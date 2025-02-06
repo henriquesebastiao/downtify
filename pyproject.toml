@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.103.2",
+    "ffmpeg>=1.4",
     "jinja2>=3.1.5",
     "python-multipart>=0.0.20",
     "requests>=2.32.3",
@@ -36,3 +37,4 @@ quote-style = 'single'
 lint = 'ruff check .; ruff check . --diff'
 format = 'ruff format .; ruff check . --fix'
 run = 'uvicorn main:app --host 0.0.0.0 --reload'
+export = 'uv export --no-hashes --no-dev > requirements.txt'

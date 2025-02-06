@@ -1,31 +1,26 @@
-import subprocess
+from functools import lru_cache
 
-from fastapi import FastAPI, Form
+from fastapi import Depends, FastAPI, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from spotdl import Spotdl
+from spotdl.types.options import DownloaderOptions
 from starlette.requests import Request
 
 app = FastAPI()
 templates = Jinja2Templates(directory='templates')
+DOWNLOADER_OPTIONS: DownloaderOptions = {
+    'output': '/downloads/{artists} - {title}.{output-ext}',
+}
 
 
-def run_spotdl(url: str):
-    command = [
-        'spotdl',
-        url,
-        '--output',
-        './downloads/{artists} - {title}.{output-ext}',
-    ]
-    result = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        check=False,
+@lru_cache(maxsize=1)
+def get_spotdl():
+    return Spotdl(
+        client_id='5f573c9620494bae87890c0f08a60293',
+        client_secret='212476d9b0f3472eaa762d90b19b0ba8',
+        downloader_settings=DOWNLOADER_OPTIONS,
     )
-
-    if result.returncode == 0:
-        return {'message': 'Download concluído'}
-    return {'error': result.stderr}
 
 
 @app.get('/', response_class=HTMLResponse)
@@ -34,6 +29,12 @@ async def index(request: Request):
 
 
 @app.post('/download/')
-async def download(url: str = Form(...)):
-    run_spotdl(url)
-    return {'message': 'Download concluído'}
+async def download(
+    spotdlc: Spotdl = Depends(get_spotdl), url: str = Form(...)
+):
+    songs = spotdlc.search([url])
+    results = spotdlc.download_songs(songs)
+
+    if results:
+        return {'message': 'Download concluído'}
+    return {'error': 'Erro ao baixar música'}
