@@ -13,10 +13,12 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Extract version from git tags
         id: version
-        run: echo "VERSION=$(git describe --tags --always --abbrev=0)" >> "$GITHUB_OUTPUT"
+        run: echo "VERSION=$(git describe --tags --always)" >> "$GITHUB_OUTPUT"
     
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -46,6 +48,6 @@ jobs:
           tags: |
             henriquesebastiao/downtify:latest
             henriquesebastiao/downtify:${{ steps.version.outputs.VERSION }}
-            ghcr.io/${{ github.repository }}/app:latest
-            ghcr.io/${{ github.repository }}/app:${{ steps.version.outputs.VERSION }}
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
           platforms: linux/amd64,linux/arm64
