@@ -1,5 +1,7 @@
 FROM python:3.13-alpine
 
+LABEL maintainer="Henrique Sebastião <contato@henriquesebastiao.com>"
+
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHON_COLORS=0
