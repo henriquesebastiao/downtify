@@ -1,0 +1,35 @@
+on: [push, pull_request]
+
+name: Test
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    env:
+      UV_SYSTEM_PYTHON: 1
+      PYTHON_COLORS: 0
+
+    steps:
+      - name: Copy files from repo
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.5.2"
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+      
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+      
+      - name: Run Ruff
+        run: uv run ruff check .; uv run ruff check . --diff
