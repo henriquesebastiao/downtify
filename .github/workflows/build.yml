@@ -16,7 +16,7 @@ jobs:
 
       - name: Extract version from git tags
         id: version
-        run: echo "VERSION=$(git describe --tags --always)" >> "$GITHUB_OUTPUT"
+        run: echo "VERSION=$(git describe --tags --always --abbrev=0)" >> "$GITHUB_OUTPUT"
     
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
