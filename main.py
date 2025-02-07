@@ -3,14 +3,18 @@ from functools import lru_cache
 from fastapi import Depends, FastAPI, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from spotdl import Spotdl
 from spotdl.types.options import DownloaderOptions
 from starlette.requests import Request
 
 app = FastAPI()
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 templates = Jinja2Templates(directory='templates')
 DOWNLOADER_OPTIONS: DownloaderOptions = {
-    'output': '/downloads/{artists} - {title}.{output-ext}',
+    'output': './downloads/{artists} - {title}.{output-ext}',
 }
 
 
