@@ -62,3 +62,23 @@ input {
 .nav-link:hover {
   color: #1ad05c;
 }
+
+.spinner {
+  height: 2.5rem;
+  width: 2.5rem;
+  border: 3px solid;
+  border-radius: 50%;
+  border-color: #1AD05C transparent;
+  animation: spin 1.3s ease infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.alert {
+  width: 15rem;
+  margin-top: 1rem;
+}
