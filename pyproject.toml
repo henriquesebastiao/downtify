@@ -33,6 +33,9 @@ select = ['I', 'F', 'E', 'W', 'PL', 'PT']
 preview = true
 quote-style = 'single'
 
+[tool.ruff.lint.per-file-ignores]
+"main.py" = ["E501"]
+
 [tool.taskipy.tasks]
 lint = 'ruff check .; ruff check . --diff'
 format = 'ruff format .; ruff check . --fix'

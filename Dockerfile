@@ -10,6 +10,8 @@ WORKDIR /downtify
 
 COPY main.py requirements.txt ./
 COPY templates ./templates
+COPY assets ./assets
+COPY static ./static
 
 RUN pip install --no-cache-dir --root-user-action ignore -r requirements.txt \
     && spotdl --download-ffmpeg
