@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from fastapi import Depends, FastAPI, Form
@@ -14,7 +15,9 @@ app.mount('/static', StaticFiles(directory='static'), name='static')
 app.mount('/assets', StaticFiles(directory='assets'), name='assets')
 templates = Jinja2Templates(directory='templates')
 DOWNLOADER_OPTIONS: DownloaderOptions = {
-    'output': './downloads/{artists} - {title}.{output-ext}',
+    'output': os.getenv(
+        'OUTPUT_PATH', default='/downloads/{artists} - {title}.{output-ext}'
+    ),
 }
 
 
