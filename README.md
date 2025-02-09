@@ -1,11 +1,9 @@
-<div vertical-align="baseline">
-  <h1>Downtify <img src="https://github.com/user-attachments/assets/4bae7aff-cbd4-4bfb-a2e3-c58f4b77a50c" alt="Poupy" height="25"/></h1>
-</div>
+# Downtify ![Logo](https://github.com/user-attachments/assets/3653d889-5774-4acc-8c5d-a737e1638ab5)
 
 [![Test](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml/badge.svg)](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml)
-![GitHub Release](https://img.shields.io/github/v/release/henriquesebastiao/downtify)
-![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify)
-![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/downtify)
+[![GitHub Release](https://img.shields.io/github/v/release/henriquesebastiao/downtify)](https://github.com/henriquesebastiao/downtify/releases)
+[![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify)](/LICENSE)
+[![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/downtify)](https://hub.docker.com/r/henriquesebastiao/downtify)
 
 Web GUI for [spotDL](https://github.com/spotDL/spotify-downloader). Allows you to download music from Spotify along with album art, lyrics and metadata.
 
