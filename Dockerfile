@@ -8,15 +8,22 @@ ENV PYTHON_COLORS=0
 
 WORKDIR /downtify
 
-COPY main.py requirements.txt ./
+COPY main.py requirements.txt entrypoint.sh ./
 COPY templates ./templates
 COPY assets ./assets
 COPY static ./static
 
-RUN pip install --no-cache-dir --root-user-action ignore -r requirements.txt \
-    && spotdl --download-ffmpeg
+RUN sed -i 's/\r$//g' entrypoint.sh && \
+    chmod +x entrypoint.sh \
+    && apk add --update ffmpeg shadow su-exec tini \
+    && pip install --no-cache-dir --root-user-action ignore -r requirements.txt
 
+ENV UID=1000
+ENV GID=1000
+ENV UMASK=022
+
+ENV DOWNLOAD_DIR /downloads
 VOLUME /downloads
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0"]
+ENTRYPOINT ["/sbin/tini", "-g", "--", "./entrypoint.sh"]
