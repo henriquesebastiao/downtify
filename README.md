@@ -16,7 +16,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/henriquesebastiao/downtify)](https://github.com/henriquesebastiao/downtify/releases)
 [![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify)](/LICENSE)
 [![Visitors](https://api.visitorbadge.io/api/visitors?path=henriquesebastiao%2Fdowntify&label=repository%20visits&countColor=%230d699c&style=flat)](https://github.com/henriquesebastiao/downtify)
-[![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/downtify)](https://hub.docker.com/r/henriquesebastiao/downtify)
+[![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/downtify.svg)](https://hub.docker.com/r/henriquesebastiao/downtify)
   
 </div>
 
