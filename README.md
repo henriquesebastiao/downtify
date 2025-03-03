@@ -1,5 +1,5 @@
 <h1 align="center">
-  <a href="https://preevy.dev" target="_blank" rel="noopener noreferrer">
+  <a href="https://github.com/henriquesebastiao/downtify" target="_blank" rel="noopener noreferrer">
     <picture>
       <img width="80" src="assets/icon-without-backgroud.svg">
     </picture>
