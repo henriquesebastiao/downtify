@@ -13,10 +13,14 @@
 <div align="center">
   
 [![Test](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml/badge.svg)](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/henriquesebastiao/downtify)](https://github.com/henriquesebastiao/downtify/releases)
-[![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify)](/LICENSE)
-[![Visitors](https://api.visitorbadge.io/api/visitors?path=henriquesebastiao%2Fdowntify&label=repository%20visits&countColor=%230d699c&style=flat)](https://github.com/henriquesebastiao/downtify)
-[![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/downtify.svg)](https://hub.docker.com/r/henriquesebastiao/downtify)
+[![Coverage Badge](https://coverage-badge.samuelcolvin.workers.dev/henriquesebastiao/downtify.svg)](https://coverage-badge.samuelcolvin.workers.dev/redirect/henriquesebastiao/downtify)
+[![GitHub Release](https://img.shields.io/github/v/release/henriquesebastiao/downtify?color=blue
+)](https://github.com/henriquesebastiao/downtify/releases)
+[![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify?color=blue
+)](/LICENSE)
+[![Visitors](https://api.visitorbadge.io/api/visitors?path=henriquesebastiao%2Fdowntify&label=repository%20visits&countColor=%231182c3&style=flat)](https://github.com/henriquesebastiao/downtify)
+[![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/downtify?color=blue
+)](https://hub.docker.com/r/henriquesebastiao/downtify)
   
 </div>
 
