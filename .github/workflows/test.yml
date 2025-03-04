@@ -33,3 +33,24 @@ jobs:
       
       - name: Run Ruff
         run: uv run ruff check .; uv run ruff check . --diff
+      
+      - name: Build Docker image
+        run: docker build -t downtify-test:latest .
+      
+      - name: Set up FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        with:
+          architecture: x64
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Run Pytest
+        run: uv run pytest -s -x --cov=main -vv
+      
+      - name: Run Coverage
+        run: uv run coverage html
+      
+      - name: Store coverage files
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: htmlcov
