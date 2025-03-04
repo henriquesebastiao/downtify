@@ -10,8 +10,8 @@ nav:
 
 theme:
   name: material
-  logo: assets/icon-without-backgroud.svg
-  favicon: assets/favicon.ico
+  logo: images/icon-without-backgroud.svg
+  favicon: images/favicon.ico
   font:
     text: Roboto
     code: Source Code Pro
