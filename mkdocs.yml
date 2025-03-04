@@ -1,0 +1,104 @@
+site_name: Downtify
+site_url: https://downtify.henriquesebastiao.com/
+repo_url: https://github.com/henriquesebastiao/downtify
+repo_name: henriquesebastiao/downtify
+
+copyright: 2025 - Henrique Sebastião
+
+nav:
+  - Downtify: index.md
+
+theme:
+  name: material
+  logo: assets/icon-without-backgroud.svg
+  favicon: assets/favicon.ico
+  font:
+    text: Roboto
+    code: Source Code Pro
+  icon:
+    repo: fontawesome/brands/git-alt
+  palette:
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: black
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - scheme: default
+      primary: black
+      toggle:
+        icon: material/lightbulb
+        name: Switch to dark mode
+  features:
+    - search.suggest
+    - search.share
+    - announce.dismiss
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.expand
+    - navigation.path
+    - toc.follow
+    - navigation.top
+    - navigation.footer
+    - content.code.annotate
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - markdown.extensions.codehilite:
+      guess_lang: false
+  - admonition
+  - attr_list
+  - tables
+  - codehilite
+  - extra
+  - pymdownx.inlinehilite
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format ''
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+
+plugins:
+  - search
+
+extra:
+  variables:
+    version: 0.2.3
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/henriquesebastiao/downtify
+      name: github.com/henriquesebastiao
+    - icon: fontawesome/brands/mastodon
+      link: https://bolha.us/@henriquesebastiao
+      name: henriquesebastiao on Mastodon
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/henriquesebastiao
+      name: Henrique Sebastião
+    - icon: fontawesome/solid/envelope
+      link: mailto:<contato@henriquesebastiao.com>
+      name: contato@henriquesebastiao.com
+    - icon: fontawesome/solid/globe
+      link: https://henriquesebastiao.com
+      name: henriquesebastiao.com
+
+# extra_css:
+#   - css/extra.css
+#   - css/termynal.css
+#   - css/custom.css
+
+# extra_javascript:
+#   - js/termynal.js
+#   - js/custom.js

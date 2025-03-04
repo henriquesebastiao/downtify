@@ -25,6 +25,9 @@ dev = [
     "testcontainers>=4.9.1",
     "pytest-xdist>=3.6.1",
 ]
+doc = [
+    "mkdocs-material>=9.6.7",
+]
 
 [tool.uv]
 upgrade = true
@@ -55,3 +58,4 @@ export = 'uv export --no-hashes --no-dev > requirements.txt'
 pre_test = 'docker build -t downtify-test:latest .'
 test = 'pytest -s -x --cov=main -vv'
 post_test = 'coverage html'
+doc = 'mkdocs serve'
