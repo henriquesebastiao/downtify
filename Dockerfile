@@ -16,7 +16,8 @@ COPY static ./static
 RUN sed -i 's/\r$//g' entrypoint.sh && \
     chmod +x entrypoint.sh \
     && apk add --update ffmpeg shadow su-exec tini \
-    && pip install --no-cache-dir --root-user-action ignore -r requirements.txt
+    && pip install --no-cache-dir --root-user-action ignore -r requirements.txt \
+    && spotdl --download-ffmpeg
 
 ENV UID=1000
 ENV GID=1000
