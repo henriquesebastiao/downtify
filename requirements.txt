@@ -9,7 +9,7 @@ cffi==1.17.1
 charset-normalizer==3.4.1
 click==8.1.8
 colorama==0.4.6
-cssselect2==0.7.0
+cssselect2==0.8.0
 defusedxml==0.7.1
 ghp-import==2.1.0
 idna==3.10

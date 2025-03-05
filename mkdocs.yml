@@ -19,19 +19,9 @@ theme:
   icon:
     repo: fontawesome/brands/git-alt
   palette:
-    # Palette toggle for dark mode
     - scheme: slate
-      primary: black
-      toggle:
-        icon: material/lightbulb-outline
-        name: Switch to light mode
-
-    # Palette toggle for light mode
-    - scheme: default
-      primary: black
-      toggle:
-        icon: material/lightbulb
-        name: Switch to dark mode
+      primary: custom
+      accent: custom
   features:
     - search.suggest
     - search.share
@@ -88,3 +78,6 @@ extra:
     - icon: fontawesome/solid/globe
       link: https://henriquesebastiao.com
       name: henriquesebastiao.com
+
+extra_css:
+  - stylesheets/extra.css
