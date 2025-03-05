@@ -1,6 +1,8 @@
 FROM python:3.13-alpine
 
 LABEL maintainer="Henrique Sebastião <contato@henriquesebastiao.com>"
+LABEL version="0.2.4"
+LABEL description="Self-hosted Spotify downloader"
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
