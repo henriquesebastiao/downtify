@@ -1,4 +1,5 @@
 site_name: Downtify
+site_description: Download Spotify songs along with album art, lyrics and metadata
 site_url: https://downtify.henriquesebastiao.com/
 repo_url: https://github.com/henriquesebastiao/downtify
 repo_name: henriquesebastiao/downtify
@@ -69,8 +70,6 @@ plugins:
       cards_layout_options:
         background_color: "#1AD35D"
         color: "#040000"
-        title: Downtify
-        description: Download Spotify songs along with album art, lyrics and metadata.
 
 extra:
   variables:
