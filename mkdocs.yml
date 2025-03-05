@@ -72,8 +72,6 @@ plugins:
         color: "#040000"
 
 extra:
-  variables:
-    version: 0.2.3
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/henriquesebastiao/downtify
@@ -90,12 +88,3 @@ extra:
     - icon: fontawesome/solid/globe
       link: https://henriquesebastiao.com
       name: henriquesebastiao.com
-
-# extra_css:
-#   - css/extra.css
-#   - css/termynal.css
-#   - css/custom.css
-
-# extra_javascript:
-#   - js/termynal.js
-#   - js/custom.js

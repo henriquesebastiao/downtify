@@ -1,6 +1,6 @@
 #!make
 
-DOWNTIFY_VERSION := 0.2.3
+DOWNTIFY_VERSION := 0.2.4
 TARGET := henriquesebastiao/downtify
 
 all: build latest
@@ -13,4 +13,13 @@ latest:
 	docker buildx create --use
 	docker buildx build --platform=linux/amd64,linux/arm64 -t $(TARGET):latest --push .
 
-.PHONY: all build latest
+clean:
+	find downloads -type f -name "*.mp3" -exec rm -f {} \;
+
+up:
+	docker compose up --build -d
+
+down:
+	docker compose down
+
+.PHONY: all build latest clean up down
