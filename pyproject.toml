@@ -26,7 +26,7 @@ dev = [
     "pytest-xdist>=3.6.1",
 ]
 doc = [
-    "mkdocs-material>=9.6.7",
+    "mkdocs-material[imaging]>=9.6.7",
 ]
 
 [tool.uv]

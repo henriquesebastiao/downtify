@@ -65,6 +65,12 @@ markdown_extensions:
 
 plugins:
   - search
+  - social:
+      cards_layout_options:
+        background_color: "#1AD35D"
+        color: "#040000"
+        title: Downtify
+        description: Download Spotify songs along with album art, lyrics and metadata.
 
 extra:
   variables:
