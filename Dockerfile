@@ -8,7 +8,7 @@ ENV PYTHON_COLORS=0
 
 WORKDIR /downtify
 
-COPY main.py requirements.txt entrypoint.sh ./
+COPY main.py requirements-app.txt entrypoint.sh ./
 COPY templates ./templates
 COPY assets ./assets
 COPY static ./static
@@ -16,7 +16,7 @@ COPY static ./static
 RUN sed -i 's/\r$//g' entrypoint.sh && \
     chmod +x entrypoint.sh \
     && apk add --update ffmpeg shadow su-exec tini \
-    && pip install --no-cache-dir --root-user-action ignore -r requirements.txt
+    && pip install --no-cache-dir --root-user-action ignore -r requirements-app.txt
 
 ENV UID=1000
 ENV GID=1000
