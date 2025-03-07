@@ -36,8 +36,13 @@ app = FastAPI(
     terms_of_service='https://github.com/henriquesebastiao/downtify/',
 )
 
+
 app.mount('/static', StaticFiles(directory='static'), name='static')
 app.mount('/assets', StaticFiles(directory='assets'), name='assets')
+
+if not os.path.exists("/downloads"):
+    os.makedirs("/downloads")
+
 app.mount("/downloads", StaticFiles(directory="/downloads"), name="downloads")
 templates = Jinja2Templates(directory='templates')
 
