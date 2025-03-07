@@ -140,6 +140,7 @@ def download(
     except Exception as error:  # pragma: no cover
         return {'detail': error}
 
+
 @app.get("/list", response_class=HTMLResponse, tags=['Web UI'], summary='List downloaded files')
 def list_downloads_page(request: Request):
     download_path = "/downloads"
