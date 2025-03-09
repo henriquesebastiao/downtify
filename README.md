@@ -13,7 +13,6 @@
 <div align="center">
   
 [![Test](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml/badge.svg)](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml)
-[![Coverage Badge](https://coverage-badge.samuelcolvin.workers.dev/henriquesebastiao/downtify.svg)](https://coverage-badge.samuelcolvin.workers.dev/redirect/henriquesebastiao/downtify)
 [![GitHub Release](https://img.shields.io/github/v/release/henriquesebastiao/downtify?color=blue
 )](https://github.com/henriquesebastiao/downtify/releases)
 [![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify?color=blue

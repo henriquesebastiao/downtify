@@ -14,9 +14,6 @@
     <a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/henriquesebastiao/downtify">
         <img src="https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml/badge.svg" alt="Test"/>
     </a>
-    <a href="https://codecov.io/gh/henriquesebastiao/skyport" > 
-        <img src="https://coverage-badge.samuelcolvin.workers.dev/henriquesebastiao/downtify.svg" alt="Coverage Badge"/> 
-    </a>
     <a href="https://raw.githubusercontent.com/henriquesebastiao/downtify/refs/heads/main/LICENSE">
         <img alt="LICENSE" src="https://img.shields.io/github/license/henriquesebastiao/downtify?color=blue"/>
     </a>
