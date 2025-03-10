@@ -45,7 +45,7 @@
     </header>
     <main class="px-3 mt-5">
         <h1>Your Downloaded Files</h1>
-        <p class="lead">Click on a file to download.</p>
+        <p class="lead">Click on a file to open it.</p>
         <ul class="list-group text-dark" id="file-list" hx-get="/list-downloads/" hx-trigger="load" hx-target="#file-list" hx-swap="innerHTML">
             {{ files | safe }}
         </ul>
