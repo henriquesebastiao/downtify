@@ -46,7 +46,7 @@
     <main class="px-3 mt-5">
         <h1>Your Downloaded Files</h1>
         <p class="lead">Click on a file to open it.</p>
-        <ul class="list-group text-dark" id="file-list" hx-get="/list-downloads/" hx-trigger="load" hx-target="#file-list" hx-swap="innerHTML">
+        <ul class="list-group text-dark" id="file-list" hx-get="/list-items" hx-trigger="load" hx-target="#file-list" hx-swap="innerHTML">
             {{ files | safe }}
         </ul>
         <a href="/" class="btn btn-lg btn-light fw-bold border-white mt-5 mb-5 view-downloaded-musics-button">Back to download page</a>
