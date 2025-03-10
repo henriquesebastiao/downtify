@@ -66,6 +66,21 @@ def get_spotdl():
     )
 
 
+def get_downloaded_files() -> str:
+    download_path = "/downloads"
+    try:
+        files = os.listdir(download_path)
+        file_links = [
+            f'<li class="list-group-item"><a href="/downloads/{file}">{file}</a></li>'
+            for file in files
+        ]
+        files = "".join(file_links) if file_links else '<li class="list-group-item">No files found.</li>'
+    except Exception as e:
+        files = f'<li class="list-group-item text-danger">Error: {str(e)}</li>'
+    
+    return files
+
+
 @app.get(
     '/',
     response_class=HTMLResponse,
@@ -148,15 +163,11 @@ def download(
 
 @app.get("/list", response_class=HTMLResponse, tags=['Web UI'], summary='List downloaded files')
 def list_downloads_page(request: Request):
-    download_path = "/downloads"
-    try:
-        files = os.listdir(download_path)
-        file_links = [
-            f'<li class="list-group-item"><a href="/downloads/{file}">{file}</a></li>'
-            for file in files
-        ]
-        files = "".join(file_links) if file_links else '<li class="list-group-item">No files found.</li>'
-    except Exception as e:
-        files = f'<li class="list-group-item text-danger">Error: {str(e)}</li>'
-
+    files = get_downloaded_files()
     return templates.TemplateResponse('list.html', {'request': request, 'files': files})
+
+
+@app.get('/list-items', response_class=HTMLResponse, tags=['Web UI'], summary='Returns downloaded files to list')
+def list_items_of_downloads_page():
+    files = get_downloaded_files()
+    return files
