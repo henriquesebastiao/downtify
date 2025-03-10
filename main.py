@@ -26,7 +26,7 @@ class Message(BaseModel):
 
 app = FastAPI(
     title='Downtify',
-    version='0.2.4',
+    version='0.3.0',
     description=DESCRIPTION,
     contact={
         'name': 'Downtify',
