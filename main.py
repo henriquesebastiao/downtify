@@ -152,7 +152,7 @@ def list_downloads_page(request: Request):
     try:
         files = os.listdir(download_path)
         file_links = [
-            f'<li class="list-group-item"><a href="/downloads/{file}">{file}</a></li>'
+            f'<li class="list-group-item"><a href="/downloads/{file}" target="_blank">{file}</a></li>'
             for file in files
         ]
         files = "".join(file_links) if file_links else '<li class="list-group-item">No files found.</li>'
