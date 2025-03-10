@@ -55,6 +55,15 @@ input {
   background-color: #1ad05c;
 }
 
+.view-downloaded-musics-button {
+  background-color: #1ad05c;
+  border: none;
+}
+
+.view-downloaded-musics-button:hover {
+  background-color: #1dee6a;
+}
+
 .gh-logo {
   font-size: 1.5em;
 }

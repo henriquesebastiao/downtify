@@ -36,8 +36,14 @@ app = FastAPI(
     terms_of_service='https://github.com/henriquesebastiao/downtify/',
 )
 
+
 app.mount('/static', StaticFiles(directory='static'), name='static')
 app.mount('/assets', StaticFiles(directory='assets'), name='assets')
+
+if not os.path.exists("/downloads"):
+    os.makedirs("/downloads")
+
+app.mount("/downloads", StaticFiles(directory="/downloads"), name="downloads")
 templates = Jinja2Templates(directory='templates')
 
 DOWNLOADER_OPTIONS: DownloaderOptions = {
@@ -138,3 +144,19 @@ def download(
         return {'message': 'Download sucessful'}
     except Exception as error:  # pragma: no cover
         return {'detail': error}
+
+
+@app.get("/list", response_class=HTMLResponse, tags=['Web UI'], summary='List downloaded files')
+def list_downloads_page(request: Request):
+    download_path = "/downloads"
+    try:
+        files = os.listdir(download_path)
+        file_links = [
+            f'<li class="list-group-item"><a href="/downloads/{file}" target="_blank">{file}</a></li>'
+            for file in files
+        ]
+        files = "".join(file_links) if file_links else '<li class="list-group-item">No files found.</li>'
+    except Exception as e:
+        files = f'<li class="list-group-item text-danger">Error: {str(e)}</li>'
+
+    return templates.TemplateResponse('list.html', {'request': request, 'files': files})
