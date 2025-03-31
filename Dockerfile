@@ -8,6 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHON_COLORS=0
 
+ENV DOWNTIFY_PORT=8000
+
 WORKDIR /downtify
 
 COPY main.py requirements-app.txt entrypoint.sh ./
@@ -26,6 +28,6 @@ ENV UMASK=022
 
 ENV DOWNLOAD_DIR /downloads
 VOLUME /downloads
-EXPOSE 8000
+EXPOSE ${DOWNTIFY_PORT}
 
 ENTRYPOINT ["/sbin/tini", "-g", "--", "./entrypoint.sh"]

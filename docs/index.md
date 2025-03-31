@@ -60,6 +60,16 @@ services:
       - ./path/to/downloads:/downloads
 ```
 
+You can also set a custom port for the web interface via the `DOWNTIFY_PORT` environment variable in `docker-compose.yml`:
+
+
+```yaml
+ports:
+  - '8000:30321'
+environment:
+  - DOWNTIFY_PORT=30321 
+```
+
 ## License
 
 This project is licensed under the [GPL-3.0](https://raw.githubusercontent.com/henriquesebastiao/downtify/refs/heads/main/LICENSE) License.
