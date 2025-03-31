@@ -22,6 +22,7 @@ dev = [
     "httpx==0.27.2",
 ]
 doc = [
+    "mkdocs>=1.6.1",
     "mkdocs-material[imaging]>=9.6.7",
 ]
 

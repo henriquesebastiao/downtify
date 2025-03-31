@@ -12,8 +12,8 @@ if [ `id -u` -eq 0 ] && [ `id -g` -eq 0 ]; then
     echo "Changing ownership of download and state directories to ${UID}:${GID}"
     chown -R "${UID}":"${GID}" /downtify /.spotdl "${DOWNLOAD_DIR}"
     echo "Running Downtify as user ${UID}:${GID}"
-    su-exec "${UID}":"${GID}" uvicorn main:app --host 0.0.0.0
+    su-exec "${UID}":"${GID}" uvicorn main:app --host 0.0.0.0 --port $DOWNTIFY_PORT
 else
     echo "User set by docker; running Downtify as `id -u`:`id -g`"
-    uvicorn main:app --host 0.0.0.0
+    uvicorn main:app --host 0.0.0.0 --port $DOWNTIFY_PORT
 fi

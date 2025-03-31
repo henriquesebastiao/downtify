@@ -63,6 +63,16 @@ services:
       - CLIENT_SECRET=212476d9b0f3472eaa762d90b19b0ba8  # Optional
 ```
 
+You can also set a custom port for the web interface via the `DOWNTIFY_PORT` environment variable in `docker-compose.yml`:
+
+
+```yaml
+ports:
+  - '8000:30321'
+environment:
+  - DOWNTIFY_PORT=30321 
+```
+
 ## License
 
 This project is licensed under the [GPL-3.0](/LICENSE) License.
