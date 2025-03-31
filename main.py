@@ -50,6 +50,7 @@ DOWNLOADER_OPTIONS: DownloaderOptions = {
     'output': os.getenv(
         'OUTPUT_PATH', default='/downloads/{artists} - {title}.{output-ext}'
     ),
+    'ffmpeg': '/downtify/ffmpeg',
 }
 
 
