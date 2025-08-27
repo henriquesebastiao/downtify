@@ -30,7 +30,7 @@ ROOT_PATH = os.getenv("DOWNTIFY_PATH")
 if not ROOT_PATH.startswith("/"):
     ROOT_PATH = "/" + ROOT_PATH
 if not ROOT_PATH.endswith("/"):
-    ROOT_PATH = ROOT_PATH + "/"
+    ROOT_PATH += "/"
 
 
 app = FastAPI(
@@ -102,7 +102,7 @@ def index(request: Request):
         'index.html',
         {
             'request': request,
-            'version' : VERSION,
+            'version': VERSION,
             'root_path': ROOT_PATH,
         }
     )
