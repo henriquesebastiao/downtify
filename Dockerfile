@@ -1,7 +1,7 @@
 FROM python:3.13-alpine
 
 LABEL maintainer="Henrique Sebastião <contato@henriquesebastiao.com>"
-LABEL version="0.3.2"
+LABEL version=${VERSION}
 LABEL description="Self-hosted Spotify downloader"
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -9,6 +9,7 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHON_COLORS=0
 
 ENV DOWNTIFY_PORT=8000
+ENV DOWNTIFY_PATH="/"
 
 WORKDIR /downtify
 

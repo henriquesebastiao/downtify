@@ -24,6 +24,15 @@ class Message(BaseModel):
     message: str = Field(examples=['Download sucessful'])
 
 
+VERSION = os.getenv("VERSION")
+ROOT_PATH = os.getenv("DOWNTIFY_PATH")
+
+if not ROOT_PATH.startswith("/"):
+    ROOT_PATH = "/" + ROOT_PATH
+if not ROOT_PATH.endswith("/"):
+    ROOT_PATH = ROOT_PATH + "/"
+
+
 app = FastAPI(
     title='Downtify',
     version='0.3.2',
@@ -57,12 +66,8 @@ DOWNLOADER_OPTIONS: DownloaderOptions = {
 @lru_cache(maxsize=1)
 def get_spotdl():
     return Spotdl(
-        client_id=os.getenv(
-            'CLIENT_ID', default='5f573c9620494bae87890c0f08a60293'
-        ),
-        client_secret=os.getenv(
-            'CLIENT_SECRET', default='212476d9b0f3472eaa762d90b19b0ba8'
-        ),
+        client_id=os.getenv('CLIENT_ID'),
+        client_secret=os.getenv('CLIENT_SECRET'),
         downloader_settings=DOWNLOADER_OPTIONS,
     )
 
@@ -72,7 +77,7 @@ def get_downloaded_files() -> str:
     try:
         files = os.listdir(download_path)
         file_links = [
-            f'<li class="list-group-item"><a href="/downloads/{file}">{file}</a></li>'
+            f'<li class="list-group-item"><a href="{ROOT_PATH}downloads/{file}">{file}</a></li>'
             for file in files
         ]
         files = (
@@ -93,7 +98,14 @@ def get_downloaded_files() -> str:
     summary='Application web interface',
 )
 def index(request: Request):
-    return templates.TemplateResponse('index.html', {'request': request})
+    return templates.TemplateResponse(
+        'index.html',
+        {
+            'request': request,
+            'version' : VERSION,
+            'root_path': ROOT_PATH,
+        }
+    )
 
 
 @app.post(
