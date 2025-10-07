@@ -22,4 +22,7 @@ up:
 down:
 	docker compose down
 
-.PHONY: all build latest clean up down
+run:
+	python app.py web
+
+.PHONY: all build latest clean up down run
