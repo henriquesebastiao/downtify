@@ -25,13 +25,13 @@
 
 https://github.com/user-attachments/assets/9711efe8-a960-4e1a-8d55-e0d1c20208f7
 
-## Features ✨
+## Features
 
 With Downtify you can download Spotify music containing album art, track names, album title and other metadata about the songs. Just copy the Spotify link, whether it's a single song, an album, etc. As soon as your downloads are complete you will be notified!
 
 ## Music Sourcing
 
-Downtify uses SpotDL to download music, which in turn uses YouTube as a download source. This method is used to avoid issues related to downloading music from Spotify.
+Downtify uses [SpotDL](https://github.com/spotDL/spotify-downloader) to download music, which in turn uses YouTube as a download source. This method is used to avoid issues related to downloading music from Spotify.
 
 > [!WARNING]
 > Users are responsible for their actions and potential legal consequences. We do not support unauthorized downloading of copyrighted material and take no responsibility for user actions.
@@ -44,7 +44,7 @@ Downtify uses SpotDL to download music, which in turn uses YouTube as a download
 > Make sure to change the path `/path/to/downloads` in the command below to the path on your computer where you want to view the downloaded songs.
 
 ```bash
-docker run -d -p 8000:8000 --name downtify -v /path/to/downloads:/downloads henriquesebastiao/downtify
+docker run -d -p 8000:8000 --name downtify -v /path/to/downloads:/downloads ghcr.io/henriquesebastiao/downtify
 ```
 
 ### Docker Compose
@@ -53,7 +53,7 @@ docker run -d -p 8000:8000 --name downtify -v /path/to/downloads:/downloads henr
 services:
   downtify:
     container_name: downtify
-    image: henriquesebastiao/downtify:latest
+    image: ghcr.io/henriquesebastiao/downtify:latest
     ports:
       - '8000:8000'
     volumes:
@@ -64,8 +64,9 @@ services:
       - CLIENT_SECRET=212476d9b0f3472eaa762d90b19b0ba8  # Optional
 ```
 
-You can also set a custom port for the web interface via the `DOWNTIFY_PORT` environment variable in `docker-compose.yml`:
+Change the value `./path/to/downloads` to the directory on your machine where you want the downloaded songs to be saved.
 
+You can also set a custom port for the web interface via the `DOWNTIFY_PORT` environment variable in `docker-compose.yml`:
 
 ```yaml
 ports:
@@ -73,6 +74,8 @@ ports:
 environment:
   - DOWNTIFY_PORT=30321 
 ```
+
+Downtify is also available in the app store of all major self-hosted home server OS like [Umbrel](https://apps.umbrel.com/app/downtify) and [CasaOS](https://casaos.zimaspace.com/).
 
 ## License
 
