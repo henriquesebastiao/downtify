@@ -1,0 +1,121 @@
+# Changelog
+
+## [Unreleased](https://github.com/henriquesebastiao/downtify/tree/HEAD)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.0...HEAD)
+
+**Fixed bugs:**
+
+- Error AnyIO worker thread on Umbrel [\#26](https://github.com/henriquesebastiao/downtify/issues/26)
+- `AnyIO worker thread` error when trying to download music [\#9](https://github.com/henriquesebastiao/downtify/issues/9)
+
+## [1.0.0](https://github.com/henriquesebastiao/downtify/tree/1.0.0) (2025-10-08)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.3.2...1.0.0)
+
+**Implemented enhancements:**
+
+- Implementing new download interface [\#30](https://github.com/henriquesebastiao/downtify/pull/30) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Closed issues:**
+
+- Bug Report: FFmpeg conversion error on Downtify 0.3.2 [\#29](https://github.com/henriquesebastiao/downtify/issues/29)
+- ffmpeg erro v0.3.1 [\#28](https://github.com/henriquesebastiao/downtify/issues/28)
+- Error ffmpeg [\#25](https://github.com/henriquesebastiao/downtify/issues/25)
+- ffmpeg error [\#24](https://github.com/henriquesebastiao/downtify/issues/24)
+- Error on UmbrelOS: application has reached a rate/request limit [\#23](https://github.com/henriquesebastiao/downtify/issues/23)
+- quality adjustment [\#16](https://github.com/henriquesebastiao/downtify/issues/16)
+
+## [0.3.2](https://github.com/henriquesebastiao/downtify/tree/0.3.2) (2025-03-31)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.3.1...0.3.2)
+
+**Implemented enhancements:**
+
+- \[Feature request/bug\] Make port for web UI adjustable [\#20](https://github.com/henriquesebastiao/downtify/issues/20)
+- 🔧 feat: Set container web port via environment variable - fix \#20 [\#21](https://github.com/henriquesebastiao/downtify/pull/21) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Fixed bugs:**
+
+- ERROR:spotdl.download.progress\_handler:FFmpegError: Failed to convert [\#19](https://github.com/henriquesebastiao/downtify/issues/19)
+- 🔧 fix: Fix error when running ffmpeg - fix \#19 [\#22](https://github.com/henriquesebastiao/downtify/pull/22) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Closed issues:**
+
+- Question on VPNs? [\#17](https://github.com/henriquesebastiao/downtify/issues/17)
+
+## [0.3.1](https://github.com/henriquesebastiao/downtify/tree/0.3.1) (2025-03-10)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.3.0...0.3.1)
+
+**Fixed bugs:**
+
+- hx-get="/list-downloads/" is producing a 404 [\#14](https://github.com/henriquesebastiao/downtify/issues/14)
+
+**Merged pull requests:**
+
+- Fixes `hx-get="/list-downloads/"` producing a 404 error [\#15](https://github.com/henriquesebastiao/downtify/pull/15) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [0.3.0](https://github.com/henriquesebastiao/downtify/tree/0.3.0) (2025-03-10)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.4...0.3.0)
+
+**Implemented enhancements:**
+
+- Add downloaded music list to web interface [\#11](https://github.com/henriquesebastiao/downtify/issues/11)
+- is it safe to have the client id and the client secret inside the code? [\#10](https://github.com/henriquesebastiao/downtify/issues/10)
+- Adding `/list` endpoint to view downloaded songs [\#13](https://github.com/henriquesebastiao/downtify/pull/13) ([dvelayosmd](https://github.com/dvelayosmd))
+
+## [0.2.4](https://github.com/henriquesebastiao/downtify/tree/0.2.4) (2025-03-05)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.3...0.2.4)
+
+**Implemented enhancements:**
+
+- Documenting API and adding tests [\#7](https://github.com/henriquesebastiao/downtify/pull/7) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Closed issues:**
+
+- Create documentation with Material for MkDocs [\#5](https://github.com/henriquesebastiao/downtify/issues/5)
+- Documenting API with Swagger UI [\#4](https://github.com/henriquesebastiao/downtify/issues/4)
+
+**Merged pull requests:**
+
+- 📜 docs: Adding documentation with MkDocs [\#8](https://github.com/henriquesebastiao/downtify/pull/8) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Sync dev with main [\#6](https://github.com/henriquesebastiao/downtify/pull/6) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [0.2.3](https://github.com/henriquesebastiao/downtify/tree/0.2.3) (2025-03-03)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.2...0.2.3)
+
+## [0.2.2](https://github.com/henriquesebastiao/downtify/tree/0.2.2) (2025-02-24)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.1...0.2.2)
+
+**Merged pull requests:**
+
+- 🔧 Adding improvements for version 0.2.2 [\#3](https://github.com/henriquesebastiao/downtify/pull/3) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [0.2.1](https://github.com/henriquesebastiao/downtify/tree/0.2.1) (2025-02-08)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.0...0.2.1)
+
+**Merged pull requests:**
+
+- 🔧 fix: Running SpotDL with subprocess avoiding async errors [\#2](https://github.com/henriquesebastiao/downtify/pull/2) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [0.2.0](https://github.com/henriquesebastiao/downtify/tree/0.2.0) (2025-02-07)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.1.0...0.2.0)
+
+**Implemented enhancements:**
+
+- ✨ Adding web interface with Bootstrap [\#1](https://github.com/henriquesebastiao/downtify/pull/1) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [0.1.0](https://github.com/henriquesebastiao/downtify/tree/0.1.0) (2025-02-06)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/28292c064ed8d50fbdca0b6bc7a47f65f8772cd6...0.1.0)
+
+
+
+\* *This Changelog was automatically generated by [github_changelog_generator](https://github.com/github-changelog-generator/github-changelog-generator)*
