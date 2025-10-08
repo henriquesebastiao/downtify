@@ -1,16 +1,11 @@
 [project]
 name = "downtify"
-version = "0.3.2"
+version = "1.0.0"
 description = "Self-hosted Spotify downloader"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "email-validator>=2.2.0",
     "fastapi>=0.103.2",
-    "jinja2>=3.1.5",
-    "load-dotenv>=0.1.0",
-    "python-multipart>=0.0.20",
-    "requests>=2.32.3",
     "spotdl>=4.2.11",
 ]
 
@@ -18,7 +13,6 @@ dependencies = [
 dev = [
     "ruff>=0.9.4",
     "taskipy>=1.14.1",
-    "httpx==0.27.2",
 ]
 doc = [
     "mkdocs>=1.6.1",

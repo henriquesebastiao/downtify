@@ -1,190 +1,156 @@
+import asyncio
+import logging
 import os
-from functools import lru_cache
+import sys
+import webbrowser
 
-from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Form
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, Field
-from spotdl import Spotdl
-from spotdl.types.options import DownloaderOptions
-from starlette.requests import Request
-
-load_dotenv()
-
-DESCRIPTION = """
-Download Spotify music with album art and metadata.
-
-With Downtify you can download Spotify musics containing album art, track names, album title and other metadata about the songs.
-"""
-
-
-class Message(BaseModel):
-    message: str = Field(examples=['Download sucessful'])
-
-
-app = FastAPI(
-    title='Downtify',
-    version='0.3.2',
-    description=DESCRIPTION,
-    contact={
-        'name': 'Downtify',
-        'url': 'https://github.com/henriquesebastiao/downtify',
-        'email': 'contato@henriquesebastiao.com',
-    },
-    terms_of_service='https://github.com/henriquesebastiao/downtify/',
+from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from spotdl._version import __version__
+from spotdl.types.options import DownloaderOptions, WebOptions
+from spotdl.utils.arguments import parse_arguments
+from spotdl.utils.config import create_settings
+from spotdl.utils.logging import NAME_TO_LEVEL
+from spotdl.utils.spotify import SpotifyClient
+from spotdl.utils.web import (
+    ALLOWED_ORIGINS,
+    SPAStaticFiles,
+    app_state,
+    fix_mime_types,
+    get_current_state,
+    router,
 )
+from uvicorn import Config, Server
+
+logger = logging.getLogger(__name__)
 
 
-app.mount('/static', StaticFiles(directory='static'), name='static')
-app.mount('/assets', StaticFiles(directory='assets'), name='assets')
+def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
+    """
+    Run the web server.
 
-if not os.path.exists('/downloads'):
-    os.makedirs('/downloads')
+    ### Arguments
+    - web_settings: Web server settings.
+    - downloader_settings: Downloader settings.
+    """
 
-app.mount('/downloads', StaticFiles(directory='/downloads'), name='downloads')
-templates = Jinja2Templates(directory='templates')
+    # Apply the fix for mime types
+    fix_mime_types()
 
-DOWNLOADER_OPTIONS: DownloaderOptions = {
-    'output': os.getenv(
-        'OUTPUT_PATH', default='/downloads/{artists} - {title}.{output-ext}'
-    ),
-    'ffmpeg': '/downtify/ffmpeg',
-}
+    # Set up the app loggers
+    uvicorn_logger = logging.getLogger('uvicorn')
+    uvicorn_logger.propagate = False
 
+    spotipy_logger = logging.getLogger('spotipy')
+    spotipy_logger.setLevel(logging.NOTSET)
 
-@lru_cache(maxsize=1)
-def get_spotdl():
-    return Spotdl(
-        client_id=os.getenv(
-            'CLIENT_ID', default='5f573c9620494bae87890c0f08a60293'
-        ),
-        client_secret=os.getenv(
-            'CLIENT_SECRET', default='212476d9b0f3472eaa762d90b19b0ba8'
-        ),
-        downloader_settings=DOWNLOADER_OPTIONS,
+    # Initialize the web server settings
+    app_state.web_settings = web_settings
+    app_state.logger = uvicorn_logger
+
+    # Create the event loop
+    app_state.loop = (
+        asyncio.new_event_loop()
+        if sys.platform != 'win32'
+        else asyncio.ProactorEventLoop()  # type: ignore
     )
 
+    downloader_settings['simple_tui'] = True
+    web_settings['web_gui_location'] = '/downtify/frontend/dist'
 
-def get_downloaded_files() -> str:
-    download_path = '/downloads'
-    try:
-        files = os.listdir(download_path)
-        file_links = [
-            f'<li class="list-group-item"><a href="/downloads/{file}">{file}</a></li>'
-            for file in files
-        ]
-        files = (
-            ''.join(file_links)
-            if file_links
-            else '<li class="list-group-item">No files found.</li>'
+    # Download web app from GitHub if not already downloaded or force flag set
+    web_app_dir = '/downtify/frontend/dist'
+
+    app_state.api = FastAPI(
+        title='spotDL',
+        description='Download music from Spotify',
+        version=__version__,
+        dependencies=[Depends(get_current_state)],
+    )
+
+    app_state.api.include_router(router)
+
+    # Add the CORS middleware
+    app_state.api.add_middleware(
+        CORSMiddleware,
+        allow_origins=(
+            ALLOWED_ORIGINS + web_settings['allowed_origins']
+            if web_settings['allowed_origins']
+            else ALLOWED_ORIGINS
+        ),
+        allow_credentials=True,
+        allow_methods=['*'],
+        allow_headers=['*'],
+    )
+
+    # Add the static files
+    app_state.api.mount(
+        '/',
+        SPAStaticFiles(directory=web_app_dir, html=True),
+        name='static',
+    )
+    protocol = 'http'
+    config = Config(
+        app=app_state.api,
+        host=web_settings['host'],
+        port=web_settings['port'],
+        workers=1,
+        log_level=NAME_TO_LEVEL[downloader_settings['log_level']],
+        loop=app_state.loop,  # type: ignore
+    )
+    if web_settings['enable_tls']:
+        logger.info('Enabling TLS')
+        protocol = 'https'
+        config.ssl_certfile = web_settings['cert_file']
+        config.ssl_keyfile = web_settings['key_file']
+        config.ssl_ca_certs = web_settings['ca_file']
+
+    app_state.server = Server(config)
+
+    app_state.downloader_settings = downloader_settings
+
+    # Open the web browser
+    webbrowser.open(
+        f'{protocol}://{web_settings["host"]}:{web_settings["port"]}/'
+    )
+
+    if not web_settings['web_use_output_dir']:
+        logger.info(
+            'Files are stored in temporary directory '
+            'and will be deleted after the program exits '
+            'to save them to current directory permanently '
+            'enable the `web_use_output_dir` option '
         )
-    except Exception as e:
-        files = f'<li class="list-group-item text-danger">Error: {str(e)}</li>'
+    else:
+        logger.info(
+            'Files are stored in current directory '
+            'to save them to temporary directory '
+            'disable the `web_use_output_dir` option '
+        )
 
-    return files
+    logger.info('Starting web server \n')
 
-
-@app.get(
-    '/',
-    response_class=HTMLResponse,
-    tags=['Web UI'],
-    summary='Application web interface',
-)
-def index(request: Request):
-    return templates.TemplateResponse('index.html', {'request': request})
+    # Start the web server
+    app_state.loop.run_until_complete(app_state.server.serve())
 
 
-@app.post(
-    '/download-web/',
-    response_class=HTMLResponse,
-    tags=['Downloader'],
-    summary='Download one or more songs from a playlist via the WEB interface',
-)
-def download_web_ui(
-    spotdlc: Spotdl = Depends(get_spotdl),
-    url: str = Form(...),
-):
-    """
-    You can download a single song or all the songs in a playlist, album, etc.
+if __name__ == '__main__':
+    # Parse the arguments
+    arguments = parse_arguments()
 
-    - **url**: URL of the song or playlist to download.
-
-    ### Responses
-
-    - `200` - Download successful.
-    """
-    try:
-        songs = spotdlc.search([url])
-        spotdlc.download_songs(songs)
-    except Exception as error:
-        return f"""
-    <div>
-        <button type="submit" class="btn btn-lg btn-light fw-bold border-white button mx-auto" id="button-download" style="display: block;"><i class="fa-solid fa-down-long"></i></button>
-        <div class="alert alert-danger mx-auto" id="success-card" style="display: none;">
-            <strong>Error: {error}</strong>
-        </div>
-    </div>
-    """
-
-    return """
-    <div>
-        <button type="submit" class="btn btn-lg btn-light fw-bold border-white button mx-auto" id="button-download" style="display: block;"><i class="fa-solid fa-down-long"></i></button>
-        <div class="alert alert-success mx-auto success-card" id="success-card" style="display: none;">
-            <strong>Download completed!</strong>
-        </div>
-    </div>
-    """
-
-
-@app.post(
-    '/download/',
-    response_class=JSONResponse,
-    response_model=Message,
-    tags=['Downloader'],
-    summary='Download a song or songs from a playlist',
-)
-def download(
-    url: str,
-    spotdlc: Spotdl = Depends(get_spotdl),
-):
-    """
-    You can download a single song or all the songs in a playlist, album, etc.
-
-    - **url**: URL of the song or playlist to download.
-
-    ### Responses
-
-    - `200` - Download successful.
-    """
-    try:
-        songs = spotdlc.search([url])
-        spotdlc.download_songs(songs)
-        return {'message': 'Download sucessful'}
-    except Exception as error:  # pragma: no cover
-        return {'detail': error}
-
-
-@app.get(
-    '/list',
-    response_class=HTMLResponse,
-    tags=['Web UI'],
-    summary='List downloaded files',
-)
-def list_downloads_page(request: Request):
-    files = get_downloaded_files()
-    return templates.TemplateResponse(
-        'list.html', {'request': request, 'files': files}
+    # Create settings dicts
+    spotify_settings, downloader_settings, web_settings = create_settings(
+        arguments
     )
 
+    web_settings['web_use_output_dir'] = True
+    downloader_settings['output'] = (
+        os.getenv('DOWNLOAD_DIR') + '/{artists} - {title}.{output-ext}'
+    )
 
-@app.get(
-    '/list-items',
-    response_class=HTMLResponse,
-    tags=['Web UI'],
-    summary='Returns downloaded files to list',
-)
-def list_items_of_downloads_page():
-    files = get_downloaded_files()
-    return files
+    # Initialize spotify client
+    SpotifyClient.init(**spotify_settings)
+    spotify_client = SpotifyClient()
+
+    # Start web ui
+    web(web_settings, downloader_settings)

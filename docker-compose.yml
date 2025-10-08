@@ -2,11 +2,13 @@ services:
   downtify:
     container_name: downtify
     image: 'downtify:${TAG-latest}'
+    restart: unless-stopped
     build: .
     ports:
       - '8000:30321'
     volumes:
       - ./downloads/docker:/downloads
+      - ./frontend/dist:/downtify/frontend/dist:ro
     environment:
       - DOWNTIFY_PORT=30321  # Optional 
       - CLIENT_ID=5f573c9620494bae87890c0f08a60293  # Optional

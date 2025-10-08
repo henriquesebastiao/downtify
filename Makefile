@@ -1,6 +1,6 @@
 #!make
 
-DOWNTIFY_VERSION := 0.3.2
+DOWNTIFY_VERSION := 1.0.0
 TARGET := henriquesebastiao/downtify
 
 all: build latest
@@ -22,4 +22,7 @@ up:
 down:
 	docker compose down
 
-.PHONY: all build latest clean up down
+run:
+	python app.py web
+
+.PHONY: all build latest clean up down run
