@@ -14,8 +14,8 @@ module.exports = {
           secondary: '#ffffff', // unused?
           accent: '#ffffff', // unused
           neutral: '#4c4c4c', // navbar & footer
-          'base-100': '#252525', // input & content bg
-          'base-200': '#252525', // border & special content bg
+          'base-100': '#131518', // input & content bg
+          'base-200': '#131518', // border & special content bg
           'base-300': '#212529', // background
           info: '#3ABFF8',
           success: '#1AD05C',
