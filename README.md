@@ -23,7 +23,7 @@
   
 </div>
 
-https://github.com/user-attachments/assets/8840607a-8d89-4b90-84d4-b9a9b2137ad7
+https://github.com/user-attachments/assets/9711efe8-a960-4e1a-8d55-e0d1c20208f7
 
 ## Features ✨
 
@@ -59,6 +59,7 @@ services:
     volumes:
       - ./path/to/downloads:/downloads
     environment:
+      - DOWNTIFY_PORT=8000  # Optional
       - CLIENT_ID=5f573c9620494bae87890c0f08a60293  # Optional
       - CLIENT_SECRET=212476d9b0f3472eaa762d90b19b0ba8  # Optional
 ```
