@@ -22,6 +22,21 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          annotations: |
+            type=org.opencontainers.image.description, value=Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker.
+            type=org.opencontainers.image.url, value=https://github.com/henriquesebastiao/downtify
+            type=org.opencontainers.image.source, value=https://github.com/henriquesebastiao/downtify
+            type=org.opencontainers.image.version, value=${{ steps.version.outputs.VERSION }}
+            type=org.opencontainers.image.authors, value=Henrique Sebastião <contato@henriquesebastiao.com>
+            type=org.opencontainers.image.licenses, value=GPL-3.0
+            type=org.opencontainers.image.vendor, value=Henrique Sebastião
+            type=org.opencontainers.image.base.name, value=python:3.13-alpine
+            type=org.opencontainers.image.title, value=Downtify
     
       - name: Login to DockerHub
         uses: docker/login-action@v3
@@ -48,14 +63,5 @@ jobs:
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
           platforms: linux/amd64,linux/arm64
-          outputs: type=image,annotations-index=\
-            org.opencontainers.image.title=Downtify,\
-            org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker.",\
-            org.opencontainers.image.version=1.0.1,\
-            org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>",\
-            org.opencontainers.image.url="https://github.com/henriquesebastiao/downtify",\
-            org.opencontainers.image.source="https://github.com/henriquesebastiao/downtify",\
-            org.opencontainers.image.licenses=GPL-3.0,\
-            org.opencontainers.image.documentation="https://github.com/henriquesebastiao/downtify#readme",\
-            org.opencontainers.image.vendor="Henrique Sebastião",\
-            org.opencontainers.image.base.name="python:3.13-alpine"
+          build-args: |
+            DOCKER_METADATA_OUTPUT_JSON

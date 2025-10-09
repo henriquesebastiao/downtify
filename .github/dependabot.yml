@@ -7,16 +7,6 @@ updates:
     assignees:
       - "henriquesebastiao"
     target-branch: "dev"
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    assignees:
-      - "henriquesebastiao"
-    target-branch: "dev"
-    ignore:
-      - dependency-name: "python:*"
-        versions: [ ">=3.14-alpine" ]
   - package-ecosystem: "docker-compose"
     directory: "/"
     schedule:
