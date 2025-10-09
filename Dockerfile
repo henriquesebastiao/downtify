@@ -1,4 +1,4 @@
-FROM python:3.13-alpine AS builder
+FROM python:3.14-alpine AS builder
 
 WORKDIR /build
 
@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir --root-user-action ignore -r requirements.txt && 
     spotdl --download-ffmpeg && \
     cp /root/.config/spotdl/ffmpeg /build/ffmpeg
 
-FROM python:3.13-alpine
+FROM python:3.14-alpine
 
 LABEL maintainer="Henrique Sebastião <contato@henriquesebastiao.com>"
 LABEL version="1.0.1"
