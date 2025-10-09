@@ -2,11 +2,9 @@ import asyncio
 import logging
 import os
 import sys
-import webbrowser
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from spotdl._version import __version__
 from spotdl.types.options import DownloaderOptions, WebOptions
 from spotdl.utils.arguments import parse_arguments
 from spotdl.utils.config import create_settings
@@ -22,6 +20,7 @@ from spotdl.utils.web import (
 )
 from uvicorn import Config, Server
 
+__version__ = "1.0.0"
 logger = logging.getLogger(__name__)
 
 
@@ -62,8 +61,8 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
     web_app_dir = '/downtify/frontend/dist'
 
     app_state.api = FastAPI(
-        title='spotDL',
-        description='Download music from Spotify',
+        title='Downtify',
+        description='Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker.',
         version=__version__,
         dependencies=[Depends(get_current_state)],
     )
@@ -108,11 +107,6 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
     app_state.server = Server(config)
 
     app_state.downloader_settings = downloader_settings
-
-    # Open the web browser
-    webbrowser.open(
-        f'{protocol}://{web_settings["host"]}:{web_settings["port"]}/'
-    )
 
     if not web_settings['web_use_output_dir']:
         logger.info(
