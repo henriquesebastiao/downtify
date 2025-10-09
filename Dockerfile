@@ -2,11 +2,11 @@ FROM python:3.13-alpine AS builder
 
 WORKDIR /build
 
-COPY requirements-app.txt .
+COPY requirements.txt .
 
-RUN pip install --no-cache-dir --root-user-action ignore -r requirements-app.txt && \
+RUN pip install --no-cache-dir --root-user-action ignore -r requirements.txt && \
     spotdl --download-ffmpeg && \
-    cp /root/.spotdl/ffmpeg /build/ffmpeg
+    cp /root/.config/spotdl/ffmpeg /build/ffmpeg
 
 FROM python:3.13-alpine
 
@@ -43,8 +43,5 @@ ENV PATH="/home/downtify/.local/bin:${PATH}"
 
 VOLUME /downloads
 EXPOSE ${DOWNTIFY_PORT}
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:${DOWNTIFY_PORT}/ || exit 1
 
 ENTRYPOINT ["/sbin/tini", "-g", "--", "./entrypoint.sh"]
