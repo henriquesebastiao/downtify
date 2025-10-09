@@ -34,7 +34,7 @@ soundcloud-v2==1.6.0
 soupsieve==2.8
 spotdl==4.4.3
 spotipy==2.25.1
-starlette==0.27.0
+starlette==0.48.0
 syncedlyrics==1.0.1
 text-unidecode==1.3
 typing-extensions==4.15.0
