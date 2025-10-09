@@ -20,7 +20,7 @@ from spotdl.utils.web import (
 )
 from uvicorn import Config, Server
 
-__version__ = "1.0.0"
+__version__ = '1.0.0'
 logger = logging.getLogger(__name__)
 
 
@@ -88,7 +88,6 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
         SPAStaticFiles(directory=web_app_dir, html=True),
         name='static',
     )
-    protocol = 'http'
     config = Config(
         app=app_state.api,
         host=web_settings['host'],
@@ -99,7 +98,6 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
     )
     if web_settings['enable_tls']:
         logger.info('Enabling TLS')
-        protocol = 'https'
         config.ssl_certfile = web_settings['cert_file']
         config.ssl_keyfile = web_settings['key_file']
         config.ssl_ca_certs = web_settings['ca_file']
