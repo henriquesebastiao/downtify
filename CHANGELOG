@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.1](https://github.com/henriquesebastiao/downtify/tree/1.0.1) (2025-10-09)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.0...1.0.1)
+
+**Implemented enhancements:**
+
+- Optimizing Docker image [\#32](https://github.com/henriquesebastiao/downtify/pull/32) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Fixed bugs:**
+
+- Error AnyIO worker thread on Umbrel [\#26](https://github.com/henriquesebastiao/downtify/issues/26)
+- `AnyIO worker thread` error when trying to download music [\#9](https://github.com/henriquesebastiao/downtify/issues/9)
+
+**Closed issues:**
+
+- 🚀 Roadmap [\#12](https://github.com/henriquesebastiao/downtify/issues/12)
+
 ## [1.0.0](https://github.com/henriquesebastiao/downtify/tree/1.0.0) (2025-10-08)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.3.2...1.0.0)
@@ -16,11 +33,6 @@
 - ffmpeg error [\#24](https://github.com/henriquesebastiao/downtify/issues/24)
 - Error on UmbrelOS: application has reached a rate/request limit [\#23](https://github.com/henriquesebastiao/downtify/issues/23)
 - quality adjustment [\#16](https://github.com/henriquesebastiao/downtify/issues/16)
-
-**Fixed bugs:**
-
-- Error AnyIO worker thread on Umbrel [\#26](https://github.com/henriquesebastiao/downtify/issues/26)
-- `AnyIO worker thread` error when trying to download music [\#9](https://github.com/henriquesebastiao/downtify/issues/9)
 
 ## [0.3.2](https://github.com/henriquesebastiao/downtify/tree/0.3.2) (2025-03-31)
 
