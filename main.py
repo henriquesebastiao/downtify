@@ -20,7 +20,7 @@ from spotdl.utils.web import (
 )
 from uvicorn import Config, Server
 
-__version__ = '1.0.1'
+__version__ = '1.0.3'
 logger = logging.getLogger(__name__)
 
 
