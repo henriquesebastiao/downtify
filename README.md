@@ -58,13 +58,11 @@ services:
       - '8000:8000'
     volumes:
       - ./path/to/downloads:/downloads
-    environment:
-      - DOWNTIFY_PORT=8000  # Optional
-      - CLIENT_ID=5f573c9620494bae87890c0f08a60293  # Optional
-      - CLIENT_SECRET=212476d9b0f3472eaa762d90b19b0ba8  # Optional
 ```
 
 Change the value `./path/to/downloads` to the directory on your machine where you want the downloaded songs to be saved.
+
+Now you can access Downtify at http://localhost:8000/
 
 You can also set a custom port for the web interface via the `DOWNTIFY_PORT` environment variable in `docker-compose.yml`:
 
@@ -75,7 +73,47 @@ environment:
   - DOWNTIFY_PORT=30321 
 ```
 
-Downtify is also available in the app store of all major self-hosted home server OS like [Umbrel](https://apps.umbrel.com/app/downtify) and [CasaOS](https://casaos.zimaspace.com/).
+> [!TIP]
+> Downtify is also available in the app store of all major self-hosted home server OS like [Umbrel](https://apps.umbrel.com/app/downtify) and [CasaOS](https://casaos.zimaspace.com/).
+
+## Possible problems and solutions
+
+**Problem:** Downtify cannot download music, error: `application has reached a rate/request limit`.
+
+**Quick Fix: Use Your Own Client ID and Secret**
+
+To avoid these issues, we recommend using your own client ID and secret from Spotify. Here’s how:
+
+1. **Visit the Spotify Developer Dashboard**: Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
+2. **Log In**: Sign in or create a Spotify account.
+3. **Create a New App**: Click "Create an App" and fill in the details. (Set APIs used to Web API and Redirect URIs to `http://127.0.0.1:9900/` (or whatever you want to use))
+4. **Get Your Credentials**: Copy your client ID and secret.
+
+**Run Downtify passing your client ID and client secret as environment variables:**
+
+Docker CLI:
+
+```bash
+docker run -d -p 8000:8000 --name downtify -v /path/to/downloads:/downloads -e CLIENT_ID=your_client_id -e CLIENT_SECRET=your_client_secret ghcr.io/henriquesebastiao/downtify
+```
+
+Docker Compose:
+
+```yaml
+services:
+  downtify:
+    container_name: downtify
+    image: ghcr.io/henriquesebastiao/downtify:latest
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./path/to/downloads:/downloads
+    environment:
+      - CLIENT_ID=your_client_id
+      - CLIENT_SECRET=your_client_secret
+```
+
+Replace `your_client_id` and `your_client_secret` with the values you obtained from Spotify.
 
 ## License
 

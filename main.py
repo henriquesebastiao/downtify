@@ -2,11 +2,9 @@ import asyncio
 import logging
 import os
 import sys
-import webbrowser
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from spotdl._version import __version__
 from spotdl.types.options import DownloaderOptions, WebOptions
 from spotdl.utils.arguments import parse_arguments
 from spotdl.utils.config import create_settings
@@ -22,6 +20,7 @@ from spotdl.utils.web import (
 )
 from uvicorn import Config, Server
 
+__version__ = '1.0.1'
 logger = logging.getLogger(__name__)
 
 
@@ -62,8 +61,8 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
     web_app_dir = '/downtify/frontend/dist'
 
     app_state.api = FastAPI(
-        title='spotDL',
-        description='Download music from Spotify',
+        title='Downtify',
+        description='Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker.',
         version=__version__,
         dependencies=[Depends(get_current_state)],
     )
@@ -89,7 +88,6 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
         SPAStaticFiles(directory=web_app_dir, html=True),
         name='static',
     )
-    protocol = 'http'
     config = Config(
         app=app_state.api,
         host=web_settings['host'],
@@ -100,7 +98,6 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
     )
     if web_settings['enable_tls']:
         logger.info('Enabling TLS')
-        protocol = 'https'
         config.ssl_certfile = web_settings['cert_file']
         config.ssl_keyfile = web_settings['key_file']
         config.ssl_ca_certs = web_settings['ca_file']
@@ -108,11 +105,6 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
     app_state.server = Server(config)
 
     app_state.downloader_settings = downloader_settings
-
-    # Open the web browser
-    webbrowser.open(
-        f'{protocol}://{web_settings["host"]}:{web_settings["port"]}/'
-    )
 
     if not web_settings['web_use_output_dir']:
         logger.info(
@@ -145,7 +137,13 @@ if __name__ == '__main__':
 
     web_settings['web_use_output_dir'] = True
     downloader_settings['output'] = (
-        os.getenv('DOWNLOAD_DIR') + '/{artists} - {title}.{output-ext}'
+        '/downloads/{artists} - {title}.{output-ext}'
+    )
+    spotify_settings['client_id'] = os.getenv(
+        'CLIENT_ID', '5f573c9620494bae87890c0f08a60293'
+    )
+    spotify_settings['client_secret'] = os.getenv(
+        'CLIENT_SECRET', '212476d9b0f3472eaa762d90b19b0ba8'
     )
 
     # Initialize spotify client
