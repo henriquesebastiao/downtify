@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import sys
 import webbrowser
 
@@ -145,7 +144,7 @@ if __name__ == '__main__':
 
     web_settings['web_use_output_dir'] = True
     downloader_settings['output'] = (
-        os.getenv('DOWNLOAD_DIR') + '/{artists} - {title}.{output-ext}'
+        '/downloads/{artists} - {title}.{output-ext}'
     )
 
     # Initialize spotify client
