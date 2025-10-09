@@ -21,10 +21,3 @@ updates:
     assignees:
       - "henriquesebastiao"
     target-branch: "dev"
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    assignees:
-      - "henriquesebastiao"
-    target-branch: "dev"
