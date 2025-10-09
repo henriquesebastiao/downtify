@@ -120,7 +120,7 @@ wheels = [
 
 [[package]]
 name = "downtify"
-version = "1.0.0"
+version = "1.0.1"
 source = { virtual = "." }
 dependencies = [
     { name = "spotdl" },
