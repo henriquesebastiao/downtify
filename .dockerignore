@@ -12,4 +12,3 @@ __pycache__
 .mypy_cache
 uv.lock
 .vscode
-docs/
