@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.3](https://github.com/henriquesebastiao/downtify/tree/1.0.3) (2025-10-09)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.2...1.0.3)
+
+**Closed issues:**
+
+- Better label the Docker image [\#42](https://github.com/henriquesebastiao/downtify/issues/42)
+
+## [1.0.2](https://github.com/henriquesebastiao/downtify/tree/1.0.2) (2025-10-09)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.1...1.0.2)
+
+**Merged pull requests:**
+
+- Labeling Docker image and updating CI dependencies [\#43](https://github.com/henriquesebastiao/downtify/pull/43) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- build\(deps\): Bump astral-sh/setup-uv from 3 to 7 [\#36](https://github.com/henriquesebastiao/downtify/pull/36) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump python from 3.13-alpine to 3.14-alpine [\#35](https://github.com/henriquesebastiao/downtify/pull/35) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump actions/setup-python from 5 to 6 [\#34](https://github.com/henriquesebastiao/downtify/pull/34) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump actions/checkout from 4 to 5 [\#33](https://github.com/henriquesebastiao/downtify/pull/33) ([dependabot[bot]](https://github.com/apps/dependabot))
+
 ## [1.0.1](https://github.com/henriquesebastiao/downtify/tree/1.0.1) (2025-10-09)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.0...1.0.1)
@@ -27,7 +47,7 @@
 
 **Closed issues:**
 
-- Bug Report: FFmpeg conversion error on Downtify 0.3.2 [\#29](https://github.com/henriquesebastiao/downtify/issues/29)
+- \[Resolved\] Bug Report: FFmpeg conversion error on Downtify 0.3.2 [\#29](https://github.com/henriquesebastiao/downtify/issues/29)
 - ffmpeg erro v0.3.1 [\#28](https://github.com/henriquesebastiao/downtify/issues/28)
 - Error ffmpeg [\#25](https://github.com/henriquesebastiao/downtify/issues/25)
 - ffmpeg error [\#24](https://github.com/henriquesebastiao/downtify/issues/24)
