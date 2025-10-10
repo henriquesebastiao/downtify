@@ -33,3 +33,16 @@ jobs:
       
       - name: Run Ruff
         run: uv run ruff check .; uv run ruff check . --diff
+  
+  prettier:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prettify code
+        uses: creyD/prettier_action@v4.6
+        with:
+          # This part is also where you can pass other options, for example:
+          prettier_options: --write frontend/src/.

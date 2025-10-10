@@ -25,4 +25,7 @@ down:
 run:
 	python app.py web
 
-.PHONY: all build latest clean up down run
+format:
+	prettier --write frontend/src/.
+
+.PHONY: all build latest clean up down run format
