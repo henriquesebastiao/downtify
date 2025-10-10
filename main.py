@@ -4,8 +4,8 @@ import os
 import sys
 
 from fastapi import Depends, FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from spotdl.types.options import DownloaderOptions, WebOptions
 from spotdl.utils.arguments import parse_arguments
 from spotdl.utils.config import create_settings
