@@ -1,7 +1,7 @@
 <template>
   <div
-    class="navbar m-2 shadow-lg bg-neutral text-neutral-content rounded-box"
-    style="width: auto !important"
+    class="navbar m-2 absolute shadow-lg bg-neutral text-neutral-content rounded-box"
+    style="width: 99% !important"
   >
     <button
       class="px-2 mx-2 navbar-start"

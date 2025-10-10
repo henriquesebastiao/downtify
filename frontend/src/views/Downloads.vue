@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="min-h-screen">
     <Navbar />
     <div class="container mx-auto p-4">
       <h1 class="text-2xl mb-4">Downloads</h1>
