@@ -1,6 +1,6 @@
 <template>
   <div>
-    <Navbar />
+    <NavbarFront />
     <Hero />
   </div>
 </template>
@@ -8,11 +8,11 @@
 <script>
 import { ref, onMounted } from 'vue'
 import Hero from '/src/components/Hero.vue'
-import Navbar from '/src/components/Navbar.vue'
+import NavbarFront from '/src/components/NavbarFront.vue'
 import API from '../model/api'
 
 export default {
-  components: { Navbar, Hero },
+  components: { NavbarFront, Hero },
   setup() {
     onMounted(() => {
       window.scroll(0, 0)

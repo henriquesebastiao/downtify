@@ -12,9 +12,6 @@
       </div>
       <button class="text-lg font-bold">Downtify</button>
     </button>
-    <div class="hidden sm:flex px-2 mx-2 navbar-center w-96 space-x-4">
-      <SearchInput class="w-full" />
-    </div>
     <div class="navbar-end">
       <a
         class="btn btn-circle mx-2"
