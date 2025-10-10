@@ -16,6 +16,14 @@
       <SearchInput class="w-full" />
     </div>
     <div class="navbar-end">
+      <a
+        class="btn btn-circle mx-2"
+        :class="route.name === 'List' ? 'btn-primary' : ''"
+        @click="router.push({ name: 'List' })"
+        title="List"
+      >
+        <Icon icon="clarity:list-line" class="h-6 w-6" />
+      </a>
       <label class="btn btn-circle swap swap-rotate mx-2">
         <input
           type="checkbox"
@@ -48,7 +56,7 @@
         </div>
         <a
           class="btn btn-circle"
-          :class="route.name === 'Download' ? 'btn-primary' : 'btn-ghost'"
+          :class="pt.downloadQueue.value.length > 0 || route.name === 'Download' ? 'btn-primary' : 'btn-ghost'"
           @click="
             route.name === 'Download'
               ? router.push({
