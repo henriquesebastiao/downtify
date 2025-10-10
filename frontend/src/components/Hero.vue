@@ -1,29 +1,5 @@
 <template>
   <div class="hero min-h-screen">
-    <div v-if="true" class="flex justify-end absolute top-0 right-0">
-      <label class="btn btn-circle swap swap-rotate m-2">
-        <input
-          type="checkbox"
-          @change="
-            themeMgr.setTheme(
-              ($event.target as HTMLInputElement)?.checked ? 'light' : 'dark'
-            )
-          "
-          :checked="themeMgr.currentTheme.value === 'dark' ? false : true"
-        />
-        <Icon
-          icon="clarity:sun-line"
-          class="swap-on fill-current h-8 w-8 m-4"
-        />
-        <Icon
-          icon="clarity:moon-line"
-          class="swap-off fill-current h-8 w-8 m-4"
-        />
-      </label>
-      <label for="my-modal" class="btn btn-square modal-button m-2">
-        <Icon icon="clarity:settings-line" class="h-6 w-6" />
-      </label>
-    </div>
     <div class="block text-center justify-center hero-content">
       <div class="bg-cover bg-no-repeat bg-center">
         <img src="../assets/downtify.svg" class="mb-5 w-32 center" />
@@ -49,6 +25,7 @@ import { Icon } from '@iconify/vue'
 import SearchInput from '../components/SearchInput.vue'
 
 import { useBinaryThemeManager } from '../model/theme'
+import { ref } from 'vue'
 
 const themeMgr = useBinaryThemeManager({
   newLightAlias: 'downtify-light',
