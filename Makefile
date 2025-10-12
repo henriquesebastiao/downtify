@@ -23,9 +23,17 @@ down:
 	docker compose down
 
 run:
-	python app.py web
+	uv run python app.py web
 
 format:
+	uv run ruff format .; ruff check . --fix
 	prettier --write frontend/src/.
 
-.PHONY: all build latest clean up down run format
+lint:
+	prettier --check frontend/src/.
+	uv run ruff check .; ruff check . --diff
+
+export:
+	uv export --no-hashes --no-dev -o requirements.txt
+
+.PHONY: all build latest clean up down run format lint export
