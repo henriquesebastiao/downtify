@@ -2,6 +2,7 @@ import { createWebHistory, createRouter } from 'vue-router'
 import Home from '/src/views/Front.vue'
 import Search from '/src/views/Search.vue'
 import Download from '/src/views/Download.vue'
+import List from '/src/views/Downloads.vue'
 import config from '/src/config'
 
 const routes = [
@@ -19,6 +20,11 @@ const routes = [
     path: '/download',
     name: 'Download',
     component: Download,
+  },
+  {
+    path: '/list',
+    name: 'List',
+    component: List,
   },
 ]
 

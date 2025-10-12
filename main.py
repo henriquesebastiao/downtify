@@ -5,6 +5,7 @@ import sys
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from spotdl.types.options import DownloaderOptions, WebOptions
 from spotdl.utils.arguments import parse_arguments
 from spotdl.utils.config import create_settings
@@ -69,6 +70,38 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
 
     app_state.api.include_router(router)
 
+    @app_state.api.get('/list')
+    def list_downloads():
+        downloads_dir = '/downloads'
+        audio_exts = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
+        try:
+            entries = os.listdir(downloads_dir)
+        except FileNotFoundError:
+            return []
+
+        files: list[str] = []
+        for entry in entries:
+            full_path = os.path.join(downloads_dir, entry)
+            if os.path.isfile(full_path):
+                _, ext = os.path.splitext(entry)
+                if ext.lower() in audio_exts:
+                    files.append(entry)
+
+        files.sort()
+        return files
+
+    @app_state.api.delete('/delete')
+    def delete_download(file: str):
+        downloads_dir = '/downloads'
+        full_path = os.path.join(downloads_dir, file)
+        if not os.path.isfile(full_path):
+            return {'deleted': False, 'error': 'File not found'}
+        try:
+            os.remove(full_path)
+        except Exception as e:
+            return {'deleted': False, 'error': str(e)}
+        return {'deleted': True}
+
     # Add the CORS middleware
     app_state.api.add_middleware(
         CORSMiddleware,
@@ -82,7 +115,14 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
         allow_headers=['*'],
     )
 
-    # Add the static files
+    # Expose downloads as static files for direct links
+    app_state.api.mount(
+        '/downloads',
+        StaticFiles(directory='/downloads'),
+        name='downloads',
+    )
+
+    # Add the static files for the SPA (must be mounted after /downloads)
     app_state.api.mount(
         '/',
         SPAStaticFiles(directory=web_app_dir, html=True),

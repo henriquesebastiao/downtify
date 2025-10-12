@@ -67,13 +67,15 @@ function check_for_update() {
 }
 
 function downloadFileURL(fileName) {
-  return (
-    API.defaults.baseURL +
-    '/api/download/file?file=' +
-    encodeURIComponent(fileName) +
-    '&client_id=' +
-    encodeURIComponent(sessionID)
-  )
+  return `/downloads/${encodeURIComponent(fileName)}`
+}
+
+function listDownloads() {
+  return API.get('/list')
+}
+
+function deleteDownload(file) {
+  return API.delete('/delete', { params: { file } })
 }
 
 function getSettings() {
@@ -97,6 +99,8 @@ export default {
   open,
   download,
   downloadFileURL,
+  listDownloads,
+  deleteDownload,
   getSettings,
   setSettings,
   check_for_update,
