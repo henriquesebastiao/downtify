@@ -29,6 +29,8 @@ https://github.com/user-attachments/assets/9711efe8-a960-4e1a-8d55-e0d1c20208f7
 
 With Downtify you can download Spotify music containing album art, track names, album title and other metadata about the songs. Just copy the Spotify link, whether it's a single song, an album, etc. As soon as your downloads are complete you will be notified!
 
+See a demo of Downtify at: [https://downtify.henriquesebastiao.com](https://downtify.henriquesebastiao.com/)
+
 ## Music Sourcing
 
 Downtify uses [SpotDL](https://github.com/spotDL/spotify-downloader) to download music, which in turn uses YouTube as a download source. This method is used to avoid issues related to downloading music from Spotify.
