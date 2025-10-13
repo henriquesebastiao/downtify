@@ -13,6 +13,7 @@ fastapi==0.103.2
 h11==0.16.0
 idna==3.11
 jaconv==0.4.0
+load-dotenv==0.1.0
 markdown-it-py==4.0.0
 mdurl==0.1.2
 mutagen==1.47.0
@@ -22,6 +23,7 @@ pydantic-core==2.41.1
 pygments==2.19.2
 pykakasi==2.3.0
 python-dateutil==2.9.0.post0
+python-dotenv==1.1.1
 python-slugify==8.0.4
 pytube==15.0.0
 rapidfuzz==3.14.1

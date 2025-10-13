@@ -5,6 +5,7 @@ description = "Download your Spotify playlists and songs along with album art an
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "load-dotenv>=0.1.0",
     "spotdl>=4.4.3",
 ]
 

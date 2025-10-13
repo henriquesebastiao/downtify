@@ -23,7 +23,7 @@ down:
 	docker compose down
 
 run:
-	uv run python app.py web
+	uv run python main.py web
 
 format:
 	uv run ruff format .; ruff check . --fix

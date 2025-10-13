@@ -2,10 +2,12 @@ import asyncio
 import logging
 import os
 import sys
+from pathlib import Path
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from load_dotenv import load_dotenv
 from spotdl.types.options import DownloaderOptions, WebOptions
 from spotdl.utils.arguments import parse_arguments
 from spotdl.utils.config import create_settings
@@ -21,8 +23,12 @@ from spotdl.utils.web import (
 )
 from uvicorn import Config, Server
 
+load_dotenv()
+
 __version__ = '1.0.3'
 logger = logging.getLogger(__name__)
+DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
+WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
 
 
 def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
@@ -56,10 +62,10 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
     )
 
     downloader_settings['simple_tui'] = True
-    web_settings['web_gui_location'] = '/downtify/frontend/dist'
+    web_settings['web_gui_location'] = WEB_GUI_LOCATION
 
     # Download web app from GitHub if not already downloaded or force flag set
-    web_app_dir = '/downtify/frontend/dist'
+    web_app_dir = WEB_GUI_LOCATION
 
     app_state.api = FastAPI(
         title='Downtify',
@@ -72,7 +78,7 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
 
     @app_state.api.get('/list')
     def list_downloads():
-        downloads_dir = '/downloads'
+        downloads_dir = str(DOWNLOAD_DIR)
         audio_exts = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
         try:
             entries = os.listdir(downloads_dir)
@@ -92,7 +98,7 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
 
     @app_state.api.delete('/delete')
     def delete_download(file: str):
-        downloads_dir = '/downloads'
+        downloads_dir = str(DOWNLOAD_DIR)
         full_path = os.path.join(downloads_dir, file)
         if not os.path.isfile(full_path):
             return {'deleted': False, 'error': 'File not found'}
@@ -118,7 +124,7 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
     # Expose downloads as static files for direct links
     app_state.api.mount(
         '/downloads',
-        StaticFiles(directory='/downloads'),
+        StaticFiles(directory=str(DOWNLOAD_DIR)),
         name='downloads',
     )
 
@@ -176,8 +182,8 @@ if __name__ == '__main__':
     )
 
     web_settings['web_use_output_dir'] = True
-    downloader_settings['output'] = (
-        '/downloads/{artists} - {title}.{output-ext}'
+    downloader_settings['output'] = str(
+        DOWNLOAD_DIR / '{artists} - {title}.{output-ext}'
     )
     spotify_settings['client_id'] = os.getenv(
         'CLIENT_ID', '5f573c9620494bae87890c0f08a60293'
