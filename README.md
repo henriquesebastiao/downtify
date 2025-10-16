@@ -75,8 +75,13 @@ environment:
   - DOWNTIFY_PORT=30321 
 ```
 
-> [!TIP]
-> Downtify is also available in the app store of all major self-hosted home server OS like [Umbrel](https://apps.umbrel.com/app/downtify) and [CasaOS](https://casaos.zimaspace.com/).
+## Available in the app stores of home server OS
+
+Downtify is also available in the app store of self-hosted home server operating systems such as:
+
+- [Umbrel](https://apps.umbrel.com/app/downtify) ☂️
+- [CasaOS](https://casaos.zimaspace.com/)
+- [HomeDock OS](https://www.homedock.cloud/apps/downtify/)
 
 ## Possible problems and solutions
 
