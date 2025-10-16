@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.0](https://github.com/henriquesebastiao/downtify/tree/1.1.0) (2025-10-13)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.3...1.1.0)
+
+**Implemented enhancements:**
+
+- Set download directories and `web_gui_location` via environment variables [\#46](https://github.com/henriquesebastiao/downtify/issues/46)
+- Added the list file view [\#45](https://github.com/henriquesebastiao/downtify/pull/45) ([lapentad](https://github.com/lapentad))
+
 ## [1.0.3](https://github.com/henriquesebastiao/downtify/tree/1.0.3) (2025-10-09)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.2...1.0.3)

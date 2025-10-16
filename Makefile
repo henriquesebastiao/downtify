@@ -36,4 +36,8 @@ lint:
 export:
 	uv export --no-hashes --no-dev -o requirements.txt
 
-.PHONY: all build latest clean up down run format lint export
+changelog:
+	github_changelog_generator -u henriquesebastiao -p downtify -o CHANGELOG --no-verbose
+	@echo "Changelog generated at CHANGELOG"
+
+.PHONY: all build latest clean up down run format lint export changelog
