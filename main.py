@@ -8,7 +8,9 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
+from spotdl.download.downloader import Downloader
 from spotdl.types.options import DownloaderOptions, WebOptions
+from spotdl.types.song import Song
 from spotdl.utils.arguments import parse_arguments
 from spotdl.utils.config import create_settings
 from spotdl.utils.logging import NAME_TO_LEVEL
@@ -17,7 +19,6 @@ from spotdl.utils.web import (
     ALLOWED_ORIGINS,
     SPAStaticFiles,
     app_state,
-    download_url,
     fix_mime_types,
     get_current_state,
     router,
@@ -213,9 +214,29 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
             logger.info(
                 f'Downloading new track from monitored playlist: {track_url}'
             )
-            await app_state.loop.run_in_executor(None, download_url, track_url)
+
+            # Create a downloader instance with the app settings
+            downloader = Downloader(
+                settings=app_state.downloader_settings, loop=app_state.loop
+            )
+
+            # Convert URL to Song object
+            song = Song.from_url(track_url)
+
+            # Download the song
+            downloaded_song, path = await app_state.loop.run_in_executor(
+                None, downloader.download_song, song
+            )
+
+            if path:
+                logger.info(
+                    f'Successfully downloaded: {song.display_name} to {path}'
+                )
+            else:
+                logger.warning(f'Failed to download: {song.display_name}')
+
         except Exception as e:
-            logger.error(f'Error downloading new track: {e}')
+            logger.error(f'Error downloading new track {track_url}: {e}')
 
     # Start monitoring in background
     app_state.playlist_monitor.start_monitoring(
