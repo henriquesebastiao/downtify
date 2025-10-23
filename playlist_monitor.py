@@ -101,7 +101,7 @@ class PlaylistMonitor:
             logger.error(f'Error adding playlist to monitoring: {e}')
             return {
                 'success': False,
-                'message': f'Error adding playlist: {str(e)}',
+                'message': 'Failed to add playlist to monitoring',
             }
 
     def remove_playlist(self, playlist_url: str) -> dict[str, Any]:
