@@ -17,11 +17,14 @@ from spotdl.utils.web import (
     ALLOWED_ORIGINS,
     SPAStaticFiles,
     app_state,
+    download_url,
     fix_mime_types,
     get_current_state,
     router,
 )
 from uvicorn import Config, Server
+
+from playlist_monitor import PlaylistMonitor
 
 load_dotenv()
 
@@ -29,6 +32,10 @@ __version__ = '1.1.0'
 logger = logging.getLogger(__name__)
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
+MONITOR_INTERVAL = int(os.getenv('MONITOR_INTERVAL', '3600'))  # 1 hour
+MONITOR_STORAGE = Path(
+    os.getenv('MONITOR_STORAGE', '/downloads/.monitored_playlists.json')
+)
 
 
 def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
@@ -108,6 +115,48 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
             return {'deleted': False, 'error': str(e)}
         return {'deleted': True}
 
+    @app_state.api.post('/monitor/add')
+    def add_monitored_playlist(playlist_url: str):
+        """Add a playlist to monitoring."""
+        monitor = getattr(app_state, 'playlist_monitor', None)
+        if monitor is None:
+            return {
+                'success': False,
+                'message': 'Playlist monitoring not initialized',
+            }
+        return monitor.add_playlist(playlist_url)
+
+    @app_state.api.delete('/monitor/remove')
+    def remove_monitored_playlist(playlist_url: str):
+        """Remove a playlist from monitoring."""
+        monitor = getattr(app_state, 'playlist_monitor', None)
+        if monitor is None:
+            return {
+                'success': False,
+                'message': 'Playlist monitoring not initialized',
+            }
+        return monitor.remove_playlist(playlist_url)
+
+    @app_state.api.get('/monitor/list')
+    def list_monitored_playlists():
+        """List all monitored playlists."""
+        monitor = getattr(app_state, 'playlist_monitor', None)
+        if monitor is None:
+            return []
+        return monitor.list_playlists()
+
+    @app_state.api.post('/monitor/check')
+    async def check_monitored_playlists():
+        """Manually trigger a check of all monitored playlists."""
+        monitor = getattr(app_state, 'playlist_monitor', None)
+        if monitor is None:
+            return {
+                'success': False,
+                'message': 'Playlist monitoring not initialized',
+            }
+        results = await monitor.check_all_playlists()
+        return {'success': True, 'results': results}
+
     # Add the CORS middleware
     app_state.api.add_middleware(
         CORSMiddleware,
@@ -151,6 +200,27 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
     app_state.server = Server(config)
 
     app_state.downloader_settings = downloader_settings
+
+    # Initialize playlist monitor
+    app_state.playlist_monitor = PlaylistMonitor(
+        MONITOR_STORAGE, MONITOR_INTERVAL
+    )
+
+    # Define download callback for new tracks
+    async def download_new_track(track_url: str):
+        """Download a new track detected by the monitor."""
+        try:
+            logger.info(
+                f'Downloading new track from monitored playlist: {track_url}'
+            )
+            await app_state.loop.run_in_executor(None, download_url, track_url)
+        except Exception as e:
+            logger.error(f'Error downloading new track: {e}')
+
+    # Start monitoring in background
+    app_state.playlist_monitor.start_monitoring(
+        download_callback=download_new_track
+    )
 
     if not web_settings['web_use_output_dir']:
         logger.info(
