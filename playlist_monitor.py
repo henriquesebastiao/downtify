@@ -80,6 +80,7 @@ class PlaylistMonitor:
                 'name': playlist.name,
                 'url': playlist_url,
                 'track_urls': track_urls,
+                'downloaded_tracks': [],  # Tracks downloaded
                 'added_at': datetime.now().isoformat(),
                 'last_checked': None,
                 'total_tracks': len(track_urls),
@@ -96,6 +97,7 @@ class PlaylistMonitor:
                 'playlist_id': playlist_id,
                 'playlist_name': playlist.name,
                 'total_tracks': len(track_urls),
+                'track_urls': track_urls,  # For initial download
             }
         except Exception as e:
             logger.error(f'Error adding playlist to monitoring: {e}')
@@ -157,21 +159,29 @@ class PlaylistMonitor:
 
     def check_playlist_changes(self, playlist_id: str) -> dict[str, list[str]]:
         """
-        Check a playlist for changes.
+        Check a playlist for changes and undownloaded tracks.
 
         Args:
             playlist_id: Playlist ID to check
 
         Returns:
-            Dictionary with 'new_tracks' and 'removed_tracks' lists
+            Dictionary with 'new_tracks', 'removed_tracks',
+            and 'pending_downloads' lists
         """
         if playlist_id not in self.monitored_playlists:
-            return {'new_tracks': [], 'removed_tracks': []}
+            return {
+                'new_tracks': [],
+                'removed_tracks': [],
+                'pending_downloads': [],
+            }
 
         try:
             playlist_data = self.monitored_playlists[playlist_id]
             playlist_url = playlist_data['url']
             old_track_urls = set(playlist_data['track_urls'])
+
+            # Get list of already downloaded tracks
+            downloaded_tracks = set(playlist_data.get('downloaded_tracks', []))
 
             # Fetch current playlist
             playlist = Playlist.from_url(playlist_url)
@@ -180,6 +190,9 @@ class PlaylistMonitor:
             # Find changes
             new_tracks = list(current_track_urls - old_track_urls)
             removed_tracks = list(old_track_urls - current_track_urls)
+
+            # Find tracks that are in the playlist but not downloaded
+            pending_downloads = list(current_track_urls - downloaded_tracks)
 
             # Update stored data
             self.monitored_playlists[playlist_id]['track_urls'] = list(
@@ -199,33 +212,54 @@ class PlaylistMonitor:
                     f'{len(new_tracks)} new, {len(removed_tracks)} removed'
                 )
 
-            return {'new_tracks': new_tracks, 'removed_tracks': removed_tracks}
+            if pending_downloads:
+                logger.info(
+                    f'{len(pending_downloads)} tracks pending download '
+                    f'in {playlist_data["name"]}'
+                )
+
+            return {
+                'new_tracks': new_tracks,
+                'removed_tracks': removed_tracks,
+                'pending_downloads': pending_downloads,
+            }
         except Exception as e:
             logger.error(f'Error checking playlist {playlist_id}: {e}')
-            return {'new_tracks': [], 'removed_tracks': []}
+            return {
+                'new_tracks': [],
+                'removed_tracks': [],
+                'pending_downloads': [],
+            }
 
     async def check_all_playlists(self) -> dict[str, Any]:
         """
-        Check all monitored playlists for changes.
+        Check all monitored playlists for changes and pending downloads.
 
         Returns:
-            Dictionary with summary of changes
+            Dictionary with summary of changes and pending downloads
         """
         logger.info('Checking all monitored playlists...')
         results = {}
         total_new = 0
         total_removed = 0
+        total_pending = 0
 
         for playlist_id in list(self.monitored_playlists.keys()):
             changes = self.check_playlist_changes(playlist_id)
-            if changes['new_tracks'] or changes['removed_tracks']:
+            if (
+                changes['new_tracks']
+                or changes['removed_tracks']
+                or changes['pending_downloads']
+            ):
                 results[playlist_id] = changes
                 total_new += len(changes['new_tracks'])
                 total_removed += len(changes['removed_tracks'])
+                total_pending += len(changes['pending_downloads'])
 
         logger.info(
             f'Check complete: {total_new} new tracks, '
-            f'{total_removed} removed tracks across '
+            f'{total_removed} removed tracks, '
+            f'{total_pending} pending downloads across '
             f'{len(results)} playlists'
         )
         return {
@@ -233,6 +267,7 @@ class PlaylistMonitor:
             'playlists_changed': len(results),
             'total_new_tracks': total_new,
             'total_removed_tracks': total_removed,
+            'total_pending_downloads': total_pending,
             'changes': results,
         }
 
@@ -247,14 +282,32 @@ class PlaylistMonitor:
             f'Starting playlist monitoring loop '
             f'(interval: {self.check_interval}s)'
         )
+
+        # Run the first check immediately on startup
+        try:
+            logger.info('Running initial playlist check...')
+            results = await self.check_all_playlists()
+
+            # Download pending tracks (all tracks from new playlists)
+            if download_callback and results['total_pending_downloads'] > 0:
+                await self._process_pending_downloads(
+                    results['changes'], download_callback
+                )
+        except Exception as e:
+            logger.error(f'Error in initial playlist check: {e}')
+
+        # Continue with periodic checks
         while True:
             try:
                 await asyncio.sleep(self.check_interval)
                 results = await self.check_all_playlists()
 
-                # Trigger downloads for new tracks if callback provided
-                if download_callback and results['total_new_tracks'] > 0:
-                    await self._process_new_tracks(
+                # Download any pending tracks
+                if (
+                    download_callback
+                    and results['total_pending_downloads'] > 0
+                ):
+                    await self._process_pending_downloads(
                         results['changes'], download_callback
                     )
             except asyncio.CancelledError:
@@ -264,14 +317,32 @@ class PlaylistMonitor:
                 logger.error(f'Error in monitoring loop: {e}')
 
     @staticmethod
-    async def _process_new_tracks(changes, download_callback):
-        """Process new tracks and trigger downloads."""
+    async def _process_pending_downloads(changes, download_callback):
+        """Process pending downloads and trigger downloads."""
         for playlist_id, change_data in changes.items():
-            for track_url in change_data['new_tracks']:
+            for track_url in change_data.get('pending_downloads', []):
                 try:
-                    await download_callback(track_url)
+                    await download_callback(track_url, playlist_id)
                 except Exception as e:
                     logger.error(f'Error downloading track {track_url}: {e}')
+
+    def mark_track_downloaded(self, playlist_id: str, track_url: str):
+        """
+        Mark a track as downloaded for a specific playlist.
+
+        Args:
+            playlist_id: The playlist ID
+            track_url: The track URL that was downloaded
+        """
+        if playlist_id in self.monitored_playlists:
+            playlist = self.monitored_playlists[playlist_id]
+            if 'downloaded_tracks' not in playlist:
+                playlist['downloaded_tracks'] = []
+
+            if track_url not in playlist['downloaded_tracks']:
+                playlist['downloaded_tracks'].append(track_url)
+                self._save_monitored_playlists()
+                logger.debug(f'Marked track as downloaded: {track_url}')
 
     def start_monitoring(self, download_callback=None):
         """

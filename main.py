@@ -117,15 +117,27 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
         return {'deleted': True}
 
     @app_state.api.post('/monitor/add')
-    def add_monitored_playlist(playlist_url: str):
-        """Add a playlist to monitoring."""
+    async def add_monitored_playlist(playlist_url: str):
+        """Add a playlist to monitoring and trigger immediate check."""
         monitor = getattr(app_state, 'playlist_monitor', None)
         if monitor is None:
             return {
                 'success': False,
                 'message': 'Playlist monitoring not initialized',
             }
-        return monitor.add_playlist(playlist_url)
+
+        result = monitor.add_playlist(playlist_url)
+
+        # If successfully added, trigger an immediate check to start downloading
+        if result.get('success'):
+            try:
+                # Run check in background without waiting
+                asyncio.create_task(monitor.check_all_playlists())
+                logger.info('Triggered check for newly added playlist')
+            except Exception as e:
+                logger.error(f'Error triggering immediate check: {e}')
+
+        return result
 
     @app_state.api.delete('/monitor/remove')
     def remove_monitored_playlist(playlist_url: str):
@@ -208,7 +220,7 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
     )
 
     # Define download callback for new tracks
-    async def download_new_track(track_url: str):
+    async def download_new_track(track_url: str, playlist_id: str = None):
         """Download a new track detected by the monitor."""
         try:
             logger.info(
@@ -232,6 +244,11 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
                 logger.info(
                     f'Successfully downloaded: {song.display_name} to {path}'
                 )
+                # Mark the track as downloaded in the monitor
+                if playlist_id:
+                    app_state.playlist_monitor.mark_track_downloaded(
+                        playlist_id, track_url
+                    )
             else:
                 logger.warning(f'Failed to download: {song.display_name}')
 
