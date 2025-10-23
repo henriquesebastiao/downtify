@@ -4,6 +4,7 @@ import os
 import sys
 from pathlib import Path
 
+import requests
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -23,12 +24,18 @@ from spotdl.utils.web import (
 )
 from uvicorn import Config, Server
 
+from playlist_monitor import PlaylistMonitor
+
 load_dotenv()
 
 __version__ = '1.1.0'
 logger = logging.getLogger(__name__)
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
+MONITOR_INTERVAL = int(os.getenv('MONITOR_INTERVAL', '3600'))  # 1 hour
+MONITOR_STORAGE = Path(
+    os.getenv('MONITOR_STORAGE', '/downloads/.monitored_playlists.json')
+)
 
 
 def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
@@ -108,6 +115,60 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
             return {'deleted': False, 'error': str(e)}
         return {'deleted': True}
 
+    @app_state.api.post('/monitor/add')
+    async def add_monitored_playlist(playlist_url: str):
+        """Add a playlist to monitoring and trigger immediate check."""
+        monitor = getattr(app_state, 'playlist_monitor', None)
+        if monitor is None:
+            return {
+                'success': False,
+                'message': 'Playlist monitoring not initialized',
+            }
+
+        result = monitor.add_playlist(playlist_url)
+
+        # If successfully added, trigger an immediate check to start downloading
+        if result.get('success'):
+            try:
+                # Run check in background without waiting
+                asyncio.create_task(monitor.check_all_playlists())
+                logger.info('Triggered check for newly added playlist')
+            except Exception as e:
+                logger.error(f'Error triggering immediate check: {e}')
+
+        return result
+
+    @app_state.api.delete('/monitor/remove')
+    def remove_monitored_playlist(playlist_url: str):
+        """Remove a playlist from monitoring."""
+        monitor = getattr(app_state, 'playlist_monitor', None)
+        if monitor is None:
+            return {
+                'success': False,
+                'message': 'Playlist monitoring not initialized',
+            }
+        return monitor.remove_playlist(playlist_url)
+
+    @app_state.api.get('/monitor/list')
+    def list_monitored_playlists():
+        """List all monitored playlists."""
+        monitor = getattr(app_state, 'playlist_monitor', None)
+        if monitor is None:
+            return []
+        return monitor.list_playlists()
+
+    @app_state.api.post('/monitor/check')
+    async def check_monitored_playlists():
+        """Manually trigger a check of all monitored playlists."""
+        monitor = getattr(app_state, 'playlist_monitor', None)
+        if monitor is None:
+            return {
+                'success': False,
+                'message': 'Playlist monitoring not initialized',
+            }
+        results = await monitor.check_all_playlists()
+        return {'success': True, 'results': results}
+
     # Add the CORS middleware
     app_state.api.add_middleware(
         CORSMiddleware,
@@ -151,6 +212,66 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
     app_state.server = Server(config)
 
     app_state.downloader_settings = downloader_settings
+
+    # Initialize playlist monitor
+    app_state.playlist_monitor = PlaylistMonitor(
+        MONITOR_STORAGE, MONITOR_INTERVAL
+    )
+
+    # Define download callback for new tracks
+    async def download_new_track(track_url: str, playlist_id: str = None):
+        """Download a new track detected by the monitor."""
+        try:
+            logger.info(
+                f'Downloading new track from monitored playlist: {track_url}'
+            )
+
+            # Use the /api/download/url endpoint via HTTP request
+            # This ensures proper client session management
+            port = web_settings.get('port', 8000)
+            host = web_settings.get('host', '127.0.0.1')
+            base_url = f'http://{host}:{port}'
+
+            # Make HTTP request in executor to avoid blocking
+            def make_request():
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/download/url',
+                        params={
+                            'url': track_url,
+                            'client_id': 'playlist_monitor',
+                        },
+                        timeout=10,
+                    )
+                    return response.status_code, response.text
+                except Exception as e:
+                    return None, str(e)
+
+            status_code, response_text = await app_state.loop.run_in_executor(
+                None, make_request
+            )
+
+            HTTP_OK = 200
+            if status_code == HTTP_OK:
+                logger.info(f'Successfully queued download for: {track_url}')
+                # Mark the track as downloaded in the monitor
+                if playlist_id:
+                    app_state.playlist_monitor.mark_track_downloaded(
+                        playlist_id, track_url
+                    )
+            else:
+                logger.warning(
+                    f'Failed to download {track_url}: '
+                    f'{status_code} - {response_text}'
+                )
+
+        except Exception as e:
+            logger.error(f'Error downloading new track {track_url}: {e}')
+
+    # Start monitoring in background
+    app_state.playlist_monitor.start_monitoring(
+        download_callback=download_new_track
+    )
 
     if not web_settings['web_use_output_dir']:
         logger.info(

@@ -94,6 +94,27 @@ function ws_onerror(fn) {
   return (wsConnection.onerror = fn)
 }
 
+// Playlist monitoring functions
+function addMonitoredPlaylist(playlistUrl) {
+  return API.post('/monitor/add', null, {
+    params: { playlist_url: playlistUrl },
+  })
+}
+
+function removeMonitoredPlaylist(playlistUrl) {
+  return API.delete('/monitor/remove', {
+    params: { playlist_url: playlistUrl },
+  })
+}
+
+function listMonitoredPlaylists() {
+  return API.get('/monitor/list')
+}
+
+function checkMonitoredPlaylists() {
+  return API.post('/monitor/check')
+}
+
 export default {
   search,
   open,
@@ -107,4 +128,8 @@ export default {
   ws_onmessage,
   ws_onerror,
   getVersion,
+  addMonitoredPlaylist,
+  removeMonitoredPlaylist,
+  listMonitoredPlaylists,
+  checkMonitoredPlaylists,
 }

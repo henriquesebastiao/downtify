@@ -29,6 +29,15 @@ https://github.com/user-attachments/assets/9711efe8-a960-4e1a-8d55-e0d1c20208f7
 
 With Downtify you can download Spotify music containing album art, track names, album title and other metadata about the songs. Just copy the Spotify link, whether it's a single song, an album, etc. As soon as your downloads are complete you will be notified!
 
+### Playlist Monitoring
+
+Downtify now supports automatic monitoring of Spotify playlists to detect and download new songs:
+
+- **Automatic Detection**: Monitor playlists for new tracks added on Spotify
+- **Auto-Download**: Automatically download newly added tracks
+- **Scheduled Checks**: Periodic checks with configurable interval (default: 1 hour)
+- **Simple Management**: API endpoints to add, remove, and list monitored playlists
+
 See a demo of Downtify at: [https://downtify.henriquesebastiao.com](https://downtify.henriquesebastiao.com/)
 
 ## Music Sourcing
@@ -73,6 +82,36 @@ ports:
   - '8000:30321'
 environment:
   - DOWNTIFY_PORT=30321 
+```
+
+### Playlist Monitoring Configuration
+
+To configure playlist monitoring, you can set the following environment variables:
+
+```yaml
+environment:
+  - MONITOR_INTERVAL=3600  # Check interval in seconds (default: 1 hour)
+  - MONITOR_STORAGE=/downloads/.monitored_playlists.json  # Storage file path
+```
+
+**API Endpoints:**
+
+- `POST /monitor/add?playlist_url=<url>` - Add a playlist to monitoring
+- `DELETE /monitor/remove?playlist_url=<url>` - Remove a playlist from monitoring
+- `GET /monitor/list` - List all monitored playlists
+- `POST /monitor/check` - Manually trigger a check for all monitored playlists
+
+**Example Usage:**
+
+```bash
+# Add a playlist to monitoring
+curl -X POST "http://localhost:8000/monitor/add?playlist_url=https://open.spotify.com/playlist/YOUR_PLAYLIST_ID"
+
+# List monitored playlists
+curl "http://localhost:8000/monitor/list"
+
+# Remove a playlist from monitoring
+curl -X DELETE "http://localhost:8000/monitor/remove?playlist_url=https://open.spotify.com/playlist/YOUR_PLAYLIST_ID"
 ```
 
 ## Available in the app stores of home server OS

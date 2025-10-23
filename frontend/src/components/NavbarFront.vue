@@ -17,9 +17,17 @@
         class="btn btn-circle mx-2"
         :class="route.name === 'List' ? 'btn-primary' : ''"
         @click="router.push({ name: 'List' })"
-        title="List"
+        title="Downloads"
       >
         <Icon icon="clarity:list-line" class="h-6 w-6" />
+      </a>
+      <a
+        class="btn btn-circle mx-2"
+        :class="route.name === 'Monitor' ? 'btn-primary' : ''"
+        @click="router.push({ name: 'Monitor' })"
+        title="Playlist Monitor"
+      >
+        <Icon icon="clarity:sync-line" class="h-6 w-6" />
       </a>
       <label class="btn btn-circle swap swap-rotate mx-2">
         <input
