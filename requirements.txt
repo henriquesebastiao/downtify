@@ -9,7 +9,7 @@ click==8.3.0
 colorama==0.4.6 ; platform_system == 'Windows'
 dacite==1.9.2
 deprecated==1.2.18
-fastapi==0.103.2
+fastapi==0.120.1
 h11==0.16.0
 idna==3.11
 jaconv==0.4.0
