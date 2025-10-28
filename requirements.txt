@@ -45,6 +45,6 @@ unidecode==1.4.0
 urllib3==2.5.0
 uvicorn==0.23.2
 websockets==14.2
-wrapt==1.17.3
+wrapt==2.0.0
 yt-dlp==2025.10.22
 ytmusicapi==1.11.1
