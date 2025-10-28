@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.1](https://github.com/henriquesebastiao/downtify/tree/1.1.1) (2025-10-28)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.1.0...1.1.1)
+
+**Implemented enhancements:**
+
+- Updating dependencies, yt-dlp to version 2025.10.22 [\#53](https://github.com/henriquesebastiao/downtify/pull/53) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Fixed bugs:**
+
+- YT-DLP error when running via docker command [\#52](https://github.com/henriquesebastiao/downtify/issues/52)
+
+**Closed issues:**
+
+- Bug: client\_id parameter breaks Spotify URL \(500 Internal Server Error\) [\#50](https://github.com/henriquesebastiao/downtify/issues/50)
+
 ## [1.1.0](https://github.com/henriquesebastiao/downtify/tree/1.1.0) (2025-10-13)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.3...1.1.0)
