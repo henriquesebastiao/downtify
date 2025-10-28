@@ -1,7 +1,7 @@
 <h1 align="center">
   <a href="https://github.com/henriquesebastiao/downtify" target="_blank" rel="noopener noreferrer">
     <picture>
-      <img width="80" src="assets/icon-without-backgroud.svg">
+      <img width="80" src="https://github.com/user-attachments/assets/628d4334-7326-446e-9f2a-4d3ab4fc95c3">
     </picture>
   </a>
   <br>
