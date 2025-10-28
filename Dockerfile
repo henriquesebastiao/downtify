@@ -11,12 +11,12 @@ RUN pip install --no-cache-dir --root-user-action ignore -r requirements.txt && 
 FROM python:3.13-alpine
 
 LABEL maintainer="Henrique Sebastião <contato@henriquesebastiao.com>"
-LABEL version="1.1.0"
+LABEL version="1.1.1"
 LABEL description="Self-hosted Spotify downloader"
 
 LABEL org.opencontainers.image.title="Downtify" \
       org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker." \
-      org.opencontainers.image.version="1.1.0" \
+      org.opencontainers.image.version="1.1.1" \
       org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>" \
       org.opencontainers.image.url="https://github.com/henriquesebastiao/downtify" \
       org.opencontainers.image.source="https://github.com/henriquesebastiao/downtify" \

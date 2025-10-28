@@ -8,7 +8,7 @@
         <h1 class="mb-1 text-5xl font-bold text-base-content">Downtify</h1>
         <span
           class="mb-5 inline-flex items-center rounded-md bg-green-400/10 px-2 py-1 text-xs font-medium text-green-400 inset-ring inset-ring-green-500/20"
-          >v1.1.0</span
+          >v1.1.1</span
         >
         <p class="mb-5 text-base-content">
           Your music along with album art, lyrics and metadata.
