@@ -18,9 +18,3 @@ updates:
       interval: "daily"
     assignees:
       - "henriquesebastiao"
-  - package-ecosystem: "uv"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    assignees:
-      - "henriquesebastiao"
