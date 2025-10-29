@@ -3,7 +3,7 @@ name = "downtify"
 version = "1.1.1"
 description = "Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "load-dotenv>=0.1.0",
     "spotdl>=4.4.3",
