@@ -29,8 +29,6 @@ https://github.com/user-attachments/assets/9711efe8-a960-4e1a-8d55-e0d1c20208f7
 
 With Downtify you can download Spotify music containing album art, track names, album title and other metadata about the songs. Just copy the Spotify link, whether it's a single song, an album, etc. As soon as your downloads are complete you will be notified!
 
-See a demo of Downtify at: [https://downtify.henriquesebastiao.com](https://downtify.henriquesebastiao.com/)
-
 ## Music Sourcing
 
 Downtify uses [SpotDL](https://github.com/spotDL/spotify-downloader) to download music, which in turn uses YouTube as a download source. This method is used to avoid issues related to downloading music from Spotify.
@@ -85,9 +83,12 @@ Downtify is also available in the app store of self-hosted home server operating
 
 ## Possible problems and solutions
 
-**Problem:** Downtify cannot download music, error: `application has reached a rate/request limit`.
+**Problem:** Downtify cannot download music, error: `Your application has reached a rate/request limit. Retry will occur after: 86400 s`.
 
 **Quick Fix: Use Your Own Client ID and Secret**
+
+> [!WARNING]
+> This has been the most frequent problem for download errors with Downtify. Before opening a new issue, please check issue #69 and make sure that the step-by-step instructions described there do not resolve your problem.
 
 To avoid these issues, we recommend using your own client ID and secret from Spotify. Here’s how:
 

@@ -25,7 +25,7 @@ from uvicorn import Config, Server
 
 load_dotenv()
 
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 logger = logging.getLogger(__name__)
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
@@ -186,10 +186,10 @@ if __name__ == '__main__':
         DOWNLOAD_DIR / '{artists} - {title}.{output-ext}'
     )
     spotify_settings['client_id'] = os.getenv(
-        'CLIENT_ID', '5f573c9620494bae87890c0f08a60293'
+        'CLIENT_ID', '1888044a412444b7bc3de411c87df5ed'
     )
     spotify_settings['client_secret'] = os.getenv(
-        'CLIENT_SECRET', '212476d9b0f3472eaa762d90b19b0ba8'
+        'CLIENT_SECRET', 'd61543acc16a46e9a0b9e137796151d9'
     )
 
     # Initialize spotify client
