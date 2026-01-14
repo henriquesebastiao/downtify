@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.2](https://github.com/henriquesebastiao/downtify/tree/1.1.2) (2026-01-14)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.1.1...1.1.2)
+
+**Fixed bugs:**
+
+- ERROR: Your application has reached a rate/request limit [\#69](https://github.com/henriquesebastiao/downtify/issues/69)
+
+**Closed issues:**
+
+- Cannot download songs from web gui [\#66](https://github.com/henriquesebastiao/downtify/issues/66)
+- Failure downloading [\#62](https://github.com/henriquesebastiao/downtify/issues/62)
+- \[Error\] Can't download on CasaOS [\#61](https://github.com/henriquesebastiao/downtify/issues/61)
+
+**Merged pull requests:**
+
+- build\(deps\): Bump actions/checkout from 4 to 5 [\#55](https://github.com/henriquesebastiao/downtify/pull/55) ([dependabot[bot]](https://github.com/apps/dependabot))
+
 ## [1.1.1](https://github.com/henriquesebastiao/downtify/tree/1.1.1) (2025-10-28)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.1.0...1.1.1)
