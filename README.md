@@ -126,8 +126,8 @@ Replace `your_client_id` and `your_client_secret` with the values you obtained f
 
 **Issues related to this problem:**
 
-- #23
-- #69
+- https://github.com/henriquesebastiao/downtify/issues/23
+- https://github.com/henriquesebastiao/downtify/issues/69
 - https://github.com/spotDL/spotify-downloader/issues/2142
 - https://github.com/spotDL/spotify-downloader/issues/2585
 
