@@ -83,7 +83,8 @@ Downtify is also available in the app store of self-hosted home server operating
 
 ## Possible problems and solutions
 
-**Problem:** Downtify cannot download music, error: `Your application has reached a rate/request limit. Retry will occur after: 86400 s`.
+### 1. Downtify cannot download music, error:
+```Your application has reached a rate/request limit. Retry will occur after: 86400 s```
 
 **Quick Fix: Use Your Own Client ID and Secret**
 
@@ -122,6 +123,13 @@ services:
 ```
 
 Replace `your_client_id` and `your_client_secret` with the values you obtained from Spotify.
+
+**Issues related to this problem:**
+
+- #23
+- #69
+- https://github.com/spotDL/spotify-downloader/issues/2142
+- https://github.com/spotDL/spotify-downloader/issues/2585
 
 ## License
 
