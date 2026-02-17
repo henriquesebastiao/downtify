@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "axios": "^1.13.5",
-    "daisyui": "^5.5.14",
+    "daisyui": "^5.5.18",
     "uuid": "^13.0.0",
     "vue": "^3.5.28",
     "vue-router": "^5.0.0"
