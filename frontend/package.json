@@ -8,16 +8,16 @@
     "format": "prettier --write src/."
   },
   "dependencies": {
-    "axios": "^1.13.5",
-    "daisyui": "^5.5.18",
-    "uuid": "^13.0.0",
-    "vue": "^3.5.28",
-    "vue-router": "^5.0.2"
+    "axios": "^1.5.0",
+    "daisyui": "^4.7.2",
+    "uuid": "^9.0.0",
+    "vue": "^3.3.4",
+    "vue-router": "^4.2.4"
   },
   "devDependencies": {
-    "@iconify/vue": "^5.0.0",
-    "@vitejs/plugin-vue": "^6.0.4",
-    "@tailwindcss/postcss": "^4.1.18",
-    "vite": "^7.3.1"
+    "@iconify/vue": "^4.1.1",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "tailwindcss": "^3.3.3",
+    "vite": "^5.1.4"
   }
 }

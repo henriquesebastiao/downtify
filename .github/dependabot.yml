@@ -33,11 +33,3 @@ updates:
     target-branch: "dev"
     exclude-paths:
        - "requirements.txt"
-
-  - package-ecosystem: "npm"
-    directory: "/frontend/"
-    schedule:
-      interval: "daily"
-    assignees:
-      - "henriquesebastiao"
-    target-branch: "dev"
