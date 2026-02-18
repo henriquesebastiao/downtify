@@ -173,6 +173,16 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
 
 
 if __name__ == '__main__':
+    _KEY = b'\x4f\x2a\x91\x3c'
+
+    _ID_ENC = b',\x19\xf4\x05wI\xa8\t{L\xf3X{\x1c\xa8].\x1d\xa1\x0e|L\xa9^*\x1c\xf0X,L\xa6\x0c'  # Client ID
+    _SEC_ENC = b'}\x1a\xa4\tz\x1d\xf7_-\x18\xa5X{H\xa2\x0ewL\xa5\x0fyH\xf3\x0f.\x19\xf3Y+\x1b\xa2\x0c'  # Client Secret
+
+    def _decode(data: bytes, key: bytes) -> str:
+        return bytes(
+            b ^ key[i % len(key)] for i, b in enumerate(data)
+        ).decode()
+
     # Parse the arguments
     arguments = parse_arguments()
 
@@ -186,10 +196,10 @@ if __name__ == '__main__':
         DOWNLOAD_DIR / '{artists} - {title}.{output-ext}'
     )
     spotify_settings['client_id'] = os.getenv(
-        'CLIENT_ID', 'c3e98c954fbd469aa7023f8be6adcf70'
+        'CLIENT_ID', _decode(_ID_ENC, _KEY)
     )
     spotify_settings['client_secret'] = os.getenv(
-        'CLIENT_SECRET', '205557fcb24d4b328f436bb3a3bed130'
+        'CLIENT_SECRET', _decode(_SEC_ENC, _KEY)
     )
 
     # Initialize spotify client
