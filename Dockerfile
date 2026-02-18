@@ -2,6 +2,8 @@ FROM python:3.13-alpine AS builder
 
 WORKDIR /build
 
+RUN apk add --no-cache git
+
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --root-user-action ignore -r requirements.txt && \

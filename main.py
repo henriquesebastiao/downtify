@@ -186,10 +186,10 @@ if __name__ == '__main__':
         DOWNLOAD_DIR / '{artists} - {title}.{output-ext}'
     )
     spotify_settings['client_id'] = os.getenv(
-        'CLIENT_ID', '1888044a412444b7bc3de411c87df5ed'
+        'CLIENT_ID', 'c3e98c954fbd469aa7023f8be6adcf70'
     )
     spotify_settings['client_secret'] = os.getenv(
-        'CLIENT_SECRET', 'd61543acc16a46e9a0b9e137796151d9'
+        'CLIENT_SECRET', '205557fcb24d4b328f436bb3a3bed130'
     )
 
     # Initialize spotify client

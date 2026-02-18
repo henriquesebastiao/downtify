@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "load-dotenv>=0.1.0",
-    "spotdl>=4.4.3",
+    "spotdl",
 ]
 
 [dependency-groups]
@@ -16,6 +16,9 @@ dev = [
 
 [tool.uv]
 upgrade = true
+
+[tool.uv.sources]
+spotdl = { git = "https://github.com/nyekuuu/spotify-downloader.git" }
 
 [tool.ruff]
 line-length = 79

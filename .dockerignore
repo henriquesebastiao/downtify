@@ -4,11 +4,9 @@
 .python-version
 README.md
 .env
-pyproject.toml
 .ruff_cache/
 .git/
 __pycache__
 *.pyc
 .mypy_cache
-uv.lock
 .vscode

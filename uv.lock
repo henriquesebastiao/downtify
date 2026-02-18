@@ -188,7 +188,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "load-dotenv", specifier = ">=0.1.0" },
-    { name = "spotdl", specifier = ">=4.4.3" },
+    { name = "spotdl", git = "https://github.com/nyekuuu/spotify-downloader.git" },
 ]
 
 [package.metadata.requires-dev]
@@ -651,7 +651,7 @@ wheels = [
 [[package]]
 name = "spotdl"
 version = "4.4.3"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/nyekuuu/spotify-downloader.git#27f3a0e33174170cbeebbcc0738ceb41a9baf947" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "fastapi" },
@@ -671,10 +671,6 @@ dependencies = [
     { name = "websockets" },
     { name = "yt-dlp" },
     { name = "ytmusicapi" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9b/22/9b6ebf3caabc4e16c5fda4754b91b8afc6a3c40d34a0717686752cca38bc/spotdl-4.4.3.tar.gz", hash = "sha256:5fa79fb3a1ac91ce434bb1713734ed2ca9c419d2de859e4031676884f0fe9dc7", size = 3888424, upload-time = "2025-10-08T11:00:50.279Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/03/02/c868f88b57d2152e3675204ef83db445f4d1ee3b987514784c60f55ab1c2/spotdl-4.4.3-py3-none-any.whl", hash = "sha256:9afb8cbc4c8312d5370f97eb610bb569533eb93597d78ea60180219a4b16d0a2", size = 117458, upload-time = "2025-10-08T11:00:48.958Z" },
 ]
 
 [[package]]
