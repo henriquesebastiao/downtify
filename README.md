@@ -25,29 +25,31 @@
 
 https://github.com/user-attachments/assets/9711efe8-a960-4e1a-8d55-e0d1c20208f7
 
-## Features
+## ✨ Why Downtify?
 
-With Downtify you can download Spotify music containing album art, track names, album title and other metadata about the songs. Just copy the Spotify link, whether it's a single song, an album, etc. As soon as your downloads are complete you will be notified!
+Tired of clunky command-line tools to download your Spotify music? Downtify wraps the powerful [spotDL](https://github.com/spotDL/spotify-downloader) engine in a clean, intuitive web interface — so anyone can download their favorite tracks, albums, and playlists without touching a terminal.
 
-## Music Sourcing
+- 🎵 Download any Spotify link — songs, albums, playlists, podcasts
+- 🖼️ Embedded metadata — album art, track name, artist, album title and more
+- 🔔 Desktop notifications when your downloads are ready
+- 🐳 One Docker command to get started
+- 🏠 Available on popular home server platforms like Umbrel, CasaOS and HomeDock
 
-Downtify uses [SpotDL](https://github.com/spotDL/spotify-downloader) to download music, which in turn uses YouTube as a download source. This method is used to avoid issues related to downloading music from Spotify.
+## 🚀 Quick Start
 
-> [!WARNING]
-> Users are responsible for their actions and potential legal consequences. We do not support unauthorized downloading of copyrighted material and take no responsibility for user actions.
-
-## Usage
-
-### Docker CLI
-
-> [!IMPORTANT]
-> Make sure to change the path `/path/to/downloads` in the command below to the path on your computer where you want to view the downloaded songs.
+Get Downtify running in under a minute:
 
 ```bash
-docker run -d -p 8000:8000 --name downtify -v /path/to/downloads:/downloads ghcr.io/henriquesebastiao/downtify
+docker run -d -p 8000:8000 --name downtify \
+  -v /path/to/downloads:/downloads \
+  ghcr.io/henriquesebastiao/downtify
 ```
 
-### Docker Compose
+Then open http://localhost:8000, paste a Spotify link, and hit download. That's it.
+
+> 💡 Change /path/to/downloads to wherever you want your music saved.
+
+### 🐳 Docker Compose
 
 ```yaml
 services:
@@ -57,80 +59,41 @@ services:
     ports:
       - '8000:8000'
     volumes:
-      - ./path/to/downloads:/downloads
+      - ./downloads:/downloads
 ```
 
-Change the value `./path/to/downloads` to the directory on your machine where you want the downloaded songs to be saved.
-
-Now you can access Downtify at http://localhost:8000/
-
-You can also set a custom port for the web interface via the `DOWNTIFY_PORT` environment variable in `docker-compose.yml`:
+Custom port? Use the DOWNTIFY_PORT environment variable:
 
 ```yaml
 ports:
   - '8000:30321'
 environment:
-  - DOWNTIFY_PORT=30321 
+  - DOWNTIFY_PORT=30321
 ```
 
-## Available in the app stores of home server OS
+## 🏠 Available on Home Server Platforms
 
-Downtify is also available in the app store of self-hosted home server operating systems such as:
+Downtify is one click away on popular self-hosted home server operating systems:
 
-- [Umbrel](https://apps.umbrel.com/app/downtify) ☂️
-- [CasaOS](https://casaos.zimaspace.com/)
-- [HomeDock OS](https://www.homedock.cloud/apps/downtify/)
+| Platform | Link |
+| -------- | ---- |
+| ☂️ Umbrel | [Install on Umbrel](https://apps.umbrel.com/app/downtify) |
+| 🏠 CasaOS | [Install on CasaOS](https://casaos.zimaspace.com/) |
+| ⚓ HomeDock OS | [Install on HomeDock](https://www.homedock.cloud/apps/downtify/) |
 
-## Possible problems and solutions
+## 🎧 How It Works
 
-### 1. Downtify cannot download music, error:
-```Your application has reached a rate/request limit. Retry will occur after: 86400 s```
-
-**Quick Fix: Use Your Own Client ID and Secret**
+Downtify uses SpotDL under the hood, which sources audio from YouTube to avoid Spotify DRM restrictions. Spotify's API is used only to fetch track metadata — so your downloads are rich with accurate song info.
 
 > [!WARNING]
-> This has been the most frequent problem for download errors with Downtify. Before opening a new issue, please check issue #69 and make sure that the step-by-step instructions described there do not resolve your problem.
+> Users are responsible for their actions and any legal consequences. We do not support unauthorized downloading of copyrighted material and take no responsibility for user actions.
 
-To avoid these issues, we recommend using your own client ID and secret from Spotify. Here’s how:
+## 🤝 Contributing
 
-1. **Visit the Spotify Developer Dashboard**: Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
-2. **Log In**: Sign in or create a Spotify account.
-3. **Create a New App**: Click "Create an App" and fill in the details. (Set APIs used to Web API and Redirect URIs to `http://127.0.0.1:9900/` (or whatever you want to use))
-4. **Get Your Credentials**: Copy your client ID and secret.
+Contributions, issues and feature requests are welcome! Feel free to check the [issues page](https://github.com/henriquesebastiao/downtify/issues).
 
-**Run Downtify passing your client ID and client secret as environment variables:**
+If Downtify has been useful to you, consider leaving a ⭐ — it helps the project grow!
 
-Docker CLI:
+## 📄 License
 
-```bash
-docker run -d -p 8000:8000 --name downtify -v /path/to/downloads:/downloads -e CLIENT_ID=your_client_id -e CLIENT_SECRET=your_client_secret ghcr.io/henriquesebastiao/downtify
-```
-
-Docker Compose:
-
-```yaml
-services:
-  downtify:
-    container_name: downtify
-    image: ghcr.io/henriquesebastiao/downtify:latest
-    ports:
-      - '8000:8000'
-    volumes:
-      - ./path/to/downloads:/downloads
-    environment:
-      - CLIENT_ID=your_client_id
-      - CLIENT_SECRET=your_client_secret
-```
-
-Replace `your_client_id` and `your_client_secret` with the values you obtained from Spotify.
-
-**Issues related to this problem:**
-
-- https://github.com/henriquesebastiao/downtify/issues/23
-- https://github.com/henriquesebastiao/downtify/issues/69
-- https://github.com/spotDL/spotify-downloader/issues/2142
-- https://github.com/spotDL/spotify-downloader/issues/2585
-
-## License
-
-This project is licensed under the [GPL-3.0](/LICENSE) License.
+Licensed under the [GPL-3.0](https://github.com/henriquesebastiao/downtify?tab=GPL-3.0-1-ov-file#readme) License.
