@@ -10,7 +10,7 @@
       <div class="bg-cover bg-no-repeat bg-center">
         <img src="../assets/downtify.svg" class="py-2 pr-2 w-10 center" />
       </div>
-      <button class="text-lg font-bold">Downtify</button>
+      <span class="text-lg font-bold">Downtify</span>
     </button>
     <div class="navbar-end">
       <a
