@@ -25,7 +25,7 @@ from uvicorn import Config, Server
 
 load_dotenv()
 
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 logger = logging.getLogger(__name__)
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
