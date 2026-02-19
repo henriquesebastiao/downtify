@@ -175,8 +175,8 @@ def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
 if __name__ == '__main__':
     _KEY = b'\x4f\x2a\x91\x3c'
 
-    _ID_ENC = b',\x19\xf4\x05wI\xa8\t{L\xf3X{\x1c\xa8].\x1d\xa1\x0e|L\xa9^*\x1c\xf0X,L\xa6\x0c'  # Client ID
-    _SEC_ENC = b'}\x1a\xa4\tz\x1d\xf7_-\x18\xa5X{H\xa2\x0ewL\xa5\x0fyH\xf3\x0f.\x19\xf3Y+\x1b\xa2\x0c'  # Client Secret
+    _ID_ENC = b'}\x1c\xa2\r\x7f\x13\xf4_z\x1a\xa5Z{N\xf5\x0fvL\xf4ZyN\xa8Y|N\xa3^|\x18\xa7]'  # Client ID
+    _SEC_ENC = b'}\x1a\xf0\x0e}\x1b\xf5_)\x1f\xa4^{\x13\xf0^-L\xf2Zw\x1e\xa7Y}N\xf7\x0f}\x1a\xa3\n'  # Client Secret
 
     def _decode(data: bytes, key: bytes) -> str:
         return bytes(
