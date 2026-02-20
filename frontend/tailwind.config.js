@@ -13,10 +13,10 @@ module.exports = {
           'primary-content': '#ffffff', // font color on primary
           secondary: '#ffffff', // unused?
           accent: '#ffffff', // unused
-          neutral: '#4c4c4c', // navbar & footer
-          'base-100': '#131518', // input & content bg
-          'base-200': '#131518', // border & special content bg
-          'base-300': '#212529', // background
+          neutral: '#121212', // navbar & footer
+          'base-100': '#1F1F1F', // input & content bg
+          'base-200': '#1F1F1F', // border & special content bg
+          'base-300': '#000000', // background
           info: '#3ABFF8',
           success: '#1AD05C',
           warning: '#FBBD23',
