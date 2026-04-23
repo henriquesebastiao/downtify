@@ -1,109 +1,62 @@
 <template>
-  <div
-    class="navbar m-2 absolute shadow-lg bg-neutral text-neutral-content rounded-box"
-    style="width: 99% !important"
-  >
-    <button
-      class="px-2 mx-2 navbar-start"
-      @click="router.push({ name: 'Home' })"
+  <header class="absolute top-0 inset-x-0 z-30">
+    <div
+      class="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6"
     >
-      <div class="bg-cover bg-no-repeat bg-center">
-        <img src="../assets/downtify.svg" class="py-2 pr-2 w-10 center" />
+      <div class="flex items-center gap-2">
+        <img
+          src="../assets/downtify.svg"
+          class="h-8 w-8 drop-shadow-[0_0_8px_rgba(26,208,92,0.55)]"
+        />
+        <span class="text-lg font-bold tracking-tight">Downtify</span>
       </div>
-      <span class="text-lg font-bold">Downtify</span>
-    </button>
-    <div class="navbar-end">
-      <a
-        class="btn btn-circle mx-2"
-        :class="route.name === 'List' ? 'btn-primary' : ''"
-        @click="router.push({ name: 'List' })"
-        title="List"
-      >
-        <Icon icon="clarity:list-line" class="h-6 w-6" />
-      </a>
-      <label class="btn btn-circle swap swap-rotate mx-2">
-        <input
-          type="checkbox"
-          @change="
+      <div class="ml-auto flex items-center gap-1 sm:gap-2">
+        <button
+          class="icon-btn"
+          @click="router.push({ name: 'List' })"
+          title="Library"
+        >
+          <Icon icon="clarity:library-line" class="h-5 w-5" />
+        </button>
+        <button
+          class="icon-btn"
+          @click="
             themeMgr.setTheme(
-              ($event.target as HTMLInputElement)?.checked ? 'light' : 'dark'
+              themeMgr.currentTheme.value === 'dark' ? 'light' : 'dark'
             )
           "
-          :checked="themeMgr.currentTheme.value === 'dark' ? false : true"
-        />
-        <Icon
-          icon="clarity:sun-line"
-          class="swap-on fill-current h-8 w-8 m-4"
-        />
-        <Icon
-          icon="clarity:moon-line"
-          class="swap-off fill-current h-8 w-8 m-4"
-        />
-      </label>
-      <label for="my-modal" class="btn btn-circle modal-button mx-2">
-        <Icon icon="clarity:settings-line" class="h-6 w-6" />
-      </label>
-      <div class="indicator mx-2">
-        <div
-          v-if="pt.downloadQueue.value.length > 0"
-          class="indicator-item indicator-top indicator-end badge badge-secondary"
-          style="top: -5px; right: -5px"
-        >
-          {{ pt.downloadQueue.value.length }}
-        </div>
-        <a
-          class="btn btn-circle"
-          :class="
-            pt.downloadQueue.value.length > 0 || route.name === 'Download'
-              ? 'btn-primary'
-              : 'btn-ghost'
-          "
-          @click="
-            route.name === 'Download'
-              ? router.push({
-                  name: 'Search',
-                  params: { query: sm.searchTerm.value },
-                })
-              : router.push({ name: 'Download' })
+          :title="
+            themeMgr.currentTheme.value === 'dark'
+              ? 'Switch to light'
+              : 'Switch to dark'
           "
         >
-          <Icon icon="clarity:download-cloud-line" class="h-6 w-6" />
-        </a>
+          <Icon
+            v-if="themeMgr.currentTheme.value === 'dark'"
+            icon="clarity:sun-line"
+            class="h-5 w-5"
+          />
+          <Icon v-else icon="clarity:moon-line" class="h-5 w-5" />
+        </button>
+        <label
+          for="settings-modal"
+          class="icon-btn cursor-pointer"
+          title="Settings"
+        >
+          <Icon icon="clarity:cog-line" class="h-5 w-5" />
+        </label>
       </div>
     </div>
-  </div>
-  <div class="sm:hidden px-2 mx-2">
-    <SearchInput class="w-full" />
-  </div>
+  </header>
 </template>
 
-<script setup lang="ts">
-import router from '../router'
-import { useRoute } from 'vue-router'
-
-import { useBinaryThemeManager } from '../model/theme'
-import { useProgressTracker, useDownloadManager } from '../model/download'
-import { useSearchManager } from '../model/search'
-
+<script setup>
 import { Icon } from '@iconify/vue'
-import SearchInput from '../components/SearchInput.vue'
-
-const pt = useProgressTracker()
-const dm = useDownloadManager()
-const sm = useSearchManager()
-const route = useRoute()
+import router from '../router'
+import { useBinaryThemeManager } from '../model/theme'
 
 const themeMgr = useBinaryThemeManager({
   newLightAlias: 'downtify-light',
   newDarkAlias: 'downtify-dark',
 })
 </script>
-
-<style scoped>
-.center {
-  text-align: center;
-
-  margin-left: auto;
-  margin-right: auto;
-}
-</style>

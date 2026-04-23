@@ -1,47 +1,130 @@
 module.exports = {
   mode: 'jit',
   content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        downtify: {
+          50: '#e6fbf0',
+          100: '#c5f4d8',
+          200: '#88e9b1',
+          300: '#48dd87',
+          400: '#1ad05c',
+          500: '#15b150',
+          600: '#10913f',
+          700: '#0d6f31',
+          800: '#0a4d22',
+          900: '#062c14',
+        },
+      },
+      fontFamily: {
+        sans: [
+          'Inter',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
+        ],
+      },
+      boxShadow: {
+        'glow-sm': '0 0 24px rgba(26, 208, 92, 0.18)',
+        glow: '0 0 36px rgba(26, 208, 92, 0.30)',
+        'glow-lg': '0 0 60px rgba(26, 208, 92, 0.45)',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.35s ease-out',
+        'slide-up': 'slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
+        'pulse-soft': 'pulseSoft 2.4s ease-in-out infinite',
+        eq1: 'eq 1.05s ease-in-out infinite',
+        eq2: 'eq 0.95s ease-in-out infinite -0.2s',
+        eq3: 'eq 0.85s ease-in-out infinite -0.4s',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 },
+        },
+        slideUp: {
+          '0%': { opacity: 0, transform: 'translateY(12px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' },
+        },
+        pulseSoft: {
+          '0%, 100%': { opacity: 0.7 },
+          '50%': { opacity: 1 },
+        },
+        eq: {
+          '0%, 100%': { transform: 'scaleY(0.4)' },
+          '50%': { transform: 'scaleY(1)' },
+        },
+      },
+    },
+  },
   daisyui: {
     themes: [
-      'light',
-      'dark',
-      'forest',
       {
         'downtify-dark': {
-          // ...require('daisyui/src/colors/themes')['[data-theme=forest]'],
-          primary: '#1AD05C', // downtify green
-          'primary-content': '#ffffff', // font color on primary
-          secondary: '#ffffff', // unused?
-          accent: '#ffffff', // unused
-          neutral: '#4c4c4c', // navbar & footer
-          'base-100': '#131518', // input & content bg
-          'base-200': '#131518', // border & special content bg
-          'base-300': '#212529', // background
+          primary: '#1AD05C',
+          'primary-focus': '#15b150',
+          'primary-content': '#001b0a',
+          secondary: '#9ca3af',
+          'secondary-content': '#0a0a0a',
+          accent: '#1AD05C',
+          'accent-content': '#001b0a',
+          neutral: '#121212',
+          'neutral-content': '#e5e7eb',
+          'base-100': '#181818',
+          'base-200': '#111111',
+          'base-300': '#000000',
+          'base-content': '#f4f4f5',
           info: '#3ABFF8',
           success: '#1AD05C',
           warning: '#FBBD23',
           error: '#F87272',
-          '--rounded-btn': '1.9rem',
+          '--rounded-box': '1.25rem',
+          '--rounded-btn': '9999px',
+          '--rounded-badge': '9999px',
+          '--btn-text-case': 'none',
+          '--animation-btn': '0.25s',
+          '--animation-input': '0.2s',
+          '--border-btn': '1px',
+          '--tab-radius': '0.75rem',
         },
       },
       {
         'downtify-light': {
           primary: '#1AD05C',
+          'primary-focus': '#15b150',
           'primary-content': '#ffffff',
           secondary: '#5d5d5d',
+          'secondary-content': '#ffffff',
           accent: '#16ce57',
-          neutral: '#4c4c4c',
+          'accent-content': '#ffffff',
+          neutral: '#1f1f1f',
+          'neutral-content': '#f4f4f5',
           'base-100': '#ffffff',
-          'base-200': '#ffffff',
-          'base-300': '#ffffff',
+          'base-200': '#f5f6f7',
+          'base-300': '#eaecef',
+          'base-content': '#0f172a',
           info: '#3ABFF8',
           success: '#1AD05C',
           warning: '#FBBD23',
           error: '#F87272',
-          '--rounded-btn': '1.9rem',
+          '--rounded-box': '1.25rem',
+          '--rounded-btn': '9999px',
+          '--rounded-badge': '9999px',
+          '--btn-text-case': 'none',
+          '--animation-btn': '0.25s',
+          '--animation-input': '0.2s',
+          '--border-btn': '1px',
+          '--tab-radius': '0.75rem',
         },
       },
     ],
+    darkTheme: 'downtify-dark',
   },
   plugins: [require('daisyui')],
 }

@@ -1,210 +1,181 @@
+"""Downtify entry point.
+
+Boots the FastAPI app that powers the web UI. The previous incarnation
+relied on the Spotify Web API (via ``spotdl`` + ``spotipy``); since that
+path now requires a Spotify Premium account, this version resolves
+metadata directly from the public ``open.spotify.com/embed`` endpoints
+and pulls the audio from YouTube via ``yt-dlp``.
+"""
+
+from __future__ import annotations
+
+import argparse
 import asyncio
 import logging
+import mimetypes
 import os
 import sys
 from pathlib import Path
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
-from spotdl.types.options import DownloaderOptions, WebOptions
-from spotdl.utils.arguments import parse_arguments
-from spotdl.utils.config import create_settings
-from spotdl.utils.logging import NAME_TO_LEVEL
-from spotdl.utils.spotify import SpotifyClient
-from spotdl.utils.web import (
-    ALLOWED_ORIGINS,
-    SPAStaticFiles,
-    app_state,
-    fix_mime_types,
-    get_current_state,
-    router,
-)
 from uvicorn import Config, Server
+
+from downtify import __version__, api
+from downtify.downloader import Downloader
 
 load_dotenv()
 
-__version__ = '1.1.4'
 logger = logging.getLogger(__name__)
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
+DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
+DEFAULT_PORT = int(os.getenv('DOWNTIFY_PORT', os.getenv('PORT', '8000')))
 
 
-def web(web_settings: WebOptions, downloader_settings: DownloaderOptions):
-    """
-    Run the web server.
+class SPAStaticFiles(StaticFiles):
+    """Serve ``index.html`` for unknown paths so SPA routing works."""
 
-    ### Arguments
-    - web_settings: Web server settings.
-    - downloader_settings: Downloader settings.
-    """
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except Exception:
+            return await super().get_response('index.html', scope)
 
-    # Apply the fix for mime types
-    fix_mime_types()
 
-    # Set up the app loggers
-    uvicorn_logger = logging.getLogger('uvicorn')
-    uvicorn_logger.propagate = False
+def _fix_mime_types() -> None:
+    mimetypes.add_type('application/javascript', '.js')
+    mimetypes.add_type('application/javascript', '.mjs')
+    mimetypes.add_type('text/css', '.css')
 
-    spotipy_logger = logging.getLogger('spotipy')
-    spotipy_logger.setLevel(logging.NOTSET)
 
-    # Initialize the web server settings
-    app_state.web_settings = web_settings
-    app_state.logger = uvicorn_logger
+def build_app() -> FastAPI:
+    DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Create the event loop
-    app_state.loop = (
-        asyncio.new_event_loop()
-        if sys.platform != 'win32'
-        else asyncio.ProactorEventLoop()  # type: ignore
-    )
-
-    downloader_settings['simple_tui'] = True
-    web_settings['web_gui_location'] = WEB_GUI_LOCATION
-
-    # Download web app from GitHub if not already downloaded or force flag set
-    web_app_dir = WEB_GUI_LOCATION
-
-    app_state.api = FastAPI(
+    app = FastAPI(
         title='Downtify',
-        description='Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker.',
-        version=__version__,
-        dependencies=[Depends(get_current_state)],
-    )
-
-    app_state.api.include_router(router)
-
-    @app_state.api.get('/list')
-    def list_downloads():
-        downloads_dir = str(DOWNLOAD_DIR)
-        audio_exts = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
-        try:
-            entries = os.listdir(downloads_dir)
-        except FileNotFoundError:
-            return []
-
-        files: list[str] = []
-        for entry in entries:
-            full_path = os.path.join(downloads_dir, entry)
-            if os.path.isfile(full_path):
-                _, ext = os.path.splitext(entry)
-                if ext.lower() in audio_exts:
-                    files.append(entry)
-
-        files.sort()
-        return files
-
-    @app_state.api.delete('/delete')
-    def delete_download(file: str):
-        downloads_dir = str(DOWNLOAD_DIR)
-        full_path = os.path.join(downloads_dir, file)
-        if not os.path.isfile(full_path):
-            return {'deleted': False, 'error': 'File not found'}
-        try:
-            os.remove(full_path)
-        except Exception as e:
-            return {'deleted': False, 'error': str(e)}
-        return {'deleted': True}
-
-    # Add the CORS middleware
-    app_state.api.add_middleware(
-        CORSMiddleware,
-        allow_origins=(
-            ALLOWED_ORIGINS + web_settings['allowed_origins']
-            if web_settings['allowed_origins']
-            else ALLOWED_ORIGINS
+        description=(
+            'Download your Spotify playlists and songs along with album '
+            'art and metadata in a self-hosted way via Docker.'
         ),
+        version=__version__,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=['*'],
         allow_credentials=True,
         allow_methods=['*'],
         allow_headers=['*'],
     )
 
-    # Expose downloads as static files for direct links
-    app_state.api.mount(
+    api.state.version = __version__
+    api.state.downloader = Downloader(
+        DOWNLOAD_DIR,
+        audio_format=api.state.settings['format'],
+        audio_bitrate=api.state.settings.get('bitrate', '320'),
+        output_template=api.state.settings['output'].replace(
+            '.{output-ext}', ''
+        ),
+    )
+    app.include_router(api.router)
+
+    @app.on_event('startup')
+    async def _capture_loop() -> None:
+        api.state.loop = asyncio.get_running_loop()
+
+    @app.get('/list')
+    def list_downloads() -> list[str]:
+        audio_exts = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
+        try:
+            entries = os.listdir(str(DOWNLOAD_DIR))
+        except FileNotFoundError:
+            return []
+        files: list[str] = []
+        for entry in entries:
+            full = os.path.join(str(DOWNLOAD_DIR), entry)
+            if (
+                os.path.isfile(full)
+                and os.path.splitext(entry)[1].lower() in audio_exts
+            ):
+                files.append(entry)
+        files.sort()
+        return files
+
+    @app.delete('/delete')
+    def delete_download(file: str) -> dict:
+        full = os.path.join(str(DOWNLOAD_DIR), file)
+        if not os.path.isfile(full):
+            return {'deleted': False, 'error': 'File not found'}
+        try:
+            os.remove(full)
+        except Exception as exc:
+            return {'deleted': False, 'error': str(exc)}
+        return {'deleted': True}
+
+    app.mount(
         '/downloads',
         StaticFiles(directory=str(DOWNLOAD_DIR)),
         name='downloads',
     )
-
-    # Add the static files for the SPA (must be mounted after /downloads)
-    app_state.api.mount(
+    app.mount(
         '/',
-        SPAStaticFiles(directory=web_app_dir, html=True),
+        SPAStaticFiles(directory=WEB_GUI_LOCATION, html=True),
         name='static',
     )
-    config = Config(
-        app=app_state.api,
-        host=web_settings['host'],
-        port=web_settings['port'],
-        workers=1,
-        log_level=NAME_TO_LEVEL[downloader_settings['log_level']],
-        loop=app_state.loop,  # type: ignore
+    return app
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog='downtify')
+    # The legacy entrypoint passed ``web`` as the subcommand plus a few
+    # spotdl-only flags. We accept and ignore the unsupported ones so
+    # existing Docker images keep starting cleanly.
+    parser.add_argument('mode', nargs='?', default='web')
+    parser.add_argument('--host', default=DEFAULT_HOST)
+    parser.add_argument('--port', type=int, default=DEFAULT_PORT)
+    parser.add_argument('--log-level', default='info')
+    parser.add_argument('--keep-alive', action='store_true')
+    parser.add_argument('--keep-sessions', action='store_true')
+    parser.add_argument('--web-use-output-dir', action='store_true')
+    args, _ = parser.parse_known_args()
+    return args
+
+
+def main() -> None:
+    args = _parse_args()
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.INFO),
+        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
     )
-    if web_settings['enable_tls']:
-        logger.info('Enabling TLS')
-        config.ssl_certfile = web_settings['cert_file']
-        config.ssl_keyfile = web_settings['key_file']
-        config.ssl_ca_certs = web_settings['ca_file']
 
-    app_state.server = Server(config)
+    _fix_mime_types()
+    app = build_app()
 
-    app_state.downloader_settings = downloader_settings
+    loop = (
+        asyncio.new_event_loop()
+        if sys.platform != 'win32'
+        else asyncio.ProactorEventLoop()  # type: ignore[attr-defined]
+    )
+    config = Config(
+        app=app,
+        host=args.host,
+        port=args.port,
+        loop=loop,  # type: ignore[arg-type]
+        log_level=args.log_level.lower(),
+        workers=1,
+    )
+    server = Server(config)
 
-    if not web_settings['web_use_output_dir']:
-        logger.info(
-            'Files are stored in temporary directory '
-            'and will be deleted after the program exits '
-            'to save them to current directory permanently '
-            'enable the `web_use_output_dir` option '
-        )
-    else:
-        logger.info(
-            'Files are stored in current directory '
-            'to save them to temporary directory '
-            'disable the `web_use_output_dir` option '
-        )
-
-    logger.info('Starting web server \n')
-
-    # Start the web server
-    app_state.loop.run_until_complete(app_state.server.serve())
+    logger.info(
+        'Starting Downtify %s on http://%s:%s',
+        __version__,
+        args.host,
+        args.port,
+    )
+    loop.run_until_complete(server.serve())
 
 
 if __name__ == '__main__':
-    _KEY = b'\x4f\x2a\x91\x3c'
-
-    _ID_ENC = b'}\x1c\xa2\r\x7f\x13\xf4_z\x1a\xa5Z{N\xf5\x0fvL\xf4ZyN\xa8Y|N\xa3^|\x18\xa7]'  # Client ID
-    _SEC_ENC = b'}\x1a\xf0\x0e}\x1b\xf5_)\x1f\xa4^{\x13\xf0^-L\xf2Zw\x1e\xa7Y}N\xf7\x0f}\x1a\xa3\n'  # Client Secret
-
-    def _decode(data: bytes, key: bytes) -> str:
-        return bytes(
-            b ^ key[i % len(key)] for i, b in enumerate(data)
-        ).decode()
-
-    # Parse the arguments
-    arguments = parse_arguments()
-
-    # Create settings dicts
-    spotify_settings, downloader_settings, web_settings = create_settings(
-        arguments
-    )
-
-    web_settings['web_use_output_dir'] = True
-    downloader_settings['output'] = str(
-        DOWNLOAD_DIR / '{artists} - {title}.{output-ext}'
-    )
-    spotify_settings['client_id'] = os.getenv(
-        'CLIENT_ID', _decode(_ID_ENC, _KEY)
-    )
-    spotify_settings['client_secret'] = os.getenv(
-        'CLIENT_SECRET', _decode(_SEC_ENC, _KEY)
-    )
-
-    # Initialize spotify client
-    SpotifyClient.init(**spotify_settings)
-    spotify_client = SpotifyClient()
-
-    # Start web ui
-    web(web_settings, downloader_settings)
+    main()

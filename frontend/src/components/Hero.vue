@@ -1,44 +1,68 @@
 <template>
-  <div class="hero min-h-screen">
-    <div class="block text-center justify-center hero-content">
-      <div class="bg-cover bg-no-repeat bg-center">
-        <img src="../assets/downtify.svg" class="mb-5 w-32 center" />
-      </div>
-      <div>
-        <h1 class="mb-1 text-5xl font-bold text-base-content">Downtify</h1>
-        <span
-          class="mb-5 inline-flex items-center rounded-md bg-green-400/10 px-2 py-1 text-xs font-medium text-green-400 inset-ring inset-ring-green-500/20"
-          >v1.1.4</span
+  <section
+    class="relative flex min-h-[calc(100dvh-4rem)] items-center justify-center px-6 pt-24 pb-16 overflow-hidden"
+  >
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
+      <div
+        class="absolute left-1/2 top-1/4 -translate-x-1/2 h-[420px] w-[420px] rounded-full bg-primary/25 blur-[120px]"
+      ></div>
+      <div
+        class="absolute right-10 bottom-12 h-64 w-64 rounded-full bg-primary/10 blur-3xl"
+      ></div>
+    </div>
+
+    <div class="relative w-full max-w-2xl text-center animate-slide-up">
+      <div class="mx-auto mb-6 inline-flex">
+        <div
+          class="relative inline-flex h-24 w-24 items-center justify-center rounded-3xl surface-strong shadow-glow"
         >
-        <p class="mb-5 text-base-content">
-          Your music along with album art, lyrics and metadata.
-        </p>
+          <img src="../assets/downtify.svg" class="h-14 w-14" />
+        </div>
       </div>
 
-      <SearchInput />
+      <h1 class="text-balance text-5xl sm:text-6xl font-bold tracking-tight">
+        Down<span class="text-primary">tify</span>
+      </h1>
+      <div class="mt-3 flex items-center justify-center gap-2">
+        <span class="badge-soft">v{{ version }}</span>
+        <span class="badge-neutral-soft">no Spotify account needed</span>
+      </div>
+      <p
+        class="mx-auto mt-5 max-w-md text-balance text-base sm:text-lg text-base-content/70"
+      >
+        Your music with full metadata, album art and lyrics — in one click.
+      </p>
+
+      <div class="mt-10">
+        <SearchInput class="w-full" />
+        <div
+          class="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-base-content/60"
+        >
+          <span class="pill bg-white/5 border border-white/10"
+            ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
+            Songs</span
+          >
+          <span class="pill bg-white/5 border border-white/10"
+            ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
+            Albums</span
+          >
+          <span class="pill bg-white/5 border border-white/10"
+            ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
+            Playlists</span
+          >
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 </template>
 
-<script setup lang="ts">
-import { Icon } from '@iconify/vue'
-import SearchInput from '../components/SearchInput.vue'
+<script setup>
+import { ref, onMounted } from 'vue'
+import SearchInput from './SearchInput.vue'
 
-import { useBinaryThemeManager } from '../model/theme'
-import { ref } from 'vue'
-
-const themeMgr = useBinaryThemeManager({
-  newLightAlias: 'downtify-light',
-  newDarkAlias: 'downtify-dark',
+const version = ref(localStorage.getItem('version') || '1.2.0')
+onMounted(() => {
+  const v = localStorage.getItem('version')
+  if (v) version.value = v
 })
-
-const version = localStorage.getItem('version') || '0.0.0'
 </script>
-
-<style scoped>
-.center {
-  text-align: center;
-  margin-left: auto;
-  margin-right: auto;
-}
-</style>
