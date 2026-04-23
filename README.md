@@ -8,7 +8,7 @@
   Downtify
 </h1>
 
-<p align="center">Web GUI for <a href="https://github.com/spotDL/spotify-downloader">spotDL</a>. Allows you to download music from Spotify along with album art, lyrics and metadata.</p>
+<p align="center">Download music from Spotify — no API keys, no account, no hassle. Just paste a link and go.</p>
 
 <div align="center">
   
@@ -27,13 +27,17 @@ https://github.com/user-attachments/assets/9711efe8-a960-4e1a-8d55-e0d1c20208f7
 
 ## ✨ Why Downtify?
 
-Tired of clunky command-line tools to download your Spotify music? Downtify wraps the powerful [spotDL](https://github.com/spotDL/spotify-downloader) engine in a clean, intuitive web interface — so anyone can download their favorite tracks, albums, and playlists without touching a terminal.
+Paste a Spotify link, click download, done. No terminal. No API keys. No Spotify account. No Premium subscription.
 
-- 🎵 Download any Spotify link — songs, albums, playlists, podcasts
-- 🖼️ Embedded metadata — album art, track name, artist, album title and more
-- 🔔 Desktop notifications when your downloads are ready
-- 🐳 One Docker command to get started
-- 🏠 Available on popular home server platforms like Umbrel, CasaOS and HomeDock
+Downtify fetches track metadata directly from Spotify's public embed pages, finds the best audio match on YouTube Music, and delivers a fully tagged file — album art, title, artist, album, and year all embedded — in whichever format you prefer.
+
+- 🎵 **Tracks, albums & playlists** — any Spotify link works
+- 🎨 **Rich metadata** — album art, title, artist, album and release year embedded in every file
+- 🎚️ **Multiple formats** — MP3, FLAC, M4A, OGG and OPUS
+- 🔑 **Zero credentials** — no Spotify API key, no account, no Premium required
+- 🔔 **Desktop notifications** when your downloads are ready
+- 🐳 **One Docker command** to get started
+- 🏠 **Available on Umbrel, CasaOS and HomeDock** for one-click home server installs
 
 ## 🚀 Quick Start
 
@@ -45,9 +49,9 @@ docker run -d -p 8000:8000 --name downtify \
   ghcr.io/henriquesebastiao/downtify
 ```
 
-Then open http://localhost:8000, paste a Spotify link, and hit download. That's it.
+Then open http://localhost:8000, paste a Spotify link, and hit download.
 
-> 💡 Change /path/to/downloads to wherever you want your music saved.
+> Change `/path/to/downloads` to wherever you want your music saved.
 
 ### 🐳 Docker Compose
 
@@ -62,7 +66,7 @@ services:
       - ./downloads:/downloads
 ```
 
-Custom port? Use the DOWNTIFY_PORT environment variable:
+Need a custom port? Use the `DOWNTIFY_PORT` environment variable:
 
 ```yaml
 ports:
@@ -81,9 +85,28 @@ Downtify is one click away on popular self-hosted home server operating systems:
 | 🏠 CasaOS | [Install on CasaOS](https://casaos.zimaspace.com/) |
 | ⚓ HomeDock OS | [Install on HomeDock](https://www.homedock.cloud/apps/downtify/) |
 
-## 🎧 How It Works
+## ⚙️ How It Works
 
-Downtify uses SpotDL under the hood, which sources audio from YouTube to avoid Spotify DRM restrictions. Spotify's API is used only to fetch track metadata — so your downloads are rich with accurate song info.
+Downtify's pipeline has three stages — metadata, audio, and tagging:
+
+1. **Metadata** — Spotify track, album and playlist links are resolved by reading the public `open.spotify.com/embed` pages. No Spotify account or API credentials are needed.
+2. **Audio match** — [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) searches YouTube Music for the track and picks the best result by comparing audio duration. Free-text searches skip the Spotify step and go straight to YouTube Music.
+3. **Download & tag** — [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) downloads the audio and `ffmpeg` converts it to your chosen format. [`mutagen`](https://mutagen.readthedocs.io/) then embeds title, artist, album, year and cover art directly into the file.
+
+| What you paste | Supported? |
+| -------------- | ---------- |
+| Spotify track link | ✅ |
+| Spotify album link | ✅ |
+| Spotify playlist link | ✅ |
+| Free-text search | ✅ |
+
+| Output format | |
+| ------------- | - |
+| MP3 | ✅ |
+| FLAC | ✅ |
+| M4A | ✅ |
+| OGG | ✅ |
+| OPUS | ✅ |
 
 > [!WARNING]
 > Users are responsible for their actions and any legal consequences. We do not support unauthorized downloading of copyrighted material and take no responsibility for user actions.

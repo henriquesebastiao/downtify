@@ -1,12 +1,18 @@
 [project]
 name = "downtify"
-version = "1.1.4"
+version = "1.2.0"
 description = "Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
+    "fastapi>=0.110",
     "load-dotenv>=0.1.0",
-    "spotdl",
+    "mutagen>=1.47",
+    "requests>=2.32",
+    "uvicorn>=0.23",
+    "websockets>=12.0",
+    "yt-dlp>=2026.2.4",
+    "ytmusicapi>=1.10",
 ]
 
 [dependency-groups]
@@ -16,9 +22,6 @@ dev = [
 
 [tool.uv]
 upgrade = true
-
-[tool.uv.sources]
-spotdl = { git = "https://github.com/nyekuuu/spotify-downloader.git" }
 
 [tool.ruff]
 line-length = 79
@@ -33,3 +36,4 @@ quote-style = 'single'
 
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ["E501", "PLR0915"]
+"downtify/*.py" = ["E501", "PLR0913", "PLR0917", "PLR2004", "PLW0603"]

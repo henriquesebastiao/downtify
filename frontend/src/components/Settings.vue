@@ -1,9 +1,11 @@
 <template>
   <!-- Put this part before </body> tag -->
-  <input type="checkbox" id="my-modal" class="modal-toggle" />
+  <input type="checkbox" id="settings-modal" class="modal-toggle" />
   <div class="modal">
     <div class="modal-box relative">
-      <label for="my-modal" class="btn btn-sm btn-circle absolute right-2 top-2"
+      <label
+        for="settings-modal"
+        class="btn btn-sm btn-circle absolute right-2 top-2"
         >✕</label
       >
       <h3 class="font-bold text-lg">Download Settings</h3>
@@ -56,6 +58,25 @@
               :selected="format === sm.settings.value.format"
             >
               {{ format }}
+            </option>
+          </select>
+        </div>
+        <!-- bitrate -->
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text">Quality</span>
+            <span class="label-text-alt opacity-60"
+              >ignored for FLAC (lossless)</span
+            >
+          </label>
+          <select class="select w-full" v-model="sm.settings.value.bitrate">
+            <option
+              v-for="(bitrate, index) in sm.settingsOptions.bitrate"
+              :key="index"
+              :value="bitrate"
+              :selected="bitrate === sm.settings.value.bitrate"
+            >
+              {{ bitrate }} kbps
             </option>
           </select>
         </div>
