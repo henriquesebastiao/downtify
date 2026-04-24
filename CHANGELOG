@@ -1,5 +1,31 @@
 # Changelog
 
+## [Unreleased](https://github.com/henriquesebastiao/downtify/tree/HEAD)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.0.0...HEAD)
+
+**Implemented enhancements:**
+
+- Feature: set output file bitrate [\#63](https://github.com/henriquesebastiao/downtify/issues/63)
+- Implementing downloads without relying on Spotify credentials brings many improvements [\#124](https://github.com/henriquesebastiao/downtify/pull/124) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Fixed bugs:**
+
+- Spotify direct link to a music or to a playlist gives wrong results [\#104](https://github.com/henriquesebastiao/downtify/issues/104)
+
+**Closed issues:**
+
+- Error in ratelimit [\#117](https://github.com/henriquesebastiao/downtify/issues/117)
+- No downloads are queued. Search for a song to begin. [\#106](https://github.com/henriquesebastiao/downtify/issues/106)
+
+## [2.0.0](https://github.com/henriquesebastiao/downtify/tree/2.0.0) (2026-04-23)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.1.4...2.0.0)
+
+**Implemented enhancements:**
+
+- Feature Request: pagination in search [\#70](https://github.com/henriquesebastiao/downtify/issues/70)
+
 ## [1.1.4](https://github.com/henriquesebastiao/downtify/tree/1.1.4) (2026-02-19)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.1.3...1.1.4)
