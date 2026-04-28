@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.3.0](https://github.com/henriquesebastiao/downtify/tree/2.3.0) (2026-04-28)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.2.0...2.3.0)
+
+**Implemented enhancements:**
+
+- feat: Settings toggle for M3U + Playlist Monitor integration [\#127](https://github.com/henriquesebastiao/downtify/pull/127) ([gmontard](https://github.com/gmontard))
+
+**Closed issues:**
+
+- Refuses to read config file on ZimaOS [\#123](https://github.com/henriquesebastiao/downtify/issues/123)
+- I wasted an hour trying to make Docker to work, why couldn't this be an EXE file? [\#107](https://github.com/henriquesebastiao/downtify/issues/107)
+
 ## [2.2.0](https://github.com/henriquesebastiao/downtify/tree/2.2.0) (2026-04-28)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.1.1...2.2.0)
