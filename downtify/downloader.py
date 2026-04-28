@@ -134,7 +134,11 @@ class Downloader:
         # Many container setups have IPv6 advertised but unroutable for
         # googlevideo.com, which surfaces as EAI_AGAIN on the AAAA lookup.
         # Setting DOWNTIFY_FORCE_IPV4=1 binds yt-dlp to IPv4 only.
-        if os.getenv('DOWNTIFY_FORCE_IPV4', '').strip() in {'1', 'true', 'yes'}:
+        if os.getenv('DOWNTIFY_FORCE_IPV4', '').strip() in {
+            '1',
+            'true',
+            'yes',
+        }:
             ydl_opts['source_address'] = '0.0.0.0'
         url = f'https://music.youtube.com/watch?v={video_id}'
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:

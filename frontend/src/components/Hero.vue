@@ -60,7 +60,7 @@
 import { ref, onMounted } from 'vue'
 import SearchInput from './SearchInput.vue'
 
-const version = ref(localStorage.getItem('version') || '1.2.0')
+const version = ref(localStorage.getItem('version') || '2.1.0')
 onMounted(() => {
   const v = localStorage.getItem('version')
   if (v) version.value = v

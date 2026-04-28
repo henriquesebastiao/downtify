@@ -1,6 +1,6 @@
 [project]
 name = "downtify"
-version = "1.2.0"
+version = "2.1.0"
 description = "Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
@@ -36,4 +36,4 @@ quote-style = 'single'
 
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ["E501", "PLR0915"]
-"downtify/*.py" = ["E501", "PLR0913", "PLR0917", "PLR2004", "PLW0603", "PLR0911"]
+"downtify/*.py" = ["E501", "PLR0913", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912"]
