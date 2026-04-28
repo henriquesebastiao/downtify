@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
-    'lyrics_providers': ['genius'],
+    'lyrics_providers': ['lrclib'],
     'format': 'mp3',
     'bitrate': '320',
     'output': '{artists} - {title}.{output-ext}',
@@ -226,6 +226,11 @@ async def update_settings_endpoint(
                 state.downloader.output_template = output.replace(
                     '.{output-ext}', ''
                 )
+            providers_in = payload.get('lyrics_providers')
+            if isinstance(providers_in, list):
+                state.downloader.lyrics_providers = [
+                    p for p in providers_in if isinstance(p, str) and p
+                ]
     return state.settings
 
 

@@ -12,7 +12,7 @@ const settings = ref({
 
 const settingsOptions = {
   audio_providers: ['youtube', 'youtube-music'],
-  lyrics_providers: ['genius', 'musixmatch', 'azlyrics'],
+  lyrics_providers: ['lrclib', 'genius', 'musixmatch', 'azlyrics'],
   format: ['mp3', 'flac', 'ogg', 'opus', 'm4a'],
   bitrate: ['128', '192', '256', '320'],
   output: '{artists} - {title}.{output-ext}',

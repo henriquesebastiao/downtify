@@ -36,4 +36,4 @@ quote-style = 'single'
 
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ["E501", "PLR0915"]
-"downtify/*.py" = ["E501", "PLR0913", "PLR0917", "PLR2004", "PLW0603"]
+"downtify/*.py" = ["E501", "PLR0913", "PLR0917", "PLR2004", "PLW0603", "PLR0911"]

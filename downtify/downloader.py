@@ -4,18 +4,20 @@ from __future__ import annotations
 
 import logging
 import re
+import re as _re
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 import requests
 import yt_dlp
 from mutagen.flac import FLAC, Picture
-from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1, TPE2
+from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1, TPE2, USLT
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 
+from . import lyrics as lyrics_mod
 from .providers import find_match
 
 logger = logging.getLogger(__name__)
@@ -39,12 +41,14 @@ class Downloader:
         audio_format: str = 'mp3',
         audio_bitrate: str = '320',
         output_template: str = '{artists} - {title}',
+        lyrics_providers: Optional[list[str]] = None,
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
         self.audio_format = audio_format
         self.audio_bitrate = audio_bitrate
         self.output_template = output_template
+        self.lyrics_providers = list(lyrics_providers or [])
 
     def _format_basename(self, song: dict[str, Any]) -> str:
         artists = ', '.join(song.get('artists') or []) or 'Unknown Artist'
@@ -135,6 +139,20 @@ class Downloader:
             embed_metadata(final_path, song)
         except Exception:
             logger.exception('Failed to embed metadata into %s', final_path)
+
+        if self.lyrics_providers:
+            try:
+                fetched = lyrics_mod.fetch(song, self.lyrics_providers)
+            except Exception:
+                logger.exception('Lyrics fetch crashed for %s', final_path)
+                fetched = None
+            if fetched is not None:
+                try:
+                    embed_lyrics(final_path, fetched)
+                except Exception:
+                    logger.exception(
+                        'Failed to embed lyrics into %s', final_path
+                    )
 
         if progress_cb:
             progress_cb(100.0, 'Done')
@@ -294,3 +312,56 @@ def _apply_vorbis_comments(audio, title, artists, album, year):
         audio['album'] = album
     if year:
         audio['date'] = year
+
+
+def embed_lyrics(path: Path, lyrics: 'lyrics_mod.Lyrics') -> None:
+    """Embed plain lyrics into the audio tag and write a .lrc sidecar
+    next to it when synced lyrics are available."""
+
+    if not path.exists() or not lyrics.has_any():
+        return
+
+    if lyrics.synced:
+        sidecar = path.with_suffix('.lrc')
+        try:
+            sidecar.write_text(lyrics.synced, encoding='utf-8')
+        except OSError:
+            logger.warning(
+                'Could not write LRC sidecar %s', sidecar, exc_info=True
+            )
+
+    text = lyrics.plain or _strip_lrc_timestamps(lyrics.synced or '')
+    if not text:
+        return
+
+    suffix = path.suffix.lower().lstrip('.')
+    if suffix == 'mp3':
+        audio = MP3(str(path), ID3=ID3)
+        if audio.tags is None:
+            audio.add_tags()
+        audio.tags.delall('USLT')
+        audio.tags.add(USLT(encoding=3, lang='eng', desc='', text=text))
+        audio.save(v2_version=3)
+    elif suffix in {'m4a', 'mp4', 'aac'}:
+        audio = MP4(str(path))
+        audio['\xa9lyr'] = text
+        audio.save()
+    elif suffix == 'flac':
+        audio = FLAC(str(path))
+        audio['lyrics'] = text
+        audio.save()
+    elif suffix in {'ogg', 'oga'}:
+        audio = OggVorbis(str(path))
+        audio['lyrics'] = text
+        audio.save()
+    elif suffix == 'opus':
+        audio = OggOpus(str(path))
+        audio['lyrics'] = text
+        audio.save()
+
+
+def _strip_lrc_timestamps(synced: str) -> str:
+    cleaned = _re.sub(r'\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]', '', synced)
+    return '\n'.join(
+        line.strip() for line in cleaned.splitlines() if line.strip()
+    )
