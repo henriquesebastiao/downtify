@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 
 import API from '/src/model/api'
+import { useSettingsManager } from '/src/model/settings'
 
 const STATUS = {
   QUEUED: 'In Queue',
@@ -101,9 +102,10 @@ API.ws_onerror((event) => {
 
 export function useDownloadManager() {
   const loading = ref(false)
-  function fromURL(url, options = {}) {
-    const { generateM3u = false } = options
+  const settingsManager = useSettingsManager()
+  function fromURL(url) {
     const isPlaylistURL = (url || '').includes('://open.spotify.com/playlist/')
+    const generateM3u = settingsManager.settings.value.generate_m3u !== false
     loading.value = true
     return API.open(url)
       .then((res) => {

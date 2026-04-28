@@ -104,6 +104,26 @@ class Downloader:
             rendered = f'{artists} - {song.get("name", "Unknown")}'
         return _sanitize(rendered)
 
+    def existing_filename_for(
+        self, song: dict[str, Any]
+    ) -> Optional[str]:
+        """Return the on-disk filename for ``song`` if any matching file exists.
+
+        Mirrors :meth:`download`'s post-conversion path resolution: prefers
+        ``{basename}.{audio_format}`` and falls back to any
+        ``{basename}.*`` since yt-dlp occasionally keeps the upstream
+        extension (opus, m4a). Returns ``None`` when no file matches.
+        """
+
+        basename = self._format_basename(song)
+        primary = self.download_dir / f'{basename}.{self.audio_format}'
+        if primary.exists():
+            return primary.name
+        for candidate in self.download_dir.glob(f'{basename}.*'):
+            if candidate.is_file():
+                return candidate.name
+        return None
+
     def download(
         self,
         song: dict[str, Any],

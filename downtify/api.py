@@ -45,6 +45,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'format': 'mp3',
     'bitrate': '320',
     'output': '{artists} - {title}.{output-ext}',
+    'generate_m3u': True,
 }
 
 
@@ -370,6 +371,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
                     state.downloader,  # type: ignore[arg-type]
                     state.connections.broadcast,
                     loop,
+                    state.settings,
                 )
             except Exception:
                 logger.exception('Initial check failed for playlist %d', pl.id)
