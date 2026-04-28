@@ -68,9 +68,7 @@ def build_m3u_content(
             continue
         path = (download_dir / filename).resolve()
         if not path.exists():
-            logger.warning(
-                'Skipping missing track in M3U: %s', path
-            )
+            logger.warning('Skipping missing track in M3U: %s', path)
             continue
         title = (entry.get('title') or '').strip()
         artist = (entry.get('artist') or '').strip()

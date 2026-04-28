@@ -17,10 +17,7 @@ def test_sanitize_keeps_allowed_chars():
 
 
 def test_sanitize_strips_filesystem_unsafe_chars():
-    assert (
-        m3u.sanitize_playlist_name('a/b\\c:d*e?f"g<h>i|j')
-        == 'abcdefghij'
-    )
+    assert m3u.sanitize_playlist_name('a/b\\c:d*e?f"g<h>i|j') == 'abcdefghij'
 
 
 def test_sanitize_drops_unicode_and_punctuation():
@@ -169,9 +166,7 @@ def test_build_no_extinf_when_no_metadata(tmp_path):
 
 def test_write_writes_under_playlists_subdir(tmp_path):
     _touch(tmp_path, 'a.mp3')
-    target, kept = m3u.write_m3u(
-        tmp_path, 'My Mix', [{'filename': 'a.mp3'}]
-    )
+    target, kept = m3u.write_m3u(tmp_path, 'My Mix', [{'filename': 'a.mp3'}])
     assert target is not None
     assert target == tmp_path / 'Playlists' / 'My Mix.m3u'
     assert target.exists()
