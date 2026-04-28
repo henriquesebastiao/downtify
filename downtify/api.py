@@ -33,6 +33,7 @@ from fastapi import (
 
 from . import providers, spotify
 from .downloader import Downloader
+from .monitor import PlaylistMonitorDB, check_playlist
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,16 @@ class ConnectionManager:
         except Exception:
             self._clients.pop(client_id, None)
 
+    async def broadcast(self, message: dict[str, Any]) -> None:
+        dead: list[str] = []
+        for client_id, ws in list(self._clients.items()):
+            try:
+                await ws.send_text(json.dumps(message))
+            except Exception:
+                dead.append(client_id)
+        for client_id in dead:
+            self._clients.pop(client_id, None)
+
 
 class AppState:
     version: str = '0.0.0'
@@ -75,6 +86,7 @@ class AppState:
     connections: ConnectionManager = ConnectionManager()
     settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
     loop: Optional[asyncio.AbstractEventLoop] = None
+    monitor_db: Optional[PlaylistMonitorDB] = None
 
 
 state = AppState()
@@ -229,3 +241,155 @@ async def websocket_endpoint(
         state.connections.disconnect(client_id)
     except Exception:
         state.connections.disconnect(client_id)
+
+
+# ---------------------------------------------------------------------------
+# Playlist monitoring endpoints
+# ---------------------------------------------------------------------------
+
+
+def _require_monitor_db() -> PlaylistMonitorDB:
+    if state.monitor_db is None:
+        raise HTTPException(
+            status_code=500, detail='Monitor database not ready'
+        )
+    return state.monitor_db
+
+
+@router.get('/api/monitor/playlists')
+async def list_monitor_playlists() -> list[dict[str, Any]]:
+    db = _require_monitor_db()
+    playlists = await asyncio.to_thread(db.list_playlists)
+    return [p.to_dict() for p in playlists]
+
+
+@router.post('/api/monitor/playlists')
+async def add_monitor_playlist(request: Request) -> dict[str, Any]:
+    db = _require_monitor_db()
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    url = payload.get('url', '')
+    interval_minutes = int(payload.get('interval_minutes', 60))
+
+    parsed = spotify.parse_spotify_url(url)
+    if parsed is None or parsed[0] != 'playlist':
+        raise HTTPException(
+            status_code=400, detail='A valid Spotify playlist URL is required'
+        )
+
+    _, spotify_id = parsed
+
+    existing = await asyncio.to_thread(db.get_by_spotify_id, spotify_id)
+    if existing is not None:
+        raise HTTPException(
+            status_code=409, detail='This playlist is already being monitored'
+        )
+
+    try:
+        name, _tracks = await asyncio.to_thread(
+            spotify.playlist_info_and_tracks, spotify_id
+        )
+    except Exception as exc:
+        logger.exception('Failed to resolve playlist %s', spotify_id)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    playlist = await asyncio.to_thread(
+        db.add_playlist, spotify_id, name, url, interval_minutes
+    )
+
+    # Kick off the first download pass immediately so the user does not have
+    # to wait up to a full monitor sweep interval for the initial backfill.
+    if state.downloader is not None:
+        loop = state.loop or asyncio.get_running_loop()
+
+        async def _initial_check(pl=playlist) -> None:
+            try:
+                await check_playlist(
+                    pl,
+                    db,
+                    state.downloader,  # type: ignore[arg-type]
+                    state.connections.broadcast,
+                    loop,
+                )
+            except Exception:
+                logger.exception('Initial check failed for playlist %d', pl.id)
+
+        asyncio.create_task(_initial_check())
+
+    return playlist.to_dict()
+
+
+@router.patch('/api/monitor/playlists/{playlist_id}')
+async def update_monitor_playlist(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    db = _require_monitor_db()
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    kwargs: dict[str, Any] = {}
+    if 'interval_minutes' in payload:
+        kwargs['interval_minutes'] = int(payload['interval_minutes'])
+    if 'enabled' in payload:
+        kwargs['enabled'] = bool(payload['enabled'])
+
+    updated = await asyncio.to_thread(
+        db.update_playlist, playlist_id, **kwargs
+    )
+    if updated is None:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
+    return updated.to_dict()
+
+
+@router.delete('/api/monitor/playlists/{playlist_id}')
+async def delete_monitor_playlist(playlist_id: int) -> dict[str, Any]:
+    db = _require_monitor_db()
+    deleted = await asyncio.to_thread(db.delete_playlist, playlist_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
+    return {'deleted': True, 'id': playlist_id}
+
+
+@router.post('/api/monitor/playlists/{playlist_id}/check')
+async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
+    db = _require_monitor_db()
+    playlist = await asyncio.to_thread(db.get_playlist, playlist_id)
+    if playlist is None:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    loop = state.loop or asyncio.get_running_loop()
+
+    async def _run() -> None:
+        try:
+            count = await check_playlist(
+                playlist,  # type: ignore[arg-type]
+                db,
+                state.downloader,  # type: ignore[arg-type]
+                state.connections.broadcast,
+                loop,
+            )
+            logger.info(
+                'Manual check: downloaded %d new track(s) from "%s"',
+                count,
+                playlist.name,
+            )  # type: ignore[union-attr]
+        except Exception:
+            logger.exception(
+                'Manual check failed for playlist %d', playlist_id
+            )
+
+    asyncio.create_task(_run())
+    return {'status': 'check_started', 'id': playlist_id}

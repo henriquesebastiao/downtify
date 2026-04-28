@@ -8,40 +8,49 @@
   Downtify
 </h1>
 
-<p align="center">Download music from Spotify — no API keys, no account, no hassle. Just paste a link and go.</p>
+<p align="center">
+  <strong>Self-hosted music downloader. Paste a Spotify link, get a perfectly tagged audio file — no API keys, no account, no hassle.</strong>
+</p>
 
 <div align="center">
-  
+
 [![Test](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml/badge.svg)](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/henriquesebastiao/downtify?color=blue
-)](https://github.com/henriquesebastiao/downtify/releases)
-[![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify?color=blue
-)](/LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/henriquesebastiao/downtify?color=blue)](https://github.com/henriquesebastiao/downtify/releases)
+[![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify?color=blue)](/LICENSE)
+[![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/downtify?color=blue)](https://hub.docker.com/r/henriquesebastiao/downtify)
 [![Visitors](https://api.visitorbadge.io/api/visitors?path=henriquesebastiao%2Fdowntify&label=repository%20visits&countColor=%231182c3&style=flat)](https://github.com/henriquesebastiao/downtify)
-[![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/downtify?color=blue
-)](https://hub.docker.com/r/henriquesebastiao/downtify)
-  
+
 </div>
 
 https://github.com/user-attachments/assets/9711efe8-a960-4e1a-8d55-e0d1c20208f7
 
-## ✨ Why Downtify?
+---
 
-Paste a Spotify link, click download, done. No terminal. No API keys. No Spotify account. No Premium subscription.
+## ✨ What is Downtify?
 
-Downtify fetches track metadata directly from Spotify's public embed pages, finds the best audio match on YouTube Music, and delivers a fully tagged file — album art, title, artist, album, and year all embedded — in whichever format you prefer.
+Downtify is a **self-hosted web app** that downloads music from Spotify — without touching the Spotify API, without needing an account, and without any Premium subscription. Just drop a link and get a fully-tagged audio file.
 
-- 🎵 **Tracks, albums & playlists** — any Spotify link works
-- 🎨 **Rich metadata** — album art, title, artist, album and release year embedded in every file
-- 🎚️ **Multiple formats** — MP3, FLAC, M4A, OGG and OPUS
-- 🔑 **Zero credentials** — no Spotify API key, no account, no Premium required
-- 🔔 **Desktop notifications** when your downloads are ready
-- 🐳 **One Docker command** to get started
-- 🏠 **Available on Umbrel, CasaOS and HomeDock** for one-click home server installs
+It resolves track metadata directly from Spotify's public embed pages, finds the best audio match on YouTube Music, downloads it with `yt-dlp`, converts it with `ffmpeg`, and embeds album art + all metadata with `mutagen`. The entire pipeline runs inside a single Docker container.
+
+---
+
+## 🚀 Features
+
+| Feature | Details |
+|---------|---------|
+| 🎵 **Tracks, albums & playlists** | Any Spotify link works — single track, full album, or entire playlist |
+| 👁️ **Playlist Monitor** | Watch playlists and **auto-download new songs** as they are added to Spotify |
+| 🎨 **Rich metadata** | Album art, title, artist, album, year — all embedded in every file |
+| 🎚️ **Multiple formats** | MP3 · FLAC · M4A · OGG · OPUS |
+| 🔎 **Free-text search** | Search YouTube Music directly — no Spotify link needed |
+| 🔑 **Zero credentials** | No Spotify API key, no account, no Premium required |
+| 🔔 **Real-time progress** | Live download progress via WebSocket — no page reload needed |
+| 🐳 **One Docker command** | Up and running in under a minute |
+| 🏠 **Home server platforms** | Available on Umbrel, CasaOS and HomeDock |
+
+---
 
 ## 🚀 Quick Start
-
-Get Downtify running in under a minute:
 
 ```bash
 docker run -d -p 8000:8000 --name downtify \
@@ -49,11 +58,11 @@ docker run -d -p 8000:8000 --name downtify \
   ghcr.io/henriquesebastiao/downtify
 ```
 
-Then open http://localhost:8000, paste a Spotify link, and hit download.
+Open [http://localhost:8000](http://localhost:8000), paste a Spotify link, and hit download.
 
 > Change `/path/to/downloads` to wherever you want your music saved.
 
-### 🐳 Docker Compose
+### Docker Compose
 
 ```yaml
 services:
@@ -64,6 +73,7 @@ services:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
+    restart: unless-stopped
 ```
 
 Need a custom port? Use the `DOWNTIFY_PORT` environment variable:
@@ -75,47 +85,87 @@ environment:
   - DOWNTIFY_PORT=30321
 ```
 
-## 🏠 Available on Home Server Platforms
+---
 
-Downtify is one click away on popular self-hosted home server operating systems:
+## 🏠 One-Click Install on Home Servers
 
 | Platform | Link |
-| -------- | ---- |
+|----------|------|
 | ☂️ Umbrel | [Install on Umbrel](https://apps.umbrel.com/app/downtify) |
 | 🏠 CasaOS | [Install on CasaOS](https://casaos.zimaspace.com/) |
 | ⚓ HomeDock OS | [Install on HomeDock](https://www.homedock.cloud/apps/downtify/) |
 
+---
+
 ## ⚙️ How It Works
 
-Downtify's pipeline has three stages — metadata, audio, and tagging:
+Downtify's download pipeline has three stages:
 
-1. **Metadata** — Spotify track, album and playlist links are resolved by reading the public `open.spotify.com/embed` pages. No Spotify account or API credentials are needed.
-2. **Audio match** — [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) searches YouTube Music for the track and picks the best result by comparing audio duration. Free-text searches skip the Spotify step and go straight to YouTube Music.
-3. **Download & tag** — [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) downloads the audio and `ffmpeg` converts it to your chosen format. [`mutagen`](https://mutagen.readthedocs.io/) then embeds title, artist, album, year and cover art directly into the file.
+```
+Spotify embed page  →  YouTube Music search  →  yt-dlp + ffmpeg + mutagen
+   (metadata)             (audio match)            (download & tag)
+```
 
-| What you paste | Supported? |
-| -------------- | ---------- |
-| Spotify track link | ✅ |
-| Spotify album link | ✅ |
-| Spotify playlist link | ✅ |
-| Free-text search | ✅ |
+1. **Metadata** — Track, album and playlist links are resolved by scraping the public `open.spotify.com/embed` pages. No Spotify credentials of any kind are required.
+2. **Audio match** — [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) searches YouTube Music for the track and picks the best result by comparing audio duration. Free-text searches skip the Spotify step entirely.
+3. **Download & tag** — [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) downloads the audio and `ffmpeg` converts it to your chosen format. [`mutagen`](https://mutagen.readthedocs.io/) embeds title, artist, album, year and cover art into the file.
 
-| Output format | |
-| ------------- | - |
-| MP3 | ✅ |
-| FLAC | ✅ |
-| M4A | ✅ |
-| OGG | ✅ |
-| OPUS | ✅ |
+---
+
+## 👁️ Playlist Monitor
+
+The **Playlist Monitor** lets Downtify watch your favorite Spotify playlists and automatically download any new songs added to them — hands-free.
+
+**How to use it:**
+
+1. Click the eye icon (👁) in the navigation bar
+2. Paste a Spotify playlist URL
+3. Choose how often Downtify should check for new tracks (every 15 min up to once a day)
+4. Click **Watch**
+
+From that point on, whenever a new song appears in the playlist on Spotify, Downtify will detect and download it on the next scheduled check. Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded.
+
+You can pause, resume, force an immediate check, or stop monitoring any playlist at any time from the same page.
+
+---
+
+## 🎛️ Download Settings
+
+Access the settings panel (⚙️ icon) to configure:
+
+| Setting | Options |
+|---------|---------|
+| **Output format** | MP3 · FLAC · M4A · OGG · OPUS |
+| **Bitrate** | 128 · 192 · 256 · 320 kbps (ignored for FLAC) |
+| **Audio provider** | YouTube Music |
+
+---
+
+## 📦 What Spotify links are supported?
+
+| Link type | Supported |
+|-----------|-----------|
+| Spotify track | ✅ |
+| Spotify album | ✅ |
+| Spotify playlist | ✅ |
+| YouTube Music search (free text) | ✅ |
+| Direct YouTube link | ✅ |
+
+---
 
 > [!WARNING]
-> Users are responsible for their actions and any legal consequences. We do not support unauthorized downloading of copyrighted material and take no responsibility for user actions.
+> Users are responsible for their actions and any legal consequences. Downtify does not support unauthorized downloading of copyrighted material and takes no responsibility for user actions.
+
+---
 
 ## 🤝 Contributing
 
-Contributions, issues and feature requests are welcome! Feel free to check the [issues page](https://github.com/henriquesebastiao/downtify/issues).
+Contributions, issues and feature requests are welcome!
+Check the [issues page](https://github.com/henriquesebastiao/downtify/issues) or open a pull request.
 
-If Downtify has been useful to you, consider leaving a ⭐ — it helps the project grow!
+If Downtify has been useful to you, consider leaving a ⭐ — it helps the project grow and reach more people!
+
+---
 
 ## 📄 License
 

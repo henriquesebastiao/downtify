@@ -32,6 +32,15 @@
         </button>
 
         <button
+          class="icon-btn"
+          :class="{ 'icon-btn-active': route.name === 'Monitor' }"
+          @click="router.push({ name: 'Monitor' })"
+          title="Playlist Monitor"
+        >
+          <Icon icon="clarity:eye-line" class="h-5 w-5" />
+        </button>
+
+        <button
           class="icon-btn relative"
           :class="{ 'icon-btn-active': route.name === 'Download' }"
           @click="

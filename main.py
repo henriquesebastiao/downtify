@@ -25,6 +25,7 @@ from uvicorn import Config, Server
 
 from downtify import __version__, api
 from downtify.downloader import Downloader
+from downtify.monitor import PlaylistMonitorDB, monitor_loop
 
 load_dotenv()
 
@@ -82,8 +83,19 @@ def build_app() -> FastAPI:
     app.include_router(api.router)
 
     @app.on_event('startup')
-    async def _capture_loop() -> None:
-        api.state.loop = asyncio.get_running_loop()
+    async def _startup() -> None:
+        loop = asyncio.get_running_loop()
+        api.state.loop = loop
+        db_path = DOWNLOAD_DIR / 'downtify_monitor.db'
+        api.state.monitor_db = PlaylistMonitorDB(db_path)
+        asyncio.create_task(
+            monitor_loop(
+                db=api.state.monitor_db,
+                get_downloader=lambda: api.state.downloader,
+                broadcast=api.state.connections.broadcast,
+                loop=loop,
+            )
+        )
 
     @app.get('/list')
     def list_downloads() -> list[str]:

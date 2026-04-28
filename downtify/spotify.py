@@ -209,9 +209,8 @@ def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
     return songs
 
 
-def playlist_tracks_from_id(playlist_id: str) -> list[dict[str, Any]]:
-    payload = _fetch_embed_json('playlist', playlist_id)
-    entity = _entity_from(payload)
+def _parse_playlist_tracks(entity: dict[str, Any]) -> list[dict[str, Any]]:
+    fallback_cover = _cover_url(entity)
     track_items = entity.get('trackList') or []
     songs: list[dict[str, Any]] = []
     for item in track_items:
@@ -223,8 +222,42 @@ def playlist_tracks_from_id(playlist_id: str) -> list[dict[str, Any]]:
         track_id = track.get('id') or _id_from_uri(track.get('uri', ''))
         if not track_id:
             continue
-        songs.append(_track_dict(track, track_id=track_id))
+        # Playlist embed exposes artists as a "subtitle" string ("A, B")
+        # rather than the structured `artists` list other endpoints return.
+        if not track.get('artists'):
+            track['artists'] = _artists_from_subtitle(track.get('subtitle'))
+        songs.append(
+            _track_dict(
+                track, track_id=track_id, fallback_cover=fallback_cover
+            )
+        )
     return songs
+
+
+def _artists_from_subtitle(subtitle: Any) -> list[dict[str, str]]:
+    if not isinstance(subtitle, str) or not subtitle:
+        return []
+    return [
+        {'name': name.strip()}
+        for name in subtitle.replace('\xa0', ' ').split(',')
+        if name.strip()
+    ]
+
+
+def playlist_tracks_from_id(playlist_id: str) -> list[dict[str, Any]]:
+    payload = _fetch_embed_json('playlist', playlist_id)
+    entity = _entity_from(payload)
+    return _parse_playlist_tracks(entity)
+
+
+def playlist_info_and_tracks(
+    playlist_id: str,
+) -> tuple[str, list[dict[str, Any]]]:
+    """Return ``(playlist_name, tracks)`` in a single embed page fetch."""
+    payload = _fetch_embed_json('playlist', playlist_id)
+    entity = _entity_from(payload)
+    name = entity.get('name') or entity.get('title') or playlist_id
+    return name, _parse_playlist_tracks(entity)
 
 
 def _id_from_uri(uri: str) -> str:
