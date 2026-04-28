@@ -246,6 +246,24 @@ async def check_playlist(
         track_id = song['song_id']
         pl_name = playlist.name
 
+        # Playlist embed entries are missing release year and use the
+        # playlist cover instead of the album cover. Re-fetching the track
+        # embed gives us both per-track. We still keep the playlist values
+        # as a fallback if the per-track fetch fails for any reason.
+        try:
+            full = await asyncio.to_thread(spotify.track_from_id, track_id)
+            for key in ('cover_url', 'year', 'album_name', 'artists'):
+                value = full.get(key)
+                if value:
+                    song[key] = value
+        except Exception:
+            logger.warning(
+                'Per-track Spotify fetch failed for %s; '
+                'falling back to playlist data',
+                track_id,
+                exc_info=True,
+            )
+
         def _make_cb(s: dict, name: str) -> Callable[[float, str], None]:
             def _cb(pct: float, message: str) -> None:
                 asyncio.run_coroutine_threadsafe(

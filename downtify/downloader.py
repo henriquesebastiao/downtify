@@ -12,14 +12,14 @@ from typing import Any, Callable, Optional
 import requests
 import yt_dlp
 from mutagen.flac import FLAC, Picture
-from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1, TPE2, USLT
+from mutagen.id3 import APIC, ID3, TALB, TCON, TDRC, TIT2, TPE1, TPE2, USLT
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 
 from . import lyrics as lyrics_mod
-from .providers import find_match
+from .providers import enrich_from_match, find_match, find_match_for_video
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,45 @@ ProgressCallback = Callable[[float, str], None]
 def _sanitize(text: str) -> str:
     safe = _INVALID_FS_CHARS.sub('', text or '').strip().strip('.')
     return safe or 'unknown'
+
+
+# Order matters — yt-dlp tries clients top-to-bottom and uses the first one
+# that yields usable formats. Picked to dodge the three current YouTube walls:
+#   * `tv`: a YouTube experiment now applies DRM to ~all videos on this client
+#     (yt-dlp #12563), so it goes last as a hail-mary.
+#   * `mweb`: increasingly requires a GVS PO Token, otherwise its formats
+#     are skipped to avoid HTTP 403.
+#   * `web`: needs a JS runtime (Deno/Node) installed for signature/n
+#     challenge solving — usually missing in slim containers.
+# `ios` and `android` typically still serve audio formats without DRM, PO
+# Token or JS runtime, so they lead.
+_DEFAULT_YT_PLAYER_CLIENTS = (
+    'ios',
+    'android',
+    'web_embedded',
+    'mweb',
+    'web',
+    'tv',
+)
+
+
+def _yt_player_clients() -> list[str]:
+    raw = os.getenv('DOWNTIFY_YT_PLAYER_CLIENTS', '').strip()
+    if not raw:
+        return list(_DEFAULT_YT_PLAYER_CLIENTS)
+    clients = [c.strip() for c in raw.split(',') if c.strip()]
+    return clients or list(_DEFAULT_YT_PLAYER_CLIENTS)
+
+
+def _yt_po_tokens() -> list[str]:
+    """Comma-separated PO Tokens, each in the form ``<client>.<context>+<token>``.
+
+    Example: ``mweb.gvs+ABC123,web.gvs+XYZ987``
+    """
+    raw = os.getenv('DOWNTIFY_YT_PO_TOKEN', '').strip()
+    if not raw:
+        return []
+    return [t.strip() for t in raw.split(',') if t.strip()]
 
 
 class Downloader:
@@ -75,12 +114,27 @@ class Downloader:
         video_id = song.get('youtube_id')
         if not video_id and (song.get('source') == 'youtube'):
             video_id = song.get('song_id')
+
+        match: Optional[dict[str, Any]] = None
         if not video_id:
-            video_id = find_match(song)
+            video_id, match = find_match(song)
+        elif not song.get('album_name') or not song.get('cover_url'):
+            # We already have a target video, but the metadata is incomplete.
+            # Look up the YT Music entry for THIS specific videoId so we
+            # don't risk switching to a karaoke / cover that happens to
+            # rank higher.
+            try:
+                match = find_match_for_video(song, video_id)
+            except Exception:
+                logger.debug('enrichment match failed', exc_info=True)
+                match = None
+
         if not video_id:
             raise RuntimeError(
                 f'Could not find a YouTube match for {song.get("name")!r}'
             )
+
+        song = enrich_from_match(song, match)
 
         basename = self._format_basename(song)
         out_template = str(self.download_dir / f'{basename}.%(ext)s')
@@ -123,6 +177,16 @@ class Downloader:
             'fragment_retries': 10,
             'extractor_retries': 3,
             'socket_timeout': 30,
+            # The default `web` player_client is the one most aggressively
+            # gated by YouTube's "Sign in to confirm you're not a bot"
+            # check on datacenter IPs. `tv` and `mweb` almost always
+            # bypass it. Order matters — yt-dlp tries them in sequence.
+            'extractor_args': {
+                'youtube': {'player_client': _yt_player_clients()}
+            },
+            # Light pacing so we don't trigger 429 rate limits when the
+            # user fires off multiple downloads back-to-back.
+            'sleep_interval_requests': 1,
             'postprocessors': [
                 {
                     'key': 'FFmpegExtractAudio',
@@ -140,6 +204,24 @@ class Downloader:
             'yes',
         }:
             ydl_opts['source_address'] = '0.0.0.0'
+
+        # Optional cookie support for the rare case where even alternate
+        # player_clients get challenged. DOWNTIFY_COOKIES_FILE points at a
+        # Netscape-format cookies.txt; DOWNTIFY_COOKIES_FROM_BROWSER takes
+        # "<browser>" or "<browser>:<profile>" (e.g. "firefox" or
+        # "chrome:Default").
+        cookies_file = os.getenv('DOWNTIFY_COOKIES_FILE', '').strip()
+        if cookies_file:
+            ydl_opts['cookiefile'] = cookies_file
+        cookies_browser = os.getenv(
+            'DOWNTIFY_COOKIES_FROM_BROWSER', ''
+        ).strip()
+        if cookies_browser:
+            parts = cookies_browser.split(':', 1)
+            ydl_opts['cookiesfrombrowser'] = (
+                (parts[0],) if len(parts) == 1 else (parts[0], parts[1])
+            )
+
         url = f'https://music.youtube.com/watch?v={video_id}'
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
@@ -196,20 +278,21 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
     artists = song.get('artists') or []
     album = song.get('album_name', '') or ''
     year = str(song.get('year') or '').strip()
+    genre = (song.get('genre') or '').strip()
     cover_bytes = _download_cover(song.get('cover_url', ''))
 
     suffix = path.suffix.lower().lstrip('.')
 
     if suffix == 'mp3':
-        _tag_mp3(path, title, artists, album, year, cover_bytes)
+        _tag_mp3(path, title, artists, album, year, genre, cover_bytes)
     elif suffix in {'m4a', 'mp4', 'aac'}:
-        _tag_mp4(path, title, artists, album, year, cover_bytes)
+        _tag_mp4(path, title, artists, album, year, genre, cover_bytes)
     elif suffix == 'flac':
-        _tag_flac(path, title, artists, album, year, cover_bytes)
+        _tag_flac(path, title, artists, album, year, genre, cover_bytes)
     elif suffix in {'ogg', 'oga'}:
-        _tag_ogg_vorbis(path, title, artists, album, year)
+        _tag_ogg_vorbis(path, title, artists, album, year, genre)
     elif suffix == 'opus':
-        _tag_opus(path, title, artists, album, year)
+        _tag_opus(path, title, artists, album, year, genre)
 
 
 def _tag_mp3(
@@ -218,6 +301,7 @@ def _tag_mp3(
     artists: list[str],
     album: str,
     year: str,
+    genre: str,
     cover_bytes: Optional[bytes],
 ) -> None:
     audio = MP3(str(path), ID3=ID3)
@@ -232,6 +316,8 @@ def _tag_mp3(
         audio.tags.add(TALB(encoding=3, text=album))
     if year:
         audio.tags.add(TDRC(encoding=3, text=year))
+    if genre:
+        audio.tags.add(TCON(encoding=3, text=genre))
     if cover_bytes:
         audio.tags.add(
             APIC(
@@ -251,6 +337,7 @@ def _tag_mp4(
     artists: list[str],
     album: str,
     year: str,
+    genre: str,
     cover_bytes: Optional[bytes],
 ) -> None:
     audio = MP4(str(path))
@@ -262,6 +349,8 @@ def _tag_mp4(
         audio['\xa9alb'] = album
     if year:
         audio['\xa9day'] = year
+    if genre:
+        audio['\xa9gen'] = genre
     if cover_bytes:
         audio['covr'] = [
             MP4Cover(cover_bytes, imageformat=MP4Cover.FORMAT_JPEG)
@@ -275,6 +364,7 @@ def _tag_flac(
     artists: list[str],
     album: str,
     year: str,
+    genre: str,
     cover_bytes: Optional[bytes],
 ) -> None:
     audio = FLAC(str(path))
@@ -286,6 +376,8 @@ def _tag_flac(
         audio['album'] = album
     if year:
         audio['date'] = year
+    if genre:
+        audio['genre'] = genre
     if cover_bytes:
         picture = Picture()
         picture.data = cover_bytes
@@ -302,9 +394,10 @@ def _tag_ogg_vorbis(
     artists: list[str],
     album: str,
     year: str,
+    genre: str,
 ) -> None:
     audio = OggVorbis(str(path))
-    _apply_vorbis_comments(audio, title, artists, album, year)
+    _apply_vorbis_comments(audio, title, artists, album, year, genre)
     audio.save()
 
 
@@ -314,13 +407,14 @@ def _tag_opus(
     artists: list[str],
     album: str,
     year: str,
+    genre: str,
 ) -> None:
     audio = OggOpus(str(path))
-    _apply_vorbis_comments(audio, title, artists, album, year)
+    _apply_vorbis_comments(audio, title, artists, album, year, genre)
     audio.save()
 
 
-def _apply_vorbis_comments(audio, title, artists, album, year):
+def _apply_vorbis_comments(audio, title, artists, album, year, genre):
     audio['title'] = title
     if artists:
         audio['artist'] = artists
@@ -329,6 +423,8 @@ def _apply_vorbis_comments(audio, title, artists, album, year):
         audio['album'] = album
     if year:
         audio['date'] = year
+    if genre:
+        audio['genre'] = genre
 
 
 def embed_lyrics(path: Path, lyrics: 'lyrics_mod.Lyrics') -> None:
