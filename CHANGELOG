@@ -1,12 +1,14 @@
 # Changelog
 
-## [Unreleased](https://github.com/henriquesebastiao/downtify/tree/HEAD)
+## [2.1.0](https://github.com/henriquesebastiao/downtify/tree/2.1.0) (2026-04-28)
 
-[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.0.0...HEAD)
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.0.0...2.1.0)
 
 **Implemented enhancements:**
 
 - Feature: set output file bitrate [\#63](https://github.com/henriquesebastiao/downtify/issues/63)
+- Feature: Spotify Playlist Change Detection and Sync [\#47](https://github.com/henriquesebastiao/downtify/issues/47)
+- feature request: lyric provider [\#31](https://github.com/henriquesebastiao/downtify/issues/31)
 - Implementing downloads without relying on Spotify credentials brings many improvements [\#124](https://github.com/henriquesebastiao/downtify/pull/124) ([henriquesebastiao](https://github.com/henriquesebastiao))
 
 **Fixed bugs:**
@@ -213,19 +215,10 @@
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.3...0.2.4)
 
-**Implemented enhancements:**
-
-- Documenting API and adding tests [\#7](https://github.com/henriquesebastiao/downtify/pull/7) ([henriquesebastiao](https://github.com/henriquesebastiao))
-
 **Closed issues:**
 
 - Create documentation with Material for MkDocs [\#5](https://github.com/henriquesebastiao/downtify/issues/5)
 - Documenting API with Swagger UI [\#4](https://github.com/henriquesebastiao/downtify/issues/4)
-
-**Merged pull requests:**
-
-- 📜 docs: Adding documentation with MkDocs [\#8](https://github.com/henriquesebastiao/downtify/pull/8) ([henriquesebastiao](https://github.com/henriquesebastiao))
-- Sync dev with main [\#6](https://github.com/henriquesebastiao/downtify/pull/6) ([henriquesebastiao](https://github.com/henriquesebastiao))
 
 ## [0.2.3](https://github.com/henriquesebastiao/downtify/tree/0.2.3) (2025-03-03)
 
@@ -234,10 +227,6 @@
 ## [0.2.2](https://github.com/henriquesebastiao/downtify/tree/0.2.2) (2025-02-24)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.1...0.2.2)
-
-**Merged pull requests:**
-
-- 🔧 Adding improvements for version 0.2.2 [\#3](https://github.com/henriquesebastiao/downtify/pull/3) ([henriquesebastiao](https://github.com/henriquesebastiao))
 
 ## [0.2.1](https://github.com/henriquesebastiao/downtify/tree/0.2.1) (2025-02-08)
 
