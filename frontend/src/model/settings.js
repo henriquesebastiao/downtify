@@ -8,6 +8,7 @@ const settings = ref({
   format: '',
   bitrate: '320',
   output: '',
+  generate_m3u: true,
 })
 
 const settingsOptions = {

@@ -95,6 +95,7 @@ def build_app() -> FastAPI:
                 get_downloader=lambda: api.state.downloader,
                 broadcast=api.state.connections.broadcast,
                 loop=loop,
+                settings=api.state.settings,
             )
         )
 

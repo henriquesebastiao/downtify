@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from . import spotify
+from . import m3u, spotify
 from .downloader import Downloader
 
 logger = logging.getLogger(__name__)
@@ -208,6 +208,7 @@ async def check_playlist(
     downloader: Downloader,
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
+    settings: Optional[dict[str, Any]] = None,
 ) -> int:
     """Fetch playlist, detect new tracks, download them. Returns count downloaded."""
     logger.info(
@@ -296,7 +297,47 @@ async def check_playlist(
         last_checked=_now_iso(),
         last_track_count=len(tracks),
     )
+
+    if downloaded > 0 and (settings is None or settings.get(
+        'generate_m3u', True
+    )):
+        await asyncio.to_thread(
+            _regenerate_m3u, playlist, tracks, downloader
+        )
     return downloaded
+
+
+def _regenerate_m3u(
+    playlist: MonitoredPlaylist,
+    tracks: list[dict[str, Any]],
+    downloader: Downloader,
+) -> None:
+    """Rewrite the playlist's M3U from on-disk state after a sweep.
+
+    Walks the full ordered track list (not just the freshly downloaded
+    ones), resolves each to an existing file via the downloader, and
+    hands the entries to :func:`m3u.write_m3u`. Tracks without a
+    matching file on disk are dropped.
+    """
+
+    entries: list[dict[str, Any]] = []
+    for song in tracks:
+        filename = downloader.existing_filename_for(song)
+        if not filename:
+            continue
+        entries.append({
+            'filename': filename,
+            'title': song.get('name', ''),
+            'artist': ', '.join(song.get('artists') or []),
+            'duration': song.get('duration', 0),
+        })
+    if not entries:
+        logger.warning(
+            'M3U skip for monitored playlist "%s": no tracks on disk',
+            playlist.name,
+        )
+        return
+    m3u.write_m3u(downloader.download_dir, playlist.name, entries)
 
 
 async def monitor_loop(
@@ -304,6 +345,7 @@ async def monitor_loop(
     get_downloader: Callable[[], Optional[Downloader]],
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
+    settings: Optional[dict[str, Any]] = None,
 ) -> None:
     """Background task: sweep all enabled playlists that are due for checking."""
     while True:
@@ -319,7 +361,7 @@ async def monitor_loop(
                     continue
                 try:
                     count = await check_playlist(
-                        pl, db, downloader, broadcast, loop
+                        pl, db, downloader, broadcast, loop, settings
                     )
                     if count > 0:
                         logger.info(

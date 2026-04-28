@@ -155,13 +155,15 @@ Access the settings panel (⚙️ icon) to configure:
 
 ## 📃 M3U playlist export
 
-When you paste a **playlist** link, a "Generate M3U playlist file" checkbox appears next to the input — it's on by default. After every track has been processed, Downtify writes a standard `EXTM3U` file to:
+Downtify writes a standard `EXTM3U` file alongside your audio whenever a playlist gets downloaded — both for **manual** playlist paste-downloads and for **Playlist Monitor** sweeps that fetched at least one new track:
 
 ```
 <downloads>/Playlists/<playlist-name>.m3u
 ```
 
-Tracks that failed to download or had no YouTube Music match are skipped (and logged); the M3U is regenerated fresh on every run, so re-pasting the same playlist URL always produces a complete file.
+The behaviour is governed by a single toggle in **Settings → Playlists → Generate M3U file for playlists** (on by default). Flip it off if you'd rather not produce M3Us at all; the rest of the download flow is unchanged.
+
+Tracks that failed to download or had no YouTube Music match are skipped (and logged). The M3U is regenerated fresh on every run, so re-pasting the same playlist URL — or letting the Monitor add new tracks over time — always produces a complete, in-order file.
 
 Track paths inside the M3U are written **relative to the M3U file itself**, so the same file works whether it's read from inside Downtify (where the library is mounted at `/downloads`) or from another consumer that mounts the same library at a different root — e.g. Jellyfin under `/nas/music`. Just point your media server at the same library mount and the playlist will appear as a single unit instead of a pile of loose files.
 
