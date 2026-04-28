@@ -35,7 +35,7 @@ jobs:
         run: uv run ruff check .; uv run ruff check . --diff
 
       - name: Run pytest
-        run: uv run pytest
+        run: uv run pytest -x -s -v
 
   prettier:
     runs-on: ubuntu-latest
