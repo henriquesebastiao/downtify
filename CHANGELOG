@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.0](https://github.com/henriquesebastiao/downtify/tree/2.2.0) (2026-04-28)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.1.1...2.2.0)
+
+**Implemented enhancements:**
+
+- feat: Generate M3U playlist files for Spotify playlists [\#126](https://github.com/henriquesebastiao/downtify/pull/126) ([gmontard](https://github.com/gmontard))
+
 ## [2.1.1](https://github.com/henriquesebastiao/downtify/tree/2.1.1) (2026-04-28)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.1.0...2.1.1)
