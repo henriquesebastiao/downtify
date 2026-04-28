@@ -18,6 +18,7 @@ class DownloadItem {
     this.progress = 0
     this.message = ''
     this.web_download_url = null
+    this.filename = null
   }
   setDownloading() {
     this.web_status = STATUS.DOWNLOADING
@@ -30,6 +31,9 @@ class DownloadItem {
   }
   setWebURL(URL) {
     this.web_download_url = URL
+  }
+  setFilename(name) {
+    this.filename = name
   }
   isQueued() {
     return this.song.song_id !== undefined ? true : false
@@ -97,24 +101,49 @@ API.ws_onerror((event) => {
 
 export function useDownloadManager() {
   const loading = ref(false)
-  function fromURL(url) {
+  function fromURL(url, options = {}) {
+    const { generateM3u = false } = options
+    const isPlaylistURL = (url || '').includes('://open.spotify.com/playlist/')
     loading.value = true
     return API.open(url)
       .then((res) => {
         console.log('Received Response:', res)
-        if (res.status === 200) {
-          const songs = res.data
-          if (Array.isArray(songs)) {
-            for (const song of songs) {
-              console.log('Opened Song:', song)
-              queue(song)
-            }
-          } else {
-            console.log('Opened Song:', songs)
-            queue(songs)
+        if (res.status !== 200) {
+          console.log('Error:', res)
+          return
+        }
+        const songs = res.data
+        if (Array.isArray(songs)) {
+          const downloads = songs.map((song) => {
+            console.log('Opened Song:', song)
+            return queue(song)
+          })
+          if (generateM3u && isPlaylistURL) {
+            Promise.all(downloads).then((results) => {
+              const tracks = results
+                .filter((r) => r && r.filename)
+                .map((r) => ({
+                  filename: r.filename,
+                  title: r.song.name,
+                  artist: (r.song.artists || []).join(', '),
+                  duration: r.song.duration || 0,
+                }))
+              if (tracks.length === 0) {
+                console.log('M3U: no successful tracks, skipping write')
+                return
+              }
+              API.writePlaylistM3u({ playlist_url: url, tracks })
+                .then((m3uRes) => {
+                  console.log('M3U written:', m3uRes.data)
+                })
+                .catch((err) => {
+                  console.log('M3U write failed:', err.message)
+                })
+            })
           }
         } else {
-          console.log('Error:', res)
+          console.log('Opened Song:', songs)
+          queue(songs)
         }
       })
       .catch((err) => {
@@ -128,7 +157,7 @@ export function useDownloadManager() {
   function download(song) {
     console.log('Downloading', song)
     progressTracker.getBySong(song).setDownloading()
-    API.download(song.url)
+    return API.download(song.url)
       .then((res) => {
         console.log('Received Response:', res)
         if (res.status === 200) {
@@ -137,21 +166,26 @@ export function useDownloadManager() {
           progressTracker
             .getBySong(song)
             .setWebURL(API.downloadFileURL(filename))
+          progressTracker.getBySong(song).setFilename(filename)
           progressTracker.getBySong(song).setDownloaded()
+          return { song, filename }
         } else {
           console.log('Error:', res)
           progressTracker.getBySong(song).setError()
+          return { song, filename: null }
         }
       })
       .catch((err) => {
         console.log('Other Error:', err.message)
         progressTracker.getBySong(song).setError()
+        return { song, filename: null }
       })
   }
 
   function queue(song, beginDownload = true) {
     progressTracker.appendSong(song)
-    if (beginDownload) download(song)
+    if (beginDownload) return download(song)
+    return Promise.resolve({ song, filename: null })
   }
   function remove(song) {
     console.log('removing')

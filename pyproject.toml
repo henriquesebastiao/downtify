@@ -17,8 +17,12 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pytest>=8.0",
     "ruff>=0.15.2",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.uv]
 upgrade = true
@@ -37,3 +41,4 @@ quote-style = 'single'
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ["E501", "PLR0915"]
 "downtify/*.py" = ["E501", "PLR0913", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912"]
+"tests/*.py" = ["PLR2004"]

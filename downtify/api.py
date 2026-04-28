@@ -8,6 +8,7 @@ working without changes:
 * ``GET  /api/songs/search``
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias)
 * ``POST /api/download/url``
+* ``POST /api/playlist/m3u``
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
 * ``WS   /api/ws``
@@ -31,7 +32,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 
-from . import providers, spotify
+from . import m3u, providers, spotify
 from .downloader import Downloader
 from .monitor import PlaylistMonitorDB, check_playlist
 
@@ -195,6 +196,57 @@ async def download_endpoint(
             )
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return filename
+
+
+@router.post('/api/playlist/m3u')
+async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
+    """Write an M3U for the playlist after the per-track downloads.
+
+    The frontend POSTs ``{playlist_url, tracks: [{filename, title,
+    artist, duration}, ...]}``. The playlist name is resolved
+    server-side via :func:`spotify.playlist_info_and_tracks` so the
+    existing ``/api/song/url`` shape stays untouched.
+    """
+
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+    try:
+        payload = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail='Invalid JSON') from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail='Invalid payload')
+
+    playlist_url = str(payload.get('playlist_url') or '').strip()
+    if not playlist_url:
+        raise HTTPException(status_code=400, detail='Missing playlist_url')
+    parsed = spotify.parse_spotify_url(playlist_url)
+    if parsed is None or parsed[0] != 'playlist':
+        raise HTTPException(
+            status_code=400, detail='Not a Spotify playlist URL'
+        )
+
+    tracks = payload.get('tracks') or []
+    if not isinstance(tracks, list):
+        raise HTTPException(status_code=400, detail='tracks must be a list')
+
+    try:
+        playlist_name, _ = await asyncio.to_thread(
+            spotify.playlist_info_and_tracks, parsed[1]
+        )
+    except Exception as exc:
+        logger.exception('Failed to resolve playlist %s', playlist_url)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    entries = [t for t in tracks if isinstance(t, dict)]
+    target, kept = m3u.write_m3u(
+        state.downloader.download_dir, playlist_name, entries
+    )
+    if target is None:
+        raise HTTPException(
+            status_code=400, detail='No tracks resolved to a file on disk'
+        )
+    return {'path': str(target), 'count': kept}
 
 
 @router.get('/api/settings')
