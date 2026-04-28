@@ -73,6 +73,10 @@ function deleteDownload(file) {
   return API.delete('/delete', { params: { file } })
 }
 
+function writePlaylistM3u(payload) {
+  return API.post('/api/playlist/m3u', payload)
+}
+
 function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
@@ -96,6 +100,7 @@ export default {
   downloadFileURL,
   listDownloads,
   deleteDownload,
+  writePlaylistM3u,
   getSettings,
   setSettings,
   check_for_update,
