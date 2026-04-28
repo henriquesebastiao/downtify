@@ -104,9 +104,7 @@ class Downloader:
             rendered = f'{artists} - {song.get("name", "Unknown")}'
         return _sanitize(rendered)
 
-    def existing_filename_for(
-        self, song: dict[str, Any]
-    ) -> Optional[str]:
+    def existing_filename_for(self, song: dict[str, Any]) -> Optional[str]:
         """Return the on-disk filename for ``song`` if any matching file exists.
 
         Mirrors :meth:`download`'s post-conversion path resolution: prefers
