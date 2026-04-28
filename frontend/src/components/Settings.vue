@@ -1,140 +1,192 @@
 <template>
-  <!-- Put this part before </body> tag -->
   <input type="checkbox" id="settings-modal" class="modal-toggle" />
-  <div class="modal">
-    <div class="modal-box relative">
-      <label
-        for="settings-modal"
-        class="btn btn-sm btn-circle absolute right-2 top-2"
-        >✕</label
+  <div class="modal modal-bottom sm:modal-middle">
+    <div
+      class="modal-box surface-strong rounded-t-3xl sm:rounded-3xl p-0 max-w-lg"
+    >
+      <!-- Header -->
+      <div
+        class="flex items-center justify-between px-6 py-4 border-b border-white/5"
       >
-      <h3 class="font-bold text-lg">Download Settings</h3>
-      <div class="flex flex-col justify-center my-4">
-        <!-- audio_provider -->
-        <div class="form-control w-full">
-          <label class="label">
-            <span class="label-text">Audio Provider</span>
-          </label>
-          <select
-            class="select w-full"
-            v-model="sm.settings.value.audio_providers[0]"
-          >
-            <option
-              v-for="(provider, index) in sm.settingsOptions.audio_providers"
-              :key="index"
-              :selected="provider === sm.settings.value.audio_providers?.[0]"
-            >
-              {{ provider }}
-            </option>
-          </select>
+        <div>
+          <h3 class="text-lg font-bold tracking-tight">Settings</h3>
+          <p class="text-xs text-base-content/50 mt-0.5">
+            Tweak how Downtify fetches and tags your music.
+          </p>
         </div>
-        <!-- lyrics_provider -->
-        <div class="form-control w-full">
-          <label class="label">
-            <span class="label-text">Lyrics Provider</span>
+        <label
+          for="settings-modal"
+          class="icon-btn cursor-pointer"
+          title="Close"
+        >
+          <Icon icon="clarity:close-line" class="h-5 w-5" />
+        </label>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 py-5 space-y-6">
+        <!-- Audio source -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            Audio source
           </label>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              v-for="provider in sm.settingsOptions.audio_providers"
+              :key="provider"
+              type="button"
+              class="rounded-xl border px-3 py-2 text-sm transition-colors text-left"
+              :class="[
+                sm.settings.value.audio_providers[0] === provider
+                  ? 'border-primary/50 bg-primary/10 text-primary'
+                  : 'border-white/10 hover:border-white/20 hover:bg-white/5',
+              ]"
+              @click="sm.settings.value.audio_providers = [provider]"
+            >
+              {{ providerLabel(provider) }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Lyrics source -->
+        <div>
+          <div class="flex items-baseline justify-between mb-2">
+            <label
+              class="block text-xs font-semibold uppercase tracking-wider text-base-content/50"
+            >
+              Lyrics source
+            </label>
+            <span class="text-[10px] text-base-content/40">
+              only lrclib is active
+            </span>
+          </div>
           <select
-            class="select w-full"
+            class="select w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
             v-model="sm.settings.value.lyrics_providers[0]"
           >
             <option
-              v-for="(provider, index) in sm.settingsOptions.lyrics_providers"
-              :key="index"
-              :selected="provider === sm.settings.value.lyrics_providers?.[0]"
+              v-for="provider in sm.settingsOptions.lyrics_providers"
+              :key="provider"
+              :value="provider"
             >
               {{ provider }}
             </option>
           </select>
         </div>
-        <!-- format -->
-        <div class="form-control w-full">
-          <label class="label">
-            <span class="label-text">Output Format</span>
-          </label>
-          <select class="select w-full" v-model="sm.settings.value.format">
-            <option
-              v-for="(format, index) in sm.settingsOptions.format"
-              :key="index"
-              :selected="format === sm.settings.value.format"
+
+        <!-- Format & bitrate -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label
+              class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
             >
-              {{ format }}
-            </option>
-          </select>
+              Format
+            </label>
+            <select
+              class="select w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              v-model="sm.settings.value.format"
+            >
+              <option
+                v-for="fmt in sm.settingsOptions.format"
+                :key="fmt"
+                :value="fmt"
+              >
+                {{ fmt.toUpperCase() }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <div class="flex items-baseline justify-between mb-2">
+              <label
+                class="block text-xs font-semibold uppercase tracking-wider text-base-content/50"
+              >
+                Quality
+              </label>
+              <span
+                v-if="sm.settings.value.format === 'flac'"
+                class="text-[10px] text-base-content/40"
+              >
+                ignored (lossless)
+              </span>
+            </div>
+            <select
+              class="select w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              v-model="sm.settings.value.bitrate"
+              :disabled="sm.settings.value.format === 'flac'"
+            >
+              <option
+                v-for="bitrate in sm.settingsOptions.bitrate"
+                :key="bitrate"
+                :value="bitrate"
+              >
+                {{ bitrate }} kbps
+              </option>
+            </select>
+          </div>
         </div>
-        <!-- bitrate -->
-        <div class="form-control w-full">
-          <label class="label">
-            <span class="label-text">Quality</span>
-            <span class="label-text-alt opacity-60"
-              >ignored for FLAC (lossless)</span
-            >
-          </label>
-          <select class="select w-full" v-model="sm.settings.value.bitrate">
-            <option
-              v-for="(bitrate, index) in sm.settingsOptions.bitrate"
-              :key="index"
-              :value="bitrate"
-              :selected="bitrate === sm.settings.value.bitrate"
-            >
-              {{ bitrate }} kbps
-            </option>
-          </select>
-        </div>
-      </div>
-      <!-- Saved Changes alerts -->
-      <div
-        v-if="sm.isSaved.value === true"
-        class="alert alert-success shadow-lg"
-      >
-        <div>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="stroke-current flex-shrink-0 h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
+
+        <!-- Save status -->
+        <transition
+          enter-active-class="transition duration-200"
+          enter-from-class="opacity-0 -translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition duration-200"
+          leave-from-class="opacity-100"
+          leave-to-class="opacity-0"
+        >
+          <div
+            v-if="sm.isSaved.value === true"
+            class="surface rounded-xl p-3 flex items-center gap-2 text-sm text-primary"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>Changes saved</span>
-        </div>
-      </div>
-      <div
-        v-if="sm.isSaved.value === false"
-        class="alert alert-error shadow-lg"
-      >
-        <div>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="stroke-current flex-shrink-0 h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
+            <Icon icon="clarity:check-line" class="h-4 w-4 shrink-0" />
+            Changes saved
+          </div>
+          <div
+            v-else-if="sm.isSaved.value === false"
+            class="surface rounded-xl p-3 flex items-center gap-2 text-sm text-error"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            <Icon
+              icon="clarity:exclamation-circle-line"
+              class="h-4 w-4 shrink-0"
             />
-          </svg>
-          <span>Error! Unable to save settings</span>
-        </div>
+            Couldn't save settings.
+          </div>
+        </transition>
       </div>
-      <div class="modal-action">
-        <label class="btn" @click="sm.saveSettings()">Save</label>
+
+      <!-- Footer -->
+      <div
+        class="flex items-center justify-end gap-2 px-6 py-4 border-t border-white/5"
+      >
+        <label
+          for="settings-modal"
+          class="btn btn-sm h-10 px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 cursor-pointer"
+        >
+          Cancel
+        </label>
+        <button
+          class="btn btn-primary btn-sm h-10 px-6 rounded-full"
+          @click="sm.saveSettings()"
+        >
+          Save
+        </button>
       </div>
     </div>
+    <label class="modal-backdrop" for="settings-modal">Close</label>
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
+import { Icon } from '@iconify/vue'
 import { useSettingsManager } from '../model/settings'
 
 const sm = useSettingsManager()
-</script>
 
-<style scoped></style>
+function providerLabel(provider) {
+  if (provider === 'youtube-music') return 'YouTube Music'
+  if (provider === 'youtube') return 'YouTube'
+  return provider
+}
+</script>

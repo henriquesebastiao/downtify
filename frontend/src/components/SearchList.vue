@@ -1,147 +1,177 @@
 <template>
-  <div class="min-h-screen m-2">
-    <div v-if="sm.isSearching.value || props.error" class="hero min-h-screen">
-      <button v-if="sm.isSearching" class="btn btn-sm btn-ghost loading">
-        LOADING
-      </button>
-      <div v-if="props.error" class="alert alert-error">
-        <div class="flex-1">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            class="w-6 h-6 mx-2 stroke-current"
+  <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold tracking-tight">Search results</h1>
+      <p class="mt-1 text-sm text-base-content/60">
+        <template v-if="sm.searchTerm.value">
+          Showing matches for
+          <span class="text-base-content/90 font-medium">
+            "{{ sm.searchTerm.value }}"
+          </span>
+          <template
+            v-if="!sm.isSearching.value && (props.data?.length || 0) > 0"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-            ></path>
-          </svg>
-          <label>Error: {{ sm.errorValue }}</label>
-        </div>
-      </div>
+            — {{ props.data.length }} song{{
+              props.data.length !== 1 ? 's' : ''
+            }}
+          </template>
+        </template>
+        <template v-else>Type something in the search bar to begin.</template>
+      </p>
     </div>
-    <template v-else>
-      <div
+
+    <!-- Error -->
+    <div
+      v-if="props.error"
+      class="surface rounded-2xl p-4 mb-4 flex gap-3 items-center text-sm text-error"
+    >
+      <Icon icon="clarity:exclamation-circle-line" class="h-5 w-5 shrink-0" />
+      <span>
+        Something went wrong{{
+          sm.errorValue.value ? `: ${sm.errorValue.value}` : '.'
+        }}
+      </span>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div v-if="sm.isSearching.value" class="space-y-3">
+      <div v-for="n in 5" :key="n" class="skeleton h-24 rounded-2xl" />
+    </div>
+
+    <!-- Empty state -->
+    <div
+      v-else-if="!props.data || props.data.length === 0"
+      class="surface rounded-2xl p-12 flex flex-col items-center text-center"
+    >
+      <Icon
+        icon="clarity:search-line"
+        class="h-12 w-12 text-base-content/20 mb-4"
+      />
+      <p class="text-base-content/50 text-sm">No songs found.</p>
+      <p class="text-base-content/40 text-xs mt-1">
+        Try another query — artist + title usually works best.
+      </p>
+    </div>
+
+    <!-- Results -->
+    <ul v-else class="space-y-2">
+      <li
         v-for="(song, index) in paginatedData"
-        :key="index"
-        class="card md:card-side card-bordered my-2 shadow-lg card-compact bg-base-100"
+        :key="song.song_id || index"
+        class="surface rounded-2xl track-card"
       >
-        <!-- {{ song }} -->
-        <figure class="aspect-square md:max-h-fit">
+        <!-- Cover -->
+        <div class="track-cover">
           <img
+            v-if="song.cover_url"
             :src="song.cover_url"
-            class="object-contain aspect-square md:max-h-44"
+            :alt="song.name"
+            class="h-full w-full object-cover"
+            loading="lazy"
           />
-        </figure>
-        <div class="card-body">
-          <h2 class="card-title">
-            {{ song.name }}
-            <div class="badge mx-0.5 badge-error" v-if="song.explicit">
-              Explicit
-            </div>
-          </h2>
-          <h3>
-            <a v-for="(artist, index) in song.artists" :key="index">
-              <a v-if="index !== 0"> &#8226; </a>
-              {{ artist }}
-            </a>
-          </h3>
-          <h3>
-            {{ song.album_name }}
-          </h3>
-          <br />
-
-          <p>
-            <br />
-          </p>
-          <div class="card-actions absolute bottom-0 right-0 m-2">
-            <a
-              class="btn btn-ghost btn-square"
-              :href="song.url"
-              target="_blank"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-6"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"
-                />
-              </svg>
-            </a>
-
-            <button
-              v-if="pt.getBySong(song)?.isQueued()"
-              class="btn btn-primary btn-square"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-6"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                />
-              </svg>
-            </button>
-            <button
-              v-else
-              class="btn btn-primary btn-square"
-              @click="download(song)"
-            >
-              <Icon icon="clarity:floppy-line" class="h-6 w-6" />
-            </button>
+          <div
+            v-else
+            class="h-full w-full flex items-center justify-center text-base-content/30"
+          >
+            <Icon icon="clarity:music-note-line" class="h-6 w-6" />
           </div>
         </div>
-      </div>
 
-      <!-- Pagination -->
-      <div class="flex justify-center my-6" v-if="totalPages > 1">
-        <div class="join">
-          <button
-            class="join-item btn"
-            :disabled="currentPage === 1"
-            @click="currentPage--"
+        <!-- Info -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-0.5">
+            <span class="font-semibold truncate">{{ song.name }}</span>
+            <span v-if="song.explicit" class="badge-error-soft shrink-0"
+              >E</span
+            >
+          </div>
+          <p class="text-xs text-base-content/70 truncate">
+            {{ artistsOf(song) }}
+          </p>
+          <p
+            v-if="song.album_name"
+            class="text-xs text-base-content/40 truncate"
           >
-            «
+            {{ song.album_name }}
+            <span v-if="song.year" class="text-base-content/30">
+              · {{ song.year }}
+            </span>
+          </p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-1 shrink-0">
+          <a
+            v-if="song.url"
+            class="icon-btn"
+            :href="song.url"
+            target="_blank"
+            rel="noopener"
+            title="Open on Spotify"
+          >
+            <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
+          </a>
+
+          <button
+            v-if="downloadState(song) === 'queued'"
+            class="icon-btn text-primary cursor-default"
+            title="In queue"
+            disabled
+          >
+            <Icon icon="clarity:check-circle-line" class="h-5 w-5" />
           </button>
           <button
-            v-for="page in totalPages"
-            :key="page"
-            class="join-item btn"
-            :class="{ 'btn-active btn-primary': page === currentPage }"
-            @click="currentPage = page"
+            v-else
+            class="icon-btn text-primary hover:bg-primary/10"
+            @click="download(song)"
+            title="Download"
           >
-            {{ page }}
-          </button>
-          <button
-            class="join-item btn"
-            :disabled="currentPage === totalPages"
-            @click="currentPage++"
-          >
-            »
+            <Icon icon="clarity:download-line" class="h-5 w-5" />
           </button>
         </div>
-      </div>
-    </template>
+      </li>
+    </ul>
+
+    <!-- Pagination -->
+    <nav
+      v-if="totalPages > 1"
+      class="mt-8 flex items-center justify-center gap-1 flex-wrap"
+    >
+      <button
+        class="icon-btn"
+        :disabled="currentPage === 1"
+        @click="currentPage--"
+        title="Previous page"
+      >
+        <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
+      </button>
+      <button
+        v-for="page in totalPages"
+        :key="page"
+        class="h-10 min-w-[2.5rem] rounded-full px-3 text-sm font-medium transition-colors"
+        :class="
+          page === currentPage
+            ? 'bg-primary text-primary-content shadow-glow-sm'
+            : 'text-base-content/70 hover:text-base-content hover:bg-white/10'
+        "
+        @click="currentPage = page"
+      >
+        {{ page }}
+      </button>
+      <button
+        class="icon-btn"
+        :disabled="currentPage === totalPages"
+        @click="currentPage++"
+        title="Next page"
+      >
+        <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
+      </button>
+    </nav>
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
@@ -151,8 +181,6 @@ import { useProgressTracker, useDownloadManager } from '../model/download'
 const PAGE_SIZE = 5
 
 const props = defineProps(['data', 'error'])
-console.log('props', props)
-
 const emit = defineEmits(['download'])
 
 const sm = useSearchManager()
@@ -178,9 +206,22 @@ watch(
   }
 )
 
+function artistsOf(song) {
+  if (Array.isArray(song.artists) && song.artists.length) {
+    return song.artists.join(', ')
+  }
+  return song.artist || 'Unknown artist'
+}
+
+function downloadState(song) {
+  const item = pt.getBySong(song)
+  if (!item) return 'idle'
+  if (item.isErrored()) return 'error'
+  if (item.isDownloaded()) return 'queued'
+  return 'queued'
+}
+
 function download(song) {
   emit('download', song)
 }
 </script>
-
-<style scoped></style>

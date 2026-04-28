@@ -1,6 +1,7 @@
 <template>
-  <div>
+  <div class="min-h-screen">
     <Navbar />
+    <Settings />
     <SearchList
       :data="sm.results.value"
       :error="sm.error.value"
@@ -17,14 +18,12 @@ import { useSearchManager } from '../model/search'
 import { useDownloadManager } from '../model/download'
 
 import Navbar from '/src/components/Navbar.vue'
+import Settings from '/src/components/Settings.vue'
 import SearchList from '/src/components/SearchList.vue'
 
-onMounted(() => {
-  window.scroll(0, 0)
-})
+onMounted(() => window.scroll(0, 0))
 
 const route = useRoute()
-
 const sm = useSearchManager()
 const dm = useDownloadManager()
 
@@ -38,5 +37,3 @@ watch(
 
 sm.searchFor(route.params.query)
 </script>
-
-<style scoped></style>

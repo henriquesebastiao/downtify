@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import re as _re
 from pathlib import Path
@@ -115,6 +116,13 @@ class Downloader:
             'nocheckcertificate': True,
             'overwrites': True,
             'progress_hooks': [hook],
+            # Resilience against flaky DNS/network in containers.
+            # googlevideo.com CDN hosts are short-lived shards and a single
+            # transient EAI_AGAIN/timeout used to abort the whole download.
+            'retries': 10,
+            'fragment_retries': 10,
+            'extractor_retries': 3,
+            'socket_timeout': 30,
             'postprocessors': [
                 {
                     'key': 'FFmpegExtractAudio',
@@ -123,6 +131,11 @@ class Downloader:
                 }
             ],
         }
+        # Many container setups have IPv6 advertised but unroutable for
+        # googlevideo.com, which surfaces as EAI_AGAIN on the AAAA lookup.
+        # Setting DOWNTIFY_FORCE_IPV4=1 binds yt-dlp to IPv4 only.
+        if os.getenv('DOWNTIFY_FORCE_IPV4', '').strip() in {'1', 'true', 'yes'}:
+            ydl_opts['source_address'] = '0.0.0.0'
         url = f'https://music.youtube.com/watch?v={video_id}'
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])

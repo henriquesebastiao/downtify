@@ -11,3 +11,6 @@ services:
       - ./frontend/dist:/downtify/frontend/dist:ro
     environment:
       - DOWNTIFY_PORT=30321
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1

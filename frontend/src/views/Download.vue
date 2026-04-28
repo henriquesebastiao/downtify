@@ -1,25 +1,16 @@
 <template>
-  <div>
+  <div class="min-h-screen">
     <Navbar />
+    <Settings />
     <DownloadList />
   </div>
 </template>
 
-<script>
-import { ref, onMounted } from 'vue'
+<script setup>
+import { onMounted } from 'vue'
 import Navbar from '/src/components/Navbar.vue'
+import Settings from '/src/components/Settings.vue'
 import DownloadList from '/src/components/DownloadList.vue'
 
-export default {
-  components: { Navbar, DownloadList },
-  setup() {
-    onMounted(() => {
-      window.scroll(0, 0)
-    })
-
-    return {}
-  },
-}
+onMounted(() => window.scroll(0, 0))
 </script>
-
-<style scoped></style>
