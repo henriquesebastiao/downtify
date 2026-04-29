@@ -11,6 +11,8 @@ export default {
     download: 'Baixar',
     unknownArtist: 'Artista desconhecido',
     unknownTrack: 'Faixa desconhecida',
+    previousPage: 'Página anterior',
+    nextPage: 'Próxima página',
   },
   nav: {
     home: 'Início',

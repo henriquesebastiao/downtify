@@ -26,7 +26,7 @@
     <!-- Queue items -->
     <ul v-else class="space-y-3">
       <li
-        v-for="(item, index) in pt.downloadQueue.value"
+        v-for="(item, index) in paginatedQueue"
         :key="index"
         class="surface rounded-2xl p-3 sm:p-4 flex items-center gap-4"
       >
@@ -100,17 +100,76 @@
         </div>
       </li>
     </ul>
+
+    <!-- Pagination -->
+    <nav
+      v-if="totalPages > 1"
+      class="mt-8 flex items-center justify-center gap-1 flex-wrap"
+    >
+      <button
+        class="icon-btn"
+        :disabled="currentPage === 1"
+        @click="currentPage--"
+        :title="t('common.previousPage')"
+      >
+        <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
+      </button>
+      <button
+        v-for="page in totalPages"
+        :key="page"
+        class="h-10 min-w-[2.5rem] rounded-full px-3 text-sm font-medium transition-colors"
+        :class="
+          page === currentPage
+            ? 'bg-primary text-primary-content shadow-glow-sm'
+            : 'text-base-content/70 hover:text-base-content hover:bg-white/10'
+        "
+        @click="currentPage = page"
+      >
+        {{ page }}
+      </button>
+      <button
+        class="icon-btn"
+        :disabled="currentPage === totalPages"
+        @click="currentPage++"
+        :title="t('common.nextPage')"
+      >
+        <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
+      </button>
+    </nav>
   </div>
 </template>
 
 <script setup>
+import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
 
+const PAGE_SIZE = 10
+
 const pt = useProgressTracker()
 const dm = useDownloadManager()
 const { t } = useI18n()
+
+const currentPage = ref(1)
+
+const totalPages = computed(() =>
+  Math.ceil(pt.downloadQueue.value.length / PAGE_SIZE)
+)
+
+const paginatedQueue = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return pt.downloadQueue.value.slice(start, start + PAGE_SIZE)
+})
+
+watch(
+  () => pt.downloadQueue.value.length,
+  () => {
+    if (currentPage.value > totalPages.value && totalPages.value > 0) {
+      currentPage.value = totalPages.value
+    }
+  }
+)
 
 function artistsOf(song) {
   if (Array.isArray(song.artists) && song.artists.length) {

@@ -71,7 +71,7 @@
       <!-- File list -->
       <ul v-else class="space-y-2">
         <li
-          v-for="(file, idx) in files"
+          v-for="file in paginatedFiles"
           :key="file"
           class="surface rounded-2xl p-3 sm:p-4 flex items-center gap-3"
         >
@@ -102,7 +102,7 @@
           <div class="flex items-center gap-1 shrink-0">
             <button
               class="icon-btn text-primary hover:bg-primary/10"
-              @click="playFile(idx)"
+              @click="playFile(files.indexOf(file))"
               :title="t('library.play')"
             >
               <Icon icon="clarity:play-line" class="h-4 w-4" />
@@ -131,6 +131,42 @@
         </li>
       </ul>
 
+      <!-- Pagination -->
+      <nav
+        v-if="totalPages > 1"
+        class="mt-8 flex items-center justify-center gap-1 flex-wrap"
+      >
+        <button
+          class="icon-btn"
+          :disabled="currentPage === 1"
+          @click="currentPage--"
+          :title="t('common.previousPage')"
+        >
+          <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
+        </button>
+        <button
+          v-for="page in totalPages"
+          :key="page"
+          class="h-10 min-w-[2.5rem] rounded-full px-3 text-sm font-medium transition-colors"
+          :class="
+            page === currentPage
+              ? 'bg-primary text-primary-content shadow-glow-sm'
+              : 'text-base-content/70 hover:text-base-content hover:bg-white/10'
+          "
+          @click="currentPage = page"
+        >
+          {{ page }}
+        </button>
+        <button
+          class="icon-btn"
+          :disabled="currentPage === totalPages"
+          @click="currentPage++"
+          :title="t('common.nextPage')"
+        >
+          <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
+        </button>
+      </nav>
+
       <!-- Count footer -->
       <p
         v-if="files.length > 0"
@@ -147,7 +183,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import Navbar from '/src/components/Navbar.vue'
@@ -155,6 +191,8 @@ import Settings from '/src/components/Settings.vue'
 import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
 import { usePlayer } from '/src/model/player'
+
+const PAGE_SIZE = 10
 
 const { t } = useI18n()
 const player = usePlayer()
@@ -165,6 +203,18 @@ const loading = ref(false)
 const error = ref('')
 const deleting = ref({})
 const coverFailed = ref({})
+const currentPage = ref(1)
+
+const totalPages = computed(() => Math.ceil(files.value.length / PAGE_SIZE))
+
+const paginatedFiles = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return files.value.slice(start, start + PAGE_SIZE)
+})
+
+watch(files, () => {
+  currentPage.value = 1
+})
 
 function coverUrlFor(file) {
   return API.coverFileURL(file)
