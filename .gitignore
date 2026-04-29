@@ -10,7 +10,7 @@ wheels/
 
 .python-version
 .vscode
-downloads/
+docker/
 
 .env
 

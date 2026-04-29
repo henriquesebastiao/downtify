@@ -52,6 +52,8 @@ RUN sed -i 's/\r$//g' entrypoint.sh && \
 ENV PATH="/home/downtify/.local/bin:${PATH}"
 
 VOLUME /downloads
+VOLUME /data
+
 EXPOSE ${DOWNTIFY_PORT}
 
 ENTRYPOINT ["/sbin/tini", "-g", "--", "./entrypoint.sh"]
