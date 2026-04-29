@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.4.1](https://github.com/henriquesebastiao/downtify/tree/2.4.1) (2026-04-29)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.4.0...2.4.1)
+
+**Implemented enhancements:**
+
+- db in download folder is not a good idea [\#139](https://github.com/henriquesebastiao/downtify/issues/139)
+- Creating a separate directory to save the SQLite database [\#140](https://github.com/henriquesebastiao/downtify/pull/140) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Merged pull requests:**
+
+- build\(deps\): Bump docker/login-action from 3 to 4 [\#138](https://github.com/henriquesebastiao/downtify/pull/138) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump docker/metadata-action from 5 to 6 [\#137](https://github.com/henriquesebastiao/downtify/pull/137) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump docker/build-push-action from 6 to 7 [\#136](https://github.com/henriquesebastiao/downtify/pull/136) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump docker/setup-buildx-action from 3 to 4 [\#135](https://github.com/henriquesebastiao/downtify/pull/135) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump docker/setup-qemu-action from 3 to 4 [\#134](https://github.com/henriquesebastiao/downtify/pull/134) ([dependabot[bot]](https://github.com/apps/dependabot))
+
 ## [2.4.0](https://github.com/henriquesebastiao/downtify/tree/2.4.0) (2026-04-29)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.3.0...2.4.0)
@@ -248,10 +265,19 @@
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.3...0.2.4)
 
+**Implemented enhancements:**
+
+- Documenting API and adding tests [\#7](https://github.com/henriquesebastiao/downtify/pull/7) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
 **Closed issues:**
 
 - Create documentation with Material for MkDocs [\#5](https://github.com/henriquesebastiao/downtify/issues/5)
 - Documenting API with Swagger UI [\#4](https://github.com/henriquesebastiao/downtify/issues/4)
+
+**Merged pull requests:**
+
+- 📜 docs: Adding documentation with MkDocs [\#8](https://github.com/henriquesebastiao/downtify/pull/8) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Sync dev with main [\#6](https://github.com/henriquesebastiao/downtify/pull/6) ([henriquesebastiao](https://github.com/henriquesebastiao))
 
 ## [0.2.3](https://github.com/henriquesebastiao/downtify/tree/0.2.3) (2025-03-03)
 
@@ -260,6 +286,10 @@
 ## [0.2.2](https://github.com/henriquesebastiao/downtify/tree/0.2.2) (2025-02-24)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.1...0.2.2)
+
+**Merged pull requests:**
+
+- 🔧 Adding improvements for version 0.2.2 [\#3](https://github.com/henriquesebastiao/downtify/pull/3) ([henriquesebastiao](https://github.com/henriquesebastiao))
 
 ## [0.2.1](https://github.com/henriquesebastiao/downtify/tree/0.2.1) (2025-02-08)
 
