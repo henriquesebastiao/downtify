@@ -2,9 +2,9 @@
   <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-2xl font-bold tracking-tight">Download Queue</h1>
+      <h1 class="text-2xl font-bold tracking-tight">{{ t('queue.title') }}</h1>
       <p class="mt-1 text-sm text-base-content/60">
-        Songs you've queued. Progress, status and quick actions live here.
+        {{ t('queue.subtitle') }}
       </p>
     </div>
 
@@ -17,9 +17,9 @@
         icon="clarity:download-line"
         class="h-12 w-12 text-base-content/20 mb-4"
       />
-      <p class="text-base-content/50 text-sm">Nothing queued right now.</p>
+      <p class="text-base-content/50 text-sm">{{ t('queue.empty') }}</p>
       <p class="text-base-content/40 text-xs mt-1">
-        Search for a song and hit download to start.
+        {{ t('queue.emptyHint') }}
       </p>
     </div>
 
@@ -72,7 +72,7 @@
             class="icon-btn text-primary hover:bg-primary/10"
             href="javascript:;"
             @click="forceDownload(item.web_download_url)"
-            title="Save to device"
+            :title="t('queue.saveToDevice')"
           >
             <Icon icon="clarity:download-line" class="h-4 w-4" />
           </a>
@@ -93,7 +93,7 @@
           <button
             class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
             @click="dm.remove(item.song)"
-            title="Remove from queue"
+            :title="t('queue.removeFromQueue')"
           >
             <Icon icon="clarity:trash-line" class="h-4 w-4" />
           </button>
@@ -106,15 +106,17 @@
 <script setup>
 import { Icon } from '@iconify/vue'
 import { useProgressTracker, useDownloadManager } from '../model/download'
+import { useI18n } from '../i18n'
 
 const pt = useProgressTracker()
 const dm = useDownloadManager()
+const { t } = useI18n()
 
 function artistsOf(song) {
   if (Array.isArray(song.artists) && song.artists.length) {
     return song.artists.join(', ')
   }
-  return song.artist || 'Unknown artist'
+  return song.artist || t('common.unknownArtist')
 }
 
 function statusClass(item) {

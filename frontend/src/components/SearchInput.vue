@@ -43,12 +43,13 @@
 </template>
 
 <script setup>
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 
 import router from '../router'
 import { useSearchManager } from '../model/search'
 import { useDownloadManager } from '../model/download'
+import { useI18n } from '../i18n'
 
 defineProps({
   compact: { type: Boolean, default: false },
@@ -56,20 +57,26 @@ defineProps({
 
 const sm = useSearchManager()
 const dm = useDownloadManager()
+const { t, locale } = useI18n()
 
-const placeHolderOptions = [
-  'Search a song, paste a Spotify link…',
+const placeHolderRotation = [
   'https://open.spotify.com/track/4vfN00PlILRXy5dcXHQE9M',
   'drugs - EDEN',
   'Não Gosto Eu Amo - Henrique e Juliano',
   'Perfect - Ed Sheeran',
   'Lightning Crashes - Live',
 ]
-const placeHolder = ref(placeHolderOptions[0])
+const rotationIndex = ref(0)
+const placeHolder = computed(() => {
+  // depend on locale to refresh translated default placeholder
+  const _ = locale.value
+  if (rotationIndex.value === 0) return t('search.placeholder')
+  return placeHolderRotation[rotationIndex.value - 1]
+})
 
 const polling = setInterval(() => {
-  placeHolderOptions.push(placeHolderOptions.shift())
-  placeHolder.value = placeHolderOptions[0]
+  rotationIndex.value =
+    (rotationIndex.value + 1) % (placeHolderRotation.length + 1)
 }, 5000)
 onBeforeUnmount(() => clearInterval(polling))
 

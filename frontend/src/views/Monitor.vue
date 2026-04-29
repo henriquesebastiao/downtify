@@ -6,10 +6,11 @@
     <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <!-- Header -->
       <div class="mb-8">
-        <h1 class="text-2xl font-bold tracking-tight">Playlist Monitor</h1>
+        <h1 class="text-2xl font-bold tracking-tight">
+          {{ t('monitor.title') }}
+        </h1>
         <p class="mt-1 text-sm text-base-content/60">
-          Add Spotify playlists to watch. New tracks added to those playlists
-          will be downloaded automatically.
+          {{ t('monitor.subtitle') }}
         </p>
       </div>
 
@@ -18,13 +19,13 @@
         <h2
           class="text-sm font-semibold uppercase tracking-wider text-base-content/50 mb-4"
         >
-          Watch a new playlist
+          {{ t('monitor.watchNew') }}
         </h2>
         <form @submit.prevent="onAdd" class="flex flex-col sm:flex-row gap-3">
           <input
             v-model="newUrl"
             type="text"
-            placeholder="Paste a Spotify playlist URL…"
+            :placeholder="t('monitor.urlPlaceholder')"
             class="input-modern flex-1 h-11 text-sm"
             :disabled="adding"
           />
@@ -34,13 +35,13 @@
               class="select select-sm rounded-full border border-white/10 bg-base-100/85 focus:border-primary/60 h-11 px-3 text-sm"
               :disabled="adding"
             >
-              <option :value="15">Every 15 min</option>
-              <option :value="30">Every 30 min</option>
-              <option :value="60">Every hour</option>
-              <option :value="180">Every 3 h</option>
-              <option :value="360">Every 6 h</option>
-              <option :value="720">Every 12 h</option>
-              <option :value="1440">Every day</option>
+              <option :value="15">{{ t('monitor.every15') }}</option>
+              <option :value="30">{{ t('monitor.every30') }}</option>
+              <option :value="60">{{ t('monitor.every1h') }}</option>
+              <option :value="180">{{ t('monitor.every3h') }}</option>
+              <option :value="360">{{ t('monitor.every6h') }}</option>
+              <option :value="720">{{ t('monitor.every12h') }}</option>
+              <option :value="1440">{{ t('monitor.every1d') }}</option>
             </select>
             <button
               type="submit"
@@ -48,7 +49,7 @@
               :disabled="adding || !newUrl.trim()"
             >
               <span v-if="adding" class="loading loading-spinner loading-xs" />
-              <span v-else>Watch</span>
+              <span v-else>{{ t('monitor.watch') }}</span>
             </button>
           </div>
         </form>
@@ -70,10 +71,10 @@
           class="h-12 w-12 text-base-content/20 mb-4"
         />
         <p class="text-base-content/50 text-sm">
-          No playlists being monitored yet.
+          {{ t('monitor.empty') }}
         </p>
         <p class="text-base-content/40 text-xs mt-1">
-          Paste a Spotify playlist link above to get started.
+          {{ t('monitor.emptyHint') }}
         </p>
       </div>
 
@@ -92,7 +93,7 @@
                 class="pill shrink-0"
                 :class="pl.enabled ? 'badge-soft' : 'badge-neutral-soft'"
               >
-                {{ pl.enabled ? 'Active' : 'Paused' }}
+                {{ pl.enabled ? t('monitor.active') : t('monitor.paused') }}
               </span>
             </div>
             <div
@@ -103,22 +104,28 @@
                   icon="clarity:refresh-line"
                   class="inline h-3 w-3 mr-0.5"
                 />
-                Every {{ formatInterval(pl.interval_minutes) }}
+                {{
+                  t('monitor.everyInterval', {
+                    interval: formatInterval(pl.interval_minutes),
+                  })
+                }}
               </span>
               <span>
                 <Icon
                   icon="clarity:music-note-line"
                   class="inline h-3 w-3 mr-0.5"
                 />
-                {{ pl.last_track_count }} track{{
-                  pl.last_track_count !== 1 ? 's' : ''
+                {{
+                  pl.last_track_count === 1
+                    ? t('monitor.tracksOne', { count: pl.last_track_count })
+                    : t('monitor.tracksMany', { count: pl.last_track_count })
                 }}
               </span>
               <span v-if="pl.last_checked">
                 <Icon icon="clarity:clock-line" class="inline h-3 w-3 mr-0.5" />
-                Checked {{ timeAgo(pl.last_checked) }}
+                {{ t('monitor.checked', { when: timeAgo(pl.last_checked) }) }}
               </span>
-              <span v-else class="italic">Not checked yet</span>
+              <span v-else class="italic">{{ t('monitor.notChecked') }}</span>
             </div>
           </div>
 
@@ -130,19 +137,19 @@
               @change="onChangeInterval(pl, $event)"
               class="select select-xs rounded-full border border-white/10 bg-base-100/60 text-xs focus:border-primary/60"
             >
-              <option :value="15">15 min</option>
-              <option :value="30">30 min</option>
-              <option :value="60">1 h</option>
-              <option :value="180">3 h</option>
-              <option :value="360">6 h</option>
-              <option :value="720">12 h</option>
-              <option :value="1440">1 day</option>
+              <option :value="15">{{ t('monitor.short15') }}</option>
+              <option :value="30">{{ t('monitor.short30') }}</option>
+              <option :value="60">{{ t('monitor.short1h') }}</option>
+              <option :value="180">{{ t('monitor.short3h') }}</option>
+              <option :value="360">{{ t('monitor.short6h') }}</option>
+              <option :value="720">{{ t('monitor.short12h') }}</option>
+              <option :value="1440">{{ t('monitor.short1d') }}</option>
             </select>
 
             <!-- Toggle enabled -->
             <button
               class="icon-btn"
-              :title="pl.enabled ? 'Pause monitoring' : 'Resume monitoring'"
+              :title="pl.enabled ? t('monitor.pause') : t('monitor.resume')"
               @click="onToggle(pl)"
             >
               <Icon
@@ -154,7 +161,7 @@
             <!-- Manual check -->
             <button
               class="icon-btn"
-              title="Check now"
+              :title="t('monitor.checkNow')"
               :disabled="checking[pl.id]"
               @click="onCheck(pl)"
             >
@@ -168,7 +175,7 @@
             <!-- Delete -->
             <button
               class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
-              title="Stop monitoring"
+              :title="t('monitor.stop')"
               @click="onDelete(pl)"
             >
               <Icon icon="clarity:trash-line" class="h-4 w-4" />
@@ -185,11 +192,7 @@
           icon="clarity:info-standard-line"
           class="h-5 w-5 shrink-0 mt-0.5 text-primary/70"
         />
-        <p>
-          When you add a playlist, Downtify downloads every track it currently
-          contains and then keeps watching it. Any songs added later on Spotify
-          are detected and downloaded automatically on the next scheduled check.
-        </p>
+        <p>{{ t('monitor.info') }}</p>
       </div>
     </div>
   </div>
@@ -201,6 +204,9 @@ import { Icon } from '@iconify/vue'
 import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
 import monitorAPI from '/src/model/monitor.js'
+import { useI18n } from '/src/i18n'
+
+const { t } = useI18n()
 
 const playlists = ref([])
 const loading = ref(false)
@@ -231,9 +237,7 @@ async function onAdd() {
     playlists.value.unshift(res.data)
     newUrl.value = ''
   } catch (e) {
-    addError.value =
-      e?.response?.data?.detail ||
-      'Failed to add playlist. Check the URL and try again.'
+    addError.value = e?.response?.data?.detail || t('monitor.failedAdd')
   } finally {
     adding.value = false
   }
@@ -266,7 +270,6 @@ async function onCheck(pl) {
   checking.value = { ...checking.value, [pl.id]: true }
   try {
     await monitorAPI.checkMonitoredPlaylist(pl.id)
-    // Refresh after a short delay to pick up updated last_checked
     setTimeout(async () => {
       try {
         const res = await monitorAPI.listMonitoredPlaylists()
@@ -281,7 +284,7 @@ async function onCheck(pl) {
 }
 
 async function onDelete(pl) {
-  if (!confirm(`Stop monitoring "${pl.name}"?`)) return
+  if (!confirm(t('monitor.deletePrompt', { name: pl.name }))) return
   try {
     await monitorAPI.deleteMonitoredPlaylist(pl.id)
     playlists.value = playlists.value.filter((p) => p.id !== pl.id)
@@ -291,20 +294,21 @@ async function onDelete(pl) {
 }
 
 function formatInterval(minutes) {
-  if (minutes < 60) return `${minutes} min`
-  if (minutes < 1440) return `${minutes / 60} h`
-  return `${minutes / 1440} day${minutes / 1440 !== 1 ? 's' : ''}`
+  if (minutes < 60) return `${minutes} ${t('monitor.minSuffix')}`
+  if (minutes < 1440) return `${minutes / 60} ${t('monitor.hourSuffix')}`
+  const days = minutes / 1440
+  return `${days} ${days === 1 ? t('monitor.daySuffix') : t('monitor.daysSuffix')}`
 }
 
 function timeAgo(isoString) {
   try {
     const diff = Date.now() - new Date(isoString).getTime()
     const mins = Math.floor(diff / 60000)
-    if (mins < 1) return 'just now'
-    if (mins < 60) return `${mins} min ago`
+    if (mins < 1) return t('monitor.timeJustNow')
+    if (mins < 60) return t('monitor.timeMinAgo', { n: mins })
     const hrs = Math.floor(mins / 60)
-    if (hrs < 24) return `${hrs} h ago`
-    return `${Math.floor(hrs / 24)} day(s) ago`
+    if (hrs < 24) return t('monitor.timeHourAgo', { n: hrs })
+    return t('monitor.timeDayAgo', { n: Math.floor(hrs / 24) })
   } catch {
     return ''
   }

@@ -11,16 +11,24 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import logging
 import mimetypes
 import os
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
+from mutagen import File as MutagenFile
+from mutagen.flac import FLAC, Picture
+from mutagen.id3 import ID3
+from mutagen.mp4 import MP4
+from mutagen.oggopus import OggOpus
+from mutagen.oggvorbis import OggVorbis
 from uvicorn import Config, Server
 
 from downtify import __version__, api
@@ -50,6 +58,82 @@ def _fix_mime_types() -> None:
     mimetypes.add_type('application/javascript', '.js')
     mimetypes.add_type('application/javascript', '.mjs')
     mimetypes.add_type('text/css', '.css')
+
+
+def _extract_cover(path: Path) -> tuple[bytes | None, str | None]:
+    """Return ``(image_bytes, mime)`` for the embedded cover, or ``(None, None)``.
+
+    Reads tags lazily — mutagen format detection handles MP3/FLAC/M4A/OGG/Opus
+    without us needing to dispatch on extension.
+    """
+
+    try:
+        # ID3 (mp3, sometimes wav/aac)
+        try:
+            tag = ID3(str(path))
+            for frame in tag.getall('APIC'):
+                if frame.data:
+                    return frame.data, frame.mime or 'image/jpeg'
+        except Exception:
+            pass
+
+        # FLAC
+        if path.suffix.lower() == '.flac':
+            try:
+                f = FLAC(str(path))
+                if f.pictures:
+                    pic = f.pictures[0]
+                    return pic.data, pic.mime or 'image/jpeg'
+            except Exception:
+                pass
+
+        # MP4 / M4A
+        if path.suffix.lower() in {'.m4a', '.mp4', '.aac'}:
+            try:
+                m = MP4(str(path))
+                covr = m.tags.get('covr') if m.tags else None
+                if covr:
+                    pic = covr[0]
+                    fmt = getattr(pic, 'imageformat', None)
+                    mime = (
+                        'image/png'
+                        if fmt == 14  # MP4Cover.FORMAT_PNG
+                        else 'image/jpeg'
+                    )
+                    return bytes(pic), mime
+            except Exception:
+                pass
+
+        # Ogg Vorbis / Opus — METADATA_BLOCK_PICTURE base64
+        if path.suffix.lower() in {'.ogg', '.opus'}:
+            try:
+                ogg = (
+                    OggOpus(str(path))
+                    if path.suffix.lower() == '.opus'
+                    else OggVorbis(str(path))
+                )
+                blocks = ogg.get('metadata_block_picture') or []
+                for raw in blocks:
+                    try:
+                        pic = Picture(base64.b64decode(raw))
+                        if pic.data:
+                            return pic.data, pic.mime or 'image/jpeg'
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+
+        # Generic fallback — let mutagen pick the right parser
+        try:
+            f = MutagenFile(str(path))
+            if f is not None and getattr(f, 'pictures', None):
+                pic = f.pictures[0]
+                return pic.data, pic.mime or 'image/jpeg'
+        except Exception:
+            pass
+    except Exception:
+        return None, None
+    return None, None
 
 
 def build_app() -> FastAPI:
@@ -127,6 +211,31 @@ def build_app() -> FastAPI:
         except Exception as exc:
             return {'deleted': False, 'error': str(exc)}
         return {'deleted': True}
+
+    @app.get('/cover')
+    def get_cover(file: str):
+        # Resolve and confine to DOWNLOAD_DIR to prevent path traversal.
+        base = DOWNLOAD_DIR.resolve()
+        try:
+            full = (base / file).resolve()
+            full.relative_to(base)
+        except (ValueError, RuntimeError):
+            raise HTTPException(status_code=400, detail='Invalid path')
+        if not full.is_file():
+            raise HTTPException(status_code=404, detail='File not found')
+
+        data, mime = _extract_cover(full)
+        if data is None:
+            raise HTTPException(status_code=404, detail='No embedded cover')
+        return Response(
+            content=data,
+            media_type=mime or 'image/jpeg',
+            headers={
+                # Cache by mtime — clients fetch once per file revision.
+                'Cache-Control': 'public, max-age=86400',
+                'ETag': f'"{int(full.stat().st_mtime)}"',
+            },
+        )
 
     app.mount(
         '/downloads',

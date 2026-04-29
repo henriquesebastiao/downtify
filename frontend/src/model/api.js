@@ -65,6 +65,10 @@ function downloadFileURL(fileName) {
   return `/downloads/${encodeURIComponent(fileName)}`
 }
 
+function coverFileURL(fileName) {
+  return `/cover?file=${encodeURIComponent(fileName)}`
+}
+
 function listDownloads() {
   return API.get('/list')
 }
@@ -98,6 +102,7 @@ export default {
   open,
   download,
   downloadFileURL,
+  coverFileURL,
   listDownloads,
   deleteDownload,
   writePlaylistM3u,

@@ -4,6 +4,7 @@ import Search from '/src/views/Search.vue'
 import Download from '/src/views/Download.vue'
 import List from '/src/views/Downloads.vue'
 import Monitor from '/src/views/Monitor.vue'
+import Player from '/src/views/Player.vue'
 import config from '/src/config'
 
 const routes = [
@@ -31,6 +32,11 @@ const routes = [
     path: '/monitor',
     name: 'Monitor',
     component: Monitor,
+  },
+  {
+    path: '/player',
+    name: 'Player',
+    component: Player,
   },
 ]
 

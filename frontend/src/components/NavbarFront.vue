@@ -14,18 +14,41 @@
         <button
           class="icon-btn"
           @click="router.push({ name: 'List' })"
-          title="Library"
+          :title="t('nav.library')"
         >
           <Icon icon="clarity:library-line" class="h-5 w-5" />
         </button>
 
         <button
           class="icon-btn"
+          @click="router.push({ name: 'Player' })"
+          :title="t('nav.player')"
+        >
+          <Icon icon="clarity:headphones-line" class="h-5 w-5" />
+        </button>
+
+        <button
+          class="icon-btn"
           @click="router.push({ name: 'Monitor' })"
-          title="Playlist Monitor"
+          :title="t('nav.monitor')"
         >
           <Icon icon="clarity:eye-line" class="h-5 w-5" />
         </button>
+
+        <button
+          class="icon-btn relative"
+          @click="router.push({ name: 'Download' })"
+          :title="t('nav.queue')"
+        >
+          <Icon icon="clarity:download-line" class="h-5 w-5" />
+          <span
+            v-if="pt.downloadQueue.value.length > 0"
+            class="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-content shadow-glow-sm"
+          >
+            {{ pt.downloadQueue.value.length }}
+          </span>
+        </button>
+
         <button
           class="icon-btn"
           @click="
@@ -35,8 +58,8 @@
           "
           :title="
             themeMgr.currentTheme.value === 'dark'
-              ? 'Switch to light'
-              : 'Switch to dark'
+              ? t('nav.switchToLight')
+              : t('nav.switchToDark')
           "
         >
           <Icon
@@ -49,7 +72,7 @@
         <label
           for="settings-modal"
           class="icon-btn cursor-pointer"
-          title="Settings"
+          :title="t('nav.settings')"
         >
           <Icon icon="clarity:cog-line" class="h-5 w-5" />
         </label>
@@ -62,9 +85,13 @@
 import { Icon } from '@iconify/vue'
 import router from '../router'
 import { useBinaryThemeManager } from '../model/theme'
+import { useProgressTracker } from '../model/download'
+import { useI18n } from '../i18n'
 
 const themeMgr = useBinaryThemeManager({
   newLightAlias: 'downtify-light',
   newDarkAlias: 'downtify-dark',
 })
+const pt = useProgressTracker()
+const { t } = useI18n()
 </script>

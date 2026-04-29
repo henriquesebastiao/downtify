@@ -25,12 +25,12 @@
       </h1>
       <div class="mt-3 flex items-center justify-center gap-2">
         <span class="badge-soft">v{{ version }}</span>
-        <span class="badge-neutral-soft">no Spotify account needed</span>
+        <span class="badge-neutral-soft">{{ t('hero.noAccount') }}</span>
       </div>
       <p
         class="mx-auto mt-5 max-w-md text-balance text-base sm:text-lg text-base-content/70"
       >
-        Your music with full metadata, album art and lyrics — in one click.
+        {{ t('hero.tagline') }}
       </p>
 
       <div class="mt-10">
@@ -40,15 +40,15 @@
         >
           <span class="pill bg-white/5 border border-white/10"
             ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-            Songs</span
+            {{ t('hero.songs') }}</span
           >
           <span class="pill bg-white/5 border border-white/10"
             ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-            Albums</span
+            {{ t('hero.albums') }}</span
           >
           <span class="pill bg-white/5 border border-white/10"
             ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-            Playlists</span
+            {{ t('hero.playlists') }}</span
           >
         </div>
       </div>
@@ -59,7 +59,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import SearchInput from './SearchInput.vue'
+import { useI18n } from '../i18n'
 
+const { t } = useI18n()
 const version = ref(localStorage.getItem('version') || '2.3.0')
 onMounted(() => {
   const v = localStorage.getItem('version')

@@ -6,7 +6,7 @@
       <button
         class="flex items-center gap-2 shrink-0"
         @click="router.push({ name: 'Home' })"
-        :title="'Home'"
+        :title="t('nav.home')"
       >
         <img
           src="../assets/downtify.svg"
@@ -26,16 +26,25 @@
           class="icon-btn"
           :class="{ 'icon-btn-active': route.name === 'List' }"
           @click="router.push({ name: 'List' })"
-          title="Library"
+          :title="t('nav.library')"
         >
           <Icon icon="clarity:library-line" class="h-5 w-5" />
         </button>
 
         <button
           class="icon-btn"
+          :class="{ 'icon-btn-active': route.name === 'Player' }"
+          @click="router.push({ name: 'Player' })"
+          :title="t('nav.player')"
+        >
+          <Icon icon="clarity:headphones-line" class="h-5 w-5" />
+        </button>
+
+        <button
+          class="icon-btn"
           :class="{ 'icon-btn-active': route.name === 'Monitor' }"
           @click="router.push({ name: 'Monitor' })"
-          title="Playlist Monitor"
+          :title="t('nav.monitor')"
         >
           <Icon icon="clarity:eye-line" class="h-5 w-5" />
         </button>
@@ -51,7 +60,7 @@
                 })
               : router.push({ name: 'Download' })
           "
-          title="Queue"
+          :title="t('nav.queue')"
         >
           <Icon icon="clarity:download-line" class="h-5 w-5" />
           <span
@@ -71,8 +80,8 @@
           "
           :title="
             themeMgr.currentTheme.value === 'dark'
-              ? 'Switch to light'
-              : 'Switch to dark'
+              ? t('nav.switchToLight')
+              : t('nav.switchToDark')
           "
         >
           <Icon
@@ -86,7 +95,7 @@
         <label
           for="settings-modal"
           class="icon-btn cursor-pointer"
-          title="Settings"
+          :title="t('nav.settings')"
         >
           <Icon icon="clarity:cog-line" class="h-5 w-5" />
         </label>
@@ -107,6 +116,7 @@ import router from '../router'
 import { useBinaryThemeManager } from '../model/theme'
 import { useProgressTracker } from '../model/download'
 import { useSearchManager } from '../model/search'
+import { useI18n } from '../i18n'
 
 import SearchInput from './SearchInput.vue'
 
@@ -117,4 +127,5 @@ const themeMgr = useBinaryThemeManager({
 })
 const pt = useProgressTracker()
 const sm = useSearchManager()
+const { t } = useI18n()
 </script>

@@ -9,15 +9,17 @@
         class="flex items-center justify-between px-6 py-4 border-b border-white/5"
       >
         <div>
-          <h3 class="text-lg font-bold tracking-tight">Settings</h3>
+          <h3 class="text-lg font-bold tracking-tight">
+            {{ t('settings.title') }}
+          </h3>
           <p class="text-xs text-base-content/50 mt-0.5">
-            Tweak how Downtify fetches and tags your music.
+            {{ t('settings.subtitle') }}
           </p>
         </div>
         <label
           for="settings-modal"
           class="icon-btn cursor-pointer"
-          title="Close"
+          :title="t('common.close')"
         >
           <Icon icon="clarity:close-line" class="h-5 w-5" />
         </label>
@@ -25,12 +27,33 @@
 
       <!-- Body -->
       <div class="px-6 py-5 space-y-6">
+        <!-- Language -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.language') }}
+          </label>
+          <select
+            class="select w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+            :value="locale"
+            @change="setLocale($event.target.value)"
+          >
+            <option v-for="l in locales" :key="l.code" :value="l.code">
+              {{ l.name }}
+            </option>
+          </select>
+          <p class="text-[11px] text-base-content/40 mt-1.5">
+            {{ t('settings.languageHint') }}
+          </p>
+        </div>
+
         <!-- Audio source -->
         <div>
           <label
             class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
           >
-            Audio source
+            {{ t('settings.audioSource') }}
           </label>
           <div class="grid grid-cols-2 gap-2">
             <button
@@ -56,10 +79,10 @@
             <label
               class="block text-xs font-semibold uppercase tracking-wider text-base-content/50"
             >
-              Lyrics source
+              {{ t('settings.lyricsSource') }}
             </label>
             <span class="text-[10px] text-base-content/40">
-              only lrclib is active
+              {{ t('settings.lyricsHint') }}
             </span>
           </div>
           <select
@@ -82,7 +105,7 @@
             <label
               class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
             >
-              Format
+              {{ t('settings.format') }}
             </label>
             <select
               class="select w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
@@ -102,13 +125,13 @@
               <label
                 class="block text-xs font-semibold uppercase tracking-wider text-base-content/50"
               >
-                Quality
+                {{ t('settings.quality') }}
               </label>
               <span
                 v-if="sm.settings.value.format === 'flac'"
                 class="text-[10px] text-base-content/40"
               >
-                ignored (lossless)
+                {{ t('settings.qualityIgnored') }}
               </span>
             </div>
             <select
@@ -132,7 +155,7 @@
           <label
             class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
           >
-            Playlists
+            {{ t('settings.playlistsSection') }}
           </label>
           <label
             class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
@@ -143,11 +166,9 @@
               v-model="sm.settings.value.generate_m3u"
             />
             <span class="flex-1 text-sm">
-              <span class="block">Generate M3U file for playlists</span>
+              <span class="block">{{ t('settings.generateM3u') }}</span>
               <span class="block text-[11px] text-base-content/50">
-                Writes <code>Playlists/&lt;name&gt;.m3u</code> alongside the
-                tracks for both manual playlist downloads and Playlist Monitor
-                sweeps.
+                {{ t('settings.generateM3uHint') }}
               </span>
             </span>
           </label>
@@ -167,7 +188,7 @@
             class="surface rounded-xl p-3 flex items-center gap-2 text-sm text-primary"
           >
             <Icon icon="clarity:check-line" class="h-4 w-4 shrink-0" />
-            Changes saved
+            {{ t('settings.saved') }}
           </div>
           <div
             v-else-if="sm.isSaved.value === false"
@@ -177,7 +198,7 @@
               icon="clarity:exclamation-circle-line"
               class="h-4 w-4 shrink-0"
             />
-            Couldn't save settings.
+            {{ t('settings.saveError') }}
           </div>
         </transition>
       </div>
@@ -190,25 +211,29 @@
           for="settings-modal"
           class="btn btn-sm h-10 px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 cursor-pointer"
         >
-          Cancel
+          {{ t('common.cancel') }}
         </label>
         <button
           class="btn btn-primary btn-sm h-10 px-6 rounded-full"
           @click="sm.saveSettings()"
         >
-          Save
+          {{ t('common.save') }}
         </button>
       </div>
     </div>
-    <label class="modal-backdrop" for="settings-modal">Close</label>
+    <label class="modal-backdrop" for="settings-modal">{{
+      t('common.close')
+    }}</label>
   </div>
 </template>
 
 <script setup>
 import { Icon } from '@iconify/vue'
 import { useSettingsManager } from '../model/settings'
+import { useI18n } from '../i18n'
 
 const sm = useSettingsManager()
+const { t, locale, setLocale, locales } = useI18n()
 
 function providerLabel(provider) {
   if (provider === 'youtube-music') return 'YouTube Music'

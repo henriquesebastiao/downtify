@@ -2,22 +2,24 @@
   <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-2xl font-bold tracking-tight">Search results</h1>
+      <h1 class="text-2xl font-bold tracking-tight">{{ t('search.title') }}</h1>
       <p class="mt-1 text-sm text-base-content/60">
         <template v-if="sm.searchTerm.value">
-          Showing matches for
+          {{ t('search.matchesFor') }}
           <span class="text-base-content/90 font-medium">
             "{{ sm.searchTerm.value }}"
           </span>
           <template
             v-if="!sm.isSearching.value && (props.data?.length || 0) > 0"
           >
-            — {{ props.data.length }} song{{
-              props.data.length !== 1 ? 's' : ''
+            {{
+              props.data.length === 1
+                ? t('search.songsCount', { count: props.data.length })
+                : t('search.songsCountPlural', { count: props.data.length })
             }}
           </template>
         </template>
-        <template v-else>Type something in the search bar to begin.</template>
+        <template v-else>{{ t('search.typeToBegin') }}</template>
       </p>
     </div>
 
@@ -28,8 +30,10 @@
     >
       <Icon icon="clarity:exclamation-circle-line" class="h-5 w-5 shrink-0" />
       <span>
-        Something went wrong{{
-          sm.errorValue.value ? `: ${sm.errorValue.value}` : '.'
+        {{
+          sm.errorValue.value
+            ? t('search.errorWithDetail', { detail: sm.errorValue.value })
+            : t('search.error')
         }}
       </span>
     </div>
@@ -48,9 +52,9 @@
         icon="clarity:search-line"
         class="h-12 w-12 text-base-content/20 mb-4"
       />
-      <p class="text-base-content/50 text-sm">No songs found.</p>
+      <p class="text-base-content/50 text-sm">{{ t('search.empty') }}</p>
       <p class="text-base-content/40 text-xs mt-1">
-        Try another query — artist + title usually works best.
+        {{ t('search.emptyHint') }}
       </p>
     </div>
 
@@ -108,7 +112,7 @@
             :href="song.url"
             target="_blank"
             rel="noopener"
-            title="Open on Spotify"
+            :title="t('search.openOnSpotify')"
           >
             <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
           </a>
@@ -116,7 +120,7 @@
           <button
             v-if="downloadState(song) === 'queued'"
             class="icon-btn text-primary cursor-default"
-            title="In queue"
+            :title="t('search.inQueue')"
             disabled
           >
             <Icon icon="clarity:check-circle-line" class="h-5 w-5" />
@@ -125,7 +129,7 @@
             v-else
             class="icon-btn text-primary hover:bg-primary/10"
             @click="download(song)"
-            title="Download"
+            :title="t('search.download')"
           >
             <Icon icon="clarity:download-line" class="h-5 w-5" />
           </button>
@@ -142,7 +146,7 @@
         class="icon-btn"
         :disabled="currentPage === 1"
         @click="currentPage--"
-        title="Previous page"
+        :title="t('search.previousPage')"
       >
         <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
       </button>
@@ -163,7 +167,7 @@
         class="icon-btn"
         :disabled="currentPage === totalPages"
         @click="currentPage++"
-        title="Next page"
+        :title="t('search.nextPage')"
       >
         <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
       </button>
@@ -177,6 +181,7 @@ import { Icon } from '@iconify/vue'
 
 import { useSearchManager } from '../model/search'
 import { useProgressTracker, useDownloadManager } from '../model/download'
+import { useI18n } from '../i18n'
 
 const PAGE_SIZE = 5
 
@@ -186,6 +191,7 @@ const emit = defineEmits(['download'])
 const sm = useSearchManager()
 const pt = useProgressTracker()
 const dm = useDownloadManager()
+const { t } = useI18n()
 
 const currentPage = ref(1)
 
@@ -210,7 +216,7 @@ function artistsOf(song) {
   if (Array.isArray(song.artists) && song.artists.length) {
     return song.artists.join(', ')
   }
-  return song.artist || 'Unknown artist'
+  return song.artist || t('common.unknownArtist')
 }
 
 function downloadState(song) {

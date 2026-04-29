@@ -7,23 +7,36 @@
       <!-- Header -->
       <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">Library</h1>
+          <h1 class="text-2xl font-bold tracking-tight">
+            {{ t('library.title') }}
+          </h1>
           <p class="mt-1 text-sm text-base-content/60">
-            Music you've already downloaded. Listen, re-download or remove.
+            {{ t('library.subtitle') }}
           </p>
         </div>
-        <button
-          class="btn btn-sm h-11 px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100"
-          @click="refresh"
-          :disabled="loading"
-        >
-          <span
-            v-if="loading"
-            class="loading loading-spinner loading-xs mr-2"
-          />
-          <Icon v-else icon="clarity:refresh-line" class="h-4 w-4 mr-2" />
-          Refresh
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            v-if="files.length > 0"
+            class="btn btn-primary btn-sm h-11 px-5 rounded-full"
+            @click="playAll"
+            :title="t('library.play')"
+          >
+            <Icon icon="clarity:play-line" class="h-4 w-4 mr-1.5" />
+            {{ t('library.play') }}
+          </button>
+          <button
+            class="btn btn-sm h-11 px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100"
+            @click="refresh"
+            :disabled="loading"
+          >
+            <span
+              v-if="loading"
+              class="loading loading-spinner loading-xs mr-2"
+            />
+            <Icon v-else icon="clarity:refresh-line" class="h-4 w-4 mr-2" />
+            {{ t('common.refresh') }}
+          </button>
+        </div>
       </div>
 
       <!-- Error -->
@@ -49,24 +62,32 @@
           icon="clarity:library-line"
           class="h-12 w-12 text-base-content/20 mb-4"
         />
-        <p class="text-base-content/50 text-sm">No downloads yet.</p>
+        <p class="text-base-content/50 text-sm">{{ t('library.empty') }}</p>
         <p class="text-base-content/40 text-xs mt-1">
-          Find a song to start filling your library.
+          {{ t('library.emptyHint') }}
         </p>
       </div>
 
       <!-- File list -->
       <ul v-else class="space-y-2">
         <li
-          v-for="file in files"
+          v-for="(file, idx) in files"
           :key="file"
           class="surface rounded-2xl p-3 sm:p-4 flex items-center gap-3"
         >
-          <!-- Audio icon thumb -->
+          <!-- Cover thumb -->
           <div
-            class="h-11 w-11 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center"
+            class="relative h-11 w-11 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center overflow-hidden"
           >
-            <Icon icon="clarity:music-note-line" class="h-5 w-5" />
+            <img
+              v-if="!coverFailed[file]"
+              :src="coverUrlFor(file)"
+              :alt="file"
+              class="absolute inset-0 h-full w-full object-cover"
+              loading="lazy"
+              @error="markCoverFailed(file)"
+            />
+            <Icon v-else icon="clarity:music-note-line" class="h-5 w-5" />
           </div>
 
           <!-- Filename -->
@@ -79,11 +100,18 @@
 
           <!-- Actions -->
           <div class="flex items-center gap-1 shrink-0">
+            <button
+              class="icon-btn text-primary hover:bg-primary/10"
+              @click="playFile(idx)"
+              :title="t('library.play')"
+            >
+              <Icon icon="clarity:play-line" class="h-4 w-4" />
+            </button>
             <a
               class="icon-btn"
               :href="`/downloads/${encodeURIComponent(file)}`"
               download
-              title="Download to device"
+              :title="t('library.downloadToDevice')"
             >
               <Icon icon="clarity:download-line" class="h-4 w-4" />
             </a>
@@ -91,7 +119,7 @@
               class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
               :disabled="deleting[file] === true"
               @click="onDelete(file)"
-              title="Delete file"
+              :title="t('library.deleteFile')"
             >
               <span
                 v-if="deleting[file] === true"
@@ -108,8 +136,11 @@
         v-if="files.length > 0"
         class="mt-6 text-xs text-base-content/40 text-center"
       >
-        {{ files.length }} file{{ files.length !== 1 ? 's' : '' }} in your
-        library
+        {{
+          files.length === 1
+            ? t('library.countOne', { count: files.length })
+            : t('library.countMany', { count: files.length })
+        }}
       </p>
     </div>
   </div>
@@ -118,14 +149,30 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useRouter } from 'vue-router'
 import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
 import API from '/src/model/api'
+import { useI18n } from '/src/i18n'
+import { usePlayer } from '/src/model/player'
+
+const { t } = useI18n()
+const player = usePlayer()
+const router = useRouter()
 
 const files = ref([])
 const loading = ref(false)
 const error = ref('')
 const deleting = ref({})
+const coverFailed = ref({})
+
+function coverUrlFor(file) {
+  return API.coverFileURL(file)
+}
+
+function markCoverFailed(file) {
+  coverFailed.value = { ...coverFailed.value, [file]: true }
+}
 
 async function refresh() {
   loading.value = true
@@ -134,20 +181,20 @@ async function refresh() {
     const res = await API.listDownloads()
     files.value = res.data || []
   } catch {
-    error.value = 'Failed to load downloads.'
+    error.value = t('library.failedLoad')
   } finally {
     loading.value = false
   }
 }
 
 async function onDelete(file) {
-  if (!confirm(`Delete "${file}"?`)) return
+  if (!confirm(t('library.deletePrompt', { file }))) return
   deleting.value = { ...deleting.value, [file]: true }
   try {
     await API.deleteDownload(file)
     files.value = files.value.filter((f) => f !== file)
   } catch {
-    error.value = `Failed to delete ${file}`
+    error.value = t('library.failedDelete', { file })
   } finally {
     deleting.value = { ...deleting.value, [file]: false }
   }
@@ -156,6 +203,17 @@ async function onDelete(file) {
 function formatExt(file) {
   const dot = file.lastIndexOf('.')
   return dot > 0 ? file.slice(dot + 1).toUpperCase() : ''
+}
+
+function playFile(index) {
+  player.setPlaylist(files.value, { startIndex: index })
+  router.push({ name: 'Player' })
+}
+
+function playAll() {
+  if (!files.value.length) return
+  player.setPlaylist(files.value, { startIndex: 0 })
+  router.push({ name: 'Player' })
 }
 
 onMounted(refresh)

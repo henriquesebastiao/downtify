@@ -8,8 +8,11 @@
       >Downtify</a
     >
     <span class="mx-2 opacity-50">·</span>
-    <span>Open source music downloader</span>
+    <span>{{ t('footer.tagline') }}</span>
   </footer>
 </template>
 
-<script setup></script>
+<script setup>
+import { useI18n } from '../i18n'
+const { t } = useI18n()
+</script>

@@ -47,6 +47,8 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 🔔 **Real-time progress** | Live download progress via WebSocket — no page reload needed |
 | 🐳 **One Docker command** | Up and running in under a minute |
 | 🏠 **Home server platforms** | Available on Umbrel, CasaOS and HomeDock |
+| 🎧 **Built-in player** | Play your downloaded music straight from the web UI — progress bar, shuffle, repeat, volume |
+| 🌍 **Multi-language UI** | English (default), Spanish and Brazilian Portuguese — easy to add more |
 
 ---
 
@@ -171,6 +173,65 @@ Track paths inside the M3U are written **relative to the M3U file itself**, so t
 
 > [!WARNING]
 > Users are responsible for their actions and any legal consequences. Downtify does not support unauthorized downloading of copyrighted material and takes no responsibility for user actions.
+
+---
+
+## 🎧 Built-in Player
+
+Downtify ships with a clean web player so you don't need a separate app to listen to what you've downloaded. Open the headphones icon (🎧) in the navigation bar — or hit the play button next to any file in the **Library** — and Downtify will load every audio file from your downloads folder into a queue.
+
+**What's included:**
+
+- Big now-playing card with embedded **album art** and a progress bar (click or drag to seek)
+- Play / pause / previous / next
+- **Shuffle** with a stable random order across the whole queue
+- **Repeat** modes: off → all → one
+- Volume slider with mute toggle (volume is remembered between sessions)
+- Side queue listing every track in your library, each one with its own thumbnail and the currently playing one highlighted
+
+The player parses `Artist - Title.ext` filenames so the now-playing card shows artist and title nicely, and pulls the cover art directly from the audio file's embedded tags (the same artwork Downtify wrote at download time). Playback uses your browser's native HTML5 audio element — no extra dependencies, no extra processes.
+
+---
+
+## 🌍 Internationalization
+
+Downtify's UI is fully translatable. The default language is **English**, with **Spanish** and **Brazilian Portuguese** included out of the box. You can switch languages from **Settings → Language**; your choice is saved in the browser's `localStorage` and applied instantly without a reload.
+
+### Contributing translations
+
+Adding a new language is a small, three-step change — no build tooling beyond the existing Vite setup is required.
+
+1. **Copy the English file as a starting point.** Locale files live in `frontend/src/i18n/locales/`. Each file exports a single object whose keys match the structure of `en.js` exactly. Pick an [IETF language tag](https://en.wikipedia.org/wiki/IETF_language_tag) for the file name (e.g. `fr.js`, `de.js`, `it.js`, `ja.js`, `pt-PT.js`).
+
+   ```bash
+   cp frontend/src/i18n/locales/en.js frontend/src/i18n/locales/fr.js
+   ```
+
+2. **Translate the values.** Keep the keys, the placeholder tokens (e.g. `{count}`, `{name}`, `{file}`) and the overall shape unchanged — only the strings on the right-hand side should change. Update the `language.name` field at the top of the file to the **native** name of the language ("Français", "Deutsch", "Italiano"…) — this is the label that appears in the language picker.
+
+3. **Register the locale** in `frontend/src/i18n/index.js`:
+
+   ```js
+   import fr from './locales/fr.js'
+
+   export const AVAILABLE_LOCALES = [
+     { code: 'en', name: 'English', messages: en },
+     { code: 'es', name: 'Español', messages: es },
+     { code: 'pt-BR', name: 'Português (BR)', messages: ptBR },
+     { code: 'fr', name: 'Français', messages: fr }, // new entry
+   ]
+   ```
+
+That's it. Rebuild the frontend (`cd frontend && npm run build`) — your language will show up in **Settings → Language** automatically.
+
+**Tips for translators:**
+
+- Missing keys fall back to English, so partial translations still ship. You can submit a PR with only the strings you're confident about.
+- Placeholder tokens like `{count}` or `{file}` must be left as-is — they're substituted at runtime.
+- Keep strings concise: the UI is laid out tightly and very long translations may wrap awkwardly. If you need to rephrase to fit, that's fine.
+- After translating, run `npm run dev` from `frontend/` and click through every page in your language to spot anything that overflows or reads oddly in context.
+
+Pull requests with new translations are very welcome — just open a PR against `main`.
 
 ---
 
