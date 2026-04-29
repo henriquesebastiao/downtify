@@ -39,6 +39,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
+DATABASE_DIR = Path('/data')
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
 DEFAULT_PORT = int(os.getenv('DOWNTIFY_PORT', os.getenv('PORT', '8000')))
@@ -138,6 +139,7 @@ def _extract_cover(path: Path) -> tuple[bytes | None, str | None]:
 
 def build_app() -> FastAPI:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    DATABASE_DIR.mkdir(parents=True, exist_ok=True)
 
     app = FastAPI(
         title='Downtify',
@@ -171,7 +173,7 @@ def build_app() -> FastAPI:
     async def _startup() -> None:
         loop = asyncio.get_running_loop()
         api.state.loop = loop
-        db_path = DOWNLOAD_DIR / 'downtify_monitor.db'
+        db_path = DATABASE_DIR / 'downtify_monitor.db'
         api.state.monitor_db = PlaylistMonitorDB(db_path)
         asyncio.create_task(
             monitor_loop(

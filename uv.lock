@@ -601,12 +601,12 @@ wheels = [
 
 [[package]]
 name = "ytmusicapi"
-version = "1.11.5"
+version = "1.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ac/4b/a44292f732903dc26a90236ad1cf284da974ed5491df388cf15713b38429/ytmusicapi-1.11.5.tar.gz", hash = "sha256:48f35901291c8af9934ec0aa9cd6b9fd1a19c543f843c39c9e8b396356b47801", size = 413046, upload-time = "2026-01-31T09:51:27.86Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4f/16/728305b1e6d100f2f2c696f6de08b3717f3db323bd666a8246397d70bcad/ytmusicapi-1.12.0.tar.gz", hash = "sha256:9a466e633c43e90025b4c3dfa862f0f5677af4eacc8d2052ef9fc8f48cd65140", size = 434631, upload-time = "2026-04-29T18:42:40.503Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/aa/a8/8feb17eaa8b2bf36b0617ba37f949a7036b6ece652672bd4517a54326f0e/ytmusicapi-1.11.5-py3-none-any.whl", hash = "sha256:f6b1e031408cce45bef207bfda449e3ecf548f7c4ff0c091c575d4a27eb21da6", size = 102313, upload-time = "2026-01-31T09:51:26.255Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/20/9f1b0ff4c9ed441b2181259ff9c0250a9999ec811b08fe45627842453092/ytmusicapi-1.12.0-py3-none-any.whl", hash = "sha256:4130a3a7a0ab56eeeff33b343c8cf4a2f4ea14c206d96c221a7646ab0e61ebc8", size = 107799, upload-time = "2026-04-29T18:42:38.489Z" },
 ]
