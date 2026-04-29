@@ -89,16 +89,68 @@ export function useProgressTracker() {
 
 const progressTracker = useProgressTracker()
 
-// If Websocket connection exists, set status using descriptive events, else, fallback to simple messages.
 API.ws_onmessage((event) => {
-  // event: MessageEvent
   let data = JSON.parse(event.data)
-  progressTracker.getBySong(data.song).wsUpdate(data)
+  let item = progressTracker.getBySong(data.song)
+  if (!item) {
+    progressTracker.appendSong(data.song)
+    item = progressTracker.getBySong(data.song)
+    if (!item) return
+  }
+  if (data.status === 'done') {
+    item.progress = 100
+    if (data.filename) {
+      item.setWebURL(API.downloadFileURL(data.filename))
+      item.setFilename(data.filename)
+    }
+    item.setDownloaded()
+  } else if (data.status === 'error') {
+    item.wsUpdate(data)
+    item.setError()
+  } else if (data.status === 'queued') {
+    item.message = data.message || ''
+  } else {
+    item.wsUpdate(data)
+    if (!item.isDownloading()) item.setDownloading()
+  }
 })
 API.ws_onerror((event) => {
-  // event: MessageEvent
   console.log('websocket error:', event)
 })
+
+async function _hydrateFromServer() {
+  try {
+    const res = await API.getQueue()
+    const jobs = res.data || []
+    for (const job of jobs) {
+      if (downloadQueue.value.some((i) => i.song.song_id === job.song.song_id))
+        continue
+      const item = new DownloadItem(job.song)
+      if (job.status === 'done') {
+        item.setDownloaded()
+        if (job.filename) {
+          item.setWebURL(API.downloadFileURL(job.filename))
+          item.setFilename(job.filename)
+        }
+        item.progress = 100
+      } else if (job.status === 'error') {
+        item.setError()
+        item.message = job.message || ''
+      } else if (job.status === 'downloading') {
+        item.setDownloading()
+        item.progress = job.progress || 0
+        item.message = job.message || ''
+      } else {
+        item.message = job.message || ''
+      }
+      downloadQueue.value.push(item)
+    }
+  } catch (e) {
+    console.log('Failed to load queue from server:', e)
+  }
+}
+
+_hydrateFromServer()
 
 export function useDownloadManager() {
   const loading = ref(false)
@@ -116,33 +168,18 @@ export function useDownloadManager() {
         }
         const songs = res.data
         if (Array.isArray(songs)) {
-          const downloads = songs.map((song) => {
-            console.log('Opened Song:', song)
-            return queue(song)
-          })
-          if (generateM3u && isPlaylistURL) {
-            Promise.all(downloads).then((results) => {
-              const tracks = results
-                .filter((r) => r && r.filename)
-                .map((r) => ({
-                  filename: r.filename,
-                  title: r.song.name,
-                  artist: (r.song.artists || []).join(', '),
-                  duration: r.song.duration || 0,
-                }))
-              if (tracks.length === 0) {
-                console.log('M3U: no successful tracks, skipping write')
-                return
-              }
-              API.writePlaylistM3u({ playlist_url: url, tracks })
-                .then((m3uRes) => {
-                  console.log('M3U written:', m3uRes.data)
-                })
-                .catch((err) => {
-                  console.log('M3U write failed:', err.message)
-                })
-            })
+          for (const song of songs) {
+            if (!progressTracker.getBySong(song)) {
+              progressTracker.appendSong(song)
+            }
           }
+          return API.downloadBatch({
+            songs,
+            playlist_url: isPlaylistURL ? url : '',
+            generate_m3u: generateM3u,
+          }).catch((err) => {
+            console.log('Batch submit failed:', err.message)
+          })
         } else {
           console.log('Opened Song:', songs)
           queue(songs)

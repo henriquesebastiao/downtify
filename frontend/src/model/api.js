@@ -57,6 +57,10 @@ function download(songURL) {
   })
 }
 
+function downloadBatch(payload) {
+  return API.post('/api/download/batch', payload)
+}
+
 function check_for_update() {
   return API.get('/api/check_update')
 }
@@ -81,6 +85,10 @@ function writePlaylistM3u(payload) {
   return API.post('/api/playlist/m3u', payload)
 }
 
+function getQueue() {
+  return API.get('/api/queue')
+}
+
 function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
@@ -101,11 +109,13 @@ export default {
   search,
   open,
   download,
+  downloadBatch,
   downloadFileURL,
   coverFileURL,
   listDownloads,
   deleteDownload,
   writePlaylistM3u,
+  getQueue,
   getSettings,
   setSettings,
   check_for_update,

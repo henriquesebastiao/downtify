@@ -89,6 +89,7 @@ class AppState:
     settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
     loop: Optional[asyncio.AbstractEventLoop] = None
     monitor_db: Optional[PlaylistMonitorDB] = None
+    download_jobs: dict[str, dict[str, Any]] = {}
 
 
 state = AppState()
@@ -158,6 +159,83 @@ def _song_for_download(url: str) -> dict[str, Any]:
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
 
+def _register_job(song: dict[str, Any], status: str = 'queued') -> str:
+    song_id = str(song.get('song_id') or song.get('url') or id(song))
+    state.download_jobs[song_id] = {
+        'song': song,
+        'status': status,
+        'progress': 0,
+        'message': '',
+        'filename': None,
+    }
+    return song_id
+
+
+async def _run_download(song: dict[str, Any], song_id: str) -> Optional[str]:
+    """Run a single download to completion, updating jobs state and broadcasting WS events."""
+
+    if state.downloader is None:
+        raise RuntimeError('Downloader not ready')
+
+    loop = state.loop or asyncio.get_running_loop()
+    job = state.download_jobs.get(song_id)
+    if job is None:
+        song_id = _register_job(song, status='downloading')
+        job = state.download_jobs[song_id]
+    else:
+        job['status'] = 'downloading'
+
+    await state.connections.broadcast({
+        'song': song,
+        'progress': 0,
+        'message': '',
+        'status': 'downloading',
+    })
+
+    def progress(pct: float, message: str) -> None:
+        j = state.download_jobs.get(song_id)
+        if j:
+            j['progress'] = pct
+            j['message'] = message
+        asyncio.run_coroutine_threadsafe(
+            state.connections.broadcast({
+                'song': song,
+                'progress': pct,
+                'message': message,
+                'status': 'downloading',
+            }),
+            loop,
+        )
+
+    try:
+        filename = await loop.run_in_executor(
+            None, lambda: state.downloader.download(song, progress)
+        )
+    except Exception as exc:
+        logger.exception('Download failed for %s', song_id)
+        job['status'] = 'error'
+        job['message'] = f'Error: {exc}'
+        await state.connections.broadcast({
+            'song': song,
+            'progress': 0,
+            'message': f'Error: {exc}',
+            'status': 'error',
+        })
+        raise
+
+    job['status'] = 'done'
+    job['filename'] = filename
+    job['progress'] = 100
+    await state.connections.broadcast({
+        'song': song,
+        'progress': 100,
+        'message': 'Done',
+        'status': 'done',
+        'filename': filename,
+    })
+    return filename
+
+
 @router.post('/api/download/url')
 async def download_endpoint(
     url: str = Query(...),
@@ -167,36 +245,134 @@ async def download_endpoint(
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
     song = _song_for_download(url)
-    loop = state.loop or asyncio.get_running_loop()
-
-    def progress(pct: float, message: str) -> None:
-        if not client_id:
-            return
-        asyncio.run_coroutine_threadsafe(
-            state.connections.send(
-                client_id,
-                {
-                    'song': song,
-                    'progress': pct,
-                    'message': message,
-                },
-            ),
-            loop,
-        )
+    song_id = _register_job(song, status='downloading')
 
     try:
-        filename = await loop.run_in_executor(
-            None, lambda: state.downloader.download(song, progress)
-        )
+        filename = await _run_download(song, song_id)
     except Exception as exc:
-        logger.exception('Download failed for %s', url)
-        if client_id:
-            await state.connections.send(
-                client_id,
-                {'song': song, 'progress': 0, 'message': f'Error: {exc}'},
-            )
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return filename
+
+
+_BATCH_CONCURRENCY = 4
+
+
+async def _process_batch(
+    songs: list[dict[str, Any]],
+    job_ids: list[str],
+    playlist_url: str,
+    generate_m3u: bool,
+) -> None:
+    semaphore = asyncio.Semaphore(_BATCH_CONCURRENCY)
+
+    async def _bounded(song: dict[str, Any], song_id: str) -> dict[str, Any]:
+        async with semaphore:
+            try:
+                filename = await _run_download(song, song_id)
+            except Exception:
+                filename = None
+            return {'song': song, 'filename': filename}
+
+    results = await asyncio.gather(
+        *[_bounded(s, sid) for s, sid in zip(songs, job_ids)],
+        return_exceptions=False,
+    )
+
+    if not (generate_m3u and playlist_url):
+        return
+
+    parsed = spotify.parse_spotify_url(playlist_url)
+    if parsed is None or parsed[0] != 'playlist':
+        return
+
+    try:
+        playlist_name, _ = await asyncio.to_thread(
+            spotify.playlist_info_and_tracks, parsed[1]
+        )
+    except Exception:
+        logger.exception(
+            'Failed to resolve playlist for M3U: %s', playlist_url
+        )
+        return
+
+    entries: list[dict[str, Any]] = []
+    for r in results:
+        if not r or not r.get('filename'):
+            continue
+        s = r['song']
+        entries.append({
+            'filename': r['filename'],
+            'title': s.get('name') or '',
+            'artist': ', '.join(s.get('artists') or []),
+            'duration': s.get('duration') or 0,
+        })
+    if not entries:
+        return
+    try:
+        await asyncio.to_thread(
+            m3u.write_m3u,
+            state.downloader.download_dir,
+            playlist_name,
+            entries,
+        )
+    except Exception:
+        logger.exception('Failed to write M3U for %s', playlist_url)
+
+
+@router.post('/api/download/batch')
+async def download_batch_endpoint(request: Request) -> dict[str, Any]:
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    try:
+        payload = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail='Invalid JSON') from exc
+
+    songs = payload.get('songs') or []
+    if not isinstance(songs, list) or not songs:
+        raise HTTPException(
+            status_code=400, detail='songs must be a non-empty list'
+        )
+    playlist_url = str(payload.get('playlist_url') or '')
+    generate_m3u = bool(payload.get('generate_m3u', True))
+
+    valid_songs: list[dict[str, Any]] = []
+    job_ids: list[str] = []
+    for song in songs:
+        if not isinstance(song, dict):
+            continue
+        song_id = _register_job(song, status='queued')
+        valid_songs.append(song)
+        job_ids.append(song_id)
+        await state.connections.broadcast({
+            'song': song,
+            'progress': 0,
+            'message': '',
+            'status': 'queued',
+        })
+
+    if not valid_songs:
+        raise HTTPException(status_code=400, detail='No valid songs in batch')
+
+    task = asyncio.create_task(
+        _process_batch(valid_songs, job_ids, playlist_url, generate_m3u)
+    )
+
+    def _log_batch_failure(t: asyncio.Task) -> None:
+        if t.cancelled():
+            return
+        exc = t.exception()
+        if exc is not None:
+            logger.exception('Batch processing crashed', exc_info=exc)
+
+    task.add_done_callback(_log_batch_failure)
+    return {'job_ids': job_ids, 'count': len(job_ids)}
+
+
+@router.get('/api/queue')
+def get_queue() -> list[dict[str, Any]]:
+    return list(state.download_jobs.values())
 
 
 @router.post('/api/playlist/m3u')
