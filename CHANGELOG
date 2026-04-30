@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.4.2](https://github.com/henriquesebastiao/downtify/tree/2.4.2) (2026-04-30)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.4.1...2.4.2)
+
+**Implemented enhancements:**
+
+- Improving logs with loguru [\#141](https://github.com/henriquesebastiao/downtify/pull/141) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
 ## [2.4.1](https://github.com/henriquesebastiao/downtify/tree/2.4.1) (2026-04-29)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.4.0...2.4.1)
