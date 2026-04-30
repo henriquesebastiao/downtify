@@ -7,13 +7,11 @@ are accepted as no-ops so existing settings keep round-tripping cleanly.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from typing import Any, Optional
 
 import requests
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 LRCLIB_BASE = 'https://lrclib.net/api'
 _USER_AGENT = 'Downtify (https://github.com/henriquesebastiao/downtify)'
@@ -39,7 +37,7 @@ def fetch(song: dict[str, Any], providers: list[str]) -> Optional[Lyrics]:
         try:
             result = _PROVIDER_FNS[name](song)
         except Exception:
-            logger.exception('Lyrics provider %r failed', name)
+            logger.exception('Lyrics provider {!r} failed', name)
             continue
         if result and result.has_any():
             return result
@@ -71,14 +69,14 @@ def _fetch_lrclib(song: dict[str, Any]) -> Optional[Lyrics]:
             timeout=10,
         )
     except requests.RequestException:
-        logger.warning('lrclib request failed', exc_info=True)
+        logger.opt(exception=True).warning('lrclib request failed')
         return None
 
     if response.status_code == 404:
         return None
     if response.status_code != 200:
         logger.warning(
-            'lrclib returned HTTP %s for %r', response.status_code, title
+            'lrclib returned HTTP {} for {!r}', response.status_code, title
         )
         return None
 

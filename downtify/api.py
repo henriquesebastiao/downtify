@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import re
 from typing import Any, Optional
 
@@ -31,13 +30,11 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from loguru import logger
 
 from . import m3u, providers, spotify
 from .downloader import Downloader
 from .monitor import PlaylistMonitorDB, check_playlist
-
-logger = logging.getLogger(__name__)
-
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
@@ -134,7 +131,7 @@ def _resolve_url(url: str):
         if kind == 'playlist':
             return spotify.playlist_tracks_from_id(sid)
     except Exception as exc:
-        logger.exception('Failed to resolve Spotify URL %s', url)
+        logger.exception('Failed to resolve Spotify URL {}', url)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     raise HTTPException(
         status_code=400, detail=f'Unsupported entity type: {kind}'
@@ -212,7 +209,7 @@ async def _run_download(song: dict[str, Any], song_id: str) -> Optional[str]:
             None, lambda: state.downloader.download(song, progress)
         )
     except Exception as exc:
-        logger.exception('Download failed for %s', song_id)
+        logger.exception('Download failed for {}', song_id)
         job['status'] = 'error'
         job['message'] = f'Error: {exc}'
         await state.connections.broadcast({
@@ -291,7 +288,7 @@ async def _process_batch(
         )
     except Exception:
         logger.exception(
-            'Failed to resolve playlist for M3U: %s', playlist_url
+            'Failed to resolve playlist for M3U: {}', playlist_url
         )
         return
 
@@ -316,7 +313,7 @@ async def _process_batch(
             entries,
         )
     except Exception:
-        logger.exception('Failed to write M3U for %s', playlist_url)
+        logger.exception('Failed to write M3U for {}', playlist_url)
 
 
 @router.post('/api/download/batch')
@@ -364,7 +361,7 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
             return
         exc = t.exception()
         if exc is not None:
-            logger.exception('Batch processing crashed', exc_info=exc)
+            logger.opt(exception=exc).error('Batch processing crashed')
 
     task.add_done_callback(_log_batch_failure)
     return {'job_ids': job_ids, 'count': len(job_ids)}
@@ -412,7 +409,7 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
             spotify.playlist_info_and_tracks, parsed[1]
         )
     except Exception as exc:
-        logger.exception('Failed to resolve playlist %s', playlist_url)
+        logger.exception('Failed to resolve playlist {}', playlist_url)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     entries = [t for t in tracks if isinstance(t, dict)]
@@ -527,7 +524,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
             spotify.playlist_info_and_tracks, spotify_id
         )
     except Exception as exc:
-        logger.exception('Failed to resolve playlist %s', spotify_id)
+        logger.exception('Failed to resolve playlist {}', spotify_id)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     playlist = await asyncio.to_thread(
@@ -550,7 +547,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
                     state.settings,
                 )
             except Exception:
-                logger.exception('Initial check failed for playlist %d', pl.id)
+                logger.exception('Initial check failed for playlist {}', pl.id)
 
         asyncio.create_task(_initial_check())
 
@@ -617,13 +614,13 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
                 loop,
             )
             logger.info(
-                'Manual check: downloaded %d new track(s) from "%s"',
+                'Manual check: downloaded {} new track(s) from "{}"',
                 count,
                 playlist.name,
             )  # type: ignore[union-attr]
         except Exception:
             logger.exception(
-                'Manual check failed for playlist %d', playlist_id
+                'Manual check failed for playlist {}', playlist_id
             )
 
     asyncio.create_task(_run())

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import os
 import re
 import re as _re
@@ -11,6 +10,7 @@ from typing import Any, Callable, Optional
 
 import requests
 import yt_dlp
+from loguru import logger
 from mutagen.flac import FLAC, Picture
 from mutagen.id3 import APIC, ID3, TALB, TCON, TDRC, TIT2, TPE1, TPE2, USLT
 from mutagen.mp3 import MP3
@@ -20,8 +20,6 @@ from mutagen.oggvorbis import OggVorbis
 
 from . import lyrics as lyrics_mod
 from .providers import enrich_from_match, find_match, find_match_for_video
-
-logger = logging.getLogger(__name__)
 
 _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 
@@ -34,15 +32,15 @@ def _sanitize(text: str) -> str:
 
 
 # Order matters — yt-dlp tries clients top-to-bottom and uses the first one
-# that yields usable formats. Picked to dodge the three current YouTube walls:
-#   * `tv`: a YouTube experiment now applies DRM to ~all videos on this client
-#     (yt-dlp #12563), so it goes last as a hail-mary.
-#   * `mweb`: increasingly requires a GVS PO Token, otherwise its formats
-#     are skipped to avoid HTTP 403.
-#   * `web`: needs a JS runtime (Deno/Node) installed for signature/n
-#     challenge solving — usually missing in slim containers.
-# `ios` and `android` typically still serve audio formats without DRM, PO
-# Token or JS runtime, so they lead.
+# that yields usable formats. `ios` and `android` lead because they still
+# provide audio formats in containers without a JS runtime, even though
+# YouTube now requires a GVS PO Token for their HTTPS/HLS formats (those
+# are skipped with a warning, but lower-quality streams remain available).
+# `web_embedded` and `web` need a JS runtime for signature/n-challenge
+# solving; without one, they yield no audio at all — so they're kept as
+# last-resort fallbacks only. `mweb` and `tv` are included as hail-mary
+# clients: `mweb` needs a PO Token too, and `tv` is affected by a DRM
+# experiment (yt-dlp #12563), but including them costs nothing.
 _DEFAULT_YT_PLAYER_CLIENTS = (
     'ios',
     'android',
@@ -51,6 +49,35 @@ _DEFAULT_YT_PLAYER_CLIENTS = (
     'web',
     'tv',
 )
+
+# Warning substrings emitted by yt-dlp that are known-harmless: they mean
+# some optional format sources are skipped, but other clients in the list
+# still serve usable audio. Suppressed to keep logs readable.
+_SUPPRESSED_YT_WARNING_FRAGMENTS = (
+    'GVS PO Token which was not provided',
+    'Some tv client https formats have been skipped as they are DRM',
+    'Signature solving failed: Some formats may be missing',
+    'n challenge solving failed: Some formats may be missing',
+)
+
+
+class _YtdlpLogger:
+    @staticmethod
+    def debug(msg: str) -> None:
+        pass
+
+    @staticmethod
+    def info(msg: str) -> None:
+        pass
+
+    @staticmethod
+    def warning(msg: str) -> None:
+        if not any(frag in msg for frag in _SUPPRESSED_YT_WARNING_FRAGMENTS):
+            logger.warning('yt-dlp: {}', msg)
+
+    @staticmethod
+    def error(msg: str) -> None:
+        logger.error('yt-dlp: {}', msg)
 
 
 def _yt_player_clients() -> list[str]:
@@ -144,7 +171,7 @@ class Downloader:
             try:
                 match = find_match_for_video(song, video_id)
             except Exception:
-                logger.debug('enrichment match failed', exc_info=True)
+                logger.opt(exception=True).debug('enrichment match failed')
                 match = None
 
         if not video_id:
@@ -177,13 +204,14 @@ class Downloader:
                 elif status == 'finished':
                     progress_cb(96.0, 'Converting')
             except Exception:
-                logger.debug('progress hook error', exc_info=True)
+                logger.opt(exception=True).debug('progress hook error')
 
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': out_template,
             'quiet': True,
             'noprogress': True,
+            'logger': _YtdlpLogger(),
             'noplaylist': True,
             'nocheckcertificate': True,
             'overwrites': True,
@@ -255,20 +283,20 @@ class Downloader:
         try:
             embed_metadata(final_path, song)
         except Exception:
-            logger.exception('Failed to embed metadata into %s', final_path)
+            logger.exception('Failed to embed metadata into {}', final_path)
 
         if self.lyrics_providers:
             try:
                 fetched = lyrics_mod.fetch(song, self.lyrics_providers)
             except Exception:
-                logger.exception('Lyrics fetch crashed for %s', final_path)
+                logger.exception('Lyrics fetch crashed for {}', final_path)
                 fetched = None
             if fetched is not None:
                 try:
                     embed_lyrics(final_path, fetched)
                 except Exception:
                     logger.exception(
-                        'Failed to embed lyrics into %s', final_path
+                        'Failed to embed lyrics into {}', final_path
                     )
 
         if progress_cb:
@@ -283,7 +311,7 @@ def _download_cover(url: str) -> Optional[bytes]:
         response = requests.get(url, timeout=15)
         response.raise_for_status()
     except Exception:
-        logger.warning('Failed to fetch cover art %s', url, exc_info=True)
+        logger.opt(exception=True).warning('Failed to fetch cover art {}', url)
         return None
     return response.content
 
@@ -457,8 +485,8 @@ def embed_lyrics(path: Path, lyrics: 'lyrics_mod.Lyrics') -> None:
         try:
             sidecar.write_text(lyrics.synced, encoding='utf-8')
         except OSError:
-            logger.warning(
-                'Could not write LRC sidecar %s', sidecar, exc_info=True
+            logger.opt(exception=True).warning(
+                'Could not write LRC sidecar {}', sidecar
             )
 
     text = lyrics.plain or _strip_lrc_timestamps(lyrics.synced or '')

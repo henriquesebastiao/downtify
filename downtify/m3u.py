@@ -9,13 +9,12 @@ the playlist appears as a single unit instead of a pile of loose tracks.
 
 from __future__ import annotations
 
-import logging
 import os
 import re
 from pathlib import Path
 from typing import Iterable, Optional
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 _PLAYLIST_NAME_ALLOWED = re.compile(r'[^A-Za-z0-9 _-]+')
 
@@ -68,7 +67,7 @@ def build_m3u_content(
             continue
         path = (download_dir / filename).resolve()
         if not path.exists():
-            logger.warning('Skipping missing track in M3U: %s', path)
+            logger.warning('Skipping missing track in M3U: {}', path)
             continue
         title = (entry.get('title') or '').strip()
         artist = (entry.get('artist') or '').strip()
@@ -109,7 +108,7 @@ def write_m3u(
     )
     if kept == 0:
         logger.warning(
-            'Refusing to write empty M3U for playlist %r', playlist_name
+            'Refusing to write empty M3U for playlist {!r}', playlist_name
         )
         return None, 0
 
@@ -117,5 +116,5 @@ def write_m3u(
     # UTF-8, no BOM, LF line endings — encoding='utf-8' on text mode
     # gives us no BOM, and we built the content with '\n' already.
     target.write_text(content, encoding='utf-8', newline='\n')
-    logger.info('Wrote M3U: %s with %d tracks', target, kept)
+    logger.info('Wrote M3U: {} with {} tracks', target, kept)
     return target, kept
