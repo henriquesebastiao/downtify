@@ -8,13 +8,10 @@ authentication and no premium account are required.
 from __future__ import annotations
 
 import json
-import logging
 import re
 from typing import Any, Optional
 
 import requests
-
-logger = logging.getLogger(__name__)
 
 SPOTIFY_URL_RE = re.compile(
     r'(?:https?://)?(?:open\.)?spotify\.com/'

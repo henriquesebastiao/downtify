@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import sqlite3
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from loguru import logger
+
 from . import m3u, spotify
 from .downloader import Downloader
-
-logger = logging.getLogger(__name__)
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
 
@@ -212,7 +211,7 @@ async def check_playlist(
 ) -> int:
     """Fetch playlist, detect new tracks, download them. Returns count downloaded."""
     logger.info(
-        'Checking monitored playlist "%s" (%s)',
+        'Checking monitored playlist "{}" ({})',
         playlist.name,
         playlist.spotify_id,
     )
@@ -222,7 +221,7 @@ async def check_playlist(
             spotify.playlist_tracks_from_id, playlist.spotify_id
         )
     except Exception:
-        logger.exception('Failed to fetch playlist %s', playlist.spotify_id)
+        logger.exception('Failed to fetch playlist {}', playlist.spotify_id)
         await asyncio.to_thread(
             db.update_playlist, playlist.id, last_checked=_now_iso()
         )
@@ -237,7 +236,7 @@ async def check_playlist(
 
     if new_tracks:
         logger.info(
-            'Found %d new track(s) in playlist "%s"',
+            'Found {} new track(s) in playlist "{}"',
             len(new_tracks),
             playlist.name,
         )
@@ -258,11 +257,10 @@ async def check_playlist(
                 if value:
                     song[key] = value
         except Exception:
-            logger.warning(
-                'Per-track Spotify fetch failed for %s; '
+            logger.opt(exception=True).warning(
+                'Per-track Spotify fetch failed for {}; '
                 'falling back to playlist data',
                 track_id,
-                exc_info=True,
             )
 
         def _make_cb(s: dict, name: str) -> Callable[[float, str], None]:
@@ -289,7 +287,7 @@ async def check_playlist(
             )
             downloaded += 1
         except Exception:
-            logger.exception('Failed to auto-download track %s', track_id)
+            logger.exception('Failed to auto-download track {}', track_id)
 
     await asyncio.to_thread(
         db.update_playlist,
@@ -331,7 +329,7 @@ def _regenerate_m3u(
         })
     if not entries:
         logger.warning(
-            'M3U skip for monitored playlist "%s": no tracks on disk',
+            'M3U skip for monitored playlist "{}": no tracks on disk',
             playlist.name,
         )
         return
@@ -363,13 +361,13 @@ async def monitor_loop(
                     )
                     if count > 0:
                         logger.info(
-                            'Auto-downloaded %d new track(s) from "%s"',
+                            'Auto-downloaded {} new track(s) from "{}"',
                             count,
                             pl.name,
                         )
                 except Exception:
                     logger.exception(
-                        'Error while checking playlist "%s"', pl.name
+                        'Error while checking playlist "{}"', pl.name
                     )
         except Exception:
             logger.exception('Unexpected error in monitor loop')

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import logging
 import re
 from threading import Lock
 from typing import Any, Optional
 
+from loguru import logger
 from ytmusicapi import YTMusic
-
-logger = logging.getLogger(__name__)
 
 _client: Optional[YTMusic] = None
 _lock = Lock()
@@ -149,7 +147,7 @@ def find_match_for_video(
     try:
         results = _ytm().search(query, filter='songs', limit=10)
     except Exception:
-        logger.debug('match-by-video search failed', exc_info=True)
+        logger.opt(exception=True).debug('match-by-video search failed')
         return None
     for result in results:
         if result.get('videoId') == video_id:

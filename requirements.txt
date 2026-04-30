@@ -13,7 +13,9 @@ charset-normalizer==3.4.7
 click==8.3.3
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
-    # via click
+    # via
+    #   click
+    #   loguru
 exceptiongroup==1.3.1 ; python_full_version < '3.11'
     # via anyio
 fastapi==0.136.1
@@ -25,6 +27,8 @@ idna==3.13
     #   anyio
     #   requests
 load-dotenv==0.1.0
+    # via downtify
+loguru==0.7.3
     # via downtify
 mutagen==1.47.0
     # via downtify
@@ -60,6 +64,8 @@ uvicorn==0.46.0
     # via downtify
 websockets==16.0
     # via downtify
+win32-setctime==1.2.0 ; sys_platform == 'win32'
+    # via loguru
 yt-dlp==2026.3.17
     # via downtify
 ytmusicapi==1.12.0

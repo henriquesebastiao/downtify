@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
+from loguru import logger
 from mutagen import File as MutagenFile
 from mutagen.flac import FLAC, Picture
 from mutagen.id3 import ID3
@@ -37,7 +38,48 @@ from downtify.monitor import PlaylistMonitorDB, monitor_loop
 
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+
+class _InterceptHandler(logging.Handler):
+    """Redirect all stdlib logging records into loguru."""
+
+    @staticmethod
+    def emit(record: logging.LogRecord) -> None:
+        try:
+            level: str | int = logger.level(record.levelname).name
+        except ValueError:
+            level = record.levelno
+        frame, depth = sys._getframe(6), 6
+        while frame and frame.f_code.co_filename == logging.__file__:
+            frame = frame.f_back  # type: ignore[assignment]
+            depth += 1
+        logger.opt(depth=depth, exception=record.exc_info).log(
+            level, record.getMessage()
+        )
+
+
+def _setup_logging(level: str) -> None:
+    logger.remove()
+    logger.add(
+        sys.stderr,
+        format=(
+            '<green>{time:YYYY-MM-DD HH:mm:ss}</green> | '
+            '<level>{level: <8}</level> | '
+            '<cyan>{name}</cyan> - '
+            '<level>{message}</level>'
+        ),
+        level=level.upper(),
+        colorize=None,
+    )
+    logging.basicConfig(handlers=[_InterceptHandler()], level=0, force=True)
+    # Explicitly override uvicorn's loggers before it starts — uvicorn will
+    # still write to these logger names, and we want them flowing through
+    # loguru rather than being printed raw by uvicorn's default handler.
+    for _name in ('uvicorn', 'uvicorn.error', 'uvicorn.access', 'fastapi'):
+        _log = logging.getLogger(_name)
+        _log.handlers = [_InterceptHandler()]
+        _log.propagate = False
+
+
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 DATABASE_DIR = Path('/data')
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
@@ -270,10 +312,7 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = _parse_args()
-    logging.basicConfig(
-        level=getattr(logging, args.log_level.upper(), logging.INFO),
-        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
-    )
+    _setup_logging(args.log_level)
 
     _fix_mime_types()
     app = build_app()
@@ -289,12 +328,13 @@ def main() -> None:
         port=args.port,
         loop=loop,  # type: ignore[arg-type]
         log_level=args.log_level.lower(),
+        log_config=None,
         workers=1,
     )
     server = Server(config)
 
     logger.info(
-        'Starting Downtify %s on http://%s:%s',
+        'Starting Downtify {} on http://{}:{}',
         __version__,
         args.host,
         args.port,
