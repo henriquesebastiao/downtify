@@ -139,7 +139,7 @@ wheels = [
 
 [[package]]
 name = "downtify"
-version = "2.4.1"
+version = "2.4.2"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
