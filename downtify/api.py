@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import (
@@ -84,6 +85,7 @@ class AppState:
     downloader: Optional[Downloader] = None
     connections: ConnectionManager = ConnectionManager()
     settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
+    settings_path: Optional[Path] = None
     loop: Optional[asyncio.AbstractEventLoop] = None
     monitor_db: Optional[PlaylistMonitorDB] = None
     download_jobs: dict[str, dict[str, Any]] = {}
@@ -91,6 +93,28 @@ class AppState:
 
 state = AppState()
 router = APIRouter()
+
+
+def _load_settings(path: Path) -> dict[str, Any]:
+    """Load saved settings from *path*, merging with DEFAULT_SETTINGS as base."""
+    try:
+        saved = json.loads(path.read_text(encoding='utf-8'))
+        if isinstance(saved, dict):
+            merged = dict(DEFAULT_SETTINGS)
+            for k, v in saved.items():
+                if k in DEFAULT_SETTINGS:
+                    merged[k] = v
+            return merged
+    except Exception:
+        pass
+    return dict(DEFAULT_SETTINGS)
+
+
+def _save_settings(path: Path, settings: dict[str, Any]) -> None:
+    try:
+        path.write_text(json.dumps(settings, indent=2), encoding='utf-8')
+    except Exception as exc:
+        logger.warning('Could not persist settings: {}', exc)
 
 
 @router.get('/api/version')
@@ -457,6 +481,8 @@ async def update_settings_endpoint(
                 state.downloader.lyrics_providers = [
                     p for p in providers_in if isinstance(p, str) and p
                 ]
+    if state.settings_path is not None:
+        _save_settings(state.settings_path, state.settings)
     return state.settings
 
 

@@ -199,6 +199,10 @@ def build_app() -> FastAPI:
         allow_headers=['*'],
     )
 
+    settings_path = DATABASE_DIR / 'settings.json'
+    api.state.settings_path = settings_path
+    api.state.settings = api._load_settings(settings_path)
+
     api.state.version = __version__
     api.state.downloader = Downloader(
         DOWNLOAD_DIR,
