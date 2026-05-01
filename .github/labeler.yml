@@ -1,0 +1,73 @@
+# actions/labeler configuration
+# Labels are applied to PRs based on the files changed.
+
+backend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'downtify/**'
+      - 'main.py'
+
+frontend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'frontend/**'
+      - '!frontend/src/i18n/**'
+
+translation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'frontend/src/i18n/**'
+
+download:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'downtify/downloader.py'
+      - 'downtify/providers.py'
+      - 'downtify/spotify.py'
+
+monitor:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'downtify/monitor.py'
+      - 'frontend/src/views/Monitor.vue'
+
+lyrics:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'downtify/lyrics.py'
+
+docker:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'entrypoint.sh'
+      - '.dockerignore'
+      - 'docker/**'
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pyproject.toml'
+      - 'requirements.txt'
+      - 'uv.lock'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+      - 'frontend/yarn.lock'
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'tests/**'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**'
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'README.md'
+      - 'CHANGELOG'
+      - 'docs/**'
