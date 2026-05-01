@@ -1,0 +1,51 @@
+title: "[Idea] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea but not sure if it warrants a formal feature request yet? Share it here and gather feedback from the community before opening an issue.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: The Idea
+      description: Describe your idea. What would it do and why would it be useful?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: Who would benefit from this and in what scenario?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of Downtify does this idea relate to?
+      options:
+        - Download pipeline (tracks / albums / playlists)
+        - Playlist Monitor
+        - Audio formats / quality
+        - Metadata / tags
+        - Lyrics
+        - Web UI / player
+        - Search
+        - API / backend
+        - Docker / deployment
+        - Multi-language / i18n
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Anything Else?
+      description: Mockups, similar tools that do this well, or any other context.
+    validations:
+      required: false

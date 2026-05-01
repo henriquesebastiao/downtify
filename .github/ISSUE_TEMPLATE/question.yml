@@ -1,0 +1,68 @@
+name: Question
+description: Ask a question about Downtify setup, usage, or configuration
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a question, please check the [README](https://github.com/henriquesebastiao/downtify#readme) and existing issues — your answer may already be there.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know? Be as specific as possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: What Have You Already Tried?
+      description: Describe what you've already attempted or read. This helps avoid repeating suggestions you've already tried.
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Downtify Version
+      description: |
+        Which version of Downtify are you running? Run:
+        `docker inspect henriquesebastiao/downtify --format '{{index .Config.Labels "org.opencontainers.image.version"}}'`
+      placeholder: "e.g. 2.4.3"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method
+      description: How are you running Downtify?
+      options:
+        - Docker CLI (docker run)
+        - Docker Compose
+        - Umbrel
+        - CasaOS
+        - HomeDock
+        - Other / not yet deployed
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any extra details, config snippets, or screenshots that might help answer your question.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I read the README and did not find the answer there.
+          required: true
+        - label: I searched existing issues and did not find a similar question.
+          required: true

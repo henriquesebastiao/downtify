@@ -1,0 +1,87 @@
+name: Translation Request
+description: Request support for a new language or report an issue with an existing translation
+labels: ["translation", "i18n"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping make Downtify available in more languages! Downtify currently ships with **English**, **Spanish**, and **Brazilian Portuguese**.
+
+        If you would like to contribute a new translation yourself, please also check the contributing guide in the repository for instructions on adding locale files.
+
+  - type: dropdown
+    id: request_type
+    attributes:
+      label: Request Type
+      description: What kind of translation request is this?
+      options:
+        - New language — I want to add a language that is not supported yet
+        - Correction — An existing translation is wrong or unnatural
+        - Missing strings — Some UI text is not translated in an existing language
+    validations:
+      required: true
+
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      description: What is the language (and region, if applicable)?
+      placeholder: "e.g. French, German, Japanese, Portuguese (Portugal)"
+    validations:
+      required: true
+
+  - type: input
+    id: locale_code
+    attributes:
+      label: Locale Code
+      description: The BCP 47 / ISO 639-1 locale code for the language.
+      placeholder: "e.g. fr, de, ja, pt-PT"
+    validations:
+      required: false
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this language important? How many users might benefit? Any regional context that would help prioritize?
+    validations:
+      required: false
+
+  - type: textarea
+    id: corrections
+    attributes:
+      label: Corrections or Missing Strings (for existing translations)
+      description: |
+        If you are reporting a wrong or missing translation, paste the affected strings below.
+        Format: `key / current text → suggested text`
+      placeholder: |
+        settings.format / "Formato" → "Formato de áudio"
+        download.button / missing in French
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      description: Are you willing to help with this translation?
+      options:
+        - label: I am willing to provide the translation strings myself (open a PR or share the file in this issue).
+        - label: I can review a machine-generated translation for accuracy.
+        - label: I am only requesting — I cannot contribute directly.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Anything else that might be useful.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this language has not been requested before.
+          required: true

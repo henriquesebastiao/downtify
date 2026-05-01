@@ -1,0 +1,46 @@
+title: "[Show & Tell] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Show off how you are using Downtify! Share your setup, automation scripts, integrations, or anything cool you have built around it.
+
+  - type: textarea
+    id: showcase
+    attributes:
+      label: What Are You Sharing?
+      description: Describe what you built or how you use Downtify. Include context so others can understand and reproduce your setup.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Home server setup / stack
+        - Docker Compose / automation
+        - Integration with another tool or service
+        - Custom script or workflow
+        - UI / theme customization
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration or Code Snippet
+      description: Paste any relevant `docker-compose.yml`, scripts, or config. Use code blocks for formatting.
+      render: yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Screenshots or Links
+      description: Add any screenshots, links, or other media that show your setup in action.
+    validations:
+      required: false

@@ -1,0 +1,69 @@
+name: Feature Request
+description: Suggest a new feature or improvement for Downtify
+labels: ["enhancement", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea that would make Downtify better? We'd love to hear it! Please describe your request in as much detail as possible.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Motivation
+      description: Is your feature request related to a problem? Describe the context or frustration that led to this idea.
+      placeholder: "I often need to... but currently there's no way to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature you'd like to see. How should it work? What would the user experience look like?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you tried any workarounds or alternative approaches? Why did they fall short?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature Area
+      description: Which part of Downtify does this feature relate to?
+      options:
+        - Download pipeline (tracks / albums / playlists)
+        - Playlist Monitor (auto-download new songs)
+        - Audio formats / quality
+        - Metadata / tags
+        - Lyrics
+        - Web UI / player
+        - Search
+        - API / backend
+        - Docker / deployment
+        - Multi-language / i18n
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any mockups, screenshots, links to similar projects, or any other context that might help illustrate the idea.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this has not been requested before.
+          required: true

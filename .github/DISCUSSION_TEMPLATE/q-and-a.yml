@@ -1,0 +1,58 @@
+title: "[Q&A] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about setting up or using Downtify? Ask here and the community or maintainers will help. For confirmed bugs, please open an [issue](https://github.com/henriquesebastiao/downtify/issues/new/choose) instead.
+
+        Before posting, check the [README](https://github.com/henriquesebastiao/downtify#readme) and search existing discussions — your answer may already be there.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know? Be as specific as possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What Have You Already Tried?
+      description: Describe what you've already attempted or read. This helps avoid repeating suggestions you've already tried.
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Downtify Version
+      description: |
+        Which version are you running? Run:
+        `docker inspect henriquesebastiao/downtify --format '{{index .Config.Labels "org.opencontainers.image.version"}}'`
+      placeholder: "e.g. 2.4.3"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method
+      options:
+        - Docker CLI (docker run)
+        - Docker Compose
+        - Umbrel
+        - CasaOS
+        - HomeDock
+        - Other / not yet deployed
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Config snippets, screenshots, or any extra details that might help answer your question.
+    validations:
+      required: false

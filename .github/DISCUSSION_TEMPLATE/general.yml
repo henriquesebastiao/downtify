@@ -1,0 +1,23 @@
+title: ""
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this space for anything that does not fit a specific category — tips, community chat, integrations, or anything Downtify-related.
+
+  - type: textarea
+    id: content
+    attributes:
+      label: What's on your mind?
+      description: Share your thoughts, tips, or anything you'd like to discuss with the community.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Screenshots, links, or any extra details that support your post.
+    validations:
+      required: false

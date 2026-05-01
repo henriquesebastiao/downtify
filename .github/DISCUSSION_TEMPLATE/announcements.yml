@@ -1,0 +1,15 @@
+title: "[Announcement] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This category is reserved for official announcements from the maintainers — new releases, breaking changes, planned maintenance, and project news.
+
+  - type: textarea
+    id: announcement
+    attributes:
+      label: Announcement
+      description: Write the full announcement here.
+    validations:
+      required: true

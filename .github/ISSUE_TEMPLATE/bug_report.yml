@@ -1,0 +1,151 @@
+name: Bug Report
+description: Report something that is not working as expected
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill in as much detail as possible — the more context you provide, the faster we can investigate.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: What went wrong? What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: List the exact steps needed to reproduce the issue.
+      placeholder: |
+        1. Open Downtify at http://localhost:8000
+        2. Paste this Spotify link: ...
+        3. Click Download
+        4. See error / unexpected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include any error messages shown in the UI.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Downtify Version
+      description: |
+        Which version of Downtify are you running?
+        You can find it in the bottom of the web UI or by running:
+        `docker inspect henriquesebastiao/downtify --format '{{index .Config.Labels "org.opencontainers.image.version"}}'`
+      placeholder: "e.g. 2.4.3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method
+      description: How are you running Downtify?
+      options:
+        - Docker CLI (docker run)
+        - Docker Compose
+        - Umbrel
+        - CasaOS
+        - HomeDock
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: format
+    attributes:
+      label: Audio Format
+      description: Which format were you downloading when the bug occurred?
+      options:
+        - MP3
+        - FLAC
+        - M4A
+        - OGG
+        - OPUS
+        - Not applicable / unknown
+    validations:
+      required: false
+
+  - type: input
+    id: spotify_link
+    attributes:
+      label: Spotify Link (if applicable)
+      description: Paste the Spotify link that triggered the issue. You can redact any personal playlist links if you prefer.
+      placeholder: "https://open.spotify.com/track/..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: docker_logs
+    attributes:
+      label: Docker Logs
+      description: |
+        Paste the relevant container logs here. To get them, run:
+
+        **Docker CLI:**
+        ```
+        docker logs downtify --tail 100
+        ```
+
+        **Docker Compose:**
+        ```
+        docker compose logs downtify --tail 100
+        ```
+
+        Add `--since 5m` to limit to the last 5 minutes if the log is too large.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Please complete the following. You can run `docker info` and `uname -a` to gather this info.
+      value: |
+        - OS:
+        - Docker version:
+        - Architecture (amd64 / arm64 / armv7):
+      render: markdown
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or links that might help.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this has not been reported before.
+          required: true
+        - label: I am using the latest version of Downtify.
+          required: false
