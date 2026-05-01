@@ -191,6 +191,28 @@ def test_write_returns_none_when_no_files_resolve(tmp_path):
     assert not (tmp_path / 'Playlists' / 'Empty.m3u').exists()
 
 
+def test_write_with_playlist_subdir_places_m3u_inside_playlist_folder(
+    tmp_path,
+):
+    # When a per-playlist sub-folder is given, both tracks and the M3U
+    # live under download_dir/<subdir>/, and track paths inside the M3U
+    # collapse to bare filenames (no '../').
+    pl_dir = tmp_path / 'My Mix'
+    pl_dir.mkdir()
+    (pl_dir / 'Artist - Song.mp3').write_bytes(b'\x00')
+    target, kept = m3u.write_m3u(
+        tmp_path,
+        'My Mix',
+        [{'filename': 'My Mix/Artist - Song.mp3', 'title': 'Song'}],
+        playlist_subdir='My Mix',
+    )
+    assert target == pl_dir / 'My Mix.m3u'
+    assert kept == 1
+    body = target.read_text(encoding='utf-8')
+    assert 'Artist - Song.mp3' in body
+    assert '../' not in body
+
+
 def test_write_utf8_no_bom_lf_line_endings(tmp_path):
     _touch(tmp_path, 's.mp3')
     target, _ = m3u.write_m3u(

@@ -89,8 +89,16 @@ def write_m3u(
     download_dir: Path,
     playlist_name: str,
     entries: Iterable[dict],
+    *,
+    playlist_subdir: Optional[str] = None,
 ) -> tuple[Optional[Path], int]:
-    """Write an M3U for ``playlist_name`` under ``download_dir/Playlists``.
+    """Write an M3U for ``playlist_name``.
+
+    When ``playlist_subdir`` is given the M3U is placed inside that
+    per-playlist folder (``download_dir/<playlist_subdir>/<safe>.m3u``)
+    so the directory is fully self-contained — handy for browsing on a
+    NAS or playing folders directly on Sonos. Otherwise the legacy
+    ``download_dir/Playlists/<safe>.m3u`` location is used.
 
     Returns ``(path, kept)``. ``path`` is ``None`` and ``kept`` is ``0``
     when no track survived the existence check; nothing is written in
@@ -98,7 +106,10 @@ def write_m3u(
     """
 
     safe_name = sanitize_playlist_name(playlist_name)
-    target_dir = Path(download_dir) / 'Playlists'
+    if playlist_subdir:
+        target_dir = Path(download_dir) / playlist_subdir
+    else:
+        target_dir = Path(download_dir) / 'Playlists'
     target_dir.mkdir(parents=True, exist_ok=True)
 
     content, kept = build_m3u_content(

@@ -92,8 +92,16 @@
 
           <!-- Filename -->
           <div class="flex-1 min-w-0">
-            <span class="text-sm font-medium truncate block">{{ file }}</span>
+            <span class="text-sm font-medium truncate block">{{
+              displayName(file)
+            }}</span>
             <span class="text-xs text-base-content/40">
+              <span v-if="folderOf(file)" class="mr-2 text-primary/70">
+                <Icon
+                  icon="clarity:folder-line"
+                  class="inline h-3 w-3 mr-0.5 align-text-top"
+                />{{ folderOf(file) }}
+              </span>
               {{ formatExt(file) }}
             </span>
           </div>
@@ -109,7 +117,7 @@
             </button>
             <a
               class="icon-btn"
-              :href="`/downloads/${encodeURIComponent(file)}`"
+              :href="API.downloadFileURL(file)"
               download
               :title="t('library.downloadToDevice')"
             >
@@ -253,6 +261,16 @@ async function onDelete(file) {
 function formatExt(file) {
   const dot = file.lastIndexOf('.')
   return dot > 0 ? file.slice(dot + 1).toUpperCase() : ''
+}
+
+function displayName(file) {
+  const slash = file.lastIndexOf('/')
+  return slash >= 0 ? file.slice(slash + 1) : file
+}
+
+function folderOf(file) {
+  const slash = file.lastIndexOf('/')
+  return slash >= 0 ? file.slice(0, slash) : ''
 }
 
 function playFile(index) {

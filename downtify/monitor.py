@@ -241,6 +241,8 @@ async def check_playlist(
             playlist.name,
         )
 
+    pl_subdir = m3u.sanitize_playlist_name(playlist.name)
+
     downloaded = 0
     for song in new_tracks:
         track_id = song['song_id']
@@ -280,7 +282,9 @@ async def check_playlist(
         try:
             await loop.run_in_executor(
                 None,
-                lambda s=song: downloader.download(s, _make_cb(s, pl_name)),
+                lambda s=song: downloader.download(
+                    s, _make_cb(s, pl_name), subdir=pl_subdir
+                ),
             )
             await asyncio.to_thread(
                 db.mark_track_downloaded, playlist.id, track_id
@@ -316,9 +320,10 @@ def _regenerate_m3u(
     matching file on disk are dropped.
     """
 
+    pl_subdir = m3u.sanitize_playlist_name(playlist.name)
     entries: list[dict[str, Any]] = []
     for song in tracks:
-        filename = downloader.existing_filename_for(song)
+        filename = downloader.existing_filename_for(song, subdir=pl_subdir)
         if not filename:
             continue
         entries.append({
@@ -333,7 +338,12 @@ def _regenerate_m3u(
             playlist.name,
         )
         return
-    m3u.write_m3u(downloader.download_dir, playlist.name, entries)
+    m3u.write_m3u(
+        downloader.download_dir,
+        playlist.name,
+        entries,
+        playlist_subdir=pl_subdir,
+    )
 
 
 async def monitor_loop(

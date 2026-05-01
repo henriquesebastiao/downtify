@@ -234,28 +234,34 @@ def build_app() -> FastAPI:
     @app.get('/list')
     def list_downloads() -> list[str]:
         audio_exts = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
-        try:
-            entries = os.listdir(str(DOWNLOAD_DIR))
-        except FileNotFoundError:
+        base = DOWNLOAD_DIR.resolve()
+        if not base.exists():
             return []
         files: list[str] = []
-        for entry in entries:
-            full = os.path.join(str(DOWNLOAD_DIR), entry)
-            if (
-                os.path.isfile(full)
-                and os.path.splitext(entry)[1].lower() in audio_exts
-            ):
-                files.append(entry)
+        # Walk recursively so per-playlist sub-folders show up alongside
+        # loose downloads in the library view.
+        for path in base.rglob('*'):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in audio_exts:
+                continue
+            files.append(path.relative_to(base).as_posix())
         files.sort()
         return files
 
     @app.delete('/delete')
     def delete_download(file: str) -> dict:
-        full = os.path.join(str(DOWNLOAD_DIR), file)
-        if not os.path.isfile(full):
+        # Resolve and confine to DOWNLOAD_DIR to prevent path traversal.
+        base = DOWNLOAD_DIR.resolve()
+        try:
+            full = (base / file).resolve()
+            full.relative_to(base)
+        except (ValueError, RuntimeError):
+            return {'deleted': False, 'error': 'Invalid path'}
+        if not full.is_file():
             return {'deleted': False, 'error': 'File not found'}
         try:
-            os.remove(full)
+            full.unlink()
         except Exception as exc:
             return {'deleted': False, 'error': str(exc)}
         return {'deleted': True}

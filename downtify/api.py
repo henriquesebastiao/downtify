@@ -192,7 +192,11 @@ def _register_job(song: dict[str, Any], status: str = 'queued') -> str:
     return song_id
 
 
-async def _run_download(song: dict[str, Any], song_id: str) -> Optional[str]:
+async def _run_download(
+    song: dict[str, Any],
+    song_id: str,
+    subdir: Optional[str] = None,
+) -> Optional[str]:
     """Run a single download to completion, updating jobs state and broadcasting WS events."""
 
     if state.downloader is None:
@@ -230,7 +234,8 @@ async def _run_download(song: dict[str, Any], song_id: str) -> Optional[str]:
 
     try:
         filename = await loop.run_in_executor(
-            None, lambda: state.downloader.download(song, progress)
+            None,
+            lambda: state.downloader.download(song, progress, subdir=subdir),
         )
     except Exception as exc:
         logger.exception('Download failed for {}', song_id)
@@ -284,12 +289,31 @@ async def _process_batch(
     playlist_url: str,
     generate_m3u: bool,
 ) -> None:
+    # Resolve the playlist name up-front so all tracks land in a single,
+    # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
+    # tracks) keep the legacy flat layout under download_dir.
+    playlist_subdir: Optional[str] = None
+    playlist_name: Optional[str] = None
+    parsed = spotify.parse_spotify_url(playlist_url) if playlist_url else None
+    if parsed is not None and parsed[0] == 'playlist':
+        try:
+            playlist_name, _ = await asyncio.to_thread(
+                spotify.playlist_info_and_tracks, parsed[1]
+            )
+            playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
+        except Exception:
+            logger.exception(
+                'Failed to resolve playlist name for {}', playlist_url
+            )
+
     semaphore = asyncio.Semaphore(_BATCH_CONCURRENCY)
 
     async def _bounded(song: dict[str, Any], song_id: str) -> dict[str, Any]:
         async with semaphore:
             try:
-                filename = await _run_download(song, song_id)
+                filename = await _run_download(
+                    song, song_id, subdir=playlist_subdir
+                )
             except Exception:
                 filename = None
             return {'song': song, 'filename': filename}
@@ -299,21 +323,7 @@ async def _process_batch(
         return_exceptions=False,
     )
 
-    if not (generate_m3u and playlist_url):
-        return
-
-    parsed = spotify.parse_spotify_url(playlist_url)
-    if parsed is None or parsed[0] != 'playlist':
-        return
-
-    try:
-        playlist_name, _ = await asyncio.to_thread(
-            spotify.playlist_info_and_tracks, parsed[1]
-        )
-    except Exception:
-        logger.exception(
-            'Failed to resolve playlist for M3U: {}', playlist_url
-        )
+    if not (generate_m3u and playlist_subdir and playlist_name):
         return
 
     entries: list[dict[str, Any]] = []
@@ -335,6 +345,7 @@ async def _process_batch(
             state.downloader.download_dir,
             playlist_name,
             entries,
+            playlist_subdir=playlist_subdir,
         )
     except Exception:
         logger.exception('Failed to write M3U for {}', playlist_url)
@@ -437,8 +448,12 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     entries = [t for t in tracks if isinstance(t, dict)]
+    playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
     target, kept = m3u.write_m3u(
-        state.downloader.download_dir, playlist_name, entries
+        state.downloader.download_dir,
+        playlist_name,
+        entries,
+        playlist_subdir=playlist_subdir,
     )
     if target is None:
         raise HTTPException(

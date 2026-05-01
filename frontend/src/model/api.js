@@ -65,8 +65,18 @@ function check_for_update() {
   return API.get('/api/check_update')
 }
 
+function encodePath(fileName) {
+  // Encode each path segment individually so '/' separators survive —
+  // playlist downloads land under '<playlist>/<song>.mp3' and we need
+  // the URL to hit '/downloads/<playlist>/<song>.mp3' literally.
+  return String(fileName || '')
+    .split('/')
+    .map(encodeURIComponent)
+    .join('/')
+}
+
 function downloadFileURL(fileName) {
-  return `/downloads/${encodeURIComponent(fileName)}`
+  return `/downloads/${encodePath(fileName)}`
 }
 
 function coverFileURL(fileName) {

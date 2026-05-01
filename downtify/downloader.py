@@ -19,6 +19,7 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 
 from . import lyrics as lyrics_mod
+from .m3u import sanitize_playlist_name
 from .providers import enrich_from_match, find_match, find_match_for_video
 
 _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
@@ -131,30 +132,59 @@ class Downloader:
             rendered = f'{artists} - {song.get("name", "Unknown")}'
         return _sanitize(rendered)
 
-    def existing_filename_for(self, song: dict[str, Any]) -> Optional[str]:
+    def existing_filename_for(
+        self,
+        song: dict[str, Any],
+        subdir: Optional[str] = None,
+    ) -> Optional[str]:
         """Return the on-disk filename for ``song`` if any matching file exists.
 
         Mirrors :meth:`download`'s post-conversion path resolution: prefers
         ``{basename}.{audio_format}`` and falls back to any
         ``{basename}.*`` since yt-dlp occasionally keeps the upstream
         extension (opus, m4a). Returns ``None`` when no file matches.
+
+        When ``subdir`` is given the lookup is scoped to that
+        sub-directory and the returned name is relative to
+        ``download_dir`` (``<subdir>/<file>.<ext>``).
         """
 
         basename = self._format_basename(song)
-        primary = self.download_dir / f'{basename}.{self.audio_format}'
+        target_dir, prefix = self._resolve_target_dir(subdir)
+        primary = target_dir / f'{basename}.{self.audio_format}'
         if primary.exists():
-            return primary.name
-        for candidate in self.download_dir.glob(f'{basename}.*'):
+            return f'{prefix}{primary.name}'
+        for candidate in target_dir.glob(f'{basename}.*'):
             if candidate.is_file():
-                return candidate.name
+                return f'{prefix}{candidate.name}'
         return None
+
+    def _resolve_target_dir(self, subdir: Optional[str]) -> tuple[Path, str]:
+        """Return ``(target_dir, relative_prefix)`` for an optional subdir.
+
+        ``relative_prefix`` is empty when ``subdir`` is not used and
+        otherwise terminates with ``'/'`` so callers can build the
+        download-dir-relative path with simple concatenation.
+        """
+
+        if not subdir:
+            return self.download_dir, ''
+        safe = sanitize_playlist_name(subdir)
+        return self.download_dir / safe, f'{safe}/'
 
     def download(
         self,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback] = None,
+        subdir: Optional[str] = None,
     ) -> str:
-        """Download ``song`` and return the resulting file name."""
+        """Download ``song`` and return the resulting file name.
+
+        When ``subdir`` is provided the file is written under
+        ``download_dir/<sanitized_subdir>/`` and the returned name is
+        relative to ``download_dir`` (``<subdir>/<file>.<ext>``). This
+        is how playlist downloads are grouped into per-playlist folders.
+        """
 
         video_id = song.get('youtube_id')
         if not video_id and (song.get('source') == 'youtube'):
@@ -182,7 +212,9 @@ class Downloader:
         song = enrich_from_match(song, match)
 
         basename = self._format_basename(song)
-        out_template = str(self.download_dir / f'{basename}.%(ext)s')
+        target_dir, rel_prefix = self._resolve_target_dir(subdir)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        out_template = str(target_dir / f'{basename}.%(ext)s')
 
         def hook(data: dict[str, Any]) -> None:
             if progress_cb is None:
@@ -272,10 +304,10 @@ class Downloader:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
-        final_path = self.download_dir / f'{basename}.{self.audio_format}'
+        final_path = target_dir / f'{basename}.{self.audio_format}'
         if not final_path.exists():
             # yt-dlp sometimes uses the upstream extension for opus/m4a
-            for candidate in self.download_dir.glob(f'{basename}.*'):
+            for candidate in target_dir.glob(f'{basename}.*'):
                 if candidate.is_file():
                     final_path = candidate
                     break
@@ -301,7 +333,7 @@ class Downloader:
 
         if progress_cb:
             progress_cb(100.0, 'Done')
-        return final_path.name
+        return f'{rel_prefix}{final_path.name}'
 
 
 def _download_cover(url: str) -> Optional[bytes]:
