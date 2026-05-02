@@ -5,6 +5,7 @@ import API from '/src/model/api'
 const settings = ref({
   audio_providers: [''],
   lyrics_providers: [''],
+  download_lyrics: true,
   format: '',
   bitrate: '320',
   output: '',

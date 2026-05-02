@@ -124,6 +124,10 @@ export default {
     audioSource: 'Audio source',
     lyricsSource: 'Lyrics source',
     lyricsHint: 'only lrclib is active',
+    downloadLyrics: 'Download lyrics',
+    downloadLyricsHint:
+      'Embed lyrics in audio files and write .lrc sidecar files',
+    lyricsProvider: 'Provider',
     format: 'Format',
     quality: 'Quality',
     qualityIgnored: 'ignored (lossless)',
