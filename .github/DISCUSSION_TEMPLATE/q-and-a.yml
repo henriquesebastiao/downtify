@@ -31,7 +31,7 @@ body:
       description: |
         Which version are you running? Run:
         `docker inspect henriquesebastiao/downtify --format '{{index .Config.Labels "org.opencontainers.image.version"}}'`
-      placeholder: "e.g. 2.4.3"
+      placeholder: "e.g. 2.5.0"
     validations:
       required: false
 
