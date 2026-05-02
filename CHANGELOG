@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.5.0](https://github.com/henriquesebastiao/downtify/tree/2.5.0) (2026-05-02)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.4.3...2.5.0)
+
+**Implemented enhancements:**
+
+- Support for Large Playlists [\#128](https://github.com/henriquesebastiao/downtify/issues/128)
+- Allowing downloads of playlists with over 100 songs [\#147](https://github.com/henriquesebastiao/downtify/pull/147) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
 ## [2.4.3](https://github.com/henriquesebastiao/downtify/tree/2.4.3) (2026-04-30)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.4.2...2.4.3)
