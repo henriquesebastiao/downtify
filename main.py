@@ -211,7 +211,7 @@ def build_app() -> FastAPI:
         output_template=api.state.settings['output'].replace(
             '.{output-ext}', ''
         ),
-        lyrics_providers=api.state.settings.get('lyrics_providers') or [],
+        lyrics_providers=api._effective_lyrics_providers(api.state.settings),
     )
     app.include_router(api.router)
 

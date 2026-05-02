@@ -40,11 +40,22 @@ from .monitor import PlaylistMonitorDB, check_playlist
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
     'lyrics_providers': ['lrclib'],
+    'download_lyrics': True,
     'format': 'mp3',
     'bitrate': '320',
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
 }
+
+
+def _effective_lyrics_providers(settings: dict[str, Any]) -> list[str]:
+    if not settings.get('download_lyrics', True):
+        return []
+    return [
+        p
+        for p in (settings.get('lyrics_providers') or [])
+        if isinstance(p, str) and p
+    ]
 
 
 class ConnectionManager:
@@ -491,11 +502,10 @@ async def update_settings_endpoint(
                 state.downloader.output_template = output.replace(
                     '.{output-ext}', ''
                 )
-            providers_in = payload.get('lyrics_providers')
-            if isinstance(providers_in, list):
-                state.downloader.lyrics_providers = [
-                    p for p in providers_in if isinstance(p, str) and p
-                ]
+            if 'lyrics_providers' in payload or 'download_lyrics' in payload:
+                state.downloader.lyrics_providers = (
+                    _effective_lyrics_providers(state.settings)
+                )
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)
     return state.settings

@@ -125,6 +125,10 @@ export default {
     audioSource: 'Fonte de áudio',
     lyricsSource: 'Fonte de letras',
     lyricsHint: 'apenas o lrclib está ativo',
+    downloadLyrics: 'Baixar letras',
+    downloadLyricsHint:
+      'Incorpora letras nos arquivos de áudio e grava arquivos .lrc',
+    lyricsProvider: 'Provedor',
     format: 'Formato',
     quality: 'Qualidade',
     qualityIgnored: 'ignorada (sem perdas)',
