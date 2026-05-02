@@ -1,11 +1,24 @@
 <template>
   <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
     <!-- Header -->
-    <div class="mb-8">
-      <h1 class="text-2xl font-bold tracking-tight">{{ t('queue.title') }}</h1>
-      <p class="mt-1 text-sm text-base-content/60">
-        {{ t('queue.subtitle') }}
-      </p>
+    <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">
+          {{ t('queue.title') }}
+        </h1>
+        <p class="mt-1 text-sm text-base-content/60">
+          {{ t('queue.subtitle') }}
+        </p>
+      </div>
+      <button
+        v-if="pt.downloadQueue.value.length > 0"
+        class="btn btn-sm h-11 px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 text-error/70 hover:text-error"
+        @click="onClearAll"
+        :title="t('queue.clearAll')"
+      >
+        <Icon icon="clarity:trash-line" class="h-4 w-4 mr-1.5" />
+        {{ t('queue.clearAll') }}
+      </button>
     </div>
 
     <!-- Empty state -->
@@ -150,6 +163,11 @@ const PAGE_SIZE = 10
 const pt = useProgressTracker()
 const dm = useDownloadManager()
 const { t } = useI18n()
+
+async function onClearAll() {
+  if (!confirm(t('queue.clearAllPrompt'))) return
+  await dm.clearAll()
+}
 
 const currentPage = ref(1)
 

@@ -57,6 +57,8 @@ export default {
     emptyHint: 'Search for a song and hit download to start.',
     saveToDevice: 'Save to device',
     removeFromQueue: 'Remove from queue',
+    clearAll: 'Clear all',
+    clearAllPrompt: 'Remove all items from the queue?',
   },
   library: {
     title: 'Library',

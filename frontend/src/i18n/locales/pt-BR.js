@@ -57,6 +57,8 @@ export default {
     emptyHint: 'Procure uma música e clique em baixar para começar.',
     saveToDevice: 'Salvar no dispositivo',
     removeFromQueue: 'Remover da fila',
+    clearAll: 'Limpar tudo',
+    clearAllPrompt: 'Remover todos os itens da fila?',
   },
   library: {
     title: 'Biblioteca',

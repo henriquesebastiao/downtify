@@ -418,6 +418,20 @@ def get_queue() -> list[dict[str, Any]]:
     return list(state.download_jobs.values())
 
 
+@router.delete('/api/queue')
+def clear_queue() -> dict:
+    state.download_jobs.clear()
+    return {'cleared': True}
+
+
+@router.delete('/api/queue/item')
+def remove_queue_item(song_id: str = Query(...)) -> dict:
+    if song_id in state.download_jobs:
+        del state.download_jobs[song_id]
+        return {'removed': True}
+    return {'removed': False}
+
+
 @router.post('/api/playlist/m3u')
 async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
     """Write an M3U for the playlist after the per-track downloads.

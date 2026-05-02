@@ -58,6 +58,8 @@ export default {
     emptyHint: 'Busca una canción y pulsa descargar para empezar.',
     saveToDevice: 'Guardar en el dispositivo',
     removeFromQueue: 'Quitar de la cola',
+    clearAll: 'Limpiar todo',
+    clearAllPrompt: '¿Eliminar todos los elementos de la cola?',
   },
   library: {
     title: 'Biblioteca',

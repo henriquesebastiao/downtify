@@ -227,8 +227,16 @@ export function useDownloadManager() {
     return Promise.resolve({ song, filename: null })
   }
   function remove(song) {
-    console.log('removing')
+    const songId = String(song.song_id || song.url || '')
     progressTracker.removeSong(song)
+    if (songId) {
+      API.removeQueueItem(songId).catch(() => {})
+    }
+  }
+
+  async function clearAll() {
+    await API.clearQueue()
+    downloadQueue.value = []
   }
 
   return {
@@ -236,6 +244,7 @@ export function useDownloadManager() {
     download,
     queue,
     remove,
+    clearAll,
     loading,
   }
 }

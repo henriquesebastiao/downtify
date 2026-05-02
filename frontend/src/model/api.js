@@ -99,6 +99,14 @@ function getQueue() {
   return API.get('/api/queue')
 }
 
+function removeQueueItem(songId) {
+  return API.delete('/api/queue/item', { params: { song_id: songId } })
+}
+
+function clearQueue() {
+  return API.delete('/api/queue')
+}
+
 function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
@@ -126,6 +134,8 @@ export default {
   deleteDownload,
   writePlaylistM3u,
   getQueue,
+  removeQueueItem,
+  clearQueue,
   getSettings,
   setSettings,
   check_for_update,
