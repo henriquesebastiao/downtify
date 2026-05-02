@@ -87,6 +87,13 @@ class PlaylistMonitorDB:
                     UNIQUE(playlist_id, track_spotify_id)
                 );
             """)
+            # Migration: add filename column if it doesn't exist yet
+            try:
+                conn.execute(
+                    'ALTER TABLE downloaded_tracks ADD COLUMN filename TEXT'
+                )
+            except Exception:
+                pass
 
     def add_playlist(
         self,
@@ -167,23 +174,32 @@ class PlaylistMonitorDB:
             ).fetchone()
             return _row_to_playlist(row) if row else None
 
-    def get_downloaded_track_ids(self, playlist_id: int) -> set[str]:
+    def get_track_filenames(
+        self, playlist_id: int
+    ) -> dict[str, Optional[str]]:
+        """Return ``{track_spotify_id: filename}`` for all known tracks."""
         with self._connect() as conn:
             rows = conn.execute(
-                'SELECT track_spotify_id FROM downloaded_tracks WHERE playlist_id = ?',
+                'SELECT track_spotify_id, filename FROM downloaded_tracks WHERE playlist_id = ?',
                 (playlist_id,),
             ).fetchall()
-            return {r['track_spotify_id'] for r in rows}
+            return {r['track_spotify_id']: r['filename'] for r in rows}
 
     def mark_track_downloaded(
-        self, playlist_id: int, track_spotify_id: str
+        self,
+        playlist_id: int,
+        track_spotify_id: str,
+        filename: Optional[str] = None,
     ) -> None:
         with self._connect() as conn:
             conn.execute(
-                """INSERT OR IGNORE INTO downloaded_tracks
-                   (playlist_id, track_spotify_id, downloaded_at)
-                   VALUES (?, ?, ?)""",
-                (playlist_id, track_spotify_id, _now_iso()),
+                """INSERT INTO downloaded_tracks
+                   (playlist_id, track_spotify_id, downloaded_at, filename)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT(playlist_id, track_spotify_id) DO UPDATE SET
+                   downloaded_at=excluded.downloaded_at,
+                   filename=excluded.filename""",
+                (playlist_id, track_spotify_id, _now_iso(), filename),
             )
 
 
@@ -227,21 +243,32 @@ async def check_playlist(
         )
         return 0
 
-    known_ids = await asyncio.to_thread(
-        db.get_downloaded_track_ids, playlist.id
-    )
-    new_tracks = [
-        t for t in tracks if t.get('song_id') and t['song_id'] not in known_ids
-    ]
+    known_tracks = await asyncio.to_thread(db.get_track_filenames, playlist.id)
+
+    pl_subdir = m3u.sanitize_playlist_name(playlist.name)
+
+    new_tracks = []
+    for t in tracks:
+        if not t.get('song_id'):
+            continue
+        tid = t['song_id']
+        if tid not in known_tracks:
+            new_tracks.append(t)
+        else:
+            stored = known_tracks[tid]
+            if (
+                stored is not None
+                and not (downloader.download_dir / stored).exists()
+            ):
+                # File was deleted — re-download
+                new_tracks.append(t)
 
     if new_tracks:
         logger.info(
-            'Found {} new track(s) in playlist "{}"',
+            'Found {} track(s) to download in playlist "{}"',
             len(new_tracks),
             playlist.name,
         )
-
-    pl_subdir = m3u.sanitize_playlist_name(playlist.name)
 
     downloaded = 0
     for song in new_tracks:
@@ -280,14 +307,14 @@ async def check_playlist(
             return _cb
 
         try:
-            await loop.run_in_executor(
+            filename = await loop.run_in_executor(
                 None,
                 lambda s=song: downloader.download(
                     s, _make_cb(s, pl_name), subdir=pl_subdir
                 ),
             )
             await asyncio.to_thread(
-                db.mark_track_downloaded, playlist.id, track_id
+                db.mark_track_downloaded, playlist.id, track_id, filename
             )
             downloaded += 1
         except Exception:
