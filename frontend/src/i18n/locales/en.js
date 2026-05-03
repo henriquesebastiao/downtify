@@ -137,6 +137,10 @@ export default {
     generateM3u: 'Generate M3U file for playlists',
     generateM3uHint:
       'Writes Playlists/<name>.m3u alongside the tracks for both manual playlist downloads and Playlist Monitor sweeps.',
+    organizationSection: 'File organization',
+    organizeByArtist: 'Organize by artist',
+    organizeByArtistHint:
+      "Save songs in subfolders named after the artist. Playlist tracks are also placed in their artist's folder instead of a playlist folder.",
     saved: 'Changes saved',
     saveError: "Couldn't save settings.",
     language: 'Language',
