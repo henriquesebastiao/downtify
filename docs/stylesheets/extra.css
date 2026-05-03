@@ -1,0 +1,337 @@
+/* ==========================================================================
+   Downtify Documentation · Custom Theme
+   Brand green: #1AD05C
+   Light bg:  #ffffff / #f5f6f7
+   Dark bg:   #1a1a1a / #121212
+   ========================================================================== */
+
+/* ---------- Custom color variables (primary = "custom") ---------- */
+
+/* Light mode */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:              #15b150;
+  --md-primary-fg-color--light:       #1AD05C;
+  --md-primary-fg-color--dark:        #0d6f31;
+  --md-primary-bg-color:              #ffffff;
+  --md-primary-bg-color--light:       rgba(255,255,255,0.7);
+  --md-accent-fg-color:               #1AD05C;
+  --md-accent-fg-color--transparent:  rgba(26,208,92,0.1);
+  --md-accent-bg-color:               #ffffff;
+}
+
+/* Dark mode */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:              #1AD05C;
+  --md-primary-fg-color--light:       #48dd87;
+  --md-primary-fg-color--dark:        #10913f;
+  --md-primary-bg-color:              #001b0a;
+  --md-primary-bg-color--light:       rgba(0,27,10,0.7);
+  --md-accent-fg-color:               #1AD05C;
+  --md-accent-fg-color--transparent:  rgba(26,208,92,0.12);
+  --md-accent-bg-color:               #001b0a;
+
+  /* Darker backgrounds */
+  --md-default-bg-color:              #1a1a1a;
+  --md-default-bg-color--light:       #222222;
+  --md-default-bg-color--lighter:     #2a2a2a;
+  --md-default-bg-color--lightest:    #333333;
+
+  /* Text — always light on dark bg */
+  --md-default-fg-color:              #f4f4f5;
+  --md-default-fg-color--light:       rgba(244,244,245,0.82);
+  --md-default-fg-color--lighter:     rgba(244,244,245,0.56);
+  --md-default-fg-color--lightest:    rgba(244,244,245,0.12);
+
+  /* Code bg */
+  --md-code-bg-color:                 #121212;
+  --md-code-fg-color:                 #e5e7eb;
+
+  /* Footer */
+  --md-footer-bg-color:               #111111;
+  --md-footer-bg-color--dark:         #0a0a0a;
+  --md-footer-fg-color:               rgba(244,244,245,0.75);
+  --md-footer-fg-color--light:        rgba(244,244,245,0.5);
+  --md-footer-fg-color--lighter:      rgba(244,244,245,0.28);
+}
+
+/* ---------- Header ---------- */
+.md-header {
+  background: var(--md-primary-fg-color);
+}
+
+[data-md-color-scheme="slate"] .md-header {
+  background: #111111;
+  border-bottom: 1px solid rgba(26,208,92,0.15);
+}
+
+/* Logo glow on dark */
+[data-md-color-scheme="slate"] .md-header__button.md-logo img,
+[data-md-color-scheme="slate"] .md-header__button.md-logo svg {
+  filter: drop-shadow(0 0 10px rgba(26,208,92,0.4));
+}
+
+/* Active nav link */
+.md-nav__link--active,
+.md-nav__link:is(:focus,:hover) {
+  color: #1AD05C;
+}
+
+/* ---------- Content headings ---------- */
+[data-md-color-scheme="slate"] .md-content__inner h1 {
+  color: #1AD05C;
+}
+
+[data-md-color-scheme="default"] .md-content__inner h1 {
+  color: #0d6f31;
+}
+
+/* ---------- Links ---------- */
+[data-md-color-scheme="slate"] .md-content a {
+  color: #1AD05C;
+}
+
+[data-md-color-scheme="slate"] .md-content a:hover {
+  color: #48dd87;
+}
+
+/* ---------- Admonitions ---------- */
+.admonition.tip,
+details.tip {
+  border-color: #1AD05C;
+}
+
+.admonition.tip > .admonition-title,
+details.tip > summary {
+  background-color: rgba(26,208,92,0.12);
+}
+
+.admonition.tip > .admonition-title::before,
+details.tip > summary::before {
+  background-color: #1AD05C;
+}
+
+/* ---------- Buttons ---------- */
+.md-button--primary {
+  background-color: #1AD05C;
+  border-color: #1AD05C;
+  color: #001b0a !important;
+  font-weight: 600;
+  border-radius: 9999px;
+  transition: background .2s, box-shadow .2s;
+}
+
+.md-button--primary:hover {
+  background-color: #15b150;
+  border-color: #15b150;
+  box-shadow: 0 0 20px rgba(26,208,92,.35);
+}
+
+.md-button {
+  border-radius: 9999px;
+}
+
+/* ---------- Tables ---------- */
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background-color: rgba(26,208,92,0.14);
+  color: #1AD05C;
+}
+
+[data-md-color-scheme="default"] .md-typeset table:not([class]) th {
+  background-color: rgba(15,111,49,0.08);
+  color: #0d6f31;
+}
+
+/* ---------- Code blocks ---------- */
+[data-md-color-scheme="slate"] .highlight,
+[data-md-color-scheme="slate"] pre > code {
+  background-color: #0d0d0d;
+  color: #e5e7eb;
+}
+
+/* ---------- Search ---------- */
+.md-search__form {
+  border-radius: 9999px;
+}
+
+/* ==========================================================================
+   Hero section (home page)
+   ========================================================================== */
+
+.hero {
+  padding: 4rem 1.5rem 3rem;
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 2rem;
+}
+
+.hero__logo {
+  display: block;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 1.5rem;
+}
+
+[data-md-color-scheme="slate"] .hero__logo {
+  filter: drop-shadow(0 0 24px rgba(26,208,92,.45));
+}
+
+.hero__title {
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  line-height: 1.05;
+  margin: 0 0 1rem;
+  color: #1AD05C;
+}
+
+.hero__lead {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin: 0 auto 1.75rem;
+  max-width: 540px;
+}
+
+[data-md-color-scheme="slate"] .hero__lead {
+  color: rgba(244,244,245,.8);
+}
+
+[data-md-color-scheme="default"] .hero__lead {
+  color: #374151;
+}
+
+.hero__cta {
+  display: flex;
+  gap: .75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+}
+
+.hero__shields {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  opacity: .85;
+}
+
+.hero__shields p { margin: 0; }
+
+/* ==========================================================================
+   Home page sections
+   ========================================================================== */
+
+.home-section {
+  max-width: 920px;
+  margin: 3rem auto;
+}
+
+.home-section > h2 {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  margin: 0 0 1rem;
+}
+
+/* ==========================================================================
+   Minimalist card grid
+   ========================================================================== */
+
+.mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: .9rem;
+  margin: 1.25rem 0;
+}
+
+.mini-card {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  padding: 1.05rem 1.15rem 1.1rem;
+  border-radius: .7rem;
+  border: 1px solid;
+  text-decoration: none !important;
+  transition: border-color .15s ease, transform .15s ease, background-color .15s ease;
+}
+
+[data-md-color-scheme="slate"] .mini-card {
+  border-color: rgba(244,244,245,.08);
+  background: rgba(255,255,255,.015);
+  color: #f4f4f5 !important;
+}
+
+[data-md-color-scheme="default"] .mini-card {
+  border-color: rgba(0,0,0,.08);
+  background: rgba(0,0,0,.01);
+  color: #111827 !important;
+}
+
+.mini-card:hover {
+  border-color: rgba(26,208,92,.4);
+  background: rgba(26,208,92,.04);
+  transform: translateY(-1px);
+}
+
+.mini-card__icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.mini-card__title {
+  font-weight: 600;
+  font-size: .95rem;
+  color: #1AD05C;
+}
+
+.mini-card__text {
+  font-size: .85rem;
+  line-height: 1.5;
+}
+
+[data-md-color-scheme="slate"] .mini-card__text {
+  color: rgba(244,244,245,.7);
+}
+
+[data-md-color-scheme="default"] .mini-card__text {
+  color: #4b5563;
+}
+
+/* ==========================================================================
+   Pipeline diagram
+   ========================================================================== */
+
+.pipeline {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 1.75rem 0;
+}
+
+.pipeline__step {
+  border-radius: .75rem;
+  padding: .7rem 1.1rem;
+  font-size: .85rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.35;
+  border: 1px solid rgba(26,208,92,.35);
+}
+
+[data-md-color-scheme="slate"] .pipeline__step {
+  background: #111111;
+  color: #f4f4f5;
+}
+
+[data-md-color-scheme="default"] .pipeline__step {
+  background: #f0fdf4;
+  color: #111827;
+}
+
+.pipeline__arrow {
+  color: #1AD05C;
+  font-size: 1.2rem;
+  font-weight: 700;
+}

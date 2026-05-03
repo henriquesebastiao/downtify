@@ -53,7 +53,10 @@ version:
 	uv run ruff format .; ruff check . --fix
 	prettier --write frontend/src/.
 
+doc:
+	uv run zensical serve
+
 %:
 	@:
 
-.PHONY: all build latest clean up down run format lint export changelog version
+.PHONY: all build latest clean up down run format lint export changelog version doc
