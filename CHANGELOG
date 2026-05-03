@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.6.0](https://github.com/henriquesebastiao/downtify/tree/2.6.0) (2026-05-03)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.5.0...2.6.0)
+
+**Implemented enhancements:**
+
+- Disable lyric download [\#145](https://github.com/henriquesebastiao/downtify/issues/145)
+- Adding functionality to save music into folders by artist [\#151](https://github.com/henriquesebastiao/downtify/pull/151) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Fixing download history clearing [\#150](https://github.com/henriquesebastiao/downtify/pull/150) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Adding functionality to disable lyrics downloads [\#148](https://github.com/henriquesebastiao/downtify/pull/148) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Fixed bugs:**
+
+- Download History Persisting After Clearing [\#146](https://github.com/henriquesebastiao/downtify/issues/146)
+- Settings Not Persisting [\#142](https://github.com/henriquesebastiao/downtify/issues/142)
+
 ## [2.5.0](https://github.com/henriquesebastiao/downtify/tree/2.5.0) (2026-05-02)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.4.3...2.5.0)
@@ -16,10 +32,6 @@
 **Implemented enhancements:**
 
 - Persisting settings in memory [\#143](https://github.com/henriquesebastiao/downtify/pull/143) ([henriquesebastiao](https://github.com/henriquesebastiao))
-
-**Fixed bugs:**
-
-- Settings Not Persisting [\#142](https://github.com/henriquesebastiao/downtify/issues/142)
 
 ## [2.4.2](https://github.com/henriquesebastiao/downtify/tree/2.4.2) (2026-04-30)
 
