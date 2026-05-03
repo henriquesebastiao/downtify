@@ -1,6 +1,6 @@
 #!make
 
-DOWNTIFY_VERSION := 2.5.0
+DOWNTIFY_VERSION := 2.6.0
 TARGET := henriquesebastiao/downtify
 
 all: build latest
@@ -44,4 +44,16 @@ test:
 	npm run test --prefix frontend
 	uv run pytest -x -s -v
 
-.PHONY: all build latest clean up down run format lint export changelog
+version:
+	@VERSION=$(word 2,$(MAKECMDGOALS)); \
+	echo "Downtify version: $$VERSION"; \
+	./version.sh $$VERSION
+	npm install --prefix frontend
+	npm run build --prefix frontend
+	uv run ruff format .; ruff check . --fix
+	prettier --write frontend/src/.
+
+%:
+	@:
+
+.PHONY: all build latest clean up down run format lint export changelog version

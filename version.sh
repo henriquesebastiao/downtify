@@ -13,7 +13,7 @@ usage() {
   exit 1
 }
 
-# ── helpers ────────────────────────────────────────────────────────────────────
+# helpers
 
 current_version() {
   grep -m1 "__version__" "$REPO_ROOT/downtify/__init__.py" \
@@ -27,7 +27,7 @@ validate_semver() {
   fi
 }
 
-# ── argument parsing ────────────────────────────────────────────────────────────
+# argument parsing
 
 [[ $# -eq 1 ]] || usage
 
@@ -48,28 +48,50 @@ fi
 
 echo "Bumping $OLD_VERSION → $NEW_VERSION"
 
-# ── downtify/__init__.py ───────────────────────────────────────────────────────
+# downtify/__init__.py
 
 sed -i "s/__version__ = '${OLD_VERSION}'/__version__ = '${NEW_VERSION}'/" \
   "$REPO_ROOT/downtify/__init__.py"
 echo "  updated downtify/__init__.py"
 
-# ── pyproject.toml ─────────────────────────────────────────────────────────────
+# pyproject.toml
 
 sed -i "s/^version = \"${OLD_VERSION}\"/version = \"${NEW_VERSION}\"/" \
   "$REPO_ROOT/pyproject.toml"
 echo "  updated pyproject.toml"
 
-# ── frontend/package.json ──────────────────────────────────────────────────────
+# frontend/package.json
 
 sed -i "s/\"version\": \"${OLD_VERSION}\"/\"version\": \"${NEW_VERSION}\"/" \
   "$REPO_ROOT/frontend/package.json"
 echo "  updated frontend/package.json"
 
-# ── verify ─────────────────────────────────────────────────────────────────────
+# Makefile
+
+sed -i "s/DOWNTIFY_VERSION := ${OLD_VERSION}/DOWNTIFY_VERSION := ${NEW_VERSION}/" \
+  "$REPO_ROOT/Makefile"
+echo "  updated Makefile"
+
+# Dockerfile
+
+sed -i \
+  -e "s/LABEL version=\"${OLD_VERSION}\"/LABEL version=\"${NEW_VERSION}\"/" \
+  -e "s/org.opencontainers.image.version=\"${OLD_VERSION}\"/org.opencontainers.image.version=\"${NEW_VERSION}\"/" \
+  "$REPO_ROOT/Dockerfile"
+echo "  updated Dockerfile"
+
+# frontend/src/components/Hero.vue
+
+sed -i "s/|| '${OLD_VERSION}'/|| '${NEW_VERSION}'/" \
+  "$REPO_ROOT/frontend/src/components/Hero.vue"
+echo "  updated frontend/src/components/Hero.vue"
+
+# verify
 
 echo
 echo "Verification:"
-grep "__version__"   "$REPO_ROOT/downtify/__init__.py"
-grep "^version"      "$REPO_ROOT/pyproject.toml"
-grep '"version"'     "$REPO_ROOT/frontend/package.json" | head -1
+grep "__version__"                    "$REPO_ROOT/downtify/__init__.py"
+grep "^version"                       "$REPO_ROOT/pyproject.toml"
+grep '"version"'                      "$REPO_ROOT/frontend/package.json" | head -1
+grep 'LABEL version'                  "$REPO_ROOT/Dockerfile"
+grep "|| '"                           "$REPO_ROOT/frontend/src/components/Hero.vue"

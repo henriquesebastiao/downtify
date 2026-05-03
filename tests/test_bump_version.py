@@ -53,7 +53,7 @@ def test_missing_argument_shows_usage():
 
 
 def _setup_fake_repo(base: Path) -> None:
-    """Create minimal copies of the three version-bearing files."""
+    """Create minimal stubs of every file that version.sh updates."""
     (base / 'downtify').mkdir()
     (base / 'downtify' / '__init__.py').write_text(
         "__version__ = '1.0.0'\n", encoding='utf-8'
@@ -64,6 +64,20 @@ def _setup_fake_repo(base: Path) -> None:
     (base / 'frontend').mkdir()
     (base / 'frontend' / 'package.json').write_text(
         '{\n  "version": "1.0.0"\n}\n', encoding='utf-8'
+    )
+    (base / 'Makefile').write_text(
+        'DOWNTIFY_VERSION := 1.0.0\n', encoding='utf-8'
+    )
+    (base / 'Dockerfile').write_text(
+        'LABEL version="1.0.0"\n'
+        '      org.opencontainers.image.version="1.0.0" \\\n',
+        encoding='utf-8',
+    )
+    components = base / 'frontend' / 'src' / 'components'
+    components.mkdir(parents=True)
+    (components / 'Hero.vue').write_text(
+        "const version = ref(localStorage.getItem('version') || '1.0.0')\n",
+        encoding='utf-8',
     )
 
 
@@ -89,6 +103,16 @@ def test_bump_updates_all_three_files(tmp_path):
     assert (
         '"version": "2.3.4"'
         in (tmp_path / 'frontend' / 'package.json').read_text()
+    )
+    assert 'DOWNTIFY_VERSION := 2.3.4' in (tmp_path / 'Makefile').read_text()
+    dockerfile = (tmp_path / 'Dockerfile').read_text()
+    assert 'LABEL version="2.3.4"' in dockerfile
+    assert 'org.opencontainers.image.version="2.3.4"' in dockerfile
+    assert (
+        "|| '2.3.4'"
+        in (
+            tmp_path / 'frontend' / 'src' / 'components' / 'Hero.vue'
+        ).read_text()
     )
 
 
