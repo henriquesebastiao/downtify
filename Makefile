@@ -41,6 +41,7 @@ changelog:
 	@echo "Changelog generated at CHANGELOG"
 
 test:
+	npm run test --prefix frontend
 	uv run pytest -x -s -v
 
 .PHONY: all build latest clean up down run format lint export changelog

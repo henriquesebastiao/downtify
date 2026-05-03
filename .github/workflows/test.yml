@@ -22,20 +22,45 @@ jobs:
           enable-cache: true
           cache-dependency-glob: |
             pyproject.toml
-      
+
       - name: Install Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      
+
       - name: Install dependencies
         run: uv sync --all-extras --dev
-      
+
       - name: Run Ruff
         run: uv run ruff check .; uv run ruff check . --diff
 
       - name: Run pytest
         run: uv run pytest -x -s -v
+
+  frontend-test:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Vitest
+        run: npm test
 
   prettier:
     runs-on: ubuntu-latest
@@ -47,5 +72,4 @@ jobs:
       - name: Prettify code
         uses: creyD/prettier_action@v4.6
         with:
-          # This part is also where you can pass other options, for example:
           prettier_options: --write frontend/src/.

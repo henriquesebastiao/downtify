@@ -5,7 +5,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "format": "prettier --write src/."
+    "format": "prettier --write src/.",
+    "test": "vitest run"
   },
   "dependencies": {
     "axios": "^1.5.0",
@@ -18,6 +19,7 @@
     "@iconify/vue": "^4.1.1",
     "@vitejs/plugin-vue": "^5.0.4",
     "tailwindcss": "^3.3.3",
-    "vite": "^5.1.4"
+    "vite": "^5.1.4",
+    "vitest": "^4.1.5"
   }
 }
