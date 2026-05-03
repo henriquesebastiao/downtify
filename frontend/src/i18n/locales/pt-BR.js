@@ -138,6 +138,10 @@ export default {
     generateM3u: 'Gerar arquivo M3U para playlists',
     generateM3uHint:
       'Grava Playlists/<nome>.m3u junto com as faixas, tanto para downloads manuais de playlist quanto para varreduras do Monitor.',
+    organizationSection: 'Organização de arquivos',
+    organizeByArtist: 'Organizar por artista',
+    organizeByArtistHint:
+      'Salva as músicas em subpastas com o nome do artista. Músicas de playlists também são salvas na pasta do artista, não na pasta da playlist.',
     saved: 'Alterações salvas',
     saveError: 'Não foi possível salvar as configurações.',
     language: 'Idioma',

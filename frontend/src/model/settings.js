@@ -10,6 +10,7 @@ const settings = ref({
   bitrate: '320',
   output: '',
   generate_m3u: true,
+  organize_by_artist: false,
 })
 
 const settingsOptions = {

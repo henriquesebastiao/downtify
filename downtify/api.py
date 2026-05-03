@@ -45,6 +45,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'bitrate': '320',
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
+    'organize_by_artist': False,
 }
 
 
@@ -350,13 +351,18 @@ async def _process_batch(
         })
     if not entries:
         return
+
+    # When organize_by_artist is on, songs land in per-artist folders instead
+    # of the playlist subfolder, so the M3U must go to the legacy Playlists/
+    # directory (playlist_subdir=None) where relative paths still resolve.
+    organize = bool(state.downloader and state.downloader.organize_by_artist)
     try:
         await asyncio.to_thread(
             m3u.write_m3u,
             state.downloader.download_dir,
             playlist_name,
             entries,
-            playlist_subdir=playlist_subdir,
+            playlist_subdir=None if organize else playlist_subdir,
         )
     except Exception:
         logger.exception('Failed to write M3U for {}', playlist_url)
@@ -474,11 +480,12 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
 
     entries = [t for t in tracks if isinstance(t, dict)]
     playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
+    organize = bool(state.downloader and state.downloader.organize_by_artist)
     target, kept = m3u.write_m3u(
         state.downloader.download_dir,
         playlist_name,
         entries,
-        playlist_subdir=playlist_subdir,
+        playlist_subdir=None if organize else playlist_subdir,
     )
     if target is None:
         raise HTTPException(
@@ -519,6 +526,10 @@ async def update_settings_endpoint(
             if 'lyrics_providers' in payload or 'download_lyrics' in payload:
                 state.downloader.lyrics_providers = (
                     _effective_lyrics_providers(state.settings)
+                )
+            if 'organize_by_artist' in payload:
+                state.downloader.organize_by_artist = bool(
+                    payload['organize_by_artist']
                 )
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)

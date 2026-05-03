@@ -140,6 +140,26 @@ Access the settings panel (⚙️ icon) to configure:
 | **Output format** | MP3 · FLAC · M4A · OGG · OPUS |
 | **Bitrate** | 128 · 192 · 256 · 320 kbps (ignored for FLAC) |
 | **Audio provider** | YouTube Music |
+| **Organize by artist** | Off (default) · On |
+
+### 📁 Organize by artist
+
+When **Settings → File organization → Organize by artist** is enabled, every downloaded track is saved inside a subfolder named after the track's primary artist:
+
+```
+<downloads>/
+  Arctic Monkeys/
+    Arctic Monkeys - Do I Wanna Know.mp3
+    Arctic Monkeys - R U Mine.mp3
+  Tame Impala/
+    Tame Impala - The Less I Know The Better.mp3
+```
+
+This applies to **all** downloads — single tracks, albums and playlists alike. Playlist tracks are saved in their artist's folder instead of a playlist folder, which makes the library compatible with media apps (like Jellyfin, Navidrome, Plex and Beets) that expect an `Artist/Song.ext` folder structure.
+
+When the setting is **off** (default), the existing behaviour is preserved: single tracks go directly into the root of the downloads folder, and playlist tracks go into a per-playlist subfolder.
+
+> **M3U files and playlists** — If you download a Spotify playlist with both *Organize by artist* and *Generate M3U* enabled, the M3U file is placed in `<downloads>/Playlists/<playlist-name>.m3u` (rather than inside the playlist subfolder) because the tracks are now spread across multiple artist folders. The relative paths inside the M3U still resolve correctly regardless of where you mount the library.
 
 ---
 

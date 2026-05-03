@@ -140,6 +140,10 @@ export default {
     generateM3u: 'Generar archivo M3U para las listas',
     generateM3uHint:
       'Escribe Playlists/<nombre>.m3u junto a las pistas, tanto para descargas manuales como para los barridos del Monitor.',
+    organizationSection: 'Organización de archivos',
+    organizeByArtist: 'Organizar por artista',
+    organizeByArtistHint:
+      'Guarda las canciones en subcarpetas con el nombre del artista. Las pistas de listas también se guardan en la carpeta del artista en lugar de la carpeta de la lista.',
     saved: 'Cambios guardados',
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',

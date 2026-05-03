@@ -110,6 +110,7 @@ class Downloader:
         audio_bitrate: str = '320',
         output_template: str = '{artists} - {title}',
         lyrics_providers: Optional[list[str]] = None,
+        organize_by_artist: bool = False,
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
@@ -117,6 +118,12 @@ class Downloader:
         self.audio_bitrate = audio_bitrate
         self.output_template = output_template
         self.lyrics_providers = list(lyrics_providers or [])
+        self.organize_by_artist = organize_by_artist
+
+    @staticmethod
+    def _artist_subdir(song: dict[str, Any]) -> str:
+        artists = song.get('artists') or []
+        return _sanitize(artists[0] if artists else 'unknown')
 
     def _format_basename(self, song: dict[str, Any]) -> str:
         artists = ', '.join(song.get('artists') or []) or 'Unknown Artist'
@@ -150,7 +157,10 @@ class Downloader:
         """
 
         basename = self._format_basename(song)
-        target_dir, prefix = self._resolve_target_dir(subdir)
+        effective_subdir = (
+            self._artist_subdir(song) if self.organize_by_artist else subdir
+        )
+        target_dir, prefix = self._resolve_target_dir(effective_subdir)
         primary = target_dir / f'{basename}.{self.audio_format}'
         if primary.exists():
             return f'{prefix}{primary.name}'
@@ -212,7 +222,10 @@ class Downloader:
         song = enrich_from_match(song, match)
 
         basename = self._format_basename(song)
-        target_dir, rel_prefix = self._resolve_target_dir(subdir)
+        effective_subdir = (
+            self._artist_subdir(song) if self.organize_by_artist else subdir
+        )
+        target_dir, rel_prefix = self._resolve_target_dir(effective_subdir)
         target_dir.mkdir(parents=True, exist_ok=True)
         out_template = str(target_dir / f'{basename}.%(ext)s')
 
