@@ -57,6 +57,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 ```bash
 docker run -d -p 8000:8000 --name downtify \
   -v /path/to/downloads:/downloads \
+  -v downtify_data:/data \
   ghcr.io/henriquesebastiao/downtify
 ```
 
@@ -75,7 +76,11 @@ services:
       - '8000:8000'
     volumes:
       - ./downloads:/downloads
+      - downtify_data:/data
     restart: unless-stopped
+
+volumes:
+  downtify_data:
 ```
 
 Need a custom port? Use the `DOWNTIFY_PORT` environment variable:
