@@ -299,3 +299,5 @@ typings/
 
 # TernJS port file
 .tern-port
+data/downtify_monitor.db
+data/settings.json
