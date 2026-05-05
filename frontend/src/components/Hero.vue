@@ -62,7 +62,7 @@ import SearchInput from './SearchInput.vue'
 import { useI18n } from '../i18n'
 
 const { t } = useI18n()
-const version = ref(localStorage.getItem('version') || '2.6.0')
+const version = ref(localStorage.getItem('version') || '2.6.1')
 onMounted(() => {
   const v = localStorage.getItem('version')
   if (v) version.value = v
