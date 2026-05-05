@@ -196,7 +196,7 @@ export function useDownloadManager() {
   function download(song) {
     console.log('Downloading', song)
     progressTracker.getBySong(song).setDownloading()
-    return API.download(song.url)
+    return API.download(song)
       .then((res) => {
         console.log('Received Response:', res)
         if (res.status === 200) {

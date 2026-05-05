@@ -352,6 +352,7 @@ def main() -> None:
         args.host,
         args.port,
     )
+    logger.info('Application log level (Loguru): {}', args.log_level.upper())
     loop.run_until_complete(server.serve())
 
 
