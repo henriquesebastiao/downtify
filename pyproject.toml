@@ -20,7 +20,7 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "ruff>=0.15.2",
-    "zensical>=0.0.39",
+    "zensical>=0.0.40",
 ]
 
 [tool.pytest.ini_options]
