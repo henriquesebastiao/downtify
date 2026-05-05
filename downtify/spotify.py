@@ -14,6 +14,8 @@ from typing import Any, Optional
 import requests
 from loguru import logger
 
+from .telemetry import json_log_blob, redact_sensitive_mapping
+
 SPOTIFY_URL_RE = re.compile(
     r'(?:https?://)?(?:open\.)?spotify\.com/'
     r'(?:intl-[a-z]{2}/)?'
@@ -25,6 +27,19 @@ _USER_AGENT = (
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
     '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 )
+
+# Spotify often serves a tiny HTML shell (no ``music:release_date`` meta) to
+# full Chrome-like user agents while still sending the static OG-rich document
+# for a minimal ``Mozilla/5.0`` probe — reuse that behaviour here only.
+_ALBUM_OPEN_PAGE_UA = 'Mozilla/5.0'
+
+# Embed album payloads often set ``releaseDate`` to ``null``. The canonical
+# open.spotify.com/album/{id} HTML still publishes ``music:release_date``.
+_ALBUM_OPEN_PAGE_META_RELEASE = re.compile(
+    r'<meta\s+name=["\']music:release_date["\']\s+content=["\']([^"\']+)["\']',
+    re.I,
+)
+_ALBUM_OPEN_PAGE_DATE_PUBLISHED = re.compile(r'"datePublished"\s*:\s*"([^"]+)"')
 
 
 def parse_spotify_url(url: str) -> Optional[tuple[str, str]]:
@@ -62,7 +77,63 @@ def _fetch_embed_json(kind: str, spotify_id: str) -> dict[str, Any]:
     )
     if not match:
         raise ValueError('Spotify embed payload not found')
-    return json.loads(match.group(1))
+    data = json.loads(match.group(1))
+    preview = json_log_blob(redact_sensitive_mapping(data))
+    logger.debug(
+        'Spotify embed NEXT_DATA ({}/{}, {} chars redacted preview): {}',
+        kind,
+        spotify_id,
+        len(preview),
+        preview,
+    )
+    _log_spotify_embed_entity_summary(kind, spotify_id, data)
+    return data
+
+
+def _log_spotify_embed_entity_summary(
+    kind: str,
+    spotify_id: str,
+    payload: dict[str, Any],
+) -> None:
+    """INFO line so release/track shape is visible without DEBUG."""
+
+    try:
+        ent = _entity_from(payload)
+    except ValueError as ex:
+        logger.warning(
+            'Spotify embed: no usable entity kind={} id={}: {}',
+            kind,
+            spotify_id,
+            ex,
+        )
+        return
+    track_list = ent.get('trackList') or []
+    alt_items = []
+    nested = ent.get('tracks')
+    if isinstance(nested, dict):
+        alt_items = nested.get('items') or []
+    rd_raw = ent.get('releaseDate')
+    if isinstance(rd_raw, dict):
+        rd_summary = 'dict isoString={!r}'.format(rd_raw.get('isoString'))
+    elif rd_raw is None:
+        rd_summary = 'null'
+    elif isinstance(rd_raw, str):
+        rd_summary = f'str:{rd_raw[:32]!r}'
+    else:
+        rd_summary = type(rd_raw).__name__
+    logger.info(
+        (
+            'Spotify embed OK: {} {} title={!r} type={!r} '
+            'trackList_len={} tracks_items_len={} releaseDate={}'
+        ),
+        kind,
+        spotify_id,
+        ent.get('name') or ent.get('title'),
+        ent.get('type'),
+        len(track_list),
+        len(alt_items),
+        rd_summary,
+    )
 
 
 def _entity_from(payload: dict[str, Any]) -> dict[str, Any]:
@@ -149,20 +220,175 @@ def _artist_names(entity: dict[str, Any]) -> list[str]:
     ]
 
 
-def _release_year(entity: dict[str, Any]) -> str:
-    release = entity.get('releaseDate')
+def _normalize_release_date_text(raw: Any) -> str:
+    """Normalize Spotify ``isoString`` (or similar) to ``YYYY-MM-DD`` or year."""
+
+    if not isinstance(raw, str):
+        return ''
+    text = raw.strip()
+    if not text:
+        return ''
+    if 'T' in text:
+        text = text.split('T', 1)[0].strip()
+    if (
+        len(text) >= 10
+        and text[4:5] == '-'
+        and text[7:8] == '-'
+        and text[:4].isdigit()
+        and text[5:7].isdigit()
+        and text[8:10].isdigit()
+    ):
+        return text[:10]
+    # Month precision strings like ``2024-06`` → tag-friendly first-of-month.
+    if (
+        len(text) >= 7
+        and text[4:5] == '-'
+        and text[:4].isdigit()
+        and text[5:7].isdigit()
+    ):
+        return f'{text[:4]}-{text[5:7]}-01'
+    if len(text) >= 4 and text[:4].isdigit():
+        return text[:4]
+    return text
+
+
+def _calendar_component(raw: Any) -> Optional[int]:
+    """Coerce embed/GraphQL month or day ints (reject bool)."""
+
+    if raw is None or isinstance(raw, bool):
+        return None
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, float) and raw.is_integer():
+        return int(raw)
+    if isinstance(raw, str) and raw.strip().isdigit():
+        return int(raw.strip())
+    return None
+
+
+def _coerce_four_digit_year(raw: Any) -> Optional[int]:
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, int) and 1000 <= raw <= 9999:
+        return raw
+    if isinstance(raw, float) and raw.is_integer():
+        y = int(raw)
+        return y if 1000 <= y <= 9999 else None
+    if isinstance(raw, str):
+        ys = raw.strip()
+        if ys.isdigit() and len(ys) == 4:
+            y = int(ys)
+            return y if 1000 <= y <= 9999 else None
+    return None
+
+
+def _release_date_raw_from_field(release: Any, *, _depth: int = 0) -> str:
+    """Extract a tagging-friendly date string from Spotify embed/GraphQL fields.
+
+    Older payloads expose ``releaseDate.isoString``. Many catalogue rows omit
+    ``isoString`` and only send ``year`` (optionally ``month``/``day`` and
+    ``precision``); without handling those we end up tagging files with no
+    release date even though Spotify showed a year on the canvas.
+    """
+
+    if _depth > 6:
+        return ''
     if isinstance(release, dict):
-        iso = release.get('isoString') or ''
-        return iso[:4]
+        cand = release.get('isoString')
+        if isinstance(cand, str) and cand.strip():
+            out = _normalize_release_date_text(cand.strip())
+            if out:
+                return out
+
+        nested = release.get('date')
+        nested_out = _release_date_raw_from_field(
+            nested, _depth=_depth + 1
+        ) if nested is not None else ''
+        if nested_out:
+            return nested_out
+
+        y_part = _coerce_four_digit_year(release.get('year'))
+        ys = str(y_part) if y_part is not None else ''
+        mi = _calendar_component(release.get('month'))
+        di = _calendar_component(release.get('day'))
+        pv = release.get('precision')
+        precision = pv.casefold() if isinstance(pv, str) else ''
+
+        if precision == 'year' and ys:
+            return ys
+
+        if ys and mi is not None and 1 <= mi <= 12:
+            mm = f'{mi:02d}'
+            if di is not None and 1 <= di <= 31:
+                return f'{ys}-{mm}-{di:02d}'
+            if precision in {'month', 'day'}:
+                return f'{ys}-{mm}-01'
+
+        if ys:
+            return ys
+
+        return ''
     if isinstance(release, str):
-        return release[:4]
+        return _normalize_release_date_text(release)
+    return ''
+
+
+def _album_release_date_from_open_page(album_id: str) -> str:
+    """Parse release date from the public album HTML when embed omits it."""
+
+    if not album_id or not re.fullmatch(r'[A-Za-z0-9]+', album_id):
+        return ''
+    try:
+        resp = requests.get(
+            f'https://open.spotify.com/album/{album_id}',
+            headers={
+                'User-Agent': _ALBUM_OPEN_PAGE_UA,
+                'Accept-Language': 'en-US,en;q=0.9',
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Spotify open album page fetch failed for release_date id={}',
+            album_id,
+        )
+        return ''
+
+    html = resp.text
+    m = _ALBUM_OPEN_PAGE_META_RELEASE.search(html)
+    if not m:
+        m = _ALBUM_OPEN_PAGE_DATE_PUBLISHED.search(html)
+    if not m:
+        return ''
+    normalized = _normalize_release_date_text(m.group(1).strip())
+    if normalized:
+        logger.debug(
+            'Spotify album {} release_date from open page: {!r}',
+            album_id,
+            normalized,
+        )
+    return normalized
+
+
+def _release_date_str(entity: dict[str, Any]) -> str:
+    """Prefer full calendar date when the embed exposes ``isoString``."""
+
+    rd = _release_date_raw_from_field(entity.get('releaseDate'))
+    if rd:
+        return rd
     album = entity.get('album') or {}
     if isinstance(album, dict):
-        rel = album.get('releaseDate')
-        if isinstance(rel, dict):
-            return (rel.get('isoString') or '')[:4]
-        if isinstance(rel, str):
-            return rel[:4]
+        for key in ('releaseDate', 'date'):
+            rd = _release_date_raw_from_field(album.get(key))
+            if rd:
+                return rd
+    return ''
+
+
+def _year_from_release_date(rd: str) -> str:
+    if len(rd) >= 4 and rd[:4].isdigit():
+        return rd[:4]
     return ''
 
 
@@ -172,12 +398,26 @@ def _track_dict(
     track_id: str,
     fallback_album: str = '',
     fallback_cover: str = '',
+    fallback_release_date: str = '',
 ) -> dict[str, Any]:
     duration_ms = entity.get('duration') or entity.get('duration_ms') or 0
     album = entity.get('album') or {}
     album_name = album.get('name', '') if isinstance(album, dict) else ''
     cover = _cover_url(entity) or fallback_cover
     names = _artist_names(entity)
+    release_date = _release_date_str(entity)
+    if not release_date:
+        release_date = (fallback_release_date or '').strip()
+    year = _year_from_release_date(release_date)
+    if not year and not release_date:
+        logger.info(
+            'Spotify resolved row has no year/release_date: '
+            'track_id={!r} title={!r} album={!r} raw_releaseDate={!r}',
+            track_id,
+            entity.get('name') or entity.get('title'),
+            album_name or fallback_album,
+            entity.get('releaseDate'),
+        )
     return {
         'song_id': track_id,
         'name': entity.get('name') or entity.get('title') or '',
@@ -190,7 +430,8 @@ def _track_dict(
         if track_id
         else '',
         'explicit': bool(entity.get('isExplicit') or entity.get('explicit')),
-        'year': _release_year(entity),
+        'release_date': release_date,
+        'year': year,
         'source': 'spotify',
     }
 
@@ -211,8 +452,12 @@ def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
         or (entity.get('tracks') or {}).get('items')
         or []
     )
+    album_track_total = len(track_items)
+    album_release_date = _release_date_str(entity)
+    if not album_release_date:
+        album_release_date = _album_release_date_from_open_page(album_id)
     songs: list[dict[str, Any]] = []
-    for item in track_items:
+    for tracklist_slot, item in enumerate(track_items, start=1):
         if not isinstance(item, dict):
             continue
         track = _embed_row_track(item)
@@ -228,14 +473,16 @@ def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
                 or _artists_from_subtitle(entity.get('subtitle'))
                 or []
             )
-        songs.append(
-            _track_dict(
-                track,
-                track_id=track_id,
-                fallback_album=album_name,
-                fallback_cover=cover,
-            )
+        row = _track_dict(
+            track,
+            track_id=track_id,
+            fallback_album=album_name,
+            fallback_cover=cover,
+            fallback_release_date=album_release_date,
         )
+        row['track_number'] = tracklist_slot
+        row['album_track_total'] = album_track_total
+        songs.append(row)
     return songs
 
 
@@ -319,6 +566,22 @@ def _track_dict_from_graphql_item(
         'totalMilliseconds'
     ) or 0
     label = (track.get('contentRating') or {}).get('label') or ''
+    gql_release = ''
+    if isinstance(album, dict):
+        for key in ('date', 'releaseDate'):
+            gql_release = _release_date_raw_from_field(album.get(key))
+            if gql_release:
+                break
+    if not gql_release:
+        logger.info(
+            'Spotify GraphQL track lacks album release date: '
+            'track_id={!r} title={!r} album={!r} '
+            'albumOfTrack_keys={}',
+            track_id,
+            track.get('name'),
+            album_name,
+            sorted(album.keys()) if isinstance(album, dict) else (),
+        )
     return {
         'song_id': track_id,
         'name': track.get('name') or '',
@@ -329,7 +592,8 @@ def _track_dict_from_graphql_item(
         'duration': int(duration_ms / 1000) if duration_ms else 0,
         'url': f'https://open.spotify.com/track/{track_id}',
         'explicit': label.upper() == 'EXPLICIT',
-        'year': '',
+        'release_date': gql_release,
+        'year': _year_from_release_date(gql_release),
         'source': 'spotify',
     }
 
@@ -364,6 +628,12 @@ def _graphql_fetch_page(
     )
     resp.raise_for_status()
     data = resp.json()
+    logger.debug(
+        'Spotify GraphQL fetchPlaylist id={} offset={}: {}',
+        playlist_id,
+        offset,
+        json_log_blob(redact_sensitive_mapping(data))[:12000],
+    )
     if 'errors' in data:
         raise ValueError(f'GraphQL errors: {data["errors"]}')
     return data['data']['playlistV2']

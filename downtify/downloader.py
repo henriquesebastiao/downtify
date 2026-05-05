@@ -12,7 +12,7 @@ import requests
 import yt_dlp
 from loguru import logger
 from mutagen.flac import FLAC, Picture
-from mutagen.id3 import APIC, ID3, TALB, TCON, TDRC, TIT2, TPE1, TPE2, USLT
+from mutagen.id3 import APIC, ID3, TALB, TCON, TDRC, TIT2, TPE1, TPE2, TRCK, USLT
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.oggopus import OggOpus
@@ -361,6 +361,39 @@ def _download_cover(url: str) -> Optional[bytes]:
     return response.content
 
 
+def _album_track_index_for_tags(
+    song: dict[str, Any],
+) -> tuple[Optional[int], Optional[int]]:
+    """Normalize ``track_number`` / ``album_track_total`` for tagging frames."""
+    raw_n = song.get('track_number')
+    raw_tot = song.get('album_track_total')
+    try:
+        n = int(raw_n)
+    except (TypeError, ValueError):
+        return None, None
+    if n <= 0:
+        return None, None
+    tot: Optional[int] = None
+    if raw_tot is not None and raw_tot != '':
+        try:
+            t = int(raw_tot)
+        except (TypeError, ValueError):
+            pass
+        else:
+            if t > 0:
+                tot = t
+    return n, tot
+
+
+def _recording_date_for_tags(song: dict[str, Any]) -> str:
+    """Prefer full ``YYYY-MM-DD`` from Spotify; fall back to year-only."""
+
+    rd = str(song.get('release_date') or '').strip()
+    if rd:
+        return rd
+    return str(song.get('year') or '').strip()
+
+
 def embed_metadata(path: Path, song: dict[str, Any]) -> None:
     if not path.exists():
         return
@@ -368,22 +401,98 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
     title = song.get('name', '')
     artists = song.get('artists') or []
     album = song.get('album_name', '') or ''
-    year = str(song.get('year') or '').strip()
+    recording_date = _recording_date_for_tags(song)
     genre = (song.get('genre') or '').strip()
     cover_bytes = _download_cover(song.get('cover_url', ''))
+    track_number, album_track_total = _album_track_index_for_tags(song)
+    if track_number is None:
+        logger.info(
+            'Tag embed: no track_number/disc position for file={} '
+            'song_id={} title={!r} raw_track_number={!r} raw_total={!r}',
+            path.name,
+            song.get('song_id'),
+            title,
+            song.get('track_number'),
+            song.get('album_track_total'),
+        )
+    if not recording_date:
+        logger.info(
+            'Tag embed: no recording date (year/release_date) for file={} '
+            'song_id={} title={!r} raw_year={!r} raw_release_date={!r}',
+            path.name,
+            song.get('song_id'),
+            title,
+            song.get('year'),
+            song.get('release_date'),
+        )
+    logger.debug(
+        'Tag embed summary: {} track={}/{} date={!r}',
+        path.name,
+        track_number,
+        album_track_total,
+        recording_date,
+    )
 
     suffix = path.suffix.lower().lstrip('.')
 
     if suffix == 'mp3':
-        _tag_mp3(path, title, artists, album, year, genre, cover_bytes)
+        _tag_mp3(
+            path,
+            title,
+            artists,
+            album,
+            recording_date,
+            genre,
+            cover_bytes,
+            track_number,
+            album_track_total,
+        )
     elif suffix in {'m4a', 'mp4', 'aac'}:
-        _tag_mp4(path, title, artists, album, year, genre, cover_bytes)
+        _tag_mp4(
+            path,
+            title,
+            artists,
+            album,
+            recording_date,
+            genre,
+            cover_bytes,
+            track_number,
+            album_track_total,
+        )
     elif suffix == 'flac':
-        _tag_flac(path, title, artists, album, year, genre, cover_bytes)
+        _tag_flac(
+            path,
+            title,
+            artists,
+            album,
+            recording_date,
+            genre,
+            cover_bytes,
+            track_number,
+            album_track_total,
+        )
     elif suffix in {'ogg', 'oga'}:
-        _tag_ogg_vorbis(path, title, artists, album, year, genre)
+        _tag_ogg_vorbis(
+            path,
+            title,
+            artists,
+            album,
+            recording_date,
+            genre,
+            track_number,
+            album_track_total,
+        )
     elif suffix == 'opus':
-        _tag_opus(path, title, artists, album, year, genre)
+        _tag_opus(
+            path,
+            title,
+            artists,
+            album,
+            recording_date,
+            genre,
+            track_number,
+            album_track_total,
+        )
 
 
 def _tag_mp3(
@@ -394,6 +503,8 @@ def _tag_mp3(
     year: str,
     genre: str,
     cover_bytes: Optional[bytes],
+    track_number: Optional[int],
+    album_track_total: Optional[int],
 ) -> None:
     audio = MP3(str(path), ID3=ID3)
     if audio.tags is None:
@@ -405,6 +516,13 @@ def _tag_mp3(
         audio.tags.add(TPE2(encoding=3, text=artists[0]))
     if album:
         audio.tags.add(TALB(encoding=3, text=album))
+    if track_number is not None:
+        trck = (
+            f'{track_number}/{album_track_total}'
+            if album_track_total is not None
+            else str(track_number)
+        )
+        audio.tags.add(TRCK(encoding=3, text=trck))
     if year:
         audio.tags.add(TDRC(encoding=3, text=year))
     if genre:
@@ -430,6 +548,8 @@ def _tag_mp4(
     year: str,
     genre: str,
     cover_bytes: Optional[bytes],
+    track_number: Optional[int],
+    album_track_total: Optional[int],
 ) -> None:
     audio = MP4(str(path))
     audio['\xa9nam'] = title
@@ -438,6 +558,9 @@ def _tag_mp4(
         audio['aART'] = [artists[0]]
     if album:
         audio['\xa9alb'] = album
+    if track_number is not None:
+        total = album_track_total if album_track_total is not None else 0
+        audio['trkn'] = [(track_number, total)]
     if year:
         audio['\xa9day'] = year
     if genre:
@@ -457,6 +580,8 @@ def _tag_flac(
     year: str,
     genre: str,
     cover_bytes: Optional[bytes],
+    track_number: Optional[int],
+    album_track_total: Optional[int],
 ) -> None:
     audio = FLAC(str(path))
     audio['title'] = title
@@ -465,6 +590,10 @@ def _tag_flac(
         audio['albumartist'] = artists[0]
     if album:
         audio['album'] = album
+    if track_number is not None:
+        audio['tracknumber'] = str(track_number)
+        if album_track_total is not None:
+            audio['tracktotal'] = str(album_track_total)
     if year:
         audio['date'] = year
     if genre:
@@ -486,9 +615,20 @@ def _tag_ogg_vorbis(
     album: str,
     year: str,
     genre: str,
+    track_number: Optional[int],
+    album_track_total: Optional[int],
 ) -> None:
     audio = OggVorbis(str(path))
-    _apply_vorbis_comments(audio, title, artists, album, year, genre)
+    _apply_vorbis_comments(
+        audio,
+        title,
+        artists,
+        album,
+        year,
+        genre,
+        track_number,
+        album_track_total,
+    )
     audio.save()
 
 
@@ -499,19 +639,43 @@ def _tag_opus(
     album: str,
     year: str,
     genre: str,
+    track_number: Optional[int],
+    album_track_total: Optional[int],
 ) -> None:
     audio = OggOpus(str(path))
-    _apply_vorbis_comments(audio, title, artists, album, year, genre)
+    _apply_vorbis_comments(
+        audio,
+        title,
+        artists,
+        album,
+        year,
+        genre,
+        track_number,
+        album_track_total,
+    )
     audio.save()
 
 
-def _apply_vorbis_comments(audio, title, artists, album, year, genre):
+def _apply_vorbis_comments(
+    audio,
+    title,
+    artists,
+    album,
+    year,
+    genre,
+    track_number: Optional[int],
+    album_track_total: Optional[int],
+):
     audio['title'] = title
     if artists:
         audio['artist'] = artists
         audio['albumartist'] = artists[0]
     if album:
         audio['album'] = album
+    if track_number is not None:
+        audio['TRACKNUMBER'] = str(track_number)
+        if album_track_total is not None:
+            audio['TRACKTOTAL'] = str(album_track_total)
     if year:
         audio['date'] = year
     if genre:

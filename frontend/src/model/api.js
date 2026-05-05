@@ -52,8 +52,10 @@ function open(songURL) {
 }
 
 function download(songURL) {
-  return API.post('/api/download/url', null, {
-    params: { url: songURL, client_id: sessionID },
+  const url = typeof songURL === 'string' ? songURL : songURL.url
+  const hints = typeof songURL === 'string' ? undefined : songURL
+  return API.post('/api/download/url', hints, {
+    params: { url, client_id: sessionID },
   })
 }
 

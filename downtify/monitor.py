@@ -281,7 +281,13 @@ async def check_playlist(
         # as a fallback if the per-track fetch fails for any reason.
         try:
             full = await asyncio.to_thread(spotify.track_from_id, track_id)
-            for key in ('cover_url', 'year', 'album_name', 'artists'):
+            for key in (
+                'cover_url',
+                'year',
+                'release_date',
+                'album_name',
+                'artists',
+            ):
                 value = full.get(key)
                 if value:
                     song[key] = value

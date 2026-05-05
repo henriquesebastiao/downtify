@@ -7,7 +7,8 @@ working without changes:
 * ``GET  /api/version``
 * ``GET  /api/songs/search``
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias)
-* ``POST /api/download/url``
+* ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
+  ``track_number`` / ``album_track_total`` survive re-fetch by URL)
 * ``POST /api/playlist/m3u``
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
@@ -25,6 +26,7 @@ from typing import Any, Optional
 
 from fastapi import (
     APIRouter,
+    Body,
     HTTPException,
     Query,
     Request,
@@ -174,6 +176,44 @@ def _resolve_url(url: str):
     )
 
 
+def _merge_client_track_hints(
+    base: dict[str, Any],
+    hints: Optional[dict[str, Any]],
+) -> None:
+    """Copy tagging fields from the client-resolved Spotify row.
+
+    ``POST /api/download/url`` re-fetches metadata from the URL only, which loses
+    ``track_number`` for rows that came from an album/playlist browse.
+    """
+
+    if not isinstance(hints, dict) or not hints:
+        return
+    tn = hints.get('track_number')
+    if tn is not None:
+        try:
+            iv = int(tn)
+        except (TypeError, ValueError):
+            pass
+        else:
+            if iv > 0:
+                base['track_number'] = iv
+    tt = hints.get('album_track_total')
+    if tt is not None:
+        try:
+            tv = int(tt)
+        except (TypeError, ValueError):
+            pass
+        else:
+            if tv > 0:
+                base['album_track_total'] = tv
+    rd = hints.get('release_date')
+    if isinstance(rd, str) and rd.strip():
+        base['release_date'] = rd.strip()
+    yr = hints.get('year')
+    if isinstance(yr, str) and yr.strip():
+        base['year'] = yr.strip()
+
+
 def _song_for_download(url: str) -> dict[str, Any]:
     parsed = spotify.parse_spotify_url(url)
     if parsed is not None:
@@ -278,11 +318,26 @@ async def _run_download(
 async def download_endpoint(
     url: str = Query(...),
     client_id: str = Query(''),
+    client_hints: Optional[dict[str, Any]] = Body(None),
 ):
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
     song = _song_for_download(url)
+    tn_before = song.get('track_number')
+    yr_before = song.get('year') or song.get('release_date')
+    _merge_client_track_hints(song, client_hints)
+    logger.debug(
+        'download/url: url={} body={} tn_before={!r} tn_after={!r} '
+        'date_before={!r} date_after_year={!r} date_after_rd={!r}',
+        url[:140],
+        'json' if isinstance(client_hints, dict) else 'none',
+        tn_before,
+        song.get('track_number'),
+        yr_before,
+        song.get('year'),
+        song.get('release_date'),
+    )
     song_id = _register_job(song, status='downloading')
 
     try:
