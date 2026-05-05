@@ -104,17 +104,15 @@ def test_artist_names_falls_back_to_subtitle():
 
 
 def test_track_dict_parses_iso_release_date():
-    track = _embed_row_track(
-        {
-            'track': {
-                'id': 'tid',
-                'uri': 'spotify:track:tid',
-                'title': 'TestSong',
-                'releaseDate': {'isoString': '2024-06-15T00:00:00.000Z'},
-            },
-            'subtitle': f'{_AL1}, {_AL2}',
-        }
-    )
+    track = _embed_row_track({
+        'track': {
+            'id': 'tid',
+            'uri': 'spotify:track:tid',
+            'title': 'TestSong',
+            'releaseDate': {'isoString': '2024-06-15T00:00:00.000Z'},
+        },
+        'subtitle': f'{_AL1}, {_AL2}',
+    })
     td = _track_dict(track, track_id='tid', fallback_album='TestAlbum')
     assert td['release_date'] == '2024-06-15'
     assert td['year'] == '2024'
@@ -148,9 +146,9 @@ def test_open_page_parses_music_release_meta():
     mock_resp.text = html
     mock_resp.raise_for_status = lambda: None
     with patch('downtify.spotify.requests.get', return_value=mock_resp):
-        assert _album_release_date_from_open_page('4J7wEPiFH5EjMFzqec4E2k') == (
-            '2025-10-03'
-        )
+        assert _album_release_date_from_open_page(
+            '4J7wEPiFH5EjMFzqec4E2k'
+        ) == ('2025-10-03')
 
 
 def test_album_tracks_fallback_open_page_when_embed_missing():
@@ -170,9 +168,12 @@ def test_album_tracks_fallback_open_page_when_embed_missing():
             'pageProps': {'state': {'data': {'entity': entity}}},
         },
     }
-    with patch('downtify.spotify._fetch_embed_json', return_value=payload), patch(
-        'downtify.spotify._album_release_date_from_open_page',
-        return_value='2025-10-03',
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch(
+            'downtify.spotify._album_release_date_from_open_page',
+            return_value='2025-10-03',
+        ),
     ):
         songs = album_tracks_from_id('dummyAlbumId')
     assert len(songs) == 1
@@ -205,16 +206,14 @@ def test_album_tracks_inherit_album_release_date():
 
 
 def test_track_dict_uses_subtitle_when_artists_empty():
-    track = _embed_row_track(
-        {
-            'track': {
-                'id': 'tid',
-                'uri': 'spotify:track:tid',
-                'title': 'TestSong',
-            },
-            'subtitle': f'{_AL1}, {_AL2}',
-        }
-    )
+    track = _embed_row_track({
+        'track': {
+            'id': 'tid',
+            'uri': 'spotify:track:tid',
+            'title': 'TestSong',
+        },
+        'subtitle': f'{_AL1}, {_AL2}',
+    })
     td = _track_dict(track, track_id='tid', fallback_album='TestAlbum')
     assert td['artists'] == [_AL1, _AL2]
     assert td['artist'] == f'{_AL1}, {_AL2}'
@@ -244,9 +243,12 @@ def test_album_tracks_from_id_merges_row_subtitle():
         },
     }
 
-    with patch('downtify.spotify._fetch_embed_json', return_value=payload), patch(
-        'downtify.spotify._album_release_date_from_open_page',
-        return_value='',
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch(
+            'downtify.spotify._album_release_date_from_open_page',
+            return_value='',
+        ),
     ):
         songs = album_tracks_from_id('dummyAlbumId')
 

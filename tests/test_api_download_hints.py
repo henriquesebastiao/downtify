@@ -6,7 +6,10 @@ from downtify.api import _merge_client_track_hints
 
 
 def test_merge_applies_track_index_and_dates():
-    base: dict = {'song_id': 'spotify:id', 'url': 'https://open.spotify.com/track/x'}
+    base: dict = {
+        'song_id': 'spotify:id',
+        'url': 'https://open.spotify.com/track/x',
+    }
     _merge_client_track_hints(
         base,
         {
@@ -26,6 +29,8 @@ def test_merge_applies_track_index_and_dates():
 
 def test_merge_ignores_invalid_track_number():
     base: dict = {'song_id': 'a'}
-    _merge_client_track_hints(base, {'track_number': 'x', 'album_track_total': 0})
+    _merge_client_track_hints(
+        base, {'track_number': 'x', 'album_track_total': 0}
+    )
     assert 'track_number' not in base
     assert 'album_track_total' not in base

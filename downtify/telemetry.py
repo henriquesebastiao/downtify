@@ -15,12 +15,16 @@ _SENSITIVE_SUBSTRINGS = frozenset({
 })
 
 # Spotify embed sentry / correlation blobs — noisy and irrelevant for parsing.
-_DROP_KEYS_CASEFOLD = frozenset(
-    {'_sentrytracedata', '_sentrybaggage', '_sentrytrace_data'}
-)
+_DROP_KEYS_CASEFOLD = frozenset({
+    '_sentrytracedata',
+    '_sentrybaggage',
+    '_sentrytrace_data',
+})
 
 
-def redact_sensitive_mapping(obj: Any, *, depth: int = 0, max_depth: int = 28) -> Any:
+def redact_sensitive_mapping(
+    obj: Any, *, depth: int = 0, max_depth: int = 28
+) -> Any:
     """Return a nested structure safe to log (tokens and secrets redacted)."""
 
     if depth > max_depth:
@@ -43,10 +47,7 @@ def redact_sensitive_mapping(obj: Any, *, depth: int = 0, max_depth: int = 28) -
                 redact_sensitive_mapping(x, depth=depth + 1) for x in obj[:120]
             ]
             return head + [f'<{len(obj) - 120} more list items>']
-        return [
-            redact_sensitive_mapping(x, depth=depth + 1)
-            for x in obj
-        ]
+        return [redact_sensitive_mapping(x, depth=depth + 1) for x in obj]
     return obj
 
 

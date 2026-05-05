@@ -8,6 +8,7 @@ from threading import Lock
 from typing import Any, Optional
 
 from loguru import logger
+from ytmusicapi import YTMusic
 
 from .telemetry import json_log_blob, redact_sensitive_mapping
 
@@ -39,7 +40,7 @@ def _log_ytm_summary_search(
         results_len,
         first_titles,
     )
-from ytmusicapi import YTMusic
+
 
 _client: Optional[YTMusic] = None
 _lock = Lock()
@@ -316,7 +317,8 @@ def _primary_artist_for_search(
 
 
 def _album_browse_id_from_search(
-    match: dict[str, Any], song: Optional[dict[str, Any]],
+    match: dict[str, Any],
+    song: Optional[dict[str, Any]],
 ) -> str:
     titles = _album_title_hints(match, song)
     if not titles:
@@ -368,7 +370,8 @@ def _album_browse_id_from_search(
 
 
 def _album_browse_id(
-    match: dict[str, Any], song: Optional[dict[str, Any]],
+    match: dict[str, Any],
+    song: Optional[dict[str, Any]],
 ) -> str:
     album = match.get('album')
     if isinstance(album, dict):
@@ -453,9 +456,7 @@ def _cached_album_tracks_and_count(
         empty: tuple[list[dict[str, Any]], Optional[int]] = ([], None)
         return empty
 
-    tracks = [
-        t for t in (data.get('tracks') or []) if isinstance(t, dict)
-    ]
+    tracks = [t for t in (data.get('tracks') or []) if isinstance(t, dict)]
     logger.info(
         'YouTube Music get_album browseId={!r} title={!r} year={!r} '
         'trackCount={} parsed_tracks_len={}',

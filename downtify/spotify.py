@@ -39,7 +39,9 @@ _ALBUM_OPEN_PAGE_META_RELEASE = re.compile(
     r'<meta\s+name=["\']music:release_date["\']\s+content=["\']([^"\']+)["\']',
     re.I,
 )
-_ALBUM_OPEN_PAGE_DATE_PUBLISHED = re.compile(r'"datePublished"\s*:\s*"([^"]+)"')
+_ALBUM_OPEN_PAGE_DATE_PUBLISHED = re.compile(
+    r'"datePublished"\s*:\s*"([^"]+)"'
+)
 
 
 def parse_spotify_url(url: str) -> Optional[tuple[str, str]]:
@@ -301,9 +303,11 @@ def _release_date_raw_from_field(release: Any, *, _depth: int = 0) -> str:
                 return out
 
         nested = release.get('date')
-        nested_out = _release_date_raw_from_field(
-            nested, _depth=_depth + 1
-        ) if nested is not None else ''
+        nested_out = (
+            _release_date_raw_from_field(nested, _depth=_depth + 1)
+            if nested is not None
+            else ''
+        )
         if nested_out:
             return nested_out
 

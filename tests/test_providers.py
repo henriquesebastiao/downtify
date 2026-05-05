@@ -4,19 +4,22 @@ from __future__ import annotations
 
 import pytest
 
-from downtify.providers import enrich_from_match, youtube_music_track_index_for_match
+from downtify import providers
+from downtify.providers import (
+    enrich_from_match,
+    youtube_music_track_index_for_match,
+)
 
 
 @pytest.fixture(autouse=True)
 def clear_ytm_album_cache():
     """Isolate tests that manipulate the in-memory get_album cache."""
-    import downtify.providers as p
 
-    p._album_track_cache.clear()
-    p._album_browse_search_cache.clear()
+    providers._album_track_cache.clear()
+    providers._album_browse_search_cache.clear()
     yield
-    p._album_track_cache.clear()
-    p._album_browse_search_cache.clear()
+    providers._album_track_cache.clear()
+    providers._album_browse_search_cache.clear()
 
 
 def test_enrich_from_match_backfills_artists_when_empty():
@@ -54,8 +57,6 @@ def test_enrich_from_match_does_not_replace_existing_artists():
 
 
 def test_enrich_from_match_sets_track_index_from_album(monkeypatch):
-    import downtify.providers as providers
-
     def fake_cached(browse_id: str):
         assert browse_id == 'MPREb_test'
         return (
@@ -66,7 +67,9 @@ def test_enrich_from_match_sets_track_index_from_album(monkeypatch):
             12,
         )
 
-    monkeypatch.setattr(providers, '_cached_album_tracks_and_count', fake_cached)
+    monkeypatch.setattr(
+        providers, '_cached_album_tracks_and_count', fake_cached
+    )
     match = {
         'videoId': 'bbbbbbbbbbb',
         'title': 'B-side',
@@ -77,9 +80,9 @@ def test_enrich_from_match_sets_track_index_from_album(monkeypatch):
     assert out['album_track_total'] == 12
 
 
-def test_youtube_music_track_number_zero_falls_back_to_list_position(monkeypatch):
-    import downtify.providers as providers
-
+def test_youtube_music_track_number_zero_falls_back_to_list_position(
+    monkeypatch,
+):
     monkeypatch.setattr(
         providers,
         '_cached_album_tracks_and_count',
@@ -97,9 +100,9 @@ def test_youtube_music_track_number_zero_falls_back_to_list_position(monkeypatch
 
 
 def test_youtube_music_no_album_id_returns_no_track(monkeypatch):
-    import downtify.providers as providers
-
-    monkeypatch.setattr(providers, '_album_browse_id_from_search', lambda *_: '')
+    monkeypatch.setattr(
+        providers, '_album_browse_id_from_search', lambda *_: ''
+    )
     assert youtube_music_track_index_for_match(
         {'videoId': 'solo', 'album': {'name': 'Loose singles only'}},
         None,
@@ -107,12 +110,12 @@ def test_youtube_music_no_album_id_returns_no_track(monkeypatch):
 
 
 def test_enrich_preserves_preset_track_number(monkeypatch):
-    import downtify.providers as providers
-
     def fake_cached(_browse_id: str):
         return ([{'videoId': 'vin', 'trackNumber': 2}], 9)
 
-    monkeypatch.setattr(providers, '_cached_album_tracks_and_count', fake_cached)
+    monkeypatch.setattr(
+        providers, '_cached_album_tracks_and_count', fake_cached
+    )
     monkeypatch.setattr(
         providers, '_album_browse_id', lambda *_args, **_kw: 'any'
     )
