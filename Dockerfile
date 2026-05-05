@@ -26,6 +26,7 @@ LABEL org.opencontainers.image.title="Downtify" \
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHON_COLORS=0 \
+    DOWNTIFY_LOG_LEVEL=info \
     DOWNTIFY_PORT=8000 \
     UID=1000 \
     GID=1000 \
