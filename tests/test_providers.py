@@ -60,15 +60,15 @@ def test_enrich_from_match_sets_track_index_from_album(monkeypatch):
         assert browse_id == 'MPREb_test'
         return (
             [
-                {'videoId': 'v_one', 'trackNumber': 1},
-                {'videoId': 'v_two', 'trackNumber': 2},
+                {'videoId': 'aaaaaaaaaaa', 'trackNumber': 1},
+                {'videoId': 'bbbbbbbbbbb', 'trackNumber': 2},
             ],
             12,
         )
 
     monkeypatch.setattr(providers, '_cached_album_tracks_and_count', fake_cached)
     match = {
-        'videoId': 'v_two',
+        'videoId': 'bbbbbbbbbbb',
         'title': 'B-side',
         'album': {'name': 'Test LP', 'id': 'MPREb_test'},
     }
@@ -84,12 +84,12 @@ def test_youtube_music_track_number_zero_falls_back_to_list_position(monkeypatch
         providers,
         '_cached_album_tracks_and_count',
         lambda _browse_id: (
-            [{'videoId': 'vidX', 'trackNumber': 0}],
+            [{'videoId': 'ccccccccccc', 'trackNumber': 0}],
             None,
         ),
     )
     n, total = youtube_music_track_index_for_match(
-        {'videoId': 'vidX', 'album': {'name': '', 'id': 'x'}},
+        {'videoId': 'ccccccccccc', 'album': {'name': '', 'id': 'x'}},
         None,
     )
     assert n == 1
