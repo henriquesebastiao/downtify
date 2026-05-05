@@ -82,6 +82,23 @@ def _entity_from(payload: dict[str, Any]) -> dict[str, Any]:
     raise ValueError('Spotify entity not found in embed payload')
 
 
+def _embed_row_track(item: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """Track dict for a playlist/album embed row.
+
+    Rows often nest the payload under ``track`` while the artist line lives in
+    a sibling ``subtitle`` field on the wrapper — copy it onto the track so
+    :func:`_artist_names` can see it.
+    """
+
+    inner = item.get('track')
+    if isinstance(inner, dict):
+        sub = item.get('subtitle')
+        if isinstance(sub, str) and sub.strip() and not inner.get('subtitle'):
+            return {**inner, 'subtitle': sub}
+        return inner
+    return item if isinstance(item, dict) else None
+
+
 def _largest_image(sources: list[dict[str, Any]]) -> str:
     if not sources:
         return ''
@@ -113,15 +130,23 @@ def _cover_url(entity: dict[str, Any]) -> str:
 
 def _artist_names(entity: dict[str, Any]) -> list[str]:
     raw = entity.get('artists') or []
-    if not isinstance(raw, list):
-        return []
     names: list[str] = []
-    for item in raw:
-        if isinstance(item, dict):
-            name = item.get('name')
-            if name:
-                names.append(name)
-    return names
+    if isinstance(raw, list):
+        for item in raw:
+            if isinstance(item, str):
+                if item.strip():
+                    names.append(item.strip())
+            elif isinstance(item, dict):
+                name = item.get('name')
+                if name:
+                    names.append(name)
+    if names:
+        return names
+    return [
+        d['name']
+        for d in _artists_from_subtitle(entity.get('subtitle'))
+        if d.get('name')
+    ]
 
 
 def _release_year(entity: dict[str, Any]) -> str:
@@ -152,10 +177,12 @@ def _track_dict(
     album = entity.get('album') or {}
     album_name = album.get('name', '') if isinstance(album, dict) else ''
     cover = _cover_url(entity) or fallback_cover
+    names = _artist_names(entity)
     return {
         'song_id': track_id,
         'name': entity.get('name') or entity.get('title') or '',
-        'artists': _artist_names(entity),
+        'artists': names,
+        'artist': ', '.join(names),
         'album_name': album_name or fallback_album,
         'cover_url': cover,
         'duration': int(int(duration_ms) / 1000) if duration_ms else 0,
@@ -188,14 +215,19 @@ def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
     for item in track_items:
         if not isinstance(item, dict):
             continue
-        track = item.get('track', item)
+        track = _embed_row_track(item)
         if not isinstance(track, dict):
             continue
         track_id = track.get('id') or _id_from_uri(track.get('uri', ''))
         if not track_id:
             continue
-        if not track.get('artists'):
-            track['artists'] = entity.get('artists') or []
+        track = dict(track)
+        if not track.get('artists') and not track.get('subtitle'):
+            track['artists'] = (
+                entity.get('artists')
+                or _artists_from_subtitle(entity.get('subtitle'))
+                or []
+            )
         songs.append(
             _track_dict(
                 track,
@@ -214,19 +246,17 @@ def _parse_playlist_tracks(entity: dict[str, Any]) -> list[dict[str, Any]]:
     for item in track_items:
         if not isinstance(item, dict):
             continue
-        track = item.get('track', item)
+        track = _embed_row_track(item)
         if not isinstance(track, dict):
             continue
         track_id = track.get('id') or _id_from_uri(track.get('uri', ''))
         if not track_id:
             continue
-        # Playlist embed exposes artists as a "subtitle" string ("A, B")
-        # rather than the structured `artists` list other endpoints return.
-        if not track.get('artists'):
-            track['artists'] = _artists_from_subtitle(track.get('subtitle'))
         songs.append(
             _track_dict(
-                track, track_id=track_id, fallback_cover=fallback_cover
+                dict(track),
+                track_id=track_id,
+                fallback_cover=fallback_cover,
             )
         )
     return songs
@@ -235,9 +265,10 @@ def _parse_playlist_tracks(entity: dict[str, Any]) -> list[dict[str, Any]]:
 def _artists_from_subtitle(subtitle: Any) -> list[dict[str, str]]:
     if not isinstance(subtitle, str) or not subtitle:
         return []
+    normalized = subtitle.replace('\xa0', ' ')
     return [
         {'name': name.strip()}
-        for name in subtitle.replace('\xa0', ' ').split(',')
+        for name in re.split(r'\s*(?:,|，)\s*', normalized)
         if name.strip()
     ]
 
@@ -292,6 +323,7 @@ def _track_dict_from_graphql_item(
         'song_id': track_id,
         'name': track.get('name') or '',
         'artists': artists,
+        'artist': ', '.join(artists),
         'album_name': album_name,
         'cover_url': cover_url,
         'duration': int(duration_ms / 1000) if duration_ms else 0,

@@ -175,6 +175,11 @@ def enrich_from_match(
             )
     if not enriched.get('year') and match.get('year'):
         enriched['year'] = str(match['year'])
+    if not enriched.get('artists'):
+        yt_meta = _result_to_song(match)
+        if yt_meta and yt_meta.get('artists'):
+            enriched['artists'] = yt_meta['artists']
+            enriched['artist'] = ', '.join(yt_meta['artists'])
     return enriched
 
 
