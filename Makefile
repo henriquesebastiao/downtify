@@ -1,6 +1,6 @@
 #!make
 
-DOWNTIFY_VERSION := 2.6.1
+DOWNTIFY_VERSION := 2.7.0
 TARGET := henriquesebastiao/downtify
 
 all: build latest
