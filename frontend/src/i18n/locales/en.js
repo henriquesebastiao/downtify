@@ -33,7 +33,7 @@ export default {
     playlists: 'Playlists',
   },
   search: {
-    placeholder: 'Search a song, paste a Spotify link…',
+    placeholder: 'Search, paste a Spotify or YouTube Music link…',
     title: 'Search results',
     matchesFor: 'Showing matches for',
     songsCount: '— {count} song',
@@ -59,6 +59,10 @@ export default {
     removeFromQueue: 'Remove from queue',
     clearAll: 'Clear all',
     clearAllPrompt: 'Remove all items from the queue?',
+    forceAudio: 'Force audio source',
+    overridePlaceholder: 'Paste a YouTube or YouTube Music URL…',
+    applyOverride: 'Apply',
+    invalidYouTubeURL: 'Invalid YouTube URL',
   },
   library: {
     title: 'Library',
@@ -141,6 +145,9 @@ export default {
     organizeByArtist: 'Organize by artist',
     organizeByArtistHint:
       "Save songs in subfolders named after the artist. Playlist tracks are also placed in their artist's folder instead of a playlist folder.",
+    parallelDownloads: 'Parallel downloads',
+    parallelDownloadsHint:
+      'Maximum number of songs downloaded simultaneously. Higher values are faster but use more bandwidth.',
     saved: 'Changes saved',
     saveError: "Couldn't save settings.",
     language: 'Language',

@@ -222,6 +222,9 @@ def build_app() -> FastAPI:
     async def _startup() -> None:
         loop = asyncio.get_running_loop()
         api.state.loop = loop
+        api.state.download_semaphore = asyncio.Semaphore(
+            max(1, int(api.state.settings.get('max_parallel_downloads', 3)))
+        )
         db_path = DATABASE_DIR / 'downtify_monitor.db'
         api.state.monitor_db = PlaylistMonitorDB(db_path)
         asyncio.create_task(

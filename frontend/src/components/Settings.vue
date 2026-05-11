@@ -217,6 +217,34 @@
           </label>
         </div>
 
+        <!-- Parallel downloads -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.parallelDownloads') }}
+          </label>
+          <div class="grid grid-cols-5 gap-1.5">
+            <button
+              v-for="n in sm.settingsOptions.max_parallel_downloads"
+              :key="n"
+              type="button"
+              class="rounded-xl border px-2 py-2 text-sm font-medium transition-colors text-center"
+              :class="[
+                sm.settings.value.max_parallel_downloads === n
+                  ? 'border-primary/50 bg-primary/10 text-primary'
+                  : 'border-white/10 hover:border-white/20 hover:bg-white/5',
+              ]"
+              @click="sm.settings.value.max_parallel_downloads = n"
+            >
+              {{ n }}
+            </button>
+          </div>
+          <p class="text-[11px] text-base-content/40 mt-1.5">
+            {{ t('settings.parallelDownloadsHint') }}
+          </p>
+        </div>
+
         <!-- Save status -->
         <transition
           enter-active-class="transition duration-200"

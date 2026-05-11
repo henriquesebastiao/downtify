@@ -19,6 +19,7 @@ working without changes:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import re
 from pathlib import Path
@@ -47,6 +48,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'bitrate': '320',
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
+    'max_parallel_downloads': 3,
     'organize_by_artist': False,
 }
 
@@ -103,6 +105,7 @@ class AppState:
     loop: Optional[asyncio.AbstractEventLoop] = None
     monitor_db: Optional[PlaylistMonitorDB] = None
     download_jobs: dict[str, dict[str, Any]] = {}
+    download_semaphore: Optional[asyncio.Semaphore] = None
 
 
 state = AppState()
@@ -284,11 +287,15 @@ async def _run_download(
             loop,
         )
 
+    sem = state.download_semaphore
     try:
-        filename = await loop.run_in_executor(
-            None,
-            lambda: state.downloader.download(song, progress, subdir=subdir),
-        )
+        async with sem if sem is not None else contextlib.nullcontext():
+            filename = await loop.run_in_executor(
+                None,
+                lambda: state.downloader.download(
+                    song, progress, subdir=subdir
+                ),
+            )
     except Exception as exc:
         logger.exception('Download failed for {}', song_id)
         job['status'] = 'error'
@@ -347,9 +354,6 @@ async def download_endpoint(
     return filename
 
 
-_BATCH_CONCURRENCY = 4
-
-
 async def _process_batch(
     songs: list[dict[str, Any]],
     job_ids: list[str],
@@ -373,17 +377,14 @@ async def _process_batch(
                 'Failed to resolve playlist name for {}', playlist_url
             )
 
-    semaphore = asyncio.Semaphore(_BATCH_CONCURRENCY)
-
     async def _bounded(song: dict[str, Any], song_id: str) -> dict[str, Any]:
-        async with semaphore:
-            try:
-                filename = await _run_download(
-                    song, song_id, subdir=playlist_subdir
-                )
-            except Exception:
-                filename = None
-            return {'song': song, 'filename': filename}
+        try:
+            filename = await _run_download(
+                song, song_id, subdir=playlist_subdir
+            )
+        except Exception:
+            filename = None
+        return {'song': song, 'filename': filename}
 
     results = await asyncio.gather(
         *[_bounded(s, sid) for s, sid in zip(songs, job_ids)],
@@ -586,6 +587,12 @@ async def update_settings_endpoint(
                 state.downloader.organize_by_artist = bool(
                     payload['organize_by_artist']
                 )
+        if 'max_parallel_downloads' in payload:
+            try:
+                count = max(1, int(payload['max_parallel_downloads']))
+                state.download_semaphore = asyncio.Semaphore(count)
+            except (TypeError, ValueError):
+                pass
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)
     return state.settings

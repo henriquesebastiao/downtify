@@ -33,7 +33,7 @@ export default {
     playlists: 'Listas',
   },
   search: {
-    placeholder: 'Busca una canción o pega un enlace de Spotify…',
+    placeholder: 'Busca o pega un enlace de Spotify o YouTube Music…',
     title: 'Resultados de búsqueda',
     matchesFor: 'Mostrando coincidencias para',
     songsCount: '— {count} canción',
@@ -60,6 +60,10 @@ export default {
     removeFromQueue: 'Quitar de la cola',
     clearAll: 'Limpiar todo',
     clearAllPrompt: '¿Eliminar todos los elementos de la cola?',
+    forceAudio: 'Forzar fuente de audio',
+    overridePlaceholder: 'Pega una URL de YouTube o YouTube Music…',
+    applyOverride: 'Aplicar',
+    invalidYouTubeURL: 'URL de YouTube no válida',
   },
   library: {
     title: 'Biblioteca',
@@ -144,6 +148,9 @@ export default {
     organizeByArtist: 'Organizar por artista',
     organizeByArtistHint:
       'Guarda las canciones en subcarpetas con el nombre del artista. Las pistas de listas también se guardan en la carpeta del artista en lugar de la carpeta de la lista.',
+    parallelDownloads: 'Descargas paralelas',
+    parallelDownloadsHint:
+      'Número máximo de canciones descargadas simultáneamente. Valores más altos son más rápidos pero consumen más ancho de banda.',
     saved: 'Cambios guardados',
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',
