@@ -42,6 +42,9 @@
               <option :value="360">{{ t('monitor.every6h') }}</option>
               <option :value="720">{{ t('monitor.every12h') }}</option>
               <option :value="1440">{{ t('monitor.every1d') }}</option>
+              <option :value="10080">{{ t('monitor.every1w') }}</option>
+              <option :value="20160">{{ t('monitor.every2w') }}</option>
+              <option :value="43200">{{ t('monitor.every1mo') }}</option>
             </select>
             <button
               type="submit"
@@ -144,6 +147,9 @@
               <option :value="360">{{ t('monitor.short6h') }}</option>
               <option :value="720">{{ t('monitor.short12h') }}</option>
               <option :value="1440">{{ t('monitor.short1d') }}</option>
+              <option :value="10080">{{ t('monitor.short1w') }}</option>
+              <option :value="20160">{{ t('monitor.short2w') }}</option>
+              <option :value="43200">{{ t('monitor.short1mo') }}</option>
             </select>
 
             <!-- Toggle enabled -->
@@ -296,8 +302,16 @@ async function onDelete(pl) {
 function formatInterval(minutes) {
   if (minutes < 60) return `${minutes} ${t('monitor.minSuffix')}`
   if (minutes < 1440) return `${minutes / 60} ${t('monitor.hourSuffix')}`
-  const days = minutes / 1440
-  return `${days} ${days === 1 ? t('monitor.daySuffix') : t('monitor.daysSuffix')}`
+  if (minutes < 10080) {
+    const days = minutes / 1440
+    return `${days} ${days === 1 ? t('monitor.daySuffix') : t('monitor.daysSuffix')}`
+  }
+  if (minutes < 43200) {
+    const weeks = minutes / 10080
+    return `${weeks} ${weeks === 1 ? t('monitor.weekSuffix') : t('monitor.weeksSuffix')}`
+  }
+  const months = Math.round(minutes / 43200)
+  return `${months} ${months === 1 ? t('monitor.monthSuffix') : t('monitor.monthsSuffix')}`
 }
 
 function timeAgo(isoString) {

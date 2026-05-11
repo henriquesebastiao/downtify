@@ -21,19 +21,25 @@ Tracks that were already in the playlist when you added it are skipped — only 
 
 1. Click the eye icon (👁️) in the navigation bar
 2. Paste a Spotify playlist URL
-3. Choose a check interval (from 15 minutes to 24 hours)
+3. Choose a check interval (from 15 minutes to once a month)
 4. Click **Watch**
 
 ## Check intervals
 
-| Label | Minutes |
-|-------|---------|
-| Every 15 min | 15 |
-| Every 30 min | 30 |
-| Every hour | 60 (default) |
-| Every 6 hours | 360 |
-| Every 12 hours | 720 |
-| Every 24 hours | 1 440 |
+| Label | Minutes | Best for |
+|-------|---------|----------|
+| Every 15 min | 15 | Frequently updated playlists |
+| Every 30 min | 30 | |
+| Every hour | 60 (default) | Most playlists |
+| Every 3 hours | 180 | |
+| Every 6 hours | 360 | |
+| Every 12 hours | 720 | |
+| Every day | 1 440 | Slowly changing playlists |
+| Every week | 10 080 | Playlists updated weekly |
+| Every 2 weeks | 20 160 | |
+| Every month | 43 200 | Archive or rarely updated playlists |
+
+You can change the interval of an existing playlist at any time from the monitor card without removing and re-adding it.
 
 ## Managing monitored playlists
 
