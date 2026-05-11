@@ -226,6 +226,39 @@ export function useDownloadManager() {
     if (beginDownload) return download(song)
     return Promise.resolve({ song, filename: null })
   }
+
+  function retryWithAudio(song, youtubeVideoId) {
+    const overriddenSong = { ...song, youtube_id: youtubeVideoId }
+    const item = progressTracker.getBySong(song)
+    if (item) {
+      item.song.youtube_id = youtubeVideoId
+      item.setDownloading()
+      item.progress = 0
+      item.message = ''
+    }
+    return API.download(overriddenSong)
+      .then((res) => {
+        const it = progressTracker.getBySong(overriddenSong)
+        if (res.status === 200) {
+          const filename = res.data
+          if (it) {
+            it.setWebURL(API.downloadFileURL(filename))
+            it.setFilename(filename)
+            it.setDownloaded()
+          }
+          return { song: overriddenSong, filename }
+        }
+        if (it) it.setError()
+        return { song: overriddenSong, filename: null }
+      })
+      .catch((err) => {
+        console.error('retryWithAudio error:', err.message)
+        const it = progressTracker.getBySong(overriddenSong)
+        if (it) it.setError()
+        return { song: overriddenSong, filename: null }
+      })
+  }
+
   function remove(song) {
     const songId = String(song.song_id || song.url || '')
     progressTracker.removeSong(song)
@@ -243,6 +276,7 @@ export function useDownloadManager() {
     fromURL,
     download,
     queue,
+    retryWithAudio,
     remove,
     clearAll,
     loading,
