@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.7.0](https://github.com/henriquesebastiao/downtify/tree/2.7.0) (2026-05-11)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.6.1...2.7.0)
+
+**Implemented enhancements:**
+
+- Configurable Parallel Downloads [\#158](https://github.com/henriquesebastiao/downtify/issues/158)
+- Allow Weekly or Monthly Playlist Synchronization [\#157](https://github.com/henriquesebastiao/downtify/issues/157)
+
+**Merged pull requests:**
+
+- Add new time intervals for weekly and monthly options [\#163](https://github.com/henriquesebastiao/downtify/pull/163) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Add parallel downloads feature and enhance settings [\#162](https://github.com/henriquesebastiao/downtify/pull/162) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- build\(deps-dev\): Bump zensical from 0.0.40 to 0.0.41 [\#161](https://github.com/henriquesebastiao/downtify/pull/161) ([dependabot[bot]](https://github.com/apps/dependabot))
+
 ## [2.6.1](https://github.com/henriquesebastiao/downtify/tree/2.6.1) (2026-05-05)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.6.0...2.6.1)
