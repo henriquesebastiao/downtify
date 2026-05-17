@@ -242,7 +242,7 @@ def build_app() -> FastAPI:
         start_organizer()
         
     @app.on_event('shutdown')
-        async def _shutdown() -> None:
+    async def _shutdown() -> None:
         stop_organizer()
 
     @app.get('/list')
