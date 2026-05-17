@@ -241,9 +241,6 @@ def build_app() -> FastAPI:
         # Organizer-Service starten (Auto-Organisation + Scanner-Ordner)
         start_organizer()
         
-    @app.on_event('shutdown')
-    async def _shutdown() -> None:
-        stop_organizer()
 
     @app.get('/list')
     def list_downloads() -> list[str]:
