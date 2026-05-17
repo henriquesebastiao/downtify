@@ -57,141 +57,783 @@ log = logging.getLogger("downtify.organizer")
 
 # ── Genre/Region Mapping ──────────────────────────────────────────────────────
 
-# Reihenfolge zählt: spezifischere/sprachliche Patterns zuerst.
-GENRE_RULES = [
-    # Sprache/Region (höchste Priorität)
-    ("manele",              "Rumänisch"),
-    ("romanian",            "Rumänisch"),
-    ("albanian",            "Albanisch"),
-    ("shqip",               "Albanisch"),
-    ("kosovan",             "Albanisch"),
-    ("tallava",             "Albanisch"),
-    ("turkish",             "Türkisch"),
-    ("turk pop",            "Türkisch"),
-    ("arabesk",             "Türkisch"),
-    ("arabic",              "Arabisch"),
-    ("arab pop",            "Arabisch"),
-    ("rai",                 "Arabisch"),
-    ("khaleeji",            "Arabisch"),
-    ("levantine",           "Arabisch"),
-    ("russian",             "Russia"),
-    ("ukrainian",           "Russia"),
-    ("greek",               "Griechisch"),
-    ("balkan",              "Serbisch"),
-    ("serbian",             "Serbisch"),
-    ("croatian",            "Serbisch"),
-    ("bosnian",             "Serbisch"),
-    ("k-pop",               "K-Pop"),
-    ("kpop",                "K-Pop"),
-    ("j-pop",               "Japanisch"),
-    ("jpop",                "Japanisch"),
+# Reihenfolge zählt: spezifischere Patterns zuerst (erste Übereinstimmung gewinnt).
+# Diese Liste wird als Fallback verwendet wenn settings.json keine genre_rules hat.
+DEFAULT_GENRE_RULES: list[tuple[str, str]] = [
 
-    # Latin Familie
-    ("reggaeton",           "Latin"),
-    ("trap latino",         "Latin"),
-    ("latin pop",           "Latin"),
-    ("cumbia",              "Latin"),
-    ("salsa",               "Latin"),
-    ("bachata",             "Latin"),
-    ("merengue",            "Latin"),
-    ("dembow",              "Latin"),
-    ("latin",               "Latin"),
+    # ══════════════════════════════════════════════════════════════════════════
+    #  BLOCK 1 – STIL-GENRES  (höchste Priorität)
+    #  Teil A: HYBRIDE – regional+stil Compound-Patterns → Sprach-Ordner.
+    #          Müssen VOR ihrem generischen Stil-Keyword stehen.
+    # ══════════════════════════════════════════════════════════════════════════
 
-    # Stil-Genres
-    ("phonk",               "Phonk"),
-    ("goa",                 "Goa"),
-    ("psytrance",           "Goa"),
-    ("psy trance",          "Goa"),
-    ("psychedelic trance",  "Goa"),
+    # ── Hybride: K-Pop ────────────────────────────────────────────────────────
+    ("k-pop",                   "K-Pop"),
+    ("kpop",                    "K-Pop"),
+    ("k-r&b",                   "K-Pop"),
+    ("k-hip hop",               "K-Pop"),
+    ("k-rap",                   "K-Pop"),
+    ("k-indie",                 "K-Pop"),
+    ("k-ballad",                "K-Pop"),
+    ("korean r&b",              "K-Pop"),
+    ("korean pop",              "K-Pop"),
+    ("korean hip hop",          "K-Pop"),
+    ("trot",                    "K-Pop"),
 
-    # Heavy/Drop
-    ("dubstep",             "Drop"),
-    ("riddim",              "Drop"),
-    ("bass house",          "Drop"),
-    ("hardstyle",           "Drop"),
-    ("rawstyle",            "Drop"),
-    ("future bass",         "Drop"),
-    ("brostep",             "Drop"),
+    # ── Hybride: Japanisch ────────────────────────────────────────────────────
+    ("j-pop",                   "Japanisch"),
+    ("jpop",                    "Japanisch"),
+    ("j-rock",                  "Japanisch"),
+    ("j-rap",                   "Japanisch"),
+    ("j-soul",                  "Japanisch"),
+    ("j-hip hop",               "Japanisch"),
+    ("idol pop",                "Japanisch"),
+    ("anison",                  "Japanisch"),
+    ("visual kei",              "Japanisch"),
+    ("city pop",                "Japanisch"),
+    ("shibuya-kei",             "Japanisch"),
+    ("oshare kei",              "Japanisch"),
 
-    # House
-    ("deep house",          "House"),
-    ("tech house",          "House"),
-    ("progressive house",   "House"),
-    ("afro house",          "House"),
-    ("future house",        "House"),
-    ("house",               "House"),
-    ("electro",             "House"),
+    # ── Hybride: Latin ────────────────────────────────────────────────────────
+    ("reggaeton",               "Latin"),
+    ("trap latino",             "Latin"),
+    ("latin pop",               "Latin"),
+    ("latin trap",              "Latin"),
+    ("latin urban",             "Latin"),
+    ("urban latin",             "Latin"),
+    ("latin rock",              "Latin"),
+    ("latin jazz",              "Latin"),
+    ("latin alternative",       "Latin"),
+    ("latin hip hop",           "Latin"),
+    ("cumbia",                  "Latin"),
+    ("cumbia villera",          "Latin"),
+    ("salsa",                   "Latin"),
+    ("bachata",                 "Latin"),
+    ("merengue",                "Latin"),
+    ("dembow",                  "Latin"),
+    ("bossa nova",              "Latin"),
+    ("samba",                   "Latin"),
+    ("sertanejo",               "Latin"),
+    ("sertanejo universitário", "Latin"),
+    ("forro",                   "Latin"),
+    ("forró",                   "Latin"),
+    ("axé",                     "Latin"),
+    ("axe music",               "Latin"),
+    ("pagode",                  "Latin"),
+    ("baile funk",              "Latin"),
+    ("funk carioca",            "Latin"),
+    ("funk brasileiro",         "Latin"),
+    ("funk ostentação",         "Latin"),
+    ("vallenato",               "Latin"),
+    ("norteño",                 "Latin"),
+    ("norteno",                 "Latin"),
+    ("ranchera",                "Latin"),
+    ("mariachi",                "Latin"),
+    ("corrido",                 "Latin"),
+    ("corridos tumbados",       "Latin"),
+    ("narcocorrido",            "Latin"),
+    ("banda",                   "Latin"),
+    ("grupero",                 "Latin"),
+    ("grupera",                 "Latin"),
+    ("flamenco",                "Latin"),
+    ("zouk",                    "Latin"),
+    ("calypso",                 "Latin"),
+    ("soca",                    "Latin"),
+    ("punta",                   "Latin"),
+    ("mambo",                   "Latin"),
+    ("cha-cha-cha",             "Latin"),
+    ("bolero",                  "Latin"),
+    ("son cubano",              "Latin"),
+    ("timba",                   "Latin"),
+    ("nueva canción",           "Latin"),
+    ("nueva cancion",           "Latin"),
+    ("tropicália",              "Latin"),
+    ("tropicalia",              "Latin"),
+    ("mpb",                     "Latin"),
 
-    # Party/Dance
-    ("eurodance",           "Party"),
-    ("dance pop",           "Party"),
-    ("club",                "Party"),
-    ("party",               "Party"),
+    # ── Hybride: Rap-regional ─────────────────────────────────────────────────
+    ("deutschrap",              "Deutschrap"),
+    ("german rap",              "Deutschrap"),
+    ("french rap",              "Rap"),
+    ("rap français",            "Rap"),
+    ("rap francais",            "Rap"),
+    ("uk rap",                  "Rap"),
+    ("italian rap",             "Rap"),
+    ("spanish rap",             "Rap"),
+    ("arabic rap",              "Rap"),
+    ("persian rap",             "Persisch"),
+    ("gangsta rap",             "Rap"),
+    ("conscious rap",           "Rap"),
+    ("horrorcore",              "Rap"),
+    ("battle rap",              "Rap"),
+    ("freestyle rap",           "Rap"),
+    ("memphis rap",             "Phonk"),
 
-    # Rap vor HipHop (German Rap, French Rap etc. → Rap)
-    ("deutschrap",          "Rap"),
-    ("german rap",          "Rap"),
-    ("french rap",          "Rap"),
-    ("uk rap",              "Rap"),
-    ("italian rap",         "Rap"),
-    ("rap",                 "Rap"),
+    # ── Hybride: Rock-regional ────────────────────────────────────────────────
+    ("anatolian rock",          "Türkisch"),
+    ("raga rock",               "Indisch"),
+    ("blues rock",              "Rock"),
+    ("folk rock",               "Rock"),
+    ("country rock",            "Rock"),
 
-    # HipHop
-    ("hip hop",             "HipHop"),
-    ("hip-hop",             "HipHop"),
-    ("hiphop",              "HipHop"),
-    ("trap",                "HipHop"),
-    ("drill",               "HipHop"),
-    ("boom bap",            "HipHop"),
+    # ── Hybride: Indisch-Stil ─────────────────────────────────────────────────
+    ("desi hip hop",            "Indisch"),
+    ("sufi pop",                "Indisch"),
+    ("desi pop",                "Indisch"),
+    ("hindi pop",               "Indisch"),
+    ("urdu pop",                "Indisch"),
+    ("tamil pop",               "Indisch"),
+    ("telugu pop",              "Indisch"),
+    ("punjabi pop",             "Indisch"),
+    ("persian pop",             "Persisch"),
+    ("persian classical",       "Persisch"),
+    ("persian traditional",     "Persisch"),
+    ("persian folk",            "Persisch"),
+    ("iranian pop",             "Persisch"),
+    ("farsi pop",               "Persisch"),
+    ("afghan pop",              "Persisch"),
+    ("israeli pop",             "Hebräisch"),
+    ("mediterranean israeli",   "Hebräisch"),
+    ("musica mizrahit",         "Hebräisch"),
+    ("pop romanesc",            "Rumänisch"),
+    ("muzica populara",         "Rumänisch"),
 
-    # Rock/Metal
-    ("rock",                "Rock"),
-    ("metal",               "Rock"),
-    ("punk",                "Rock"),
-    ("grunge",              "Rock"),
+    # ── Hybride: Afrikanisch-Stil ─────────────────────────────────────────────
+    ("afro house",              "Afrohouse"),
+    ("afro tech",               "Afrikanisch"),
 
-    # Classic/Cinematic
-    ("classical",           "Classic Oldies"),
-    ("cinematic",           "Classic Oldies"),
-    ("soundtrack",          "Classic Oldies"),
-    ("film score",          "Classic Oldies"),
-    ("oldies",              "Classic Oldies"),
-    ("rock and roll",       "Classic Oldies"),
+    # ══════════════════════════════════════════════════════════════════════════
+    #  Teil B: REINE STIL-GENRES  (spezifisch → generisch)
+    # ══════════════════════════════════════════════════════════════════════════
 
-    # R&B/Soul
-    ("r&b",                 "R&B"),
-    ("rnb",                 "R&B"),
-    ("soul",                "R&B"),
-    ("funk",                "R&B"),
+    # ── Phonk ─────────────────────────────────────────────────────────────────
+    ("drift phonk",             "Phonk"),
+    ("memphis phonk",           "Phonk"),
+    ("raver phonk",             "Phonk"),
+    ("pluggnb",                 "Phonk"),
+    ("phonk",                   "Phonk"),
 
-    # Pop (generisch, am Schluss)
-    ("dance",               "Party"),
-    ("edm",                 "House"),
-    ("electronic",          "House"),
-    ("pop",                 "Pop"),
+    # ── Goa / Psytrance ──────────────────────────────────────────────────────
+    ("progressive psy",         "Goa"),
+    ("psychedelic trance",      "Goa"),
+    ("psy trance",              "Goa"),
+    ("darkpsy",                 "Goa"),
+    ("dark psy",                "Goa"),
+    ("forest psy",              "Goa"),
+    ("hi-tech psy",             "Goa"),
+    ("twilight psy",            "Goa"),
+    ("suomisaundi",             "Goa"),
+    ("nitzhonot",               "Goa"),
+    ("full on",                 "Goa"),
+    ("psytrance",               "Goa"),
+    ("goa",                     "Goa"),
+
+    # ── Drop / Bass / DnB / Hardcore ─────────────────────────────────────────
+    ("drum and bass",           "Drop"),
+    ("drum & bass",             "Drop"),
+    ("liquid dnb",              "Drop"),
+    ("liquid drum",             "Drop"),
+    ("neurofunk",               "Drop"),
+    ("d&b",                     "Drop"),
+    ("dnb",                     "Drop"),
+    ("hardcore techno",         "Drop"),
+    ("uk hardcore",             "Drop"),
+    ("happy hardcore",          "Drop"),
+    ("gabber",                  "Drop"),
+    ("terrorcore",              "Drop"),
+    ("speedcore",               "Drop"),
+    ("frenchcore",              "Drop"),
+    ("melodic dubstep",         "Drop"),
+    ("brostep",                 "Drop"),
+    ("deathstep",               "Drop"),
+    ("neurostep",               "Drop"),
+    ("tearout",                 "Drop"),
+    ("riddim",                  "Drop"),
+    ("dubstep",                 "Drop"),
+    ("bass house",              "Drop"),
+    ("hardstyle",               "Drop"),
+    ("rawstyle",                "Drop"),
+    ("hybrid trap",             "Drop"),
+    ("glitch hop",              "Drop"),
+    ("moombahton",              "Drop"),
+    ("jungle",                  "Drop"),
+    ("breakbeat",               "Drop"),
+    ("breaks",                  "Drop"),
+    ("future bass",             "Drop"),
+    ("wave",                    "Drop"),
+    ("dark clubbing",           "Drop"),
+    ("industrial techno",       "Drop"),
+    ("midtempo",                "Drop"),
+    ("bass music",              "Drop"),
+    ("hardcore",                "Drop"),
+
+    # ── House / Techno / Trance ───────────────────────────────────────────────
+    ("deep house",              "House"),
+    ("tech house",              "House"),
+    ("progressive house",       "House"),
+    ("future house",            "House"),
+    ("big room house",          "House"),
+    ("ambient house",           "House"),
+    ("lo-fi house",             "House"),
+    ("tropical house",          "House"),
+    ("melodic house",           "House"),
+    ("organic house",           "House"),
+    ("funky house",             "House"),
+    ("soulful house",           "House"),
+    ("jackin house",            "House"),
+    ("chicago house",           "House"),
+    ("acid house",              "House"),
+    ("electro house",           "House"),
+    ("progressive trance",      "House"),
+    ("vocal trance",            "House"),
+    ("acid techno",             "House"),
+    ("melodic techno",          "House"),
+    ("minimal techno",          "House"),
+    ("detroit techno",          "House"),
+    ("uk garage",               "House"),
+    ("speed garage",            "House"),
+    ("uk funky",                "House"),
+    ("2-step",                  "House"),
+    ("complextro",              "House"),
+    ("microhouse",              "House"),
+    ("nu-disco",                "House"),
+    ("italo disco",             "House"),
+    ("big room",                "House"),
+    ("mainstage",               "House"),
+    ("electronica",             "House"),
+    ("electro",                 "House"),
+    ("house",                   "House"),
+    ("minimal",                 "House"),
+    ("techno",                  "House"),
+    ("trance",                  "House"),
+    ("edm",                     "House"),
+    ("electronic",              "House"),
+
+    # ── Party / Dance / Disco ─────────────────────────────────────────────────
+    ("eurodance",               "Party"),
+    ("dance pop",               "Party"),
+    ("bubblegum dance",         "Party"),
+    ("commercial dance",        "Party"),
+    ("disco polo",              "Party"),
+    ("italodance",              "Party"),
+    ("italodisco",              "Party"),
+    ("europop",                 "Party"),
+    ("teen pop",                "Party"),
+    ("hands up",                "Party"),
+    ("schlager",                "Party"),
+    ("nu disco",                "Party"),
+    ("italo",                   "Party"),
+    ("disco",                   "Party"),
+    ("club",                    "Party"),
+    ("party",                   "Party"),
+    ("dance",                   "Party"),
+
+    # ── Rap ───────────────────────────────────────────────────────────────────
+    # trap/drill VOR rap (Substring-Fix: "rap" ist in "trap" enthalten)
+    ("trap",                    "HipHop"),
+    ("drill",                   "HipHop"),
+    ("rap",                     "Rap"),
+
+    # ── HipHop ───────────────────────────────────────────────────────────────
+    ("uk drill",                "HipHop"),
+    ("afro drill",              "HipHop"),
+    ("east coast rap",          "HipHop"),
+    ("west coast rap",          "HipHop"),
+    ("southern rap",            "HipHop"),
+    ("dirty south",             "HipHop"),
+    ("boom bap",                "HipHop"),
+    ("cloud rap",               "HipHop"),
+    ("mumble rap",              "HipHop"),
+    ("emo rap",                 "HipHop"),
+    ("lo-fi hip hop",           "HipHop"),
+    ("lofi hip hop",            "HipHop"),
+    ("lo-fi rap",               "HipHop"),
+    ("jazz rap",                "HipHop"),
+    ("alternative hip hop",     "HipHop"),
+    ("abstract hip hop",        "HipHop"),
+    ("instrumental hip hop",    "HipHop"),
+    ("grime",                   "HipHop"),
+    ("crunk",                   "HipHop"),
+    ("snap",                    "HipHop"),
+    ("chopped and screwed",     "HipHop"),
+    ("chillhop",                "HipHop"),
+    ("vaporwave",               "HipHop"),
+    ("hip hop",                 "HipHop"),
+    ("hip-hop",                 "HipHop"),
+    ("hiphop",                  "HipHop"),
+
+    # ── Rock / Metal ─────────────────────────────────────────────────────────
+    ("alternative rock",        "Rock"),
+    ("alt rock",                "Rock"),
+    ("indie rock",              "Rock"),
+    ("hard rock",               "Rock"),
+    ("symphonic metal",         "Rock"),
+    ("progressive metal",       "Rock"),
+    ("gothic metal",            "Rock"),
+    ("funk metal",              "Rock"),
+    ("heavy metal",             "Rock"),
+    ("thrash metal",            "Rock"),
+    ("death metal",             "Rock"),
+    ("black metal",             "Rock"),
+    ("doom metal",              "Rock"),
+    ("stoner metal",            "Rock"),
+    ("sludge metal",            "Rock"),
+    ("power metal",             "Rock"),
+    ("nu-metal",                "Rock"),
+    ("nu metal",                "Rock"),
+    ("prog metal",              "Rock"),
+    ("progressive rock",        "Rock"),
+    ("prog rock",               "Rock"),
+    ("post-punk",               "Rock"),
+    ("post-grunge",             "Rock"),
+    ("post-rock",               "Rock"),
+    ("psychedelic rock",        "Rock"),
+    ("garage rock",             "Rock"),
+    ("noise rock",              "Rock"),
+    ("math rock",               "Rock"),
+    ("stoner rock",             "Rock"),
+    ("metalcore",               "Rock"),
+    ("deathcore",               "Rock"),
+    ("rapcore",                 "Rock"),
+    ("new wave",                "Rock"),
+    ("darkwave",                "Rock"),
+    ("gothic rock",             "Rock"),
+    ("goth",                    "Rock"),
+    ("shoegaze",                "Rock"),
+    ("britpop",                 "Rock"),
+    ("screamo",                 "Rock"),
+    ("emo",                     "Rock"),
+    ("grunge",                  "Rock"),
+    ("punk",                    "Rock"),
+    ("metal",                   "Rock"),
+    ("rock",                    "Rock"),
+
+    # ── Classic Oldies ────────────────────────────────────────────────────────
+    ("rock and roll",           "Classic Oldies"),
+    ("doo-wop",                 "Classic Oldies"),
+    ("film score",              "Classic Oldies"),
+    ("game soundtrack",         "Classic Oldies"),
+    ("soundtrack",              "Classic Oldies"),
+    ("cinematic",               "Classic Oldies"),
+    ("classical",               "Classic Oldies"),
+    ("baroque",                 "Classic Oldies"),
+    ("renaissance",             "Classic Oldies"),
+    ("cool jazz",               "Classic Oldies"),
+    ("big band",                "Classic Oldies"),
+    ("bebop",                   "Classic Oldies"),
+    ("dixieland",               "Classic Oldies"),
+    ("swing",                   "Classic Oldies"),
+    ("jazz",                    "Classic Oldies"),
+    ("blues",                   "Classic Oldies"),
+    ("bluegrass",               "Classic Oldies"),
+    ("country",                 "Classic Oldies"),
+    ("folk",                    "Classic Oldies"),
+    ("gospel",                  "Classic Oldies"),
+    ("spiritual",               "Classic Oldies"),
+    ("opera",                   "Classic Oldies"),
+    ("chanson",                 "Classic Oldies"),
+    ("variété",                 "Classic Oldies"),
+    ("schlager oldies",         "Classic Oldies"),
+    ("oldies",                  "Classic Oldies"),
+
+    # ── R&B / Soul ────────────────────────────────────────────────────────────
+    ("contemporary r&b",        "R&B"),
+    ("alternative r&b",         "R&B"),
+    ("alt r&b",                 "R&B"),
+    ("future r&b",              "R&B"),
+    ("new jack swing",          "R&B"),
+    ("neo soul",                "R&B"),
+    ("quiet storm",             "R&B"),
+    ("disco soul",              "R&B"),
+    ("rhythm and blues",        "R&B"),
+    ("trip hop",                "R&B"),
+    ("motown",                  "R&B"),
+    ("r&b",                     "R&B"),
+    ("rnb",                     "R&B"),
+    ("soul",                    "R&B"),
+    ("funk",                    "R&B"),
+
+    # ── Pop (generisch) ───────────────────────────────────────────────────────
+    ("synth-pop",               "Pop"),
+    ("synthpop",                "Pop"),
+    ("electropop",              "Pop"),
+    ("indie pop",               "Pop"),
+    ("dream pop",               "Pop"),
+    ("art pop",                 "Pop"),
+    ("chamber pop",             "Pop"),
+    ("baroque pop",             "Pop"),
+    ("bedroom pop",             "Pop"),
+    ("lo-fi pop",               "Pop"),
+    ("acoustic pop",            "Pop"),
+    ("singer-songwriter",       "Pop"),
+    ("pop",                     "Pop"),
+
+    # ── Sonstiges-Stil ────────────────────────────────────────────────────────
+    ("reggae",                  "Sonstiges"),
+    ("dancehall",               "Sonstiges"),
+    ("ska",                     "Sonstiges"),
+    ("dub",                     "Sonstiges"),
+    ("ambient",                 "Sonstiges"),
+    ("new age",                 "Sonstiges"),
+    ("meditation",              "Sonstiges"),
+    ("lounge",                  "Sonstiges"),
+    ("easy listening",          "Sonstiges"),
+    ("chillout",                "House"),
+    ("downtempo",               "Sonstiges"),
+    ("world music",             "Sonstiges"),
+    ("fado",                    "Sonstiges"),
+    ("celtic",                  "Sonstiges"),
+    ("irish folk",              "Sonstiges"),
+
+    # ══════════════════════════════════════════════════════════════════════════
+    #  BLOCK 2 – SPRACHE / REGION  (zweite Priorität)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    # ── Indisch / Südasien ────────────────────────────────────────────────────
+    ("bollywood",               "Indisch"),
+    ("filmi",                   "Indisch"),
+    ("kollywood",               "Indisch"),
+    ("tollywood",               "Indisch"),
+    ("mollywood",               "Indisch"),
+    ("bhangra",                 "Indisch"),
+    ("punjabi",                 "Indisch"),
+    ("hindustani",              "Indisch"),
+    ("carnatic",                "Indisch"),
+    ("ghazal",                  "Indisch"),
+    ("qawwali",                 "Indisch"),
+    ("desi",                    "Indisch"),
+    ("hindi",                   "Indisch"),
+    ("urdu",                    "Indisch"),
+    ("tamil",                   "Indisch"),
+    ("telugu",                  "Indisch"),
+    ("bengali",                 "Indisch"),
+    ("kannada",                 "Indisch"),
+    ("malayalam",               "Indisch"),
+    ("marathi",                 "Indisch"),
+    ("gujarati",                "Indisch"),
+    ("rajasthani",              "Indisch"),
+    ("garba",                   "Indisch"),
+    ("dandiya",                 "Indisch"),
+    ("bhajan",                  "Indisch"),
+    ("kirtan",                  "Indisch"),
+    ("baul",                    "Indisch"),
+    ("lavani",                  "Indisch"),
+    ("rabindra sangeet",        "Indisch"),
+    ("thumri",                  "Indisch"),
+    ("dhrupad",                 "Indisch"),
+    ("raga",                    "Indisch"),
+    ("indipop",                 "Indisch"),
+    ("indi-pop",                "Indisch"),
+    ("india pop",               "Indisch"),
+    ("nepali",                  "Indisch"),
+    ("sinhala",                 "Indisch"),
+    ("indian",                  "Indisch"),
+
+    # ── Afrikanisch ───────────────────────────────────────────────────────────
+    ("afrobeats",               "Afrikanisch"),
+    ("afrobeat",                "Afrikanisch"),
+    ("afropop",                 "Afrikanisch"),
+    ("afrofusion",              "Afrikanisch"),
+    ("afro pop",                "Afrikanisch"),
+    ("afro fusion",             "Afrikanisch"),
+    ("afro soul",               "Afrikanisch"),
+    ("afro dancehall",          "Afrikanisch"),
+    ("afro swing",              "Afrikanisch"),
+    ("afrojuju",                "Afrikanisch"),
+    ("afrowave",                "Afrikanisch"),
+    ("amapiano",                "Afrikanisch"),
+    ("highlife",                "Afrikanisch"),
+    ("hiplife",                 "Afrikanisch"),
+    ("juju music",              "Afrikanisch"),
+    ("juju",                    "Afrikanisch"),
+    ("fuji music",              "Afrikanisch"),
+    ("kwaito",                  "Afrikanisch"),
+    ("gqom",                    "Afrikanisch"),
+    ("soukous",                 "Afrikanisch"),
+    ("congolese rumba",         "Afrikanisch"),
+    ("mbalax",                  "Afrikanisch"),
+    ("bikutsi",                 "Afrikanisch"),
+    ("makossa",                 "Afrikanisch"),
+    ("chimurenga",              "Afrikanisch"),
+    ("mbaqanga",                "Afrikanisch"),
+    ("isicathamiya",            "Afrikanisch"),
+    ("bongo flava",             "Afrikanisch"),
+    ("naija",                   "Afrikanisch"),
+    ("gnawa",                   "Afrikanisch"),
+    ("zouglou",                 "Afrikanisch"),
+    ("coupé-décalé",            "Afrikanisch"),
+    ("coupe decale",            "Afrikanisch"),
+    ("ethio-jazz",              "Afrikanisch"),
+    ("ethiojazz",               "Afrikanisch"),
+    ("afrotech",                "Afrikanisch"),
+    ("south african",           "Afrikanisch"),
+    ("nigerian",                "Afrikanisch"),
+    ("ghanaian",                "Afrikanisch"),
+    ("kenyan",                  "Afrikanisch"),
+    ("tanzanian",               "Afrikanisch"),
+    ("ugandan",                 "Afrikanisch"),
+    ("congolese",               "Afrikanisch"),
+    ("zimbabwean",              "Afrikanisch"),
+    ("african",                 "Afrikanisch"),
+
+    # ── Persisch / Iranisch ───────────────────────────────────────────────────
+    ("persian",                 "Persisch"),
+    ("iranian",                 "Persisch"),
+    ("irani",                   "Persisch"),
+    ("farsi",                   "Persisch"),
+    ("losanjelesi",             "Persisch"),
+    ("dastgah",                 "Persisch"),
+    ("radif",                   "Persisch"),
+    ("tajik",                   "Persisch"),
+    ("tajiki",                  "Persisch"),
+    ("afghani",                 "Persisch"),
+    ("pashto",                  "Persisch"),
+    ("dari",                    "Persisch"),
+    ("kurdish",                 "Persisch"),
+
+    # ── Hebräisch / Israelisch ────────────────────────────────────────────────
+    ("mizrahi",                 "Hebräisch"),
+    ("mizrahit",                "Hebräisch"),
+    ("israeli",                 "Hebräisch"),
+    ("hebrew",                  "Hebräisch"),
+    ("piyyut",                  "Hebräisch"),
+    ("yiddish",                 "Hebräisch"),
+    ("klezmer",                 "Hebräisch"),
+    ("niggun",                  "Hebräisch"),
+    ("hasidic",                 "Hebräisch"),
+
+    # ── Rumänisch ─────────────────────────────────────────────────────────────
+    ("manele",                  "Rumänisch"),
+    ("romanian",                "Rumänisch"),
+    ("hora",                    "Rumänisch"),
+    ("doina",                   "Rumänisch"),
+    ("lautareasca",             "Rumänisch"),
+    ("lautaresc",               "Rumänisch"),
+    ("maneaua",                 "Rumänisch"),
+
+    # ── Albanisch ─────────────────────────────────────────────────────────────
+    ("albanian",                "Albanisch"),
+    ("shqip",                   "Albanisch"),
+    ("kosovan",                 "Albanisch"),
+    ("tallava",                 "Albanisch"),
+    ("iso polyphony",           "Albanisch"),
+    ("valle",                   "Albanisch"),
+    ("çifteli",                 "Albanisch"),
+
+    # ── Türkisch ──────────────────────────────────────────────────────────────
+    ("turk pop",                "Türkisch"),
+    ("türk pop",                "Türkisch"),
+    ("arabesk",                 "Türkisch"),
+    ("arabesque",               "Türkisch"),
+    ("türkçe",                  "Türkisch"),
+    ("türkü",                   "Türkisch"),
+    ("turku",                   "Türkisch"),
+    ("halk müziği",             "Türkisch"),
+    ("halk muzigi",             "Türkisch"),
+    ("anatolian",               "Türkisch"),
+    ("sanat müziği",            "Türkisch"),
+    ("sanat muzigi",            "Türkisch"),
+    ("fantezi",                 "Türkisch"),
+    ("damar",                   "Türkisch"),
+    ("özgün müzik",             "Türkisch"),
+    ("çalgı",                   "Türkisch"),
+    ("roman havası",            "Türkisch"),
+    ("turkish",                 "Türkisch"),
+
+    # ── Arabisch ──────────────────────────────────────────────────────────────
+    ("arab pop",                "Arabisch"),
+    ("khaleeji",                "Arabisch"),
+    ("khaliji",                 "Arabisch"),
+    ("levantine",               "Arabisch"),
+    ("shaabi",                  "Arabisch"),
+    ("sha'bi",                  "Arabisch"),
+    ("sha3bi",                  "Arabisch"),
+    ("tarab",                   "Arabisch"),
+    ("maqam",                   "Arabisch"),
+    ("nasheed",                 "Arabisch"),
+    ("sawt",                    "Arabisch"),
+    ("mawal",                   "Arabisch"),
+    ("mawwal",                  "Arabisch"),
+    ("dabke",                   "Arabisch"),
+    ("nubian",                  "Arabisch"),
+    ("moroccan",                "Arabisch"),
+    ("algerian",                "Arabisch"),
+    ("tunisian",                "Arabisch"),
+    ("egyptian",                "Arabisch"),
+    ("gulf music",              "Arabisch"),
+    ("sudanese",                "Arabisch"),
+    ("libyan",                  "Arabisch"),
+    ("yemeni",                  "Arabisch"),
+    ("iraqi",                   "Arabisch"),
+    ("rai",                     "Arabisch"),
+    ("raï",                     "Arabisch"),
+    ("arabic",                  "Arabisch"),
+
+    # ── Russia / GUS ──────────────────────────────────────────────────────────
+    ("shanson",                 "Russia"),
+    ("chanson russe",           "Russia"),
+    ("russki",                  "Russia"),
+    ("bard music",              "Russia"),
+    ("soviet",                  "Russia"),
+    ("georgian pop",            "Russia"),
+    ("kazakh",                  "Russia"),
+    ("uzbek",                   "Russia"),
+    ("turkmen",                 "Russia"),
+    ("armenian",                "Russia"),
+    ("moldovan",                "Russia"),
+    ("belarusian",              "Russia"),
+    ("kyrgyz",                  "Russia"),
+    ("azerbaijani",             "Russia"),
+    ("latvian",                 "Russia"),
+    ("lithuanian",              "Russia"),
+    ("estonian",                "Russia"),
+    ("russian",                 "Russia"),
+    ("ukrainian",               "Russia"),
+
+    # ── Griechisch ────────────────────────────────────────────────────────────
+    ("laika",                   "Griechisch"),
+    ("laïká",                   "Griechisch"),
+    ("rebetiko",                "Griechisch"),
+    ("rembetiko",               "Griechisch"),
+    ("entechno",                "Griechisch"),
+    ("skyladiko",               "Griechisch"),
+    ("dimotika",                "Griechisch"),
+    ("nisiotika",               "Griechisch"),
+    ("kantades",                "Griechisch"),
+    ("elafrolaika",             "Griechisch"),
+    ("greek",                   "Griechisch"),
+
+    # ── Serbisch / Balkan ─────────────────────────────────────────────────────
+    ("sevdalinka",              "Serbisch"),
+    ("sevdah",                  "Serbisch"),
+    ("turbofolk",               "Serbisch"),
+    ("turbo folk",              "Serbisch"),
+    ("novokomponovana",         "Serbisch"),
+    ("narodna muzika",          "Serbisch"),
+    ("narodnjaci",              "Serbisch"),
+    ("trubaci",                 "Serbisch"),
+    ("gusle",                   "Serbisch"),
+    ("yugoslav",                "Serbisch"),
+    ("ex-yu",                   "Serbisch"),
+    ("exyu",                    "Serbisch"),
+    ("slovene",                 "Serbisch"),
+    ("slovenian",               "Serbisch"),
+    ("bulgarian",               "Serbisch"),
+    ("macedonian",              "Serbisch"),
+    ("cocek",                   "Serbisch"),
+    ("čoček",                   "Serbisch"),
+    ("bosnian",                 "Serbisch"),
+    ("croatian",                "Serbisch"),
+    ("serbian",                 "Serbisch"),
+    ("balkan",                  "Serbisch"),
+
+    # ── K-Pop (Breit-Keyword) ─────────────────────────────────────────────────
+    ("korean",                  "K-Pop"),
+
+    # ── Japanisch (Breit-Keywords) ────────────────────────────────────────────
+    ("anime",                   "Japanisch"),
+    ("enka",                    "Japanisch"),
+    ("kayokyoku",               "Japanisch"),
+    ("japanese",                "Japanisch"),
+
+    # ── Latin (Breit-Keyword) ─────────────────────────────────────────────────
+    ("latin",                   "Latin"),
+
+    # ── Sonstiges-Sprache ─────────────────────────────────────────────────────
+    ("mandopop",                "Sonstiges"),
+    ("cantopop",                "Sonstiges"),
+    ("c-pop",                   "Sonstiges"),
+    ("thai pop",                "Sonstiges"),
+    ("opm",                     "Sonstiges"),
+    ("pinoy pop",               "Sonstiges"),
+    ("vietnamese pop",          "Sonstiges"),
+    ("k-trot",                  "Sonstiges"),
 ]
 
-COUNTRY_TO_FOLDER = {
+DEFAULT_COUNTRY_TO_FOLDER: dict[str, str] = {
+    # ── Rumänisch ──────────────────────────────────────────────────────────────
     "RO": "Rumänisch",
+    # ── Albanisch ──────────────────────────────────────────────────────────────
     "AL": "Albanisch", "XK": "Albanisch", "MK": "Albanisch",
-    "RU": "Russia", "UA": "Russia", "BY": "Russia",
+    # ── Russia / GUS ───────────────────────────────────────────────────────────
+    "RU": "Russia",   "UA": "Russia",   "BY": "Russia",   "MD": "Russia",
+    "KZ": "Russia",   "UZ": "Russia",   "TM": "Russia",   "KG": "Russia",
+    "GE": "Russia",   "AM": "Russia",
+    "LT": "Russia",   "LV": "Russia",   "EE": "Russia",
+    # ── Türkisch ───────────────────────────────────────────────────────────────
+    "TR": "Türkisch", "AZ": "Türkisch",
+    # ── Arabisch ───────────────────────────────────────────────────────────────
     "SA": "Arabisch", "AE": "Arabisch", "EG": "Arabisch", "MA": "Arabisch",
     "LB": "Arabisch", "JO": "Arabisch", "SY": "Arabisch", "IQ": "Arabisch",
     "DZ": "Arabisch", "TN": "Arabisch", "LY": "Arabisch", "YE": "Arabisch",
     "PS": "Arabisch", "BH": "Arabisch", "KW": "Arabisch", "OM": "Arabisch",
-    "QA": "Arabisch", "SD": "Arabisch",
-    "TR": "Türkisch",
-    "GR": "Griechisch",
+    "QA": "Arabisch", "SD": "Arabisch", "SS": "Arabisch", "MR": "Arabisch",
+    "SO": "Arabisch", "DJ": "Arabisch", "KM": "Arabisch",
+    # ── Griechisch ─────────────────────────────────────────────────────────────
+    "GR": "Griechisch", "CY": "Griechisch",
+    # ── Serbisch ───────────────────────────────────────────────────────────────
     "RS": "Serbisch", "ME": "Serbisch", "BA": "Serbisch", "HR": "Serbisch",
-    "BR": "Latin", "AR": "Latin", "MX": "Latin", "CO": "Latin", "CL": "Latin",
-    "PE": "Latin", "PR": "Latin", "DO": "Latin", "VE": "Latin", "CU": "Latin",
-    "ES": "Latin",
-    "KR": "K-Pop", "JP": "Japanisch",
+    "SI": "Serbisch", "BG": "Serbisch",
+    # ── K-Pop ─────────────────────────────────────────────────────────────────
+    "KR": "K-Pop",
+    # ── Japanisch ─────────────────────────────────────────────────────────────
+    "JP": "Japanisch",
+    # ── Latin ─────────────────────────────────────────────────────────────────
+    "BR": "Latin",  "AR": "Latin",  "MX": "Latin",  "CO": "Latin",
+    "CL": "Latin",  "PE": "Latin",  "PR": "Latin",  "DO": "Latin",
+    "VE": "Latin",  "CU": "Latin",  "ES": "Latin",  "PT": "Latin",
+    "PY": "Latin",  "UY": "Latin",  "BO": "Latin",  "EC": "Latin",
+    "GT": "Latin",  "HN": "Latin",  "SV": "Latin",  "NI": "Latin",
+    "CR": "Latin",  "PA": "Latin",  "HT": "Latin",  "GP": "Latin",
+    "MQ": "Latin",  "GF": "Latin",  "MF": "Latin",
+    # ── Indisch / Südasien ─────────────────────────────────────────────────────
+    "IN": "Indisch", "PK": "Indisch", "BD": "Indisch", "LK": "Indisch",
+    "NP": "Indisch", "BT": "Indisch", "MV": "Indisch",
+    "TJ": "Persisch",
+    # ── Afrikanisch ────────────────────────────────────────────────────────────
+    "NG": "Afrikanisch", "GH": "Afrikanisch", "ZA": "Afrikanisch",
+    "KE": "Afrikanisch", "TZ": "Afrikanisch", "ET": "Afrikanisch",
+    "SN": "Afrikanisch", "CI": "Afrikanisch", "CM": "Afrikanisch",
+    "CD": "Afrikanisch", "CG": "Afrikanisch", "AO": "Afrikanisch",
+    "MZ": "Afrikanisch", "ZW": "Afrikanisch", "MW": "Afrikanisch",
+    "ZM": "Afrikanisch", "UG": "Afrikanisch", "RW": "Afrikanisch",
+    "BI": "Afrikanisch", "BF": "Afrikanisch", "ML": "Afrikanisch",
+    "GN": "Afrikanisch", "GM": "Afrikanisch", "SL": "Afrikanisch",
+    "LR": "Afrikanisch", "BJ": "Afrikanisch", "TG": "Afrikanisch",
+    "NE": "Afrikanisch", "GW": "Afrikanisch", "CV": "Afrikanisch",
+    "ST": "Afrikanisch", "GQ": "Afrikanisch", "GA": "Afrikanisch",
+    "CF": "Afrikanisch", "TD": "Afrikanisch", "ER": "Afrikanisch",
+    "MG": "Afrikanisch", "NA": "Afrikanisch", "BW": "Afrikanisch",
+    "LS": "Afrikanisch", "SZ": "Afrikanisch", "SC": "Afrikanisch",
+    "MU": "Afrikanisch", "RE": "Afrikanisch",
+    # ── Persisch ───────────────────────────────────────────────────────────────
+    "IR": "Persisch", "AF": "Persisch",
+    # ── Hebräisch ─────────────────────────────────────────────────────────────
+    "IL": "Hebräisch",
+    # ── Sonstiges ─────────────────────────────────────────────────────────────
+    "DE": "Sonstiges", "AT": "Sonstiges", "CH": "Sonstiges", "FR": "Sonstiges",
+    "IT": "Sonstiges", "NL": "Sonstiges", "BE": "Sonstiges", "LU": "Sonstiges",
+    "GB": "Sonstiges", "IE": "Sonstiges", "IS": "Sonstiges", "NO": "Sonstiges",
+    "SE": "Sonstiges", "DK": "Sonstiges", "FI": "Sonstiges", "MT": "Sonstiges",
+    "SM": "Sonstiges", "VA": "Sonstiges", "AD": "Sonstiges", "MC": "Sonstiges",
+    "LI": "Sonstiges", "GL": "Sonstiges", "FO": "Sonstiges",
+    "PL": "Sonstiges", "CZ": "Sonstiges", "SK": "Sonstiges", "HU": "Sonstiges",
+    "US": "Sonstiges", "CA": "Sonstiges",
+    "JM": "Sonstiges", "TT": "Sonstiges", "BB": "Sonstiges",
+    "AU": "Sonstiges", "NZ": "Sonstiges",
+    "CN": "Sonstiges", "TW": "Sonstiges", "HK": "Sonstiges",
+    "VN": "Sonstiges", "TH": "Sonstiges", "PH": "Sonstiges",
+    "ID": "Sonstiges", "MY": "Sonstiges", "SG": "Sonstiges",
 }
 
+# Backward-compat aliases (used in _match_genre_rules / resolve)
+GENRE_RULES = DEFAULT_GENRE_RULES
+COUNTRY_TO_FOLDER = DEFAULT_COUNTRY_TO_FOLDER
+
 ETHNIC_FOLDERS = {
-    "Rumänisch", "Albanisch", "Türkisch", "Arabisch",
-    "Russia", "Griechisch", "Serbisch", "K-Pop", "Latin", "Japanisch",
+    "Rumänisch", "Albanisch", "Türkisch", "Arabisch", "Indisch", "Persisch",
+    "Hebräisch", "Russia", "Griechisch", "Serbisch", "K-Pop", "Latin",
+    "Japanisch", "Afrikanisch", "Afrohouse", "Deutschrap",
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -252,11 +894,11 @@ def _read_tags(path: Path) -> dict:
     return result
 
 
-def _match_genre_rules(genres: list) -> Optional[str]:
+def _match_genre_rules(genres: list, rules: Optional[list] = None) -> Optional[str]:
     if not genres:
         return None
     joined = " | ".join(g.lower() for g in genres)
-    for keyword, folder in GENRE_RULES:
+    for keyword, folder in (rules if rules is not None else GENRE_RULES):
         if keyword in joined:
             return folder
     return None
@@ -570,6 +1212,48 @@ class GenreResolver:
     def __init__(self, db: OrganizerDB, spotify: SpotifyClient):
         self.db = db
         self.spotify = spotify
+        self._genre_rules: list[tuple[str, str]] = DEFAULT_GENRE_RULES
+        self._country_map: dict[str, str] = DEFAULT_COUNTRY_TO_FOLDER
+        self._artist_rules: list[dict] = []
+
+    def reload_from_settings(self, settings: dict) -> None:
+        """Hot-reload rules from settings dict (called after save via API)."""
+        raw_genre = settings.get('genre_rules')
+        if raw_genre and isinstance(raw_genre, list):
+            self._genre_rules = [
+                (r['keyword'], r['folder'])
+                for r in raw_genre
+                if isinstance(r, dict) and r.get('keyword') and r.get('folder')
+            ]
+        else:
+            self._genre_rules = DEFAULT_GENRE_RULES
+
+        raw_country = settings.get('country_to_folder')
+        if raw_country and isinstance(raw_country, dict):
+            self._country_map = raw_country
+        else:
+            self._country_map = DEFAULT_COUNTRY_TO_FOLDER
+
+        raw_artist = settings.get('artist_rules')
+        if raw_artist and isinstance(raw_artist, list):
+            self._artist_rules = [
+                r for r in raw_artist
+                if isinstance(r, dict) and r.get('pattern') and r.get('artist')
+            ]
+        else:
+            self._artist_rules = []
+
+    def apply_artist_alias(self, raw_artist: str) -> str:
+        """Apply artist alias rules: if pattern matches → return mapped artist."""
+        lower = raw_artist.lower()
+        for rule in self._artist_rules:
+            if rule['pattern'].lower() in lower:
+                log.info(f"  Artist-Alias: '{raw_artist}' → '{rule['artist']}'")
+                return rule['artist']
+        return raw_artist
+
+    def get_artist_rules(self) -> list[dict]:
+        return self._artist_rules
 
     def resolve(self, artist: str, title: str) -> str:
         if not artist:
@@ -599,7 +1283,7 @@ class GenreResolver:
             self.db.cache_genres(artist, spotify_genres)
 
         # Ethnische Genres haben absolute Priorität
-        f = _match_genre_rules(spotify_genres)
+        f = _match_genre_rules(spotify_genres, self._genre_rules)
         if f in ETHNIC_FOLDERS:
             return f
 
@@ -610,9 +1294,9 @@ class GenreResolver:
             self.db.cache_country(artist, country or "")
         else:
             mb_tags = []
-        if country and country in COUNTRY_TO_FOLDER:
+        if country and country in self._country_map:
             log.info(f"  Artist Country: {country}")
-            return COUNTRY_TO_FOLDER[country]
+            return self._country_map[country]
 
         # Stil-basierte Spotify-Rules
         if f:
@@ -621,7 +1305,7 @@ class GenreResolver:
         # MusicBrainz Tags
         if mb_tags:
             log.info(f"  MusicBrainz Tags: {mb_tags[:5]}")
-            f = _match_genre_rules(mb_tags)
+            f = _match_genre_rules(mb_tags, self._genre_rules)
             if f:
                 return f
 
@@ -787,15 +1471,9 @@ def process_file(
         else:
             log.warning(f"  AudD konnte den Song nicht identifizieren")
 
-    file_id = _file_id(path, tags)
-    if db.is_processed(file_id, tags.get("spotify_id")):
-        log.info(f"  Bereits verarbeitet → skip")
-        if delete_after_move:
-            try: path.unlink()
-            except Exception: pass
-        return False
-
     raw_artist = tags.get("artist") or "Sonstiges"
+    # Apply artist alias rules before any further processing
+    raw_artist = resolver.apply_artist_alias(raw_artist)
     artist_p   = _primary_artist(raw_artist)
     title      = _sanitize(tags.get("title")  or path.stem)
     artist     = _sanitize(artist_p, "Sonstiges")
@@ -816,13 +1494,7 @@ def process_file(
         return False
 
     # Downtify Monitor DB updaten → verhindert Re-Download
-    if source == "download":
-        _nullify_monitor_filename(path)
-
-    db.mark_processed(
-        file_id, tags.get("spotify_id"), source,
-        genre, artist, album, title, str(target),
-    )
+    _nullify_monitor_filename(path)
     return True
 
 
@@ -933,6 +1605,11 @@ def start_organizer() -> OrganizerService:
         return _singleton
     _singleton = OrganizerService()
     _singleton.start()
+    return _singleton
+
+
+def get_organizer() -> Optional[OrganizerService]:
+    """Return running singleton (None if not started yet)."""
     return _singleton
 
 

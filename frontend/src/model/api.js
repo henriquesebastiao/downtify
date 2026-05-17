@@ -118,6 +118,22 @@ function setSettings(settings) {
   })
 }
 
+function listTruth(search = '', page = 1, limit = 20) {
+  return API.get('/api/truth', { params: { search, page, limit } })
+}
+
+function deleteTruth(trackId) {
+  return API.delete(`/api/truth/${trackId}`)
+}
+
+function getOrganizerConfig() {
+  return API.get('/api/organizer/config')
+}
+
+function saveOrganizerConfig(config) {
+  return API.post('/api/organizer/config', config)
+}
+
 function ws_onmessage(fn) {
   return (wsConnection.onmessage = fn)
 }
@@ -140,6 +156,10 @@ export default {
   clearQueue,
   getSettings,
   setSettings,
+  listTruth,
+  deleteTruth,
+  getOrganizerConfig,
+  saveOrganizerConfig,
   check_for_update,
   ws_onmessage,
   ws_onerror,

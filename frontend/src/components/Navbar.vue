@@ -50,6 +50,15 @@
         </button>
 
         <button
+          class="icon-btn"
+          :class="{ 'icon-btn-active': route.name === 'Organizer' }"
+          @click="router.push({ name: 'Organizer' })"
+          :title="t('nav.organizer')"
+        >
+          <Icon icon="clarity:organization-line" class="h-5 w-5" />
+        </button>
+
+        <button
           class="icon-btn relative"
           :class="{ 'icon-btn-active': route.name === 'Download' }"
           @click="

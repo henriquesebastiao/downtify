@@ -79,19 +79,61 @@ class PlaylistMonitorDB:
                 );
                 CREATE TABLE IF NOT EXISTS downloaded_tracks (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    playlist_id INTEGER NOT NULL,
+                    playlist_id INTEGER,
                     track_spotify_id TEXT NOT NULL,
                     downloaded_at TEXT NOT NULL,
+                    filename TEXT,
                     FOREIGN KEY (playlist_id) REFERENCES monitored_playlists(id)
-                        ON DELETE CASCADE,
-                    UNIQUE(playlist_id, track_spotify_id)
+                        ON DELETE CASCADE
                 );
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_track
+                    ON downloaded_tracks(playlist_id, track_spotify_id)
+                    WHERE playlist_id IS NOT NULL;
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_direct_track
+                    ON downloaded_tracks(track_spotify_id)
+                    WHERE playlist_id IS NULL;
             """)
-            # Migration: add filename column if it doesn't exist yet
+            # Migration: add filename column if it doesn't exist yet (legacy)
             try:
                 conn.execute(
                     'ALTER TABLE downloaded_tracks ADD COLUMN filename TEXT'
                 )
+            except Exception:
+                pass
+            # Migration: make playlist_id nullable by rebuilding the table when
+            # the old NOT NULL constraint is still in place.
+            try:
+                info = conn.execute(
+                    "PRAGMA table_info(downloaded_tracks)"
+                ).fetchall()
+                for col in info:
+                    if col[1] == 'playlist_id' and col[3] == 1:  # notnull=1
+                        conn.executescript("""
+                            CREATE TABLE downloaded_tracks_new (
+                                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                                playlist_id      INTEGER,
+                                track_spotify_id TEXT NOT NULL,
+                                downloaded_at    TEXT NOT NULL,
+                                filename         TEXT,
+                                FOREIGN KEY (playlist_id)
+                                    REFERENCES monitored_playlists(id)
+                                    ON DELETE CASCADE
+                            );
+                            INSERT INTO downloaded_tracks_new
+                                SELECT id, playlist_id, track_spotify_id,
+                                       downloaded_at, filename
+                                FROM downloaded_tracks;
+                            DROP TABLE downloaded_tracks;
+                            ALTER TABLE downloaded_tracks_new
+                                RENAME TO downloaded_tracks;
+                            CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_track
+                                ON downloaded_tracks(playlist_id, track_spotify_id)
+                                WHERE playlist_id IS NOT NULL;
+                            CREATE UNIQUE INDEX IF NOT EXISTS idx_direct_track
+                                ON downloaded_tracks(track_spotify_id)
+                                WHERE playlist_id IS NULL;
+                        """)
+                        break
             except Exception:
                 pass
 
@@ -193,14 +235,102 @@ class PlaylistMonitorDB:
     ) -> None:
         with self._connect() as conn:
             conn.execute(
+                "DELETE FROM downloaded_tracks WHERE playlist_id=? AND track_spotify_id=?",
+                (playlist_id, track_spotify_id),
+            )
+            conn.execute(
                 """INSERT INTO downloaded_tracks
                    (playlist_id, track_spotify_id, downloaded_at, filename)
-                   VALUES (?, ?, ?, ?)
-                   ON CONFLICT(playlist_id, track_spotify_id) DO UPDATE SET
-                   downloaded_at=excluded.downloaded_at,
-                   filename=excluded.filename""",
+                   VALUES (?, ?, ?, ?)""",
                 (playlist_id, track_spotify_id, _now_iso(), filename),
             )
+
+    def mark_direct_download(
+        self,
+        spotify_id: str,
+        filename: Optional[str] = None,
+    ) -> None:
+        """Track a direct (non-playlist) download in the List of Truth."""
+        with self._connect() as conn:
+            existing = conn.execute(
+                "SELECT id FROM downloaded_tracks WHERE track_spotify_id=?",
+                (spotify_id,),
+            ).fetchone()
+            if existing:
+                return
+            conn.execute(
+                """INSERT OR IGNORE INTO downloaded_tracks
+                   (playlist_id, track_spotify_id, downloaded_at, filename)
+                   VALUES (NULL, ?, ?, ?)""",
+                (spotify_id, _now_iso(), filename),
+            )
+
+    def is_track_downloaded(self, spotify_id: str) -> bool:
+        """Return True if this Spotify track is already in the List of Truth."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM downloaded_tracks WHERE track_spotify_id=?",
+                (spotify_id,),
+            ).fetchone()
+            return row is not None
+
+    def list_all_downloads(
+        self,
+        search: str = '',
+        page: int = 1,
+        limit: int = 20,
+    ) -> tuple[list[dict], int]:
+        """Paginated search across all downloaded tracks (List of Truth)."""
+        offset = (page - 1) * limit
+        with self._connect() as conn:
+            if search:
+                pattern = f'%{search}%'
+                where = (
+                    "WHERE dt.filename LIKE ? OR dt.track_spotify_id LIKE ?"
+                    " OR mp.name LIKE ?"
+                )
+                args: tuple = (pattern, pattern, pattern)
+            else:
+                where = ""
+                args = ()
+            total = conn.execute(
+                f"""SELECT COUNT(*) FROM downloaded_tracks dt
+                    LEFT JOIN monitored_playlists mp ON dt.playlist_id = mp.id
+                    {where}""",
+                args,
+            ).fetchone()[0]
+            rows = conn.execute(
+                f"""SELECT dt.id, dt.playlist_id, dt.track_spotify_id,
+                           dt.downloaded_at, dt.filename, mp.name as playlist_name
+                    FROM downloaded_tracks dt
+                    LEFT JOIN monitored_playlists mp ON dt.playlist_id = mp.id
+                    {where}
+                    ORDER BY dt.downloaded_at DESC
+                    LIMIT ? OFFSET ?""",
+                args + (limit, offset),
+            ).fetchall()
+        items = [
+            {
+                'id': r['id'],
+                'playlist_id': r['playlist_id'],
+                'track_spotify_id': r['track_spotify_id'],
+                'downloaded_at': r['downloaded_at'],
+                'filename': r['filename'],
+                'playlist_name': r['playlist_name'],
+            }
+            for r in rows
+        ]
+        pages = max(1, (total + limit - 1) // limit)
+        return items, total, pages
+
+    def delete_download(self, track_id: int) -> bool:
+        """Remove a track from the List of Truth so it can be re-downloaded."""
+        with self._connect() as conn:
+            cur = conn.execute(
+                "DELETE FROM downloaded_tracks WHERE id=?",
+                (track_id,),
+            )
+            return cur.rowcount > 0
 
 
 def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:

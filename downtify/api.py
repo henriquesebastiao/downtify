@@ -39,6 +39,11 @@ from loguru import logger
 from . import m3u, providers, spotify
 from .downloader import Downloader
 from .monitor import PlaylistMonitorDB, check_playlist
+from .organizer_service import (
+    DEFAULT_GENRE_RULES,
+    DEFAULT_COUNTRY_TO_FOLDER,
+    get_organizer,
+)
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
@@ -50,6 +55,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'generate_m3u': True,
     'max_parallel_downloads': 3,
     'organize_by_artist': False,
+    'genre_rules': None,        # None = use hardcoded defaults
+    'artist_rules': [],
+    'country_to_folder': None,  # None = use hardcoded defaults
 }
 
 
@@ -125,6 +133,14 @@ def _load_settings(path: Path) -> dict[str, Any]:
     except Exception:
         pass
     return dict(DEFAULT_SETTINGS)
+
+
+def _save_settings_full(path: Path, settings: dict[str, Any]) -> None:
+    """Save all settings keys (including organizer config) to disk."""
+    try:
+        path.write_text(json.dumps(settings, indent=2, ensure_ascii=False), encoding='utf-8')
+    except Exception as exc:
+        logger.warning('Could not persist settings: {}', exc)
 
 
 def _save_settings(path: Path, settings: dict[str, Any]) -> None:
@@ -318,6 +334,15 @@ async def _run_download(
         'status': 'done',
         'filename': filename,
     })
+
+    # Track in the List of Truth (monitor DB) for direct downloads
+    if state.monitor_db is not None and filename:
+        spotify_id = song.get('song_id') or song.get('spotify_id') or ''
+        if spotify_id:
+            await asyncio.to_thread(
+                state.monitor_db.mark_direct_download, spotify_id, filename
+            )
+
     return filename
 
 
@@ -596,6 +621,81 @@ async def update_settings_endpoint(
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)
     return state.settings
+
+
+@router.get('/api/truth')
+def get_truth(
+    search: str = Query(''),
+    page: int = Query(1),
+    limit: int = Query(20),
+) -> dict[str, Any]:
+    """List of Truth: paginated search of all downloaded tracks in monitor DB."""
+    if state.monitor_db is None:
+        return {'items': [], 'total': 0, 'page': page, 'pages': 1}
+    items, total, pages = state.monitor_db.list_all_downloads(
+        search=search, page=page, limit=limit
+    )
+    return {'items': items, 'total': total, 'page': page, 'pages': pages}
+
+
+@router.delete('/api/truth/{track_id}')
+def delete_truth(track_id: int) -> dict[str, Any]:
+    """Remove a track from the List of Truth so it can be re-downloaded."""
+    if state.monitor_db is None:
+        raise HTTPException(status_code=503, detail='Monitor DB not ready')
+    deleted = state.monitor_db.delete_download(track_id)
+    return {'deleted': deleted}
+
+
+@router.get('/api/organizer/config')
+def get_organizer_config() -> dict[str, Any]:
+    """Return current organizer rules (genre rules + artist aliases)."""
+    genre_rules = state.settings.get('genre_rules')
+    if not genre_rules:
+        genre_rules = [
+            {'keyword': kw, 'folder': folder}
+            for kw, folder in DEFAULT_GENRE_RULES
+        ]
+    country_to_folder = state.settings.get('country_to_folder')
+    if not country_to_folder:
+        country_to_folder = DEFAULT_COUNTRY_TO_FOLDER
+    artist_rules = state.settings.get('artist_rules') or []
+    available_folders = sorted(set(
+        r['folder'] for r in genre_rules
+        if isinstance(r, dict) and r.get('folder')
+    ))
+    return {
+        'genre_rules': genre_rules,
+        'artist_rules': artist_rules,
+        'country_to_folder': country_to_folder,
+        'available_folders': available_folders,
+    }
+
+
+@router.post('/api/organizer/config')
+async def save_organizer_config(request: Request) -> dict[str, Any]:
+    """Save organizer rules to settings and hot-reload the organizer."""
+    try:
+        payload = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail='Invalid JSON') from exc
+
+    if isinstance(payload.get('genre_rules'), list):
+        state.settings['genre_rules'] = payload['genre_rules']
+    if isinstance(payload.get('artist_rules'), list):
+        state.settings['artist_rules'] = payload['artist_rules']
+    if isinstance(payload.get('country_to_folder'), dict):
+        state.settings['country_to_folder'] = payload['country_to_folder']
+
+    if state.settings_path is not None:
+        _save_settings_full(state.settings_path, state.settings)
+
+    # Hot-reload organizer rules
+    svc = get_organizer()
+    if svc is not None:
+        svc.resolver.reload_from_settings(state.settings)
+
+    return {'saved': True}
 
 
 @router.websocket('/api/ws')
