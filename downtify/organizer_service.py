@@ -712,6 +712,39 @@ def determine_target_path(genre: str, artist: str, album: str, title: str, ext: 
     return target
 
 
+# ── Downtify Monitor DB: filename nullifizieren ───────────────────────────────
+
+def _nullify_monitor_filename(original_path: Path) -> None:
+    """
+    Setzt filename=NULL in Downtifys downloaded_tracks Tabelle.
+
+    Warum: monitor.py re-downloaded einen Song wenn:
+        stored is not None AND not (download_dir / stored).exists()
+
+    Wenn filename=NULL ist, greift stored is not None NICHT → kein Re-Download.
+    Der Song bleibt als "erledigt" in der DB – wird nie mehr neu heruntergeladen.
+    """
+    monitor_db = DATA_DIR / "downtify_monitor.db"
+    if not monitor_db.exists():
+        return
+    try:
+        # Relativer Pfad wie er in downloaded_tracks.filename gespeichert ist
+        rel = original_path.relative_to(DOWNLOAD_DIR).as_posix()
+        conn = sqlite3.connect(str(monitor_db), timeout=10)
+        cur = conn.execute(
+            "UPDATE downloaded_tracks SET filename = NULL WHERE filename = ?",
+            (rel,),
+        )
+        conn.commit()
+        conn.close()
+        if cur.rowcount > 0:
+            log.info(f"  ✓ Monitor DB: filename nullified ({rel})")
+        else:
+            log.debug(f"  Monitor DB: kein Eintrag für {rel} gefunden")
+    except Exception as e:
+        log.warning(f"  Monitor DB Update fehlgeschlagen: {e}")
+
+
 # ── Datei-Verarbeitung ───────────────────────────────────────────────────────
 
 def _file_id(path: Path, tags: dict) -> str:
@@ -781,6 +814,10 @@ def process_file(
     except Exception as e:
         log.error(f"  ✗ Move fehlgeschlagen: {e}")
         return False
+
+    # Downtify Monitor DB updaten → verhindert Re-Download
+    if source == "download":
+        _nullify_monitor_filename(path)
 
     db.mark_processed(
         file_id, tags.get("spotify_id"), source,
