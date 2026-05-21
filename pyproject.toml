@@ -36,6 +36,9 @@ line-length = 79
 [tool.ruff.lint]
 preview = true
 select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+extend-ignore = [
+    'PLW0717',
+]
 
 [tool.ruff.format]
 preview = true
