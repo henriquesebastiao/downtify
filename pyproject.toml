@@ -18,6 +18,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "codeflash>=0.20.5",
     "pytest>=8.0",
     "ruff>=0.15.2",
     "zensical>=0.0.43",
@@ -45,3 +46,10 @@ quote-style = 'single'
 "downloader.py" = ["PLC1901"]
 "downtify/*.py" = ["E501", "PLR0913", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916"]
 "tests/*.py" = ["PLR2004", "PLC2701", "E501"]
+
+[tool.codeflash]
+# All paths are relative to this pyproject.toml's directory.
+module-root = "downtify"
+tests-root = "tests"
+ignore-paths = []
+formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
