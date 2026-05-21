@@ -176,7 +176,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "mutagen", specifier = ">=1.47" },
     { name = "requests", specifier = ">=2.34.1" },
-    { name = "uvicorn", specifier = ">=0.23" },
+    { name = "uvicorn", specifier = ">=0.47.0" },
     { name = "websockets", specifier = ">=12.0" },
     { name = "yt-dlp", specifier = ">=2026.2.4" },
     { name = "ytmusicapi", specifier = ">=1.10" },
