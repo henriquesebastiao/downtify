@@ -6,11 +6,11 @@ annotated-types==0.7.0
     # via pydantic
 anyio==4.13.0
     # via starlette
-certifi==2026.4.22
+certifi==2026.5.20
     # via requests
 charset-normalizer==3.4.7
     # via requests
-click==8.3.3
+click==8.4.0
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
@@ -22,7 +22,7 @@ fastapi==0.136.1
     # via downtify
 h11==0.16.0
     # via uvicorn
-idna==3.13
+idna==3.15
     # via
     #   anyio
     #   requests
@@ -32,13 +32,13 @@ loguru==0.7.3
     # via downtify
 mutagen==1.47.0
     # via downtify
-pydantic==2.13.3
+pydantic==2.13.4
     # via fastapi
-pydantic-core==2.46.3
+pydantic-core==2.46.4
     # via pydantic
 python-dotenv==1.2.2
     # via load-dotenv
-requests==2.33.1
+requests==2.34.2
     # via
     #   downtify
     #   ytmusicapi
@@ -58,9 +58,9 @@ typing-inspection==0.4.2
     # via
     #   fastapi
     #   pydantic
-urllib3==2.6.3
+urllib3==2.7.0
     # via requests
-uvicorn==0.46.0
+uvicorn==0.47.0
     # via downtify
 websockets==16.0
     # via downtify
