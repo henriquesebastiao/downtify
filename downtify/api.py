@@ -198,6 +198,12 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         leave_in_place = True
     else:
         leave_in_place = bool(leave_in_place)
+    try:
+        max_parallel = int(settings.get('max_parallel_downloads') or 3)
+    except (TypeError, ValueError):
+        max_parallel = 3
+    max_parallel = min(8, max(1, max_parallel))
+
     return {
         'enabled': bool(raw.get('enabled', False)),
         'base_url': base_url,
@@ -205,6 +211,7 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'download_dir': download_dir,
         'source_dir': source_dir,
         'leave_in_place': leave_in_place,
+        'max_parallel_downloads': max_parallel,
         'timeout_seconds': timeout_seconds,
         'search_retries': search_retries,
         'search_poll_seconds': search_poll_seconds,

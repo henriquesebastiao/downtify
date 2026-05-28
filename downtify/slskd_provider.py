@@ -16,7 +16,28 @@ from urllib.parse import quote
 import requests
 from loguru import logger
 
-_SLSKD_LOCK = threading.Lock()
+_SLSKD_SEM: Optional[threading.Semaphore] = None
+_SLSKD_SEM_LIMIT = 0
+
+
+def _slskd_parallel_limit(settings: dict[str, Any]) -> int:
+    return _int_setting(
+        settings,
+        'max_parallel_downloads',
+        3,
+        minimum=1,
+        maximum=8,
+    )
+
+
+def _slskd_semaphore(settings: dict[str, Any]) -> threading.Semaphore:
+    """Match Downtify parallel download setting; do not serialize all slskd work."""
+    global _SLSKD_SEM, _SLSKD_SEM_LIMIT
+    limit = _slskd_parallel_limit(settings)
+    if _SLSKD_SEM is None or _SLSKD_SEM_LIMIT != limit:
+        _SLSKD_SEM = threading.Semaphore(limit)
+        _SLSKD_SEM_LIMIT = limit
+    return _SLSKD_SEM
 
 _DEFAULT_DOWNLOAD_TIMEOUT_SECONDS = 600
 _DEFAULT_QUEUED_TIMEOUT_SECONDS = 180
@@ -915,8 +936,12 @@ def download_from_slskd(
     deadline = _slskd_deadline(settings)
     report(2.0, 'Searching slskd')
 
-    with _SLSKD_LOCK:
-        search_id = ''
+    search_id = ''
+    queued: Optional[dict[str, Any]] = None
+
+    # Search + enqueue only: allow N in parallel; do not hold the slot while
+    # waiting minutes for the Soulseek transfer on disk.
+    with _slskd_semaphore(settings):
         responses: list[dict[str, Any]] = []
         used_query = ''
         for query in queries:
@@ -977,7 +1002,6 @@ def download_from_slskd(
             client.delete_search(search_id)
             return None
 
-        queued: Optional[dict[str, Any]] = None
         for file_row in files:
             if client.enqueue_download(file_row):
                 queued = file_row
@@ -996,62 +1020,63 @@ def download_from_slskd(
             )
             return None
 
-        report(36.0, 'Queued on slskd')
-        username = str(queued.get('username') or '')
-        filename = str(queued.get('filename') or '')
+    report(36.0, 'Queued on slskd')
+    username = str(queued.get('username') or '')
+    filename = str(queued.get('filename') or '')
+    try:
+        queued_size = int(queued.get('size') or 0)
+    except (TypeError, ValueError):
+        queued_size = 0
+    roots = _search_roots(settings, client)
+
+    def _root_key(path: Path) -> str:
         try:
-            queued_size = int(queued.get('size') or 0)
-        except (TypeError, ValueError):
-            queued_size = 0
-        roots = _search_roots(settings, client)
+            return str(path.resolve())
+        except OSError:
+            return str(path)
 
-        def _root_key(path: Path) -> str:
-            try:
-                return str(path.resolve())
-            except OSError:
-                return str(path)
+    root_keys = {_root_key(r) for r in roots}
+    if _root_key(source_dir) not in root_keys:
+        roots.insert(0, source_dir)
+    if _root_key(output_dir) not in root_keys:
+        roots.append(output_dir)
 
-        root_keys = {_root_key(r) for r in roots}
-        if _root_key(source_dir) not in root_keys:
-            roots.insert(0, source_dir)
-        if _root_key(output_dir) not in root_keys:
-            roots.append(output_dir)
-
-        found = _wait_for_slskd_file(
-            client,
-            song,
-            username,
-            filename,
-            settings,
-            roots,
-            expected_size=queued_size,
-            progress_cb=progress_cb,
-            deadline=deadline,
-        )
+    found = _wait_for_slskd_file(
+        client,
+        song,
+        username,
+        filename,
+        settings,
+        roots,
+        expected_size=queued_size,
+        progress_cb=progress_cb,
+        deadline=deadline,
+    )
+    if search_id:
         client.delete_search(search_id)
 
-        if found is None:
-            found = _resolve_downloaded_file(
-                roots,
-                output_dir,
-                song,
-                filename,
-                username=username,
-                leave_in_place=leave_in_place,
-                expected_size=queued_size,
-            )
-        else:
-            found = _finalize_slskd_path(found, output_dir, leave_in_place)
+    if found is None:
+        found = _resolve_downloaded_file(
+            roots,
+            output_dir,
+            song,
+            filename,
+            username=username,
+            leave_in_place=leave_in_place,
+            expected_size=queued_size,
+        )
+    else:
+        found = _finalize_slskd_path(found, output_dir, leave_in_place)
 
-        if found is None:
-            remote_dirs = client.remote_download_directories()
-            logger.info(
-                'slskd: file not found after transfer title={!r} searched={} '
-                'slskd_dirs={} file={!r} user={!r}',
-                song.get('name'),
-                [str(p) for p in roots],
-                remote_dirs,
-                _file_basename(filename),
-                username,
-            )
-        return found
+    if found is None:
+        remote_dirs = client.remote_download_directories()
+        logger.info(
+            'slskd: file not found after transfer title={!r} searched={} '
+            'slskd_dirs={} file={!r} user={!r}',
+            song.get('name'),
+            [str(p) for p in roots],
+            remote_dirs,
+            _file_basename(filename),
+            username,
+        )
+    return found
