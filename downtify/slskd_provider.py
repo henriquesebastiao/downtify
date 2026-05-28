@@ -30,13 +30,20 @@ def _slskd_parallel_limit(settings: dict[str, Any]) -> int:
     )
 
 
+def reset_slskd_parallelism(settings: dict[str, Any]) -> None:
+    """Apply a new parallel limit after settings change (call on save)."""
+    global _SLSKD_SEM, _SLSKD_SEM_LIMIT
+    limit = _slskd_parallel_limit(settings)
+    _SLSKD_SEM = threading.Semaphore(limit)
+    _SLSKD_SEM_LIMIT = limit
+
+
 def _slskd_semaphore(settings: dict[str, Any]) -> threading.Semaphore:
     """Match Downtify parallel download setting; do not serialize all slskd work."""
     global _SLSKD_SEM, _SLSKD_SEM_LIMIT
     limit = _slskd_parallel_limit(settings)
     if _SLSKD_SEM is None or _SLSKD_SEM_LIMIT != limit:
-        _SLSKD_SEM = threading.Semaphore(limit)
-        _SLSKD_SEM_LIMIT = limit
+        reset_slskd_parallelism(settings)
     return _SLSKD_SEM
 
 _DEFAULT_DOWNLOAD_TIMEOUT_SECONDS = 600

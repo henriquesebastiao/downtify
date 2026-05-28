@@ -189,7 +189,7 @@ export default {
       "Save songs in subfolders named after the artist. Playlist tracks are also placed in their artist's folder instead of a playlist folder.",
     parallelDownloads: 'Parallel downloads',
     parallelDownloadsHint:
-      'Maximum number of songs downloaded simultaneously. Higher values are faster but use more bandwidth.',
+      'Maximum songs at once (YouTube and slskd). Tap a number, then Save — applies to new work; a playlist already running keeps its current batch until you start another.',
     saved: 'Changes saved',
     saveError: "Couldn't save settings.",
     language: 'Language',

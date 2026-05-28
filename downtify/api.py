@@ -966,7 +966,15 @@ async def update_settings_endpoint(
         if 'max_parallel_downloads' in payload:
             try:
                 count = max(1, int(payload['max_parallel_downloads']))
+                count = min(8, count)
                 state.download_semaphore = asyncio.Semaphore(count)
+                if state.downloader is not None:
+                    state.downloader.slskd_settings = _effective_slskd_settings(
+                        state.settings
+                    )
+                from downtify.slskd_provider import reset_slskd_parallelism
+
+                reset_slskd_parallelism(state.settings)
             except (TypeError, ValueError):
                 pass
     if state.settings_path is not None:
