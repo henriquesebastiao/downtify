@@ -81,6 +81,38 @@ function downloadFileURL(fileName) {
   return `/media/${encodePath(fileName)}`
 }
 
+function decodePathSegment(segment) {
+  try {
+    return decodeURIComponent(segment)
+  } catch {
+    return segment
+  }
+}
+
+/** Stored library path from a /media/... URL or plain relative path. */
+function mediaUrlToStoredPath(fileNameOrMediaUrl) {
+  let path = String(fileNameOrMediaUrl || '')
+  const mediaIdx = path.indexOf('/media/')
+  if (mediaIdx >= 0) {
+    path = path.slice(mediaIdx + '/media/'.length)
+  } else {
+    path = path.replace(/^\//, '')
+  }
+  return path
+    .split('/')
+    .filter(Boolean)
+    .map(decodePathSegment)
+    .join('/')
+}
+
+/** Filename for the browser save dialog (decoded, no %20 etc.). */
+function downloadSaveName(fileNameOrMediaUrl) {
+  const stored = mediaUrlToStoredPath(fileNameOrMediaUrl)
+  if (!stored) return 'download'
+  const parts = stored.split('/')
+  return parts[parts.length - 1] || 'download'
+}
+
 function coverFileURL(fileName) {
   return `/cover?file=${encodeURIComponent(fileName)}`
 }
@@ -135,6 +167,7 @@ export default {
   download,
   downloadBatch,
   downloadFileURL,
+  downloadSaveName,
   coverFileURL,
   listDownloads,
   deleteDownload,

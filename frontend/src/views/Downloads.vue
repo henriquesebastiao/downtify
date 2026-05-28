@@ -124,7 +124,7 @@
             <a
               class="icon-btn"
               :href="API.downloadFileURL(entry.file)"
-              download
+              :download="API.downloadSaveName(entry.file)"
               :title="t('library.downloadToDevice')"
             >
               <Icon icon="clarity:download-line" class="h-4 w-4" />

@@ -257,6 +257,7 @@
 <script setup>
 import { ref, computed, watch, reactive } from 'vue'
 import { Icon } from '@iconify/vue'
+import API from '../model/api'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
 
@@ -448,7 +449,7 @@ function applyOverride(item) {
 function forceDownload(url) {
   const a = document.createElement('a')
   a.href = url
-  a.download = url.split('/').pop()
+  a.download = API.downloadSaveName(url)
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

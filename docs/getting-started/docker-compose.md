@@ -17,7 +17,7 @@ docker compose pull
 docker compose up -d
 ```
 
-[`docker-compose.example.yml`](../../docker-compose.example.yml) uses **`dx616b/spoti-to-navidrome:2.7.8`**, maps `/downloads` and `/slskd`, and listens on port `30321` inside the container (`8000:30321` on the host).
+[`docker-compose.example.yml`](../../docker-compose.example.yml) uses **`dx616b/spoti-to-navidrome:2.7.9`**, maps `/downloads` and `/slskd`, and listens on port `30321` inside the container (`8000:30321` on the host).
 
 Or create a minimal `docker-compose.yml` manually:
 
@@ -25,7 +25,7 @@ Or create a minimal `docker-compose.yml` manually:
 services:
   downtify:
     container_name: downtify
-    image: dx616b/spoti-to-navidrome:2.7.8
+    image: dx616b/spoti-to-navidrome:2.7.9
     ports:
       - '8000:30321'
     environment:

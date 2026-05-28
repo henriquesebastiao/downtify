@@ -13,7 +13,7 @@
 services:
   downtify:
     container_name: downtify
-    image: dx616b/spoti-to-navidrome:2.7.8
+    image: dx616b/spoti-to-navidrome:2.7.9
     restart: unless-stopped
     ports:
       - '8000:30321'
