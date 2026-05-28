@@ -206,6 +206,38 @@ def _yt_po_tokens() -> list[str]:
     return [t.strip() for t in raw.split(',') if t.strip()]
 
 
+_YTDLP_AUDIO_FORMATS = (
+    'bestaudio/best',
+    'bestaudio[ext=m4a]/bestaudio/best[acodec!=none]/best/b',
+    'ba/b/bv*+ba/b',
+    'worst[acodec!=none]/worst',
+)
+
+
+def _youtube_extractor_args(
+    youtube_settings: Optional[dict[str, Any]] = None,
+    *,
+    allow_missing_pot: bool = False,
+) -> dict[str, Any]:
+    args: dict[str, Any] = {
+        'player_client': _youtube_player_clients(youtube_settings),
+    }
+    po = _yt_po_tokens()
+    if po:
+        args['po_token'] = po
+    if allow_missing_pot:
+        args['formats'] = ['missing_pot']
+    return args
+
+
+def _ytdlp_format_unavailable_retry(exc: BaseException) -> bool:
+    msg = str(exc).casefold()
+    return (
+        'requested format is not available' in msg
+        or 'only images are available' in msg
+    )
+
+
 def _fallback_video_id_via_ytdlp(
     song: dict[str, Any],
     *,
@@ -707,11 +739,7 @@ class Downloader:
             # check on datacenter IPs. `tv` and `mweb` almost always
             # bypass it. Order matters — yt-dlp tries them in sequence.
             'extractor_args': {
-                'youtube': {
-                    'player_client': _youtube_player_clients(
-                        self.youtube_settings
-                    )
-                }
+                'youtube': _youtube_extractor_args(self.youtube_settings),
             },
             # Light pacing so we don't trigger 429 rate limits when the
             # user fires off multiple downloads back-to-back.
@@ -747,23 +775,52 @@ class Downloader:
             raise RuntimeError('missing YouTube video id')
 
         last_err: Optional[BaseException] = None
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            for index, url in enumerate(urls):
+        success = False
+        for url_index, url in enumerate(urls):
+            for fmt_index, fmt in enumerate(_YTDLP_AUDIO_FORMATS):
+                attempt_opts = dict(ydl_opts)
+                attempt_opts['format'] = fmt
+                attempt_opts['extractor_args'] = {
+                    'youtube': _youtube_extractor_args(
+                        self.youtube_settings,
+                        allow_missing_pot=(
+                            fmt_index == len(_YTDLP_AUDIO_FORMATS) - 1
+                        ),
+                    ),
+                }
                 try:
-                    ydl.download([url])
+                    with yt_dlp.YoutubeDL(attempt_opts) as ydl:
+                        ydl.download([url])
+                    success = True
                     last_err = None
                     break
                 except DownloadError as exc:
                     last_err = exc
-                    if index + 1 < len(urls) and _ytdlp_age_restricted_retry(exc):
+                    if (
+                        fmt_index + 1 < len(_YTDLP_AUDIO_FORMATS)
+                        and _ytdlp_format_unavailable_retry(exc)
+                    ):
+                        logger.info(
+                            'yt-dlp: format {!r} unavailable for {}, '
+                            'trying fallback',
+                            fmt,
+                            video_id,
+                        )
+                        continue
+                    if (
+                        url_index + 1 < len(urls)
+                        and _ytdlp_age_restricted_retry(exc)
+                    ):
                         logger.info(
                             'yt-dlp: age-restricted on {!r}, trying {!r}',
                             url,
-                            urls[index + 1],
+                            urls[url_index + 1],
                         )
-                        continue
+                        break
                     raise
-        if last_err is not None:
+            if success:
+                break
+        if not success and last_err is not None:
             raise last_err
 
         final_path = target_dir / f'{basename}.{self.audio_format}'

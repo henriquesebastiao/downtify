@@ -12,7 +12,10 @@ from downtify.api import (
     _youtube_settings_for_response,
 )
 from downtify.downloader import (
+    _YTDLP_AUDIO_FORMATS,
+    _youtube_extractor_args,
     _youtube_watch_urls,
+    _ytdlp_format_unavailable_retry,
     apply_ytdlp_cookie_opts,
     ytdlp_cookies_configured,
 )
@@ -91,6 +94,23 @@ def test_youtube_watch_urls_music_first_without_cookies():
 
 def test_ytdlp_cookies_configured_false_when_missing_file():
     assert not ytdlp_cookies_configured({'cookies_file': '/no/such.txt'})
+
+
+def test_ytdlp_format_unavailable_retry_detects_message():
+    assert _ytdlp_format_unavailable_retry(
+        Exception('Requested format is not available')
+    )
+
+
+def test_youtube_extractor_args_includes_po_token(monkeypatch):
+    monkeypatch.setenv('DOWNTIFY_YT_PO_TOKEN', 'web.gvs+TEST')
+    args = _youtube_extractor_args({})
+    assert args['po_token'] == ['web.gvs+TEST']
+
+
+def test_ytdlp_audio_formats_has_fallbacks():
+    assert len(_YTDLP_AUDIO_FORMATS) >= 3
+    assert _YTDLP_AUDIO_FORMATS[0] == 'bestaudio/best'
 
 
 def test_validate_youtube_cookies_bytes_rejects_empty():
