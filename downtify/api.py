@@ -39,7 +39,7 @@ from fastapi import (
 from loguru import logger
 
 from . import m3u, providers, spotify
-from .downloader import Downloader, NoAudioMatchError
+from .downloader import Downloader, NoAudioMatchError, inspect_youtube_cookies
 from .monitor import PlaylistMonitorDB, check_playlist
 from .navidrome import _effective_navidrome_settings, sync_playlist_to_navidrome
 from .library_metadata import read_audio_metadata
@@ -121,9 +121,23 @@ def _effective_youtube_settings(settings: dict[str, Any]) -> dict[str, Any]:
 def _youtube_settings_for_response(settings: dict[str, Any]) -> dict[str, Any]:
     yt = _effective_youtube_settings(settings)
     path = yt.get('cookies_file') or ''
+    cookie_path = Path(path) if path else None
+    health = (
+        inspect_youtube_cookies(cookie_path)
+        if cookie_path is not None
+        else {
+            'exists': False,
+            'looks_authenticated': False,
+            'auth_cookies_found': [],
+            'warnings': [],
+        }
+    )
     return {
         **yt,
         'cookies_file_exists': bool(path and Path(path).is_file()),
+        'cookies_looks_authenticated': bool(health.get('looks_authenticated')),
+        'cookies_auth_names': list(health.get('auth_cookies_found') or []),
+        'cookies_warnings': list(health.get('warnings') or []),
     }
 
 
@@ -1084,6 +1098,14 @@ async def upload_youtube_cookies_endpoint(
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)
     logger.info('YouTube cookies saved to {}', dest)
+    health = inspect_youtube_cookies(dest)
+    for warning in health.get('warnings') or []:
+        logger.warning('YouTube cookies upload: {}', warning)
+    if health.get('looks_authenticated'):
+        logger.info(
+            'YouTube cookies upload: login session detected ({})',
+            ', '.join(health.get('auth_cookies_found') or []),
+        )
     out = dict(state.settings)
     out['youtube'] = _youtube_settings_for_response(state.settings)
     return out

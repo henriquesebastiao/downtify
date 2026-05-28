@@ -167,10 +167,93 @@ def apply_ytdlp_cookie_opts(
 _COOKIE_YT_CLIENTS = (
     'web_safari',
     'web',
-    'web_creator',
-    'mweb',
+    'tv_embedded',
+    'web_embedded',
     'tv',
 )
+
+_YOUTUBE_AUTH_COOKIE_NAMES = frozenset(
+    {
+        'LOGIN_INFO',
+        'SID',
+        '__Secure-1PSID',
+        '__Secure-3PSID',
+        'SAPISID',
+        '__Secure-1PAPISID',
+        '__Secure-3PAPISID',
+    }
+)
+
+
+def inspect_youtube_cookies(path: Path | str) -> dict[str, Any]:
+    """Best-effort Netscape cookie file health check for YouTube auth."""
+    cookie_path = Path(path)
+    out: dict[str, Any] = {
+        'path': str(cookie_path),
+        'exists': cookie_path.is_file(),
+        'auth_cookies_found': [],
+        'looks_authenticated': False,
+        'has_youtube_domain': False,
+        'warnings': [],
+    }
+    if not cookie_path.is_file():
+        out['warnings'].append('cookies file not found')
+        return out
+    try:
+        text = cookie_path.read_text(encoding='utf-8', errors='replace')
+    except OSError as exc:
+        out['warnings'].append(f'cannot read cookies file: {exc}')
+        return out
+    if 'youtube.com' not in text.casefold():
+        out['warnings'].append('no youtube.com cookies in file')
+        return out
+    out['has_youtube_domain'] = True
+    names: set[str] = set()
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        parts = line.split('\t')
+        if len(parts) < 7:
+            continue
+        domain, name = parts[0], parts[5]
+        if 'youtube' in domain.casefold():
+            names.add(name)
+    found = sorted(names & _YOUTUBE_AUTH_COOKIE_NAMES)
+    out['auth_cookies_found'] = found
+    out['looks_authenticated'] = bool(found) and (
+        'LOGIN_INFO' in names
+        or '__Secure-3PSID' in names
+        or 'SID' in names
+    )
+    if not out['looks_authenticated']:
+        out['warnings'].append(
+            'missing login session cookies; export from youtube.com while '
+            'signed in (private window, only tab: youtube.com/robots.txt)'
+        )
+    return out
+
+
+def _log_youtube_cookie_health(youtube_settings: Optional[dict[str, Any]]) -> None:
+    path_str = str((youtube_settings or {}).get('cookies_file') or '').strip()
+    if not path_str:
+        return
+    health = inspect_youtube_cookies(path_str)
+    for warning in health.get('warnings') or []:
+        logger.warning('YouTube cookies: {}', warning)
+    if health.get('looks_authenticated'):
+        logger.info(
+            'YouTube cookies: login session present ({})',
+            ', '.join(health.get('auth_cookies_found') or []),
+        )
+
+
+def _cookie_yt_player_clients() -> list[str]:
+    clients: list[str] = []
+    if _yt_po_tokens():
+        clients.append('mweb')
+    clients.extend(_COOKIE_YT_CLIENTS)
+    return clients
 
 
 def _youtube_player_clients_for_profile(
@@ -179,7 +262,7 @@ def _youtube_player_clients_for_profile(
     use_cookies: bool,
 ) -> list[str]:
     if use_cookies:
-        return list(_COOKIE_YT_CLIENTS)
+        return _cookie_yt_player_clients()
     return list(_yt_player_clients())
 
 
@@ -283,46 +366,170 @@ def _ytdlp_format_unavailable_retry(exc: BaseException) -> bool:
     )
 
 
-def _fallback_video_id_via_ytdlp(
+def _ytdlp_should_try_alternate_video(exc: BaseException) -> bool:
+    msg = str(exc).casefold()
+    return (
+        _ytdlp_age_restricted_retry(exc)
+        or _ytdlp_format_unavailable_retry(exc)
+        or '403' in msg
+        or 'forbidden' in msg
+        or 'sign in to confirm' in msg
+        or 'cookies are no longer valid' in msg
+    )
+
+
+def _fallback_video_ids_via_ytdlp(
     song: dict[str, Any],
     *,
     youtube_settings: Optional[dict[str, Any]] = None,
-) -> Optional[str]:
-    """Best-effort YouTube fallback when YT Music search yields no match."""
-
+    exclude: Optional[frozenset[str]] = None,
+    limit: int = 5,
+) -> list[str]:
+    """Ranked YouTube video ids from yt-dlp search (no cookies)."""
     title = str(song.get('name') or '').strip()
     artists = [a for a in (song.get('artists') or []) if isinstance(a, str) and a]
     query = ' '.join([*artists[:2], title]).strip()
     if not query:
-        return None
+        return []
+    count = min(max(1, limit), 10)
     opts = {
         'quiet': True,
         'no_warnings': True,
         'extract_flat': 'in_playlist',
         'skip_download': True,
     }
-    # Search does not need cookies; web+cookies often returns SABR-only results.
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(f'ytsearch1:{query}', download=False)
+            info = ydl.extract_info(f'ytsearch{count}:{query}', download=False)
     except Exception:
         logger.opt(exception=True).debug(
             'yt-dlp fallback search failed for query={!r}', query
         )
-        return None
+        return []
     entries = info.get('entries') if isinstance(info, dict) else None
-    if not isinstance(entries, list) or not entries:
+    if not isinstance(entries, list):
+        return []
+    skip = exclude or frozenset()
+    out: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        vid = entry.get('id')
+        if isinstance(vid, str) and vid.strip() and vid.strip() not in skip:
+            out.append(vid.strip())
+    return out
+
+
+def _fallback_video_id_via_ytdlp(
+    song: dict[str, Any],
+    *,
+    youtube_settings: Optional[dict[str, Any]] = None,
+) -> Optional[str]:
+    """Best-effort YouTube fallback when YT Music search yields no match."""
+    ids = _fallback_video_ids_via_ytdlp(
+        song,
+        youtube_settings=youtube_settings,
+        limit=1,
+    )
+    if not ids:
         return None
-    first = entries[0] if isinstance(entries[0], dict) else {}
-    vid = first.get('id')
-    if isinstance(vid, str) and vid.strip():
-        logger.info(
-            'yt-dlp fallback picked videoId={} for title={!r}',
-            vid.strip(),
-            title,
-        )
-        return vid.strip()
-    return None
+    vid = ids[0]
+    logger.info(
+        'yt-dlp fallback picked videoId={} for title={!r}',
+        vid,
+        str(song.get('name') or '').strip(),
+    )
+    return vid
+
+
+def _ytdlp_download_video(
+    video_id: str,
+    *,
+    ydl_opts: dict[str, Any],
+    youtube_settings: Optional[dict[str, Any]] = None,
+) -> None:
+    """Run yt-dlp profile/format fallbacks for one video id. Raises on failure."""
+    profiles = _youtube_download_profiles(video_id, youtube_settings)
+    if not profiles:
+        raise RuntimeError('missing YouTube video id')
+
+    last_err: Optional[BaseException] = None
+    success = False
+    for profile_index, profile in enumerate(profiles):
+        profile_opts = dict(ydl_opts)
+        if profile['use_cookies']:
+            apply_ytdlp_cookie_opts(profile_opts, youtube_settings)
+            if profile_opts.get('cookiefile'):
+                logger.info(
+                    'yt-dlp: using cookies from {}',
+                    profile_opts['cookiefile'],
+                )
+            elif profile_opts.get('cookiesfrombrowser'):
+                logger.info('yt-dlp: using cookies from browser')
+        elif profile_index > 0:
+            logger.info(
+                'yt-dlp: cookie/web profile failed for {}, '
+                'retrying with ios/android clients (no cookies)',
+                video_id,
+            )
+
+        for url in profile['urls']:
+            for fmt_index, fmt in enumerate(_YTDLP_AUDIO_FORMATS):
+                attempt_opts = dict(profile_opts)
+                attempt_opts['format'] = fmt
+                attempt_opts['extractor_args'] = {
+                    'youtube': _youtube_extractor_args(
+                        youtube_settings,
+                        use_cookies=profile['use_cookies'],
+                        allow_missing_pot=(
+                            fmt_index == len(_YTDLP_AUDIO_FORMATS) - 1
+                        ),
+                    ),
+                }
+                try:
+                    with yt_dlp.YoutubeDL(attempt_opts) as ydl:
+                        ydl.download([url])
+                    success = True
+                    last_err = None
+                    break
+                except DownloadError as exc:
+                    last_err = exc
+                    msg = str(exc).casefold()
+                    if 'cookies are no longer valid' in msg:
+                        logger.error(
+                            'yt-dlp: YouTube cookies expired or rotated; '
+                            're-export from youtube.com (private window) '
+                            'and upload again'
+                        )
+                    if (
+                        fmt_index + 1 < len(_YTDLP_AUDIO_FORMATS)
+                        and _ytdlp_format_unavailable_retry(exc)
+                    ):
+                        logger.info(
+                            'yt-dlp: format {!r} unavailable for {} '
+                            '({}), trying fallback',
+                            fmt,
+                            video_id,
+                            profile['label'],
+                        )
+                        continue
+                    break
+            if success:
+                break
+        if success:
+            break
+        if (
+            profile_index + 1 < len(profiles)
+            and last_err is not None
+            and _ytdlp_should_retry_without_cookies(
+                last_err, used_cookies=profile['use_cookies']
+            )
+        ):
+            continue
+        if last_err is not None:
+            raise last_err
+    if not success and last_err is not None:
+        raise last_err
 
 
 class Downloader:
@@ -801,86 +1008,52 @@ class Downloader:
         }:
             ydl_opts['source_address'] = '0.0.0.0'
 
-        if os.getenv('DOWNTIFY_FORCE_IPV4', '').strip() in {
-            '1',
-            'true',
-            'yes',
-        }:
-            ydl_opts['source_address'] = '0.0.0.0'
+        _log_youtube_cookie_health(self.youtube_settings)
 
-        profiles = _youtube_download_profiles(video_id, self.youtube_settings)
-        if not profiles:
+        primary_id = str(video_id or '').strip()
+        if not primary_id:
             raise RuntimeError('missing YouTube video id')
 
-        last_err: Optional[BaseException] = None
-        success = False
-        for profile_index, profile in enumerate(profiles):
-            profile_opts = dict(ydl_opts)
-            if profile['use_cookies']:
-                apply_ytdlp_cookie_opts(profile_opts, self.youtube_settings)
-                if profile_opts.get('cookiefile'):
-                    logger.info(
-                        'yt-dlp: using cookies from {}',
-                        profile_opts['cookiefile'],
-                    )
-                elif profile_opts.get('cookiesfrombrowser'):
-                    logger.info('yt-dlp: using cookies from browser')
-            elif profile_index > 0:
-                logger.info(
-                    'yt-dlp: cookie/web profile failed for {}, '
-                    'retrying with ios/android clients (no cookies)',
-                    video_id,
-                )
+        alt_ids = _fallback_video_ids_via_ytdlp(
+            song,
+            youtube_settings=self.youtube_settings,
+            exclude=frozenset({primary_id}),
+            limit=5,
+        )
+        candidate_ids: list[str] = [primary_id]
+        for alt in alt_ids:
+            if alt not in candidate_ids:
+                candidate_ids.append(alt)
 
-            for url in profile['urls']:
-                for fmt_index, fmt in enumerate(_YTDLP_AUDIO_FORMATS):
-                    attempt_opts = dict(profile_opts)
-                    attempt_opts['format'] = fmt
-                    attempt_opts['extractor_args'] = {
-                        'youtube': _youtube_extractor_args(
-                            self.youtube_settings,
-                            use_cookies=profile['use_cookies'],
-                            allow_missing_pot=(
-                                fmt_index == len(_YTDLP_AUDIO_FORMATS) - 1
-                            ),
-                        ),
-                    }
-                    try:
-                        with yt_dlp.YoutubeDL(attempt_opts) as ydl:
-                            ydl.download([url])
-                        success = True
-                        last_err = None
-                        break
-                    except DownloadError as exc:
-                        last_err = exc
-                        if (
-                            fmt_index + 1 < len(_YTDLP_AUDIO_FORMATS)
-                            and _ytdlp_format_unavailable_retry(exc)
-                        ):
-                            logger.info(
-                                'yt-dlp: format {!r} unavailable for {} '
-                                '({}), trying fallback',
-                                fmt,
-                                video_id,
-                                profile['label'],
-                            )
-                            continue
-                        break
-                if success:
-                    break
-            if success:
-                break
-            if (
-                profile_index + 1 < len(profiles)
-                and last_err is not None
-                and _ytdlp_should_retry_without_cookies(
-                    last_err, used_cookies=profile['use_cookies']
+        last_err: Optional[BaseException] = None
+        for idx, cand_id in enumerate(candidate_ids):
+            if idx > 0:
+                logger.info(
+                    'yt-dlp: trying alternate videoId={} for title={!r}',
+                    cand_id,
+                    song.get('name'),
                 )
-            ):
-                continue
-            if last_err is not None:
-                raise last_err
-        if not success and last_err is not None:
+                if progress_cb:
+                    progress_cb(
+                        5.0,
+                        f'{_provider_display_name(yt_provider) or "YouTube"} · trying alternate match…',
+                        yt_provider,
+                    )
+            try:
+                _ytdlp_download_video(
+                    cand_id,
+                    ydl_opts=ydl_opts,
+                    youtube_settings=self.youtube_settings,
+                )
+                last_err = None
+                break
+            except DownloadError as exc:
+                last_err = exc
+                has_more = idx + 1 < len(candidate_ids)
+                if has_more and _ytdlp_should_try_alternate_video(exc):
+                    continue
+                raise
+        if last_err is not None:
             raise last_err
 
         final_path = target_dir / f'{basename}.{self.audio_format}'

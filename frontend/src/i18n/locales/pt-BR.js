@@ -204,7 +204,9 @@ export default {
     youtubeCookiesUpload: 'Enviar cookies.txt',
     youtubeCookiesClear: 'Remover cookies',
     youtubeCookiesReady:
-      'Arquivo de cookies encontrado — o yt-dlp usará nas baixas do YouTube.',
+      'Cookies de login detectadas — yt-dlp usará em vídeos com verificação de idade.',
+    youtubeCookiesWeak:
+      'Arquivo presente, mas sem sessão do YouTube. Exporte de novo de youtube.com logado.',
     youtubeCookiesMissing:
       'Caminho definido mas o arquivo não existe. Envie de novo ou confira o volume.',
     slskdSection: 'slskd',

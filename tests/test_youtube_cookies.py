@@ -13,11 +13,14 @@ from downtify.api import (
 )
 from downtify.downloader import (
     _YTDLP_AUDIO_FORMATS,
+    _cookie_yt_player_clients,
     _youtube_download_profiles,
     _youtube_extractor_args,
     _ytdlp_format_unavailable_retry,
+    _ytdlp_should_try_alternate_video,
     _ytdlp_should_retry_without_cookies,
     apply_ytdlp_cookie_opts,
+    inspect_youtube_cookies,
     ytdlp_cookies_configured,
 )
 
@@ -61,12 +64,49 @@ def test_apply_ytdlp_cookie_opts_skips_missing_file():
 def test_youtube_settings_for_response_exists_flag(tmp_path: Path):
     cookie_path = tmp_path / 'cookies.txt'
     cookie_path.write_text(
-        '.youtube.com\n',
+        '# Netscape HTTP Cookie File\n'
+        '.youtube.com\tTRUE\t/\tTRUE\t0\tLOGIN_INFO\tabc\n'
+        '.youtube.com\tTRUE\t/\tTRUE\t0\tSID\txyz\n',
         encoding='utf-8',
     )
     settings = {'youtube': {'cookies_file': str(cookie_path)}}
     out = _youtube_settings_for_response(settings)
     assert out['cookies_file_exists'] is True
+    assert out['cookies_looks_authenticated'] is True
+    assert 'LOGIN_INFO' in out['cookies_auth_names']
+
+
+def test_youtube_settings_for_response_weak_cookies(tmp_path: Path):
+    cookie_path = tmp_path / 'cookies.txt'
+    cookie_path.write_text('.youtube.com\n', encoding='utf-8')
+    settings = {'youtube': {'cookies_file': str(cookie_path)}}
+    out = _youtube_settings_for_response(settings)
+    assert out['cookies_file_exists'] is True
+    assert out['cookies_looks_authenticated'] is False
+
+
+def test_inspect_youtube_cookies_detects_missing_login(tmp_path: Path):
+    cookie_path = tmp_path / 'cookies.txt'
+    cookie_path.write_text(
+        '# Netscape\n.other.com\tTRUE\t/\tFALSE\t0\tfoo\tbar\n',
+        encoding='utf-8',
+    )
+    health = inspect_youtube_cookies(cookie_path)
+    assert health['looks_authenticated'] is False
+    assert health['warnings']
+
+
+def test_cookie_yt_player_clients_prefers_mweb_with_po_token(monkeypatch):
+    monkeypatch.setenv('DOWNTIFY_YT_PO_TOKEN', 'web.gvs+TEST')
+    clients = _cookie_yt_player_clients()
+    assert clients[0] == 'mweb'
+    assert 'web_creator' not in clients
+
+
+def test_ytdlp_should_try_alternate_video_on_age_gate():
+    assert _ytdlp_should_try_alternate_video(
+        Exception('Sign in to confirm your age')
+    )
 
 
 def test_youtube_cookies_storage_path_next_to_settings(tmp_path: Path):

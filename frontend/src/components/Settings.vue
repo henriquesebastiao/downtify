@@ -240,10 +240,16 @@
             {{ t('settings.youtubeCookiesHint') }}
           </p>
           <p
-            v-if="youtubeCookiesReady"
+            v-if="youtubeCookiesReady && youtubeCookiesAuthenticated"
             class="text-xs text-success mb-2"
           >
             {{ t('settings.youtubeCookiesReady') }}
+          </p>
+          <p
+            v-else-if="youtubeCookiesReady && !youtubeCookiesAuthenticated"
+            class="text-xs text-warning mb-2"
+          >
+            {{ t('settings.youtubeCookiesWeak') }}
           </p>
           <p
             v-else-if="youtubeCookiesPath && !youtubeCookiesReady"
@@ -615,6 +621,9 @@ const YOUTUBE_DEFAULTS = {
   cookies_file: '',
   cookies_from_browser: '',
   cookies_file_exists: false,
+  cookies_looks_authenticated: false,
+  cookies_auth_names: [],
+  cookies_warnings: [],
 }
 
 const youtubeCookiesPath = computed(
@@ -622,6 +631,9 @@ const youtubeCookiesPath = computed(
 )
 const youtubeCookiesReady = computed(
   () => Boolean(sm.settings.value?.youtube?.cookies_file_exists)
+)
+const youtubeCookiesAuthenticated = computed(
+  () => Boolean(sm.settings.value?.youtube?.cookies_looks_authenticated)
 )
 const { t, locale, setLocale, locales } = useI18n()
 

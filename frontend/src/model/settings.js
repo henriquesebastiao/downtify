@@ -8,6 +8,9 @@ const settings = ref({
     cookies_file: '',
     cookies_from_browser: '',
     cookies_file_exists: false,
+    cookies_looks_authenticated: false,
+    cookies_auth_names: [],
+    cookies_warnings: [],
   },
   slskd: {
     enabled: false,

@@ -196,12 +196,15 @@ export default {
     languageHint: 'Choose the interface language',
     youtubeSection: 'YouTube cookies',
     youtubeCookiesHint:
-      'Required for age-restricted tracks. Export Netscape cookies.txt from youtube.com (not music.youtube.com) while logged into Google, upload here, and confirm the green “Cookies file found” line. Downtify uses www.youtube.com with cookies for those videos. Keep the file private.',
+      'For age-restricted tracks. In a private/incognito window, log into youtube.com, open only youtube.com/robots.txt in that tab, export Netscape cookies.txt (Get cookies.txt LOCALLY or similar), upload here. Green = login cookies detected. Without valid cookies, Downtify still tries other YouTube uploads for the same song.',
     youtubeCookiesPath: 'Cookies file path (inside container)',
     youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
     youtubeCookiesUpload: 'Upload cookies.txt',
     youtubeCookiesClear: 'Remove cookies',
-    youtubeCookiesReady: 'Cookies file found — yt-dlp will use it for YouTube downloads.',
+    youtubeCookiesReady:
+      'Login cookies detected — yt-dlp will use them for age-restricted videos.',
+    youtubeCookiesWeak:
+      'File found but no YouTube login session in it. Re-export from youtube.com while signed in (see hint above).',
     youtubeCookiesMissing:
       'Path is set but the file is missing on disk. Upload again or fix the mount path.',
     slskdSection: 'slskd',
