@@ -197,10 +197,13 @@ export default {
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',
     languageHint: 'Elige el idioma de la interfaz',
-    youtubeAdvancedToggle: 'Avanzado: cookies de YouTube (opcional)',
-    youtubeCookiesConfigured: 'activo',
+    youtubeSection: 'Cookies de YouTube (opcional)',
+    youtubeEnabled: 'Configurar cookies de YouTube',
+    youtubeEnabledHint:
+      'Opcional — solo ayuda con algunos fallbacks de YouTube con edad. La mayoría funciona sin esto.',
     youtubeCookiesHint:
-      'Casi nunca hace falta — solo algunos fallbacks de YouTube con edad. Exporta cookies.txt de youtube.com si lo necesitas.',
+      'No hace falta para descargas normales. Úsalo solo si fallan vídeos con verificación de edad.',
+    youtubeCookiesPath: 'Ruta del archivo de cookies (en el contenedor)',
     youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
     youtubeCookiesUpload: 'Subir cookies.txt',
     youtubeCookiesClear: 'Quitar cookies',

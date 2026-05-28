@@ -229,6 +229,90 @@
           </div>
         </div>
 
+        <!-- YouTube cookies (optional) -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.youtubeSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/40 mb-2">
+            {{ t('settings.youtubeCookiesHint') }}
+          </p>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="youtubeCookiesExpanded"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.youtubeEnabled') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.youtubeEnabledHint') }}
+              </span>
+              <span
+                v-if="youtubeCookiesReady && youtubeCookiesAuthenticated"
+                class="block text-[11px] text-success mt-1"
+              >
+                {{ t('settings.youtubeCookiesReady') }}
+              </span>
+            </span>
+          </label>
+          <div
+            v-if="youtubeCookiesExpanded"
+            class="grid grid-cols-1 gap-2"
+          >
+            <p
+              v-if="youtubeCookiesReady && !youtubeCookiesAuthenticated"
+              class="text-xs text-warning"
+            >
+              {{ t('settings.youtubeCookiesWeak') }}
+            </p>
+            <p
+              v-else-if="youtubeCookiesPath && !youtubeCookiesReady"
+              class="text-xs text-warning"
+            >
+              {{ t('settings.youtubeCookiesMissing') }}
+            </p>
+            <label class="text-[11px] text-base-content/50">
+              {{ t('settings.youtubeCookiesPath') }}
+            </label>
+            <input
+              type="text"
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60 font-mono text-sm"
+              :placeholder="t('settings.youtubeCookiesPathPlaceholder')"
+              v-model="sm.settings.value.youtube.cookies_file"
+            />
+            <div class="flex flex-wrap gap-2">
+              <label class="btn btn-sm btn-outline rounded-xl cursor-pointer">
+                {{ t('settings.youtubeCookiesUpload') }}
+                <input
+                  type="file"
+                  accept=".txt,text/plain"
+                  class="hidden"
+                  @change="onYoutubeCookiesFile"
+                />
+              </label>
+              <button
+                type="button"
+                class="btn btn-sm btn-ghost rounded-xl"
+                :disabled="!youtubeCookiesReady && !youtubeCookiesPath"
+                @click="clearYoutubeCookies"
+              >
+                {{ t('settings.youtubeCookiesClear') }}
+              </button>
+            </div>
+            <p
+              v-if="youtubeCookiesError"
+              class="text-xs text-error"
+            >
+              {{ youtubeCookiesError }}
+            </p>
+          </div>
+        </div>
+
         <!-- Lyrics source -->
         <div>
           <label
@@ -488,73 +572,6 @@
           <p class="text-[11px] text-base-content/40 mt-1.5">
             {{ t('settings.parallelDownloadsHint') }}
           </p>
-        </div>
-
-        <!-- YouTube cookies: hidden behind text toggle at bottom -->
-        <div class="pt-1">
-          <button
-            type="button"
-            class="text-[11px] text-base-content/35 hover:text-base-content/55 transition-colors"
-            @click="youtubeCookiesExpanded = !youtubeCookiesExpanded"
-          >
-            {{ t('settings.youtubeAdvancedToggle') }}
-            <span
-              v-if="youtubeCookiesReady && youtubeCookiesAuthenticated"
-              class="text-success/80"
-            >
-              · {{ t('settings.youtubeCookiesConfigured') }}
-            </span>
-          </button>
-          <div
-            v-if="youtubeCookiesExpanded"
-            class="mt-2 space-y-2 rounded-lg border border-white/5 bg-base-100/30 px-3 py-2"
-          >
-            <p class="text-[10px] leading-snug text-base-content/40">
-              {{ t('settings.youtubeCookiesHint') }}
-            </p>
-            <p
-              v-if="youtubeCookiesReady && !youtubeCookiesAuthenticated"
-              class="text-[10px] text-warning"
-            >
-              {{ t('settings.youtubeCookiesWeak') }}
-            </p>
-            <p
-              v-else-if="youtubeCookiesPath && !youtubeCookiesReady"
-              class="text-[10px] text-warning"
-            >
-              {{ t('settings.youtubeCookiesMissing') }}
-            </p>
-            <input
-              type="text"
-              class="input input-xs w-full rounded-lg bg-base-100/85 border border-white/10"
-              :placeholder="t('settings.youtubeCookiesPathPlaceholder')"
-              v-model="sm.settings.value.youtube.cookies_file"
-            />
-            <div class="flex flex-wrap gap-1.5">
-              <label
-                class="btn btn-xs btn-ghost rounded-lg cursor-pointer normal-case"
-              >
-                {{ t('settings.youtubeCookiesUpload') }}
-                <input
-                  type="file"
-                  accept=".txt,text/plain"
-                  class="hidden"
-                  @change="onYoutubeCookiesFile"
-                />
-              </label>
-              <button
-                type="button"
-                class="btn btn-xs btn-ghost rounded-lg normal-case"
-                :disabled="!youtubeCookiesReady && !youtubeCookiesPath"
-                @click="clearYoutubeCookies"
-              >
-                {{ t('settings.youtubeCookiesClear') }}
-              </button>
-            </div>
-            <p v-if="youtubeCookiesError" class="text-[10px] text-error">
-              {{ youtubeCookiesError }}
-            </p>
-          </div>
         </div>
 
         <!-- Save status -->

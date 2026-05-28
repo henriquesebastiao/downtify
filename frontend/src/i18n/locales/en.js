@@ -194,10 +194,13 @@ export default {
     saveError: "Couldn't save settings.",
     language: 'Language',
     languageHint: 'Choose the interface language',
-    youtubeAdvancedToggle: 'Advanced: YouTube cookies (optional)',
-    youtubeCookiesConfigured: 'on',
+    youtubeSection: 'YouTube cookies (optional)',
+    youtubeEnabled: 'Configure YouTube cookies',
+    youtubeEnabledHint:
+      'Optional — only helps with some age-restricted YouTube fallbacks. Most tracks work without this.',
     youtubeCookiesHint:
-      'Rarely needed — only some age-restricted YouTube fallbacks. Export cookies.txt from youtube.com if required.',
+      'Not required for normal downloads. Use only if YouTube fallbacks fail on age-restricted videos.',
+    youtubeCookiesPath: 'Cookies file path (inside container)',
     youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
     youtubeCookiesUpload: 'Upload cookies.txt',
     youtubeCookiesClear: 'Remove cookies',
