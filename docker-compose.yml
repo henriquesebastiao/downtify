@@ -1,3 +1,5 @@
+# Local development compose (build from source).
+# For production with the published image, use: cp docker-compose.example.yml docker-compose.yml
 services:
   downtify:
     container_name: downtify
@@ -7,10 +9,10 @@ services:
     ports:
       - '8000:30321'
     volumes:
-      # Music library. If slskd is another container, mount the SAME host folder
-      # there (e.g. ./docker/downloads:/downloads) and set Settings → slskd path
-      # to /downloads (path inside this container, not the host path).
+      # If slskd runs elsewhere, mount the SAME host folder as slskd at /slskd
+      # and set Settings → slskd → folder path to /slskd.
       - ./docker/downloads:/downloads
+      # - ./docker/slskd:/slskd
       - ./docker/data:/data
       - ./frontend/dist:/downtify/frontend/dist:ro
     environment:
