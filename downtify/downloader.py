@@ -12,6 +12,7 @@ from typing import Any, Callable, Optional
 import requests
 import yt_dlp
 from loguru import logger
+from yt_dlp.utils import DownloadError
 from mutagen.flac import FLAC, Picture
 from mutagen.id3 import (
     APIC,
@@ -108,6 +109,14 @@ def _yt_player_clients() -> list[str]:
     return clients or list(_DEFAULT_YT_PLAYER_CLIENTS)
 
 
+def ytdlp_cookies_configured(
+    youtube_settings: Optional[dict[str, Any]] = None,
+) -> bool:
+    probe: dict[str, Any] = {}
+    apply_ytdlp_cookie_opts(probe, youtube_settings)
+    return 'cookiefile' in probe or 'cookiesfrombrowser' in probe
+
+
 def apply_ytdlp_cookie_opts(
     ydl_opts: dict[str, Any],
     youtube_settings: Optional[dict[str, Any]] = None,
@@ -139,6 +148,41 @@ def apply_ytdlp_cookie_opts(
         ydl_opts['cookiesfrombrowser'] = (
             (parts[0],) if len(parts) == 1 else (parts[0], parts[1])
         )
+
+
+def _youtube_player_clients(
+    youtube_settings: Optional[dict[str, Any]] = None,
+) -> list[str]:
+    clients = _yt_player_clients()
+    if not ytdlp_cookies_configured(youtube_settings):
+        return clients
+    # Logged-in web client works best with cookies for age-restricted videos.
+    ordered = ['web', *[c for c in clients if c != 'web']]
+    return ordered
+
+
+def _youtube_watch_urls(
+    video_id: str,
+    youtube_settings: Optional[dict[str, Any]] = None,
+) -> list[str]:
+    """URLs to try for yt-dlp; www.youtube.com first when cookies are set."""
+    vid = str(video_id or '').strip()
+    if not vid:
+        return []
+    www = f'https://www.youtube.com/watch?v={vid}'
+    music = f'https://music.youtube.com/watch?v={vid}'
+    if ytdlp_cookies_configured(youtube_settings):
+        return [www, music]
+    return [music, www]
+
+
+def _ytdlp_age_restricted_retry(exc: BaseException) -> bool:
+    msg = str(exc).casefold()
+    return (
+        'age-restricted' in msg
+        or 'only available on youtube' in msg
+        or 'sign in to confirm your age' in msg
+    )
 
 
 def _yt_po_tokens() -> list[str]:
@@ -610,7 +654,11 @@ class Downloader:
             # check on datacenter IPs. `tv` and `mweb` almost always
             # bypass it. Order matters — yt-dlp tries them in sequence.
             'extractor_args': {
-                'youtube': {'player_client': _yt_player_clients()}
+                'youtube': {
+                    'player_client': _youtube_player_clients(
+                        self.youtube_settings
+                    )
+                }
             },
             # Light pacing so we don't trigger 429 rate limits when the
             # user fires off multiple downloads back-to-back.
@@ -634,10 +682,36 @@ class Downloader:
             ydl_opts['source_address'] = '0.0.0.0'
 
         apply_ytdlp_cookie_opts(ydl_opts, self.youtube_settings)
+        if ydl_opts.get('cookiefile'):
+            logger.info(
+                'yt-dlp: using cookies from {}', ydl_opts['cookiefile']
+            )
+        elif ydl_opts.get('cookiesfrombrowser'):
+            logger.info('yt-dlp: using cookies from browser')
 
-        url = f'https://music.youtube.com/watch?v={video_id}'
+        urls = _youtube_watch_urls(video_id, self.youtube_settings)
+        if not urls:
+            raise RuntimeError('missing YouTube video id')
+
+        last_err: Optional[BaseException] = None
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+            for index, url in enumerate(urls):
+                try:
+                    ydl.download([url])
+                    last_err = None
+                    break
+                except DownloadError as exc:
+                    last_err = exc
+                    if index + 1 < len(urls) and _ytdlp_age_restricted_retry(exc):
+                        logger.info(
+                            'yt-dlp: age-restricted on {!r}, trying {!r}',
+                            url,
+                            urls[index + 1],
+                        )
+                        continue
+                    raise
+        if last_err is not None:
+            raise last_err
 
         final_path = target_dir / f'{basename}.{self.audio_format}'
         if not final_path.exists():

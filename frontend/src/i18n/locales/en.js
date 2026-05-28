@@ -196,7 +196,7 @@ export default {
     languageHint: 'Choose the interface language',
     youtubeSection: 'YouTube cookies',
     youtubeCookiesHint:
-      'For age-restricted or sign-in videos. Export a Netscape cookies.txt from youtube.com while logged into Google (browser extension), then upload here or set a path inside the container (e.g. /data/youtube-cookies.txt). Keep the file private.',
+      'Required for age-restricted tracks. Export Netscape cookies.txt from youtube.com (not music.youtube.com) while logged into Google, upload here, and confirm the green “Cookies file found” line. Downtify uses www.youtube.com with cookies for those videos. Keep the file private.',
     youtubeCookiesPath: 'Cookies file path (inside container)',
     youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
     youtubeCookiesUpload: 'Upload cookies.txt',

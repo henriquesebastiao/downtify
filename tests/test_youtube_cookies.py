@@ -11,7 +11,11 @@ from downtify.api import (
     _youtube_cookies_storage_path,
     _youtube_settings_for_response,
 )
-from downtify.downloader import apply_ytdlp_cookie_opts
+from downtify.downloader import (
+    _youtube_watch_urls,
+    apply_ytdlp_cookie_opts,
+    ytdlp_cookies_configured,
+)
 
 
 def test_default_settings_includes_youtube():
@@ -66,6 +70,27 @@ def test_youtube_cookies_storage_path_next_to_settings(tmp_path: Path):
     assert _youtube_cookies_storage_path(settings_path) == (
         tmp_path / 'youtube-cookies.txt'
     )
+
+
+def test_youtube_watch_urls_prefers_www_with_cookies(tmp_path: Path):
+    cookie_path = tmp_path / 'cookies.txt'
+    cookie_path.write_text(
+        '.youtube.com\n',
+        encoding='utf-8',
+    )
+    settings = {'cookies_file': str(cookie_path)}
+    urls = _youtube_watch_urls('abc123', settings)
+    assert urls[0] == 'https://www.youtube.com/watch?v=abc123'
+    assert 'music.youtube.com' in urls[1]
+
+
+def test_youtube_watch_urls_music_first_without_cookies():
+    urls = _youtube_watch_urls('abc123', {})
+    assert urls[0].startswith('https://music.youtube.com/')
+
+
+def test_ytdlp_cookies_configured_false_when_missing_file():
+    assert not ytdlp_cookies_configured({'cookies_file': '/no/such.txt'})
 
 
 def test_validate_youtube_cookies_bytes_rejects_empty():
