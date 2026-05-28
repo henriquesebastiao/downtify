@@ -90,9 +90,9 @@
             <Icon icon="clarity:download-line" class="h-4 w-4" />
           </a>
           <div
-            v-else-if="item.progress > 0 && !item.isErrored()"
+            v-else-if="item.isDownloading() && !item.isErrored()"
             class="radial-progress text-primary"
-            :style="`--value:${item.progress}; --size:2.75rem; --thickness:3px`"
+            :style="`--value:${Math.max(0, item.progress)}; --size:2.75rem; --thickness:3px`"
           >
             <span class="text-[10px] font-semibold">
               {{ Math.round(item.progress) }}%

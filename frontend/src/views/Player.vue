@@ -223,8 +223,8 @@
 
           <ul v-if="files.length > 0" class="space-y-1">
             <li
-              v-for="(file, idx) in files"
-              :key="file"
+              v-for="(entry, idx) in files"
+              :key="entry.file"
               class="rounded-xl px-2 py-2 flex items-center gap-3 cursor-pointer transition-colors"
               :class="
                 idx === player.currentIndex.value
@@ -242,12 +242,12 @@
                 "
               >
                 <img
-                  v-if="!coverFailed[file]"
-                  :src="coverUrlFor(file)"
-                  :alt="trackInfo(file).title"
+                  v-if="!coverFailed[entry.file]"
+                  :src="coverUrlFor(entry.file)"
+                  :alt="entry.title"
                   class="absolute inset-0 h-full w-full object-cover"
                   loading="lazy"
-                  @error="markCoverFailed(file)"
+                  @error="markCoverFailed(entry.file)"
                 />
                 <span
                   v-if="
@@ -259,17 +259,17 @@
                   <span></span><span></span><span></span>
                 </span>
                 <Icon
-                  v-else-if="coverFailed[file]"
+                  v-else-if="coverFailed[entry.file]"
                   icon="clarity:music-note-line"
                   class="h-4 w-4 text-base-content/50"
                 />
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm truncate font-medium">
-                  {{ trackInfo(file).title }}
+                  {{ entry.title }}
                 </p>
                 <p class="text-[11px] truncate text-base-content/50">
-                  {{ trackInfo(file).artist || t('common.unknownArtist') }}
+                  {{ entry.artist || t('common.unknownArtist') }}
                 </p>
               </div>
             </li>
@@ -290,7 +290,12 @@ import { Icon } from '@iconify/vue'
 import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
 import API from '/src/model/api'
-import { usePlayer, formatTime, trackInfoFromFile } from '/src/model/player'
+import {
+  usePlayer,
+  formatTime,
+  trackInfoFromFile,
+  normalizeLibraryEntry,
+} from '/src/model/player'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
@@ -314,7 +319,7 @@ async function load() {
   loading.value = true
   try {
     const res = await API.listDownloads()
-    files.value = res.data || []
+    files.value = (res.data || []).map(normalizeLibraryEntry)
     // If the player was empty (direct nav to /player), seed the queue
     // with the library so the user has something to play.
     if (player.playlist.value.length === 0 && files.value.length > 0) {
@@ -328,7 +333,7 @@ async function load() {
 function onPick(idx) {
   if (
     player.playlist.value.length !== files.value.length ||
-    player.playlist.value[idx]?.file !== files.value[idx]
+    player.playlist.value[idx]?.file !== files.value[idx]?.file
   ) {
     player.setPlaylist(files.value, { startIndex: idx })
   } else {

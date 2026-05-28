@@ -71,8 +71,8 @@
       <!-- File list -->
       <ul v-else class="space-y-2">
         <li
-          v-for="file in paginatedFiles"
-          :key="file"
+          v-for="entry in paginatedFiles"
+          :key="entry.file"
           class="surface rounded-2xl p-3 sm:p-4 flex items-center gap-3"
         >
           <!-- Cover thumb -->
@@ -80,29 +80,35 @@
             class="relative h-11 w-11 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center overflow-hidden"
           >
             <img
-              v-if="!coverFailed[file]"
-              :src="coverUrlFor(file)"
-              :alt="file"
+              v-if="!coverFailed[entry.file]"
+              :src="coverUrlFor(entry.file)"
+              :alt="entry.title"
               class="absolute inset-0 h-full w-full object-cover"
               loading="lazy"
-              @error="markCoverFailed(file)"
+              @error="markCoverFailed(entry.file)"
             />
             <Icon v-else icon="clarity:music-note-line" class="h-5 w-5" />
           </div>
 
-          <!-- Filename -->
+          <!-- Title / path -->
           <div class="flex-1 min-w-0">
             <span class="text-sm font-medium truncate block">{{
-              displayName(file)
+              entry.title
             }}</span>
+            <p
+              v-if="entry.artist"
+              class="text-xs text-base-content/60 truncate"
+            >
+              {{ entry.artist }}
+            </p>
             <span class="text-xs text-base-content/40">
-              <span v-if="folderOf(file)" class="mr-2 text-primary/70">
+              <span v-if="folderOf(entry.file)" class="mr-2 text-primary/70">
                 <Icon
                   icon="clarity:folder-line"
                   class="inline h-3 w-3 mr-0.5 align-text-top"
-                />{{ folderOf(file) }}
+                />{{ folderOf(entry.file) }}
               </span>
-              {{ formatExt(file) }}
+              {{ formatExt(entry.file) }}
             </span>
           </div>
 
@@ -110,14 +116,14 @@
           <div class="flex items-center gap-1 shrink-0">
             <button
               class="icon-btn text-primary hover:bg-primary/10"
-              @click="playFile(files.indexOf(file))"
+              @click="playEntry(entry)"
               :title="t('library.play')"
             >
               <Icon icon="clarity:play-line" class="h-4 w-4" />
             </button>
             <a
               class="icon-btn"
-              :href="API.downloadFileURL(file)"
+              :href="API.downloadFileURL(entry.file)"
               download
               :title="t('library.downloadToDevice')"
             >
@@ -125,12 +131,12 @@
             </a>
             <button
               class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
-              :disabled="deleting[file] === true"
-              @click="onDelete(file)"
+              :disabled="deleting[entry.file] === true"
+              @click="onDelete(entry.file)"
               :title="t('library.deleteFile')"
             >
               <span
-                v-if="deleting[file] === true"
+                v-if="deleting[entry.file] === true"
                 class="loading loading-spinner loading-xs"
               />
               <Icon v-else icon="clarity:trash-line" class="h-4 w-4" />
@@ -198,7 +204,7 @@ import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
 import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
-import { usePlayer } from '/src/model/player'
+import { normalizeLibraryEntry, usePlayer } from '/src/model/player'
 
 const PAGE_SIZE = 10
 
@@ -237,7 +243,7 @@ async function refresh() {
   error.value = ''
   try {
     const res = await API.listDownloads()
-    files.value = res.data || []
+    files.value = (res.data || []).map(normalizeLibraryEntry)
   } catch {
     error.value = t('library.failedLoad')
   } finally {
@@ -263,17 +269,14 @@ function formatExt(file) {
   return dot > 0 ? file.slice(dot + 1).toUpperCase() : ''
 }
 
-function displayName(file) {
-  const slash = file.lastIndexOf('/')
-  return slash >= 0 ? file.slice(slash + 1) : file
-}
-
 function folderOf(file) {
   const slash = file.lastIndexOf('/')
   return slash >= 0 ? file.slice(0, slash) : ''
 }
 
-function playFile(index) {
+function playEntry(entry) {
+  const index = files.value.findIndex((row) => row.file === entry.file)
+  if (index < 0) return
   player.setPlaylist(files.value, { startIndex: index })
   router.push({ name: 'Player' })
 }

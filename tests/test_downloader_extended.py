@@ -195,10 +195,13 @@ def test_resolve_video_id_prefers_provider_order_youtube_first(monkeypatch):
         raise AssertionError('find_match should not run when youtube succeeds')
 
     monkeypatch.setattr(downloader_mod, 'find_match', should_not_run)
-    vid, match, provider = d._resolve_video_id({'name': 'Track', 'artists': []})
+    vid, match, provider, local_path = d._resolve_video_id(
+        {'name': 'Track', 'artists': []}
+    )
     assert vid == 'yt123'
     assert match is None
     assert provider == 'youtube'
+    assert local_path is None
 
 
 def test_resolve_video_id_uses_second_provider_on_first_failure(monkeypatch):
@@ -211,7 +214,82 @@ def test_resolve_video_id_uses_second_provider_on_first_failure(monkeypatch):
         'find_match',
         lambda _song: ('ytm456', {'videoId': 'ytm456'}),
     )
-    vid, match, provider = d._resolve_video_id({'name': 'Track', 'artists': []})
+    vid, match, provider, local_path = d._resolve_video_id(
+        {'name': 'Track', 'artists': []}
+    )
     assert vid == 'ytm456'
     assert isinstance(match, dict)
     assert provider == 'youtube-music'
+    assert local_path is None
+
+
+def test_resolve_video_id_ytdlp_fallback_when_only_youtube_music(monkeypatch):
+    """Configs like slskd + youtube-music omit 'youtube' as a provider."""
+    d = Downloader(
+        '/tmp',
+        audio_providers=['slskd', 'youtube-music'],
+        slskd_settings={'enabled': True},
+    )
+    ytdlp_calls: list[str] = []
+
+    monkeypatch.setattr(downloader_mod, 'download_from_slskd', lambda *_a, **_k: None)
+    monkeypatch.setattr(downloader_mod, 'find_match', lambda _song: (None, None))
+    monkeypatch.setattr(
+        downloader_mod,
+        '_fallback_video_id_via_ytdlp',
+        lambda _song: ytdlp_calls.append('ok') or 'yt-fallback',
+    )
+
+    vid, match, provider, local_path = d._resolve_video_id(
+        {'name': 'Seamans Underwear', 'artists': ['Artist']}
+    )
+    assert vid == 'yt-fallback'
+    assert match is None
+    assert provider == 'youtube'
+    assert local_path is None
+    assert ytdlp_calls == ['ok']
+
+
+def test_resolve_video_id_supports_slskd_provider(monkeypatch, tmp_path):
+    d = Downloader(
+        '/tmp',
+        audio_providers=['slskd'],
+        slskd_settings={'enabled': True},
+    )
+    source = tmp_path / 'slskd-file.flac'
+    source.write_bytes(b'\x00')
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_slskd', lambda *_args, **_kw: source
+    )
+    vid, match, provider, local_path = d._resolve_video_id(
+        {'name': 'Track', 'artists': []}
+    )
+    assert vid is None
+    assert match is None
+    assert provider == 'slskd'
+    assert local_path == source
+
+
+def test_resolve_video_id_skips_slskd_when_disabled(monkeypatch):
+    d = Downloader(
+        '/tmp',
+        audio_providers=['slskd', 'youtube'],
+        slskd_settings={'enabled': False},
+    )
+    monkeypatch.setattr(
+        downloader_mod,
+        'download_from_slskd',
+        lambda *_args, **_kw: (_ for _ in ()).throw(
+            AssertionError('slskd should not be called when disabled')
+        ),
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_fallback_video_id_via_ytdlp', lambda _song: 'yt123'
+    )
+    vid, match, provider, local_path = d._resolve_video_id(
+        {'name': 'Track', 'artists': []}
+    )
+    assert vid == 'yt123'
+    assert match is None
+    assert provider == 'youtube'
+    assert local_path is None

@@ -7,11 +7,11 @@ services:
     ports:
       - '8000:30321'
     volumes:
+      # Music library. If slskd is another container, mount the SAME host folder
+      # there (e.g. ./docker/downloads:/downloads) and set Settings → slskd path
+      # to /downloads (path inside this container, not the host path).
       - ./docker/downloads:/downloads
       - ./docker/data:/data
       - ./frontend/dist:/downtify/frontend/dist:ro
     environment:
       - DOWNTIFY_PORT=30321
-    dns:
-      - 1.1.1.1
-      - 1.0.0.1

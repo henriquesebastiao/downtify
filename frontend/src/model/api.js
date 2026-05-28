@@ -78,7 +78,7 @@ function encodePath(fileName) {
 }
 
 function downloadFileURL(fileName) {
-  return `/downloads/${encodePath(fileName)}`
+  return `/media/${encodePath(fileName)}`
 }
 
 function coverFileURL(fileName) {

@@ -1,5 +1,7 @@
 import { ref, computed } from 'vue'
 
+import API from '/src/model/api'
+
 const VOLUME_KEY = 'downtify-player-volume'
 
 const playlist = ref([])
@@ -40,14 +42,6 @@ function ensureAudio() {
   return audio
 }
 
-function fileUrl(file) {
-  return `/downloads/${encodeURIComponent(file)}`
-}
-
-function coverUrl(file) {
-  return `/cover?file=${encodeURIComponent(file)}`
-}
-
 function trackFromFile(file) {
   const noExt = file.replace(/\.[^.]+$/, '')
   let artist = ''
@@ -59,10 +53,31 @@ function trackFromFile(file) {
   }
   return {
     file,
-    url: fileUrl(file),
-    cover: coverUrl(file),
+    url: API.downloadFileURL(file),
+    cover: API.coverFileURL(file),
     title,
     artist,
+    album: '',
+  }
+}
+
+/** Normalize ``/list`` rows (string legacy paths or tag-enriched objects). */
+export function normalizeLibraryEntry(raw) {
+  if (typeof raw === 'string') {
+    return trackFromFile(raw)
+  }
+  const file = String(raw?.file || '')
+  const base = trackFromFile(file)
+  const title = String(raw?.title || '').trim()
+  const artist = String(raw?.artist || '').trim()
+  const album = String(raw?.album || '').trim()
+  return {
+    file,
+    url: base.url,
+    cover: base.cover,
+    title: title || base.title,
+    artist: artist || base.artist,
+    album: album || base.album,
   }
 }
 
@@ -81,7 +96,7 @@ function buildShuffleOrder() {
 
 function setPlaylist(files, options = {}) {
   const tracks = (files || []).map((f) =>
-    typeof f === 'string' ? trackFromFile(f) : f
+    typeof f === 'string' ? trackFromFile(f) : normalizeLibraryEntry(f)
   )
   playlist.value = tracks
   if (currentIndex.value >= tracks.length) currentIndex.value = -1
@@ -257,8 +272,11 @@ export function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export function trackInfoFromFile(file) {
-  return trackFromFile(file)
+export function trackInfoFromFile(fileOrEntry) {
+  if (typeof fileOrEntry === 'string') {
+    return trackFromFile(fileOrEntry)
+  }
+  return normalizeLibraryEntry(fileOrEntry)
 }
 
 export function usePlayer() {

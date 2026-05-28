@@ -137,7 +137,10 @@ export default {
   settings: {
     title: 'Settings',
     subtitle: 'Tweak how Downtify fetches and tags your music.',
-    audioSource: 'Audio source',
+    audioSource: 'Audio sources (fallback order)',
+    audioSourceHint:
+      'Enable one or more. Downtify tries them in order (1, 2, 3) per track. Use slskd then YouTube for playlists.',
+    audioSourceReset: 'Use recommended order',
     lyricsSource: 'Lyrics source',
     lyricsHint: 'only lrclib is active',
     downloadLyrics: 'Download lyrics',
@@ -150,7 +153,22 @@ export default {
     playlistsSection: 'Playlists',
     generateM3u: 'Generate M3U file for playlists',
     generateM3uHint:
-      'Writes Playlists/<name>.m3u alongside the tracks for both manual playlist downloads and Playlist Monitor sweeps.',
+      'Writes Playlists/<name>.m3u with absolute file paths (/downloads/... and /slskd/...) for manual downloads and Playlist Monitor sweeps.',
+    syncNavidrome: 'Create playlist in Navidrome',
+    syncNavidromeHint:
+      'After a Spotify playlist download finishes, scan the library and create/update a Navidrome playlist with the same name.',
+    navidromeSection: 'Navidrome',
+    navidromeHint:
+      'Uses the Subsonic API (same as Explo). Point your music folder in Navidrome at Downtify downloads.',
+    navidromeEnabled: 'Enable Navidrome sync',
+    navidromeEnabledHint:
+      'Requires URL, username, and password. Admin account recommended: triggers Subsonic startScan (incremental) before matching tracks, same as Explo.',
+    navidromeUrl: 'Navidrome URL (example: https://music.example.com)',
+    navidromeUsername: 'Navidrome username',
+    navidromePassword: 'Navidrome password',
+    navidromeAdminUser: 'Admin username (optional, for library scan)',
+    navidromeAdminPassword: 'Admin password (optional)',
+    navidromePublic: 'Public playlist in Navidrome',
     organizationSection: 'File organization',
     organizeByArtist: 'Organize by artist',
     organizeByArtistHint:
@@ -162,6 +180,34 @@ export default {
     saveError: "Couldn't save settings.",
     language: 'Language',
     languageHint: 'Choose the interface language',
+    slskdSection: 'slskd',
+    slskdHint:
+      'Soulseek via slskd. With Navidrome enabled, playlists are built in Navidrome after a library scan — files can stay in the slskd folder.',
+    slskdEnabled: 'Enable slskd provider',
+    slskdEnabledHint:
+      'When off, slskd is never attempted in provider fallback.',
+    slskdBaseUrl: 'slskd base URL (example: https://slskd.example.com)',
+    slskdApiKey: 'slskd API key',
+    slskdSourceDirTitle: 'slskd download folder (inside this container)',
+    slskdSourceDirBullet1:
+      'slskd writes completed transfers here (e.g. /slskd → host music/slskd).',
+    slskdSourceDirBullet2:
+      'Navidrome must scan the parent music library that includes this folder.',
+    slskdSourceDirBullet3:
+      'Use the path Downtify sees — not the host path, not the slskd web URL.',
+    slskdSourceDirExample:
+      'slskd:  /mnt/storage/music/slskd:/downloads\nDowntify: /mnt/storage/music/slskd:/slskd  → set /slskd',
+    slskdSourceDirLabel: 'slskd folder path in Downtify',
+    slskdSourceDirPlaceholder: '/slskd',
+    slskdSourceDirHint:
+      'Downtify watches this folder for finished slskd files. No copy into /downloads when leave-in-place is on.',
+    slskdLeaveInPlace: 'Leave slskd files in place',
+    slskdLeaveInPlaceHint:
+      'Do not copy into /downloads. Tag in place, register for dedupe, and add tracks to Navidrome playlists via library search (recommended with Navidrome sync).',
+    slskdDownloadTimeout: 'Total slskd timeout (seconds)',
+    slskdQueuedTimeout: 'Queued / no-progress timeout (seconds)',
+    slskdTimeoutHint:
+      'If slskd does not finish in time, Downtify tries the next audio provider (YouTube). Lower the queued timeout when tracks sit on "Queued on slskd" too long.',
   },
   player: {
     title: 'Player',

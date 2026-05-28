@@ -20,7 +20,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
 from loguru import logger
@@ -35,6 +35,13 @@ from uvicorn import Config, Server
 from downtify import __version__, api
 from downtify.downloader import Downloader
 from downtify.monitor import PlaylistMonitorDB, monitor_loop
+from downtify.library_catalog import (
+    LibraryContext,
+    library_context_from_state,
+    list_library_entries,
+    resolve_library_file,
+)
+from downtify.track_index import TrackIndex
 
 load_dotenv()
 
@@ -212,6 +219,7 @@ def build_app() -> FastAPI:
             '.{output-ext}', ''
         ),
         audio_providers=api._effective_audio_providers(api.state.settings),
+        slskd_settings=api._effective_slskd_settings(api.state.settings),
         lyrics_providers=api._effective_lyrics_providers(api.state.settings),
         organize_by_artist=bool(
             api.state.settings.get('organize_by_artist', False)
@@ -228,44 +236,53 @@ def build_app() -> FastAPI:
         )
         db_path = DATABASE_DIR / 'downtify_monitor.db'
         api.state.monitor_db = PlaylistMonitorDB(db_path)
+        library_db = DATABASE_DIR / 'downtify_library.db'
+        api.state.track_index = TrackIndex(library_db)
+        try:
+            imported = api.state.track_index.backfill_from_monitor_db(db_path)
+            if imported:
+                logger.info(
+                    'Track library index: imported {} path(s) from monitor history',
+                    imported,
+                )
+        except Exception:
+            logger.exception('Track library backfill from monitor db failed')
         asyncio.create_task(
             monitor_loop(
                 db=api.state.monitor_db,
                 get_downloader=lambda: api.state.downloader,
+                get_track_index=lambda: api.state.track_index,
                 broadcast=api.state.connections.broadcast,
                 loop=loop,
                 settings=api.state.settings,
             )
         )
 
+    def _library_ctx() -> LibraryContext:
+        return library_context_from_state(
+            DOWNLOAD_DIR,
+            api.state.settings,
+            api.state.track_index,
+        )
+
     @app.get('/list')
-    def list_downloads() -> list[str]:
-        audio_exts = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
-        base = DOWNLOAD_DIR.resolve()
-        if not base.exists():
-            return []
-        files: list[str] = []
-        # Walk recursively so per-playlist sub-folders show up alongside
-        # loose downloads in the library view.
-        for path in base.rglob('*'):
-            if not path.is_file():
-                continue
-            if path.suffix.lower() not in audio_exts:
-                continue
-            files.append(path.relative_to(base).as_posix())
-        files.sort()
-        return files
+    def list_downloads() -> list[dict[str, str]]:
+        return list_library_entries(_library_ctx())
+
+    @app.get('/media/{file_path:path}')
+    def serve_media(file_path: str) -> FileResponse:
+        full = resolve_library_file(file_path, _library_ctx())
+        if full is None:
+            raise HTTPException(status_code=404, detail='File not found')
+        return FileResponse(
+            full,
+            media_type=mimetypes.guess_type(str(full))[0] or 'application/octet-stream',
+        )
 
     @app.delete('/delete')
     def delete_download(file: str) -> dict:
-        # Resolve and confine to DOWNLOAD_DIR to prevent path traversal.
-        base = DOWNLOAD_DIR.resolve()
-        try:
-            full = (base / file).resolve()
-            full.relative_to(base)
-        except (ValueError, RuntimeError):
-            return {'deleted': False, 'error': 'Invalid path'}
-        if not full.is_file():
+        full = resolve_library_file(file, _library_ctx())
+        if full is None:
             return {'deleted': False, 'error': 'File not found'}
         try:
             full.unlink()
@@ -275,14 +292,8 @@ def build_app() -> FastAPI:
 
     @app.get('/cover')
     def get_cover(file: str):
-        # Resolve and confine to DOWNLOAD_DIR to prevent path traversal.
-        base = DOWNLOAD_DIR.resolve()
-        try:
-            full = (base / file).resolve()
-            full.relative_to(base)
-        except (ValueError, RuntimeError):
-            raise HTTPException(status_code=400, detail='Invalid path')
-        if not full.is_file():
+        full = resolve_library_file(file, _library_ctx())
+        if full is None:
             raise HTTPException(status_code=404, detail='File not found')
 
         data, mime = _extract_cover(full)

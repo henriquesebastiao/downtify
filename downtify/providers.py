@@ -135,6 +135,41 @@ def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
     }
 
 
+def _parse_text_search_query(query: str) -> tuple[list[str], str]:
+    text = query.strip()
+    if not text:
+        return [], ''
+    if ' - ' in text:
+        left, right = text.split(' - ', 1)
+        artist = left.strip()
+        title = right.strip()
+        if artist and title:
+            return [artist], title
+    return [], text
+
+
+def song_stub_from_text_query(query: str) -> Optional[dict[str, Any]]:
+    """Build a minimal song row for slskd matching when browse search has no hits."""
+    artists, title = _parse_text_search_query(query)
+    text = query.strip()
+    if not text:
+        return None
+    song_id = f'search-{abs(hash(text)) & 0xFFFFFFFF:08x}'
+    return {
+        'song_id': song_id,
+        'name': title,
+        'artists': artists,
+        'album_name': '',
+        'cover_url': '',
+        'duration': 0,
+        'url': f'downtify-search:{song_id}',
+        'explicit': False,
+        'year': '',
+        'release_date': '',
+        'source': 'text_search',
+    }
+
+
 def search_songs(query: str, limit: int = 20) -> list[dict[str, Any]]:
     if not query.strip():
         return []

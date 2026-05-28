@@ -55,21 +55,177 @@
           >
             {{ t('settings.audioSource') }}
           </label>
+          <p class="text-[11px] text-base-content/40 mb-2">
+            {{ t('settings.audioSourceHint') }}
+          </p>
           <div class="grid grid-cols-2 gap-2">
             <button
               v-for="provider in sm.settingsOptions.audio_providers"
               :key="provider"
               type="button"
-              class="rounded-xl border px-3 py-2 text-sm transition-colors text-left"
+              class="rounded-xl border px-3 py-2 text-sm transition-colors text-left relative"
               :class="[
-                sm.settings.value.audio_providers[0] === provider
+                audioProviderIndex(provider) >= 0
                   ? 'border-primary/50 bg-primary/10 text-primary'
                   : 'border-white/10 hover:border-white/20 hover:bg-white/5',
               ]"
-              @click="sm.settings.value.audio_providers = [provider]"
+              @click="toggleAudioProvider(provider)"
             >
+              <span
+                v-if="audioProviderIndex(provider) >= 0"
+                class="absolute top-1 right-1 text-[10px] font-bold opacity-80"
+              >
+                {{ audioProviderIndex(provider) + 1 }}
+              </span>
               {{ providerLabel(provider) }}
             </button>
+          </div>
+          <ul
+            v-if="sm.settings.value.audio_providers.length"
+            class="mt-2 space-y-1 text-sm"
+          >
+            <li
+              v-for="(provider, index) in sm.settings.value.audio_providers"
+              :key="provider"
+              class="flex items-center gap-2 rounded-lg border border-white/10 px-2 py-1"
+            >
+              <span class="text-xs opacity-50 w-4">{{ index + 1 }}</span>
+              <span class="flex-1">{{ providerLabel(provider) }}</span>
+              <button
+                type="button"
+                class="btn btn-xs btn-ghost px-1 min-h-0 h-7"
+                :disabled="index === 0"
+                @click="moveProviderAt(index, -1)"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                class="btn btn-xs btn-ghost px-1 min-h-0 h-7"
+                :disabled="index === sm.settings.value.audio_providers.length - 1"
+                @click="moveProviderAt(index, 1)"
+              >
+                ↓
+              </button>
+            </li>
+          </ul>
+          <button
+            type="button"
+            class="btn btn-xs btn-ghost rounded-lg mt-2"
+            @click="resetAudioProvidersRecommended"
+          >
+            {{ t('settings.audioSourceReset') }}
+          </button>
+        </div>
+
+        <!-- slskd -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.slskdSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/40 mb-2">
+            {{ t('settings.slskdHint') }}
+          </p>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.slskd.enabled"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.slskdEnabled') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.slskdEnabledHint') }}
+              </span>
+            </span>
+          </label>
+          <div
+            v-if="sm.settings.value.slskd.enabled"
+            class="grid grid-cols-1 gap-2"
+          >
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="text"
+              :placeholder="t('settings.slskdBaseUrl')"
+              v-model="sm.settings.value.slskd.base_url"
+            />
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="password"
+              :placeholder="t('settings.slskdApiKey')"
+              v-model="sm.settings.value.slskd.api_key"
+            />
+            <div class="rounded-xl border border-white/10 bg-base-100/50 px-3 py-2.5 space-y-2">
+              <p class="text-[11px] font-semibold text-base-content/70">
+                {{ t('settings.slskdSourceDirTitle') }}
+              </p>
+              <ul class="text-[11px] text-base-content/50 space-y-1 list-disc pl-4">
+                <li>{{ t('settings.slskdSourceDirBullet1') }}</li>
+                <li>{{ t('settings.slskdSourceDirBullet2') }}</li>
+                <li>{{ t('settings.slskdSourceDirBullet3') }}</li>
+              </ul>
+              <pre
+                class="text-[10px] leading-relaxed text-base-content/60 whitespace-pre-wrap font-mono bg-base-300/30 rounded-lg px-2 py-1.5"
+              >{{ t('settings.slskdSourceDirExample') }}</pre>
+            </div>
+            <label class="text-[11px] text-base-content/50">
+              {{ t('settings.slskdSourceDirLabel') }}
+            </label>
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60 font-mono text-sm"
+              type="text"
+              :placeholder="t('settings.slskdSourceDirPlaceholder')"
+              v-model="sm.settings.value.slskd.source_dir"
+            />
+            <p class="text-[11px] text-base-content/40">
+              {{ t('settings.slskdSourceDirHint') }}
+            </p>
+            <label
+              class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mt-2"
+            >
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                v-model="sm.settings.value.slskd.leave_in_place"
+              />
+              <span>
+                <span class="block text-sm font-medium">{{
+                  t('settings.slskdLeaveInPlace')
+                }}</span>
+                <span class="block text-[11px] text-base-content/50 mt-0.5">{{
+                  t('settings.slskdLeaveInPlaceHint')
+                }}</span>
+              </span>
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+              <label class="text-[11px] text-base-content/50">
+                {{ t('settings.slskdDownloadTimeout') }}
+                <input
+                  class="input input-sm w-full mt-1 rounded-xl bg-base-100/85 border border-white/10"
+                  type="number"
+                  min="30"
+                  max="3600"
+                  v-model.number="sm.settings.value.slskd.download_timeout_seconds"
+                />
+              </label>
+              <label class="text-[11px] text-base-content/50">
+                {{ t('settings.slskdQueuedTimeout') }}
+                <input
+                  class="input input-sm w-full mt-1 rounded-xl bg-base-100/85 border border-white/10"
+                  type="number"
+                  min="15"
+                  max="3600"
+                  v-model.number="sm.settings.value.slskd.queued_timeout_seconds"
+                />
+              </label>
+            </div>
+            <p class="text-[11px] text-base-content/40">
+              {{ t('settings.slskdTimeoutHint') }}
+            </p>
           </div>
         </div>
 
@@ -177,7 +333,7 @@
             {{ t('settings.playlistsSection') }}
           </label>
           <label
-            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
           >
             <input
               type="checkbox"
@@ -191,6 +347,95 @@
               </span>
             </span>
           </label>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.sync_navidrome"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.syncNavidrome') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.syncNavidromeHint') }}
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <!-- Navidrome -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.navidromeSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/40 mb-2">
+            {{ t('settings.navidromeHint') }}
+          </p>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.navidrome.enabled"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.navidromeEnabled') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.navidromeEnabledHint') }}
+              </span>
+            </span>
+          </label>
+          <div
+            v-if="sm.settings.value.navidrome.enabled"
+            class="grid grid-cols-1 gap-2"
+          >
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="text"
+              :placeholder="t('settings.navidromeUrl')"
+              v-model="sm.settings.value.navidrome.url"
+            />
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="text"
+              :placeholder="t('settings.navidromeUsername')"
+              v-model="sm.settings.value.navidrome.username"
+            />
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="password"
+              :placeholder="t('settings.navidromePassword')"
+              v-model="sm.settings.value.navidrome.password"
+            />
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="text"
+              :placeholder="t('settings.navidromeAdminUser')"
+              v-model="sm.settings.value.navidrome.admin_username"
+            />
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="password"
+              :placeholder="t('settings.navidromeAdminPassword')"
+              v-model="sm.settings.value.navidrome.admin_password"
+            />
+            <label
+              class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+            >
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                v-model="sm.settings.value.navidrome.public_playlist"
+              />
+              <span class="flex-1 text-sm">
+                <span class="block">{{ t('settings.navidromePublic') }}</span>
+              </span>
+            </label>
+          </div>
         </div>
 
         <!-- File organization -->
@@ -269,7 +514,7 @@
               icon="clarity:exclamation-circle-line"
               class="h-4 w-4 shrink-0"
             />
-            {{ t('settings.saveError') }}
+            {{ sm.saveErrorText.value || t('settings.saveError') }}
           </div>
         </transition>
       </div>
@@ -300,15 +545,123 @@
 
 <script setup>
 import { Icon } from '@iconify/vue'
+import { watchEffect } from 'vue'
 import { useSettingsManager } from '../model/settings'
 import { useI18n } from '../i18n'
 
 const sm = useSettingsManager()
 const { t, locale, setLocale, locales } = useI18n()
 
+const NAVIDROME_DEFAULTS = {
+  enabled: false,
+  url: '',
+  username: '',
+  password: '',
+  admin_username: '',
+  admin_password: '',
+  public_playlist: false,
+  scan_after_download: true,
+  scan_wait_seconds: 120,
+  scan_poll_seconds: 30,
+  client_name: 'Downtify',
+  api_version: '1.16.1',
+}
+
+const SLSKD_DEFAULTS = {
+  enabled: false,
+  base_url: '',
+  api_key: '',
+  source_dir: '/slskd',
+  leave_in_place: true,
+  timeout_seconds: 20,
+  search_retries: 5,
+  search_poll_seconds: 15,
+  download_attempts: 3,
+  poll_interval_seconds: 5,
+  poll_max_attempts: 60,
+  download_timeout_seconds: 600,
+  queued_timeout_seconds: 180,
+  extensions: ['mp3', 'flac'],
+  min_bitrate: 256,
+}
+
+watchEffect(() => {
+  const curr = sm.settings.value?.slskd
+  if (!curr || typeof curr !== 'object') {
+    sm.settings.value.slskd = { ...SLSKD_DEFAULTS }
+    return
+  }
+  for (const [k, v] of Object.entries(SLSKD_DEFAULTS)) {
+    if (curr[k] === undefined || curr[k] === null) {
+      curr[k] = v
+    }
+  }
+})
+
+watchEffect(() => {
+  const curr = sm.settings.value?.navidrome
+  if (!curr || typeof curr !== 'object') {
+    sm.settings.value.navidrome = { ...NAVIDROME_DEFAULTS }
+    return
+  }
+  for (const [k, v] of Object.entries(NAVIDROME_DEFAULTS)) {
+    if (curr[k] === undefined || curr[k] === null) {
+      curr[k] = v
+    }
+  }
+})
+
+watchEffect(() => {
+  if (sm.settings.value?.sync_navidrome === undefined) {
+    sm.settings.value.sync_navidrome = true
+  }
+})
+
+watchEffect(() => {
+  const providers = sm.settings.value?.audio_providers
+  if (!Array.isArray(providers) || providers.length === 0) {
+    sm.settings.value.audio_providers = ['youtube-music']
+  }
+})
+
 function providerLabel(provider) {
   if (provider === 'youtube-music') return 'YouTube Music'
   if (provider === 'youtube') return 'YouTube'
+  if (provider === 'slskd') return 'slskd'
   return provider
+}
+
+const AUDIO_PROVIDER_ORDER = ['slskd', 'youtube-music', 'youtube']
+
+function audioProviderIndex(provider) {
+  const list = sm.settings.value?.audio_providers || []
+  return list.indexOf(provider)
+}
+
+function toggleAudioProvider(provider) {
+  const list = [...(sm.settings.value.audio_providers || [])]
+  const idx = list.indexOf(provider)
+  if (idx >= 0) {
+    list.splice(idx, 1)
+  } else {
+    list.push(provider)
+  }
+  sm.settings.value.audio_providers =
+    list.length > 0 ? list : ['youtube-music']
+}
+
+function moveProviderAt(index, delta) {
+  const list = [...(sm.settings.value.audio_providers || [])]
+  const target = index + delta
+  if (target < 0 || target >= list.length) return
+  ;[list[index], list[target]] = [list[target], list[index]]
+  sm.settings.value.audio_providers = list
+}
+
+function resetAudioProvidersRecommended() {
+  const slskdOn = Boolean(sm.settings.value?.slskd?.enabled)
+  sm.settings.value.audio_providers = slskdOn
+    ? [...AUDIO_PROVIDER_ORDER]
+    : ['youtube-music', 'youtube']
 }
 </script>

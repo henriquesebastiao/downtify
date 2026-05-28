@@ -13,6 +13,14 @@ from loguru import logger
 
 from . import m3u, spotify
 from .downloader import Downloader
+from .navidrome import _effective_navidrome_settings, sync_playlist_to_navidrome
+from .library_metadata import read_audio_metadata
+from .library_paths import locate_library_file, slskd_dir_from_downloader
+from .track_index import (
+    TrackIndex,
+    normalize_spotify_track_id,
+    resolve_existing_download,
+)
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
 
@@ -224,6 +232,7 @@ async def check_playlist(
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
     settings: Optional[dict[str, Any]] = None,
+    track_index: Optional[TrackIndex] = None,
 ) -> int:
     """Fetch playlist, detect new tracks, download them. Returns count downloaded."""
     logger.info(
@@ -246,22 +255,44 @@ async def check_playlist(
     known_tracks = await asyncio.to_thread(db.get_track_filenames, playlist.id)
 
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
+    slskd_dir = slskd_dir_from_downloader(downloader)
 
+    linked_from_library = 0
     new_tracks = []
     for t in tracks:
         if not t.get('song_id'):
             continue
         tid = t['song_id']
-        if tid not in known_tracks:
-            new_tracks.append(t)
-        else:
-            stored = known_tracks[tid]
-            if (
-                stored is not None
-                and not (downloader.download_dir / stored).exists()
-            ):
-                # File was deleted — re-download
-                new_tracks.append(t)
+        stored = known_tracks.get(tid)
+        if stored and locate_library_file(
+            stored, downloader.download_dir, slskd_dir
+        ):
+            continue
+        if track_index is not None:
+            spotify_tid = normalize_spotify_track_id(t)
+            if spotify_tid:
+                library_file = track_index.lookup(spotify_tid)
+                if library_file and locate_library_file(
+                    library_file, downloader.download_dir, slskd_dir
+                ):
+                    await asyncio.to_thread(
+                        db.mark_track_downloaded,
+                        playlist.id,
+                        tid,
+                        library_file,
+                    )
+                    linked_from_library += 1
+                    continue
+                if library_file:
+                    track_index.forget(spotify_tid)
+        new_tracks.append(t)
+
+    if linked_from_library:
+        logger.info(
+            'Linked {} track(s) from library into playlist "{}"',
+            linked_from_library,
+            playlist.name,
+        )
 
     if new_tracks:
         logger.info(
@@ -281,16 +312,7 @@ async def check_playlist(
         # as a fallback if the per-track fetch fails for any reason.
         try:
             full = await asyncio.to_thread(spotify.track_from_id, track_id)
-            for key in (
-                'cover_url',
-                'year',
-                'release_date',
-                'album_name',
-                'artists',
-            ):
-                value = full.get(key)
-                if value:
-                    song[key] = value
+            song.update(spotify._merge_full_track_metadata(song, full))
         except Exception:
             logger.opt(exception=True).warning(
                 'Per-track Spotify fetch failed for {}; '
@@ -322,6 +344,10 @@ async def check_playlist(
             await asyncio.to_thread(
                 db.mark_track_downloaded, playlist.id, track_id, filename
             )
+            if track_index is not None:
+                await asyncio.to_thread(
+                    track_index.register_song, song, filename
+                )
             downloaded += 1
         except Exception:
             logger.exception('Failed to auto-download track {}', track_id)
@@ -333,17 +359,102 @@ async def check_playlist(
         last_track_count=len(tracks),
     )
 
-    if downloaded > 0 and (
-        settings is None or settings.get('generate_m3u', True)
-    ):
-        await asyncio.to_thread(_regenerate_m3u, playlist, tracks, downloader)
+    if downloaded > 0 or linked_from_library > 0:
+        known_tracks = await asyncio.to_thread(
+            db.get_track_filenames, playlist.id
+        )
+        if settings is None or settings.get('generate_m3u', True):
+            await asyncio.to_thread(
+                _regenerate_m3u,
+                playlist,
+                tracks,
+                downloader,
+                known_tracks,
+                track_index,
+                settings,
+            )
+        if settings is None or settings.get('sync_navidrome', True):
+            await asyncio.to_thread(
+                _sync_navidrome_playlist,
+                playlist,
+                tracks,
+                downloader,
+                settings,
+                known_tracks,
+                track_index,
+            )
     return downloaded
+
+
+def _resolve_monitored_track_filename(
+    song: dict[str, Any],
+    downloader: Downloader,
+    pl_subdir: str,
+    known_tracks: dict[str, Optional[str]],
+    track_index: Optional[TrackIndex],
+) -> Optional[str]:
+    tid = song.get('song_id')
+    if tid:
+        stored = known_tracks.get(tid)
+        if stored and locate_library_file(
+            stored, downloader.download_dir, slskd_dir_from_downloader(downloader)
+        ):
+            return stored
+    hit = resolve_existing_download(
+        downloader,
+        song,
+        subdir=pl_subdir,
+        track_index=track_index,
+    )
+    return hit[0] if hit else None
+
+
+def _sync_navidrome_playlist(
+    playlist: MonitoredPlaylist,
+    tracks: list[dict[str, Any]],
+    downloader: Downloader,
+    settings: Optional[dict[str, Any]],
+    known_tracks: dict[str, Optional[str]],
+    track_index: Optional[TrackIndex] = None,
+) -> None:
+    if not settings or not _effective_navidrome_settings(settings).get('enabled'):
+        return
+    pl_subdir = m3u.sanitize_playlist_name(playlist.name)
+    songs: list[dict[str, Any]] = []
+    for song in tracks:
+        filename = _resolve_monitored_track_filename(
+            song, downloader, pl_subdir, known_tracks, track_index
+        )
+        if not filename:
+            continue
+        row = dict(song)
+        row['filename'] = filename
+        path = locate_library_file(
+            filename, downloader.download_dir, slskd_dir_from_downloader(downloader)
+        )
+        if path is not None:
+            meta = read_audio_metadata(path)
+            if meta.get('title'):
+                row['name'] = meta['title']
+            if meta.get('artists'):
+                row['artists'] = meta['artists']
+        songs.append(row)
+    if not songs:
+        logger.warning(
+            'Navidrome sync skip for "{}": no tracks on disk',
+            playlist.name,
+        )
+        return
+    sync_playlist_to_navidrome(playlist.name, songs, settings)
 
 
 def _regenerate_m3u(
     playlist: MonitoredPlaylist,
     tracks: list[dict[str, Any]],
     downloader: Downloader,
+    known_tracks: dict[str, Optional[str]],
+    track_index: Optional[TrackIndex] = None,
+    settings: Optional[dict[str, Any]] = None,
 ) -> None:
     """Rewrite the playlist's M3U from on-disk state after a sweep.
 
@@ -356,7 +467,9 @@ def _regenerate_m3u(
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
     entries: list[dict[str, Any]] = []
     for song in tracks:
-        filename = downloader.existing_filename_for(song, subdir=pl_subdir)
+        filename = _resolve_monitored_track_filename(
+            song, downloader, pl_subdir, known_tracks, track_index
+        )
         if not filename:
             continue
         entries.append({
@@ -376,12 +489,14 @@ def _regenerate_m3u(
         playlist.name,
         entries,
         playlist_subdir=pl_subdir,
+        slskd_dir=slskd_dir_from_downloader(downloader),
     )
 
 
 async def monitor_loop(
     db: PlaylistMonitorDB,
     get_downloader: Callable[[], Optional[Downloader]],
+    get_track_index: Callable[[], Optional[TrackIndex]],
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
     settings: Optional[dict[str, Any]] = None,
@@ -398,9 +513,16 @@ async def monitor_loop(
                 downloader = get_downloader()
                 if downloader is None:
                     continue
+                track_index = get_track_index()
                 try:
                     count = await check_playlist(
-                        pl, db, downloader, broadcast, loop, settings
+                        pl,
+                        db,
+                        downloader,
+                        broadcast,
+                        loop,
+                        settings,
+                        track_index=track_index,
                     )
                     if count > 0:
                         logger.info(

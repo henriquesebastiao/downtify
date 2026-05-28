@@ -14,6 +14,7 @@ from downtify.spotify import (
     _normalize_release_date_text,
     _track_dict,
     album_tracks_from_id,
+    enrich_track_from_spotify_if_sparse,
 )
 
 # Aliases only — no real artist / track titles
@@ -130,6 +131,65 @@ def test_track_dict_year_only_release_date_object():
     td = _track_dict(entity, track_id='tid', fallback_album='TestAlbum')
     assert td['release_date'] == '1994'
     assert td['year'] == '1994'
+
+
+def test_track_dict_reads_track_number_from_embed():
+    entity = {
+        'id': 'tid',
+        'uri': 'spotify:track:tid',
+        'title': 'TestSong',
+        'trackNumber': 4,
+        'album': {'name': 'TestAlbum', 'trackCount': 12},
+        'artists': [{'name': _AL1}],
+    }
+    td = _track_dict(entity, track_id='tid')
+    assert td['track_number'] == 4
+    assert td['album_track_total'] == 12
+
+
+@patch('downtify.spotify.track_from_id')
+def test_enrich_track_from_spotify_if_sparse_fetches_missing_fields(
+    mock_track_from_id,
+):
+    mock_track_from_id.return_value = {
+        'song_id': 'a' * 22,
+        'source': 'spotify',
+        'year': '2016',
+        'release_date': '2016-07-01',
+        'track_number': 24,
+        'album_track_total': 100,
+        'cover_url': 'https://example.com/cover.jpg',
+        'album_name': 'TestAlbum',
+        'artists': [_AL1],
+        'artist': _AL1,
+    }
+    sparse = {
+        'song_id': 'a' * 22,
+        'source': 'spotify',
+        'name': 'TestSong',
+        'artists': [_AL1],
+        'cover_url': 'https://example.com/playlist.jpg',
+    }
+    out = enrich_track_from_spotify_if_sparse(sparse)
+    mock_track_from_id.assert_called_once_with('a' * 22)
+    assert out['year'] == '2016'
+    assert out['track_number'] == 24
+    assert out['cover_url'] == 'https://example.com/cover.jpg'
+
+
+@patch('downtify.spotify.track_from_id')
+def test_enrich_track_from_spotify_if_sparse_skips_when_complete(
+    mock_track_from_id,
+):
+    complete = {
+        'song_id': 'b' * 22,
+        'source': 'spotify',
+        'year': '2020',
+        'release_date': '2020-01-01',
+        'track_number': 1,
+    }
+    assert enrich_track_from_spotify_if_sparse(complete) is complete
+    mock_track_from_id.assert_not_called()
 
 
 def test_normalize_month_precision_middle_string():

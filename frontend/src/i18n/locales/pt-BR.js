@@ -139,7 +139,10 @@ export default {
   settings: {
     title: 'Configurações',
     subtitle: 'Ajuste como o Downtify baixa e marca suas músicas.',
-    audioSource: 'Fonte de áudio',
+    audioSource: 'Fontes de áudio (ordem de fallback)',
+    audioSourceHint:
+      'Ative uma ou mais. O Downtify tenta na ordem (1, 2, 3) por faixa. Para playlists: slskd e depois YouTube.',
+    audioSourceReset: 'Usar ordem recomendada',
     lyricsSource: 'Fonte de letras',
     lyricsHint: 'apenas o lrclib está ativo',
     downloadLyrics: 'Baixar letras',
@@ -152,7 +155,22 @@ export default {
     playlistsSection: 'Playlists',
     generateM3u: 'Gerar arquivo M3U para playlists',
     generateM3uHint:
-      'Grava Playlists/<nome>.m3u junto com as faixas, tanto para downloads manuais de playlist quanto para varreduras do Monitor.',
+      'Grava Playlists/<nome>.m3u com caminhos absolutos (/downloads/... e /slskd/...) para downloads e o Monitor.',
+    syncNavidrome: 'Criar playlist no Navidrome',
+    syncNavidromeHint:
+      'Depois de baixar uma playlist do Spotify, escaneia a biblioteca e cria/atualiza uma playlist no Navidrome com o mesmo nome.',
+    navidromeSection: 'Navidrome',
+    navidromeHint:
+      'Usa a API Subsonic (como o Explo). A pasta de música no Navidrome deve apontar para os downloads do Downtify.',
+    navidromeEnabled: 'Ativar sincronização com Navidrome',
+    navidromeEnabledHint:
+      'Exige URL, usuário e senha. Conta admin opcional dispara varredura da biblioteca.',
+    navidromeUrl: 'URL do Navidrome (exemplo: https://musica.exemplo.com)',
+    navidromeUsername: 'Usuário do Navidrome',
+    navidromePassword: 'Senha do Navidrome',
+    navidromeAdminUser: 'Usuário admin (opcional, para varredura)',
+    navidromeAdminPassword: 'Senha admin (opcional)',
+    navidromePublic: 'Playlist pública no Navidrome',
     organizationSection: 'Organização de arquivos',
     organizeByArtist: 'Organizar por artista',
     organizeByArtistHint:
@@ -164,6 +182,34 @@ export default {
     saveError: 'Não foi possível salvar as configurações.',
     language: 'Idioma',
     languageHint: 'Escolha o idioma da interface',
+    slskdSection: 'slskd',
+    slskdHint:
+      'Soulseek via slskd. Com Navidrome ativo, playlists são criadas lá após varrer a biblioteca; arquivos podem ficar na pasta do slskd.',
+    slskdEnabled: 'Ativar provedor slskd',
+    slskdEnabledHint:
+      'Quando desativado, o slskd nunca é tentado na cadeia de fallback.',
+    slskdBaseUrl: 'URL base do slskd (exemplo: https://slskd.exemplo.com)',
+    slskdApiKey: 'API key do slskd',
+    slskdSourceDirTitle: 'Pasta de download do slskd (neste container)',
+    slskdSourceDirBullet1:
+      'O slskd grava transferências concluídas aqui (ex.: /slskd → music/slskd no host).',
+    slskdSourceDirBullet2:
+      'O Navidrome deve varrer a biblioteca que inclui esta pasta.',
+    slskdSourceDirBullet3:
+      'Caminho visto pelo Downtify — não o caminho do host nem a URL do slskd.',
+    slskdSourceDirExample:
+      'slskd:  /mnt/storage/music/slskd:/downloads\nDowntify: /mnt/storage/music/slskd:/slskd  → /slskd',
+    slskdSourceDirLabel: 'Pasta slskd no Downtify',
+    slskdSourceDirPlaceholder: '/slskd',
+    slskdSourceDirHint:
+      'O Downtify observa esta pasta. Sem cópia para /downloads com “deixar no lugar” ativo.',
+    slskdLeaveInPlace: 'Deixar arquivos do slskd no lugar',
+    slskdLeaveInPlaceHint:
+      'Não copiar para /downloads. Taguear no lugar e montar playlists no Navidrome após o scan.',
+    slskdDownloadTimeout: 'Tempo máximo slskd (segundos)',
+    slskdQueuedTimeout: 'Tempo na fila sem progresso (segundos)',
+    slskdTimeoutHint:
+      'Se o slskd não terminar a tempo, o Downtify tenta o próximo provedor (YouTube). Reduza o tempo na fila se ficar em "Queued on slskd".',
   },
   player: {
     title: 'Player',

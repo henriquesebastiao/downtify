@@ -422,7 +422,7 @@ def _track_dict(
             album_name or fallback_album,
             entity.get('releaseDate'),
         )
-    return {
+    row: dict[str, Any] = {
         'song_id': track_id,
         'name': entity.get('name') or entity.get('title') or '',
         'artists': names,
@@ -438,6 +438,99 @@ def _track_dict(
         'year': year,
         'source': 'spotify',
     }
+    raw_tn = entity.get('trackNumber')
+    if raw_tn is None:
+        raw_tn = entity.get('track_number')
+    if raw_tn is not None:
+        try:
+            tn = int(raw_tn)
+        except (TypeError, ValueError):
+            tn = 0
+        if tn > 0:
+            row['track_number'] = tn
+    if isinstance(album, dict):
+        raw_total = album.get('trackCount')
+        if raw_total is None and isinstance(album.get('tracks'), dict):
+            raw_total = album['tracks'].get('total')
+        if raw_total is not None:
+            try:
+                tt = int(raw_total)
+            except (TypeError, ValueError):
+                tt = 0
+            if tt > 0:
+                row['album_track_total'] = tt
+    return row
+
+
+def _merge_full_track_metadata(
+    song: dict[str, Any], full: dict[str, Any]
+) -> dict[str, Any]:
+    """Apply per-track embed fields onto a sparse playlist/browse row."""
+
+    merged = dict(song)
+    for key in (
+        'cover_url',
+        'year',
+        'release_date',
+        'album_name',
+        'artists',
+        'artist',
+        'track_number',
+        'album_track_total',
+    ):
+        value = full.get(key)
+        if value is None or value == '' or value == []:
+            continue
+        if key in ('track_number', 'album_track_total'):
+            if merged.get(key) is not None:
+                continue
+            try:
+                iv = int(value)
+            except (TypeError, ValueError):
+                continue
+            if iv <= 0:
+                continue
+            merged[key] = iv
+            continue
+        if key == 'artists':
+            if merged.get('artists'):
+                continue
+            merged['artists'] = value
+            merged['artist'] = full.get('artist') or ', '.join(value)
+            continue
+        merged[key] = value
+    return merged
+
+
+def enrich_track_from_spotify_if_sparse(song: dict[str, Any]) -> dict[str, Any]:
+    """Fill missing Spotify tagging fields from the per-track embed.
+
+    Playlist browse rows often omit ``year``, ``release_date``, and
+    ``track_number``; monitored playlists re-fetch each track the same way.
+    """
+
+    if song.get('source') != 'spotify':
+        return song
+    track_id = song.get('song_id')
+    if not isinstance(track_id, str) or not re.fullmatch(
+        r'[A-Za-z0-9]{22}', track_id
+    ):
+        return song
+    has_date = bool(
+        str(song.get('release_date') or '').strip()
+        or str(song.get('year') or '').strip()
+    )
+    has_track = song.get('track_number') is not None
+    if has_date and has_track:
+        return song
+    try:
+        full = track_from_id(track_id)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Per-track Spotify enrich failed for {}', track_id
+        )
+        return song
+    return _merge_full_track_metadata(song, full)
 
 
 def track_from_id(track_id: str) -> dict[str, Any]:

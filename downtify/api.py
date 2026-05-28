@@ -37,32 +37,185 @@ from fastapi import (
 from loguru import logger
 
 from . import m3u, providers, spotify
-from .downloader import Downloader
+from .downloader import Downloader, NoAudioMatchError
 from .monitor import PlaylistMonitorDB, check_playlist
+from .navidrome import _effective_navidrome_settings, sync_playlist_to_navidrome
+from .library_metadata import read_audio_metadata
+from .library_paths import locate_library_file, slskd_dir_from_downloader
+from .track_index import TrackIndex, resolve_existing_download
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
+    'slskd': {
+        'enabled': False,
+        'base_url': '',
+        'api_key': '',
+        'download_dir': '/downloads',
+        'source_dir': '/slskd',
+        'leave_in_place': True,
+        'timeout_seconds': 20,
+        'search_retries': 5,
+        'search_poll_seconds': 15,
+        'download_attempts': 3,
+        'poll_interval_seconds': 5,
+        'poll_max_attempts': 60,
+        'download_timeout_seconds': 600,
+        'queued_timeout_seconds': 180,
+        'extensions': ['mp3', 'flac'],
+        'min_bitrate': 256,
+    },
     'lyrics_providers': ['lrclib'],
     'download_lyrics': True,
     'format': 'mp3',
     'bitrate': '320',
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
+    'sync_navidrome': True,
+    'navidrome': {
+        'enabled': False,
+        'url': '',
+        'username': '',
+        'password': '',
+        'admin_username': '',
+        'admin_password': '',
+        'public_playlist': False,
+        'scan_after_download': True,
+        'scan_full': False,
+        'scan_wait_seconds': 120,
+        'scan_poll_seconds': 5,
+        'scan_retry_seconds': 15,
+        'client_name': 'Downtify',
+        'api_version': '1.16.1',
+    },
     'max_parallel_downloads': 3,
     'organize_by_artist': False,
 }
 
 
 def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
-    allowed = {'youtube-music', 'youtube'}
+    allowed = {'youtube-music', 'youtube', 'slskd'}
+    slskd_cfg = _effective_slskd_settings(settings)
     out: list[str] = []
     seen: set[str] = set()
     for raw in (settings.get('audio_providers') or []):
         p = str(raw or '').strip()
+        if p == 'slskd' and not bool(slskd_cfg.get('enabled')):
+            continue
         if p in allowed and p not in seen:
             seen.add(p)
             out.append(p)
-    return out or ['youtube-music']
+    if not out:
+        return ['youtube-music']
+    # UI historically stored a single provider; keep playlist downloads useful
+    # by falling back to YouTube when slskd is selected without a backup.
+    if 'slskd' in out and not any(p in out for p in ('youtube', 'youtube-music')):
+        for fallback in ('youtube-music', 'youtube'):
+            if fallback not in seen:
+                seen.add(fallback)
+                out.append(fallback)
+    return out
+
+
+def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    raw = settings.get('slskd')
+    if not isinstance(raw, dict):
+        raw = {}
+    base_url = str(raw.get('base_url') or '').strip().rstrip('/')
+    download_dir = str(raw.get('download_dir') or '/downloads').strip()
+    leave_in_place = raw.get('leave_in_place')
+    if leave_in_place is None:
+        leave_in_place_default = True
+    else:
+        leave_in_place_default = bool(leave_in_place)
+    source_dir = str(raw.get('source_dir') or '').strip()
+    if not source_dir:
+        source_dir = '/slskd' if leave_in_place_default else download_dir
+    api_key = str(raw.get('api_key') or '').strip()
+    try:
+        timeout_seconds = int(raw.get('timeout_seconds') or 20)
+    except (TypeError, ValueError):
+        timeout_seconds = 20
+    timeout_seconds = min(120, max(5, timeout_seconds))
+    try:
+        search_retries = int(raw.get('search_retries') or 5)
+    except (TypeError, ValueError):
+        search_retries = 5
+    search_retries = min(20, max(1, search_retries))
+    try:
+        search_poll_seconds = int(raw.get('search_poll_seconds') or 15)
+    except (TypeError, ValueError):
+        search_poll_seconds = 15
+    search_poll_seconds = min(60, max(3, search_poll_seconds))
+    try:
+        download_attempts = int(raw.get('download_attempts') or 3)
+    except (TypeError, ValueError):
+        download_attempts = 3
+    download_attempts = min(10, max(1, download_attempts))
+    try:
+        poll_interval_seconds = int(raw.get('poll_interval_seconds') or 5)
+    except (TypeError, ValueError):
+        poll_interval_seconds = 5
+    poll_interval_seconds = min(30, max(1, poll_interval_seconds))
+    try:
+        poll_max_attempts = int(raw.get('poll_max_attempts') or 60)
+    except (TypeError, ValueError):
+        poll_max_attempts = 60
+    poll_max_attempts = min(300, max(1, poll_max_attempts))
+    try:
+        download_timeout_seconds = int(
+            raw.get('download_timeout_seconds') or 600
+        )
+    except (TypeError, ValueError):
+        download_timeout_seconds = 600
+    download_timeout_seconds = min(3600, max(30, download_timeout_seconds))
+    try:
+        queued_timeout_seconds = int(raw.get('queued_timeout_seconds') or 180)
+    except (TypeError, ValueError):
+        queued_timeout_seconds = 180
+    queued_timeout_seconds = min(3600, max(15, queued_timeout_seconds))
+    try:
+        min_bitrate = int(raw.get('min_bitrate') or 256)
+    except (TypeError, ValueError):
+        min_bitrate = 256
+    raw_ext = raw.get('extensions')
+    if isinstance(raw_ext, list):
+        extensions = [
+            str(e).strip().lower().lstrip('.')
+            for e in raw_ext
+            if str(e).strip()
+        ]
+    elif isinstance(raw_ext, str) and raw_ext.strip():
+        extensions = [
+            e.strip().lower().lstrip('.')
+            for e in raw_ext.split(',')
+            if e.strip()
+        ]
+    else:
+        extensions = ['mp3', 'flac']
+    if not extensions:
+        extensions = ['mp3', 'flac']
+    if leave_in_place is None:
+        leave_in_place = True
+    else:
+        leave_in_place = bool(leave_in_place)
+    return {
+        'enabled': bool(raw.get('enabled', False)),
+        'base_url': base_url,
+        'api_key': api_key,
+        'download_dir': download_dir,
+        'source_dir': source_dir,
+        'leave_in_place': leave_in_place,
+        'timeout_seconds': timeout_seconds,
+        'search_retries': search_retries,
+        'search_poll_seconds': search_poll_seconds,
+        'download_attempts': download_attempts,
+        'poll_interval_seconds': poll_interval_seconds,
+        'poll_max_attempts': poll_max_attempts,
+        'download_timeout_seconds': download_timeout_seconds,
+        'queued_timeout_seconds': queued_timeout_seconds,
+        'extensions': extensions,
+        'min_bitrate': min_bitrate,
+    }
 
 
 def _effective_lyrics_providers(settings: dict[str, Any]) -> list[str]:
@@ -116,6 +269,7 @@ class AppState:
     settings_path: Optional[Path] = None
     loop: Optional[asyncio.AbstractEventLoop] = None
     monitor_db: Optional[PlaylistMonitorDB] = None
+    track_index: Optional[TrackIndex] = None
     download_jobs: dict[str, dict[str, Any]] = {}
     download_semaphore: Optional[asyncio.Semaphore] = None
 
@@ -132,7 +286,14 @@ def _load_settings(path: Path) -> dict[str, Any]:
             merged = dict(DEFAULT_SETTINGS)
             for k, v in saved.items():
                 if k in DEFAULT_SETTINGS:
-                    merged[k] = v
+                    if (
+                        k in ('slskd', 'navidrome')
+                        and isinstance(v, dict)
+                        and isinstance(DEFAULT_SETTINGS.get(k), dict)
+                    ):
+                        merged[k] = {**DEFAULT_SETTINGS[k], **v}
+                    else:
+                        merged[k] = v
             return merged
     except Exception:
         pass
@@ -158,7 +319,25 @@ def check_update() -> Optional[dict[str, Any]]:
 
 @router.get('/api/songs/search')
 def search_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
-    return providers.search_songs(query, limit=20)
+    results = providers.search_songs(query, limit=20)
+    if results:
+        return results
+    q = query.strip()
+    if not q:
+        return []
+    slskd_cfg = _effective_slskd_settings(state.settings)
+    providers_list = _effective_audio_providers(state.settings)
+    if 'slskd' in providers_list and slskd_cfg.get('enabled'):
+        stub = providers.song_stub_from_text_query(q)
+        if stub:
+            logger.info(
+                'Search fallback for slskd: q={!r} title={!r} artists={}',
+                q,
+                stub.get('name'),
+                stub.get('artists'),
+            )
+            return [stub]
+    return []
 
 
 @router.get('/api/song/url')
@@ -229,6 +408,16 @@ def _merge_client_track_hints(
         base['year'] = yr.strip()
 
 
+def _song_from_download_request(
+    url: str, client_hints: Optional[dict[str, Any]]
+) -> dict[str, Any]:
+    if isinstance(client_hints, dict) and client_hints.get('source') == 'text_search':
+        return dict(client_hints)
+    song = _song_for_download(url)
+    _merge_client_track_hints(song, client_hints)
+    return song
+
+
 def _song_for_download(url: str) -> dict[str, Any]:
     parsed = spotify.parse_spotify_url(url)
     if parsed is not None:
@@ -270,6 +459,12 @@ async def _run_download(
         raise RuntimeError('Downloader not ready')
 
     loop = state.loop or asyncio.get_running_loop()
+    logger.info(
+        'download start: title={!r} artists={} providers={}',
+        song.get('name'),
+        song.get('artists'),
+        getattr(state.downloader, 'audio_providers', None),
+    )
     job = state.download_jobs.get(song_id)
     if job is None:
         song_id = _register_job(song, status='downloading')
@@ -283,6 +478,36 @@ async def _run_download(
         'message': '',
         'status': 'downloading',
     })
+
+    def _lookup_existing() -> Optional[tuple[str, str]]:
+        return resolve_existing_download(
+            state.downloader,
+            song,
+            subdir=subdir,
+            track_index=state.track_index,
+        )
+
+    existing_hit = await loop.run_in_executor(None, _lookup_existing)
+    if existing_hit:
+        existing, skip_message = existing_hit
+        logger.info(
+            'download skip: {} title={!r} path={}',
+            skip_message.lower(),
+            song.get('name'),
+            existing,
+        )
+        job['status'] = 'done'
+        job['filename'] = existing
+        job['progress'] = 100
+        job['message'] = skip_message
+        await state.connections.broadcast({
+            'song': song,
+            'progress': 100,
+            'message': skip_message,
+            'status': 'done',
+            'filename': existing,
+        })
+        return existing
 
     def progress(pct: float, message: str) -> None:
         j = state.download_jobs.get(song_id)
@@ -308,6 +533,21 @@ async def _run_download(
                     song, progress, subdir=subdir
                 ),
             )
+    except NoAudioMatchError as exc:
+        logger.warning(
+            'No audio source for {!r} ({})',
+            song.get('name'),
+            song_id,
+        )
+        job['status'] = 'error'
+        job['message'] = str(exc)
+        await state.connections.broadcast({
+            'song': song,
+            'progress': 0,
+            'message': str(exc),
+            'status': 'error',
+        })
+        return None
     except Exception as exc:
         logger.exception('Download failed for {}', song_id)
         job['status'] = 'error'
@@ -323,6 +563,11 @@ async def _run_download(
     job['status'] = 'done'
     job['filename'] = filename
     job['progress'] = 100
+    if state.track_index is not None and filename:
+        await loop.run_in_executor(
+            None,
+            lambda: state.track_index.register_song(song, filename),
+        )
     await state.connections.broadcast({
         'song': song,
         'progress': 100,
@@ -342,20 +587,13 @@ async def download_endpoint(
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
-    song = _song_for_download(url)
-    tn_before = song.get('track_number')
-    yr_before = song.get('year') or song.get('release_date')
-    _merge_client_track_hints(song, client_hints)
-    logger.debug(
-        'download/url: url={} body={} tn_before={!r} tn_after={!r} '
-        'date_before={!r} date_after_year={!r} date_after_rd={!r}',
-        url[:140],
-        'json' if isinstance(client_hints, dict) else 'none',
-        tn_before,
-        song.get('track_number'),
-        yr_before,
-        song.get('year'),
-        song.get('release_date'),
+    song = _song_from_download_request(url, client_hints)
+    logger.info(
+        'download/url: title={!r} artists={} source={} url={}',
+        song.get('name'),
+        song.get('artists'),
+        song.get('source'),
+        str(song.get('url') or url)[:140],
     )
     song_id = _register_job(song, status='downloading')
 
@@ -363,7 +601,62 @@ async def download_endpoint(
         filename = await _run_download(song, song_id)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    if filename is None:
+        raise HTTPException(
+            status_code=404,
+            detail='Could not find an audio match',
+        )
     return filename
+
+
+def _songs_for_navidrome_sync(
+    results: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    downloader = state.downloader
+    download_dir = (
+        Path(downloader.download_dir) if downloader is not None else None
+    )
+    slskd_dir = (
+        slskd_dir_from_downloader(downloader) if downloader is not None else None
+    )
+    for r in results:
+        if not r or not r.get('filename'):
+            continue
+        song = dict(r.get('song') or {})
+        song['filename'] = r['filename']
+        if download_dir is not None:
+            path = locate_library_file(r['filename'], download_dir, slskd_dir)
+            if path is not None:
+                meta = read_audio_metadata(path)
+                if meta.get('title'):
+                    song['name'] = meta['title']
+                if meta.get('artists'):
+                    song['artists'] = meta['artists']
+        out.append(song)
+    return out
+
+
+async def _sync_playlist_navidrome(
+    playlist_name: str,
+    results: list[dict[str, Any]],
+) -> None:
+    if not _effective_navidrome_settings(state.settings).get('enabled'):
+        return
+    if state.settings.get('sync_navidrome', True) is False:
+        return
+    songs = _songs_for_navidrome_sync(results)
+    if not songs:
+        return
+    try:
+        await asyncio.to_thread(
+            sync_playlist_to_navidrome,
+            playlist_name,
+            songs,
+            state.settings,
+        )
+    except Exception:
+        logger.exception('Navidrome sync failed for playlist {}', playlist_name)
 
 
 async def _process_batch(
@@ -403,7 +696,7 @@ async def _process_batch(
         return_exceptions=False,
     )
 
-    if not (generate_m3u and playlist_subdir and playlist_name):
+    if not playlist_name:
         return
 
     entries: list[dict[str, Any]] = []
@@ -417,23 +710,23 @@ async def _process_batch(
             'artist': ', '.join(s.get('artists') or []),
             'duration': s.get('duration') or 0,
         })
-    if not entries:
-        return
 
-    # When organize_by_artist is on, songs land in per-artist folders instead
-    # of the playlist subfolder, so the M3U must go to the legacy Playlists/
-    # directory (playlist_subdir=None) where relative paths still resolve.
-    organize = bool(state.downloader and state.downloader.organize_by_artist)
-    try:
-        await asyncio.to_thread(
-            m3u.write_m3u,
-            state.downloader.download_dir,
-            playlist_name,
-            entries,
-            playlist_subdir=None if organize else playlist_subdir,
-        )
-    except Exception:
-        logger.exception('Failed to write M3U for {}', playlist_url)
+    if generate_m3u and playlist_subdir and entries:
+        organize = bool(state.downloader and state.downloader.organize_by_artist)
+        try:
+            await asyncio.to_thread(
+                m3u.write_m3u,
+                state.downloader.download_dir,
+                playlist_name,
+                entries,
+                playlist_subdir=None if organize else playlist_subdir,
+                slskd_dir=slskd_dir_from_downloader(state.downloader),
+            )
+        except Exception:
+            logger.exception('Failed to write M3U for {}', playlist_url)
+
+    if entries:
+        await _sync_playlist_navidrome(playlist_name, results)
 
 
 @router.post('/api/download/batch')
@@ -554,6 +847,7 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
         playlist_name,
         entries,
         playlist_subdir=None if organize else playlist_subdir,
+        slskd_dir=slskd_dir_from_downloader(state.downloader),
     )
     if target is None:
         raise HTTPException(
@@ -579,8 +873,54 @@ async def update_settings_endpoint(
         for key, value in payload.items():
             if key in DEFAULT_SETTINGS:
                 state.settings[key] = value
+        if 'slskd' in payload:
+            state.settings['slskd'] = _effective_slskd_settings(state.settings)
+            slskd_cfg = state.settings['slskd']
+            if slskd_cfg.get('enabled'):
+                if not str(slskd_cfg.get('base_url') or '').strip():
+                    raise HTTPException(
+                        status_code=400,
+                        detail='slskd base URL is required when enabled',
+                    )
+                if not str(slskd_cfg.get('api_key') or '').strip():
+                    raise HTTPException(
+                        status_code=400,
+                        detail='slskd API key is required when enabled',
+                    )
+        if 'navidrome' in payload:
+            state.settings['navidrome'] = _effective_navidrome_settings(
+                state.settings
+            )
+            nav_cfg = state.settings['navidrome']
+            if nav_cfg.get('enabled'):
+                if not str(nav_cfg.get('url') or '').strip():
+                    raise HTTPException(
+                        status_code=400,
+                        detail='Navidrome URL is required when enabled',
+                    )
+                if not str(nav_cfg.get('username') or '').strip():
+                    raise HTTPException(
+                        status_code=400,
+                        detail='Navidrome username is required when enabled',
+                    )
+                if not str(nav_cfg.get('password') or ''):
+                    raise HTTPException(
+                        status_code=400,
+                        detail='Navidrome password is required when enabled',
+                    )
+        if 'audio_providers' in payload or 'slskd' in payload:
+            state.settings['audio_providers'] = _effective_audio_providers(
+                state.settings
+            )
         if state.downloader is not None:
             if 'audio_providers' in payload:
+                state.downloader.audio_providers = _effective_audio_providers(
+                    state.settings
+                )
+            if 'slskd' in payload:
+                state.downloader.slskd_settings = _effective_slskd_settings(
+                    state.settings
+                )
                 state.downloader.audio_providers = _effective_audio_providers(
                     state.settings
                 )
@@ -699,6 +1039,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
                     state.connections.broadcast,
                     loop,
                     state.settings,
+                    track_index=state.track_index,
                 )
             except Exception:
                 logger.exception('Initial check failed for playlist {}', pl.id)
@@ -766,6 +1107,8 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
                 state.downloader,  # type: ignore[arg-type]
                 state.connections.broadcast,
                 loop,
+                state.settings,
+                track_index=state.track_index,
             )
             logger.info(
                 'Manual check: downloaded {} new track(s) from "{}"',
