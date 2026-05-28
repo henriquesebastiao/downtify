@@ -17,6 +17,7 @@ from downtify.api import (
 def test_default_settings_has_required_keys():
     required = {
         'audio_providers',
+        'youtube',
         'slskd',
         'lyrics_providers',
         'download_lyrics',

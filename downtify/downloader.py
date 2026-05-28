@@ -108,6 +108,39 @@ def _yt_player_clients() -> list[str]:
     return clients or list(_DEFAULT_YT_PLAYER_CLIENTS)
 
 
+def apply_ytdlp_cookie_opts(
+    ydl_opts: dict[str, Any],
+    youtube_settings: Optional[dict[str, Any]] = None,
+) -> None:
+    """Attach cookiefile / cookiesfrombrowser when configured (settings or env)."""
+    cookies_file = ''
+    if youtube_settings:
+        cookies_file = str(youtube_settings.get('cookies_file') or '').strip()
+    if not cookies_file:
+        cookies_file = os.getenv('DOWNTIFY_COOKIES_FILE', '').strip()
+    if cookies_file:
+        path = Path(cookies_file)
+        if path.is_file():
+            ydl_opts['cookiefile'] = str(path)
+        else:
+            logger.warning('yt-dlp cookies file not found: {}', cookies_file)
+
+    cookies_browser = ''
+    if youtube_settings:
+        cookies_browser = str(
+            youtube_settings.get('cookies_from_browser') or ''
+        ).strip()
+    if not cookies_browser:
+        cookies_browser = os.getenv(
+            'DOWNTIFY_COOKIES_FROM_BROWSER', ''
+        ).strip()
+    if cookies_browser:
+        parts = cookies_browser.split(':', 1)
+        ydl_opts['cookiesfrombrowser'] = (
+            (parts[0],) if len(parts) == 1 else (parts[0], parts[1])
+        )
+
+
 def _yt_po_tokens() -> list[str]:
     """Comma-separated PO Tokens, each in the form ``<client>.<context>+<token>``.
 
@@ -119,7 +152,11 @@ def _yt_po_tokens() -> list[str]:
     return [t.strip() for t in raw.split(',') if t.strip()]
 
 
-def _fallback_video_id_via_ytdlp(song: dict[str, Any]) -> Optional[str]:
+def _fallback_video_id_via_ytdlp(
+    song: dict[str, Any],
+    *,
+    youtube_settings: Optional[dict[str, Any]] = None,
+) -> Optional[str]:
     """Best-effort YouTube fallback when YT Music search yields no match."""
 
     title = str(song.get('name') or '').strip()
@@ -133,6 +170,7 @@ def _fallback_video_id_via_ytdlp(song: dict[str, Any]) -> Optional[str]:
         'extract_flat': 'in_playlist',
         'skip_download': True,
     }
+    apply_ytdlp_cookie_opts(opts, youtube_settings)
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(f'ytsearch1:{query}', download=False)
@@ -169,6 +207,7 @@ class Downloader:
         organize_by_artist: bool = False,
         audio_providers: Optional[list[str]] = None,
         slskd_settings: Optional[dict[str, Any]] = None,
+        youtube_settings: Optional[dict[str, Any]] = None,
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
@@ -179,6 +218,7 @@ class Downloader:
         self.organize_by_artist = organize_by_artist
         self.audio_providers = self._normalize_audio_providers(audio_providers)
         self.slskd_settings = self._normalize_slskd_settings(slskd_settings)
+        self.youtube_settings = dict(youtube_settings or {})
         # Final tagged files land in Downtify's download root.
         self.slskd_settings['output_dir'] = str(self.download_dir)
 
@@ -277,7 +317,9 @@ class Downloader:
                 )
             elif provider == 'youtube':
                 tried_ytdlp = True
-                video_id = _fallback_video_id_via_ytdlp(song)
+                video_id = _fallback_video_id_via_ytdlp(
+                    song, youtube_settings=self.youtube_settings
+                )
                 if video_id:
                     logger.info(
                         'Match resolver: provider={} succeeded title={!r} '
@@ -330,7 +372,9 @@ class Downloader:
                 )
 
         if not tried_ytdlp and 'youtube-music' in self.audio_providers:
-            video_id = _fallback_video_id_via_ytdlp(song)
+            video_id = _fallback_video_id_via_ytdlp(
+                song, youtube_settings=self.youtube_settings
+            )
             if video_id:
                 logger.info(
                     'Match resolver: yt-dlp search fallback after provider '
@@ -589,22 +633,7 @@ class Downloader:
         }:
             ydl_opts['source_address'] = '0.0.0.0'
 
-        # Optional cookie support for the rare case where even alternate
-        # player_clients get challenged. DOWNTIFY_COOKIES_FILE points at a
-        # Netscape-format cookies.txt; DOWNTIFY_COOKIES_FROM_BROWSER takes
-        # "<browser>" or "<browser>:<profile>" (e.g. "firefox" or
-        # "chrome:Default").
-        cookies_file = os.getenv('DOWNTIFY_COOKIES_FILE', '').strip()
-        if cookies_file:
-            ydl_opts['cookiefile'] = cookies_file
-        cookies_browser = os.getenv(
-            'DOWNTIFY_COOKIES_FROM_BROWSER', ''
-        ).strip()
-        if cookies_browser:
-            parts = cookies_browser.split(':', 1)
-            ydl_opts['cookiesfrombrowser'] = (
-                (parts[0],) if len(parts) == 1 else (parts[0], parts[1])
-            )
+        apply_ytdlp_cookie_opts(ydl_opts, self.youtube_settings)
 
         url = f'https://music.youtube.com/watch?v={video_id}'
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:

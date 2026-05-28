@@ -23,6 +23,8 @@ services:
       - /path/to/music/downloads:/downloads
       - /path/to/music/slskd:/slskd
       - downtify_data:/data
+      # Optional: mount cookies instead of uploading in Settings → YouTube cookies
+      # - /path/to/cookies.txt:/data/youtube-cookies.txt:ro
 
 volumes:
   downtify_data:

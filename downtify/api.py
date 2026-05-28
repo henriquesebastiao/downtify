@@ -28,9 +28,11 @@ from typing import Any, Optional
 from fastapi import (
     APIRouter,
     Body,
+    File,
     HTTPException,
     Query,
     Request,
+    UploadFile,
     WebSocket,
     WebSocketDisconnect,
 )
@@ -44,8 +46,14 @@ from .library_metadata import read_audio_metadata
 from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .track_index import TrackIndex, resolve_existing_download
 
+DEFAULT_YOUTUBE_COOKIES_BASENAME = 'youtube-cookies.txt'
+
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
+    'youtube': {
+        'cookies_file': '',
+        'cookies_from_browser': '',
+    },
     'slskd': {
         'enabled': False,
         'base_url': '',
@@ -90,6 +98,33 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'max_parallel_downloads': 3,
     'organize_by_artist': False,
 }
+
+
+def _youtube_cookies_storage_path(settings_path: Optional[Path]) -> Path:
+    if settings_path is not None:
+        return settings_path.parent / DEFAULT_YOUTUBE_COOKIES_BASENAME
+    return Path('/data') / DEFAULT_YOUTUBE_COOKIES_BASENAME
+
+
+def _effective_youtube_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    raw = settings.get('youtube')
+    if not isinstance(raw, dict):
+        raw = {}
+    return {
+        'cookies_file': str(raw.get('cookies_file') or '').strip(),
+        'cookies_from_browser': str(
+            raw.get('cookies_from_browser') or ''
+        ).strip(),
+    }
+
+
+def _youtube_settings_for_response(settings: dict[str, Any]) -> dict[str, Any]:
+    yt = _effective_youtube_settings(settings)
+    path = yt.get('cookies_file') or ''
+    return {
+        **yt,
+        'cookies_file_exists': bool(path and Path(path).is_file()),
+    }
 
 
 def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
@@ -294,7 +329,7 @@ def _load_settings(path: Path) -> dict[str, Any]:
             for k, v in saved.items():
                 if k in DEFAULT_SETTINGS:
                     if (
-                        k in ('slskd', 'navidrome')
+                        k in ('slskd', 'navidrome', 'youtube')
                         and isinstance(v, dict)
                         and isinstance(DEFAULT_SETTINGS.get(k), dict)
                     ):
@@ -878,7 +913,9 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
 
 @router.get('/api/settings')
 def get_settings_endpoint(client_id: str = Query('')) -> dict[str, Any]:
-    return state.settings
+    out = dict(state.settings)
+    out['youtube'] = _youtube_settings_for_response(state.settings)
+    return out
 
 
 @router.post('/api/settings/update')
@@ -893,6 +930,10 @@ async def update_settings_endpoint(
         for key, value in payload.items():
             if key in DEFAULT_SETTINGS:
                 state.settings[key] = value
+        if 'youtube' in payload:
+            state.settings['youtube'] = _effective_youtube_settings(
+                state.settings
+            )
         if 'slskd' in payload:
             state.settings['slskd'] = _effective_slskd_settings(state.settings)
             slskd_cfg = state.settings['slskd']
@@ -963,6 +1004,10 @@ async def update_settings_endpoint(
                 state.downloader.organize_by_artist = bool(
                     payload['organize_by_artist']
                 )
+            if 'youtube' in payload:
+                state.downloader.youtube_settings = _effective_youtube_settings(
+                    state.settings
+                )
         if 'max_parallel_downloads' in payload:
             try:
                 count = max(1, int(payload['max_parallel_downloads']))
@@ -979,7 +1024,88 @@ async def update_settings_endpoint(
                 pass
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)
-    return state.settings
+    out = dict(state.settings)
+    out['youtube'] = _youtube_settings_for_response(state.settings)
+    return out
+
+
+def _validate_youtube_cookies_bytes(raw: bytes) -> None:
+    if not raw or not raw.strip():
+        raise HTTPException(
+            status_code=400, detail='cookies file is empty'
+        )
+    if len(raw) > 512_000:
+        raise HTTPException(
+            status_code=400, detail='cookies file is too large'
+        )
+    try:
+        text = raw.decode('utf-8', errors='replace')
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400, detail='cookies file must be UTF-8 text'
+        ) from exc
+    if 'youtube.com' not in text and 'youtube' not in text.casefold():
+        raise HTTPException(
+            status_code=400,
+            detail='file does not look like YouTube cookies (export from youtube.com while signed in)',
+        )
+
+
+@router.post('/api/settings/youtube-cookies')
+async def upload_youtube_cookies_endpoint(
+    file: UploadFile = File(...),
+    client_id: str = Query(''),
+) -> dict[str, Any]:
+    raw = await file.read()
+    _validate_youtube_cookies_bytes(raw)
+    dest = _youtube_cookies_storage_path(state.settings_path)
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(raw)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f'could not write cookies file: {exc}',
+        ) from exc
+    merged = dict(state.settings)
+    yt = _effective_youtube_settings(merged)
+    yt['cookies_file'] = str(dest)
+    merged['youtube'] = yt
+    state.settings['youtube'] = yt
+    if state.downloader is not None:
+        state.downloader.youtube_settings = dict(yt)
+    if state.settings_path is not None:
+        _save_settings(state.settings_path, state.settings)
+    logger.info('YouTube cookies saved to {}', dest)
+    out = dict(state.settings)
+    out['youtube'] = _youtube_settings_for_response(state.settings)
+    return out
+
+
+@router.delete('/api/settings/youtube-cookies')
+def delete_youtube_cookies_endpoint(
+    client_id: str = Query(''),
+) -> dict[str, Any]:
+    yt = _effective_youtube_settings(state.settings)
+    path_str = yt.get('cookies_file') or ''
+    if path_str:
+        try:
+            Path(path_str).unlink(missing_ok=True)
+        except OSError as exc:
+            logger.warning('Could not delete cookies file {}: {}', path_str, exc)
+    state.settings['youtube'] = {
+        'cookies_file': '',
+        'cookies_from_browser': '',
+    }
+    if state.downloader is not None:
+        state.downloader.youtube_settings = _effective_youtube_settings(
+            state.settings
+        )
+    if state.settings_path is not None:
+        _save_settings(state.settings_path, state.settings)
+    out = dict(state.settings)
+    out['youtube'] = _youtube_settings_for_response(state.settings)
+    return out
 
 
 @router.websocket('/api/ws')

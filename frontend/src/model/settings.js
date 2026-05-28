@@ -4,6 +4,11 @@ import API from '/src/model/api'
 
 const settings = ref({
   audio_providers: [''],
+  youtube: {
+    cookies_file: '',
+    cookies_from_browser: '',
+    cookies_file_exists: false,
+  },
   slskd: {
     enabled: false,
     base_url: '',
@@ -61,6 +66,7 @@ API.getSettings().then((res) => {
     settings.value = {
       ...settings.value,
       ...res.data,
+      youtube: { ...settings.value.youtube, ...(res.data.youtube || {}) },
       slskd: { ...settings.value.slskd, ...(res.data.slskd || {}) },
       navidrome: { ...settings.value.navidrome, ...(res.data.navidrome || {}) },
     }

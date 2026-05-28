@@ -220,6 +220,7 @@ def build_app() -> FastAPI:
         ),
         audio_providers=api._effective_audio_providers(api.state.settings),
         slskd_settings=api._effective_slskd_settings(api.state.settings),
+        youtube_settings=api._effective_youtube_settings(api.state.settings),
         lyrics_providers=api._effective_lyrics_providers(api.state.settings),
         organize_by_artist=bool(
             api.state.settings.get('organize_by_artist', False)

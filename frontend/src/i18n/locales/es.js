@@ -197,6 +197,17 @@ export default {
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',
     languageHint: 'Elige el idioma de la interfaz',
+    youtubeSection: 'Cookies de YouTube',
+    youtubeCookiesHint:
+      'Para vídeos con verificación de edad o inicio de sesión. Exporta cookies.txt (formato Netscape) desde youtube.com con tu cuenta de Google y súbelo aquí o indica la ruta en el contenedor (p. ej. /data/youtube-cookies.txt).',
+    youtubeCookiesPath: 'Ruta del archivo de cookies (en el contenedor)',
+    youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
+    youtubeCookiesUpload: 'Subir cookies.txt',
+    youtubeCookiesClear: 'Quitar cookies',
+    youtubeCookiesReady:
+      'Archivo de cookies encontrado — yt-dlp lo usará en descargas de YouTube.',
+    youtubeCookiesMissing:
+      'Ruta configurada pero el archivo no existe. Vuelve a subirlo o revisa el volumen.',
     slskdSection: 'slskd',
     slskdHint:
       'Soulseek vía slskd. Con Navidrome activo, las listas se crean allí tras escanear la biblioteca; los archivos pueden quedarse en la carpeta slskd.',

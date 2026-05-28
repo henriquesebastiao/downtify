@@ -1,0 +1,77 @@
+"""YouTube cookies settings and yt-dlp option wiring."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from downtify.api import (
+    DEFAULT_SETTINGS,
+    _effective_youtube_settings,
+    _validate_youtube_cookies_bytes,
+    _youtube_cookies_storage_path,
+    _youtube_settings_for_response,
+)
+from downtify.downloader import apply_ytdlp_cookie_opts
+
+
+def test_default_settings_includes_youtube():
+    assert 'youtube' in DEFAULT_SETTINGS
+    assert DEFAULT_SETTINGS['youtube']['cookies_file'] == ''
+
+
+def test_effective_youtube_settings_strips_paths():
+    settings = {
+        'youtube': {
+            'cookies_file': '  /data/cookies.txt  ',
+            'cookies_from_browser': ' chrome:Default ',
+        }
+    }
+    out = _effective_youtube_settings(settings)
+    assert out['cookies_file'] == '/data/cookies.txt'
+    assert out['cookies_from_browser'] == 'chrome:Default'
+
+
+def test_apply_ytdlp_cookie_opts_from_settings(tmp_path: Path):
+    cookie_path = tmp_path / 'cookies.txt'
+    cookie_path.write_text(
+        '# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tx\ty\n',
+        encoding='utf-8',
+    )
+    opts: dict = {}
+    apply_ytdlp_cookie_opts(
+        opts, {'cookies_file': str(cookie_path), 'cookies_from_browser': ''}
+    )
+    assert opts['cookiefile'] == str(cookie_path)
+
+
+def test_apply_ytdlp_cookie_opts_skips_missing_file():
+    opts: dict = {}
+    apply_ytdlp_cookie_opts(opts, {'cookies_file': '/no/such/cookies.txt'})
+    assert 'cookiefile' not in opts
+
+
+def test_youtube_settings_for_response_exists_flag(tmp_path: Path):
+    cookie_path = tmp_path / 'cookies.txt'
+    cookie_path.write_text(
+        '.youtube.com\n',
+        encoding='utf-8',
+    )
+    settings = {'youtube': {'cookies_file': str(cookie_path)}}
+    out = _youtube_settings_for_response(settings)
+    assert out['cookies_file_exists'] is True
+
+
+def test_youtube_cookies_storage_path_next_to_settings(tmp_path: Path):
+    settings_path = tmp_path / 'settings.json'
+    assert _youtube_cookies_storage_path(settings_path) == (
+        tmp_path / 'youtube-cookies.txt'
+    )
+
+
+def test_validate_youtube_cookies_bytes_rejects_empty():
+    import pytest
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc:
+        _validate_youtube_cookies_bytes(b'   ')
+    assert exc.value.status_code == 400

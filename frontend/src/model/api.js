@@ -154,6 +154,21 @@ function setSettings(settings) {
   })
 }
 
+function uploadYoutubeCookies(file) {
+  const form = new FormData()
+  form.append('file', file)
+  return API.post('/api/settings/youtube-cookies', form, {
+    params: { client_id: sessionID },
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+function clearYoutubeCookies() {
+  return API.delete('/api/settings/youtube-cookies', {
+    params: { client_id: sessionID },
+  })
+}
+
 function ws_onmessage(fn) {
   return (wsConnection.onmessage = fn)
 }
@@ -178,6 +193,8 @@ export default {
   clearCompletedQueue,
   getSettings,
   setSettings,
+  uploadYoutubeCookies,
+  clearYoutubeCookies,
   check_for_update,
   ws_onmessage,
   ws_onerror,

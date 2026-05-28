@@ -229,6 +229,64 @@
           </div>
         </div>
 
+        <!-- YouTube cookies -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.youtubeSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/40 mb-2">
+            {{ t('settings.youtubeCookiesHint') }}
+          </p>
+          <p
+            v-if="youtubeCookiesReady"
+            class="text-xs text-success mb-2"
+          >
+            {{ t('settings.youtubeCookiesReady') }}
+          </p>
+          <p
+            v-else-if="youtubeCookiesPath && !youtubeCookiesReady"
+            class="text-xs text-warning mb-2"
+          >
+            {{ t('settings.youtubeCookiesMissing') }}
+          </p>
+          <label class="block text-xs text-base-content/50 mb-1">
+            {{ t('settings.youtubeCookiesPath') }}
+          </label>
+          <input
+            type="text"
+            class="input input-bordered w-full rounded-xl bg-base-100/85 border border-white/10 text-sm mb-2"
+            :placeholder="t('settings.youtubeCookiesPathPlaceholder')"
+            v-model="sm.settings.value.youtube.cookies_file"
+          />
+          <div class="flex flex-wrap gap-2">
+            <label class="btn btn-sm btn-outline rounded-xl cursor-pointer">
+              {{ t('settings.youtubeCookiesUpload') }}
+              <input
+                type="file"
+                accept=".txt,text/plain"
+                class="hidden"
+                @change="onYoutubeCookiesFile"
+              />
+            </label>
+            <button
+              type="button"
+              class="btn btn-sm btn-ghost rounded-xl"
+              :disabled="!youtubeCookiesReady && !youtubeCookiesPath"
+              @click="clearYoutubeCookies"
+            >
+              {{ t('settings.youtubeCookiesClear') }}
+            </button>
+          </div>
+          <p
+            v-if="youtubeCookiesError"
+            class="text-xs text-error mt-2"
+          >
+            {{ youtubeCookiesError }}
+          </p>
+        </div>
+
         <!-- Lyrics source -->
         <div>
           <label
@@ -545,11 +603,26 @@
 
 <script setup>
 import { Icon } from '@iconify/vue'
-import { watchEffect } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
+import API from '../model/api'
 import { useSettingsManager } from '../model/settings'
 import { useI18n } from '../i18n'
 
 const sm = useSettingsManager()
+const youtubeCookiesError = ref('')
+
+const YOUTUBE_DEFAULTS = {
+  cookies_file: '',
+  cookies_from_browser: '',
+  cookies_file_exists: false,
+}
+
+const youtubeCookiesPath = computed(
+  () => String(sm.settings.value?.youtube?.cookies_file || '').trim()
+)
+const youtubeCookiesReady = computed(
+  () => Boolean(sm.settings.value?.youtube?.cookies_file_exists)
+)
 const { t, locale, setLocale, locales } = useI18n()
 
 const NAVIDROME_DEFAULTS = {
@@ -584,6 +657,19 @@ const SLSKD_DEFAULTS = {
   extensions: ['mp3', 'flac'],
   min_bitrate: 256,
 }
+
+watchEffect(() => {
+  const curr = sm.settings.value?.youtube
+  if (!curr || typeof curr !== 'object') {
+    sm.settings.value.youtube = { ...YOUTUBE_DEFAULTS }
+    return
+  }
+  for (const [k, v] of Object.entries(YOUTUBE_DEFAULTS)) {
+    if (curr[k] === undefined || curr[k] === null) {
+      curr[k] = v
+    }
+  }
+})
 
 watchEffect(() => {
   const curr = sm.settings.value?.slskd
@@ -623,6 +709,51 @@ watchEffect(() => {
     sm.settings.value.audio_providers = ['youtube-music']
   }
 })
+
+async function onYoutubeCookiesFile(event) {
+  const input = event.target
+  const file = input?.files?.[0]
+  if (!file) return
+  youtubeCookiesError.value = ''
+  try {
+    const res = await API.uploadYoutubeCookies(file)
+    if (res.status === 200 && res.data?.youtube) {
+      sm.settings.value.youtube = {
+        ...sm.settings.value.youtube,
+        ...res.data.youtube,
+      }
+    } else {
+      youtubeCookiesError.value = t('settings.saveError')
+    }
+  } catch (err) {
+    const detail = err?.response?.data?.detail
+    youtubeCookiesError.value =
+      typeof detail === 'string' && detail.trim()
+        ? detail
+        : t('settings.saveError')
+  } finally {
+    if (input) input.value = ''
+  }
+}
+
+async function clearYoutubeCookies() {
+  youtubeCookiesError.value = ''
+  try {
+    const res = await API.clearYoutubeCookies()
+    if (res.status === 200 && res.data?.youtube) {
+      sm.settings.value.youtube = {
+        ...sm.settings.value.youtube,
+        ...res.data.youtube,
+      }
+    }
+  } catch (err) {
+    const detail = err?.response?.data?.detail
+    youtubeCookiesError.value =
+      typeof detail === 'string' && detail.trim()
+        ? detail
+        : t('settings.saveError')
+  }
+}
 
 function providerLabel(provider) {
   if (provider === 'youtube-music') return 'YouTube Music'

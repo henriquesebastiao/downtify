@@ -194,6 +194,16 @@ export default {
     saveError: "Couldn't save settings.",
     language: 'Language',
     languageHint: 'Choose the interface language',
+    youtubeSection: 'YouTube cookies',
+    youtubeCookiesHint:
+      'For age-restricted or sign-in videos. Export a Netscape cookies.txt from youtube.com while logged into Google (browser extension), then upload here or set a path inside the container (e.g. /data/youtube-cookies.txt). Keep the file private.',
+    youtubeCookiesPath: 'Cookies file path (inside container)',
+    youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
+    youtubeCookiesUpload: 'Upload cookies.txt',
+    youtubeCookiesClear: 'Remove cookies',
+    youtubeCookiesReady: 'Cookies file found — yt-dlp will use it for YouTube downloads.',
+    youtubeCookiesMissing:
+      'Path is set but the file is missing on disk. Upload again or fix the mount path.',
     slskdSection: 'slskd',
     slskdHint:
       'Soulseek via slskd. With Navidrome enabled, playlists are built in Navidrome after a library scan — files can stay in the slskd folder.',
