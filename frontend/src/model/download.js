@@ -18,6 +18,7 @@ class DownloadItem {
     this.web_status = STATUS.QUEUED
     this.progress = 0
     this.message = ''
+    this.provider = ''
     this.web_download_url = null
     this.filename = null
   }
@@ -34,6 +35,7 @@ class DownloadItem {
     this.web_status = STATUS.QUEUED
     this.progress = 0
     this.message = ''
+    this.provider = ''
     this.web_download_url = null
     this.filename = null
   }
@@ -58,6 +60,9 @@ class DownloadItem {
   wsUpdate(message) {
     this.progress = message.progress
     this.message = message.message
+    if (message.provider) {
+      this.provider = message.provider
+    }
   }
 }
 
@@ -116,6 +121,7 @@ API.ws_onmessage((event) => {
   } else if (data.status === 'queued') {
     item.web_status = STATUS.QUEUED
     item.message = data.message || ''
+    if (data.provider) item.provider = data.provider
   } else {
     item.wsUpdate(data)
     item.setDownloading()
@@ -147,9 +153,11 @@ async function _hydrateFromServer() {
         item.setDownloading()
         item.progress = job.progress || 0
         item.message = job.message || ''
+        item.provider = job.provider || ''
       } else {
         item.web_status = STATUS.QUEUED
         item.message = job.message || ''
+        item.provider = job.provider || ''
       }
       downloadQueue.value.push(item)
     }

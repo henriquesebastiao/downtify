@@ -40,7 +40,17 @@ from .slskd_provider import download_from_slskd
 
 _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 
-ProgressCallback = Callable[[float, str], None]
+ProgressCallback = Callable[[float, str, Optional[str]], None]
+
+
+def _provider_display_name(provider: Optional[str]) -> str:
+    if provider == 'youtube-music':
+        return 'YouTube Music'
+    if provider == 'youtube':
+        return 'YouTube'
+    if provider == 'slskd':
+        return 'slskd'
+    return ''
 
 
 class NoAudioMatchError(RuntimeError):
@@ -335,7 +345,7 @@ class Downloader:
 
         if progress_cb is not None:
             try:
-                progress_cb(0.0, 'Searching for audio…')
+                progress_cb(0.0, 'Searching for audio…', None)
             except Exception:
                 logger.opt(exception=True).debug(
                     'progress callback error at search start'
@@ -344,6 +354,17 @@ class Downloader:
         tried_ytdlp = False
         for provider in self.audio_providers:
             if provider == 'youtube-music':
+                if progress_cb is not None:
+                    try:
+                        progress_cb(
+                            1.0,
+                            'Matching on YouTube Music…',
+                            'youtube-music',
+                        )
+                    except Exception:
+                        logger.opt(exception=True).debug(
+                            'progress callback error for youtube-music'
+                        )
                 video_id, match = find_match(song)
                 if video_id:
                     logger.info(
@@ -361,6 +382,13 @@ class Downloader:
                 )
             elif provider == 'youtube':
                 tried_ytdlp = True
+                if progress_cb is not None:
+                    try:
+                        progress_cb(2.0, 'Searching on YouTube…', 'youtube')
+                    except Exception:
+                        logger.opt(exception=True).debug(
+                            'progress callback error for youtube'
+                        )
                 video_id = _fallback_video_id_via_ytdlp(
                     song, youtube_settings=self.youtube_settings
                 )
@@ -404,7 +432,11 @@ class Downloader:
                     return None, None, provider, local
                 if has_fallback and progress_cb is not None:
                     try:
-                        progress_cb(0.0, 'slskd timed out, trying next provider')
+                        progress_cb(
+                            0.0,
+                            'No match on slskd, trying next source…',
+                            'slskd',
+                        )
                     except Exception:
                         logger.opt(exception=True).debug(
                             'progress callback error after slskd timeout'
@@ -416,6 +448,17 @@ class Downloader:
                 )
 
         if not tried_ytdlp and 'youtube-music' in self.audio_providers:
+            if progress_cb is not None:
+                try:
+                    progress_cb(
+                        2.0,
+                        'Searching on YouTube…',
+                        'youtube',
+                    )
+                except Exception:
+                    logger.opt(exception=True).debug(
+                        'progress callback error for yt-dlp fallback'
+                    )
             video_id = _fallback_video_id_via_ytdlp(
                 song, youtube_settings=self.youtube_settings
             )
@@ -511,6 +554,7 @@ class Downloader:
         final_path: Path,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback],
+        provider: Optional[str] = None,
     ) -> None:
         try:
             embed_metadata(final_path, song)
@@ -532,7 +576,9 @@ class Downloader:
                     )
 
         if progress_cb:
-            progress_cb(100.0, 'Done')
+            label = _provider_display_name(provider)
+            msg = f'{label} · done' if label else 'Done'
+            progress_cb(100.0, msg, provider)
 
     def download(
         self,
@@ -570,6 +616,7 @@ class Downloader:
             except Exception:
                 logger.opt(exception=True).debug('enrichment match failed')
                 match = None
+            provider = provider or 'youtube-music'
 
         if not video_id and local_source_path is None:
             raise NoAudioMatchError(
@@ -587,6 +634,8 @@ class Downloader:
         target_dir.mkdir(parents=True, exist_ok=True)
         out_template = str(target_dir / f'{basename}.%(ext)s')
 
+        yt_provider = provider if provider in ('youtube', 'youtube-music') else 'youtube'
+
         if local_source_path is not None:
             if provider == 'slskd' and bool(
                 self.slskd_settings.get('leave_in_place', True)
@@ -603,18 +652,21 @@ class Downloader:
                 )
                 stored_name = f'{rel_prefix}{final_path.name}'
             if progress_cb:
-                progress_cb(
-                    95.0,
-                    f'Downloaded ({provider or "slskd"})',
-                )
-            self._finalize_downloaded_file(final_path, song, progress_cb)
+                label = _provider_display_name(provider) or 'slskd'
+                progress_cb(95.0, f'Downloaded ({label})', provider)
+            self._finalize_downloaded_file(final_path, song, progress_cb, provider)
             return stored_name
+
+        if progress_cb:
+            label = _provider_display_name(yt_provider) or 'YouTube'
+            progress_cb(5.0, f'{label} · preparing download…', yt_provider)
 
         def hook(data: dict[str, Any]) -> None:
             if progress_cb is None:
                 return
             try:
                 status = data.get('status')
+                label = _provider_display_name(yt_provider) or 'YouTube'
                 if status == 'downloading':
                     total = (
                         data.get('total_bytes')
@@ -625,10 +677,11 @@ class Downloader:
                     if total:
                         progress_cb(
                             min(95.0, downloaded / total * 95.0),
-                            'Downloading',
+                            f'{label} · downloading',
+                            yt_provider,
                         )
                 elif status == 'finished':
-                    progress_cb(96.0, 'Converting')
+                    progress_cb(96.0, f'{label} · converting', yt_provider)
             except Exception:
                 logger.opt(exception=True).debug('progress hook error')
 
@@ -721,7 +774,7 @@ class Downloader:
                     final_path = candidate
                     break
 
-        self._finalize_downloaded_file(final_path, song, progress_cb)
+        self._finalize_downloaded_file(final_path, song, progress_cb, yt_provider)
         return f'{rel_prefix}{final_path.name}'
 
 

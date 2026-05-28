@@ -485,6 +485,7 @@ def _register_job(song: dict[str, Any], status: str = 'queued') -> str:
         'status': status,
         'progress': 0,
         'message': '',
+        'provider': '',
         'filename': None,
     }
     return song_id
@@ -542,16 +543,22 @@ async def _run_download(
         })
         return existing
 
-    def progress(pct: float, message: str) -> None:
+    def progress(
+        pct: float, message: str, provider: Optional[str] = None
+    ) -> None:
         j = state.download_jobs.get(song_id)
         if j:
             j['progress'] = pct
-            j['message'] = message
+            if message:
+                j['message'] = message
+            if provider:
+                j['provider'] = provider
         asyncio.run_coroutine_threadsafe(
             state.connections.broadcast({
                 'song': song,
                 'progress': pct,
-                'message': message,
+                'message': message or (j or {}).get('message', ''),
+                'provider': provider or (j or {}).get('provider', ''),
                 'status': 'downloading',
             }),
             loop,
@@ -561,12 +568,12 @@ async def _run_download(
     try:
         async with sem if sem is not None else contextlib.nullcontext():
             job['status'] = 'downloading'
-            job['progress'] = 0
-            job['message'] = ''
+            job['progress'] = job.get('progress') or 0
             await state.connections.broadcast({
                 'song': song,
-                'progress': 0,
-                'message': '',
+                'progress': job['progress'],
+                'message': job.get('message') or '',
+                'provider': job.get('provider') or '',
                 'status': 'downloading',
             })
             filename = await loop.run_in_executor(

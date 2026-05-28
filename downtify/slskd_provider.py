@@ -848,7 +848,7 @@ def _wait_for_slskd_file(
                 on_disk_bytes = 0
             if _disk_complete(found, expected_size):
                 if progress_cb is not None:
-                    progress_cb(92.0, 'Downloading')
+                    progress_cb(92.0, 'slskd · downloading', 'slskd')
                 return found
 
         transfer = client.find_transfer(username, filename)
@@ -894,7 +894,7 @@ def _wait_for_slskd_file(
             )
             if pct > last_reported_pct or attempt == 0:
                 last_reported_pct = pct
-                progress_cb(pct, message)
+                progress_cb(pct, message, 'slskd')
 
         time.sleep(max(1, interval))
 
@@ -936,12 +936,17 @@ def download_from_slskd(
     def report(pct: float, message: str) -> None:
         if progress_cb is not None:
             try:
-                progress_cb(pct, message)
+                text = (
+                    message
+                    if str(message).lower().startswith('slskd')
+                    else f'slskd · {message}'
+                )
+                progress_cb(pct, text, 'slskd')
             except Exception:
                 logger.opt(exception=True).debug('slskd progress callback error')
 
     deadline = _slskd_deadline(settings)
-    report(2.0, 'Searching slskd')
+    report(2.0, 'searching')
 
     search_id = ''
     queued: Optional[dict[str, Any]] = None
@@ -958,14 +963,14 @@ def download_from_slskd(
                     song.get('name'),
                 )
                 return None
-            report(8.0, 'Searching slskd')
+            report(8.0, 'searching')
             search_id = client.start_search(query) or ''
             if not search_id:
                 continue
             if not client.wait_search_complete(
                 search_id,
                 label,
-                on_poll=lambda pct: report(pct, 'Searching slskd'),
+                on_poll=lambda pct: report(pct, 'searching'),
                 deadline=deadline,
             ):
                 client.delete_search(search_id)
@@ -1027,7 +1032,7 @@ def download_from_slskd(
             )
             return None
 
-    report(36.0, 'Queued on slskd')
+    report(36.0, 'queued')
     username = str(queued.get('username') or '')
     filename = str(queued.get('filename') or '')
     try:

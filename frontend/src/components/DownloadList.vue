@@ -117,12 +117,24 @@
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-0.5 flex-wrap">
               <span class="font-semibold truncate">{{ item.song.name }}</span>
+              <span
+                v-if="providerLabel(item)"
+                class="badge badge-xs badge-outline opacity-80 shrink-0"
+              >
+                {{ providerLabel(item) }}
+              </span>
               <span :class="statusClass(item)" class="shrink-0">
                 {{ statusLabel(item) }}
               </span>
             </div>
             <p class="text-xs text-base-content/60 truncate">
               {{ artistsOf(item.song) }}
+            </p>
+            <p
+              v-if="queueItemState(item) === 'active' && item.message"
+              class="text-xs text-base-content/50 mt-0.5 line-clamp-2"
+            >
+              {{ item.message }}
             </p>
             <p
               v-if="item.song.album_name"
@@ -406,11 +418,21 @@ function statusClass(item) {
 
 function statusLabel(item) {
   const state = queueItemState(item)
-  if (state === 'active' && item.message) return item.message
+  if (state === 'active' && item.message) {
+    return t('queue.statusActive')
+  }
   if (item.isErrored()) return t('queue.statusFailed')
   if (item.isDownloaded()) return t('queue.statusDone')
   if (state === 'active') return t('queue.statusActive')
   return t('queue.statusQueued')
+}
+
+function providerLabel(item) {
+  const raw = String(item.provider || '').trim()
+  if (raw === 'youtube-music') return 'YouTube Music'
+  if (raw === 'youtube') return 'YouTube'
+  if (raw === 'slskd') return 'slskd'
+  return ''
 }
 
 function parseYoutubeId(url) {
