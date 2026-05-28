@@ -1,4 +1,5 @@
 from typing import Any
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from downtify.slskd_provider import (
@@ -10,6 +11,7 @@ from downtify.slskd_provider import (
     _flatten_slskd_responses,
     _paths_match,
     _slskd_search_queries,
+    download_from_slskd,
 )
 
 
@@ -251,3 +253,90 @@ def test_enqueue_download_uses_username_endpoint():
     assert captured['json'] == [
         {'filename': 'music\\Artist - Track.mp3', 'size': 1234}
     ]
+
+
+def test_download_from_slskd_tries_next_candidate_on_failure(monkeypatch, tmp_path):
+    candidates = [
+        {
+            'username': 'peer1',
+            'filename': 'Artist - Track (1).mp3',
+            'size': 1000,
+        },
+        {
+            'username': 'peer2',
+            'filename': 'Artist - Track (2).mp3',
+            'size': 1000,
+        },
+    ]
+    success = tmp_path / 'Artist - Track (2).mp3'
+    success.write_bytes(b'audio')
+
+    class FakeClient:
+        base_url = 'https://slskd.example'
+
+        def configured(self) -> bool:
+            return True
+
+        def can_connect(self) -> bool:
+            return True
+
+        def start_search(self, query: str) -> str:
+            return 'search-1'
+
+        def wait_search_complete(self, *args, **kwargs) -> bool:
+            return True
+
+        def search_responses(self, search_id: str) -> list[dict[str, Any]]:
+            return [{'username': 'peer1', 'hasFreeUploadSlot': True, 'fileCount': 1}]
+
+        def delete_search(self, search_id: str) -> None:
+            pass
+
+        def enqueue_download(self, row: dict[str, Any]) -> bool:
+            return True
+
+        def remote_download_directories(self) -> list[str]:
+            return []
+
+    wait_calls: list[str] = []
+
+    def fake_wait(client, song, username, filename, settings, roots, **kwargs):
+        wait_calls.append(filename)
+        if filename.endswith('(2).mp3'):
+            return success
+        return None
+
+    monkeypatch.setattr(
+        'downtify.slskd_provider.SlskdClient',
+        lambda settings: FakeClient(),
+    )
+    monkeypatch.setattr(
+        'downtify.slskd_provider._collect_matching_files',
+        lambda song, responses: list(candidates),
+    )
+    monkeypatch.setattr(
+        'downtify.slskd_provider._filter_by_quality',
+        lambda files, settings: files,
+    )
+    monkeypatch.setattr(
+        'downtify.slskd_provider._search_roots',
+        lambda settings, client: [tmp_path],
+    )
+    monkeypatch.setattr('downtify.slskd_provider._wait_for_slskd_file', fake_wait)
+
+    settings = {
+        'enabled': True,
+        'base_url': 'https://slskd.example',
+        'api_key': 'key',
+        'output_dir': str(tmp_path),
+        'source_dir': str(tmp_path),
+        'leave_in_place': True,
+    }
+    result = download_from_slskd(
+        {'name': 'Track', 'artists': ['Artist'], 'album_name': 'Album'},
+        settings,
+    )
+    assert result == success
+    assert len(wait_calls) == 2
+    assert wait_calls[0].endswith('(1).mp3')
+    assert wait_calls[1].endswith('(2).mp3')
