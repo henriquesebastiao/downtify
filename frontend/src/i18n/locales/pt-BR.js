@@ -191,7 +191,7 @@ export default {
       'Salva as músicas em subpastas com o nome do artista. Músicas de playlists também são salvas na pasta do artista, não na pasta da playlist.',
     parallelDownloads: 'Downloads paralelos',
     parallelDownloadsHint:
-      'Número máximo de músicas baixadas ao mesmo tempo. Valores maiores são mais rápidos, mas consomem mais banda.',
+      'Máximo de músicas ao mesmo tempo (YouTube e slskd). Toque um número e Salvar; vale para trabalho novo. Com slskd ativo, prefira 2–3: o slskd limita buscas Soulseek simultâneas; valores altos só enfileiram ou falham.',
     saved: 'Alterações salvas',
     saveError: 'Não foi possível salvar as configurações.',
     language: 'Idioma',

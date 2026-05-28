@@ -192,7 +192,7 @@ export default {
       'Guarda las canciones en subcarpetas con el nombre del artista. Las pistas de listas también se guardan en la carpeta del artista en lugar de la carpeta de la lista.',
     parallelDownloads: 'Descargas paralelas',
     parallelDownloadsHint:
-      'Número máximo de canciones descargadas simultáneamente. Valores más altos son más rápidos pero consumen más ancho de banda.',
+      'Máximo de canciones a la vez (YouTube y slskd). Toca un número y Guardar; afecta trabajo nuevo. Con slskd activo, usa 2–3: slskd limita búsquedas Soulseek simultáneas; valores altos suelen encolarse o fallar, no acelerar.',
     saved: 'Cambios guardados',
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',
