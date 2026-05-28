@@ -249,6 +249,14 @@ class Downloader:
         Returns ``(video_id, ytm_match, provider_used, local_file_path)``.
         """
 
+        if progress_cb is not None:
+            try:
+                progress_cb(0.0, 'Searching for audio…')
+            except Exception:
+                logger.opt(exception=True).debug(
+                    'progress callback error at search start'
+                )
+
         tried_ytdlp = False
         for provider in self.audio_providers:
             if provider == 'youtube-music':

@@ -158,7 +158,7 @@
               <Icon icon="clarity:download-line" class="h-4 w-4" />
             </a>
             <div
-              v-else-if="item.isDownloading() && !item.isErrored()"
+              v-else-if="queueItemState(item) === 'active'"
               class="radial-progress text-primary"
               :style="`--value:${Math.max(0, item.progress)}; --size:2.75rem; --thickness:3px`"
             >
@@ -166,10 +166,6 @@
                 {{ Math.round(item.progress) }}%
               </span>
             </div>
-            <span
-              v-else-if="!item.isErrored()"
-              class="loading loading-spinner loading-sm text-primary"
-            />
 
             <button
               class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
@@ -275,9 +271,8 @@ const overrideUrls = reactive({})
 function queueItemState(item) {
   if (item.isErrored()) return 'failed'
   if (item.isDownloaded()) return 'done'
-  if (item.isDownloading()) return 'downloading'
   if (item.isQueued()) return 'queued'
-  return 'queued'
+  return 'active'
 }
 
 const doneCount = computed(
@@ -294,10 +289,8 @@ const failedCount = computed(
 
 const activeCount = computed(
   () =>
-    pt.downloadQueue.value.filter((item) => {
-      const s = queueItemState(item)
-      return s === 'queued' || s === 'downloading'
-    }).length
+    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'active')
+      .length
 )
 
 const filterTabs = computed(() => [
@@ -335,12 +328,7 @@ const filteredQueue = computed(() => {
     case 'all':
       return q
     case 'active':
-      return q.filter((item) => {
-        const s = queueItemState(item)
-        return s === 'queued' || s === 'downloading'
-      })
-    case 'downloading':
-      return q.filter((item) => queueItemState(item) === 'downloading')
+      return q.filter((item) => queueItemState(item) === 'active')
     case 'queued':
       return q.filter((item) => queueItemState(item) === 'queued')
     case 'done':
@@ -412,15 +400,16 @@ function artistsOf(song) {
 function statusClass(item) {
   if (item.isErrored()) return 'badge-error-soft'
   if (item.isDownloaded()) return 'badge-soft'
-  if (item.isDownloading()) return 'badge-soft'
+  if (queueItemState(item) === 'active') return 'badge-soft'
   return 'badge-neutral-soft'
 }
 
 function statusLabel(item) {
-  if (item.message) return item.message
+  const state = queueItemState(item)
+  if (state === 'active' && item.message) return item.message
   if (item.isErrored()) return t('queue.statusFailed')
   if (item.isDownloaded()) return t('queue.statusDone')
-  if (item.isDownloading()) return t('queue.statusDownloading')
+  if (state === 'active') return t('queue.statusActive')
   return t('queue.statusQueued')
 }
 

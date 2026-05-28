@@ -118,7 +118,7 @@ API.ws_onmessage((event) => {
     item.message = data.message || ''
   } else {
     item.wsUpdate(data)
-    if (!item.isDownloading()) item.setDownloading()
+    item.setDownloading()
   }
 })
 API.ws_onerror((event) => {
