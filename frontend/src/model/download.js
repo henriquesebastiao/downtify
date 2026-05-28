@@ -30,6 +30,13 @@ class DownloadItem {
   setError() {
     this.web_status = STATUS.ERROR
   }
+  resetForRetry() {
+    this.web_status = STATUS.QUEUED
+    this.progress = 0
+    this.message = ''
+    this.web_download_url = null
+    this.filename = null
+  }
   setWebURL(URL) {
     this.web_download_url = URL
   }
@@ -155,11 +162,24 @@ _hydrateFromServer()
 export function useDownloadManager() {
   const loading = ref(false)
   const settingsManager = useSettingsManager()
+  async function pruneCompletedForNewPlaylist() {
+    downloadQueue.value = downloadQueue.value.filter((item) => !item.isDownloaded())
+    try {
+      await API.clearCompletedQueue()
+    } catch (e) {
+      console.log('Failed to clear completed queue on server:', e)
+    }
+  }
+
   function fromURL(url) {
     const isPlaylistURL = (url || '').includes('://open.spotify.com/playlist/')
     const generateM3u = settingsManager.settings.value.generate_m3u !== false
     loading.value = true
-    return API.open(url)
+    const playlistPrep = isPlaylistURL
+      ? pruneCompletedForNewPlaylist()
+      : Promise.resolve()
+    return playlistPrep
+      .then(() => API.open(url))
       .then((res) => {
         console.log('Received Response:', res)
         if (res.status !== 200) {
@@ -272,13 +292,35 @@ export function useDownloadManager() {
     downloadQueue.value = []
   }
 
+  async function clearCompleted() {
+    await API.clearCompletedQueue()
+    downloadQueue.value = downloadQueue.value.filter((item) => !item.isDownloaded())
+  }
+
+  function retry(song) {
+    const item = progressTracker.getBySong(song)
+    if (item) item.resetForRetry()
+    return download(song)
+  }
+
+  function retryAllFailed() {
+    const failed = downloadQueue.value.filter((item) => item.isErrored())
+    for (const item of failed) {
+      retry(item.song)
+    }
+    return failed.length
+  }
+
   return {
     fromURL,
     download,
     queue,
+    retry,
     retryWithAudio,
+    retryAllFailed,
     remove,
     clearAll,
+    clearCompleted,
     loading,
   }
 }

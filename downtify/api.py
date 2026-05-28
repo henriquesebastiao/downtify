@@ -791,6 +791,19 @@ def clear_queue() -> dict:
     return {'cleared': True}
 
 
+@router.delete('/api/queue/completed')
+def clear_completed_queue() -> dict:
+    """Remove finished jobs so a new playlist queue is easier to read."""
+    removed = [
+        song_id
+        for song_id, job in list(state.download_jobs.items())
+        if job.get('status') == 'done'
+    ]
+    for song_id in removed:
+        del state.download_jobs[song_id]
+    return {'removed': len(removed)}
+
+
 @router.delete('/api/queue/item')
 def remove_queue_item(song_id: str = Query(...)) -> dict:
     if song_id in state.download_jobs:

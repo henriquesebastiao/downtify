@@ -1,7 +1,7 @@
 <template>
   <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
     <!-- Header -->
-    <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight">
           {{ t('queue.title') }}
@@ -10,18 +10,63 @@
           {{ t('queue.subtitle') }}
         </p>
       </div>
-      <button
+      <div
         v-if="pt.downloadQueue.value.length > 0"
-        class="btn btn-sm h-11 px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 text-error/70 hover:text-error"
-        @click="onClearAll"
-        :title="t('queue.clearAll')"
+        class="flex flex-wrap gap-2 justify-end"
       >
-        <Icon icon="clarity:trash-line" class="h-4 w-4 mr-1.5" />
-        {{ t('queue.clearAll') }}
+        <button
+          v-if="failedCount > 0"
+          class="btn btn-sm h-11 px-4 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100"
+          @click="onRetryAllFailed"
+        >
+          <Icon icon="clarity:refresh-line" class="h-4 w-4 mr-1.5" />
+          {{ t('queue.retryAllFailed', { count: failedCount }) }}
+        </button>
+        <button
+          v-if="doneCount > 0"
+          class="btn btn-sm h-11 px-4 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100"
+          @click="onClearCompleted"
+        >
+          {{ t('queue.clearCompleted', { count: doneCount }) }}
+        </button>
+        <button
+          class="btn btn-sm h-11 px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 text-error/70 hover:text-error"
+          @click="onClearAll"
+          :title="t('queue.clearAll')"
+        >
+          <Icon icon="clarity:trash-line" class="h-4 w-4 mr-1.5" />
+          {{ t('queue.clearAll') }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div
+      v-if="pt.downloadQueue.value.length > 0"
+      class="mb-6 flex flex-wrap gap-2"
+      role="tablist"
+    >
+      <button
+        v-for="tab in filterTabs"
+        :key="tab.id"
+        type="button"
+        class="btn btn-sm rounded-full border-white/10"
+        :class="
+          statusFilter === tab.id
+            ? 'btn-primary'
+            : 'bg-base-100/85 hover:bg-base-100'
+        "
+        @click="statusFilter = tab.id"
+      >
+        {{ tab.label }}
+        <span
+          v-if="tab.count > 0"
+          class="ml-1 opacity-80 tabular-nums"
+        >({{ tab.count }})</span>
       </button>
     </div>
 
-    <!-- Empty state -->
+    <!-- Empty state (no queue at all) -->
     <div
       v-if="pt.downloadQueue.value.length === 0"
       class="surface rounded-2xl p-12 flex flex-col items-center text-center"
@@ -36,81 +81,138 @@
       </p>
     </div>
 
+    <!-- Filtered empty -->
+    <div
+      v-else-if="filteredQueue.length === 0"
+      class="surface rounded-2xl p-8 text-center text-sm text-base-content/50"
+    >
+      {{ t('queue.emptyFilter') }}
+    </div>
+
     <!-- Queue items -->
     <ul v-else class="space-y-3">
       <li
         v-for="(item, index) in paginatedQueue"
-        :key="index"
-        class="surface rounded-2xl p-3 sm:p-4 flex items-center gap-4"
+        :key="item.song.song_id || item.song.url || index"
+        class="surface rounded-2xl p-3 sm:p-4"
       >
-        <!-- Cover -->
-        <div class="track-cover h-16 w-16 sm:h-20 sm:w-20">
-          <img
-            v-if="item.song.cover_url"
-            :src="item.song.cover_url"
-            :alt="item.song.name"
-            class="h-full w-full object-cover"
-          />
-          <div
-            v-else
-            class="h-full w-full flex items-center justify-center text-base-content/30"
-          >
-            <Icon icon="clarity:music-note-line" class="h-6 w-6" />
+        <div class="flex items-center gap-4">
+          <!-- Cover -->
+          <div class="track-cover h-16 w-16 sm:h-20 sm:w-20 shrink-0">
+            <img
+              v-if="item.song.cover_url"
+              :src="item.song.cover_url"
+              :alt="item.song.name"
+              class="h-full w-full object-cover"
+            />
+            <div
+              v-else
+              class="h-full w-full flex items-center justify-center text-base-content/30"
+            >
+              <Icon icon="clarity:music-note-line" class="h-6 w-6" />
+            </div>
+          </div>
+
+          <!-- Title + status -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-0.5 flex-wrap">
+              <span class="font-semibold truncate">{{ item.song.name }}</span>
+              <span :class="statusClass(item)" class="shrink-0">
+                {{ statusLabel(item) }}
+              </span>
+            </div>
+            <p class="text-xs text-base-content/60 truncate">
+              {{ artistsOf(item.song) }}
+            </p>
+            <p
+              v-if="item.song.album_name"
+              class="text-xs text-base-content/40 truncate"
+            >
+              {{ item.song.album_name }}
+            </p>
+            <p
+              v-if="item.isErrored() && item.message"
+              class="text-xs text-error/80 mt-1 line-clamp-2"
+            >
+              {{ item.message }}
+            </p>
+          </div>
+
+          <!-- Progress / actions -->
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              v-if="item.isErrored()"
+              class="icon-btn text-primary hover:bg-primary/10"
+              :title="t('queue.retry')"
+              @click="dm.retry(item.song)"
+            >
+              <Icon icon="clarity:refresh-line" class="h-4 w-4" />
+            </button>
+            <a
+              v-if="item.isDownloaded()"
+              class="icon-btn text-primary hover:bg-primary/10"
+              href="javascript:;"
+              @click="forceDownload(item.web_download_url)"
+              :title="t('queue.saveToDevice')"
+            >
+              <Icon icon="clarity:download-line" class="h-4 w-4" />
+            </a>
+            <div
+              v-else-if="item.isDownloading() && !item.isErrored()"
+              class="radial-progress text-primary"
+              :style="`--value:${Math.max(0, item.progress)}; --size:2.75rem; --thickness:3px`"
+            >
+              <span class="text-[10px] font-semibold">
+                {{ Math.round(item.progress) }}%
+              </span>
+            </div>
+            <span
+              v-else-if="!item.isErrored()"
+              class="loading loading-spinner loading-sm text-primary"
+            />
+
+            <button
+              class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
+              @click="dm.remove(item.song)"
+              :title="t('queue.removeFromQueue')"
+            >
+              <Icon icon="clarity:trash-line" class="h-4 w-4" />
+            </button>
           </div>
         </div>
 
-        <!-- Title + status -->
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 mb-0.5">
-            <span class="font-semibold truncate">{{ item.song.name }}</span>
-            <span :class="statusClass(item)" class="shrink-0">
-              {{ item.message || item.web_status }}
-            </span>
-          </div>
-          <p class="text-xs text-base-content/60 truncate">
-            {{ artistsOf(item.song) }}
-          </p>
-          <p
-            v-if="item.song.album_name"
-            class="text-xs text-base-content/40 truncate"
-          >
-            {{ item.song.album_name }}
-          </p>
-        </div>
-
-        <!-- Progress / actions -->
-        <div class="flex items-center gap-2 shrink-0">
-          <a
-            v-if="item.isDownloaded()"
-            class="icon-btn text-primary hover:bg-primary/10"
-            href="javascript:;"
-            @click="forceDownload(item.web_download_url)"
-            :title="t('queue.saveToDevice')"
-          >
-            <Icon icon="clarity:download-line" class="h-4 w-4" />
-          </a>
-          <div
-            v-else-if="item.isDownloading() && !item.isErrored()"
-            class="radial-progress text-primary"
-            :style="`--value:${Math.max(0, item.progress)}; --size:2.75rem; --thickness:3px`"
-          >
-            <span class="text-[10px] font-semibold">
-              {{ Math.round(item.progress) }}%
-            </span>
-          </div>
-          <span
-            v-else-if="!item.isErrored()"
-            class="loading loading-spinner loading-sm text-primary"
+        <!-- Optional YouTube override for failed tracks -->
+        <div
+          v-if="item.isErrored() && overrideOpen[item.song.song_id]"
+          class="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center"
+        >
+          <input
+            v-model="overrideUrls[item.song.song_id]"
+            type="text"
+            class="input input-sm flex-1 min-w-[12rem] rounded-xl bg-base-100/80"
+            :placeholder="t('queue.overridePlaceholder')"
           />
-
           <button
-            class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
-            @click="dm.remove(item.song)"
-            :title="t('queue.removeFromQueue')"
+            class="btn btn-sm btn-primary rounded-full"
+            @click="applyOverride(item)"
           >
-            <Icon icon="clarity:trash-line" class="h-4 w-4" />
+            {{ t('queue.applyOverride') }}
+          </button>
+          <button
+            class="btn btn-sm btn-ghost rounded-full"
+            @click="overrideOpen[item.song.song_id] = false"
+          >
+            {{ t('common.cancel') }}
           </button>
         </div>
+        <button
+          v-else-if="item.isErrored()"
+          type="button"
+          class="mt-2 text-xs text-primary/80 hover:text-primary"
+          @click="overrideOpen[item.song.song_id] = true"
+        >
+          {{ t('queue.forceAudio') }}
+        </button>
       </li>
     </ul>
 
@@ -153,7 +255,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, reactive } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
@@ -164,30 +266,146 @@ const pt = useProgressTracker()
 const dm = useDownloadManager()
 const { t } = useI18n()
 
+const statusFilter = ref('active')
+const currentPage = ref(1)
+const overrideOpen = reactive({})
+const overrideUrls = reactive({})
+
+function queueItemState(item) {
+  if (item.isErrored()) return 'failed'
+  if (item.isDownloaded()) return 'done'
+  if (item.isDownloading()) return 'downloading'
+  return 'queued'
+}
+
+const doneCount = computed(
+  () =>
+    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'done')
+      .length
+)
+
+const failedCount = computed(
+  () =>
+    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'failed')
+      .length
+)
+
+const activeCount = computed(
+  () =>
+    pt.downloadQueue.value.filter((item) => {
+      const s = queueItemState(item)
+      return s === 'queued' || s === 'downloading'
+    }).length
+)
+
+const filterTabs = computed(() => [
+  {
+    id: 'active',
+    label: t('queue.filterActive'),
+    count: activeCount.value,
+  },
+  {
+    id: 'all',
+    label: t('queue.filterAll'),
+    count: pt.downloadQueue.value.length,
+  },
+  {
+    id: 'downloading',
+    label: t('queue.filterDownloading'),
+    count: pt.downloadQueue.value.filter(
+      (i) => queueItemState(i) === 'downloading'
+    ).length,
+  },
+  {
+    id: 'queued',
+    label: t('queue.filterQueued'),
+    count: pt.downloadQueue.value.filter((i) => queueItemState(i) === 'queued')
+      .length,
+  },
+  {
+    id: 'done',
+    label: t('queue.filterDone'),
+    count: doneCount.value,
+  },
+  {
+    id: 'failed',
+    label: t('queue.filterFailed'),
+    count: failedCount.value,
+  },
+])
+
+const filteredQueue = computed(() => {
+  const q = pt.downloadQueue.value
+  switch (statusFilter.value) {
+    case 'all':
+      return q
+    case 'active':
+      return q.filter((item) => {
+        const s = queueItemState(item)
+        return s === 'queued' || s === 'downloading'
+      })
+    case 'downloading':
+      return q.filter((item) => queueItemState(item) === 'downloading')
+    case 'queued':
+      return q.filter((item) => queueItemState(item) === 'queued')
+    case 'done':
+      return q.filter((item) => queueItemState(item) === 'done')
+    case 'failed':
+      return q.filter((item) => queueItemState(item) === 'failed')
+    default:
+      return q
+  }
+})
+
+const totalPages = computed(() =>
+  Math.ceil(filteredQueue.value.length / PAGE_SIZE)
+)
+
+const paginatedQueue = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredQueue.value.slice(start, start + PAGE_SIZE)
+})
+
+watch(statusFilter, () => {
+  currentPage.value = 1
+})
+
+watch(
+  () => filteredQueue.value.length,
+  () => {
+    if (currentPage.value > totalPages.value && totalPages.value > 0) {
+      currentPage.value = totalPages.value
+    }
+    if (currentPage.value < 1) currentPage.value = 1
+  }
+)
+
+watch(
+  () => pt.downloadQueue.value.length,
+  (len) => {
+    if (len === 0) statusFilter.value = 'active'
+    else if (
+      statusFilter.value === 'active' &&
+      activeCount.value === 0 &&
+      failedCount.value > 0
+    ) {
+      statusFilter.value = 'failed'
+    }
+  }
+)
+
 async function onClearAll() {
   if (!confirm(t('queue.clearAllPrompt'))) return
   await dm.clearAll()
 }
 
-const currentPage = ref(1)
+async function onClearCompleted() {
+  await dm.clearCompleted()
+}
 
-const totalPages = computed(() =>
-  Math.ceil(pt.downloadQueue.value.length / PAGE_SIZE)
-)
-
-const paginatedQueue = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE
-  return pt.downloadQueue.value.slice(start, start + PAGE_SIZE)
-})
-
-watch(
-  () => pt.downloadQueue.value.length,
-  () => {
-    if (currentPage.value > totalPages.value && totalPages.value > 0) {
-      currentPage.value = totalPages.value
-    }
-  }
-)
+function onRetryAllFailed() {
+  dm.retryAllFailed()
+}
 
 function artistsOf(song) {
   if (Array.isArray(song.artists) && song.artists.length) {
@@ -199,7 +417,32 @@ function artistsOf(song) {
 function statusClass(item) {
   if (item.isErrored()) return 'badge-error-soft'
   if (item.isDownloaded()) return 'badge-soft'
+  if (item.isDownloading()) return 'badge-soft'
   return 'badge-neutral-soft'
+}
+
+function statusLabel(item) {
+  if (item.message) return item.message
+  if (item.isErrored()) return t('queue.statusFailed')
+  if (item.isDownloaded()) return t('queue.statusDone')
+  if (item.isDownloading()) return t('queue.statusDownloading')
+  return t('queue.statusQueued')
+}
+
+function parseYoutubeId(url) {
+  const m = String(url || '').match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{6,})/)
+  return m ? m[1] : null
+}
+
+function applyOverride(item) {
+  const id = item.song.song_id
+  const videoId = parseYoutubeId(overrideUrls[id])
+  if (!videoId) {
+    alert(t('queue.invalidYouTubeURL'))
+    return
+  }
+  overrideOpen[id] = false
+  dm.retryWithAudio(item.song, videoId)
 }
 
 function forceDownload(url) {

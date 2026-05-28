@@ -109,6 +109,10 @@ function clearQueue() {
   return API.delete('/api/queue')
 }
 
+function clearCompletedQueue() {
+  return API.delete('/api/queue/completed')
+}
+
 function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
@@ -138,6 +142,7 @@ export default {
   getQueue,
   removeQueueItem,
   clearQueue,
+  clearCompletedQueue,
   getSettings,
   setSettings,
   check_for_update,
