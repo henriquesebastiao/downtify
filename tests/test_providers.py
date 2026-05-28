@@ -125,3 +125,57 @@ def test_enrich_preserves_preset_track_number(monkeypatch):
     )
     assert out['track_number'] == 7
     assert out['album_track_total'] == 11
+
+
+def test_find_match_falls_back_when_song_rows_have_no_video_id(monkeypatch):
+    class FakeYTM:
+        def search(self, query, filt, limit=10):
+            if filt == 'songs':
+                return [{'title': 'Song but no id'}]
+            if filt == 'videos':
+                return [{'title': 'Real Video', 'videoId': 'abc123def45'}]
+            return []
+
+    monkeypatch.setattr(providers, '_client', FakeYTM())
+    video_id, match = providers.find_match(
+        {'name': 'Track', 'artists': ['Artist'], 'duration': 180}
+    )
+    assert video_id == 'abc123def45'
+    assert isinstance(match, dict)
+    assert match['videoId'] == 'abc123def45'
+
+
+def test_find_match_retries_title_only_query(monkeypatch):
+    class FakeYTM:
+        def search(self, query, filt, limit=10):
+            if query == 'Artist Missing Song' and filt in {'songs', 'videos'}:
+                return []
+            if query == 'Missing Song' and filt == 'videos':
+                return [{'title': 'Missing Song', 'videoId': 'xyz987uvw65'}]
+            return []
+
+    monkeypatch.setattr(providers, '_client', FakeYTM())
+    video_id, match = providers.find_match(
+        {'name': 'Missing Song', 'artists': ['Artist'], 'duration': 200}
+    )
+    assert video_id == 'xyz987uvw65'
+    assert isinstance(match, dict)
+    assert match['videoId'] == 'xyz987uvw65'
+
+
+def test_find_match_uses_unfiltered_search_fallback(monkeypatch):
+    class FakeYTM:
+        def search(self, query, filter=None, limit=10):
+            if filter in {'songs', 'videos'}:
+                return []
+            if filter is None and query == 'Artist Track':
+                return [{'title': 'Track', 'videoId': 'qwe987rty65'}]
+            return []
+
+    monkeypatch.setattr(providers, '_client', FakeYTM())
+    video_id, match = providers.find_match(
+        {'name': 'Track', 'artists': ['Artist'], 'duration': 180}
+    )
+    assert video_id == 'qwe987rty65'
+    assert isinstance(match, dict)
+    assert match['videoId'] == 'qwe987rty65'

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from downtify import downloader as downloader_mod
 from downtify.downloader import Downloader
 
 
@@ -157,3 +158,60 @@ def test_organize_by_artist_default_is_false(tmp_path):
 def test_organize_by_artist_can_be_set_true(tmp_path):
     d = Downloader(tmp_path, organize_by_artist=True)
     assert d.organize_by_artist is True
+
+
+def test_fallback_video_id_via_ytdlp_returns_first_entry(monkeypatch):
+    class FakeYDL:
+        def __init__(self, _opts):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def extract_info(self, _query, download=False):
+            assert download is False
+            return {'entries': [{'id': 'abc123def45'}]}
+
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', FakeYDL)
+    vid = downloader_mod._fallback_video_id_via_ytdlp(
+        {'name': 'Track', 'artists': ['Artist']}
+    )
+    assert vid == 'abc123def45'
+
+
+def test_resolve_video_id_prefers_provider_order_youtube_first(monkeypatch):
+    d = Downloader('/tmp', audio_providers=['youtube', 'youtube-music'])
+
+    monkeypatch.setattr(
+        downloader_mod,
+        '_fallback_video_id_via_ytdlp',
+        lambda _song: 'yt123',
+    )
+
+    def should_not_run(_song):
+        raise AssertionError('find_match should not run when youtube succeeds')
+
+    monkeypatch.setattr(downloader_mod, 'find_match', should_not_run)
+    vid, match, provider = d._resolve_video_id({'name': 'Track', 'artists': []})
+    assert vid == 'yt123'
+    assert match is None
+    assert provider == 'youtube'
+
+
+def test_resolve_video_id_uses_second_provider_on_first_failure(monkeypatch):
+    d = Downloader('/tmp', audio_providers=['youtube', 'youtube-music'])
+    monkeypatch.setattr(
+        downloader_mod, '_fallback_video_id_via_ytdlp', lambda _song: None
+    )
+    monkeypatch.setattr(
+        downloader_mod,
+        'find_match',
+        lambda _song: ('ytm456', {'videoId': 'ytm456'}),
+    )
+    vid, match, provider = d._resolve_video_id({'name': 'Track', 'artists': []})
+    assert vid == 'ytm456'
+    assert isinstance(match, dict)
+    assert provider == 'youtube-music'

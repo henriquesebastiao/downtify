@@ -211,6 +211,7 @@ def build_app() -> FastAPI:
         output_template=api.state.settings['output'].replace(
             '.{output-ext}', ''
         ),
+        audio_providers=api._effective_audio_providers(api.state.settings),
         lyrics_providers=api._effective_lyrics_providers(api.state.settings),
         organize_by_artist=bool(
             api.state.settings.get('organize_by_artist', False)

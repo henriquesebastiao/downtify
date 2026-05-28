@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from threading import Lock
 from typing import Any, Optional
 
@@ -88,6 +89,16 @@ def _parse_duration(value: Any) -> int:
     return 0
 
 
+def _ascii_fold_query(text: str) -> str:
+    """Drop diacritics and collapse whitespace for fallback queries."""
+
+    if not text:
+        return ''
+    folded = unicodedata.normalize('NFKD', text)
+    plain = ''.join(ch for ch in folded if not unicodedata.combining(ch))
+    return re.sub(r'\s+', ' ', plain).strip()
+
+
 def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
     video_id = result.get('videoId')
     if not video_id:
@@ -170,41 +181,86 @@ def find_match(
     if not query:
         return None, None
     duration = song.get('duration') or 0
-    try:
-        results = _ytm().search(query, filter='songs', limit=10)
-    except Exception:
-        logger.exception('YouTube Music match search failed')
-        results = []
-    _log_ytm_summary_search(
-        phase='match_songs',
-        query=query,
-        filt='songs',
-        results_len=len(results),
-        first_titles=[
-            str(r.get('title') or '')[:60]
-            for r in results[:8]
-            if isinstance(r, dict)
-        ],
-    )
-    _log_ytm_response(f'find_match songs q={query[:80]!r}', results)
-    if not results:
+    title_only = title.strip()
+
+    def _search(
+        phase: str, q: str, filt: Optional[str]
+    ) -> list[dict[str, Any]]:
         try:
-            results = _ytm().search(query, filter='videos', limit=10)
+            if filt:
+                rows = _ytm().search(q, filter=filt, limit=10)
+            else:
+                rows = _ytm().search(q, limit=10)
         except Exception:
-            results = []
+            logger.opt(exception=True).debug(
+                'YouTube Music match search failed phase={} filter={!r}',
+                phase,
+                filt,
+            )
+            rows = []
         _log_ytm_summary_search(
-            phase='match_videos_fallback',
-            query=query,
-            filt='videos',
-            results_len=len(results),
+            phase=phase,
+            query=q,
+            filt=filt,
+            results_len=len(rows),
             first_titles=[
                 str(r.get('title') or '')[:60]
-                for r in results[:8]
+                for r in rows[:8]
                 if isinstance(r, dict)
             ],
         )
-        _log_ytm_response(f'find_match videos q={query[:80]!r}', results)
-    best = _pick_best(results, duration, title, artists)
+        _log_ytm_response(f'find_match {phase} q={q[:80]!r}', rows)
+        return rows
+
+    candidates: list[dict[str, Any]] = []
+    # Start strict (artist + title) then progressively relax.
+    attempts = [
+        ('match_songs', query, 'songs'),
+        ('match_videos_fallback', query, 'videos'),
+        ('match_all_unfiltered', query, None),
+    ]
+    if title_only and title_only.casefold() != query.casefold():
+        attempts.extend(
+            [
+                ('match_songs_title_only', title_only, 'songs'),
+                ('match_videos_title_only', title_only, 'videos'),
+                ('match_all_title_only', title_only, None),
+            ]
+        )
+    folded_query = _ascii_fold_query(query)
+    folded_title = _ascii_fold_query(title_only)
+    if folded_query and folded_query.casefold() != query.casefold():
+        attempts.extend(
+            [
+                ('match_songs_ascii_fold', folded_query, 'songs'),
+                ('match_videos_ascii_fold', folded_query, 'videos'),
+                ('match_all_ascii_fold', folded_query, None),
+            ]
+        )
+    if (
+        folded_title
+        and title_only
+        and folded_title.casefold() != title_only.casefold()
+    ):
+        attempts.extend(
+            [
+                ('match_songs_title_ascii_fold', folded_title, 'songs'),
+                ('match_videos_title_ascii_fold', folded_title, 'videos'),
+                ('match_all_title_ascii_fold', folded_title, None),
+            ]
+        )
+    seen_attempts: set[tuple[str, str]] = set()
+    for phase, q, filt in attempts:
+        key = (q.casefold(), filt or '')
+        if key in seen_attempts:
+            continue
+        seen_attempts.add(key)
+        rows = _search(phase, q, filt)
+        for row in rows:
+            if isinstance(row, dict) and row.get('videoId'):
+                candidates.append(row)
+
+    best = _pick_best(candidates, duration, title, artists)
     if best is not None:
         logger.info(
             'YouTube Music find_match picked videoId={} title={!r} year={!r}',
@@ -214,7 +270,7 @@ def find_match(
         )
         _log_ytm_response('find_match chosen row', best)
         return best.get('videoId'), best
-    for result in results:
+    for result in candidates:
         if result.get('videoId'):
             logger.info(
                 'YouTube Music find_match fallback first videoId={} title={!r}',

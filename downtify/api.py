@@ -53,6 +53,18 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 }
 
 
+def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
+    allowed = {'youtube-music', 'youtube'}
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in (settings.get('audio_providers') or []):
+        p = str(raw or '').strip()
+        if p in allowed and p not in seen:
+            seen.add(p)
+            out.append(p)
+    return out or ['youtube-music']
+
+
 def _effective_lyrics_providers(settings: dict[str, Any]) -> list[str]:
     if not settings.get('download_lyrics', True):
         return []
@@ -568,6 +580,10 @@ async def update_settings_endpoint(
             if key in DEFAULT_SETTINGS:
                 state.settings[key] = value
         if state.downloader is not None:
+            if 'audio_providers' in payload:
+                state.downloader.audio_providers = _effective_audio_providers(
+                    state.settings
+                )
             fmt = payload.get('format')
             if isinstance(fmt, str) and fmt:
                 state.downloader.audio_format = fmt

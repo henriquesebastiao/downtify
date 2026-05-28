@@ -7,6 +7,7 @@ import json
 
 from downtify.api import (
     DEFAULT_SETTINGS,
+    _effective_audio_providers,
     _effective_lyrics_providers,
     _load_settings,
 )
@@ -40,6 +41,22 @@ def test_default_download_lyrics_is_true():
 
 def test_default_format_is_mp3():
     assert DEFAULT_SETTINGS['format'] == 'mp3'
+
+
+def test_effective_audio_providers_keeps_allowed_order():
+    settings = {'audio_providers': ['youtube', 'youtube-music']}
+    assert _effective_audio_providers(settings) == ['youtube', 'youtube-music']
+
+
+def test_effective_audio_providers_filters_invalid_and_dedupes():
+    settings = {
+        'audio_providers': ['youtube', 'invalid', 'youtube', 'youtube-music']
+    }
+    assert _effective_audio_providers(settings) == ['youtube', 'youtube-music']
+
+
+def test_effective_audio_providers_defaults_when_missing():
+    assert _effective_audio_providers({}) == ['youtube-music']
 
 
 # ── _load_settings ────────────────────────────────────────────────────────────

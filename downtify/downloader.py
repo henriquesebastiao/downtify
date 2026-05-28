@@ -111,6 +111,43 @@ def _yt_po_tokens() -> list[str]:
     return [t.strip() for t in raw.split(',') if t.strip()]
 
 
+def _fallback_video_id_via_ytdlp(song: dict[str, Any]) -> Optional[str]:
+    """Best-effort YouTube fallback when YT Music search yields no match."""
+
+    title = str(song.get('name') or '').strip()
+    artists = [a for a in (song.get('artists') or []) if isinstance(a, str) and a]
+    query = ' '.join([*artists[:2], title]).strip()
+    if not query:
+        return None
+    opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': 'in_playlist',
+        'skip_download': True,
+    }
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(f'ytsearch1:{query}', download=False)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'yt-dlp fallback search failed for query={!r}', query
+        )
+        return None
+    entries = info.get('entries') if isinstance(info, dict) else None
+    if not isinstance(entries, list) or not entries:
+        return None
+    first = entries[0] if isinstance(entries[0], dict) else {}
+    vid = first.get('id')
+    if isinstance(vid, str) and vid.strip():
+        logger.info(
+            'yt-dlp fallback picked videoId={} for title={!r}',
+            vid.strip(),
+            title,
+        )
+        return vid.strip()
+    return None
+
+
 class Downloader:
     """Wraps ``yt-dlp`` plus ``mutagen`` tagging."""
 
@@ -122,6 +159,7 @@ class Downloader:
         output_template: str = '{artists} - {title}',
         lyrics_providers: Optional[list[str]] = None,
         organize_by_artist: bool = False,
+        audio_providers: Optional[list[str]] = None,
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
@@ -130,6 +168,63 @@ class Downloader:
         self.output_template = output_template
         self.lyrics_providers = list(lyrics_providers or [])
         self.organize_by_artist = organize_by_artist
+        self.audio_providers = self._normalize_audio_providers(audio_providers)
+
+    @staticmethod
+    def _normalize_audio_providers(
+        providers: Optional[list[str]],
+    ) -> list[str]:
+        allowed = {'youtube-music', 'youtube'}
+        if not providers:
+            return ['youtube-music']
+        out: list[str] = []
+        seen: set[str] = set()
+        for raw in providers:
+            p = str(raw or '').strip()
+            if p in allowed and p not in seen:
+                seen.add(p)
+                out.append(p)
+        return out or ['youtube-music']
+
+    def _resolve_video_id(
+        self, song: dict[str, Any]
+    ) -> tuple[Optional[str], Optional[dict[str, Any]], Optional[str]]:
+        """Resolve ``(video_id, ytm_match, provider_used)`` by configured order."""
+
+        for provider in self.audio_providers:
+            if provider == 'youtube-music':
+                video_id, match = find_match(song)
+                if video_id:
+                    logger.info(
+                        'Match resolver: provider={} succeeded title={!r} '
+                        'video_id={}',
+                        provider,
+                        song.get('name'),
+                        video_id,
+                    )
+                    return video_id, match, provider
+                logger.info(
+                    'Match resolver: provider={} no match title={!r}',
+                    provider,
+                    song.get('name'),
+                )
+            elif provider == 'youtube':
+                video_id = _fallback_video_id_via_ytdlp(song)
+                if video_id:
+                    logger.info(
+                        'Match resolver: provider={} succeeded title={!r} '
+                        'video_id={}',
+                        provider,
+                        song.get('name'),
+                        video_id,
+                    )
+                    return video_id, None, provider
+                logger.info(
+                    'Match resolver: provider={} no match title={!r}',
+                    provider,
+                    song.get('name'),
+                )
+        return None, None, None
 
     @staticmethod
     def _artist_subdir(song: dict[str, Any]) -> str:
@@ -213,7 +308,7 @@ class Downloader:
 
         match: Optional[dict[str, Any]] = None
         if not video_id:
-            video_id, match = find_match(song)
+            video_id, match, _provider = self._resolve_video_id(song)
         elif not song.get('album_name') or not song.get('cover_url'):
             # We already have a target video, but the metadata is incomplete.
             # Look up the YT Music entry for THIS specific videoId so we
