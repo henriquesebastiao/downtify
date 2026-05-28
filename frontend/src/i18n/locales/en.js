@@ -194,9 +194,11 @@ export default {
     saveError: "Couldn't save settings.",
     language: 'Language',
     languageHint: 'Choose the interface language',
-    youtubeSection: 'YouTube cookies',
+    youtubeSection: 'YouTube cookies (optional)',
+    youtubeCookiesSummary:
+      'Not required for most downloads. May help when a YouTube fallback is age-restricted.',
     youtubeCookiesHint:
-      'For age-restricted tracks. In a private/incognito window, log into youtube.com, open only youtube.com/robots.txt in that tab, export Netscape cookies.txt (Get cookies.txt LOCALLY or similar), upload here. Green = login cookies detected. Without valid cookies, Downtify still tries other YouTube uploads for the same song.',
+      'Only needed in a few cases (age-verified sign-in on youtube.com). Export Netscape cookies.txt from a private window (single tab: youtube.com/robots.txt), upload here, or mount at the path below. Most tracks work without this.',
     youtubeCookiesPath: 'Cookies file path (inside container)',
     youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
     youtubeCookiesUpload: 'Upload cookies.txt',

@@ -229,13 +229,20 @@
           </div>
         </div>
 
-        <!-- YouTube cookies -->
-        <div>
-          <label
-            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+        <!-- YouTube cookies (optional, collapsed) -->
+        <details
+          class="rounded-xl border border-white/10 bg-base-100/40 px-3 py-2"
+          :open="youtubeCookiesOpen"
+        >
+          <summary
+            class="cursor-pointer list-none text-xs font-semibold uppercase tracking-wider text-base-content/50 select-none [&::-webkit-details-marker]:hidden"
           >
-            {{ t('settings.youtubeSection') }}
-          </label>
+            <span>{{ t('settings.youtubeSection') }}</span>
+            <span class="block normal-case font-normal tracking-normal text-[11px] text-base-content/40 mt-0.5">
+              {{ t('settings.youtubeCookiesSummary') }}
+            </span>
+          </summary>
+          <div class="pt-3 mt-2 border-t border-white/10">
           <p class="text-[11px] text-base-content/40 mb-2">
             {{ t('settings.youtubeCookiesHint') }}
           </p>
@@ -291,7 +298,8 @@
           >
             {{ youtubeCookiesError }}
           </p>
-        </div>
+          </div>
+        </details>
 
         <!-- Lyrics source -->
         <div>
@@ -634,6 +642,9 @@ const youtubeCookiesReady = computed(
 )
 const youtubeCookiesAuthenticated = computed(
   () => Boolean(sm.settings.value?.youtube?.cookies_looks_authenticated)
+)
+const youtubeCookiesOpen = computed(
+  () => youtubeCookiesReady.value || Boolean(youtubeCookiesPath.value)
 )
 const { t, locale, setLocale, locales } = useI18n()
 

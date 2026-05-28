@@ -197,9 +197,11 @@ export default {
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',
     languageHint: 'Elige el idioma de la interfaz',
-    youtubeSection: 'Cookies de YouTube',
+    youtubeSection: 'Cookies de YouTube (opcional)',
+    youtubeCookiesSummary:
+      'No hace falta en la mayoría de descargas. Puede ayudar si el fallback de YouTube exige edad.',
     youtubeCookiesHint:
-      'Para vídeos con verificación de edad o inicio de sesión. Exporta cookies.txt (formato Netscape) desde youtube.com con tu cuenta de Google y súbelo aquí o indica la ruta en el contenedor (p. ej. /data/youtube-cookies.txt).',
+      'Solo en casos puntuales (cuenta verificada en youtube.com). Exporta cookies.txt Netscape en ventana privada (una pestaña: youtube.com/robots.txt) o monta la ruta. La mayoría de pistas funcionan sin esto.',
     youtubeCookiesPath: 'Ruta del archivo de cookies (en el contenedor)',
     youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
     youtubeCookiesUpload: 'Subir cookies.txt',
