@@ -17,7 +17,7 @@ docker compose pull
 docker compose up -d
 ```
 
-[`docker-compose.example.yml`](../../docker-compose.example.yml) uses **`dx616b/spoti-to-navidrome:2.7.9`**, maps `/downloads` and `/slskd`, and listens on port `30321` inside the container (`8000:30321` on the host).
+[`docker-compose.example.yml`](../../docker-compose.example.yml) maps `/downloads` and `/slskd`, and listens on port `30321` inside the container (`8000:30321` on the host).
 
 Or create a minimal `docker-compose.yml` manually:
 
@@ -25,7 +25,7 @@ Or create a minimal `docker-compose.yml` manually:
 services:
   downtify:
     container_name: downtify
-    image: dx616b/spoti-to-navidrome:2.7.9
+    image: ghcr.io/henriquesebastiao/downtify:latest
     ports:
       - '8000:30321'
     environment:
@@ -59,8 +59,6 @@ Add a second volume so Downtify and slskd share the same Soulseek download folde
 ```
 
 In Downtify **Settings → slskd**: enable slskd, set **Base URL** to your slskd API (e.g. `http://slskd:5030` on a shared Docker network), **API key**, and **folder path** `/slskd`. Mount that same host directory on your slskd container.
-
-Upstream image without this fork: `ghcr.io/henriquesebastiao/downtify:latest`.
 
 ## Custom port
 

@@ -77,15 +77,13 @@ Configure everything under **Settings** (⚙️): Audio sources, slskd block, Pl
 
 ## 🚀 Quick Start
 
-**Published image (this fork, 2.7.9):** `dx616b/spoti-to-navidrome:2.7.9` (also tagged `:latest` on Docker Hub).
-
 ```bash
 docker run -d -p 8000:30321 --name downtify \
   -e DOWNTIFY_PORT=30321 \
   -v /path/to/music/downloads:/downloads \
   -v /path/to/music/slskd:/slskd \
   -v downtify_data:/data \
-  dx616b/spoti-to-navidrome:2.7.9
+  ghcr.io/henriquesebastiao/downtify:latest
 ```
 
 Open [http://localhost:8000](http://localhost:8000), paste a Spotify link, and hit download.
@@ -103,7 +101,7 @@ docker compose pull
 docker compose up -d
 ```
 
-See [`docker-compose.example.yml`](docker-compose.example.yml) for a ready-made stack using `dx616b/spoti-to-navidrome:2.7.9`.
+See [`docker-compose.example.yml`](docker-compose.example.yml) for a ready-made stack with `/downloads` and `/slskd` volumes.
 
 Minimal setup (YouTube / YouTube Music only):
 
@@ -129,7 +127,7 @@ With **slskd** and a separate Soulseek library folder (recommended for Navidrome
 services:
   downtify:
     container_name: downtify
-    image: dx616b/spoti-to-navidrome:2.7.9
+    image: ghcr.io/henriquesebastiao/downtify:latest
     ports:
       - '8000:30321'
     environment:
@@ -143,8 +141,6 @@ services:
 volumes:
   downtify_data:
 ```
-
-Upstream image (no slskd fork): `ghcr.io/henriquesebastiao/downtify:latest`.
 
 > **Paths inside the container** are what you configure in the UI (`/downloads`, `/slskd`). Map host folders to those mount points. Navidrome must scan the **same** host folders.
 
