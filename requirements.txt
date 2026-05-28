@@ -38,6 +38,8 @@ pydantic-core==2.46.4
     # via pydantic
 python-dotenv==1.2.2
     # via load-dotenv
+python-multipart==0.0.20
+    # via downtify
 requests==2.34.2
     # via
     #   downtify
