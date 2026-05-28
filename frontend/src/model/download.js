@@ -44,8 +44,7 @@ class DownloadItem {
     this.filename = name
   }
   isQueued() {
-    return this.song.song_id !== undefined ? true : false
-    // return this.web_status === STATUS.QUEUED
+    return this.web_status === STATUS.QUEUED
   }
   isDownloading() {
     return this.web_status === STATUS.DOWNLOADING
@@ -115,6 +114,7 @@ API.ws_onmessage((event) => {
     item.wsUpdate(data)
     item.setError()
   } else if (data.status === 'queued') {
+    item.web_status = STATUS.QUEUED
     item.message = data.message || ''
   } else {
     item.wsUpdate(data)
@@ -148,6 +148,7 @@ async function _hydrateFromServer() {
         item.progress = job.progress || 0
         item.message = job.message || ''
       } else {
+        item.web_status = STATUS.QUEUED
         item.message = job.message || ''
       }
       downloadQueue.value.push(item)

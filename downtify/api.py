@@ -467,17 +467,8 @@ async def _run_download(
     )
     job = state.download_jobs.get(song_id)
     if job is None:
-        song_id = _register_job(song, status='downloading')
+        song_id = _register_job(song, status='queued')
         job = state.download_jobs[song_id]
-    else:
-        job['status'] = 'downloading'
-
-    await state.connections.broadcast({
-        'song': song,
-        'progress': 0,
-        'message': '',
-        'status': 'downloading',
-    })
 
     def _lookup_existing() -> Optional[tuple[str, str]]:
         return resolve_existing_download(
@@ -527,6 +518,15 @@ async def _run_download(
     sem = state.download_semaphore
     try:
         async with sem if sem is not None else contextlib.nullcontext():
+            job['status'] = 'downloading'
+            job['progress'] = 0
+            job['message'] = ''
+            await state.connections.broadcast({
+                'song': song,
+                'progress': 0,
+                'message': '',
+                'status': 'downloading',
+            })
             filename = await loop.run_in_executor(
                 None,
                 lambda: state.downloader.download(
@@ -595,7 +595,7 @@ async def download_endpoint(
         song.get('source'),
         str(song.get('url') or url)[:140],
     )
-    song_id = _register_job(song, status='downloading')
+    song_id = _register_job(song, status='queued')
 
     try:
         filename = await _run_download(song, song_id)

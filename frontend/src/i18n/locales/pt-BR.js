@@ -155,7 +155,7 @@ export default {
     subtitle: 'Ajuste como o Downtify baixa e marca suas músicas.',
     audioSource: 'Fontes de áudio (ordem de fallback)',
     audioSourceHint:
-      'Ative uma ou mais. O Downtify tenta na ordem (1, 2, 3) por faixa. Para playlists: slskd e depois YouTube.',
+      'Ative uma ou mais. Cada faixa tenta as fontes na ordem (1, 2, 3) até uma funcionar.',
     audioSourceReset: 'Usar ordem recomendada',
     lyricsSource: 'Fonte de letras',
     lyricsHint: 'apenas o lrclib está ativo',

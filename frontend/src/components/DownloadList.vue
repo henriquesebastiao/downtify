@@ -276,6 +276,7 @@ function queueItemState(item) {
   if (item.isErrored()) return 'failed'
   if (item.isDownloaded()) return 'done'
   if (item.isDownloading()) return 'downloading'
+  if (item.isQueued()) return 'queued'
   return 'queued'
 }
 
@@ -306,22 +307,15 @@ const filterTabs = computed(() => [
     count: activeCount.value,
   },
   {
-    id: 'all',
-    label: t('queue.filterAll'),
-    count: pt.downloadQueue.value.length,
-  },
-  {
-    id: 'downloading',
-    label: t('queue.filterDownloading'),
-    count: pt.downloadQueue.value.filter(
-      (i) => queueItemState(i) === 'downloading'
-    ).length,
-  },
-  {
     id: 'queued',
     label: t('queue.filterQueued'),
     count: pt.downloadQueue.value.filter((i) => queueItemState(i) === 'queued')
       .length,
+  },
+  {
+    id: 'all',
+    label: t('queue.filterAll'),
+    count: pt.downloadQueue.value.length,
   },
   {
     id: 'done',

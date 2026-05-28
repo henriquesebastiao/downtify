@@ -156,7 +156,7 @@ export default {
     subtitle: 'Ajusta cómo Downtify descarga y etiqueta tu música.',
     audioSource: 'Fuentes de audio (orden de respaldo)',
     audioSourceHint:
-      'Activa una o más. Downtify las prueba en orden (1, 2, 3) por pista. Para listas: slskd y luego YouTube.',
+      'Activa una o más. Cada pista prueba las fuentes en orden (1, 2, 3) hasta que una funcione.',
     audioSourceReset: 'Usar orden recomendado',
     lyricsSource: 'Fuente de letras',
     lyricsHint: 'solo lrclib está activo',

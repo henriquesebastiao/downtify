@@ -153,7 +153,7 @@ export default {
     subtitle: 'Tweak how Downtify fetches and tags your music.',
     audioSource: 'Audio sources (fallback order)',
     audioSourceHint:
-      'Enable one or more. Downtify tries them in order (1, 2, 3) per track. Use slskd then YouTube for playlists.',
+      'Enable one or more. Each track tries sources in order (1, 2, 3) until one succeeds.',
     audioSourceReset: 'Use recommended order',
     lyricsSource: 'Lyrics source',
     lyricsHint: 'only lrclib is active',
