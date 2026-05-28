@@ -229,78 +229,6 @@
           </div>
         </div>
 
-        <!-- YouTube cookies (optional, collapsed) -->
-        <details
-          class="rounded-xl border border-white/10 bg-base-100/40 px-3 py-2"
-          :open="youtubeCookiesOpen"
-        >
-          <summary
-            class="cursor-pointer list-none text-xs font-semibold uppercase tracking-wider text-base-content/50 select-none [&::-webkit-details-marker]:hidden"
-          >
-            <span>{{ t('settings.youtubeSection') }}</span>
-            <span class="block normal-case font-normal tracking-normal text-[11px] text-base-content/40 mt-0.5">
-              {{ t('settings.youtubeCookiesSummary') }}
-            </span>
-          </summary>
-          <div class="pt-3 mt-2 border-t border-white/10">
-          <p class="text-[11px] text-base-content/40 mb-2">
-            {{ t('settings.youtubeCookiesHint') }}
-          </p>
-          <p
-            v-if="youtubeCookiesReady && youtubeCookiesAuthenticated"
-            class="text-xs text-success mb-2"
-          >
-            {{ t('settings.youtubeCookiesReady') }}
-          </p>
-          <p
-            v-else-if="youtubeCookiesReady && !youtubeCookiesAuthenticated"
-            class="text-xs text-warning mb-2"
-          >
-            {{ t('settings.youtubeCookiesWeak') }}
-          </p>
-          <p
-            v-else-if="youtubeCookiesPath && !youtubeCookiesReady"
-            class="text-xs text-warning mb-2"
-          >
-            {{ t('settings.youtubeCookiesMissing') }}
-          </p>
-          <label class="block text-xs text-base-content/50 mb-1">
-            {{ t('settings.youtubeCookiesPath') }}
-          </label>
-          <input
-            type="text"
-            class="input input-bordered w-full rounded-xl bg-base-100/85 border border-white/10 text-sm mb-2"
-            :placeholder="t('settings.youtubeCookiesPathPlaceholder')"
-            v-model="sm.settings.value.youtube.cookies_file"
-          />
-          <div class="flex flex-wrap gap-2">
-            <label class="btn btn-sm btn-outline rounded-xl cursor-pointer">
-              {{ t('settings.youtubeCookiesUpload') }}
-              <input
-                type="file"
-                accept=".txt,text/plain"
-                class="hidden"
-                @change="onYoutubeCookiesFile"
-              />
-            </label>
-            <button
-              type="button"
-              class="btn btn-sm btn-ghost rounded-xl"
-              :disabled="!youtubeCookiesReady && !youtubeCookiesPath"
-              @click="clearYoutubeCookies"
-            >
-              {{ t('settings.youtubeCookiesClear') }}
-            </button>
-          </div>
-          <p
-            v-if="youtubeCookiesError"
-            class="text-xs text-error mt-2"
-          >
-            {{ youtubeCookiesError }}
-          </p>
-          </div>
-        </details>
-
         <!-- Lyrics source -->
         <div>
           <label
@@ -562,6 +490,73 @@
           </p>
         </div>
 
+        <!-- YouTube cookies: hidden behind text toggle at bottom -->
+        <div class="pt-1">
+          <button
+            type="button"
+            class="text-[11px] text-base-content/35 hover:text-base-content/55 transition-colors"
+            @click="youtubeCookiesExpanded = !youtubeCookiesExpanded"
+          >
+            {{ t('settings.youtubeAdvancedToggle') }}
+            <span
+              v-if="youtubeCookiesReady && youtubeCookiesAuthenticated"
+              class="text-success/80"
+            >
+              · {{ t('settings.youtubeCookiesConfigured') }}
+            </span>
+          </button>
+          <div
+            v-if="youtubeCookiesExpanded"
+            class="mt-2 space-y-2 rounded-lg border border-white/5 bg-base-100/30 px-3 py-2"
+          >
+            <p class="text-[10px] leading-snug text-base-content/40">
+              {{ t('settings.youtubeCookiesHint') }}
+            </p>
+            <p
+              v-if="youtubeCookiesReady && !youtubeCookiesAuthenticated"
+              class="text-[10px] text-warning"
+            >
+              {{ t('settings.youtubeCookiesWeak') }}
+            </p>
+            <p
+              v-else-if="youtubeCookiesPath && !youtubeCookiesReady"
+              class="text-[10px] text-warning"
+            >
+              {{ t('settings.youtubeCookiesMissing') }}
+            </p>
+            <input
+              type="text"
+              class="input input-xs w-full rounded-lg bg-base-100/85 border border-white/10"
+              :placeholder="t('settings.youtubeCookiesPathPlaceholder')"
+              v-model="sm.settings.value.youtube.cookies_file"
+            />
+            <div class="flex flex-wrap gap-1.5">
+              <label
+                class="btn btn-xs btn-ghost rounded-lg cursor-pointer normal-case"
+              >
+                {{ t('settings.youtubeCookiesUpload') }}
+                <input
+                  type="file"
+                  accept=".txt,text/plain"
+                  class="hidden"
+                  @change="onYoutubeCookiesFile"
+                />
+              </label>
+              <button
+                type="button"
+                class="btn btn-xs btn-ghost rounded-lg normal-case"
+                :disabled="!youtubeCookiesReady && !youtubeCookiesPath"
+                @click="clearYoutubeCookies"
+              >
+                {{ t('settings.youtubeCookiesClear') }}
+              </button>
+            </div>
+            <p v-if="youtubeCookiesError" class="text-[10px] text-error">
+              {{ youtubeCookiesError }}
+            </p>
+          </div>
+        </div>
+
         <!-- Save status -->
         <transition
           enter-active-class="transition duration-200"
@@ -624,6 +619,7 @@ import { useI18n } from '../i18n'
 
 const sm = useSettingsManager()
 const youtubeCookiesError = ref('')
+const youtubeCookiesExpanded = ref(false)
 
 const YOUTUBE_DEFAULTS = {
   cookies_file: '',
@@ -642,9 +638,6 @@ const youtubeCookiesReady = computed(
 )
 const youtubeCookiesAuthenticated = computed(
   () => Boolean(sm.settings.value?.youtube?.cookies_looks_authenticated)
-)
-const youtubeCookiesOpen = computed(
-  () => youtubeCookiesReady.value || Boolean(youtubeCookiesPath.value)
 )
 const { t, locale, setLocale, locales } = useI18n()
 

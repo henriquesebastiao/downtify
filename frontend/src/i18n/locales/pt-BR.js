@@ -196,12 +196,10 @@ export default {
     saveError: 'Não foi possível salvar as configurações.',
     language: 'Idioma',
     languageHint: 'Escolha o idioma da interface',
-    youtubeSection: 'Cookies do YouTube (opcional)',
-    youtubeCookiesSummary:
-      'Não é necessário na maioria das baixas. Pode ajudar quando o fallback do YouTube exige idade.',
+    youtubeAdvancedToggle: 'Avançado: cookies do YouTube (opcional)',
+    youtubeCookiesConfigured: 'ativo',
     youtubeCookiesHint:
-      'Só em casos raros (conta verificada em youtube.com). Exporte cookies.txt Netscape em janela privada (uma aba: youtube.com/robots.txt) ou monte o caminho. A maioria das faixas funciona sem isso.',
-    youtubeCookiesPath: 'Caminho do arquivo de cookies (no container)',
+      'Quase nunca necessário — só alguns fallbacks do YouTube com idade. Exporte cookies.txt de youtube.com se precisar.',
     youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
     youtubeCookiesUpload: 'Enviar cookies.txt',
     youtubeCookiesClear: 'Remover cookies',
