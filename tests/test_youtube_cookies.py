@@ -13,9 +13,10 @@ from downtify.api import (
 )
 from downtify.downloader import (
     _YTDLP_AUDIO_FORMATS,
+    _youtube_download_profiles,
     _youtube_extractor_args,
-    _youtube_watch_urls,
     _ytdlp_format_unavailable_retry,
+    _ytdlp_should_retry_without_cookies,
     apply_ytdlp_cookie_opts,
     ytdlp_cookies_configured,
 )
@@ -75,6 +76,34 @@ def test_youtube_cookies_storage_path_next_to_settings(tmp_path: Path):
     )
 
 
+def test_youtube_download_profiles_cookie_then_no_cookies(tmp_path: Path):
+    cookie_path = tmp_path / 'cookies.txt'
+    cookie_path.write_text('.youtube.com\n', encoding='utf-8')
+    settings = {'cookies_file': str(cookie_path)}
+    profiles = _youtube_download_profiles('abc123', settings)
+    assert len(profiles) == 2
+    assert profiles[0]['use_cookies'] is True
+    assert profiles[0]['urls'] == ['https://www.youtube.com/watch?v=abc123']
+    assert profiles[1]['use_cookies'] is False
+
+
+def test_youtube_download_profiles_no_cookies_only():
+    profiles = _youtube_download_profiles('abc123', {})
+    assert len(profiles) == 1
+    assert profiles[0]['use_cookies'] is False
+
+
+def test_ytdlp_should_retry_without_cookies_on_only_images():
+    assert _ytdlp_should_retry_without_cookies(
+        Exception('Only images are available'),
+        used_cookies=True,
+    )
+    assert not _ytdlp_should_retry_without_cookies(
+        Exception('age-restricted'),
+        used_cookies=True,
+    )
+
+
 def test_youtube_watch_urls_prefers_www_with_cookies(tmp_path: Path):
     cookie_path = tmp_path / 'cookies.txt'
     cookie_path.write_text(
@@ -82,14 +111,13 @@ def test_youtube_watch_urls_prefers_www_with_cookies(tmp_path: Path):
         encoding='utf-8',
     )
     settings = {'cookies_file': str(cookie_path)}
-    urls = _youtube_watch_urls('abc123', settings)
-    assert urls[0] == 'https://www.youtube.com/watch?v=abc123'
-    assert 'music.youtube.com' in urls[1]
+    profiles = _youtube_download_profiles('abc123', settings)
+    assert profiles[0]['urls'][0] == 'https://www.youtube.com/watch?v=abc123'
 
 
 def test_youtube_watch_urls_music_first_without_cookies():
-    urls = _youtube_watch_urls('abc123', {})
-    assert urls[0].startswith('https://music.youtube.com/')
+    profiles = _youtube_download_profiles('abc123', {})
+    assert profiles[0]['urls'][0].startswith('https://music.youtube.com/')
 
 
 def test_ytdlp_cookies_configured_false_when_missing_file():
@@ -104,8 +132,9 @@ def test_ytdlp_format_unavailable_retry_detects_message():
 
 def test_youtube_extractor_args_includes_po_token(monkeypatch):
     monkeypatch.setenv('DOWNTIFY_YT_PO_TOKEN', 'web.gvs+TEST')
-    args = _youtube_extractor_args({})
+    args = _youtube_extractor_args({}, use_cookies=False)
     assert args['po_token'] == ['web.gvs+TEST']
+    assert 'ios' in args['player_client']
 
 
 def test_ytdlp_audio_formats_has_fallbacks():
