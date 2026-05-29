@@ -9,7 +9,9 @@ from downtify.slskd_provider import (
     _filter_slskd_responses,
     _find_on_disk,
     _flatten_slskd_responses,
+    _match_min_score,
     _paths_match,
+    _rank_slskd_candidates,
     _slskd_search_queries,
     download_from_slskd,
 )
@@ -73,6 +75,98 @@ def test_collect_matching_files_skips_wrong_extension_and_keywords():
     matches = _collect_matching_files(song, responses)
     assert len(matches) == 1
     assert 'DRAMA KING.mp3' in matches[0]['filename']
+    assert matches[0]['match_score'] >= _match_min_score({})
+
+
+def test_rank_rejects_album_only_without_artist_in_filename():
+    song = {
+        'artists': ['Pitbull'],
+        'name': 'Hotel Room Service',
+        'album_name': 'Hotel Room Service Album',
+        'duration': 242,
+    }
+    responses = [
+        {
+            'username': 'peer1',
+            'fileCount': 1,
+            'hasFreeUploadSlot': True,
+            'files': [
+                {
+                    'filename': '@@x\\Compilations\\Hotel Room Service Album\\01 Intro.mp3',
+                    'size': 1,
+                    'length': 242,
+                },
+            ],
+        }
+    ]
+    ranked = _rank_slskd_candidates(song, responses)
+    assert ranked == []
+
+
+def test_rank_rejects_wrong_track_same_artist_short_title():
+    song = {
+        'artists': ['Gunna'],
+        'name': 'W',
+        'album_name': 'Single',
+        'duration': 200,
+    }
+    responses = [
+        {
+            'username': 'peer1',
+            'fileCount': 2,
+            'hasFreeUploadSlot': True,
+            'files': [
+                {
+                    'filename': 'Unreleased\\Mellow (feat. Gunna & Lil Baby).mp3',
+                    'size': 1,
+                    'length': 180,
+                },
+                {
+                    'filename': 'Gunna - W.mp3',
+                    'size': 2,
+                    'length': 200,
+                    'bitRate': 320,
+                },
+            ],
+        }
+    ]
+    ranked = _rank_slskd_candidates(song, responses)
+    assert len(ranked) == 1
+    assert 'Gunna - W.mp3' in ranked[0]['filename']
+    assert ranked[0]['match_score'] >= _match_min_score({})
+
+
+def test_rank_prefers_better_title_match():
+    song = {
+        'artists': ['Melxdie'],
+        'name': 'DRAMA KING',
+        'album_name': 'FAILED ROCKSTAR',
+        'duration': 152,
+    }
+    responses = [
+        {
+            'username': 'peer1',
+            'fileCount': 2,
+            'hasFreeUploadSlot': True,
+            'files': [
+                {
+                    'filename': '@@x\\Melxdie - DRAMA KING (demo).mp3',
+                    'size': 1,
+                    'length': 152,
+                },
+                {
+                    'filename': '@@x\\Melxdie - DRAMA KING.mp3',
+                    'size': 2,
+                    'length': 152,
+                    'bitRate': 320,
+                },
+            ],
+        }
+    ]
+    ranked = _rank_slskd_candidates(song, responses)
+    assert len(ranked) >= 1
+    assert 'DRAMA KING.mp3' in ranked[0]['filename']
+    assert 'demo' not in ranked[0]['filename'].casefold()
 
 
 def test_filter_slskd_responses_hides_no_free_slot_and_locked_files():
@@ -261,11 +355,15 @@ def test_download_from_slskd_tries_next_candidate_on_failure(monkeypatch, tmp_pa
             'username': 'peer1',
             'filename': 'Artist - Track (1).mp3',
             'size': 1000,
+            'match_score': 8,
+            'match_reasons': ['artist', 'title'],
         },
         {
             'username': 'peer2',
             'filename': 'Artist - Track (2).mp3',
             'size': 1000,
+            'match_score': 9,
+            'match_reasons': ['artist', 'title'],
         },
     ]
     success = tmp_path / 'Artist - Track (2).mp3'
@@ -311,12 +409,12 @@ def test_download_from_slskd_tries_next_candidate_on_failure(monkeypatch, tmp_pa
         lambda settings: FakeClient(),
     )
     monkeypatch.setattr(
-        'downtify.slskd_provider._collect_matching_files',
-        lambda song, responses: list(candidates),
+        'downtify.slskd_provider._rank_slskd_candidates',
+        lambda song, responses, settings=None: list(candidates),
     )
     monkeypatch.setattr(
-        'downtify.slskd_provider._filter_by_quality',
-        lambda files, settings: files,
+        'downtify.slskd_provider._select_download_candidates',
+        lambda ranked, settings: ranked,
     )
     monkeypatch.setattr(
         'downtify.slskd_provider._search_roots',
@@ -338,5 +436,5 @@ def test_download_from_slskd_tries_next_candidate_on_failure(monkeypatch, tmp_pa
     )
     assert result == success
     assert len(wait_calls) == 2
-    assert wait_calls[0].endswith('(1).mp3')
-    assert wait_calls[1].endswith('(2).mp3')
+    assert wait_calls[0].endswith('(2).mp3')
+    assert wait_calls[1].endswith('(1).mp3')

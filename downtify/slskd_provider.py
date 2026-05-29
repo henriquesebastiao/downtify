@@ -89,6 +89,16 @@ _FILTER_KEYWORDS = (
     'acapella',
     'karaoke',
 )
+_PATH_PENALTY_KEYWORDS = (
+    'unreleased',
+    'bootleg',
+    'mixtape',
+    'discography',
+)
+_AMBIGUOUS_TITLE_ALNUM_LEN = 4
+_DEFAULT_MATCH_MIN_SCORE = 5
+_STRICT_DURATION_SECONDS = 3
+_DEFAULT_DURATION_TOLERANCE_SECONDS = 10
 
 
 class SlskdClient:
@@ -436,18 +446,122 @@ def _filter_slskd_responses(
     return [r for r in responses if _response_has_free_slot(r)]
 
 
-def _collect_matching_files(
-    song: dict[str, Any], responses: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
+def _song_duration_seconds(song: dict[str, Any]) -> int:
+    target_duration = int(song.get('duration') or 0)
+    if target_duration > 1000:
+        return target_duration // 1000
+    return target_duration
+
+
+def _title_is_ambiguous(title_alnum: str) -> bool:
+    return len(title_alnum) < _AMBIGUOUS_TITLE_ALNUM_LEN
+
+
+def _match_min_score(settings: dict[str, Any]) -> int:
+    try:
+        value = int(settings.get('match_min_score') or _DEFAULT_MATCH_MIN_SCORE)
+    except (TypeError, ValueError):
+        value = _DEFAULT_MATCH_MIN_SCORE
+    return max(0, value)
+
+
+def _score_slskd_candidate(
+    song: dict[str, Any],
+    filename: str,
+    file_row: dict[str, Any],
+    *,
+    target_duration: int,
+) -> Optional[tuple[int, list[str]]]:
+    """Return (score, reasons) or None when hard requirements fail."""
     artist = _alnum_only(
         ' '.join(str(a) for a in (song.get('artists') or [])[:1])
     )
     album = _alnum_only(str(song.get('album_name') or ''))
     title = _alnum_only(_primary_title(str(song.get('name') or '')))
-    target_duration = int(song.get('duration') or 0)
-    if target_duration > 1000:
-        target_duration = target_duration // 1000
-    matches: list[dict[str, Any]] = []
+    sanitized_name = _alnum_only(filename)
+    basename = _file_basename(filename)
+    base_alnum = _alnum_only(basename)
+
+    if artist and artist not in sanitized_name:
+        return None
+    if title and title not in sanitized_name:
+        return None
+    if not artist and not title:
+        return None
+
+    length = _parse_duration_seconds(
+        file_row.get('length') or file_row.get('duration')
+    )
+    if _title_is_ambiguous(title):
+        if not (target_duration and length):
+            return None
+        if abs(target_duration - length) > _STRICT_DURATION_SECONDS:
+            return None
+    elif (
+        target_duration
+        and length
+        and abs(target_duration - length) > _DEFAULT_DURATION_TOLERANCE_SECONDS
+    ):
+        return None
+
+    score = 0
+    reasons: list[str] = []
+
+    if artist and base_alnum.startswith(artist):
+        score += 3
+        reasons.append('artist_prefix')
+    elif artist and artist in base_alnum:
+        score += 1
+        reasons.append('artist')
+
+    if title and title in base_alnum:
+        score += 2
+        reasons.append('title')
+        if artist and base_alnum.find(artist) < base_alnum.find(title):
+            score += 2
+            reasons.append('artist_before_title')
+
+    if target_duration and length:
+        delta = abs(target_duration - length)
+        if delta <= _STRICT_DURATION_SECONDS:
+            score += 3
+            reasons.append('duration_3s')
+        elif delta <= _DEFAULT_DURATION_TOLERANCE_SECONDS:
+            score += 1
+            reasons.append('duration_10s')
+
+    if album and album in sanitized_name:
+        score += 1
+        reasons.append('album')
+
+    path_folded = filename.casefold()
+    if any(keyword in path_folded for keyword in _PATH_PENALTY_KEYWORDS):
+        score -= 2
+        reasons.append('path_penalty')
+
+    try:
+        bitrate = int(file_row.get('bitRate') or file_row.get('bitrate') or 0)
+    except (TypeError, ValueError):
+        bitrate = 0
+    if bitrate >= 320:
+        score += 1
+        reasons.append('bitrate_320')
+    elif bitrate >= 192:
+        score += 1
+        reasons.append('bitrate_192')
+
+    return score, reasons
+
+
+def _rank_slskd_candidates(
+    song: dict[str, Any],
+    responses: list[dict[str, Any]],
+    settings: Optional[dict[str, Any]] = None,
+) -> list[dict[str, Any]]:
+    """Score and sort all viable files (highest confidence first)."""
+    _ = settings
+    target_duration = _song_duration_seconds(song)
+    ranked: list[dict[str, Any]] = []
 
     for resp in _filter_slskd_responses(responses):
         if int(resp.get('fileCount') or 0) <= 0:
@@ -474,26 +588,46 @@ def _collect_matching_files(
                 continue
             if _contains_keyword(song, filename):
                 continue
-            length = _parse_duration_seconds(
-                file_row.get('length') or file_row.get('duration')
+
+            scored = _score_slskd_candidate(
+                song,
+                filename,
+                file_row,
+                target_duration=target_duration,
             )
-            if target_duration and length and abs(target_duration - length) > 10:
+            if scored is None:
                 continue
-            sanitized_name = _alnum_only(filename)
-            if not (
-                (artist and artist in sanitized_name)
-                or (album and album in sanitized_name)
-            ):
-                continue
-            if title and title not in sanitized_name:
-                continue
-            matches.append({**file_row, 'username': username, 'filename': filename})
-    return matches
+            score, reasons = scored
+            ranked.append(
+                {
+                    **file_row,
+                    'username': username,
+                    'filename': filename,
+                    'match_score': score,
+                    'match_reasons': reasons,
+                }
+            )
+
+    ranked.sort(
+        key=lambda row: (
+            -int(row.get('match_score') or 0),
+            -int(row.get('bitRate') or row.get('bitrate') or 0),
+        )
+    )
+    return ranked
 
 
-def _filter_by_quality(
-    files: list[dict[str, Any]], settings: dict[str, Any]
+def _collect_matching_files(
+    song: dict[str, Any], responses: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
+    """Ranked candidates without applying the minimum score gate (tests)."""
+    return _rank_slskd_candidates(song, responses)
+
+
+def _select_download_candidates(
+    ranked: list[dict[str, Any]], settings: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Pick up to download_attempts files, preferring extension order at equal score."""
     raw_ext = settings.get('extensions') or ['mp3', 'flac']
     extensions = [
         str(e).strip().lower().lstrip('.')
@@ -502,21 +636,44 @@ def _filter_by_quality(
     ] or ['mp3', 'flac']
     min_bitrate = int(settings.get('min_bitrate') or 0)
     max_files = int(settings.get('download_attempts') or 3)
-    filtered: list[dict[str, Any]] = []
-    for ext in extensions:
-        for file_row in files:
-            if _file_extension(str(file_row.get('filename') or '')) != ext:
+
+    by_score: dict[int, list[dict[str, Any]]] = {}
+    for row in ranked:
+        by_score.setdefault(int(row.get('match_score') or 0), []).append(row)
+
+    selected: list[dict[str, Any]] = []
+    for score in sorted(by_score.keys(), reverse=True):
+        bucket = by_score[score]
+        for ext in extensions:
+            for file_row in bucket:
+                if _file_extension(str(file_row.get('filename') or '')) != ext:
+                    continue
+                try:
+                    bitrate = int(
+                        file_row.get('bitRate') or file_row.get('bitrate') or 0
+                    )
+                except (TypeError, ValueError):
+                    bitrate = 0
+                if min_bitrate and bitrate and bitrate < min_bitrate:
+                    continue
+                selected.append(file_row)
+                if len(selected) >= max_files:
+                    return selected
+        for file_row in bucket:
+            if file_row in selected:
                 continue
             try:
-                bitrate = int(file_row.get('bitRate') or file_row.get('bitrate') or 0)
+                bitrate = int(
+                    file_row.get('bitRate') or file_row.get('bitrate') or 0
+                )
             except (TypeError, ValueError):
                 bitrate = 0
             if min_bitrate and bitrate and bitrate < min_bitrate:
                 continue
-            filtered.append(file_row)
-            if len(filtered) >= max_files:
-                return filtered
-    return filtered
+            selected.append(file_row)
+            if len(selected) >= max_files:
+                return selected
+    return selected
 
 
 def _file_basename(filename: str) -> str:
@@ -992,7 +1149,7 @@ def download_from_slskd(
                 client.delete_search(search_id)
             return None
 
-        candidates = _collect_matching_files(song, responses)
+        candidates = _rank_slskd_candidates(song, responses, settings)
         if not candidates:
             logger.info(
                 'slskd: no matching audio files title={!r} q={!r} responses={}',
@@ -1003,7 +1160,26 @@ def download_from_slskd(
             client.delete_search(search_id)
             return None
 
-        files = _filter_by_quality(candidates, settings)
+        min_score = _match_min_score(settings)
+        qualified = [
+            row
+            for row in candidates
+            if int(row.get('match_score') or 0) >= min_score
+        ]
+        if not qualified:
+            top = candidates[0]
+            logger.info(
+                'slskd: no confident match title={!r} top_score={} '
+                'top_file={!r} min_score={}',
+                song.get('name'),
+                top.get('match_score'),
+                _file_basename(str(top.get('filename') or '')),
+                min_score,
+            )
+            client.delete_search(search_id)
+            return None
+
+        files = _select_download_candidates(qualified, settings)
         if not files:
             logger.info(
                 'slskd: no files passed quality filters title={!r}',
@@ -1011,6 +1187,18 @@ def download_from_slskd(
             )
             client.delete_search(search_id)
             return None
+
+        pick = files[0]
+        logger.info(
+            'slskd: picked score={} reasons={} file={!r} user={!r} '
+            'candidates={} qualified={}',
+            pick.get('match_score'),
+            ','.join(pick.get('match_reasons') or []),
+            _file_basename(str(pick.get('filename') or '')),
+            pick.get('username'),
+            len(candidates),
+            len(qualified),
+        )
 
         if _past_deadline(deadline):
             client.delete_search(search_id)
