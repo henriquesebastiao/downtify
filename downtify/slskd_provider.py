@@ -379,15 +379,29 @@ def _file_extension(filename: str) -> str:
     return re.sub(r'[^a-z0-9]+', '', ext)
 
 
+def _path_segments(filename: str) -> list[str]:
+    """Parent folders in a Soulseek path (people often encode artist/album there)."""
+    normalized = str(filename or '').replace('\\', '/')
+    parent = Path(normalized).parent
+    return [part for part in parent.parts if part not in ('.', '/')]
+
+
 def _contains_keyword(song: dict[str, Any], filename: str) -> bool:
+    """Filter remix/live/etc. on the file name, not parent folder names."""
     title = str(song.get('name') or '').casefold()
     artist = ' '.join(str(a) for a in (song.get('artists') or [])).casefold()
-    content = filename.casefold()
+    basename = _file_basename(filename)
+    haystacks = [basename.casefold()]
+    segments = _path_segments(filename)
+    if segments:
+        # Immediate parent folder (e.g. "Artist - Album") — not the whole tree.
+        haystacks.append(segments[-1].casefold())
     for keyword in _FILTER_KEYWORDS:
         if keyword in title or keyword in artist:
             continue
-        if keyword in content:
-            return True
+        for haystack in haystacks:
+            if keyword in haystack:
+                return True
     return False
 
 
@@ -506,6 +520,7 @@ def _score_slskd_candidate(
 
     score = 0
     reasons: list[str] = []
+    path_segments = _path_segments(filename)
 
     if artist and base_alnum.startswith(artist):
         score += 3
@@ -513,6 +528,9 @@ def _score_slskd_candidate(
     elif artist and artist in base_alnum:
         score += 1
         reasons.append('artist')
+    elif artist and artist in sanitized_name:
+        score += 2
+        reasons.append('artist_in_path')
 
     if title and title in base_alnum:
         score += 2
@@ -520,6 +538,22 @@ def _score_slskd_candidate(
         if artist and base_alnum.find(artist) < base_alnum.find(title):
             score += 2
             reasons.append('artist_before_title')
+    elif title and title in sanitized_name:
+        score += 2
+        reasons.append('title_in_path')
+
+    for segment in path_segments:
+        segment_alnum = _alnum_only(segment)
+        if not segment_alnum:
+            continue
+        if artist and title and artist in segment_alnum and title in segment_alnum:
+            score += 2
+            reasons.append('folder_segment')
+            break
+        if album and album in segment_alnum:
+            score += 1
+            reasons.append('album_folder')
+            break
 
     if target_duration and length:
         delta = abs(target_duration - length)
@@ -534,9 +568,14 @@ def _score_slskd_candidate(
         score += 1
         reasons.append('album')
 
+    # Soft penalty only when the leaf file name lacks title (dump folders).
     path_folded = filename.casefold()
-    if any(keyword in path_folded for keyword in _PATH_PENALTY_KEYWORDS):
-        score -= 2
+    if (
+        title
+        and title not in base_alnum
+        and any(keyword in path_folded for keyword in _PATH_PENALTY_KEYWORDS)
+    ):
+        score -= 1
         reasons.append('path_penalty')
 
     try:

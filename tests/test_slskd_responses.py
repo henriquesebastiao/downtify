@@ -78,6 +78,51 @@ def test_collect_matching_files_skips_wrong_extension_and_keywords():
     assert matches[0]['match_score'] >= _match_min_score({})
 
 
+def test_rank_accepts_title_and_artist_from_parent_folders():
+    song = {
+        'artists': ['Daft Punk'],
+        'name': 'One More Time',
+        'album_name': 'Discovery',
+        'duration': 320,
+    }
+    responses = [
+        {
+            'username': 'peer1',
+            'fileCount': 1,
+            'hasFreeUploadSlot': True,
+            'files': [
+                {
+                    'filename': '@@files\\Daft Punk\\Discovery\\01 - One More Time.mp3',
+                    'size': 1,
+                    'length': 320,
+                    'bitRate': 320,
+                },
+            ],
+        }
+    ]
+    ranked = _rank_slskd_candidates(song, responses)
+    assert len(ranked) == 1
+    assert 'One More Time' in ranked[0]['filename']
+    reasons = ranked[0].get('match_reasons') or []
+    assert 'title_in_path' in reasons or 'folder_segment' in reasons
+
+
+def test_contains_keyword_ignores_remix_in_distant_parent_folder():
+    song = {
+        'artists': ['Artist'],
+        'name': 'Song',
+        'album_name': 'Album',
+        'duration': 200,
+    }
+    from downtify.slskd_provider import _contains_keyword
+
+    assert not _contains_keyword(
+        song,
+        '@@share\\Remix Collections\\Artist\\Song.mp3',
+    )
+    assert _contains_keyword(song, '@@share\\Artist\\Song (Remix).mp3')
+
+
 def test_rank_rejects_album_only_without_artist_in_filename():
     song = {
         'artists': ['Pitbull'],
