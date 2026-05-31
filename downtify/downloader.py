@@ -194,7 +194,7 @@ class Downloader:
         safe = sanitize_playlist_name(subdir)
         return self.download_dir / safe, f'{safe}/'
 
-    def download(
+    def download(  # noqa: PLR0914
         self,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback] = None,
