@@ -176,9 +176,10 @@ def test_fallback_video_id_via_ytdlp_returns_first_entry(monkeypatch):
             return {'entries': [{'id': 'abc123def45'}]}
 
     monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', FakeYDL)
-    vid = downloader_mod._fallback_video_id_via_ytdlp(
-        {'name': 'Track', 'artists': ['Artist']}
-    )
+    vid = downloader_mod._fallback_video_id_via_ytdlp({
+        'name': 'Track',
+        'artists': ['Artist'],
+    })
     assert vid == 'abc123def45'
 
 
@@ -195,9 +196,10 @@ def test_resolve_video_id_prefers_provider_order_youtube_first(monkeypatch):
         raise AssertionError('find_match should not run when youtube succeeds')
 
     monkeypatch.setattr(downloader_mod, 'find_match', should_not_run)
-    vid, match, provider, local_path = d._resolve_video_id(
-        {'name': 'Track', 'artists': []}
-    )
+    vid, match, provider, local_path = d._resolve_video_id({
+        'name': 'Track',
+        'artists': [],
+    })
     assert vid == 'yt123'
     assert match is None
     assert provider == 'youtube'
@@ -214,9 +216,10 @@ def test_resolve_video_id_uses_second_provider_on_first_failure(monkeypatch):
         'find_match',
         lambda _song: ('ytm456', {'videoId': 'ytm456'}),
     )
-    vid, match, provider, local_path = d._resolve_video_id(
-        {'name': 'Track', 'artists': []}
-    )
+    vid, match, provider, local_path = d._resolve_video_id({
+        'name': 'Track',
+        'artists': [],
+    })
     assert vid == 'ytm456'
     assert isinstance(match, dict)
     assert provider == 'youtube-music'
@@ -232,17 +235,22 @@ def test_resolve_video_id_ytdlp_fallback_when_only_youtube_music(monkeypatch):
     )
     ytdlp_calls: list[str] = []
 
-    monkeypatch.setattr(downloader_mod, 'download_from_slskd', lambda *_a, **_k: None)
-    monkeypatch.setattr(downloader_mod, 'find_match', lambda _song: (None, None))
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_slskd', lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        downloader_mod, 'find_match', lambda _song: (None, None)
+    )
     monkeypatch.setattr(
         downloader_mod,
         '_fallback_video_id_via_ytdlp',
         lambda _song: ytdlp_calls.append('ok') or 'yt-fallback',
     )
 
-    vid, match, provider, local_path = d._resolve_video_id(
-        {'name': 'Seamans Underwear', 'artists': ['Artist']}
-    )
+    vid, match, provider, local_path = d._resolve_video_id({
+        'name': 'Seamans Underwear',
+        'artists': ['Artist'],
+    })
     assert vid == 'yt-fallback'
     assert match is None
     assert provider == 'youtube'
@@ -261,9 +269,10 @@ def test_resolve_video_id_supports_slskd_provider(monkeypatch, tmp_path):
     monkeypatch.setattr(
         downloader_mod, 'download_from_slskd', lambda *_args, **_kw: source
     )
-    vid, match, provider, local_path = d._resolve_video_id(
-        {'name': 'Track', 'artists': []}
-    )
+    vid, match, provider, local_path = d._resolve_video_id({
+        'name': 'Track',
+        'artists': [],
+    })
     assert vid is None
     assert match is None
     assert provider == 'slskd'
@@ -286,9 +295,10 @@ def test_resolve_video_id_skips_slskd_when_disabled(monkeypatch):
     monkeypatch.setattr(
         downloader_mod, '_fallback_video_id_via_ytdlp', lambda _song: 'yt123'
     )
-    vid, match, provider, local_path = d._resolve_video_id(
-        {'name': 'Track', 'artists': []}
-    )
+    vid, match, provider, local_path = d._resolve_video_id({
+        'name': 'Track',
+        'artists': [],
+    })
     assert vid == 'yt123'
     assert match is None
     assert provider == 'youtube'

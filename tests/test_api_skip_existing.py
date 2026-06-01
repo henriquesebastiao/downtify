@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-import downtify.api as api
+from downtify import api
 from downtify.downloader import Downloader
 from downtify.track_index import TrackIndex
 
@@ -87,7 +87,9 @@ def test_run_download_skips_via_global_library(tmp_path):
         )
 
         assert filename == 'Other Playlist/Artist - Track.mp3'
-        assert api.state.download_jobs[song_id]['message'] == 'Already in library'
+        assert (
+            api.state.download_jobs[song_id]['message'] == 'Already in library'
+        )
         d.download.assert_not_called()
     finally:
         api.state.download_jobs.clear()

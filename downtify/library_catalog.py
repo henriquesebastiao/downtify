@@ -10,9 +10,15 @@ from .library_metadata import library_entry_for_file
 from .library_paths import library_stored_path, locate_library_file
 from .track_index import TrackIndex
 
-AUDIO_EXTENSIONS = frozenset(
-    {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
-)
+AUDIO_EXTENSIONS = frozenset({
+    '.mp3',
+    '.m4a',
+    '.flac',
+    '.ogg',
+    '.wav',
+    '.aac',
+    '.opus',
+})
 
 
 @dataclass(frozen=True)
@@ -44,9 +50,7 @@ def _is_audio(path: Path) -> bool:
     return path.is_file() and path.suffix.lower() in AUDIO_EXTENSIONS
 
 
-def resolve_library_file(
-    stored: str, ctx: LibraryContext
-) -> Optional[Path]:
+def resolve_library_file(stored: str, ctx: LibraryContext) -> Optional[Path]:
     """Resolve a library-relative path if it points to an allowed audio file."""
 
     text = str(stored or '').strip().replace('\\', '/')
@@ -101,9 +105,7 @@ def list_library_paths(ctx: LibraryContext) -> list[str]:
 
     if ctx.slskd_dir is not None and ctx.slskd_dir.is_dir():
         try:
-            same_tree = (
-                ctx.slskd_dir.resolve() == ctx.download_dir.resolve()
-            )
+            same_tree = ctx.slskd_dir.resolve() == ctx.download_dir.resolve()
         except OSError:
             same_tree = False
         if not same_tree:

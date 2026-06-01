@@ -13,9 +13,12 @@ from loguru import logger
 
 from . import m3u, spotify
 from .downloader import Downloader
-from .navidrome import _effective_navidrome_settings, sync_playlist_to_navidrome
 from .library_metadata import read_audio_metadata
 from .library_paths import locate_library_file, slskd_dir_from_downloader
+from .navidrome import (
+    _effective_navidrome_settings,
+    sync_playlist_to_navidrome,
+)
 from .track_index import (
     TrackIndex,
     normalize_spotify_track_id,
@@ -397,7 +400,9 @@ def _resolve_monitored_track_filename(
     if tid:
         stored = known_tracks.get(tid)
         if stored and locate_library_file(
-            stored, downloader.download_dir, slskd_dir_from_downloader(downloader)
+            stored,
+            downloader.download_dir,
+            slskd_dir_from_downloader(downloader),
         ):
             return stored
     hit = resolve_existing_download(
@@ -417,7 +422,9 @@ def _sync_navidrome_playlist(
     known_tracks: dict[str, Optional[str]],
     track_index: Optional[TrackIndex] = None,
 ) -> None:
-    if not settings or not _effective_navidrome_settings(settings).get('enabled'):
+    if not settings or not _effective_navidrome_settings(settings).get(
+        'enabled'
+    ):
         return
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
     songs: list[dict[str, Any]] = []
@@ -430,7 +437,9 @@ def _sync_navidrome_playlist(
         row = dict(song)
         row['filename'] = filename
         path = locate_library_file(
-            filename, downloader.download_dir, slskd_dir_from_downloader(downloader)
+            filename,
+            downloader.download_dir,
+            slskd_dir_from_downloader(downloader),
         )
         if path is not None:
             meta = read_audio_metadata(path)

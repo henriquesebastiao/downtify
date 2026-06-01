@@ -66,7 +66,9 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
     }
 
 
-def library_entry_for_file(stored_path: str, full_path: Path) -> dict[str, str]:
+def library_entry_for_file(
+    stored_path: str, full_path: Path
+) -> dict[str, str]:
     """Build one ``/list`` row using tags, then filename fallbacks."""
 
     fb_title, fb_artist = _fallback_title_from_filename(full_path)

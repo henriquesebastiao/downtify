@@ -104,25 +104,23 @@ def test_effective_audio_providers_defaults_when_missing():
 def test_effective_slskd_settings_defaults_when_missing():
     out = _effective_slskd_settings({})
     assert out['enabled'] is False
-    assert out['base_url'] == ''
+    assert not out['base_url']
     assert out['download_dir'] == '/downloads'
     assert out['timeout_seconds'] == 20
 
 
 def test_effective_slskd_settings_normalizes_values():
-    out = _effective_slskd_settings(
-        {
-            'slskd': {
-                'enabled': True,
-                'base_url': 'http://slskd.local:5030/',
-                'api_key': '  key ',
-                'download_dir': '/data/slskd',
-                'timeout_seconds': '90',
-                'poll_interval_seconds': '2',
-                'poll_max_attempts': '99',
-            }
+    out = _effective_slskd_settings({
+        'slskd': {
+            'enabled': True,
+            'base_url': 'http://slskd.local:5030/',
+            'api_key': '  key ',
+            'download_dir': '/data/slskd',
+            'timeout_seconds': '90',
+            'poll_interval_seconds': '2',
+            'poll_max_attempts': '99',
         }
-    )
+    })
     assert out['base_url'] == 'http://slskd.local:5030'
     assert out['enabled'] is True
     assert out['api_key'] == 'key'

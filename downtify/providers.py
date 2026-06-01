@@ -255,35 +255,29 @@ def find_match(
         ('match_all_unfiltered', query, None),
     ]
     if title_only and title_only.casefold() != query.casefold():
-        attempts.extend(
-            [
-                ('match_songs_title_only', title_only, 'songs'),
-                ('match_videos_title_only', title_only, 'videos'),
-                ('match_all_title_only', title_only, None),
-            ]
-        )
+        attempts.extend([
+            ('match_songs_title_only', title_only, 'songs'),
+            ('match_videos_title_only', title_only, 'videos'),
+            ('match_all_title_only', title_only, None),
+        ])
     folded_query = _ascii_fold_query(query)
     folded_title = _ascii_fold_query(title_only)
     if folded_query and folded_query.casefold() != query.casefold():
-        attempts.extend(
-            [
-                ('match_songs_ascii_fold', folded_query, 'songs'),
-                ('match_videos_ascii_fold', folded_query, 'videos'),
-                ('match_all_ascii_fold', folded_query, None),
-            ]
-        )
+        attempts.extend([
+            ('match_songs_ascii_fold', folded_query, 'songs'),
+            ('match_videos_ascii_fold', folded_query, 'videos'),
+            ('match_all_ascii_fold', folded_query, None),
+        ])
     if (
         folded_title
         and title_only
         and folded_title.casefold() != title_only.casefold()
     ):
-        attempts.extend(
-            [
-                ('match_songs_title_ascii_fold', folded_title, 'songs'),
-                ('match_videos_title_ascii_fold', folded_title, 'videos'),
-                ('match_all_title_ascii_fold', folded_title, None),
-            ]
-        )
+        attempts.extend([
+            ('match_songs_title_ascii_fold', folded_title, 'songs'),
+            ('match_videos_title_ascii_fold', folded_title, 'videos'),
+            ('match_all_title_ascii_fold', folded_title, None),
+        ])
     seen_attempts: set[tuple[str, str]] = set()
     for phase, q, filt in attempts:
         key = (q.casefold(), filt or '')

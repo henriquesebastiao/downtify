@@ -14,13 +14,11 @@ def test_effective_navidrome_settings_defaults():
 
 
 def test_search_song_id_matches_title_and_artist():
-    client = NavidromeClient(
-        {
-            'url': 'https://navidrome.test',
-            'username': 'u',
-            'password': 'p',
-        }
-    )
+    client = NavidromeClient({
+        'url': 'https://navidrome.test',
+        'username': 'u',
+        'password': 'p',
+    })
 
     def fake_request(endpoint, extra=None, **kwargs):
         assert endpoint == 'search3'
@@ -39,9 +37,11 @@ def test_search_song_id_matches_title_and_artist():
         }
 
     client._request = fake_request  # type: ignore[method-assign]
-    sid = client.search_song_id(
-        {'name': 'DRAMA KING', 'artists': ['Melxdie'], 'duration': 152}
-    )
+    sid = client.search_song_id({
+        'name': 'DRAMA KING',
+        'artists': ['Melxdie'],
+        'duration': 152,
+    })
     assert sid == 'song-1'
 
 
@@ -53,7 +53,10 @@ def test_sync_playlist_creates_playlist(mock_get):
 
     scan_resp = MagicMock()
     scan_resp.json.return_value = {
-        'subsonic-response': {'status': 'ok', 'scanStatus': {'scanning': False}}
+        'subsonic-response': {
+            'status': 'ok',
+            'scanStatus': {'scanning': False},
+        }
     }
     scan_resp.raise_for_status = MagicMock()
 
@@ -168,7 +171,9 @@ def test_sync_playlist_updates_existing_by_id(mock_get):
     playlists_resp.json.return_value = {
         'subsonic-response': {
             'status': 'ok',
-            'playlists': {'playlist': {'id': 'pl-existing', 'name': 'My List'}},
+            'playlists': {
+                'playlist': {'id': 'pl-existing', 'name': 'My List'}
+            },
         }
     }
     playlists_resp.raise_for_status = MagicMock()

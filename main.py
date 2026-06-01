@@ -34,13 +34,13 @@ from uvicorn import Config, Server
 
 from downtify import __version__, api
 from downtify.downloader import Downloader
-from downtify.monitor import PlaylistMonitorDB, monitor_loop
 from downtify.library_catalog import (
     LibraryContext,
     library_context_from_state,
     list_library_entries,
     resolve_library_file,
 )
+from downtify.monitor import PlaylistMonitorDB, monitor_loop
 from downtify.track_index import TrackIndex
 
 load_dotenv()
@@ -277,7 +277,8 @@ def build_app() -> FastAPI:
             raise HTTPException(status_code=404, detail='File not found')
         return FileResponse(
             full,
-            media_type=mimetypes.guess_type(str(full))[0] or 'application/octet-stream',
+            media_type=mimetypes.guess_type(str(full))[0]
+            or 'application/octet-stream',
         )
 
     @app.delete('/delete')

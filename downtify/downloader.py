@@ -12,7 +12,6 @@ from typing import Any, Callable, Optional
 import requests
 import yt_dlp
 from loguru import logger
-from yt_dlp.utils import DownloadError
 from mutagen.flac import FLAC, Picture
 from mutagen.id3 import (
     APIC,
@@ -30,12 +29,13 @@ from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
+from yt_dlp.utils import DownloadError
 
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
+from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
 from .providers import enrich_from_match, find_match, find_match_for_video
-from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .slskd_provider import download_from_slskd
 
 _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
@@ -172,17 +172,15 @@ _COOKIE_YT_CLIENTS = (
     'tv',
 )
 
-_YOUTUBE_AUTH_COOKIE_NAMES = frozenset(
-    {
-        'LOGIN_INFO',
-        'SID',
-        '__Secure-1PSID',
-        '__Secure-3PSID',
-        'SAPISID',
-        '__Secure-1PAPISID',
-        '__Secure-3PAPISID',
-    }
-)
+_YOUTUBE_AUTH_COOKIE_NAMES = frozenset({
+    'LOGIN_INFO',
+    'SID',
+    '__Secure-1PSID',
+    '__Secure-3PSID',
+    'SAPISID',
+    '__Secure-1PAPISID',
+    '__Secure-3PAPISID',
+})
 
 
 def inspect_youtube_cookies(path: Path | str) -> dict[str, Any]:
@@ -222,9 +220,7 @@ def inspect_youtube_cookies(path: Path | str) -> dict[str, Any]:
     found = sorted(names & _YOUTUBE_AUTH_COOKIE_NAMES)
     out['auth_cookies_found'] = found
     out['looks_authenticated'] = bool(found) and (
-        'LOGIN_INFO' in names
-        or '__Secure-3PSID' in names
-        or 'SID' in names
+        'LOGIN_INFO' in names or '__Secure-3PSID' in names or 'SID' in names
     )
     if not out['looks_authenticated']:
         out['warnings'].append(
@@ -234,7 +230,9 @@ def inspect_youtube_cookies(path: Path | str) -> dict[str, Any]:
     return out
 
 
-def _log_youtube_cookie_health(youtube_settings: Optional[dict[str, Any]]) -> None:
+def _log_youtube_cookie_health(
+    youtube_settings: Optional[dict[str, Any]],
+) -> None:
     path_str = str((youtube_settings or {}).get('cookies_file') or '').strip()
     if not path_str:
         return
@@ -278,20 +276,16 @@ def _youtube_download_profiles(
     music = f'https://music.youtube.com/watch?v={vid}'
     profiles: list[dict[str, Any]] = []
     if ytdlp_cookies_configured(youtube_settings):
-        profiles.append(
-            {
-                'label': 'cookies+web',
-                'use_cookies': True,
-                'urls': [www],
-            }
-        )
-    profiles.append(
-        {
-            'label': 'no-cookies',
-            'use_cookies': False,
-            'urls': [music, www],
-        }
-    )
+        profiles.append({
+            'label': 'cookies+web',
+            'use_cookies': True,
+            'urls': [www],
+        })
+    profiles.append({
+        'label': 'no-cookies',
+        'use_cookies': False,
+        'urls': [music, www],
+    })
     return profiles
 
 
@@ -387,7 +381,9 @@ def _fallback_video_ids_via_ytdlp(
 ) -> list[str]:
     """Ranked YouTube video ids from yt-dlp search (no cookies)."""
     title = str(song.get('name') or '').strip()
-    artists = [a for a in (song.get('artists') or []) if isinstance(a, str) and a]
+    artists = [
+        a for a in (song.get('artists') or []) if isinstance(a, str) and a
+    ]
     query = ' '.join([*artists[:2], title]).strip()
     if not query:
         return []
@@ -501,10 +497,9 @@ def _ytdlp_download_video(
                             're-export from youtube.com (private window) '
                             'and upload again'
                         )
-                    if (
-                        fmt_index + 1 < len(_YTDLP_AUDIO_FORMATS)
-                        and _ytdlp_format_unavailable_retry(exc)
-                    ):
+                    if fmt_index + 1 < len(
+                        _YTDLP_AUDIO_FORMATS
+                    ) and _ytdlp_format_unavailable_retry(exc):
                         logger.info(
                             'yt-dlp: format {!r} unavailable for {} '
                             '({}), trying fallback',
@@ -581,6 +576,7 @@ class Downloader:
         settings: Optional[dict[str, Any]],
     ) -> dict[str, Any]:
         raw = settings if isinstance(settings, dict) else {}
+
         def _int(raw_value: Any, default: int) -> int:
             try:
                 return int(raw_value)
@@ -596,7 +592,9 @@ class Downloader:
             'source_dir': str(raw.get('source_dir') or download_dir).strip(),
             'timeout_seconds': _int(raw.get('timeout_seconds') or 20, 20),
             'search_retries': _int(raw.get('search_retries') or 5, 5),
-            'search_poll_seconds': _int(raw.get('search_poll_seconds') or 15, 15),
+            'search_poll_seconds': _int(
+                raw.get('search_poll_seconds') or 15, 15
+            ),
             'download_attempts': _int(raw.get('download_attempts') or 3, 3),
             'poll_interval_seconds': _int(
                 raw.get('poll_interval_seconds') or 5, 5
@@ -887,8 +885,8 @@ class Downloader:
         local_source_path: Optional[Path] = None
         if not video_id:
             song = spotify_mod.enrich_track_from_spotify_if_sparse(song)
-            video_id, match, provider, local_source_path = self._resolve_video_id(
-                song, progress_cb=progress_cb
+            video_id, match, provider, local_source_path = (
+                self._resolve_video_id(song, progress_cb=progress_cb)
             )
         elif not song.get('album_name') or not song.get('cover_url'):
             # We already have a target video, but the metadata is incomplete.
@@ -918,7 +916,9 @@ class Downloader:
         target_dir.mkdir(parents=True, exist_ok=True)
         out_template = str(target_dir / f'{basename}.%(ext)s')
 
-        yt_provider = provider if provider in ('youtube', 'youtube-music') else 'youtube'
+        yt_provider = (
+            provider if provider in ('youtube', 'youtube-music') else 'youtube'
+        )
 
         if local_source_path is not None:
             if provider == 'slskd' and bool(
@@ -938,7 +938,9 @@ class Downloader:
             if progress_cb:
                 label = _provider_display_name(provider) or 'slskd'
                 progress_cb(95.0, f'Downloaded ({label})', provider)
-            self._finalize_downloaded_file(final_path, song, progress_cb, provider)
+            self._finalize_downloaded_file(
+                final_path, song, progress_cb, provider
+            )
             return stored_name
 
         if progress_cb:
@@ -1064,7 +1066,9 @@ class Downloader:
                     final_path = candidate
                     break
 
-        self._finalize_downloaded_file(final_path, song, progress_cb, yt_provider)
+        self._finalize_downloaded_file(
+            final_path, song, progress_cb, yt_provider
+        )
         return f'{rel_prefix}{final_path.name}'
 
 

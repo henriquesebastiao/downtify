@@ -1,4 +1,7 @@
-from downtify.providers import _parse_text_search_query, song_stub_from_text_query
+from downtify.providers import (
+    _parse_text_search_query,
+    song_stub_from_text_query,
+)
 
 
 def test_parse_artist_dash_title():

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from mutagen.easyid3 import EasyID3
-from mutagen.id3 import ID3
 from mutagen.mp3 import MP3
 
-from downtify.library_metadata import library_entry_for_file, read_audio_metadata
+from downtify.library_metadata import (
+    library_entry_for_file,
+    read_audio_metadata,
+)
 
 
 def test_read_audio_metadata_from_mp3_tags(tmp_path):

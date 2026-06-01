@@ -1,11 +1,10 @@
 from typing import Any
-from pathlib import Path
 from unittest.mock import MagicMock
 
 from downtify.slskd_provider import (
-    _slskd_transfer_progress_pct,
     SlskdClient,
     _collect_matching_files,
+    _contains_keyword,
     _filter_slskd_responses,
     _find_on_disk,
     _flatten_slskd_responses,
@@ -13,34 +12,31 @@ from downtify.slskd_provider import (
     _paths_match,
     _rank_slskd_candidates,
     _slskd_search_queries,
+    _slskd_transfer_progress_pct,
     download_from_slskd,
 )
 
 
 def test_flatten_slskd_responses_attaches_username_to_files():
-    rows = _flatten_slskd_responses(
-        [
-            {
-                'username': 'peer1',
-                'files': [
-                    {'filename': 'Artist - Track.mp3', 'size': 1},
-                ],
-            }
-        ]
-    )
+    rows = _flatten_slskd_responses([
+        {
+            'username': 'peer1',
+            'files': [
+                {'filename': 'Artist - Track.mp3', 'size': 1},
+            ],
+        }
+    ])
     assert len(rows) == 1
     assert rows[0]['username'] == 'peer1'
     assert rows[0]['filename'] == 'Artist - Track.mp3'
 
 
 def test_slskd_search_queries_prefers_title_dash_artist():
-    queries = _slskd_search_queries(
-        {
-            'artists': ['4D4M'],
-            'name': "YOU KNOW WHERE WE'RE GOING - Hardstyle Bass Bounce Edition",
-            'album_name': "YOU KNOW WHERE WE'RE GOING",
-        }
-    )
+    queries = _slskd_search_queries({
+        'artists': ['4D4M'],
+        'name': "YOU KNOW WHERE WE'RE GOING - Hardstyle Bass Bounce Edition",
+        'album_name': "YOU KNOW WHERE WE'RE GOING",
+    })
     assert queries[0] == "YOU KNOW WHERE WE'RE GOING - 4D4M"
     assert 'YOU KNOW WHERE WERE GOING' in queries
 
@@ -114,7 +110,6 @@ def test_contains_keyword_ignores_remix_in_distant_parent_folder():
         'album_name': 'Album',
         'duration': 200,
     }
-    from downtify.slskd_provider import _contains_keyword
 
     assert not _contains_keyword(
         song,
@@ -272,9 +267,11 @@ def test_filter_slskd_responses_hides_no_free_slot_and_locked_files():
 
 
 def test_start_search_requests_filtered_responses():
-    client = SlskdClient(
-        {'base_url': 'https://slskd.example', 'api_key': 'key', 'timeout_seconds': 5}
-    )
+    client = SlskdClient({
+        'base_url': 'https://slskd.example',
+        'api_key': 'key',
+        'timeout_seconds': 5,
+    })
     captured: dict[str, Any] = {}
 
     def fake_request(method, path, **kwargs):
@@ -339,9 +336,11 @@ def test_slskd_transfer_progress_falls_back_when_no_stats():
 
 
 def test_find_transfer_matches_basename_not_full_path():
-    client = SlskdClient(
-        {'base_url': 'https://slskd.example', 'api_key': 'key', 'timeout_seconds': 5}
-    )
+    client = SlskdClient({
+        'base_url': 'https://slskd.example',
+        'api_key': 'key',
+        'timeout_seconds': 5,
+    })
     client.list_download_transfers = lambda: [  # type: ignore[method-assign]
         {
             'username': 'peer1',
@@ -364,9 +363,11 @@ def test_find_transfer_matches_basename_not_full_path():
 
 
 def test_enqueue_download_uses_username_endpoint():
-    client = SlskdClient(
-        {'base_url': 'https://slskd.example', 'api_key': 'key', 'timeout_seconds': 5}
-    )
+    client = SlskdClient({
+        'base_url': 'https://slskd.example',
+        'api_key': 'key',
+        'timeout_seconds': 5,
+    })
     captured: dict[str, Any] = {}
 
     def fake_request(method, path, **kwargs):
@@ -380,13 +381,11 @@ def test_enqueue_download_uses_username_endpoint():
         return resp
 
     client._request = fake_request  # type: ignore[method-assign]
-    ok = client.enqueue_download(
-        {
-            'username': 'peer1',
-            'filename': 'music\\Artist - Track.mp3',
-            'size': 1234,
-        }
-    )
+    ok = client.enqueue_download({
+        'username': 'peer1',
+        'filename': 'music\\Artist - Track.mp3',
+        'size': 1234,
+    })
     assert ok is True
     assert captured['path'] == '/api/v0/transfers/downloads/peer1'
     assert captured['json'] == [
@@ -394,7 +393,9 @@ def test_enqueue_download_uses_username_endpoint():
     ]
 
 
-def test_download_from_slskd_tries_next_candidate_on_failure(monkeypatch, tmp_path):
+def test_download_from_slskd_tries_next_candidate_on_failure(
+    monkeypatch, tmp_path
+):
     candidates = [
         {
             'username': 'peer1',
@@ -430,7 +431,13 @@ def test_download_from_slskd_tries_next_candidate_on_failure(monkeypatch, tmp_pa
             return True
 
         def search_responses(self, search_id: str) -> list[dict[str, Any]]:
-            return [{'username': 'peer1', 'hasFreeUploadSlot': True, 'fileCount': 1}]
+            return [
+                {
+                    'username': 'peer1',
+                    'hasFreeUploadSlot': True,
+                    'fileCount': 1,
+                }
+            ]
 
         def delete_search(self, search_id: str) -> None:
             pass
@@ -465,7 +472,9 @@ def test_download_from_slskd_tries_next_candidate_on_failure(monkeypatch, tmp_pa
         'downtify.slskd_provider._search_roots',
         lambda settings, client: [tmp_path],
     )
-    monkeypatch.setattr('downtify.slskd_provider._wait_for_slskd_file', fake_wait)
+    monkeypatch.setattr(
+        'downtify.slskd_provider._wait_for_slskd_file', fake_wait
+    )
 
     settings = {
         'enabled': True,

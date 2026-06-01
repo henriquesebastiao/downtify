@@ -17,7 +17,9 @@ def path_relative_to_anchor(file_path: Path, anchor: Path) -> str:
     try:
         return file_resolved.relative_to(anchor_resolved).as_posix()
     except ValueError:
-        return os.path.relpath(file_resolved, anchor_resolved).replace('\\', '/')
+        return os.path.relpath(file_resolved, anchor_resolved).replace(
+            '\\', '/'
+        )
 
 
 def resolve_stored_path(stored: str, anchor: Path) -> Path:
@@ -124,7 +126,9 @@ def locate_library_file(
         for root in default_slskd_source_roots(download_dir):
             candidates.append((root / rel).resolve())
         candidates.append((download_dir / 'slskd' / rel).resolve())
-    candidates.append(resolve_library_stored_path(text, download_dir, slskd_dir))
+    candidates.append(
+        resolve_library_stored_path(text, download_dir, slskd_dir)
+    )
 
     seen: set[str] = set()
     for path in candidates:

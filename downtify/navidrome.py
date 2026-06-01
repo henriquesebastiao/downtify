@@ -89,8 +89,10 @@ def _effective_navidrome_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'scan_wait_seconds': scan_wait_seconds,
         'scan_poll_seconds': scan_poll_seconds,
         'scan_retry_seconds': scan_retry_seconds,
-        'client_name': str(raw.get('client_name') or 'Downtify').strip() or 'Downtify',
-        'api_version': str(raw.get('api_version') or '1.16.1').strip() or '1.16.1',
+        'client_name': str(raw.get('client_name') or 'Downtify').strip()
+        or 'Downtify',
+        'api_version': str(raw.get('api_version') or '1.16.1').strip()
+        or '1.16.1',
     }
 
 
@@ -156,7 +158,9 @@ class NavidromeClient:
         resp = requests.get(url, timeout=self.timeout)
         resp.raise_for_status()
         data = resp.json()
-        body = data.get('subsonic-response') if isinstance(data, dict) else None
+        body = (
+            data.get('subsonic-response') if isinstance(data, dict) else None
+        )
         if not isinstance(body, dict):
             raise ValueError('Invalid Subsonic response')
         if body.get('status') == 'failed':
@@ -170,7 +174,9 @@ class NavidromeClient:
             self._request('ping')
             return True
         except Exception as exc:
-            logger.info('navidrome: ping failed url={!r} err={}', self.base_url, exc)
+            logger.info(
+                'navidrome: ping failed url={!r} err={}', self.base_url, exc
+            )
             return False
 
     def _scan_credentials(self) -> tuple[str, str]:
@@ -211,7 +217,9 @@ class NavidromeClient:
 
     def search_song_id(self, song: dict[str, Any]) -> Optional[str]:
         title = _search_title(str(song.get('name') or ''))
-        artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
+        artists = [
+            str(a) for a in (song.get('artists') or []) if str(a).strip()
+        ]
         artist = artists[0] if artists else ''
         path_keys = _path_match_keys(str(song.get('filename') or ''))
         query = f'{title} {artist}'.strip()
@@ -243,7 +251,9 @@ class NavidromeClient:
             c_artist = str(candidate.get('artist') or '')
             c_title = str(candidate.get('title') or '')
             c_duration = int(candidate.get('duration') or 0)
-            c_path = str(candidate.get('path') or '').replace('\\', '/').casefold()
+            c_path = (
+                str(candidate.get('path') or '').replace('\\', '/').casefold()
+            )
 
             artist_match = artist and artist.casefold() in c_artist.casefold()
             title_match = (
@@ -312,10 +322,16 @@ class NavidromeClient:
         resp = requests.get(url, timeout=self.timeout)
         resp.raise_for_status()
         data = resp.json()
-        body = data.get('subsonic-response') if isinstance(data, dict) else None
+        body = (
+            data.get('subsonic-response') if isinstance(data, dict) else None
+        )
         if not isinstance(body, dict) or body.get('status') == 'failed':
             err = (body or {}).get('error') if isinstance(body, dict) else {}
-            message = err.get('message') if isinstance(err, dict) else 'create failed'
+            message = (
+                err.get('message')
+                if isinstance(err, dict)
+                else 'create failed'
+            )
             raise ValueError(str(message))
         playlist = body.get('playlist') if isinstance(body, dict) else None
         if isinstance(playlist, dict):
@@ -366,7 +382,7 @@ def _song_label(song: dict[str, Any]) -> str:
     label = str(song.get('name') or 'unknown')
     artists = song.get('artists') or []
     if artists:
-        label = f"{', '.join(str(a) for a in artists)} - {label}"
+        label = f'{", ".join(str(a) for a in artists)} - {label}'
     fn = str(song.get('filename') or '').strip()
     return f'{label} ({fn})' if fn else label
 

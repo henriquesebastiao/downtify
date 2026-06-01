@@ -38,12 +38,17 @@ from fastapi import (
 )
 from loguru import logger
 
+from downtify.slskd_provider import reset_slskd_parallelism
+
 from . import m3u, providers, spotify
 from .downloader import Downloader, NoAudioMatchError, inspect_youtube_cookies
-from .monitor import PlaylistMonitorDB, check_playlist
-from .navidrome import _effective_navidrome_settings, sync_playlist_to_navidrome
 from .library_metadata import read_audio_metadata
 from .library_paths import locate_library_file, slskd_dir_from_downloader
+from .monitor import PlaylistMonitorDB, check_playlist
+from .navidrome import (
+    _effective_navidrome_settings,
+    sync_playlist_to_navidrome,
+)
 from .track_index import TrackIndex, resolve_existing_download
 
 DEFAULT_YOUTUBE_COOKIES_BASENAME = 'youtube-cookies.txt'
@@ -146,7 +151,7 @@ def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
     slskd_cfg = _effective_slskd_settings(settings)
     out: list[str] = []
     seen: set[str] = set()
-    for raw in (settings.get('audio_providers') or []):
+    for raw in settings.get('audio_providers') or []:
         p = str(raw or '').strip()
         if p == 'slskd' and not bool(slskd_cfg.get('enabled')):
             continue
@@ -157,7 +162,9 @@ def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
         return ['youtube-music']
     # UI historically stored a single provider; keep playlist downloads useful
     # by falling back to YouTube when slskd is selected without a backup.
-    if 'slskd' in out and not any(p in out for p in ('youtube', 'youtube-music')):
+    if 'slskd' in out and not any(
+        p in out for p in ('youtube', 'youtube-music')
+    ):
         for fallback in ('youtube-music', 'youtube'):
             if fallback not in seen:
                 seen.add(fallback)
@@ -467,7 +474,10 @@ def _merge_client_track_hints(
 def _song_from_download_request(
     url: str, client_hints: Optional[dict[str, Any]]
 ) -> dict[str, Any]:
-    if isinstance(client_hints, dict) and client_hints.get('source') == 'text_search':
+    if (
+        isinstance(client_hints, dict)
+        and client_hints.get('source') == 'text_search'
+    ):
         return dict(client_hints)
     song = _song_for_download(url)
     _merge_client_track_hints(song, client_hints)
@@ -681,7 +691,9 @@ def _songs_for_navidrome_sync(
         Path(downloader.download_dir) if downloader is not None else None
     )
     slskd_dir = (
-        slskd_dir_from_downloader(downloader) if downloader is not None else None
+        slskd_dir_from_downloader(downloader)
+        if downloader is not None
+        else None
     )
     for r in results:
         if not r or not r.get('filename'):
@@ -719,7 +731,9 @@ async def _sync_playlist_navidrome(
             state.settings,
         )
     except Exception:
-        logger.exception('Navidrome sync failed for playlist {}', playlist_name)
+        logger.exception(
+            'Navidrome sync failed for playlist {}', playlist_name
+        )
 
 
 async def _process_batch(
@@ -775,7 +789,9 @@ async def _process_batch(
         })
 
     if generate_m3u and playlist_subdir and entries:
-        organize = bool(state.downloader and state.downloader.organize_by_artist)
+        organize = bool(
+            state.downloader and state.downloader.organize_by_artist
+        )
         try:
             await asyncio.to_thread(
                 m3u.write_m3u,
@@ -1026,8 +1042,8 @@ async def update_settings_endpoint(
                     payload['organize_by_artist']
                 )
             if 'youtube' in payload:
-                state.downloader.youtube_settings = _effective_youtube_settings(
-                    state.settings
+                state.downloader.youtube_settings = (
+                    _effective_youtube_settings(state.settings)
                 )
         if 'max_parallel_downloads' in payload:
             try:
@@ -1035,10 +1051,9 @@ async def update_settings_endpoint(
                 count = min(8, count)
                 state.download_semaphore = asyncio.Semaphore(count)
                 if state.downloader is not None:
-                    state.downloader.slskd_settings = _effective_slskd_settings(
-                        state.settings
+                    state.downloader.slskd_settings = (
+                        _effective_slskd_settings(state.settings)
                     )
-                from downtify.slskd_provider import reset_slskd_parallelism
 
                 reset_slskd_parallelism(state.settings)
             except (TypeError, ValueError):
@@ -1052,9 +1067,7 @@ async def update_settings_endpoint(
 
 def _validate_youtube_cookies_bytes(raw: bytes) -> None:
     if not raw or not raw.strip():
-        raise HTTPException(
-            status_code=400, detail='cookies file is empty'
-        )
+        raise HTTPException(status_code=400, detail='cookies file is empty')
     if len(raw) > 512_000:
         raise HTTPException(
             status_code=400, detail='cookies file is too large'
@@ -1121,7 +1134,9 @@ def delete_youtube_cookies_endpoint(
         try:
             Path(path_str).unlink(missing_ok=True)
         except OSError as exc:
-            logger.warning('Could not delete cookies file {}: {}', path_str, exc)
+            logger.warning(
+                'Could not delete cookies file {}: {}', path_str, exc
+            )
     state.settings['youtube'] = {
         'cookies_file': '',
         'cookies_from_browser': '',

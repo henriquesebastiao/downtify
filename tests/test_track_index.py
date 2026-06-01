@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from downtify.downloader import Downloader
+from downtify.library_paths import library_stored_path
 from downtify.track_index import (
     TrackIndex,
     normalize_spotify_track_id,
@@ -13,17 +14,12 @@ SPOTIFY_ID = '4uLU6hMCjMI75M1A2tKUQC'
 
 
 def test_normalize_spotify_track_id_from_song_id():
-    assert (
-        normalize_spotify_track_id({'song_id': SPOTIFY_ID})
-        == SPOTIFY_ID
-    )
+    assert normalize_spotify_track_id({'song_id': SPOTIFY_ID}) == SPOTIFY_ID
 
 
 def test_normalize_spotify_track_id_from_uri():
     assert (
-        normalize_spotify_track_id(
-            {'song_id': f'spotify:track:{SPOTIFY_ID}'}
-        )
+        normalize_spotify_track_id({'song_id': f'spotify:track:{SPOTIFY_ID}'})
         == SPOTIFY_ID
     )
 
@@ -39,8 +35,6 @@ def test_resolve_existing_prefers_global_library(tmp_path):
     target = slskd_dir / 'Artist - Track.mp3'
     slskd_dir.mkdir(parents=True)
     target.write_bytes(b'x' * 100)
-
-    from downtify.library_paths import library_stored_path
 
     stored = library_stored_path(target, download_dir, slskd_dir)
     index = TrackIndex(tmp_path / 'library.db')

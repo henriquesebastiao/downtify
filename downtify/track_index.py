@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .library_paths import (
-    library_stored_path,
     locate_library_file,
     slskd_dir_from_downloader,
 )

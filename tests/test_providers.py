@@ -137,9 +137,11 @@ def test_find_match_falls_back_when_song_rows_have_no_video_id(monkeypatch):
             return []
 
     monkeypatch.setattr(providers, '_client', FakeYTM())
-    video_id, match = providers.find_match(
-        {'name': 'Track', 'artists': ['Artist'], 'duration': 180}
-    )
+    video_id, match = providers.find_match({
+        'name': 'Track',
+        'artists': ['Artist'],
+        'duration': 180,
+    })
     assert video_id == 'abc123def45'
     assert isinstance(match, dict)
     assert match['videoId'] == 'abc123def45'
@@ -155,9 +157,11 @@ def test_find_match_retries_title_only_query(monkeypatch):
             return []
 
     monkeypatch.setattr(providers, '_client', FakeYTM())
-    video_id, match = providers.find_match(
-        {'name': 'Missing Song', 'artists': ['Artist'], 'duration': 200}
-    )
+    video_id, match = providers.find_match({
+        'name': 'Missing Song',
+        'artists': ['Artist'],
+        'duration': 200,
+    })
     assert video_id == 'xyz987uvw65'
     assert isinstance(match, dict)
     assert match['videoId'] == 'xyz987uvw65'
@@ -173,9 +177,11 @@ def test_find_match_uses_unfiltered_search_fallback(monkeypatch):
             return []
 
     monkeypatch.setattr(providers, '_client', FakeYTM())
-    video_id, match = providers.find_match(
-        {'name': 'Track', 'artists': ['Artist'], 'duration': 180}
-    )
+    video_id, match = providers.find_match({
+        'name': 'Track',
+        'artists': ['Artist'],
+        'duration': 180,
+    })
     assert video_id == 'qwe987rty65'
     assert isinstance(match, dict)
     assert match['videoId'] == 'qwe987rty65'

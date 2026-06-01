@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+from mutagen.easyid3 import EasyID3
+from mutagen.mp3 import MP3
+
 from downtify.library_catalog import (
     LibraryContext,
     list_library_entries,
     list_library_paths,
     resolve_library_file,
 )
-from mutagen.easyid3 import EasyID3
-from mutagen.mp3 import MP3
 from downtify.library_paths import library_stored_path
 
 

@@ -479,7 +479,7 @@ def _merge_full_track_metadata(
         'album_track_total',
     ):
         value = full.get(key)
-        if value is None or value == '' or value == []:
+        if value is None or not value or value == []:
             continue
         if key in ('track_number', 'album_track_total'):
             if merged.get(key) is not None:
@@ -502,7 +502,9 @@ def _merge_full_track_metadata(
     return merged
 
 
-def enrich_track_from_spotify_if_sparse(song: dict[str, Any]) -> dict[str, Any]:
+def enrich_track_from_spotify_if_sparse(
+    song: dict[str, Any],
+) -> dict[str, Any]:
     """Fill missing Spotify tagging fields from the per-track embed.
 
     Playlist browse rows often omit ``year``, ``release_date``, and
