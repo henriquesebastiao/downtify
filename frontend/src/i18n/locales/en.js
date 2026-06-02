@@ -204,7 +204,7 @@ export default {
     reconcileM3u: 'M3U',
     reconcileNavidrome: 'Navidrome',
     reconcileNone:
-      'No moved files found. Use this after relocating files (same name and size). Deleting tracks is handled when you delete; stale playlist rows are removed here if files are gone.',
+      'No path updates or stale catalog rows. After moving files on disk, run this again. If you deleted in Library, M3U/Navidrome were already updated on delete — refresh the Library page if the list looks old.',
     reconcilePrunedSimple:
       'Removed {pruned} stale catalog entries (files already deleted).',
     reconcilePrunedBackfill:

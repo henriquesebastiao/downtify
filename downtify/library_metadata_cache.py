@@ -124,7 +124,9 @@ class LibraryMetadataCache:
         """Return a ``/list`` row, reading tags only when cache is missing or stale."""
 
         rows = self.get_entries_batch([(stored_path, full_path)])
-        return rows[0] if rows else library_entry_for_file(stored_path, full_path)
+        return (
+            rows[0] if rows else library_entry_for_file(stored_path, full_path)
+        )
 
     def get_entries_batch(
         self, items: list[tuple[str, Path]]
@@ -224,9 +226,7 @@ class LibraryMetadataCache:
 
                 entry = library_entry_for_file(stored, full)
                 results.append(entry)
-                self._store_conn(
-                    conn, name, ck, entry, mtime_ns, size
-                )
+                self._store_conn(conn, name, ck, entry, mtime_ns, size)
 
             for name, ck in filename_updates:
                 conn.execute(
@@ -236,7 +236,9 @@ class LibraryMetadataCache:
 
         return results
 
-    def refresh(self, stored_path: str, full_path: Path) -> Optional[dict[str, str]]:
+    def refresh(
+        self, stored_path: str, full_path: Path
+    ) -> Optional[dict[str, str]]:
         """Re-read tags from disk and update the cache (e.g. after download)."""
 
         name = _norm_filename(stored_path)
@@ -278,7 +280,9 @@ class LibraryMetadataCache:
             if ck:
                 keys.append(ck)
         with self._connect() as conn:
-            conn.execute('DELETE FROM library_metadata WHERE filename = ?', (name,))
+            conn.execute(
+                'DELETE FROM library_metadata WHERE filename = ?', (name,)
+            )
             for ck in keys:
                 conn.execute(
                     'DELETE FROM library_metadata WHERE content_key = ?', (ck,)
@@ -294,11 +298,7 @@ class LibraryMetadataCache:
         ck = file_content_key(full_path)
         if ck:
             row = self._fetch_by_content_key(ck)
-            if (
-                row is not None
-                and row[0] == mtime_ns
-                and row[1] == size
-            ):
+            if row is not None and row[0] == mtime_ns and row[1] == size:
                 self._touch_filename(ck, stored_path)
                 return row
         row = self._fetch_by_filename(stored_path)

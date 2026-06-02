@@ -10,9 +10,7 @@ from .library_cache_keys import file_content_key
 from .library_metadata import library_entry_for_file
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import library_stored_path, locate_library_file
-from .library_paths_cache import (
-    get_cached_paths,
-)
+from .library_paths_cache import get_cached_paths
 from .playlist_catalog import PlaylistCatalog
 from .track_index import TrackIndex
 

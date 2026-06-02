@@ -34,12 +34,13 @@ from downtify.cover_cache import CoverArtCache
 from downtify.downloader import Downloader
 from downtify.library_catalog import (
     LibraryContext,
-    invalidate_library_paths_cache,
     library_context_from_state,
     list_library_entries,
     resolve_library_file,
 )
 from downtify.library_metadata_cache import LibraryMetadataCache
+from downtify.library_paths_cache import invalidate_library_paths_cache
+from downtify.library_reconcile import refresh_playlists_after_moves
 from downtify.monitor import PlaylistMonitorDB, monitor_loop
 from downtify.navidrome_index import NavidromeIndex
 from downtify.playlist_catalog import PlaylistCatalog
@@ -266,14 +267,38 @@ def build_app() -> FastAPI:
             api.state.cover_cache.forget(file, full_path=full)
         if api.state.metadata_cache is not None:
             api.state.metadata_cache.forget(file, full_path=full)
+        affected_playlists: list[str] = []
         if api.state.playlist_catalog is not None:
-            api.state.playlist_catalog.remove_tracks_for_filename(file)
+            affected_playlists = (
+                api.state.playlist_catalog.remove_tracks_for_filename(file)
+            )
         if api.state.track_index is not None:
             api.state.track_index.remove_by_filename(file)
         invalidate_library_paths_cache()
         if api.state.navidrome_index is not None:
             api.state.navidrome_index.forget_filename(file, full_path=full)
-        return {'deleted': True}
+        if (
+            affected_playlists
+            and api.state.downloader is not None
+            and api.state.playlist_catalog is not None
+        ):
+            try:
+                refresh_playlists_after_moves(
+                    set(affected_playlists),
+                    settings=api.state.settings,
+                    downloader=api.state.downloader,
+                    playlist_catalog=api.state.playlist_catalog,
+                    track_index=api.state.track_index,
+                    monitor_db=api.state.monitor_db,
+                    navidrome_index=api.state.navidrome_index,
+                )
+            except Exception as exc:
+                logger.warning(
+                    'delete: playlist refresh failed for {}: {}',
+                    ', '.join(affected_playlists[:5]),
+                    exc,
+                )
+        return {'deleted': True, 'playlists_affected': affected_playlists}
 
     @app.get('/cover')
     def get_cover(file: str):

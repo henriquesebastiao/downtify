@@ -13,10 +13,10 @@ from .library_cache_keys import file_content_key
 from .library_catalog import (
     AUDIO_EXTENSIONS,
     LibraryContext,
-    invalidate_library_paths_cache,
     library_context_from_state,
 )
 from .library_paths import library_stored_path, locate_library_file
+from .library_paths_cache import invalidate_library_paths_cache
 from .navidrome import (
     _effective_navidrome_settings,
     enrich_song_from_library_file,
@@ -33,10 +33,9 @@ def playlist_refresh_enabled(settings: dict[str, Any]) -> tuple[bool, bool]:
     """Return ``(generate_m3u, sync_navidrome)`` from current settings."""
 
     generate_m3u = settings.get('generate_m3u', True) is not False
-    sync_navidrome = (
-        settings.get('sync_navidrome', True) is not False
-        and _effective_navidrome_settings(settings).get('enabled')
-    )
+    sync_navidrome = settings.get(
+        'sync_navidrome', True
+    ) is not False and _effective_navidrome_settings(settings).get('enabled')
     return generate_m3u, sync_navidrome
 
 
@@ -144,6 +143,7 @@ def prune_stale_and_backfill(
     *,
     track_index: Optional[TrackIndex] = None,
     playlist_catalog: Optional[PlaylistCatalog] = None,
+    navidrome_index: Optional[Any] = None,
 ) -> tuple[int, int, set[str]]:
     """Remove DB rows for missing files; fill missing ``content_key`` values."""
 
@@ -165,6 +165,8 @@ def prune_stale_and_backfill(
                 if playlist_catalog.remove_track(pl_name, tid):
                     pruned += 1
                     affected.add(pl_name)
+                if navidrome_index is not None:
+                    navidrome_index.forget_filename(old_path)
                 continue
             ck = str(row.get('content_key') or '').strip()
             if not ck:
@@ -185,6 +187,8 @@ def prune_stale_and_backfill(
             if full is None:
                 if track_index.remove_by_filename(old_path):
                     pruned += 1
+                if navidrome_index is not None:
+                    navidrome_index.forget_filename(old_path)
                 continue
             ck = str(row.get('content_key') or '').strip()
             if not ck:
@@ -327,6 +331,7 @@ def reconcile_and_refresh(
         ctx,
         track_index=track_index,
         playlist_catalog=playlist_catalog,
+        navidrome_index=navidrome_index,
     )
     count, move_affected = reconcile_library_paths(
         ctx,
@@ -353,8 +358,12 @@ def reconcile_and_refresh(
             navidrome_index=navidrome_index,
         )
         did_refresh = True
-    if count or pruned:
-        invalidate_library_paths_cache()
+    invalidate_library_paths_cache()
+    if not (count or pruned or backfilled):
+        logger.info(
+            'library reconcile: no path updates, stale rows, or backfills '
+            '(DB already matches disk, or delete was done in the Library UI)'
+        )
     return {
         'paths_updated': count,
         'pruned_stale': pruned,

@@ -15,7 +15,9 @@ def test_store_and_lookup_by_filename(tmp_path: Path) -> None:
     db = tmp_path / 'library.db'
     index = NavidromeIndex(db)
     track = _touch(tmp_path / 'Artist/Track.mp3')
-    index.store('Artist/Track.mp3', 'nd-1', spotify_track_id='sp-1', full_path=track)
+    index.store(
+        'Artist/Track.mp3', 'nd-1', spotify_track_id='sp-1', full_path=track
+    )
     assert index.lookup_filename('Artist/Track.mp3') == 'nd-1'
     assert index.lookup_file(track) == 'nd-1'
 

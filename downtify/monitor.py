@@ -450,6 +450,7 @@ async def check_playlist(  # noqa: PLR0914
     )
 
     if playlist_catalog is not None:
+
         def _sync_catalog() -> None:
             fresh = db.get_track_filenames(playlist.id)
             rows: list[tuple[dict[str, Any], str, Path]] = []

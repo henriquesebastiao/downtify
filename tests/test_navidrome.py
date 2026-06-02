@@ -437,7 +437,9 @@ def test_sync_playlist_updates_existing_by_id(mock_get, mock_post):
 
 @patch('downtify.navidrome.requests.post')
 @patch('downtify.navidrome.requests.get')
-def test_sync_playlist_uses_navidrome_index_cache(mock_get, mock_post, tmp_path):
+def test_sync_playlist_uses_navidrome_index_cache(
+    mock_get, mock_post, tmp_path
+):
     """Cached Navidrome ids skip search3 during playlist sync."""
 
     ping_resp = MagicMock()
@@ -520,10 +522,16 @@ def test_create_playlist_batches_many_songs(mock_post):
     playlist_id = client.create_playlist('Big List', song_ids)
     assert playlist_id == 'pl-big'
     assert mock_post.call_count == 2
-    create_url, create_kwargs = mock_post.call_args_list[0][0][0], mock_post.call_args_list[0][1]
+    create_url, create_kwargs = (
+        mock_post.call_args_list[0][0][0],
+        mock_post.call_args_list[0][1],
+    )
     assert 'createPlaylist' in create_url
     assert len(create_kwargs['data']) == 80
-    update_url, update_kwargs = mock_post.call_args_list[1][0][0], mock_post.call_args_list[1][1]
+    update_url, update_kwargs = (
+        mock_post.call_args_list[1][0][0],
+        mock_post.call_args_list[1][1],
+    )
     assert 'updatePlaylist' in update_url
     assert update_kwargs['params']['playlistId'] == 'pl-big'
     assert len(update_kwargs['data']) == 70

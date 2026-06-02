@@ -70,7 +70,9 @@ def _embedded_cover_from_ogg(path: Path) -> tuple[bytes | None, str | None]:
     return None, None
 
 
-def _embedded_cover_from_mutagen(path: Path) -> tuple[bytes | None, str | None]:
+def _embedded_cover_from_mutagen(
+    path: Path,
+) -> tuple[bytes | None, str | None]:
     try:
         f = MutagenFile(str(path))
         if f is not None and getattr(f, 'pictures', None):

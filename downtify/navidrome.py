@@ -529,7 +529,9 @@ class NavidromeClient:
             target_duration //= 1000
 
         for query in primary:
-            batch = self._search3_songs(query, song_count=_PRIMARY_SEARCH_COUNT)
+            batch = self._search3_songs(
+                query, song_count=_PRIMARY_SEARCH_COUNT
+            )
             picked = _pick_song_id_from_candidates(
                 batch, song, path_keys, target_duration
             )

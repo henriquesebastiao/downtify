@@ -26,12 +26,20 @@ def test_reconcile_updates_stale_path(tmp_path: Path) -> None:
 
     library_db = tmp_path / 'library.db'
     index = TrackIndex(library_db)
-    index.register('4uLU6hMCjMI75M1A2tKUQC', 'Playlist/Artist - Song.mp3', full_path=old)
+    index.register(
+        '4uLU6hMCjMI75M1A2tKUQC', 'Playlist/Artist - Song.mp3', full_path=old
+    )
 
     catalog = PlaylistCatalog(library_db)
     catalog.replace_playlist_tracks(
         'My List',
-        [({'song_id': '4uLU6hMCjMI75M1A2tKUQC'}, 'Playlist/Artist - Song.mp3', old)],
+        [
+            (
+                {'song_id': '4uLU6hMCjMI75M1A2tKUQC'},
+                'Playlist/Artist - Song.mp3',
+                old,
+            )
+        ],
     )
 
     ctx = LibraryContext(download_dir=download_dir)
@@ -42,7 +50,10 @@ def test_reconcile_updates_stale_path(tmp_path: Path) -> None:
     assert count >= 1
     assert 'My List' in affected
     assert index.lookup('4uLU6hMCjMI75M1A2tKUQC') == 'Artist/Artist - Song.mp3'
-    assert catalog.list_tracks('My List')[0]['filename'] == 'Artist/Artist - Song.mp3'
+    assert (
+        catalog.list_tracks('My List')[0]['filename']
+        == 'Artist/Artist - Song.mp3'
+    )
 
 
 def test_build_disk_content_index(tmp_path: Path) -> None:

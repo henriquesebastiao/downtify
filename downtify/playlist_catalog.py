@@ -301,9 +301,7 @@ class PlaylistCatalog:
                 (ck, pl_name, tid),
             )
 
-    def remove_track(
-        self, playlist_name: str, track_spotify_id: str
-    ) -> bool:
+    def remove_track(self, playlist_name: str, track_spotify_id: str) -> bool:
         pl_name = str(playlist_name or '').strip()
         tid = str(track_spotify_id or '').strip()
         if not pl_name or not tid:

@@ -49,7 +49,7 @@ Use after you **move or reorganize files on disk** (same filename and size, new 
 Reconcile does **not** run on a schedule or at startup — only when you press the button (or call `POST /api/library/reconcile`).
 
 !!! note "Deletes vs moves"
-    Deleting a track from the Library UI removes the file and catalog rows immediately. **Fix library paths** is for moves and for cleaning up anything left behind after manual deletes outside Downtify.
+    Deleting a track from the **Library** UI removes the file, catalog rows, and (when M3U or Navidrome sync is enabled) rewrites affected playlists. **Fix library paths** is for **moves** and for **manual deletes on disk** (Finder, SSH, etc.) that left stale rows in the database. If you already deleted in the UI, reconcile often reports “no changes” because the catalog is already clean — use **Refresh** on the Library page if the list looks stale.
 
 ## Navidrome (related behavior)
 

@@ -43,9 +43,9 @@ from downtify.slskd_provider import reset_slskd_parallelism
 from . import m3u, providers, spotify
 from .cover_cache import CoverArtCache
 from .downloader import Downloader, NoAudioMatchError, inspect_youtube_cookies
-from .library_catalog import invalidate_library_paths_cache
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
+from .library_paths_cache import invalidate_library_paths_cache
 from .library_reconcile import reconcile_and_refresh
 from .monitor import PlaylistMonitorDB, check_playlist
 from .navidrome import (
@@ -706,7 +706,11 @@ async def _run_download(
                 slskd_dir=slskd,
             ),
         )
-    if filename and state.metadata_cache is not None and state.downloader is not None:
+    if (
+        filename
+        and state.metadata_cache is not None
+        and state.downloader is not None
+    ):
         dl_dir = Path(state.downloader.download_dir)
         slskd = slskd_dir_from_downloader(state.downloader)
         cache = state.metadata_cache
@@ -898,6 +902,7 @@ async def _process_batch(
             logger.exception('Failed to write M3U for {}', playlist_url)
 
     if entries and playlist_name:
+
         def _catalog_batch() -> None:
             rows: list[tuple[dict[str, Any], str, Path]] = []
             dl_dir = Path(state.downloader.download_dir)

@@ -22,7 +22,9 @@ def file_content_key(full_path: Path) -> str | None:
     return hashlib.sha256(payload).hexdigest()
 
 
-def file_content_key_from_name_and_size(name: str, file_size: int) -> str | None:
+def file_content_key_from_name_and_size(
+    name: str, file_size: int
+) -> str | None:
     """Rebuild the content key when only basename and size are known."""
 
     base = Path(str(name or '').replace('\\', '/')).name.casefold()
