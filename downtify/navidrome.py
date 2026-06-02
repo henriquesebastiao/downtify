@@ -227,47 +227,58 @@ def _exact_tag_match(
     return False
 
 
-def _search_queries_for_song(
+_PRIMARY_SEARCH_COUNT = 40
+_FALLBACK_SEARCH_COUNT = 80
+_MAX_FALLBACK_QUERIES = 4
+
+
+def _search_query_phases(
     song: dict[str, Any], path_keys: list[str]
-) -> list[str]:
-    """Build search queries; embedded tags first, then filename fallbacks."""
+) -> tuple[list[str], list[str]]:
+    """Primary tag/metadata queries, then a short filename fallback list."""
 
     title, artists = _library_tags(song)
     search_title = _search_title(title)
     artist = artists[0] if artists else ''
     tagged = bool(song.get('library_from_tags'))
-    queries: list[str] = []
+    primary: list[str] = []
+    fallback: list[str] = []
 
-    def add(query: str) -> None:
+    def add_primary(query: str) -> None:
         text = str(query or '').strip()
-        if text and text not in queries:
-            queries.append(text)
+        if text and text not in primary:
+            primary.append(text)
+
+    def add_fallback(query: str) -> None:
+        text = str(query or '').strip()
+        if text and text not in fallback and text not in primary:
+            fallback.append(text)
 
     if tagged and title:
         if artist:
-            add(f'{artist} {title}')
-            add(f'{title} {artist}')
+            add_primary(f'{artist} {title}')
+            add_primary(f'{title} {artist}')
+        else:
+            add_primary(title)
         if len(artists) > 1:
-            joined = ', '.join(artists)
-            add(f'{joined} {title}')
-            add(f'{title} {joined}')
-        add(title)
+            add_primary(f'{title} {", ".join(artists)}')
     else:
-        add(f'{search_title} {artist}'.strip())
+        add_primary(f'{search_title} {artist}'.strip())
         if len(artists) > 1:
-            add(f'{search_title} {", ".join(artists[:3])}'.strip())
+            add_primary(f'{search_title} {", ".join(artists[:3])}'.strip())
 
     if path_keys:
         basename = path_keys[0].rsplit('/', 1)[-1]
         stem = basename.rsplit('.', 1)[0] if basename else ''
-        for item in _queries_from_filename_stem(stem):
-            add(item)
-        add(stem)
-        add(basename)
-        add(path_keys[0])
-        for key in path_keys[1:]:
-            add(key)
-    return queries
+        loosened = _loosen_search_query(stem) if stem else ''
+        if loosened:
+            add_fallback(loosened)
+        if stem:
+            add_fallback(stem)
+        if basename:
+            add_fallback(basename)
+        add_fallback(path_keys[0])
+    return primary, fallback[:_MAX_FALLBACK_QUERIES]
 
 
 def _pick_song_id_from_candidates(
@@ -488,7 +499,7 @@ class NavidromeClient:
         return False
 
     def _search3_songs(
-        self, query: str, *, song_count: int = 200
+        self, query: str, *, song_count: int = _PRIMARY_SEARCH_COUNT
     ) -> list[dict]:
         body = self._request(
             'search3',
@@ -506,26 +517,32 @@ class NavidromeClient:
 
     def search_song_id(self, song: dict[str, Any]) -> Optional[str]:
         path_keys = _path_match_keys(str(song.get('filename') or ''))
-        queries = _search_queries_for_song(song, path_keys)
-        if not queries:
+        primary, fallback = _search_query_phases(song, path_keys)
+        if not primary and not fallback:
             return None
 
         target_duration = int(song.get('duration') or 0)
         if target_duration > 1000:
             target_duration //= 1000
 
-        seen_ids: set[str] = set()
-        candidates: list[dict[str, Any]] = []
-        for query in queries:
-            for candidate in self._search3_songs(query):
-                cid = str(candidate.get('id') or '').strip()
-                if not cid or cid in seen_ids:
-                    continue
-                seen_ids.add(cid)
-                candidates.append(candidate)
-        return _pick_song_id_from_candidates(
-            candidates, song, path_keys, target_duration
-        )
+        for query in primary:
+            batch = self._search3_songs(query, song_count=_PRIMARY_SEARCH_COUNT)
+            picked = _pick_song_id_from_candidates(
+                batch, song, path_keys, target_duration
+            )
+            if picked:
+                return picked
+
+        for query in fallback:
+            batch = self._search3_songs(
+                query, song_count=_FALLBACK_SEARCH_COUNT
+            )
+            picked = _pick_song_id_from_candidates(
+                batch, song, path_keys, target_duration
+            )
+            if picked:
+                return picked
+        return None
 
     def find_playlist_ids_by_name(self, name: str) -> list[str]:
         """Return all playlist IDs with an exact *name* match (newest API order)."""
