@@ -42,9 +42,7 @@ def _normalise(text: str) -> str:
         return ''
     # Decompose → strip combining marks → recompose
     nfkd = unicodedata.normalize('NFKD', text)
-    stripped = ''.join(
-        ch for ch in nfkd if unicodedata.category(ch) != 'Mn'
-    )
+    stripped = ''.join(ch for ch in nfkd if unicodedata.category(ch) != 'Mn')
     folded = stripped.casefold()
     # Remove common noise: feat., ft., parenthetical extras
     folded = re.sub(r'\s*\(.*?\)', '', folded)
@@ -79,9 +77,7 @@ def _rate_wait() -> None:
         _last_request_time = time.monotonic()
 
 
-def _search_itunes(
-    query: str, limit: int = 5
-) -> list[dict[str, Any]]:
+def _search_itunes(query: str, limit: int = 5) -> list[dict[str, Any]]:
     """Call the iTunes Search API and return the ``results`` list."""
     _rate_wait()
     params = f'term={quote_plus(query)}&entity=song&limit={limit}'
@@ -177,9 +173,7 @@ def fetch_genre(song: dict[str, Any]) -> str:
             genre,
         )
     else:
-        logger.info(
-            'iTunes genre: no match for {!r} by {!r}', title, artist
-        )
+        logger.info('iTunes genre: no match for {!r} by {!r}', title, artist)
 
     # ── Populate album cache ──────────────────────────────────────
     if cache_key and genre:
