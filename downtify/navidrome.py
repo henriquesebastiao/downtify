@@ -381,9 +381,20 @@ class NavidromeClient:
         if playlist_id:
             query['playlistId'] = playlist_id
         form = [('songId', sid) for sid in batches[0]]
+        logger.info(
+            'navidrome: createPlaylist POST batch 1/{} songs={} (uri-safe)',
+            len(batches),
+            len(form),
+        )
         body = self._rest_post('createPlaylist', query, form)
         pid = _playlist_id_from_body(body, playlist_id)
-        for batch in batches[1:]:
+        for index, batch in enumerate(batches[1:], start=2):
+            logger.info(
+                'navidrome: updatePlaylist POST batch {}/{} songs={}',
+                index,
+                len(batches),
+                len(batch),
+            )
             self._add_songs_to_playlist(pid, batch)
         return pid
 
