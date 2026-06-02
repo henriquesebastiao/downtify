@@ -81,22 +81,24 @@ def _normalize_path_text(path: str) -> str:
 
 
 def _path_match_keys(filename: str) -> list[str]:
-    """Normalized path fragments to match Navidrome ``path`` fields."""
+    """Path fragments for matching Navidrome ``path`` (any library root prefix)."""
 
     text = _normalize_path_text(filename).casefold().strip()
     if not text:
         return []
-    keys: list[str] = []
-    for candidate in (text, f'downtify/{text}', f'downloads/{text}'):
-        if candidate not in keys:
-            keys.append(candidate)
+    keys: list[str] = [text]
+    parts = [part for part in text.split('/') if part]
+    if len(parts) >= 2:
+        tail = '/'.join(parts[-2:])
+        if tail not in keys:
+            keys.append(tail)
     base = text.rsplit('/', 1)[-1]
     if base and base not in keys:
         keys.append(base)
     if text.startswith('slskd/'):
-        tail = text[len('slskd/') :]
-        if tail not in keys:
-            keys.append(tail)
+        without_slskd = text[len('slskd/') :]
+        if without_slskd not in keys:
+            keys.append(without_slskd)
     return keys
 
 
@@ -136,6 +138,10 @@ def _path_matches(path_keys: list[str], navidrome_path: str) -> bool:
         return False
     c_base = _navidrome_path_basename(c_path)
     for key in path_keys:
+        if not key:
+            continue
+        if c_path == key or c_path.endswith(f'/{key}'):
+            return True
         if key in c_path:
             return True
         key_base = key.rsplit('/', 1)[-1]

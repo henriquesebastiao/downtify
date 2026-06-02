@@ -52,14 +52,14 @@ def test_path_matches_basename_when_parent_folder_differs():
     assert not _path_matches(keys, 'Music/Imports/other.mp3')
 
 
-def test_path_matches_downtify_library_prefix():
+def test_path_matches_when_navidrome_has_extra_parent_folders():
     keys = ['albanian car songs/solo, dj a-boom, arlenn - tona.mp3']
-    navidrome = 'downtify/Albanian Car Songs/Solo, DJ A-Boom, ARLENN - Tona.mp3'
+    navidrome = 'my/local/root/downtify/Albanian Car Songs/Solo, DJ A-Boom, ARLENN - Tona.mp3'
     assert _path_matches(keys, navidrome)
 
 
 def test_search_song_id_finds_track_by_filename_stem_first():
-    """Navidrome path is under downtify/; title search alone may miss the row."""
+    """Filename search finds the row when title+artist search does not."""
 
     client = NavidromeClient({
         'url': 'https://navidrome.test',
@@ -82,7 +82,7 @@ def test_search_song_id_finds_track_by_filename_stem_first():
                             'artist': 'X',
                             'duration': 1,
                             'path': (
-                                'downtify/Albanian Car Songs/'
+                                'library/imports/Albanian Car Songs/'
                                 'Solo, DJ A-Boom, ARLENN - Tona.mp3'
                             ),
                         }
