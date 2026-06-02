@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import secrets
 import time
+import unicodedata
 from dataclasses import dataclass
 from typing import Any, Optional
 from urllib.parse import urlencode
@@ -74,13 +76,20 @@ def _search_title(title: str) -> str:
     return text
 
 
+def _normalize_path_text(path: str) -> str:
+    return unicodedata.normalize('NFC', str(path or '').replace('\\', '/'))
+
+
 def _path_match_keys(filename: str) -> list[str]:
     """Normalized path fragments to match Navidrome ``path`` fields."""
 
-    text = str(filename or '').strip().replace('\\', '/').casefold()
+    text = _normalize_path_text(filename).casefold().strip()
     if not text:
         return []
-    keys = [text]
+    keys: list[str] = []
+    for candidate in (text, f'downtify/{text}', f'downloads/{text}'):
+        if candidate not in keys:
+            keys.append(candidate)
     base = text.rsplit('/', 1)[-1]
     if base and base not in keys:
         keys.append(base)
@@ -89,6 +98,121 @@ def _path_match_keys(filename: str) -> list[str]:
         if tail not in keys:
             keys.append(tail)
     return keys
+
+
+def _navidrome_path_basename(path: str) -> str:
+    return str(path or '').replace('\\', '/').casefold().rsplit('/', 1)[-1]
+
+
+def _normalize_filename_key(name: str) -> str:
+    text = str(name or '').casefold()
+    text = re.sub(r'[^\w\s.-]', '', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def _basename_aligned(stored: str, indexed: str) -> bool:
+    if stored == indexed:
+        return True
+    left = _normalize_filename_key(stored)
+    right = _normalize_filename_key(indexed)
+    if not left or not right:
+        return False
+    if left == right:
+        return True
+    if (
+        len(left) >= 12
+        and len(right) >= 12
+        and (left in right or right in left)
+    ):
+        return True
+    return False
+
+
+def _path_matches(path_keys: list[str], navidrome_path: str) -> bool:
+    """True when Downtify's stored path lines up with Navidrome's indexed path."""
+
+    c_path = _normalize_path_text(navidrome_path).casefold()
+    if not path_keys or not c_path:
+        return False
+    c_base = _navidrome_path_basename(c_path)
+    for key in path_keys:
+        if key in c_path:
+            return True
+        key_base = key.rsplit('/', 1)[-1]
+        if key_base and _basename_aligned(key_base, c_base):
+            return True
+    return False
+
+
+def _search_queries_for_song(
+    song: dict[str, Any], path_keys: list[str]
+) -> list[str]:
+    """Build search queries; filename-first so indexed paths are found."""
+
+    title = _search_title(str(song.get('name') or ''))
+    artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
+    artist = artists[0] if artists else ''
+    queries: list[str] = []
+
+    def add(query: str) -> None:
+        text = str(query or '').strip()
+        if text and text not in queries:
+            queries.append(text)
+
+    if path_keys:
+        basename = path_keys[0].rsplit('/', 1)[-1]
+        stem = basename.rsplit('.', 1)[0] if basename else ''
+        add(stem)
+        add(basename)
+        add(path_keys[0])
+        for key in path_keys[1:]:
+            add(key)
+    add(f'{title} {artist}'.strip())
+    if len(artists) > 1:
+        add(f'{title} {", ".join(artists[:3])}'.strip())
+    return queries
+
+
+def _pick_song_id_from_candidates(
+    songs: list[dict[str, Any]],
+    song: dict[str, Any],
+    path_keys: list[str],
+    target_duration: int,
+) -> Optional[str]:
+    title = _search_title(str(song.get('name') or ''))
+    artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
+    artist = artists[0] if artists else ''
+
+    for candidate in songs:
+        if not isinstance(candidate, dict):
+            continue
+        cid = str(candidate.get('id') or '').strip()
+        if not cid:
+            continue
+        c_artist = str(candidate.get('artist') or '')
+        c_title = str(candidate.get('title') or '')
+        c_duration = int(candidate.get('duration') or 0)
+        c_path = str(candidate.get('path') or '')
+
+        if path_keys and _path_matches(path_keys, c_path):
+            return cid
+
+        artist_match = artist and artist.casefold() in c_artist.casefold()
+        title_match = (
+            title.casefold() == c_title.casefold()
+            or str(song.get('name') or '').casefold() == c_title.casefold()
+        )
+        duration_match = (
+            not target_duration
+            or not c_duration
+            or abs(target_duration - c_duration) < 10
+        )
+
+        if artist_match and title_match and duration_match:
+            return cid
+        if title_match and duration_match:
+            return cid
+    return None
 
 
 def _effective_navidrome_settings(settings: dict[str, Any]) -> dict[str, Any]:
@@ -254,68 +378,48 @@ class NavidromeClient:
         )
         return False
 
-    def search_song_id(  # noqa: PLR0914  # Subsonic search + path/duration match
-        self, song: dict[str, Any]
-    ) -> Optional[str]:
-        title = _search_title(str(song.get('name') or ''))
-        artists = [
-            str(a) for a in (song.get('artists') or []) if str(a).strip()
-        ]
-        artist = artists[0] if artists else ''
-        path_keys = _path_match_keys(str(song.get('filename') or ''))
-        query = f'{title} {artist}'.strip()
-        if not query and not path_keys:
-            return None
+    def _search3_songs(
+        self, query: str, *, song_count: int = 200
+    ) -> list[dict]:
         body = self._request(
             'search3',
-            {'query': query or path_keys[0], 'songCount': 30},
+            {'query': query, 'songCount': song_count},
         )
         results = body.get('searchResult3') if isinstance(body, dict) else None
-        songs = []
+        songs: list[Any] = []
         if isinstance(results, dict):
             songs = results.get('song') or []
         if isinstance(songs, dict):
             songs = [songs]
         if not isinstance(songs, list):
+            return []
+        return [s for s in songs if isinstance(s, dict)]
+
+    def search_song_id(self, song: dict[str, Any]) -> Optional[str]:
+        path_keys = _path_match_keys(str(song.get('filename') or ''))
+        queries = _search_queries_for_song(song, path_keys)
+        if not queries:
             return None
 
         target_duration = int(song.get('duration') or 0)
         if target_duration > 1000:
             target_duration //= 1000
 
-        for candidate in songs:
-            if not isinstance(candidate, dict):
-                continue
-            cid = str(candidate.get('id') or '').strip()
-            if not cid:
-                continue
-            c_artist = str(candidate.get('artist') or '')
-            c_title = str(candidate.get('title') or '')
-            c_duration = int(candidate.get('duration') or 0)
-            c_path = (
-                str(candidate.get('path') or '').replace('\\', '/').casefold()
+        seen_ids: set[str] = set()
+        for query in queries:
+            batch = self._search3_songs(query)
+            merged: list[dict[str, Any]] = []
+            for candidate in batch:
+                cid = str(candidate.get('id') or '').strip()
+                if not cid or cid in seen_ids:
+                    continue
+                seen_ids.add(cid)
+                merged.append(candidate)
+            picked = _pick_song_id_from_candidates(
+                merged, song, path_keys, target_duration
             )
-
-            artist_match = artist and artist.casefold() in c_artist.casefold()
-            title_match = (
-                title.casefold() == c_title.casefold()
-                or str(song.get('name') or '').casefold() == c_title.casefold()
-            )
-            duration_match = (
-                not target_duration
-                or not c_duration
-                or abs(target_duration - c_duration) < 10
-            )
-            path_match = any(key in c_path for key in path_keys)
-
-            if path_keys and path_keys[0] in c_path:
-                return cid
-            if artist_match and title_match and duration_match:
-                return cid
-            if title_match and duration_match:
-                return cid
-            if path_match and duration_match:
-                return cid
+            if picked:
+                return picked
         return None
 
     def find_playlist_ids_by_name(self, name: str) -> list[str]:

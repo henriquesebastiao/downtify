@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 from downtify.navidrome import (
     NavidromeClient,
     _effective_navidrome_settings,
+    _path_matches,
     sync_playlist_to_navidrome,
 )
 
@@ -43,6 +44,99 @@ def test_search_song_id_matches_title_and_artist():
         'duration': 152,
     })
     assert sid == 'song-1'
+
+
+def test_path_matches_basename_when_parent_folder_differs():
+    keys = ['albanian car songs/solo - tona.mp3', 'solo - tona.mp3']
+    assert _path_matches(keys, 'Music/Imports/solo - tona.mp3')
+    assert not _path_matches(keys, 'Music/Imports/other.mp3')
+
+
+def test_path_matches_downtify_library_prefix():
+    keys = ['albanian car songs/solo, dj a-boom, arlenn - tona.mp3']
+    navidrome = 'downtify/Albanian Car Songs/Solo, DJ A-Boom, ARLENN - Tona.mp3'
+    assert _path_matches(keys, navidrome)
+
+
+def test_search_song_id_finds_track_by_filename_stem_first():
+    """Navidrome path is under downtify/; title search alone may miss the row."""
+
+    client = NavidromeClient({
+        'url': 'https://navidrome.test',
+        'username': 'u',
+        'password': 'p',
+    })
+
+    def fake_request(endpoint, extra=None, **kwargs):
+        assert endpoint == 'search3'
+        query = str((extra or {}).get('query') or '')
+        if query.casefold() == 'tona solo':
+            return {'searchResult3': {'song': []}}
+        if 'arlenn - tona' in query.casefold():
+            return {
+                'searchResult3': {
+                    'song': [
+                        {
+                            'id': 'tona-id',
+                            'title': 'Other Tags',
+                            'artist': 'X',
+                            'duration': 1,
+                            'path': (
+                                'downtify/Albanian Car Songs/'
+                                'Solo, DJ A-Boom, ARLENN - Tona.mp3'
+                            ),
+                        }
+                    ]
+                }
+            }
+        return {'searchResult3': {'song': []}}
+
+    client._request = fake_request  # type: ignore[method-assign]
+    sid = client.search_song_id({
+        'name': 'Tona',
+        'artists': ['Solo', 'DJ A-Boom', 'ARLENN'],
+        'duration': 200,
+        'filename': 'Albanian Car Songs/Solo, DJ A-Boom, ARLENN - Tona.mp3',
+    })
+    assert sid == 'tona-id'
+
+
+def test_search_song_id_matches_by_filename_in_navidrome_path():
+    """Track is in Navidrome under a different folder prefix than Downtify stored path."""
+
+    client = NavidromeClient({
+        'url': 'https://navidrome.test',
+        'username': 'u',
+        'password': 'p',
+    })
+    calls: list[str] = []
+
+    def fake_request(endpoint, extra=None, **kwargs):
+        assert endpoint == 'search3'
+        calls.append(str((extra or {}).get('query')))
+        return {
+            'searchResult3': {
+                'song': [
+                    {
+                        'id': 'song-82',
+                        'title': 'Different Tag Title',
+                        'artist': 'Someone Else',
+                        'duration': 999,
+                        'path': 'library/imports/solo, dj a-boom, arlenn - tona.mp3',
+                    }
+                ]
+            }
+        }
+
+    client._request = fake_request  # type: ignore[method-assign]
+    sid = client.search_song_id({
+        'name': 'Tona',
+        'artists': ['Solo', 'DJ A-Boom', 'ARLENN'],
+        'duration': 200,
+        'filename': 'Albanian Car Songs/Solo, DJ A-Boom, ARLENN - Tona.mp3',
+    })
+    assert sid == 'song-82'
+    assert any('tona' in q.casefold() for q in calls)
 
 
 @patch('downtify.navidrome.requests.post')
