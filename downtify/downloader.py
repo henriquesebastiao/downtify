@@ -33,6 +33,7 @@ from yt_dlp.utils import DownloadError
 
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
+from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
 from .providers import enrich_from_match, find_match, find_match_for_video
@@ -838,6 +839,16 @@ class Downloader:
         progress_cb: Optional[ProgressCallback],
         provider: Optional[str] = None,
     ) -> None:
+        if not song.get('genre'):
+            try:
+                genre = _fetch_itunes_genre(song)
+                if genre:
+                    song = {**song, 'genre': genre}
+            except Exception:
+                logger.opt(exception=True).debug(
+                    'iTunes genre lookup failed for {}', final_path
+                )
+
         try:
             embed_metadata(final_path, song)
         except Exception:
@@ -862,7 +873,7 @@ class Downloader:
             msg = f'{label} · done' if label else 'Done'
             progress_cb(100.0, msg, provider)
 
-    def download(
+    def download(  # noqa: PLR0914
         self,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback] = None,

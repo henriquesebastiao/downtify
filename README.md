@@ -436,6 +436,8 @@ Pull requests with new translations are very welcome — just open a PR against 
 Contributions, issues and feature requests are welcome!
 Check the [issues page](https://github.com/henriquesebastiao/downtify/issues) or open a pull request.
 
+Before sending a pull request, please read [**CONTRIBUTING.md**](./CONTRIBUTING.md) — it covers local setup, the project's **coding and formatting standards** (Ruff for Python, Prettier for the frontend), testing requirements, commit conventions, and the PR checklist. All contributions are expected to follow those standards.
+
 If Downtify has been useful to you, consider leaving a ⭐ — it helps the project grow and reach more people!
 
 ---

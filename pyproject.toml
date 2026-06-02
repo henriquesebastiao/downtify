@@ -1,6 +1,6 @@
 [project]
 name = "downtify"
-version = "2.7.10"
+version = "2.8.0"
 description = "Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
@@ -19,9 +19,9 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "codeflash>=0.20.5",
+    "codeflash>=0.20.6",
     "pytest>=8.0",
-    "ruff>=0.15.2",
+    "ruff>=0.15.15",
     "zensical>=0.0.43",
 ]
 

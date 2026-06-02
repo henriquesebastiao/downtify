@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.8.0](https://github.com/henriquesebastiao/downtify/tree/2.8.0) (2026-06-02)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.7.0...2.8.0)
+
+**Security fixes:**
+
+- vulnerabilities [\#170](https://github.com/henriquesebastiao/downtify/issues/170)
+
+**Merged pull requests:**
+
+- build\(deps-dev\): Bump codeflash from 0.20.5 to 0.20.6 [\#188](https://github.com/henriquesebastiao/downtify/pull/188) ([dependabot[bot]](https://github.com/apps/dependabot))
+- feat: enrich audio tags with genre from public iTunes Search API [\#187](https://github.com/henriquesebastiao/downtify/pull/187) ([Ramss3s](https://github.com/Ramss3s))
+- build\(deps-dev\): Bump ruff from 0.15.14 to 0.15.15 [\#184](https://github.com/henriquesebastiao/downtify/pull/184) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump uvicorn from 0.47.0 to 0.48.0 [\#181](https://github.com/henriquesebastiao/downtify/pull/181) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump actions/checkout from 4 to 6 [\#180](https://github.com/henriquesebastiao/downtify/pull/180) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump astral-sh/setup-uv from 6 to 7 [\#179](https://github.com/henriquesebastiao/downtify/pull/179) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add CodeFlash GitHub Actions workflow [\#178](https://github.com/henriquesebastiao/downtify/pull/178) ([codeflash-ai[bot]](https://github.com/apps/codeflash-ai))
+- core: Update dependencies [\#177](https://github.com/henriquesebastiao/downtify/pull/177) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- build\(deps-dev\): Bump zensical from 0.0.41 to 0.0.43 [\#176](https://github.com/henriquesebastiao/downtify/pull/176) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump uvicorn from 0.46.0 to 0.47.0 [\#169](https://github.com/henriquesebastiao/downtify/pull/169) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump requests from 2.34.0 to 2.34.1 [\#166](https://github.com/henriquesebastiao/downtify/pull/166) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump requests from 2.33.1 to 2.34.0 [\#164](https://github.com/henriquesebastiao/downtify/pull/164) ([dependabot[bot]](https://github.com/apps/dependabot))
+
 ## [2.7.0](https://github.com/henriquesebastiao/downtify/tree/2.7.0) (2026-05-11)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.6.1...2.7.0)
