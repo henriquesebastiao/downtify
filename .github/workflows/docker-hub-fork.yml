@@ -1,4 +1,4 @@
-# Build and push dx616b/downtify to Docker Hub (fork testing; not upstream releases).
+# Build and push dx616b/spoti-to-navidrome to Docker Hub (fork testing).
 name: Docker Hub (fork)
 
 on:
@@ -26,7 +26,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: dx616b/downtify
+          images: dx616b/spoti-to-navidrome
           tags: |
             type=raw,value=latest,enable={{ github.ref == 'refs/heads/feature/slskd-navidrome-library-sync' }}
             type=raw,value=slskd-dev

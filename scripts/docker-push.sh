@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Build and push dx616b/downtify to Docker Hub (local).
+# Build and push dx616b/spoti-to-navidrome to Docker Hub (local).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-IMAGE="${IMAGE:-dx616b/downtify}"
-TAG="${TAG:-slskd-dev}"
+IMAGE="${IMAGE:-dx616b/spoti-to-navidrome}"
+TAG="${TAG:-latest}"
 
 if [[ ! -f frontend/dist/index.html ]]; then
   echo "building frontend/dist..."
