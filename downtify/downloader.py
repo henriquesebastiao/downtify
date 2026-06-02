@@ -30,6 +30,7 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 
 from . import lyrics as lyrics_mod
+from .itunes import fetch_genre as _fetch_itunes_genre
 from .m3u import sanitize_playlist_name
 from .providers import enrich_from_match, find_match, find_match_for_video
 
@@ -193,7 +194,7 @@ class Downloader:
         safe = sanitize_playlist_name(subdir)
         return self.download_dir / safe, f'{safe}/'
 
-    def download(
+    def download(  # noqa: PLR0914
         self,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback] = None,
@@ -335,6 +336,17 @@ class Downloader:
                 if candidate.is_file():
                     final_path = candidate
                     break
+
+        # ── Genre enrichment via iTunes Search API ──────────────
+        if not song.get('genre'):
+            try:
+                genre = _fetch_itunes_genre(song)
+                if genre:
+                    song = {**song, 'genre': genre}
+            except Exception:
+                logger.opt(exception=True).debug(
+                    'iTunes genre lookup failed for {}', final_path
+                )
 
         try:
             embed_metadata(final_path, song)
