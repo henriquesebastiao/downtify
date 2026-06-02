@@ -711,8 +711,10 @@ def _songs_for_navidrome_sync(
                 meta = read_audio_metadata(path)
                 if meta.get('title'):
                     song['name'] = meta['title']
+                    song['library_from_tags'] = True
                 if meta.get('artists'):
                     song['artists'] = meta['artists']
+                    song['library_from_tags'] = True
         out.append(song)
     return out
 

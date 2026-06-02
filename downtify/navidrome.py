@@ -181,20 +181,81 @@ def _path_matches(path_keys: list[str], navidrome_path: str) -> bool:
     return False
 
 
+def _library_tags(song: dict[str, Any]) -> tuple[str, list[str]]:
+    title = str(song.get('name') or '').strip()
+    artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
+    return title, artists
+
+
+def _normalize_tag(text: str) -> str:
+    return unicodedata.normalize('NFC', str(text or '').strip()).casefold()
+
+
+def _duration_close(
+    target_duration: int, candidate_duration: int, *, slack: int = 12
+) -> bool:
+    if not target_duration or not candidate_duration:
+        return True
+    return abs(target_duration - candidate_duration) <= slack
+
+
+def _exact_tag_match(
+    song: dict[str, Any],
+    candidate: dict[str, Any],
+    target_duration: int,
+) -> bool:
+    """Match Navidrome row to on-disk ID3/Vorbis tags (exact title + artist)."""
+
+    title, artists = _library_tags(song)
+    if not title:
+        return False
+    c_title = str(candidate.get('title') or '').strip()
+    c_artist = str(candidate.get('artist') or '').strip()
+    if _normalize_tag(title) != _normalize_tag(c_title):
+        return False
+    c_duration = int(candidate.get('duration') or 0)
+    if not _duration_close(target_duration, c_duration):
+        return False
+    if not artists:
+        return True
+    c_artist_n = _normalize_tag(c_artist)
+    joined = _normalize_tag(', '.join(artists))
+    if joined == c_artist_n:
+        return True
+    if any(_normalize_tag(artist) in c_artist_n for artist in artists):
+        return True
+    return False
+
+
 def _search_queries_for_song(
     song: dict[str, Any], path_keys: list[str]
 ) -> list[str]:
-    """Build search queries; filename-first so indexed paths are found."""
+    """Build search queries; embedded tags first, then filename fallbacks."""
 
-    title = _search_title(str(song.get('name') or ''))
-    artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
+    title, artists = _library_tags(song)
+    search_title = _search_title(title)
     artist = artists[0] if artists else ''
+    tagged = bool(song.get('library_from_tags'))
     queries: list[str] = []
 
     def add(query: str) -> None:
         text = str(query or '').strip()
         if text and text not in queries:
             queries.append(text)
+
+    if tagged and title:
+        if artist:
+            add(f'{artist} {title}')
+            add(f'{title} {artist}')
+        if len(artists) > 1:
+            joined = ', '.join(artists)
+            add(f'{joined} {title}')
+            add(f'{title} {joined}')
+        add(title)
+    else:
+        add(f'{search_title} {artist}'.strip())
+        if len(artists) > 1:
+            add(f'{search_title} {", ".join(artists[:3])}'.strip())
 
     if path_keys:
         basename = path_keys[0].rsplit('/', 1)[-1]
@@ -206,9 +267,6 @@ def _search_queries_for_song(
         add(path_keys[0])
         for key in path_keys[1:]:
             add(key)
-    add(f'{title} {artist}'.strip())
-    if len(artists) > 1:
-        add(f'{title} {", ".join(artists[:3])}'.strip())
     return queries
 
 
@@ -218,10 +276,11 @@ def _pick_song_id_from_candidates(
     path_keys: list[str],
     target_duration: int,
 ) -> Optional[str]:
-    title = _search_title(str(song.get('name') or ''))
-    artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
+    title, artists = _library_tags(song)
+    search_title = _search_title(title)
     artist = artists[0] if artists else ''
     require_artist = bool(path_keys)
+    use_exact_tags = bool(song.get('library_from_tags') and title)
 
     for candidate in songs:
         if not isinstance(candidate, dict):
@@ -232,6 +291,14 @@ def _pick_song_id_from_candidates(
         c_path = str(candidate.get('path') or '')
         if path_keys and _path_matches(path_keys, c_path):
             return cid
+
+    if use_exact_tags:
+        for candidate in songs:
+            if not isinstance(candidate, dict):
+                continue
+            cid = str(candidate.get('id') or '').strip()
+            if cid and _exact_tag_match(song, candidate, target_duration):
+                return cid
 
     for candidate in songs:
         if not isinstance(candidate, dict):
@@ -245,14 +312,10 @@ def _pick_song_id_from_candidates(
 
         artist_match = artist and artist.casefold() in c_artist.casefold()
         title_match = (
-            title.casefold() == c_title.casefold()
-            or str(song.get('name') or '').casefold() == c_title.casefold()
+            search_title.casefold() == c_title.casefold()
+            or title.casefold() == c_title.casefold()
         )
-        duration_match = (
-            not target_duration
-            or not c_duration
-            or abs(target_duration - c_duration) < 10
-        )
+        duration_match = _duration_close(target_duration, c_duration, slack=10)
 
         if artist_match and title_match and duration_match:
             return cid

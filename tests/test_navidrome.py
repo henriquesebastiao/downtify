@@ -24,6 +24,47 @@ def test_effective_navidrome_settings_defaults():
     assert out['scan_wait_seconds'] == 120
 
 
+def test_search_song_id_exact_mutagen_tags():
+    client = NavidromeClient({
+        'url': 'https://navidrome.test',
+        'username': 'u',
+        'password': 'p',
+    })
+
+    def fake_request(endpoint, extra=None, **kwargs):
+        assert endpoint == 'search3'
+        return {
+            'searchResult3': {
+                'song': [
+                    {
+                        'id': 'wrong',
+                        'title': 'Tona',
+                        'artist': 'Other',
+                        'duration': 200,
+                        'path': 'other/tona.mp3',
+                    },
+                    {
+                        'id': 'right',
+                        'title': 'Tona',
+                        'artist': 'Solo, DJ A-Boom, ARLENN',
+                        'duration': 201,
+                        'path': 'other/path.mp3',
+                    },
+                ]
+            }
+        }
+
+    client._request = fake_request  # type: ignore[method-assign]
+    sid = client.search_song_id({
+        'name': 'Tona',
+        'artists': ['Solo', 'DJ A-Boom', 'ARLENN'],
+        'duration': 200,
+        'filename': 'Albanian Car Songs/Solo, DJ A-Boom, ARLENN - Tona.mp3',
+        'library_from_tags': True,
+    })
+    assert sid == 'right'
+
+
 def test_search_song_id_matches_title_and_artist():
     client = NavidromeClient({
         'url': 'https://navidrome.test',
@@ -242,6 +283,7 @@ def test_sync_playlist_creates_playlist(mock_get, mock_post):
                 'artists': ['Artist'],
                 'duration': 200,
                 'filename': 'Artist/Track.mp3',
+                'library_from_tags': True,
             }
         ],
         settings,
