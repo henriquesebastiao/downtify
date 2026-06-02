@@ -3,7 +3,9 @@ from unittest.mock import MagicMock, patch
 from downtify.navidrome import (
     NavidromeClient,
     _effective_navidrome_settings,
+    _metadata_aligns_with_filename,
     _path_matches,
+    _songs_for_playlist_sync,
     sync_playlist_to_navidrome,
 )
 
@@ -22,6 +24,37 @@ def test_effective_navidrome_settings_defaults():
     out = _effective_navidrome_settings({})
     assert out['enabled'] is False
     assert out['scan_wait_seconds'] == 120
+
+
+def test_metadata_aligns_rejects_wrong_slskd_file():
+    song = {
+        'name': 'Non Stop',
+        'artists': ['Stealth'],
+        'filename': (
+            'slskd/Bassman - Bass 2 Tha Old School (1996)/'
+            '09. Bassman - Music Non Stop.mp3'
+        ),
+        'library_from_tags': True,
+    }
+    assert not _metadata_aligns_with_filename(song)
+
+
+def test_songs_for_playlist_sync_skips_mismatched_slskd_path():
+    songs = [
+        {
+            'name': 'Katile',
+            'artists': ['Don Xhoni'],
+            'filename': 'Albanian Car Songs/Don Xhoni - Katile.mp3',
+        },
+        {
+            'name': 'Non Stop',
+            'artists': ['Stealth'],
+            'filename': 'slskd/other/09. Bassman - Music Non Stop.mp3',
+        },
+    ]
+    kept = _songs_for_playlist_sync('Albanian Car Songs', songs)
+    assert len(kept) == 1
+    assert kept[0]['name'] == 'Katile'
 
 
 def test_search_song_id_exact_mutagen_tags():

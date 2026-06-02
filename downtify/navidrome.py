@@ -14,6 +14,8 @@ from urllib.parse import urlencode
 import requests
 from loguru import logger
 
+from .m3u import sanitize_playlist_name
+
 # Subsonic createPlaylist via GET appends every songId to the query string; large
 # playlists hit HTTP 414. POST form bodies avoid that; we still batch adds.
 _PLAYLIST_SONG_ID_BATCH = 80
@@ -212,9 +214,6 @@ def _exact_tag_match(
     c_title = str(candidate.get('title') or '').strip()
     c_artist = str(candidate.get('artist') or '').strip()
     if _normalize_tag(title) != _normalize_tag(c_title):
-        return False
-    c_duration = int(candidate.get('duration') or 0)
-    if not _duration_close(target_duration, c_duration):
         return False
     if not artists:
         return True
@@ -653,11 +652,38 @@ class NavidromeClient:
         )
 
 
-def _scan_wait_budget(cfg: dict[str, Any], track_count: int) -> int:
-    """Seconds to wait for Navidrome scan; scales slightly with playlist size."""
+def _stem_from_stored_filename(filename: str) -> str:
+    base = _normalize_path_text(filename).casefold().rsplit('/', 1)[-1]
+    stem = base.rsplit('.', 1)[0] if '.' in base else base
+    return re.sub(r'^\d+\.\s*', '', stem).strip()
 
-    base = int(cfg['scan_wait_seconds'])
-    return min(900, max(base, 30 + track_count * 2))
+
+def _metadata_aligns_with_filename(song: dict[str, Any]) -> bool:
+    """False when the on-disk path clearly belongs to a different track."""
+
+    stem = _stem_from_stored_filename(str(song.get('filename') or ''))
+    if ' - ' not in stem:
+        return True
+    file_artists, file_title = stem.rsplit(' - ', 1)
+    title, artists = _library_tags(song)
+    if not title:
+        return True
+    title_n = _normalize_tag(title)
+    file_title_n = _normalize_tag(file_title.strip())
+    title_ok = (
+        title_n == file_title_n
+        or title_n in file_title_n
+        or file_title_n in title_n
+    )
+    if not artists:
+        return title_ok
+    file_artists_n = _normalize_tag(file_artists.strip())
+    artist_ok = any(
+        _normalize_tag(artist) in file_artists_n
+        or file_artists_n in _normalize_tag(artist)
+        for artist in artists
+    )
+    return title_ok and artist_ok
 
 
 def _song_label(song: dict[str, Any]) -> str:
@@ -667,6 +693,39 @@ def _song_label(song: dict[str, Any]) -> str:
         label = f'{", ".join(str(a) for a in artists)} - {label}'
     fn = str(song.get('filename') or '').strip()
     return f'{label} ({fn})' if fn else label
+
+
+def _songs_for_playlist_sync(
+    playlist_name: str, songs: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Drop rows whose stored file path does not match Spotify/tag metadata."""
+
+    folder = sanitize_playlist_name(playlist_name).casefold()
+    kept: list[dict[str, Any]] = []
+    for song in songs:
+        fn = str(song.get('filename') or '').replace('\\', '/').casefold()
+        if folder and fn and folder not in fn and fn.startswith('slskd/'):
+            logger.info(
+                'navidrome: skip sync for {!r}; file outside playlist folder: {}',
+                _song_label(song),
+                song.get('filename'),
+            )
+            continue
+        if not _metadata_aligns_with_filename(song):
+            logger.info(
+                'navidrome: skip sync for {!r}; filename does not match tags',
+                _song_label(song),
+            )
+            continue
+        kept.append(song)
+    return kept
+
+
+def _scan_wait_budget(cfg: dict[str, Any], track_count: int) -> int:
+    """Seconds to wait for Navidrome scan; scales slightly with playlist size."""
+
+    base = int(cfg['scan_wait_seconds'])
+    return min(900, max(base, 30 + track_count * 2))
 
 
 def _match_songs_in_library(
@@ -725,6 +784,10 @@ def sync_playlist_to_navidrome(
     if not client.ping():
         logger.info('navidrome: server unreachable url={!r}', cfg.get('url'))
         return None
+    if not songs:
+        return None
+
+    songs = _songs_for_playlist_sync(playlist_name, songs)
     if not songs:
         return None
 
