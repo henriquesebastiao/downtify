@@ -17,7 +17,10 @@
         </span>
       </button>
 
-      <div class="hidden md:flex flex-1 justify-center">
+      <div
+        v-if="route.name !== 'List'"
+        class="hidden md:flex flex-1 justify-center"
+      >
         <SearchInput class="w-full max-w-md" :compact="true" />
       </div>
 
@@ -102,7 +105,7 @@
       </div>
     </div>
 
-    <div class="md:hidden px-4 pb-3">
+    <div v-if="route.name !== 'List'" class="md:hidden px-4 pb-3">
       <SearchInput :compact="true" />
     </div>
   </header>

@@ -41,15 +41,56 @@ from loguru import logger
 from downtify.slskd_provider import reset_slskd_parallelism
 
 from . import m3u, providers, spotify
+from .cover_cache import CoverArtCache
 from .downloader import Downloader, NoAudioMatchError, inspect_youtube_cookies
-from .library_metadata import read_audio_metadata
+from .library_catalog import invalidate_library_paths_cache
+from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
+from .library_reconcile import reconcile_and_refresh
 from .monitor import PlaylistMonitorDB, check_playlist
 from .navidrome import (
     _effective_navidrome_settings,
+    cache_navidrome_song_id,
+    enrich_song_from_library_file,
     sync_playlist_to_navidrome,
 )
+from .navidrome_index import NavidromeIndex
+from .playlist_catalog import PlaylistCatalog
 from .track_index import TrackIndex, resolve_existing_download
+
+
+def _register_download_on_disk(
+    song: dict[str, Any],
+    filename: str,
+    *,
+    playlist_name: Optional[str] = None,
+    track_order: int = 0,
+    spotify_playlist_id: Optional[str] = None,
+) -> None:
+    """Update track index and optional playlist catalog after a download."""
+
+    if state.downloader is None or not filename:
+        return
+    dl_dir = Path(state.downloader.download_dir)
+    slskd = slskd_dir_from_downloader(state.downloader)
+    full = locate_library_file(filename, dl_dir, slskd)
+    if full is None:
+        return
+    if state.track_index is not None:
+        state.track_index.register_song(song, filename, full_path=full)
+    if state.playlist_catalog is not None and playlist_name:
+        state.playlist_catalog.ensure_playlist(
+            playlist_name, spotify_id=spotify_playlist_id
+        )
+        state.playlist_catalog.upsert_track(
+            playlist_name,
+            song,
+            filename,
+            full,
+            track_order=track_order,
+        )
+    invalidate_library_paths_cache()
+
 
 DEFAULT_YOUTUBE_COOKIES_BASENAME = 'youtube-cookies.txt'
 
@@ -102,6 +143,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     },
     'max_parallel_downloads': 3,
     'organize_by_artist': False,
+    'cache_cover_art': False,
 }
 
 
@@ -338,6 +380,10 @@ class AppState:
     loop: Optional[asyncio.AbstractEventLoop] = None
     monitor_db: Optional[PlaylistMonitorDB] = None
     track_index: Optional[TrackIndex] = None
+    navidrome_index: Optional[NavidromeIndex] = None
+    metadata_cache: Optional[LibraryMetadataCache] = None
+    cover_cache: Optional[CoverArtCache] = None
+    playlist_catalog: Optional[PlaylistCatalog] = None
     download_jobs: dict[str, dict[str, Any]] = {}
     download_semaphore: Optional[asyncio.Semaphore] = None
 
@@ -641,10 +687,49 @@ async def _run_download(
     job['status'] = 'done'
     job['filename'] = filename
     job['progress'] = 100
-    if state.track_index is not None and filename:
+    if filename:
         await loop.run_in_executor(
             None,
-            lambda: state.track_index.register_song(song, filename),
+            lambda: _register_download_on_disk(song, filename),
+        )
+    if filename and state.navidrome_index is not None:
+        dl_dir = Path(state.downloader.download_dir)
+        slskd = slskd_dir_from_downloader(state.downloader)
+        await loop.run_in_executor(
+            None,
+            lambda: cache_navidrome_song_id(
+                state.settings,
+                song,
+                filename,
+                state.navidrome_index,
+                download_dir=dl_dir,
+                slskd_dir=slskd,
+            ),
+        )
+    if filename and state.metadata_cache is not None and state.downloader is not None:
+        dl_dir = Path(state.downloader.download_dir)
+        slskd = slskd_dir_from_downloader(state.downloader)
+        cache = state.metadata_cache
+        await loop.run_in_executor(
+            None,
+            lambda: cache.refresh_stored_path(
+                filename, download_dir=dl_dir, slskd_dir=slskd
+            ),
+        )
+    if (
+        filename
+        and state.settings.get('cache_cover_art')
+        and state.cover_cache is not None
+        and state.downloader is not None
+    ):
+        dl_dir = Path(state.downloader.download_dir)
+        slskd = slskd_dir_from_downloader(state.downloader)
+        cover_cache = state.cover_cache
+        await loop.run_in_executor(
+            None,
+            lambda: cover_cache.refresh_stored_path(
+                filename, download_dir=dl_dir, slskd_dir=slskd
+            ),
         )
     await state.connections.broadcast({
         'song': song,
@@ -706,15 +791,7 @@ def _songs_for_navidrome_sync(
         song = dict(r.get('song') or {})
         song['filename'] = r['filename']
         if download_dir is not None:
-            path = locate_library_file(r['filename'], download_dir, slskd_dir)
-            if path is not None:
-                meta = read_audio_metadata(path)
-                if meta.get('title'):
-                    song['name'] = meta['title']
-                    song['library_from_tags'] = True
-                if meta.get('artists'):
-                    song['artists'] = meta['artists']
-                    song['library_from_tags'] = True
+            song = enrich_song_from_library_file(song, download_dir, slskd_dir)
         out.append(song)
     return out
 
@@ -731,11 +808,18 @@ async def _sync_playlist_navidrome(
     if not songs:
         return
     try:
+        download_dir = (
+            Path(state.downloader.download_dir)
+            if state.downloader is not None
+            else None
+        )
         await asyncio.to_thread(
             sync_playlist_to_navidrome,
             playlist_name,
             songs,
             state.settings,
+            navidrome_index=state.navidrome_index,
+            download_dir=download_dir,
         )
     except Exception:
         logger.exception(
@@ -754,11 +838,13 @@ async def _process_batch(
     # tracks) keep the legacy flat layout under download_dir.
     playlist_subdir: Optional[str] = None
     playlist_name: Optional[str] = None
+    spotify_playlist_id: Optional[str] = None
     parsed = spotify.parse_spotify_url(playlist_url) if playlist_url else None
     if parsed is not None and parsed[0] == 'playlist':
+        spotify_playlist_id = parsed[1]
         try:
             playlist_name, _ = await asyncio.to_thread(
-                spotify.playlist_info_and_tracks, parsed[1]
+                spotify.playlist_info_and_tracks, spotify_playlist_id
             )
             playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
         except Exception:
@@ -811,8 +897,64 @@ async def _process_batch(
         except Exception:
             logger.exception('Failed to write M3U for {}', playlist_url)
 
-    if entries:
+    if entries and playlist_name:
+        def _catalog_batch() -> None:
+            rows: list[tuple[dict[str, Any], str, Path]] = []
+            dl_dir = Path(state.downloader.download_dir)
+            slskd = slskd_dir_from_downloader(state.downloader)
+            for song, result in zip(songs, results):
+                fn = (result or {}).get('filename')
+                if not fn:
+                    continue
+                full = locate_library_file(fn, dl_dir, slskd)
+                if full is None:
+                    continue
+                rows.append((song, fn, full))
+            if state.playlist_catalog is not None and rows:
+                state.playlist_catalog.replace_playlist_tracks(
+                    playlist_name,
+                    rows,
+                    spotify_id=spotify_playlist_id,
+                )
+            for song, result in zip(songs, results):
+                fn = (result or {}).get('filename')
+                if fn:
+                    _register_download_on_disk(song, fn)
+
+        await asyncio.to_thread(_catalog_batch)
+        if len(entries) < len(songs):
+            logger.info(
+                'navidrome: batch for playlist={!r}: {} downloaded, {} failed',
+                playlist_name,
+                len(entries),
+                len(songs) - len(entries),
+            )
         await _sync_playlist_navidrome(playlist_name, results)
+
+
+@router.post('/api/library/reconcile')
+async def reconcile_library_endpoint() -> dict[str, Any]:
+    """Detect moved files and refresh playlist M3U / Navidrome."""
+
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+    download_dir = Path(state.downloader.download_dir)
+
+    def _run() -> dict[str, Any]:
+        result = reconcile_and_refresh(
+            download_dir,
+            state.settings,
+            state.downloader,
+            track_index=state.track_index,
+            playlist_catalog=state.playlist_catalog,
+            monitor_db=state.monitor_db,
+            navidrome_index=state.navidrome_index,
+            refresh_playlists=True,
+        )
+        invalidate_library_paths_cache()
+        return result
+
+    return await asyncio.to_thread(_run)
 
 
 @router.post('/api/download/batch')

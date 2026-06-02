@@ -5,7 +5,7 @@
 
     <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <!-- Header -->
-      <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 class="text-2xl font-bold tracking-tight">
             {{ t('library.title') }}
@@ -16,7 +16,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button
-            v-if="files.length > 0"
+            v-if="filteredFiles.length > 0"
             class="btn btn-primary btn-sm h-11 px-5 rounded-full"
             @click="playAll"
             :title="t('library.play')"
@@ -39,6 +39,30 @@
         </div>
       </div>
 
+      <!-- Library search (local only; navbar search is hidden on this page) -->
+      <div class="relative mb-6">
+        <Icon
+          icon="clarity:search-line"
+          class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40 pointer-events-none"
+        />
+        <input
+          v-model="libraryFilterQuery"
+          type="search"
+          class="input input-bordered w-full pl-10 pr-10 h-11 rounded-full bg-base-100/85 border-white/10"
+          :placeholder="t('library.searchPlaceholder')"
+          autocomplete="off"
+        />
+        <button
+          v-if="libraryFilterQuery"
+          type="button"
+          class="absolute right-2 top-1/2 -translate-y-1/2 icon-btn h-8 w-8"
+          :title="t('common.close')"
+          @click="clearLibraryFilter"
+        >
+          <Icon icon="clarity:times-line" class="h-4 w-4" />
+        </button>
+      </div>
+
       <!-- Error -->
       <div
         v-if="error"
@@ -53,7 +77,7 @@
         <div v-for="n in 4" :key="n" class="skeleton h-16 rounded-2xl" />
       </div>
 
-      <!-- Empty state -->
+      <!-- Empty library -->
       <div
         v-else-if="files.length === 0"
         class="surface rounded-2xl p-12 flex flex-col items-center text-center"
@@ -65,6 +89,20 @@
         <p class="text-base-content/50 text-sm">{{ t('library.empty') }}</p>
         <p class="text-base-content/40 text-xs mt-1">
           {{ t('library.emptyHint') }}
+        </p>
+      </div>
+
+      <!-- No search matches -->
+      <div
+        v-else-if="filteredFiles.length === 0"
+        class="surface rounded-2xl p-12 flex flex-col items-center text-center"
+      >
+        <Icon
+          icon="clarity:search-line"
+          class="h-12 w-12 text-base-content/20 mb-4"
+        />
+        <p class="text-base-content/50 text-sm">
+          {{ t('library.searchNoResults') }}
         </p>
       </div>
 
@@ -101,6 +139,22 @@
             >
               {{ entry.artist }}
             </p>
+            <p v-if="entry.album" class="text-xs text-base-content/50 truncate">
+              {{ entry.album }}
+            </p>
+            <div
+              v-if="entry.playlists?.length"
+              class="flex flex-wrap gap-1 mt-1"
+            >
+              <span
+                v-for="pl in entry.playlists"
+                :key="pl"
+                class="badge badge-xs border-primary/30 bg-primary/10 text-primary max-w-full truncate"
+                :title="pl"
+              >
+                {{ pl }}
+              </span>
+            </div>
             <span class="text-xs text-base-content/40">
               <span v-if="folderOf(entry.file)" class="mr-2 text-primary/70">
                 <Icon
@@ -145,72 +199,63 @@
         </li>
       </ul>
 
-      <!-- Pagination -->
-      <nav
-        v-if="totalPages > 1"
-        class="mt-8 flex items-center justify-center gap-1 flex-wrap"
-      >
-        <button
-          class="icon-btn"
-          :disabled="currentPage === 1"
-          @click="currentPage--"
-          :title="t('common.previousPage')"
-        >
-          <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
-        </button>
-        <button
-          v-for="page in totalPages"
-          :key="page"
-          class="h-10 min-w-[2.5rem] rounded-full px-3 text-sm font-medium transition-colors"
-          :class="
-            page === currentPage
-              ? 'bg-primary text-primary-content shadow-glow-sm'
-              : 'text-base-content/70 hover:text-base-content hover:bg-white/10'
-          "
-          @click="currentPage = page"
-        >
-          {{ page }}
-        </button>
-        <button
-          class="icon-btn"
-          :disabled="currentPage === totalPages"
-          @click="currentPage++"
-          :title="t('common.nextPage')"
-        >
-          <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
-        </button>
-      </nav>
+      <LibraryPagination
+        v-if="filteredFiles.length > 0"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total-items="filteredFiles.length"
+        :page-size="pageSize"
+        @update:current-page="currentPage = $event"
+        @update:page-size="onPageSizeChange"
+      />
 
       <!-- Count footer -->
       <p
         v-if="files.length > 0"
-        class="mt-6 text-xs text-base-content/40 text-center"
+        class="mt-4 text-xs text-base-content/40 text-center"
       >
-        {{
-          files.length === 1
-            ? t('library.countOne', { count: files.length })
-            : t('library.countMany', { count: files.length })
-        }}
+        <template v-if="libraryFilterQuery.trim()">
+          {{
+            t('library.filteredCount', {
+              shown: filteredFiles.length,
+              total: files.length,
+            })
+          }}
+        </template>
+        <template v-else>
+          {{
+            files.length === 1
+              ? t('library.countOne', { count: files.length })
+              : t('library.countMany', { count: files.length })
+          }}
+        </template>
       </p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
+import LibraryPagination from '/src/components/LibraryPagination.vue'
 import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
+import {
+  useLibraryFilter,
+  libraryEntryMatchesQuery,
+} from '/src/model/libraryFilter'
 import { normalizeLibraryEntry, usePlayer } from '/src/model/player'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE_STORAGE_KEY = 'downtify.libraryPageSize'
+const DEFAULT_PAGE_SIZE = 25
 
 const { t } = useI18n()
 const player = usePlayer()
 const router = useRouter()
+const { libraryFilterQuery, clearLibraryFilter } = useLibraryFilter()
 
 const files = ref([])
 const loading = ref(false)
@@ -218,17 +263,52 @@ const error = ref('')
 const deleting = ref({})
 const coverFailed = ref({})
 const currentPage = ref(1)
+const pageSize = ref(readPageSize())
 
-const totalPages = computed(() => Math.ceil(files.value.length / PAGE_SIZE))
+const filteredFiles = computed(() => {
+  const query = libraryFilterQuery.value
+  if (!String(query || '').trim()) return files.value
+  return files.value.filter((entry) => libraryEntryMatchesQuery(entry, query))
+})
+
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredFiles.value.length / pageSize.value))
+)
 
 const paginatedFiles = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE
-  return files.value.slice(start, start + PAGE_SIZE)
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredFiles.value.slice(start, start + pageSize.value)
 })
 
-watch(files, () => {
+watch([filteredFiles, pageSize], () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = totalPages.value
+  }
+})
+
+watch(libraryFilterQuery, () => {
   currentPage.value = 1
 })
+
+function readPageSize() {
+  try {
+    const raw = parseInt(localStorage.getItem(PAGE_SIZE_STORAGE_KEY) || '', 10)
+    if ([10, 25, 50, 100].includes(raw)) return raw
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_PAGE_SIZE
+}
+
+function onPageSizeChange(size) {
+  pageSize.value = size
+  currentPage.value = 1
+  try {
+    localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(size))
+  } catch {
+    /* ignore */
+  }
+}
 
 function coverUrlFor(file) {
   return API.coverFileURL(file)
@@ -242,7 +322,7 @@ async function refresh() {
   loading.value = true
   error.value = ''
   try {
-    const res = await API.listDownloads()
+    const res = await API.listDownloads(true)
     files.value = (res.data || []).map(normalizeLibraryEntry)
   } catch {
     error.value = t('library.failedLoad')
@@ -256,7 +336,7 @@ async function onDelete(file) {
   deleting.value = { ...deleting.value, [file]: true }
   try {
     await API.deleteDownload(file)
-    files.value = files.value.filter((f) => f !== file)
+    files.value = files.value.filter((entry) => entry.file !== file)
   } catch {
     error.value = t('library.failedDelete', { file })
   } finally {
@@ -275,17 +355,21 @@ function folderOf(file) {
 }
 
 function playEntry(entry) {
-  const index = files.value.findIndex((row) => row.file === entry.file)
+  const index = filteredFiles.value.findIndex((row) => row.file === entry.file)
   if (index < 0) return
-  player.setPlaylist(files.value, { startIndex: index })
+  player.setPlaylist(filteredFiles.value, { startIndex: index })
   router.push({ name: 'Player' })
 }
 
 function playAll() {
-  if (!files.value.length) return
-  player.setPlaylist(files.value, { startIndex: 0 })
+  if (!filteredFiles.value.length) return
+  player.setPlaylist(filteredFiles.value, { startIndex: 0 })
   router.push({ name: 'Player' })
 }
 
 onMounted(refresh)
+
+onUnmounted(() => {
+  clearLibraryFilter()
+})
 </script>

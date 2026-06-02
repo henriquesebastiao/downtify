@@ -113,8 +113,10 @@ function coverFileURL(fileName) {
   return `/cover?file=${encodeURIComponent(fileName)}`
 }
 
-function listDownloads() {
-  return API.get('/list')
+function listDownloads(forceRefresh = false) {
+  return API.get('/list', {
+    params: forceRefresh ? { refresh: true } : {},
+  })
 }
 
 function deleteDownload(file) {
@@ -165,6 +167,10 @@ function clearYoutubeCookies() {
   })
 }
 
+function reconcileLibrary() {
+  return API.post('/api/library/reconcile')
+}
+
 function ws_onmessage(fn) {
   return (wsConnection.onmessage = fn)
 }
@@ -191,6 +197,7 @@ export default {
   setSettings,
   uploadYoutubeCookies,
   clearYoutubeCookies,
+  reconcileLibrary,
   check_for_update,
   ws_onmessage,
   ws_onerror,

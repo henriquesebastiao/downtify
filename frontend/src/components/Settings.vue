@@ -527,6 +527,57 @@
           </div>
         </div>
 
+        <!-- Library / player -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.librarySection') }}
+          </label>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.cache_cover_art"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.cacheCoverArt') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.cacheCoverArtHint') }}
+              </span>
+            </span>
+          </label>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2 mt-3"
+          >
+            {{ t('settings.reconcileSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/50 mb-2">
+            {{ t('settings.reconcileIntro') }}
+          </p>
+          <button
+            type="button"
+            class="btn btn-sm h-10 px-5 rounded-full border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50"
+            :disabled="reconcileBusy"
+            @click="runLibraryReconcile"
+          >
+            {{
+              reconcileBusy
+                ? t('settings.reconcileRunning')
+                : t('settings.reconcileButton')
+            }}
+          </button>
+          <p
+            v-if="reconcileMessage"
+            class="text-[11px] mt-2"
+            :class="reconcileError ? 'text-error' : 'text-primary'"
+          >
+            {{ reconcileMessage }}
+          </p>
+        </div>
+
         <!-- File organization -->
         <div>
           <label
@@ -642,6 +693,9 @@ import { useI18n } from '../i18n'
 const sm = useSettingsManager()
 const youtubeCookiesError = ref('')
 const youtubeCookiesExpanded = ref(false)
+const reconcileBusy = ref(false)
+const reconcileMessage = ref('')
+const reconcileError = ref(false)
 
 const YOUTUBE_DEFAULTS = {
   cookies_file: '',
@@ -740,6 +794,72 @@ watchEffect(() => {
     sm.settings.value.sync_navidrome = true
   }
 })
+
+watchEffect(() => {
+  if (sm.settings.value?.cache_cover_art === undefined) {
+    sm.settings.value.cache_cover_art = false
+  }
+})
+
+async function runLibraryReconcile() {
+  reconcileBusy.value = true
+  reconcileMessage.value = ''
+  reconcileError.value = false
+  try {
+    const res = await API.reconcileLibrary()
+    const count = res.data?.paths_updated ?? 0
+    const pruned = res.data?.pruned_stale ?? 0
+    const backfilled = res.data?.content_keys_backfilled ?? 0
+    const playlists = (res.data?.playlists_affected ?? []).join(', ')
+    const refreshM3u = !!res.data?.refresh_m3u
+    const refreshNav = !!res.data?.refresh_navidrome
+    const extras = [
+      refreshM3u ? t('settings.reconcileM3u') : '',
+      refreshNav ? t('settings.reconcileNavidrome') : '',
+    ]
+      .filter(Boolean)
+      .join(', ')
+    if (count === 0 && pruned === 0 && backfilled === 0) {
+      reconcileMessage.value = t('settings.reconcileNone')
+    } else if (count === 0 && pruned > 0) {
+      if (playlists && extras) {
+        reconcileMessage.value = t('settings.reconcilePrunedPlaylists', {
+          pruned,
+          playlists,
+          extras,
+        })
+      } else if (backfilled > 0) {
+        reconcileMessage.value = t('settings.reconcilePrunedBackfill', {
+          pruned,
+          backfilled,
+        })
+      } else {
+        reconcileMessage.value = t('settings.reconcilePrunedSimple', { pruned })
+      }
+    } else if (count === 0 && backfilled > 0) {
+      reconcileMessage.value = t('settings.reconcileBackfillOnly', {
+        backfilled,
+      })
+    } else if (!refreshM3u && !refreshNav) {
+      reconcileMessage.value = t('settings.reconcileDonePathsOnly', {
+        count,
+      })
+    } else {
+      reconcileMessage.value = extras
+        ? t('settings.reconcileDone', {
+            count,
+            playlists: playlists || '—',
+            extras,
+          })
+        : t('settings.reconcileDonePathsOnly', { count })
+    }
+  } catch {
+    reconcileError.value = true
+    reconcileMessage.value = t('settings.reconcileError')
+  } finally {
+    reconcileBusy.value = false
+  }
+}
 
 watchEffect(() => {
   const providers = sm.settings.value?.audio_providers

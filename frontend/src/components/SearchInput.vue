@@ -68,7 +68,6 @@ const placeHolderRotation = [
 ]
 const rotationIndex = ref(0)
 const placeHolder = computed(() => {
-  // depend on locale to refresh translated default placeholder
   const _ = locale.value
   if (rotationIndex.value === 0) return t('search.placeholder')
   return placeHolderRotation[rotationIndex.value - 1]

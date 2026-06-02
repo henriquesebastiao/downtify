@@ -11,12 +11,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import base64
 import logging
 import mimetypes
 import os
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import AsyncIterator
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,23 +25,24 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
 from loguru import logger
-from mutagen import File as MutagenFile
-from mutagen.flac import FLAC, Picture
-from mutagen.id3 import ID3
-from mutagen.mp4 import MP4
-from mutagen.oggopus import OggOpus
-from mutagen.oggvorbis import OggVorbis
+from pydantic import BaseModel, Field
 from uvicorn import Config, Server
 
 from downtify import __version__, api
+from downtify.cover_art import extract_cover_art
+from downtify.cover_cache import CoverArtCache
 from downtify.downloader import Downloader
 from downtify.library_catalog import (
     LibraryContext,
+    invalidate_library_paths_cache,
     library_context_from_state,
     list_library_entries,
     resolve_library_file,
 )
+from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.monitor import PlaylistMonitorDB, monitor_loop
+from downtify.navidrome_index import NavidromeIndex
+from downtify.playlist_catalog import PlaylistCatalog
 from downtify.track_index import TrackIndex
 
 load_dotenv()
@@ -110,80 +112,75 @@ def _fix_mime_types() -> None:
     mimetypes.add_type('text/css', '.css')
 
 
-def _extract_cover(path: Path) -> tuple[bytes | None, str | None]:
-    """Return ``(image_bytes, mime)`` for the embedded cover, or ``(None, None)``.
+class LibraryListEntry(BaseModel):
+    """One row from ``GET /list``."""
 
-    Reads tags lazily — mutagen format detection handles MP3/FLAC/M4A/OGG/Opus
-    without us needing to dispatch on extension.
-    """
+    file: str
+    title: str = ''
+    artist: str = ''
+    album: str = ''
+    playlists: list[str] = Field(default_factory=list)
 
+
+async def _application_startup() -> None:
+    loop = asyncio.get_running_loop()
+    api.state.loop = loop
+    api.state.download_semaphore = asyncio.Semaphore(
+        max(1, int(api.state.settings.get('max_parallel_downloads', 3)))
+    )
+    db_path = DATABASE_DIR / 'downtify_monitor.db'
+    api.state.monitor_db = PlaylistMonitorDB(db_path)
+    library_db = DATABASE_DIR / 'downtify_library.db'
+    api.state.track_index = TrackIndex(library_db)
+    api.state.navidrome_index = NavidromeIndex(library_db)
+    api.state.metadata_cache = LibraryMetadataCache(library_db)
+    api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
+    api.state.playlist_catalog = PlaylistCatalog(library_db)
+    lib_ctx = library_context_from_state(
+        DOWNLOAD_DIR, api.state.settings, api.state.track_index
+    )
     try:
-        # ID3 (mp3, sometimes wav/aac)
-        try:
-            tag = ID3(str(path))
-            for frame in tag.getall('APIC'):
-                if frame.data:
-                    return frame.data, frame.mime or 'image/jpeg'
-        except Exception:
-            pass
-
-        # FLAC
-        if path.suffix.lower() == '.flac':
-            try:
-                f = FLAC(str(path))
-                if f.pictures:
-                    pic = f.pictures[0]
-                    return pic.data, pic.mime or 'image/jpeg'
-            except Exception:
-                pass
-
-        # MP4 / M4A
-        if path.suffix.lower() in {'.m4a', '.mp4', '.aac'}:
-            try:
-                m = MP4(str(path))
-                covr = m.tags.get('covr') if m.tags else None
-                if covr:
-                    pic = covr[0]
-                    fmt = getattr(pic, 'imageformat', None)
-                    mime = (
-                        'image/png'
-                        if fmt == 14  # MP4Cover.FORMAT_PNG
-                        else 'image/jpeg'
-                    )
-                    return bytes(pic), mime
-            except Exception:
-                pass
-
-        # Ogg Vorbis / Opus — METADATA_BLOCK_PICTURE base64
-        if path.suffix.lower() in {'.ogg', '.opus'}:
-            try:
-                ogg = (
-                    OggOpus(str(path))
-                    if path.suffix.lower() == '.opus'
-                    else OggVorbis(str(path))
-                )
-                blocks = ogg.get('metadata_block_picture') or []
-                for raw in blocks:
-                    try:
-                        pic = Picture(base64.b64decode(raw))
-                        if pic.data:
-                            return pic.data, pic.mime or 'image/jpeg'
-                    except Exception:
-                        continue
-            except Exception:
-                pass
-
-        # Generic fallback — let mutagen pick the right parser
-        try:
-            f = MutagenFile(str(path))
-            if f is not None and getattr(f, 'pictures', None):
-                pic = f.pictures[0]
-                return pic.data, pic.mime or 'image/jpeg'
-        except Exception:
-            pass
+        imported = api.state.track_index.backfill_from_monitor_db(db_path)
+        if imported:
+            logger.info(
+                'Track library index: imported {} path(s) from monitor history',
+                imported,
+            )
     except Exception:
-        return None, None
-    return None, None
+        logger.exception('Track library backfill from monitor db failed')
+    try:
+        imported_pl = api.state.playlist_catalog.backfill_from_monitor_db(
+            db_path,
+            download_dir=lib_ctx.download_dir,
+            slskd_dir=lib_ctx.slskd_dir,
+        )
+        if imported_pl:
+            logger.info(
+                'Playlist catalog: linked {} track(s) from monitor history',
+                imported_pl,
+            )
+    except Exception:
+        logger.exception('Playlist catalog backfill from monitor db failed')
+    asyncio.create_task(
+        monitor_loop(
+            db=api.state.monitor_db,
+            get_downloader=lambda: api.state.downloader,
+            get_track_index=lambda: api.state.track_index,
+            get_navidrome_index=lambda: api.state.navidrome_index,
+            get_metadata_cache=lambda: api.state.metadata_cache,
+            get_cover_cache=lambda: api.state.cover_cache,
+            get_playlist_catalog=lambda: api.state.playlist_catalog,
+            broadcast=api.state.connections.broadcast,
+            loop=loop,
+            settings=api.state.settings,
+        )
+    )
+
+
+@asynccontextmanager
+async def _application_lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    await _application_startup()
+    yield
 
 
 def build_app() -> FastAPI:
@@ -197,6 +194,7 @@ def build_app() -> FastAPI:
             'art and metadata in a self-hosted way via Docker.'
         ),
         version=__version__,
+        lifespan=_application_lifespan,
     )
     app.add_middleware(
         CORSMiddleware,
@@ -228,47 +226,21 @@ def build_app() -> FastAPI:
     )
     app.include_router(api.router)
 
-    @app.on_event('startup')
-    async def _startup() -> None:
-        loop = asyncio.get_running_loop()
-        api.state.loop = loop
-        api.state.download_semaphore = asyncio.Semaphore(
-            max(1, int(api.state.settings.get('max_parallel_downloads', 3)))
-        )
-        db_path = DATABASE_DIR / 'downtify_monitor.db'
-        api.state.monitor_db = PlaylistMonitorDB(db_path)
-        library_db = DATABASE_DIR / 'downtify_library.db'
-        api.state.track_index = TrackIndex(library_db)
-        try:
-            imported = api.state.track_index.backfill_from_monitor_db(db_path)
-            if imported:
-                logger.info(
-                    'Track library index: imported {} path(s) from monitor history',
-                    imported,
-                )
-        except Exception:
-            logger.exception('Track library backfill from monitor db failed')
-        asyncio.create_task(
-            monitor_loop(
-                db=api.state.monitor_db,
-                get_downloader=lambda: api.state.downloader,
-                get_track_index=lambda: api.state.track_index,
-                broadcast=api.state.connections.broadcast,
-                loop=loop,
-                settings=api.state.settings,
-            )
-        )
-
     def _library_ctx() -> LibraryContext:
         return library_context_from_state(
             DOWNLOAD_DIR,
             api.state.settings,
             api.state.track_index,
+            metadata_cache=api.state.metadata_cache,
+            playlist_catalog=api.state.playlist_catalog,
         )
 
-    @app.get('/list')
-    def list_downloads() -> list[dict[str, str]]:
-        return list_library_entries(_library_ctx())
+    @app.get('/list', response_model=list[LibraryListEntry])
+    def list_downloads(refresh: bool = False) -> list[LibraryListEntry]:
+        if refresh:
+            invalidate_library_paths_cache()
+        rows = list_library_entries(_library_ctx())
+        return [LibraryListEntry.model_validate(row) for row in rows]
 
     @app.get('/media/{file_path:path}')
     def serve_media(file_path: str) -> FileResponse:
@@ -290,6 +262,17 @@ def build_app() -> FastAPI:
             full.unlink()
         except Exception as exc:
             return {'deleted': False, 'error': str(exc)}
+        if api.state.cover_cache is not None:
+            api.state.cover_cache.forget(file, full_path=full)
+        if api.state.metadata_cache is not None:
+            api.state.metadata_cache.forget(file, full_path=full)
+        if api.state.playlist_catalog is not None:
+            api.state.playlist_catalog.remove_tracks_for_filename(file)
+        if api.state.track_index is not None:
+            api.state.track_index.remove_by_filename(file)
+        invalidate_library_paths_cache()
+        if api.state.navidrome_index is not None:
+            api.state.navidrome_index.forget_filename(file, full_path=full)
         return {'deleted': True}
 
     @app.get('/cover')
@@ -298,14 +281,28 @@ def build_app() -> FastAPI:
         if full is None:
             raise HTTPException(status_code=404, detail='File not found')
 
-        data, mime = _extract_cover(full)
+        data: bytes | None = None
+        mime: str | None = None
+        if api.state.settings.get('cache_cover_art'):
+            cache = api.state.cover_cache
+            if cache is not None:
+                hit = cache.lookup(file, full)
+                if hit is not None:
+                    data, mime = hit
         if data is None:
-            raise HTTPException(status_code=404, detail='No embedded cover')
+            data, mime = extract_cover_art(full)
+            if data is None:
+                raise HTTPException(
+                    status_code=404, detail='No cover in file or folder'
+                )
+            if api.state.settings.get('cache_cover_art'):
+                cache = api.state.cover_cache
+                if cache is not None:
+                    cache.store(file, full, data, mime or 'image/jpeg')
         return Response(
             content=data,
             media_type=mime or 'image/jpeg',
             headers={
-                # Cache by mtime — clients fetch once per file revision.
                 'Cache-Control': 'public, max-age=86400',
                 'ETag': f'"{int(full.stat().st_mtime)}"',
             },

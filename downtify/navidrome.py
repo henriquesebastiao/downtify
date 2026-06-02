@@ -8,13 +8,17 @@ import secrets
 import time
 import unicodedata
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlencode
 
 import requests
 from loguru import logger
 
-from .m3u import sanitize_playlist_name
+from .library_metadata import read_audio_metadata
+from .library_paths import locate_library_file
+from .navidrome_index import NavidromeIndex
+from .track_index import normalize_spotify_track_id
 
 # Subsonic createPlaylist via GET appends every songId to the query string; large
 # playlists hit HTTP 414. POST form bodies avoid that; we still batch adds.
@@ -698,19 +702,10 @@ def _song_label(song: dict[str, Any]) -> str:
 def _songs_for_playlist_sync(
     playlist_name: str, songs: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    """Drop rows whose stored file path does not match Spotify/tag metadata."""
+    """Drop rows whose on-disk path clearly does not match track metadata."""
 
-    folder = sanitize_playlist_name(playlist_name).casefold()
     kept: list[dict[str, Any]] = []
     for song in songs:
-        fn = str(song.get('filename') or '').replace('\\', '/').casefold()
-        if folder and fn and folder not in fn and fn.startswith('slskd/'):
-            logger.info(
-                'navidrome: skip sync for {!r}; file outside playlist folder: {}',
-                _song_label(song),
-                song.get('filename'),
-            )
-            continue
         if not _metadata_aligns_with_filename(song):
             logger.info(
                 'navidrome: skip sync for {!r}; filename does not match tags',
@@ -728,18 +723,119 @@ def _scan_wait_budget(cfg: dict[str, Any], track_count: int) -> int:
     return min(900, max(base, 30 + track_count * 2))
 
 
+def enrich_song_from_library_file(
+    song: dict[str, Any],
+    download_dir: Path,
+    slskd_dir: Optional[Path],
+) -> dict[str, Any]:
+    """Attach on-disk path metadata (mutagen tags) for Navidrome matching."""
+
+    row = dict(song)
+    filename = str(row.get('filename') or '').strip()
+    if not filename:
+        return row
+    path = locate_library_file(filename, download_dir, slskd_dir)
+    if path is None:
+        return row
+    meta = read_audio_metadata(path)
+    if meta.get('title'):
+        row['name'] = meta['title']
+        row['library_from_tags'] = True
+    if meta.get('artists'):
+        row['artists'] = meta['artists']
+        row['library_from_tags'] = True
+    return row
+
+
+def resolve_navidrome_song_id(
+    client: NavidromeClient,
+    song: dict[str, Any],
+    index: Optional[NavidromeIndex] = None,
+    *,
+    download_dir: Optional[Path] = None,
+    slskd_dir: Optional[Path] = None,
+) -> tuple[Optional[str], bool]:
+    """Return ``(navidrome song id, from_cache)``."""
+
+    filename = str(song.get('filename') or '').strip()
+    full_path: Optional[Path] = None
+    if filename and download_dir is not None:
+        full_path = locate_library_file(filename, download_dir, slskd_dir)
+
+    if index is not None:
+        cached = index.lookup_song(song, full_path=full_path)
+        if cached:
+            return cached, True
+    sid = client.search_song_id(song)
+    if sid and index is not None and filename:
+        index.store(
+            filename,
+            sid,
+            spotify_track_id=normalize_spotify_track_id(song),
+            full_path=full_path,
+        )
+    return sid, False
+
+
+def cache_navidrome_song_id(
+    settings: dict[str, Any],
+    song: dict[str, Any],
+    filename: str,
+    index: Optional[NavidromeIndex],
+    *,
+    download_dir: Optional[Path] = None,
+    slskd_dir: Optional[Path] = None,
+) -> None:
+    """Resolve and store Navidrome id after a successful download."""
+
+    if index is None or not _effective_navidrome_settings(settings).get(
+        'enabled'
+    ):
+        return
+    row = dict(song)
+    row['filename'] = filename
+    if download_dir is not None:
+        row = enrich_song_from_library_file(row, download_dir, slskd_dir)
+    client = NavidromeClient(_effective_navidrome_settings(settings))
+    if not client.configured() or not client.ping():
+        return
+    resolve_navidrome_song_id(
+        client, row, index, download_dir=download_dir, slskd_dir=slskd_dir
+    )
+
+
 def _match_songs_in_library(
     client: NavidromeClient,
     songs: list[dict[str, Any]],
+    index: Optional[NavidromeIndex] = None,
+    *,
+    download_dir: Optional[Path] = None,
+    slskd_dir: Optional[Path] = None,
 ) -> tuple[list[str], list[dict[str, Any]]]:
     song_ids: list[str] = []
     unmatched: list[dict[str, Any]] = []
+    cached = 0
     for song in songs:
-        sid = client.search_song_id(song)
+        sid, from_cache = resolve_navidrome_song_id(
+            client,
+            song,
+            index,
+            download_dir=download_dir,
+            slskd_dir=slskd_dir,
+        )
         if sid:
             song_ids.append(sid)
+            if from_cache:
+                cached += 1
         else:
             unmatched.append(song)
+    if index is not None and songs:
+        logger.info(
+            'navidrome: resolved {}/{} track(s) ({} from cache)',
+            len(song_ids),
+            len(songs),
+            cached,
+        )
     return song_ids, unmatched
 
 
@@ -766,11 +862,33 @@ def _trigger_library_scan(
     return False
 
 
-def sync_playlist_to_navidrome(
+def _library_dirs_from_settings(
+    settings: dict[str, Any],
+    download_dir: Optional[Path] = None,
+) -> tuple[Path, Optional[Path]]:
+    slskd_raw = settings.get('slskd')
+    slskd_dir: Optional[Path] = None
+    if isinstance(slskd_raw, dict):
+        source = str(slskd_raw.get('source_dir') or '').strip()
+        if source:
+            slskd_dir = Path(source)
+    dl = download_dir
+    if dl is None and isinstance(slskd_raw, dict):
+        raw_dl = str(slskd_raw.get('download_dir') or '').strip()
+        if raw_dl:
+            dl = Path(raw_dl)
+    if dl is None:
+        dl = Path('/downloads')
+    return Path(dl), slskd_dir
+
+
+def sync_playlist_to_navidrome(  # noqa: PLR0914
     playlist_name: str,
     songs: list[dict[str, Any]],
     settings: dict[str, Any],
     *,
+    navidrome_index: Optional[NavidromeIndex] = None,
+    download_dir: Optional[Path] = None,
     comment: str = 'Synced from Spotify via Downtify',
 ) -> Optional[PlaylistSyncResult]:
     """Match *songs* in Navidrome and create/replace a server playlist."""
@@ -787,7 +905,16 @@ def sync_playlist_to_navidrome(
     if not songs:
         return None
 
+    incoming = len(songs)
     songs = _songs_for_playlist_sync(playlist_name, songs)
+    if len(songs) < incoming:
+        logger.info(
+            'navidrome: excluded {} of {} track(s) from sync for playlist={!r} '
+            '(filename/tag mismatch)',
+            incoming - len(songs),
+            incoming,
+            playlist_name,
+        )
     if not songs:
         return None
 
@@ -800,7 +927,14 @@ def sync_playlist_to_navidrome(
         except Exception as exc:
             logger.info('navidrome: library scan failed err={}', exc)
 
-    song_ids, pending = _match_songs_in_library(client, songs)
+    dl_dir, slskd_dir = _library_dirs_from_settings(settings, download_dir)
+    song_ids, pending = _match_songs_in_library(
+        client,
+        songs,
+        navidrome_index,
+        download_dir=dl_dir,
+        slskd_dir=slskd_dir,
+    )
     retry_seconds = int(cfg.get('scan_retry_seconds') or 0)
     if pending and scanned and retry_seconds > 0:
         logger.info(
@@ -809,7 +943,13 @@ def sync_playlist_to_navidrome(
             retry_seconds,
         )
         time.sleep(retry_seconds)
-        extra_ids, pending = _match_songs_in_library(client, pending)
+        extra_ids, pending = _match_songs_in_library(
+            client,
+            pending,
+            navidrome_index,
+            download_dir=dl_dir,
+            slskd_dir=slskd_dir,
+        )
         song_ids.extend(extra_ids)
 
     total = len(songs)

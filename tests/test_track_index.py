@@ -62,8 +62,14 @@ def test_resolve_existing_prefers_global_library(tmp_path):
     assert hit[0] == stored
 
 
-def test_register_keeps_first_canonical_path(tmp_path):
+def test_register_updates_path_for_same_track(tmp_path):
     index = TrackIndex(tmp_path / 'library.db')
-    index.register(SPOTIFY_ID, 'first/path.mp3')
-    index.register(SPOTIFY_ID, 'second/path.mp3')
-    assert index.lookup(SPOTIFY_ID) == 'first/path.mp3'
+    first = tmp_path / 'first' / 'Artist - Song.mp3'
+    second = tmp_path / 'second' / 'Artist - Song.mp3'
+    first.parent.mkdir(parents=True)
+    second.parent.mkdir(parents=True)
+    first.write_bytes(b'same')
+    second.write_bytes(b'same')
+    index.register(SPOTIFY_ID, 'first/path.mp3', full_path=first)
+    index.register(SPOTIFY_ID, 'second/path.mp3', full_path=second)
+    assert index.lookup(SPOTIFY_ID) == 'second/path.mp3'

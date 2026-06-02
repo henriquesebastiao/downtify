@@ -81,6 +81,8 @@ export default {
   library: {
     title: 'Library',
     subtitle: "Music you've already downloaded. Listen, re-download or remove.",
+    searchPlaceholder: 'Search title, artist, album, or path…',
+    searchNoResults: 'No tracks match your search.',
     empty: 'No downloads yet.',
     emptyHint: 'Find a song to start filling your library.',
     failedLoad: 'Failed to load downloads.',
@@ -88,6 +90,11 @@ export default {
     deletePrompt: 'Delete "{file}"?',
     countOne: '{count} file in your library',
     countMany: '{count} files in your library',
+    filteredCount: '{shown} of {total} tracks',
+    showingRange: 'Showing {from}–{to} of {total}',
+    pageSize: 'Per page',
+    firstPage: 'First page',
+    lastPage: 'Last page',
     downloadToDevice: 'Download to device',
     deleteFile: 'Delete file',
     play: 'Play',
@@ -183,6 +190,30 @@ export default {
     navidromeAdminUser: 'Admin username (optional, for library scan)',
     navidromeAdminPassword: 'Admin password (optional)',
     navidromePublic: 'Public playlist in Navidrome',
+    librarySection: 'Library & player',
+    cacheCoverArt: 'Cache album art on disk',
+    cacheCoverArtHint:
+      'Stores cover images under /data/cover_cache so the player and library load faster. Uses extra disk space; safe to turn off anytime.',
+    reconcileSection: 'Library path sync',
+    reconcileIntro:
+      'After you move files on disk, fixes stored paths. M3U and Navidrome playlists are updated only if those options are enabled above.',
+    reconcileButton: 'Fix library paths',
+    reconcileRunning: 'Scanning library…',
+    reconcileDonePathsOnly: 'Updated {count} path(s).',
+    reconcileDone: 'Updated {count} path(s). Playlists: {playlists} ({extras})',
+    reconcileM3u: 'M3U',
+    reconcileNavidrome: 'Navidrome',
+    reconcileNone:
+      'No moved files found. Use this after relocating files (same name and size). Deleting tracks is handled when you delete; stale playlist rows are removed here if files are gone.',
+    reconcilePrunedSimple:
+      'Removed {pruned} stale catalog entries (files already deleted).',
+    reconcilePrunedBackfill:
+      'Removed {pruned} stale entries. Indexed {backfilled} tracks for future path matching.',
+    reconcilePrunedPlaylists:
+      'Removed {pruned} stale entries. Refreshed playlists: {playlists} ({extras})',
+    reconcileBackfillOnly:
+      'Indexed {backfilled} tracks for path matching. No moves found this time.',
+    reconcileError: 'Library reconcile failed.',
     organizationSection: 'File organization',
     organizeByArtist: 'Organize by artist',
     organizeByArtistHint:

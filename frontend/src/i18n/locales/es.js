@@ -83,6 +83,8 @@ export default {
     title: 'Biblioteca',
     subtitle:
       'Música que ya has descargado. Escucha, descarga otra vez o elimina.',
+    searchPlaceholder: 'Buscar título, artista, álbum o ruta…',
+    searchNoResults: 'Ninguna pista coincide con la búsqueda.',
     empty: 'Aún no hay descargas.',
     emptyHint: 'Encuentra una canción para empezar a llenar tu biblioteca.',
     failedLoad: 'No se pudieron cargar las descargas.',
@@ -90,6 +92,11 @@ export default {
     deletePrompt: '¿Eliminar "{file}"?',
     countOne: '{count} archivo en tu biblioteca',
     countMany: '{count} archivos en tu biblioteca',
+    filteredCount: '{shown} de {total} pistas',
+    showingRange: 'Mostrando {from}–{to} de {total}',
+    pageSize: 'Por página',
+    firstPage: 'Primera página',
+    lastPage: 'Última página',
     downloadToDevice: 'Descargar al dispositivo',
     deleteFile: 'Eliminar archivo',
     play: 'Reproducir',
@@ -186,6 +193,31 @@ export default {
     navidromeAdminUser: 'Usuario admin (opcional, para escaneo)',
     navidromeAdminPassword: 'Contraseña admin (opcional)',
     navidromePublic: 'Lista pública en Navidrome',
+    librarySection: 'Biblioteca y reproductor',
+    cacheCoverArt: 'Guardar carátulas en disco',
+    cacheCoverArtHint:
+      'Guarda las imágenes en /data/cover_cache para cargar más rápido el reproductor y la biblioteca. Usa espacio extra; puedes desactivarlo cuando quieras.',
+    reconcileSection: 'Sincronizar rutas',
+    reconcileIntro:
+      'Si moviste archivos, corrige las rutas guardadas. M3U y Navidrome solo si están activados arriba.',
+    reconcileButton: 'Corregir rutas de la biblioteca',
+    reconcileRunning: 'Escaneando biblioteca…',
+    reconcileDonePathsOnly: 'Actualizadas {count} ruta(s).',
+    reconcileDone:
+      'Actualizadas {count} ruta(s). Listas: {playlists} ({extras})',
+    reconcileM3u: 'M3U',
+    reconcileNavidrome: 'Navidrome',
+    reconcileNone:
+      'No hay archivos movidos. Úsalo tras cambiar de carpeta (mismo nombre y tamaño). Al borrar, se limpia aquí si el archivo ya no existe.',
+    reconcilePrunedSimple:
+      'Eliminadas {pruned} entradas obsoletas (archivos ya borrados).',
+    reconcilePrunedBackfill:
+      'Eliminadas {pruned} entradas. Indexadas {backfilled} pistas para futuros cambios de ruta.',
+    reconcilePrunedPlaylists:
+      'Eliminadas {pruned} entradas. Listas actualizadas: {playlists} ({extras})',
+    reconcileBackfillOnly:
+      'Indexadas {backfilled} pistas. No se detectaron movimientos ahora.',
+    reconcileError: 'Error al reconciliar la biblioteca.',
     organizationSection: 'Organización de archivos',
     organizeByArtist: 'Organizar por artista',
     organizeByArtistHint:

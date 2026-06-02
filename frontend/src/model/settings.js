@@ -51,6 +51,7 @@ const settings = ref({
     api_version: '1.16.1',
   },
   organize_by_artist: false,
+  cache_cover_art: false,
   max_parallel_downloads: 3,
 })
 

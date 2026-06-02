@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from .library_cache_keys import file_content_key
 from .library_paths import (
     locate_library_file,
     slskd_dir_from_downloader,
@@ -62,8 +63,20 @@ class TrackIndex:
                 CREATE TABLE IF NOT EXISTS library_tracks (
                     spotify_track_id TEXT PRIMARY KEY,
                     filename TEXT NOT NULL,
+                    content_key TEXT,
                     registered_at TEXT NOT NULL
                 )
+            """)
+            try:
+                conn.execute(
+                    'ALTER TABLE library_tracks ADD COLUMN content_key TEXT'
+                )
+            except Exception:
+                pass
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_library_tracks_content_key
+                ON library_tracks (content_key)
+                WHERE content_key IS NOT NULL
             """)
 
     def lookup(self, spotify_track_id: str) -> Optional[str]:
@@ -85,36 +98,100 @@ class TrackIndex:
             return None
         return self.lookup(tid)
 
-    def register(self, spotify_track_id: str, filename: str) -> None:
+    def register(
+        self,
+        spotify_track_id: str,
+        filename: str,
+        *,
+        full_path: Optional[Path] = None,
+    ) -> None:
         tid = str(spotify_track_id or '').strip()
         name = str(filename or '').strip().replace('\\', '/')
         if not _SPOTIFY_TRACK_ID.fullmatch(tid) or not name:
             return
+        ck: Optional[str] = None
+        if full_path is not None:
+            ck = file_content_key(full_path)
         with self._connect() as conn:
-            row = conn.execute(
-                'SELECT filename FROM library_tracks WHERE spotify_track_id = ?',
-                (tid,),
-            ).fetchone()
-            if row is not None:
-                existing = str(row['filename'])
-                if existing == name:
-                    return
-                # Keep the first canonical path; callers drop stale rows via forget().
-                return
             conn.execute(
                 """INSERT INTO library_tracks
-                   (spotify_track_id, filename, registered_at)
-                   VALUES (?, ?, ?)
+                   (spotify_track_id, filename, content_key, registered_at)
+                   VALUES (?, ?, ?, ?)
                    ON CONFLICT(spotify_track_id) DO UPDATE SET
                    filename=excluded.filename,
+                   content_key=COALESCE(excluded.content_key, library_tracks.content_key),
                    registered_at=excluded.registered_at""",
-                (tid, name, _now_iso()),
+                (tid, name, ck, _now_iso()),
             )
 
-    def register_song(self, song: dict[str, Any], filename: str) -> None:
+    def register_song(
+        self,
+        song: dict[str, Any],
+        filename: str,
+        *,
+        full_path: Optional[Path] = None,
+    ) -> None:
         tid = normalize_spotify_track_id(song)
         if tid:
-            self.register(tid, filename)
+            self.register(tid, filename, full_path=full_path)
+
+    def update_filename(
+        self,
+        spotify_track_id: str,
+        filename: str,
+        *,
+        content_key: Optional[str] = None,
+    ) -> bool:
+        tid = str(spotify_track_id or '').strip()
+        name = str(filename or '').strip().replace('\\', '/')
+        if not _SPOTIFY_TRACK_ID.fullmatch(tid) or not name:
+            return False
+        with self._connect() as conn:
+            cur = conn.execute(
+                """UPDATE library_tracks SET filename = ?,
+                   content_key = COALESCE(?, content_key)
+                   WHERE spotify_track_id = ? AND filename != ?""",
+                (name, content_key, tid, name),
+            )
+            return cur.rowcount > 0
+
+    def all_rows(self) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT spotify_track_id, filename, content_key
+                   FROM library_tracks"""
+            ).fetchall()
+        return [
+            {
+                'spotify_track_id': str(row['spotify_track_id']),
+                'filename': str(row['filename']).replace('\\', '/'),
+                'content_key': row['content_key'],
+            }
+            for row in rows
+        ]
+
+    def set_content_key(self, spotify_track_id: str, content_key: str) -> bool:
+        tid = str(spotify_track_id or '').strip()
+        ck = str(content_key or '').strip()
+        if not _SPOTIFY_TRACK_ID.fullmatch(tid) or not ck:
+            return False
+        with self._connect() as conn:
+            cur = conn.execute(
+                """UPDATE library_tracks SET content_key = ?
+                   WHERE spotify_track_id = ? AND COALESCE(content_key, '') = ''""",
+                (ck, tid),
+            )
+            return cur.rowcount > 0
+
+    def remove_by_filename(self, filename: str) -> bool:
+        name = str(filename or '').strip().replace('\\', '/')
+        if not name:
+            return False
+        with self._connect() as conn:
+            cur = conn.execute(
+                'DELETE FROM library_tracks WHERE filename = ?', (name,)
+            )
+            return cur.rowcount > 0
 
     def list_filenames(self) -> list[str]:
         with self._connect() as conn:
@@ -188,7 +265,10 @@ def resolve_existing_download(
     local = downloader.existing_filename_for(song, subdir=subdir)
     if local and locate_library_file(local, download_dir, slskd_dir):
         if track_index is not None:
-            track_index.register_song(song, local)
+            full = locate_library_file(local, download_dir, slskd_dir)
+            track_index.register_song(
+                song, local, full_path=full if full is not None else None
+            )
         return local, 'Already on disk'
 
     return None

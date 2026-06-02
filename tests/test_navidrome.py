@@ -8,6 +8,7 @@ from downtify.navidrome import (
     _songs_for_playlist_sync,
     sync_playlist_to_navidrome,
 )
+from downtify.navidrome_index import NavidromeIndex
 
 
 def _route_mock_get(responses: dict[str, MagicMock]):
@@ -55,6 +56,20 @@ def test_songs_for_playlist_sync_skips_mismatched_slskd_path():
     kept = _songs_for_playlist_sync('Albanian Car Songs', songs)
     assert len(kept) == 1
     assert kept[0]['name'] == 'Katile'
+
+
+def test_songs_for_playlist_sync_keeps_slskd_leave_in_place():
+    songs = [
+        {
+            'name': 'Katile',
+            'artists': ['Don Xhoni'],
+            'filename': 'slskd/peer/Don Xhoni - Katile.mp3',
+            'library_from_tags': True,
+        },
+    ]
+    kept = _songs_for_playlist_sync('Albanian Car Songs', songs)
+    assert len(kept) == 1
+    assert kept[0]['filename'].startswith('slskd/')
 
 
 def test_search_song_id_exact_mutagen_tags():
@@ -418,6 +433,68 @@ def test_sync_playlist_updates_existing_by_id(mock_get, mock_post):
     assert create_calls[0][1]['params']['playlistId'] == 'pl-existing'
     all_get_urls = [call[0][0] for call in mock_get.call_args_list]
     assert not any('deletePlaylist' in url for url in all_get_urls)
+
+
+@patch('downtify.navidrome.requests.post')
+@patch('downtify.navidrome.requests.get')
+def test_sync_playlist_uses_navidrome_index_cache(mock_get, mock_post, tmp_path):
+    """Cached Navidrome ids skip search3 during playlist sync."""
+
+    ping_resp = MagicMock()
+    ping_resp.json.return_value = {'subsonic-response': {'status': 'ok'}}
+    ping_resp.raise_for_status = MagicMock()
+
+    playlists_resp = MagicMock()
+    playlists_resp.json.return_value = {
+        'subsonic-response': {'status': 'ok', 'playlists': {}}
+    }
+    playlists_resp.raise_for_status = MagicMock()
+
+    create_resp = MagicMock()
+    create_resp.json.return_value = {
+        'subsonic-response': {
+            'status': 'ok',
+            'playlist': {'id': 'pl-cached'},
+        }
+    }
+    create_resp.raise_for_status = MagicMock()
+
+    mock_get.side_effect = _route_mock_get({
+        '/rest/ping': ping_resp,
+        '/rest/getPlaylists': playlists_resp,
+    })
+    mock_post.side_effect = [create_resp]
+
+    track = tmp_path / 'Artist - Track.mp3'
+    track.write_bytes(b'cached-audio')
+    index = NavidromeIndex(tmp_path / 'nav.db')
+    index.store('Artist/Track.mp3', 'cached-song-id', full_path=track)
+
+    settings = {
+        'navidrome': {
+            'enabled': True,
+            'url': 'https://navidrome.test',
+            'username': 'user',
+            'password': 'pass',
+            'scan_after_download': False,
+        }
+    }
+    result = sync_playlist_to_navidrome(
+        'Cached List',
+        [
+            {
+                'name': 'Track',
+                'artists': ['Artist'],
+                'filename': 'Artist/Track.mp3',
+            }
+        ],
+        settings,
+        navidrome_index=index,
+    )
+    assert result is not None
+    assert result.matched == 1
+    all_get_urls = [call[0][0] for call in mock_get.call_args_list]
+    assert not any('search3' in url for url in all_get_urls)
 
 
 @patch('downtify.navidrome.requests.post')

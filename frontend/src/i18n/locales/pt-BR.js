@@ -82,6 +82,8 @@ export default {
   library: {
     title: 'Biblioteca',
     subtitle: 'Músicas que você já baixou. Escute, baixe novamente ou remova.',
+    searchPlaceholder: 'Buscar título, artista, álbum ou caminho…',
+    searchNoResults: 'Nenhuma faixa corresponde à busca.',
     empty: 'Nenhum download ainda.',
     emptyHint: 'Encontre uma música para começar a montar sua biblioteca.',
     failedLoad: 'Falha ao carregar os downloads.',
@@ -89,6 +91,11 @@ export default {
     deletePrompt: 'Excluir "{file}"?',
     countOne: '{count} arquivo na sua biblioteca',
     countMany: '{count} arquivos na sua biblioteca',
+    filteredCount: '{shown} de {total} faixas',
+    showingRange: 'Exibindo {from}–{to} de {total}',
+    pageSize: 'Por página',
+    firstPage: 'Primeira página',
+    lastPage: 'Última página',
     downloadToDevice: 'Baixar para o dispositivo',
     deleteFile: 'Excluir arquivo',
     play: 'Reproduzir',
@@ -185,6 +192,31 @@ export default {
     navidromeAdminUser: 'Usuário admin (opcional, para varredura)',
     navidromeAdminPassword: 'Senha admin (opcional)',
     navidromePublic: 'Playlist pública no Navidrome',
+    librarySection: 'Biblioteca e player',
+    cacheCoverArt: 'Cachear capas de álbum no disco',
+    cacheCoverArtHint:
+      'Armazena imagens em /data/cover_cache para o player e a biblioteca abrirem mais rápido. Usa espaço em disco extra; pode desligar quando quiser.',
+    reconcileSection: 'Sincronizar caminhos',
+    reconcileIntro:
+      'Depois de mover arquivos, corrige os caminhos salvos. M3U e Navidrome só se estiverem ativados acima.',
+    reconcileButton: 'Corrigir caminhos da biblioteca',
+    reconcileRunning: 'Varrendo biblioteca…',
+    reconcileDonePathsOnly: 'Atualizados {count} caminho(s).',
+    reconcileDone:
+      'Atualizados {count} caminho(s). Playlists: {playlists} ({extras})',
+    reconcileM3u: 'M3U',
+    reconcileNavidrome: 'Navidrome',
+    reconcileNone:
+      'Nenhum arquivo movido. Use após mudar de pasta (mesmo nome e tamanho). Ao excluir, entradas órfãs são limpas aqui.',
+    reconcilePrunedSimple:
+      'Removidas {pruned} entradas obsoletas (arquivos já excluídos).',
+    reconcilePrunedBackfill:
+      'Removidas {pruned} entradas. Indexadas {backfilled} faixas para futuras mudanças de caminho.',
+    reconcilePrunedPlaylists:
+      'Removidas {pruned} entradas. Playlists atualizadas: {playlists} ({extras})',
+    reconcileBackfillOnly:
+      'Indexadas {backfilled} faixas. Nenhuma movimentação detectada agora.',
+    reconcileError: 'Falha ao reconciliar a biblioteca.',
     organizationSection: 'Organização de arquivos',
     organizeByArtist: 'Organizar por artista',
     organizeByArtistHint:

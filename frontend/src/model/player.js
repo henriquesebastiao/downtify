@@ -71,6 +71,9 @@ export function normalizeLibraryEntry(raw) {
   const title = String(raw?.title || '').trim()
   const artist = String(raw?.artist || '').trim()
   const album = String(raw?.album || '').trim()
+  const playlists = Array.isArray(raw?.playlists)
+    ? raw.playlists.map((p) => String(p).trim()).filter(Boolean)
+    : []
   return {
     file,
     url: base.url,
@@ -78,6 +81,7 @@ export function normalizeLibraryEntry(raw) {
     title: title || base.title,
     artist: artist || base.artist,
     album: album || base.album,
+    playlists,
   }
 }
 

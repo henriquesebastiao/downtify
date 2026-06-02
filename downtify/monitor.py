@@ -12,13 +12,18 @@ from typing import Any, Callable, Optional
 from loguru import logger
 
 from . import m3u, spotify
+from .cover_cache import CoverArtCache
 from .downloader import Downloader
-from .library_metadata import read_audio_metadata
+from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .navidrome import (
     _effective_navidrome_settings,
+    cache_navidrome_song_id,
+    enrich_song_from_library_file,
     sync_playlist_to_navidrome,
 )
+from .navidrome_index import NavidromeIndex
+from .playlist_catalog import PlaylistCatalog
 from .track_index import (
     TrackIndex,
     normalize_spotify_track_id,
@@ -196,6 +201,30 @@ class PlaylistMonitorDB:
             ).fetchall()
             return {r['track_spotify_id']: r['filename'] for r in rows}
 
+    def update_filename_for_spotify(
+        self, track_spotify_id: str, filename: str
+    ) -> set[str]:
+        """Update stored paths for *track_spotify_id* across all playlists."""
+
+        tid = str(track_spotify_id or '').strip()
+        name = str(filename or '').strip().replace('\\', '/')
+        if not tid or not name:
+            return set()
+        with self._connect() as conn:
+            conn.execute(
+                """UPDATE downloaded_tracks SET filename = ?
+                   WHERE track_spotify_id = ? AND
+                   (filename IS NULL OR filename != ?)""",
+                (name, tid, name),
+            )
+            rows = conn.execute(
+                """SELECT DISTINCT p.name FROM downloaded_tracks dt
+                   JOIN monitored_playlists p ON p.id = dt.playlist_id
+                   WHERE dt.track_spotify_id = ?""",
+                (tid,),
+            ).fetchall()
+        return {str(row['name']) for row in rows}
+
     def mark_track_downloaded(
         self,
         playlist_id: int,
@@ -228,7 +257,7 @@ def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
     )
 
 
-async def check_playlist(
+async def check_playlist(  # noqa: PLR0914
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
     downloader: Downloader,
@@ -236,6 +265,10 @@ async def check_playlist(
     loop: asyncio.AbstractEventLoop,
     settings: Optional[dict[str, Any]] = None,
     track_index: Optional[TrackIndex] = None,
+    navidrome_index: Optional[NavidromeIndex] = None,
+    metadata_cache: Optional[LibraryMetadataCache] = None,
+    cover_cache: Optional[CoverArtCache] = None,
+    playlist_catalog: Optional[PlaylistCatalog] = None,
 ) -> int:
     """Fetch playlist, detect new tracks, download them. Returns count downloaded."""
     logger.info(
@@ -243,6 +276,13 @@ async def check_playlist(
         playlist.name,
         playlist.spotify_id,
     )
+
+    if playlist_catalog is not None:
+        await asyncio.to_thread(
+            playlist_catalog.ensure_playlist,
+            playlist.name,
+            spotify_id=playlist.spotify_id,
+        )
 
     try:
         tracks = await asyncio.to_thread(
@@ -347,9 +387,56 @@ async def check_playlist(
             await asyncio.to_thread(
                 db.mark_track_downloaded, playlist.id, track_id, filename
             )
-            if track_index is not None:
+            dl_dir = Path(downloader.download_dir)
+            full = locate_library_file(filename, dl_dir, slskd_dir)
+            if track_index is not None and full is not None:
                 await asyncio.to_thread(
-                    track_index.register_song, song, filename
+                    track_index.register_song,
+                    song,
+                    filename,
+                    full_path=full,
+                )
+            if playlist_catalog is not None and full is not None:
+                await asyncio.to_thread(
+                    playlist_catalog.upsert_track,
+                    playlist.name,
+                    song,
+                    filename,
+                    full,
+                )
+            if navidrome_index is not None and settings is not None:
+                dl_dir = Path(downloader.download_dir)
+                slskd = slskd_dir_from_downloader(downloader)
+                await asyncio.to_thread(
+                    cache_navidrome_song_id,
+                    settings,
+                    song,
+                    filename,
+                    navidrome_index,
+                    download_dir=dl_dir,
+                    slskd_dir=slskd,
+                )
+            if metadata_cache is not None:
+                dl_dir = Path(downloader.download_dir)
+                slskd = slskd_dir_from_downloader(downloader)
+                await asyncio.to_thread(
+                    metadata_cache.refresh_stored_path,
+                    filename,
+                    download_dir=dl_dir,
+                    slskd_dir=slskd,
+                )
+            if (
+                settings
+                and settings.get('cache_cover_art')
+                and cover_cache is not None
+            ):
+                dl_dir = Path(downloader.download_dir)
+                slskd = slskd_dir_from_downloader(downloader)
+                await asyncio.to_thread(
+                    cover_cache.refresh_stored_path,
+                    filename,
+                    download_dir=dl_dir,
+                    slskd_dir=slskd,
                 )
             downloaded += 1
         except Exception:
@@ -361,6 +448,31 @@ async def check_playlist(
         last_checked=_now_iso(),
         last_track_count=len(tracks),
     )
+
+    if playlist_catalog is not None:
+        def _sync_catalog() -> None:
+            fresh = db.get_track_filenames(playlist.id)
+            rows: list[tuple[dict[str, Any], str, Path]] = []
+            dl_dir = Path(downloader.download_dir)
+            for song in tracks:
+                tid = song.get('song_id')
+                if not tid:
+                    continue
+                fn = fresh.get(tid)
+                if not fn:
+                    continue
+                full = locate_library_file(fn, dl_dir, slskd_dir)
+                if full is None:
+                    continue
+                rows.append((song, fn, full))
+            if rows:
+                playlist_catalog.replace_playlist_tracks(
+                    playlist.name,
+                    rows,
+                    spotify_id=playlist.spotify_id,
+                )
+
+        await asyncio.to_thread(_sync_catalog)
 
     if downloaded > 0 or linked_from_library > 0:
         known_tracks = await asyncio.to_thread(
@@ -385,6 +497,7 @@ async def check_playlist(
                 settings,
                 known_tracks,
                 track_index,
+                navidrome_index,
             )
     return downloaded
 
@@ -421,6 +534,7 @@ def _sync_navidrome_playlist(
     settings: Optional[dict[str, Any]],
     known_tracks: dict[str, Optional[str]],
     track_index: Optional[TrackIndex] = None,
+    navidrome_index: Optional[NavidromeIndex] = None,
 ) -> None:
     if not settings or not _effective_navidrome_settings(settings).get(
         'enabled'
@@ -436,17 +550,11 @@ def _sync_navidrome_playlist(
             continue
         row = dict(song)
         row['filename'] = filename
-        path = locate_library_file(
-            filename,
-            downloader.download_dir,
+        row = enrich_song_from_library_file(
+            row,
+            Path(downloader.download_dir),
             slskd_dir_from_downloader(downloader),
         )
-        if path is not None:
-            meta = read_audio_metadata(path)
-            if meta.get('title'):
-                row['name'] = meta['title']
-            if meta.get('artists'):
-                row['artists'] = meta['artists']
         songs.append(row)
     if not songs:
         logger.warning(
@@ -454,7 +562,13 @@ def _sync_navidrome_playlist(
             playlist.name,
         )
         return
-    sync_playlist_to_navidrome(playlist.name, songs, settings)
+    sync_playlist_to_navidrome(
+        playlist.name,
+        songs,
+        settings,
+        navidrome_index=navidrome_index,
+        download_dir=Path(downloader.download_dir),
+    )
 
 
 def _regenerate_m3u(
@@ -506,6 +620,10 @@ async def monitor_loop(
     db: PlaylistMonitorDB,
     get_downloader: Callable[[], Optional[Downloader]],
     get_track_index: Callable[[], Optional[TrackIndex]],
+    get_navidrome_index: Callable[[], Optional[NavidromeIndex]],
+    get_metadata_cache: Callable[[], Optional[LibraryMetadataCache]],
+    get_cover_cache: Callable[[], Optional[CoverArtCache]],
+    get_playlist_catalog: Callable[[], Optional[PlaylistCatalog]],
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
     settings: Optional[dict[str, Any]] = None,
@@ -523,6 +641,10 @@ async def monitor_loop(
                 if downloader is None:
                     continue
                 track_index = get_track_index()
+                navidrome_index = get_navidrome_index()
+                metadata_cache = get_metadata_cache()
+                cover_cache = get_cover_cache()
+                playlist_catalog = get_playlist_catalog()
                 try:
                     count = await check_playlist(
                         pl,
@@ -532,6 +654,10 @@ async def monitor_loop(
                         loop,
                         settings,
                         track_index=track_index,
+                        navidrome_index=navidrome_index,
+                        metadata_cache=metadata_cache,
+                        cover_cache=cover_cache,
+                        playlist_catalog=playlist_catalog,
                     )
                     if count > 0:
                         logger.info(

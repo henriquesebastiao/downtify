@@ -10,6 +10,7 @@ from downtify.library_catalog import (
     list_library_paths,
     resolve_library_file,
 )
+from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.library_paths import library_stored_path
 
 
@@ -59,7 +60,10 @@ def test_list_library_entries_reads_embedded_tags(tmp_path):
     tags.add(TPE1(encoding=3, text='Real Artist'))
     tags.save(str(track), v2_version=3)
 
-    ctx = LibraryContext(download_dir=download_dir, slskd_dir=slskd_dir)
+    cache = LibraryMetadataCache(tmp_path / 'library.db')
+    ctx = LibraryContext(
+        download_dir=download_dir, slskd_dir=slskd_dir, metadata_cache=cache
+    )
     entries = list_library_entries(ctx)
     assert len(entries) == 1
     assert entries[0]['title'] == 'Real Title'
