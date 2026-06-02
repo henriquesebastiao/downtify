@@ -481,7 +481,7 @@ def _merge_full_track_metadata(
         value = full.get(key)
         if value is None or not value or value == []:
             continue
-        if key in ('track_number', 'album_track_total'):
+        if key in {'track_number', 'album_track_total'}:
             if merged.get(key) is not None:
                 continue
             try:

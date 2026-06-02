@@ -49,7 +49,7 @@ quote-style = 'single'
 "main.py" = ["E501", "PLR0915", "PLR2004", "PLR1702", "PLR0912", "PLR0911"]
 "downloader.py" = ["PLC1901"]
 "downtify/*.py" = ["E501", "PLR0913", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916"]
-"tests/*.py" = ["PLR2004", "PLC2701", "E501", "PLR0913", "PLR0917"]
+"tests/*.py" = ["PLR2004", "PLC2701", "E501"]
 
 [tool.codeflash]
 # All paths are relative to this pyproject.toml's directory.

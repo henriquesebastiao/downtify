@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from mutagen import File as MutagenFile
+from mutagen.id3 import ID3
 
 
 def _tag_text(value: Any) -> str:
@@ -39,23 +40,36 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return dict(empty)
 
+    title = ''
+    artist = ''
+    album = ''
+
     try:
         audio = MutagenFile(str(path), easy=True)
     except Exception:
-        return dict(empty)
-    if audio is None:
-        return dict(empty)
+        audio = None
 
-    title = _tag_text(audio.get('title'))
-    artist = _tag_text(audio.get('artist'))
-    album = _tag_text(audio.get('album'))
+    if audio is not None:
+        title = _tag_text(audio.get('title'))
+        artist = _tag_text(audio.get('artist'))
+        album = _tag_text(audio.get('album'))
 
-    if not title and audio.tags is not None:
-        title = _tag_text(audio.tags.get('title'))
-    if not artist and audio.tags is not None:
-        artist = _tag_text(audio.tags.get('artist'))
-    if not album and audio.tags is not None:
-        album = _tag_text(audio.tags.get('album'))
+        if not title and audio.tags is not None:
+            title = _tag_text(audio.tags.get('title'))
+        if not artist and audio.tags is not None:
+            artist = _tag_text(audio.tags.get('artist'))
+        if not album and audio.tags is not None:
+            album = _tag_text(audio.tags.get('album'))
+
+    if not title and not artist and not album:
+        try:
+            id3 = ID3(str(path))
+        except Exception:
+            id3 = None
+        if id3 is not None:
+            title = _tag_text(id3.get('TIT2'))
+            artist = _tag_text(id3.get('TPE1'))
+            album = _tag_text(id3.get('TALB'))
 
     artists = _split_artists(artist)
     return {

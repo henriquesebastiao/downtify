@@ -98,11 +98,7 @@ function mediaUrlToStoredPath(fileNameOrMediaUrl) {
   } else {
     path = path.replace(/^\//, '')
   }
-  return path
-    .split('/')
-    .filter(Boolean)
-    .map(decodePathSegment)
-    .join('/')
+  return path.split('/').filter(Boolean).map(decodePathSegment).join('/')
 }
 
 /** Filename for the browser save dialog (decoded, no %20 etc.). */

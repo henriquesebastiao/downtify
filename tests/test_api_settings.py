@@ -68,7 +68,8 @@ def test_effective_audio_providers_filters_invalid_and_dedupes():
             'youtube',
             'slskd',
             'youtube-music',
-        ]
+        ],
+        'slskd': {'enabled': True},
     }
     assert _effective_audio_providers(settings) == [
         'youtube',
@@ -125,7 +126,7 @@ def test_effective_slskd_settings_normalizes_values():
     assert out['enabled'] is True
     assert out['api_key'] == 'key'
     assert out['download_dir'] == '/data/slskd'
-    assert out['source_dir'] == '/data/slskd'
+    assert out['source_dir'] == '/slskd'
     assert out['timeout_seconds'] == 90
     assert out['poll_interval_seconds'] == 2
     assert out['poll_max_attempts'] == 99

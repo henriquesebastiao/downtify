@@ -172,7 +172,9 @@ export function useDownloadManager() {
   const loading = ref(false)
   const settingsManager = useSettingsManager()
   async function pruneCompletedForNewPlaylist() {
-    downloadQueue.value = downloadQueue.value.filter((item) => !item.isDownloaded())
+    downloadQueue.value = downloadQueue.value.filter(
+      (item) => !item.isDownloaded()
+    )
     try {
       await API.clearCompletedQueue()
     } catch (e) {
@@ -303,7 +305,9 @@ export function useDownloadManager() {
 
   async function clearCompleted() {
     await API.clearCompletedQueue()
-    downloadQueue.value = downloadQueue.value.filter((item) => !item.isDownloaded())
+    downloadQueue.value = downloadQueue.value.filter(
+      (item) => !item.isDownloaded()
+    )
   }
 
   function retry(song) {

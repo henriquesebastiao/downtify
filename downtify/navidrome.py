@@ -7,10 +7,49 @@ import secrets
 import time
 from dataclasses import dataclass
 from typing import Any, Optional
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 
 import requests
 from loguru import logger
+
+# Subsonic createPlaylist via GET appends every songId to the query string; large
+# playlists hit HTTP 414. POST form bodies avoid that; we still batch adds.
+_PLAYLIST_SONG_ID_BATCH = 80
+
+
+def _song_id_batches(
+    song_ids: list[str], batch_size: int = _PLAYLIST_SONG_ID_BATCH
+) -> list[list[str]]:
+    batches: list[list[str]] = []
+    for index in range(0, len(song_ids), batch_size):
+        batches.append(song_ids[index : index + batch_size])
+    return batches
+
+
+def _parse_subsonic_http_response(resp: requests.Response) -> dict[str, Any]:
+    resp.raise_for_status()
+    data = resp.json()
+    body = data.get('subsonic-response') if isinstance(data, dict) else None
+    if not isinstance(body, dict):
+        raise ValueError('Invalid Subsonic response')
+    if body.get('status') == 'failed':
+        err = body.get('error') or {}
+        message = err.get('message') if isinstance(err, dict) else str(err)
+        raise ValueError(str(message or 'Subsonic request failed'))
+    return body
+
+
+def _playlist_id_from_body(
+    body: dict[str, Any], fallback: Optional[str] = None
+) -> str:
+    playlist = body.get('playlist')
+    if isinstance(playlist, dict):
+        pid = str(playlist.get('id') or '').strip()
+        if pid:
+            return pid
+    if fallback:
+        return fallback
+    raise ValueError('createPlaylist returned no playlist id')
 
 
 @dataclass
@@ -215,7 +254,9 @@ class NavidromeClient:
         )
         return False
 
-    def search_song_id(self, song: dict[str, Any]) -> Optional[str]:
+    def search_song_id(  # noqa: PLR0914  # Subsonic search + path/duration match
+        self, song: dict[str, Any]
+    ) -> Optional[str]:
         title = _search_title(str(song.get('name') or ''))
         artists = [
             str(a) for a in (song.get('artists') or []) if str(a).strip()
@@ -240,7 +281,7 @@ class NavidromeClient:
 
         target_duration = int(song.get('duration') or 0)
         if target_duration > 1000:
-            target_duration = target_duration // 1000
+            target_duration //= 1000
 
         for candidate in songs:
             if not isinstance(candidate, dict):
@@ -301,6 +342,28 @@ class NavidromeClient:
     def delete_playlist(self, playlist_id: str) -> None:
         self._request('deletePlaylist', {'id': playlist_id})
 
+    def _rest_post(
+        self,
+        endpoint: str,
+        query: dict[str, str],
+        form_pairs: list[tuple[str, str]],
+    ) -> dict[str, Any]:
+        url = f'{self.base_url}/rest/{endpoint}'
+        resp = requests.post(
+            url, params=query, data=form_pairs, timeout=self.timeout
+        )
+        return _parse_subsonic_http_response(resp)
+
+    def _add_songs_to_playlist(
+        self, playlist_id: str, song_ids: list[str]
+    ) -> None:
+        if not song_ids:
+            return
+        query = self._auth_query()
+        query['playlistId'] = playlist_id
+        form = [('songIdToAdd', sid) for sid in song_ids]
+        self._rest_post('updatePlaylist', query, form)
+
     def _create_or_replace_playlist(
         self,
         name: str,
@@ -312,35 +375,17 @@ class NavidromeClient:
 
         if not song_ids:
             raise ValueError('No songs matched in Navidrome library')
+        batches = _song_id_batches(song_ids)
         query = self._auth_query()
         query['name'] = name
         if playlist_id:
             query['playlistId'] = playlist_id
-        url = f'{self.base_url}/rest/createPlaylist?{urlencode(query)}'
-        for sid in song_ids:
-            url += f'&songId={quote(sid)}'
-        resp = requests.get(url, timeout=self.timeout)
-        resp.raise_for_status()
-        data = resp.json()
-        body = (
-            data.get('subsonic-response') if isinstance(data, dict) else None
-        )
-        if not isinstance(body, dict) or body.get('status') == 'failed':
-            err = (body or {}).get('error') if isinstance(body, dict) else {}
-            message = (
-                err.get('message')
-                if isinstance(err, dict)
-                else 'create failed'
-            )
-            raise ValueError(str(message))
-        playlist = body.get('playlist') if isinstance(body, dict) else None
-        if isinstance(playlist, dict):
-            pid = str(playlist.get('id') or '').strip()
-            if pid:
-                return pid
-        if playlist_id:
-            return playlist_id
-        raise ValueError('createPlaylist returned no playlist id')
+        form = [('songId', sid) for sid in batches[0]]
+        body = self._rest_post('createPlaylist', query, form)
+        pid = _playlist_id_from_body(body, playlist_id)
+        for batch in batches[1:]:
+            self._add_songs_to_playlist(pid, batch)
+        return pid
 
     def create_playlist(self, name: str, song_ids: list[str]) -> str:
         return self._create_or_replace_playlist(name, song_ids)

@@ -129,14 +129,15 @@ def test_enrich_preserves_preset_track_number(monkeypatch):
 
 def test_find_match_falls_back_when_song_rows_have_no_video_id(monkeypatch):
     class FakeYTM:
-        def search(self, query, filt, limit=10):
-            if filt == 'songs':
+        @staticmethod
+        def search(query, filter=None, limit=10):
+            if filter == 'songs':
                 return [{'title': 'Song but no id'}]
-            if filt == 'videos':
+            if filter == 'videos':
                 return [{'title': 'Real Video', 'videoId': 'abc123def45'}]
             return []
 
-    monkeypatch.setattr(providers, '_client', FakeYTM())
+    monkeypatch.setattr(providers, '_ytm', FakeYTM)
     video_id, match = providers.find_match({
         'name': 'Track',
         'artists': ['Artist'],
@@ -149,14 +150,18 @@ def test_find_match_falls_back_when_song_rows_have_no_video_id(monkeypatch):
 
 def test_find_match_retries_title_only_query(monkeypatch):
     class FakeYTM:
-        def search(self, query, filt, limit=10):
-            if query == 'Artist Missing Song' and filt in {'songs', 'videos'}:
+        @staticmethod
+        def search(query, filter=None, limit=10):
+            if query == 'Artist Missing Song' and filter in {
+                'songs',
+                'videos',
+            }:
                 return []
-            if query == 'Missing Song' and filt == 'videos':
+            if query == 'Missing Song' and filter == 'videos':
                 return [{'title': 'Missing Song', 'videoId': 'xyz987uvw65'}]
             return []
 
-    monkeypatch.setattr(providers, '_client', FakeYTM())
+    monkeypatch.setattr(providers, '_ytm', FakeYTM)
     video_id, match = providers.find_match({
         'name': 'Missing Song',
         'artists': ['Artist'],
@@ -169,14 +174,15 @@ def test_find_match_retries_title_only_query(monkeypatch):
 
 def test_find_match_uses_unfiltered_search_fallback(monkeypatch):
     class FakeYTM:
-        def search(self, query, filter=None, limit=10):
+        @staticmethod
+        def search(query, filter=None, limit=10):
             if filter in {'songs', 'videos'}:
                 return []
             if filter is None and query == 'Artist Track':
                 return [{'title': 'Track', 'videoId': 'qwe987rty65'}]
             return []
 
-    monkeypatch.setattr(providers, '_client', FakeYTM())
+    monkeypatch.setattr(providers, '_ytm', FakeYTM)
     video_id, match = providers.find_match({
         'name': 'Track',
         'artists': ['Artist'],

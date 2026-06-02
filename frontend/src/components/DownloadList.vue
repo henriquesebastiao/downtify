@@ -59,10 +59,9 @@
         @click="statusFilter = tab.id"
       >
         {{ tab.label }}
-        <span
-          v-if="tab.count > 0"
-          class="ml-1 opacity-80 tabular-nums"
-        >({{ tab.count }})</span>
+        <span v-if="tab.count > 0" class="ml-1 opacity-80 tabular-nums"
+          >({{ tab.count }})</span
+        >
       </button>
     </div>
 

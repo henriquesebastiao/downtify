@@ -40,7 +40,6 @@ def reset_slskd_parallelism(settings: dict[str, Any]) -> None:
 
 def _slskd_semaphore(settings: dict[str, Any]) -> threading.Semaphore:
     """Match Downtify parallel download setting; do not serialize all slskd work."""
-    global _SLSKD_SEM, _SLSKD_SEM_LIMIT
     limit = _slskd_parallel_limit(settings)
     if _SLSKD_SEM is None or _SLSKD_SEM_LIMIT != limit:
         reset_slskd_parallelism(settings)
@@ -399,7 +398,7 @@ def _path_segments(filename: str) -> list[str]:
     """Parent folders in a Soulseek path (people often encode artist/album there)."""
     normalized = str(filename or '').replace('\\', '/')
     parent = Path(normalized).parent
-    return [part for part in parent.parts if part not in ('.', '/')]
+    return [part for part in parent.parts if part not in {'.', '/'}]
 
 
 def _contains_keyword(song: dict[str, Any], filename: str) -> bool:
@@ -793,7 +792,7 @@ def _search_roots(settings: dict[str, Any], client: SlskdClient) -> list[Path]:
 def _parse_soulseek_path(filename: str) -> tuple[str, str]:
     normalized = filename.replace('\\', '/')
     parent = Path(normalized).parent
-    parent_name = '' if str(parent) in ('.', '/') else parent.name
+    parent_name = '' if str(parent) in {'.', '/'} else parent.name
     return Path(normalized).name, parent_name
 
 
@@ -1122,7 +1121,7 @@ def _wait_for_slskd_file(
     )
 
 
-def download_from_slskd(
+def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finalize
     song: dict[str, Any],
     settings: dict[str, Any],
     progress_cb: Optional[ProgressCallback] = None,

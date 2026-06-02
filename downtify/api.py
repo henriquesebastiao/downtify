@@ -172,67 +172,40 @@ def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
     return out
 
 
-def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
-    raw = settings.get('slskd')
-    if not isinstance(raw, dict):
-        raw = {}
+def _setting_int(
+    data: dict[str, Any],
+    key: str,
+    default: int,
+    *,
+    minimum: int,
+    maximum: int,
+) -> int:
+    try:
+        value = int(data.get(key) or default)
+    except (TypeError, ValueError):
+        value = default
+    return min(maximum, max(minimum, value))
+
+
+def _slskd_core_fields(
+    raw: dict[str, Any],
+) -> tuple[str, str, str, str, bool]:
     base_url = str(raw.get('base_url') or '').strip().rstrip('/')
     download_dir = str(raw.get('download_dir') or '/downloads').strip()
+    api_key = str(raw.get('api_key') or '').strip()
     leave_in_place = raw.get('leave_in_place')
-    if leave_in_place is None:
-        leave_in_place_default = True
-    else:
-        leave_in_place_default = bool(leave_in_place)
+    leave_default = leave_in_place is None or bool(leave_in_place)
     source_dir = str(raw.get('source_dir') or '').strip()
     if not source_dir:
-        source_dir = '/slskd' if leave_in_place_default else download_dir
-    api_key = str(raw.get('api_key') or '').strip()
-    try:
-        timeout_seconds = int(raw.get('timeout_seconds') or 20)
-    except (TypeError, ValueError):
-        timeout_seconds = 20
-    timeout_seconds = min(120, max(5, timeout_seconds))
-    try:
-        search_retries = int(raw.get('search_retries') or 5)
-    except (TypeError, ValueError):
-        search_retries = 5
-    search_retries = min(20, max(1, search_retries))
-    try:
-        search_poll_seconds = int(raw.get('search_poll_seconds') or 15)
-    except (TypeError, ValueError):
-        search_poll_seconds = 15
-    search_poll_seconds = min(60, max(3, search_poll_seconds))
-    try:
-        download_attempts = int(raw.get('download_attempts') or 3)
-    except (TypeError, ValueError):
-        download_attempts = 3
-    download_attempts = min(10, max(1, download_attempts))
-    try:
-        poll_interval_seconds = int(raw.get('poll_interval_seconds') or 5)
-    except (TypeError, ValueError):
-        poll_interval_seconds = 5
-    poll_interval_seconds = min(30, max(1, poll_interval_seconds))
-    try:
-        poll_max_attempts = int(raw.get('poll_max_attempts') or 60)
-    except (TypeError, ValueError):
-        poll_max_attempts = 60
-    poll_max_attempts = min(300, max(1, poll_max_attempts))
-    try:
-        download_timeout_seconds = int(
-            raw.get('download_timeout_seconds') or 600
-        )
-    except (TypeError, ValueError):
-        download_timeout_seconds = 600
-    download_timeout_seconds = min(3600, max(30, download_timeout_seconds))
-    try:
-        queued_timeout_seconds = int(raw.get('queued_timeout_seconds') or 180)
-    except (TypeError, ValueError):
-        queued_timeout_seconds = 180
-    queued_timeout_seconds = min(3600, max(15, queued_timeout_seconds))
-    try:
-        min_bitrate = int(raw.get('min_bitrate') or 256)
-    except (TypeError, ValueError):
-        min_bitrate = 256
+        source_dir = '/slskd' if leave_default else download_dir
+    if leave_in_place is None:
+        leave_in_place = True
+    else:
+        leave_in_place = bool(leave_in_place)
+    return base_url, download_dir, api_key, source_dir, leave_in_place
+
+
+def _slskd_extensions(raw: dict[str, Any]) -> list[str]:
     raw_ext = raw.get('extensions')
     if isinstance(raw_ext, list):
         extensions = [
@@ -250,15 +223,56 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         extensions = ['mp3', 'flac']
     if not extensions:
         extensions = ['mp3', 'flac']
-    if leave_in_place is None:
-        leave_in_place = True
-    else:
-        leave_in_place = bool(leave_in_place)
+    return extensions
+
+
+def _slskd_numeric_settings(
+    raw: dict[str, Any], settings: dict[str, Any]
+) -> dict[str, int]:
     try:
-        max_parallel = int(settings.get('max_parallel_downloads') or 3)
+        min_bitrate = int(raw.get('min_bitrate') or 256)
     except (TypeError, ValueError):
-        max_parallel = 3
-    max_parallel = min(8, max(1, max_parallel))
+        min_bitrate = 256
+    return {
+        'timeout_seconds': _setting_int(
+            raw, 'timeout_seconds', 20, minimum=5, maximum=120
+        ),
+        'search_retries': _setting_int(
+            raw, 'search_retries', 5, minimum=1, maximum=20
+        ),
+        'search_poll_seconds': _setting_int(
+            raw, 'search_poll_seconds', 15, minimum=3, maximum=60
+        ),
+        'download_attempts': _setting_int(
+            raw, 'download_attempts', 3, minimum=1, maximum=10
+        ),
+        'poll_interval_seconds': _setting_int(
+            raw, 'poll_interval_seconds', 5, minimum=1, maximum=30
+        ),
+        'poll_max_attempts': _setting_int(
+            raw, 'poll_max_attempts', 60, minimum=1, maximum=300
+        ),
+        'download_timeout_seconds': _setting_int(
+            raw, 'download_timeout_seconds', 600, minimum=30, maximum=3600
+        ),
+        'queued_timeout_seconds': _setting_int(
+            raw, 'queued_timeout_seconds', 180, minimum=15, maximum=3600
+        ),
+        'min_bitrate': min_bitrate,
+        'max_parallel_downloads': _setting_int(
+            settings, 'max_parallel_downloads', 3, minimum=1, maximum=8
+        ),
+    }
+
+
+def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    raw = settings.get('slskd')
+    if not isinstance(raw, dict):
+        raw = {}
+    base_url, download_dir, api_key, source_dir, leave_in_place = (
+        _slskd_core_fields(raw)
+    )
+    nums = _slskd_numeric_settings(raw, settings)
 
     return {
         'enabled': bool(raw.get('enabled', False)),
@@ -267,17 +281,8 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'download_dir': download_dir,
         'source_dir': source_dir,
         'leave_in_place': leave_in_place,
-        'max_parallel_downloads': max_parallel,
-        'timeout_seconds': timeout_seconds,
-        'search_retries': search_retries,
-        'search_poll_seconds': search_poll_seconds,
-        'download_attempts': download_attempts,
-        'poll_interval_seconds': poll_interval_seconds,
-        'poll_max_attempts': poll_max_attempts,
-        'download_timeout_seconds': download_timeout_seconds,
-        'queued_timeout_seconds': queued_timeout_seconds,
-        'extensions': extensions,
-        'min_bitrate': min_bitrate,
+        'extensions': _slskd_extensions(raw),
+        **nums,
     }
 
 
@@ -350,7 +355,7 @@ def _load_settings(path: Path) -> dict[str, Any]:
             for k, v in saved.items():
                 if k in DEFAULT_SETTINGS:
                     if (
-                        k in ('slskd', 'navidrome', 'youtube')
+                        k in {'slskd', 'navidrome', 'youtube'}
                         and isinstance(v, dict)
                         and isinstance(DEFAULT_SETTINGS.get(k), dict)
                     ):

@@ -102,7 +102,9 @@
               <button
                 type="button"
                 class="btn btn-xs btn-ghost px-1 min-h-0 h-7"
-                :disabled="index === sm.settings.value.audio_providers.length - 1"
+                :disabled="
+                  index === sm.settings.value.audio_providers.length - 1
+                "
                 @click="moveProviderAt(index, 1)"
               >
                 ↓
@@ -159,18 +161,23 @@
               :placeholder="t('settings.slskdApiKey')"
               v-model="sm.settings.value.slskd.api_key"
             />
-            <div class="rounded-xl border border-white/10 bg-base-100/50 px-3 py-2.5 space-y-2">
+            <div
+              class="rounded-xl border border-white/10 bg-base-100/50 px-3 py-2.5 space-y-2"
+            >
               <p class="text-[11px] font-semibold text-base-content/70">
                 {{ t('settings.slskdSourceDirTitle') }}
               </p>
-              <ul class="text-[11px] text-base-content/50 space-y-1 list-disc pl-4">
+              <ul
+                class="text-[11px] text-base-content/50 space-y-1 list-disc pl-4"
+              >
                 <li>{{ t('settings.slskdSourceDirBullet1') }}</li>
                 <li>{{ t('settings.slskdSourceDirBullet2') }}</li>
                 <li>{{ t('settings.slskdSourceDirBullet3') }}</li>
               </ul>
               <pre
                 class="text-[10px] leading-relaxed text-base-content/60 whitespace-pre-wrap font-mono bg-base-300/30 rounded-lg px-2 py-1.5"
-              >{{ t('settings.slskdSourceDirExample') }}</pre>
+                >{{ t('settings.slskdSourceDirExample') }}</pre
+              >
             </div>
             <label class="text-[11px] text-base-content/50">
               {{ t('settings.slskdSourceDirLabel') }}
@@ -209,7 +216,9 @@
                   type="number"
                   min="30"
                   max="3600"
-                  v-model.number="sm.settings.value.slskd.download_timeout_seconds"
+                  v-model.number="
+                    sm.settings.value.slskd.download_timeout_seconds
+                  "
                 />
               </label>
               <label class="text-[11px] text-base-content/50">
@@ -219,7 +228,9 @@
                   type="number"
                   min="15"
                   max="3600"
-                  v-model.number="sm.settings.value.slskd.queued_timeout_seconds"
+                  v-model.number="
+                    sm.settings.value.slskd.queued_timeout_seconds
+                  "
                 />
               </label>
             </div>
@@ -260,10 +271,7 @@
               </span>
             </span>
           </label>
-          <div
-            v-if="youtubeCookiesExpanded"
-            class="grid grid-cols-1 gap-2"
-          >
+          <div v-if="youtubeCookiesExpanded" class="grid grid-cols-1 gap-2">
             <p
               v-if="youtubeCookiesReady && !youtubeCookiesAuthenticated"
               class="text-xs text-warning"
@@ -304,10 +312,7 @@
                 {{ t('settings.youtubeCookiesClear') }}
               </button>
             </div>
-            <p
-              v-if="youtubeCookiesError"
-              class="text-xs text-error"
-            >
+            <p v-if="youtubeCookiesError" class="text-xs text-error">
               {{ youtubeCookiesError }}
             </p>
           </div>
@@ -647,14 +652,14 @@ const YOUTUBE_DEFAULTS = {
   cookies_warnings: [],
 }
 
-const youtubeCookiesPath = computed(
-  () => String(sm.settings.value?.youtube?.cookies_file || '').trim()
+const youtubeCookiesPath = computed(() =>
+  String(sm.settings.value?.youtube?.cookies_file || '').trim()
 )
-const youtubeCookiesReady = computed(
-  () => Boolean(sm.settings.value?.youtube?.cookies_file_exists)
+const youtubeCookiesReady = computed(() =>
+  Boolean(sm.settings.value?.youtube?.cookies_file_exists)
 )
-const youtubeCookiesAuthenticated = computed(
-  () => Boolean(sm.settings.value?.youtube?.cookies_looks_authenticated)
+const youtubeCookiesAuthenticated = computed(() =>
+  Boolean(sm.settings.value?.youtube?.cookies_looks_authenticated)
 )
 const { t, locale, setLocale, locales } = useI18n()
 
@@ -810,8 +815,7 @@ function toggleAudioProvider(provider) {
   } else {
     list.push(provider)
   }
-  sm.settings.value.audio_providers =
-    list.length > 0 ? list : ['youtube-music']
+  sm.settings.value.audio_providers = list.length > 0 ? list : ['youtube-music']
 }
 
 function moveProviderAt(index, delta) {

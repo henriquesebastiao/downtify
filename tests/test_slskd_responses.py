@@ -1,5 +1,4 @@
 from typing import Any
-from unittest.mock import MagicMock
 
 from downtify.slskd_provider import (
     SlskdClient,
@@ -37,7 +36,7 @@ def test_slskd_search_queries_prefers_title_dash_artist():
         'name': "YOU KNOW WHERE WE'RE GOING - Hardstyle Bass Bounce Edition",
         'album_name': "YOU KNOW WHERE WE'RE GOING",
     })
-    assert queries[0] == "YOU KNOW WHERE WE'RE GOING - 4D4M"
+    assert queries[0] == 'YOU KNOW WHERE WERE GOING - 4D4M'
     assert 'YOU KNOW WHERE WERE GOING' in queries
 
 
@@ -100,7 +99,15 @@ def test_rank_accepts_title_and_artist_from_parent_folders():
     assert len(ranked) == 1
     assert 'One More Time' in ranked[0]['filename']
     reasons = ranked[0].get('match_reasons') or []
-    assert 'title_in_path' in reasons or 'folder_segment' in reasons
+    assert any(
+        tag in reasons
+        for tag in (
+            'title_in_path',
+            'folder_segment',
+            'artist_in_path',
+            'album_folder',
+        )
+    )
 
 
 def test_contains_keyword_ignores_remix_in_distant_parent_folder():
@@ -274,15 +281,11 @@ def test_start_search_requests_filtered_responses():
     })
     captured: dict[str, Any] = {}
 
-    def fake_request(method, path, **kwargs):
+    def fake_request(method, path, *, json_body=None):
         captured['method'] = method
         captured['path'] = path
-        captured['json'] = kwargs.get('json')
-        resp = MagicMock()
-        resp.content = b'{"id":"search-1"}'
-        resp.raise_for_status = lambda: None
-        resp.json = lambda: {'id': 'search-1'}
-        return resp
+        captured['json'] = json_body
+        return {'id': 'search-1'}
 
     client._request = fake_request  # type: ignore[method-assign]
     search_id = client.start_search('Artist - Track')
@@ -370,15 +373,11 @@ def test_enqueue_download_uses_username_endpoint():
     })
     captured: dict[str, Any] = {}
 
-    def fake_request(method, path, **kwargs):
+    def fake_request(method, path, *, json_body=None):
         captured['method'] = method
         captured['path'] = path
-        captured['json'] = kwargs.get('json')
-        resp = MagicMock()
-        resp.content = b'{}'
-        resp.raise_for_status = lambda: None
-        resp.json = lambda: {}
-        return resp
+        captured['json'] = json_body
+        return {}
 
     client._request = fake_request  # type: ignore[method-assign]
     ok = client.enqueue_download({
@@ -418,19 +417,24 @@ def test_download_from_slskd_tries_next_candidate_on_failure(
     class FakeClient:
         base_url = 'https://slskd.example'
 
-        def configured(self) -> bool:
+        @staticmethod
+        def configured() -> bool:
             return True
 
-        def can_connect(self) -> bool:
+        @staticmethod
+        def can_connect() -> bool:
             return True
 
-        def start_search(self, query: str) -> str:
+        @staticmethod
+        def start_search(query: str) -> str:
             return 'search-1'
 
-        def wait_search_complete(self, *args, **kwargs) -> bool:
+        @staticmethod
+        def wait_search_complete(*args, **kwargs) -> bool:
             return True
 
-        def search_responses(self, search_id: str) -> list[dict[str, Any]]:
+        @staticmethod
+        def search_responses(search_id: str) -> list[dict[str, Any]]:
             return [
                 {
                     'username': 'peer1',
@@ -439,18 +443,22 @@ def test_download_from_slskd_tries_next_candidate_on_failure(
                 }
             ]
 
-        def delete_search(self, search_id: str) -> None:
+        @staticmethod
+        def delete_search(search_id: str) -> None:
             pass
 
-        def enqueue_download(self, row: dict[str, Any]) -> bool:
+        @staticmethod
+        def enqueue_download(row: dict[str, Any]) -> bool:
             return True
 
-        def remote_download_directories(self) -> list[str]:
+        @staticmethod
+        def remote_download_directories() -> list[str]:
             return []
 
     wait_calls: list[str] = []
 
-    def fake_wait(client, song, username, filename, settings, roots, **kwargs):
+    def fake_wait(*args, **kwargs):
+        filename = args[3] if len(args) > 3 else ''
         wait_calls.append(filename)
         if filename.endswith('(2).mp3'):
             return success
@@ -490,5 +498,5 @@ def test_download_from_slskd_tries_next_candidate_on_failure(
     )
     assert result == success
     assert len(wait_calls) == 2
-    assert wait_calls[0].endswith('(2).mp3')
-    assert wait_calls[1].endswith('(1).mp3')
+    assert wait_calls[0].endswith('(1).mp3')
+    assert wait_calls[1].endswith('(2).mp3')

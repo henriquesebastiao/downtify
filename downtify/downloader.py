@@ -208,8 +208,8 @@ def inspect_youtube_cookies(path: Path | str) -> dict[str, Any]:
         return out
     out['has_youtube_domain'] = True
     names: set[str] = set()
-    for line in text.splitlines():
-        line = line.strip()
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
         if not line or line.startswith('#'):
             continue
         parts = line.split('\t')
@@ -699,7 +699,7 @@ class Downloader:
                     continue
                 slskd_idx = self.audio_providers.index('slskd')
                 has_fallback = any(
-                    p in ('youtube-music', 'youtube')
+                    p in {'youtube-music', 'youtube'}
                     for p in self.audio_providers[slskd_idx + 1 :]
                 )
                 local = download_from_slskd(
@@ -873,7 +873,7 @@ class Downloader:
             msg = f'{label} · done' if label else 'Done'
             progress_cb(100.0, msg, provider)
 
-    def download(  # noqa: PLR0914
+    def download(  # noqa: PLR0914  # yt-dlp + slskd + tagging pipeline
         self,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback] = None,
@@ -928,7 +928,7 @@ class Downloader:
         out_template = str(target_dir / f'{basename}.%(ext)s')
 
         yt_provider = (
-            provider if provider in ('youtube', 'youtube-music') else 'youtube'
+            provider if provider in {'youtube', 'youtube-music'} else 'youtube'
         )
 
         if local_source_path is not None:

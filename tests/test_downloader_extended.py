@@ -171,7 +171,8 @@ def test_fallback_video_id_via_ytdlp_returns_first_entry(monkeypatch):
         def __exit__(self, exc_type, exc, tb):
             return False
 
-        def extract_info(self, _query, download=False):
+        @staticmethod
+        def extract_info(_query, download=False):
             assert download is False
             return {'entries': [{'id': 'abc123def45'}]}
 
@@ -189,7 +190,7 @@ def test_resolve_video_id_prefers_provider_order_youtube_first(monkeypatch):
     monkeypatch.setattr(
         downloader_mod,
         '_fallback_video_id_via_ytdlp',
-        lambda _song: 'yt123',
+        lambda _song, youtube_settings=None: 'yt123',
     )
 
     def should_not_run(_song):
@@ -209,7 +210,9 @@ def test_resolve_video_id_prefers_provider_order_youtube_first(monkeypatch):
 def test_resolve_video_id_uses_second_provider_on_first_failure(monkeypatch):
     d = Downloader('/tmp', audio_providers=['youtube', 'youtube-music'])
     monkeypatch.setattr(
-        downloader_mod, '_fallback_video_id_via_ytdlp', lambda _song: None
+        downloader_mod,
+        '_fallback_video_id_via_ytdlp',
+        lambda _song, youtube_settings=None: None,
     )
     monkeypatch.setattr(
         downloader_mod,
@@ -244,7 +247,9 @@ def test_resolve_video_id_ytdlp_fallback_when_only_youtube_music(monkeypatch):
     monkeypatch.setattr(
         downloader_mod,
         '_fallback_video_id_via_ytdlp',
-        lambda _song: ytdlp_calls.append('ok') or 'yt-fallback',
+        lambda _song, youtube_settings=None: (
+            ytdlp_calls.append('ok') or 'yt-fallback'
+        ),
     )
 
     vid, match, provider, local_path = d._resolve_video_id({
@@ -293,7 +298,9 @@ def test_resolve_video_id_skips_slskd_when_disabled(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        downloader_mod, '_fallback_video_id_via_ytdlp', lambda _song: 'yt123'
+        downloader_mod,
+        '_fallback_video_id_via_ytdlp',
+        lambda _song, youtube_settings=None: 'yt123',
     )
     vid, match, provider, local_path = d._resolve_video_id({
         'name': 'Track',

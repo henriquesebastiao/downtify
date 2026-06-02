@@ -119,36 +119,38 @@ export function useSettingsManager() {
       return
     }
     saveErrorText.value = ''
-    API.setSettings(settings.value).then((res) => {
-      if (res.status === 200) {
-        console.log('Saved!')
-        isSaved.value = true
-        const modal = document.getElementById('settings-modal')
-        if (modal && 'checked' in modal) {
-          modal.checked = false
+    API.setSettings(settings.value)
+      .then((res) => {
+        if (res.status === 200) {
+          console.log('Saved!')
+          isSaved.value = true
+          const modal = document.getElementById('settings-modal')
+          if (modal && 'checked' in modal) {
+            modal.checked = false
+          }
+          setTimeout(() => {
+            isSaved.value = null
+          }, 2000)
+        } else {
+          console.error('Error saving settings.', res)
+          saveErrorText.value = 'Could not save settings'
+          isSaved.value = false
+          setTimeout(() => {
+            isSaved.value = null
+          }, 2000)
         }
-        setTimeout(() => {
-          isSaved.value = null
-        }, 2000)
-      } else {
-        console.error('Error saving settings.', res)
-        saveErrorText.value = 'Could not save settings'
+      })
+      .catch((error) => {
+        const detail = error?.response?.data?.detail
+        saveErrorText.value =
+          typeof detail === 'string' && detail.trim()
+            ? detail
+            : 'Could not save settings'
         isSaved.value = false
         setTimeout(() => {
           isSaved.value = null
-        }, 2000)
-      }
-    }).catch((error) => {
-      const detail = error?.response?.data?.detail
-      saveErrorText.value =
-        typeof detail === 'string' && detail.trim()
-          ? detail
-          : 'Could not save settings'
-      isSaved.value = false
-      setTimeout(() => {
-        isSaved.value = null
-      }, 2500)
-    })
+        }, 2500)
+      })
   }
   return { saveSettings, settings, settingsOptions, isSaved, saveErrorText }
 }

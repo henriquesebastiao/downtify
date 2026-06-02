@@ -43,7 +43,7 @@ def test_wait_for_slskd_file_queued_timeout_without_transfer(monkeypatch):
         'file.mp3',
         settings,
         [Path('/slskd')],
-        deadline=t0 + 600,
+        deadline=1600.0,
     )
     assert result is None
     assert client.find_transfer.called

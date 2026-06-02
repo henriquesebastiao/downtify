@@ -22,7 +22,7 @@ fastapi==0.136.3
     # via downtify
 h11==0.16.0
     # via uvicorn
-idna==3.17
+idna==3.18
     # via
     #   anyio
     #   requests
@@ -38,7 +38,7 @@ pydantic-core==2.46.4
     # via pydantic
 python-dotenv==1.2.2
     # via load-dotenv
-python-multipart==0.0.20
+python-multipart==0.0.30
     # via downtify
 requests==2.34.2
     # via
