@@ -107,9 +107,40 @@ def _navidrome_path_basename(path: str) -> str:
 
 
 def _normalize_filename_key(name: str) -> str:
-    text = str(name or '').casefold()
+    text = str(name or '').casefold().replace('&', ' and ')
     text = re.sub(r'[^\w\s.-]', '', text)
     return re.sub(r'\s+', ' ', text).strip()
+
+
+def _loosen_search_query(text: str) -> str:
+    """Strip punctuation so Navidrome full-text search finds filename-like rows."""
+
+    lowered = _normalize_path_text(text).casefold().replace('&', ' and ')
+    cleaned = re.sub(r'[^\w\s-]', ' ', lowered)
+    return re.sub(r'\s+', ' ', cleaned).strip()
+
+
+def _queries_from_filename_stem(stem: str) -> list[str]:
+    text = str(stem or '').strip()
+    if not text:
+        return []
+    out: list[str] = []
+    if ' - ' in text:
+        artists_part, title_part = text.rsplit(' - ', 1)
+        artists_part = artists_part.strip()
+        title_part = title_part.strip()
+        if title_part:
+            out.append(title_part)
+        if artists_part:
+            out.append(artists_part)
+            lead = artists_part.split(',')[0].strip()
+            if lead and title_part:
+                out.append(f'{title_part} {lead}')
+                out.append(f'{lead} {title_part}')
+    loosened = _loosen_search_query(text)
+    if loosened and loosened not in out:
+        out.append(loosened)
+    return out
 
 
 def _basename_aligned(stored: str, indexed: str) -> bool:
@@ -168,6 +199,8 @@ def _search_queries_for_song(
     if path_keys:
         basename = path_keys[0].rsplit('/', 1)[-1]
         stem = basename.rsplit('.', 1)[0] if basename else ''
+        for item in _queries_from_filename_stem(stem):
+            add(item)
         add(stem)
         add(basename)
         add(path_keys[0])
@@ -188,6 +221,17 @@ def _pick_song_id_from_candidates(
     title = _search_title(str(song.get('name') or ''))
     artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
     artist = artists[0] if artists else ''
+    require_artist = bool(path_keys)
+
+    for candidate in songs:
+        if not isinstance(candidate, dict):
+            continue
+        cid = str(candidate.get('id') or '').strip()
+        if not cid:
+            continue
+        c_path = str(candidate.get('path') or '')
+        if path_keys and _path_matches(path_keys, c_path):
+            return cid
 
     for candidate in songs:
         if not isinstance(candidate, dict):
@@ -198,10 +242,6 @@ def _pick_song_id_from_candidates(
         c_artist = str(candidate.get('artist') or '')
         c_title = str(candidate.get('title') or '')
         c_duration = int(candidate.get('duration') or 0)
-        c_path = str(candidate.get('path') or '')
-
-        if path_keys and _path_matches(path_keys, c_path):
-            return cid
 
         artist_match = artist and artist.casefold() in c_artist.casefold()
         title_match = (
@@ -216,7 +256,7 @@ def _pick_song_id_from_candidates(
 
         if artist_match and title_match and duration_match:
             return cid
-        if title_match and duration_match:
+        if not require_artist and title_match and duration_match:
             return cid
     return None
 
@@ -412,21 +452,17 @@ class NavidromeClient:
             target_duration //= 1000
 
         seen_ids: set[str] = set()
+        candidates: list[dict[str, Any]] = []
         for query in queries:
-            batch = self._search3_songs(query)
-            merged: list[dict[str, Any]] = []
-            for candidate in batch:
+            for candidate in self._search3_songs(query):
                 cid = str(candidate.get('id') or '').strip()
                 if not cid or cid in seen_ids:
                     continue
                 seen_ids.add(cid)
-                merged.append(candidate)
-            picked = _pick_song_id_from_candidates(
-                merged, song, path_keys, target_duration
-            )
-            if picked:
-                return picked
-        return None
+                candidates.append(candidate)
+        return _pick_song_id_from_candidates(
+            candidates, song, path_keys, target_duration
+        )
 
     def find_playlist_ids_by_name(self, name: str) -> list[str]:
         """Return all playlist IDs with an exact *name* match (newest API order)."""

@@ -8,6 +8,16 @@ from downtify.navidrome import (
 )
 
 
+def _route_mock_get(responses: dict[str, MagicMock]):
+    def _handler(url: str, *args, **kwargs):
+        for key, resp in responses.items():
+            if key in url:
+                return resp
+        raise AssertionError(f'unexpected GET {url}')
+
+    return _handler
+
+
 def test_effective_navidrome_settings_defaults():
     out = _effective_navidrome_settings({})
     assert out['enabled'] is False
@@ -50,6 +60,12 @@ def test_path_matches_basename_when_parent_folder_differs():
     keys = ['albanian car songs/solo - tona.mp3', 'solo - tona.mp3']
     assert _path_matches(keys, 'Music/Imports/solo - tona.mp3')
     assert not _path_matches(keys, 'Music/Imports/other.mp3')
+
+
+def test_path_matches_ampersand_in_artist_name():
+    keys = ['albanian car songs/blunt & real, kaos, bardool - hey.mp3']
+    assert _path_matches(keys, 'music/Blunt & Real, Kaos, Bardool - Hey.mp3')
+    assert _path_matches(keys, 'music/Blunt and Real, Kaos, Bardool - Hey.mp3')
 
 
 def test_path_matches_when_navidrome_has_extra_parent_folders():
@@ -197,14 +213,14 @@ def test_sync_playlist_creates_playlist(mock_get, mock_post):
     start_scan_resp.json.return_value = {'subsonic-response': {'status': 'ok'}}
     start_scan_resp.raise_for_status = MagicMock()
 
-    mock_get.side_effect = [
-        ping_resp,
-        start_scan_resp,
-        scan_resp,
-        search_resp,
-        playlists_resp,
-        update_resp,
-    ]
+    mock_get.side_effect = _route_mock_get({
+        '/rest/ping': ping_resp,
+        '/rest/startScan': start_scan_resp,
+        '/rest/getScanStatus': scan_resp,
+        '/rest/search3': search_resp,
+        '/rest/getPlaylists': playlists_resp,
+        '/rest/updatePlaylist': update_resp,
+    })
     mock_post.side_effect = [create_resp]
 
     settings = {
@@ -287,12 +303,12 @@ def test_sync_playlist_updates_existing_by_id(mock_get, mock_post):
     update_resp.json.return_value = {'subsonic-response': {'status': 'ok'}}
     update_resp.raise_for_status = MagicMock()
 
-    mock_get.side_effect = [
-        ping_resp,
-        search_resp,
-        playlists_resp,
-        update_resp,
-    ]
+    mock_get.side_effect = _route_mock_get({
+        '/rest/ping': ping_resp,
+        '/rest/search3': search_resp,
+        '/rest/getPlaylists': playlists_resp,
+        '/rest/updatePlaylist': update_resp,
+    })
     mock_post.side_effect = [replace_resp]
 
     settings = {
