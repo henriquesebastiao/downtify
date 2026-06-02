@@ -1,5 +1,30 @@
 # Changelog
 
+## [Unreleased]
+
+**Implemented enhancements:**
+
+- **Library catalog** — SQLite playlist catalog (track membership per Spotify playlist), path-stable `content_key` (basename + file size), and Navidrome song-id index for faster repeat syncs ([#182](https://github.com/henriquesebastiao/downtify/pull/182))
+- **Library performance** — In-memory path scan cache (~90s TTL) and SQLite metadata cache for `/api/list`; optional on-disk cover art cache under `/data/cover_cache` (Settings → Library & player)
+- **Library UI** — Client-side search (title, artist, album, path), pagination with saved page size, playlist badges on each row, dedicated Library search (navbar search hidden on Library page), refresh with `?refresh=true`
+- **Library path sync** — Settings → **Fix library paths** and `POST /api/library/reconcile`: detect moved files, prune stale index/catalog rows after deletes, backfill `content_key`, optionally regenerate M3U and re-sync Navidrome for affected playlists
+- **Navidrome large playlists** — `createPlaylist` via POST with batched `updatePlaylist` to avoid HTTP 414 when syncing hundreds of tracks
+- **Navidrome matching** — Stronger library matching (mutagen tags, path tails, slskd folder paths, capped fallback queries, early exit on confident match)
+- **slskd + Navidrome integration** (feature branch) — slskd provider with leave-in-place, configurable provider order, track index dedupe, `/downloads` + `/slskd` library paths, M3U absolute paths, in-place Navidrome playlist updates, playlist monitor M3U/Navidrome refresh
+- **Download queue** — Status filters, per-track and bulk retry, clear completed, prune finished tracks when a new Spotify playlist starts
+- **YouTube cookies** (optional) — Settings upload/path for age-restricted yt-dlp fallbacks
+- **Startup** — FastAPI lifespan handler replaces deprecated `on_event('startup')`
+
+**Fixed bugs:**
+
+- Navidrome playlist sync failing with HTTP 414 on large playlists
+- Library `/list` validation errors when returning playlist names per track
+- slskd path false positives during Navidrome match; duration tolerance for tag matching
+
+**Documentation:**
+
+- README feature summary, `docs/features/library-catalog.md`, and changelog entries for catalog, reconcile, and caches
+
 ## [2.8.0](https://github.com/henriquesebastiao/downtify/tree/2.8.0) (2026-06-02)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.7.0...2.8.0)

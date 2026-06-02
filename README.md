@@ -56,22 +56,27 @@ It resolves track metadata from Spotify's public embed pages, then tries your co
 
 ---
 
-## 📋 Recent changes (2.7.x)
+## 📋 Recent changes (feature branch)
 
-Summary of the slskd + Navidrome integration work:
+Summary of work in [PR #182](https://github.com/henriquesebastiao/downtify/pull/182) (slskd, Navidrome, library catalog). Full detail: [`docs/features/library-catalog.md`](docs/features/library-catalog.md) and [`CHANGELOG`](CHANGELOG).
 
-| Area | Change |
-|------|--------|
+| Area | What it does |
+|------|----------------|
 | **slskd provider** | Search Soulseek, poll transfers, optional leave-in-place under `/slskd`, timeouts and YouTube fallback |
 | **Provider order** | Settings UI to enable and order slskd / YouTube Music / YouTube |
 | **Track index** | Spotify track ID → file path; skips re-downloads for playlists and monitor |
+| **Playlist catalog** | Tracks which Spotify playlists contain each file; badges in Library; used for reconcile and Navidrome refresh |
+| **Library performance** | Path scan cache + SQLite metadata cache for fast `/list`; optional cover cache under `/data/cover_cache` |
+| **Library UI** | Search, pagination, refresh; navbar search hidden on Library page |
+| **Fix library paths** | Settings button (and `POST /api/library/reconcile`) after you move files on disk — updates indexes, prunes deleted files, can refresh M3U / Navidrome |
 | **Library paths** | Resolves `slskd/…` entries to `/slskd` for M3U, player, and Navidrome matching |
 | **M3U** | Absolute paths (`/downloads/…`, `/slskd/…`) for media servers |
-| **Navidrome** | Scan → match → **update same playlist** (no duplicate playlists on each sync) |
+| **Navidrome** | Scan → match → **update same playlist**; POST/batched sync for large playlists (no HTTP 414) |
 | **Playlist monitor** | Regenerates M3U and can sync Navidrome after new tracks |
-| **Player / library** | Tag-based metadata; plays slskd files via `/media/slskd/` |
+| **Download queue** | Filters, retry, clear completed |
+| **Player / library** | Tag-based metadata; plays slskd files via `/media/slskd/`; cover cache optional in Settings |
 
-Configure everything under **Settings** (⚙️): Audio sources, slskd block, Playlists (M3U + Navidrome), and File organization.
+Configure under **Settings** (⚙️): Audio sources, slskd, Playlists (M3U + Navidrome), **Library & player** (cover cache, path sync), and File organization.
 
 ---
 
