@@ -98,6 +98,21 @@ export default {
     downloadToDevice: 'Download to device',
     deleteFile: 'Delete file',
     play: 'Play',
+    selectAllFiltered: 'Select all on this page',
+    selectAllFilteredCount: 'Select all {count} filtered',
+    clearSelection: 'Clear selection',
+    deleteSelected: 'Delete selected ({count})',
+    deleteSelectedPrompt:
+      'Delete {count} selected track(s)? Files are removed from disk; playlists and Navidrome update in the background.',
+    batchDeletePartial:
+      'Deleted {ok} track(s). {failed} could not be deleted.',
+    filterByPlaylist: 'Playlist',
+    filterAllPlaylists: 'All playlists',
+    deletePlaylist: 'Delete playlist',
+    deletePlaylistPrompt:
+      'Delete all tracks in "{name}"? Files on disk and the playlist catalog entry are removed. M3U and Navidrome sync run in the background.',
+    playlistDeleted: 'Playlist "{name}" removed ({count} tracks).',
+    playlistDeleteFailed: 'Could not delete playlist "{name}".',
   },
   monitor: {
     title: 'Playlist Monitor',

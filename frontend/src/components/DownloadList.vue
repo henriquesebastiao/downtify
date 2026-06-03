@@ -262,10 +262,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive } from 'vue'
+import { ref, computed, watch, reactive, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import API from '../model/api'
-import { useProgressTracker, useDownloadManager } from '../model/download'
+import {
+  useProgressTracker,
+  useDownloadManager,
+  syncQueueFromServer,
+} from '../model/download'
 import { useI18n } from '../i18n'
 
 const PAGE_SIZE = 10
@@ -387,6 +391,10 @@ watch(
     }
   }
 )
+
+onMounted(() => {
+  syncQueueFromServer().catch(() => {})
+})
 
 async function onClearAll() {
   if (!confirm(t('queue.clearAllPrompt'))) return

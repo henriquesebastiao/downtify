@@ -658,47 +658,83 @@ class NavidromeClient:
         )
 
 
-def _stem_from_stored_filename(filename: str) -> str:
-    base = _normalize_path_text(filename).casefold().rsplit('/', 1)[-1]
-    stem = base.rsplit('.', 1)[0] if '.' in base else base
-    return re.sub(r'^\d+\.\s*', '', stem).strip()
+def _normalize_tag_loose(text: str) -> str:
+    """Casefold and drop punctuation so tag vs path comparisons are tolerant."""
+
+    text = _normalize_tag(text)
+    text = text.replace("'", '').replace('’', '').replace('‛', '')
+    text = re.sub(r'[^\w\s]', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()
 
 
-def _metadata_aligns_with_filename(song: dict[str, Any]) -> bool:
-    """False when the on-disk path clearly belongs to a different track."""
-
-    stem = _stem_from_stored_filename(str(song.get('filename') or ''))
-    if ' - ' not in stem:
+def _titles_align(expected: str, from_file: str) -> bool:
+    title_n = _normalize_tag_loose(expected)
+    file_title_n = _normalize_tag_loose(from_file)
+    if not title_n or not file_title_n:
         return True
-    file_artists, file_title = stem.rsplit(' - ', 1)
-    title, artists = _library_tags(song)
-    if not title:
-        return True
-    title_n = _normalize_tag(title)
-    file_title_n = _normalize_tag(file_title.strip())
-    title_ok = (
+    return (
         title_n == file_title_n
         or title_n in file_title_n
         or file_title_n in title_n
     )
-    if not artists:
-        return title_ok
-    file_artists_n = _normalize_tag(file_artists.strip())
-    artist_ok = any(
-        _normalize_tag(artist) in file_artists_n
-        or file_artists_n in _normalize_tag(artist)
-        for artist in artists
-    )
-    return title_ok and artist_ok
+
+
+def _artist_lists_align(expected: list[str], actual: list[str]) -> bool:
+    if not expected:
+        return True
+    if not actual:
+        return True
+    for exp in expected:
+        exp_n = _normalize_tag_loose(exp)
+        if not exp_n:
+            continue
+        for act in actual:
+            act_n = _normalize_tag_loose(act)
+            if exp_n in act_n or act_n in exp_n:
+                return True
+    return False
+
+
+def _spotify_expected(song: dict[str, Any]) -> tuple[str, list[str]]:
+    title = str(song.get('spotify_name') or '').strip()
+    artists = [
+        str(a).strip()
+        for a in (song.get('spotify_artists') or [])
+        if str(a).strip()
+    ]
+    return title, artists
+
+
+def _spotify_aligns_with_file_tags(song: dict[str, Any]) -> bool:
+    """False when embedded tags clearly disagree with the Spotify playlist row."""
+
+    if not song.get('library_from_tags'):
+        return True
+
+    spotify_title, spotify_artists = _spotify_expected(song)
+    if not spotify_title:
+        return True
+
+    file_title, file_artists = _library_tags(song)
+    if not file_title:
+        return True
+    if not _titles_align(spotify_title, file_title):
+        return False
+    return _artist_lists_align(spotify_artists, file_artists)
 
 
 def _song_label(song: dict[str, Any]) -> str:
-    label = str(song.get('name') or 'unknown')
-    artists = song.get('artists') or []
-    if artists:
-        label = f'{", ".join(str(a) for a in artists)} - {label}'
+    spotify_title, spotify_artists = _spotify_expected(song)
+    file_title, file_artists = _library_tags(song)
+    exp = spotify_title or 'unknown'
+    if spotify_artists:
+        exp = f'{", ".join(spotify_artists)} - {exp}'
+    file = file_title or 'unknown'
+    if file_artists:
+        file = f'{", ".join(file_artists)} - {file}'
     fn = str(song.get('filename') or '').strip()
-    return f'{label} ({fn})' if fn else label
+    base = f'spotify={exp!r} tags={file!r}'
+    return f'{base} ({fn})' if fn else base
 
 
 def _songs_for_playlist_sync(
@@ -708,9 +744,9 @@ def _songs_for_playlist_sync(
 
     kept: list[dict[str, Any]] = []
     for song in songs:
-        if not _metadata_aligns_with_filename(song):
+        if not _spotify_aligns_with_file_tags(song):
             logger.info(
-                'navidrome: skip sync for {!r}; filename does not match tags',
+                'navidrome: skip sync for {}; Spotify does not match file tags',
                 _song_label(song),
             )
             continue
@@ -733,6 +769,14 @@ def enrich_song_from_library_file(
     """Attach on-disk path metadata (mutagen tags) for Navidrome matching."""
 
     row = dict(song)
+    if not row.get('spotify_name'):
+        row['spotify_name'] = str(row.get('name') or '').strip()
+    if not row.get('spotify_artists'):
+        row['spotify_artists'] = [
+            str(a).strip()
+            for a in (row.get('artists') or [])
+            if str(a).strip()
+        ]
     filename = str(row.get('filename') or '').strip()
     if not filename:
         return row
@@ -884,6 +928,38 @@ def _library_dirs_from_settings(
     return Path(dl), slskd_dir
 
 
+def remove_navidrome_playlist_by_name(
+    playlist_name: str,
+    settings: dict[str, Any],
+) -> int:
+    """Delete Navidrome playlist(s) matching *playlist_name*. Returns count removed."""
+
+    cfg = _effective_navidrome_settings(settings)
+    if not cfg.get('enabled'):
+        return 0
+    client = NavidromeClient(cfg)
+    if not client.configured() or not client.ping():
+        return 0
+    removed = 0
+    for playlist_id in client.find_playlist_ids_by_name(playlist_name):
+        try:
+            client.delete_playlist(playlist_id)
+            removed += 1
+            logger.info(
+                'navidrome: removed playlist id={} name={!r}',
+                playlist_id,
+                playlist_name,
+            )
+        except Exception as exc:
+            logger.info(
+                'navidrome: could not remove playlist id={} name={!r} err={}',
+                playlist_id,
+                playlist_name,
+                exc,
+            )
+    return removed
+
+
 def sync_playlist_to_navidrome(  # noqa: PLR0914
     playlist_name: str,
     songs: list[dict[str, Any]],
@@ -892,8 +968,14 @@ def sync_playlist_to_navidrome(  # noqa: PLR0914
     navidrome_index: Optional[NavidromeIndex] = None,
     download_dir: Optional[Path] = None,
     comment: str = 'Synced from Spotify via Downtify',
+    trigger_scan: Optional[bool] = None,
 ) -> Optional[PlaylistSyncResult]:
-    """Match *songs* in Navidrome and create/replace a server playlist."""
+    """Match *songs* in Navidrome and create/replace a server playlist.
+
+    *trigger_scan*: when ``None``, use ``scan_after_download`` from settings
+    (typical after new downloads). Pass ``False`` after deletes or path fixes
+    when files were removed, not added.
+    """
     cfg = _effective_navidrome_settings(settings)
     if not cfg.get('enabled'):
         return None
@@ -912,7 +994,7 @@ def sync_playlist_to_navidrome(  # noqa: PLR0914
     if len(songs) < incoming:
         logger.info(
             'navidrome: excluded {} of {} track(s) from sync for playlist={!r} '
-            '(filename/tag mismatch)',
+            '(Spotify/file tag mismatch)',
             incoming - len(songs),
             incoming,
             playlist_name,
@@ -922,7 +1004,12 @@ def sync_playlist_to_navidrome(  # noqa: PLR0914
 
     scanned = False
     scan_complete = False
-    if cfg.get('scan_after_download'):
+    do_scan = (
+        bool(cfg.get('scan_after_download'))
+        if trigger_scan is None
+        else bool(trigger_scan)
+    )
+    if do_scan:
         try:
             scanned = True
             scan_complete = _trigger_library_scan(client, cfg, len(songs))

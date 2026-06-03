@@ -314,6 +314,28 @@ class PlaylistCatalog:
             )
             return cur.rowcount > 0
 
+    def delete_playlist(self, playlist_name: str) -> list[str]:
+        """Remove playlist and all track rows; return registered filenames."""
+
+        pl_name = str(playlist_name or '').strip()
+        if not pl_name:
+            return []
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT filename FROM playlist_tracks
+                   WHERE playlist_name = ?""",
+                (pl_name,),
+            ).fetchall()
+            filenames = list(
+                dict.fromkeys(
+                    _norm_path(str(row['filename']))
+                    for row in rows
+                    if row['filename']
+                )
+            )
+            conn.execute('DELETE FROM playlists WHERE name = ?', (pl_name,))
+        return filenames
+
     def remove_tracks_for_filename(self, filename: str) -> list[str]:
         """Delete rows pointing at *filename*; return affected playlist names."""
 

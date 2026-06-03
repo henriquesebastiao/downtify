@@ -100,6 +100,21 @@ export default {
     downloadToDevice: 'Descargar al dispositivo',
     deleteFile: 'Eliminar archivo',
     play: 'Reproducir',
+    selectAllFiltered: 'Seleccionar página',
+    selectAllFilteredCount: 'Seleccionar {count} filtrados',
+    clearSelection: 'Quitar selección',
+    deleteSelected: 'Eliminar selección ({count})',
+    deleteSelectedPrompt:
+      '¿Eliminar {count} pista(s)? Los archivos se borran del disco; M3U y Navidrome se actualizan en segundo plano.',
+    batchDeletePartial:
+      'Eliminadas {ok} pista(s). {failed} no se pudieron eliminar.',
+    filterByPlaylist: 'Lista',
+    filterAllPlaylists: 'Todas las listas',
+    deletePlaylist: 'Eliminar lista',
+    deletePlaylistPrompt:
+      '¿Eliminar todas las pistas de "{name}"? Se quitan archivos y la entrada del catálogo. M3U y Navidrome se actualizan en segundo plano.',
+    playlistDeleted: 'Lista "{name}" eliminada ({count} pistas).',
+    playlistDeleteFailed: 'No se pudo eliminar la lista "{name}".',
   },
   monitor: {
     title: 'Monitor de listas',

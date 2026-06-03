@@ -15,6 +15,7 @@ Pending upstream merge ([#182](https://github.com/henriquesebastiao/downtify/pul
 - **Track index** — Skip re-downloads when a Spotify track is already on disk (including `/slskd` paths)
 - **Playlist catalog** — Remember which playlist downloads contain each file; show badges in Library
 - **Fast Library** — Path and metadata caches; optional cover cache; search and pagination in the UI
+- **Library bulk delete** — Multi-select track delete and delete entire playlist from the Library page
 - **Fix library paths** — Manual reconcile after moving files on disk; optional M3U and Navidrome refresh
 - **Navidrome** — Update existing playlists in place; POST/batched API for large playlists; improved track matching
 - **Download queue** — Filters (Waiting / In progress / …), retry, clear completed

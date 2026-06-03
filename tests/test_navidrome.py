@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 from downtify.navidrome import (
     NavidromeClient,
     _effective_navidrome_settings,
-    _metadata_aligns_with_filename,
     _path_matches,
     _songs_for_playlist_sync,
+    _spotify_aligns_with_file_tags,
     sync_playlist_to_navidrome,
 )
 from downtify.navidrome_index import NavidromeIndex
@@ -27,40 +27,95 @@ def test_effective_navidrome_settings_defaults():
     assert out['scan_wait_seconds'] == 120
 
 
-def test_metadata_aligns_rejects_wrong_slskd_file():
+def test_spotify_aligns_rejects_wrong_slskd_file():
     song = {
-        'name': 'Non Stop',
-        'artists': ['Stealth'],
+        'spotify_name': 'Non Stop',
+        'spotify_artists': ['Stealth'],
+        'name': 'Music Non Stop',
+        'artists': ['Bassman'],
         'filename': (
             'slskd/Bassman - Bass 2 Tha Old School (1996)/'
             '09. Bassman - Music Non Stop.mp3'
         ),
         'library_from_tags': True,
     }
-    assert not _metadata_aligns_with_filename(song)
+    assert not _spotify_aligns_with_file_tags(song)
 
 
 def test_songs_for_playlist_sync_skips_mismatched_slskd_path():
     songs = [
         {
+            'spotify_name': 'Katile',
+            'spotify_artists': ['Don Xhoni'],
             'name': 'Katile',
             'artists': ['Don Xhoni'],
             'filename': 'Albanian Car Songs/Don Xhoni - Katile.mp3',
+            'library_from_tags': True,
         },
         {
-            'name': 'Non Stop',
-            'artists': ['Stealth'],
+            'spotify_name': 'Non Stop',
+            'spotify_artists': ['Stealth'],
+            'name': 'Music Non Stop',
+            'artists': ['Bassman'],
             'filename': 'slskd/other/09. Bassman - Music Non Stop.mp3',
+            'library_from_tags': True,
         },
     ]
     kept = _songs_for_playlist_sync('Albanian Car Songs', songs)
     assert len(kept) == 1
-    assert kept[0]['name'] == 'Katile'
+    assert kept[0]['spotify_name'] == 'Katile'
+
+
+def test_spotify_aligns_when_tags_match_playlist_row():
+    song = {
+        'spotify_name': 'I Need You (feat. Brandy)',
+        'spotify_artists': ['Kehlani', 'Brandy'],
+        'name': 'I Need You (feat. Brandy)',
+        'artists': ['Kehlani', 'Brandy'],
+        'filename': (
+            'slskd/Kehlani - Kehlani (2026, WEB, 320)/'
+            '05 - I Need You (feat. Brandy).mp3'
+        ),
+        'library_from_tags': True,
+    }
+    assert _spotify_aligns_with_file_tags(song)
+
+
+def test_spotify_aligns_apostrophe_title_difference():
+    song = {
+        'spotify_name': "If I Ain't Got You",
+        'spotify_artists': ['Alicia Keys'],
+        'name': 'If I Aint Got You',
+        'artists': ['Alicia Keys'],
+        'filename': (
+            'slskd/The Diary Of Alicia Keys - 2003/'
+            'Alicia Keys - 6 - If I Aint Got You.mp3'
+        ),
+        'library_from_tags': True,
+    }
+    assert _spotify_aligns_with_file_tags(song)
+
+
+def test_spotify_aligns_rejects_obvious_wrong_download():
+    song = {
+        'spotify_name': "Don't",
+        'spotify_artists': ['Bryson Tiller'],
+        'name': "Don't You Fear",
+        'artists': ['Kraam', 'Santirini'],
+        'filename': (
+            'slskd/Afro House Radio/Kraam, Santirini - '
+            "Don't You Fear.mp3"
+        ),
+        'library_from_tags': True,
+    }
+    assert not _spotify_aligns_with_file_tags(song)
 
 
 def test_songs_for_playlist_sync_keeps_slskd_leave_in_place():
     songs = [
         {
+            'spotify_name': 'Katile',
+            'spotify_artists': ['Don Xhoni'],
             'name': 'Katile',
             'artists': ['Don Xhoni'],
             'filename': 'slskd/peer/Don Xhoni - Katile.mp3',

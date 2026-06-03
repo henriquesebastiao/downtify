@@ -38,6 +38,7 @@ from downtify.library_catalog import (
     list_library_entries,
     resolve_library_file,
 )
+from downtify.library_delete import delete_library_file
 from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.library_paths_cache import invalidate_library_paths_cache
 from downtify.library_reconcile import refresh_playlists_after_moves
@@ -254,51 +255,56 @@ def build_app() -> FastAPI:
             or 'application/octet-stream',
         )
 
-    @app.delete('/delete')
-    def delete_download(file: str) -> dict:
-        full = resolve_library_file(file, _library_ctx())
-        if full is None:
-            return {'deleted': False, 'error': 'File not found'}
+    async def _refresh_playlists_after_delete(
+        playlist_names: set[str],
+    ) -> None:
+        """M3U / Navidrome refresh can take minutes; run off the request path."""
+
+        if not playlist_names or api.state.downloader is None:
+            return
+        if api.state.playlist_catalog is None:
+            return
         try:
-            full.unlink()
-        except Exception as exc:
-            return {'deleted': False, 'error': str(exc)}
-        if api.state.cover_cache is not None:
-            api.state.cover_cache.forget(file, full_path=full)
-        if api.state.metadata_cache is not None:
-            api.state.metadata_cache.forget(file, full_path=full)
-        affected_playlists: list[str] = []
-        if api.state.playlist_catalog is not None:
-            affected_playlists = (
-                api.state.playlist_catalog.remove_tracks_for_filename(file)
+            await asyncio.to_thread(
+                refresh_playlists_after_moves,
+                playlist_names,
+                settings=api.state.settings,
+                downloader=api.state.downloader,
+                playlist_catalog=api.state.playlist_catalog,
+                track_index=api.state.track_index,
+                monitor_db=api.state.monitor_db,
+                navidrome_index=api.state.navidrome_index,
             )
-        if api.state.track_index is not None:
-            api.state.track_index.remove_by_filename(file)
-        invalidate_library_paths_cache()
-        if api.state.navidrome_index is not None:
-            api.state.navidrome_index.forget_filename(file, full_path=full)
-        if (
-            affected_playlists
-            and api.state.downloader is not None
-            and api.state.playlist_catalog is not None
-        ):
-            try:
-                refresh_playlists_after_moves(
-                    set(affected_playlists),
-                    settings=api.state.settings,
-                    downloader=api.state.downloader,
-                    playlist_catalog=api.state.playlist_catalog,
-                    track_index=api.state.track_index,
-                    monitor_db=api.state.monitor_db,
-                    navidrome_index=api.state.navidrome_index,
-                )
-            except Exception as exc:
-                logger.warning(
-                    'delete: playlist refresh failed for {}: {}',
-                    ', '.join(affected_playlists[:5]),
-                    exc,
-                )
-        return {'deleted': True, 'playlists_affected': affected_playlists}
+        except Exception:
+            logger.exception(
+                'delete: background playlist refresh failed for {}',
+                ', '.join(sorted(playlist_names)[:5]),
+            )
+
+    @app.delete('/delete')
+    async def delete_download(file: str) -> dict:
+        result = delete_library_file(
+            file,
+            _library_ctx(),
+            cover_cache=api.state.cover_cache,
+            metadata_cache=api.state.metadata_cache,
+            playlist_catalog=api.state.playlist_catalog,
+            track_index=api.state.track_index,
+            navidrome_index=api.state.navidrome_index,
+        )
+        if not result.get('deleted'):
+            return {
+                'deleted': False,
+                'error': result.get('error') or 'File not found',
+            }
+        affected = set(result.get('playlists_affected') or [])
+        if affected:
+            asyncio.create_task(_refresh_playlists_after_delete(affected))
+        return {
+            'deleted': True,
+            'playlists_affected': result.get('playlists_affected') or [],
+            'playlists_refresh_scheduled': bool(affected),
+        }
 
     @app.get('/cover')
     def get_cover(file: str):

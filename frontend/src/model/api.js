@@ -123,6 +123,16 @@ function deleteDownload(file) {
   return API.delete('/delete', { params: { file } })
 }
 
+function deleteDownloadsBatch(files) {
+  return API.post('/api/library/delete/batch', { files })
+}
+
+function deleteLibraryPlaylist(playlistName) {
+  return API.delete('/api/library/playlist', {
+    params: { playlist_name: playlistName },
+  })
+}
+
 function writePlaylistM3u(payload) {
   return API.post('/api/playlist/m3u', payload)
 }
@@ -188,6 +198,8 @@ export default {
   coverFileURL,
   listDownloads,
   deleteDownload,
+  deleteDownloadsBatch,
+  deleteLibraryPlaylist,
   writePlaylistM3u,
   getQueue,
   removeQueueItem,

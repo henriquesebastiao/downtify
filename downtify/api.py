@@ -43,10 +43,15 @@ from downtify.slskd_provider import reset_slskd_parallelism
 from . import m3u, providers, spotify
 from .cover_cache import CoverArtCache
 from .downloader import Downloader, NoAudioMatchError, inspect_youtube_cookies
+from .library_catalog import library_context_from_state
+from .library_delete import delete_library_files, delete_playlist_from_library
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .library_paths_cache import invalidate_library_paths_cache
-from .library_reconcile import reconcile_and_refresh
+from .library_reconcile import (
+    reconcile_and_refresh,
+    refresh_playlists_after_moves,
+)
 from .monitor import PlaylistMonitorDB, check_playlist
 from .navidrome import (
     _effective_navidrome_settings,
@@ -623,6 +628,7 @@ async def _run_download(
     ) -> None:
         j = state.download_jobs.get(song_id)
         if j:
+            j['status'] = 'downloading'
             j['progress'] = pct
             if message:
                 j['message'] = message
@@ -960,6 +966,96 @@ async def reconcile_library_endpoint() -> dict[str, Any]:
         return result
 
     return await asyncio.to_thread(_run)
+
+
+async def _schedule_playlist_refresh_after_delete(
+    playlist_names: set[str],
+) -> None:
+    if not playlist_names or state.downloader is None:
+        return
+    if state.playlist_catalog is None:
+        return
+
+    async def _run() -> None:
+        try:
+            await asyncio.to_thread(
+                refresh_playlists_after_moves,
+                playlist_names,
+                settings=state.settings,
+                downloader=state.downloader,
+                playlist_catalog=state.playlist_catalog,
+                track_index=state.track_index,
+                monitor_db=state.monitor_db,
+                navidrome_index=state.navidrome_index,
+            )
+        except Exception:
+            logger.exception(
+                'library delete: background playlist refresh failed for {}',
+                ', '.join(sorted(playlist_names)[:5]),
+            )
+
+    asyncio.create_task(_run())
+
+
+@router.post('/api/library/delete/batch')
+async def delete_library_batch_endpoint(
+    body: dict[str, Any] = Body(...),
+) -> dict[str, Any]:
+    """Delete multiple library files by stored relative path."""
+
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+    raw = body.get('files')
+    if not isinstance(raw, list) or not raw:
+        raise HTTPException(
+            status_code=400, detail='files must be a non-empty list'
+        )
+    ctx = library_context_from_state(
+        Path(state.downloader.download_dir),
+        state.settings,
+        track_index=state.track_index,
+    )
+    result = await asyncio.to_thread(
+        delete_library_files,
+        [str(f) for f in raw],
+        ctx,
+        state,
+    )
+    affected = set(result.get('playlists_affected') or [])
+    if affected:
+        await _schedule_playlist_refresh_after_delete(affected)
+    result['playlists_refresh_scheduled'] = bool(affected)
+    return result
+
+
+@router.delete('/api/library/playlist')
+async def delete_library_playlist_endpoint(
+    playlist_name: str = Query(..., min_length=1),
+) -> dict[str, Any]:
+    """Delete all tracks in a playlist, its M3U, and catalog entry."""
+
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    def _run() -> dict[str, Any]:
+        return delete_playlist_from_library(
+            playlist_name,
+            Path(state.downloader.download_dir),
+            state.settings,
+            state,
+        )
+
+    result = await asyncio.to_thread(_run)
+    if not result.get('ok'):
+        raise HTTPException(
+            status_code=400,
+            detail=str(result.get('error') or 'Playlist delete failed'),
+        )
+    affected = set(result.get('playlists_affected') or [])
+    if affected:
+        asyncio.create_task(_schedule_playlist_refresh_after_delete(affected))
+    result['playlists_refresh_scheduled'] = bool(affected)
+    return result
 
 
 @router.post('/api/download/batch')

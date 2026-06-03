@@ -20,6 +20,7 @@ from .library_paths_cache import invalidate_library_paths_cache
 from .navidrome import (
     _effective_navidrome_settings,
     enrich_song_from_library_file,
+    remove_navidrome_playlist_by_name,
     sync_playlist_to_navidrome,
 )
 from .playlist_catalog import PlaylistCatalog
@@ -214,8 +215,13 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
     track_index: Optional[TrackIndex] = None,
     monitor_db: Optional['PlaylistMonitorDB'] = None,
     navidrome_index: Optional[Any] = None,
+    navidrome_scan: bool = False,
 ) -> None:
-    """Regenerate local M3U and optionally Navidrome for *playlist_names*."""
+    """Regenerate local M3U and optionally Navidrome for *playlist_names*.
+
+    Library scan is off by default here (deletes / reconcile). New downloads
+    call ``sync_playlist_to_navidrome`` directly with scan from settings.
+    """
 
     if not playlist_names:
         return
@@ -236,6 +242,14 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
     for name in sorted(playlist_names):
         catalog_rows = playlist_catalog.list_tracks(name)
         if not catalog_rows:
+            if sync_navidrome:
+                try:
+                    remove_navidrome_playlist_by_name(name, settings)
+                except Exception:
+                    logger.exception(
+                        'library reconcile: Navidrome remove failed for {!r}',
+                        name,
+                    )
             continue
 
         spotify_tracks: list[dict[str, Any]] = []
@@ -304,6 +318,7 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
                     settings,
                     navidrome_index=navidrome_index,
                     download_dir=download_dir,
+                    trigger_scan=navidrome_scan,
                 )
             except Exception:
                 logger.exception(

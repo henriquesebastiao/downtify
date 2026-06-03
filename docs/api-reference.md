@@ -179,6 +179,32 @@ Delete a downloaded file.
 
 ---
 
+### `POST /api/library/delete/batch`
+
+Delete multiple library files by stored relative path.
+
+**Request body:**
+
+```json
+{ "files": ["My Playlist/Song.mp3", "Artist - Track.mp3"] }
+```
+
+**Response:** `{ "deleted": ["…"], "failed": [{ "file": "…", "error": "…" }], "deleted_count": 1, "failed_count": 0, "playlists_affected": ["My Playlist"], "playlists_refresh_scheduled": true }`
+
+---
+
+### `DELETE /api/library/playlist`
+
+Delete all tracks for a playlist, remove its M3U file(s), and drop the playlist catalog entry.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `playlist_name` | string | yes | Playlist name as shown in Library badges |
+
+**Response:** `{ "ok": true, "playlist": "…", "files": ["…"], "deleted_count": 2, "failed_count": 0, "failed": [], "playlists_affected": ["…"], "playlists_refresh_scheduled": true }`
+
+---
+
 ### `GET /cover`
 
 Return the embedded cover art for a file.

@@ -12,6 +12,42 @@ const STATUS = {
 
 const downloadQueue = ref([])
 
+/** Match backend ``_register_job`` / queue keys. */
+function jobSongKey(song) {
+  if (!song || typeof song !== 'object') return ''
+  return String(song.song_id || song.url || '').trim()
+}
+
+function applyServerJob(item, job) {
+  if (!item || !job) return
+  if (job.provider) item.provider = job.provider
+  if (job.status === 'done') {
+    item.progress = 100
+    item.message = job.message || ''
+    if (job.filename) {
+      item.setWebURL(API.downloadFileURL(job.filename))
+      item.setFilename(job.filename)
+    }
+    item.setDownloaded()
+    return
+  }
+  if (job.status === 'error') {
+    item.setError()
+    item.message = job.message || ''
+    item.progress = job.progress || 0
+    return
+  }
+  if (job.status === 'downloading') {
+    item.setDownloading()
+    item.progress = job.progress || 0
+    item.message = job.message || ''
+    return
+  }
+  item.web_status = STATUS.QUEUED
+  item.progress = job.progress || 0
+  item.message = job.message || ''
+}
+
 class DownloadItem {
   constructor(song) {
     this.song = song
@@ -68,8 +104,10 @@ class DownloadItem {
 
 export function useProgressTracker() {
   function _findIndex(song) {
+    const key = jobSongKey(song)
+    if (!key) return -1
     return downloadQueue.value.findIndex(
-      (downloadItem) => downloadItem.song.song_id === song.song_id
+      (downloadItem) => jobSongKey(downloadItem.song) === key
     )
   }
   function appendSong(song) {
@@ -77,17 +115,16 @@ export function useProgressTracker() {
     downloadQueue.value.push(downloadItem)
   }
   function removeSong(song) {
-    console.log('removing', song, song.song_id)
+    const key = jobSongKey(song)
     downloadQueue.value = downloadQueue.value.filter(
-      (downloadItem) => downloadItem.song.song_id !== song.song_id
+      (downloadItem) => jobSongKey(downloadItem.song) !== key
     )
-    console.log(downloadQueue.value)
   }
 
   function getBySong(song) {
     const idx = _findIndex(song)
     if (idx === -1) return null
-    return downloadQueue.value[_findIndex(song)]
+    return downloadQueue.value[idx]
   }
 
   return {
@@ -99,6 +136,52 @@ export function useProgressTracker() {
 }
 
 const progressTracker = useProgressTracker()
+
+let queuePollTimer = null
+
+function queueHasActiveItems() {
+  return downloadQueue.value.some(
+    (item) => item.isDownloading() || item.isQueued()
+  )
+}
+
+function stopQueuePoll() {
+  if (queuePollTimer) {
+    clearInterval(queuePollTimer)
+    queuePollTimer = null
+  }
+}
+
+function ensureQueuePoll() {
+  if (!queueHasActiveItems()) {
+    stopQueuePoll()
+    return
+  }
+  if (queuePollTimer) return
+  queuePollTimer = setInterval(() => {
+    syncQueueFromServer().catch(() => {})
+  }, 3000)
+}
+
+export async function syncQueueFromServer() {
+  const res = await API.getQueue()
+  const jobs = res.data || []
+  for (const job of jobs) {
+    const song = job.song
+    if (!song) continue
+    let item = progressTracker.getBySong(song)
+    if (!item) {
+      item = new DownloadItem(song)
+      downloadQueue.value.push(item)
+    }
+    applyServerJob(item, job)
+  }
+  if (queueHasActiveItems()) {
+    ensureQueuePoll()
+  } else {
+    stopQueuePoll()
+  }
+}
 
 API.ws_onmessage((event) => {
   let data = JSON.parse(event.data)
@@ -126,6 +209,8 @@ API.ws_onmessage((event) => {
     item.wsUpdate(data)
     item.setDownloading()
   }
+  ensureQueuePoll()
+  syncQueueFromServer().catch(() => {})
 })
 API.ws_onerror((event) => {
   console.log('websocket error:', event)
@@ -133,34 +218,7 @@ API.ws_onerror((event) => {
 
 async function _hydrateFromServer() {
   try {
-    const res = await API.getQueue()
-    const jobs = res.data || []
-    for (const job of jobs) {
-      if (downloadQueue.value.some((i) => i.song.song_id === job.song.song_id))
-        continue
-      const item = new DownloadItem(job.song)
-      if (job.status === 'done') {
-        item.setDownloaded()
-        if (job.filename) {
-          item.setWebURL(API.downloadFileURL(job.filename))
-          item.setFilename(job.filename)
-        }
-        item.progress = 100
-      } else if (job.status === 'error') {
-        item.setError()
-        item.message = job.message || ''
-      } else if (job.status === 'downloading') {
-        item.setDownloading()
-        item.progress = job.progress || 0
-        item.message = job.message || ''
-        item.provider = job.provider || ''
-      } else {
-        item.web_status = STATUS.QUEUED
-        item.message = job.message || ''
-        item.provider = job.provider || ''
-      }
-      downloadQueue.value.push(item)
-    }
+    await syncQueueFromServer()
   } catch (e) {
     console.log('Failed to load queue from server:', e)
   }
