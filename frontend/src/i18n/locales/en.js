@@ -104,8 +104,7 @@ export default {
     deleteSelected: 'Delete selected ({count})',
     deleteSelectedPrompt:
       'Delete {count} selected track(s)? Files are removed from disk; playlists and Navidrome update in the background.',
-    batchDeletePartial:
-      'Deleted {ok} track(s). {failed} could not be deleted.',
+    batchDeletePartial: 'Deleted {ok} track(s). {failed} could not be deleted.',
     filterByPlaylist: 'Playlist',
     filterAllPlaylists: 'All playlists',
     deletePlaylist: 'Delete playlist',

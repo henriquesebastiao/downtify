@@ -397,9 +397,7 @@ function toggleSelectAllFiltered() {
     selectedFiles.value = new Set()
     return
   }
-  selectedFiles.value = new Set(
-    filteredFiles.value.map((entry) => entry.file)
-  )
+  selectedFiles.value = new Set(filteredFiles.value.map((entry) => entry.file))
 }
 
 function removeFilesFromList(paths) {
@@ -458,8 +456,7 @@ async function onDelete(file) {
   try {
     const res = await API.deleteDownload(file)
     if (res.data?.deleted === false) {
-      error.value =
-        res.data?.error || t('library.failedDelete', { file })
+      error.value = res.data?.error || t('library.failedDelete', { file })
       return
     }
     removeFilesFromList([file])
