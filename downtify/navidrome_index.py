@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .library_cache_keys import file_content_key
-from .track_index import normalize_spotify_track_id
 from .sqlite_utils import connect_sqlite
+from .track_index import normalize_spotify_track_id
 
 
 def _now_iso() -> str:

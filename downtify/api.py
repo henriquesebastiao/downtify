@@ -580,7 +580,7 @@ def _register_job(song: dict[str, Any], status: str = 'queued') -> str:
     return song_id
 
 
-async def _run_download(
+async def _run_download(  # noqa: PLR0914
     song: dict[str, Any],
     song_id: str,
     subdir: Optional[str] = None,

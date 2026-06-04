@@ -51,6 +51,7 @@ from downtify.track_index import TrackIndex
 
 load_dotenv()
 
+
 def _uvicorn_access_log_enabled() -> bool:
     """HTTP request lines are off by default; set DOWNTIFY_ACCESS_LOG=full to enable."""
     raw = str(os.getenv('DOWNTIFY_ACCESS_LOG', '') or '').strip().lower()

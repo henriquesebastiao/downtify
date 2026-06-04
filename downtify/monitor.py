@@ -24,12 +24,12 @@ from .navidrome import (
 )
 from .navidrome_index import NavidromeIndex
 from .playlist_catalog import PlaylistCatalog
+from .sqlite_utils import connect_sqlite
 from .track_index import (
     TrackIndex,
     normalize_spotify_track_id,
     resolve_existing_download,
 )
-from .sqlite_utils import connect_sqlite
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
 

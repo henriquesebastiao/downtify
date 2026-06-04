@@ -7,8 +7,8 @@ from downtify.navidrome import (
     _songs_for_playlist_sync,
     sync_playlist_to_navidrome,
 )
-from downtify.track_tag_match import spotify_aligns_with_file_tags
 from downtify.navidrome_index import NavidromeIndex
+from downtify.track_tag_match import spotify_aligns_with_file_tags
 
 
 def _route_mock_get(responses: dict[str, MagicMock]):

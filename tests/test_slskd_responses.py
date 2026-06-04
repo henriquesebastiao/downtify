@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 from downtify.slskd_provider import (
@@ -554,9 +555,13 @@ def test_download_from_slskd_retries_when_tags_mismatch(
         fake_verify,
     )
     removed: list[Path] = []
+
+    def _record_discard(path: Path) -> None:
+        removed.append(path)
+
     monkeypatch.setattr(
         'downtify.slskd_provider._discard_mismatched_download',
-        lambda p: removed.append(p),
+        _record_discard,
     )
 
     settings = {

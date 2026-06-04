@@ -206,7 +206,7 @@ def search_songs(query: str, limit: int = 20) -> list[dict[str, Any]]:
     return songs
 
 
-def find_match(
+def find_match(  # noqa: PLR0914
     song: dict[str, Any],
 ) -> tuple[Optional[str], Optional[dict[str, Any]]]:
     """Return ``(videoId, full_result)`` that best matches ``song``.

@@ -190,11 +190,7 @@
               loading="lazy"
               @error="markCoverFailed(entry.file)"
             />
-            <Icon
-              v-else
-              icon="clarity:music-note-line"
-              class="h-5 w-5"
-            />
+            <Icon v-else icon="clarity:music-note-line" class="h-5 w-5" />
           </div>
 
           <!-- Title / path -->

@@ -50,7 +50,6 @@ from .track_tag_match import (
     song_duration_seconds,
     spotify_file_tag_mismatch_label,
     strip_mix_suffix,
-    verify_downloaded_audio_file,
     verify_youtube_download_file,
     youtube_probe_title_matches,
 )
@@ -58,6 +57,7 @@ from .track_tag_match import (
 _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 
 ProgressCallback = Callable[[float, str, Optional[str]], None]
+
 
 def _youtube_download_timeout_seconds(settings: dict[str, Any]) -> int:
     try:

@@ -1,5 +1,7 @@
 <template>
-  <div class="min-h-dvh overflow-x-hidden pb-[max(1rem,env(safe-area-inset-bottom))]">
+  <div
+    class="min-h-dvh overflow-x-hidden pb-[max(1rem,env(safe-area-inset-bottom))]"
+  >
     <Navbar />
     <Settings />
 
@@ -14,42 +16,39 @@
         </p>
       </div>
 
-      <div
-        v-if="files.length > 0"
-        class="mb-6 flex flex-col gap-3"
-      >
+      <div v-if="files.length > 0" class="mb-6 flex flex-col gap-3">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div class="relative flex-1 min-w-0">
-          <Icon
-            icon="clarity:search-line"
-            class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40 pointer-events-none"
-          />
-          <input
-            v-model="filterQuery"
-            type="text"
-            class="input input-bordered w-full pl-10 pr-10 h-11 rounded-full bg-base-100/85 border-white/10"
-            :placeholder="t('library.searchPlaceholder')"
-            autocomplete="off"
-          />
-          <button
-            v-if="filterQuery"
-            type="button"
-            class="absolute right-2 top-1/2 -translate-y-1/2 icon-btn h-8 w-8"
-            :title="t('common.close')"
-            @click="filterQuery = ''"
+            <Icon
+              icon="clarity:search-line"
+              class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40 pointer-events-none"
+            />
+            <input
+              v-model="filterQuery"
+              type="text"
+              class="input input-bordered w-full pl-10 pr-10 h-11 rounded-full bg-base-100/85 border-white/10"
+              :placeholder="t('library.searchPlaceholder')"
+              autocomplete="off"
+            />
+            <button
+              v-if="filterQuery"
+              type="button"
+              class="absolute right-2 top-1/2 -translate-y-1/2 icon-btn h-8 w-8"
+              :title="t('common.close')"
+              @click="filterQuery = ''"
+            >
+              <Icon icon="clarity:times-line" class="h-4 w-4" />
+            </button>
+          </div>
+          <select
+            v-model="playlistFilter"
+            class="select select-bordered select-sm rounded-full bg-base-100/85 border-white/10 sm:max-w-xs sm:min-w-[12rem]"
           >
-            <Icon icon="clarity:times-line" class="h-4 w-4" />
-          </button>
-        </div>
-        <select
-          v-model="playlistFilter"
-          class="select select-bordered select-sm rounded-full bg-base-100/85 border-white/10 sm:max-w-xs sm:min-w-[12rem]"
-        >
-          <option value="">{{ t('library.filterAllPlaylists') }}</option>
-          <option v-for="pl in playlistNames" :key="pl" :value="pl">
-            {{ pl }}
-          </option>
-        </select>
+            <option value="">{{ t('library.filterAllPlaylists') }}</option>
+            <option v-for="pl in playlistNames" :key="pl" :value="pl">
+              {{ pl }}
+            </option>
+          </select>
         </div>
       </div>
 
@@ -83,10 +82,7 @@
       </div>
 
       <!-- Player + queue -->
-      <div
-        v-else
-        class="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_360px] min-w-0"
-      >
+      <div v-else class="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_360px] min-w-0">
         <!-- Player card -->
         <section
           class="surface rounded-3xl p-4 sm:p-8 flex flex-col items-center text-center min-w-0 w-full"
@@ -286,10 +282,12 @@
             </h2>
             <span class="text-[11px] text-base-content/40">
               <template v-if="hasActiveFilter">
-                {{ t('library.filteredCount', {
-                  shown: filteredFiles.length,
-                  total: files.length,
-                }) }}
+                {{
+                  t('library.filteredCount', {
+                    shown: filteredFiles.length,
+                    total: files.length,
+                  })
+                }}
               </template>
               <template v-else>
                 {{
@@ -351,11 +349,7 @@
                 v-if="batchDeleting"
                 class="loading loading-spinner loading-xs mr-1"
               />
-              <Icon
-                v-else
-                icon="clarity:trash-line"
-                class="h-3.5 w-3.5 mr-1"
-              />
+              <Icon v-else icon="clarity:trash-line" class="h-3.5 w-3.5 mr-1" />
               {{ selectedCount }}
             </button>
           </div>
@@ -520,7 +514,9 @@ const selectedCount = computed(() => selectedFiles.value.size)
 
 const allFilteredSelected = computed(() => {
   if (!filteredFiles.value.length) return false
-  return filteredFiles.value.every((entry) => selectedFiles.value.has(entry.file))
+  return filteredFiles.value.every((entry) =>
+    selectedFiles.value.has(entry.file)
+  )
 })
 
 const someFilteredSelected = computed(() => {
@@ -641,11 +637,7 @@ async function onDelete(file) {
       return
     }
     removeFilesFromList([file])
-    syncPlayerAfterDelete(
-      file,
-      wasCurrent ? idxBefore : -1,
-      wasPlaying,
-    )
+    syncPlayerAfterDelete(file, wasCurrent ? idxBefore : -1, wasPlaying)
   } catch (err) {
     const detail = err?.response?.data?.error
     error.value =
@@ -676,7 +668,7 @@ async function onDeleteSelected() {
       syncPlayerAfterRemovals(
         deleted,
         currentFile && deleted.includes(currentFile) ? idxBefore : -1,
-        wasPlaying && currentFile && deleted.includes(currentFile),
+        wasPlaying && currentFile && deleted.includes(currentFile)
       )
     }
     if (failed.length) {
