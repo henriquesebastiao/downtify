@@ -64,8 +64,6 @@ export default {
   },
   queue: {
     title: 'Fila de download',
-    subtitle:
-      'Músicas na fila. Filtre o que está ativo ou com falha. Uma playlist nova do Spotify remove as concluídas e mantém as com erro.',
     empty: 'Nada na fila no momento.',
     emptyHint: 'Procure uma música e clique em baixar para começar.',
     emptyFilter: 'Nenhuma faixa neste filtro.',

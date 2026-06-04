@@ -6,9 +6,6 @@
         <h1 class="text-2xl font-bold tracking-tight">
           {{ t('queue.title') }}
         </h1>
-        <p class="mt-1 text-sm text-base-content/60">
-          {{ t('queue.subtitle') }}
-        </p>
       </div>
       <div
         v-if="pt.downloadQueue.value.length > 0"

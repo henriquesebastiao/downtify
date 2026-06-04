@@ -65,8 +65,6 @@ export default {
   },
   queue: {
     title: 'Cola de descargas',
-    subtitle:
-      'Canciones en cola. Filtra por activas o fallidas. Una playlist nueva de Spotify quita las terminadas y conserva los fallos.',
     empty: 'No hay nada en la cola ahora mismo.',
     emptyHint: 'Busca una canción y pulsa descargar para empezar.',
     emptyFilter: 'Ninguna pista coincide con este filtro.',

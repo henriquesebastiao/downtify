@@ -64,8 +64,6 @@ export default {
   },
   queue: {
     title: 'Download Queue',
-    subtitle:
-      'In progress = work started (searching providers or transferring). Waiting = not started yet. A new playlist clears done tracks and keeps failures.',
     empty: 'Nothing queued right now.',
     emptyHint: 'Search for a song and hit download to start.',
     emptyFilter: 'No tracks match this filter.',
