@@ -69,6 +69,8 @@ export default {
     empty: 'Nothing queued right now.',
     emptyHint: 'Search for a song and hit download to start.',
     emptyFilter: 'No tracks match this filter.',
+    emptyActiveWithWaiting:
+      'No downloads in progress yet. {count} track(s) waiting — open the Waiting tab.',
     filterAll: 'All',
     filterActive: 'In progress',
     filterQueued: 'Waiting',

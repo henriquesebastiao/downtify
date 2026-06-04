@@ -70,6 +70,8 @@ export default {
     empty: 'No hay nada en la cola ahora mismo.',
     emptyHint: 'Busca una canción y pulsa descargar para empezar.',
     emptyFilter: 'Ninguna pista coincide con este filtro.',
+    emptyActiveWithWaiting:
+      'Aún no hay descargas en curso. {count} en espera — abre la pestaña En espera.',
     filterAll: 'Todas',
     filterActive: 'En curso',
     filterQueued: 'En espera',

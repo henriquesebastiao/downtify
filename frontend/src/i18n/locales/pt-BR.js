@@ -69,6 +69,8 @@ export default {
     empty: 'Nada na fila no momento.',
     emptyHint: 'Procure uma música e clique em baixar para começar.',
     emptyFilter: 'Nenhuma faixa neste filtro.',
+    emptyActiveWithWaiting:
+      'Nenhum download em andamento ainda. {count} aguardando — abra a aba Aguardando.',
     filterAll: 'Todas',
     filterActive: 'Em andamento',
     filterQueued: 'Aguardando',

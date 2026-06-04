@@ -85,7 +85,10 @@
       v-else-if="filteredQueue.length === 0"
       class="surface rounded-2xl p-8 text-center text-sm text-base-content/50"
     >
-      {{ t('queue.emptyFilter') }}
+      <p v-if="statusFilter === 'active' && queuedCount > 0">
+        {{ t('queue.emptyActiveWithWaiting', { count: queuedCount }) }}
+      </p>
+      <p v-else>{{ t('queue.emptyFilter') }}</p>
     </div>
 
     <!-- Queue items -->
@@ -383,6 +386,8 @@ watch(
   }
 )
 
+const pendingCount = computed(() => activeCount.value + queuedCount.value)
+
 watch(
   () => pt.downloadQueue.value.length,
   (len) => {
@@ -390,15 +395,8 @@ watch(
   }
 )
 
-watch(queuedCount, (queued, prev) => {
-  if (queued <= (prev ?? 0)) return
-  if (activeCount.value === 0) {
-    statusFilter.value = 'queued'
-  }
-})
-
-watch(activeCount, (active, prev) => {
-  if (active > (prev ?? 0)) {
+watch(pendingCount, (pending, prev) => {
+  if (pending > (prev ?? 0)) {
     statusFilter.value = 'active'
   }
 })
