@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen">
+  <div class="min-h-dvh overflow-x-hidden">
     <Navbar />
     <Settings />
 
@@ -59,7 +59,7 @@
         />
         <input
           v-model="libraryFilterQuery"
-          type="search"
+          type="text"
           class="input input-bordered w-full pl-10 pr-10 h-11 rounded-full bg-base-100/85 border-white/10"
           :placeholder="t('library.searchPlaceholder')"
           autocomplete="off"
@@ -183,14 +183,18 @@
             class="relative h-11 w-11 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center overflow-hidden"
           >
             <img
-              v-if="!coverFailed[entry.file]"
+              v-if="entry.has_cover && !coverFailed[entry.file]"
               :src="coverUrlFor(entry.file)"
               :alt="entry.title"
               class="absolute inset-0 h-full w-full object-cover"
               loading="lazy"
               @error="markCoverFailed(entry.file)"
             />
-            <Icon v-else icon="clarity:music-note-line" class="h-5 w-5" />
+            <Icon
+              v-else
+              icon="clarity:music-note-line"
+              class="h-5 w-5"
+            />
           </div>
 
           <!-- Title / path -->
@@ -544,13 +548,13 @@ function folderOf(file) {
 function playEntry(entry) {
   const index = filteredFiles.value.findIndex((row) => row.file === entry.file)
   if (index < 0) return
-  player.setPlaylist(filteredFiles.value, { startIndex: index })
+  player.setPlaylist(filteredFiles.value, { startIndex: index, autoplay: true })
   router.push({ name: 'Player' })
 }
 
 function playAll() {
   if (!filteredFiles.value.length) return
-  player.setPlaylist(filteredFiles.value, { startIndex: 0 })
+  player.setPlaylist(filteredFiles.value, { startIndex: 0, autoplay: true })
   router.push({ name: 'Player' })
 }
 

@@ -105,7 +105,10 @@
       </div>
     </div>
 
-    <div v-if="route.name !== 'List'" class="md:hidden px-4 pb-3">
+    <div
+      v-if="route.name !== 'List'"
+      class="md:hidden px-4 pb-2 border-b border-white/5"
+    >
       <SearchInput :compact="true" />
     </div>
   </header>

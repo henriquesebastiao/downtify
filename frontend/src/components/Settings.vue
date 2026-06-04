@@ -741,7 +741,7 @@ const SLSKD_DEFAULTS = {
   timeout_seconds: 20,
   search_retries: 5,
   search_poll_seconds: 15,
-  download_attempts: 3,
+  download_attempts: 5,
   poll_interval_seconds: 5,
   poll_max_attempts: 60,
   download_timeout_seconds: 600,

@@ -157,3 +157,13 @@ def extract_cover_art(path: Path) -> tuple[bytes | None, str | None]:
     if data:
         return data, mime
     return extract_folder_cover(path)
+
+
+def file_has_cover_art(path: Path) -> bool:
+    """True when embedded or folder art exists (used by ``/list``)."""
+
+    if not path.is_file():
+        return False
+    if extract_folder_cover(path)[0]:
+        return True
+    return extract_embedded_cover(path)[0] is not None

@@ -6,7 +6,11 @@ from pathlib import Path
 
 from mutagen.id3 import APIC, ID3
 
-from downtify.cover_art import extract_cover_art, extract_folder_cover
+from downtify.cover_art import (
+    extract_cover_art,
+    extract_folder_cover,
+    file_has_cover_art,
+)
 
 
 def test_extract_folder_cover_reads_cover_jpg(tmp_path: Path) -> None:
@@ -38,3 +42,15 @@ def test_extract_cover_art_prefers_embedded(tmp_path: Path) -> None:
 
     data, _mime = extract_cover_art(track)
     assert data == b'embedded'
+
+
+def test_file_has_cover_art_detects_embedded_and_folder(tmp_path: Path) -> None:
+    bare = tmp_path / 'bare.mp3'
+    bare.write_bytes(b'\x00' * 64)
+    assert file_has_cover_art(bare) is False
+
+    folder = tmp_path / 'with-folder' / 't.mp3'
+    folder.parent.mkdir()
+    folder.write_bytes(b'\x00')
+    (folder.parent / 'cover.jpg').write_bytes(b'x')
+    assert file_has_cover_art(folder) is True

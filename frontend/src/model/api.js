@@ -4,15 +4,19 @@ import config from '/src/config.js'
 
 import { v4 as uuidv4 } from 'uuid'
 
-console.log('using env:', process.env)
-console.log('using config: ', config)
+if (import.meta.env.DEV) {
+  console.log('using env:', process.env)
+  console.log('using config: ', config)
+}
 
 const API = axios.create({
   baseURL: `${config.PROTOCOL}//${config.BACKEND}:${config.PORT}${config.BASEURL}`,
 })
 
 const sessionID = uuidv4()
-console.log('session ID: ', sessionID)
+if (import.meta.env.DEV) {
+  console.log('session ID: ', sessionID)
+}
 
 getVersion()
 
@@ -23,14 +27,18 @@ const wsConnection = new WebSocket(
 )
 
 wsConnection.onopen = (event) => {
-  console.log('websocket connection opened', event)
+  if (import.meta.env.DEV) {
+    console.log('websocket connection opened', event)
+  }
 }
 
 function getVersion() {
   API.get('/api/version')
     .then((res) => {
       const prevItem = localStorage.getItem('version')
-      console.log('Backend version: ', res.data)
+      if (import.meta.env.DEV) {
+        console.log('Backend version: ', res.data)
+      }
       localStorage.setItem('version', res.data)
       if (prevItem != res.data) {
         location.reload()

@@ -5,9 +5,9 @@ from downtify.navidrome import (
     _effective_navidrome_settings,
     _path_matches,
     _songs_for_playlist_sync,
-    _spotify_aligns_with_file_tags,
     sync_playlist_to_navidrome,
 )
+from downtify.track_tag_match import spotify_aligns_with_file_tags
 from downtify.navidrome_index import NavidromeIndex
 
 
@@ -39,7 +39,7 @@ def test_spotify_aligns_rejects_wrong_slskd_file():
         ),
         'library_from_tags': True,
     }
-    assert not _spotify_aligns_with_file_tags(song)
+    assert not spotify_aligns_with_file_tags(song)
 
 
 def test_songs_for_playlist_sync_skips_mismatched_slskd_path():
@@ -78,7 +78,7 @@ def test_spotify_aligns_when_tags_match_playlist_row():
         ),
         'library_from_tags': True,
     }
-    assert _spotify_aligns_with_file_tags(song)
+    assert spotify_aligns_with_file_tags(song)
 
 
 def test_spotify_aligns_apostrophe_title_difference():
@@ -93,7 +93,7 @@ def test_spotify_aligns_apostrophe_title_difference():
         ),
         'library_from_tags': True,
     }
-    assert _spotify_aligns_with_file_tags(song)
+    assert spotify_aligns_with_file_tags(song)
 
 
 def test_spotify_aligns_rejects_obvious_wrong_download():
@@ -108,7 +108,7 @@ def test_spotify_aligns_rejects_obvious_wrong_download():
         ),
         'library_from_tags': True,
     }
-    assert not _spotify_aligns_with_file_tags(song)
+    assert not spotify_aligns_with_file_tags(song)
 
 
 def test_songs_for_playlist_sync_keeps_slskd_leave_in_place():

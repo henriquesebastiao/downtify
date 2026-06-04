@@ -82,6 +82,7 @@ export function normalizeLibraryEntry(raw) {
     artist: artist || base.artist,
     album: album || base.album,
     playlists,
+    has_cover: Boolean(raw?.has_cover),
   }
 }
 
@@ -98,22 +99,58 @@ function buildShuffleOrder() {
       : 0
 }
 
+function storedPathFromMediaUrl(src) {
+  if (!src) return null
+  try {
+    const path = new URL(src, window.location.origin).pathname
+    const prefix = '/media/'
+    if (path.startsWith(prefix)) {
+      return decodeURIComponent(path.slice(prefix.length))
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
 function setPlaylist(files, options = {}) {
+  const prevFile =
+    currentIndex.value >= 0 && currentIndex.value < playlist.value.length
+      ? playlist.value[currentIndex.value]?.file
+      : null
+  const audioFile = audio?.src ? storedPathFromMediaUrl(audio.src) : null
+  const keepFile = prevFile || audioFile || null
   const tracks = (files || []).map((f) =>
     typeof f === 'string' ? trackFromFile(f) : normalizeLibraryEntry(f)
   )
   playlist.value = tracks
-  if (currentIndex.value >= tracks.length) currentIndex.value = -1
   if (shuffle.value) buildShuffleOrder()
+
+  if (options.preservePlayback) {
+    if (keepFile) {
+      const idx = tracks.findIndex((t) => t.file === keepFile)
+      currentIndex.value = idx
+      if (idx < 0 && audio && !audio.paused) {
+        audio.pause()
+      }
+    } else if (currentIndex.value >= tracks.length) {
+      currentIndex.value = -1
+    }
+    return
+  }
+
+  if (currentIndex.value >= tracks.length) currentIndex.value = -1
+  const shouldAutoplay = options.autoplay === true
   if (typeof options.startIndex === 'number') {
-    playAt(options.startIndex)
-  } else if (options.autoplay && tracks.length > 0 && currentIndex.value < 0) {
-    playAt(0)
+    playAt(options.startIndex, { autoplay: shouldAutoplay })
+  } else if (shouldAutoplay && tracks.length > 0 && currentIndex.value < 0) {
+    playAt(0, { autoplay: true })
   }
 }
 
-function playAt(index) {
+function playAt(index, options = {}) {
   if (index < 0 || index >= playlist.value.length) return
+  const autoplay = options.autoplay !== false
   const a = ensureAudio()
   currentIndex.value = index
   if (shuffle.value) {
@@ -124,7 +161,11 @@ function playAt(index) {
   a.src = playlist.value[index].url
   a.currentTime = 0
   currentTime.value = 0
-  a.play().catch(() => {})
+  if (autoplay) {
+    a.play().catch(() => {})
+  } else {
+    a.pause()
+  }
 }
 
 function play() {

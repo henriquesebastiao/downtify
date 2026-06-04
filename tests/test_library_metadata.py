@@ -28,6 +28,7 @@ def test_read_audio_metadata_from_mp3_tags(tmp_path):
     assert entry['title'] == 'The Most'
     assert entry['artist'] == 'Weval'
     assert entry['album'] == 'Half Age'
+    assert entry['has_cover'] is False
 
 
 def test_library_entry_falls_back_to_filename(tmp_path):

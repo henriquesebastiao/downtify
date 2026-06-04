@@ -12,6 +12,13 @@ from loguru import logger
 from ytmusicapi import YTMusic
 
 from .telemetry import json_log_blob, redact_sensitive_mapping
+from .track_tag_match import (
+    candidate_adds_mix_variant,
+    media_duration_matches_mix_variant,
+    media_duration_matches_song,
+    remote_title_unacceptable,
+    strip_mix_suffix,
+)
 
 
 def _log_ytm_response(label: str, payload: Any) -> None:
@@ -278,6 +285,14 @@ def find_match(
             ('match_videos_title_ascii_fold', folded_title, 'videos'),
             ('match_all_title_ascii_fold', folded_title, None),
         ])
+    base_title = strip_mix_suffix(title_only)
+    if base_title and base_title.casefold() != title_only.casefold():
+        base_query = f'{artists_q} {base_title}'.strip()
+        attempts.extend([
+            ('match_songs_base_title', base_query, 'songs'),
+            ('match_videos_base_title', base_query, 'videos'),
+            ('match_all_base_title', base_query, None),
+        ])
     seen_attempts: set[tuple[str, str]] = set()
     for phase, q, filt in attempts:
         key = (q.casefold(), filt or '')
@@ -289,7 +304,35 @@ def find_match(
             if isinstance(row, dict) and row.get('videoId'):
                 candidates.append(row)
 
-    best = _pick_best(candidates, duration, title, artists)
+    strict_candidates = [
+        row
+        for row in candidates
+        if isinstance(row, dict)
+        and row.get('videoId')
+        and not candidate_adds_mix_variant(
+            title, str(row.get('title') or '')
+        )
+    ]
+    best = _pick_best(strict_candidates, duration, title, artists)
+    if best is None and strict_candidates != candidates:
+        mix_candidates = [
+            row
+            for row in candidates
+            if isinstance(row, dict)
+            and row.get('videoId')
+            and candidate_adds_mix_variant(
+                title, str(row.get('title') or '')
+            )
+        ]
+        if mix_candidates:
+            logger.info(
+                'YouTube Music find_match: trying mix variants as last resort '
+                'for title={!r}',
+                title,
+            )
+            best = _pick_best(
+                mix_candidates, duration, title, artists, mix_variant=True
+            )
     if best is not None:
         logger.info(
             'YouTube Music find_match picked videoId={} title={!r} year={!r}',
@@ -299,15 +342,62 @@ def find_match(
         )
         _log_ytm_response('find_match chosen row', best)
         return best.get('videoId'), best
-    for result in candidates:
-        if result.get('videoId'):
-            logger.info(
-                'YouTube Music find_match fallback first videoId={} title={!r}',
-                result.get('videoId'),
-                result.get('title'),
-            )
-            _log_ytm_response('find_match fallback row', result)
-            return result['videoId'], result
+    strict_candidates = [
+        result
+        for result in candidates
+        if not candidate_adds_mix_variant(
+            title, str(result.get('title') or '')
+        )
+    ]
+    for result in strict_candidates or candidates:
+        vid = result.get('videoId')
+        if not vid:
+            continue
+        candidate_title = (result.get('title') or '').lower()
+        if remote_title_unacceptable({'name': title}, candidate_title):
+            continue
+        candidate_duration = result.get('duration_seconds') or _parse_duration(
+            result.get('duration')
+        )
+        if candidate_duration and not media_duration_matches_song(
+            {'duration': duration},
+            candidate_duration,
+        ):
+            continue
+        logger.info(
+            'YouTube Music find_match fallback first videoId={} title={!r}',
+            vid,
+            result.get('title'),
+        )
+        _log_ytm_response('find_match fallback row', result)
+        return vid, result
+    mix_only = [
+        result
+        for result in candidates
+        if candidate_adds_mix_variant(title, str(result.get('title') or ''))
+    ]
+    for result in mix_only:
+        vid = result.get('videoId')
+        if not vid:
+            continue
+        candidate_title = (result.get('title') or '').lower()
+        if remote_title_unacceptable({'name': title}, candidate_title):
+            continue
+        candidate_duration = result.get('duration_seconds') or _parse_duration(
+            result.get('duration')
+        )
+        if candidate_duration and not media_duration_matches_mix_variant(
+            {'duration': duration},
+            candidate_duration,
+        ):
+            continue
+        logger.info(
+            'YouTube Music find_match mix-variant fallback videoId={} title={!r}',
+            vid,
+            result.get('title'),
+        )
+        _log_ytm_response('find_match mix-variant fallback row', result)
+        return vid, result
     logger.info(
         'YouTube Music find_match: no result for query={!r}',
         query[:160],
@@ -721,6 +811,14 @@ _NEGATIVE_KEYWORDS = (
     '8d audio',
     '1 hour',
     'bass boosted',
+    'audiobook',
+    'audio book',
+    'unabridged',
+    'narrated by',
+    'read by',
+    'full book',
+    'spoken word',
+    'podcast',
 )
 
 
@@ -729,6 +827,8 @@ def _pick_best(
     target_duration: int,
     target_title: str = '',
     target_artists: Optional[list[str]] = None,
+    *,
+    mix_variant: bool = False,
 ) -> Optional[dict[str, Any]]:
     target_title_l = (target_title or '').lower()
     target_artist_set = {
@@ -750,10 +850,18 @@ def _pick_best(
             for kw in _NEGATIVE_KEYWORDS
         ):
             continue
+        if remote_title_unacceptable({'name': target_title}, candidate_title):
+            continue
 
         candidate_duration = result.get('duration_seconds') or _parse_duration(
             result.get('duration')
         )
+        duration_ok = media_duration_matches_mix_variant if mix_variant else media_duration_matches_song
+        if candidate_duration and not duration_ok(
+            {'duration': target_duration},
+            candidate_duration,
+        ):
+            continue
         if target_duration and candidate_duration:
             score = abs(candidate_duration - target_duration)
         else:

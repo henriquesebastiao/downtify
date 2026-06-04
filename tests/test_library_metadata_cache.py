@@ -10,6 +10,7 @@ from mutagen.id3 import ID3, TIT2, TPE1
 
 from downtify.library_catalog import LibraryContext, list_library_entries
 from downtify.library_metadata_cache import LibraryMetadataCache
+from downtify.sqlite_utils import connect_sqlite
 
 
 def _write_tagged_mp3(path: Path, title: str, artist: str) -> None:
@@ -87,3 +88,36 @@ def test_metadata_cache_survives_path_change(tmp_path: Path) -> None:
     entry = cache.get_entry('Artist/Artist - Track.mp3', new_path)
     assert entry['title'] == 'Title'
     assert entry['artist'] == 'Artist'
+
+
+def test_has_cover_column_migration_keeps_cached_mtime(tmp_path: Path) -> None:
+    db_path = tmp_path / 'library.db'
+    with connect_sqlite(str(db_path), row_factory=True) as conn:
+        conn.execute("""
+            CREATE TABLE library_metadata (
+                content_key TEXT PRIMARY KEY,
+                filename TEXT NOT NULL,
+                title TEXT NOT NULL DEFAULT '',
+                artist TEXT NOT NULL DEFAULT '',
+                album TEXT NOT NULL DEFAULT '',
+                file_mtime_ns INTEGER NOT NULL,
+                file_size INTEGER NOT NULL,
+                cached_at TEXT NOT NULL
+            )
+        """)
+        conn.execute(
+            """INSERT INTO library_metadata
+               (content_key, filename, title, artist, album,
+                file_mtime_ns, file_size, cached_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            ('ck1', 't.mp3', 'Title', 'Artist', '', 123456, 100, 'now'),
+        )
+
+    cache = LibraryMetadataCache(db_path)
+    with cache._connect() as conn:
+        row = conn.execute(
+            'SELECT file_mtime_ns, has_cover FROM library_metadata WHERE content_key = ?',
+            ('ck1',),
+        ).fetchone()
+    assert int(row['file_mtime_ns']) == 123456
+    assert int(row['has_cover']) == 0

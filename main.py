@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import logging
 import mimetypes
 import os
@@ -31,6 +32,7 @@ from uvicorn import Config, Server
 from downtify import __version__, api
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
+from downtify.download_pool import limiter_from_settings
 from downtify.downloader import Downloader
 from downtify.library_catalog import (
     LibraryContext,
@@ -48,6 +50,11 @@ from downtify.playlist_catalog import PlaylistCatalog
 from downtify.track_index import TrackIndex
 
 load_dotenv()
+
+def _uvicorn_access_log_enabled() -> bool:
+    """HTTP request lines are off by default; set DOWNTIFY_ACCESS_LOG=full to enable."""
+    raw = str(os.getenv('DOWNTIFY_ACCESS_LOG', '') or '').strip().lower()
+    return raw in {'1', 'true', 'full', 'all', 'on'}
 
 
 class _InterceptHandler(logging.Handler):
@@ -85,9 +92,10 @@ def _setup_logging(level: str) -> None:
     # Explicitly override uvicorn's loggers before it starts — uvicorn will
     # still write to these logger names, and we want them flowing through
     # loguru rather than being printed raw by uvicorn's default handler.
+    intercept = _InterceptHandler()
     for _name in ('uvicorn', 'uvicorn.error', 'uvicorn.access', 'fastapi'):
         _log = logging.getLogger(_name)
-        _log.handlers = [_InterceptHandler()]
+        _log.handlers = [intercept]
         _log.propagate = False
 
 
@@ -96,6 +104,9 @@ DATABASE_DIR = Path('/data')
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
 DEFAULT_PORT = int(os.getenv('DOWNTIFY_PORT', os.getenv('PORT', '8000')))
+_TRANSPARENT_GIF = base64.b64decode(
+    'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+)
 
 
 class SPAStaticFiles(StaticFiles):
@@ -121,15 +132,14 @@ class LibraryListEntry(BaseModel):
     title: str = ''
     artist: str = ''
     album: str = ''
+    has_cover: bool = False
     playlists: list[str] = Field(default_factory=list)
 
 
 async def _application_startup() -> None:
     loop = asyncio.get_running_loop()
     api.state.loop = loop
-    api.state.download_semaphore = asyncio.Semaphore(
-        max(1, int(api.state.settings.get('max_parallel_downloads', 3)))
-    )
+    api.state.download_limiter = limiter_from_settings(api.state.settings)
     db_path = DATABASE_DIR / 'downtify_monitor.db'
     api.state.monitor_db = PlaylistMonitorDB(db_path)
     library_db = DATABASE_DIR / 'downtify_library.db'
@@ -323,8 +333,10 @@ def build_app() -> FastAPI:
         if data is None:
             data, mime = extract_cover_art(full)
             if data is None:
-                raise HTTPException(
-                    status_code=404, detail='No cover in file or folder'
+                return Response(
+                    content=_TRANSPARENT_GIF,
+                    media_type='image/gif',
+                    headers={'Cache-Control': 'public, max-age=3600'},
                 )
             if api.state.settings.get('cache_cover_art'):
                 cache = api.state.cover_cache
@@ -387,6 +399,7 @@ def main() -> None:
         loop=loop,  # type: ignore[arg-type]
         log_level=args.log_level.lower(),
         log_config=None,
+        access_log=_uvicorn_access_log_enabled(),
         workers=1,
     )
     server = Server(config)

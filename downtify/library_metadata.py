@@ -8,6 +8,8 @@ from typing import Any
 from mutagen import File as MutagenFile
 from mutagen.id3 import ID3
 
+from .cover_art import file_has_cover_art
+
 
 def _tag_text(value: Any) -> str:
     if value is None:
@@ -95,6 +97,7 @@ def library_entry_for_file(
         'title': title,
         'artist': artist,
         'album': album,
+        'has_cover': file_has_cover_art(full_path),
     }
 
 

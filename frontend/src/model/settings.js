@@ -7,6 +7,7 @@ const settings = ref({
   youtube: {
     cookies_file: '',
     cookies_from_browser: '',
+    download_timeout_seconds: 900,
     cookies_file_exists: false,
     cookies_looks_authenticated: false,
     cookies_auth_names: [],
@@ -21,7 +22,7 @@ const settings = ref({
     timeout_seconds: 20,
     search_retries: 5,
     search_poll_seconds: 15,
-    download_attempts: 3,
+    download_attempts: 5,
     poll_interval_seconds: 5,
     poll_max_attempts: 60,
     download_timeout_seconds: 600,
@@ -66,7 +67,9 @@ const settingsOptions = {
 
 API.getSettings().then((res) => {
   if (res.status === 200) {
-    console.log('Received settings:', res.data)
+    if (import.meta.env.DEV) {
+      console.log('Received settings:', res.data)
+    }
     settings.value = {
       ...settings.value,
       ...res.data,

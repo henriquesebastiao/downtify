@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import os
 import re
 import re as _re
 import shutil
+import threading
+import time
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -38,10 +41,77 @@ from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
 from .providers import enrich_from_match, find_match, find_match_for_video
 from .slskd_provider import download_from_slskd
+from .track_tag_match import (
+    candidate_adds_mix_variant,
+    duration_matches_song,
+    media_duration_matches_mix_variant,
+    remote_title_unacceptable,
+    snapshot_spotify_metadata,
+    song_duration_seconds,
+    spotify_file_tag_mismatch_label,
+    strip_mix_suffix,
+    verify_downloaded_audio_file,
+    verify_youtube_download_file,
+    youtube_probe_title_matches,
+)
 
 _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 
 ProgressCallback = Callable[[float, str, Optional[str]], None]
+
+def _youtube_download_timeout_seconds(settings: dict[str, Any]) -> int:
+    try:
+        value = int(settings.get('download_timeout_seconds') or 900)
+    except (TypeError, ValueError):
+        value = 900
+    return min(3600, max(60, value))
+
+
+class _ConvertHeartbeat:
+    """Keep queue UI alive while ffmpeg post-processes after yt-dlp 'finished'."""
+
+    def __init__(
+        self,
+        progress_cb: ProgressCallback,
+        *,
+        label: str,
+        provider: Optional[str],
+        interval_seconds: float = 20.0,
+    ) -> None:
+        self._progress_cb = progress_cb
+        self._label = label
+        self._provider = provider
+        self._interval = interval_seconds
+        self._stop = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+
+    def start(self) -> None:
+        self._stop.clear()
+        self._thread = threading.Thread(
+            target=self._run,
+            name='downtify-convert-heartbeat',
+            daemon=True,
+        )
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=1.0)
+
+    def _run(self) -> None:
+        started = time.monotonic()
+        while not self._stop.wait(self._interval):
+            elapsed = int(time.monotonic() - started)
+            mins, secs = divmod(elapsed, 60)
+            try:
+                self._progress_cb(
+                    96.0,
+                    f'{self._label} · converting ({mins}m {secs:02d}s)…',
+                    self._provider,
+                )
+            except Exception:
+                logger.opt(exception=True).debug('convert heartbeat error')
 
 
 def _provider_display_name(provider: Optional[str]) -> str:
@@ -373,22 +443,81 @@ def _ytdlp_should_try_alternate_video(exc: BaseException) -> bool:
     )
 
 
-def _fallback_video_ids_via_ytdlp(
-    song: dict[str, Any],
-    *,
-    youtube_settings: Optional[dict[str, Any]] = None,
-    exclude: Optional[frozenset[str]] = None,
-    limit: int = 5,
-) -> list[str]:
-    """Ranked YouTube video ids from yt-dlp search (no cookies)."""
+def _ytdlp_fallback_search_queries(song: dict[str, Any]) -> list[str]:
+    """Build yt-dlp search queries; include stripped mix/edit variants."""
+
     title = str(song.get('name') or '').strip()
     artists = [
         a for a in (song.get('artists') or []) if isinstance(a, str) and a
     ]
-    query = ' '.join([*artists[:2], title]).strip()
+    album = str(song.get('album_name') or '').strip()
+    queries: list[str] = []
+
+    def _add(parts: list[str]) -> None:
+        query = ' '.join(part for part in parts if part).strip()
+        if query and query not in queries:
+            queries.append(query)
+
+    base_title = strip_mix_suffix(title) or title
+    title_words = base_title.split()
+    short_ambiguous = (
+        album
+        and len(title_words) == 1
+        and len(title_words[0]) <= 5
+    )
+    if short_ambiguous:
+        _add([*artists[:2], base_title, album])
+    _add([*artists[:2], base_title])
+    if album and not short_ambiguous:
+        _add([*artists[:2], base_title, album])
+    if title.casefold() != base_title.casefold():
+        _add([*artists[:2], title])
+        if short_ambiguous:
+            _add([*artists[:2], title, album])
+        elif album:
+            _add([*artists[:2], title, album])
+    return queries
+
+
+def _ytdlp_fallback_search_query(song: dict[str, Any]) -> str:
+    """Build a yt-dlp search query; disambiguate very short track titles."""
+
+    queries = _ytdlp_fallback_search_queries(song)
+    return queries[0] if queries else ''
+
+
+def _youtube_candidate_near_acceptable(
+    song: dict[str, Any],
+    probe: dict[str, Any],
+) -> bool:
+    """Looser pre-download filter when strict duration match finds nothing."""
+
+    title = str(probe.get('title') or '')
+    if remote_title_unacceptable(song, title):
+        return False
+    length = int(probe.get('duration') or 0)
+    target = song_duration_seconds(song)
+    if length <= 0 or not target:
+        return True
+    spotify_title = str(song.get('name') or '')
+    if candidate_adds_mix_variant(spotify_title, title):
+        return media_duration_matches_mix_variant(song, length)
+    if not youtube_probe_title_matches(song, title):
+        return False
+    if length > target + max(60, int(target * 0.35)):
+        return False
+    if length < max(30, int(target * 0.4)) and target >= 60:
+        return False
+    return abs(length - target) <= max(60, int(target * 0.25))
+
+
+def _ytdlp_search_video_ids(
+    query: str,
+    *,
+    count: int,
+) -> list[str]:
     if not query:
         return []
-    count = min(max(1, limit), 10)
     opts = {
         'quiet': True,
         'no_warnings': True,
@@ -406,15 +535,59 @@ def _fallback_video_ids_via_ytdlp(
     entries = info.get('entries') if isinstance(info, dict) else None
     if not isinstance(entries, list):
         return []
-    skip = exclude or frozenset()
-    out: list[str] = []
+    ids: list[str] = []
     for entry in entries:
         if not isinstance(entry, dict):
             continue
         vid = entry.get('id')
-        if isinstance(vid, str) and vid.strip() and vid.strip() not in skip:
-            out.append(vid.strip())
-    return out
+        if isinstance(vid, str) and vid.strip():
+            ids.append(vid.strip())
+    return ids
+
+
+def _fallback_video_ids_via_ytdlp(
+    song: dict[str, Any],
+    *,
+    youtube_settings: Optional[dict[str, Any]] = None,
+    exclude: Optional[frozenset[str]] = None,
+    limit: int = 5,
+) -> list[str]:
+    """Ranked YouTube video ids from yt-dlp search (no cookies)."""
+    queries = _ytdlp_fallback_search_queries(song)
+    if not queries:
+        return []
+    count = min(max(limit * 2, limit, 1), 10)
+    skip = exclude or frozenset()
+    verified: list[str] = []
+    near: list[str] = []
+    unverified: list[str] = []
+    seen: set[str] = set()
+
+    for query in queries:
+        for vid in _ytdlp_search_video_ids(query, count=count):
+            if not vid or vid in skip or vid in seen:
+                continue
+            seen.add(vid)
+            probe = _ytdlp_video_probe(vid, youtube_settings=youtube_settings)
+            if probe is None:
+                unverified.append(vid)
+                continue
+            if _youtube_candidate_acceptable(song, probe):
+                verified.append(vid)
+            elif _youtube_candidate_near_acceptable(song, probe):
+                near.append(vid)
+            if len(verified) >= limit:
+                break
+        if len(verified) >= limit:
+            break
+
+    if verified:
+        return verified[:limit]
+    if near:
+        return near[:limit]
+    if not song_duration_seconds(song):
+        return unverified[:limit]
+    return []
 
 
 def _fallback_video_id_via_ytdlp(
@@ -528,6 +701,104 @@ def _ytdlp_download_video(
         raise last_err
 
 
+def _ytdlp_video_probe(
+    video_id: str,
+    *,
+    youtube_settings: Optional[dict[str, Any]] = None,
+) -> Optional[dict[str, Any]]:
+    vid = str(video_id or '').strip()
+    if not vid:
+        return None
+    opts: dict[str, Any] = {
+        'quiet': True,
+        'no_warnings': True,
+        'skip_download': True,
+        'noplaylist': True,
+    }
+    apply_ytdlp_cookie_opts(opts, youtube_settings)
+    url = f'https://www.youtube.com/watch?v={vid}'
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'yt-dlp video probe failed for {}', vid
+        )
+        return None
+    if not isinstance(info, dict):
+        return None
+    try:
+        length = int(info.get('duration') or 0)
+    except (TypeError, ValueError):
+        length = 0
+    title = str(info.get('title') or '').strip()
+    if length <= 0 and not title:
+        return None
+    return {'duration': length, 'title': title}
+
+
+def _remove_partial_downloads(target_dir: Path, basename: str) -> None:
+    for candidate in target_dir.glob(f'{basename}.*'):
+        if candidate.is_file():
+            try:
+                candidate.unlink()
+            except OSError:
+                logger.opt(exception=True).warning(
+                    'Failed to remove partial download {}', candidate
+                )
+
+
+def _youtube_candidate_acceptable(
+    song: dict[str, Any],
+    probe: dict[str, Any],
+) -> bool:
+    title = str(probe.get('title') or '')
+    if remote_title_unacceptable(song, title):
+        logger.info(
+            'yt-dlp: skip video title={!r} (audiobook/podcast/long-form) '
+            'for spotify={!r}',
+            title[:120],
+            song.get('name'),
+        )
+        return False
+    length = int(probe.get('duration') or 0)
+    if length > 0 and not duration_matches_song(song, length):
+        logger.info(
+            'yt-dlp: skip video duration={}s (expected ~{}s) title={!r}',
+            length,
+            song_duration_seconds(song),
+            song.get('name'),
+        )
+        return False
+    if not youtube_probe_title_matches(song, title):
+        logger.info(
+            'yt-dlp: skip video title={!r} (title mismatch) for spotify={!r}',
+            title[:120],
+            song.get('name'),
+        )
+        return False
+    return True
+
+
+def _run_callable_with_timeout(
+    func: Callable[[], None],
+    *,
+    timeout_seconds: int,
+    label: str,
+) -> None:
+    if timeout_seconds <= 0:
+        func()
+        return
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(func)
+        try:
+            future.result(timeout=timeout_seconds)
+        except concurrent.futures.TimeoutError as exc:
+            raise TimeoutError(
+                f'{label} exceeded {timeout_seconds}s'
+            ) from exc
+
+
 class Downloader:
     """Wraps ``yt-dlp`` plus ``mutagen`` tagging."""
 
@@ -596,7 +867,7 @@ class Downloader:
             'search_poll_seconds': _int(
                 raw.get('search_poll_seconds') or 15, 15
             ),
-            'download_attempts': _int(raw.get('download_attempts') or 3, 3),
+            'download_attempts': _int(raw.get('download_attempts') or 5, 5),
             'poll_interval_seconds': _int(
                 raw.get('poll_interval_seconds') or 5, 5
             ),
@@ -870,8 +1141,8 @@ class Downloader:
 
         if progress_cb:
             label = _provider_display_name(provider)
-            msg = f'{label} · done' if label else 'Done'
-            progress_cb(100.0, msg, provider)
+            msg = f'{label} · tagging' if label else 'Tagging'
+            progress_cb(98.0, msg, provider)
 
     def download(  # noqa: PLR0914  # yt-dlp + slskd + tagging pipeline
         self,
@@ -1010,6 +1281,9 @@ class Downloader:
                     'preferredquality': self.audio_bitrate,
                 }
             ],
+            'postprocessor_args': {
+                'ffmpeg': ['-threads', '4'],
+            },
         }
         # Many container setups have IPv6 advertised but unroutable for
         # googlevideo.com, which surfaces as EAI_AGAIN on the AAAA lookup.
@@ -1037,9 +1311,16 @@ class Downloader:
         for alt in alt_ids:
             if alt not in candidate_ids:
                 candidate_ids.append(alt)
+        tried_ids = set(candidate_ids)
+
+        yt_timeout = _youtube_download_timeout_seconds(self.youtube_settings)
+        convert_label = _provider_display_name(yt_provider) or 'YouTube'
+        spotify_row = snapshot_spotify_metadata(song)
 
         last_err: Optional[BaseException] = None
-        for idx, cand_id in enumerate(candidate_ids):
+        idx = 0
+        while idx < len(candidate_ids):
+            cand_id = candidate_ids[idx]
             if idx > 0:
                 logger.info(
                     'yt-dlp: trying alternate videoId={} for title={!r}',
@@ -1049,38 +1330,128 @@ class Downloader:
                 if progress_cb:
                     progress_cb(
                         5.0,
-                        f'{_provider_display_name(yt_provider) or "YouTube"} · trying alternate match…',
+                        f'{convert_label} · trying alternate match…',
                         yt_provider,
                     )
-            try:
+            probe = _ytdlp_video_probe(
+                cand_id,
+                youtube_settings=self.youtube_settings,
+            )
+            if probe is not None and not _youtube_candidate_acceptable(
+                song, probe
+            ) and not _youtube_candidate_near_acceptable(song, probe):
+                last_err = DownloadError(
+                    f'YouTube candidate rejected ({probe.get("title")!r})'
+                )
+                if idx + 1 < len(candidate_ids):
+                    idx += 1
+                    continue
+                raise last_err
+
+            heartbeat: Optional[_ConvertHeartbeat] = None
+            if progress_cb is not None:
+                heartbeat = _ConvertHeartbeat(
+                    progress_cb,
+                    label=convert_label,
+                    provider=yt_provider,
+                )
+                heartbeat.start()
+
+            def _do_download(vid: str = cand_id) -> None:
                 _ytdlp_download_video(
-                    cand_id,
+                    vid,
                     ydl_opts=ydl_opts,
                     youtube_settings=self.youtube_settings,
                 )
-                last_err = None
-                break
+
+            try:
+                _run_callable_with_timeout(
+                    _do_download,
+                    timeout_seconds=yt_timeout,
+                    label=f'YouTube download for {song.get("name")!r}',
+                )
             except DownloadError as exc:
                 last_err = exc
                 has_more = idx + 1 < len(candidate_ids)
                 if has_more and _ytdlp_should_try_alternate_video(exc):
+                    idx += 1
                     continue
                 raise
+            except TimeoutError as exc:
+                last_err = exc
+                logger.warning(
+                    'yt-dlp: timed out after {}s videoId={} title={!r}',
+                    yt_timeout,
+                    cand_id,
+                    song.get('name'),
+                )
+                if idx + 1 < len(candidate_ids):
+                    idx += 1
+                    continue
+                raise
+            finally:
+                if heartbeat is not None:
+                    heartbeat.stop()
+
+            final_path = target_dir / f'{basename}.{self.audio_format}'
+            if not final_path.exists():
+                for candidate in target_dir.glob(f'{basename}.*'):
+                    if candidate.is_file():
+                        final_path = candidate
+                        break
+
+            if not final_path.exists():
+                last_err = DownloadError('yt-dlp produced no output file')
+                if idx + 1 < len(candidate_ids):
+                    idx += 1
+                    continue
+                raise last_err
+
+            if not verify_youtube_download_file(
+                final_path, spotify_row, probe=probe
+            ):
+                logger.info(
+                    'yt-dlp: post-download verify failed videoId={} {}; '
+                    'trying next candidate ({}/{})',
+                    cand_id,
+                    spotify_file_tag_mismatch_label({
+                        **spotify_row,
+                        'library_from_tags': True,
+                    }),
+                    idx + 1,
+                    len(candidate_ids),
+                )
+                _remove_partial_downloads(target_dir, basename)
+                last_err = DownloadError('downloaded file did not match Spotify')
+                extra = _fallback_video_ids_via_ytdlp(
+                    song,
+                    youtube_settings=self.youtube_settings,
+                    exclude=frozenset(tried_ids),
+                    limit=5,
+                )
+                for alt in extra:
+                    if alt not in tried_ids:
+                        candidate_ids.append(alt)
+                        tried_ids.add(alt)
+                if idx + 1 < len(candidate_ids):
+                    idx += 1
+                    continue
+                raise NoAudioMatchError(
+                    f'Could not find an audio match for {song.get("name")!r}'
+                ) from last_err
+
+            self._finalize_downloaded_file(
+                final_path, song, progress_cb, yt_provider
+            )
+            return f'{rel_prefix}{final_path.name}'
+
         if last_err is not None:
-            raise last_err
-
-        final_path = target_dir / f'{basename}.{self.audio_format}'
-        if not final_path.exists():
-            # yt-dlp sometimes uses the upstream extension for opus/m4a
-            for candidate in target_dir.glob(f'{basename}.*'):
-                if candidate.is_file():
-                    final_path = candidate
-                    break
-
-        self._finalize_downloaded_file(
-            final_path, song, progress_cb, yt_provider
+            raise NoAudioMatchError(
+                f'Could not find an audio match for {song.get("name")!r}'
+            ) from last_err
+        raise NoAudioMatchError(
+            f'Could not find an audio match for {song.get("name")!r}'
         )
-        return f'{rel_prefix}{final_path.name}'
 
 
 def _download_cover(url: str) -> Optional[bytes]:

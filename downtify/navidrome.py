@@ -19,6 +19,11 @@ from .library_metadata import read_audio_metadata
 from .library_paths import locate_library_file
 from .navidrome_index import NavidromeIndex
 from .track_index import normalize_spotify_track_id
+from .track_tag_match import (
+    snapshot_spotify_metadata,
+    spotify_aligns_with_file_tags,
+    spotify_file_tag_mismatch_label,
+)
 
 # Subsonic createPlaylist via GET appends every songId to the query string; large
 # playlists hit HTTP 414. POST form bodies avoid that; we still batch adds.
@@ -658,83 +663,15 @@ class NavidromeClient:
         )
 
 
-def _normalize_tag_loose(text: str) -> str:
-    """Casefold and drop punctuation so tag vs path comparisons are tolerant."""
-
-    text = _normalize_tag(text)
-    text = text.replace("'", '').replace('’', '').replace('‛', '')
-    text = re.sub(r'[^\w\s]', ' ', text)
-    return re.sub(r'\s+', ' ', text).strip()
-
-
-def _titles_align(expected: str, from_file: str) -> bool:
-    title_n = _normalize_tag_loose(expected)
-    file_title_n = _normalize_tag_loose(from_file)
-    if not title_n or not file_title_n:
-        return True
-    return (
-        title_n == file_title_n
-        or title_n in file_title_n
-        or file_title_n in title_n
-    )
-
-
-def _artist_lists_align(expected: list[str], actual: list[str]) -> bool:
-    if not expected:
-        return True
-    if not actual:
-        return True
-    for exp in expected:
-        exp_n = _normalize_tag_loose(exp)
-        if not exp_n:
-            continue
-        for act in actual:
-            act_n = _normalize_tag_loose(act)
-            if exp_n in act_n or act_n in exp_n:
-                return True
-    return False
-
-
-def _spotify_expected(song: dict[str, Any]) -> tuple[str, list[str]]:
-    title = str(song.get('spotify_name') or '').strip()
-    artists = [
-        str(a).strip()
-        for a in (song.get('spotify_artists') or [])
-        if str(a).strip()
-    ]
-    return title, artists
-
-
-def _spotify_aligns_with_file_tags(song: dict[str, Any]) -> bool:
-    """False when embedded tags clearly disagree with the Spotify playlist row."""
-
-    if not song.get('library_from_tags'):
-        return True
-
-    spotify_title, spotify_artists = _spotify_expected(song)
-    if not spotify_title:
-        return True
-
-    file_title, file_artists = _library_tags(song)
-    if not file_title:
-        return True
-    if not _titles_align(spotify_title, file_title):
-        return False
-    return _artist_lists_align(spotify_artists, file_artists)
-
-
 def _song_label(song: dict[str, Any]) -> str:
-    spotify_title, spotify_artists = _spotify_expected(song)
-    file_title, file_artists = _library_tags(song)
-    exp = spotify_title or 'unknown'
-    if spotify_artists:
-        exp = f'{", ".join(spotify_artists)} - {exp}'
-    file = file_title or 'unknown'
-    if file_artists:
-        file = f'{", ".join(file_artists)} - {file}'
-    fn = str(song.get('filename') or '').strip()
-    base = f'spotify={exp!r} tags={file!r}'
-    return f'{base} ({fn})' if fn else base
+    tags_row = dict(song)
+    title, artists = _library_tags(song)
+    if title:
+        tags_row['name'] = title
+    if artists:
+        tags_row['artists'] = artists
+    tags_row['library_from_tags'] = bool(title)
+    return spotify_file_tag_mismatch_label(tags_row)
 
 
 def _songs_for_playlist_sync(
@@ -744,10 +681,12 @@ def _songs_for_playlist_sync(
 
     kept: list[dict[str, Any]] = []
     for song in songs:
-        if not _spotify_aligns_with_file_tags(song):
+        if not spotify_aligns_with_file_tags(song):
+            fn = str(song.get('filename') or '').strip()
+            label = spotify_file_tag_mismatch_label(song)
             logger.info(
                 'navidrome: skip sync for {}; Spotify does not match file tags',
-                _song_label(song),
+                f'{label} ({fn})' if fn else label,
             )
             continue
         kept.append(song)
@@ -768,15 +707,7 @@ def enrich_song_from_library_file(
 ) -> dict[str, Any]:
     """Attach on-disk path metadata (mutagen tags) for Navidrome matching."""
 
-    row = dict(song)
-    if not row.get('spotify_name'):
-        row['spotify_name'] = str(row.get('name') or '').strip()
-    if not row.get('spotify_artists'):
-        row['spotify_artists'] = [
-            str(a).strip()
-            for a in (row.get('artists') or [])
-            if str(a).strip()
-        ]
+    row = snapshot_spotify_metadata(song)
     filename = str(row.get('filename') or '').strip()
     if not filename:
         return row

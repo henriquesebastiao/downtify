@@ -10,6 +10,7 @@ from typing import Any, Optional
 from .library_cache_keys import file_content_key
 from .library_paths import locate_library_file
 from .track_index import normalize_spotify_track_id
+from .sqlite_utils import connect_sqlite
 
 
 def _now_iso() -> str:
@@ -35,9 +36,7 @@ class PlaylistCatalog:
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self._path, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        return conn
+        return connect_sqlite(self._path, row_factory=True)
 
     def _init_db(self) -> None:
         with self._connect() as conn:

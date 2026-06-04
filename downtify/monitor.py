@@ -29,6 +29,7 @@ from .track_index import (
     normalize_spotify_track_id,
     resolve_existing_download,
 )
+from .sqlite_utils import connect_sqlite
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
 
@@ -74,9 +75,8 @@ class PlaylistMonitorDB:
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self._path, check_same_thread=False)
+        conn = connect_sqlite(self._path, row_factory=True)
         conn.execute('PRAGMA foreign_keys = ON')
-        conn.row_factory = sqlite3.Row
         return conn
 
     def _init_db(self) -> None:

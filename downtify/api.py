@@ -38,6 +38,7 @@ from fastapi import (
 )
 from loguru import logger
 
+from downtify.download_pool import DownloadParallelLimiter
 from downtify.slskd_provider import reset_slskd_parallelism
 
 from . import m3u, providers, spotify
@@ -104,6 +105,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'youtube': {
         'cookies_file': '',
         'cookies_from_browser': '',
+        'download_timeout_seconds': 900,
     },
     'slskd': {
         'enabled': False,
@@ -115,7 +117,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'timeout_seconds': 20,
         'search_retries': 5,
         'search_poll_seconds': 15,
-        'download_attempts': 3,
+        'download_attempts': 5,
         'poll_interval_seconds': 5,
         'poll_max_attempts': 60,
         'download_timeout_seconds': 600,
@@ -167,6 +169,13 @@ def _effective_youtube_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'cookies_from_browser': str(
             raw.get('cookies_from_browser') or ''
         ).strip(),
+        'download_timeout_seconds': _setting_int(
+            raw,
+            'download_timeout_seconds',
+            900,
+            minimum=60,
+            maximum=3600,
+        ),
     }
 
 
@@ -291,7 +300,7 @@ def _slskd_numeric_settings(
             raw, 'search_poll_seconds', 15, minimum=3, maximum=60
         ),
         'download_attempts': _setting_int(
-            raw, 'download_attempts', 3, minimum=1, maximum=10
+            raw, 'download_attempts', 5, minimum=1, maximum=10
         ),
         'poll_interval_seconds': _setting_int(
             raw, 'poll_interval_seconds', 5, minimum=1, maximum=30
@@ -390,7 +399,7 @@ class AppState:
     cover_cache: Optional[CoverArtCache] = None
     playlist_catalog: Optional[PlaylistCatalog] = None
     download_jobs: dict[str, dict[str, Any]] = {}
-    download_semaphore: Optional[asyncio.Semaphore] = None
+    download_limiter: Optional[DownloadParallelLimiter] = None
 
 
 state = AppState()
@@ -575,6 +584,10 @@ async def _run_download(
     song: dict[str, Any],
     song_id: str,
     subdir: Optional[str] = None,
+    *,
+    playlist_name: Optional[str] = None,
+    spotify_playlist_id: Optional[str] = None,
+    track_order: int = 0,
 ) -> Optional[str]:
     """Run a single download to completion, updating jobs state and broadcasting WS events."""
 
@@ -645,9 +658,19 @@ async def _run_download(
             loop,
         )
 
-    sem = state.download_semaphore
+    yt_timeout = 900
+    if state.downloader is not None:
+        yt_timeout = int(
+            (state.downloader.youtube_settings or {}).get(
+                'download_timeout_seconds'
+            )
+            or 900
+        )
+    yt_timeout = min(3600, max(60, yt_timeout))
+
+    limiter = state.download_limiter
     try:
-        async with sem if sem is not None else contextlib.nullcontext():
+        async with limiter if limiter is not None else contextlib.nullcontext():
             job['status'] = 'downloading'
             job['progress'] = job.get('progress') or 0
             await state.connections.broadcast({
@@ -657,12 +680,36 @@ async def _run_download(
                 'provider': job.get('provider') or '',
                 'status': 'downloading',
             })
-            filename = await loop.run_in_executor(
-                None,
-                lambda: state.downloader.download(
-                    song, progress, subdir=subdir
-                ),
-            )
+            try:
+                filename = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        lambda: state.downloader.download(
+                            song, progress, subdir=subdir
+                        ),
+                    ),
+                    timeout=yt_timeout,
+                )
+            except TimeoutError:
+                msg = (
+                    f'Download timed out after {yt_timeout}s '
+                    '(YouTube convert or network may have stalled)'
+                )
+                logger.warning(
+                    'Download timed out for {!r} ({}) after {}s',
+                    song.get('name'),
+                    song_id,
+                    yt_timeout,
+                )
+                job['status'] = 'error'
+                job['message'] = msg
+                await state.connections.broadcast({
+                    'song': song,
+                    'progress': 0,
+                    'message': msg,
+                    'status': 'error',
+                })
+                return None
     except NoAudioMatchError as exc:
         logger.warning(
             'No audio source for {!r} ({})',
@@ -693,10 +740,27 @@ async def _run_download(
     job['status'] = 'done'
     job['filename'] = filename
     job['progress'] = 100
+    job['message'] = 'Done'
+    await state.connections.broadcast({
+        'song': song,
+        'progress': 100,
+        'message': 'Done',
+        'status': 'done',
+        'filename': filename,
+    })
     if filename:
+        pl_name = playlist_name
+        pl_id = spotify_playlist_id
+        order = track_order
         await loop.run_in_executor(
             None,
-            lambda: _register_download_on_disk(song, filename),
+            lambda: _register_download_on_disk(
+                song,
+                filename,
+                playlist_name=pl_name,
+                spotify_playlist_id=pl_id,
+                track_order=order,
+            ),
         )
     if filename and state.navidrome_index is not None:
         dl_dir = Path(state.downloader.download_dir)
@@ -741,13 +805,6 @@ async def _run_download(
                 filename, download_dir=dl_dir, slskd_dir=slskd
             ),
         )
-    await state.connections.broadcast({
-        'song': song,
-        'progress': 100,
-        'message': 'Done',
-        'status': 'done',
-        'filename': filename,
-    })
     return filename
 
 
@@ -862,17 +919,27 @@ async def _process_batch(
                 'Failed to resolve playlist name for {}', playlist_url
             )
 
-    async def _bounded(song: dict[str, Any], song_id: str) -> dict[str, Any]:
+    async def _bounded(
+        song: dict[str, Any], song_id: str, track_order: int
+    ) -> dict[str, Any]:
         try:
             filename = await _run_download(
-                song, song_id, subdir=playlist_subdir
+                song,
+                song_id,
+                subdir=playlist_subdir,
+                playlist_name=playlist_name,
+                spotify_playlist_id=spotify_playlist_id,
+                track_order=track_order,
             )
         except Exception:
             filename = None
         return {'song': song, 'filename': filename}
 
     results = await asyncio.gather(
-        *[_bounded(s, sid) for s, sid in zip(songs, job_ids)],
+        *[
+            _bounded(s, sid, index)
+            for index, (s, sid) in enumerate(zip(songs, job_ids))
+        ],
         return_exceptions=False,
     )
 
@@ -927,11 +994,6 @@ async def _process_batch(
                     rows,
                     spotify_id=spotify_playlist_id,
                 )
-            for song, result in zip(songs, results):
-                fn = (result or {}).get('filename')
-                if fn:
-                    _register_download_on_disk(song, fn)
-
         await asyncio.to_thread(_catalog_batch)
         if len(entries) < len(songs):
             logger.info(
@@ -1299,7 +1361,10 @@ async def update_settings_endpoint(
             try:
                 count = max(1, int(payload['max_parallel_downloads']))
                 count = min(8, count)
-                state.download_semaphore = asyncio.Semaphore(count)
+                if state.download_limiter is not None:
+                    await state.download_limiter.apply_limit(count)
+                else:
+                    state.download_limiter = DownloadParallelLimiter(count)
                 if state.downloader is not None:
                     state.downloader.slskd_settings = (
                         _effective_slskd_settings(state.settings)

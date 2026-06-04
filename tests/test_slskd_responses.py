@@ -12,6 +12,7 @@ from downtify.slskd_provider import (
     _rank_slskd_candidates,
     _slskd_search_queries,
     _slskd_transfer_progress_pct,
+    _title_in_basename,
     download_from_slskd,
 )
 
@@ -38,6 +39,41 @@ def test_slskd_search_queries_prefers_title_dash_artist():
     })
     assert queries[0] == 'YOU KNOW WHERE WERE GOING - 4D4M'
     assert 'YOU KNOW WHERE WERE GOING' in queries
+
+
+def test_slskd_search_queries_include_full_and_short_radio_mix():
+    queries = _slskd_search_queries({
+        'artists': ['Y:K'],
+        'name': 'Loud Enough - Radio Mix',
+    })
+    assert queries[0] == 'Loud Enough - Y:K'
+    assert 'Loud Enough - Radio Mix - Y:K' in queries
+    assert 'Y:K Loud Enough - Radio Mix' in queries
+
+
+def test_rank_accepts_radio_mix_filename_for_radio_mix_track():
+    song = {
+        'artists': ['Y:K'],
+        'name': 'Loud Enough - Radio Mix',
+        'duration': 174,
+    }
+    responses = [
+        {
+            'username': 'peer1',
+            'fileCount': 1,
+            'hasFreeUploadSlot': True,
+            'files': [
+                {
+                    'filename': '@@x\\Y K - Loud Enough - Radio Mix.mp3',
+                    'size': 1,
+                    'length': 176,
+                    'bitRate': 320,
+                },
+            ],
+        },
+    ]
+    ranked = _rank_slskd_candidates(song, responses, {})
+    assert len(ranked) == 1
 
 
 def test_collect_matching_files_skips_wrong_extension_and_keywords():
@@ -142,6 +178,37 @@ def test_rank_rejects_album_only_without_artist_in_filename():
                     'filename': '@@x\\Compilations\\Hotel Room Service Album\\01 Intro.mp3',
                     'size': 1,
                     'length': 242,
+                },
+            ],
+        }
+    ]
+    ranked = _rank_slskd_candidates(song, responses)
+    assert ranked == []
+
+
+def test_rank_rejects_wrong_file_when_only_folder_matches_title():
+    """Folder named after the request must not satisfy match without title on file."""
+    song = {
+        'artists': ['Tom Jung'],
+        'name': 'Light',
+        'album_name': 'Light',
+        'duration': 210,
+    }
+    responses = [
+        {
+            'username': 'peer1',
+            'fileCount': 1,
+            'hasFreeUploadSlot': True,
+            'files': [
+                {
+                    'filename': (
+                        '@@share\\Tom Jung\\Light\\'
+                        '04 - RamirezPouyaShakewell - Gold Thangs & '
+                        'Pinky Rangs (Da Hooptie).mp3'
+                    ),
+                    'size': 1,
+                    'length': 210,
+                    'bitRate': 320,
                 },
             ],
         }
@@ -390,6 +457,122 @@ def test_enqueue_download_uses_username_endpoint():
     assert captured['json'] == [
         {'filename': 'music\\Artist - Track.mp3', 'size': 1234}
     ]
+
+
+def test_title_in_basename_rejects_substring_false_positive():
+    assert not _title_in_basename('Artist - highlight.mp3', 'light')
+    assert _title_in_basename('Tom Jung - Light.mp3', 'light')
+
+
+def test_download_from_slskd_retries_when_tags_mismatch(
+    monkeypatch, tmp_path
+):
+    candidates = [
+        {
+            'username': 'peer1',
+            'filename': 'Tom Jung/Light/wrong.mp3',
+            'size': 1000,
+            'match_score': 8,
+        },
+        {
+            'username': 'peer2',
+            'filename': 'Tom Jung - Light.mp3',
+            'size': 1000,
+            'match_score': 9,
+        },
+    ]
+    good = tmp_path / 'Tom Jung - Light.mp3'
+    good.write_bytes(b'ok')
+    bad = tmp_path / 'wrong.mp3'
+    bad.write_bytes(b'bad')
+
+    class FakeClient:
+        base_url = 'https://slskd.example'
+
+        @staticmethod
+        def configured() -> bool:
+            return True
+
+        @staticmethod
+        def can_connect() -> bool:
+            return True
+
+        @staticmethod
+        def start_search(query: str) -> str:
+            return 'search-1'
+
+        @staticmethod
+        def wait_search_complete(*args, **kwargs) -> bool:
+            return True
+
+        @staticmethod
+        def search_responses(search_id: str) -> list[dict[str, Any]]:
+            return [{'username': 'peer1', 'hasFreeUploadSlot': True, 'fileCount': 2}]
+
+        @staticmethod
+        def delete_search(search_id: str) -> None:
+            pass
+
+        @staticmethod
+        def enqueue_download(row: dict[str, Any]) -> bool:
+            return True
+
+        @staticmethod
+        def remote_download_directories() -> list[str]:
+            return []
+
+    def fake_wait(*args, **kwargs):
+        filename = args[3] if len(args) > 3 else ''
+        if 'wrong' in filename:
+            return bad
+        return good
+
+    def fake_verify(path, song):
+        return path == good
+
+    monkeypatch.setattr(
+        'downtify.slskd_provider.SlskdClient',
+        lambda settings: FakeClient(),
+    )
+    monkeypatch.setattr(
+        'downtify.slskd_provider._rank_slskd_candidates',
+        lambda song, responses, settings=None: list(candidates),
+    )
+    monkeypatch.setattr(
+        'downtify.slskd_provider._select_download_candidates',
+        lambda ranked, settings: ranked,
+    )
+    monkeypatch.setattr(
+        'downtify.slskd_provider._search_roots',
+        lambda settings, client: [tmp_path],
+    )
+    monkeypatch.setattr(
+        'downtify.slskd_provider._wait_for_slskd_file', fake_wait
+    )
+    monkeypatch.setattr(
+        'downtify.slskd_provider.verify_downloaded_file_matches_spotify',
+        fake_verify,
+    )
+    removed: list[Path] = []
+    monkeypatch.setattr(
+        'downtify.slskd_provider._discard_mismatched_download',
+        lambda p: removed.append(p),
+    )
+
+    settings = {
+        'enabled': True,
+        'base_url': 'https://slskd.example',
+        'api_key': 'key',
+        'output_dir': str(tmp_path),
+        'source_dir': str(tmp_path),
+        'leave_in_place': True,
+    }
+    result = download_from_slskd(
+        {'name': 'Light', 'artists': ['Tom Jung'], 'album_name': 'Light'},
+        settings,
+    )
+    assert result == good
+    assert bad in removed
 
 
 def test_download_from_slskd_tries_next_candidate_on_failure(

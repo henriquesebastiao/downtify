@@ -234,7 +234,7 @@ export default {
       "Save songs in subfolders named after the artist. Playlist tracks are also placed in their artist's folder instead of a playlist folder.",
     parallelDownloads: 'Parallel downloads',
     parallelDownloadsHint:
-      'Maximum songs at once (YouTube and slskd). Tap a number, then Save — applies to new work; a playlist already running keeps its current batch until you start another. With slskd on, prefer 2–3: slskd caps concurrent Soulseek searches; higher values mostly queue or fail, not faster downloads.',
+      'Maximum songs downloading at once (YouTube and slskd), shared across all playlists in the queue. Tap a number, then Save. With slskd on, prefer 2–3.',
     saved: 'Changes saved',
     saveError: "Couldn't save settings.",
     language: 'Language',
@@ -306,6 +306,9 @@ export default {
     nowPlaying: 'Now playing',
     upNext: 'Up next',
     playFromLibrary: 'Open in player',
+    selectAll: 'Select all',
+    selectedCount: '{selected} of {total} selected',
+    deleteTrack: 'Remove from library',
     countOne: '{count} track',
     countMany: '{count} tracks',
   },

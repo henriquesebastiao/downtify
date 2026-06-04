@@ -13,6 +13,7 @@ from .library_cache_keys import (
 )
 from .library_metadata import library_entry_for_file
 from .library_paths import locate_library_file
+from .sqlite_utils import connect_sqlite
 
 
 def _now_iso() -> str:
@@ -43,9 +44,7 @@ class LibraryMetadataCache:
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self._path, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        return conn
+        return connect_sqlite(self._path, row_factory=True)
 
     def _init_db(self) -> None:
         with self._connect() as conn:
@@ -60,6 +59,7 @@ class LibraryMetadataCache:
                         title TEXT NOT NULL DEFAULT '',
                         artist TEXT NOT NULL DEFAULT '',
                         album TEXT NOT NULL DEFAULT '',
+                        has_cover INTEGER NOT NULL DEFAULT 0,
                         file_mtime_ns INTEGER NOT NULL,
                         file_size INTEGER NOT NULL,
                         cached_at TEXT NOT NULL
@@ -71,8 +71,21 @@ class LibraryMetadataCache:
                 """)
                 return
             if row[0] and 'content_key' in str(row[0]):
+                self._ensure_has_cover_column(conn)
                 return
             self._migrate_legacy_table(conn)
+
+    @staticmethod
+    def _ensure_has_cover_column(conn: sqlite3.Connection) -> None:
+        cols = {
+            str(r[1])
+            for r in conn.execute('PRAGMA table_info(library_metadata)')
+        }
+        if 'has_cover' in cols:
+            return
+        conn.execute(
+            'ALTER TABLE library_metadata ADD COLUMN has_cover INTEGER NOT NULL DEFAULT 0'
+        )
 
     @staticmethod
     def _migrate_legacy_table(conn: sqlite3.Connection) -> None:
@@ -177,7 +190,7 @@ class LibraryMetadataCache:
             for chunk in _chunked(content_keys, 400):
                 placeholders = ','.join('?' * len(chunk))
                 query = f"""SELECT content_key, filename, file_mtime_ns, file_size,
-                            title, artist, album
+                            title, artist, album, has_cover
                             FROM library_metadata
                             WHERE content_key IN ({placeholders})"""
                 for row in conn.execute(query, chunk):
@@ -185,54 +198,67 @@ class LibraryMetadataCache:
             for chunk in _chunked(filenames, 400):
                 placeholders = ','.join('?' * len(chunk))
                 query = f"""SELECT content_key, filename, file_mtime_ns, file_size,
-                            title, artist, album
+                            title, artist, album, has_cover
                             FROM library_metadata
                             WHERE filename IN ({placeholders})"""
                 for row in conn.execute(query, chunk):
                     by_name[_norm_filename(str(row['filename']))] = row
 
-            results: list[dict[str, str]] = []
-            filename_updates: list[tuple[str, str]] = []
+        results: list[dict[str, str]] = []
+        filename_updates: list[tuple[str, str]] = []
+        pending_stores: list[
+            tuple[str, Optional[str], dict[str, str], int, int]
+        ] = []
 
-            for item in prepared:
-                stored = str(item['stored'])
-                full = item['full']
-                if not item.get('ready'):
-                    results.append(library_entry_for_file(stored, full))
+        for item in prepared:
+            stored = str(item['stored'])
+            full = item['full']
+            if not item.get('ready'):
+                results.append(library_entry_for_file(stored, full))
+                continue
+
+            name = str(item['name'])
+            mtime_ns = int(item['mtime_ns'])
+            size = int(item['size'])
+            ck = item.get('ck')
+
+            row = by_ck.get(str(ck)) if ck else None
+            if row is None:
+                row = by_name.get(name)
+            if row is not None:
+                if (
+                    int(row['file_mtime_ns']) == mtime_ns
+                    and int(row['file_size']) == size
+                ):
+                    if _norm_filename(str(row['filename'])) != name and ck:
+                        filename_updates.append((name, str(ck)))
+                    results.append({
+                        'file': stored,
+                        'title': str(row['title'] or ''),
+                        'artist': str(row['artist'] or ''),
+                        'album': str(row['album'] or ''),
+                        'has_cover': bool(int(row['has_cover'] or 0)),
+                    })
                     continue
 
-                name = str(item['name'])
-                mtime_ns = int(item['mtime_ns'])
-                size = int(item['size'])
-                ck = item.get('ck')
+            entry = library_entry_for_file(stored, full)
+            results.append(entry)
+            pending_stores.append((name, ck, entry, mtime_ns, size))
 
-                row = by_ck.get(str(ck)) if ck else None
-                if row is None:
-                    row = by_name.get(name)
-                if row is not None:
-                    if (
-                        int(row['file_mtime_ns']) == mtime_ns
-                        and int(row['file_size']) == size
-                    ):
-                        if _norm_filename(str(row['filename'])) != name and ck:
-                            filename_updates.append((name, str(ck)))
-                        results.append({
-                            'file': stored,
-                            'title': str(row['title'] or ''),
-                            'artist': str(row['artist'] or ''),
-                            'album': str(row['album'] or ''),
-                        })
-                        continue
-
-                entry = library_entry_for_file(stored, full)
-                results.append(entry)
-                self._store_conn(conn, name, ck, entry, mtime_ns, size)
-
-            for name, ck in filename_updates:
-                conn.execute(
-                    'UPDATE library_metadata SET filename = ? WHERE content_key = ?',
-                    (name, ck),
-                )
+        if filename_updates or pending_stores:
+            with self._connect() as conn:
+                for index, (name, ck, entry, mtime_ns, size) in enumerate(
+                    pending_stores,
+                    start=1,
+                ):
+                    self._store_conn(conn, name, ck, entry, mtime_ns, size)
+                    if index % 100 == 0:
+                        conn.commit()
+                for name, ck in filename_updates:
+                    conn.execute(
+                        'UPDATE library_metadata SET filename = ? WHERE content_key = ?',
+                        (name, ck),
+                    )
 
         return results
 
@@ -368,14 +394,15 @@ class LibraryMetadataCache:
         name = _norm_filename(filename)
         conn.execute(
             """INSERT INTO library_metadata
-               (content_key, filename, title, artist, album,
+               (content_key, filename, title, artist, album, has_cover,
                 file_mtime_ns, file_size, cached_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(content_key) DO UPDATE SET
                filename=excluded.filename,
                title=excluded.title,
                artist=excluded.artist,
                album=excluded.album,
+               has_cover=excluded.has_cover,
                file_mtime_ns=excluded.file_mtime_ns,
                file_size=excluded.file_size,
                cached_at=excluded.cached_at""",
@@ -385,6 +412,7 @@ class LibraryMetadataCache:
                 str(entry.get('title') or ''),
                 str(entry.get('artist') or ''),
                 str(entry.get('album') or ''),
+                1 if entry.get('has_cover') else 0,
                 mtime_ns,
                 file_size,
                 _now_iso(),
