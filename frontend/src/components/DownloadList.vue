@@ -314,6 +314,8 @@ const queuedCount = computed(
       .length
 )
 
+const pendingCount = computed(() => activeCount.value + queuedCount.value)
+
 const filterTabs = computed(() => [
   {
     id: 'active',
@@ -387,25 +389,12 @@ watch(
   () => pt.downloadQueue.value.length,
   (len) => {
     if (len === 0) statusFilter.value = 'active'
-    else if (
-      statusFilter.value === 'active' &&
-      activeCount.value === 0 &&
-      queuedCount.value === 0 &&
-      failedCount.value > 0
-    ) {
-      statusFilter.value = 'failed'
-    }
   }
 )
 
-watch(queuedCount, (queued, prev) => {
-  if (queued <= (prev ?? 0)) return
-  if (statusFilter.value === 'failed') {
-    statusFilter.value = 'queued'
-    return
-  }
-  if (statusFilter.value === 'active' && activeCount.value === 0) {
-    statusFilter.value = 'queued'
+watch(pendingCount, (pending, prev) => {
+  if (pending > (prev ?? 0)) {
+    statusFilter.value = 'active'
   }
 })
 
