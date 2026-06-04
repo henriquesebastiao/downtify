@@ -160,9 +160,7 @@ def _delete_audio_under_dir(
             continue
         if path.suffix.lower() not in AUDIO_EXTENSIONS:
             continue
-        stored = library_stored_path(
-            path, ctx.download_dir, ctx.slskd_dir
-        )
+        stored = library_stored_path(path, ctx.download_dir, ctx.slskd_dir)
         if stored in skip_paths:
             continue
         result = delete_library_file(

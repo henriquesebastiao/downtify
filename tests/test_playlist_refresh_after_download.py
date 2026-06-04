@@ -10,7 +10,9 @@ from downtify.playlist_catalog import PlaylistCatalog
 from downtify.track_index import normalize_spotify_track_id
 
 
-def test_playlists_for_track_returns_distinct_playlists(tmp_path: Path) -> None:
+def test_playlists_for_track_returns_distinct_playlists(
+    tmp_path: Path,
+) -> None:
     catalog = PlaylistCatalog(tmp_path / 'lib.db')
     track = tmp_path / 'song.mp3'
     track.write_bytes(b'x')
@@ -29,21 +31,21 @@ def test_playlist_context_from_url_hint_resolves_name() -> None:
         'downtify.api.spotify.playlist_info_and_tracks',
         return_value=('Summer Hits', []),
     ):
-        ctx = api._playlist_context_from_hints(
-            {
-                'downtify_playlist_url': (
-                    'https://open.spotify.com/playlist/abc123'
-                ),
-                'downtify_track_order': 3,
-            }
-        )
+        ctx = api._playlist_context_from_hints({
+            'downtify_playlist_url': (
+                'https://open.spotify.com/playlist/abc123'
+            ),
+            'downtify_track_order': 3,
+        })
     assert ctx['playlist_name'] == 'Summer Hits'
     assert ctx['spotify_playlist_id'] == 'abc123'
     assert ctx['track_order'] == 3
     assert ctx['subdir'] == 'Summer Hits'
 
 
-def test_playlists_for_successful_download_merges_catalog_and_primary() -> None:
+def test_playlists_for_successful_download_merges_catalog_and_primary() -> (
+    None
+):
     api.state.playlist_catalog = MagicMock()
     api.state.monitor_db = MagicMock()
     api.state.playlist_catalog.playlists_for_track.return_value = ['Other']

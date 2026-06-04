@@ -162,6 +162,27 @@ def test_contains_keyword_ignores_remix_in_distant_parent_folder():
     assert _contains_keyword(song, '@@share\\Artist\\Song (Remix).mp3')
 
 
+def test_contains_keyword_does_not_false_positive_on_oliver_artist():
+    song = {
+        'artists': ['Oliver'],
+        'name': 'Hurt',
+        'duration': 180,
+    }
+    assert not _contains_keyword(song, '@@share\\Oliver\\Hurt.mp3')
+
+
+def test_contains_keyword_rejects_live_for_studio_track():
+    song = {
+        'artists': ['Artist'],
+        'name': 'Old Man River',
+        'duration': 222,
+    }
+    assert _contains_keyword(
+        song,
+        '@@share\\Artist\\Old Man River - Live.mp3',
+    )
+
+
 def test_rank_rejects_album_only_without_artist_in_filename():
     song = {
         'artists': ['Pitbull'],
@@ -465,9 +486,7 @@ def test_title_in_basename_rejects_substring_false_positive():
     assert _title_in_basename('Tom Jung - Light.mp3', 'light')
 
 
-def test_download_from_slskd_retries_when_tags_mismatch(
-    monkeypatch, tmp_path
-):
+def test_download_from_slskd_retries_when_tags_mismatch(monkeypatch, tmp_path):
     candidates = [
         {
             'username': 'peer1',
@@ -508,7 +527,13 @@ def test_download_from_slskd_retries_when_tags_mismatch(
 
         @staticmethod
         def search_responses(search_id: str) -> list[dict[str, Any]]:
-            return [{'username': 'peer1', 'hasFreeUploadSlot': True, 'fileCount': 2}]
+            return [
+                {
+                    'username': 'peer1',
+                    'hasFreeUploadSlot': True,
+                    'fileCount': 2,
+                }
+            ]
 
         @staticmethod
         def delete_search(search_id: str) -> None:

@@ -746,6 +746,9 @@ const SLSKD_DEFAULTS = {
   poll_max_attempts: 60,
   download_timeout_seconds: 600,
   queued_timeout_seconds: 180,
+  duration_tolerance_seconds: 10,
+    duration_tolerance_percent: 15,
+  mix_duration_tolerance_percent: 50,
   extensions: ['mp3', 'flac'],
   min_bitrate: 256,
 }

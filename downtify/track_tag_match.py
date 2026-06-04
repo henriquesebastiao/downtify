@@ -13,6 +13,8 @@ from mutagen import File as MutagenFile
 from .library_metadata import read_audio_metadata
 
 _DEFAULT_DURATION_TOLERANCE_SECONDS = 10
+_DEFAULT_DURATION_TOLERANCE_PERCENT = 15
+_DEFAULT_MIX_DURATION_TOLERANCE_PERCENT = 50
 _MAX_WHEN_SPOTIFY_DURATION_UNKNOWN = 600
 _WRONG_MATCH_TITLE_KEYWORDS = (
     'audiobook',
@@ -39,6 +41,98 @@ _WRONG_MATCH_TITLE_KEYWORDS = (
     '1 hour',
     '2 hour',
 )
+
+# Variant modifiers (live, remix, karaoke, …) shared by YouTube and slskd.
+# Use word-boundary-ish patterns for short tokens (live, remix) to avoid
+# false positives inside unrelated words (e.g. "Oliver", "deliver").
+_UNWANTED_REMOTE_VARIANT_KEYWORDS = (
+    'karaoke',
+    'instrumental',
+    'acapella',
+    'a cappella',
+    'cover ',
+    'cover)',
+    'tribute',
+    'guitar lesson',
+    'sped up',
+    'slowed',
+    'reverb',
+    'nightcore',
+    '8d audio',
+    'bass boosted',
+    ' remix',
+    '(remix',
+    'remix)',
+    'extended',
+    ' clean',
+    'clean version',
+    ' live',
+    '- live',
+    '(live',
+    'live)',
+    'live version',
+    'live at',
+    'live from',
+)
+
+
+def remote_adds_unwanted_variant(
+    spotify_title: str,
+    remote_text: str,
+    *,
+    spotify_artists: Optional[list[str]] = None,
+    skip_keywords: Optional[frozenset[str]] = None,
+) -> bool:
+    """True when *remote_text* adds a variant modifier absent from Spotify."""
+
+    artists = ' '.join(
+        str(a).strip() for a in (spotify_artists or []) if str(a).strip()
+    )
+    spotify_blob = f'{spotify_title or ""} {artists}'.casefold()
+    remote_l = str(remote_text or '').casefold()
+    skip = skip_keywords or frozenset()
+    return any(
+        kw not in skip and kw in remote_l and kw not in spotify_blob
+        for kw in _UNWANTED_REMOTE_VARIANT_KEYWORDS
+    )
+
+
+def _remote_adds_spam_keyword(spotify_title: str, remote_text: str) -> bool:
+    remote_l = str(remote_text or '').casefold()
+    if not remote_l:
+        return False
+    title_l = str(spotify_title or '').casefold()
+    return any(
+        kw in remote_l and kw not in title_l
+        for kw in _WRONG_MATCH_TITLE_KEYWORDS
+    )
+
+
+def remote_text_unacceptable(
+    spotify_title: str,
+    remote_text: str,
+    *,
+    spotify_artists: Optional[list[str]] = None,
+    skip_variant_keywords: Optional[frozenset[str]] = None,
+) -> bool:
+    """True when *remote_text* adds spam or variant modifiers absent from Spotify."""
+
+    if _remote_adds_spam_keyword(spotify_title, remote_text):
+        return True
+    return remote_adds_unwanted_variant(
+        spotify_title,
+        remote_text,
+        spotify_artists=spotify_artists,
+        skip_keywords=skip_variant_keywords,
+    )
+
+
+def youtube_title_has_negative_keyword(
+    spotify_title: str, candidate_title: str
+) -> bool:
+    """Variant-only check (audiobook/spam uses :func:`remote_text_unacceptable`)."""
+
+    return remote_adds_unwanted_variant(spotify_title, candidate_title)
 
 
 _MIX_SUFFIX_RE = re.compile(
@@ -158,8 +252,48 @@ def song_duration_seconds(song: dict[str, Any]) -> int:
     return target_duration
 
 
+def _clamp_int(value: Any, default: int, *, minimum: int, maximum: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return min(maximum, max(minimum, parsed))
+
+
+def duration_tolerances_from_settings(
+    settings: Optional[dict[str, Any]] = None,
+) -> dict[str, int]:
+    """Read slskd duration tolerance knobs (defaults: 10s, 15%%, 50%% mix)."""
+
+    raw = settings if isinstance(settings, dict) else {}
+    return {
+        'seconds': _clamp_int(
+            raw.get('duration_tolerance_seconds'),
+            _DEFAULT_DURATION_TOLERANCE_SECONDS,
+            minimum=1,
+            maximum=120,
+        ),
+        'percent': _clamp_int(
+            raw.get('duration_tolerance_percent'),
+            _DEFAULT_DURATION_TOLERANCE_PERCENT,
+            minimum=1,
+            maximum=100,
+        ),
+        'mix_percent': _clamp_int(
+            raw.get('mix_duration_tolerance_percent'),
+            _DEFAULT_MIX_DURATION_TOLERANCE_PERCENT,
+            minimum=1,
+            maximum=200,
+        ),
+    }
+
+
 def media_duration_matches_song(
-    song: dict[str, Any], media_seconds: int
+    song: dict[str, Any],
+    media_seconds: int,
+    *,
+    tolerance_seconds: int = _DEFAULT_DURATION_TOLERANCE_SECONDS,
+    tolerance_percent: int = _DEFAULT_DURATION_TOLERANCE_PERCENT,
 ) -> bool:
     """Align with slskd: reject audiobooks and hour-long wrong matches."""
 
@@ -169,9 +303,9 @@ def media_duration_matches_song(
     if not target:
         return media_seconds <= _MAX_WHEN_SPOTIFY_DURATION_UNKNOWN
     delta = abs(media_seconds - target)
-    if delta <= _DEFAULT_DURATION_TOLERANCE_SECONDS:
+    if delta <= tolerance_seconds:
         return True
-    cap = max(45, int(target * 0.20))
+    cap = max(45, int(target * tolerance_percent / 100))
     if media_seconds > target + cap:
         return False
     if media_seconds < max(20, int(target * 0.5)) and target >= 60:
@@ -180,10 +314,22 @@ def media_duration_matches_song(
 
 
 def media_duration_matches_mix_variant(
-    song: dict[str, Any], media_seconds: int
+    song: dict[str, Any],
+    media_seconds: int,
+    *,
+    tolerance_percent: int = _DEFAULT_MIX_DURATION_TOLERANCE_PERCENT,
+    normal_tolerance_seconds: int = _DEFAULT_DURATION_TOLERANCE_SECONDS,
+    normal_tolerance_percent: int = _DEFAULT_DURATION_TOLERANCE_PERCENT,
 ) -> bool:
     """Looser runtime bounds for extended/radio/club mix last-resort matches."""
 
+    if media_duration_matches_song(
+        song,
+        media_seconds,
+        tolerance_seconds=normal_tolerance_seconds,
+        tolerance_percent=normal_tolerance_percent,
+    ):
+        return True
     if media_seconds <= 0:
         return True
     target = song_duration_seconds(song)
@@ -195,7 +341,9 @@ def media_duration_matches_mix_variant(
         return False
     if media_seconds < max(20, int(target * 0.35)) and target >= 60:
         return False
-    return abs(media_seconds - target) <= max(90, int(target * 0.50))
+    return abs(media_seconds - target) <= max(
+        90, int(target * tolerance_percent / 100)
+    )
 
 
 def duration_matches_song(song: dict[str, Any], media_seconds: int) -> bool:
@@ -207,13 +355,14 @@ def duration_matches_song(song: dict[str, Any], media_seconds: int) -> bool:
 def remote_title_unacceptable(song: dict[str, Any], remote_title: str) -> bool:
     """True when a YouTube/Soulseek title looks like audiobook/podcast spam."""
 
-    remote_l = str(remote_title or '').casefold()
-    if not remote_l:
-        return False
-    song_title_l = str(song.get('name') or '').casefold()
-    return any(
-        kw in remote_l and kw not in song_title_l
-        for kw in _WRONG_MATCH_TITLE_KEYWORDS
+    return remote_text_unacceptable(
+        str(song.get('name') or ''),
+        remote_title,
+        spotify_artists=[
+            str(a).strip()
+            for a in (song.get('artists') or [])
+            if str(a).strip()
+        ],
     )
 
 
@@ -318,9 +467,7 @@ def verify_downloaded_audio_file(path: Path, song: dict[str, Any]) -> bool:
     if length > 0:
         meta = read_audio_metadata(path)
         file_title = str(meta.get('title') or path.stem)
-        spotify_title = str(
-            song.get('spotify_name') or song.get('name') or ''
-        )
+        spotify_title = str(song.get('spotify_name') or song.get('name') or '')
         duration_ok = (
             media_duration_matches_mix_variant(song, length)
             if candidate_adds_mix_variant(spotify_title, file_title)

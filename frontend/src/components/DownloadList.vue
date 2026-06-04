@@ -290,12 +290,6 @@ function queueItemState(item) {
   return 'active'
 }
 
-/** In progress tab: waiting + actively downloading (not done/failed). */
-function isInProgress(item) {
-  const state = queueItemState(item)
-  return state === 'active' || state === 'queued'
-}
-
 const doneCount = computed(
   () =>
     pt.downloadQueue.value.filter((item) => queueItemState(item) === 'done')
@@ -309,7 +303,15 @@ const failedCount = computed(
 )
 
 const activeCount = computed(
-  () => pt.downloadQueue.value.filter((item) => isInProgress(item)).length
+  () =>
+    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'active')
+      .length
+)
+
+const queuedCount = computed(
+  () =>
+    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'queued')
+      .length
 )
 
 const filterTabs = computed(() => [
@@ -321,8 +323,7 @@ const filterTabs = computed(() => [
   {
     id: 'queued',
     label: t('queue.filterQueued'),
-    count: pt.downloadQueue.value.filter((i) => queueItemState(i) === 'queued')
-      .length,
+    count: queuedCount.value,
   },
   {
     id: 'all',
@@ -347,7 +348,7 @@ const filteredQueue = computed(() => {
     case 'all':
       return q
     case 'active':
-      return q.filter((item) => isInProgress(item))
+      return q.filter((item) => queueItemState(item) === 'active')
     case 'queued':
       return q.filter((item) => queueItemState(item) === 'queued')
     case 'done':
@@ -389,6 +390,7 @@ watch(
     else if (
       statusFilter.value === 'active' &&
       activeCount.value === 0 &&
+      queuedCount.value === 0 &&
       failedCount.value > 0
     ) {
       statusFilter.value = 'failed'
@@ -396,16 +398,16 @@ watch(
   }
 )
 
-watch(
-  () =>
-    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'queued')
-      .length,
-  (queued, prev) => {
-    if (queued > (prev ?? 0) && statusFilter.value === 'failed') {
-      statusFilter.value = 'active'
-    }
+watch(queuedCount, (queued, prev) => {
+  if (queued <= (prev ?? 0)) return
+  if (statusFilter.value === 'failed') {
+    statusFilter.value = 'queued'
+    return
   }
-)
+  if (statusFilter.value === 'active' && activeCount.value === 0) {
+    statusFilter.value = 'queued'
+  }
+})
 
 onMounted(() => {
   syncQueueFromServer().catch(() => {})

@@ -142,6 +142,25 @@ def test_load_settings_deep_merges_slskd_dict(tmp_path):
     out = _load_settings(path)
     assert out['slskd']['base_url'] == 'http://slskd:5030'
     assert out['slskd']['download_dir'] == '/downloads'
+    assert out['slskd']['duration_tolerance_percent'] == 15
+    persisted = json.loads(path.read_text(encoding='utf-8'))
+    assert persisted['slskd']['duration_tolerance_percent'] == 15
+
+
+def test_load_settings_keeps_explicit_duration_tolerance(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(
+        json.dumps({
+            'slskd': {
+                'duration_tolerance_percent': 20,
+                'duration_tolerance_seconds': 10,
+                'mix_duration_tolerance_percent': 50,
+            },
+        }),
+        encoding='utf-8',
+    )
+    out = _load_settings(path)
+    assert out['slskd']['duration_tolerance_percent'] == 20
 
 
 # ── _load_settings ────────────────────────────────────────────────────────────

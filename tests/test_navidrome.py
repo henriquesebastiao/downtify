@@ -103,8 +103,7 @@ def test_spotify_aligns_rejects_obvious_wrong_download():
         'name': "Don't You Fear",
         'artists': ['Kraam', 'Santirini'],
         'filename': (
-            'slskd/Afro House Radio/Kraam, Santirini - '
-            "Don't You Fear.mp3"
+            "slskd/Afro House Radio/Kraam, Santirini - Don't You Fear.mp3"
         ),
         'library_from_tags': True,
     }

@@ -291,6 +291,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'poll_max_attempts': 60,
         'download_timeout_seconds': 600,
         'queued_timeout_seconds': 180,
+        'duration_tolerance_seconds': 10,
+        'duration_tolerance_percent': 15,
+        'mix_duration_tolerance_percent': 50,
         'extensions': ['mp3', 'flac'],
         'min_bitrate': 256,
     },
@@ -483,6 +486,15 @@ def _slskd_numeric_settings(
         'queued_timeout_seconds': _setting_int(
             raw, 'queued_timeout_seconds', 180, minimum=15, maximum=3600
         ),
+        'duration_tolerance_seconds': _setting_int(
+            raw, 'duration_tolerance_seconds', 10, minimum=1, maximum=120
+        ),
+        'duration_tolerance_percent': _setting_int(
+            raw, 'duration_tolerance_percent', 15, minimum=1, maximum=100
+        ),
+        'mix_duration_tolerance_percent': _setting_int(
+            raw, 'mix_duration_tolerance_percent', 50, minimum=1, maximum=200
+        ),
         'min_bitrate': min_bitrate,
         'max_parallel_downloads': _setting_int(
             settings, 'max_parallel_downloads', 3, minimum=1, maximum=8
@@ -575,26 +587,65 @@ state = AppState()
 router = APIRouter()
 
 
+def _merge_saved_settings(saved: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(DEFAULT_SETTINGS)
+    for k, v in saved.items():
+        if k in DEFAULT_SETTINGS:
+            if (
+                k in {'slskd', 'navidrome', 'youtube'}
+                and isinstance(v, dict)
+                and isinstance(DEFAULT_SETTINGS.get(k), dict)
+            ):
+                merged[k] = {**DEFAULT_SETTINGS[k], **v}
+            else:
+                merged[k] = v
+    return merged
+
+
+def _settings_file_missing_defaults(
+    saved: Optional[dict[str, Any]], merged: dict[str, Any]
+) -> bool:
+    if not isinstance(saved, dict):
+        return False
+    for key, default_val in DEFAULT_SETTINGS.items():
+        if key not in saved:
+            return True
+        if key in {'slskd', 'navidrome', 'youtube'} and isinstance(
+            default_val, dict
+        ):
+            saved_nested = saved.get(key)
+            if not isinstance(saved_nested, dict):
+                return True
+            if set(default_val) - set(saved_nested):
+                return True
+    return False
+
+
 def _load_settings(path: Path) -> dict[str, Any]:
     """Load saved settings from *path*, merging with DEFAULT_SETTINGS as base."""
+
+    saved: Optional[dict[str, Any]] = None
     try:
-        saved = json.loads(path.read_text(encoding='utf-8'))
-        if isinstance(saved, dict):
-            merged = dict(DEFAULT_SETTINGS)
-            for k, v in saved.items():
-                if k in DEFAULT_SETTINGS:
-                    if (
-                        k in {'slskd', 'navidrome', 'youtube'}
-                        and isinstance(v, dict)
-                        and isinstance(DEFAULT_SETTINGS.get(k), dict)
-                    ):
-                        merged[k] = {**DEFAULT_SETTINGS[k], **v}
-                    else:
-                        merged[k] = v
-            return merged
+        if path.is_file():
+            raw = json.loads(path.read_text(encoding='utf-8'))
+            if isinstance(raw, dict):
+                saved = raw
     except Exception:
-        pass
-    return dict(DEFAULT_SETTINGS)
+        logger.opt(exception=True).debug('settings load failed path={}', path)
+
+    if isinstance(saved, dict):
+        merged = _merge_saved_settings(saved)
+    else:
+        merged = dict(DEFAULT_SETTINGS)
+
+    if not path.is_file() or _settings_file_missing_defaults(saved, merged):
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            _save_settings(path, merged)
+        except Exception as exc:
+            logger.warning('Could not persist merged settings: {}', exc)
+
+    return merged
 
 
 def _save_settings(path: Path, settings: dict[str, Any]) -> None:

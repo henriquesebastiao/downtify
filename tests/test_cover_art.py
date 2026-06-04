@@ -44,7 +44,9 @@ def test_extract_cover_art_prefers_embedded(tmp_path: Path) -> None:
     assert data == b'embedded'
 
 
-def test_file_has_cover_art_detects_embedded_and_folder(tmp_path: Path) -> None:
+def test_file_has_cover_art_detects_embedded_and_folder(
+    tmp_path: Path,
+) -> None:
     bare = tmp_path / 'bare.mp3'
     bare.write_bytes(b'\x00' * 64)
     assert file_has_cover_art(bare) is False

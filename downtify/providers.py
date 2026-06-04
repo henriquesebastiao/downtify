@@ -17,7 +17,7 @@ from .track_tag_match import (
     candidate_adds_mix_variant,
     media_duration_matches_mix_variant,
     media_duration_matches_song,
-    remote_title_unacceptable,
+    remote_text_unacceptable,
     strip_mix_suffix,
 )
 
@@ -329,9 +329,7 @@ def find_match(  # noqa: PLR0914
         for row in candidates
         if isinstance(row, dict)
         and row.get('videoId')
-        and not candidate_adds_mix_variant(
-            title, str(row.get('title') or '')
-        )
+        and not candidate_adds_mix_variant(title, str(row.get('title') or ''))
     ]
     best = _pick_best(strict_candidates, duration, title, artists)
     if best is None and strict_candidates != candidates:
@@ -340,9 +338,7 @@ def find_match(  # noqa: PLR0914
             for row in candidates
             if isinstance(row, dict)
             and row.get('videoId')
-            and candidate_adds_mix_variant(
-                title, str(row.get('title') or '')
-            )
+            and candidate_adds_mix_variant(title, str(row.get('title') or ''))
         ]
         if mix_candidates:
             logger.info(
@@ -374,7 +370,7 @@ def find_match(  # noqa: PLR0914
         if not vid:
             continue
         candidate_title = (result.get('title') or '').lower()
-        if remote_title_unacceptable({'name': title}, candidate_title):
+        if remote_text_unacceptable(title, candidate_title):
             continue
         candidate_duration = result.get('duration_seconds') or _parse_duration(
             result.get('duration')
@@ -401,7 +397,7 @@ def find_match(  # noqa: PLR0914
         if not vid:
             continue
         candidate_title = (result.get('title') or '').lower()
-        if remote_title_unacceptable({'name': title}, candidate_title):
+        if remote_text_unacceptable(title, candidate_title):
             continue
         candidate_duration = result.get('duration_seconds') or _parse_duration(
             result.get('duration')
@@ -817,31 +813,6 @@ def enrich_from_match(
     return enriched
 
 
-_NEGATIVE_KEYWORDS = (
-    'karaoke',
-    'instrumental',
-    'cover ',
-    'cover)',
-    'tribute',
-    'guitar lesson',
-    'sped up',
-    'slowed',
-    'reverb',
-    'nightcore',
-    '8d audio',
-    '1 hour',
-    'bass boosted',
-    'audiobook',
-    'audio book',
-    'unabridged',
-    'narrated by',
-    'read by',
-    'full book',
-    'spoken word',
-    'podcast',
-)
-
-
 def _pick_best(
     results: list[dict[str, Any]],
     target_duration: int,
@@ -862,21 +833,18 @@ def _pick_best(
             continue
 
         candidate_title = (result.get('title') or '').lower()
-        # Skip results that add a "karaoke"/"instrumental"/etc. modifier
-        # which the source song does not have. Catches the most common
-        # source of wrong-audio matches.
-        if any(
-            kw in candidate_title and kw not in target_title_l
-            for kw in _NEGATIVE_KEYWORDS
-        ):
-            continue
-        if remote_title_unacceptable({'name': target_title}, candidate_title):
+        # Skip karaoke/live/audiobook/etc. modifiers absent from Spotify.
+        if remote_text_unacceptable(target_title, candidate_title):
             continue
 
         candidate_duration = result.get('duration_seconds') or _parse_duration(
             result.get('duration')
         )
-        duration_ok = media_duration_matches_mix_variant if mix_variant else media_duration_matches_song
+        duration_ok = (
+            media_duration_matches_mix_variant
+            if mix_variant
+            else media_duration_matches_song
+        )
         if candidate_duration and not duration_ok(
             {'duration': target_duration},
             candidate_duration,

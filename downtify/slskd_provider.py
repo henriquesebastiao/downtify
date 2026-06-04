@@ -16,9 +16,10 @@ from loguru import logger
 
 from .library_metadata import read_audio_metadata
 from .track_tag_match import (
+    duration_tolerances_from_settings,
     media_duration_matches_mix_variant,
     media_duration_matches_song,
-    remote_title_unacceptable,
+    remote_text_unacceptable,
     snapshot_spotify_metadata,
     spotify_file_tag_mismatch_label,
     strip_mix_suffix,
@@ -92,15 +93,6 @@ def _past_deadline(deadline: float) -> bool:
 
 
 _AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'm4a', 'ogg', 'opus'})
-_FILTER_KEYWORDS = (
-    'live',
-    'remix',
-    'instrumental',
-    'extended',
-    'clean',
-    'acapella',
-    'karaoke',
-)
 _PATH_PENALTY_KEYWORDS = (
     'unreleased',
     'bootleg',
@@ -110,7 +102,6 @@ _PATH_PENALTY_KEYWORDS = (
 _AMBIGUOUS_TITLE_ALNUM_LEN = 5
 _DEFAULT_MATCH_MIN_SCORE = 5
 _STRICT_DURATION_SECONDS = 3
-_DEFAULT_DURATION_TOLERANCE_SECONDS = 10
 
 
 class SlskdClient:
@@ -458,23 +449,24 @@ def _contains_keyword(
     allow_mix_variants: bool = False,
 ) -> bool:
     """Filter remix/live/etc. on the file name, not parent folder names."""
-    title = str(song.get('name') or '').casefold()
-    artist = ' '.join(str(a) for a in (song.get('artists') or [])).casefold()
+    title = str(song.get('name') or '')
+    artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
     basename = _file_basename(filename)
-    haystacks = [basename.casefold()]
+    haystacks = [basename]
     segments = _path_segments(filename)
     if segments:
         # Immediate parent folder (e.g. "Artist - Album") — not the whole tree.
-        haystacks.append(segments[-1].casefold())
-    for keyword in _FILTER_KEYWORDS:
-        if allow_mix_variants and keyword == 'extended':
-            continue
-        if keyword in title or keyword in artist:
-            continue
-        for haystack in haystacks:
-            if keyword in haystack:
-                return True
-    return False
+        haystacks.append(segments[-1])
+    skip = frozenset({'extended'}) if allow_mix_variants else frozenset()
+    return any(
+        remote_text_unacceptable(
+            title,
+            haystack,
+            spotify_artists=artists,
+            skip_variant_keywords=skip,
+        )
+        for haystack in haystacks
+    )
 
 
 def _parse_duration_seconds(value: Any) -> int:
@@ -560,8 +552,10 @@ def _score_slskd_candidate(  # noqa: PLR0914
     *,
     target_duration: int,
     mix_variant_duration: bool = False,
+    settings: Optional[dict[str, Any]] = None,
 ) -> Optional[tuple[int, list[str]]]:
     """Return (score, reasons) or None when hard requirements fail."""
+    tol = duration_tolerances_from_settings(settings)
     artist = _alnum_only(
         ' '.join(str(a) for a in (song.get('artists') or [])[:1])
     )
@@ -582,19 +576,18 @@ def _score_slskd_candidate(  # noqa: PLR0914
     title_ok = False
     if title and _title_in_basename(filename, title):
         title_ok = True
-    elif full_title and full_title != title and _title_in_basename(
-        filename, full_title
+    elif (
+        full_title
+        and full_title != title
+        and _title_in_basename(filename, full_title)
     ):
         title_ok = True
     if (title or full_title) and not title_ok:
         return None
-    if remote_title_unacceptable(song, _file_basename(filename)):
-        return None
 
     artist_in_leaf = bool(artist and artist in base_alnum)
     artist_in_path = bool(
-        artist
-        and any(artist in _alnum_only(seg) for seg in path_segments)
+        artist and any(artist in _alnum_only(seg) for seg in path_segments)
     )
     if artist and not (artist_in_leaf or artist_in_path):
         return None
@@ -608,12 +601,22 @@ def _score_slskd_candidate(  # noqa: PLR0914
         if abs(target_duration - length) > _STRICT_DURATION_SECONDS:
             return None
     elif target_duration and length:
-        duration_ok = (
-            media_duration_matches_mix_variant
-            if mix_variant_duration
-            else media_duration_matches_song
-        )
-        if not duration_ok(song, length):
+        if mix_variant_duration:
+            duration_ok = media_duration_matches_mix_variant(
+                song,
+                length,
+                tolerance_percent=tol['mix_percent'],
+                normal_tolerance_seconds=tol['seconds'],
+                normal_tolerance_percent=tol['percent'],
+            )
+        else:
+            duration_ok = media_duration_matches_song(
+                song,
+                length,
+                tolerance_seconds=tol['seconds'],
+                tolerance_percent=tol['percent'],
+            )
+        if not duration_ok:
             return None
 
     score = 0
@@ -666,10 +669,10 @@ def _score_slskd_candidate(  # noqa: PLR0914
 
     if target_duration and length:
         delta = abs(target_duration - length)
-        if delta <= _STRICT_DURATION_SECONDS:
+        if delta <= min(_STRICT_DURATION_SECONDS, tol['seconds']):
             score += 3
             reasons.append('duration_3s')
-        elif delta <= _DEFAULT_DURATION_TOLERANCE_SECONDS:
+        elif delta <= tol['seconds']:
             score += 1
             reasons.append('duration_10s')
 
@@ -709,7 +712,6 @@ def _rank_slskd_candidates(
     allow_mix_variants: bool = False,
 ) -> list[dict[str, Any]]:
     """Score and sort all viable files (highest confidence first)."""
-    _ = settings
     target_duration = _song_duration_seconds(song)
     ranked: list[dict[str, Any]] = []
 
@@ -747,6 +749,7 @@ def _rank_slskd_candidates(
                 file_row,
                 target_duration=target_duration,
                 mix_variant_duration=allow_mix_variants,
+                settings=settings,
             )
             if scored is None:
                 continue
@@ -1469,7 +1472,9 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                 )
 
             if found is not None:
-                if not verify_downloaded_file_matches_spotify(found, spotify_row):
+                if not verify_downloaded_file_matches_spotify(
+                    found, spotify_row
+                ):
                     meta = read_audio_metadata(found)
                     mismatch_row = {
                         **spotify_row,

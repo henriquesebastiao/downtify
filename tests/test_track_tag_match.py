@@ -6,8 +6,11 @@ from pathlib import Path
 
 from downtify.track_tag_match import (
     candidate_adds_mix_variant,
+    duration_tolerances_from_settings,
     media_duration_matches_mix_variant,
     media_duration_matches_song,
+    remote_adds_unwanted_variant,
+    remote_text_unacceptable,
     remote_title_unacceptable,
     snapshot_spotify_metadata,
     spotify_aligns_with_file_tags,
@@ -104,15 +107,53 @@ def test_media_duration_accepts_mix_variant_last_resort_drift():
     assert media_duration_matches_mix_variant(song, 380) is False
 
 
+def test_media_duration_respects_custom_tolerance_percent():
+    song = {'duration': 200}
+    assert (
+        media_duration_matches_song(
+            song, 250, tolerance_seconds=5, tolerance_percent=15
+        )
+        is False
+    )
+    assert (
+        media_duration_matches_song(
+            song, 235, tolerance_seconds=5, tolerance_percent=20
+        )
+        is True
+    )
+    assert (
+        media_duration_matches_mix_variant(
+            song,
+            260,
+            tolerance_percent=35,
+            normal_tolerance_seconds=5,
+            normal_tolerance_percent=15,
+        )
+        is True
+    )
+
+
+def test_duration_tolerances_from_slskd_settings():
+    assert duration_tolerances_from_settings({}) == {
+        'seconds': 10,
+        'percent': 15,
+        'mix_percent': 50,
+    }
+    tol = duration_tolerances_from_settings({
+        'duration_tolerance_seconds': 12,
+        'duration_tolerance_percent': 25,
+        'mix_duration_tolerance_percent': 60,
+    })
+    assert tol == {'seconds': 12, 'percent': 25, 'mix_percent': 60}
+
+
 def test_strip_mix_suffix():
     assert strip_mix_suffix('Loud Enough - Radio Mix') == 'Loud Enough'
     assert strip_mix_suffix('Heat - Extended Mix') == 'Heat'
 
 
 def test_candidate_adds_mix_variant_last_resort_only():
-    assert candidate_adds_mix_variant(
-        'Heat', 'Heat (Extended Mix)'
-    )
+    assert candidate_adds_mix_variant('Heat', 'Heat (Extended Mix)')
     assert not candidate_adds_mix_variant(
         'Heat - Extended Mix', 'Heat (Extended Mix)'
     )
@@ -159,4 +200,47 @@ def test_remote_title_rejects_audiobook_label():
     )
     assert not remote_title_unacceptable(
         song, 'Temptation Island (Official Video)'
+    )
+
+
+def test_remote_text_unacceptable_unifies_spam_and_variants():
+    assert remote_text_unacceptable(
+        'Old Man River',
+        'Old Man River - Live',
+    )
+    assert remote_text_unacceptable(
+        'Temptation Island',
+        'Temptation Island - Full Audiobook Part 1',
+    )
+    assert not remote_text_unacceptable(
+        'Old Man River - Live',
+        'Old Man River - Live',
+    )
+    assert remote_adds_unwanted_variant(
+        'Old Man River',
+        'Old Man River - Live',
+    )
+    assert not remote_adds_unwanted_variant(
+        'Old Man River - Live',
+        'Old Man River - Live',
+    )
+
+
+def test_remote_adds_unwanted_variant_does_not_match_live_inside_oliver():
+    assert not remote_adds_unwanted_variant(
+        'Song',
+        'Oliver - Song.mp3',
+        spotify_artists=['Oliver'],
+    )
+
+
+def test_remote_adds_unwanted_variant_skips_extended_when_allowed():
+    assert remote_adds_unwanted_variant(
+        'Track',
+        'Track (Extended Mix).mp3',
+    )
+    assert not remote_adds_unwanted_variant(
+        'Track',
+        'Track (Extended Mix).mp3',
+        skip_keywords=frozenset({'extended'}),
     )

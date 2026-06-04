@@ -39,12 +39,17 @@ from . import spotify as spotify_mod
 from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
-from .providers import enrich_from_match, find_match, find_match_for_video
+from .providers import (
+    enrich_from_match,
+    find_match,
+    find_match_for_video,
+)
 from .slskd_provider import download_from_slskd
 from .track_tag_match import (
     candidate_adds_mix_variant,
     duration_matches_song,
     media_duration_matches_mix_variant,
+    remote_text_unacceptable,
     remote_title_unacceptable,
     snapshot_spotify_metadata,
     song_duration_seconds,
@@ -461,9 +466,7 @@ def _ytdlp_fallback_search_queries(song: dict[str, Any]) -> list[str]:
     base_title = strip_mix_suffix(title) or title
     title_words = base_title.split()
     short_ambiguous = (
-        album
-        and len(title_words) == 1
-        and len(title_words[0]) <= 5
+        album and len(title_words) == 1 and len(title_words[0]) <= 5
     )
     if short_ambiguous:
         _add([*artists[:2], base_title, album])
@@ -753,12 +756,21 @@ def _youtube_candidate_acceptable(
     probe: dict[str, Any],
 ) -> bool:
     title = str(probe.get('title') or '')
-    if remote_title_unacceptable(song, title):
+    spotify_title = str(song.get('name') or '')
+    if remote_text_unacceptable(
+        spotify_title,
+        title,
+        spotify_artists=[
+            str(a).strip()
+            for a in (song.get('artists') or [])
+            if str(a).strip()
+        ],
+    ):
         logger.info(
-            'yt-dlp: skip video title={!r} (audiobook/podcast/long-form) '
+            'yt-dlp: skip video title={!r} (live/karaoke/spam/etc.) '
             'for spotify={!r}',
             title[:120],
-            song.get('name'),
+            spotify_title,
         )
         return False
     length = int(probe.get('duration') or 0)
@@ -794,9 +806,7 @@ def _run_callable_with_timeout(
         try:
             future.result(timeout=timeout_seconds)
         except concurrent.futures.TimeoutError as exc:
-            raise TimeoutError(
-                f'{label} exceeded {timeout_seconds}s'
-            ) from exc
+            raise TimeoutError(f'{label} exceeded {timeout_seconds}s') from exc
 
 
 class Downloader:
@@ -879,6 +889,21 @@ class Downloader:
             'queued_timeout_seconds': min(
                 3600,
                 max(15, _int(raw.get('queued_timeout_seconds') or 180, 180)),
+            ),
+            'duration_tolerance_seconds': min(
+                120,
+                max(1, _int(raw.get('duration_tolerance_seconds') or 10, 10)),
+            ),
+            'duration_tolerance_percent': min(
+                100,
+                max(1, _int(raw.get('duration_tolerance_percent') or 15, 15)),
+            ),
+            'mix_duration_tolerance_percent': min(
+                200,
+                max(
+                    1,
+                    _int(raw.get('mix_duration_tolerance_percent') or 50, 50),
+                ),
             ),
             'extensions': raw.get('extensions') or ['mp3', 'flac'],
             'min_bitrate': _int(raw.get('min_bitrate') or 256, 256),
@@ -1337,9 +1362,11 @@ class Downloader:
                 cand_id,
                 youtube_settings=self.youtube_settings,
             )
-            if probe is not None and not _youtube_candidate_acceptable(
-                song, probe
-            ) and not _youtube_candidate_near_acceptable(song, probe):
+            if (
+                probe is not None
+                and not _youtube_candidate_acceptable(song, probe)
+                and not _youtube_candidate_near_acceptable(song, probe)
+            ):
                 last_err = DownloadError(
                     f'YouTube candidate rejected ({probe.get("title")!r})'
                 )
@@ -1422,7 +1449,9 @@ class Downloader:
                     len(candidate_ids),
                 )
                 _remove_partial_downloads(target_dir, basename)
-                last_err = DownloadError('downloaded file did not match Spotify')
+                last_err = DownloadError(
+                    'downloaded file did not match Spotify'
+                )
                 extra = _fallback_video_ids_via_ytdlp(
                     song,
                     youtube_settings=self.youtube_settings,
