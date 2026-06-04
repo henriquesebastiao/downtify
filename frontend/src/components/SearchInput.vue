@@ -11,10 +11,7 @@
       v-model="sm.searchTerm.value"
       @keyup.enter="submit()"
     />
-    <div
-      v-if="!compact"
-      class="absolute right-1.5 top-1/2 -translate-y-1/2"
-    >
+    <div v-if="!compact" class="absolute right-1.5 top-1/2 -translate-y-1/2">
       <button
         type="button"
         class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-content shadow-glow-sm transition hover:scale-105 active:scale-95 disabled:opacity-60"

@@ -41,8 +41,7 @@ export default {
     browsePlaylistHint:
       'Ver faixas da playlist (cole um link de playlist do Spotify antes)',
     downloadLink: 'Baixar este link',
-    downloadLinkHint:
-      'Baixar faixa ou álbum (cole um link do Spotify antes)',
+    downloadLinkHint: 'Baixar faixa ou álbum (cole um link do Spotify antes)',
     title: 'Resultados da busca',
     matchesFor: 'Mostrando resultados para',
     songsCount: '— {count} música',

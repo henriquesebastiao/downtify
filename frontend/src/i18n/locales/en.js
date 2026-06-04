@@ -53,7 +53,8 @@ export default {
     emptyHint: 'Try another query — artist + title usually works best.',
     openOnSpotify: 'Open on Spotify',
     playlistTitle: 'Spotify playlist',
-    playlistSubtitle: 'Pick tracks to download individually, or download the whole playlist.',
+    playlistSubtitle:
+      'Pick tracks to download individually, or download the whole playlist.',
     openPlaylistOnSpotify: 'Open playlist on Spotify',
     downloadEntirePlaylist: 'Download entire playlist',
     inQueue: 'In queue',
