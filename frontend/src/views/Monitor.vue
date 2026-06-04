@@ -32,7 +32,7 @@
           <div class="flex items-center gap-2 shrink-0">
             <select
               v-model="newInterval"
-              class="select select-sm rounded-full border border-white/10 bg-base-100/85 focus:border-primary/60 h-11 px-3 text-sm"
+              class="filter-select text-sm"
               :disabled="adding"
             >
               <option :value="15">{{ t('monitor.every15') }}</option>
@@ -138,7 +138,7 @@
             <select
               :value="pl.interval_minutes"
               @change="onChangeInterval(pl, $event)"
-              class="select select-xs rounded-full border border-white/10 bg-base-100/60 text-xs focus:border-primary/60"
+              class="filter-select-xs"
             >
               <option :value="15">{{ t('monitor.short15') }}</option>
               <option :value="30">{{ t('monitor.short30') }}</option>

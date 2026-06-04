@@ -16,6 +16,7 @@ export default {
   },
   nav: {
     home: 'Home',
+    search: 'Search',
     library: 'Library',
     monitor: 'Playlist Monitor',
     queue: 'Queue',
@@ -34,6 +35,13 @@ export default {
   },
   search: {
     placeholder: 'Search, paste a Spotify or YouTube Music link…',
+    submitSearch: 'Search',
+    browsePlaylist: 'Browse playlist tracks',
+    browsePlaylistHint:
+      'Browse playlist tracks (paste a Spotify playlist link first)',
+    downloadLink: 'Download this link',
+    downloadLinkHint:
+      'Download track or album (paste a Spotify track/album link first)',
     title: 'Search results',
     matchesFor: 'Showing matches for',
     songsCount: '— {count} song',
@@ -44,6 +52,10 @@ export default {
     empty: 'No songs found.',
     emptyHint: 'Try another query — artist + title usually works best.',
     openOnSpotify: 'Open on Spotify',
+    playlistTitle: 'Spotify playlist',
+    playlistSubtitle: 'Pick tracks to download individually, or download the whole playlist.',
+    openPlaylistOnSpotify: 'Open playlist on Spotify',
+    downloadEntirePlaylist: 'Download entire playlist',
     inQueue: 'In queue',
     download: 'Download',
     previousPage: 'Previous page',

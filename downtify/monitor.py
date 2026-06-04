@@ -201,6 +201,21 @@ class PlaylistMonitorDB:
             ).fetchall()
             return {r['track_spotify_id']: r['filename'] for r in rows}
 
+    def playlists_for_track(self, track_spotify_id: str) -> set[str]:
+        """Monitored playlist names that include this Spotify track."""
+
+        tid = str(track_spotify_id or '').strip()
+        if not tid:
+            return set()
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT DISTINCT p.name FROM downloaded_tracks dt
+                   JOIN monitored_playlists p ON p.id = dt.playlist_id
+                   WHERE dt.track_spotify_id = ?""",
+                (tid,),
+            ).fetchall()
+        return {str(row['name']) for row in rows}
+
     def update_filename_for_spotify(
         self, track_spotify_id: str, filename: str
     ) -> set[str]:
@@ -217,13 +232,7 @@ class PlaylistMonitorDB:
                    (filename IS NULL OR filename != ?)""",
                 (name, tid, name),
             )
-            rows = conn.execute(
-                """SELECT DISTINCT p.name FROM downloaded_tracks dt
-                   JOIN monitored_playlists p ON p.id = dt.playlist_id
-                   WHERE dt.track_spotify_id = ?""",
-                (tid,),
-            ).fetchall()
-        return {str(row['name']) for row in rows}
+        return self.playlists_for_track(tid)
 
     def mark_track_downloaded(
         self,

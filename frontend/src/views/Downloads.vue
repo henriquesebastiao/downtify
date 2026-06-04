@@ -83,15 +83,11 @@
         <label class="text-xs text-base-content/50 shrink-0">
           {{ t('library.filterByPlaylist') }}
         </label>
-        <select
+        <PlaylistFilterSelect
           v-model="playlistFilter"
-          class="select select-bordered select-sm rounded-full bg-base-100/85 border-white/10 max-w-xs"
-        >
-          <option value="">{{ t('library.filterAllPlaylists') }}</option>
-          <option v-for="pl in playlistNames" :key="pl" :value="pl">
-            {{ pl }}
-          </option>
-        </select>
+          :options="playlistNames"
+          :all-label="t('library.filterAllPlaylists')"
+        />
         <button
           v-if="playlistFilter"
           type="button"
@@ -304,6 +300,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import Navbar from '/src/components/Navbar.vue'
+import PlaylistFilterSelect from '/src/components/PlaylistFilterSelect.vue'
 import Settings from '/src/components/Settings.vue'
 import LibraryPagination from '/src/components/LibraryPagination.vue'
 import API from '/src/model/api'
@@ -312,7 +309,11 @@ import {
   useLibraryFilter,
   libraryEntryMatchesQuery,
 } from '/src/model/libraryFilter'
-import { normalizeLibraryEntry, usePlayer } from '/src/model/player'
+import {
+  normalizeLibraryEntry,
+  savePlayerViewPrefs,
+  usePlayer,
+} from '/src/model/player'
 
 const PAGE_SIZE_STORAGE_KEY = 'downtify.libraryPageSize'
 const DEFAULT_PAGE_SIZE = 25
@@ -541,15 +542,24 @@ function folderOf(file) {
   return slash >= 0 ? file.slice(0, slash) : ''
 }
 
+function persistPlayerViewForPlayback() {
+  savePlayerViewPrefs({
+    playlistFilter: playlistFilter.value,
+    filterQuery: libraryFilterQuery.value,
+  })
+}
+
 function playEntry(entry) {
   const index = filteredFiles.value.findIndex((row) => row.file === entry.file)
   if (index < 0) return
+  persistPlayerViewForPlayback()
   player.setPlaylist(filteredFiles.value, { startIndex: index, autoplay: true })
   router.push({ name: 'Player' })
 }
 
 function playAll() {
   if (!filteredFiles.value.length) return
+  persistPlayerViewForPlayback()
   player.setPlaylist(filteredFiles.value, { startIndex: 0, autoplay: true })
   router.push({ name: 'Player' })
 }

@@ -16,6 +16,7 @@ export default {
   },
   nav: {
     home: 'Inicio',
+    search: 'Buscar',
     library: 'Biblioteca',
     monitor: 'Monitor de listas',
     queue: 'Cola',
@@ -33,6 +34,13 @@ export default {
     playlists: 'Listas',
   },
   search: {
+    submitSearch: 'Buscar',
+    browsePlaylist: 'Ver pistas de la lista',
+    browsePlaylistHint:
+      'Ver pistas de la lista (pega antes un enlace de playlist de Spotify)',
+    downloadLink: 'Descargar este enlace',
+    downloadLinkHint:
+      'Descargar tema o álbum (pega antes un enlace de Spotify)',
     placeholder: 'Busca o pega un enlace de Spotify o YouTube Music…',
     title: 'Resultados de búsqueda',
     matchesFor: 'Mostrando coincidencias para',
@@ -45,6 +53,11 @@ export default {
     emptyHint:
       'Prueba con otra búsqueda — artista + título suele funcionar mejor.',
     openOnSpotify: 'Abrir en Spotify',
+    playlistTitle: 'Lista de Spotify',
+    playlistSubtitle:
+      'Elige pistas para descargar una a una, o descarga la lista completa.',
+    openPlaylistOnSpotify: 'Abrir lista en Spotify',
+    downloadEntirePlaylist: 'Descargar lista completa',
     inQueue: 'En la cola',
     download: 'Descargar',
     previousPage: 'Página anterior',

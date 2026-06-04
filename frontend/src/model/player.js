@@ -3,6 +3,38 @@ import { ref, computed } from 'vue'
 import API from '/src/model/api'
 
 const VOLUME_KEY = 'downtify-player-volume'
+const PLAYER_PLAYLIST_FILTER_KEY = 'downtify-player-pl-filter'
+const PLAYER_FILTER_QUERY_KEY = 'downtify-player-filter-query'
+
+export function loadPlayerViewPrefs() {
+  try {
+    return {
+      playlistFilter: sessionStorage.getItem(PLAYER_PLAYLIST_FILTER_KEY) || '',
+      filterQuery: sessionStorage.getItem(PLAYER_FILTER_QUERY_KEY) || '',
+    }
+  } catch {
+    return { playlistFilter: '', filterQuery: '' }
+  }
+}
+
+export function savePlayerViewPrefs(prefs) {
+  try {
+    if (prefs.playlistFilter !== undefined) {
+      sessionStorage.setItem(
+        PLAYER_PLAYLIST_FILTER_KEY,
+        String(prefs.playlistFilter || '')
+      )
+    }
+    if (prefs.filterQuery !== undefined) {
+      sessionStorage.setItem(
+        PLAYER_FILTER_QUERY_KEY,
+        String(prefs.filterQuery || '')
+      )
+    }
+  } catch {
+    // ignore
+  }
+}
 
 const playlist = ref([])
 const currentIndex = ref(-1)
@@ -299,6 +331,15 @@ function toggleShuffle() {
   setShuffle(!shuffle.value)
 }
 
+/** Re-sync UI transport state after remounting the Player view. */
+function syncTransportFromAudio() {
+  const a = audio
+  if (!a?.src) return
+  currentTime.value = a.currentTime
+  duration.value = isFinite(a.duration) ? a.duration : 0
+  isPlaying.value = !a.paused
+}
+
 const currentTrack = computed(() =>
   currentIndex.value >= 0 && currentIndex.value < playlist.value.length
     ? playlist.value[currentIndex.value]
@@ -352,5 +393,6 @@ export function usePlayer() {
     cycleRepeat,
     setShuffle,
     toggleShuffle,
+    syncTransportFromAudio,
   }
 }

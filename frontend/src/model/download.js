@@ -257,10 +257,19 @@ export function useDownloadManager() {
         }
         const songs = res.data
         if (Array.isArray(songs)) {
-          for (const song of songs) {
+          const batchPlaylist = isPlaylistURL
+            ? { downtify_playlist_url: url }
+            : {}
+          for (let i = 0; i < songs.length; i++) {
+            const song = {
+              ...songs[i],
+              ...batchPlaylist,
+              downtify_track_order: i,
+            }
             if (!progressTracker.getBySong(song)) {
               progressTracker.appendSong(song)
             }
+            songs[i] = song
           }
           return API.downloadBatch({
             songs,

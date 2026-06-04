@@ -201,6 +201,21 @@ class PlaylistCatalog:
             for row in rows
         ]
 
+    def playlists_for_track(self, spotify_track_id: str) -> list[str]:
+        """Playlist names that catalog this Spotify track ID."""
+
+        tid = str(spotify_track_id or '').strip()
+        if not tid:
+            return []
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT DISTINCT playlist_name FROM playlist_tracks
+                   WHERE track_spotify_id = ?
+                   ORDER BY playlist_name""",
+                (tid,),
+            ).fetchall()
+        return [str(row['playlist_name']) for row in rows]
+
     def spotify_id_for_playlist(self, playlist_name: str) -> Optional[str]:
         pl_name = str(playlist_name or '').strip()
         if not pl_name:

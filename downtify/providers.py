@@ -7,6 +7,7 @@ import re
 import unicodedata
 from threading import Lock
 from typing import Any, Optional
+from urllib.parse import quote
 
 from loguru import logger
 from ytmusicapi import YTMusic
@@ -127,7 +128,7 @@ def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
     release_date = (
         year_str if len(year_str) == 4 and year_str.isdigit() else ''
     )
-    return {
+    row = {
         'song_id': video_id,
         'name': result.get('title', ''),
         'artists': artists,
@@ -140,6 +141,23 @@ def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
         'release_date': release_date,
         'source': 'youtube',
     }
+    row['spotify_url'] = spotify_open_url(row)
+    return row
+
+
+def spotify_open_url(song: dict[str, Any]) -> str:
+    """Web URL to open this row on Spotify (track link or search fallback)."""
+
+    raw = str(song.get('url') or '').strip()
+    if 'open.spotify.com' in raw:
+        return raw
+    artists = song.get('artists') or []
+    artist = ', '.join(str(a).strip() for a in artists[:3] if str(a).strip())
+    title = str(song.get('name') or '').strip()
+    term = f'{artist} {title}'.strip() if artist else title
+    if not term:
+        return ''
+    return f'https://open.spotify.com/search/{quote(term)}'
 
 
 def _parse_text_search_query(query: str) -> tuple[list[str], str]:
@@ -162,7 +180,7 @@ def song_stub_from_text_query(query: str) -> Optional[dict[str, Any]]:
     if not text:
         return None
     song_id = f'search-{abs(hash(text)) & 0xFFFFFFFF:08x}'
-    return {
+    row = {
         'song_id': song_id,
         'name': title,
         'artists': artists,
@@ -175,6 +193,8 @@ def song_stub_from_text_query(query: str) -> Optional[dict[str, Any]]:
         'release_date': '',
         'source': 'text_search',
     }
+    row['spotify_url'] = spotify_open_url(row)
+    return row
 
 
 def search_songs(query: str, limit: int = 20) -> list[dict[str, Any]]:

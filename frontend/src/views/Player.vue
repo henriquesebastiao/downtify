@@ -40,15 +40,12 @@
               <Icon icon="clarity:times-line" class="h-4 w-4" />
             </button>
           </div>
-          <select
+          <PlaylistFilterSelect
             v-model="playlistFilter"
-            class="select select-bordered select-sm rounded-full bg-base-100/85 border-white/10 sm:max-w-xs sm:min-w-[12rem]"
-          >
-            <option value="">{{ t('library.filterAllPlaylists') }}</option>
-            <option v-for="pl in playlistNames" :key="pl" :value="pl">
-              {{ pl }}
-            </option>
-          </select>
+            :options="playlistNames"
+            :all-label="t('library.filterAllPlaylists')"
+            class="sm:max-w-xs"
+          />
         </div>
       </div>
 
@@ -300,7 +297,7 @@
           </div>
 
           <div
-            v-if="filteredFiles.length > 0"
+            v-if="queueEntries.length > 0"
             class="mb-3 px-1 flex flex-wrap items-center gap-2 border-b border-white/5 pb-3"
           >
             <label
@@ -318,14 +315,14 @@
                   {{
                     t('player.selectedCount', {
                       selected: selectedCount,
-                      total: filteredFiles.length,
+                      total: queueEntries.length,
                     })
                   }}
                 </template>
                 <template v-else>
                   {{ t('player.selectAll') }}
                   <span class="text-base-content/40">
-                    ({{ filteredFiles.length }})
+                    ({{ queueEntries.length }})
                   </span>
                 </template>
               </span>
@@ -361,9 +358,9 @@
             {{ t('library.searchNoResults') }}
           </p>
 
-          <ul v-else-if="filteredFiles.length > 0" class="space-y-1">
+          <ul v-else-if="queueEntries.length > 0" class="space-y-1">
             <li
-              v-for="(entry, idx) in filteredFiles"
+              v-for="(entry, idx) in queueEntries"
               :key="entry.file"
               class="rounded-xl px-2 py-2 flex items-center gap-3 cursor-pointer transition-colors"
               :class="
@@ -448,6 +445,7 @@
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import Navbar from '/src/components/Navbar.vue'
+import PlaylistFilterSelect from '/src/components/PlaylistFilterSelect.vue'
 import Settings from '/src/components/Settings.vue'
 import API from '/src/model/api'
 import {
@@ -455,6 +453,8 @@ import {
   formatTime,
   trackInfoFromFile,
   normalizeLibraryEntry,
+  loadPlayerViewPrefs,
+  savePlayerViewPrefs,
 } from '/src/model/player'
 import { useI18n } from '/src/i18n'
 import { libraryEntryMatchesQuery } from '/src/model/libraryFilter'
@@ -473,6 +473,9 @@ const selectedFiles = ref(new Set())
 const selectAllCheckbox = ref(null)
 const progressBar = ref(null)
 const coverFailed = ref({})
+const restoringView = ref(false)
+/** Skip auto-replacing the queue when returning to Player mid-playback. */
+const queueLocked = ref(false)
 let dragging = false
 
 function coverUrlFor(file) {
@@ -504,6 +507,14 @@ const filteredFiles = computed(() => {
   return list.filter((entry) => libraryEntryMatchesQuery(entry, query))
 })
 
+/** Sidebar queue: active player list, or library filter when idle. */
+const queueEntries = computed(() => {
+  if (player.playlist.value.length > 0) {
+    return player.playlist.value
+  }
+  return filteredFiles.value
+})
+
 const hasActiveFilter = computed(
   () =>
     Boolean(String(filterQuery.value || '').trim()) ||
@@ -513,14 +524,14 @@ const hasActiveFilter = computed(
 const selectedCount = computed(() => selectedFiles.value.size)
 
 const allFilteredSelected = computed(() => {
-  if (!filteredFiles.value.length) return false
-  return filteredFiles.value.every((entry) =>
+  if (!queueEntries.value.length) return false
+  return queueEntries.value.every((entry) =>
     selectedFiles.value.has(entry.file)
   )
 })
 
 const someFilteredSelected = computed(() => {
-  const total = filteredFiles.value.length
+  const total = queueEntries.value.length
   const n = selectedCount.value
   return total > 0 && n > 0 && n < total
 })
@@ -546,7 +557,7 @@ function toggleSelectAllFiltered() {
     selectedFiles.value = new Set()
     return
   }
-  selectedFiles.value = new Set(filteredFiles.value.map((entry) => entry.file))
+  selectedFiles.value = new Set(queueEntries.value.map((entry) => entry.file))
 }
 
 function clearSelection() {
@@ -568,9 +579,26 @@ function syncPlayerQueue(options = {}) {
   player.setPlaylist(list, { preservePlayback: true })
 }
 
+watch(playlistFilter, (value) => {
+  savePlayerViewPrefs({
+    playlistFilter: value,
+    filterQuery: filterQuery.value,
+  })
+  if (!restoringView.value) queueLocked.value = false
+})
+
+watch(filterQuery, (value) => {
+  savePlayerViewPrefs({
+    playlistFilter: playlistFilter.value,
+    filterQuery: value,
+  })
+  if (!restoringView.value) queueLocked.value = false
+})
+
 watch([filteredFiles, playlistFilter, filterQuery], () => {
   if (!files.value.length) return
   if (!filteredFiles.value.length) return
+  if (queueLocked.value) return
   syncPlayerQueue()
 })
 
@@ -579,7 +607,11 @@ async function load() {
   try {
     const res = await API.listDownloads()
     files.value = (res.data || []).map(normalizeLibraryEntry)
-    if (player.playlist.value.length === 0 && filteredFiles.value.length > 0) {
+    if (
+      !queueLocked.value &&
+      player.playlist.value.length === 0 &&
+      filteredFiles.value.length > 0
+    ) {
       player.setPlaylist(filteredFiles.value, { preservePlayback: true })
     }
   } finally {
@@ -746,8 +778,18 @@ function onSeekEnd() {
 
 onMounted(() => {
   window.scroll(0, 0)
-  load()
-  nextTick(updateSelectAllIndeterminate)
+  restoringView.value = true
+  if (player.playlist.value.length > 0 || player.currentTrack.value) {
+    queueLocked.value = true
+  }
+  const prefs = loadPlayerViewPrefs()
+  playlistFilter.value = prefs.playlistFilter
+  filterQuery.value = prefs.filterQuery
+  player.syncTransportFromAudio()
+  load().finally(() => {
+    restoringView.value = false
+    nextTick(updateSelectAllIndeterminate)
+  })
 })
 
 onUnmounted(() => {

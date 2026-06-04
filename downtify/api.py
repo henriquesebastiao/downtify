@@ -62,7 +62,11 @@ from .navidrome import (
 )
 from .navidrome_index import NavidromeIndex
 from .playlist_catalog import PlaylistCatalog
-from .track_index import TrackIndex, resolve_existing_download
+from .track_index import (
+    TrackIndex,
+    normalize_spotify_track_id,
+    resolve_existing_download,
+)
 
 
 def _register_download_on_disk(
@@ -72,30 +76,195 @@ def _register_download_on_disk(
     playlist_name: Optional[str] = None,
     track_order: int = 0,
     spotify_playlist_id: Optional[str] = None,
-) -> None:
-    """Update track index and optional playlist catalog after a download."""
+) -> set[str]:
+    """Update track index, catalog, monitor; return playlists to refresh."""
 
-    if state.downloader is None or not filename:
+    return _register_download_playlists_on_disk(
+        song,
+        filename,
+        playlist_name=playlist_name,
+        spotify_playlist_id=spotify_playlist_id,
+        track_order=track_order,
+    )
+
+
+def _playlist_context_from_hints(
+    hints: Optional[dict[str, Any]],
+) -> dict[str, Any]:
+    """Resolve optional playlist batch/retry context from client hints."""
+
+    if not isinstance(hints, dict):
+        return {}
+    name = str(
+        hints.get('downtify_playlist_name') or hints.get('playlist_name') or ''
+    ).strip()
+    playlist_url = str(
+        hints.get('downtify_playlist_url') or hints.get('playlist_url') or ''
+    ).strip()
+    spotify_playlist_id = (
+        str(
+            hints.get('downtify_spotify_playlist_id')
+            or hints.get('spotify_playlist_id')
+            or ''
+        ).strip()
+        or None
+    )
+    order_raw = hints.get('downtify_track_order', hints.get('track_order', 0))
+    try:
+        track_order = int(order_raw)
+    except (TypeError, ValueError):
+        track_order = 0
+    track_order = max(track_order, 0)
+
+    if not name and playlist_url:
+        parsed = spotify.parse_spotify_url(playlist_url)
+        if parsed is not None and parsed[0] == 'playlist':
+            spotify_playlist_id = spotify_playlist_id or parsed[1]
+            try:
+                name, _ = spotify.playlist_info_and_tracks(parsed[1])
+            except Exception:
+                logger.opt(exception=True).warning(
+                    'download: failed to resolve playlist name from url'
+                )
+                name = ''
+
+    subdir: Optional[str] = None
+    if name and state.downloader is not None:
+        organize = bool(state.settings.get('organize_by_artist', False))
+        if not organize:
+            subdir = m3u.sanitize_playlist_name(name)
+
+    return {
+        'playlist_name': name or None,
+        'spotify_playlist_id': spotify_playlist_id,
+        'track_order': track_order,
+        'subdir': subdir,
+    }
+
+
+def _playlists_for_successful_download(
+    song: dict[str, Any],
+    *,
+    primary_playlist: Optional[str] = None,
+) -> set[str]:
+    """Playlist names that should be refreshed after this track succeeds."""
+
+    names: set[str] = set()
+    primary = str(primary_playlist or '').strip()
+    if primary:
+        names.add(primary)
+    tid = normalize_spotify_track_id(song)
+    if not tid:
+        return names
+    if state.playlist_catalog is not None:
+        names.update(state.playlist_catalog.playlists_for_track(tid))
+    if state.monitor_db is not None:
+        names.update(state.monitor_db.playlists_for_track(tid))
+    return names
+
+
+def _upsert_track_in_playlists(
+    song: dict[str, Any],
+    filename: str,
+    playlist_names: set[str],
+    *,
+    primary_playlist: Optional[str] = None,
+    primary_order: int = 0,
+    spotify_playlist_id: Optional[str] = None,
+) -> None:
+    """Register the file in the catalog for every affected playlist."""
+
+    if state.downloader is None or state.playlist_catalog is None:
+        return
+    if not playlist_names:
         return
     dl_dir = Path(state.downloader.download_dir)
     slskd = slskd_dir_from_downloader(state.downloader)
     full = locate_library_file(filename, dl_dir, slskd)
     if full is None:
         return
+    catalog = state.playlist_catalog
+    primary = str(primary_playlist or '').strip()
+    for pl_name in sorted(playlist_names):
+        sid = (
+            spotify_playlist_id
+            if pl_name == primary and spotify_playlist_id
+            else catalog.spotify_id_for_playlist(pl_name)
+        )
+        catalog.ensure_playlist(pl_name, spotify_id=sid)
+        order = primary_order if pl_name == primary else 0
+        catalog.upsert_track(pl_name, song, filename, full, track_order=order)
+
+
+def _register_download_playlists_on_disk(
+    song: dict[str, Any],
+    filename: str,
+    *,
+    playlist_name: Optional[str] = None,
+    spotify_playlist_id: Optional[str] = None,
+    track_order: int = 0,
+) -> set[str]:
+    """Update indexes, catalog, monitor paths; return playlists to refresh."""
+
+    if state.downloader is None or not filename:
+        return set()
+    tid = normalize_spotify_track_id(song)
+    if state.monitor_db is not None and tid:
+        state.monitor_db.update_filename_for_spotify(tid, filename)
+
+    affected = _playlists_for_successful_download(
+        song, primary_playlist=playlist_name
+    )
+    _upsert_track_in_playlists(
+        song,
+        filename,
+        affected,
+        primary_playlist=playlist_name,
+        primary_order=track_order,
+        spotify_playlist_id=spotify_playlist_id,
+    )
     if state.track_index is not None:
-        state.track_index.register_song(song, filename, full_path=full)
-    if state.playlist_catalog is not None and playlist_name:
-        state.playlist_catalog.ensure_playlist(
-            playlist_name, spotify_id=spotify_playlist_id
-        )
-        state.playlist_catalog.upsert_track(
-            playlist_name,
-            song,
-            filename,
-            full,
-            track_order=track_order,
-        )
+        dl_dir = Path(state.downloader.download_dir)
+        slskd = slskd_dir_from_downloader(state.downloader)
+        full = locate_library_file(filename, dl_dir, slskd)
+        if full is not None:
+            state.track_index.register_song(song, filename, full_path=full)
     invalidate_library_paths_cache()
+    return affected
+
+
+async def _schedule_playlist_refresh_after_download(
+    playlist_names: set[str],
+) -> None:
+    if not playlist_names or state.downloader is None:
+        return
+    if state.playlist_catalog is None:
+        return
+
+    async def _run() -> None:
+        try:
+            await asyncio.to_thread(
+                refresh_playlists_after_moves,
+                playlist_names,
+                settings=state.settings,
+                downloader=state.downloader,
+                playlist_catalog=state.playlist_catalog,
+                track_index=state.track_index,
+                monitor_db=state.monitor_db,
+                navidrome_index=state.navidrome_index,
+                navidrome_scan=bool(
+                    state.settings.get('navidrome', {}).get(
+                        'scan_after_download', True
+                    )
+                ),
+            )
+        except Exception:
+            logger.exception(
+                'download: playlist refresh failed for {}',
+                ', '.join(sorted(playlist_names)[:5]),
+            )
+
+    asyncio.create_task(_run())
 
 
 DEFAULT_YOUTUBE_COOKIES_BASENAME = 'youtube-cookies.txt'
@@ -588,6 +757,7 @@ async def _run_download(  # noqa: PLR0914
     playlist_name: Optional[str] = None,
     spotify_playlist_id: Optional[str] = None,
     track_order: int = 0,
+    refresh_playlists: bool = True,
 ) -> Optional[str]:
     """Run a single download to completion, updating jobs state and broadcasting WS events."""
 
@@ -670,7 +840,9 @@ async def _run_download(  # noqa: PLR0914
 
     limiter = state.download_limiter
     try:
-        async with limiter if limiter is not None else contextlib.nullcontext():
+        async with (
+            limiter if limiter is not None else contextlib.nullcontext()
+        ):
             job['status'] = 'downloading'
             job['progress'] = job.get('progress') or 0
             await state.connections.broadcast({
@@ -752,9 +924,9 @@ async def _run_download(  # noqa: PLR0914
         pl_name = playlist_name
         pl_id = spotify_playlist_id
         order = track_order
-        await loop.run_in_executor(
+        affected = await loop.run_in_executor(
             None,
-            lambda: _register_download_on_disk(
+            lambda: _register_download_playlists_on_disk(
                 song,
                 filename,
                 playlist_name=pl_name,
@@ -762,6 +934,8 @@ async def _run_download(  # noqa: PLR0914
                 track_order=order,
             ),
         )
+        if refresh_playlists and affected:
+            await _schedule_playlist_refresh_after_download(affected)
     if filename and state.navidrome_index is not None:
         dl_dir = Path(state.downloader.download_dir)
         slskd = slskd_dir_from_downloader(state.downloader)
@@ -818,6 +992,7 @@ async def download_endpoint(
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
     song = _song_from_download_request(url, client_hints)
+    pl_ctx = _playlist_context_from_hints(client_hints)
     logger.info(
         'download/url: title={!r} artists={} source={} url={}',
         song.get('name'),
@@ -828,7 +1003,14 @@ async def download_endpoint(
     song_id = _register_job(song, status='queued')
 
     try:
-        filename = await _run_download(song, song_id)
+        filename = await _run_download(
+            song,
+            song_id,
+            subdir=pl_ctx.get('subdir'),
+            playlist_name=pl_ctx.get('playlist_name'),
+            spotify_playlist_id=pl_ctx.get('spotify_playlist_id'),
+            track_order=int(pl_ctx.get('track_order') or 0),
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     if filename is None:
@@ -930,6 +1112,7 @@ async def _process_batch(
                 playlist_name=playlist_name,
                 spotify_playlist_id=spotify_playlist_id,
                 track_order=track_order,
+                refresh_playlists=False,
             )
         except Exception:
             filename = None
@@ -994,6 +1177,7 @@ async def _process_batch(
                     rows,
                     spotify_id=spotify_playlist_id,
                 )
+
         await asyncio.to_thread(_catalog_batch)
         if len(entries) < len(songs):
             logger.info(

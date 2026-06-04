@@ -27,6 +27,15 @@
       <div class="ml-auto flex items-center gap-1 sm:gap-2">
         <button
           class="icon-btn"
+          :class="{ 'icon-btn-active': route.name === 'Search' }"
+          @click="openSearch()"
+          :title="t('nav.search')"
+        >
+          <Icon icon="clarity:search-line" class="h-5 w-5" />
+        </button>
+
+        <button
+          class="icon-btn"
           :class="{ 'icon-btn-active': route.name === 'List' }"
           @click="router.push({ name: 'List' })"
           :title="t('nav.library')"
@@ -55,14 +64,7 @@
         <button
           class="icon-btn relative"
           :class="{ 'icon-btn-active': route.name === 'Download' }"
-          @click="
-            route.name === 'Download'
-              ? router.push({
-                  name: 'Search',
-                  params: { query: sm.searchTerm.value || ' ' },
-                })
-              : router.push({ name: 'Download' })
-          "
+          @click="router.push({ name: 'Download' })"
           :title="t('nav.queue')"
         >
           <Icon icon="clarity:download-line" class="h-5 w-5" />
@@ -121,7 +123,12 @@ import { useRoute } from 'vue-router'
 import router from '../router'
 import { useBinaryThemeManager } from '../model/theme'
 import { useProgressTracker } from '../model/download'
-import { useSearchManager } from '../model/search'
+import {
+  useSearchManager,
+  PLAYLIST_ROUTE_QUERY,
+  PLAYLIST_URL_KEY,
+} from '../model/search'
+import { useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
 
 import SearchInput from './SearchInput.vue'
@@ -133,5 +140,33 @@ const themeMgr = useBinaryThemeManager({
 })
 const pt = useProgressTracker()
 const sm = useSearchManager()
+const dm = useDownloadManager()
 const { t } = useI18n()
+
+function openSearch() {
+  const text = String(sm.searchTerm.value || '').trim()
+  if (!text) {
+    router.push({ name: 'Home' })
+    return
+  }
+  if (sm.isSpotifyPlaylistURL(text)) {
+    try {
+      sessionStorage.setItem(PLAYLIST_URL_KEY, text)
+    } catch {
+      // ignore
+    }
+    router.push({ name: 'Search', params: { query: PLAYLIST_ROUTE_QUERY } })
+    sm.loadSpotifyPlaylist(text)
+    return
+  }
+  if (sm.isSpotifyDirectDownloadURL(text)) {
+    router.push({ name: 'Download' })
+    return
+  }
+  if (sm.isValidSearch(text)) {
+    router.push({ name: 'Search', params: { query: text } })
+    return
+  }
+  router.push({ name: 'Home' })
+}
 </script>

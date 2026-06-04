@@ -16,6 +16,7 @@ export default {
   },
   nav: {
     home: 'Início',
+    search: 'Buscar',
     library: 'Biblioteca',
     monitor: 'Monitor de playlists',
     queue: 'Fila',
@@ -35,6 +36,13 @@ export default {
   search: {
     placeholder:
       'Busque uma música ou cole um link do Spotify ou YouTube Music…',
+    submitSearch: 'Buscar',
+    browsePlaylist: 'Ver faixas da playlist',
+    browsePlaylistHint:
+      'Ver faixas da playlist (cole um link de playlist do Spotify antes)',
+    downloadLink: 'Baixar este link',
+    downloadLinkHint:
+      'Baixar faixa ou álbum (cole um link do Spotify antes)',
     title: 'Resultados da busca',
     matchesFor: 'Mostrando resultados para',
     songsCount: '— {count} música',
@@ -45,6 +53,11 @@ export default {
     empty: 'Nenhuma música encontrada.',
     emptyHint: 'Tente outra busca — artista + título costuma funcionar melhor.',
     openOnSpotify: 'Abrir no Spotify',
+    playlistTitle: 'Playlist do Spotify',
+    playlistSubtitle:
+      'Escolha faixas para baixar individualmente ou baixe a playlist inteira.',
+    openPlaylistOnSpotify: 'Abrir playlist no Spotify',
+    downloadEntirePlaylist: 'Baixar playlist inteira',
     inQueue: 'Na fila',
     download: 'Baixar',
     previousPage: 'Página anterior',

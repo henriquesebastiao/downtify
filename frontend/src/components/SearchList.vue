@@ -2,9 +2,27 @@
   <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-2xl font-bold tracking-tight">{{ t('search.title') }}</h1>
+      <h1 class="text-2xl font-bold tracking-tight">
+        {{
+          sm.browseKind.value === 'spotify_playlist'
+            ? t('search.playlistTitle')
+            : t('search.title')
+        }}
+      </h1>
       <p class="mt-1 text-sm text-base-content/60">
-        <template v-if="sm.searchTerm.value">
+        <template v-if="sm.browseKind.value === 'spotify_playlist'">
+          {{ t('search.playlistSubtitle') }}
+          <template
+            v-if="!sm.isSearching.value && (props.data?.length || 0) > 0"
+          >
+            {{
+              props.data.length === 1
+                ? t('search.songsCount', { count: props.data.length })
+                : t('search.songsCountPlural', { count: props.data.length })
+            }}
+          </template>
+        </template>
+        <template v-else-if="sm.searchTerm.value">
           {{ t('search.matchesFor') }}
           <span class="text-base-content/90 font-medium">
             "{{ sm.searchTerm.value }}"
@@ -21,6 +39,34 @@
         </template>
         <template v-else>{{ t('search.typeToBegin') }}</template>
       </p>
+      <div
+        v-if="
+          sm.browseKind.value === 'spotify_playlist' &&
+          sm.playlistUrl.value &&
+          !sm.isSearching.value
+        "
+        class="mt-4 flex flex-wrap gap-2"
+      >
+        <a
+          class="btn btn-sm btn-ghost rounded-full"
+          :href="sm.playlistUrl.value"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
+          {{ t('search.openPlaylistOnSpotify') }}
+        </a>
+        <button
+          v-if="(props.data?.length || 0) > 0"
+          type="button"
+          class="btn btn-sm btn-primary rounded-full"
+          :disabled="dm.loading.value"
+          @click="downloadEntirePlaylist"
+        >
+          <Icon icon="clarity:download-line" class="h-4 w-4" />
+          {{ t('search.downloadEntirePlaylist') }}
+        </button>
+      </div>
     </div>
 
     <!-- Error -->
@@ -107,11 +153,11 @@
         <!-- Actions -->
         <div class="flex items-center gap-1 shrink-0">
           <a
-            v-if="song.url"
+            v-if="spotifyHref(song)"
             class="icon-btn"
-            :href="song.url"
+            :href="spotifyHref(song)"
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
             :title="t('search.openOnSpotify')"
           >
             <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
@@ -179,15 +225,17 @@
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
+import { useRouter } from 'vue-router'
 import { useSearchManager } from '../model/search'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 10
 
 const props = defineProps(['data', 'error'])
 const emit = defineEmits(['download'])
 
+const router = useRouter()
 const sm = useSearchManager()
 const pt = useProgressTracker()
 const dm = useDownloadManager()
@@ -219,6 +267,16 @@ function artistsOf(song) {
   return song.artist || t('common.unknownArtist')
 }
 
+function spotifyHref(song) {
+  const direct = String(song?.spotify_url || song?.url || '').trim()
+  if (direct.includes('open.spotify.com')) return direct
+  const artists = Array.isArray(song?.artists) ? song.artists.join(' ') : ''
+  const name = String(song?.name || '').trim()
+  const q = `${artists} ${name}`.trim()
+  if (!q) return ''
+  return `https://open.spotify.com/search/${encodeURIComponent(q)}`
+}
+
 function downloadState(song) {
   const item = pt.getBySong(song)
   if (!item) return 'idle'
@@ -229,5 +287,12 @@ function downloadState(song) {
 
 function download(song) {
   emit('download', song)
+}
+
+function downloadEntirePlaylist() {
+  const url = sm.playlistUrl.value
+  if (!url) return
+  dm.fromURL(url)
+  router.push({ name: 'Download' })
 }
 </script>
