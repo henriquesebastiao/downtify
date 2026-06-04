@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
+import requests
 from loguru import logger
 
 from . import m3u, spotify
@@ -259,6 +260,18 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
                 _pl_name, spotify_tracks = spotify.playlist_info_and_tracks(
                     spotify_id
                 )
+            except requests.HTTPError as exc:
+                status = (
+                    exc.response.status_code if exc.response is not None else 0
+                )
+                logger.warning(
+                    'Playlist refresh: Spotify embed HTTP {} for {!r} '
+                    '(id={}); using catalog metadata only',
+                    status,
+                    name,
+                    spotify_id,
+                )
+                spotify_tracks = []
             except Exception:
                 logger.opt(exception=True).warning(
                     'Playlist refresh: Spotify fetch failed for {!r}', name

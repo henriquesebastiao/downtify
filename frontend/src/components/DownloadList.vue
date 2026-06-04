@@ -290,6 +290,12 @@ function queueItemState(item) {
   return 'active'
 }
 
+/** In progress tab: waiting + actively downloading (not done/failed). */
+function isInProgress(item) {
+  const state = queueItemState(item)
+  return state === 'active' || state === 'queued'
+}
+
 const doneCount = computed(
   () =>
     pt.downloadQueue.value.filter((item) => queueItemState(item) === 'done')
@@ -303,9 +309,7 @@ const failedCount = computed(
 )
 
 const activeCount = computed(
-  () =>
-    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'active')
-      .length
+  () => pt.downloadQueue.value.filter((item) => isInProgress(item)).length
 )
 
 const filterTabs = computed(() => [
@@ -343,7 +347,7 @@ const filteredQueue = computed(() => {
     case 'all':
       return q
     case 'active':
-      return q.filter((item) => queueItemState(item) === 'active')
+      return q.filter((item) => isInProgress(item))
     case 'queued':
       return q.filter((item) => queueItemState(item) === 'queued')
     case 'done':
@@ -388,6 +392,17 @@ watch(
       failedCount.value > 0
     ) {
       statusFilter.value = 'failed'
+    }
+  }
+)
+
+watch(
+  () =>
+    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'queued')
+      .length,
+  (queued, prev) => {
+    if (queued > (prev ?? 0) && statusFilter.value === 'failed') {
+      statusFilter.value = 'active'
     }
   }
 )
