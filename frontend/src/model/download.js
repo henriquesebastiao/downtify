@@ -12,6 +12,10 @@ const STATUS = {
 
 const downloadQueue = ref([])
 
+function touchQueue() {
+  downloadQueue.value = downloadQueue.value.slice()
+}
+
 /** Match backend ``_register_job`` / queue keys. */
 function jobSongKey(song) {
   if (!song || typeof song !== 'object') return ''
@@ -41,11 +45,13 @@ function applyServerJob(item, job) {
     item.setDownloading()
     item.progress = job.progress || 0
     item.message = job.message || ''
+    touchQueue()
     return
   }
   item.web_status = STATUS.QUEUED
   item.progress = job.progress || 0
   item.message = job.message || ''
+  touchQueue()
 }
 
 class DownloadItem {
@@ -59,13 +65,19 @@ class DownloadItem {
     this.filename = null
   }
   setDownloading() {
+    if (this.web_status === STATUS.DOWNLOADING) return
     this.web_status = STATUS.DOWNLOADING
+    touchQueue()
   }
   setDownloaded() {
+    if (this.web_status === STATUS.DOWNLOADED) return
     this.web_status = STATUS.DOWNLOADED
+    touchQueue()
   }
   setError() {
+    if (this.web_status === STATUS.ERROR) return
     this.web_status = STATUS.ERROR
+    touchQueue()
   }
   resetForRetry() {
     this.web_status = STATUS.QUEUED
@@ -74,6 +86,7 @@ class DownloadItem {
     this.provider = ''
     this.web_download_url = null
     this.filename = null
+    touchQueue()
   }
   setWebURL(URL) {
     this.web_download_url = URL
@@ -94,11 +107,23 @@ class DownloadItem {
     return this.web_status === STATUS.ERROR
   }
   wsUpdate(message) {
-    this.progress = message.progress
-    this.message = message.message
-    if (message.provider) {
-      this.provider = message.provider
+    const progress = message.progress
+    const msg = message.message
+    const provider = message.provider
+    let changed = false
+    if (progress !== this.progress) {
+      this.progress = progress
+      changed = true
     }
+    if (msg !== this.message) {
+      this.message = msg
+      changed = true
+    }
+    if (provider && provider !== this.provider) {
+      this.provider = provider
+      changed = true
+    }
+    if (changed) touchQueue()
   }
 }
 
@@ -111,14 +136,15 @@ export function useProgressTracker() {
     )
   }
   function appendSong(song) {
-    let downloadItem = new DownloadItem(song)
-    downloadQueue.value.push(downloadItem)
+    downloadQueue.value.push(new DownloadItem(song))
+    touchQueue()
   }
   function removeSong(song) {
     const key = jobSongKey(song)
     downloadQueue.value = downloadQueue.value.filter(
       (downloadItem) => jobSongKey(downloadItem.song) !== key
     )
+    touchQueue()
   }
 
   function getBySong(song) {
@@ -205,6 +231,7 @@ API.ws_onmessage((event) => {
     item.web_status = STATUS.QUEUED
     item.message = data.message || ''
     if (data.provider) item.provider = data.provider
+    touchQueue()
   } else {
     item.wsUpdate(data)
     item.setDownloading()
@@ -233,11 +260,22 @@ export function useDownloadManager() {
     downloadQueue.value = downloadQueue.value.filter(
       (item) => !item.isDownloaded()
     )
+    touchQueue()
     try {
       await API.clearCompletedQueue()
     } catch (e) {
       console.log('Failed to clear completed queue on server:', e)
     }
+  }
+
+  function _queueSongForBatch(song) {
+    const existing = progressTracker.getBySong(song)
+    if (existing) {
+      existing.song = { ...existing.song, ...song }
+      existing.resetForRetry()
+      return
+    }
+    progressTracker.appendSong(song)
   }
 
   function fromURL(url) {
@@ -266,18 +304,19 @@ export function useDownloadManager() {
               ...batchPlaylist,
               downtify_track_order: i,
             }
-            if (!progressTracker.getBySong(song)) {
-              progressTracker.appendSong(song)
-            }
+            _queueSongForBatch(song)
             songs[i] = song
           }
           return API.downloadBatch({
             songs,
             playlist_url: isPlaylistURL ? url : '',
             generate_m3u: generateM3u,
-          }).catch((err) => {
-            console.log('Batch submit failed:', err.message)
           })
+            .then(() => syncQueueFromServer())
+            .then(() => ensureQueuePoll())
+            .catch((err) => {
+              console.log('Batch submit failed:', err.message)
+            })
         } else {
           console.log('Opened Song:', songs)
           queue(songs)

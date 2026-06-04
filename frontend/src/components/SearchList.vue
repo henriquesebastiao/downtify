@@ -292,7 +292,7 @@ function download(song) {
 function downloadEntirePlaylist() {
   const url = sm.playlistUrl.value
   if (!url) return
-  dm.fromURL(url)
   router.push({ name: 'Download' })
+  void dm.fromURL(url)
 }
 </script>

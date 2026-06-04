@@ -320,7 +320,7 @@ const filterTabs = computed(() => [
   {
     id: 'active',
     label: t('queue.filterActive'),
-    count: activeCount.value,
+    count: pendingCount.value,
   },
   {
     id: 'queued',
@@ -350,7 +350,10 @@ const filteredQueue = computed(() => {
     case 'all':
       return q
     case 'active':
-      return q.filter((item) => queueItemState(item) === 'active')
+      return q.filter((item) => {
+        const state = queueItemState(item)
+        return state === 'active' || state === 'queued'
+      })
     case 'queued':
       return q.filter((item) => queueItemState(item) === 'queued')
     case 'done':
