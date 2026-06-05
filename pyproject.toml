@@ -20,7 +20,7 @@ dependencies = [
 dev = [
     "codeflash>=0.20.6",
     "pytest>=8.0",
-    "ruff>=0.15.15",
+    "ruff>=0.15.16",
     "zensical>=0.0.43",
 ]
 
