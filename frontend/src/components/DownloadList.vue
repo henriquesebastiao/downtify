@@ -7,10 +7,7 @@
           {{ t('queue.title') }}
         </h1>
       </div>
-      <div
-        v-if="pt.downloadQueue.value.length > 0"
-        class="flex flex-wrap gap-2 justify-end"
-      >
+      <div v-if="queueLength > 0" class="flex flex-wrap gap-2 justify-end">
         <button
           v-if="failedCount > 0"
           class="btn btn-sm h-11 px-4 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100"
@@ -39,7 +36,7 @@
 
     <!-- Filters -->
     <div
-      v-if="pt.downloadQueue.value.length > 0"
+      v-if="queueLength > 0"
       class="mb-6 flex flex-wrap gap-2"
       role="tablist"
     >
@@ -64,7 +61,7 @@
 
     <!-- Empty state (no queue at all) -->
     <div
-      v-if="pt.downloadQueue.value.length === 0"
+      v-if="queueLength === 0"
       class="surface rounded-2xl p-12 flex flex-col items-center text-center"
     >
       <Icon
@@ -262,7 +259,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive, onMounted } from 'vue'
+import { ref, computed, watch, reactive, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import API from '../model/api'
 import {
@@ -274,7 +271,7 @@ import { useI18n } from '../i18n'
 
 const PAGE_SIZE = 10
 
-const pt = useProgressTracker()
+const { downloadQueue, queueVersion } = useProgressTracker()
 const dm = useDownloadManager()
 const { t } = useI18n()
 
@@ -290,29 +287,34 @@ function queueItemState(item) {
   return 'active'
 }
 
-const doneCount = computed(
-  () =>
-    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'done')
-      .length
-)
+const queueLength = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.length
+})
 
-const failedCount = computed(
-  () =>
-    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'failed')
-      .length
-)
+const doneCount = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.filter((item) => queueItemState(item) === 'done')
+    .length
+})
 
-const activeCount = computed(
-  () =>
-    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'active')
-      .length
-)
+const failedCount = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.filter((item) => queueItemState(item) === 'failed')
+    .length
+})
 
-const queuedCount = computed(
-  () =>
-    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'queued')
-      .length
-)
+const activeCount = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.filter((item) => queueItemState(item) === 'active')
+    .length
+})
+
+const queuedCount = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.filter((item) => queueItemState(item) === 'queued')
+    .length
+})
 
 const filterTabs = computed(() => [
   {
@@ -328,7 +330,7 @@ const filterTabs = computed(() => [
   {
     id: 'all',
     label: t('queue.filterAll'),
-    count: pt.downloadQueue.value.length,
+    count: queueLength.value,
   },
   {
     id: 'done',
@@ -343,7 +345,8 @@ const filterTabs = computed(() => [
 ])
 
 const filteredQueue = computed(() => {
-  const q = pt.downloadQueue.value
+  queueVersion.value
+  const q = downloadQueue.value
   switch (statusFilter.value) {
     case 'all':
       return q
@@ -385,12 +388,9 @@ watch(
 
 const pendingCount = computed(() => activeCount.value + queuedCount.value)
 
-watch(
-  () => pt.downloadQueue.value.length,
-  (len) => {
-    if (len === 0) statusFilter.value = 'active'
-  }
-)
+watch(queueLength, (len) => {
+  if (len === 0) statusFilter.value = 'active'
+})
 
 watch(pendingCount, (pending, prev) => {
   if (pending > (prev ?? 0)) {
@@ -398,8 +398,20 @@ watch(pendingCount, (pending, prev) => {
   }
 })
 
+let queueRefreshTimer = null
+
 onMounted(() => {
   syncQueueFromServer().catch(() => {})
+  queueRefreshTimer = setInterval(() => {
+    syncQueueFromServer().catch(() => {})
+  }, 2000)
+})
+
+onUnmounted(() => {
+  if (queueRefreshTimer) {
+    clearInterval(queueRefreshTimer)
+    queueRefreshTimer = null
+  }
 })
 
 async function onClearAll() {

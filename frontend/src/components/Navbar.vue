@@ -69,10 +69,10 @@
         >
           <Icon icon="clarity:download-line" class="h-5 w-5" />
           <span
-            v-if="pt.downloadQueue.value.length > 0"
+            v-if="queueBadge > 0"
             class="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-content shadow-glow-sm"
           >
-            {{ pt.downloadQueue.value.length }}
+            {{ queueBadge }}
           </span>
         </button>
 
@@ -117,6 +117,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRoute } from 'vue-router'
 
@@ -138,7 +139,11 @@ const themeMgr = useBinaryThemeManager({
   newLightAlias: 'downtify-light',
   newDarkAlias: 'downtify-dark',
 })
-const pt = useProgressTracker()
+const { downloadQueue, queueVersion } = useProgressTracker()
+const queueBadge = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.length
+})
 const sm = useSearchManager()
 const dm = useDownloadManager()
 const { t } = useI18n()

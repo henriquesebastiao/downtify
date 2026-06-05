@@ -11,9 +11,11 @@ const STATUS = {
 }
 
 const downloadQueue = ref([])
+const queueVersion = ref(0)
 
 function touchQueue() {
   downloadQueue.value = downloadQueue.value.slice()
+  queueVersion.value += 1
 }
 
 /** Match backend ``_register_job`` / queue keys. */
@@ -158,6 +160,7 @@ export function useProgressTracker() {
     removeSong,
     getBySong,
     downloadQueue,
+    queueVersion,
   }
 }
 
@@ -202,6 +205,7 @@ export async function syncQueueFromServer() {
     }
     applyServerJob(item, job)
   }
+  touchQueue()
   if (queueHasActiveItems()) {
     ensureQueuePoll()
   } else {
@@ -307,6 +311,8 @@ export function useDownloadManager() {
             _queueSongForBatch(song)
             songs[i] = song
           }
+          touchQueue()
+          ensureQueuePoll()
           return API.downloadBatch({
             songs,
             playlist_url: isPlaylistURL ? url : '',
