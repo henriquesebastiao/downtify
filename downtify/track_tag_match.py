@@ -150,6 +150,8 @@ _MIX_VARIANT_MARKERS = (
     'original mix',
 )
 
+MIX_VARIANT_REMOTE_SKIP_KEYWORDS = frozenset({'extended'})
+
 
 def strip_mix_suffix(title: str) -> str:
     """Drop trailing mix/edit suffixes for broader audio search queries."""
@@ -168,6 +170,17 @@ def candidate_adds_mix_variant(
         marker in cand_l and marker not in spotify_l
         for marker in _MIX_VARIANT_MARKERS
     )
+
+
+def mix_variant_remote_skip_keywords(
+    spotify_title: str,
+    remote_text: str,
+) -> Optional[frozenset[str]]:
+    """Allow ``extended`` in remote titles when probing mix-variant uploads."""
+
+    if candidate_adds_mix_variant(spotify_title, remote_text):
+        return MIX_VARIANT_REMOTE_SKIP_KEYWORDS
+    return None
 
 
 def youtube_probe_title_matches(
@@ -355,14 +368,19 @@ def duration_matches_song(song: dict[str, Any], media_seconds: int) -> bool:
 def remote_title_unacceptable(song: dict[str, Any], remote_title: str) -> bool:
     """True when a YouTube/Soulseek title looks like audiobook/podcast spam."""
 
+    spotify_title = str(song.get('name') or '')
     return remote_text_unacceptable(
-        str(song.get('name') or ''),
+        spotify_title,
         remote_title,
         spotify_artists=[
             str(a).strip()
             for a in (song.get('artists') or [])
             if str(a).strip()
         ],
+        skip_variant_keywords=mix_variant_remote_skip_keywords(
+            spotify_title,
+            remote_title,
+        ),
     )
 
 

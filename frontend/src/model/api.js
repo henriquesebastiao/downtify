@@ -71,6 +71,31 @@ function downloadBatch(payload) {
   return API.post('/api/download/batch', payload)
 }
 
+function getIncompletePlaylists() {
+  return API.get('/api/playlists/incomplete')
+}
+
+function getPlaylistBatches() {
+  return API.get('/api/playlists/batches')
+}
+
+function getPlaylistBatchDetails(spotifyPlaylistId, { tracks = true } = {}) {
+  return API.get(
+    `/api/playlists/batches/${encodeURIComponent(spotifyPlaylistId)}`,
+    { params: tracks ? {} : { tracks: false } }
+  )
+}
+
+function downloadMissingPlaylistTracks(payload) {
+  return API.post('/api/playlists/incomplete/download-missing', payload)
+}
+
+function deletePlaylistBatch(spotifyPlaylistId) {
+  return API.delete(
+    `/api/playlists/batches/${encodeURIComponent(spotifyPlaylistId)}`
+  )
+}
+
 function check_for_update() {
   return API.get('/api/check_update')
 }
@@ -201,6 +226,11 @@ export default {
   open,
   download,
   downloadBatch,
+  getIncompletePlaylists,
+  getPlaylistBatches,
+  getPlaylistBatchDetails,
+  downloadMissingPlaylistTracks,
+  deletePlaylistBatch,
   downloadFileURL,
   downloadSaveName,
   coverFileURL,

@@ -58,6 +58,37 @@ export default {
       'Elige pistas para descargar una a una, o descarga la lista completa.',
     openPlaylistOnSpotify: 'Abrir lista en Spotify',
     downloadEntirePlaylist: 'Descargar lista completa',
+    playlistBatchesTitle: 'Descargas de listas',
+    playlistBatchesHint:
+      'Listas de Spotify descargadas con Downtify. Expande para ver pistas pendientes.',
+    playlistBatchStatusComplete: 'Completa',
+    playlistBatchComplete: 'Todas las pistas están en tu biblioteca.',
+    playlistBatchesEmpty: 'Aún no hay descargas de listas registradas.',
+    playlistBatchesEmptyHint:
+      'Descarga una lista de Spotify para verla aquí con el recuento de pendientes.',
+    playlistBatchesLoadFailed:
+      'No se pudieron cargar las descargas de listas. ¿Backend actualizado?',
+    playlistBatchesLoading: 'Cargando listas…',
+    playlistBatchesTracksLoading: 'Cargando pistas pendientes…',
+    playlistBatchesVerifying: 'Comprobando con Spotify…',
+    playlistBatchesSearchPlaceholder: 'Filtrar listas o pistas…',
+    playlistBatchesNoMatch: 'Ninguna lista coincide con el filtro.',
+    playlistBatchesNoTrackMatch:
+      'Ninguna pista coincide con el filtro en esta lista.',
+    playlistBatchesExpandAll: 'Expandir todo',
+    playlistBatchesCollapseAll: 'Contraer todo',
+    incompleteTitle: 'Listas incompletas',
+    incompleteHint:
+      'Descargas de listas con pistas pendientes. Expande para ver cuáles faltan.',
+    incompleteSummary:
+      '{downloaded}/{expected} descargadas · {missing} pendientes',
+    incompleteInProgress: 'En curso',
+    incompleteFinished: 'Incompleta',
+    downloadMissing: 'Descargar pendientes ({count})',
+    playPlaylist: 'Reproducir lista',
+    playlistBatchNothingToPlay:
+      'Aún no hay pistas descargadas de esta lista en tu biblioteca.',
+    incompleteTracksLoading: 'Lista no disponible — prueba a refrescar.',
     inQueue: 'En la cola',
     download: 'Descargar',
     previousPage: 'Página anterior',

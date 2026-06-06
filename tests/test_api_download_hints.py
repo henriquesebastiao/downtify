@@ -34,3 +34,13 @@ def test_merge_ignores_invalid_track_number():
     )
     assert 'track_number' not in base
     assert 'album_track_total' not in base
+
+
+def test_merge_applies_youtube_id_override():
+    base: dict = {
+        'song_id': 'spotify:id',
+        'url': 'https://open.spotify.com/track/x',
+    }
+    _merge_client_track_hints(base, {'youtube_id': ' dQw4w9WgXcQ '})
+    assert base['youtube_id'] == 'dQw4w9WgXcQ'
+    assert base['youtube_id_override'] is True

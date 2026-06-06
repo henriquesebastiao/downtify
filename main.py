@@ -30,6 +30,10 @@ from pydantic import BaseModel, Field
 from uvicorn import Config, Server
 
 from downtify import __version__, api
+from downtify.api import (
+    collect_playlist_batch_sync_rows,
+    known_spotify_playlist_ids,
+)
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
 from downtify.download_pool import limiter_from_settings
@@ -46,7 +50,12 @@ from downtify.library_paths_cache import invalidate_library_paths_cache
 from downtify.library_reconcile import refresh_playlists_after_moves
 from downtify.monitor import PlaylistMonitorDB, monitor_loop
 from downtify.navidrome_index import NavidromeIndex
+from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
 from downtify.playlist_catalog import PlaylistCatalog
+from downtify.playlist_spotify_cache import (
+    PlaylistSpotifyCache,
+    playlist_spotify_cache_loop,
+)
 from downtify.track_index import TrackIndex
 
 load_dotenv()
@@ -153,6 +162,8 @@ async def _application_startup() -> None:
     api.state.metadata_cache = LibraryMetadataCache(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
     api.state.playlist_catalog = PlaylistCatalog(library_db)
+    api.state.playlist_batch_store = PlaylistBatchStore(library_db)
+    api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     lib_ctx = library_context_from_state(
         DOWNLOAD_DIR, api.state.settings, api.state.track_index
     )
@@ -178,6 +189,19 @@ async def _application_startup() -> None:
             )
     except Exception:
         logger.exception('Playlist catalog backfill from monitor db failed')
+    try:
+        if api.state.playlist_batch_store is not None:
+            synced = ensure_batch_records(
+                api.state.playlist_batch_store,
+                collect_playlist_batch_sync_rows(),
+            )
+            if synced:
+                logger.info(
+                    'Playlist batches: registered {} playlist(s) from library',
+                    synced,
+                )
+    except Exception:
+        logger.exception('Playlist batch sync from library failed')
     asyncio.create_task(
         monitor_loop(
             db=api.state.monitor_db,
@@ -187,9 +211,18 @@ async def _application_startup() -> None:
             get_metadata_cache=lambda: api.state.metadata_cache,
             get_cover_cache=lambda: api.state.cover_cache,
             get_playlist_catalog=lambda: api.state.playlist_catalog,
+            get_playlist_spotify_cache=lambda: (
+                api.state.playlist_spotify_cache
+            ),
             broadcast=api.state.connections.broadcast,
             loop=loop,
             settings=api.state.settings,
+        )
+    )
+    asyncio.create_task(
+        playlist_spotify_cache_loop(
+            api.state.playlist_spotify_cache,
+            known_spotify_playlist_ids,
         )
     )
 
@@ -289,6 +322,7 @@ def build_app() -> FastAPI:
                 track_index=api.state.track_index,
                 monitor_db=api.state.monitor_db,
                 navidrome_index=api.state.navidrome_index,
+                playlist_spotify_cache=api.state.playlist_spotify_cache,
             )
         except Exception:
             logger.exception(

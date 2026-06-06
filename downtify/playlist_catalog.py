@@ -179,6 +179,27 @@ class PlaylistCatalog:
             ).fetchall()
         return [str(row['name']) for row in rows]
 
+    def list_playlists_with_spotify_id(self) -> list[dict[str, Any]]:
+        """Playlists in the catalog that have a linked Spotify playlist id."""
+
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT p.name, p.spotify_id,
+                          (SELECT COUNT(*) FROM playlist_tracks pt
+                           WHERE pt.playlist_name = p.name) AS track_count
+                   FROM playlists p
+                   WHERE p.spotify_id IS NOT NULL AND TRIM(p.spotify_id) != ''
+                   ORDER BY p.name"""
+            ).fetchall()
+        return [
+            {
+                'name': str(row['name']),
+                'spotify_id': str(row['spotify_id']),
+                'track_count': int(row['track_count'] or 0),
+            }
+            for row in rows
+        ]
+
     def list_tracks(self, playlist_name: str) -> list[dict[str, Any]]:
         pl_name = str(playlist_name or '').strip()
         if not pl_name:

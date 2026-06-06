@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Optional
 import requests
 from loguru import logger
 
-from . import m3u, spotify
+from . import m3u
 from .downloader import Downloader
 from .library_cache_keys import file_content_key
 from .library_catalog import (
@@ -25,6 +25,7 @@ from .navidrome import (
     sync_playlist_to_navidrome,
 )
 from .playlist_catalog import PlaylistCatalog
+from .playlist_spotify_cache import PlaylistSpotifyCache, fetch_playlist_tracks
 from .track_index import TrackIndex, normalize_spotify_track_id
 
 if TYPE_CHECKING:
@@ -217,6 +218,7 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
     monitor_db: Optional['PlaylistMonitorDB'] = None,
     navidrome_index: Optional[Any] = None,
     navidrome_scan: bool = False,
+    playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None,
 ) -> None:
     """Regenerate local M3U and optionally Navidrome for *playlist_names*.
 
@@ -257,8 +259,9 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
         spotify_id = playlist_catalog.spotify_id_for_playlist(name)
         if spotify_id:
             try:
-                _pl_name, spotify_tracks = spotify.playlist_info_and_tracks(
-                    spotify_id
+                _pl_name, spotify_tracks = fetch_playlist_tracks(
+                    spotify_id,
+                    cache=playlist_spotify_cache,
                 )
             except requests.HTTPError as exc:
                 status = (
@@ -349,6 +352,7 @@ def reconcile_and_refresh(
     monitor_db: Optional['PlaylistMonitorDB'] = None,
     navidrome_index: Optional[Any] = None,
     refresh_playlists: bool = True,
+    playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None,
 ) -> dict[str, Any]:
     """Run path reconciliation and optional playlist / Navidrome refresh."""
 
@@ -384,6 +388,7 @@ def reconcile_and_refresh(
             track_index=track_index,
             monitor_db=monitor_db,
             navidrome_index=navidrome_index,
+            playlist_spotify_cache=playlist_spotify_cache,
         )
         did_refresh = True
     invalidate_library_paths_cache()

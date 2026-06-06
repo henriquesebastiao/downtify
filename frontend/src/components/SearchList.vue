@@ -1,5 +1,7 @@
 <template>
   <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <IncompletePlaylists @download="(song) => emit('download', song)" />
+
     <!-- Header -->
     <div class="mb-8">
       <h1 class="text-2xl font-bold tracking-tight">
@@ -229,6 +231,7 @@ import { useRouter } from 'vue-router'
 import { useSearchManager } from '../model/search'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
+import IncompletePlaylists from './IncompletePlaylists.vue'
 
 const PAGE_SIZE = 10
 

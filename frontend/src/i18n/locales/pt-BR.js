@@ -57,6 +57,36 @@ export default {
       'Escolha faixas para baixar individualmente ou baixe a playlist inteira.',
     openPlaylistOnSpotify: 'Abrir playlist no Spotify',
     downloadEntirePlaylist: 'Baixar playlist inteira',
+    playlistBatchesTitle: 'Downloads de playlists',
+    playlistBatchesHint:
+      'Playlists do Spotify baixadas pelo Downtify. Expanda para ver faixas faltando.',
+    playlistBatchStatusComplete: 'Completa',
+    playlistBatchComplete: 'Todas as faixas estão na sua biblioteca.',
+    playlistBatchesEmpty: 'Nenhum download de playlist registrado ainda.',
+    playlistBatchesEmptyHint:
+      'Baixe uma playlist do Spotify para vê-la aqui com a contagem de faltantes.',
+    playlistBatchesLoadFailed:
+      'Não foi possível carregar os downloads de playlist. Backend atualizado?',
+    playlistBatchesLoading: 'Carregando playlists…',
+    playlistBatchesTracksLoading: 'Carregando faixas faltantes…',
+    playlistBatchesVerifying: 'Verificando no Spotify…',
+    playlistBatchesSearchPlaceholder: 'Filtrar playlists ou faixas…',
+    playlistBatchesNoMatch: 'Nenhuma playlist corresponde ao filtro.',
+    playlistBatchesNoTrackMatch:
+      'Nenhuma faixa corresponde ao filtro nesta playlist.',
+    playlistBatchesExpandAll: 'Expandir tudo',
+    playlistBatchesCollapseAll: 'Recolher tudo',
+    incompleteTitle: 'Playlists incompletas',
+    incompleteHint:
+      'Downloads de playlist com faixas faltando. Expanda para ver quais.',
+    incompleteSummary: '{downloaded}/{expected} baixadas · {missing} faltando',
+    incompleteInProgress: 'Em andamento',
+    incompleteFinished: 'Incompleta',
+    downloadMissing: 'Baixar faltantes ({count})',
+    playPlaylist: 'Tocar playlist',
+    playlistBatchNothingToPlay:
+      'Ainda não há faixas baixadas desta playlist na biblioteca.',
+    incompleteTracksLoading: 'Lista indisponível — tente atualizar.',
     inQueue: 'Na fila',
     download: 'Baixar',
     previousPage: 'Página anterior',

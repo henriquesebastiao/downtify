@@ -30,7 +30,7 @@ const dm = useDownloadManager()
 watch(
   () => route.params.query,
   (query) => {
-    if (query) sm.searchFor(query)
+    sm.searchFor(query)
   }
 )
 

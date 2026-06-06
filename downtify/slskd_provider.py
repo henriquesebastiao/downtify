@@ -16,6 +16,7 @@ from loguru import logger
 
 from .library_metadata import read_audio_metadata
 from .track_tag_match import (
+    MIX_VARIANT_REMOTE_SKIP_KEYWORDS,
     duration_tolerances_from_settings,
     media_duration_matches_mix_variant,
     media_duration_matches_song,
@@ -457,7 +458,9 @@ def _contains_keyword(
     if segments:
         # Immediate parent folder (e.g. "Artist - Album") — not the whole tree.
         haystacks.append(segments[-1])
-    skip = frozenset({'extended'}) if allow_mix_variants else frozenset()
+    skip = (
+        MIX_VARIANT_REMOTE_SKIP_KEYWORDS if allow_mix_variants else frozenset()
+    )
     return any(
         remote_text_unacceptable(
             title,

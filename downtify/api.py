@@ -10,6 +10,11 @@ working without changes:
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
   ``track_number`` / ``album_track_total`` survive re-fetch by URL)
 * ``POST /api/playlist/m3u``
+* ``GET  /api/playlists/batches``
+* ``GET  /api/playlists/batches/{spotify_playlist_id}``
+* ``DELETE /api/playlists/batches/{spotify_playlist_id}``
+* ``GET  /api/playlists/incomplete``
+* ``POST /api/playlists/incomplete/download-missing``
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
 * ``WS   /api/ws``
@@ -61,12 +66,48 @@ from .navidrome import (
     sync_playlist_to_navidrome,
 )
 from .navidrome_index import NavidromeIndex
+from .playlist_batches import (
+    PlaylistBatchStore,
+    active_queue_count_for_playlist,
+    split_tracks_by_library,
+)
 from .playlist_catalog import PlaylistCatalog
+from .playlist_spotify_cache import (
+    PlaylistSpotifyCache,
+    fetch_playlist_tracks,
+    fetch_track_metadata,
+)
 from .track_index import (
     TrackIndex,
     normalize_spotify_track_id,
     resolve_existing_download,
 )
+
+
+def _fetch_playlist_tracks(
+    spotify_playlist_id: str,
+    *,
+    refresh: bool = False,
+) -> tuple[str, list[dict[str, Any]]]:
+    return fetch_playlist_tracks(
+        spotify_playlist_id,
+        cache=state.playlist_spotify_cache,
+        refresh=refresh,
+    )
+
+
+def _fetch_track_metadata(
+    track_spotify_id: str,
+    *,
+    playlist_id: Optional[str] = None,
+    refresh: bool = False,
+) -> dict[str, Any]:
+    return fetch_track_metadata(
+        track_spotify_id,
+        cache=state.playlist_spotify_cache,
+        playlist_id=playlist_id,
+        refresh=refresh,
+    )
 
 
 def _register_download_on_disk(
@@ -121,7 +162,7 @@ def _playlist_context_from_hints(
         if parsed is not None and parsed[0] == 'playlist':
             spotify_playlist_id = spotify_playlist_id or parsed[1]
             try:
-                name, _ = spotify.playlist_info_and_tracks(parsed[1])
+                name, _ = _fetch_playlist_tracks(parsed[1])
             except Exception:
                 logger.opt(exception=True).warning(
                     'download: failed to resolve playlist name from url'
@@ -257,6 +298,7 @@ async def _schedule_playlist_refresh_after_download(
                         'scan_after_download', True
                     )
                 ),
+                playlist_spotify_cache=state.playlist_spotify_cache,
             )
         except Exception:
             logger.exception(
@@ -579,6 +621,8 @@ class AppState:
     metadata_cache: Optional[LibraryMetadataCache] = None
     cover_cache: Optional[CoverArtCache] = None
     playlist_catalog: Optional[PlaylistCatalog] = None
+    playlist_batch_store: Optional[PlaylistBatchStore] = None
+    playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None
     download_jobs: dict[str, dict[str, Any]] = {}
     download_limiter: Optional[DownloadParallelLimiter] = None
 
@@ -705,11 +749,12 @@ def _resolve_url(url: str):
     kind, sid = parsed
     try:
         if kind == 'track':
-            return spotify.track_from_id(sid)
+            return _fetch_track_metadata(sid)
         if kind == 'album':
             return spotify.album_tracks_from_id(sid)
         if kind == 'playlist':
-            return spotify.playlist_tracks_from_id(sid)
+            _name, tracks = _fetch_playlist_tracks(sid)
+            return tracks
     except Exception as exc:
         logger.exception('Failed to resolve Spotify URL {}', url)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -725,7 +770,8 @@ def _merge_client_track_hints(
     """Copy tagging fields from the client-resolved Spotify row.
 
     ``POST /api/download/url`` re-fetches metadata from the URL only, which loses
-    ``track_number`` for rows that came from an album/playlist browse.
+    ``track_number`` for rows that came from an album/playlist browse, and drops
+    a manual ``youtube_id`` override from the failed-queue retry flow.
     """
 
     if not isinstance(hints, dict) or not hints:
@@ -754,6 +800,18 @@ def _merge_client_track_hints(
     yr = hints.get('year')
     if isinstance(yr, str) and yr.strip():
         base['year'] = yr.strip()
+    ytid = hints.get('youtube_id')
+    if ytid is not None:
+        if isinstance(ytid, str):
+            stripped = ytid.strip()
+            if stripped:
+                base['youtube_id'] = stripped
+                base['youtube_id_override'] = True
+        else:
+            converted = str(ytid).strip()
+            if converted:
+                base['youtube_id'] = converted
+                base['youtube_id_override'] = True
 
 
 def _song_from_download_request(
@@ -774,7 +832,7 @@ def _song_for_download(url: str) -> dict[str, Any]:
     if parsed is not None:
         kind, sid = parsed
         if kind == 'track':
-            return spotify.track_from_id(sid)
+            return _fetch_track_metadata(sid)
         raise HTTPException(
             status_code=400,
             detail='Only Spotify track URLs are supported here',
@@ -1132,6 +1190,7 @@ async def _process_batch(
     job_ids: list[str],
     playlist_url: str,
     generate_m3u: bool,
+    batch_id: Optional[int] = None,
 ) -> None:
     # Resolve the playlist name up-front so all tracks land in a single,
     # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
@@ -1143,14 +1202,21 @@ async def _process_batch(
     if parsed is not None and parsed[0] == 'playlist':
         spotify_playlist_id = parsed[1]
         try:
-            playlist_name, _ = await asyncio.to_thread(
-                spotify.playlist_info_and_tracks, spotify_playlist_id
+            playlist_name, tracks = await asyncio.to_thread(
+                _fetch_playlist_tracks, spotify_playlist_id, refresh=True
             )
             playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
         except Exception:
             logger.exception(
                 'Failed to resolve playlist name for {}', playlist_url
             )
+
+    if batch_id is not None and playlist_name and state.playlist_batch_store:
+        await asyncio.to_thread(
+            state.playlist_batch_store.update_batch_name,
+            batch_id,
+            playlist_name,
+        )
 
     async def _bounded(
         song: dict[str, Any], song_id: str, track_order: int
@@ -1176,6 +1242,28 @@ async def _process_batch(
         ],
         return_exceptions=False,
     )
+
+    succeeded = sum(1 for r in results if r and r.get('filename'))
+    failed = len(results) - succeeded
+
+    if playlist_name:
+        logger.info(
+            'playlist batch: name={!r} downloaded={}/{} failed={}',
+            playlist_name,
+            succeeded,
+            len(songs),
+            failed,
+        )
+
+    if batch_id is not None and state.playlist_batch_store is not None:
+        batch_status = 'complete' if failed == 0 else 'incomplete'
+        await asyncio.to_thread(
+            state.playlist_batch_store.finish_batch,
+            batch_id,
+            succeeded,
+            failed,
+            status=batch_status,
+        )
 
     if not playlist_name:
         return
@@ -1230,14 +1318,547 @@ async def _process_batch(
                 )
 
         await asyncio.to_thread(_catalog_batch)
-        if len(entries) < len(songs):
-            logger.info(
-                'navidrome: batch for playlist={!r}: {} downloaded, {} failed',
-                playlist_name,
-                len(entries),
-                len(songs) - len(entries),
-            )
         await _sync_playlist_navidrome(playlist_name, results)
+
+
+def _playlist_subdir_for_name(playlist_name: str) -> str:
+    return m3u.sanitize_playlist_name(playlist_name)
+
+
+def _catalog_filenames_for_playlist(
+    playlist_name: str,
+    spotify_playlist_id: str,
+) -> dict[str, str]:
+    """Map Spotify track id to on-disk filename from the playlist catalog."""
+
+    if state.playlist_catalog is None:
+        return {}
+    sid = str(spotify_playlist_id or '').strip()
+    names: list[str] = []
+    if str(playlist_name or '').strip():
+        names.append(str(playlist_name).strip())
+    for row in state.playlist_catalog.list_playlists_with_spotify_id():
+        if sid and row['spotify_id'] != sid:
+            continue
+        name = str(row['name'] or '').strip()
+        if name and name not in names:
+            names.append(name)
+    by_tid: dict[str, str] = {}
+    for name in names:
+        for row in state.playlist_catalog.list_tracks(name):
+            tid = str(row.get('track_spotify_id') or '').strip()
+            filename = str(row.get('filename') or '').strip()
+            if tid and filename:
+                by_tid[tid] = filename
+    return by_tid
+
+
+def _song_row_hint(song: dict[str, Any]) -> dict[str, Any]:
+    return {
+        'song_id': song.get('song_id'),
+        'name': song.get('name') or '',
+        'artists': list(song.get('artists') or []),
+        'album_name': song.get('album_name') or '',
+        'cover_url': song.get('cover_url') or '',
+        'url': song.get('url') or '',
+        'duration': song.get('duration') or 0,
+    }
+
+
+def _known_spotify_playlist_sources() -> dict[str, dict[str, Any]]:
+    """Merge Spotify playlist ids from batch store, catalog, and monitor."""
+
+    sources: dict[str, dict[str, Any]] = {}
+    if state.playlist_batch_store is not None:
+        for batch in state.playlist_batch_store.list_latest_batches():
+            sid = str(batch['spotify_playlist_id'] or '').strip()
+            if not sid:
+                continue
+            sources[sid] = {
+                'playlist_name': batch['playlist_name'],
+                'playlist_url': batch['playlist_url'],
+                'expected_hint': int(batch.get('expected_count') or 0),
+                'batch': batch,
+            }
+    if state.playlist_catalog is not None:
+        for row in state.playlist_catalog.list_playlists_with_spotify_id():
+            sid = str(row['spotify_id'] or '').strip()
+            if not sid:
+                continue
+            if sid not in sources:
+                sources[sid] = {
+                    'playlist_name': row['name'],
+                    'playlist_url': f'https://open.spotify.com/playlist/{sid}',
+                    'expected_hint': int(row.get('track_count') or 0),
+                    'batch': None,
+                }
+            else:
+                entry = sources[sid]
+                if not entry.get('playlist_name'):
+                    entry['playlist_name'] = row['name']
+                if int(row.get('track_count') or 0) > int(
+                    entry.get('expected_hint') or 0
+                ):
+                    entry['expected_hint'] = int(row['track_count'])
+        monitor_by_name: dict[str, Any] = {}
+        if state.monitor_db is not None:
+            for pl in state.monitor_db.list_playlists():
+                name = str(pl.name or '').strip()
+                if name:
+                    monitor_by_name[name] = pl
+        batch_by_name: dict[str, dict[str, Any]] = {}
+        if state.playlist_batch_store is not None:
+            for batch in state.playlist_batch_store.list_latest_batches():
+                name = str(batch.get('playlist_name') or '').strip()
+                if name:
+                    batch_by_name[name] = batch
+        for name in state.playlist_catalog.list_playlist_names():
+            sid = state.playlist_catalog.spotify_id_for_playlist(name) or ''
+            if not sid:
+                mon = monitor_by_name.get(name)
+                if mon and mon.spotify_id:
+                    sid = str(mon.spotify_id).strip()
+                else:
+                    batch = batch_by_name.get(name)
+                    if batch:
+                        sid = str(batch['spotify_playlist_id']).strip()
+            if not sid or sid in sources:
+                continue
+            track_count = len(state.playlist_catalog.list_tracks(name))
+            sources[sid] = {
+                'playlist_name': name,
+                'playlist_url': f'https://open.spotify.com/playlist/{sid}',
+                'expected_hint': track_count,
+                'batch': batch_by_name.get(name),
+            }
+    if state.monitor_db is not None:
+        for pl in state.monitor_db.list_playlists():
+            sid = str(pl.spotify_id or '').strip()
+            if not sid:
+                continue
+            if sid not in sources:
+                sources[sid] = {
+                    'playlist_name': pl.name,
+                    'playlist_url': pl.url,
+                    'expected_hint': int(pl.last_track_count or 0),
+                    'batch': None,
+                }
+            else:
+                entry = sources[sid]
+                if pl.name and (
+                    not entry.get('playlist_name')
+                    or entry['playlist_name'] == sid
+                ):
+                    entry['playlist_name'] = pl.name
+                if pl.url:
+                    entry['playlist_url'] = pl.url
+    return sources
+
+
+def known_spotify_playlist_ids() -> list[str]:
+    """Spotify playlist ids tracked by batches, catalog, and monitor."""
+
+    return list(_known_spotify_playlist_sources().keys())
+
+
+def _resolve_playlist_batch_status(
+    *,
+    missing_count: int,
+    active_count: int,
+    expected_count: int,
+    batch: Optional[dict[str, Any]] = None,
+) -> str:
+    """Derive batch status from live counts (not stale DB status alone)."""
+
+    if active_count > 0:
+        return 'in_progress'
+    if missing_count == 0 and expected_count > 0:
+        if batch is not None and state.playlist_batch_store is not None:
+            if batch.get('status') != 'complete':
+                state.playlist_batch_store.mark_complete(batch['id'])
+        return 'complete'
+    if missing_count > 0:
+        return 'incomplete'
+    if batch is not None and batch.get('status') == 'complete':
+        return 'complete'
+    if batch is not None:
+        return str(batch.get('status') or 'incomplete')
+    return 'complete'
+
+
+def _playlist_batch_summary(
+    spotify_id: str,
+    playlist_name: str,
+    playlist_url: str,
+    *,
+    batch: Optional[dict[str, Any]] = None,
+    expected_hint: int = 0,
+) -> dict[str, Any]:
+    """Counts from cached Spotify track list + library scan."""
+
+    active_count = active_queue_count_for_playlist(
+        spotify_id, state.download_jobs
+    )
+
+    if state.playlist_catalog is not None:
+        for row in state.playlist_catalog.list_playlists_with_spotify_id():
+            if row['spotify_id'] != spotify_id:
+                continue
+            if not playlist_name or playlist_name == spotify_id:
+                playlist_name = str(row['name'])
+            break
+
+    cached_name: Optional[str] = None
+    cached_tracks: Optional[list[dict[str, Any]]] = None
+    if state.playlist_spotify_cache is not None:
+        hit = state.playlist_spotify_cache.get(spotify_id)
+        if hit is not None:
+            cached_name, cached_tracks = hit
+
+    if cached_tracks is not None:
+        if cached_name:
+            playlist_name = cached_name
+        expected_count = len(cached_tracks)
+        downloaded_count = 0
+        missing_count = expected_count
+        if (
+            cached_tracks
+            and state.downloader is not None
+            and state.track_index is not None
+        ):
+            subdir = _playlist_subdir_for_name(playlist_name)
+            catalog_filenames = _catalog_filenames_for_playlist(
+                playlist_name,
+                spotify_id,
+            )
+            downloaded_count, missing_tracks = split_tracks_by_library(
+                cached_tracks,
+                downloader=state.downloader,
+                track_index=state.track_index,
+                subdir=subdir,
+                catalog_filenames=catalog_filenames,
+            )
+            missing_count = len(missing_tracks)
+        status = _resolve_playlist_batch_status(
+            missing_count=missing_count,
+            active_count=active_count,
+            expected_count=expected_count,
+            batch=batch,
+        )
+        if status == 'complete':
+            missing_count = 0
+        return {
+            'batch_id': batch['id'] if batch else None,
+            'spotify_playlist_id': spotify_id,
+            'playlist_name': playlist_name,
+            'playlist_url': playlist_url,
+            'expected_count': expected_count,
+            'downloaded_count': downloaded_count,
+            'missing_count': missing_count,
+            'missing_tracks': [],
+            'active_in_queue': active_count,
+            'status': status,
+            'source': 'cache',
+            'started_at': batch.get('started_at') if batch else None,
+            'finished_at': batch.get('finished_at') if batch else None,
+        }
+
+    downloaded_count = 0
+    if state.playlist_catalog is not None:
+        for row in state.playlist_catalog.list_playlists_with_spotify_id():
+            if row['spotify_id'] != spotify_id:
+                continue
+            downloaded_count = int(row.get('track_count') or 0)
+            break
+        if not downloaded_count and playlist_name:
+            downloaded_count = len(
+                state.playlist_catalog.list_tracks(playlist_name)
+            )
+
+    expected_count = max(int(expected_hint or 0), 0)
+    if batch is not None:
+        expected_count = max(
+            expected_count, int(batch.get('expected_count') or 0)
+        )
+
+    status = 'in_progress' if active_count > 0 else 'pending'
+    return {
+        'batch_id': batch['id'] if batch else None,
+        'spotify_playlist_id': spotify_id,
+        'playlist_name': playlist_name,
+        'playlist_url': playlist_url,
+        'expected_count': expected_count,
+        'downloaded_count': downloaded_count,
+        'missing_count': 0,
+        'missing_tracks': [],
+        'active_in_queue': active_count,
+        'status': status,
+        'source': 'pending',
+        'started_at': batch.get('started_at') if batch else None,
+        'finished_at': batch.get('finished_at') if batch else None,
+    }
+
+
+def _playlist_completeness_report(
+    spotify_id: str,
+    playlist_name: str,
+    playlist_url: str,
+    *,
+    batch: Optional[dict[str, Any]] = None,
+    expected_hint: int = 0,
+    include_missing_tracks: bool = True,
+    refresh: bool = False,
+) -> dict[str, Any]:
+    tracks: list[dict[str, Any]] = []
+    try:
+        fetched_name, tracks = _fetch_playlist_tracks(
+            spotify_id, refresh=refresh
+        )
+        if fetched_name:
+            playlist_name = fetched_name
+    except Exception:
+        logger.opt(exception=True).debug(
+            'playlist batch: Spotify fetch failed for {}',
+            spotify_id,
+        )
+
+    subdir = _playlist_subdir_for_name(playlist_name)
+    catalog_filenames = _catalog_filenames_for_playlist(
+        playlist_name,
+        spotify_id,
+    )
+    downloaded_count, missing_tracks = split_tracks_by_library(
+        tracks,
+        downloader=state.downloader,
+        track_index=state.track_index,
+        subdir=subdir,
+        catalog_filenames=catalog_filenames,
+    )
+    expected_count = len(tracks) or int(expected_hint or 0)
+    if batch is not None and not expected_count:
+        expected_count = int(batch.get('expected_count') or 0)
+    missing_count = len(missing_tracks)
+    if not tracks and expected_count > downloaded_count:
+        missing_count = expected_count - downloaded_count
+
+    active_count = active_queue_count_for_playlist(
+        spotify_id, state.download_jobs
+    )
+
+    status = _resolve_playlist_batch_status(
+        missing_count=missing_count,
+        active_count=active_count,
+        expected_count=expected_count,
+        batch=batch,
+    )
+
+    track_hints = (
+        [_song_row_hint(t) for t in missing_tracks]
+        if include_missing_tracks
+        else []
+    )
+
+    return {
+        'batch_id': batch['id'] if batch else None,
+        'spotify_playlist_id': spotify_id,
+        'playlist_name': playlist_name,
+        'playlist_url': playlist_url,
+        'expected_count': expected_count,
+        'downloaded_count': downloaded_count,
+        'missing_count': missing_count,
+        'missing_tracks': track_hints,
+        'active_in_queue': active_count,
+        'status': status,
+        'source': 'spotify',
+        'started_at': batch.get('started_at') if batch else None,
+        'finished_at': batch.get('finished_at') if batch else None,
+    }
+
+
+def _report_for_spotify_playlist(
+    spotify_playlist_id: str,
+    *,
+    mode: str = 'estimate',
+    include_missing_tracks: bool = True,
+    refresh: bool = False,
+) -> Optional[dict[str, Any]]:
+    sid = str(spotify_playlist_id or '').strip()
+    if not sid:
+        return None
+    meta = _known_spotify_playlist_sources().get(sid)
+    if meta is None:
+        return None
+    batch = meta.get('batch')
+    name = str(meta.get('playlist_name') or sid)
+    url = str(
+        meta.get('playlist_url') or f'https://open.spotify.com/playlist/{sid}'
+    )
+    hint = int(meta.get('expected_hint') or 0)
+    if mode == 'spotify':
+        return _playlist_completeness_report(
+            sid,
+            name,
+            url,
+            batch=batch if isinstance(batch, dict) else None,
+            expected_hint=hint,
+            include_missing_tracks=include_missing_tracks,
+            refresh=refresh,
+        )
+    report = _playlist_batch_summary(
+        sid,
+        name,
+        url,
+        batch=batch if isinstance(batch, dict) else None,
+        expected_hint=hint,
+    )
+    return report
+
+
+def _build_playlist_batch_reports(
+    *,
+    include_tracks: bool = False,
+) -> list[dict[str, Any]]:
+    if state.downloader is None or state.track_index is None:
+        return []
+
+    builder = (
+        _playlist_completeness_report
+        if include_tracks
+        else _playlist_batch_summary
+    )
+    reports: list[dict[str, Any]] = []
+    for sid, meta in _known_spotify_playlist_sources().items():
+        batch = meta.get('batch')
+        reports.append(
+            builder(
+                sid,
+                str(meta.get('playlist_name') or sid),
+                str(
+                    meta.get('playlist_url')
+                    or f'https://open.spotify.com/playlist/{sid}'
+                ),
+                batch=batch if isinstance(batch, dict) else None,
+                expected_hint=int(meta.get('expected_hint') or 0),
+            )
+        )
+    reports.sort(
+        key=lambda row: (
+            row.get('status') != 'complete',
+            row.get('playlist_name') or '',
+        )
+    )
+    return reports
+
+
+def collect_playlist_batch_sync_rows() -> list[dict[str, Any]]:
+    """Playlist rows for startup batch registration."""
+
+    rows: list[dict[str, Any]] = []
+    for sid, meta in _known_spotify_playlist_sources().items():
+        rows.append({
+            'spotify_id': sid,
+            'name': str(meta.get('playlist_name') or sid),
+            'url': str(
+                meta.get('playlist_url')
+                or f'https://open.spotify.com/playlist/{sid}'
+            ),
+            'track_count': int(meta.get('expected_hint') or 0),
+        })
+    return rows
+
+
+def _build_incomplete_playlist_reports(
+    *,
+    include_tracks: bool = False,
+) -> list[dict[str, Any]]:
+    """Playlists that still need work (missing tracks or active queue jobs)."""
+
+    return [
+        row
+        for row in _build_playlist_batch_reports(include_tracks=include_tracks)
+        if row['status'] != 'complete'
+    ]
+
+
+def _missing_tracks_for_playlist(
+    spotify_playlist_id: str,
+) -> tuple[str, str, list[dict[str, Any]]]:
+    if state.downloader is None or state.track_index is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    sid = str(spotify_playlist_id or '').strip()
+    if not sid:
+        raise HTTPException(
+            status_code=400, detail='spotify_playlist_id required'
+        )
+
+    try:
+        playlist_name, tracks = _fetch_playlist_tracks(sid)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail='Failed to fetch playlist from Spotify'
+        ) from exc
+
+    subdir = _playlist_subdir_for_name(playlist_name)
+    catalog_filenames = _catalog_filenames_for_playlist(
+        playlist_name,
+        sid,
+    )
+    _downloaded, missing = split_tracks_by_library(
+        tracks,
+        downloader=state.downloader,
+        track_index=state.track_index,
+        subdir=subdir,
+        catalog_filenames=catalog_filenames,
+    )
+    playlist_url = f'https://open.spotify.com/playlist/{sid}'
+    return playlist_name, playlist_url, missing
+
+
+async def _submit_playlist_batch(
+    songs: list[dict[str, Any]],
+    playlist_url: str,
+    *,
+    generate_m3u: bool,
+    batch_id: Optional[int] = None,
+) -> dict[str, Any]:
+    valid_songs: list[dict[str, Any]] = []
+    job_ids: list[str] = []
+    for song in songs:
+        if not isinstance(song, dict):
+            continue
+        song_id = _register_job(song, status='queued')
+        valid_songs.append(song)
+        job_ids.append(song_id)
+        await state.connections.broadcast({
+            'song': song,
+            'progress': 0,
+            'message': '',
+            'status': 'queued',
+        })
+
+    if not valid_songs:
+        raise HTTPException(status_code=400, detail='No valid songs in batch')
+
+    task = asyncio.create_task(
+        _process_batch(
+            valid_songs,
+            job_ids,
+            playlist_url,
+            generate_m3u,
+            batch_id,
+        )
+    )
+
+    def _log_batch_failure(t: asyncio.Task) -> None:
+        if t.cancelled():
+            return
+        exc = t.exception()
+        if exc is not None:
+            logger.opt(exception=exc).error('Batch processing crashed')
+
+    task.add_done_callback(_log_batch_failure)
+    return {'job_ids': job_ids, 'count': len(job_ids)}
 
 
 @router.post('/api/library/reconcile')
@@ -1258,6 +1879,7 @@ async def reconcile_library_endpoint() -> dict[str, Any]:
             monitor_db=state.monitor_db,
             navidrome_index=state.navidrome_index,
             refresh_playlists=True,
+            playlist_spotify_cache=state.playlist_spotify_cache,
         )
         invalidate_library_paths_cache()
         return result
@@ -1284,6 +1906,7 @@ async def _schedule_playlist_refresh_after_delete(
                 track_index=state.track_index,
                 monitor_db=state.monitor_db,
                 navidrome_index=state.navidrome_index,
+                playlist_spotify_cache=state.playlist_spotify_cache,
             )
         except Exception:
             logger.exception(
@@ -1373,37 +1996,202 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
     playlist_url = str(payload.get('playlist_url') or '')
     generate_m3u = bool(payload.get('generate_m3u', True))
 
-    valid_songs: list[dict[str, Any]] = []
-    job_ids: list[str] = []
-    for song in songs:
-        if not isinstance(song, dict):
-            continue
-        song_id = _register_job(song, status='queued')
-        valid_songs.append(song)
-        job_ids.append(song_id)
-        await state.connections.broadcast({
-            'song': song,
-            'progress': 0,
-            'message': '',
-            'status': 'queued',
-        })
+    batch_id: Optional[int] = None
+    parsed = spotify.parse_spotify_url(playlist_url) if playlist_url else None
+    if (
+        parsed is not None
+        and parsed[0] == 'playlist'
+        and state.playlist_batch_store is not None
+    ):
+        spotify_playlist_id = parsed[1]
+        playlist_name = str(songs[0].get('album_name') or '').strip()
+        if not playlist_name:
+            playlist_name = spotify_playlist_id
+        batch_id = await asyncio.to_thread(
+            state.playlist_batch_store.start_batch,
+            spotify_playlist_id,
+            playlist_name,
+            playlist_url,
+            len(songs),
+        )
 
-    if not valid_songs:
-        raise HTTPException(status_code=400, detail='No valid songs in batch')
-
-    task = asyncio.create_task(
-        _process_batch(valid_songs, job_ids, playlist_url, generate_m3u)
+    return await _submit_playlist_batch(
+        songs,
+        playlist_url,
+        generate_m3u=generate_m3u,
+        batch_id=batch_id,
     )
 
-    def _log_batch_failure(t: asyncio.Task) -> None:
-        if t.cancelled():
-            return
-        exc = t.exception()
-        if exc is not None:
-            logger.opt(exception=exc).error('Batch processing crashed')
 
-    task.add_done_callback(_log_batch_failure)
-    return {'job_ids': job_ids, 'count': len(job_ids)}
+@router.get('/api/playlists/batches')
+async def list_playlist_batches_endpoint() -> dict[str, Any]:
+    """Tracked Spotify playlist batches (summary from Spotify cache)."""
+
+    reports = await asyncio.to_thread(_build_playlist_batch_reports)
+    return {'playlists': reports, 'count': len(reports)}
+
+
+@router.get('/api/playlists/batches/{spotify_playlist_id}')
+async def get_playlist_batch_detail_endpoint(
+    spotify_playlist_id: str,
+    tracks: bool = Query(default=True),
+    refresh: bool = Query(default=False),
+) -> dict[str, Any]:
+    """Completeness for one playlist using cached Spotify track list."""
+
+    report = await asyncio.to_thread(
+        _report_for_spotify_playlist,
+        spotify_playlist_id,
+        mode='spotify',
+        include_missing_tracks=tracks,
+        refresh=refresh,
+    )
+    if report is None:
+        raise HTTPException(status_code=404, detail='Playlist not found')
+    return report
+
+
+def _purge_playlist_tracking(spotify_playlist_id: str) -> None:
+    sid = str(spotify_playlist_id or '').strip()
+    if not sid:
+        return
+    batches_removed = 0
+    if state.playlist_batch_store is not None:
+        batches_removed = (
+            state.playlist_batch_store.delete_for_spotify_playlist(sid)
+        )
+    if state.playlist_spotify_cache is not None:
+        state.playlist_spotify_cache.delete_playlist(sid)
+    monitor_removed = False
+    if state.monitor_db is not None:
+        monitored = state.monitor_db.get_by_spotify_id(sid)
+        if monitored is not None:
+            state.monitor_db.delete_playlist(monitored.id)
+            monitor_removed = True
+    logger.info(
+        'Playlist delete: cleared tracking for {} '
+        '(batch_rows={}, spotify_cache=yes, monitor={})',
+        sid,
+        batches_removed,
+        'removed' if monitor_removed else 'none',
+    )
+
+
+@router.delete('/api/playlists/batches/{spotify_playlist_id}')
+async def delete_playlist_batch_endpoint(
+    spotify_playlist_id: str,
+) -> dict[str, Any]:
+    """Delete playlist audio, catalog, M3U, and batch/monitor/cache tracking."""
+
+    sid = str(spotify_playlist_id or '').strip()
+    if not sid:
+        raise HTTPException(
+            status_code=400, detail='spotify_playlist_id required'
+        )
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    meta = _known_spotify_playlist_sources().get(sid)
+    if meta is None:
+        raise HTTPException(status_code=404, detail='Playlist not found')
+
+    playlist_name = str(meta.get('playlist_name') or sid).strip() or sid
+    logger.info(
+        'Playlist batch delete requested for {!r} (spotify_id={})',
+        playlist_name,
+        sid,
+    )
+
+    def _run() -> dict[str, Any]:
+        result = delete_playlist_from_library(
+            playlist_name,
+            Path(state.downloader.download_dir),
+            state.settings,
+            state,
+        )
+        _purge_playlist_tracking(sid)
+        return result
+
+    result = await asyncio.to_thread(_run)
+    if not result.get('ok'):
+        raise HTTPException(
+            status_code=400,
+            detail=str(result.get('error') or 'Playlist delete failed'),
+        )
+    affected = set(result.get('playlists_affected') or [])
+    if affected:
+        asyncio.create_task(_schedule_playlist_refresh_after_delete(affected))
+    result['spotify_playlist_id'] = sid
+    result['playlists_refresh_scheduled'] = bool(affected)
+    return result
+
+
+@router.get('/api/playlists/incomplete')
+async def list_incomplete_playlists_endpoint() -> dict[str, Any]:
+    """Playlist batches that are still missing tracks vs Spotify."""
+
+    reports = await asyncio.to_thread(_build_incomplete_playlist_reports)
+    return {'playlists': reports, 'count': len(reports)}
+
+
+@router.post('/api/playlists/incomplete/download-missing')
+async def download_missing_playlist_tracks_endpoint(
+    body: dict[str, Any] = Body(...),
+) -> dict[str, Any]:
+    """Queue only tracks from a Spotify playlist that are not in the library."""
+
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    spotify_playlist_id = str(body.get('spotify_playlist_id') or '').strip()
+    playlist_url = str(body.get('playlist_url') or '').strip()
+    if not spotify_playlist_id and playlist_url:
+        parsed = spotify.parse_spotify_url(playlist_url)
+        if parsed is not None and parsed[0] == 'playlist':
+            spotify_playlist_id = parsed[1]
+    if not spotify_playlist_id:
+        raise HTTPException(
+            status_code=400,
+            detail='spotify_playlist_id or playlist_url required',
+        )
+
+    playlist_name, resolved_url, missing = await asyncio.to_thread(
+        _missing_tracks_for_playlist, spotify_playlist_id
+    )
+    if not missing:
+        if state.playlist_batch_store is not None:
+            for batch in state.playlist_batch_store.list_open_batches():
+                if batch['spotify_playlist_id'] == spotify_playlist_id:
+                    state.playlist_batch_store.mark_complete(batch['id'])
+        return {'count': 0, 'message': 'Playlist already complete'}
+
+    generate_m3u = bool(body.get('generate_m3u', True))
+    batch_id: Optional[int] = None
+    if state.playlist_batch_store is not None:
+        batch_id = await asyncio.to_thread(
+            state.playlist_batch_store.start_batch,
+            spotify_playlist_id,
+            playlist_name,
+            resolved_url,
+            len(missing),
+        )
+
+    songs: list[dict[str, Any]] = []
+    for index, track in enumerate(missing):
+        song = dict(track)
+        song['downtify_playlist_url'] = resolved_url
+        song['downtify_track_order'] = index
+        songs.append(song)
+
+    result = await _submit_playlist_batch(
+        songs,
+        resolved_url,
+        generate_m3u=generate_m3u,
+        batch_id=batch_id,
+    )
+    result['missing_count'] = len(missing)
+    result['playlist_name'] = playlist_name
+    return result
 
 
 @router.get('/api/queue')
@@ -1471,8 +2259,8 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail='tracks must be a list')
 
     try:
-        playlist_name, _ = await asyncio.to_thread(
-            spotify.playlist_info_and_tracks, parsed[1]
+        playlist_name, _tracks = await asyncio.to_thread(
+            _fetch_playlist_tracks, parsed[1], refresh=True
         )
     except Exception as exc:
         logger.exception('Failed to resolve playlist {}', playlist_url)
@@ -1763,7 +2551,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
 
     try:
         name, _tracks = await asyncio.to_thread(
-            spotify.playlist_info_and_tracks, spotify_id
+            _fetch_playlist_tracks, spotify_id, refresh=True
         )
     except Exception as exc:
         logger.exception('Failed to resolve playlist {}', spotify_id)
@@ -1788,6 +2576,8 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
                     loop,
                     state.settings,
                     track_index=state.track_index,
+                    playlist_catalog=state.playlist_catalog,
+                    playlist_spotify_cache=state.playlist_spotify_cache,
                 )
             except Exception:
                 logger.exception('Initial check failed for playlist {}', pl.id)
@@ -1857,6 +2647,8 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
                 loop,
                 state.settings,
                 track_index=state.track_index,
+                playlist_catalog=state.playlist_catalog,
+                playlist_spotify_cache=state.playlist_spotify_cache,
             )
             logger.info(
                 'Manual check: downloaded {} new track(s) from "{}"',

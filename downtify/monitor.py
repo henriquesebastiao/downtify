@@ -24,6 +24,11 @@ from .navidrome import (
 )
 from .navidrome_index import NavidromeIndex
 from .playlist_catalog import PlaylistCatalog
+from .playlist_spotify_cache import (
+    PlaylistSpotifyCache,
+    fetch_playlist_tracks,
+    fetch_track_metadata,
+)
 from .sqlite_utils import connect_sqlite
 from .track_index import (
     TrackIndex,
@@ -278,6 +283,7 @@ async def check_playlist(  # noqa: PLR0914
     metadata_cache: Optional[LibraryMetadataCache] = None,
     cover_cache: Optional[CoverArtCache] = None,
     playlist_catalog: Optional[PlaylistCatalog] = None,
+    playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None,
 ) -> int:
     """Fetch playlist, detect new tracks, download them. Returns count downloaded."""
     logger.info(
@@ -294,8 +300,11 @@ async def check_playlist(  # noqa: PLR0914
         )
 
     try:
-        tracks = await asyncio.to_thread(
-            spotify.playlist_tracks_from_id, playlist.spotify_id
+        _name, tracks = await asyncio.to_thread(
+            fetch_playlist_tracks,
+            playlist.spotify_id,
+            cache=playlist_spotify_cache,
+            refresh=True,
         )
     except Exception:
         logger.exception('Failed to fetch playlist {}', playlist.spotify_id)
@@ -363,7 +372,12 @@ async def check_playlist(  # noqa: PLR0914
         # embed gives us both per-track. We still keep the playlist values
         # as a fallback if the per-track fetch fails for any reason.
         try:
-            full = await asyncio.to_thread(spotify.track_from_id, track_id)
+            full = await asyncio.to_thread(
+                fetch_track_metadata,
+                track_id,
+                cache=playlist_spotify_cache,
+                playlist_id=playlist.spotify_id,
+            )
             song.update(spotify._merge_full_track_metadata(song, full))
         except Exception:
             logger.opt(exception=True).warning(
@@ -634,6 +648,7 @@ async def monitor_loop(
     get_metadata_cache: Callable[[], Optional[LibraryMetadataCache]],
     get_cover_cache: Callable[[], Optional[CoverArtCache]],
     get_playlist_catalog: Callable[[], Optional[PlaylistCatalog]],
+    get_playlist_spotify_cache: Callable[[], Optional[PlaylistSpotifyCache]],
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
     settings: Optional[dict[str, Any]] = None,
@@ -655,6 +670,7 @@ async def monitor_loop(
                 metadata_cache = get_metadata_cache()
                 cover_cache = get_cover_cache()
                 playlist_catalog = get_playlist_catalog()
+                playlist_spotify_cache = get_playlist_spotify_cache()
                 try:
                     count = await check_playlist(
                         pl,
@@ -668,6 +684,7 @@ async def monitor_loop(
                         metadata_cache=metadata_cache,
                         cover_cache=cover_cache,
                         playlist_catalog=playlist_catalog,
+                        playlist_spotify_cache=playlist_spotify_cache,
                     )
                     if count > 0:
                         logger.info(

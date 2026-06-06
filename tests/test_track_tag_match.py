@@ -244,3 +244,23 @@ def test_remote_adds_unwanted_variant_skips_extended_when_allowed():
         'Track (Extended Mix).mp3',
         skip_keywords=frozenset({'extended'}),
     )
+
+
+def test_remote_title_allows_extended_mix_when_spotify_is_plain_title():
+    song = {
+        'name': "Don't Touch",
+        'artists': ['Berin'],
+    }
+    probe_title = (
+        "Berin - Don't Touch (Extended Mix) - #afrohouse #thesacredtribe"
+    )
+    assert not remote_title_unacceptable(song, probe_title)
+    assert youtube_probe_title_matches(song, probe_title)
+
+
+def test_remote_title_still_rejects_live_when_spotify_is_studio():
+    song = {'name': "Don't Touch", 'artists': ['Berin']}
+    assert remote_title_unacceptable(
+        song,
+        "Berin - Don't Touch (Live at Warehouse)",
+    )

@@ -18,6 +18,20 @@ from .library_paths_cache import invalidate_library_paths_cache
 from .m3u import sanitize_playlist_name
 
 
+def _log_failed_deletes(
+    failed: list[dict[str, str]],
+    *,
+    context: str,
+) -> None:
+    for item in failed:
+        logger.warning(
+            '{}: could not delete {} — {}',
+            context,
+            item.get('file') or '?',
+            item.get('error') or 'unknown error',
+        )
+
+
 def delete_library_file(
     stored_path: str,
     ctx: LibraryContext,
@@ -37,6 +51,7 @@ def delete_library_file(
 
     full = resolve_library_file(file_key, ctx)
     if full is None:
+        logger.warning('Library delete: file not found on disk: {}', file_key)
         return {
             'file': file_key,
             'deleted': False,
@@ -46,7 +61,14 @@ def delete_library_file(
     try:
         full.unlink()
     except OSError as exc:
+        logger.warning(
+            'Library delete: could not unlink {}: {}',
+            full,
+            exc,
+        )
         return {'file': file_key, 'deleted': False, 'error': str(exc)}
+
+    logger.debug('Deleted library file: {}', file_key)
 
     affected_playlists: list[str] = []
     if cover_cache is not None:
@@ -75,6 +97,8 @@ def delete_library_files(
     stored_paths: list[str],
     ctx: LibraryContext,
     state: Any,
+    *,
+    log_failures: bool = True,
 ) -> dict[str, Any]:
     """Delete many files; return per-file results and union of affected playlists."""
 
@@ -110,6 +134,12 @@ def delete_library_files(
 
     if deleted:
         invalidate_library_paths_cache()
+        logger.debug(
+            'Batch library delete: removed {} file(s)',
+            len(deleted),
+        )
+    if failed and log_failures:
+        _log_failed_deletes(failed, context='Batch library delete')
     return {
         'deleted': deleted,
         'failed': failed,
@@ -149,12 +179,17 @@ def _delete_audio_under_dir(
     affected: set[str] = set()
 
     if not directory.is_dir():
+        logger.debug(
+            'Playlist folder scan: directory does not exist: {}',
+            directory,
+        )
         return {
             'deleted': deleted,
             'failed': failed,
             'playlists_affected': [],
         }
 
+    logger.debug('Playlist folder scan: {}', directory)
     for path in directory.rglob('*'):
         if not path.is_file():
             continue
@@ -191,6 +226,141 @@ def _delete_audio_under_dir(
     }
 
 
+def _remove_playlist_m3u_files(
+    download_dir: Path,
+    playlist_name: str,
+    *,
+    organize_by_artist: bool,
+) -> int:
+    removed = 0
+    for m3u_path in _m3u_paths_for_playlist(
+        download_dir,
+        playlist_name,
+        organize_by_artist=organize_by_artist,
+    ):
+        try:
+            if m3u_path.is_file():
+                m3u_path.unlink()
+                removed += 1
+                logger.info('Playlist delete: removed M3U {}', m3u_path)
+        except OSError as exc:
+            logger.warning('Could not remove M3U {}: {}', m3u_path, exc)
+    return removed
+
+
+def _log_playlist_delete_summary(
+    playlist_name: str,
+    *,
+    catalog_count: int,
+    deleted_count: int,
+    catalog_deleted: int,
+    folder_deleted: int,
+    failed_count: int,
+    m3u_removed: int,
+) -> None:
+    if deleted_count:
+        logger.info(
+            'Playlist delete finished for {!r}: {} audio file(s) removed '
+            '({} from catalog, {} from folder scan), {} failed, {} M3U file(s)',
+            playlist_name,
+            deleted_count,
+            catalog_deleted,
+            folder_deleted,
+            failed_count,
+            m3u_removed,
+        )
+        return
+    logger.warning(
+        'Playlist delete finished for {!r}: no audio files removed from disk '
+        '(catalog listed {}, failed {}, M3U removed {})',
+        playlist_name,
+        catalog_count,
+        failed_count,
+        m3u_removed,
+    )
+
+
+def _delete_playlist_catalog_tracks(
+    playlist_name: str,
+    ctx: LibraryContext,
+    state: Any,
+    catalog: Any,
+) -> tuple[list[str], list[str], list[dict[str, str]], set[str], set[str]]:
+    filenames = catalog.delete_playlist(playlist_name)
+    seen = set(filenames)
+    logger.info(
+        'Playlist delete: catalog had {} registered track file(s) for {!r}',
+        len(filenames),
+        playlist_name,
+    )
+    if not filenames:
+        logger.info(
+            'Playlist delete: no catalog entries for {!r}; '
+            'relying on folder scan and M3U cleanup',
+            playlist_name,
+        )
+
+    batch = delete_library_files(list(seen), ctx, state, log_failures=False)
+    downloaded_from_catalog = list(batch['deleted'])
+    failed = list(batch['failed'])
+    if filenames:
+        logger.info(
+            'Playlist delete: removed {}/{} catalog track file(s) for {!r}',
+            len(downloaded_from_catalog),
+            len(filenames),
+            playlist_name,
+        )
+    _log_failed_deletes(failed, context=f'Playlist delete ({playlist_name!r})')
+    affected = set(batch.get('playlists_affected') or [])
+    return filenames, downloaded_from_catalog, failed, seen, affected
+
+
+def _delete_playlist_folder_extras(
+    playlist_name: str,
+    playlist_dir: Path,
+    ctx: LibraryContext,
+    state: Any,
+    *,
+    skip_paths: set[str],
+    already_deleted: list[str],
+) -> tuple[list[str], list[dict[str, str]], list[str], list[str]]:
+    extra = _delete_audio_under_dir(
+        playlist_dir,
+        ctx,
+        state,
+        skip_paths=skip_paths,
+    )
+    extra_deleted = [
+        fn for fn in extra['deleted'] if fn not in already_deleted
+    ]
+    merged = list(already_deleted)
+    for fn in extra['deleted']:
+        if fn not in merged:
+            merged.append(fn)
+    if extra_deleted:
+        logger.info(
+            'Playlist delete: removed {} extra track file(s) from {}',
+            len(extra_deleted),
+            playlist_dir,
+        )
+    elif playlist_dir.is_dir():
+        logger.info(
+            'Playlist delete: no extra audio under {} '
+            '(folder exists, nothing beyond catalog list)',
+            playlist_dir,
+        )
+    _log_failed_deletes(
+        extra['failed'],
+        context=f'Playlist delete folder scan ({playlist_name!r})',
+    )
+    return (
+        merged,
+        extra['failed'],
+        extra_deleted,
+        list(extra.get('playlists_affected') or []),
+    )
+
+
 def delete_playlist_from_library(
     playlist_name: str,
     download_dir: Path,
@@ -203,6 +373,15 @@ def delete_playlist_from_library(
     if not pl_name:
         return {'ok': False, 'error': 'Empty playlist name'}
 
+    organize = bool(settings.get('organize_by_artist', False))
+    safe = sanitize_playlist_name(pl_name)
+    logger.info(
+        'Deleting playlist {!r} (folder={!r}, organize_by_artist={})',
+        pl_name,
+        safe,
+        organize,
+    )
+
     ctx = library_context_from_state(
         download_dir,
         settings,
@@ -212,42 +391,53 @@ def delete_playlist_from_library(
     if catalog is None:
         return {'ok': False, 'error': 'Playlist catalog not available'}
 
-    filenames = catalog.delete_playlist(pl_name)
-    seen = set(filenames)
-    batch = delete_library_files(list(seen), ctx, state)
-    deleted = list(batch['deleted'])
-    failed = list(batch['failed'])
-    affected = set(batch.get('playlists_affected') or [])
+    filenames, downloaded_from_catalog, failed, seen, affected = (
+        _delete_playlist_catalog_tracks(pl_name, ctx, state, catalog)
+    )
+    deleted = list(downloaded_from_catalog)
+    extra_deleted: list[str] = []
 
-    organize = bool(settings.get('organize_by_artist', False))
     if not organize:
-        safe = sanitize_playlist_name(pl_name)
-        extra = _delete_audio_under_dir(
-            download_dir / safe,
-            ctx,
-            state,
-            skip_paths=seen,
+        deleted, extra_failed, extra_deleted, extra_affected = (
+            _delete_playlist_folder_extras(
+                pl_name,
+                download_dir / safe,
+                ctx,
+                state,
+                skip_paths=seen,
+                already_deleted=downloaded_from_catalog,
+            )
         )
-        for fn in extra['deleted']:
-            if fn not in deleted:
-                deleted.append(fn)
-        failed.extend(extra['failed'])
-        for pl in extra.get('playlists_affected') or []:
-            affected.add(pl)
+        failed.extend(extra_failed)
+        for pl_name_affected in extra_affected:
+            affected.add(pl_name_affected)
+    else:
+        logger.info(
+            'Playlist delete: skipped folder scan for {!r} '
+            '(organize_by_artist enabled)',
+            pl_name,
+        )
 
-    for m3u_path in _m3u_paths_for_playlist(
-        download_dir, pl_name, organize_by_artist=organize
-    ):
-        try:
-            if m3u_path.is_file():
-                m3u_path.unlink()
-                logger.info('Removed M3U: {}', m3u_path)
-        except OSError as exc:
-            logger.warning('Could not remove M3U {}: {}', m3u_path, exc)
+    m3u_removed = _remove_playlist_m3u_files(
+        download_dir,
+        pl_name,
+        organize_by_artist=organize,
+    )
 
     affected.add(pl_name)
     if deleted:
         invalidate_library_paths_cache()
+
+    _log_playlist_delete_summary(
+        pl_name,
+        catalog_count=len(filenames),
+        deleted_count=len(deleted),
+        catalog_deleted=len(downloaded_from_catalog),
+        folder_deleted=len(extra_deleted),
+        failed_count=len(failed),
+        m3u_removed=m3u_removed,
+    )
+
     return {
         'ok': True,
         'playlist': pl_name,

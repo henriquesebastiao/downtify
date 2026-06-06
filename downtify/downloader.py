@@ -49,6 +49,7 @@ from .track_tag_match import (
     candidate_adds_mix_variant,
     duration_matches_song,
     media_duration_matches_mix_variant,
+    mix_variant_remote_skip_keywords,
     remote_text_unacceptable,
     remote_title_unacceptable,
     snapshot_spotify_metadata,
@@ -757,6 +758,7 @@ def _youtube_candidate_acceptable(
 ) -> bool:
     title = str(probe.get('title') or '')
     spotify_title = str(song.get('name') or '')
+    mix_variant = candidate_adds_mix_variant(spotify_title, title)
     if remote_text_unacceptable(
         spotify_title,
         title,
@@ -765,6 +767,10 @@ def _youtube_candidate_acceptable(
             for a in (song.get('artists') or [])
             if str(a).strip()
         ],
+        skip_variant_keywords=mix_variant_remote_skip_keywords(
+            spotify_title,
+            title,
+        ),
     ):
         logger.info(
             'yt-dlp: skip video title={!r} (live/karaoke/spam/etc.) '
@@ -774,14 +780,20 @@ def _youtube_candidate_acceptable(
         )
         return False
     length = int(probe.get('duration') or 0)
-    if length > 0 and not duration_matches_song(song, length):
-        logger.info(
-            'yt-dlp: skip video duration={}s (expected ~{}s) title={!r}',
-            length,
-            song_duration_seconds(song),
-            song.get('name'),
+    if length > 0:
+        duration_ok = (
+            media_duration_matches_mix_variant(song, length)
+            if mix_variant
+            else duration_matches_song(song, length)
         )
-        return False
+        if not duration_ok:
+            logger.info(
+                'yt-dlp: skip video duration={}s (expected ~{}s) title={!r}',
+                length,
+                song_duration_seconds(song),
+                song.get('name'),
+            )
+            return False
     if not youtube_probe_title_matches(song, title):
         logger.info(
             'yt-dlp: skip video title={!r} (title mismatch) for spotify={!r}',
@@ -1187,6 +1199,8 @@ class Downloader:
         if not video_id and (song.get('source') == 'youtube'):
             video_id = song.get('song_id')
 
+        manual_youtube_override = bool(song.get('youtube_id_override'))
+
         match: Optional[dict[str, Any]] = None
         provider: Optional[str] = None
         local_source_path: Optional[Path] = None
@@ -1326,16 +1340,24 @@ class Downloader:
         if not primary_id:
             raise RuntimeError('missing YouTube video id')
 
-        alt_ids = _fallback_video_ids_via_ytdlp(
-            song,
-            youtube_settings=self.youtube_settings,
-            exclude=frozenset({primary_id}),
-            limit=5,
-        )
-        candidate_ids: list[str] = [primary_id]
-        for alt in alt_ids:
-            if alt not in candidate_ids:
-                candidate_ids.append(alt)
+        if manual_youtube_override:
+            logger.info(
+                'yt-dlp: using manual YouTube override videoId={} for title={!r}',
+                primary_id,
+                song.get('name'),
+            )
+            candidate_ids = [primary_id]
+        else:
+            alt_ids = _fallback_video_ids_via_ytdlp(
+                song,
+                youtube_settings=self.youtube_settings,
+                exclude=frozenset({primary_id}),
+                limit=5,
+            )
+            candidate_ids = [primary_id]
+            for alt in alt_ids:
+                if alt not in candidate_ids:
+                    candidate_ids.append(alt)
         tried_ids = set(candidate_ids)
 
         yt_timeout = _youtube_download_timeout_seconds(self.youtube_settings)
@@ -1362,8 +1384,10 @@ class Downloader:
                 cand_id,
                 youtube_settings=self.youtube_settings,
             )
+            skip_probe_checks = manual_youtube_override and idx == 0
             if (
                 probe is not None
+                and not skip_probe_checks
                 and not _youtube_candidate_acceptable(song, probe)
                 and not _youtube_candidate_near_acceptable(song, probe)
             ):
@@ -1434,8 +1458,11 @@ class Downloader:
                     continue
                 raise last_err
 
-            if not verify_youtube_download_file(
-                final_path, spotify_row, probe=probe
+            if (
+                not manual_youtube_override
+                and not verify_youtube_download_file(
+                    final_path, spotify_row, probe=probe
+                )
             ):
                 logger.info(
                     'yt-dlp: post-download verify failed videoId={} {}; '

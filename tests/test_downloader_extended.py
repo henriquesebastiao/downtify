@@ -248,6 +248,32 @@ def test_ytdlp_fallback_search_queries_strip_radio_mix():
     assert 'Y:K Loud Enough - Radio Mix' in queries
 
 
+def test_youtube_candidate_accepts_extended_mix_when_duration_matches():
+    song = {
+        'name': "Don't Touch",
+        'artists': ['Berin'],
+        'duration': 372,
+    }
+    probe = {
+        'title': "Berin - Don't Touch (Extended Mix) - #afrohouse",
+        'duration': 372,
+    }
+    assert downloader_mod._youtube_candidate_acceptable(song, probe)
+
+
+def test_youtube_candidate_rejects_extended_mix_when_duration_way_off():
+    song = {
+        'name': "Don't Touch",
+        'artists': ['Berin'],
+        'duration': 210,
+    }
+    probe = {
+        'title': "Berin - Don't Touch (Extended Mix)",
+        'duration': 372,
+    }
+    assert not downloader_mod._youtube_candidate_acceptable(song, probe)
+
+
 def test_resolve_video_id_prefers_provider_order_youtube_first(monkeypatch):
     d = Downloader('/tmp', audio_providers=['youtube', 'youtube-music'])
 

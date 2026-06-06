@@ -4,6 +4,7 @@
       class="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6"
     >
       <button
+        type="button"
         class="flex items-center gap-2 shrink-0"
         @click="router.push({ name: 'Home' })"
         :title="t('nav.home')"
@@ -151,7 +152,7 @@ const { t } = useI18n()
 function openSearch() {
   const text = String(sm.searchTerm.value || '').trim()
   if (!text) {
-    router.push({ name: 'Home' })
+    router.push({ name: 'Search' })
     return
   }
   if (sm.isSpotifyPlaylistURL(text)) {
@@ -172,6 +173,6 @@ function openSearch() {
     router.push({ name: 'Search', params: { query: text } })
     return
   }
-  router.push({ name: 'Home' })
+  router.push({ name: 'Search' })
 }
 </script>

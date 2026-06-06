@@ -14,8 +14,7 @@ const routes = [
     component: Home,
   },
   {
-    // Allow full Spotify URLs (with slashes) in the path segment
-    path: '/search/:query(.*)',
+    path: '/search/:query(.*)?',
     name: 'Search',
     component: Search,
   },

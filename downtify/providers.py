@@ -14,9 +14,11 @@ from ytmusicapi import YTMusic
 
 from .telemetry import json_log_blob, redact_sensitive_mapping
 from .track_tag_match import (
+    MIX_VARIANT_REMOTE_SKIP_KEYWORDS,
     candidate_adds_mix_variant,
     media_duration_matches_mix_variant,
     media_duration_matches_song,
+    mix_variant_remote_skip_keywords,
     remote_text_unacceptable,
     strip_mix_suffix,
 )
@@ -397,7 +399,11 @@ def find_match(  # noqa: PLR0914
         if not vid:
             continue
         candidate_title = (result.get('title') or '').lower()
-        if remote_text_unacceptable(title, candidate_title):
+        if remote_text_unacceptable(
+            title,
+            candidate_title,
+            skip_variant_keywords=MIX_VARIANT_REMOTE_SKIP_KEYWORDS,
+        ):
             continue
         candidate_duration = result.get('duration_seconds') or _parse_duration(
             result.get('duration')
@@ -834,7 +840,19 @@ def _pick_best(
 
         candidate_title = (result.get('title') or '').lower()
         # Skip karaoke/live/audiobook/etc. modifiers absent from Spotify.
-        if remote_text_unacceptable(target_title, candidate_title):
+        variant_skip = (
+            MIX_VARIANT_REMOTE_SKIP_KEYWORDS
+            if mix_variant
+            else mix_variant_remote_skip_keywords(
+                target_title,
+                candidate_title,
+            )
+        )
+        if remote_text_unacceptable(
+            target_title,
+            candidate_title,
+            skip_variant_keywords=variant_skip,
+        ):
             continue
 
         candidate_duration = result.get('duration_seconds') or _parse_duration(

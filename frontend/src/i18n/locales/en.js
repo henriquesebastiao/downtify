@@ -57,6 +57,36 @@ export default {
       'Pick tracks to download individually, or download the whole playlist.',
     openPlaylistOnSpotify: 'Open playlist on Spotify',
     downloadEntirePlaylist: 'Download entire playlist',
+    playlistBatchesTitle: 'Playlist downloads',
+    playlistBatchesHint:
+      'Spotify playlists you have downloaded via Downtify. Expand to see missing tracks.',
+    playlistBatchStatusComplete: 'Complete',
+    playlistBatchComplete: 'All tracks are in your library.',
+    playlistBatchesEmpty: 'No playlist downloads tracked yet.',
+    playlistBatchesEmptyHint:
+      'Download a Spotify playlist to see it here with missing-track counts.',
+    playlistBatchesLoadFailed:
+      'Could not load playlist downloads. Is the backend up to date?',
+    playlistBatchesLoading: 'Loading playlists…',
+    playlistBatchesTracksLoading: 'Loading missing tracks…',
+    playlistBatchesVerifying: 'Checking against Spotify…',
+    playlistBatchesSearchPlaceholder: 'Filter playlists or tracks…',
+    playlistBatchesNoMatch: 'No playlists match your filter.',
+    playlistBatchesNoTrackMatch:
+      'No tracks match your filter in this playlist.',
+    playlistBatchesExpandAll: 'Expand all',
+    playlistBatchesCollapseAll: 'Collapse all',
+    incompleteTitle: 'Incomplete playlists',
+    incompleteHint:
+      'Playlist downloads that still have missing tracks. Expand to see which songs are missing.',
+    incompleteSummary: '{downloaded}/{expected} downloaded · {missing} missing',
+    incompleteInProgress: 'In progress',
+    incompleteFinished: 'Incomplete',
+    downloadMissing: 'Download missing ({count})',
+    playPlaylist: 'Play playlist',
+    playlistBatchNothingToPlay:
+      'No downloaded tracks for this playlist in your library yet.',
+    incompleteTracksLoading: 'Track list unavailable — try refresh.',
     inQueue: 'In queue',
     download: 'Download',
     previousPage: 'Previous page',
