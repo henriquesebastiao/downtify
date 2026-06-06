@@ -55,21 +55,266 @@
           >
             {{ t('settings.audioSource') }}
           </label>
+          <p class="text-[11px] text-base-content/40 mb-2">
+            {{ t('settings.audioSourceHint') }}
+          </p>
           <div class="grid grid-cols-2 gap-2">
             <button
               v-for="provider in sm.settingsOptions.audio_providers"
               :key="provider"
               type="button"
-              class="rounded-xl border px-3 py-2 text-sm transition-colors text-left"
+              class="rounded-xl border px-3 py-2 text-sm transition-colors text-left relative"
               :class="[
-                sm.settings.value.audio_providers[0] === provider
+                audioProviderIndex(provider) >= 0
                   ? 'border-primary/50 bg-primary/10 text-primary'
                   : 'border-white/10 hover:border-white/20 hover:bg-white/5',
               ]"
-              @click="sm.settings.value.audio_providers = [provider]"
+              @click="toggleAudioProvider(provider)"
             >
+              <span
+                v-if="audioProviderIndex(provider) >= 0"
+                class="absolute top-1 right-1 text-[10px] font-bold opacity-80"
+              >
+                {{ audioProviderIndex(provider) + 1 }}
+              </span>
               {{ providerLabel(provider) }}
             </button>
+          </div>
+          <ul
+            v-if="sm.settings.value.audio_providers.length"
+            class="mt-2 space-y-1 text-sm"
+          >
+            <li
+              v-for="(provider, index) in sm.settings.value.audio_providers"
+              :key="provider"
+              class="flex items-center gap-2 rounded-lg border border-white/10 px-2 py-1"
+            >
+              <span class="text-xs opacity-50 w-4">{{ index + 1 }}</span>
+              <span class="flex-1">{{ providerLabel(provider) }}</span>
+              <button
+                type="button"
+                class="btn btn-xs btn-ghost px-1 min-h-0 h-7"
+                :disabled="index === 0"
+                @click="moveProviderAt(index, -1)"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                class="btn btn-xs btn-ghost px-1 min-h-0 h-7"
+                :disabled="
+                  index === sm.settings.value.audio_providers.length - 1
+                "
+                @click="moveProviderAt(index, 1)"
+              >
+                ↓
+              </button>
+            </li>
+          </ul>
+          <button
+            type="button"
+            class="btn btn-xs btn-ghost rounded-lg mt-2"
+            @click="resetAudioProvidersRecommended"
+          >
+            {{ t('settings.audioSourceReset') }}
+          </button>
+        </div>
+
+        <!-- slskd -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.slskdSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/40 mb-2">
+            {{ t('settings.slskdHint') }}
+          </p>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.slskd.enabled"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.slskdEnabled') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.slskdEnabledHint') }}
+              </span>
+            </span>
+          </label>
+          <div
+            v-if="sm.settings.value.slskd.enabled"
+            class="grid grid-cols-1 gap-2"
+          >
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="text"
+              :placeholder="t('settings.slskdBaseUrl')"
+              v-model="sm.settings.value.slskd.base_url"
+            />
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="password"
+              :placeholder="t('settings.slskdApiKey')"
+              v-model="sm.settings.value.slskd.api_key"
+            />
+            <div
+              class="rounded-xl border border-white/10 bg-base-100/50 px-3 py-2.5 space-y-2"
+            >
+              <p class="text-[11px] font-semibold text-base-content/70">
+                {{ t('settings.slskdSourceDirTitle') }}
+              </p>
+              <ul
+                class="text-[11px] text-base-content/50 space-y-1 list-disc pl-4"
+              >
+                <li>{{ t('settings.slskdSourceDirBullet1') }}</li>
+                <li>{{ t('settings.slskdSourceDirBullet2') }}</li>
+                <li>{{ t('settings.slskdSourceDirBullet3') }}</li>
+              </ul>
+              <pre
+                class="text-[10px] leading-relaxed text-base-content/60 whitespace-pre-wrap font-mono bg-base-300/30 rounded-lg px-2 py-1.5"
+                >{{ t('settings.slskdSourceDirExample') }}</pre
+              >
+            </div>
+            <label class="text-[11px] text-base-content/50">
+              {{ t('settings.slskdSourceDirLabel') }}
+            </label>
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60 font-mono text-sm"
+              type="text"
+              :placeholder="t('settings.slskdSourceDirPlaceholder')"
+              v-model="sm.settings.value.slskd.source_dir"
+            />
+            <p class="text-[11px] text-base-content/40">
+              {{ t('settings.slskdSourceDirHint') }}
+            </p>
+            <label
+              class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mt-2"
+            >
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                v-model="sm.settings.value.slskd.leave_in_place"
+              />
+              <span>
+                <span class="block text-sm font-medium">{{
+                  t('settings.slskdLeaveInPlace')
+                }}</span>
+                <span class="block text-[11px] text-base-content/50 mt-0.5">{{
+                  t('settings.slskdLeaveInPlaceHint')
+                }}</span>
+              </span>
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+              <label class="text-[11px] text-base-content/50">
+                {{ t('settings.slskdDownloadTimeout') }}
+                <input
+                  class="input input-sm w-full mt-1 rounded-xl bg-base-100/85 border border-white/10"
+                  type="number"
+                  min="30"
+                  max="3600"
+                  v-model.number="
+                    sm.settings.value.slskd.download_timeout_seconds
+                  "
+                />
+              </label>
+              <label class="text-[11px] text-base-content/50">
+                {{ t('settings.slskdQueuedTimeout') }}
+                <input
+                  class="input input-sm w-full mt-1 rounded-xl bg-base-100/85 border border-white/10"
+                  type="number"
+                  min="15"
+                  max="3600"
+                  v-model.number="
+                    sm.settings.value.slskd.queued_timeout_seconds
+                  "
+                />
+              </label>
+            </div>
+            <p class="text-[11px] text-base-content/40">
+              {{ t('settings.slskdTimeoutHint') }}
+            </p>
+          </div>
+        </div>
+
+        <!-- YouTube cookies (optional) -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.youtubeSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/40 mb-2">
+            {{ t('settings.youtubeCookiesHint') }}
+          </p>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="youtubeCookiesExpanded"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.youtubeEnabled') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.youtubeEnabledHint') }}
+              </span>
+              <span
+                v-if="youtubeCookiesReady && youtubeCookiesAuthenticated"
+                class="block text-[11px] text-success mt-1"
+              >
+                {{ t('settings.youtubeCookiesReady') }}
+              </span>
+            </span>
+          </label>
+          <div v-if="youtubeCookiesExpanded" class="grid grid-cols-1 gap-2">
+            <p
+              v-if="youtubeCookiesReady && !youtubeCookiesAuthenticated"
+              class="text-xs text-warning"
+            >
+              {{ t('settings.youtubeCookiesWeak') }}
+            </p>
+            <p
+              v-else-if="youtubeCookiesPath && !youtubeCookiesReady"
+              class="text-xs text-warning"
+            >
+              {{ t('settings.youtubeCookiesMissing') }}
+            </p>
+            <label class="text-[11px] text-base-content/50">
+              {{ t('settings.youtubeCookiesPath') }}
+            </label>
+            <input
+              type="text"
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60 font-mono text-sm"
+              :placeholder="t('settings.youtubeCookiesPathPlaceholder')"
+              v-model="sm.settings.value.youtube.cookies_file"
+            />
+            <div class="flex flex-wrap gap-2">
+              <label class="btn btn-sm btn-outline rounded-xl cursor-pointer">
+                {{ t('settings.youtubeCookiesUpload') }}
+                <input
+                  type="file"
+                  accept=".txt,text/plain"
+                  class="hidden"
+                  @change="onYoutubeCookiesFile"
+                />
+              </label>
+              <button
+                type="button"
+                class="btn btn-sm btn-ghost rounded-xl"
+                :disabled="!youtubeCookiesReady && !youtubeCookiesPath"
+                @click="clearYoutubeCookies"
+              >
+                {{ t('settings.youtubeCookiesClear') }}
+              </button>
+            </div>
+            <p v-if="youtubeCookiesError" class="text-xs text-error">
+              {{ youtubeCookiesError }}
+            </p>
           </div>
         </div>
 
@@ -177,7 +422,7 @@
             {{ t('settings.playlistsSection') }}
           </label>
           <label
-            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
           >
             <input
               type="checkbox"
@@ -191,6 +436,146 @@
               </span>
             </span>
           </label>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.sync_navidrome"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.syncNavidrome') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.syncNavidromeHint') }}
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <!-- Navidrome -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.navidromeSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/40 mb-2">
+            {{ t('settings.navidromeHint') }}
+          </p>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.navidrome.enabled"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.navidromeEnabled') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.navidromeEnabledHint') }}
+              </span>
+            </span>
+          </label>
+          <div
+            v-if="sm.settings.value.navidrome.enabled"
+            class="grid grid-cols-1 gap-2"
+          >
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="text"
+              :placeholder="t('settings.navidromeUrl')"
+              v-model="sm.settings.value.navidrome.url"
+            />
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="text"
+              :placeholder="t('settings.navidromeUsername')"
+              v-model="sm.settings.value.navidrome.username"
+            />
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="password"
+              :placeholder="t('settings.navidromePassword')"
+              v-model="sm.settings.value.navidrome.password"
+            />
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="text"
+              :placeholder="t('settings.navidromeAdminUser')"
+              v-model="sm.settings.value.navidrome.admin_username"
+            />
+            <input
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              type="password"
+              :placeholder="t('settings.navidromeAdminPassword')"
+              v-model="sm.settings.value.navidrome.admin_password"
+            />
+            <label
+              class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+            >
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                v-model="sm.settings.value.navidrome.public_playlist"
+              />
+              <span class="flex-1 text-sm">
+                <span class="block">{{ t('settings.navidromePublic') }}</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Library / player -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.librarySection') }}
+          </label>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.cache_cover_art"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.cacheCoverArt') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.cacheCoverArtHint') }}
+              </span>
+            </span>
+          </label>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2 mt-3"
+          >
+            {{ t('settings.reconcileSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/50 mb-2">
+            {{ t('settings.reconcileIntro') }}
+          </p>
+          <button
+            type="button"
+            class="btn btn-sm h-10 px-5 rounded-full border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50"
+            :disabled="reconcileBusy"
+            @click="runLibraryReconcile"
+          >
+            {{
+              reconcileBusy
+                ? t('settings.reconcileRunning')
+                : t('settings.reconcileButton')
+            }}
+          </button>
+          <p
+            v-if="reconcileMessage"
+            class="text-[11px] mt-2"
+            :class="reconcileError ? 'text-error' : 'text-primary'"
+          >
+            {{ reconcileMessage }}
+          </p>
         </div>
 
         <!-- File organization -->
@@ -269,7 +654,7 @@
               icon="clarity:exclamation-circle-line"
               class="h-4 w-4 shrink-0"
             />
-            {{ t('settings.saveError') }}
+            {{ sm.saveErrorText.value || t('settings.saveError') }}
           </div>
         </transition>
       </div>
@@ -300,15 +685,274 @@
 
 <script setup>
 import { Icon } from '@iconify/vue'
+import { computed, ref, watchEffect } from 'vue'
+import API from '../model/api'
 import { useSettingsManager } from '../model/settings'
 import { useI18n } from '../i18n'
 
 const sm = useSettingsManager()
+const youtubeCookiesError = ref('')
+const youtubeCookiesExpanded = ref(false)
+const reconcileBusy = ref(false)
+const reconcileMessage = ref('')
+const reconcileError = ref(false)
+
+const YOUTUBE_DEFAULTS = {
+  cookies_file: '',
+  cookies_from_browser: '',
+  cookies_file_exists: false,
+  cookies_looks_authenticated: false,
+  cookies_auth_names: [],
+  cookies_warnings: [],
+}
+
+const youtubeCookiesPath = computed(() =>
+  String(sm.settings.value?.youtube?.cookies_file || '').trim()
+)
+const youtubeCookiesReady = computed(() =>
+  Boolean(sm.settings.value?.youtube?.cookies_file_exists)
+)
+const youtubeCookiesAuthenticated = computed(() =>
+  Boolean(sm.settings.value?.youtube?.cookies_looks_authenticated)
+)
 const { t, locale, setLocale, locales } = useI18n()
+
+const NAVIDROME_DEFAULTS = {
+  enabled: false,
+  url: '',
+  username: '',
+  password: '',
+  admin_username: '',
+  admin_password: '',
+  public_playlist: false,
+  scan_after_download: true,
+  scan_wait_seconds: 120,
+  scan_poll_seconds: 30,
+  client_name: 'Downtify',
+  api_version: '1.16.1',
+}
+
+const SLSKD_DEFAULTS = {
+  enabled: false,
+  base_url: '',
+  api_key: '',
+  source_dir: '/slskd',
+  leave_in_place: true,
+  timeout_seconds: 20,
+  search_retries: 5,
+  search_poll_seconds: 15,
+  download_attempts: 5,
+  poll_interval_seconds: 5,
+  poll_max_attempts: 60,
+  download_timeout_seconds: 600,
+  queued_timeout_seconds: 180,
+  duration_tolerance_seconds: 10,
+  duration_tolerance_percent: 15,
+  mix_duration_tolerance_percent: 50,
+  extensions: ['mp3', 'flac'],
+  min_bitrate: 256,
+}
+
+watchEffect(() => {
+  const curr = sm.settings.value?.youtube
+  if (!curr || typeof curr !== 'object') {
+    sm.settings.value.youtube = { ...YOUTUBE_DEFAULTS }
+    return
+  }
+  for (const [k, v] of Object.entries(YOUTUBE_DEFAULTS)) {
+    if (curr[k] === undefined || curr[k] === null) {
+      curr[k] = v
+    }
+  }
+})
+
+watchEffect(() => {
+  const curr = sm.settings.value?.slskd
+  if (!curr || typeof curr !== 'object') {
+    sm.settings.value.slskd = { ...SLSKD_DEFAULTS }
+    return
+  }
+  for (const [k, v] of Object.entries(SLSKD_DEFAULTS)) {
+    if (curr[k] === undefined || curr[k] === null) {
+      curr[k] = v
+    }
+  }
+})
+
+watchEffect(() => {
+  const curr = sm.settings.value?.navidrome
+  if (!curr || typeof curr !== 'object') {
+    sm.settings.value.navidrome = { ...NAVIDROME_DEFAULTS }
+    return
+  }
+  for (const [k, v] of Object.entries(NAVIDROME_DEFAULTS)) {
+    if (curr[k] === undefined || curr[k] === null) {
+      curr[k] = v
+    }
+  }
+})
+
+watchEffect(() => {
+  if (sm.settings.value?.sync_navidrome === undefined) {
+    sm.settings.value.sync_navidrome = true
+  }
+})
+
+watchEffect(() => {
+  if (sm.settings.value?.cache_cover_art === undefined) {
+    sm.settings.value.cache_cover_art = false
+  }
+})
+
+async function runLibraryReconcile() {
+  reconcileBusy.value = true
+  reconcileMessage.value = ''
+  reconcileError.value = false
+  try {
+    const res = await API.reconcileLibrary()
+    const count = res.data?.paths_updated ?? 0
+    const pruned = res.data?.pruned_stale ?? 0
+    const backfilled = res.data?.content_keys_backfilled ?? 0
+    const playlists = (res.data?.playlists_affected ?? []).join(', ')
+    const refreshM3u = !!res.data?.refresh_m3u
+    const refreshNav = !!res.data?.refresh_navidrome
+    const extras = [
+      refreshM3u ? t('settings.reconcileM3u') : '',
+      refreshNav ? t('settings.reconcileNavidrome') : '',
+    ]
+      .filter(Boolean)
+      .join(', ')
+    if (count === 0 && pruned === 0 && backfilled === 0) {
+      reconcileMessage.value = t('settings.reconcileNone')
+    } else if (count === 0 && pruned > 0) {
+      if (playlists && extras) {
+        reconcileMessage.value = t('settings.reconcilePrunedPlaylists', {
+          pruned,
+          playlists,
+          extras,
+        })
+      } else if (backfilled > 0) {
+        reconcileMessage.value = t('settings.reconcilePrunedBackfill', {
+          pruned,
+          backfilled,
+        })
+      } else {
+        reconcileMessage.value = t('settings.reconcilePrunedSimple', { pruned })
+      }
+    } else if (count === 0 && backfilled > 0) {
+      reconcileMessage.value = t('settings.reconcileBackfillOnly', {
+        backfilled,
+      })
+    } else if (!refreshM3u && !refreshNav) {
+      reconcileMessage.value = t('settings.reconcileDonePathsOnly', {
+        count,
+      })
+    } else {
+      reconcileMessage.value = extras
+        ? t('settings.reconcileDone', {
+            count,
+            playlists: playlists || '—',
+            extras,
+          })
+        : t('settings.reconcileDonePathsOnly', { count })
+    }
+  } catch {
+    reconcileError.value = true
+    reconcileMessage.value = t('settings.reconcileError')
+  } finally {
+    reconcileBusy.value = false
+  }
+}
+
+watchEffect(() => {
+  const providers = sm.settings.value?.audio_providers
+  if (!Array.isArray(providers) || providers.length === 0) {
+    sm.settings.value.audio_providers = ['youtube-music']
+  }
+})
+
+async function onYoutubeCookiesFile(event) {
+  const input = event.target
+  const file = input?.files?.[0]
+  if (!file) return
+  youtubeCookiesError.value = ''
+  try {
+    const res = await API.uploadYoutubeCookies(file)
+    if (res.status === 200 && res.data?.youtube) {
+      sm.settings.value.youtube = {
+        ...sm.settings.value.youtube,
+        ...res.data.youtube,
+      }
+    } else {
+      youtubeCookiesError.value = t('settings.saveError')
+    }
+  } catch (err) {
+    const detail = err?.response?.data?.detail
+    youtubeCookiesError.value =
+      typeof detail === 'string' && detail.trim()
+        ? detail
+        : t('settings.saveError')
+  } finally {
+    if (input) input.value = ''
+  }
+}
+
+async function clearYoutubeCookies() {
+  youtubeCookiesError.value = ''
+  try {
+    const res = await API.clearYoutubeCookies()
+    if (res.status === 200 && res.data?.youtube) {
+      sm.settings.value.youtube = {
+        ...sm.settings.value.youtube,
+        ...res.data.youtube,
+      }
+    }
+  } catch (err) {
+    const detail = err?.response?.data?.detail
+    youtubeCookiesError.value =
+      typeof detail === 'string' && detail.trim()
+        ? detail
+        : t('settings.saveError')
+  }
+}
 
 function providerLabel(provider) {
   if (provider === 'youtube-music') return 'YouTube Music'
   if (provider === 'youtube') return 'YouTube'
+  if (provider === 'slskd') return 'slskd'
   return provider
+}
+
+const AUDIO_PROVIDER_ORDER = ['slskd', 'youtube-music', 'youtube']
+
+function audioProviderIndex(provider) {
+  const list = sm.settings.value?.audio_providers || []
+  return list.indexOf(provider)
+}
+
+function toggleAudioProvider(provider) {
+  const list = [...(sm.settings.value.audio_providers || [])]
+  const idx = list.indexOf(provider)
+  if (idx >= 0) {
+    list.splice(idx, 1)
+  } else {
+    list.push(provider)
+  }
+  sm.settings.value.audio_providers = list.length > 0 ? list : ['youtube-music']
+}
+
+function moveProviderAt(index, delta) {
+  const list = [...(sm.settings.value.audio_providers || [])]
+  const target = index + delta
+  if (target < 0 || target >= list.length) return
+  ;[list[index], list[target]] = [list[target], list[index]]
+  sm.settings.value.audio_providers = list
+}
+
+function resetAudioProvidersRecommended() {
+  const slskdOn = Boolean(sm.settings.value?.slskd?.enabled)
+  sm.settings.value.audio_providers = slskdOn
+    ? [...AUDIO_PROVIDER_ORDER]
+    : ['youtube-music', 'youtube']
 }
 </script>

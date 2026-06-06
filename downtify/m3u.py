@@ -9,12 +9,13 @@ the playlist appears as a single unit instead of a pile of loose tracks.
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 from typing import Iterable, Optional
 
 from loguru import logger
+
+from .library_paths import locate_library_file
 
 _PLAYLIST_NAME_ALLOWED = re.compile(r'[^A-Za-z0-9 _-]+')
 
@@ -38,7 +39,7 @@ def build_m3u_content(
     entries: Iterable[dict],
     *,
     download_dir: Path,
-    m3u_dir: Optional[Path] = None,
+    slskd_dir: Optional[Path] = None,
 ) -> tuple[str, int]:
     """Render the body of a ``.m3u`` file.
 
@@ -46,28 +47,24 @@ def build_m3u_content(
     ``title``, ``artist`` and ``duration``. Entries whose file does not
     exist on disk are skipped (and logged).
 
-    Track paths are written **relative to the M3U file's directory** so
-    the same file works whether it's read from inside the Downtify
-    container (``/downloads/...``) or from another consumer that mounts
-    the same library at a different root (Jellyfin under
-    ``/nas/music/...``, etc). ``m3u_dir`` defaults to
-    ``download_dir/Playlists`` to match :func:`write_m3u`.
+    Track paths are the **absolute resolved filesystem paths** where
+    Downtify found each file (e.g. ``/downloads/...`` or ``/slskd/...``),
+    so media servers that share the same volume mounts can open them
+    without manual path configuration.
 
     Returns ``(content, kept_count)`` so the caller can both write the
     file and report how many tracks ended up in it.
     """
 
-    if m3u_dir is None:
-        m3u_dir = download_dir / 'Playlists'
     lines: list[str] = ['#EXTM3U']
     kept = 0
     for entry in entries:
         filename = (entry or {}).get('filename')
         if not filename:
             continue
-        path = (download_dir / filename).resolve()
-        if not path.exists():
-            logger.warning('Skipping missing track in M3U: {}', path)
+        path = locate_library_file(filename, download_dir, slskd_dir)
+        if path is None:
+            logger.warning('Skipping missing track in M3U: {}', filename)
             continue
         title = (entry.get('title') or '').strip()
         artist = (entry.get('artist') or '').strip()
@@ -79,7 +76,7 @@ def build_m3u_content(
         if title or artist:
             label = ' - '.join(p for p in (artist, title) if p)
             lines.append(f'#EXTINF:{duration_int},{label}')
-        lines.append(os.path.relpath(path, start=m3u_dir))
+        lines.append(path.resolve().as_posix())
         kept += 1
     # Standard M3U uses LF line endings.
     return '\n'.join(lines) + '\n', kept
@@ -91,6 +88,7 @@ def write_m3u(
     entries: Iterable[dict],
     *,
     playlist_subdir: Optional[str] = None,
+    slskd_dir: Optional[Path] = None,
 ) -> tuple[Optional[Path], int]:
     """Write an M3U for ``playlist_name``.
 
@@ -115,7 +113,7 @@ def write_m3u(
     content, kept = build_m3u_content(
         list(entries),
         download_dir=Path(download_dir),
-        m3u_dir=target_dir,
+        slskd_dir=slskd_dir,
     )
     if kept == 0:
         logger.warning(

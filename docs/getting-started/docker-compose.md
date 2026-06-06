@@ -8,7 +8,18 @@ Docker Compose is the recommended way to run Downtify for persistent home-server
 
 ## Minimal setup
 
-Create a `docker-compose.yml` file:
+Copy the repository example (recommended for 2.7.x + slskd):
+
+```bash
+cp docker-compose.example.yml docker-compose.yml
+# Edit host paths in docker-compose.yml
+docker compose pull
+docker compose up -d
+```
+
+[`docker-compose.example.yml`](../../docker-compose.example.yml) maps `/downloads` and `/slskd`, and listens on port `30321` inside the container (`8000:30321` on the host).
+
+Or create a minimal `docker-compose.yml` manually:
 
 ```yaml
 services:
@@ -16,7 +27,9 @@ services:
     container_name: downtify
     image: ghcr.io/henriquesebastiao/downtify:latest
     ports:
-      - '8000:8000'
+      - '8000:30321'
+    environment:
+      - DOWNTIFY_PORT=30321
     volumes:
       - ./downloads:/downloads
       - downtify_data:/data
@@ -33,6 +46,19 @@ docker compose up -d
 ```
 
 Open **[http://localhost:8000](http://localhost:8000)**.
+
+## With slskd (Soulseek)
+
+Add a second volume so Downtify and slskd share the same Soulseek download folder:
+
+```yaml
+    volumes:
+      - ./downloads:/downloads
+      - ./slskd:/slskd
+      - downtify_data:/data
+```
+
+In Downtify **Settings → slskd**: enable slskd, set **Base URL** to your slskd API (e.g. `http://slskd:5030` on a shared Docker network), **API key**, and **folder path** `/slskd`. Mount that same host directory on your slskd container.
 
 ## Custom port
 

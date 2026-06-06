@@ -1,6 +1,40 @@
 import { ref, computed } from 'vue'
 
+import API from '/src/model/api'
+
 const VOLUME_KEY = 'downtify-player-volume'
+const PLAYER_PLAYLIST_FILTER_KEY = 'downtify-player-pl-filter'
+const PLAYER_FILTER_QUERY_KEY = 'downtify-player-filter-query'
+
+export function loadPlayerViewPrefs() {
+  try {
+    return {
+      playlistFilter: sessionStorage.getItem(PLAYER_PLAYLIST_FILTER_KEY) || '',
+      filterQuery: sessionStorage.getItem(PLAYER_FILTER_QUERY_KEY) || '',
+    }
+  } catch {
+    return { playlistFilter: '', filterQuery: '' }
+  }
+}
+
+export function savePlayerViewPrefs(prefs) {
+  try {
+    if (prefs.playlistFilter !== undefined) {
+      sessionStorage.setItem(
+        PLAYER_PLAYLIST_FILTER_KEY,
+        String(prefs.playlistFilter || '')
+      )
+    }
+    if (prefs.filterQuery !== undefined) {
+      sessionStorage.setItem(
+        PLAYER_FILTER_QUERY_KEY,
+        String(prefs.filterQuery || '')
+      )
+    }
+  } catch {
+    // ignore
+  }
+}
 
 const playlist = ref([])
 const currentIndex = ref(-1)
@@ -40,14 +74,6 @@ function ensureAudio() {
   return audio
 }
 
-function fileUrl(file) {
-  return `/downloads/${encodeURIComponent(file)}`
-}
-
-function coverUrl(file) {
-  return `/cover?file=${encodeURIComponent(file)}`
-}
-
 function trackFromFile(file) {
   const noExt = file.replace(/\.[^.]+$/, '')
   let artist = ''
@@ -59,10 +85,36 @@ function trackFromFile(file) {
   }
   return {
     file,
-    url: fileUrl(file),
-    cover: coverUrl(file),
+    url: API.downloadFileURL(file),
+    cover: API.coverFileURL(file),
     title,
     artist,
+    album: '',
+  }
+}
+
+/** Normalize ``/list`` rows (string legacy paths or tag-enriched objects). */
+export function normalizeLibraryEntry(raw) {
+  if (typeof raw === 'string') {
+    return trackFromFile(raw)
+  }
+  const file = String(raw?.file || '')
+  const base = trackFromFile(file)
+  const title = String(raw?.title || '').trim()
+  const artist = String(raw?.artist || '').trim()
+  const album = String(raw?.album || '').trim()
+  const playlists = Array.isArray(raw?.playlists)
+    ? raw.playlists.map((p) => String(p).trim()).filter(Boolean)
+    : []
+  return {
+    file,
+    url: base.url,
+    cover: base.cover,
+    title: title || base.title,
+    artist: artist || base.artist,
+    album: album || base.album,
+    playlists,
+    has_cover: Boolean(raw?.has_cover),
   }
 }
 
@@ -79,22 +131,58 @@ function buildShuffleOrder() {
       : 0
 }
 
+function storedPathFromMediaUrl(src) {
+  if (!src) return null
+  try {
+    const path = new URL(src, window.location.origin).pathname
+    const prefix = '/media/'
+    if (path.startsWith(prefix)) {
+      return decodeURIComponent(path.slice(prefix.length))
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
 function setPlaylist(files, options = {}) {
+  const prevFile =
+    currentIndex.value >= 0 && currentIndex.value < playlist.value.length
+      ? playlist.value[currentIndex.value]?.file
+      : null
+  const audioFile = audio?.src ? storedPathFromMediaUrl(audio.src) : null
+  const keepFile = prevFile || audioFile || null
   const tracks = (files || []).map((f) =>
-    typeof f === 'string' ? trackFromFile(f) : f
+    typeof f === 'string' ? trackFromFile(f) : normalizeLibraryEntry(f)
   )
   playlist.value = tracks
-  if (currentIndex.value >= tracks.length) currentIndex.value = -1
   if (shuffle.value) buildShuffleOrder()
+
+  if (options.preservePlayback) {
+    if (keepFile) {
+      const idx = tracks.findIndex((t) => t.file === keepFile)
+      currentIndex.value = idx
+      if (idx < 0 && audio && !audio.paused) {
+        audio.pause()
+      }
+    } else if (currentIndex.value >= tracks.length) {
+      currentIndex.value = -1
+    }
+    return
+  }
+
+  if (currentIndex.value >= tracks.length) currentIndex.value = -1
+  const shouldAutoplay = options.autoplay === true
   if (typeof options.startIndex === 'number') {
-    playAt(options.startIndex)
-  } else if (options.autoplay && tracks.length > 0 && currentIndex.value < 0) {
-    playAt(0)
+    playAt(options.startIndex, { autoplay: shouldAutoplay })
+  } else if (shouldAutoplay && tracks.length > 0 && currentIndex.value < 0) {
+    playAt(0, { autoplay: true })
   }
 }
 
-function playAt(index) {
+function playAt(index, options = {}) {
   if (index < 0 || index >= playlist.value.length) return
+  const autoplay = options.autoplay !== false
   const a = ensureAudio()
   currentIndex.value = index
   if (shuffle.value) {
@@ -105,7 +193,11 @@ function playAt(index) {
   a.src = playlist.value[index].url
   a.currentTime = 0
   currentTime.value = 0
-  a.play().catch(() => {})
+  if (autoplay) {
+    a.play().catch(() => {})
+  } else {
+    a.pause()
+  }
 }
 
 function play() {
@@ -239,6 +331,15 @@ function toggleShuffle() {
   setShuffle(!shuffle.value)
 }
 
+/** Re-sync UI transport state after remounting the Player view. */
+function syncTransportFromAudio() {
+  const a = audio
+  if (!a?.src) return
+  currentTime.value = a.currentTime
+  duration.value = isFinite(a.duration) ? a.duration : 0
+  isPlaying.value = !a.paused
+}
+
 const currentTrack = computed(() =>
   currentIndex.value >= 0 && currentIndex.value < playlist.value.length
     ? playlist.value[currentIndex.value]
@@ -257,8 +358,11 @@ export function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export function trackInfoFromFile(file) {
-  return trackFromFile(file)
+export function trackInfoFromFile(fileOrEntry) {
+  if (typeof fileOrEntry === 'string') {
+    return trackFromFile(fileOrEntry)
+  }
+  return normalizeLibraryEntry(fileOrEntry)
 }
 
 export function usePlayer() {
@@ -289,5 +393,6 @@ export function usePlayer() {
     cycleRepeat,
     setShuffle,
     toggleShuffle,
+    syncTransportFromAudio,
   }
 }

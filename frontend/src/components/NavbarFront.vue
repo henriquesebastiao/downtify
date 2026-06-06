@@ -3,14 +3,28 @@
     <div
       class="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6"
     >
-      <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="flex items-center gap-2 shrink-0"
+        @click="router.push({ name: 'Home' })"
+        :title="t('nav.home')"
+      >
         <img
           src="../assets/downtify.svg"
           class="h-8 w-8 drop-shadow-[0_0_8px_rgba(26,208,92,0.55)]"
         />
         <span class="text-lg font-bold tracking-tight">Downtify</span>
-      </div>
+      </button>
       <div class="ml-auto flex items-center gap-1 sm:gap-2">
+        <button
+          class="icon-btn"
+          :class="{ 'icon-btn-active': route.name === 'Search' }"
+          @click="router.push({ name: 'Search' })"
+          :title="t('nav.search')"
+        >
+          <Icon icon="clarity:search-line" class="h-5 w-5" />
+        </button>
+
         <button
           class="icon-btn"
           @click="router.push({ name: 'List' })"
@@ -42,10 +56,10 @@
         >
           <Icon icon="clarity:download-line" class="h-5 w-5" />
           <span
-            v-if="pt.downloadQueue.value.length > 0"
+            v-if="queueBadge > 0"
             class="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-content shadow-glow-sm"
           >
-            {{ pt.downloadQueue.value.length }}
+            {{ queueBadge }}
           </span>
         </button>
 
@@ -82,16 +96,23 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useRoute } from 'vue-router'
 import router from '../router'
 import { useBinaryThemeManager } from '../model/theme'
 import { useProgressTracker } from '../model/download'
 import { useI18n } from '../i18n'
 
+const route = useRoute()
 const themeMgr = useBinaryThemeManager({
   newLightAlias: 'downtify-light',
   newDarkAlias: 'downtify-dark',
 })
-const pt = useProgressTracker()
+const { downloadQueue, queueVersion } = useProgressTracker()
+const queueBadge = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.length
+})
 const { t } = useI18n()
 </script>

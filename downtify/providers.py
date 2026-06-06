@@ -4,13 +4,24 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from threading import Lock
 from typing import Any, Optional
+from urllib.parse import quote
 
 from loguru import logger
 from ytmusicapi import YTMusic
 
 from .telemetry import json_log_blob, redact_sensitive_mapping
+from .track_tag_match import (
+    MIX_VARIANT_REMOTE_SKIP_KEYWORDS,
+    candidate_adds_mix_variant,
+    media_duration_matches_mix_variant,
+    media_duration_matches_song,
+    mix_variant_remote_skip_keywords,
+    remote_text_unacceptable,
+    strip_mix_suffix,
+)
 
 
 def _log_ytm_response(label: str, payload: Any) -> None:
@@ -88,6 +99,16 @@ def _parse_duration(value: Any) -> int:
     return 0
 
 
+def _ascii_fold_query(text: str) -> str:
+    """Drop diacritics and collapse whitespace for fallback queries."""
+
+    if not text:
+        return ''
+    folded = unicodedata.normalize('NFKD', text)
+    plain = ''.join(ch for ch in folded if not unicodedata.combining(ch))
+    return re.sub(r'\s+', ' ', plain).strip()
+
+
 def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
     video_id = result.get('videoId')
     if not video_id:
@@ -109,7 +130,7 @@ def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
     release_date = (
         year_str if len(year_str) == 4 and year_str.isdigit() else ''
     )
-    return {
+    row = {
         'song_id': video_id,
         'name': result.get('title', ''),
         'artists': artists,
@@ -122,6 +143,60 @@ def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
         'release_date': release_date,
         'source': 'youtube',
     }
+    row['spotify_url'] = spotify_open_url(row)
+    return row
+
+
+def spotify_open_url(song: dict[str, Any]) -> str:
+    """Web URL to open this row on Spotify (track link or search fallback)."""
+
+    raw = str(song.get('url') or '').strip()
+    if 'open.spotify.com' in raw:
+        return raw
+    artists = song.get('artists') or []
+    artist = ', '.join(str(a).strip() for a in artists[:3] if str(a).strip())
+    title = str(song.get('name') or '').strip()
+    term = f'{artist} {title}'.strip() if artist else title
+    if not term:
+        return ''
+    return f'https://open.spotify.com/search/{quote(term)}'
+
+
+def _parse_text_search_query(query: str) -> tuple[list[str], str]:
+    text = query.strip()
+    if not text:
+        return [], ''
+    if ' - ' in text:
+        left, right = text.split(' - ', 1)
+        artist = left.strip()
+        title = right.strip()
+        if artist and title:
+            return [artist], title
+    return [], text
+
+
+def song_stub_from_text_query(query: str) -> Optional[dict[str, Any]]:
+    """Build a minimal song row for slskd matching when browse search has no hits."""
+    artists, title = _parse_text_search_query(query)
+    text = query.strip()
+    if not text:
+        return None
+    song_id = f'search-{abs(hash(text)) & 0xFFFFFFFF:08x}'
+    row = {
+        'song_id': song_id,
+        'name': title,
+        'artists': artists,
+        'album_name': '',
+        'cover_url': '',
+        'duration': 0,
+        'url': f'downtify-search:{song_id}',
+        'explicit': False,
+        'year': '',
+        'release_date': '',
+        'source': 'text_search',
+    }
+    row['spotify_url'] = spotify_open_url(row)
+    return row
 
 
 def search_songs(query: str, limit: int = 20) -> list[dict[str, Any]]:
@@ -153,7 +228,7 @@ def search_songs(query: str, limit: int = 20) -> list[dict[str, Any]]:
     return songs
 
 
-def find_match(
+def find_match(  # noqa: PLR0914
     song: dict[str, Any],
 ) -> tuple[Optional[str], Optional[dict[str, Any]]]:
     """Return ``(videoId, full_result)`` that best matches ``song``.
@@ -170,41 +245,112 @@ def find_match(
     if not query:
         return None, None
     duration = song.get('duration') or 0
-    try:
-        results = _ytm().search(query, filter='songs', limit=10)
-    except Exception:
-        logger.exception('YouTube Music match search failed')
-        results = []
-    _log_ytm_summary_search(
-        phase='match_songs',
-        query=query,
-        filt='songs',
-        results_len=len(results),
-        first_titles=[
-            str(r.get('title') or '')[:60]
-            for r in results[:8]
-            if isinstance(r, dict)
-        ],
-    )
-    _log_ytm_response(f'find_match songs q={query[:80]!r}', results)
-    if not results:
+    title_only = title.strip()
+
+    def _search(
+        phase: str, q: str, filt: Optional[str]
+    ) -> list[dict[str, Any]]:
         try:
-            results = _ytm().search(query, filter='videos', limit=10)
+            if filt:
+                rows = _ytm().search(q, filter=filt, limit=10)
+            else:
+                rows = _ytm().search(q, limit=10)
         except Exception:
-            results = []
+            logger.opt(exception=True).debug(
+                'YouTube Music match search failed phase={} filter={!r}',
+                phase,
+                filt,
+            )
+            rows = []
         _log_ytm_summary_search(
-            phase='match_videos_fallback',
-            query=query,
-            filt='videos',
-            results_len=len(results),
+            phase=phase,
+            query=q,
+            filt=filt,
+            results_len=len(rows),
             first_titles=[
                 str(r.get('title') or '')[:60]
-                for r in results[:8]
+                for r in rows[:8]
                 if isinstance(r, dict)
             ],
         )
-        _log_ytm_response(f'find_match videos q={query[:80]!r}', results)
-    best = _pick_best(results, duration, title, artists)
+        _log_ytm_response(f'find_match {phase} q={q[:80]!r}', rows)
+        return rows
+
+    candidates: list[dict[str, Any]] = []
+    # Start strict (artist + title) then progressively relax.
+    attempts = [
+        ('match_songs', query, 'songs'),
+        ('match_videos_fallback', query, 'videos'),
+        ('match_all_unfiltered', query, None),
+    ]
+    if title_only and title_only.casefold() != query.casefold():
+        attempts.extend([
+            ('match_songs_title_only', title_only, 'songs'),
+            ('match_videos_title_only', title_only, 'videos'),
+            ('match_all_title_only', title_only, None),
+        ])
+    folded_query = _ascii_fold_query(query)
+    folded_title = _ascii_fold_query(title_only)
+    if folded_query and folded_query.casefold() != query.casefold():
+        attempts.extend([
+            ('match_songs_ascii_fold', folded_query, 'songs'),
+            ('match_videos_ascii_fold', folded_query, 'videos'),
+            ('match_all_ascii_fold', folded_query, None),
+        ])
+    if (
+        folded_title
+        and title_only
+        and folded_title.casefold() != title_only.casefold()
+    ):
+        attempts.extend([
+            ('match_songs_title_ascii_fold', folded_title, 'songs'),
+            ('match_videos_title_ascii_fold', folded_title, 'videos'),
+            ('match_all_title_ascii_fold', folded_title, None),
+        ])
+    base_title = strip_mix_suffix(title_only)
+    if base_title and base_title.casefold() != title_only.casefold():
+        base_query = f'{artists_q} {base_title}'.strip()
+        attempts.extend([
+            ('match_songs_base_title', base_query, 'songs'),
+            ('match_videos_base_title', base_query, 'videos'),
+            ('match_all_base_title', base_query, None),
+        ])
+    seen_attempts: set[tuple[str, str]] = set()
+    for phase, q, filt in attempts:
+        key = (q.casefold(), filt or '')
+        if key in seen_attempts:
+            continue
+        seen_attempts.add(key)
+        rows = _search(phase, q, filt)
+        for row in rows:
+            if isinstance(row, dict) and row.get('videoId'):
+                candidates.append(row)
+
+    strict_candidates = [
+        row
+        for row in candidates
+        if isinstance(row, dict)
+        and row.get('videoId')
+        and not candidate_adds_mix_variant(title, str(row.get('title') or ''))
+    ]
+    best = _pick_best(strict_candidates, duration, title, artists)
+    if best is None and strict_candidates != candidates:
+        mix_candidates = [
+            row
+            for row in candidates
+            if isinstance(row, dict)
+            and row.get('videoId')
+            and candidate_adds_mix_variant(title, str(row.get('title') or ''))
+        ]
+        if mix_candidates:
+            logger.info(
+                'YouTube Music find_match: trying mix variants as last resort '
+                'for title={!r}',
+                title,
+            )
+            best = _pick_best(
+                mix_candidates, duration, title, artists, mix_variant=True
+            )
     if best is not None:
         logger.info(
             'YouTube Music find_match picked videoId={} title={!r} year={!r}',
@@ -214,15 +360,66 @@ def find_match(
         )
         _log_ytm_response('find_match chosen row', best)
         return best.get('videoId'), best
-    for result in results:
-        if result.get('videoId'):
-            logger.info(
-                'YouTube Music find_match fallback first videoId={} title={!r}',
-                result.get('videoId'),
-                result.get('title'),
-            )
-            _log_ytm_response('find_match fallback row', result)
-            return result['videoId'], result
+    strict_candidates = [
+        result
+        for result in candidates
+        if not candidate_adds_mix_variant(
+            title, str(result.get('title') or '')
+        )
+    ]
+    for result in strict_candidates or candidates:
+        vid = result.get('videoId')
+        if not vid:
+            continue
+        candidate_title = (result.get('title') or '').lower()
+        if remote_text_unacceptable(title, candidate_title):
+            continue
+        candidate_duration = result.get('duration_seconds') or _parse_duration(
+            result.get('duration')
+        )
+        if candidate_duration and not media_duration_matches_song(
+            {'duration': duration},
+            candidate_duration,
+        ):
+            continue
+        logger.info(
+            'YouTube Music find_match fallback first videoId={} title={!r}',
+            vid,
+            result.get('title'),
+        )
+        _log_ytm_response('find_match fallback row', result)
+        return vid, result
+    mix_only = [
+        result
+        for result in candidates
+        if candidate_adds_mix_variant(title, str(result.get('title') or ''))
+    ]
+    for result in mix_only:
+        vid = result.get('videoId')
+        if not vid:
+            continue
+        candidate_title = (result.get('title') or '').lower()
+        if remote_text_unacceptable(
+            title,
+            candidate_title,
+            skip_variant_keywords=MIX_VARIANT_REMOTE_SKIP_KEYWORDS,
+        ):
+            continue
+        candidate_duration = result.get('duration_seconds') or _parse_duration(
+            result.get('duration')
+        )
+        if candidate_duration and not media_duration_matches_mix_variant(
+            {'duration': duration},
+            candidate_duration,
+        ):
+            continue
+        logger.info(
+            'YouTube Music find_match mix-variant fallback videoId={} title={!r}',
+            vid,
+            result.get('title'),
+        )
+        _log_ytm_response('find_match mix-variant fallback row', result)
+        return vid, result
     logger.info(
         'YouTube Music find_match: no result for query={!r}',
         query[:160],
@@ -622,28 +819,13 @@ def enrich_from_match(
     return enriched
 
 
-_NEGATIVE_KEYWORDS = (
-    'karaoke',
-    'instrumental',
-    'cover ',
-    'cover)',
-    'tribute',
-    'guitar lesson',
-    'sped up',
-    'slowed',
-    'reverb',
-    'nightcore',
-    '8d audio',
-    '1 hour',
-    'bass boosted',
-)
-
-
 def _pick_best(
     results: list[dict[str, Any]],
     target_duration: int,
     target_title: str = '',
     target_artists: Optional[list[str]] = None,
+    *,
+    mix_variant: bool = False,
 ) -> Optional[dict[str, Any]]:
     target_title_l = (target_title or '').lower()
     target_artist_set = {
@@ -657,18 +839,35 @@ def _pick_best(
             continue
 
         candidate_title = (result.get('title') or '').lower()
-        # Skip results that add a "karaoke"/"instrumental"/etc. modifier
-        # which the source song does not have. Catches the most common
-        # source of wrong-audio matches.
-        if any(
-            kw in candidate_title and kw not in target_title_l
-            for kw in _NEGATIVE_KEYWORDS
+        # Skip karaoke/live/audiobook/etc. modifiers absent from Spotify.
+        variant_skip = (
+            MIX_VARIANT_REMOTE_SKIP_KEYWORDS
+            if mix_variant
+            else mix_variant_remote_skip_keywords(
+                target_title,
+                candidate_title,
+            )
+        )
+        if remote_text_unacceptable(
+            target_title,
+            candidate_title,
+            skip_variant_keywords=variant_skip,
         ):
             continue
 
         candidate_duration = result.get('duration_seconds') or _parse_duration(
             result.get('duration')
         )
+        duration_ok = (
+            media_duration_matches_mix_variant
+            if mix_variant
+            else media_duration_matches_song
+        )
+        if candidate_duration and not duration_ok(
+            {'duration': target_duration},
+            candidate_duration,
+        ):
+            continue
         if target_duration and candidate_duration:
             score = abs(candidate_duration - target_duration)
         else:

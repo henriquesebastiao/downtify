@@ -45,6 +45,40 @@ def _touch(tmp_path: Path, name: str) -> Path:
     return path
 
 
+def test_build_m3u_finds_slskd_track_when_only_on_external_mount(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    slskd_dir = tmp_path / 'slskd'
+    download_dir.mkdir()
+    track = slskd_dir / 'peer' / 'song.mp3'
+    track.parent.mkdir(parents=True)
+    track.write_bytes(b'\x00')
+
+    content, kept = m3u.build_m3u_content(
+        [{'filename': 'slskd/peer/song.mp3', 'title': 'T', 'artist': 'A'}],
+        download_dir=download_dir,
+        slskd_dir=slskd_dir,
+    )
+    assert kept == 1
+    assert 'peer/song.mp3' in content or 'song.mp3' in content
+
+
+def test_build_m3u_resolves_slskd_prefixed_paths(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    slskd_dir = tmp_path / 'slskd'
+    download_dir.mkdir()
+    track = slskd_dir / 'peer' / 'song.mp3'
+    track.parent.mkdir(parents=True)
+    track.write_bytes(b'\x00')
+
+    content, kept = m3u.build_m3u_content(
+        [{'filename': 'slskd/peer/song.mp3', 'title': 'T', 'artist': 'A'}],
+        download_dir=download_dir,
+        slskd_dir=slskd_dir,
+    )
+    assert kept == 1
+    assert 'song.mp3' in content
+
+
 def test_build_starts_with_extm3u_header(tmp_path):
     _touch(tmp_path, 'a.mp3')
     content, _ = m3u.build_m3u_content(
@@ -101,31 +135,24 @@ def test_build_skips_entries_without_filename(tmp_path):
     assert content == '#EXTM3U\n'
 
 
-def test_build_uses_paths_relative_to_m3u_dir(tmp_path):
-    # Track is flat under download_dir; M3U lives in download_dir/Playlists.
-    # Relative path back to the track is therefore '../song.mp3'.
-    _touch(tmp_path, 'song.mp3')
+def test_build_uses_absolute_paths(tmp_path):
+    track = _touch(tmp_path, 'song.mp3')
     content, _ = m3u.build_m3u_content(
         [{'filename': 'song.mp3'}], download_dir=tmp_path
     )
-    assert '../song.mp3' in content
-    # Absolute path must NOT leak into the M3U.
-    assert str(tmp_path) not in content
+    assert track.resolve().as_posix() in content
 
 
-def test_build_relative_paths_with_explicit_m3u_dir(tmp_path):
-    # Track nested under an artist subdir, M3U sibling at Playlists/.
+def test_build_absolute_path_for_nested_track(tmp_path):
     artist_dir = tmp_path / 'Artist' / 'Album'
     artist_dir.mkdir(parents=True)
-    (artist_dir / 'Track.mp3').write_bytes(b'\x00')
-    m3u_dir = tmp_path / 'Playlists'
-    m3u_dir.mkdir()
+    track = artist_dir / 'Track.mp3'
+    track.write_bytes(b'\x00')
     content, _ = m3u.build_m3u_content(
         [{'filename': 'Artist/Album/Track.mp3'}],
         download_dir=tmp_path,
-        m3u_dir=m3u_dir,
     )
-    assert '../Artist/Album/Track.mp3' in content
+    assert track.resolve().as_posix() in content
 
 
 def test_build_extinf_format_with_artist_and_title(tmp_path):
@@ -191,6 +218,23 @@ def test_write_returns_none_when_no_files_resolve(tmp_path):
     assert not (tmp_path / 'Playlists' / 'Empty.m3u').exists()
 
 
+def test_build_m3u_writes_absolute_slskd_path(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    slskd_dir = tmp_path / 'slskd'
+    download_dir.mkdir()
+    track = slskd_dir / 'Album' / 'song.mp3'
+    track.parent.mkdir(parents=True)
+    track.write_bytes(b'\x00')
+
+    content, kept = m3u.build_m3u_content(
+        [{'filename': 'slskd/Album/song.mp3'}],
+        download_dir=download_dir,
+        slskd_dir=slskd_dir,
+    )
+    assert kept == 1
+    assert track.resolve().as_posix() in content
+
+
 def test_write_with_playlist_subdir_places_m3u_inside_playlist_folder(
     tmp_path,
 ):
@@ -209,8 +253,7 @@ def test_write_with_playlist_subdir_places_m3u_inside_playlist_folder(
     assert target == pl_dir / 'My Mix.m3u'
     assert kept == 1
     body = target.read_text(encoding='utf-8')
-    assert 'Artist - Song.mp3' in body
-    assert '../' not in body
+    assert (pl_dir / 'Artist - Song.mp3').resolve().as_posix() in body
 
 
 def test_write_utf8_no_bom_lf_line_endings(tmp_path):

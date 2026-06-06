@@ -30,7 +30,7 @@ https://github.com/user-attachments/assets/9711efe8-a960-4e1a-8d55-e0d1c20208f7
 
 Downtify is a **self-hosted web app** that downloads music from Spotify — without touching the Spotify API, without needing an account, and without any Premium subscription. Just drop a link and get a fully-tagged audio file.
 
-It resolves track metadata directly from Spotify's public embed pages, finds the best audio match on YouTube Music, downloads it with `yt-dlp`, converts it with `ffmpeg`, and embeds album art + all metadata with `mutagen`. The entire pipeline runs inside a single Docker container.
+It resolves track metadata from Spotify's public embed pages, then tries your configured **audio sources** (Soulseek via **slskd**, YouTube Music, or YouTube). Downloads are tagged with `mutagen`, indexed so playlists are not re-fetched, and can export **M3U** playlists or sync into **Navidrome**. The app runs in a single Docker container.
 
 ---
 
@@ -48,24 +48,67 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 🐳 **One Docker command** | Up and running in under a minute |
 | 🏠 **Home server platforms** | Available on Umbrel, CasaOS and HomeDock |
 | 🎧 **Built-in player** | Play your downloaded music straight from the web UI — progress bar, shuffle, repeat, volume |
+| 🌐 **slskd (Soulseek)** | Optional first provider via [slskd](https://github.com/slskd/slskd) — leave files in place, real download progress |
+| 🎵 **Navidrome playlists** | Sync Spotify playlists into Navidrome after download (Subsonic API, same idea as Explo) |
+| 📚 **Library browser** | Lists `/downloads` and `/slskd` with tags from embedded metadata (not just filenames) |
+| 🔁 **Skip re-downloads** | Global Spotify track index remembers what you already have on disk |
 | 🌍 **Multi-language UI** | English (default), Spanish and Brazilian Portuguese — easy to add more |
+
+---
+
+## 📋 Recent changes (feature branch)
+
+Summary of work in [PR #182](https://github.com/henriquesebastiao/downtify/pull/182) (slskd, Navidrome, library catalog). Full detail: [`docs/features/library-catalog.md`](docs/features/library-catalog.md) and [`CHANGELOG`](CHANGELOG).
+
+| Area | What it does |
+|------|----------------|
+| **slskd provider** | Search Soulseek, poll transfers, optional leave-in-place under `/slskd`, timeouts and YouTube fallback |
+| **Provider order** | Settings UI to enable and order slskd / YouTube Music / YouTube |
+| **Track index** | Spotify track ID → file path; skips re-downloads for playlists and monitor |
+| **Playlist catalog** | Tracks which Spotify playlists contain each file; badges in Library; used for reconcile and Navidrome refresh |
+| **Library performance** | Path scan cache + SQLite metadata cache for fast `/list`; optional cover cache under `/data/cover_cache` |
+| **Library UI** | Search, pagination, refresh; navbar search hidden on Library page |
+| **Fix library paths** | Settings button (and `POST /api/library/reconcile`) after you move files on disk — updates indexes, prunes deleted files, can refresh M3U / Navidrome |
+| **Library paths** | Resolves `slskd/…` entries to `/slskd` for M3U, player, and Navidrome matching |
+| **M3U** | Absolute paths (`/downloads/…`, `/slskd/…`) for media servers |
+| **Navidrome** | Scan → match → **update same playlist**; POST/batched sync for large playlists (no HTTP 414) |
+| **Playlist monitor** | Regenerates M3U and can sync Navidrome after new tracks |
+| **Download queue** | Filters, retry, clear completed |
+| **Player / library** | Tag-based metadata; plays slskd files via `/media/slskd/`; cover cache optional in Settings |
+
+Configure under **Settings** (⚙️): Audio sources, slskd, Playlists (M3U + Navidrome), **Library & player** (cover cache, path sync), and File organization.
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-docker run -d -p 8000:8000 --name downtify \
-  -v /path/to/downloads:/downloads \
+docker run -d -p 8000:30321 --name downtify \
+  -e DOWNTIFY_PORT=30321 \
+  -v /path/to/music/downloads:/downloads \
+  -v /path/to/music/slskd:/slskd \
   -v downtify_data:/data \
-  ghcr.io/henriquesebastiao/downtify
+  ghcr.io/henriquesebastiao/downtify:latest
 ```
 
 Open [http://localhost:8000](http://localhost:8000), paste a Spotify link, and hit download.
 
-> Change `/path/to/downloads` to wherever you want your music saved.
+> Change host paths to your library folders. Omit the `/slskd` mount if you only use YouTube.
 
 ### Docker Compose
+
+Copy the example file and start:
+
+```bash
+cp docker-compose.example.yml docker-compose.yml
+# Edit ./docker-compose.yml — set your host paths for downloads and slskd
+docker compose pull
+docker compose up -d
+```
+
+See [`docker-compose.example.yml`](docker-compose.example.yml) for a ready-made stack with `/downloads` and `/slskd` volumes.
+
+Minimal setup (YouTube / YouTube Music only):
 
 ```yaml
 services:
@@ -82,6 +125,29 @@ services:
 volumes:
   downtify_data:
 ```
+
+With **slskd** and a separate Soulseek library folder (recommended for Navidrome + leave-in-place):
+
+```yaml
+services:
+  downtify:
+    container_name: downtify
+    image: ghcr.io/henriquesebastiao/downtify:latest
+    ports:
+      - '8000:30321'
+    environment:
+      - DOWNTIFY_PORT=30321
+    volumes:
+      - /path/to/music/downloads:/downloads
+      - /path/to/music/slskd:/slskd      # same folder slskd writes to
+      - downtify_data:/data
+    restart: unless-stopped
+
+volumes:
+  downtify_data:
+```
+
+> **Paths inside the container** are what you configure in the UI (`/downloads`, `/slskd`). Map host folders to those mount points. Navidrome must scan the **same** host folders.
 
 Need a custom port? Use the `DOWNTIFY_PORT` environment variable:
 
@@ -106,16 +172,17 @@ environment:
 
 ## ⚙️ How It Works
 
-Downtify's download pipeline has three stages:
+Downtify resolves **metadata** from Spotify embed pages, then tries **audio providers** in the order you set in Settings until one succeeds:
 
 ```
-Spotify embed page  →  YouTube Music search  →  yt-dlp + ffmpeg + mutagen
-   (metadata)             (audio match)            (download & tag)
+Spotify embed  →  Provider chain (slskd → YouTube Music → …)  →  Tag & register
+  (metadata)         (find audio on disk or download)              (mutagen + index)
 ```
 
-1. **Metadata** — Track, album and playlist links are resolved by scraping the public `open.spotify.com/embed` pages. No Spotify credentials of any kind are required.
-2. **Audio match** — [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) searches YouTube Music for the track and picks the best result by comparing audio duration. Free-text searches skip the Spotify step entirely.
-3. **Download & tag** — [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) downloads the audio and `ffmpeg` converts it to your chosen format. [`mutagen`](https://mutagen.readthedocs.io/) embeds title, artist, album, year and cover art into the file.
+1. **Metadata** — Track, album and playlist links use the public `open.spotify.com/embed` pages. No Spotify API key or Premium account is required. Sparse playlist embeds are enriched from per-track Spotify data when needed.
+2. **Audio providers** — You choose the order (see [Audio sources](#-audio-sources-slskd--youtube)). **slskd** searches Soulseek and waits for a transfer into your library folder. **YouTube Music** / **YouTube** use [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) and [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) with an optional yt-dlp search fallback when YT Music finds nothing.
+3. **Tag & dedupe** — [`mutagen`](https://mutagen.readthedocs.io/) embeds title, artist, album, year and cover art. A local **track index** (`/data`) maps Spotify track IDs to on-disk paths so playlists and the monitor do not re-download songs you already have.
+4. **Playlists (optional)** — **M3U** files for media servers and/or a **Navidrome** playlist sync via the Subsonic API (scan library → match tracks → update playlist in place).
 
 ---
 
@@ -130,7 +197,9 @@ The **Playlist Monitor** lets Downtify watch your favorite Spotify playlists and
 3. Choose how often Downtify should check for new tracks (every 15 min up to once a day)
 4. Click **Watch**
 
-From that point on, whenever a new song appears in the playlist on Spotify, Downtify will detect and download it on the next scheduled check. Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded.
+From that point on, whenever a new song appears in the playlist on Spotify, Downtify will detect and download it on the next scheduled check. Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded. Songs already on disk (including under `/slskd` from an earlier slskd download) are linked via the track index instead of being fetched again.
+
+After a successful sweep, the monitor can **regenerate the M3U** and **sync Navidrome** (when those options are enabled in Settings), same as a manual playlist download.
 
 You can pause, resume, force an immediate check, or stop monitoring any playlist at any time from the same page.
 
@@ -138,14 +207,106 @@ You can pause, resume, force an immediate check, or stop monitoring any playlist
 
 ## 🎛️ Download Settings
 
-Access the settings panel (⚙️ icon) to configure:
+Open the settings panel (⚙️ icon). Settings are stored under `/data` in the container and survive restarts.
 
-| Setting | Options |
-|---------|---------|
+| Setting | Options / notes |
+|---------|-----------------|
+| **Audio sources** | Ordered list: **slskd**, **YouTube Music**, **YouTube** (see below) |
 | **Output format** | MP3 · FLAC · M4A · OGG · OPUS |
 | **Bitrate** | 128 · 192 · 256 · 320 kbps (ignored for FLAC) |
-| **Audio provider** | YouTube Music |
 | **Organize by artist** | Off (default) · On |
+| **Generate M3U** | On by default for playlist downloads / monitor |
+| **Sync Navidrome** | Create or update a Navidrome playlist after Spotify playlist jobs |
+| **Parallel downloads** | How many tracks download at once (default 3) |
+| **Lyrics** | Optional LRCLIB / Genius / etc. |
+
+---
+
+## 🔊 Audio sources (slskd + YouTube)
+
+In **Settings → Audio sources**, pick one or more providers and drag them into priority order. Downtify tries each provider until audio is found.
+
+| Provider | Role |
+|----------|------|
+| **slskd** | Search Soulseek via your [slskd](https://github.com/slskd/slskd) instance; files land in `source_dir` (usually `/slskd`). Best quality when peers have the track. |
+| **YouTube Music** | Default fallback; uses YT Music search + yt-dlp download into `/downloads` (or playlist subfolder). |
+| **YouTube** | Plain YouTube search via yt-dlp (also used as a last-resort search if YT Music fails). |
+
+**Recommended order for a Soulseek + Navidrome setup:** `slskd` → `YouTube Music` (and optionally `YouTube`).
+
+If **slskd** is enabled but nothing is queued within **queued timeout** (default 180s), or the transfer exceeds **download timeout** (default 600s), Downtify automatically tries the next provider.
+
+---
+
+## 🌐 slskd (Soulseek via slskd)
+
+### Requirements
+
+- A running **slskd** instance with API access (base URL + API key from slskd’s web UI).
+- The same music folder visible to Downtify and (if used) Navidrome.
+
+### Settings → slskd
+
+| Field | Typical value | Meaning |
+|-------|----------------|---------|
+| **Enable slskd** | On | Turns the provider on (must also appear in Audio sources). |
+| **Base URL** | `http://slskd:5030` | slskd API URL **as Downtify sees it** (Docker service name or host:port). |
+| **API key** | *(from slskd)* | Required when enabled. |
+| **slskd folder path in Downtify** | `/slskd` | Where finished Soulseek files appear **inside the Downtify container** — not the host path. |
+| **Leave slskd files in place** | On (recommended) | Do not copy into `/downloads`; tag in place and register `slskd/…` paths in the library index. |
+| **Download timeout** | `600` | Max seconds to wait for an slskd transfer. |
+| **Queued timeout** | `180` | Max seconds stuck in slskd’s queue before falling back to YouTube. |
+
+### Docker volumes example
+
+```text
+Host                          Downtify container
+/path/to/music/downloads  →   /downloads
+/path/to/music/slskd      →   /slskd        ← slskd must write here too
+```
+
+If slskd runs in another container, mount the **same host directory** on both containers, e.g. `- /mnt/music/slskd:/slskd` on each.
+
+### Behaviour
+
+- Downtify searches slskd, enqueues a download, and polls until the file exists under `source_dir` (or times out).
+- With **leave in place**, the stored library path looks like `slskd/Album Name/track.mp3` and the built-in player serves it from `/media/slskd/…`.
+- Without leave in place, files are copied into `/downloads` like a normal YouTube download.
+
+---
+
+## 🎵 Navidrome playlist sync
+
+Downtify can mirror a downloaded Spotify playlist into **Navidrome** using the Subsonic API (same approach as tools like Explo).
+
+### What it does
+
+1. After playlist tracks finish downloading, Downtify calls Navidrome **`startScan`** (incremental library scan).
+2. Waits for the scan to finish (configurable; scales with playlist size).
+3. Searches the Navidrome library for each track (title, artist, tags from files, and path).
+4. **Updates the existing Navidrome playlist** with the same name when possible (no duplicate playlists). Old duplicate playlists from earlier versions can be deleted manually once.
+
+### Settings → Navidrome
+
+| Field | Notes |
+|-------|--------|
+| **Enable Navidrome sync** | Master toggle (also enable **Create playlist in Navidrome** under Playlists). |
+| **URL** | e.g. `https://music.example.com` |
+| **Username / password** | Navidrome user that should **own** the playlists. |
+| **Admin username / password** | Optional — only needed if your main user is **not** an admin. If your account is already admin, leave admin fields **empty**; one login is enough. |
+| **Public playlist** | Whether the Navidrome playlist is public. |
+
+Scan timing uses defaults in settings storage: **scan after download** (on), wait up to **120s** base (+ extra time for large playlists), **5s** poll interval, and a **15s** retry pass for tracks that were not indexed yet.
+
+### Navidrome server setup
+
+1. In Navidrome **Settings → Music Library**, include every folder Downtify writes to, e.g. both `/downloads` and `/slskd` (or the host paths you mapped to those mounts).
+2. Use the **same** Navidrome user in Downtify that should own synced playlists.
+3. After upgrading, run one full playlist download or a monitor sweep to refresh the playlist.
+
+If sync reports `matched=46/55`, the missing tracks are usually **not scanned yet** in Navidrome, live outside configured music folders, or could not be matched by search — check Downtify logs for `not in library index`.
+
+---
 
 ### 📁 Organize by artist
 
@@ -164,7 +325,7 @@ This applies to **all** downloads — single tracks, albums and playlists alike.
 
 When the setting is **off** (default), the existing behaviour is preserved: single tracks go directly into the root of the downloads folder, and playlist tracks go into a per-playlist subfolder.
 
-> **M3U files and playlists** — If you download a Spotify playlist with both *Organize by artist* and *Generate M3U* enabled, the M3U file is placed in `<downloads>/Playlists/<playlist-name>.m3u` (rather than inside the playlist subfolder) because the tracks are now spread across multiple artist folders. The relative paths inside the M3U still resolve correctly regardless of where you mount the library.
+> **M3U files and playlists** — If you download a Spotify playlist with both *Organize by artist* and *Generate M3U* enabled, the M3U file is placed in `<downloads>/Playlists/<playlist-name>.m3u` (rather than inside the playlist subfolder) because the tracks are now spread across multiple artist folders.
 
 ---
 
@@ -182,17 +343,32 @@ When the setting is **off** (default), the existing behaviour is preserved: sing
 
 ## 📃 M3U playlist export
 
-Downtify writes a standard `EXTM3U` file alongside your audio whenever a playlist gets downloaded — both for **manual** playlist paste-downloads and for **Playlist Monitor** sweeps that fetched at least one new track:
+Downtify writes a standard `EXTM3U` file whenever a playlist download (or monitor sweep) keeps at least one track on disk.
 
+**Default location** (organize by artist **off**):
+
+```text
+<downloads>/<playlist-name>/<playlist-name>.m3u
 ```
+
+**With organize by artist on**:
+
+```text
 <downloads>/Playlists/<playlist-name>.m3u
 ```
 
-The behaviour is governed by a single toggle in **Settings → Playlists → Generate M3U file for playlists** (on by default). Flip it off if you'd rather not produce M3Us at all; the rest of the download flow is unchanged.
+Toggle: **Settings → Playlists → Generate M3U file for playlists** (on by default).
 
-Tracks that failed to download or had no YouTube Music match are skipped (and logged). The M3U is regenerated fresh on every run, so re-pasting the same playlist URL — or letting the Monitor add new tracks over time — always produces a complete, in-order file.
+Tracks that are not on disk are skipped and logged. The file is rebuilt on each run so order matches the Spotify playlist.
 
-Track paths inside the M3U are written **relative to the M3U file itself**, so the same file works whether it's read from inside Downtify (where the library is mounted at `/downloads`) or from another consumer that mounts the same library at a different root — e.g. Jellyfin under `/nas/music`. Just point your media server at the same library mount and the playlist will appear as a single unit instead of a pile of loose files.
+**Paths inside the M3U** are the **absolute paths where Downtify found each file** on disk, for example:
+
+```text
+/downloads/Robot Heart/Artist - Title.mp3
+/slskd/Some Album/01 - Track.mp3
+```
+
+Use the same volume mounts in Jellyfin, Navidrome, or other tools (`/downloads` and `/slskd` in the container map to your host library). Entries under `slskd/…` resolve to `/slskd/…` inside the container even when the M3U file lives under `/downloads`.
 
 ---
 
@@ -203,7 +379,7 @@ Track paths inside the M3U are written **relative to the M3U file itself**, so t
 
 ## 🎧 Built-in Player
 
-Downtify ships with a clean web player so you don't need a separate app to listen to what you've downloaded. Open the headphones icon (🎧) in the navigation bar — or hit the play button next to any file in the **Library** — and Downtify will load every audio file from your downloads folder into a queue.
+Downtify ships with a clean web player so you don't need a separate app to listen to what you've downloaded. Open the headphones icon (🎧) in the navigation bar — or hit the play button next to any file in the **Library** — and Downtify will load audio from `/downloads` and `/slskd` into a queue.
 
 **What's included:**
 
@@ -214,7 +390,7 @@ Downtify ships with a clean web player so you don't need a separate app to liste
 - Volume slider with mute toggle (volume is remembered between sessions)
 - Side queue listing every track in your library, each one with its own thumbnail and the currently playing one highlighted
 
-The player parses `Artist - Title.ext` filenames so the now-playing card shows artist and title nicely, and pulls the cover art directly from the audio file's embedded tags (the same artwork Downtify wrote at download time). Playback uses your browser's native HTML5 audio element — no extra dependencies, no extra processes.
+The **Library** and **Player** read **embedded tags** (title, artist, album) via mutagen, with filename parsing as a fallback. slskd tracks under `slskd/…` are played through `/media/slskd/…` URLs. Cover art comes from tags when present. Playback uses the browser’s HTML5 audio element — no extra dependencies.
 
 ---
 

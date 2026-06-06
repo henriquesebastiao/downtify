@@ -16,6 +16,7 @@ export default {
   },
   nav: {
     home: 'Inicio',
+    search: 'Buscar',
     library: 'Biblioteca',
     monitor: 'Monitor de listas',
     queue: 'Cola',
@@ -33,6 +34,13 @@ export default {
     playlists: 'Listas',
   },
   search: {
+    submitSearch: 'Buscar',
+    browsePlaylist: 'Ver pistas de la lista',
+    browsePlaylistHint:
+      'Ver pistas de la lista (pega antes un enlace de playlist de Spotify)',
+    downloadLink: 'Descargar este enlace',
+    downloadLinkHint:
+      'Descargar tema o álbum (pega antes un enlace de Spotify)',
     placeholder: 'Busca o pega un enlace de Spotify o YouTube Music…',
     title: 'Resultados de búsqueda',
     matchesFor: 'Mostrando coincidencias para',
@@ -45,6 +53,42 @@ export default {
     emptyHint:
       'Prueba con otra búsqueda — artista + título suele funcionar mejor.',
     openOnSpotify: 'Abrir en Spotify',
+    playlistTitle: 'Lista de Spotify',
+    playlistSubtitle:
+      'Elige pistas para descargar una a una, o descarga la lista completa.',
+    openPlaylistOnSpotify: 'Abrir lista en Spotify',
+    downloadEntirePlaylist: 'Descargar lista completa',
+    playlistBatchesTitle: 'Descargas de listas',
+    playlistBatchesHint:
+      'Listas de Spotify descargadas con Downtify. Expande para ver pistas pendientes.',
+    playlistBatchStatusComplete: 'Completa',
+    playlistBatchComplete: 'Todas las pistas están en tu biblioteca.',
+    playlistBatchesEmpty: 'Aún no hay descargas de listas registradas.',
+    playlistBatchesEmptyHint:
+      'Descarga una lista de Spotify para verla aquí con el recuento de pendientes.',
+    playlistBatchesLoadFailed:
+      'No se pudieron cargar las descargas de listas. ¿Backend actualizado?',
+    playlistBatchesLoading: 'Cargando listas…',
+    playlistBatchesTracksLoading: 'Cargando pistas pendientes…',
+    playlistBatchesVerifying: 'Comprobando con Spotify…',
+    playlistBatchesSearchPlaceholder: 'Filtrar listas o pistas…',
+    playlistBatchesNoMatch: 'Ninguna lista coincide con el filtro.',
+    playlistBatchesNoTrackMatch:
+      'Ninguna pista coincide con el filtro en esta lista.',
+    playlistBatchesExpandAll: 'Expandir todo',
+    playlistBatchesCollapseAll: 'Contraer todo',
+    incompleteTitle: 'Listas incompletas',
+    incompleteHint:
+      'Descargas de listas con pistas pendientes. Expande para ver cuáles faltan.',
+    incompleteSummary:
+      '{downloaded}/{expected} descargadas · {missing} pendientes',
+    incompleteInProgress: 'En curso',
+    incompleteFinished: 'Incompleta',
+    downloadMissing: 'Descargar pendientes ({count})',
+    playPlaylist: 'Reproducir lista',
+    playlistBatchNothingToPlay:
+      'Aún no hay pistas descargadas de esta lista en tu biblioteca.',
+    incompleteTracksLoading: 'Lista no disponible — prueba a refrescar.',
     inQueue: 'En la cola',
     download: 'Descargar',
     previousPage: 'Página anterior',
@@ -52,15 +96,29 @@ export default {
   },
   queue: {
     title: 'Cola de descargas',
-    subtitle:
-      'Canciones que has añadido a la cola. Progreso, estado y acciones rápidas aquí.',
     empty: 'No hay nada en la cola ahora mismo.',
     emptyHint: 'Busca una canción y pulsa descargar para empezar.',
+    emptyFilter: 'Ninguna pista coincide con este filtro.',
+    emptyActiveWithWaiting:
+      'Aún no hay descargas en curso. {count} en espera — abre la pestaña En espera.',
+    filterAll: 'Todas',
+    filterActive: 'En curso',
+    filterQueued: 'En espera',
+    filterDone: 'Hechas',
+    filterFailed: 'Fallidas',
+    statusQueued: 'En espera',
+    statusActive: 'En curso',
+    statusDownloading: 'Descargando',
+    statusDone: 'Hecha',
+    statusFailed: 'Fallida',
+    retry: 'Reintentar descarga',
+    retryAllFailed: 'Reintentar fallidas ({count})',
+    clearCompleted: 'Quitar hechas ({count})',
     saveToDevice: 'Guardar en el dispositivo',
     removeFromQueue: 'Quitar de la cola',
     clearAll: 'Limpiar todo',
     clearAllPrompt: '¿Eliminar todos los elementos de la cola?',
-    forceAudio: 'Forzar fuente de audio',
+    forceAudio: 'Usar una URL de YouTube',
     overridePlaceholder: 'Pega una URL de YouTube o YouTube Music…',
     applyOverride: 'Aplicar',
     invalidYouTubeURL: 'URL de YouTube no válida',
@@ -69,6 +127,8 @@ export default {
     title: 'Biblioteca',
     subtitle:
       'Música que ya has descargado. Escucha, descarga otra vez o elimina.',
+    searchPlaceholder: 'Buscar título, artista, álbum o ruta…',
+    searchNoResults: 'Ninguna pista coincide con la búsqueda.',
     empty: 'Aún no hay descargas.',
     emptyHint: 'Encuentra una canción para empezar a llenar tu biblioteca.',
     failedLoad: 'No se pudieron cargar las descargas.',
@@ -76,9 +136,29 @@ export default {
     deletePrompt: '¿Eliminar "{file}"?',
     countOne: '{count} archivo en tu biblioteca',
     countMany: '{count} archivos en tu biblioteca',
+    filteredCount: '{shown} de {total} pistas',
+    showingRange: 'Mostrando {from}–{to} de {total}',
+    pageSize: 'Por página',
+    firstPage: 'Primera página',
+    lastPage: 'Última página',
     downloadToDevice: 'Descargar al dispositivo',
     deleteFile: 'Eliminar archivo',
     play: 'Reproducir',
+    selectAllFiltered: 'Seleccionar página',
+    selectAllFilteredCount: 'Seleccionar {count} filtrados',
+    clearSelection: 'Quitar selección',
+    deleteSelected: 'Eliminar selección ({count})',
+    deleteSelectedPrompt:
+      '¿Eliminar {count} pista(s)? Los archivos se borran del disco; M3U y Navidrome se actualizan en segundo plano.',
+    batchDeletePartial:
+      'Eliminadas {ok} pista(s). {failed} no se pudieron eliminar.',
+    filterByPlaylist: 'Lista',
+    filterAllPlaylists: 'Todas las listas',
+    deletePlaylist: 'Eliminar lista',
+    deletePlaylistPrompt:
+      '¿Eliminar todas las pistas de "{name}"? Se quitan archivos y la entrada del catálogo. M3U y Navidrome se actualizan en segundo plano.',
+    playlistDeleted: 'Lista "{name}" eliminada ({count} pistas).',
+    playlistDeleteFailed: 'No se pudo eliminar la lista "{name}".',
   },
   monitor: {
     title: 'Monitor de listas',
@@ -140,7 +220,10 @@ export default {
   settings: {
     title: 'Ajustes',
     subtitle: 'Ajusta cómo Downtify descarga y etiqueta tu música.',
-    audioSource: 'Fuente de audio',
+    audioSource: 'Fuentes de audio (orden de respaldo)',
+    audioSourceHint:
+      'Activa una o más. Cada pista prueba las fuentes en orden (1, 2, 3) hasta que una funcione.',
+    audioSourceReset: 'Usar orden recomendado',
     lyricsSource: 'Fuente de letras',
     lyricsHint: 'solo lrclib está activo',
     downloadLyrics: 'Descargar letras',
@@ -153,18 +236,102 @@ export default {
     playlistsSection: 'Listas',
     generateM3u: 'Generar archivo M3U para las listas',
     generateM3uHint:
-      'Escribe Playlists/<nombre>.m3u junto a las pistas, tanto para descargas manuales como para los barridos del Monitor.',
+      'Escribe Playlists/<nombre>.m3u con rutas absolutas (/downloads/... y /slskd/...) para descargas y el Monitor.',
+    syncNavidrome: 'Crear lista en Navidrome',
+    syncNavidromeHint:
+      'Tras descargar una lista de Spotify, escanea la biblioteca y crea/actualiza una lista en Navidrome con el mismo nombre.',
+    navidromeSection: 'Navidrome',
+    navidromeHint:
+      'Usa la API Subsonic (como Explo). La carpeta de música en Navidrome debe apuntar a las descargas de Downtify.',
+    navidromeEnabled: 'Activar sincronización con Navidrome',
+    navidromeEnabledHint:
+      'Requiere URL, usuario y contraseña. La cuenta admin opcional inicia el escaneo de la biblioteca.',
+    navidromeUrl: 'URL de Navidrome (ejemplo: https://musica.ejemplo.com)',
+    navidromeUsername: 'Usuario de Navidrome',
+    navidromePassword: 'Contraseña de Navidrome',
+    navidromeAdminUser: 'Usuario admin (opcional, para escaneo)',
+    navidromeAdminPassword: 'Contraseña admin (opcional)',
+    navidromePublic: 'Lista pública en Navidrome',
+    librarySection: 'Biblioteca y reproductor',
+    cacheCoverArt: 'Guardar carátulas en disco',
+    cacheCoverArtHint:
+      'Guarda las imágenes en /data/cover_cache para cargar más rápido el reproductor y la biblioteca. Usa espacio extra; puedes desactivarlo cuando quieras.',
+    reconcileSection: 'Sincronizar rutas',
+    reconcileIntro:
+      'Si moviste archivos, corrige las rutas guardadas. M3U y Navidrome solo si están activados arriba.',
+    reconcileButton: 'Corregir rutas de la biblioteca',
+    reconcileRunning: 'Escaneando biblioteca…',
+    reconcileDonePathsOnly: 'Actualizadas {count} ruta(s).',
+    reconcileDone:
+      'Actualizadas {count} ruta(s). Listas: {playlists} ({extras})',
+    reconcileM3u: 'M3U',
+    reconcileNavidrome: 'Navidrome',
+    reconcileNone:
+      'No hay archivos movidos. Úsalo tras cambiar de carpeta (mismo nombre y tamaño). Al borrar, se limpia aquí si el archivo ya no existe.',
+    reconcilePrunedSimple:
+      'Eliminadas {pruned} entradas obsoletas (archivos ya borrados).',
+    reconcilePrunedBackfill:
+      'Eliminadas {pruned} entradas. Indexadas {backfilled} pistas para futuros cambios de ruta.',
+    reconcilePrunedPlaylists:
+      'Eliminadas {pruned} entradas. Listas actualizadas: {playlists} ({extras})',
+    reconcileBackfillOnly:
+      'Indexadas {backfilled} pistas. No se detectaron movimientos ahora.',
+    reconcileError: 'Error al reconciliar la biblioteca.',
     organizationSection: 'Organización de archivos',
     organizeByArtist: 'Organizar por artista',
     organizeByArtistHint:
       'Guarda las canciones en subcarpetas con el nombre del artista. Las pistas de listas también se guardan en la carpeta del artista en lugar de la carpeta de la lista.',
     parallelDownloads: 'Descargas paralelas',
     parallelDownloadsHint:
-      'Número máximo de canciones descargadas simultáneamente. Valores más altos son más rápidos pero consumen más ancho de banda.',
+      'Máximo de canciones a la vez (YouTube y slskd). Toca un número y Guardar; afecta trabajo nuevo. Con slskd activo, usa 2–3: slskd limita búsquedas Soulseek simultáneas; valores altos suelen encolarse o fallar, no acelerar.',
     saved: 'Cambios guardados',
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',
     languageHint: 'Elige el idioma de la interfaz',
+    youtubeSection: 'Cookies de YouTube (opcional)',
+    youtubeEnabled: 'Configurar cookies de YouTube',
+    youtubeEnabledHint:
+      'Opcional — solo ayuda con algunos fallbacks de YouTube con edad. La mayoría funciona sin esto.',
+    youtubeCookiesHint:
+      'No hace falta para descargas normales. Úsalo solo si fallan vídeos con verificación de edad.',
+    youtubeCookiesPath: 'Ruta del archivo de cookies (en el contenedor)',
+    youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
+    youtubeCookiesUpload: 'Subir cookies.txt',
+    youtubeCookiesClear: 'Quitar cookies',
+    youtubeCookiesReady:
+      'Cookies de inicio de sesión detectadas — yt-dlp las usará en vídeos con edad.',
+    youtubeCookiesWeak:
+      'Archivo presente pero sin sesión de YouTube. Vuelve a exportar desde youtube.com con la cuenta iniciada.',
+    youtubeCookiesMissing:
+      'Ruta configurada pero el archivo no existe. Vuelve a subirlo o revisa el volumen.',
+    slskdSection: 'slskd',
+    slskdHint:
+      'Soulseek vía slskd. Con Navidrome activo, las listas se crean allí tras escanear la biblioteca; los archivos pueden quedarse en la carpeta slskd.',
+    slskdEnabled: 'Activar proveedor slskd',
+    slskdEnabledHint:
+      'Si está desactivado, slskd nunca se intentará en la cadena de fallback.',
+    slskdBaseUrl: 'URL base de slskd (ejemplo: https://slskd.ejemplo.com)',
+    slskdApiKey: 'API key de slskd',
+    slskdSourceDirTitle: 'Carpeta de descargas de slskd (en este contenedor)',
+    slskdSourceDirBullet1:
+      'slskd escribe aquí las transferencias completadas (ej. /slskd → music/slskd en el host).',
+    slskdSourceDirBullet2:
+      'Navidrome debe escanear la biblioteca que incluye esta carpeta.',
+    slskdSourceDirBullet3:
+      'Ruta que ve Downtify — no la ruta del host ni la URL web de slskd.',
+    slskdSourceDirExample:
+      'slskd:  /mnt/storage/music/slskd:/downloads\nDowntify: /mnt/storage/music/slskd:/slskd  → /slskd',
+    slskdSourceDirLabel: 'Carpeta slskd en Downtify',
+    slskdSourceDirPlaceholder: '/slskd',
+    slskdSourceDirHint:
+      'Downtify detecta archivos slskd aquí. Sin copia a /downloads si “dejar en sitio” está activo.',
+    slskdLeaveInPlace: 'Dejar archivos slskd en su sitio',
+    slskdLeaveInPlaceHint:
+      'No copiar a /downloads. Etiquetar en sitio y añadir a listas de Navidrome tras el escaneo.',
+    slskdDownloadTimeout: 'Tiempo máximo slskd (segundos)',
+    slskdQueuedTimeout: 'Tiempo en cola sin progreso (segundos)',
+    slskdTimeoutHint:
+      'Si slskd no termina a tiempo, Downtify prueba el siguiente proveedor (YouTube). Baja el tiempo en cola si se queda en "Queued on slskd".',
   },
   player: {
     title: 'Reproductor',
@@ -188,6 +355,9 @@ export default {
     nowPlaying: 'Sonando ahora',
     upNext: 'A continuación',
     playFromLibrary: 'Abrir en el reproductor',
+    selectAll: 'Seleccionar todo',
+    selectedCount: '{selected} de {total} seleccionados',
+    deleteTrack: 'Quitar de la biblioteca',
     countOne: '{count} pista',
     countMany: '{count} pistas',
   },

@@ -16,6 +16,7 @@ export default {
   },
   nav: {
     home: 'Home',
+    search: 'Search',
     library: 'Library',
     monitor: 'Playlist Monitor',
     queue: 'Queue',
@@ -34,6 +35,13 @@ export default {
   },
   search: {
     placeholder: 'Search, paste a Spotify or YouTube Music link…',
+    submitSearch: 'Search',
+    browsePlaylist: 'Browse playlist tracks',
+    browsePlaylistHint:
+      'Browse playlist tracks (paste a Spotify playlist link first)',
+    downloadLink: 'Download this link',
+    downloadLinkHint:
+      'Download track or album (paste a Spotify track/album link first)',
     title: 'Search results',
     matchesFor: 'Showing matches for',
     songsCount: '— {count} song',
@@ -44,6 +52,41 @@ export default {
     empty: 'No songs found.',
     emptyHint: 'Try another query — artist + title usually works best.',
     openOnSpotify: 'Open on Spotify',
+    playlistTitle: 'Spotify playlist',
+    playlistSubtitle:
+      'Pick tracks to download individually, or download the whole playlist.',
+    openPlaylistOnSpotify: 'Open playlist on Spotify',
+    downloadEntirePlaylist: 'Download entire playlist',
+    playlistBatchesTitle: 'Playlist downloads',
+    playlistBatchesHint:
+      'Spotify playlists you have downloaded via Downtify. Expand to see missing tracks.',
+    playlistBatchStatusComplete: 'Complete',
+    playlistBatchComplete: 'All tracks are in your library.',
+    playlistBatchesEmpty: 'No playlist downloads tracked yet.',
+    playlistBatchesEmptyHint:
+      'Download a Spotify playlist to see it here with missing-track counts.',
+    playlistBatchesLoadFailed:
+      'Could not load playlist downloads. Is the backend up to date?',
+    playlistBatchesLoading: 'Loading playlists…',
+    playlistBatchesTracksLoading: 'Loading missing tracks…',
+    playlistBatchesVerifying: 'Checking against Spotify…',
+    playlistBatchesSearchPlaceholder: 'Filter playlists or tracks…',
+    playlistBatchesNoMatch: 'No playlists match your filter.',
+    playlistBatchesNoTrackMatch:
+      'No tracks match your filter in this playlist.',
+    playlistBatchesExpandAll: 'Expand all',
+    playlistBatchesCollapseAll: 'Collapse all',
+    incompleteTitle: 'Incomplete playlists',
+    incompleteHint:
+      'Playlist downloads that still have missing tracks. Expand to see which songs are missing.',
+    incompleteSummary: '{downloaded}/{expected} downloaded · {missing} missing',
+    incompleteInProgress: 'In progress',
+    incompleteFinished: 'Incomplete',
+    downloadMissing: 'Download missing ({count})',
+    playPlaylist: 'Play playlist',
+    playlistBatchNothingToPlay:
+      'No downloaded tracks for this playlist in your library yet.',
+    incompleteTracksLoading: 'Track list unavailable — try refresh.',
     inQueue: 'In queue',
     download: 'Download',
     previousPage: 'Previous page',
@@ -51,15 +94,29 @@ export default {
   },
   queue: {
     title: 'Download Queue',
-    subtitle:
-      "Songs you've queued. Progress, status and quick actions live here.",
     empty: 'Nothing queued right now.',
     emptyHint: 'Search for a song and hit download to start.',
+    emptyFilter: 'No tracks match this filter.',
+    emptyActiveWithWaiting:
+      'No downloads in progress yet. {count} track(s) waiting — open the Waiting tab.',
+    filterAll: 'All',
+    filterActive: 'In progress',
+    filterQueued: 'Waiting',
+    filterDone: 'Done',
+    filterFailed: 'Failed',
+    statusQueued: 'Waiting',
+    statusActive: 'In progress',
+    statusDownloading: 'Downloading',
+    statusDone: 'Done',
+    statusFailed: 'Failed',
+    retry: 'Retry download',
+    retryAllFailed: 'Retry failed ({count})',
+    clearCompleted: 'Clear done ({count})',
     saveToDevice: 'Save to device',
     removeFromQueue: 'Remove from queue',
     clearAll: 'Clear all',
     clearAllPrompt: 'Remove all items from the queue?',
-    forceAudio: 'Force audio source',
+    forceAudio: 'Use a YouTube URL instead',
     overridePlaceholder: 'Paste a YouTube or YouTube Music URL…',
     applyOverride: 'Apply',
     invalidYouTubeURL: 'Invalid YouTube URL',
@@ -67,6 +124,8 @@ export default {
   library: {
     title: 'Library',
     subtitle: "Music you've already downloaded. Listen, re-download or remove.",
+    searchPlaceholder: 'Search title, artist, album, or path…',
+    searchNoResults: 'No tracks match your search.',
     empty: 'No downloads yet.',
     emptyHint: 'Find a song to start filling your library.',
     failedLoad: 'Failed to load downloads.',
@@ -74,9 +133,28 @@ export default {
     deletePrompt: 'Delete "{file}"?',
     countOne: '{count} file in your library',
     countMany: '{count} files in your library',
+    filteredCount: '{shown} of {total} tracks',
+    showingRange: 'Showing {from}–{to} of {total}',
+    pageSize: 'Per page',
+    firstPage: 'First page',
+    lastPage: 'Last page',
     downloadToDevice: 'Download to device',
     deleteFile: 'Delete file',
     play: 'Play',
+    selectAllFiltered: 'Select all on this page',
+    selectAllFilteredCount: 'Select all {count} filtered',
+    clearSelection: 'Clear selection',
+    deleteSelected: 'Delete selected ({count})',
+    deleteSelectedPrompt:
+      'Delete {count} selected track(s)? Files are removed from disk; playlists and Navidrome update in the background.',
+    batchDeletePartial: 'Deleted {ok} track(s). {failed} could not be deleted.',
+    filterByPlaylist: 'Playlist',
+    filterAllPlaylists: 'All playlists',
+    deletePlaylist: 'Delete playlist',
+    deletePlaylistPrompt:
+      'Delete all tracks in "{name}"? Files on disk and the playlist catalog entry are removed. M3U and Navidrome sync run in the background.',
+    playlistDeleted: 'Playlist "{name}" removed ({count} tracks).',
+    playlistDeleteFailed: 'Could not delete playlist "{name}".',
   },
   monitor: {
     title: 'Playlist Monitor',
@@ -137,7 +215,10 @@ export default {
   settings: {
     title: 'Settings',
     subtitle: 'Tweak how Downtify fetches and tags your music.',
-    audioSource: 'Audio source',
+    audioSource: 'Audio sources (fallback order)',
+    audioSourceHint:
+      'Enable one or more. Each track tries sources in order (1, 2, 3) until one succeeds.',
+    audioSourceReset: 'Use recommended order',
     lyricsSource: 'Lyrics source',
     lyricsHint: 'only lrclib is active',
     downloadLyrics: 'Download lyrics',
@@ -150,18 +231,101 @@ export default {
     playlistsSection: 'Playlists',
     generateM3u: 'Generate M3U file for playlists',
     generateM3uHint:
-      'Writes Playlists/<name>.m3u alongside the tracks for both manual playlist downloads and Playlist Monitor sweeps.',
+      'Writes Playlists/<name>.m3u with absolute file paths (/downloads/... and /slskd/...) for manual downloads and Playlist Monitor sweeps.',
+    syncNavidrome: 'Create playlist in Navidrome',
+    syncNavidromeHint:
+      'After a Spotify playlist download finishes, scan the library and create/update a Navidrome playlist with the same name.',
+    navidromeSection: 'Navidrome',
+    navidromeHint:
+      'Uses the Subsonic API (same as Explo). Point your music folder in Navidrome at Downtify downloads.',
+    navidromeEnabled: 'Enable Navidrome sync',
+    navidromeEnabledHint:
+      'Requires URL, username, and password. Admin account recommended: triggers Subsonic startScan (incremental) before matching tracks, same as Explo.',
+    navidromeUrl: 'Navidrome URL (example: https://music.example.com)',
+    navidromeUsername: 'Navidrome username',
+    navidromePassword: 'Navidrome password',
+    navidromeAdminUser: 'Admin username (optional, for library scan)',
+    navidromeAdminPassword: 'Admin password (optional)',
+    navidromePublic: 'Public playlist in Navidrome',
+    librarySection: 'Library & player',
+    cacheCoverArt: 'Cache album art on disk',
+    cacheCoverArtHint:
+      'Stores cover images under /data/cover_cache so the player and library load faster. Uses extra disk space; safe to turn off anytime.',
+    reconcileSection: 'Library path sync',
+    reconcileIntro:
+      'After you move files on disk, fixes stored paths. M3U and Navidrome playlists are updated only if those options are enabled above.',
+    reconcileButton: 'Fix library paths',
+    reconcileRunning: 'Scanning library…',
+    reconcileDonePathsOnly: 'Updated {count} path(s).',
+    reconcileDone: 'Updated {count} path(s). Playlists: {playlists} ({extras})',
+    reconcileM3u: 'M3U',
+    reconcileNavidrome: 'Navidrome',
+    reconcileNone:
+      'No path updates or stale catalog rows. After moving files on disk, run this again. If you deleted in Library, M3U/Navidrome were already updated on delete — refresh the Library page if the list looks old.',
+    reconcilePrunedSimple:
+      'Removed {pruned} stale catalog entries (files already deleted).',
+    reconcilePrunedBackfill:
+      'Removed {pruned} stale entries. Indexed {backfilled} tracks for future path matching.',
+    reconcilePrunedPlaylists:
+      'Removed {pruned} stale entries. Refreshed playlists: {playlists} ({extras})',
+    reconcileBackfillOnly:
+      'Indexed {backfilled} tracks for path matching. No moves found this time.',
+    reconcileError: 'Library reconcile failed.',
     organizationSection: 'File organization',
     organizeByArtist: 'Organize by artist',
     organizeByArtistHint:
       "Save songs in subfolders named after the artist. Playlist tracks are also placed in their artist's folder instead of a playlist folder.",
     parallelDownloads: 'Parallel downloads',
     parallelDownloadsHint:
-      'Maximum number of songs downloaded simultaneously. Higher values are faster but use more bandwidth.',
+      'Maximum songs downloading at once (YouTube and slskd), shared across all playlists in the queue. Tap a number, then Save. With slskd on, prefer 2–3.',
     saved: 'Changes saved',
     saveError: "Couldn't save settings.",
     language: 'Language',
     languageHint: 'Choose the interface language',
+    youtubeSection: 'YouTube cookies (optional)',
+    youtubeEnabled: 'Configure YouTube cookies',
+    youtubeEnabledHint:
+      'Optional — only helps with some age-restricted YouTube fallbacks. Most tracks work without this.',
+    youtubeCookiesHint:
+      'Not required for normal downloads. Use only if YouTube fallbacks fail on age-restricted videos.',
+    youtubeCookiesPath: 'Cookies file path (inside container)',
+    youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
+    youtubeCookiesUpload: 'Upload cookies.txt',
+    youtubeCookiesClear: 'Remove cookies',
+    youtubeCookiesReady:
+      'Login cookies detected — yt-dlp will use them for age-restricted videos.',
+    youtubeCookiesWeak:
+      'File found but no YouTube login session in it. Re-export from youtube.com while signed in (see hint above).',
+    youtubeCookiesMissing:
+      'Path is set but the file is missing on disk. Upload again or fix the mount path.',
+    slskdSection: 'slskd',
+    slskdHint:
+      'Soulseek via slskd. With Navidrome enabled, playlists are built in Navidrome after a library scan — files can stay in the slskd folder.',
+    slskdEnabled: 'Enable slskd provider',
+    slskdEnabledHint:
+      'When off, slskd is never attempted in provider fallback.',
+    slskdBaseUrl: 'slskd base URL (example: https://slskd.example.com)',
+    slskdApiKey: 'slskd API key',
+    slskdSourceDirTitle: 'slskd download folder (inside this container)',
+    slskdSourceDirBullet1:
+      'slskd writes completed transfers here (e.g. /slskd → host music/slskd).',
+    slskdSourceDirBullet2:
+      'Navidrome must scan the parent music library that includes this folder.',
+    slskdSourceDirBullet3:
+      'Use the path Downtify sees — not the host path, not the slskd web URL.',
+    slskdSourceDirExample:
+      'slskd:  /mnt/storage/music/slskd:/downloads\nDowntify: /mnt/storage/music/slskd:/slskd  → set /slskd',
+    slskdSourceDirLabel: 'slskd folder path in Downtify',
+    slskdSourceDirPlaceholder: '/slskd',
+    slskdSourceDirHint:
+      'Downtify watches this folder for finished slskd files. No copy into /downloads when leave-in-place is on.',
+    slskdLeaveInPlace: 'Leave slskd files in place',
+    slskdLeaveInPlaceHint:
+      'Do not copy into /downloads. Tag in place, register for dedupe, and add tracks to Navidrome playlists via library search (recommended with Navidrome sync).',
+    slskdDownloadTimeout: 'Total slskd timeout (seconds)',
+    slskdQueuedTimeout: 'Queued / no-progress timeout (seconds)',
+    slskdTimeoutHint:
+      'If slskd does not finish in time, Downtify tries the next audio provider (YouTube). Lower the queued timeout when tracks sit on "Queued on slskd" too long.',
   },
   player: {
     title: 'Player',
@@ -185,6 +349,9 @@ export default {
     nowPlaying: 'Now playing',
     upNext: 'Up next',
     playFromLibrary: 'Open in player',
+    selectAll: 'Select all',
+    selectedCount: '{selected} of {total} selected',
+    deleteTrack: 'Remove from library',
     countOne: '{count} track',
     countMany: '{count} tracks',
   },

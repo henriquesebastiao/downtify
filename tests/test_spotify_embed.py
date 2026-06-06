@@ -5,15 +5,18 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 from downtify.spotify import (
     _album_release_date_from_open_page,
     _artist_names,
     _artists_from_subtitle,
     _embed_row_track,
+    _fetch_embed_json,
     _normalize_release_date_text,
     _track_dict,
     album_tracks_from_id,
+    enrich_track_from_spotify_if_sparse,
 )
 
 # Aliases only — no real artist / track titles
@@ -130,6 +133,65 @@ def test_track_dict_year_only_release_date_object():
     td = _track_dict(entity, track_id='tid', fallback_album='TestAlbum')
     assert td['release_date'] == '1994'
     assert td['year'] == '1994'
+
+
+def test_track_dict_reads_track_number_from_embed():
+    entity = {
+        'id': 'tid',
+        'uri': 'spotify:track:tid',
+        'title': 'TestSong',
+        'trackNumber': 4,
+        'album': {'name': 'TestAlbum', 'trackCount': 12},
+        'artists': [{'name': _AL1}],
+    }
+    td = _track_dict(entity, track_id='tid')
+    assert td['track_number'] == 4
+    assert td['album_track_total'] == 12
+
+
+@patch('downtify.spotify.track_from_id')
+def test_enrich_track_from_spotify_if_sparse_fetches_missing_fields(
+    mock_track_from_id,
+):
+    mock_track_from_id.return_value = {
+        'song_id': 'a' * 22,
+        'source': 'spotify',
+        'year': '2016',
+        'release_date': '2016-07-01',
+        'track_number': 24,
+        'album_track_total': 100,
+        'cover_url': 'https://example.com/cover.jpg',
+        'album_name': 'TestAlbum',
+        'artists': [_AL1],
+        'artist': _AL1,
+    }
+    sparse = {
+        'song_id': 'a' * 22,
+        'source': 'spotify',
+        'name': 'TestSong',
+        'artists': [_AL1],
+        'cover_url': 'https://example.com/playlist.jpg',
+    }
+    out = enrich_track_from_spotify_if_sparse(sparse)
+    mock_track_from_id.assert_called_once_with('a' * 22)
+    assert out['year'] == '2016'
+    assert out['track_number'] == 24
+    assert out['cover_url'] == 'https://example.com/cover.jpg'
+
+
+@patch('downtify.spotify.track_from_id')
+def test_enrich_track_from_spotify_if_sparse_skips_when_complete(
+    mock_track_from_id,
+):
+    complete = {
+        'song_id': 'b' * 22,
+        'source': 'spotify',
+        'year': '2020',
+        'release_date': '2020-01-01',
+        'track_number': 1,
+    }
+    assert enrich_track_from_spotify_if_sparse(complete) is complete
+    mock_track_from_id.assert_not_called()
 
 
 def test_normalize_month_precision_middle_string():
@@ -259,3 +321,42 @@ def test_album_tracks_from_id_merges_row_subtitle():
     assert songs[0]['album_name'] == 'TestAlbum'
     assert songs[0]['track_number'] == 1
     assert songs[0]['album_track_total'] == 1
+
+
+def test_fetch_embed_json_retries_transient_504() -> None:
+    ok = MagicMock(status_code=200)
+    ok.text = (
+        '<script id="__NEXT_DATA__" type="application/json">'
+        '{"props":{"pageProps":{"state":{"data":{"entity":{}}}}}}'
+        '</script>'
+    )
+    ok.raise_for_status = MagicMock()
+
+    fail = MagicMock(status_code=504)
+    fail.raise_for_status.side_effect = requests.HTTPError(response=fail)
+
+    with (
+        patch('downtify.spotify.time.sleep'),
+        patch(
+            'downtify.spotify.requests.get',
+            side_effect=[fail, fail, ok],
+        ) as mock_get,
+    ):
+        data = _fetch_embed_json('playlist', 'abc123')
+
+    assert mock_get.call_count == 3
+    assert 'props' in data
+
+
+def test_fetch_embed_json_does_not_retry_client_errors() -> None:
+    fail = MagicMock(status_code=404)
+    fail.raise_for_status.side_effect = requests.HTTPError(response=fail)
+
+    with (
+        patch('downtify.spotify.time.sleep') as mock_sleep,
+        patch('downtify.spotify.requests.get', return_value=fail),
+    ):
+        with pytest.raises(requests.HTTPError):
+            _fetch_embed_json('playlist', 'missing')
+
+    mock_sleep.assert_not_called()

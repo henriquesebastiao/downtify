@@ -32,6 +32,13 @@
     min-height: 100dvh;
   }
 
+  @media (max-width: 1023px) {
+    body {
+      /* Fixed backgrounds break scrolling/layout on many mobile browsers */
+      background-attachment: scroll;
+    }
+  }
+
   [data-theme='downtify-light'] body {
     background-image:
       radial-gradient(
@@ -112,6 +119,27 @@
     @apply bg-primary text-primary-content hover:bg-primary hover:text-primary-content shadow-glow-sm;
   }
 
+  .icon-btn-compact {
+    @apply h-9 w-9;
+  }
+  @media (min-width: 640px) {
+    .icon-btn-compact {
+      @apply h-10 w-10;
+    }
+  }
+
+  .progress-thumb {
+    @apply opacity-100;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .progress-thumb {
+      @apply opacity-0;
+    }
+    .group:hover .progress-thumb {
+      @apply opacity-100;
+    }
+  }
+
   .pill {
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
@@ -119,8 +147,106 @@
   .input-modern {
     @apply w-full h-12 rounded-full bg-base-100/85 border border-white/10 px-5 pr-14 text-base-content placeholder:text-base-content/40 outline-none transition focus:border-primary/60 focus:shadow-glow-sm;
   }
+  /* Avoid duplicate clear control when a custom clear button is used nearby */
+  input[type='search']::-webkit-search-cancel-button,
+  input[type='search']::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
   [data-theme='downtify-light'] .input-modern {
     @apply bg-white border-black/10;
+  }
+
+  .search-action-btn {
+    @apply inline-flex items-center justify-center rounded-full border border-white/10;
+    @apply bg-base-100/70 text-base-content/35 transition;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .search-action-btn-active {
+    @apply border-primary/40 bg-base-100/90 text-primary;
+    @apply hover:bg-primary/15 active:scale-95;
+  }
+  .search-action-btn-active:disabled {
+    @apply opacity-60;
+  }
+  [data-theme='downtify-light'] .search-action-btn {
+    @apply border-black/10 bg-white/70;
+  }
+  [data-theme='downtify-light'] .search-action-btn-active {
+    @apply border-primary/40 bg-white/90;
+  }
+
+  /* Themed playlist filter (custom dropdown; native <select> menus are OS-styled). */
+  .playlist-filter-trigger {
+    @apply flex w-full h-11 min-h-11 items-center gap-2 rounded-full border px-4 text-sm;
+    @apply bg-base-100/85 text-base-content border-white/10;
+    @apply outline-none transition hover:border-primary/40 focus:border-primary/60 focus:shadow-glow-sm;
+  }
+  .playlist-filter-trigger-open {
+    @apply border-primary/60 shadow-glow-sm;
+  }
+  [data-theme='downtify-light'] .playlist-filter-trigger {
+    @apply bg-white/85 border-black/10;
+  }
+
+  .playlist-filter-menu {
+    @apply absolute left-0 top-[calc(100%+0.35rem)] z-50 max-h-60 min-w-full w-max max-w-[min(24rem,90vw)] overflow-y-auto rounded-2xl py-1;
+    @apply bg-base-100/95 backdrop-blur-md border border-white/10 shadow-lg;
+  }
+  [data-theme='downtify-light'] .playlist-filter-menu {
+    @apply bg-white/95 border-black/10;
+  }
+
+  .playlist-filter-item {
+    @apply w-full px-4 py-2.5 text-left text-sm text-base-content/90;
+    @apply transition-colors hover:bg-white/10 hover:text-base-content;
+  }
+  .playlist-filter-item span {
+    @apply block truncate;
+  }
+  .playlist-filter-item-active {
+    @apply bg-primary/15 text-primary font-medium;
+  }
+  [data-theme='downtify-light'] .playlist-filter-item {
+    @apply hover:bg-black/5;
+  }
+  [data-theme='downtify-light'] .playlist-filter-item-active {
+    @apply bg-primary/15 text-primary;
+  }
+
+  /* Native <select> for monitor intervals (color-scheme helps a little). */
+  .filter-select {
+    @apply select select-bordered select-sm rounded-full h-11 min-h-11 px-4;
+    @apply bg-base-100/85 text-base-content border-white/10;
+    @apply outline-none transition focus:border-primary/60 focus:shadow-glow-sm;
+    color-scheme: dark;
+  }
+  [data-theme='downtify-light'] .filter-select {
+    @apply bg-white/85 border-black/10;
+    color-scheme: light;
+  }
+  .filter-select option {
+    @apply bg-base-100 text-base-content;
+  }
+  [data-theme='downtify-light'] .filter-select option {
+    @apply bg-white text-base-content;
+  }
+
+  .filter-select-xs {
+    @apply select select-bordered select-xs rounded-full text-base-content;
+    @apply bg-base-100/85 border-white/10;
+    @apply outline-none transition focus:border-primary/60;
+    color-scheme: dark;
+  }
+  [data-theme='downtify-light'] .filter-select-xs {
+    @apply bg-white/85 border-black/10;
+    color-scheme: light;
+  }
+  .filter-select-xs option {
+    @apply bg-base-100 text-base-content;
+  }
+  [data-theme='downtify-light'] .filter-select-xs option {
+    @apply bg-white text-base-content;
   }
 
   .track-card {

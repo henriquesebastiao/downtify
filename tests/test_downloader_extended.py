@@ -5,7 +5,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from downtify import downloader as downloader_mod
 from downtify.downloader import Downloader
+from downtify.track_tag_match import duration_matches_song
 
 
 def _make(tmp_path: Path, **kwargs) -> Downloader:
@@ -157,3 +159,264 @@ def test_organize_by_artist_default_is_false(tmp_path):
 def test_organize_by_artist_can_be_set_true(tmp_path):
     d = Downloader(tmp_path, organize_by_artist=True)
     assert d.organize_by_artist is True
+
+
+def test_fallback_video_id_via_ytdlp_returns_first_entry(monkeypatch):
+    class FakeYDL:
+        def __init__(self, _opts):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        @staticmethod
+        def extract_info(_query, download=False):
+            assert download is False
+            return {'entries': [{'id': 'abc123def45'}]}
+
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', FakeYDL)
+    monkeypatch.setattr(
+        downloader_mod,
+        '_ytdlp_video_probe',
+        lambda _vid, youtube_settings=None: {'duration': 0, 'title': 'Track'},
+    )
+    vid = downloader_mod._fallback_video_id_via_ytdlp({
+        'name': 'Track',
+        'artists': ['Artist'],
+    })
+    assert vid == 'abc123def45'
+
+
+def test_fallback_video_id_skips_duration_mismatch(monkeypatch):
+    class FakeYDL:
+        def __init__(self, _opts):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        @staticmethod
+        def extract_info(_query, download=False):
+            assert download is False
+            return {
+                'entries': [
+                    {'id': 'wrong123456'},
+                    {'id': 'good1234567'},
+                ],
+            }
+
+    probes = {
+        'wrong123456': {'duration': 381, 'title': 'You'},
+        'good1234567': {'duration': 222, 'title': 'You'},
+    }
+
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', FakeYDL)
+    monkeypatch.setattr(
+        downloader_mod,
+        '_ytdlp_video_probe',
+        lambda vid, youtube_settings=None: probes.get(vid),
+    )
+    vid = downloader_mod._fallback_video_id_via_ytdlp({
+        'name': 'You',
+        'artists': ['Artist'],
+        'duration': 222,
+    })
+    assert vid == 'good1234567'
+
+
+def test_ytdlp_fallback_search_query_appends_album_for_short_title():
+    query = downloader_mod._ytdlp_fallback_search_query({
+        'name': 'You',
+        'artists': ['Jane Doe'],
+        'album_name': 'Shades Of Gray',
+    })
+    assert query == 'Jane Doe You Shades Of Gray'
+
+
+def test_ytdlp_fallback_search_queries_strip_radio_mix():
+    queries = downloader_mod._ytdlp_fallback_search_queries({
+        'name': 'Loud Enough - Radio Mix',
+        'artists': ['Y:K'],
+    })
+    assert queries[0] == 'Y:K Loud Enough'
+    assert 'Y:K Loud Enough - Radio Mix' in queries
+
+
+def test_youtube_candidate_accepts_extended_mix_when_duration_matches():
+    song = {
+        'name': "Don't Touch",
+        'artists': ['Berin'],
+        'duration': 372,
+    }
+    probe = {
+        'title': "Berin - Don't Touch (Extended Mix) - #afrohouse",
+        'duration': 372,
+    }
+    assert downloader_mod._youtube_candidate_acceptable(song, probe)
+
+
+def test_youtube_candidate_rejects_extended_mix_when_duration_way_off():
+    song = {
+        'name': "Don't Touch",
+        'artists': ['Berin'],
+        'duration': 210,
+    }
+    probe = {
+        'title': "Berin - Don't Touch (Extended Mix)",
+        'duration': 372,
+    }
+    assert not downloader_mod._youtube_candidate_acceptable(song, probe)
+
+
+def test_resolve_video_id_prefers_provider_order_youtube_first(monkeypatch):
+    d = Downloader('/tmp', audio_providers=['youtube', 'youtube-music'])
+
+    monkeypatch.setattr(
+        downloader_mod,
+        '_fallback_video_id_via_ytdlp',
+        lambda _song, youtube_settings=None: 'yt123',
+    )
+
+    def should_not_run(_song):
+        raise AssertionError('find_match should not run when youtube succeeds')
+
+    monkeypatch.setattr(downloader_mod, 'find_match', should_not_run)
+    vid, match, provider, local_path = d._resolve_video_id({
+        'name': 'Track',
+        'artists': [],
+    })
+    assert vid == 'yt123'
+    assert match is None
+    assert provider == 'youtube'
+    assert local_path is None
+
+
+def test_resolve_video_id_uses_second_provider_on_first_failure(monkeypatch):
+    d = Downloader('/tmp', audio_providers=['youtube', 'youtube-music'])
+    monkeypatch.setattr(
+        downloader_mod,
+        '_fallback_video_id_via_ytdlp',
+        lambda _song, youtube_settings=None: None,
+    )
+    monkeypatch.setattr(
+        downloader_mod,
+        'find_match',
+        lambda _song: ('ytm456', {'videoId': 'ytm456'}),
+    )
+    vid, match, provider, local_path = d._resolve_video_id({
+        'name': 'Track',
+        'artists': [],
+    })
+    assert vid == 'ytm456'
+    assert isinstance(match, dict)
+    assert provider == 'youtube-music'
+    assert local_path is None
+
+
+def test_resolve_video_id_ytdlp_fallback_when_only_youtube_music(monkeypatch):
+    """Configs like slskd + youtube-music omit 'youtube' as a provider."""
+    d = Downloader(
+        '/tmp',
+        audio_providers=['slskd', 'youtube-music'],
+        slskd_settings={'enabled': True},
+    )
+    ytdlp_calls: list[str] = []
+
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_slskd', lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        downloader_mod, 'find_match', lambda _song: (None, None)
+    )
+    monkeypatch.setattr(
+        downloader_mod,
+        '_fallback_video_id_via_ytdlp',
+        lambda _song, youtube_settings=None: (
+            ytdlp_calls.append('ok') or 'yt-fallback'
+        ),
+    )
+
+    vid, match, provider, local_path = d._resolve_video_id({
+        'name': 'Seamans Underwear',
+        'artists': ['Artist'],
+    })
+    assert vid == 'yt-fallback'
+    assert match is None
+    assert provider == 'youtube'
+    assert local_path is None
+    assert ytdlp_calls == ['ok']
+
+
+def test_resolve_video_id_supports_slskd_provider(monkeypatch, tmp_path):
+    d = Downloader(
+        '/tmp',
+        audio_providers=['slskd'],
+        slskd_settings={'enabled': True},
+    )
+    source = tmp_path / 'slskd-file.flac'
+    source.write_bytes(b'\x00')
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_slskd', lambda *_args, **_kw: source
+    )
+    vid, match, provider, local_path = d._resolve_video_id({
+        'name': 'Track',
+        'artists': [],
+    })
+    assert vid is None
+    assert match is None
+    assert provider == 'slskd'
+    assert local_path == source
+
+
+def test_resolve_video_id_skips_slskd_when_disabled(monkeypatch):
+    d = Downloader(
+        '/tmp',
+        audio_providers=['slskd', 'youtube'],
+        slskd_settings={'enabled': False},
+    )
+    monkeypatch.setattr(
+        downloader_mod,
+        'download_from_slskd',
+        lambda *_args, **_kw: (_ for _ in ()).throw(
+            AssertionError('slskd should not be called when disabled')
+        ),
+    )
+    monkeypatch.setattr(
+        downloader_mod,
+        '_fallback_video_id_via_ytdlp',
+        lambda _song, youtube_settings=None: 'yt123',
+    )
+    vid, match, provider, local_path = d._resolve_video_id({
+        'name': 'Track',
+        'artists': [],
+    })
+    assert vid == 'yt123'
+    assert match is None
+    assert provider == 'youtube'
+    assert local_path is None
+
+
+def test_duration_matches_song_accepts_close_match():
+    song = {'duration': 185}
+    assert duration_matches_song(song, 180) is True
+
+
+def test_duration_matches_song_rejects_hour_long_for_short_track():
+    song = {'duration': 180_000}
+    assert duration_matches_song(song, 3600) is False
+
+
+def test_youtube_download_timeout_seconds_clamped():
+    assert downloader_mod._youtube_download_timeout_seconds({}) == 900
+    assert (
+        downloader_mod._youtube_download_timeout_seconds({
+            'download_timeout_seconds': 30,
+        })
+        == 60
+    )

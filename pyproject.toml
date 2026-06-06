@@ -9,6 +9,7 @@ dependencies = [
     "load-dotenv>=0.1.0",
     "loguru>=0.7.3",
     "mutagen>=1.47",
+    "python-multipart>=0.0.9",
     "requests>=2.34.1",
     "uvicorn>=0.49.0",
     "websockets>=12.0",

@@ -7,7 +7,9 @@ import json
 
 from downtify.api import (
     DEFAULT_SETTINGS,
+    _effective_audio_providers,
     _effective_lyrics_providers,
+    _effective_slskd_settings,
     _load_settings,
 )
 
@@ -15,12 +17,16 @@ from downtify.api import (
 def test_default_settings_has_required_keys():
     required = {
         'audio_providers',
+        'youtube',
+        'slskd',
         'lyrics_providers',
         'download_lyrics',
         'format',
         'bitrate',
         'output',
         'generate_m3u',
+        'sync_navidrome',
+        'navidrome',
         'organize_by_artist',
     }
     assert required <= set(DEFAULT_SETTINGS)
@@ -40,6 +46,121 @@ def test_default_download_lyrics_is_true():
 
 def test_default_format_is_mp3():
     assert DEFAULT_SETTINGS['format'] == 'mp3'
+
+
+def test_effective_audio_providers_keeps_allowed_order():
+    settings = {
+        'audio_providers': ['youtube', 'slskd', 'youtube-music'],
+        'slskd': {'enabled': True},
+    }
+    assert _effective_audio_providers(settings) == [
+        'youtube',
+        'slskd',
+        'youtube-music',
+    ]
+
+
+def test_effective_audio_providers_filters_invalid_and_dedupes():
+    settings = {
+        'audio_providers': [
+            'youtube',
+            'invalid',
+            'youtube',
+            'slskd',
+            'youtube-music',
+        ],
+        'slskd': {'enabled': True},
+    }
+    assert _effective_audio_providers(settings) == [
+        'youtube',
+        'slskd',
+        'youtube-music',
+    ]
+
+
+def test_effective_audio_providers_adds_youtube_fallback_when_only_slskd():
+    settings = {
+        'audio_providers': ['slskd'],
+        'slskd': {'enabled': True},
+    }
+    assert _effective_audio_providers(settings) == [
+        'slskd',
+        'youtube-music',
+        'youtube',
+    ]
+
+
+def test_effective_audio_providers_skips_slskd_when_disabled():
+    settings = {
+        'audio_providers': ['youtube', 'slskd', 'youtube-music'],
+        'slskd': {'enabled': False},
+    }
+    assert _effective_audio_providers(settings) == ['youtube', 'youtube-music']
+
+
+def test_effective_audio_providers_defaults_when_missing():
+    assert _effective_audio_providers({}) == ['youtube-music']
+
+
+def test_effective_slskd_settings_defaults_when_missing():
+    out = _effective_slskd_settings({})
+    assert out['enabled'] is False
+    assert not out['base_url']
+    assert out['download_dir'] == '/downloads'
+    assert out['timeout_seconds'] == 20
+
+
+def test_effective_slskd_settings_normalizes_values():
+    out = _effective_slskd_settings({
+        'slskd': {
+            'enabled': True,
+            'base_url': 'http://slskd.local:5030/',
+            'api_key': '  key ',
+            'download_dir': '/data/slskd',
+            'timeout_seconds': '90',
+            'poll_interval_seconds': '2',
+            'poll_max_attempts': '99',
+        }
+    })
+    assert out['base_url'] == 'http://slskd.local:5030'
+    assert out['enabled'] is True
+    assert out['api_key'] == 'key'
+    assert out['download_dir'] == '/data/slskd'
+    assert out['source_dir'] == '/slskd'
+    assert out['timeout_seconds'] == 90
+    assert out['poll_interval_seconds'] == 2
+    assert out['poll_max_attempts'] == 99
+    assert out['search_retries'] == 5
+
+
+def test_load_settings_deep_merges_slskd_dict(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(
+        json.dumps({'slskd': {'base_url': 'http://slskd:5030'}}),
+        encoding='utf-8',
+    )
+    out = _load_settings(path)
+    assert out['slskd']['base_url'] == 'http://slskd:5030'
+    assert out['slskd']['download_dir'] == '/downloads'
+    assert out['slskd']['duration_tolerance_percent'] == 15
+    persisted = json.loads(path.read_text(encoding='utf-8'))
+    assert persisted['slskd']['duration_tolerance_percent'] == 15
+
+
+def test_load_settings_keeps_explicit_duration_tolerance(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(
+        json.dumps({
+            'slskd': {
+                'duration_tolerance_percent': 20,
+                'duration_tolerance_seconds': 10,
+                'mix_duration_tolerance_percent': 50,
+            },
+        }),
+        encoding='utf-8',
+    )
+    out = _load_settings(path)
+    assert out['slskd']['duration_tolerance_percent'] == 20
 
 
 # ── _load_settings ────────────────────────────────────────────────────────────
