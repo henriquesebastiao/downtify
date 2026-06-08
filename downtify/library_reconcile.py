@@ -16,6 +16,10 @@ from .library_catalog import (
     LibraryContext,
     library_context_from_state,
 )
+from .library_delete import (
+    TagMismatchDeleteContext,
+    delete_if_spotify_tag_mismatch,
+)
 from .library_paths import library_stored_path, locate_library_file
 from .library_paths_cache import invalidate_library_paths_cache
 from .navidrome import (
@@ -27,6 +31,7 @@ from .navidrome import (
 from .playlist_catalog import PlaylistCatalog
 from .playlist_spotify_cache import PlaylistSpotifyCache, fetch_playlist_tracks
 from .track_index import TrackIndex, normalize_spotify_track_id
+from .track_tag_match import spotify_aligns_with_file_tags
 
 if TYPE_CHECKING:
     from .monitor import PlaylistMonitorDB
@@ -219,6 +224,9 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
     navidrome_index: Optional[Any] = None,
     navidrome_scan: bool = False,
     playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None,
+    cover_cache: Optional[Any] = None,
+    metadata_cache: Optional[Any] = None,
+    delete_tag_mismatches: bool = True,
 ) -> None:
     """Regenerate local M3U and optionally Navidrome for *playlist_names*.
 
@@ -231,7 +239,17 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
 
     generate_m3u, sync_navidrome = playlist_refresh_enabled(settings)
     if not generate_m3u and not sync_navidrome:
+        logger.info(
+            'library reconcile: skip playlist refresh (M3U and Navidrome sync off)'
+        )
         return
+
+    logger.info(
+        'library reconcile: refreshing {} playlist(s) after library change: {}',
+        len(playlist_names),
+        ', '.join(sorted(playlist_names)[:8])
+        + ('; ...' if len(playlist_names) > 8 else ''),
+    )
 
     download_dir = Path(downloader.download_dir)
     slskd_dir = (
@@ -241,6 +259,22 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
         else None
     )
     organize = bool(settings.get('organize_by_artist', False))
+    mismatch_delete: Optional[TagMismatchDeleteContext] = None
+    if delete_tag_mismatches:
+        mismatch_delete = TagMismatchDeleteContext(
+            ctx=library_context_from_state(
+                download_dir,
+                settings,
+                track_index=track_index,
+                metadata_cache=metadata_cache,
+                playlist_catalog=playlist_catalog,
+            ),
+            cover_cache=cover_cache,
+            metadata_cache=metadata_cache,
+            playlist_catalog=playlist_catalog,
+            track_index=track_index,
+            navidrome_index=navidrome_index,
+        )
 
     for name in sorted(playlist_names):
         catalog_rows = playlist_catalog.list_tracks(name)
@@ -298,6 +332,13 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
             song = dict(meta)
             song['filename'] = filename
             song = enrich_song_from_library_file(song, download_dir, slskd_dir)
+            if not spotify_aligns_with_file_tags(song):
+                if mismatch_delete is not None and delete_if_spotify_tag_mismatch(
+                    song,
+                    mismatch_delete,
+                    playlist_name=name,
+                ):
+                    continue
             entries.append({
                 'filename': filename,
                 'title': song.get('name') or '',
@@ -335,6 +376,7 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
                     navidrome_index=navidrome_index,
                     download_dir=download_dir,
                     trigger_scan=navidrome_scan,
+                    delete_tag_mismatches=mismatch_delete,
                 )
             except Exception:
                 logger.exception(
@@ -353,6 +395,8 @@ def reconcile_and_refresh(
     navidrome_index: Optional[Any] = None,
     refresh_playlists: bool = True,
     playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None,
+    cover_cache: Optional[Any] = None,
+    metadata_cache: Optional[Any] = None,
 ) -> dict[str, Any]:
     """Run path reconciliation and optional playlist / Navidrome refresh."""
 
@@ -389,6 +433,8 @@ def reconcile_and_refresh(
             monitor_db=monitor_db,
             navidrome_index=navidrome_index,
             playlist_spotify_cache=playlist_spotify_cache,
+            cover_cache=cover_cache,
+            metadata_cache=metadata_cache,
         )
         did_refresh = True
     invalidate_library_paths_cache()

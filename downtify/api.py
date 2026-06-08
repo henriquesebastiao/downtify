@@ -50,11 +50,16 @@ from . import m3u, providers, spotify
 from .cover_cache import CoverArtCache
 from .downloader import Downloader, NoAudioMatchError, inspect_youtube_cookies
 from .library_catalog import library_context_from_state
-from .library_delete import delete_library_files, delete_playlist_from_library
+from .library_delete import (
+    delete_library_files,
+    delete_playlist_from_library,
+    tag_mismatch_delete_context_from_state,
+)
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .library_paths_cache import invalidate_library_paths_cache
 from .library_reconcile import (
+    playlist_refresh_enabled,
     reconcile_and_refresh,
     refresh_playlists_after_moves,
 )
@@ -299,6 +304,8 @@ async def _schedule_playlist_refresh_after_download(
                     )
                 ),
                 playlist_spotify_cache=state.playlist_spotify_cache,
+                cover_cache=state.cover_cache,
+                metadata_cache=state.metadata_cache,
             )
         except Exception:
             logger.exception(
@@ -1178,11 +1185,72 @@ async def _sync_playlist_navidrome(
             state.settings,
             navidrome_index=state.navidrome_index,
             download_dir=download_dir,
+            delete_tag_mismatches=tag_mismatch_delete_context_from_state(state),
         )
     except Exception:
         logger.exception(
             'Navidrome sync failed for playlist {}', playlist_name
         )
+
+
+def _rebuild_playlist_catalog_from_library(
+    playlist_name: str,
+    spotify_playlist_id: str,
+) -> int:
+    """Link every on-disk Spotify playlist track into the catalog (upsert)."""
+
+    if (
+        state.playlist_catalog is None
+        or state.downloader is None
+        or state.track_index is None
+    ):
+        return 0
+    sid = str(spotify_playlist_id or '').strip()
+    if not sid:
+        return 0
+    try:
+        resolved_name, tracks = _fetch_playlist_tracks(sid)
+    except Exception:
+        logger.opt(exception=True).warning(
+            'playlist batch: catalog rebuild failed for {!r}',
+            playlist_name,
+        )
+        return 0
+    pl_name = str(resolved_name or playlist_name or '').strip()
+    if not pl_name:
+        return 0
+
+    subdir = _playlist_subdir_for_name(pl_name)
+    catalog_filenames = _catalog_filenames_for_playlist(pl_name, sid)
+    dl_dir = Path(state.downloader.download_dir)
+    slskd = slskd_dir_from_downloader(state.downloader)
+    state.playlist_catalog.ensure_playlist(pl_name, spotify_id=sid)
+
+    linked = 0
+    for index, track in enumerate(tracks):
+        filename: Optional[str] = None
+        full: Optional[Path] = None
+        hit = resolve_existing_download(
+            state.downloader,
+            track,
+            subdir=subdir,
+            track_index=state.track_index,
+        )
+        if hit:
+            filename = hit[0]
+            full = locate_library_file(filename, dl_dir, slskd)
+        else:
+            tid = normalize_spotify_track_id(track)
+            if tid and catalog_filenames:
+                filename = str(catalog_filenames.get(tid) or '').strip()
+                if filename:
+                    full = locate_library_file(filename, dl_dir, slskd)
+        if filename and full is not None:
+            state.playlist_catalog.upsert_track(
+                pl_name, track, filename, full, track_order=index
+            )
+            linked += 1
+    return linked
 
 
 async def _process_batch(
@@ -1198,6 +1266,7 @@ async def _process_batch(
     playlist_subdir: Optional[str] = None
     playlist_name: Optional[str] = None
     spotify_playlist_id: Optional[str] = None
+    spotify_track_count = 0
     parsed = spotify.parse_spotify_url(playlist_url) if playlist_url else None
     if parsed is not None and parsed[0] == 'playlist':
         spotify_playlist_id = parsed[1]
@@ -1205,6 +1274,7 @@ async def _process_batch(
             playlist_name, tracks = await asyncio.to_thread(
                 _fetch_playlist_tracks, spotify_playlist_id, refresh=True
             )
+            spotify_track_count = len(tracks)
             playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
         except Exception:
             logger.exception(
@@ -1268,57 +1338,84 @@ async def _process_batch(
     if not playlist_name:
         return
 
-    entries: list[dict[str, Any]] = []
-    for r in results:
-        if not r or not r.get('filename'):
-            continue
-        s = r['song']
-        entries.append({
-            'filename': r['filename'],
-            'title': s.get('name') or '',
-            'artist': ', '.join(s.get('artists') or []),
-            'duration': s.get('duration') or 0,
-        })
-
-    if generate_m3u and playlist_subdir and entries:
-        organize = bool(
-            state.downloader and state.downloader.organize_by_artist
+    partial_batch = (
+        spotify_track_count > 0 and len(songs) < spotify_track_count
+    )
+    if partial_batch:
+        logger.info(
+            'playlist batch: partial run {}/{} tracks for {!r}; '
+            'will rebuild full catalog before M3U/Navidrome sync',
+            len(songs),
+            spotify_track_count,
+            playlist_name,
         )
-        try:
-            await asyncio.to_thread(
-                m3u.write_m3u,
-                state.downloader.download_dir,
+
+    def _catalog_batch() -> int:
+        if state.playlist_catalog is None or state.downloader is None:
+            return 0
+        dl_dir = Path(state.downloader.download_dir)
+        slskd = slskd_dir_from_downloader(state.downloader)
+        linked = 0
+        for index, (song, result) in enumerate(zip(songs, results)):
+            fn = (result or {}).get('filename')
+            if not fn:
+                continue
+            full = locate_library_file(fn, dl_dir, slskd)
+            if full is None:
+                continue
+            order = int(song.get('downtify_track_order') or index)
+            state.playlist_catalog.upsert_track(
                 playlist_name,
-                entries,
-                playlist_subdir=None if organize else playlist_subdir,
-                slskd_dir=slskd_dir_from_downloader(state.downloader),
+                song,
+                fn,
+                full,
+                track_order=order,
             )
-        except Exception:
-            logger.exception('Failed to write M3U for {}', playlist_url)
+            linked += 1
+        if spotify_playlist_id:
+            state.playlist_catalog.ensure_playlist(
+                playlist_name,
+                spotify_id=spotify_playlist_id,
+            )
+        return linked
 
-    if entries and playlist_name:
+    batch_linked = await asyncio.to_thread(_catalog_batch)
 
-        def _catalog_batch() -> None:
-            rows: list[tuple[dict[str, Any], str, Path]] = []
-            dl_dir = Path(state.downloader.download_dir)
-            slskd = slskd_dir_from_downloader(state.downloader)
-            for song, result in zip(songs, results):
-                fn = (result or {}).get('filename')
-                if not fn:
-                    continue
-                full = locate_library_file(fn, dl_dir, slskd)
-                if full is None:
-                    continue
-                rows.append((song, fn, full))
-            if state.playlist_catalog is not None and rows:
-                state.playlist_catalog.replace_playlist_tracks(
-                    playlist_name,
-                    rows,
-                    spotify_id=spotify_playlist_id,
+    catalog_linked = batch_linked
+    if spotify_playlist_id:
+        catalog_linked = await asyncio.to_thread(
+            _rebuild_playlist_catalog_from_library,
+            playlist_name,
+            spotify_playlist_id,
+        )
+        logger.info(
+            'playlist batch: catalog has {} on-disk track(s) for {!r}',
+            catalog_linked,
+            playlist_name,
+        )
+
+    do_m3u, do_navidrome = playlist_refresh_enabled(state.settings)
+    if not generate_m3u:
+        do_m3u = False
+    if do_m3u or do_navidrome:
+        await asyncio.to_thread(
+            refresh_playlists_after_moves,
+            {playlist_name},
+            settings=state.settings,
+            downloader=state.downloader,
+            playlist_catalog=state.playlist_catalog,
+            track_index=state.track_index,
+            monitor_db=state.monitor_db,
+            navidrome_index=state.navidrome_index,
+            navidrome_scan=bool(
+                state.settings.get('navidrome', {}).get(
+                    'scan_after_download', True
                 )
-
-        await asyncio.to_thread(_catalog_batch)
-        await _sync_playlist_navidrome(playlist_name, results)
+            ),
+            playlist_spotify_cache=state.playlist_spotify_cache,
+            cover_cache=state.cover_cache,
+            metadata_cache=state.metadata_cache,
+        )
 
 
 def _playlist_subdir_for_name(playlist_name: str) -> str:
@@ -1880,6 +1977,8 @@ async def reconcile_library_endpoint() -> dict[str, Any]:
             navidrome_index=state.navidrome_index,
             refresh_playlists=True,
             playlist_spotify_cache=state.playlist_spotify_cache,
+            cover_cache=state.cover_cache,
+            metadata_cache=state.metadata_cache,
         )
         invalidate_library_paths_cache()
         return result
@@ -1896,6 +1995,11 @@ async def _schedule_playlist_refresh_after_delete(
         return
 
     async def _run() -> None:
+        logger.info(
+            'Library delete: scheduling M3U/Navidrome refresh for {}',
+            ', '.join(sorted(playlist_names)[:8])
+            + ('; ...' if len(playlist_names) > 8 else ''),
+        )
         try:
             await asyncio.to_thread(
                 refresh_playlists_after_moves,
@@ -1907,6 +2011,8 @@ async def _schedule_playlist_refresh_after_delete(
                 monitor_db=state.monitor_db,
                 navidrome_index=state.navidrome_index,
                 playlist_spotify_cache=state.playlist_spotify_cache,
+                cover_cache=state.cover_cache,
+                metadata_cache=state.metadata_cache,
             )
         except Exception:
             logger.exception(
@@ -2163,7 +2269,37 @@ async def download_missing_playlist_tracks_endpoint(
             for batch in state.playlist_batch_store.list_open_batches():
                 if batch['spotify_playlist_id'] == spotify_playlist_id:
                     state.playlist_batch_store.mark_complete(batch['id'])
-        return {'count': 0, 'message': 'Playlist already complete'}
+        linked = await asyncio.to_thread(
+            _rebuild_playlist_catalog_from_library,
+            playlist_name,
+            spotify_playlist_id,
+        )
+        do_m3u, do_navidrome = playlist_refresh_enabled(state.settings)
+        if linked and (do_m3u or do_navidrome):
+            await asyncio.to_thread(
+                refresh_playlists_after_moves,
+                {playlist_name},
+                settings=state.settings,
+                downloader=state.downloader,
+                playlist_catalog=state.playlist_catalog,
+                track_index=state.track_index,
+                monitor_db=state.monitor_db,
+                navidrome_index=state.navidrome_index,
+                navidrome_scan=bool(
+                    state.settings.get('navidrome', {}).get(
+                        'scan_after_download', True
+                    )
+                ),
+                playlist_spotify_cache=state.playlist_spotify_cache,
+                cover_cache=state.cover_cache,
+                metadata_cache=state.metadata_cache,
+            )
+        return {
+            'count': 0,
+            'message': 'Playlist already complete',
+            'catalog_linked': linked,
+            'playlist_refresh': bool(linked and (do_m3u or do_navidrome)),
+        }
 
     generate_m3u = bool(body.get('generate_m3u', True))
     batch_id: Optional[int] = None
@@ -2578,6 +2714,8 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
                     track_index=state.track_index,
                     playlist_catalog=state.playlist_catalog,
                     playlist_spotify_cache=state.playlist_spotify_cache,
+                    cover_cache=state.cover_cache,
+                    metadata_cache=state.metadata_cache,
                 )
             except Exception:
                 logger.exception('Initial check failed for playlist {}', pl.id)
@@ -2649,6 +2787,8 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
                 track_index=state.track_index,
                 playlist_catalog=state.playlist_catalog,
                 playlist_spotify_cache=state.playlist_spotify_cache,
+                cover_cache=state.cover_cache,
+                metadata_cache=state.metadata_cache,
             )
             logger.info(
                 'Manual check: downloaded {} new track(s) from "{}"',

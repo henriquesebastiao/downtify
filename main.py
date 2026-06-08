@@ -312,6 +312,11 @@ def build_app() -> FastAPI:
             return
         if api.state.playlist_catalog is None:
             return
+        logger.info(
+            'Library delete: scheduling M3U/Navidrome refresh for {}',
+            ', '.join(sorted(playlist_names)[:8])
+            + ('; ...' if len(playlist_names) > 8 else ''),
+        )
         try:
             await asyncio.to_thread(
                 refresh_playlists_after_moves,
@@ -323,6 +328,8 @@ def build_app() -> FastAPI:
                 monitor_db=api.state.monitor_db,
                 navidrome_index=api.state.navidrome_index,
                 playlist_spotify_cache=api.state.playlist_spotify_cache,
+                cover_cache=api.state.cover_cache,
+                metadata_cache=api.state.metadata_cache,
             )
         except Exception:
             logger.exception(

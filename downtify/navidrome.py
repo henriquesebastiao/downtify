@@ -15,6 +15,10 @@ from urllib.parse import urlencode
 import requests
 from loguru import logger
 
+from .library_delete import (
+    TagMismatchDeleteContext,
+    delete_if_spotify_tag_mismatch,
+)
 from .library_metadata import read_audio_metadata
 from .library_paths import locate_library_file
 from .navidrome_index import NavidromeIndex
@@ -675,21 +679,30 @@ def _song_label(song: dict[str, Any]) -> str:
 
 
 def _songs_for_playlist_sync(
-    playlist_name: str, songs: list[dict[str, Any]]
+    playlist_name: str,
+    songs: list[dict[str, Any]],
+    *,
+    delete_mismatches: Optional[TagMismatchDeleteContext] = None,
 ) -> list[dict[str, Any]]:
     """Drop rows whose on-disk path clearly does not match track metadata."""
 
     kept: list[dict[str, Any]] = []
     for song in songs:
-        if not spotify_aligns_with_file_tags(song):
-            fn = str(song.get('filename') or '').strip()
-            label = spotify_file_tag_mismatch_label(song)
-            logger.info(
-                'navidrome: skip sync for {}; Spotify does not match file tags',
-                f'{label} ({fn})' if fn else label,
-            )
+        if spotify_aligns_with_file_tags(song):
+            kept.append(song)
             continue
-        kept.append(song)
+        fn = str(song.get('filename') or '').strip()
+        label = spotify_file_tag_mismatch_label(song)
+        if delete_mismatches is not None and delete_if_spotify_tag_mismatch(
+            song,
+            delete_mismatches,
+            playlist_name=playlist_name,
+        ):
+            continue
+        logger.info(
+            'navidrome: skip sync for {}; Spotify does not match file tags',
+            f'{label} ({fn})' if fn else label,
+        )
     return kept
 
 
@@ -900,6 +913,7 @@ def sync_playlist_to_navidrome(  # noqa: PLR0914
     download_dir: Optional[Path] = None,
     comment: str = 'Synced from Spotify via Downtify',
     trigger_scan: Optional[bool] = None,
+    delete_tag_mismatches: Optional[TagMismatchDeleteContext] = None,
 ) -> Optional[PlaylistSyncResult]:
     """Match *songs* in Navidrome and create/replace a server playlist.
 
@@ -921,11 +935,21 @@ def sync_playlist_to_navidrome(  # noqa: PLR0914
         return None
 
     incoming = len(songs)
-    songs = _songs_for_playlist_sync(playlist_name, songs)
+    songs = _songs_for_playlist_sync(
+        playlist_name,
+        songs,
+        delete_mismatches=delete_tag_mismatches,
+    )
     if len(songs) < incoming:
+        action = (
+            'deleted or excluded'
+            if delete_tag_mismatches is not None
+            else 'excluded'
+        )
         logger.info(
-            'navidrome: excluded {} of {} track(s) from sync for playlist={!r} '
+            'navidrome: {} {} of {} track(s) from sync for playlist={!r} '
             '(Spotify/file tag mismatch)',
+            action,
             incoming - len(songs),
             incoming,
             playlist_name,

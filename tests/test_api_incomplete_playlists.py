@@ -520,3 +520,71 @@ def test_delete_playlist_batch_endpoint(tmp_path: Path) -> None:
         api.state.track_index = None
         api.state.downloader = None
         api.state.download_jobs.clear()
+
+
+def test_rebuild_playlist_catalog_from_library_links_all_on_disk(
+    tmp_path: Path,
+) -> None:
+    db = tmp_path / 'lib.db'
+    download_dir = tmp_path / 'downloads'
+    pl_dir = download_dir / 'Albanian Car Songs'
+    pl_dir.mkdir(parents=True)
+
+    tracks_meta = [
+        {
+            'song_id': '4uLU6hMCjMI75M1A2tKUQ1',
+            'name': 'One',
+            'artists': ['A'],
+        },
+        {
+            'song_id': '4uLU6hMCjMI75M1A2tKUQ2',
+            'name': 'Two',
+            'artists': ['B'],
+        },
+        {
+            'song_id': '4uLU6hMCjMI75M1A2tKUQ3',
+            'name': 'Three',
+            'artists': ['C'],
+        },
+    ]
+    index = TrackIndex(db)
+    for meta in tracks_meta:
+        path = pl_dir / f'{meta["artists"][0]} - {meta["name"]}.mp3'
+        path.write_bytes(b'x' * 100)
+        stored = f'Albanian Car Songs/{path.name}'
+        meta['filename'] = stored
+        index.register(meta['song_id'], stored, full_path=path)
+
+    catalog = PlaylistCatalog(db)
+    catalog.ensure_playlist('Albanian Car Songs', spotify_id='pl123')
+    catalog.replace_playlist_tracks(
+        'Albanian Car Songs',
+        [(tracks_meta[0], tracks_meta[0]['filename'], pl_dir / 'A - One.mp3')],
+        spotify_id='pl123',
+    )
+    assert len(catalog.list_tracks('Albanian Car Songs')) == 1
+
+    downloader = MagicMock()
+    downloader.download_dir = str(download_dir)
+    downloader.organize_by_artist = False
+    downloader.slskd_settings = {}
+
+    api.state.playlist_catalog = catalog
+    api.state.track_index = index
+    api.state.downloader = downloader
+
+    try:
+        with patch(
+            'downtify.api._fetch_playlist_tracks',
+            return_value=('Albanian Car Songs', tracks_meta),
+        ):
+            linked = api._rebuild_playlist_catalog_from_library(
+                'Albanian Car Songs',
+                'pl123',
+            )
+        assert linked == 3
+        assert len(catalog.list_tracks('Albanian Car Songs')) == 3
+    finally:
+        api.state.playlist_catalog = None
+        api.state.track_index = None
+        api.state.downloader = None

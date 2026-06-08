@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+from downtify.library_catalog import LibraryContext
+from downtify.library_delete import TagMismatchDeleteContext
 from downtify.navidrome import (
     NavidromeClient,
     _effective_navidrome_settings,
@@ -40,6 +42,33 @@ def test_spotify_aligns_rejects_wrong_slskd_file():
         'library_from_tags': True,
     }
     assert not spotify_aligns_with_file_tags(song)
+
+
+def test_songs_for_playlist_sync_deletes_mismatched_file(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    pl_dir = download_dir / 'Albanian Car Songs'
+    pl_dir.mkdir(parents=True)
+    wrong = pl_dir / 'Buta - Edi Rama.mp3'
+    wrong.write_bytes(b'audio')
+
+    songs = [
+        {
+            'spotify_name': 'Edi Rama',
+            'spotify_artists': ['Buta'],
+            'name': 'Ama',
+            'artists': ['Noizy', 'Era Istrefi'],
+            'filename': 'Albanian Car Songs/Buta - Edi Rama.mp3',
+            'library_from_tags': True,
+        },
+    ]
+    del_ctx = TagMismatchDeleteContext(ctx=LibraryContext(download_dir=download_dir))
+    kept = _songs_for_playlist_sync(
+        'Albanian Car Songs',
+        songs,
+        delete_mismatches=del_ctx,
+    )
+    assert kept == []
+    assert not wrong.is_file()
 
 
 def test_songs_for_playlist_sync_skips_mismatched_slskd_path():

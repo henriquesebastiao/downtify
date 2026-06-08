@@ -6,6 +6,8 @@ from pathlib import Path
 
 from downtify.library_catalog import LibraryContext, PlaylistCatalog
 from downtify.library_delete import (
+    TagMismatchDeleteContext,
+    delete_if_spotify_tag_mismatch,
     delete_library_file,
     delete_playlist_from_library,
 )
@@ -33,6 +35,38 @@ def test_delete_library_file(tmp_path: Path) -> None:
     result = delete_library_file('Artist - Song.mp3', ctx)
     assert result.get('deleted') is True
     assert not track.is_file()
+
+
+def test_delete_if_spotify_tag_mismatch(tmp_path: Path) -> None:
+    download_dir = tmp_path / 'downloads'
+    pl_dir = download_dir / 'My Playlist'
+    pl_dir.mkdir(parents=True)
+    wrong = pl_dir / 'Noizy - 100 Kile.mp3'
+    wrong.write_bytes(b'audio')
+
+    db = tmp_path / 'lib.db'
+    catalog = PlaylistCatalog(db)
+    catalog.ensure_playlist('My Playlist')
+    catalog.upsert_track(
+        'My Playlist',
+        {'song_id': '4uLU6hMCjMI75M1A2tKUQC', 'name': '100 Kile', 'artists': ['Noizy']},
+        'My Playlist/Noizy - 100 Kile.mp3',
+        wrong,
+    )
+
+    ctx = LibraryContext(download_dir=download_dir, playlist_catalog=catalog)
+    song = {
+        'spotify_name': '100 Kile',
+        'spotify_artists': ['Noizy'],
+        'name': '100',
+        'artists': ['Ledri Vula', 'Lyrical Son', 'Singi'],
+        'filename': 'My Playlist/Noizy - 100 Kile.mp3',
+        'library_from_tags': True,
+    }
+    del_ctx = TagMismatchDeleteContext(ctx=ctx, playlist_catalog=catalog)
+    assert delete_if_spotify_tag_mismatch(song, del_ctx, playlist_name='My Playlist')
+    assert not wrong.is_file()
+    assert catalog.list_tracks('My Playlist') == []
 
 
 def test_delete_playlist_from_library(tmp_path: Path) -> None:

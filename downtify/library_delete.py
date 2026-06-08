@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from loguru import logger
 
@@ -16,6 +17,103 @@ from .library_catalog import (
 from .library_paths import library_stored_path
 from .library_paths_cache import invalidate_library_paths_cache
 from .m3u import sanitize_playlist_name
+from .track_tag_match import (
+    spotify_aligns_with_file_tags,
+    spotify_file_tag_mismatch_label,
+)
+
+
+@dataclass
+class TagMismatchDeleteContext:
+    """Optional caches/indexes used when removing wrong on-disk audio."""
+
+    ctx: LibraryContext
+    cover_cache: Any = None
+    metadata_cache: Any = None
+    playlist_catalog: Any = None
+    track_index: Any = None
+    navidrome_index: Any = None
+
+
+def delete_if_spotify_tag_mismatch(
+    song: dict[str, Any],
+    del_ctx: TagMismatchDeleteContext,
+    *,
+    playlist_name: str = '',
+) -> bool:
+    """Delete a library file whose embedded tags disagree with Spotify.
+
+    Returns ``True`` when the file was removed from disk and catalog.
+    """
+
+    if not song.get('library_from_tags'):
+        return False
+    if spotify_aligns_with_file_tags(song):
+        return False
+
+    filename = str(song.get('filename') or '').strip().replace('\\', '/')
+    if not filename:
+        return False
+
+    label = spotify_file_tag_mismatch_label(song)
+    pl_note = f" playlist={playlist_name!r}" if playlist_name else ''
+    result = delete_library_file(
+        filename,
+        del_ctx.ctx,
+        cover_cache=del_ctx.cover_cache,
+        metadata_cache=del_ctx.metadata_cache,
+        playlist_catalog=del_ctx.playlist_catalog,
+        track_index=del_ctx.track_index,
+        navidrome_index=del_ctx.navidrome_index,
+    )
+    if result.get('deleted'):
+        logger.info(
+            'library: deleted wrong file {} ({}){}',
+            filename,
+            label,
+            pl_note,
+        )
+        return True
+
+    logger.warning(
+        'library: tag mismatch but delete failed for {} ({}){} — {}',
+        filename,
+        label,
+        pl_note,
+        result.get('error') or 'unknown error',
+    )
+    return False
+
+
+def tag_mismatch_delete_context_from_state(
+    state: Any,
+    *,
+    download_dir: Optional[Path] = None,
+    settings: Optional[dict[str, Any]] = None,
+) -> Optional[TagMismatchDeleteContext]:
+    """Build delete context from app ``state`` when a downloader is configured."""
+
+    downloader = getattr(state, 'downloader', None)
+    if downloader is None:
+        return None
+    dl_dir = download_dir or Path(downloader.download_dir)
+    cfg = settings if isinstance(settings, dict) else getattr(state, 'settings', {})
+    if not isinstance(cfg, dict):
+        cfg = {}
+    return TagMismatchDeleteContext(
+        ctx=library_context_from_state(
+            dl_dir,
+            cfg,
+            track_index=getattr(state, 'track_index', None),
+            metadata_cache=getattr(state, 'metadata_cache', None),
+            playlist_catalog=getattr(state, 'playlist_catalog', None),
+        ),
+        cover_cache=getattr(state, 'cover_cache', None),
+        metadata_cache=getattr(state, 'metadata_cache', None),
+        playlist_catalog=getattr(state, 'playlist_catalog', None),
+        track_index=getattr(state, 'track_index', None),
+        navidrome_index=getattr(state, 'navidrome_index', None),
+    )
 
 
 def _log_failed_deletes(
@@ -68,8 +166,6 @@ def delete_library_file(
         )
         return {'file': file_key, 'deleted': False, 'error': str(exc)}
 
-    logger.debug('Deleted library file: {}', file_key)
-
     affected_playlists: list[str] = []
     if cover_cache is not None:
         cover_cache.forget(file_key, full_path=full)
@@ -86,6 +182,18 @@ def delete_library_file(
 
     if invalidate_paths:
         invalidate_library_paths_cache()
+
+    if affected_playlists:
+        logger.info(
+            'Library delete: removed {} (playlists: {})',
+            file_key,
+            ', '.join(affected_playlists),
+        )
+    else:
+        logger.info(
+            'Library delete: removed {} (not linked to a playlist in catalog)',
+            file_key,
+        )
     return {
         'file': file_key,
         'deleted': True,
@@ -134,9 +242,15 @@ def delete_library_files(
 
     if deleted:
         invalidate_library_paths_cache()
-        logger.debug(
-            'Batch library delete: removed {} file(s)',
+        pl_note = (
+            f'; playlists: {", ".join(sorted(affected))}'
+            if affected
+            else '; no playlist catalog links'
+        )
+        logger.info(
+            'Batch library delete: removed {} file(s){}',
             len(deleted),
+            pl_note,
         )
     if failed and log_failures:
         _log_failed_deletes(failed, context='Batch library delete')
