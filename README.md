@@ -1,5 +1,5 @@
 <h1 align="center">
-  <a href="https://github.com/henriquesebastiao/downtify" target="_blank" rel="noopener noreferrer">
+  <a href="https://github.com/dx616b/downtify" target="_blank" rel="noopener noreferrer">
     <picture>
       <img width="80" src="https://github.com/user-attachments/assets/628d4334-7326-446e-9f2a-4d3ab4fc95c3">
     </picture>
@@ -18,8 +18,7 @@
 [![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify?color=blue)](/LICENSE)
 [![Docker Pulls](https://img.shields.io/docker/pulls/dx616b/spoti-to-navidrome?color=blue)](https://hub.docker.com/r/dx616b/spoti-to-navidrome)
 
-**Fork of [henriquesebastiao/downtify](https://github.com/henriquesebastiao/downtify)** — slskd, Navidrome library sync, catalog, and matching hardening.  
-Upstream PR: [#182](https://github.com/henriquesebastiao/downtify/pull/182) (pending review).
+Fork of [henriquesebastiao/downtify](https://github.com/henriquesebastiao/downtify) · Docker image `dx616b/spoti-to-navidrome`
 
 </div>
 
@@ -32,6 +31,8 @@ https://github.com/user-attachments/assets/9711efe8-a960-4e1a-8d55-e0d1c20208f7
 Downtify is a **self-hosted web app** that downloads music from Spotify — without touching the Spotify API, without needing an account, and without any Premium subscription. Just drop a link and get a fully-tagged audio file.
 
 It resolves track metadata from Spotify's public embed pages, then tries your configured **audio sources** (Soulseek via **slskd**, YouTube Music, or YouTube). Downloads are tagged with `mutagen`, indexed so playlists are not re-fetched, and can export **M3U** playlists or sync into **Navidrome**. The app runs in a single Docker container.
+
+**This fork adds:** slskd integration, Navidrome playlist sync, a library catalog for `/downloads` and `/slskd`, Search playlist batches, skip re-downloads via a track index, and tag-mismatch cleanup on playlist refresh. More detail: [`docs/features/library-catalog.md`](docs/features/library-catalog.md).
 
 ---
 
@@ -47,7 +48,6 @@ It resolves track metadata from Spotify's public embed pages, then tries your co
 | 🔑 **Zero credentials** | No Spotify API key, no account, no Premium required |
 | 🔔 **Real-time progress** | Live download progress via WebSocket — no page reload needed |
 | 🐳 **One Docker command** | Up and running in under a minute |
-| 🏠 **Home server platforms** | Available on Umbrel, CasaOS and HomeDock |
 | 🎧 **Built-in player** | Play your downloaded music straight from the web UI — progress bar, shuffle, repeat, volume |
 | 🌐 **slskd (Soulseek)** | Optional first provider via [slskd](https://github.com/slskd/slskd) — leave files in place, real download progress |
 | 🎵 **Navidrome playlists** | Sync Spotify playlists into Navidrome after download (Subsonic API, same idea as Explo) |
@@ -57,62 +57,11 @@ It resolves track metadata from Spotify's public embed pages, then tries your co
 
 ---
 
-## 📋 Fork enhancements (`feature/slskd-navidrome-library-sync`)
-
-This fork extends upstream Downtify v2.8.0 with Soulseek + Navidrome integration, a persistent library catalog, and stricter download matching. Full library detail: [`docs/features/library-catalog.md`](docs/features/library-catalog.md).
-
-### Docker image (this fork)
+## 🚀 Quick Start
 
 ```bash
 docker pull dx616b/spoti-to-navidrome:latest
-```
 
-Tags: `latest` · `slskd-dev` · short git SHA (from CI).
-
-**CI (GitHub Actions):** every push to `main` runs [Docker Hub (fork)](.github/workflows/docker-hub-fork.yml) and publishes multi-arch images. Add these repository secrets under **Settings → Secrets → Actions**:
-
-| Secret | Value |
-|--------|--------|
-| `DOCKERHUB_USERNAME` | `dx616b` |
-| `DOCKERHUB_TOKEN` | Docker Hub access token (Read & Write) |
-
-Publishing a GitHub **Release** also runs [build.yml](.github/workflows/build.yml) with version tags.
-
-### What’s new
-
-| Area | What it does |
-|------|----------------|
-| **slskd provider** | Search Soulseek via slskd, poll transfers, optional leave-in-place under `/slskd`, timeouts, YouTube fallback |
-| **Provider order** | Settings UI to enable and order slskd / YouTube Music / YouTube |
-| **Download matching** | Post-download tag + duration verify; reject audiobooks, karaoke, unwanted remix/live variants; basename title checks for slskd |
-| **Tag mismatch cleanup** | Wrong files (Spotify row ≠ embedded mutagen tags) are **deleted** on playlist refresh and excluded from M3U / Navidrome |
-| **Track index** | Spotify track ID → file path; skips re-downloads for playlists, monitor, and Search batches |
-| **Playlist catalog** | Which Spotify playlists contain each file; badges in Library; drives reconcile and Navidrome refresh |
-| **Partial playlist batches** | “Download missing” / small batches **upsert** tracks and rebuild the full on-disk catalog — never wipe a 456-track playlist down to 2 |
-| **Search playlist batches** | Download whole playlists from Search with live progress, batch tracking, and queue updates |
-| **Incomplete playlists** | API + UI to see missing tracks and queue only what’s not on disk |
-| **Library performance** | Path scan cache + SQLite metadata cache; optional cover cache under `/data/cover_cache` |
-| **Library UI** | Search, pagination, playlist filter, per-track and **batch delete**, delete whole playlist from library |
-| **Fix library paths** | Settings button + `POST /api/library/reconcile` — update paths after moves, prune stale rows, refresh M3U / Navidrome |
-| **Library paths** | Resolves `slskd/…` to `/slskd` for M3U, player, and Navidrome |
-| **M3U** | Absolute paths (`/downloads/…`, `/slskd/…`) for media servers |
-| **Navidrome sync** | Scan → match by tags + path tail → **update same playlist**; POST + batched `updatePlaylist` (no HTTP 414 on large playlists) |
-| **Navidrome matching** | Early exit on confident match; multi-artist and special-character filenames; cached song IDs per file |
-| **Playlist monitor** | Regenerates M3U and syncs Navidrome after new tracks |
-| **Download queue** | In progress / Waiting tabs, live WebSocket updates, filters, retry, clear completed |
-| **Player** | Search + playlist filter, play queue, shuffle/repeat, delete from player, slskd playback via `/media/slskd/` |
-| **iTunes genre** | Optional genre enrichment from public iTunes Search API on finalize |
-| **Logging** | HTTP access logs off by default; set `DOWNTIFY_ACCESS_LOG=full` to enable |
-
-Configure under **Settings** (⚙️): Audio sources, slskd, Playlists (M3U + Navidrome), **Library & player** (cover cache, path sync), and File organization.
-
----
-
-## 🚀 Quick Start
-
-**This fork** (slskd + Navidrome + catalog):
-
-```bash
 docker run -d -p 8000:30321 --name downtify \
   -e DOWNTIFY_PORT=30321 \
   -v /path/to/music/downloads:/downloads \
@@ -121,97 +70,19 @@ docker run -d -p 8000:30321 --name downtify \
   dx616b/spoti-to-navidrome:latest
 ```
 
-**Upstream** image:
-
-```bash
-docker run -d -p 8000:30321 --name downtify \
-  -e DOWNTIFY_PORT=30321 \
-  -v /path/to/music/downloads:/downloads \
-  -v /path/to/music/slskd:/slskd \
-  -v downtify_data:/data \
-  ghcr.io/henriquesebastiao/downtify:latest
-```
-
 Open [http://localhost:8000](http://localhost:8000), paste a Spotify link, and hit download.
 
-> Change host paths to your library folders. Omit the `/slskd` mount if you only use YouTube.
+> Map host paths to your library folders. Omit the `/slskd` mount if you only use YouTube. Paths in the UI are container paths (`/downloads`, `/slskd`). Navidrome must scan the same host folders.
 
 ### Docker Compose
 
-Copy the example file and start:
-
 ```bash
 cp docker-compose.example.yml docker-compose.yml
-# Edit ./docker-compose.yml — set your host paths for downloads and slskd
-docker compose pull
-docker compose up -d
+# edit host paths, then:
+docker compose pull && docker compose up -d
 ```
 
-See [`docker-compose.example.yml`](docker-compose.example.yml) for a ready-made stack with `/downloads` and `/slskd` volumes.
-
-Minimal setup (YouTube / YouTube Music only):
-
-```yaml
-services:
-  downtify:
-    container_name: downtify
-    image: ghcr.io/henriquesebastiao/downtify:latest
-    ports:
-      - '8000:8000'
-    volumes:
-      - ./downloads:/downloads
-      - downtify_data:/data
-    restart: unless-stopped
-
-volumes:
-  downtify_data:
-```
-
-With **slskd** and a separate Soulseek library folder (recommended for Navidrome + leave-in-place):
-
-```yaml
-services:
-  downtify:
-    container_name: downtify
-    image: dx616b/spoti-to-navidrome:latest   # fork; or ghcr.io/henriquesebastiao/downtify:latest
-    ports:
-      - '8000:30321'
-    environment:
-      - DOWNTIFY_PORT=30321
-    volumes:
-      - /path/to/music/downloads:/downloads
-      - /path/to/music/slskd:/slskd      # same folder slskd writes to
-      - downtify_data:/data
-    restart: unless-stopped
-
-volumes:
-  downtify_data:
-```
-
-> **Paths inside the container** are what you configure in the UI (`/downloads`, `/slskd`). Map host folders to those mount points. Navidrome must scan the **same** host folders.
-
-### Wrong-file cleanup (tag mismatch)
-
-If an old slskd or YouTube download landed the wrong audio but kept the right filename, playlist refresh detects **Spotify metadata ≠ embedded file tags**, deletes the bad file, and leaves the track as missing so you can re-download. Check logs for `library: deleted wrong file`.
-
-Need a custom port? Use the `DOWNTIFY_PORT` environment variable:
-
-```yaml
-ports:
-  - '8000:30321'
-environment:
-  - DOWNTIFY_PORT=30321
-```
-
----
-
-## 🏠 One-Click Install on Home Servers
-
-| Platform | Link |
-|----------|------|
-| ☂️ Umbrel | [Install on Umbrel](https://apps.umbrel.com/app/downtify) |
-| 🏠 CasaOS | [Install on CasaOS](https://casaos.zimaspace.com/) |
-| ⚓ HomeDock OS | [Install on HomeDock](https://www.homedock.cloud/apps/downtify/) |
+See [`docker-compose.example.yml`](docker-compose.example.yml).
 
 ---
 
@@ -349,9 +220,7 @@ Scan timing uses defaults in settings storage: **scan after download** (on), wai
 2. Use the **same** Navidrome user in Downtify that should own synced playlists.
 3. After upgrading, run one full playlist download or a monitor sweep to refresh the playlist.
 
-If sync reports `matched=46/55`, the missing tracks are usually **not scanned yet** in Navidrome, live outside configured music folders, could not be matched by search, or were **skipped/deleted** because file tags did not match the Spotify row — check logs for `not in library index` or `deleted wrong file`.
-
-Large playlists (400+ tracks) use POST + batched song ID updates so Navidrome does not return HTTP 414.
+If sync reports `matched=46/55`, missing tracks are usually not scanned in Navidrome yet, live outside configured music folders, or failed tag matching. Playlist refresh can delete files whose embedded tags do not match Spotify (`library: deleted wrong file` in logs).
 
 ---
 
@@ -488,11 +357,7 @@ Pull requests with new translations are very welcome — just open a PR against 
 
 ## 🤝 Contributing
 
-This fork is maintained at [dx616b/downtify](https://github.com/dx616b/downtify). Issues and PRs are welcome on that repo.
-
-Upstream [henriquesebastiao/downtify](https://github.com/henriquesebastiao/downtify) accepts contributions separately — see [**CONTRIBUTING.md**](./CONTRIBUTING.md) for coding standards (Ruff, Prettier, pytest).
-
-If this fork has been useful to you, consider leaving a ⭐ on the fork — it helps others find the slskd + Navidrome work.
+Issues and PRs welcome on [dx616b/downtify](https://github.com/dx616b/downtify). See [**CONTRIBUTING.md**](./CONTRIBUTING.md) for dev setup.
 
 ---
 
