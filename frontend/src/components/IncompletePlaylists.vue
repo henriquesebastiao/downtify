@@ -42,9 +42,14 @@
           </span>
         </span>
         <span
-          v-if="refreshing"
-          class="loading loading-spinner loading-xs shrink-0 mt-1"
-        />
+          class="inline-flex h-4 w-4 shrink-0 mt-1 items-center justify-center"
+          aria-hidden="true"
+        >
+          <span
+            class="loading loading-spinner loading-xs"
+            :class="refreshing ? 'opacity-100' : 'opacity-0'"
+          />
+        </span>
       </button>
 
       <div v-show="sectionOpen" class="mt-4 space-y-3">
@@ -126,7 +131,7 @@
                   :aria-label="statusLabelFor(pl)"
                 >
                   <span
-                    v-if="effectiveStatus(pl) === 'pending'"
+                    v-if="effectiveStatus(pl) === 'pending' || isVerifying(pl)"
                     class="loading loading-spinner loading-sm"
                   />
                   <Icon
@@ -147,13 +152,6 @@
                   </span>
                   <span class="text-xs text-base-content/60 block truncate">
                     {{ playlistSummary(displayPl(pl)) }}
-                  </span>
-                  <span
-                    v-if="isVerifying(pl)"
-                    class="text-[10px] text-base-content/40 flex items-center gap-1 mt-0.5"
-                  >
-                    <span class="loading loading-spinner loading-xs" />
-                    {{ t('search.playlistBatchesVerifying') }}
                   </span>
                 </span>
               </button>
@@ -718,6 +716,9 @@ function statusLabel(status) {
 }
 
 function statusLabelFor(pl) {
+  if (isVerifying(pl)) {
+    return t('search.playlistBatchesVerifying')
+  }
   return statusLabel(effectiveStatus(pl))
 }
 
