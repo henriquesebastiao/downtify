@@ -122,14 +122,19 @@ export default {
     forceSlskd: 'Use an slskd file instead',
     overridePlaceholder: 'Paste a YouTube or YouTube Music URL…',
     youtubeOverrideHint: 'Paste a YouTube link; Spotify metadata is kept.',
-    slskdOverridePlaceholder:
-      'Manelo | @@wibgr\\Folder\\06 - Artist - Track.mp3',
+    slskdOverridePeer: 'Peer (username)',
+    slskdOverridePeerPlaceholder: 'Manelo',
+    slskdOverrideFolder: 'Folder path',
+    slskdOverrideFolderPlaceholder:
+      '@@wibgr\\EUROPA & EUROVISIÓN\\Ivi Adamou - San Ena Oniro (2012)',
+    slskdOverrideFile: 'File name',
+    slskdOverrideFilePlaceholder:
+      '06 - Ivi Adamou, Melisses - Krata Ta Matia Sou klista.mp3',
     slskdOverrideHint:
-      'Peer username, then |, then the full remote path from slskd (starts with @@). Example: Manelo | @@wibgr\\EUROPA\\…\\track.mp3',
+      'Copy each line from slskd as shown — peer name, folder line (@@…), then the .mp3 filename. Downtify joins folder + file for you.',
     applyOverride: 'Apply',
     invalidYouTubeURL: 'Invalid YouTube URL',
-    invalidSlskdOverride:
-      'Invalid slskd path. Use: username | @@share\\folder\\file.mp3',
+    invalidSlskdOverride: 'Fill in peer, folder path, and file name.',
   },
   library: {
     title: 'Library',

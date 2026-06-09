@@ -1,3 +1,14 @@
+/** Join folder + filename lines copied from the slskd UI. */
+export function joinSlskdRemotePath(folder, file) {
+  const dir = String(folder || '').trim()
+  const name = String(file || '').trim()
+  if (!dir || !name) return ''
+  if (dir.endsWith('\\') || dir.endsWith('/')) {
+    return `${dir}${name}`
+  }
+  return `${dir}\\${name}`
+}
+
 /** Parse manual slskd override pasted from the slskd UI. */
 export function parseSlskdOverride(text) {
   const raw = String(text || '').trim()

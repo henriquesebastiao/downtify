@@ -197,17 +197,55 @@
                 : t('queue.youtubeOverrideHint')
             }}
           </p>
-          <div class="flex flex-wrap gap-2 items-center">
+          <template v-if="overrideMode[item.song.song_id] === 'slskd'">
+            <div class="grid gap-2 sm:grid-cols-2">
+              <label class="form-control sm:col-span-2">
+                <span class="label-text text-[11px] text-base-content/60 mb-1">
+                  {{ t('queue.slskdOverridePeer') }}
+                </span>
+                <input
+                  v-model="overrideSlskdPeer[item.song.song_id]"
+                  type="text"
+                  class="input input-sm w-full rounded-xl bg-base-100/80 font-mono text-xs"
+                  :placeholder="t('queue.slskdOverridePeerPlaceholder')"
+                  autocomplete="off"
+                />
+              </label>
+              <label class="form-control sm:col-span-2">
+                <span class="label-text text-[11px] text-base-content/60 mb-1">
+                  {{ t('queue.slskdOverrideFolder') }}
+                </span>
+                <input
+                  v-model="overrideSlskdFolder[item.song.song_id]"
+                  type="text"
+                  class="input input-sm w-full rounded-xl bg-base-100/80 font-mono text-xs"
+                  :placeholder="t('queue.slskdOverrideFolderPlaceholder')"
+                  autocomplete="off"
+                />
+              </label>
+              <label class="form-control sm:col-span-2">
+                <span class="label-text text-[11px] text-base-content/60 mb-1">
+                  {{ t('queue.slskdOverrideFile') }}
+                </span>
+                <input
+                  v-model="overrideSlskdFile[item.song.song_id]"
+                  type="text"
+                  class="input input-sm w-full rounded-xl bg-base-100/80 font-mono text-xs"
+                  :placeholder="t('queue.slskdOverrideFilePlaceholder')"
+                  autocomplete="off"
+                />
+              </label>
+            </div>
+          </template>
+          <div v-else class="flex flex-wrap gap-2 items-center">
             <input
               v-model="overrideText[item.song.song_id]"
               type="text"
-              class="input input-sm flex-1 min-w-[12rem] rounded-xl bg-base-100/80 font-mono text-xs"
-              :placeholder="
-                overrideMode[item.song.song_id] === 'slskd'
-                  ? t('queue.slskdOverridePlaceholder')
-                  : t('queue.overridePlaceholder')
-              "
+              class="input input-sm flex-1 min-w-[12rem] rounded-xl bg-base-100/80"
+              :placeholder="t('queue.overridePlaceholder')"
             />
+          </div>
+          <div class="flex flex-wrap gap-2 items-center pt-1">
             <button
               class="btn btn-sm btn-primary rounded-full"
               @click="applyOverride(item)"
@@ -291,7 +329,7 @@ import {
   useDownloadManager,
   syncQueueFromServer,
 } from '../model/download'
-import { parseSlskdOverride } from '../model/slskdOverride'
+import { joinSlskdRemotePath } from '../model/slskdOverride'
 import { useI18n } from '../i18n'
 
 const PAGE_SIZE = 10
@@ -304,6 +342,9 @@ const statusFilter = ref('active')
 const currentPage = ref(1)
 const overrideMode = reactive({})
 const overrideText = reactive({})
+const overrideSlskdPeer = reactive({})
+const overrideSlskdFolder = reactive({})
+const overrideSlskdFile = reactive({})
 
 function queueItemState(item) {
   if (item.isErrored()) return 'failed'
@@ -492,9 +533,10 @@ function parseYoutubeId(url) {
 
 function openOverride(id, mode) {
   overrideMode[id] = mode
-  if (overrideText[id] === undefined) {
-    overrideText[id] = ''
-  }
+  if (overrideText[id] === undefined) overrideText[id] = ''
+  if (overrideSlskdPeer[id] === undefined) overrideSlskdPeer[id] = ''
+  if (overrideSlskdFolder[id] === undefined) overrideSlskdFolder[id] = ''
+  if (overrideSlskdFile[id] === undefined) overrideSlskdFile[id] = ''
 }
 
 function closeOverride(id) {
@@ -506,13 +548,17 @@ function applyOverride(item) {
   const mode = overrideMode[id]
   const text = overrideText[id]
   if (mode === 'slskd') {
-    const parsed = parseSlskdOverride(text)
-    if (!parsed) {
+    const username = String(overrideSlskdPeer[id] || '').trim()
+    const filename = joinSlskdRemotePath(
+      overrideSlskdFolder[id],
+      overrideSlskdFile[id]
+    )
+    if (!username || !filename) {
       alert(t('queue.invalidSlskdOverride'))
       return
     }
     closeOverride(id)
-    dm.retryWithSlskd(item.song, parsed)
+    dm.retryWithSlskd(item.song, { username, filename })
     return
   }
   const videoId = parseYoutubeId(text)
