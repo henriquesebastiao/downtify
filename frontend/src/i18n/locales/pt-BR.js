@@ -291,6 +291,9 @@ export default {
       'Opcional — só ajuda em alguns fallbacks do YouTube com idade. A maioria funciona sem isso.',
     youtubeCookiesHint:
       'Não é necessário para baixas normais. Use só se fallbacks falharem por verificação de idade.',
+    youtubeDownloadTimeout: 'Tempo máximo de download do YouTube (segundos)',
+    youtubeDownloadTimeoutHint:
+      'Tempo máximo por tentativa no YouTube (download + conversão ffmpeg). Padrão 1800 (30 min). Aumente para mixes longos ou discos lentos.',
     youtubeCookiesPath: 'Caminho do arquivo de cookies (no container)',
     youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
     youtubeCookiesUpload: 'Enviar cookies.txt',

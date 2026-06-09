@@ -65,12 +65,19 @@ _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 ProgressCallback = Callable[[float, str, Optional[str]], None]
 
 
+_YT_DOWNLOAD_TIMEOUT_DEFAULT = 1800
+_YT_DOWNLOAD_TIMEOUT_MAX = 7200
+
+
 def _youtube_download_timeout_seconds(settings: dict[str, Any]) -> int:
     try:
-        value = int(settings.get('download_timeout_seconds') or 900)
+        value = int(
+            settings.get('download_timeout_seconds')
+            or _YT_DOWNLOAD_TIMEOUT_DEFAULT
+        )
     except (TypeError, ValueError):
-        value = 900
-    return min(3600, max(60, value))
+        value = _YT_DOWNLOAD_TIMEOUT_DEFAULT
+    return min(_YT_DOWNLOAD_TIMEOUT_MAX, max(60, value))
 
 
 class _ConvertHeartbeat:
@@ -1436,6 +1443,17 @@ class Downloader:
                     cand_id,
                     song.get('name'),
                 )
+                if progress_cb is not None:
+                    try:
+                        progress_cb(
+                            0.0,
+                            f'{convert_label} · timed out after {yt_timeout}s',
+                            yt_provider,
+                        )
+                    except Exception:
+                        logger.opt(exception=True).debug(
+                            'progress callback error after timeout'
+                        )
                 if idx + 1 < len(candidate_ids):
                     idx += 1
                     continue

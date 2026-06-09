@@ -323,7 +323,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'youtube': {
         'cookies_file': '',
         'cookies_from_browser': '',
-        'download_timeout_seconds': 900,
+        'download_timeout_seconds': 1800,
     },
     'slskd': {
         'enabled': False,
@@ -393,9 +393,9 @@ def _effective_youtube_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'download_timeout_seconds': _setting_int(
             raw,
             'download_timeout_seconds',
-            900,
+            1800,
             minimum=60,
-            maximum=3600,
+            maximum=7200,
         ),
     }
 
@@ -922,10 +922,14 @@ async def _run_download(  # noqa: PLR0914
         })
         return existing
 
+    _TERMINAL_JOB_STATUSES = frozenset({'done', 'error'})
+
     def progress(
         pct: float, message: str, provider: Optional[str] = None
     ) -> None:
         j = state.download_jobs.get(song_id)
+        if j and j.get('status') in _TERMINAL_JOB_STATUSES:
+            return
         if j:
             j['status'] = 'downloading'
             j['progress'] = pct
@@ -944,15 +948,15 @@ async def _run_download(  # noqa: PLR0914
             loop,
         )
 
-    yt_timeout = 900
+    yt_timeout = 1800
     if state.downloader is not None:
         yt_timeout = int(
             (state.downloader.youtube_settings or {}).get(
                 'download_timeout_seconds'
             )
-            or 900
+            or 1800
         )
-    yt_timeout = min(3600, max(60, yt_timeout))
+    yt_timeout = min(7200, max(60, yt_timeout))
 
     limiter = state.download_limiter
     try:
@@ -978,18 +982,20 @@ async def _run_download(  # noqa: PLR0914
                     ),
                     timeout=yt_timeout,
                 )
-            except TimeoutError:
-                msg = (
+            except TimeoutError as exc:
+                msg = str(exc).strip() or (
                     f'Download timed out after {yt_timeout}s '
                     '(YouTube convert or network may have stalled)'
                 )
                 logger.warning(
-                    'Download timed out for {!r} ({}) after {}s',
+                    'Download timed out for {!r} ({}) after {}s: {}',
                     song.get('name'),
                     song_id,
                     yt_timeout,
+                    msg,
                 )
                 job['status'] = 'error'
+                job['progress'] = 0
                 job['message'] = msg
                 await state.connections.broadcast({
                     'song': song,

@@ -38,9 +38,9 @@ function applyServerJob(item, job) {
     return
   }
   if (job.status === 'error') {
-    item.setError()
     item.message = job.message || ''
-    item.progress = job.progress || 0
+    item.progress = job.progress ?? 0
+    item.setError()
     return
   }
   if (job.status === 'downloading') {
@@ -229,16 +229,22 @@ API.ws_onmessage((event) => {
     }
     item.setDownloaded()
   } else if (data.status === 'error') {
-    item.wsUpdate(data)
+    item.progress = data.progress ?? 0
+    item.message = data.message || ''
+    if (data.provider) item.provider = data.provider
     item.setError()
   } else if (data.status === 'queued') {
     item.web_status = STATUS.QUEUED
     item.message = data.message || ''
     if (data.provider) item.provider = data.provider
     touchQueue()
+  } else if (data.status === 'downloading') {
+    if (!item.isErrored()) {
+      item.wsUpdate(data)
+      item.setDownloading()
+    }
   } else {
     item.wsUpdate(data)
-    item.setDownloading()
   }
   ensureQueuePoll()
   syncQueueFromServer().catch(() => {})
