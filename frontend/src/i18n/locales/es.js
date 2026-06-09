@@ -121,9 +121,23 @@ export default {
     clearAll: 'Limpiar todo',
     clearAllPrompt: '¿Eliminar todos los elementos de la cola?',
     forceAudio: 'Usar una URL de YouTube',
+    forceSlskd: 'Usar un archivo de slskd',
     overridePlaceholder: 'Pega una URL de YouTube o YouTube Music…',
+    youtubeOverrideHint:
+      'Pega un enlace de YouTube; se conservan los metadatos de Spotify.',
+    slskdOverridePeer: 'Par (usuario)',
+    slskdOverridePeerPlaceholder: 'Manelo',
+    slskdOverrideFolder: 'Ruta de carpeta',
+    slskdOverrideFolderPlaceholder:
+      '@@wibgr\\EUROPA & EUROVISIÓN\\Ivi Adamou - San Ena Oniro (2012)',
+    slskdOverrideFile: 'Nombre del archivo',
+    slskdOverrideFilePlaceholder:
+      '06 - Ivi Adamou, Melisses - Krata Ta Matia Sou klista.mp3',
+    slskdOverrideHint:
+      'Copia cada línea de slskd: usuario, carpeta (@@…) y nombre del .mp3. Downtify une carpeta y archivo.',
     applyOverride: 'Aplicar',
     invalidYouTubeURL: 'URL de YouTube no válida',
+    invalidSlskdOverride: 'Completa par, carpeta y nombre del archivo.',
   },
   library: {
     title: 'Biblioteca',

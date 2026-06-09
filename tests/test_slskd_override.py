@@ -61,33 +61,29 @@ def test_download_slskd_direct_skips_search(monkeypatch, tmp_path: Path):
 
     enqueued: list[dict[str, Any]] = []
 
-    class FakeClient:
-        base_url = 'http://slskd:5030'
+    def _fake_client(_settings: dict[str, Any]) -> MagicMock:
+        client = MagicMock()
+        client.base_url = 'http://slskd:5030'
+        client.configured.return_value = True
+        client.can_connect.return_value = True
+        client.remote_download_directories.return_value = []
 
-        def configured(self) -> bool:
-            return True
-
-        def can_connect(self) -> bool:
-            return True
-
-        def enqueue_download(self, row: dict[str, Any]) -> bool:
+        def _enqueue(row: dict[str, Any]) -> bool:
             enqueued.append(dict(row))
             return True
 
-        def find_transfer(self, username: str, filename: str) -> dict[str, Any]:
-            return {
-                'state': 'Completed',
-                'bytesTransferred': 80_000,
-                'size': 80_000,
-                'percentComplete': 100,
-            }
-
-        def remote_download_directories(self) -> list[str]:
-            return []
+        client.enqueue_download.side_effect = _enqueue
+        client.find_transfer.return_value = {
+            'state': 'Completed',
+            'bytesTransferred': 80_000,
+            'size': 80_000,
+            'percentComplete': 100,
+        }
+        return client
 
     monkeypatch.setattr(
         'downtify.slskd_provider.SlskdClient',
-        lambda settings: FakeClient(),
+        _fake_client,
     )
     monkeypatch.setattr(
         'downtify.slskd_provider._find_on_disk_for_song',
