@@ -5,27 +5,27 @@ updates:
     schedule:
       interval: "daily"
     assignees:
-      - "henriquesebastiao"
+      - "dx616b"
 
   - package-ecosystem: "docker-compose"
     directory: "/"
     schedule:
       interval: "daily"
     assignees:
-      - "henriquesebastiao"
+      - "dx616b"
 
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "daily"
     assignees:
-      - "henriquesebastiao"
+      - "dx616b"
 
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "daily"
     assignees:
-      - "henriquesebastiao"
+      - "dx616b"
     exclude-paths:
-       - "requirements.txt"
+      - "requirements.txt"
