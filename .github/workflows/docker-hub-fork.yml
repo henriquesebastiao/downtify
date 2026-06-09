@@ -31,7 +31,7 @@ jobs:
         with:
           images: dx616b/spoti-to-navidrome
           tags: |
-            type=raw,value=latest,enable={{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest
             type=raw,value=slskd-dev
             type=sha,prefix=,format=short
 
