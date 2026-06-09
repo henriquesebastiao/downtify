@@ -14,11 +14,12 @@
 
 <div align="center">
 
-[![Test](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml/badge.svg)](https://github.com/henriquesebastiao/downtify/actions/workflows/test.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/henriquesebastiao/downtify?color=blue)](https://github.com/henriquesebastiao/downtify/releases)
+[![Test](https://github.com/dx616b/downtify/actions/workflows/test.yml/badge.svg)](https://github.com/dx616b/downtify/actions/workflows/test.yml)
 [![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify?color=blue)](/LICENSE)
-[![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/downtify?color=blue)](https://hub.docker.com/r/henriquesebastiao/downtify)
-[![Visitors](https://api.visitorbadge.io/api/visitors?path=henriquesebastiao%2Fdowntify&label=repository%20visits&countColor=%231182c3&style=flat)](https://github.com/henriquesebastiao/downtify)
+[![Docker Pulls](https://img.shields.io/docker/pulls/dx616b/spoti-to-navidrome?color=blue)](https://hub.docker.com/r/dx616b/spoti-to-navidrome)
+
+**Fork of [henriquesebastiao/downtify](https://github.com/henriquesebastiao/downtify)** — slskd, Navidrome library sync, catalog, and matching hardening.  
+Upstream PR: [#182](https://github.com/henriquesebastiao/downtify/pull/182) (pending review).
 
 </div>
 
@@ -56,31 +57,62 @@ It resolves track metadata from Spotify's public embed pages, then tries your co
 
 ---
 
-## 📋 Recent changes (feature branch)
+## 📋 Fork enhancements (`feature/slskd-navidrome-library-sync`)
 
-Summary of work in [PR #182](https://github.com/henriquesebastiao/downtify/pull/182) (slskd, Navidrome, library catalog). Full detail: [`docs/features/library-catalog.md`](docs/features/library-catalog.md) and [`CHANGELOG`](CHANGELOG).
+This fork extends upstream Downtify v2.8.0 with Soulseek + Navidrome integration, a persistent library catalog, and stricter download matching. Full library detail: [`docs/features/library-catalog.md`](docs/features/library-catalog.md).
+
+### Docker image (this fork)
+
+```bash
+docker pull dx616b/spoti-to-navidrome:latest
+```
+
+Tags: `latest` · `slskd-dev` (same build).
+
+### What’s new
 
 | Area | What it does |
 |------|----------------|
-| **slskd provider** | Search Soulseek, poll transfers, optional leave-in-place under `/slskd`, timeouts and YouTube fallback |
+| **slskd provider** | Search Soulseek via slskd, poll transfers, optional leave-in-place under `/slskd`, timeouts, YouTube fallback |
 | **Provider order** | Settings UI to enable and order slskd / YouTube Music / YouTube |
-| **Track index** | Spotify track ID → file path; skips re-downloads for playlists and monitor |
-| **Playlist catalog** | Tracks which Spotify playlists contain each file; badges in Library; used for reconcile and Navidrome refresh |
-| **Library performance** | Path scan cache + SQLite metadata cache for fast `/list`; optional cover cache under `/data/cover_cache` |
-| **Library UI** | Search, pagination, refresh; navbar search hidden on Library page |
-| **Fix library paths** | Settings button (and `POST /api/library/reconcile`) after you move files on disk — updates indexes, prunes deleted files, can refresh M3U / Navidrome |
-| **Library paths** | Resolves `slskd/…` entries to `/slskd` for M3U, player, and Navidrome matching |
+| **Download matching** | Post-download tag + duration verify; reject audiobooks, karaoke, unwanted remix/live variants; basename title checks for slskd |
+| **Tag mismatch cleanup** | Wrong files (Spotify row ≠ embedded mutagen tags) are **deleted** on playlist refresh and excluded from M3U / Navidrome |
+| **Track index** | Spotify track ID → file path; skips re-downloads for playlists, monitor, and Search batches |
+| **Playlist catalog** | Which Spotify playlists contain each file; badges in Library; drives reconcile and Navidrome refresh |
+| **Partial playlist batches** | “Download missing” / small batches **upsert** tracks and rebuild the full on-disk catalog — never wipe a 456-track playlist down to 2 |
+| **Search playlist batches** | Download whole playlists from Search with live progress, batch tracking, and queue updates |
+| **Incomplete playlists** | API + UI to see missing tracks and queue only what’s not on disk |
+| **Library performance** | Path scan cache + SQLite metadata cache; optional cover cache under `/data/cover_cache` |
+| **Library UI** | Search, pagination, playlist filter, per-track and **batch delete**, delete whole playlist from library |
+| **Fix library paths** | Settings button + `POST /api/library/reconcile` — update paths after moves, prune stale rows, refresh M3U / Navidrome |
+| **Library paths** | Resolves `slskd/…` to `/slskd` for M3U, player, and Navidrome |
 | **M3U** | Absolute paths (`/downloads/…`, `/slskd/…`) for media servers |
-| **Navidrome** | Scan → match → **update same playlist**; POST/batched sync for large playlists (no HTTP 414) |
-| **Playlist monitor** | Regenerates M3U and can sync Navidrome after new tracks |
-| **Download queue** | Filters, retry, clear completed |
-| **Player / library** | Tag-based metadata; plays slskd files via `/media/slskd/`; cover cache optional in Settings |
+| **Navidrome sync** | Scan → match by tags + path tail → **update same playlist**; POST + batched `updatePlaylist` (no HTTP 414 on large playlists) |
+| **Navidrome matching** | Early exit on confident match; multi-artist and special-character filenames; cached song IDs per file |
+| **Playlist monitor** | Regenerates M3U and syncs Navidrome after new tracks |
+| **Download queue** | In progress / Waiting tabs, live WebSocket updates, filters, retry, clear completed |
+| **Player** | Search + playlist filter, play queue, shuffle/repeat, delete from player, slskd playback via `/media/slskd/` |
+| **iTunes genre** | Optional genre enrichment from public iTunes Search API on finalize |
+| **Logging** | HTTP access logs off by default; set `DOWNTIFY_ACCESS_LOG=full` to enable |
 
 Configure under **Settings** (⚙️): Audio sources, slskd, Playlists (M3U + Navidrome), **Library & player** (cover cache, path sync), and File organization.
 
 ---
 
 ## 🚀 Quick Start
+
+**This fork** (slskd + Navidrome + catalog):
+
+```bash
+docker run -d -p 8000:30321 --name downtify \
+  -e DOWNTIFY_PORT=30321 \
+  -v /path/to/music/downloads:/downloads \
+  -v /path/to/music/slskd:/slskd \
+  -v downtify_data:/data \
+  dx616b/spoti-to-navidrome:latest
+```
+
+**Upstream** image:
 
 ```bash
 docker run -d -p 8000:30321 --name downtify \
@@ -132,7 +164,7 @@ With **slskd** and a separate Soulseek library folder (recommended for Navidrome
 services:
   downtify:
     container_name: downtify
-    image: ghcr.io/henriquesebastiao/downtify:latest
+    image: dx616b/spoti-to-navidrome:latest   # fork; or ghcr.io/henriquesebastiao/downtify:latest
     ports:
       - '8000:30321'
     environment:
@@ -148,6 +180,10 @@ volumes:
 ```
 
 > **Paths inside the container** are what you configure in the UI (`/downloads`, `/slskd`). Map host folders to those mount points. Navidrome must scan the **same** host folders.
+
+### Wrong-file cleanup (tag mismatch)
+
+If an old slskd or YouTube download landed the wrong audio but kept the right filename, playlist refresh detects **Spotify metadata ≠ embedded file tags**, deletes the bad file, and leaves the track as missing so you can re-download. Check logs for `library: deleted wrong file`.
 
 Need a custom port? Use the `DOWNTIFY_PORT` environment variable:
 
@@ -304,7 +340,9 @@ Scan timing uses defaults in settings storage: **scan after download** (on), wai
 2. Use the **same** Navidrome user in Downtify that should own synced playlists.
 3. After upgrading, run one full playlist download or a monitor sweep to refresh the playlist.
 
-If sync reports `matched=46/55`, the missing tracks are usually **not scanned yet** in Navidrome, live outside configured music folders, or could not be matched by search — check Downtify logs for `not in library index`.
+If sync reports `matched=46/55`, the missing tracks are usually **not scanned yet** in Navidrome, live outside configured music folders, could not be matched by search, or were **skipped/deleted** because file tags did not match the Spotify row — check logs for `not in library index` or `deleted wrong file`.
+
+Large playlists (400+ tracks) use POST + batched song ID updates so Navidrome does not return HTTP 414.
 
 ---
 
@@ -385,12 +423,15 @@ Downtify ships with a clean web player so you don't need a separate app to liste
 
 - Big now-playing card with embedded **album art** and a progress bar (click or drag to seek)
 - Play / pause / previous / next
+- **Search** and **playlist filter** to narrow the track list
+- **Play queue** — add tracks without losing your place in the list
+- **Delete** tracks from the player (removes file + catalog; refreshes playlists in background)
 - **Shuffle** with a stable random order across the whole queue
 - **Repeat** modes: off → all → one
 - Volume slider with mute toggle (volume is remembered between sessions)
 - Side queue listing every track in your library, each one with its own thumbnail and the currently playing one highlighted
 
-The **Library** and **Player** read **embedded tags** (title, artist, album) via mutagen, with filename parsing as a fallback. slskd tracks under `slskd/…` are played through `/media/slskd/…` URLs. Cover art comes from tags when present. Playback uses the browser’s HTML5 audio element — no extra dependencies.
+The **Library** and **Player** read **embedded tags** (title, artist, album) via mutagen, with filename parsing as a fallback. slskd tracks under `slskd/…` are played through `/media/slskd/…` URLs. Cover art comes from tags when present (or from the optional disk cache). Playback uses the browser’s HTML5 audio element — no extra dependencies.
 
 ---
 
@@ -438,12 +479,11 @@ Pull requests with new translations are very welcome — just open a PR against 
 
 ## 🤝 Contributing
 
-Contributions, issues and feature requests are welcome!
-Check the [issues page](https://github.com/henriquesebastiao/downtify/issues) or open a pull request.
+This fork is maintained at [dx616b/downtify](https://github.com/dx616b/downtify). Issues and PRs are welcome on that repo.
 
-Before sending a pull request, please read [**CONTRIBUTING.md**](./CONTRIBUTING.md) — it covers local setup, the project's **coding and formatting standards** (Ruff for Python, Prettier for the frontend), testing requirements, commit conventions, and the PR checklist. All contributions are expected to follow those standards.
+Upstream [henriquesebastiao/downtify](https://github.com/henriquesebastiao/downtify) accepts contributions separately — see [**CONTRIBUTING.md**](./CONTRIBUTING.md) for coding standards (Ruff, Prettier, pytest).
 
-If Downtify has been useful to you, consider leaving a ⭐ — it helps the project grow and reach more people!
+If this fork has been useful to you, consider leaving a ⭐ on the fork — it helps others find the slskd + Navidrome work.
 
 ---
 
