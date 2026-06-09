@@ -7,7 +7,7 @@ const settings = ref({
   youtube: {
     cookies_file: '',
     cookies_from_browser: '',
-    download_timeout_seconds: 900,
+    download_timeout_seconds: 1800,
     cookies_file_exists: false,
     cookies_looks_authenticated: false,
     cookies_auth_names: [],

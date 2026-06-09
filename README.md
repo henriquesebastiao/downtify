@@ -67,7 +67,16 @@ This fork extends upstream Downtify v2.8.0 with Soulseek + Navidrome integration
 docker pull dx616b/spoti-to-navidrome:latest
 ```
 
-Tags: `latest` · `slskd-dev` (same build).
+Tags: `latest` · `slskd-dev` · short git SHA (from CI).
+
+**CI (GitHub Actions):** every push to `main` runs [Docker Hub (fork)](.github/workflows/docker-hub-fork.yml) and publishes multi-arch images. Add these repository secrets under **Settings → Secrets → Actions**:
+
+| Secret | Value |
+|--------|--------|
+| `DOCKERHUB_USERNAME` | `dx616b` |
+| `DOCKERHUB_TOKEN` | Docker Hub access token (Read & Write) |
+
+Publishing a GitHub **Release** also runs [build.yml](.github/workflows/build.yml) with version tags.
 
 ### What’s new
 

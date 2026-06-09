@@ -16,7 +16,7 @@ jobs:
       - name: Extract version from git tags
         id: version
         run: echo "VERSION=$(git describe --tags --always | cut -d'-' -f1)" >> "$GITHUB_OUTPUT"
-    
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
 
@@ -28,17 +28,15 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           annotations: |
-            type=org.opencontainers.image.description, value=Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker.
-            type=org.opencontainers.image.url, value=https://github.com/henriquesebastiao/downtify
-            type=org.opencontainers.image.source, value=https://github.com/henriquesebastiao/downtify
+            type=org.opencontainers.image.description, value=Self-hosted Spotify downloader with slskd and Navidrome sync (dx616b fork).
+            type=org.opencontainers.image.url, value=https://github.com/dx616b/downtify
+            type=org.opencontainers.image.source, value=https://github.com/dx616b/downtify
             type=org.opencontainers.image.version, value=${{ steps.version.outputs.VERSION }}
-            type=org.opencontainers.image.authors, value=Henrique Sebastião <contato@henriquesebastiao.com>
             type=org.opencontainers.image.licenses, value=GPL-3.0
-            type=org.opencontainers.image.vendor, value=Henrique Sebastião
             type=org.opencontainers.image.base.name, value=python:3.13-alpine
             type=org.opencontainers.image.title, value=Downtify
-    
-      - name: Login to DockerHub
+
+      - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -58,8 +56,8 @@ jobs:
           context: .
           push: true
           tags: |
-            henriquesebastiao/downtify:latest
-            henriquesebastiao/downtify:${{ steps.version.outputs.VERSION }}
+            dx616b/spoti-to-navidrome:latest
+            dx616b/spoti-to-navidrome:${{ steps.version.outputs.VERSION }}
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
           platforms: linux/amd64,linux/arm64

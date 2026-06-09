@@ -70,10 +70,12 @@ export default {
     playlistBatchesLoading: 'Loading playlists…',
     playlistBatchesTracksLoading: 'Loading missing tracks…',
     playlistBatchesVerifying: 'Checking against Spotify…',
-    playlistBatchesSearchPlaceholder: 'Filter playlists or tracks…',
+    playlistBatchesSearchPlaceholder: 'Filter playlists or track titles…',
     playlistBatchesNoMatch: 'No playlists match your filter.',
     playlistBatchesNoTrackMatch:
-      'No tracks match your filter in this playlist.',
+      'No missing tracks match your filter in this playlist.',
+    playlistBatchesNoMissingLoaded:
+      'Missing track list not loaded yet — collapse and expand again, or clear the filter.',
     playlistBatchesExpandAll: 'Expand all',
     playlistBatchesCollapseAll: 'Collapse all',
     incompleteTitle: 'Incomplete playlists',
@@ -288,6 +290,9 @@ export default {
       'Optional — only helps with some age-restricted YouTube fallbacks. Most tracks work without this.',
     youtubeCookiesHint:
       'Not required for normal downloads. Use only if YouTube fallbacks fail on age-restricted videos.',
+    youtubeDownloadTimeout: 'YouTube download timeout (seconds)',
+    youtubeDownloadTimeoutHint:
+      'Max time per YouTube attempt (download + ffmpeg convert). Default 1800 (30 min). Raise for long mixes or slow disks.',
     youtubeCookiesPath: 'Cookies file path (inside container)',
     youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
     youtubeCookiesUpload: 'Upload cookies.txt',

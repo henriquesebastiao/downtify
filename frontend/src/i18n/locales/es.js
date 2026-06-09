@@ -71,10 +71,12 @@ export default {
     playlistBatchesLoading: 'Cargando listas…',
     playlistBatchesTracksLoading: 'Cargando pistas pendientes…',
     playlistBatchesVerifying: 'Comprobando con Spotify…',
-    playlistBatchesSearchPlaceholder: 'Filtrar listas o pistas…',
+    playlistBatchesSearchPlaceholder: 'Filtrar listas o títulos de pistas…',
     playlistBatchesNoMatch: 'Ninguna lista coincide con el filtro.',
     playlistBatchesNoTrackMatch:
-      'Ninguna pista coincide con el filtro en esta lista.',
+      'Ninguna pista pendiente coincide con el filtro en esta lista.',
+    playlistBatchesNoMissingLoaded:
+      'La lista de pendientes no se cargó — contrae y expande de nuevo, o borra el filtro.',
     playlistBatchesExpandAll: 'Expandir todo',
     playlistBatchesCollapseAll: 'Contraer todo',
     incompleteTitle: 'Listas incompletas',
@@ -294,6 +296,9 @@ export default {
       'Opcional — solo ayuda con algunos fallbacks de YouTube con edad. La mayoría funciona sin esto.',
     youtubeCookiesHint:
       'No hace falta para descargas normales. Úsalo solo si fallan vídeos con verificación de edad.',
+    youtubeDownloadTimeout: 'Tiempo máximo de descarga de YouTube (segundos)',
+    youtubeDownloadTimeoutHint:
+      'Tiempo máximo por intento de YouTube (descarga + conversión ffmpeg). Por defecto 1800 (30 min). Súbelo para mezclas largas o discos lentos.',
     youtubeCookiesPath: 'Ruta del archivo de cookies (en el contenedor)',
     youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
     youtubeCookiesUpload: 'Subir cookies.txt',

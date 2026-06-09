@@ -413,10 +413,16 @@ def test_duration_matches_song_rejects_hour_long_for_short_track():
 
 
 def test_youtube_download_timeout_seconds_clamped():
-    assert downloader_mod._youtube_download_timeout_seconds({}) == 900
+    assert downloader_mod._youtube_download_timeout_seconds({}) == 1800
     assert (
         downloader_mod._youtube_download_timeout_seconds({
             'download_timeout_seconds': 30,
         })
         == 60
+    )
+    assert (
+        downloader_mod._youtube_download_timeout_seconds({
+            'download_timeout_seconds': 99999,
+        })
+        == 7200
     )
