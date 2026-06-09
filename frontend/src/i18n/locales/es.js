@@ -16,6 +16,7 @@ export default {
   },
   nav: {
     home: 'Inicio',
+    search: 'Buscar',
     library: 'Biblioteca',
     monitor: 'Monitor de listas',
     queue: 'Cola',
@@ -33,6 +34,13 @@ export default {
     playlists: 'Listas',
   },
   search: {
+    submitSearch: 'Buscar',
+    browsePlaylist: 'Ver pistas de la lista',
+    browsePlaylistHint:
+      'Ver pistas de la lista (pega antes un enlace de playlist de Spotify)',
+    downloadLink: 'Descargar este enlace',
+    downloadLinkHint:
+      'Descargar tema o álbum (pega antes un enlace de Spotify)',
     placeholder: 'Busca o pega un enlace de Spotify o YouTube Music…',
     title: 'Resultados de búsqueda',
     matchesFor: 'Mostrando coincidencias para',
@@ -45,6 +53,42 @@ export default {
     emptyHint:
       'Prueba con otra búsqueda — artista + título suele funcionar mejor.',
     openOnSpotify: 'Abrir en Spotify',
+    playlistTitle: 'Lista de Spotify',
+    playlistSubtitle:
+      'Elige pistas para descargar una a una, o descarga la lista completa.',
+    openPlaylistOnSpotify: 'Abrir lista en Spotify',
+    downloadEntirePlaylist: 'Descargar lista completa',
+    playlistBatchesTitle: 'Descargas de listas',
+    playlistBatchesHint:
+      'Listas de Spotify descargadas con Downtify. Expande para ver pistas pendientes.',
+    playlistBatchStatusComplete: 'Completa',
+    playlistBatchComplete: 'Todas las pistas están en tu biblioteca.',
+    playlistBatchesEmpty: 'Aún no hay descargas de listas registradas.',
+    playlistBatchesEmptyHint:
+      'Descarga una lista de Spotify para verla aquí con el recuento de pendientes.',
+    playlistBatchesLoadFailed:
+      'No se pudieron cargar las descargas de listas. ¿Backend actualizado?',
+    playlistBatchesLoading: 'Cargando listas…',
+    playlistBatchesTracksLoading: 'Cargando pistas pendientes…',
+    playlistBatchesVerifying: 'Comprobando con Spotify…',
+    playlistBatchesSearchPlaceholder: 'Filtrar listas o pistas…',
+    playlistBatchesNoMatch: 'Ninguna lista coincide con el filtro.',
+    playlistBatchesNoTrackMatch:
+      'Ninguna pista coincide con el filtro en esta lista.',
+    playlistBatchesExpandAll: 'Expandir todo',
+    playlistBatchesCollapseAll: 'Contraer todo',
+    incompleteTitle: 'Listas incompletas',
+    incompleteHint:
+      'Descargas de listas con pistas pendientes. Expande para ver cuáles faltan.',
+    incompleteSummary:
+      '{downloaded}/{expected} descargadas · {missing} pendientes',
+    incompleteInProgress: 'En curso',
+    incompleteFinished: 'Incompleta',
+    downloadMissing: 'Descargar pendientes ({count})',
+    playPlaylist: 'Reproducir lista',
+    playlistBatchNothingToPlay:
+      'Aún no hay pistas descargadas de esta lista en tu biblioteca.',
+    incompleteTracksLoading: 'Lista no disponible — prueba a refrescar.',
     inQueue: 'En la cola',
     download: 'Descargar',
     previousPage: 'Página anterior',
@@ -52,11 +96,11 @@ export default {
   },
   queue: {
     title: 'Cola de descargas',
-    subtitle:
-      'Canciones en cola. Filtra por activas o fallidas. Una playlist nueva de Spotify quita las terminadas y conserva los fallos.',
     empty: 'No hay nada en la cola ahora mismo.',
     emptyHint: 'Busca una canción y pulsa descargar para empezar.',
     emptyFilter: 'Ninguna pista coincide con este filtro.',
+    emptyActiveWithWaiting:
+      'Aún no hay descargas en curso. {count} en espera — abre la pestaña En espera.',
     filterAll: 'Todas',
     filterActive: 'En curso',
     filterQueued: 'En espera',
@@ -83,6 +127,8 @@ export default {
     title: 'Biblioteca',
     subtitle:
       'Música que ya has descargado. Escucha, descarga otra vez o elimina.',
+    searchPlaceholder: 'Buscar título, artista, álbum o ruta…',
+    searchNoResults: 'Ninguna pista coincide con la búsqueda.',
     empty: 'Aún no hay descargas.',
     emptyHint: 'Encuentra una canción para empezar a llenar tu biblioteca.',
     failedLoad: 'No se pudieron cargar las descargas.',
@@ -90,9 +136,29 @@ export default {
     deletePrompt: '¿Eliminar "{file}"?',
     countOne: '{count} archivo en tu biblioteca',
     countMany: '{count} archivos en tu biblioteca',
+    filteredCount: '{shown} de {total} pistas',
+    showingRange: 'Mostrando {from}–{to} de {total}',
+    pageSize: 'Por página',
+    firstPage: 'Primera página',
+    lastPage: 'Última página',
     downloadToDevice: 'Descargar al dispositivo',
     deleteFile: 'Eliminar archivo',
     play: 'Reproducir',
+    selectAllFiltered: 'Seleccionar página',
+    selectAllFilteredCount: 'Seleccionar {count} filtrados',
+    clearSelection: 'Quitar selección',
+    deleteSelected: 'Eliminar selección ({count})',
+    deleteSelectedPrompt:
+      '¿Eliminar {count} pista(s)? Los archivos se borran del disco; M3U y Navidrome se actualizan en segundo plano.',
+    batchDeletePartial:
+      'Eliminadas {ok} pista(s). {failed} no se pudieron eliminar.',
+    filterByPlaylist: 'Lista',
+    filterAllPlaylists: 'Todas las listas',
+    deletePlaylist: 'Eliminar lista',
+    deletePlaylistPrompt:
+      '¿Eliminar todas las pistas de "{name}"? Se quitan archivos y la entrada del catálogo. M3U y Navidrome se actualizan en segundo plano.',
+    playlistDeleted: 'Lista "{name}" eliminada ({count} pistas).',
+    playlistDeleteFailed: 'No se pudo eliminar la lista "{name}".',
   },
   monitor: {
     title: 'Monitor de listas',
@@ -186,6 +252,31 @@ export default {
     navidromeAdminUser: 'Usuario admin (opcional, para escaneo)',
     navidromeAdminPassword: 'Contraseña admin (opcional)',
     navidromePublic: 'Lista pública en Navidrome',
+    librarySection: 'Biblioteca y reproductor',
+    cacheCoverArt: 'Guardar carátulas en disco',
+    cacheCoverArtHint:
+      'Guarda las imágenes en /data/cover_cache para cargar más rápido el reproductor y la biblioteca. Usa espacio extra; puedes desactivarlo cuando quieras.',
+    reconcileSection: 'Sincronizar rutas',
+    reconcileIntro:
+      'Si moviste archivos, corrige las rutas guardadas. M3U y Navidrome solo si están activados arriba.',
+    reconcileButton: 'Corregir rutas de la biblioteca',
+    reconcileRunning: 'Escaneando biblioteca…',
+    reconcileDonePathsOnly: 'Actualizadas {count} ruta(s).',
+    reconcileDone:
+      'Actualizadas {count} ruta(s). Listas: {playlists} ({extras})',
+    reconcileM3u: 'M3U',
+    reconcileNavidrome: 'Navidrome',
+    reconcileNone:
+      'No hay archivos movidos. Úsalo tras cambiar de carpeta (mismo nombre y tamaño). Al borrar, se limpia aquí si el archivo ya no existe.',
+    reconcilePrunedSimple:
+      'Eliminadas {pruned} entradas obsoletas (archivos ya borrados).',
+    reconcilePrunedBackfill:
+      'Eliminadas {pruned} entradas. Indexadas {backfilled} pistas para futuros cambios de ruta.',
+    reconcilePrunedPlaylists:
+      'Eliminadas {pruned} entradas. Listas actualizadas: {playlists} ({extras})',
+    reconcileBackfillOnly:
+      'Indexadas {backfilled} pistas. No se detectaron movimientos ahora.',
+    reconcileError: 'Error al reconciliar la biblioteca.',
     organizationSection: 'Organización de archivos',
     organizeByArtist: 'Organizar por artista',
     organizeByArtistHint:
@@ -264,6 +355,9 @@ export default {
     nowPlaying: 'Sonando ahora',
     upNext: 'A continuación',
     playFromLibrary: 'Abrir en el reproductor',
+    selectAll: 'Seleccionar todo',
+    selectedCount: '{selected} de {total} seleccionados',
+    deleteTrack: 'Quitar de la biblioteca',
     countOne: '{count} pista',
     countMany: '{count} pistas',
   },

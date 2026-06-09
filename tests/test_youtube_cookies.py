@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+from fastapi import HTTPException
+
 from downtify.api import (
     DEFAULT_SETTINGS,
     _effective_youtube_settings,
@@ -17,8 +20,8 @@ from downtify.downloader import (
     _youtube_download_profiles,
     _youtube_extractor_args,
     _ytdlp_format_unavailable_retry,
-    _ytdlp_should_try_alternate_video,
     _ytdlp_should_retry_without_cookies,
+    _ytdlp_should_try_alternate_video,
     apply_ytdlp_cookie_opts,
     inspect_youtube_cookies,
     ytdlp_cookies_configured,
@@ -27,7 +30,7 @@ from downtify.downloader import (
 
 def test_default_settings_includes_youtube():
     assert 'youtube' in DEFAULT_SETTINGS
-    assert DEFAULT_SETTINGS['youtube']['cookies_file'] == ''
+    assert not DEFAULT_SETTINGS['youtube']['cookies_file']
 
 
 def test_effective_youtube_settings_strips_paths():
@@ -183,9 +186,6 @@ def test_ytdlp_audio_formats_has_fallbacks():
 
 
 def test_validate_youtube_cookies_bytes_rejects_empty():
-    import pytest
-    from fastapi import HTTPException
-
     with pytest.raises(HTTPException) as exc:
         _validate_youtube_cookies_bytes(b'   ')
     assert exc.value.status_code == 400

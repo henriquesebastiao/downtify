@@ -5,11 +5,20 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-import downtify.api as api
+from downtify import api
 from downtify.downloader import Downloader
 from downtify.track_index import TrackIndex
 
 SPOTIFY_ID = '4uLU6hMCjMI75M1A2tKUQC'
+
+
+def _run_download(coro):
+    loop = asyncio.new_event_loop()
+    try:
+        api.state.loop = loop
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 def test_run_download_skips_when_matching_file_exists(tmp_path):
@@ -31,12 +40,11 @@ def test_run_download_skips_when_matching_file_exists(tmp_path):
     prev_connections = api.state.connections
     try:
         api.state.downloader = d
-        api.state.loop = asyncio.new_event_loop()
         api.state.connections = MagicMock()
         api.state.connections.broadcast = AsyncMock()
         song_id = api._register_job(song, status='queued')
 
-        filename = asyncio.run(api._run_download(song, song_id))
+        filename = _run_download(api._run_download(song, song_id))
 
         assert filename == 'Artist - Track.mp3'
         assert api.state.download_jobs[song_id]['status'] == 'done'
@@ -72,7 +80,6 @@ def test_run_download_skips_via_global_library(tmp_path):
     try:
         api.state.downloader = d
         api.state.track_index = library
-        api.state.loop = asyncio.new_event_loop()
         api.state.connections = MagicMock()
         api.state.connections.broadcast = AsyncMock()
         song = {
@@ -82,12 +89,14 @@ def test_run_download_skips_via_global_library(tmp_path):
         }
         song_id = api._register_job(song, status='queued')
 
-        filename = asyncio.run(
+        filename = _run_download(
             api._run_download(song, song_id, subdir='New Playlist')
         )
 
         assert filename == 'Other Playlist/Artist - Track.mp3'
-        assert api.state.download_jobs[song_id]['message'] == 'Already in library'
+        assert (
+            api.state.download_jobs[song_id]['message'] == 'Already in library'
+        )
         d.download.assert_not_called()
     finally:
         api.state.download_jobs.clear()
@@ -117,12 +126,11 @@ def test_run_download_skips_in_playlist_subdir(tmp_path):
     prev_connections = api.state.connections
     try:
         api.state.downloader = d
-        api.state.loop = asyncio.new_event_loop()
         api.state.connections = MagicMock()
         api.state.connections.broadcast = AsyncMock()
         song_id = api._register_job(song, status='queued')
 
-        filename = asyncio.run(
+        filename = _run_download(
             api._run_download(song, song_id, subdir='My Playlist')
         )
 

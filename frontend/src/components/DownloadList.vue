@@ -6,14 +6,8 @@
         <h1 class="text-2xl font-bold tracking-tight">
           {{ t('queue.title') }}
         </h1>
-        <p class="mt-1 text-sm text-base-content/60">
-          {{ t('queue.subtitle') }}
-        </p>
       </div>
-      <div
-        v-if="pt.downloadQueue.value.length > 0"
-        class="flex flex-wrap gap-2 justify-end"
-      >
+      <div v-if="queueLength > 0" class="flex flex-wrap gap-2 justify-end">
         <button
           v-if="failedCount > 0"
           class="btn btn-sm h-11 px-4 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100"
@@ -42,7 +36,7 @@
 
     <!-- Filters -->
     <div
-      v-if="pt.downloadQueue.value.length > 0"
+      v-if="queueLength > 0"
       class="mb-6 flex flex-wrap gap-2"
       role="tablist"
     >
@@ -59,16 +53,15 @@
         @click="statusFilter = tab.id"
       >
         {{ tab.label }}
-        <span
-          v-if="tab.count > 0"
-          class="ml-1 opacity-80 tabular-nums"
-        >({{ tab.count }})</span>
+        <span v-if="tab.count > 0" class="ml-1 opacity-80 tabular-nums"
+          >({{ tab.count }})</span
+        >
       </button>
     </div>
 
     <!-- Empty state (no queue at all) -->
     <div
-      v-if="pt.downloadQueue.value.length === 0"
+      v-if="queueLength === 0"
       class="surface rounded-2xl p-12 flex flex-col items-center text-center"
     >
       <Icon
@@ -86,7 +79,10 @@
       v-else-if="filteredQueue.length === 0"
       class="surface rounded-2xl p-8 text-center text-sm text-base-content/50"
     >
-      {{ t('queue.emptyFilter') }}
+      <p v-if="statusFilter === 'active' && queuedCount > 0">
+        {{ t('queue.emptyActiveWithWaiting', { count: queuedCount }) }}
+      </p>
+      <p v-else>{{ t('queue.emptyFilter') }}</p>
     </div>
 
     <!-- Queue items -->
@@ -263,15 +259,19 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive } from 'vue'
+import { ref, computed, watch, reactive, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import API from '../model/api'
-import { useProgressTracker, useDownloadManager } from '../model/download'
+import {
+  useProgressTracker,
+  useDownloadManager,
+  syncQueueFromServer,
+} from '../model/download'
 import { useI18n } from '../i18n'
 
 const PAGE_SIZE = 10
 
-const pt = useProgressTracker()
+const { downloadQueue, queueVersion } = useProgressTracker()
 const dm = useDownloadManager()
 const { t } = useI18n()
 
@@ -287,23 +287,34 @@ function queueItemState(item) {
   return 'active'
 }
 
-const doneCount = computed(
-  () =>
-    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'done')
-      .length
-)
+const queueLength = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.length
+})
 
-const failedCount = computed(
-  () =>
-    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'failed')
-      .length
-)
+const doneCount = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.filter((item) => queueItemState(item) === 'done')
+    .length
+})
 
-const activeCount = computed(
-  () =>
-    pt.downloadQueue.value.filter((item) => queueItemState(item) === 'active')
-      .length
-)
+const failedCount = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.filter((item) => queueItemState(item) === 'failed')
+    .length
+})
+
+const activeCount = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.filter((item) => queueItemState(item) === 'active')
+    .length
+})
+
+const queuedCount = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.filter((item) => queueItemState(item) === 'queued')
+    .length
+})
 
 const filterTabs = computed(() => [
   {
@@ -314,13 +325,12 @@ const filterTabs = computed(() => [
   {
     id: 'queued',
     label: t('queue.filterQueued'),
-    count: pt.downloadQueue.value.filter((i) => queueItemState(i) === 'queued')
-      .length,
+    count: queuedCount.value,
   },
   {
     id: 'all',
     label: t('queue.filterAll'),
-    count: pt.downloadQueue.value.length,
+    count: queueLength.value,
   },
   {
     id: 'done',
@@ -335,7 +345,8 @@ const filterTabs = computed(() => [
 ])
 
 const filteredQueue = computed(() => {
-  const q = pt.downloadQueue.value
+  queueVersion.value
+  const q = downloadQueue.value
   switch (statusFilter.value) {
     case 'all':
       return q
@@ -375,19 +386,33 @@ watch(
   }
 )
 
-watch(
-  () => pt.downloadQueue.value.length,
-  (len) => {
-    if (len === 0) statusFilter.value = 'active'
-    else if (
-      statusFilter.value === 'active' &&
-      activeCount.value === 0 &&
-      failedCount.value > 0
-    ) {
-      statusFilter.value = 'failed'
-    }
+const pendingCount = computed(() => activeCount.value + queuedCount.value)
+
+watch(queueLength, (len) => {
+  if (len === 0) statusFilter.value = 'active'
+})
+
+watch(pendingCount, (pending, prev) => {
+  if (pending > (prev ?? 0)) {
+    statusFilter.value = 'active'
   }
-)
+})
+
+let queueRefreshTimer = null
+
+onMounted(() => {
+  syncQueueFromServer().catch(() => {})
+  queueRefreshTimer = setInterval(() => {
+    syncQueueFromServer().catch(() => {})
+  }, 2000)
+})
+
+onUnmounted(() => {
+  if (queueRefreshTimer) {
+    clearInterval(queueRefreshTimer)
+    queueRefreshTimer = null
+  }
+})
 
 async function onClearAll() {
   if (!confirm(t('queue.clearAllPrompt'))) return

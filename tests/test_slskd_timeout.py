@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from downtify.downloader import Downloader
 from downtify.slskd_provider import _wait_for_slskd_file
@@ -43,13 +43,15 @@ def test_wait_for_slskd_file_queued_timeout_without_transfer(monkeypatch):
         'file.mp3',
         settings,
         [Path('/slskd')],
-        deadline=t0 + 600,
+        deadline=1600.0,
     )
     assert result is None
     assert client.find_transfer.called
 
 
-def test_resolve_video_id_falls_back_after_slskd_timeout(monkeypatch, tmp_path):
+def test_resolve_video_id_falls_back_after_slskd_timeout(
+    monkeypatch, tmp_path
+):
     d = Downloader(
         tmp_path,
         audio_format='mp3',
@@ -64,9 +66,10 @@ def test_resolve_video_id_falls_back_after_slskd_timeout(monkeypatch, tmp_path):
         lambda song: ('yt123', {'name': song.get('name')}),
     )
 
-    video_id, match, provider, local = d._resolve_video_id(
-        {'name': 'Track', 'artists': ['Artist']}
-    )
+    video_id, match, provider, local = d._resolve_video_id({
+        'name': 'Track',
+        'artists': ['Artist'],
+    })
     assert provider == 'youtube-music'
     assert video_id == 'yt123'
     assert local is None

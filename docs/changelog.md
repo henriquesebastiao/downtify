@@ -4,6 +4,43 @@ icon: lucide/history
 
 # Changelog
 
+## [Unreleased] — feature branch
+
+Pending upstream merge ([#182](https://github.com/henriquesebastiao/downtify/pull/182)). See [Library catalog & path sync](features/library-catalog.md) for how the new pieces fit together.
+
+**Enhancements**
+
+- **slskd provider** — Soulseek via slskd with leave-in-place under `/slskd`, timeouts, and fallback to YouTube providers
+- **Provider order** — Enable and order slskd / YouTube Music / YouTube in Settings
+- **Track index** — Skip re-downloads when a Spotify track is already on disk (including `/slskd` paths)
+- **Playlist catalog** — Remember which playlist downloads contain each file; show badges in Library
+- **Fast Library** — Path and metadata caches; optional cover cache; search and pagination in the UI
+- **Library bulk delete** — Multi-select track delete and delete entire playlist from the Library page
+- **Fix library paths** — Manual reconcile after moving files on disk; optional M3U and Navidrome refresh
+- **Navidrome** — Update existing playlists in place; POST/batched API for large playlists; improved track matching
+- **Download queue** — Filters (Waiting / In progress / …), retry, clear completed
+- **YouTube cookies** (optional) — Upload `cookies.txt` for difficult age-restricted fallbacks
+
+**Bug fixes**
+
+- HTTP 414 when syncing very large playlists to Navidrome
+- Library list API errors for playlist name fields
+- Navidrome match quality for slskd folder layouts and tag duration edge cases
+
+---
+
+## [2.8.0](https://github.com/henriquesebastiao/downtify/tree/2.8.0) — 2026-06-02
+
+**Enhancements**
+
+- Genre tags enriched from the public iTunes Search API at download time ([#187](https://github.com/henriquesebastiao/downtify/pull/187))
+
+**Security**
+
+- Dependency vulnerability fixes ([#170](https://github.com/henriquesebastiao/downtify/issues/170))
+
+---
+
 ## [2.6.0](https://github.com/henriquesebastiao/downtify/tree/2.6.0) — 2026-05-03
 
 **Enhancements**

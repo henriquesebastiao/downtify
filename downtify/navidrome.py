@@ -3,14 +3,70 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import secrets
 import time
+import unicodedata
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 
 import requests
 from loguru import logger
+
+from .library_delete import (
+    TagMismatchDeleteContext,
+    delete_if_spotify_tag_mismatch,
+)
+from .library_metadata import read_audio_metadata
+from .library_paths import locate_library_file
+from .navidrome_index import NavidromeIndex
+from .track_index import normalize_spotify_track_id
+from .track_tag_match import (
+    snapshot_spotify_metadata,
+    spotify_aligns_with_file_tags,
+    spotify_file_tag_mismatch_label,
+)
+
+# Subsonic createPlaylist via GET appends every songId to the query string; large
+# playlists hit HTTP 414. POST form bodies avoid that; we still batch adds.
+_PLAYLIST_SONG_ID_BATCH = 80
+
+
+def _song_id_batches(
+    song_ids: list[str], batch_size: int = _PLAYLIST_SONG_ID_BATCH
+) -> list[list[str]]:
+    batches: list[list[str]] = []
+    for index in range(0, len(song_ids), batch_size):
+        batches.append(song_ids[index : index + batch_size])
+    return batches
+
+
+def _parse_subsonic_http_response(resp: requests.Response) -> dict[str, Any]:
+    resp.raise_for_status()
+    data = resp.json()
+    body = data.get('subsonic-response') if isinstance(data, dict) else None
+    if not isinstance(body, dict):
+        raise ValueError('Invalid Subsonic response')
+    if body.get('status') == 'failed':
+        err = body.get('error') or {}
+        message = err.get('message') if isinstance(err, dict) else str(err)
+        raise ValueError(str(message or 'Subsonic request failed'))
+    return body
+
+
+def _playlist_id_from_body(
+    body: dict[str, Any], fallback: Optional[str] = None
+) -> str:
+    playlist = body.get('playlist')
+    if isinstance(playlist, dict):
+        pid = str(playlist.get('id') or '').strip()
+        if pid:
+            return pid
+    if fallback:
+        return fallback
+    raise ValueError('createPlaylist returned no playlist id')
 
 
 @dataclass
@@ -35,21 +91,260 @@ def _search_title(title: str) -> str:
     return text
 
 
-def _path_match_keys(filename: str) -> list[str]:
-    """Normalized path fragments to match Navidrome ``path`` fields."""
+def _normalize_path_text(path: str) -> str:
+    return unicodedata.normalize('NFC', str(path or '').replace('\\', '/'))
 
-    text = str(filename or '').strip().replace('\\', '/').casefold()
+
+def _path_match_keys(filename: str) -> list[str]:
+    """Path fragments for matching Navidrome ``path`` (any library root prefix)."""
+
+    text = _normalize_path_text(filename).casefold().strip()
     if not text:
         return []
-    keys = [text]
+    keys: list[str] = [text]
+    parts = [part for part in text.split('/') if part]
+    if len(parts) >= 2:
+        tail = '/'.join(parts[-2:])
+        if tail not in keys:
+            keys.append(tail)
     base = text.rsplit('/', 1)[-1]
     if base and base not in keys:
         keys.append(base)
     if text.startswith('slskd/'):
-        tail = text[len('slskd/') :]
-        if tail not in keys:
-            keys.append(tail)
+        without_slskd = text[len('slskd/') :]
+        if without_slskd not in keys:
+            keys.append(without_slskd)
     return keys
+
+
+def _navidrome_path_basename(path: str) -> str:
+    return str(path or '').replace('\\', '/').casefold().rsplit('/', 1)[-1]
+
+
+def _normalize_filename_key(name: str) -> str:
+    text = str(name or '').casefold().replace('&', ' and ')
+    text = re.sub(r'[^\w\s.-]', '', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def _loosen_search_query(text: str) -> str:
+    """Strip punctuation so Navidrome full-text search finds filename-like rows."""
+
+    lowered = _normalize_path_text(text).casefold().replace('&', ' and ')
+    cleaned = re.sub(r'[^\w\s-]', ' ', lowered)
+    return re.sub(r'\s+', ' ', cleaned).strip()
+
+
+def _queries_from_filename_stem(stem: str) -> list[str]:
+    text = str(stem or '').strip()
+    if not text:
+        return []
+    out: list[str] = []
+    if ' - ' in text:
+        artists_part, title_part = text.rsplit(' - ', 1)
+        artists_part = artists_part.strip()
+        title_part = title_part.strip()
+        if title_part:
+            out.append(title_part)
+        if artists_part:
+            out.append(artists_part)
+            lead = artists_part.split(',')[0].strip()
+            if lead and title_part:
+                out.append(f'{title_part} {lead}')
+                out.append(f'{lead} {title_part}')
+    loosened = _loosen_search_query(text)
+    if loosened and loosened not in out:
+        out.append(loosened)
+    return out
+
+
+def _basename_aligned(stored: str, indexed: str) -> bool:
+    if stored == indexed:
+        return True
+    left = _normalize_filename_key(stored)
+    right = _normalize_filename_key(indexed)
+    if not left or not right:
+        return False
+    if left == right:
+        return True
+    if (
+        len(left) >= 12
+        and len(right) >= 12
+        and (left in right or right in left)
+    ):
+        return True
+    return False
+
+
+def _path_matches(path_keys: list[str], navidrome_path: str) -> bool:
+    """True when Downtify's stored path lines up with Navidrome's indexed path."""
+
+    c_path = _normalize_path_text(navidrome_path).casefold()
+    if not path_keys or not c_path:
+        return False
+    c_base = _navidrome_path_basename(c_path)
+    for key in path_keys:
+        if not key:
+            continue
+        if c_path == key or c_path.endswith(f'/{key}'):
+            return True
+        if key in c_path:
+            return True
+        key_base = key.rsplit('/', 1)[-1]
+        if key_base and _basename_aligned(key_base, c_base):
+            return True
+    return False
+
+
+def _library_tags(song: dict[str, Any]) -> tuple[str, list[str]]:
+    title = str(song.get('name') or '').strip()
+    artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
+    return title, artists
+
+
+def _normalize_tag(text: str) -> str:
+    return unicodedata.normalize('NFC', str(text or '').strip()).casefold()
+
+
+def _duration_close(
+    target_duration: int, candidate_duration: int, *, slack: int = 12
+) -> bool:
+    if not target_duration or not candidate_duration:
+        return True
+    return abs(target_duration - candidate_duration) <= slack
+
+
+def _exact_tag_match(
+    song: dict[str, Any],
+    candidate: dict[str, Any],
+    target_duration: int,
+) -> bool:
+    """Match Navidrome row to on-disk ID3/Vorbis tags (exact title + artist)."""
+
+    title, artists = _library_tags(song)
+    if not title:
+        return False
+    c_title = str(candidate.get('title') or '').strip()
+    c_artist = str(candidate.get('artist') or '').strip()
+    if _normalize_tag(title) != _normalize_tag(c_title):
+        return False
+    if not artists:
+        return True
+    c_artist_n = _normalize_tag(c_artist)
+    joined = _normalize_tag(', '.join(artists))
+    if joined == c_artist_n:
+        return True
+    if any(_normalize_tag(artist) in c_artist_n for artist in artists):
+        return True
+    return False
+
+
+_PRIMARY_SEARCH_COUNT = 40
+_FALLBACK_SEARCH_COUNT = 80
+_MAX_FALLBACK_QUERIES = 4
+
+
+def _search_query_phases(
+    song: dict[str, Any], path_keys: list[str]
+) -> tuple[list[str], list[str]]:
+    """Primary tag/metadata queries, then a short filename fallback list."""
+
+    title, artists = _library_tags(song)
+    search_title = _search_title(title)
+    artist = artists[0] if artists else ''
+    tagged = bool(song.get('library_from_tags'))
+    primary: list[str] = []
+    fallback: list[str] = []
+
+    def add_primary(query: str) -> None:
+        text = str(query or '').strip()
+        if text and text not in primary:
+            primary.append(text)
+
+    def add_fallback(query: str) -> None:
+        text = str(query or '').strip()
+        if text and text not in fallback and text not in primary:
+            fallback.append(text)
+
+    if tagged and title:
+        if artist:
+            add_primary(f'{artist} {title}')
+            add_primary(f'{title} {artist}')
+        else:
+            add_primary(title)
+        if len(artists) > 1:
+            add_primary(f'{title} {", ".join(artists)}')
+    else:
+        add_primary(f'{search_title} {artist}'.strip())
+        if len(artists) > 1:
+            add_primary(f'{search_title} {", ".join(artists[:3])}'.strip())
+
+    if path_keys:
+        basename = path_keys[0].rsplit('/', 1)[-1]
+        stem = basename.rsplit('.', 1)[0] if basename else ''
+        loosened = _loosen_search_query(stem) if stem else ''
+        if loosened:
+            add_fallback(loosened)
+        if stem:
+            add_fallback(stem)
+        if basename:
+            add_fallback(basename)
+        add_fallback(path_keys[0])
+    return primary, fallback[:_MAX_FALLBACK_QUERIES]
+
+
+def _pick_song_id_from_candidates(
+    songs: list[dict[str, Any]],
+    song: dict[str, Any],
+    path_keys: list[str],
+    target_duration: int,
+) -> Optional[str]:
+    title, artists = _library_tags(song)
+    search_title = _search_title(title)
+    artist = artists[0] if artists else ''
+    require_artist = bool(path_keys)
+    use_exact_tags = bool(song.get('library_from_tags') and title)
+
+    for candidate in songs:
+        if not isinstance(candidate, dict):
+            continue
+        cid = str(candidate.get('id') or '').strip()
+        if not cid:
+            continue
+        c_path = str(candidate.get('path') or '')
+        if path_keys and _path_matches(path_keys, c_path):
+            return cid
+
+    if use_exact_tags:
+        for candidate in songs:
+            if not isinstance(candidate, dict):
+                continue
+            cid = str(candidate.get('id') or '').strip()
+            if cid and _exact_tag_match(song, candidate, target_duration):
+                return cid
+
+    for candidate in songs:
+        if not isinstance(candidate, dict):
+            continue
+        cid = str(candidate.get('id') or '').strip()
+        if not cid:
+            continue
+        c_artist = str(candidate.get('artist') or '')
+        c_title = str(candidate.get('title') or '')
+        c_duration = int(candidate.get('duration') or 0)
+
+        artist_match = artist and artist.casefold() in c_artist.casefold()
+        title_match = (
+            search_title.casefold() == c_title.casefold()
+            or title.casefold() == c_title.casefold()
+        )
+        duration_match = _duration_close(target_duration, c_duration, slack=10)
+
+        if artist_match and title_match and duration_match:
+            return cid
+        if not require_artist and title_match and duration_match:
+            return cid
+    return None
 
 
 def _effective_navidrome_settings(settings: dict[str, Any]) -> dict[str, Any]:
@@ -89,8 +384,10 @@ def _effective_navidrome_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'scan_wait_seconds': scan_wait_seconds,
         'scan_poll_seconds': scan_poll_seconds,
         'scan_retry_seconds': scan_retry_seconds,
-        'client_name': str(raw.get('client_name') or 'Downtify').strip() or 'Downtify',
-        'api_version': str(raw.get('api_version') or '1.16.1').strip() or '1.16.1',
+        'client_name': str(raw.get('client_name') or 'Downtify').strip()
+        or 'Downtify',
+        'api_version': str(raw.get('api_version') or '1.16.1').strip()
+        or '1.16.1',
     }
 
 
@@ -156,7 +453,9 @@ class NavidromeClient:
         resp = requests.get(url, timeout=self.timeout)
         resp.raise_for_status()
         data = resp.json()
-        body = data.get('subsonic-response') if isinstance(data, dict) else None
+        body = (
+            data.get('subsonic-response') if isinstance(data, dict) else None
+        )
         if not isinstance(body, dict):
             raise ValueError('Invalid Subsonic response')
         if body.get('status') == 'failed':
@@ -170,7 +469,9 @@ class NavidromeClient:
             self._request('ping')
             return True
         except Exception as exc:
-            logger.info('navidrome: ping failed url={!r} err={}', self.base_url, exc)
+            logger.info(
+                'navidrome: ping failed url={!r} err={}', self.base_url, exc
+            )
             return False
 
     def _scan_credentials(self) -> tuple[str, str]:
@@ -209,62 +510,52 @@ class NavidromeClient:
         )
         return False
 
-    def search_song_id(self, song: dict[str, Any]) -> Optional[str]:
-        title = _search_title(str(song.get('name') or ''))
-        artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
-        artist = artists[0] if artists else ''
-        path_keys = _path_match_keys(str(song.get('filename') or ''))
-        query = f'{title} {artist}'.strip()
-        if not query and not path_keys:
-            return None
+    def _search3_songs(
+        self, query: str, *, song_count: int = _PRIMARY_SEARCH_COUNT
+    ) -> list[dict]:
         body = self._request(
             'search3',
-            {'query': query or path_keys[0], 'songCount': 30},
+            {'query': query, 'songCount': song_count},
         )
         results = body.get('searchResult3') if isinstance(body, dict) else None
-        songs = []
+        songs: list[Any] = []
         if isinstance(results, dict):
             songs = results.get('song') or []
         if isinstance(songs, dict):
             songs = [songs]
         if not isinstance(songs, list):
+            return []
+        return [s for s in songs if isinstance(s, dict)]
+
+    def search_song_id(self, song: dict[str, Any]) -> Optional[str]:
+        path_keys = _path_match_keys(str(song.get('filename') or ''))
+        primary, fallback = _search_query_phases(song, path_keys)
+        if not primary and not fallback:
             return None
 
         target_duration = int(song.get('duration') or 0)
         if target_duration > 1000:
-            target_duration = target_duration // 1000
+            target_duration //= 1000
 
-        for candidate in songs:
-            if not isinstance(candidate, dict):
-                continue
-            cid = str(candidate.get('id') or '').strip()
-            if not cid:
-                continue
-            c_artist = str(candidate.get('artist') or '')
-            c_title = str(candidate.get('title') or '')
-            c_duration = int(candidate.get('duration') or 0)
-            c_path = str(candidate.get('path') or '').replace('\\', '/').casefold()
-
-            artist_match = artist and artist.casefold() in c_artist.casefold()
-            title_match = (
-                title.casefold() == c_title.casefold()
-                or str(song.get('name') or '').casefold() == c_title.casefold()
+        for query in primary:
+            batch = self._search3_songs(
+                query, song_count=_PRIMARY_SEARCH_COUNT
             )
-            duration_match = (
-                not target_duration
-                or not c_duration
-                or abs(target_duration - c_duration) < 10
+            picked = _pick_song_id_from_candidates(
+                batch, song, path_keys, target_duration
             )
-            path_match = any(key in c_path for key in path_keys)
+            if picked:
+                return picked
 
-            if path_keys and path_keys[0] in c_path:
-                return cid
-            if artist_match and title_match and duration_match:
-                return cid
-            if title_match and duration_match:
-                return cid
-            if path_match and duration_match:
-                return cid
+        for query in fallback:
+            batch = self._search3_songs(
+                query, song_count=_FALLBACK_SEARCH_COUNT
+            )
+            picked = _pick_song_id_from_candidates(
+                batch, song, path_keys, target_duration
+            )
+            if picked:
+                return picked
         return None
 
     def find_playlist_ids_by_name(self, name: str) -> list[str]:
@@ -291,6 +582,28 @@ class NavidromeClient:
     def delete_playlist(self, playlist_id: str) -> None:
         self._request('deletePlaylist', {'id': playlist_id})
 
+    def _rest_post(
+        self,
+        endpoint: str,
+        query: dict[str, str],
+        form_pairs: list[tuple[str, str]],
+    ) -> dict[str, Any]:
+        url = f'{self.base_url}/rest/{endpoint}'
+        resp = requests.post(
+            url, params=query, data=form_pairs, timeout=self.timeout
+        )
+        return _parse_subsonic_http_response(resp)
+
+    def _add_songs_to_playlist(
+        self, playlist_id: str, song_ids: list[str]
+    ) -> None:
+        if not song_ids:
+            return
+        query = self._auth_query()
+        query['playlistId'] = playlist_id
+        form = [('songIdToAdd', sid) for sid in song_ids]
+        self._rest_post('updatePlaylist', query, form)
+
     def _create_or_replace_playlist(
         self,
         name: str,
@@ -302,29 +615,28 @@ class NavidromeClient:
 
         if not song_ids:
             raise ValueError('No songs matched in Navidrome library')
+        batches = _song_id_batches(song_ids)
         query = self._auth_query()
         query['name'] = name
         if playlist_id:
             query['playlistId'] = playlist_id
-        url = f'{self.base_url}/rest/createPlaylist?{urlencode(query)}'
-        for sid in song_ids:
-            url += f'&songId={quote(sid)}'
-        resp = requests.get(url, timeout=self.timeout)
-        resp.raise_for_status()
-        data = resp.json()
-        body = data.get('subsonic-response') if isinstance(data, dict) else None
-        if not isinstance(body, dict) or body.get('status') == 'failed':
-            err = (body or {}).get('error') if isinstance(body, dict) else {}
-            message = err.get('message') if isinstance(err, dict) else 'create failed'
-            raise ValueError(str(message))
-        playlist = body.get('playlist') if isinstance(body, dict) else None
-        if isinstance(playlist, dict):
-            pid = str(playlist.get('id') or '').strip()
-            if pid:
-                return pid
-        if playlist_id:
-            return playlist_id
-        raise ValueError('createPlaylist returned no playlist id')
+        form = [('songId', sid) for sid in batches[0]]
+        logger.info(
+            'navidrome: createPlaylist POST batch 1/{} songs={} (uri-safe)',
+            len(batches),
+            len(form),
+        )
+        body = self._rest_post('createPlaylist', query, form)
+        pid = _playlist_id_from_body(body, playlist_id)
+        for index, batch in enumerate(batches[1:], start=2):
+            logger.info(
+                'navidrome: updatePlaylist POST batch {}/{} songs={}',
+                index,
+                len(batches),
+                len(batch),
+            )
+            self._add_songs_to_playlist(pid, batch)
+        return pid
 
     def create_playlist(self, name: str, song_ids: list[str]) -> str:
         return self._create_or_replace_playlist(name, song_ids)
@@ -355,6 +667,45 @@ class NavidromeClient:
         )
 
 
+def _song_label(song: dict[str, Any]) -> str:
+    tags_row = dict(song)
+    title, artists = _library_tags(song)
+    if title:
+        tags_row['name'] = title
+    if artists:
+        tags_row['artists'] = artists
+    tags_row['library_from_tags'] = bool(title)
+    return spotify_file_tag_mismatch_label(tags_row)
+
+
+def _songs_for_playlist_sync(
+    playlist_name: str,
+    songs: list[dict[str, Any]],
+    *,
+    delete_mismatches: Optional[TagMismatchDeleteContext] = None,
+) -> list[dict[str, Any]]:
+    """Drop rows whose on-disk path clearly does not match track metadata."""
+
+    kept: list[dict[str, Any]] = []
+    for song in songs:
+        if spotify_aligns_with_file_tags(song):
+            kept.append(song)
+            continue
+        fn = str(song.get('filename') or '').strip()
+        label = spotify_file_tag_mismatch_label(song)
+        if delete_mismatches is not None and delete_if_spotify_tag_mismatch(
+            song,
+            delete_mismatches,
+            playlist_name=playlist_name,
+        ):
+            continue
+        logger.info(
+            'navidrome: skip sync for {}; Spotify does not match file tags',
+            f'{label} ({fn})' if fn else label,
+        )
+    return kept
+
+
 def _scan_wait_budget(cfg: dict[str, Any], track_count: int) -> int:
     """Seconds to wait for Navidrome scan; scales slightly with playlist size."""
 
@@ -362,27 +713,119 @@ def _scan_wait_budget(cfg: dict[str, Any], track_count: int) -> int:
     return min(900, max(base, 30 + track_count * 2))
 
 
-def _song_label(song: dict[str, Any]) -> str:
-    label = str(song.get('name') or 'unknown')
-    artists = song.get('artists') or []
-    if artists:
-        label = f"{', '.join(str(a) for a in artists)} - {label}"
-    fn = str(song.get('filename') or '').strip()
-    return f'{label} ({fn})' if fn else label
+def enrich_song_from_library_file(
+    song: dict[str, Any],
+    download_dir: Path,
+    slskd_dir: Optional[Path],
+) -> dict[str, Any]:
+    """Attach on-disk path metadata (mutagen tags) for Navidrome matching."""
+
+    row = snapshot_spotify_metadata(song)
+    filename = str(row.get('filename') or '').strip()
+    if not filename:
+        return row
+    path = locate_library_file(filename, download_dir, slskd_dir)
+    if path is None:
+        return row
+    meta = read_audio_metadata(path)
+    if meta.get('title'):
+        row['name'] = meta['title']
+        row['library_from_tags'] = True
+    if meta.get('artists'):
+        row['artists'] = meta['artists']
+        row['library_from_tags'] = True
+    return row
+
+
+def resolve_navidrome_song_id(
+    client: NavidromeClient,
+    song: dict[str, Any],
+    index: Optional[NavidromeIndex] = None,
+    *,
+    download_dir: Optional[Path] = None,
+    slskd_dir: Optional[Path] = None,
+) -> tuple[Optional[str], bool]:
+    """Return ``(navidrome song id, from_cache)``."""
+
+    filename = str(song.get('filename') or '').strip()
+    full_path: Optional[Path] = None
+    if filename and download_dir is not None:
+        full_path = locate_library_file(filename, download_dir, slskd_dir)
+
+    if index is not None:
+        cached = index.lookup_song(song, full_path=full_path)
+        if cached:
+            return cached, True
+    sid = client.search_song_id(song)
+    if sid and index is not None and filename:
+        index.store(
+            filename,
+            sid,
+            spotify_track_id=normalize_spotify_track_id(song),
+            full_path=full_path,
+        )
+    return sid, False
+
+
+def cache_navidrome_song_id(
+    settings: dict[str, Any],
+    song: dict[str, Any],
+    filename: str,
+    index: Optional[NavidromeIndex],
+    *,
+    download_dir: Optional[Path] = None,
+    slskd_dir: Optional[Path] = None,
+) -> None:
+    """Resolve and store Navidrome id after a successful download."""
+
+    if index is None or not _effective_navidrome_settings(settings).get(
+        'enabled'
+    ):
+        return
+    row = dict(song)
+    row['filename'] = filename
+    if download_dir is not None:
+        row = enrich_song_from_library_file(row, download_dir, slskd_dir)
+    client = NavidromeClient(_effective_navidrome_settings(settings))
+    if not client.configured() or not client.ping():
+        return
+    resolve_navidrome_song_id(
+        client, row, index, download_dir=download_dir, slskd_dir=slskd_dir
+    )
 
 
 def _match_songs_in_library(
     client: NavidromeClient,
     songs: list[dict[str, Any]],
+    index: Optional[NavidromeIndex] = None,
+    *,
+    download_dir: Optional[Path] = None,
+    slskd_dir: Optional[Path] = None,
 ) -> tuple[list[str], list[dict[str, Any]]]:
     song_ids: list[str] = []
     unmatched: list[dict[str, Any]] = []
+    cached = 0
     for song in songs:
-        sid = client.search_song_id(song)
+        sid, from_cache = resolve_navidrome_song_id(
+            client,
+            song,
+            index,
+            download_dir=download_dir,
+            slskd_dir=slskd_dir,
+        )
         if sid:
             song_ids.append(sid)
+            if from_cache:
+                cached += 1
         else:
             unmatched.append(song)
+    if index is not None and songs:
+        logger.info(
+            'navidrome: resolved {}/{} track(s) ({} from cache)',
+            len(song_ids),
+            len(songs),
+            cached,
+        )
     return song_ids, unmatched
 
 
@@ -409,14 +852,75 @@ def _trigger_library_scan(
     return False
 
 
-def sync_playlist_to_navidrome(
+def _library_dirs_from_settings(
+    settings: dict[str, Any],
+    download_dir: Optional[Path] = None,
+) -> tuple[Path, Optional[Path]]:
+    slskd_raw = settings.get('slskd')
+    slskd_dir: Optional[Path] = None
+    if isinstance(slskd_raw, dict):
+        source = str(slskd_raw.get('source_dir') or '').strip()
+        if source:
+            slskd_dir = Path(source)
+    dl = download_dir
+    if dl is None and isinstance(slskd_raw, dict):
+        raw_dl = str(slskd_raw.get('download_dir') or '').strip()
+        if raw_dl:
+            dl = Path(raw_dl)
+    if dl is None:
+        dl = Path('/downloads')
+    return Path(dl), slskd_dir
+
+
+def remove_navidrome_playlist_by_name(
+    playlist_name: str,
+    settings: dict[str, Any],
+) -> int:
+    """Delete Navidrome playlist(s) matching *playlist_name*. Returns count removed."""
+
+    cfg = _effective_navidrome_settings(settings)
+    if not cfg.get('enabled'):
+        return 0
+    client = NavidromeClient(cfg)
+    if not client.configured() or not client.ping():
+        return 0
+    removed = 0
+    for playlist_id in client.find_playlist_ids_by_name(playlist_name):
+        try:
+            client.delete_playlist(playlist_id)
+            removed += 1
+            logger.info(
+                'navidrome: removed playlist id={} name={!r}',
+                playlist_id,
+                playlist_name,
+            )
+        except Exception as exc:
+            logger.info(
+                'navidrome: could not remove playlist id={} name={!r} err={}',
+                playlist_id,
+                playlist_name,
+                exc,
+            )
+    return removed
+
+
+def sync_playlist_to_navidrome(  # noqa: PLR0914
     playlist_name: str,
     songs: list[dict[str, Any]],
     settings: dict[str, Any],
     *,
+    navidrome_index: Optional[NavidromeIndex] = None,
+    download_dir: Optional[Path] = None,
     comment: str = 'Synced from Spotify via Downtify',
+    trigger_scan: Optional[bool] = None,
+    delete_tag_mismatches: Optional[TagMismatchDeleteContext] = None,
 ) -> Optional[PlaylistSyncResult]:
-    """Match *songs* in Navidrome and create/replace a server playlist."""
+    """Match *songs* in Navidrome and create/replace a server playlist.
+
+    *trigger_scan*: when ``None``, use ``scan_after_download`` from settings
+    (typical after new downloads). Pass ``False`` after deletes or path fixes
+    when files were removed, not added.
+    """
     cfg = _effective_navidrome_settings(settings)
     if not cfg.get('enabled'):
         return None
@@ -430,16 +934,51 @@ def sync_playlist_to_navidrome(
     if not songs:
         return None
 
+    incoming = len(songs)
+    songs = _songs_for_playlist_sync(
+        playlist_name,
+        songs,
+        delete_mismatches=delete_tag_mismatches,
+    )
+    if len(songs) < incoming:
+        action = (
+            'deleted or excluded'
+            if delete_tag_mismatches is not None
+            else 'excluded'
+        )
+        logger.info(
+            'navidrome: {} {} of {} track(s) from sync for playlist={!r} '
+            '(Spotify/file tag mismatch)',
+            action,
+            incoming - len(songs),
+            incoming,
+            playlist_name,
+        )
+    if not songs:
+        return None
+
     scanned = False
     scan_complete = False
-    if cfg.get('scan_after_download'):
+    do_scan = (
+        bool(cfg.get('scan_after_download'))
+        if trigger_scan is None
+        else bool(trigger_scan)
+    )
+    if do_scan:
         try:
             scanned = True
             scan_complete = _trigger_library_scan(client, cfg, len(songs))
         except Exception as exc:
             logger.info('navidrome: library scan failed err={}', exc)
 
-    song_ids, pending = _match_songs_in_library(client, songs)
+    dl_dir, slskd_dir = _library_dirs_from_settings(settings, download_dir)
+    song_ids, pending = _match_songs_in_library(
+        client,
+        songs,
+        navidrome_index,
+        download_dir=dl_dir,
+        slskd_dir=slskd_dir,
+    )
     retry_seconds = int(cfg.get('scan_retry_seconds') or 0)
     if pending and scanned and retry_seconds > 0:
         logger.info(
@@ -448,7 +987,13 @@ def sync_playlist_to_navidrome(
             retry_seconds,
         )
         time.sleep(retry_seconds)
-        extra_ids, pending = _match_songs_in_library(client, pending)
+        extra_ids, pending = _match_songs_in_library(
+            client,
+            pending,
+            navidrome_index,
+            download_dir=dl_dir,
+            slskd_dir=slskd_dir,
+        )
         song_ids.extend(extra_ids)
 
     total = len(songs)

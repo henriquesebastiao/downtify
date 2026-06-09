@@ -9,6 +9,7 @@ from downtify.providers import (
     enrich_from_match,
     youtube_music_track_index_for_match,
 )
+from downtify.track_tag_match import youtube_title_has_negative_keyword
 
 
 @pytest.fixture(autouse=True)
@@ -129,35 +130,83 @@ def test_enrich_preserves_preset_track_number(monkeypatch):
 
 def test_find_match_falls_back_when_song_rows_have_no_video_id(monkeypatch):
     class FakeYTM:
-        def search(self, query, filt, limit=10):
-            if filt == 'songs':
+        @staticmethod
+        def search(query, filter=None, limit=10):
+            if filter == 'songs':
                 return [{'title': 'Song but no id'}]
-            if filt == 'videos':
+            if filter == 'videos':
                 return [{'title': 'Real Video', 'videoId': 'abc123def45'}]
             return []
 
-    monkeypatch.setattr(providers, '_client', FakeYTM())
-    video_id, match = providers.find_match(
-        {'name': 'Track', 'artists': ['Artist'], 'duration': 180}
-    )
+    monkeypatch.setattr(providers, '_ytm', FakeYTM)
+    video_id, match = providers.find_match({
+        'name': 'Track',
+        'artists': ['Artist'],
+        'duration': 180,
+    })
     assert video_id == 'abc123def45'
     assert isinstance(match, dict)
     assert match['videoId'] == 'abc123def45'
 
 
+def test_youtube_title_rejects_live_when_spotify_is_studio():
+    assert youtube_title_has_negative_keyword(
+        'Old Man River',
+        'Old Man River - Live',
+    )
+    assert not youtube_title_has_negative_keyword(
+        'Old Man River - Live',
+        'Old Man River - Live',
+    )
+
+
+def test_find_match_skips_live_video_when_spotify_is_studio(monkeypatch):
+    class FakeYTM:
+        @staticmethod
+        def search(query, filter=None, limit=10):
+            return [
+                {
+                    'title': 'Old Man River - Live',
+                    'videoId': 'live1111111',
+                    'duration_seconds': 272,
+                },
+                {
+                    'title': 'Old Man River',
+                    'videoId': 'studio22222',
+                    'duration_seconds': 222,
+                },
+            ]
+
+    monkeypatch.setattr(providers, '_ytm', FakeYTM)
+    video_id, match = providers.find_match({
+        'name': 'Old Man River',
+        'artists': ['Artist'],
+        'duration': 222,
+    })
+    assert video_id == 'studio22222'
+    assert match is not None
+    assert match['videoId'] == 'studio22222'
+
+
 def test_find_match_retries_title_only_query(monkeypatch):
     class FakeYTM:
-        def search(self, query, filt, limit=10):
-            if query == 'Artist Missing Song' and filt in {'songs', 'videos'}:
+        @staticmethod
+        def search(query, filter=None, limit=10):
+            if query == 'Artist Missing Song' and filter in {
+                'songs',
+                'videos',
+            }:
                 return []
-            if query == 'Missing Song' and filt == 'videos':
+            if query == 'Missing Song' and filter == 'videos':
                 return [{'title': 'Missing Song', 'videoId': 'xyz987uvw65'}]
             return []
 
-    monkeypatch.setattr(providers, '_client', FakeYTM())
-    video_id, match = providers.find_match(
-        {'name': 'Missing Song', 'artists': ['Artist'], 'duration': 200}
-    )
+    monkeypatch.setattr(providers, '_ytm', FakeYTM)
+    video_id, match = providers.find_match({
+        'name': 'Missing Song',
+        'artists': ['Artist'],
+        'duration': 200,
+    })
     assert video_id == 'xyz987uvw65'
     assert isinstance(match, dict)
     assert match['videoId'] == 'xyz987uvw65'
@@ -165,17 +214,20 @@ def test_find_match_retries_title_only_query(monkeypatch):
 
 def test_find_match_uses_unfiltered_search_fallback(monkeypatch):
     class FakeYTM:
-        def search(self, query, filter=None, limit=10):
+        @staticmethod
+        def search(query, filter=None, limit=10):
             if filter in {'songs', 'videos'}:
                 return []
             if filter is None and query == 'Artist Track':
                 return [{'title': 'Track', 'videoId': 'qwe987rty65'}]
             return []
 
-    monkeypatch.setattr(providers, '_client', FakeYTM())
-    video_id, match = providers.find_match(
-        {'name': 'Track', 'artists': ['Artist'], 'duration': 180}
-    )
+    monkeypatch.setattr(providers, '_ytm', FakeYTM)
+    video_id, match = providers.find_match({
+        'name': 'Track',
+        'artists': ['Artist'],
+        'duration': 180,
+    })
     assert video_id == 'qwe987rty65'
     assert isinstance(match, dict)
     assert match['videoId'] == 'qwe987rty65'

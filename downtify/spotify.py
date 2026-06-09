@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from typing import Any, Optional
 
 import requests
@@ -61,17 +62,46 @@ def parse_spotify_url(url: str) -> Optional[tuple[str, str]]:
     return match.group('type'), match.group('id')
 
 
+_EMBED_TRANSIENT_HTTP = frozenset({429, 502, 503, 504})
+_EMBED_FETCH_ATTEMPTS = 3
+
+
 def _fetch_embed_json(kind: str, spotify_id: str) -> dict[str, Any]:
     url = f'https://open.spotify.com/embed/{kind}/{spotify_id}'
-    response = requests.get(
-        url,
-        headers={
-            'User-Agent': _USER_AGENT,
-            'Accept-Language': 'en-US,en;q=0.9',
-        },
-        timeout=15,
-    )
-    response.raise_for_status()
+    response: requests.Response | None = None
+    for attempt in range(_EMBED_FETCH_ATTEMPTS):
+        response = requests.get(
+            url,
+            headers={
+                'User-Agent': _USER_AGENT,
+                'Accept-Language': 'en-US,en;q=0.9',
+            },
+            timeout=15,
+        )
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            status = (
+                exc.response.status_code if exc.response is not None else 0
+            )
+            if (
+                status in _EMBED_TRANSIENT_HTTP
+                and attempt < _EMBED_FETCH_ATTEMPTS - 1
+            ):
+                logger.debug(
+                    'Spotify embed HTTP {} for {}/{}, retry {}/{}',
+                    status,
+                    kind,
+                    spotify_id,
+                    attempt + 1,
+                    _EMBED_FETCH_ATTEMPTS,
+                )
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            raise
+        break
+    if response is None:
+        raise RuntimeError('Spotify embed fetch did not run')
     match = re.search(
         r'<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)</script>',
         response.text,
@@ -479,9 +509,9 @@ def _merge_full_track_metadata(
         'album_track_total',
     ):
         value = full.get(key)
-        if value is None or value == '' or value == []:
+        if value is None or not value or value == []:
             continue
-        if key in ('track_number', 'album_track_total'):
+        if key in {'track_number', 'album_track_total'}:
             if merged.get(key) is not None:
                 continue
             try:
@@ -502,7 +532,9 @@ def _merge_full_track_metadata(
     return merged
 
 
-def enrich_track_from_spotify_if_sparse(song: dict[str, Any]) -> dict[str, Any]:
+def enrich_track_from_spotify_if_sparse(
+    song: dict[str, Any],
+) -> dict[str, Any]:
     """Fill missing Spotify tagging fields from the per-track embed.
 
     Playlist browse rows often omit ``year``, ``release_date``, and

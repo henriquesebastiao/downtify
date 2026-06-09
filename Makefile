@@ -1,6 +1,6 @@
 #!make
 
-DOWNTIFY_VERSION := 2.7.0
+DOWNTIFY_VERSION := 2.8.0
 TARGET := henriquesebastiao/downtify
 
 all: build latest
@@ -22,8 +22,11 @@ up:
 down:
 	docker compose down
 
-run:
+run: frontend-build
 	uv run python main.py web
+
+frontend-build:
+	npm run build --prefix frontend
 
 format:
 	uv run ruff format .; ruff check . --fix
@@ -59,4 +62,4 @@ doc:
 %:
 	@:
 
-.PHONY: all build latest clean up down run format lint export changelog version doc
+.PHONY: all build latest clean up down run frontend-build format lint export changelog version doc

@@ -9,12 +9,25 @@ import time
 import unicodedata
 from pathlib import Path
 from typing import Any, Callable, Optional
-
-ProgressCallback = Callable[[float, str], None]
 from urllib.parse import quote
 
 import requests
 from loguru import logger
+
+from .library_metadata import read_audio_metadata
+from .track_tag_match import (
+    MIX_VARIANT_REMOTE_SKIP_KEYWORDS,
+    duration_tolerances_from_settings,
+    media_duration_matches_mix_variant,
+    media_duration_matches_song,
+    remote_text_unacceptable,
+    snapshot_spotify_metadata,
+    spotify_file_tag_mismatch_label,
+    strip_mix_suffix,
+    verify_downloaded_file_matches_spotify,
+)
+
+ProgressCallback = Callable[[float, str], None]
 
 _SLSKD_SEM: Optional[threading.Semaphore] = None
 _SLSKD_SEM_LIMIT = 0
@@ -40,11 +53,11 @@ def reset_slskd_parallelism(settings: dict[str, Any]) -> None:
 
 def _slskd_semaphore(settings: dict[str, Any]) -> threading.Semaphore:
     """Match Downtify parallel download setting; do not serialize all slskd work."""
-    global _SLSKD_SEM, _SLSKD_SEM_LIMIT
     limit = _slskd_parallel_limit(settings)
     if _SLSKD_SEM is None or _SLSKD_SEM_LIMIT != limit:
         reset_slskd_parallelism(settings)
     return _SLSKD_SEM
+
 
 _DEFAULT_DOWNLOAD_TIMEOUT_SECONDS = 600
 _DEFAULT_QUEUED_TIMEOUT_SECONDS = 180
@@ -79,26 +92,17 @@ def _slskd_deadline(settings: dict[str, Any]) -> float:
 def _past_deadline(deadline: float) -> bool:
     return time.monotonic() >= deadline
 
+
 _AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'm4a', 'ogg', 'opus'})
-_FILTER_KEYWORDS = (
-    'live',
-    'remix',
-    'instrumental',
-    'extended',
-    'clean',
-    'acapella',
-    'karaoke',
-)
 _PATH_PENALTY_KEYWORDS = (
     'unreleased',
     'bootleg',
     'mixtape',
     'discography',
 )
-_AMBIGUOUS_TITLE_ALNUM_LEN = 4
+_AMBIGUOUS_TITLE_ALNUM_LEN = 5
 _DEFAULT_MATCH_MIN_SCORE = 5
 _STRICT_DURATION_SECONDS = 3
-_DEFAULT_DURATION_TOLERANCE_SECONDS = 10
 
 
 class SlskdClient:
@@ -107,8 +111,10 @@ class SlskdClient:
         self.api_key = str(settings.get('api_key') or '').strip()
         self.timeout = int(settings.get('timeout_seconds') or 20)
         self.search_retries = int(settings.get('search_retries') or 5)
-        self.search_poll_seconds = int(settings.get('search_poll_seconds') or 15)
-        self.download_attempts = int(settings.get('download_attempts') or 3)
+        self.search_poll_seconds = int(
+            settings.get('search_poll_seconds') or 15
+        )
+        self.download_attempts = int(settings.get('download_attempts') or 5)
         self.session = requests.Session()
         if self.api_key:
             self.session.headers.update({'X-API-Key': self.api_key})
@@ -156,7 +162,9 @@ class SlskdClient:
         try:
             data = self._request('POST', '/api/v0/searches', json_body=body)
         except Exception as exc:
-            logger.info('slskd: search POST failed q={!r} err={}', query[:120], exc)
+            logger.info(
+                'slskd: search POST failed q={!r} err={}', query[:120], exc
+            )
             return None
         if isinstance(data, dict):
             for key in ('id', 'searchId'):
@@ -217,7 +225,9 @@ class SlskdClient:
 
     def search_responses(self, search_id: str) -> list[dict[str, Any]]:
         try:
-            data = self._request('GET', f'/api/v0/searches/{search_id}/responses')
+            data = self._request(
+                'GET', f'/api/v0/searches/{search_id}/responses'
+            )
         except Exception:
             return []
         if isinstance(data, list):
@@ -275,7 +285,10 @@ class SlskdClient:
     ) -> Optional[dict[str, Any]]:
         for peer_filter in (username, ''):
             for peer in self.list_download_transfers():
-                if peer_filter and str(peer.get('username') or '') != peer_filter:
+                if (
+                    peer_filter
+                    and str(peer.get('username') or '') != peer_filter
+                ):
                     continue
                 for directory in peer.get('directories') or []:
                     if not isinstance(directory, dict):
@@ -312,7 +325,10 @@ def _flatten_slskd_responses(data: Any) -> list[dict[str, Any]]:
         if not isinstance(resp, dict):
             continue
         username = str(
-            resp.get('username') or resp.get('userName') or resp.get('user') or ''
+            resp.get('username')
+            or resp.get('userName')
+            or resp.get('user')
+            or ''
         ).strip()
         for file_row in resp.get('files') or []:
             if not isinstance(file_row, dict):
@@ -340,15 +356,54 @@ def _alnum_only(text: str) -> str:
 
 
 def _primary_title(title: str) -> str:
-    text = str(title or '').strip()
+    text = strip_mix_suffix(str(title or '').strip())
     if ' - ' in text:
-        return text.split(' - ', 1)[0].strip()
+        head = text.split(' - ', 1)[0].strip()
+        if head:
+            return head
     return text
+
+
+def _title_in_basename(filename: str, title_alnum: str) -> bool:
+    """Require title as a basename token (avoids folder-only and substring false hits)."""
+
+    if not title_alnum:
+        return True
+    base = _file_basename(filename)
+    base_alnum = _alnum_only(base)
+    if title_alnum == base_alnum:
+        return True
+    folded = _normalize_search_text(base).casefold()
+    tokens = [
+        _alnum_only(part)
+        for part in re.split(r'[^a-z0-9]+', folded)
+        if _alnum_only(part)
+    ]
+    if title_alnum in tokens:
+        return True
+    if len(title_alnum) >= 6 and title_alnum in base_alnum:
+        return True
+    return False
+
+
+def _discard_mismatched_download(path: Path) -> None:
+    try:
+        if path.is_file():
+            path.unlink()
+            logger.info('slskd: removed mismatched download file={!r}', path)
+    except OSError as exc:
+        logger.warning(
+            'slskd: could not remove mismatched file={!r} err={}',
+            path,
+            exc,
+        )
 
 
 def _slskd_search_queries(song: dict[str, Any]) -> list[str]:
     artists = [
-        str(a).strip() for a in (song.get('artists') or [])[:2] if str(a).strip()
+        str(a).strip()
+        for a in (song.get('artists') or [])[:2]
+        if str(a).strip()
     ]
     artist = artists[0] if artists else ''
     title = str(song.get('name') or '').strip()
@@ -369,6 +424,8 @@ def _slskd_search_queries(song: dict[str, Any]) -> list[str]:
         add(f'{title} - {artist}')
     if short_title:
         add(short_title)
+    if artist and short_title and short_title != title:
+        add(f'{artist} {short_title}')
     if artist and title:
         add(f'{artist} {title}')
     return queries
@@ -383,26 +440,36 @@ def _path_segments(filename: str) -> list[str]:
     """Parent folders in a Soulseek path (people often encode artist/album there)."""
     normalized = str(filename or '').replace('\\', '/')
     parent = Path(normalized).parent
-    return [part for part in parent.parts if part not in ('.', '/')]
+    return [part for part in parent.parts if part not in {'.', '/'}]
 
 
-def _contains_keyword(song: dict[str, Any], filename: str) -> bool:
+def _contains_keyword(
+    song: dict[str, Any],
+    filename: str,
+    *,
+    allow_mix_variants: bool = False,
+) -> bool:
     """Filter remix/live/etc. on the file name, not parent folder names."""
-    title = str(song.get('name') or '').casefold()
-    artist = ' '.join(str(a) for a in (song.get('artists') or [])).casefold()
+    title = str(song.get('name') or '')
+    artists = [str(a) for a in (song.get('artists') or []) if str(a).strip()]
     basename = _file_basename(filename)
-    haystacks = [basename.casefold()]
+    haystacks = [basename]
     segments = _path_segments(filename)
     if segments:
         # Immediate parent folder (e.g. "Artist - Album") — not the whole tree.
-        haystacks.append(segments[-1].casefold())
-    for keyword in _FILTER_KEYWORDS:
-        if keyword in title or keyword in artist:
-            continue
-        for haystack in haystacks:
-            if keyword in haystack:
-                return True
-    return False
+        haystacks.append(segments[-1])
+    skip = (
+        MIX_VARIANT_REMOTE_SKIP_KEYWORDS if allow_mix_variants else frozenset()
+    )
+    return any(
+        remote_text_unacceptable(
+            title,
+            haystack,
+            spotify_artists=artists,
+            skip_variant_keywords=skip,
+        )
+        for haystack in haystacks
+    )
 
 
 def _parse_duration_seconds(value: Any) -> int:
@@ -473,34 +540,59 @@ def _title_is_ambiguous(title_alnum: str) -> bool:
 
 def _match_min_score(settings: dict[str, Any]) -> int:
     try:
-        value = int(settings.get('match_min_score') or _DEFAULT_MATCH_MIN_SCORE)
+        value = int(
+            settings.get('match_min_score') or _DEFAULT_MATCH_MIN_SCORE
+        )
     except (TypeError, ValueError):
         value = _DEFAULT_MATCH_MIN_SCORE
     return max(0, value)
 
 
-def _score_slskd_candidate(
+def _score_slskd_candidate(  # noqa: PLR0914
     song: dict[str, Any],
     filename: str,
     file_row: dict[str, Any],
     *,
     target_duration: int,
+    mix_variant_duration: bool = False,
+    settings: Optional[dict[str, Any]] = None,
 ) -> Optional[tuple[int, list[str]]]:
     """Return (score, reasons) or None when hard requirements fail."""
+    tol = duration_tolerances_from_settings(settings)
     artist = _alnum_only(
         ' '.join(str(a) for a in (song.get('artists') or [])[:1])
     )
     album = _alnum_only(str(song.get('album_name') or ''))
-    title = _alnum_only(_primary_title(str(song.get('name') or '')))
+    raw_name = str(song.get('name') or '')
+    title = _alnum_only(_primary_title(raw_name))
+    full_title = _alnum_only(raw_name)
     sanitized_name = _alnum_only(filename)
     basename = _file_basename(filename)
     base_alnum = _alnum_only(basename)
+    path_segments = _path_segments(filename)
 
-    if artist and artist not in sanitized_name:
+    if not artist and not title and not full_title:
         return None
-    if title and title not in sanitized_name:
+
+    # Soulseek paths often include the requested album/title in folders while
+    # the leaf file is a different track — require title on the filename itself.
+    title_ok = False
+    if title and _title_in_basename(filename, title):
+        title_ok = True
+    elif (
+        full_title
+        and full_title != title
+        and _title_in_basename(filename, full_title)
+    ):
+        title_ok = True
+    if (title or full_title) and not title_ok:
         return None
-    if not artist and not title:
+
+    artist_in_leaf = bool(artist and artist in base_alnum)
+    artist_in_path = bool(
+        artist and any(artist in _alnum_only(seg) for seg in path_segments)
+    )
+    if artist and not (artist_in_leaf or artist_in_path):
         return None
 
     length = _parse_duration_seconds(
@@ -511,16 +603,27 @@ def _score_slskd_candidate(
             return None
         if abs(target_duration - length) > _STRICT_DURATION_SECONDS:
             return None
-    elif (
-        target_duration
-        and length
-        and abs(target_duration - length) > _DEFAULT_DURATION_TOLERANCE_SECONDS
-    ):
-        return None
+    elif target_duration and length:
+        if mix_variant_duration:
+            duration_ok = media_duration_matches_mix_variant(
+                song,
+                length,
+                tolerance_percent=tol['mix_percent'],
+                normal_tolerance_seconds=tol['seconds'],
+                normal_tolerance_percent=tol['percent'],
+            )
+        else:
+            duration_ok = media_duration_matches_song(
+                song,
+                length,
+                tolerance_seconds=tol['seconds'],
+                tolerance_percent=tol['percent'],
+            )
+        if not duration_ok:
+            return None
 
     score = 0
     reasons: list[str] = []
-    path_segments = _path_segments(filename)
 
     if artist and base_alnum.startswith(artist):
         score += 3
@@ -532,12 +635,19 @@ def _score_slskd_candidate(
         score += 2
         reasons.append('artist_in_path')
 
-    if title and title in base_alnum:
+    if title and _title_in_basename(filename, title):
         score += 2
         reasons.append('title')
         if artist and base_alnum.find(artist) < base_alnum.find(title):
             score += 2
             reasons.append('artist_before_title')
+    elif (
+        full_title
+        and full_title != title
+        and _title_in_basename(filename, full_title)
+    ):
+        score += 2
+        reasons.append('title_full')
     elif title and title in sanitized_name:
         score += 2
         reasons.append('title_in_path')
@@ -546,7 +656,12 @@ def _score_slskd_candidate(
         segment_alnum = _alnum_only(segment)
         if not segment_alnum:
             continue
-        if artist and title and artist in segment_alnum and title in segment_alnum:
+        if (
+            artist
+            and title
+            and artist in segment_alnum
+            and title in segment_alnum
+        ):
             score += 2
             reasons.append('folder_segment')
             break
@@ -557,10 +672,10 @@ def _score_slskd_candidate(
 
     if target_duration and length:
         delta = abs(target_duration - length)
-        if delta <= _STRICT_DURATION_SECONDS:
+        if delta <= min(_STRICT_DURATION_SECONDS, tol['seconds']):
             score += 3
             reasons.append('duration_3s')
-        elif delta <= _DEFAULT_DURATION_TOLERANCE_SECONDS:
+        elif delta <= tol['seconds']:
             score += 1
             reasons.append('duration_10s')
 
@@ -596,9 +711,10 @@ def _rank_slskd_candidates(
     song: dict[str, Any],
     responses: list[dict[str, Any]],
     settings: Optional[dict[str, Any]] = None,
+    *,
+    allow_mix_variants: bool = False,
 ) -> list[dict[str, Any]]:
     """Score and sort all viable files (highest confidence first)."""
-    _ = settings
     target_duration = _song_duration_seconds(song)
     ranked: list[dict[str, Any]] = []
 
@@ -625,7 +741,9 @@ def _rank_slskd_candidates(
             ext = _file_extension(filename)
             if ext and ext not in _AUDIO_EXTENSIONS:
                 continue
-            if _contains_keyword(song, filename):
+            if _contains_keyword(
+                song, filename, allow_mix_variants=allow_mix_variants
+            ):
                 continue
 
             scored = _score_slskd_candidate(
@@ -633,19 +751,19 @@ def _rank_slskd_candidates(
                 filename,
                 file_row,
                 target_duration=target_duration,
+                mix_variant_duration=allow_mix_variants,
+                settings=settings,
             )
             if scored is None:
                 continue
             score, reasons = scored
-            ranked.append(
-                {
-                    **file_row,
-                    'username': username,
-                    'filename': filename,
-                    'match_score': score,
-                    'match_reasons': reasons,
-                }
-            )
+            ranked.append({
+                **file_row,
+                'username': username,
+                'filename': filename,
+                'match_score': score,
+                'match_reasons': reasons,
+            })
 
     ranked.sort(
         key=lambda row: (
@@ -669,12 +787,10 @@ def _select_download_candidates(
     """Pick up to download_attempts files, preferring extension order at equal score."""
     raw_ext = settings.get('extensions') or ['mp3', 'flac']
     extensions = [
-        str(e).strip().lower().lstrip('.')
-        for e in raw_ext
-        if str(e).strip()
+        str(e).strip().lower().lstrip('.') for e in raw_ext if str(e).strip()
     ] or ['mp3', 'flac']
     min_bitrate = int(settings.get('min_bitrate') or 0)
-    max_files = int(settings.get('download_attempts') or 3)
+    max_files = int(settings.get('download_attempts') or 5)
 
     by_score: dict[int, list[dict[str, Any]]] = {}
     for row in ranked:
@@ -754,9 +870,7 @@ def _extract_directory_paths(data: Any) -> list[str]:
     return out
 
 
-def _search_roots(
-    settings: dict[str, Any], client: SlskdClient
-) -> list[Path]:
+def _search_roots(settings: dict[str, Any], client: SlskdClient) -> list[Path]:
     roots: list[Path] = []
     seen: set[str] = set()
     for raw in (
@@ -776,7 +890,7 @@ def _search_roots(
 def _parse_soulseek_path(filename: str) -> tuple[str, str]:
     normalized = filename.replace('\\', '/')
     parent = Path(normalized).parent
-    parent_name = '' if str(parent) in ('.', '/') else parent.name
+    parent_name = '' if str(parent) in {'.', '/'} else parent.name
     return Path(normalized).name, parent_name
 
 
@@ -982,7 +1096,9 @@ def _resolve_downloaded_file(
     return _copy_to_output(found, output_dir)
 
 
-def _finalize_slskd_path(found: Path, output_dir: Path, leave_in_place: bool) -> Path:
+def _finalize_slskd_path(
+    found: Path, output_dir: Path, leave_in_place: bool
+) -> Path:
     if leave_in_place:
         return found
     return _copy_to_output(found, output_dir)
@@ -1103,7 +1219,7 @@ def _wait_for_slskd_file(
     )
 
 
-def download_from_slskd(
+def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finalize
     song: dict[str, Any],
     settings: dict[str, Any],
     progress_cb: Optional[ProgressCallback] = None,
@@ -1112,22 +1228,37 @@ def download_from_slskd(
         return None
     client = SlskdClient(settings)
     if not client.configured():
-        logger.info('slskd: missing configuration title={!r}', song.get('name'))
+        logger.info(
+            'slskd: missing configuration title={!r}', song.get('name')
+        )
         return None
     if not client.can_connect():
-        logger.info('slskd: connectivity check failed base_url={!r}', client.base_url)
+        logger.info(
+            'slskd: connectivity check failed base_url={!r}', client.base_url
+        )
         return None
 
-    output_dir = Path(str(settings.get('output_dir') or settings.get('download_dir') or '/downloads'))
+    output_dir = Path(
+        str(
+            settings.get('output_dir')
+            or settings.get('download_dir')
+            or '/downloads'
+        )
+    )
     source_dir = Path(
-        str(settings.get('source_dir') or settings.get('download_dir') or output_dir)
+        str(
+            settings.get('source_dir')
+            or settings.get('download_dir')
+            or output_dir
+        )
     )
     leave_in_place = bool(settings.get('leave_in_place', True))
-    queries = _slskd_search_queries(song)
+    spotify_row = snapshot_spotify_metadata(song)
+    queries = _slskd_search_queries(spotify_row)
     if not queries:
         return None
 
-    label = f"{song.get('name')} - {', '.join(song.get('artists') or [])}"
+    label = f'{song.get("name")} - {", ".join(song.get("artists") or [])}'
 
     def report(pct: float, message: str) -> None:
         if progress_cb is not None:
@@ -1139,17 +1270,22 @@ def download_from_slskd(
                 )
                 progress_cb(pct, text, 'slskd')
             except Exception:
-                logger.opt(exception=True).debug('slskd progress callback error')
+                logger.opt(exception=True).debug(
+                    'slskd progress callback error'
+                )
 
     deadline = _slskd_deadline(settings)
     report(2.0, 'searching')
 
     search_id = ''
 
-    # Search only inside the parallel slot; try each candidate sequentially after.
+    # Hold the parallel slot for search, enqueue, and transfer.
     with _slskd_semaphore(settings):
-        responses: list[dict[str, Any]] = []
         used_query = ''
+        candidates: list[dict[str, Any]] = []
+        files: list[dict[str, Any]] = []
+        min_score = _match_min_score(settings)
+
         for query in queries:
             if _past_deadline(deadline):
                 logger.info(
@@ -1172,15 +1308,78 @@ def download_from_slskd(
                 continue
             raw_responses = client.search_responses(search_id)
             responses = _filter_slskd_responses(raw_responses)
-            if responses:
-                used_query = query
-                break
-            client.delete_search(search_id)
-            search_id = ''
+            if not responses:
+                client.delete_search(search_id)
+                search_id = ''
+                continue
 
-        if not responses:
+            ranked = _rank_slskd_candidates(song, responses, settings)
+            if not ranked:
+                ranked = _rank_slskd_candidates(
+                    song,
+                    responses,
+                    settings,
+                    allow_mix_variants=True,
+                )
+                if ranked:
+                    logger.info(
+                        'slskd: using extended-mix last resort for query={!r} '
+                        'title={!r}',
+                        query[:120],
+                        song.get('name'),
+                    )
+            if not ranked:
+                logger.info(
+                    'slskd: no matching audio for query={!r} title={!r} '
+                    'responses={}',
+                    query[:120],
+                    song.get('name'),
+                    len(responses),
+                )
+                client.delete_search(search_id)
+                search_id = ''
+                continue
+
+            qualified = [
+                row
+                for row in ranked
+                if int(row.get('match_score') or 0) >= min_score
+            ]
+            if not qualified:
+                top = ranked[0]
+                logger.info(
+                    'slskd: low confidence for query={!r} title={!r} '
+                    'top_score={} top_file={!r} min_score={}',
+                    query[:120],
+                    song.get('name'),
+                    top.get('match_score'),
+                    _file_basename(str(top.get('filename') or '')),
+                    min_score,
+                )
+                client.delete_search(search_id)
+                search_id = ''
+                continue
+
+            selected = _select_download_candidates(qualified, settings)
+            if not selected:
+                logger.info(
+                    'slskd: no files passed quality filters for query={!r} '
+                    'title={!r}',
+                    query[:120],
+                    song.get('name'),
+                )
+                client.delete_search(search_id)
+                search_id = ''
+                continue
+
+            used_query = query
+            candidates = ranked
+            files = selected
+            break
+
+        if not files:
             logger.info(
-                'slskd: no results title={!r} queries={}',
+                'slskd: no matching audio files title={!r} queries={}',
                 song.get('name'),
                 queries[:6],
             )
@@ -1188,55 +1387,18 @@ def download_from_slskd(
                 client.delete_search(search_id)
             return None
 
-        candidates = _rank_slskd_candidates(song, responses, settings)
-        if not candidates:
-            logger.info(
-                'slskd: no matching audio files title={!r} q={!r} responses={}',
-                song.get('name'),
-                used_query[:120],
-                len(responses),
-            )
-            client.delete_search(search_id)
-            return None
-
-        min_score = _match_min_score(settings)
-        qualified = [
-            row
-            for row in candidates
-            if int(row.get('match_score') or 0) >= min_score
-        ]
-        if not qualified:
-            top = candidates[0]
-            logger.info(
-                'slskd: no confident match title={!r} top_score={} '
-                'top_file={!r} min_score={}',
-                song.get('name'),
-                top.get('match_score'),
-                _file_basename(str(top.get('filename') or '')),
-                min_score,
-            )
-            client.delete_search(search_id)
-            return None
-
-        files = _select_download_candidates(qualified, settings)
-        if not files:
-            logger.info(
-                'slskd: no files passed quality filters title={!r}',
-                song.get('name'),
-            )
-            client.delete_search(search_id)
-            return None
-
         pick = files[0]
         logger.info(
             'slskd: picked score={} reasons={} file={!r} user={!r} '
-            'candidates={} qualified={}',
+            'query={!r} ranked={} selected={} (download_attempts={})',
             pick.get('match_score'),
             ','.join(pick.get('match_reasons') or []),
             _file_basename(str(pick.get('filename') or '')),
             pick.get('username'),
+            used_query[:120],
             len(candidates),
-            len(qualified),
+            len(files),
+            int(settings.get('download_attempts') or 5),
         )
 
         if _past_deadline(deadline):
@@ -1247,91 +1409,113 @@ def download_from_slskd(
             )
             return None
 
-    roots = _search_roots(settings, client)
+        roots = _search_roots(settings, client)
 
-    def _root_key(path: Path) -> str:
-        try:
-            return str(path.resolve())
-        except OSError:
-            return str(path)
+        def _root_key(path: Path) -> str:
+            try:
+                return str(path.resolve())
+            except OSError:
+                return str(path)
 
-    root_keys = {_root_key(r) for r in roots}
-    if _root_key(source_dir) not in root_keys:
-        roots.insert(0, source_dir)
-    if _root_key(output_dir) not in root_keys:
-        roots.append(output_dir)
+        root_keys = {_root_key(r) for r in roots}
+        if _root_key(source_dir) not in root_keys:
+            roots.insert(0, source_dir)
+        if _root_key(output_dir) not in root_keys:
+            roots.append(output_dir)
 
-    for attempt_idx, file_row in enumerate(files, start=1):
-        if _past_deadline(deadline):
-            logger.info(
-                'slskd: download timeout before trying candidate {} title={!r}',
-                attempt_idx,
-                song.get('name'),
+        for attempt_idx, file_row in enumerate(files, start=1):
+            if _past_deadline(deadline):
+                logger.info(
+                    'slskd: download timeout before trying candidate {} title={!r}',
+                    attempt_idx,
+                    song.get('name'),
+                )
+                break
+
+            username = str(file_row.get('username') or '')
+            filename = str(file_row.get('filename') or '')
+            if not client.enqueue_download(file_row):
+                logger.info(
+                    'slskd: enqueue failed candidate={}/{} title={!r} user={!r} file={!r}',
+                    attempt_idx,
+                    len(files),
+                    song.get('name'),
+                    username,
+                    _file_basename(filename)[:120],
+                )
+                continue
+
+            try:
+                queued_size = int(file_row.get('size') or 0)
+            except (TypeError, ValueError):
+                queued_size = 0
+
+            report(36.0, f'queued ({attempt_idx}/{len(files)})')
+
+            found = _wait_for_slskd_file(
+                client,
+                song,
+                username,
+                filename,
+                settings,
+                roots,
+                expected_size=queued_size,
+                progress_cb=progress_cb,
+                deadline=deadline,
             )
-            break
+            if found is None:
+                found = _resolve_downloaded_file(
+                    roots,
+                    output_dir,
+                    song,
+                    filename,
+                    username=username,
+                    leave_in_place=leave_in_place,
+                    expected_size=queued_size,
+                )
 
-        username = str(file_row.get('username') or '')
-        filename = str(file_row.get('filename') or '')
-        if not client.enqueue_download(file_row):
+            if found is not None:
+                if not verify_downloaded_file_matches_spotify(
+                    found, spotify_row
+                ):
+                    meta = read_audio_metadata(found)
+                    mismatch_row = {
+                        **spotify_row,
+                        'name': str(meta.get('title') or ''),
+                        'artists': list(meta.get('artists') or []),
+                        'library_from_tags': True,
+                    }
+                    logger.info(
+                        'slskd: tags mismatch after download {}; '
+                        'trying next candidate ({}/{}) file={!r}',
+                        spotify_file_tag_mismatch_label(mismatch_row),
+                        attempt_idx,
+                        len(files),
+                        _file_basename(filename)[:120],
+                    )
+                    _discard_mismatched_download(found)
+                    found = None
+
+            if found is not None:
+                if search_id:
+                    client.delete_search(search_id)
+                return _finalize_slskd_path(found, output_dir, leave_in_place)
+
             logger.info(
-                'slskd: enqueue failed candidate={}/{} title={!r} user={!r} file={!r}',
+                'slskd: candidate failed candidate={}/{} title={!r} user={!r} file={!r}',
                 attempt_idx,
                 len(files),
                 song.get('name'),
                 username,
                 _file_basename(filename)[:120],
             )
-            continue
 
-        try:
-            queued_size = int(file_row.get('size') or 0)
-        except (TypeError, ValueError):
-            queued_size = 0
-
-        report(36.0, f'queued ({attempt_idx}/{len(files)})')
-
-        found = _wait_for_slskd_file(
-            client,
-            song,
-            username,
-            filename,
-            settings,
-            roots,
-            expected_size=queued_size,
-            progress_cb=progress_cb,
-            deadline=deadline,
-        )
-        if found is None:
-            found = _resolve_downloaded_file(
-                roots,
-                output_dir,
-                song,
-                filename,
-                username=username,
-                leave_in_place=leave_in_place,
-                expected_size=queued_size,
-            )
-
-        if found is not None:
-            if search_id:
-                client.delete_search(search_id)
-            return _finalize_slskd_path(found, output_dir, leave_in_place)
+        if search_id:
+            client.delete_search(search_id)
 
         logger.info(
-            'slskd: candidate failed candidate={}/{} title={!r} user={!r} file={!r}',
-            attempt_idx,
-            len(files),
+            'slskd: all candidates failed title={!r} tried={}',
             song.get('name'),
-            username,
-            _file_basename(filename)[:120],
+            len(files),
         )
-
-    if search_id:
-        client.delete_search(search_id)
-
-    logger.info(
-        'slskd: all candidates failed title={!r} tried={}',
-        song.get('name'),
-        len(files),
-    )
-    return None
+        return None

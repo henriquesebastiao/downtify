@@ -4,6 +4,7 @@
       class="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6"
     >
       <button
+        type="button"
         class="flex items-center gap-2 shrink-0"
         @click="router.push({ name: 'Home' })"
         :title="t('nav.home')"
@@ -17,11 +18,23 @@
         </span>
       </button>
 
-      <div class="hidden md:flex flex-1 justify-center">
+      <div
+        v-if="route.name !== 'List'"
+        class="hidden md:flex flex-1 justify-center"
+      >
         <SearchInput class="w-full max-w-md" :compact="true" />
       </div>
 
       <div class="ml-auto flex items-center gap-1 sm:gap-2">
+        <button
+          class="icon-btn"
+          :class="{ 'icon-btn-active': route.name === 'Search' }"
+          @click="openSearch()"
+          :title="t('nav.search')"
+        >
+          <Icon icon="clarity:search-line" class="h-5 w-5" />
+        </button>
+
         <button
           class="icon-btn"
           :class="{ 'icon-btn-active': route.name === 'List' }"
@@ -52,22 +65,15 @@
         <button
           class="icon-btn relative"
           :class="{ 'icon-btn-active': route.name === 'Download' }"
-          @click="
-            route.name === 'Download'
-              ? router.push({
-                  name: 'Search',
-                  params: { query: sm.searchTerm.value || ' ' },
-                })
-              : router.push({ name: 'Download' })
-          "
+          @click="router.push({ name: 'Download' })"
           :title="t('nav.queue')"
         >
           <Icon icon="clarity:download-line" class="h-5 w-5" />
           <span
-            v-if="pt.downloadQueue.value.length > 0"
+            v-if="queueBadge > 0"
             class="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-content shadow-glow-sm"
           >
-            {{ pt.downloadQueue.value.length }}
+            {{ queueBadge }}
           </span>
         </button>
 
@@ -102,20 +108,29 @@
       </div>
     </div>
 
-    <div class="md:hidden px-4 pb-3">
+    <div
+      v-if="route.name !== 'List'"
+      class="md:hidden px-4 pb-2 border-b border-white/5"
+    >
       <SearchInput :compact="true" />
     </div>
   </header>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRoute } from 'vue-router'
 
 import router from '../router'
 import { useBinaryThemeManager } from '../model/theme'
 import { useProgressTracker } from '../model/download'
-import { useSearchManager } from '../model/search'
+import {
+  useSearchManager,
+  PLAYLIST_ROUTE_QUERY,
+  PLAYLIST_URL_KEY,
+} from '../model/search'
+import { useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
 
 import SearchInput from './SearchInput.vue'
@@ -125,7 +140,39 @@ const themeMgr = useBinaryThemeManager({
   newLightAlias: 'downtify-light',
   newDarkAlias: 'downtify-dark',
 })
-const pt = useProgressTracker()
+const { downloadQueue, queueVersion } = useProgressTracker()
+const queueBadge = computed(() => {
+  queueVersion.value
+  return downloadQueue.value.length
+})
 const sm = useSearchManager()
+const dm = useDownloadManager()
 const { t } = useI18n()
+
+function openSearch() {
+  const text = String(sm.searchTerm.value || '').trim()
+  if (!text) {
+    router.push({ name: 'Search' })
+    return
+  }
+  if (sm.isSpotifyPlaylistURL(text)) {
+    try {
+      sessionStorage.setItem(PLAYLIST_URL_KEY, text)
+    } catch {
+      // ignore
+    }
+    router.push({ name: 'Search', params: { query: PLAYLIST_ROUTE_QUERY } })
+    sm.loadSpotifyPlaylist(text)
+    return
+  }
+  if (sm.isSpotifyDirectDownloadURL(text)) {
+    router.push({ name: 'Download' })
+    return
+  }
+  if (sm.isValidSearch(text)) {
+    router.push({ name: 'Search', params: { query: text } })
+    return
+  }
+  router.push({ name: 'Search' })
+}
 </script>

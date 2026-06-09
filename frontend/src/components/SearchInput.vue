@@ -3,42 +3,29 @@
     <input
       type="text"
       :placeholder="placeHolder"
-      :class="['input-modern', compact ? 'h-11 text-sm' : 'h-14 text-base']"
+      :class="[
+        'input-modern',
+        compact ? 'h-11 text-sm' : 'h-14 text-base',
+        inputPadClass,
+      ]"
       v-model="sm.searchTerm.value"
-      @keyup.enter="lookUp(sm.searchTerm.value)"
+      @keyup.enter="submit()"
     />
-    <button
-      class="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex items-center justify-center rounded-full bg-primary text-primary-content shadow-glow-sm transition hover:scale-105 active:scale-95 disabled:opacity-60"
-      :class="compact ? 'h-9 w-9' : 'h-11 w-11'"
-      :disabled="dm.loading.value"
-      @click="lookUp(sm.searchTerm.value)"
-    >
-      <span
-        v-if="dm.loading.value"
-        class="loading loading-spinner"
-        :class="compact ? 'loading-xs' : 'loading-sm'"
-      ></span>
-      <Icon
-        v-else-if="sm.isValidURL(sm.searchTerm.value)"
-        icon="clarity:download-line"
-        :class="compact ? 'h-4 w-4' : 'h-5 w-5'"
-      />
-      <svg
-        v-else
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="2"
-        stroke="currentColor"
-        :class="compact ? 'h-4 w-4' : 'h-5 w-5'"
+    <div v-if="!compact" class="absolute right-1.5 top-1/2 -translate-y-1/2">
+      <button
+        type="button"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-content shadow-glow-sm transition hover:scale-105 active:scale-95 disabled:opacity-60"
+        :disabled="dm.loading.value || !canSubmit"
+        :title="t('search.submitSearch')"
+        @click="submit()"
       >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+        <span
+          v-if="dm.loading.value"
+          class="loading loading-spinner loading-sm"
         />
-      </svg>
-    </button>
+        <Icon v-else icon="clarity:search-line" class="h-5 w-5" />
+      </button>
+    </div>
   </div>
 </template>
 
@@ -47,11 +34,15 @@ import { ref, computed, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 
 import router from '../router'
-import { useSearchManager } from '../model/search'
+import {
+  useSearchManager,
+  PLAYLIST_ROUTE_QUERY,
+  PLAYLIST_URL_KEY,
+} from '../model/search'
 import { useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
 
-defineProps({
+const props = defineProps({
   compact: { type: Boolean, default: false },
 })
 
@@ -68,11 +59,31 @@ const placeHolderRotation = [
 ]
 const rotationIndex = ref(0)
 const placeHolder = computed(() => {
-  // depend on locale to refresh translated default placeholder
   const _ = locale.value
   if (rotationIndex.value === 0) return t('search.placeholder')
   return placeHolderRotation[rotationIndex.value - 1]
 })
+
+const inputText = computed(() => String(sm.searchTerm.value || '').trim())
+
+const showPlaylistAction = computed(() =>
+  sm.isSpotifyPlaylistURL(inputText.value)
+)
+
+const showDownloadAction = computed(() =>
+  sm.isSpotifyDirectDownloadURL(inputText.value)
+)
+
+const canSubmit = computed(() => {
+  if (!inputText.value) return false
+  return (
+    sm.isValidSearch(inputText.value) ||
+    showPlaylistAction.value ||
+    showDownloadAction.value
+  )
+})
+
+const inputPadClass = computed(() => (props.compact ? '' : 'pr-14'))
 
 const polling = setInterval(() => {
   rotationIndex.value =
@@ -80,13 +91,40 @@ const polling = setInterval(() => {
 }, 5000)
 onBeforeUnmount(() => clearInterval(polling))
 
-function lookUp(query) {
-  if (!query || !query.trim()) return
-  if (sm.isValidURL(query)) {
-    dm.fromURL(query)
-    router.push({ name: 'Download' })
-  } else if (sm.isValidSearch(query)) {
-    router.push({ name: 'Search', params: { query } })
+function browsePlaylist() {
+  const text = inputText.value
+  if (!text || !sm.isSpotifyPlaylistURL(text)) return
+  try {
+    sessionStorage.setItem(PLAYLIST_URL_KEY, text)
+  } catch {
+    // ignore
+  }
+  router.push({ name: 'Search', params: { query: PLAYLIST_ROUTE_QUERY } })
+  sm.loadSpotifyPlaylist(text)
+}
+
+function downloadLink() {
+  const text = inputText.value
+  if (!text || !sm.isSpotifyDirectDownloadURL(text)) return
+  dm.fromURL(text)
+  router.push({ name: 'Download' })
+}
+
+function textSearch() {
+  const text = inputText.value
+  if (!text || !sm.isValidSearch(text)) return
+  router.push({ name: 'Search', params: { query: text } })
+}
+
+function submit() {
+  const text = inputText.value
+  if (!text) return
+  if (sm.isSpotifyPlaylistURL(text)) {
+    browsePlaylist()
+  } else if (sm.isSpotifyDirectDownloadURL(text)) {
+    downloadLink()
+  } else if (sm.isValidSearch(text)) {
+    textSearch()
   }
 }
 </script>

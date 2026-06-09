@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
 from downtify import library_paths as lp
 
 
@@ -36,7 +33,9 @@ def test_locate_prefers_configured_slskd_dir_over_legacy_copy(tmp_path):
     assert found == external.resolve()
 
 
-def test_slskd_dir_from_downloader_falls_back_to_env_mount(tmp_path, monkeypatch):
+def test_slskd_dir_from_downloader_falls_back_to_env_mount(
+    tmp_path, monkeypatch
+):
     slskd_mount = tmp_path / 'slskd_vol'
     slskd_mount.mkdir()
 

@@ -5,12 +5,14 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 from downtify.spotify import (
     _album_release_date_from_open_page,
     _artist_names,
     _artists_from_subtitle,
     _embed_row_track,
+    _fetch_embed_json,
     _normalize_release_date_text,
     _track_dict,
     album_tracks_from_id,
@@ -319,3 +321,42 @@ def test_album_tracks_from_id_merges_row_subtitle():
     assert songs[0]['album_name'] == 'TestAlbum'
     assert songs[0]['track_number'] == 1
     assert songs[0]['album_track_total'] == 1
+
+
+def test_fetch_embed_json_retries_transient_504() -> None:
+    ok = MagicMock(status_code=200)
+    ok.text = (
+        '<script id="__NEXT_DATA__" type="application/json">'
+        '{"props":{"pageProps":{"state":{"data":{"entity":{}}}}}}'
+        '</script>'
+    )
+    ok.raise_for_status = MagicMock()
+
+    fail = MagicMock(status_code=504)
+    fail.raise_for_status.side_effect = requests.HTTPError(response=fail)
+
+    with (
+        patch('downtify.spotify.time.sleep'),
+        patch(
+            'downtify.spotify.requests.get',
+            side_effect=[fail, fail, ok],
+        ) as mock_get,
+    ):
+        data = _fetch_embed_json('playlist', 'abc123')
+
+    assert mock_get.call_count == 3
+    assert 'props' in data
+
+
+def test_fetch_embed_json_does_not_retry_client_errors() -> None:
+    fail = MagicMock(status_code=404)
+    fail.raise_for_status.side_effect = requests.HTTPError(response=fail)
+
+    with (
+        patch('downtify.spotify.time.sleep') as mock_sleep,
+        patch('downtify.spotify.requests.get', return_value=fail),
+    ):
+        with pytest.raises(requests.HTTPError):
+            _fetch_embed_json('playlist', 'missing')
+
+    mock_sleep.assert_not_called()

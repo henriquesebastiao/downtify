@@ -102,7 +102,9 @@
               <button
                 type="button"
                 class="btn btn-xs btn-ghost px-1 min-h-0 h-7"
-                :disabled="index === sm.settings.value.audio_providers.length - 1"
+                :disabled="
+                  index === sm.settings.value.audio_providers.length - 1
+                "
                 @click="moveProviderAt(index, 1)"
               >
                 ↓
@@ -159,18 +161,23 @@
               :placeholder="t('settings.slskdApiKey')"
               v-model="sm.settings.value.slskd.api_key"
             />
-            <div class="rounded-xl border border-white/10 bg-base-100/50 px-3 py-2.5 space-y-2">
+            <div
+              class="rounded-xl border border-white/10 bg-base-100/50 px-3 py-2.5 space-y-2"
+            >
               <p class="text-[11px] font-semibold text-base-content/70">
                 {{ t('settings.slskdSourceDirTitle') }}
               </p>
-              <ul class="text-[11px] text-base-content/50 space-y-1 list-disc pl-4">
+              <ul
+                class="text-[11px] text-base-content/50 space-y-1 list-disc pl-4"
+              >
                 <li>{{ t('settings.slskdSourceDirBullet1') }}</li>
                 <li>{{ t('settings.slskdSourceDirBullet2') }}</li>
                 <li>{{ t('settings.slskdSourceDirBullet3') }}</li>
               </ul>
               <pre
                 class="text-[10px] leading-relaxed text-base-content/60 whitespace-pre-wrap font-mono bg-base-300/30 rounded-lg px-2 py-1.5"
-              >{{ t('settings.slskdSourceDirExample') }}</pre>
+                >{{ t('settings.slskdSourceDirExample') }}</pre
+              >
             </div>
             <label class="text-[11px] text-base-content/50">
               {{ t('settings.slskdSourceDirLabel') }}
@@ -209,7 +216,9 @@
                   type="number"
                   min="30"
                   max="3600"
-                  v-model.number="sm.settings.value.slskd.download_timeout_seconds"
+                  v-model.number="
+                    sm.settings.value.slskd.download_timeout_seconds
+                  "
                 />
               </label>
               <label class="text-[11px] text-base-content/50">
@@ -219,7 +228,9 @@
                   type="number"
                   min="15"
                   max="3600"
-                  v-model.number="sm.settings.value.slskd.queued_timeout_seconds"
+                  v-model.number="
+                    sm.settings.value.slskd.queued_timeout_seconds
+                  "
                 />
               </label>
             </div>
@@ -260,10 +271,7 @@
               </span>
             </span>
           </label>
-          <div
-            v-if="youtubeCookiesExpanded"
-            class="grid grid-cols-1 gap-2"
-          >
+          <div v-if="youtubeCookiesExpanded" class="grid grid-cols-1 gap-2">
             <p
               v-if="youtubeCookiesReady && !youtubeCookiesAuthenticated"
               class="text-xs text-warning"
@@ -304,10 +312,7 @@
                 {{ t('settings.youtubeCookiesClear') }}
               </button>
             </div>
-            <p
-              v-if="youtubeCookiesError"
-              class="text-xs text-error"
-            >
+            <p v-if="youtubeCookiesError" class="text-xs text-error">
               {{ youtubeCookiesError }}
             </p>
           </div>
@@ -522,6 +527,57 @@
           </div>
         </div>
 
+        <!-- Library / player -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.librarySection') }}
+          </label>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.cache_cover_art"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.cacheCoverArt') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.cacheCoverArtHint') }}
+              </span>
+            </span>
+          </label>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2 mt-3"
+          >
+            {{ t('settings.reconcileSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/50 mb-2">
+            {{ t('settings.reconcileIntro') }}
+          </p>
+          <button
+            type="button"
+            class="btn btn-sm h-10 px-5 rounded-full border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50"
+            :disabled="reconcileBusy"
+            @click="runLibraryReconcile"
+          >
+            {{
+              reconcileBusy
+                ? t('settings.reconcileRunning')
+                : t('settings.reconcileButton')
+            }}
+          </button>
+          <p
+            v-if="reconcileMessage"
+            class="text-[11px] mt-2"
+            :class="reconcileError ? 'text-error' : 'text-primary'"
+          >
+            {{ reconcileMessage }}
+          </p>
+        </div>
+
         <!-- File organization -->
         <div>
           <label
@@ -637,6 +693,9 @@ import { useI18n } from '../i18n'
 const sm = useSettingsManager()
 const youtubeCookiesError = ref('')
 const youtubeCookiesExpanded = ref(false)
+const reconcileBusy = ref(false)
+const reconcileMessage = ref('')
+const reconcileError = ref(false)
 
 const YOUTUBE_DEFAULTS = {
   cookies_file: '',
@@ -647,14 +706,14 @@ const YOUTUBE_DEFAULTS = {
   cookies_warnings: [],
 }
 
-const youtubeCookiesPath = computed(
-  () => String(sm.settings.value?.youtube?.cookies_file || '').trim()
+const youtubeCookiesPath = computed(() =>
+  String(sm.settings.value?.youtube?.cookies_file || '').trim()
 )
-const youtubeCookiesReady = computed(
-  () => Boolean(sm.settings.value?.youtube?.cookies_file_exists)
+const youtubeCookiesReady = computed(() =>
+  Boolean(sm.settings.value?.youtube?.cookies_file_exists)
 )
-const youtubeCookiesAuthenticated = computed(
-  () => Boolean(sm.settings.value?.youtube?.cookies_looks_authenticated)
+const youtubeCookiesAuthenticated = computed(() =>
+  Boolean(sm.settings.value?.youtube?.cookies_looks_authenticated)
 )
 const { t, locale, setLocale, locales } = useI18n()
 
@@ -682,11 +741,14 @@ const SLSKD_DEFAULTS = {
   timeout_seconds: 20,
   search_retries: 5,
   search_poll_seconds: 15,
-  download_attempts: 3,
+  download_attempts: 5,
   poll_interval_seconds: 5,
   poll_max_attempts: 60,
   download_timeout_seconds: 600,
   queued_timeout_seconds: 180,
+  duration_tolerance_seconds: 10,
+  duration_tolerance_percent: 15,
+  mix_duration_tolerance_percent: 50,
   extensions: ['mp3', 'flac'],
   min_bitrate: 256,
 }
@@ -735,6 +797,72 @@ watchEffect(() => {
     sm.settings.value.sync_navidrome = true
   }
 })
+
+watchEffect(() => {
+  if (sm.settings.value?.cache_cover_art === undefined) {
+    sm.settings.value.cache_cover_art = false
+  }
+})
+
+async function runLibraryReconcile() {
+  reconcileBusy.value = true
+  reconcileMessage.value = ''
+  reconcileError.value = false
+  try {
+    const res = await API.reconcileLibrary()
+    const count = res.data?.paths_updated ?? 0
+    const pruned = res.data?.pruned_stale ?? 0
+    const backfilled = res.data?.content_keys_backfilled ?? 0
+    const playlists = (res.data?.playlists_affected ?? []).join(', ')
+    const refreshM3u = !!res.data?.refresh_m3u
+    const refreshNav = !!res.data?.refresh_navidrome
+    const extras = [
+      refreshM3u ? t('settings.reconcileM3u') : '',
+      refreshNav ? t('settings.reconcileNavidrome') : '',
+    ]
+      .filter(Boolean)
+      .join(', ')
+    if (count === 0 && pruned === 0 && backfilled === 0) {
+      reconcileMessage.value = t('settings.reconcileNone')
+    } else if (count === 0 && pruned > 0) {
+      if (playlists && extras) {
+        reconcileMessage.value = t('settings.reconcilePrunedPlaylists', {
+          pruned,
+          playlists,
+          extras,
+        })
+      } else if (backfilled > 0) {
+        reconcileMessage.value = t('settings.reconcilePrunedBackfill', {
+          pruned,
+          backfilled,
+        })
+      } else {
+        reconcileMessage.value = t('settings.reconcilePrunedSimple', { pruned })
+      }
+    } else if (count === 0 && backfilled > 0) {
+      reconcileMessage.value = t('settings.reconcileBackfillOnly', {
+        backfilled,
+      })
+    } else if (!refreshM3u && !refreshNav) {
+      reconcileMessage.value = t('settings.reconcileDonePathsOnly', {
+        count,
+      })
+    } else {
+      reconcileMessage.value = extras
+        ? t('settings.reconcileDone', {
+            count,
+            playlists: playlists || '—',
+            extras,
+          })
+        : t('settings.reconcileDonePathsOnly', { count })
+    }
+  } catch {
+    reconcileError.value = true
+    reconcileMessage.value = t('settings.reconcileError')
+  } finally {
+    reconcileBusy.value = false
+  }
+}
 
 watchEffect(() => {
   const providers = sm.settings.value?.audio_providers
@@ -810,8 +938,7 @@ function toggleAudioProvider(provider) {
   } else {
     list.push(provider)
   }
-  sm.settings.value.audio_providers =
-    list.length > 0 ? list : ['youtube-music']
+  sm.settings.value.audio_providers = list.length > 0 ? list : ['youtube-music']
 }
 
 function moveProviderAt(index, delta) {

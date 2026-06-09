@@ -16,7 +16,9 @@ import logging
 import mimetypes
 import os
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import AsyncIterator
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,26 +26,45 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
 from loguru import logger
-from mutagen import File as MutagenFile
-from mutagen.flac import FLAC, Picture
-from mutagen.id3 import ID3
-from mutagen.mp4 import MP4
-from mutagen.oggopus import OggOpus
-from mutagen.oggvorbis import OggVorbis
+from pydantic import BaseModel, Field
 from uvicorn import Config, Server
 
 from downtify import __version__, api
+from downtify.api import (
+    collect_playlist_batch_sync_rows,
+    known_spotify_playlist_ids,
+)
+from downtify.cover_art import extract_cover_art
+from downtify.cover_cache import CoverArtCache
+from downtify.download_pool import limiter_from_settings
 from downtify.downloader import Downloader
-from downtify.monitor import PlaylistMonitorDB, monitor_loop
 from downtify.library_catalog import (
     LibraryContext,
     library_context_from_state,
     list_library_entries,
     resolve_library_file,
 )
+from downtify.library_delete import delete_library_file
+from downtify.library_metadata_cache import LibraryMetadataCache
+from downtify.library_paths_cache import invalidate_library_paths_cache
+from downtify.library_reconcile import refresh_playlists_after_moves
+from downtify.monitor import PlaylistMonitorDB, monitor_loop
+from downtify.navidrome_index import NavidromeIndex
+from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
+from downtify.playlist_catalog import PlaylistCatalog
+from downtify.playlist_spotify_cache import (
+    PlaylistSpotifyCache,
+    playlist_spotify_cache_loop,
+)
 from downtify.track_index import TrackIndex
 
 load_dotenv()
+
+
+def _uvicorn_access_log_enabled() -> bool:
+    """HTTP request lines are off by default; set DOWNTIFY_ACCESS_LOG=full to enable."""
+    raw = str(os.getenv('DOWNTIFY_ACCESS_LOG', '') or '').strip().lower()
+    return raw in {'1', 'true', 'full', 'all', 'on'}
 
 
 class _InterceptHandler(logging.Handler):
@@ -81,17 +102,25 @@ def _setup_logging(level: str) -> None:
     # Explicitly override uvicorn's loggers before it starts — uvicorn will
     # still write to these logger names, and we want them flowing through
     # loguru rather than being printed raw by uvicorn's default handler.
+    intercept = _InterceptHandler()
     for _name in ('uvicorn', 'uvicorn.error', 'uvicorn.access', 'fastapi'):
         _log = logging.getLogger(_name)
-        _log.handlers = [_InterceptHandler()]
+        _log.handlers = [intercept]
         _log.propagate = False
 
 
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 DATABASE_DIR = Path('/data')
-WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
+_REPO_ROOT = Path(__file__).resolve().parent
+WEB_GUI_LOCATION = os.getenv(
+    'WEB_GUI_LOCATION',
+    str(_REPO_ROOT / 'frontend' / 'dist'),
+)
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
 DEFAULT_PORT = int(os.getenv('DOWNTIFY_PORT', os.getenv('PORT', '8000')))
+_TRANSPARENT_GIF = base64.b64decode(
+    'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+)
 
 
 class SPAStaticFiles(StaticFiles):
@@ -110,80 +139,98 @@ def _fix_mime_types() -> None:
     mimetypes.add_type('text/css', '.css')
 
 
-def _extract_cover(path: Path) -> tuple[bytes | None, str | None]:
-    """Return ``(image_bytes, mime)`` for the embedded cover, or ``(None, None)``.
+class LibraryListEntry(BaseModel):
+    """One row from ``GET /list``."""
 
-    Reads tags lazily — mutagen format detection handles MP3/FLAC/M4A/OGG/Opus
-    without us needing to dispatch on extension.
-    """
+    file: str
+    title: str = ''
+    artist: str = ''
+    album: str = ''
+    has_cover: bool = False
+    playlists: list[str] = Field(default_factory=list)
 
+
+async def _application_startup() -> None:
+    loop = asyncio.get_running_loop()
+    api.state.loop = loop
+    api.state.download_limiter = limiter_from_settings(api.state.settings)
+    db_path = DATABASE_DIR / 'downtify_monitor.db'
+    api.state.monitor_db = PlaylistMonitorDB(db_path)
+    library_db = DATABASE_DIR / 'downtify_library.db'
+    api.state.track_index = TrackIndex(library_db)
+    api.state.navidrome_index = NavidromeIndex(library_db)
+    api.state.metadata_cache = LibraryMetadataCache(library_db)
+    api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
+    api.state.playlist_catalog = PlaylistCatalog(library_db)
+    api.state.playlist_batch_store = PlaylistBatchStore(library_db)
+    api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
+    lib_ctx = library_context_from_state(
+        DOWNLOAD_DIR, api.state.settings, api.state.track_index
+    )
     try:
-        # ID3 (mp3, sometimes wav/aac)
-        try:
-            tag = ID3(str(path))
-            for frame in tag.getall('APIC'):
-                if frame.data:
-                    return frame.data, frame.mime or 'image/jpeg'
-        except Exception:
-            pass
-
-        # FLAC
-        if path.suffix.lower() == '.flac':
-            try:
-                f = FLAC(str(path))
-                if f.pictures:
-                    pic = f.pictures[0]
-                    return pic.data, pic.mime or 'image/jpeg'
-            except Exception:
-                pass
-
-        # MP4 / M4A
-        if path.suffix.lower() in {'.m4a', '.mp4', '.aac'}:
-            try:
-                m = MP4(str(path))
-                covr = m.tags.get('covr') if m.tags else None
-                if covr:
-                    pic = covr[0]
-                    fmt = getattr(pic, 'imageformat', None)
-                    mime = (
-                        'image/png'
-                        if fmt == 14  # MP4Cover.FORMAT_PNG
-                        else 'image/jpeg'
-                    )
-                    return bytes(pic), mime
-            except Exception:
-                pass
-
-        # Ogg Vorbis / Opus — METADATA_BLOCK_PICTURE base64
-        if path.suffix.lower() in {'.ogg', '.opus'}:
-            try:
-                ogg = (
-                    OggOpus(str(path))
-                    if path.suffix.lower() == '.opus'
-                    else OggVorbis(str(path))
-                )
-                blocks = ogg.get('metadata_block_picture') or []
-                for raw in blocks:
-                    try:
-                        pic = Picture(base64.b64decode(raw))
-                        if pic.data:
-                            return pic.data, pic.mime or 'image/jpeg'
-                    except Exception:
-                        continue
-            except Exception:
-                pass
-
-        # Generic fallback — let mutagen pick the right parser
-        try:
-            f = MutagenFile(str(path))
-            if f is not None and getattr(f, 'pictures', None):
-                pic = f.pictures[0]
-                return pic.data, pic.mime or 'image/jpeg'
-        except Exception:
-            pass
+        imported = api.state.track_index.backfill_from_monitor_db(db_path)
+        if imported:
+            logger.info(
+                'Track library index: imported {} path(s) from monitor history',
+                imported,
+            )
     except Exception:
-        return None, None
-    return None, None
+        logger.exception('Track library backfill from monitor db failed')
+    try:
+        imported_pl = api.state.playlist_catalog.backfill_from_monitor_db(
+            db_path,
+            download_dir=lib_ctx.download_dir,
+            slskd_dir=lib_ctx.slskd_dir,
+        )
+        if imported_pl:
+            logger.info(
+                'Playlist catalog: linked {} track(s) from monitor history',
+                imported_pl,
+            )
+    except Exception:
+        logger.exception('Playlist catalog backfill from monitor db failed')
+    try:
+        if api.state.playlist_batch_store is not None:
+            synced = ensure_batch_records(
+                api.state.playlist_batch_store,
+                collect_playlist_batch_sync_rows(),
+            )
+            if synced:
+                logger.info(
+                    'Playlist batches: registered {} playlist(s) from library',
+                    synced,
+                )
+    except Exception:
+        logger.exception('Playlist batch sync from library failed')
+    asyncio.create_task(
+        monitor_loop(
+            db=api.state.monitor_db,
+            get_downloader=lambda: api.state.downloader,
+            get_track_index=lambda: api.state.track_index,
+            get_navidrome_index=lambda: api.state.navidrome_index,
+            get_metadata_cache=lambda: api.state.metadata_cache,
+            get_cover_cache=lambda: api.state.cover_cache,
+            get_playlist_catalog=lambda: api.state.playlist_catalog,
+            get_playlist_spotify_cache=lambda: (
+                api.state.playlist_spotify_cache
+            ),
+            broadcast=api.state.connections.broadcast,
+            loop=loop,
+            settings=api.state.settings,
+        )
+    )
+    asyncio.create_task(
+        playlist_spotify_cache_loop(
+            api.state.playlist_spotify_cache,
+            known_spotify_playlist_ids,
+        )
+    )
+
+
+@asynccontextmanager
+async def _application_lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    await _application_startup()
+    yield
 
 
 def build_app() -> FastAPI:
@@ -197,6 +244,7 @@ def build_app() -> FastAPI:
             'art and metadata in a self-hosted way via Docker.'
         ),
         version=__version__,
+        lifespan=_application_lifespan,
     )
     app.add_middleware(
         CORSMiddleware,
@@ -228,47 +276,21 @@ def build_app() -> FastAPI:
     )
     app.include_router(api.router)
 
-    @app.on_event('startup')
-    async def _startup() -> None:
-        loop = asyncio.get_running_loop()
-        api.state.loop = loop
-        api.state.download_semaphore = asyncio.Semaphore(
-            max(1, int(api.state.settings.get('max_parallel_downloads', 3)))
-        )
-        db_path = DATABASE_DIR / 'downtify_monitor.db'
-        api.state.monitor_db = PlaylistMonitorDB(db_path)
-        library_db = DATABASE_DIR / 'downtify_library.db'
-        api.state.track_index = TrackIndex(library_db)
-        try:
-            imported = api.state.track_index.backfill_from_monitor_db(db_path)
-            if imported:
-                logger.info(
-                    'Track library index: imported {} path(s) from monitor history',
-                    imported,
-                )
-        except Exception:
-            logger.exception('Track library backfill from monitor db failed')
-        asyncio.create_task(
-            monitor_loop(
-                db=api.state.monitor_db,
-                get_downloader=lambda: api.state.downloader,
-                get_track_index=lambda: api.state.track_index,
-                broadcast=api.state.connections.broadcast,
-                loop=loop,
-                settings=api.state.settings,
-            )
-        )
-
     def _library_ctx() -> LibraryContext:
         return library_context_from_state(
             DOWNLOAD_DIR,
             api.state.settings,
             api.state.track_index,
+            metadata_cache=api.state.metadata_cache,
+            playlist_catalog=api.state.playlist_catalog,
         )
 
-    @app.get('/list')
-    def list_downloads() -> list[dict[str, str]]:
-        return list_library_entries(_library_ctx())
+    @app.get('/list', response_model=list[LibraryListEntry])
+    def list_downloads(refresh: bool = False) -> list[LibraryListEntry]:
+        if refresh:
+            invalidate_library_paths_cache()
+        rows = list_library_entries(_library_ctx())
+        return [LibraryListEntry.model_validate(row) for row in rows]
 
     @app.get('/media/{file_path:path}')
     def serve_media(file_path: str) -> FileResponse:
@@ -277,19 +299,68 @@ def build_app() -> FastAPI:
             raise HTTPException(status_code=404, detail='File not found')
         return FileResponse(
             full,
-            media_type=mimetypes.guess_type(str(full))[0] or 'application/octet-stream',
+            media_type=mimetypes.guess_type(str(full))[0]
+            or 'application/octet-stream',
         )
 
-    @app.delete('/delete')
-    def delete_download(file: str) -> dict:
-        full = resolve_library_file(file, _library_ctx())
-        if full is None:
-            return {'deleted': False, 'error': 'File not found'}
+    async def _refresh_playlists_after_delete(
+        playlist_names: set[str],
+    ) -> None:
+        """M3U / Navidrome refresh can take minutes; run off the request path."""
+
+        if not playlist_names or api.state.downloader is None:
+            return
+        if api.state.playlist_catalog is None:
+            return
+        logger.info(
+            'Library delete: scheduling M3U/Navidrome refresh for {}',
+            ', '.join(sorted(playlist_names)[:8])
+            + ('; ...' if len(playlist_names) > 8 else ''),
+        )
         try:
-            full.unlink()
-        except Exception as exc:
-            return {'deleted': False, 'error': str(exc)}
-        return {'deleted': True}
+            await asyncio.to_thread(
+                refresh_playlists_after_moves,
+                playlist_names,
+                settings=api.state.settings,
+                downloader=api.state.downloader,
+                playlist_catalog=api.state.playlist_catalog,
+                track_index=api.state.track_index,
+                monitor_db=api.state.monitor_db,
+                navidrome_index=api.state.navidrome_index,
+                playlist_spotify_cache=api.state.playlist_spotify_cache,
+                cover_cache=api.state.cover_cache,
+                metadata_cache=api.state.metadata_cache,
+            )
+        except Exception:
+            logger.exception(
+                'delete: background playlist refresh failed for {}',
+                ', '.join(sorted(playlist_names)[:5]),
+            )
+
+    @app.delete('/delete')
+    async def delete_download(file: str) -> dict:
+        result = delete_library_file(
+            file,
+            _library_ctx(),
+            cover_cache=api.state.cover_cache,
+            metadata_cache=api.state.metadata_cache,
+            playlist_catalog=api.state.playlist_catalog,
+            track_index=api.state.track_index,
+            navidrome_index=api.state.navidrome_index,
+        )
+        if not result.get('deleted'):
+            return {
+                'deleted': False,
+                'error': result.get('error') or 'File not found',
+            }
+        affected = set(result.get('playlists_affected') or [])
+        if affected:
+            asyncio.create_task(_refresh_playlists_after_delete(affected))
+        return {
+            'deleted': True,
+            'playlists_affected': result.get('playlists_affected') or [],
+            'playlists_refresh_scheduled': bool(affected),
+        }
 
     @app.get('/cover')
     def get_cover(file: str):
@@ -297,14 +368,30 @@ def build_app() -> FastAPI:
         if full is None:
             raise HTTPException(status_code=404, detail='File not found')
 
-        data, mime = _extract_cover(full)
+        data: bytes | None = None
+        mime: str | None = None
+        if api.state.settings.get('cache_cover_art'):
+            cache = api.state.cover_cache
+            if cache is not None:
+                hit = cache.lookup(file, full)
+                if hit is not None:
+                    data, mime = hit
         if data is None:
-            raise HTTPException(status_code=404, detail='No embedded cover')
+            data, mime = extract_cover_art(full)
+            if data is None:
+                return Response(
+                    content=_TRANSPARENT_GIF,
+                    media_type='image/gif',
+                    headers={'Cache-Control': 'public, max-age=3600'},
+                )
+            if api.state.settings.get('cache_cover_art'):
+                cache = api.state.cover_cache
+                if cache is not None:
+                    cache.store(file, full, data, mime or 'image/jpeg')
         return Response(
             content=data,
             media_type=mime or 'image/jpeg',
             headers={
-                # Cache by mtime — clients fetch once per file revision.
                 'Cache-Control': 'public, max-age=86400',
                 'ETag': f'"{int(full.stat().st_mtime)}"',
             },
@@ -358,6 +445,7 @@ def main() -> None:
         loop=loop,  # type: ignore[arg-type]
         log_level=args.log_level.lower(),
         log_config=None,
+        access_log=_uvicorn_access_log_enabled(),
         workers=1,
     )
     server = Server(config)

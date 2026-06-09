@@ -7,6 +7,7 @@ const settings = ref({
   youtube: {
     cookies_file: '',
     cookies_from_browser: '',
+    download_timeout_seconds: 900,
     cookies_file_exists: false,
     cookies_looks_authenticated: false,
     cookies_auth_names: [],
@@ -21,11 +22,14 @@ const settings = ref({
     timeout_seconds: 20,
     search_retries: 5,
     search_poll_seconds: 15,
-    download_attempts: 3,
+    download_attempts: 5,
     poll_interval_seconds: 5,
     poll_max_attempts: 60,
     download_timeout_seconds: 600,
     queued_timeout_seconds: 180,
+    duration_tolerance_seconds: 10,
+    duration_tolerance_percent: 15,
+    mix_duration_tolerance_percent: 50,
     extensions: ['mp3', 'flac'],
     min_bitrate: 256,
   },
@@ -51,6 +55,7 @@ const settings = ref({
     api_version: '1.16.1',
   },
   organize_by_artist: false,
+  cache_cover_art: false,
   max_parallel_downloads: 3,
 })
 
@@ -65,7 +70,9 @@ const settingsOptions = {
 
 API.getSettings().then((res) => {
   if (res.status === 200) {
-    console.log('Received settings:', res.data)
+    if (import.meta.env.DEV) {
+      console.log('Received settings:', res.data)
+    }
     settings.value = {
       ...settings.value,
       ...res.data,
@@ -119,36 +126,38 @@ export function useSettingsManager() {
       return
     }
     saveErrorText.value = ''
-    API.setSettings(settings.value).then((res) => {
-      if (res.status === 200) {
-        console.log('Saved!')
-        isSaved.value = true
-        const modal = document.getElementById('settings-modal')
-        if (modal && 'checked' in modal) {
-          modal.checked = false
+    API.setSettings(settings.value)
+      .then((res) => {
+        if (res.status === 200) {
+          console.log('Saved!')
+          isSaved.value = true
+          const modal = document.getElementById('settings-modal')
+          if (modal && 'checked' in modal) {
+            modal.checked = false
+          }
+          setTimeout(() => {
+            isSaved.value = null
+          }, 2000)
+        } else {
+          console.error('Error saving settings.', res)
+          saveErrorText.value = 'Could not save settings'
+          isSaved.value = false
+          setTimeout(() => {
+            isSaved.value = null
+          }, 2000)
         }
-        setTimeout(() => {
-          isSaved.value = null
-        }, 2000)
-      } else {
-        console.error('Error saving settings.', res)
-        saveErrorText.value = 'Could not save settings'
+      })
+      .catch((error) => {
+        const detail = error?.response?.data?.detail
+        saveErrorText.value =
+          typeof detail === 'string' && detail.trim()
+            ? detail
+            : 'Could not save settings'
         isSaved.value = false
         setTimeout(() => {
           isSaved.value = null
-        }, 2000)
-      }
-    }).catch((error) => {
-      const detail = error?.response?.data?.detail
-      saveErrorText.value =
-        typeof detail === 'string' && detail.trim()
-          ? detail
-          : 'Could not save settings'
-      isSaved.value = false
-      setTimeout(() => {
-        isSaved.value = null
-      }, 2500)
-    })
+        }, 2500)
+      })
   }
   return { saveSettings, settings, settingsOptions, isSaved, saveErrorText }
 }

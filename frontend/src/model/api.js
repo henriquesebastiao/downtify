@@ -4,15 +4,19 @@ import config from '/src/config.js'
 
 import { v4 as uuidv4 } from 'uuid'
 
-console.log('using env:', process.env)
-console.log('using config: ', config)
+if (import.meta.env.DEV) {
+  console.log('using env:', process.env)
+  console.log('using config: ', config)
+}
 
 const API = axios.create({
   baseURL: `${config.PROTOCOL}//${config.BACKEND}:${config.PORT}${config.BASEURL}`,
 })
 
 const sessionID = uuidv4()
-console.log('session ID: ', sessionID)
+if (import.meta.env.DEV) {
+  console.log('session ID: ', sessionID)
+}
 
 getVersion()
 
@@ -23,14 +27,18 @@ const wsConnection = new WebSocket(
 )
 
 wsConnection.onopen = (event) => {
-  console.log('websocket connection opened', event)
+  if (import.meta.env.DEV) {
+    console.log('websocket connection opened', event)
+  }
 }
 
 function getVersion() {
   API.get('/api/version')
     .then((res) => {
       const prevItem = localStorage.getItem('version')
-      console.log('Backend version: ', res.data)
+      if (import.meta.env.DEV) {
+        console.log('Backend version: ', res.data)
+      }
       localStorage.setItem('version', res.data)
       if (prevItem != res.data) {
         location.reload()
@@ -61,6 +69,31 @@ function download(songURL) {
 
 function downloadBatch(payload) {
   return API.post('/api/download/batch', payload)
+}
+
+function getIncompletePlaylists() {
+  return API.get('/api/playlists/incomplete')
+}
+
+function getPlaylistBatches() {
+  return API.get('/api/playlists/batches')
+}
+
+function getPlaylistBatchDetails(spotifyPlaylistId, { tracks = true } = {}) {
+  return API.get(
+    `/api/playlists/batches/${encodeURIComponent(spotifyPlaylistId)}`,
+    { params: tracks ? {} : { tracks: false } }
+  )
+}
+
+function downloadMissingPlaylistTracks(payload) {
+  return API.post('/api/playlists/incomplete/download-missing', payload)
+}
+
+function deletePlaylistBatch(spotifyPlaylistId) {
+  return API.delete(
+    `/api/playlists/batches/${encodeURIComponent(spotifyPlaylistId)}`
+  )
 }
 
 function check_for_update() {
@@ -98,11 +131,7 @@ function mediaUrlToStoredPath(fileNameOrMediaUrl) {
   } else {
     path = path.replace(/^\//, '')
   }
-  return path
-    .split('/')
-    .filter(Boolean)
-    .map(decodePathSegment)
-    .join('/')
+  return path.split('/').filter(Boolean).map(decodePathSegment).join('/')
 }
 
 /** Filename for the browser save dialog (decoded, no %20 etc.). */
@@ -117,12 +146,24 @@ function coverFileURL(fileName) {
   return `/cover?file=${encodeURIComponent(fileName)}`
 }
 
-function listDownloads() {
-  return API.get('/list')
+function listDownloads(forceRefresh = false) {
+  return API.get('/list', {
+    params: forceRefresh ? { refresh: true } : {},
+  })
 }
 
 function deleteDownload(file) {
   return API.delete('/delete', { params: { file } })
+}
+
+function deleteDownloadsBatch(files) {
+  return API.post('/api/library/delete/batch', { files })
+}
+
+function deleteLibraryPlaylist(playlistName) {
+  return API.delete('/api/library/playlist', {
+    params: { playlist_name: playlistName },
+  })
 }
 
 function writePlaylistM3u(payload) {
@@ -169,6 +210,10 @@ function clearYoutubeCookies() {
   })
 }
 
+function reconcileLibrary() {
+  return API.post('/api/library/reconcile')
+}
+
 function ws_onmessage(fn) {
   return (wsConnection.onmessage = fn)
 }
@@ -181,11 +226,18 @@ export default {
   open,
   download,
   downloadBatch,
+  getIncompletePlaylists,
+  getPlaylistBatches,
+  getPlaylistBatchDetails,
+  downloadMissingPlaylistTracks,
+  deletePlaylistBatch,
   downloadFileURL,
   downloadSaveName,
   coverFileURL,
   listDownloads,
   deleteDownload,
+  deleteDownloadsBatch,
+  deleteLibraryPlaylist,
   writePlaylistM3u,
   getQueue,
   removeQueueItem,
@@ -195,6 +247,7 @@ export default {
   setSettings,
   uploadYoutubeCookies,
   clearYoutubeCookies,
+  reconcileLibrary,
   check_for_update,
   ws_onmessage,
   ws_onerror,

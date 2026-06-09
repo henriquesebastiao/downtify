@@ -2,25 +2,22 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from mutagen.id3 import ID3, TALB, TIT2, TPE1
 
-from mutagen.easyid3 import EasyID3
-from mutagen.id3 import ID3
-from mutagen.mp3 import MP3
-
-from downtify.library_metadata import library_entry_for_file, read_audio_metadata
+from downtify.library_metadata import (
+    library_entry_for_file,
+    read_audio_metadata,
+)
 
 
 def test_read_audio_metadata_from_mp3_tags(tmp_path):
     track = tmp_path / 'peer' / '02-weval_-_the_most.mp3'
-    track.parent.mkdir(parents=True)
-    audio = MP3()
-    audio.save(str(track))
-    tags = EasyID3(str(track))
-    tags['title'] = 'The Most'
-    tags['artist'] = 'Weval'
-    tags['album'] = 'Half Age'
-    tags.save()
+    track.parent.mkdir(parents=True, exist_ok=True)
+    tags = ID3()
+    tags.add(TIT2(encoding=3, text='The Most'))
+    tags.add(TPE1(encoding=3, text='Weval'))
+    tags.add(TALB(encoding=3, text='Half Age'))
+    tags.save(str(track), v2_version=3)
 
     meta = read_audio_metadata(track)
     assert meta['title'] == 'The Most'
@@ -31,6 +28,7 @@ def test_read_audio_metadata_from_mp3_tags(tmp_path):
     assert entry['title'] == 'The Most'
     assert entry['artist'] == 'Weval'
     assert entry['album'] == 'Half Age'
+    assert entry['has_cover'] is False
 
 
 def test_library_entry_falls_back_to_filename(tmp_path):
