@@ -70,10 +70,12 @@ export default {
     playlistBatchesLoading: 'Loading playlists…',
     playlistBatchesTracksLoading: 'Loading missing tracks…',
     playlistBatchesVerifying: 'Checking against Spotify…',
-    playlistBatchesSearchPlaceholder: 'Filter playlists or tracks…',
+    playlistBatchesSearchPlaceholder: 'Filter playlists or track titles…',
     playlistBatchesNoMatch: 'No playlists match your filter.',
     playlistBatchesNoTrackMatch:
-      'No tracks match your filter in this playlist.',
+      'No missing tracks match your filter in this playlist.',
+    playlistBatchesNoMissingLoaded:
+      'Missing track list not loaded yet — collapse and expand again, or clear the filter.',
     playlistBatchesExpandAll: 'Expand all',
     playlistBatchesCollapseAll: 'Collapse all',
     incompleteTitle: 'Incomplete playlists',

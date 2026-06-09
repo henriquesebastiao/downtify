@@ -70,10 +70,12 @@ export default {
     playlistBatchesLoading: 'Carregando playlists…',
     playlistBatchesTracksLoading: 'Carregando faixas faltantes…',
     playlistBatchesVerifying: 'Verificando no Spotify…',
-    playlistBatchesSearchPlaceholder: 'Filtrar playlists ou faixas…',
+    playlistBatchesSearchPlaceholder: 'Filtrar playlists ou títulos de faixas…',
     playlistBatchesNoMatch: 'Nenhuma playlist corresponde ao filtro.',
     playlistBatchesNoTrackMatch:
-      'Nenhuma faixa corresponde ao filtro nesta playlist.',
+      'Nenhuma faixa pendente corresponde ao filtro nesta playlist.',
+    playlistBatchesNoMissingLoaded:
+      'Lista de faltantes não carregou — recolha e expanda de novo, ou limpe o filtro.',
     playlistBatchesExpandAll: 'Expandir tudo',
     playlistBatchesCollapseAll: 'Recolher tudo',
     incompleteTitle: 'Playlists incompletas',

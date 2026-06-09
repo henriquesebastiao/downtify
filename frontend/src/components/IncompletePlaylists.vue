@@ -426,9 +426,18 @@ function trackMatchesQuery(track, query) {
   )
 }
 
-function visibleTracksFromList(tracks) {
+function filterMatchesPlaylistName(pl, query) {
+  const name = String(displayPl(pl).playlist_name || '').toLowerCase()
+  return name.includes(query)
+}
+
+function visibleTracksFromList(tracks, pl) {
   const query = filterQuery.value.trim().toLowerCase()
   if (!query) {
+    return tracks
+  }
+  // Searching by playlist title should not hide every missing row inside it.
+  if (pl && filterMatchesPlaylistName(pl, query)) {
     return tracks
   }
   return tracks.filter((track) => trackMatchesQuery(track, query))
@@ -437,7 +446,7 @@ function visibleTracksFromList(tracks) {
 function missingTracksFor(pl) {
   const detail = playlistDetails[pl.spotify_playlist_id]
   const tracks = detail?.missing_tracks ?? pl.missing_tracks ?? []
-  return visibleTracksFromList(tracks)
+  return visibleTracksFromList(tracks, pl)
 }
 
 function tracksDetailReady(pl) {
@@ -447,14 +456,22 @@ function tracksDetailReady(pl) {
 
 function tracksEmptyMessage(pl) {
   const detail = playlistDetails[pl.spotify_playlist_id]
+  const row = displayPl(pl)
   if (detail?.error) {
     return t('search.incompleteTracksLoading')
   }
   if (!tracksDetailReady(pl) && effectiveStatus(pl) !== 'complete') {
     return t('search.incompleteTracksLoading')
   }
-  if (filterQuery.value.trim()) {
+  const query = filterQuery.value.trim().toLowerCase()
+  if (query) {
+    if (filterMatchesPlaylistName(pl, query)) {
+      return t('search.playlistBatchesNoMissingLoaded')
+    }
     return t('search.playlistBatchesNoTrackMatch')
+  }
+  if ((row.missing_count || 0) > 0) {
+    return t('search.incompleteTracksLoading')
   }
   return t('search.playlistBatchComplete')
 }
