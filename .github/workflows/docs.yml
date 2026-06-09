@@ -1,21 +1,31 @@
 name: Documentation
+
 on:
   push:
     branches:
       - master
       - main
+  workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   deploy:
     environment:
-      name: docs
+      name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/configure-pages@v6
+        with:
+          enablement: true
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
