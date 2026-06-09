@@ -1219,11 +1219,169 @@ def _wait_for_slskd_file(
     )
 
 
+def parse_slskd_override_text(text: str) -> Optional[dict[str, str]]:
+    """Parse ``username | @@share\\path\\file.ext`` from a manual override."""
+
+    raw = str(text or '').strip()
+    if not raw:
+        return None
+    if '|' in raw:
+        username, _, filename = raw.partition('|')
+        username = username.strip()
+        filename = filename.strip()
+        if username and filename:
+            return {'username': username, 'filename': filename}
+    match = re.match(r'^(\S+)\s+(@@.+)$', raw, re.DOTALL)
+    if match:
+        return {
+            'username': match.group(1).strip(),
+            'filename': match.group(2).strip(),
+        }
+    return None
+
+
+def _slskd_override_row(song: dict[str, Any]) -> Optional[dict[str, Any]]:
+    if not song.get('slskd_override'):
+        return None
+    username = str(song.get('slskd_username') or '').strip()
+    filename = str(song.get('slskd_filename') or '').strip()
+    if not username or not filename:
+        return None
+    try:
+        size = int(song.get('slskd_size') or 0)
+    except (TypeError, ValueError):
+        size = 0
+    return {'username': username, 'filename': filename, 'size': max(0, size)}
+
+
+def _download_slskd_direct(
+    song: dict[str, Any],
+    settings: dict[str, Any],
+    progress_cb: Optional[ProgressCallback] = None,
+) -> Optional[Path]:
+    """Enqueue a known Soulseek remote file (failed-queue manual override)."""
+
+    row = _slskd_override_row(song)
+    if row is None:
+        logger.info(
+            'slskd: override missing username/filename title={!r}',
+            song.get('name'),
+        )
+        return None
+    client = SlskdClient(settings)
+    if not client.configured() or not client.can_connect():
+        return None
+
+    output_dir = Path(
+        str(
+            settings.get('output_dir')
+            or settings.get('download_dir')
+            or '/downloads'
+        )
+    )
+    source_dir = Path(
+        str(
+            settings.get('source_dir')
+            or settings.get('download_dir')
+            or output_dir
+        )
+    )
+    leave_in_place = bool(settings.get('leave_in_place', True))
+    spotify_row = snapshot_spotify_metadata(song)
+    username = str(row['username'])
+    filename = str(row['filename'])
+    expected_size = int(row.get('size') or 0)
+    deadline = _slskd_deadline(settings)
+
+    def report(pct: float, message: str) -> None:
+        if progress_cb is not None:
+            try:
+                text = (
+                    message
+                    if str(message).lower().startswith('slskd')
+                    else f'slskd · {message}'
+                )
+                progress_cb(pct, text, 'slskd')
+            except Exception:
+                logger.opt(exception=True).debug(
+                    'slskd progress callback error'
+                )
+
+    report(2.0, 'manual override')
+    roots = _search_roots(settings, client)
+
+    def _root_key(path: Path) -> str:
+        try:
+            return str(path.resolve())
+        except OSError:
+            return str(path)
+
+    root_keys = {_root_key(r) for r in roots}
+    if _root_key(source_dir) not in root_keys:
+        roots.insert(0, source_dir)
+    if _root_key(output_dir) not in root_keys:
+        roots.append(output_dir)
+
+    with _slskd_semaphore(settings):
+        if _past_deadline(deadline):
+            return None
+        logger.info(
+            'slskd: manual override user={!r} file={!r} title={!r}',
+            username,
+            _file_basename(filename)[:120],
+            song.get('name'),
+        )
+        if not client.enqueue_download(row):
+            logger.info(
+                'slskd: manual enqueue failed user={!r} file={!r}',
+                username,
+                _file_basename(filename)[:120],
+            )
+            return None
+        report(36.0, 'queued (manual)')
+        found = _wait_for_slskd_file(
+            client,
+            song,
+            username,
+            filename,
+            settings,
+            roots,
+            expected_size=expected_size,
+            progress_cb=progress_cb,
+            deadline=deadline,
+        )
+        if found is None:
+            found = _resolve_downloaded_file(
+                roots,
+                output_dir,
+                song,
+                filename,
+                username=username,
+                leave_in_place=leave_in_place,
+                expected_size=expected_size,
+            )
+        if found is not None and not verify_downloaded_file_matches_spotify(
+            found, spotify_row
+        ):
+            logger.info(
+                'slskd: manual override tags mismatch title={!r} file={!r}',
+                song.get('name'),
+                _file_basename(filename)[:120],
+            )
+            _discard_mismatched_download(found)
+            found = None
+        if found is not None:
+            return _finalize_slskd_path(found, output_dir, leave_in_place)
+    return None
+
+
 def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finalize
     song: dict[str, Any],
     settings: dict[str, Any],
     progress_cb: Optional[ProgressCallback] = None,
 ) -> Optional[Path]:
+    if song.get('slskd_override'):
+        return _download_slskd_direct(song, settings, progress_cb)
     if not bool(settings.get('enabled')):
         return None
     client = SlskdClient(settings)

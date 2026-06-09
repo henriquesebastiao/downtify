@@ -119,9 +119,22 @@ export default {
     clearAll: 'Clear all',
     clearAllPrompt: 'Remove all items from the queue?',
     forceAudio: 'Use a YouTube URL instead',
+    forceSlskd: 'Use an slskd file instead',
     overridePlaceholder: 'Paste a YouTube or YouTube Music URL…',
+    youtubeOverrideHint: 'Paste a YouTube link; Spotify metadata is kept.',
+    slskdOverridePeer: 'Peer (username)',
+    slskdOverridePeerPlaceholder: 'Manelo',
+    slskdOverrideFolder: 'Folder path',
+    slskdOverrideFolderPlaceholder:
+      '@@wibgr\\EUROPA & EUROVISIÓN\\Ivi Adamou - San Ena Oniro (2012)',
+    slskdOverrideFile: 'File name',
+    slskdOverrideFilePlaceholder:
+      '06 - Ivi Adamou, Melisses - Krata Ta Matia Sou klista.mp3',
+    slskdOverrideHint:
+      'Copy each line from slskd as shown — peer name, folder line (@@…), then the .mp3 filename. Downtify joins folder + file for you.',
     applyOverride: 'Apply',
     invalidYouTubeURL: 'Invalid YouTube URL',
+    invalidSlskdOverride: 'Fill in peer, folder path, and file name.',
   },
   library: {
     title: 'Library',

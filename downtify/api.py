@@ -819,6 +819,18 @@ def _merge_client_track_hints(
             if converted:
                 base['youtube_id'] = converted
                 base['youtube_id_override'] = True
+    if hints.get('slskd_override'):
+        base['slskd_override'] = True
+        for key in ('slskd_username', 'slskd_filename'):
+            val = hints.get(key)
+            if isinstance(val, str) and val.strip():
+                base[key] = val.strip()
+        sz = hints.get('slskd_size')
+        if sz is not None:
+            try:
+                base['slskd_size'] = int(sz)
+            except (TypeError, ValueError):
+                pass
 
 
 def _song_from_download_request(
