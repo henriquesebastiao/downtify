@@ -376,6 +376,54 @@ export function useDownloadManager() {
     return Promise.resolve({ song, filename: null })
   }
 
+  function retryWithSlskd(song, { username, filename, size = 0 }) {
+    const overriddenSong = {
+      ...song,
+      slskd_override: true,
+      slskd_username: username,
+      slskd_filename: filename,
+      slskd_size: size,
+    }
+    delete overriddenSong.youtube_id
+    delete overriddenSong.youtube_id_override
+    const item = progressTracker.getBySong(song)
+    if (item) {
+      Object.assign(item.song, {
+        slskd_override: true,
+        slskd_username: username,
+        slskd_filename: filename,
+        slskd_size: size,
+      })
+      delete item.song.youtube_id
+      delete item.song.youtube_id_override
+      item.setDownloading()
+      item.progress = 0
+      item.message = ''
+      item.provider = 'slskd'
+    }
+    return API.download(overriddenSong)
+      .then((res) => {
+        const it = progressTracker.getBySong(overriddenSong)
+        if (res.status === 200) {
+          const fn = res.data
+          if (it) {
+            it.setWebURL(API.downloadFileURL(fn))
+            it.setFilename(fn)
+            it.setDownloaded()
+          }
+          return { song: overriddenSong, filename: fn }
+        }
+        if (it) it.setError()
+        return { song: overriddenSong, filename: null }
+      })
+      .catch((err) => {
+        console.error('retryWithSlskd error:', err.message)
+        const it = progressTracker.getBySong(overriddenSong)
+        if (it) it.setError()
+        return { song: overriddenSong, filename: null }
+      })
+  }
+
   function retryWithAudio(song, youtubeVideoId) {
     const overriddenSong = { ...song, youtube_id: youtubeVideoId }
     const item = progressTracker.getBySong(song)
@@ -448,6 +496,7 @@ export function useDownloadManager() {
     queue,
     retry,
     retryWithAudio,
+    retryWithSlskd,
     retryAllFailed,
     remove,
     clearAll,

@@ -949,6 +949,24 @@ class Downloader:
                     'progress callback error at search start'
                 )
 
+        if song.get('slskd_override'):
+            local = download_from_slskd(
+                song, self.slskd_settings, progress_cb=progress_cb
+            )
+            if local is not None:
+                logger.info(
+                    'Match resolver: slskd manual override succeeded title={!r} '
+                    'path={}',
+                    song.get('name'),
+                    local,
+                )
+                return None, None, 'slskd', local
+            logger.info(
+                'Match resolver: slskd manual override failed title={!r}',
+                song.get('name'),
+            )
+            return None, None, None, None
+
         tried_ytdlp = False
         for provider in self.audio_providers:
             if provider == 'youtube-music':

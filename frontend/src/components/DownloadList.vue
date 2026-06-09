@@ -185,38 +185,62 @@
           </div>
         </div>
 
-        <!-- Optional YouTube override for failed tracks -->
+        <!-- Manual source override for failed tracks -->
         <div
-          v-if="item.isErrored() && overrideOpen[item.song.song_id]"
-          class="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center"
+          v-if="item.isErrored() && overrideMode[item.song.song_id]"
+          class="mt-3 pt-3 border-t border-white/10 space-y-2"
         >
-          <input
-            v-model="overrideUrls[item.song.song_id]"
-            type="text"
-            class="input input-sm flex-1 min-w-[12rem] rounded-xl bg-base-100/80"
-            :placeholder="t('queue.overridePlaceholder')"
-          />
+          <p class="text-[11px] text-base-content/50 leading-snug">
+            {{
+              overrideMode[item.song.song_id] === 'slskd'
+                ? t('queue.slskdOverrideHint')
+                : t('queue.youtubeOverrideHint')
+            }}
+          </p>
+          <div class="flex flex-wrap gap-2 items-center">
+            <input
+              v-model="overrideText[item.song.song_id]"
+              type="text"
+              class="input input-sm flex-1 min-w-[12rem] rounded-xl bg-base-100/80 font-mono text-xs"
+              :placeholder="
+                overrideMode[item.song.song_id] === 'slskd'
+                  ? t('queue.slskdOverridePlaceholder')
+                  : t('queue.overridePlaceholder')
+              "
+            />
+            <button
+              class="btn btn-sm btn-primary rounded-full"
+              @click="applyOverride(item)"
+            >
+              {{ t('queue.applyOverride') }}
+            </button>
+            <button
+              class="btn btn-sm btn-ghost rounded-full"
+              @click="closeOverride(item.song.song_id)"
+            >
+              {{ t('common.cancel') }}
+            </button>
+          </div>
+        </div>
+        <div
+          v-else-if="item.isErrored()"
+          class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs"
+        >
           <button
-            class="btn btn-sm btn-primary rounded-full"
-            @click="applyOverride(item)"
+            type="button"
+            class="text-primary/80 hover:text-primary"
+            @click="openOverride(item.song.song_id, 'youtube')"
           >
-            {{ t('queue.applyOverride') }}
+            {{ t('queue.forceAudio') }}
           </button>
           <button
-            class="btn btn-sm btn-ghost rounded-full"
-            @click="overrideOpen[item.song.song_id] = false"
+            type="button"
+            class="text-primary/80 hover:text-primary"
+            @click="openOverride(item.song.song_id, 'slskd')"
           >
-            {{ t('common.cancel') }}
+            {{ t('queue.forceSlskd') }}
           </button>
         </div>
-        <button
-          v-else-if="item.isErrored()"
-          type="button"
-          class="mt-2 text-xs text-primary/80 hover:text-primary"
-          @click="overrideOpen[item.song.song_id] = true"
-        >
-          {{ t('queue.forceAudio') }}
-        </button>
       </li>
     </ul>
 
@@ -267,6 +291,7 @@ import {
   useDownloadManager,
   syncQueueFromServer,
 } from '../model/download'
+import { parseSlskdOverride } from '../model/slskdOverride'
 import { useI18n } from '../i18n'
 
 const PAGE_SIZE = 10
@@ -277,8 +302,8 @@ const { t } = useI18n()
 
 const statusFilter = ref('active')
 const currentPage = ref(1)
-const overrideOpen = reactive({})
-const overrideUrls = reactive({})
+const overrideMode = reactive({})
+const overrideText = reactive({})
 
 function queueItemState(item) {
   if (item.isErrored()) return 'failed'
@@ -465,14 +490,37 @@ function parseYoutubeId(url) {
   return m ? m[1] : null
 }
 
+function openOverride(id, mode) {
+  overrideMode[id] = mode
+  if (overrideText[id] === undefined) {
+    overrideText[id] = ''
+  }
+}
+
+function closeOverride(id) {
+  delete overrideMode[id]
+}
+
 function applyOverride(item) {
   const id = item.song.song_id
-  const videoId = parseYoutubeId(overrideUrls[id])
+  const mode = overrideMode[id]
+  const text = overrideText[id]
+  if (mode === 'slskd') {
+    const parsed = parseSlskdOverride(text)
+    if (!parsed) {
+      alert(t('queue.invalidSlskdOverride'))
+      return
+    }
+    closeOverride(id)
+    dm.retryWithSlskd(item.song, parsed)
+    return
+  }
+  const videoId = parseYoutubeId(text)
   if (!videoId) {
     alert(t('queue.invalidYouTubeURL'))
     return
   }
-  overrideOpen[id] = false
+  closeOverride(id)
   dm.retryWithAudio(item.song, videoId)
 }
 

@@ -119,9 +119,17 @@ export default {
     clearAll: 'Clear all',
     clearAllPrompt: 'Remove all items from the queue?',
     forceAudio: 'Use a YouTube URL instead',
+    forceSlskd: 'Use an slskd file instead',
     overridePlaceholder: 'Paste a YouTube or YouTube Music URL…',
+    youtubeOverrideHint: 'Paste a YouTube link; Spotify metadata is kept.',
+    slskdOverridePlaceholder:
+      'Manelo | @@wibgr\\Folder\\06 - Artist - Track.mp3',
+    slskdOverrideHint:
+      'Peer username, then |, then the full remote path from slskd (starts with @@). Example: Manelo | @@wibgr\\EUROPA\\…\\track.mp3',
     applyOverride: 'Apply',
     invalidYouTubeURL: 'Invalid YouTube URL',
+    invalidSlskdOverride:
+      'Invalid slskd path. Use: username | @@share\\folder\\file.mp3',
   },
   library: {
     title: 'Library',
