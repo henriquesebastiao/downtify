@@ -19,7 +19,7 @@
     </div>
 
     <div
-      v-else-if="playlists.length > 0"
+      v-else-if="openPlaylists.length > 0"
       class="surface rounded-2xl p-4 sm:p-5"
     >
       <button
@@ -339,14 +339,6 @@ const VERIFY_STALE_MS = 5 * 60 * 1000
 const VERIFY_TICK_MS = 1200
 const REFRESH_MS = 30000
 const PROGRESS_REFRESH_MS = 5000
-
-const filteredPlaylists = computed(() => {
-  const query = filterQuery.value.trim().toLowerCase()
-  if (!query) {
-    return playlists.value
-  }
-  return playlists.value.filter((pl) => playlistMatchesQuery(pl, query))
-})
 
 function displayPl(pl) {
   const detail = playlistDetails[pl.spotify_playlist_id]
@@ -699,6 +691,22 @@ function effectiveStatus(pl) {
   }
   return row.status || 'incomplete'
 }
+
+function playlistNeedsAttention(pl) {
+  return effectiveStatus(displayPl(pl)) !== 'complete'
+}
+
+const openPlaylists = computed(() =>
+  playlists.value.filter((pl) => playlistNeedsAttention(pl))
+)
+
+const filteredPlaylists = computed(() => {
+  const query = filterQuery.value.trim().toLowerCase()
+  if (!query) {
+    return openPlaylists.value
+  }
+  return openPlaylists.value.filter((pl) => playlistMatchesQuery(pl, query))
+})
 
 function playlistSummary(pl) {
   return t('search.incompleteSummary', {

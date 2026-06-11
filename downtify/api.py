@@ -13,7 +13,6 @@ working without changes:
 * ``GET  /api/playlists/batches``
 * ``GET  /api/playlists/batches/{spotify_playlist_id}``
 * ``DELETE /api/playlists/batches/{spotify_playlist_id}``
-* ``GET  /api/playlists/incomplete``
 * ``POST /api/playlists/incomplete/download-missing``
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
@@ -63,7 +62,7 @@ from .library_reconcile import (
     reconcile_and_refresh,
     refresh_playlists_after_moves,
 )
-from .monitor import PlaylistMonitorDB, check_playlist
+from .monitor import PlaylistMonitorDB, _now_iso, check_playlist
 from .navidrome import (
     _effective_navidrome_settings,
     cache_navidrome_song_id,
@@ -1862,7 +1861,19 @@ def _build_playlist_batch_reports(
             row.get('playlist_name') or '',
         )
     )
+    _attach_monitor_state(reports)
     return reports
+
+
+def _attach_monitor_state(reports: list[dict[str, Any]]) -> None:
+    """Add monitor row (if any) to each playlist batch summary."""
+
+    by_sid: dict[str, dict[str, Any]] = {}
+    if state.monitor_db is not None:
+        for pl in state.monitor_db.list_playlists():
+            by_sid[pl.spotify_id] = pl.to_dict()
+    for row in reports:
+        row['monitor'] = by_sid.get(str(row.get('spotify_playlist_id') or ''))
 
 
 def collect_playlist_batch_sync_rows() -> list[dict[str, Any]]:
@@ -1897,7 +1908,9 @@ def _build_incomplete_playlist_reports(
 
 def _missing_tracks_for_playlist(
     spotify_playlist_id: str,
-) -> tuple[str, str, list[dict[str, Any]]]:
+    *,
+    refresh: bool = False,
+) -> tuple[str, str, list[dict[str, Any]], int]:
     if state.downloader is None or state.track_index is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
@@ -1908,7 +1921,7 @@ def _missing_tracks_for_playlist(
         )
 
     try:
-        playlist_name, tracks = _fetch_playlist_tracks(sid)
+        playlist_name, tracks = _fetch_playlist_tracks(sid, refresh=refresh)
     except Exception as exc:
         raise HTTPException(
             status_code=502, detail='Failed to fetch playlist from Spotify'
@@ -1927,7 +1940,103 @@ def _missing_tracks_for_playlist(
         catalog_filenames=catalog_filenames,
     )
     playlist_url = f'https://open.spotify.com/playlist/{sid}'
-    return playlist_name, playlist_url, missing
+    return playlist_name, playlist_url, missing, len(tracks)
+
+
+async def queue_missing_playlist_tracks(
+    spotify_playlist_id: str,
+    *,
+    playlist_url: str = '',
+    generate_m3u: bool = True,
+    refresh: bool = False,
+) -> dict[str, Any]:
+    """Refresh Spotify playlist and queue tracks missing from the library."""
+
+    if state.downloader is None:
+        raise RuntimeError('Downloader not ready')
+
+    sid = str(spotify_playlist_id or '').strip()
+    if not sid:
+        raise ValueError('spotify_playlist_id required')
+
+    resolved_url = str(playlist_url or '').strip()
+    playlist_name, fetched_url, missing, expected_count = (
+        await asyncio.to_thread(
+            _missing_tracks_for_playlist, sid, refresh=refresh
+        )
+    )
+    if not resolved_url:
+        resolved_url = fetched_url
+
+    if not missing:
+        if state.playlist_batch_store is not None:
+            for batch in state.playlist_batch_store.list_open_batches():
+                if batch['spotify_playlist_id'] == sid:
+                    state.playlist_batch_store.mark_complete(batch['id'])
+        linked = await asyncio.to_thread(
+            _rebuild_playlist_catalog_from_library,
+            playlist_name,
+            sid,
+        )
+        do_m3u, do_navidrome = playlist_refresh_enabled(state.settings)
+        if linked and (do_m3u or do_navidrome):
+            await asyncio.to_thread(
+                refresh_playlists_after_moves,
+                {playlist_name},
+                settings=state.settings,
+                downloader=state.downloader,
+                playlist_catalog=state.playlist_catalog,
+                track_index=state.track_index,
+                monitor_db=state.monitor_db,
+                navidrome_index=state.navidrome_index,
+                navidrome_scan=bool(
+                    state.settings.get('navidrome', {}).get(
+                        'scan_after_download', True
+                    )
+                ),
+                playlist_spotify_cache=state.playlist_spotify_cache,
+                cover_cache=state.cover_cache,
+                metadata_cache=state.metadata_cache,
+            )
+        return {
+            'count': 0,
+            'queued_count': 0,
+            'missing_count': 0,
+            'expected_count': expected_count,
+            'playlist_name': playlist_name,
+            'message': 'Playlist already complete',
+            'catalog_linked': linked,
+            'playlist_refresh': bool(linked and (do_m3u or do_navidrome)),
+        }
+
+    batch_id: Optional[int] = None
+    if state.playlist_batch_store is not None:
+        batch_id = await asyncio.to_thread(
+            state.playlist_batch_store.start_batch,
+            sid,
+            playlist_name,
+            resolved_url,
+            len(missing),
+        )
+
+    songs: list[dict[str, Any]] = []
+    for index, track in enumerate(missing):
+        song = dict(track)
+        song['downtify_playlist_url'] = resolved_url
+        song['downtify_track_order'] = index
+        songs.append(song)
+
+    result = await _submit_playlist_batch(
+        songs,
+        resolved_url,
+        generate_m3u=generate_m3u,
+        batch_id=batch_id,
+    )
+    result['missing_count'] = len(missing)
+    result['queued_count'] = len(missing)
+    result['expected_count'] = expected_count
+    result['playlist_name'] = playlist_name
+    return result
 
 
 async def _submit_playlist_batch(
@@ -2250,14 +2359,6 @@ async def delete_playlist_batch_endpoint(
     return result
 
 
-@router.get('/api/playlists/incomplete')
-async def list_incomplete_playlists_endpoint() -> dict[str, Any]:
-    """Playlist batches that are still missing tracks vs Spotify."""
-
-    reports = await asyncio.to_thread(_build_incomplete_playlist_reports)
-    return {'playlists': reports, 'count': len(reports)}
-
-
 @router.post('/api/playlists/incomplete/download-missing')
 async def download_missing_playlist_tracks_endpoint(
     body: dict[str, Any] = Body(...),
@@ -2279,73 +2380,21 @@ async def download_missing_playlist_tracks_endpoint(
             detail='spotify_playlist_id or playlist_url required',
         )
 
-    playlist_name, resolved_url, missing = await asyncio.to_thread(
-        _missing_tracks_for_playlist, spotify_playlist_id
-    )
-    if not missing:
-        if state.playlist_batch_store is not None:
-            for batch in state.playlist_batch_store.list_open_batches():
-                if batch['spotify_playlist_id'] == spotify_playlist_id:
-                    state.playlist_batch_store.mark_complete(batch['id'])
-        linked = await asyncio.to_thread(
-            _rebuild_playlist_catalog_from_library,
-            playlist_name,
-            spotify_playlist_id,
-        )
-        do_m3u, do_navidrome = playlist_refresh_enabled(state.settings)
-        if linked and (do_m3u or do_navidrome):
-            await asyncio.to_thread(
-                refresh_playlists_after_moves,
-                {playlist_name},
-                settings=state.settings,
-                downloader=state.downloader,
-                playlist_catalog=state.playlist_catalog,
-                track_index=state.track_index,
-                monitor_db=state.monitor_db,
-                navidrome_index=state.navidrome_index,
-                navidrome_scan=bool(
-                    state.settings.get('navidrome', {}).get(
-                        'scan_after_download', True
-                    )
-                ),
-                playlist_spotify_cache=state.playlist_spotify_cache,
-                cover_cache=state.cover_cache,
-                metadata_cache=state.metadata_cache,
-            )
-        return {
-            'count': 0,
-            'message': 'Playlist already complete',
-            'catalog_linked': linked,
-            'playlist_refresh': bool(linked and (do_m3u or do_navidrome)),
-        }
-
     generate_m3u = bool(body.get('generate_m3u', True))
-    batch_id: Optional[int] = None
-    if state.playlist_batch_store is not None:
-        batch_id = await asyncio.to_thread(
-            state.playlist_batch_store.start_batch,
+    try:
+        return await queue_missing_playlist_tracks(
             spotify_playlist_id,
-            playlist_name,
-            resolved_url,
-            len(missing),
+            playlist_url=playlist_url,
+            generate_m3u=generate_m3u,
         )
-
-    songs: list[dict[str, Any]] = []
-    for index, track in enumerate(missing):
-        song = dict(track)
-        song['downtify_playlist_url'] = resolved_url
-        song['downtify_track_order'] = index
-        songs.append(song)
-
-    result = await _submit_playlist_batch(
-        songs,
-        resolved_url,
-        generate_m3u=generate_m3u,
-        batch_id=batch_id,
-    )
-    result['missing_count'] = len(missing)
-    result['playlist_name'] = playlist_name
-    return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(
+            'Failed to queue missing tracks for playlist {}',
+            spotify_playlist_id,
+        )
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get('/api/queue')
@@ -2671,76 +2720,83 @@ def _require_monitor_db() -> PlaylistMonitorDB:
     return state.monitor_db
 
 
-@router.get('/api/monitor/playlists')
-async def list_monitor_playlists() -> list[dict[str, Any]]:
-    db = _require_monitor_db()
-    playlists = await asyncio.to_thread(db.list_playlists)
-    return [p.to_dict() for p in playlists]
+@router.post('/api/monitor/playlists/upsert')
+async def upsert_monitor_playlist(request: Request) -> dict[str, Any]:
+    """Enable or disable monitoring for a known Spotify playlist (no backfill)."""
 
-
-@router.post('/api/monitor/playlists')
-async def add_monitor_playlist(request: Request) -> dict[str, Any]:
     db = _require_monitor_db()
     try:
         payload = await request.json()
     except Exception:
         payload = {}
 
-    url = payload.get('url', '')
-    interval_minutes = int(payload.get('interval_minutes', 60))
-
-    parsed = spotify.parse_spotify_url(url)
-    if parsed is None or parsed[0] != 'playlist':
+    spotify_id = str(payload.get('spotify_playlist_id') or '').strip()
+    if not spotify_id:
         raise HTTPException(
-            status_code=400, detail='A valid Spotify playlist URL is required'
+            status_code=400, detail='spotify_playlist_id required'
         )
 
-    _, spotify_id = parsed
+    interval_minutes = int(payload.get('interval_minutes', 60))
+    enabled = bool(payload.get('enabled', True))
+
+    meta = _known_spotify_playlist_sources().get(spotify_id)
+    if meta is not None:
+        name = str(meta.get('playlist_name') or spotify_id)
+        url = str(
+            meta.get('playlist_url')
+            or f'https://open.spotify.com/playlist/{spotify_id}'
+        )
+    else:
+        try:
+            name, _tracks = await asyncio.to_thread(
+                _fetch_playlist_tracks, spotify_id, refresh=True
+            )
+        except Exception as exc:
+            logger.exception('Failed to resolve playlist {}', spotify_id)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        url = f'https://open.spotify.com/playlist/{spotify_id}'
 
     existing = await asyncio.to_thread(db.get_by_spotify_id, spotify_id)
     if existing is not None:
-        raise HTTPException(
-            status_code=409, detail='This playlist is already being monitored'
+        kwargs: dict[str, Any] = {
+            'enabled': enabled,
+            'interval_minutes': interval_minutes,
+            'name': name,
+        }
+        # Enabling only schedules the next check; use Check now for immediate runs.
+        if enabled and (not existing.enabled or existing.last_checked is None):
+            kwargs['last_checked'] = _now_iso()
+        updated = await asyncio.to_thread(
+            db.update_playlist,
+            existing.id,
+            **kwargs,
         )
+        if updated is None:
+            raise HTTPException(
+                status_code=404, detail='Monitored playlist not found'
+            )
+        return updated.to_dict()
 
-    try:
-        name, _tracks = await asyncio.to_thread(
-            _fetch_playlist_tracks, spotify_id, refresh=True
-        )
-    except Exception as exc:
-        logger.exception('Failed to resolve playlist {}', spotify_id)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    if not enabled:
+        return {
+            'id': None,
+            'spotify_id': spotify_id,
+            'name': name,
+            'url': url,
+            'interval_minutes': interval_minutes,
+            'enabled': False,
+            'last_checked': None,
+            'last_track_count': 0,
+            'created_at': None,
+        }
 
     playlist = await asyncio.to_thread(
         db.add_playlist, spotify_id, name, url, interval_minutes
     )
-
-    # Kick off the first download pass immediately so the user does not have
-    # to wait up to a full monitor sweep interval for the initial backfill.
-    if state.downloader is not None:
-        loop = state.loop or asyncio.get_running_loop()
-
-        async def _initial_check(pl=playlist) -> None:
-            try:
-                await check_playlist(
-                    pl,
-                    db,
-                    state.downloader,  # type: ignore[arg-type]
-                    state.connections.broadcast,
-                    loop,
-                    state.settings,
-                    track_index=state.track_index,
-                    playlist_catalog=state.playlist_catalog,
-                    playlist_spotify_cache=state.playlist_spotify_cache,
-                    cover_cache=state.cover_cache,
-                    metadata_cache=state.metadata_cache,
-                )
-            except Exception:
-                logger.exception('Initial check failed for playlist {}', pl.id)
-
-        asyncio.create_task(_initial_check())
-
-    return playlist.to_dict()
+    scheduled = await asyncio.to_thread(
+        db.update_playlist, playlist.id, last_checked=_now_iso()
+    )
+    return (scheduled or playlist).to_dict()
 
 
 @router.patch('/api/monitor/playlists/{playlist_id}')
@@ -2753,11 +2809,20 @@ async def update_monitor_playlist(
     except Exception:
         payload = {}
 
+    existing = await asyncio.to_thread(db.get_playlist, playlist_id)
+    if existing is None:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
+
     kwargs: dict[str, Any] = {}
     if 'interval_minutes' in payload:
         kwargs['interval_minutes'] = int(payload['interval_minutes'])
     if 'enabled' in payload:
-        kwargs['enabled'] = bool(payload['enabled'])
+        enabled = bool(payload['enabled'])
+        kwargs['enabled'] = enabled
+        if enabled and (not existing.enabled or existing.last_checked is None):
+            kwargs['last_checked'] = _now_iso()
 
     updated = await asyncio.to_thread(
         db.update_playlist, playlist_id, **kwargs
@@ -2767,17 +2832,6 @@ async def update_monitor_playlist(
             status_code=404, detail='Monitored playlist not found'
         )
     return updated.to_dict()
-
-
-@router.delete('/api/monitor/playlists/{playlist_id}')
-async def delete_monitor_playlist(playlist_id: int) -> dict[str, Any]:
-    db = _require_monitor_db()
-    deleted = await asyncio.to_thread(db.delete_playlist, playlist_id)
-    if not deleted:
-        raise HTTPException(
-            status_code=404, detail='Monitored playlist not found'
-        )
-    return {'deleted': True, 'id': playlist_id}
 
 
 @router.post('/api/monitor/playlists/{playlist_id}/check')
@@ -2809,7 +2863,7 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
                 metadata_cache=state.metadata_cache,
             )
             logger.info(
-                'Manual check: downloaded {} new track(s) from "{}"',
+                'Manual check: queued {} missing track(s) from "{}"',
                 count,
                 playlist.name,
             )  # type: ignore[union-attr]
