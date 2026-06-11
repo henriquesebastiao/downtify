@@ -71,7 +71,7 @@
                 {{ playlistSummary(pl) }}
               </p>
               <div
-                v-if="isWatched(pl) && pl.monitor"
+                v-if="pl.monitor?.enabled"
                 class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-base-content/50 mt-1"
               >
                 <span>
@@ -79,11 +79,7 @@
                     icon="clarity:refresh-line"
                     class="inline h-3 w-3 mr-0.5"
                   />
-                  {{
-                    t('monitor.everyInterval', {
-                      interval: formatInterval(pl.monitor.interval_minutes),
-                    })
-                  }}
+                  {{ scheduleLabel(pl) }}
                 </span>
                 <span v-if="pl.monitor.last_checked">
                   <Icon
@@ -96,7 +92,6 @@
                     })
                   }}
                 </span>
-                <span v-else class="italic">{{ t('monitor.notChecked') }}</span>
               </div>
             </div>
 
@@ -117,37 +112,45 @@
                 }}</span>
               </label>
 
-              <template v-if="pl.monitor?.enabled">
-                <select
-                  :value="pl.monitor.interval_minutes"
-                  class="filter-select-xs"
-                  @change="onChangeInterval(pl, $event)"
-                >
-                  <option :value="15">{{ t('monitor.short15') }}</option>
-                  <option :value="30">{{ t('monitor.short30') }}</option>
-                  <option :value="60">{{ t('monitor.short1h') }}</option>
-                  <option :value="180">{{ t('monitor.short3h') }}</option>
-                  <option :value="360">{{ t('monitor.short6h') }}</option>
-                  <option :value="720">{{ t('monitor.short12h') }}</option>
-                  <option :value="1440">{{ t('monitor.short1d') }}</option>
-                  <option :value="10080">{{ t('monitor.short1w') }}</option>
-                  <option :value="20160">{{ t('monitor.short2w') }}</option>
-                  <option :value="43200">{{ t('monitor.short1mo') }}</option>
-                </select>
+              <select
+                :value="scheduleFor(pl).interval_minutes"
+                class="filter-select-xs"
+                @change="onChangeInterval(pl, $event)"
+              >
+                <option :value="15">{{ t('monitor.short15') }}</option>
+                <option :value="30">{{ t('monitor.short30') }}</option>
+                <option :value="60">{{ t('monitor.short1h') }}</option>
+                <option :value="180">{{ t('monitor.short3h') }}</option>
+                <option :value="360">{{ t('monitor.short6h') }}</option>
+                <option :value="720">{{ t('monitor.short12h') }}</option>
+                <option :value="1440">{{ t('monitor.short1d') }}</option>
+                <option :value="10080">{{ t('monitor.short1w') }}</option>
+                <option :value="20160">{{ t('monitor.short2w') }}</option>
+                <option :value="43200">{{ t('monitor.short1mo') }}</option>
+              </select>
 
-                <button
-                  class="icon-btn"
-                  :title="t('monitor.checkNow')"
-                  :disabled="!!checking[pl.spotify_playlist_id]"
-                  @click="onCheck(pl)"
-                >
-                  <span
-                    v-if="checking[pl.spotify_playlist_id]"
-                    class="loading loading-spinner loading-xs"
-                  />
-                  <Icon v-else icon="clarity:refresh-line" class="h-4 w-4" />
-                </button>
-              </template>
+              <input
+                v-if="usesCheckTime(scheduleFor(pl).interval_minutes)"
+                type="time"
+                class="filter-select-xs w-[5.5rem]"
+                :value="scheduleFor(pl).check_time"
+                :title="t('monitor.checkTimeHint')"
+                @change="onChangeCheckTime(pl, $event)"
+              />
+
+              <button
+                v-if="pl.monitor?.enabled"
+                class="icon-btn"
+                :title="t('monitor.checkNow')"
+                :disabled="!!checking[pl.spotify_playlist_id]"
+                @click="onCheck(pl)"
+              >
+                <span
+                  v-if="checking[pl.spotify_playlist_id]"
+                  class="loading loading-spinner loading-xs"
+                />
+                <Icon v-else icon="clarity:refresh-line" class="h-4 w-4" />
+              </button>
 
               <a
                 v-if="pl.playlist_url"
@@ -201,15 +204,42 @@ import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
 
+const CALENDAR_INTERVAL_MINUTES = 1440
+const DEFAULT_DAILY_CHECK_TIME = '03:00'
+
 const playlists = ref([])
 const loading = ref(false)
 const loadError = ref('')
 const toggling = ref({})
 const checking = ref({})
 const downloading = ref({})
+const preferredSchedule = ref({})
 
 function isWatched(pl) {
   return pl.monitor != null
+}
+
+function usesCheckTime(intervalMinutes) {
+  return intervalMinutes >= CALENDAR_INTERVAL_MINUTES
+}
+
+function scheduleFor(pl) {
+  const sid = pl.spotify_playlist_id
+  const mon = pl.monitor
+  const preferred = preferredSchedule.value[sid] || {}
+  const interval = mon?.interval_minutes ?? preferred.interval_minutes ?? 60
+  let checkTime = mon?.check_time ?? preferred.check_time ?? ''
+  if (usesCheckTime(interval) && !checkTime) {
+    checkTime = DEFAULT_DAILY_CHECK_TIME
+  }
+  return { interval_minutes: interval, check_time: checkTime }
+}
+
+function rememberSchedule(sid, { interval_minutes, check_time }) {
+  preferredSchedule.value = {
+    ...preferredSchedule.value,
+    [sid]: { interval_minutes, check_time },
+  }
 }
 
 function playlistSummary(pl) {
@@ -218,6 +248,15 @@ function playlistSummary(pl) {
     expected: pl.expected_count,
     missing: pl.missing_count,
   })
+}
+
+function scheduleLabel(pl) {
+  const { interval_minutes, check_time } = scheduleFor(pl)
+  const interval = formatInterval(interval_minutes)
+  if (usesCheckTime(interval_minutes) && check_time) {
+    return t('monitor.everyIntervalAt', { interval, time: check_time })
+  }
+  return t('monitor.everyInterval', { interval })
 }
 
 async function load() {
@@ -233,18 +272,31 @@ async function load() {
   }
 }
 
+function monitorPayload(pl, { enabled, interval_minutes, check_time }) {
+  const payload = {
+    spotify_playlist_id: pl.spotify_playlist_id,
+    enabled,
+    interval_minutes,
+  }
+  if (usesCheckTime(interval_minutes) && check_time) {
+    payload.check_time = check_time
+    payload.check_timezone =
+      pl.monitor?.check_timezone || monitorAPI.browserTimezone()
+  }
+  return payload
+}
+
 async function onToggleWatch(pl, event) {
   const enabled = event.target.checked
   const sid = pl.spotify_playlist_id
+  const schedule = scheduleFor(pl)
   toggling.value = { ...toggling.value, [sid]: true }
   try {
-    const interval = pl.monitor?.interval_minutes ?? 60
-    const res = await monitorAPI.upsertMonitoredPlaylist({
-      spotify_playlist_id: sid,
-      enabled,
-      interval_minutes: interval,
-    })
+    const res = await monitorAPI.upsertMonitoredPlaylist(
+      monitorPayload(pl, { enabled, ...schedule })
+    )
     pl.monitor = res.data
+    rememberSchedule(sid, schedule)
   } catch {
     event.target.checked = !enabled
   } finally {
@@ -254,11 +306,43 @@ async function onToggleWatch(pl, event) {
 
 async function onChangeInterval(pl, event) {
   const val = parseInt(event.target.value, 10)
+  const sid = pl.spotify_playlist_id
+  const prev = scheduleFor(pl)
+  const check_time = usesCheckTime(val)
+    ? prev.check_time || DEFAULT_DAILY_CHECK_TIME
+    : ''
+  rememberSchedule(sid, { interval_minutes: val, check_time })
   if (!pl.monitor?.id) return
   try {
-    const res = await monitorAPI.updateMonitoredPlaylist(pl.monitor.id, {
-      interval_minutes: val,
-    })
+    const res = await monitorAPI.updateMonitoredPlaylist(
+      pl.monitor.id,
+      monitorPayload(pl, {
+        enabled: true,
+        interval_minutes: val,
+        check_time,
+      })
+    )
+    pl.monitor = res.data
+  } catch {
+    // silently ignore
+  }
+}
+
+async function onChangeCheckTime(pl, event) {
+  const check_time = event.target.value
+  const sid = pl.spotify_playlist_id
+  const { interval_minutes } = scheduleFor(pl)
+  rememberSchedule(sid, { interval_minutes, check_time })
+  if (!pl.monitor?.id) return
+  try {
+    const res = await monitorAPI.updateMonitoredPlaylist(
+      pl.monitor.id,
+      monitorPayload(pl, {
+        enabled: true,
+        interval_minutes,
+        check_time,
+      })
+    )
     pl.monitor = res.data
   } catch {
     // silently ignore

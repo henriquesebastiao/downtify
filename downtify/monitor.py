@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import sqlite3
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
+from zoneinfo import ZoneInfo
 
 from loguru import logger
 
@@ -21,24 +22,150 @@ from .sqlite_utils import connect_sqlite
 from .track_index import TrackIndex
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
+CALENDAR_INTERVAL_MINUTES = 1440  # daily+ schedules can use a time-of-day
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _is_due(last_checked: Optional[str], interval_minutes: int) -> bool:
+def _local_now() -> datetime:
+    return datetime.now().astimezone()
+
+
+def parse_check_timezone(value: Any) -> Optional[str]:
+    """Validate an IANA timezone name (e.g. ``Europe/London``)."""
+
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        ZoneInfo(text)
+    except Exception:
+        return None
+    return text
+
+
+def _resolve_schedule_tz(check_timezone: Optional[str] = None) -> Any:
+    parsed = parse_check_timezone(check_timezone)
+    if parsed:
+        return ZoneInfo(parsed)
+    local = _local_now()
+    return local.tzinfo or timezone.utc
+
+
+def _parse_checked_at(
+    iso: Optional[str],
+    schedule_tz: Any = None,
+) -> Optional[datetime]:
+    if not iso:
+        return None
+    tz = schedule_tz or _resolve_schedule_tz()
+    try:
+        dt = datetime.fromisoformat(iso)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(tz)
+    except ValueError:
+        return None
+
+
+def parse_check_time_minutes(value: Any) -> Optional[int]:
+    """Parse ``HH:MM`` or minutes-since-midnight (0-1439)."""
+
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        minutes = int(value)
+        return minutes if 0 <= minutes < 1440 else None
+    text = str(value).strip()
+    if not text:
+        return None
+    if ':' in text:
+        hour_text, minute_text = text.split(':', 1)
+        try:
+            hour = int(hour_text)
+            minute = int(minute_text)
+        except ValueError:
+            return None
+        if 0 <= hour < 24 and 0 <= minute < 60:
+            return hour * 60 + minute
+        return None
+    return None
+
+
+def format_check_time_minutes(minutes: Optional[int]) -> Optional[str]:
+    if minutes is None:
+        return None
+    hour, minute = divmod(int(minutes) % 1440, 60)
+    return f'{hour:02d}:{minute:02d}'
+
+
+def _slot_on_date(day: date, check_at_minutes: int, tz: Any) -> datetime:
+    hour, minute = divmod(int(check_at_minutes) % 1440, 60)
+    return datetime.combine(day, time(hour, minute), tzinfo=tz)
+
+
+def next_scheduled_run(
+    last_checked: Optional[str],
+    interval_minutes: int,
+    check_at_minutes: Optional[int] = None,
+    check_timezone: Optional[str] = None,
+) -> datetime:
+    """When the playlist should run next (browser or server timezone)."""
+
+    tz = _resolve_schedule_tz(check_timezone)
+    now = datetime.now(tz)
+    after = _parse_checked_at(last_checked, tz) or now
+    if check_at_minutes is None or interval_minutes < CALENDAR_INTERVAL_MINUTES:
+        return after + timedelta(minutes=interval_minutes)
+    period_days = max(1, interval_minutes // CALENDAR_INTERVAL_MINUTES)
+    day = after.date()
+    slot = _slot_on_date(day, check_at_minutes, tz)
+    if slot <= after:
+        day += timedelta(days=1)
+        slot = _slot_on_date(day, check_at_minutes, tz)
+    if period_days == 1:
+        return slot
+
+    while slot <= after:
+        day += timedelta(days=period_days)
+        slot = _slot_on_date(day, check_at_minutes, tz)
+    return slot
+
+
+def _is_due(
+    last_checked: Optional[str],
+    interval_minutes: int,
+    check_at_minutes: Optional[int] = None,
+    check_timezone: Optional[str] = None,
+) -> bool:
     if last_checked is None:
         return True
     try:
-        last = datetime.fromisoformat(last_checked)
-        if last.tzinfo is None:
-            last = last.replace(tzinfo=timezone.utc)
-        return datetime.now(timezone.utc) >= last + timedelta(
-            minutes=interval_minutes
+        tz = _resolve_schedule_tz(check_timezone)
+        now = datetime.now(tz)
+        return now >= next_scheduled_run(
+            last_checked,
+            interval_minutes,
+            check_at_minutes,
+            check_timezone,
         )
-    except ValueError:
+    except (ValueError, TypeError):
         return True
+
+
+def schedule_anchor_iso(
+    interval_minutes: int,
+    check_at_minutes: Optional[int] = None,
+) -> str:
+    """Stamp used when enabling so the first run waits for the schedule."""
+
+    return _local_now().isoformat()
 
 
 @dataclass
@@ -52,9 +179,13 @@ class MonitoredPlaylist:
     last_checked: Optional[str]
     last_track_count: int
     created_at: str
+    check_at_minutes: Optional[int] = None
+    check_timezone: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        data = asdict(self)
+        data['check_time'] = format_check_time_minutes(self.check_at_minutes)
+        return data
 
 
 class PlaylistMonitorDB:
@@ -99,6 +230,20 @@ class PlaylistMonitorDB:
                 )
             except Exception:
                 pass
+            try:
+                conn.execute(
+                    'ALTER TABLE monitored_playlists '
+                    'ADD COLUMN check_at_minutes INTEGER'
+                )
+            except Exception:
+                pass
+            try:
+                conn.execute(
+                    'ALTER TABLE monitored_playlists '
+                    'ADD COLUMN check_timezone TEXT'
+                )
+            except Exception:
+                pass
 
     def add_playlist(
         self,
@@ -106,13 +251,24 @@ class PlaylistMonitorDB:
         name: str,
         url: str,
         interval_minutes: int = 60,
+        check_at_minutes: Optional[int] = None,
+        check_timezone: Optional[str] = None,
     ) -> MonitoredPlaylist:
         with self._connect() as conn:
             cur = conn.execute(
                 """INSERT INTO monitored_playlists
-                   (spotify_id, name, url, interval_minutes, enabled, created_at)
-                   VALUES (?, ?, ?, ?, 1, ?)""",
-                (spotify_id, name, url, interval_minutes, _now_iso()),
+                   (spotify_id, name, url, interval_minutes, enabled,
+                    check_at_minutes, check_timezone, created_at)
+                   VALUES (?, ?, ?, ?, 1, ?, ?, ?)""",
+                (
+                    spotify_id,
+                    name,
+                    url,
+                    interval_minutes,
+                    check_at_minutes,
+                    check_timezone,
+                    _now_iso(),
+                ),
             )
             row = conn.execute(
                 'SELECT * FROM monitored_playlists WHERE id = ?',
@@ -162,6 +318,8 @@ class PlaylistMonitorDB:
             'last_checked',
             'last_track_count',
             'name',
+            'check_at_minutes',
+            'check_timezone',
         }
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
@@ -242,6 +400,9 @@ class PlaylistMonitorDB:
 
 
 def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
+    keys = row.keys()
+    check_at = row['check_at_minutes'] if 'check_at_minutes' in keys else None
+    check_tz = row['check_timezone'] if 'check_timezone' in keys else None
     return MonitoredPlaylist(
         id=row['id'],
         spotify_id=row['spotify_id'],
@@ -252,6 +413,8 @@ def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
         last_checked=row['last_checked'],
         last_track_count=row['last_track_count'],
         created_at=row['created_at'],
+        check_at_minutes=check_at,
+        check_timezone=check_tz,
     )
 
 
@@ -352,7 +515,12 @@ async def monitor_loop(
             for pl in playlists:
                 if not pl.enabled:
                     continue
-                if not _is_due(pl.last_checked, pl.interval_minutes):
+                if not _is_due(
+                    pl.last_checked,
+                    pl.interval_minutes,
+                    pl.check_at_minutes,
+                    pl.check_timezone,
+                ):
                     continue
                 downloader = get_downloader()
                 if downloader is None:

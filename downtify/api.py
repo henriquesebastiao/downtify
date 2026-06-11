@@ -62,7 +62,14 @@ from .library_reconcile import (
     reconcile_and_refresh,
     refresh_playlists_after_moves,
 )
-from .monitor import PlaylistMonitorDB, _now_iso, check_playlist
+from .monitor import (
+    CALENDAR_INTERVAL_MINUTES,
+    PlaylistMonitorDB,
+    check_playlist,
+    parse_check_time_minutes,
+    parse_check_timezone,
+    schedule_anchor_iso,
+)
 from .navidrome import (
     _effective_navidrome_settings,
     cache_navidrome_song_id,
@@ -2720,6 +2727,110 @@ def _require_monitor_db() -> PlaylistMonitorDB:
     return state.monitor_db
 
 
+def _monitor_check_at_minutes(
+    payload: dict[str, Any],
+    interval_minutes: int,
+) -> Optional[int]:
+    if interval_minutes < CALENDAR_INTERVAL_MINUTES:
+        return None
+    if 'check_at_minutes' in payload:
+        return parse_check_time_minutes(payload.get('check_at_minutes'))
+    if 'check_time' in payload:
+        return parse_check_time_minutes(payload.get('check_time'))
+    return None
+
+
+def _monitor_check_timezone(
+    payload: dict[str, Any],
+    interval_minutes: int,
+) -> Optional[str]:
+    if interval_minutes < CALENDAR_INTERVAL_MINUTES:
+        return None
+    if 'check_timezone' in payload:
+        return parse_check_timezone(payload.get('check_timezone'))
+    return None
+
+
+def _monitor_schedule_changed(payload: dict[str, Any]) -> bool:
+    return any(
+        key in payload
+        for key in (
+            'check_time',
+            'check_at_minutes',
+            'check_timezone',
+            'interval_minutes',
+        )
+    )
+
+
+def _resolve_monitor_schedule(
+    payload: dict[str, Any],
+    interval_minutes: int,
+    existing: Optional[Any] = None,
+) -> tuple[Optional[int], Optional[str]]:
+    check_at_minutes = _monitor_check_at_minutes(payload, interval_minutes)
+    check_timezone = _monitor_check_timezone(payload, interval_minutes)
+    if existing is not None and interval_minutes >= CALENDAR_INTERVAL_MINUTES:
+        if (
+            check_at_minutes is None
+            and 'check_time' not in payload
+            and 'check_at_minutes' not in payload
+        ):
+            check_at_minutes = existing.check_at_minutes
+        if check_timezone is None and 'check_timezone' not in payload:
+            check_timezone = existing.check_timezone
+    return check_at_minutes, check_timezone
+
+
+def _monitor_schedule_kwargs(
+    *,
+    enabled: bool,
+    interval_minutes: int,
+    check_at_minutes: Optional[int],
+    check_timezone: Optional[str],
+    was_enabled: bool,
+    last_checked: Optional[str],
+    reschedule: bool = False,
+) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {
+        'enabled': enabled,
+        'interval_minutes': interval_minutes,
+        'check_at_minutes': check_at_minutes,
+        'check_timezone': check_timezone,
+    }
+    if enabled and (
+        reschedule
+        or not was_enabled
+        or last_checked is None
+    ):
+        kwargs['last_checked'] = schedule_anchor_iso(
+            interval_minutes,
+            check_at_minutes,
+        )
+    return kwargs
+
+
+async def _resolve_monitor_playlist_meta(
+    spotify_id: str,
+) -> tuple[str, str]:
+    meta = _known_spotify_playlist_sources().get(spotify_id)
+    if meta is not None:
+        name = str(meta.get('playlist_name') or spotify_id)
+        url = str(
+            meta.get('playlist_url')
+            or f'https://open.spotify.com/playlist/{spotify_id}'
+        )
+        return name, url
+    try:
+        name, _tracks = await asyncio.to_thread(
+            _fetch_playlist_tracks, spotify_id, refresh=True
+        )
+    except Exception as exc:
+        logger.exception('Failed to resolve playlist {}', spotify_id)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return name, f'https://open.spotify.com/playlist/{spotify_id}'
+
+
 @router.post('/api/monitor/playlists/upsert')
 async def upsert_monitor_playlist(request: Request) -> dict[str, Any]:
     """Enable or disable monitoring for a known Spotify playlist (no backfill)."""
@@ -2738,34 +2849,23 @@ async def upsert_monitor_playlist(request: Request) -> dict[str, Any]:
 
     interval_minutes = int(payload.get('interval_minutes', 60))
     enabled = bool(payload.get('enabled', True))
-
-    meta = _known_spotify_playlist_sources().get(spotify_id)
-    if meta is not None:
-        name = str(meta.get('playlist_name') or spotify_id)
-        url = str(
-            meta.get('playlist_url')
-            or f'https://open.spotify.com/playlist/{spotify_id}'
-        )
-    else:
-        try:
-            name, _tracks = await asyncio.to_thread(
-                _fetch_playlist_tracks, spotify_id, refresh=True
-            )
-        except Exception as exc:
-            logger.exception('Failed to resolve playlist {}', spotify_id)
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-        url = f'https://open.spotify.com/playlist/{spotify_id}'
-
+    name, url = await _resolve_monitor_playlist_meta(spotify_id)
     existing = await asyncio.to_thread(db.get_by_spotify_id, spotify_id)
+    check_at_minutes, check_timezone = _resolve_monitor_schedule(
+        payload, interval_minutes, existing
+    )
+
     if existing is not None:
-        kwargs: dict[str, Any] = {
-            'enabled': enabled,
-            'interval_minutes': interval_minutes,
-            'name': name,
-        }
-        # Enabling only schedules the next check; use Check now for immediate runs.
-        if enabled and (not existing.enabled or existing.last_checked is None):
-            kwargs['last_checked'] = _now_iso()
+        kwargs = _monitor_schedule_kwargs(
+            enabled=enabled,
+            interval_minutes=interval_minutes,
+            check_at_minutes=check_at_minutes,
+            check_timezone=check_timezone,
+            was_enabled=existing.enabled,
+            last_checked=existing.last_checked,
+            reschedule=_monitor_schedule_changed(payload),
+        )
+        kwargs['name'] = name
         updated = await asyncio.to_thread(
             db.update_playlist,
             existing.id,
@@ -2788,13 +2888,24 @@ async def upsert_monitor_playlist(request: Request) -> dict[str, Any]:
             'last_checked': None,
             'last_track_count': 0,
             'created_at': None,
+            'check_at_minutes': check_at_minutes,
+            'check_time': None,
+            'check_timezone': check_timezone,
         }
 
     playlist = await asyncio.to_thread(
-        db.add_playlist, spotify_id, name, url, interval_minutes
+        db.add_playlist,
+        spotify_id,
+        name,
+        url,
+        interval_minutes,
+        check_at_minutes,
+        check_timezone,
     )
     scheduled = await asyncio.to_thread(
-        db.update_playlist, playlist.id, last_checked=_now_iso()
+        db.update_playlist,
+        playlist.id,
+        last_checked=schedule_anchor_iso(interval_minutes, check_at_minutes),
     )
     return (scheduled or playlist).to_dict()
 
@@ -2815,14 +2926,28 @@ async def update_monitor_playlist(
             status_code=404, detail='Monitored playlist not found'
         )
 
-    kwargs: dict[str, Any] = {}
-    if 'interval_minutes' in payload:
-        kwargs['interval_minutes'] = int(payload['interval_minutes'])
+    interval_minutes = int(
+        payload.get('interval_minutes', existing.interval_minutes)
+    )
+    check_at_minutes, check_timezone = _resolve_monitor_schedule(
+        payload, interval_minutes, existing
+    )
+
+    enabled = bool(payload['enabled']) if 'enabled' in payload else existing.enabled
+    schedule_kwargs = _monitor_schedule_kwargs(
+        enabled=enabled,
+        interval_minutes=interval_minutes,
+        check_at_minutes=check_at_minutes,
+        check_timezone=check_timezone,
+        was_enabled=existing.enabled,
+        last_checked=existing.last_checked,
+        reschedule=_monitor_schedule_changed(payload),
+    )
+    kwargs: dict[str, Any] = dict(schedule_kwargs)
     if 'enabled' in payload:
-        enabled = bool(payload['enabled'])
         kwargs['enabled'] = enabled
-        if enabled and (not existing.enabled or existing.last_checked is None):
-            kwargs['last_checked'] = _now_iso()
+    if 'interval_minutes' in payload:
+        kwargs['interval_minutes'] = interval_minutes
 
     updated = await asyncio.to_thread(
         db.update_playlist, playlist_id, **kwargs
