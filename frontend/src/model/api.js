@@ -71,10 +71,6 @@ function downloadBatch(payload) {
   return API.post('/api/download/batch', payload)
 }
 
-function getIncompletePlaylists() {
-  return API.get('/api/playlists/incomplete')
-}
-
 function getPlaylistBatches() {
   return API.get('/api/playlists/batches')
 }
@@ -226,7 +222,6 @@ export default {
   open,
   download,
   downloadBatch,
-  getIncompletePlaylists,
   getPlaylistBatches,
   getPlaylistBatchDetails,
   downloadMissingPlaylistTracks,

@@ -4,7 +4,6 @@
     <Settings />
 
     <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <!-- Header -->
       <div class="mb-8">
         <h1 class="text-2xl font-bold tracking-tight">
           {{ t('monitor.title') }}
@@ -14,57 +13,18 @@
         </p>
       </div>
 
-      <!-- Add playlist form -->
-      <div class="surface rounded-2xl p-5 mb-8">
-        <h2
-          class="text-sm font-semibold uppercase tracking-wider text-base-content/50 mb-4"
-        >
-          {{ t('monitor.watchNew') }}
-        </h2>
-        <form @submit.prevent="onAdd" class="flex flex-col sm:flex-row gap-3">
-          <input
-            v-model="newUrl"
-            type="text"
-            :placeholder="t('monitor.urlPlaceholder')"
-            class="input-modern flex-1 h-11 text-sm"
-            :disabled="adding"
-          />
-          <div class="flex items-center gap-2 shrink-0">
-            <select
-              v-model="newInterval"
-              class="filter-select text-sm"
-              :disabled="adding"
-            >
-              <option :value="15">{{ t('monitor.every15') }}</option>
-              <option :value="30">{{ t('monitor.every30') }}</option>
-              <option :value="60">{{ t('monitor.every1h') }}</option>
-              <option :value="180">{{ t('monitor.every3h') }}</option>
-              <option :value="360">{{ t('monitor.every6h') }}</option>
-              <option :value="720">{{ t('monitor.every12h') }}</option>
-              <option :value="1440">{{ t('monitor.every1d') }}</option>
-              <option :value="10080">{{ t('monitor.every1w') }}</option>
-              <option :value="20160">{{ t('monitor.every2w') }}</option>
-              <option :value="43200">{{ t('monitor.every1mo') }}</option>
-            </select>
-            <button
-              type="submit"
-              class="btn btn-primary btn-sm h-11 px-5 rounded-full"
-              :disabled="adding || !newUrl.trim()"
-            >
-              <span v-if="adding" class="loading loading-spinner loading-xs" />
-              <span v-else>{{ t('monitor.watch') }}</span>
-            </button>
-          </div>
-        </form>
-        <p v-if="addError" class="mt-2 text-xs text-error">{{ addError }}</p>
+      <div
+        v-if="loadError"
+        class="surface rounded-2xl p-4 mb-6 text-sm text-error flex gap-2 items-center"
+      >
+        <Icon icon="clarity:exclamation-circle-line" class="h-5 w-5 shrink-0" />
+        <span>{{ loadError }}</span>
       </div>
 
-      <!-- Loading skeleton -->
       <div v-if="loading" class="space-y-3">
         <div v-for="n in 3" :key="n" class="skeleton h-24 rounded-2xl" />
       </div>
 
-      <!-- Empty state -->
       <div
         v-else-if="playlists.length === 0"
         class="surface rounded-2xl p-12 flex flex-col items-center text-center"
@@ -81,116 +41,140 @@
         </p>
       </div>
 
-      <!-- Playlist cards -->
       <ul v-else class="space-y-3">
         <li
           v-for="pl in playlists"
-          :key="pl.id"
-          class="surface rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+          :key="pl.spotify_playlist_id"
+          class="surface rounded-2xl p-4 sm:p-5 flex flex-col gap-4"
         >
-          <!-- Info -->
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="font-semibold truncate">{{ pl.name }}</span>
-              <span
-                class="pill shrink-0"
-                :class="pl.enabled ? 'badge-soft' : 'badge-neutral-soft'"
+          <div class="flex flex-col sm:flex-row sm:items-start gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-semibold truncate">{{ pl.playlist_name }}</span>
+                <span
+                  v-if="isWatched(pl)"
+                  class="pill shrink-0"
+                  :class="
+                    pl.monitor?.enabled ? 'badge-soft' : 'badge-neutral-soft'
+                  "
+                >
+                  {{
+                    pl.monitor?.enabled
+                      ? t('monitor.active')
+                      : t('monitor.paused')
+                  }}
+                </span>
+              </div>
+              <p class="text-xs text-base-content/50">
+                {{ playlistSummary(pl) }}
+              </p>
+              <div
+                v-if="isWatched(pl) && pl.monitor"
+                class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-base-content/50 mt-1"
               >
-                {{ pl.enabled ? t('monitor.active') : t('monitor.paused') }}
-              </span>
+                <span>
+                  <Icon
+                    icon="clarity:refresh-line"
+                    class="inline h-3 w-3 mr-0.5"
+                  />
+                  {{
+                    t('monitor.everyInterval', {
+                      interval: formatInterval(pl.monitor.interval_minutes),
+                    })
+                  }}
+                </span>
+                <span v-if="pl.monitor.last_checked">
+                  <Icon
+                    icon="clarity:clock-line"
+                    class="inline h-3 w-3 mr-0.5"
+                  />
+                  {{
+                    t('monitor.checked', {
+                      when: timeAgo(pl.monitor.last_checked),
+                    })
+                  }}
+                </span>
+                <span v-else class="italic">{{ t('monitor.notChecked') }}</span>
+              </div>
             </div>
-            <div
-              class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-base-content/50"
-            >
-              <span>
-                <Icon
-                  icon="clarity:refresh-line"
-                  class="inline h-3 w-3 mr-0.5"
+
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <label
+                class="flex items-center gap-2 cursor-pointer select-none"
+                :title="t('monitor.watchNew')"
+              >
+                <input
+                  type="checkbox"
+                  class="toggle toggle-primary toggle-sm"
+                  :checked="!!pl.monitor?.enabled"
+                  :disabled="!!toggling[pl.spotify_playlist_id]"
+                  @change="onToggleWatch(pl, $event)"
                 />
-                {{
-                  t('monitor.everyInterval', {
-                    interval: formatInterval(pl.interval_minutes),
-                  })
-                }}
-              </span>
-              <span>
-                <Icon
-                  icon="clarity:music-note-line"
-                  class="inline h-3 w-3 mr-0.5"
-                />
-                {{
-                  pl.last_track_count === 1
-                    ? t('monitor.tracksOne', { count: pl.last_track_count })
-                    : t('monitor.tracksMany', { count: pl.last_track_count })
-                }}
-              </span>
-              <span v-if="pl.last_checked">
-                <Icon icon="clarity:clock-line" class="inline h-3 w-3 mr-0.5" />
-                {{ t('monitor.checked', { when: timeAgo(pl.last_checked) }) }}
-              </span>
-              <span v-else class="italic">{{ t('monitor.notChecked') }}</span>
+                <span class="text-xs text-base-content/70">{{
+                  t('monitor.watchNew')
+                }}</span>
+              </label>
+
+              <template v-if="pl.monitor?.enabled">
+                <select
+                  :value="pl.monitor.interval_minutes"
+                  class="filter-select-xs"
+                  @change="onChangeInterval(pl, $event)"
+                >
+                  <option :value="15">{{ t('monitor.short15') }}</option>
+                  <option :value="30">{{ t('monitor.short30') }}</option>
+                  <option :value="60">{{ t('monitor.short1h') }}</option>
+                  <option :value="180">{{ t('monitor.short3h') }}</option>
+                  <option :value="360">{{ t('monitor.short6h') }}</option>
+                  <option :value="720">{{ t('monitor.short12h') }}</option>
+                  <option :value="1440">{{ t('monitor.short1d') }}</option>
+                  <option :value="10080">{{ t('monitor.short1w') }}</option>
+                  <option :value="20160">{{ t('monitor.short2w') }}</option>
+                  <option :value="43200">{{ t('monitor.short1mo') }}</option>
+                </select>
+
+                <button
+                  class="icon-btn"
+                  :title="t('monitor.checkNow')"
+                  :disabled="!!checking[pl.spotify_playlist_id]"
+                  @click="onCheck(pl)"
+                >
+                  <span
+                    v-if="checking[pl.spotify_playlist_id]"
+                    class="loading loading-spinner loading-xs"
+                  />
+                  <Icon v-else icon="clarity:refresh-line" class="h-4 w-4" />
+                </button>
+              </template>
+
+              <a
+                v-if="pl.playlist_url"
+                class="icon-btn"
+                :href="pl.playlist_url"
+                target="_blank"
+                rel="noopener noreferrer"
+                :title="t('search.openPlaylistOnSpotify')"
+              >
+                <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
+              </a>
+
+              <button
+                v-if="pl.missing_count > 0"
+                type="button"
+                class="icon-btn text-primary hover:bg-primary/10"
+                :disabled="!!downloading[pl.spotify_playlist_id]"
+                :title="
+                  t('search.downloadMissing', { count: pl.missing_count })
+                "
+                @click="onDownloadMissing(pl)"
+              >
+                <Icon icon="clarity:download-line" class="h-4 w-4" />
+              </button>
             </div>
-          </div>
-
-          <!-- Actions -->
-          <div class="flex items-center gap-2 shrink-0">
-            <!-- Interval selector -->
-            <select
-              :value="pl.interval_minutes"
-              @change="onChangeInterval(pl, $event)"
-              class="filter-select-xs"
-            >
-              <option :value="15">{{ t('monitor.short15') }}</option>
-              <option :value="30">{{ t('monitor.short30') }}</option>
-              <option :value="60">{{ t('monitor.short1h') }}</option>
-              <option :value="180">{{ t('monitor.short3h') }}</option>
-              <option :value="360">{{ t('monitor.short6h') }}</option>
-              <option :value="720">{{ t('monitor.short12h') }}</option>
-              <option :value="1440">{{ t('monitor.short1d') }}</option>
-              <option :value="10080">{{ t('monitor.short1w') }}</option>
-              <option :value="20160">{{ t('monitor.short2w') }}</option>
-              <option :value="43200">{{ t('monitor.short1mo') }}</option>
-            </select>
-
-            <!-- Toggle enabled -->
-            <button
-              class="icon-btn"
-              :title="pl.enabled ? t('monitor.pause') : t('monitor.resume')"
-              @click="onToggle(pl)"
-            >
-              <Icon
-                :icon="pl.enabled ? 'clarity:pause-line' : 'clarity:play-line'"
-                class="h-4 w-4"
-              />
-            </button>
-
-            <!-- Manual check -->
-            <button
-              class="icon-btn"
-              :title="t('monitor.checkNow')"
-              :disabled="checking[pl.id]"
-              @click="onCheck(pl)"
-            >
-              <span
-                v-if="checking[pl.id]"
-                class="loading loading-spinner loading-xs"
-              />
-              <Icon v-else icon="clarity:refresh-line" class="h-4 w-4" />
-            </button>
-
-            <!-- Delete -->
-            <button
-              class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
-              :title="t('monitor.stop')"
-              @click="onDelete(pl)"
-            >
-              <Icon icon="clarity:trash-line" class="h-4 w-4" />
-            </button>
           </div>
         </li>
       </ul>
 
-      <!-- Info banner -->
       <div
         class="mt-8 surface rounded-2xl p-4 flex gap-3 text-sm text-base-content/60"
       >
@@ -209,6 +193,7 @@ import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
+import API from '/src/model/api.js'
 import monitorAPI from '/src/model/monitor.js'
 import { useI18n } from '/src/i18n'
 
@@ -216,86 +201,92 @@ const { t } = useI18n()
 
 const playlists = ref([])
 const loading = ref(false)
-const adding = ref(false)
-const addError = ref('')
-const newUrl = ref('')
-const newInterval = ref(60)
+const loadError = ref('')
+const toggling = ref({})
 const checking = ref({})
+const downloading = ref({})
+
+function isWatched(pl) {
+  return pl.monitor != null
+}
+
+function playlistSummary(pl) {
+  return t('search.incompleteSummary', {
+    downloaded: pl.downloaded_count,
+    expected: pl.expected_count,
+    missing: pl.missing_count,
+  })
+}
 
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
-    const res = await monitorAPI.listMonitoredPlaylists()
-    playlists.value = res.data || []
+    const res = await API.getPlaylistBatches()
+    playlists.value = res.data?.playlists || []
+  } catch {
+    loadError.value = t('monitor.failedAdd')
   } finally {
     loading.value = false
   }
 }
 
-async function onAdd() {
-  addError.value = ''
-  adding.value = true
+async function onToggleWatch(pl, event) {
+  const enabled = event.target.checked
+  const sid = pl.spotify_playlist_id
+  toggling.value = { ...toggling.value, [sid]: true }
   try {
-    const res = await monitorAPI.addMonitoredPlaylist(
-      newUrl.value.trim(),
-      newInterval.value
-    )
-    playlists.value.unshift(res.data)
-    newUrl.value = ''
-  } catch (e) {
-    addError.value = e?.response?.data?.detail || t('monitor.failedAdd')
-  } finally {
-    adding.value = false
-  }
-}
-
-async function onToggle(pl) {
-  try {
-    const res = await monitorAPI.updateMonitoredPlaylist(pl.id, {
-      enabled: !pl.enabled,
+    const interval = pl.monitor?.interval_minutes ?? 60
+    const res = await monitorAPI.upsertMonitoredPlaylist({
+      spotify_playlist_id: sid,
+      enabled,
+      interval_minutes: interval,
     })
-    Object.assign(pl, res.data)
+    pl.monitor = res.data
   } catch {
-    // silently ignore
+    event.target.checked = !enabled
+  } finally {
+    toggling.value = { ...toggling.value, [sid]: false }
   }
 }
 
 async function onChangeInterval(pl, event) {
   const val = parseInt(event.target.value, 10)
+  if (!pl.monitor?.id) return
   try {
-    const res = await monitorAPI.updateMonitoredPlaylist(pl.id, {
+    const res = await monitorAPI.updateMonitoredPlaylist(pl.monitor.id, {
       interval_minutes: val,
     })
-    Object.assign(pl, res.data)
+    pl.monitor = res.data
   } catch {
     // silently ignore
   }
 }
 
 async function onCheck(pl) {
-  checking.value = { ...checking.value, [pl.id]: true }
+  const id = pl.monitor?.id
+  if (!id) return
+  const sid = pl.spotify_playlist_id
+  checking.value = { ...checking.value, [sid]: true }
   try {
-    await monitorAPI.checkMonitoredPlaylist(pl.id)
-    setTimeout(async () => {
-      try {
-        const res = await monitorAPI.listMonitoredPlaylists()
-        playlists.value = res.data || []
-      } finally {
-        checking.value = { ...checking.value, [pl.id]: false }
-      }
-    }, 3000)
-  } catch {
-    checking.value = { ...checking.value, [pl.id]: false }
+    await monitorAPI.checkMonitoredPlaylist(id)
+    setTimeout(load, 3000)
+  } finally {
+    checking.value = { ...checking.value, [sid]: false }
   }
 }
 
-async function onDelete(pl) {
-  if (!confirm(t('monitor.deletePrompt', { name: pl.name }))) return
+async function onDownloadMissing(pl) {
+  const sid = pl.spotify_playlist_id
+  downloading.value = { ...downloading.value, [sid]: true }
   try {
-    await monitorAPI.deleteMonitoredPlaylist(pl.id)
-    playlists.value = playlists.value.filter((p) => p.id !== pl.id)
-  } catch {
-    // silently ignore
+    await API.downloadMissingPlaylistTracks({
+      spotify_playlist_id: sid,
+      playlist_url: pl.playlist_url,
+    })
+    setTimeout(load, 2000)
+  } finally {
+    downloading.value = { ...downloading.value, [sid]: false }
   }
 }
 
