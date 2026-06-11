@@ -50,7 +50,9 @@
           <div class="flex flex-col sm:flex-row sm:items-start gap-4">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 mb-1">
-                <span class="font-semibold truncate">{{ pl.playlist_name }}</span>
+                <span class="font-semibold truncate">{{
+                  pl.playlist_name
+                }}</span>
                 <span
                   v-if="isWatched(pl)"
                   class="pill shrink-0"

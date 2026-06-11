@@ -181,8 +181,7 @@ export default {
     failedAdd:
       'No se pudieron cargar las listas. ¿El backend está actualizado?',
     empty: 'Aún no hay listas registradas.',
-    emptyHint:
-      'Descarga una lista de Spotify desde Buscar — aparecerá aquí.',
+    emptyHint: 'Descarga una lista de Spotify desde Buscar — aparecerá aquí.',
     active: 'Activa',
     paused: 'Pausada',
     everyInterval: 'Cada {interval}',

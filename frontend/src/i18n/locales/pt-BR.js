@@ -178,8 +178,7 @@ export default {
     failedAdd:
       'Não foi possível carregar as playlists. O backend está atualizado?',
     empty: 'Nenhuma playlist registrada ainda.',
-    emptyHint:
-      'Baixe uma playlist do Spotify na Busca — ela aparecerá aqui.',
+    emptyHint: 'Baixe uma playlist do Spotify na Busca — ela aparecerá aqui.',
     active: 'Ativa',
     paused: 'Pausada',
     everyInterval: 'A cada {interval}',
