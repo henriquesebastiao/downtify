@@ -81,7 +81,7 @@ def _setup_logging(level: str) -> None:
 
 
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
-DATABASE_DIR = Path('/data')
+DATABASE_DIR = Path(os.getenv('DATABASE_DIR', '/data'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
 DEFAULT_PORT = int(os.getenv('DOWNTIFY_PORT', os.getenv('PORT', '8000')))

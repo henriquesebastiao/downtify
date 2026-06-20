@@ -417,12 +417,23 @@ def _recording_date_for_tags(song: dict[str, Any]) -> str:
     return str(song.get('year') or '').strip()
 
 
+def _album_artist_for_tags(artists: list[str]) -> Optional[str]:
+    if not artists:
+        return None
+    if len(artists) > 1:
+        return 'Various Artists'
+    if re.search(r'\s*(?:,|，|&)\s*', artists[0]):
+        return 'Various Artists'
+    return artists[0]
+
+
 def embed_metadata(path: Path, song: dict[str, Any]) -> None:
     if not path.exists():
         return
 
     title = song.get('name', '')
     artists = song.get('artists') or []
+    album_artist = _album_artist_for_tags(artists)
     album = song.get('album_name', '') or ''
     recording_date = _recording_date_for_tags(song)
     genre = (song.get('genre') or '').strip()
@@ -463,6 +474,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             path,
             title,
             artists,
+            album_artist,
             album,
             recording_date,
             genre,
@@ -475,6 +487,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             path,
             title,
             artists,
+            album_artist,
             album,
             recording_date,
             genre,
@@ -487,6 +500,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             path,
             title,
             artists,
+            album_artist,
             album,
             recording_date,
             genre,
@@ -499,6 +513,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             path,
             title,
             artists,
+            album_artist,
             album,
             recording_date,
             genre,
@@ -510,6 +525,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             path,
             title,
             artists,
+            album_artist,
             album,
             recording_date,
             genre,
@@ -522,6 +538,7 @@ def _tag_mp3(
     path: Path,
     title: str,
     artists: list[str],
+    album_artist: Optional[str],
     album: str,
     year: str,
     genre: str,
@@ -536,7 +553,8 @@ def _tag_mp3(
     audio.tags.add(TIT2(encoding=3, text=title))
     if artists:
         audio.tags.add(TPE1(encoding=3, text='/'.join(artists)))
-        audio.tags.add(TPE2(encoding=3, text=artists[0]))
+    if album_artist:
+        audio.tags.add(TPE2(encoding=3, text=album_artist))
     if album:
         audio.tags.add(TALB(encoding=3, text=album))
     if track_number is not None:
@@ -567,6 +585,7 @@ def _tag_mp4(
     path: Path,
     title: str,
     artists: list[str],
+    album_artist: Optional[str],
     album: str,
     year: str,
     genre: str,
@@ -578,7 +597,8 @@ def _tag_mp4(
     audio['\xa9nam'] = title
     if artists:
         audio['\xa9ART'] = artists
-        audio['aART'] = [artists[0]]
+    if album_artist:
+        audio['aART'] = [album_artist]
     if album:
         audio['\xa9alb'] = album
     if track_number is not None:
@@ -599,6 +619,7 @@ def _tag_flac(
     path: Path,
     title: str,
     artists: list[str],
+    album_artist: Optional[str],
     album: str,
     year: str,
     genre: str,
@@ -610,7 +631,8 @@ def _tag_flac(
     audio['title'] = title
     if artists:
         audio['artist'] = artists
-        audio['albumartist'] = artists[0]
+    if album_artist:
+        audio['albumartist'] = album_artist
     if album:
         audio['album'] = album
     if track_number is not None:
@@ -635,6 +657,7 @@ def _tag_ogg_vorbis(
     path: Path,
     title: str,
     artists: list[str],
+    album_artist: Optional[str],
     album: str,
     year: str,
     genre: str,
@@ -646,6 +669,7 @@ def _tag_ogg_vorbis(
         audio,
         title,
         artists,
+        album_artist,
         album,
         year,
         genre,
@@ -659,6 +683,7 @@ def _tag_opus(
     path: Path,
     title: str,
     artists: list[str],
+    album_artist: Optional[str],
     album: str,
     year: str,
     genre: str,
@@ -670,6 +695,7 @@ def _tag_opus(
         audio,
         title,
         artists,
+        album_artist,
         album,
         year,
         genre,
@@ -683,6 +709,7 @@ def _apply_vorbis_comments(
     audio,
     title,
     artists,
+    album_artist,
     album,
     year,
     genre,
@@ -692,7 +719,8 @@ def _apply_vorbis_comments(
     audio['title'] = title
     if artists:
         audio['artist'] = artists
-        audio['albumartist'] = artists[0]
+    if album_artist:
+        audio['albumartist'] = album_artist
     if album:
         audio['album'] = album
     if track_number is not None:
