@@ -438,7 +438,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.34.1" },
     { name = "uvicorn", specifier = ">=0.49.0" },
     { name = "websockets", specifier = ">=12.0" },
-    { name = "yt-dlp", specifier = ">=2026.2.4" },
+    { name = "yt-dlp", specifier = ">=2026.6.9" },
     { name = "ytmusicapi", specifier = ">=1.12.1" },
 ]
 
@@ -447,7 +447,7 @@ dev = [
     { name = "codeflash", specifier = ">=0.20.6" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "ruff", specifier = ">=0.15.18" },
-    { name = "zensical", specifier = ">=0.0.44" },
+    { name = "zensical", specifier = ">=0.0.45" },
 ]
 
 [[package]]
