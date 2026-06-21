@@ -552,7 +552,7 @@ def _tag_mp3(
     audio.tags.delall('APIC')
     audio.tags.add(TIT2(encoding=3, text=title))
     if artists:
-        audio.tags.add(TPE1(encoding=3, text='/'.join(artists)))
+        audio.tags.add(TPE1(encoding=3, text=';'.join(artists)))
     if album_artist:
         audio.tags.add(TPE2(encoding=3, text=album_artist))
     if album:
