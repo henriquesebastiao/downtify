@@ -12,7 +12,7 @@ dependencies = [
     "requests>=2.34.1",
     "uvicorn>=0.49.0",
     "websockets>=12.0",
-    "yt-dlp>=2026.2.4",
+    "yt-dlp>=2026.6.9",
     "ytmusicapi>=1.12.1",
 ]
 
