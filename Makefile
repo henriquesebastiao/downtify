@@ -21,6 +21,7 @@ up:
 
 down:
 	docker compose down
+	docker rmi downtify:latest
 
 run:
 	uv run python main.py web
