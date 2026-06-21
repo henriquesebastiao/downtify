@@ -447,7 +447,7 @@ dev = [
     { name = "codeflash", specifier = ">=0.20.6" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "ruff", specifier = ">=0.15.15" },
-    { name = "zensical", specifier = ">=0.0.44" },
+    { name = "zensical", specifier = ">=0.0.45" },
 ]
 
 [[package]]
