@@ -431,7 +431,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastapi", specifier = ">=0.110" },
+    { name = "fastapi", specifier = ">=0.138.0" },
     { name = "load-dotenv", specifier = ">=0.1.0" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "mutagen", specifier = ">=1.47" },
@@ -445,8 +445,8 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "codeflash", specifier = ">=0.20.6" },
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "ruff", specifier = ">=0.15.15" },
+    { name = "pytest", specifier = ">=9.1.1" },
+    { name = "ruff", specifier = ">=0.15.18" },
     { name = "zensical", specifier = ">=0.0.45" },
 ]
 
