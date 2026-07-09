@@ -58,6 +58,26 @@ def test_format_basename_album_available_in_template(tmp_path):
     assert result == 'MyAlbum - Song'
 
 
+def test_format_basename_supports_album_subpath(tmp_path):
+    d = _make(tmp_path, output_template='{album}/{title}')
+    result = d._format_basename({
+        'name': 'Song',
+        'artists': ['A'],
+        'album_name': 'MyAlbum',
+    })
+    assert result == 'MyAlbum/Song'
+
+
+def test_format_basename_sanitizes_values_before_splitting_subpaths(tmp_path):
+    d = _make(tmp_path, output_template='{album}/{title}')
+    result = d._format_basename({
+        'name': 'AC/DC: Live',
+        'artists': ['A'],
+        'album_name': '../Bad/Album?',
+    })
+    assert result == 'BadAlbum/ACDC Live'
+
+
 def test_format_basename_bad_template_falls_back(tmp_path):
     d = _make(tmp_path, output_template='{nonexistent_key}')
     result = d._format_basename({'name': 'Song', 'artists': ['Artist']})
@@ -129,6 +149,23 @@ def test_organize_by_artist_finds_in_artist_dir_regardless_of_subdir(tmp_path):
         {'name': 'Song', 'artists': ['Artist']}, subdir='Some Playlist'
     )
     assert result == 'Artist/Artist - Song.mp3'
+
+
+def test_organize_by_artist_combines_with_output_subpath(tmp_path):
+    d = _make(
+        tmp_path,
+        organize_by_artist=True,
+        output_template='{album}/{title}',
+    )
+    album_dir = tmp_path / 'Artist' / 'Album'
+    album_dir.mkdir(parents=True)
+    (album_dir / 'Song.mp3').write_bytes(b'\x00')
+    result = d.existing_filename_for({
+        'name': 'Song',
+        'artists': ['Artist'],
+        'album_name': 'Album',
+    })
+    assert result == 'Artist/Album/Song.mp3'
 
 
 def test_organize_by_artist_false_keeps_playlist_routing(tmp_path):
