@@ -152,6 +152,10 @@ export default {
     format: 'Μορφή αρχείου',
     quality: 'Ποιότητα',
     qualityIgnored: 'αγνοείται (lossless)',
+    outputTemplate: 'Μορφή ονόματος αρχείου',
+    outputTemplateReset: 'Επαναφορά',
+    outputTemplateHint:
+      'Χρησιμοποιήστε / για υποφακέλους. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
     playlistsSection: 'Λίστες αναπαραγωγής (Playlists)',
     generateM3u: 'Δημιουργία αρχείου M3U για τις λίστες',
     generateM3uHint:

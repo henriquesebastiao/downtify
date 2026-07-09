@@ -149,6 +149,10 @@ export default {
     format: 'Formato',
     quality: 'Qualidade',
     qualityIgnored: 'ignorada (sem perdas)',
+    outputTemplate: 'Formato do nome',
+    outputTemplateReset: 'Restaurar',
+    outputTemplateHint:
+      'Use / para criar subpastas. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
     playlistsSection: 'Playlists',
     generateM3u: 'Gerar arquivo M3U para playlists',
     generateM3uHint:

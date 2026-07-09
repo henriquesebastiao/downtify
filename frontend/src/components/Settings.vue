@@ -169,6 +169,33 @@
           </div>
         </div>
 
+        <!-- Filename template -->
+        <div>
+          <div class="flex items-baseline justify-between mb-2 gap-3">
+            <label
+              class="block text-xs font-semibold uppercase tracking-wider text-base-content/50"
+            >
+              {{ t('settings.outputTemplate') }}
+            </label>
+            <button
+              type="button"
+              class="text-[11px] text-primary hover:text-primary-focus transition-colors"
+              @click="resetOutputTemplate"
+            >
+              {{ t('settings.outputTemplateReset') }}
+            </button>
+          </div>
+          <input
+            type="text"
+            class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60 font-mono text-sm"
+            v-model.trim="sm.settings.value.output"
+            :placeholder="sm.settingsOptions.output"
+          />
+          <p class="text-[11px] text-base-content/40 mt-1.5">
+            {{ t('settings.outputTemplateHint') }}
+          </p>
+        </div>
+
         <!-- Playlists -->
         <div>
           <label
@@ -286,7 +313,7 @@
         </label>
         <button
           class="btn btn-primary btn-sm h-10 px-6 rounded-full"
-          @click="sm.saveSettings()"
+          @click="saveSettings"
         >
           {{ t('common.save') }}
         </button>
@@ -310,5 +337,16 @@ function providerLabel(provider) {
   if (provider === 'youtube-music') return 'YouTube Music'
   if (provider === 'youtube') return 'YouTube'
   return provider
+}
+
+function resetOutputTemplate() {
+  sm.settings.value.output = sm.settingsOptions.output
+}
+
+function saveSettings() {
+  if (!String(sm.settings.value.output || '').trim()) {
+    resetOutputTemplate()
+  }
+  sm.saveSettings()
 }
 </script>
