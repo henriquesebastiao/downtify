@@ -446,7 +446,7 @@ requires-dist = [
 dev = [
     { name = "codeflash", specifier = ">=0.20.6" },
     { name = "pytest", specifier = ">=9.1.1" },
-    { name = "ruff", specifier = ">=0.15.18" },
+    { name = "ruff", specifier = ">=0.15.20" },
     { name = "zensical", specifier = ">=0.0.46" },
 ]
 
