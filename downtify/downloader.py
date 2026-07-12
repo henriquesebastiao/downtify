@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import os
 import re
 import re as _re
@@ -545,6 +546,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             album,
             recording_date,
             genre,
+            cover_bytes,
             track_number,
             album_track_total,
         )
@@ -557,6 +559,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             album,
             recording_date,
             genre,
+            cover_bytes,
             track_number,
             album_track_total,
         )
@@ -689,6 +692,7 @@ def _tag_ogg_vorbis(
     album: str,
     year: str,
     genre: str,
+    cover_bytes: Optional[bytes],
     track_number: Optional[int],
     album_track_total: Optional[int],
 ) -> None:
@@ -701,6 +705,7 @@ def _tag_ogg_vorbis(
         album,
         year,
         genre,
+        cover_bytes,
         track_number,
         album_track_total,
     )
@@ -715,6 +720,7 @@ def _tag_opus(
     album: str,
     year: str,
     genre: str,
+    cover_bytes: Optional[bytes],
     track_number: Optional[int],
     album_track_total: Optional[int],
 ) -> None:
@@ -727,6 +733,7 @@ def _tag_opus(
         album,
         year,
         genre,
+        cover_bytes,
         track_number,
         album_track_total,
     )
@@ -741,6 +748,7 @@ def _apply_vorbis_comments(
     album,
     year,
     genre,
+    cover_bytes: Optional[bytes],
     track_number: Optional[int],
     album_track_total: Optional[int],
 ):
@@ -759,6 +767,14 @@ def _apply_vorbis_comments(
         audio['date'] = year
     if genre:
         audio['genre'] = genre
+    if cover_bytes:
+        picture = Picture()
+        picture.data = cover_bytes
+        picture.type = 3
+        picture.mime = 'image/jpeg'
+        picture_data = picture.write()
+        encoded_data = base64.b64encode(picture_data).decode('ascii')
+        audio['metadata_block_picture'] = [encoded_data]
 
 
 def embed_lyrics(path: Path, lyrics: 'lyrics_mod.Lyrics') -> None:
