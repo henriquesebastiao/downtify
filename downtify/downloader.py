@@ -192,7 +192,7 @@ class Downloader:
         )
         target_dir, prefix = self._resolve_target_dir(effective_subdir)
         if output_subdir is not None:
-            target_dir = target_dir / output_subdir
+            target_dir /= output_subdir
             prefix = f'{prefix}{output_subdir.as_posix()}/'
         primary = target_dir / f'{basename}.{self.audio_format}'
         if primary.exists():
@@ -264,7 +264,7 @@ class Downloader:
         )
         target_dir, rel_prefix = self._resolve_target_dir(effective_subdir)
         if output_subdir is not None:
-            target_dir = target_dir / output_subdir
+            target_dir /= output_subdir
             rel_prefix = f'{rel_prefix}{output_subdir.as_posix()}/'
         target_dir.mkdir(parents=True, exist_ok=True)
         out_template = str(target_dir / f'{basename}.%(ext)s')
