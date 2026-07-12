@@ -138,19 +138,33 @@ class Downloader:
         artists = song.get('artists') or []
         return _sanitize(artists[0] if artists else 'unknown')
 
-    def _format_basename(self, song: dict[str, Any]) -> str:
-        artists = ', '.join(song.get('artists') or []) or 'Unknown Artist'
+    @staticmethod
+    def _template_values(song: dict[str, Any]) -> dict[str, str]:
+        artist_names = [_sanitize(a) for a in (song.get('artists') or [])]
+        artists = ', '.join(a for a in artist_names if a) or 'Unknown Artist'
+        return {
+            'title': _sanitize(song.get('name', 'Unknown')),
+            'artists': artists,
+            'artist': artists,
+            'album': _sanitize(song.get('album_name', '')),
+        }
+
+    def _format_output_parts(self, song: dict[str, Any]) -> list[str]:
+        """Render the output template as safe relative path components."""
+
         template = self.output_template.replace('.{output-ext}', '')
         try:
-            rendered = template.format(
-                title=song.get('name', 'Unknown'),
-                artists=artists,
-                artist=artists,
-                album=song.get('album_name', ''),
-            )
+            rendered = template.format(**self._template_values(song))
         except (KeyError, IndexError):
-            rendered = f'{artists} - {song.get("name", "Unknown")}'
-        return _sanitize(rendered)
+            values = self._template_values(song)
+            rendered = f'{values["artists"]} - {values["title"]}'
+
+        parts = [_sanitize(part) for part in re.split(r'[\\/]+', rendered)]
+        parts = [part for part in parts if part]
+        return parts or ['unknown']
+
+    def _format_basename(self, song: dict[str, Any]) -> str:
+        return '/'.join(self._format_output_parts(song))
 
     def existing_filename_for(
         self,
@@ -169,11 +183,18 @@ class Downloader:
         ``download_dir`` (``<subdir>/<file>.<ext>``).
         """
 
-        basename = self._format_basename(song)
+        output_parts = self._format_output_parts(song)
+        basename = output_parts[-1]
+        output_subdir = (
+            Path(*output_parts[:-1]) if len(output_parts) > 1 else None
+        )
         effective_subdir = (
             self._artist_subdir(song) if self.organize_by_artist else subdir
         )
         target_dir, prefix = self._resolve_target_dir(effective_subdir)
+        if output_subdir is not None:
+            target_dir /= output_subdir
+            prefix = f'{prefix}{output_subdir.as_posix()}/'
         primary = target_dir / f'{basename}.{self.audio_format}'
         if primary.exists():
             return f'{prefix}{primary.name}'
@@ -234,11 +255,18 @@ class Downloader:
 
         song = enrich_from_match(song, match)
 
-        basename = self._format_basename(song)
+        output_parts = self._format_output_parts(song)
+        basename = output_parts[-1]
+        output_subdir = (
+            Path(*output_parts[:-1]) if len(output_parts) > 1 else None
+        )
         effective_subdir = (
             self._artist_subdir(song) if self.organize_by_artist else subdir
         )
         target_dir, rel_prefix = self._resolve_target_dir(effective_subdir)
+        if output_subdir is not None:
+            target_dir /= output_subdir
+            rel_prefix = f'{rel_prefix}{output_subdir.as_posix()}/'
         target_dir.mkdir(parents=True, exist_ok=True)
         out_template = str(target_dir / f'{basename}.%(ext)s')
 

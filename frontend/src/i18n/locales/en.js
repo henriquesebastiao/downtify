@@ -147,6 +147,10 @@ export default {
     format: 'Format',
     quality: 'Quality',
     qualityIgnored: 'ignored (lossless)',
+    outputTemplate: 'Filename format',
+    outputTemplateReset: 'Reset',
+    outputTemplateHint:
+      'Use / to create subfolders. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
     playlistsSection: 'Playlists',
     generateM3u: 'Generate M3U file for playlists',
     generateM3uHint:

@@ -150,6 +150,10 @@ export default {
     format: 'Formato',
     quality: 'Calidad',
     qualityIgnored: 'ignorada (sin pérdidas)',
+    outputTemplate: 'Formato del nombre',
+    outputTemplateReset: 'Restaurar',
+    outputTemplateHint:
+      'Usa / para crear subcarpetas. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
     playlistsSection: 'Listas',
     generateM3u: 'Generar archivo M3U para las listas',
     generateM3uHint:
