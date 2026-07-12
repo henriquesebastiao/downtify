@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.9.0](https://github.com/henriquesebastiao/downtify/tree/2.9.0) (2026-07-12)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.8.0...2.9.0)
+
+**Fixed bugs:**
+
+- Various Artists [\#207](https://github.com/henriquesebastiao/downtify/issues/207)
+- Renaming not working [\#194](https://github.com/henriquesebastiao/downtify/issues/194)
+- OPUS music have no cover art [\#165](https://github.com/henriquesebastiao/downtify/issues/165)
+
+**Merged pull requests:**
+
+- Fix output filename subpaths [\#226](https://github.com/henriquesebastiao/downtify/pull/226) ([FidelGB](https://github.com/FidelGB))
+- Fix OPUS format missing cover art [\#217](https://github.com/henriquesebastiao/downtify/pull/217) ([berkeozgen08](https://github.com/berkeozgen08))
+- build\(deps-dev\): Bump ruff from 0.15.18 to 0.15.20 [\#214](https://github.com/henriquesebastiao/downtify/pull/214) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump mutagen from 1.47.0 to 1.48.1 [\#213](https://github.com/henriquesebastiao/downtify/pull/213) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump zensical from 0.0.45 to 0.0.46 [\#209](https://github.com/henriquesebastiao/downtify/pull/209) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add Various Artists in album Artist if there are more than one artists [\#208](https://github.com/henriquesebastiao/downtify/pull/208) ([Robokishan](https://github.com/Robokishan))
+- build\(deps\): Bump actions/checkout from 6 to 7 [\#206](https://github.com/henriquesebastiao/downtify/pull/206) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Use the ID3v2.4 separator for artists: "; " [\#205](https://github.com/henriquesebastiao/downtify/pull/205) ([fracarma](https://github.com/fracarma))
+- feat: add Greek translation  [\#197](https://github.com/henriquesebastiao/downtify/pull/197) ([Harrygr-droid](https://github.com/Harrygr-droid))
+- build\(deps-dev\): Bump zensical from 0.0.44 to 0.0.45 [\#196](https://github.com/henriquesebastiao/downtify/pull/196) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump yt-dlp from 2026.3.17 to 2026.6.9 [\#195](https://github.com/henriquesebastiao/downtify/pull/195) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump ytmusicapi from 1.12.0 to 1.12.1 [\#193](https://github.com/henriquesebastiao/downtify/pull/193) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump zensical from 0.0.43 to 0.0.44 [\#190](https://github.com/henriquesebastiao/downtify/pull/190) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump uvicorn from 0.48.0 to 0.49.0 [\#189](https://github.com/henriquesebastiao/downtify/pull/189) ([dependabot[bot]](https://github.com/apps/dependabot))
+
 ## [2.8.0](https://github.com/henriquesebastiao/downtify/tree/2.8.0) (2026-06-02)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.7.0...2.8.0)
