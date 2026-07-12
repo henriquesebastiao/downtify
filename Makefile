@@ -57,7 +57,10 @@ version:
 doc:
 	uv run zensical serve
 
+rm:
+	sudo rm -rf docker/downloads/*
+
 %:
 	@:
 
-.PHONY: all build latest clean up down run format lint export changelog version doc
+.PHONY: all build latest clean up down run format lint export changelog version doc rm
