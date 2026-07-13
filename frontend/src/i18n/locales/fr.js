@@ -162,6 +162,9 @@ export default {
     organizeByArtist: 'Organisation des fichiers',
     organizeByArtistHint:
       "Enregistrez les morceaux dans des sous-dossiers portant le nom de l'artiste. Les titres des listes de lecture sont également placés dans le dossier de leur artiste plutôt que dans un dossier dédié à la liste de lecture.",
+    organizeByAlbum: 'Organiser par album',
+    organizeByAlbumHint:
+      "Enregistrez les morceaux dans des sous-dossiers portant le nom de l'album, afin qu'un album entier soit téléchargé dans son propre dossier. Combiné avec « Organiser par artiste », la structure devient Artiste/Album.",
     parallelDownloads: 'Téléchargements parallèles',
     parallelDownloadsHint:
       'Nombre maximal de titres téléchargeables simultanément. Plus cette valeur est élevée, plus le téléchargement est rapide, mais plus la bande passante utilisée est importante.',

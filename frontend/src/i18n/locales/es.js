@@ -162,6 +162,9 @@ export default {
     organizeByArtist: 'Organizar por artista',
     organizeByArtistHint:
       'Guarda las canciones en subcarpetas con el nombre del artista. Las pistas de listas también se guardan en la carpeta del artista en lugar de la carpeta de la lista.',
+    organizeByAlbum: 'Organizar por álbum',
+    organizeByAlbumHint:
+      'Guarda las canciones en subcarpetas con el nombre del álbum, de modo que un álbum completo se descarga en su propia carpeta. Combinado con "Organizar por artista", la estructura queda Artista/Álbum.',
     parallelDownloads: 'Descargas paralelas',
     parallelDownloadsHint:
       'Número máximo de canciones descargadas simultáneamente. Valores más altos son más rápidos pero consumen más ancho de banda.',

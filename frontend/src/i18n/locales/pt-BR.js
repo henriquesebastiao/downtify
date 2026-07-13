@@ -161,6 +161,9 @@ export default {
     organizeByArtist: 'Organizar por artista',
     organizeByArtistHint:
       'Salva as músicas em subpastas com o nome do artista. Músicas de playlists também são salvas na pasta do artista, não na pasta da playlist.',
+    organizeByAlbum: 'Organizar por álbum',
+    organizeByAlbumHint:
+      'Salva as músicas em subpastas com o nome do álbum, para que um álbum inteiro seja baixado na sua própria pasta. Combinado com "Organizar por artista", a estrutura fica Artista/Álbum.',
     parallelDownloads: 'Downloads paralelos',
     parallelDownloadsHint:
       'Número máximo de músicas baixadas ao mesmo tempo. Valores maiores são mais rápidos, mas consomem mais banda.',

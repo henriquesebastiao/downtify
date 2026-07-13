@@ -124,6 +124,7 @@ class Downloader:
         output_template: str = '{artists} - {title}',
         lyrics_providers: Optional[list[str]] = None,
         organize_by_artist: bool = False,
+        organize_by_album: bool = False,
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
@@ -132,11 +133,64 @@ class Downloader:
         self.output_template = output_template
         self.lyrics_providers = list(lyrics_providers or [])
         self.organize_by_artist = organize_by_artist
+        self.organize_by_album = organize_by_album
 
     @staticmethod
     def _artist_subdir(song: dict[str, Any]) -> str:
         artists = song.get('artists') or []
         return _sanitize(artists[0] if artists else 'unknown')
+
+    @staticmethod
+    def _album_subdir(song: dict[str, Any]) -> str:
+        return _sanitize(song.get('album_name') or 'unknown')
+
+    def _effective_subdir(
+        self, song: dict[str, Any], fallback: Optional[str]
+    ) -> Optional[str]:
+        """Resolve the destination sub-directory for ``song``.
+
+        The ``organize_by_*`` toggles take precedence over the caller's
+        ``fallback`` (e.g. a per-playlist folder). When both are enabled
+        the layout nests as ``<Artist>/<Album>/``; a single toggle yields
+        just that one level. When neither is set the ``fallback`` is used
+        unchanged.
+        """
+
+        parts: list[str] = []
+        if self.organize_by_artist:
+            parts.append(self._artist_subdir(song))
+        if self.organize_by_album:
+            parts.append(self._album_subdir(song))
+        if parts:
+            return '/'.join(parts)
+        return fallback
+
+    def _save_album_cover(
+        self, target_dir: Path, song: dict[str, Any]
+    ) -> None:
+        """Save the album art as ``cover.jpg`` inside the album folder.
+
+        Only runs when organizing by album, so ``target_dir`` is the
+        album's own folder. ``song['cover_url']`` already points at the
+        largest image Spotify offers (see ``spotify._largest_image``).
+        Skipped when ``cover.jpg`` already exists so the art is fetched
+        once per album rather than once per track.
+        """
+
+        if not self.organize_by_album:
+            return
+        cover_path = target_dir / 'cover.jpg'
+        if cover_path.exists():
+            return
+        data = _download_cover(song.get('cover_url', ''))
+        if not data:
+            return
+        try:
+            cover_path.write_bytes(data)
+        except OSError:
+            logger.opt(exception=True).warning(
+                'Could not write album cover {}', cover_path
+            )
 
     @staticmethod
     def _template_values(song: dict[str, Any]) -> dict[str, str]:
@@ -188,9 +242,7 @@ class Downloader:
         output_subdir = (
             Path(*output_parts[:-1]) if len(output_parts) > 1 else None
         )
-        effective_subdir = (
-            self._artist_subdir(song) if self.organize_by_artist else subdir
-        )
+        effective_subdir = self._effective_subdir(song, subdir)
         target_dir, prefix = self._resolve_target_dir(effective_subdir)
         if output_subdir is not None:
             target_dir /= output_subdir
@@ -206,6 +258,9 @@ class Downloader:
     def _resolve_target_dir(self, subdir: Optional[str]) -> tuple[Path, str]:
         """Return ``(target_dir, relative_prefix)`` for an optional subdir.
 
+        ``subdir`` may contain ``/`` separators to express a nested
+        layout (e.g. ``<Artist>/<Album>``); each path component is
+        sanitised individually so the separators survive. The
         ``relative_prefix`` is empty when ``subdir`` is not used and
         otherwise terminates with ``'/'`` so callers can build the
         download-dir-relative path with simple concatenation.
@@ -213,8 +268,13 @@ class Downloader:
 
         if not subdir:
             return self.download_dir, ''
-        safe = sanitize_playlist_name(subdir)
-        return self.download_dir / safe, f'{safe}/'
+        parts = [
+            sanitize_playlist_name(p) for p in subdir.split('/') if p.strip()
+        ]
+        if not parts:
+            return self.download_dir, ''
+        rel = '/'.join(parts)
+        return self.download_dir / Path(*parts), f'{rel}/'
 
     def download(  # noqa: PLR0914
         self,
@@ -260,9 +320,7 @@ class Downloader:
         output_subdir = (
             Path(*output_parts[:-1]) if len(output_parts) > 1 else None
         )
-        effective_subdir = (
-            self._artist_subdir(song) if self.organize_by_artist else subdir
-        )
+        effective_subdir = self._effective_subdir(song, subdir)
         target_dir, rel_prefix = self._resolve_target_dir(effective_subdir)
         if output_subdir is not None:
             target_dir /= output_subdir
@@ -381,6 +439,11 @@ class Downloader:
             embed_metadata(final_path, song)
         except Exception:
             logger.exception('Failed to embed metadata into {}', final_path)
+
+        try:
+            self._save_album_cover(target_dir, song)
+        except Exception:
+            logger.exception('Failed to write album cover in {}', target_dir)
 
         if self.lyrics_providers:
             try:

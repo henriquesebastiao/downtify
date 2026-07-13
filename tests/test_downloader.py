@@ -31,10 +31,19 @@ def test_resolve_target_dir_with_subdir_appends_sanitized_name(tmp_path):
 
 
 def test_resolve_target_dir_sanitizes_unsafe_subdir(tmp_path):
+    # '/' now separates nested path components; other unsafe characters are
+    # stripped per-component.
     d = _make_downloader(tmp_path)
     target, prefix = d._resolve_target_dir('Bad/Name:Here?')
-    assert target == tmp_path / 'BadNameHere'
-    assert prefix == 'BadNameHere/'
+    assert target == tmp_path / 'Bad' / 'NameHere'
+    assert prefix == 'Bad/NameHere/'
+
+
+def test_resolve_target_dir_nests_multi_component_subdir(tmp_path):
+    d = _make_downloader(tmp_path)
+    target, prefix = d._resolve_target_dir('Björk/Homogenic')
+    assert target == tmp_path / 'Björk' / 'Homogenic'
+    assert prefix == 'Björk/Homogenic/'
 
 
 def test_existing_filename_finds_file_in_root(tmp_path):

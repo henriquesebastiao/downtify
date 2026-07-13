@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from downtify import downloader as downloader_mod
 from downtify.downloader import Downloader
 
 
@@ -194,3 +195,134 @@ def test_organize_by_artist_default_is_false(tmp_path):
 def test_organize_by_artist_can_be_set_true(tmp_path):
     d = Downloader(tmp_path, organize_by_artist=True)
     assert d.organize_by_artist is True
+
+
+def test_organize_by_artist_keeps_unicode_folder_name(tmp_path):
+    # Regression: accented artist names used to have their accents stripped
+    # from the folder ("Björk" -> "Bjrk").
+    d = _make(tmp_path, organize_by_artist=True)
+    artist_dir = tmp_path / 'Björk'
+    artist_dir.mkdir()
+    (artist_dir / 'Björk - Jóga.mp3').write_bytes(b'\x00')
+    result = d.existing_filename_for({
+        'name': 'Jóga',
+        'artists': ['Björk'],
+    })
+    assert result == 'Björk/Björk - Jóga.mp3'
+
+
+# ── _album_subdir ─────────────────────────────────────────────────────────────
+
+
+def test_album_subdir_returns_album_name():
+    assert Downloader._album_subdir({'album_name': 'Homogenic'}) == 'Homogenic'
+
+
+def test_album_subdir_missing_key_returns_unknown():
+    assert Downloader._album_subdir({}) == 'unknown'
+
+
+def test_album_subdir_keeps_unicode():
+    assert Downloader._album_subdir({'album_name': 'Vespertine é'}) == (
+        'Vespertine é'
+    )
+
+
+# ── organize_by_album – existing_filename_for ─────────────────────────────────
+
+
+def test_organize_by_album_default_is_false(tmp_path):
+    assert Downloader(tmp_path).organize_by_album is False
+
+
+def test_organize_by_album_finds_file_in_album_dir(tmp_path):
+    d = _make(tmp_path, organize_by_album=True)
+    album_dir = tmp_path / 'Homogenic'
+    album_dir.mkdir()
+    (album_dir / 'Björk - Jóga.mp3').write_bytes(b'\x00')
+    result = d.existing_filename_for({
+        'name': 'Jóga',
+        'artists': ['Björk'],
+        'album_name': 'Homogenic',
+    })
+    assert result == 'Homogenic/Björk - Jóga.mp3'
+
+
+def test_organize_by_artist_and_album_nests_artist_over_album(tmp_path):
+    d = _make(tmp_path, organize_by_artist=True, organize_by_album=True)
+    nested = tmp_path / 'Björk' / 'Homogenic'
+    nested.mkdir(parents=True)
+    (nested / 'Björk - Jóga.mp3').write_bytes(b'\x00')
+    result = d.existing_filename_for({
+        'name': 'Jóga',
+        'artists': ['Björk'],
+        'album_name': 'Homogenic',
+    })
+    assert result == 'Björk/Homogenic/Björk - Jóga.mp3'
+
+
+def test_organize_by_album_ignores_subdir_param(tmp_path):
+    d = _make(tmp_path, organize_by_album=True)
+    pl_dir = tmp_path / 'My Playlist'
+    pl_dir.mkdir()
+    (pl_dir / 'Artist - Song.mp3').write_bytes(b'\x00')
+    result = d.existing_filename_for(
+        {'name': 'Song', 'artists': ['Artist'], 'album_name': 'Some Album'},
+        subdir='My Playlist',
+    )
+    assert result is None
+
+
+# ── _save_album_cover ─────────────────────────────────────────────────────────
+
+_SONG = {
+    'name': 'Jóga',
+    'artists': ['Björk'],
+    'album_name': 'Homogenic',
+    'cover_url': 'https://img/cover',
+}
+
+
+def test_save_album_cover_writes_cover_jpg(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
+    )
+    d = _make(tmp_path, organize_by_album=True)
+    d._save_album_cover(tmp_path, _SONG)
+    assert (tmp_path / 'cover.jpg').read_bytes() == b'IMG-BYTES'
+
+
+def test_save_album_cover_noop_when_not_organizing_by_album(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
+    )
+    d = _make(tmp_path, organize_by_album=False)
+    d._save_album_cover(tmp_path, _SONG)
+    assert not (tmp_path / 'cover.jpg').exists()
+
+
+def test_save_album_cover_fetches_once_when_already_present(
+    tmp_path, monkeypatch
+):
+    calls = []
+
+    def _fake(url):
+        calls.append(url)
+        return b'IMG-BYTES'
+
+    monkeypatch.setattr(downloader_mod, '_download_cover', _fake)
+    d = _make(tmp_path, organize_by_album=True)
+    (tmp_path / 'cover.jpg').write_bytes(b'EXISTING')
+    d._save_album_cover(tmp_path, _SONG)
+    # Existing file is preserved and no download is attempted.
+    assert (tmp_path / 'cover.jpg').read_bytes() == b'EXISTING'
+    assert calls == []
+
+
+def test_save_album_cover_noop_when_no_cover_bytes(tmp_path, monkeypatch):
+    monkeypatch.setattr(downloader_mod, '_download_cover', lambda url: None)
+    d = _make(tmp_path, organize_by_album=True)
+    d._save_album_cover(tmp_path, _SONG)
+    assert not (tmp_path / 'cover.jpg').exists()
