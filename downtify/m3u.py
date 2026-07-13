@@ -16,21 +16,27 @@ from typing import Iterable, Optional
 
 from loguru import logger
 
-_PLAYLIST_NAME_ALLOWED = re.compile(r'[^A-Za-z0-9 _-]+')
+# Only characters that are genuinely illegal in FAT/NTFS/ext filenames are
+# dropped. Everything else — including accented and non-Latin letters such
+# as "ö" (Björk) or "é" (Fabrizio de André) — is preserved so folder names
+# match the original artist/album/playlist titles.
+_PLAYLIST_NAME_INVALID = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 
 
 def sanitize_playlist_name(name: str) -> str:
     """Strip filesystem-unsafe characters from a playlist name.
 
-    Keeps alphanumerics, spaces, hyphens and underscores; drops the rest.
-    Returns ``'playlist'`` if nothing is left after sanitising so we
-    never produce an empty filename.
+    Removes only characters that are illegal in filenames on common
+    filesystems while keeping Unicode letters, digits and punctuation
+    intact. Collapses runs of whitespace and trims leading/trailing dots
+    and spaces. Returns ``'playlist'`` if nothing is left after
+    sanitising so we never produce an empty filename.
     """
 
     if not name:
         return 'playlist'
-    cleaned = _PLAYLIST_NAME_ALLOWED.sub('', name).strip()
-    cleaned = re.sub(r'\s+', ' ', cleaned)
+    cleaned = _PLAYLIST_NAME_INVALID.sub('', name)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip().strip('.').strip()
     return cleaned or 'playlist'
 
 

@@ -159,6 +159,9 @@ export default {
     organizeByArtist: 'Organize by artist',
     organizeByArtistHint:
       "Save songs in subfolders named after the artist. Playlist tracks are also placed in their artist's folder instead of a playlist folder.",
+    organizeByAlbum: 'Organize by album',
+    organizeByAlbumHint:
+      'Save songs in subfolders named after the album, so a whole album downloads into its own folder. Combined with "Organize by artist" the layout nests as Artist/Album.',
     parallelDownloads: 'Parallel downloads',
     parallelDownloadsHint:
       'Maximum number of songs downloaded simultaneously. Higher values are faster but use more bandwidth.',

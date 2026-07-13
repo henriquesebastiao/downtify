@@ -215,6 +215,9 @@ def build_app() -> FastAPI:
         organize_by_artist=bool(
             api.state.settings.get('organize_by_artist', False)
         ),
+        organize_by_album=bool(
+            api.state.settings.get('organize_by_album', False)
+        ),
     )
     app.include_router(api.router)
 

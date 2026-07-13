@@ -50,7 +50,20 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'generate_m3u': True,
     'max_parallel_downloads': 3,
     'organize_by_artist': False,
+    'organize_by_album': False,
 }
+
+
+def _organize_enabled() -> bool:
+    """True when tracks are routed into per-artist/per-album folders.
+
+    In that case per-playlist folders are bypassed, so the M3U must be
+    written to the legacy ``Playlists/`` directory where its relative
+    track paths still resolve.
+    """
+
+    d = state.downloader
+    return bool(d and (d.organize_by_artist or d.organize_by_album))
 
 
 def _effective_lyrics_providers(settings: dict[str, Any]) -> list[str]:
@@ -408,10 +421,11 @@ async def _process_batch(
     if not entries:
         return
 
-    # When organize_by_artist is on, songs land in per-artist folders instead
-    # of the playlist subfolder, so the M3U must go to the legacy Playlists/
-    # directory (playlist_subdir=None) where relative paths still resolve.
-    organize = bool(state.downloader and state.downloader.organize_by_artist)
+    # When organize-by-artist/album is on, songs land in those folders
+    # instead of the playlist subfolder, so the M3U must go to the legacy
+    # Playlists/ directory (playlist_subdir=None) where relative paths
+    # still resolve.
+    organize = _organize_enabled()
     try:
         await asyncio.to_thread(
             m3u.write_m3u,
@@ -536,7 +550,7 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
 
     entries = [t for t in tracks if isinstance(t, dict)]
     playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
-    organize = bool(state.downloader and state.downloader.organize_by_artist)
+    organize = _organize_enabled()
     target, kept = m3u.write_m3u(
         state.downloader.download_dir,
         playlist_name,
@@ -586,6 +600,10 @@ async def update_settings_endpoint(
             if 'organize_by_artist' in payload:
                 state.downloader.organize_by_artist = bool(
                     payload['organize_by_artist']
+                )
+            if 'organize_by_album' in payload:
+                state.downloader.organize_by_album = bool(
+                    payload['organize_by_album']
                 )
         if 'max_parallel_downloads' in payload:
             try:

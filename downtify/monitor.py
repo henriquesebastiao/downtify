@@ -371,11 +371,15 @@ def _regenerate_m3u(
             playlist.name,
         )
         return
+    # When organize-by-artist/album is on the tracks live in those folders
+    # rather than the per-playlist subfolder, so the M3U goes to the legacy
+    # Playlists/ directory where its relative paths still resolve.
+    organize = downloader.organize_by_artist or downloader.organize_by_album
     m3u.write_m3u(
         downloader.download_dir,
         playlist.name,
         entries,
-        playlist_subdir=pl_subdir,
+        playlist_subdir=None if organize else pl_subdir,
     )
 
 

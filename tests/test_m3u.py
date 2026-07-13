@@ -20,10 +20,19 @@ def test_sanitize_strips_filesystem_unsafe_chars():
     assert m3u.sanitize_playlist_name('a/b\\c:d*e?f"g<h>i|j') == 'abcdefghij'
 
 
-def test_sanitize_drops_unicode_and_punctuation():
-    # Accents, emojis and punctuation are dropped per the spec
-    # (alphanumerics + space + hyphen + underscore only).
-    assert m3u.sanitize_playlist_name('Été — Café 🎵 #1') == 't Caf 1'
+def test_sanitize_keeps_unicode_letters():
+    # Accented and non-Latin letters must survive so folder names match
+    # the original artist/album titles (regression: "Björk" -> "Bjrk").
+    assert m3u.sanitize_playlist_name('Björk') == 'Björk'
+    assert m3u.sanitize_playlist_name('Fabrizio de André') == (
+        'Fabrizio de André'
+    )
+
+
+def test_sanitize_keeps_punctuation_and_emoji():
+    # Only truly filesystem-unsafe characters are dropped; everything
+    # else (punctuation, emoji, em-dash) is preserved.
+    assert m3u.sanitize_playlist_name('Été — Café 🎵 #1') == 'Été — Café 🎵 #1'
 
 
 def test_sanitize_empty_input_falls_back_to_default():
