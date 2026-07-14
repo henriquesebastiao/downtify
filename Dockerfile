@@ -11,7 +11,7 @@ RUN pip install --upgrade pip && \
 # stale dist. `npm ci` installs exactly what package-lock.json pins; the
 # source is copied afterwards so dependency layers stay cached across
 # source-only changes.
-FROM node:20-alpine AS frontend-builder
+FROM node:26-alpine AS frontend-builder
 
 WORKDIR /frontend
 
