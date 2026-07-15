@@ -99,6 +99,15 @@
               <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
             </a>
             <button
+              v-if="albumDownloadState(album) === 'queued'"
+              class="icon-btn text-primary cursor-default"
+              :title="t('search.inQueue')"
+              disabled
+            >
+              <Icon icon="clarity:check-circle-line" class="h-5 w-5" />
+            </button>
+            <button
+              v-else
               class="icon-btn text-primary hover:bg-primary/10"
               @click="downloadAlbum(album)"
               :title="t('search.downloadAlbum')"
@@ -260,7 +269,6 @@
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
-import router from '../router'
 import { useSearchManager } from '../model/search'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
@@ -276,6 +284,10 @@ const dm = useDownloadManager()
 const { t } = useI18n()
 
 const currentPage = ref(1)
+// Albums don't have a single stable id in the shared progress tracker
+// until their tracks are resolved, so "queued" is tracked locally here —
+// same "click, get a checkmark, stay put" confirmation songs already get.
+const queuedAlbumIds = ref(new Set())
 
 const totalPages = computed(() =>
   Math.ceil((props.data?.length || 0) / PAGE_SIZE)
@@ -313,9 +325,13 @@ function download(song) {
   emit('download', song)
 }
 
+function albumDownloadState(album) {
+  return queuedAlbumIds.value.has(album.album_id) ? 'queued' : 'idle'
+}
+
 function downloadAlbum(album) {
+  queuedAlbumIds.value.add(album.album_id)
   dm.fromURL(album.url)
-  router.push({ name: 'Download' })
 }
 
 function releaseTypeBadge(album) {
