@@ -7,6 +7,7 @@ import pytest
 from downtify import providers
 from downtify.providers import (
     _albums_match,
+    _artists_overlap,
     _find_match_via_album,
     _pick_best,
     _titles_match,
@@ -140,6 +141,36 @@ def test_enrich_preserves_preset_track_number(monkeypatch):
     )
     assert out['track_number'] == 7
     assert out['album_track_total'] == 11
+
+
+# ── _artists_overlap ───────────────────────────────────────────────────────────
+
+
+def test_artists_overlap_true_when_shared_artist():
+    result = {'artists': [{'name': 'José González'}]}
+    assert _artists_overlap(['José González'], result)
+
+
+def test_artists_overlap_false_for_unrelated_artist():
+    result = {'artists': [{'name': 'Kid Spirit'}, {'name': 'Maggie Szabo'}]}
+    assert not _artists_overlap(['José González'], result)
+
+
+def test_artists_overlap_true_when_any_credited_artist_matches():
+    # A multi-artist target (e.g. a feature) only needs one match.
+    result = {'artists': [{'name': 'Avicii'}]}
+    assert _artists_overlap(['Avicii', 'José González'], result)
+
+
+def test_artists_overlap_vacuously_true_without_target_artists():
+    result = {'artists': [{'name': 'Anyone'}]}
+    assert _artists_overlap([], result)
+    assert _artists_overlap(None, result)
+
+
+def test_artists_overlap_case_insensitive():
+    result = {'artists': [{'name': 'JOSÉ GONZÁLEZ'}]}
+    assert _artists_overlap(['josé gonzález'], result)
 
 
 # ── _albums_match ─────────────────────────────────────────────────────────────
@@ -341,6 +372,37 @@ def test_pick_best_rejects_all_candidates_with_wrong_title():
     assert best is None
 
 
+def test_pick_best_rejects_title_collision_across_unrelated_artists():
+    # Regression: "Broken Arrows" exists as three unrelated songs
+    # (José González's own bonus track, Avicii's "Stories" track, and a
+    # Kid Spirit & Maggie Szabo single). None of the wrong-artist hits
+    # should win just for having the closer duration to the target.
+    kid_spirit = _song_row(
+        'Broken Arrows', 'Kid Spirit', 'Broken Arrows', 165, 'wrong-close'
+    )
+    avicii = _song_row('Broken Arrows', 'Avicii', 'Stories', 233, 'wrong-far')
+    best = _pick_best(
+        [kid_spirit, avicii],
+        target_duration=118,
+        target_title='Broken Arrows',
+        target_artists=['José González'],
+    )
+    assert best is None
+
+
+def test_pick_best_accepts_featured_artist_not_in_candidate_list():
+    # A target with multiple credited artists (e.g. a feature) must
+    # still match a candidate that only lists one of them.
+    candidate = _song_row('Broken Arrows', 'Avicii', 'Stories', 233, 'right')
+    best = _pick_best(
+        [candidate],
+        target_duration=233,
+        target_title='Broken Arrows',
+        target_artists=['Avicii', 'José González'],
+    )
+    assert best['videoId'] == 'right'
+
+
 def test_pick_best_rejects_containment_match():
     # Regression: "Storm - Live" was matching "A Perfect Storm" (an
     # unrelated song) via substring containment on the base title.
@@ -479,6 +541,29 @@ def test_find_match_returns_none_when_no_title_matches(monkeypatch):
         'name': 'Slow Moves - Remastered 2023',
         'artists': ['José González'],
         'duration': 172,
+    })
+    assert video_id is None
+    assert match is None
+
+
+def test_find_match_rejects_title_collision_across_unrelated_artists(
+    monkeypatch,
+):
+    # Regression: "Broken Arrows" turns up as three unrelated songs; the
+    # fallback loop must reject the wrong-artist hits just like
+    # _pick_best does, rather than picking "the first result" by title
+    # alone. No album_name here, so the tracklist fallback is a no-op.
+    fake = _FakeYTM([
+        _song_row(
+            'Broken Arrows', 'Kid Spirit', 'Broken Arrows', 165, 'wrong'
+        ),
+        _song_row('Broken Arrows', 'Avicii', 'Stories', 233, 'also-wrong'),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, match = find_match({
+        'name': 'Broken Arrows',
+        'artists': ['José González'],
+        'duration': 118,
     })
     assert video_id is None
     assert match is None

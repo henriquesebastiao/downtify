@@ -216,12 +216,14 @@ def find_match(
         _log_ytm_response('find_match chosen row', best)
         return best.get('videoId'), best
     for result in results:
-        # Same hard title requirement as `_pick_best`: never fall back to
-        # "the first result" if its title doesn't actually resemble the
-        # source track, or a duration/artist-only near-miss ends up
-        # downloaded under the wrong title.
-        if result.get('videoId') and (
-            not title or _titles_match(title, result.get('title'))
+        # Same hard title/artist requirements as `_pick_best`: never fall
+        # back to "the first result" if its title doesn't actually
+        # resemble the source track, or if it shares the title but not
+        # the artist (title collisions across unrelated artists happen).
+        if (
+            result.get('videoId')
+            and (not title or _titles_match(title, result.get('title')))
+            and _artists_overlap(artists, result)
         ):
             logger.info(
                 'YouTube Music find_match fallback first videoId={} title={!r}',
@@ -747,6 +749,31 @@ def enrich_from_match(
     return enriched
 
 
+def _artists_overlap(
+    target_artists: Optional[list[str]], result: dict[str, Any]
+) -> bool:
+    """True when the candidate shares at least one artist with the target.
+
+    Vacuously true when the target's artist list is unknown, so callers
+    without artist context (e.g. an album-tracklist scan) aren't
+    unfairly blocked. Otherwise a hard requirement: a song that merely
+    shares its exact title with the target (title collisions across
+    unrelated artists are common for short/generic names — "Broken
+    Arrows" turns up from at least three different acts) must never be
+    picked just for being the "least wrong" duration match.
+    """
+
+    target_set = {(a or '').lower() for a in (target_artists or []) if a}
+    if not target_set:
+        return True
+    candidate_set = {
+        (a.get('name') or '').lower()
+        for a in (result.get('artists') or [])
+        if isinstance(a, dict)
+    }
+    return bool(target_set & candidate_set)
+
+
 _NEGATIVE_KEYWORDS = (
     'karaoke',
     'instrumental',
@@ -772,9 +799,6 @@ def _pick_best(
     target_album: str = '',
 ) -> Optional[dict[str, Any]]:
     target_title_l = (target_title or '').lower()
-    target_artist_set = {
-        (a or '').lower() for a in (target_artists or []) if a
-    }
     target_album_norm = _norm_compact_title(target_album)
 
     best: Optional[dict[str, Any]] = None
@@ -804,6 +828,12 @@ def _pick_best(
         ):
             continue
 
+        # Hard requirement: at least one artist must overlap. See
+        # `_artists_overlap`'s docstring — a title collision with an
+        # unrelated artist must never win on duration alone.
+        if not _artists_overlap(target_artists, result):
+            continue
+
         candidate_duration = result.get('duration_seconds') or _parse_duration(
             result.get('duration')
         )
@@ -811,15 +841,6 @@ def _pick_best(
             score = abs(candidate_duration - target_duration)
         else:
             score = 5
-
-        # Reward results whose artist list overlaps the source artists.
-        candidate_artists = {
-            (a.get('name') or '').lower()
-            for a in (result.get('artists') or [])
-            if isinstance(a, dict)
-        }
-        if target_artist_set and not (target_artist_set & candidate_artists):
-            score += 30  # heavy penalty for wrong artist
 
         # Album is the decisive signal when the source album is known: it
         # separates the studio version from live / compilation / re-recorded
