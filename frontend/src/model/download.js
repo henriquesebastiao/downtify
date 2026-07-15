@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { normalizeSpotifyURL } from '/src/model/url'
 
 import API from '/src/model/api'
 import { useSettingsManager } from '/src/model/settings'
@@ -156,7 +157,9 @@ export function useDownloadManager() {
   const loading = ref(false)
   const settingsManager = useSettingsManager()
   function fromURL(url) {
-    const isPlaylistURL = (url || '').includes('://open.spotify.com/playlist/')
+    const isPlaylistURL = normalizeSpotifyURL(url).includes(
+      '://open.spotify.com/playlist/'
+    )
     const generateM3u = settingsManager.settings.value.generate_m3u !== false
     loading.value = true
     return API.open(url)

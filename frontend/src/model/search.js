@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 
 import API from '/src/model/api'
+import { normalizeSpotifyURL } from '/src/model/url'
 
 const searchTerm = ref('')
 const results = ref()
@@ -13,6 +14,7 @@ function useSearchManager() {
     return isValidSearch(str) || isValidURL(str)
   }
   function isValidSearch(str) {
+    str = normalizeSpotifyURL(str)
     if (
       str === '' ||
       str.includes('://open.spotify.com/track/') ||
@@ -26,6 +28,7 @@ function useSearchManager() {
     return true
   }
   function isValidURL(str) {
+    str = normalizeSpotifyURL(str)
     return (
       str.includes('://open.spotify.com/track/') ||
       str.includes('://open.spotify.com/album/') ||
