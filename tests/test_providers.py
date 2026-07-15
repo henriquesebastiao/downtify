@@ -524,6 +524,96 @@ class _FakeYTM:
         return self._results
 
 
+class _FakeYTMByFilter:
+    """Routes ``search()`` results by the ``filter`` kwarg, so tests can
+    tell find_match's staged search attempts (unfiltered top-result,
+    `songs`, `videos`) apart."""
+
+    def __init__(self, by_filter):
+        self._by_filter = by_filter
+
+    def search(self, query, filter=None, limit=10):
+        return self._by_filter.get(filter, [])
+
+
+def test_find_match_uses_unfiltered_top_result_when_present(monkeypatch):
+    # Regression: "Broken Arrows (Remastered 2023)" (like "Remain" and
+    # "Deadweight on Velveteen") is absent from the `songs`-filtered
+    # search entirely, but resolves instantly as the unfiltered "Top
+    # result" — find_match must try that first.
+    top_result = {
+        'category': 'Top result',
+        'resultType': 'song',
+        'videoId': 'right',
+        'title': 'Broken Arrows',
+        'artists': [{'name': 'José González'}],
+        'duration_seconds': 118,
+    }
+    songs_filtered = [
+        _song_row(
+            'Broken Arrows', 'Kid Spirit', 'Broken Arrows', 165, 'wrong'
+        ),
+        _song_row('Broken Arrows', 'Avicii', 'Stories', 233, 'also-wrong'),
+    ]
+    fake = _FakeYTMByFilter({None: [top_result], 'songs': songs_filtered})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, match = find_match({
+        'name': 'Broken Arrows',
+        'artists': ['José González'],
+        'duration': 118,
+    })
+    assert video_id == 'right'
+
+
+def test_find_match_ignores_non_song_or_video_top_result(monkeypatch):
+    # An album/artist/playlist Top result must not short-circuit the
+    # match; find_match should fall through to the filtered search.
+    top_result = {
+        'category': 'Top result',
+        'resultType': 'artist',
+        'browseId': 'x',
+    }
+    songs_filtered = [
+        _song_row(
+            'Broken Arrows', 'José González', 'Broken Arrows', 118, 'right'
+        ),
+    ]
+    fake = _FakeYTMByFilter({None: [top_result], 'songs': songs_filtered})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, match = find_match({
+        'name': 'Broken Arrows',
+        'artists': ['José González'],
+        'duration': 118,
+    })
+    assert video_id == 'right'
+
+
+def test_find_match_falls_through_when_top_result_fails_gates(monkeypatch):
+    # Same strictness as everywhere else: a Top result that doesn't pass
+    # the title/artist gates is not accepted just for being "Top result".
+    top_result = {
+        'category': 'Top result',
+        'resultType': 'song',
+        'videoId': 'wrong',
+        'title': 'Something Else Entirely',
+        'artists': [{'name': 'Unrelated Artist'}],
+        'duration_seconds': 118,
+    }
+    songs_filtered = [
+        _song_row(
+            'Broken Arrows', 'José González', 'Broken Arrows', 118, 'right'
+        ),
+    ]
+    fake = _FakeYTMByFilter({None: [top_result], 'songs': songs_filtered})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, match = find_match({
+        'name': 'Broken Arrows',
+        'artists': ['José González'],
+        'duration': 118,
+    })
+    assert video_id == 'right'
+
+
 def test_find_match_returns_none_when_no_title_matches(monkeypatch):
     # Only the `songs` filter is exercised; `videos` fallback is unused here
     # since `songs` already returned non-empty results. No `album_name` is

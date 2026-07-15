@@ -171,6 +171,49 @@ def find_match(
     if not query:
         return None, None
     duration = song.get('duration') or 0
+
+    # Try an unfiltered (default) search first. Unlike the category-
+    # filtered searches below, this is the only request that includes
+    # YouTube Music's own "Top result" card — its single best guess for
+    # the query — and it is empirically far more reliable than the
+    # `songs` shelf for tracks the filtered search omits entirely (e.g.
+    # "Remain" and "Broken Arrows (Remastered 2023)" are both absent
+    # from `filter='songs'` results for their own artist+title query,
+    # yet resolve instantly as the unfiltered Top result).
+    try:
+        top_results = _ytm().search(query, limit=5)
+    except Exception:
+        logger.exception('YouTube Music top-result search failed')
+        top_results = []
+    _log_ytm_summary_search(
+        phase='match_top_result',
+        query=query,
+        filt='default',
+        results_len=len(top_results),
+        first_titles=[
+            str(r.get('title') or '')[:60]
+            for r in top_results[:8]
+            if isinstance(r, dict)
+        ],
+    )
+    _log_ytm_response(f'find_match top-result q={query[:80]!r}', top_results)
+    usable_top_results = [
+        r
+        for r in top_results
+        if isinstance(r, dict) and r.get('resultType') in {'song', 'video'}
+    ]
+    top_best = _pick_best(usable_top_results, duration, title, artists, album)
+    if top_best is not None:
+        logger.info(
+            'YouTube Music find_match picked videoId={} title={!r} '
+            'year={!r} via=top_result',
+            top_best.get('videoId'),
+            top_best.get('title'),
+            top_best.get('year'),
+        )
+        _log_ytm_response('find_match chosen row (top result)', top_best)
+        return top_best.get('videoId'), top_best
+
     try:
         results = _ytm().search(query, filter='songs', limit=10)
     except Exception:
