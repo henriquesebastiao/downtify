@@ -166,6 +166,7 @@ def find_match(
     artists = song.get('artists') or []
     artists_q = ' '.join(artists)
     title = song.get('name', '')
+    album = song.get('album_name', '')
     query = f'{artists_q} {title}'.strip()
     if not query:
         return None, None
@@ -204,7 +205,7 @@ def find_match(
             ],
         )
         _log_ytm_response(f'find_match videos q={query[:80]!r}', results)
-    best = _pick_best(results, duration, title, artists)
+    best = _pick_best(results, duration, title, artists, album)
     if best is not None:
         logger.info(
             'YouTube Music find_match picked videoId={} title={!r} year={!r}',
@@ -215,7 +216,13 @@ def find_match(
         _log_ytm_response('find_match chosen row', best)
         return best.get('videoId'), best
     for result in results:
-        if result.get('videoId'):
+        # Same hard title requirement as `_pick_best`: never fall back to
+        # "the first result" if its title doesn't actually resemble the
+        # source track, or a duration/artist-only near-miss ends up
+        # downloaded under the wrong title.
+        if result.get('videoId') and (
+            not title or _titles_match(title, result.get('title'))
+        ):
             logger.info(
                 'YouTube Music find_match fallback first videoId={} title={!r}',
                 result.get('videoId'),
@@ -223,9 +230,17 @@ def find_match(
             )
             _log_ytm_response('find_match fallback row', result)
             return result['videoId'], result
+    # Text search sometimes never returns the correct video at all (see
+    # `_find_match_via_album`'s docstring) — try resolving it directly
+    # off the album's tracklist before giving up.
+    album_video_id, album_match = _find_match_via_album(song)
+    if album_video_id:
+        return album_video_id, album_match
     logger.info(
-        'YouTube Music find_match: no result for query={!r}',
+        'YouTube Music find_match: no title-matching result for '
+        'query={!r} target_title={!r}',
         query[:160],
+        title,
     )
     return None, None
 
@@ -273,6 +288,66 @@ def _norm_compact_title(value: Any) -> str:
     """Lowercase collapsed title for forgiving comparisons."""
 
     return re.sub(r'\s+', ' ', str(value or '').casefold()).strip()
+
+
+# Qualifiers that mark a genuinely different recording — a different
+# performance or edit, not just a different pressing of the same audio.
+# When one name is a prefix of the other (e.g. "Local Valley" vs "Local
+# Valley (Deluxe)"), the extra text is tolerated *unless* it contains one
+# of these — a plain "Tjomme" must never match "Tjomme (DJ Koze Remix)".
+# Extend this list as new special cases turn up.
+_VERSION_QUALIFIER_WORDS = (
+    'live',
+    'remix',
+    'cover',
+    'karaoke',
+    'acoustic',
+    'unplugged',
+    'demo',
+    'instrumental',
+    'tribute',
+)
+_VERSION_QUALIFIER_RE = re.compile(
+    r'\b(' + '|'.join(_VERSION_QUALIFIER_WORDS) + r')\b'
+)
+
+
+def _names_match(target: Any, candidate: Any) -> bool:
+    """True when two free-text names (title or album) refer to the same release.
+
+    An exact normalized match always counts. Otherwise one name may be a
+    prefix of the other, tolerating cosmetic edition tags a reissue adds
+    without changing the underlying content (``"(Deluxe)"``,
+    ``"(Remastered 2023)"``, ``"(Anniversary Edition)"``). The extra
+    text is rejected, however, if it names a genuinely different
+    recording — see :data:`_VERSION_QUALIFIER_WORDS`. A common prefix
+    shorter than 4 characters is never accepted, so short unrelated
+    names don't collide (``"U"`` must not match ``"Unplugged"``).
+    """
+
+    t = _norm_compact_title(target)
+    c = _norm_compact_title(candidate)
+    if not t or not c:
+        return False
+    if t == c:
+        return True
+    shorter, longer = sorted((t, c), key=len)
+    if len(shorter) < 4 or not longer.startswith(shorter):
+        return False
+    tail = longer[len(shorter) :]
+    return not _VERSION_QUALIFIER_RE.search(tail)
+
+
+def _albums_match(target: Any, candidate: Any) -> bool:
+    """True when two album names refer to the same release. See :func:`_names_match`."""
+
+    return _names_match(target, candidate)
+
+
+def _titles_match(target: Any, candidate: Any) -> bool:
+    """True when two song titles refer to the same recording. See :func:`_names_match`."""
+
+    return _names_match(target, candidate)
 
 
 def _album_title_hints(
@@ -484,6 +559,56 @@ def _cached_album_tracks_and_count(
     return tup
 
 
+def _find_match_via_album(
+    song: dict[str, Any],
+) -> tuple[Optional[str], Optional[dict[str, Any]]]:
+    """Resolve a track by scanning its album's tracklist directly.
+
+    YouTube Music's text search occasionally omits the correct video
+    from an "artist + title" query's own results entirely — e.g.
+    searching "José González Remain" never surfaces "Remain" itself,
+    while surfacing an unrelated track by the same artist (confirmed by
+    inspecting the raw search payload). When the source album is known,
+    resolving it via the ``albums`` filter and scanning its full
+    :func:`_cached_album_tracks_and_count` listing sidesteps that
+    search-relevance quirk entirely, since the tracklist is keyed by
+    album rather than by a fuzzy text query.
+    """
+
+    title = song.get('name', '')
+    album_name = str(song.get('album_name') or '').strip()
+    if not title or not album_name:
+        return None, None
+
+    browse_id = _album_browse_id_from_search({}, song)
+    if not browse_id:
+        return None, None
+
+    tracks, _total = _cached_album_tracks_and_count(browse_id)
+    for track in tracks:
+        if not isinstance(track, dict):
+            continue
+        video_id = _row_video_id(track)
+        if not video_id:
+            continue
+        if _titles_match(title, track.get('title')):
+            logger.info(
+                'YouTube Music find_match album-tracklist fallback hit '
+                'browseId={!r} videoId={} title={!r}',
+                browse_id,
+                video_id,
+                track.get('title'),
+            )
+            return video_id, track
+    logger.info(
+        'YouTube Music find_match album-tracklist fallback: no title '
+        'match in browseId={!r} for title={!r}',
+        browse_id,
+        title,
+    )
+    return None, None
+
+
 def youtube_music_track_index_for_match(
     match: Optional[dict[str, Any]],
     song: Optional[dict[str, Any]] = None,
@@ -644,11 +769,13 @@ def _pick_best(
     target_duration: int,
     target_title: str = '',
     target_artists: Optional[list[str]] = None,
+    target_album: str = '',
 ) -> Optional[dict[str, Any]]:
     target_title_l = (target_title or '').lower()
     target_artist_set = {
         (a or '').lower() for a in (target_artists or []) if a
     }
+    target_album_norm = _norm_compact_title(target_album)
 
     best: Optional[dict[str, Any]] = None
     best_score: float = float('inf')
@@ -663,6 +790,17 @@ def _pick_best(
         if any(
             kw in candidate_title and kw not in target_title_l
             for kw in _NEGATIVE_KEYWORDS
+        ):
+            continue
+
+        # Hard requirement: the title must actually resemble the source
+        # title. Duration/artist/album scoring alone can otherwise pick a
+        # completely unrelated song (e.g. a "- Remastered 2023" suffix
+        # throws off the search and every hit is a different track by the
+        # same artist) — better to reject the track than embed the wrong
+        # audio under the right metadata.
+        if target_title and not _titles_match(
+            target_title, result.get('title')
         ):
             continue
 
@@ -682,6 +820,23 @@ def _pick_best(
         }
         if target_artist_set and not (target_artist_set & candidate_artists):
             score += 30  # heavy penalty for wrong artist
+
+        # Album is the decisive signal when the source album is known: it
+        # separates the studio version from live / compilation / re-recorded
+        # takes of the same song that share title, artist and near-identical
+        # length (durations differ by a second or two, so duration alone is
+        # not enough). Only applied when the candidate carries album info so
+        # album-less `videos` results are not unfairly penalised.
+        if target_album_norm:
+            candidate_album = ''
+            alb = result.get('album')
+            if isinstance(alb, dict):
+                candidate_album = alb.get('name') or ''
+            if candidate_album:
+                if _albums_match(target_album, candidate_album):
+                    score -= 25
+                else:
+                    score += 15
 
         # Reward exact title matches over loosely-related ones.
         if candidate_title and target_title_l:
