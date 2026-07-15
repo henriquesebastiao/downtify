@@ -177,6 +177,11 @@ def _album_summary(result: dict[str, Any]) -> Optional[dict[str, Any]]:
         'explicit': bool(result.get('isExplicit')),
         'url': f'https://music.youtube.com/browse/{browse_id.strip()}',
         'source': 'youtube',
+        # YouTube Music's own release-type classification: 'Album',
+        # 'Single', or 'EP'. Not every release is actually an "album" —
+        # surface it as-is so callers (UI badge, audio tags) don't have
+        # to guess.
+        'release_type': result.get('type') or '',
     }
 
 
@@ -702,6 +707,9 @@ def _cached_album_tracks_and_count(
             'title': data.get('title') or '',
             'year': str(data.get('year') or '').strip(),
             'thumbnails': data.get('thumbnails') or [],
+            # 'Album' / 'Single' / 'EP' — YouTube Music's own release
+            # classification.
+            'type': data.get('type') or '',
         }
     return tup
 
@@ -720,6 +728,50 @@ def _cached_album_meta(browse_id: str) -> dict[str, Any]:
 
 def _cached_album_title(browse_id: str) -> str:
     return _cached_album_meta(browse_id).get('title', '')
+
+
+def _cached_album_release_type(browse_id: str) -> str:
+    return _cached_album_meta(browse_id).get('type', '')
+
+
+def _album_track_song(
+    track: dict[str, Any],
+    video_id: str,
+    position: int,
+    total: int,
+    meta: dict[str, Any],
+) -> dict[str, Any]:
+    """Build one album-track song dict, given the album's cached metadata."""
+
+    artists = [
+        a.get('name', '')
+        for a in (track.get('artists') or [])
+        if isinstance(a, dict) and a.get('name')
+    ]
+    year = meta.get('year', '')
+    thumbs = meta.get('thumbnails') or []
+    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+    track_number = _normalize_ytm_track_slot(
+        declared=track.get('trackNumber'), position_in_album_list=position
+    )
+    return {
+        'song_id': video_id,
+        'name': track.get('title', ''),
+        'artists': artists,
+        'artist': ', '.join(artists),
+        'album_name': meta.get('title', ''),
+        'cover_url': cover,
+        'duration': track.get('duration_seconds')
+        or _parse_duration(track.get('duration')),
+        'url': f'https://music.youtube.com/watch?v={video_id}',
+        'explicit': bool(track.get('isExplicit')),
+        'year': year,
+        'release_date': year,
+        'source': 'youtube',
+        'track_number': track_number,
+        'album_track_total': total,
+        'release_type': meta.get('type', ''),
+    }
 
 
 def album_tracks_from_browse_id(
@@ -754,44 +806,13 @@ def album_tracks_from_browse_id(
         return []
     total = total_ct or len(tracks)
     meta = _cached_album_meta(browse_id)
-    album_name = meta.get('title', '')
-    year = meta.get('year', '')
-    thumbs = meta.get('thumbnails') or []
-    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
 
     songs: list[dict[str, Any]] = []
     for position, track in enumerate(tracks, start=1):
         video_id = _row_video_id(track)
         if not video_id:
             continue
-        artists = [
-            a.get('name', '')
-            for a in (track.get('artists') or [])
-            if isinstance(a, dict) and a.get('name')
-        ]
-        duration = track.get('duration_seconds') or _parse_duration(
-            track.get('duration')
-        )
-        track_number = _normalize_ytm_track_slot(
-            declared=track.get('trackNumber'),
-            position_in_album_list=position,
-        )
-        songs.append({
-            'song_id': video_id,
-            'name': track.get('title', ''),
-            'artists': artists,
-            'artist': ', '.join(artists),
-            'album_name': album_name,
-            'cover_url': cover,
-            'duration': duration,
-            'url': f'https://music.youtube.com/watch?v={video_id}',
-            'explicit': bool(track.get('isExplicit')),
-            'year': year,
-            'release_date': year,
-            'source': 'youtube',
-            'track_number': track_number,
-            'album_track_total': total,
-        })
+        songs.append(_album_track_song(track, video_id, position, total, meta))
     return songs
 
 
@@ -962,17 +983,23 @@ def enrich_from_match(
         enriched.setdefault('track_number', yt_n)
     if yt_tot is not None:
         enriched.setdefault('album_track_total', yt_tot)
-    if not enriched.get('album_name'):
+    if not enriched.get('album_name') or not enriched.get('release_type'):
         # `youtube_music_track_index_for_match` already resolved (and
         # cached) the album's browseId while computing the track index
-        # above — reuse it to backfill the album title too, since the
-        # search-derived `match` sometimes lacks `album.name` even when
-        # the video is genuinely part of a catalogued release.
+        # above — reuse it to backfill the album title and release
+        # type too, since the search-derived `match` sometimes lacks
+        # `album.name` even when the video is genuinely part of a
+        # catalogued release.
         browse_id = _album_browse_id(match, enriched)
         if browse_id:
-            album_title = _cached_album_title(browse_id)
-            if album_title:
-                enriched['album_name'] = album_title
+            if not enriched.get('album_name'):
+                album_title = _cached_album_title(browse_id)
+                if album_title:
+                    enriched['album_name'] = album_title
+            if not enriched.get('release_type'):
+                release_type = _cached_album_release_type(browse_id)
+                if release_type:
+                    enriched['release_type'] = release_type
     spotify_tid = enriched.get('song_id')
     if yt_n is None:
         logger.info(

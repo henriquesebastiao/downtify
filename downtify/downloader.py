@@ -23,10 +23,11 @@ from mutagen.id3 import (
     TPE1,
     TPE2,
     TRCK,
+    TXXX,
     USLT,
 )
 from mutagen.mp3 import MP3
-from mutagen.mp4 import MP4, MP4Cover
+from mutagen.mp4 import MP4, MP4Cover, MP4FreeForm
 from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 
@@ -519,6 +520,15 @@ def _album_artist_for_tags(artists: list[str]) -> Optional[str]:
     return artists[0]
 
 
+def _release_type_for_tags(song: dict[str, Any]) -> str:
+    """YouTube Music's release classification ('album'/'single'/'ep'),
+    lower-cased to match the MusicBrainz Picard tagging convention used
+    by most taggers/media servers (``MusicBrainz Album Type`` / Vorbis
+    ``RELEASETYPE`` / the MP4 freeform equivalent)."""
+
+    return str(song.get('release_type') or '').strip().lower()
+
+
 def embed_metadata(path: Path, song: dict[str, Any]) -> None:
     if not path.exists():
         return
@@ -529,6 +539,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
     album = song.get('album_name', '') or ''
     recording_date = _recording_date_for_tags(song)
     genre = (song.get('genre') or '').strip()
+    release_type = _release_type_for_tags(song)
     cover_bytes = _download_cover(song.get('cover_url', ''))
     track_number, album_track_total = _album_track_index_for_tags(song)
     if track_number is None:
@@ -573,6 +584,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             cover_bytes,
             track_number,
             album_track_total,
+            release_type,
         )
     elif suffix in {'m4a', 'mp4', 'aac'}:
         _tag_mp4(
@@ -586,6 +598,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             cover_bytes,
             track_number,
             album_track_total,
+            release_type,
         )
     elif suffix == 'flac':
         _tag_flac(
@@ -599,6 +612,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             cover_bytes,
             track_number,
             album_track_total,
+            release_type,
         )
     elif suffix in {'ogg', 'oga'}:
         _tag_ogg_vorbis(
@@ -612,6 +626,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             cover_bytes,
             track_number,
             album_track_total,
+            release_type,
         )
     elif suffix == 'opus':
         _tag_opus(
@@ -625,6 +640,7 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
             cover_bytes,
             track_number,
             album_track_total,
+            release_type,
         )
 
 
@@ -639,6 +655,7 @@ def _tag_mp3(
     cover_bytes: Optional[bytes],
     track_number: Optional[int],
     album_track_total: Optional[int],
+    release_type: str = '',
 ) -> None:
     audio = MP3(str(path), ID3=ID3)
     if audio.tags is None:
@@ -662,6 +679,15 @@ def _tag_mp3(
         audio.tags.add(TDRC(encoding=3, text=year))
     if genre:
         audio.tags.add(TCON(encoding=3, text=genre))
+    if release_type:
+        audio.tags.delall('TXXX:MusicBrainz Album Type')
+        audio.tags.add(
+            TXXX(
+                encoding=3,
+                desc='MusicBrainz Album Type',
+                text=release_type,
+            )
+        )
     if cover_bytes:
         audio.tags.add(
             APIC(
@@ -686,6 +712,7 @@ def _tag_mp4(
     cover_bytes: Optional[bytes],
     track_number: Optional[int],
     album_track_total: Optional[int],
+    release_type: str = '',
 ) -> None:
     audio = MP4(str(path))
     audio['\xa9nam'] = title
@@ -702,6 +729,10 @@ def _tag_mp4(
         audio['\xa9day'] = year
     if genre:
         audio['\xa9gen'] = genre
+    if release_type:
+        audio['----:com.apple.iTunes:MusicBrainz Album Type'] = [
+            MP4FreeForm(release_type.encode('utf-8'))
+        ]
     if cover_bytes:
         audio['covr'] = [
             MP4Cover(cover_bytes, imageformat=MP4Cover.FORMAT_JPEG)
@@ -720,6 +751,7 @@ def _tag_flac(
     cover_bytes: Optional[bytes],
     track_number: Optional[int],
     album_track_total: Optional[int],
+    release_type: str = '',
 ) -> None:
     audio = FLAC(str(path))
     audio['title'] = title
@@ -737,6 +769,8 @@ def _tag_flac(
         audio['date'] = year
     if genre:
         audio['genre'] = genre
+    if release_type:
+        audio['releasetype'] = release_type
     if cover_bytes:
         picture = Picture()
         picture.data = cover_bytes
@@ -758,6 +792,7 @@ def _tag_ogg_vorbis(
     cover_bytes: Optional[bytes],
     track_number: Optional[int],
     album_track_total: Optional[int],
+    release_type: str = '',
 ) -> None:
     audio = OggVorbis(str(path))
     _apply_vorbis_comments(
@@ -771,6 +806,7 @@ def _tag_ogg_vorbis(
         cover_bytes,
         track_number,
         album_track_total,
+        release_type,
     )
     audio.save()
 
@@ -786,6 +822,7 @@ def _tag_opus(
     cover_bytes: Optional[bytes],
     track_number: Optional[int],
     album_track_total: Optional[int],
+    release_type: str = '',
 ) -> None:
     audio = OggOpus(str(path))
     _apply_vorbis_comments(
@@ -799,6 +836,7 @@ def _tag_opus(
         cover_bytes,
         track_number,
         album_track_total,
+        release_type,
     )
     audio.save()
 
@@ -814,6 +852,7 @@ def _apply_vorbis_comments(
     cover_bytes: Optional[bytes],
     track_number: Optional[int],
     album_track_total: Optional[int],
+    release_type: str = '',
 ):
     audio['title'] = title
     if artists:
@@ -828,6 +867,8 @@ def _apply_vorbis_comments(
             audio['TRACKTOTAL'] = str(album_track_total)
     if year:
         audio['date'] = year
+    if release_type:
+        audio['RELEASETYPE'] = release_type
     if genre:
         audio['genre'] = genre
     if cover_bytes:

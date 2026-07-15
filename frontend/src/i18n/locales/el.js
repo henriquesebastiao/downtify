@@ -50,7 +50,11 @@ export default {
     previousPage: 'Προηγούμενη σελίδα',
     nextPage: 'Επόμενη σελίδα',
     albumsTitle: 'Άλμπουμ',
+    albumBadge: 'Άλμπουμ',
+    singleBadge: 'Σινγκλ',
+    epBadge: 'EP',
     downloadAlbum: 'Λήψη άλμπουμ',
+    songsTitle: 'Τραγούδια',
   },
   queue: {
     title: 'Ουρά λήψεων',

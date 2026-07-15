@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from downtify import downloader as downloader_mod
-from downtify.downloader import Downloader
+from downtify.downloader import Downloader, _release_type_for_tags
 
 
 def _make(tmp_path: Path, **kwargs) -> Downloader:
@@ -326,3 +326,24 @@ def test_save_album_cover_noop_when_no_cover_bytes(tmp_path, monkeypatch):
     d = _make(tmp_path, organize_by_album=True)
     d._save_album_cover(tmp_path, _SONG)
     assert not (tmp_path / 'cover.jpg').exists()
+
+
+# ── _release_type_for_tags ─────────────────────────────────────────────────────
+
+
+def test_release_type_for_tags_lowercases():
+    assert _release_type_for_tags({'release_type': 'Album'}) == 'album'
+    assert _release_type_for_tags({'release_type': 'Single'}) == 'single'
+    assert _release_type_for_tags({'release_type': 'EP'}) == 'ep'
+
+
+def test_release_type_for_tags_strips_whitespace():
+    assert _release_type_for_tags({'release_type': '  Album  '}) == 'album'
+
+
+def test_release_type_for_tags_missing_key_returns_empty():
+    assert not _release_type_for_tags({})
+
+
+def test_release_type_for_tags_none_value_returns_empty():
+    assert not _release_type_for_tags({'release_type': None})

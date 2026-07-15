@@ -51,7 +51,11 @@ export default {
     previousPage: 'Page précédente',
     nextPage: 'Page suivante',
     albumsTitle: 'Albums',
+    albumBadge: 'Album',
+    singleBadge: 'Single',
+    epBadge: 'EP',
     downloadAlbum: "Télécharger l'album",
+    songsTitle: 'Titres',
   },
   queue: {
     title: "File d'attente des téléchargements",

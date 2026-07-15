@@ -45,13 +45,14 @@
       >
         {{ t('search.albumsTitle') }}
       </h2>
-      <ul class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      <ul class="space-y-2">
         <li
           v-for="album in sm.albumResults.value"
           :key="album.album_id"
-          class="surface rounded-2xl p-3 flex flex-col gap-2"
+          class="surface rounded-2xl track-card"
         >
-          <div class="aspect-square rounded-xl overflow-hidden bg-white/5">
+          <!-- Cover -->
+          <div class="track-cover">
             <img
               v-if="album.cover_url"
               :src="album.cover_url"
@@ -63,22 +64,33 @@
               v-else
               class="h-full w-full flex items-center justify-center text-base-content/30"
             >
-              <Icon icon="clarity:album-line" class="h-8 w-8" />
+              <Icon icon="clarity:album-line" class="h-6 w-6" />
             </div>
           </div>
-          <div class="min-w-0">
-            <p class="font-semibold text-sm truncate">{{ album.name }}</p>
-            <p class="text-xs text-base-content/60 truncate">
-              {{ album.artist || t('common.unknownArtist') }}
-              <span v-if="album.year" class="text-base-content/40">
-                · {{ album.year }}
+
+          <!-- Info -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="font-semibold truncate">{{ album.name }}</span>
+              <span
+                class="badge-soft shrink-0 text-[10px] uppercase tracking-wide"
+              >
+                {{ releaseTypeBadge(album) }}
               </span>
+            </div>
+            <p class="text-xs text-base-content/70 truncate">
+              {{ album.artist || t('common.unknownArtist') }}
+            </p>
+            <p v-if="album.year" class="text-xs text-base-content/40 truncate">
+              {{ album.year }}
             </p>
           </div>
-          <div class="flex items-center gap-1.5 mt-1">
+
+          <!-- Actions -->
+          <div class="flex items-center gap-1 shrink-0">
             <a
               v-if="album.url"
-              class="icon-btn shrink-0"
+              class="icon-btn"
               :href="album.url"
               target="_blank"
               rel="noopener"
@@ -87,16 +99,25 @@
               <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
             </a>
             <button
-              class="btn btn-primary btn-sm rounded-full flex-1"
+              class="icon-btn text-primary hover:bg-primary/10"
               @click="downloadAlbum(album)"
+              :title="t('search.downloadAlbum')"
             >
-              <Icon icon="clarity:download-line" class="h-4 w-4" />
-              {{ t('search.downloadAlbum') }}
+              <Icon icon="clarity:download-line" class="h-5 w-5" />
             </button>
           </div>
         </li>
       </ul>
     </div>
+
+    <!-- Songs section label — only needed to separate from the Albums
+         section above; standalone song results don't need a heading. -->
+    <h2
+      v-if="sm.albumResults.value.length > 0 && props.data?.length"
+      class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3"
+    >
+      {{ t('search.songsTitle') }}
+    </h2>
 
     <!-- Loading skeleton -->
     <div v-if="sm.isSearching.value" class="space-y-3">
@@ -295,5 +316,12 @@ function download(song) {
 function downloadAlbum(album) {
   dm.fromURL(album.url)
   router.push({ name: 'Download' })
+}
+
+function releaseTypeBadge(album) {
+  const type = (album.release_type || '').toLowerCase()
+  if (type === 'single') return t('search.singleBadge')
+  if (type === 'ep') return t('search.epBadge')
+  return t('search.albumBadge')
 }
 </script>

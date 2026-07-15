@@ -50,7 +50,11 @@ export default {
     previousPage: 'Página anterior',
     nextPage: 'Próxima página',
     albumsTitle: 'Álbuns',
+    albumBadge: 'Álbum',
+    singleBadge: 'Single',
+    epBadge: 'EP',
     downloadAlbum: 'Baixar álbum',
+    songsTitle: 'Músicas',
   },
   queue: {
     title: 'Fila de download',

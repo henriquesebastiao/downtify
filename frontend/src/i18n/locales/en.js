@@ -49,7 +49,11 @@ export default {
     previousPage: 'Previous page',
     nextPage: 'Next page',
     albumsTitle: 'Albums',
+    albumBadge: 'Album',
+    singleBadge: 'Single',
+    epBadge: 'EP',
     downloadAlbum: 'Download album',
+    songsTitle: 'Songs',
   },
   queue: {
     title: 'Download Queue',

@@ -901,6 +901,7 @@ def test_album_tracks_from_browse_id_resolves_full_tracklist(monkeypatch):
             'title': 'Veneer',
             'year': '2003',
             'thumbnails': [{'url': 'https://img/cover.jpg'}],
+            'type': 'Album',
         },
     )
     songs = album_tracks_from_browse_id('MPREb_r66dI91cUVz')
@@ -912,8 +913,41 @@ def test_album_tracks_from_browse_id_resolves_full_tracklist(monkeypatch):
     assert songs[0]['year'] == '2003'
     assert songs[0]['source'] == 'youtube'
     assert songs[0]['song_id'] == 'aaaaaaaaaaa'
+    assert songs[0]['release_type'] == 'Album'
     assert songs[1]['name'] == 'Remain'
     assert songs[1]['track_number'] == 2
+
+
+def test_album_tracks_from_browse_id_propagates_single_release_type(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _bid: ([_album_track_row('aaaaaaaaaaa', 'FENIAN', 1)], 3),
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_meta',
+        lambda _bid: {'title': 'FENIAN', 'type': 'Single'},
+    )
+    songs = album_tracks_from_browse_id('MPREb_8qovY23NPvW')
+    assert songs[0]['release_type'] == 'Single'
+
+
+def test_album_tracks_from_browse_id_missing_type_defaults_empty(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _bid: ([_album_track_row('aaaaaaaaaaa', 'Track', 1)], 1),
+    )
+    monkeypatch.setattr(
+        providers, '_cached_album_meta', lambda _bid: {'title': 'No Type'}
+    )
+    songs = album_tracks_from_browse_id('MPREb_notype')
+    assert not songs[0]['release_type']
 
 
 def test_album_tracks_from_browse_id_converts_playlist_id(monkeypatch):
@@ -988,7 +1022,7 @@ def test_album_tracks_from_browse_id_skips_rows_without_video_id(monkeypatch):
 # ── search_albums / _album_summary ────────────────────────────────────────────
 
 
-def _album_search_row(browse_id, title, artist, year):
+def _album_search_row(browse_id, title, artist, year, release_type='Album'):
     return {
         'category': 'Albums',
         'resultType': 'album',
@@ -998,6 +1032,7 @@ def _album_search_row(browse_id, title, artist, year):
         'artists': [{'name': artist}],
         'thumbnails': [{'url': 'https://img/cover.jpg'}],
         'isExplicit': False,
+        'type': release_type,
     }
 
 
@@ -1014,6 +1049,42 @@ def test_search_albums_returns_album_summaries(monkeypatch):
     assert albums[0]['year'] == '2003'
     assert albums[0]['source'] == 'youtube'
     assert albums[0]['url'] == 'https://music.youtube.com/browse/MPREb_x'
+    assert albums[0]['release_type'] == 'Album'
+
+
+def test_search_albums_differentiates_single_and_ep(monkeypatch):
+    # Regression: two same-titled releases by the same artist can be a
+    # genuine Album and a Single (e.g. Kneecap's "FENIAN" album vs. the
+    # "FENIAN" title-track single) — the type must reflect each one.
+    fake = _FakeYTM([
+        _album_search_row(
+            'MPREb_album', 'FENIAN', 'KNEECAP', '2026', release_type='Album'
+        ),
+        _album_search_row(
+            'MPREb_single', 'FENIAN', 'KNEECAP', '2026', release_type='Single'
+        ),
+        _album_search_row(
+            'MPREb_ep',
+            'Irish Goodbye',
+            'KNEECAP',
+            '2026',
+            release_type='EP',
+        ),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    albums = search_albums('Kneecap')
+    types = {a['album_id']: a['release_type'] for a in albums}
+    assert types == {
+        'MPREb_album': 'Album',
+        'MPREb_single': 'Single',
+        'MPREb_ep': 'EP',
+    }
+
+
+def test_album_summary_missing_type_defaults_empty():
+    row = _album_search_row('MPREb_x', 'Veneer', 'José González', '2003')
+    del row['type']
+    assert not providers._album_summary(row)['release_type']
 
 
 def test_search_albums_skips_rows_without_browse_id(monkeypatch):
@@ -1147,3 +1218,52 @@ def test_enrich_from_match_backfills_album_name_via_browse_id(monkeypatch):
     out = enrich_from_match({'name': 'Slow Moves', 'source': 'youtube'}, match)
     assert out['album_name'] == 'Veneer'
     assert out['track_number'] == 1
+
+
+def test_enrich_from_match_backfills_release_type_via_browse_id(monkeypatch):
+    match = {'videoId': 'vidvidvidvi', 'title': 'Slow Moves', 'album': None}
+    monkeypatch.setattr(
+        providers, '_album_browse_id', lambda *_a, **_kw: 'MPREb_r66dI91cUVz'
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _bid: ([{'videoId': 'vidvidvidvi', 'trackNumber': 1}], 10),
+    )
+    monkeypatch.setattr(
+        providers, '_cached_album_title', lambda _bid: 'Veneer'
+    )
+    monkeypatch.setattr(
+        providers, '_cached_album_release_type', lambda _bid: 'Album'
+    )
+    out = enrich_from_match({'name': 'Slow Moves', 'source': 'youtube'}, match)
+    assert out['release_type'] == 'Album'
+
+
+def test_enrich_from_match_preserves_existing_release_type(monkeypatch):
+    # If the caller already knows the release type (e.g. it came from
+    # album_tracks_from_browse_id), enrichment must not overwrite it.
+    match = {
+        'videoId': 'vidvidvidvi',
+        'title': 'Slow Moves',
+        'album': {'name': 'Veneer', 'id': 'MPREb_r66dI91cUVz'},
+    }
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _bid: ([{'videoId': 'vidvidvidvi', 'trackNumber': 1}], 10),
+    )
+
+    def _boom(_bid):
+        raise AssertionError('should not be called when already set')
+
+    monkeypatch.setattr(providers, '_cached_album_release_type', _boom)
+    out = enrich_from_match(
+        {
+            'name': 'Slow Moves',
+            'source': 'youtube',
+            'release_type': 'Single',
+        },
+        match,
+    )
+    assert out['release_type'] == 'Single'
