@@ -11,8 +11,12 @@ from downtify.providers import (
     _find_match_via_album,
     _pick_best,
     _titles_match,
+    album_tracks_from_browse_id,
     enrich_from_match,
     find_match,
+    parse_youtube_url,
+    search_albums,
+    song_from_video_id,
     youtube_music_track_index_for_match,
 )
 
@@ -32,9 +36,11 @@ def clear_ytm_album_cache():
     """Isolate tests that manipulate the in-memory get_album cache."""
 
     providers._album_track_cache.clear()
+    providers._album_meta_cache.clear()
     providers._album_browse_search_cache.clear()
     yield
     providers._album_track_cache.clear()
+    providers._album_meta_cache.clear()
     providers._album_browse_search_cache.clear()
 
 
@@ -818,3 +824,326 @@ def test_find_match_via_album_still_rejects_version_mismatch(monkeypatch):
     })
     assert video_id is None
     assert match is None
+
+
+# ── parse_youtube_url ─────────────────────────────────────────────────────────
+
+
+def test_parse_youtube_url_watch():
+    assert parse_youtube_url(
+        'https://music.youtube.com/watch?v=eAX90iTkiPk'
+    ) == ('track', 'eAX90iTkiPk')
+
+
+def test_parse_youtube_url_short_link():
+    assert parse_youtube_url('https://youtu.be/eAX90iTkiPk') == (
+        'track',
+        'eAX90iTkiPk',
+    )
+
+
+def test_parse_youtube_url_plain_youtube_watch():
+    assert parse_youtube_url(
+        'https://www.youtube.com/watch?v=eAX90iTkiPk&t=5s'
+    ) == ('track', 'eAX90iTkiPk')
+
+
+def test_parse_youtube_url_album_browse():
+    assert parse_youtube_url(
+        'https://music.youtube.com/browse/MPREb_r66dI91cUVz'
+    ) == ('album', 'MPREb_r66dI91cUVz')
+
+
+def test_parse_youtube_url_album_playlist_form():
+    assert parse_youtube_url(
+        'https://music.youtube.com/playlist?list=OLAK5uy_l3gkZ6IpW'
+    ) == ('album', 'OLAK5uy_l3gkZ6IpW')
+
+
+def test_parse_youtube_url_rejects_non_youtube_url():
+    assert parse_youtube_url('https://open.spotify.com/track/abc') is None
+
+
+def test_parse_youtube_url_rejects_empty_string():
+    assert parse_youtube_url('') is None
+
+
+# ── album_tracks_from_browse_id ────────────────────────────────────────────────
+
+
+def _album_track_row(video_id, title, track_number, artist='José González'):
+    return {
+        'videoId': video_id,
+        'title': title,
+        'artists': [{'name': artist}],
+        'trackNumber': track_number,
+        'duration_seconds': 200,
+        'isExplicit': False,
+    }
+
+
+def test_album_tracks_from_browse_id_resolves_full_tracklist(monkeypatch):
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _browse_id: (
+            [
+                _album_track_row('aaaaaaaaaaa', 'Slow Moves', 1),
+                _album_track_row('bbbbbbbbbbb', 'Remain', 2),
+            ],
+            10,
+        ),
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_meta',
+        lambda _browse_id: {
+            'title': 'Veneer',
+            'year': '2003',
+            'thumbnails': [{'url': 'https://img/cover.jpg'}],
+        },
+    )
+    songs = album_tracks_from_browse_id('MPREb_r66dI91cUVz')
+    assert len(songs) == 2
+    assert songs[0]['name'] == 'Slow Moves'
+    assert songs[0]['album_name'] == 'Veneer'
+    assert songs[0]['track_number'] == 1
+    assert songs[0]['album_track_total'] == 10
+    assert songs[0]['year'] == '2003'
+    assert songs[0]['source'] == 'youtube'
+    assert songs[0]['song_id'] == 'aaaaaaaaaaa'
+    assert songs[1]['name'] == 'Remain'
+    assert songs[1]['track_number'] == 2
+
+
+def test_album_tracks_from_browse_id_converts_playlist_id(monkeypatch):
+    calls = []
+
+    class _Fake:
+        @staticmethod
+        def get_album_browse_id(playlist_id):
+            calls.append(playlist_id)
+            return 'MPREb_resolved'
+
+    monkeypatch.setattr(providers, '_ytm', _Fake)
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda browse_id: (
+            ([_album_track_row('aaaaaaaaaaa', 'Slow Moves', 1)], 1)
+            if browse_id == 'MPREb_resolved'
+            else ([], None)
+        ),
+    )
+    monkeypatch.setattr(
+        providers, '_cached_album_meta', lambda _browse_id: {'title': 'Veneer'}
+    )
+    songs = album_tracks_from_browse_id('OLAK5uy_someplaylistid')
+    assert calls == ['OLAK5uy_someplaylistid']
+    assert len(songs) == 1
+    assert songs[0]['album_name'] == 'Veneer'
+
+
+def test_album_tracks_from_browse_id_returns_empty_when_playlist_unresolvable(
+    monkeypatch,
+):
+    class _Fake:
+        @staticmethod
+        def get_album_browse_id(playlist_id):
+            return None
+
+    monkeypatch.setattr(providers, '_ytm', _Fake)
+    assert album_tracks_from_browse_id('OLAK5uy_bogus') == []
+
+
+def test_album_tracks_from_browse_id_returns_empty_when_no_tracks(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        providers, '_cached_album_tracks_and_count', lambda _bid: ([], None)
+    )
+    assert album_tracks_from_browse_id('MPREb_empty') == []
+
+
+def test_album_tracks_from_browse_id_skips_rows_without_video_id(monkeypatch):
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _bid: (
+            [
+                {'title': 'No video id here'},
+                _album_track_row('aaaaaaaaaaa', 'Slow Moves', 1),
+            ],
+            2,
+        ),
+    )
+    monkeypatch.setattr(
+        providers, '_cached_album_meta', lambda _bid: {'title': 'Veneer'}
+    )
+    songs = album_tracks_from_browse_id('MPREb_r66dI91cUVz')
+    assert len(songs) == 1
+    assert songs[0]['song_id'] == 'aaaaaaaaaaa'
+
+
+# ── search_albums / _album_summary ────────────────────────────────────────────
+
+
+def _album_search_row(browse_id, title, artist, year):
+    return {
+        'category': 'Albums',
+        'resultType': 'album',
+        'title': title,
+        'browseId': browse_id,
+        'year': year,
+        'artists': [{'name': artist}],
+        'thumbnails': [{'url': 'https://img/cover.jpg'}],
+        'isExplicit': False,
+    }
+
+
+def test_search_albums_returns_album_summaries(monkeypatch):
+    fake = _FakeYTM([
+        _album_search_row('MPREb_x', 'Veneer', 'José González', '2003'),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    albums = search_albums('José González Veneer')
+    assert len(albums) == 1
+    assert albums[0]['album_id'] == 'MPREb_x'
+    assert albums[0]['name'] == 'Veneer'
+    assert albums[0]['artist'] == 'José González'
+    assert albums[0]['year'] == '2003'
+    assert albums[0]['source'] == 'youtube'
+    assert albums[0]['url'] == 'https://music.youtube.com/browse/MPREb_x'
+
+
+def test_search_albums_skips_rows_without_browse_id(monkeypatch):
+    fake = _FakeYTM([{'title': 'No browseId', 'artists': []}])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    assert search_albums('anything') == []
+
+
+def test_search_albums_empty_query_returns_empty_without_network(monkeypatch):
+    def _boom(*_a, **_kw):
+        raise AssertionError('should not search for an empty query')
+
+    monkeypatch.setattr(providers, '_ytm', _boom)
+    assert search_albums('   ') == []
+
+
+# ── song_from_video_id ────────────────────────────────────────────────────────
+
+
+def test_song_from_video_id_enriches_with_catalog_match(monkeypatch):
+    base_song = {
+        'song_id': 'eAX90iTkiPk',
+        'name': 'Slow Moves',
+        'artists': ['José González'],
+        'album_name': '',
+        'cover_url': 'https://img/thumb.jpg',
+        'duration': 172,
+        'url': 'https://music.youtube.com/watch?v=eAX90iTkiPk',
+        'explicit': False,
+        'year': '',
+        'release_date': '',
+        'source': 'youtube',
+    }
+    monkeypatch.setattr(
+        providers, '_song_from_video_details', lambda _vid: dict(base_song)
+    )
+    catalog_match = {
+        'videoId': 'eAX90iTkiPk',
+        'title': 'Slow Moves',
+        'album': {'name': 'Veneer', 'id': 'MPREb_r66dI91cUVz'},
+    }
+    monkeypatch.setattr(
+        providers, 'find_match', lambda _song: ('eAX90iTkiPk', catalog_match)
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _bid: ([{'videoId': 'eAX90iTkiPk', 'trackNumber': 1}], 10),
+    )
+    song = song_from_video_id('eAX90iTkiPk')
+    assert song['album_name'] == 'Veneer'
+    assert song['track_number'] == 1
+    assert song['album_track_total'] == 10
+    # Identity fields describe the requested video, not the match.
+    assert song['song_id'] == 'eAX90iTkiPk'
+    assert song['source'] == 'youtube'
+    assert song['url'] == 'https://music.youtube.com/watch?v=eAX90iTkiPk'
+
+
+def test_song_from_video_id_falls_back_when_no_catalog_match(monkeypatch):
+    base_song = {
+        'song_id': 'xyz',
+        'name': 'Some Upload',
+        'artists': ['A Channel'],
+        'album_name': '',
+        'cover_url': '',
+        'duration': 60,
+        'url': 'https://music.youtube.com/watch?v=xyz',
+        'explicit': False,
+        'year': '',
+        'release_date': '',
+        'source': 'youtube',
+    }
+    monkeypatch.setattr(
+        providers, '_song_from_video_details', lambda _vid: dict(base_song)
+    )
+    monkeypatch.setattr(providers, 'find_match', lambda _song: (None, None))
+    song = song_from_video_id('xyz')
+    assert song == base_song
+
+
+def test_song_from_video_id_returns_early_without_a_title(monkeypatch):
+    def _boom(_song):
+        raise AssertionError('find_match must not run without a title')
+
+    monkeypatch.setattr(
+        providers,
+        '_song_from_video_details',
+        lambda _vid: {'song_id': 'xyz', 'name': ''},
+    )
+    monkeypatch.setattr(providers, 'find_match', _boom)
+    song = song_from_video_id('xyz')
+    assert song == {'song_id': 'xyz', 'name': ''}
+
+
+def test_song_from_video_id_survives_find_match_exception(monkeypatch):
+    base_song = {'song_id': 'xyz', 'name': 'Some Upload'}
+
+    def _boom(_song):
+        raise RuntimeError('network blew up')
+
+    monkeypatch.setattr(
+        providers, '_song_from_video_details', lambda _vid: dict(base_song)
+    )
+    monkeypatch.setattr(providers, 'find_match', _boom)
+    song = song_from_video_id('xyz')
+    assert song == base_song
+
+
+# ── enrich_from_match album-name fallback via browse_id ───────────────────────
+
+
+def test_enrich_from_match_backfills_album_name_via_browse_id(monkeypatch):
+    # Regression: a search-derived `match` sometimes lacks `album.name`
+    # even though `youtube_music_track_index_for_match` still manages to
+    # resolve the album's browseId (via an albums-filter search) while
+    # computing the track index. That browseId must be reused to
+    # backfill the album title too, rather than leaving it empty.
+    match = {'videoId': 'vidvidvidvi', 'title': 'Slow Moves', 'album': None}
+    monkeypatch.setattr(
+        providers, '_album_browse_id', lambda *_a, **_kw: 'MPREb_r66dI91cUVz'
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _bid: ([{'videoId': 'vidvidvidvi', 'trackNumber': 1}], 10),
+    )
+    monkeypatch.setattr(
+        providers, '_cached_album_title', lambda _bid: 'Veneer'
+    )
+    out = enrich_from_match({'name': 'Slow Moves', 'source': 'youtube'}, match)
+    assert out['album_name'] == 'Veneer'
+    assert out['track_number'] == 1

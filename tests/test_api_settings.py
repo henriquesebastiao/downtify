@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import json
 
+from downtify import api
 from downtify.api import (
     DEFAULT_SETTINGS,
     _effective_lyrics_providers,
     _load_settings,
+    search_albums_endpoint,
 )
 
 
@@ -40,6 +42,33 @@ def test_default_download_lyrics_is_true():
 
 def test_default_format_is_mp3():
     assert DEFAULT_SETTINGS['format'] == 'mp3'
+
+
+def test_default_search_albums_is_true():
+    assert DEFAULT_SETTINGS['search_albums'] is True
+
+
+# ── search_albums_endpoint ─────────────────────────────────────────────────────
+
+
+def test_search_albums_endpoint_calls_provider_when_enabled(monkeypatch):
+    monkeypatch.setitem(api.state.settings, 'search_albums', True)
+    monkeypatch.setattr(
+        api.providers,
+        'search_albums',
+        lambda query, limit: [{'name': 'Veneer'}],
+    )
+    assert search_albums_endpoint(query='Veneer') == [{'name': 'Veneer'}]
+
+
+def test_search_albums_endpoint_short_circuits_when_disabled(monkeypatch):
+    monkeypatch.setitem(api.state.settings, 'search_albums', False)
+
+    def _boom(*_a, **_kw):
+        raise AssertionError('should not search when disabled')
+
+    monkeypatch.setattr(api.providers, 'search_albums', _boom)
+    assert search_albums_endpoint(query='Veneer') == []
 
 
 # ── _load_settings ────────────────────────────────────────────────────────────

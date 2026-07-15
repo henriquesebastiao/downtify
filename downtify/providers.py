@@ -50,6 +50,9 @@ _album_track_cache: dict[
     str,
     tuple[list[dict[str, Any]], Optional[int]],
 ] = {}
+# Album-level metadata (title/year/thumbnails) per browse id, populated
+# alongside ``_album_track_cache`` from the same ``get_album`` call.
+_album_meta_cache: dict[str, dict[str, Any]] = {}
 # ``artist|album`` (case-folded hints) → album ``browseId`` from a songs filter.
 _album_browse_search_cache: dict[str, str] = {}
 
@@ -151,6 +154,100 @@ def search_songs(query: str, limit: int = 20) -> list[dict[str, Any]]:
         if song:
             songs.append(song)
     return songs
+
+
+def _album_summary(result: dict[str, Any]) -> Optional[dict[str, Any]]:
+    browse_id = result.get('browseId')
+    if not isinstance(browse_id, str) or not browse_id.strip():
+        return None
+    artists = [
+        a.get('name', '')
+        for a in (result.get('artists') or [])
+        if isinstance(a, dict) and a.get('name')
+    ]
+    thumbs = result.get('thumbnails') or []
+    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+    return {
+        'album_id': browse_id.strip(),
+        'name': result.get('title', ''),
+        'artists': artists,
+        'artist': ', '.join(artists),
+        'cover_url': cover,
+        'year': str(result.get('year') or '').strip(),
+        'explicit': bool(result.get('isExplicit')),
+        'url': f'https://music.youtube.com/browse/{browse_id.strip()}',
+        'source': 'youtube',
+    }
+
+
+def search_albums(query: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Search YouTube Music for albums matching ``query``.
+
+    Returns lightweight album summaries (not full tracklists) suitable
+    for a search-results list; resolve a chosen album's tracks via
+    :func:`album_tracks_from_browse_id`.
+    """
+
+    if not query.strip():
+        return []
+    try:
+        results = _ytm().search(query, filter='albums', limit=limit)
+    except Exception:
+        logger.exception('YouTube Music album search failed')
+        return []
+    titles = [
+        str(r.get('title') or '')[:60]
+        for r in results[:8]
+        if isinstance(r, dict)
+    ]
+    _log_ytm_summary_search(
+        phase='browse_albums',
+        query=query,
+        filt='albums',
+        results_len=len(results),
+        first_titles=titles,
+    )
+    _log_ytm_response(f'search albums q={query[:80]!r}', results)
+    albums: list[dict[str, Any]] = []
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        album = _album_summary(result)
+        if album:
+            albums.append(album)
+    return albums
+
+
+_YOUTUBE_URL_HOSTS = ('youtube.com', 'youtu.be', 'music.youtube.com')
+_YOUTUBE_VIDEO_ID_RE = re.compile(
+    r'(?:[?&]v=|youtu\.be/|/shorts/)([A-Za-z0-9_-]{6,})'
+)
+_YOUTUBE_ALBUM_BROWSE_RE = re.compile(r'/browse/(MPREb_[A-Za-z0-9_-]+)')
+_YOUTUBE_ALBUM_PLAYLIST_RE = re.compile(r'[?&]list=(OLAK5uy_[A-Za-z0-9_-]+)')
+
+
+def parse_youtube_url(url: str) -> Optional[tuple[str, str]]:
+    """Parse a YouTube/YouTube Music URL into ``(kind, id)``.
+
+    ``kind`` is ``'track'`` (a watchable videoId) or ``'album'`` (a
+    ``MPREb_`` browse id, or an ``OLAK5uy_`` audio-playlist id — pass
+    either straight to :func:`album_tracks_from_browse_id`, which
+    resolves the playlist form to a browse id itself). Returns ``None``
+    for URLs that aren't recognized YouTube links at all.
+    """
+
+    if not url or not any(host in url for host in _YOUTUBE_URL_HOSTS):
+        return None
+    match = _YOUTUBE_ALBUM_BROWSE_RE.search(url)
+    if match:
+        return 'album', match.group(1)
+    match = _YOUTUBE_ALBUM_PLAYLIST_RE.search(url)
+    if match:
+        return 'album', match.group(1)
+    match = _YOUTUBE_VIDEO_ID_RE.search(url)
+    if match:
+        return 'track', match.group(1)
+    return None
 
 
 def find_match(
@@ -601,7 +698,101 @@ def _cached_album_tracks_and_count(
     tup = (tracks, total_ct)
     with _lock:
         _album_track_cache[browse_id] = tup
+        _album_meta_cache[browse_id] = {
+            'title': data.get('title') or '',
+            'year': str(data.get('year') or '').strip(),
+            'thumbnails': data.get('thumbnails') or [],
+        }
     return tup
+
+
+def _cached_album_meta(browse_id: str) -> dict[str, Any]:
+    """Album-level metadata for ``browse_id``, if already resolved and cached.
+
+    Only ever a cache read — populated as a side effect of
+    :func:`_cached_album_tracks_and_count`, never triggers its own
+    ``get_album`` call.
+    """
+
+    with _lock:
+        return dict(_album_meta_cache.get(browse_id) or {})
+
+
+def _cached_album_title(browse_id: str) -> str:
+    return _cached_album_meta(browse_id).get('title', '')
+
+
+def album_tracks_from_browse_id(
+    browse_id_or_playlist_id: str,
+) -> list[dict[str, Any]]:
+    """Resolve a YouTube Music album into Spotify-shaped song dicts.
+
+    Accepts either a ``MPREb_`` browse id or an ``OLAK5uy_`` audio
+    playlist id (converted to a browse id first via
+    ``get_album_browse_id``). Mirrors
+    :func:`spotify.album_tracks_from_id`'s output shape so the same
+    batch-download/M3U frontend code path works unchanged for a
+    directly-pasted YouTube Music album URL. Returns ``[]`` if the
+    album can't be resolved at all.
+    """
+
+    browse_id = browse_id_or_playlist_id
+    if browse_id.startswith('OLAK5uy_'):
+        try:
+            resolved = _ytm().get_album_browse_id(browse_id)
+        except Exception:
+            logger.exception(
+                'YouTube Music get_album_browse_id failed for {}', browse_id
+            )
+            resolved = None
+        if not resolved:
+            return []
+        browse_id = resolved
+
+    tracks, total_ct = _cached_album_tracks_and_count(browse_id)
+    if not tracks:
+        return []
+    total = total_ct or len(tracks)
+    meta = _cached_album_meta(browse_id)
+    album_name = meta.get('title', '')
+    year = meta.get('year', '')
+    thumbs = meta.get('thumbnails') or []
+    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+
+    songs: list[dict[str, Any]] = []
+    for position, track in enumerate(tracks, start=1):
+        video_id = _row_video_id(track)
+        if not video_id:
+            continue
+        artists = [
+            a.get('name', '')
+            for a in (track.get('artists') or [])
+            if isinstance(a, dict) and a.get('name')
+        ]
+        duration = track.get('duration_seconds') or _parse_duration(
+            track.get('duration')
+        )
+        track_number = _normalize_ytm_track_slot(
+            declared=track.get('trackNumber'),
+            position_in_album_list=position,
+        )
+        songs.append({
+            'song_id': video_id,
+            'name': track.get('title', ''),
+            'artists': artists,
+            'artist': ', '.join(artists),
+            'album_name': album_name,
+            'cover_url': cover,
+            'duration': duration,
+            'url': f'https://music.youtube.com/watch?v={video_id}',
+            'explicit': bool(track.get('isExplicit')),
+            'year': year,
+            'release_date': year,
+            'source': 'youtube',
+            'track_number': track_number,
+            'album_track_total': total,
+        })
+    return songs
 
 
 def _find_match_via_album(
@@ -771,6 +962,17 @@ def enrich_from_match(
         enriched.setdefault('track_number', yt_n)
     if yt_tot is not None:
         enriched.setdefault('album_track_total', yt_tot)
+    if not enriched.get('album_name'):
+        # `youtube_music_track_index_for_match` already resolved (and
+        # cached) the album's browseId while computing the track index
+        # above — reuse it to backfill the album title too, since the
+        # search-derived `match` sometimes lacks `album.name` even when
+        # the video is genuinely part of a catalogued release.
+        browse_id = _album_browse_id(match, enriched)
+        if browse_id:
+            album_title = _cached_album_title(browse_id)
+            if album_title:
+                enriched['album_name'] = album_title
     spotify_tid = enriched.get('song_id')
     if yt_n is None:
         logger.info(
@@ -915,8 +1117,13 @@ def _pick_best(
     return best
 
 
-def song_from_video_id(video_id: str) -> dict[str, Any]:
-    """Look up basic song info for a YouTube videoId via YT Music."""
+def _song_from_video_details(video_id: str) -> dict[str, Any]:
+    """Basic song info from ``get_song``'s raw video-player payload.
+
+    This is the only reliable, always-available source for an arbitrary
+    videoId (title, uploader/author, duration, thumbnail) — but it is
+    raw player data with no catalog metadata (album, track number).
+    """
 
     try:
         info = _ytm().get_song(video_id)
@@ -947,3 +1154,42 @@ def song_from_video_id(video_id: str) -> dict[str, Any]:
         'release_date': '',
         'source': 'youtube',
     }
+
+
+def song_from_video_id(video_id: str) -> dict[str, Any]:
+    """Look up song info for a YouTube videoId, including album/track
+    metadata when the video is part of an official YouTube Music album.
+
+    ``get_song`` (raw player data) never carries catalog metadata, and
+    ``get_watch_playlist`` was found — empirically, against the live
+    API — not to reliably include it either. Catalog metadata (album,
+    track number) is only reliably available through search, so once
+    the basic title/artist/duration are known, the resolved title is
+    run through the same matching pipeline used for Spotify-sourced
+    downloads (:func:`find_match`) to look up a catalog hit, and
+    :func:`enrich_from_match` fills in album/track metadata from it
+    when found — never overriding the video actually requested.
+    """
+
+    song = _song_from_video_details(video_id)
+    if not song.get('name'):
+        return song
+
+    try:
+        _, match = find_match(song)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'song_from_video_id: catalog lookup failed for {}', video_id
+        )
+        match = None
+    if not match:
+        return song
+
+    enriched = enrich_from_match(song, match)
+    # enrich_from_match never touches these, but pin them explicitly so
+    # the returned song always describes the video the caller asked
+    # for, never whichever video the catalog lookup happened to match.
+    enriched['song_id'] = video_id
+    enriched['url'] = f'https://music.youtube.com/watch?v={video_id}'
+    enriched['source'] = 'youtube'
+    return enriched

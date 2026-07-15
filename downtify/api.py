@@ -21,7 +21,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -51,6 +50,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'max_parallel_downloads': 3,
     'organize_by_artist': False,
     'organize_by_album': False,
+    'search_albums': True,
 }
 
 
@@ -162,6 +162,13 @@ def search_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
     return providers.search_songs(query, limit=20)
 
 
+@router.get('/api/albums/search')
+def search_albums_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
+    if not state.settings.get('search_albums', True):
+        return []
+    return providers.search_albums(query, limit=10)
+
+
 @router.get('/api/song/url')
 def song_url_endpoint(url: str = Query(...)):
     return _resolve_url(url)
@@ -173,23 +180,39 @@ def url_endpoint(url: str = Query(...)):
 
 
 def _resolve_url(url: str):
-    parsed = spotify.parse_spotify_url(url)
-    if parsed is None:
-        raise HTTPException(status_code=400, detail='Invalid Spotify URL')
-    kind, sid = parsed
-    try:
-        if kind == 'track':
-            return spotify.track_from_id(sid)
-        if kind == 'album':
-            return spotify.album_tracks_from_id(sid)
-        if kind == 'playlist':
-            return spotify.playlist_tracks_from_id(sid)
-    except Exception as exc:
-        logger.exception('Failed to resolve Spotify URL {}', url)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    raise HTTPException(
-        status_code=400, detail=f'Unsupported entity type: {kind}'
-    )
+    spotify_parsed = spotify.parse_spotify_url(url)
+    if spotify_parsed is not None:
+        kind, sid = spotify_parsed
+        try:
+            if kind == 'track':
+                return spotify.track_from_id(sid)
+            if kind == 'album':
+                return spotify.album_tracks_from_id(sid)
+            if kind == 'playlist':
+                return spotify.playlist_tracks_from_id(sid)
+        except Exception as exc:
+            logger.exception('Failed to resolve Spotify URL {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400, detail=f'Unsupported entity type: {kind}'
+        )
+
+    youtube_parsed = providers.parse_youtube_url(url)
+    if youtube_parsed is not None:
+        kind, yid = youtube_parsed
+        try:
+            if kind == 'track':
+                return providers.song_from_video_id(yid)
+            if kind == 'album':
+                return providers.album_tracks_from_browse_id(yid)
+        except Exception as exc:
+            logger.exception('Failed to resolve YouTube URL {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400, detail=f'Unsupported entity type: {kind}'
+        )
+
+    raise HTTPException(status_code=400, detail='Invalid URL')
 
 
 def _merge_client_track_hints(
@@ -240,11 +263,15 @@ def _song_for_download(url: str) -> dict[str, Any]:
             status_code=400,
             detail='Only Spotify track URLs are supported here',
         )
-    if 'youtube.com' in url or 'youtu.be' in url or 'music.youtube' in url:
-        match = re.search(r'(?:v=|youtu\.be/)([A-Za-z0-9_-]{6,})', url)
-        if not match:
-            raise HTTPException(status_code=400, detail='Invalid YouTube URL')
-        return providers.song_from_video_id(match.group(1))
+    youtube_parsed = providers.parse_youtube_url(url)
+    if youtube_parsed is not None:
+        kind, yid = youtube_parsed
+        if kind == 'track':
+            return providers.song_from_video_id(yid)
+        raise HTTPException(
+            status_code=400,
+            detail='Only single YouTube video URLs are supported here',
+        )
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
 

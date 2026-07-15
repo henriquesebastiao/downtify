@@ -13,6 +13,7 @@ const settings = ref({
   organize_by_artist: false,
   organize_by_album: false,
   max_parallel_downloads: 3,
+  search_albums: true,
 })
 
 const settingsOptions = {

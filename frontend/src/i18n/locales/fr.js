@@ -45,11 +45,13 @@ export default {
     empty: 'Aucun titre trouvé',
     emptyHint:
       'Essayez une autre recherche : artiste + titre  donne généralement de meilleurs résultats.',
-    openOnSpotify: 'Ouvrir depuis Spotify',
+    openSource: 'Ouvrir la source',
     inQueue: "Dans la file d'attente",
     download: 'Télécharger',
     previousPage: 'Page précédente',
     nextPage: 'Page suivante',
+    albumsTitle: 'Albums',
+    downloadAlbum: "Télécharger l'album",
   },
   queue: {
     title: "File d'attente des téléchargements",
@@ -154,6 +156,10 @@ export default {
     format: 'Format',
     quality: 'Qualité',
     qualityIgnored: 'ignoré (sans perte)',
+    searchSection: 'Recherche',
+    searchAlbums: 'Afficher les albums dans les résultats de recherche',
+    searchAlbumsHint:
+      "Recherche aussi les albums correspondants, avec la possibilité de télécharger l'album complet.",
     playlistsSection: 'Liste de lecture',
     generateM3u: 'Générer un fichier M3U pour les listes de lecture',
     generateM3uHint:

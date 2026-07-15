@@ -44,11 +44,13 @@ export default {
     empty: 'No se encontraron canciones.',
     emptyHint:
       'Prueba con otra búsqueda — artista + título suele funcionar mejor.',
-    openOnSpotify: 'Abrir en Spotify',
+    openSource: 'Abrir en la fuente',
     inQueue: 'En la cola',
     download: 'Descargar',
     previousPage: 'Página anterior',
     nextPage: 'Página siguiente',
+    albumsTitle: 'Álbumes',
+    downloadAlbum: 'Descargar álbum',
   },
   queue: {
     title: 'Cola de descargas',
@@ -154,6 +156,10 @@ export default {
     outputTemplateReset: 'Restaurar',
     outputTemplateHint:
       'Usa / para crear subcarpetas. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
+    searchSection: 'Búsqueda',
+    searchAlbums: 'Mostrar álbumes en los resultados de búsqueda',
+    searchAlbumsHint:
+      'También busca álbumes coincidentes al buscar, con la opción de descargar el álbum completo.',
     playlistsSection: 'Listas',
     generateM3u: 'Generar archivo M3U para las listas',
     generateM3uHint:

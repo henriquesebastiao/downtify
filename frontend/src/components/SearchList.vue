@@ -38,6 +38,66 @@
       </span>
     </div>
 
+    <!-- Albums -->
+    <div v-if="sm.albumResults.value.length > 0" class="mb-8">
+      <h2
+        class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3"
+      >
+        {{ t('search.albumsTitle') }}
+      </h2>
+      <ul class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <li
+          v-for="album in sm.albumResults.value"
+          :key="album.album_id"
+          class="surface rounded-2xl p-3 flex flex-col gap-2"
+        >
+          <div class="aspect-square rounded-xl overflow-hidden bg-white/5">
+            <img
+              v-if="album.cover_url"
+              :src="album.cover_url"
+              :alt="album.name"
+              class="h-full w-full object-cover"
+              loading="lazy"
+            />
+            <div
+              v-else
+              class="h-full w-full flex items-center justify-center text-base-content/30"
+            >
+              <Icon icon="clarity:album-line" class="h-8 w-8" />
+            </div>
+          </div>
+          <div class="min-w-0">
+            <p class="font-semibold text-sm truncate">{{ album.name }}</p>
+            <p class="text-xs text-base-content/60 truncate">
+              {{ album.artist || t('common.unknownArtist') }}
+              <span v-if="album.year" class="text-base-content/40">
+                · {{ album.year }}
+              </span>
+            </p>
+          </div>
+          <div class="flex items-center gap-1.5 mt-1">
+            <a
+              v-if="album.url"
+              class="icon-btn shrink-0"
+              :href="album.url"
+              target="_blank"
+              rel="noopener"
+              :title="t('search.openSource')"
+            >
+              <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
+            </a>
+            <button
+              class="btn btn-primary btn-sm rounded-full flex-1"
+              @click="downloadAlbum(album)"
+            >
+              <Icon icon="clarity:download-line" class="h-4 w-4" />
+              {{ t('search.downloadAlbum') }}
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
     <!-- Loading skeleton -->
     <div v-if="sm.isSearching.value" class="space-y-3">
       <div v-for="n in 5" :key="n" class="skeleton h-24 rounded-2xl" />
@@ -112,7 +172,7 @@
             :href="song.url"
             target="_blank"
             rel="noopener"
-            :title="t('search.openOnSpotify')"
+            :title="t('search.openSource')"
           >
             <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
           </a>
@@ -179,6 +239,7 @@
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
+import router from '../router'
 import { useSearchManager } from '../model/search'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
@@ -229,5 +290,10 @@ function downloadState(song) {
 
 function download(song) {
   emit('download', song)
+}
+
+function downloadAlbum(album) {
+  dm.fromURL(album.url)
+  router.push({ name: 'Download' })
 }
 </script>
