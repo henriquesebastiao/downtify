@@ -1,15 +1,15 @@
 [project]
 name = "downtify"
-version = "2.9.0"
+version = "2.9.1"
 description = "Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "fastapi>=0.139.0",
+    "fastapi>=0.139.1",
     "load-dotenv>=0.1.0",
     "loguru>=0.7.3",
     "mutagen>=1.48.1",
-    "requests>=2.34.1",
+    "requests>=2.34.2",
     "uvicorn>=0.51.0",
     "websockets>=16.1",
     "yt-dlp>=2026.7.4",
