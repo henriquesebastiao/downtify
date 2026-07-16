@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.9.1](https://github.com/henriquesebastiao/downtify/tree/2.9.1) (2026-07-16)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.9.0...2.9.1)
+
+**Fixed bugs:**
+
+- Recognize playlist links copied from Spotify interfaces in other languages [\#230](https://github.com/henriquesebastiao/downtify/issues/230)
+
+**Merged pull requests:**
+
+- Recognize Spotify URLs with locale segment \(intl-xx\) [\#233](https://github.com/henriquesebastiao/downtify/pull/233) ([mozuvic1](https://github.com/mozuvic1))
+- build\(deps\): Bump actions/setup-node from 6 to 7 [\#232](https://github.com/henriquesebastiao/downtify/pull/232) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump node from 20-alpine to 26-alpine [\#231](https://github.com/henriquesebastiao/downtify/pull/231) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add option to separate songs by album [\#229](https://github.com/henriquesebastiao/downtify/pull/229) ([fracarma](https://github.com/fracarma))
+
 ## [2.9.0](https://github.com/henriquesebastiao/downtify/tree/2.9.0) (2026-07-12)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.8.0...2.9.0)
