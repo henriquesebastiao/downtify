@@ -105,6 +105,7 @@ def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
         for a in (result.get('artists') or [])
         if isinstance(a, dict) and a.get('name')
     ]
+    artists = _extract_title_featuring_artist(result.get('title', ''), artists)
     thumbs = result.get('thumbnails') or []
     cover = thumbs[-1].get('url', '') if thumbs else ''
     cover = _upgrade_thumbnail(cover)
@@ -759,19 +760,21 @@ def _cached_album_release_type(browse_id: str) -> str:
 
 
 # Separators YouTube Music uses when it collapses a featuring artist into
-# a single combined-name entry instead of a separate artist dict. Only
-# unambiguous "featuring" markers are included — words/symbols like "&",
-# "and", "," or "x" are deliberately excluded even though YouTube Music
-# uses them too, because they routinely appear inside real band names
-# (e.g. a trio named "Salt, Bone & Ash", or a duo named "Harbor and the
-# Wren") and could get mis-split if the album's own metadata is ever
-# internally inconsistent about the artist name used as the anchor below.
+# a single combined-name entry instead of a separate artist dict.
+# "and"/","/"with"/"x" are deliberately excluded even though YouTube
+# Music uses them too, because they routinely appear inside real band
+# names (e.g. a duo named "Harbor and the Wren") and could get mis-split
+# if the album's own metadata is ever internally inconsistent about the
+# artist name used as the anchor below. "&" carries the same risk but is
+# kept anyway since it's the single most common combined-name pattern in
+# practice, and the anchor check already guards against the common case.
 _FEATURING_ARTIST_SEPARATORS = (
     ' feat. ',
     ' feat ',
     ' featuring ',
     ' ft. ',
     ' ft ',
+    ' & ',
 )
 
 
@@ -800,6 +803,35 @@ def _split_combined_featuring_artist(
     return artists
 
 
+# Matches a trailing "(feat. X)" / "(ft. X)" / "(featuring X)" — with
+# either parenthesis or square-bracket style — at the end of a title.
+_TITLE_FEATURING_RE = re.compile(
+    r'[\(\[]\s*(?:feat\.?|ft\.?|featuring)\s+(.+?)\s*[\)\]]\s*$',
+    re.IGNORECASE,
+)
+
+
+def _extract_title_featuring_artist(
+    title: str, artists: list[str]
+) -> list[str]:
+    """Add a featured artist named in the title's "(feat. X)" suffix to
+    ``artists``, for the case where YouTube Music's own artists list
+    doesn't credit them at all — e.g. a track titled "Better Way To Live
+    (feat. Grian Chatten)" whose ``artists`` is just ``[{"name":
+    "KNEECAP"}]``, with no entry whatsoever for the featured artist.
+    """
+    match = _TITLE_FEATURING_RE.search(title or '')
+    if not match:
+        return artists
+    featured = match.group(1).strip()
+    if not featured:
+        return artists
+    existing = {a.lower() for a in artists}
+    if featured.lower() in existing:
+        return artists
+    return [*artists, featured]
+
+
 def _album_track_song(
     track: dict[str, Any],
     video_id: str,
@@ -817,6 +849,7 @@ def _album_track_song(
     artists = _split_combined_featuring_artist(
         artists, meta.get('artists') or []
     )
+    artists = _extract_title_featuring_artist(track.get('title', ''), artists)
     year = meta.get('year', '')
     thumbs = meta.get('thumbnails') or []
     cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''

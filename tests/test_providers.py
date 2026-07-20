@@ -978,14 +978,22 @@ def test_split_combined_featuring_artist_recognizes_common_separators(
     assert result == ['Nova Ashworth', 'Wexler']
 
 
+def test_split_combined_featuring_artist_splits_ampersand_separator():
+    result = providers._split_combined_featuring_artist(
+        ['Nova Ashworth & Wexler'], ['Nova Ashworth']
+    )
+    assert result == ['Nova Ashworth', 'Wexler']
+
+
 @pytest.mark.parametrize(
     'combined_name',
     [
-        # "&"/"and"/","/"with"/"x" are deliberately NOT treated as
-        # featuring separators — they're too common inside real band
-        # names (e.g. "Salt, Bone & Ash", "Harbor and the Wren") to
-        # split safely even with the known-album-artist anchor.
-        'Nova Ashworth & Wexler',
+        # "and"/","/"with"/"x" are deliberately NOT treated as featuring
+        # separators — they're too common inside real band names (e.g.
+        # "Harbor and the Wren") to split safely even with the
+        # known-album-artist anchor. "&" is handled separately (see
+        # test_split_combined_featuring_artist_splits_ampersand_separator)
+        # since it's re-enabled despite the same risk.
         'Nova Ashworth and Wexler',
         'Nova Ashworth, Wexler',
         'Nova Ashworth with Wexler',
@@ -1022,6 +1030,76 @@ def test_split_combined_featuring_artist_no_album_artists_known():
         ['Nova Ashworth feat. Wexler'], []
     )
     assert result == ['Nova Ashworth feat. Wexler']
+
+
+# ── _extract_title_featuring_artist ─────────────────────────────────────────────
+
+
+def test_extract_title_featuring_artist_adds_missing_credit():
+    # Regression: a real "Fine Art" (KNEECAP) track came back from
+    # YouTube Music with artists=[{"name": "KNEECAP"}] only — no entry
+    # at all for the featured artist named in the title.
+    result = providers._extract_title_featuring_artist(
+        'Better Way To Live (feat. Grian Chatten)', ['Turf Rebels']
+    )
+    assert result == ['Turf Rebels', 'Grian Chatten']
+
+
+@pytest.mark.parametrize(
+    'title',
+    [
+        'Song (feat. Guest Artist)',
+        'Song (feat Guest Artist)',
+        'Song (featuring Guest Artist)',
+        'Song (ft. Guest Artist)',
+        'Song (ft Guest Artist)',
+        'Song [feat. Guest Artist]',
+    ],
+)
+def test_extract_title_featuring_artist_recognizes_common_forms(title):
+    result = providers._extract_title_featuring_artist(title, ['Main Act'])
+    assert result == ['Main Act', 'Guest Artist']
+
+
+def test_extract_title_featuring_artist_no_match_leaves_artists_unchanged():
+    result = providers._extract_title_featuring_artist(
+        'Plain Song Title', ['Main Act']
+    )
+    assert result == ['Main Act']
+
+
+def test_extract_title_featuring_artist_skips_already_credited_artist():
+    # The featured artist already has their own entry — don't duplicate.
+    result = providers._extract_title_featuring_artist(
+        'Song (feat. Guest Artist)', ['Main Act', 'Guest Artist']
+    )
+    assert result == ['Main Act', 'Guest Artist']
+
+
+def test_extract_title_featuring_artist_case_insensitive_dedupe():
+    result = providers._extract_title_featuring_artist(
+        'Song (feat. GUEST ARTIST)', ['Main Act', 'Guest Artist']
+    )
+    assert result == ['Main Act', 'Guest Artist']
+
+
+def test_extract_title_featuring_artist_handles_empty_title():
+    assert providers._extract_title_featuring_artist('', ['Main Act']) == [
+        'Main Act'
+    ]
+
+
+def test_result_to_song_adds_title_featuring_artist():
+    # search_songs / find_match results go through the same title-based
+    # featuring-artist backfill as album tracks.
+    result = {
+        'videoId': 'aaaaaaaaaaa',
+        'title': 'Better Way To Live (feat. Grian Chatten)',
+        'artists': [{'name': 'Turf Rebels'}],
+        'duration_seconds': 177,
+    }
+    song = providers._result_to_song(result)
+    assert song['artists'] == ['Turf Rebels', 'Grian Chatten']
 
 
 # ── album_tracks_from_browse_id ────────────────────────────────────────────────
@@ -1074,6 +1152,51 @@ def test_album_tracks_from_browse_id_resolves_full_tracklist(monkeypatch):
     assert songs[1]['track_number'] == 2
 
 
+def test_album_tracks_from_browse_id_backfills_title_featuring_artist(
+    monkeypatch,
+):
+    # Regression: a real "Fine Art" (KNEECAP) track, "Better Way To Live
+    # (feat. Grian Chatten)", came back from YouTube Music with
+    # artists=[{"name": "KNEECAP"}] only — no entry at all for the
+    # featured artist, who is only named in the title. Unlike the
+    # combined-name bug, there's nothing to split here; the featured
+    # artist has to be read out of the title instead.
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _bid: (
+            [
+                _album_track_row(
+                    'aaaaaaaaaaa', 'PULSE WIRE', 1, artist='Turf Rebels'
+                ),
+                {
+                    'videoId': 'bbbbbbbbbbb',
+                    'title': 'Better Way To Live (feat. Grian Chatten)',
+                    'artists': [{'name': 'Turf Rebels'}],
+                    'trackNumber': 2,
+                    'duration_seconds': 177,
+                    'isExplicit': False,
+                },
+            ],
+            2,
+        ),
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_meta',
+        lambda _bid: {'title': 'Fine Art', 'artists': ['Turf Rebels']},
+    )
+    songs = album_tracks_from_browse_id('MPREb_test')
+    track = next(
+        s for s in songs if s['name'].startswith('Better Way To Live')
+    )
+    assert track['artists'] == ['Turf Rebels', 'Grian Chatten']
+    assert track['artist'] == 'Turf Rebels, Grian Chatten'
+    # album_artist stays the album's own artist, unaffected by the
+    # featured-artist backfill on this one track.
+    assert track['album_artist'] == 'Turf Rebels'
+
+
 def test_album_tracks_from_browse_id_splits_combined_featuring_artist(
     monkeypatch,
 ):
@@ -1122,14 +1245,13 @@ def test_album_tracks_from_browse_id_splits_combined_featuring_artist(
 def test_album_tracks_from_browse_id_album_artist_consistent_even_when_unsplit(
     monkeypatch,
 ):
-    # Regression: an actual "NORTHFIRE & THE QUIET STORM" track came
-    # back from YouTube Music with a single combined artist entry
-    # "Nova Ashworth & Wexler" instead of two separate artist dicts. "&"
-    # is intentionally not auto-split (too ambiguous — see the
-    # ignores_ambiguous_separators tests), so `artists` stays as the raw
-    # combined string. `album_artist` must still stay consistent with the
-    # rest of the album, independent of whether the track's own artists
-    # got split — that's what actually fixes the folder/tag mismatch.
+    # A track can come back from YouTube Music with a single combined
+    # artist entry using a separator that's intentionally not auto-split
+    # (too ambiguous — see the ignores_ambiguous_separators tests), so
+    # `artists` stays as the raw combined string. `album_artist` must
+    # still stay consistent with the rest of the album, independent of
+    # whether the track's own artists got split — that's what actually
+    # fixes the folder/tag mismatch.
     monkeypatch.setattr(
         providers,
         '_cached_album_tracks_and_count',
@@ -1141,7 +1263,7 @@ def test_album_tracks_from_browse_id_album_artist_consistent_even_when_unsplit(
                 {
                     'videoId': 'bbbbbbbbbbb',
                     'title': 'DUSK ROW',
-                    'artists': [{'name': 'Nova Ashworth & Wexler'}],
+                    'artists': [{'name': 'Nova Ashworth, Wexler'}],
                     'trackNumber': 2,
                     'duration_seconds': 233,
                     'isExplicit': False,
@@ -1161,7 +1283,7 @@ def test_album_tracks_from_browse_id_album_artist_consistent_even_when_unsplit(
     songs = album_tracks_from_browse_id('MPREb_nQ0wPNHCFH9')
     hellstar = next(s for s in songs if s['name'] == 'DUSK ROW')
     stampede = next(s for s in songs if s['name'] == 'PULSE WIRE')
-    assert hellstar['artists'] == ['Nova Ashworth & Wexler']
+    assert hellstar['artists'] == ['Nova Ashworth, Wexler']
     assert hellstar['album_artist'] == 'Nova Ashworth'
     assert stampede['album_artist'] == 'Nova Ashworth'
 
