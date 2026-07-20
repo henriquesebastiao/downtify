@@ -22,11 +22,9 @@ def test_sanitize_strips_filesystem_unsafe_chars():
 
 def test_sanitize_keeps_unicode_letters():
     # Accented and non-Latin letters must survive so folder names match
-    # the original artist/album titles (regression: "Björk" -> "Bjrk").
-    assert m3u.sanitize_playlist_name('Björk') == 'Björk'
-    assert m3u.sanitize_playlist_name('Fabrizio de André') == (
-        'Fabrizio de André'
-    )
+    # the original artist/album titles (regression: "Sólrún" -> "Solrun").
+    assert m3u.sanitize_playlist_name('Sólrún') == 'Sólrún'
+    assert m3u.sanitize_playlist_name('Renata Béranger') == ('Renata Béranger')
 
 
 def test_sanitize_keeps_punctuation_and_emoji():

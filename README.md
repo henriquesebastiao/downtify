@@ -153,9 +153,9 @@ When **Settings → File organization → Organize by artist** is enabled, every
 
 ```
 <downloads>/
-  Arctic Monkeys/
-    Arctic Monkeys - Do I Wanna Know.mp3
-    Arctic Monkeys - R U Mine.mp3
+  The Night Owls/
+    The Night Owls - Do I Still Recall.mp3
+    The Night Owls - R U Awake.mp3
   Tame Impala/
     Tame Impala - The Less I Know The Better.mp3
 ```

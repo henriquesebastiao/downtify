@@ -19,10 +19,10 @@ def _make(tmp_path: Path, **kwargs) -> Downloader:
 def test_format_basename_default_template(tmp_path):
     d = _make(tmp_path)
     result = d._format_basename({
-        'name': 'Do I Wanna Know',
-        'artists': ['Arctic Monkeys'],
+        'name': 'Do I Still Recall',
+        'artists': ['The Night Owls'],
     })
-    assert result == 'Arctic Monkeys - Do I Wanna Know'
+    assert result == 'The Night Owls - Do I Still Recall'
 
 
 def test_format_basename_multiple_artists_joined(tmp_path):
@@ -72,11 +72,11 @@ def test_format_basename_supports_album_subpath(tmp_path):
 def test_format_basename_sanitizes_values_before_splitting_subpaths(tmp_path):
     d = _make(tmp_path, output_template='{album}/{title}')
     result = d._format_basename({
-        'name': 'AC/DC: Live',
+        'name': 'Fade/Out: Live',
         'artists': ['A'],
         'album_name': '../Bad/Album?',
     })
-    assert result == 'BadAlbum/ACDC Live'
+    assert result == 'BadAlbum/FadeOut Live'
 
 
 def test_format_basename_bad_template_falls_back(tmp_path):
@@ -90,9 +90,9 @@ def test_format_basename_bad_template_falls_back(tmp_path):
 
 def test_artist_subdir_returns_first_artist():
     result = Downloader._artist_subdir({
-        'artists': ['Arctic Monkeys', 'Other']
+        'artists': ['The Night Owls', 'Other']
     })
-    assert result == 'Arctic Monkeys'
+    assert result == 'The Night Owls'
 
 
 def test_artist_subdir_empty_list_returns_unknown():
@@ -104,7 +104,7 @@ def test_artist_subdir_missing_key_returns_unknown():
 
 
 def test_artist_subdir_sanitizes_slashes():
-    result = Downloader._artist_subdir({'artists': ['AC/DC']})
+    result = Downloader._artist_subdir({'artists': ['Fade/Out']})
     assert '/' not in result
 
 
@@ -115,23 +115,23 @@ def test_artist_subdir_sanitizes_colons():
 
 def test_artist_subdir_prefers_album_artist_over_track_artists():
     # Regression: a featuring track's own `artists` can differ from the
-    # rest of the album (e.g. "Genesis Owusu & Duckwrth" vs "Genesis
-    # Owusu"), which used to land it in a different folder than its
+    # rest of the album (e.g. "Nova Ashworth & Wexler" vs "Nova
+    # Ashworth"), which used to land it in a different folder than its
     # album-mates. `album_artist` (set for YouTube Music albums) takes
     # priority so the whole album stays together.
     result = Downloader._artist_subdir({
-        'artists': ['Genesis Owusu & Duckwrth'],
-        'album_artist': 'Genesis Owusu',
+        'artists': ['Nova Ashworth & Wexler'],
+        'album_artist': 'Nova Ashworth',
     })
-    assert result == 'Genesis Owusu'
+    assert result == 'Nova Ashworth'
 
 
 def test_artist_subdir_falls_back_to_track_artists_when_album_artist_blank():
     result = Downloader._artist_subdir({
-        'artists': ['Arctic Monkeys'],
+        'artists': ['The Night Owls'],
         'album_artist': '',
     })
-    assert result == 'Arctic Monkeys'
+    assert result == 'The Night Owls'
 
 
 # ── organize_by_artist – existing_filename_for ────────────────────────────────
@@ -139,14 +139,16 @@ def test_artist_subdir_falls_back_to_track_artists_when_album_artist_blank():
 
 def test_organize_by_artist_finds_file_in_artist_dir(tmp_path):
     d = _make(tmp_path, organize_by_artist=True)
-    artist_dir = tmp_path / 'Arctic Monkeys'
+    artist_dir = tmp_path / 'The Night Owls'
     artist_dir.mkdir()
-    (artist_dir / 'Arctic Monkeys - Do I Wanna Know.mp3').write_bytes(b'\x00')
+    (artist_dir / 'The Night Owls - Do I Still Recall.mp3').write_bytes(
+        b'\x00'
+    )
     result = d.existing_filename_for({
-        'name': 'Do I Wanna Know',
-        'artists': ['Arctic Monkeys'],
+        'name': 'Do I Still Recall',
+        'artists': ['The Night Owls'],
     })
-    assert result == 'Arctic Monkeys/Arctic Monkeys - Do I Wanna Know.mp3'
+    assert result == 'The Night Owls/The Night Owls - Do I Still Recall.mp3'
 
 
 def test_organize_by_artist_ignores_subdir_param(tmp_path):
@@ -220,23 +222,23 @@ def test_organize_by_artist_can_be_set_true(tmp_path):
 
 def test_organize_by_artist_keeps_unicode_folder_name(tmp_path):
     # Regression: accented artist names used to have their accents stripped
-    # from the folder ("Björk" -> "Bjrk").
+    # from the folder ("Sólrún" -> "Solrun").
     d = _make(tmp_path, organize_by_artist=True)
-    artist_dir = tmp_path / 'Björk'
+    artist_dir = tmp_path / 'Sólrún'
     artist_dir.mkdir()
-    (artist_dir / 'Björk - Jóga.mp3').write_bytes(b'\x00')
+    (artist_dir / 'Sólrún - Vindra.mp3').write_bytes(b'\x00')
     result = d.existing_filename_for({
-        'name': 'Jóga',
-        'artists': ['Björk'],
+        'name': 'Vindra',
+        'artists': ['Sólrún'],
     })
-    assert result == 'Björk/Björk - Jóga.mp3'
+    assert result == 'Sólrún/Sólrún - Vindra.mp3'
 
 
 # ── _album_subdir ─────────────────────────────────────────────────────────────
 
 
 def test_album_subdir_returns_album_name():
-    assert Downloader._album_subdir({'album_name': 'Homogenic'}) == 'Homogenic'
+    assert Downloader._album_subdir({'album_name': 'Auroric'}) == 'Auroric'
 
 
 def test_album_subdir_missing_key_returns_unknown():
@@ -244,8 +246,8 @@ def test_album_subdir_missing_key_returns_unknown():
 
 
 def test_album_subdir_keeps_unicode():
-    assert Downloader._album_subdir({'album_name': 'Vespertine é'}) == (
-        'Vespertine é'
+    assert Downloader._album_subdir({'album_name': 'Nocturne é'}) == (
+        'Nocturne é'
     )
 
 
@@ -258,28 +260,28 @@ def test_organize_by_album_default_is_false(tmp_path):
 
 def test_organize_by_album_finds_file_in_album_dir(tmp_path):
     d = _make(tmp_path, organize_by_album=True)
-    album_dir = tmp_path / 'Homogenic'
+    album_dir = tmp_path / 'Auroric'
     album_dir.mkdir()
-    (album_dir / 'Björk - Jóga.mp3').write_bytes(b'\x00')
+    (album_dir / 'Sólrún - Vindra.mp3').write_bytes(b'\x00')
     result = d.existing_filename_for({
-        'name': 'Jóga',
-        'artists': ['Björk'],
-        'album_name': 'Homogenic',
+        'name': 'Vindra',
+        'artists': ['Sólrún'],
+        'album_name': 'Auroric',
     })
-    assert result == 'Homogenic/Björk - Jóga.mp3'
+    assert result == 'Auroric/Sólrún - Vindra.mp3'
 
 
 def test_organize_by_artist_and_album_nests_artist_over_album(tmp_path):
     d = _make(tmp_path, organize_by_artist=True, organize_by_album=True)
-    nested = tmp_path / 'Björk' / 'Homogenic'
+    nested = tmp_path / 'Sólrún' / 'Auroric'
     nested.mkdir(parents=True)
-    (nested / 'Björk - Jóga.mp3').write_bytes(b'\x00')
+    (nested / 'Sólrún - Vindra.mp3').write_bytes(b'\x00')
     result = d.existing_filename_for({
-        'name': 'Jóga',
-        'artists': ['Björk'],
-        'album_name': 'Homogenic',
+        'name': 'Vindra',
+        'artists': ['Sólrún'],
+        'album_name': 'Auroric',
     })
-    assert result == 'Björk/Homogenic/Björk - Jóga.mp3'
+    assert result == 'Sólrún/Auroric/Sólrún - Vindra.mp3'
 
 
 def test_organize_by_album_ignores_subdir_param(tmp_path):
@@ -297,9 +299,9 @@ def test_organize_by_album_ignores_subdir_param(tmp_path):
 # ── _save_album_cover ─────────────────────────────────────────────────────────
 
 _SONG = {
-    'name': 'Jóga',
-    'artists': ['Björk'],
-    'album_name': 'Homogenic',
+    'name': 'Vindra',
+    'artists': ['Sólrún'],
+    'album_name': 'Auroric',
     'cover_url': 'https://img/cover',
 }
 

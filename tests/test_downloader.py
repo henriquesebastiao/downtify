@@ -41,9 +41,9 @@ def test_resolve_target_dir_sanitizes_unsafe_subdir(tmp_path):
 
 def test_resolve_target_dir_nests_multi_component_subdir(tmp_path):
     d = _make_downloader(tmp_path)
-    target, prefix = d._resolve_target_dir('Björk/Homogenic')
-    assert target == tmp_path / 'Björk' / 'Homogenic'
-    assert prefix == 'Björk/Homogenic/'
+    target, prefix = d._resolve_target_dir('Sólrún/Auroric')
+    assert target == tmp_path / 'Sólrún' / 'Auroric'
+    assert prefix == 'Sólrún/Auroric/'
 
 
 def test_existing_filename_finds_file_in_root(tmp_path):

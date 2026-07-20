@@ -287,7 +287,7 @@ def find_match(
     # YouTube Music's own "Top result" card — its single best guess for
     # the query — and it is empirically far more reliable than the
     # `songs` shelf for tracks the filtered search omits entirely (e.g.
-    # "Remain" and "Broken Arrows (Remastered 2023)" are both absent
+    # "Held Together" and "Fallen Wires (Remastered 2023)" are both absent
     # from `filter='songs'` results for their own artist+title query,
     # yet resolve instantly as the unfiltered Top result).
     try:
@@ -447,9 +447,9 @@ def _norm_compact_title(value: Any) -> str:
 
 # Qualifiers that mark a genuinely different recording — a different
 # performance or edit, not just a different pressing of the same audio.
-# When one name is a prefix of the other (e.g. "Local Valley" vs "Local
+# When one name is a prefix of the other (e.g. "Amber Field" vs "Local
 # Valley (Deluxe)"), the extra text is tolerated *unless* it contains one
-# of these — a plain "Tjomme" must never match "Tjomme (DJ Koze Remix)".
+# of these — a plain "Fernglow" must never match "Fernglow (DJ Koze Remix)".
 # Extend this list as new special cases turn up.
 _VERSION_QUALIFIER_WORDS = (
     'live',
@@ -763,9 +763,9 @@ def _cached_album_release_type(browse_id: str) -> str:
 # unambiguous "featuring" markers are included — words/symbols like "&",
 # "and", "," or "x" are deliberately excluded even though YouTube Music
 # uses them too, because they routinely appear inside real band names
-# (Earth, Wind & Fire; Florence and the Machine; Emerson, Lake & Palmer)
-# and could get mis-split if the album's own metadata is ever internally
-# inconsistent about the artist name used as the anchor below.
+# (e.g. a trio named "Salt, Bone & Ash", or a duo named "Harbor and the
+# Wren") and could get mis-split if the album's own metadata is ever
+# internally inconsistent about the artist name used as the anchor below.
 _FEATURING_ARTIST_SEPARATORS = (
     ' feat. ',
     ' feat ',
@@ -898,7 +898,7 @@ def _find_match_via_album(
 
     YouTube Music's text search occasionally omits the correct video
     from an "artist + title" query's own results entirely — e.g.
-    searching "José González Remain" never surfaces "Remain" itself,
+    searching "Mica Ferreira Held Together" never surfaces "Held Together" itself,
     while surfacing an unrelated track by the same artist (confirmed by
     inspecting the raw search payload). When the source album is known,
     resolving it via the ``albums`` filter and scanning its full

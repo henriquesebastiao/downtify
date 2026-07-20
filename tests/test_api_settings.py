@@ -56,9 +56,11 @@ def test_search_albums_endpoint_calls_provider_when_enabled(monkeypatch):
     monkeypatch.setattr(
         api.providers,
         'search_albums',
-        lambda query, limit: [{'name': 'Veneer'}],
+        lambda query, limit: [{'name': 'Driftlight'}],
     )
-    assert search_albums_endpoint(query='Veneer') == [{'name': 'Veneer'}]
+    assert search_albums_endpoint(query='Driftlight') == [
+        {'name': 'Driftlight'}
+    ]
 
 
 def test_search_albums_endpoint_short_circuits_when_disabled(monkeypatch):
@@ -68,7 +70,7 @@ def test_search_albums_endpoint_short_circuits_when_disabled(monkeypatch):
         raise AssertionError('should not search when disabled')
 
     monkeypatch.setattr(api.providers, 'search_albums', _boom)
-    assert search_albums_endpoint(query='Veneer') == []
+    assert search_albums_endpoint(query='Driftlight') == []
 
 
 # ── _load_settings ────────────────────────────────────────────────────────────
