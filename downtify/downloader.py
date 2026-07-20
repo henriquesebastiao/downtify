@@ -138,6 +138,14 @@ class Downloader:
 
     @staticmethod
     def _artist_subdir(song: dict[str, Any]) -> str:
+        # Prefer the source's own album-level artist (set for YouTube
+        # Music albums) so every track in an album lands in the same
+        # folder even when one track's own `artists` differs (a feature,
+        # a remix credit, ...) — mirrors the album-artist tag fallback in
+        # `embed_metadata`.
+        album_artist = (song.get('album_artist') or '').strip()
+        if album_artist:
+            return _sanitize(album_artist)
         artists = song.get('artists') or []
         return _sanitize(artists[0] if artists else 'unknown')
 
@@ -535,7 +543,13 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
 
     title = song.get('name', '')
     artists = song.get('artists') or []
-    album_artist = _album_artist_for_tags(artists)
+    # Prefer the source's own album-level artist (set for YouTube Music
+    # albums — see `providers._album_track_song`) so every track in an
+    # album gets the same tag even when one track's own artists differ
+    # (a feature, a remix credit, ...). Falls back to a per-track heuristic
+    # when the source doesn't know an album artist (single-track/playlist
+    # downloads).
+    album_artist = song.get('album_artist') or _album_artist_for_tags(artists)
     album = song.get('album_name', '') or ''
     recording_date = _recording_date_for_tags(song)
     genre = (song.get('genre') or '').strip()

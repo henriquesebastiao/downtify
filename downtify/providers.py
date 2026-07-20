@@ -55,6 +55,11 @@ _album_track_cache: dict[
 _album_meta_cache: dict[str, dict[str, Any]] = {}
 # ``artist|album`` (case-folded hints) → album ``browseId`` from a songs filter.
 _album_browse_search_cache: dict[str, str] = {}
+# Artist names per album browse id, captured from an albums-filter search
+# result (``search_albums``) — used as a fallback for the album artist tag
+# when the later ``get_album`` call for the same browse id doesn't itself
+# return an ``artists`` field.
+_album_search_artist_cache: dict[str, list[str]] = {}
 
 
 def _ytm() -> YTMusic:
@@ -165,6 +170,9 @@ def _album_summary(result: dict[str, Any]) -> Optional[dict[str, Any]]:
         for a in (result.get('artists') or [])
         if isinstance(a, dict) and a.get('name')
     ]
+    if artists:
+        with _lock:
+            _album_search_artist_cache[browse_id.strip()] = artists
     thumbs = result.get('thumbnails') or []
     cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
     return {
@@ -508,7 +516,7 @@ def _album_title_hints(
             hints.append(n)
     if song:
         n = str(song.get('album_name') or '').strip()
-        if n not in hints:
+        if n and n not in hints:
             hints.append(n)
     # de-dupe while keeping order
     seen: set[str] = set()
@@ -563,7 +571,7 @@ def _album_browse_id_from_search(
             'YouTube Music album search failed',
         )
         return ''
-    titles = [
+    result_titles = [
         str(r.get('title') or '')[:60]
         for r in results[:10]
         if isinstance(r, dict)
@@ -572,9 +580,13 @@ def _album_browse_id_from_search(
         'YouTube Music album search title_match q={!r} hits={} sample_titles={}',
         query[:120],
         len(results),
-        titles,
+        result_titles,
     )
-    _log_ytm_response(f'albums search titles={titles!r}', results)
+    _log_ytm_response(f'albums search titles={result_titles!r}', results)
+    # Match against the *original* title hints we were looking for — not
+    # the search results' own titles (that used to shadow `titles` here,
+    # making this check a no-op that always accepted the first result
+    # regardless of whether it was actually the right album).
     want = {_norm_compact_title(t) for t in titles if t.strip()}
     for r in results:
         if not isinstance(r, dict):
@@ -700,9 +712,20 @@ def _cached_album_tracks_and_count(
         total_ct = None
     if not total_ct and tracks:
         total_ct = len(tracks)
+    artists = [
+        a.get('name', '')
+        for a in (data.get('artists') or [])
+        if isinstance(a, dict) and a.get('name')
+    ]
     tup = (tracks, total_ct)
     with _lock:
         _album_track_cache[browse_id] = tup
+        if not artists:
+            # get_album's own response doesn't always carry an `artists`
+            # field — fall back to what the earlier albums-filter search
+            # for this same browse id already told us (search_albums /
+            # _album_summary), rather than losing it.
+            artists = list(_album_search_artist_cache.get(browse_id) or [])
         _album_meta_cache[browse_id] = {
             'title': data.get('title') or '',
             'year': str(data.get('year') or '').strip(),
@@ -710,6 +733,7 @@ def _cached_album_tracks_and_count(
             # 'Album' / 'Single' / 'EP' — YouTube Music's own release
             # classification.
             'type': data.get('type') or '',
+            'artists': artists,
         }
     return tup
 
@@ -734,6 +758,48 @@ def _cached_album_release_type(browse_id: str) -> str:
     return _cached_album_meta(browse_id).get('type', '')
 
 
+# Separators YouTube Music uses when it collapses a featuring artist into
+# a single combined-name entry instead of a separate artist dict. Only
+# unambiguous "featuring" markers are included — words/symbols like "&",
+# "and", "," or "x" are deliberately excluded even though YouTube Music
+# uses them too, because they routinely appear inside real band names
+# (Earth, Wind & Fire; Florence and the Machine; Emerson, Lake & Palmer)
+# and could get mis-split if the album's own metadata is ever internally
+# inconsistent about the artist name used as the anchor below.
+_FEATURING_ARTIST_SEPARATORS = (
+    ' feat. ',
+    ' feat ',
+    ' featuring ',
+    ' ft. ',
+    ' ft ',
+)
+
+
+def _split_combined_featuring_artist(
+    artists: list[str], album_artists: list[str]
+) -> list[str]:
+    """Split a "Primary feat. Featured" combined name YouTube Music
+    sometimes returns as a single artist entry (no separate channel id)
+    for featuring tracks — instead of the usual one-dict-per-artist list.
+
+    Only splits when the combined name is prefixed by an artist already
+    known to be on the album, so genuine band names aren't mistakenly
+    split apart.
+    """
+    if len(artists) != 1:
+        return artists
+    name = artists[0]
+    name_lower = name.lower()
+    for album_artist in album_artists:
+        for sep in _FEATURING_ARTIST_SEPARATORS:
+            prefix = f'{album_artist}{sep}'
+            if name_lower.startswith(prefix.lower()):
+                featured = name[len(prefix) :].strip()
+                if featured:
+                    return [album_artist, featured]
+    return artists
+
+
 def _album_track_song(
     track: dict[str, Any],
     video_id: str,
@@ -748,6 +814,9 @@ def _album_track_song(
         for a in (track.get('artists') or [])
         if isinstance(a, dict) and a.get('name')
     ]
+    artists = _split_combined_featuring_artist(
+        artists, meta.get('artists') or []
+    )
     year = meta.get('year', '')
     thumbs = meta.get('thumbnails') or []
     cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
@@ -771,6 +840,12 @@ def _album_track_song(
         'track_number': track_number,
         'album_track_total': total,
         'release_type': meta.get('type', ''),
+        # The album's own artist, so every track in the album gets the
+        # same "album artist" tag even when a track's own `artists` differs
+        # (a feature, a remix credit, ...) — see
+        # `downloader._album_artist_for_tags`, which falls back to a
+        # per-track heuristic when this isn't set.
+        'album_artist': ', '.join(meta.get('artists') or []),
     }
 
 

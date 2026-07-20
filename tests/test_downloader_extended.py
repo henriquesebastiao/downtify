@@ -113,6 +113,27 @@ def test_artist_subdir_sanitizes_colons():
     assert ':' not in result
 
 
+def test_artist_subdir_prefers_album_artist_over_track_artists():
+    # Regression: a featuring track's own `artists` can differ from the
+    # rest of the album (e.g. "Genesis Owusu & Duckwrth" vs "Genesis
+    # Owusu"), which used to land it in a different folder than its
+    # album-mates. `album_artist` (set for YouTube Music albums) takes
+    # priority so the whole album stays together.
+    result = Downloader._artist_subdir({
+        'artists': ['Genesis Owusu & Duckwrth'],
+        'album_artist': 'Genesis Owusu',
+    })
+    assert result == 'Genesis Owusu'
+
+
+def test_artist_subdir_falls_back_to_track_artists_when_album_artist_blank():
+    result = Downloader._artist_subdir({
+        'artists': ['Arctic Monkeys'],
+        'album_artist': '',
+    })
+    assert result == 'Arctic Monkeys'
+
+
 # ── organize_by_artist – existing_filename_for ────────────────────────────────
 
 

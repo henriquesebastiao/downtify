@@ -38,10 +38,12 @@ def clear_ytm_album_cache():
     providers._album_track_cache.clear()
     providers._album_meta_cache.clear()
     providers._album_browse_search_cache.clear()
+    providers._album_search_artist_cache.clear()
     yield
     providers._album_track_cache.clear()
     providers._album_meta_cache.clear()
     providers._album_browse_search_cache.clear()
+    providers._album_search_artist_cache.clear()
 
 
 def test_enrich_from_match_backfills_artists_when_empty():
@@ -716,6 +718,94 @@ def test_find_match_returns_none_when_album_fallback_also_fails(monkeypatch):
     assert match is None
 
 
+# ── _album_title_hints ────────────────────────────────────────────────────────
+
+
+def test_album_title_hints_empty_when_nothing_known():
+    # Regression: an empty `song['album_name']` used to still get appended
+    # as a hint (an empty string isn't already "in" an empty list), which
+    # degraded the later album search down to just the artist name.
+    assert providers._album_title_hints({}, {'album_name': ''}) == []
+    assert providers._album_title_hints({}, None) == []
+
+
+def test_album_title_hints_includes_match_album():
+    match = {'album': {'name': 'Veneer'}}
+    assert providers._album_title_hints(match, None) == ['Veneer']
+
+
+def test_album_title_hints_includes_song_album_name():
+    assert providers._album_title_hints({}, {'album_name': 'Veneer'}) == [
+        'Veneer'
+    ]
+
+
+def test_album_title_hints_dedupes_case_insensitively():
+    match = {'album': {'name': 'Veneer'}}
+    song = {'album_name': 'veneer'}
+    assert providers._album_title_hints(match, song) == ['Veneer']
+
+
+# ── _album_browse_id_from_search ────────────────────────────────────────────────
+
+
+def _album_result(browse_id, title, artist='KNEECAP'):
+    return {
+        'title': title,
+        'browseId': browse_id,
+        'artists': [{'name': artist}],
+    }
+
+
+def test_album_browse_id_from_search_returns_empty_without_hints(
+    monkeypatch,
+):
+    def _boom(*_a, **_kw):
+        raise AssertionError(
+            'should not search when there is no title hint at all'
+        )
+
+    monkeypatch.setattr(providers, '_ytm', _boom)
+    assert not providers._album_browse_id_from_search({}, {'album_name': ''})
+
+
+def test_album_browse_id_from_search_picks_matching_title_not_first_result(
+    monkeypatch,
+):
+    # Regression: a real "Get Your Brits Out" (KNEECAP) download got
+    # tagged with the album "FENIAN" instead. The albums search returned
+    # FENIAN first (most prominent/relevant KNEECAP album) and the
+    # matching code used to always accept whatever result came first,
+    # regardless of whether its title matched what we were looking for.
+    fake = _FakeYTM([
+        _album_result('MPREb_fenian', 'FENIAN'),
+        _album_result('MPREb_brits', 'Get Your Brits Out'),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    browse_id = providers._album_browse_id_from_search(
+        {'artists': [{'name': 'KNEECAP'}]},
+        {'album_name': 'Get Your Brits Out', 'artists': ['KNEECAP']},
+    )
+    assert browse_id == 'MPREb_brits'
+
+
+def test_album_browse_id_from_search_returns_empty_when_no_title_matches(
+    monkeypatch,
+):
+    # None of the search results actually match the hint we're looking
+    # for — must not fall back to "the first result anyway".
+    fake = _FakeYTM([
+        _album_result('MPREb_fenian', 'FENIAN'),
+        _album_result('MPREb_fineart', 'Fine Art'),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    browse_id = providers._album_browse_id_from_search(
+        {'artists': [{'name': 'KNEECAP'}]},
+        {'album_name': 'Get Your Brits Out', 'artists': ['KNEECAP']},
+    )
+    assert not browse_id
+
+
 # ── _find_match_via_album ─────────────────────────────────────────────────────
 
 
@@ -868,6 +958,78 @@ def test_parse_youtube_url_rejects_empty_string():
     assert parse_youtube_url('') is None
 
 
+# ── _split_combined_featuring_artist ────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    'combined_name',
+    [
+        'Genesis Owusu feat. Duckwrth',
+        'Genesis Owusu feat Duckwrth',
+        'Genesis Owusu featuring Duckwrth',
+        'Genesis Owusu ft. Duckwrth',
+        'Genesis Owusu ft Duckwrth',
+    ],
+)
+def test_split_combined_featuring_artist_recognizes_common_separators(
+    combined_name,
+):
+    # Regression: YouTube Music sometimes returns a featuring track's
+    # artists as a single combined-name entry (no separate channel id)
+    # instead of one dict per artist — this used to land the track in the
+    # wrong artist folder and tag it with the raw combined string.
+    result = providers._split_combined_featuring_artist(
+        [combined_name], ['Genesis Owusu']
+    )
+    assert result == ['Genesis Owusu', 'Duckwrth']
+
+
+@pytest.mark.parametrize(
+    'combined_name',
+    [
+        # "&"/"and"/","/"with"/"x" are deliberately NOT treated as
+        # featuring separators — they're too common inside real band
+        # names (Earth, Wind & Fire; Florence and the Machine) to split
+        # safely even with the known-album-artist anchor.
+        'Genesis Owusu & Duckwrth',
+        'Genesis Owusu and Duckwrth',
+        'Genesis Owusu, Duckwrth',
+        'Genesis Owusu with Duckwrth',
+        'Genesis Owusu x Duckwrth',
+    ],
+)
+def test_split_combined_featuring_artist_ignores_ambiguous_separators(
+    combined_name,
+):
+    result = providers._split_combined_featuring_artist(
+        [combined_name], ['Genesis Owusu']
+    )
+    assert result == [combined_name]
+
+
+def test_split_combined_featuring_artist_leaves_unrelated_name_alone():
+    # Only split when prefixed by a *known* album artist — an unrelated
+    # name that happens to contain "feat." must be left alone.
+    result = providers._split_combined_featuring_artist(
+        ['Random Artist feat. Someone'], ['Genesis Owusu']
+    )
+    assert result == ['Random Artist feat. Someone']
+
+
+def test_split_combined_featuring_artist_leaves_multi_artist_list_alone():
+    result = providers._split_combined_featuring_artist(
+        ['Genesis Owusu', 'KYE'], ['Genesis Owusu']
+    )
+    assert result == ['Genesis Owusu', 'KYE']
+
+
+def test_split_combined_featuring_artist_no_album_artists_known():
+    result = providers._split_combined_featuring_artist(
+        ['Genesis Owusu feat. Duckwrth'], []
+    )
+    assert result == ['Genesis Owusu feat. Duckwrth']
+
+
 # ── album_tracks_from_browse_id ────────────────────────────────────────────────
 
 
@@ -916,6 +1078,98 @@ def test_album_tracks_from_browse_id_resolves_full_tracklist(monkeypatch):
     assert songs[0]['release_type'] == 'Album'
     assert songs[1]['name'] == 'Remain'
     assert songs[1]['track_number'] == 2
+
+
+def test_album_tracks_from_browse_id_splits_combined_featuring_artist(
+    monkeypatch,
+):
+    # A featuring track using an unambiguous separator ("feat.") gets its
+    # combined artist name split into the album's own artist plus the
+    # featured one.
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _bid: (
+            [
+                _album_track_row(
+                    'aaaaaaaaaaa', 'STAMPEDE', 1, artist='Genesis Owusu'
+                ),
+                {
+                    'videoId': 'bbbbbbbbbbb',
+                    'title': 'HELLSTAR',
+                    'artists': [{'name': 'Genesis Owusu feat. Duckwrth'}],
+                    'trackNumber': 2,
+                    'duration_seconds': 233,
+                    'isExplicit': False,
+                },
+            ],
+            2,
+        ),
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_meta',
+        lambda _bid: {
+            'title': 'REDSTAR WU & THE WORLDWIDE SCOURGE',
+            'artists': ['Genesis Owusu'],
+        },
+    )
+    songs = album_tracks_from_browse_id('MPREb_nQ0wPNHCFH9')
+    hellstar = next(s for s in songs if s['name'] == 'HELLSTAR')
+    stampede = next(s for s in songs if s['name'] == 'STAMPEDE')
+    assert hellstar['artists'] == ['Genesis Owusu', 'Duckwrth']
+    assert hellstar['artist'] == 'Genesis Owusu, Duckwrth'
+    # The album artist tag must stay consistent across the whole album,
+    # regardless of a track's own (possibly multi-artist) `artists` list.
+    assert hellstar['album_artist'] == 'Genesis Owusu'
+    assert stampede['album_artist'] == 'Genesis Owusu'
+
+
+def test_album_tracks_from_browse_id_album_artist_consistent_even_when_unsplit(
+    monkeypatch,
+):
+    # Regression: an actual "REDSTAR WU & THE WORLDWIDE SCOURGE" track came
+    # back from YouTube Music with a single combined artist entry
+    # "Genesis Owusu & Duckwrth" instead of two separate artist dicts. "&"
+    # is intentionally not auto-split (too ambiguous — see the
+    # ignores_ambiguous_separators tests), so `artists` stays as the raw
+    # combined string. `album_artist` must still stay consistent with the
+    # rest of the album, independent of whether the track's own artists
+    # got split — that's what actually fixes the folder/tag mismatch.
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _bid: (
+            [
+                _album_track_row(
+                    'aaaaaaaaaaa', 'STAMPEDE', 1, artist='Genesis Owusu'
+                ),
+                {
+                    'videoId': 'bbbbbbbbbbb',
+                    'title': 'HELLSTAR',
+                    'artists': [{'name': 'Genesis Owusu & Duckwrth'}],
+                    'trackNumber': 2,
+                    'duration_seconds': 233,
+                    'isExplicit': False,
+                },
+            ],
+            2,
+        ),
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_meta',
+        lambda _bid: {
+            'title': 'REDSTAR WU & THE WORLDWIDE SCOURGE',
+            'artists': ['Genesis Owusu'],
+        },
+    )
+    songs = album_tracks_from_browse_id('MPREb_nQ0wPNHCFH9')
+    hellstar = next(s for s in songs if s['name'] == 'HELLSTAR')
+    stampede = next(s for s in songs if s['name'] == 'STAMPEDE')
+    assert hellstar['artists'] == ['Genesis Owusu & Duckwrth']
+    assert hellstar['album_artist'] == 'Genesis Owusu'
+    assert stampede['album_artist'] == 'Genesis Owusu'
 
 
 def test_album_tracks_from_browse_id_propagates_single_release_type(
@@ -1099,6 +1353,70 @@ def test_search_albums_empty_query_returns_empty_without_network(monkeypatch):
 
     monkeypatch.setattr(providers, '_ytm', _boom)
     assert search_albums('   ') == []
+
+
+def test_search_albums_caches_artist_for_later_album_artist_fallback(
+    monkeypatch,
+):
+    fake = _FakeYTM([
+        _album_search_row('MPREb_x', 'Veneer', 'José González', '2003'),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    search_albums('José González Veneer')
+    assert providers._album_search_artist_cache['MPREb_x'] == ['José González']
+
+
+class _FakeYTMGetAlbum:
+    def __init__(self, response):
+        self._response = response
+
+    def get_album(self, _browse_id):
+        return self._response
+
+
+def test_album_meta_falls_back_to_search_cached_artist_when_get_album_lacks_it(
+    monkeypatch,
+):
+    # Regression: `get_album`'s own response doesn't always carry an
+    # `artists` field, even though the earlier albums-filter search that
+    # found this browse id already told us the artist — reuse it instead
+    # of losing it and falling back to the "Various Artists" tag heuristic.
+    providers._album_search_artist_cache['MPREb_nQ0wPNHCFH9'] = [
+        'Genesis Owusu'
+    ]
+    monkeypatch.setattr(
+        providers,
+        '_ytm',
+        lambda: _FakeYTMGetAlbum({
+            'title': 'REDSTAR WU & THE WORLDWIDE SCOURGE',
+            'tracks': [_album_track_row('aaaaaaaaaaa', 'STAMPEDE', 1)],
+            # No 'artists' key at all in this get_album response.
+        }),
+    )
+    tracks, _total = providers._cached_album_tracks_and_count(
+        'MPREb_nQ0wPNHCFH9'
+    )
+    assert tracks
+    meta = providers._cached_album_meta('MPREb_nQ0wPNHCFH9')
+    assert meta['artists'] == ['Genesis Owusu']
+
+
+def test_album_meta_prefers_get_album_artist_over_search_cache(monkeypatch):
+    # get_album's own artists field, when present, wins over the (possibly
+    # stale) search-time cache rather than being silently overridden.
+    providers._album_search_artist_cache['MPREb_nQ0wPNHCFH9'] = ['Stale Name']
+    monkeypatch.setattr(
+        providers,
+        '_ytm',
+        lambda: _FakeYTMGetAlbum({
+            'title': 'REDSTAR WU & THE WORLDWIDE SCOURGE',
+            'tracks': [_album_track_row('aaaaaaaaaaa', 'STAMPEDE', 1)],
+            'artists': [{'name': 'Genesis Owusu'}],
+        }),
+    )
+    providers._cached_album_tracks_and_count('MPREb_nQ0wPNHCFH9')
+    meta = providers._cached_album_meta('MPREb_nQ0wPNHCFH9')
+    assert meta['artists'] == ['Genesis Owusu']
 
 
 # ── song_from_video_id ────────────────────────────────────────────────────────
