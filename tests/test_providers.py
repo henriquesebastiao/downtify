@@ -1102,6 +1102,127 @@ def test_result_to_song_adds_title_featuring_artist():
     assert song['artists'] == ['Turf Rebels', 'Grian Chatten']
 
 
+# ── _prefer_official_audio_track ────────────────────────────────────────────────
+
+
+def _search_hit(video_id, title, artist, video_type, duration_seconds=200):
+    return {
+        'videoId': video_id,
+        'title': title,
+        'artists': [{'name': artist}],
+        'videoType': video_type,
+        'duration_seconds': duration_seconds,
+    }
+
+
+def test_prefer_official_audio_track_swaps_omv_for_atv(monkeypatch):
+    # A music-video (OMV) upload sometimes uses a different edit (extended
+    # intro, spoken word, ...) than the actual album recording — prefer
+    # the official-audio (ATV) upload of the same song when one exists.
+    fake = _FakeYTM([
+        _search_hit('omv-id', 'Song', 'Artist', 'MUSIC_VIDEO_TYPE_OMV', 240),
+        _search_hit('atv-id', 'Song', 'Artist', 'MUSIC_VIDEO_TYPE_ATV', 200),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, duration = providers._prefer_official_audio_track(
+        'omv-id', 240, 'Song', ['Artist'], 'MUSIC_VIDEO_TYPE_OMV'
+    )
+    assert video_id == 'atv-id'
+    assert duration == 200
+
+
+def test_prefer_official_audio_track_leaves_non_omv_untouched(monkeypatch):
+    def _boom(*_a, **_kw):
+        raise AssertionError('should not search when track is not an OMV')
+
+    monkeypatch.setattr(providers, '_ytm', _boom)
+    video_id, duration = providers._prefer_official_audio_track(
+        'atv-id', 200, 'Song', ['Artist'], 'MUSIC_VIDEO_TYPE_ATV'
+    )
+    assert video_id == 'atv-id'
+    assert duration == 200
+
+
+def test_prefer_official_audio_track_keeps_omv_when_no_atv_found(
+    monkeypatch,
+):
+    fake = _FakeYTM([
+        _search_hit('omv-id', 'Song', 'Artist', 'MUSIC_VIDEO_TYPE_OMV', 240),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, duration = providers._prefer_official_audio_track(
+        'omv-id', 240, 'Song', ['Artist'], 'MUSIC_VIDEO_TYPE_OMV'
+    )
+    assert video_id == 'omv-id'
+    assert duration == 240
+
+
+def test_prefer_official_audio_track_rejects_wrong_title_match(monkeypatch):
+    # An ATV result exists but for an unrelated song — must not swap to it.
+    fake = _FakeYTM([
+        _search_hit(
+            'atv-id', 'Unrelated Song', 'Artist', 'MUSIC_VIDEO_TYPE_ATV'
+        ),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, duration = providers._prefer_official_audio_track(
+        'omv-id', 240, 'Song', ['Artist'], 'MUSIC_VIDEO_TYPE_OMV'
+    )
+    assert video_id == 'omv-id'
+    assert duration == 240
+
+
+def test_prefer_official_audio_track_rejects_wrong_artist_match(monkeypatch):
+    fake = _FakeYTM([
+        _search_hit('atv-id', 'Song', 'Someone Else', 'MUSIC_VIDEO_TYPE_ATV'),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, duration = providers._prefer_official_audio_track(
+        'omv-id', 240, 'Song', ['Artist'], 'MUSIC_VIDEO_TYPE_OMV'
+    )
+    assert video_id == 'omv-id'
+    assert duration == 240
+
+
+class _FakeYTMSearchRaises:
+    @staticmethod
+    def search(*_a, **_kw):
+        raise RuntimeError('network blew up')
+
+
+def test_prefer_official_audio_track_survives_search_exception(monkeypatch):
+    monkeypatch.setattr(providers, '_ytm', _FakeYTMSearchRaises)
+    video_id, duration = providers._prefer_official_audio_track(
+        'omv-id', 240, 'Song', ['Artist'], 'MUSIC_VIDEO_TYPE_OMV'
+    )
+    assert video_id == 'omv-id'
+    assert duration == 240
+
+
+def test_album_track_song_prefers_official_audio(monkeypatch):
+    # End-to-end: an album track whose own videoType is OMV gets swapped
+    # to its ATV counterpart when building the song dict.
+    fake = _FakeYTM([
+        _search_hit('atv-id', 'Song', 'Artist', 'MUSIC_VIDEO_TYPE_ATV', 200),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    track = {
+        'videoId': 'omv-id',
+        'title': 'Song',
+        'artists': [{'name': 'Artist'}],
+        'trackNumber': 1,
+        'duration_seconds': 240,
+        'isExplicit': False,
+        'videoType': 'MUSIC_VIDEO_TYPE_OMV',
+    }
+    song = providers._album_track_song(
+        track, 'omv-id', 1, 1, {'title': 'Album', 'artists': ['Artist']}
+    )
+    assert song['song_id'] == 'atv-id'
+    assert song['url'] == 'https://music.youtube.com/watch?v=atv-id'
+    assert song['duration'] == 200
+
+
 # ── album_tracks_from_browse_id ────────────────────────────────────────────────
 
 

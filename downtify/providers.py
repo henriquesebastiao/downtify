@@ -832,6 +832,69 @@ def _extract_title_featuring_artist(
     return [*artists, featured]
 
 
+# YouTube Music's own classification of a track's upload (see
+# `get_album`/search results' `videoType` field): "ATV" is a studio
+# recording uploaded by the artist with static cover art — the actual
+# album/single release. "OMV" is a genuine music video, which often uses
+# a different edit of the song (extended or spoken intro, alternate
+# mix) than the album version, even though it's nominally "the same
+# track". ytmusicapi doesn't expose both alternatives on one track
+# entry, so swapping requires a follow-up search.
+_MUSIC_VIDEO_TYPE_OFFICIAL_AUDIO = 'MUSIC_VIDEO_TYPE_ATV'
+_MUSIC_VIDEO_TYPE_MUSIC_VIDEO = 'MUSIC_VIDEO_TYPE_OMV'
+
+
+def _prefer_official_audio_track(
+    video_id: str,
+    duration: int,
+    title: str,
+    artists: list[str],
+    video_type: str,
+) -> tuple[str, int]:
+    """Swap a music-video (OMV) track for its official-audio (ATV)
+    counterpart when one can be found, since the video edit sometimes
+    differs from the actual album recording. Returns the original
+    ``(video_id, duration)`` unchanged when the track isn't an OMV, or
+    when no matching ATV alternative turns up.
+    """
+    if video_type != _MUSIC_VIDEO_TYPE_MUSIC_VIDEO:
+        return video_id, duration
+    query = f'{" ".join(artists)} {title}'.strip()
+    if not query:
+        return video_id, duration
+    try:
+        results = _ytm().search(query, filter='songs', limit=10)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Official-audio preference search failed for {!r}', title
+        )
+        return video_id, duration
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        if result.get('videoType') != _MUSIC_VIDEO_TYPE_OFFICIAL_AUDIO:
+            continue
+        if not _titles_match(title, result.get('title')):
+            continue
+        if not _artists_overlap(artists, result):
+            continue
+        candidate = result.get('videoId')
+        if not (isinstance(candidate, str) and candidate.strip()):
+            continue
+        candidate_duration = result.get('duration_seconds') or _parse_duration(
+            result.get('duration')
+        )
+        logger.info(
+            'Preferring official-audio (ATV) videoId={} over music-video '
+            '(OMV) videoId={} for title={!r}',
+            candidate,
+            video_id,
+            title,
+        )
+        return candidate.strip(), (candidate_duration or duration)
+    return video_id, duration
+
+
 def _album_track_song(
     track: dict[str, Any],
     video_id: str,
@@ -850,6 +913,13 @@ def _album_track_song(
         artists, meta.get('artists') or []
     )
     artists = _extract_title_featuring_artist(track.get('title', ''), artists)
+    title = track.get('title', '')
+    duration = track.get('duration_seconds') or _parse_duration(
+        track.get('duration')
+    )
+    video_id, duration = _prefer_official_audio_track(
+        video_id, duration, title, artists, track.get('videoType', '')
+    )
     year = meta.get('year', '')
     thumbs = meta.get('thumbnails') or []
     cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
@@ -858,13 +928,12 @@ def _album_track_song(
     )
     return {
         'song_id': video_id,
-        'name': track.get('title', ''),
+        'name': title,
         'artists': artists,
         'artist': ', '.join(artists),
         'album_name': meta.get('title', ''),
         'cover_url': cover,
-        'duration': track.get('duration_seconds')
-        or _parse_duration(track.get('duration')),
+        'duration': duration,
         'url': f'https://music.youtube.com/watch?v={video_id}',
         'explicit': bool(track.get('isExplicit')),
         'year': year,
