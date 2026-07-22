@@ -22,6 +22,7 @@ from mutagen.id3 import (
     TIT2,
     TPE1,
     TPE2,
+    TPOS,
     TRCK,
     TXXX,
     USLT,
@@ -689,6 +690,13 @@ def _tag_mp3(
             else str(track_number)
         )
         audio.tags.add(TRCK(encoding=3, text=trck))
+        # Downtify never handles multi-disc releases, so this is always "1" -
+        # but writing it is not just cosmetic: media servers/taggers that
+        # read a missing disc tag as 0 (rather than defaulting to 1) will
+        # otherwise fail to match this track against the same recording
+        # tagged by another source, since disc position is compared
+        # alongside track position.
+        audio.tags.add(TPOS(encoding=3, text='1'))
     if year:
         audio.tags.add(TDRC(encoding=3, text=year))
     if genre:
@@ -739,6 +747,8 @@ def _tag_mp4(
     if track_number is not None:
         total = album_track_total if album_track_total is not None else 0
         audio['trkn'] = [(track_number, total)]
+        # see the matching comment in _tag_mp3 for why disc=1 is always written
+        audio['disk'] = [(1, 0)]
     if year:
         audio['\xa9day'] = year
     if genre:
@@ -779,6 +789,8 @@ def _tag_flac(
         audio['tracknumber'] = str(track_number)
         if album_track_total is not None:
             audio['tracktotal'] = str(album_track_total)
+        # see the matching comment in _tag_mp3 for why disc=1 is always written
+        audio['discnumber'] = '1'
     if year:
         audio['date'] = year
     if genre:
@@ -879,6 +891,8 @@ def _apply_vorbis_comments(
         audio['TRACKNUMBER'] = str(track_number)
         if album_track_total is not None:
             audio['TRACKTOTAL'] = str(album_track_total)
+        # see the matching comment in _tag_mp3 for why disc=1 is always written
+        audio['DISCNUMBER'] = '1'
     if year:
         audio['date'] = year
     if release_type:
