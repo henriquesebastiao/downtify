@@ -9,6 +9,9 @@ working without changes:
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias)
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
   ``track_number`` / ``album_track_total`` survive re-fetch by URL)
+* ``POST /api/download/album`` (YouTube Music album/browse URL only;
+  downloads every track from one shared, already-resolved tracklist so
+  metadata stays consistent across the whole release)
 * ``POST /api/playlist/m3u``
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
@@ -514,6 +517,63 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
 
     task.add_done_callback(_log_batch_failure)
     return {'job_ids': job_ids, 'count': len(job_ids)}
+
+
+def _songs_for_album_download(url: str) -> list[dict[str, Any]]:
+    youtube_parsed = providers.parse_youtube_url(url)
+    if youtube_parsed is None or youtube_parsed[0] != 'album':
+        raise HTTPException(
+            status_code=400,
+            detail='Only YouTube Music album/browse URLs are supported here',
+        )
+    _, browse_id = youtube_parsed
+    songs = providers.album_tracks_from_browse_id(browse_id)
+    if not songs:
+        raise HTTPException(
+            status_code=404, detail='Album not found or has no tracks'
+        )
+    return songs
+
+
+@router.post('/api/download/album')
+async def download_album_endpoint(url: str = Query(...)) -> dict[str, str]:
+    """Download every track of a YouTube Music album/browse URL.
+
+    Unlike ``POST /api/download/url`` (which only accepts a single video URL
+    and therefore re-resolves catalog metadata independently, per track),
+    this resolves the album's full tracklist once via
+    :func:`providers.album_tracks_from_browse_id` and downloads each track
+    using that shared, already-consistent metadata (track number, album
+    name/artist, cover, year). This matters for compilations/"best of"
+    albums, whose tracks would otherwise be re-matched one video at a time
+    and can drift to their original, differently-tagged source album.
+
+    Returns a mapping of ``song_id -> downloaded filename`` for every track
+    that downloaded successfully (failed tracks are omitted, not raised).
+    """
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    songs = _songs_for_album_download(url)
+
+    async def _one(song: dict[str, Any]) -> tuple[str, Optional[str]]:
+        song_id = str(song.get('song_id') or '')
+        if not song_id:
+            return '', None
+        job_id = _register_job(song, status='downloading')
+        try:
+            filename = await _run_download(song, job_id)
+        except Exception:
+            logger.exception('Album track download failed for {}', song_id)
+            return song_id, None
+        return song_id, filename
+
+    results = await asyncio.gather(*(_one(song) for song in songs))
+    return {
+        song_id: filename
+        for song_id, filename in results
+        if song_id and filename
+    }
 
 
 @router.get('/api/queue')
