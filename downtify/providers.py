@@ -386,6 +386,34 @@ def _artist_albums_full_list(
     return [r for r in (full or []) if isinstance(r, dict)] or results
 
 
+def artist_info_from_channel_id(channel_id: str) -> dict[str, Any]:
+    """Resolve an artist's own profile info: name, thumbnail, bio.
+
+    Distinct from :func:`artist_albums_from_channel_id` (their releases)
+    and :func:`artist_top_songs_from_channel_id`/
+    :func:`artist_top_albums_from_channel_id` (their popular tracks/
+    albums) - this is just the "About" info for the artist page itself.
+    Returns ``{}`` if the artist can't be resolved at all.
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return {}
+
+    thumbs = artist_data.get('thumbnails') or []
+    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+    return {
+        'artist_id': channel_id,
+        'name': str(artist_data.get('name') or '').strip(),
+        'cover_url': cover,
+        'description': str(artist_data.get('description') or '').strip(),
+        'url': f'https://music.youtube.com/channel/{channel_id}',
+        'source': 'youtube',
+    }
+
+
 def artist_albums_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
     """Resolve every album and single for an artist as lightweight summaries.
 

@@ -13,6 +13,7 @@ from downtify.providers import (
     _titles_match,
     album_tracks_from_browse_id,
     artist_albums_from_channel_id,
+    artist_info_from_channel_id,
     artist_top_albums_from_channel_id,
     artist_top_songs_from_channel_id,
     enrich_from_match,
@@ -2459,3 +2460,39 @@ class _FakeYTMGetArtistRaises:
 def test_artist_albums_returns_empty_on_get_artist_error(monkeypatch):
     monkeypatch.setattr(providers, '_ytm', _FakeYTMGetArtistRaises)
     assert artist_albums_from_channel_id('UCxxx') == []
+
+
+# ── artist_info_from_channel_id ─────────────────────────────────────────────────
+
+
+def test_artist_info_resolves_profile_fields(monkeypatch):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'description': 'A solo artist known for quiet, understated songs.',
+        'thumbnails': [
+            {'url': 'https://img/small.jpg'},
+            {'url': 'https://img/big.jpg'},
+        ],
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    info = artist_info_from_channel_id('UCxxx')
+    assert info['artist_id'] == 'UCxxx'
+    assert info['name'] == 'Mica Ferreira'
+    assert info['description'] == (
+        'A solo artist known for quiet, understated songs.'
+    )
+    assert info['cover_url']
+    assert info['url'] == 'https://music.youtube.com/channel/UCxxx'
+    assert info['source'] == 'youtube'
+
+
+def test_artist_info_missing_description_returns_empty_string(monkeypatch):
+    artist_data = {'name': 'Mica Ferreira'}
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    info = artist_info_from_channel_id('UCxxx')
+    assert not info['description']
+
+
+def test_artist_info_returns_empty_dict_on_ytm_error(monkeypatch):
+    monkeypatch.setattr(providers, '_ytm', _FakeYTMGetArtistRaises)
+    assert artist_info_from_channel_id('UCxxx') == {}

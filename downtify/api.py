@@ -13,6 +13,8 @@ working without changes:
   sorted by YouTube Music's own "Popularity" order; same shape as
   ``/api/albums/search``; for every album/single, use ``/api/url`` on
   the artist's channel URL instead)
+* ``GET  /api/artists/info`` (an artist's own profile: name, thumbnail,
+  bio - not their releases)
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
   resolves an artist channel URL into every one of their albums/singles
   as lightweight summaries, same shape as ``/api/albums/search`` - no
@@ -202,6 +204,11 @@ def artist_top_albums_endpoint(
     channel_id: str = Query(...),
 ) -> list[dict[str, Any]]:
     return providers.artist_top_albums_from_channel_id(channel_id)
+
+
+@router.get('/api/artists/info')
+def artist_info_endpoint(channel_id: str = Query(...)) -> dict[str, Any]:
+    return providers.artist_info_from_channel_id(channel_id)
 
 
 @router.get('/api/song/url')
