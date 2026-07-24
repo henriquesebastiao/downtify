@@ -13,6 +13,8 @@ from downtify.providers import (
     _titles_match,
     album_tracks_from_browse_id,
     artist_albums_from_channel_id,
+    artist_top_albums_from_channel_id,
+    artist_top_songs_from_channel_id,
     enrich_from_match,
     find_match,
     parse_youtube_url,
@@ -2149,6 +2151,303 @@ def test_artist_albums_dedupes_overlapping_browse_ids(monkeypatch):
     monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
     albums = artist_albums_from_channel_id('UCxxx')
     assert len(albums) == 1
+
+
+# ── artist_top_albums_from_channel_id ───────────────────────────────────────────
+
+
+def test_artist_top_albums_uses_popularity_sorted_fetch(monkeypatch):
+    # Regression: "top albums" used to be the shelf's own (unsorted, ~10
+    # entry) preview. It must instead reflect YouTube Music's own
+    # "Popularity" sort on the discography page - same as picking
+    # "Popularity" from the sort dropdown on the artist's page.
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'albums': {
+            'results': [_artist_release_row('MPREb_preview', 'Preview Only')],
+            'params': 'continuation-token',
+        },
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    monkeypatch.setattr(
+        providers,
+        '_fetch_artist_section_by_popularity',
+        lambda _channel_id, _params, _limit: [
+            {'browseId': 'MPREb_popular_1', 'title': 'Most Popular'},
+            {'browseId': 'MPREb_popular_2', 'title': 'Second Most Popular'},
+        ],
+    )
+    albums = artist_top_albums_from_channel_id('UCxxx')
+    assert [a['album_id'] for a in albums] == [
+        'MPREb_popular_1',
+        'MPREb_popular_2',
+    ]
+    assert albums[0]['release_type'] == 'Album'
+    assert albums[0]['artist'] == 'Mica Ferreira'
+
+
+def test_artist_top_albums_falls_back_to_preview_without_params(monkeypatch):
+    # No 'params' continuation at all (too few releases to paginate) -
+    # there's no sort menu to reach either, so use the shelf's own preview.
+    def _boom(*_a, **_kw):
+        raise AssertionError('should not attempt a popularity fetch')
+
+    monkeypatch.setattr(
+        providers, '_fetch_artist_section_by_popularity', _boom
+    )
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'albums': {
+            'results': [_artist_release_row('MPREb_1', 'Driftlight', '2021')]
+        },
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    albums = artist_top_albums_from_channel_id('UCxxx')
+    assert [a['album_id'] for a in albums] == ['MPREb_1']
+
+
+def test_artist_top_albums_falls_back_to_preview_when_popularity_fetch_fails(
+    monkeypatch,
+):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'albums': {
+            'results': [_artist_release_row('MPREb_1', 'Driftlight')],
+            'params': 'continuation-token',
+        },
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+
+    def _boom(_channel_id, _params, _limit):
+        raise RuntimeError('network blew up')
+
+    monkeypatch.setattr(
+        providers, '_fetch_artist_section_by_popularity', _boom
+    )
+    albums = artist_top_albums_from_channel_id('UCxxx')
+    assert [a['album_id'] for a in albums] == ['MPREb_1']
+
+
+def test_artist_top_albums_falls_back_when_popularity_fetch_returns_empty(
+    monkeypatch,
+):
+    # e.g. no sort menu found on the discography page for this artist.
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'albums': {
+            'results': [_artist_release_row('MPREb_1', 'Driftlight')],
+            'params': 'continuation-token',
+        },
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    monkeypatch.setattr(
+        providers,
+        '_fetch_artist_section_by_popularity',
+        lambda _channel_id, _params, _limit: [],
+    )
+    albums = artist_top_albums_from_channel_id('UCxxx')
+    assert [a['album_id'] for a in albums] == ['MPREb_1']
+
+
+def test_artist_top_albums_ignores_singles_section(monkeypatch):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'albums': {'results': [_artist_release_row('MPREb_1', 'Driftlight')]},
+        'singles': {
+            'results': [_artist_release_row('MPREb_2', 'Held Together')]
+        },
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    albums = artist_top_albums_from_channel_id('UCxxx')
+    assert [a['album_id'] for a in albums] == ['MPREb_1']
+
+
+def test_artist_top_albums_returns_empty_when_no_albums_section(monkeypatch):
+    monkeypatch.setattr(
+        providers, '_ytm', lambda: _FakeYTMArtist({'name': 'Mica Ferreira'})
+    )
+    assert artist_top_albums_from_channel_id('UCxxx') == []
+
+
+def test_artist_top_albums_returns_empty_on_ytm_error(monkeypatch):
+    monkeypatch.setattr(providers, '_ytm', _FakeYTMGetArtistRaises)
+    assert artist_top_albums_from_channel_id('UCxxx') == []
+
+
+# ── _fetch_artist_section_by_popularity ─────────────────────────────────────────
+
+
+def _sort_menu_option(title, continuation_token=None):
+    option = {'title': {'runs': [{'text': title}]}}
+    if continuation_token:
+        option['selectedCommand'] = {
+            'commandExecutorCommand': {
+                'commands': [
+                    {
+                        'browseSectionListReloadEndpoint': {
+                            'continuation': {
+                                'reloadContinuationData': {
+                                    'continuation': continuation_token
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    return {'musicMultiSelectMenuItemRenderer': option}
+
+
+def _sort_menu_header(popularity_continuation_token):
+    return {
+        'musicSideAlignedItemRenderer': {
+            'endItems': [
+                {
+                    'musicSortFilterButtonRenderer': {
+                        'menu': {
+                            'musicMultiSelectMenuRenderer': {
+                                'options': [
+                                    _sort_menu_option('Default'),
+                                    _sort_menu_option(
+                                        'Popularity',
+                                        popularity_continuation_token,
+                                    ),
+                                ]
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+
+def _sort_menu_response(discography_grid, popularity_continuation_token):
+    """The initial discography page response, carrying both the default-
+    order grid and the sort-order dropdown menu (with a "Popularity"
+    option) in the shape ytmusicapi's own navigation constants expect.
+
+    ``header`` is a sibling of ``contents`` directly under
+    ``sectionListRenderer`` — not nested inside a content item.
+    """
+    return {
+        'contents': {
+            'singleColumnBrowseResultsRenderer': {
+                'tabs': [
+                    {
+                        'tabRenderer': {
+                            'content': {
+                                'sectionListRenderer': {
+                                    'contents': [
+                                        {'gridRenderer': discography_grid}
+                                    ],
+                                    'header': _sort_menu_header(
+                                        popularity_continuation_token
+                                    ),
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+
+def _popularity_reload_response(items):
+    """Shape of the response to the reloadable-continuation request that
+    picking "Popularity" from the sort menu triggers."""
+    return {
+        'continuationContents': {
+            'sectionListContinuation': {
+                'contents': [{'gridRenderer': {'items': items}}]
+            }
+        }
+    }
+
+
+def test_fetch_artist_section_by_popularity_reorders_and_truncates(
+    monkeypatch,
+):
+    fake = _FakeYTMSendRequest(
+        _sort_menu_response(
+            {'items': [_grid_album_item('MPREb_default', 'Default Order')]},
+            popularity_continuation_token='reload-token',
+        ),
+        continuation_response=_popularity_reload_response([
+            _grid_album_item('MPREb_1', 'Most Popular'),
+            _grid_album_item('MPREb_2', 'Second Most Popular'),
+            _grid_album_item('MPREb_3', 'Third Most Popular'),
+        ]),
+    )
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+
+    albums = providers._fetch_artist_section_by_popularity(
+        'UCxxx', 'params-token', limit=2
+    )
+    # popularity order, not default order, and truncated to the limit
+    assert [a['browseId'] for a in albums] == ['MPREb_1', 'MPREb_2']
+    assert fake.continuation_requested
+
+
+def test_fetch_artist_section_by_popularity_returns_empty_without_sort_menu(
+    monkeypatch,
+):
+    # A discography page with no sort menu at all (e.g. artist has too
+    # few releases for YouTube Music to bother offering one).
+    fake = _FakeYTMSendRequest(_discography_response([]))
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+
+    albums = providers._fetch_artist_section_by_popularity(
+        'UCxxx', 'params-token', limit=5
+    )
+    assert albums == []
+    assert not fake.continuation_requested
+
+
+# ── artist_top_songs_from_channel_id ────────────────────────────────────────────
+
+
+def _artist_song_row(video_id, title, artist='Mica Ferreira', album=None):
+    row = {
+        'videoId': video_id,
+        'title': title,
+        'artists': [{'name': artist}],
+    }
+    if album:
+        row['album'] = {'name': album}
+    return row
+
+
+def test_artist_top_songs_resolves_songs_section(monkeypatch):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'songs': {
+            'results': [
+                _artist_song_row(
+                    'aaaaaaaaaaa', 'Quiet Static', album='Driftlight'
+                ),
+                _artist_song_row('bbbbbbbbbbb', 'Held Together'),
+            ]
+        },
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    songs = artist_top_songs_from_channel_id('UCxxx')
+    assert [s['song_id'] for s in songs] == ['aaaaaaaaaaa', 'bbbbbbbbbbb']
+    assert songs[0]['album_name'] == 'Driftlight'
+    assert songs[0]['artists'] == ['Mica Ferreira']
+
+
+def test_artist_top_songs_returns_empty_when_no_songs_section(monkeypatch):
+    monkeypatch.setattr(
+        providers, '_ytm', lambda: _FakeYTMArtist({'name': 'Mica Ferreira'})
+    )
+    assert artist_top_songs_from_channel_id('UCxxx') == []
+
+
+def test_artist_top_songs_returns_empty_on_ytm_error(monkeypatch):
+    monkeypatch.setattr(providers, '_ytm', _FakeYTMGetArtistRaises)
+    assert artist_top_songs_from_channel_id('UCxxx') == []
 
 
 class _FakeYTMGetArtistRaises:

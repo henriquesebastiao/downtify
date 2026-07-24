@@ -11,6 +11,8 @@ from downtify.api import (
     DEFAULT_SETTINGS,
     _effective_lyrics_providers,
     _load_settings,
+    artist_top_albums_endpoint,
+    artist_top_songs_endpoint,
     search_albums_endpoint,
     search_artists_endpoint,
 )
@@ -110,6 +112,31 @@ def test_search_artists_endpoint_calls_provider(monkeypatch):
     )
     assert search_artists_endpoint(query='Mica Ferreira') == [
         {'name': 'Mica Ferreira'}
+    ]
+
+
+# ── artist_top_songs_endpoint / artist_top_albums_endpoint ────────────────────
+
+
+def test_artist_top_songs_endpoint_calls_provider(monkeypatch):
+    monkeypatch.setattr(
+        api.providers,
+        'artist_top_songs_from_channel_id',
+        lambda channel_id: [{'song_id': channel_id}],
+    )
+    assert artist_top_songs_endpoint(channel_id='UCxxx') == [
+        {'song_id': 'UCxxx'}
+    ]
+
+
+def test_artist_top_albums_endpoint_calls_provider(monkeypatch):
+    monkeypatch.setattr(
+        api.providers,
+        'artist_top_albums_from_channel_id',
+        lambda channel_id: [{'album_id': channel_id}],
+    )
+    assert artist_top_albums_endpoint(channel_id='UCxxx') == [
+        {'album_id': 'UCxxx'}
     ]
 
 

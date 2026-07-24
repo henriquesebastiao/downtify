@@ -9,12 +9,21 @@ from typing import Any, Optional
 
 from loguru import logger
 from ytmusicapi import YTMusic
-from ytmusicapi.continuations import get_continuations
+from ytmusicapi.continuations import (
+    get_continuations,
+    get_reloadable_continuation_params,
+)
 from ytmusicapi.navigation import (
+    CONTENT,
     GRID,
     GRID_ITEMS,
+    HEADER_SIDE,
+    MULTI_SELECT,
+    SECTION,
+    SECTION_LIST_CONTINUATION,
     SECTION_LIST_ITEM,
     SINGLE_COLUMN_TAB,
+    TITLE_TEXT,
     nav,
 )
 from ytmusicapi.parsers.library import parse_albums as _parse_ytm_albums
@@ -427,26 +436,203 @@ def artist_albums_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
         len(deduped),
     )
 
-    albums: list[dict[str, Any]] = []
-    for browse_id, (entry, default_release_type) in deduped.items():
-        thumbs = entry.get('thumbnails') or []
-        cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
-        albums.append({
-            'album_id': browse_id,
-            'name': entry.get('title') or '',
-            'artists': [artist_name] if artist_name else [],
-            'artist': artist_name,
-            'cover_url': cover,
-            'year': str(entry.get('year') or '').strip(),
-            'explicit': bool(entry.get('isExplicit')),
-            'url': f'https://music.youtube.com/browse/{browse_id}',
-            'source': 'youtube',
-            # the singles section carries YTM's own 'Single'/'EP' split;
-            # the albums section doesn't distinguish further, so it always
-            # falls back to the section's own default ('Album').
-            'release_type': entry.get('type') or default_release_type,
-        })
+    return [
+        _artist_album_entry_to_summary(
+            browse_id, entry, artist_name, default_release_type
+        )
+        for browse_id, (entry, default_release_type) in deduped.items()
+    ]
+
+
+def _artist_album_entry_to_summary(
+    browse_id: str,
+    entry: dict[str, Any],
+    artist_name: str,
+    default_release_type: str,
+) -> dict[str, Any]:
+    """Build one album summary dict from a raw ``get_artist`` shelf entry.
+
+    Same shape as :func:`search_albums` results (no tracklists) — shared
+    by :func:`artist_albums_from_channel_id` (full discography) and
+    :func:`artist_top_albums_from_channel_id` (the shelf's own preview,
+    unexpanded).
+    """
+    thumbs = entry.get('thumbnails') or []
+    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+    return {
+        'album_id': browse_id,
+        'name': entry.get('title') or '',
+        'artists': [artist_name] if artist_name else [],
+        'artist': artist_name,
+        'cover_url': cover,
+        'year': str(entry.get('year') or '').strip(),
+        'explicit': bool(entry.get('isExplicit')),
+        'url': f'https://music.youtube.com/browse/{browse_id}',
+        'source': 'youtube',
+        # the singles section carries YTM's own 'Single'/'EP' split;
+        # the albums section doesn't distinguish further, so it always
+        # falls back to the section's own default ('Album').
+        'release_type': entry.get('type') or default_release_type,
+    }
+
+
+_TOP_ALBUMS_LIMIT = 5
+
+
+def _popularity_sort_continuation(
+    response: dict[str, Any],
+) -> Optional[dict[str, Any]]:
+    """Find the "Popularity" entry in a discography page's sort-order
+    menu and return its reloadable-continuation payload, or ``None`` if
+    the page doesn't carry a sort menu at all (e.g. too few releases for
+    YouTube Music to bother offering one).
+    """
+    try:
+        sort_options = nav(
+            response,
+            SINGLE_COLUMN_TAB
+            + SECTION
+            + HEADER_SIDE
+            + [
+                'endItems',
+                0,
+                'musicSortFilterButtonRenderer',
+                'menu',
+                'musicMultiSelectMenuRenderer',
+                'options',
+            ],
+        )
+    except Exception:
+        return None
+    for option in sort_options:
+        title = nav(option, MULTI_SELECT + TITLE_TEXT, True)
+        if isinstance(title, str) and title.strip().lower() == 'popularity':
+            return nav(
+                option,
+                [
+                    *MULTI_SELECT,
+                    'selectedCommand',
+                    'commandExecutorCommand',
+                    'commands',
+                    -1,
+                    'browseSectionListReloadEndpoint',
+                ],
+                True,
+            )
+    return None
+
+
+def _fetch_artist_section_by_popularity(
+    channel_id: str, params: str, limit: int
+) -> list[dict[str, Any]]:
+    """Fetch an artist's 'albums'/'singles' shelf sorted by YouTube
+    Music's own "Popularity" ordering, truncated to ``limit`` entries.
+
+    This is literally what selecting "Popularity" from the sort dropdown
+    on an artist's discography page does — see
+    ``_fetch_full_artist_section``'s docstring for why the discography
+    browseId, not the artist's channelId itself, is needed to even reach
+    that page (and its sort menu) in the first place.
+    """
+    body = {
+        'browseId': _artist_discography_browse_id(channel_id),
+        'params': params,
+    }
+    ytm = _ytm()
+    response = ytm._send_request('browse', body)
+    continuation = _popularity_sort_continuation(response)
+    if not continuation:
+        return []
+    additional_params = get_reloadable_continuation_params({
+        'continuations': [continuation['continuation']]
+    })
+    response = ytm._send_request('browse', body, additional_params)
+    results = nav(response, SECTION_LIST_CONTINUATION + CONTENT)
+    contents = nav(results, GRID_ITEMS, True) or []
+    return _parse_ytm_albums(contents)[:limit]
+
+
+def artist_top_albums_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
+    """Resolve an artist's most popular albums as lightweight summaries.
+
+    Fetches the discography page sorted by YouTube Music's own
+    "Popularity" order and takes the first :data:`_TOP_ALBUMS_LIMIT`.
+    Falls back to the "Albums" shelf's own (unsorted) preview when no
+    'params' continuation is offered at all, or the popularity fetch
+    fails for any reason — an artist with too few releases for YouTube
+    Music to paginate doesn't get a sort menu either, so this covers the
+    same case that would make the continuation lookup a no-op anyway.
+    Singles/EPs are not included, matching the "Albums" shelf itself.
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return []
+
+    artist_name = str(artist_data.get('name') or '').strip()
+    section = artist_data.get('albums')
+    if not isinstance(section, dict):
+        return []
+
+    params = section.get('params')
+    entries: list[dict[str, Any]] = []
+    if params:
+        try:
+            entries = _fetch_artist_section_by_popularity(
+                channel_id, params, _TOP_ALBUMS_LIMIT
+            )
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Fetching popularity-sorted albums failed for {}',
+                channel_id,
+            )
+    if not entries:
+        entries = [
+            r for r in (section.get('results') or []) if isinstance(r, dict)
+        ][:_TOP_ALBUMS_LIMIT]
+
+    albums = []
+    for entry in entries:
+        browse_id = entry.get('browseId')
+        if not isinstance(browse_id, str) or not browse_id.strip():
+            continue
+        albums.append(
+            _artist_album_entry_to_summary(
+                browse_id.strip(), entry, artist_name, 'Album'
+            )
+        )
     return albums
+
+
+def artist_top_songs_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
+    """Resolve an artist's 'Top songs' shelf as lightweight song summaries.
+
+    Same shape as :func:`search_songs` results. This is YouTube Music's
+    own popularity-ranked preview (~10 entries, no further pagination
+    offered) — distinct from the full discography, which is resolved a
+    release at a time via :func:`album_tracks_from_browse_id`.
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return []
+
+    section = artist_data.get('songs')
+    if not isinstance(section, dict):
+        return []
+    results = [
+        r for r in (section.get('results') or []) if isinstance(r, dict)
+    ]
+    songs: list[dict[str, Any]] = []
+    for result in results:
+        song = _result_to_song(result)
+        if song:
+            songs.append(song)
+    return songs
 
 
 _YOUTUBE_URL_HOSTS = ('youtube.com', 'youtu.be', 'music.youtube.com')

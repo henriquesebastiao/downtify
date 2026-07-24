@@ -7,6 +7,12 @@ working without changes:
 * ``GET  /api/version``
 * ``GET  /api/songs/search``
 * ``GET  /api/artists/search``
+* ``GET  /api/artists/top_songs`` (an artist's "Top songs" shelf preview,
+  same shape as ``/api/songs/search`` - no further pagination offered)
+* ``GET  /api/artists/top_albums`` (an artist's 5 most popular albums,
+  sorted by YouTube Music's own "Popularity" order; same shape as
+  ``/api/albums/search``; for every album/single, use ``/api/url`` on
+  the artist's channel URL instead)
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
   resolves an artist channel URL into every one of their albums/singles
   as lightweight summaries, same shape as ``/api/albums/search`` - no
@@ -182,6 +188,20 @@ def search_albums_endpoint(
 @router.get('/api/artists/search')
 def search_artists_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
     return providers.search_artists(query, limit=10)
+
+
+@router.get('/api/artists/top_songs')
+def artist_top_songs_endpoint(
+    channel_id: str = Query(...),
+) -> list[dict[str, Any]]:
+    return providers.artist_top_songs_from_channel_id(channel_id)
+
+
+@router.get('/api/artists/top_albums')
+def artist_top_albums_endpoint(
+    channel_id: str = Query(...),
+) -> list[dict[str, Any]]:
+    return providers.artist_top_albums_from_channel_id(channel_id)
 
 
 @router.get('/api/song/url')
