@@ -12,6 +12,7 @@ from downtify.api import (
     _effective_lyrics_providers,
     _load_settings,
     artist_info_endpoint,
+    artist_similar_endpoint,
     artist_top_albums_endpoint,
     artist_top_songs_endpoint,
     search_albums_endpoint,
@@ -148,6 +149,17 @@ def test_artist_info_endpoint_calls_provider(monkeypatch):
         lambda channel_id: {'artist_id': channel_id},
     )
     assert artist_info_endpoint(channel_id='UCxxx') == {'artist_id': 'UCxxx'}
+
+
+def test_artist_similar_endpoint_calls_provider(monkeypatch):
+    monkeypatch.setattr(
+        api.providers,
+        'artist_similar_from_channel_id',
+        lambda channel_id: [{'artist_id': channel_id}],
+    )
+    assert artist_similar_endpoint(channel_id='UCxxx') == [
+        {'artist_id': 'UCxxx'}
+    ]
 
 
 # ── _load_settings ────────────────────────────────────────────────────────────

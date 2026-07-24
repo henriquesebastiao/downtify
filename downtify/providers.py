@@ -414,6 +414,42 @@ def artist_info_from_channel_id(channel_id: str) -> dict[str, Any]:
     }
 
 
+def artist_similar_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
+    """Resolve an artist's "Fans might also like" shelf as lightweight
+    artist summaries. Same shape as :func:`search_artists` results.
+
+    YouTube Music only ever offers a short, fixed list here (~10 - no
+    'params' continuation is offered, unlike the albums/singles shelves).
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return []
+
+    section = artist_data.get('related')
+    if not isinstance(section, dict):
+        return []
+    artists = []
+    for entry in section.get('results') or []:
+        if not isinstance(entry, dict):
+            continue
+        related_id = entry.get('browseId')
+        if not isinstance(related_id, str) or not related_id.strip():
+            continue
+        thumbs = entry.get('thumbnails') or []
+        cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+        artists.append({
+            'artist_id': related_id.strip(),
+            'name': entry.get('title') or '',
+            'cover_url': cover,
+            'url': f'https://music.youtube.com/channel/{related_id.strip()}',
+            'source': 'youtube',
+        })
+    return artists
+
+
 def artist_albums_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
     """Resolve every album and single for an artist as lightweight summaries.
 

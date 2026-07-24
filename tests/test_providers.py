@@ -14,6 +14,7 @@ from downtify.providers import (
     album_tracks_from_browse_id,
     artist_albums_from_channel_id,
     artist_info_from_channel_id,
+    artist_similar_from_channel_id,
     artist_top_albums_from_channel_id,
     artist_top_songs_from_channel_id,
     enrich_from_match,
@@ -2496,3 +2497,59 @@ def test_artist_info_missing_description_returns_empty_string(monkeypatch):
 def test_artist_info_returns_empty_dict_on_ytm_error(monkeypatch):
     monkeypatch.setattr(providers, '_ytm', _FakeYTMGetArtistRaises)
     assert artist_info_from_channel_id('UCxxx') == {}
+
+
+# ── artist_similar_from_channel_id ──────────────────────────────────────────────
+
+
+def _related_artist_row(browse_id, title):
+    return {
+        'title': title,
+        'browseId': browse_id,
+        'thumbnails': [{'url': 'https://img/cover.jpg'}],
+    }
+
+
+def test_artist_similar_resolves_related_section(monkeypatch):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'related': {
+            'results': [
+                _related_artist_row('UCyyy', 'The Night Owls'),
+                _related_artist_row('UCzzz', 'Marco Ferretti'),
+            ]
+        },
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    artists = artist_similar_from_channel_id('UCxxx')
+    assert [a['artist_id'] for a in artists] == ['UCyyy', 'UCzzz']
+    assert artists[0]['name'] == 'The Night Owls'
+    assert artists[0]['cover_url']
+    assert artists[0]['url'] == 'https://music.youtube.com/channel/UCyyy'
+
+
+def test_artist_similar_returns_empty_when_no_related_section(monkeypatch):
+    monkeypatch.setattr(
+        providers, '_ytm', lambda: _FakeYTMArtist({'name': 'Mica Ferreira'})
+    )
+    assert artist_similar_from_channel_id('UCxxx') == []
+
+
+def test_artist_similar_skips_entries_without_browse_id(monkeypatch):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'related': {
+            'results': [
+                {'title': 'No Channel'},
+                _related_artist_row('UCyyy', 'The Night Owls'),
+            ]
+        },
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    artists = artist_similar_from_channel_id('UCxxx')
+    assert [a['artist_id'] for a in artists] == ['UCyyy']
+
+
+def test_artist_similar_returns_empty_on_ytm_error(monkeypatch):
+    monkeypatch.setattr(providers, '_ytm', _FakeYTMGetArtistRaises)
+    assert artist_similar_from_channel_id('UCxxx') == []

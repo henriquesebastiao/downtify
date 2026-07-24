@@ -15,6 +15,8 @@ working without changes:
   the artist's channel URL instead)
 * ``GET  /api/artists/info`` (an artist's own profile: name, thumbnail,
   bio - not their releases)
+* ``GET  /api/artists/similar`` (an artist's "Fans might also like"
+  shelf, same shape as ``/api/artists/search``)
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
   resolves an artist channel URL into every one of their albums/singles
   as lightweight summaries, same shape as ``/api/albums/search`` - no
@@ -209,6 +211,13 @@ def artist_top_albums_endpoint(
 @router.get('/api/artists/info')
 def artist_info_endpoint(channel_id: str = Query(...)) -> dict[str, Any]:
     return providers.artist_info_from_channel_id(channel_id)
+
+
+@router.get('/api/artists/similar')
+def artist_similar_endpoint(
+    channel_id: str = Query(...),
+) -> list[dict[str, Any]]:
+    return providers.artist_similar_from_channel_id(channel_id)
 
 
 @router.get('/api/song/url')
