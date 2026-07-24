@@ -6,7 +6,11 @@ working without changes:
 
 * ``GET  /api/version``
 * ``GET  /api/songs/search``
-* ``GET  /api/song/url`` and ``GET /api/url`` (alias)
+* ``GET  /api/artists/search``
+* ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
+  resolves an artist channel URL into every one of their albums/singles
+  as lightweight summaries, same shape as ``/api/albums/search`` - no
+  tracklists; resolve a chosen release's tracks separately)
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
   ``track_number`` / ``album_track_total`` survive re-fetch by URL)
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
@@ -166,10 +170,18 @@ def search_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
 
 
 @router.get('/api/albums/search')
-def search_albums_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
+def search_albums_endpoint(
+    query: str = Query(''),
+    limit: int = Query(25, ge=1, le=50),
+) -> list[dict[str, Any]]:
     if not state.settings.get('search_albums', True):
         return []
-    return providers.search_albums(query, limit=10)
+    return providers.search_albums(query, limit=limit)
+
+
+@router.get('/api/artists/search')
+def search_artists_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
+    return providers.search_artists(query, limit=10)
 
 
 @router.get('/api/song/url')
@@ -208,6 +220,8 @@ def _resolve_url(url: str):
                 return providers.song_from_video_id(yid)
             if kind == 'album':
                 return providers.album_tracks_from_browse_id(yid)
+            if kind == 'artist':
+                return providers.artist_albums_from_channel_id(yid)
         except Exception as exc:
             logger.exception('Failed to resolve YouTube URL {}', url)
             raise HTTPException(status_code=502, detail=str(exc)) from exc

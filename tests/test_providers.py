@@ -12,10 +12,12 @@ from downtify.providers import (
     _pick_best,
     _titles_match,
     album_tracks_from_browse_id,
+    artist_albums_from_channel_id,
     enrich_from_match,
     find_match,
     parse_youtube_url,
     search_albums,
+    search_artists,
     song_from_video_id,
     youtube_music_track_index_for_match,
 )
@@ -944,6 +946,12 @@ def test_parse_youtube_url_album_playlist_form():
     ) == ('album', 'OLAK5uy_l3gkZ6IpW')
 
 
+def test_parse_youtube_url_artist_channel():
+    assert parse_youtube_url(
+        'https://music.youtube.com/channel/UCAjidy3vxRkgGVNIFqZMl_Q'
+    ) == ('artist', 'UCAjidy3vxRkgGVNIFqZMl_Q')
+
+
 def test_parse_youtube_url_rejects_non_youtube_url():
     assert parse_youtube_url('https://open.spotify.com/track/abc') is None
 
@@ -1836,3 +1844,179 @@ def test_enrich_from_match_preserves_existing_release_type(monkeypatch):
         match,
     )
     assert out['release_type'] == 'Single'
+
+
+# ── search_artists / _artist_summary ──────────────────────────────────────────
+
+
+def _artist_search_row(channel_id, name):
+    return {
+        'category': 'Artists',
+        'resultType': 'artist',
+        'artist': name,
+        'browseId': channel_id,
+        'thumbnails': [{'url': 'https://img/artist.jpg'}],
+    }
+
+
+def test_search_artists_returns_artist_summaries(monkeypatch):
+    fake = _FakeYTM([_artist_search_row('UCxxx', 'Mica Ferreira')])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    artists = search_artists('Mica Ferreira')
+    assert len(artists) == 1
+    assert artists[0]['artist_id'] == 'UCxxx'
+    assert artists[0]['name'] == 'Mica Ferreira'
+    assert artists[0]['source'] == 'youtube'
+    assert artists[0]['url'] == 'https://music.youtube.com/channel/UCxxx'
+
+
+def test_search_artists_skips_rows_without_browse_id():
+    assert providers._artist_summary({'artist': 'No id'}) is None
+
+
+def test_search_artists_empty_query_returns_empty_without_network(monkeypatch):
+    def _boom(*_a, **_kw):
+        raise AssertionError('should not search for an empty query')
+
+    monkeypatch.setattr(providers, '_ytm', _boom)
+    assert search_artists('   ') == []
+
+
+class _FakeYTMArtistSearchRaises:
+    @staticmethod
+    def search(*_a, **_kw):
+        raise RuntimeError('network down')
+
+
+def test_search_artists_returns_empty_on_ytm_error(monkeypatch):
+    monkeypatch.setattr(providers, '_ytm', _FakeYTMArtistSearchRaises)
+    assert search_artists('anything') == []
+
+
+# ── artist_albums_from_channel_id ──────────────────────────────────────────────
+
+
+class _FakeYTMArtist:
+    """Fake YTMusic client for get_artist/get_artist_albums-based tests."""
+
+    def __init__(self, artist_data, albums_by_params=None):
+        self._artist_data = artist_data
+        self._albums_by_params = albums_by_params or {}
+        self.get_album_calls = 0
+
+    def get_artist(self, channel_id):
+        return self._artist_data
+
+    def get_artist_albums(self, channel_id, params):
+        return self._albums_by_params[params]
+
+    def get_album(self, browse_id):
+        # listing an artist's albums must never resolve a tracklist
+        self.get_album_calls += 1
+        raise AssertionError('get_artist_albums must not resolve tracklists')
+
+
+def _artist_release_row(browse_id, title, year=None, release_type=None):
+    row = {'browseId': browse_id, 'title': title, 'thumbnails': []}
+    if year is not None:
+        row['year'] = year
+    if release_type is not None:
+        row['type'] = release_type
+    return row
+
+
+def test_artist_albums_resolves_albums_and_singles(monkeypatch):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'albums': {
+            'results': [
+                _artist_release_row('MPREb_album', 'Driftlight', '2021')
+            ],
+        },
+        'singles': {
+            'results': [
+                _artist_release_row(
+                    'MPREb_single', 'Held Together', '2022', 'Single'
+                )
+            ],
+        },
+    }
+    fake = _FakeYTMArtist(artist_data)
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+
+    albums = artist_albums_from_channel_id('UCxxx')
+    by_id = {a['album_id']: a for a in albums}
+    assert set(by_id) == {'MPREb_album', 'MPREb_single'}
+    assert by_id['MPREb_album']['release_type'] == 'Album'
+    assert by_id['MPREb_album']['year'] == '2021'
+    assert by_id['MPREb_album']['artist'] == 'Mica Ferreira'
+    assert by_id['MPREb_single']['release_type'] == 'Single'
+    assert fake.get_album_calls == 0
+
+
+def test_artist_albums_uses_ytm_own_release_type_for_singles(monkeypatch):
+    # The singles section carries YTM's own Single/EP split directly - it
+    # must be preferred over the generic 'Single' section default.
+    artist_data = {
+        'name': 'Kneecap',
+        'singles': {
+            'results': [
+                _artist_release_row(
+                    'MPREb_ep', 'Irish Goodbye', release_type='EP'
+                )
+            ]
+        },
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    albums = artist_albums_from_channel_id('UCxxx')
+    assert albums[0]['release_type'] == 'EP'
+
+
+def test_artist_albums_uses_get_artist_albums_when_paginated(monkeypatch):
+    # The preview list under 'results' is short; a 'params' continuation
+    # token means the full list must be fetched via get_artist_albums.
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'albums': {
+            'results': [_artist_release_row('MPREb_preview', 'Preview Only')],
+            'params': 'continuation-token',
+        },
+    }
+    fake = _FakeYTMArtist(
+        artist_data,
+        albums_by_params={
+            'continuation-token': [
+                _artist_release_row('MPREb_full_1', 'Full List 1'),
+                _artist_release_row('MPREb_full_2', 'Full List 2'),
+            ]
+        },
+    )
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+
+    albums = artist_albums_from_channel_id('UCxxx')
+    # the paginated (full) list replaces the short preview entirely
+    assert {a['album_id'] for a in albums} == {'MPREb_full_1', 'MPREb_full_2'}
+
+
+def test_artist_albums_dedupes_overlapping_browse_ids(monkeypatch):
+    # The same release occasionally shows up under both sections.
+    row = _artist_release_row('MPREb_dup', 'Same Release')
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'albums': {'results': [row]},
+        'singles': {'results': [row]},
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    albums = artist_albums_from_channel_id('UCxxx')
+    assert len(albums) == 1
+
+
+class _FakeYTMGetArtistRaises:
+    @staticmethod
+    def get_artist(_channel_id):
+        raise RuntimeError('network down')
+
+
+def test_artist_albums_returns_empty_on_get_artist_error(monkeypatch):
+    monkeypatch.setattr(providers, '_ytm', _FakeYTMGetArtistRaises)
+    assert artist_albums_from_channel_id('UCxxx') == []

@@ -3,6 +3,7 @@ _effective_lyrics_providers."""
 
 from __future__ import annotations
 
+import inspect
 import json
 
 from downtify import api
@@ -11,6 +12,7 @@ from downtify.api import (
     _effective_lyrics_providers,
     _load_settings,
     search_albums_endpoint,
+    search_artists_endpoint,
 )
 
 
@@ -63,6 +65,30 @@ def test_search_albums_endpoint_calls_provider_when_enabled(monkeypatch):
     ]
 
 
+def test_search_albums_endpoint_default_limit_is_25():
+    # Regression: this used to be hardcoded to 10, capping how many
+    # albums a caller (e.g. the Music Assistant provider) could ever see
+    # regardless of what it asked for. Calling the route function
+    # directly (as the other tests here do) doesn't resolve FastAPI's
+    # `Query(...)` default the way a real request would, so this checks
+    # the declared default via the signature instead.
+    limit_param = inspect.signature(search_albums_endpoint).parameters['limit']
+    assert limit_param.default.default == 25
+
+
+def test_search_albums_endpoint_honors_custom_limit(monkeypatch):
+    monkeypatch.setitem(api.state.settings, 'search_albums', True)
+    captured = {}
+
+    def _fake(query, limit):
+        captured['limit'] = limit
+        return []
+
+    monkeypatch.setattr(api.providers, 'search_albums', _fake)
+    search_albums_endpoint(query='Driftlight', limit=50)
+    assert captured['limit'] == 50
+
+
 def test_search_albums_endpoint_short_circuits_when_disabled(monkeypatch):
     monkeypatch.setitem(api.state.settings, 'search_albums', False)
 
@@ -71,6 +97,20 @@ def test_search_albums_endpoint_short_circuits_when_disabled(monkeypatch):
 
     monkeypatch.setattr(api.providers, 'search_albums', _boom)
     assert search_albums_endpoint(query='Driftlight') == []
+
+
+# ── search_artists_endpoint ────────────────────────────────────────────────────
+
+
+def test_search_artists_endpoint_calls_provider(monkeypatch):
+    monkeypatch.setattr(
+        api.providers,
+        'search_artists',
+        lambda query, limit: [{'name': 'Mica Ferreira'}],
+    )
+    assert search_artists_endpoint(query='Mica Ferreira') == [
+        {'name': 'Mica Ferreira'}
+    ]
 
 
 # ── _load_settings ────────────────────────────────────────────────────────────

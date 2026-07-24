@@ -232,22 +232,176 @@ def search_albums(query: str, limit: int = 10) -> list[dict[str, Any]]:
     return albums
 
 
+def _artist_summary(result: dict[str, Any]) -> Optional[dict[str, Any]]:
+    channel_id = result.get('browseId')
+    if not isinstance(channel_id, str) or not channel_id.strip():
+        return None
+    thumbs = result.get('thumbnails') or []
+    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+    return {
+        'artist_id': channel_id.strip(),
+        'name': result.get('artist') or '',
+        'cover_url': cover,
+        'url': f'https://music.youtube.com/channel/{channel_id.strip()}',
+        'source': 'youtube',
+    }
+
+
+def search_artists(query: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Search YouTube Music for artists matching ``query``.
+
+    Returns lightweight artist summaries; resolve a chosen artist's full
+    discography (every album and single, each with its full tracklist)
+    via :func:`artist_discography_from_channel_id`.
+    """
+
+    if not query.strip():
+        return []
+    try:
+        results = _ytm().search(query, filter='artists', limit=limit)
+    except Exception:
+        logger.exception('YouTube Music artist search failed')
+        return []
+    titles = [
+        str(r.get('artist') or '')[:60]
+        for r in results[:8]
+        if isinstance(r, dict)
+    ]
+    _log_ytm_summary_search(
+        phase='browse_artists',
+        query=query,
+        filt='artists',
+        results_len=len(results),
+        first_titles=titles,
+    )
+    _log_ytm_response(f'search artists q={query[:80]!r}', results)
+    artists: list[dict[str, Any]] = []
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        artist = _artist_summary(result)
+        if artist:
+            artists.append(artist)
+    return artists
+
+
+def _artist_albums_full_list(
+    channel_id: str, section: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Return every entry of an artist page's 'albums'/'singles' section.
+
+    The section as returned by ``get_artist`` only ever holds a short
+    preview (~10 entries); the ``params`` continuation token it carries
+    must be passed to ``get_artist_albums`` to fetch the complete list.
+    """
+
+    results = [
+        r for r in (section.get('results') or []) if isinstance(r, dict)
+    ]
+    params = section.get('params')
+    if not params:
+        return results
+    try:
+        full = _ytm().get_artist_albums(channel_id, params)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'YouTube Music get_artist_albums failed for {}', channel_id
+        )
+        return results
+    return [r for r in (full or []) if isinstance(r, dict)] or results
+
+
+def artist_albums_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
+    """Resolve every album and single for an artist as lightweight summaries.
+
+    Same shape as :func:`search_albums` results (no tracklists). This is
+    deliberate: listing an artist's releases never needs their tracks - a
+    caller that wants a specific release's tracks resolves it separately,
+    once the user actually opens it, via :func:`album_tracks_from_browse_id`.
+    Resolving every tracklist just to list the discography would mean one
+    extra YouTube Music round-trip *per release*, turning a single
+    ``get_artist`` call into dozens for a prolific artist. Duplicates (a
+    release appearing in both the albums and singles sections) are
+    de-duplicated.
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return []
+
+    artist_name = str(artist_data.get('name') or '').strip()
+    entries: list[tuple[dict[str, Any], str]] = []
+    for section_key, release_type in (
+        ('albums', 'Album'),
+        ('singles', 'Single'),
+    ):
+        section = artist_data.get(section_key)
+        if not isinstance(section, dict):
+            continue
+        for entry in _artist_albums_full_list(channel_id, section):
+            entries.append((entry, release_type))
+
+    # dedupe by browseId (a release occasionally shows up in both sections)
+    deduped: dict[str, tuple[dict[str, Any], str]] = {}
+    for entry, default_release_type in entries:
+        browse_id = entry.get('browseId')
+        if not isinstance(browse_id, str) or not browse_id.strip():
+            continue
+        deduped.setdefault(browse_id.strip(), (entry, default_release_type))
+
+    logger.info(
+        'YouTube Music get_artist {!r} channelId={} albums={} singles={} '
+        'unique={}',
+        artist_name,
+        channel_id,
+        sum(1 for _, rt in entries if rt == 'Album'),
+        sum(1 for _, rt in entries if rt == 'Single'),
+        len(deduped),
+    )
+
+    albums: list[dict[str, Any]] = []
+    for browse_id, (entry, default_release_type) in deduped.items():
+        thumbs = entry.get('thumbnails') or []
+        cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+        albums.append({
+            'album_id': browse_id,
+            'name': entry.get('title') or '',
+            'artists': [artist_name] if artist_name else [],
+            'artist': artist_name,
+            'cover_url': cover,
+            'year': str(entry.get('year') or '').strip(),
+            'explicit': bool(entry.get('isExplicit')),
+            'url': f'https://music.youtube.com/browse/{browse_id}',
+            'source': 'youtube',
+            # the singles section carries YTM's own 'Single'/'EP' split;
+            # the albums section doesn't distinguish further, so it always
+            # falls back to the section's own default ('Album').
+            'release_type': entry.get('type') or default_release_type,
+        })
+    return albums
+
+
 _YOUTUBE_URL_HOSTS = ('youtube.com', 'youtu.be', 'music.youtube.com')
 _YOUTUBE_VIDEO_ID_RE = re.compile(
     r'(?:[?&]v=|youtu\.be/|/shorts/)([A-Za-z0-9_-]{6,})'
 )
 _YOUTUBE_ALBUM_BROWSE_RE = re.compile(r'/browse/(MPREb_[A-Za-z0-9_-]+)')
 _YOUTUBE_ALBUM_PLAYLIST_RE = re.compile(r'[?&]list=(OLAK5uy_[A-Za-z0-9_-]+)')
+_YOUTUBE_ARTIST_CHANNEL_RE = re.compile(r'/channel/(UC[A-Za-z0-9_-]+)')
 
 
 def parse_youtube_url(url: str) -> Optional[tuple[str, str]]:
     """Parse a YouTube/YouTube Music URL into ``(kind, id)``.
 
-    ``kind`` is ``'track'`` (a watchable videoId) or ``'album'`` (a
+    ``kind`` is ``'track'`` (a watchable videoId), ``'album'`` (a
     ``MPREb_`` browse id, or an ``OLAK5uy_`` audio-playlist id — pass
     either straight to :func:`album_tracks_from_browse_id`, which
-    resolves the playlist form to a browse id itself). Returns ``None``
-    for URLs that aren't recognized YouTube links at all.
+    resolves the playlist form to a browse id itself), or ``'artist'``
+    (a ``UC``-prefixed channel id — pass to
+    :func:`artist_discography_from_channel_id`). Returns ``None`` for
+    URLs that aren't recognized YouTube links at all.
     """
 
     if not url or not any(host in url for host in _YOUTUBE_URL_HOSTS):
@@ -258,6 +412,9 @@ def parse_youtube_url(url: str) -> Optional[tuple[str, str]]:
     match = _YOUTUBE_ALBUM_PLAYLIST_RE.search(url)
     if match:
         return 'album', match.group(1)
+    match = _YOUTUBE_ARTIST_CHANNEL_RE.search(url)
+    if match:
+        return 'artist', match.group(1)
     match = _YOUTUBE_VIDEO_ID_RE.search(url)
     if match:
         return 'track', match.group(1)
