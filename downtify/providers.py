@@ -9,6 +9,15 @@ from typing import Any, Optional
 
 from loguru import logger
 from ytmusicapi import YTMusic
+from ytmusicapi.continuations import get_continuations
+from ytmusicapi.navigation import (
+    GRID,
+    GRID_ITEMS,
+    SECTION_LIST_ITEM,
+    SINGLE_COLUMN_TAB,
+    nav,
+)
+from ytmusicapi.parsers.library import parse_albums as _parse_ytm_albums
 
 from .telemetry import json_log_blob, redact_sensitive_mapping
 
@@ -285,6 +294,62 @@ def search_artists(query: str, limit: int = 10) -> list[dict[str, Any]]:
     return artists
 
 
+def _artist_discography_browse_id(channel_id: str) -> str:
+    """BrowseId for an artist's full "See all" albums/singles grid page.
+
+    Distinct from the artist's own channelId. YouTube Music's "More"
+    button on an artist's Albums/Singles shelf links to this same id
+    (``MPAD`` + channelId) — visible directly in the button's own
+    navigation endpoint, and in the URL if you click it yourself:
+    ``https://music.youtube.com/browse/MPAD<channelId>``.
+    """
+    return f'MPAD{channel_id}'
+
+
+def _fetch_full_artist_section(
+    channel_id: str, params: str
+) -> list[dict[str, Any]]:
+    """Fetch every entry of an artist's 'albums' or 'singles' shelf.
+
+    ytmusicapi's own ``get_artist_albums(channelId, params)`` sends the
+    artist's own channelId as the browseId, which returns the *artist's
+    home page* again (a channel can have several other carousels besides
+    Albums/Singles, e.g. "Top songs") instead of the dedicated
+    discography grid — its navigation code then assumes the first
+    section of that response is the grid it wants, finds an unrelated
+    shelf instead, and raises a KeyError. Upstream closed this as "not
+    planned": https://github.com/sigma67/ytmusicapi/issues/595. This
+    requests the correct discography browseId directly instead (see
+    ``_artist_discography_browse_id``), reusing ytmusicapi's own
+    lower-level request/parse/continuation helpers.
+    """
+    body = {
+        'browseId': _artist_discography_browse_id(channel_id),
+        'params': params,
+    }
+    ytm = _ytm()
+    response = ytm._send_request('browse', body)
+    results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM)
+    contents = nav(results, GRID_ITEMS, True) or []
+    albums = _parse_ytm_albums(contents)
+    grid = nav(results, GRID, True) or {}
+    if 'continuations' in grid:
+
+        def _request_more(additional_params: Any) -> Any:
+            return ytm._send_request('browse', body, additional_params)
+
+        albums.extend(
+            get_continuations(
+                grid,
+                'gridContinuation',
+                None,
+                _request_more,
+                _parse_ytm_albums,
+            )
+        )
+    return albums
+
+
 def _artist_albums_full_list(
     channel_id: str, section: dict[str, Any]
 ) -> list[dict[str, Any]]:
@@ -292,7 +357,8 @@ def _artist_albums_full_list(
 
     The section as returned by ``get_artist`` only ever holds a short
     preview (~10 entries); the ``params`` continuation token it carries
-    must be passed to ``get_artist_albums`` to fetch the complete list.
+    is used to fetch the complete list from the artist's discography
+    browse page (see ``_fetch_full_artist_section``).
     """
 
     results = [
@@ -302,10 +368,10 @@ def _artist_albums_full_list(
     if not params:
         return results
     try:
-        full = _ytm().get_artist_albums(channel_id, params)
+        full = _fetch_full_artist_section(channel_id, params)
     except Exception:
         logger.opt(exception=True).debug(
-            'YouTube Music get_artist_albums failed for {}', channel_id
+            'Fetching full artist discography failed for {}', channel_id
         )
         return results
     return [r for r in (full or []) if isinstance(r, dict)] or results

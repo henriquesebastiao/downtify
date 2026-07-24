@@ -1893,22 +1893,141 @@ def test_search_artists_returns_empty_on_ytm_error(monkeypatch):
     assert search_artists('anything') == []
 
 
+# ── _fetch_full_artist_section ──────────────────────────────────────────────────
+
+
+def test_artist_discography_browse_id_prefixes_mpad():
+    # This is literally what YouTube Music's own "More" button on an
+    # artist's Albums/Singles shelf links to.
+    assert (
+        providers._artist_discography_browse_id('UCGexNm_Kw4rdQjLxmpb2EKw')
+        == 'MPADUCGexNm_Kw4rdQjLxmpb2EKw'
+    )
+
+
+def _grid_album_item(browse_id, title):
+    return {
+        'musicTwoRowItemRenderer': {
+            'title': {
+                'runs': [
+                    {
+                        'text': title,
+                        'navigationEndpoint': {
+                            'browseEndpoint': {'browseId': browse_id}
+                        },
+                    }
+                ]
+            },
+            'subtitle': {'runs': [{'text': 'Album'}]},
+            'thumbnailRenderer': {
+                'musicThumbnailRenderer': {'thumbnail': {'thumbnails': []}}
+            },
+        }
+    }
+
+
+def _discography_response(items, continuation_token=None):
+    """The shape of the *first* page's response (nested under the tab/
+    section-list structure a fresh 'browse' call returns)."""
+    grid = {'items': items}
+    if continuation_token:
+        grid['continuations'] = [
+            {'nextContinuationData': {'continuation': continuation_token}}
+        ]
+    return {
+        'contents': {
+            'singleColumnBrowseResultsRenderer': {
+                'tabs': [
+                    {
+                        'tabRenderer': {
+                            'content': {
+                                'sectionListRenderer': {
+                                    'contents': [{'gridRenderer': grid}]
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+
+def _continuation_page_response(items):
+    """The shape of a *subsequent* page's response — ytmusicapi's
+    `get_continuations` unwraps this differently from the first page (via
+    `continuationContents`), not the tab/section-list structure above."""
+    return {'continuationContents': {'gridContinuation': {'items': items}}}
+
+
+class _FakeYTMSendRequest:
+    """Fake YTMusic client exercising `_fetch_full_artist_section`'s real
+    navigation/parsing path against realistic (if minimal) raw responses,
+    rather than mocking around it — this is the exact path that broke in
+    ytmusicapi's own `get_artist_albums()` (issue #595), so it's worth
+    testing against real response shapes, not just a mocked return value.
+    """
+
+    def __init__(self, initial_response, continuation_response=None):
+        self._initial_response = initial_response
+        self._continuation_response = continuation_response
+        self.requested_browse_ids = []
+        self.continuation_requested = False
+
+    def _send_request(self, _endpoint, body, additional_params=None):
+        self.requested_browse_ids.append(body['browseId'])
+        if additional_params is not None:
+            self.continuation_requested = True
+            return self._continuation_response
+        return self._initial_response
+
+
+def test_fetch_full_artist_section_parses_single_page(monkeypatch):
+    fake = _FakeYTMSendRequest(
+        _discography_response([
+            _grid_album_item('MPREb_1', 'First'),
+            _grid_album_item('MPREb_2', 'Second'),
+        ])
+    )
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+
+    albums = providers._fetch_full_artist_section('UCxxx', 'params-token')
+    assert [a['browseId'] for a in albums] == ['MPREb_1', 'MPREb_2']
+    assert [a['title'] for a in albums] == ['First', 'Second']
+    # requests the artist's discography browseId, not the channel id itself
+    assert fake.requested_browse_ids == ['MPADUCxxx']
+    assert not fake.continuation_requested
+
+
+def test_fetch_full_artist_section_follows_continuation(monkeypatch):
+    fake = _FakeYTMSendRequest(
+        _discography_response(
+            [_grid_album_item('MPREb_1', 'First')],
+            continuation_token='next-page-token',
+        ),
+        continuation_response=_continuation_page_response([
+            _grid_album_item('MPREb_2', 'Second')
+        ]),
+    )
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+
+    albums = providers._fetch_full_artist_section('UCxxx', 'params-token')
+    assert [a['browseId'] for a in albums] == ['MPREb_1', 'MPREb_2']
+    assert fake.continuation_requested
+
+
 # ── artist_albums_from_channel_id ──────────────────────────────────────────────
 
 
 class _FakeYTMArtist:
-    """Fake YTMusic client for get_artist/get_artist_albums-based tests."""
+    """Fake YTMusic client for get_artist-based tests."""
 
-    def __init__(self, artist_data, albums_by_params=None):
+    def __init__(self, artist_data):
         self._artist_data = artist_data
-        self._albums_by_params = albums_by_params or {}
         self.get_album_calls = 0
 
     def get_artist(self, channel_id):
         return self._artist_data
-
-    def get_artist_albums(self, channel_id, params):
-        return self._albums_by_params[params]
 
     def get_album(self, browse_id):
         # listing an artist's albums must never resolve a tracklist
@@ -1972,9 +2091,10 @@ def test_artist_albums_uses_ytm_own_release_type_for_singles(monkeypatch):
     assert albums[0]['release_type'] == 'EP'
 
 
-def test_artist_albums_uses_get_artist_albums_when_paginated(monkeypatch):
+def test_artist_albums_fetches_full_list_when_paginated(monkeypatch):
     # The preview list under 'results' is short; a 'params' continuation
-    # token means the full list must be fetched via get_artist_albums.
+    # token means the full list must be fetched from the artist's
+    # discography browse page (see _fetch_full_artist_section).
     artist_data = {
         'name': 'Mica Ferreira',
         'albums': {
@@ -1982,20 +2102,40 @@ def test_artist_albums_uses_get_artist_albums_when_paginated(monkeypatch):
             'params': 'continuation-token',
         },
     }
-    fake = _FakeYTMArtist(
-        artist_data,
-        albums_by_params={
-            'continuation-token': [
-                _artist_release_row('MPREb_full_1', 'Full List 1'),
-                _artist_release_row('MPREb_full_2', 'Full List 2'),
-            ]
-        },
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+    monkeypatch.setattr(
+        providers,
+        '_fetch_full_artist_section',
+        lambda _channel_id, _params: [
+            {'browseId': 'MPREb_full_1', 'title': 'Full List 1'},
+            {'browseId': 'MPREb_full_2', 'title': 'Full List 2'},
+        ],
     )
-    monkeypatch.setattr(providers, '_ytm', lambda: fake)
 
     albums = artist_albums_from_channel_id('UCxxx')
     # the paginated (full) list replaces the short preview entirely
     assert {a['album_id'] for a in albums} == {'MPREb_full_1', 'MPREb_full_2'}
+
+
+def test_artist_albums_falls_back_to_preview_when_full_fetch_fails(
+    monkeypatch,
+):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'albums': {
+            'results': [_artist_release_row('MPREb_preview', 'Preview Only')],
+            'params': 'continuation-token',
+        },
+    }
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTMArtist(artist_data))
+
+    def _boom(_channel_id, _params):
+        raise RuntimeError('network blew up')
+
+    monkeypatch.setattr(providers, '_fetch_full_artist_section', _boom)
+
+    albums = artist_albums_from_channel_id('UCxxx')
+    assert {a['album_id'] for a in albums} == {'MPREb_preview'}
 
 
 def test_artist_albums_dedupes_overlapping_browse_ids(monkeypatch):
