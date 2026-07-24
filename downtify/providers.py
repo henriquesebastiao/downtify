@@ -78,6 +78,15 @@ _album_browse_search_cache: dict[str, str] = {}
 # when the later ``get_album`` call for the same browse id doesn't itself
 # return an ``artists`` field.
 _album_search_artist_cache: dict[str, list[str]] = {}
+# Official-audio (ATV) preference result per original (OMV) video id.
+# ``album_tracks_from_browse_id`` gets called several times over for the
+# same album across a single download (once per caller resolving the
+# tracklist for display, once more when the download itself resolves it
+# server-side) even though the raw album payload is already cached above —
+# without this, every one of those calls reruns a live YouTube Music search
+# per music-video track, which is most of what makes an album "slow to
+# start" downloading.
+_omv_preference_cache: dict[str, tuple[str, int]] = {}
 
 
 def _ytm() -> YTMusic:
@@ -1332,6 +1341,10 @@ def _prefer_official_audio_track(
     """
     if video_type != _MUSIC_VIDEO_TYPE_MUSIC_VIDEO:
         return video_id, duration
+    with _lock:
+        cached = _omv_preference_cache.get(video_id)
+    if cached is not None:
+        return cached
     query = f'{" ".join(artists)} {title}'.strip()
     if not query:
         return video_id, duration
@@ -1364,7 +1377,12 @@ def _prefer_official_audio_track(
             video_id,
             title,
         )
-        return candidate.strip(), (candidate_duration or duration)
+        chosen = (candidate.strip(), (candidate_duration or duration))
+        with _lock:
+            _omv_preference_cache[video_id] = chosen
+        return chosen
+    with _lock:
+        _omv_preference_cache[video_id] = (video_id, duration)
     return video_id, duration
 
 

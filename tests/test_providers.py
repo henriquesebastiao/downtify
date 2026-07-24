@@ -45,11 +45,13 @@ def clear_ytm_album_cache():
     providers._album_meta_cache.clear()
     providers._album_browse_search_cache.clear()
     providers._album_search_artist_cache.clear()
+    providers._omv_preference_cache.clear()
     yield
     providers._album_track_cache.clear()
     providers._album_meta_cache.clear()
     providers._album_browse_search_cache.clear()
     providers._album_search_artist_cache.clear()
+    providers._omv_preference_cache.clear()
 
 
 def test_enrich_from_match_backfills_artists_when_empty():
@@ -1209,6 +1211,54 @@ def test_prefer_official_audio_track_survives_search_exception(monkeypatch):
     )
     assert video_id == 'omv-id'
     assert duration == 240
+
+
+def test_prefer_official_audio_track_caches_swap_by_video_id(monkeypatch):
+    # Regression: album_tracks_from_browse_id gets called several times
+    # over for the same album within a single download (once per caller
+    # resolving the tracklist, once more server-side when the download
+    # itself resolves it again) — without caching this by video id, every
+    # one of those calls reruns a live search per music-video track, which
+    # is most of what made an album slow to *start* downloading.
+    calls = {'count': 0}
+
+    class _CountingYTM:
+        @staticmethod
+        def search(*_a, **_kw):
+            calls['count'] += 1
+            return [
+                _search_hit(
+                    'atv-id', 'Song', 'Artist', 'MUSIC_VIDEO_TYPE_ATV', 200
+                )
+            ]
+
+    monkeypatch.setattr(providers, '_ytm', _CountingYTM)
+    for _ in range(3):
+        video_id, duration = providers._prefer_official_audio_track(
+            'omv-id', 240, 'Song', ['Artist'], 'MUSIC_VIDEO_TYPE_OMV'
+        )
+        assert video_id == 'atv-id'
+        assert duration == 200
+    assert calls['count'] == 1
+
+
+def test_prefer_official_audio_track_caches_no_match_result(monkeypatch):
+    calls = {'count': 0}
+
+    class _CountingYTM:
+        @staticmethod
+        def search(*_a, **_kw):
+            calls['count'] += 1
+            return []
+
+    monkeypatch.setattr(providers, '_ytm', _CountingYTM)
+    for _ in range(3):
+        video_id, duration = providers._prefer_official_audio_track(
+            'omv-id', 240, 'Song', ['Artist'], 'MUSIC_VIDEO_TYPE_OMV'
+        )
+        assert video_id == 'omv-id'
+        assert duration == 240
+    assert calls['count'] == 1
 
 
 def test_album_track_song_prefers_official_audio(monkeypatch):
