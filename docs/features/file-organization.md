@@ -14,9 +14,9 @@ Single tracks and YouTube searches go directly into the root of the downloads fo
 downloads/
 ├── My Playlist/
 │   ├── My Playlist.m3u
-│   ├── Arctic Monkeys - Do I Wanna Know.mp3
+│   ├── The Night Owls - Do I Still Recall.mp3
 │   └── Tame Impala - The Less I Know The Better.mp3
-└── Arctic Monkeys - R U Mine.mp3       ← single track
+└── The Night Owls - R U Awake.mp3       ← single track
 ```
 
 ## Organize by artist
@@ -25,9 +25,9 @@ Enable **Settings → File organization → Organize by artist** to group every 
 
 ```
 downloads/
-├── Arctic Monkeys/
-│   ├── Arctic Monkeys - Do I Wanna Know.mp3
-│   └── Arctic Monkeys - R U Mine.mp3
+├── The Night Owls/
+│   ├── The Night Owls - Do I Still Recall.mp3
+│   └── The Night Owls - R U Awake.mp3
 ├── Tame Impala/
 │   └── Tame Impala - The Less I Know The Better.mp3
 └── Playlists/

@@ -44,11 +44,17 @@ export default {
     empty: 'Δεν βρέθηκαν τραγούδια.',
     emptyHint:
       'Δοκίμασε άλλη αναζήτηση – ο συνδυασμός καλλιτέχνης + τίτλος συνήθως λειτουργεί καλύτερα.',
-    openOnSpotify: 'Άνοιγμα στο Spotify',
+    openSource: 'Άνοιγμα στην πηγή',
     inQueue: 'Στην ουρά',
     download: 'Λήψη',
     previousPage: 'Προηγούμενη σελίδα',
     nextPage: 'Επόμενη σελίδα',
+    albumsTitle: 'Άλμπουμ',
+    albumBadge: 'Άλμπουμ',
+    singleBadge: 'Σινγκλ',
+    epBadge: 'EP',
+    downloadAlbum: 'Λήψη άλμπουμ',
+    songsTitle: 'Τραγούδια',
   },
   queue: {
     title: 'Ουρά λήψεων',
@@ -156,6 +162,10 @@ export default {
     outputTemplateReset: 'Επαναφορά',
     outputTemplateHint:
       'Χρησιμοποιήστε / για υποφακέλους. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
+    searchSection: 'Αναζήτηση',
+    searchAlbums: 'Εμφάνιση άλμπουμ στα αποτελέσματα αναζήτησης',
+    searchAlbumsHint:
+      'Αναζητά επίσης άλμπουμ που ταιριάζουν, με δυνατότητα λήψης ολόκληρου του άλμπουμ.',
     playlistsSection: 'Λίστες αναπαραγωγής (Playlists)',
     generateM3u: 'Δημιουργία αρχείου M3U για τις λίστες',
     generateM3uHint:

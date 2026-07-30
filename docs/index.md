@@ -61,7 +61,7 @@ Spotify's official API gates downloads behind a Premium subscription. Downtify t
 | Spotify album | `open.spotify.com/album/…` |
 | Spotify playlist | `open.spotify.com/playlist/…` |
 | YouTube / YT Music | `youtube.com/watch?v=…` |
-| Free-text search | `Arctic Monkeys Do I Wanna Know` |
+| Free-text search | `The Night Owls Do I Still Recall` |
 
 </section>
 

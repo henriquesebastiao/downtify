@@ -3,12 +3,20 @@ _effective_lyrics_providers."""
 
 from __future__ import annotations
 
+import inspect
 import json
 
+from downtify import api
 from downtify.api import (
     DEFAULT_SETTINGS,
     _effective_lyrics_providers,
     _load_settings,
+    artist_info_endpoint,
+    artist_similar_endpoint,
+    artist_top_albums_endpoint,
+    artist_top_songs_endpoint,
+    search_albums_endpoint,
+    search_artists_endpoint,
 )
 
 
@@ -40,6 +48,118 @@ def test_default_download_lyrics_is_true():
 
 def test_default_format_is_mp3():
     assert DEFAULT_SETTINGS['format'] == 'mp3'
+
+
+def test_default_search_albums_is_true():
+    assert DEFAULT_SETTINGS['search_albums'] is True
+
+
+# ── search_albums_endpoint ─────────────────────────────────────────────────────
+
+
+def test_search_albums_endpoint_calls_provider_when_enabled(monkeypatch):
+    monkeypatch.setitem(api.state.settings, 'search_albums', True)
+    monkeypatch.setattr(
+        api.providers,
+        'search_albums',
+        lambda query, limit: [{'name': 'Driftlight'}],
+    )
+    assert search_albums_endpoint(query='Driftlight') == [
+        {'name': 'Driftlight'}
+    ]
+
+
+def test_search_albums_endpoint_default_limit_is_25():
+    # Regression: this used to be hardcoded to 10, capping how many
+    # albums a caller (e.g. the Music Assistant provider) could ever see
+    # regardless of what it asked for. Calling the route function
+    # directly (as the other tests here do) doesn't resolve FastAPI's
+    # `Query(...)` default the way a real request would, so this checks
+    # the declared default via the signature instead.
+    limit_param = inspect.signature(search_albums_endpoint).parameters['limit']
+    assert limit_param.default.default == 25
+
+
+def test_search_albums_endpoint_honors_custom_limit(monkeypatch):
+    monkeypatch.setitem(api.state.settings, 'search_albums', True)
+    captured = {}
+
+    def _fake(query, limit):
+        captured['limit'] = limit
+        return []
+
+    monkeypatch.setattr(api.providers, 'search_albums', _fake)
+    search_albums_endpoint(query='Driftlight', limit=50)
+    assert captured['limit'] == 50
+
+
+def test_search_albums_endpoint_short_circuits_when_disabled(monkeypatch):
+    monkeypatch.setitem(api.state.settings, 'search_albums', False)
+
+    def _boom(*_a, **_kw):
+        raise AssertionError('should not search when disabled')
+
+    monkeypatch.setattr(api.providers, 'search_albums', _boom)
+    assert search_albums_endpoint(query='Driftlight') == []
+
+
+# ── search_artists_endpoint ────────────────────────────────────────────────────
+
+
+def test_search_artists_endpoint_calls_provider(monkeypatch):
+    monkeypatch.setattr(
+        api.providers,
+        'search_artists',
+        lambda query, limit: [{'name': 'Mica Ferreira'}],
+    )
+    assert search_artists_endpoint(query='Mica Ferreira') == [
+        {'name': 'Mica Ferreira'}
+    ]
+
+
+# ── artist_top_songs_endpoint / artist_top_albums_endpoint ────────────────────
+
+
+def test_artist_top_songs_endpoint_calls_provider(monkeypatch):
+    monkeypatch.setattr(
+        api.providers,
+        'artist_top_songs_from_channel_id',
+        lambda channel_id: [{'song_id': channel_id}],
+    )
+    assert artist_top_songs_endpoint(channel_id='UCxxx') == [
+        {'song_id': 'UCxxx'}
+    ]
+
+
+def test_artist_top_albums_endpoint_calls_provider(monkeypatch):
+    monkeypatch.setattr(
+        api.providers,
+        'artist_top_albums_from_channel_id',
+        lambda channel_id: [{'album_id': channel_id}],
+    )
+    assert artist_top_albums_endpoint(channel_id='UCxxx') == [
+        {'album_id': 'UCxxx'}
+    ]
+
+
+def test_artist_info_endpoint_calls_provider(monkeypatch):
+    monkeypatch.setattr(
+        api.providers,
+        'artist_info_from_channel_id',
+        lambda channel_id: {'artist_id': channel_id},
+    )
+    assert artist_info_endpoint(channel_id='UCxxx') == {'artist_id': 'UCxxx'}
+
+
+def test_artist_similar_endpoint_calls_provider(monkeypatch):
+    monkeypatch.setattr(
+        api.providers,
+        'artist_similar_from_channel_id',
+        lambda channel_id: [{'artist_id': channel_id}],
+    )
+    assert artist_similar_endpoint(channel_id='UCxxx') == [
+        {'artist_id': 'UCxxx'}
+    ]
 
 
 # ── _load_settings ────────────────────────────────────────────────────────────

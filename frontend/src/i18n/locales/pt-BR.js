@@ -44,11 +44,17 @@ export default {
     errorWithDetail: 'Algo deu errado: {detail}',
     empty: 'Nenhuma música encontrada.',
     emptyHint: 'Tente outra busca — artista + título costuma funcionar melhor.',
-    openOnSpotify: 'Abrir no Spotify',
+    openSource: 'Abrir na fonte',
     inQueue: 'Na fila',
     download: 'Baixar',
     previousPage: 'Página anterior',
     nextPage: 'Próxima página',
+    albumsTitle: 'Álbuns',
+    albumBadge: 'Álbum',
+    singleBadge: 'Single',
+    epBadge: 'EP',
+    downloadAlbum: 'Baixar álbum',
+    songsTitle: 'Músicas',
   },
   queue: {
     title: 'Fila de download',
@@ -153,6 +159,10 @@ export default {
     outputTemplateReset: 'Restaurar',
     outputTemplateHint:
       'Use / para criar subpastas. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
+    searchSection: 'Busca',
+    searchAlbums: 'Mostrar álbuns nos resultados de busca',
+    searchAlbumsHint:
+      'Também procura álbuns correspondentes ao pesquisar, com a opção de baixar o álbum inteiro.',
     playlistsSection: 'Playlists',
     generateM3u: 'Gerar arquivo M3U para playlists',
     generateM3uHint:

@@ -43,11 +43,17 @@ export default {
     errorWithDetail: 'Something went wrong: {detail}',
     empty: 'No songs found.',
     emptyHint: 'Try another query — artist + title usually works best.',
-    openOnSpotify: 'Open on Spotify',
+    openSource: 'Open in source',
     inQueue: 'In queue',
     download: 'Download',
     previousPage: 'Previous page',
     nextPage: 'Next page',
+    albumsTitle: 'Albums',
+    albumBadge: 'Album',
+    singleBadge: 'Single',
+    epBadge: 'EP',
+    downloadAlbum: 'Download album',
+    songsTitle: 'Songs',
   },
   queue: {
     title: 'Download Queue',
@@ -151,6 +157,10 @@ export default {
     outputTemplateReset: 'Reset',
     outputTemplateHint:
       'Use / to create subfolders. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
+    searchSection: 'Search',
+    searchAlbums: 'Show albums in search results',
+    searchAlbumsHint:
+      'Also look up matching albums when you search, with an option to download the whole thing.',
     playlistsSection: 'Playlists',
     generateM3u: 'Generate M3U file for playlists',
     generateM3uHint:

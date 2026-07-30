@@ -35,7 +35,7 @@ The default filename template is:
 {artists} - {title}
 ```
 
-Which produces filenames like `Arctic Monkeys - Do I Wanna Know.mp3`.
+Which produces filenames like `The Night Owls - Do I Still Recall.mp3`.
 
 Available tokens:
 

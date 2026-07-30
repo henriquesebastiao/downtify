@@ -28,6 +28,6 @@ Downtify accepts several input types in the search bar:
 | Spotify album URL | `https://open.spotify.com/album/…` |
 | Spotify playlist URL | `https://open.spotify.com/playlist/…` |
 | YouTube / YouTube Music URL | `https://www.youtube.com/watch?v=…` |
-| Free-text search | `Arctic Monkeys Do I Wanna Know` |
+| Free-text search | `The Night Owls Do I Still Recall` |
 
 Free-text searches are sent directly to YouTube Music — no Spotify link required.

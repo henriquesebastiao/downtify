@@ -58,9 +58,9 @@ def _names_match(a: str, b: str) -> bool:
         return False
     if na == nb:
         return True
-    # One contains the other (handles "Arctic Monkeys" vs
-    # "Arctic Monkeys & …" or "Do I Wanna Know?" vs
-    # "Do I Wanna Know? - Single Version").
+    # One contains the other (handles "The Night Owls" vs
+    # "The Night Owls & …" or "Do I Still Recall?" vs
+    # "Do I Still Recall? - Single Version").
     return na in nb or nb in na
 
 
