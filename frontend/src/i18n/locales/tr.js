@@ -33,7 +33,8 @@ export default {
     playlists: 'Çalma Listeleri',
   },
   search: {
-    placeholder: 'Arama yapmak için bir Spotify veya YouTube Müzik bağlantısı yapıştır…',
+    placeholder:
+      'Arama yapmak için bir Spotify veya YouTube Müzik bağlantısı yapıştır…',
     title: 'Arama sonuçları',
     matchesFor: 'Sonuçlar gösteriliyor:',
     songsCount: '— {count} şarkı',
@@ -42,7 +43,8 @@ export default {
     error: 'Bir hata oluştu.',
     errorWithDetail: 'Bir hata oluştu: {detail}',
     empty: 'Hiçbir şarkı bulunamadı.',
-    emptyHint: 'Başka şekilde aratmayı dene — sanatçı + şarkı adı genellikle en iyi sonucu verir.',
+    emptyHint:
+      'Başka şekilde aratmayı dene — sanatçı + şarkı adı genellikle en iyi sonucu verir.',
     openOnSpotify: 'Spotify üzerinde aç',
     inQueue: 'Kuyrukta',
     download: 'İndir',
@@ -52,7 +54,7 @@ export default {
   queue: {
     title: 'İndirme Kuyruğu',
     subtitle:
-      "İndirme kuyruğuna eklenen şarkılar. İlerleme durumu ve bilgisi burada yer alır.",
+      'İndirme kuyruğuna eklenen şarkılar. İlerleme durumu ve bilgisi burada yer alır.',
     empty: 'İndirme kuyruğu boş.',
     emptyHint: 'Bir şarkı arattıktan sonra indirme düğmesine basarak başlayın.',
     saveToDevice: 'Cihaza kaydet',
@@ -66,7 +68,8 @@ export default {
   },
   library: {
     title: 'Kütüphane',
-    subtitle: "İndirilmiş müzikler. Dinleyebilir, tekrardan indirebilir veya silebilirsin.",
+    subtitle:
+      'İndirilmiş müzikler. Dinleyebilir, tekrardan indirebilir veya silebilirsin.',
     empty: 'Henüz indirilmiş bir müzik yok.',
     emptyHint: 'Kütüphaneni doldurmak için bir müzik bularak başla.',
     failedLoad: 'İndirmeler listelenirken bir hata oluştu.',
@@ -85,9 +88,11 @@ export default {
     watchNew: 'Bir çalma listesini izle',
     urlPlaceholder: 'Bir Spotify çalma listesi bağlantısı yapıştır…',
     watch: 'İzle',
-    failedAdd: 'Çalma listesi eklenirken bir hata oluştu. Bağlantıyı kontrol edip tekrar deneyin.',
+    failedAdd:
+      'Çalma listesi eklenirken bir hata oluştu. Bağlantıyı kontrol edip tekrar deneyin.',
     empty: 'Henüz izlenen bir çalma listesi yok.',
-    emptyHint: 'Başlamak için yukarıya bir Spotify çalma listesi bağlantısı yapıştır.',
+    emptyHint:
+      'Başlamak için yukarıya bir Spotify çalma listesi bağlantısı yapıştır.',
     active: 'Aktif',
     paused: 'Duraklatıldı',
     everyInterval: 'Her {interval}',
@@ -136,7 +141,8 @@ export default {
   },
   settings: {
     title: 'Ayarlar',
-    subtitle: "Downtify'ın müziklerini nasıl indirdiğini ve kaydettiğini ayarla.",
+    subtitle:
+      "Downtify'ın müziklerini nasıl indirdiğini ve kaydettiğini ayarla.",
     audioSource: 'Şarkı kaynağı',
     lyricsSource: 'Şarkı sözleri kaynağı',
     lyricsHint: 'yalnızca lrclib aktiftir',
@@ -158,7 +164,7 @@ export default {
     organizationSection: 'Dosya düzeni',
     organizeByArtist: 'Sanatçıya göre',
     organizeByArtistHint:
-      "Şarkılar, sanatçının adıyla bir klasöre kaydedilir. Çalma listesindeki parçalar da çalma listesi klasörü yerine ilgili sanatçının klasörüne eklenir.",
+      'Şarkılar, sanatçının adıyla bir klasöre kaydedilir. Çalma listesindeki parçalar da çalma listesi klasörü yerine ilgili sanatçının klasörüne eklenir.',
     organizeByAlbum: 'Albüme göre',
     organizeByAlbumHint:
       'Şarkılar, albümün adıyla bir klasör kaydedilir; böylece bir albümün tamamı kendi klasörüne indirilir. "Sanatçıya göre" seçeneğiyle birleştirildiğinde, düzen "Sanatçı/Albüm" şeklinde hiyerarşik bir klasör yapısı oluşturur.',
@@ -166,13 +172,13 @@ export default {
     parallelDownloadsHint:
       'Aynı anda indirilebilecek maksimum şarkı sayısı. Yüksek değerler daha hızlı indirmeler yapabilir fakat daha fazla internet harcar.',
     saved: 'Değişiklikler kaydedildi',
-    saveError: "Ayarlar kaydedilirken bir hata oluştu.",
+    saveError: 'Ayarlar kaydedilirken bir hata oluştu.',
     language: 'Dil',
     languageHint: 'Arayüz dilini değiştir',
   },
   player: {
     title: 'Oynatıcı',
-    subtitle: "İndirdiğin müzikleri dinle.",
+    subtitle: 'İndirdiğin müzikleri dinle.',
     empty: 'Oynatılacak bir şey yok',
     emptyHint: 'Dinlemeye başlamak için birkaç müzik indir.',
     queue: 'Oynatma Kuyruğu',
