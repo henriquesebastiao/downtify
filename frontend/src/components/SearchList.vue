@@ -38,6 +38,96 @@
       </span>
     </div>
 
+    <!-- Albums -->
+    <div v-if="sm.albumResults.value.length > 0" class="mb-8">
+      <h2
+        class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3"
+      >
+        {{ t('search.albumsTitle') }}
+      </h2>
+      <ul class="space-y-2">
+        <li
+          v-for="album in sm.albumResults.value"
+          :key="album.album_id"
+          class="surface rounded-2xl track-card"
+        >
+          <!-- Cover -->
+          <div class="track-cover">
+            <img
+              v-if="album.cover_url"
+              :src="album.cover_url"
+              :alt="album.name"
+              class="h-full w-full object-cover"
+              loading="lazy"
+            />
+            <div
+              v-else
+              class="h-full w-full flex items-center justify-center text-base-content/30"
+            >
+              <Icon icon="clarity:album-line" class="h-6 w-6" />
+            </div>
+          </div>
+
+          <!-- Info -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="font-semibold truncate">{{ album.name }}</span>
+              <span
+                class="badge-soft shrink-0 text-[10px] uppercase tracking-wide"
+              >
+                {{ releaseTypeBadge(album) }}
+              </span>
+            </div>
+            <p class="text-xs text-base-content/70 truncate">
+              {{ album.artist || t('common.unknownArtist') }}
+            </p>
+            <p v-if="album.year" class="text-xs text-base-content/40 truncate">
+              {{ album.year }}
+            </p>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-1 shrink-0">
+            <a
+              v-if="album.url"
+              class="icon-btn"
+              :href="album.url"
+              target="_blank"
+              rel="noopener"
+              :title="t('search.openSource')"
+            >
+              <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
+            </a>
+            <button
+              v-if="albumDownloadState(album) === 'queued'"
+              class="icon-btn text-primary cursor-default"
+              :title="t('search.inQueue')"
+              disabled
+            >
+              <Icon icon="clarity:check-circle-line" class="h-5 w-5" />
+            </button>
+            <button
+              v-else
+              class="icon-btn text-primary hover:bg-primary/10"
+              @click="downloadAlbum(album)"
+              :title="t('search.downloadAlbum')"
+            >
+              <Icon icon="clarity:download-line" class="h-5 w-5" />
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Songs section label — only needed to separate from the Albums
+         section above; standalone song results don't need a heading. -->
+    <h2
+      v-if="sm.albumResults.value.length > 0 && props.data?.length"
+      class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3"
+    >
+      {{ t('search.songsTitle') }}
+    </h2>
+
     <!-- Loading skeleton -->
     <div v-if="sm.isSearching.value" class="space-y-3">
       <div v-for="n in 5" :key="n" class="skeleton h-24 rounded-2xl" />
@@ -112,7 +202,7 @@
             :href="song.url"
             target="_blank"
             rel="noopener"
-            :title="t('search.openOnSpotify')"
+            :title="t('search.openSource')"
           >
             <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
           </a>
@@ -194,6 +284,10 @@ const dm = useDownloadManager()
 const { t } = useI18n()
 
 const currentPage = ref(1)
+// Albums don't have a single stable id in the shared progress tracker
+// until their tracks are resolved, so "queued" is tracked locally here —
+// same "click, get a checkmark, stay put" confirmation songs already get.
+const queuedAlbumIds = ref(new Set())
 
 const totalPages = computed(() =>
   Math.ceil((props.data?.length || 0) / PAGE_SIZE)
@@ -229,5 +323,21 @@ function downloadState(song) {
 
 function download(song) {
   emit('download', song)
+}
+
+function albumDownloadState(album) {
+  return queuedAlbumIds.value.has(album.album_id) ? 'queued' : 'idle'
+}
+
+function downloadAlbum(album) {
+  queuedAlbumIds.value.add(album.album_id)
+  dm.fromURL(album.url)
+}
+
+function releaseTypeBadge(album) {
+  const type = (album.release_type || '').toLowerCase()
+  if (type === 'single') return t('search.singleBadge')
+  if (type === 'ep') return t('search.epBadge')
+  return t('search.albumBadge')
 }
 </script>

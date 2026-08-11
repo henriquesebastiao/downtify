@@ -18,7 +18,7 @@ from loguru import logger
 
 # Only characters that are genuinely illegal in FAT/NTFS/ext filenames are
 # dropped. Everything else — including accented and non-Latin letters such
-# as "ö" (Björk) or "é" (Fabrizio de André) — is preserved so folder names
+# as "ö" (Sólrún) or "é" (Renata Béranger) — is preserved so folder names
 # match the original artist/album/playlist titles.
 _PLAYLIST_NAME_INVALID = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 

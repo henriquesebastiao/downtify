@@ -6,9 +6,26 @@ working without changes:
 
 * ``GET  /api/version``
 * ``GET  /api/songs/search``
-* ``GET  /api/song/url`` and ``GET /api/url`` (alias)
+* ``GET  /api/artists/search``
+* ``GET  /api/artists/top_songs`` (an artist's "Top songs" shelf preview,
+  same shape as ``/api/songs/search`` - no further pagination offered)
+* ``GET  /api/artists/top_albums`` (an artist's 5 most popular albums,
+  sorted by YouTube Music's own "Popularity" order; same shape as
+  ``/api/albums/search``; for every album/single, use ``/api/url`` on
+  the artist's channel URL instead)
+* ``GET  /api/artists/info`` (an artist's own profile: name, thumbnail,
+  bio - not their releases)
+* ``GET  /api/artists/similar`` (an artist's "Fans might also like"
+  shelf, same shape as ``/api/artists/search``)
+* ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
+  resolves an artist channel URL into every one of their albums/singles
+  as lightweight summaries, same shape as ``/api/albums/search`` - no
+  tracklists; resolve a chosen release's tracks separately)
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
   ``track_number`` / ``album_track_total`` survive re-fetch by URL)
+* ``POST /api/download/album`` (YouTube Music album/browse URL only;
+  downloads every track from one shared, already-resolved tracklist so
+  metadata stays consistent across the whole release)
 * ``POST /api/playlist/m3u``
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
@@ -21,7 +38,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -51,6 +67,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'max_parallel_downloads': 3,
     'organize_by_artist': False,
     'organize_by_album': False,
+    'search_albums': True,
 }
 
 
@@ -162,6 +179,47 @@ def search_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
     return providers.search_songs(query, limit=20)
 
 
+@router.get('/api/albums/search')
+def search_albums_endpoint(
+    query: str = Query(''),
+    limit: int = Query(25, ge=1, le=50),
+) -> list[dict[str, Any]]:
+    if not state.settings.get('search_albums', True):
+        return []
+    return providers.search_albums(query, limit=limit)
+
+
+@router.get('/api/artists/search')
+def search_artists_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
+    return providers.search_artists(query, limit=10)
+
+
+@router.get('/api/artists/top_songs')
+def artist_top_songs_endpoint(
+    channel_id: str = Query(...),
+) -> list[dict[str, Any]]:
+    return providers.artist_top_songs_from_channel_id(channel_id)
+
+
+@router.get('/api/artists/top_albums')
+def artist_top_albums_endpoint(
+    channel_id: str = Query(...),
+) -> list[dict[str, Any]]:
+    return providers.artist_top_albums_from_channel_id(channel_id)
+
+
+@router.get('/api/artists/info')
+def artist_info_endpoint(channel_id: str = Query(...)) -> dict[str, Any]:
+    return providers.artist_info_from_channel_id(channel_id)
+
+
+@router.get('/api/artists/similar')
+def artist_similar_endpoint(
+    channel_id: str = Query(...),
+) -> list[dict[str, Any]]:
+    return providers.artist_similar_from_channel_id(channel_id)
+
+
 @router.get('/api/song/url')
 def song_url_endpoint(url: str = Query(...)):
     return _resolve_url(url)
@@ -173,23 +231,41 @@ def url_endpoint(url: str = Query(...)):
 
 
 def _resolve_url(url: str):
-    parsed = spotify.parse_spotify_url(url)
-    if parsed is None:
-        raise HTTPException(status_code=400, detail='Invalid Spotify URL')
-    kind, sid = parsed
-    try:
-        if kind == 'track':
-            return spotify.track_from_id(sid)
-        if kind == 'album':
-            return spotify.album_tracks_from_id(sid)
-        if kind == 'playlist':
-            return spotify.playlist_tracks_from_id(sid)
-    except Exception as exc:
-        logger.exception('Failed to resolve Spotify URL {}', url)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    raise HTTPException(
-        status_code=400, detail=f'Unsupported entity type: {kind}'
-    )
+    spotify_parsed = spotify.parse_spotify_url(url)
+    if spotify_parsed is not None:
+        kind, sid = spotify_parsed
+        try:
+            if kind == 'track':
+                return spotify.track_from_id(sid)
+            if kind == 'album':
+                return spotify.album_tracks_from_id(sid)
+            if kind == 'playlist':
+                return spotify.playlist_tracks_from_id(sid)
+        except Exception as exc:
+            logger.exception('Failed to resolve Spotify URL {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400, detail=f'Unsupported entity type: {kind}'
+        )
+
+    youtube_parsed = providers.parse_youtube_url(url)
+    if youtube_parsed is not None:
+        kind, yid = youtube_parsed
+        try:
+            if kind == 'track':
+                return providers.song_from_video_id(yid)
+            if kind == 'album':
+                return providers.album_tracks_from_browse_id(yid)
+            if kind == 'artist':
+                return providers.artist_albums_from_channel_id(yid)
+        except Exception as exc:
+            logger.exception('Failed to resolve YouTube URL {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400, detail=f'Unsupported entity type: {kind}'
+        )
+
+    raise HTTPException(status_code=400, detail='Invalid URL')
 
 
 def _merge_client_track_hints(
@@ -240,11 +316,15 @@ def _song_for_download(url: str) -> dict[str, Any]:
             status_code=400,
             detail='Only Spotify track URLs are supported here',
         )
-    if 'youtube.com' in url or 'youtu.be' in url or 'music.youtube' in url:
-        match = re.search(r'(?:v=|youtu\.be/)([A-Za-z0-9_-]{6,})', url)
-        if not match:
-            raise HTTPException(status_code=400, detail='Invalid YouTube URL')
-        return providers.song_from_video_id(match.group(1))
+    youtube_parsed = providers.parse_youtube_url(url)
+    if youtube_parsed is not None:
+        kind, yid = youtube_parsed
+        if kind == 'track':
+            return providers.song_from_video_id(yid)
+        raise HTTPException(
+            status_code=400,
+            detail='Only single YouTube video URLs are supported here',
+        )
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
 
@@ -487,6 +567,63 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
 
     task.add_done_callback(_log_batch_failure)
     return {'job_ids': job_ids, 'count': len(job_ids)}
+
+
+def _songs_for_album_download(url: str) -> list[dict[str, Any]]:
+    youtube_parsed = providers.parse_youtube_url(url)
+    if youtube_parsed is None or youtube_parsed[0] != 'album':
+        raise HTTPException(
+            status_code=400,
+            detail='Only YouTube Music album/browse URLs are supported here',
+        )
+    _, browse_id = youtube_parsed
+    songs = providers.album_tracks_from_browse_id(browse_id)
+    if not songs:
+        raise HTTPException(
+            status_code=404, detail='Album not found or has no tracks'
+        )
+    return songs
+
+
+@router.post('/api/download/album')
+async def download_album_endpoint(url: str = Query(...)) -> dict[str, str]:
+    """Download every track of a YouTube Music album/browse URL.
+
+    Unlike ``POST /api/download/url`` (which only accepts a single video URL
+    and therefore re-resolves catalog metadata independently, per track),
+    this resolves the album's full tracklist once via
+    :func:`providers.album_tracks_from_browse_id` and downloads each track
+    using that shared, already-consistent metadata (track number, album
+    name/artist, cover, year). This matters for compilations/"best of"
+    albums, whose tracks would otherwise be re-matched one video at a time
+    and can drift to their original, differently-tagged source album.
+
+    Returns a mapping of ``song_id -> downloaded filename`` for every track
+    that downloaded successfully (failed tracks are omitted, not raised).
+    """
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    songs = _songs_for_album_download(url)
+
+    async def _one(song: dict[str, Any]) -> tuple[str, Optional[str]]:
+        song_id = str(song.get('song_id') or '')
+        if not song_id:
+            return '', None
+        job_id = _register_job(song, status='downloading')
+        try:
+            filename = await _run_download(song, job_id)
+        except Exception:
+            logger.exception('Album track download failed for {}', song_id)
+            return song_id, None
+        return song_id, filename
+
+    results = await asyncio.gather(*(_one(song) for song in songs))
+    return {
+        song_id: filename
+        for song_id, filename in results
+        if song_id and filename
+    }
 
 
 @router.get('/api/queue')
