@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.10.1](https://github.com/henriquesebastiao/downtify/tree/2.10.1) (2026-08-12)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.10.0...2.10.1)
+
+**Implemented enhancements:**
+
+- saving a song with an album name [\#173](https://github.com/henriquesebastiao/downtify/issues/173)
+- Output Structure [\#144](https://github.com/henriquesebastiao/downtify/issues/144)
+- Support for reverse proxy with Cloudflare Tunnel \(ROOT\_URL / BASE\_URL env support\) [\#49](https://github.com/henriquesebastiao/downtify/issues/49)
+
+**Fixed bugs:**
+
+- Age restricted content having issues with cookies, or wanting age approval [\#183](https://github.com/henriquesebastiao/downtify/issues/183)
+- Cookies issues [\#160](https://github.com/henriquesebastiao/downtify/issues/160)
+
+**Merged pull requests:**
+
+- Remove dist folder [\#256](https://github.com/henriquesebastiao/downtify/pull/256) ([fracarma](https://github.com/fracarma))
+- build\(deps\): Bump docker/login-action from 4.5.2 to 4.6.0 [\#255](https://github.com/henriquesebastiao/downtify/pull/255) ([dependabot[bot]](https://github.com/apps/dependabot))
+
 ## [2.10.0](https://github.com/henriquesebastiao/downtify/tree/2.10.0) (2026-08-11)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.9.2...2.10.0)
