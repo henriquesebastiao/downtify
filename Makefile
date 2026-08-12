@@ -1,6 +1,6 @@
 #!make
 
-DOWNTIFY_VERSION := 2.10.0
+DOWNTIFY_VERSION := 2.10.1
 TARGET := henriquesebastiao/downtify
 
 all: build latest
@@ -50,7 +50,6 @@ version:
 	echo "Downtify version: $$VERSION"; \
 	./version.sh $$VERSION
 	npm install --prefix frontend
-	npm run build --prefix frontend
 	uv run ruff format .; ruff check . --fix
 	prettier --write frontend/src/.
 
