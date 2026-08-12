@@ -9,7 +9,6 @@ services:
     volumes:
       - ./docker/downloads:/downloads
       - ./docker/data:/data
-      - ./frontend/dist:/downtify/frontend/dist:ro
     environment:
       - DOWNTIFY_PORT=30321
     dns:
