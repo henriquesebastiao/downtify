@@ -3,14 +3,89 @@ organize_by_artist routing logic."""
 
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 
+from mutagen.id3 import ID3
+
 from downtify import downloader as downloader_mod
-from downtify.downloader import Downloader, _release_type_for_tags
+from downtify.downloader import (
+    Downloader,
+    _release_type_for_tags,
+    _tag_mp3,
+    embed_lyrics,
+)
+from downtify.lyrics import Lyrics
 
 
 def _make(tmp_path: Path, **kwargs) -> Downloader:
     return Downloader(tmp_path, **kwargs)
+
+
+# A minimal-but-real single-frame MP3 (silence, ~0.1s), generated with
+# ffmpeg. mutagen's MP3 class needs an actual MPEG audio frame to
+# recognize the file and attach ID3 tags to it — an empty/garbage file
+# is rejected before the ID3 write path is even reached.
+_MINIMAL_MP3_B64 = (
+    'SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA/+MYxAAAAANIAAA'
+    'AAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV'
+    'VVVVVV/+MYxDsAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV'
+    'VVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxHYAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV'
+    'VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxLEAAANIAAAAAFVVVVVVVVV'
+    'VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV'
+)
+
+
+def _minimal_mp3(path: Path) -> Path:
+    path.write_bytes(base64.b64decode(_MINIMAL_MP3_B64))
+    return path
+
+
+# ── ID3v2.4 tagging (regression: v2.3 + UTF-8 corruption) ──────────────────────
+
+
+def test_tag_mp3_round_trips_long_title_without_corruption(tmp_path):
+    """Guards the ID3v2.4 save: every frame written by _tag_mp3 must
+    round-trip byte-for-byte. See the v2_version comment in _tag_mp3
+    for why v2.4 (native UTF-8) is used instead of v2.3, which has no
+    UTF-8 text encoding and forces mutagen to transcode encoding=3
+    frames to UTF-16 on save."""
+    mp3_path = _minimal_mp3(tmp_path / 'song.mp3')
+    _tag_mp3(
+        mp3_path,
+        title="Baba O'Riley",
+        artists=['The Who'],
+        album_artist='The Who',
+        album="Who's Next",
+        year='1971',
+        genre='Rock',
+        cover_bytes=None,
+        track_number=1,
+        album_track_total=9,
+        release_type='album',
+    )
+
+    tags = ID3(mp3_path)
+    assert str(tags.getall('TIT2')[0]) == "Baba O'Riley"
+    assert str(tags.getall('TPE1')[0]) == 'The Who'
+    assert str(tags.getall('TPE2')[0]) == 'The Who'
+    assert str(tags.getall('TALB')[0]) == "Who's Next"
+    assert str(tags.getall('TDRC')[0]) == '1971'
+    assert str(tags.getall('TCON')[0]) == 'Rock'
+    assert str(tags.getall('TRCK')[0]) == '1/9'
+
+
+def test_embed_lyrics_mp3_round_trips_without_corruption(tmp_path):
+    """Same v2.4-vs-v2.3 concern as _tag_mp3, but for the USLT (lyrics)
+    save path."""
+    mp3_path = _minimal_mp3(tmp_path / 'song.mp3')
+    lyrics_text = '\n'.join(
+        f'Line {i} of a fairly long set of lyrics' for i in range(20)
+    )
+    embed_lyrics(mp3_path, Lyrics(plain=lyrics_text))
+
+    tags = ID3(mp3_path)
+    assert str(tags.getall('USLT::eng')[0]) == lyrics_text
 
 
 # ── _format_basename ──────────────────────────────────────────────────────────

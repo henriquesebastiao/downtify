@@ -720,7 +720,15 @@ def _tag_mp3(
                 data=cover_bytes,
             )
         )
-    audio.save(v2_version=3)
+    # ID3v2.3 has no UTF-8 text encoding (only Latin-1/UTF-16), so saving
+    # v2.3 frames created with encoding=3 forces mutagen to transcode them
+    # to UTF-16 on write. That conversion corrupts the tail of the frame
+    # (observed: the last 1-2 characters replaced with garbage code
+    # points), which then desyncs the ID3 reader for every frame that
+    # follows TIT2 — silently dropping artist/album/genre/date/track
+    # number/cover on read. v2.4 supports UTF-8 natively, so no forced
+    # transcode happens.
+    audio.save(v2_version=4)
 
 
 def _tag_mp4(
@@ -936,7 +944,9 @@ def embed_lyrics(path: Path, lyrics: 'lyrics_mod.Lyrics') -> None:
             audio.add_tags()
         audio.tags.delall('USLT')
         audio.tags.add(USLT(encoding=3, lang='eng', desc='', text=text))
-        audio.save(v2_version=3)
+        # See the matching comment in _tag_mp3: v2.3 forces a UTF-8 ->
+        # UTF-16 transcode on save that corrupts long text frames.
+        audio.save(v2_version=4)
     elif suffix in {'m4a', 'mp4', 'aac'}:
         audio = MP4(str(path))
         audio['\xa9lyr'] = text
