@@ -370,3 +370,49 @@ def test_release_type_for_tags_missing_key_returns_empty():
 
 def test_release_type_for_tags_none_value_returns_empty():
     assert not _release_type_for_tags({'release_type': None})
+
+
+# ── download() ydl_opts (remote EJS components for SABR fallback) ──────────────
+
+
+class _CapturedOpts(Exception):
+    """Raised by the fake YoutubeDL to stop download() before it would
+    otherwise touch the network, once we've captured ydl_opts."""
+
+
+class _FakeYoutubeDL:
+    captured: dict = {}
+
+    def __init__(self, opts):
+        _FakeYoutubeDL.captured = opts
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def download(self, urls):  # noqa: PLR6301 - mirrors yt_dlp.YoutubeDL's API
+        raise _CapturedOpts
+
+
+def test_download_ydl_opts_enables_remote_ejs_component(tmp_path, monkeypatch):
+    """Without `remote_components: ['ejs:github']`, yt-dlp refuses to
+    fetch the EJS challenge-solver script even when a JS runtime is
+    installed, so the `web`/`web_embedded` fallback clients silently
+    yield no audio once YouTube's SABR rollout gates `ios`/`android`
+    (henriquesebastiao/downtify#247)."""
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _FakeYoutubeDL)
+    d = _make(tmp_path)
+    song = {
+        'name': 'Song',
+        'artists': ['Artist'],
+        'youtube_id': 'abc123def45',
+        'album_name': 'Album',
+        'cover_url': 'https://example.com/cover.jpg',
+    }
+    try:
+        d.download(song)
+    except _CapturedOpts:
+        pass
+    assert _FakeYoutubeDL.captured.get('remote_components') == ['ejs:github']
