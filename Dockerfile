@@ -54,6 +54,7 @@ RUN apk add --no-cache \
     shadow \
     su-exec \
     tini \
+    tzdata \
     deno \
     yt-dlp-ejs-rt-deno
 

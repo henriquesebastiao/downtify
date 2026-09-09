@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import sqlite3
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -15,10 +16,65 @@ from . import m3u, spotify
 from .downloader import Downloader
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
+MINUTES_PER_DAY = 1440
+
+SYNC_TIME_ENV_VAR = 'DOWNTIFY_MONITOR_SYNC_TIME'
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _sync_anchor_time() -> Optional[time]:
+    """Parse ``DOWNTIFY_MONITOR_SYNC_TIME`` (``HH:MM``, 24h, local time).
+
+    Returns ``None`` when unset or malformed, in which case scheduling
+    falls back to the plain ``last_checked + interval`` behavior. Only
+    read from the environment at call time (not cached) so it can be
+    changed without a restart of the whole process in tests, and so a
+    typo doesn't get baked in for the process lifetime.
+    """
+    raw = os.getenv(SYNC_TIME_ENV_VAR, '').strip()
+    if not raw:
+        return None
+    hour_str, _, minute_str = raw.partition(':')
+    try:
+        hour = int(hour_str)
+        minute = int(minute_str) if minute_str else 0
+        return time(hour, minute)
+    except ValueError:
+        logger.warning(
+            '{}={!r} is not a valid HH:MM time; ignoring it.',
+            SYNC_TIME_ENV_VAR,
+            raw,
+        )
+        return None
+
+
+def _next_due_at(last: datetime, interval_minutes: int) -> datetime:
+    """Compute when *last*'s next check is due.
+
+    For sub-day intervals this is simply ``last + interval``. For
+    intervals that are a whole number of days (daily, weekly, every 2
+    weeks, monthly), the result is additionally snapped to the
+    :data:`SYNC_TIME_ENV_VAR` time-of-day when it's set, so all
+    day-or-longer playlists sync at the same configured hour (e.g.
+    ``03:00``) instead of at whatever time the playlist happened to be
+    added or last checked. The date component always advances by at
+    least one full interval, so the snap never moves the due time
+    earlier than an unsnapped ``last + interval`` would allow.
+    """
+    due = last + timedelta(minutes=interval_minutes)
+    if interval_minutes % MINUTES_PER_DAY != 0:
+        return due
+    anchor = _sync_anchor_time()
+    if anchor is None:
+        return due
+    local_due = due.astimezone()
+    anchored_local = local_due.replace(
+        hour=anchor.hour, minute=anchor.minute, second=0, microsecond=0
+    )
+    return anchored_local.astimezone(timezone.utc)
 
 
 def _is_due(last_checked: Optional[str], interval_minutes: int) -> bool:
@@ -28,8 +84,8 @@ def _is_due(last_checked: Optional[str], interval_minutes: int) -> bool:
         last = datetime.fromisoformat(last_checked)
         if last.tzinfo is None:
             last = last.replace(tzinfo=timezone.utc)
-        return datetime.now(timezone.utc) >= last + timedelta(
-            minutes=interval_minutes
+        return datetime.now(timezone.utc) >= _next_due_at(
+            last, interval_minutes
         )
     except ValueError:
         return True
