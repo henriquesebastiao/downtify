@@ -42,7 +42,8 @@ export default {
     error: 'Valami elromlott.',
     errorWithDetail: 'Valami elromlott: {detail}',
     empty: 'Nem találtam dalokat.',
-    emptyHint: 'Próbáljon meg egy másik lekérdezést — az előadó + cím általában a legjobb.',
+    emptyHint:
+      'Próbáljon meg egy másik lekérdezést — az előadó + cím általában a legjobb.',
     openSource: 'Megnyitás forrásban',
     inQueue: 'Sorban',
     download: 'Letöltés',
@@ -58,9 +59,10 @@ export default {
   queue: {
     title: 'Letöltési sor',
     subtitle:
-      "Az Ön által sorba helyezett dalok. A folyamat, állapot és gyors műveletek itt láthatók.",
+      'Az Ön által sorba helyezett dalok. A folyamat, állapot és gyors műveletek itt láthatók.',
     empty: 'Nincs semmi sorban.',
-    emptyHint: 'Keressen egy dalt, és nyomja meg a letöltés gombot a kezdéshez.',
+    emptyHint:
+      'Keressen egy dalt, és nyomja meg a letöltés gombot a kezdéshez.',
     saveToDevice: 'Mentés eszközre',
     removeFromQueue: 'Eltávolítás a sorból',
     clearAll: 'Összes törlése',
@@ -72,7 +74,7 @@ export default {
   },
   library: {
     title: 'Könyvtár',
-    subtitle: "Már letöltött zene. Hallgass, töltse le újra vagy távolítsa el.",
+    subtitle: 'Már letöltött zene. Hallgass, töltse le újra vagy távolítsa el.',
     empty: 'Még nincs letöltés.',
     emptyHint: 'Keressen egy dalt a könyvtár feltöltéséhez.',
     failedLoad: 'Nem sikerült betölteni a letöltéseket.',
@@ -81,7 +83,7 @@ export default {
     countOne: '{count} fájl a könyvtárban',
     countMany: '{count} fájlok a könyvtárban',
     downloadToDevice: 'Letöltés eszközre',
-    
+
     deleteFile: 'Fájl törlése',
     play: 'Lejátszás',
   },
@@ -92,9 +94,11 @@ export default {
     watchNew: 'Új lejátszási lista megtekintése',
     urlPlaceholder: 'Illesszen be egy Spotify lejátszási lista URL-jét…',
     watch: 'Figyelés',
-    failedAdd: 'Nem sikerült hozzáadni a lejátszási listát. Ellenőrizze az URL-t és próbálja újra.',
+    failedAdd:
+      'Nem sikerült hozzáadni a lejátszási listát. Ellenőrizze az URL-t és próbálja újra.',
     empty: 'Még nincsenek figyelemmel kísért lejátszási listák.',
-    emptyHint: 'Az első lépésekhez illesszen be egy Spotify lejátszási lista hivatkozást fent.',
+    emptyHint:
+      'Az első lépésekhez illesszen be egy Spotify lejátszási lista hivatkozást fent.',
     active: 'Aktív',
     paused: 'Szünetel',
     everyInterval: 'Minden {interval}',

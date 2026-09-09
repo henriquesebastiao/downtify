@@ -19,7 +19,7 @@ export const AVAILABLE_LOCALES = [
   { code: 'el', name: 'Ελληνικά', messages: el },
   { code: 'fr', name: 'Français', messages: fr },
   { code: 'tr', name: 'Türkçe', messages: tr },
-  { code: 'hu', name: 'Magyar', messages: hu},
+  { code: 'hu', name: 'Magyar', messages: hu },
 ]
 
 const DEFAULT_LOCALE = 'en'
