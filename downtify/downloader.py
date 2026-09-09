@@ -384,6 +384,15 @@ class Downloader:
             'extractor_args': {
                 'youtube': {'player_client': _yt_player_clients()}
             },
+            # `web`/`web_embedded` need a JS runtime to solve YouTube's
+            # signature/n-challenges (see the comment on
+            # _DEFAULT_YT_PLAYER_CLIENTS above) — that's the only real
+            # fallback once `ios`/`android` get SABR-gated. yt-dlp
+            # refuses to fetch its EJS challenge-solver script by
+            # default, so without this the JS runtime never actually
+            # gets used and those two clients silently yield no audio
+            # (see henriquesebastiao/downtify#247).
+            'remote_components': ['ejs:github'],
             # Light pacing so we don't trigger 429 rate limits when the
             # user fires off multiple downloads back-to-back.
             'sleep_interval_requests': 1,
