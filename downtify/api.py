@@ -56,6 +56,9 @@ from . import m3u, providers, spotify
 from .downloader import Downloader
 from .monitor import PlaylistMonitorDB, check_playlist
 
+MIN_PARALLEL_DOWNLOADS = 1
+MAX_PARALLEL_DOWNLOADS = 30
+
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
     'lyrics_providers': ['lrclib'],
@@ -69,6 +72,21 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'organize_by_album': False,
     'search_albums': True,
 }
+
+
+def _clamp_parallel_downloads(value: Any) -> int:
+    """Coerce and clamp a requested parallel-download count.
+
+    Keeps the setting inside ``[MIN_PARALLEL_DOWNLOADS,
+    MAX_PARALLEL_DOWNLOADS]`` regardless of what the client sends, so a
+    malformed or malicious payload can't spin up an unbounded number of
+    concurrent yt-dlp/ffmpeg processes.
+    """
+    try:
+        count = int(value)
+    except (TypeError, ValueError):
+        count = DEFAULT_SETTINGS['max_parallel_downloads']
+    return min(MAX_PARALLEL_DOWNLOADS, max(MIN_PARALLEL_DOWNLOADS, count))
 
 
 def _organize_enabled() -> bool:
@@ -151,6 +169,9 @@ def _load_settings(path: Path) -> dict[str, Any]:
             for k, v in saved.items():
                 if k in DEFAULT_SETTINGS:
                     merged[k] = v
+            merged['max_parallel_downloads'] = _clamp_parallel_downloads(
+                merged['max_parallel_downloads']
+            )
             return merged
     except Exception:
         pass
@@ -715,9 +736,13 @@ async def update_settings_endpoint(
     except Exception:
         payload = {}
     if isinstance(payload, dict):
-        for key, value in payload.items():
-            if key in DEFAULT_SETTINGS:
-                state.settings[key] = value
+        for key, raw_value in payload.items():
+            if key not in DEFAULT_SETTINGS:
+                continue
+            if key == 'max_parallel_downloads':
+                state.settings[key] = _clamp_parallel_downloads(raw_value)
+            else:
+                state.settings[key] = raw_value
         if state.downloader is not None:
             fmt = payload.get('format')
             if isinstance(fmt, str) and fmt:
@@ -743,11 +768,9 @@ async def update_settings_endpoint(
                     payload['organize_by_album']
                 )
         if 'max_parallel_downloads' in payload:
-            try:
-                count = max(1, int(payload['max_parallel_downloads']))
-                state.download_semaphore = asyncio.Semaphore(count)
-            except (TypeError, ValueError):
-                pass
+            state.download_semaphore = asyncio.Semaphore(
+                state.settings['max_parallel_downloads']
+            )
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)
     return state.settings

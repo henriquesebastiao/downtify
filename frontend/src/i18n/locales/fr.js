@@ -178,6 +178,7 @@ export default {
     parallelDownloads: 'Téléchargements parallèles',
     parallelDownloadsHint:
       'Nombre maximal de titres téléchargeables simultanément. Plus cette valeur est élevée, plus le téléchargement est rapide, mais plus la bande passante utilisée est importante.',
+    parallelDownloadsCustomHint: 'Valeur personnalisée entre {min} et {max}.',
     saved: 'Changements sauvegardés',
     saveError: 'Impossible de sauvegarder les paramètres.',
     language: 'Langue',

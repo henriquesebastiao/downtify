@@ -16,13 +16,29 @@ const settings = ref({
   search_albums: true,
 })
 
+const MIN_PARALLEL_DOWNLOADS = 1
+const MAX_PARALLEL_DOWNLOADS = 30
+
 const settingsOptions = {
   audio_providers: ['youtube', 'youtube-music'],
   lyrics_providers: ['lrclib', 'genius', 'musixmatch', 'azlyrics'],
   format: ['mp3', 'flac', 'ogg', 'opus', 'm4a'],
   bitrate: ['128', '192', '256', '320'],
-  max_parallel_downloads: [1, 2, 3, 5, 8],
+  max_parallel_downloads_presets: [1, 2, 3, 5, 8],
+  max_parallel_downloads_min: MIN_PARALLEL_DOWNLOADS,
+  max_parallel_downloads_max: MAX_PARALLEL_DOWNLOADS,
   output: '{artists} - {title}.{output-ext}',
+}
+
+export function clampParallelDownloads(value) {
+  const parsed = Number.parseInt(value, 10)
+  if (Number.isNaN(parsed)) {
+    return MIN_PARALLEL_DOWNLOADS
+  }
+  return Math.min(
+    MAX_PARALLEL_DOWNLOADS,
+    Math.max(MIN_PARALLEL_DOWNLOADS, parsed)
+  )
 }
 
 API.getSettings().then((res) => {

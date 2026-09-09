@@ -292,7 +292,7 @@
           </label>
           <div class="grid grid-cols-5 gap-1.5">
             <button
-              v-for="n in sm.settingsOptions.max_parallel_downloads"
+              v-for="n in sm.settingsOptions.max_parallel_downloads_presets"
               :key="n"
               type="button"
               class="rounded-xl border px-2 py-2 text-sm font-medium transition-colors text-center"
@@ -301,10 +301,29 @@
                   ? 'border-primary/50 bg-primary/10 text-primary'
                   : 'border-white/10 hover:border-white/20 hover:bg-white/5',
               ]"
-              @click="sm.settings.value.max_parallel_downloads = n"
+              @click="setParallelDownloads(n)"
             >
               {{ n }}
             </button>
+          </div>
+          <div class="flex items-center gap-2 mt-2">
+            <input
+              type="number"
+              inputmode="numeric"
+              class="input input-sm w-24 rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              :min="sm.settingsOptions.max_parallel_downloads_min"
+              :max="sm.settingsOptions.max_parallel_downloads_max"
+              :value="sm.settings.value.max_parallel_downloads"
+              @change="setParallelDownloads($event.target.value)"
+            />
+            <span class="text-[11px] text-base-content/40">
+              {{
+                t('settings.parallelDownloadsCustomHint', {
+                  min: sm.settingsOptions.max_parallel_downloads_min,
+                  max: sm.settingsOptions.max_parallel_downloads_max,
+                })
+              }}
+            </span>
           </div>
           <p class="text-[11px] text-base-content/40 mt-1.5">
             {{ t('settings.parallelDownloadsHint') }}
@@ -366,7 +385,7 @@
 
 <script setup>
 import { Icon } from '@iconify/vue'
-import { useSettingsManager } from '../model/settings'
+import { clampParallelDownloads, useSettingsManager } from '../model/settings'
 import { useI18n } from '../i18n'
 
 const sm = useSettingsManager()
@@ -376,6 +395,10 @@ function providerLabel(provider) {
   if (provider === 'youtube-music') return 'YouTube Music'
   if (provider === 'youtube') return 'YouTube'
   return provider
+}
+
+function setParallelDownloads(value) {
+  sm.settings.value.max_parallel_downloads = clampParallelDownloads(value)
 }
 
 function resetOutputTemplate() {
