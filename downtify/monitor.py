@@ -326,8 +326,11 @@ async def check_playlist(
             playlist.name,
         )
 
+    delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0
+    last_index = len(new_tracks) - 1
+
     downloaded = 0
-    for song in new_tracks:
+    for index, song in enumerate(new_tracks):
         track_id = song['song_id']
         pl_name = playlist.name
 
@@ -379,6 +382,8 @@ async def check_playlist(
                 db.mark_track_downloaded, playlist.id, track_id, filename
             )
             downloaded += 1
+            if delay_seconds > 0 and index != last_index:
+                await asyncio.sleep(delay_seconds)
         except Exception:
             logger.exception('Failed to auto-download track {}', track_id)
 

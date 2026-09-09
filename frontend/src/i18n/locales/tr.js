@@ -181,6 +181,10 @@ export default {
     parallelDownloadsHint:
       'Aynı anda indirilebilecek maksimum şarkı sayısı. Yüksek değerler daha hızlı indirmeler yapabilir fakat daha fazla internet harcar.',
     parallelDownloadsCustomHint: '{min} ile {max} arasında özel değer.',
+    downloadDelay: 'İndirmeler arası gecikme',
+    downloadDelayHint:
+      'Bir şarkıyı bitirdikten sonra bir sonrakine başlamadan önce bu kadar saniye bekle. Playlist/albüm indirmelerinde ve Playlist İzleme senkronizasyonlarında insan davranışını taklit etmek için kullanışlıdır.',
+    downloadDelayCustomHint: '{min} ile {max} saniye arasında özel değer.',
     saved: 'Değişiklikler kaydedildi',
     saveError: 'Ayarlar kaydedilirken bir hata oluştu.',
     language: 'Dil',

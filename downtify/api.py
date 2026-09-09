@@ -59,6 +59,9 @@ from .monitor import PlaylistMonitorDB, check_playlist
 MIN_PARALLEL_DOWNLOADS = 1
 MAX_PARALLEL_DOWNLOADS = 30
 
+MIN_DOWNLOAD_DELAY_SECONDS = 0
+MAX_DOWNLOAD_DELAY_SECONDS = 300
+
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
     'lyrics_providers': ['lrclib'],
@@ -68,6 +71,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
     'max_parallel_downloads': 3,
+    'download_delay_seconds': 0,
     'organize_by_artist': False,
     'organize_by_album': False,
     'search_albums': True,
@@ -87,6 +91,23 @@ def _clamp_parallel_downloads(value: Any) -> int:
     except (TypeError, ValueError):
         count = DEFAULT_SETTINGS['max_parallel_downloads']
     return min(MAX_PARALLEL_DOWNLOADS, max(MIN_PARALLEL_DOWNLOADS, count))
+
+
+def _clamp_download_delay(value: Any) -> float:
+    """Coerce and clamp the requested inter-download delay, in seconds.
+
+    Keeps the setting inside ``[MIN_DOWNLOAD_DELAY_SECONDS,
+    MAX_DOWNLOAD_DELAY_SECONDS]`` regardless of what the client sends,
+    so a malformed or malicious payload can't freeze batch/monitor
+    downloads for an unbounded amount of time.
+    """
+    try:
+        delay = float(value)
+    except (TypeError, ValueError):
+        delay = DEFAULT_SETTINGS['download_delay_seconds']
+    return min(
+        MAX_DOWNLOAD_DELAY_SECONDS, max(MIN_DOWNLOAD_DELAY_SECONDS, delay)
+    )
 
 
 def _organize_enabled() -> bool:
@@ -171,6 +192,9 @@ def _load_settings(path: Path) -> dict[str, Any]:
                     merged[k] = v
             merged['max_parallel_downloads'] = _clamp_parallel_downloads(
                 merged['max_parallel_downloads']
+            )
+            merged['download_delay_seconds'] = _clamp_download_delay(
+                merged['download_delay_seconds']
             )
             return merged
     except Exception:
@@ -365,8 +389,18 @@ async def _run_download(
     song: dict[str, Any],
     song_id: str,
     subdir: Optional[str] = None,
+    delay_seconds: float = 0,
 ) -> Optional[str]:
-    """Run a single download to completion, updating jobs state and broadcasting WS events."""
+    """Run a single download to completion, updating jobs state and broadcasting WS events.
+
+    When *delay_seconds* is positive, the concurrency slot (semaphore
+    permit) is held for that long after a successful download before
+    being released, so the next queued download in a batch can't start
+    until the delay has elapsed. This is only meant for multi-song
+    orchestration (playlist/album batches); single manual downloads
+    should pass ``delay_seconds=0`` so a one-off download never waits
+    around for nothing.
+    """
 
     if state.downloader is None:
         raise RuntimeError('Downloader not ready')
@@ -410,6 +444,18 @@ async def _run_download(
                     song, progress, subdir=subdir
                 ),
             )
+            job['status'] = 'done'
+            job['filename'] = filename
+            job['progress'] = 100
+            await state.connections.broadcast({
+                'song': song,
+                'progress': 100,
+                'message': 'Done',
+                'status': 'done',
+                'filename': filename,
+            })
+            if delay_seconds > 0:
+                await asyncio.sleep(delay_seconds)
     except Exception as exc:
         logger.exception('Download failed for {}', song_id)
         job['status'] = 'error'
@@ -422,16 +468,6 @@ async def _run_download(
         })
         raise
 
-    job['status'] = 'done'
-    job['filename'] = filename
-    job['progress'] = 100
-    await state.connections.broadcast({
-        'song': song,
-        'progress': 100,
-        'message': 'Done',
-        'status': 'done',
-        'filename': filename,
-    })
     return filename
 
 
@@ -491,10 +527,22 @@ async def _process_batch(
                 'Failed to resolve playlist name for {}', playlist_url
             )
 
+    # A per-song delay only makes sense when there's a "next" song to
+    # wait for; skip it entirely for a lone track so a single download
+    # never waits around for nothing.
+    delay_seconds = (
+        state.settings.get('download_delay_seconds', 0)
+        if len(songs) > 1
+        else 0
+    )
+
     async def _bounded(song: dict[str, Any], song_id: str) -> dict[str, Any]:
         try:
             filename = await _run_download(
-                song, song_id, subdir=playlist_subdir
+                song,
+                song_id,
+                subdir=playlist_subdir,
+                delay_seconds=delay_seconds,
             )
         except Exception:
             filename = None
@@ -626,6 +674,13 @@ async def download_album_endpoint(url: str = Query(...)) -> dict[str, str]:
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
     songs = _songs_for_album_download(url)
+    # See _process_batch: only meaningful when there's a "next" track to
+    # wait for, so a single-track album never waits around for nothing.
+    delay_seconds = (
+        state.settings.get('download_delay_seconds', 0)
+        if len(songs) > 1
+        else 0
+    )
 
     async def _one(song: dict[str, Any]) -> tuple[str, Optional[str]]:
         song_id = str(song.get('song_id') or '')
@@ -633,7 +688,9 @@ async def download_album_endpoint(url: str = Query(...)) -> dict[str, str]:
             return '', None
         job_id = _register_job(song, status='downloading')
         try:
-            filename = await _run_download(song, job_id)
+            filename = await _run_download(
+                song, job_id, delay_seconds=delay_seconds
+            )
         except Exception:
             logger.exception('Album track download failed for {}', song_id)
             return song_id, None
@@ -741,6 +798,8 @@ async def update_settings_endpoint(
                 continue
             if key == 'max_parallel_downloads':
                 state.settings[key] = _clamp_parallel_downloads(raw_value)
+            elif key == 'download_delay_seconds':
+                state.settings[key] = _clamp_download_delay(raw_value)
             else:
                 state.settings[key] = raw_value
         if state.downloader is not None:

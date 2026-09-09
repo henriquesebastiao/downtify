@@ -89,7 +89,7 @@ def test_download_album_endpoint_keeps_shared_album_metadata(monkeypatch):
 
     seen_songs = []
 
-    async def fake_run_download(song, job_id, subdir=None):
+    async def fake_run_download(song, job_id, subdir=None, delay_seconds=0):
         seen_songs.append(song)
         if song['song_id'] == 'bad-1':
             raise RuntimeError('boom')
@@ -112,7 +112,7 @@ def test_download_album_endpoint_skips_songs_without_id(monkeypatch):
     monkeypatch.setattr(api.state, 'downloader', object())
     monkeypatch.setattr(api.state, 'download_jobs', {})
 
-    async def fake_run_download(song, job_id, subdir=None):
+    async def fake_run_download(song, job_id, subdir=None, delay_seconds=0):
         raise AssertionError(
             'should not attempt to download a song with no id'
         )

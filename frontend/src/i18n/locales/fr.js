@@ -188,6 +188,11 @@ export default {
     parallelDownloadsHint:
       'Nombre maximal de titres téléchargeables simultanément. Plus cette valeur est élevée, plus le téléchargement est rapide, mais plus la bande passante utilisée est importante.',
     parallelDownloadsCustomHint: 'Valeur personnalisée entre {min} et {max}.',
+    downloadDelay: 'Délai entre les téléchargements',
+    downloadDelayHint:
+      'Attendre ce nombre de secondes après avoir terminé un morceau avant de commencer le suivant. Utile pour imiter un comportement humain lors des téléchargements de listes/albums et des synchronisations du Moniteur de listes.',
+    downloadDelayCustomHint:
+      'Valeur personnalisée entre {min} et {max} secondes.',
     saved: 'Changements sauvegardés',
     saveError: 'Impossible de sauvegarder les paramètres.',
     language: 'Langue',
