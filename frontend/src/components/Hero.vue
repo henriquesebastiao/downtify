@@ -51,6 +51,32 @@
             {{ t('hero.playlists') }}</span
           >
         </div>
+
+        <div class="mt-5">
+          <button
+            type="button"
+            class="inline-flex items-center gap-1.5 text-xs text-base-content/50 hover:text-base-content/80 transition-colors"
+            :disabled="importing"
+            @click="triggerCsvPicker"
+          >
+            <span
+              v-if="importing"
+              class="loading loading-spinner loading-xs"
+            ></span>
+            <Icon v-else icon="clarity:import-line" class="h-3.5 w-3.5" />
+            {{ t('hero.importCsv') }}
+          </button>
+          <input
+            ref="csvInput"
+            type="file"
+            accept=".csv,text/csv"
+            class="hidden"
+            @change="onCsvSelected"
+          />
+          <p v-if="importError" class="mt-2 text-xs text-error">
+            {{ importError }}
+          </p>
+        </div>
       </div>
     </div>
   </section>
@@ -58,7 +84,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import SearchInput from './SearchInput.vue'
+import router from '../router'
+import { useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
 
 const { t } = useI18n()
@@ -67,4 +96,36 @@ onMounted(() => {
   const v = localStorage.getItem('version')
   if (v) version.value = v
 })
+
+const dm = useDownloadManager()
+const csvInput = ref(null)
+const importing = ref(false)
+const importError = ref('')
+
+function triggerCsvPicker() {
+  importError.value = ''
+  csvInput.value?.click()
+}
+
+function onCsvSelected(event) {
+  const file = event.target.files && event.target.files[0]
+  event.target.value = ''
+  if (!file) return
+
+  importError.value = ''
+  importing.value = true
+  const playlistName = file.name.replace(/\.csv$/i, '')
+  dm.fromCsvFile(file, playlistName)
+    .then(() => {
+      router.push({ name: 'Download' })
+    })
+    .catch((err) => {
+      console.log('CSV import failed:', err.message)
+      importError.value =
+        err?.response?.data?.detail || t('hero.importCsvError')
+    })
+    .finally(() => {
+      importing.value = false
+    })
+}
 </script>

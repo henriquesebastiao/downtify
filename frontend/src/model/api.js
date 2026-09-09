@@ -67,6 +67,10 @@ function downloadBatch(payload) {
   return API.post('/api/download/batch', payload)
 }
 
+function downloadCsv(payload) {
+  return API.post('/api/download/csv', payload)
+}
+
 function check_for_update() {
   return API.get('/api/check_update')
 }
@@ -135,6 +139,7 @@ export default {
   open,
   download,
   downloadBatch,
+  downloadCsv,
   downloadFileURL,
   coverFileURL,
   listDownloads,

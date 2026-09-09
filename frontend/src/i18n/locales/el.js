@@ -31,6 +31,8 @@ export default {
     songs: 'Τραγούδια',
     albums: 'Άλμπουμ',
     playlists: 'Λίστες αναπαραγωγής',
+    importCsv: 'Εισαγωγή CSV βιβλιοθήκης (Soundiiz, TuneMyMusic, Exportify…)',
+    importCsvError: 'Δεν ήταν δυνατή η εισαγωγή αυτού του αρχείου CSV.',
   },
   search: {
     placeholder: 'Αναζήτηση, επικόλληση συνδέσμου Spotify ή YouTube Music...',

@@ -31,6 +31,8 @@ export default {
     songs: 'Songs',
     albums: 'Albums',
     playlists: 'Playlists',
+    importCsv: 'Import a library CSV (Soundiiz, TuneMyMusic, Exportify…)',
+    importCsvError: "Couldn't import that CSV file.",
   },
   search: {
     placeholder: 'Search, paste a Spotify or YouTube Music link…',

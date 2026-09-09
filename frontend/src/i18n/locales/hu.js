@@ -31,6 +31,8 @@ export default {
     songs: 'Zenék',
     albums: 'Albumok',
     playlists: 'Lejátszási listák',
+    importCsv: 'Könyvtár CSV importálása (Soundiiz, TuneMyMusic, Exportify…)',
+    importCsvError: 'Nem sikerült importálni ezt a CSV fájlt.',
   },
   search: {
     placeholder: 'Keresés, illessz be egy Spotify vagy YouTube Music linket…',

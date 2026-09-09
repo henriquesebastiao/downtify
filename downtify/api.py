@@ -26,6 +26,10 @@ working without changes:
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
   downloads every track from one shared, already-resolved tracklist so
   metadata stays consistent across the whole release)
+* ``POST /api/download/csv`` (import a library-export CSV from Soundiiz,
+  TuneMyMusic, Exportify, etc.; JSON body ``{csv, playlist_name,
+  generate_m3u}`` - the raw CSV text, read client-side, not a multipart
+  upload)
 * ``POST /api/playlist/m3u``
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
@@ -52,7 +56,7 @@ from fastapi import (
 )
 from loguru import logger
 
-from . import m3u, providers, spotify
+from . import library_import, m3u, providers, spotify
 from .downloader import Downloader
 from .monitor import PlaylistMonitorDB, check_playlist
 
@@ -509,12 +513,14 @@ async def _process_batch(
     job_ids: list[str],
     playlist_url: str,
     generate_m3u: bool,
+    playlist_name: Optional[str] = None,
 ) -> None:
     # Resolve the playlist name up-front so all tracks land in a single,
     # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
-    # tracks) keep the legacy flat layout under download_dir.
+    # tracks) keep the legacy flat layout under download_dir. A caller
+    # without a Spotify playlist_url (e.g. a CSV library import) can
+    # instead pass playlist_name directly.
     playlist_subdir: Optional[str] = None
-    playlist_name: Optional[str] = None
     parsed = spotify.parse_spotify_url(playlist_url) if playlist_url else None
     if parsed is not None and parsed[0] == 'playlist':
         try:
@@ -526,6 +532,8 @@ async def _process_batch(
             logger.exception(
                 'Failed to resolve playlist name for {}', playlist_url
             )
+    elif playlist_name:
+        playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
 
     # A per-song delay only makes sense when there's a "next" song to
     # wait for; skip it entirely for a lone track so a single download
@@ -636,6 +644,79 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
 
     task.add_done_callback(_log_batch_failure)
     return {'job_ids': job_ids, 'count': len(job_ids)}
+
+
+@router.post('/api/download/csv')
+async def download_csv_endpoint(request: Request) -> dict[str, Any]:
+    """Import a library-export CSV (Soundiiz, TuneMyMusic, Exportify, ...).
+
+    Body: ``{"csv": "<raw file text>", "playlist_name": "...",
+    "generate_m3u": true}``. The CSV is read client-side and sent as
+    plain text in the JSON body rather than as a multipart upload, to
+    match every other endpoint here and avoid an extra dependency.
+
+    Each row is resolved the same way a free-text search would be, via
+    :func:`providers.find_match` inside :meth:`Downloader.download` -
+    there is no Spotify/YouTube URL per row, only a title and artist.
+    """
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    try:
+        payload = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail='Invalid JSON') from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail='Invalid payload')
+
+    csv_text = payload.get('csv')
+    if not isinstance(csv_text, str) or not csv_text.strip():
+        raise HTTPException(
+            status_code=400, detail='csv must be a non-empty string'
+        )
+
+    try:
+        songs = await asyncio.to_thread(
+            library_import.parse_library_csv, csv_text
+        )
+    except library_import.LibraryCsvError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    playlist_name = (
+        str(payload.get('playlist_name') or '').strip() or 'Imported Library'
+    )
+    generate_m3u = bool(payload.get('generate_m3u', True))
+
+    job_ids: list[str] = []
+    for song in songs:
+        song_id = _register_job(song, status='queued')
+        job_ids.append(song_id)
+        await state.connections.broadcast({
+            'song': song,
+            'progress': 0,
+            'message': '',
+            'status': 'queued',
+        })
+
+    task = asyncio.create_task(
+        _process_batch(
+            songs, job_ids, '', generate_m3u, playlist_name=playlist_name
+        )
+    )
+
+    def _log_batch_failure(t: asyncio.Task) -> None:
+        if t.cancelled():
+            return
+        exc = t.exception()
+        if exc is not None:
+            logger.opt(exception=exc).error('CSV batch processing crashed')
+
+    task.add_done_callback(_log_batch_failure)
+    return {
+        'job_ids': job_ids,
+        'count': len(job_ids),
+        'playlist_name': playlist_name,
+    }
 
 
 def _songs_for_album_download(url: str) -> list[dict[str, Any]]:

@@ -31,6 +31,9 @@ export default {
     songs: 'Canciones',
     albums: 'Álbumes',
     playlists: 'Listas',
+    importCsv:
+      'Importar un CSV de biblioteca (Soundiiz, TuneMyMusic, Exportify…)',
+    importCsvError: 'No se pudo importar ese archivo CSV.',
   },
   search: {
     placeholder: 'Busca o pega un enlace de Spotify o YouTube Music…',
