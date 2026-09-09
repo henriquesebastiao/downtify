@@ -134,6 +134,21 @@ From that point on, whenever a new song appears in the playlist on Spotify, Down
 
 You can pause, resume, force an immediate check, or stop monitoring any playlist at any time from the same page.
 
+### 🕒 Choosing a daily sync time
+
+By default, a playlist checked every day (or week / 2 weeks / month) syncs at whatever time it was originally added or last checked — there's no guaranteed time of day. To pin day-or-longer syncs to a specific hour (e.g. run overnight at 3 AM instead of whenever), set the `DOWNTIFY_MONITOR_SYNC_TIME` environment variable:
+
+```yaml
+environment:
+  - TZ=America/Sao_Paulo
+  - DOWNTIFY_MONITOR_SYNC_TIME=03:00
+```
+
+- `DOWNTIFY_MONITOR_SYNC_TIME` uses 24-hour `HH:MM` format and only affects intervals of a full day or more (every day, week, 2 weeks, month) — shorter intervals (15 min – 12 h) are unaffected, since anchoring them to a single daily time would break their cadence.
+- Set `TZ` to your local [IANA timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) so the sync time is interpreted in your local time rather than UTC.
+- The very first check after adding a playlist always runs immediately, regardless of this setting — it only governs the *recurring* schedule afterward.
+- Leave `DOWNTIFY_MONITOR_SYNC_TIME` unset to keep the previous behavior (sync exactly one interval after the last check).
+
 ---
 
 ## 🎛️ Download Settings
