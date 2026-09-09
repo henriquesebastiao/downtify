@@ -188,6 +188,11 @@ export default {
     parallelDownloadsHint:
       'Número máximo de canciones descargadas simultáneamente. Valores más altos son más rápidos pero consumen más ancho de banda.',
     parallelDownloadsCustomHint: 'Valor personalizado entre {min} y {max}.',
+    downloadDelay: 'Retraso entre descargas',
+    downloadDelayHint:
+      'Espera esta cantidad de segundos después de terminar una canción antes de empezar la siguiente. Útil para imitar el comportamiento humano en descargas de listas/álbumes y sincronizaciones del Monitor de listas.',
+    downloadDelayCustomHint:
+      'Valor personalizado entre {min} y {max} segundos.',
     saved: 'Cambios guardados',
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',

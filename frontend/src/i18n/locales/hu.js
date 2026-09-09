@@ -190,6 +190,10 @@ export default {
     parallelDownloadsHint:
       'Egyszerre letöltött dalok maximális száma. A magasabb értékek gyorsabbak, de több sávszélességet használnak.',
     parallelDownloadsCustomHint: 'Egyéni érték {min} és {max} között.',
+    downloadDelay: 'Késleltetés letöltések között',
+    downloadDelayHint:
+      'Ennyi másodpercet várjon egy dal befejezése után, mielőtt elkezdi a következőt. Hasznos az emberi viselkedés utánzásához lejátszási lista/album letöltéseknél és a Lejátszásilista-figyelő szinkronizálásainál.',
+    downloadDelayCustomHint: 'Egyéni érték {min} és {max} másodperc között.',
     saved: 'Módosítások mentve',
     saveError: 'Nem sikerült menteni a beállításokat.',
     language: 'Nyelv',

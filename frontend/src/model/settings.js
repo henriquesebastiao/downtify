@@ -13,11 +13,15 @@ const settings = ref({
   organize_by_artist: false,
   organize_by_album: false,
   max_parallel_downloads: 3,
+  download_delay_seconds: 0,
   search_albums: true,
 })
 
 const MIN_PARALLEL_DOWNLOADS = 1
 const MAX_PARALLEL_DOWNLOADS = 30
+
+const MIN_DOWNLOAD_DELAY_SECONDS = 0
+const MAX_DOWNLOAD_DELAY_SECONDS = 300
 
 const settingsOptions = {
   audio_providers: ['youtube', 'youtube-music'],
@@ -27,6 +31,9 @@ const settingsOptions = {
   max_parallel_downloads_presets: [1, 2, 3, 5, 8],
   max_parallel_downloads_min: MIN_PARALLEL_DOWNLOADS,
   max_parallel_downloads_max: MAX_PARALLEL_DOWNLOADS,
+  download_delay_seconds_presets: [0, 5, 15, 30, 60],
+  download_delay_seconds_min: MIN_DOWNLOAD_DELAY_SECONDS,
+  download_delay_seconds_max: MAX_DOWNLOAD_DELAY_SECONDS,
   output: '{artists} - {title}.{output-ext}',
 }
 
@@ -38,6 +45,17 @@ export function clampParallelDownloads(value) {
   return Math.min(
     MAX_PARALLEL_DOWNLOADS,
     Math.max(MIN_PARALLEL_DOWNLOADS, parsed)
+  )
+}
+
+export function clampDownloadDelaySeconds(value) {
+  const parsed = Number.parseInt(value, 10)
+  if (Number.isNaN(parsed)) {
+    return MIN_DOWNLOAD_DELAY_SECONDS
+  }
+  return Math.min(
+    MAX_DOWNLOAD_DELAY_SECONDS,
+    Math.max(MIN_DOWNLOAD_DELAY_SECONDS, parsed)
   )
 }
 

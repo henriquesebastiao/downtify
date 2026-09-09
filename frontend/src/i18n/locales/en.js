@@ -185,6 +185,10 @@ export default {
     parallelDownloadsHint:
       'Maximum number of songs downloaded simultaneously. Higher values are faster but use more bandwidth.',
     parallelDownloadsCustomHint: 'Custom value between {min} and {max}.',
+    downloadDelay: 'Delay between downloads',
+    downloadDelayHint:
+      'Wait this many seconds after finishing a song before starting the next one. Useful to mimic human behavior on playlist/album downloads and Playlist Monitor syncs.',
+    downloadDelayCustomHint: 'Custom value between {min} and {max} seconds.',
     saved: 'Changes saved',
     saveError: "Couldn't save settings.",
     language: 'Language',

@@ -10,8 +10,11 @@ import json
 from downtify import api
 from downtify.api import (
     DEFAULT_SETTINGS,
+    MAX_DOWNLOAD_DELAY_SECONDS,
     MAX_PARALLEL_DOWNLOADS,
+    MIN_DOWNLOAD_DELAY_SECONDS,
     MIN_PARALLEL_DOWNLOADS,
+    _clamp_download_delay,
     _clamp_parallel_downloads,
     _effective_lyrics_providers,
     _load_settings,
@@ -349,3 +352,77 @@ def test_update_settings_clamps_zero_parallel_downloads(monkeypatch):
 def test_update_settings_accepts_in_range_parallel_downloads(monkeypatch):
     result = _call_update_settings(monkeypatch, {'max_parallel_downloads': 25})
     assert result['max_parallel_downloads'] == 25
+
+
+# ── _clamp_download_delay ────────────────────────────────────────────────────
+
+
+def test_clamp_download_delay_within_range_is_unchanged():
+    assert _clamp_download_delay(60) == 60
+
+
+def test_clamp_download_delay_caps_above_max():
+    assert _clamp_download_delay(9999) == MAX_DOWNLOAD_DELAY_SECONDS
+
+
+def test_clamp_download_delay_floors_below_min():
+    assert _clamp_download_delay(-5) == MIN_DOWNLOAD_DELAY_SECONDS
+
+
+def test_clamp_download_delay_accepts_string_numbers():
+    assert _clamp_download_delay('30') == 30
+
+
+def test_clamp_download_delay_falls_back_on_garbage():
+    assert (
+        _clamp_download_delay('not-a-number')
+        == DEFAULT_SETTINGS['download_delay_seconds']
+    )
+    assert (
+        _clamp_download_delay(None)
+        == DEFAULT_SETTINGS['download_delay_seconds']
+    )
+
+
+def test_clamp_download_delay_boundaries_are_inclusive():
+    assert (
+        _clamp_download_delay(MIN_DOWNLOAD_DELAY_SECONDS)
+        == MIN_DOWNLOAD_DELAY_SECONDS
+    )
+    assert (
+        _clamp_download_delay(MAX_DOWNLOAD_DELAY_SECONDS)
+        == MAX_DOWNLOAD_DELAY_SECONDS
+    )
+
+
+def test_load_settings_clamps_out_of_range_download_delay(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(
+        json.dumps({'download_delay_seconds': 99999}), encoding='utf-8'
+    )
+    result = _load_settings(path)
+    assert result['download_delay_seconds'] == MAX_DOWNLOAD_DELAY_SECONDS
+
+
+def test_update_settings_clamps_excessive_download_delay(monkeypatch):
+    monkeypatch.setitem(
+        api.state.settings,
+        'download_delay_seconds',
+        DEFAULT_SETTINGS['download_delay_seconds'],
+    )
+    result = _call_update_settings(
+        monkeypatch, {'download_delay_seconds': 99999}
+    )
+    assert result['download_delay_seconds'] == MAX_DOWNLOAD_DELAY_SECONDS
+
+
+def test_update_settings_accepts_in_range_download_delay(monkeypatch):
+    monkeypatch.setitem(
+        api.state.settings,
+        'download_delay_seconds',
+        DEFAULT_SETTINGS['download_delay_seconds'],
+    )
+    result = _call_update_settings(
+        monkeypatch, {'download_delay_seconds': 45}
+    )
+    assert result['download_delay_seconds'] == 45

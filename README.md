@@ -161,6 +161,14 @@ Access the settings panel (⚙️ icon) to configure:
 | **Bitrate** | 128 · 192 · 256 · 320 kbps (ignored for FLAC) |
 | **Audio provider** | YouTube Music |
 | **Organize by artist** | Off (default) · On |
+| **Parallel downloads** | 1–30 concurrent downloads (default 3) |
+| **Delay between downloads** | 0–300 seconds (default 0 = off) |
+
+### ⏱️ Delay between downloads
+
+**Settings → Delay between downloads** makes Downtify wait a configurable number of seconds after finishing a song before starting the next one, instead of firing downloads back-to-back. This applies to playlist, album and batch downloads, as well as Playlist Monitor's automatic sweeps — it's skipped for a single manual track download, since there's no "next" song to wait for.
+
+Combined with a lower **Parallel downloads** value, this spreads out requests over time to look less like a bot hammering YouTube — handy if you're downloading large playlists unattended and want to keep a lower profile.
 
 ### 📁 Organize by artist
 
