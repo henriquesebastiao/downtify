@@ -178,6 +178,7 @@ export default {
     parallelDownloads: 'Descargas paralelas',
     parallelDownloadsHint:
       'Número máximo de canciones descargadas simultáneamente. Valores más altos son más rápidos pero consumen más ancho de banda.',
+    parallelDownloadsCustomHint: 'Valor personalizado entre {min} y {max}.',
     saved: 'Cambios guardados',
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',

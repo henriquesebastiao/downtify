@@ -180,6 +180,7 @@ export default {
     parallelDownloads: 'Párhuzamos letöltések',
     parallelDownloadsHint:
       'Egyszerre letöltött dalok maximális száma. A magasabb értékek gyorsabbak, de több sávszélességet használnak.',
+    parallelDownloadsCustomHint: 'Egyéni érték {min} és {max} között.',
     saved: 'Módosítások mentve',
     saveError: 'Nem sikerült menteni a beállításokat.',
     language: 'Nyelv',

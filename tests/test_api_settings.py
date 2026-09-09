@@ -3,12 +3,16 @@ _effective_lyrics_providers."""
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import json
 
 from downtify import api
 from downtify.api import (
     DEFAULT_SETTINGS,
+    MAX_PARALLEL_DOWNLOADS,
+    MIN_PARALLEL_DOWNLOADS,
+    _clamp_parallel_downloads,
     _effective_lyrics_providers,
     _load_settings,
     artist_info_endpoint,
@@ -258,3 +262,90 @@ def test_effective_providers_defaults_to_enabled_when_key_missing():
 def test_effective_providers_empty_list_when_no_providers():
     settings = {'download_lyrics': True, 'lyrics_providers': []}
     assert _effective_lyrics_providers(settings) == []
+
+
+# ── _clamp_parallel_downloads ───────────────────────────────────────────────
+
+
+def test_clamp_parallel_downloads_within_range_is_unchanged():
+    assert _clamp_parallel_downloads(12) == 12
+
+
+def test_clamp_parallel_downloads_caps_above_max():
+    assert _clamp_parallel_downloads(9999) == MAX_PARALLEL_DOWNLOADS
+
+
+def test_clamp_parallel_downloads_floors_below_min():
+    assert _clamp_parallel_downloads(0) == MIN_PARALLEL_DOWNLOADS
+    assert _clamp_parallel_downloads(-5) == MIN_PARALLEL_DOWNLOADS
+
+
+def test_clamp_parallel_downloads_accepts_string_numbers():
+    assert _clamp_parallel_downloads('20') == 20
+
+
+def test_clamp_parallel_downloads_falls_back_on_garbage():
+    assert (
+        _clamp_parallel_downloads('not-a-number')
+        == DEFAULT_SETTINGS['max_parallel_downloads']
+    )
+    assert (
+        _clamp_parallel_downloads(None)
+        == DEFAULT_SETTINGS['max_parallel_downloads']
+    )
+
+
+def test_clamp_parallel_downloads_boundaries_are_inclusive():
+    assert _clamp_parallel_downloads(MIN_PARALLEL_DOWNLOADS) == (
+        MIN_PARALLEL_DOWNLOADS
+    )
+    assert _clamp_parallel_downloads(MAX_PARALLEL_DOWNLOADS) == (
+        MAX_PARALLEL_DOWNLOADS
+    )
+
+
+def test_load_settings_clamps_out_of_range_parallel_downloads(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(
+        json.dumps({'max_parallel_downloads': 500}), encoding='utf-8'
+    )
+    result = _load_settings(path)
+    assert result['max_parallel_downloads'] == MAX_PARALLEL_DOWNLOADS
+
+
+# ── update_settings_endpoint ────────────────────────────────────────────────
+
+
+class _FakeRequest:
+    def __init__(self, payload):
+        self._payload = payload
+
+    async def json(self):
+        return self._payload
+
+
+def _call_update_settings(monkeypatch, payload):
+    monkeypatch.setitem(
+        api.state.settings,
+        'max_parallel_downloads',
+        DEFAULT_SETTINGS['max_parallel_downloads'],
+    )
+    monkeypatch.setattr(api.state, 'settings_path', None)
+    return asyncio.run(api.update_settings_endpoint(_FakeRequest(payload)))
+
+
+def test_update_settings_clamps_excessive_parallel_downloads(monkeypatch):
+    result = _call_update_settings(
+        monkeypatch, {'max_parallel_downloads': 1000}
+    )
+    assert result['max_parallel_downloads'] == MAX_PARALLEL_DOWNLOADS
+
+
+def test_update_settings_clamps_zero_parallel_downloads(monkeypatch):
+    result = _call_update_settings(monkeypatch, {'max_parallel_downloads': 0})
+    assert result['max_parallel_downloads'] == MIN_PARALLEL_DOWNLOADS
+
+
+def test_update_settings_accepts_in_range_parallel_downloads(monkeypatch):
+    result = _call_update_settings(monkeypatch, {'max_parallel_downloads': 25})
+    assert result['max_parallel_downloads'] == 25

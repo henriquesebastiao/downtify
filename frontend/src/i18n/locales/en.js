@@ -175,6 +175,7 @@ export default {
     parallelDownloads: 'Parallel downloads',
     parallelDownloadsHint:
       'Maximum number of songs downloaded simultaneously. Higher values are faster but use more bandwidth.',
+    parallelDownloadsCustomHint: 'Custom value between {min} and {max}.',
     saved: 'Changes saved',
     saveError: "Couldn't save settings.",
     language: 'Language',

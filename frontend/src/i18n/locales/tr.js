@@ -171,6 +171,7 @@ export default {
     parallelDownloads: 'Eş zamanlı indirmeler',
     parallelDownloadsHint:
       'Aynı anda indirilebilecek maksimum şarkı sayısı. Yüksek değerler daha hızlı indirmeler yapabilir fakat daha fazla internet harcar.',
+    parallelDownloadsCustomHint: '{min} ile {max} arasında özel değer.',
     saved: 'Değişiklikler kaydedildi',
     saveError: 'Ayarlar kaydedilirken bir hata oluştu.',
     language: 'Dil',
