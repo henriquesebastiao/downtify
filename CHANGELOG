@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.10.2](https://github.com/henriquesebastiao/downtify/tree/2.10.2) (2026-09-09)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.10.1...2.10.2)
+
+**Implemented enhancements:**
+
+- Delete untracked songs [\#185](https://github.com/henriquesebastiao/downtify/issues/185)
+
+**Fixed bugs:**
+
+- Downtify 2.9.1 fails to download YouTube Music [\#247](https://github.com/henriquesebastiao/downtify/issues/247)
+
+**Merged pull requests:**
+
+- core: Update packages \(2026-9-8\) [\#290](https://github.com/henriquesebastiao/downtify/pull/290) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix: enable yt-dlp's remote EJS component for YouTube SABR fallback [\#286](https://github.com/henriquesebastiao/downtify/pull/286) ([Athos97](https://github.com/Athos97))
+- fix: save MP3 tags as ID3v2.4 instead of v2.3 [\#285](https://github.com/henriquesebastiao/downtify/pull/285) ([Athos97](https://github.com/Athos97))
+- added hungarian translation [\#284](https://github.com/henriquesebastiao/downtify/pull/284) ([BetteriX](https://github.com/BetteriX))
+
 ## [2.10.1](https://github.com/henriquesebastiao/downtify/tree/2.10.1) (2026-08-12)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.10.0...2.10.1)
