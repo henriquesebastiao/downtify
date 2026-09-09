@@ -43,6 +43,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 🎨 **Rich metadata** | Album art, title, artist, album, year — all embedded in every file |
 | 🎚️ **Multiple formats** | MP3 · FLAC · M4A · OGG · OPUS |
 | 🔎 **Free-text search** | Search YouTube Music directly — no Spotify link needed |
+| 📥 **CSV library import** | Import a library export from Soundiiz, TuneMyMusic or Exportify and queue the whole thing |
 | 🔑 **Zero credentials** | No Spotify API key, no account, no Premium required |
 | 🔔 **Real-time progress** | Live download progress via WebSocket — no page reload needed |
 | 🐳 **One Docker command** | Up and running in under a minute |
@@ -200,6 +201,17 @@ When the setting is **off** (default), the existing behaviour is preserved: sing
 | Spotify playlist | ✅ |
 | YouTube Music search (free text) | ✅ |
 | Direct YouTube link | ✅ |
+
+---
+
+## 📥 Import a library CSV
+
+Already exported your library from [Soundiiz](https://soundiiz.com/), [TuneMyMusic](https://www.tunemymusic.com/) or [Exportify](https://github.com/watsonbox/exportify)? Click **"Import a library CSV"** below the search box on the home page and pick the file — Downtify reads its Title/Artist columns (it recognizes the column names each of those tools uses) and queues every track for download, resolving each one via YouTube Music search just like a free-text query.
+
+- The whole file is read in your browser and sent as plain text — nothing is uploaded anywhere else.
+- Rows are matched case-insensitively against common header names, so exports from any of the three tools work without renaming columns.
+- If a header can't be recognized, the import is rejected up front with the column names it did find, rather than silently skipping everything.
+- Combine this with **Settings → Delay between downloads** (see below) if you're importing a large library — Downtify will otherwise fire off a lot of YouTube requests back-to-back, which is an easy way to get rate-limited.
 
 ---
 

@@ -196,6 +196,35 @@ export function useDownloadManager() {
       })
   }
 
+  function _readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result || ''))
+      reader.onerror = () => reject(reader.error || new Error('Read failed'))
+      reader.readAsText(file)
+    })
+  }
+
+  function fromCsvFile(file, playlistName) {
+    const generateM3u = settingsManager.settings.value.generate_m3u !== false
+    loading.value = true
+    return _readFileAsText(file)
+      .then((csv) =>
+        API.downloadCsv({
+          csv,
+          playlist_name: playlistName || '',
+          generate_m3u: generateM3u,
+        })
+      )
+      .then((res) => {
+        console.log('CSV import queued:', res.data)
+        return res.data
+      })
+      .finally(() => {
+        loading.value = false
+      })
+  }
+
   function download(song) {
     console.log('Downloading', song)
     progressTracker.getBySong(song).setDownloading()
@@ -277,6 +306,7 @@ export function useDownloadManager() {
 
   return {
     fromURL,
+    fromCsvFile,
     download,
     queue,
     retryWithAudio,

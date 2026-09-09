@@ -31,6 +31,9 @@ export default {
     songs: 'Şarkılar',
     albums: 'Albümler',
     playlists: 'Çalma Listeleri',
+    importCsv:
+      'Bir kütüphane CSV dosyası içe aktar (Soundiiz, TuneMyMusic, Exportify…)',
+    importCsvError: 'Bu CSV dosyası içe aktarılamadı.',
   },
   search: {
     placeholder:
