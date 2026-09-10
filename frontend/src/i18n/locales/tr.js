@@ -168,7 +168,7 @@ export default {
     outputTemplate: 'Dosya adı formatı',
     outputTemplateReset: 'Varsayılana dön',
     outputTemplateHint:
-      'Alt klasörler oluşturmak için "/" kullanılabilir. Değişkenler: {artists}, {artist}, {title}, {album}, {output-ext}',
+      'Alt klasörler oluşturmak için "/" kullanılabilir. Değişkenler: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
     playlistsSection: 'Çalma Listeleri',
     generateM3u: 'Çalma listeleri için M3U dosyaları oluştur',
     generateM3uHint:

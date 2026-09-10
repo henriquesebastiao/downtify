@@ -170,7 +170,7 @@ export default {
     outputTemplate: 'Formato do nome',
     outputTemplateReset: 'Restaurar',
     outputTemplateHint:
-      'Use / para criar subpastas. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
+      'Use / para criar subpastas. Tokens: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
     searchSection: 'Busca',
     searchAlbums: 'Mostrar álbuns nos resultados de busca',
     searchAlbumsHint:

@@ -171,7 +171,7 @@ export default {
     outputTemplate: 'Formato del nombre',
     outputTemplateReset: 'Restaurar',
     outputTemplateHint:
-      'Usa / para crear subcarpetas. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
+      'Usa / para crear subcarpetas. Tokens: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
     searchSection: 'Búsqueda',
     searchAlbums: 'Mostrar álbumes en los resultados de búsqueda',
     searchAlbumsHint:

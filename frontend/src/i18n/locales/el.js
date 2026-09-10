@@ -172,7 +172,7 @@ export default {
     outputTemplate: 'Μορφή ονόματος αρχείου',
     outputTemplateReset: 'Επαναφορά',
     outputTemplateHint:
-      'Χρησιμοποιήστε / για υποφακέλους. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
+      'Χρησιμοποιήστε / για υποφακέλους. Tokens: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
     searchSection: 'Αναζήτηση',
     searchAlbums: 'Εμφάνιση άλμπουμ στα αποτελέσματα αναζήτησης',
     searchAlbumsHint:

@@ -167,7 +167,7 @@ export default {
     outputTemplate: 'Filename format',
     outputTemplateReset: 'Reset',
     outputTemplateHint:
-      'Use / to create subfolders. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
+      'Use / to create subfolders. Tokens: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
     searchSection: 'Search',
     searchAlbums: 'Show albums in search results',
     searchAlbumsHint:
