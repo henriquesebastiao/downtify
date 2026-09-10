@@ -77,7 +77,7 @@ Playlist embed entries are missing the release year and use the playlist cover a
 
 ## M3U integration
 
-The M3U is written **twice** per sweep that downloads at least one new track: once right after the *first* track finishes, and again once the sweep completes. The early write means the playlist is already playable — and you can confirm the sync is working — without waiting for every track to finish; a slow or hung download further down the list no longer holds up the whole M3U. The final write picks up every track that downloaded during the sweep.
+The playlist's M3U is rewritten **after every track finishes**, so it grows as the sweep downloads rather than appearing only once everything is done. The playlist is playable from the first track onwards, and a slow or hung download further down the list never holds up the tracks that already landed. A final rewrite at the end of the sweep re-resolves everything against the filesystem.
 
 Manual playlist/album downloads and CSV imports behave the same way. See [M3U Export](m3u-export.md#when-it-is-written) for details.
 

@@ -107,6 +107,80 @@ def test_process_batch_writes_m3u_before_slow_track_finishes(
     assert final.index('Song A') < final.index('Song B')
 
 
+def test_process_batch_m3u_grows_with_each_completed_track(
+    monkeypatch, tmp_path
+):
+    """Each finished track must land in the M3U immediately — not be held
+    back until the whole batch is done."""
+    songs = [
+        {'song_id': 'a', 'name': 'Song A', 'artists': ['Artist A']},
+        {'song_id': 'b', 'name': 'Song B', 'artists': ['Artist B']},
+        {'song_id': 'c', 'name': 'Song C', 'artists': ['Artist C']},
+    ]
+    dl = _make_downloader(tmp_path)
+    monkeypatch.setattr(api.state, 'downloader', dl)
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    monkeypatch.setattr(api.state, 'download_semaphore', None)
+
+    release_b = asyncio.Event()
+    release_c = asyncio.Event()
+
+    async def fake_run_download(song, song_id, subdir=None, delay_seconds=0):
+        if song['song_id'] == 'b':
+            await release_b.wait()
+        elif song['song_id'] == 'c':
+            await release_c.wait()
+        return _write_track_file(dl, song, subdir)
+
+    monkeypatch.setattr(api, '_run_download', fake_run_download)
+
+    m3u_path = tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.m3u'
+
+    def _m3u_text() -> str:
+        return m3u_path.read_text(encoding='utf-8')
+
+    async def _scenario():
+        task = asyncio.create_task(
+            api._process_batch(
+                songs,
+                ['job-a', 'job-b', 'job-c'],
+                playlist_url='',
+                generate_m3u=True,
+                playlist_name=PLAYLIST_NAME,
+            )
+        )
+
+        assert await _wait_for(m3u_path.exists), 'no M3U after first track'
+        after_a = _m3u_text()
+
+        # Let B through; it must show up without waiting for C.
+        release_b.set()
+        assert await _wait_for(lambda: 'Song B' in _m3u_text()), (
+            'Song B was not added to the M3U while Song C was still pending'
+        )
+        after_b = _m3u_text()
+        assert not task.done(), 'batch finished before the assertion ran'
+
+        release_c.set()
+        await task
+        return after_a, after_b, _m3u_text()
+
+    after_a, after_b, final = asyncio.run(_scenario())
+
+    assert 'Song A' in after_a
+    assert 'Song B' not in after_a
+    assert 'Song C' not in after_a
+
+    assert 'Song A' in after_b
+    assert 'Song B' in after_b
+    assert 'Song C' not in after_b
+
+    assert 'Song C' in final
+    assert (
+        final.index('Song A') < final.index('Song B') < final.index('Song C')
+    )
+
+
 def test_process_batch_skips_m3u_when_generation_disabled(
     monkeypatch, tmp_path
 ):
@@ -266,6 +340,145 @@ def test_check_playlist_writes_m3u_before_slow_track_finishes(
     assert 'Song B' not in early
     assert 'Song A' in final
     assert 'Song B' in final
+
+
+def test_check_playlist_m3u_grows_with_each_completed_track(
+    monkeypatch, tmp_path
+):
+    """A monitor sweep must add each track to the M3U as it lands."""
+    tracks = [
+        {'song_id': 'a', 'name': 'Song A', 'artists': ['Artist A']},
+        {'song_id': 'b', 'name': 'Song B', 'artists': ['Artist B']},
+        {'song_id': 'c', 'name': 'Song C', 'artists': ['Artist C']},
+    ]
+    dl = _make_downloader(tmp_path)
+
+    monkeypatch.setattr(
+        monitor.spotify, 'playlist_tracks_from_id', lambda spotify_id: tracks
+    )
+    monkeypatch.setattr(monitor.spotify, 'track_from_id', lambda track_id: {})
+
+    release_b = threading.Event()
+    release_c = threading.Event()
+
+    def fake_download(song, cb, subdir=None):
+        if song['song_id'] == 'b':
+            release_b.wait(timeout=5)
+        elif song['song_id'] == 'c':
+            release_c.wait(timeout=5)
+        return _write_track_file(dl, song, subdir)
+
+    monkeypatch.setattr(dl, 'download', fake_download)
+
+    m3u_path = tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.m3u'
+
+    def _m3u_text() -> str:
+        return m3u_path.read_text(encoding='utf-8')
+
+    async def fake_broadcast(_msg):
+        return None
+
+    async def _scenario():
+        task = asyncio.create_task(
+            monitor.check_playlist(
+                _monitored_playlist(),
+                _FakeMonitorDB(),
+                dl,
+                fake_broadcast,
+                asyncio.get_running_loop(),
+                settings={'generate_m3u': True},
+            )
+        )
+
+        assert await _wait_for(m3u_path.exists), 'no M3U after first track'
+        after_a = _m3u_text()
+
+        release_b.set()
+        assert await _wait_for(lambda: 'Song B' in _m3u_text()), (
+            'Song B was not added to the M3U while Song C was still pending'
+        )
+        after_b = _m3u_text()
+        assert not task.done(), 'sweep finished before the assertion ran'
+
+        release_c.set()
+        await task
+        return after_a, after_b, _m3u_text()
+
+    after_a, after_b, final = asyncio.run(_scenario())
+
+    assert 'Song A' in after_a
+    assert 'Song B' not in after_a
+
+    assert 'Song A' in after_b
+    assert 'Song B' in after_b
+    assert 'Song C' not in after_b
+
+    assert 'Song C' in final
+    assert (
+        final.index('Song A') < final.index('Song B') < final.index('Song C')
+    )
+
+
+def test_check_playlist_reuses_files_from_earlier_sweeps_in_the_m3u(
+    monkeypatch, tmp_path
+):
+    """Tracks downloaded in a previous sweep must stay in the M3U written
+    during the current one, not be dropped until the final rewrite."""
+    tracks = [
+        {'song_id': 'old', 'name': 'Old Song', 'artists': ['Artist O']},
+        {'song_id': 'new', 'name': 'New Song', 'artists': ['Artist N']},
+    ]
+    dl = _make_downloader(tmp_path)
+    subdir = PLAYLIST_NAME
+
+    # Pretend 'old' came from an earlier sweep: its file is on disk and
+    # the DB knows its filename.
+    old_filename = _write_track_file(dl, tracks[0], subdir)
+
+    class _DBWithHistory:
+        @staticmethod
+        def get_track_filenames(playlist_id):
+            return {'old': old_filename}
+
+        @staticmethod
+        def mark_track_downloaded(playlist_id, track_id, filename):
+            pass
+
+        @staticmethod
+        def update_playlist(playlist_id, **kwargs):
+            pass
+
+    monkeypatch.setattr(
+        monitor.spotify, 'playlist_tracks_from_id', lambda spotify_id: tracks
+    )
+    monkeypatch.setattr(monitor.spotify, 'track_from_id', lambda track_id: {})
+    monkeypatch.setattr(
+        dl,
+        'download',
+        lambda song, cb, subdir=None: _write_track_file(dl, song, subdir),
+    )
+
+    async def fake_broadcast(_msg):
+        return None
+
+    async def _scenario():
+        return await monitor.check_playlist(
+            _monitored_playlist(),
+            _DBWithHistory(),
+            dl,
+            fake_broadcast,
+            asyncio.get_running_loop(),
+            settings={'generate_m3u': True},
+        )
+
+    downloaded = asyncio.run(_scenario())
+    final = (tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.m3u').read_text(
+        encoding='utf-8'
+    )
+
+    assert downloaded == 1  # only the new track was fetched
+    assert 'Old Song' in final
+    assert 'New Song' in final
 
 
 def test_check_playlist_skips_m3u_when_generation_disabled(

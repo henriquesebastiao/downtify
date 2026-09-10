@@ -304,8 +304,8 @@ def test_check_playlist_no_delay_when_setting_is_zero(monkeypatch):
 class _OrderedM3uDownloader:
     """Records download/M3U-write order in a shared list, in whichever
     order check_playlist actually issues them, so tests can assert the
-    M3U is written right after the *first* download rather than only
-    once the whole sweep finishes."""
+    M3U is rewritten after *every* download rather than only once the
+    whole sweep finishes."""
 
     download_dir = __import__('pathlib').Path('/tmp')
     organize_by_artist = False
@@ -349,7 +349,7 @@ def _run_check_playlist(monkeypatch, tracks, downloader, settings):
         loop.close()
 
 
-def test_check_playlist_writes_m3u_after_first_download_not_just_at_end(
+def test_check_playlist_rewrites_m3u_after_every_download(
     monkeypatch,
 ):
     tracks = [
@@ -359,7 +359,7 @@ def test_check_playlist_writes_m3u_after_first_download_not_just_at_end(
     ]
     events = []
 
-    def fake_regenerate_m3u(playlist, all_tracks, downloader):
+    def fake_regenerate_m3u(playlist, all_tracks, downloader, resolved=None):
         events.append('m3u')
 
     monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
@@ -370,13 +370,15 @@ def test_check_playlist_writes_m3u_after_first_download_not_just_at_end(
     )
 
     assert downloaded == 3
-    # M3U written right after the first download completes, not after
-    # b/c — and again once at the very end of the sweep.
+    # Every track that lands is written into the M3U immediately, plus a
+    # final authoritative rewrite at the end of the sweep.
     assert events == [
         'download:a',
         'm3u',
         'download:b',
+        'm3u',
         'download:c',
+        'm3u',
         'm3u',
     ]
 
@@ -385,7 +387,7 @@ def test_check_playlist_skips_m3u_entirely_when_disabled(monkeypatch):
     tracks = [{'song_id': 'a', 'name': 'A'}, {'song_id': 'b', 'name': 'B'}]
     events = []
 
-    def fake_regenerate_m3u(playlist, all_tracks, downloader):
+    def fake_regenerate_m3u(playlist, all_tracks, downloader, resolved=None):
         events.append('m3u')
 
     monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
@@ -403,7 +405,7 @@ def test_check_playlist_no_m3u_when_every_download_fails(monkeypatch):
     tracks = [{'song_id': 'a', 'name': 'A'}, {'song_id': 'b', 'name': 'B'}]
     events = []
 
-    def fake_regenerate_m3u(playlist, all_tracks, downloader):
+    def fake_regenerate_m3u(playlist, all_tracks, downloader, resolved=None):
         events.append('m3u')
 
     monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
@@ -418,14 +420,14 @@ def test_check_playlist_no_m3u_when_every_download_fails(monkeypatch):
 
 
 def test_check_playlist_writes_m3u_twice_for_a_single_track(monkeypatch):
-    # A single successful track still gets the early write (first
-    # download) and the final write (end of sweep) — the second is a
-    # cheap, idempotent no-op rewrite, deliberately not special-cased
-    # away, matching the "write early, write again at the end" request.
+    # One track -> one per-track write plus the final rewrite. The
+    # second is a cheap, idempotent rewrite, deliberately not
+    # special-cased away: the final pass is what resolves the playlist
+    # against the filesystem rather than the in-memory filename map.
     tracks = [{'song_id': 'a', 'name': 'A'}]
     events = []
 
-    def fake_regenerate_m3u(playlist, all_tracks, downloader):
+    def fake_regenerate_m3u(playlist, all_tracks, downloader, resolved=None):
         events.append('m3u')
 
     monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
@@ -443,7 +445,7 @@ def test_check_playlist_treats_missing_settings_as_m3u_enabled(monkeypatch):
     tracks = [{'song_id': 'a', 'name': 'A'}]
     events = []
 
-    def fake_regenerate_m3u(playlist, all_tracks, downloader):
+    def fake_regenerate_m3u(playlist, all_tracks, downloader, resolved=None):
         events.append('m3u')
 
     monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)

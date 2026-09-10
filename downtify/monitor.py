@@ -303,6 +303,13 @@ async def check_playlist(
 
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
 
+    # Filenames already on disk from earlier sweeps, keyed by track id,
+    # topped up as each new track lands. Lets the M3U be rewritten after
+    # every single download without re-resolving the whole playlist
+    # against the filesystem each time (which is O(tracks) globs per
+    # write, and quadratic over a large sweep).
+    resolved: dict[str, str] = {}
+
     new_tracks = []
     for t in tracks:
         if not t.get('song_id'):
@@ -312,12 +319,13 @@ async def check_playlist(
             new_tracks.append(t)
         else:
             stored = known_tracks[tid]
-            if (
-                stored is not None
-                and not (downloader.download_dir / stored).exists()
-            ):
+            if stored is None:
+                continue
+            if not (downloader.download_dir / stored).exists():
                 # File was deleted — re-download
                 new_tracks.append(t)
+            else:
+                resolved[tid] = stored
 
     if new_tracks:
         logger.info(
@@ -327,7 +335,6 @@ async def check_playlist(
         )
 
     delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0
-    wrote_early_m3u = False
 
     downloaded = 0
     for index, song in enumerate(new_tracks):
@@ -382,18 +389,15 @@ async def check_playlist(
                 db.mark_track_downloaded, playlist.id, track_id, filename
             )
             downloaded += 1
-            if not wrote_early_m3u and (
-                settings is None or settings.get('generate_m3u', True)
-            ):
-                # Write the M3U as soon as the first track lands rather
-                # than waiting for the whole sweep, so a slow/hung
-                # download further down the list doesn't hold up an
-                # already-downloaded playlist from showing up as
-                # playable. It's rewritten again once the sweep
-                # finishes to pick up every track that downloaded.
-                wrote_early_m3u = True
+            if filename:
+                resolved[track_id] = filename
+            if settings is None or settings.get('generate_m3u', True):
+                # Rewrite the M3U after every track rather than once the
+                # whole sweep finishes, so the playlist grows as it
+                # downloads and a slow/hung track further down the list
+                # never holds up what's already on disk.
                 await asyncio.to_thread(
-                    _regenerate_m3u, playlist, tracks, downloader
+                    _regenerate_m3u, playlist, tracks, downloader, resolved
                 )
             if delay_seconds > 0 and index != len(new_tracks) - 1:
                 await asyncio.sleep(delay_seconds)
@@ -418,19 +422,29 @@ def _regenerate_m3u(
     playlist: MonitoredPlaylist,
     tracks: list[dict[str, Any]],
     downloader: Downloader,
+    resolved: Optional[dict[str, str]] = None,
 ) -> None:
-    """Rewrite the playlist's M3U from on-disk state after a sweep.
+    """Rewrite the playlist's M3U, in playlist order.
 
     Walks the full ordered track list (not just the freshly downloaded
-    ones), resolves each to an existing file via the downloader, and
-    hands the entries to :func:`m3u.write_m3u`. Tracks without a
-    matching file on disk are dropped.
+    ones) and hands the entries to :func:`m3u.write_m3u`. Tracks with no
+    file are dropped, so a partially-downloaded playlist still yields a
+    valid, correctly-ordered M3U.
+
+    With *resolved* (``{track_id: filename}``) filenames are taken from
+    that map alone — the cheap path used for the rewrite after each
+    individual download. Without it every track is resolved against the
+    filesystem instead, which is the authoritative view used for the
+    final rewrite at the end of a sweep.
     """
 
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
     entries: list[dict[str, Any]] = []
     for song in tracks:
-        filename = downloader.existing_filename_for(song, subdir=pl_subdir)
+        if resolved is None:
+            filename = downloader.existing_filename_for(song, subdir=pl_subdir)
+        else:
+            filename = resolved.get(song.get('song_id') or '')
         if not filename:
             continue
         entries.append({

@@ -595,15 +595,14 @@ async def _process_batch(
     )
 
     wants_m3u = bool(generate_m3u and playlist_subdir and playlist_name)
-    # Filename per song index, filled in as downloads land. Used to write
-    # the M3U before the whole batch is done, so one slow or hung track
-    # can't hold up a playlist that's otherwise already on disk.
+    # Filename per song index, filled in as downloads land. The M3U is
+    # rewritten from this after every completed download, so the playlist
+    # grows as it downloads instead of appearing all at once at the end,
+    # and one slow or hung track can't hold up what's already on disk.
     resolved: dict[int, Optional[str]] = {}
-    early_m3u_written = False
     m3u_lock = asyncio.Lock()
 
     async def _bounded(index: int, song: dict[str, Any], song_id: str) -> None:
-        nonlocal early_m3u_written
         try:
             filename = await _run_download(
                 song,
@@ -616,10 +615,9 @@ async def _process_batch(
         resolved[index] = filename
         if not (filename and wants_m3u):
             return
+        # Serialized so concurrent downloads can't interleave writes to
+        # the same file.
         async with m3u_lock:
-            if early_m3u_written:
-                return
-            early_m3u_written = True
             await _write_batch_m3u(
                 songs, resolved, playlist_name, playlist_subdir
             )
