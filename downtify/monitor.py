@@ -327,7 +327,7 @@ async def check_playlist(
         )
 
     delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0
-    last_index = len(new_tracks) - 1
+    wrote_early_m3u = False
 
     downloaded = 0
     for index, song in enumerate(new_tracks):
@@ -382,7 +382,20 @@ async def check_playlist(
                 db.mark_track_downloaded, playlist.id, track_id, filename
             )
             downloaded += 1
-            if delay_seconds > 0 and index != last_index:
+            if not wrote_early_m3u and (
+                settings is None or settings.get('generate_m3u', True)
+            ):
+                # Write the M3U as soon as the first track lands rather
+                # than waiting for the whole sweep, so a slow/hung
+                # download further down the list doesn't hold up an
+                # already-downloaded playlist from showing up as
+                # playable. It's rewritten again once the sweep
+                # finishes to pick up every track that downloaded.
+                wrote_early_m3u = True
+                await asyncio.to_thread(
+                    _regenerate_m3u, playlist, tracks, downloader
+                )
+            if delay_seconds > 0 and index != len(new_tracks) - 1:
                 await asyncio.sleep(delay_seconds)
         except Exception:
             logger.exception('Failed to auto-download track {}', track_id)

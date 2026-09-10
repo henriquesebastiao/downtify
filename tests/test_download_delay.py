@@ -296,3 +296,160 @@ def test_check_playlist_no_delay_when_setting_is_zero(monkeypatch):
 
     assert downloaded == 2
     assert sleeps == []
+
+
+# ── monitor.check_playlist: incremental M3U writes ──────────────────────────
+
+
+class _OrderedM3uDownloader:
+    """Records download/M3U-write order in a shared list, in whichever
+    order check_playlist actually issues them, so tests can assert the
+    M3U is written right after the *first* download rather than only
+    once the whole sweep finishes."""
+
+    download_dir = __import__('pathlib').Path('/tmp')
+    organize_by_artist = False
+    organize_by_album = False
+
+    def __init__(self, events, *, fail_song_ids=frozenset()):
+        self.events = events
+        self.fail_song_ids = fail_song_ids
+
+    def download(self, song, cb, subdir=None):
+        if song['song_id'] in self.fail_song_ids:
+            self.events.append(f'fail:{song["song_id"]}')
+            raise RuntimeError('boom')
+        self.events.append(f'download:{song["song_id"]}')
+        return f'{song["song_id"]}.mp3'
+
+
+def _run_check_playlist(monkeypatch, tracks, downloader, settings):
+    monkeypatch.setattr(
+        monitor.spotify, 'playlist_tracks_from_id', lambda spotify_id: tracks
+    )
+    monkeypatch.setattr(monitor.spotify, 'track_from_id', lambda track_id: {})
+    monkeypatch.setattr(monitor.asyncio, 'sleep', lambda _s: asyncio.sleep(0))
+
+    async def fake_broadcast(_msg):
+        return None
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(
+            monitor.check_playlist(
+                _playlist(),
+                _FakeMonitorDB(),
+                downloader,
+                fake_broadcast,
+                loop,
+                settings=settings,
+            )
+        )
+    finally:
+        loop.close()
+
+
+def test_check_playlist_writes_m3u_after_first_download_not_just_at_end(
+    monkeypatch,
+):
+    tracks = [
+        {'song_id': 'a', 'name': 'A'},
+        {'song_id': 'b', 'name': 'B'},
+        {'song_id': 'c', 'name': 'C'},
+    ]
+    events = []
+
+    def fake_regenerate_m3u(playlist, all_tracks, downloader):
+        events.append('m3u')
+
+    monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
+    downloader = _OrderedM3uDownloader(events)
+
+    downloaded = _run_check_playlist(
+        monkeypatch, tracks, downloader, {'generate_m3u': True}
+    )
+
+    assert downloaded == 3
+    # M3U written right after the first download completes, not after
+    # b/c — and again once at the very end of the sweep.
+    assert events == [
+        'download:a',
+        'm3u',
+        'download:b',
+        'download:c',
+        'm3u',
+    ]
+
+
+def test_check_playlist_skips_m3u_entirely_when_disabled(monkeypatch):
+    tracks = [{'song_id': 'a', 'name': 'A'}, {'song_id': 'b', 'name': 'B'}]
+    events = []
+
+    def fake_regenerate_m3u(playlist, all_tracks, downloader):
+        events.append('m3u')
+
+    monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
+    downloader = _OrderedM3uDownloader(events)
+
+    downloaded = _run_check_playlist(
+        monkeypatch, tracks, downloader, {'generate_m3u': False}
+    )
+
+    assert downloaded == 2
+    assert 'm3u' not in events
+
+
+def test_check_playlist_no_m3u_when_every_download_fails(monkeypatch):
+    tracks = [{'song_id': 'a', 'name': 'A'}, {'song_id': 'b', 'name': 'B'}]
+    events = []
+
+    def fake_regenerate_m3u(playlist, all_tracks, downloader):
+        events.append('m3u')
+
+    monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
+    downloader = _OrderedM3uDownloader(events, fail_song_ids={'a', 'b'})
+
+    downloaded = _run_check_playlist(
+        monkeypatch, tracks, downloader, {'generate_m3u': True}
+    )
+
+    assert downloaded == 0
+    assert 'm3u' not in events
+
+
+def test_check_playlist_writes_m3u_twice_for_a_single_track(monkeypatch):
+    # A single successful track still gets the early write (first
+    # download) and the final write (end of sweep) — the second is a
+    # cheap, idempotent no-op rewrite, deliberately not special-cased
+    # away, matching the "write early, write again at the end" request.
+    tracks = [{'song_id': 'a', 'name': 'A'}]
+    events = []
+
+    def fake_regenerate_m3u(playlist, all_tracks, downloader):
+        events.append('m3u')
+
+    monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
+    downloader = _OrderedM3uDownloader(events)
+
+    downloaded = _run_check_playlist(
+        monkeypatch, tracks, downloader, {'generate_m3u': True}
+    )
+
+    assert downloaded == 1
+    assert events == ['download:a', 'm3u', 'm3u']
+
+
+def test_check_playlist_treats_missing_settings_as_m3u_enabled(monkeypatch):
+    tracks = [{'song_id': 'a', 'name': 'A'}]
+    events = []
+
+    def fake_regenerate_m3u(playlist, all_tracks, downloader):
+        events.append('m3u')
+
+    monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
+    downloader = _OrderedM3uDownloader(events)
+
+    downloaded = _run_check_playlist(monkeypatch, tracks, downloader, None)
+
+    assert downloaded == 1
+    assert events.count('m3u') == 2

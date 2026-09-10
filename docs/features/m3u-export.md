@@ -23,12 +23,22 @@ Track paths inside the M3U are written **relative to the M3U file itself**, not 
 
 M3U generation is controlled by **Settings → Generate M3U file for playlists** (on by default). Turning it off skips M3U creation entirely; the rest of the download flow is unchanged.
 
+## When it is written
+
+The M3U is written **twice** per run — once as soon as the *first* track finishes downloading, and again when the run completes:
+
+| Run type | Early write | Final write |
+|----------|-------------|-------------|
+| Playlist / album download, [CSV import](library-import.md) | After the first track finishes | After every track finishes |
+| [Playlist Monitor](playlist-monitor.md#m3u-integration) sweep | After the first new track finishes | After the sweep completes |
+
+The early write means the playlist is already playable — and you can confirm the sync is working — without waiting for the whole batch. A single slow or hung download no longer keeps the M3U from appearing at all. The final write picks up everything else that downloaded.
+
+Both writes list tracks in **playlist order**, not in the order downloads happened to finish, so a partially-written M3U is still correctly ordered.
+
 ## Regeneration
 
-The M3U is regenerated fresh on every run:
-
-- Re-pasting the same playlist URL produces a complete, in-order file including any tracks that were missing on earlier runs
-- The Playlist Monitor regenerates the M3U after each sweep that downloads at least one new track
+The M3U is regenerated fresh on every run — re-pasting the same playlist URL produces a complete, in-order file including any tracks that were missing on earlier runs.
 
 Tracks that failed to download or had no YouTube Music match are silently skipped.
 

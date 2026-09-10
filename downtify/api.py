@@ -508,6 +508,56 @@ async def download_endpoint(
     return filename
 
 
+def _m3u_entries_for(
+    songs: list[dict[str, Any]], resolved: dict[int, Optional[str]]
+) -> list[dict[str, Any]]:
+    """Build M3U entries for the songs downloaded so far.
+
+    Iterates ``songs`` in playlist order (not completion order, which
+    varies with concurrency) and keeps only those with a filename in
+    ``resolved``, so a partially-finished batch still produces a
+    correctly-ordered file.
+    """
+    entries: list[dict[str, Any]] = []
+    for index, song in enumerate(songs):
+        filename = resolved.get(index)
+        if not filename:
+            continue
+        entries.append({
+            'filename': filename,
+            'title': song.get('name') or '',
+            'artist': ', '.join(song.get('artists') or []),
+            'duration': song.get('duration') or 0,
+        })
+    return entries
+
+
+async def _write_batch_m3u(
+    songs: list[dict[str, Any]],
+    resolved: dict[int, Optional[str]],
+    playlist_name: str,
+    playlist_subdir: str,
+) -> None:
+    entries = _m3u_entries_for(songs, resolved)
+    if not entries:
+        return
+    # When organize-by-artist/album is on, songs land in those folders
+    # instead of the playlist subfolder, so the M3U must go to the legacy
+    # Playlists/ directory (playlist_subdir=None) where relative paths
+    # still resolve.
+    organize = _organize_enabled()
+    try:
+        await asyncio.to_thread(
+            m3u.write_m3u,
+            state.downloader.download_dir,
+            playlist_name,
+            entries,
+            playlist_subdir=None if organize else playlist_subdir,
+        )
+    except Exception:
+        logger.exception('Failed to write M3U for {!r}', playlist_name)
+
+
 async def _process_batch(
     songs: list[dict[str, Any]],
     job_ids: list[str],
@@ -544,7 +594,16 @@ async def _process_batch(
         else 0
     )
 
-    async def _bounded(song: dict[str, Any], song_id: str) -> dict[str, Any]:
+    wants_m3u = bool(generate_m3u and playlist_subdir and playlist_name)
+    # Filename per song index, filled in as downloads land. Used to write
+    # the M3U before the whole batch is done, so one slow or hung track
+    # can't hold up a playlist that's otherwise already on disk.
+    resolved: dict[int, Optional[str]] = {}
+    early_m3u_written = False
+    m3u_lock = asyncio.Lock()
+
+    async def _bounded(index: int, song: dict[str, Any], song_id: str) -> None:
+        nonlocal early_m3u_written
         try:
             filename = await _run_download(
                 song,
@@ -554,45 +613,27 @@ async def _process_batch(
             )
         except Exception:
             filename = None
-        return {'song': song, 'filename': filename}
+        resolved[index] = filename
+        if not (filename and wants_m3u):
+            return
+        async with m3u_lock:
+            if early_m3u_written:
+                return
+            early_m3u_written = True
+            await _write_batch_m3u(
+                songs, resolved, playlist_name, playlist_subdir
+            )
 
-    results = await asyncio.gather(
-        *[_bounded(s, sid) for s, sid in zip(songs, job_ids)],
+    await asyncio.gather(
+        *[
+            _bounded(i, s, sid)
+            for i, (s, sid) in enumerate(zip(songs, job_ids))
+        ],
         return_exceptions=False,
     )
 
-    if not (generate_m3u and playlist_subdir and playlist_name):
-        return
-
-    entries: list[dict[str, Any]] = []
-    for r in results:
-        if not r or not r.get('filename'):
-            continue
-        s = r['song']
-        entries.append({
-            'filename': r['filename'],
-            'title': s.get('name') or '',
-            'artist': ', '.join(s.get('artists') or []),
-            'duration': s.get('duration') or 0,
-        })
-    if not entries:
-        return
-
-    # When organize-by-artist/album is on, songs land in those folders
-    # instead of the playlist subfolder, so the M3U must go to the legacy
-    # Playlists/ directory (playlist_subdir=None) where relative paths
-    # still resolve.
-    organize = _organize_enabled()
-    try:
-        await asyncio.to_thread(
-            m3u.write_m3u,
-            state.downloader.download_dir,
-            playlist_name,
-            entries,
-            playlist_subdir=None if organize else playlist_subdir,
-        )
-    except Exception:
-        logger.exception('Failed to write M3U for {}', playlist_url)
+    if wants_m3u:
+        await _write_batch_m3u(songs, resolved, playlist_name, playlist_subdir)
 
 
 @router.post('/api/download/batch')
