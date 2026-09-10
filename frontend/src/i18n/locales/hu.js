@@ -229,6 +229,8 @@ export default {
     playFromLibrary: 'Megnyitás a lejátszóban',
     countOne: '{count} szám',
     countMany: '{count} szám',
+    playingFrom: 'Lejátszás innen',
+    allSongs: 'Összes szám ({count})',
   },
   footer: {
     tagline: 'Nyílt forráskódú zeneletöltő',

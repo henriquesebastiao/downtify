@@ -227,6 +227,8 @@ export default {
     playFromLibrary: 'Abrir no player',
     countOne: '{count} faixa',
     countMany: '{count} faixas',
+    playingFrom: 'Tocando de',
+    allSongs: 'Todas as músicas ({count})',
   },
   footer: {
     tagline: 'Baixador de músicas de código aberto',

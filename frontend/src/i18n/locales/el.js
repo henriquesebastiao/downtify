@@ -230,6 +230,8 @@ export default {
     playFromLibrary: 'Άνοιγμα στο player',
     countOne: '{count} κομμάτι',
     countMany: '{count} κομμάτια',
+    playingFrom: 'Αναπαραγωγή από',
+    allSongs: 'Όλα τα τραγούδια ({count})',
   },
   footer: {
     tagline: 'Πρόγραμμα λήψης μουσικής ανοιχτού κώδικα',
