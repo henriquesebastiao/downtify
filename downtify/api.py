@@ -58,7 +58,13 @@ from loguru import logger
 
 from . import library_import, m3u, providers, spotify
 from .downloader import Downloader
-from .monitor import PlaylistMonitorDB, check_playlist
+from .monitor import (
+    KIND_ARTIST,
+    KIND_PLAYLIST,
+    PlaylistMonitorDB,
+    check_artist,
+    check_playlist,
+)
 
 MIN_PARALLEL_DOWNLOADS = 1
 MAX_PARALLEL_DOWNLOADS = 30
@@ -982,6 +988,106 @@ def _require_monitor_db() -> PlaylistMonitorDB:
     return state.monitor_db
 
 
+def _youtube_artist_for_name(name: str) -> tuple[str, str]:
+    """Find the YouTube Music artist channel that matches *name*.
+
+    Spotify's artist embed exposes no discography (only a top-tracks
+    preview), so a watched Spotify artist is followed through YouTube
+    Music instead — which is also where the audio is fetched from, so
+    every release we can see is one we can actually download. Returns
+    ``(channel_id, resolved_name)``.
+    """
+
+    results = providers.search_artists(name, limit=10)
+    if not results:
+        raise HTTPException(
+            status_code=404,
+            detail=f'No YouTube Music artist found for {name!r}',
+        )
+    wanted = name.casefold().strip()
+    exact = [
+        r
+        for r in results
+        if str(r.get('name') or '').casefold().strip() == wanted
+    ]
+    best = (exact or results)[0]
+    channel_id = str(best.get('artist_id') or '')
+    if not channel_id:
+        raise HTTPException(
+            status_code=502,
+            detail=f'YouTube Music artist for {name!r} has no channel id',
+        )
+    return channel_id, str(best.get('name') or name)
+
+
+async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
+    """Resolve a pasted URL into ``(kind, watch_key, display_name)``.
+
+    Accepts a Spotify playlist URL (watched by its tracks), a Spotify
+    artist URL or a YouTube Music artist/channel URL (watched by their
+    discography).
+    """
+
+    spotify_parsed = spotify.parse_spotify_url(url)
+    if spotify_parsed is not None and spotify_parsed[0] == 'playlist':
+        _, playlist_id = spotify_parsed
+        try:
+            name, _tracks = await asyncio.to_thread(
+                spotify.playlist_info_and_tracks, playlist_id
+            )
+        except Exception as exc:
+            logger.exception('Failed to resolve playlist {}', playlist_id)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return KIND_PLAYLIST, playlist_id, name
+
+    if spotify_parsed is not None and spotify_parsed[0] == 'artist':
+        _, artist_id = spotify_parsed
+        try:
+            spotify_name = await asyncio.to_thread(
+                spotify.artist_name_from_id, artist_id
+            )
+        except Exception as exc:
+            logger.exception('Failed to resolve artist {}', artist_id)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        channel_id, name = await asyncio.to_thread(
+            _youtube_artist_for_name, spotify_name
+        )
+        return KIND_ARTIST, channel_id, name
+
+    youtube_parsed = providers.parse_youtube_url(url)
+    if youtube_parsed is not None and youtube_parsed[0] == 'artist':
+        _, channel_id = youtube_parsed
+        try:
+            info = await asyncio.to_thread(
+                providers.artist_info_from_channel_id, channel_id
+            )
+        except Exception as exc:
+            logger.exception('Failed to resolve artist channel {}', channel_id)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return KIND_ARTIST, channel_id, str(info.get('name') or channel_id)
+
+    raise HTTPException(
+        status_code=400,
+        detail=(
+            'A Spotify playlist URL, a Spotify artist URL or a YouTube '
+            'Music artist URL is required'
+        ),
+    )
+
+
+async def _check_watch(
+    playlist: Any,
+    db: PlaylistMonitorDB,
+    downloader: Any,
+    broadcast: Any,
+    loop: asyncio.AbstractEventLoop,
+    settings: dict[str, Any],
+) -> int:
+    """Run the right check for a watch, by kind."""
+    check = check_artist if playlist.kind == KIND_ARTIST else check_playlist
+    return await check(playlist, db, downloader, broadcast, loop, settings)
+
+
 @router.get('/api/monitor/playlists')
 async def list_monitor_playlists() -> list[dict[str, Any]]:
     db = _require_monitor_db()
@@ -1000,30 +1106,21 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
     url = payload.get('url', '')
     interval_minutes = int(payload.get('interval_minutes', 60))
 
-    parsed = spotify.parse_spotify_url(url)
-    if parsed is None or parsed[0] != 'playlist':
-        raise HTTPException(
-            status_code=400, detail='A valid Spotify playlist URL is required'
-        )
+    kind, watch_key, name = await _resolve_watch_target(url)
 
-    _, spotify_id = parsed
-
-    existing = await asyncio.to_thread(db.get_by_spotify_id, spotify_id)
+    existing = await asyncio.to_thread(db.get_by_spotify_id, watch_key)
     if existing is not None:
         raise HTTPException(
-            status_code=409, detail='This playlist is already being monitored'
+            status_code=409,
+            detail=(
+                'This artist is already being watched'
+                if kind == KIND_ARTIST
+                else 'This playlist is already being monitored'
+            ),
         )
-
-    try:
-        name, _tracks = await asyncio.to_thread(
-            spotify.playlist_info_and_tracks, spotify_id
-        )
-    except Exception as exc:
-        logger.exception('Failed to resolve playlist {}', spotify_id)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     playlist = await asyncio.to_thread(
-        db.add_playlist, spotify_id, name, url, interval_minutes
+        db.add_playlist, watch_key, name, url, interval_minutes, kind
     )
 
     # Kick off the first download pass immediately so the user does not have
@@ -1033,7 +1130,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
 
         async def _initial_check(pl=playlist) -> None:
             try:
-                await check_playlist(
+                await _check_watch(
                     pl,
                     db,
                     state.downloader,  # type: ignore[arg-type]
@@ -1042,7 +1139,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
                     state.settings,
                 )
             except Exception:
-                logger.exception('Initial check failed for playlist {}', pl.id)
+                logger.exception('Initial check failed for watch {}', pl.id)
 
         asyncio.create_task(_initial_check())
 
@@ -1101,12 +1198,15 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
 
     async def _run() -> None:
         try:
-            count = await check_playlist(
-                playlist,  # type: ignore[arg-type]
+            count = await _check_watch(
+                playlist,
                 db,
-                state.downloader,  # type: ignore[arg-type]
+                state.downloader,
                 state.connections.broadcast,
                 loop,
+                # Was omitted before, which silently ignored the
+                # delay-between-downloads setting on a manual check.
+                state.settings,
             )
             logger.info(
                 'Manual check: downloaded {} new track(s) from "{}"',
@@ -1114,9 +1214,7 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
                 playlist.name,
             )  # type: ignore[union-attr]
         except Exception:
-            logger.exception(
-                'Manual check failed for playlist {}', playlist_id
-            )
+            logger.exception('Manual check failed for watch {}', playlist_id)
 
     asyncio.create_task(_run())
     return {'status': 'check_started', 'id': playlist_id}

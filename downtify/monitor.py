@@ -12,7 +12,7 @@ from typing import Any, Callable, Optional
 
 from loguru import logger
 
-from . import m3u, spotify
+from . import m3u, providers, spotify
 from .downloader import Downloader
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
@@ -91,6 +91,10 @@ def _is_due(last_checked: Optional[str], interval_minutes: int) -> bool:
         return True
 
 
+KIND_PLAYLIST = 'playlist'
+KIND_ARTIST = 'artist'
+
+
 @dataclass
 class MonitoredPlaylist:
     id: int
@@ -102,6 +106,11 @@ class MonitoredPlaylist:
     last_checked: Optional[str]
     last_track_count: int
     created_at: str
+    # 'playlist' watches a Spotify playlist's tracks; 'artist' watches a
+    # YouTube Music artist's discography for new releases. For an artist
+    # watch, ``spotify_id`` holds the YouTube Music channel id — it is
+    # just the unique key a watch is addressed by.
+    kind: str = KIND_PLAYLIST
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -142,11 +151,29 @@ class PlaylistMonitorDB:
                         ON DELETE CASCADE,
                     UNIQUE(playlist_id, track_spotify_id)
                 );
+                CREATE TABLE IF NOT EXISTS seen_albums (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    playlist_id INTEGER NOT NULL,
+                    album_id TEXT NOT NULL,
+                    name TEXT,
+                    seen_at TEXT NOT NULL,
+                    FOREIGN KEY (playlist_id) REFERENCES monitored_playlists(id)
+                        ON DELETE CASCADE,
+                    UNIQUE(playlist_id, album_id)
+                );
             """)
             # Migration: add filename column if it doesn't exist yet
             try:
                 conn.execute(
                     'ALTER TABLE downloaded_tracks ADD COLUMN filename TEXT'
+                )
+            except Exception:
+                pass
+            # Migration: watches used to be playlists only.
+            try:
+                conn.execute(
+                    'ALTER TABLE monitored_playlists ADD COLUMN kind TEXT '
+                    f"NOT NULL DEFAULT '{KIND_PLAYLIST}'"
                 )
             except Exception:
                 pass
@@ -157,13 +184,15 @@ class PlaylistMonitorDB:
         name: str,
         url: str,
         interval_minutes: int = 60,
+        kind: str = KIND_PLAYLIST,
     ) -> MonitoredPlaylist:
         with self._connect() as conn:
             cur = conn.execute(
                 """INSERT INTO monitored_playlists
-                   (spotify_id, name, url, interval_minutes, enabled, created_at)
-                   VALUES (?, ?, ?, ?, 1, ?)""",
-                (spotify_id, name, url, interval_minutes, _now_iso()),
+                   (spotify_id, name, url, interval_minutes, enabled,
+                    created_at, kind)
+                   VALUES (?, ?, ?, ?, 1, ?, ?)""",
+                (spotify_id, name, url, interval_minutes, _now_iso(), kind),
             )
             row = conn.execute(
                 'SELECT * FROM monitored_playlists WHERE id = ?',
@@ -241,6 +270,31 @@ class PlaylistMonitorDB:
             ).fetchall()
             return {r['track_spotify_id']: r['filename'] for r in rows}
 
+    def get_seen_album_ids(self, playlist_id: int) -> set[str]:
+        """Return the album ids already processed for an artist watch."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                'SELECT album_id FROM seen_albums WHERE playlist_id = ?',
+                (playlist_id,),
+            ).fetchall()
+            return {r['album_id'] for r in rows}
+
+    def mark_album_seen(
+        self,
+        playlist_id: int,
+        album_id: str,
+        name: Optional[str] = None,
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO seen_albums
+                   (playlist_id, album_id, name, seen_at)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT(playlist_id, album_id) DO UPDATE SET
+                   name=excluded.name""",
+                (playlist_id, album_id, name, _now_iso()),
+            )
+
     def mark_track_downloaded(
         self,
         playlist_id: int,
@@ -260,6 +314,7 @@ class PlaylistMonitorDB:
 
 
 def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
+    keys = row.keys()
     return MonitoredPlaylist(
         id=row['id'],
         spotify_id=row['spotify_id'],
@@ -270,6 +325,10 @@ def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
         last_checked=row['last_checked'],
         last_track_count=row['last_track_count'],
         created_at=row['created_at'],
+        # Rows written before the kind migration have no column at all
+        # when reading from a stale connection/schema cache.
+        kind=(row['kind'] if 'kind' in keys else KIND_PLAYLIST)
+        or KIND_PLAYLIST,
     )
 
 
@@ -418,6 +477,140 @@ async def check_playlist(
     return downloaded
 
 
+def _progress_cb(
+    song: dict[str, Any],
+    label: str,
+    broadcast: Callable[[dict[str, Any]], Any],
+    loop: asyncio.AbstractEventLoop,
+) -> Callable[[float, str], None]:
+    """Build a downloader progress callback that broadcasts over the WS."""
+
+    def _cb(pct: float, message: str) -> None:
+        asyncio.run_coroutine_threadsafe(
+            broadcast({
+                'song': song,
+                'progress': pct,
+                'message': message,
+                'playlist_name': label,
+            }),
+            loop,
+        )
+
+    return _cb
+
+
+async def check_artist(
+    playlist: MonitoredPlaylist,
+    db: PlaylistMonitorDB,
+    downloader: Downloader,
+    broadcast: Callable[[dict[str, Any]], Any],
+    loop: asyncio.AbstractEventLoop,
+    settings: Optional[dict[str, Any]] = None,
+) -> int:
+    """Download every release of a watched artist that isn't known yet.
+
+    ``playlist.spotify_id`` is the artist's YouTube Music channel id. The
+    discography is listed in one call per sweep; only releases missing
+    from ``seen_albums`` have their tracklists fetched, so a steady-state
+    sweep costs a single request. Returns the number of tracks
+    downloaded.
+    """
+    logger.info(
+        'Checking monitored artist "{}" ({})',
+        playlist.name,
+        playlist.spotify_id,
+    )
+
+    try:
+        albums = await asyncio.to_thread(
+            providers.artist_albums_from_channel_id, playlist.spotify_id
+        )
+    except Exception:
+        logger.exception(
+            'Failed to fetch discography for artist {}', playlist.spotify_id
+        )
+        await asyncio.to_thread(
+            db.update_playlist, playlist.id, last_checked=_now_iso()
+        )
+        return 0
+
+    seen = await asyncio.to_thread(db.get_seen_album_ids, playlist.id)
+    new_albums = [
+        a for a in albums if a.get('album_id') and a['album_id'] not in seen
+    ]
+    if new_albums:
+        logger.info(
+            'Found {} new release(s) for artist "{}"',
+            len(new_albums),
+            playlist.name,
+        )
+
+    delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0
+    known_tracks = await asyncio.to_thread(db.get_track_filenames, playlist.id)
+
+    downloaded = 0
+    for album in new_albums:
+        album_id = album['album_id']
+        try:
+            tracks = await asyncio.to_thread(
+                providers.album_tracks_from_browse_id, album_id
+            )
+        except Exception:
+            logger.exception(
+                'Failed to fetch tracks for release {} ({})',
+                album.get('name'),
+                album_id,
+            )
+            continue
+
+        complete = True
+        for song in tracks:
+            track_id = song.get('song_id')
+            if not track_id:
+                complete = False
+                continue
+            if track_id in known_tracks:
+                continue
+            try:
+                filename = await loop.run_in_executor(
+                    None,
+                    lambda s=song: downloader.download(
+                        s, _progress_cb(s, playlist.name, broadcast, loop)
+                    ),
+                )
+                await asyncio.to_thread(
+                    db.mark_track_downloaded, playlist.id, track_id, filename
+                )
+                known_tracks[track_id] = filename
+                downloaded += 1
+                if delay_seconds > 0:
+                    await asyncio.sleep(delay_seconds)
+            except Exception:
+                complete = False
+                logger.exception(
+                    'Failed to auto-download track {} of release {}',
+                    track_id,
+                    album.get('name'),
+                )
+
+        # Only remember the release once every track is accounted for, so
+        # a transient failure is retried on the next sweep instead of
+        # being silently skipped forever. Tracks that already succeeded
+        # are cheap to skip via `known_tracks`.
+        if complete:
+            await asyncio.to_thread(
+                db.mark_album_seen, playlist.id, album_id, album.get('name')
+            )
+
+    await asyncio.to_thread(
+        db.update_playlist,
+        playlist.id,
+        last_checked=_now_iso(),
+        last_track_count=len(albums),
+    )
+    return downloaded
+
+
 def _regenerate_m3u(
     playlist: MonitoredPlaylist,
     tracks: list[dict[str, Any]],
@@ -490,8 +683,11 @@ async def monitor_loop(
                 downloader = get_downloader()
                 if downloader is None:
                     continue
+                check = (
+                    check_artist if pl.kind == KIND_ARTIST else check_playlist
+                )
                 try:
-                    count = await check_playlist(
+                    count = await check(
                         pl, db, downloader, broadcast, loop, settings
                     )
                     if count > 0:
@@ -502,7 +698,7 @@ async def monitor_loop(
                         )
                 except Exception:
                     logger.exception(
-                        'Error while checking playlist "{}"', pl.name
+                        'Error while checking watch "{}"', pl.name
                     )
         except Exception:
             logger.exception('Unexpected error in monitor loop')

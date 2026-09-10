@@ -276,15 +276,15 @@ Write an M3U file for a playlist after per-track downloads are complete.
 
 ### `GET /api/monitor/playlists`
 
-List all monitored playlists.
+List all watches (playlists and artists).
 
-**Response:** Array of playlist monitor objects.
+**Response:** Array of watch objects. Each has a `kind` of `"playlist"` or `"artist"`; for an artist watch, `spotify_id` holds the YouTube Music channel id and `last_track_count` is the number of releases.
 
 ---
 
 ### `POST /api/monitor/playlists`
 
-Add a playlist to the monitor. Triggers an immediate initial download.
+Add a watch. Triggers an immediate initial download.
 
 **Request body:**
 
@@ -295,7 +295,13 @@ Add a playlist to the monitor. Triggers an immediate initial download.
 }
 ```
 
-**Response:** Playlist monitor object.
+| `url` | Creates |
+|-------|---------|
+| Spotify playlist URL | A playlist watch |
+| Spotify artist URL | An artist watch (resolved to the matching YouTube Music artist — see [Artist Watch](features/playlist-monitor.md#artist-watch)) |
+| YouTube Music artist URL | An artist watch |
+
+**Response:** Watch object. `400` if the URL is none of the above, `409` if it is already watched, `404` if no matching YouTube Music artist exists.
 
 ---
 

@@ -92,9 +92,10 @@ export default {
   monitor: {
     title: 'Lejátszási lista felügyelő',
     subtitle:
-      'Adjon hozzá Spotify lejátszási listákat a megfigyeléshez. Az ezekhez hozzáadott új számok automatikusan letöltésre kerülnek.',
-    watchNew: 'Új lejátszási lista megtekintése',
-    urlPlaceholder: 'Illesszen be egy Spotify lejátszási lista URL-jét…',
+      'Adjon hozzá Spotify lejátszási listákat vagy előadókat a megfigyeléshez. Az új számok és az új kiadványok automatikusan letöltésre kerülnek.',
+    watchNew: 'Új lejátszási lista vagy előadó figyelése',
+    urlPlaceholder:
+      'Illesszen be egy Spotify lejátszási lista vagy előadó URL-t…',
     watch: 'Figyelés',
     failedAdd:
       'Nem sikerült hozzáadni a lejátszási listát. Ellenőrizze az URL-t és próbálja újra.',
@@ -106,6 +107,9 @@ export default {
     everyInterval: 'Minden {interval}',
     tracksOne: '{count} szám',
     tracksMany: '{count} szám',
+    releasesOne: '{count} kiadvány',
+    releasesMany: '{count} kiadvány',
+    kindArtist: 'Előadó',
     checked: 'Ellenőrizve: {when}',
     notChecked: 'Még nem ellenőrizve',
     pause: 'Figyelés szüneteltetése',
@@ -122,7 +126,7 @@ export default {
     sortStatus: 'Szüneteltetve/Aktív',
     sortAscending: 'Növekvő sorrend',
     sortDescending: 'Csökkenő sorrend',
-    info: 'Amikor hozzáadsz egy lejátszási listát, a Downtify letölti az összes benne található számot, majd figyeli azt. A Spotify-on később hozzáadott dalok automatikusan felismerésre és letöltésre kerülnek a következő ütemezett ellenőrzéskor.',
+    info: 'Amikor hozzáadsz egy lejátszási listát, a Downtify letölti az összes benne található számot, majd figyeli azt. A Spotify-on később hozzáadott dalok automatikusan felismerésre és letöltésre kerülnek a következő ütemezett ellenőrzéskor. Előadó hozzáadása ugyanígy működik: a Downtify letölti a diszkográfiáját, majd figyeli az új kiadványokat.',
     every15: '15 percenként',
     every30: '30 percenként',
     every1h: 'Óránként',

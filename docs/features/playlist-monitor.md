@@ -4,11 +4,20 @@ icon: lucide/eye
 
 # Playlist Monitor
 
-The Playlist Monitor watches your favourite Spotify playlists and automatically downloads new tracks as they are added — hands-free.
+The Playlist Monitor watches your favourite Spotify playlists — and the artists you follow — and automatically downloads new tracks and new releases as they appear, hands-free.
+
+Two kinds of watch live side by side on the same page:
+
+| Watch | Paste | Downloads |
+|-------|-------|-----------|
+| **Playlist** | A Spotify playlist URL | Every track in the playlist, then any track added later |
+| **Artist** | A Spotify **artist** URL, or a YouTube Music artist URL | The artist's whole discography, then every new release |
+
+See [Artist Watch](#artist-watch) for how artist watches work.
 
 ## How it works
 
-Downtify keeps a background task running every 60 seconds. On each sweep it checks every enabled monitored playlist to see if it is due for inspection (based on its configured interval). When a playlist is due, Downtify:
+Downtify keeps a background task running every 60 seconds. On each sweep it checks every enabled watch to see if it is due for inspection (based on its configured interval). When a *playlist* is due, Downtify:
 
 1. Fetches the full track list from Spotify
 2. Compares it against the set of tracks already downloaded
@@ -23,6 +32,27 @@ Tracks that were already in the playlist when you added it are skipped — only 
 2. Paste a Spotify playlist URL
 3. Choose a check interval (from 15 minutes to once a month)
 4. Click **Watch**
+
+## Artist Watch
+
+Instead of building a playlist per artist, paste an artist link and Downtify follows their whole catalogue. Add one exactly like a playlist — paste the URL, pick an interval, click **Watch**. Artist watches show an **Artist** badge and a release count instead of a track count.
+
+Accepted URLs:
+
+- A Spotify artist URL (`https://open.spotify.com/artist/…`)
+- A YouTube Music artist URL (`https://music.youtube.com/channel/…`)
+
+On each sweep Downtify lists the artist's discography, compares it against the releases it has already processed, and downloads every track of anything new. A steady-state sweep costs a single request — tracklists are only fetched for releases it hasn't seen before.
+
+!!! note "Why the discography comes from YouTube Music"
+    Spotify's public embed exposes an artist's name and a top-tracks preview, but **not** their discography — reading that would need Spotify API credentials, which Downtify deliberately doesn't use. So a Spotify artist link is resolved to its name and matched to the same artist on YouTube Music, which is also where the audio is fetched from. The upside: every release Downtify can see is one it can actually download. The trade-off: for an artist whose name is ambiguous, check that the watch's resolved name is the artist you meant — paste the YouTube Music artist URL directly if it picked the wrong one.
+
+!!! warning "The first sweep downloads the whole back catalogue"
+    Adding an artist queues **every** release they have, which for a prolific artist can be hundreds of albums and singles. Set **[Delay between downloads](download-settings.md#delay-between-downloads)** before adding a batch of artists, or you're very likely to get rate-limited.
+
+A release is only recorded as processed once every one of its tracks is accounted for, so a track that fails on a transient error is retried on the next sweep rather than being skipped forever. Tracks that already downloaded are never fetched twice.
+
+Artist watches don't generate M3U files — the tracks are laid out by your [file organization](file-organization.md) settings rather than as a playlist.
 
 ## Check intervals
 
@@ -85,5 +115,8 @@ Manual playlist/album downloads and CSV imports behave the same way. See [M3U Ex
 
 Monitor state is stored in a SQLite database at `/data/downtify_monitor.db`. The database records:
 
-- Each monitored playlist (Spotify ID, name, URL, interval, enabled state, last check time)
-- Every track successfully downloaded per playlist, including the filename on disk
+- Each watch (kind, Spotify playlist ID or YouTube Music channel ID, name, URL, interval, enabled state, last check time)
+- Every track successfully downloaded per watch, including the filename on disk
+- For artist watches, the releases already processed, so a sweep only fetches tracklists for genuinely new ones
+
+Databases created before Artist Watch are migrated automatically on startup; existing rows keep working as playlist watches.

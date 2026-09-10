@@ -91,9 +91,9 @@ export default {
   monitor: {
     title: 'Monitor de playlists',
     subtitle:
-      'Adicione playlists do Spotify para monitorar. Novas faixas adicionadas a essas playlists serão baixadas automaticamente.',
-    watchNew: 'Monitorar uma nova playlist',
-    urlPlaceholder: 'Cole uma URL de playlist do Spotify…',
+      'Adicione playlists ou artistas do Spotify para monitorar. Novas faixas e novos lançamentos serão baixados automaticamente.',
+    watchNew: 'Monitorar uma nova playlist ou artista',
+    urlPlaceholder: 'Cole uma URL de playlist ou de artista do Spotify…',
     watch: 'Monitorar',
     failedAdd:
       'Falha ao adicionar a playlist. Verifique a URL e tente novamente.',
@@ -104,6 +104,9 @@ export default {
     everyInterval: 'A cada {interval}',
     tracksOne: '{count} faixa',
     tracksMany: '{count} faixas',
+    releasesOne: '{count} lançamento',
+    releasesMany: '{count} lançamentos',
+    kindArtist: 'Artista',
     checked: 'Verificada {when}',
     notChecked: 'Ainda não verificada',
     pause: 'Pausar monitoramento',
@@ -120,7 +123,7 @@ export default {
     sortStatus: 'Pausada/Ativa',
     sortAscending: 'Ordem crescente',
     sortDescending: 'Ordem decrescente',
-    info: 'Quando você adiciona uma playlist, o Downtify baixa todas as faixas atuais dela e segue monitorando. Qualquer música adicionada depois no Spotify é detectada e baixada automaticamente na próxima verificação.',
+    info: 'Quando você adiciona uma playlist, o Downtify baixa todas as faixas atuais dela e segue monitorando. Qualquer música adicionada depois no Spotify é detectada e baixada automaticamente na próxima verificação. Adicionar um artista funciona da mesma forma: o Downtify baixa a discografia dele e depois monitora novos lançamentos.',
     every15: 'A cada 15 min',
     every30: 'A cada 30 min',
     every1h: 'A cada hora',
