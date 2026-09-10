@@ -206,11 +206,19 @@ class Downloader:
     def _template_values(song: dict[str, Any]) -> dict[str, str]:
         artist_names = [_sanitize(a) for a in (song.get('artists') or [])]
         artists = ', '.join(a for a in artist_names if a) or 'Unknown Artist'
+        # Same normalization used for the embedded tag (see
+        # _album_track_index_for_tags): only a positive integer counts,
+        # anything else (missing, non-numeric, a free-text/YouTube search
+        # result with no Spotify track_number) renders as ''. Zero-padded
+        # to 2 digits so "{tracknumber} - {title}" sorts correctly in a
+        # file browser (2 < 10 lexicographically without padding).
+        track_number, _ = _album_track_index_for_tags(song)
         return {
             'title': _sanitize(song.get('name', 'Unknown')),
             'artists': artists,
             'artist': artists,
             'album': _sanitize(song.get('album_name', '')),
+            'tracknumber': f'{track_number:02d}' if track_number else '',
         }
 
     def _format_output_parts(self, song: dict[str, Any]) -> list[str]:

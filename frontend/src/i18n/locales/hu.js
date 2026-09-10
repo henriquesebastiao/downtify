@@ -172,7 +172,7 @@ export default {
     outputTemplate: 'Fájlnév formátuma',
     outputTemplateReset: 'Újra',
     outputTemplateHint:
-      'A / használatával hozzon létre almappákat. Tokenek: {artists}, {artist}, {title}, {album}, {output-ext}',
+      'A / használatával hozzon létre almappákat. Tokenek: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
     searchSection: 'Keresés',
     searchAlbums: 'Albumok megjelenítése a keresési eredményekben',
     searchAlbumsHint:

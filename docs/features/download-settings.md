@@ -44,6 +44,16 @@ Available tokens:
 | `{title}` | Track title |
 | `{artists}` | Comma-separated artist names |
 | `{album}` | Album name |
+| `{tracknumber}` | Track's position on its album, zero-padded to 2 digits (e.g. `01`, `12`). Empty when the source has no track number (e.g. a free-text/YouTube search result). |
+
+The template can also include `/` to build subfolders. For example, to lay out a library as `Artist/Album/01 - Title.mp3`:
+
+```
+{artists}/{album}/{tracknumber} - {title}
+```
+
+!!! note
+    This is independent of the **Organize by artist** / **Organize by album** toggles below — those route playlist/album downloads into shared per-artist or per-album folders across your whole library. `{tracknumber}` just lets a template like the one above build that same layout manually, track by track, without turning those toggles on.
 
 ## Parallel downloads
 

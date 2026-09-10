@@ -160,6 +160,74 @@ def test_format_basename_bad_template_falls_back(tmp_path):
     assert 'Song' in result
 
 
+# ── {tracknumber} template token ────────────────────────────────────────────
+
+
+def test_format_basename_tracknumber_zero_padded(tmp_path):
+    d = _make(tmp_path, output_template='{tracknumber} - {title}')
+    result = d._format_basename({
+        'name': 'Song',
+        'artists': ['A'],
+        'track_number': 7,
+    })
+    assert result == '07 - Song'
+
+
+def test_format_basename_tracknumber_not_padded_past_two_digits(tmp_path):
+    d = _make(tmp_path, output_template='{tracknumber} - {title}')
+    result = d._format_basename({
+        'name': 'Song',
+        'artists': ['A'],
+        'track_number': 123,
+    })
+    assert result == '123 - Song'
+
+
+def test_format_basename_tracknumber_missing_is_empty(tmp_path):
+    d = _make(tmp_path, output_template='{tracknumber} - {title}')
+    result = d._format_basename({'name': 'Song', 'artists': ['A']})
+    assert result == '- Song'
+
+
+def test_format_basename_tracknumber_non_numeric_is_empty(tmp_path):
+    d = _make(tmp_path, output_template='{tracknumber} - {title}')
+    result = d._format_basename({
+        'name': 'Song',
+        'artists': ['A'],
+        'track_number': 'not-a-number',
+    })
+    assert result == '- Song'
+
+
+def test_format_basename_tracknumber_zero_is_empty(tmp_path):
+    # track_number 0 isn't a valid position (matches the tag-embedding
+    # normalization in _album_track_index_for_tags).
+    d = _make(tmp_path, output_template='{tracknumber} - {title}')
+    result = d._format_basename({
+        'name': 'Song',
+        'artists': ['A'],
+        'track_number': 0,
+    })
+    assert result == '- Song'
+
+
+def test_format_basename_supports_full_artist_album_tracknumber_layout(
+    tmp_path,
+):
+    # The exact layout requested alongside this token: Artist/Album/NN -
+    # Title.
+    d = _make(
+        tmp_path, output_template='{artists}/{album}/{tracknumber} - {title}'
+    )
+    result = d._format_basename({
+        'name': 'Song',
+        'artists': ['The Night Owls'],
+        'album_name': 'First Light',
+        'track_number': 3,
+    })
+    assert result == 'The Night Owls/First Light/03 - Song'
+
+
 # ── _artist_subdir ────────────────────────────────────────────────────────────
 
 
