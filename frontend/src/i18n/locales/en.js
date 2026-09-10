@@ -194,6 +194,12 @@ export default {
     downloadDelayHint:
       'Wait this many seconds after finishing a song before starting the next one. Useful to mimic human behavior on playlist/album downloads and Playlist Monitor syncs.',
     downloadDelayCustomHint: 'Custom value between {min} and {max} seconds.',
+    downloadCoverArt: 'Download cover art',
+    downloadCoverArtHint:
+      'Embed album art into downloaded files. Turn off to skip fetching cover art entirely — smaller files, faster downloads.',
+    coverResolution: 'Cover art resolution',
+    coverResolutionHint:
+      'Target size (width & height, in pixels) requested for embedded cover art from YouTube Music sources — useful for higher-resolution artwork in media servers like Plex. Only affects YouTube Music; Spotify-sourced covers already use the largest size Spotify offers.',
     saved: 'Changes saved',
     saveError: "Couldn't save settings.",
     language: 'Language',

@@ -6,11 +6,13 @@ import pytest
 
 from downtify import providers
 from downtify.providers import (
+    DEFAULT_COVER_RESOLUTION,
     _albums_match,
     _artists_overlap,
     _find_match_via_album,
     _pick_best,
     _titles_match,
+    _upgrade_thumbnail,
     album_tracks_from_browse_id,
     artist_albums_from_channel_id,
     artist_info_from_channel_id,
@@ -22,6 +24,7 @@ from downtify.providers import (
     parse_youtube_url,
     search_albums,
     search_artists,
+    set_cover_resolution,
     song_from_video_id,
     youtube_music_track_index_for_match,
 )
@@ -2603,3 +2606,43 @@ def test_artist_similar_skips_entries_without_browse_id(monkeypatch):
 def test_artist_similar_returns_empty_on_ytm_error(monkeypatch):
     monkeypatch.setattr(providers, '_ytm', _FakeYTMGetArtistRaises)
     assert artist_similar_from_channel_id('UCxxx') == []
+
+
+# ── cover art resolution ────────────────────────────────────────────────────
+
+_RAW_THUMB = 'https://yt3.googleusercontent.com/abc123=w120-h120-l90-rj'
+
+
+def test_upgrade_thumbnail_uses_default_resolution():
+    assert _upgrade_thumbnail(_RAW_THUMB) == (
+        f'https://yt3.googleusercontent.com/abc123'
+        f'=w{DEFAULT_COVER_RESOLUTION}-h{DEFAULT_COVER_RESOLUTION}-l90-rj'
+    )
+
+
+def test_upgrade_thumbnail_empty_url_stays_empty():
+    assert not _upgrade_thumbnail('')
+
+
+def test_set_cover_resolution_changes_the_requested_size(monkeypatch):
+    monkeypatch.setattr(
+        providers, '_cover_resolution', DEFAULT_COVER_RESOLUTION
+    )
+    set_cover_resolution(1200)
+    try:
+        assert _upgrade_thumbnail(_RAW_THUMB) == (
+            'https://yt3.googleusercontent.com/abc123=w1200-h1200-l90-rj'
+        )
+    finally:
+        set_cover_resolution(DEFAULT_COVER_RESOLUTION)
+
+
+def test_upgrade_thumbnail_replaces_any_prior_size(monkeypatch):
+    monkeypatch.setattr(providers, '_cover_resolution', 900)
+    # A URL that already carries a completely different size/param tail
+    # (e.g. from a raw ytmusicapi search hit) must still be rewritten,
+    # not left with a mismatched suffix.
+    raw = 'https://yt3.googleusercontent.com/abc123=w544-h544-p-rw-l90-rj'
+    assert _upgrade_thumbnail(raw) == (
+        'https://yt3.googleusercontent.com/abc123=w900-h900-l90-rj'
+    )

@@ -10,10 +10,13 @@ import json
 from downtify import api
 from downtify.api import (
     DEFAULT_SETTINGS,
+    MAX_COVER_RESOLUTION,
     MAX_DOWNLOAD_DELAY_SECONDS,
     MAX_PARALLEL_DOWNLOADS,
+    MIN_COVER_RESOLUTION,
     MIN_DOWNLOAD_DELAY_SECONDS,
     MIN_PARALLEL_DOWNLOADS,
+    _clamp_cover_resolution,
     _clamp_download_delay,
     _clamp_parallel_downloads,
     _effective_lyrics_providers,
@@ -422,7 +425,107 @@ def test_update_settings_accepts_in_range_download_delay(monkeypatch):
         'download_delay_seconds',
         DEFAULT_SETTINGS['download_delay_seconds'],
     )
-    result = _call_update_settings(
-        monkeypatch, {'download_delay_seconds': 45}
-    )
+    result = _call_update_settings(monkeypatch, {'download_delay_seconds': 45})
     assert result['download_delay_seconds'] == 45
+
+
+# ── _clamp_cover_resolution ──────────────────────────────────────────────────
+
+
+def test_clamp_cover_resolution_within_range_is_unchanged():
+    assert _clamp_cover_resolution(800) == 800
+
+
+def test_clamp_cover_resolution_caps_above_max():
+    assert _clamp_cover_resolution(9999) == MAX_COVER_RESOLUTION
+
+
+def test_clamp_cover_resolution_floors_below_min():
+    assert _clamp_cover_resolution(1) == MIN_COVER_RESOLUTION
+    assert _clamp_cover_resolution(-5) == MIN_COVER_RESOLUTION
+
+
+def test_clamp_cover_resolution_accepts_string_numbers():
+    assert _clamp_cover_resolution('900') == 900
+
+
+def test_clamp_cover_resolution_falls_back_on_garbage():
+    assert (
+        _clamp_cover_resolution('not-a-number')
+        == DEFAULT_SETTINGS['cover_resolution']
+    )
+    assert (
+        _clamp_cover_resolution(None) == DEFAULT_SETTINGS['cover_resolution']
+    )
+
+
+def test_clamp_cover_resolution_boundaries_are_inclusive():
+    assert _clamp_cover_resolution(MIN_COVER_RESOLUTION) == (
+        MIN_COVER_RESOLUTION
+    )
+    assert _clamp_cover_resolution(MAX_COVER_RESOLUTION) == (
+        MAX_COVER_RESOLUTION
+    )
+
+
+def test_load_settings_clamps_out_of_range_cover_resolution(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(json.dumps({'cover_resolution': 99999}), encoding='utf-8')
+    result = _load_settings(path)
+    assert result['cover_resolution'] == MAX_COVER_RESOLUTION
+
+
+def test_update_settings_clamps_excessive_cover_resolution(monkeypatch):
+    monkeypatch.setitem(
+        api.state.settings,
+        'cover_resolution',
+        DEFAULT_SETTINGS['cover_resolution'],
+    )
+    # This endpoint call also propagates to the real
+    # providers.set_cover_resolution; stub it out so this test (which
+    # only cares about the clamped response value) doesn't leak global
+    # provider state into whichever test runs next.
+    monkeypatch.setattr(
+        api.providers, 'set_cover_resolution', lambda *_a: None
+    )
+    result = _call_update_settings(monkeypatch, {'cover_resolution': 99999})
+    assert result['cover_resolution'] == MAX_COVER_RESOLUTION
+
+
+def test_update_settings_accepts_in_range_cover_resolution(monkeypatch):
+    monkeypatch.setitem(
+        api.state.settings,
+        'cover_resolution',
+        DEFAULT_SETTINGS['cover_resolution'],
+    )
+    monkeypatch.setattr(
+        api.providers, 'set_cover_resolution', lambda *_a: None
+    )
+    result = _call_update_settings(monkeypatch, {'cover_resolution': 900})
+    assert result['cover_resolution'] == 900
+
+
+def test_update_settings_applies_cover_resolution_to_providers(monkeypatch):
+    monkeypatch.setitem(
+        api.state.settings,
+        'cover_resolution',
+        DEFAULT_SETTINGS['cover_resolution'],
+    )
+    captured = []
+    monkeypatch.setattr(api.providers, 'set_cover_resolution', captured.append)
+    _call_update_settings(monkeypatch, {'cover_resolution': 900})
+    assert captured == [900]
+
+
+def test_update_settings_leaves_providers_untouched_when_key_absent(
+    monkeypatch,
+):
+    monkeypatch.setitem(
+        api.state.settings,
+        'cover_resolution',
+        DEFAULT_SETTINGS['cover_resolution'],
+    )
+    captured = []
+    monkeypatch.setattr(api.providers, 'set_cover_resolution', captured.append)
+    _call_update_settings(monkeypatch, {'format': 'flac'})
+    assert captured == []

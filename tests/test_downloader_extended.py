@@ -14,6 +14,7 @@ from downtify.downloader import (
     _release_type_for_tags,
     _tag_mp3,
     embed_lyrics,
+    embed_metadata,
 )
 from downtify.lyrics import Lyrics
 
@@ -492,6 +493,42 @@ def test_save_album_cover_noop_when_no_cover_bytes(tmp_path, monkeypatch):
     d = _make(tmp_path, organize_by_album=True)
     d._save_album_cover(tmp_path, _SONG)
     assert not (tmp_path / 'cover.jpg').exists()
+
+
+# ── download_cover_art toggle ───────────────────────────────────────────────
+
+
+def test_downloader_download_cover_art_defaults_true(tmp_path):
+    assert _make(tmp_path).download_cover_art is True
+
+
+def test_downloader_download_cover_art_can_be_disabled(tmp_path):
+    assert _make(tmp_path, download_cover_art=False).download_cover_art is (
+        False
+    )
+
+
+def test_embed_metadata_embeds_cover_by_default(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
+    )
+    mp3_path = _minimal_mp3(tmp_path / 'song.mp3')
+    embed_metadata(mp3_path, _SONG)
+    frames = ID3(mp3_path).getall('APIC')
+    assert len(frames) == 1
+    assert frames[0].data == b'IMG-BYTES'
+
+
+def test_embed_metadata_skips_cover_when_disabled(tmp_path, monkeypatch):
+    def _boom(url):
+        raise AssertionError(
+            'should not fetch cover art when download_cover=False'
+        )
+
+    monkeypatch.setattr(downloader_mod, '_download_cover', _boom)
+    mp3_path = _minimal_mp3(tmp_path / 'song.mp3')
+    embed_metadata(mp3_path, _SONG, download_cover=False)
+    assert ID3(mp3_path).getall('APIC') == []
 
 
 # ── _release_type_for_tags ─────────────────────────────────────────────────────

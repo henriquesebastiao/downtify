@@ -200,6 +200,12 @@ export default {
     downloadDelayHint:
       'Ennyi másodpercet várjon egy dal befejezése után, mielőtt elkezdi a következőt. Hasznos az emberi viselkedés utánzásához lejátszási lista/album letöltéseknél és a Lejátszásilista-figyelő szinkronizálásainál.',
     downloadDelayCustomHint: 'Egyéni érték {min} és {max} másodperc között.',
+    downloadCoverArt: 'Borítókép letöltése',
+    downloadCoverArtHint:
+      'Beágyazza az albumborítót a letöltött fájlokba. Kapcsolja ki, hogy egyáltalán ne töltse le a borítóképet — kisebb fájlok, gyorsabb letöltések.',
+    coverResolution: 'Borítókép felbontása',
+    coverResolutionHint:
+      'A beágyazott borítókép céltémete (szélesség és magasság, pixelben) YouTube Music forrásokból — hasznos a nagyobb felbontású borítóképekhez olyan médiaszervereken, mint a Plex. Csak a YouTube Musicra hat; a Spotify-forrásból származó borítók már a Spotify által kínált legnagyobb méretet használják.',
     saved: 'Módosítások mentve',
     saveError: 'Nem sikerült menteni a beállításokat.',
     language: 'Nyelv',

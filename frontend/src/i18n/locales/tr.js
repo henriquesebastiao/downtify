@@ -191,6 +191,12 @@ export default {
     downloadDelayHint:
       'Bir şarkıyı bitirdikten sonra bir sonrakine başlamadan önce bu kadar saniye bekle. Playlist/albüm indirmelerinde ve Playlist İzleme senkronizasyonlarında insan davranışını taklit etmek için kullanışlıdır.',
     downloadDelayCustomHint: '{min} ile {max} saniye arasında özel değer.',
+    downloadCoverArt: 'Kapak resmini indir',
+    downloadCoverArtHint:
+      'Albüm kapağını indirilen dosyalara göm. Kapak resmini hiç indirmemek için kapat — daha küçük dosyalar, daha hızlı indirmeler.',
+    coverResolution: 'Kapak resmi çözünürlüğü',
+    coverResolutionHint:
+      "YouTube Music kaynaklarından gömülü kapak resmi için istenen hedef boyut (genişlik ve yükseklik, piksel cinsinden) — Plex gibi medya sunucularında daha yüksek çözünürlüklü kapak resimleri için kullanışlıdır. Yalnızca YouTube Music'i etkiler; Spotify kaynaklı kapaklar zaten Spotify'ın sunduğu en büyük boyutu kullanır.",
     saved: 'Değişiklikler kaydedildi',
     saveError: 'Ayarlar kaydedilirken bir hata oluştu.',
     language: 'Dil',

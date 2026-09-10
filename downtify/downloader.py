@@ -127,6 +127,7 @@ class Downloader:
         lyrics_providers: Optional[list[str]] = None,
         organize_by_artist: bool = False,
         organize_by_album: bool = False,
+        download_cover_art: bool = True,
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
@@ -136,6 +137,7 @@ class Downloader:
         self.lyrics_providers = list(lyrics_providers or [])
         self.organize_by_artist = organize_by_artist
         self.organize_by_album = organize_by_album
+        self.download_cover_art = download_cover_art
 
     @staticmethod
     def _artist_subdir(song: dict[str, Any]) -> str:
@@ -463,14 +465,19 @@ class Downloader:
                 )
 
         try:
-            embed_metadata(final_path, song)
+            embed_metadata(
+                final_path, song, download_cover=self.download_cover_art
+            )
         except Exception:
             logger.exception('Failed to embed metadata into {}', final_path)
 
-        try:
-            self._save_album_cover(target_dir, song)
-        except Exception:
-            logger.exception('Failed to write album cover in {}', target_dir)
+        if self.download_cover_art:
+            try:
+                self._save_album_cover(target_dir, song)
+            except Exception:
+                logger.exception(
+                    'Failed to write album cover in {}', target_dir
+                )
 
         if self.lyrics_providers:
             try:
@@ -555,7 +562,9 @@ def _release_type_for_tags(song: dict[str, Any]) -> str:
     return str(song.get('release_type') or '').strip().lower()
 
 
-def embed_metadata(path: Path, song: dict[str, Any]) -> None:
+def embed_metadata(
+    path: Path, song: dict[str, Any], *, download_cover: bool = True
+) -> None:
     if not path.exists():
         return
 
@@ -572,7 +581,9 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
     recording_date = _recording_date_for_tags(song)
     genre = (song.get('genre') or '').strip()
     release_type = _release_type_for_tags(song)
-    cover_bytes = _download_cover(song.get('cover_url', ''))
+    cover_bytes = (
+        _download_cover(song.get('cover_url', '')) if download_cover else None
+    )
     track_number, album_track_total = _album_track_index_for_tags(song)
     if track_number is None:
         logger.info(

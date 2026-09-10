@@ -189,6 +189,8 @@ Return the current settings.
   "generate_m3u": true,
   "max_parallel_downloads": 3,
   "download_delay_seconds": 0,
+  "cover_resolution": 600,
+  "download_cover_art": true,
   "organize_by_artist": false,
   "organize_by_album": false,
   "search_albums": true
@@ -199,6 +201,8 @@ Return the current settings.
 |-------|------|-------------|
 | `max_parallel_downloads` | integer | Concurrent download limit. Clamped to `1–30`. |
 | `download_delay_seconds` | number | Seconds to wait after each download in a batch before starting the next. Clamped to `0–300`. |
+| `download_cover_art` | boolean | Whether to fetch and embed cover art at all. See [Download cover art](features/download-settings.md#download-cover-art). |
+| `cover_resolution` | integer | Target pixel size (width & height) for YouTube Music-sourced cover art. Clamped to `300–1200`. Only used when `download_cover_art` is true. See [Cover art resolution](features/download-settings.md#cover-art-resolution). |
 
 ---
 

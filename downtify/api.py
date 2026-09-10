@@ -75,6 +75,9 @@ MAX_PARALLEL_DOWNLOADS = 30
 MIN_DOWNLOAD_DELAY_SECONDS = 0
 MAX_DOWNLOAD_DELAY_SECONDS = 300
 
+MIN_COVER_RESOLUTION = 300
+MAX_COVER_RESOLUTION = 1200
+
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
     'lyrics_providers': ['lrclib'],
@@ -85,6 +88,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'generate_m3u': True,
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
+    'cover_resolution': providers.DEFAULT_COVER_RESOLUTION,
+    'download_cover_art': True,
     'organize_by_artist': False,
     'organize_by_album': False,
     'search_albums': True,
@@ -121,6 +126,21 @@ def _clamp_download_delay(value: Any) -> float:
     return min(
         MAX_DOWNLOAD_DELAY_SECONDS, max(MIN_DOWNLOAD_DELAY_SECONDS, delay)
     )
+
+
+def _clamp_cover_resolution(value: Any) -> int:
+    """Coerce and clamp the requested cover art target size, in pixels.
+
+    Keeps the setting inside ``[MIN_COVER_RESOLUTION,
+    MAX_COVER_RESOLUTION]``. Only affects YouTube Music-sourced cover
+    art (see ``providers.set_cover_resolution``); Spotify-sourced
+    covers already use the largest size Spotify's embed API offers.
+    """
+    try:
+        px = int(value)
+    except (TypeError, ValueError):
+        px = DEFAULT_SETTINGS['cover_resolution']
+    return min(MAX_COVER_RESOLUTION, max(MIN_COVER_RESOLUTION, px))
 
 
 def _organize_enabled() -> bool:
@@ -208,6 +228,9 @@ def _load_settings(path: Path) -> dict[str, Any]:
             )
             merged['download_delay_seconds'] = _clamp_download_delay(
                 merged['download_delay_seconds']
+            )
+            merged['cover_resolution'] = _clamp_cover_resolution(
+                merged['cover_resolution']
             )
             return merged
     except Exception:
@@ -942,6 +965,8 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_parallel_downloads(raw_value)
             elif key == 'download_delay_seconds':
                 state.settings[key] = _clamp_download_delay(raw_value)
+            elif key == 'cover_resolution':
+                state.settings[key] = _clamp_cover_resolution(raw_value)
             else:
                 state.settings[key] = raw_value
         if state.downloader is not None:
@@ -968,10 +993,16 @@ async def update_settings_endpoint(
                 state.downloader.organize_by_album = bool(
                     payload['organize_by_album']
                 )
+            if 'download_cover_art' in payload:
+                state.downloader.download_cover_art = bool(
+                    payload['download_cover_art']
+                )
         if 'max_parallel_downloads' in payload:
             state.download_semaphore = asyncio.Semaphore(
                 state.settings['max_parallel_downloads']
             )
+        if 'cover_resolution' in payload:
+            providers.set_cover_resolution(state.settings['cover_resolution'])
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)
     return state.settings

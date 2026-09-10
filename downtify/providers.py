@@ -98,12 +98,39 @@ def _ytm() -> YTMusic:
     return _client
 
 
+DEFAULT_COVER_RESOLUTION = 600
+
+# Mutable module-level target, set from Settings (see
+# set_cover_resolution) so every function below that resolves a YouTube
+# Music thumbnail through _upgrade_thumbnail picks it up without each of
+# them needing to accept and thread a resolution parameter through their
+# own callers. Verified against the live CDN that requesting larger
+# than the hardcoded 600px default actually returns more real detail
+# (not just upscaling) up to roughly 1200-1400px depending on the
+# source image.
+_cover_resolution = DEFAULT_COVER_RESOLUTION
+
+
+def set_cover_resolution(pixels: int) -> None:
+    """Set the target size (in pixels, both dimensions) for YouTube
+    Music cover art requested via _upgrade_thumbnail from here on.
+
+    Spotify-sourced cover art is unaffected: Downtify already picks the
+    largest size Spotify's embed API offers (see spotify._largest_image)
+    and Spotify's image URLs have no equivalent resizable suffix to
+    raise further.
+    """
+    global _cover_resolution
+    _cover_resolution = pixels
+
+
 def _upgrade_thumbnail(url: str) -> str:
     """Replace the size suffix on a YT thumbnail with a larger one."""
 
     if not url:
         return url
-    return re.sub(r'=w\d+-h\d+.*$', '=w600-h600-l90-rj', url)
+    size = _cover_resolution
+    return re.sub(r'=w\d+-h\d+.*$', f'=w{size}-h{size}-l90-rj', url)
 
 
 def _parse_duration(value: Any) -> int:

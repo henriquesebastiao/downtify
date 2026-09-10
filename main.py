@@ -218,6 +218,16 @@ def build_app() -> FastAPI:
         organize_by_album=bool(
             api.state.settings.get('organize_by_album', False)
         ),
+        download_cover_art=bool(
+            api.state.settings.get('download_cover_art', True)
+        ),
+    )
+    api.providers.set_cover_resolution(
+        api._clamp_cover_resolution(
+            api.state.settings.get(
+                'cover_resolution', api.providers.DEFAULT_COVER_RESOLUTION
+            )
+        )
     )
     app.include_router(api.router)
 
