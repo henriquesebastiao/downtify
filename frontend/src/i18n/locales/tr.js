@@ -87,9 +87,9 @@ export default {
   monitor: {
     title: 'Çalma Listesi İzleyici',
     subtitle:
-      'Spotify çalma listelerini izleme listesine ekleyin. İzlenen çalma listelerine eklenen yeni şarkılar otomatik olarak indirilir.',
-    watchNew: 'Bir çalma listesini izle',
-    urlPlaceholder: 'Bir Spotify çalma listesi bağlantısı yapıştır…',
+      'İzlemek için Spotify çalma listeleri veya sanatçılar ekle. Yeni parçalar ve yeni yayınlar otomatik olarak indirilir.',
+    watchNew: 'Yeni bir çalma listesi veya sanatçı izle',
+    urlPlaceholder: 'Bir Spotify çalma listesi veya sanatçı URL’si yapıştır…',
     watch: 'İzle',
     failedAdd:
       'Çalma listesi eklenirken bir hata oluştu. Bağlantıyı kontrol edip tekrar deneyin.',
@@ -101,6 +101,9 @@ export default {
     everyInterval: 'Her {interval}',
     tracksOne: '{count} parça',
     tracksMany: '{count} parça',
+    releasesOne: '{count} yayın',
+    releasesMany: '{count} yayın',
+    kindArtist: 'Sanatçı',
     checked: '{when} kontrol edildi',
     notChecked: 'Henüz kontrol yapılmadı',
     pause: 'İzlemeyi durdur',
@@ -117,7 +120,7 @@ export default {
     sortStatus: 'Duraklatıldı/Etkin',
     sortAscending: 'Artan sıralama',
     sortDescending: 'Azalan sıralama',
-    info: "Bir çalma listesi eklediğinde Downtify o çalma listesinde bulunan tüm parçaları indirir ve ayrıca listeyi izlemeye devam eder. Spotify'a daha sonradan eklenen tüm şarkıları tespit eder ve sonraki kontrol sırasında otomatik olarak indirir.",
+    info: "Bir çalma listesi eklediğinde Downtify o çalma listesinde bulunan tüm parçaları indirir ve ayrıca listeyi izlemeye devam eder. Spotify'a daha sonradan eklenen tüm şarkıları tespit eder ve sonraki kontrol sırasında otomatik olarak indirir. Bir sanatçı eklemek de aynı şekilde çalışır: Downtify diskografisini indirir, ardından yeni yayınları izler.",
     every15: 'Her 15 dakika',
     every30: 'Her 30 dakika',
     every1h: 'Her saat',
