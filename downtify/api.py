@@ -5,6 +5,9 @@ The endpoints intentionally mirror the surface that the previous
 working without changes:
 
 * ``GET  /api/version``
+* ``GET  /api/health`` (liveness probe for the Docker ``HEALTHCHECK`` -
+  see ``healthcheck.sh``; always ``200`` once the server can answer
+  requests, regardless of downloader/monitor readiness)
 * ``GET  /api/songs/search``
 * ``GET  /api/artists/search``
 * ``GET  /api/artists/top_songs`` (an artist's "Top songs" shelf preview,
@@ -222,6 +225,19 @@ def _save_settings(path: Path, settings: dict[str, Any]) -> None:
 @router.get('/api/version')
 def get_version() -> str:
     return state.version
+
+
+@router.get('/api/health')
+def get_health() -> dict[str, Any]:
+    """Liveness probe: the process is up and FastAPI is serving requests.
+
+    Deliberately doesn't check the downloader/monitor DB — those are
+    only set up once ``main.py``'s startup hook finishes, so gating
+    health on them would report unhealthy during the brief, normal
+    window right after boot. Docker's ``HEALTHCHECK`` already has a
+    ``--start-period`` for that; this endpoint just needs to answer.
+    """
+    return {'status': 'ok', 'version': state.version}
 
 
 @router.get('/api/check_update')

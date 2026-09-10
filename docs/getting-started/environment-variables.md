@@ -27,6 +27,19 @@ environment:
   - DOWNTIFY_MONITOR_SYNC_TIME=03:00
 ```
 
+## Health check
+
+The image has a built-in [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) — no custom `--health-cmd` needed. It polls `GET /api/health` on the container's own port every 30 seconds (5 second timeout, 20 second start-up grace period, 3 retries before the container is marked unhealthy). `docker ps` and `docker inspect` show the result, and tools like Compose's `condition: service_healthy` or Watchtower can act on it.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DOWNTIFY_HEALTHCHECK` | `1` | Set to `0` to disable the built-in check — it then always reports healthy without contacting the server. Use this if an external/orchestrator-level check (e.g. a Kubernetes liveness probe) should be the only one deciding container health. |
+
+```yaml
+environment:
+  - DOWNTIFY_HEALTHCHECK=0
+```
+
 ## Anti-bot / YouTube
 
 YouTube periodically challenges automated downloaders. These variables give you escape hatches when the defaults stop working.

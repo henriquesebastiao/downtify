@@ -43,6 +43,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHON_COLORS=0 \
     DOWNTIFY_LOG_LEVEL=info \
     DOWNTIFY_PORT=8000 \
+    DOWNTIFY_HEALTHCHECK=1 \
     UID=1000 \
     GID=1000 \
     UMASK=022
@@ -61,12 +62,12 @@ RUN apk add --no-cache \
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-COPY main.py entrypoint.sh ./
+COPY main.py entrypoint.sh healthcheck.sh ./
 COPY downtify ./downtify
 COPY --from=frontend-builder /frontend/dist ./frontend/dist
 
-RUN sed -i 's/\r$//g' entrypoint.sh && \
-    chmod +x entrypoint.sh
+RUN sed -i 's/\r$//g' entrypoint.sh healthcheck.sh && \
+    chmod +x entrypoint.sh healthcheck.sh
 
 ENV PATH="/home/downtify/.local/bin:${PATH}"
 
@@ -74,5 +75,8 @@ VOLUME /downloads
 VOLUME /data
 
 EXPOSE ${DOWNTIFY_PORT}
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD ./healthcheck.sh
 
 ENTRYPOINT ["/sbin/tini", "-g", "--", "./entrypoint.sh"]
