@@ -77,7 +77,9 @@ Playlist embed entries are missing the release year and use the playlist cover a
 
 ## M3U integration
 
-After each sweep that downloads at least one new track, Downtify regenerates the playlist's M3U file to reflect the current on-disk state. See [M3U Export](m3u-export.md) for details.
+The playlist's M3U is rewritten **after every track finishes**, so it grows as the sweep downloads rather than appearing only once everything is done. The playlist is playable from the first track onwards, and a slow or hung download further down the list never holds up the tracks that already landed. A final rewrite at the end of the sweep re-resolves everything against the filesystem.
+
+Manual playlist/album downloads and CSV imports behave the same way. See [M3U Export](m3u-export.md#when-it-is-written) for details.
 
 ## Storage
 
