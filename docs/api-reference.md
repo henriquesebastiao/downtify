@@ -65,7 +65,7 @@ Download a single track. Blocks until complete.
 
 ### `POST /api/download/batch`
 
-Download multiple tracks concurrently (up to 4 at a time). Returns immediately; progress is broadcast over WebSocket.
+Download multiple tracks concurrently, gated by the [`max_parallel_downloads` setting](#post-apisettingsupdate) (default 3, configurable 1–30) and, if set, the `download_delay_seconds` delay between them. Returns immediately; progress is broadcast over WebSocket.
 
 **Request body:**
 
@@ -91,6 +91,52 @@ Download multiple tracks concurrently (up to 4 at a time). Returns immediately; 
   "count": 2
 }
 ```
+
+---
+
+### `POST /api/download/album`
+
+Download every track of a YouTube Music album/browse URL, resolving the full tracklist once so every track shares consistent metadata (this avoids the album/compilation drift that downloading each track independently via `/api/download/url` can cause).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | yes | YouTube Music album/browse URL |
+
+**Response:** Object mapping `song_id -> downloaded filename` for every track that downloaded successfully (failed tracks are omitted, not raised).
+
+---
+
+### `POST /api/download/csv`
+
+Import a [library-export CSV](../features/library-import.md) (Soundiiz, TuneMyMusic, Exportify). The file is read client-side and sent as plain text, not a multipart upload. Reuses the same batch pipeline as `/api/download/batch` — same parallel-downloads limit, same delay-between-downloads, and an M3U is written under `playlist_name` if `generate_m3u` is true.
+
+**Request body:**
+
+```json
+{
+  "csv": "Title,Artist\nHeld Together,Slowdive\n",
+  "playlist_name": "My Old Library",
+  "generate_m3u": true
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `csv` | string | Required. The raw CSV file content. |
+| `playlist_name` | string | Optional. Defaults to `"Imported Library"`. Used for the M3U filename and download subfolder. |
+| `generate_m3u` | boolean | Whether to write an M3U after the import finishes. Default: `true`. |
+
+**Response:**
+
+```json
+{
+  "job_ids": ["csv:0", "csv:1"],
+  "count": 2,
+  "playlist_name": "My Old Library"
+}
+```
+
+Returns `400` if the CSV has no recognizable title/artist columns, is empty, or exceeds 2,000 rows.
 
 ---
 
@@ -141,9 +187,18 @@ Return the current settings.
   "bitrate": "320",
   "output": "{artists} - {title}.{output-ext}",
   "generate_m3u": true,
-  "organize_by_artist": false
+  "max_parallel_downloads": 3,
+  "download_delay_seconds": 0,
+  "organize_by_artist": false,
+  "organize_by_album": false,
+  "search_albums": true
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `max_parallel_downloads` | integer | Concurrent download limit. Clamped to `1–30`. |
+| `download_delay_seconds` | number | Seconds to wait after each download in a batch before starting the next. Clamped to `0–300`. |
 
 ---
 

@@ -74,6 +74,15 @@ Version bump: `make version 2.7.1` — runs `version.sh`, rebuilds the frontend,
 - For changes touching `spotify.py`, `providers.py`, `downloader.py`, or `m3u.py`, add or extend the matching `tests/test_*.py`. The `test_spotify_embed.py` / `test_spotify_url.py` suites already cover the embed schema quirks — extend them rather than mocking around them.
 - `codeflash` (CI) optimizes hot paths. Don't write code that depends on micro-optimizations Codeflash might rewrite; keep functions pure and small so its rewrites stay safe.
 
+## Documentation
+
+There are two documentation surfaces, with different jobs — don't blur them:
+
+- **`README.md`** — a short overview for someone landing on the GitHub repo for the first time: what Downtify is, quick start, a features table, and brief pointers. Keep sections to a few lines each. When a feature needs more than that (full option tables, edge cases, env var reference, API shapes), the README gets a one-paragraph summary plus a link into `docs/` — the detail itself belongs in `docs/`, not duplicated in both places.
+- **`docs/`** (built by `zensical`, served at the project's GitHub Pages site — see `site_url` in `zensical.toml`) — the complete reference. This is where full option tables, every environment variable, the full API reference (`docs/api-reference.md`), and per-feature deep-dives (`docs/features/*.md`) live. New user-facing features get a page here (add it to `nav` in `zensical.toml` too), not just a README blurb.
+
+Cross-check both against the code, not against each other — a stale doc citing another stale doc just launders the error.
+
 ## Quality bar before declaring a task done
 
 1. `make lint` clean (no new ruff or prettier diff).
@@ -83,6 +92,7 @@ Version bump: `make version 2.7.1` — runs `version.sh`, rebuilds the frontend,
 5. If the change affects download behavior: manually run `make run`, pull one Spotify track + one playlist, confirm metadata, cover art, and (when enabled) lyrics embed correctly. State the manual verification explicitly — type checks do not validate this.
 6. If the change affects the SPA: `npm --prefix frontend run build` succeeds and the resulting `frontend/dist` is served correctly by the backend.
 7. Docker: if Python deps changed, run `make export` so `requirements.txt` matches `uv.lock` before merging — the Docker build uses `requirements.txt`, not `uv.lock`.
+8. **Before calling any task finished**, check whether it changed user-facing behavior (new/changed setting, env var, endpoint, UI control, supported input type, language, limit). If it did, update `README.md` (brief overview + link) and the matching `docs/` page(s) in the same change — see [Documentation](#documentation). If nothing user-facing changed (internal refactor, test-only change, CI config), say so explicitly instead of silently skipping this.
 
 ## Things to never do
 

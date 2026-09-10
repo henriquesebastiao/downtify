@@ -107,6 +107,12 @@ Spotify's official API gates downloads behind a Premium subscription. Downtify t
   <span class="mini-card__text">Flat dump or per-artist folders — whichever your media server prefers.</span>
 </a>
 
+<a href="features/library-import/" class="mini-card">
+  <span class="mini-card__icon">📥</span>
+  <span class="mini-card__title">CSV library import</span>
+  <span class="mini-card__text">Bring a Soundiiz, TuneMyMusic or Exportify export and queue the whole thing.</span>
+</a>
+
 </div>
 
 </section>

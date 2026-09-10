@@ -20,6 +20,8 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/downtify?color=blue)](https://hub.docker.com/r/henriquesebastiao/downtify)
 [![Visitors](https://api.visitorbadge.io/api/visitors?path=henriquesebastiao%2Fdowntify&label=repository%20visits&countColor=%231182c3&style=flat)](https://github.com/henriquesebastiao/downtify)
 
+**[📚 Full documentation](https://henriquesebastiao.github.io/downtify/)**
+
 </div>
 
 https://github.com/user-attachments/assets/9711efe8-a960-4e1a-8d55-e0d1c20208f7
@@ -49,7 +51,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 🐳 **One Docker command** | Up and running in under a minute |
 | 🏠 **Home server platforms** | Available on Umbrel, CasaOS and HomeDock |
 | 🎧 **Built-in player** | Play your downloaded music straight from the web UI — progress bar, shuffle, repeat, volume |
-| 🌍 **Multi-language UI** | English (default), Spanish and Brazilian Portuguese — easy to add more |
+| 🌍 **Multi-language UI** | English (default) plus 6 more languages — easy to add more |
 
 ---
 
@@ -128,27 +130,14 @@ The **Playlist Monitor** lets Downtify watch your favorite Spotify playlists and
 
 1. Click the eye icon (👁) in the navigation bar
 2. Paste a Spotify playlist URL
-3. Choose how often Downtify should check for new tracks (every 15 min up to once a day)
+3. Choose how often Downtify should check for new tracks (every 15 min up to once a month)
 4. Click **Watch**
 
 From that point on, whenever a new song appears in the playlist on Spotify, Downtify will detect and download it on the next scheduled check. Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded.
 
 You can pause, resume, force an immediate check, or stop monitoring any playlist at any time from the same page.
 
-### 🕒 Choosing a daily sync time
-
-By default, a playlist checked every day (or week / 2 weeks / month) syncs at whatever time it was originally added or last checked — there's no guaranteed time of day. To pin day-or-longer syncs to a specific hour (e.g. run overnight at 3 AM instead of whenever), set the `DOWNTIFY_MONITOR_SYNC_TIME` environment variable:
-
-```yaml
-environment:
-  - TZ=America/Sao_Paulo
-  - DOWNTIFY_MONITOR_SYNC_TIME=03:00
-```
-
-- `DOWNTIFY_MONITOR_SYNC_TIME` uses 24-hour `HH:MM` format and only affects intervals of a full day or more (every day, week, 2 weeks, month) — shorter intervals (15 min – 12 h) are unaffected, since anchoring them to a single daily time would break their cadence.
-- Set `TZ` to your local [IANA timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) so the sync time is interpreted in your local time rather than UTC.
-- The very first check after adding a playlist always runs immediately, regardless of this setting — it only governs the *recurring* schedule afterward.
-- Leave `DOWNTIFY_MONITOR_SYNC_TIME` unset to keep the previous behavior (sync exactly one interval after the last check).
+Playlists checked daily or less often can be pinned to a specific hour (e.g. always sync overnight at 3 AM) with the `DOWNTIFY_MONITOR_SYNC_TIME` and `TZ` environment variables, and can be sorted by date added, title, frequency, track count, or status. See **[Playlist Monitor](https://henriquesebastiao.github.io/downtify/features/playlist-monitor/)** in the full docs for details.
 
 ---
 
@@ -165,11 +154,7 @@ Access the settings panel (⚙️ icon) to configure:
 | **Parallel downloads** | 1–30 concurrent downloads (default 3) |
 | **Delay between downloads** | 0–300 seconds (default 0 = off) |
 
-### ⏱️ Delay between downloads
-
-**Settings → Delay between downloads** makes Downtify wait a configurable number of seconds after finishing a song before starting the next one, instead of firing downloads back-to-back. This applies to playlist, album and batch downloads, as well as Playlist Monitor's automatic sweeps — it's skipped for a single manual track download, since there's no "next" song to wait for.
-
-Combined with a lower **Parallel downloads** value, this spreads out requests over time to look less like a bot hammering YouTube — handy if you're downloading large playlists unattended and want to keep a lower profile.
+**Delay between downloads** waits a configurable number of seconds between songs instead of firing requests back-to-back — combined with a lower **Parallel downloads** value, it's the main tool for avoiding YouTube rate limits on large unattended downloads. See **[Download Settings](https://henriquesebastiao.github.io/downtify/features/download-settings/)** for the full reference.
 
 ### 📁 Organize by artist
 
@@ -206,12 +191,7 @@ When the setting is **off** (default), the existing behaviour is preserved: sing
 
 ## 📥 Import a library CSV
 
-Already exported your library from [Soundiiz](https://soundiiz.com/), [TuneMyMusic](https://www.tunemymusic.com/) or [Exportify](https://github.com/watsonbox/exportify)? Click **"Import a library CSV"** below the search box on the home page and pick the file — Downtify reads its Title/Artist columns (it recognizes the column names each of those tools uses) and queues every track for download, resolving each one via YouTube Music search just like a free-text query.
-
-- The whole file is read in your browser and sent as plain text — nothing is uploaded anywhere else.
-- Rows are matched case-insensitively against common header names, so exports from any of the three tools work without renaming columns.
-- If a header can't be recognized, the import is rejected up front with the column names it did find, rather than silently skipping everything.
-- Combine this with **Settings → Delay between downloads** (see below) if you're importing a large library — Downtify will otherwise fire off a lot of YouTube requests back-to-back, which is an easy way to get rate-limited.
+Already exported your library from [Soundiiz](https://soundiiz.com/), [TuneMyMusic](https://www.tunemymusic.com/) or [Exportify](https://github.com/watsonbox/exportify)? Click **"Import a library CSV"** below the search box on the home page and pick the file — Downtify reads its Title/Artist columns and queues every track for download. See **[Library Import](https://henriquesebastiao.github.io/downtify/features/library-import/)** in the full docs for supported columns, limits, and rate-limiting tips.
 
 ---
 
@@ -255,16 +235,16 @@ The player parses `Artist - Title.ext` filenames so the now-playing card shows a
 
 ## 🌍 Internationalization
 
-Downtify's UI is fully translatable. The default language is **English**, with **Spanish** and **Brazilian Portuguese** included out of the box. You can switch languages from **Settings → Language**; your choice is saved in the browser's `localStorage` and applied instantly without a reload.
+Downtify's UI is fully translatable. The default language is **English**, with **Spanish, Brazilian Portuguese, French, Turkish, Greek and Hungarian** included out of the box. You can switch languages from **Settings → Language**; your choice is saved in the browser's `localStorage` and applied instantly without a reload.
 
 ### Contributing translations
 
 Adding a new language is a small, three-step change — no build tooling beyond the existing Vite setup is required.
 
-1. **Copy the English file as a starting point.** Locale files live in `frontend/src/i18n/locales/`. Each file exports a single object whose keys match the structure of `en.js` exactly. Pick an [IETF language tag](https://en.wikipedia.org/wiki/IETF_language_tag) for the file name (e.g. `fr.js`, `de.js`, `it.js`, `ja.js`, `pt-PT.js`).
+1. **Copy the English file as a starting point.** Locale files live in `frontend/src/i18n/locales/`. Each file exports a single object whose keys match the structure of `en.js` exactly. Pick an [IETF language tag](https://en.wikipedia.org/wiki/IETF_language_tag) for the file name (e.g. `de.js`, `it.js`, `ja.js`, `pt-PT.js`).
 
    ```bash
-   cp frontend/src/i18n/locales/en.js frontend/src/i18n/locales/fr.js
+   cp frontend/src/i18n/locales/en.js frontend/src/i18n/locales/de.js
    ```
 
 2. **Translate the values.** Keep the keys, the placeholder tokens (e.g. `{count}`, `{name}`, `{file}`) and the overall shape unchanged — only the strings on the right-hand side should change. Update the `language.name` field at the top of the file to the **native** name of the language ("Français", "Deutsch", "Italiano"…) — this is the label that appears in the language picker.
@@ -272,13 +252,17 @@ Adding a new language is a small, three-step change — no build tooling beyond 
 3. **Register the locale** in `frontend/src/i18n/index.js`:
 
    ```js
-   import fr from './locales/fr.js'
+   import de from './locales/de.js'
 
    export const AVAILABLE_LOCALES = [
      { code: 'en', name: 'English', messages: en },
      { code: 'es', name: 'Español', messages: es },
      { code: 'pt-BR', name: 'Português (BR)', messages: ptBR },
-     { code: 'fr', name: 'Français', messages: fr }, // new entry
+     { code: 'fr', name: 'Français', messages: fr },
+     { code: 'tr', name: 'Türkçe', messages: tr },
+     { code: 'el', name: 'Ελληνικά', messages: el },
+     { code: 'hu', name: 'Magyar', messages: hu },
+     { code: 'de', name: 'Deutsch', messages: de }, // new entry
    ]
    ```
 

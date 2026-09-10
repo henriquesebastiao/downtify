@@ -10,8 +10,9 @@ Downtify covers everything you need to build and maintain a local music library 
 
 | Feature | What it does |
 |---------|-------------|
-| [Download Settings](download-settings.md) | Choose format (MP3/FLAC/M4A/OGG/OPUS) and bitrate per download |
+| [Download Settings](download-settings.md) | Choose format (MP3/FLAC/M4A/OGG/OPUS), bitrate, parallel downloads and delay between downloads |
 | [Playlist Monitor](playlist-monitor.md) | Watch playlists and auto-download new tracks as they appear on Spotify |
+| [Library Import (CSV)](library-import.md) | Import a library export from Soundiiz, TuneMyMusic or Exportify and queue the whole thing |
 | [Built-in Player](player.md) | Play your downloaded music in the browser with shuffle, repeat and album art |
 | [M3U Export](m3u-export.md) | Auto-generated playlist files for Jellyfin, Navidrome, Plex and any media app |
 | [File Organization](file-organization.md) | Flat layout or per-artist subfolders |

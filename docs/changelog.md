@@ -4,127 +4,516 @@ icon: lucide/history
 
 # Changelog
 
-## [2.6.0](https://github.com/henriquesebastiao/downtify/tree/2.6.0) — 2026-05-03
+## [2.10.2](https://github.com/henriquesebastiao/downtify/tree/2.10.2) (2026-09-09)
 
-**Enhancements**
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.10.1...2.10.2)
 
-- Organize by artist: save music into per-artist subfolders ([#151](https://github.com/henriquesebastiao/downtify/pull/151))
-- Option to disable lyrics downloads ([#148](https://github.com/henriquesebastiao/downtify/pull/148))
-- Fix download history clearing ([#150](https://github.com/henriquesebastiao/downtify/pull/150))
+**Implemented enhancements:**
 
-**Bug fixes**
+- Delete untracked songs [\#185](https://github.com/henriquesebastiao/downtify/issues/185)
 
-- Download history persisting after clearing ([#146](https://github.com/henriquesebastiao/downtify/issues/146))
-- Settings not persisting across restarts ([#142](https://github.com/henriquesebastiao/downtify/issues/142))
+**Fixed bugs:**
 
----
+- Downtify 2.9.1 fails to download YouTube Music [\#247](https://github.com/henriquesebastiao/downtify/issues/247)
 
-## [2.5.0](https://github.com/henriquesebastiao/downtify/tree/2.5.0) — 2026-05-02
+**Merged pull requests:**
 
-**Enhancements**
+- core: Update packages \(2026-9-8\) [\#290](https://github.com/henriquesebastiao/downtify/pull/290) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix: enable yt-dlp's remote EJS component for YouTube SABR fallback [\#286](https://github.com/henriquesebastiao/downtify/pull/286) ([Athos97](https://github.com/Athos97))
+- fix: save MP3 tags as ID3v2.4 instead of v2.3 [\#285](https://github.com/henriquesebastiao/downtify/pull/285) ([Athos97](https://github.com/Athos97))
+- added hungarian translation [\#284](https://github.com/henriquesebastiao/downtify/pull/284) ([BetteriX](https://github.com/BetteriX))
 
-- Support for playlists with over 100 songs ([#147](https://github.com/henriquesebastiao/downtify/pull/147))
+## [2.10.1](https://github.com/henriquesebastiao/downtify/tree/2.10.1) (2026-08-12)
 
----
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.10.0...2.10.1)
 
-## [2.4.3](https://github.com/henriquesebastiao/downtify/tree/2.4.3) — 2026-04-30
+**Implemented enhancements:**
 
-**Enhancements**
+- saving a song with an album name [\#173](https://github.com/henriquesebastiao/downtify/issues/173)
+- Output Structure [\#144](https://github.com/henriquesebastiao/downtify/issues/144)
+- Support for reverse proxy with Cloudflare Tunnel \(ROOT\_URL / BASE\_URL env support\) [\#49](https://github.com/henriquesebastiao/downtify/issues/49)
 
-- Persist settings to disk so they survive container restarts ([#143](https://github.com/henriquesebastiao/downtify/pull/143))
+**Fixed bugs:**
 
----
+- Age restricted content having issues with cookies, or wanting age approval [\#183](https://github.com/henriquesebastiao/downtify/issues/183)
+- Cookies issues [\#160](https://github.com/henriquesebastiao/downtify/issues/160)
 
-## [2.4.2](https://github.com/henriquesebastiao/downtify/tree/2.4.2) — 2026-04-30
+**Merged pull requests:**
 
-**Enhancements**
+- Remove dist folder [\#256](https://github.com/henriquesebastiao/downtify/pull/256) ([fracarma](https://github.com/fracarma))
+- build\(deps\): Bump docker/login-action from 4.5.2 to 4.6.0 [\#255](https://github.com/henriquesebastiao/downtify/pull/255) ([dependabot[bot]](https://github.com/apps/dependabot))
 
-- Structured logging with loguru ([#141](https://github.com/henriquesebastiao/downtify/pull/141))
+## [2.10.0](https://github.com/henriquesebastiao/downtify/tree/2.10.0) (2026-08-11)
 
----
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.9.2...2.10.0)
 
-## [2.4.1](https://github.com/henriquesebastiao/downtify/tree/2.4.1) — 2026-04-29
+**Implemented enhancements:**
 
-**Enhancements**
+- Youtube album download [\#244](https://github.com/henriquesebastiao/downtify/pull/244) ([fracarma](https://github.com/fracarma))
 
-- Move SQLite database from `/downloads` to `/data` — a separate named volume ([#140](https://github.com/henriquesebastiao/downtify/pull/140))
+## [2.9.2](https://github.com/henriquesebastiao/downtify/tree/2.9.2) (2026-08-11)
 
----
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.9.1...2.9.2)
 
-## [2.4.0](https://github.com/henriquesebastiao/downtify/tree/2.4.0) — 2026-04-29
+**Fixed bugs:**
 
-[Full changelog](https://github.com/henriquesebastiao/downtify/compare/2.3.0...2.4.0)
+- Downtify grabbing the wrong audio [\#159](https://github.com/henriquesebastiao/downtify/issues/159)
 
----
+**Merged pull requests:**
 
-## [2.3.0](https://github.com/henriquesebastiao/downtify/tree/2.3.0) — 2026-04-28
+- build\(deps-dev\): Bump zensical from 0.0.52 to 0.0.53 [\#252](https://github.com/henriquesebastiao/downtify/pull/252) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump docker/login-action from 4 to 4.5.2 [\#248](https://github.com/henriquesebastiao/downtify/pull/248) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add Turkish Locale Support [\#245](https://github.com/henriquesebastiao/downtify/pull/245) ([Singulariity](https://github.com/Singulariity))
+- build\(deps\): Bump actions/labeler from 6 to 7 [\#242](https://github.com/henriquesebastiao/downtify/pull/242) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump zensical from 0.0.50 to 0.0.51 [\#241](https://github.com/henriquesebastiao/downtify/pull/241) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump websockets from 16.1 to 16.1.1 [\#240](https://github.com/henriquesebastiao/downtify/pull/240) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump actions/setup-python from 6 to 7 [\#239](https://github.com/henriquesebastiao/downtify/pull/239) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump ruff from 0.15.21 to 0.15.22 [\#236](https://github.com/henriquesebastiao/downtify/pull/236) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Check the album and song names [\#234](https://github.com/henriquesebastiao/downtify/pull/234) ([fracarma](https://github.com/fracarma))
 
-**Enhancements**
+## [2.9.1](https://github.com/henriquesebastiao/downtify/tree/2.9.1) (2026-07-16)
 
-- Settings toggle to enable/disable M3U generation; Playlist Monitor integration ([#127](https://github.com/henriquesebastiao/downtify/pull/127))
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.9.0...2.9.1)
 
----
+**Fixed bugs:**
 
-## [2.2.0](https://github.com/henriquesebastiao/downtify/tree/2.2.0) — 2026-04-28
+- Recognize playlist links copied from Spotify interfaces in other languages [\#230](https://github.com/henriquesebastiao/downtify/issues/230)
 
-**Enhancements**
+**Merged pull requests:**
 
-- Automatic `EXTM3U` playlist file generation for Spotify playlists ([#126](https://github.com/henriquesebastiao/downtify/pull/126))
+- Recognize Spotify URLs with locale segment \(intl-xx\) [\#233](https://github.com/henriquesebastiao/downtify/pull/233) ([mozuvic1](https://github.com/mozuvic1))
+- build\(deps\): Bump actions/setup-node from 6 to 7 [\#232](https://github.com/henriquesebastiao/downtify/pull/232) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump node from 20-alpine to 26-alpine [\#231](https://github.com/henriquesebastiao/downtify/pull/231) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add option to separate songs by album [\#229](https://github.com/henriquesebastiao/downtify/pull/229) ([fracarma](https://github.com/fracarma))
 
----
+## [2.9.0](https://github.com/henriquesebastiao/downtify/tree/2.9.0) (2026-07-12)
 
-## [2.1.1](https://github.com/henriquesebastiao/downtify/tree/2.1.1) — 2026-04-28
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.8.0...2.9.0)
 
-**Bug fixes**
+**Fixed bugs:**
 
-- Album details (year, album cover) missing from embedded metadata ([#125](https://github.com/henriquesebastiao/downtify/issues/125))
+- Various Artists [\#207](https://github.com/henriquesebastiao/downtify/issues/207)
+- Renaming not working [\#194](https://github.com/henriquesebastiao/downtify/issues/194)
+- OPUS music have no cover art [\#165](https://github.com/henriquesebastiao/downtify/issues/165)
 
----
+**Merged pull requests:**
 
-## [2.1.0](https://github.com/henriquesebastiao/downtify/tree/2.1.0) — 2026-04-28
+- Fix output filename subpaths [\#226](https://github.com/henriquesebastiao/downtify/pull/226) ([FidelGB](https://github.com/FidelGB))
+- Fix OPUS format missing cover art [\#217](https://github.com/henriquesebastiao/downtify/pull/217) ([berkeozgen08](https://github.com/berkeozgen08))
+- build\(deps-dev\): Bump ruff from 0.15.18 to 0.15.20 [\#214](https://github.com/henriquesebastiao/downtify/pull/214) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump mutagen from 1.47.0 to 1.48.1 [\#213](https://github.com/henriquesebastiao/downtify/pull/213) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump zensical from 0.0.45 to 0.0.46 [\#209](https://github.com/henriquesebastiao/downtify/pull/209) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add Various Artists in album Artist if there are more than one artists [\#208](https://github.com/henriquesebastiao/downtify/pull/208) ([Robokishan](https://github.com/Robokishan))
+- build\(deps\): Bump actions/checkout from 6 to 7 [\#206](https://github.com/henriquesebastiao/downtify/pull/206) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Use the ID3v2.4 separator for artists: "; " [\#205](https://github.com/henriquesebastiao/downtify/pull/205) ([fracarma](https://github.com/fracarma))
+- feat: add Greek translation  [\#197](https://github.com/henriquesebastiao/downtify/pull/197) ([Harrygr-droid](https://github.com/Harrygr-droid))
+- build\(deps-dev\): Bump zensical from 0.0.44 to 0.0.45 [\#196](https://github.com/henriquesebastiao/downtify/pull/196) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump yt-dlp from 2026.3.17 to 2026.6.9 [\#195](https://github.com/henriquesebastiao/downtify/pull/195) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump ytmusicapi from 1.12.0 to 1.12.1 [\#193](https://github.com/henriquesebastiao/downtify/pull/193) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump zensical from 0.0.43 to 0.0.44 [\#190](https://github.com/henriquesebastiao/downtify/pull/190) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump uvicorn from 0.48.0 to 0.49.0 [\#189](https://github.com/henriquesebastiao/downtify/pull/189) ([dependabot[bot]](https://github.com/apps/dependabot))
 
-**Enhancements**
+## [2.8.0](https://github.com/henriquesebastiao/downtify/tree/2.8.0) (2026-06-02)
 
-- Rewrite: replace Spotify Web API (spotdl/spotipy) with public embed scraping — no credentials or Premium required ([#124](https://github.com/henriquesebastiao/downtify/pull/124))
-- Configurable output bitrate
-- Playlist Monitor (watch playlists and auto-download new tracks)
-- Lyrics via lrclib
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.7.0...2.8.0)
 
-**Bug fixes**
+**Security fixes:**
 
-- Spotify direct links returning wrong results ([#104](https://github.com/henriquesebastiao/downtify/issues/104))
+- vulnerabilities [\#170](https://github.com/henriquesebastiao/downtify/issues/170)
 
----
+**Merged pull requests:**
 
-## [2.0.0](https://github.com/henriquesebastiao/downtify/tree/2.0.0) — 2026-04-23
+- build\(deps-dev\): Bump codeflash from 0.20.5 to 0.20.6 [\#188](https://github.com/henriquesebastiao/downtify/pull/188) ([dependabot[bot]](https://github.com/apps/dependabot))
+- feat: enrich audio tags with genre from public iTunes Search API [\#187](https://github.com/henriquesebastiao/downtify/pull/187) ([Ramss3s](https://github.com/Ramss3s))
+- build\(deps-dev\): Bump ruff from 0.15.14 to 0.15.15 [\#184](https://github.com/henriquesebastiao/downtify/pull/184) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump uvicorn from 0.47.0 to 0.48.0 [\#181](https://github.com/henriquesebastiao/downtify/pull/181) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump actions/checkout from 4 to 6 [\#180](https://github.com/henriquesebastiao/downtify/pull/180) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump astral-sh/setup-uv from 6 to 7 [\#179](https://github.com/henriquesebastiao/downtify/pull/179) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add CodeFlash GitHub Actions workflow [\#178](https://github.com/henriquesebastiao/downtify/pull/178) ([codeflash-ai[bot]](https://github.com/apps/codeflash-ai))
+- core: Update dependencies [\#177](https://github.com/henriquesebastiao/downtify/pull/177) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- build\(deps-dev\): Bump zensical from 0.0.41 to 0.0.43 [\#176](https://github.com/henriquesebastiao/downtify/pull/176) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump uvicorn from 0.46.0 to 0.47.0 [\#169](https://github.com/henriquesebastiao/downtify/pull/169) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump requests from 2.34.0 to 2.34.1 [\#166](https://github.com/henriquesebastiao/downtify/pull/166) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump requests from 2.33.1 to 2.34.0 [\#164](https://github.com/henriquesebastiao/downtify/pull/164) ([dependabot[bot]](https://github.com/apps/dependabot))
 
-[Full changelog](https://github.com/henriquesebastiao/downtify/compare/1.1.4...2.0.0)
+## [2.7.0](https://github.com/henriquesebastiao/downtify/tree/2.7.0) (2026-05-11)
 
----
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.6.1...2.7.0)
 
-## [1.1.4](https://github.com/henriquesebastiao/downtify/tree/1.1.4) — 2026-02-19
+**Implemented enhancements:**
 
-**Bug fixes**
+- Configurable Parallel Downloads [\#158](https://github.com/henriquesebastiao/downtify/issues/158)
+- Allow Weekly or Monthly Playlist Synchronization [\#157](https://github.com/henriquesebastiao/downtify/issues/157)
 
-- Search engine not returning results ([#102](https://github.com/henriquesebastiao/downtify/issues/102))
-- HTTP 500 errors with the Spotify API ([#97](https://github.com/henriquesebastiao/downtify/issues/97))
+**Merged pull requests:**
 
----
+- Add new time intervals for weekly and monthly options [\#163](https://github.com/henriquesebastiao/downtify/pull/163) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Add parallel downloads feature and enhance settings [\#162](https://github.com/henriquesebastiao/downtify/pull/162) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- build\(deps-dev\): Bump zensical from 0.0.40 to 0.0.41 [\#161](https://github.com/henriquesebastiao/downtify/pull/161) ([dependabot[bot]](https://github.com/apps/dependabot))
 
-## [1.1.3](https://github.com/henriquesebastiao/downtify/tree/1.1.3) — 2026-02-18
+## [2.6.1](https://github.com/henriquesebastiao/downtify/tree/2.6.1) (2026-05-05)
 
-**Bug fixes**
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.6.0...2.6.1)
 
-- Updated spotDL to reflect changes in the Spotify API ([#100](https://github.com/henriquesebastiao/downtify/pull/100))
+**Merged pull requests:**
 
----
+- Retrieve Artist, Track Number and Year when retrieving an album [\#156](https://github.com/henriquesebastiao/downtify/pull/156) ([fracarma](https://github.com/fracarma))
+- build\(deps-dev\): Bump zensical from 0.0.39 to 0.0.40 [\#155](https://github.com/henriquesebastiao/downtify/pull/155) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump actions/labeler from 5 to 6 [\#153](https://github.com/henriquesebastiao/downtify/pull/153) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add documentation [\#152](https://github.com/henriquesebastiao/downtify/pull/152) ([henriquesebastiao](https://github.com/henriquesebastiao))
 
-## [1.1.1](https://github.com/henriquesebastiao/downtify/tree/1.1.1) — 2025-10-28
+## [2.6.0](https://github.com/henriquesebastiao/downtify/tree/2.6.0) (2026-05-03)
 
-**Enhancements**
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.5.0...2.6.0)
 
-- yt-dlp updated to 2025.10.22 ([#53](https://github.com/henriquesebastiao/downtify/pull/53))
+**Implemented enhancements:**
 
----
+- Disable lyric download [\#145](https://github.com/henriquesebastiao/downtify/issues/145)
+- Adding functionality to save music into folders by artist [\#151](https://github.com/henriquesebastiao/downtify/pull/151) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Fixing download history clearing [\#150](https://github.com/henriquesebastiao/downtify/pull/150) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Adding functionality to disable lyrics downloads [\#148](https://github.com/henriquesebastiao/downtify/pull/148) ([henriquesebastiao](https://github.com/henriquesebastiao))
 
-[Full changelog on GitHub →](https://github.com/henriquesebastiao/downtify/blob/main/CHANGELOG)
+**Fixed bugs:**
+
+- Download History Persisting After Clearing [\#146](https://github.com/henriquesebastiao/downtify/issues/146)
+- Settings Not Persisting [\#142](https://github.com/henriquesebastiao/downtify/issues/142)
+
+## [2.5.0](https://github.com/henriquesebastiao/downtify/tree/2.5.0) (2026-05-02)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.4.3...2.5.0)
+
+**Implemented enhancements:**
+
+- Support for Large Playlists [\#128](https://github.com/henriquesebastiao/downtify/issues/128)
+- Allowing downloads of playlists with over 100 songs [\#147](https://github.com/henriquesebastiao/downtify/pull/147) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [2.4.3](https://github.com/henriquesebastiao/downtify/tree/2.4.3) (2026-04-30)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.4.2...2.4.3)
+
+**Implemented enhancements:**
+
+- Persisting settings in memory [\#143](https://github.com/henriquesebastiao/downtify/pull/143) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [2.4.2](https://github.com/henriquesebastiao/downtify/tree/2.4.2) (2026-04-30)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.4.1...2.4.2)
+
+**Implemented enhancements:**
+
+- Improving logs with loguru [\#141](https://github.com/henriquesebastiao/downtify/pull/141) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [2.4.1](https://github.com/henriquesebastiao/downtify/tree/2.4.1) (2026-04-29)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.4.0...2.4.1)
+
+**Implemented enhancements:**
+
+- db in download folder is not a good idea [\#139](https://github.com/henriquesebastiao/downtify/issues/139)
+- Creating a separate directory to save the SQLite database [\#140](https://github.com/henriquesebastiao/downtify/pull/140) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Merged pull requests:**
+
+- build\(deps\): Bump docker/login-action from 3 to 4 [\#138](https://github.com/henriquesebastiao/downtify/pull/138) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump docker/metadata-action from 5 to 6 [\#137](https://github.com/henriquesebastiao/downtify/pull/137) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump docker/build-push-action from 6 to 7 [\#136](https://github.com/henriquesebastiao/downtify/pull/136) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump docker/setup-buildx-action from 3 to 4 [\#135](https://github.com/henriquesebastiao/downtify/pull/135) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump docker/setup-qemu-action from 3 to 4 [\#134](https://github.com/henriquesebastiao/downtify/pull/134) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [2.4.0](https://github.com/henriquesebastiao/downtify/tree/2.4.0) (2026-04-29)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.3.0...2.4.0)
+
+## [2.3.0](https://github.com/henriquesebastiao/downtify/tree/2.3.0) (2026-04-28)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.2.0...2.3.0)
+
+**Implemented enhancements:**
+
+- feat: Settings toggle for M3U + Playlist Monitor integration [\#127](https://github.com/henriquesebastiao/downtify/pull/127) ([gmontard](https://github.com/gmontard))
+
+**Closed issues:**
+
+- Refuses to read config file on ZimaOS [\#123](https://github.com/henriquesebastiao/downtify/issues/123)
+- I wasted an hour trying to make Docker to work, why couldn't this be an EXE file? [\#107](https://github.com/henriquesebastiao/downtify/issues/107)
+
+## [2.2.0](https://github.com/henriquesebastiao/downtify/tree/2.2.0) (2026-04-28)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.1.1...2.2.0)
+
+**Implemented enhancements:**
+
+- feat: Generate M3U playlist files for Spotify playlists [\#126](https://github.com/henriquesebastiao/downtify/pull/126) ([gmontard](https://github.com/gmontard))
+
+## [2.1.1](https://github.com/henriquesebastiao/downtify/tree/2.1.1) (2026-04-28)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.1.0...2.1.1)
+
+**Fixed bugs:**
+
+- Album Details Missing in Metadata [\#125](https://github.com/henriquesebastiao/downtify/issues/125)
+
+## [2.1.0](https://github.com/henriquesebastiao/downtify/tree/2.1.0) (2026-04-28)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.0.0...2.1.0)
+
+**Implemented enhancements:**
+
+- Feature: set output file bitrate [\#63](https://github.com/henriquesebastiao/downtify/issues/63)
+- Feature: Spotify Playlist Change Detection and Sync [\#47](https://github.com/henriquesebastiao/downtify/issues/47)
+- feature request: lyric provider [\#31](https://github.com/henriquesebastiao/downtify/issues/31)
+- Implementing downloads without relying on Spotify credentials brings many improvements [\#124](https://github.com/henriquesebastiao/downtify/pull/124) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Fixed bugs:**
+
+- Spotify direct link to a music or to a playlist gives wrong results [\#104](https://github.com/henriquesebastiao/downtify/issues/104)
+
+**Closed issues:**
+
+- Error in ratelimit [\#117](https://github.com/henriquesebastiao/downtify/issues/117)
+- No downloads are queued. Search for a song to begin. [\#106](https://github.com/henriquesebastiao/downtify/issues/106)
+
+## [2.0.0](https://github.com/henriquesebastiao/downtify/tree/2.0.0) (2026-04-23)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.1.4...2.0.0)
+
+**Implemented enhancements:**
+
+- Feature Request: pagination in search [\#70](https://github.com/henriquesebastiao/downtify/issues/70)
+
+## [1.1.4](https://github.com/henriquesebastiao/downtify/tree/1.1.4) (2026-02-19)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.1.3...1.1.4)
+
+**Fixed bugs:**
+
+- Search engine does not return results [\#102](https://github.com/henriquesebastiao/downtify/issues/102)
+- fix: for Error code 500 with spotify API and download error. [\#99](https://github.com/henriquesebastiao/downtify/issues/99)
+- Error code 500 with spotify API [\#97](https://github.com/henriquesebastiao/downtify/issues/97)
+- Error: Request failed with status code 500 [\#92](https://github.com/henriquesebastiao/downtify/issues/92)
+- Error when searching album [\#88](https://github.com/henriquesebastiao/downtify/issues/88)
+- 500 Internal Server Error on download [\#85](https://github.com/henriquesebastiao/downtify/issues/85)
+- ERROR: Your application has reached a rate/request limit [\#69](https://github.com/henriquesebastiao/downtify/issues/69)
+
+## [1.1.3](https://github.com/henriquesebastiao/downtify/tree/1.1.3) (2026-02-18)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.1.2...1.1.3)
+
+**Fixed bugs:**
+
+- Download Error [\#67](https://github.com/henriquesebastiao/downtify/issues/67)
+- Adding a corrected version of spotDL to reflect the changes made to the Spotify API [\#100](https://github.com/henriquesebastiao/downtify/pull/100) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Closed issues:**
+
+- ERROR:    Client 1...b not found [\#68](https://github.com/henriquesebastiao/downtify/issues/68)
+- \[ENHANCEMENT\] User | Password login screen [\#64](https://github.com/henriquesebastiao/downtify/issues/64)
+
+**Merged pull requests:**
+
+- build\(deps-dev\): Bump ruff from 0.15.0 to 0.15.1 [\#98](https://github.com/henriquesebastiao/downtify/pull/98) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump vue from 3.5.27 to 3.5.28 in /frontend [\#96](https://github.com/henriquesebastiao/downtify/pull/96) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump axios from 1.13.4 to 1.13.5 in /frontend [\#95](https://github.com/henriquesebastiao/downtify/pull/95) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump daisyui from 5.5.14 to 5.5.18 in /frontend [\#94](https://github.com/henriquesebastiao/downtify/pull/94) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump ruff from 0.14.14 to 0.15.0 [\#93](https://github.com/henriquesebastiao/downtify/pull/93) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump @vitejs/plugin-vue from 6.0.3 to 6.0.4 in /frontend [\#90](https://github.com/henriquesebastiao/downtify/pull/90) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump vue-router from 5.0.0 to 5.0.2 in /frontend [\#89](https://github.com/henriquesebastiao/downtify/pull/89) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump vue-router from 4.6.4 to 5.0.0 in /frontend [\#84](https://github.com/henriquesebastiao/downtify/pull/84) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump axios from 1.13.3 to 1.13.4 in /frontend [\#83](https://github.com/henriquesebastiao/downtify/pull/83) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Update packages \(2026-01-26\) [\#82](https://github.com/henriquesebastiao/downtify/pull/82) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- build\(deps\): Bump vue from 3.5.26 to 3.5.27 in /frontend [\#81](https://github.com/henriquesebastiao/downtify/pull/81) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump uuid from 9.0.1 to 13.0.0 in /frontend [\#80](https://github.com/henriquesebastiao/downtify/pull/80) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump daisyui from 4.12.24 to 5.5.14 in /frontend [\#79](https://github.com/henriquesebastiao/downtify/pull/79) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump axios from 1.13.2 to 1.13.3 in /frontend [\#78](https://github.com/henriquesebastiao/downtify/pull/78) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Update packages \(2026-01-25\) [\#77](https://github.com/henriquesebastiao/downtify/pull/77) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- build\(deps-dev\): Bump @vitejs/plugin-vue from 5.2.4 to 6.0.3 in /frontend [\#74](https://github.com/henriquesebastiao/downtify/pull/74) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump vite from 5.4.21 to 7.3.1 in /frontend [\#72](https://github.com/henriquesebastiao/downtify/pull/72) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump ruff from 0.14.13 to 0.14.14 [\#71](https://github.com/henriquesebastiao/downtify/pull/71) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump actions/checkout from 5 to 6 [\#65](https://github.com/henriquesebastiao/downtify/pull/65) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [1.1.2](https://github.com/henriquesebastiao/downtify/tree/1.1.2) (2026-01-14)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.1.1...1.1.2)
+
+**Closed issues:**
+
+- Cannot download songs from web gui [\#66](https://github.com/henriquesebastiao/downtify/issues/66)
+- Failure downloading [\#62](https://github.com/henriquesebastiao/downtify/issues/62)
+- \[Error\] Can't download on CasaOS [\#61](https://github.com/henriquesebastiao/downtify/issues/61)
+
+**Merged pull requests:**
+
+- build\(deps\): Bump actions/checkout from 4 to 5 [\#55](https://github.com/henriquesebastiao/downtify/pull/55) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [1.1.1](https://github.com/henriquesebastiao/downtify/tree/1.1.1) (2025-10-28)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.1.0...1.1.1)
+
+**Implemented enhancements:**
+
+- Updating dependencies, yt-dlp to version 2025.10.22 [\#53](https://github.com/henriquesebastiao/downtify/pull/53) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Fixed bugs:**
+
+- YT-DLP error when running via docker command [\#52](https://github.com/henriquesebastiao/downtify/issues/52)
+
+**Closed issues:**
+
+- Bug: client\_id parameter breaks Spotify URL \(500 Internal Server Error\) [\#50](https://github.com/henriquesebastiao/downtify/issues/50)
+
+## [1.1.0](https://github.com/henriquesebastiao/downtify/tree/1.1.0) (2025-10-13)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.3...1.1.0)
+
+**Implemented enhancements:**
+
+- Set download directories and `web_gui_location` via environment variables [\#46](https://github.com/henriquesebastiao/downtify/issues/46)
+- Added the list file view [\#45](https://github.com/henriquesebastiao/downtify/pull/45) ([lapentad](https://github.com/lapentad))
+
+## [1.0.3](https://github.com/henriquesebastiao/downtify/tree/1.0.3) (2025-10-09)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.2...1.0.3)
+
+**Closed issues:**
+
+- Better label the Docker image [\#42](https://github.com/henriquesebastiao/downtify/issues/42)
+
+## [1.0.2](https://github.com/henriquesebastiao/downtify/tree/1.0.2) (2025-10-09)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.1...1.0.2)
+
+**Merged pull requests:**
+
+- Labeling Docker image and updating CI dependencies [\#43](https://github.com/henriquesebastiao/downtify/pull/43) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- build\(deps\): Bump astral-sh/setup-uv from 3 to 7 [\#36](https://github.com/henriquesebastiao/downtify/pull/36) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump python from 3.13-alpine to 3.14-alpine [\#35](https://github.com/henriquesebastiao/downtify/pull/35) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump actions/setup-python from 5 to 6 [\#34](https://github.com/henriquesebastiao/downtify/pull/34) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump actions/checkout from 4 to 5 [\#33](https://github.com/henriquesebastiao/downtify/pull/33) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [1.0.1](https://github.com/henriquesebastiao/downtify/tree/1.0.1) (2025-10-09)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/1.0.0...1.0.1)
+
+**Implemented enhancements:**
+
+- Optimizing Docker image [\#32](https://github.com/henriquesebastiao/downtify/pull/32) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Fixed bugs:**
+
+- Error AnyIO worker thread on Umbrel [\#26](https://github.com/henriquesebastiao/downtify/issues/26)
+- `AnyIO worker thread` error when trying to download music [\#9](https://github.com/henriquesebastiao/downtify/issues/9)
+
+**Closed issues:**
+
+- 🚀 Roadmap [\#12](https://github.com/henriquesebastiao/downtify/issues/12)
+
+## [1.0.0](https://github.com/henriquesebastiao/downtify/tree/1.0.0) (2025-10-08)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.3.2...1.0.0)
+
+**Implemented enhancements:**
+
+- Implementing new download interface [\#30](https://github.com/henriquesebastiao/downtify/pull/30) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Closed issues:**
+
+- \[Resolved\] Bug Report: FFmpeg conversion error on Downtify 0.3.2 [\#29](https://github.com/henriquesebastiao/downtify/issues/29)
+- ffmpeg erro v0.3.1 [\#28](https://github.com/henriquesebastiao/downtify/issues/28)
+- Error ffmpeg [\#25](https://github.com/henriquesebastiao/downtify/issues/25)
+- ffmpeg error [\#24](https://github.com/henriquesebastiao/downtify/issues/24)
+- Error on UmbrelOS: application has reached a rate/request limit [\#23](https://github.com/henriquesebastiao/downtify/issues/23)
+- quality adjustment [\#16](https://github.com/henriquesebastiao/downtify/issues/16)
+
+## [0.3.2](https://github.com/henriquesebastiao/downtify/tree/0.3.2) (2025-03-31)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.3.1...0.3.2)
+
+**Implemented enhancements:**
+
+- \[Feature request/bug\] Make port for web UI adjustable [\#20](https://github.com/henriquesebastiao/downtify/issues/20)
+- 🔧 feat: Set container web port via environment variable - fix \#20 [\#21](https://github.com/henriquesebastiao/downtify/pull/21) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Fixed bugs:**
+
+- ERROR:spotdl.download.progress\_handler:FFmpegError: Failed to convert [\#19](https://github.com/henriquesebastiao/downtify/issues/19)
+- 🔧 fix: Fix error when running ffmpeg - fix \#19 [\#22](https://github.com/henriquesebastiao/downtify/pull/22) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Closed issues:**
+
+- Question on VPNs? [\#17](https://github.com/henriquesebastiao/downtify/issues/17)
+
+## [0.3.1](https://github.com/henriquesebastiao/downtify/tree/0.3.1) (2025-03-10)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.3.0...0.3.1)
+
+**Fixed bugs:**
+
+- hx-get="/list-downloads/" is producing a 404 [\#14](https://github.com/henriquesebastiao/downtify/issues/14)
+
+**Merged pull requests:**
+
+- Fixes `hx-get="/list-downloads/"` producing a 404 error [\#15](https://github.com/henriquesebastiao/downtify/pull/15) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [0.3.0](https://github.com/henriquesebastiao/downtify/tree/0.3.0) (2025-03-10)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.4...0.3.0)
+
+**Implemented enhancements:**
+
+- Add downloaded music list to web interface [\#11](https://github.com/henriquesebastiao/downtify/issues/11)
+- is it safe to have the client id and the client secret inside the code? [\#10](https://github.com/henriquesebastiao/downtify/issues/10)
+- Adding `/list` endpoint to view downloaded songs [\#13](https://github.com/henriquesebastiao/downtify/pull/13) ([dvelayosmd](https://github.com/dvelayosmd))
+
+## [0.2.4](https://github.com/henriquesebastiao/downtify/tree/0.2.4) (2025-03-05)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.3...0.2.4)
+
+**Implemented enhancements:**
+
+- Documenting API and adding tests [\#7](https://github.com/henriquesebastiao/downtify/pull/7) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+**Closed issues:**
+
+- Create documentation with Material for MkDocs [\#5](https://github.com/henriquesebastiao/downtify/issues/5)
+- Documenting API with Swagger UI [\#4](https://github.com/henriquesebastiao/downtify/issues/4)
+
+**Merged pull requests:**
+
+- 📜 docs: Adding documentation with MkDocs [\#8](https://github.com/henriquesebastiao/downtify/pull/8) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Sync dev with main [\#6](https://github.com/henriquesebastiao/downtify/pull/6) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [0.2.3](https://github.com/henriquesebastiao/downtify/tree/0.2.3) (2025-03-03)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.2...0.2.3)
+
+## [0.2.2](https://github.com/henriquesebastiao/downtify/tree/0.2.2) (2025-02-24)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.1...0.2.2)
+
+**Merged pull requests:**
+
+- 🔧 Adding improvements for version 0.2.2 [\#3](https://github.com/henriquesebastiao/downtify/pull/3) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [0.2.1](https://github.com/henriquesebastiao/downtify/tree/0.2.1) (2025-02-08)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.2.0...0.2.1)
+
+**Merged pull requests:**
+
+- 🔧 fix: Running SpotDL with subprocess avoiding async errors [\#2](https://github.com/henriquesebastiao/downtify/pull/2) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [0.2.0](https://github.com/henriquesebastiao/downtify/tree/0.2.0) (2025-02-07)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/0.1.0...0.2.0)
+
+**Implemented enhancements:**
+
+- ✨ Adding web interface with Bootstrap [\#1](https://github.com/henriquesebastiao/downtify/pull/1) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [0.1.0](https://github.com/henriquesebastiao/downtify/tree/0.1.0) (2025-02-06)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/28292c064ed8d50fbdca0b6bc7a47f65f8772cd6...0.1.0)
+
+
+
+\* *This Changelog was automatically generated by [github_changelog_generator](https://github.com/github-changelog-generator/github-changelog-generator)*

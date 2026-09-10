@@ -49,6 +49,28 @@ From the Monitor page you can:
 - **Force check** — trigger an immediate check outside the scheduled interval
 - **Remove** — stop monitoring a playlist and delete its record (downloaded files are kept)
 
+## Sorting
+
+When you're watching more than one playlist, a **Sort by** control appears above the list. Sort by:
+
+| Field | Notes |
+|-------|-------|
+| Date added | Default — newest first |
+| Title | Alphabetical |
+| Refresh frequency | Most frequent (shortest interval) first |
+| Number of tracks | Most tracks first |
+| Days since checked | Never-checked playlists surface first |
+| Paused / Active | Active playlists first |
+
+Click the direction button next to the dropdown to flip between ascending and descending order. The sort is applied client-side only — it doesn't change check order or scheduling.
+
+## Choosing a daily sync time
+
+By default, a playlist checked every day (or week / 2 weeks / month) syncs at whatever time it was originally added or last checked — there's no guaranteed time of day. To pin day-or-longer syncs to a specific hour (e.g. run overnight at 3 AM instead of whenever), set the `DOWNTIFY_MONITOR_SYNC_TIME` environment variable together with `TZ`. See [Environment Variables](../getting-started/environment-variables.md#playlist-monitor) for the full reference.
+
+- Only affects intervals of a full day or more — shorter intervals (15 min – 12 h) are unaffected, since anchoring them to a single daily time would break their cadence.
+- The very first check after adding a playlist always runs immediately, regardless of this setting.
+
 ## Per-track metadata enrichment
 
 Playlist embed entries are missing the release year and use the playlist cover art instead of the per-track album cover. Downtify re-fetches each new track individually to get the correct cover and year before downloading — falling back to the playlist-level data if the per-track fetch fails.

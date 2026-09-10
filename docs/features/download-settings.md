@@ -47,17 +47,29 @@ Available tokens:
 
 ## Parallel downloads
 
-Controls how many songs are downloaded simultaneously.
+Controls how many songs are downloaded simultaneously. Pick a preset (1, 2, 3, 5, 8) or type any custom value from **1 to 30** into the number field next to the presets.
 
 | Value | Behaviour |
 |-------|-----------|
 | **1** | Sequential — one song at a time (safest, lowest resource use) |
-| **2** | Mild concurrency |
 | **3** | Default. Good balance of speed and stability. |
-| **5** | Faster for large playlists |
-| **8** | Maximum. Best for fast connections; uses more CPU and bandwidth. |
+| **8** | Faster for large playlists |
+| **up to 30** | Best for very fast connections; uses more CPU and bandwidth, and increases the chance of YouTube rate-limiting you. |
 
-The limit applies to every download — both individual tracks and batch playlist imports. Changing this value in Settings takes effect immediately without a restart.
+The limit applies to every batch download — playlist/album downloads, the batch queue endpoint, and CSV [library imports](library-import.md). It does **not** apply to Playlist Monitor sweeps, which download new tracks one at a time. Changing this value in Settings takes effect immediately without a restart; the server clamps any value outside `1–30`.
+
+## Delay between downloads
+
+Makes Downtify wait a configurable number of seconds after finishing one song before starting the next one, instead of firing requests back-to-back.
+
+| Value | Behaviour |
+|-------|-----------|
+| **0** | Default — off, no delay. |
+| **5 / 15 / 30 / 60** | Presets, or type any custom value from **0 to 300 seconds**. |
+
+This applies to playlist, album and batch downloads, CSV [library imports](library-import.md), and Playlist Monitor's automatic sweeps. It is skipped for a single manual track download (there's no "next" song to wait for), and skipped after the *last* track in any batch so a run doesn't trail off with a pointless wait at the end.
+
+Combined with a lower **Parallel downloads** value, this is the main tool for avoiding YouTube rate-limiting when downloading a large playlist or an imported library unattended.
 
 ## Audio provider
 

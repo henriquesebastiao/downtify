@@ -4,7 +4,7 @@ icon: lucide/languages
 
 # Internationalization
 
-Downtify's UI is fully translatable. The default language is **English**, with **Spanish** and **Brazilian Portuguese** included out of the box.
+Downtify's UI is fully translatable. The default language is **English**, with six other languages included out of the box.
 
 ## Switching language
 
@@ -17,6 +17,10 @@ Go to **Settings → Language** and pick your preferred language. The choice is 
 | `en` | English (default) |
 | `es` | Español |
 | `pt-BR` | Português (Brasil) |
+| `fr` | Français |
+| `tr` | Türkçe |
+| `el` | Ελληνικά |
+| `hu` | Magyar |
 
 ## Adding a new language
 
@@ -27,7 +31,7 @@ Adding a translation is a three-step process:
 Locale files live in `frontend/src/i18n/locales/`. Each file exports a single object whose keys match the structure of `en.js`. Use an [IETF language tag](https://en.wikipedia.org/wiki/IETF_language_tag) for the file name.
 
 ```bash
-cp frontend/src/i18n/locales/en.js frontend/src/i18n/locales/fr.js
+cp frontend/src/i18n/locales/en.js frontend/src/i18n/locales/de.js
 ```
 
 ### 2. Translate the values
@@ -39,13 +43,17 @@ Keep keys, placeholder tokens (e.g. `{count}`, `{name}`, `{file}`) and the overa
 Add an import and an entry to `AVAILABLE_LOCALES` in `frontend/src/i18n/index.js`:
 
 ```js
-import fr from './locales/fr.js'
+import de from './locales/de.js'
 
 export const AVAILABLE_LOCALES = [
   { code: 'en', name: 'English', messages: en },
   { code: 'es', name: 'Español', messages: es },
   { code: 'pt-BR', name: 'Português (BR)', messages: ptBR },
-  { code: 'fr', name: 'Français', messages: fr }, // new
+  { code: 'fr', name: 'Français', messages: fr },
+  { code: 'tr', name: 'Türkçe', messages: tr },
+  { code: 'el', name: 'Ελληνικά', messages: el },
+  { code: 'hu', name: 'Magyar', messages: hu },
+  { code: 'de', name: 'Deutsch', messages: de }, // new
 ]
 ```
 

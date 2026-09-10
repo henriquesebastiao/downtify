@@ -29,6 +29,7 @@ nav = [
     { "Overview"             = "features/index.md"                  },
     { "Download Settings"    = "features/download-settings.md"      },
     { "Playlist Monitor"     = "features/playlist-monitor.md"       },
+    { "Library Import (CSV)" = "features/library-import.md"         },
     { "Built-in Player"      = "features/player.md"                 },
     { "M3U Export"           = "features/m3u-export.md"             },
     { "File Organization"    = "features/file-organization.md"      },

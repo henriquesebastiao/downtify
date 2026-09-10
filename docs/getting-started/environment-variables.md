@@ -13,6 +13,19 @@ All environment variables are optional. Downtify works out of the box without an
 | `DOWNTIFY_PORT` | `8000` | Port the server listens on inside the container. Change the left side of the port mapping to expose a different host port. |
 | `DOWNLOAD_DIR` | `/downloads` | Directory where audio files are saved. Override if you mount your library at a custom path. |
 | `HOST` | `0.0.0.0` | Bind address for the web server. |
+| `TZ` | `UTC` | Local timezone (IANA name, e.g. `America/Sao_Paulo`), used to interpret `DOWNTIFY_MONITOR_SYNC_TIME` below. |
+
+## Playlist Monitor
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DOWNTIFY_MONITOR_SYNC_TIME` | _(unset)_ | Time of day (24h `HH:MM`, local to `TZ` above) at which [Playlist Monitor](../features/playlist-monitor.md#choosing-a-daily-sync-time) syncs with a daily-or-longer interval (every day, week, 2 weeks, month) should run. Leave unset to sync exactly one interval after the previous check, whatever time that lands on. |
+
+```yaml
+environment:
+  - TZ=America/Sao_Paulo
+  - DOWNTIFY_MONITOR_SYNC_TIME=03:00
+```
 
 ## Anti-bot / YouTube
 
