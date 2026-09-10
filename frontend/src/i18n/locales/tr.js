@@ -220,6 +220,8 @@ export default {
     playFromLibrary: 'Oynatıcıda aç',
     countOne: '{count} parça',
     countMany: '{count} parça',
+    playingFrom: 'Şuradan çalıyor',
+    allSongs: 'Tüm Şarkılar ({count})',
   },
   footer: {
     tagline: 'Açık kaynak müzik indirme uygulaması',

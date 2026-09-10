@@ -229,6 +229,8 @@ export default {
     playFromLibrary: 'Ouvrir dans le lecteur',
     countOne: '{count} titre',
     countMany: '{count} titres',
+    playingFrom: 'Lecture depuis',
+    allSongs: 'Tous les titres ({count})',
   },
   footer: {
     tagline:

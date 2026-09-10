@@ -91,6 +91,41 @@ def build_m3u_content(
     return '\n'.join(lines) + '\n', kept
 
 
+def read_m3u_tracks(m3u_path: Path, download_dir: Path) -> list[str]:
+    """Return the tracks listed in *m3u_path*, as paths relative to
+    *download_dir* (the same shape ``/list`` returns), in file order.
+
+    Inverts the relative-path scheme :func:`build_m3u_content` writes:
+    each non-comment line is relative to the M3U's own directory, not to
+    *download_dir*. Lines that don't resolve to an existing file under
+    *download_dir* are skipped — self-healing when a track was deleted
+    or a line is otherwise stale, and a hard guard against a malicious
+    or malformed M3U escaping the library root via ``../``.
+    """
+
+    download_dir = Path(download_dir).resolve()
+    m3u_dir = m3u_path.resolve().parent
+    try:
+        lines = m3u_path.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return []
+
+    tracks: list[str] = []
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith('#'):
+            continue
+        try:
+            resolved = (m3u_dir / line).resolve()
+            rel = resolved.relative_to(download_dir)
+        except (OSError, ValueError):
+            continue
+        if not resolved.is_file():
+            continue
+        tracks.append(rel.as_posix())
+    return tracks
+
+
 def write_m3u(
     download_dir: Path,
     playlist_name: str,

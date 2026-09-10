@@ -223,6 +223,8 @@ export default {
     playFromLibrary: 'Open in player',
     countOne: '{count} track',
     countMany: '{count} tracks',
+    playingFrom: 'Playing from',
+    allSongs: 'All Songs ({count})',
   },
   footer: {
     tagline: 'Open source music downloader',

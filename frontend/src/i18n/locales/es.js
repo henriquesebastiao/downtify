@@ -228,6 +228,8 @@ export default {
     playFromLibrary: 'Abrir en el reproductor',
     countOne: '{count} pista',
     countMany: '{count} pistas',
+    playingFrom: 'Reproduciendo desde',
+    allSongs: 'Todas las canciones ({count})',
   },
   footer: {
     tagline: 'Descargador de música de código abierto',

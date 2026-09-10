@@ -32,7 +32,7 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 from uvicorn import Config, Server
 
-from downtify import __version__, api
+from downtify import __version__, api, m3u
 from downtify.downloader import Downloader
 from downtify.monitor import PlaylistMonitorDB, monitor_loop
 
@@ -259,6 +259,36 @@ def build_app() -> FastAPI:
             files.append(path.relative_to(base).as_posix())
         files.sort()
         return files
+
+    @app.get('/playlists')
+    def list_playlists() -> list[dict]:
+        """List downloaded playlists, derived from the ``.m3u`` files
+        Downtify already writes for playlist/album downloads and
+        Playlist Monitor sweeps (see ``downtify/m3u.py``).
+
+        Each M3U file on disk is one playlist, regardless of whether
+        *Organize by artist/album* put its tracks in a per-playlist
+        folder or scattered them into artist/album folders — the M3U is
+        the one place that still records "these tracks belong together,
+        in this order" either way. Single tracks and albums downloaded
+        without an M3U (e.g. via the YouTube Music album endpoint)
+        aren't playlists and don't show up here.
+        """
+        base = DOWNLOAD_DIR.resolve()
+        if not base.exists():
+            return []
+        playlists: list[dict] = []
+        for m3u_path in sorted(base.rglob('*.m3u')):
+            tracks = m3u.read_m3u_tracks(m3u_path, base)
+            if not tracks:
+                continue
+            playlists.append({
+                'name': m3u_path.stem,
+                'files': tracks,
+                'count': len(tracks),
+            })
+        playlists.sort(key=lambda p: p['name'].casefold())
+        return playlists
 
     @app.delete('/delete')
     def delete_download(file: str) -> dict:

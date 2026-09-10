@@ -244,3 +244,94 @@ def test_write_overwrites_existing_m3u(tmp_path):
     )
     assert kept == 2
     assert 'b.mp3' in target.read_text(encoding='utf-8')
+
+
+# --- read_m3u_tracks ---------------------------------------------------------
+
+
+def test_read_round_trips_central_playlists_dir(tmp_path):
+    _touch(tmp_path, 'a.mp3')
+    _touch(tmp_path, 'b.mp3')
+    target, _ = m3u.write_m3u(
+        tmp_path,
+        'Mix',
+        [{'filename': 'a.mp3'}, {'filename': 'b.mp3'}],
+    )
+    assert m3u.read_m3u_tracks(target, tmp_path) == ['a.mp3', 'b.mp3']
+
+
+def test_read_round_trips_per_playlist_subdir(tmp_path):
+    pl_dir = tmp_path / 'My Mix'
+    pl_dir.mkdir()
+    (pl_dir / 'Artist - Song.mp3').write_bytes(b'\x00')
+    target, _ = m3u.write_m3u(
+        tmp_path,
+        'My Mix',
+        [{'filename': 'My Mix/Artist - Song.mp3'}],
+        playlist_subdir='My Mix',
+    )
+    assert m3u.read_m3u_tracks(target, tmp_path) == [
+        'My Mix/Artist - Song.mp3'
+    ]
+
+
+def test_read_preserves_track_order(tmp_path):
+    _touch(tmp_path, 'c.mp3')
+    _touch(tmp_path, 'a.mp3')
+    _touch(tmp_path, 'b.mp3')
+    target, _ = m3u.write_m3u(
+        tmp_path,
+        'Mix',
+        [
+            {'filename': 'c.mp3'},
+            {'filename': 'a.mp3'},
+            {'filename': 'b.mp3'},
+        ],
+    )
+    assert m3u.read_m3u_tracks(target, tmp_path) == [
+        'c.mp3',
+        'a.mp3',
+        'b.mp3',
+    ]
+
+
+def test_read_skips_deleted_tracks(tmp_path):
+    _touch(tmp_path, 'a.mp3')
+    b = _touch(tmp_path, 'b.mp3')
+    target, _ = m3u.write_m3u(
+        tmp_path, 'Mix', [{'filename': 'a.mp3'}, {'filename': 'b.mp3'}]
+    )
+    b.unlink()
+    assert m3u.read_m3u_tracks(target, tmp_path) == ['a.mp3']
+
+
+def test_read_ignores_extm3u_and_extinf_lines(tmp_path):
+    _touch(tmp_path, 'a.mp3')
+    target, _ = m3u.write_m3u(
+        tmp_path, 'Mix', [{'filename': 'a.mp3', 'title': 'Song'}]
+    )
+    body = target.read_text(encoding='utf-8')
+    assert body.startswith('#EXTM3U\n#EXTINF:')
+    assert m3u.read_m3u_tracks(target, tmp_path) == ['a.mp3']
+
+
+def test_read_returns_empty_list_for_missing_file(tmp_path):
+    assert m3u.read_m3u_tracks(tmp_path / 'nope.m3u', tmp_path) == []
+
+
+def test_read_rejects_path_traversal_outside_download_dir(tmp_path):
+    # A track path that escapes download_dir (e.g. a hand-edited or
+    # malicious M3U) must never be surfaced.
+    outside = tmp_path.parent / 'outside.mp3'
+    outside.write_bytes(b'\x00')
+    m3u_dir = tmp_path / 'Playlists'
+    m3u_dir.mkdir()
+    m3u_path = m3u_dir / 'Mix.m3u'
+    m3u_path.write_text(f'#EXTM3U\n../../{outside.name}\n', encoding='utf-8')
+    assert m3u.read_m3u_tracks(m3u_path, tmp_path) == []
+
+
+def test_read_empty_playlist_returns_empty_list(tmp_path):
+    m3u_path = tmp_path / 'Empty.m3u'
+    m3u_path.write_text('#EXTM3U\n', encoding='utf-8')
+    assert m3u.read_m3u_tracks(m3u_path, tmp_path) == []

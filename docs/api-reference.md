@@ -222,6 +222,22 @@ List all audio files in the downloads directory (recursive).
 
 ---
 
+### `GET /playlists`
+
+List downloaded playlists, derived from the `.m3u` files already on disk (see [M3U Export](features/m3u-export.md)). Used by the [Built-in Player](features/player.md#playing-a-single-playlist) to offer "play just this playlist" instead of the whole library.
+
+**Response:**
+
+```json
+[
+  { "name": "My Playlist", "files": ["My Playlist/Artist - Song.mp3"], "count": 1 }
+]
+```
+
+Sorted by name. A single track or an album downloaded without an M3U doesn't appear here.
+
+---
+
 ### `DELETE /delete`
 
 Delete a downloaded file.
