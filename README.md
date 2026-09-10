@@ -153,8 +153,14 @@ Access the settings panel (⚙️ icon) to configure:
 | **Organize by artist** | Off (default) · On |
 | **Parallel downloads** | 1–30 concurrent downloads (default 3) |
 | **Delay between downloads** | 0–300 seconds (default 0 = off) |
+| **Download cover art** | On (default) · Off |
+| **Cover art resolution** | 300–1200px (default 600) |
 
-**Delay between downloads** waits a configurable number of seconds between songs instead of firing requests back-to-back — combined with a lower **Parallel downloads** value, it's the main tool for avoiding YouTube rate limits on large unattended downloads. See **[Download Settings](https://henriquesebastiao.github.io/downtify/features/download-settings/)** for the full reference.
+**Delay between downloads** waits a configurable number of seconds between songs instead of firing requests back-to-back — combined with a lower **Parallel downloads** value, it's the main tool for avoiding YouTube rate limits on large unattended downloads.
+
+**Cover art resolution** raises the size Downtify requests for YouTube Music-sourced cover art — handy if you feed your library into a media server like Plex that shows higher-resolution artwork than the 600px default. Turn **Download cover art** off entirely to skip fetching artwork — smaller, faster downloads.
+
+See **[Download Settings](https://henriquesebastiao.github.io/downtify/features/download-settings/)** for the full reference.
 
 ### 📁 Organize by artist
 

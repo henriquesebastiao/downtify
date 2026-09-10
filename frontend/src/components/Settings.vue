@@ -377,6 +377,75 @@
           </p>
         </div>
 
+        <!-- Cover art -->
+        <div>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-3"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.download_cover_art"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.downloadCoverArt') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.downloadCoverArtHint') }}
+              </span>
+            </span>
+          </label>
+
+          <div
+            :class="{
+              'opacity-40 pointer-events-none':
+                !sm.settings.value.download_cover_art,
+            }"
+          >
+            <label
+              class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+            >
+              {{ t('settings.coverResolution') }}
+            </label>
+            <div class="grid grid-cols-5 gap-1.5">
+              <button
+                v-for="n in sm.settingsOptions.cover_resolution_presets"
+                :key="n"
+                type="button"
+                :disabled="!sm.settings.value.download_cover_art"
+                class="rounded-xl border px-2 py-2 text-sm font-medium transition-colors text-center"
+                :class="[
+                  sm.settings.value.cover_resolution === n
+                    ? 'border-primary/50 bg-primary/10 text-primary'
+                    : 'border-white/10 hover:border-white/20 hover:bg-white/5',
+                ]"
+                @click="setCoverResolution(n)"
+              >
+                {{ n }}
+              </button>
+            </div>
+            <div class="flex items-center gap-3 mt-3">
+              <input
+                type="range"
+                :min="sm.settingsOptions.cover_resolution_min"
+                :max="sm.settingsOptions.cover_resolution_max"
+                step="50"
+                :disabled="!sm.settings.value.download_cover_art"
+                :value="sm.settings.value.cover_resolution"
+                @input="setCoverResolution($event.target.value)"
+                class="range range-xs range-primary flex-1"
+              />
+              <span
+                class="text-xs tabular-nums w-16 text-right shrink-0 text-base-content/60"
+              >
+                {{ sm.settings.value.cover_resolution }}px
+              </span>
+            </div>
+            <p class="text-[11px] text-base-content/40 mt-1.5">
+              {{ t('settings.coverResolutionHint') }}
+            </p>
+          </div>
+        </div>
+
         <!-- Save status -->
         <transition
           enter-active-class="transition duration-200"
@@ -433,6 +502,7 @@
 <script setup>
 import { Icon } from '@iconify/vue'
 import {
+  clampCoverResolution,
   clampDownloadDelaySeconds,
   clampParallelDownloads,
   useSettingsManager,
@@ -454,6 +524,10 @@ function setParallelDownloads(value) {
 
 function setDownloadDelay(value) {
   sm.settings.value.download_delay_seconds = clampDownloadDelaySeconds(value)
+}
+
+function setCoverResolution(value) {
+  sm.settings.value.cover_resolution = clampCoverResolution(value)
 }
 
 function resetOutputTemplate() {

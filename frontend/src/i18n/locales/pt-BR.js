@@ -198,6 +198,12 @@ export default {
       'Espera esta quantidade de segundos após terminar uma música antes de começar a próxima. Útil para imitar o comportamento humano em downloads de playlists/álbuns e sincronizações do Monitor de playlists.',
     downloadDelayCustomHint:
       'Valor personalizado entre {min} e {max} segundos.',
+    downloadCoverArt: 'Baixar capa do álbum',
+    downloadCoverArtHint:
+      'Incorpora a capa do álbum nos arquivos baixados. Desative para não baixar a capa — arquivos menores, downloads mais rápidos.',
+    coverResolution: 'Resolução da capa',
+    coverResolutionHint:
+      'Tamanho alvo (largura e altura, em pixels) solicitado para a capa incorporada de fontes do YouTube Music — útil para capas em resolução mais alta em servidores de mídia como o Plex. Afeta apenas o YouTube Music; as capas do Spotify já usam o maior tamanho que o Spotify oferece.',
     saved: 'Alterações salvas',
     saveError: 'Não foi possível salvar as configurações.',
     language: 'Idioma',

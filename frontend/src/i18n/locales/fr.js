@@ -200,6 +200,12 @@ export default {
       'Attendre ce nombre de secondes après avoir terminé un morceau avant de commencer le suivant. Utile pour imiter un comportement humain lors des téléchargements de listes/albums et des synchronisations du Moniteur de listes.',
     downloadDelayCustomHint:
       'Valeur personnalisée entre {min} et {max} secondes.',
+    downloadCoverArt: 'Télécharger la pochette',
+    downloadCoverArtHint:
+      "Intègre la pochette de l'album dans les fichiers téléchargés. Désactivez pour ne pas récupérer la pochette du tout — fichiers plus légers, téléchargements plus rapides.",
+    coverResolution: 'Résolution de la pochette',
+    coverResolutionHint:
+      "Taille cible (largeur et hauteur, en pixels) demandée pour la pochette intégrée provenant de YouTube Music — utile pour des pochettes en plus haute résolution dans les serveurs multimédias comme Plex. N'affecte que YouTube Music ; les pochettes provenant de Spotify utilisent déjà la plus grande taille que Spotify propose.",
     saved: 'Changements sauvegardés',
     saveError: 'Impossible de sauvegarder les paramètres.',
     language: 'Langue',

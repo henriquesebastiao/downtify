@@ -199,6 +199,12 @@ export default {
       'Espera esta cantidad de segundos después de terminar una canción antes de empezar la siguiente. Útil para imitar el comportamiento humano en descargas de listas/álbumes y sincronizaciones del Monitor de listas.',
     downloadDelayCustomHint:
       'Valor personalizado entre {min} y {max} segundos.',
+    downloadCoverArt: 'Descargar portada',
+    downloadCoverArtHint:
+      'Incrusta la portada del álbum en los archivos descargados. Desactívalo para omitir la descarga de la portada por completo — archivos más pequeños, descargas más rápidas.',
+    coverResolution: 'Resolución de la portada',
+    coverResolutionHint:
+      'Tamaño objetivo (ancho y alto, en píxeles) solicitado para la portada incrustada desde fuentes de YouTube Music — útil para portadas de mayor resolución en servidores multimedia como Plex. Solo afecta a YouTube Music; las portadas de Spotify ya usan el tamaño más grande que ofrece Spotify.',
     saved: 'Cambios guardados',
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',
