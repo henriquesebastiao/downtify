@@ -16,6 +16,8 @@ from . import m3u, providers, spotify
 from .downloader import Downloader
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
+# Seconds between filesystem reconciliation sweeps (see reconcile_loop).
+RECONCILE_LOOP_INTERVAL = 3600
 MINUTES_PER_DAY = 1440
 
 SYNC_TIME_ENV_VAR = 'DOWNTIFY_MONITOR_SYNC_TIME'
@@ -351,6 +353,41 @@ class PlaylistMonitorDB:
                 (playlist_id, track_spotify_id, _now_iso(), filename),
             )
 
+    def list_all_downloaded_tracks(self) -> list[dict[str, Any]]:
+        """Every ``downloaded_tracks`` row that has a filename, across
+        every watch.
+
+        Used by the hourly reconciliation sweep (see
+        :func:`reconcile_downloaded_tracks`), which checks all of them
+        against the filesystem in one pass instead of one watch at a
+        time.
+        """
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT playlist_id, track_spotify_id, filename
+                   FROM downloaded_tracks
+                   WHERE filename IS NOT NULL"""
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def remove_downloaded_tracks(self, pairs: list[tuple[int, str]]) -> int:
+        """Delete the given ``(playlist_id, track_spotify_id)`` rows.
+
+        Called when the hourly reconciliation sweep finds a downloaded
+        track's file is no longer under the downloads directory — the
+        track goes back to being "not downloaded" and is re-fetched on
+        the watch's next check.
+        """
+        if not pairs:
+            return 0
+        with self._connect() as conn:
+            conn.executemany(
+                """DELETE FROM downloaded_tracks
+                   WHERE playlist_id = ? AND track_spotify_id = ?""",
+                pairs,
+            )
+        return len(pairs)
+
 
 def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
     keys = row.keys()
@@ -427,11 +464,20 @@ async def check_playlist(
 
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
 
-    # Filenames already on disk from earlier sweeps, keyed by track id,
+    # Filenames already known from earlier sweeps, keyed by track id,
     # topped up as each new track lands. Lets the M3U be rewritten after
     # every single download without re-resolving the whole playlist
     # against the filesystem each time (which is O(tracks) globs per
     # write, and quadratic over a large sweep).
+    #
+    # A track already in `downloaded_tracks` is trusted as downloaded
+    # without checking whether its file is still on disk — the file may
+    # have been moved elsewhere in the filesystem outside the downloads
+    # directory (e.g. into a separate media library), which must not
+    # cause a re-download on every single sweep. A file that's actually
+    # gone (deleted, not just moved) is instead noticed and forgotten by
+    # the hourly :func:`reconcile_downloaded_tracks` sweep, which is what
+    # makes such a track eligible for re-download again.
     resolved: dict[str, str] = {}
 
     new_tracks = []
@@ -443,12 +489,7 @@ async def check_playlist(
             new_tracks.append(t)
         else:
             stored = known_tracks[tid]
-            if stored is None:
-                continue
-            if not (downloader.download_dir / stored).exists():
-                # File was deleted — re-download
-                new_tracks.append(t)
-            else:
+            if stored is not None:
                 resolved[tid] = stored
 
     if new_tracks:
@@ -775,3 +816,56 @@ async def monitor_loop(
         except Exception:
             logger.exception('Unexpected error in monitor loop')
         await asyncio.sleep(MONITOR_LOOP_INTERVAL)
+
+
+async def reconcile_downloaded_tracks(
+    db: PlaylistMonitorDB, downloader: Downloader
+) -> int:
+    """Drop ``downloaded_tracks`` rows whose file is gone from disk.
+
+    ``check_playlist`` trusts a row in ``downloaded_tracks`` as proof a
+    track was already downloaded without re-checking the filesystem (see
+    its docstring) — otherwise a file moved elsewhere on disk would be
+    re-downloaded on every single sweep. This is the other half of that
+    trade-off: a track whose file has genuinely disappeared (deleted,
+    not just moved) is still noticed here and forgotten, so it becomes
+    eligible for re-download again on the watch's next check. Returns
+    the number of rows removed.
+    """
+    rows = await asyncio.to_thread(db.list_all_downloaded_tracks)
+    missing = [
+        (row['playlist_id'], row['track_spotify_id'])
+        for row in rows
+        if not (downloader.download_dir / row['filename']).exists()
+    ]
+    if missing:
+        await asyncio.to_thread(db.remove_downloaded_tracks, missing)
+    return len(missing)
+
+
+async def reconcile_loop(
+    db: PlaylistMonitorDB,
+    get_downloader: Callable[[], Optional[Downloader]],
+    interval_seconds: int = RECONCILE_LOOP_INTERVAL,
+) -> None:
+    """Background task: hourly, prune downloaded-track records for files
+    that are no longer in the downloads directory.
+
+    Runs independently of :func:`monitor_loop` and its per-watch
+    schedule — this sweep always checks every known downloaded track
+    across every watch, on its own fixed cadence.
+    """
+    while True:
+        try:
+            downloader = get_downloader()
+            if downloader is not None:
+                removed = await reconcile_downloaded_tracks(db, downloader)
+                if removed:
+                    logger.info(
+                        '{} downloaded-track record(s) removed: file no '
+                        'longer found in the downloads directory',
+                        removed,
+                    )
+        except Exception:
+            logger.exception('Unexpected error in reconcile loop')
+        await asyncio.sleep(interval_seconds)

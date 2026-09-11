@@ -26,7 +26,9 @@ Downtify keeps a background task running every 60 seconds. On each sweep it chec
 3. Downloads any new tracks using the same pipeline as a manual download
 4. Updates the M3U file for the playlist (if M3U generation is enabled)
 
-Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded. If a track's file is later deleted from disk, it will be re-downloaded on the next check.
+Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded. "Already downloaded" is tracked in a small SQLite database (`downtify_monitor.db` under `/data`), not by checking the downloads folder — so moving a downloaded file elsewhere on disk (into your own library layout, another drive, wherever) does **not** make Downtify think it's missing and re-download it on the next check.
+
+A separate sweep runs every hour and checks whether each downloaded track's file is still there. Genuinely deleted files (as opposed to ones you moved) are forgotten at that point, so the track becomes eligible for download again — on the next watch check after that hourly sweep, not instantly.
 
 A watch is never checked twice at the same time. Adding a watch starts its first check immediately; if that check is still downloading when the next scheduled sweep comes around, the sweep skips the watch instead of starting a second, overlapping download of the same tracks.
 
