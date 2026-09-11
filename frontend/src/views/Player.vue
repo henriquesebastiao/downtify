@@ -227,84 +227,91 @@
         </section>
 
         <!-- Queue list -->
-        <aside
-          class="surface rounded-3xl p-4 sm:p-5 lg:max-h-[640px] lg:overflow-y-auto"
-        >
-          <div class="flex items-center justify-between mb-3 px-1">
-            <h2
-              class="text-xs font-semibold uppercase tracking-wider text-base-content/50"
-            >
-              {{ t('player.queue') }}
-            </h2>
-            <span class="text-[11px] text-base-content/40">
-              {{
-                player.playlist.value.length === 1
-                  ? t('player.countOne', {
-                      count: player.playlist.value.length,
-                    })
-                  : t('player.countMany', {
-                      count: player.playlist.value.length,
-                    })
-              }}
-            </span>
-          </div>
+        <!-- overflow-hidden lives on the outer wrapper so the rounded
+             corners clip the inner scrollbar instead of it poking past
+             them (native scrollbars ignore border-radius on the element
+             they scroll). -->
+        <aside class="surface rounded-3xl overflow-hidden lg:max-h-[640px]">
+          <div class="p-4 sm:p-5 lg:max-h-[640px] lg:overflow-y-auto">
+            <div class="flex items-center justify-between mb-3 px-1">
+              <h2
+                class="text-xs font-semibold uppercase tracking-wider text-base-content/50"
+              >
+                {{ t('player.queue') }}
+              </h2>
+              <span class="text-[11px] text-base-content/40">
+                {{
+                  player.playlist.value.length === 1
+                    ? t('player.countOne', {
+                        count: player.playlist.value.length,
+                      })
+                    : t('player.countMany', {
+                        count: player.playlist.value.length,
+                      })
+                }}
+              </span>
+            </div>
 
-          <ul v-if="player.playlist.value.length > 0" class="space-y-1">
-            <li
-              v-for="(track, idx) in player.playlist.value"
-              :key="track.file"
-              class="rounded-xl px-2 py-2 flex items-center gap-3 cursor-pointer transition-colors"
-              :class="
-                idx === player.currentIndex.value
-                  ? 'bg-primary/10 text-primary'
-                  : 'hover:bg-white/5'
-              "
-              @click="player.playAt(idx)"
-            >
-              <div
-                class="relative h-9 w-9 shrink-0 rounded-lg overflow-hidden flex items-center justify-center"
+            <ul v-if="player.playlist.value.length > 0" class="space-y-1">
+              <li
+                v-for="(track, idx) in player.playlist.value"
+                :key="track.file"
+                class="rounded-xl px-2 py-2 flex items-center gap-3 cursor-pointer transition-colors"
                 :class="
                   idx === player.currentIndex.value
-                    ? 'bg-primary/15'
-                    : 'bg-base-100/60'
+                    ? 'bg-primary/10 text-primary'
+                    : 'hover:bg-white/5'
                 "
+                @click="player.playAt(idx)"
               >
-                <img
-                  v-if="!coverFailed[track.file]"
-                  :src="track.cover"
-                  :alt="track.title"
-                  class="absolute inset-0 h-full w-full object-cover"
-                  loading="lazy"
-                  @error="markCoverFailed(track.file)"
-                />
-                <span
-                  v-if="
-                    idx === player.currentIndex.value && player.isPlaying.value
+                <div
+                  class="relative h-9 w-9 shrink-0 rounded-lg overflow-hidden flex items-center justify-center"
+                  :class="
+                    idx === player.currentIndex.value
+                      ? 'bg-primary/15'
+                      : 'bg-base-100/60'
                   "
-                  class="relative equalizer h-3"
-                  aria-hidden="true"
                 >
-                  <span></span><span></span><span></span>
-                </span>
-                <Icon
-                  v-else-if="coverFailed[track.file]"
-                  icon="clarity:music-note-line"
-                  class="h-4 w-4 text-base-content/50"
-                />
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm truncate font-medium">
-                  {{ track.title }}
-                </p>
-                <p class="text-[11px] truncate text-base-content/50">
-                  {{ track.artist || t('common.unknownArtist') }}
-                </p>
-              </div>
-            </li>
-          </ul>
+                  <img
+                    v-if="!coverFailed[track.file]"
+                    :src="track.cover"
+                    :alt="track.title"
+                    class="absolute inset-0 h-full w-full object-cover"
+                    loading="lazy"
+                    @error="markCoverFailed(track.file)"
+                  />
+                  <span
+                    v-if="
+                      idx === player.currentIndex.value &&
+                      player.isPlaying.value
+                    "
+                    class="relative equalizer h-3"
+                    aria-hidden="true"
+                  >
+                    <span></span><span></span><span></span>
+                  </span>
+                  <Icon
+                    v-else-if="coverFailed[track.file]"
+                    icon="clarity:music-note-line"
+                    class="h-4 w-4 text-base-content/50"
+                  />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm truncate font-medium">
+                    {{ track.title }}
+                  </p>
+                  <p class="text-[11px] truncate text-base-content/50">
+                    {{ track.artist || t('common.unknownArtist') }}
+                  </p>
+                </div>
+              </li>
+            </ul>
 
-          <div v-else class="text-center py-10">
-            <p class="text-base-content/50 text-sm">{{ t('player.empty') }}</p>
+            <div v-else class="text-center py-10">
+              <p class="text-base-content/50 text-sm">
+                {{ t('player.empty') }}
+              </p>
+            </div>
           </div>
         </aside>
       </div>
