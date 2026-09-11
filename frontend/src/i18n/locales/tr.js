@@ -87,20 +87,26 @@ export default {
   monitor: {
     title: 'Çalma Listesi İzleyici',
     subtitle:
-      'Spotify çalma listelerini izleme listesine ekleyin. İzlenen çalma listelerine eklenen yeni şarkılar otomatik olarak indirilir.',
-    watchNew: 'Bir çalma listesini izle',
-    urlPlaceholder: 'Bir Spotify çalma listesi bağlantısı yapıştır…',
+      'İzlemek için Spotify veya YouTube Music çalma listeleri ya da sanatçılar ekle. Yeni parçalar ve yeni yayınlar otomatik olarak indirilir.',
+    watchNew: 'Yeni bir çalma listesi veya sanatçı izle',
+    urlPlaceholder:
+      'Bir Spotify veya YouTube Music çalma listesi ya da sanatçı URL’si yapıştır…',
     watch: 'İzle',
     failedAdd:
       'Çalma listesi eklenirken bir hata oluştu. Bağlantıyı kontrol edip tekrar deneyin.',
     empty: 'Henüz izlenen bir çalma listesi yok.',
     emptyHint:
-      'Başlamak için yukarıya bir Spotify çalma listesi bağlantısı yapıştır.',
+      'Başlamak için yukarıya bir Spotify veya YouTube Music çalma listesi bağlantısı yapıştır.',
     active: 'Aktif',
     paused: 'Duraklatıldı',
     everyInterval: 'Her {interval}',
     tracksOne: '{count} parça',
     tracksMany: '{count} parça',
+    releasesOne: '{count} yayın',
+    releasesMany: '{count} yayın',
+    kindArtist: 'Sanatçı',
+    sourceSpotify: 'Spotify',
+    sourceYouTubeMusic: 'YouTube Music',
     checked: '{when} kontrol edildi',
     notChecked: 'Henüz kontrol yapılmadı',
     pause: 'İzlemeyi durdur',
@@ -117,7 +123,7 @@ export default {
     sortStatus: 'Duraklatıldı/Etkin',
     sortAscending: 'Artan sıralama',
     sortDescending: 'Azalan sıralama',
-    info: "Bir çalma listesi eklediğinde Downtify o çalma listesinde bulunan tüm parçaları indirir ve ayrıca listeyi izlemeye devam eder. Spotify'a daha sonradan eklenen tüm şarkıları tespit eder ve sonraki kontrol sırasında otomatik olarak indirir.",
+    info: "Bir çalma listesi eklediğinde Downtify o çalma listesinde bulunan tüm parçaları indirir ve ayrıca listeyi izlemeye devam eder. Listeye daha sonra Spotify'da veya YouTube Music'te eklenen tüm şarkıları tespit eder ve sonraki kontrol sırasında otomatik olarak indirir. Bir sanatçı eklemek de aynı şekilde çalışır: Downtify diskografisini indirir, ardından yeni yayınları izler.",
     every15: 'Her 15 dakika',
     every30: 'Her 30 dakika',
     every1h: 'Her saat',
@@ -168,7 +174,7 @@ export default {
     outputTemplate: 'Dosya adı formatı',
     outputTemplateReset: 'Varsayılana dön',
     outputTemplateHint:
-      'Alt klasörler oluşturmak için "/" kullanılabilir. Değişkenler: {artists}, {artist}, {title}, {album}, {output-ext}',
+      'Alt klasörler oluşturmak için "/" kullanılabilir. Değişkenler: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
     playlistsSection: 'Çalma Listeleri',
     generateM3u: 'Çalma listeleri için M3U dosyaları oluştur',
     generateM3uHint:
@@ -188,6 +194,15 @@ export default {
     downloadDelayHint:
       'Bir şarkıyı bitirdikten sonra bir sonrakine başlamadan önce bu kadar saniye bekle. Playlist/albüm indirmelerinde ve Playlist İzleme senkronizasyonlarında insan davranışını taklit etmek için kullanışlıdır.',
     downloadDelayCustomHint: '{min} ile {max} saniye arasında özel değer.',
+    downloadCoverArt: 'Kapak resmini indir',
+    downloadCoverArtHint:
+      'Albüm kapağını indirilen dosyalara göm. Kapak resmini hiç indirmemek için kapat — daha küçük dosyalar, daha hızlı indirmeler.',
+    coverResolution: 'Kapak resmi çözünürlüğü',
+    coverResolutionHint:
+      "YouTube Music kaynaklarından gömülü kapak resmi için istenen hedef boyut (genişlik ve yükseklik, piksel cinsinden) — Plex gibi medya sunucularında daha yüksek çözünürlüklü kapak resimleri için kullanışlıdır. Yalnızca YouTube Music'i etkiler; Spotify kaynaklı kapaklar zaten Spotify'ın sunduğu en büyük boyutu kullanır.",
+    overwriteExistingFiles: 'Mevcut dosyaların üzerine yaz',
+    overwriteExistingFilesHint:
+      'Bant genişliğinden tasarruf etmek için kapatın: indirme klasörünüzün herhangi bir yerinde (kitaplık kökü, başka bir listenin klasörü, sanatçı/albüm klasörü) zaten bulunan bir şarkı yeniden indirilmez. Eşleştirme Spotify/YouTube kimliğine göre değil, dosya adına göre yapılır.',
     saved: 'Değişiklikler kaydedildi',
     saveError: 'Ayarlar kaydedilirken bir hata oluştu.',
     language: 'Dil',
@@ -217,6 +232,8 @@ export default {
     playFromLibrary: 'Oynatıcıda aç',
     countOne: '{count} parça',
     countMany: '{count} parça',
+    playingFrom: 'Şuradan çalıyor',
+    allSongs: 'Tüm Şarkılar ({count})',
   },
   footer: {
     tagline: 'Açık kaynak müzik indirme uygulaması',

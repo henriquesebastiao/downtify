@@ -6,6 +6,7 @@ import base64
 import os
 import re
 import re as _re
+import threading
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -38,6 +39,11 @@ from .m3u import sanitize_playlist_name
 from .providers import enrich_from_match, find_match, find_match_for_video
 
 _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+
+# Extensions that count as "this song is already downloaded". Deliberately
+# excludes sidecars written next to the audio (.lrc, cover.jpg, .m3u) so a
+# leftover lyrics file can never stand in for a missing track.
+_AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'ogg', 'opus', 'm4a'})
 
 ProgressCallback = Callable[[float, str], None]
 
@@ -127,6 +133,8 @@ class Downloader:
         lyrics_providers: Optional[list[str]] = None,
         organize_by_artist: bool = False,
         organize_by_album: bool = False,
+        download_cover_art: bool = True,
+        overwrite_existing_files: bool = True,
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
@@ -136,6 +144,10 @@ class Downloader:
         self.lyrics_providers = list(lyrics_providers or [])
         self.organize_by_artist = organize_by_artist
         self.organize_by_album = organize_by_album
+        self.overwrite_existing_files = overwrite_existing_files
+        self.download_cover_art = download_cover_art
+        self._target_locks: dict[str, threading.Lock] = {}
+        self._target_locks_guard = threading.Lock()
 
     @staticmethod
     def _artist_subdir(song: dict[str, Any]) -> str:
@@ -206,11 +218,19 @@ class Downloader:
     def _template_values(song: dict[str, Any]) -> dict[str, str]:
         artist_names = [_sanitize(a) for a in (song.get('artists') or [])]
         artists = ', '.join(a for a in artist_names if a) or 'Unknown Artist'
+        # Same normalization used for the embedded tag (see
+        # _album_track_index_for_tags): only a positive integer counts,
+        # anything else (missing, non-numeric, a free-text/YouTube search
+        # result with no Spotify track_number) renders as ''. Zero-padded
+        # to 2 digits so "{tracknumber} - {title}" sorts correctly in a
+        # file browser (2 < 10 lexicographically without padding).
+        track_number, _ = _album_track_index_for_tags(song)
         return {
             'title': _sanitize(song.get('name', 'Unknown')),
             'artists': artists,
             'artist': artists,
             'album': _sanitize(song.get('album_name', '')),
+            'tracknumber': f'{track_number:02d}' if track_number else '',
         }
 
     def _format_output_parts(self, song: dict[str, Any]) -> list[str]:
@@ -260,10 +280,97 @@ class Downloader:
         primary = target_dir / f'{basename}.{self.audio_format}'
         if primary.exists():
             return f'{prefix}{primary.name}'
-        for candidate in target_dir.glob(f'{basename}.*'):
-            if candidate.is_file():
-                return f'{prefix}{candidate.name}'
+        # Not a glob: titles like "Song [Live]" are glob character classes.
+        if target_dir.is_dir():
+            for candidate in sorted(target_dir.iterdir()):
+                stem, dot, ext = candidate.name.rpartition('.')
+                if (
+                    dot
+                    and stem == basename
+                    and ext.lower() in _AUDIO_EXTENSIONS
+                    and candidate.is_file()
+                ):
+                    return f'{prefix}{candidate.name}'
         return None
+
+    def find_existing_download(
+        self,
+        song: dict[str, Any],
+        subdir: Optional[str] = None,
+    ) -> Optional[str]:
+        """Return a file anywhere in the library that already holds ``song``.
+
+        Checks the exact destination first, then the whole library for an
+        audio file whose name (and any folders the output template adds)
+        matches, case-insensitively. That catches the same song saved by
+        a single-track download (library root), by another playlist's
+        folder, or under a previous organize-by-artist/album layout.
+        Matching is by rendered filename, not by track id: the files carry
+        no id to compare against.
+        """
+
+        exact = self.existing_filename_for(song, subdir)
+        if exact is not None:
+            return exact
+        wanted = [p.casefold() for p in self._format_output_parts(song)]
+        return self._scan_library(wanted[-1], wanted[:-1])
+
+    def _scan_library(self, stem: str, parents: list[str]) -> Optional[str]:
+        root_dir = self.download_dir
+        for root, dirs, files in os.walk(root_dir):
+            dirs[:] = sorted(d for d in dirs if not d.startswith('.'))
+            for name in sorted(files):
+                base, dot, ext = name.rpartition('.')
+                if (
+                    not dot
+                    or ext.lower() not in _AUDIO_EXTENSIONS
+                    or base.casefold() != stem
+                ):
+                    continue
+                rel = Path(root, name).relative_to(root_dir)
+                if parents:
+                    folders = [p.casefold() for p in rel.parts[:-1]]
+                    if folders[-len(parents) :] != parents:
+                        continue
+                return rel.as_posix()
+        return None
+
+    def _can_resolve_path_early(self, song: dict[str, Any]) -> bool:
+        """Whether ``song`` already has every field its output path needs.
+
+        True for Spotify-sourced songs, which lets the existing-file check
+        run before the YouTube Music search instead of after it. Anything
+        the template needs that only enrichment could fill in (album,
+        track number) makes this False, so an incomplete early path can
+        never match an unrelated file.
+        """
+
+        if not (song.get('name') and song.get('artists')):
+            return False
+        template = self.output_template
+        if (self.organize_by_album or '{album}' in template) and not song.get(
+            'album_name'
+        ):
+            return False
+        if '{tracknumber}' in template:
+            track_number, _ = _album_track_index_for_tags(song)
+            if not track_number:
+                return False
+        return True
+
+    def _target_lock(self, song: dict[str, Any]) -> threading.Lock:
+        key = '/'.join(p.casefold() for p in self._format_output_parts(song))
+        with self._target_locks_guard:
+            return self._target_locks.setdefault(key, threading.Lock())
+
+    @staticmethod
+    def _skip_existing(
+        existing: str, progress_cb: Optional[ProgressCallback]
+    ) -> str:
+        logger.info('Skipping download, file already exists: {}', existing)
+        if progress_cb:
+            progress_cb(100.0, 'Already downloaded')
+        return existing
 
     def _resolve_target_dir(self, subdir: Optional[str]) -> tuple[Path, str]:
         """Return ``(target_dir, relative_prefix)`` for an optional subdir.
@@ -286,7 +393,7 @@ class Downloader:
         rel = '/'.join(parts)
         return self.download_dir / Path(*parts), f'{rel}/'
 
-    def download(  # noqa: PLR0914
+    def download(
         self,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback] = None,
@@ -298,7 +405,17 @@ class Downloader:
         ``download_dir/<sanitized_subdir>/`` and the returned name is
         relative to ``download_dir`` (``<subdir>/<file>.<ext>``). This
         is how playlist downloads are grouped into per-playlist folders.
+
+        With ``overwrite_existing_files`` off, a song already anywhere in
+        the library is not downloaded again; the existing file's name is
+        returned instead (see :meth:`find_existing_download`).
         """
+
+        skip_existing = not self.overwrite_existing_files
+        if skip_existing and self._can_resolve_path_early(song):
+            existing = self.find_existing_download(song, subdir)
+            if existing is not None:
+                return self._skip_existing(existing, progress_cb)
 
         video_id = song.get('youtube_id')
         if not video_id and (song.get('source') == 'youtube'):
@@ -325,6 +442,27 @@ class Downloader:
 
         song = enrich_from_match(song, match)
 
+        if not skip_existing:
+            return self._fetch_and_tag(song, video_id, progress_cb, subdir)
+
+        # Re-checked after enrichment (which can fill in the album/track
+        # number the path depends on), and serialized per target file so
+        # two downloads of the same song running at once — a duplicate row
+        # in one playlist, or two playlists sharing a track — can't both
+        # miss the check and fetch it twice.
+        with self._target_lock(song):
+            existing = self.find_existing_download(song, subdir)
+            if existing is not None:
+                return self._skip_existing(existing, progress_cb)
+            return self._fetch_and_tag(song, video_id, progress_cb, subdir)
+
+    def _fetch_and_tag(  # noqa: PLR0914
+        self,
+        song: dict[str, Any],
+        video_id: str,
+        progress_cb: Optional[ProgressCallback],
+        subdir: Optional[str],
+    ) -> str:
         output_parts = self._format_output_parts(song)
         basename = output_parts[-1]
         output_subdir = (
@@ -455,14 +593,19 @@ class Downloader:
                 )
 
         try:
-            embed_metadata(final_path, song)
+            embed_metadata(
+                final_path, song, download_cover=self.download_cover_art
+            )
         except Exception:
             logger.exception('Failed to embed metadata into {}', final_path)
 
-        try:
-            self._save_album_cover(target_dir, song)
-        except Exception:
-            logger.exception('Failed to write album cover in {}', target_dir)
+        if self.download_cover_art:
+            try:
+                self._save_album_cover(target_dir, song)
+            except Exception:
+                logger.exception(
+                    'Failed to write album cover in {}', target_dir
+                )
 
         if self.lyrics_providers:
             try:
@@ -547,7 +690,9 @@ def _release_type_for_tags(song: dict[str, Any]) -> str:
     return str(song.get('release_type') or '').strip().lower()
 
 
-def embed_metadata(path: Path, song: dict[str, Any]) -> None:
+def embed_metadata(
+    path: Path, song: dict[str, Any], *, download_cover: bool = True
+) -> None:
     if not path.exists():
         return
 
@@ -564,7 +709,9 @@ def embed_metadata(path: Path, song: dict[str, Any]) -> None:
     recording_date = _recording_date_for_tags(song)
     genre = (song.get('genre') or '').strip()
     release_type = _release_type_for_tags(song)
-    cover_bytes = _download_cover(song.get('cover_url', ''))
+    cover_bytes = (
+        _download_cover(song.get('cover_url', '')) if download_cover else None
+    )
     track_number, album_track_total = _album_track_index_for_tags(song)
     if track_number is None:
         logger.info(

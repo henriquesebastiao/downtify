@@ -91,19 +91,26 @@ export default {
   monitor: {
     title: 'Monitor de playlists',
     subtitle:
-      'Adicione playlists do Spotify para monitorar. Novas faixas adicionadas a essas playlists serão baixadas automaticamente.',
-    watchNew: 'Monitorar uma nova playlist',
-    urlPlaceholder: 'Cole uma URL de playlist do Spotify…',
+      'Adicione playlists ou artistas do Spotify ou do YouTube Music para monitorar. Novas faixas e novos lançamentos serão baixados automaticamente.',
+    watchNew: 'Monitorar uma nova playlist ou artista',
+    urlPlaceholder:
+      'Cole uma URL de playlist ou de artista do Spotify ou do YouTube Music…',
     watch: 'Monitorar',
     failedAdd:
       'Falha ao adicionar a playlist. Verifique a URL e tente novamente.',
     empty: 'Nenhuma playlist sendo monitorada ainda.',
-    emptyHint: 'Cole um link de playlist do Spotify acima para começar.',
+    emptyHint:
+      'Cole um link de playlist do Spotify ou do YouTube Music acima para começar.',
     active: 'Ativa',
     paused: 'Pausada',
     everyInterval: 'A cada {interval}',
     tracksOne: '{count} faixa',
     tracksMany: '{count} faixas',
+    releasesOne: '{count} lançamento',
+    releasesMany: '{count} lançamentos',
+    kindArtist: 'Artista',
+    sourceSpotify: 'Spotify',
+    sourceYouTubeMusic: 'YouTube Music',
     checked: 'Verificada {when}',
     notChecked: 'Ainda não verificada',
     pause: 'Pausar monitoramento',
@@ -120,7 +127,7 @@ export default {
     sortStatus: 'Pausada/Ativa',
     sortAscending: 'Ordem crescente',
     sortDescending: 'Ordem decrescente',
-    info: 'Quando você adiciona uma playlist, o Downtify baixa todas as faixas atuais dela e segue monitorando. Qualquer música adicionada depois no Spotify é detectada e baixada automaticamente na próxima verificação.',
+    info: 'Quando você adiciona uma playlist, o Downtify baixa todas as faixas atuais dela e segue monitorando. Qualquer música adicionada a ela depois no Spotify ou no YouTube Music é detectada e baixada automaticamente na próxima verificação. Adicionar um artista funciona da mesma forma: o Downtify baixa a discografia dele e depois monitora novos lançamentos.',
     every15: 'A cada 15 min',
     every30: 'A cada 30 min',
     every1h: 'A cada hora',
@@ -170,7 +177,7 @@ export default {
     outputTemplate: 'Formato do nome',
     outputTemplateReset: 'Restaurar',
     outputTemplateHint:
-      'Use / para criar subpastas. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
+      'Use / para criar subpastas. Tokens: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
     searchSection: 'Busca',
     searchAlbums: 'Mostrar álbuns nos resultados de busca',
     searchAlbumsHint:
@@ -195,6 +202,15 @@ export default {
       'Espera esta quantidade de segundos após terminar uma música antes de começar a próxima. Útil para imitar o comportamento humano em downloads de playlists/álbuns e sincronizações do Monitor de playlists.',
     downloadDelayCustomHint:
       'Valor personalizado entre {min} e {max} segundos.',
+    downloadCoverArt: 'Baixar capa do álbum',
+    downloadCoverArtHint:
+      'Incorpora a capa do álbum nos arquivos baixados. Desative para não baixar a capa — arquivos menores, downloads mais rápidos.',
+    coverResolution: 'Resolução da capa',
+    coverResolutionHint:
+      'Tamanho alvo (largura e altura, em pixels) solicitado para a capa incorporada de fontes do YouTube Music — útil para capas em resolução mais alta em servidores de mídia como o Plex. Afeta apenas o YouTube Music; as capas do Spotify já usam o maior tamanho que o Spotify oferece.',
+    overwriteExistingFiles: 'Sobrescrever arquivos existentes',
+    overwriteExistingFilesHint:
+      'Desative para economizar banda: uma música que já está em qualquer lugar da pasta de downloads (raiz da biblioteca, pasta de outra playlist, pasta de artista/álbum) não é baixada novamente. A comparação é pelo nome do arquivo, não pelo ID do Spotify/YouTube.',
     saved: 'Alterações salvas',
     saveError: 'Não foi possível salvar as configurações.',
     language: 'Idioma',
@@ -224,6 +240,8 @@ export default {
     playFromLibrary: 'Abrir no player',
     countOne: '{count} faixa',
     countMany: '{count} faixas',
+    playingFrom: 'Tocando de',
+    allSongs: 'Todas as músicas ({count})',
   },
   footer: {
     tagline: 'Baixador de músicas de código aberto',

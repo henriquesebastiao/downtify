@@ -711,6 +711,23 @@ def _id_from_uri(uri: str) -> str:
     return parts[-1] if parts else ''
 
 
+def artist_name_from_id(artist_id: str) -> str:
+    """Return an artist's display name from their embed page.
+
+    The artist embed only carries the name, image and a top-tracks
+    preview — Spotify does not expose a discography there, so callers
+    that need releases resolve the artist against another provider by
+    name. Raises ``ValueError`` when the name can't be read.
+    """
+
+    payload = _fetch_embed_json('artist', artist_id)
+    entity = _entity_from(payload)
+    name = (entity.get('name') or entity.get('title') or '').strip()
+    if not name:
+        raise ValueError(f'Could not read artist name for {artist_id}')
+    return name
+
+
 def resolve(url: str) -> Any:
     """Resolve any Spotify URL to a single song or a list of songs."""
 

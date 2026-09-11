@@ -92,20 +92,26 @@ export default {
   monitor: {
     title: 'Lejátszási lista felügyelő',
     subtitle:
-      'Adjon hozzá Spotify lejátszási listákat a megfigyeléshez. Az ezekhez hozzáadott új számok automatikusan letöltésre kerülnek.',
-    watchNew: 'Új lejátszási lista megtekintése',
-    urlPlaceholder: 'Illesszen be egy Spotify lejátszási lista URL-jét…',
+      'Adjon hozzá Spotify vagy YouTube Music lejátszási listákat vagy előadókat a megfigyeléshez. Az új számok és az új kiadványok automatikusan letöltésre kerülnek.',
+    watchNew: 'Új lejátszási lista vagy előadó figyelése',
+    urlPlaceholder:
+      'Illesszen be egy Spotify vagy YouTube Music lejátszási lista vagy előadó URL-t…',
     watch: 'Figyelés',
     failedAdd:
       'Nem sikerült hozzáadni a lejátszási listát. Ellenőrizze az URL-t és próbálja újra.',
     empty: 'Még nincsenek figyelemmel kísért lejátszási listák.',
     emptyHint:
-      'Az első lépésekhez illesszen be egy Spotify lejátszási lista hivatkozást fent.',
+      'Az első lépésekhez illesszen be egy Spotify vagy YouTube Music lejátszási lista hivatkozást fent.',
     active: 'Aktív',
     paused: 'Szünetel',
     everyInterval: 'Minden {interval}',
     tracksOne: '{count} szám',
     tracksMany: '{count} szám',
+    releasesOne: '{count} kiadvány',
+    releasesMany: '{count} kiadvány',
+    kindArtist: 'Előadó',
+    sourceSpotify: 'Spotify',
+    sourceYouTubeMusic: 'YouTube Music',
     checked: 'Ellenőrizve: {when}',
     notChecked: 'Még nem ellenőrizve',
     pause: 'Figyelés szüneteltetése',
@@ -122,7 +128,7 @@ export default {
     sortStatus: 'Szüneteltetve/Aktív',
     sortAscending: 'Növekvő sorrend',
     sortDescending: 'Csökkenő sorrend',
-    info: 'Amikor hozzáadsz egy lejátszási listát, a Downtify letölti az összes benne található számot, majd figyeli azt. A Spotify-on később hozzáadott dalok automatikusan felismerésre és letöltésre kerülnek a következő ütemezett ellenőrzéskor.',
+    info: 'Amikor hozzáadsz egy lejátszási listát, a Downtify letölti az összes benne található számot, majd figyeli azt. A listához később a Spotify-on vagy a YouTube Musicon hozzáadott dalok automatikusan felismerésre és letöltésre kerülnek a következő ütemezett ellenőrzéskor. Előadó hozzáadása ugyanígy működik: a Downtify letölti a diszkográfiáját, majd figyeli az új kiadványokat.',
     every15: '15 percenként',
     every30: '30 percenként',
     every1h: 'Óránként',
@@ -172,7 +178,7 @@ export default {
     outputTemplate: 'Fájlnév formátuma',
     outputTemplateReset: 'Újra',
     outputTemplateHint:
-      'A / használatával hozzon létre almappákat. Tokenek: {artists}, {artist}, {title}, {album}, {output-ext}',
+      'A / használatával hozzon létre almappákat. Tokenek: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
     searchSection: 'Keresés',
     searchAlbums: 'Albumok megjelenítése a keresési eredményekben',
     searchAlbumsHint:
@@ -196,6 +202,15 @@ export default {
     downloadDelayHint:
       'Ennyi másodpercet várjon egy dal befejezése után, mielőtt elkezdi a következőt. Hasznos az emberi viselkedés utánzásához lejátszási lista/album letöltéseknél és a Lejátszásilista-figyelő szinkronizálásainál.',
     downloadDelayCustomHint: 'Egyéni érték {min} és {max} másodperc között.',
+    downloadCoverArt: 'Borítókép letöltése',
+    downloadCoverArtHint:
+      'Beágyazza az albumborítót a letöltött fájlokba. Kapcsolja ki, hogy egyáltalán ne töltse le a borítóképet — kisebb fájlok, gyorsabb letöltések.',
+    coverResolution: 'Borítókép felbontása',
+    coverResolutionHint:
+      'A beágyazott borítókép céltémete (szélesség és magasság, pixelben) YouTube Music forrásokból — hasznos a nagyobb felbontású borítóképekhez olyan médiaszervereken, mint a Plex. Csak a YouTube Musicra hat; a Spotify-forrásból származó borítók már a Spotify által kínált legnagyobb méretet használják.',
+    overwriteExistingFiles: 'Meglévő fájlok felülírása',
+    overwriteExistingFilesHint:
+      'Kapcsolja ki a sávszélesség megtakarításához: a letöltési mappa bármely részén (könyvtár gyökere, másik lejátszási lista mappája, előadó/album mappa) már meglévő dal nem töltődik le újra. Az egyeztetés fájlnév alapján történik, nem a Spotify/YouTube azonosító alapján.',
     saved: 'Módosítások mentve',
     saveError: 'Nem sikerült menteni a beállításokat.',
     language: 'Nyelv',
@@ -225,6 +240,8 @@ export default {
     playFromLibrary: 'Megnyitás a lejátszóban',
     countOne: '{count} szám',
     countMany: '{count} szám',
+    playingFrom: 'Lejátszás innen',
+    allSongs: 'Összes szám ({count})',
   },
   footer: {
     tagline: 'Nyílt forráskódú zeneletöltő',

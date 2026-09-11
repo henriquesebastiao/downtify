@@ -92,19 +92,26 @@ export default {
   monitor: {
     title: 'Monitor de listas',
     subtitle:
-      'Añade listas de Spotify para vigilar. Las nuevas pistas añadidas a esas listas se descargarán automáticamente.',
-    watchNew: 'Vigilar una nueva lista',
-    urlPlaceholder: 'Pega una URL de lista de Spotify…',
+      'Añade listas o artistas de Spotify o YouTube Music para vigilar. Las nuevas pistas y los nuevos lanzamientos se descargarán automáticamente.',
+    watchNew: 'Vigilar una nueva lista o artista',
+    urlPlaceholder:
+      'Pega una URL de lista o de artista de Spotify o YouTube Music…',
     watch: 'Vigilar',
     failedAdd:
       'No se pudo añadir la lista. Comprueba la URL e inténtalo de nuevo.',
     empty: 'Aún no hay listas vigiladas.',
-    emptyHint: 'Pega un enlace de lista de Spotify arriba para empezar.',
+    emptyHint:
+      'Pega un enlace de lista de Spotify o YouTube Music arriba para empezar.',
     active: 'Activa',
     paused: 'Pausada',
     everyInterval: 'Cada {interval}',
     tracksOne: '{count} pista',
     tracksMany: '{count} pistas',
+    releasesOne: '{count} lanzamiento',
+    releasesMany: '{count} lanzamientos',
+    kindArtist: 'Artista',
+    sourceSpotify: 'Spotify',
+    sourceYouTubeMusic: 'YouTube Music',
     checked: 'Revisada {when}',
     notChecked: 'Aún no revisada',
     pause: 'Pausar vigilancia',
@@ -121,7 +128,7 @@ export default {
     sortStatus: 'Pausada/Activa',
     sortAscending: 'Orden ascendente',
     sortDescending: 'Orden descendente',
-    info: 'Al añadir una lista, Downtify descarga todas las pistas que contenga en ese momento y la sigue vigilando. Cualquier canción añadida después en Spotify se detecta y descarga automáticamente en la siguiente revisión.',
+    info: 'Al añadir una lista, Downtify descarga todas las pistas que contenga en ese momento y la sigue vigilando. Cualquier canción que se le añada después en Spotify o YouTube Music se detecta y descarga automáticamente en la siguiente revisión. Añadir un artista funciona igual: Downtify descarga su discografía y luego vigila los nuevos lanzamientos.',
     every15: 'Cada 15 min',
     every30: 'Cada 30 min',
     every1h: 'Cada hora',
@@ -171,7 +178,7 @@ export default {
     outputTemplate: 'Formato del nombre',
     outputTemplateReset: 'Restaurar',
     outputTemplateHint:
-      'Usa / para crear subcarpetas. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
+      'Usa / para crear subcarpetas. Tokens: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
     searchSection: 'Búsqueda',
     searchAlbums: 'Mostrar álbumes en los resultados de búsqueda',
     searchAlbumsHint:
@@ -196,6 +203,15 @@ export default {
       'Espera esta cantidad de segundos después de terminar una canción antes de empezar la siguiente. Útil para imitar el comportamiento humano en descargas de listas/álbumes y sincronizaciones del Monitor de listas.',
     downloadDelayCustomHint:
       'Valor personalizado entre {min} y {max} segundos.',
+    downloadCoverArt: 'Descargar portada',
+    downloadCoverArtHint:
+      'Incrusta la portada del álbum en los archivos descargados. Desactívalo para omitir la descarga de la portada por completo — archivos más pequeños, descargas más rápidas.',
+    coverResolution: 'Resolución de la portada',
+    coverResolutionHint:
+      'Tamaño objetivo (ancho y alto, en píxeles) solicitado para la portada incrustada desde fuentes de YouTube Music — útil para portadas de mayor resolución en servidores multimedia como Plex. Solo afecta a YouTube Music; las portadas de Spotify ya usan el tamaño más grande que ofrece Spotify.',
+    overwriteExistingFiles: 'Sobrescribir archivos existentes',
+    overwriteExistingFilesHint:
+      'Desactívalo para ahorrar ancho de banda: una canción que ya está en cualquier lugar de tu carpeta de descargas (raíz de la biblioteca, carpeta de otra lista, carpeta de artista/álbum) no se vuelve a descargar. Se compara por nombre de archivo, no por el ID de Spotify/YouTube.',
     saved: 'Cambios guardados',
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',
@@ -225,6 +241,8 @@ export default {
     playFromLibrary: 'Abrir en el reproductor',
     countOne: '{count} pista',
     countMany: '{count} pistas',
+    playingFrom: 'Reproduciendo desde',
+    allSongs: 'Todas las canciones ({count})',
   },
   footer: {
     tagline: 'Descargador de música de código abierto',

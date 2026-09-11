@@ -5,13 +5,37 @@
 
     <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold tracking-tight">
-          {{ t('player.title') }}
-        </h1>
-        <p class="mt-1 text-sm text-base-content/60">
-          {{ t('player.subtitle') }}
-        </p>
+      <div
+        class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+      >
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">
+            {{ t('player.title') }}
+          </h1>
+          <p class="mt-1 text-sm text-base-content/60">
+            {{ t('player.subtitle') }}
+          </p>
+        </div>
+
+        <div v-if="playlists.length > 0" class="shrink-0">
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-1.5"
+          >
+            {{ t('player.playingFrom') }}
+          </label>
+          <select
+            v-model="selectedPlaylistName"
+            @change="onSelectPlaylist"
+            class="select select-sm w-full sm:w-64 rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+          >
+            <option :value="null">
+              {{ t('player.allSongs', { count: files.length }) }}
+            </option>
+            <option v-for="pl in playlists" :key="pl.name" :value="pl.name">
+              {{ pl.name }} ({{ pl.count }})
+            </option>
+          </select>
+        </div>
       </div>
 
       <!-- Empty state -->
@@ -121,7 +145,7 @@
               class="icon-btn"
               @click="player.prev()"
               :title="t('player.previous')"
-              :disabled="files.length === 0"
+              :disabled="player.playlist.value.length === 0"
             >
               <Icon
                 icon="clarity:step-forward-2-line"
@@ -131,7 +155,7 @@
             <button
               class="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-content shadow-glow-sm hover:scale-105 active:scale-95 transition disabled:opacity-50"
               @click="player.toggle()"
-              :disabled="files.length === 0"
+              :disabled="player.playlist.value.length === 0"
               :title="
                 player.isPlaying.value ? t('player.pause') : t('player.play')
               "
@@ -149,7 +173,7 @@
               class="icon-btn"
               @click="player.next()"
               :title="t('player.next')"
-              :disabled="files.length === 0"
+              :disabled="player.playlist.value.length === 0"
             >
               <Icon icon="clarity:step-forward-2-line" class="h-5 w-5" />
             </button>
@@ -214,24 +238,28 @@
             </h2>
             <span class="text-[11px] text-base-content/40">
               {{
-                files.length === 1
-                  ? t('player.countOne', { count: files.length })
-                  : t('player.countMany', { count: files.length })
+                player.playlist.value.length === 1
+                  ? t('player.countOne', {
+                      count: player.playlist.value.length,
+                    })
+                  : t('player.countMany', {
+                      count: player.playlist.value.length,
+                    })
               }}
             </span>
           </div>
 
-          <ul v-if="files.length > 0" class="space-y-1">
+          <ul v-if="player.playlist.value.length > 0" class="space-y-1">
             <li
-              v-for="(file, idx) in files"
-              :key="file"
+              v-for="(track, idx) in player.playlist.value"
+              :key="track.file"
               class="rounded-xl px-2 py-2 flex items-center gap-3 cursor-pointer transition-colors"
               :class="
                 idx === player.currentIndex.value
                   ? 'bg-primary/10 text-primary'
                   : 'hover:bg-white/5'
               "
-              @click="onPick(idx)"
+              @click="player.playAt(idx)"
             >
               <div
                 class="relative h-9 w-9 shrink-0 rounded-lg overflow-hidden flex items-center justify-center"
@@ -242,12 +270,12 @@
                 "
               >
                 <img
-                  v-if="!coverFailed[file]"
-                  :src="coverUrlFor(file)"
-                  :alt="trackInfo(file).title"
+                  v-if="!coverFailed[track.file]"
+                  :src="track.cover"
+                  :alt="track.title"
                   class="absolute inset-0 h-full w-full object-cover"
                   loading="lazy"
-                  @error="markCoverFailed(file)"
+                  @error="markCoverFailed(track.file)"
                 />
                 <span
                   v-if="
@@ -259,17 +287,17 @@
                   <span></span><span></span><span></span>
                 </span>
                 <Icon
-                  v-else-if="coverFailed[file]"
+                  v-else-if="coverFailed[track.file]"
                   icon="clarity:music-note-line"
                   class="h-4 w-4 text-base-content/50"
                 />
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm truncate font-medium">
-                  {{ trackInfo(file).title }}
+                  {{ track.title }}
                 </p>
                 <p class="text-[11px] truncate text-base-content/50">
-                  {{ trackInfo(file).artist || t('common.unknownArtist') }}
+                  {{ track.artist || t('common.unknownArtist') }}
                 </p>
               </div>
             </li>
@@ -290,54 +318,69 @@ import { Icon } from '@iconify/vue'
 import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
 import API from '/src/model/api'
-import { usePlayer, formatTime, trackInfoFromFile } from '/src/model/player'
+import { usePlayer, formatTime } from '/src/model/player'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
 const player = usePlayer()
 
 const files = ref([])
+const playlists = ref([])
+const selectedPlaylistName = ref(null) // null = "All Songs"
 const loading = ref(false)
 const progressBar = ref(null)
 const coverFailed = ref({})
 let dragging = false
 
-function coverUrlFor(file) {
-  return API.coverFileURL(file)
-}
-
 function markCoverFailed(file) {
   coverFailed.value = { ...coverFailed.value, [file]: true }
+}
+
+function filesForSelection(name) {
+  if (!name) return files.value
+  const pl = playlists.value.find((p) => p.name === name)
+  return pl ? pl.files : files.value
+}
+
+// Reflect whichever queue is already loaded (playback survives
+// navigating away and back) in the selector, instead of always
+// resetting it to "All Songs" on mount.
+function detectCurrentSelection() {
+  const current = player.playlist.value.map((track) => track.file)
+  if (current.length === 0) {
+    selectedPlaylistName.value = null
+    return
+  }
+  const match = playlists.value.find(
+    (pl) =>
+      pl.files.length === current.length &&
+      pl.files.every((f, i) => f === current[i])
+  )
+  selectedPlaylistName.value = match ? match.name : null
 }
 
 async function load() {
   loading.value = true
   try {
-    const res = await API.listDownloads()
-    files.value = res.data || []
+    const [libraryRes, playlistsRes] = await Promise.all([
+      API.listDownloads(),
+      API.listPlaylists(),
+    ])
+    files.value = libraryRes.data || []
+    playlists.value = playlistsRes.data || []
     // If the player was empty (direct nav to /player), seed the queue
-    // with the library so the user has something to play.
+    // with the full library so the user has something to play.
     if (player.playlist.value.length === 0 && files.value.length > 0) {
       player.setPlaylist(files.value)
     }
+    detectCurrentSelection()
   } finally {
     loading.value = false
   }
 }
 
-function onPick(idx) {
-  if (
-    player.playlist.value.length !== files.value.length ||
-    player.playlist.value[idx]?.file !== files.value[idx]
-  ) {
-    player.setPlaylist(files.value, { startIndex: idx })
-  } else {
-    player.playAt(idx)
-  }
-}
-
-function trackInfo(file) {
-  return trackInfoFromFile(file)
+function onSelectPlaylist() {
+  player.setPlaylist(filesForSelection(selectedPlaylistName.value))
 }
 
 const trackTitle = computed(() => {

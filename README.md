@@ -41,7 +41,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | Feature | Details |
 |---------|---------|
 | 🎵 **Tracks, albums & playlists** | Any Spotify link works — single track, full album, or entire playlist |
-| 👁️ **Playlist Monitor** | Watch playlists and **auto-download new songs** as they are added to Spotify |
+| 👁️ **Playlist & Artist Watch** | Watch Spotify or YouTube Music playlists **and artists** — new songs and new releases download automatically |
 | 🎨 **Rich metadata** | Album art, title, artist, album, year — all embedded in every file |
 | 🎚️ **Multiple formats** | MP3 · FLAC · M4A · OGG · OPUS |
 | 🔎 **Free-text search** | Search YouTube Music directly — no Spotify link needed |
@@ -124,18 +124,20 @@ Spotify embed page  →  YouTube Music search  →  yt-dlp + ffmpeg + mutagen
 
 ## 👁️ Playlist Monitor
 
-The **Playlist Monitor** lets Downtify watch your favorite Spotify playlists and automatically download any new songs added to them — hands-free.
+The **Playlist Monitor** lets Downtify watch your favorite Spotify and YouTube Music playlists — and the artists you follow — and automatically download new songs and new releases, hands-free.
 
 **How to use it:**
 
 1. Click the eye icon (👁) in the navigation bar
-2. Paste a Spotify playlist URL
+2. Paste a Spotify or YouTube Music playlist URL, or an **artist** URL (Spotify, or YouTube Music such as `music.youtube.com/@artist`) to watch everything they release
 3. Choose how often Downtify should check for new tracks (every 15 min up to once a month)
 4. Click **Watch**
 
-From that point on, whenever a new song appears in the playlist on Spotify, Downtify will detect and download it on the next scheduled check. Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded.
+From that point on, whenever a new song appears in the playlist, Downtify will detect and download it on the next scheduled check. Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded.
 
-You can pause, resume, force an immediate check, or stop monitoring any playlist at any time from the same page.
+Adding an **artist** works the same way: Downtify downloads their discography and then watches for new releases, so you don't need a dedicated playlist per artist. Each watch shows a **Spotify** or **YouTube Music** badge. You can pause, resume, force an immediate check, or stop any watch at any time from the same page.
+
+YouTube Music playlists are handy for songs that aren't on Spotify: each track is downloaded from the exact video in the playlist.
 
 Playlists checked daily or less often can be pinned to a specific hour (e.g. always sync overnight at 3 AM) with the `DOWNTIFY_MONITOR_SYNC_TIME` and `TZ` environment variables, and can be sorted by date added, title, frequency, track count, or status. See **[Playlist Monitor](https://henriquesebastiao.github.io/downtify/features/playlist-monitor/)** in the full docs for details.
 
@@ -153,8 +155,17 @@ Access the settings panel (⚙️ icon) to configure:
 | **Organize by artist** | Off (default) · On |
 | **Parallel downloads** | 1–30 concurrent downloads (default 3) |
 | **Delay between downloads** | 0–300 seconds (default 0 = off) |
+| **Download cover art** | On (default) · Off |
+| **Cover art resolution** | 300–1200px (default 600) |
+| **Overwrite existing files** | On (default) · Off |
 
-**Delay between downloads** waits a configurable number of seconds between songs instead of firing requests back-to-back — combined with a lower **Parallel downloads** value, it's the main tool for avoiding YouTube rate limits on large unattended downloads. See **[Download Settings](https://henriquesebastiao.github.io/downtify/features/download-settings/)** for the full reference.
+**Delay between downloads** waits a configurable number of seconds between songs instead of firing requests back-to-back — combined with a lower **Parallel downloads** value, it's the main tool for avoiding YouTube rate limits on large unattended downloads.
+
+**Cover art resolution** raises the size Downtify requests for YouTube Music-sourced cover art — handy if you feed your library into a media server like Plex that shows higher-resolution artwork than the 600px default. Turn **Download cover art** off entirely to skip fetching artwork — smaller, faster downloads.
+
+Turn **Overwrite existing files** off to save bandwidth: a song that's already anywhere in your download folder (library root, another playlist's folder, an artist/album folder) isn't downloaded again. Useful when the same track is in several playlists or already in your library.
+
+See **[Download Settings](https://henriquesebastiao.github.io/downtify/features/download-settings/)** for the full reference.
 
 ### 📁 Organize by artist
 
@@ -184,6 +195,7 @@ When the setting is **off** (default), the existing behaviour is preserved: sing
 | Spotify track | ✅ |
 | Spotify album | ✅ |
 | Spotify playlist | ✅ |
+| YouTube Music playlist | ✅ |
 | YouTube Music search (free text) | ✅ |
 | Direct YouTube link | ✅ |
 
@@ -228,6 +240,7 @@ Downtify ships with a clean web player so you don't need a separate app to liste
 - **Repeat** modes: off → all → one
 - Volume slider with mute toggle (volume is remembered between sessions)
 - Side queue listing every track in your library, each one with its own thumbnail and the currently playing one highlighted
+- **Playing from** selector — play just one downloaded playlist instead of your whole library queued at once. See **[Built-in Player](https://henriquesebastiao.github.io/downtify/features/player/)** in the full docs.
 
 The player parses `Artist - Title.ext` filenames so the now-playing card shows artist and title nicely, and pulls the cover art directly from the audio file's embedded tags (the same artwork Downtify wrote at download time). Playback uses your browser's native HTML5 audio element — no extra dependencies, no extra processes.
 

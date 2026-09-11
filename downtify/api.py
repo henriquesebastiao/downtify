@@ -5,6 +5,9 @@ The endpoints intentionally mirror the surface that the previous
 working without changes:
 
 * ``GET  /api/version``
+* ``GET  /api/health`` (liveness probe for the Docker ``HEALTHCHECK`` -
+  see ``healthcheck.sh``; always ``200`` once the server can answer
+  requests, regardless of downloader/monitor readiness)
 * ``GET  /api/songs/search``
 * ``GET  /api/artists/search``
 * ``GET  /api/artists/top_songs`` (an artist's "Top songs" shelf preview,
@@ -18,9 +21,11 @@ working without changes:
 * ``GET  /api/artists/similar`` (an artist's "Fans might also like"
   shelf, same shape as ``/api/artists/search``)
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
-  resolves an artist channel URL into every one of their albums/singles
-  as lightweight summaries, same shape as ``/api/albums/search`` - no
-  tracklists; resolve a chosen release's tracks separately)
+  resolves an artist channel or ``@handle`` URL into every one of their
+  albums/singles as lightweight summaries, same shape as
+  ``/api/albums/search`` - no tracklists; resolve a chosen release's
+  tracks separately). A YouTube Music playlist URL resolves to its
+  tracks, like a Spotify playlist.
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
   ``track_number`` / ``album_track_total`` survive re-fetch by URL)
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
@@ -58,13 +63,23 @@ from loguru import logger
 
 from . import library_import, m3u, providers, spotify
 from .downloader import Downloader
-from .monitor import PlaylistMonitorDB, check_playlist
+from .monitor import (
+    KIND_ARTIST,
+    KIND_PLAYLIST,
+    PlaylistMonitorDB,
+    check_watch,
+    fetch_playlist,
+    parse_playlist_url,
+)
 
 MIN_PARALLEL_DOWNLOADS = 1
 MAX_PARALLEL_DOWNLOADS = 30
 
 MIN_DOWNLOAD_DELAY_SECONDS = 0
 MAX_DOWNLOAD_DELAY_SECONDS = 300
+
+MIN_COVER_RESOLUTION = 300
+MAX_COVER_RESOLUTION = 1200
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
@@ -76,6 +91,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'generate_m3u': True,
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
+    'cover_resolution': providers.DEFAULT_COVER_RESOLUTION,
+    'download_cover_art': True,
+    'overwrite_existing_files': True,
     'organize_by_artist': False,
     'organize_by_album': False,
     'search_albums': True,
@@ -112,6 +130,21 @@ def _clamp_download_delay(value: Any) -> float:
     return min(
         MAX_DOWNLOAD_DELAY_SECONDS, max(MIN_DOWNLOAD_DELAY_SECONDS, delay)
     )
+
+
+def _clamp_cover_resolution(value: Any) -> int:
+    """Coerce and clamp the requested cover art target size, in pixels.
+
+    Keeps the setting inside ``[MIN_COVER_RESOLUTION,
+    MAX_COVER_RESOLUTION]``. Only affects YouTube Music-sourced cover
+    art (see ``providers.set_cover_resolution``); Spotify-sourced
+    covers already use the largest size Spotify's embed API offers.
+    """
+    try:
+        px = int(value)
+    except (TypeError, ValueError):
+        px = DEFAULT_SETTINGS['cover_resolution']
+    return min(MAX_COVER_RESOLUTION, max(MIN_COVER_RESOLUTION, px))
 
 
 def _organize_enabled() -> bool:
@@ -200,6 +233,9 @@ def _load_settings(path: Path) -> dict[str, Any]:
             merged['download_delay_seconds'] = _clamp_download_delay(
                 merged['download_delay_seconds']
             )
+            merged['cover_resolution'] = _clamp_cover_resolution(
+                merged['cover_resolution']
+            )
             return merged
     except Exception:
         pass
@@ -216,6 +252,19 @@ def _save_settings(path: Path, settings: dict[str, Any]) -> None:
 @router.get('/api/version')
 def get_version() -> str:
     return state.version
+
+
+@router.get('/api/health')
+def get_health() -> dict[str, Any]:
+    """Liveness probe: the process is up and FastAPI is serving requests.
+
+    Deliberately doesn't check the downloader/monitor DB — those are
+    only set up once ``main.py``'s startup hook finishes, so gating
+    health on them would report unhealthy during the brief, normal
+    window right after boot. Docker's ``HEALTHCHECK`` already has a
+    ``--start-period`` for that; this endpoint just needs to answer.
+    """
+    return {'status': 'ok', 'version': state.version}
 
 
 @router.get('/api/check_update')
@@ -305,8 +354,14 @@ def _resolve_url(url: str):
                 return providers.song_from_video_id(yid)
             if kind == 'album':
                 return providers.album_tracks_from_browse_id(yid)
+            if kind == 'playlist':
+                return providers.playlist_tracks_from_id(yid)
             if kind == 'artist':
-                return providers.artist_albums_from_channel_id(yid)
+                return providers.artist_albums_from_channel_id(
+                    providers.resolve_artist_channel_id(yid)
+                )
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
         except Exception as exc:
             logger.exception('Failed to resolve YouTube URL {}', url)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -508,6 +563,56 @@ async def download_endpoint(
     return filename
 
 
+def _m3u_entries_for(
+    songs: list[dict[str, Any]], resolved: dict[int, Optional[str]]
+) -> list[dict[str, Any]]:
+    """Build M3U entries for the songs downloaded so far.
+
+    Iterates ``songs`` in playlist order (not completion order, which
+    varies with concurrency) and keeps only those with a filename in
+    ``resolved``, so a partially-finished batch still produces a
+    correctly-ordered file.
+    """
+    entries: list[dict[str, Any]] = []
+    for index, song in enumerate(songs):
+        filename = resolved.get(index)
+        if not filename:
+            continue
+        entries.append({
+            'filename': filename,
+            'title': song.get('name') or '',
+            'artist': ', '.join(song.get('artists') or []),
+            'duration': song.get('duration') or 0,
+        })
+    return entries
+
+
+async def _write_batch_m3u(
+    songs: list[dict[str, Any]],
+    resolved: dict[int, Optional[str]],
+    playlist_name: str,
+    playlist_subdir: str,
+) -> None:
+    entries = _m3u_entries_for(songs, resolved)
+    if not entries:
+        return
+    # When organize-by-artist/album is on, songs land in those folders
+    # instead of the playlist subfolder, so the M3U must go to the legacy
+    # Playlists/ directory (playlist_subdir=None) where relative paths
+    # still resolve.
+    organize = _organize_enabled()
+    try:
+        await asyncio.to_thread(
+            m3u.write_m3u,
+            state.downloader.download_dir,
+            playlist_name,
+            entries,
+            playlist_subdir=None if organize else playlist_subdir,
+        )
+    except Exception:
+        logger.exception('Failed to write M3U for {!r}', playlist_name)
+
+
 async def _process_batch(
     songs: list[dict[str, Any]],
     job_ids: list[str],
@@ -518,15 +623,13 @@ async def _process_batch(
     # Resolve the playlist name up-front so all tracks land in a single,
     # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
     # tracks) keep the legacy flat layout under download_dir. A caller
-    # without a Spotify playlist_url (e.g. a CSV library import) can
-    # instead pass playlist_name directly.
+    # without a Spotify/YouTube Music playlist_url (e.g. a CSV library
+    # import) can instead pass playlist_name directly.
     playlist_subdir: Optional[str] = None
-    parsed = spotify.parse_spotify_url(playlist_url) if playlist_url else None
-    if parsed is not None and parsed[0] == 'playlist':
+    target = parse_playlist_url(playlist_url) if playlist_url else None
+    if target is not None:
         try:
-            playlist_name, _ = await asyncio.to_thread(
-                spotify.playlist_info_and_tracks, parsed[1]
-            )
+            playlist_name, _ = await asyncio.to_thread(fetch_playlist, *target)
             playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
         except Exception:
             logger.exception(
@@ -544,7 +647,15 @@ async def _process_batch(
         else 0
     )
 
-    async def _bounded(song: dict[str, Any], song_id: str) -> dict[str, Any]:
+    wants_m3u = bool(generate_m3u and playlist_subdir and playlist_name)
+    # Filename per song index, filled in as downloads land. The M3U is
+    # rewritten from this after every completed download, so the playlist
+    # grows as it downloads instead of appearing all at once at the end,
+    # and one slow or hung track can't hold up what's already on disk.
+    resolved: dict[int, Optional[str]] = {}
+    m3u_lock = asyncio.Lock()
+
+    async def _bounded(index: int, song: dict[str, Any], song_id: str) -> None:
         try:
             filename = await _run_download(
                 song,
@@ -554,45 +665,26 @@ async def _process_batch(
             )
         except Exception:
             filename = None
-        return {'song': song, 'filename': filename}
+        resolved[index] = filename
+        if not (filename and wants_m3u):
+            return
+        # Serialized so concurrent downloads can't interleave writes to
+        # the same file.
+        async with m3u_lock:
+            await _write_batch_m3u(
+                songs, resolved, playlist_name, playlist_subdir
+            )
 
-    results = await asyncio.gather(
-        *[_bounded(s, sid) for s, sid in zip(songs, job_ids)],
+    await asyncio.gather(
+        *[
+            _bounded(i, s, sid)
+            for i, (s, sid) in enumerate(zip(songs, job_ids))
+        ],
         return_exceptions=False,
     )
 
-    if not (generate_m3u and playlist_subdir and playlist_name):
-        return
-
-    entries: list[dict[str, Any]] = []
-    for r in results:
-        if not r or not r.get('filename'):
-            continue
-        s = r['song']
-        entries.append({
-            'filename': r['filename'],
-            'title': s.get('name') or '',
-            'artist': ', '.join(s.get('artists') or []),
-            'duration': s.get('duration') or 0,
-        })
-    if not entries:
-        return
-
-    # When organize-by-artist/album is on, songs land in those folders
-    # instead of the playlist subfolder, so the M3U must go to the legacy
-    # Playlists/ directory (playlist_subdir=None) where relative paths
-    # still resolve.
-    organize = _organize_enabled()
-    try:
-        await asyncio.to_thread(
-            m3u.write_m3u,
-            state.downloader.download_dir,
-            playlist_name,
-            entries,
-            playlist_subdir=None if organize else playlist_subdir,
-        )
-    except Exception:
-        logger.exception('Failed to write M3U for {}', playlist_url)
+    if wants_m3u:
+        await _write_batch_m3u(songs, resolved, playlist_name, playlist_subdir)
 
 
 @router.post('/api/download/batch')
@@ -809,9 +901,10 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
     """Write an M3U for the playlist after the per-track downloads.
 
     The frontend POSTs ``{playlist_url, tracks: [{filename, title,
-    artist, duration}, ...]}``. The playlist name is resolved
-    server-side via :func:`spotify.playlist_info_and_tracks` so the
-    existing ``/api/song/url`` shape stays untouched.
+    artist, duration}, ...]}``, where ``playlist_url`` is a Spotify or
+    YouTube Music playlist. The playlist name is resolved server-side
+    via :func:`monitor.fetch_playlist` so the existing ``/api/song/url``
+    shape stays untouched.
     """
 
     if state.downloader is None:
@@ -826,10 +919,11 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
     playlist_url = str(payload.get('playlist_url') or '').strip()
     if not playlist_url:
         raise HTTPException(status_code=400, detail='Missing playlist_url')
-    parsed = spotify.parse_spotify_url(playlist_url)
-    if parsed is None or parsed[0] != 'playlist':
+    target = parse_playlist_url(playlist_url)
+    if target is None:
         raise HTTPException(
-            status_code=400, detail='Not a Spotify playlist URL'
+            status_code=400,
+            detail='Not a Spotify or YouTube Music playlist URL',
         )
 
     tracks = payload.get('tracks') or []
@@ -837,9 +931,7 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail='tracks must be a list')
 
     try:
-        playlist_name, _ = await asyncio.to_thread(
-            spotify.playlist_info_and_tracks, parsed[1]
-        )
+        playlist_name, _ = await asyncio.to_thread(fetch_playlist, *target)
     except Exception as exc:
         logger.exception('Failed to resolve playlist {}', playlist_url)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -881,6 +973,8 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_parallel_downloads(raw_value)
             elif key == 'download_delay_seconds':
                 state.settings[key] = _clamp_download_delay(raw_value)
+            elif key == 'cover_resolution':
+                state.settings[key] = _clamp_cover_resolution(raw_value)
             else:
                 state.settings[key] = raw_value
         if state.downloader is not None:
@@ -907,10 +1001,20 @@ async def update_settings_endpoint(
                 state.downloader.organize_by_album = bool(
                     payload['organize_by_album']
                 )
+            if 'download_cover_art' in payload:
+                state.downloader.download_cover_art = bool(
+                    payload['download_cover_art']
+                )
+            if 'overwrite_existing_files' in payload:
+                state.downloader.overwrite_existing_files = bool(
+                    payload['overwrite_existing_files']
+                )
         if 'max_parallel_downloads' in payload:
             state.download_semaphore = asyncio.Semaphore(
                 state.settings['max_parallel_downloads']
             )
+        if 'cover_resolution' in payload:
+            providers.set_cover_resolution(state.settings['cover_resolution'])
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)
     return state.settings
@@ -943,6 +1047,101 @@ def _require_monitor_db() -> PlaylistMonitorDB:
     return state.monitor_db
 
 
+def _youtube_artist_for_name(name: str) -> tuple[str, str]:
+    """Find the YouTube Music artist channel that matches *name*.
+
+    Spotify's artist embed exposes no discography (only a top-tracks
+    preview), so a watched Spotify artist is followed through YouTube
+    Music instead — which is also where the audio is fetched from, so
+    every release we can see is one we can actually download. Returns
+    ``(channel_id, resolved_name)``.
+    """
+
+    results = providers.search_artists(name, limit=10)
+    if not results:
+        raise HTTPException(
+            status_code=404,
+            detail=f'No YouTube Music artist found for {name!r}',
+        )
+    wanted = name.casefold().strip()
+    exact = [
+        r
+        for r in results
+        if str(r.get('name') or '').casefold().strip() == wanted
+    ]
+    best = (exact or results)[0]
+    channel_id = str(best.get('artist_id') or '')
+    if not channel_id:
+        raise HTTPException(
+            status_code=502,
+            detail=f'YouTube Music artist for {name!r} has no channel id',
+        )
+    return channel_id, str(best.get('name') or name)
+
+
+async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
+    """Resolve a pasted URL into ``(kind, watch_key, display_name)``.
+
+    Accepts a Spotify or YouTube Music playlist URL (watched by its
+    tracks), and a Spotify artist URL or a YouTube Music artist URL
+    (``/channel/UC...`` or ``/@handle``, watched by their discography).
+    """
+
+    playlist_target = parse_playlist_url(url)
+    if playlist_target is not None:
+        _, playlist_id = playlist_target
+        try:
+            name, _tracks = await asyncio.to_thread(
+                fetch_playlist, *playlist_target
+            )
+        except Exception as exc:
+            logger.exception('Failed to resolve playlist {}', playlist_id)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return KIND_PLAYLIST, playlist_id, name
+
+    spotify_parsed = spotify.parse_spotify_url(url)
+    if spotify_parsed is not None and spotify_parsed[0] == 'artist':
+        _, artist_id = spotify_parsed
+        try:
+            spotify_name = await asyncio.to_thread(
+                spotify.artist_name_from_id, artist_id
+            )
+        except Exception as exc:
+            logger.exception('Failed to resolve artist {}', artist_id)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        channel_id, name = await asyncio.to_thread(
+            _youtube_artist_for_name, spotify_name
+        )
+        return KIND_ARTIST, channel_id, name
+
+    youtube_parsed = providers.parse_youtube_url(url)
+    if youtube_parsed is not None and youtube_parsed[0] == 'artist':
+        _, channel_or_handle = youtube_parsed
+        try:
+            channel_id = await asyncio.to_thread(
+                providers.resolve_artist_channel_id, channel_or_handle
+            )
+            info = await asyncio.to_thread(
+                providers.artist_info_from_channel_id, channel_id
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception(
+                'Failed to resolve artist channel {}', channel_or_handle
+            )
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return KIND_ARTIST, channel_id, str(info.get('name') or channel_id)
+
+    raise HTTPException(
+        status_code=400,
+        detail=(
+            'A Spotify or YouTube Music playlist URL, or a Spotify or '
+            'YouTube Music artist URL, is required'
+        ),
+    )
+
+
 @router.get('/api/monitor/playlists')
 async def list_monitor_playlists() -> list[dict[str, Any]]:
     db = _require_monitor_db()
@@ -961,30 +1160,21 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
     url = payload.get('url', '')
     interval_minutes = int(payload.get('interval_minutes', 60))
 
-    parsed = spotify.parse_spotify_url(url)
-    if parsed is None or parsed[0] != 'playlist':
-        raise HTTPException(
-            status_code=400, detail='A valid Spotify playlist URL is required'
-        )
+    kind, watch_key, name = await _resolve_watch_target(url)
 
-    _, spotify_id = parsed
-
-    existing = await asyncio.to_thread(db.get_by_spotify_id, spotify_id)
+    existing = await asyncio.to_thread(db.get_by_spotify_id, watch_key)
     if existing is not None:
         raise HTTPException(
-            status_code=409, detail='This playlist is already being monitored'
+            status_code=409,
+            detail=(
+                'This artist is already being watched'
+                if kind == KIND_ARTIST
+                else 'This playlist is already being monitored'
+            ),
         )
-
-    try:
-        name, _tracks = await asyncio.to_thread(
-            spotify.playlist_info_and_tracks, spotify_id
-        )
-    except Exception as exc:
-        logger.exception('Failed to resolve playlist {}', spotify_id)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     playlist = await asyncio.to_thread(
-        db.add_playlist, spotify_id, name, url, interval_minutes
+        db.add_playlist, watch_key, name, url, interval_minutes, kind
     )
 
     # Kick off the first download pass immediately so the user does not have
@@ -994,7 +1184,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
 
         async def _initial_check(pl=playlist) -> None:
             try:
-                await check_playlist(
+                await check_watch(
                     pl,
                     db,
                     state.downloader,  # type: ignore[arg-type]
@@ -1003,7 +1193,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
                     state.settings,
                 )
             except Exception:
-                logger.exception('Initial check failed for playlist {}', pl.id)
+                logger.exception('Initial check failed for watch {}', pl.id)
 
         asyncio.create_task(_initial_check())
 
@@ -1062,12 +1252,15 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
 
     async def _run() -> None:
         try:
-            count = await check_playlist(
-                playlist,  # type: ignore[arg-type]
+            count = await check_watch(
+                playlist,
                 db,
-                state.downloader,  # type: ignore[arg-type]
+                state.downloader,
                 state.connections.broadcast,
                 loop,
+                # Was omitted before, which silently ignored the
+                # delay-between-downloads setting on a manual check.
+                state.settings,
             )
             logger.info(
                 'Manual check: downloaded {} new track(s) from "{}"',
@@ -1075,9 +1268,7 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
                 playlist.name,
             )  # type: ignore[union-attr]
         except Exception:
-            logger.exception(
-                'Manual check failed for playlist {}', playlist_id
-            )
+            logger.exception('Manual check failed for watch {}', playlist_id)
 
     asyncio.create_task(_run())
     return {'status': 'check_started', 'id': playlist_id}

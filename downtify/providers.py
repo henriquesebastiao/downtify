@@ -6,6 +6,7 @@ import json
 import re
 from threading import Lock
 from typing import Any, Optional
+from urllib.parse import quote, unquote
 
 from loguru import logger
 from ytmusicapi import YTMusic
@@ -98,12 +99,39 @@ def _ytm() -> YTMusic:
     return _client
 
 
+DEFAULT_COVER_RESOLUTION = 600
+
+# Mutable module-level target, set from Settings (see
+# set_cover_resolution) so every function below that resolves a YouTube
+# Music thumbnail through _upgrade_thumbnail picks it up without each of
+# them needing to accept and thread a resolution parameter through their
+# own callers. Verified against the live CDN that requesting larger
+# than the hardcoded 600px default actually returns more real detail
+# (not just upscaling) up to roughly 1200-1400px depending on the
+# source image.
+_cover_resolution = DEFAULT_COVER_RESOLUTION
+
+
+def set_cover_resolution(pixels: int) -> None:
+    """Set the target size (in pixels, both dimensions) for YouTube
+    Music cover art requested via _upgrade_thumbnail from here on.
+
+    Spotify-sourced cover art is unaffected: Downtify already picks the
+    largest size Spotify's embed API offers (see spotify._largest_image)
+    and Spotify's image URLs have no equivalent resizable suffix to
+    raise further.
+    """
+    global _cover_resolution
+    _cover_resolution = pixels
+
+
 def _upgrade_thumbnail(url: str) -> str:
     """Replace the size suffix on a YT thumbnail with a larger one."""
 
     if not url:
         return url
-    return re.sub(r'=w\d+-h\d+.*$', '=w600-h600-l90-rj', url)
+    size = _cover_resolution
+    return re.sub(r'=w\d+-h\d+.*$', f'=w{size}-h{size}-l90-rj', url)
 
 
 def _parse_duration(value: Any) -> int:
@@ -715,6 +743,17 @@ _YOUTUBE_VIDEO_ID_RE = re.compile(
 _YOUTUBE_ALBUM_BROWSE_RE = re.compile(r'/browse/(MPREb_[A-Za-z0-9_-]+)')
 _YOUTUBE_ALBUM_PLAYLIST_RE = re.compile(r'[?&]list=(OLAK5uy_[A-Za-z0-9_-]+)')
 _YOUTUBE_ARTIST_CHANNEL_RE = re.compile(r'/channel/(UC[A-Za-z0-9_-]+)')
+_YOUTUBE_ARTIST_HANDLE_RE = re.compile(r'\.com/(@[^/?#&]+)')
+_YOUTUBE_PLAYLIST_ID_RE = re.compile(r'[?&]list=([A-Za-z0-9_-]+)')
+_YOUTUBE_PLAYLIST_BROWSE_RE = re.compile(r'/browse/VL([A-Za-z0-9_-]+)')
+
+
+def _is_radio_mix(playlist_id: str) -> bool:
+    # "RD..." ids are endless auto-generated radio mixes (not a fixed
+    # list); "RDCLAK5uy_..." ones are YouTube Music's curated playlists.
+    return playlist_id.startswith('RD') and not playlist_id.startswith(
+        'RDCLAK5uy_'
+    )
 
 
 def parse_youtube_url(url: str) -> Optional[tuple[str, str]]:
@@ -723,10 +762,14 @@ def parse_youtube_url(url: str) -> Optional[tuple[str, str]]:
     ``kind`` is ``'track'`` (a watchable videoId), ``'album'`` (a
     ``MPREb_`` browse id, or an ``OLAK5uy_`` audio-playlist id — pass
     either straight to :func:`album_tracks_from_browse_id`, which
-    resolves the playlist form to a browse id itself), or ``'artist'``
-    (a ``UC``-prefixed channel id — pass to
-    :func:`artist_discography_from_channel_id`). Returns ``None`` for
-    URLs that aren't recognized YouTube links at all.
+    resolves the playlist form to a browse id itself), ``'playlist'`` (a
+    user or curated playlist id — pass to :func:`playlist_tracks_from_id`)
+    or ``'artist'`` (a ``UC``-prefixed channel id, or an ``@handle`` —
+    pass either to :func:`resolve_artist_channel_id` first). Returns
+    ``None`` for URLs that aren't recognized YouTube links at all.
+
+    A ``watch?v=...&list=...`` URL is the song that was playing, not the
+    playlist around it, so it stays a ``'track'``.
     """
 
     if not url or not any(host in url for host in _YOUTUBE_URL_HOSTS):
@@ -740,10 +783,58 @@ def parse_youtube_url(url: str) -> Optional[tuple[str, str]]:
     match = _YOUTUBE_ARTIST_CHANNEL_RE.search(url)
     if match:
         return 'artist', match.group(1)
-    match = _YOUTUBE_VIDEO_ID_RE.search(url)
+    match = _YOUTUBE_ARTIST_HANDLE_RE.search(url)
     if match:
-        return 'track', match.group(1)
+        return 'artist', unquote(match.group(1))
+    match = _YOUTUBE_PLAYLIST_BROWSE_RE.search(url)
+    if match:
+        return 'playlist', match.group(1)
+    video = _YOUTUBE_VIDEO_ID_RE.search(url)
+    if video:
+        return 'track', video.group(1)
+    match = _YOUTUBE_PLAYLIST_ID_RE.search(url)
+    if match and not _is_radio_mix(match.group(1)):
+        return 'playlist', match.group(1)
     return None
+
+
+_channel_id_cache: dict[str, str] = {}
+
+
+def resolve_artist_channel_id(channel_or_handle: str) -> str:
+    """Turn the ``'artist'`` id from :func:`parse_youtube_url` into a
+    ``UC...`` channel id.
+
+    A channel id is returned as is. An ``@handle`` is resolved through
+    YouTube Music's own URL resolver, the same call its web app makes
+    when a ``music.youtube.com/@handle`` link is opened. A handle that
+    doesn't belong to an artist resolves to the YouTube Music home page
+    instead of a channel, and raises ``ValueError``.
+    """
+
+    value = (channel_or_handle or '').strip()
+    if value.startswith('UC'):
+        return value
+    if not value.startswith('@'):
+        raise ValueError(f'Not a YouTube channel id or handle: {value!r}')
+    with _lock:
+        cached = _channel_id_cache.get(value.casefold())
+    if cached:
+        return cached
+    # The resolver only maps handles to artist pages on the
+    # music.youtube.com host; a www.youtube.com URL comes back unresolved.
+    response = _ytm()._send_request(
+        'navigation/resolve_url',
+        {'url': f'https://music.youtube.com/{quote(value, safe="@")}'},
+    )
+    _log_ytm_response(f'resolve_url {value}', response)
+    endpoint = (response or {}).get('endpoint') or {}
+    browse_id = (endpoint.get('browseEndpoint') or {}).get('browseId') or ''
+    if not browse_id.startswith('UC'):
+        raise ValueError(f'No YouTube Music artist found for {value}')
+    with _lock:
+        _channel_id_cache[value.casefold()] = browse_id
+    return browse_id
 
 
 def find_match(
@@ -1888,3 +1979,93 @@ def song_from_video_id(video_id: str) -> dict[str, Any]:
     enriched['url'] = f'https://music.youtube.com/watch?v={video_id}'
     enriched['source'] = 'youtube'
     return enriched
+
+
+# A catalog upload (the artist's own studio audio, or anything filed under
+# an album) already has the real artists and title. Anything else — a
+# user upload, or a music video reposted by a promo channel — is credited
+# to whoever uploaded it, and ytmusicapi sometimes even parses the upload
+# date or view count as the "artist". Those carry the real credit in the
+# title instead: "Artist - Title".
+_UPLOAD_METADATA_ARTIST_RE = re.compile(
+    r'^(?:[A-Z][a-z]{2,8}\.? \d{1,2}, \d{4}|[\d.,]+[KMB]? views?)$'
+)
+_TITLE_NOISE_RE = re.compile(
+    r'\s*[\(\[][^\)\]]*\b(?:official|lyrics?|visuali[sz]er|audio|video|'
+    r'hd|hq|4k|mv)\b[^\)\]]*[\)\]]',
+    re.IGNORECASE,
+)
+# The part after " - " names a version of the song, not the song: in
+# "Yellow - Live at Glastonbury", "Yellow" is the title, not an artist.
+_TITLE_VERSION_SUFFIX_RE = re.compile(
+    r'^(?:' + '|'.join(_VERSION_QUALIFIER_WORDS) + r'|ao vivo|en vivo|'
+    r'remaster\w*|radio edit|extended|edit|version|mix)\b',
+    re.IGNORECASE,
+)
+
+
+def _split_upload_title(
+    title: str, artists: list[str]
+) -> tuple[str, list[str]]:
+    """``(title, artists)`` for an upload whose title reads "Artist - Title"."""
+
+    clean = _TITLE_NOISE_RE.sub('', title or '').strip()
+    head, sep, tail = clean.partition(' - ')
+    if not sep or not head.strip() or not tail.strip():
+        return clean, artists
+    if _TITLE_VERSION_SUFFIX_RE.match(tail.strip()):
+        return clean, artists
+    credited = [a.strip() for a in head.split(',') if a.strip()]
+    return tail.strip(), credited
+
+
+def _playlist_track_song(track: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """One playlist row as a song dict, pinned to that exact video."""
+
+    video_id = track.get('videoId')
+    if not video_id or track.get('isAvailable') is False:
+        return None
+    song = _result_to_song(track)
+    if song is None:
+        return None
+    catalog = track.get('videoType') == _MUSIC_VIDEO_TYPE_OFFICIAL_AUDIO or (
+        isinstance(track.get('album'), dict) and track['album'].get('name')
+    )
+    if not catalog:
+        artists = [
+            a
+            for a in song['artists']
+            if not _UPLOAD_METADATA_ARTIST_RE.match(a)
+        ]
+        title, artists = _split_upload_title(track.get('title', ''), artists)
+        song['name'] = title
+        song['artists'] = _extract_title_featuring_artist(title, artists)
+    # Pin the download to the playlist's own video: for a song that isn't
+    # on Spotify, the upload in the playlist may be the only copy there is.
+    song['youtube_id'] = video_id
+    return song
+
+
+def playlist_info_and_tracks_from_id(
+    playlist_id: str,
+) -> tuple[str, list[dict[str, Any]]]:
+    """``(title, songs)`` for a YouTube Music playlist.
+
+    Mirrors :func:`spotify.playlist_info_and_tracks` so a YouTube Music
+    playlist goes through the same batch download, M3U and Playlist
+    Monitor code. Every track is fetched (``limit=None`` pages through
+    the whole list); unavailable (deleted/private) entries are dropped.
+    """
+
+    data = _ytm().get_playlist(playlist_id, limit=None)
+    _log_ytm_response(f'get_playlist {playlist_id}', data)
+    songs = [
+        song
+        for track in (data.get('tracks') or [])
+        if (song := _playlist_track_song(track)) is not None
+    ]
+    return str(data.get('title') or playlist_id), songs
+
+
+def playlist_tracks_from_id(playlist_id: str) -> list[dict[str, Any]]:
+    return playlist_info_and_tracks_from_id(playlist_id)[1]

@@ -89,18 +89,24 @@ export default {
   monitor: {
     title: 'Playlist Monitor',
     subtitle:
-      'Add Spotify playlists to watch. New tracks added to those playlists will be downloaded automatically.',
-    watchNew: 'Watch a new playlist',
-    urlPlaceholder: 'Paste a Spotify playlist URL…',
+      'Add Spotify or YouTube Music playlists and artists to watch. New tracks and new releases will be downloaded automatically.',
+    watchNew: 'Watch a new playlist or artist',
+    urlPlaceholder: 'Paste a Spotify or YouTube Music playlist or artist URL…',
     watch: 'Watch',
     failedAdd: 'Failed to add playlist. Check the URL and try again.',
     empty: 'No playlists being monitored yet.',
-    emptyHint: 'Paste a Spotify playlist link above to get started.',
+    emptyHint:
+      'Paste a Spotify or YouTube Music playlist link above to get started.',
     active: 'Active',
     paused: 'Paused',
     everyInterval: 'Every {interval}',
     tracksOne: '{count} track',
     tracksMany: '{count} tracks',
+    releasesOne: '{count} release',
+    releasesMany: '{count} releases',
+    kindArtist: 'Artist',
+    sourceSpotify: 'Spotify',
+    sourceYouTubeMusic: 'YouTube Music',
     checked: 'Checked {when}',
     notChecked: 'Not checked yet',
     pause: 'Pause monitoring',
@@ -117,7 +123,7 @@ export default {
     sortStatus: 'Paused/Active',
     sortAscending: 'Sort ascending',
     sortDescending: 'Sort descending',
-    info: 'When you add a playlist, Downtify downloads every track it currently contains and then keeps watching it. Any songs added later on Spotify are detected and downloaded automatically on the next scheduled check.',
+    info: 'When you add a playlist, Downtify downloads every track it currently contains and then keeps watching it. Any songs added to it later on Spotify or YouTube Music are detected and downloaded automatically on the next scheduled check. Adding an artist works the same way: Downtify downloads their discography, then watches for new releases.',
     every15: 'Every 15 min',
     every30: 'Every 30 min',
     every1h: 'Every hour',
@@ -167,7 +173,7 @@ export default {
     outputTemplate: 'Filename format',
     outputTemplateReset: 'Reset',
     outputTemplateHint:
-      'Use / to create subfolders. Tokens: {artists}, {artist}, {title}, {album}, {output-ext}',
+      'Use / to create subfolders. Tokens: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
     searchSection: 'Search',
     searchAlbums: 'Show albums in search results',
     searchAlbumsHint:
@@ -191,6 +197,15 @@ export default {
     downloadDelayHint:
       'Wait this many seconds after finishing a song before starting the next one. Useful to mimic human behavior on playlist/album downloads and Playlist Monitor syncs.',
     downloadDelayCustomHint: 'Custom value between {min} and {max} seconds.',
+    downloadCoverArt: 'Download cover art',
+    downloadCoverArtHint:
+      'Embed album art into downloaded files. Turn off to skip fetching cover art entirely — smaller files, faster downloads.',
+    coverResolution: 'Cover art resolution',
+    coverResolutionHint:
+      'Target size (width & height, in pixels) requested for embedded cover art from YouTube Music sources — useful for higher-resolution artwork in media servers like Plex. Only affects YouTube Music; Spotify-sourced covers already use the largest size Spotify offers.',
+    overwriteExistingFiles: 'Overwrite existing files',
+    overwriteExistingFilesHint:
+      "Turn off to save bandwidth: a song already anywhere in your download folder (library root, another playlist's folder, an artist/album folder) is not downloaded again. Matched by file name, not by Spotify/YouTube ID.",
     saved: 'Changes saved',
     saveError: "Couldn't save settings.",
     language: 'Language',
@@ -220,6 +235,8 @@ export default {
     playFromLibrary: 'Open in player',
     countOne: '{count} track',
     countMany: '{count} tracks',
+    playingFrom: 'Playing from',
+    allSongs: 'All Songs ({count})',
   },
   footer: {
     tagline: 'Open source music downloader',

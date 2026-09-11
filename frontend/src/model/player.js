@@ -79,16 +79,40 @@ function buildShuffleOrder() {
       : 0
 }
 
+function sameTrackOrder(a, b) {
+  if (a.length !== b.length) return false
+  return a.every((track, i) => track.file === b[i].file)
+}
+
 function setPlaylist(files, options = {}) {
   const tracks = (files || []).map((f) =>
     typeof f === 'string' ? trackFromFile(f) : f
   )
+  if (
+    typeof options.startIndex !== 'number' &&
+    sameTrackOrder(tracks, playlist.value)
+  ) {
+    // Re-selecting the queue that's already loaded (e.g. re-picking the
+    // active playlist) must not interrupt what's currently playing.
+    return
+  }
   playlist.value = tracks
-  if (currentIndex.value >= tracks.length) currentIndex.value = -1
-  if (shuffle.value) buildShuffleOrder()
   if (typeof options.startIndex === 'number') {
     playAt(options.startIndex)
-  } else if (options.autoplay && tracks.length > 0 && currentIndex.value < 0) {
+    return
+  }
+  // Any other queue replacement drops whatever was playing/queued
+  // before — a stale currentIndex would otherwise point at an unrelated
+  // track in the new list that just happens to share the same position.
+  currentIndex.value = -1
+  pause()
+  if (audio) {
+    audio.removeAttribute('src')
+  }
+  currentTime.value = 0
+  duration.value = 0
+  if (shuffle.value) buildShuffleOrder()
+  if (options.autoplay && tracks.length > 0) {
     playAt(0)
   }
 }

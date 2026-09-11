@@ -136,6 +136,22 @@
               <div class="flex items-center gap-2 mb-1">
                 <span class="font-semibold truncate">{{ pl.name }}</span>
                 <span
+                  class="shrink-0"
+                  :class="
+                    isYouTubeMusic(pl) ? 'badge-youtube-music' : 'badge-spotify'
+                  "
+                >
+                  {{
+                    isYouTubeMusic(pl)
+                      ? t('monitor.sourceYouTubeMusic')
+                      : t('monitor.sourceSpotify')
+                  }}
+                </span>
+                <span v-if="isArtist(pl)" class="pill shrink-0 badge-soft">
+                  <Icon icon="clarity:user-line" class="inline h-3 w-3" />
+                  {{ t('monitor.kindArtist') }}
+                </span>
+                <span
                   class="pill shrink-0"
                   :class="pl.enabled ? 'badge-soft' : 'badge-neutral-soft'"
                 >
@@ -158,14 +174,14 @@
                 </span>
                 <span>
                   <Icon
-                    icon="clarity:music-note-line"
+                    :icon="
+                      isArtist(pl)
+                        ? 'clarity:library-line'
+                        : 'clarity:music-note-line'
+                    "
                     class="inline h-3 w-3 mr-0.5"
                   />
-                  {{
-                    pl.last_track_count === 1
-                      ? t('monitor.tracksOne', { count: pl.last_track_count })
-                      : t('monitor.tracksMany', { count: pl.last_track_count })
-                  }}
+                  {{ countLabel(pl) }}
                 </span>
                 <span v-if="pl.last_checked">
                   <Icon
@@ -270,6 +286,26 @@ const addError = ref('')
 const newUrl = ref('')
 const newInterval = ref(60)
 const checking = ref({})
+
+function isArtist(pl) {
+  return pl.kind === 'artist'
+}
+
+function isYouTubeMusic(pl) {
+  return pl.source === 'youtube_music'
+}
+
+function countLabel(pl) {
+  const count = pl.last_track_count
+  if (isArtist(pl)) {
+    return count === 1
+      ? t('monitor.releasesOne', { count })
+      : t('monitor.releasesMany', { count })
+  }
+  return count === 1
+    ? t('monitor.tracksOne', { count })
+    : t('monitor.tracksMany', { count })
+}
 
 const SORT_DEFAULT_DIR = {
   created_at: 'desc',
