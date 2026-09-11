@@ -240,9 +240,11 @@ Downtify ships with a clean web player so you don't need a separate app to liste
 - **Repeat** modes: off → all → one
 - Volume slider with mute toggle (volume is remembered between sessions)
 - Side queue listing every track in your library, each one with its own thumbnail and the currently playing one highlighted
-- **Playing from** selector — play just one downloaded playlist instead of your whole library queued at once. See **[Built-in Player](https://henriquesebastiao.github.io/downtify/features/player/)** in the full docs.
+- **Playing from** selector — play just one downloaded playlist, artist or album instead of your whole library queued at once. See **[Built-in Player](https://henriquesebastiao.github.io/downtify/features/player/)** in the full docs.
 
 The player parses `Artist - Title.ext` filenames so the now-playing card shows artist and title nicely, and pulls the cover art directly from the audio file's embedded tags (the same artwork Downtify wrote at download time). Playback uses your browser's native HTML5 audio element — no extra dependencies, no extra processes.
+
+The **Library** page has the same playlist/artist/album filter to narrow down the file list before playing, re-downloading or deleting a track.
 
 ---
 

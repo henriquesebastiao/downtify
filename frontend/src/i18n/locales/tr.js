@@ -83,6 +83,9 @@ export default {
     downloadToDevice: 'Cihaza indir',
     deleteFile: 'Dosyayı sil',
     play: 'Oynat',
+    filterBy: 'Filtrele',
+    filterEmpty: 'Bu filtreyle eşleşen dosya yok.',
+    clearFilter: 'Filtreyi temizle',
   },
   monitor: {
     title: 'Çalma Listesi İzleyici',
@@ -234,6 +237,9 @@ export default {
     countMany: '{count} parça',
     playingFrom: 'Şuradan çalıyor',
     allSongs: 'Tüm Şarkılar ({count})',
+    playlistsGroup: 'Çalma Listeleri',
+    artistsGroup: 'Sanatçılar',
+    albumsGroup: 'Albümler',
   },
   footer: {
     tagline: 'Açık kaynak müzik indirme uygulaması',

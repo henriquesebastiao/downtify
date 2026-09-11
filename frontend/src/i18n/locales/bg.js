@@ -84,6 +84,9 @@ export default {
     downloadToDevice: 'Запис на устройство',
     deleteFile: 'Изтрий файл',
     play: 'Пусни',
+    filterBy: 'Филтрирай по',
+    filterEmpty: 'Няма файлове, отговарящи на този филтър.',
+    clearFilter: 'Изчисти филтъра',
   },
   monitor: {
     title: 'Следене на плейлист',
@@ -236,6 +239,9 @@ export default {
     countMany: '{count} песни',
     playingFrom: 'Възпроизвеждане от',
     allSongs: 'Всички песни ({count})',
+    playlistsGroup: 'Плейлисти',
+    artistsGroup: 'Изпълнители',
+    albumsGroup: 'Албуми',
   },
   footer: {
     tagline: 'Приложение за теглене на музика с отворен код',

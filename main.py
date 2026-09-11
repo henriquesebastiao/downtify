@@ -179,6 +179,28 @@ def _extract_cover(path: Path) -> tuple[bytes | None, str | None]:
     return None, None
 
 
+def _extract_track_tags(path: Path) -> tuple[str, str]:
+    """Return ``(artist, album)`` read from ``path``'s embedded tags.
+
+    Powers the player's "play only this artist/album" filters. Uses
+    mutagen's "easy" wrappers so ID3 (MP3), MP4 (M4A/AAC) and Vorbis
+    comments (FLAC/OGG/Opus) all expose the same ``artist``/``album``
+    keys without us needing to dispatch on extension. Missing or
+    unreadable tags come back as ``''`` — the frontend then buckets the
+    track the same way it already does for artist-less filenames.
+    """
+
+    try:
+        tags = MutagenFile(str(path), easy=True)
+    except Exception:
+        return '', ''
+    if not tags:
+        return '', ''
+    artist = (tags.get('artist') or [''])[0]
+    album = (tags.get('album') or [''])[0]
+    return artist, album
+
+
 def build_app() -> FastAPI:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
@@ -302,6 +324,35 @@ def build_app() -> FastAPI:
             })
         playlists.sort(key=lambda p: p['name'].casefold())
         return playlists
+
+    @app.get('/tracks')
+    def list_tracks() -> list[dict]:
+        """List downloaded tracks with artist/album read from embedded tags.
+
+        Powers the player's "play only this artist" / "play only this
+        album" filters (see the Vue Player view) — the flat ``/list``
+        endpoint only has filenames, and album in particular isn't
+        reliably derivable from the filename or folder layout unless
+        *Organize by artist/album* is on.
+        """
+        audio_exts = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
+        base = DOWNLOAD_DIR.resolve()
+        if not base.exists():
+            return []
+        tracks: list[dict] = []
+        for path in base.rglob('*'):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in audio_exts:
+                continue
+            artist, album = _extract_track_tags(path)
+            tracks.append({
+                'file': path.relative_to(base).as_posix(),
+                'artist': artist,
+                'album': album,
+            })
+        tracks.sort(key=lambda t: t['file'])
+        return tracks
 
     @app.delete('/delete')
     def delete_download(file: str) -> dict:

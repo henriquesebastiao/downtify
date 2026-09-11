@@ -17,23 +17,56 @@
           </p>
         </div>
 
-        <div v-if="playlists.length > 0" class="shrink-0">
+        <div v-if="hasFilterableGroups" class="shrink-0">
           <label
             class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-1.5"
           >
             {{ t('player.playingFrom') }}
           </label>
           <select
-            v-model="selectedPlaylistName"
-            @change="onSelectPlaylist"
+            v-model="selectedGroup"
+            @change="onSelectGroup"
             class="select select-sm w-full sm:w-64 rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
           >
             <option :value="null">
               {{ t('player.allSongs', { count: files.length }) }}
             </option>
-            <option v-for="pl in playlists" :key="pl.name" :value="pl.name">
-              {{ pl.name }} ({{ pl.count }})
-            </option>
+            <optgroup
+              v-if="playlists.length > 0"
+              :label="t('player.playlistsGroup')"
+            >
+              <option
+                v-for="pl in playlists"
+                :key="'playlist-' + pl.name"
+                :value="{ type: 'playlist', name: pl.name }"
+              >
+                {{ pl.name }} ({{ pl.count }})
+              </option>
+            </optgroup>
+            <optgroup
+              v-if="artistGroups.length > 0"
+              :label="t('player.artistsGroup')"
+            >
+              <option
+                v-for="a in artistGroups"
+                :key="'artist-' + a.name"
+                :value="{ type: 'artist', name: a.name }"
+              >
+                {{ a.name }} ({{ a.count }})
+              </option>
+            </optgroup>
+            <optgroup
+              v-if="albumGroups.length > 0"
+              :label="t('player.albumsGroup')"
+            >
+              <option
+                v-for="al in albumGroups"
+                :key="'album-' + al.name"
+                :value="{ type: 'album', name: al.name }"
+              >
+                {{ al.name }} ({{ al.count }})
+              </option>
+            </optgroup>
           </select>
         </div>
       </div>
@@ -326,14 +359,21 @@ import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
 import API from '/src/model/api'
 import { usePlayer, formatTime } from '/src/model/player'
+import {
+  buildGroups,
+  filesForGroup as resolveFilesForGroup,
+  detectGroup,
+} from '/src/model/trackGroups'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
 const player = usePlayer()
 
 const files = ref([])
+const tracks = ref([]) // [{ file, artist, album }] — from GET /tracks
 const playlists = ref([])
-const selectedPlaylistName = ref(null) // null = "All Songs"
+// null = "All Songs"; otherwise { type: 'playlist' | 'artist' | 'album', name }
+const selectedGroup = ref(null)
 const loading = ref(false)
 const progressBar = ref(null)
 const coverFailed = ref({})
@@ -343,10 +383,23 @@ function markCoverFailed(file) {
   coverFailed.value = { ...coverFailed.value, [file]: true }
 }
 
-function filesForSelection(name) {
-  if (!name) return files.value
-  const pl = playlists.value.find((p) => p.name === name)
-  return pl ? pl.files : files.value
+const artistGroups = computed(() => buildGroups(tracks.value, 'artist'))
+const albumGroups = computed(() => buildGroups(tracks.value, 'album'))
+
+const hasFilterableGroups = computed(
+  () =>
+    playlists.value.length > 0 ||
+    artistGroups.value.length > 0 ||
+    albumGroups.value.length > 0
+)
+
+function filesForGroup(group) {
+  return resolveFilesForGroup(group, {
+    files: files.value,
+    playlists: playlists.value,
+    artistGroups: artistGroups.value,
+    albumGroups: albumGroups.value,
+  })
 }
 
 // Reflect whichever queue is already loaded (playback survives
@@ -354,26 +407,22 @@ function filesForSelection(name) {
 // resetting it to "All Songs" on mount.
 function detectCurrentSelection() {
   const current = player.playlist.value.map((track) => track.file)
-  if (current.length === 0) {
-    selectedPlaylistName.value = null
-    return
-  }
-  const match = playlists.value.find(
-    (pl) =>
-      pl.files.length === current.length &&
-      pl.files.every((f, i) => f === current[i])
-  )
-  selectedPlaylistName.value = match ? match.name : null
+  selectedGroup.value = detectGroup(current, {
+    playlists: playlists.value,
+    artistGroups: artistGroups.value,
+    albumGroups: albumGroups.value,
+  })
 }
 
 async function load() {
   loading.value = true
   try {
-    const [libraryRes, playlistsRes] = await Promise.all([
-      API.listDownloads(),
+    const [tracksRes, playlistsRes] = await Promise.all([
+      API.listTracks(),
       API.listPlaylists(),
     ])
-    files.value = libraryRes.data || []
+    tracks.value = tracksRes.data || []
+    files.value = tracks.value.map((tr) => tr.file)
     playlists.value = playlistsRes.data || []
     // If the player was empty (direct nav to /player), seed the queue
     // with the full library so the user has something to play.
@@ -386,8 +435,8 @@ async function load() {
   }
 }
 
-function onSelectPlaylist() {
-  player.setPlaylist(filesForSelection(selectedPlaylistName.value))
+function onSelectGroup() {
+  player.setPlaylist(filesForGroup(selectedGroup.value))
 }
 
 const trackTitle = computed(() => {

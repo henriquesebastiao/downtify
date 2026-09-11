@@ -101,6 +101,10 @@ function listPlaylists() {
   return API.get('/playlists')
 }
 
+function listTracks() {
+  return API.get('/tracks')
+}
+
 function deleteDownload(file) {
   return API.delete('/delete', { params: { file } })
 }
@@ -148,6 +152,7 @@ export default {
   coverFileURL,
   listDownloads,
   listPlaylists,
+  listTracks,
   deleteDownload,
   writePlaylistM3u,
   getQueue,

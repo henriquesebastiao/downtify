@@ -16,7 +16,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button
-            v-if="files.length > 0"
+            v-if="filteredFiles.length > 0"
             class="btn btn-primary btn-sm h-11 px-5 rounded-full"
             @click="playAll"
             :title="t('library.play')"
@@ -37,6 +37,59 @@
             {{ t('common.refresh') }}
           </button>
         </div>
+      </div>
+
+      <!-- Filter by playlist / artist / album -->
+      <div v-if="hasFilterableGroups" class="mb-6">
+        <label
+          class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-1.5"
+        >
+          {{ t('library.filterBy') }}
+        </label>
+        <select
+          v-model="selectedGroup"
+          class="select select-sm w-full sm:w-64 rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+        >
+          <option :value="null">
+            {{ t('player.allSongs', { count: files.length }) }}
+          </option>
+          <optgroup
+            v-if="playlists.length > 0"
+            :label="t('player.playlistsGroup')"
+          >
+            <option
+              v-for="pl in playlists"
+              :key="'playlist-' + pl.name"
+              :value="{ type: 'playlist', name: pl.name }"
+            >
+              {{ pl.name }} ({{ pl.count }})
+            </option>
+          </optgroup>
+          <optgroup
+            v-if="artistGroups.length > 0"
+            :label="t('player.artistsGroup')"
+          >
+            <option
+              v-for="a in artistGroups"
+              :key="'artist-' + a.name"
+              :value="{ type: 'artist', name: a.name }"
+            >
+              {{ a.name }} ({{ a.count }})
+            </option>
+          </optgroup>
+          <optgroup
+            v-if="albumGroups.length > 0"
+            :label="t('player.albumsGroup')"
+          >
+            <option
+              v-for="al in albumGroups"
+              :key="'album-' + al.name"
+              :value="{ type: 'album', name: al.name }"
+            >
+              {{ al.name }} ({{ al.count }})
+            </option>
+          </optgroup>
+        </select>
       </div>
 
       <!-- Error -->
@@ -66,6 +119,26 @@
         <p class="text-base-content/40 text-xs mt-1">
           {{ t('library.emptyHint') }}
         </p>
+      </div>
+
+      <!-- Filter matched nothing (library itself isn't empty) -->
+      <div
+        v-else-if="filteredFiles.length === 0"
+        class="surface rounded-2xl p-12 flex flex-col items-center text-center"
+      >
+        <Icon
+          icon="clarity:search-line"
+          class="h-12 w-12 text-base-content/20 mb-4"
+        />
+        <p class="text-base-content/50 text-sm">
+          {{ t('library.filterEmpty') }}
+        </p>
+        <button
+          class="mt-3 text-xs text-primary hover:underline"
+          @click="selectedGroup = null"
+        >
+          {{ t('library.clearFilter') }}
+        </button>
       </div>
 
       <!-- File list -->
@@ -110,7 +183,7 @@
           <div class="flex items-center gap-1 shrink-0">
             <button
               class="icon-btn text-primary hover:bg-primary/10"
-              @click="playFile(files.indexOf(file))"
+              @click="playFile(file)"
               :title="t('library.play')"
             >
               <Icon icon="clarity:play-line" class="h-4 w-4" />
@@ -177,13 +250,13 @@
 
       <!-- Count footer -->
       <p
-        v-if="files.length > 0"
+        v-if="filteredFiles.length > 0"
         class="mt-6 text-xs text-base-content/40 text-center"
       >
         {{
-          files.length === 1
-            ? t('library.countOne', { count: files.length })
-            : t('library.countMany', { count: files.length })
+          filteredFiles.length === 1
+            ? t('library.countOne', { count: filteredFiles.length })
+            : t('library.countMany', { count: filteredFiles.length })
         }}
       </p>
     </div>
@@ -199,6 +272,7 @@ import Settings from '/src/components/Settings.vue'
 import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
 import { usePlayer } from '/src/model/player'
+import { buildGroups, filesForGroup } from '/src/model/trackGroups'
 
 const PAGE_SIZE = 10
 
@@ -207,20 +281,45 @@ const player = usePlayer()
 const router = useRouter()
 
 const files = ref([])
+const tracks = ref([]) // [{ file, artist, album }] — from GET /tracks
+const playlists = ref([])
+// null = "All Songs"; otherwise { type: 'playlist' | 'artist' | 'album', name }
+const selectedGroup = ref(null)
 const loading = ref(false)
 const error = ref('')
 const deleting = ref({})
 const coverFailed = ref({})
 const currentPage = ref(1)
 
-const totalPages = computed(() => Math.ceil(files.value.length / PAGE_SIZE))
+const artistGroups = computed(() => buildGroups(tracks.value, 'artist'))
+const albumGroups = computed(() => buildGroups(tracks.value, 'album'))
+
+const hasFilterableGroups = computed(
+  () =>
+    playlists.value.length > 0 ||
+    artistGroups.value.length > 0 ||
+    albumGroups.value.length > 0
+)
+
+const filteredFiles = computed(() =>
+  filesForGroup(selectedGroup.value, {
+    files: files.value,
+    playlists: playlists.value,
+    artistGroups: artistGroups.value,
+    albumGroups: albumGroups.value,
+  })
+)
+
+const totalPages = computed(() =>
+  Math.ceil(filteredFiles.value.length / PAGE_SIZE)
+)
 
 const paginatedFiles = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE
-  return files.value.slice(start, start + PAGE_SIZE)
+  return filteredFiles.value.slice(start, start + PAGE_SIZE)
 })
 
-watch(files, () => {
+watch(filteredFiles, () => {
   currentPage.value = 1
 })
 
@@ -236,8 +335,13 @@ async function refresh() {
   loading.value = true
   error.value = ''
   try {
-    const res = await API.listDownloads()
-    files.value = res.data || []
+    const [tracksRes, playlistsRes] = await Promise.all([
+      API.listTracks(),
+      API.listPlaylists(),
+    ])
+    tracks.value = tracksRes.data || []
+    files.value = tracks.value.map((tr) => tr.file)
+    playlists.value = playlistsRes.data || []
   } catch {
     error.value = t('library.failedLoad')
   } finally {
@@ -251,6 +355,7 @@ async function onDelete(file) {
   try {
     await API.deleteDownload(file)
     files.value = files.value.filter((f) => f !== file)
+    tracks.value = tracks.value.filter((tr) => tr.file !== file)
   } catch {
     error.value = t('library.failedDelete', { file })
   } finally {
@@ -273,14 +378,15 @@ function folderOf(file) {
   return slash >= 0 ? file.slice(0, slash) : ''
 }
 
-function playFile(index) {
-  player.setPlaylist(files.value, { startIndex: index })
+function playFile(file) {
+  const index = filteredFiles.value.indexOf(file)
+  player.setPlaylist(filteredFiles.value, { startIndex: Math.max(0, index) })
   router.push({ name: 'Player' })
 }
 
 function playAll() {
-  if (!files.value.length) return
-  player.setPlaylist(files.value, { startIndex: 0 })
+  if (!filteredFiles.value.length) return
+  player.setPlaylist(filteredFiles.value, { startIndex: 0 })
   router.push({ name: 'Player' })
 }
 

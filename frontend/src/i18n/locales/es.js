@@ -88,6 +88,9 @@ export default {
     downloadToDevice: 'Descargar al dispositivo',
     deleteFile: 'Eliminar archivo',
     play: 'Reproducir',
+    filterBy: 'Filtrar por',
+    filterEmpty: 'Ningún archivo coincide con este filtro.',
+    clearFilter: 'Quitar filtro',
   },
   monitor: {
     title: 'Monitor de listas',
@@ -243,6 +246,9 @@ export default {
     countMany: '{count} pistas',
     playingFrom: 'Reproduciendo desde',
     allSongs: 'Todas las canciones ({count})',
+    playlistsGroup: 'Listas de reproducción',
+    artistsGroup: 'Artistas',
+    albumsGroup: 'Álbumes',
   },
   footer: {
     tagline: 'Descargador de música de código abierto',
