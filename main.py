@@ -34,7 +34,7 @@ from uvicorn import Config, Server
 
 from downtify import __version__, api, m3u
 from downtify.downloader import Downloader
-from downtify.monitor import PlaylistMonitorDB, monitor_loop
+from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 
 load_dotenv()
 
@@ -274,6 +274,16 @@ def build_app() -> FastAPI:
                 broadcast=api.state.connections.broadcast,
                 loop=loop,
                 settings=api.state.settings,
+            )
+        )
+        # Separate hourly sweep that forgets a downloaded-track record once
+        # its file is gone from the downloads directory — see
+        # downtify/monitor.py:reconcile_loop for why this is a distinct,
+        # slower cadence from the per-watch monitor_loop above.
+        asyncio.create_task(
+            reconcile_loop(
+                db=api.state.monitor_db,
+                get_downloader=lambda: api.state.downloader,
             )
         )
 
