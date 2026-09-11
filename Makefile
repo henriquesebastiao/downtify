@@ -3,15 +3,10 @@
 DOWNTIFY_VERSION := 2.10.2
 TARGET := henriquesebastiao/downtify
 
-all: build latest
+all: build up
 
 build:
-	docker buildx create --use
-	docker buildx build --platform=linux/amd64,linux/arm64 -t $(TARGET):$(DOWNTIFY_VERSION) --push .
-
-latest:
-	docker buildx create --use
-	docker buildx build --platform=linux/amd64,linux/arm64 -t $(TARGET):latest --push .
+	docker buildx build . --no-cache
 
 clean:
 	find downloads -type f -name "*.mp3" -exec rm -f {} \;
@@ -62,4 +57,4 @@ rm:
 %:
 	@:
 
-.PHONY: all build latest clean up down run format lint export changelog version doc rm
+.PHONY: all build clean up down run format lint export changelog version doc rm
