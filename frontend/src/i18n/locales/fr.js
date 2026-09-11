@@ -94,16 +94,16 @@ export default {
   monitor: {
     title: 'Surveillance des listes de lecture',
     subtitle:
-      'Ajoutez des listes de lecture ou des artistes Spotify à surveiller. Les nouveaux titres et les nouvelles sorties seront téléchargés automatiquement.',
+      'Ajoutez des listes de lecture ou des artistes Spotify ou YouTube Music à surveiller. Les nouveaux titres et les nouvelles sorties seront téléchargés automatiquement.',
     watchNew: 'Suivre une nouvelle liste de lecture ou un artiste',
     urlPlaceholder:
-      "Collez l'URL d'une liste de lecture ou d'un artiste Spotify…",
+      "Collez l'URL d'une liste de lecture ou d'un artiste Spotify ou YouTube Music…",
     watch: 'Regarder',
     failedAdd:
       "Impossible d'ajouter la liste de lecture. Vérifiez l'URL et réessayez.",
     empty: "Aucune liste de lecture n'est encore surveillée.",
     emptyHint:
-      "Collez le lien d'une liste de lecture Spotify ci-dessus pour commencer.",
+      "Collez le lien d'une liste de lecture Spotify ou YouTube Music ci-dessus pour commencer.",
     active: 'Active',
     paused: 'En pause',
     everyInterval: 'Toutes les {interval}',
@@ -112,6 +112,8 @@ export default {
     releasesOne: '{count} sortie',
     releasesMany: '{count} sorties',
     kindArtist: 'Artiste',
+    sourceSpotify: 'Spotify',
+    sourceYouTubeMusic: 'YouTube Music',
     checked: 'Vérifié {when}',
     notChecked: 'Pas encore vérifié',
     pause: 'Mettre en pause la surveillance',
@@ -128,7 +130,7 @@ export default {
     sortStatus: 'En pause/Active',
     sortAscending: 'Tri croissant',
     sortDescending: 'Tri décroissant',
-    info: 'Lorsque vous ajoutez une liste de lecture, Downtify télécharge tous les titres qu’elle contient à ce moment-là, puis continue de la surveiller. Les morceaux ajoutés ultérieurement sur Spotify sont détectés et téléchargés automatiquement lors de la prochaine vérification programmée. Ajouter un artiste fonctionne de la même façon : Downtify télécharge sa discographie, puis surveille les nouvelles sorties.',
+    info: 'Lorsque vous ajoutez une liste de lecture, Downtify télécharge tous les titres qu’elle contient à ce moment-là, puis continue de la surveiller. Les morceaux qui y sont ajoutés ultérieurement sur Spotify ou YouTube Music sont détectés et téléchargés automatiquement lors de la prochaine vérification programmée. Ajouter un artiste fonctionne de la même façon : Downtify télécharge sa discographie, puis surveille les nouvelles sorties.',
     every15: 'Toutes les 15 min',
     every30: 'Toutes les 30 min',
     every1h: 'Toutes les heures',

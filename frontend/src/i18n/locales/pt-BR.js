@@ -91,14 +91,16 @@ export default {
   monitor: {
     title: 'Monitor de playlists',
     subtitle:
-      'Adicione playlists ou artistas do Spotify para monitorar. Novas faixas e novos lançamentos serão baixados automaticamente.',
+      'Adicione playlists ou artistas do Spotify ou do YouTube Music para monitorar. Novas faixas e novos lançamentos serão baixados automaticamente.',
     watchNew: 'Monitorar uma nova playlist ou artista',
-    urlPlaceholder: 'Cole uma URL de playlist ou de artista do Spotify…',
+    urlPlaceholder:
+      'Cole uma URL de playlist ou de artista do Spotify ou do YouTube Music…',
     watch: 'Monitorar',
     failedAdd:
       'Falha ao adicionar a playlist. Verifique a URL e tente novamente.',
     empty: 'Nenhuma playlist sendo monitorada ainda.',
-    emptyHint: 'Cole um link de playlist do Spotify acima para começar.',
+    emptyHint:
+      'Cole um link de playlist do Spotify ou do YouTube Music acima para começar.',
     active: 'Ativa',
     paused: 'Pausada',
     everyInterval: 'A cada {interval}',
@@ -107,6 +109,8 @@ export default {
     releasesOne: '{count} lançamento',
     releasesMany: '{count} lançamentos',
     kindArtist: 'Artista',
+    sourceSpotify: 'Spotify',
+    sourceYouTubeMusic: 'YouTube Music',
     checked: 'Verificada {when}',
     notChecked: 'Ainda não verificada',
     pause: 'Pausar monitoramento',
@@ -123,7 +127,7 @@ export default {
     sortStatus: 'Pausada/Ativa',
     sortAscending: 'Ordem crescente',
     sortDescending: 'Ordem decrescente',
-    info: 'Quando você adiciona uma playlist, o Downtify baixa todas as faixas atuais dela e segue monitorando. Qualquer música adicionada depois no Spotify é detectada e baixada automaticamente na próxima verificação. Adicionar um artista funciona da mesma forma: o Downtify baixa a discografia dele e depois monitora novos lançamentos.',
+    info: 'Quando você adiciona uma playlist, o Downtify baixa todas as faixas atuais dela e segue monitorando. Qualquer música adicionada a ela depois no Spotify ou no YouTube Music é detectada e baixada automaticamente na próxima verificação. Adicionar um artista funciona da mesma forma: o Downtify baixa a discografia dele e depois monitora novos lançamentos.',
     every15: 'A cada 15 min',
     every30: 'A cada 30 min',
     every1h: 'A cada hora',

@@ -146,6 +146,18 @@
   [data-theme='downtify-light'] .badge-neutral-soft {
     @apply bg-black/5 border-black/10;
   }
+  .badge-spotify {
+    @apply pill bg-[#1DB954]/15 text-[#1ED760] border border-[#1DB954]/25;
+  }
+  [data-theme='downtify-light'] .badge-spotify {
+    @apply text-[#0F7A36];
+  }
+  .badge-youtube-music {
+    @apply pill bg-[#FF0033]/15 text-[#FF4E45] border border-[#FF0033]/25;
+  }
+  [data-theme='downtify-light'] .badge-youtube-music {
+    @apply text-[#C4001F];
+  }
 
   .card-hover-glow {
     @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow-sm;

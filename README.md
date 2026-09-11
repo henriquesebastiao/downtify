@@ -41,7 +41,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | Feature | Details |
 |---------|---------|
 | 🎵 **Tracks, albums & playlists** | Any Spotify link works — single track, full album, or entire playlist |
-| 👁️ **Playlist & Artist Watch** | Watch playlists **and artists** — new songs and new releases download automatically |
+| 👁️ **Playlist & Artist Watch** | Watch Spotify or YouTube Music playlists **and artists** — new songs and new releases download automatically |
 | 🎨 **Rich metadata** | Album art, title, artist, album, year — all embedded in every file |
 | 🎚️ **Multiple formats** | MP3 · FLAC · M4A · OGG · OPUS |
 | 🔎 **Free-text search** | Search YouTube Music directly — no Spotify link needed |
@@ -124,18 +124,20 @@ Spotify embed page  →  YouTube Music search  →  yt-dlp + ffmpeg + mutagen
 
 ## 👁️ Playlist Monitor
 
-The **Playlist Monitor** lets Downtify watch your favorite Spotify playlists — and the artists you follow — and automatically download new songs and new releases, hands-free.
+The **Playlist Monitor** lets Downtify watch your favorite Spotify and YouTube Music playlists — and the artists you follow — and automatically download new songs and new releases, hands-free.
 
 **How to use it:**
 
 1. Click the eye icon (👁) in the navigation bar
-2. Paste a Spotify playlist URL, or a Spotify **artist** URL to watch everything they release
+2. Paste a Spotify or YouTube Music playlist URL, or an **artist** URL (Spotify, or YouTube Music such as `music.youtube.com/@artist`) to watch everything they release
 3. Choose how often Downtify should check for new tracks (every 15 min up to once a month)
 4. Click **Watch**
 
-From that point on, whenever a new song appears in the playlist on Spotify, Downtify will detect and download it on the next scheduled check. Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded.
+From that point on, whenever a new song appears in the playlist, Downtify will detect and download it on the next scheduled check. Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded.
 
-Adding an **artist** works the same way: Downtify downloads their discography and then watches for new releases, so you don't need a dedicated playlist per artist. You can pause, resume, force an immediate check, or stop any watch at any time from the same page.
+Adding an **artist** works the same way: Downtify downloads their discography and then watches for new releases, so you don't need a dedicated playlist per artist. Each watch shows a **Spotify** or **YouTube Music** badge. You can pause, resume, force an immediate check, or stop any watch at any time from the same page.
+
+YouTube Music playlists are handy for songs that aren't on Spotify: each track is downloaded from the exact video in the playlist.
 
 Playlists checked daily or less often can be pinned to a specific hour (e.g. always sync overnight at 3 AM) with the `DOWNTIFY_MONITOR_SYNC_TIME` and `TZ` environment variables, and can be sorted by date added, title, frequency, track count, or status. See **[Playlist Monitor](https://henriquesebastiao.github.io/downtify/features/playlist-monitor/)** in the full docs for details.
 
@@ -193,6 +195,7 @@ When the setting is **off** (default), the existing behaviour is preserved: sing
 | Spotify track | ✅ |
 | Spotify album | ✅ |
 | Spotify playlist | ✅ |
+| YouTube Music playlist | ✅ |
 | YouTube Music search (free text) | ✅ |
 | Direct YouTube link | ✅ |
 

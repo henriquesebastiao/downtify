@@ -92,16 +92,16 @@ export default {
   monitor: {
     title: 'Lejátszási lista felügyelő',
     subtitle:
-      'Adjon hozzá Spotify lejátszási listákat vagy előadókat a megfigyeléshez. Az új számok és az új kiadványok automatikusan letöltésre kerülnek.',
+      'Adjon hozzá Spotify vagy YouTube Music lejátszási listákat vagy előadókat a megfigyeléshez. Az új számok és az új kiadványok automatikusan letöltésre kerülnek.',
     watchNew: 'Új lejátszási lista vagy előadó figyelése',
     urlPlaceholder:
-      'Illesszen be egy Spotify lejátszási lista vagy előadó URL-t…',
+      'Illesszen be egy Spotify vagy YouTube Music lejátszási lista vagy előadó URL-t…',
     watch: 'Figyelés',
     failedAdd:
       'Nem sikerült hozzáadni a lejátszási listát. Ellenőrizze az URL-t és próbálja újra.',
     empty: 'Még nincsenek figyelemmel kísért lejátszási listák.',
     emptyHint:
-      'Az első lépésekhez illesszen be egy Spotify lejátszási lista hivatkozást fent.',
+      'Az első lépésekhez illesszen be egy Spotify vagy YouTube Music lejátszási lista hivatkozást fent.',
     active: 'Aktív',
     paused: 'Szünetel',
     everyInterval: 'Minden {interval}',
@@ -110,6 +110,8 @@ export default {
     releasesOne: '{count} kiadvány',
     releasesMany: '{count} kiadvány',
     kindArtist: 'Előadó',
+    sourceSpotify: 'Spotify',
+    sourceYouTubeMusic: 'YouTube Music',
     checked: 'Ellenőrizve: {when}',
     notChecked: 'Még nem ellenőrizve',
     pause: 'Figyelés szüneteltetése',
@@ -126,7 +128,7 @@ export default {
     sortStatus: 'Szüneteltetve/Aktív',
     sortAscending: 'Növekvő sorrend',
     sortDescending: 'Csökkenő sorrend',
-    info: 'Amikor hozzáadsz egy lejátszási listát, a Downtify letölti az összes benne található számot, majd figyeli azt. A Spotify-on később hozzáadott dalok automatikusan felismerésre és letöltésre kerülnek a következő ütemezett ellenőrzéskor. Előadó hozzáadása ugyanígy működik: a Downtify letölti a diszkográfiáját, majd figyeli az új kiadványokat.',
+    info: 'Amikor hozzáadsz egy lejátszási listát, a Downtify letölti az összes benne található számot, majd figyeli azt. A listához később a Spotify-on vagy a YouTube Musicon hozzáadott dalok automatikusan felismerésre és letöltésre kerülnek a következő ütemezett ellenőrzéskor. Előadó hozzáadása ugyanígy működik: a Downtify letölti a diszkográfiáját, majd figyeli az új kiadványokat.',
     every15: '15 percenként',
     every30: '30 percenként',
     every1h: 'Óránként',

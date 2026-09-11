@@ -2,7 +2,7 @@ import { ref } from 'vue'
 
 import API from '/src/model/api'
 import { useSettingsManager } from '/src/model/settings'
-import { normalizeSpotifyURL } from '/src/model/url'
+import { isYouTubePlaylistURL, normalizeSpotifyURL } from '/src/model/url'
 
 const searchTerm = ref('')
 const results = ref()
@@ -17,7 +17,8 @@ function isYouTubeURL(str) {
     /[?&]v=/.test(str) ||
     str.includes('youtu.be/') ||
     /\/browse\/MPREb_/.test(str) ||
-    (str.includes('/playlist?') && /list=OLAK5uy_/.test(str))
+    (str.includes('/playlist?') && /list=OLAK5uy_/.test(str)) ||
+    isYouTubePlaylistURL(str)
   )
 }
 
