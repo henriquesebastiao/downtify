@@ -53,6 +53,7 @@ doc:
 
 rm:
 	sudo rm -rf docker/downloads/*
+	sudo rm -rf docker/data/*
 
 %:
 	@:
