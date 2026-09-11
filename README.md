@@ -52,6 +52,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 🏠 **Home server platforms** | Available on Umbrel, CasaOS and HomeDock |
 | 🎧 **Built-in player** | Play your downloaded music straight from the web UI — progress bar, shuffle, repeat, volume |
 | 🌍 **Multi-language UI** | English (default) plus 6 more languages — easy to add more |
+| 📱 **Installable (PWA)** | Add Downtify to your iOS or Android home screen — launches full-screen, no browser chrome |
 
 ---
 
@@ -245,6 +246,12 @@ Downtify ships with a clean web player so you don't need a separate app to liste
 The player parses `Artist - Title.ext` filenames so the now-playing card shows artist and title nicely, and pulls the cover art directly from the audio file's embedded tags (the same artwork Downtify wrote at download time). Playback uses your browser's native HTML5 audio element — no extra dependencies, no extra processes.
 
 The **Library** page has the same playlist/artist/album filter to narrow down the file list before playing, re-downloading or deleting a track.
+
+---
+
+## 📱 Install as an App (PWA)
+
+Downtify's web UI can be installed to your phone's home screen — on **iOS** (Safari: Share → Add to Home Screen) and **Android** (Chrome: ⋮ → Add to Home screen) — and launches full-screen with the Downtify icon, no browser address bar. See **[Install as an App](https://henriquesebastiao.github.io/downtify/features/pwa/)** in the full docs.
 
 ---
 
