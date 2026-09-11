@@ -92,14 +92,24 @@
   }
 
   .glass-nav {
-    background: rgba(18, 18, 18, 0.72);
-    backdrop-filter: saturate(160%) blur(14px);
-    -webkit-backdrop-filter: saturate(160%) blur(14px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(
+      to bottom,
+      rgba(18, 18, 18, 0.92),
+      rgba(18, 18, 18, 0.86)
+    );
+    backdrop-filter: saturate(180%) blur(22px);
+    -webkit-backdrop-filter: saturate(180%) blur(22px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.55);
   }
   [data-theme='downtify-light'] .glass-nav {
-    background: rgba(255, 255, 255, 0.78);
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.92),
+      rgba(255, 255, 255, 0.86)
+    );
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.15);
   }
 
   .icon-btn {
