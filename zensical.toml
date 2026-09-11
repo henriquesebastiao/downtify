@@ -35,6 +35,7 @@ nav = [
     { "File Organization"    = "features/file-organization.md"      },
     { "Lyrics"               = "features/lyrics.md"                 },
     { "Internationalization" = "features/internationalization.md"   },
+    { "Install as an App (PWA)" = "features/pwa.md"                 },
   ]},
   { "How It Works"  = "how-it-works.md"  },
   { "API Reference" = "api-reference.md" },
