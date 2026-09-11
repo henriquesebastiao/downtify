@@ -200,6 +200,9 @@ export default {
     coverResolution: 'Cover art resolution',
     coverResolutionHint:
       'Target size (width & height, in pixels) requested for embedded cover art from YouTube Music sources — useful for higher-resolution artwork in media servers like Plex. Only affects YouTube Music; Spotify-sourced covers already use the largest size Spotify offers.',
+    overwriteExistingFiles: 'Overwrite existing files',
+    overwriteExistingFilesHint:
+      "Turn off to save bandwidth: a song already anywhere in your download folder (library root, another playlist's folder, an artist/album folder) is not downloaded again. Matched by file name, not by Spotify/YouTube ID.",
     saved: 'Changes saved',
     saveError: "Couldn't save settings.",
     language: 'Language',

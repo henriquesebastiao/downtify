@@ -206,6 +206,9 @@ export default {
     coverResolution: 'Résolution de la pochette',
     coverResolutionHint:
       "Taille cible (largeur et hauteur, en pixels) demandée pour la pochette intégrée provenant de YouTube Music — utile pour des pochettes en plus haute résolution dans les serveurs multimédias comme Plex. N'affecte que YouTube Music ; les pochettes provenant de Spotify utilisent déjà la plus grande taille que Spotify propose.",
+    overwriteExistingFiles: 'Écraser les fichiers existants',
+    overwriteExistingFilesHint:
+      "Désactivez pour économiser de la bande passante : un morceau déjà présent n'importe où dans votre dossier de téléchargement (racine de la bibliothèque, dossier d'une autre liste, dossier d'artiste/album) n'est pas retéléchargé. Comparaison par nom de fichier, pas par l'ID Spotify/YouTube.",
     saved: 'Changements sauvegardés',
     saveError: 'Impossible de sauvegarder les paramètres.',
     language: 'Langue',

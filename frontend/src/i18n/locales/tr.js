@@ -197,6 +197,9 @@ export default {
     coverResolution: 'Kapak resmi çözünürlüğü',
     coverResolutionHint:
       "YouTube Music kaynaklarından gömülü kapak resmi için istenen hedef boyut (genişlik ve yükseklik, piksel cinsinden) — Plex gibi medya sunucularında daha yüksek çözünürlüklü kapak resimleri için kullanışlıdır. Yalnızca YouTube Music'i etkiler; Spotify kaynaklı kapaklar zaten Spotify'ın sunduğu en büyük boyutu kullanır.",
+    overwriteExistingFiles: 'Mevcut dosyaların üzerine yaz',
+    overwriteExistingFilesHint:
+      'Bant genişliğinden tasarruf etmek için kapatın: indirme klasörünüzün herhangi bir yerinde (kitaplık kökü, başka bir listenin klasörü, sanatçı/albüm klasörü) zaten bulunan bir şarkı yeniden indirilmez. Eşleştirme Spotify/YouTube kimliğine göre değil, dosya adına göre yapılır.',
     saved: 'Değişiklikler kaydedildi',
     saveError: 'Ayarlar kaydedilirken bir hata oluştu.',
     language: 'Dil',

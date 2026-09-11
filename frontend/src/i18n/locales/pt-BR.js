@@ -204,6 +204,9 @@ export default {
     coverResolution: 'Resolução da capa',
     coverResolutionHint:
       'Tamanho alvo (largura e altura, em pixels) solicitado para a capa incorporada de fontes do YouTube Music — útil para capas em resolução mais alta em servidores de mídia como o Plex. Afeta apenas o YouTube Music; as capas do Spotify já usam o maior tamanho que o Spotify oferece.',
+    overwriteExistingFiles: 'Sobrescrever arquivos existentes',
+    overwriteExistingFilesHint:
+      'Desative para economizar banda: uma música que já está em qualquer lugar da pasta de downloads (raiz da biblioteca, pasta de outra playlist, pasta de artista/álbum) não é baixada novamente. A comparação é pelo nome do arquivo, não pelo ID do Spotify/YouTube.',
     saved: 'Alterações salvas',
     saveError: 'Não foi possível salvar as configurações.',
     language: 'Idioma',
