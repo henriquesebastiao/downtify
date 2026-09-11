@@ -205,7 +205,7 @@ export default {
       'Желан размер (широчина и височина в пиксели) за вградена обложка от YouTube Music - полезно ако се желае по детайлна обложка, като например в Plex. Засяга само YouTube Music. Източници от Spotify автоматично теглят най-добрата обложка.',
     overwriteExistingFiles: 'Презаписване на съществуващи файлове',
     overwriteExistingFilesHint:
-      "Изключи за да спестиш ресурс: песен която вече е изтеглена в папката за тегления (корена на папката, плейлист папка или папка на артист) не се тегли отново. Търси съвпадения по име на файл, а не по Spotify/YouTube ID.",      Turn off to save bandwidth: a song already anywhere in your download folder (library root, another playlist's folder, an artist/album folder) is not downloaded again. Matched by file name, not by 
+      "Изключи за да спестиш ресурс: песен която вече е изтеглена в папката за тегления (корена на папката, плейлист папка или папка на артист) не се тегли отново. Търси съвпадения по име на файл, а не по Spotify/YouTube ID.",     
     saved: 'Промените са запазени',
     saveError: "Настройките не се запазиха.",
     language: 'Език',
