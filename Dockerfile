@@ -55,9 +55,6 @@ WORKDIR /downtify
 
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache \
-    --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
-    --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
-    --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing \
     shadow \
     su-exec \
     tini \
