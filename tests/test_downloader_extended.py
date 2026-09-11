@@ -4,6 +4,8 @@ organize_by_artist routing logic."""
 from __future__ import annotations
 
 import base64
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from mutagen.id3 import ID3
@@ -574,6 +576,280 @@ class _FakeYoutubeDL:
 
     def download(self, urls):  # noqa: PLR6301 - mirrors yt_dlp.YoutubeDL's API
         raise _CapturedOpts
+
+
+_OVERWRITE_SONG = {
+    'name': 'Song',
+    'artists': ['Artist'],
+    'youtube_id': 'abc123def45',
+    'album_name': 'Album',
+    'cover_url': 'https://example.com/cover.jpg',
+}
+
+
+# ── download() – overwrite_existing_files ───────────────────────────────────
+
+
+def test_download_skips_existing_file_when_overwrite_disabled(
+    tmp_path, monkeypatch
+):
+    _FakeYoutubeDL.captured = {}
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _FakeYoutubeDL)
+    d = _make(tmp_path, overwrite_existing_files=False)
+    existing = tmp_path / 'Artist - Song.mp3'
+    existing.write_bytes(b'already here')
+
+    result = d.download(_OVERWRITE_SONG)
+
+    assert result == 'Artist - Song.mp3'
+    assert existing.read_bytes() == b'already here'  # untouched
+    # yt-dlp must never have been reached.
+    assert _FakeYoutubeDL.captured == {}
+
+
+def test_download_reports_done_via_progress_cb_when_skipped(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _FakeYoutubeDL)
+    d = _make(tmp_path, overwrite_existing_files=False)
+    (tmp_path / 'Artist - Song.mp3').write_bytes(b'already here')
+
+    calls = []
+    d.download(
+        _OVERWRITE_SONG, progress_cb=lambda pct, msg: calls.append((pct, msg))
+    )
+    assert calls == [(100.0, 'Already downloaded')]
+
+
+def test_download_proceeds_when_overwrite_disabled_but_no_existing_file(
+    tmp_path, monkeypatch
+):
+    _FakeYoutubeDL.captured = {}
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _FakeYoutubeDL)
+    d = _make(tmp_path, overwrite_existing_files=False)
+
+    try:
+        d.download(_OVERWRITE_SONG)
+    except _CapturedOpts:
+        pass
+    # yt-dlp *was* reached, since there was nothing to skip.
+    assert _FakeYoutubeDL.captured != {}
+
+
+def test_download_overwrites_by_default_even_if_file_exists(
+    tmp_path, monkeypatch
+):
+    _FakeYoutubeDL.captured = {}
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _FakeYoutubeDL)
+    d = _make(tmp_path)  # overwrite_existing_files defaults to True
+    (tmp_path / 'Artist - Song.mp3').write_bytes(b'already here')
+
+    try:
+        d.download(_OVERWRITE_SONG)
+    except _CapturedOpts:
+        pass
+    # Default behavior is unchanged: yt-dlp still runs even though a
+    # file already exists at the target path.
+    assert _FakeYoutubeDL.captured != {}
+
+
+class _YoutubeDLMustNotRun:
+    def __init__(self, opts):
+        raise AssertionError('yt-dlp must not run for an existing song')
+
+
+def test_download_skips_song_already_in_library_root_for_playlist(
+    tmp_path, monkeypatch
+):
+    # A single-track download lands in the library root; the same song
+    # later arriving through a playlist batch targets the playlist folder.
+    monkeypatch.setattr(
+        downloader_mod.yt_dlp, 'YoutubeDL', _YoutubeDLMustNotRun
+    )
+    d = _make(tmp_path, overwrite_existing_files=False)
+    (tmp_path / 'Artist - Song.mp3').write_bytes(b'already here')
+
+    result = d.download(_OVERWRITE_SONG, subdir='Road Trip')
+
+    assert result == 'Artist - Song.mp3'
+    assert not (tmp_path / 'Road Trip').exists()
+
+
+def test_download_skips_song_already_in_another_playlist_folder(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        downloader_mod.yt_dlp, 'YoutubeDL', _YoutubeDLMustNotRun
+    )
+    d = _make(tmp_path, overwrite_existing_files=False)
+    (tmp_path / 'Gym').mkdir()
+    (tmp_path / 'Gym' / 'Artist - Song.mp3').write_bytes(b'already here')
+
+    result = d.download(_OVERWRITE_SONG, subdir='Road Trip')
+
+    assert result == 'Gym/Artist - Song.mp3'
+
+
+def test_download_skips_song_saved_under_previous_organize_layout(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        downloader_mod.yt_dlp, 'YoutubeDL', _YoutubeDLMustNotRun
+    )
+    d = _make(
+        tmp_path, overwrite_existing_files=False, organize_by_artist=True
+    )
+    (tmp_path / 'Artist - Song.mp3').write_bytes(b'from before organizing')
+
+    assert d.download(_OVERWRITE_SONG) == 'Artist - Song.mp3'
+
+
+def test_download_skip_matches_filename_case_insensitively(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        downloader_mod.yt_dlp, 'YoutubeDL', _YoutubeDLMustNotRun
+    )
+    d = _make(tmp_path, overwrite_existing_files=False)
+    (tmp_path / 'Mix').mkdir()
+    (tmp_path / 'Mix' / 'ARTIST - song.flac').write_bytes(b'x')
+
+    assert d.download(_OVERWRITE_SONG) == 'Mix/ARTIST - song.flac'
+
+
+def test_download_skip_requires_template_folders_to_match(
+    tmp_path, monkeypatch
+):
+    # With "{artists}/{title}" the artist folder is part of the song's
+    # identity: another artist's "Song" is a different song.
+    _FakeYoutubeDL.captured = {}
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _FakeYoutubeDL)
+    d = _make(
+        tmp_path,
+        overwrite_existing_files=False,
+        output_template='{artists}/{title}',
+    )
+    (tmp_path / 'Someone Else').mkdir()
+    (tmp_path / 'Someone Else' / 'Song.mp3').write_bytes(b'x')
+
+    try:
+        d.download(_OVERWRITE_SONG)
+    except _CapturedOpts:
+        pass
+    assert _FakeYoutubeDL.captured != {}
+
+
+def test_download_lyrics_sidecar_alone_does_not_count_as_downloaded(
+    tmp_path, monkeypatch
+):
+    _FakeYoutubeDL.captured = {}
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _FakeYoutubeDL)
+    d = _make(tmp_path, overwrite_existing_files=False)
+    (tmp_path / 'Artist - Song.lrc').write_text('[00:01.00]la')
+
+    try:
+        d.download(_OVERWRITE_SONG)
+    except _CapturedOpts:
+        pass
+    assert _FakeYoutubeDL.captured != {}
+
+
+def test_download_skip_happens_before_youtube_music_search(
+    tmp_path, monkeypatch
+):
+    # Spotify songs carry title/artists/album up front, so an existing
+    # file is detected without spending a YouTube Music search on it.
+    def _no_search(*_args, **_kwargs):
+        raise AssertionError('YouTube Music must not be searched')
+
+    monkeypatch.setattr(downloader_mod, 'find_match', _no_search)
+    monkeypatch.setattr(
+        downloader_mod.yt_dlp, 'YoutubeDL', _YoutubeDLMustNotRun
+    )
+    d = _make(tmp_path, overwrite_existing_files=False)
+    (tmp_path / 'Artist - Song.mp3').write_bytes(b'already here')
+    song = {k: v for k, v in _OVERWRITE_SONG.items() if k != 'youtube_id'}
+
+    assert d.download(song, subdir='Road Trip') == 'Artist - Song.mp3'
+
+
+def test_download_searches_first_when_path_needs_enriched_fields(
+    tmp_path, monkeypatch
+):
+    # "{album}" is unknown until enrichment, so the early check must not
+    # guess a path from incomplete data.
+    searched = []
+
+    def _search(song):
+        searched.append(song['name'])
+        return None, None
+
+    monkeypatch.setattr(downloader_mod, 'find_match', _search)
+    d = _make(
+        tmp_path,
+        overwrite_existing_files=False,
+        output_template='{album}/{title}',
+    )
+    (tmp_path / 'Song.mp3').write_bytes(b'unrelated single')
+
+    try:
+        d.download({'name': 'Song', 'artists': ['Artist']})
+    except RuntimeError:
+        pass  # no match: the search itself is what's asserted
+    assert searched == ['Song']
+
+
+def test_download_concurrent_duplicates_fetch_only_once(tmp_path, monkeypatch):
+    # The same song twice in one playlist (or in two playlists syncing at
+    # once) runs on parallel worker threads; only one may download it.
+    fetches = []
+
+    class _SlowYoutubeDL:
+        def __init__(self, opts):
+            self.outtmpl = opts['outtmpl']
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc_info):
+            return False
+
+        def download(self, urls):
+            fetches.append(urls)
+            time.sleep(0.2)
+            _minimal_mp3(Path(self.outtmpl.replace('%(ext)s', 'mp3')))
+
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _SlowYoutubeDL)
+    monkeypatch.setattr(downloader_mod, '_fetch_itunes_genre', lambda s: None)
+    monkeypatch.setattr(downloader_mod, '_download_cover', lambda url: None)
+    d = _make(tmp_path, overwrite_existing_files=False)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(
+            pool.map(
+                lambda sub: d.download(dict(_OVERWRITE_SONG), subdir=sub),
+                ['Road Trip', 'Road Trip'],
+            )
+        )
+
+    assert len(fetches) == 1
+    assert results == ['Road Trip/Artist - Song.mp3'] * 2
+
+
+def test_existing_filename_for_ignores_non_audio_sidecars(tmp_path):
+    d = _make(tmp_path, audio_format='flac')
+    (tmp_path / 'Artist - Song.lrc').write_text('[00:01.00]la')
+    assert d.existing_filename_for(_OVERWRITE_SONG) is None
+
+    (tmp_path / 'Artist - Song.mp3').write_bytes(b'x')
+    assert d.existing_filename_for(_OVERWRITE_SONG) == 'Artist - Song.mp3'
+
+
+def test_existing_filename_for_fallback_handles_glob_characters(tmp_path):
+    d = _make(tmp_path, audio_format='flac')
+    song = {'name': 'Song [Live]', 'artists': ['Artist']}
+    (tmp_path / 'Artist - Song [Live].mp3').write_bytes(b'x')
+    assert d.existing_filename_for(song) == 'Artist - Song [Live].mp3'
 
 
 def test_download_ydl_opts_enables_remote_ejs_component(tmp_path, monkeypatch):

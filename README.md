@@ -155,10 +155,13 @@ Access the settings panel (⚙️ icon) to configure:
 | **Delay between downloads** | 0–300 seconds (default 0 = off) |
 | **Download cover art** | On (default) · Off |
 | **Cover art resolution** | 300–1200px (default 600) |
+| **Overwrite existing files** | On (default) · Off |
 
 **Delay between downloads** waits a configurable number of seconds between songs instead of firing requests back-to-back — combined with a lower **Parallel downloads** value, it's the main tool for avoiding YouTube rate limits on large unattended downloads.
 
 **Cover art resolution** raises the size Downtify requests for YouTube Music-sourced cover art — handy if you feed your library into a media server like Plex that shows higher-resolution artwork than the 600px default. Turn **Download cover art** off entirely to skip fetching artwork — smaller, faster downloads.
+
+Turn **Overwrite existing files** off to save bandwidth: a song that's already anywhere in your download folder (library root, another playlist's folder, an artist/album folder) isn't downloaded again. Useful when the same track is in several playlists or already in your library.
 
 See **[Download Settings](https://henriquesebastiao.github.io/downtify/features/download-settings/)** for the full reference.
 

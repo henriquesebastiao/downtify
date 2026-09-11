@@ -16,6 +16,7 @@ const settings = ref({
   download_delay_seconds: 0,
   cover_resolution: 600,
   download_cover_art: true,
+  overwrite_existing_files: true,
   search_albums: true,
 })
 

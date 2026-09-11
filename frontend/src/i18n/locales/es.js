@@ -205,6 +205,9 @@ export default {
     coverResolution: 'Resolución de la portada',
     coverResolutionHint:
       'Tamaño objetivo (ancho y alto, en píxeles) solicitado para la portada incrustada desde fuentes de YouTube Music — útil para portadas de mayor resolución en servidores multimedia como Plex. Solo afecta a YouTube Music; las portadas de Spotify ya usan el tamaño más grande que ofrece Spotify.',
+    overwriteExistingFiles: 'Sobrescribir archivos existentes',
+    overwriteExistingFilesHint:
+      'Desactívalo para ahorrar ancho de banda: una canción que ya está en cualquier lugar de tu carpeta de descargas (raíz de la biblioteca, carpeta de otra lista, carpeta de artista/álbum) no se vuelve a descargar. Se compara por nombre de archivo, no por el ID de Spotify/YouTube.',
     saved: 'Cambios guardados',
     saveError: 'No se pudieron guardar los ajustes.',
     language: 'Idioma',

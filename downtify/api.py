@@ -90,6 +90,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'download_delay_seconds': 0,
     'cover_resolution': providers.DEFAULT_COVER_RESOLUTION,
     'download_cover_art': True,
+    'overwrite_existing_files': True,
     'organize_by_artist': False,
     'organize_by_album': False,
     'search_albums': True,
@@ -996,6 +997,10 @@ async def update_settings_endpoint(
             if 'download_cover_art' in payload:
                 state.downloader.download_cover_art = bool(
                     payload['download_cover_art']
+                )
+            if 'overwrite_existing_files' in payload:
+                state.downloader.overwrite_existing_files = bool(
+                    payload['overwrite_existing_files']
                 )
         if 'max_parallel_downloads' in payload:
             state.download_semaphore = asyncio.Semaphore(

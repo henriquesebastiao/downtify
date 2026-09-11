@@ -98,6 +98,26 @@ This is useful when feeding your library into a media server like Plex that disp
 
 Changing this value in Settings takes effect immediately, including for the currently-open search page — it does not require re-downloading anything already on disk.
 
+## Overwrite existing files
+
+On by default, matching Downtify's historical behavior: every download runs through the pipeline (audio fetch, tagging, cover art, lyrics) and overwrites whatever file already sits at the computed output path.
+
+Turn this off to never download a song that is already on disk. This matters most when downloading a playlist, importing a [CSV library](library-import.md), or letting the [Playlist Monitor](playlist-monitor.md) sync playlists that share tracks with each other or with songs already in your library — with the option on, every one of those duplicates is downloaded again.
+
+With it off, Downtify looks for the song **anywhere in the download folder**, not just where the new download would go:
+
+- the library root (single-track downloads),
+- any playlist's folder (playlist downloads, CSV imports, Playlist Monitor),
+- an artist/album folder, or the flat layout from before you turned *Organize by artist/album* on or off.
+
+A song counts as already downloaded when an audio file (`.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`) has the name the [output filename template](#output-filename-template) produces for it, compared case-insensitively. A leftover `.lrc` lyrics file alone doesn't count. If the template contains folders (e.g. `{artists}/{title}`), those folders must match too, so another artist's song with the same title isn't mistaken for this one. Because files don't carry a Spotify/YouTube track ID, matching is by name: a file you renamed, or one saved under a different filename template, won't be recognized.
+
+When a song is skipped:
+
+- Nothing is fetched: no audio, no cover art, no lyrics, no re-tagging. For Spotify tracks the check runs before the YouTube Music search too, so already-downloaded songs don't cost any search requests.
+- The queue shows the song as finished, and playlist [M3U files](m3u-export.md) point at the existing file wherever it lives (e.g. `../Artist - Title.mp3`), so the playlist still plays in full.
+- If the same song is queued twice at the same time (listed twice in one playlist, or in two playlists downloading in parallel), only one copy is downloaded. The other waits for it and then skips.
+
 ## Audio provider
 
 Currently the only supported audio provider is **YouTube Music**. Downtify uses [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) to search for the best match by comparing track duration.
