@@ -2,11 +2,15 @@
   <input type="checkbox" id="settings-modal" class="modal-toggle" />
   <div class="modal modal-bottom sm:modal-middle">
     <div
-      class="modal-box surface-strong rounded-t-3xl sm:rounded-3xl p-0 max-w-lg"
+      class="modal-box surface-strong rounded-t-3xl sm:rounded-3xl p-0 max-w-lg overflow-hidden flex flex-col"
     >
       <!-- Header -->
+      <!-- overflow-hidden + flex-col on modal-box (above) clips the body's
+           scrollbar to the rounded corners instead of it poking past them
+           (daisyUI's .modal-box ships overflow-y:auto directly on the
+           rounded element, which native scrollbars don't respect). -->
       <div
-        class="flex items-center justify-between px-6 py-4 border-b border-white/5"
+        class="shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/5"
       >
         <div>
           <h3 class="text-lg font-bold tracking-tight">
@@ -26,7 +30,7 @@
       </div>
 
       <!-- Body -->
-      <div class="px-6 py-5 space-y-6">
+      <div class="px-6 py-5 space-y-6 overflow-y-auto min-h-0">
         <!-- Language -->
         <div>
           <label
@@ -498,7 +502,7 @@
 
       <!-- Footer -->
       <div
-        class="flex items-center justify-end gap-2 px-6 py-4 border-t border-white/5"
+        class="shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-white/5"
       >
         <label
           for="settings-modal"
