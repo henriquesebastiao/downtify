@@ -88,6 +88,9 @@ export default {
     downloadToDevice: 'Λήψη στη συσκευή',
     deleteFile: 'Διαγραφή αρχείου',
     play: 'Αναπαραγωγή',
+    filterBy: 'Φιλτράρισμα κατά',
+    filterEmpty: 'Κανένα αρχείο δεν ταιριάζει με αυτό το φίλτρο.',
+    clearFilter: 'Καθαρισμός φίλτρου',
   },
   monitor: {
     title: 'Παρακολούθηση Playlist',
@@ -243,6 +246,9 @@ export default {
     countMany: '{count} κομμάτια',
     playingFrom: 'Αναπαραγωγή από',
     allSongs: 'Όλα τα τραγούδια ({count})',
+    playlistsGroup: 'Λίστες αναπαραγωγής',
+    artistsGroup: 'Καλλιτέχνες',
+    albumsGroup: 'Άλμπουμ',
   },
   footer: {
     tagline: 'Πρόγραμμα λήψης μουσικής ανοιχτού κώδικα',

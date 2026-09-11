@@ -88,6 +88,9 @@ export default {
 
     deleteFile: 'Fájl törlése',
     play: 'Lejátszás',
+    filterBy: 'Szűrés',
+    filterEmpty: 'Nincs a szűrőnek megfelelő fájl.',
+    clearFilter: 'Szűrő törlése',
   },
   monitor: {
     title: 'Lejátszási lista felügyelő',
@@ -242,6 +245,9 @@ export default {
     countMany: '{count} szám',
     playingFrom: 'Lejátszás innen',
     allSongs: 'Összes szám ({count})',
+    playlistsGroup: 'Lejátszási listák',
+    artistsGroup: 'Előadók',
+    albumsGroup: 'Albumok',
   },
   footer: {
     tagline: 'Nyílt forráskódú zeneletöltő',

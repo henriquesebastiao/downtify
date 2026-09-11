@@ -87,6 +87,9 @@ export default {
     downloadToDevice: 'Baixar para o dispositivo',
     deleteFile: 'Excluir arquivo',
     play: 'Reproduzir',
+    filterBy: 'Filtrar por',
+    filterEmpty: 'Nenhum arquivo corresponde a este filtro.',
+    clearFilter: 'Limpar filtro',
   },
   monitor: {
     title: 'Monitor de playlists',
@@ -242,6 +245,9 @@ export default {
     countMany: '{count} faixas',
     playingFrom: 'Tocando de',
     allSongs: 'Todas as músicas ({count})',
+    playlistsGroup: 'Playlists',
+    artistsGroup: 'Artistas',
+    albumsGroup: 'Álbuns',
   },
   footer: {
     tagline: 'Baixador de músicas de código aberto',

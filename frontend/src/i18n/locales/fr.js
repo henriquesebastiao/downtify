@@ -90,6 +90,9 @@ export default {
     downloadToDevice: "Télécharger sur l'appareil",
     deleteFile: 'Supprimer le fichier',
     play: 'Lecture',
+    filterBy: 'Filtrer par',
+    filterEmpty: 'Aucun fichier ne correspond à ce filtre.',
+    clearFilter: 'Effacer le filtre',
   },
   monitor: {
     title: 'Surveillance des listes de lecture',
@@ -242,6 +245,9 @@ export default {
     countMany: '{count} titres',
     playingFrom: 'Lecture depuis',
     allSongs: 'Tous les titres ({count})',
+    playlistsGroup: 'Playlists',
+    artistsGroup: 'Artistes',
+    albumsGroup: 'Albums',
   },
   footer: {
     tagline:

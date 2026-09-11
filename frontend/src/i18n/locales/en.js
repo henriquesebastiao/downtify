@@ -85,6 +85,9 @@ export default {
     downloadToDevice: 'Download to device',
     deleteFile: 'Delete file',
     play: 'Play',
+    filterBy: 'Filter by',
+    filterEmpty: 'No files match this filter.',
+    clearFilter: 'Clear filter',
   },
   monitor: {
     title: 'Playlist Monitor',
@@ -237,6 +240,9 @@ export default {
     countMany: '{count} tracks',
     playingFrom: 'Playing from',
     allSongs: 'All Songs ({count})',
+    playlistsGroup: 'Playlists',
+    artistsGroup: 'Artists',
+    albumsGroup: 'Albums',
   },
   footer: {
     tagline: 'Open source music downloader',
