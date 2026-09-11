@@ -21,9 +21,11 @@ working without changes:
 * ``GET  /api/artists/similar`` (an artist's "Fans might also like"
   shelf, same shape as ``/api/artists/search``)
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
-  resolves an artist channel URL into every one of their albums/singles
-  as lightweight summaries, same shape as ``/api/albums/search`` - no
-  tracklists; resolve a chosen release's tracks separately)
+  resolves an artist channel or ``@handle`` URL into every one of their
+  albums/singles as lightweight summaries, same shape as
+  ``/api/albums/search`` - no tracklists; resolve a chosen release's
+  tracks separately). A YouTube Music playlist URL resolves to its
+  tracks, like a Spotify playlist.
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
   ``track_number`` / ``album_track_total`` survive re-fetch by URL)
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
@@ -65,8 +67,9 @@ from .monitor import (
     KIND_ARTIST,
     KIND_PLAYLIST,
     PlaylistMonitorDB,
-    check_artist,
-    check_playlist,
+    check_watch,
+    fetch_playlist,
+    parse_playlist_url,
 )
 
 MIN_PARALLEL_DOWNLOADS = 1
@@ -351,8 +354,14 @@ def _resolve_url(url: str):
                 return providers.song_from_video_id(yid)
             if kind == 'album':
                 return providers.album_tracks_from_browse_id(yid)
+            if kind == 'playlist':
+                return providers.playlist_tracks_from_id(yid)
             if kind == 'artist':
-                return providers.artist_albums_from_channel_id(yid)
+                return providers.artist_albums_from_channel_id(
+                    providers.resolve_artist_channel_id(yid)
+                )
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
         except Exception as exc:
             logger.exception('Failed to resolve YouTube URL {}', url)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -614,15 +623,13 @@ async def _process_batch(
     # Resolve the playlist name up-front so all tracks land in a single,
     # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
     # tracks) keep the legacy flat layout under download_dir. A caller
-    # without a Spotify playlist_url (e.g. a CSV library import) can
-    # instead pass playlist_name directly.
+    # without a Spotify/YouTube Music playlist_url (e.g. a CSV library
+    # import) can instead pass playlist_name directly.
     playlist_subdir: Optional[str] = None
-    parsed = spotify.parse_spotify_url(playlist_url) if playlist_url else None
-    if parsed is not None and parsed[0] == 'playlist':
+    target = parse_playlist_url(playlist_url) if playlist_url else None
+    if target is not None:
         try:
-            playlist_name, _ = await asyncio.to_thread(
-                spotify.playlist_info_and_tracks, parsed[1]
-            )
+            playlist_name, _ = await asyncio.to_thread(fetch_playlist, *target)
             playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
         except Exception:
             logger.exception(
@@ -894,9 +901,10 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
     """Write an M3U for the playlist after the per-track downloads.
 
     The frontend POSTs ``{playlist_url, tracks: [{filename, title,
-    artist, duration}, ...]}``. The playlist name is resolved
-    server-side via :func:`spotify.playlist_info_and_tracks` so the
-    existing ``/api/song/url`` shape stays untouched.
+    artist, duration}, ...]}``, where ``playlist_url`` is a Spotify or
+    YouTube Music playlist. The playlist name is resolved server-side
+    via :func:`monitor.fetch_playlist` so the existing ``/api/song/url``
+    shape stays untouched.
     """
 
     if state.downloader is None:
@@ -911,10 +919,11 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
     playlist_url = str(payload.get('playlist_url') or '').strip()
     if not playlist_url:
         raise HTTPException(status_code=400, detail='Missing playlist_url')
-    parsed = spotify.parse_spotify_url(playlist_url)
-    if parsed is None or parsed[0] != 'playlist':
+    target = parse_playlist_url(playlist_url)
+    if target is None:
         raise HTTPException(
-            status_code=400, detail='Not a Spotify playlist URL'
+            status_code=400,
+            detail='Not a Spotify or YouTube Music playlist URL',
         )
 
     tracks = payload.get('tracks') or []
@@ -922,9 +931,7 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail='tracks must be a list')
 
     try:
-        playlist_name, _ = await asyncio.to_thread(
-            spotify.playlist_info_and_tracks, parsed[1]
-        )
+        playlist_name, _ = await asyncio.to_thread(fetch_playlist, *target)
     except Exception as exc:
         logger.exception('Failed to resolve playlist {}', playlist_url)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -1075,23 +1082,24 @@ def _youtube_artist_for_name(name: str) -> tuple[str, str]:
 async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
     """Resolve a pasted URL into ``(kind, watch_key, display_name)``.
 
-    Accepts a Spotify playlist URL (watched by its tracks), a Spotify
-    artist URL or a YouTube Music artist/channel URL (watched by their
-    discography).
+    Accepts a Spotify or YouTube Music playlist URL (watched by its
+    tracks), and a Spotify artist URL or a YouTube Music artist URL
+    (``/channel/UC...`` or ``/@handle``, watched by their discography).
     """
 
-    spotify_parsed = spotify.parse_spotify_url(url)
-    if spotify_parsed is not None and spotify_parsed[0] == 'playlist':
-        _, playlist_id = spotify_parsed
+    playlist_target = parse_playlist_url(url)
+    if playlist_target is not None:
+        _, playlist_id = playlist_target
         try:
             name, _tracks = await asyncio.to_thread(
-                spotify.playlist_info_and_tracks, playlist_id
+                fetch_playlist, *playlist_target
             )
         except Exception as exc:
             logger.exception('Failed to resolve playlist {}', playlist_id)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         return KIND_PLAYLIST, playlist_id, name
 
+    spotify_parsed = spotify.parse_spotify_url(url)
     if spotify_parsed is not None and spotify_parsed[0] == 'artist':
         _, artist_id = spotify_parsed
         try:
@@ -1108,36 +1116,30 @@ async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
 
     youtube_parsed = providers.parse_youtube_url(url)
     if youtube_parsed is not None and youtube_parsed[0] == 'artist':
-        _, channel_id = youtube_parsed
+        _, channel_or_handle = youtube_parsed
         try:
+            channel_id = await asyncio.to_thread(
+                providers.resolve_artist_channel_id, channel_or_handle
+            )
             info = await asyncio.to_thread(
                 providers.artist_info_from_channel_id, channel_id
             )
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
         except Exception as exc:
-            logger.exception('Failed to resolve artist channel {}', channel_id)
+            logger.exception(
+                'Failed to resolve artist channel {}', channel_or_handle
+            )
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         return KIND_ARTIST, channel_id, str(info.get('name') or channel_id)
 
     raise HTTPException(
         status_code=400,
         detail=(
-            'A Spotify playlist URL, a Spotify artist URL or a YouTube '
-            'Music artist URL is required'
+            'A Spotify or YouTube Music playlist URL, or a Spotify or '
+            'YouTube Music artist URL, is required'
         ),
     )
-
-
-async def _check_watch(
-    playlist: Any,
-    db: PlaylistMonitorDB,
-    downloader: Any,
-    broadcast: Any,
-    loop: asyncio.AbstractEventLoop,
-    settings: dict[str, Any],
-) -> int:
-    """Run the right check for a watch, by kind."""
-    check = check_artist if playlist.kind == KIND_ARTIST else check_playlist
-    return await check(playlist, db, downloader, broadcast, loop, settings)
 
 
 @router.get('/api/monitor/playlists')
@@ -1182,7 +1184,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
 
         async def _initial_check(pl=playlist) -> None:
             try:
-                await _check_watch(
+                await check_watch(
                     pl,
                     db,
                     state.downloader,  # type: ignore[arg-type]
@@ -1250,7 +1252,7 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
 
     async def _run() -> None:
         try:
-            count = await _check_watch(
+            count = await check_watch(
                 playlist,
                 db,
                 state.downloader,

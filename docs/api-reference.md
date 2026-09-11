@@ -32,17 +32,18 @@ Search YouTube Music by free text.
 
 ### `GET /api/song/url`
 
-Resolve a Spotify URL to metadata.
+Resolve a Spotify or YouTube Music URL to metadata.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify track, album or playlist URL |
+| `url` | string | yes | Spotify track, album or playlist URL, or a YouTube / YouTube Music video, album, playlist or artist URL |
 
 **Response:**
 
 - **Track URL** → single song object
 - **Album URL** → array of song objects
-- **Playlist URL** → array of song objects
+- **Playlist URL** → array of song objects. For a YouTube Music playlist (`…/playlist?list=…`), every song is pinned to the playlist's own video (`youtube_id`), and for uploads the artist/title are taken from an `Artist - Title` video title. See [YouTube Music playlists](features/playlist-monitor.md#youtube-music-playlists).
+- **Artist URL** (YouTube Music `…/channel/UC…` or `…/@handle`) → array of release summaries. `404` if a handle doesn't belong to an artist.
 
 `GET /api/url` is an alias for this endpoint.
 
@@ -80,7 +81,7 @@ Download multiple tracks concurrently, gated by the [`max_parallel_downloads` se
 | Field | Type | Description |
 |-------|------|-------------|
 | `songs` | array | Song objects to download |
-| `playlist_url` | string | Optional. Used to determine the playlist subfolder and M3U name. |
+| `playlist_url` | string | Optional. A Spotify or YouTube Music playlist URL, used to determine the playlist subfolder and M3U name. |
 | `generate_m3u` | boolean | Whether to write an M3U after the batch finishes. Default: `true`. |
 
 **Response:**
@@ -272,7 +273,7 @@ Return the embedded cover art for a file.
 
 ### `POST /api/playlist/m3u`
 
-Write an M3U file for a playlist after per-track downloads are complete.
+Write an M3U file for a playlist after per-track downloads are complete. `playlist_url` can be a Spotify or a YouTube Music playlist.
 
 **Request body:**
 
@@ -300,7 +301,7 @@ Write an M3U file for a playlist after per-track downloads are complete.
 
 List all watches (playlists and artists).
 
-**Response:** Array of watch objects. Each has a `kind` of `"playlist"` or `"artist"`; for an artist watch, `spotify_id` holds the YouTube Music channel id and `last_track_count` is the number of releases.
+**Response:** Array of watch objects. Each has a `kind` of `"playlist"` or `"artist"`, and a `source` of `"spotify"` or `"youtube_music"` (the service the watch was added from, read from its `url`). `spotify_id` is the watch's unique key: the Spotify or YouTube Music playlist id, or for an artist watch the YouTube Music channel id. For an artist watch, `last_track_count` is the number of releases.
 
 ---
 
@@ -320,10 +321,11 @@ Add a watch. Triggers an immediate initial download.
 | `url` | Creates |
 |-------|---------|
 | Spotify playlist URL | A playlist watch |
+| YouTube Music playlist URL (`…/playlist?list=…`) | A playlist watch |
 | Spotify artist URL | An artist watch (resolved to the matching YouTube Music artist — see [Artist Watch](features/playlist-monitor.md#artist-watch)) |
-| YouTube Music artist URL | An artist watch |
+| YouTube Music artist URL (`…/channel/UC…` or `…/@handle`) | An artist watch |
 
-**Response:** Watch object. `400` if the URL is none of the above, `409` if it is already watched, `404` if no matching YouTube Music artist exists.
+**Response:** Watch object. `400` if the URL is none of the above, `409` if it is already watched (an artist added by handle and by channel URL is the same watch), `404` if no matching YouTube Music artist exists.
 
 ---
 

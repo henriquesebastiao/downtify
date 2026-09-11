@@ -135,6 +135,18 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 mb-1">
                 <span class="font-semibold truncate">{{ pl.name }}</span>
+                <span
+                  class="shrink-0"
+                  :class="
+                    isYouTubeMusic(pl) ? 'badge-youtube-music' : 'badge-spotify'
+                  "
+                >
+                  {{
+                    isYouTubeMusic(pl)
+                      ? t('monitor.sourceYouTubeMusic')
+                      : t('monitor.sourceSpotify')
+                  }}
+                </span>
                 <span v-if="isArtist(pl)" class="pill shrink-0 badge-soft">
                   <Icon icon="clarity:user-line" class="inline h-3 w-3" />
                   {{ t('monitor.kindArtist') }}
@@ -277,6 +289,10 @@ const checking = ref({})
 
 function isArtist(pl) {
   return pl.kind === 'artist'
+}
+
+function isYouTubeMusic(pl) {
+  return pl.source === 'youtube_music'
 }
 
 function countLabel(pl) {

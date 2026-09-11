@@ -87,15 +87,16 @@ export default {
   monitor: {
     title: 'Çalma Listesi İzleyici',
     subtitle:
-      'İzlemek için Spotify çalma listeleri veya sanatçılar ekle. Yeni parçalar ve yeni yayınlar otomatik olarak indirilir.',
+      'İzlemek için Spotify veya YouTube Music çalma listeleri ya da sanatçılar ekle. Yeni parçalar ve yeni yayınlar otomatik olarak indirilir.',
     watchNew: 'Yeni bir çalma listesi veya sanatçı izle',
-    urlPlaceholder: 'Bir Spotify çalma listesi veya sanatçı URL’si yapıştır…',
+    urlPlaceholder:
+      'Bir Spotify veya YouTube Music çalma listesi ya da sanatçı URL’si yapıştır…',
     watch: 'İzle',
     failedAdd:
       'Çalma listesi eklenirken bir hata oluştu. Bağlantıyı kontrol edip tekrar deneyin.',
     empty: 'Henüz izlenen bir çalma listesi yok.',
     emptyHint:
-      'Başlamak için yukarıya bir Spotify çalma listesi bağlantısı yapıştır.',
+      'Başlamak için yukarıya bir Spotify veya YouTube Music çalma listesi bağlantısı yapıştır.',
     active: 'Aktif',
     paused: 'Duraklatıldı',
     everyInterval: 'Her {interval}',
@@ -104,6 +105,8 @@ export default {
     releasesOne: '{count} yayın',
     releasesMany: '{count} yayın',
     kindArtist: 'Sanatçı',
+    sourceSpotify: 'Spotify',
+    sourceYouTubeMusic: 'YouTube Music',
     checked: '{when} kontrol edildi',
     notChecked: 'Henüz kontrol yapılmadı',
     pause: 'İzlemeyi durdur',
@@ -120,7 +123,7 @@ export default {
     sortStatus: 'Duraklatıldı/Etkin',
     sortAscending: 'Artan sıralama',
     sortDescending: 'Azalan sıralama',
-    info: "Bir çalma listesi eklediğinde Downtify o çalma listesinde bulunan tüm parçaları indirir ve ayrıca listeyi izlemeye devam eder. Spotify'a daha sonradan eklenen tüm şarkıları tespit eder ve sonraki kontrol sırasında otomatik olarak indirir. Bir sanatçı eklemek de aynı şekilde çalışır: Downtify diskografisini indirir, ardından yeni yayınları izler.",
+    info: "Bir çalma listesi eklediğinde Downtify o çalma listesinde bulunan tüm parçaları indirir ve ayrıca listeyi izlemeye devam eder. Listeye daha sonra Spotify'da veya YouTube Music'te eklenen tüm şarkıları tespit eder ve sonraki kontrol sırasında otomatik olarak indirir. Bir sanatçı eklemek de aynı şekilde çalışır: Downtify diskografisini indirir, ardından yeni yayınları izler.",
     every15: 'Her 15 dakika',
     every30: 'Her 30 dakika',
     every1h: 'Her saat',

@@ -94,6 +94,41 @@ def _is_due(last_checked: Optional[str], interval_minutes: int) -> bool:
 KIND_PLAYLIST = 'playlist'
 KIND_ARTIST = 'artist'
 
+SOURCE_SPOTIFY = 'spotify'
+SOURCE_YOUTUBE_MUSIC = 'youtube_music'
+
+
+def watch_source(url: str) -> str:
+    """The service a watch was added from, read off the URL it was added with.
+
+    Anything that isn't a YouTube URL is Spotify, which is what every
+    watch was before YouTube Music ones existed, so older rows need no
+    migration.
+    """
+    if providers.parse_youtube_url(url or '') is not None:
+        return SOURCE_YOUTUBE_MUSIC
+    return SOURCE_SPOTIFY
+
+
+def parse_playlist_url(url: str) -> Optional[tuple[str, str]]:
+    """``(source, playlist_id)`` for a Spotify or YouTube Music playlist URL."""
+    parsed = spotify.parse_spotify_url(url or '')
+    if parsed is not None and parsed[0] == 'playlist':
+        return SOURCE_SPOTIFY, parsed[1]
+    youtube_parsed = providers.parse_youtube_url(url or '')
+    if youtube_parsed is not None and youtube_parsed[0] == 'playlist':
+        return SOURCE_YOUTUBE_MUSIC, youtube_parsed[1]
+    return None
+
+
+def fetch_playlist(
+    source: str, playlist_id: str
+) -> tuple[str, list[dict[str, Any]]]:
+    """``(name, tracks)`` of a playlist on either service (blocking)."""
+    if source == SOURCE_YOUTUBE_MUSIC:
+        return providers.playlist_info_and_tracks_from_id(playlist_id)
+    return spotify.playlist_info_and_tracks(playlist_id)
+
 
 @dataclass
 class MonitoredPlaylist:
@@ -106,14 +141,18 @@ class MonitoredPlaylist:
     last_checked: Optional[str]
     last_track_count: int
     created_at: str
-    # 'playlist' watches a Spotify playlist's tracks; 'artist' watches a
-    # YouTube Music artist's discography for new releases. For an artist
-    # watch, ``spotify_id`` holds the YouTube Music channel id — it is
-    # just the unique key a watch is addressed by.
+    # 'playlist' watches a playlist's tracks; 'artist' watches a YouTube
+    # Music artist's discography for new releases. ``spotify_id`` is just
+    # the unique key a watch is addressed by: the Spotify or YouTube Music
+    # playlist id, or for an artist the YouTube Music channel id.
     kind: str = KIND_PLAYLIST
 
+    @property
+    def source(self) -> str:
+        return watch_source(self.url)
+
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return {**asdict(self), 'source': self.source}
 
 
 class PlaylistMonitorDB:
@@ -332,6 +371,28 @@ def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
     )
 
 
+async def _fill_from_spotify_track(song: dict[str, Any]) -> None:
+    """Top up a Spotify playlist row from the track's own embed.
+
+    Playlist embed entries are missing release year and use the playlist
+    cover instead of the album cover; the per-track embed has both. The
+    playlist values stay as a fallback if the per-track fetch fails.
+    """
+    try:
+        full = await asyncio.to_thread(spotify.track_from_id, song['song_id'])
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Per-track Spotify fetch failed for {}; '
+            'falling back to playlist data',
+            song['song_id'],
+        )
+        return
+    for key in ('cover_url', 'year', 'release_date', 'album_name', 'artists'):
+        value = full.get(key)
+        if value:
+            song[key] = value
+
+
 async def check_playlist(
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
@@ -347,10 +408,14 @@ async def check_playlist(
         playlist.spotify_id,
     )
 
+    from_spotify = playlist.source == SOURCE_SPOTIFY
+    fetch_tracks = (
+        spotify.playlist_tracks_from_id
+        if from_spotify
+        else providers.playlist_tracks_from_id
+    )
     try:
-        tracks = await asyncio.to_thread(
-            spotify.playlist_tracks_from_id, playlist.spotify_id
-        )
+        tracks = await asyncio.to_thread(fetch_tracks, playlist.spotify_id)
     except Exception:
         logger.exception('Failed to fetch playlist {}', playlist.spotify_id)
         await asyncio.to_thread(
@@ -400,28 +465,9 @@ async def check_playlist(
         track_id = song['song_id']
         pl_name = playlist.name
 
-        # Playlist embed entries are missing release year and use the
-        # playlist cover instead of the album cover. Re-fetching the track
-        # embed gives us both per-track. We still keep the playlist values
-        # as a fallback if the per-track fetch fails for any reason.
-        try:
-            full = await asyncio.to_thread(spotify.track_from_id, track_id)
-            for key in (
-                'cover_url',
-                'year',
-                'release_date',
-                'album_name',
-                'artists',
-            ):
-                value = full.get(key)
-                if value:
-                    song[key] = value
-        except Exception:
-            logger.opt(exception=True).warning(
-                'Per-track Spotify fetch failed for {}; '
-                'falling back to playlist data',
-                track_id,
-            )
+        # YouTube Music rows already carry their own video's metadata.
+        if from_spotify:
+            await _fill_from_spotify_track(song)
 
         def _make_cb(s: dict, name: str) -> Callable[[float, str], None]:
             def _cb(pct: float, message: str) -> None:
@@ -664,6 +710,35 @@ def _regenerate_m3u(
     )
 
 
+# Ids of watches with a check running right now. Adding a watch starts its
+# first check immediately, and the background sweep would otherwise start
+# a second one for the same never-checked watch while the first is still
+# downloading — both then fetch the same tracks into the same files.
+_checks_running: set[int] = set()
+
+
+async def check_watch(
+    playlist: MonitoredPlaylist,
+    db: PlaylistMonitorDB,
+    downloader: Downloader,
+    broadcast: Callable[[dict[str, Any]], Any],
+    loop: asyncio.AbstractEventLoop,
+    settings: Optional[dict[str, Any]] = None,
+) -> int:
+    """Run the right check for a watch by kind, unless one is already running."""
+    if playlist.id in _checks_running:
+        logger.info('Watch "{}" is already being checked', playlist.name)
+        return 0
+    _checks_running.add(playlist.id)
+    try:
+        check = (
+            check_artist if playlist.kind == KIND_ARTIST else check_playlist
+        )
+        return await check(playlist, db, downloader, broadcast, loop, settings)
+    finally:
+        _checks_running.discard(playlist.id)
+
+
 async def monitor_loop(
     db: PlaylistMonitorDB,
     get_downloader: Callable[[], Optional[Downloader]],
@@ -683,11 +758,8 @@ async def monitor_loop(
                 downloader = get_downloader()
                 if downloader is None:
                     continue
-                check = (
-                    check_artist if pl.kind == KIND_ARTIST else check_playlist
-                )
                 try:
-                    count = await check(
+                    count = await check_watch(
                         pl, db, downloader, broadcast, loop, settings
                     )
                     if count > 0:

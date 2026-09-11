@@ -92,14 +92,16 @@ export default {
   monitor: {
     title: 'Monitor de listas',
     subtitle:
-      'Añade listas o artistas de Spotify para vigilar. Las nuevas pistas y los nuevos lanzamientos se descargarán automáticamente.',
+      'Añade listas o artistas de Spotify o YouTube Music para vigilar. Las nuevas pistas y los nuevos lanzamientos se descargarán automáticamente.',
     watchNew: 'Vigilar una nueva lista o artista',
-    urlPlaceholder: 'Pega una URL de lista o de artista de Spotify…',
+    urlPlaceholder:
+      'Pega una URL de lista o de artista de Spotify o YouTube Music…',
     watch: 'Vigilar',
     failedAdd:
       'No se pudo añadir la lista. Comprueba la URL e inténtalo de nuevo.',
     empty: 'Aún no hay listas vigiladas.',
-    emptyHint: 'Pega un enlace de lista de Spotify arriba para empezar.',
+    emptyHint:
+      'Pega un enlace de lista de Spotify o YouTube Music arriba para empezar.',
     active: 'Activa',
     paused: 'Pausada',
     everyInterval: 'Cada {interval}',
@@ -108,6 +110,8 @@ export default {
     releasesOne: '{count} lanzamiento',
     releasesMany: '{count} lanzamientos',
     kindArtist: 'Artista',
+    sourceSpotify: 'Spotify',
+    sourceYouTubeMusic: 'YouTube Music',
     checked: 'Revisada {when}',
     notChecked: 'Aún no revisada',
     pause: 'Pausar vigilancia',
@@ -124,7 +128,7 @@ export default {
     sortStatus: 'Pausada/Activa',
     sortAscending: 'Orden ascendente',
     sortDescending: 'Orden descendente',
-    info: 'Al añadir una lista, Downtify descarga todas las pistas que contenga en ese momento y la sigue vigilando. Cualquier canción añadida después en Spotify se detecta y descarga automáticamente en la siguiente revisión. Añadir un artista funciona igual: Downtify descarga su discografía y luego vigila los nuevos lanzamientos.',
+    info: 'Al añadir una lista, Downtify descarga todas las pistas que contenga en ese momento y la sigue vigilando. Cualquier canción que se le añada después en Spotify o YouTube Music se detecta y descarga automáticamente en la siguiente revisión. Añadir un artista funciona igual: Downtify descarga su discografía y luego vigila los nuevos lanzamientos.',
     every15: 'Cada 15 min',
     every30: 'Cada 30 min',
     every1h: 'Cada hora',
