@@ -91,7 +91,7 @@ import { useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
 
 const { t } = useI18n()
-const version = ref(localStorage.getItem('version') || '2.10.2')
+const version = ref(localStorage.getItem('version') || '2.11.0')
 onMounted(() => {
   const v = localStorage.getItem('version')
   if (v) version.value = v
