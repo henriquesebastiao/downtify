@@ -4,6 +4,68 @@ icon: lucide/history
 
 # Changelog
 
+## [2.11.0](https://github.com/henriquesebastiao/downtify/tree/2.11.0) (2026-09-11)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.10.2...2.11.0)
+
+**Implemented enhancements:**
+
+- \[Feature Request\] Download using spotify [\#287](https://github.com/henriquesebastiao/downtify/issues/287)
+- Save downloaded songs in database instead of checking destination folder [\#283](https://github.com/henriquesebastiao/downtify/issues/283)
+- \[Feature Request\] Allow Grouping by Playlist/Artist/Album in Library and Player screens [\#277](https://github.com/henriquesebastiao/downtify/issues/277)
+- "display": "standalone" to web manifest for iOS PWA support [\#270](https://github.com/henriquesebastiao/downtify/issues/270)
+- Youtube Playlist Download [\#269](https://github.com/henriquesebastiao/downtify/issues/269)
+- Disable overwrite option [\#267](https://github.com/henriquesebastiao/downtify/issues/267)
+- Disable Artwork Downloading [\#263](https://github.com/henriquesebastiao/downtify/issues/263)
+- Play songs by playlist [\#259](https://github.com/henriquesebastiao/downtify/issues/259)
+- health check [\#258](https://github.com/henriquesebastiao/downtify/issues/258)
+- Artist Watch Feature [\#253](https://github.com/henriquesebastiao/downtify/issues/253)
+- File Format Token - Track number [\#251](https://github.com/henriquesebastiao/downtify/issues/251)
+- Create M3U immediately [\#238](https://github.com/henriquesebastiao/downtify/issues/238)
+- Download all queue [\#224](https://github.com/henriquesebastiao/downtify/issues/224)
+- Cluster download by album as well as artist? [\#218](https://github.com/henriquesebastiao/downtify/issues/218)
+- Ability to download from CSV [\#204](https://github.com/henriquesebastiao/downtify/issues/204)
+- Add a configurable delay/sleep interval between song downloads [\#201](https://github.com/henriquesebastiao/downtify/issues/201)
+- \[Feature Request\] Artist search/download [\#199](https://github.com/henriquesebastiao/downtify/issues/199)
+- Add Sync Time Ability [\#192](https://github.com/henriquesebastiao/downtify/issues/192)
+- Playlist Monitor - sorting [\#186](https://github.com/henriquesebastiao/downtify/issues/186)
+- Enable a greater number of simultaneous downloads for faster internet connections [\#175](https://github.com/henriquesebastiao/downtify/issues/175)
+
+**Fixed bugs:**
+
+- Scrollbar jumping out of widgets [\#312](https://github.com/henriquesebastiao/downtify/issues/312)
+- Playlist watch [\#257](https://github.com/henriquesebastiao/downtify/issues/257)
+
+**Closed issues:**
+
+- Possible fix\(deps\): yt-dlp 2026.6.9 → 2026.7.4 \(CVE-2026-55404\) in requirements.txt [\#292](https://github.com/henriquesebastiao/downtify/issues/292)
+- Possible fix\(deps\): uuid 9.0.1 → 11.1.1, 12.0.1, 13.0.1 \(CVE-2026-41907\) in package-lock.json [\#291](https://github.com/henriquesebastiao/downtify/issues/291)
+- Security: request to enable private vulnerability reporting [\#276](https://github.com/henriquesebastiao/downtify/issues/276)
+
+**Merged pull requests:**
+
+- feat\(pwa\): installable web app manifest + iOS/Android home-screen support [\#316](https://github.com/henriquesebastiao/downtify/pull/316) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(monitor\): trust the downloaded-tracks DB, not the filesystem [\#315](https://github.com/henriquesebastiao/downtify/pull/315) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: filter by playlist, artist or album \(same as player\) [\#314](https://github.com/henriquesebastiao/downtify/pull/314) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- style: Fix scrollbar poking past rounded corners [\#313](https://github.com/henriquesebastiao/downtify/pull/313) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Strengthen glass effect on top nav bar [\#311](https://github.com/henriquesebastiao/downtify/pull/311) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Bulgarian translation [\#310](https://github.com/henriquesebastiao/downtify/pull/310) ([alex-kirkata](https://github.com/alex-kirkata))
+- fix: resolve vulnerabilities and update Docker runtime [\#309](https://github.com/henriquesebastiao/downtify/pull/309) ([betterix](https://github.com/betterix))
+- feat: Download and monitor YouTube Music playlists and @handle artists [\#307](https://github.com/henriquesebastiao/downtify/pull/307) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add an option to skip songs already downloaded anywhere in the … [\#305](https://github.com/henriquesebastiao/downtify/pull/305) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add cover art resolution and a way to skip it entirely [\#304](https://github.com/henriquesebastiao/downtify/pull/304) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Let the Built-in Player play a single downloaded playlist [\#303](https://github.com/henriquesebastiao/downtify/pull/303) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add a built-in Docker HEALTHCHECK, toggleable via DOWNTIFY\_HEAL… [\#302](https://github.com/henriquesebastiao/downtify/pull/302) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add Artist Watch to the Playlist Monitor [\#301](https://github.com/henriquesebastiao/downtify/pull/301) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add {tracknumber} filename template token [\#300](https://github.com/henriquesebastiao/downtify/pull/300) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Feature/incremental m3u monitor [\#299](https://github.com/henriquesebastiao/downtify/pull/299) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Fix possible fix\(deps\): yt-dlp 2026.6.9 → 2026.7.4 \(CVE-2026-55404\) in requirements.txt [\#298](https://github.com/henriquesebastiao/downtify/pull/298) ([begininvoke](https://github.com/begininvoke))
+- Add CSV library import \(Soundiiz, TuneMyMusic, Exportify\) [\#297](https://github.com/henriquesebastiao/downtify/pull/297) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Add configurable delay between song downloads [\#296](https://github.com/henriquesebastiao/downtify/pull/296) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add DOWNTIFY\_MONITOR\_SYNC\_TIME to anchor daily+ playlist syncs [\#295](https://github.com/henriquesebastiao/downtify/pull/295) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add sorting to Playlist Monitor page [\#294](https://github.com/henriquesebastiao/downtify/pull/294) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Add custom parallel downloads \(1-30\) to Settings [\#293](https://github.com/henriquesebastiao/downtify/pull/293) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
 ## [2.10.2](https://github.com/henriquesebastiao/downtify/tree/2.10.2) (2026-09-09)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.10.1...2.10.2)
@@ -21,7 +83,7 @@ icon: lucide/history
 - core: Update packages \(2026-9-8\) [\#290](https://github.com/henriquesebastiao/downtify/pull/290) ([henriquesebastiao](https://github.com/henriquesebastiao))
 - fix: enable yt-dlp's remote EJS component for YouTube SABR fallback [\#286](https://github.com/henriquesebastiao/downtify/pull/286) ([Athos97](https://github.com/Athos97))
 - fix: save MP3 tags as ID3v2.4 instead of v2.3 [\#285](https://github.com/henriquesebastiao/downtify/pull/285) ([Athos97](https://github.com/Athos97))
-- added hungarian translation [\#284](https://github.com/henriquesebastiao/downtify/pull/284) ([BetteriX](https://github.com/BetteriX))
+- added hungarian translation [\#284](https://github.com/henriquesebastiao/downtify/pull/284) ([betterix](https://github.com/betterix))
 
 ## [2.10.1](https://github.com/henriquesebastiao/downtify/tree/2.10.1) (2026-08-12)
 
