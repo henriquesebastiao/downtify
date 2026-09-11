@@ -1,11 +1,14 @@
-FROM python:3.13-alpine AS builder
+FROM mwader/static-ffmpeg:latest AS ffmpeg-bin
+
+FROM python:3.14-alpine AS builder
 
 WORKDIR /build
 
 COPY requirements.txt .
 
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir --root-user-action ignore -r requirements.txt
+    pip install --no-cache-dir --root-user-action ignore -r requirements.txt && \
+    pip uninstall -y pip setuptools
 
 # Build the Vue frontend so the image is self-contained and never ships a
 # stale dist. `npm ci` installs exactly what package-lock.json pins; the
@@ -21,7 +24,7 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-FROM python:3.13-alpine
+FROM python:3.14-alpine
 
 LABEL maintainer="Henrique Sebastião <contato@henriquesebastiao.com>"
 LABEL version="2.10.2"
@@ -36,7 +39,7 @@ LABEL org.opencontainers.image.title="Downtify" \
       org.opencontainers.image.licenses="GPL-3.0" \
       org.opencontainers.image.documentation="https://github.com/henriquesebastiao/downtify#readme" \
       org.opencontainers.image.vendor="Henrique Sebastião" \
-      org.opencontainers.image.base.name="python:3.13-alpine"
+      org.opencontainers.image.base.name="python:3.14-alpine"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -50,8 +53,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /downtify
 
-RUN apk add --no-cache \
-    ffmpeg \
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache \
     shadow \
     su-exec \
     tini \
@@ -59,7 +62,11 @@ RUN apk add --no-cache \
     deno \
     yt-dlp-ejs-rt-deno
 
-COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+RUN rm -rf /usr/local/lib/python3.14/site-packages/*
+
+COPY --from=ffmpeg-bin /ffmpeg /usr/local/bin/ffmpeg
+COPY --from=ffmpeg-bin /ffprobe /usr/local/bin/ffprobe
+COPY --from=builder /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY main.py entrypoint.sh healthcheck.sh ./
