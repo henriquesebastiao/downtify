@@ -43,3 +43,7 @@ When *Organize by artist* is on and you download a Spotify playlist with M3U gen
 ## Changing the setting
 
 The setting takes effect immediately for all **new** downloads. Existing files already on disk are not moved.
+
+## Deleting a track cleans up empty folders
+
+Deleting a track from the Library page removes its per-playlist, artist or album folder too, once it's empty — and keeps climbing up through any now-empty parent folders (e.g. the artist folder after its last album is gone), stopping at the downloads directory itself, which is never removed. A folder that still holds anything else — another track, an `.m3u`, a `cover.jpg` still in use — is left alone.

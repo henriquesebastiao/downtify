@@ -317,7 +317,11 @@ Sorted by `file`, same order as `/list`. `artist`/`album` come back as `""` when
 
 ### `DELETE /delete`
 
-Delete a downloaded file.
+Delete a downloaded file, plus its leftovers — best-effort, so a missing or unremovable one doesn't fail the request:
+
+- its `.lrc` lyrics sidecar, if any (same basename, see [Lyrics](features/lyrics.md));
+- the folder's shared `cover.jpg` under [*Organize by album*](features/download-settings.md#download-cover-art), but only once no other track in that same folder still needs it;
+- the file's folder, and any of its ancestors, that end up empty as a result — climbing up but never past the downloads directory root.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

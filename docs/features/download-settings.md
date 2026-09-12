@@ -87,6 +87,8 @@ Controls whether Downtify embeds album art at all. On by default. Turn it off to
 
 Turning this off also skips writing the standalone `cover.jpg` that the *Organize by album* option (see [File Organization](file-organization.md)) produces, and the [player](player.md)/library will show no artwork for tracks downloaded this way (the fallback music-note icon instead).
 
+That `cover.jpg` is shared by every track in the album folder. Deleting a track from the Library page removes it too, but only once it's the **last** track left in that folder — as long as another track from the same album is still there, the cover stays.
+
 ## Cover art resolution
 
 Only relevant when **Download cover art** (above) is on. Sets the target size (width and height, in pixels) Downtify requests for embedded cover art sourced from **YouTube Music**. Pick a preset (300, 600, 800, 1000, 1200) or drag the slider anywhere from **300 to 1200**; the current value in pixels is shown next to it. Default is 600.
