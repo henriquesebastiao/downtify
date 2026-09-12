@@ -208,6 +208,18 @@ export default {
     overwriteExistingFiles: 'Презаписване на съществуващи файлове',
     overwriteExistingFilesHint:
       'Изключи за да спестиш ресурс: песен която вече е изтеглена в папката за тегления (корена на папката, плейлист папка или папка на артист) не се тегли отново. Търси съвпадения по име на файл, а не по Spotify/YouTube ID.',
+    cookies: 'Бисквитки за YouTube',
+    cookiesHint:
+      'Някои песни — особено тези с explicit съдържание — се предоставят само на влязъл в профила си пълнолетен потребител, а YouTube понякога блокира изтеглянията. Качете cookies.txt във формат Netscape, експортиран от браузър с активна YouTube сесия. Файлът се пази в /data и остава след обновяване на контейнера.',
+    cookiesConfigured: 'cookies.txt е настроен',
+    cookiesUpload: 'Качи cookies.txt',
+    cookiesReplace: 'Замени cookies.txt',
+    cookiesDelete: 'Изтрий файла с бисквитки',
+    cookiesDeletePrompt: 'Да се изтрие ли запазеният cookies.txt?',
+    cookiesLocked:
+      'Управлява се от променливата на средата DOWNTIFY_COOKIES_FILE. Премахнете я, за да качите файл оттук.',
+    cookiesEnvMissing:
+      'Този файл не съществува в контейнера — проверете пътя и монтирания том.',
     saved: 'Промените са запазени',
     saveError: 'Настройките не се запазиха.',
     language: 'Език',

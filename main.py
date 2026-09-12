@@ -33,6 +33,7 @@ from mutagen.oggvorbis import OggVorbis
 from uvicorn import Config, Server
 
 from downtify import __version__, api, m3u
+from downtify.cookies import CookiesStore
 from downtify.downloader import Downloader
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 
@@ -225,9 +226,15 @@ def build_app() -> FastAPI:
     api.state.settings_path = settings_path
     api.state.settings = api._load_settings(settings_path)
 
+    # Lives alongside settings.json in the /data volume so an uploaded
+    # cookies.txt survives container updates.
+    cookies_store = CookiesStore(DATABASE_DIR / 'cookies.txt')
+    api.state.cookies_store = cookies_store
+
     api.state.version = __version__
     api.state.downloader = Downloader(
         DOWNLOAD_DIR,
+        cookies_store=cookies_store,
         audio_format=api.state.settings['format'],
         audio_bitrate=api.state.settings.get('bitrate', '320'),
         output_template=api.state.settings['output'].replace(

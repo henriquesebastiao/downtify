@@ -49,8 +49,11 @@ YouTube periodically challenges automated downloaders. These variables give you 
 | `DOWNTIFY_FORCE_IPV4` | _(unset)_ | Set to `1` to force yt-dlp to use IPv4 only. Useful when your host has a broken or rate-limited IPv6 address. |
 | `DOWNTIFY_YT_PLAYER_CLIENTS` | `ios,android,web_embedded,mweb,web,tv` | Comma-separated list of yt-dlp player clients to try, in order. Downtify's default list already favours clients that work without a JavaScript runtime. Override this only if you know a specific client is being blocked. |
 | `DOWNTIFY_YT_PO_TOKEN` | _(unset)_ | Comma-separated Proof-of-Origin tokens for yt-dlp, each in the form `<client>.<context>+<token>` (e.g. `mweb.gvs+ABC123`). Required only if YouTube starts demanding PO Tokens for the clients you're using. |
-| `DOWNTIFY_COOKIES_FILE` | _(unset)_ | Path to a Netscape-format `cookies.txt` inside the container. Lets yt-dlp authenticate as a real browser session. Useful when YouTube enforces age verification or login walls. |
-| `DOWNTIFY_COOKIES_FROM_BROWSER` | _(unset)_ | Browser name to extract cookies from (e.g. `chrome`, `firefox`). Requires the browser's cookie store to be accessible inside the container. |
+| `DOWNTIFY_COOKIES_FILE` | _(unset)_ | Path to a Netscape-format `cookies.txt` **inside the container**. Lets yt-dlp authenticate as a real browser session — needed for explicit/age-restricted tracks and whenever YouTube enforces a login wall. Takes precedence over a file uploaded in the web UI, and makes that UI section read-only. See [YouTube Cookies](../features/youtube-cookies.md). |
+| `DOWNTIFY_COOKIES_FROM_BROWSER` | _(unset)_ | Browser name to extract cookies from (e.g. `chrome`, `firefox`). Requires the browser's cookie store to be accessible inside the container, so it's rarely usable in Docker. |
+
+!!! tip "You probably don't need these"
+    You can upload a `cookies.txt` straight from **Settings → YouTube cookies** in the web UI. It's stored in `/data` (so it survives container updates), needs no bind mount or container path, and works the same on Windows, macOS and Linux. The variables above stay supported for deployments that prefer to manage the file themselves.
 
 ## Example: Docker Compose with anti-bot settings
 
@@ -72,7 +75,9 @@ services:
 
 ## Getting a cookies.txt
 
-Use a browser extension such as [Get cookies.txt LOCALLY](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) (Chrome) or [cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/) (Firefox). Export from `youtube.com` while logged into a real Google account, then mount the file into the container as shown above.
+Use a browser extension such as [Get cookies.txt LOCALLY](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) (Chrome) or [cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/) (Firefox). Export from `youtube.com` while logged into a real Google account, then either upload it in **Settings → YouTube cookies** or mount it into the container as shown above.
+
+See [YouTube Cookies](../features/youtube-cookies.md) for the full walkthrough, and [Troubleshooting](../troubleshooting.md) when downloads still fail.
 
 !!! warning
     Keep your `cookies.txt` private — it contains session tokens that grant access to your Google account.

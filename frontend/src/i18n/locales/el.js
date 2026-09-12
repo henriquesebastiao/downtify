@@ -215,6 +215,18 @@ export default {
     overwriteExistingFiles: 'Αντικατάσταση υπαρχόντων αρχείων',
     overwriteExistingFilesHint:
       'Απενεργοποιήστε το για εξοικονόμηση εύρους ζώνης: ένα τραγούδι που υπάρχει ήδη οπουδήποτε στον φάκελο λήψεων (ρίζα βιβλιοθήκης, φάκελος άλλης λίστας, φάκελος καλλιτέχνη/άλμπουμ) δεν κατεβαίνει ξανά. Η αντιστοίχιση γίνεται με βάση το όνομα αρχείου, όχι το ID Spotify/YouTube.',
+    cookies: 'Cookies YouTube',
+    cookiesHint:
+      'Ορισμένα κομμάτια — ιδίως όσα έχουν explicit περιεχόμενο — διατίθενται μόνο σε συνδεδεμένο ενήλικο λογαριασμό, ενώ το YouTube ενίοτε μπλοκάρει τις λήψεις. Ανεβάστε ένα cookies.txt σε μορφή Netscape από περιηγητή συνδεδεμένο στο YouTube. Αποθηκεύεται στο /data και διατηρείται μετά από ενημερώσεις του container.',
+    cookiesConfigured: 'Το cookies.txt ρυθμίστηκε',
+    cookiesUpload: 'Μεταφόρτωση cookies.txt',
+    cookiesReplace: 'Αντικατάσταση cookies.txt',
+    cookiesDelete: 'Διαγραφή αρχείου cookies',
+    cookiesDeletePrompt: 'Διαγραφή του αποθηκευμένου cookies.txt;',
+    cookiesLocked:
+      'Ελέγχεται από τη μεταβλητή περιβάλλοντος DOWNTIFY_COOKIES_FILE. Αφαιρέστε την για να ανεβάσετε αρχείο από εδώ.',
+    cookiesEnvMissing:
+      'Το αρχείο δεν υπάρχει μέσα στο container — ελέγξτε τη διαδρομή και την προσάρτηση του volume.',
     saved: 'Οι αλλαγές αποθηκεύτηκαν',
     saveError: 'Αδυναμία αποθήκευσης ρυθμίσεων.',
     language: 'Γλώσσα',

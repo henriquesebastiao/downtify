@@ -125,6 +125,22 @@ function clearQueue() {
   return API.delete('/api/queue')
 }
 
+function getCookiesStatus() {
+  return API.get('/api/cookies')
+}
+
+// The cookies.txt is sent as the raw request body rather than multipart
+// form-data, so the backend doesn't need python-multipart just for this.
+function uploadCookies(file) {
+  return API.post('/api/cookies', file, {
+    headers: { 'Content-Type': 'text/plain' },
+  })
+}
+
+function deleteCookies() {
+  return API.delete('/api/cookies')
+}
+
 function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
@@ -160,6 +176,9 @@ export default {
   clearQueue,
   getSettings,
   setSettings,
+  getCookiesStatus,
+  uploadCookies,
+  deleteCookies,
   check_for_update,
   ws_onmessage,
   ws_onerror,

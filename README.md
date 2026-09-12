@@ -53,6 +53,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 🎧 **Built-in player** | Play your downloaded music straight from the web UI — progress bar, shuffle, repeat, volume |
 | 🌍 **Multi-language UI** | English (default) plus 6 more languages — easy to add more |
 | 📱 **Installable (PWA)** | Add Downtify to your iOS or Android home screen — launches full-screen, no browser chrome |
+| 🍪 **Cookie upload** | Upload a YouTube `cookies.txt` from the settings screen to download explicit/age-restricted tracks — no bind mounts, works on Windows |
 
 ---
 
@@ -298,6 +299,26 @@ That's it. Rebuild the frontend (`cd frontend && npm run build`) — your langua
 - After translating, run `npm run dev` from `frontend/` and click through every page in your language to spot anything that overflows or reads oddly in context.
 
 Pull requests with new translations are very welcome — just open a PR against `main`.
+
+---
+
+## 🩹 Troubleshooting
+
+Most download problems have the same root cause: **YouTube wants a signed-in session**. Upload a `cookies.txt` in **Settings (⚙️) → YouTube cookies** and they usually go away.
+
+| Problem | Likely cause | Fix |
+|---------|--------------|-----|
+| A song with **explicit content** won't download (`Sign in to confirm your age`) | YouTube only serves age-restricted tracks to a signed-in adult account | Upload a `cookies.txt` in **Settings → YouTube cookies** |
+| Downloads fail, hang or say the format is unavailable | YouTube is challenging/rate-limiting the requests — common on a VPS or VPN | Upload a `cookies.txt`; then raise *Delay between downloads* and lower *Parallel downloads* in Settings; then try `DOWNTIFY_FORCE_IPV4=1`; then update the image |
+| `DOWNTIFY_COOKIES_FILE` seems ignored (especially on **Windows / Docker Desktop**) | The variable needs a *container* path and a bind mount — a `C:\...` path never works | Skip the variable and upload the file in **Settings → YouTube cookies** instead |
+| The cookie upload button is greyed out | `DOWNTIFY_COOKIES_FILE` is set, so the deployment owns that file | Unset the variable and recreate the container |
+| Uploaded cookies / settings vanish after an update | `/data` isn't a persistent volume | Keep `- downtify_data:/data` in your compose file |
+| Upload rejected as invalid | The file isn't a **Netscape** cookie jar (JSON, spreadsheet or a copied header) | Re-export with a cookies.txt browser extension, from a `youtube.com` tab |
+| A watched playlist re-downloads tracks you already have | The files are no longer in the downloads directory | Keep `/downloads` persistent; moving files *within* it is fine |
+
+Cookies expire — if age-restricted downloads start failing again, export a fresh file and upload it as a replacement.
+
+Full details, including how to export the file and what it contains: **[YouTube Cookies](https://henriquesebastiao.github.io/downtify/features/youtube-cookies/)** and **[Troubleshooting](https://henriquesebastiao.github.io/downtify/troubleshooting/)** in the docs.
 
 ---
 

@@ -219,6 +219,60 @@ Update one or more settings. Takes effect immediately and is persisted to disk.
 
 ---
 
+## YouTube cookies
+
+Backs the **Settings → YouTube cookies** screen. The uploaded file lives in the data directory (`/data/cookies.txt`) so it survives container updates. See [YouTube Cookies](features/youtube-cookies.md).
+
+The cookie file's contents are never returned by the API — only whether one is configured, how large it is and when it changed.
+
+### `GET /api/cookies`
+
+Current cookie configuration.
+
+**Response:**
+
+```json
+{
+  "configured": true,
+  "source": "upload",
+  "locked": false,
+  "path": "/data/cookies.txt",
+  "size": 2048,
+  "updated_at": "2026-09-12T02:22:02.282849+00:00"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `configured` | boolean | Whether a usable cookie file is in place. |
+| `source` | string \| null | `"upload"`, `"env"` (`DOWNTIFY_COOKIES_FILE`), or `null` when unconfigured. |
+| `locked` | boolean | `true` when `DOWNTIFY_COOKIES_FILE` is set — uploads and deletions are then refused. |
+| `size` / `updated_at` | integer \| null | Only reported for an uploaded file. |
+
+---
+
+### `POST /api/cookies`
+
+Upload a Netscape `cookies.txt`, replacing any previous one. The body is the **raw file**, not multipart form-data.
+
+**Response:** the `GET /api/cookies` object plus a `warnings` array (e.g. when the file has no `youtube.com` cookies).
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Not a valid Netscape cookie jar (empty, binary, or no cookie lines). |
+| `409` | `DOWNTIFY_COOKIES_FILE` is set, so the file is managed outside the UI. |
+| `413` | Larger than 2 MB, so it isn't a cookies.txt. |
+
+---
+
+### `DELETE /api/cookies`
+
+Remove the uploaded cookie file.
+
+**Response:** the `GET /api/cookies` object plus `"deleted"` (`false` when there was nothing to delete). Returns `409` while `DOWNTIFY_COOKIES_FILE` is set.
+
+---
+
 ## File management
 
 ### `GET /list`

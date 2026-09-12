@@ -206,6 +206,18 @@ export default {
     overwriteExistingFiles: 'Mevcut dosyaların üzerine yaz',
     overwriteExistingFilesHint:
       'Bant genişliğinden tasarruf etmek için kapatın: indirme klasörünüzün herhangi bir yerinde (kitaplık kökü, başka bir listenin klasörü, sanatçı/albüm klasörü) zaten bulunan bir şarkı yeniden indirilmez. Eşleştirme Spotify/YouTube kimliğine göre değil, dosya adına göre yapılır.',
+    cookies: 'YouTube çerezleri',
+    cookiesHint:
+      'Bazı parçalar — özellikle müstehcen içerikli olanlar — yalnızca oturum açmış yetişkin bir hesaba sunulur ve YouTube zaman zaman indirmeleri engeller. YouTube oturumu açık bir tarayıcıdan dışa aktarılmış Netscape biçiminde bir cookies.txt yükleyin. Dosya /data içinde saklanır ve konteyner güncellemelerinde korunur.',
+    cookiesConfigured: 'cookies.txt yapılandırıldı',
+    cookiesUpload: 'cookies.txt yükle',
+    cookiesReplace: 'cookies.txt değiştir',
+    cookiesDelete: 'Çerez dosyasını sil',
+    cookiesDeletePrompt: 'Kayıtlı cookies.txt silinsin mi?',
+    cookiesLocked:
+      'DOWNTIFY_COOKIES_FILE ortam değişkeni tarafından yönetiliyor. Buradan dosya yüklemek için değişkeni kaldırın.',
+    cookiesEnvMissing:
+      'Bu dosya konteyner içinde yok — yolu ve birim bağlamasını kontrol edin.',
     saved: 'Değişiklikler kaydedildi',
     saveError: 'Ayarlar kaydedilirken bir hata oluştu.',
     language: 'Dil',

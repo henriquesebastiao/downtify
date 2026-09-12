@@ -471,6 +471,127 @@
           </label>
         </div>
 
+        <!-- YouTube cookies -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.cookies') }}
+          </label>
+          <p class="text-[11px] text-base-content/50 mb-3">
+            {{ t('settings.cookiesHint') }}
+          </p>
+
+          <!-- Managed by DOWNTIFY_COOKIES_FILE: read-only here -->
+          <div
+            v-if="cm.status.value.locked"
+            class="surface rounded-xl p-3 flex gap-2 text-sm"
+          >
+            <Icon
+              icon="clarity:lock-line"
+              class="h-4 w-4 shrink-0 mt-0.5 text-base-content/50"
+            />
+            <span class="flex-1 min-w-0">
+              <span class="block">{{ t('settings.cookiesLocked') }}</span>
+              <span
+                class="block text-[11px] text-base-content/50 truncate"
+                :title="cm.status.value.path"
+              >
+                {{ cm.status.value.path }}
+              </span>
+              <span
+                v-if="!cm.status.value.configured"
+                class="block text-[11px] text-error mt-1"
+              >
+                {{ t('settings.cookiesEnvMissing') }}
+              </span>
+            </span>
+          </div>
+
+          <template v-else>
+            <div
+              v-if="cm.status.value.configured"
+              class="surface rounded-xl p-3 flex items-center gap-2 text-sm mb-2"
+            >
+              <Icon
+                icon="clarity:check-circle-line"
+                class="h-4 w-4 shrink-0 text-primary"
+              />
+              <span class="flex-1 min-w-0">
+                <span class="block">{{ t('settings.cookiesConfigured') }}</span>
+                <span class="block text-[11px] text-base-content/50">
+                  {{ formatCookieSize(cm.status.value.size) }}
+                  <template v-if="cm.status.value.updated_at">
+                    · {{ formatCookieDate(cm.status.value.updated_at) }}
+                  </template>
+                </span>
+              </span>
+              <button
+                type="button"
+                class="icon-btn text-error/70 hover:text-error hover:bg-error/10 shrink-0"
+                :disabled="cm.busy.value"
+                @click="onDeleteCookies"
+                :title="t('settings.cookiesDelete')"
+              >
+                <span
+                  v-if="cm.busy.value"
+                  class="loading loading-spinner loading-xs"
+                />
+                <Icon v-else icon="clarity:trash-line" class="h-4 w-4" />
+              </button>
+            </div>
+
+            <label
+              class="btn btn-sm h-10 px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 cursor-pointer w-full"
+              :class="{ 'pointer-events-none opacity-60': cm.busy.value }"
+            >
+              <span
+                v-if="cm.busy.value"
+                class="loading loading-spinner loading-xs mr-2"
+              />
+              <Icon
+                v-else
+                icon="clarity:upload-cloud-line"
+                class="h-4 w-4 mr-2"
+              />
+              {{
+                cm.status.value.configured
+                  ? t('settings.cookiesReplace')
+                  : t('settings.cookiesUpload')
+              }}
+              <input
+                ref="cookiesInput"
+                type="file"
+                accept=".txt,text/plain"
+                class="hidden"
+                @change="onCookiesSelected"
+              />
+            </label>
+          </template>
+
+          <div
+            v-if="cm.error.value"
+            class="surface rounded-xl p-3 mt-2 flex gap-2 text-sm text-error"
+          >
+            <Icon
+              icon="clarity:exclamation-circle-line"
+              class="h-4 w-4 shrink-0 mt-0.5"
+            />
+            <span class="flex-1">{{ cm.error.value }}</span>
+          </div>
+          <div
+            v-for="warning in cm.warnings.value"
+            :key="warning"
+            class="surface rounded-xl p-3 mt-2 flex gap-2 text-sm text-warning"
+          >
+            <Icon
+              icon="clarity:warning-standard-line"
+              class="h-4 w-4 shrink-0 mt-0.5"
+            />
+            <span class="flex-1">{{ warning }}</span>
+          </div>
+        </div>
+
         <!-- Save status -->
         <transition
           enter-active-class="transition duration-200"
@@ -525,6 +646,7 @@
 </template>
 
 <script setup>
+import { onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import {
   clampCoverResolution,
@@ -532,10 +654,40 @@ import {
   clampParallelDownloads,
   useSettingsManager,
 } from '../model/settings'
+import { useCookiesManager } from '../model/cookies'
 import { useI18n } from '../i18n'
 
 const sm = useSettingsManager()
+const cm = useCookiesManager()
 const { t, locale, setLocale, locales } = useI18n()
+
+const cookiesInput = ref(null)
+
+onMounted(cm.refresh)
+
+function formatCookieSize(bytes) {
+  if (!bytes && bytes !== 0) return ''
+  if (bytes < 1024) return `${bytes} B`
+  return `${(bytes / 1024).toFixed(1)} KB`
+}
+
+function formatCookieDate(iso) {
+  const parsed = new Date(iso)
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleString()
+}
+
+async function onCookiesSelected(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  await cm.upload(file)
+  // Reset so re-picking the same file still fires @change.
+  if (cookiesInput.value) cookiesInput.value.value = ''
+}
+
+async function onDeleteCookies() {
+  if (!confirm(t('settings.cookiesDeletePrompt'))) return
+  await cm.remove()
+}
 
 function providerLabel(provider) {
   if (provider === 'youtube-music') return 'YouTube Music'
