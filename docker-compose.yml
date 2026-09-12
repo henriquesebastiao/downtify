@@ -9,8 +9,10 @@ services:
     volumes:
       - ./docker/downloads:/downloads
       - ./docker/data:/data
+      - ./docker/cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_PORT=30321
+      - DOWNTIFY_COOKIES_FILE=/cookies.txt
       # - TZ=America/Sao_Paulo
       # - DOWNTIFY_MONITOR_SYNC_TIME=03:00
     dns:
