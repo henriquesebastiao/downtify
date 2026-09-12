@@ -214,6 +214,18 @@ export default {
     overwriteExistingFiles: 'Meglévő fájlok felülírása',
     overwriteExistingFilesHint:
       'Kapcsolja ki a sávszélesség megtakarításához: a letöltési mappa bármely részén (könyvtár gyökere, másik lejátszási lista mappája, előadó/album mappa) már meglévő dal nem töltődik le újra. Az egyeztetés fájlnév alapján történik, nem a Spotify/YouTube azonosító alapján.',
+    cookies: 'YouTube sütik',
+    cookiesHint:
+      'Néhány szám — különösen az explicit tartalmúak — csak bejelentkezett, felnőtt fiók számára érhető el, és a YouTube időnként letiltja a letöltéseket. Tölts fel egy Netscape formátumú cookies.txt fájlt, amelyet egy YouTube-ra bejelentkezett böngészőből exportáltál. A fájl a /data könyvtárban tárolódik, és megmarad a konténer frissítései után is.',
+    cookiesConfigured: 'cookies.txt beállítva',
+    cookiesUpload: 'cookies.txt feltöltése',
+    cookiesReplace: 'cookies.txt cseréje',
+    cookiesDelete: 'Süti fájl törlése',
+    cookiesDeletePrompt: 'Törlöd a tárolt cookies.txt fájlt?',
+    cookiesLocked:
+      'A DOWNTIFY_COOKIES_FILE környezeti változó kezeli. Távolítsd el, ha innen szeretnél fájlt feltölteni.',
+    cookiesEnvMissing:
+      'Ez a fájl nem létezik a konténerben — ellenőrizd az elérési utat és a kötet csatolását.',
     saved: 'Módosítások mentve',
     saveError: 'Nem sikerült menteni a beállításokat.',
     language: 'Nyelv',

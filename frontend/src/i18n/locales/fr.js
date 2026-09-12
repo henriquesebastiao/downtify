@@ -214,6 +214,18 @@ export default {
     overwriteExistingFiles: 'Écraser les fichiers existants',
     overwriteExistingFilesHint:
       "Désactivez pour économiser de la bande passante : un morceau déjà présent n'importe où dans votre dossier de téléchargement (racine de la bibliothèque, dossier d'une autre liste, dossier d'artiste/album) n'est pas retéléchargé. Comparaison par nom de fichier, pas par l'ID Spotify/YouTube.",
+    cookies: 'Cookies YouTube',
+    cookiesHint:
+      "Certains titres — surtout ceux au contenu explicite — ne sont servis qu'à un compte adulte connecté, et YouTube bloque parfois les téléchargements. Importez un cookies.txt au format Netscape exporté depuis un navigateur connecté à YouTube. Il est stocké dans /data et conservé lors des mises à jour du conteneur.",
+    cookiesConfigured: 'cookies.txt configuré',
+    cookiesUpload: 'Importer cookies.txt',
+    cookiesReplace: 'Remplacer cookies.txt',
+    cookiesDelete: 'Supprimer le fichier de cookies',
+    cookiesDeletePrompt: 'Supprimer le cookies.txt enregistré ?',
+    cookiesLocked:
+      "Géré par la variable d'environnement DOWNTIFY_COOKIES_FILE. Retirez-la pour importer un fichier ici.",
+    cookiesEnvMissing:
+      "Ce fichier n'existe pas dans le conteneur — vérifiez le chemin et le montage du volume.",
     saved: 'Changements sauvegardés',
     saveError: 'Impossible de sauvegarder les paramètres.',
     language: 'Langue',

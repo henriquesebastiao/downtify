@@ -38,6 +38,10 @@ working without changes:
 * ``POST /api/playlist/m3u``
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
+* ``GET  /api/cookies`` (current YouTube cookie configuration)
+* ``POST /api/cookies`` (upload a Netscape cookies.txt as the raw request
+  body - no multipart, so no ``python-multipart`` dependency)
+* ``DELETE /api/cookies`` (remove the uploaded cookies.txt)
 * ``WS   /api/ws``
 * ``GET  /api/check_update``
 """
@@ -62,6 +66,7 @@ from fastapi import (
 from loguru import logger
 
 from . import library_import, m3u, providers, spotify
+from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .downloader import Downloader
 from .monitor import (
     KIND_ARTIST,
@@ -208,6 +213,7 @@ class AppState:
     connections: ConnectionManager = ConnectionManager()
     settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
     settings_path: Optional[Path] = None
+    cookies_store: Optional[CookiesStore] = None
     loop: Optional[asyncio.AbstractEventLoop] = None
     monitor_db: Optional[PlaylistMonitorDB] = None
     download_jobs: dict[str, dict[str, Any]] = {}
@@ -950,6 +956,77 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
             status_code=400, detail='No tracks resolved to a file on disk'
         )
     return {'path': str(target), 'count': kept}
+
+
+def _require_cookies_store() -> CookiesStore:
+    if state.cookies_store is None:
+        raise HTTPException(
+            status_code=503, detail='Cookie storage is not ready yet'
+        )
+    return state.cookies_store
+
+
+@router.get('/api/cookies')
+def get_cookies_endpoint() -> dict[str, Any]:
+    """Current cookie configuration, for the settings UI.
+
+    ``locked`` means ``DOWNTIFY_COOKIES_FILE`` is set: that deployment
+    manages its own cookie file, so uploads and deletions are refused.
+    """
+    return _require_cookies_store().status()
+
+
+@router.post('/api/cookies')
+async def upload_cookies_endpoint(request: Request) -> dict[str, Any]:
+    """Store an uploaded Netscape ``cookies.txt``, replacing any previous one.
+
+    The body is the raw file rather than a multipart form so Downtify
+    doesn't need ``python-multipart`` just for this — a cookies.txt is
+    plain text and never large.
+    """
+    store = _require_cookies_store()
+    if store.is_locked():
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                'Cookies are configured through the DOWNTIFY_COOKIES_FILE '
+                'environment variable. Unset it to manage the file here.'
+            ),
+        )
+    content = await request.body()
+    if len(content) > MAX_COOKIES_BYTES:
+        raise HTTPException(status_code=413, detail='File is too large')
+    try:
+        warnings = await asyncio.to_thread(store.save, content)
+    except InvalidCookiesFile as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except OSError as exc:
+        logger.exception('Failed to store uploaded cookies file')
+        raise HTTPException(
+            status_code=500, detail=f'Could not save the file: {exc}'
+        ) from exc
+    return {**store.status(), 'warnings': warnings}
+
+
+@router.delete('/api/cookies')
+async def delete_cookies_endpoint() -> dict[str, Any]:
+    store = _require_cookies_store()
+    if store.is_locked():
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                'Cookies are configured through the DOWNTIFY_COOKIES_FILE '
+                'environment variable. Unset it to manage the file here.'
+            ),
+        )
+    try:
+        deleted = await asyncio.to_thread(store.delete)
+    except OSError as exc:
+        logger.exception('Failed to delete stored cookies file')
+        raise HTTPException(
+            status_code=500, detail=f'Could not delete the file: {exc}'
+        ) from exc
+    return {**store.status(), 'deleted': deleted}
 
 
 @router.get('/api/settings')

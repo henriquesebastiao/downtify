@@ -214,6 +214,18 @@ export default {
     overwriteExistingFiles: 'Sobrescrever arquivos existentes',
     overwriteExistingFilesHint:
       'Desative para economizar banda: uma música que já está em qualquer lugar da pasta de downloads (raiz da biblioteca, pasta de outra playlist, pasta de artista/álbum) não é baixada novamente. A comparação é pelo nome do arquivo, não pelo ID do Spotify/YouTube.',
+    cookies: 'Cookies do YouTube',
+    cookiesHint:
+      'Algumas músicas — principalmente as com conteúdo explícito — só são liberadas para uma conta adulta logada, e o YouTube às vezes bloqueia downloads. Envie um cookies.txt no formato Netscape exportado de um navegador logado no YouTube para resolver os dois casos. Ele é salvo em /data e mantido entre atualizações do container.',
+    cookiesConfigured: 'cookies.txt configurado',
+    cookiesUpload: 'Enviar cookies.txt',
+    cookiesReplace: 'Substituir cookies.txt',
+    cookiesDelete: 'Excluir arquivo de cookies',
+    cookiesDeletePrompt: 'Excluir o cookies.txt salvo?',
+    cookiesLocked:
+      'Gerenciado pela variável de ambiente DOWNTIFY_COOKIES_FILE. Remova-a para enviar um arquivo por aqui.',
+    cookiesEnvMissing:
+      'Este arquivo não existe dentro do container — verifique o caminho e a montagem do volume.',
     saved: 'Alterações salvas',
     saveError: 'Não foi possível salvar as configurações.',
     language: 'Idioma',

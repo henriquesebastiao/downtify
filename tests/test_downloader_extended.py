@@ -872,3 +872,51 @@ def test_download_ydl_opts_enables_remote_ejs_component(tmp_path, monkeypatch):
     except _CapturedOpts:
         pass
     assert _FakeYoutubeDL.captured.get('remote_components') == ['ejs:github']
+
+
+# ── age-restricted error translation ────────────────────────────────────────
+
+
+_AGE_GATE_ERROR = RuntimeError(
+    'ERROR: [youtube] lENt7-t8I-I: Sign in to confirm your age. This video '
+    'may be inappropriate for some users. Use --cookies-from-browser or '
+    '--cookies for the authentication. See https://github.com/yt-dlp/yt-dlp'
+    '/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp'
+)
+
+
+def test_age_gate_error_tells_user_to_upload_cookies():
+    translated = downloader_mod._translate_download_error(
+        _AGE_GATE_ERROR, {'name': 'Some Track'}, has_cookies=False
+    )
+    message = str(translated)
+    assert isinstance(translated, RuntimeError)
+    assert 'Some Track' in message
+    assert 'cookies.txt' in message
+    # The raw yt-dlp CLI advice means nothing in the web UI and is the
+    # single most-reported "downloads are broken" symptom.
+    assert '--cookies-from-browser' not in message
+    assert 'yt-dlp' not in message
+
+
+def test_age_gate_error_with_cookies_suggests_refreshing_them():
+    translated = downloader_mod._translate_download_error(
+        _AGE_GATE_ERROR, {'name': 'Some Track'}, has_cookies=True
+    )
+    message = str(translated)
+    assert 'age verification' in message
+    assert 'upload it again' in message
+
+
+def test_non_age_gate_errors_are_passed_through_untouched():
+    raw = RuntimeError('ERROR: unable to download video data: HTTP Error 403')
+    translated = downloader_mod._translate_download_error(
+        raw, {'name': 'Some Track'}, has_cookies=False
+    )
+    assert translated is raw
+
+
+def test_is_age_restricted_error_matches_youtube_wording():
+    assert downloader_mod.is_age_restricted_error(str(_AGE_GATE_ERROR))
+    assert downloader_mod.is_age_restricted_error('AGE_VERIFICATION_REQUIRED')
+    assert not downloader_mod.is_age_restricted_error('HTTP Error 403')

@@ -34,6 +34,7 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 
 from . import lyrics as lyrics_mod
+from .cookies import CookiesStore
 from .itunes import fetch_genre as _fetch_itunes_genre
 from .m3u import sanitize_playlist_name
 from .providers import enrich_from_match, find_match, find_match_for_video
@@ -121,6 +122,51 @@ def _yt_po_tokens() -> list[str]:
     return [t.strip() for t in raw.split(',') if t.strip()]
 
 
+# Substrings YouTube/yt-dlp use when a video is behind the age wall.
+_AGE_GATE_ERROR_FRAGMENTS = (
+    'confirm your age',
+    'age-restricted',
+    'inappropriate for some users',
+    'age_verification_required',
+    'age_check_required',
+)
+
+
+def is_age_restricted_error(message: str) -> bool:
+    return any(
+        fragment in message.lower() for fragment in _AGE_GATE_ERROR_FRAGMENTS
+    )
+
+
+def _translate_download_error(
+    exc: Exception, song: dict[str, Any], has_cookies: bool
+) -> Exception:
+    """Replace yt-dlp's age-gate error with something actionable.
+
+    The raw error is a wall of yt-dlp CLI advice (``--cookies-from-browser``,
+    wiki links) that means nothing to someone using the web UI, and it's
+    the single most common "downloads are broken" report. Every other
+    failure is passed through untouched.
+    """
+
+    if not is_age_restricted_error(str(exc)):
+        return exc
+    name = song.get('name') or 'This track'
+    if has_cookies:
+        return RuntimeError(
+            f'"{name}" is age-restricted on YouTube and the configured '
+            'cookies file was not accepted. Export a fresh cookies.txt '
+            'while logged into a YouTube account that has completed '
+            "Google's age verification, then upload it again in "
+            'Settings > YouTube cookies.'
+        )
+    return RuntimeError(
+        f'"{name}" has explicit content and YouTube only serves it to a '
+        'signed-in adult account. Upload a YouTube cookies.txt in '
+        'Settings > YouTube cookies to download it.'
+    )
+
+
 class Downloader:
     """Wraps ``yt-dlp`` plus ``mutagen`` tagging."""
 
@@ -135,9 +181,14 @@ class Downloader:
         organize_by_album: bool = False,
         download_cover_art: bool = True,
         overwrite_existing_files: bool = True,
+        cookies_store: Optional[CookiesStore] = None,
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
+        # Resolves DOWNTIFY_COOKIES_FILE and the cookies.txt uploaded
+        # through the settings UI, in that order of precedence. ``None``
+        # keeps the env-var-only behavior for direct/standalone use.
+        self.cookies_store = cookies_store
         self.audio_format = audio_format
         self.audio_bitrate = audio_bitrate
         self.output_template = output_template
@@ -148,6 +199,18 @@ class Downloader:
         self.download_cover_art = download_cover_art
         self._target_locks: dict[str, threading.Lock] = {}
         self._target_locks_guard = threading.Lock()
+
+    def _resolve_cookies_file(self) -> str:
+        """Path to the cookies.txt yt-dlp should use, or ``''``.
+
+        With a store configured this is DOWNTIFY_COOKIES_FILE, else the
+        file uploaded through the settings UI. Resolved per download so
+        uploading or deleting one takes effect without a restart.
+        """
+        if self.cookies_store is not None:
+            active = self.cookies_store.active_path()
+            return str(active) if active else ''
+        return os.getenv('DOWNTIFY_COOKIES_FILE', '').strip()
 
     @staticmethod
     def _artist_subdir(song: dict[str, Any]) -> str:
@@ -552,12 +615,14 @@ class Downloader:
         }:
             ydl_opts['source_address'] = '0.0.0.0'
 
-        # Optional cookie support for the rare case where even alternate
-        # player_clients get challenged. DOWNTIFY_COOKIES_FILE points at a
-        # Netscape-format cookies.txt; DOWNTIFY_COOKIES_FROM_BROWSER takes
+        # Cookies authenticate yt-dlp as a real browser session — needed
+        # for age-restricted (explicit) tracks and whenever YouTube
+        # challenges the download. The file comes either from
+        # DOWNTIFY_COOKIES_FILE or from the settings UI upload, resolved
+        # by the store in that order; DOWNTIFY_COOKIES_FROM_BROWSER takes
         # "<browser>" or "<browser>:<profile>" (e.g. "firefox" or
         # "chrome:Default").
-        cookies_file = os.getenv('DOWNTIFY_COOKIES_FILE', '').strip()
+        cookies_file = self._resolve_cookies_file()
         if cookies_file:
             ydl_opts['cookiefile'] = cookies_file
         cookies_browser = os.getenv(
@@ -570,8 +635,13 @@ class Downloader:
             )
 
         url = f'https://music.youtube.com/watch?v={video_id}'
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+        except Exception as exc:
+            raise _translate_download_error(
+                exc, song, has_cookies=bool(cookies_file or cookies_browser)
+            ) from exc
 
         final_path = target_dir / f'{basename}.{self.audio_format}'
         if not final_path.exists():

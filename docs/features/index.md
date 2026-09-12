@@ -17,6 +17,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | [M3U Export](m3u-export.md) | Auto-generated playlist files for Jellyfin, Navidrome, Plex and any media app |
 | [File Organization](file-organization.md) | Flat layout or per-artist subfolders |
 | [Lyrics](lyrics.md) | Automatically download and embed lyrics (plain and time-synced) |
+| [YouTube Cookies](youtube-cookies.md) | Upload a `cookies.txt` from the web UI to download explicit/age-restricted tracks |
 | [Internationalization](internationalization.md) | English, Spanish and Brazilian Portuguese out of the box |
 
 ## Input types
