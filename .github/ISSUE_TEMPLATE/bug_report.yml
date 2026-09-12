@@ -1,6 +1,7 @@
 name: Bug Report
 description: Report something that is not working as expected
 labels: ["bug", "needs triage"]
+projects: ["henriquesebastiao/downtify/1"]
 body:
   - type: markdown
     attributes:
