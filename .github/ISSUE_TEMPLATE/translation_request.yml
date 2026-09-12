@@ -1,6 +1,7 @@
 name: Translation Request
 description: Request support for a new language or report an issue with an existing translation
 labels: ["translation", "i18n"]
+projects: ["henriquesebastiao/downtify/1"]
 body:
   - type: markdown
     attributes:
