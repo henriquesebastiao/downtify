@@ -87,6 +87,12 @@ WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
 DEFAULT_PORT = int(os.getenv('DOWNTIFY_PORT', os.getenv('PORT', '8000')))
 
+_AUDIO_EXTENSIONS = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
+
+#: Filename written by Downloader._save_album_cover next to every track
+#: of an album folder (organize-by-album layout only).
+_ALBUM_COVER_FILENAME = 'cover.jpg'
+
 
 class SPAStaticFiles(StaticFiles):
     """Serve ``index.html`` for unknown paths so SPA routing works."""
@@ -202,6 +208,78 @@ def _extract_track_tags(path: Path) -> tuple[str, str]:
     return artist, album
 
 
+def _delete_lrc_sidecar(audio_path: Path) -> None:
+    """Best-effort removal of the .lrc sidecar next to a deleted track.
+
+    Mirrors the naming ``downtify/downloader.py:embed_lyrics`` writes the
+    sidecar with — same basename as the audio file, ``.lrc`` extension.
+    A missing or unremovable sidecar must not fail the audio file's own
+    deletion, which has already succeeded by the time this runs.
+    """
+    lrc = audio_path.with_suffix('.lrc')
+    try:
+        lrc.unlink(missing_ok=True)
+    except OSError:
+        logger.opt(exception=True).warning(
+            'Could not remove LRC sidecar {}', lrc
+        )
+
+
+def _delete_album_cover_if_orphaned(audio_path: Path) -> None:
+    """Best-effort removal of a now-unused ``cover.jpg``.
+
+    ``cover.jpg`` (written by ``Downloader._save_album_cover`` under the
+    *Organize by album* layout) sits once per album folder, shared by
+    every track in it — so it's only safe to delete once no other track
+    in that same folder still needs it. Checked *after* the audio file
+    itself is gone, so the deleted track doesn't count as a remaining
+    dependent.
+    """
+    folder = audio_path.parent
+    cover = folder / _ALBUM_COVER_FILENAME
+    if not cover.is_file():
+        return
+    still_used = any(
+        p.is_file() and p.suffix.lower() in _AUDIO_EXTENSIONS
+        for p in folder.iterdir()
+    )
+    if still_used:
+        return
+    try:
+        cover.unlink(missing_ok=True)
+    except OSError:
+        logger.opt(exception=True).warning(
+            'Could not remove orphaned album cover {}', cover
+        )
+
+
+def _prune_empty_parent_dirs(start_dir: Path, root: Path) -> None:
+    """Remove ``start_dir`` and its empty ancestors, stopping at ``root``.
+
+    Run after a track and its sidecars are deleted, so a per-playlist or
+    per-artist/album folder left with nothing in it doesn't linger
+    forever. Climbs one directory at a time and stops at the first one
+    that still has something in it — ``root`` (the downloads directory)
+    is never removed itself, even if it ends up empty.
+    """
+    try:
+        root = root.resolve()
+        current = start_dir.resolve()
+    except OSError:
+        return
+    # Safety: only ever climb within root's own tree, never above it.
+    if current != root and root not in current.parents:
+        return
+    while current != root:
+        try:
+            if any(current.iterdir()):
+                return
+            current.rmdir()
+        except OSError:
+            return
+        current = current.parent
+
+
 def build_app() -> FastAPI:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
@@ -296,7 +374,6 @@ def build_app() -> FastAPI:
 
     @app.get('/list')
     def list_downloads() -> list[str]:
-        audio_exts = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
         base = DOWNLOAD_DIR.resolve()
         if not base.exists():
             return []
@@ -306,7 +383,7 @@ def build_app() -> FastAPI:
         for path in base.rglob('*'):
             if not path.is_file():
                 continue
-            if path.suffix.lower() not in audio_exts:
+            if path.suffix.lower() not in _AUDIO_EXTENSIONS:
                 continue
             files.append(path.relative_to(base).as_posix())
         files.sort()
@@ -352,7 +429,6 @@ def build_app() -> FastAPI:
         reliably derivable from the filename or folder layout unless
         *Organize by artist/album* is on.
         """
-        audio_exts = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
         base = DOWNLOAD_DIR.resolve()
         if not base.exists():
             return []
@@ -360,7 +436,7 @@ def build_app() -> FastAPI:
         for path in base.rglob('*'):
             if not path.is_file():
                 continue
-            if path.suffix.lower() not in audio_exts:
+            if path.suffix.lower() not in _AUDIO_EXTENSIONS:
                 continue
             artist, album = _extract_track_tags(path)
             tracks.append({
@@ -386,6 +462,9 @@ def build_app() -> FastAPI:
             full.unlink()
         except Exception as exc:
             return {'deleted': False, 'error': str(exc)}
+        _delete_lrc_sidecar(full)
+        _delete_album_cover_if_orphaned(full)
+        _prune_empty_parent_dirs(full.parent, base)
         return {'deleted': True}
 
     @app.get('/cover')

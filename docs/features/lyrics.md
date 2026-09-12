@@ -32,6 +32,8 @@ lrclib is queried with the track title, primary artist, album name and duration.
 
 When synced lyrics are available, Downtify also saves a `.lrc` file next to the audio file with the same base name. This lets media players that support external lyrics files (like Jellyfin or certain portable players) show the time-synced lyrics independently of the embedded tags.
 
+Deleting the track from the Library page removes this `.lrc` sidecar along with the audio file, so lyrics never linger as an orphaned file.
+
 ## Fallback behaviour
 
 If lrclib returns no result for a track, the download continues normally — the audio file is saved without lyrics. No error is raised.
