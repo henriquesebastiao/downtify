@@ -12,6 +12,7 @@ services:
       - ./docker/cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_PORT=30321
+      # https://downtify.henriquesebastiao.com/getting-started/environment-variables/#getting-a-cookiestxt
       - DOWNTIFY_COOKIES_FILE=/cookies.txt
       # - TZ=America/Sao_Paulo
       # - DOWNTIFY_MONITOR_SYNC_TIME=03:00
