@@ -213,6 +213,9 @@ export default {
     overwriteExistingFiles: 'Mevcut dosyaların üzerine yaz',
     overwriteExistingFilesHint:
       'Bant genişliğinden tasarruf etmek için kapatın: indirme klasörünüzün herhangi bir yerinde (kitaplık kökü, başka bir listenin klasörü, sanatçı/albüm klasörü) zaten bulunan bir şarkı yeniden indirilmez. Eşleştirme Spotify/YouTube kimliğine göre değil, dosya adına göre yapılır.',
+    miniPlayer: 'Oynatıcı çubuğu',
+    miniPlayerHint:
+      'Bir parça yüklüyken tüm sayfalarda (Player sayfası hariç) oynatma kontrolleri içeren alt bir çubuk gösterir.',
     cookies: 'YouTube çerezleri',
     cookiesHint:
       'Bazı parçalar — özellikle müstehcen içerikli olanlar — yalnızca oturum açmış yetişkin bir hesaba sunulur ve YouTube zaman zaman indirmeleri engeller. YouTube oturumu açık bir tarayıcıdan dışa aktarılmış Netscape biçiminde bir cookies.txt yükleyin. Dosya /data içinde saklanır ve konteyner güncellemelerinde korunur.',
@@ -259,6 +262,8 @@ export default {
     playlistsGroup: 'Çalma Listeleri',
     artistsGroup: 'Sanatçılar',
     albumsGroup: 'Albümler',
+    hideBar: 'Oynatıcı çubuğunu gizle',
+    showBar: 'Oynatıcı çubuğunu göster',
   },
   footer: {
     tagline: 'Açık kaynak müzik indirme uygulaması',

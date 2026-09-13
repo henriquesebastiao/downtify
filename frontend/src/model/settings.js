@@ -18,6 +18,7 @@ const settings = ref({
   download_cover_art: true,
   overwrite_existing_files: true,
   search_albums: true,
+  mini_player_enabled: true,
 })
 
 const MIN_PARALLEL_DOWNLOADS = 1

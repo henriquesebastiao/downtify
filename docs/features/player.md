@@ -28,6 +28,17 @@ Switching the selection replaces the queue and stops whatever was playing; pick 
 
 The Library page (the file browser in the navigation bar) has the same **Filter by** selector, built from the same playlist/artist/album data — use it to narrow down the file list before deleting, re-downloading, or hitting play on a track, instead of scrolling through the whole library.
 
+## Mini player bar
+
+While a track is loaded, a bar with playback controls sticks to the bottom of every page except the Player page itself (which already has full controls) — album art, title/artist, shuffle, previous, play/pause, next, repeat and volume, like any other music app's persistent mini player. Tap the title or cover to jump to the full Player page.
+
+- A track name or artist too long for the bar scrolls back and forth instead of being cut off or forcing the bar to resize.
+- The **▾** button on the right collapses the bar into a small floating button (with a bars-style "now playing" animation) so it stops taking up screen space; tap that button to bring the bar back. Both are per-session — the bar starts expanded again next time you open Downtify.
+- The volume button opens a small popup with the same volume slider (and mute toggle) as the Player page.
+- On narrow screens the cover, shuffle, repeat and volume button are hidden so the remaining controls (previous, play/pause, next, collapse) fit on a single row without wrapping.
+
+Turn the whole thing off in **Settings → Mini player bar** if you'd rather not have it — the Player page itself is unaffected either way.
+
 ## How it works
 
 The player loads every audio file found recursively inside the downloads directory. Files are served directly from the container via the `/downloads` static mount. The playlist group is built from the `.m3u` files already on disk (`GET /playlists`); the artist/album groups are built from each file's embedded tags (`GET /tracks`) — no separate playlist or library database.

@@ -471,6 +471,25 @@
           </label>
         </div>
 
+        <!-- Mini player bar -->
+        <div>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.mini_player_enabled"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.miniPlayer') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.miniPlayerHint') }}
+              </span>
+            </span>
+          </label>
+        </div>
+
         <!-- YouTube cookies -->
         <div>
           <label

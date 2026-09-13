@@ -221,6 +221,9 @@ export default {
     overwriteExistingFiles: 'Meglévő fájlok felülírása',
     overwriteExistingFilesHint:
       'Kapcsolja ki a sávszélesség megtakarításához: a letöltési mappa bármely részén (könyvtár gyökere, másik lejátszási lista mappája, előadó/album mappa) már meglévő dal nem töltődik le újra. Az egyeztetés fájlnév alapján történik, nem a Spotify/YouTube azonosító alapján.',
+    miniPlayer: 'Lejátszósáv',
+    miniPlayerHint:
+      'Alsó sávot jelenít meg lejátszásvezérlőkkel minden oldalon (a Lejátszó oldal kivételével), amíg egy szám be van töltve.',
     cookies: 'YouTube sütik',
     cookiesHint:
       'Néhány szám — különösen az explicit tartalmúak — csak bejelentkezett, felnőtt fiók számára érhető el, és a YouTube időnként letiltja a letöltéseket. Tölts fel egy Netscape formátumú cookies.txt fájlt, amelyet egy YouTube-ra bejelentkezett böngészőből exportáltál. A fájl a /data könyvtárban tárolódik, és megmarad a konténer frissítései után is.',
@@ -267,6 +270,8 @@ export default {
     playlistsGroup: 'Lejátszási listák',
     artistsGroup: 'Előadók',
     albumsGroup: 'Albumok',
+    hideBar: 'Lejátszósáv elrejtése',
+    showBar: 'Lejátszósáv megjelenítése',
   },
   footer: {
     tagline: 'Nyílt forráskódú zeneletöltő',

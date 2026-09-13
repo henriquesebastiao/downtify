@@ -216,6 +216,9 @@ export default {
     overwriteExistingFiles: 'Overwrite existing files',
     overwriteExistingFilesHint:
       "Turn off to save bandwidth: a song already anywhere in your download folder (library root, another playlist's folder, an artist/album folder) is not downloaded again. Matched by file name, not by Spotify/YouTube ID.",
+    miniPlayer: 'Mini player bar',
+    miniPlayerHint:
+      'Show a bottom bar with playback controls on every page (except the Player itself) while a track is loaded.',
     cookies: 'YouTube cookies',
     cookiesHint:
       'Some tracks — explicit ones especially — are only served to a signed-in adult account, and YouTube sometimes challenges downloads. Upload a Netscape cookies.txt exported from a browser logged into YouTube to fix both. It is stored in /data and kept across container updates.',
@@ -262,6 +265,8 @@ export default {
     playlistsGroup: 'Playlists',
     artistsGroup: 'Artists',
     albumsGroup: 'Albums',
+    hideBar: 'Hide player bar',
+    showBar: 'Show player bar',
   },
   footer: {
     tagline: 'Open source music downloader',
