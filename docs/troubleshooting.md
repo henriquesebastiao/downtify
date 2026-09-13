@@ -77,6 +77,12 @@ Downtify records every auto-downloaded track in its database, so moving files el
 
 If files vanish on every restart, the `/downloads` volume isn't persisted — same fix as above.
 
+## "Could not find a YouTube match for '…'"
+
+Neither YouTube Music nor standard YouTube returned a result that passed the matcher's checks — title resembling the source, at least one shared artist, not a karaoke/cover/live/other-language version, and a duration within 30 seconds of Spotify's. See [How it works](how-it-works.md#fallback-to-standard-youtube).
+
+This usually means the song genuinely isn't on YouTube, or is only uploaded under a very different title or artist credit. If you can find the right video yourself, paste its YouTube URL into the search bar to download that exact video.
+
 ## Downloaded audio has the wrong metadata or cover
 
 Downtify resolves metadata from Spotify and matches the audio on YouTube Music. A mismatch usually means the match landed on a cover, remix or live version. Downloading from the Spotify **album** link rather than a search result gives the matcher much more to work with (track number, album, release type).

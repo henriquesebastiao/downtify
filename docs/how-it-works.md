@@ -22,11 +22,22 @@ For **albums and playlists**, the embed returns the track list. Playlist embeds 
 !!! note "Per-track metadata enrichment"
     Playlist embed entries are missing the release year and use the playlist cover instead of each track's own album cover. For the [Playlist Monitor](features/playlist-monitor.md), Downtify re-fetches every new track individually to get the correct cover and year before downloading.
 
-## 2. Audio match — YouTube Music search
+## 2. Audio match — YouTube Music, then YouTube
 
 Downtify uses [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) to search YouTube Music for the best audio match. The search query is built from the track title and artist name.
 
-Results are ranked by comparing the duration reported by YouTube Music against the duration from Spotify. The closest match within a 10-second window is selected. If no result matches the window, the top search result is used as a fallback.
+A result is only accepted if its title resembles the source title and it shares at least one artist. Spotify's dash-style version suffix and YouTube Music's parenthesised one are treated as the same (`Tubarões - Ao Vivo` matches `Tubarões (Ao Vivo)`), and an artist credit YouTube Music packs into one entry (`A, B, and C`) is split before comparing. Karaoke, cover, instrumental, sped-up/slowed, live (incl. `Ao Vivo`/`En Vivo`), acoustic, remix and other-language versions (e.g. `(Spanish Version)`) are rejected unless the source track is itself that version. Among the remaining results, the one whose duration is closest to Spotify's wins, with a bonus for a matching album name. If no search result qualifies and the album is known, the album's tracklist is scanned directly.
+
+### Fallback to standard YouTube
+
+Some songs are missing from YouTube Music, or only exist there as a different recording. So standard YouTube is searched too when:
+
+- YouTube Music has **no acceptable match**, or
+- its best match's duration is **more than 10 seconds** off from Spotify's — a strong hint that it's a different recording (e.g. a dubbed version with the same title).
+
+Standard-YouTube results go through the same title, artist and version checks, and are never accepted more than 30 seconds off from Spotify's duration. A YouTube result replaces a weak YouTube Music match only when its duration is strictly closer; otherwise the YouTube Music match is kept, since its catalog uploads usually have the cleanest audio.
+
+If neither site has an acceptable match, the track fails with `Could not find a YouTube match for '<title>'` rather than downloading the wrong song.
 
 For YouTube URLs entered directly, this step is skipped — Downtify downloads that specific video.
 

@@ -121,7 +121,7 @@ Spotify embed page  →  YouTube Music search  →  yt-dlp + ffmpeg + mutagen
 ```
 
 1. **Metadata** — Track, album and playlist links are resolved by scraping the public `open.spotify.com/embed` pages. No Spotify credentials of any kind are required.
-2. **Audio match** — [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) searches YouTube Music for the track and picks the best result by comparing audio duration. Free-text searches skip the Spotify step entirely.
+2. **Audio match** — [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) searches YouTube Music for the track and picks the best result by comparing audio duration. If YouTube Music has no good match (the song is missing, or only a different version such as a dubbed one), standard YouTube is searched automatically — see [How it works](https://henriquesebastiao.github.io/downtify/how-it-works/#fallback-to-standard-youtube). Free-text searches skip the Spotify step entirely.
 3. **Download & tag** — [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) downloads the audio and `ffmpeg` converts it to your chosen format. [`mutagen`](https://mutagen.readthedocs.io/) embeds title, artist, album, year and cover art into the file.
 
 ---
@@ -318,6 +318,7 @@ Most download problems have the same root cause: **YouTube wants a signed-in ses
 | The cookie upload button is greyed out | `DOWNTIFY_COOKIES_FILE` is set, so the deployment owns that file | Unset the variable and recreate the container |
 | Uploaded cookies / settings vanish after an update | `/data` isn't a persistent volume | Keep `- downtify_data:/data` in your compose file |
 | Upload rejected as invalid | The file isn't a **Netscape** cookie jar (JSON, spreadsheet or a copied header) | Re-export with a cookies.txt browser extension, from a `youtube.com` tab |
+| `Could not find a YouTube match for '…'` | Neither YouTube Music nor standard YouTube has a result that passes the title/artist/duration checks | Paste the right video's YouTube URL into the search bar to download it directly |
 | A watched playlist re-downloads tracks you already have | The files are no longer in the downloads directory | Keep `/downloads` persistent; moving files *within* it is fine |
 
 Cookies expire — if age-restricted downloads start failing again, export a fresh file and upload it as a replacement.
