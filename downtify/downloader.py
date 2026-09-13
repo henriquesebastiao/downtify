@@ -10,7 +10,7 @@ import threading
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-import requests
+import httpx
 import yt_dlp
 from loguru import logger
 from mutagen.flac import FLAC, Picture
@@ -700,7 +700,7 @@ def _download_cover(url: str) -> Optional[bytes]:
     if not url:
         return None
     try:
-        response = requests.get(url, timeout=15)
+        response = httpx.get(url, timeout=15)
         response.raise_for_status()
     except Exception:
         logger.opt(exception=True).warning('Failed to fetch cover art {}', url)

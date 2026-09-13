@@ -16,7 +16,7 @@ from threading import Lock
 from typing import Any, Optional
 from urllib.parse import quote_plus
 
-import requests
+import httpx
 from loguru import logger
 
 _ITUNES_SEARCH_URL = 'https://itunes.apple.com/search'
@@ -84,7 +84,7 @@ def _search_itunes(query: str, limit: int = 5) -> list[dict[str, Any]]:
     url = f'{_ITUNES_SEARCH_URL}?{params}'
     logger.debug('iTunes genre lookup: {}', url)
     try:
-        resp = requests.get(url, timeout=_TIMEOUT)
+        resp = httpx.get(url, timeout=_TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
     except Exception:

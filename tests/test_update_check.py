@@ -3,7 +3,7 @@ that powers the "a new version of Downtify is available" footer
 notification, and the ``GET /api/check_update`` endpoint it feeds.
 
 ``GET /api/check_update`` used to be a permanent stub returning
-``None`` — this wires it up for real. All offline: ``requests.get`` is
+``None`` — this wires it up for real. All offline: ``httpx.get`` is
 monkeypatched throughout (a live call against the real GitHub API was
 used to hand-verify the request/response shape during development, but
 doesn't belong in the suite — see CLAUDE.md's "no network calls in
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 
-import requests
+import httpx
 
 from downtify import api
 from downtify import update_check as update_check_mod
@@ -82,7 +82,7 @@ class _FakeResponse:
 
     def raise_for_status(self):
         if self.status_code >= 400:
-            raise requests.HTTPError(f'{self.status_code} error')
+            raise httpx.HTTPError(f'{self.status_code} error')
 
     def json(self):
         return self._payload
@@ -90,7 +90,7 @@ class _FakeResponse:
 
 def test_check_now_populates_status_on_success(monkeypatch):
     monkeypatch.setattr(
-        requests,
+        httpx,
         'get',
         lambda *a, **kw: _FakeResponse({
             'tag_name': '2.12.0',
@@ -111,7 +111,7 @@ def test_check_now_populates_status_on_success(monkeypatch):
 
 def test_status_reports_no_update_when_versions_match(monkeypatch):
     monkeypatch.setattr(
-        requests,
+        httpx,
         'get',
         lambda *a, **kw: _FakeResponse({'tag_name': '2.11.0'}),
     )
@@ -133,9 +133,9 @@ def test_status_before_any_check_has_no_latest_version():
 
 def test_check_now_network_error_does_not_raise(monkeypatch):
     def _raise(*_a, **_kw):
-        raise requests.ConnectionError('offline')
+        raise httpx.ConnectError('offline')
 
-    monkeypatch.setattr(requests, 'get', _raise)
+    monkeypatch.setattr(httpx, 'get', _raise)
     checker = UpdateChecker()
     checker.check_now()  # must not raise
 
@@ -146,7 +146,7 @@ def test_check_now_network_error_does_not_raise(monkeypatch):
 
 def test_check_now_http_error_does_not_raise(monkeypatch):
     monkeypatch.setattr(
-        requests, 'get', lambda *a, **kw: _FakeResponse({}, status=404)
+        httpx, 'get', lambda *a, **kw: _FakeResponse({}, status=404)
     )
     checker = UpdateChecker()
     checker.check_now()  # must not raise
@@ -155,7 +155,7 @@ def test_check_now_http_error_does_not_raise(monkeypatch):
 
 def test_check_now_missing_tag_name_does_not_raise(monkeypatch):
     monkeypatch.setattr(
-        requests, 'get', lambda *a, **kw: _FakeResponse({'tag_name': ''})
+        httpx, 'get', lambda *a, **kw: _FakeResponse({'tag_name': ''})
     )
     checker = UpdateChecker()
     checker.check_now()  # must not raise
@@ -164,7 +164,7 @@ def test_check_now_missing_tag_name_does_not_raise(monkeypatch):
 
 def test_a_later_failed_check_keeps_the_previous_result(monkeypatch):
     monkeypatch.setattr(
-        requests,
+        httpx,
         'get',
         lambda *a, **kw: _FakeResponse({'tag_name': '2.12.0'}),
     )
@@ -172,9 +172,9 @@ def test_a_later_failed_check_keeps_the_previous_result(monkeypatch):
     checker.check_now()
 
     def _raise(*_a, **_kw):
-        raise requests.ConnectionError('offline this time')
+        raise httpx.ConnectionError('offline this time')
 
-    monkeypatch.setattr(requests, 'get', _raise)
+    monkeypatch.setattr(httpx, 'get', _raise)
     checker.check_now()
 
     # The stale-but-real result from the first check carries over rather
@@ -196,7 +196,7 @@ def test_check_update_endpoint_returns_checker_status(monkeypatch):
     monkeypatch.setattr(api.state, 'version', '2.11.0')
     checker = UpdateChecker()
     monkeypatch.setattr(
-        requests,
+        httpx,
         'get',
         lambda *a, **kw: _FakeResponse({'tag_name': '2.12.0'}),
     )
