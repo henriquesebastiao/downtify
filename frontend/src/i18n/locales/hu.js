@@ -272,5 +272,6 @@ export default {
   },
   footer: {
     tagline: 'Nyílt forráskódú zeneletöltő',
+    updateAvailable: 'A(z) {version} verzió elérhető',
   },
 }

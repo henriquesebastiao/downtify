@@ -37,6 +37,7 @@ nav = [
     { "YouTube Cookies"      = "features/youtube-cookies.md"        },
     { "Internationalization" = "features/internationalization.md"   },
     { "Install as an App (PWA)" = "features/pwa.md"                 },
+    { "Update Notifications" = "features/updates.md"                },
   ]},
   { "How It Works"    = "how-it-works.md"    },
   { "Troubleshooting" = "troubleshooting.md" },

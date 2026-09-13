@@ -264,5 +264,6 @@ export default {
   },
   footer: {
     tagline: 'Açık kaynak müzik indirme uygulaması',
+    updateAvailable: '{version} sürümü kullanılabilir',
   },
 }

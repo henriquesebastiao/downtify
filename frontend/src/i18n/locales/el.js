@@ -273,5 +273,6 @@ export default {
   },
   footer: {
     tagline: 'Πρόγραμμα λήψης μουσικής ανοιχτού κώδικα',
+    updateAvailable: 'Η έκδοση {version} είναι διαθέσιμη',
   },
 }

@@ -16,6 +16,26 @@ Returns the current Downtify version as a plain string.
 
 ---
 
+### `GET /api/check_update`
+
+Result of the last hourly check against [GitHub Releases](https://github.com/henriquesebastiao/downtify/releases) — powers the update notice in the page footer. The request to GitHub happens on a background loop, never on this endpoint's own request; this just reads whatever that loop last found.
+
+**Response:**
+
+```json
+{
+  "current_version": "2.11.0",
+  "latest_version": "2.12.0",
+  "update_available": true,
+  "release_url": "https://github.com/henriquesebastiao/downtify/releases/tag/2.12.0",
+  "last_checked": "2026-09-13T07:06:16.610181+00:00"
+}
+```
+
+Returns `null` in the brief window right after startup, before the first check has completed. If the check to GitHub fails (network issue, rate limit), the previous result — or `latest_version: null` if there hasn't been a successful one yet — carries over until the next hourly attempt; this endpoint itself never fails because of it.
+
+---
+
 ## Search & resolve
 
 ### `GET /api/songs/search`

@@ -76,6 +76,7 @@ from .monitor import (
     fetch_playlist,
     parse_playlist_url,
 )
+from .update_check import UpdateChecker
 
 MIN_PARALLEL_DOWNLOADS = 1
 MAX_PARALLEL_DOWNLOADS = 30
@@ -214,6 +215,7 @@ class AppState:
     settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
     settings_path: Optional[Path] = None
     cookies_store: Optional[CookiesStore] = None
+    update_checker: Optional[UpdateChecker] = None
     loop: Optional[asyncio.AbstractEventLoop] = None
     monitor_db: Optional[PlaylistMonitorDB] = None
     download_jobs: dict[str, dict[str, Any]] = {}
@@ -275,7 +277,13 @@ def get_health() -> dict[str, Any]:
 
 @router.get('/api/check_update')
 def check_update() -> Optional[dict[str, Any]]:
-    return None
+    """Result of the last hourly GitHub Releases check (see
+    ``downtify/update_check.py``), or ``None`` before the first one has
+    run — briefly, right after startup.
+    """
+    if state.update_checker is None:
+        return None
+    return state.update_checker.status(state.version)
 
 
 @router.get('/api/songs/search')

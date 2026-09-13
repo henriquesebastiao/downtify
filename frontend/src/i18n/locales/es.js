@@ -273,5 +273,6 @@ export default {
   },
   footer: {
     tagline: 'Descargador de música de código abierto',
+    updateAvailable: 'La versión {version} está disponible',
   },
 }

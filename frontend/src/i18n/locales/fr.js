@@ -273,5 +273,6 @@ export default {
   footer: {
     tagline:
       'Logiciel open source de téléchargement de musique - Traduction par Souverain',
+    updateAvailable: 'La version {version} est disponible',
   },
 }
