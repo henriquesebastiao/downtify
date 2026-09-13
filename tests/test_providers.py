@@ -57,6 +57,14 @@ def clear_ytm_album_cache():
     providers._omv_preference_cache.clear()
 
 
+@pytest.fixture(autouse=True)
+def no_real_youtube_search(monkeypatch):
+    """find_match's standard-YouTube fallback must never hit the network;
+    tests that exercise it override this stub with their own results."""
+
+    monkeypatch.setattr(providers, '_youtube_search', lambda q, limit: [])
+
+
 def test_enrich_from_match_backfills_artists_when_empty():
     song = {
         'name': 'Test Song',
@@ -343,11 +351,15 @@ def test_titles_match_live_target_rejects_studio_candidate():
     assert not _titles_match('Wait It Out - Live', 'Wait It Out')
 
 
-def test_titles_match_rejects_differently_formatted_live_tag():
-    # Deliberately strict: even a genuine live take is rejected if
-    # YouTube Music doesn't spell the qualifier exactly like Spotify does.
-    assert not _titles_match('Wait It Out - Live', 'Wait It Out (Live)')
+def test_titles_match_accepts_differently_formatted_live_tag():
+    # Spotify's "- Live" and YouTube Music's "(Live)" name the same take;
+    # rejecting it failed whole live albums/playlists. A different take
+    # ("Live at …") is still a different title.
+    assert _titles_match('Wait It Out - Live', 'Wait It Out (Live)')
     assert _titles_match('Wait It Out - Live', 'Wait It Out - Live')
+    assert not _titles_match(
+        'Wait It Out - Live', 'Wait It Out (Live at Wembley)'
+    )
 
 
 def test_titles_match_studio_target_rejects_live_candidate():
@@ -721,6 +733,506 @@ def test_find_match_returns_none_when_album_fallback_also_fails(monkeypatch):
     })
     assert video_id is None
     assert match is None
+
+
+# ── find_match title-first query retry ───────────────────────────────────────
+
+
+class _FakeYTMByQuery:
+    """Routes ``search()`` results by query text and records every query,
+    so tests can tell the artist-first and title-first searches apart."""
+
+    def __init__(self, by_query):
+        self._by_query = by_query
+        self.queries = []
+
+    def search(self, query, filter=None, limit=10):
+        self.queries.append(query)
+        return self._by_query.get(query, [])
+
+
+def _no_album_fallback(song):
+    return None, None
+
+
+def test_find_match_retries_title_first_when_artist_first_misses(
+    monkeypatch,
+):
+    fake = _FakeYTMByQuery({
+        'Mica Ferreira Held Together': [
+            _song_row('Hollow Anchor', 'Mica Ferreira', '', 207, 'x'),
+        ],
+        'Held Together Mica Ferreira': [
+            _song_row('Held Together', 'Mica Ferreira', '', 226, 'right'),
+        ],
+    })
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+
+    def _boom(song):
+        raise AssertionError('album fallback must not run after a hit')
+
+    monkeypatch.setattr(providers, '_find_match_via_album', _boom)
+    video_id, match = find_match({
+        'name': 'Held Together',
+        'artists': ['Mica Ferreira'],
+        'duration': 226,
+    })
+    assert video_id == 'right'
+    assert match['title'] == 'Held Together'
+    assert fake.queries[0] == 'Mica Ferreira Held Together'
+    assert 'Held Together Mica Ferreira' in fake.queries
+
+
+def test_find_match_skips_title_first_query_after_artist_first_hit(
+    monkeypatch,
+):
+    fake = _FakeYTMByQuery({
+        'Mica Ferreira Held Together': [
+            _song_row('Held Together', 'Mica Ferreira', '', 226, 'right'),
+        ],
+    })
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, _ = find_match({
+        'name': 'Held Together',
+        'artists': ['Mica Ferreira'],
+        'duration': 226,
+    })
+    assert video_id == 'right'
+    assert 'Held Together Mica Ferreira' not in fake.queries
+
+
+def test_find_match_title_first_joins_all_artists(monkeypatch):
+    fake = _FakeYTMByQuery({})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    monkeypatch.setattr(providers, '_find_match_via_album', _no_album_fallback)
+    assert find_match({
+        'name': 'Azulejo - Ao Vivo',
+        'artists': ['Mayke & Rodrigo', 'Clayton & Romário'],
+        'duration': 142,
+    }) == (None, None)
+    assert set(fake.queries) == {
+        'Mayke & Rodrigo Clayton & Romário Azulejo - Ao Vivo',
+        'Azulejo - Ao Vivo Mayke & Rodrigo Clayton & Romário',
+    }
+
+
+def test_find_match_without_artists_searches_only_once_per_stage(
+    monkeypatch,
+):
+    fake = _FakeYTMByQuery({})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    monkeypatch.setattr(providers, '_find_match_via_album', _no_album_fallback)
+    assert find_match({'name': 'Held Together', 'artists': []}) == (
+        None,
+        None,
+    )
+    assert set(fake.queries) == {'Held Together'}
+    # top result + songs + videos, and no repeated title-first round.
+    assert len(fake.queries) == 3
+
+
+def test_find_match_album_fallback_runs_after_both_query_orders_miss(
+    monkeypatch,
+):
+    fake = _FakeYTMByQuery({})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    seen = []
+
+    def _album(song):
+        seen.append(list(fake.queries))
+        return 'album-vid', {'videoId': 'album-vid', 'title': 'Held Together'}
+
+    monkeypatch.setattr(providers, '_find_match_via_album', _album)
+    video_id, _ = find_match({
+        'name': 'Held Together',
+        'album_name': 'Driftlight',
+        'artists': ['Mica Ferreira'],
+        'duration': 226,
+    })
+    assert video_id == 'album-vid'
+    assert 'Held Together Mica Ferreira' in seen[0]
+
+
+# ── find_match standard-YouTube fallback ─────────────────────────────────────
+
+
+def _yt_entry(video_id, title, channel, duration, **extra):
+    return {
+        'id': video_id,
+        'title': title,
+        'channel': channel,
+        'duration': duration,
+        **extra,
+    }
+
+
+def _stub_youtube(monkeypatch, entries):
+    calls = []
+
+    def _search(query, limit):
+        calls.append(query)
+        return entries
+
+    monkeypatch.setattr(providers, '_youtube_search', _search)
+    return calls
+
+
+_HIPS = {
+    'name': "Hips Don't Lie (feat. Wyclef Jean)",
+    'artists': ['Shakira', 'Wyclef Jean'],
+    'duration': 218,
+}
+
+
+def test_find_match_falls_back_to_youtube_when_music_has_nothing(
+    monkeypatch,
+):
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTM([]))
+    _stub_youtube(
+        monkeypatch,
+        [
+            _yt_entry(
+                'yt-right',
+                'Shakira - Hips Don’t Lie (featuring Wyclef Jean) '
+                '(Official 4K Video) ft. Wyclef Jean',
+                'Shakira',
+                219,
+            )
+        ],
+    )
+    video_id, match = find_match(_HIPS)
+    assert video_id == 'yt-right'
+    # A standard-YouTube hit carries no catalog metadata to enrich from.
+    assert match is None
+
+
+def test_find_match_replaces_weak_music_match_with_closer_youtube_hit(
+    monkeypatch,
+):
+    # The reported bug: YouTube Music only has the dubbed version, which
+    # shares title and artist but not length; YouTube has the original.
+    fake = _FakeYTMByFilter({
+        'songs': [_song_row('Song', 'Artist', '', 245, 'ytm-dub')],
+    })
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    _stub_youtube(
+        monkeypatch,
+        [_yt_entry('yt-original', 'Artist - Song (Official Audio)', 'x', 201)],
+    )
+    video_id, match = find_match({
+        'name': 'Song',
+        'artists': ['Artist'],
+        'duration': 200,
+    })
+    assert video_id == 'yt-original'
+    assert match is None
+
+
+def test_find_match_keeps_weak_music_match_when_youtube_is_not_closer(
+    monkeypatch,
+):
+    row = _song_row('Song', 'Artist', '', 215, 'ytm-hit')
+    monkeypatch.setattr(
+        providers, '_ytm', lambda: _FakeYTMByFilter({'songs': [row]})
+    )
+    _stub_youtube(
+        monkeypatch, [_yt_entry('yt-far', 'Artist - Song', 'Artist', 222)]
+    )
+    video_id, match = find_match({
+        'name': 'Song',
+        'artists': ['Artist'],
+        'duration': 200,
+    })
+    assert video_id == 'ytm-hit'
+    assert match is row
+
+
+def test_find_match_skips_youtube_when_music_match_is_strong(monkeypatch):
+    row = _song_row('Song', 'Artist', '', 203, 'ytm-hit')
+    monkeypatch.setattr(
+        providers, '_ytm', lambda: _FakeYTMByFilter({'songs': [row]})
+    )
+
+    def _boom(query, limit):
+        raise AssertionError('YouTube must not be searched')
+
+    monkeypatch.setattr(providers, '_youtube_search', _boom)
+    video_id, _ = find_match({
+        'name': 'Song',
+        'artists': ['Artist'],
+        'duration': 200,
+    })
+    assert video_id == 'ytm-hit'
+
+
+def test_find_match_returns_none_when_youtube_search_fails(monkeypatch):
+    monkeypatch.setattr(providers, '_ytm', lambda: _FakeYTM([]))
+
+    def _boom(query, limit):
+        raise RuntimeError('network down')
+
+    monkeypatch.setattr(providers, '_youtube_search', _boom)
+    assert find_match({'name': 'Song', 'artists': ['Artist']}) == (
+        None,
+        None,
+    )
+
+
+def test_youtube_fallback_rejects_variants_hidden_by_title_noise(
+    monkeypatch,
+):
+    # "(Instrumental Audio)" / "(8D Audio)" would be stripped as "audio"
+    # noise before the title gate — the variant check must see the raw
+    # title first.
+    _stub_youtube(
+        monkeypatch,
+        [
+            _yt_entry('inst', 'Artist - Song (Instrumental Audio)', 'x', 200),
+            _yt_entry('8d', 'Artist - Song (8D Audio)', 'x', 200),
+        ],
+    )
+    assert providers._find_match_via_youtube({
+        'name': 'Song',
+        'artists': ['Artist'],
+        'duration': 200,
+    }) == (None, None)
+
+
+def test_youtube_fallback_enforces_duration_cap(monkeypatch):
+    _stub_youtube(
+        monkeypatch,
+        [_yt_entry('long', 'Artist - Song (Official Video)', 'x', 260)],
+    )
+    assert providers._find_match_via_youtube({
+        'name': 'Song',
+        'artists': ['Artist'],
+        'duration': 200,
+    }) == (None, None)
+
+
+def test_youtube_fallback_rejects_unrelated_artist_and_other_language(
+    monkeypatch,
+):
+    _stub_youtube(
+        monkeypatch,
+        [
+            _yt_entry('other', 'Someone Else - Song', 'Someone Else', 200),
+            _yt_entry('es', 'Artist - Song (Spanish Version)', 'x', 200),
+            _yt_entry(
+                'live', 'Artist - Song', 'Artist', 200, live_status='is_live'
+            ),
+        ],
+    )
+    assert providers._find_match_via_youtube({
+        'name': 'Song',
+        'artists': ['Artist'],
+        'duration': 200,
+    }) == (None, None)
+
+
+def test_youtube_fallback_credits_topic_channel_as_artist(monkeypatch):
+    calls = _stub_youtube(
+        monkeypatch, [_yt_entry('topic', 'Song', 'Artist - Topic', 199)]
+    )
+    assert providers._find_match_via_youtube({
+        'name': 'Song',
+        'artists': ['Artist'],
+        'duration': 200,
+    }) == ('topic', 1)
+    assert calls == ['Artist Song']
+
+
+def test_youtube_entry_to_result_splits_combined_artist_credit():
+    result = providers._youtube_entry_to_result(
+        _yt_entry(
+            'id1',
+            'Florence and the Machine & Artist B - Song (Lyric Video)',
+            'SomeChannelVEVO',
+            180,
+        )
+    )
+    names = [a['name'] for a in result['artists']]
+    assert 'Florence and the Machine & Artist B' in names
+    assert 'Artist B' in names
+    assert 'SomeChannel' in names
+    assert result['title'] == 'Song'
+    assert result['duration_seconds'] == 180
+
+
+@pytest.mark.parametrize(
+    ('spotify_title', 'ytm_title'),
+    [
+        ('Tubarões - Ao Vivo', 'Tubarões (Ao Vivo)'),
+        (
+            'Ai Cowboy - BeM Interior, Ao Vivo',
+            'Ai Cowboy (BeM Interior, Ao Vivo)',
+        ),
+        (
+            'Voltinha de Trator (Bom de Cama) - Ao Vivo',
+            'Voltinha de Trator (Bom de Cama) (Ao Vivo)',
+        ),
+        ('Yellow - Live', 'Yellow (Live)'),
+        ('Song - Remastered 2011', 'Song (Remastered 2011)'),
+    ],
+)
+def test_titles_match_spotify_dash_suffix_vs_parenthesised(
+    spotify_title, ytm_title
+):
+    # Regression: 17 of 19 tracks of a live sertanejo playlist failed with
+    # "Could not find a YouTube match" — Spotify's "Title - Ao Vivo"
+    # never matched YouTube Music's "Title (Ao Vivo)", on either site.
+    assert _titles_match(spotify_title, ytm_title)
+    assert _titles_match(ytm_title, spotify_title)
+
+
+def test_titles_match_keeps_live_and_studio_apart():
+    assert not _titles_match('Tubarões - Ao Vivo', 'Tubarões')
+    assert not _titles_match('Tubarões', 'Tubarões (Ao Vivo)')
+    assert not _titles_match('Canción', 'Canción (En Vivo)')
+
+
+@pytest.mark.parametrize(
+    ('target', 'candidate'),
+    [
+        # Native script + romanization, uploaded by the artist.
+        ('Kuchizuke Diamond', 'くちづけDiamond - Kuchizuke Diamond'),
+        # "Game OST - Title (edition) - Artist" fan upload.
+        (
+            'Smash Hit Theme',
+            'Smash Hit OST - Smash Hit Theme Full Version - Douglas Holmquist',
+        ),
+        ('Tubarões - Ao Vivo', 'Diego & Victor Hugo - Tubarões (Ao Vivo)'),
+    ],
+)
+def test_titles_match_accepts_title_as_dash_segment(target, candidate):
+    assert _titles_match(target, candidate)
+    assert _titles_match(candidate, target)
+
+
+@pytest.mark.parametrize(
+    ('target', 'candidate'),
+    [
+        # A segment shorter than the title is a different, broader name.
+        ('Smash Hit Theme', 'Smash Hit - All Boss Soundtracks - Artist'),
+        # The other segments name a different recording.
+        ('Yellow', 'Yellow - Live'),
+        ('Yellow', 'Coldplay - Yellow - Remix'),
+        ('Tubarões - Ao Vivo', 'Diego & Victor Hugo - Tubarões'),
+        # Title merely contained in a segment.
+        ('Storm', 'Artist - A Perfect Storm'),
+    ],
+)
+def test_titles_match_segment_rejections(target, candidate):
+    assert not _titles_match(target, candidate)
+
+
+def test_artists_overlap_ignores_leading_the():
+    # Regression: Spotify's "Eden Project" vs YouTube Music's
+    # "The Eden Project" failed "Crazy in Love".
+    assert _artists_overlap(
+        ['Eden Project'], {'artists': [{'name': 'The Eden Project'}]}
+    )
+    assert _artists_overlap(
+        ['The Beatles'], {'artists': [{'name': 'Beatles, and Someone'}]}
+    )
+    assert not _artists_overlap(
+        ['Eden Project'], {'artists': [{'name': 'EDEN'}]}
+    )
+
+
+def test_youtube_fallback_credits_artist_from_any_title_segment(monkeypatch):
+    # Regression: "Smash Hit Theme" only exists as a fan upload whose
+    # title ends with the artist and whose channel isn't the artist.
+    _stub_youtube(
+        monkeypatch,
+        [
+            _yt_entry(
+                'looping',
+                'Smash Hit OST - Smash Hit Theme (Looping) - Douglas Holmquist',
+                'Den1136',
+                77,
+            ),
+            _yt_entry(
+                'full',
+                'Smash Hit OST - Smash Hit Theme Full Version - '
+                'Douglas Holmquist',
+                'Den1136',
+                89,
+            ),
+            _yt_entry(
+                'talk', 'How I wrote the Smash Hit Theme music', 'x', 315
+            ),
+        ],
+    )
+    assert providers._find_match_via_youtube({
+        'name': 'Smash Hit Theme',
+        'artists': ['Douglas Holmquist'],
+        'duration': 88,
+    }) == ('full', 1)
+
+
+def test_find_match_accepts_artist_upload_with_romanized_segment(
+    monkeypatch,
+):
+    top = [
+        {
+            'resultType': 'video',
+            'videoId': 'fan',
+            'title': 'Kuchizuke Diamond - WEAVER「Opening Full Lyrics」',
+            'artists': [{'name': 'VE4MIX'}],
+        },
+        {
+            'resultType': 'video',
+            'videoId': 'weaver',
+            'title': 'くちづけDiamond - Kuchizuke Diamond',
+            'artists': [{'name': 'WEAVER'}],
+        },
+    ]
+    fake = _FakeYTMByFilter({None: top})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, _ = find_match({
+        'name': 'Kuchizuke Diamond',
+        'artists': ['WEAVER'],
+        'duration': 236,
+    })
+    assert video_id == 'weaver'
+
+
+def test_artists_overlap_splits_packed_credit():
+    packed = {
+        'artists': [
+            {'name': 'JIRAYAUAI, DOUTH!, VITOR BUENO, and SAM SAM'},
+        ]
+    }
+    assert _artists_overlap(['JIRAYAUAI', 'Douth!'], packed)
+    assert _artists_overlap(['Sam Sam'], packed)
+    assert not _artists_overlap(['Ana Castela'], packed)
+    duo = {'artists': [{'name': 'Rionegro & Solimões'}]}
+    assert _artists_overlap(['Rionegro & Solimões'], duo)
+
+
+def test_find_match_resolves_dash_suffixed_live_title(monkeypatch):
+    fake = _FakeYTMByFilter({
+        'songs': [
+            _song_row(
+                'Azulejo (Ao Vivo)', 'Clayton & Romário', '', 143, 'right'
+            ),
+        ],
+    })
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, match = find_match({
+        'name': 'Azulejo - Ao Vivo',
+        'artists': ['Mayke & Rodrigo', 'Clayton & Romário'],
+        'duration': 142,
+    })
+    assert video_id == 'right'
+    assert match['title'] == 'Azulejo (Ao Vivo)'
+
+
+def test_titles_match_rejects_other_language_version():
+    assert not _titles_match('Song', 'Song (Spanish Version)')
+    assert not _titles_match('Song', 'Song (Versión en Español)')
+    assert _titles_match('Song', 'Song (Remastered 2011)')
 
 
 # ── _album_title_hints ────────────────────────────────────────────────────────
@@ -1757,7 +2269,9 @@ def test_song_from_video_id_enriches_with_catalog_match(monkeypatch):
         'album': {'name': 'Driftlight', 'id': 'MPREb_r66dI91cUVz'},
     }
     monkeypatch.setattr(
-        providers, 'find_match', lambda _song: ('eAX90iTkiPk', catalog_match)
+        providers,
+        '_find_youtube_music_match',
+        lambda _song: ('eAX90iTkiPk', catalog_match),
     )
     monkeypatch.setattr(
         providers,
@@ -1791,7 +2305,9 @@ def test_song_from_video_id_falls_back_when_no_catalog_match(monkeypatch):
     monkeypatch.setattr(
         providers, '_song_from_video_details', lambda _vid: dict(base_song)
     )
-    monkeypatch.setattr(providers, 'find_match', lambda _song: (None, None))
+    monkeypatch.setattr(
+        providers, '_find_youtube_music_match', lambda _song: (None, None)
+    )
     song = song_from_video_id('xyz')
     assert song == base_song
 
@@ -1805,7 +2321,7 @@ def test_song_from_video_id_returns_early_without_a_title(monkeypatch):
         '_song_from_video_details',
         lambda _vid: {'song_id': 'xyz', 'name': ''},
     )
-    monkeypatch.setattr(providers, 'find_match', _boom)
+    monkeypatch.setattr(providers, '_find_youtube_music_match', _boom)
     song = song_from_video_id('xyz')
     assert song == {'song_id': 'xyz', 'name': ''}
 
@@ -1819,7 +2335,7 @@ def test_song_from_video_id_survives_find_match_exception(monkeypatch):
     monkeypatch.setattr(
         providers, '_song_from_video_details', lambda _vid: dict(base_song)
     )
-    monkeypatch.setattr(providers, 'find_match', _boom)
+    monkeypatch.setattr(providers, '_find_youtube_music_match', _boom)
     song = song_from_video_id('xyz')
     assert song == base_song
 
