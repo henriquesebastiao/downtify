@@ -8,7 +8,9 @@
           src="../assets/downtify.svg"
           class="h-8 w-8 drop-shadow-[0_0_8px_rgba(26,208,92,0.55)]"
         />
-        <span class="text-lg font-bold tracking-tight">Downtify</span>
+        <span class="hidden text-lg font-bold tracking-tight sm:inline"
+          >Downtify</span
+        >
       </div>
       <div class="ml-auto flex items-center gap-1 sm:gap-2">
         <button
