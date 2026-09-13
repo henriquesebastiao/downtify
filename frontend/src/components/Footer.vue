@@ -1,5 +1,8 @@
 <template>
   <footer class="mt-auto px-6 py-6 text-center text-sm text-base-content/60">
+    <div v-if="version" class="mb-2">
+      <span class="badge-soft">v{{ version }}</span>
+    </div>
     <a
       class="font-semibold text-primary hover:underline"
       href="https://github.com/henriquesebastiao/downtify"
@@ -29,10 +32,18 @@
 </template>
 
 <script setup>
+import { onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useI18n } from '../i18n'
 import { useUpdateCheck } from '../model/updateCheck'
 
 const { t } = useI18n()
 const uc = useUpdateCheck()
+
+// Set by api.js's getVersion() (GET /api/version) once the app loads.
+const version = ref(localStorage.getItem('version') || '')
+onMounted(() => {
+  const v = localStorage.getItem('version')
+  if (v) version.value = v
+})
 </script>

@@ -25,7 +25,6 @@ export default {
     switchToDark: 'Basculer en mode sombre',
   },
   hero: {
-    noAccount: 'Pas besoin de compte Spotify',
     tagline:
       "Votre musique avec toutes les métadonnées, les pochettes d'album et les paroles, en un seul clic.",
     songs: 'Titres',

@@ -25,7 +25,6 @@ export default {
     switchToDark: 'Смени на тъмен',
   },
   hero: {
-    noAccount: 'не е нужен профил в Spotify',
     tagline: 'Твоята музика с цялата метадата, обложка и текст - с един клик.',
     songs: 'Песни',
     albums: 'Албуми',

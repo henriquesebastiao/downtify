@@ -25,7 +25,6 @@ export default {
     switchToDark: 'Mudar para escuro',
   },
   hero: {
-    noAccount: 'sem precisar de conta no Spotify',
     tagline:
       'Sua música com metadados completos, capa do álbum e letras — em um clique.',
     songs: 'Músicas',

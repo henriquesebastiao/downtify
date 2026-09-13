@@ -23,10 +23,6 @@
       <h1 class="text-balance text-5xl sm:text-6xl font-bold tracking-tight">
         Down<span class="text-primary">tify</span>
       </h1>
-      <div class="mt-3 flex items-center justify-center gap-2">
-        <span class="badge-soft">v{{ version }}</span>
-        <span class="badge-neutral-soft">{{ t('hero.noAccount') }}</span>
-      </div>
       <p
         class="mx-auto mt-5 max-w-md text-balance text-base sm:text-lg text-base-content/70"
       >
@@ -35,22 +31,6 @@
 
       <div class="mt-10">
         <SearchInput class="w-full" />
-        <div
-          class="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-base-content/60"
-        >
-          <span class="pill bg-white/5 border border-white/10"
-            ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-            {{ t('hero.songs') }}</span
-          >
-          <span class="pill bg-white/5 border border-white/10"
-            ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-            {{ t('hero.albums') }}</span
-          >
-          <span class="pill bg-white/5 border border-white/10"
-            ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-            {{ t('hero.playlists') }}</span
-          >
-        </div>
 
         <div class="mt-5">
           <button
@@ -88,7 +68,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import SearchInput from './SearchInput.vue'
 import router from '../router'
@@ -96,11 +76,6 @@ import { useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
 
 const { t } = useI18n()
-const version = ref(localStorage.getItem('version') || '2.11.0')
-onMounted(() => {
-  const v = localStorage.getItem('version')
-  if (v) version.value = v
-})
 
 const dm = useDownloadManager()
 const csvInput = ref(null)

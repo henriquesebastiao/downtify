@@ -25,7 +25,6 @@ export default {
     switchToDark: 'Karanlık temaya geç',
   },
   hero: {
-    noAccount: 'Spotify hesabı gerektirmez',
     tagline:
       'Tek bir tıklama ile — tüm meta verileri, albüm kapağı ve şarkı sözleri.',
     songs: 'Şarkılar',

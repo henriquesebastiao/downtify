@@ -25,7 +25,6 @@ export default {
     switchToDark: 'Váltás sötét módra',
   },
   hero: {
-    noAccount: 'Spotify-fiók nem szükséges',
     tagline:
       'A zene teljes metaadataival, albumképekkel és dalszövegekkel — egy kattintásal.',
     songs: 'Zenék',
