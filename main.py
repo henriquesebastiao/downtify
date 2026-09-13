@@ -18,7 +18,7 @@ import os
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -280,6 +280,64 @@ def _prune_empty_parent_dirs(start_dir: Path, root: Path) -> None:
         current = current.parent
 
 
+#: Hard cap on a single batch-delete request, so an accidental
+#: "select everything" on a huge library can't tie up a request
+#: forever or send a payload that's obviously not a real selection.
+MAX_BATCH_DELETE = 2000
+
+
+def _delete_track_file(file: str, base: Path) -> dict:
+    """Delete one track (``file``, relative to ``base``) plus its
+    sidecars, and prune the folder it leaves behind if it's now empty.
+
+    Returns ``{'deleted': True}`` or ``{'deleted': False, 'error': str}``
+    — this is the exact shape ``DELETE /delete`` has always returned;
+    ``DELETE /delete/batch`` reuses it per file.
+    """
+    # Resolve and confine to `base` to prevent path traversal.
+    try:
+        full = (base / file).resolve()
+        full.relative_to(base)
+    except (ValueError, RuntimeError):
+        return {'deleted': False, 'error': 'Invalid path'}
+    if not full.is_file():
+        return {'deleted': False, 'error': 'File not found'}
+    try:
+        full.unlink()
+    except Exception as exc:
+        return {'deleted': False, 'error': str(exc)}
+    _delete_lrc_sidecar(full)
+    _delete_album_cover_if_orphaned(full)
+    _prune_empty_parent_dirs(full.parent, base)
+    return {'deleted': True}
+
+
+def _delete_tracks_batch(files: list[str], base: Path) -> dict:
+    """Delete every file in ``files`` (each relative to ``base``).
+
+    Each file is handled independently through :func:`_delete_track_file`
+    — one bad path or an already-gone file doesn't stop the rest.
+    Raises :class:`ValueError` if ``files`` is larger than
+    :data:`MAX_BATCH_DELETE`, so an accidental "select everything" on a
+    huge library can't tie up a request forever.
+    """
+    # Dedupe (order-preserving) so a client sending the same path twice
+    # can't have the second attempt report a spurious "File not found"
+    # for a file the first attempt already removed.
+    files = list(dict.fromkeys(files))
+    if len(files) > MAX_BATCH_DELETE:
+        raise ValueError(
+            f'Cannot delete more than {MAX_BATCH_DELETE} files in one request'
+        )
+    results = {f: _delete_track_file(f, base) for f in files}
+    deleted = sum(1 for r in results.values() if r['deleted'])
+    return {
+        'deleted_count': deleted,
+        'failed_count': len(files) - deleted,
+        'results': results,
+    }
+
+
 def build_app() -> FastAPI:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
@@ -449,23 +507,24 @@ def build_app() -> FastAPI:
 
     @app.delete('/delete')
     def delete_download(file: str) -> dict:
-        # Resolve and confine to DOWNLOAD_DIR to prevent path traversal.
-        base = DOWNLOAD_DIR.resolve()
+        return _delete_track_file(file, DOWNLOAD_DIR.resolve())
+
+    @app.delete('/delete/batch')
+    def delete_downloads_batch(
+        files: list[str] = Body(..., embed=True),
+    ) -> dict:
+        """Delete several tracks in one request.
+
+        Powers the Library page's multi-select — selecting every track
+        matching the active playlist/artist/album filter (including
+        ones on other pages) and deleting them all is impractical one
+        file at a time. Each file is deleted independently: one bad
+        path or a file that's already gone doesn't stop the rest.
+        """
         try:
-            full = (base / file).resolve()
-            full.relative_to(base)
-        except (ValueError, RuntimeError):
-            return {'deleted': False, 'error': 'Invalid path'}
-        if not full.is_file():
-            return {'deleted': False, 'error': 'File not found'}
-        try:
-            full.unlink()
-        except Exception as exc:
-            return {'deleted': False, 'error': str(exc)}
-        _delete_lrc_sidecar(full)
-        _delete_album_cover_if_orphaned(full)
-        _prune_empty_parent_dirs(full.parent, base)
-        return {'deleted': True}
+            return _delete_tracks_batch(files, DOWNLOAD_DIR.resolve())
+        except ValueError as exc:
+            raise HTTPException(status_code=413, detail=str(exc)) from exc
 
     @app.get('/cover')
     def get_cover(file: str):
