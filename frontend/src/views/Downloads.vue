@@ -274,40 +274,11 @@
       </ul>
 
       <!-- Pagination -->
-      <nav
+      <Pagination
         v-if="totalPages > 1"
-        class="mt-8 flex items-center justify-center gap-1 flex-wrap"
-      >
-        <button
-          class="icon-btn"
-          :disabled="currentPage === 1"
-          @click="currentPage--"
-          :title="t('common.previousPage')"
-        >
-          <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
-        </button>
-        <button
-          v-for="page in totalPages"
-          :key="page"
-          class="h-10 min-w-[2.5rem] rounded-full px-3 text-sm font-medium transition-colors"
-          :class="
-            page === currentPage
-              ? 'bg-primary text-primary-content shadow-glow-sm'
-              : 'text-base-content/70 hover:text-base-content hover:bg-white/10'
-          "
-          @click="currentPage = page"
-        >
-          {{ page }}
-        </button>
-        <button
-          class="icon-btn"
-          :disabled="currentPage === totalPages"
-          @click="currentPage++"
-          :title="t('common.nextPage')"
-        >
-          <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
-        </button>
-      </nav>
+        v-model="currentPage"
+        :total-pages="totalPages"
+      />
 
       <!-- Count footer -->
       <p
@@ -330,6 +301,7 @@ import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
+import Pagination from '/src/components/Pagination.vue'
 import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
 import { usePlayer } from '/src/model/player'

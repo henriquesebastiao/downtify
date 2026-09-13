@@ -49,8 +49,6 @@ export default {
     openSource: 'Άνοιγμα στην πηγή',
     inQueue: 'Στην ουρά',
     download: 'Λήψη',
-    previousPage: 'Προηγούμενη σελίδα',
-    nextPage: 'Επόμενη σελίδα',
     albumsTitle: 'Άλμπουμ',
     albumBadge: 'Άλμπουμ',
     singleBadge: 'Σινγκλ',
