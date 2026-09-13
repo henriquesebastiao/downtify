@@ -97,7 +97,7 @@
       <div v-else class="grid gap-6 lg:grid-cols-[1fr_360px]">
         <!-- Player card -->
         <section
-          class="surface rounded-3xl p-6 sm:p-8 flex flex-col items-center text-center"
+          class="surface rounded-3xl p-6 sm:p-8 min-w-0 flex flex-col items-center text-center"
         >
           <!-- Cover -->
           <div
@@ -126,13 +126,15 @@
           </div>
 
           <!-- Title / artist -->
-          <div class="mt-6 w-full">
-            <p class="text-xl font-bold tracking-tight truncate">
-              {{ trackTitle }}
-            </p>
-            <p class="text-sm text-base-content/60 truncate mt-0.5">
-              {{ trackArtist }}
-            </p>
+          <div class="mt-6 w-full min-w-0">
+            <MarqueeText
+              :text="trackTitle"
+              class="text-xl font-bold tracking-tight"
+            />
+            <MarqueeText
+              :text="trackArtist"
+              class="text-sm text-base-content/60 mt-0.5"
+            />
           </div>
 
           <!-- Progress -->
@@ -352,6 +354,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
+import MarqueeText from '/src/components/MarqueeText.vue'
 import API from '/src/model/api'
 import { usePlayer, formatTime } from '/src/model/player'
 import {

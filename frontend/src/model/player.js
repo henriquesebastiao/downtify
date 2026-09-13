@@ -49,7 +49,14 @@ function coverUrl(file) {
 }
 
 function trackFromFile(file) {
-  const noExt = file.replace(/\.[^.]+$/, '')
+  // Playlist/album downloads land in their own subfolder
+  // ("My Playlist/Artist - Title.mp3"), so the basename must be
+  // isolated before parsing "Artist - Title" — otherwise the first
+  // " - " found in the *whole path* wins, and the artist comes out as
+  // "My Playlist/Artist" instead of just "Artist".
+  const slash = file.lastIndexOf('/')
+  const basename = slash >= 0 ? file.slice(slash + 1) : file
+  const noExt = basename.replace(/\.[^.]+$/, '')
   let artist = ''
   let title = noExt
   const dash = noExt.indexOf(' - ')
