@@ -55,16 +55,21 @@
         <div class="mt-5">
           <button
             type="button"
-            class="inline-flex items-center gap-1.5 text-xs text-base-content/50 hover:text-base-content/80 transition-colors"
+            class="inline-flex max-w-full items-center gap-1.5 text-xs text-base-content/50 hover:text-base-content/80 transition-colors"
             :disabled="importing"
+            :title="t('hero.importCsv')"
             @click="triggerCsvPicker"
           >
             <span
               v-if="importing"
-              class="loading loading-spinner loading-xs"
+              class="loading loading-spinner loading-xs shrink-0"
             ></span>
-            <Icon v-else icon="fa6-solid:file-import" class="h-3.5 w-3.5" />
-            {{ t('hero.importCsv') }}
+            <Icon
+              v-else
+              icon="fa6-solid:file-import"
+              class="h-3.5 w-3.5 shrink-0"
+            />
+            <span class="min-w-0 truncate">{{ t('hero.importCsv') }}</span>
           </button>
           <input
             ref="csvInput"
