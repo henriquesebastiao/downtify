@@ -36,6 +36,7 @@ from downtify import __version__, api, m3u
 from downtify.cookies import CookiesStore
 from downtify.downloader import Downloader
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
+from downtify.update_check import UpdateChecker, update_check_loop
 
 load_dotenv()
 
@@ -429,6 +430,13 @@ def build_app() -> FastAPI:
                 get_downloader=lambda: api.state.downloader,
             )
         )
+        # Hourly check against GitHub Releases (see
+        # downtify/update_check.py) so the footer can tell the user a
+        # newer Downtify is out. GET /api/check_update only ever reads
+        # this loop's cached result — the request to GitHub never blocks
+        # a page load.
+        api.state.update_checker = UpdateChecker()
+        asyncio.create_task(update_check_loop(api.state.update_checker))
 
     @app.get('/list')
     def list_downloads() -> list[str]:

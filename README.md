@@ -54,6 +54,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 🌍 **Multi-language UI** | English (default) plus 6 more languages — easy to add more |
 | 📱 **Installable (PWA)** | Add Downtify to your iOS or Android home screen — launches full-screen, no browser chrome |
 | 🍪 **Cookie upload** | Upload a YouTube `cookies.txt` from the settings screen to download explicit/age-restricted tracks — no bind mounts, works on Windows |
+| 🔔 **Update notifications** | Hourly check against GitHub Releases; a footer notice appears when a newer version is out |
 
 ---
 

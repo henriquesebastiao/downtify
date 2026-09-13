@@ -267,5 +267,6 @@ export default {
   },
   footer: {
     tagline: 'Open source music downloader',
+    updateAvailable: 'Version {version} is available',
   },
 }

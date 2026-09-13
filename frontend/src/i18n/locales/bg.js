@@ -266,5 +266,6 @@ export default {
   },
   footer: {
     tagline: 'Приложение за теглене на музика с отворен код',
+    updateAvailable: 'Версия {version} е налична',
   },
 }

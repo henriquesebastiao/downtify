@@ -272,5 +272,6 @@ export default {
   },
   footer: {
     tagline: 'Baixador de músicas de código aberto',
+    updateAvailable: 'A versão {version} está disponível',
   },
 }

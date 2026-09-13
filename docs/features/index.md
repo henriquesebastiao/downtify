@@ -19,6 +19,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Lyrics](lyrics.md) | Automatically download and embed lyrics (plain and time-synced) |
 | [YouTube Cookies](youtube-cookies.md) | Upload a `cookies.txt` from the web UI to download explicit/age-restricted tracks |
 | [Internationalization](internationalization.md) | English, Spanish and Brazilian Portuguese out of the box |
+| [Update Notifications](updates.md) | Hourly check against GitHub Releases; a footer notice appears when a newer version is out |
 
 ## Input types
 
