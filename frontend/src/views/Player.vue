@@ -500,36 +500,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.player-range {
-  -webkit-appearance: none;
-  appearance: none;
-  background: rgba(255, 255, 255, 0.1);
-  height: 4px;
-  border-radius: 9999px;
-  outline: none;
-}
-[data-theme='downtify-light'] .player-range {
-  background: rgba(0, 0, 0, 0.1);
-}
-.player-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 14px;
-  width: 14px;
-  border-radius: 9999px;
-  background: #1ad05c;
-  cursor: pointer;
-  box-shadow: 0 0 12px rgba(26, 208, 92, 0.45);
-}
-.player-range::-moz-range-thumb {
-  height: 14px;
-  width: 14px;
-  border-radius: 9999px;
-  background: #1ad05c;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 0 12px rgba(26, 208, 92, 0.45);
-}
 .pulse-glow {
   animation: glow 2.4s ease-in-out infinite;
 }

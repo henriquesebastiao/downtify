@@ -221,6 +221,9 @@ export default {
     overwriteExistingFiles: 'Sobrescrever arquivos existentes',
     overwriteExistingFilesHint:
       'Desative para economizar banda: uma música que já está em qualquer lugar da pasta de downloads (raiz da biblioteca, pasta de outra playlist, pasta de artista/álbum) não é baixada novamente. A comparação é pelo nome do arquivo, não pelo ID do Spotify/YouTube.',
+    miniPlayer: 'Barra do player',
+    miniPlayerHint:
+      'Mostra uma barra inferior com controles de reprodução em todas as páginas (exceto na própria tela do Player) enquanto houver uma faixa carregada.',
     cookies: 'Cookies do YouTube',
     cookiesHint:
       'Algumas músicas — principalmente as com conteúdo explícito — só são liberadas para uma conta adulta logada, e o YouTube às vezes bloqueia downloads. Envie um cookies.txt no formato Netscape exportado de um navegador logado no YouTube para resolver os dois casos. Ele é salvo em /data e mantido entre atualizações do container.',
@@ -267,6 +270,8 @@ export default {
     playlistsGroup: 'Playlists',
     artistsGroup: 'Artistas',
     albumsGroup: 'Álbuns',
+    hideBar: 'Ocultar barra do player',
+    showBar: 'Exibir barra do player',
   },
   footer: {
     tagline: 'Baixador de músicas de código aberto',

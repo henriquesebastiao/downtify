@@ -64,6 +64,10 @@ def test_default_search_albums_is_true():
     assert DEFAULT_SETTINGS['search_albums'] is True
 
 
+def test_default_mini_player_enabled_is_true():
+    assert DEFAULT_SETTINGS['mini_player_enabled'] is True
+
+
 # ── search_albums_endpoint ─────────────────────────────────────────────────────
 
 
@@ -355,6 +359,14 @@ def test_update_settings_clamps_zero_parallel_downloads(monkeypatch):
 def test_update_settings_accepts_in_range_parallel_downloads(monkeypatch):
     result = _call_update_settings(monkeypatch, {'max_parallel_downloads': 25})
     assert result['max_parallel_downloads'] == 25
+
+
+def test_update_settings_toggles_mini_player_enabled(monkeypatch):
+    # A plain passthrough boolean — the backend never acts on it, only
+    # stores and returns whatever the UI last set (see
+    # docs/features/player.md#mini-player-bar).
+    result = _call_update_settings(monkeypatch, {'mini_player_enabled': False})
+    assert result['mini_player_enabled'] is False
 
 
 # ── _clamp_download_delay ────────────────────────────────────────────────────

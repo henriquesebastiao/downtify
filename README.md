@@ -55,6 +55,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 📱 **Installable (PWA)** | Add Downtify to your iOS or Android home screen — launches full-screen, no browser chrome |
 | 🍪 **Cookie upload** | Upload a YouTube `cookies.txt` from the settings screen to download explicit/age-restricted tracks — no bind mounts, works on Windows |
 | 🔔 **Update notifications** | Hourly check against GitHub Releases; a footer notice appears when a newer version is out |
+| 🎚️ **Mini player bar** | Playback controls stick to the bottom of every page while a track is loaded — collapsible, mobile-friendly, can be turned off |
 
 ---
 
@@ -248,6 +249,8 @@ Downtify ships with a clean web player so you don't need a separate app to liste
 The player parses `Artist - Title.ext` filenames so the now-playing card shows artist and title nicely, and pulls the cover art directly from the audio file's embedded tags (the same artwork Downtify wrote at download time). Playback uses your browser's native HTML5 audio element — no extra dependencies, no extra processes.
 
 The **Library** page has the same playlist/artist/album filter to narrow down the file list before playing, re-downloading or deleting a track. Check boxes let you select any number of tracks — including ones on other pages — and delete them all in one go; "Select all" grabs every track matching the current filter, so deleting a whole album or artist is just: filter to it, select all, delete.
+
+While a track is loaded, a **mini player bar** (cover, title/artist, shuffle, previous, play/pause, next, repeat, volume) sticks to the bottom of every other page, collapsible into a small floating "now playing" button — turn it off in **Settings → Mini player bar** if you don't want it. See **[Mini Player Bar](https://henriquesebastiao.github.io/downtify/features/player/#mini-player-bar)** in the full docs.
 
 ---
 

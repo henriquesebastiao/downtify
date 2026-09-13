@@ -221,6 +221,9 @@ export default {
     overwriteExistingFiles: 'Écraser les fichiers existants',
     overwriteExistingFilesHint:
       "Désactivez pour économiser de la bande passante : un morceau déjà présent n'importe où dans votre dossier de téléchargement (racine de la bibliothèque, dossier d'une autre liste, dossier d'artiste/album) n'est pas retéléchargé. Comparaison par nom de fichier, pas par l'ID Spotify/YouTube.",
+    miniPlayer: 'Barre du lecteur',
+    miniPlayerHint:
+      "Affiche une barre en bas de page avec les contrôles de lecture sur toutes les pages (sauf le Lecteur lui-même) tant qu'un titre est chargé.",
     cookies: 'Cookies YouTube',
     cookiesHint:
       "Certains titres — surtout ceux au contenu explicite — ne sont servis qu'à un compte adulte connecté, et YouTube bloque parfois les téléchargements. Importez un cookies.txt au format Netscape exporté depuis un navigateur connecté à YouTube. Il est stocké dans /data et conservé lors des mises à jour du conteneur.",
@@ -267,6 +270,8 @@ export default {
     playlistsGroup: 'Playlists',
     artistsGroup: 'Artistes',
     albumsGroup: 'Albums',
+    hideBar: 'Masquer la barre du lecteur',
+    showBar: 'Afficher la barre du lecteur',
   },
   footer: {
     tagline:

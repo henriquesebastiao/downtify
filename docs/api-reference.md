@@ -215,7 +215,8 @@ Return the current settings.
   "overwrite_existing_files": true,
   "organize_by_artist": false,
   "organize_by_album": false,
-  "search_albums": true
+  "search_albums": true,
+  "mini_player_enabled": true
 }
 ```
 
@@ -223,6 +224,7 @@ Return the current settings.
 |-------|------|-------------|
 | `max_parallel_downloads` | integer | Concurrent download limit. Clamped to `1–30`. |
 | `download_delay_seconds` | number | Seconds to wait after each download in a batch before starting the next. Clamped to `0–300`. |
+| `mini_player_enabled` | boolean | Whether the [mini player bar](features/player.md#mini-player-bar) appears on non-Player pages while a track is loaded. Purely a UI preference — the backend never reads it. |
 | `download_cover_art` | boolean | Whether to fetch and embed cover art at all. See [Download cover art](features/download-settings.md#download-cover-art). |
 | `cover_resolution` | integer | Target pixel size (width & height) for YouTube Music-sourced cover art. Clamped to `300–1200`. Only used when `download_cover_art` is true. See [Cover art resolution](features/download-settings.md#cover-art-resolution). |
 | `overwrite_existing_files` | boolean | When `false`, a song already anywhere in the download folder (matched by output filename) isn't downloaded again; the download returns the existing file's path instead. See [Overwrite existing files](features/download-settings.md#overwrite-existing-files). |

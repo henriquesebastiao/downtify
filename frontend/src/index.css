@@ -173,6 +173,41 @@
     @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow-sm;
   }
 
+  /* Styled <input type="range">: shared by the Player page's volume
+     slider and MiniPlayer's volume popover — the thumb/track styling
+     needs raw CSS (::-webkit-slider-thumb etc. aren't @apply-able), so
+     it lives here globally instead of duplicated in two scoped blocks. */
+  .player-range {
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    height: 4px;
+    border-radius: 9999px;
+    outline: none;
+  }
+  [data-theme='downtify-light'] .player-range {
+    background: rgba(0, 0, 0, 0.1);
+  }
+  .player-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 14px;
+    width: 14px;
+    border-radius: 9999px;
+    background: #1ad05c;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(26, 208, 92, 0.45);
+  }
+  .player-range::-moz-range-thumb {
+    height: 14px;
+    width: 14px;
+    border-radius: 9999px;
+    background: #1ad05c;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(26, 208, 92, 0.45);
+  }
+
   .equalizer {
     @apply inline-flex items-end gap-0.5 h-4;
   }

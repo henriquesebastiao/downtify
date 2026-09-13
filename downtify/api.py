@@ -103,6 +103,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'organize_by_artist': False,
     'organize_by_album': False,
     'search_albums': True,
+    'mini_player_enabled': True,
 }
 
 
