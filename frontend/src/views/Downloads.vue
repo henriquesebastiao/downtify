@@ -21,7 +21,7 @@
             @click="playAll"
             :title="t('library.play')"
           >
-            <Icon icon="clarity:play-line" class="h-4 w-4 mr-1.5" />
+            <Icon icon="fa6-solid:play" class="h-4 w-4 mr-1.5" />
             {{ t('library.play') }}
           </button>
           <button
@@ -33,7 +33,7 @@
               v-if="loading"
               class="loading loading-spinner loading-xs mr-2"
             />
-            <Icon v-else icon="clarity:refresh-line" class="h-4 w-4 mr-2" />
+            <Icon v-else icon="fa6-solid:arrows-rotate" class="h-4 w-4 mr-2" />
             {{ t('common.refresh') }}
           </button>
         </div>
@@ -97,7 +97,7 @@
         v-if="error"
         class="surface rounded-2xl p-4 mb-4 flex gap-3 items-center text-sm text-error"
       >
-        <Icon icon="clarity:exclamation-circle-line" class="h-5 w-5 shrink-0" />
+        <Icon icon="fa6-solid:circle-exclamation" class="h-5 w-5 shrink-0" />
         <span>{{ error }}</span>
       </div>
 
@@ -112,7 +112,7 @@
         class="surface rounded-2xl p-12 flex flex-col items-center text-center"
       >
         <Icon
-          icon="clarity:library-line"
+          icon="fa6-solid:layer-group"
           class="h-12 w-12 text-base-content/20 mb-4"
         />
         <p class="text-base-content/50 text-sm">{{ t('library.empty') }}</p>
@@ -127,7 +127,7 @@
         class="surface rounded-2xl p-12 flex flex-col items-center text-center"
       >
         <Icon
-          icon="clarity:search-line"
+          icon="fa6-solid:magnifying-glass"
           class="h-12 w-12 text-base-content/20 mb-4"
         />
         <p class="text-base-content/50 text-sm">
@@ -177,7 +177,7 @@
               v-if="bulkDeleting"
               class="loading loading-spinner loading-xs mr-1.5"
             />
-            <Icon v-else icon="clarity:trash-line" class="h-4 w-4 mr-1.5" />
+            <Icon v-else icon="fa6-solid:trash" class="h-4 w-4 mr-1.5" />
             {{ t('library.deleteSelected') }}
           </button>
           <button
@@ -187,7 +187,7 @@
             @click="clearSelection"
             :title="t('library.clearSelection')"
           >
-            <Icon icon="clarity:close-line" class="h-4 w-4" />
+            <Icon icon="fa6-solid:xmark" class="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -221,7 +221,7 @@
               loading="lazy"
               @error="markCoverFailed(file)"
             />
-            <Icon v-else icon="clarity:music-note-line" class="h-5 w-5" />
+            <Icon v-else icon="fa6-solid:music" class="h-5 w-5" />
           </div>
 
           <!-- Filename -->
@@ -232,7 +232,7 @@
             <span class="text-xs text-base-content/40">
               <span v-if="folderOf(file)" class="mr-2 text-primary/70">
                 <Icon
-                  icon="clarity:folder-line"
+                  icon="fa6-solid:folder"
                   class="inline h-3 w-3 mr-0.5 align-text-top"
                 />{{ folderOf(file) }}
               </span>
@@ -247,7 +247,7 @@
               @click="playFile(file)"
               :title="t('library.play')"
             >
-              <Icon icon="clarity:play-line" class="h-4 w-4" />
+              <Icon icon="fa6-solid:play" class="h-4 w-4" />
             </button>
             <a
               class="icon-btn"
@@ -255,7 +255,7 @@
               download
               :title="t('library.downloadToDevice')"
             >
-              <Icon icon="clarity:download-line" class="h-4 w-4" />
+              <Icon icon="fa6-solid:download" class="h-4 w-4" />
             </a>
             <button
               class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
@@ -267,7 +267,7 @@
                 v-if="deleting[file] === true"
                 class="loading loading-spinner loading-xs"
               />
-              <Icon v-else icon="clarity:trash-line" class="h-4 w-4" />
+              <Icon v-else icon="fa6-solid:trash" class="h-4 w-4" />
             </button>
           </div>
         </li>

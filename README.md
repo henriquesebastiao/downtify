@@ -337,3 +337,5 @@ If Downtify has been useful to you, consider leaving a ⭐ — it helps the proj
 ## 📄 License
 
 Licensed under the [GPL-3.0](https://github.com/henriquesebastiao/downtify?tab=GPL-3.0-1-ov-file#readme) License.
+
+Icons by [Font Awesome](https://fontawesome.com) (Free, [CC BY 4.0](https://fontawesome.com/license/free)), loaded via [Iconify](https://iconify.design).

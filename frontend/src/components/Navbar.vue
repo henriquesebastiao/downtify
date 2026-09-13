@@ -28,7 +28,7 @@
           @click="router.push({ name: 'List' })"
           :title="t('nav.library')"
         >
-          <Icon icon="clarity:library-line" class="h-5 w-5" />
+          <Icon icon="fa6-solid:layer-group" class="h-5 w-5" />
         </button>
 
         <button
@@ -37,7 +37,7 @@
           @click="router.push({ name: 'Player' })"
           :title="t('nav.player')"
         >
-          <Icon icon="clarity:headphones-line" class="h-5 w-5" />
+          <Icon icon="fa6-solid:headphones" class="h-5 w-5" />
         </button>
 
         <button
@@ -46,7 +46,7 @@
           @click="router.push({ name: 'Monitor' })"
           :title="t('nav.monitor')"
         >
-          <Icon icon="clarity:eye-line" class="h-5 w-5" />
+          <Icon icon="fa6-solid:eye" class="h-5 w-5" />
         </button>
 
         <button
@@ -62,7 +62,7 @@
           "
           :title="t('nav.queue')"
         >
-          <Icon icon="clarity:download-line" class="h-5 w-5" />
+          <Icon icon="fa6-solid:download" class="h-5 w-5" />
           <span
             v-if="pt.downloadQueue.value.length > 0"
             class="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-content shadow-glow-sm"
@@ -86,10 +86,10 @@
         >
           <Icon
             v-if="themeMgr.currentTheme.value === 'dark'"
-            icon="clarity:sun-line"
+            icon="fa6-solid:sun"
             class="h-5 w-5"
           />
-          <Icon v-else icon="clarity:moon-line" class="h-5 w-5" />
+          <Icon v-else icon="fa6-solid:moon" class="h-5 w-5" />
         </button>
 
         <label
@@ -97,7 +97,7 @@
           class="icon-btn cursor-pointer"
           :title="t('nav.settings')"
         >
-          <Icon icon="clarity:cog-line" class="h-5 w-5" />
+          <Icon icon="fa6-solid:gear" class="h-5 w-5" />
         </label>
       </div>
     </div>
