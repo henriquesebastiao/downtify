@@ -14,7 +14,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-import requests
+import httpx
 from loguru import logger
 
 GITHUB_REPO = 'henriquesebastiao/downtify'
@@ -72,7 +72,7 @@ class UpdateChecker:
         """
         url = f'https://api.github.com/repos/{self._repo}/releases/latest'
         try:
-            response = requests.get(
+            response = httpx.get(
                 url,
                 headers={'Accept': 'application/vnd.github+json'},
                 timeout=REQUEST_TIMEOUT,

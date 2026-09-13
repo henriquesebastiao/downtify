@@ -11,7 +11,7 @@ import json
 import re
 from typing import Any, Optional
 
-import requests
+import httpx
 from loguru import logger
 
 from .telemetry import json_log_blob, redact_sensitive_mapping
@@ -63,7 +63,7 @@ def parse_spotify_url(url: str) -> Optional[tuple[str, str]]:
 
 def _fetch_embed_json(kind: str, spotify_id: str) -> dict[str, Any]:
     url = f'https://open.spotify.com/embed/{kind}/{spotify_id}'
-    response = requests.get(
+    response = httpx.get(
         url,
         headers={
             'User-Agent': _USER_AGENT,
@@ -343,7 +343,7 @@ def _album_release_date_from_open_page(album_id: str) -> str:
     if not album_id or not re.fullmatch(r'[A-Za-z0-9]+', album_id):
         return ''
     try:
-        resp = requests.get(
+        resp = httpx.get(
             f'https://open.spotify.com/album/{album_id}',
             headers={
                 'User-Agent': _ALBUM_OPEN_PAGE_UA,
@@ -605,7 +605,7 @@ def _track_dict_from_graphql_item(
 def _graphql_fetch_page(
     playlist_id: str, token: str, offset: int, limit: int = 100
 ) -> dict[str, Any]:
-    resp = requests.get(
+    resp = httpx.get(
         _PARTNER_API,
         params={
             'operationName': 'fetchPlaylist',
