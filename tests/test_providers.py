@@ -735,6 +735,124 @@ def test_find_match_returns_none_when_album_fallback_also_fails(monkeypatch):
     assert match is None
 
 
+# ── find_match title-first query retry ───────────────────────────────────────
+
+
+class _FakeYTMByQuery:
+    """Routes ``search()`` results by query text and records every query,
+    so tests can tell the artist-first and title-first searches apart."""
+
+    def __init__(self, by_query):
+        self._by_query = by_query
+        self.queries = []
+
+    def search(self, query, filter=None, limit=10):
+        self.queries.append(query)
+        return self._by_query.get(query, [])
+
+
+def _no_album_fallback(song):
+    return None, None
+
+
+def test_find_match_retries_title_first_when_artist_first_misses(
+    monkeypatch,
+):
+    fake = _FakeYTMByQuery({
+        'Mica Ferreira Held Together': [
+            _song_row('Hollow Anchor', 'Mica Ferreira', '', 207, 'x'),
+        ],
+        'Held Together Mica Ferreira': [
+            _song_row('Held Together', 'Mica Ferreira', '', 226, 'right'),
+        ],
+    })
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+
+    def _boom(song):
+        raise AssertionError('album fallback must not run after a hit')
+
+    monkeypatch.setattr(providers, '_find_match_via_album', _boom)
+    video_id, match = find_match({
+        'name': 'Held Together',
+        'artists': ['Mica Ferreira'],
+        'duration': 226,
+    })
+    assert video_id == 'right'
+    assert match['title'] == 'Held Together'
+    assert fake.queries[0] == 'Mica Ferreira Held Together'
+    assert 'Held Together Mica Ferreira' in fake.queries
+
+
+def test_find_match_skips_title_first_query_after_artist_first_hit(
+    monkeypatch,
+):
+    fake = _FakeYTMByQuery({
+        'Mica Ferreira Held Together': [
+            _song_row('Held Together', 'Mica Ferreira', '', 226, 'right'),
+        ],
+    })
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, _ = find_match({
+        'name': 'Held Together',
+        'artists': ['Mica Ferreira'],
+        'duration': 226,
+    })
+    assert video_id == 'right'
+    assert 'Held Together Mica Ferreira' not in fake.queries
+
+
+def test_find_match_title_first_joins_all_artists(monkeypatch):
+    fake = _FakeYTMByQuery({})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    monkeypatch.setattr(providers, '_find_match_via_album', _no_album_fallback)
+    assert find_match({
+        'name': 'Azulejo - Ao Vivo',
+        'artists': ['Mayke & Rodrigo', 'Clayton & Romário'],
+        'duration': 142,
+    }) == (None, None)
+    assert set(fake.queries) == {
+        'Mayke & Rodrigo Clayton & Romário Azulejo - Ao Vivo',
+        'Azulejo - Ao Vivo Mayke & Rodrigo Clayton & Romário',
+    }
+
+
+def test_find_match_without_artists_searches_only_once_per_stage(
+    monkeypatch,
+):
+    fake = _FakeYTMByQuery({})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    monkeypatch.setattr(providers, '_find_match_via_album', _no_album_fallback)
+    assert find_match({'name': 'Held Together', 'artists': []}) == (
+        None,
+        None,
+    )
+    assert set(fake.queries) == {'Held Together'}
+    # top result + songs + videos, and no repeated title-first round.
+    assert len(fake.queries) == 3
+
+
+def test_find_match_album_fallback_runs_after_both_query_orders_miss(
+    monkeypatch,
+):
+    fake = _FakeYTMByQuery({})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    seen = []
+
+    def _album(song):
+        seen.append(list(fake.queries))
+        return 'album-vid', {'videoId': 'album-vid', 'title': 'Held Together'}
+
+    monkeypatch.setattr(providers, '_find_match_via_album', _album)
+    video_id, _ = find_match({
+        'name': 'Held Together',
+        'album_name': 'Driftlight',
+        'artists': ['Mica Ferreira'],
+        'duration': 226,
+    })
+    assert video_id == 'album-vid'
+    assert 'Held Together Mica Ferreira' in seen[0]
+
+
 # ── find_match standard-YouTube fallback ─────────────────────────────────────
 
 
@@ -971,6 +1089,113 @@ def test_titles_match_keeps_live_and_studio_apart():
     assert not _titles_match('Tubarões - Ao Vivo', 'Tubarões')
     assert not _titles_match('Tubarões', 'Tubarões (Ao Vivo)')
     assert not _titles_match('Canción', 'Canción (En Vivo)')
+
+
+@pytest.mark.parametrize(
+    ('target', 'candidate'),
+    [
+        # Native script + romanization, uploaded by the artist.
+        ('Kuchizuke Diamond', 'くちづけDiamond - Kuchizuke Diamond'),
+        # "Game OST - Title (edition) - Artist" fan upload.
+        (
+            'Smash Hit Theme',
+            'Smash Hit OST - Smash Hit Theme Full Version - Douglas Holmquist',
+        ),
+        ('Tubarões - Ao Vivo', 'Diego & Victor Hugo - Tubarões (Ao Vivo)'),
+    ],
+)
+def test_titles_match_accepts_title_as_dash_segment(target, candidate):
+    assert _titles_match(target, candidate)
+    assert _titles_match(candidate, target)
+
+
+@pytest.mark.parametrize(
+    ('target', 'candidate'),
+    [
+        # A segment shorter than the title is a different, broader name.
+        ('Smash Hit Theme', 'Smash Hit - All Boss Soundtracks - Artist'),
+        # The other segments name a different recording.
+        ('Yellow', 'Yellow - Live'),
+        ('Yellow', 'Coldplay - Yellow - Remix'),
+        ('Tubarões - Ao Vivo', 'Diego & Victor Hugo - Tubarões'),
+        # Title merely contained in a segment.
+        ('Storm', 'Artist - A Perfect Storm'),
+    ],
+)
+def test_titles_match_segment_rejections(target, candidate):
+    assert not _titles_match(target, candidate)
+
+
+def test_artists_overlap_ignores_leading_the():
+    # Regression: Spotify's "Eden Project" vs YouTube Music's
+    # "The Eden Project" failed "Crazy in Love".
+    assert _artists_overlap(
+        ['Eden Project'], {'artists': [{'name': 'The Eden Project'}]}
+    )
+    assert _artists_overlap(
+        ['The Beatles'], {'artists': [{'name': 'Beatles, and Someone'}]}
+    )
+    assert not _artists_overlap(
+        ['Eden Project'], {'artists': [{'name': 'EDEN'}]}
+    )
+
+
+def test_youtube_fallback_credits_artist_from_any_title_segment(monkeypatch):
+    # Regression: "Smash Hit Theme" only exists as a fan upload whose
+    # title ends with the artist and whose channel isn't the artist.
+    _stub_youtube(
+        monkeypatch,
+        [
+            _yt_entry(
+                'looping',
+                'Smash Hit OST - Smash Hit Theme (Looping) - Douglas Holmquist',
+                'Den1136',
+                77,
+            ),
+            _yt_entry(
+                'full',
+                'Smash Hit OST - Smash Hit Theme Full Version - '
+                'Douglas Holmquist',
+                'Den1136',
+                89,
+            ),
+            _yt_entry(
+                'talk', 'How I wrote the Smash Hit Theme music', 'x', 315
+            ),
+        ],
+    )
+    assert providers._find_match_via_youtube({
+        'name': 'Smash Hit Theme',
+        'artists': ['Douglas Holmquist'],
+        'duration': 88,
+    }) == ('full', 1)
+
+
+def test_find_match_accepts_artist_upload_with_romanized_segment(
+    monkeypatch,
+):
+    top = [
+        {
+            'resultType': 'video',
+            'videoId': 'fan',
+            'title': 'Kuchizuke Diamond - WEAVER「Opening Full Lyrics」',
+            'artists': [{'name': 'VE4MIX'}],
+        },
+        {
+            'resultType': 'video',
+            'videoId': 'weaver',
+            'title': 'くちづけDiamond - Kuchizuke Diamond',
+            'artists': [{'name': 'WEAVER'}],
+        },
+    ]
+    fake = _FakeYTMByFilter({None: top})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    video_id, _ = find_match({
+        'name': 'Kuchizuke Diamond',
+        'artists': ['WEAVER'],
+        'duration': 236,
+    })
+    assert video_id == 'weaver'
 
 
 def test_artists_overlap_splits_packed_credit():

@@ -921,7 +921,9 @@ def _find_youtube_music_match(
 ) -> tuple[Optional[str], Optional[dict[str, Any]]]:
     """YouTube Music half of :func:`find_match`: ``(videoId, result)``.
 
-    Either element may be ``None`` if no acceptable match is found.
+    Searches "<artists> <title>" first, then "<title> <artists>" (see
+    below), then the album's tracklist. Either element may be ``None``
+    if no acceptable match is found.
     """
 
     artists = song.get('artists') or []
@@ -932,6 +934,60 @@ def _find_youtube_music_match(
     if not query:
         return None, None
     duration = song.get('duration') or 0
+
+    video_id, result = _search_youtube_music_match(
+        query, title, artists, album, duration
+    )
+    if video_id:
+        return video_id, result
+
+    # YouTube Music's ranking depends on word order: for some tracks the
+    # artist-first query buries the right song below what the matcher
+    # looks at (or omits it), while "<title> <artist>" returns it as the
+    # very first result. Same stages and gates, just the other order.
+    title_first_query = f'{title} {artists_q}'.strip()
+    if title and artists_q and title_first_query != query:
+        video_id, result = _search_youtube_music_match(
+            title_first_query, title, artists, album, duration
+        )
+        if video_id:
+            logger.info(
+                'YouTube Music find_match resolved videoId={} via '
+                'title-first query={!r}',
+                video_id,
+                title_first_query[:160],
+            )
+            return video_id, result
+
+    # Text search sometimes never returns the correct video at all (see
+    # `_find_match_via_album`'s docstring) — try resolving it directly
+    # off the album's tracklist before giving up.
+    album_video_id, album_match = _find_match_via_album(song)
+    if album_video_id:
+        return album_video_id, album_match
+    logger.info(
+        'YouTube Music find_match: no title-matching result for '
+        'query={!r} or query={!r} target_title={!r}',
+        query[:160],
+        title_first_query[:160],
+        title,
+    )
+    return None, None
+
+
+def _search_youtube_music_match(
+    query: str,
+    title: str,
+    artists: list[str],
+    album: str,
+    duration: int,
+) -> tuple[Optional[str], Optional[dict[str, Any]]]:
+    """Best gated YouTube Music ``(videoId, result)`` for one ``query``.
+
+    Runs the unfiltered search (for the "Top result" card), then the
+    ``songs`` shelf (``videos`` when that's empty), through
+    :func:`_pick_best`. ``(None, None)`` when nothing qualifies.
+    """
 
     # Try an unfiltered (default) search first. Unlike the category-
     # filtered searches below, this is the only request that includes
@@ -1036,18 +1092,6 @@ def _find_youtube_music_match(
             )
             _log_ytm_response('find_match fallback row', result)
             return result['videoId'], result
-    # Text search sometimes never returns the correct video at all (see
-    # `_find_match_via_album`'s docstring) — try resolving it directly
-    # off the album's tracklist before giving up.
-    album_video_id, album_match = _find_match_via_album(song)
-    if album_video_id:
-        return album_video_id, album_match
-    logger.info(
-        'YouTube Music find_match: no title-matching result for '
-        'query={!r} target_title={!r}',
-        query[:160],
-        title,
-    )
     return None, None
 
 
@@ -1113,7 +1157,13 @@ def _youtube_entry_to_result(
         return None
     if entry.get('live_status') in {'is_live', 'is_upcoming', 'post_live'}:
         return None
-    title, credited = _split_upload_title(str(entry.get('title') or ''), [])
+    raw_title = str(entry.get('title') or '')
+    title, credited = _split_upload_title(raw_title, [])
+    # The artist isn't always the first segment: fan/OST uploads read
+    # "Game OST - Title - Artist", so every segment is a possible credit.
+    segments = _TITLE_NOISE_RE.sub('', raw_title).split(' - ')
+    if len(segments) > 1:
+        credited = [*credited, *(s.strip() for s in segments if s.strip())]
     artists: list[str] = []
     for credit in credited:
         artists.extend([
@@ -1329,9 +1379,35 @@ def _albums_match(target: Any, candidate: Any) -> bool:
 
 
 def _titles_match(target: Any, candidate: Any) -> bool:
-    """True when two song titles refer to the same recording. See :func:`_names_match`."""
+    """True when two song titles refer to the same recording. See :func:`_names_match`.
 
-    return _names_match(target, candidate)
+    A title may also match one " - "-separated segment of the other:
+    uploads bundle extra text that way — "くちづけDiamond - Kuchizuke
+    Diamond" (native script and romanization), "Smash Hit OST - Smash Hit
+    Theme Full Version - Douglas Holmquist" (game, title, artist). The
+    segment must start with the whole title (so "Smash Hit" never matches
+    "Smash Hit Theme"), and the remaining segments must not name a
+    different recording ("Yellow - Live" is still not "Yellow").
+    """
+
+    if _names_match(target, candidate):
+        return True
+    for whole, segmented in ((target, candidate), (candidate, target)):
+        whole_norm = _DASH_VERSION_SUFFIX_RE.sub(
+            r'\1 (\2)', _norm_compact_title(whole)
+        )
+        segments = _norm_compact_title(segmented).split(' - ')
+        if not whole_norm or len(segments) < 2:
+            continue
+        for i, segment in enumerate(segments):
+            rest = ' '.join(segments[:i] + segments[i + 1 :])
+            if (
+                segment.startswith(whole_norm)
+                and _names_match(whole_norm, segment)
+                and not _VERSION_QUALIFIER_RE.search(rest)
+            ):
+                return True
+    return False
 
 
 def _album_title_hints(
@@ -2049,22 +2125,33 @@ def _artists_overlap(
     picked just for being the "least wrong" duration match.
     """
 
-    target_set = {(a or '').lower() for a in (target_artists or []) if a}
+    target_set = {_norm_artist_name(a) for a in (target_artists or []) if a}
+    target_set.discard('')
     if not target_set:
         return True
     candidate_set: set[str] = set()
     for a in result.get('artists') or []:
         if not isinstance(a, dict):
             continue
-        name = (a.get('name') or '').lower()
+        name = a.get('name') or ''
         # YouTube Music sometimes packs every credit into one entry
         # ("JIRAYAUAI, DOUTH!, VITOR BUENO, and SAM SAM"); the unsplit
         # name is kept too so "Rionegro & Solimões" still matches whole.
-        candidate_set.add(name)
+        candidate_set.add(_norm_artist_name(name))
         candidate_set.update(
-            p for p in _ARTIST_CREDIT_SPLIT_RE.split(name) if p
+            _norm_artist_name(p)
+            for p in _ARTIST_CREDIT_SPLIT_RE.split(name)
+            if p
         )
     return bool(target_set & candidate_set)
+
+
+def _norm_artist_name(name: str) -> str:
+    """Casefolded artist name without a leading "The" — Spotify and
+    YouTube Music disagree on it ("Eden Project" vs "The Eden Project")."""
+
+    value = re.sub(r'\s+', ' ', name.casefold()).strip()
+    return re.sub(r'^the\s+', '', value)
 
 
 _NEGATIVE_KEYWORDS = (
