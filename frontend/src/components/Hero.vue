@@ -1,6 +1,6 @@
 <template>
   <section
-    class="relative flex min-h-[calc(100dvh-4rem)] items-center justify-center px-6 pt-24 pb-16 overflow-hidden"
+    class="relative flex flex-1 items-center justify-center px-6 pt-24 pb-16 overflow-hidden"
   >
     <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
       <div
