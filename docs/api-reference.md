@@ -331,6 +331,35 @@ Delete a downloaded file, plus its leftovers — best-effort, so a missing or un
 
 ---
 
+### `DELETE /delete/batch`
+
+Delete several files in one request — same cleanup as `DELETE /delete` (sidecars, orphaned cover, empty-folder pruning) applied to each one independently, so one bad path or an already-deleted file doesn't stop the rest. Powers the Library page's multi-select.
+
+**Request body:**
+
+```json
+{ "files": ["My Playlist/Song.mp3", "Some Album/Track 2.mp3"] }
+```
+
+Duplicate paths are deduplicated before processing. Capped at 2000 files per request (`413` if exceeded).
+
+**Response:**
+
+```json
+{
+  "deleted_count": 2,
+  "failed_count": 0,
+  "results": {
+    "My Playlist/Song.mp3": { "deleted": true },
+    "Some Album/Track 2.mp3": { "deleted": true }
+  }
+}
+```
+
+`results` maps each requested path to the same shape `DELETE /delete` returns for it.
+
+---
+
 ### `GET /cover`
 
 Return the embedded cover art for a file.

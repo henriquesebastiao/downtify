@@ -141,13 +141,74 @@
         </button>
       </div>
 
+      <!-- Selection toolbar -->
+      <div v-else class="flex flex-wrap items-center gap-3 mb-3 text-sm">
+        <label
+          class="flex items-center gap-2 cursor-pointer select-none text-base-content/70"
+        >
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm checkbox-primary"
+            :checked="allFilteredSelected"
+            :disabled="bulkDeleting"
+            @change="toggleSelectAllFiltered"
+          />
+          {{
+            allFilteredSelected
+              ? t('library.deselectAll')
+              : t('library.selectAll', { count: filteredFiles.length })
+          }}
+        </label>
+
+        <div
+          v-if="selectedFiles.size > 0"
+          class="flex items-center gap-2 ml-auto"
+        >
+          <span class="text-base-content/50">
+            {{ t('library.selectedCount', { count: selectedFiles.size }) }}
+          </span>
+          <button
+            type="button"
+            class="btn btn-sm h-9 px-4 rounded-full border-error/30 bg-error/10 text-error hover:bg-error/20"
+            :disabled="bulkDeleting"
+            @click="onBulkDelete"
+          >
+            <span
+              v-if="bulkDeleting"
+              class="loading loading-spinner loading-xs mr-1.5"
+            />
+            <Icon v-else icon="clarity:trash-line" class="h-4 w-4 mr-1.5" />
+            {{ t('library.deleteSelected') }}
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            :disabled="bulkDeleting"
+            @click="clearSelection"
+            :title="t('library.clearSelection')"
+          >
+            <Icon icon="clarity:close-line" class="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
       <!-- File list -->
-      <ul v-else class="space-y-2">
+      <ul v-if="filteredFiles.length > 0" class="space-y-2">
         <li
           v-for="file in paginatedFiles"
           :key="file"
           class="surface rounded-2xl p-3 sm:p-4 flex items-center gap-3"
+          :class="{ 'ring-1 ring-primary/40': selectedFiles.has(file) }"
         >
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm checkbox-primary shrink-0"
+            :checked="selectedFiles.has(file)"
+            :disabled="bulkDeleting"
+            @change="toggleFile(file)"
+            :aria-label="t('library.selectFile', { file: displayName(file) })"
+          />
+
           <!-- Cover thumb -->
           <div
             class="relative h-11 w-11 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center overflow-hidden"
@@ -198,7 +259,7 @@
             </a>
             <button
               class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
-              :disabled="deleting[file] === true"
+              :disabled="deleting[file] === true || bulkDeleting"
               @click="onDelete(file)"
               :title="t('library.deleteFile')"
             >
@@ -290,6 +351,8 @@ const error = ref('')
 const deleting = ref({})
 const coverFailed = ref({})
 const currentPage = ref(1)
+const selectedFiles = ref(new Set())
+const bulkDeleting = ref(false)
 
 const artistGroups = computed(() => buildGroups(tracks.value, 'artist'))
 const albumGroups = computed(() => buildGroups(tracks.value, 'album'))
@@ -319,9 +382,36 @@ const paginatedFiles = computed(() => {
   return filteredFiles.value.slice(start, start + PAGE_SIZE)
 })
 
+const allFilteredSelected = computed(
+  () =>
+    filteredFiles.value.length > 0 &&
+    filteredFiles.value.every((f) => selectedFiles.value.has(f))
+)
+
 watch(filteredFiles, () => {
   currentPage.value = 1
+  // The filtered set just changed shape (filter switched, or a file was
+  // deleted) — a selection made against the previous set no longer
+  // means the same thing, so don't carry it over silently.
+  clearSelection()
 })
+
+function toggleFile(file) {
+  const next = new Set(selectedFiles.value)
+  if (next.has(file)) next.delete(file)
+  else next.add(file)
+  selectedFiles.value = next
+}
+
+function toggleSelectAllFiltered() {
+  selectedFiles.value = allFilteredSelected.value
+    ? new Set()
+    : new Set(filteredFiles.value)
+}
+
+function clearSelection() {
+  selectedFiles.value = new Set()
+}
 
 function coverUrlFor(file) {
   return API.coverFileURL(file)
@@ -360,6 +450,36 @@ async function onDelete(file) {
     error.value = t('library.failedDelete', { file })
   } finally {
     deleting.value = { ...deleting.value, [file]: false }
+  }
+}
+
+async function onBulkDelete() {
+  const targets = Array.from(selectedFiles.value)
+  if (!targets.length) return
+  if (!confirm(t('library.bulkDeletePrompt', { count: targets.length }))) {
+    return
+  }
+  bulkDeleting.value = true
+  error.value = ''
+  try {
+    const res = await API.deleteDownloadsBatch(targets)
+    const results = res.data.results || {}
+    const removed = new Set(
+      Object.keys(results).filter((f) => results[f].deleted)
+    )
+    files.value = files.value.filter((f) => !removed.has(f))
+    tracks.value = tracks.value.filter((tr) => !removed.has(tr.file))
+    const failedCount = res.data.failed_count || 0
+    if (failedCount > 0) {
+      error.value = t('library.bulkDeletePartialError', {
+        count: failedCount,
+      })
+    }
+  } catch {
+    error.value = t('library.bulkDeleteFailed')
+  } finally {
+    clearSelection()
+    bulkDeleting.value = false
   }
 }
 
