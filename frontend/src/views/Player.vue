@@ -77,7 +77,7 @@
         class="surface rounded-2xl p-12 flex flex-col items-center text-center"
       >
         <Icon
-          icon="clarity:headphones-line"
+          icon="fa6-solid:headphones"
           class="h-12 w-12 text-base-content/20 mb-4"
         />
         <p class="text-base-content/50 text-sm">{{ t('player.empty') }}</p>
@@ -115,7 +115,7 @@
               class="absolute inset-0 h-full w-full object-cover"
               @error="markCoverFailed(player.currentTrack.value.file)"
             />
-            <Icon v-else icon="clarity:music-note-line" class="h-24 w-24" />
+            <Icon v-else icon="fa6-solid:music" class="h-24 w-24" />
             <div
               v-if="player.isPlaying.value"
               class="absolute bottom-3 right-3 equalizer h-5"
@@ -172,7 +172,7 @@
                   : t('player.shuffleOff')
               "
             >
-              <Icon icon="clarity:shuffle-line" class="h-5 w-5" />
+              <Icon icon="fa6-solid:shuffle" class="h-5 w-5" />
             </button>
             <button
               class="icon-btn"
@@ -180,10 +180,7 @@
               :title="t('player.previous')"
               :disabled="player.playlist.value.length === 0"
             >
-              <Icon
-                icon="clarity:step-forward-2-line"
-                class="h-5 w-5 -scale-x-100"
-              />
+              <Icon icon="fa6-solid:backward-step" class="h-5 w-5" />
             </button>
             <button
               class="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-content shadow-glow-sm hover:scale-105 active:scale-95 transition disabled:opacity-50"
@@ -195,9 +192,7 @@
             >
               <Icon
                 :icon="
-                  player.isPlaying.value
-                    ? 'clarity:pause-solid'
-                    : 'clarity:play-solid'
+                  player.isPlaying.value ? 'fa6-solid:pause' : 'fa6-solid:play'
                 "
                 class="h-6 w-6"
               />
@@ -208,7 +203,7 @@
               :title="t('player.next')"
               :disabled="player.playlist.value.length === 0"
             >
-              <Icon icon="clarity:step-forward-2-line" class="h-5 w-5" />
+              <Icon icon="fa6-solid:forward-step" class="h-5 w-5" />
             </button>
             <button
               class="icon-btn relative"
@@ -216,7 +211,7 @@
               @click="player.cycleRepeat()"
               :title="repeatTitle"
             >
-              <Icon icon="clarity:refresh-line" class="h-5 w-5" />
+              <Icon icon="fa6-solid:arrows-rotate" class="h-5 w-5" />
               <span
                 v-if="player.repeatMode.value === 'one'"
                 class="absolute -bottom-0.5 -right-0.5 h-4 min-w-[1rem] px-1 rounded-full bg-primary text-primary-content text-[9px] font-bold flex items-center justify-center"
@@ -238,10 +233,10 @@
               <Icon
                 :icon="
                   player.isMuted.value || player.volume.value === 0
-                    ? 'clarity:volume-mute-line'
+                    ? 'fa6-solid:volume-xmark'
                     : player.volume.value < 0.5
-                      ? 'clarity:volume-down-line'
-                      : 'clarity:volume-up-line'
+                      ? 'fa6-solid:volume-low'
+                      : 'fa6-solid:volume-high'
                 "
                 class="h-5 w-5"
               />
@@ -325,7 +320,7 @@
                   </span>
                   <Icon
                     v-else-if="coverFailed[track.file]"
-                    icon="clarity:music-note-line"
+                    icon="fa6-solid:music"
                     class="h-4 w-4 text-base-content/50"
                   />
                 </div>

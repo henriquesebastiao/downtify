@@ -28,7 +28,7 @@
       v-if="props.error"
       class="surface rounded-2xl p-4 mb-4 flex gap-3 items-center text-sm text-error"
     >
-      <Icon icon="clarity:exclamation-circle-line" class="h-5 w-5 shrink-0" />
+      <Icon icon="fa6-solid:circle-exclamation" class="h-5 w-5 shrink-0" />
       <span>
         {{
           sm.errorValue.value
@@ -64,7 +64,7 @@
               v-else
               class="h-full w-full flex items-center justify-center text-base-content/30"
             >
-              <Icon icon="clarity:album-line" class="h-6 w-6" />
+              <Icon icon="fa6-solid:record-vinyl" class="h-6 w-6" />
             </div>
           </div>
 
@@ -96,7 +96,10 @@
               rel="noopener"
               :title="t('search.openSource')"
             >
-              <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
+              <Icon
+                icon="fa6-solid:arrow-up-right-from-square"
+                class="h-4 w-4"
+              />
             </a>
             <button
               v-if="albumDownloadState(album) === 'queued'"
@@ -104,7 +107,7 @@
               :title="t('search.inQueue')"
               disabled
             >
-              <Icon icon="clarity:check-circle-line" class="h-5 w-5" />
+              <Icon icon="fa6-solid:circle-check" class="h-5 w-5" />
             </button>
             <button
               v-else
@@ -112,7 +115,7 @@
               @click="downloadAlbum(album)"
               :title="t('search.downloadAlbum')"
             >
-              <Icon icon="clarity:download-line" class="h-5 w-5" />
+              <Icon icon="fa6-solid:download" class="h-5 w-5" />
             </button>
           </div>
         </li>
@@ -139,7 +142,7 @@
       class="surface rounded-2xl p-12 flex flex-col items-center text-center"
     >
       <Icon
-        icon="clarity:search-line"
+        icon="fa6-solid:magnifying-glass"
         class="h-12 w-12 text-base-content/20 mb-4"
       />
       <p class="text-base-content/50 text-sm">{{ t('search.empty') }}</p>
@@ -168,7 +171,7 @@
             v-else
             class="h-full w-full flex items-center justify-center text-base-content/30"
           >
-            <Icon icon="clarity:music-note-line" class="h-6 w-6" />
+            <Icon icon="fa6-solid:music" class="h-6 w-6" />
           </div>
         </div>
 
@@ -204,7 +207,7 @@
             rel="noopener"
             :title="t('search.openSource')"
           >
-            <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
+            <Icon icon="fa6-solid:arrow-up-right-from-square" class="h-4 w-4" />
           </a>
 
           <button
@@ -213,7 +216,7 @@
             :title="t('search.inQueue')"
             disabled
           >
-            <Icon icon="clarity:check-circle-line" class="h-5 w-5" />
+            <Icon icon="fa6-solid:circle-check" class="h-5 w-5" />
           </button>
           <button
             v-else
@@ -221,7 +224,7 @@
             @click="download(song)"
             :title="t('search.download')"
           >
-            <Icon icon="clarity:download-line" class="h-5 w-5" />
+            <Icon icon="fa6-solid:download" class="h-5 w-5" />
           </button>
         </div>
       </li>

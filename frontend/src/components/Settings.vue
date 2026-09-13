@@ -25,7 +25,7 @@
           class="icon-btn cursor-pointer"
           :title="t('common.close')"
         >
-          <Icon icon="clarity:close-line" class="h-5 w-5" />
+          <Icon icon="fa6-solid:xmark" class="h-5 w-5" />
         </label>
       </div>
 
@@ -488,7 +488,7 @@
             class="surface rounded-xl p-3 flex gap-2 text-sm"
           >
             <Icon
-              icon="clarity:lock-line"
+              icon="fa6-solid:lock"
               class="h-4 w-4 shrink-0 mt-0.5 text-base-content/50"
             />
             <span class="flex-1 min-w-0">
@@ -514,7 +514,7 @@
               class="surface rounded-xl p-3 flex items-center gap-2 text-sm mb-2"
             >
               <Icon
-                icon="clarity:check-circle-line"
+                icon="fa6-solid:circle-check"
                 class="h-4 w-4 shrink-0 text-primary"
               />
               <span class="flex-1 min-w-0">
@@ -537,7 +537,7 @@
                   v-if="cm.busy.value"
                   class="loading loading-spinner loading-xs"
                 />
-                <Icon v-else icon="clarity:trash-line" class="h-4 w-4" />
+                <Icon v-else icon="fa6-solid:trash" class="h-4 w-4" />
               </button>
             </div>
 
@@ -551,7 +551,7 @@
               />
               <Icon
                 v-else
-                icon="clarity:upload-cloud-line"
+                icon="fa6-solid:cloud-arrow-up"
                 class="h-4 w-4 mr-2"
               />
               {{
@@ -574,7 +574,7 @@
             class="surface rounded-xl p-3 mt-2 flex gap-2 text-sm text-error"
           >
             <Icon
-              icon="clarity:exclamation-circle-line"
+              icon="fa6-solid:circle-exclamation"
               class="h-4 w-4 shrink-0 mt-0.5"
             />
             <span class="flex-1">{{ cm.error.value }}</span>
@@ -585,7 +585,7 @@
             class="surface rounded-xl p-3 mt-2 flex gap-2 text-sm text-warning"
           >
             <Icon
-              icon="clarity:warning-standard-line"
+              icon="fa6-solid:triangle-exclamation"
               class="h-4 w-4 shrink-0 mt-0.5"
             />
             <span class="flex-1">{{ warning }}</span>
@@ -605,7 +605,7 @@
             v-if="sm.isSaved.value === true"
             class="surface rounded-xl p-3 flex items-center gap-2 text-sm text-primary"
           >
-            <Icon icon="clarity:check-line" class="h-4 w-4 shrink-0" />
+            <Icon icon="fa6-solid:check" class="h-4 w-4 shrink-0" />
             {{ t('settings.saved') }}
           </div>
           <div
@@ -613,7 +613,7 @@
             class="surface rounded-xl p-3 flex items-center gap-2 text-sm text-error"
           >
             <Icon
-              icon="clarity:exclamation-circle-line"
+              icon="fa6-solid:circle-exclamation"
               class="h-4 w-4 shrink-0"
             />
             {{ t('settings.saveError') }}

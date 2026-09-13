@@ -63,7 +63,7 @@
               v-if="importing"
               class="loading loading-spinner loading-xs"
             ></span>
-            <Icon v-else icon="clarity:import-line" class="h-3.5 w-3.5" />
+            <Icon v-else icon="fa6-solid:file-import" class="h-3.5 w-3.5" />
             {{ t('hero.importCsv') }}
           </button>
           <input

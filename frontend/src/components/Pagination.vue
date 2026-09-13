@@ -7,7 +7,7 @@
       @click="$emit('update:modelValue', modelValue - 1)"
       :title="t('common.previousPage')"
     >
-      <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
+      <Icon icon="fa6-solid:chevron-up" class="h-4 w-4 rotate-[-90deg]" />
     </button>
 
     <template v-for="(item, index) in desktopItems" :key="`${item}-${index}`">
@@ -38,7 +38,7 @@
       @click="$emit('update:modelValue', modelValue + 1)"
       :title="t('common.nextPage')"
     >
-      <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
+      <Icon icon="fa6-solid:chevron-up" class="h-4 w-4 rotate-90" />
     </button>
   </nav>
 
@@ -58,7 +58,7 @@
       @click="$emit('update:modelValue', modelValue - 1)"
       :title="t('common.previousPage')"
     >
-      <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
+      <Icon icon="fa6-solid:chevron-up" class="h-4 w-4 rotate-[-90deg]" />
     </button>
 
     <template v-for="(item, index) in mobileItems" :key="`${item}-${index}`">
@@ -89,7 +89,7 @@
       @click="$emit('update:modelValue', modelValue + 1)"
       :title="t('common.nextPage')"
     >
-      <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
+      <Icon icon="fa6-solid:chevron-up" class="h-4 w-4 rotate-90" />
     </button>
   </nav>
 </template>

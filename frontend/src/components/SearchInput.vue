@@ -20,7 +20,7 @@
       ></span>
       <Icon
         v-else-if="sm.isValidURL(sm.searchTerm.value)"
-        icon="clarity:download-line"
+        icon="fa6-solid:download"
         :class="compact ? 'h-4 w-4' : 'h-5 w-5'"
       />
       <svg

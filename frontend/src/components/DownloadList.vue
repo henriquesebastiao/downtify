@@ -16,7 +16,7 @@
         @click="onClearAll"
         :title="t('queue.clearAll')"
       >
-        <Icon icon="clarity:trash-line" class="h-4 w-4 mr-1.5" />
+        <Icon icon="fa6-solid:trash" class="h-4 w-4 mr-1.5" />
         {{ t('queue.clearAll') }}
       </button>
     </div>
@@ -27,7 +27,7 @@
       class="surface rounded-2xl p-12 flex flex-col items-center text-center"
     >
       <Icon
-        icon="clarity:download-line"
+        icon="fa6-solid:download"
         class="h-12 w-12 text-base-content/20 mb-4"
       />
       <p class="text-base-content/50 text-sm">{{ t('queue.empty') }}</p>
@@ -55,7 +55,7 @@
             v-else
             class="h-full w-full flex items-center justify-center text-base-content/30"
           >
-            <Icon icon="clarity:music-note-line" class="h-6 w-6" />
+            <Icon icon="fa6-solid:music" class="h-6 w-6" />
           </div>
         </div>
 
@@ -87,7 +87,7 @@
             @click="forceDownload(item.web_download_url)"
             :title="t('queue.saveToDevice')"
           >
-            <Icon icon="clarity:download-line" class="h-4 w-4" />
+            <Icon icon="fa6-solid:download" class="h-4 w-4" />
           </a>
           <div
             v-else-if="item.progress > 0 && !item.isErrored()"
@@ -108,7 +108,7 @@
             @click="dm.remove(item.song)"
             :title="t('queue.removeFromQueue')"
           >
-            <Icon icon="clarity:trash-line" class="h-4 w-4" />
+            <Icon icon="fa6-solid:trash" class="h-4 w-4" />
           </button>
         </div>
       </li>

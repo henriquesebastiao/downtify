@@ -70,7 +70,7 @@
         class="surface rounded-2xl p-12 flex flex-col items-center text-center"
       >
         <Icon
-          icon="clarity:music-note-line"
+          icon="fa6-solid:music"
           class="h-12 w-12 text-base-content/20 mb-4"
         />
         <p class="text-base-content/50 text-sm">
@@ -118,7 +118,7 @@
             @click="toggleSortDir"
           >
             <Icon
-              icon="clarity:angle-line"
+              icon="fa6-solid:chevron-up"
               class="h-4 w-4 transition-transform"
               :class="sortDir === 'asc' ? 'rotate-[-180deg]' : 'rotate-0'"
             />
@@ -148,7 +148,7 @@
                   }}
                 </span>
                 <span v-if="isArtist(pl)" class="pill shrink-0 badge-soft">
-                  <Icon icon="clarity:user-line" class="inline h-3 w-3" />
+                  <Icon icon="fa6-solid:user" class="inline h-3 w-3" />
                   {{ t('monitor.kindArtist') }}
                 </span>
                 <span
@@ -163,7 +163,7 @@
               >
                 <span>
                   <Icon
-                    icon="clarity:refresh-line"
+                    icon="fa6-solid:arrows-rotate"
                     class="inline h-3 w-3 mr-0.5"
                   />
                   {{
@@ -175,19 +175,14 @@
                 <span>
                   <Icon
                     :icon="
-                      isArtist(pl)
-                        ? 'clarity:library-line'
-                        : 'clarity:music-note-line'
+                      isArtist(pl) ? 'fa6-solid:layer-group' : 'fa6-solid:music'
                     "
                     class="inline h-3 w-3 mr-0.5"
                   />
                   {{ countLabel(pl) }}
                 </span>
                 <span v-if="pl.last_checked">
-                  <Icon
-                    icon="clarity:clock-line"
-                    class="inline h-3 w-3 mr-0.5"
-                  />
+                  <Icon icon="fa6-solid:clock" class="inline h-3 w-3 mr-0.5" />
                   {{ t('monitor.checked', { when: timeAgo(pl.last_checked) }) }}
                 </span>
                 <span v-else class="italic">{{ t('monitor.notChecked') }}</span>
@@ -221,9 +216,7 @@
                 @click="onToggle(pl)"
               >
                 <Icon
-                  :icon="
-                    pl.enabled ? 'clarity:pause-line' : 'clarity:play-line'
-                  "
+                  :icon="pl.enabled ? 'fa6-solid:pause' : 'fa6-solid:play'"
                   class="h-4 w-4"
                 />
               </button>
@@ -239,7 +232,7 @@
                   v-if="checking[pl.id]"
                   class="loading loading-spinner loading-xs"
                 />
-                <Icon v-else icon="clarity:refresh-line" class="h-4 w-4" />
+                <Icon v-else icon="fa6-solid:arrows-rotate" class="h-4 w-4" />
               </button>
 
               <!-- Delete -->
@@ -248,7 +241,7 @@
                 :title="t('monitor.stop')"
                 @click="onDelete(pl)"
               >
-                <Icon icon="clarity:trash-line" class="h-4 w-4" />
+                <Icon icon="fa6-solid:trash" class="h-4 w-4" />
               </button>
             </div>
           </li>
@@ -260,7 +253,7 @@
         class="mt-8 surface rounded-2xl p-4 flex gap-3 text-sm text-base-content/60"
       >
         <Icon
-          icon="clarity:info-standard-line"
+          icon="fa6-solid:circle-info"
           class="h-5 w-5 shrink-0 mt-0.5 text-primary/70"
         />
         <p>{{ t('monitor.info') }}</p>
