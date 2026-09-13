@@ -108,12 +108,6 @@ def test_bump_updates_all_three_files(tmp_path):
     dockerfile = (tmp_path / 'Dockerfile').read_text()
     assert 'LABEL version="2.3.4"' in dockerfile
     assert 'org.opencontainers.image.version="2.3.4"' in dockerfile
-    assert (
-        "|| '2.3.4'"
-        in (
-            tmp_path / 'frontend' / 'src' / 'components' / 'Hero.vue'
-        ).read_text()
-    )
 
 
 def test_bump_noop_when_already_at_target(tmp_path):

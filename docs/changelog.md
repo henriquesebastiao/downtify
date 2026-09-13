@@ -4,6 +4,42 @@ icon: lucide/history
 
 # Changelog
 
+## [2.12.0](https://github.com/henriquesebastiao/downtify/tree/2.12.0) (2026-09-13)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.11.0...2.12.0)
+
+**Implemented enhancements:**
+
+- Replace icons with Font Awesome [\#333](https://github.com/henriquesebastiao/downtify/issues/333)
+- Replace `requests` with `httpx` [\#330](https://github.com/henriquesebastiao/downtify/issues/330)
+- Improved page number display when pagination is present [\#328](https://github.com/henriquesebastiao/downtify/issues/328)
+- Enable the selection of tracks for mass deletion via the Library menu [\#326](https://github.com/henriquesebastiao/downtify/issues/326)
+- Add a notification for the user that a new version of Downtify is available [\#325](https://github.com/henriquesebastiao/downtify/issues/325)
+- PWA \(progressive web app\) Icon [\#324](https://github.com/henriquesebastiao/downtify/issues/324)
+- paste cookies file via web interface [\#280](https://github.com/henriquesebastiao/downtify/issues/280)
+
+**Fixed bugs:**
+
+- Delete lyrics when the music file is deleted from the library [\#319](https://github.com/henriquesebastiao/downtify/issues/319)
+- Downtify v2.10.2 cannot download: yt-dlp cookies issue [\#308](https://github.com/henriquesebastiao/downtify/issues/308)
+- OS error: file name too long [\#268](https://github.com/henriquesebastiao/downtify/issues/268)
+- Adjust CSS con mobile [\#228](https://github.com/henriquesebastiao/downtify/issues/228)
+- youtube bot detection error [\#225](https://github.com/henriquesebastiao/downtify/issues/225)
+- Song age restricted even with cookies linked [\#203](https://github.com/henriquesebastiao/downtify/issues/203)
+
+**Merged pull requests:**
+
+- fix\(match\): accept Spotify "- Ao Vivo" titles, fall back to standard YouTube [\#337](https://github.com/henriquesebastiao/downtify/pull/337) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(player\): global mini player bar [\#336](https://github.com/henriquesebastiao/downtify/pull/336) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(player\): stop the now-playing widget from resizing/scrolling on a long name, fix playlist folder leaking into artist [\#335](https://github.com/henriquesebastiao/downtify/pull/335) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- refactor\(ui\): replace all Clarity icons with Font Awesome [\#334](https://github.com/henriquesebastiao/downtify/pull/334) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(ui\): condense pagination to a fixed number of pages, not all of them [\#332](https://github.com/henriquesebastiao/downtify/pull/332) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- core: Replacing requests with httpx [\#331](https://github.com/henriquesebastiao/downtify/pull/331) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(update-check\): notify when a newer Downtify version is out [\#329](https://github.com/henriquesebastiao/downtify/pull/329) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(library\): select and bulk-delete tracks, including across pages [\#327](https://github.com/henriquesebastiao/downtify/pull/327) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(library\): clean up sidecars and empty folders when deleting a track [\#323](https://github.com/henriquesebastiao/downtify/pull/323) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(cookies\): upload a YouTube cookies.txt from the settings UI [\#320](https://github.com/henriquesebastiao/downtify/pull/320) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
 ## [2.11.0](https://github.com/henriquesebastiao/downtify/tree/2.11.0) (2026-09-11)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.10.2...2.11.0)
