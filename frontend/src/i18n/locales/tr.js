@@ -51,8 +51,6 @@ export default {
     openOnSpotify: 'Spotify üzerinde aç',
     inQueue: 'Kuyrukta',
     download: 'İndir',
-    previousPage: 'Önceki sayfa',
-    nextPage: 'Sonraki sayfa',
   },
   queue: {
     title: 'İndirme Kuyruğu',

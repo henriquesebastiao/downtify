@@ -51,8 +51,6 @@ export default {
     openSource: 'Ouvrir la source',
     inQueue: "Dans la file d'attente",
     download: 'Télécharger',
-    previousPage: 'Page précédente',
-    nextPage: 'Page suivante',
     albumsTitle: 'Albums',
     albumBadge: 'Album',
     singleBadge: 'Single',

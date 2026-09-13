@@ -228,40 +228,11 @@
     </ul>
 
     <!-- Pagination -->
-    <nav
+    <Pagination
       v-if="totalPages > 1"
-      class="mt-8 flex items-center justify-center gap-1 flex-wrap"
-    >
-      <button
-        class="icon-btn"
-        :disabled="currentPage === 1"
-        @click="currentPage--"
-        :title="t('search.previousPage')"
-      >
-        <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
-      </button>
-      <button
-        v-for="page in totalPages"
-        :key="page"
-        class="h-10 min-w-[2.5rem] rounded-full px-3 text-sm font-medium transition-colors"
-        :class="
-          page === currentPage
-            ? 'bg-primary text-primary-content shadow-glow-sm'
-            : 'text-base-content/70 hover:text-base-content hover:bg-white/10'
-        "
-        @click="currentPage = page"
-      >
-        {{ page }}
-      </button>
-      <button
-        class="icon-btn"
-        :disabled="currentPage === totalPages"
-        @click="currentPage++"
-        :title="t('search.nextPage')"
-      >
-        <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
-      </button>
-    </nav>
+      v-model="currentPage"
+      :total-pages="totalPages"
+    />
   </div>
 </template>
 
@@ -269,6 +240,7 @@
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
+import Pagination from './Pagination.vue'
 import { useSearchManager } from '../model/search'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'

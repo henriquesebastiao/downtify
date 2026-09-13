@@ -50,8 +50,6 @@ export default {
     openSource: 'Abrir en la fuente',
     inQueue: 'En la cola',
     download: 'Descargar',
-    previousPage: 'Página anterior',
-    nextPage: 'Página siguiente',
     albumsTitle: 'Álbumes',
     albumBadge: 'Álbum',
     singleBadge: 'Sencillo',

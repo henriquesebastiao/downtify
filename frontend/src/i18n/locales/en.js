@@ -48,8 +48,6 @@ export default {
     openSource: 'Open in source',
     inQueue: 'In queue',
     download: 'Download',
-    previousPage: 'Previous page',
-    nextPage: 'Next page',
     albumsTitle: 'Albums',
     albumBadge: 'Album',
     singleBadge: 'Single',

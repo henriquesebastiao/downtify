@@ -48,8 +48,6 @@ export default {
     openSource: 'Отвори източник',
     inQueue: 'В опашка',
     download: 'Теглене',
-    previousPage: 'Предишна страница',
-    nextPage: 'Следваща страница',
     albumsTitle: 'Албуми',
     albumBadge: 'Албум',
     singleBadge: 'Сингъл',

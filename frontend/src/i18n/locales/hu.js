@@ -49,8 +49,6 @@ export default {
     openSource: 'Megnyitás forrásban',
     inQueue: 'Sorban',
     download: 'Letöltés',
-    previousPage: 'Előző oldal',
-    nextPage: 'Következő oldal',
     albumsTitle: 'Albumok',
     albumBadge: 'Album',
     singleBadge: 'Single',
