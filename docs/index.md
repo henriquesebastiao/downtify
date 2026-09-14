@@ -28,7 +28,7 @@ Drop a Spotify link, get a tagged audio file. No account, no API key, no Premium
 <div class="hero__shields" markdown>
 
 [![Release](https://img.shields.io/github/v/release/henriquesebastiao/downtify?color=1AD05C&label=release)](https://github.com/henriquesebastiao/downtify/releases)
-[![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/downtify?color=1AD05C)](https://hub.docker.com/r/henriquesebastiao/downtify)
+[![Docker Pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Fhenriquesebastiao%2Fdowntify%2Fdowntify&query=downloadCount&style=flat&label=docker%20pulls)](https://github.com/henriquesebastiao/downtify/pkgs/container/downtify)
 [![License](https://img.shields.io/github/license/henriquesebastiao/downtify?color=1AD05C)](https://github.com/henriquesebastiao/downtify/blob/main/LICENSE)
 
 </div>
