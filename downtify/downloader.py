@@ -32,6 +32,7 @@ from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4, MP4Cover, MP4FreeForm
 from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
+from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
 from . import lyrics as lyrics_mod
 from .cookies import CookiesStore
@@ -47,6 +48,102 @@ _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 _AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'ogg', 'opus', 'm4a'})
 
 ProgressCallback = Callable[[float, str], None]
+
+# Downtify format name → yt-dlp ExtractAudio codec name. yt-dlp calls Ogg
+# Vorbis "vorbis" (output extension .ogg); passing "ogg" crashes the
+# conversion with KeyError: 'ogg'.
+_YTDLP_AUDIO_CODECS = {'ogg': 'vorbis'}
+
+# yt-dlp codec → the source codec it stream-copies instead of encoding.
+_COPYABLE_SOURCE_CODECS = {'m4a': 'aac', 'opus': 'opus', 'vorbis': 'vorbis'}
+
+# A same-codec source within this fraction of the chosen bitrate is kept
+# as a lossless stream copy rather than re-encoded to the same bitrate.
+_BITRATE_COPY_TOLERANCE = 0.1
+
+
+def _audio_bit_rate(metadata: dict[str, Any]) -> Optional[float]:
+    """Audio bitrate (bits/s) from an ``ffprobe -show_streams -show_format``
+    JSON object, or ``None`` when it can't be told.
+
+    The audio stream's own ``bit_rate`` wins. WebM/Ogg streams don't carry
+    one, so the container's ``bit_rate`` is used instead — but only for an
+    audio-only file, where it isn't inflated by a video stream.
+    """
+
+    streams = metadata.get('streams') or []
+    audio = [s for s in streams if s.get('codec_type') == 'audio']
+    if not audio:
+        return None
+    for value in (
+        audio[0].get('bit_rate'),
+        (metadata.get('format') or {}).get('bit_rate')
+        if len(audio) == len(streams)
+        else None,
+    ):
+        try:
+            if value is not None and float(value) > 0:
+                return float(value)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+class _ExtractAudioPP(FFmpegExtractAudioPP):
+    """yt-dlp's audio extraction, honoring the chosen bitrate.
+
+    yt-dlp stream-copies instead of encoding whenever the downloaded
+    stream already has the target codec (an AAC source for M4A, Opus for
+    OPUS), silently ignoring ``preferredquality``. YouTube's AAC stream is
+    ~128 kbps, so M4A came out at 128 kbps whatever bitrate was chosen.
+
+    The copy is kept only when the source is already at the chosen bitrate
+    (within :data:`_BITRATE_COPY_TOLERANCE`) or its bitrate is unknown.
+    Otherwise the source codec is reported under a non-matching name, which
+    sends yt-dlp's ``run()`` down its regular encode path — same encoder
+    choice, bitrate arguments and temp-file handling as any other format.
+    """
+
+    def __init__(
+        self, downloader: Any, audio_format: str, bitrate_kbps: str
+    ) -> None:
+        self._codec = _YTDLP_AUDIO_CODECS.get(audio_format, audio_format)
+        super().__init__(
+            downloader,
+            preferredcodec=self._codec,
+            preferredquality=bitrate_kbps,
+        )
+        try:
+            self._bitrate_bps = float(bitrate_kbps) * 1000
+        except (TypeError, ValueError):
+            self._bitrate_bps = None
+
+    def get_audio_codec(self, path: str) -> Optional[str]:
+        codec = super().get_audio_codec(path)
+        if (
+            not self._bitrate_bps
+            or codec is None
+            or codec != _COPYABLE_SOURCE_CODECS.get(self._codec)
+        ):
+            return codec
+        try:
+            source_bps = _audio_bit_rate(self.get_metadata_object(path))
+        except Exception:
+            logger.opt(exception=True).debug('ffprobe bitrate read failed')
+            return codec
+        if source_bps is None or (
+            abs(source_bps - self._bitrate_bps)
+            <= self._bitrate_bps * _BITRATE_COPY_TOLERANCE
+        ):
+            return codec
+        logger.info(
+            'Re-encoding {} source at {:.0f} kbps to {:.0f} kbps {}',
+            codec,
+            source_bps / 1000,
+            self._bitrate_bps / 1000,
+            self._codec,
+        )
+        return f'{codec}-reencode'
 
 
 def _sanitize(text: str) -> str:
@@ -597,13 +694,6 @@ class Downloader:
             # Light pacing so we don't trigger 429 rate limits when the
             # user fires off multiple downloads back-to-back.
             'sleep_interval_requests': 1,
-            'postprocessors': [
-                {
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': self.audio_format,
-                    'preferredquality': self.audio_bitrate,
-                }
-            ],
         }
         # Many container setups have IPv6 advertised but unroutable for
         # googlevideo.com, which surfaces as EAI_AGAIN on the AAAA lookup.
@@ -637,6 +727,14 @@ class Downloader:
         url = f'https://music.youtube.com/watch?v={video_id}'
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # Registered directly: `ydl_opts['postprocessors']` only
+                # accepts yt-dlp's built-in postprocessors by name.
+                ydl.add_post_processor(
+                    _ExtractAudioPP(
+                        ydl, self.audio_format, self.audio_bitrate
+                    ),
+                    when='post_process',
+                )
                 ydl.download([url])
         except Exception as exc:
             raise _translate_download_error(

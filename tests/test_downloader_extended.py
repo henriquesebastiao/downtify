@@ -4,15 +4,22 @@ organize_by_artist routing logic."""
 from __future__ import annotations
 
 import base64
+import shutil
+import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import pytest
+import yt_dlp
 from mutagen.id3 import ID3
+from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
 from downtify import downloader as downloader_mod
 from downtify.downloader import (
     Downloader,
+    _audio_bit_rate,
+    _ExtractAudioPP,
     _release_type_for_tags,
     _tag_mp3,
     embed_lyrics,
@@ -564,15 +571,21 @@ class _CapturedOpts(Exception):
 
 class _FakeYoutubeDL:
     captured: dict = {}
+    post_processors: list = []
 
     def __init__(self, opts):
         _FakeYoutubeDL.captured = opts
+        # yt-dlp postprocessors read their options through `params`.
+        self.params = opts
 
     def __enter__(self):
         return self
 
     def __exit__(self, *exc_info):
         return False
+
+    def add_post_processor(self, pp, when='post_process'):  # noqa: PLR6301
+        _FakeYoutubeDL.post_processors.append((pp, when))
 
     def download(self, urls):  # noqa: PLR6301 - mirrors yt_dlp.YoutubeDL's API
         raise _CapturedOpts
@@ -807,12 +820,16 @@ def test_download_concurrent_duplicates_fetch_only_once(tmp_path, monkeypatch):
     class _SlowYoutubeDL:
         def __init__(self, opts):
             self.outtmpl = opts['outtmpl']
+            self.params = opts
 
         def __enter__(self):
             return self
 
         def __exit__(self, *exc_info):
             return False
+
+        def add_post_processor(self, pp, when='post_process'):
+            pass
 
         def download(self, urls):
             fetches.append(urls)
@@ -920,3 +937,205 @@ def test_is_age_restricted_error_matches_youtube_wording():
     assert downloader_mod.is_age_restricted_error(str(_AGE_GATE_ERROR))
     assert downloader_mod.is_age_restricted_error('AGE_VERIFICATION_REQUIRED')
     assert not downloader_mod.is_age_restricted_error('HTTP Error 403')
+
+
+# ── audio extraction honors the chosen bitrate (M4A/OPUS) and OGG ───────────
+
+
+def test_download_registers_bitrate_aware_extract_audio_pp(
+    tmp_path, monkeypatch
+):
+    _FakeYoutubeDL.captured = {}
+    _FakeYoutubeDL.post_processors = []
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _FakeYoutubeDL)
+    d = _make(tmp_path, audio_format='m4a', audio_bitrate='320')
+    try:
+        d.download(_OVERWRITE_SONG)
+    except _CapturedOpts:
+        pass
+    assert 'postprocessors' not in _FakeYoutubeDL.captured
+    [(pp, when)] = _FakeYoutubeDL.post_processors
+    assert isinstance(pp, _ExtractAudioPP)
+    assert when == 'post_process'
+    assert pp._codec == 'm4a'
+    assert pp._bitrate_bps == 320_000
+
+
+def test_extract_audio_pp_maps_ogg_to_vorbis():
+    # Regression: yt-dlp has no "ogg" codec; OGG downloads crashed with
+    # KeyError: 'ogg' inside the conversion.
+    pp = _ExtractAudioPP(yt_dlp.YoutubeDL({'quiet': True}), 'ogg', '320')
+    assert pp._codec == 'vorbis'
+
+
+def test_audio_bit_rate_prefers_the_audio_stream():
+    meta = {
+        'streams': [{'codec_type': 'audio', 'bit_rate': '129687'}],
+        'format': {'bit_rate': '131000'},
+    }
+    assert _audio_bit_rate(meta) == 129687
+
+
+def test_audio_bit_rate_falls_back_to_container_for_audio_only_files():
+    # WebM/Ogg audio streams carry no bit_rate of their own.
+    meta = {
+        'streams': [{'codec_type': 'audio'}],
+        'format': {'bit_rate': '151255'},
+    }
+    assert _audio_bit_rate(meta) == 151255
+
+
+def test_audio_bit_rate_ignores_container_rate_inflated_by_video():
+    meta = {
+        'streams': [{'codec_type': 'video'}, {'codec_type': 'audio'}],
+        'format': {'bit_rate': '600000'},
+    }
+    assert _audio_bit_rate(meta) is None
+
+
+@pytest.mark.parametrize(
+    'meta',
+    [
+        {},
+        {'streams': [{'codec_type': 'video', 'bit_rate': '500000'}]},
+        {'streams': [{'codec_type': 'audio', 'bit_rate': 'N/A'}]},
+    ],
+)
+def test_audio_bit_rate_unknown(meta):
+    assert _audio_bit_rate(meta) is None
+
+
+@pytest.mark.parametrize(
+    ('audio_format', 'bitrate', 'source_codec', 'source_bps', 'expected'),
+    [
+        # The reported bug: YouTube's ~128 kbps AAC copied into M4A.
+        ('m4a', '320', 'aac', 129_687, 'aac-reencode'),
+        ('m4a', '192', 'aac', 129_687, 'aac-reencode'),
+        # Already at the chosen bitrate: keep the lossless copy.
+        ('m4a', '128', 'aac', 129_687, 'aac'),
+        # Same shortcut for OPUS from YouTube's Opus stream.
+        ('opus', '256', 'opus', 151_255, 'opus-reencode'),
+        ('opus', '128', 'opus', 151_255, 'opus-reencode'),
+        # Different codecs are encoded by yt-dlp anyway: untouched.
+        ('m4a', '320', 'opus', 151_255, 'opus'),
+        ('mp3', '320', 'aac', 129_687, 'aac'),
+        # Unknown source bitrate: don't guess, keep yt-dlp's copy.
+        ('m4a', '320', 'aac', None, 'aac'),
+    ],
+)
+def test_extract_audio_pp_copy_or_encode_decision(  # noqa: PLR0913, PLR0917
+    monkeypatch, audio_format, bitrate, source_codec, source_bps, expected
+):
+    monkeypatch.setattr(
+        FFmpegExtractAudioPP,
+        'get_audio_codec',
+        lambda self, path: source_codec,
+    )
+    stream = {'codec_type': 'audio'}
+    if source_bps is not None:
+        stream['bit_rate'] = str(source_bps)
+    monkeypatch.setattr(
+        _ExtractAudioPP,
+        'get_metadata_object',
+        lambda self, path, opts=None: {'streams': [stream], 'format': {}},
+    )
+    pp = _ExtractAudioPP(
+        yt_dlp.YoutubeDL({'quiet': True}), audio_format, bitrate
+    )
+    assert pp.get_audio_codec('/x') == expected
+
+
+def test_extract_audio_pp_keeps_copy_when_ffprobe_fails(monkeypatch):
+    monkeypatch.setattr(
+        FFmpegExtractAudioPP, 'get_audio_codec', lambda self, path: 'aac'
+    )
+
+    def _boom(self, path, opts=None):
+        raise RuntimeError('ffprobe missing')
+
+    monkeypatch.setattr(_ExtractAudioPP, 'get_metadata_object', _boom)
+    pp = _ExtractAudioPP(yt_dlp.YoutubeDL({'quiet': True}), 'm4a', '320')
+    assert pp.get_audio_codec('/x') == 'aac'
+
+
+_HAS_FFMPEG = bool(shutil.which('ffmpeg') and shutil.which('ffprobe'))
+
+
+def _probe_audio(path: str) -> tuple[str, int]:
+    out = subprocess.run(
+        [
+            'ffprobe',
+            '-v',
+            'error',
+            '-select_streams',
+            'a:0',
+            '-show_entries',
+            'stream=codec_name,bit_rate',
+            '-of',
+            'csv=p=0',
+            path,
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    codec, _, rate = out.partition(',')
+    return codec, int(rate) if rate.isdigit() else 0
+
+
+def _aac_source(tmp_path: Path) -> Path:
+    # Stereo noise, so the encoders actually use the bitrate they're given
+    # (a pure tone compresses far below it).
+    src = tmp_path / 'source.m4a'
+    subprocess.run(
+        [
+            'ffmpeg',
+            '-v',
+            'error',
+            '-f',
+            'lavfi',
+            '-i',
+            'anoisesrc=d=4:c=pink:r=44100,aformat=channel_layouts=stereo',
+            '-c:a',
+            'aac',
+            '-b:a',
+            '128k',
+            str(src),
+        ],
+        check=True,
+    )
+    return src
+
+
+@pytest.mark.skipif(not _HAS_FFMPEG, reason='ffmpeg/ffprobe not installed')
+def test_extract_audio_pp_m4a_from_aac_source_uses_chosen_bitrate(tmp_path):
+    src = _aac_source(tmp_path)
+    ydl = yt_dlp.YoutubeDL({'quiet': True, 'noprogress': True})
+    pp = _ExtractAudioPP(ydl, 'm4a', '320')
+    _, info = pp.run({'filepath': str(src), 'ext': 'm4a'})
+    codec, rate = _probe_audio(info['filepath'])
+    assert codec == 'aac'
+    # yt-dlp's plain ExtractAudio leaves this at the source's ~128 kbps.
+    assert rate > 250_000
+
+
+@pytest.mark.skipif(not _HAS_FFMPEG, reason='ffmpeg/ffprobe not installed')
+def test_extract_audio_pp_m4a_at_source_bitrate_is_left_as_is(tmp_path):
+    src = _aac_source(tmp_path)
+    before = src.read_bytes()
+    ydl = yt_dlp.YoutubeDL({'quiet': True, 'noprogress': True})
+    pp = _ExtractAudioPP(ydl, 'm4a', '128')
+    _, info = pp.run({'filepath': str(src), 'ext': 'm4a'})
+    assert info['filepath'] == str(src)
+    assert src.read_bytes() == before
+
+
+@pytest.mark.skipif(not _HAS_FFMPEG, reason='ffmpeg/ffprobe not installed')
+def test_extract_audio_pp_ogg_produces_vorbis(tmp_path):
+    src = _aac_source(tmp_path)
+    ydl = yt_dlp.YoutubeDL({'quiet': True, 'noprogress': True})
+    pp = _ExtractAudioPP(ydl, 'ogg', '192')
+    _, info = pp.run({'filepath': str(src), 'ext': 'm4a'})
+    assert info['filepath'].endswith('.ogg')
+    codec, _ = _probe_audio(info['filepath'])
+    assert codec == 'vorbis'
