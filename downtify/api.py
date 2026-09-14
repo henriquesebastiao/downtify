@@ -67,7 +67,7 @@ from loguru import logger
 
 from . import library_import, m3u, providers, spotify
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
-from .downloader import Downloader
+from .downloader import DOWNLOAD_EXECUTOR, MAX_PARALLEL_DOWNLOADS, Downloader
 from .monitor import (
     KIND_ARTIST,
     KIND_PLAYLIST,
@@ -79,7 +79,6 @@ from .monitor import (
 from .update_check import UpdateChecker
 
 MIN_PARALLEL_DOWNLOADS = 1
-MAX_PARALLEL_DOWNLOADS = 30
 
 MIN_DOWNLOAD_DELAY_SECONDS = 0
 MAX_DOWNLOAD_DELAY_SECONDS = 300
@@ -199,14 +198,23 @@ class ConnectionManager:
             self._clients.pop(client_id, None)
 
     async def broadcast(self, message: dict[str, Any]) -> None:
-        dead: list[str] = []
-        for client_id, ws in list(self._clients.items()):
-            try:
-                await ws.send_text(json.dumps(message))
-            except Exception:
-                dead.append(client_id)
-        for client_id in dead:
-            self._clients.pop(client_id, None)
+        # Serialized once, sent to every client concurrently: one slow
+        # client (a phone on a weak connection) no longer delays the rest.
+        clients = list(self._clients.items())
+        if not clients:
+            return
+        text = json.dumps(message)
+        results = await asyncio.gather(
+            *(ws.send_text(text) for _, ws in clients),
+            return_exceptions=True,
+        )
+        for (client_id, ws), result in zip(clients, results):
+            # Only drop that exact socket: the client may have reconnected
+            # under the same id while the sends were in flight.
+            if isinstance(result, Exception) and (
+                self._clients.get(client_id) is ws
+            ):
+                self._clients.pop(client_id, None)
 
 
 class AppState:
@@ -513,7 +521,7 @@ async def _run_download(
     try:
         async with sem if sem is not None else contextlib.nullcontext():
             filename = await loop.run_in_executor(
-                None,
+                DOWNLOAD_EXECUTOR,
                 lambda: state.downloader.download(
                     song, progress, subdir=subdir
                 ),
@@ -554,7 +562,9 @@ async def download_endpoint(
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
-    song = _song_for_download(url)
+    # Spotify/YouTube Music network calls: off the event loop, or every
+    # other request and WebSocket stalls until they return.
+    song = await asyncio.to_thread(_song_for_download, url)
     tn_before = song.get('track_number')
     yr_before = song.get('year') or song.get('release_date')
     _merge_client_track_hints(song, client_hints)
@@ -861,7 +871,7 @@ async def download_album_endpoint(url: str = Query(...)) -> dict[str, str]:
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
-    songs = _songs_for_album_download(url)
+    songs = await asyncio.to_thread(_songs_for_album_download, url)
     # See _process_batch: only meaningful when there's a "next" track to
     # wait for, so a single-track album never waits around for nothing.
     delay_seconds = (

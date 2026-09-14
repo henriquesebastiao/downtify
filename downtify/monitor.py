@@ -13,7 +13,7 @@ from typing import Any, Callable, Optional
 from loguru import logger
 
 from . import m3u, providers, spotify
-from .downloader import Downloader
+from .downloader import DOWNLOAD_EXECUTOR, Downloader
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
 # Seconds between filesystem reconciliation sweeps (see reconcile_loop).
@@ -526,7 +526,7 @@ async def check_playlist(
 
         try:
             filename = await loop.run_in_executor(
-                None,
+                DOWNLOAD_EXECUTOR,
                 lambda s=song: downloader.download(
                     s, _make_cb(s, pl_name), subdir=pl_subdir
                 ),
@@ -660,7 +660,7 @@ async def check_artist(
                 continue
             try:
                 filename = await loop.run_in_executor(
-                    None,
+                    DOWNLOAD_EXECUTOR,
                     lambda s=song: downloader.download(
                         s, _progress_cb(s, playlist.name, broadcast, loop)
                     ),
@@ -833,11 +833,15 @@ async def reconcile_downloaded_tracks(
     the number of rows removed.
     """
     rows = await asyncio.to_thread(db.list_all_downloaded_tracks)
-    missing = [
-        (row['playlist_id'], row['track_spotify_id'])
-        for row in rows
-        if not (downloader.download_dir / row['filename']).exists()
-    ]
+    # One stat() per downloaded track — thousands of them on a slow disk
+    # or network mount — so off the event loop.
+    missing = await asyncio.to_thread(
+        lambda: [
+            (row['playlist_id'], row['track_spotify_id'])
+            for row in rows
+            if not (downloader.download_dir / row['filename']).exists()
+        ]
+    )
     if missing:
         await asyncio.to_thread(db.remove_downloaded_tracks, missing)
     return len(missing)
