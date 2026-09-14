@@ -170,6 +170,59 @@ def test_enrich_preserves_preset_track_number(monkeypatch):
     assert out['album_track_total'] == 11
 
 
+def _stub_album_lookup(monkeypatch, year: str) -> None:
+    """Resolve every match to one cached album carrying ``year``."""
+
+    monkeypatch.setattr(
+        providers, '_cached_album_tracks_and_count', lambda _b: ([], None)
+    )
+    monkeypatch.setattr(
+        providers, '_album_browse_id', lambda *_args, **_kw: 'MPREb_year'
+    )
+    providers._album_meta_cache['MPREb_year'] = {
+        'title': 'Homework',
+        'year': year,
+        'type': 'Album',
+        'thumbnails': [],
+        'artists': ['Daft Punk'],
+    }
+
+
+def test_enrich_from_match_fills_year_from_cached_album_meta(monkeypatch):
+    _stub_album_lookup(monkeypatch, '1997')
+    out = enrich_from_match(
+        {'name': 'Around the World', 'source': 'spotify'},
+        {'videoId': 'ytyear00001', 'title': 'Around the World'},
+    )
+    assert out['year'] == '1997'
+    assert out['release_date'] == '1997'
+
+
+def test_enrich_from_match_keeps_year_already_on_the_song(monkeypatch):
+    _stub_album_lookup(monkeypatch, '1997')
+    out = enrich_from_match(
+        {
+            'name': 'Around the World',
+            'source': 'spotify',
+            'year': '2001',
+            'release_date': '2001-03-12',
+        },
+        {'videoId': 'ytyear00001', 'title': 'Around the World'},
+    )
+    assert out['year'] == '2001'
+    assert out['release_date'] == '2001-03-12'
+
+
+def test_enrich_from_match_ignores_non_four_digit_album_year(monkeypatch):
+    _stub_album_lookup(monkeypatch, 'n/a')
+    out = enrich_from_match(
+        {'name': 'Around the World', 'source': 'spotify'},
+        {'videoId': 'ytyear00001', 'title': 'Around the World'},
+    )
+    assert not out.get('year')
+    assert not out.get('release_date')
+
+
 # ── _artists_overlap ───────────────────────────────────────────────────────────
 
 
