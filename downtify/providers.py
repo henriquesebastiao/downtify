@@ -1663,6 +1663,10 @@ def _cached_album_release_type(browse_id: str) -> str:
     return _cached_album_meta(browse_id).get('type', '')
 
 
+def _cached_album_year(browse_id: str) -> str:
+    return _cached_album_meta(browse_id).get('year', '')
+
+
 # Separators YouTube Music uses when it collapses a featuring artist into
 # a single combined-name entry instead of a separate artist dict.
 # "and"/","/"with"/"x" are deliberately excluded even though YouTube
@@ -2073,13 +2077,18 @@ def enrich_from_match(
         enriched.setdefault('track_number', yt_n)
     if yt_tot is not None:
         enriched.setdefault('album_track_total', yt_tot)
-    if not enriched.get('album_name') or not enriched.get('release_type'):
+    _need_year = not str(enriched.get('year') or '').strip()
+    if (
+        not enriched.get('album_name')
+        or not enriched.get('release_type')
+        or _need_year
+    ):
         # `youtube_music_track_index_for_match` already resolved (and
         # cached) the album's browseId while computing the track index
-        # above — reuse it to backfill the album title and release
-        # type too, since the search-derived `match` sometimes lacks
-        # `album.name` even when the video is genuinely part of a
-        # catalogued release.
+        # above — reuse it to backfill the album title, release type
+        # and year too, since the search-derived `match` sometimes
+        # lacks `album.name` and a `year` even when the video is
+        # genuinely part of a catalogued release.
         browse_id = _album_browse_id(match, enriched)
         if browse_id:
             if not enriched.get('album_name'):
@@ -2090,6 +2099,12 @@ def enrich_from_match(
                 release_type = _cached_album_release_type(browse_id)
                 if release_type:
                     enriched['release_type'] = release_type
+            if _need_year:
+                album_year = _cached_album_year(browse_id)
+                if len(album_year) == 4 and album_year.isdigit():
+                    enriched['year'] = album_year
+                    if not str(enriched.get('release_date') or '').strip():
+                        enriched['release_date'] = album_year
     spotify_tid = enriched.get('song_id')
     if yt_n is None:
         logger.info(
