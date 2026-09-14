@@ -27,6 +27,11 @@ Available for lossy formats (MP3, M4A, OGG, OPUS). FLAC ignores this setting.
 | High | 256 |
 | Best | **320** (default) |
 
+The downloaded audio is encoded at the bitrate you pick, for every lossy format. If the audio YouTube serves already has the target codec at roughly that bitrate (e.g. its ~128 kbps AAC stream for **M4A @ 128**), it's kept as-is instead of being re-encoded, since a re-encode would only lose quality.
+
+!!! note "A higher bitrate doesn't add quality"
+    YouTube's audio tops out at roughly **128–160 kbps** (AAC or Opus), and Downtify always downloads the best stream available. Encoding it at 256 or 320 kbps gives larger files that preserve that source faithfully, but can't restore detail the source never had. Pick a lower bitrate if file size matters more to you.
+
 ## Output filename template
 
 The default filename template is:
