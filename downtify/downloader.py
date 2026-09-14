@@ -7,6 +7,7 @@ import os
 import re
 import re as _re
 import threading
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -48,6 +49,22 @@ _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 _AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'ogg', 'opus', 'm4a'})
 
 ProgressCallback = Callable[[float, str], None]
+
+# Upper bound of the "Parallel downloads" setting (see api.py's clamp).
+MAX_PARALLEL_DOWNLOADS = 30
+
+# A download holds a thread for its whole run (yt-dlp + ffmpeg, often
+# minutes). Running them on asyncio's default executor — only
+# min(32, cpu_count + 4) threads, e.g. 6 on a 2-core NAS — silently capped
+# "Parallel downloads" below the chosen value and left every
+# `asyncio.to_thread()` call (M3U writes, Monitor DB queries, playlist
+# fetches) queued behind in-flight downloads. Idle threads are cheap; the
+# download semaphore still bounds how many actually run. The extra room
+# covers Playlist Monitor sweeps, which download outside that semaphore.
+DOWNLOAD_EXECUTOR = ThreadPoolExecutor(
+    max_workers=MAX_PARALLEL_DOWNLOADS + 8,
+    thread_name_prefix='downtify-download',
+)
 
 # Downtify format name → yt-dlp ExtractAudio codec name. yt-dlp calls Ogg
 # Vorbis "vorbis" (output extension .ogg); passing "ogg" crashes the
@@ -348,7 +365,10 @@ class Downloader:
         return fallback
 
     def _save_album_cover(
-        self, target_dir: Path, song: dict[str, Any]
+        self,
+        target_dir: Path,
+        song: dict[str, Any],
+        cover_bytes: Optional[bytes] = None,
     ) -> None:
         """Save the album art as ``cover.jpg`` inside the album folder.
 
@@ -356,7 +376,9 @@ class Downloader:
         album's own folder. ``song['cover_url']`` already points at the
         largest image Spotify offers (see ``spotify._largest_image``).
         Skipped when ``cover.jpg`` already exists so the art is fetched
-        once per album rather than once per track.
+        once per album rather than once per track. ``cover_bytes``, when
+        already fetched for embedding, is written instead of downloading
+        the image again.
         """
 
         if not self.organize_by_album:
@@ -364,7 +386,7 @@ class Downloader:
         cover_path = target_dir / 'cover.jpg'
         if cover_path.exists():
             return
-        data = _download_cover(song.get('cover_url', ''))
+        data = cover_bytes or _download_cover(song.get('cover_url', ''))
         if not data:
             return
         try:
@@ -636,7 +658,13 @@ class Downloader:
         target_dir.mkdir(parents=True, exist_ok=True)
         out_template = str(target_dir / f'{basename}.%(ext)s')
 
+        # yt-dlp calls the hook for every downloaded chunk, and each report
+        # becomes a WebSocket broadcast scheduled on the event loop — only
+        # forward it when the whole-number percentage actually changes.
+        last_reported_pct = -1
+
         def hook(data: dict[str, Any]) -> None:
+            nonlocal last_reported_pct
             if progress_cb is None:
                 return
             try:
@@ -649,10 +677,10 @@ class Downloader:
                     )
                     downloaded = data.get('downloaded_bytes') or 0
                     if total:
-                        progress_cb(
-                            min(95.0, downloaded / total * 95.0),
-                            'Downloading',
-                        )
+                        pct = min(95.0, downloaded / total * 95.0)
+                        if int(pct) != last_reported_pct:
+                            last_reported_pct = int(pct)
+                            progress_cb(pct, 'Downloading')
                 elif status == 'finished':
                     progress_cb(96.0, 'Converting')
             except Exception:
@@ -725,21 +753,56 @@ class Downloader:
             )
 
         url = f'https://music.youtube.com/watch?v={video_id}'
+
+        # Genre, cover art and lyrics depend only on the song's metadata,
+        # not on the audio file — so they're looked up while yt-dlp
+        # downloads, instead of one after another once it's done. The
+        # cover is fetched once and reused for both the embedded art and
+        # the album folder's cover.jpg (it used to be downloaded twice).
+        lookups = ThreadPoolExecutor(
+            max_workers=3, thread_name_prefix='downtify-metadata'
+        )
+        genre_future = (
+            None
+            if song.get('genre')
+            else lookups.submit(_fetch_itunes_genre, song)
+        )
+        cover_future = (
+            lookups.submit(_download_cover, song.get('cover_url', ''))
+            if self.download_cover_art
+            else None
+        )
+        lyrics_future = (
+            lookups.submit(lyrics_mod.fetch, song, self.lyrics_providers)
+            if self.lyrics_providers
+            else None
+        )
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Registered directly: `ydl_opts['postprocessors']` only
-                # accepts yt-dlp's built-in postprocessors by name.
-                ydl.add_post_processor(
-                    _ExtractAudioPP(
-                        ydl, self.audio_format, self.audio_bitrate
-                    ),
-                    when='post_process',
-                )
-                ydl.download([url])
-        except Exception as exc:
-            raise _translate_download_error(
-                exc, song, has_cookies=bool(cookies_file or cookies_browser)
-            ) from exc
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    # Registered directly: `ydl_opts['postprocessors']`
+                    # only accepts yt-dlp's built-in postprocessors by name.
+                    ydl.add_post_processor(
+                        _ExtractAudioPP(
+                            ydl, self.audio_format, self.audio_bitrate
+                        ),
+                        when='post_process',
+                    )
+                    ydl.download([url])
+            except Exception as exc:
+                raise _translate_download_error(
+                    exc,
+                    song,
+                    has_cookies=bool(cookies_file or cookies_browser),
+                ) from exc
+            genre = _lookup_result(genre_future, 'iTunes genre lookup', song)
+            cover_bytes = _lookup_result(cover_future, 'Cover download', song)
+            fetched = _lookup_result(
+                lyrics_future, 'Lyrics fetch', song, error=True
+            )
+        finally:
+            # A failed download shouldn't wait on lookups nobody will use.
+            lookups.shutdown(wait=False, cancel_futures=True)
 
         final_path = target_dir / f'{basename}.{self.audio_format}'
         if not final_path.exists():
@@ -749,49 +812,61 @@ class Downloader:
                     final_path = candidate
                     break
 
-        # ── Genre enrichment via iTunes Search API ──────────────
-        if not song.get('genre'):
-            try:
-                genre = _fetch_itunes_genre(song)
-                if genre:
-                    song = {**song, 'genre': genre}
-            except Exception:
-                logger.opt(exception=True).debug(
-                    'iTunes genre lookup failed for {}', final_path
-                )
+        if genre:
+            song = {**song, 'genre': genre}
 
         try:
             embed_metadata(
-                final_path, song, download_cover=self.download_cover_art
+                final_path,
+                song,
+                download_cover=self.download_cover_art,
+                cover_bytes=cover_bytes,
             )
         except Exception:
             logger.exception('Failed to embed metadata into {}', final_path)
 
         if self.download_cover_art:
             try:
-                self._save_album_cover(target_dir, song)
+                self._save_album_cover(target_dir, song, cover_bytes)
             except Exception:
                 logger.exception(
                     'Failed to write album cover in {}', target_dir
                 )
 
-        if self.lyrics_providers:
+        if fetched is not None:
             try:
-                fetched = lyrics_mod.fetch(song, self.lyrics_providers)
+                embed_lyrics(final_path, fetched)
             except Exception:
-                logger.exception('Lyrics fetch crashed for {}', final_path)
-                fetched = None
-            if fetched is not None:
-                try:
-                    embed_lyrics(final_path, fetched)
-                except Exception:
-                    logger.exception(
-                        'Failed to embed lyrics into {}', final_path
-                    )
+                logger.exception('Failed to embed lyrics into {}', final_path)
 
         if progress_cb:
             progress_cb(100.0, 'Done')
         return f'{rel_prefix}{final_path.name}'
+
+
+def _lookup_result(
+    future: Optional[Future],
+    label: str,
+    song: dict[str, Any],
+    *,
+    error: bool = False,
+) -> Any:
+    """Result of one of ``_fetch_and_tag``'s concurrent metadata lookups.
+
+    A failed lookup never fails the download: it's logged (at ERROR when
+    ``error`` is set, DEBUG otherwise) and treated as "nothing found".
+    """
+
+    if future is None:
+        return None
+    try:
+        return future.result()
+    except Exception:
+        log = logger.opt(exception=True)
+        (log.error if error else log.debug)(
+            '{} failed for {!r}', label, song.get('name')
+        )
+        return None
 
 
 def _download_cover(url: str) -> Optional[bytes]:
@@ -859,7 +934,11 @@ def _release_type_for_tags(song: dict[str, Any]) -> str:
 
 
 def embed_metadata(
-    path: Path, song: dict[str, Any], *, download_cover: bool = True
+    path: Path,
+    song: dict[str, Any],
+    *,
+    download_cover: bool = True,
+    cover_bytes: Optional[bytes] = None,
 ) -> None:
     if not path.exists():
         return
@@ -877,9 +956,10 @@ def embed_metadata(
     recording_date = _recording_date_for_tags(song)
     genre = (song.get('genre') or '').strip()
     release_type = _release_type_for_tags(song)
-    cover_bytes = (
-        _download_cover(song.get('cover_url', '')) if download_cover else None
-    )
+    if not download_cover:
+        cover_bytes = None
+    elif cover_bytes is None:
+        cover_bytes = _download_cover(song.get('cover_url', ''))
     track_number, album_track_total = _album_track_index_for_tags(song)
     if track_number is None:
         logger.info(

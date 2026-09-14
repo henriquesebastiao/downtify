@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
 
 import httpx
@@ -643,28 +644,80 @@ def _graphql_fetch_page(
     return data['data']['playlistV2']
 
 
+_GRAPHQL_PAGE_LIMIT = 100
+# Pages after the first are fetched this many at a time — enough to make
+# a long playlist resolve several times faster, few enough to stay polite
+# to Spotify's API.
+_GRAPHQL_PAGE_CONCURRENCY = 4
+
+
+def _graphql_page_items(pv2: dict[str, Any]) -> tuple[list[Any], int]:
+    content = pv2.get('content') or {}
+    return content.get('items') or [], content.get('totalCount') or 0
+
+
+def _graphql_sequential_items(
+    playlist_id: str, token: str, offset: int
+) -> list[Any]:
+    """Every item from ``offset`` on, one page after another, advancing by
+    however many items each page actually returned."""
+
+    items: list[Any] = []
+    while True:
+        page, total = _graphql_page_items(
+            _graphql_fetch_page(
+                playlist_id, token, offset, _GRAPHQL_PAGE_LIMIT
+            )
+        )
+        items.extend(page)
+        offset += len(page)
+        if not page or offset >= total:
+            return items
+
+
 def _graphql_all_tracks(
     playlist_id: str, token: str
 ) -> tuple[Optional[str], list[dict[str, Any]]]:
-    """Return ``(playlist_name_or_None, all_tracks)`` via partner GraphQL."""
-    songs: list[dict[str, Any]] = []
-    playlist_name: Optional[str] = None
-    offset = 0
-    limit = 100
-    while True:
-        pv2 = _graphql_fetch_page(playlist_id, token, offset, limit)
-        if playlist_name is None:
-            playlist_name = pv2.get('name') or None
-        content = pv2.get('content') or {}
-        items = content.get('items') or []
-        for item in items:
-            td = _track_dict_from_graphql_item(item)
-            if td:
-                songs.append(td)
-        total = content.get('totalCount') or 0
-        offset += len(items)
-        if not items or offset >= total:
-            break
+    """Return ``(playlist_name_or_None, all_tracks)`` via partner GraphQL.
+
+    The first page reports the playlist's size, so the remaining pages are
+    requested concurrently (:data:`_GRAPHQL_PAGE_CONCURRENCY` at a time)
+    at fixed offsets instead of one after another. That assumes every page
+    but the last comes back full; if one doesn't, the fixed offsets would
+    skip items, so the rest is walked sequentially from the first short
+    page — the old behavior — instead.
+    """
+
+    first = _graphql_fetch_page(playlist_id, token, 0, _GRAPHQL_PAGE_LIMIT)
+    playlist_name = first.get('name') or None
+    items, total = _graphql_page_items(first)
+    page_size = len(items)
+    if page_size and page_size < total:
+        offsets = list(range(page_size, total, page_size))
+        with ThreadPoolExecutor(
+            max_workers=_GRAPHQL_PAGE_CONCURRENCY,
+            thread_name_prefix='downtify-spotify-page',
+        ) as pool:
+            pages = list(
+                pool.map(
+                    lambda offset: _graphql_page_items(
+                        _graphql_fetch_page(
+                            playlist_id, token, offset, _GRAPHQL_PAGE_LIMIT
+                        )
+                    )[0],
+                    offsets,
+                )
+            )
+        for offset, page in zip(offsets, pages):
+            if len(page) < page_size and offset != offsets[-1]:
+                items.extend(
+                    _graphql_sequential_items(playlist_id, token, offset)
+                )
+                break
+            items.extend(page)
+    songs = [
+        td for item in items if (td := _track_dict_from_graphql_item(item))
+    ]
     return playlist_name, songs
 
 

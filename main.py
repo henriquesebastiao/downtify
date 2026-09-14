@@ -16,6 +16,8 @@ import logging
 import mimetypes
 import os
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from fastapi import Body, FastAPI, HTTPException
@@ -207,6 +209,56 @@ def _extract_track_tags(path: Path) -> tuple[str, str]:
     artist = (tags.get('artist') or [''])[0]
     album = (tags.get('album') or [''])[0]
     return artist, album
+
+
+# (artist, album) per absolute path, valid while the file's mtime and size
+# are unchanged. The Player and Library pages call /tracks on every visit;
+# without this each visit re-parsed every file's tags.
+_TRACK_TAGS_CACHE: dict[str, tuple[tuple[int, int], tuple[str, str]]] = {}
+_TRACK_TAGS_LOCK = threading.Lock()
+# Tag reads on a cache miss are mostly waiting on the disk (seeks on an
+# HDD, round-trips on a NAS mount), where threads parallelize well:
+# 2,000 files with a simulated 2 ms I/O latency went from ~5 s sequential
+# to ~0.6 s on 8 threads. Processes aren't worth it here — the parsing
+# itself is small, and forking a server with live download threads isn't
+# safe.
+_TAG_READ_THREADS = 8
+
+
+def _cached_track_tags(path: Path) -> tuple[str, str]:
+    try:
+        stat = path.stat()
+    except OSError:
+        return '', ''
+    key = str(path)
+    signature = (stat.st_mtime_ns, stat.st_size)
+    with _TRACK_TAGS_LOCK:
+        cached = _TRACK_TAGS_CACHE.get(key)
+    if cached is not None and cached[0] == signature:
+        return cached[1]
+    tags = _extract_track_tags(path)
+    with _TRACK_TAGS_LOCK:
+        _TRACK_TAGS_CACHE[key] = (signature, tags)
+    return tags
+
+
+def _read_library_tags(paths: list[Path]) -> list[tuple[str, str]]:
+    """``(artist, album)`` for each of ``paths``, in order.
+
+    Unchanged files come from the cache; the rest are read on a thread
+    pool. Entries for files no longer in ``paths`` (deleted or moved) are
+    dropped so the cache doesn't grow forever.
+    """
+
+    with ThreadPoolExecutor(
+        max_workers=_TAG_READ_THREADS, thread_name_prefix='downtify-tags'
+    ) as pool:
+        tags = list(pool.map(_cached_track_tags, paths))
+    current = {str(p) for p in paths}
+    with _TRACK_TAGS_LOCK:
+        for key in [k for k in _TRACK_TAGS_CACHE if k not in current]:
+            del _TRACK_TAGS_CACHE[key]
+    return tags
 
 
 def _delete_lrc_sidecar(audio_path: Path) -> None:
@@ -498,18 +550,19 @@ def build_app() -> FastAPI:
         base = DOWNLOAD_DIR.resolve()
         if not base.exists():
             return []
-        tracks: list[dict] = []
-        for path in base.rglob('*'):
-            if not path.is_file():
-                continue
-            if path.suffix.lower() not in _AUDIO_EXTENSIONS:
-                continue
-            artist, album = _extract_track_tags(path)
-            tracks.append({
+        paths = [
+            path
+            for path in base.rglob('*')
+            if path.suffix.lower() in _AUDIO_EXTENSIONS and path.is_file()
+        ]
+        tracks = [
+            {
                 'file': path.relative_to(base).as_posix(),
                 'artist': artist,
                 'album': album,
-            })
+            }
+            for path, (artist, album) in zip(paths, _read_library_tags(paths))
+        ]
         tracks.sort(key=lambda t: t['file'])
         return tracks
 
