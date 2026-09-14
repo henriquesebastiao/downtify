@@ -1,4 +1,12 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 
 // player.js reads localStorage at module load time (to restore the
 // saved volume), which doesn't exist in Vitest's default (non-browser)
@@ -61,5 +69,33 @@ describe('trackInfoFromFile', () => {
   it('keeps the full relative path (with folder) in the file field', () => {
     const track = trackInfoFromFile('My Playlist/Artist - Title.mp3')
     expect(track.file).toBe('My Playlist/Artist - Title.mp3')
+  })
+})
+
+// player.js also reads `window.innerWidth` at module load time to decide
+// the initial volume — each case needs a fresh module instance (isolated
+// via vi.resetModules()) with its own `window`/`localStorage` stub,
+// rather than the shared one `trackInfoFromFile`'s tests import once.
+describe('usePlayer initial volume', () => {
+  beforeEach(() => {
+    vi.resetModules()
+  })
+
+  afterEach(() => {
+    delete globalThis.window
+  })
+
+  it('starts at max volume on a mobile-width viewport, ignoring a saved level', async () => {
+    globalThis.window = { innerWidth: 375 }
+    globalThis.localStorage = { getItem: () => '0.3', setItem: () => {} }
+    const { usePlayer } = await import('../model/player.js')
+    expect(usePlayer().volume.value).toBe(1)
+  })
+
+  it('restores the saved volume on a desktop-width viewport', async () => {
+    globalThis.window = { innerWidth: 1280 }
+    globalThis.localStorage = { getItem: () => '0.3', setItem: () => {} }
+    const { usePlayer } = await import('../model/player.js')
+    expect(usePlayer().volume.value).toBe(0.3)
   })
 })

@@ -13,7 +13,7 @@ Downtify ships with a web player so you can listen to your downloaded music with
 - **Playback controls** — play, pause, previous, next
 - **Shuffle** — stable random order across the whole library queue
 - **Repeat modes** — off → repeat all → repeat one
-- **Volume slider** — with mute toggle; your volume level is saved between sessions
+- **Volume slider** — with mute toggle; your volume level is saved between sessions. Hidden on mobile, where the audio is kept at full volume and the phone's own hardware buttons control the level instead
 - **Side queue** — all tracks in your library, each with its own thumbnail; the currently playing track is highlighted
 - **Playing from** — pick **All Songs**, one specific downloaded playlist, one artist, or one album, instead of always queuing your whole library
 

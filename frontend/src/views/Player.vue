@@ -223,8 +223,11 @@
             </button>
           </div>
 
-          <!-- Volume -->
-          <div class="mt-6 w-full max-w-xs flex items-center gap-3">
+          <!-- Volume: hidden on mobile, where the hardware volume buttons
+               are what people actually use — see player.js's
+               isMobileViewport(), which also keeps the audio element
+               itself at full volume there. -->
+          <div class="mt-6 w-full max-w-xs hidden sm:flex items-center gap-3">
             <button
               class="icon-btn"
               @click="player.toggleMute()"

@@ -7,7 +7,25 @@ const currentIndex = ref(-1)
 const isPlaying = ref(false)
 const currentTime = ref(0)
 const duration = ref(0)
-const volume = ref(parseFloat(localStorage.getItem(VOLUME_KEY) || '0.85'))
+// Matches the `sm` breakpoint the mobile-only volume-UI hiding uses
+// (Player.vue, MiniPlayer.vue). Phones control the actual output level
+// with their hardware volume buttons, which scale whatever this element
+// outputs — so the element itself is kept at full volume there instead
+// of applying the desktop-saved level on top of the hardware one.
+const MOBILE_VOLUME_BREAKPOINT_PX = 640
+
+function isMobileViewport() {
+  return (
+    typeof window !== 'undefined' &&
+    window.innerWidth < MOBILE_VOLUME_BREAKPOINT_PX
+  )
+}
+
+const volume = ref(
+  isMobileViewport()
+    ? 1
+    : parseFloat(localStorage.getItem(VOLUME_KEY) || '0.85')
+)
 const isMuted = ref(false)
 const repeatMode = ref('off') // 'off' | 'all' | 'one'
 const shuffle = ref(false)
