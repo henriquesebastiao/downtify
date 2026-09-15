@@ -18,11 +18,8 @@ down:
 	docker compose down
 	docker rmi downtify:latest
 
-run: frontend-build
+run:
 	uv run python main.py web
-
-frontend-build:
-	npm run build --prefix frontend
 
 format:
 	uv run ruff format .; ruff check . --fix
@@ -61,4 +58,4 @@ rm:
 %:
 	@:
 
-.PHONY: all build clean up down run frontend-build format lint export changelog version doc rm
+.PHONY: all build clean up down run format lint export changelog version doc rm

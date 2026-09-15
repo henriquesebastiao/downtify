@@ -307,5 +307,4 @@ data/downtify_monitor.db
 data/settings.json
 
 .claude/
-.aider*
 data/
