@@ -14,7 +14,8 @@ from .library_catalog import (
     library_context_from_state,
     resolve_library_file,
 )
-from .library_paths import library_stored_path
+from .library_cleanup import prune_empty_parent_dirs, remove_track_leftovers
+from .library_paths import SLSKD_LIBRARY_PREFIX, library_stored_path
 from .library_paths_cache import invalidate_library_paths_cache
 from .m3u import sanitize_playlist_name
 from .track_tag_match import (
@@ -169,6 +170,15 @@ def delete_library_file(
             exc,
         )
         return {'file': file_key, 'deleted': False, 'error': str(exc)}
+    # Same leftovers DELETE /delete removes: .lrc sidecar, orphaned
+    # cover.jpg, and folders left empty (never the library roots).
+    root = (
+        ctx.slskd_dir
+        if ctx.slskd_dir is not None
+        and file_key.startswith(SLSKD_LIBRARY_PREFIX)
+        else ctx.download_dir
+    )
+    remove_track_leftovers(full, root)
 
     affected_playlists: list[str] = []
     if cover_cache is not None:
@@ -308,7 +318,8 @@ def _delete_audio_under_dir(
         }
 
     logger.debug('Playlist folder scan: {}', directory)
-    for path in directory.rglob('*'):
+    # Materialized up front: deleting a track can prune its folder.
+    for path in list(directory.rglob('*')):
         if not path.is_file():
             continue
         if path.suffix.lower() not in AUDIO_EXTENSIONS:
@@ -361,6 +372,7 @@ def _remove_playlist_m3u_files(
                 m3u_path.unlink()
                 removed += 1
                 logger.info('Playlist delete: removed M3U {}', m3u_path)
+                prune_empty_parent_dirs(m3u_path.parent, download_dir)
         except OSError as exc:
             logger.warning('Could not remove M3U {}: {}', m3u_path, exc)
     return removed

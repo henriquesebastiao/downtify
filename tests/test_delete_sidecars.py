@@ -1,6 +1,7 @@
-"""Tests for the cleanup ``DELETE /delete`` does after removing a track:
-``main._delete_lrc_sidecar``, ``main._delete_album_cover_if_orphaned``
-and ``main._prune_empty_parent_dirs``.
+"""Tests for the cleanup done after removing a library track
+(``DELETE /delete``, playlist deletes): ``delete_lrc_sidecar``,
+``delete_album_cover_if_orphaned`` and ``prune_empty_parent_dirs`` in
+``downtify/library_cleanup.py``.
 
 Deleting a track through the Library page used to only remove the audio
 file, leaving things behind:
@@ -16,8 +17,8 @@ file, leaving things behind:
 
 ``DELETE /delete`` itself lives inside ``main.build_app()`` alongside
 the other file-management routes, none of which have route-level tests
-in this suite (no TestClient/build_app fixture yet — see
-test_main_tracks.py). All three cleanup functions are plain
+in this suite (no TestClient/build_app fixture yet). All three cleanup
+functions are plain
 module-level functions, so they're tested directly here.
 """
 
@@ -25,9 +26,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import main
+from downtify import library_cleanup
 
-# ── _delete_lrc_sidecar ──────────────────────────────────────────────────────
+# ── delete_lrc_sidecar ───────────────────────────────────────────────────────
 
 
 def test_delete_lrc_sidecar_removes_matching_lrc(tmp_path):
@@ -36,7 +37,7 @@ def test_delete_lrc_sidecar_removes_matching_lrc(tmp_path):
     lrc = tmp_path / 'Artist - Song.lrc'
     lrc.write_text('[00:00.00]La la la', encoding='utf-8')
 
-    main._delete_lrc_sidecar(audio)
+    library_cleanup.delete_lrc_sidecar(audio)
 
     assert not lrc.exists()
 
@@ -46,7 +47,7 @@ def test_delete_lrc_sidecar_no_op_when_no_lyrics(tmp_path):
     audio.write_bytes(b'audio')
 
     # Must not raise just because there was never a .lrc to begin with.
-    main._delete_lrc_sidecar(audio)
+    library_cleanup.delete_lrc_sidecar(audio)
 
 
 def test_delete_lrc_sidecar_does_not_touch_other_files(tmp_path):
@@ -55,7 +56,7 @@ def test_delete_lrc_sidecar_does_not_touch_other_files(tmp_path):
     other_lrc = tmp_path / 'Other Song.lrc'
     other_lrc.write_text('unrelated', encoding='utf-8')
 
-    main._delete_lrc_sidecar(audio)
+    library_cleanup.delete_lrc_sidecar(audio)
 
     assert other_lrc.exists()
 
@@ -73,10 +74,10 @@ def test_delete_lrc_sidecar_survives_unremovable_file(tmp_path, monkeypatch):
 
     # Must not propagate — the audio file's own deletion already
     # succeeded by the time this runs.
-    main._delete_lrc_sidecar(audio)
+    library_cleanup.delete_lrc_sidecar(audio)
 
 
-# ── _delete_album_cover_if_orphaned ──────────────────────────────────────────
+# ── delete_album_cover_if_orphaned ───────────────────────────────────────────
 
 
 def _album_folder(tmp_path, *track_names: str) -> Path:
@@ -96,7 +97,7 @@ def test_cover_deleted_when_last_track_in_folder_is_gone(tmp_path):
     # Mirrors what delete_download does: audio file is unlinked first...
     deleted_track.unlink()
     # ...then cleanup runs.
-    main._delete_album_cover_if_orphaned(deleted_track)
+    library_cleanup.delete_album_cover_if_orphaned(deleted_track)
 
     assert not cover.exists()
 
@@ -108,7 +109,7 @@ def test_cover_kept_when_another_track_remains(tmp_path):
     deleted_track = folder / 'Track 1.mp3'
 
     deleted_track.unlink()
-    main._delete_album_cover_if_orphaned(deleted_track)
+    library_cleanup.delete_album_cover_if_orphaned(deleted_track)
 
     assert cover.exists()
     assert (folder / 'Track 2.mp3').exists()
@@ -122,7 +123,7 @@ def test_cover_kept_when_a_different_audio_extension_remains(tmp_path):
     deleted_track = folder / 'Track 1.mp3'
 
     deleted_track.unlink()
-    main._delete_album_cover_if_orphaned(deleted_track)
+    library_cleanup.delete_album_cover_if_orphaned(deleted_track)
 
     assert cover.exists()
 
@@ -133,7 +134,7 @@ def test_no_op_when_there_is_no_cover(tmp_path):
     deleted_track.unlink()
 
     # Must not raise just because organize-by-album was never on.
-    main._delete_album_cover_if_orphaned(deleted_track)
+    library_cleanup.delete_album_cover_if_orphaned(deleted_track)
 
 
 def test_cover_ignores_lrc_and_m3u_siblings(tmp_path):
@@ -146,7 +147,7 @@ def test_cover_ignores_lrc_and_m3u_siblings(tmp_path):
     deleted_track = folder / 'Track 1.mp3'
 
     deleted_track.unlink()
-    main._delete_album_cover_if_orphaned(deleted_track)
+    library_cleanup.delete_album_cover_if_orphaned(deleted_track)
 
     assert not cover.exists()
 
@@ -164,10 +165,10 @@ def test_cover_survives_unremovable_file(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, 'unlink', _raise)
 
     # Must not propagate.
-    main._delete_album_cover_if_orphaned(deleted_track)
+    library_cleanup.delete_album_cover_if_orphaned(deleted_track)
 
 
-# ── _prune_empty_parent_dirs ─────────────────────────────────────────────────
+# ── prune_empty_parent_dirs ──────────────────────────────────────────────────
 
 
 def test_prune_removes_single_empty_folder(tmp_path):
@@ -175,7 +176,7 @@ def test_prune_removes_single_empty_folder(tmp_path):
     playlist_dir = root / 'My Playlist'
     playlist_dir.mkdir()
 
-    main._prune_empty_parent_dirs(playlist_dir, root)
+    library_cleanup.prune_empty_parent_dirs(playlist_dir, root)
 
     assert not playlist_dir.exists()
     assert root.exists()
@@ -186,7 +187,7 @@ def test_prune_climbs_nested_empty_folders_up_to_root(tmp_path):
     album_dir = root / 'Some Artist' / 'Some Album'
     album_dir.mkdir(parents=True)
 
-    main._prune_empty_parent_dirs(album_dir, root)
+    library_cleanup.prune_empty_parent_dirs(album_dir, root)
 
     assert not album_dir.exists()
     assert not (root / 'Some Artist').exists()
@@ -201,7 +202,7 @@ def test_prune_stops_at_first_non_empty_ancestor(tmp_path):
     album_dir.mkdir(parents=True)
     other_album_dir.mkdir(parents=True)
 
-    main._prune_empty_parent_dirs(album_dir, root)
+    library_cleanup.prune_empty_parent_dirs(album_dir, root)
 
     # Album A is gone, but Artist still holds Album B, so it must stay.
     assert not album_dir.exists()
@@ -212,7 +213,7 @@ def test_prune_stops_at_first_non_empty_ancestor(tmp_path):
 def test_prune_never_removes_root_even_if_empty(tmp_path):
     root = tmp_path
 
-    main._prune_empty_parent_dirs(root, root)
+    library_cleanup.prune_empty_parent_dirs(root, root)
 
     assert root.exists()
 
@@ -227,7 +228,7 @@ def test_prune_leaves_folder_with_a_leftover_file(tmp_path):
         '#EXTM3U\n', encoding='utf-8'
     )
 
-    main._prune_empty_parent_dirs(playlist_dir, root)
+    library_cleanup.prune_empty_parent_dirs(playlist_dir, root)
 
     assert playlist_dir.exists()
 
@@ -238,7 +239,7 @@ def test_prune_no_op_when_folder_already_gone(tmp_path):
 
     # Must not raise — nothing to prune, the caller's own folder may
     # already not exist in edge cases.
-    main._prune_empty_parent_dirs(already_gone, root)
+    library_cleanup.prune_empty_parent_dirs(already_gone, root)
 
 
 def test_prune_refuses_to_climb_outside_root(tmp_path):
@@ -247,7 +248,7 @@ def test_prune_refuses_to_climb_outside_root(tmp_path):
     outside = tmp_path / 'outside'
     outside.mkdir()
 
-    main._prune_empty_parent_dirs(outside, root)
+    library_cleanup.prune_empty_parent_dirs(outside, root)
 
     # `outside` isn't under `root` at all — must be left untouched.
     assert outside.exists()

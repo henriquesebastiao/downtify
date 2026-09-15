@@ -37,6 +37,45 @@ def test_delete_library_file(tmp_path: Path) -> None:
     assert not track.is_file()
 
 
+def test_delete_library_file_removes_leftovers_like_delete_endpoint(
+    tmp_path: Path,
+) -> None:
+    # Same cleanup as DELETE /delete: the .lrc sidecar goes, and so does
+    # the folder once nothing is left in it (never the downloads root).
+    download_dir = tmp_path / 'downloads'
+    pl_dir = download_dir / 'My Playlist'
+    pl_dir.mkdir(parents=True)
+    track = pl_dir / 'Artist - Song.mp3'
+    track.write_bytes(b'audio')
+    (pl_dir / 'Artist - Song.lrc').write_text('lyrics', encoding='utf-8')
+
+    ctx = LibraryContext(download_dir=download_dir)
+    result = delete_library_file('My Playlist/Artist - Song.mp3', ctx)
+
+    assert result.get('deleted') is True
+    assert not pl_dir.exists()
+    assert download_dir.is_dir()
+
+
+def test_delete_library_file_prunes_slskd_folders_within_slskd_root(
+    tmp_path: Path,
+) -> None:
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    slskd_dir = tmp_path / 'slskd'
+    user_dir = slskd_dir / 'user' / 'Album'
+    user_dir.mkdir(parents=True)
+    track = user_dir / 'Artist - Song.flac'
+    track.write_bytes(b'audio')
+
+    ctx = LibraryContext(download_dir=download_dir, slskd_dir=slskd_dir)
+    result = delete_library_file('slskd/user/Album/Artist - Song.flac', ctx)
+
+    assert result.get('deleted') is True
+    assert not (slskd_dir / 'user').exists()
+    assert slskd_dir.is_dir()
+
+
 def test_delete_if_spotify_tag_mismatch(tmp_path: Path) -> None:
     download_dir = tmp_path / 'downloads'
     pl_dir = download_dir / 'My Playlist'
@@ -83,6 +122,7 @@ def test_delete_playlist_from_library(tmp_path: Path) -> None:
     t2 = pl_dir / 'B - Two.mp3'
     t1.write_bytes(b'1')
     t2.write_bytes(b'2')
+    (pl_dir / 'My Playlist.m3u').write_text('#EXTM3U\n', encoding='utf-8')
 
     db = tmp_path / 'lib.db'
     catalog = PlaylistCatalog(db)
@@ -113,6 +153,9 @@ def test_delete_playlist_from_library(tmp_path: Path) -> None:
     assert not t1.is_file()
     assert not t2.is_file()
     assert catalog.list_tracks('My Playlist') == []
+    # Folder is gone too: tracks, then the playlist's M3U, were its
+    # only contents.
+    assert not pl_dir.exists()
 
 
 def test_delete_playlist_spares_same_named_album_folder_when_organized_by_album(
