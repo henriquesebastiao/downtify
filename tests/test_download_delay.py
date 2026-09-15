@@ -363,7 +363,9 @@ def test_check_playlist_rewrites_m3u_after_every_download(
     ]
     events = []
 
-    def fake_regenerate_m3u(playlist, all_tracks, downloader, resolved=None):
+    def fake_regenerate_m3u(
+        playlist, all_tracks, downloader, resolved=None, known_tracks=None
+    ):
         events.append('m3u')
 
     monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
@@ -391,7 +393,9 @@ def test_check_playlist_skips_m3u_entirely_when_disabled(monkeypatch):
     tracks = [{'song_id': 'a', 'name': 'A'}, {'song_id': 'b', 'name': 'B'}]
     events = []
 
-    def fake_regenerate_m3u(playlist, all_tracks, downloader, resolved=None):
+    def fake_regenerate_m3u(
+        playlist, all_tracks, downloader, resolved=None, known_tracks=None
+    ):
         events.append('m3u')
 
     monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
@@ -409,7 +413,9 @@ def test_check_playlist_no_m3u_when_every_download_fails(monkeypatch):
     tracks = [{'song_id': 'a', 'name': 'A'}, {'song_id': 'b', 'name': 'B'}]
     events = []
 
-    def fake_regenerate_m3u(playlist, all_tracks, downloader, resolved=None):
+    def fake_regenerate_m3u(
+        playlist, all_tracks, downloader, resolved=None, known_tracks=None
+    ):
         events.append('m3u')
 
     monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
@@ -431,7 +437,9 @@ def test_check_playlist_writes_m3u_twice_for_a_single_track(monkeypatch):
     tracks = [{'song_id': 'a', 'name': 'A'}]
     events = []
 
-    def fake_regenerate_m3u(playlist, all_tracks, downloader, resolved=None):
+    def fake_regenerate_m3u(
+        playlist, all_tracks, downloader, resolved=None, known_tracks=None
+    ):
         events.append('m3u')
 
     monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)
@@ -449,7 +457,9 @@ def test_check_playlist_treats_missing_settings_as_m3u_enabled(monkeypatch):
     tracks = [{'song_id': 'a', 'name': 'A'}]
     events = []
 
-    def fake_regenerate_m3u(playlist, all_tracks, downloader, resolved=None):
+    def fake_regenerate_m3u(
+        playlist, all_tracks, downloader, resolved=None, known_tracks=None
+    ):
         events.append('m3u')
 
     monkeypatch.setattr(monitor, '_regenerate_m3u', fake_regenerate_m3u)

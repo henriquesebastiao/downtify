@@ -13,8 +13,21 @@ from typing import Any, Callable, Optional
 from loguru import logger
 
 from . import m3u, providers, spotify
+from .cover_cache import CoverArtCache
 from .downloader import DOWNLOAD_EXECUTOR, Downloader, ProgressCallback
+from .library_metadata_cache import LibraryMetadataCache
+from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .library_paths_cache import invalidate_library_paths_cache
+from .navidrome import (
+    _effective_navidrome_settings,
+    cache_navidrome_song_id,
+    enrich_song_from_library_file,
+    sync_playlist_to_navidrome,
+)
+from .navidrome_index import NavidromeIndex
+from .playlist_catalog import PlaylistCatalog
+from .playlist_spotify_cache import PlaylistSpotifyCache
+from .track_index import TrackIndex, normalize_spotify_track_id
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
 # Seconds between filesystem reconciliation sweeps (see reconcile_loop).
@@ -22,6 +35,18 @@ RECONCILE_LOOP_INTERVAL = 3600
 MINUTES_PER_DAY = 1440
 
 SYNC_TIME_ENV_VAR = 'DOWNTIFY_MONITOR_SYNC_TIME'
+
+
+@dataclass
+class LibraryStores:
+    """The library stores a sweep keeps up to date (see ``api.state``)."""
+
+    track_index: Optional[TrackIndex] = None
+    playlist_catalog: Optional[PlaylistCatalog] = None
+    navidrome_index: Optional[NavidromeIndex] = None
+    metadata_cache: Optional[LibraryMetadataCache] = None
+    cover_cache: Optional[CoverArtCache] = None
+    playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None
 
 
 def _now_iso() -> str:
@@ -467,6 +492,9 @@ async def _fill_from_spotify_track(song: dict[str, Any]) -> None:
         value = full.get(key)
         if value:
             song[key] = value
+    for key in ('track_number', 'album_track_total'):
+        if not song.get(key) and full.get(key):
+            song[key] = full[key]
 
 
 async def check_playlist(
@@ -476,8 +504,15 @@ async def check_playlist(
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
     settings: Optional[dict[str, Any]] = None,
+    library: Optional[LibraryStores] = None,
 ) -> int:
-    """Fetch playlist, detect new tracks, download them. Returns count downloaded."""
+    """Fetch playlist, detect new tracks, download them. Returns count downloaded.
+
+    With ``library`` stores, new tracks already in the library (by Spotify
+    id, when *Overwrite existing files* is off) are linked instead of
+    downloaded, every downloaded track is registered in them, and the
+    playlist's catalog and Navidrome playlist are synced after the sweep.
+    """
     logger.info(
         'Checking monitored playlist "{}" ({})',
         playlist.name,
@@ -498,6 +533,20 @@ async def check_playlist(
             db.update_playlist, playlist.id, last_checked=_now_iso()
         )
         return 0
+    library = library or LibraryStores()
+    if from_spotify and library.playlist_spotify_cache is not None:
+        await asyncio.to_thread(
+            library.playlist_spotify_cache.store,
+            playlist.spotify_id,
+            playlist.name,
+            tracks,
+        )
+    if library.playlist_catalog is not None:
+        await asyncio.to_thread(
+            library.playlist_catalog.ensure_playlist,
+            playlist.name,
+            spotify_id=_catalog_spotify_id(playlist),
+        )
 
     known_tracks = await asyncio.to_thread(db.get_track_filenames, playlist.id)
 
@@ -519,17 +568,9 @@ async def check_playlist(
     # makes such a track eligible for re-download again.
     resolved: dict[str, str] = {}
 
-    new_tracks = []
-    for t in tracks:
-        if not t.get('song_id'):
-            continue
-        tid = t['song_id']
-        if tid not in known_tracks:
-            new_tracks.append(t)
-        else:
-            stored = known_tracks[tid]
-            if stored is not None:
-                resolved[tid] = stored
+    new_tracks, linked_from_library = await _split_new_tracks(
+        playlist, tracks, db, downloader, library, known_tracks, resolved
+    )
 
     if new_tracks:
         logger.info(
@@ -539,6 +580,7 @@ async def check_playlist(
         )
 
     delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0
+    track_positions = {id(t): i for i, t in enumerate(tracks)}
 
     downloaded = 0
     for index, song in enumerate(new_tracks):
@@ -566,6 +608,16 @@ async def check_playlist(
             downloaded += 1
             if filename:
                 resolved[track_id] = filename
+                await asyncio.to_thread(
+                    _register_monitored_download,
+                    song,
+                    filename,
+                    downloader,
+                    library,
+                    settings or {},
+                    playlist_name=playlist.name,
+                    track_order=track_positions[id(song)],
+                )
             if settings is None or settings.get('generate_m3u', True):
                 # Rewrite the M3U after every track rather than once the
                 # whole sweep finishes, so the playlist grows as it
@@ -586,11 +638,218 @@ async def check_playlist(
         last_track_count=len(tracks),
     )
 
-    if downloaded > 0 and (
-        settings is None or settings.get('generate_m3u', True)
-    ):
-        await asyncio.to_thread(_regenerate_m3u, playlist, tracks, downloader)
+    if downloaded > 0 or linked_from_library > 0:
+        known_tracks = await asyncio.to_thread(
+            db.get_track_filenames, playlist.id
+        )
+        if settings is None or settings.get('generate_m3u', True):
+            await asyncio.to_thread(
+                _regenerate_m3u,
+                playlist,
+                tracks,
+                downloader,
+                None,
+                known_tracks,
+            )
+        await asyncio.to_thread(
+            _sync_library_playlist,
+            playlist,
+            tracks,
+            downloader,
+            known_tracks,
+            library,
+            settings,
+        )
     return downloaded
+
+
+def _catalog_spotify_id(playlist: MonitoredPlaylist) -> Optional[str]:
+    """The playlist catalog keys playlists by Spotify id; a YouTube Music
+    watch has none."""
+
+    return playlist.spotify_id if playlist.source == SOURCE_SPOTIFY else None
+
+
+async def _split_new_tracks(
+    playlist: MonitoredPlaylist,
+    tracks: list[dict[str, Any]],
+    db: PlaylistMonitorDB,
+    downloader: Downloader,
+    library: LibraryStores,
+    known_tracks: dict[str, Optional[str]],
+    resolved: dict[str, str],
+) -> tuple[list[dict[str, Any]], int]:
+    """``(tracks to download, number linked from the library)``.
+
+    Tracks the watch already recorded are skipped (and their filenames
+    added to ``resolved``). With *Overwrite existing files* off, a new
+    track the track index already has on disk is recorded for the watch
+    instead of being downloaded again.
+    """
+
+    new_tracks: list[dict[str, Any]] = []
+    linked = 0
+    link_existing = library.track_index is not None and not getattr(
+        downloader, 'overwrite_existing_files', True
+    )
+    for track in tracks:
+        tid = track.get('song_id')
+        if not tid:
+            continue
+        if tid in known_tracks:
+            stored = known_tracks[tid]
+            if stored is not None:
+                resolved[tid] = stored
+            continue
+        existing = (
+            await asyncio.to_thread(
+                _library_file_for, track, downloader, library
+            )
+            if link_existing
+            else None
+        )
+        if not existing:
+            new_tracks.append(track)
+            continue
+        await asyncio.to_thread(
+            db.mark_track_downloaded, playlist.id, tid, existing
+        )
+        resolved[tid] = existing
+        linked += 1
+    if linked:
+        logger.info(
+            'Linked {} track(s) already in the library into playlist "{}"',
+            linked,
+            playlist.name,
+        )
+    return new_tracks, linked
+
+
+def _library_file_for(
+    song: dict[str, Any], downloader: Downloader, library: LibraryStores
+) -> Optional[str]:
+    """The library path already holding ``song`` per the track index."""
+
+    tid = normalize_spotify_track_id(song)
+    if not tid or library.track_index is None:
+        return None
+    stored = library.track_index.lookup(tid)
+    if not stored:
+        return None
+    if locate_library_file(
+        stored, downloader.download_dir, slskd_dir_from_downloader(downloader)
+    ):
+        return stored
+    library.track_index.forget(tid)
+    return None
+
+
+def _register_monitored_download(
+    song: dict[str, Any],
+    filename: str,
+    downloader: Downloader,
+    library: LibraryStores,
+    settings: dict[str, Any],
+    *,
+    playlist_name: str,
+    track_order: int,
+) -> None:
+    """Record a track a sweep downloaded in the library stores."""
+
+    download_dir = Path(downloader.download_dir)
+    slskd_dir = slskd_dir_from_downloader(downloader)
+    full = locate_library_file(filename, download_dir, slskd_dir)
+    if full is None:
+        return
+    try:
+        if library.track_index is not None:
+            library.track_index.register_song(song, filename, full_path=full)
+        if library.playlist_catalog is not None:
+            library.playlist_catalog.upsert_track(
+                playlist_name, song, filename, full, track_order=track_order
+            )
+        if library.navidrome_index is not None:
+            cache_navidrome_song_id(
+                settings,
+                song,
+                filename,
+                library.navidrome_index,
+                download_dir=download_dir,
+                slskd_dir=slskd_dir,
+            )
+        if library.metadata_cache is not None:
+            library.metadata_cache.refresh_stored_path(
+                filename, download_dir=download_dir, slskd_dir=slskd_dir
+            )
+        if settings.get('cache_cover_art') and library.cover_cache:
+            library.cover_cache.refresh_stored_path(
+                filename, download_dir=download_dir, slskd_dir=slskd_dir
+            )
+    except Exception:
+        logger.exception('Could not register {} in the library', filename)
+
+
+def _sync_library_playlist(
+    playlist: MonitoredPlaylist,
+    tracks: list[dict[str, Any]],
+    downloader: Downloader,
+    known_tracks: dict[str, Optional[str]],
+    library: LibraryStores,
+    settings: Optional[dict[str, Any]],
+) -> None:
+    """After a sweep: mirror the playlist's on-disk tracks into the
+    catalog and, when Navidrome sync is on, update its Navidrome playlist."""
+
+    download_dir = Path(downloader.download_dir)
+    slskd_dir = slskd_dir_from_downloader(downloader)
+    rows: list[tuple[dict[str, Any], str, Path]] = []
+    for song in tracks:
+        filename = known_tracks.get(song.get('song_id') or '')
+        full = (
+            locate_library_file(filename, download_dir, slskd_dir)
+            if filename
+            else None
+        )
+        if full is not None:
+            rows.append((song, filename, full))
+
+    if library.playlist_catalog is not None and rows:
+        try:
+            library.playlist_catalog.replace_playlist_tracks(
+                playlist.name, rows, spotify_id=_catalog_spotify_id(playlist)
+            )
+        except Exception:
+            logger.exception(
+                'Playlist catalog sync failed for "{}"', playlist.name
+            )
+
+    if (
+        not settings
+        or settings.get('sync_navidrome', True) is False
+        or not _effective_navidrome_settings(settings).get('enabled')
+    ):
+        return
+    songs = [
+        enrich_song_from_library_file(
+            {**song, 'filename': filename}, download_dir, slskd_dir
+        )
+        for song, filename, _full in rows
+    ]
+    if not songs:
+        logger.warning(
+            'Navidrome sync skip for "{}": no tracks on disk', playlist.name
+        )
+        return
+    try:
+        sync_playlist_to_navidrome(
+            playlist.name,
+            songs,
+            settings,
+            navidrome_index=library.navidrome_index,
+            download_dir=download_dir,
+        )
+    except Exception:
+        logger.exception('Navidrome sync failed for "{}"', playlist.name)
 
 
 def _progress_cb(
@@ -734,6 +993,7 @@ def _regenerate_m3u(
     tracks: list[dict[str, Any]],
     downloader: Downloader,
     resolved: Optional[dict[str, str]] = None,
+    known_tracks: Optional[dict[str, Optional[str]]] = None,
 ) -> None:
     """Rewrite the playlist's M3U, in playlist order.
 
@@ -746,16 +1006,28 @@ def _regenerate_m3u(
     that map alone — the cheap path used for the rewrite after each
     individual download. Without it every track is resolved against the
     filesystem instead, which is the authoritative view used for the
-    final rewrite at the end of a sweep.
+    final rewrite at the end of a sweep: the watch's recorded filename
+    (``known_tracks``) when that file exists — it may be a track linked
+    from elsewhere in the library, e.g. an slskd download — else the
+    track's expected path in the playlist folder.
     """
 
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
+    download_dir = Path(downloader.download_dir)
+    slskd_dir = slskd_dir_from_downloader(downloader)
     entries: list[dict[str, Any]] = []
     for song in tracks:
-        if resolved is None:
-            filename = downloader.existing_filename_for(song, subdir=pl_subdir)
-        else:
+        if resolved is not None:
             filename = resolved.get(song.get('song_id') or '')
+        else:
+            filename = (known_tracks or {}).get(song.get('song_id') or '')
+            if not (
+                filename
+                and locate_library_file(filename, download_dir, slskd_dir)
+            ):
+                filename = downloader.existing_filename_for(
+                    song, subdir=pl_subdir
+                )
         if not filename:
             continue
         entries.append({
@@ -779,6 +1051,7 @@ def _regenerate_m3u(
         playlist.name,
         entries,
         playlist_subdir=None if organize else pl_subdir,
+        slskd_dir=slskd_dir,
     )
 
 
@@ -796,6 +1069,7 @@ async def check_watch(
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
     settings: Optional[dict[str, Any]] = None,
+    library: Optional[LibraryStores] = None,
 ) -> int:
     """Run the right check for a watch by kind, unless one is already running."""
     if playlist.id in _checks_running:
@@ -803,10 +1077,13 @@ async def check_watch(
         return 0
     _checks_running.add(playlist.id)
     try:
-        check = (
-            check_artist if playlist.kind == KIND_ARTIST else check_playlist
+        if playlist.kind == KIND_ARTIST:
+            return await check_artist(
+                playlist, db, downloader, broadcast, loop, settings
+            )
+        return await check_playlist(
+            playlist, db, downloader, broadcast, loop, settings, library
         )
-        return await check(playlist, db, downloader, broadcast, loop, settings)
     finally:
         _checks_running.discard(playlist.id)
 
@@ -817,6 +1094,7 @@ async def monitor_loop(
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
     settings: Optional[dict[str, Any]] = None,
+    get_library: Optional[Callable[[], LibraryStores]] = None,
 ) -> None:
     """Background task: sweep all enabled playlists that are due for checking."""
     while True:
@@ -832,7 +1110,13 @@ async def monitor_loop(
                     continue
                 try:
                     count = await check_watch(
-                        pl, db, downloader, broadcast, loop, settings
+                        pl,
+                        db,
+                        downloader,
+                        broadcast,
+                        loop,
+                        settings,
+                        get_library() if get_library else None,
                     )
                     if count > 0:
                         logger.info(

@@ -89,6 +89,7 @@ from .monitor import (
     KIND_ARTIST,
     KIND_PLAYLIST,
     SOURCE_SPOTIFY,
+    LibraryStores,
     PlaylistMonitorDB,
     check_watch,
     fetch_playlist,
@@ -482,6 +483,19 @@ def library_context() -> LibraryContext:
         state.track_index,
         metadata_cache=state.metadata_cache,
         playlist_catalog=state.playlist_catalog,
+    )
+
+
+def library_stores() -> LibraryStores:
+    """The library stores Playlist Monitor sweeps keep up to date."""
+
+    return LibraryStores(
+        track_index=state.track_index,
+        playlist_catalog=state.playlist_catalog,
+        navidrome_index=state.navidrome_index,
+        metadata_cache=state.metadata_cache,
+        cover_cache=state.cover_cache,
+        playlist_spotify_cache=state.playlist_spotify_cache,
     )
 
 
@@ -3046,6 +3060,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
                     state.connections.broadcast,
                     loop,
                     state.settings,
+                    library_stores(),
                 )
             except Exception:
                 logger.exception('Initial check failed for watch {}', pl.id)
@@ -3116,6 +3131,7 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
                 # Was omitted before, which silently ignored the
                 # delay-between-downloads setting on a manual check.
                 state.settings,
+                library_stores(),
             )
             logger.info(
                 'Manual check: downloaded {} new track(s) from "{}"',

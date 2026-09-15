@@ -370,6 +370,7 @@ def build_app() -> FastAPI:
                 broadcast=api.state.connections.broadcast,
                 loop=loop,
                 settings=api.state.settings,
+                get_library=api.library_stores,
             )
         )
         # Separate hourly sweep that forgets a downloaded-track record once
