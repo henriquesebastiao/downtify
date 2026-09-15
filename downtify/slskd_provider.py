@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import quote
 
-import requests
+import httpx
 from loguru import logger
 
 from .library_metadata import read_audio_metadata
@@ -115,7 +115,7 @@ class SlskdClient:
             settings.get('search_poll_seconds') or 15
         )
         self.download_attempts = int(settings.get('download_attempts') or 5)
-        self.session = requests.Session()
+        self.session = httpx.Client(follow_redirects=True)
         if self.api_key:
             self.session.headers.update({'X-API-Key': self.api_key})
 

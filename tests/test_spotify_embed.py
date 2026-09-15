@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
-import requests
 
 from downtify.spotify import (
     _album_release_date_from_open_page,
@@ -323,6 +323,14 @@ def test_album_tracks_from_id_merges_row_subtitle():
     assert songs[0]['album_track_total'] == 1
 
 
+def _http_status_error(status: int) -> httpx.HTTPStatusError:
+    request = httpx.Request('GET', 'https://open.spotify.com/embed/x/y')
+    response = httpx.Response(status, request=request)
+    return httpx.HTTPStatusError(
+        f'HTTP {status}', request=request, response=response
+    )
+
+
 def test_fetch_embed_json_retries_transient_504() -> None:
     ok = MagicMock(status_code=200)
     ok.text = (
@@ -333,12 +341,12 @@ def test_fetch_embed_json_retries_transient_504() -> None:
     ok.raise_for_status = MagicMock()
 
     fail = MagicMock(status_code=504)
-    fail.raise_for_status.side_effect = requests.HTTPError(response=fail)
+    fail.raise_for_status.side_effect = _http_status_error(504)
 
     with (
         patch('downtify.spotify.time.sleep'),
         patch(
-            'downtify.spotify.requests.get',
+            'downtify.spotify.httpx.get',
             side_effect=[fail, fail, ok],
         ) as mock_get,
     ):
@@ -350,13 +358,13 @@ def test_fetch_embed_json_retries_transient_504() -> None:
 
 def test_fetch_embed_json_does_not_retry_client_errors() -> None:
     fail = MagicMock(status_code=404)
-    fail.raise_for_status.side_effect = requests.HTTPError(response=fail)
+    fail.raise_for_status.side_effect = _http_status_error(404)
 
     with (
         patch('downtify.spotify.time.sleep') as mock_sleep,
-        patch('downtify.spotify.requests.get', return_value=fail),
+        patch('downtify.spotify.httpx.get', return_value=fail),
     ):
-        with pytest.raises(requests.HTTPError):
+        with pytest.raises(httpx.HTTPStatusError):
             _fetch_embed_json('playlist', 'missing')
 
     mock_sleep.assert_not_called()

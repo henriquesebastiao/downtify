@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlencode
 
-import requests
+import httpx
 from loguru import logger
 
 from .library_delete import (
@@ -43,7 +43,7 @@ def _song_id_batches(
     return batches
 
 
-def _parse_subsonic_http_response(resp: requests.Response) -> dict[str, Any]:
+def _parse_subsonic_http_response(resp: httpx.Response) -> dict[str, Any]:
     resp.raise_for_status()
     data = resp.json()
     body = data.get('subsonic-response') if isinstance(data, dict) else None
@@ -450,7 +450,7 @@ class NavidromeClient:
                     continue
                 params[key] = str(value)
         url = f'{self.base_url}/rest/{endpoint}?{urlencode(params)}'
-        resp = requests.get(url, timeout=self.timeout)
+        resp = httpx.get(url, timeout=self.timeout, follow_redirects=True)
         resp.raise_for_status()
         data = resp.json()
         body = (
@@ -589,8 +589,17 @@ class NavidromeClient:
         form_pairs: list[tuple[str, str]],
     ) -> dict[str, Any]:
         url = f'{self.base_url}/rest/{endpoint}'
-        resp = requests.post(
-            url, params=query, data=form_pairs, timeout=self.timeout
+        # httpx takes repeated form keys as a list per key, not as
+        # (key, value) pairs; insertion order within each key is kept.
+        form: dict[str, list[str]] = {}
+        for key, value in form_pairs:
+            form.setdefault(key, []).append(value)
+        resp = httpx.post(
+            url,
+            params=query,
+            data=form,
+            timeout=self.timeout,
+            follow_redirects=True,
         )
         return _parse_subsonic_http_response(resp)
 

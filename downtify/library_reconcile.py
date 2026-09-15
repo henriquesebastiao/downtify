@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
-import requests
+import httpx
 from loguru import logger
 
 from . import m3u
@@ -297,10 +297,8 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
                     spotify_id,
                     cache=playlist_spotify_cache,
                 )
-            except requests.HTTPError as exc:
-                status = (
-                    exc.response.status_code if exc.response is not None else 0
-                )
+            except httpx.HTTPStatusError as exc:
+                status = exc.response.status_code
                 logger.warning(
                     'Playlist refresh: Spotify embed HTTP {} for {!r} '
                     '(id={}); using catalog metadata only',
@@ -333,10 +331,13 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
             song['filename'] = filename
             song = enrich_song_from_library_file(song, download_dir, slskd_dir)
             if not spotify_aligns_with_file_tags(song):
-                if mismatch_delete is not None and delete_if_spotify_tag_mismatch(
-                    song,
-                    mismatch_delete,
-                    playlist_name=name,
+                if (
+                    mismatch_delete is not None
+                    and delete_if_spotify_tag_mismatch(
+                        song,
+                        mismatch_delete,
+                        playlist_name=name,
+                    )
                 ):
                     continue
             entries.append({

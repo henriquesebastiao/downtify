@@ -61,7 +61,9 @@ def test_songs_for_playlist_sync_deletes_mismatched_file(tmp_path):
             'library_from_tags': True,
         },
     ]
-    del_ctx = TagMismatchDeleteContext(ctx=LibraryContext(download_dir=download_dir))
+    del_ctx = TagMismatchDeleteContext(
+        ctx=LibraryContext(download_dir=download_dir)
+    )
     kept = _songs_for_playlist_sync(
         'Albanian Car Songs',
         songs,
@@ -327,8 +329,8 @@ def test_search_song_id_matches_by_filename_in_navidrome_path():
     assert any('tona' in q.casefold() for q in calls)
 
 
-@patch('downtify.navidrome.requests.post')
-@patch('downtify.navidrome.requests.get')
+@patch('downtify.navidrome.httpx.post')
+@patch('downtify.navidrome.httpx.get')
 def test_sync_playlist_creates_playlist(mock_get, mock_post):
     ping_resp = MagicMock()
     ping_resp.json.return_value = {'subsonic-response': {'status': 'ok'}}
@@ -424,8 +426,8 @@ def test_sync_playlist_creates_playlist(mock_get, mock_post):
     assert result.matched == 1
 
 
-@patch('downtify.navidrome.requests.post')
-@patch('downtify.navidrome.requests.get')
+@patch('downtify.navidrome.httpx.post')
+@patch('downtify.navidrome.httpx.get')
 def test_sync_playlist_updates_existing_by_id(mock_get, mock_post):
     """Existing playlists are replaced in place (createPlaylist + playlistId)."""
 
@@ -518,8 +520,8 @@ def test_sync_playlist_updates_existing_by_id(mock_get, mock_post):
     assert not any('deletePlaylist' in url for url in all_get_urls)
 
 
-@patch('downtify.navidrome.requests.post')
-@patch('downtify.navidrome.requests.get')
+@patch('downtify.navidrome.httpx.post')
+@patch('downtify.navidrome.httpx.get')
 def test_sync_playlist_uses_navidrome_index_cache(
     mock_get, mock_post, tmp_path
 ):
@@ -582,7 +584,7 @@ def test_sync_playlist_uses_navidrome_index_cache(
     assert not any('search3' in url for url in all_get_urls)
 
 
-@patch('downtify.navidrome.requests.post')
+@patch('downtify.navidrome.httpx.post')
 def test_create_playlist_batches_many_songs(mock_post):
     """Large playlists use POST and batch songIdToAdd to avoid HTTP 414."""
 
@@ -610,11 +612,11 @@ def test_create_playlist_batches_many_songs(mock_post):
         mock_post.call_args_list[0][1],
     )
     assert 'createPlaylist' in create_url
-    assert len(create_kwargs['data']) == 80
+    assert len(create_kwargs['data']['songId']) == 80
     update_url, update_kwargs = (
         mock_post.call_args_list[1][0][0],
         mock_post.call_args_list[1][1],
     )
     assert 'updatePlaylist' in update_url
     assert update_kwargs['params']['playlistId'] == 'pl-big'
-    assert len(update_kwargs['data']) == 70
+    assert len(update_kwargs['data']['songIdToAdd']) == 70
