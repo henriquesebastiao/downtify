@@ -197,6 +197,58 @@ export default {
     generateM3u: 'Çalma listeleri için M3U dosyaları oluştur',
     generateM3uHint:
       'Hem manuel çalma listesi indirmeleri hem de Çalma Listesi İzleyicisi taramaları için parçaların yanına Playlists/<isim>.m3u dosyalarını kaydeder.',
+    audioSourceHint:
+      'Bir veya daha fazlasını seçin. Her parça, biri başarılı olana kadar seçilen kaynakları sırayla (1, 2, 3) dener.',
+    audioSourceMoveUp: 'Yukarı taşı',
+    audioSourceMoveDown: 'Aşağı taşı',
+    slskdSection: 'slskd (Soulseek)',
+    slskdHint:
+      "Kendi slskd sunucunuz üzerinden Soulseek'ten parça indirin. slskd'nin bulamadığı parçalar sonraki ses kaynağına geçer.",
+    slskdEnabled: "slskd'yi etkinleştir",
+    slskdEnabledHint:
+      "slskd URL'si ve bir API anahtarı gerekir. Kapalıyken slskd hiç denenmez.",
+    slskdBaseUrl: "slskd URL'si (ör. http://slskd:5030)",
+    slskdApiKey: 'slskd API anahtarı',
+    slskdSourceDir: "Downtify'ın gördüğü şekliyle slskd indirme klasörü",
+    slskdSourceDirHint:
+      "slskd'nin indirme klasörünü Downtify konteynerine bağlayın ve buraya ana makine yolunu değil, konteyner içindeki yolu girin.",
+    slskdLeaveInPlace: 'slskd dosyalarını yerinde bırak',
+    slskdLeaveInPlaceHint:
+      'Dosyayı indirme klasörüne kopyalamak yerine slskd klasöründe etiketler. Diğer indirmelerinizin yanına kopyalamak için kapatın.',
+    slskdDownloadTimeout: 'Toplam zaman aşımı (saniye)',
+    slskdQueuedTimeout: 'Kuyrukta bekleme süresi (saniye)',
+    slskdTimeoutHint:
+      'slskd zamanında bitirmezse veya bir aktarım ilerlemeden kuyrukta beklerse Downtify sonraki ses kaynağına geçer.',
+    navidromeSection: 'Navidrome',
+    navidromeHint:
+      "İndirilen çalma listelerini Subsonic API aracılığıyla Navidrome'a yansıtır. Navidrome'un müzik klasörü Downtify indirmelerini (ve kullanılıyorsa slskd klasörünü) içermelidir.",
+    navidromeEnabled: "Navidrome'u etkinleştir",
+    navidromeEnabledHint: "Navidrome URL'si, kullanıcı adı ve parola gerekir.",
+    navidromeUrl: "Navidrome URL'si (ör. http://navidrome:4533)",
+    navidromeUsername: 'Kullanıcı adı',
+    navidromePassword: 'Parola',
+    navidromeAdminUsername: 'Yönetici kullanıcı adı (isteğe bağlı)',
+    navidromeAdminPassword: 'Yönetici parolası (isteğe bağlı)',
+    navidromeAdminHint:
+      "Yönetici hesabı, Downtify'ın yeni parçaları eşleştirmeden önce kütüphane taraması başlatmasını sağlar; böylece çalma listeleri onları daha erken alır.",
+    syncNavidrome: "Navidrome'da çalma listeleri oluştur",
+    syncNavidromeHint:
+      "Bir çalma listesi indirildikten veya Çalma Listesi İzleyici taramasından sonra Navidrome'da aynı adla bir çalma listesi oluşturur ya da günceller.",
+    navidromePublic: 'Navidrome çalma listelerini herkese açık yap',
+    librarySection: 'Kütüphane',
+    cacheCoverArt: 'Kapak resimlerini diskte önbelleğe al',
+    cacheCoverArtHint:
+      'Kütüphane ve Oynatıcı daha hızlı yüklensin diye çıkarılan kapak resimlerini /data/cover_cache içinde tutar. Ek disk alanı kullanır.',
+    reconcileHint:
+      'Diskte dosyaları taşıdınız veya yeniden adlandırdınız mı? Kayıtlı kütüphane yollarını ve yukarıda etkinse M3U dosyalarını ve Navidrome çalma listelerini günceller.',
+    reconcileButton: 'Kütüphane yollarını düzelt',
+    reconcilePaths: '{count} yol güncellendi.',
+    reconcilePruned:
+      'Artık var olmayan dosyalar için {count} kayıt kaldırıldı.',
+    reconcileIndexed: '{count} parça dizine eklendi.',
+    reconcilePlaylists: 'Yenilenen çalma listeleri: {playlists}.',
+    reconcileNone: 'Her şey zaten güncel.',
+    reconcileError: 'Kütüphane yolları düzeltilemedi.',
     organizationSection: 'Dosya düzeni',
     organizeByArtist: 'Sanatçıya göre',
     organizeByArtistHint:

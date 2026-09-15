@@ -205,6 +205,59 @@ export default {
     generateM3u: 'Δημιουργία αρχείου M3U για τις λίστες',
     generateM3uHint:
       'Δημιουργεί ένα αρχείο Playlists/<όνομα>.m3u δίπλα στα κομμάτια, τόσο για χειροκίνητες λήψεις λιστών όσο και για τους ελέγχους του Playlist Monitor.',
+    audioSourceHint:
+      'Επιλέξτε μία ή περισσότερες. Κάθε κομμάτι δοκιμάζει τις επιλεγμένες πηγές με τη σειρά (1, 2, 3) μέχρι να πετύχει μία.',
+    audioSourceMoveUp: 'Μετακίνηση πάνω',
+    audioSourceMoveDown: 'Μετακίνηση κάτω',
+    slskdSection: 'slskd (Soulseek)',
+    slskdHint:
+      'Κατεβάστε κομμάτια από το Soulseek μέσω του δικού σας διακομιστή slskd. Όσα δεν βρει το slskd περνούν στην επόμενη πηγή ήχου.',
+    slskdEnabled: 'Ενεργοποίηση slskd',
+    slskdEnabledHint:
+      'Απαιτεί το URL του slskd και ένα κλειδί API. Όταν είναι ανενεργό, το slskd δεν δοκιμάζεται ποτέ.',
+    slskdBaseUrl: 'URL του slskd (π.χ. http://slskd:5030)',
+    slskdApiKey: 'Κλειδί API του slskd',
+    slskdSourceDir: 'Φάκελος λήψεων του slskd, όπως τον βλέπει το Downtify',
+    slskdSourceDirHint:
+      'Προσαρτήστε τον φάκελο λήψεων του slskd στο container του Downtify και εισαγάγετε εδώ τη διαδρομή μέσα στο container, όχι του host.',
+    slskdLeaveInPlace: 'Διατήρηση αρχείων slskd στη θέση τους',
+    slskdLeaveInPlaceHint:
+      'Προσθέτει ετικέτες στο αρχείο μέσα στον φάκελο του slskd αντί να το αντιγράφει στον φάκελο λήψεων. Απενεργοποιήστε για αντιγραφή δίπλα στις άλλες λήψεις.',
+    slskdDownloadTimeout: 'Συνολικό χρονικό όριο (δευτερόλεπτα)',
+    slskdQueuedTimeout: 'Χρονικό όριο αναμονής (δευτερόλεπτα)',
+    slskdTimeoutHint:
+      'Αν το slskd δεν ολοκληρώσει εγκαίρως ή μια μεταφορά μείνει στην ουρά χωρίς πρόοδο, το Downtify περνά στην επόμενη πηγή ήχου.',
+    navidromeSection: 'Navidrome',
+    navidromeHint:
+      'Αντιγράφει τις λίστες που κατεβάσατε στο Navidrome μέσω του Subsonic API. Ο φάκελος μουσικής του Navidrome πρέπει να περιλαμβάνει τις λήψεις του Downtify (και τον φάκελο του slskd, αν χρησιμοποιείται).',
+    navidromeEnabled: 'Ενεργοποίηση Navidrome',
+    navidromeEnabledHint:
+      'Απαιτεί το URL, το όνομα χρήστη και τον κωδικό του Navidrome.',
+    navidromeUrl: 'URL του Navidrome (π.χ. http://navidrome:4533)',
+    navidromeUsername: 'Όνομα χρήστη',
+    navidromePassword: 'Κωδικός',
+    navidromeAdminUsername: 'Όνομα διαχειριστή (προαιρετικό)',
+    navidromeAdminPassword: 'Κωδικός διαχειριστή (προαιρετικό)',
+    navidromeAdminHint:
+      'Ένας λογαριασμός διαχειριστή επιτρέπει στο Downtify να ξεκινά σάρωση βιβλιοθήκης πριν αντιστοιχίσει τα νέα κομμάτια, ώστε οι λίστες να τα περιλαμβάνουν νωρίτερα.',
+    syncNavidrome: 'Δημιουργία λιστών στο Navidrome',
+    syncNavidromeHint:
+      'Μετά από λήψη λίστας ή έλεγχο της Παρακολούθησης λιστών, δημιουργεί ή ενημερώνει λίστα στο Navidrome με το ίδιο όνομα.',
+    navidromePublic: 'Δημόσιες λίστες στο Navidrome',
+    librarySection: 'Βιβλιοθήκη',
+    cacheCoverArt: 'Προσωρινή αποθήκευση εξωφύλλων στον δίσκο',
+    cacheCoverArtHint:
+      'Κρατά τα εξαγόμενα εξώφυλλα στο /data/cover_cache ώστε η Βιβλιοθήκη και η Αναπαραγωγή να φορτώνουν πιο γρήγορα. Χρησιμοποιεί επιπλέον χώρο.',
+    reconcileHint:
+      'Μετακινήσατε ή μετονομάσατε αρχεία στον δίσκο; Ενημερώνει τις αποθηκευμένες διαδρομές της βιβλιοθήκης και, αν είναι ενεργά παραπάνω, τα M3U και τις λίστες του Navidrome.',
+    reconcileButton: 'Διόρθωση διαδρομών βιβλιοθήκης',
+    reconcilePaths: 'Ενημερώθηκαν {count} διαδρομή(ές).',
+    reconcilePruned:
+      'Αφαιρέθηκαν {count} καταχώριση(εις) για αρχεία που δεν υπάρχουν πια.',
+    reconcileIndexed: 'Καταχωρίστηκαν {count} κομμάτι(α).',
+    reconcilePlaylists: 'Ανανεώθηκαν οι λίστες: {playlists}.',
+    reconcileNone: 'Όλα είναι ήδη ενημερωμένα.',
+    reconcileError: 'Δεν ήταν δυνατή η διόρθωση των διαδρομών.',
     organizationSection: 'Οργάνωση αρχείων',
     organizeByArtist: 'Οργάνωση ανά καλλιτέχνη',
     organizeByArtistHint:

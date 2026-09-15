@@ -3,16 +3,7 @@ import { ref, computed } from 'vue'
 import API from '/src/model/api'
 
 const settings = ref({
-  audio_providers: [''],
-  youtube: {
-    cookies_file: '',
-    cookies_from_browser: '',
-    download_timeout_seconds: 900,
-    cookies_file_exists: false,
-    cookies_looks_authenticated: false,
-    cookies_auth_names: [],
-    cookies_warnings: [],
-  },
+  audio_providers: ['youtube-music'],
   slskd: {
     enabled: false,
     base_url: '',
@@ -124,13 +115,12 @@ export function clampCoverResolution(value) {
 
 API.getSettings().then((res) => {
   if (res.status === 200) {
-    if (import.meta.env.DEV) {
-      console.log('Received settings:', res.data)
-    }
+    console.log('Received settings:', res.data)
+    // Merge nested blocks over the defaults so a settings file saved
+    // before slskd/Navidrome existed still binds every form field.
     settings.value = {
       ...settings.value,
       ...res.data,
-      youtube: { ...settings.value.youtube, ...(res.data.youtube || {}) },
       slskd: { ...settings.value.slskd, ...(res.data.slskd || {}) },
       navidrome: { ...settings.value.navidrome, ...(res.data.navidrome || {}) },
     }
@@ -141,60 +131,21 @@ API.getSettings().then((res) => {
 
 export function useSettingsManager() {
   const isSaved = ref()
+  // Backend rejection reason (e.g. slskd enabled without an API key).
   const saveErrorText = ref('')
-
-  function validateSettings() {
-    const slskd = settings.value?.slskd || {}
-    if (slskd.enabled) {
-      if (!String(slskd.base_url || '').trim()) {
-        return 'slskd base URL is required when enabled'
-      }
-      if (!String(slskd.api_key || '').trim()) {
-        return 'slskd API key is required when enabled'
-      }
-    }
-    const nav = settings.value?.navidrome || {}
-    if (nav.enabled) {
-      if (!String(nav.url || '').trim()) {
-        return 'Navidrome URL is required when enabled'
-      }
-      if (!String(nav.username || '').trim()) {
-        return 'Navidrome username is required when enabled'
-      }
-      if (!String(nav.password || '')) {
-        return 'Navidrome password is required when enabled'
-      }
-    }
-    return ''
-  }
-
   function saveSettings() {
     console.log('Saving settings:', settings.value)
-    const err = validateSettings()
-    if (err) {
-      saveErrorText.value = err
-      isSaved.value = false
-      setTimeout(() => {
-        isSaved.value = null
-      }, 2500)
-      return
-    }
     saveErrorText.value = ''
     API.setSettings(settings.value)
       .then((res) => {
         if (res.status === 200) {
           console.log('Saved!')
           isSaved.value = true
-          const modal = document.getElementById('settings-modal')
-          if (modal && 'checked' in modal) {
-            modal.checked = false
-          }
           setTimeout(() => {
             isSaved.value = null
           }, 2000)
         } else {
           console.error('Error saving settings.', res)
-          saveErrorText.value = 'Could not save settings'
           isSaved.value = false
           setTimeout(() => {
             isSaved.value = null
@@ -204,13 +155,11 @@ export function useSettingsManager() {
       .catch((error) => {
         const detail = error?.response?.data?.detail
         saveErrorText.value =
-          typeof detail === 'string' && detail.trim()
-            ? detail
-            : 'Could not save settings'
+          typeof detail === 'string' && detail.trim() ? detail : ''
         isSaved.value = false
         setTimeout(() => {
           isSaved.value = null
-        }, 2500)
+        }, 3000)
       })
   }
   return { saveSettings, settings, settingsOptions, isSaved, saveErrorText }

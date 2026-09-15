@@ -205,6 +205,59 @@ export default {
     generateM3u: 'Generar archivo M3U para las listas',
     generateM3uHint:
       'Escribe Playlists/<nombre>.m3u junto a las pistas, tanto para descargas manuales como para los barridos del Monitor.',
+    audioSourceHint:
+      'Elige una o más. Cada pista prueba las fuentes seleccionadas en orden (1, 2, 3) hasta que una funcione.',
+    audioSourceMoveUp: 'Subir',
+    audioSourceMoveDown: 'Bajar',
+    slskdSection: 'slskd (Soulseek)',
+    slskdHint:
+      'Descarga pistas de Soulseek a través de tu propio servidor slskd. Las pistas que slskd no encuentre pasan a la siguiente fuente de audio.',
+    slskdEnabled: 'Activar slskd',
+    slskdEnabledHint:
+      'Requiere la URL de slskd y una API key. Si está desactivado, slskd nunca se intenta.',
+    slskdBaseUrl: 'URL de slskd (ej. http://slskd:5030)',
+    slskdApiKey: 'API key de slskd',
+    slskdSourceDir: 'Carpeta de descargas de slskd, tal como la ve Downtify',
+    slskdSourceDirHint:
+      'Monta la carpeta de descargas de slskd en el contenedor de Downtify e indica aquí la ruta dentro del contenedor, no la del host.',
+    slskdLeaveInPlace: 'Dejar los archivos de slskd en su sitio',
+    slskdLeaveInPlaceHint:
+      'Etiqueta el archivo dentro de la carpeta de slskd en lugar de copiarlo a la carpeta de descargas. Desactívalo para copiarlo junto a tus otras descargas.',
+    slskdDownloadTimeout: 'Tiempo máximo total (segundos)',
+    slskdQueuedTimeout: 'Tiempo en cola (segundos)',
+    slskdTimeoutHint:
+      'Si slskd no termina a tiempo, o una transferencia se queda en cola sin progreso, Downtify pasa a la siguiente fuente de audio.',
+    navidromeSection: 'Navidrome',
+    navidromeHint:
+      'Replica las listas descargadas en Navidrome mediante su API Subsonic. La carpeta de música de Navidrome debe incluir las descargas de Downtify (y la carpeta de slskd, si la usas).',
+    navidromeEnabled: 'Activar Navidrome',
+    navidromeEnabledHint:
+      'Requiere la URL, el usuario y la contraseña de Navidrome.',
+    navidromeUrl: 'URL de Navidrome (ej. http://navidrome:4533)',
+    navidromeUsername: 'Usuario',
+    navidromePassword: 'Contraseña',
+    navidromeAdminUsername: 'Usuario admin (opcional)',
+    navidromeAdminPassword: 'Contraseña admin (opcional)',
+    navidromeAdminHint:
+      'Una cuenta admin permite a Downtify iniciar un escaneo de la biblioteca antes de buscar las pistas nuevas, para que las listas las incluyan antes.',
+    syncNavidrome: 'Crear listas en Navidrome',
+    syncNavidromeHint:
+      'Tras descargar una lista o una comprobación del Monitor de listas, crea o actualiza una lista en Navidrome con el mismo nombre.',
+    navidromePublic: 'Hacer públicas las listas de Navidrome',
+    librarySection: 'Biblioteca',
+    cacheCoverArt: 'Guardar carátulas en caché en disco',
+    cacheCoverArtHint:
+      'Guarda las carátulas extraídas en /data/cover_cache para que la Biblioteca y el Reproductor carguen más rápido. Usa espacio extra en disco.',
+    reconcileHint:
+      '¿Moviste o renombraste archivos en el disco? Actualiza las rutas guardadas de la biblioteca y, si están activados arriba, los M3U y las listas de Navidrome.',
+    reconcileButton: 'Corregir rutas de la biblioteca',
+    reconcilePaths: '{count} ruta(s) actualizada(s).',
+    reconcilePruned:
+      'Se quitaron {count} entrada(s) de archivos que ya no existen.',
+    reconcileIndexed: '{count} pista(s) indexada(s).',
+    reconcilePlaylists: 'Listas actualizadas: {playlists}.',
+    reconcileNone: 'Todo está actualizado.',
+    reconcileError: 'No se pudieron corregir las rutas de la biblioteca.',
     organizationSection: 'Organización de archivos',
     organizeByArtist: 'Organizar por artista',
     organizeByArtistHint:
