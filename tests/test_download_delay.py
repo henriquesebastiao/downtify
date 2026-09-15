@@ -79,7 +79,9 @@ def test_process_batch_skips_delay_for_single_song(monkeypatch):
     monkeypatch.setitem(api.state.settings, 'download_delay_seconds', 30)
     captured = []
 
-    async def fake_run_download(song, song_id, subdir=None, delay_seconds=0):
+    async def fake_run_download(
+        song, song_id, subdir=None, delay_seconds=0, **_kwargs
+    ):
         captured.append(delay_seconds)
         return f'{song["song_id"]}.mp3'
 
@@ -97,7 +99,9 @@ def test_process_batch_applies_delay_for_multiple_songs(monkeypatch):
     monkeypatch.setitem(api.state.settings, 'download_delay_seconds', 30)
     captured = []
 
-    async def fake_run_download(song, song_id, subdir=None, delay_seconds=0):
+    async def fake_run_download(
+        song, song_id, subdir=None, delay_seconds=0, **_kwargs
+    ):
         captured.append(delay_seconds)
         return f'{song["song_id"]}.mp3'
 

@@ -1,4 +1,5 @@
-"""Batch/URL downloads skip tracks that already exist on disk."""
+"""With *Overwrite existing files* off, batch/URL downloads skip tracks
+that already exist on disk or in the track index."""
 
 from __future__ import annotations
 
@@ -27,6 +28,7 @@ def test_run_download_skips_when_matching_file_exists(tmp_path):
         download_dir,
         audio_format='mp3',
         audio_providers=['youtube'],
+        overwrite_existing_files=False,
     )
     song = {'name': 'Track', 'artists': ['Artist']}
     target = download_dir / 'Artist - Track.mp3'
@@ -63,6 +65,7 @@ def test_run_download_skips_via_global_library(tmp_path):
         download_dir,
         audio_format='mp3',
         audio_providers=['youtube'],
+        overwrite_existing_files=False,
     )
     other = download_dir / 'Other Playlist' / 'Artist - Track.mp3'
     other.parent.mkdir(parents=True)
@@ -112,6 +115,7 @@ def test_run_download_skips_in_playlist_subdir(tmp_path):
         download_dir,
         audio_format='mp3',
         audio_providers=['youtube'],
+        overwrite_existing_files=False,
     )
     song = {'name': 'Track', 'artists': ['Artist']}
     pl_dir = download_dir / 'My Playlist'
@@ -141,3 +145,34 @@ def test_run_download_skips_in_playlist_subdir(tmp_path):
         api.state.loop = prev_loop
         api.state.connections = prev_connections
         api.state.download_jobs.clear()
+
+
+def test_run_download_redownloads_existing_file_when_overwrite_is_on(tmp_path):
+    # main's default: Overwrite existing files is on, so the existing file
+    # doesn't stop the download.
+    download_dir = tmp_path / 'music'
+    d = Downloader(download_dir, audio_format='mp3')
+    target = download_dir / 'Artist - Track.mp3'
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b'fake')
+    d.download = MagicMock(return_value='Artist - Track.mp3')
+
+    prev_downloader = api.state.downloader
+    prev_loop = api.state.loop
+    prev_connections = api.state.connections
+    try:
+        api.state.downloader = d
+        api.state.connections = MagicMock()
+        api.state.connections.broadcast = AsyncMock()
+        song = {'name': 'Track', 'artists': ['Artist']}
+        song_id = api._register_job(song, status='queued')
+
+        filename = _run_download(api._run_download(song, song_id))
+
+        assert filename == 'Artist - Track.mp3'
+        d.download.assert_called_once()
+    finally:
+        api.state.download_jobs.clear()
+        api.state.downloader = prev_downloader
+        api.state.loop = prev_loop
+        api.state.connections = prev_connections

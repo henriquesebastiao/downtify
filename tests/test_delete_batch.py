@@ -220,6 +220,14 @@ def test_after_library_delete_forgets_files_and_reports_playlists(
     monkeypatch.setattr(api.state, 'navidrome_index', None)
     monkeypatch.setattr(api.state, 'metadata_cache', None)
     monkeypatch.setattr(api.state, 'cover_cache', None)
+    refreshed = []
+
+    async def _schedule(names):
+        refreshed.append(names)
+
+    monkeypatch.setattr(
+        api, '_schedule_playlist_refresh_after_delete', _schedule
+    )
     track.unlink()
 
     response = asyncio.run(
@@ -228,6 +236,11 @@ def test_after_library_delete_forgets_files_and_reports_playlists(
         )
     )
 
-    assert response == {'deleted': True, 'playlists_affected': ['Mix']}
+    assert response == {
+        'deleted': True,
+        'playlists_affected': ['Mix'],
+        'playlists_refresh_scheduled': True,
+    }
+    assert refreshed == [{'Mix'}]
     assert catalog.list_tracks('Mix') == []
     assert index.lookup('4uLU6hMCjMI75M1A2tKUQC') is None

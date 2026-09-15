@@ -337,6 +337,44 @@ class PlaylistMonitorDB:
                 (playlist_id, album_id, name, _now_iso()),
             )
 
+    def playlists_for_track(self, track_spotify_id: str) -> set[str]:
+        """Names of the watched playlists that downloaded this track."""
+
+        tid = str(track_spotify_id or '').strip()
+        if not tid:
+            return set()
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT DISTINCT p.name FROM downloaded_tracks dt
+                   JOIN monitored_playlists p ON p.id = dt.playlist_id
+                   WHERE dt.track_spotify_id = ?""",
+                (tid,),
+            ).fetchall()
+        return {str(row['name']) for row in rows}
+
+    def update_filename_for_spotify(
+        self, track_spotify_id: str, filename: str
+    ) -> set[str]:
+        """Point every watch's record of this track at ``filename``.
+
+        Used when the track is downloaded again elsewhere (another
+        playlist, a single download), so a watch doesn't keep a stale
+        path. Returns the playlists that have the track.
+        """
+
+        tid = str(track_spotify_id or '').strip()
+        name = str(filename or '').strip().replace('\\', '/')
+        if not tid or not name:
+            return set()
+        with self._connect() as conn:
+            conn.execute(
+                """UPDATE downloaded_tracks SET filename = ?
+                   WHERE track_spotify_id = ?
+                   AND (filename IS NULL OR filename != ?)""",
+                (name, tid, name),
+            )
+        return self.playlists_for_track(tid)
+
     def mark_track_downloaded(
         self,
         playlist_id: int,

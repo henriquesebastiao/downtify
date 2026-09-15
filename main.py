@@ -41,9 +41,12 @@ from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.library_paths import SLSKD_LIBRARY_PREFIX
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 from downtify.navidrome_index import NavidromeIndex
-from downtify.playlist_batches import PlaylistBatchStore
+from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
 from downtify.playlist_catalog import PlaylistCatalog
-from downtify.playlist_spotify_cache import PlaylistSpotifyCache
+from downtify.playlist_spotify_cache import (
+    PlaylistSpotifyCache,
+    playlist_spotify_cache_loop,
+)
 from downtify.track_index import TrackIndex
 from downtify.update_check import UpdateChecker, update_check_loop
 
@@ -322,6 +325,18 @@ def _open_library_stores(monitor_db_path: Path) -> None:
             )
     except Exception:
         logger.exception('Playlist catalog backfill from monitor db failed')
+    try:
+        registered = ensure_batch_records(
+            api.state.playlist_batch_store,
+            api.collect_playlist_batch_sync_rows(),
+        )
+        if registered:
+            logger.info(
+                'Playlist batches: registered {} playlist(s) from library',
+                registered,
+            )
+    except Exception:
+        logger.exception('Playlist batch sync from library failed')
 
 
 def build_app() -> FastAPI:
@@ -340,6 +355,14 @@ def build_app() -> FastAPI:
         db_path = DATABASE_DIR / 'downtify_monitor.db'
         api.state.monitor_db = PlaylistMonitorDB(db_path)
         _open_library_stores(db_path)
+        # Keeps the cached Spotify track lists of known playlists fresh for
+        # the playlist batch reports.
+        asyncio.create_task(
+            playlist_spotify_cache_loop(
+                api.state.playlist_spotify_cache,
+                api.known_spotify_playlist_ids,
+            )
+        )
         asyncio.create_task(
             monitor_loop(
                 db=api.state.monitor_db,

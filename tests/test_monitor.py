@@ -6,6 +6,7 @@ from datetime import datetime, time, timedelta, timezone
 
 from downtify.monitor import (
     SYNC_TIME_ENV_VAR,
+    PlaylistMonitorDB,
     _is_due,
     _next_due_at,
     _sync_anchor_time,
@@ -132,3 +133,23 @@ def test_is_due_respects_anchor_for_daily_interval(monkeypatch):
     last = datetime.now(timezone.utc) - timedelta(hours=25)
     expected = datetime.now(timezone.utc) >= _next_due_at(last, 1440)
     assert _is_due(_iso(last), 1440) == expected
+
+
+def test_playlists_for_track_and_update_filename(tmp_path):
+    db = PlaylistMonitorDB(tmp_path / 'monitor.db')
+    a = db.add_playlist(
+        'pl-a', 'List A', 'https://open.spotify.com/playlist/a', 60
+    )
+    b = db.add_playlist(
+        'pl-b', 'List B', 'https://open.spotify.com/playlist/b', 60
+    )
+    db.mark_track_downloaded(a.id, 'track1', 'List A/Song.mp3')
+    db.mark_track_downloaded(b.id, 'track1', 'List B/Song.mp3')
+
+    assert db.playlists_for_track('track1') == {'List A', 'List B'}
+    assert db.update_filename_for_spotify('track1', 'Artist/Song.mp3') == {
+        'List A',
+        'List B',
+    }
+    assert db.get_track_filenames(a.id) == {'track1': 'Artist/Song.mp3'}
+    assert db.playlists_for_track('unknown') == set()

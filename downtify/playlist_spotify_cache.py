@@ -417,7 +417,7 @@ async def warm_uncached_playlists(
     warmed = 0
     for raw_id in spotify_ids:
         sid = str(raw_id or '').strip()
-        if not sid or cache.get(sid) is not None:
+        if not sid or await asyncio.to_thread(cache.get, sid) is not None:
             continue
         try:
             await asyncio.to_thread(
@@ -448,7 +448,9 @@ async def playlist_spotify_cache_loop(
 
     while True:
         try:
-            ids = list_spotify_ids()
+            # SQLite lookups across the batch store, catalog and monitor:
+            # off the event loop.
+            ids = await asyncio.to_thread(list_spotify_ids)
             warmed = await warm_uncached_playlists(
                 cache,
                 ids,

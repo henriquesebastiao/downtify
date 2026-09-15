@@ -26,6 +26,7 @@ def test_playlists_for_track_returns_distinct_playlists(
 def test_playlist_context_from_url_hint_resolves_name() -> None:
     api.state.downloader = MagicMock()
     api.state.downloader.organize_by_artist = False
+    api.state.downloader.organize_by_album = False
     api.state.settings = {'organize_by_artist': False}
     with patch(
         'downtify.api.spotify.playlist_info_and_tracks',

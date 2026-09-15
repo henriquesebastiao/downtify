@@ -145,7 +145,9 @@ def test_process_batch_writes_m3u_under_explicit_playlist_name(monkeypatch):
     monkeypatch.setattr(api.state, 'download_jobs', {})
     monkeypatch.setattr(api, '_organize_enabled', lambda: False)
 
-    async def fake_run_download(song, song_id, subdir=None, delay_seconds=0):
+    async def fake_run_download(
+        song, song_id, subdir=None, delay_seconds=0, **_kwargs
+    ):
         return f'{song["name"]}.mp3'
 
     monkeypatch.setattr(api, '_run_download', fake_run_download)
@@ -153,7 +155,12 @@ def test_process_batch_writes_m3u_under_explicit_playlist_name(monkeypatch):
     written = {}
 
     def fake_write_m3u(
-        download_dir, playlist_name, entries, *, playlist_subdir=None
+        download_dir,
+        playlist_name,
+        entries,
+        *,
+        playlist_subdir=None,
+        slskd_dir=None,
     ):
         written['playlist_name'] = playlist_name
         written['playlist_subdir'] = playlist_subdir
@@ -187,7 +194,9 @@ def test_process_batch_skips_m3u_when_playlist_name_missing(monkeypatch):
     monkeypatch.setattr(api.state, 'downloader', object())
     monkeypatch.setattr(api.state, 'download_jobs', {})
 
-    async def fake_run_download(song, song_id, subdir=None, delay_seconds=0):
+    async def fake_run_download(
+        song, song_id, subdir=None, delay_seconds=0, **_kwargs
+    ):
         return f'{song["name"]}.mp3'
 
     monkeypatch.setattr(api, '_run_download', fake_run_download)
