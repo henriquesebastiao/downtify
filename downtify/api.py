@@ -67,7 +67,12 @@ from loguru import logger
 
 from . import library_import, m3u, providers, spotify
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
-from .downloader import DOWNLOAD_EXECUTOR, MAX_PARALLEL_DOWNLOADS, Downloader
+from .downloader import (
+    AUDIO_PROVIDERS,
+    DOWNLOAD_EXECUTOR,
+    MAX_PARALLEL_DOWNLOADS,
+    Downloader,
+)
 from .monitor import (
     KIND_ARTIST,
     KIND_PLAYLIST,
@@ -76,6 +81,8 @@ from .monitor import (
     fetch_playlist,
     parse_playlist_url,
 )
+from .navidrome import _effective_navidrome_settings
+from .slskd_provider import reset_slskd_parallelism
 from .update_check import UpdateChecker
 
 MIN_PARALLEL_DOWNLOADS = 1
@@ -103,7 +110,55 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'organize_by_album': False,
     'search_albums': True,
     'mini_player_enabled': True,
+    # Soulseek via slskd, used when 'slskd' is in audio_providers.
+    'slskd': {
+        'enabled': False,
+        'base_url': '',
+        'api_key': '',
+        'download_dir': '/downloads',
+        'source_dir': '/slskd',
+        'leave_in_place': True,
+        'timeout_seconds': 20,
+        'search_retries': 5,
+        'search_poll_seconds': 15,
+        'download_attempts': 5,
+        'poll_interval_seconds': 5,
+        'poll_max_attempts': 60,
+        'download_timeout_seconds': 600,
+        'queued_timeout_seconds': 180,
+        'duration_tolerance_seconds': 10,
+        'duration_tolerance_percent': 15,
+        'mix_duration_tolerance_percent': 50,
+        'extensions': ['mp3', 'flac'],
+        'min_bitrate': 256,
+    },
+    # Navidrome (Subsonic API) playlist sync after playlist downloads.
+    'sync_navidrome': True,
+    'navidrome': {
+        'enabled': False,
+        'url': '',
+        'username': '',
+        'password': '',
+        'admin_username': '',
+        'admin_password': '',
+        'public_playlist': False,
+        'scan_after_download': True,
+        'scan_full': False,
+        'scan_wait_seconds': 120,
+        'scan_poll_seconds': 5,
+        'scan_retry_seconds': 15,
+        'client_name': 'Downtify',
+        'api_version': '1.16.1',
+    },
+    # Keep extracted cover art under /data/cover_cache for faster Library
+    # and Player loads.
+    'cache_cover_art': False,
 }
+
+# Settings stored as nested objects: saved values are merged over the
+# defaults key by key, so a settings.json from an older version still gets
+# every newer option.
+_NESTED_SETTINGS = ('slskd', 'navidrome')
 
 
 def _clamp_parallel_downloads(value: Any) -> int:
@@ -151,6 +206,146 @@ def _clamp_cover_resolution(value: Any) -> int:
     except (TypeError, ValueError):
         px = DEFAULT_SETTINGS['cover_resolution']
     return min(MAX_COVER_RESOLUTION, max(MIN_COVER_RESOLUTION, px))
+
+
+def _setting_int(
+    data: dict[str, Any],
+    key: str,
+    default: int,
+    *,
+    minimum: int,
+    maximum: int,
+) -> int:
+    try:
+        value = int(data.get(key) or default)
+    except (TypeError, ValueError):
+        value = default
+    return min(maximum, max(minimum, value))
+
+
+def _slskd_extensions(raw: dict[str, Any]) -> list[str]:
+    value = raw.get('extensions')
+    if isinstance(value, str):
+        value = value.split(',')
+    if not isinstance(value, list):
+        value = []
+    extensions = [
+        str(e).strip().lower().lstrip('.') for e in value if str(e).strip()
+    ]
+    return extensions or ['mp3', 'flac']
+
+
+def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    """Normalized slskd settings (URLs trimmed, numbers clamped).
+
+    ``source_dir`` defaults to ``/slskd`` when files are left in place and
+    to the download folder otherwise. The parallel-download limit is taken
+    from the global setting, capped at 8 for slskd.
+    """
+
+    raw = settings.get('slskd')
+    if not isinstance(raw, dict):
+        raw = {}
+    download_dir = str(raw.get('download_dir') or '/downloads').strip()
+    leave_in_place = raw.get('leave_in_place')
+    leave_in_place = True if leave_in_place is None else bool(leave_in_place)
+    source_dir = str(raw.get('source_dir') or '').strip() or (
+        '/slskd' if leave_in_place else download_dir
+    )
+    try:
+        min_bitrate = int(raw.get('min_bitrate') or 256)
+    except (TypeError, ValueError):
+        min_bitrate = 256
+
+    def bounded(key: str, default: int, low: int, high: int) -> int:
+        return _setting_int(raw, key, default, minimum=low, maximum=high)
+
+    return {
+        'enabled': bool(raw.get('enabled', False)),
+        'base_url': str(raw.get('base_url') or '').strip().rstrip('/'),
+        'api_key': str(raw.get('api_key') or '').strip(),
+        'download_dir': download_dir,
+        'source_dir': source_dir,
+        'leave_in_place': leave_in_place,
+        'extensions': _slskd_extensions(raw),
+        'timeout_seconds': bounded('timeout_seconds', 20, 5, 120),
+        'search_retries': bounded('search_retries', 5, 1, 20),
+        'search_poll_seconds': bounded('search_poll_seconds', 15, 3, 60),
+        'download_attempts': bounded('download_attempts', 5, 1, 10),
+        'poll_interval_seconds': bounded('poll_interval_seconds', 5, 1, 30),
+        'poll_max_attempts': bounded('poll_max_attempts', 60, 1, 300),
+        'download_timeout_seconds': bounded(
+            'download_timeout_seconds', 600, 30, 3600
+        ),
+        'queued_timeout_seconds': bounded(
+            'queued_timeout_seconds', 180, 15, 3600
+        ),
+        'duration_tolerance_seconds': bounded(
+            'duration_tolerance_seconds', 10, 1, 120
+        ),
+        'duration_tolerance_percent': bounded(
+            'duration_tolerance_percent', 15, 1, 100
+        ),
+        'mix_duration_tolerance_percent': bounded(
+            'mix_duration_tolerance_percent', 50, 1, 200
+        ),
+        'min_bitrate': min_bitrate,
+        'max_parallel_downloads': _setting_int(
+            settings, 'max_parallel_downloads', 3, minimum=1, maximum=8
+        ),
+    }
+
+
+def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
+    """Enabled audio providers in the configured order.
+
+    slskd is dropped while it's disabled. When slskd is the only provider
+    left, YouTube Music and YouTube are appended as fallbacks so a track
+    slskd can't find still downloads.
+    """
+
+    slskd_enabled = bool(_effective_slskd_settings(settings).get('enabled'))
+    out: list[str] = []
+    for raw in settings.get('audio_providers') or []:
+        name = str(raw or '').strip()
+        if name == 'slskd' and not slskd_enabled:
+            continue
+        if name in AUDIO_PROVIDERS and name not in out:
+            out.append(name)
+    if not out:
+        return ['youtube-music']
+    if out == ['slskd']:
+        out += ['youtube-music', 'youtube']
+    return out
+
+
+def _validate_integration_settings(
+    slskd: dict[str, Any], navidrome: dict[str, Any]
+) -> None:
+    """Reject enabling slskd/Navidrome without the fields they need."""
+
+    if slskd.get('enabled'):
+        if not slskd.get('base_url'):
+            raise HTTPException(
+                status_code=400,
+                detail='slskd base URL is required when enabled',
+            )
+        if not slskd.get('api_key'):
+            raise HTTPException(
+                status_code=400,
+                detail='slskd API key is required when enabled',
+            )
+    if navidrome.get('enabled'):
+        for key, label in (
+            ('url', 'URL'),
+            ('username', 'username'),
+            ('password', 'password'),
+        ):
+            if not navidrome.get(key):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f'Navidrome {label} is required when enabled',
+                )
 
 
 def _organize_enabled() -> bool:
@@ -242,7 +437,11 @@ def _load_settings(path: Path) -> dict[str, Any]:
         if isinstance(saved, dict):
             merged = dict(DEFAULT_SETTINGS)
             for k, v in saved.items():
-                if k in DEFAULT_SETTINGS:
+                if k not in DEFAULT_SETTINGS:
+                    continue
+                if k in _NESTED_SETTINGS and isinstance(v, dict):
+                    merged[k] = {**DEFAULT_SETTINGS[k], **v}
+                else:
                     merged[k] = v
             merged['max_parallel_downloads'] = _clamp_parallel_downloads(
                 merged['max_parallel_downloads']
@@ -1067,6 +1266,14 @@ async def update_settings_endpoint(
     except Exception:
         payload = {}
     if isinstance(payload, dict):
+        # Validated up front so a rejected save changes nothing.
+        pending = {**state.settings, **payload}
+        slskd_cfg = _effective_slskd_settings(pending)
+        navidrome_cfg = _effective_navidrome_settings(pending)
+        _validate_integration_settings(
+            slskd_cfg if 'slskd' in payload else {},
+            navidrome_cfg if 'navidrome' in payload else {},
+        )
         for key, raw_value in payload.items():
             if key not in DEFAULT_SETTINGS:
                 continue
@@ -1076,9 +1283,37 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_download_delay(raw_value)
             elif key == 'cover_resolution':
                 state.settings[key] = _clamp_cover_resolution(raw_value)
+            elif key == 'slskd':
+                # The parallel limit is derived from max_parallel_downloads,
+                # not stored with slskd's own options.
+                state.settings[key] = {
+                    k: v
+                    for k, v in slskd_cfg.items()
+                    if k != 'max_parallel_downloads'
+                }
+            elif key == 'navidrome':
+                state.settings[key] = navidrome_cfg
             else:
                 state.settings[key] = raw_value
+        if {'audio_providers', 'slskd'} & set(payload):
+            state.settings['audio_providers'] = _effective_audio_providers(
+                state.settings
+            )
         if state.downloader is not None:
+            if {'audio_providers', 'slskd', 'max_parallel_downloads'} & set(
+                payload
+            ):
+                state.downloader.slskd_settings = (
+                    state.downloader._normalize_slskd_settings(
+                        _effective_slskd_settings(state.settings)
+                    )
+                )
+                state.downloader.slskd_settings['output_dir'] = str(
+                    state.downloader.download_dir
+                )
+                state.downloader.audio_providers = _effective_audio_providers(
+                    state.settings
+                )
             fmt = payload.get('format')
             if isinstance(fmt, str) and fmt:
                 state.downloader.audio_format = fmt
@@ -1114,6 +1349,7 @@ async def update_settings_endpoint(
             state.download_semaphore = asyncio.Semaphore(
                 state.settings['max_parallel_downloads']
             )
+            reset_slskd_parallelism(_effective_slskd_settings(state.settings))
         if 'cover_resolution' in payload:
             providers.set_cover_resolution(state.settings['cover_resolution'])
     if state.settings_path is not None:

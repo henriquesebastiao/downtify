@@ -7,6 +7,9 @@ import asyncio
 import inspect
 import json
 
+import pytest
+from fastapi import HTTPException
+
 from downtify import api
 from downtify.api import (
     DEFAULT_SETTINGS,
@@ -19,7 +22,9 @@ from downtify.api import (
     _clamp_cover_resolution,
     _clamp_download_delay,
     _clamp_parallel_downloads,
+    _effective_audio_providers,
     _effective_lyrics_providers,
+    _effective_slskd_settings,
     _load_settings,
     artist_info_endpoint,
     artist_similar_endpoint,
@@ -28,6 +33,7 @@ from downtify.api import (
     search_albums_endpoint,
     search_artists_endpoint,
 )
+from downtify.downloader import Downloader
 
 
 def test_default_settings_has_required_keys():
@@ -40,6 +46,10 @@ def test_default_settings_has_required_keys():
         'output',
         'generate_m3u',
         'organize_by_artist',
+        'slskd',
+        'sync_navidrome',
+        'navidrome',
+        'cache_cover_art',
     }
     assert required <= set(DEFAULT_SETTINGS)
 
@@ -541,3 +551,190 @@ def test_update_settings_leaves_providers_untouched_when_key_absent(
     monkeypatch.setattr(api.providers, 'set_cover_resolution', captured.append)
     _call_update_settings(monkeypatch, {'format': 'flac'})
     assert captured == []
+
+
+# ── audio providers / slskd / Navidrome settings (PR #182) ────────────────
+
+
+def test_effective_audio_providers_keeps_allowed_order():
+    settings = {
+        'audio_providers': ['youtube', 'slskd', 'youtube-music'],
+        'slskd': {'enabled': True},
+    }
+    assert _effective_audio_providers(settings) == [
+        'youtube',
+        'slskd',
+        'youtube-music',
+    ]
+
+
+def test_effective_audio_providers_filters_invalid_and_dedupes():
+    settings = {
+        'audio_providers': [
+            'youtube',
+            'invalid',
+            'youtube',
+            'slskd',
+            'youtube-music',
+        ],
+        'slskd': {'enabled': True},
+    }
+    assert _effective_audio_providers(settings) == [
+        'youtube',
+        'slskd',
+        'youtube-music',
+    ]
+
+
+def test_effective_audio_providers_adds_youtube_fallback_when_only_slskd():
+    settings = {
+        'audio_providers': ['slskd'],
+        'slskd': {'enabled': True},
+    }
+    assert _effective_audio_providers(settings) == [
+        'slskd',
+        'youtube-music',
+        'youtube',
+    ]
+
+
+def test_effective_audio_providers_skips_slskd_when_disabled():
+    settings = {
+        'audio_providers': ['youtube', 'slskd', 'youtube-music'],
+        'slskd': {'enabled': False},
+    }
+    assert _effective_audio_providers(settings) == ['youtube', 'youtube-music']
+
+
+def test_effective_audio_providers_defaults_when_missing():
+    assert _effective_audio_providers({}) == ['youtube-music']
+
+
+def test_effective_slskd_settings_defaults_when_missing():
+    out = _effective_slskd_settings({})
+    assert out['enabled'] is False
+    assert not out['base_url']
+    assert out['download_dir'] == '/downloads'
+    assert out['timeout_seconds'] == 20
+
+
+def test_effective_slskd_settings_normalizes_values():
+    out = _effective_slskd_settings({
+        'slskd': {
+            'enabled': True,
+            'base_url': 'http://slskd.local:5030/',
+            'api_key': '  key ',
+            'download_dir': '/data/slskd',
+            'timeout_seconds': '90',
+            'poll_interval_seconds': '2',
+            'poll_max_attempts': '99',
+        }
+    })
+    assert out['base_url'] == 'http://slskd.local:5030'
+    assert out['enabled'] is True
+    assert out['api_key'] == 'key'
+    assert out['download_dir'] == '/data/slskd'
+    assert out['source_dir'] == '/slskd'
+    assert out['timeout_seconds'] == 90
+    assert out['poll_interval_seconds'] == 2
+    assert out['poll_max_attempts'] == 99
+    assert out['search_retries'] == 5
+
+
+def test_effective_slskd_settings_caps_parallelism_at_eight():
+    out = _effective_slskd_settings({'max_parallel_downloads': 30})
+    assert out['max_parallel_downloads'] == 8
+
+
+def test_load_settings_deep_merges_slskd_dict(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(
+        json.dumps({'slskd': {'base_url': 'http://slskd:5030'}}),
+        encoding='utf-8',
+    )
+    out = _load_settings(path)
+    assert out['slskd']['base_url'] == 'http://slskd:5030'
+    assert out['slskd']['download_dir'] == '/downloads'
+    assert out['slskd']['duration_tolerance_percent'] == 15
+
+
+def test_load_settings_keeps_explicit_duration_tolerance(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(
+        json.dumps({
+            'slskd': {
+                'duration_tolerance_percent': 20,
+                'duration_tolerance_seconds': 10,
+                'mix_duration_tolerance_percent': 50,
+            },
+        }),
+        encoding='utf-8',
+    )
+    out = _load_settings(path)
+    assert out['slskd']['duration_tolerance_percent'] == 20
+
+
+class _JsonRequest:
+    def __init__(self, payload):
+        self._payload = payload
+
+    async def json(self):
+        return self._payload
+
+
+def _update(monkeypatch, payload, downloader=None):
+    monkeypatch.setattr(api.state, 'settings', dict(DEFAULT_SETTINGS))
+    monkeypatch.setattr(api.state, 'settings_path', None)
+    monkeypatch.setattr(api.state, 'downloader', downloader)
+    return asyncio.run(
+        api.update_settings_endpoint(_JsonRequest(payload), client_id='')
+    )
+
+
+def test_update_settings_rejects_enabled_slskd_without_url(monkeypatch):
+    with pytest.raises(HTTPException) as exc_info:
+        _update(monkeypatch, {'slskd': {'enabled': True, 'api_key': 'k'}})
+    assert exc_info.value.status_code == 400
+    # A rejected save leaves the stored settings untouched.
+    assert api.state.settings['slskd']['enabled'] is False
+
+
+def test_update_settings_rejects_enabled_navidrome_without_password(
+    monkeypatch,
+):
+    with pytest.raises(HTTPException) as exc_info:
+        _update(
+            monkeypatch,
+            {
+                'navidrome': {
+                    'enabled': True,
+                    'url': 'http://nd',
+                    'username': 'u',
+                }
+            },
+        )
+    assert 'password' in exc_info.value.detail
+
+
+def test_update_settings_applies_providers_and_slskd_to_downloader(
+    monkeypatch, tmp_path
+):
+    downloader = Downloader(tmp_path)
+    out = _update(
+        monkeypatch,
+        {
+            'audio_providers': ['slskd', 'youtube-music'],
+            'slskd': {
+                'enabled': True,
+                'base_url': 'http://slskd:5030/',
+                'api_key': 'key',
+            },
+        },
+        downloader=downloader,
+    )
+    assert out['audio_providers'] == ['slskd', 'youtube-music']
+    assert out['slskd']['base_url'] == 'http://slskd:5030'
+    assert 'max_parallel_downloads' not in out['slskd']
+    assert downloader.audio_providers == ['slskd', 'youtube-music']
+    assert downloader.slskd_settings['enabled'] is True
+    assert downloader.slskd_settings['output_dir'] == str(tmp_path)
