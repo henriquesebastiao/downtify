@@ -99,14 +99,24 @@
   }
 
   .glass-nav {
-    background: rgba(18, 18, 18, 0.72);
-    backdrop-filter: saturate(160%) blur(14px);
-    -webkit-backdrop-filter: saturate(160%) blur(14px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(
+      to bottom,
+      rgba(18, 18, 18, 0.92),
+      rgba(18, 18, 18, 0.86)
+    );
+    backdrop-filter: saturate(180%) blur(22px);
+    -webkit-backdrop-filter: saturate(180%) blur(22px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.55);
   }
   [data-theme='downtify-light'] .glass-nav {
-    background: rgba(255, 255, 255, 0.78);
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.92),
+      rgba(255, 255, 255, 0.86)
+    );
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.15);
   }
 
   .icon-btn {
@@ -272,9 +282,56 @@
   [data-theme='downtify-light'] .badge-neutral-soft {
     @apply bg-black/5 border-black/10;
   }
+  .badge-spotify {
+    @apply pill bg-[#1DB954]/15 text-[#1ED760] border border-[#1DB954]/25;
+  }
+  [data-theme='downtify-light'] .badge-spotify {
+    @apply text-[#0F7A36];
+  }
+  .badge-youtube-music {
+    @apply pill bg-[#FF0033]/15 text-[#FF4E45] border border-[#FF0033]/25;
+  }
+  [data-theme='downtify-light'] .badge-youtube-music {
+    @apply text-[#C4001F];
+  }
 
   .card-hover-glow {
     @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow-sm;
+  }
+
+  /* Styled <input type="range">: shared by the Player page's volume
+     slider and MiniPlayer's volume popover — the thumb/track styling
+     needs raw CSS (::-webkit-slider-thumb etc. aren't @apply-able), so
+     it lives here globally instead of duplicated in two scoped blocks. */
+  .player-range {
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    height: 4px;
+    border-radius: 9999px;
+    outline: none;
+  }
+  [data-theme='downtify-light'] .player-range {
+    background: rgba(0, 0, 0, 0.1);
+  }
+  .player-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 14px;
+    width: 14px;
+    border-radius: 9999px;
+    background: #1ad05c;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(26, 208, 92, 0.45);
+  }
+  .player-range::-moz-range-thumb {
+    height: 14px;
+    width: 14px;
+    border-radius: 9999px;
+    background: #1ad05c;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(26, 208, 92, 0.45);
   }
 
   .equalizer {

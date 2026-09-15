@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { isYouTubePlaylistURL, normalizeSpotifyURL } from '/src/model/url'
 
 import API from '/src/model/api'
 import { useSettingsManager } from '/src/model/settings'
@@ -283,7 +284,9 @@ export function useDownloadManager() {
   }
 
   function fromURL(url) {
-    const isPlaylistURL = (url || '').includes('://open.spotify.com/playlist/')
+    const isPlaylistURL =
+      normalizeSpotifyURL(url).includes('://open.spotify.com/playlist/') ||
+      isYouTubePlaylistURL(url)
     const generateM3u = settingsManager.settings.value.generate_m3u !== false
     loading.value = true
     const playlistPrep = isPlaylistURL
@@ -330,6 +333,35 @@ export function useDownloadManager() {
       })
       .catch((err) => {
         console.log('Other Error:', err.message)
+      })
+      .finally(() => {
+        loading.value = false
+      })
+  }
+
+  function _readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result || ''))
+      reader.onerror = () => reject(reader.error || new Error('Read failed'))
+      reader.readAsText(file)
+    })
+  }
+
+  function fromCsvFile(file, playlistName) {
+    const generateM3u = settingsManager.settings.value.generate_m3u !== false
+    loading.value = true
+    return _readFileAsText(file)
+      .then((csv) =>
+        API.downloadCsv({
+          csv,
+          playlist_name: playlistName || '',
+          generate_m3u: generateM3u,
+        })
+      )
+      .then((res) => {
+        console.log('CSV import queued:', res.data)
+        return res.data
       })
       .finally(() => {
         loading.value = false
@@ -438,6 +470,7 @@ export function useDownloadManager() {
 
   return {
     fromURL,
+    fromCsvFile,
     download,
     queue,
     retry,

@@ -17,21 +17,27 @@ from loguru import logger
 
 from .library_paths import locate_library_file
 
-_PLAYLIST_NAME_ALLOWED = re.compile(r'[^A-Za-z0-9 _-]+')
+# Only characters that are genuinely illegal in FAT/NTFS/ext filenames are
+# dropped. Everything else — including accented and non-Latin letters such
+# as "ö" (Sólrún) or "é" (Renata Béranger) — is preserved so folder names
+# match the original artist/album/playlist titles.
+_PLAYLIST_NAME_INVALID = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 
 
 def sanitize_playlist_name(name: str) -> str:
     """Strip filesystem-unsafe characters from a playlist name.
 
-    Keeps alphanumerics, spaces, hyphens and underscores; drops the rest.
-    Returns ``'playlist'`` if nothing is left after sanitising so we
-    never produce an empty filename.
+    Removes only characters that are illegal in filenames on common
+    filesystems while keeping Unicode letters, digits and punctuation
+    intact. Collapses runs of whitespace and trims leading/trailing dots
+    and spaces. Returns ``'playlist'`` if nothing is left after
+    sanitising so we never produce an empty filename.
     """
 
     if not name:
         return 'playlist'
-    cleaned = _PLAYLIST_NAME_ALLOWED.sub('', name).strip()
-    cleaned = re.sub(r'\s+', ' ', cleaned)
+    cleaned = _PLAYLIST_NAME_INVALID.sub('', name)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip().strip('.').strip()
     return cleaned or 'playlist'
 
 
@@ -80,6 +86,41 @@ def build_m3u_content(
         kept += 1
     # Standard M3U uses LF line endings.
     return '\n'.join(lines) + '\n', kept
+
+
+def read_m3u_tracks(m3u_path: Path, download_dir: Path) -> list[str]:
+    """Return the tracks listed in *m3u_path*, as paths relative to
+    *download_dir* (the same shape ``/list`` returns), in file order.
+
+    Inverts the relative-path scheme :func:`build_m3u_content` writes:
+    each non-comment line is relative to the M3U's own directory, not to
+    *download_dir*. Lines that don't resolve to an existing file under
+    *download_dir* are skipped — self-healing when a track was deleted
+    or a line is otherwise stale, and a hard guard against a malicious
+    or malformed M3U escaping the library root via ``../``.
+    """
+
+    download_dir = Path(download_dir).resolve()
+    m3u_dir = m3u_path.resolve().parent
+    try:
+        lines = m3u_path.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return []
+
+    tracks: list[str] = []
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith('#'):
+            continue
+        try:
+            resolved = (m3u_dir / line).resolve()
+            rel = resolved.relative_to(download_dir)
+        except (OSError, ValueError):
+            continue
+        if not resolved.is_file():
+            continue
+        tracks.append(rel.as_posix())
+    return tracks
 
 
 def write_m3u(

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-dvh overflow-x-hidden">
+  <div>
     <Navbar />
     <Settings />
 
@@ -32,7 +32,7 @@
           <div class="flex items-center gap-2 shrink-0">
             <select
               v-model="newInterval"
-              class="filter-select text-sm"
+              class="select select-sm rounded-full border border-white/10 bg-base-100/85 focus:border-primary/60 h-11 px-3 text-sm"
               :disabled="adding"
             >
               <option :value="15">{{ t('monitor.every15') }}</option>
@@ -70,7 +70,7 @@
         class="surface rounded-2xl p-12 flex flex-col items-center text-center"
       >
         <Icon
-          icon="clarity:music-note-line"
+          icon="fa6-solid:music"
           class="h-12 w-12 text-base-content/20 mb-4"
         />
         <p class="text-base-content/50 text-sm">
@@ -82,120 +82,178 @@
       </div>
 
       <!-- Playlist cards -->
-      <ul v-else class="space-y-3">
-        <li
-          v-for="pl in playlists"
-          :key="pl.id"
-          class="surface rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4"
-        >
-          <!-- Info -->
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="font-semibold truncate">{{ pl.name }}</span>
-              <span
-                class="pill shrink-0"
-                :class="pl.enabled ? 'badge-soft' : 'badge-neutral-soft'"
+      <div v-else>
+        <!-- Sort controls -->
+        <div v-if="playlists.length > 1" class="flex items-center gap-2 mb-3">
+          <label class="text-xs text-base-content/50 shrink-0">
+            {{ t('monitor.sortBy') }}
+          </label>
+          <select
+            v-model="sortField"
+            @change="onSortFieldChange"
+            class="select select-xs rounded-full border border-white/10 bg-base-100/60 text-xs focus:border-primary/60"
+          >
+            <option value="created_at">
+              {{ t('monitor.sortDateAdded') }}
+            </option>
+            <option value="name">{{ t('monitor.sortTitle') }}</option>
+            <option value="interval_minutes">
+              {{ t('monitor.sortFrequency') }}
+            </option>
+            <option value="last_track_count">
+              {{ t('monitor.sortTrackCount') }}
+            </option>
+            <option value="last_checked">
+              {{ t('monitor.sortDaysSinceChecked') }}
+            </option>
+            <option value="enabled">{{ t('monitor.sortStatus') }}</option>
+          </select>
+          <button
+            class="icon-btn"
+            :title="
+              sortDir === 'asc'
+                ? t('monitor.sortAscending')
+                : t('monitor.sortDescending')
+            "
+            @click="toggleSortDir"
+          >
+            <Icon
+              icon="fa6-solid:chevron-up"
+              class="h-4 w-4 transition-transform"
+              :class="sortDir === 'asc' ? 'rotate-[-180deg]' : 'rotate-0'"
+            />
+          </button>
+        </div>
+
+        <ul class="space-y-3">
+          <li
+            v-for="pl in sortedPlaylists"
+            :key="pl.id"
+            class="surface rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+          >
+            <!-- Info -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-semibold truncate">{{ pl.name }}</span>
+                <span
+                  class="shrink-0"
+                  :class="
+                    isYouTubeMusic(pl) ? 'badge-youtube-music' : 'badge-spotify'
+                  "
+                >
+                  {{
+                    isYouTubeMusic(pl)
+                      ? t('monitor.sourceYouTubeMusic')
+                      : t('monitor.sourceSpotify')
+                  }}
+                </span>
+                <span v-if="isArtist(pl)" class="pill shrink-0 badge-soft">
+                  <Icon icon="fa6-solid:user" class="inline h-3 w-3" />
+                  {{ t('monitor.kindArtist') }}
+                </span>
+                <span
+                  class="pill shrink-0"
+                  :class="pl.enabled ? 'badge-soft' : 'badge-neutral-soft'"
+                >
+                  {{ pl.enabled ? t('monitor.active') : t('monitor.paused') }}
+                </span>
+              </div>
+              <div
+                class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-base-content/50"
               >
-                {{ pl.enabled ? t('monitor.active') : t('monitor.paused') }}
-              </span>
+                <span>
+                  <Icon
+                    icon="fa6-solid:arrows-rotate"
+                    class="inline h-3 w-3 mr-0.5"
+                  />
+                  {{
+                    t('monitor.everyInterval', {
+                      interval: formatInterval(pl.interval_minutes),
+                    })
+                  }}
+                </span>
+                <span>
+                  <Icon
+                    :icon="
+                      isArtist(pl) ? 'fa6-solid:layer-group' : 'fa6-solid:music'
+                    "
+                    class="inline h-3 w-3 mr-0.5"
+                  />
+                  {{ countLabel(pl) }}
+                </span>
+                <span v-if="pl.last_checked">
+                  <Icon icon="fa6-solid:clock" class="inline h-3 w-3 mr-0.5" />
+                  {{ t('monitor.checked', { when: timeAgo(pl.last_checked) }) }}
+                </span>
+                <span v-else class="italic">{{ t('monitor.notChecked') }}</span>
+              </div>
             </div>
-            <div
-              class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-base-content/50"
-            >
-              <span>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-2 shrink-0">
+              <!-- Interval selector -->
+              <select
+                :value="pl.interval_minutes"
+                @change="onChangeInterval(pl, $event)"
+                class="select select-xs rounded-full border border-white/10 bg-base-100/60 text-xs focus:border-primary/60"
+              >
+                <option :value="15">{{ t('monitor.short15') }}</option>
+                <option :value="30">{{ t('monitor.short30') }}</option>
+                <option :value="60">{{ t('monitor.short1h') }}</option>
+                <option :value="180">{{ t('monitor.short3h') }}</option>
+                <option :value="360">{{ t('monitor.short6h') }}</option>
+                <option :value="720">{{ t('monitor.short12h') }}</option>
+                <option :value="1440">{{ t('monitor.short1d') }}</option>
+                <option :value="10080">{{ t('monitor.short1w') }}</option>
+                <option :value="20160">{{ t('monitor.short2w') }}</option>
+                <option :value="43200">{{ t('monitor.short1mo') }}</option>
+              </select>
+
+              <!-- Toggle enabled -->
+              <button
+                class="icon-btn"
+                :title="pl.enabled ? t('monitor.pause') : t('monitor.resume')"
+                @click="onToggle(pl)"
+              >
                 <Icon
-                  icon="clarity:refresh-line"
-                  class="inline h-3 w-3 mr-0.5"
+                  :icon="pl.enabled ? 'fa6-solid:pause' : 'fa6-solid:play'"
+                  class="h-4 w-4"
                 />
-                {{
-                  t('monitor.everyInterval', {
-                    interval: formatInterval(pl.interval_minutes),
-                  })
-                }}
-              </span>
-              <span>
-                <Icon
-                  icon="clarity:music-note-line"
-                  class="inline h-3 w-3 mr-0.5"
+              </button>
+
+              <!-- Manual check -->
+              <button
+                class="icon-btn"
+                :title="t('monitor.checkNow')"
+                :disabled="checking[pl.id]"
+                @click="onCheck(pl)"
+              >
+                <span
+                  v-if="checking[pl.id]"
+                  class="loading loading-spinner loading-xs"
                 />
-                {{
-                  pl.last_track_count === 1
-                    ? t('monitor.tracksOne', { count: pl.last_track_count })
-                    : t('monitor.tracksMany', { count: pl.last_track_count })
-                }}
-              </span>
-              <span v-if="pl.last_checked">
-                <Icon icon="clarity:clock-line" class="inline h-3 w-3 mr-0.5" />
-                {{ t('monitor.checked', { when: timeAgo(pl.last_checked) }) }}
-              </span>
-              <span v-else class="italic">{{ t('monitor.notChecked') }}</span>
+                <Icon v-else icon="fa6-solid:arrows-rotate" class="h-4 w-4" />
+              </button>
+
+              <!-- Delete -->
+              <button
+                class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
+                :title="t('monitor.stop')"
+                @click="onDelete(pl)"
+              >
+                <Icon icon="fa6-solid:trash" class="h-4 w-4" />
+              </button>
             </div>
-          </div>
-
-          <!-- Actions -->
-          <div class="flex items-center gap-2 shrink-0">
-            <!-- Interval selector -->
-            <select
-              :value="pl.interval_minutes"
-              @change="onChangeInterval(pl, $event)"
-              class="filter-select-xs"
-            >
-              <option :value="15">{{ t('monitor.short15') }}</option>
-              <option :value="30">{{ t('monitor.short30') }}</option>
-              <option :value="60">{{ t('monitor.short1h') }}</option>
-              <option :value="180">{{ t('monitor.short3h') }}</option>
-              <option :value="360">{{ t('monitor.short6h') }}</option>
-              <option :value="720">{{ t('monitor.short12h') }}</option>
-              <option :value="1440">{{ t('monitor.short1d') }}</option>
-              <option :value="10080">{{ t('monitor.short1w') }}</option>
-              <option :value="20160">{{ t('monitor.short2w') }}</option>
-              <option :value="43200">{{ t('monitor.short1mo') }}</option>
-            </select>
-
-            <!-- Toggle enabled -->
-            <button
-              class="icon-btn"
-              :title="pl.enabled ? t('monitor.pause') : t('monitor.resume')"
-              @click="onToggle(pl)"
-            >
-              <Icon
-                :icon="pl.enabled ? 'clarity:pause-line' : 'clarity:play-line'"
-                class="h-4 w-4"
-              />
-            </button>
-
-            <!-- Manual check -->
-            <button
-              class="icon-btn"
-              :title="t('monitor.checkNow')"
-              :disabled="checking[pl.id]"
-              @click="onCheck(pl)"
-            >
-              <span
-                v-if="checking[pl.id]"
-                class="loading loading-spinner loading-xs"
-              />
-              <Icon v-else icon="clarity:refresh-line" class="h-4 w-4" />
-            </button>
-
-            <!-- Delete -->
-            <button
-              class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
-              :title="t('monitor.stop')"
-              @click="onDelete(pl)"
-            >
-              <Icon icon="clarity:trash-line" class="h-4 w-4" />
-            </button>
-          </div>
-        </li>
-      </ul>
+          </li>
+        </ul>
+      </div>
 
       <!-- Info banner -->
       <div
         class="mt-8 surface rounded-2xl p-4 flex gap-3 text-sm text-base-content/60"
       >
         <Icon
-          icon="clarity:info-standard-line"
+          icon="fa6-solid:circle-info"
           class="h-5 w-5 shrink-0 mt-0.5 text-primary/70"
         />
         <p>{{ t('monitor.info') }}</p>
@@ -205,7 +263,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
@@ -221,6 +279,74 @@ const addError = ref('')
 const newUrl = ref('')
 const newInterval = ref(60)
 const checking = ref({})
+
+function isArtist(pl) {
+  return pl.kind === 'artist'
+}
+
+function isYouTubeMusic(pl) {
+  return pl.source === 'youtube_music'
+}
+
+function countLabel(pl) {
+  const count = pl.last_track_count
+  if (isArtist(pl)) {
+    return count === 1
+      ? t('monitor.releasesOne', { count })
+      : t('monitor.releasesMany', { count })
+  }
+  return count === 1
+    ? t('monitor.tracksOne', { count })
+    : t('monitor.tracksMany', { count })
+}
+
+const SORT_DEFAULT_DIR = {
+  created_at: 'desc',
+  name: 'asc',
+  interval_minutes: 'asc',
+  last_track_count: 'desc',
+  last_checked: 'asc',
+  enabled: 'desc',
+}
+const sortField = ref('created_at')
+const sortDir = ref(SORT_DEFAULT_DIR.created_at)
+
+function onSortFieldChange() {
+  sortDir.value = SORT_DEFAULT_DIR[sortField.value]
+}
+
+function toggleSortDir() {
+  sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+}
+
+function sortValue(pl, field) {
+  switch (field) {
+    case 'name':
+      return (pl.name || '').toLowerCase()
+    case 'interval_minutes':
+      return pl.interval_minutes ?? 0
+    case 'last_track_count':
+      return pl.last_track_count ?? 0
+    case 'last_checked':
+      return pl.last_checked ? new Date(pl.last_checked).getTime() : -Infinity
+    case 'enabled':
+      return pl.enabled ? 1 : 0
+    case 'created_at':
+    default:
+      return pl.created_at ? new Date(pl.created_at).getTime() : 0
+  }
+}
+
+const sortedPlaylists = computed(() => {
+  const dir = sortDir.value === 'asc' ? 1 : -1
+  return [...playlists.value].sort((a, b) => {
+    const av = sortValue(a, sortField.value)
+    const bv = sortValue(b, sortField.value)
+    if (av < bv) return -1 * dir
+    if (av > bv) return 1 * dir
+    return 0
+  })
+})
 
 async function load() {
   loading.value = true

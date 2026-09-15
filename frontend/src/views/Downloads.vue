@@ -1,11 +1,11 @@
 <template>
-  <div class="min-h-dvh overflow-x-hidden">
+  <div>
     <Navbar />
     <Settings />
 
     <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <!-- Header -->
-      <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 class="text-2xl font-bold tracking-tight">
             {{ t('library.title') }}
@@ -14,26 +14,14 @@
             {{ t('library.subtitle') }}
           </p>
         </div>
-        <div class="flex flex-wrap items-center gap-2 justify-end">
-          <button
-            v-if="selectedCount > 0"
-            class="btn btn-error btn-sm h-11 px-5 rounded-full btn-outline"
-            :disabled="batchDeleting"
-            @click="onDeleteSelected"
-          >
-            <span
-              v-if="batchDeleting"
-              class="loading loading-spinner loading-xs mr-2"
-            />
-            {{ t('library.deleteSelected', { count: selectedCount }) }}
-          </button>
+        <div class="flex items-center gap-2">
           <button
             v-if="filteredFiles.length > 0"
             class="btn btn-primary btn-sm h-11 px-5 rounded-full"
             @click="playAll"
             :title="t('library.play')"
           >
-            <Icon icon="clarity:play-line" class="h-4 w-4 mr-1.5" />
+            <Icon icon="fa6-solid:play" class="h-4 w-4 mr-1.5" />
             {{ t('library.play') }}
           </button>
           <button
@@ -45,77 +33,63 @@
               v-if="loading"
               class="loading loading-spinner loading-xs mr-2"
             />
-            <Icon v-else icon="clarity:refresh-line" class="h-4 w-4 mr-2" />
+            <Icon v-else icon="fa6-solid:arrows-rotate" class="h-4 w-4 mr-2" />
             {{ t('common.refresh') }}
           </button>
         </div>
       </div>
 
-      <!-- Library search (local only; navbar search is hidden on this page) -->
-      <div class="relative mb-6">
-        <Icon
-          icon="clarity:search-line"
-          class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40 pointer-events-none"
-        />
-        <input
-          v-model="libraryFilterQuery"
-          type="text"
-          class="input input-bordered w-full pl-10 pr-10 h-11 rounded-full bg-base-100/85 border-white/10"
-          :placeholder="t('library.searchPlaceholder')"
-          autocomplete="off"
-        />
-        <button
-          v-if="libraryFilterQuery"
-          type="button"
-          class="absolute right-2 top-1/2 -translate-y-1/2 icon-btn h-8 w-8"
-          :title="t('common.close')"
-          @click="clearLibraryFilter"
+      <!-- Filter by playlist / artist / album -->
+      <div v-if="hasFilterableGroups" class="mb-6">
+        <label
+          class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-1.5"
         >
-          <Icon icon="clarity:times-line" class="h-4 w-4" />
-        </button>
-      </div>
-
-      <!-- Playlist filter + bulk selection -->
-      <div
-        v-if="files.length > 0"
-        class="mb-4 flex flex-wrap items-center gap-2"
-      >
-        <label class="text-xs text-base-content/50 shrink-0">
-          {{ t('library.filterByPlaylist') }}
+          {{ t('library.filterBy') }}
         </label>
-        <PlaylistFilterSelect
-          v-model="playlistFilter"
-          :options="playlistNames"
-          :all-label="t('library.filterAllPlaylists')"
-        />
-        <button
-          v-if="playlistFilter"
-          type="button"
-          class="btn btn-error btn-sm rounded-full btn-outline"
-          :disabled="playlistDeleting"
-          @click="onDeletePlaylist"
+        <select
+          v-model="selectedGroup"
+          class="select select-sm w-full sm:w-64 rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
         >
-          <span
-            v-if="playlistDeleting"
-            class="loading loading-spinner loading-xs mr-2"
-          />
-          {{ t('library.deletePlaylist') }}
-        </button>
-        <span class="flex-1" />
-        <button
-          v-if="filteredFiles.length > 0"
-          type="button"
-          class="btn btn-ghost btn-xs rounded-full"
-          @click="toggleSelectAllFiltered"
-        >
-          {{
-            allFilteredSelected
-              ? t('library.clearSelection')
-              : t('library.selectAllFilteredCount', {
-                  count: filteredFiles.length,
-                })
-          }}
-        </button>
+          <option :value="null">
+            {{ t('player.allSongs', { count: files.length }) }}
+          </option>
+          <optgroup
+            v-if="playlists.length > 0"
+            :label="t('player.playlistsGroup')"
+          >
+            <option
+              v-for="pl in playlists"
+              :key="'playlist-' + pl.name"
+              :value="{ type: 'playlist', name: pl.name }"
+            >
+              {{ pl.name }} ({{ pl.count }})
+            </option>
+          </optgroup>
+          <optgroup
+            v-if="artistGroups.length > 0"
+            :label="t('player.artistsGroup')"
+          >
+            <option
+              v-for="a in artistGroups"
+              :key="'artist-' + a.name"
+              :value="{ type: 'artist', name: a.name }"
+            >
+              {{ a.name }} ({{ a.count }})
+            </option>
+          </optgroup>
+          <optgroup
+            v-if="albumGroups.length > 0"
+            :label="t('player.albumsGroup')"
+          >
+            <option
+              v-for="al in albumGroups"
+              :key="'album-' + al.name"
+              :value="{ type: 'album', name: al.name }"
+            >
+              {{ al.name }} ({{ al.count }})
+            </option>
+          </optgroup>
+        </select>
       </div>
 
       <!-- Error -->
@@ -123,7 +97,7 @@
         v-if="error"
         class="surface rounded-2xl p-4 mb-4 flex gap-3 items-center text-sm text-error"
       >
-        <Icon icon="clarity:exclamation-circle-line" class="h-5 w-5 shrink-0" />
+        <Icon icon="fa6-solid:circle-exclamation" class="h-5 w-5 shrink-0" />
         <span>{{ error }}</span>
       </div>
 
@@ -132,13 +106,13 @@
         <div v-for="n in 4" :key="n" class="skeleton h-16 rounded-2xl" />
       </div>
 
-      <!-- Empty library -->
+      <!-- Empty state -->
       <div
         v-else-if="files.length === 0"
         class="surface rounded-2xl p-12 flex flex-col items-center text-center"
       >
         <Icon
-          icon="clarity:library-line"
+          icon="fa6-solid:layer-group"
           class="h-12 w-12 text-base-content/20 mb-4"
         />
         <p class="text-base-content/50 text-sm">{{ t('library.empty') }}</p>
@@ -147,83 +121,122 @@
         </p>
       </div>
 
-      <!-- No search matches -->
+      <!-- Filter matched nothing (library itself isn't empty) -->
       <div
         v-else-if="filteredFiles.length === 0"
         class="surface rounded-2xl p-12 flex flex-col items-center text-center"
       >
         <Icon
-          icon="clarity:search-line"
+          icon="fa6-solid:magnifying-glass"
           class="h-12 w-12 text-base-content/20 mb-4"
         />
         <p class="text-base-content/50 text-sm">
-          {{ t('library.searchNoResults') }}
+          {{ t('library.filterEmpty') }}
         </p>
+        <button
+          class="mt-3 text-xs text-primary hover:underline"
+          @click="selectedGroup = null"
+        >
+          {{ t('library.clearFilter') }}
+        </button>
+      </div>
+
+      <!-- Selection toolbar -->
+      <div v-else class="flex flex-wrap items-center gap-3 mb-3 text-sm">
+        <label
+          class="flex items-center gap-2 cursor-pointer select-none text-base-content/70"
+        >
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm checkbox-primary"
+            :checked="allFilteredSelected"
+            :disabled="bulkDeleting"
+            @change="toggleSelectAllFiltered"
+          />
+          {{
+            allFilteredSelected
+              ? t('library.deselectAll')
+              : t('library.selectAll', { count: filteredFiles.length })
+          }}
+        </label>
+
+        <div
+          v-if="selectedFiles.size > 0"
+          class="flex items-center gap-2 ml-auto"
+        >
+          <span class="text-base-content/50">
+            {{ t('library.selectedCount', { count: selectedFiles.size }) }}
+          </span>
+          <button
+            type="button"
+            class="btn btn-sm h-9 px-4 rounded-full border-error/30 bg-error/10 text-error hover:bg-error/20"
+            :disabled="bulkDeleting"
+            @click="onBulkDelete"
+          >
+            <span
+              v-if="bulkDeleting"
+              class="loading loading-spinner loading-xs mr-1.5"
+            />
+            <Icon v-else icon="fa6-solid:trash" class="h-4 w-4 mr-1.5" />
+            {{ t('library.deleteSelected') }}
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            :disabled="bulkDeleting"
+            @click="clearSelection"
+            :title="t('library.clearSelection')"
+          >
+            <Icon icon="fa6-solid:xmark" class="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <!-- File list -->
-      <ul v-else class="space-y-2">
+      <ul v-if="filteredFiles.length > 0" class="space-y-2">
         <li
-          v-for="entry in paginatedFiles"
-          :key="entry.file"
+          v-for="file in paginatedFiles"
+          :key="file"
           class="surface rounded-2xl p-3 sm:p-4 flex items-center gap-3"
+          :class="{ 'ring-1 ring-primary/40': selectedFiles.has(file) }"
         >
           <input
             type="checkbox"
             class="checkbox checkbox-sm checkbox-primary shrink-0"
-            :checked="selectedFiles.has(entry.file)"
-            @change="toggleSelect(entry.file)"
+            :checked="selectedFiles.has(file)"
+            :disabled="bulkDeleting"
+            @change="toggleFile(file)"
+            :aria-label="t('library.selectFile', { file: displayName(file) })"
           />
+
           <!-- Cover thumb -->
           <div
             class="relative h-11 w-11 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center overflow-hidden"
           >
             <img
-              v-if="entry.has_cover && !coverFailed[entry.file]"
-              :src="coverUrlFor(entry.file)"
-              :alt="entry.title"
+              v-if="!coverFailed[file]"
+              :src="coverUrlFor(file)"
+              :alt="file"
               class="absolute inset-0 h-full w-full object-cover"
               loading="lazy"
-              @error="markCoverFailed(entry.file)"
+              @error="markCoverFailed(file)"
             />
-            <Icon v-else icon="clarity:music-note-line" class="h-5 w-5" />
+            <Icon v-else icon="fa6-solid:music" class="h-5 w-5" />
           </div>
 
-          <!-- Title / path -->
+          <!-- Filename -->
           <div class="flex-1 min-w-0">
             <span class="text-sm font-medium truncate block">{{
-              entry.title
+              displayName(file)
             }}</span>
-            <p
-              v-if="entry.artist"
-              class="text-xs text-base-content/60 truncate"
-            >
-              {{ entry.artist }}
-            </p>
-            <p v-if="entry.album" class="text-xs text-base-content/50 truncate">
-              {{ entry.album }}
-            </p>
-            <div
-              v-if="entry.playlists?.length"
-              class="flex flex-wrap gap-1 mt-1"
-            >
-              <span
-                v-for="pl in entry.playlists"
-                :key="pl"
-                class="badge badge-xs border-primary/30 bg-primary/10 text-primary max-w-full truncate"
-                :title="pl"
-              >
-                {{ pl }}
-              </span>
-            </div>
             <span class="text-xs text-base-content/40">
-              <span v-if="folderOf(entry.file)" class="mr-2 text-primary/70">
+              <span v-if="folderOf(file)" class="mr-2 text-primary/70">
                 <Icon
-                  icon="clarity:folder-line"
+                  icon="fa6-solid:folder"
                   class="inline h-3 w-3 mr-0.5 align-text-top"
-                />{{ folderOf(entry.file) }}
+                />{{ folderOf(file) }}
               </span>
-              {{ formatExt(entry.file) }}
+              {{ formatExt(file) }}
             </span>
           </div>
 
@@ -231,162 +244,131 @@
           <div class="flex items-center gap-1 shrink-0">
             <button
               class="icon-btn text-primary hover:bg-primary/10"
-              @click="playEntry(entry)"
+              @click="playFile(file)"
               :title="t('library.play')"
             >
-              <Icon icon="clarity:play-line" class="h-4 w-4" />
+              <Icon icon="fa6-solid:play" class="h-4 w-4" />
             </button>
             <a
               class="icon-btn"
-              :href="API.downloadFileURL(entry.file)"
-              :download="API.downloadSaveName(entry.file)"
+              :href="API.downloadFileURL(file)"
+              download
               :title="t('library.downloadToDevice')"
             >
-              <Icon icon="clarity:download-line" class="h-4 w-4" />
+              <Icon icon="fa6-solid:download" class="h-4 w-4" />
             </a>
             <button
               class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
-              :disabled="deleting[entry.file] === true"
-              @click="onDelete(entry.file)"
+              :disabled="deleting[file] === true || bulkDeleting"
+              @click="onDelete(file)"
               :title="t('library.deleteFile')"
             >
               <span
-                v-if="deleting[entry.file] === true"
+                v-if="deleting[file] === true"
                 class="loading loading-spinner loading-xs"
               />
-              <Icon v-else icon="clarity:trash-line" class="h-4 w-4" />
+              <Icon v-else icon="fa6-solid:trash" class="h-4 w-4" />
             </button>
           </div>
         </li>
       </ul>
 
-      <LibraryPagination
-        v-if="filteredFiles.length > 0"
-        :current-page="currentPage"
+      <!-- Pagination -->
+      <Pagination
+        v-if="totalPages > 1"
+        v-model="currentPage"
         :total-pages="totalPages"
-        :total-items="filteredFiles.length"
-        :page-size="pageSize"
-        @update:current-page="currentPage = $event"
-        @update:page-size="onPageSizeChange"
       />
 
       <!-- Count footer -->
       <p
-        v-if="files.length > 0"
-        class="mt-4 text-xs text-base-content/40 text-center"
+        v-if="filteredFiles.length > 0"
+        class="mt-6 text-xs text-base-content/40 text-center"
       >
-        <template v-if="libraryFilterQuery.trim()">
-          {{
-            t('library.filteredCount', {
-              shown: filteredFiles.length,
-              total: files.length,
-            })
-          }}
-        </template>
-        <template v-else>
-          {{
-            files.length === 1
-              ? t('library.countOne', { count: files.length })
-              : t('library.countMany', { count: files.length })
-          }}
-        </template>
+        {{
+          filteredFiles.length === 1
+            ? t('library.countOne', { count: filteredFiles.length })
+            : t('library.countMany', { count: filteredFiles.length })
+        }}
       </p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import Navbar from '/src/components/Navbar.vue'
-import PlaylistFilterSelect from '/src/components/PlaylistFilterSelect.vue'
 import Settings from '/src/components/Settings.vue'
-import LibraryPagination from '/src/components/LibraryPagination.vue'
+import Pagination from '/src/components/Pagination.vue'
 import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
-import {
-  useLibraryFilter,
-  libraryEntryMatchesQuery,
-} from '/src/model/libraryFilter'
-import {
-  normalizeLibraryEntry,
-  savePlayerViewPrefs,
-  usePlayer,
-} from '/src/model/player'
+import { usePlayer } from '/src/model/player'
+import { buildGroups, filesForGroup } from '/src/model/trackGroups'
 
-const PAGE_SIZE_STORAGE_KEY = 'downtify.libraryPageSize'
-const DEFAULT_PAGE_SIZE = 25
+const PAGE_SIZE = 10
 
 const { t } = useI18n()
 const player = usePlayer()
 const router = useRouter()
-const { libraryFilterQuery, clearLibraryFilter } = useLibraryFilter()
 
 const files = ref([])
+const tracks = ref([]) // [{ file, artist, album }] — from GET /tracks
+const playlists = ref([])
+// null = "All Songs"; otherwise { type: 'playlist' | 'artist' | 'album', name }
+const selectedGroup = ref(null)
 const loading = ref(false)
 const error = ref('')
 const deleting = ref({})
-const batchDeleting = ref(false)
-const playlistDeleting = ref(false)
 const coverFailed = ref({})
 const currentPage = ref(1)
-const pageSize = ref(readPageSize())
 const selectedFiles = ref(new Set())
-const playlistFilter = ref('')
+const bulkDeleting = ref(false)
 
-const playlistNames = computed(() => {
-  const names = new Set()
-  for (const entry of files.value) {
-    for (const pl of entry.playlists || []) {
-      if (pl) names.add(pl)
-    }
-  }
-  return [...names].sort((a, b) => a.localeCompare(b))
-})
+const artistGroups = computed(() => buildGroups(tracks.value, 'artist'))
+const albumGroups = computed(() => buildGroups(tracks.value, 'album'))
 
-const filteredFiles = computed(() => {
-  let list = files.value
-  const pl = String(playlistFilter.value || '').trim()
-  if (pl) {
-    list = list.filter((entry) => (entry.playlists || []).includes(pl))
-  }
-  const query = libraryFilterQuery.value
-  if (!String(query || '').trim()) return list
-  return list.filter((entry) => libraryEntryMatchesQuery(entry, query))
-})
+const hasFilterableGroups = computed(
+  () =>
+    playlists.value.length > 0 ||
+    artistGroups.value.length > 0 ||
+    albumGroups.value.length > 0
+)
 
-const selectedCount = computed(() => selectedFiles.value.size)
-
-const allFilteredSelected = computed(() => {
-  if (!filteredFiles.value.length) return false
-  return filteredFiles.value.every((e) => selectedFiles.value.has(e.file))
-})
+const filteredFiles = computed(() =>
+  filesForGroup(selectedGroup.value, {
+    files: files.value,
+    playlists: playlists.value,
+    artistGroups: artistGroups.value,
+    albumGroups: albumGroups.value,
+  })
+)
 
 const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredFiles.value.length / pageSize.value))
+  Math.ceil(filteredFiles.value.length / PAGE_SIZE)
 )
 
 const paginatedFiles = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  return filteredFiles.value.slice(start, start + pageSize.value)
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredFiles.value.slice(start, start + PAGE_SIZE)
 })
 
-watch([filteredFiles, pageSize], () => {
-  if (currentPage.value > totalPages.value) {
-    currentPage.value = totalPages.value
-  }
-})
+const allFilteredSelected = computed(
+  () =>
+    filteredFiles.value.length > 0 &&
+    filteredFiles.value.every((f) => selectedFiles.value.has(f))
+)
 
-watch(libraryFilterQuery, () => {
+watch(filteredFiles, () => {
   currentPage.value = 1
+  // The filtered set just changed shape (filter switched, or a file was
+  // deleted) — a selection made against the previous set no longer
+  // means the same thing, so don't carry it over silently.
+  clearSelection()
 })
 
-watch(playlistFilter, () => {
-  currentPage.value = 1
-})
-
-function toggleSelect(file) {
+function toggleFile(file) {
   const next = new Set(selectedFiles.value)
   if (next.has(file)) next.delete(file)
   else next.add(file)
@@ -394,39 +376,13 @@ function toggleSelect(file) {
 }
 
 function toggleSelectAllFiltered() {
-  if (allFilteredSelected.value) {
-    selectedFiles.value = new Set()
-    return
-  }
-  selectedFiles.value = new Set(filteredFiles.value.map((entry) => entry.file))
+  selectedFiles.value = allFilteredSelected.value
+    ? new Set()
+    : new Set(filteredFiles.value)
 }
 
-function removeFilesFromList(paths) {
-  const gone = new Set(paths)
-  files.value = files.value.filter((entry) => !gone.has(entry.file))
-  const next = new Set(selectedFiles.value)
-  for (const p of gone) next.delete(p)
-  selectedFiles.value = next
-}
-
-function readPageSize() {
-  try {
-    const raw = parseInt(localStorage.getItem(PAGE_SIZE_STORAGE_KEY) || '', 10)
-    if ([10, 25, 50, 100].includes(raw)) return raw
-  } catch {
-    /* ignore */
-  }
-  return DEFAULT_PAGE_SIZE
-}
-
-function onPageSizeChange(size) {
-  pageSize.value = size
-  currentPage.value = 1
-  try {
-    localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(size))
-  } catch {
-    /* ignore */
-  }
+function clearSelection() {
+  selectedFiles.value = new Set()
 }
 
 function coverUrlFor(file) {
@@ -441,8 +397,13 @@ async function refresh() {
   loading.value = true
   error.value = ''
   try {
-    const res = await API.listDownloads(true)
-    files.value = (res.data || []).map(normalizeLibraryEntry)
+    const [tracksRes, playlistsRes] = await Promise.all([
+      API.listTracks(),
+      API.listPlaylists(),
+    ])
+    tracks.value = tracksRes.data || []
+    files.value = tracks.value.map((tr) => tr.file)
+    playlists.value = playlistsRes.data || []
   } catch {
     error.value = t('library.failedLoad')
   } finally {
@@ -453,82 +414,44 @@ async function refresh() {
 async function onDelete(file) {
   if (!confirm(t('library.deletePrompt', { file }))) return
   deleting.value = { ...deleting.value, [file]: true }
-  error.value = ''
   try {
-    const res = await API.deleteDownload(file)
-    if (res.data?.deleted === false) {
-      error.value = res.data?.error || t('library.failedDelete', { file })
-      return
-    }
-    removeFilesFromList([file])
-  } catch (err) {
-    const detail = err?.response?.data?.error
-    error.value =
-      typeof detail === 'string' && detail
-        ? detail
-        : t('library.failedDelete', { file })
+    await API.deleteDownload(file)
+    files.value = files.value.filter((f) => f !== file)
+    tracks.value = tracks.value.filter((tr) => tr.file !== file)
+  } catch {
+    error.value = t('library.failedDelete', { file })
   } finally {
     deleting.value = { ...deleting.value, [file]: false }
   }
 }
 
-async function onDeleteSelected() {
-  const paths = [...selectedFiles.value]
-  if (!paths.length) return
-  if (!confirm(t('library.deleteSelectedPrompt', { count: paths.length })))
+async function onBulkDelete() {
+  const targets = Array.from(selectedFiles.value)
+  if (!targets.length) return
+  if (!confirm(t('library.bulkDeletePrompt', { count: targets.length }))) {
     return
-  batchDeleting.value = true
-  error.value = ''
-  try {
-    const res = await API.deleteDownloadsBatch(paths)
-    const deleted = res.data?.deleted || []
-    const failed = res.data?.failed || []
-    removeFilesFromList(deleted)
-    if (failed.length) {
-      error.value = t('library.batchDeletePartial', {
-        ok: deleted.length,
-        failed: failed.length,
-      })
-    }
-  } catch (err) {
-    const detail = err?.response?.data?.detail
-    error.value =
-      typeof detail === 'string' && detail
-        ? detail
-        : t('library.failedDelete', { file: paths[0] })
-  } finally {
-    batchDeleting.value = false
   }
-}
-
-async function onDeletePlaylist() {
-  const name = String(playlistFilter.value || '').trim()
-  if (!name) return
-  if (!confirm(t('library.deletePlaylistPrompt', { name }))) return
-  playlistDeleting.value = true
+  bulkDeleting.value = true
   error.value = ''
   try {
-    const res = await API.deleteLibraryPlaylist(name)
-    const count = res.data?.deleted_count ?? 0
-    files.value = files.value.filter(
-      (entry) => !(entry.playlists || []).includes(name)
+    const res = await API.deleteDownloadsBatch(targets)
+    const results = res.data.results || {}
+    const removed = new Set(
+      Object.keys(results).filter((f) => results[f].deleted)
     )
-    selectedFiles.value = new Set()
-    playlistFilter.value = ''
-    if ((res.data?.failed_count || 0) > 0) {
-      error.value = t('library.batchDeletePartial', {
-        ok: count,
-        failed: res.data.failed_count,
+    files.value = files.value.filter((f) => !removed.has(f))
+    tracks.value = tracks.value.filter((tr) => !removed.has(tr.file))
+    const failedCount = res.data.failed_count || 0
+    if (failedCount > 0) {
+      error.value = t('library.bulkDeletePartialError', {
+        count: failedCount,
       })
     }
-  } catch (err) {
-    const detail = err?.response?.data?.detail
-    error.value =
-      typeof detail === 'string' && detail
-        ? detail
-        : t('library.playlistDeleteFailed', { name })
+  } catch {
+    error.value = t('library.bulkDeleteFailed')
   } finally {
-    playlistDeleting.value = false
+    clearSelection()
+    bulkDeleting.value = false
   }
 }
 
@@ -537,36 +460,27 @@ function formatExt(file) {
   return dot > 0 ? file.slice(dot + 1).toUpperCase() : ''
 }
 
+function displayName(file) {
+  const slash = file.lastIndexOf('/')
+  return slash >= 0 ? file.slice(slash + 1) : file
+}
+
 function folderOf(file) {
   const slash = file.lastIndexOf('/')
   return slash >= 0 ? file.slice(0, slash) : ''
 }
 
-function persistPlayerViewForPlayback() {
-  savePlayerViewPrefs({
-    playlistFilter: playlistFilter.value,
-    filterQuery: libraryFilterQuery.value,
-  })
-}
-
-function playEntry(entry) {
-  const index = filteredFiles.value.findIndex((row) => row.file === entry.file)
-  if (index < 0) return
-  persistPlayerViewForPlayback()
-  player.setPlaylist(filteredFiles.value, { startIndex: index, autoplay: true })
+function playFile(file) {
+  const index = filteredFiles.value.indexOf(file)
+  player.setPlaylist(filteredFiles.value, { startIndex: Math.max(0, index) })
   router.push({ name: 'Player' })
 }
 
 function playAll() {
   if (!filteredFiles.value.length) return
-  persistPlayerViewForPlayback()
-  player.setPlaylist(filteredFiles.value, { startIndex: 0, autoplay: true })
+  player.setPlaylist(filteredFiles.value, { startIndex: 0 })
   router.push({ name: 'Player' })
 }
 
 onMounted(refresh)
-
-onUnmounted(() => {
-  clearLibraryFilter()
-})
 </script>

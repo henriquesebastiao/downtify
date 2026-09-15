@@ -1,29 +1,211 @@
 # Changelog
 
-## [Unreleased]
+## [2.12.0](https://github.com/henriquesebastiao/downtify/tree/2.12.0) (2026-09-13)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.11.0...2.12.0)
 
 **Implemented enhancements:**
 
-- **Library catalog** — SQLite playlist catalog (track membership per Spotify playlist), path-stable `content_key` (basename + file size), and Navidrome song-id index for faster repeat syncs ([#182](https://github.com/henriquesebastiao/downtify/pull/182))
-- **Library performance** — In-memory path scan cache (~90s TTL) and SQLite metadata cache for `/api/list`; optional on-disk cover art cache under `/data/cover_cache` (Settings → Library & player)
-- **Library UI** — Client-side search (title, artist, album, path), pagination with saved page size, playlist badges on each row, dedicated Library search (navbar search hidden on Library page), refresh with `?refresh=true`
-- **Library path sync** — Settings → **Fix library paths** and `POST /api/library/reconcile`: detect moved files, prune stale index/catalog rows after deletes, backfill `content_key`, optionally regenerate M3U and re-sync Navidrome for affected playlists
-- **Navidrome large playlists** — `createPlaylist` via POST with batched `updatePlaylist` to avoid HTTP 414 when syncing hundreds of tracks
-- **Navidrome matching** — Stronger library matching (mutagen tags, path tails, slskd folder paths, capped fallback queries, early exit on confident match)
-- **slskd + Navidrome integration** (feature branch) — slskd provider with leave-in-place, configurable provider order, track index dedupe, `/downloads` + `/slskd` library paths, M3U absolute paths, in-place Navidrome playlist updates, playlist monitor M3U/Navidrome refresh
-- **Download queue** — Status filters, per-track and bulk retry, clear completed, prune finished tracks when a new Spotify playlist starts
-- **YouTube cookies** (optional) — Settings upload/path for age-restricted yt-dlp fallbacks
-- **Startup** — FastAPI lifespan handler replaces deprecated `on_event('startup')`
+- Replace icons with Font Awesome [\#333](https://github.com/henriquesebastiao/downtify/issues/333)
+- Replace `requests` with `httpx` [\#330](https://github.com/henriquesebastiao/downtify/issues/330)
+- Improved page number display when pagination is present [\#328](https://github.com/henriquesebastiao/downtify/issues/328)
+- Enable the selection of tracks for mass deletion via the Library menu [\#326](https://github.com/henriquesebastiao/downtify/issues/326)
+- Add a notification for the user that a new version of Downtify is available [\#325](https://github.com/henriquesebastiao/downtify/issues/325)
+- PWA \(progressive web app\) Icon [\#324](https://github.com/henriquesebastiao/downtify/issues/324)
+- paste cookies file via web interface [\#280](https://github.com/henriquesebastiao/downtify/issues/280)
 
 **Fixed bugs:**
 
-- Navidrome playlist sync failing with HTTP 414 on large playlists
-- Library `/list` validation errors when returning playlist names per track
-- slskd path false positives during Navidrome match; duration tolerance for tag matching
+- Delete lyrics when the music file is deleted from the library [\#319](https://github.com/henriquesebastiao/downtify/issues/319)
+- Downtify v2.10.2 cannot download: yt-dlp cookies issue [\#308](https://github.com/henriquesebastiao/downtify/issues/308)
+- OS error: file name too long [\#268](https://github.com/henriquesebastiao/downtify/issues/268)
+- Adjust CSS con mobile [\#228](https://github.com/henriquesebastiao/downtify/issues/228)
+- youtube bot detection error [\#225](https://github.com/henriquesebastiao/downtify/issues/225)
+- Song age restricted even with cookies linked [\#203](https://github.com/henriquesebastiao/downtify/issues/203)
 
-**Documentation:**
+**Merged pull requests:**
 
-- README feature summary, `docs/features/library-catalog.md`, and changelog entries for catalog, reconcile, and caches
+- fix\(match\): accept Spotify "- Ao Vivo" titles, fall back to standard YouTube [\#337](https://github.com/henriquesebastiao/downtify/pull/337) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(player\): global mini player bar [\#336](https://github.com/henriquesebastiao/downtify/pull/336) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(player\): stop the now-playing widget from resizing/scrolling on a long name, fix playlist folder leaking into artist [\#335](https://github.com/henriquesebastiao/downtify/pull/335) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- refactor\(ui\): replace all Clarity icons with Font Awesome [\#334](https://github.com/henriquesebastiao/downtify/pull/334) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(ui\): condense pagination to a fixed number of pages, not all of them [\#332](https://github.com/henriquesebastiao/downtify/pull/332) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- core: Replacing requests with httpx [\#331](https://github.com/henriquesebastiao/downtify/pull/331) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(update-check\): notify when a newer Downtify version is out [\#329](https://github.com/henriquesebastiao/downtify/pull/329) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(library\): select and bulk-delete tracks, including across pages [\#327](https://github.com/henriquesebastiao/downtify/pull/327) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(library\): clean up sidecars and empty folders when deleting a track [\#323](https://github.com/henriquesebastiao/downtify/pull/323) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(cookies\): upload a YouTube cookies.txt from the settings UI [\#320](https://github.com/henriquesebastiao/downtify/pull/320) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [2.11.0](https://github.com/henriquesebastiao/downtify/tree/2.11.0) (2026-09-11)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.10.2...2.11.0)
+
+**Implemented enhancements:**
+
+- \[Feature Request\] Download using spotify [\#287](https://github.com/henriquesebastiao/downtify/issues/287)
+- Save downloaded songs in database instead of checking destination folder [\#283](https://github.com/henriquesebastiao/downtify/issues/283)
+- \[Feature Request\] Allow Grouping by Playlist/Artist/Album in Library and Player screens [\#277](https://github.com/henriquesebastiao/downtify/issues/277)
+- "display": "standalone" to web manifest for iOS PWA support [\#270](https://github.com/henriquesebastiao/downtify/issues/270)
+- Youtube Playlist Download [\#269](https://github.com/henriquesebastiao/downtify/issues/269)
+- Disable overwrite option [\#267](https://github.com/henriquesebastiao/downtify/issues/267)
+- Disable Artwork Downloading [\#263](https://github.com/henriquesebastiao/downtify/issues/263)
+- Play songs by playlist [\#259](https://github.com/henriquesebastiao/downtify/issues/259)
+- health check [\#258](https://github.com/henriquesebastiao/downtify/issues/258)
+- Artist Watch Feature [\#253](https://github.com/henriquesebastiao/downtify/issues/253)
+- File Format Token - Track number [\#251](https://github.com/henriquesebastiao/downtify/issues/251)
+- Create M3U immediately [\#238](https://github.com/henriquesebastiao/downtify/issues/238)
+- Download all queue [\#224](https://github.com/henriquesebastiao/downtify/issues/224)
+- Cluster download by album as well as artist? [\#218](https://github.com/henriquesebastiao/downtify/issues/218)
+- Ability to download from CSV [\#204](https://github.com/henriquesebastiao/downtify/issues/204)
+- Add a configurable delay/sleep interval between song downloads [\#201](https://github.com/henriquesebastiao/downtify/issues/201)
+- \[Feature Request\] Artist search/download [\#199](https://github.com/henriquesebastiao/downtify/issues/199)
+- Add Sync Time Ability [\#192](https://github.com/henriquesebastiao/downtify/issues/192)
+- Playlist Monitor - sorting [\#186](https://github.com/henriquesebastiao/downtify/issues/186)
+- Enable a greater number of simultaneous downloads for faster internet connections [\#175](https://github.com/henriquesebastiao/downtify/issues/175)
+
+**Fixed bugs:**
+
+- Scrollbar jumping out of widgets [\#312](https://github.com/henriquesebastiao/downtify/issues/312)
+- Playlist watch [\#257](https://github.com/henriquesebastiao/downtify/issues/257)
+
+**Closed issues:**
+
+- Possible fix\(deps\): yt-dlp 2026.6.9 → 2026.7.4 \(CVE-2026-55404\) in requirements.txt [\#292](https://github.com/henriquesebastiao/downtify/issues/292)
+- Possible fix\(deps\): uuid 9.0.1 → 11.1.1, 12.0.1, 13.0.1 \(CVE-2026-41907\) in package-lock.json [\#291](https://github.com/henriquesebastiao/downtify/issues/291)
+- Security: request to enable private vulnerability reporting [\#276](https://github.com/henriquesebastiao/downtify/issues/276)
+
+**Merged pull requests:**
+
+- feat\(pwa\): installable web app manifest + iOS/Android home-screen support [\#316](https://github.com/henriquesebastiao/downtify/pull/316) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(monitor\): trust the downloaded-tracks DB, not the filesystem [\#315](https://github.com/henriquesebastiao/downtify/pull/315) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: filter by playlist, artist or album \(same as player\) [\#314](https://github.com/henriquesebastiao/downtify/pull/314) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- style: Fix scrollbar poking past rounded corners [\#313](https://github.com/henriquesebastiao/downtify/pull/313) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Strengthen glass effect on top nav bar [\#311](https://github.com/henriquesebastiao/downtify/pull/311) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Bulgarian translation [\#310](https://github.com/henriquesebastiao/downtify/pull/310) ([alex-kirkata](https://github.com/alex-kirkata))
+- fix: resolve vulnerabilities and update Docker runtime [\#309](https://github.com/henriquesebastiao/downtify/pull/309) ([betterix](https://github.com/betterix))
+- feat: Download and monitor YouTube Music playlists and @handle artists [\#307](https://github.com/henriquesebastiao/downtify/pull/307) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add an option to skip songs already downloaded anywhere in the … [\#305](https://github.com/henriquesebastiao/downtify/pull/305) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add cover art resolution and a way to skip it entirely [\#304](https://github.com/henriquesebastiao/downtify/pull/304) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Let the Built-in Player play a single downloaded playlist [\#303](https://github.com/henriquesebastiao/downtify/pull/303) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add a built-in Docker HEALTHCHECK, toggleable via DOWNTIFY\_HEAL… [\#302](https://github.com/henriquesebastiao/downtify/pull/302) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add Artist Watch to the Playlist Monitor [\#301](https://github.com/henriquesebastiao/downtify/pull/301) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add {tracknumber} filename template token [\#300](https://github.com/henriquesebastiao/downtify/pull/300) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Feature/incremental m3u monitor [\#299](https://github.com/henriquesebastiao/downtify/pull/299) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Fix possible fix\(deps\): yt-dlp 2026.6.9 → 2026.7.4 \(CVE-2026-55404\) in requirements.txt [\#298](https://github.com/henriquesebastiao/downtify/pull/298) ([begininvoke](https://github.com/begininvoke))
+- Add CSV library import \(Soundiiz, TuneMyMusic, Exportify\) [\#297](https://github.com/henriquesebastiao/downtify/pull/297) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Add configurable delay between song downloads [\#296](https://github.com/henriquesebastiao/downtify/pull/296) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add DOWNTIFY\_MONITOR\_SYNC\_TIME to anchor daily+ playlist syncs [\#295](https://github.com/henriquesebastiao/downtify/pull/295) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: Add sorting to Playlist Monitor page [\#294](https://github.com/henriquesebastiao/downtify/pull/294) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Add custom parallel downloads \(1-30\) to Settings [\#293](https://github.com/henriquesebastiao/downtify/pull/293) ([henriquesebastiao](https://github.com/henriquesebastiao))
+
+## [2.10.2](https://github.com/henriquesebastiao/downtify/tree/2.10.2) (2026-09-09)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.10.1...2.10.2)
+
+**Implemented enhancements:**
+
+- Delete untracked songs [\#185](https://github.com/henriquesebastiao/downtify/issues/185)
+
+**Fixed bugs:**
+
+- Downtify 2.9.1 fails to download YouTube Music [\#247](https://github.com/henriquesebastiao/downtify/issues/247)
+
+**Merged pull requests:**
+
+- core: Update packages \(2026-9-8\) [\#290](https://github.com/henriquesebastiao/downtify/pull/290) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix: enable yt-dlp's remote EJS component for YouTube SABR fallback [\#286](https://github.com/henriquesebastiao/downtify/pull/286) ([Athos97](https://github.com/Athos97))
+- fix: save MP3 tags as ID3v2.4 instead of v2.3 [\#285](https://github.com/henriquesebastiao/downtify/pull/285) ([Athos97](https://github.com/Athos97))
+- added hungarian translation [\#284](https://github.com/henriquesebastiao/downtify/pull/284) ([betterix](https://github.com/betterix))
+
+## [2.10.1](https://github.com/henriquesebastiao/downtify/tree/2.10.1) (2026-08-12)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.10.0...2.10.1)
+
+**Implemented enhancements:**
+
+- saving a song with an album name [\#173](https://github.com/henriquesebastiao/downtify/issues/173)
+- Output Structure [\#144](https://github.com/henriquesebastiao/downtify/issues/144)
+- Support for reverse proxy with Cloudflare Tunnel \(ROOT\_URL / BASE\_URL env support\) [\#49](https://github.com/henriquesebastiao/downtify/issues/49)
+
+**Fixed bugs:**
+
+- Age restricted content having issues with cookies, or wanting age approval [\#183](https://github.com/henriquesebastiao/downtify/issues/183)
+- Cookies issues [\#160](https://github.com/henriquesebastiao/downtify/issues/160)
+
+**Merged pull requests:**
+
+- Remove dist folder [\#256](https://github.com/henriquesebastiao/downtify/pull/256) ([fracarma](https://github.com/fracarma))
+- build\(deps\): Bump docker/login-action from 4.5.2 to 4.6.0 [\#255](https://github.com/henriquesebastiao/downtify/pull/255) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [2.10.0](https://github.com/henriquesebastiao/downtify/tree/2.10.0) (2026-08-11)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.9.2...2.10.0)
+
+**Implemented enhancements:**
+
+- Youtube album download [\#244](https://github.com/henriquesebastiao/downtify/pull/244) ([fracarma](https://github.com/fracarma))
+
+## [2.9.2](https://github.com/henriquesebastiao/downtify/tree/2.9.2) (2026-08-11)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.9.1...2.9.2)
+
+**Fixed bugs:**
+
+- Downtify grabbing the wrong audio [\#159](https://github.com/henriquesebastiao/downtify/issues/159)
+
+**Merged pull requests:**
+
+- build\(deps-dev\): Bump zensical from 0.0.52 to 0.0.53 [\#252](https://github.com/henriquesebastiao/downtify/pull/252) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump docker/login-action from 4 to 4.5.2 [\#248](https://github.com/henriquesebastiao/downtify/pull/248) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add Turkish Locale Support [\#245](https://github.com/henriquesebastiao/downtify/pull/245) ([Singulariity](https://github.com/Singulariity))
+- build\(deps\): Bump actions/labeler from 6 to 7 [\#242](https://github.com/henriquesebastiao/downtify/pull/242) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump zensical from 0.0.50 to 0.0.51 [\#241](https://github.com/henriquesebastiao/downtify/pull/241) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump websockets from 16.1 to 16.1.1 [\#240](https://github.com/henriquesebastiao/downtify/pull/240) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump actions/setup-python from 6 to 7 [\#239](https://github.com/henriquesebastiao/downtify/pull/239) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump ruff from 0.15.21 to 0.15.22 [\#236](https://github.com/henriquesebastiao/downtify/pull/236) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Check the album and song names [\#234](https://github.com/henriquesebastiao/downtify/pull/234) ([fracarma](https://github.com/fracarma))
+
+## [2.9.1](https://github.com/henriquesebastiao/downtify/tree/2.9.1) (2026-07-16)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.9.0...2.9.1)
+
+**Fixed bugs:**
+
+- Recognize playlist links copied from Spotify interfaces in other languages [\#230](https://github.com/henriquesebastiao/downtify/issues/230)
+
+**Merged pull requests:**
+
+- Recognize Spotify URLs with locale segment \(intl-xx\) [\#233](https://github.com/henriquesebastiao/downtify/pull/233) ([mozuvic1](https://github.com/mozuvic1))
+- build\(deps\): Bump actions/setup-node from 6 to 7 [\#232](https://github.com/henriquesebastiao/downtify/pull/232) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump node from 20-alpine to 26-alpine [\#231](https://github.com/henriquesebastiao/downtify/pull/231) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add option to separate songs by album [\#229](https://github.com/henriquesebastiao/downtify/pull/229) ([fracarma](https://github.com/fracarma))
+
+## [2.9.0](https://github.com/henriquesebastiao/downtify/tree/2.9.0) (2026-07-12)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.8.0...2.9.0)
+
+**Fixed bugs:**
+
+- Various Artists [\#207](https://github.com/henriquesebastiao/downtify/issues/207)
+- Renaming not working [\#194](https://github.com/henriquesebastiao/downtify/issues/194)
+- OPUS music have no cover art [\#165](https://github.com/henriquesebastiao/downtify/issues/165)
+
+**Merged pull requests:**
+
+- Fix output filename subpaths [\#226](https://github.com/henriquesebastiao/downtify/pull/226) ([FidelGB](https://github.com/FidelGB))
+- Fix OPUS format missing cover art [\#217](https://github.com/henriquesebastiao/downtify/pull/217) ([berkeozgen08](https://github.com/berkeozgen08))
+- build\(deps-dev\): Bump ruff from 0.15.18 to 0.15.20 [\#214](https://github.com/henriquesebastiao/downtify/pull/214) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump mutagen from 1.47.0 to 1.48.1 [\#213](https://github.com/henriquesebastiao/downtify/pull/213) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump zensical from 0.0.45 to 0.0.46 [\#209](https://github.com/henriquesebastiao/downtify/pull/209) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add Various Artists in album Artist if there are more than one artists [\#208](https://github.com/henriquesebastiao/downtify/pull/208) ([Robokishan](https://github.com/Robokishan))
+- build\(deps\): Bump actions/checkout from 6 to 7 [\#206](https://github.com/henriquesebastiao/downtify/pull/206) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Use the ID3v2.4 separator for artists: "; " [\#205](https://github.com/henriquesebastiao/downtify/pull/205) ([fracarma](https://github.com/fracarma))
+- feat: add Greek translation  [\#197](https://github.com/henriquesebastiao/downtify/pull/197) ([Harrygr-droid](https://github.com/Harrygr-droid))
+- build\(deps-dev\): Bump zensical from 0.0.44 to 0.0.45 [\#196](https://github.com/henriquesebastiao/downtify/pull/196) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump yt-dlp from 2026.3.17 to 2026.6.9 [\#195](https://github.com/henriquesebastiao/downtify/pull/195) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump ytmusicapi from 1.12.0 to 1.12.1 [\#193](https://github.com/henriquesebastiao/downtify/pull/193) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps-dev\): Bump zensical from 0.0.43 to 0.0.44 [\#190](https://github.com/henriquesebastiao/downtify/pull/190) ([dependabot[bot]](https://github.com/apps/dependabot))
+- build\(deps\): Bump uvicorn from 0.48.0 to 0.49.0 [\#189](https://github.com/henriquesebastiao/downtify/pull/189) ([dependabot[bot]](https://github.com/apps/dependabot))
 
 ## [2.8.0](https://github.com/henriquesebastiao/downtify/tree/2.8.0) (2026-06-02)
 

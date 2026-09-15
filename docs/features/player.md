@@ -13,12 +13,35 @@ Downtify ships with a web player so you can listen to your downloaded music with
 - **Playback controls** — play, pause, previous, next
 - **Shuffle** — stable random order across the whole library queue
 - **Repeat modes** — off → repeat all → repeat one
-- **Volume slider** — with mute toggle; your volume level is saved between sessions
+- **Volume slider** — with mute toggle; your volume level is saved between sessions. Hidden on mobile, where the audio is kept at full volume and the phone's own hardware buttons control the level instead
 - **Side queue** — all tracks in your library, each with its own thumbnail; the currently playing track is highlighted
+- **Playing from** — pick **All Songs**, one specific downloaded playlist, one artist, or one album, instead of always queuing your whole library
+
+## Playing a single playlist, artist or album
+
+By default the player queues every downloaded track. Use the **Playing from** selector next to the page title to narrow the queue down:
+
+- **Playlists** — picks up any playlist that has an [M3U file](m3u-export.md). Playlist and album downloads, [CSV imports](library-import.md), and [Playlist Monitor](playlist-monitor.md) all write one automatically, so this works retroactively on everything you've already downloaded. A single track or an album downloaded without an M3U (e.g. via the YouTube Music album flow) isn't a "playlist" and won't appear in this group — it's still part of **All Songs**.
+- **Artists** and **Albums** — built from each file's embedded artist/album tags, so they list every artist and album you've ever downloaded regardless of how the files are organized on disk (loose in the library root, in per-playlist folders, or in `Artist/Album` folders when [*Organize by artist/album*](file-organization.md) is on). A track with no artist or album tag simply isn't a member of either group, but it's still part of **All Songs**.
+
+Switching the selection replaces the queue and stops whatever was playing; pick a track or hit play to start the new one. Reopening the player later resumes whichever queue (all songs, a playlist, an artist, or an album) was last loaded.
+
+The Library page (the file browser in the navigation bar) has the same **Filter by** selector, built from the same playlist/artist/album data — use it to narrow down the file list before deleting, re-downloading, or hitting play on a track, instead of scrolling through the whole library.
+
+## Mini player bar
+
+While a track is loaded, a bar with playback controls sticks to the bottom of every page except the Player page itself (which already has full controls) — album art, title/artist, shuffle, previous, play/pause, next, repeat and volume, like any other music app's persistent mini player. Tap the title or cover to jump to the full Player page.
+
+- A track name or artist too long for the bar scrolls back and forth instead of being cut off or forcing the bar to resize.
+- The **▾** button on the right collapses the bar into a small floating button (with a bars-style "now playing" animation) so it stops taking up screen space; tap that button to bring the bar back. Both are per-session — the bar starts expanded again next time you open Downtify.
+- The volume button opens a small popup with the same volume slider (and mute toggle) as the Player page.
+- On narrow screens the cover, shuffle, repeat and volume button are hidden so the remaining controls (previous, play/pause, next, collapse) fit on a single row without wrapping.
+
+Turn the whole thing off in **Settings → Mini player bar** if you'd rather not have it — the Player page itself is unaffected either way.
 
 ## How it works
 
-The player loads every audio file found recursively inside the downloads directory. Files are served directly from the container via the `/downloads` static mount.
+The player loads every audio file found recursively inside the downloads directory. Files are served directly from the container via the `/downloads` static mount. The playlist group is built from the `.m3u` files already on disk (`GET /playlists`); the artist/album groups are built from each file's embedded tags (`GET /tracks`) — no separate playlist or library database.
 
 Filenames in the format `Artist - Title.ext` are parsed so the now-playing card can show artist and title cleanly. Cover art is served from `/cover`, which reads embedded tags (and optional folder images like `cover.jpg`). When **Cache album art on disk** is enabled in Settings, covers are stored under `/data/cover_cache` for faster Library and player loads.
 

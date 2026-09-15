@@ -14,9 +14,9 @@ Single tracks and YouTube searches go directly into the root of the downloads fo
 downloads/
 ├── My Playlist/
 │   ├── My Playlist.m3u
-│   ├── Arctic Monkeys - Do I Wanna Know.mp3
+│   ├── The Night Owls - Do I Still Recall.mp3
 │   └── Tame Impala - The Less I Know The Better.mp3
-└── Arctic Monkeys - R U Mine.mp3       ← single track
+└── The Night Owls - R U Awake.mp3       ← single track
 ```
 
 ## Organize by artist
@@ -25,9 +25,9 @@ Enable **Settings → File organization → Organize by artist** to group every 
 
 ```
 downloads/
-├── Arctic Monkeys/
-│   ├── Arctic Monkeys - Do I Wanna Know.mp3
-│   └── Arctic Monkeys - R U Mine.mp3
+├── The Night Owls/
+│   ├── The Night Owls - Do I Still Recall.mp3
+│   └── The Night Owls - R U Awake.mp3
 ├── Tame Impala/
 │   └── Tame Impala - The Less I Know The Better.mp3
 └── Playlists/
@@ -43,3 +43,13 @@ When *Organize by artist* is on and you download a Spotify playlist with M3U gen
 ## Changing the setting
 
 The setting takes effect immediately for all **new** downloads. Existing files already on disk are not moved.
+
+## Deleting a track cleans up empty folders
+
+Deleting a track from the Library page removes its per-playlist, artist or album folder too, once it's empty — and keeps climbing up through any now-empty parent folders (e.g. the artist folder after its last album is gone), stopping at the downloads directory itself, which is never removed. A folder that still holds anything else — another track, an `.m3u`, a `cover.jpg` still in use — is left alone.
+
+## Selecting and deleting several tracks at once
+
+The Library page's file list has a checkbox on every track, plus a **Select all** toggle that selects every track matching the page's current [playlist/artist/album filter](player.md#playing-a-single-playlist-artist-or-album) — including tracks on other pages, not just what's currently visible. **Delete selected** removes all of them in one request (`DELETE /delete/batch`, see [API Reference](../api-reference.md)), with the same per-track cleanup (`.lrc`, orphaned `cover.jpg`, empty folders) as deleting one track at a time.
+
+Since the checkbox selection follows whatever filter is active, deleting an entire album or artist is: pick it from **Filter by**, click **Select all**, then **Delete selected**.

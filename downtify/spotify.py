@@ -10,9 +10,10 @@ from __future__ import annotations
 import json
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
 
-import requests
+import httpx
 from loguru import logger
 
 from .telemetry import json_log_blob, redact_sensitive_mapping
@@ -68,9 +69,9 @@ _EMBED_FETCH_ATTEMPTS = 3
 
 def _fetch_embed_json(kind: str, spotify_id: str) -> dict[str, Any]:
     url = f'https://open.spotify.com/embed/{kind}/{spotify_id}'
-    response: requests.Response | None = None
+    response: httpx.Response | None = None
     for attempt in range(_EMBED_FETCH_ATTEMPTS):
-        response = requests.get(
+        response = httpx.get(
             url,
             headers={
                 'User-Agent': _USER_AGENT,
@@ -80,10 +81,8 @@ def _fetch_embed_json(kind: str, spotify_id: str) -> dict[str, Any]:
         )
         try:
             response.raise_for_status()
-        except requests.HTTPError as exc:
-            status = (
-                exc.response.status_code if exc.response is not None else 0
-            )
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
             if (
                 status in _EMBED_TRANSIENT_HTTP
                 and attempt < _EMBED_FETCH_ATTEMPTS - 1
@@ -373,7 +372,7 @@ def _album_release_date_from_open_page(album_id: str) -> str:
     if not album_id or not re.fullmatch(r'[A-Za-z0-9]+', album_id):
         return ''
     try:
-        resp = requests.get(
+        resp = httpx.get(
             f'https://open.spotify.com/album/{album_id}',
             headers={
                 'User-Agent': _ALBUM_OPEN_PAGE_UA,
@@ -730,7 +729,7 @@ def _track_dict_from_graphql_item(
 def _graphql_fetch_page(
     playlist_id: str, token: str, offset: int, limit: int = 100
 ) -> dict[str, Any]:
-    resp = requests.get(
+    resp = httpx.get(
         _PARTNER_API,
         params={
             'operationName': 'fetchPlaylist',
@@ -768,28 +767,80 @@ def _graphql_fetch_page(
     return data['data']['playlistV2']
 
 
+_GRAPHQL_PAGE_LIMIT = 100
+# Pages after the first are fetched this many at a time — enough to make
+# a long playlist resolve several times faster, few enough to stay polite
+# to Spotify's API.
+_GRAPHQL_PAGE_CONCURRENCY = 4
+
+
+def _graphql_page_items(pv2: dict[str, Any]) -> tuple[list[Any], int]:
+    content = pv2.get('content') or {}
+    return content.get('items') or [], content.get('totalCount') or 0
+
+
+def _graphql_sequential_items(
+    playlist_id: str, token: str, offset: int
+) -> list[Any]:
+    """Every item from ``offset`` on, one page after another, advancing by
+    however many items each page actually returned."""
+
+    items: list[Any] = []
+    while True:
+        page, total = _graphql_page_items(
+            _graphql_fetch_page(
+                playlist_id, token, offset, _GRAPHQL_PAGE_LIMIT
+            )
+        )
+        items.extend(page)
+        offset += len(page)
+        if not page or offset >= total:
+            return items
+
+
 def _graphql_all_tracks(
     playlist_id: str, token: str
 ) -> tuple[Optional[str], list[dict[str, Any]]]:
-    """Return ``(playlist_name_or_None, all_tracks)`` via partner GraphQL."""
-    songs: list[dict[str, Any]] = []
-    playlist_name: Optional[str] = None
-    offset = 0
-    limit = 100
-    while True:
-        pv2 = _graphql_fetch_page(playlist_id, token, offset, limit)
-        if playlist_name is None:
-            playlist_name = pv2.get('name') or None
-        content = pv2.get('content') or {}
-        items = content.get('items') or []
-        for item in items:
-            td = _track_dict_from_graphql_item(item)
-            if td:
-                songs.append(td)
-        total = content.get('totalCount') or 0
-        offset += len(items)
-        if not items or offset >= total:
-            break
+    """Return ``(playlist_name_or_None, all_tracks)`` via partner GraphQL.
+
+    The first page reports the playlist's size, so the remaining pages are
+    requested concurrently (:data:`_GRAPHQL_PAGE_CONCURRENCY` at a time)
+    at fixed offsets instead of one after another. That assumes every page
+    but the last comes back full; if one doesn't, the fixed offsets would
+    skip items, so the rest is walked sequentially from the first short
+    page — the old behavior — instead.
+    """
+
+    first = _graphql_fetch_page(playlist_id, token, 0, _GRAPHQL_PAGE_LIMIT)
+    playlist_name = first.get('name') or None
+    items, total = _graphql_page_items(first)
+    page_size = len(items)
+    if page_size and page_size < total:
+        offsets = list(range(page_size, total, page_size))
+        with ThreadPoolExecutor(
+            max_workers=_GRAPHQL_PAGE_CONCURRENCY,
+            thread_name_prefix='downtify-spotify-page',
+        ) as pool:
+            pages = list(
+                pool.map(
+                    lambda offset: _graphql_page_items(
+                        _graphql_fetch_page(
+                            playlist_id, token, offset, _GRAPHQL_PAGE_LIMIT
+                        )
+                    )[0],
+                    offsets,
+                )
+            )
+        for offset, page in zip(offsets, pages):
+            if len(page) < page_size and offset != offsets[-1]:
+                items.extend(
+                    _graphql_sequential_items(playlist_id, token, offset)
+                )
+                break
+            items.extend(page)
+    songs = [
+        td for item in items if (td := _track_dict_from_graphql_item(item))
+    ]
     return playlist_name, songs
 
 
@@ -834,6 +885,23 @@ def _id_from_uri(uri: str) -> str:
         return ''
     parts = uri.split(':')
     return parts[-1] if parts else ''
+
+
+def artist_name_from_id(artist_id: str) -> str:
+    """Return an artist's display name from their embed page.
+
+    The artist embed only carries the name, image and a top-tracks
+    preview — Spotify does not expose a discography there, so callers
+    that need releases resolve the artist against another provider by
+    name. Raises ``ValueError`` when the name can't be read.
+    """
+
+    payload = _fetch_embed_json('artist', artist_id)
+    entity = _entity_from(payload)
+    name = (entity.get('name') or entity.get('title') or '').strip()
+    if not name:
+        raise ValueError(f'Could not read artist name for {artist_id}')
+    return name
 
 
 def resolve(url: str) -> Any:

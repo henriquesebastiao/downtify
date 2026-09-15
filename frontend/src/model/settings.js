@@ -56,16 +56,70 @@ const settings = ref({
   },
   organize_by_artist: false,
   cache_cover_art: false,
+  organize_by_album: false,
   max_parallel_downloads: 3,
+  download_delay_seconds: 0,
+  cover_resolution: 600,
+  download_cover_art: true,
+  overwrite_existing_files: true,
+  search_albums: true,
+  mini_player_enabled: true,
 })
+
+const MIN_PARALLEL_DOWNLOADS = 1
+const MAX_PARALLEL_DOWNLOADS = 30
+
+const MIN_DOWNLOAD_DELAY_SECONDS = 0
+const MAX_DOWNLOAD_DELAY_SECONDS = 300
+
+const MIN_COVER_RESOLUTION = 300
+const MAX_COVER_RESOLUTION = 1200
 
 const settingsOptions = {
   audio_providers: ['youtube', 'youtube-music', 'slskd'],
   lyrics_providers: ['lrclib', 'genius', 'musixmatch', 'azlyrics'],
   format: ['mp3', 'flac', 'ogg', 'opus', 'm4a'],
   bitrate: ['128', '192', '256', '320'],
-  max_parallel_downloads: [1, 2, 3, 5, 8],
+  max_parallel_downloads_presets: [1, 2, 3, 5, 8],
+  max_parallel_downloads_min: MIN_PARALLEL_DOWNLOADS,
+  max_parallel_downloads_max: MAX_PARALLEL_DOWNLOADS,
+  download_delay_seconds_presets: [0, 5, 15, 30, 60],
+  download_delay_seconds_min: MIN_DOWNLOAD_DELAY_SECONDS,
+  download_delay_seconds_max: MAX_DOWNLOAD_DELAY_SECONDS,
+  cover_resolution_presets: [300, 600, 800, 1000, 1200],
+  cover_resolution_min: MIN_COVER_RESOLUTION,
+  cover_resolution_max: MAX_COVER_RESOLUTION,
   output: '{artists} - {title}.{output-ext}',
+}
+
+export function clampParallelDownloads(value) {
+  const parsed = Number.parseInt(value, 10)
+  if (Number.isNaN(parsed)) {
+    return MIN_PARALLEL_DOWNLOADS
+  }
+  return Math.min(
+    MAX_PARALLEL_DOWNLOADS,
+    Math.max(MIN_PARALLEL_DOWNLOADS, parsed)
+  )
+}
+
+export function clampDownloadDelaySeconds(value) {
+  const parsed = Number.parseInt(value, 10)
+  if (Number.isNaN(parsed)) {
+    return MIN_DOWNLOAD_DELAY_SECONDS
+  }
+  return Math.min(
+    MAX_DOWNLOAD_DELAY_SECONDS,
+    Math.max(MIN_DOWNLOAD_DELAY_SECONDS, parsed)
+  )
+}
+
+export function clampCoverResolution(value) {
+  const parsed = Number.parseInt(value, 10)
+  if (Number.isNaN(parsed)) {
+    return MIN_COVER_RESOLUTION
+  }
+  return Math.min(MAX_COVER_RESOLUTION, Math.max(MIN_COVER_RESOLUTION, parsed))
 }
 
 API.getSettings().then((res) => {

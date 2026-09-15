@@ -2,6 +2,11 @@ import { ref } from 'vue'
 import en from './locales/en.js'
 import es from './locales/es.js'
 import ptBR from './locales/pt-BR.js'
+import el from './locales/el.js'
+import fr from './locales/fr.js'
+import tr from './locales/tr.js'
+import hu from './locales/hu.js'
+import bg from './locales/bg.js'
 
 // Registry of available locales. To add a new language:
 //   1. Create ./locales/<code>.js exporting the same key shape as en.js
@@ -12,6 +17,11 @@ export const AVAILABLE_LOCALES = [
   { code: 'en', name: 'English', messages: en },
   { code: 'es', name: 'Español', messages: es },
   { code: 'pt-BR', name: 'Português (BR)', messages: ptBR },
+  { code: 'el', name: 'Ελληνικά', messages: el },
+  { code: 'fr', name: 'Français', messages: fr },
+  { code: 'tr', name: 'Türkçe', messages: tr },
+  { code: 'hu', name: 'Magyar', messages: hu },
+  { code: 'bg', name: 'Български', messages: bg },
 ]
 
 const DEFAULT_LOCALE = 'en'

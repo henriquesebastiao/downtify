@@ -1,6 +1,7 @@
 name: Feature Request
 description: Suggest a new feature or improvement for Downtify
 labels: ["enhancement", "needs triage"]
+projects: ["henriquesebastiao/24"]
 body:
   - type: markdown
     attributes:

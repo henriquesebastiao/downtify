@@ -1,6 +1,6 @@
 <template>
   <section
-    class="relative flex min-h-[calc(100dvh-4rem)] items-center justify-center px-6 pt-24 pb-16 overflow-hidden"
+    class="relative flex flex-1 items-center justify-center px-6 pt-24 pb-16 overflow-hidden"
   >
     <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
       <div
@@ -23,10 +23,6 @@
       <h1 class="text-balance text-5xl sm:text-6xl font-bold tracking-tight">
         Down<span class="text-primary">tify</span>
       </h1>
-      <div class="mt-3 flex items-center justify-center gap-2">
-        <span class="badge-soft">v{{ version }}</span>
-        <span class="badge-neutral-soft">{{ t('hero.noAccount') }}</span>
-      </div>
       <p
         class="mx-auto mt-5 max-w-md text-balance text-base sm:text-lg text-base-content/70"
       >
@@ -35,21 +31,36 @@
 
       <div class="mt-10">
         <SearchInput class="w-full" />
-        <div
-          class="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-base-content/60"
-        >
-          <span class="pill bg-white/5 border border-white/10"
-            ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-            {{ t('hero.songs') }}</span
+
+        <div class="mt-5">
+          <button
+            type="button"
+            class="inline-flex max-w-full items-center gap-1.5 text-xs text-base-content/50 hover:text-base-content/80 transition-colors"
+            :disabled="importing"
+            :title="t('hero.importCsv')"
+            @click="triggerCsvPicker"
           >
-          <span class="pill bg-white/5 border border-white/10"
-            ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-            {{ t('hero.albums') }}</span
-          >
-          <span class="pill bg-white/5 border border-white/10"
-            ><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-            {{ t('hero.playlists') }}</span
-          >
+            <span
+              v-if="importing"
+              class="loading loading-spinner loading-xs shrink-0"
+            ></span>
+            <Icon
+              v-else
+              icon="fa6-solid:file-import"
+              class="h-3.5 w-3.5 shrink-0"
+            />
+            <span class="min-w-0 truncate">{{ t('hero.importCsv') }}</span>
+          </button>
+          <input
+            ref="csvInput"
+            type="file"
+            accept=".csv,text/csv"
+            class="hidden"
+            @change="onCsvSelected"
+          />
+          <p v-if="importError" class="mt-2 text-xs text-error">
+            {{ importError }}
+          </p>
         </div>
       </div>
     </div>
@@ -57,14 +68,44 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
+import { Icon } from '@iconify/vue'
 import SearchInput from './SearchInput.vue'
+import router from '../router'
+import { useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
 
 const { t } = useI18n()
-const version = ref(localStorage.getItem('version') || '2.8.0')
-onMounted(() => {
-  const v = localStorage.getItem('version')
-  if (v) version.value = v
-})
+
+const dm = useDownloadManager()
+const csvInput = ref(null)
+const importing = ref(false)
+const importError = ref('')
+
+function triggerCsvPicker() {
+  importError.value = ''
+  csvInput.value?.click()
+}
+
+function onCsvSelected(event) {
+  const file = event.target.files && event.target.files[0]
+  event.target.value = ''
+  if (!file) return
+
+  importError.value = ''
+  importing.value = true
+  const playlistName = file.name.replace(/\.csv$/i, '')
+  dm.fromCsvFile(file, playlistName)
+    .then(() => {
+      router.push({ name: 'Download' })
+    })
+    .catch((err) => {
+      console.log('CSV import failed:', err.message)
+      importError.value =
+        err?.response?.data?.detail || t('hero.importCsvError')
+    })
+    .finally(() => {
+      importing.value = false
+    })
+}
 </script>

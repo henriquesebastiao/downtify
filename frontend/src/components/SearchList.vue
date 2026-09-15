@@ -1,30 +1,10 @@
 <template>
   <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-    <IncompletePlaylists @download="(song) => emit('download', song)" />
-
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-2xl font-bold tracking-tight">
-        {{
-          sm.browseKind.value === 'spotify_playlist'
-            ? t('search.playlistTitle')
-            : t('search.title')
-        }}
-      </h1>
+      <h1 class="text-2xl font-bold tracking-tight">{{ t('search.title') }}</h1>
       <p class="mt-1 text-sm text-base-content/60">
-        <template v-if="sm.browseKind.value === 'spotify_playlist'">
-          {{ t('search.playlistSubtitle') }}
-          <template
-            v-if="!sm.isSearching.value && (props.data?.length || 0) > 0"
-          >
-            {{
-              props.data.length === 1
-                ? t('search.songsCount', { count: props.data.length })
-                : t('search.songsCountPlural', { count: props.data.length })
-            }}
-          </template>
-        </template>
-        <template v-else-if="sm.searchTerm.value">
+        <template v-if="sm.searchTerm.value">
           {{ t('search.matchesFor') }}
           <span class="text-base-content/90 font-medium">
             "{{ sm.searchTerm.value }}"
@@ -41,34 +21,6 @@
         </template>
         <template v-else>{{ t('search.typeToBegin') }}</template>
       </p>
-      <div
-        v-if="
-          sm.browseKind.value === 'spotify_playlist' &&
-          sm.playlistUrl.value &&
-          !sm.isSearching.value
-        "
-        class="mt-4 flex flex-wrap gap-2"
-      >
-        <a
-          class="btn btn-sm btn-ghost rounded-full"
-          :href="sm.playlistUrl.value"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
-          {{ t('search.openPlaylistOnSpotify') }}
-        </a>
-        <button
-          v-if="(props.data?.length || 0) > 0"
-          type="button"
-          class="btn btn-sm btn-primary rounded-full"
-          :disabled="dm.loading.value"
-          @click="downloadEntirePlaylist"
-        >
-          <Icon icon="clarity:download-line" class="h-4 w-4" />
-          {{ t('search.downloadEntirePlaylist') }}
-        </button>
-      </div>
     </div>
 
     <!-- Error -->
@@ -76,7 +28,7 @@
       v-if="props.error"
       class="surface rounded-2xl p-4 mb-4 flex gap-3 items-center text-sm text-error"
     >
-      <Icon icon="clarity:exclamation-circle-line" class="h-5 w-5 shrink-0" />
+      <Icon icon="fa6-solid:circle-exclamation" class="h-5 w-5 shrink-0" />
       <span>
         {{
           sm.errorValue.value
@@ -85,6 +37,99 @@
         }}
       </span>
     </div>
+
+    <!-- Albums -->
+    <div v-if="sm.albumResults.value.length > 0" class="mb-8">
+      <h2
+        class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3"
+      >
+        {{ t('search.albumsTitle') }}
+      </h2>
+      <ul class="space-y-2">
+        <li
+          v-for="album in sm.albumResults.value"
+          :key="album.album_id"
+          class="surface rounded-2xl track-card"
+        >
+          <!-- Cover -->
+          <div class="track-cover">
+            <img
+              v-if="album.cover_url"
+              :src="album.cover_url"
+              :alt="album.name"
+              class="h-full w-full object-cover"
+              loading="lazy"
+            />
+            <div
+              v-else
+              class="h-full w-full flex items-center justify-center text-base-content/30"
+            >
+              <Icon icon="fa6-solid:record-vinyl" class="h-6 w-6" />
+            </div>
+          </div>
+
+          <!-- Info -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="font-semibold truncate">{{ album.name }}</span>
+              <span
+                class="badge-soft shrink-0 text-[10px] uppercase tracking-wide"
+              >
+                {{ releaseTypeBadge(album) }}
+              </span>
+            </div>
+            <p class="text-xs text-base-content/70 truncate">
+              {{ album.artist || t('common.unknownArtist') }}
+            </p>
+            <p v-if="album.year" class="text-xs text-base-content/40 truncate">
+              {{ album.year }}
+            </p>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-1 shrink-0">
+            <a
+              v-if="album.url"
+              class="icon-btn"
+              :href="album.url"
+              target="_blank"
+              rel="noopener"
+              :title="t('search.openSource')"
+            >
+              <Icon
+                icon="fa6-solid:arrow-up-right-from-square"
+                class="h-4 w-4"
+              />
+            </a>
+            <button
+              v-if="albumDownloadState(album) === 'queued'"
+              class="icon-btn text-primary cursor-default"
+              :title="t('search.inQueue')"
+              disabled
+            >
+              <Icon icon="fa6-solid:circle-check" class="h-5 w-5" />
+            </button>
+            <button
+              v-else
+              class="icon-btn text-primary hover:bg-primary/10"
+              @click="downloadAlbum(album)"
+              :title="t('search.downloadAlbum')"
+            >
+              <Icon icon="fa6-solid:download" class="h-5 w-5" />
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Songs section label — only needed to separate from the Albums
+         section above; standalone song results don't need a heading. -->
+    <h2
+      v-if="sm.albumResults.value.length > 0 && props.data?.length"
+      class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3"
+    >
+      {{ t('search.songsTitle') }}
+    </h2>
 
     <!-- Loading skeleton -->
     <div v-if="sm.isSearching.value" class="space-y-3">
@@ -97,7 +142,7 @@
       class="surface rounded-2xl p-12 flex flex-col items-center text-center"
     >
       <Icon
-        icon="clarity:search-line"
+        icon="fa6-solid:magnifying-glass"
         class="h-12 w-12 text-base-content/20 mb-4"
       />
       <p class="text-base-content/50 text-sm">{{ t('search.empty') }}</p>
@@ -126,7 +171,7 @@
             v-else
             class="h-full w-full flex items-center justify-center text-base-content/30"
           >
-            <Icon icon="clarity:music-note-line" class="h-6 w-6" />
+            <Icon icon="fa6-solid:music" class="h-6 w-6" />
           </div>
         </div>
 
@@ -155,14 +200,14 @@
         <!-- Actions -->
         <div class="flex items-center gap-1 shrink-0">
           <a
-            v-if="spotifyHref(song)"
+            v-if="song.url"
             class="icon-btn"
-            :href="spotifyHref(song)"
+            :href="song.url"
             target="_blank"
-            rel="noopener noreferrer"
-            :title="t('search.openOnSpotify')"
+            rel="noopener"
+            :title="t('search.openSource')"
           >
-            <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
+            <Icon icon="fa6-solid:arrow-up-right-from-square" class="h-4 w-4" />
           </a>
 
           <button
@@ -171,7 +216,7 @@
             :title="t('search.inQueue')"
             disabled
           >
-            <Icon icon="clarity:check-circle-line" class="h-5 w-5" />
+            <Icon icon="fa6-solid:circle-check" class="h-5 w-5" />
           </button>
           <button
             v-else
@@ -179,47 +224,18 @@
             @click="download(song)"
             :title="t('search.download')"
           >
-            <Icon icon="clarity:download-line" class="h-5 w-5" />
+            <Icon icon="fa6-solid:download" class="h-5 w-5" />
           </button>
         </div>
       </li>
     </ul>
 
     <!-- Pagination -->
-    <nav
+    <Pagination
       v-if="totalPages > 1"
-      class="mt-8 flex items-center justify-center gap-1 flex-wrap"
-    >
-      <button
-        class="icon-btn"
-        :disabled="currentPage === 1"
-        @click="currentPage--"
-        :title="t('search.previousPage')"
-      >
-        <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
-      </button>
-      <button
-        v-for="page in totalPages"
-        :key="page"
-        class="h-10 min-w-[2.5rem] rounded-full px-3 text-sm font-medium transition-colors"
-        :class="
-          page === currentPage
-            ? 'bg-primary text-primary-content shadow-glow-sm'
-            : 'text-base-content/70 hover:text-base-content hover:bg-white/10'
-        "
-        @click="currentPage = page"
-      >
-        {{ page }}
-      </button>
-      <button
-        class="icon-btn"
-        :disabled="currentPage === totalPages"
-        @click="currentPage++"
-        :title="t('search.nextPage')"
-      >
-        <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
-      </button>
-    </nav>
+      v-model="currentPage"
+      :total-pages="totalPages"
+    />
   </div>
 </template>
 
@@ -227,24 +243,26 @@
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
-import { useRouter } from 'vue-router'
+import Pagination from './Pagination.vue'
 import { useSearchManager } from '../model/search'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
-import IncompletePlaylists from './IncompletePlaylists.vue'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 5
 
 const props = defineProps(['data', 'error'])
 const emit = defineEmits(['download'])
 
-const router = useRouter()
 const sm = useSearchManager()
 const pt = useProgressTracker()
 const dm = useDownloadManager()
 const { t } = useI18n()
 
 const currentPage = ref(1)
+// Albums don't have a single stable id in the shared progress tracker
+// until their tracks are resolved, so "queued" is tracked locally here —
+// same "click, get a checkmark, stay put" confirmation songs already get.
+const queuedAlbumIds = ref(new Set())
 
 const totalPages = computed(() =>
   Math.ceil((props.data?.length || 0) / PAGE_SIZE)
@@ -270,16 +288,6 @@ function artistsOf(song) {
   return song.artist || t('common.unknownArtist')
 }
 
-function spotifyHref(song) {
-  const direct = String(song?.spotify_url || song?.url || '').trim()
-  if (direct.includes('open.spotify.com')) return direct
-  const artists = Array.isArray(song?.artists) ? song.artists.join(' ') : ''
-  const name = String(song?.name || '').trim()
-  const q = `${artists} ${name}`.trim()
-  if (!q) return ''
-  return `https://open.spotify.com/search/${encodeURIComponent(q)}`
-}
-
 function downloadState(song) {
   const item = pt.getBySong(song)
   if (!item) return 'idle'
@@ -292,10 +300,19 @@ function download(song) {
   emit('download', song)
 }
 
-function downloadEntirePlaylist() {
-  const url = sm.playlistUrl.value
-  if (!url) return
-  router.push({ name: 'Download' })
-  void dm.fromURL(url)
+function albumDownloadState(album) {
+  return queuedAlbumIds.value.has(album.album_id) ? 'queued' : 'idle'
+}
+
+function downloadAlbum(album) {
+  queuedAlbumIds.value.add(album.album_id)
+  dm.fromURL(album.url)
+}
+
+function releaseTypeBadge(album) {
+  const type = (album.release_type || '').toLowerCase()
+  if (type === 'single') return t('search.singleBadge')
+  if (type === 'ep') return t('search.epBadge')
+  return t('search.albumBadge')
 }
 </script>

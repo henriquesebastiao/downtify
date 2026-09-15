@@ -2,11 +2,15 @@
   <input type="checkbox" id="settings-modal" class="modal-toggle" />
   <div class="modal modal-bottom sm:modal-middle">
     <div
-      class="modal-box surface-strong rounded-t-3xl sm:rounded-3xl p-0 max-w-lg"
+      class="modal-box surface-strong rounded-t-3xl sm:rounded-3xl p-0 max-w-lg overflow-hidden flex flex-col"
     >
       <!-- Header -->
+      <!-- overflow-hidden + flex-col on modal-box (above) clips the body's
+           scrollbar to the rounded corners instead of it poking past them
+           (daisyUI's .modal-box ships overflow-y:auto directly on the
+           rounded element, which native scrollbars don't respect). -->
       <div
-        class="flex items-center justify-between px-6 py-4 border-b border-white/5"
+        class="shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/5"
       >
         <div>
           <h3 class="text-lg font-bold tracking-tight">
@@ -21,12 +25,12 @@
           class="icon-btn cursor-pointer"
           :title="t('common.close')"
         >
-          <Icon icon="clarity:close-line" class="h-5 w-5" />
+          <Icon icon="fa6-solid:xmark" class="h-5 w-5" />
         </label>
       </div>
 
       <!-- Body -->
-      <div class="px-6 py-5 space-y-6">
+      <div class="px-6 py-5 space-y-6 overflow-y-auto min-h-0">
         <!-- Language -->
         <div>
           <label
@@ -55,266 +59,21 @@
           >
             {{ t('settings.audioSource') }}
           </label>
-          <p class="text-[11px] text-base-content/40 mb-2">
-            {{ t('settings.audioSourceHint') }}
-          </p>
           <div class="grid grid-cols-2 gap-2">
             <button
               v-for="provider in sm.settingsOptions.audio_providers"
               :key="provider"
               type="button"
-              class="rounded-xl border px-3 py-2 text-sm transition-colors text-left relative"
+              class="rounded-xl border px-3 py-2 text-sm transition-colors text-left"
               :class="[
-                audioProviderIndex(provider) >= 0
+                sm.settings.value.audio_providers[0] === provider
                   ? 'border-primary/50 bg-primary/10 text-primary'
                   : 'border-white/10 hover:border-white/20 hover:bg-white/5',
               ]"
-              @click="toggleAudioProvider(provider)"
+              @click="sm.settings.value.audio_providers = [provider]"
             >
-              <span
-                v-if="audioProviderIndex(provider) >= 0"
-                class="absolute top-1 right-1 text-[10px] font-bold opacity-80"
-              >
-                {{ audioProviderIndex(provider) + 1 }}
-              </span>
               {{ providerLabel(provider) }}
             </button>
-          </div>
-          <ul
-            v-if="sm.settings.value.audio_providers.length"
-            class="mt-2 space-y-1 text-sm"
-          >
-            <li
-              v-for="(provider, index) in sm.settings.value.audio_providers"
-              :key="provider"
-              class="flex items-center gap-2 rounded-lg border border-white/10 px-2 py-1"
-            >
-              <span class="text-xs opacity-50 w-4">{{ index + 1 }}</span>
-              <span class="flex-1">{{ providerLabel(provider) }}</span>
-              <button
-                type="button"
-                class="btn btn-xs btn-ghost px-1 min-h-0 h-7"
-                :disabled="index === 0"
-                @click="moveProviderAt(index, -1)"
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                class="btn btn-xs btn-ghost px-1 min-h-0 h-7"
-                :disabled="
-                  index === sm.settings.value.audio_providers.length - 1
-                "
-                @click="moveProviderAt(index, 1)"
-              >
-                ↓
-              </button>
-            </li>
-          </ul>
-          <button
-            type="button"
-            class="btn btn-xs btn-ghost rounded-lg mt-2"
-            @click="resetAudioProvidersRecommended"
-          >
-            {{ t('settings.audioSourceReset') }}
-          </button>
-        </div>
-
-        <!-- slskd -->
-        <div>
-          <label
-            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
-          >
-            {{ t('settings.slskdSection') }}
-          </label>
-          <p class="text-[11px] text-base-content/40 mb-2">
-            {{ t('settings.slskdHint') }}
-          </p>
-          <label
-            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
-          >
-            <input
-              type="checkbox"
-              class="checkbox checkbox-sm checkbox-primary mt-0.5"
-              v-model="sm.settings.value.slskd.enabled"
-            />
-            <span class="flex-1 text-sm">
-              <span class="block">{{ t('settings.slskdEnabled') }}</span>
-              <span class="block text-[11px] text-base-content/50">
-                {{ t('settings.slskdEnabledHint') }}
-              </span>
-            </span>
-          </label>
-          <div
-            v-if="sm.settings.value.slskd.enabled"
-            class="grid grid-cols-1 gap-2"
-          >
-            <input
-              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
-              type="text"
-              :placeholder="t('settings.slskdBaseUrl')"
-              v-model="sm.settings.value.slskd.base_url"
-            />
-            <input
-              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
-              type="password"
-              :placeholder="t('settings.slskdApiKey')"
-              v-model="sm.settings.value.slskd.api_key"
-            />
-            <div
-              class="rounded-xl border border-white/10 bg-base-100/50 px-3 py-2.5 space-y-2"
-            >
-              <p class="text-[11px] font-semibold text-base-content/70">
-                {{ t('settings.slskdSourceDirTitle') }}
-              </p>
-              <ul
-                class="text-[11px] text-base-content/50 space-y-1 list-disc pl-4"
-              >
-                <li>{{ t('settings.slskdSourceDirBullet1') }}</li>
-                <li>{{ t('settings.slskdSourceDirBullet2') }}</li>
-                <li>{{ t('settings.slskdSourceDirBullet3') }}</li>
-              </ul>
-              <pre
-                class="text-[10px] leading-relaxed text-base-content/60 whitespace-pre-wrap font-mono bg-base-300/30 rounded-lg px-2 py-1.5"
-                >{{ t('settings.slskdSourceDirExample') }}</pre
-              >
-            </div>
-            <label class="text-[11px] text-base-content/50">
-              {{ t('settings.slskdSourceDirLabel') }}
-            </label>
-            <input
-              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60 font-mono text-sm"
-              type="text"
-              :placeholder="t('settings.slskdSourceDirPlaceholder')"
-              v-model="sm.settings.value.slskd.source_dir"
-            />
-            <p class="text-[11px] text-base-content/40">
-              {{ t('settings.slskdSourceDirHint') }}
-            </p>
-            <label
-              class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mt-2"
-            >
-              <input
-                type="checkbox"
-                class="checkbox checkbox-sm checkbox-primary mt-0.5"
-                v-model="sm.settings.value.slskd.leave_in_place"
-              />
-              <span>
-                <span class="block text-sm font-medium">{{
-                  t('settings.slskdLeaveInPlace')
-                }}</span>
-                <span class="block text-[11px] text-base-content/50 mt-0.5">{{
-                  t('settings.slskdLeaveInPlaceHint')
-                }}</span>
-              </span>
-            </label>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-              <label class="text-[11px] text-base-content/50">
-                {{ t('settings.slskdDownloadTimeout') }}
-                <input
-                  class="input input-sm w-full mt-1 rounded-xl bg-base-100/85 border border-white/10"
-                  type="number"
-                  min="30"
-                  max="3600"
-                  v-model.number="
-                    sm.settings.value.slskd.download_timeout_seconds
-                  "
-                />
-              </label>
-              <label class="text-[11px] text-base-content/50">
-                {{ t('settings.slskdQueuedTimeout') }}
-                <input
-                  class="input input-sm w-full mt-1 rounded-xl bg-base-100/85 border border-white/10"
-                  type="number"
-                  min="15"
-                  max="3600"
-                  v-model.number="
-                    sm.settings.value.slskd.queued_timeout_seconds
-                  "
-                />
-              </label>
-            </div>
-            <p class="text-[11px] text-base-content/40">
-              {{ t('settings.slskdTimeoutHint') }}
-            </p>
-          </div>
-        </div>
-
-        <!-- YouTube cookies (optional) -->
-        <div>
-          <label
-            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
-          >
-            {{ t('settings.youtubeSection') }}
-          </label>
-          <p class="text-[11px] text-base-content/40 mb-2">
-            {{ t('settings.youtubeCookiesHint') }}
-          </p>
-          <label
-            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
-          >
-            <input
-              type="checkbox"
-              class="checkbox checkbox-sm checkbox-primary mt-0.5"
-              v-model="youtubeCookiesExpanded"
-            />
-            <span class="flex-1 text-sm">
-              <span class="block">{{ t('settings.youtubeEnabled') }}</span>
-              <span class="block text-[11px] text-base-content/50">
-                {{ t('settings.youtubeEnabledHint') }}
-              </span>
-              <span
-                v-if="youtubeCookiesReady && youtubeCookiesAuthenticated"
-                class="block text-[11px] text-success mt-1"
-              >
-                {{ t('settings.youtubeCookiesReady') }}
-              </span>
-            </span>
-          </label>
-          <div v-if="youtubeCookiesExpanded" class="grid grid-cols-1 gap-2">
-            <p
-              v-if="youtubeCookiesReady && !youtubeCookiesAuthenticated"
-              class="text-xs text-warning"
-            >
-              {{ t('settings.youtubeCookiesWeak') }}
-            </p>
-            <p
-              v-else-if="youtubeCookiesPath && !youtubeCookiesReady"
-              class="text-xs text-warning"
-            >
-              {{ t('settings.youtubeCookiesMissing') }}
-            </p>
-            <label class="text-[11px] text-base-content/50">
-              {{ t('settings.youtubeCookiesPath') }}
-            </label>
-            <input
-              type="text"
-              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60 font-mono text-sm"
-              :placeholder="t('settings.youtubeCookiesPathPlaceholder')"
-              v-model="sm.settings.value.youtube.cookies_file"
-            />
-            <div class="flex flex-wrap gap-2">
-              <label class="btn btn-sm btn-outline rounded-xl cursor-pointer">
-                {{ t('settings.youtubeCookiesUpload') }}
-                <input
-                  type="file"
-                  accept=".txt,text/plain"
-                  class="hidden"
-                  @change="onYoutubeCookiesFile"
-                />
-              </label>
-              <button
-                type="button"
-                class="btn btn-sm btn-ghost rounded-xl"
-                :disabled="!youtubeCookiesReady && !youtubeCookiesPath"
-                @click="clearYoutubeCookies"
-              >
-                {{ t('settings.youtubeCookiesClear') }}
-              </button>
-            </div>
-            <p v-if="youtubeCookiesError" class="text-xs text-error">
-              {{ youtubeCookiesError }}
-            </p>
           </div>
         </div>
 
@@ -414,6 +173,57 @@
           </div>
         </div>
 
+        <!-- Filename template -->
+        <div>
+          <div class="flex items-baseline justify-between mb-2 gap-3">
+            <label
+              class="block text-xs font-semibold uppercase tracking-wider text-base-content/50"
+            >
+              {{ t('settings.outputTemplate') }}
+            </label>
+            <button
+              type="button"
+              class="text-[11px] text-primary hover:text-primary-focus transition-colors"
+              @click="resetOutputTemplate"
+            >
+              {{ t('settings.outputTemplateReset') }}
+            </button>
+          </div>
+          <input
+            type="text"
+            class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60 font-mono text-sm"
+            v-model.trim="sm.settings.value.output"
+            :placeholder="sm.settingsOptions.output"
+          />
+          <p class="text-[11px] text-base-content/40 mt-1.5">
+            {{ t('settings.outputTemplateHint') }}
+          </p>
+        </div>
+
+        <!-- Search -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.searchSection') }}
+          </label>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.search_albums"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.searchAlbums') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.searchAlbumsHint') }}
+              </span>
+            </span>
+          </label>
+        </div>
+
         <!-- Playlists -->
         <div>
           <label
@@ -422,7 +232,7 @@
             {{ t('settings.playlistsSection') }}
           </label>
           <label
-            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
           >
             <input
               type="checkbox"
@@ -436,146 +246,6 @@
               </span>
             </span>
           </label>
-          <label
-            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
-          >
-            <input
-              type="checkbox"
-              class="checkbox checkbox-sm checkbox-primary mt-0.5"
-              v-model="sm.settings.value.sync_navidrome"
-            />
-            <span class="flex-1 text-sm">
-              <span class="block">{{ t('settings.syncNavidrome') }}</span>
-              <span class="block text-[11px] text-base-content/50">
-                {{ t('settings.syncNavidromeHint') }}
-              </span>
-            </span>
-          </label>
-        </div>
-
-        <!-- Navidrome -->
-        <div>
-          <label
-            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
-          >
-            {{ t('settings.navidromeSection') }}
-          </label>
-          <p class="text-[11px] text-base-content/40 mb-2">
-            {{ t('settings.navidromeHint') }}
-          </p>
-          <label
-            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
-          >
-            <input
-              type="checkbox"
-              class="checkbox checkbox-sm checkbox-primary mt-0.5"
-              v-model="sm.settings.value.navidrome.enabled"
-            />
-            <span class="flex-1 text-sm">
-              <span class="block">{{ t('settings.navidromeEnabled') }}</span>
-              <span class="block text-[11px] text-base-content/50">
-                {{ t('settings.navidromeEnabledHint') }}
-              </span>
-            </span>
-          </label>
-          <div
-            v-if="sm.settings.value.navidrome.enabled"
-            class="grid grid-cols-1 gap-2"
-          >
-            <input
-              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
-              type="text"
-              :placeholder="t('settings.navidromeUrl')"
-              v-model="sm.settings.value.navidrome.url"
-            />
-            <input
-              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
-              type="text"
-              :placeholder="t('settings.navidromeUsername')"
-              v-model="sm.settings.value.navidrome.username"
-            />
-            <input
-              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
-              type="password"
-              :placeholder="t('settings.navidromePassword')"
-              v-model="sm.settings.value.navidrome.password"
-            />
-            <input
-              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
-              type="text"
-              :placeholder="t('settings.navidromeAdminUser')"
-              v-model="sm.settings.value.navidrome.admin_username"
-            />
-            <input
-              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
-              type="password"
-              :placeholder="t('settings.navidromeAdminPassword')"
-              v-model="sm.settings.value.navidrome.admin_password"
-            />
-            <label
-              class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
-            >
-              <input
-                type="checkbox"
-                class="checkbox checkbox-sm checkbox-primary mt-0.5"
-                v-model="sm.settings.value.navidrome.public_playlist"
-              />
-              <span class="flex-1 text-sm">
-                <span class="block">{{ t('settings.navidromePublic') }}</span>
-              </span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Library / player -->
-        <div>
-          <label
-            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
-          >
-            {{ t('settings.librarySection') }}
-          </label>
-          <label
-            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
-          >
-            <input
-              type="checkbox"
-              class="checkbox checkbox-sm checkbox-primary mt-0.5"
-              v-model="sm.settings.value.cache_cover_art"
-            />
-            <span class="flex-1 text-sm">
-              <span class="block">{{ t('settings.cacheCoverArt') }}</span>
-              <span class="block text-[11px] text-base-content/50">
-                {{ t('settings.cacheCoverArtHint') }}
-              </span>
-            </span>
-          </label>
-          <label
-            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2 mt-3"
-          >
-            {{ t('settings.reconcileSection') }}
-          </label>
-          <p class="text-[11px] text-base-content/50 mb-2">
-            {{ t('settings.reconcileIntro') }}
-          </p>
-          <button
-            type="button"
-            class="btn btn-sm h-10 px-5 rounded-full border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50"
-            :disabled="reconcileBusy"
-            @click="runLibraryReconcile"
-          >
-            {{
-              reconcileBusy
-                ? t('settings.reconcileRunning')
-                : t('settings.reconcileButton')
-            }}
-          </button>
-          <p
-            v-if="reconcileMessage"
-            class="text-[11px] mt-2"
-            :class="reconcileError ? 'text-error' : 'text-primary'"
-          >
-            {{ reconcileMessage }}
-          </p>
         </div>
 
         <!-- File organization -->
@@ -586,7 +256,7 @@
             {{ t('settings.organizationSection') }}
           </label>
           <label
-            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-2"
           >
             <input
               type="checkbox"
@@ -597,6 +267,21 @@
               <span class="block">{{ t('settings.organizeByArtist') }}</span>
               <span class="block text-[11px] text-base-content/50">
                 {{ t('settings.organizeByArtistHint') }}
+              </span>
+            </span>
+          </label>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.organize_by_album"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.organizeByAlbum') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.organizeByAlbumHint') }}
               </span>
             </span>
           </label>
@@ -611,7 +296,7 @@
           </label>
           <div class="grid grid-cols-5 gap-1.5">
             <button
-              v-for="n in sm.settingsOptions.max_parallel_downloads"
+              v-for="n in sm.settingsOptions.max_parallel_downloads_presets"
               :key="n"
               type="button"
               class="rounded-xl border px-2 py-2 text-sm font-medium transition-colors text-center"
@@ -620,14 +305,310 @@
                   ? 'border-primary/50 bg-primary/10 text-primary'
                   : 'border-white/10 hover:border-white/20 hover:bg-white/5',
               ]"
-              @click="sm.settings.value.max_parallel_downloads = n"
+              @click="setParallelDownloads(n)"
             >
               {{ n }}
             </button>
           </div>
+          <div class="flex items-center gap-2 mt-2">
+            <input
+              type="number"
+              inputmode="numeric"
+              class="input input-sm w-24 rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              :min="sm.settingsOptions.max_parallel_downloads_min"
+              :max="sm.settingsOptions.max_parallel_downloads_max"
+              :value="sm.settings.value.max_parallel_downloads"
+              @change="setParallelDownloads($event.target.value)"
+            />
+            <span class="text-[11px] text-base-content/40">
+              {{
+                t('settings.parallelDownloadsCustomHint', {
+                  min: sm.settingsOptions.max_parallel_downloads_min,
+                  max: sm.settingsOptions.max_parallel_downloads_max,
+                })
+              }}
+            </span>
+          </div>
           <p class="text-[11px] text-base-content/40 mt-1.5">
             {{ t('settings.parallelDownloadsHint') }}
           </p>
+        </div>
+
+        <!-- Download delay -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.downloadDelay') }}
+          </label>
+          <div class="grid grid-cols-5 gap-1.5">
+            <button
+              v-for="n in sm.settingsOptions.download_delay_seconds_presets"
+              :key="n"
+              type="button"
+              class="rounded-xl border px-2 py-2 text-sm font-medium transition-colors text-center"
+              :class="[
+                sm.settings.value.download_delay_seconds === n
+                  ? 'border-primary/50 bg-primary/10 text-primary'
+                  : 'border-white/10 hover:border-white/20 hover:bg-white/5',
+              ]"
+              @click="setDownloadDelay(n)"
+            >
+              {{ n }}
+            </button>
+          </div>
+          <div class="flex items-center gap-2 mt-2">
+            <input
+              type="number"
+              inputmode="numeric"
+              class="input input-sm w-24 rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              :min="sm.settingsOptions.download_delay_seconds_min"
+              :max="sm.settingsOptions.download_delay_seconds_max"
+              :value="sm.settings.value.download_delay_seconds"
+              @change="setDownloadDelay($event.target.value)"
+            />
+            <span class="text-[11px] text-base-content/40">
+              {{
+                t('settings.downloadDelayCustomHint', {
+                  min: sm.settingsOptions.download_delay_seconds_min,
+                  max: sm.settingsOptions.download_delay_seconds_max,
+                })
+              }}
+            </span>
+          </div>
+          <p class="text-[11px] text-base-content/40 mt-1.5">
+            {{ t('settings.downloadDelayHint') }}
+          </p>
+        </div>
+
+        <!-- Cover art -->
+        <div>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-3"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.download_cover_art"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.downloadCoverArt') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.downloadCoverArtHint') }}
+              </span>
+            </span>
+          </label>
+
+          <div
+            :class="{
+              'opacity-40 pointer-events-none':
+                !sm.settings.value.download_cover_art,
+            }"
+          >
+            <label
+              class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+            >
+              {{ t('settings.coverResolution') }}
+            </label>
+            <div class="grid grid-cols-5 gap-1.5">
+              <button
+                v-for="n in sm.settingsOptions.cover_resolution_presets"
+                :key="n"
+                type="button"
+                :disabled="!sm.settings.value.download_cover_art"
+                class="rounded-xl border px-2 py-2 text-sm font-medium transition-colors text-center"
+                :class="[
+                  sm.settings.value.cover_resolution === n
+                    ? 'border-primary/50 bg-primary/10 text-primary'
+                    : 'border-white/10 hover:border-white/20 hover:bg-white/5',
+                ]"
+                @click="setCoverResolution(n)"
+              >
+                {{ n }}
+              </button>
+            </div>
+            <div class="flex items-center gap-3 mt-3">
+              <input
+                type="range"
+                :min="sm.settingsOptions.cover_resolution_min"
+                :max="sm.settingsOptions.cover_resolution_max"
+                step="50"
+                :disabled="!sm.settings.value.download_cover_art"
+                :value="sm.settings.value.cover_resolution"
+                @input="setCoverResolution($event.target.value)"
+                class="range range-xs range-primary flex-1"
+              />
+              <span
+                class="text-xs tabular-nums w-16 text-right shrink-0 text-base-content/60"
+              >
+                {{ sm.settings.value.cover_resolution }}px
+              </span>
+            </div>
+            <p class="text-[11px] text-base-content/40 mt-1.5">
+              {{ t('settings.coverResolutionHint') }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Overwrite existing files -->
+        <div>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.overwrite_existing_files"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{
+                t('settings.overwriteExistingFiles')
+              }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.overwriteExistingFilesHint') }}
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <!-- Mini player bar -->
+        <div>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.mini_player_enabled"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.miniPlayer') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.miniPlayerHint') }}
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <!-- YouTube cookies -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.cookies') }}
+          </label>
+          <p class="text-[11px] text-base-content/50 mb-3">
+            {{ t('settings.cookiesHint') }}
+          </p>
+
+          <!-- Managed by DOWNTIFY_COOKIES_FILE: read-only here -->
+          <div
+            v-if="cm.status.value.locked"
+            class="surface rounded-xl p-3 flex gap-2 text-sm"
+          >
+            <Icon
+              icon="fa6-solid:lock"
+              class="h-4 w-4 shrink-0 mt-0.5 text-base-content/50"
+            />
+            <span class="flex-1 min-w-0">
+              <span class="block">{{ t('settings.cookiesLocked') }}</span>
+              <span
+                class="block text-[11px] text-base-content/50 truncate"
+                :title="cm.status.value.path"
+              >
+                {{ cm.status.value.path }}
+              </span>
+              <span
+                v-if="!cm.status.value.configured"
+                class="block text-[11px] text-error mt-1"
+              >
+                {{ t('settings.cookiesEnvMissing') }}
+              </span>
+            </span>
+          </div>
+
+          <template v-else>
+            <div
+              v-if="cm.status.value.configured"
+              class="surface rounded-xl p-3 flex items-center gap-2 text-sm mb-2"
+            >
+              <Icon
+                icon="fa6-solid:circle-check"
+                class="h-4 w-4 shrink-0 text-primary"
+              />
+              <span class="flex-1 min-w-0">
+                <span class="block">{{ t('settings.cookiesConfigured') }}</span>
+                <span class="block text-[11px] text-base-content/50">
+                  {{ formatCookieSize(cm.status.value.size) }}
+                  <template v-if="cm.status.value.updated_at">
+                    · {{ formatCookieDate(cm.status.value.updated_at) }}
+                  </template>
+                </span>
+              </span>
+              <button
+                type="button"
+                class="icon-btn text-error/70 hover:text-error hover:bg-error/10 shrink-0"
+                :disabled="cm.busy.value"
+                @click="onDeleteCookies"
+                :title="t('settings.cookiesDelete')"
+              >
+                <span
+                  v-if="cm.busy.value"
+                  class="loading loading-spinner loading-xs"
+                />
+                <Icon v-else icon="fa6-solid:trash" class="h-4 w-4" />
+              </button>
+            </div>
+
+            <label
+              class="btn btn-sm h-10 px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 cursor-pointer w-full"
+              :class="{ 'pointer-events-none opacity-60': cm.busy.value }"
+            >
+              <span
+                v-if="cm.busy.value"
+                class="loading loading-spinner loading-xs mr-2"
+              />
+              <Icon
+                v-else
+                icon="fa6-solid:cloud-arrow-up"
+                class="h-4 w-4 mr-2"
+              />
+              {{
+                cm.status.value.configured
+                  ? t('settings.cookiesReplace')
+                  : t('settings.cookiesUpload')
+              }}
+              <input
+                ref="cookiesInput"
+                type="file"
+                accept=".txt,text/plain"
+                class="hidden"
+                @change="onCookiesSelected"
+              />
+            </label>
+          </template>
+
+          <div
+            v-if="cm.error.value"
+            class="surface rounded-xl p-3 mt-2 flex gap-2 text-sm text-error"
+          >
+            <Icon
+              icon="fa6-solid:circle-exclamation"
+              class="h-4 w-4 shrink-0 mt-0.5"
+            />
+            <span class="flex-1">{{ cm.error.value }}</span>
+          </div>
+          <div
+            v-for="warning in cm.warnings.value"
+            :key="warning"
+            class="surface rounded-xl p-3 mt-2 flex gap-2 text-sm text-warning"
+          >
+            <Icon
+              icon="fa6-solid:triangle-exclamation"
+              class="h-4 w-4 shrink-0 mt-0.5"
+            />
+            <span class="flex-1">{{ warning }}</span>
+          </div>
         </div>
 
         <!-- Save status -->
@@ -643,7 +624,7 @@
             v-if="sm.isSaved.value === true"
             class="surface rounded-xl p-3 flex items-center gap-2 text-sm text-primary"
           >
-            <Icon icon="clarity:check-line" class="h-4 w-4 shrink-0" />
+            <Icon icon="fa6-solid:check" class="h-4 w-4 shrink-0" />
             {{ t('settings.saved') }}
           </div>
           <div
@@ -651,17 +632,17 @@
             class="surface rounded-xl p-3 flex items-center gap-2 text-sm text-error"
           >
             <Icon
-              icon="clarity:exclamation-circle-line"
+              icon="fa6-solid:circle-exclamation"
               class="h-4 w-4 shrink-0"
             />
-            {{ sm.saveErrorText.value || t('settings.saveError') }}
+            {{ t('settings.saveError') }}
           </div>
         </transition>
       </div>
 
       <!-- Footer -->
       <div
-        class="flex items-center justify-end gap-2 px-6 py-4 border-t border-white/5"
+        class="shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t border-white/5"
       >
         <label
           for="settings-modal"
@@ -671,7 +652,7 @@
         </label>
         <button
           class="btn btn-primary btn-sm h-10 px-6 rounded-full"
-          @click="sm.saveSettings()"
+          @click="saveSettings"
         >
           {{ t('common.save') }}
         </button>
@@ -684,275 +665,75 @@
 </template>
 
 <script setup>
+import { onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import { computed, ref, watchEffect } from 'vue'
-import API from '../model/api'
-import { useSettingsManager } from '../model/settings'
+import {
+  clampCoverResolution,
+  clampDownloadDelaySeconds,
+  clampParallelDownloads,
+  useSettingsManager,
+} from '../model/settings'
+import { useCookiesManager } from '../model/cookies'
 import { useI18n } from '../i18n'
 
 const sm = useSettingsManager()
-const youtubeCookiesError = ref('')
-const youtubeCookiesExpanded = ref(false)
-const reconcileBusy = ref(false)
-const reconcileMessage = ref('')
-const reconcileError = ref(false)
-
-const YOUTUBE_DEFAULTS = {
-  cookies_file: '',
-  cookies_from_browser: '',
-  cookies_file_exists: false,
-  cookies_looks_authenticated: false,
-  cookies_auth_names: [],
-  cookies_warnings: [],
-}
-
-const youtubeCookiesPath = computed(() =>
-  String(sm.settings.value?.youtube?.cookies_file || '').trim()
-)
-const youtubeCookiesReady = computed(() =>
-  Boolean(sm.settings.value?.youtube?.cookies_file_exists)
-)
-const youtubeCookiesAuthenticated = computed(() =>
-  Boolean(sm.settings.value?.youtube?.cookies_looks_authenticated)
-)
+const cm = useCookiesManager()
 const { t, locale, setLocale, locales } = useI18n()
 
-const NAVIDROME_DEFAULTS = {
-  enabled: false,
-  url: '',
-  username: '',
-  password: '',
-  admin_username: '',
-  admin_password: '',
-  public_playlist: false,
-  scan_after_download: true,
-  scan_wait_seconds: 120,
-  scan_poll_seconds: 30,
-  client_name: 'Downtify',
-  api_version: '1.16.1',
+const cookiesInput = ref(null)
+
+onMounted(cm.refresh)
+
+function formatCookieSize(bytes) {
+  if (!bytes && bytes !== 0) return ''
+  if (bytes < 1024) return `${bytes} B`
+  return `${(bytes / 1024).toFixed(1)} KB`
 }
 
-const SLSKD_DEFAULTS = {
-  enabled: false,
-  base_url: '',
-  api_key: '',
-  source_dir: '/slskd',
-  leave_in_place: true,
-  timeout_seconds: 20,
-  search_retries: 5,
-  search_poll_seconds: 15,
-  download_attempts: 5,
-  poll_interval_seconds: 5,
-  poll_max_attempts: 60,
-  download_timeout_seconds: 600,
-  queued_timeout_seconds: 180,
-  duration_tolerance_seconds: 10,
-  duration_tolerance_percent: 15,
-  mix_duration_tolerance_percent: 50,
-  extensions: ['mp3', 'flac'],
-  min_bitrate: 256,
+function formatCookieDate(iso) {
+  const parsed = new Date(iso)
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleString()
 }
 
-watchEffect(() => {
-  const curr = sm.settings.value?.youtube
-  if (!curr || typeof curr !== 'object') {
-    sm.settings.value.youtube = { ...YOUTUBE_DEFAULTS }
-    return
-  }
-  for (const [k, v] of Object.entries(YOUTUBE_DEFAULTS)) {
-    if (curr[k] === undefined || curr[k] === null) {
-      curr[k] = v
-    }
-  }
-})
-
-watchEffect(() => {
-  const curr = sm.settings.value?.slskd
-  if (!curr || typeof curr !== 'object') {
-    sm.settings.value.slskd = { ...SLSKD_DEFAULTS }
-    return
-  }
-  for (const [k, v] of Object.entries(SLSKD_DEFAULTS)) {
-    if (curr[k] === undefined || curr[k] === null) {
-      curr[k] = v
-    }
-  }
-})
-
-watchEffect(() => {
-  const curr = sm.settings.value?.navidrome
-  if (!curr || typeof curr !== 'object') {
-    sm.settings.value.navidrome = { ...NAVIDROME_DEFAULTS }
-    return
-  }
-  for (const [k, v] of Object.entries(NAVIDROME_DEFAULTS)) {
-    if (curr[k] === undefined || curr[k] === null) {
-      curr[k] = v
-    }
-  }
-})
-
-watchEffect(() => {
-  if (sm.settings.value?.sync_navidrome === undefined) {
-    sm.settings.value.sync_navidrome = true
-  }
-})
-
-watchEffect(() => {
-  if (sm.settings.value?.cache_cover_art === undefined) {
-    sm.settings.value.cache_cover_art = false
-  }
-})
-
-async function runLibraryReconcile() {
-  reconcileBusy.value = true
-  reconcileMessage.value = ''
-  reconcileError.value = false
-  try {
-    const res = await API.reconcileLibrary()
-    const count = res.data?.paths_updated ?? 0
-    const pruned = res.data?.pruned_stale ?? 0
-    const backfilled = res.data?.content_keys_backfilled ?? 0
-    const playlists = (res.data?.playlists_affected ?? []).join(', ')
-    const refreshM3u = !!res.data?.refresh_m3u
-    const refreshNav = !!res.data?.refresh_navidrome
-    const extras = [
-      refreshM3u ? t('settings.reconcileM3u') : '',
-      refreshNav ? t('settings.reconcileNavidrome') : '',
-    ]
-      .filter(Boolean)
-      .join(', ')
-    if (count === 0 && pruned === 0 && backfilled === 0) {
-      reconcileMessage.value = t('settings.reconcileNone')
-    } else if (count === 0 && pruned > 0) {
-      if (playlists && extras) {
-        reconcileMessage.value = t('settings.reconcilePrunedPlaylists', {
-          pruned,
-          playlists,
-          extras,
-        })
-      } else if (backfilled > 0) {
-        reconcileMessage.value = t('settings.reconcilePrunedBackfill', {
-          pruned,
-          backfilled,
-        })
-      } else {
-        reconcileMessage.value = t('settings.reconcilePrunedSimple', { pruned })
-      }
-    } else if (count === 0 && backfilled > 0) {
-      reconcileMessage.value = t('settings.reconcileBackfillOnly', {
-        backfilled,
-      })
-    } else if (!refreshM3u && !refreshNav) {
-      reconcileMessage.value = t('settings.reconcileDonePathsOnly', {
-        count,
-      })
-    } else {
-      reconcileMessage.value = extras
-        ? t('settings.reconcileDone', {
-            count,
-            playlists: playlists || '—',
-            extras,
-          })
-        : t('settings.reconcileDonePathsOnly', { count })
-    }
-  } catch {
-    reconcileError.value = true
-    reconcileMessage.value = t('settings.reconcileError')
-  } finally {
-    reconcileBusy.value = false
-  }
-}
-
-watchEffect(() => {
-  const providers = sm.settings.value?.audio_providers
-  if (!Array.isArray(providers) || providers.length === 0) {
-    sm.settings.value.audio_providers = ['youtube-music']
-  }
-})
-
-async function onYoutubeCookiesFile(event) {
-  const input = event.target
-  const file = input?.files?.[0]
+async function onCookiesSelected(event) {
+  const file = event.target.files?.[0]
   if (!file) return
-  youtubeCookiesError.value = ''
-  try {
-    const res = await API.uploadYoutubeCookies(file)
-    if (res.status === 200 && res.data?.youtube) {
-      sm.settings.value.youtube = {
-        ...sm.settings.value.youtube,
-        ...res.data.youtube,
-      }
-    } else {
-      youtubeCookiesError.value = t('settings.saveError')
-    }
-  } catch (err) {
-    const detail = err?.response?.data?.detail
-    youtubeCookiesError.value =
-      typeof detail === 'string' && detail.trim()
-        ? detail
-        : t('settings.saveError')
-  } finally {
-    if (input) input.value = ''
-  }
+  await cm.upload(file)
+  // Reset so re-picking the same file still fires @change.
+  if (cookiesInput.value) cookiesInput.value.value = ''
 }
 
-async function clearYoutubeCookies() {
-  youtubeCookiesError.value = ''
-  try {
-    const res = await API.clearYoutubeCookies()
-    if (res.status === 200 && res.data?.youtube) {
-      sm.settings.value.youtube = {
-        ...sm.settings.value.youtube,
-        ...res.data.youtube,
-      }
-    }
-  } catch (err) {
-    const detail = err?.response?.data?.detail
-    youtubeCookiesError.value =
-      typeof detail === 'string' && detail.trim()
-        ? detail
-        : t('settings.saveError')
-  }
+async function onDeleteCookies() {
+  if (!confirm(t('settings.cookiesDeletePrompt'))) return
+  await cm.remove()
 }
 
 function providerLabel(provider) {
   if (provider === 'youtube-music') return 'YouTube Music'
   if (provider === 'youtube') return 'YouTube'
-  if (provider === 'slskd') return 'slskd'
   return provider
 }
 
-const AUDIO_PROVIDER_ORDER = ['slskd', 'youtube-music', 'youtube']
-
-function audioProviderIndex(provider) {
-  const list = sm.settings.value?.audio_providers || []
-  return list.indexOf(provider)
+function setParallelDownloads(value) {
+  sm.settings.value.max_parallel_downloads = clampParallelDownloads(value)
 }
 
-function toggleAudioProvider(provider) {
-  const list = [...(sm.settings.value.audio_providers || [])]
-  const idx = list.indexOf(provider)
-  if (idx >= 0) {
-    list.splice(idx, 1)
-  } else {
-    list.push(provider)
+function setDownloadDelay(value) {
+  sm.settings.value.download_delay_seconds = clampDownloadDelaySeconds(value)
+}
+
+function setCoverResolution(value) {
+  sm.settings.value.cover_resolution = clampCoverResolution(value)
+}
+
+function resetOutputTemplate() {
+  sm.settings.value.output = sm.settingsOptions.output
+}
+
+function saveSettings() {
+  if (!String(sm.settings.value.output || '').trim()) {
+    resetOutputTemplate()
   }
-  sm.settings.value.audio_providers = list.length > 0 ? list : ['youtube-music']
-}
-
-function moveProviderAt(index, delta) {
-  const list = [...(sm.settings.value.audio_providers || [])]
-  const target = index + delta
-  if (target < 0 || target >= list.length) return
-  ;[list[index], list[target]] = [list[target], list[index]]
-  sm.settings.value.audio_providers = list
-}
-
-function resetAudioProvidersRecommended() {
-  const slskdOn = Boolean(sm.settings.value?.slskd?.enabled)
-  sm.settings.value.audio_providers = slskdOn
-    ? [...AUDIO_PROVIDER_ORDER]
-    : ['youtube-music', 'youtube']
+  sm.saveSettings()
 }
 </script>

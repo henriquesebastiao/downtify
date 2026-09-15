@@ -1,5 +1,8 @@
 <template>
-  <div class="min-h-dvh flex flex-col text-base-content">
+  <div
+    class="min-h-dvh flex flex-col text-base-content"
+    :class="{ 'pb-16': mini.showBar.value }"
+  >
     <router-view v-slot="{ Component, route }">
       <transition name="page" mode="out-in">
         <component :is="Component" :key="route.fullPath" />
@@ -7,6 +10,7 @@
     </router-view>
     <Footer />
     <Settings />
+    <MiniPlayer />
   </div>
 </template>
 
@@ -14,9 +18,12 @@
 import { onBeforeMount } from 'vue'
 import Footer from './components/Footer.vue'
 import Settings from './components/Settings.vue'
+import MiniPlayer from './components/MiniPlayer.vue'
 import { useBinaryThemeManager } from './model/theme'
+import { useMiniPlayer } from './model/miniPlayer'
 
 const themeMgr = useBinaryThemeManager()
+const mini = useMiniPlayer()
 onBeforeMount(() => {
   themeMgr.setLightAlias('downtify-light')
   themeMgr.setDarkAlias('downtify-dark')

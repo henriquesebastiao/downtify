@@ -80,12 +80,6 @@ sed -i \
   "$REPO_ROOT/Dockerfile"
 echo "  updated Dockerfile"
 
-# frontend/src/components/Hero.vue
-
-sed -i "s/|| '${OLD_VERSION}'/|| '${NEW_VERSION}'/" \
-  "$REPO_ROOT/frontend/src/components/Hero.vue"
-echo "  updated frontend/src/components/Hero.vue"
-
 # verify
 
 echo
@@ -94,4 +88,3 @@ grep "__version__"                    "$REPO_ROOT/downtify/__init__.py"
 grep "^version"                       "$REPO_ROOT/pyproject.toml"
 grep '"version"'                      "$REPO_ROOT/frontend/package.json" | head -1
 grep 'LABEL version'                  "$REPO_ROOT/Dockerfile"
-grep "|| '"                           "$REPO_ROOT/frontend/src/components/Hero.vue"

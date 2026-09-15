@@ -13,7 +13,7 @@ def test_sanitize_removes_filesystem_unsafe_chars(char):
 
 
 def test_sanitize_normal_string_unchanged():
-    assert _sanitize('Arctic Monkeys') == 'Arctic Monkeys'
+    assert _sanitize('The Night Owls') == 'The Night Owls'
 
 
 def test_sanitize_empty_string_returns_unknown():
@@ -45,12 +45,12 @@ def test_sanitize_control_chars_removed():
 
 
 def test_sanitize_unicode_letters_kept():
-    assert _sanitize('Sigur Rós') == 'Sigur Rós'
+    assert _sanitize('Sólfar') == 'Sólfar'
 
 
 def test_sanitize_numbers_kept():
-    assert _sanitize('2Pac') == '2Pac'
+    assert _sanitize('7Signal') == '7Signal'
 
 
 def test_sanitize_hyphen_kept():
-    assert _sanitize('Post-Malone') == 'Post-Malone'
+    assert _sanitize('Echo-Static') == 'Echo-Static'

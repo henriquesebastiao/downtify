@@ -1,0 +1,180 @@
+{
+  "name": "Downtify",
+  "short_name": "Downtify",
+  "description": "Self-hosted Spotify downloader — tracks, albums and playlists with full metadata, cover art and lyrics.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#181818",
+  "theme_color": "#1ad05c",
+  "icons": [
+    {
+      "src": "/40.png",
+      "sizes": "16x16",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/20.png",
+      "sizes": "20x20",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/29.png",
+      "sizes": "29x29",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/32.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/40.png",
+      "sizes": "40x40",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/48.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/50.png",
+      "sizes": "50x50",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/57.png",
+      "sizes": "57x57",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/58.png",
+      "sizes": "58x58",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/60.png",
+      "sizes": "60x60",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/64.png",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/76.png",
+      "sizes": "76x76",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/80.png",
+      "sizes": "80x80",
+      "type": "image/png",
+      "purpose": "maskable"
+    },{
+      "src": "/87.png",
+      "sizes": "87x87",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/100.png",
+      "sizes": "100x100",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/114.png",
+      "sizes": "114x114",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/120.png",
+      "sizes": "120x120",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable"
+    },{
+      "src": "/152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/167.png",
+      "sizes": "167x167",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

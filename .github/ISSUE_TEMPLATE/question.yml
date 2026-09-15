@@ -1,6 +1,7 @@
 name: Question
 description: Ask a question about Downtify setup, usage, or configuration
 labels: ["question"]
+projects: ["henriquesebastiao/24"]
 body:
   - type: markdown
     attributes:

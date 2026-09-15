@@ -14,6 +14,13 @@ services:
       - ./docker/downloads:/downloads
       # - ./docker/slskd:/slskd
       - ./docker/data:/data
-      - ./frontend/dist:/downtify/frontend/dist:ro
+      # - ./docker/cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_PORT=30321
+      # https://downtify.henriquesebastiao.com/getting-started/environment-variables/#getting-a-cookiestxt
+      # - DOWNTIFY_COOKIES_FILE=/cookies.txt
+      # - TZ=America/Sao_Paulo
+      # - DOWNTIFY_MONITOR_SYNC_TIME=03:00
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1

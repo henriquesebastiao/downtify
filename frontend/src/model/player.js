@@ -1,47 +1,31 @@
 import { ref, computed } from 'vue'
 
-import API from '/src/model/api'
-
 const VOLUME_KEY = 'downtify-player-volume'
-const PLAYER_PLAYLIST_FILTER_KEY = 'downtify-player-pl-filter'
-const PLAYER_FILTER_QUERY_KEY = 'downtify-player-filter-query'
-
-export function loadPlayerViewPrefs() {
-  try {
-    return {
-      playlistFilter: sessionStorage.getItem(PLAYER_PLAYLIST_FILTER_KEY) || '',
-      filterQuery: sessionStorage.getItem(PLAYER_FILTER_QUERY_KEY) || '',
-    }
-  } catch {
-    return { playlistFilter: '', filterQuery: '' }
-  }
-}
-
-export function savePlayerViewPrefs(prefs) {
-  try {
-    if (prefs.playlistFilter !== undefined) {
-      sessionStorage.setItem(
-        PLAYER_PLAYLIST_FILTER_KEY,
-        String(prefs.playlistFilter || '')
-      )
-    }
-    if (prefs.filterQuery !== undefined) {
-      sessionStorage.setItem(
-        PLAYER_FILTER_QUERY_KEY,
-        String(prefs.filterQuery || '')
-      )
-    }
-  } catch {
-    // ignore
-  }
-}
 
 const playlist = ref([])
 const currentIndex = ref(-1)
 const isPlaying = ref(false)
 const currentTime = ref(0)
 const duration = ref(0)
-const volume = ref(parseFloat(localStorage.getItem(VOLUME_KEY) || '0.85'))
+// Matches the `sm` breakpoint the mobile-only volume-UI hiding uses
+// (Player.vue, MiniPlayer.vue). Phones control the actual output level
+// with their hardware volume buttons, which scale whatever this element
+// outputs — so the element itself is kept at full volume there instead
+// of applying the desktop-saved level on top of the hardware one.
+const MOBILE_VOLUME_BREAKPOINT_PX = 640
+
+function isMobileViewport() {
+  return (
+    typeof window !== 'undefined' &&
+    window.innerWidth < MOBILE_VOLUME_BREAKPOINT_PX
+  )
+}
+
+const volume = ref(
+  isMobileViewport()
+    ? 1
+    : parseFloat(localStorage.getItem(VOLUME_KEY) || '0.85')
+)
 const isMuted = ref(false)
 const repeatMode = ref('off') // 'off' | 'all' | 'one'
 const shuffle = ref(false)
@@ -74,8 +58,23 @@ function ensureAudio() {
   return audio
 }
 
+function fileUrl(file) {
+  return `/downloads/${encodeURIComponent(file)}`
+}
+
+function coverUrl(file) {
+  return `/cover?file=${encodeURIComponent(file)}`
+}
+
 function trackFromFile(file) {
-  const noExt = file.replace(/\.[^.]+$/, '')
+  // Playlist/album downloads land in their own subfolder
+  // ("My Playlist/Artist - Title.mp3"), so the basename must be
+  // isolated before parsing "Artist - Title" — otherwise the first
+  // " - " found in the *whole path* wins, and the artist comes out as
+  // "My Playlist/Artist" instead of just "Artist".
+  const slash = file.lastIndexOf('/')
+  const basename = slash >= 0 ? file.slice(slash + 1) : file
+  const noExt = basename.replace(/\.[^.]+$/, '')
   let artist = ''
   let title = noExt
   const dash = noExt.indexOf(' - ')
@@ -85,36 +84,10 @@ function trackFromFile(file) {
   }
   return {
     file,
-    url: API.downloadFileURL(file),
-    cover: API.coverFileURL(file),
+    url: fileUrl(file),
+    cover: coverUrl(file),
     title,
     artist,
-    album: '',
-  }
-}
-
-/** Normalize ``/list`` rows (string legacy paths or tag-enriched objects). */
-export function normalizeLibraryEntry(raw) {
-  if (typeof raw === 'string') {
-    return trackFromFile(raw)
-  }
-  const file = String(raw?.file || '')
-  const base = trackFromFile(file)
-  const title = String(raw?.title || '').trim()
-  const artist = String(raw?.artist || '').trim()
-  const album = String(raw?.album || '').trim()
-  const playlists = Array.isArray(raw?.playlists)
-    ? raw.playlists.map((p) => String(p).trim()).filter(Boolean)
-    : []
-  return {
-    file,
-    url: base.url,
-    cover: base.cover,
-    title: title || base.title,
-    artist: artist || base.artist,
-    album: album || base.album,
-    playlists,
-    has_cover: Boolean(raw?.has_cover),
   }
 }
 
@@ -131,58 +104,46 @@ function buildShuffleOrder() {
       : 0
 }
 
-function storedPathFromMediaUrl(src) {
-  if (!src) return null
-  try {
-    const path = new URL(src, window.location.origin).pathname
-    const prefix = '/media/'
-    if (path.startsWith(prefix)) {
-      return decodeURIComponent(path.slice(prefix.length))
-    }
-  } catch {
-    /* ignore */
-  }
-  return null
+function sameTrackOrder(a, b) {
+  if (a.length !== b.length) return false
+  return a.every((track, i) => track.file === b[i].file)
 }
 
 function setPlaylist(files, options = {}) {
-  const prevFile =
-    currentIndex.value >= 0 && currentIndex.value < playlist.value.length
-      ? playlist.value[currentIndex.value]?.file
-      : null
-  const audioFile = audio?.src ? storedPathFromMediaUrl(audio.src) : null
-  const keepFile = prevFile || audioFile || null
   const tracks = (files || []).map((f) =>
-    typeof f === 'string' ? trackFromFile(f) : normalizeLibraryEntry(f)
+    typeof f === 'string' ? trackFromFile(f) : f
   )
-  playlist.value = tracks
-  if (shuffle.value) buildShuffleOrder()
-
-  if (options.preservePlayback) {
-    if (keepFile) {
-      const idx = tracks.findIndex((t) => t.file === keepFile)
-      currentIndex.value = idx
-      if (idx < 0 && audio && !audio.paused) {
-        audio.pause()
-      }
-    } else if (currentIndex.value >= tracks.length) {
-      currentIndex.value = -1
-    }
+  if (
+    typeof options.startIndex !== 'number' &&
+    sameTrackOrder(tracks, playlist.value)
+  ) {
+    // Re-selecting the queue that's already loaded (e.g. re-picking the
+    // active playlist) must not interrupt what's currently playing.
     return
   }
-
-  if (currentIndex.value >= tracks.length) currentIndex.value = -1
-  const shouldAutoplay = options.autoplay === true
+  playlist.value = tracks
   if (typeof options.startIndex === 'number') {
-    playAt(options.startIndex, { autoplay: shouldAutoplay })
-  } else if (shouldAutoplay && tracks.length > 0 && currentIndex.value < 0) {
-    playAt(0, { autoplay: true })
+    playAt(options.startIndex)
+    return
+  }
+  // Any other queue replacement drops whatever was playing/queued
+  // before — a stale currentIndex would otherwise point at an unrelated
+  // track in the new list that just happens to share the same position.
+  currentIndex.value = -1
+  pause()
+  if (audio) {
+    audio.removeAttribute('src')
+  }
+  currentTime.value = 0
+  duration.value = 0
+  if (shuffle.value) buildShuffleOrder()
+  if (options.autoplay && tracks.length > 0) {
+    playAt(0)
   }
 }
 
-function playAt(index, options = {}) {
+function playAt(index) {
   if (index < 0 || index >= playlist.value.length) return
-  const autoplay = options.autoplay !== false
   const a = ensureAudio()
   currentIndex.value = index
   if (shuffle.value) {
@@ -193,11 +154,7 @@ function playAt(index, options = {}) {
   a.src = playlist.value[index].url
   a.currentTime = 0
   currentTime.value = 0
-  if (autoplay) {
-    a.play().catch(() => {})
-  } else {
-    a.pause()
-  }
+  a.play().catch(() => {})
 }
 
 function play() {
@@ -331,15 +288,6 @@ function toggleShuffle() {
   setShuffle(!shuffle.value)
 }
 
-/** Re-sync UI transport state after remounting the Player view. */
-function syncTransportFromAudio() {
-  const a = audio
-  if (!a?.src) return
-  currentTime.value = a.currentTime
-  duration.value = isFinite(a.duration) ? a.duration : 0
-  isPlaying.value = !a.paused
-}
-
 const currentTrack = computed(() =>
   currentIndex.value >= 0 && currentIndex.value < playlist.value.length
     ? playlist.value[currentIndex.value]
@@ -358,11 +306,8 @@ export function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export function trackInfoFromFile(fileOrEntry) {
-  if (typeof fileOrEntry === 'string') {
-    return trackFromFile(fileOrEntry)
-  }
-  return normalizeLibraryEntry(fileOrEntry)
+export function trackInfoFromFile(file) {
+  return trackFromFile(file)
 }
 
 export function usePlayer() {
@@ -393,6 +338,5 @@ export function usePlayer() {
     cycleRepeat,
     setShuffle,
     toggleShuffle,
-    syncTransportFromAudio,
   }
 }

@@ -207,7 +207,7 @@ def test_open_page_parses_music_release_meta():
     mock_resp = MagicMock()
     mock_resp.text = html
     mock_resp.raise_for_status = lambda: None
-    with patch('downtify.spotify.requests.get', return_value=mock_resp):
+    with patch('downtify.spotify.httpx.get', return_value=mock_resp):
         assert _album_release_date_from_open_page(
             '4J7wEPiFH5EjMFzqec4E2k'
         ) == ('2025-10-03')

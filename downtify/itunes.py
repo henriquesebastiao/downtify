@@ -16,7 +16,7 @@ from threading import Lock
 from typing import Any, Optional
 from urllib.parse import quote_plus
 
-import requests
+import httpx
 from loguru import logger
 
 _ITUNES_SEARCH_URL = 'https://itunes.apple.com/search'
@@ -58,9 +58,9 @@ def _names_match(a: str, b: str) -> bool:
         return False
     if na == nb:
         return True
-    # One contains the other (handles "Arctic Monkeys" vs
-    # "Arctic Monkeys & …" or "Do I Wanna Know?" vs
-    # "Do I Wanna Know? - Single Version").
+    # One contains the other (handles "The Night Owls" vs
+    # "The Night Owls & …" or "Do I Still Recall?" vs
+    # "Do I Still Recall? - Single Version").
     return na in nb or nb in na
 
 
@@ -84,7 +84,7 @@ def _search_itunes(query: str, limit: int = 5) -> list[dict[str, Any]]:
     url = f'{_ITUNES_SEARCH_URL}?{params}'
     logger.debug('iTunes genre lookup: {}', url)
     try:
-        resp = requests.get(url, timeout=_TIMEOUT)
+        resp = httpx.get(url, timeout=_TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
     except Exception:

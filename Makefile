@@ -1,17 +1,12 @@
 #!make
 
-DOWNTIFY_VERSION := 2.8.0
+DOWNTIFY_VERSION := 2.12.0
 TARGET := henriquesebastiao/downtify
 
-all: build latest
+all: build up
 
 build:
-	docker buildx create --use
-	docker buildx build --platform=linux/amd64,linux/arm64 -t $(TARGET):$(DOWNTIFY_VERSION) --push .
-
-latest:
-	docker buildx create --use
-	docker buildx build --platform=linux/amd64,linux/arm64 -t $(TARGET):latest --push .
+	docker buildx build . --no-cache
 
 clean:
 	find downloads -type f -name "*.mp3" -exec rm -f {} \;
@@ -21,6 +16,7 @@ up:
 
 down:
 	docker compose down
+	docker rmi downtify:latest
 
 run: frontend-build
 	uv run python main.py web
@@ -52,14 +48,17 @@ version:
 	echo "Downtify version: $$VERSION"; \
 	./version.sh $$VERSION
 	npm install --prefix frontend
-	npm run build --prefix frontend
 	uv run ruff format .; ruff check . --fix
 	prettier --write frontend/src/.
 
 doc:
 	uv run zensical serve
 
+rm:
+	sudo rm -rf docker/downloads/*
+	sudo rm -rf docker/data/*
+
 %:
 	@:
 
-.PHONY: all build latest clean up down run frontend-build format lint export changelog version doc
+.PHONY: all build clean up down run frontend-build format lint export changelog version doc rm

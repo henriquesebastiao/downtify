@@ -16,55 +16,32 @@ import logging
 import mimetypes
 import os
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
 from loguru import logger
-from pydantic import BaseModel, Field
+from mutagen import File as MutagenFile
+from mutagen.flac import FLAC, Picture
+from mutagen.id3 import ID3
+from mutagen.mp4 import MP4
+from mutagen.oggopus import OggOpus
+from mutagen.oggvorbis import OggVorbis
 from uvicorn import Config, Server
 
-from downtify import __version__, api
-from downtify.api import (
-    collect_playlist_batch_sync_rows,
-    known_spotify_playlist_ids,
-)
-from downtify.cover_art import extract_cover_art
-from downtify.cover_cache import CoverArtCache
-from downtify.download_pool import limiter_from_settings
+from downtify import __version__, api, m3u
+from downtify.cookies import CookiesStore
 from downtify.downloader import Downloader
-from downtify.library_catalog import (
-    LibraryContext,
-    library_context_from_state,
-    list_library_entries,
-    resolve_library_file,
-)
-from downtify.library_delete import delete_library_file
-from downtify.library_metadata_cache import LibraryMetadataCache
-from downtify.library_paths_cache import invalidate_library_paths_cache
-from downtify.library_reconcile import refresh_playlists_after_moves
-from downtify.monitor import PlaylistMonitorDB, monitor_loop
-from downtify.navidrome_index import NavidromeIndex
-from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
-from downtify.playlist_catalog import PlaylistCatalog
-from downtify.playlist_spotify_cache import (
-    PlaylistSpotifyCache,
-    playlist_spotify_cache_loop,
-)
-from downtify.track_index import TrackIndex
+from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
+from downtify.update_check import UpdateChecker, update_check_loop
 
 load_dotenv()
-
-
-def _uvicorn_access_log_enabled() -> bool:
-    """HTTP request lines are off by default; set DOWNTIFY_ACCESS_LOG=full to enable."""
-    raw = str(os.getenv('DOWNTIFY_ACCESS_LOG', '') or '').strip().lower()
-    return raw in {'1', 'true', 'full', 'all', 'on'}
 
 
 class _InterceptHandler(logging.Handler):
@@ -102,25 +79,23 @@ def _setup_logging(level: str) -> None:
     # Explicitly override uvicorn's loggers before it starts — uvicorn will
     # still write to these logger names, and we want them flowing through
     # loguru rather than being printed raw by uvicorn's default handler.
-    intercept = _InterceptHandler()
     for _name in ('uvicorn', 'uvicorn.error', 'uvicorn.access', 'fastapi'):
         _log = logging.getLogger(_name)
-        _log.handlers = [intercept]
+        _log.handlers = [_InterceptHandler()]
         _log.propagate = False
 
 
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
-DATABASE_DIR = Path('/data')
-_REPO_ROOT = Path(__file__).resolve().parent
-WEB_GUI_LOCATION = os.getenv(
-    'WEB_GUI_LOCATION',
-    str(_REPO_ROOT / 'frontend' / 'dist'),
-)
+DATABASE_DIR = Path(os.getenv('DATABASE_DIR', '/data'))
+WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
 DEFAULT_PORT = int(os.getenv('DOWNTIFY_PORT', os.getenv('PORT', '8000')))
-_TRANSPARENT_GIF = base64.b64decode(
-    'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-)
+
+_AUDIO_EXTENSIONS = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
+
+#: Filename written by Downloader._save_album_cover next to every track
+#: of an album folder (organize-by-album layout only).
+_ALBUM_COVER_FILENAME = 'cover.jpg'
 
 
 class SPAStaticFiles(StaticFiles):
@@ -139,112 +114,336 @@ def _fix_mime_types() -> None:
     mimetypes.add_type('text/css', '.css')
 
 
-class LibraryListEntry(BaseModel):
-    """One row from ``GET /list``."""
+def _extract_cover(path: Path) -> tuple[bytes | None, str | None]:
+    """Return ``(image_bytes, mime)`` for the embedded cover, or ``(None, None)``.
 
-    file: str
-    title: str = ''
-    artist: str = ''
-    album: str = ''
-    has_cover: bool = False
-    playlists: list[str] = Field(default_factory=list)
+    Reads tags lazily — mutagen format detection handles MP3/FLAC/M4A/OGG/Opus
+    without us needing to dispatch on extension.
+    """
 
+    try:
+        # ID3 (mp3, sometimes wav/aac)
+        try:
+            tag = ID3(str(path))
+            for frame in tag.getall('APIC'):
+                if frame.data:
+                    return frame.data, frame.mime or 'image/jpeg'
+        except Exception:
+            pass
 
-async def _application_startup() -> None:
-    loop = asyncio.get_running_loop()
-    api.state.loop = loop
-    api.state.download_limiter = limiter_from_settings(api.state.settings)
-    db_path = DATABASE_DIR / 'downtify_monitor.db'
-    api.state.monitor_db = PlaylistMonitorDB(db_path)
-    library_db = DATABASE_DIR / 'downtify_library.db'
-    api.state.track_index = TrackIndex(library_db)
-    api.state.navidrome_index = NavidromeIndex(library_db)
-    api.state.metadata_cache = LibraryMetadataCache(library_db)
-    api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
-    api.state.playlist_catalog = PlaylistCatalog(library_db)
-    api.state.playlist_batch_store = PlaylistBatchStore(library_db)
-    api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
-    lib_ctx = library_context_from_state(
-        DOWNLOAD_DIR, api.state.settings, api.state.track_index
-    )
-    try:
-        imported = api.state.track_index.backfill_from_monitor_db(db_path)
-        if imported:
-            logger.info(
-                'Track library index: imported {} path(s) from monitor history',
-                imported,
-            )
-    except Exception:
-        logger.exception('Track library backfill from monitor db failed')
-    try:
-        imported_pl = api.state.playlist_catalog.backfill_from_monitor_db(
-            db_path,
-            download_dir=lib_ctx.download_dir,
-            slskd_dir=lib_ctx.slskd_dir,
-        )
-        if imported_pl:
-            logger.info(
-                'Playlist catalog: linked {} track(s) from monitor history',
-                imported_pl,
-            )
-    except Exception:
-        logger.exception('Playlist catalog backfill from monitor db failed')
-    try:
-        if api.state.playlist_batch_store is not None:
-            synced = ensure_batch_records(
-                api.state.playlist_batch_store,
-                collect_playlist_batch_sync_rows(),
-            )
-            if synced:
-                logger.info(
-                    'Playlist batches: registered {} playlist(s) from library',
-                    synced,
+        # FLAC
+        if path.suffix.lower() == '.flac':
+            try:
+                f = FLAC(str(path))
+                if f.pictures:
+                    pic = f.pictures[0]
+                    return pic.data, pic.mime or 'image/jpeg'
+            except Exception:
+                pass
+
+        # MP4 / M4A
+        if path.suffix.lower() in {'.m4a', '.mp4', '.aac'}:
+            try:
+                m = MP4(str(path))
+                covr = m.tags.get('covr') if m.tags else None
+                if covr:
+                    pic = covr[0]
+                    fmt = getattr(pic, 'imageformat', None)
+                    mime = (
+                        'image/png'
+                        if fmt == 14  # MP4Cover.FORMAT_PNG
+                        else 'image/jpeg'
+                    )
+                    return bytes(pic), mime
+            except Exception:
+                pass
+
+        # Ogg Vorbis / Opus — METADATA_BLOCK_PICTURE base64
+        if path.suffix.lower() in {'.ogg', '.opus'}:
+            try:
+                ogg = (
+                    OggOpus(str(path))
+                    if path.suffix.lower() == '.opus'
+                    else OggVorbis(str(path))
                 )
+                blocks = ogg.get('metadata_block_picture') or []
+                for raw in blocks:
+                    try:
+                        pic = Picture(base64.b64decode(raw))
+                        if pic.data:
+                            return pic.data, pic.mime or 'image/jpeg'
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+
+        # Generic fallback — let mutagen pick the right parser
+        try:
+            f = MutagenFile(str(path))
+            if f is not None and getattr(f, 'pictures', None):
+                pic = f.pictures[0]
+                return pic.data, pic.mime or 'image/jpeg'
+        except Exception:
+            pass
     except Exception:
-        logger.exception('Playlist batch sync from library failed')
-    asyncio.create_task(
-        monitor_loop(
-            db=api.state.monitor_db,
-            get_downloader=lambda: api.state.downloader,
-            get_track_index=lambda: api.state.track_index,
-            get_navidrome_index=lambda: api.state.navidrome_index,
-            get_metadata_cache=lambda: api.state.metadata_cache,
-            get_cover_cache=lambda: api.state.cover_cache,
-            get_playlist_catalog=lambda: api.state.playlist_catalog,
-            get_playlist_spotify_cache=lambda: (
-                api.state.playlist_spotify_cache
-            ),
-            broadcast=api.state.connections.broadcast,
-            loop=loop,
-            settings=api.state.settings,
-        )
-    )
-    asyncio.create_task(
-        playlist_spotify_cache_loop(
-            api.state.playlist_spotify_cache,
-            known_spotify_playlist_ids,
-        )
-    )
+        return None, None
+    return None, None
 
 
-@asynccontextmanager
-async def _application_lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    await _application_startup()
-    yield
+def _extract_track_tags(path: Path) -> tuple[str, str]:
+    """Return ``(artist, album)`` read from ``path``'s embedded tags.
+
+    Powers the player's "play only this artist/album" filters. Uses
+    mutagen's "easy" wrappers so ID3 (MP3), MP4 (M4A/AAC) and Vorbis
+    comments (FLAC/OGG/Opus) all expose the same ``artist``/``album``
+    keys without us needing to dispatch on extension. Missing or
+    unreadable tags come back as ``''`` — the frontend then buckets the
+    track the same way it already does for artist-less filenames.
+    """
+
+    try:
+        tags = MutagenFile(str(path), easy=True)
+    except Exception:
+        return '', ''
+    if not tags:
+        return '', ''
+    artist = (tags.get('artist') or [''])[0]
+    album = (tags.get('album') or [''])[0]
+    return artist, album
+
+
+# (artist, album) per absolute path, valid while the file's mtime and size
+# are unchanged. The Player and Library pages call /tracks on every visit;
+# without this each visit re-parsed every file's tags.
+_TRACK_TAGS_CACHE: dict[str, tuple[tuple[int, int], tuple[str, str]]] = {}
+_TRACK_TAGS_LOCK = threading.Lock()
+# Tag reads on a cache miss are mostly waiting on the disk (seeks on an
+# HDD, round-trips on a NAS mount), where threads parallelize well:
+# 2,000 files with a simulated 2 ms I/O latency went from ~5 s sequential
+# to ~0.6 s on 8 threads. Processes aren't worth it here — the parsing
+# itself is small, and forking a server with live download threads isn't
+# safe.
+_TAG_READ_THREADS = 8
+
+
+def _cached_track_tags(path: Path) -> tuple[str, str]:
+    try:
+        stat = path.stat()
+    except OSError:
+        return '', ''
+    key = str(path)
+    signature = (stat.st_mtime_ns, stat.st_size)
+    with _TRACK_TAGS_LOCK:
+        cached = _TRACK_TAGS_CACHE.get(key)
+    if cached is not None and cached[0] == signature:
+        return cached[1]
+    tags = _extract_track_tags(path)
+    with _TRACK_TAGS_LOCK:
+        _TRACK_TAGS_CACHE[key] = (signature, tags)
+    return tags
+
+
+def _read_library_tags(paths: list[Path]) -> list[tuple[str, str]]:
+    """``(artist, album)`` for each of ``paths``, in order.
+
+    Unchanged files come from the cache; the rest are read on a thread
+    pool. Entries for files no longer in ``paths`` (deleted or moved) are
+    dropped so the cache doesn't grow forever.
+    """
+
+    with ThreadPoolExecutor(
+        max_workers=_TAG_READ_THREADS, thread_name_prefix='downtify-tags'
+    ) as pool:
+        tags = list(pool.map(_cached_track_tags, paths))
+    current = {str(p) for p in paths}
+    with _TRACK_TAGS_LOCK:
+        for key in [k for k in _TRACK_TAGS_CACHE if k not in current]:
+            del _TRACK_TAGS_CACHE[key]
+    return tags
+
+
+def _delete_lrc_sidecar(audio_path: Path) -> None:
+    """Best-effort removal of the .lrc sidecar next to a deleted track.
+
+    Mirrors the naming ``downtify/downloader.py:embed_lyrics`` writes the
+    sidecar with — same basename as the audio file, ``.lrc`` extension.
+    A missing or unremovable sidecar must not fail the audio file's own
+    deletion, which has already succeeded by the time this runs.
+    """
+    lrc = audio_path.with_suffix('.lrc')
+    try:
+        lrc.unlink(missing_ok=True)
+    except OSError:
+        logger.opt(exception=True).warning(
+            'Could not remove LRC sidecar {}', lrc
+        )
+
+
+def _delete_album_cover_if_orphaned(audio_path: Path) -> None:
+    """Best-effort removal of a now-unused ``cover.jpg``.
+
+    ``cover.jpg`` (written by ``Downloader._save_album_cover`` under the
+    *Organize by album* layout) sits once per album folder, shared by
+    every track in it — so it's only safe to delete once no other track
+    in that same folder still needs it. Checked *after* the audio file
+    itself is gone, so the deleted track doesn't count as a remaining
+    dependent.
+    """
+    folder = audio_path.parent
+    cover = folder / _ALBUM_COVER_FILENAME
+    if not cover.is_file():
+        return
+    still_used = any(
+        p.is_file() and p.suffix.lower() in _AUDIO_EXTENSIONS
+        for p in folder.iterdir()
+    )
+    if still_used:
+        return
+    try:
+        cover.unlink(missing_ok=True)
+    except OSError:
+        logger.opt(exception=True).warning(
+            'Could not remove orphaned album cover {}', cover
+        )
+
+
+def _prune_empty_parent_dirs(start_dir: Path, root: Path) -> None:
+    """Remove ``start_dir`` and its empty ancestors, stopping at ``root``.
+
+    Run after a track and its sidecars are deleted, so a per-playlist or
+    per-artist/album folder left with nothing in it doesn't linger
+    forever. Climbs one directory at a time and stops at the first one
+    that still has something in it — ``root`` (the downloads directory)
+    is never removed itself, even if it ends up empty.
+    """
+    try:
+        root = root.resolve()
+        current = start_dir.resolve()
+    except OSError:
+        return
+    # Safety: only ever climb within root's own tree, never above it.
+    if current != root and root not in current.parents:
+        return
+    while current != root:
+        try:
+            if any(current.iterdir()):
+                return
+            current.rmdir()
+        except OSError:
+            return
+        current = current.parent
+
+
+#: Hard cap on a single batch-delete request, so an accidental
+#: "select everything" on a huge library can't tie up a request
+#: forever or send a payload that's obviously not a real selection.
+MAX_BATCH_DELETE = 2000
+
+
+def _delete_track_file(file: str, base: Path) -> dict:
+    """Delete one track (``file``, relative to ``base``) plus its
+    sidecars, and prune the folder it leaves behind if it's now empty.
+
+    Returns ``{'deleted': True}`` or ``{'deleted': False, 'error': str}``
+    — this is the exact shape ``DELETE /delete`` has always returned;
+    ``DELETE /delete/batch`` reuses it per file.
+    """
+    # Resolve and confine to `base` to prevent path traversal.
+    try:
+        full = (base / file).resolve()
+        full.relative_to(base)
+    except (ValueError, RuntimeError):
+        return {'deleted': False, 'error': 'Invalid path'}
+    if not full.is_file():
+        return {'deleted': False, 'error': 'File not found'}
+    try:
+        full.unlink()
+    except Exception as exc:
+        return {'deleted': False, 'error': str(exc)}
+    _delete_lrc_sidecar(full)
+    _delete_album_cover_if_orphaned(full)
+    _prune_empty_parent_dirs(full.parent, base)
+    return {'deleted': True}
+
+
+def _delete_tracks_batch(files: list[str], base: Path) -> dict:
+    """Delete every file in ``files`` (each relative to ``base``).
+
+    Each file is handled independently through :func:`_delete_track_file`
+    — one bad path or an already-gone file doesn't stop the rest.
+    Raises :class:`ValueError` if ``files`` is larger than
+    :data:`MAX_BATCH_DELETE`, so an accidental "select everything" on a
+    huge library can't tie up a request forever.
+    """
+    # Dedupe (order-preserving) so a client sending the same path twice
+    # can't have the second attempt report a spurious "File not found"
+    # for a file the first attempt already removed.
+    files = list(dict.fromkeys(files))
+    if len(files) > MAX_BATCH_DELETE:
+        raise ValueError(
+            f'Cannot delete more than {MAX_BATCH_DELETE} files in one request'
+        )
+    results = {f: _delete_track_file(f, base) for f in files}
+    deleted = sum(1 for r in results.values() if r['deleted'])
+    return {
+        'deleted_count': deleted,
+        'failed_count': len(files) - deleted,
+        'results': results,
+    }
 
 
 def build_app() -> FastAPI:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
 
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        loop = asyncio.get_running_loop()
+        api.state.loop = loop
+        api.state.download_semaphore = asyncio.Semaphore(
+            api._clamp_parallel_downloads(
+                api.state.settings.get('max_parallel_downloads', 3)
+            )
+        )
+        db_path = DATABASE_DIR / 'downtify_monitor.db'
+        api.state.monitor_db = PlaylistMonitorDB(db_path)
+        asyncio.create_task(
+            monitor_loop(
+                db=api.state.monitor_db,
+                get_downloader=lambda: api.state.downloader,
+                broadcast=api.state.connections.broadcast,
+                loop=loop,
+                settings=api.state.settings,
+            )
+        )
+        # Separate hourly sweep that forgets a downloaded-track record once
+        # its file is gone from the downloads directory — see
+        # downtify/monitor.py:reconcile_loop for why this is a distinct,
+        # slower cadence from the per-watch monitor_loop above.
+        asyncio.create_task(
+            reconcile_loop(
+                db=api.state.monitor_db,
+                get_downloader=lambda: api.state.downloader,
+            )
+        )
+        # Hourly check against GitHub Releases (see
+        # downtify/update_check.py) so the footer can tell the user a
+        # newer Downtify is out. GET /api/check_update only ever reads
+        # this loop's cached result — the request to GitHub never blocks
+        # a page load.
+        api.state.update_checker = UpdateChecker()
+        asyncio.create_task(update_check_loop(api.state.update_checker))
+
+        yield
+
     app = FastAPI(
+        lifespan=lifespan,
         title='Downtify',
         description=(
             'Download your Spotify playlists and songs along with album '
             'art and metadata in a self-hosted way via Docker.'
         ),
         version=__version__,
-        lifespan=_application_lifespan,
     )
     app.add_middleware(
         CORSMiddleware,
@@ -258,140 +457,160 @@ def build_app() -> FastAPI:
     api.state.settings_path = settings_path
     api.state.settings = api._load_settings(settings_path)
 
+    # Lives alongside settings.json in the /data volume so an uploaded
+    # cookies.txt survives container updates.
+    cookies_store = CookiesStore(DATABASE_DIR / 'cookies.txt')
+    api.state.cookies_store = cookies_store
+
     api.state.version = __version__
     api.state.downloader = Downloader(
         DOWNLOAD_DIR,
+        cookies_store=cookies_store,
         audio_format=api.state.settings['format'],
         audio_bitrate=api.state.settings.get('bitrate', '320'),
         output_template=api.state.settings['output'].replace(
             '.{output-ext}', ''
         ),
-        audio_providers=api._effective_audio_providers(api.state.settings),
-        slskd_settings=api._effective_slskd_settings(api.state.settings),
-        youtube_settings=api._effective_youtube_settings(api.state.settings),
         lyrics_providers=api._effective_lyrics_providers(api.state.settings),
         organize_by_artist=bool(
             api.state.settings.get('organize_by_artist', False)
         ),
+        organize_by_album=bool(
+            api.state.settings.get('organize_by_album', False)
+        ),
+        download_cover_art=bool(
+            api.state.settings.get('download_cover_art', True)
+        ),
+        overwrite_existing_files=bool(
+            api.state.settings.get('overwrite_existing_files', True)
+        ),
+    )
+    api.providers.set_cover_resolution(
+        api._clamp_cover_resolution(
+            api.state.settings.get(
+                'cover_resolution', api.providers.DEFAULT_COVER_RESOLUTION
+            )
+        )
     )
     app.include_router(api.router)
 
-    def _library_ctx() -> LibraryContext:
-        return library_context_from_state(
-            DOWNLOAD_DIR,
-            api.state.settings,
-            api.state.track_index,
-            metadata_cache=api.state.metadata_cache,
-            playlist_catalog=api.state.playlist_catalog,
-        )
+    @app.get('/list')
+    def list_downloads() -> list[str]:
+        base = DOWNLOAD_DIR.resolve()
+        if not base.exists():
+            return []
+        files: list[str] = []
+        # Walk recursively so per-playlist sub-folders show up alongside
+        # loose downloads in the library view.
+        for path in base.rglob('*'):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in _AUDIO_EXTENSIONS:
+                continue
+            files.append(path.relative_to(base).as_posix())
+        files.sort()
+        return files
 
-    @app.get('/list', response_model=list[LibraryListEntry])
-    def list_downloads(refresh: bool = False) -> list[LibraryListEntry]:
-        if refresh:
-            invalidate_library_paths_cache()
-        rows = list_library_entries(_library_ctx())
-        return [LibraryListEntry.model_validate(row) for row in rows]
+    @app.get('/playlists')
+    def list_playlists() -> list[dict]:
+        """List downloaded playlists, derived from the ``.m3u`` files
+        Downtify already writes for playlist/album downloads and
+        Playlist Monitor sweeps (see ``downtify/m3u.py``).
 
-    @app.get('/media/{file_path:path}')
-    def serve_media(file_path: str) -> FileResponse:
-        full = resolve_library_file(file_path, _library_ctx())
-        if full is None:
-            raise HTTPException(status_code=404, detail='File not found')
-        return FileResponse(
-            full,
-            media_type=mimetypes.guess_type(str(full))[0]
-            or 'application/octet-stream',
-        )
+        Each M3U file on disk is one playlist, regardless of whether
+        *Organize by artist/album* put its tracks in a per-playlist
+        folder or scattered them into artist/album folders — the M3U is
+        the one place that still records "these tracks belong together,
+        in this order" either way. Single tracks and albums downloaded
+        without an M3U (e.g. via the YouTube Music album endpoint)
+        aren't playlists and don't show up here.
+        """
+        base = DOWNLOAD_DIR.resolve()
+        if not base.exists():
+            return []
+        playlists: list[dict] = []
+        for m3u_path in sorted(base.rglob('*.m3u')):
+            tracks = m3u.read_m3u_tracks(m3u_path, base)
+            if not tracks:
+                continue
+            playlists.append({
+                'name': m3u_path.stem,
+                'files': tracks,
+                'count': len(tracks),
+            })
+        playlists.sort(key=lambda p: p['name'].casefold())
+        return playlists
 
-    async def _refresh_playlists_after_delete(
-        playlist_names: set[str],
-    ) -> None:
-        """M3U / Navidrome refresh can take minutes; run off the request path."""
+    @app.get('/tracks')
+    def list_tracks() -> list[dict]:
+        """List downloaded tracks with artist/album read from embedded tags.
 
-        if not playlist_names or api.state.downloader is None:
-            return
-        if api.state.playlist_catalog is None:
-            return
-        logger.info(
-            'Library delete: scheduling M3U/Navidrome refresh for {}',
-            ', '.join(sorted(playlist_names)[:8])
-            + ('; ...' if len(playlist_names) > 8 else ''),
-        )
-        try:
-            await asyncio.to_thread(
-                refresh_playlists_after_moves,
-                playlist_names,
-                settings=api.state.settings,
-                downloader=api.state.downloader,
-                playlist_catalog=api.state.playlist_catalog,
-                track_index=api.state.track_index,
-                monitor_db=api.state.monitor_db,
-                navidrome_index=api.state.navidrome_index,
-                playlist_spotify_cache=api.state.playlist_spotify_cache,
-                cover_cache=api.state.cover_cache,
-                metadata_cache=api.state.metadata_cache,
-            )
-        except Exception:
-            logger.exception(
-                'delete: background playlist refresh failed for {}',
-                ', '.join(sorted(playlist_names)[:5]),
-            )
+        Powers the player's "play only this artist" / "play only this
+        album" filters (see the Vue Player view) — the flat ``/list``
+        endpoint only has filenames, and album in particular isn't
+        reliably derivable from the filename or folder layout unless
+        *Organize by artist/album* is on.
+        """
+        base = DOWNLOAD_DIR.resolve()
+        if not base.exists():
+            return []
+        paths = [
+            path
+            for path in base.rglob('*')
+            if path.suffix.lower() in _AUDIO_EXTENSIONS and path.is_file()
+        ]
+        tracks = [
+            {
+                'file': path.relative_to(base).as_posix(),
+                'artist': artist,
+                'album': album,
+            }
+            for path, (artist, album) in zip(paths, _read_library_tags(paths))
+        ]
+        tracks.sort(key=lambda t: t['file'])
+        return tracks
 
     @app.delete('/delete')
-    async def delete_download(file: str) -> dict:
-        result = delete_library_file(
-            file,
-            _library_ctx(),
-            cover_cache=api.state.cover_cache,
-            metadata_cache=api.state.metadata_cache,
-            playlist_catalog=api.state.playlist_catalog,
-            track_index=api.state.track_index,
-            navidrome_index=api.state.navidrome_index,
-        )
-        if not result.get('deleted'):
-            return {
-                'deleted': False,
-                'error': result.get('error') or 'File not found',
-            }
-        affected = set(result.get('playlists_affected') or [])
-        if affected:
-            asyncio.create_task(_refresh_playlists_after_delete(affected))
-        return {
-            'deleted': True,
-            'playlists_affected': result.get('playlists_affected') or [],
-            'playlists_refresh_scheduled': bool(affected),
-        }
+    def delete_download(file: str) -> dict:
+        return _delete_track_file(file, DOWNLOAD_DIR.resolve())
+
+    @app.delete('/delete/batch')
+    def delete_downloads_batch(
+        files: list[str] = Body(..., embed=True),
+    ) -> dict:
+        """Delete several tracks in one request.
+
+        Powers the Library page's multi-select — selecting every track
+        matching the active playlist/artist/album filter (including
+        ones on other pages) and deleting them all is impractical one
+        file at a time. Each file is deleted independently: one bad
+        path or a file that's already gone doesn't stop the rest.
+        """
+        try:
+            return _delete_tracks_batch(files, DOWNLOAD_DIR.resolve())
+        except ValueError as exc:
+            raise HTTPException(status_code=413, detail=str(exc)) from exc
 
     @app.get('/cover')
     def get_cover(file: str):
-        full = resolve_library_file(file, _library_ctx())
-        if full is None:
+        # Resolve and confine to DOWNLOAD_DIR to prevent path traversal.
+        base = DOWNLOAD_DIR.resolve()
+        try:
+            full = (base / file).resolve()
+            full.relative_to(base)
+        except (ValueError, RuntimeError):
+            raise HTTPException(status_code=400, detail='Invalid path')
+        if not full.is_file():
             raise HTTPException(status_code=404, detail='File not found')
 
-        data: bytes | None = None
-        mime: str | None = None
-        if api.state.settings.get('cache_cover_art'):
-            cache = api.state.cover_cache
-            if cache is not None:
-                hit = cache.lookup(file, full)
-                if hit is not None:
-                    data, mime = hit
+        data, mime = _extract_cover(full)
         if data is None:
-            data, mime = extract_cover_art(full)
-            if data is None:
-                return Response(
-                    content=_TRANSPARENT_GIF,
-                    media_type='image/gif',
-                    headers={'Cache-Control': 'public, max-age=3600'},
-                )
-            if api.state.settings.get('cache_cover_art'):
-                cache = api.state.cover_cache
-                if cache is not None:
-                    cache.store(file, full, data, mime or 'image/jpeg')
+            raise HTTPException(status_code=404, detail='No embedded cover')
         return Response(
             content=data,
             media_type=mime or 'image/jpeg',
             headers={
+                # Cache by mtime — clients fetch once per file revision.
                 'Cache-Control': 'public, max-age=86400',
                 'ETag': f'"{int(full.stat().st_mtime)}"',
             },
@@ -445,7 +664,6 @@ def main() -> None:
         loop=loop,  # type: ignore[arg-type]
         log_level=args.log_level.lower(),
         log_config=None,
-        access_log=_uvicorn_access_log_enabled(),
         workers=1,
     )
     server = Server(config)

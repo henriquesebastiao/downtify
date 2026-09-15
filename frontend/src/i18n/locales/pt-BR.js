@@ -16,7 +16,6 @@ export default {
   },
   nav: {
     home: 'Início',
-    search: 'Buscar',
     library: 'Biblioteca',
     monitor: 'Monitor de playlists',
     queue: 'Fila',
@@ -26,22 +25,18 @@ export default {
     switchToDark: 'Mudar para escuro',
   },
   hero: {
-    noAccount: 'sem precisar de conta no Spotify',
     tagline:
       'Sua música com metadados completos, capa do álbum e letras — em um clique.',
     songs: 'Músicas',
     albums: 'Álbuns',
     playlists: 'Playlists',
+    importCsv:
+      'Importar um CSV de biblioteca (Soundiiz, TuneMyMusic, Exportify…)',
+    importCsvError: 'Não foi possível importar esse arquivo CSV.',
   },
   search: {
     placeholder:
       'Busque uma música ou cole um link do Spotify ou YouTube Music…',
-    submitSearch: 'Buscar',
-    browsePlaylist: 'Ver faixas da playlist',
-    browsePlaylistHint:
-      'Ver faixas da playlist (cole um link de playlist do Spotify antes)',
-    downloadLink: 'Baixar este link',
-    downloadLinkHint: 'Baixar faixa ou álbum (cole um link do Spotify antes)',
     title: 'Resultados da busca',
     matchesFor: 'Mostrando resultados para',
     songsCount: '— {count} música',
@@ -51,72 +46,27 @@ export default {
     errorWithDetail: 'Algo deu errado: {detail}',
     empty: 'Nenhuma música encontrada.',
     emptyHint: 'Tente outra busca — artista + título costuma funcionar melhor.',
-    openOnSpotify: 'Abrir no Spotify',
-    playlistTitle: 'Playlist do Spotify',
-    playlistSubtitle:
-      'Escolha faixas para baixar individualmente ou baixe a playlist inteira.',
-    openPlaylistOnSpotify: 'Abrir playlist no Spotify',
-    downloadEntirePlaylist: 'Baixar playlist inteira',
-    playlistBatchesTitle: 'Downloads de playlists',
-    playlistBatchesHint:
-      'Playlists do Spotify baixadas pelo Downtify. Expanda para ver faixas faltando.',
-    playlistBatchStatusComplete: 'Completa',
-    playlistBatchComplete: 'Todas as faixas estão na sua biblioteca.',
-    playlistBatchesEmpty: 'Nenhum download de playlist registrado ainda.',
-    playlistBatchesEmptyHint:
-      'Baixe uma playlist do Spotify para vê-la aqui com a contagem de faltantes.',
-    playlistBatchesLoadFailed:
-      'Não foi possível carregar os downloads de playlist. Backend atualizado?',
-    playlistBatchesLoading: 'Carregando playlists…',
-    playlistBatchesTracksLoading: 'Carregando faixas faltantes…',
-    playlistBatchesVerifying: 'Verificando no Spotify…',
-    playlistBatchesSearchPlaceholder: 'Filtrar playlists ou faixas…',
-    playlistBatchesNoMatch: 'Nenhuma playlist corresponde ao filtro.',
-    playlistBatchesNoTrackMatch:
-      'Nenhuma faixa corresponde ao filtro nesta playlist.',
-    playlistBatchesExpandAll: 'Expandir tudo',
-    playlistBatchesCollapseAll: 'Recolher tudo',
-    incompleteTitle: 'Playlists incompletas',
-    incompleteHint:
-      'Downloads de playlist com faixas faltando. Expanda para ver quais.',
-    incompleteSummary: '{downloaded}/{expected} baixadas · {missing} faltando',
-    incompleteInProgress: 'Em andamento',
-    incompleteFinished: 'Incompleta',
-    downloadMissing: 'Baixar faltantes ({count})',
-    playPlaylist: 'Tocar playlist',
-    playlistBatchNothingToPlay:
-      'Ainda não há faixas baixadas desta playlist na biblioteca.',
-    incompleteTracksLoading: 'Lista indisponível — tente atualizar.',
+    openSource: 'Abrir na fonte',
     inQueue: 'Na fila',
     download: 'Baixar',
-    previousPage: 'Página anterior',
-    nextPage: 'Próxima página',
+    albumsTitle: 'Álbuns',
+    albumBadge: 'Álbum',
+    singleBadge: 'Single',
+    epBadge: 'EP',
+    downloadAlbum: 'Baixar álbum',
+    songsTitle: 'Músicas',
   },
   queue: {
     title: 'Fila de download',
+    subtitle:
+      'Músicas que você adicionou à fila. Progresso, status e ações rápidas ficam aqui.',
     empty: 'Nada na fila no momento.',
     emptyHint: 'Procure uma música e clique em baixar para começar.',
-    emptyFilter: 'Nenhuma faixa neste filtro.',
-    emptyActiveWithWaiting:
-      'Nenhum download em andamento ainda. {count} aguardando — abra a aba Aguardando.',
-    filterAll: 'Todas',
-    filterActive: 'Em andamento',
-    filterQueued: 'Aguardando',
-    filterDone: 'Concluídas',
-    filterFailed: 'Com falha',
-    statusQueued: 'Aguardando',
-    statusActive: 'Em andamento',
-    statusDownloading: 'Baixando',
-    statusDone: 'Concluída',
-    statusFailed: 'Falhou',
-    retry: 'Tentar de novo',
-    retryAllFailed: 'Repetir falhas ({count})',
-    clearCompleted: 'Limpar concluídas ({count})',
     saveToDevice: 'Salvar no dispositivo',
     removeFromQueue: 'Remover da fila',
     clearAll: 'Limpar tudo',
     clearAllPrompt: 'Remover todos os itens da fila?',
-    forceAudio: 'Usar URL do YouTube',
+    forceAudio: 'Forçar fonte de áudio',
     overridePlaceholder: 'Cole uma URL do YouTube ou YouTube Music…',
     applyOverride: 'Aplicar',
     invalidYouTubeURL: 'URL do YouTube inválida',
@@ -124,8 +74,6 @@ export default {
   library: {
     title: 'Biblioteca',
     subtitle: 'Músicas que você já baixou. Escute, baixe novamente ou remova.',
-    searchPlaceholder: 'Buscar título, artista, álbum ou caminho…',
-    searchNoResults: 'Nenhuma faixa corresponde à busca.',
     empty: 'Nenhum download ainda.',
     emptyHint: 'Encontre uma música para começar a montar sua biblioteca.',
     failedLoad: 'Falha ao carregar os downloads.',
@@ -133,46 +81,45 @@ export default {
     deletePrompt: 'Excluir "{file}"?',
     countOne: '{count} arquivo na sua biblioteca',
     countMany: '{count} arquivos na sua biblioteca',
-    filteredCount: '{shown} de {total} faixas',
-    showingRange: 'Exibindo {from}–{to} de {total}',
-    pageSize: 'Por página',
-    firstPage: 'Primeira página',
-    lastPage: 'Última página',
     downloadToDevice: 'Baixar para o dispositivo',
     deleteFile: 'Excluir arquivo',
     play: 'Reproduzir',
-    selectAllFiltered: 'Selecionar página',
-    selectAllFilteredCount: 'Selecionar {count} filtrados',
+    filterBy: 'Filtrar por',
+    filterEmpty: 'Nenhum arquivo corresponde a este filtro.',
+    clearFilter: 'Limpar filtro',
+    selectAll: 'Selecionar tudo ({count})',
+    deselectAll: 'Desmarcar tudo',
+    selectedCount: '{count} selecionada(s)',
+    selectFile: 'Selecionar {file}',
+    deleteSelected: 'Excluir selecionadas',
     clearSelection: 'Limpar seleção',
-    deleteSelected: 'Excluir selecionados ({count})',
-    deleteSelectedPrompt:
-      'Excluir {count} faixa(s)? Os arquivos são removidos do disco; M3U e Navidrome atualizam em segundo plano.',
-    batchDeletePartial:
-      'Excluídas {ok} faixa(s). {failed} não puderam ser excluídas.',
-    filterByPlaylist: 'Playlist',
-    filterAllPlaylists: 'Todas as playlists',
-    deletePlaylist: 'Excluir playlist',
-    deletePlaylistPrompt:
-      'Excluir todas as faixas de "{name}"? Remove arquivos e a entrada no catálogo. M3U e Navidrome sincronizam em segundo plano.',
-    playlistDeleted: 'Playlist "{name}" removida ({count} faixas).',
-    playlistDeleteFailed: 'Não foi possível excluir a playlist "{name}".',
+    bulkDeletePrompt: 'Excluir {count} arquivos selecionados?',
+    bulkDeleteFailed: 'Não foi possível excluir os arquivos selecionados.',
+    bulkDeletePartialError: '{count} arquivo(s) não puderam ser excluídos.',
   },
   monitor: {
     title: 'Monitor de playlists',
     subtitle:
-      'Adicione playlists do Spotify para monitorar. Novas faixas adicionadas a essas playlists serão baixadas automaticamente.',
-    watchNew: 'Monitorar uma nova playlist',
-    urlPlaceholder: 'Cole uma URL de playlist do Spotify…',
+      'Adicione playlists ou artistas do Spotify ou do YouTube Music para monitorar. Novas faixas e novos lançamentos serão baixados automaticamente.',
+    watchNew: 'Monitorar uma nova playlist ou artista',
+    urlPlaceholder:
+      'Cole uma URL de playlist ou de artista do Spotify ou do YouTube Music…',
     watch: 'Monitorar',
     failedAdd:
       'Falha ao adicionar a playlist. Verifique a URL e tente novamente.',
     empty: 'Nenhuma playlist sendo monitorada ainda.',
-    emptyHint: 'Cole um link de playlist do Spotify acima para começar.',
+    emptyHint:
+      'Cole um link de playlist do Spotify ou do YouTube Music acima para começar.',
     active: 'Ativa',
     paused: 'Pausada',
     everyInterval: 'A cada {interval}',
     tracksOne: '{count} faixa',
     tracksMany: '{count} faixas',
+    releasesOne: '{count} lançamento',
+    releasesMany: '{count} lançamentos',
+    kindArtist: 'Artista',
+    sourceSpotify: 'Spotify',
+    sourceYouTubeMusic: 'YouTube Music',
     checked: 'Verificada {when}',
     notChecked: 'Ainda não verificada',
     pause: 'Pausar monitoramento',
@@ -180,7 +127,16 @@ export default {
     checkNow: 'Verificar agora',
     stop: 'Parar de monitorar',
     deletePrompt: 'Parar de monitorar "{name}"?',
-    info: 'Quando você adiciona uma playlist, o Downtify baixa todas as faixas atuais dela e segue monitorando. Qualquer música adicionada depois no Spotify é detectada e baixada automaticamente na próxima verificação.',
+    sortBy: 'Ordenar por',
+    sortDateAdded: 'Data de adição',
+    sortTitle: 'Título',
+    sortFrequency: 'Frequência de atualização',
+    sortTrackCount: 'Número de faixas',
+    sortDaysSinceChecked: 'Dias desde a última verificação',
+    sortStatus: 'Pausada/Ativa',
+    sortAscending: 'Ordem crescente',
+    sortDescending: 'Ordem decrescente',
+    info: 'Quando você adiciona uma playlist, o Downtify baixa todas as faixas atuais dela e segue monitorando. Qualquer música adicionada a ela depois no Spotify ou no YouTube Music é detectada e baixada automaticamente na próxima verificação. Adicionar um artista funciona da mesma forma: o Downtify baixa a discografia dele e depois monitora novos lançamentos.',
     every15: 'A cada 15 min',
     every30: 'A cada 30 min',
     every1h: 'A cada hora',
@@ -217,10 +173,7 @@ export default {
   settings: {
     title: 'Configurações',
     subtitle: 'Ajuste como o Downtify baixa e marca suas músicas.',
-    audioSource: 'Fontes de áudio (ordem de fallback)',
-    audioSourceHint:
-      'Ative uma ou mais. Cada faixa tenta as fontes na ordem (1, 2, 3) até uma funcionar.',
-    audioSourceReset: 'Usar ordem recomendada',
+    audioSource: 'Fonte de áudio',
     lyricsSource: 'Fonte de letras',
     lyricsHint: 'apenas o lrclib está ativo',
     downloadLyrics: 'Baixar letras',
@@ -230,105 +183,62 @@ export default {
     format: 'Formato',
     quality: 'Qualidade',
     qualityIgnored: 'ignorada (sem perdas)',
+    outputTemplate: 'Formato do nome',
+    outputTemplateReset: 'Restaurar',
+    outputTemplateHint:
+      'Use / para criar subpastas. Tokens: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
+    searchSection: 'Busca',
+    searchAlbums: 'Mostrar álbuns nos resultados de busca',
+    searchAlbumsHint:
+      'Também procura álbuns correspondentes ao pesquisar, com a opção de baixar o álbum inteiro.',
     playlistsSection: 'Playlists',
     generateM3u: 'Gerar arquivo M3U para playlists',
     generateM3uHint:
-      'Grava Playlists/<nome>.m3u com caminhos absolutos (/downloads/... e /slskd/...) para downloads e o Monitor.',
-    syncNavidrome: 'Criar playlist no Navidrome',
-    syncNavidromeHint:
-      'Depois de baixar uma playlist do Spotify, escaneia a biblioteca e cria/atualiza uma playlist no Navidrome com o mesmo nome.',
-    navidromeSection: 'Navidrome',
-    navidromeHint:
-      'Usa a API Subsonic (como o Explo). A pasta de música no Navidrome deve apontar para os downloads do Downtify.',
-    navidromeEnabled: 'Ativar sincronização com Navidrome',
-    navidromeEnabledHint:
-      'Exige URL, usuário e senha. Conta admin opcional dispara varredura da biblioteca.',
-    navidromeUrl: 'URL do Navidrome (exemplo: https://musica.exemplo.com)',
-    navidromeUsername: 'Usuário do Navidrome',
-    navidromePassword: 'Senha do Navidrome',
-    navidromeAdminUser: 'Usuário admin (opcional, para varredura)',
-    navidromeAdminPassword: 'Senha admin (opcional)',
-    navidromePublic: 'Playlist pública no Navidrome',
-    librarySection: 'Biblioteca e player',
-    cacheCoverArt: 'Cachear capas de álbum no disco',
-    cacheCoverArtHint:
-      'Armazena imagens em /data/cover_cache para o player e a biblioteca abrirem mais rápido. Usa espaço em disco extra; pode desligar quando quiser.',
-    reconcileSection: 'Sincronizar caminhos',
-    reconcileIntro:
-      'Depois de mover arquivos, corrige os caminhos salvos. M3U e Navidrome só se estiverem ativados acima.',
-    reconcileButton: 'Corrigir caminhos da biblioteca',
-    reconcileRunning: 'Varrendo biblioteca…',
-    reconcileDonePathsOnly: 'Atualizados {count} caminho(s).',
-    reconcileDone:
-      'Atualizados {count} caminho(s). Playlists: {playlists} ({extras})',
-    reconcileM3u: 'M3U',
-    reconcileNavidrome: 'Navidrome',
-    reconcileNone:
-      'Nenhum arquivo movido. Use após mudar de pasta (mesmo nome e tamanho). Ao excluir, entradas órfãs são limpas aqui.',
-    reconcilePrunedSimple:
-      'Removidas {pruned} entradas obsoletas (arquivos já excluídos).',
-    reconcilePrunedBackfill:
-      'Removidas {pruned} entradas. Indexadas {backfilled} faixas para futuras mudanças de caminho.',
-    reconcilePrunedPlaylists:
-      'Removidas {pruned} entradas. Playlists atualizadas: {playlists} ({extras})',
-    reconcileBackfillOnly:
-      'Indexadas {backfilled} faixas. Nenhuma movimentação detectada agora.',
-    reconcileError: 'Falha ao reconciliar a biblioteca.',
+      'Grava Playlists/<nome>.m3u junto com as faixas, tanto para downloads manuais de playlist quanto para varreduras do Monitor.',
     organizationSection: 'Organização de arquivos',
     organizeByArtist: 'Organizar por artista',
     organizeByArtistHint:
       'Salva as músicas em subpastas com o nome do artista. Músicas de playlists também são salvas na pasta do artista, não na pasta da playlist.',
+    organizeByAlbum: 'Organizar por álbum',
+    organizeByAlbumHint:
+      'Salva as músicas em subpastas com o nome do álbum, para que um álbum inteiro seja baixado na sua própria pasta. Combinado com "Organizar por artista", a estrutura fica Artista/Álbum.',
     parallelDownloads: 'Downloads paralelos',
     parallelDownloadsHint:
-      'Máximo de músicas ao mesmo tempo (YouTube e slskd). Toque um número e Salvar; vale para trabalho novo. Com slskd ativo, prefira 2–3: o slskd limita buscas Soulseek simultâneas; valores altos só enfileiram ou falham.',
+      'Número máximo de músicas baixadas ao mesmo tempo. Valores maiores são mais rápidos, mas consomem mais banda.',
+    parallelDownloadsCustomHint: 'Valor personalizado entre {min} e {max}.',
+    downloadDelay: 'Atraso entre downloads',
+    downloadDelayHint:
+      'Espera esta quantidade de segundos após terminar uma música antes de começar a próxima. Útil para imitar o comportamento humano em downloads de playlists/álbuns e sincronizações do Monitor de playlists.',
+    downloadDelayCustomHint:
+      'Valor personalizado entre {min} e {max} segundos.',
+    downloadCoverArt: 'Baixar capa do álbum',
+    downloadCoverArtHint:
+      'Incorpora a capa do álbum nos arquivos baixados. Desative para não baixar a capa — arquivos menores, downloads mais rápidos.',
+    coverResolution: 'Resolução da capa',
+    coverResolutionHint:
+      'Tamanho alvo (largura e altura, em pixels) solicitado para a capa incorporada de fontes do YouTube Music — útil para capas em resolução mais alta em servidores de mídia como o Plex. Afeta apenas o YouTube Music; as capas do Spotify já usam o maior tamanho que o Spotify oferece.',
+    overwriteExistingFiles: 'Sobrescrever arquivos existentes',
+    overwriteExistingFilesHint:
+      'Desative para economizar banda: uma música que já está em qualquer lugar da pasta de downloads (raiz da biblioteca, pasta de outra playlist, pasta de artista/álbum) não é baixada novamente. A comparação é pelo nome do arquivo, não pelo ID do Spotify/YouTube.',
+    miniPlayer: 'Barra do player',
+    miniPlayerHint:
+      'Mostra uma barra inferior com controles de reprodução em todas as páginas (exceto na própria tela do Player) enquanto houver uma faixa carregada.',
+    cookies: 'Cookies do YouTube',
+    cookiesHint:
+      'Algumas músicas — principalmente as com conteúdo explícito — só são liberadas para uma conta adulta logada, e o YouTube às vezes bloqueia downloads. Envie um cookies.txt no formato Netscape exportado de um navegador logado no YouTube para resolver os dois casos. Ele é salvo em /data e mantido entre atualizações do container.',
+    cookiesConfigured: 'cookies.txt configurado',
+    cookiesUpload: 'Enviar cookies.txt',
+    cookiesReplace: 'Substituir cookies.txt',
+    cookiesDelete: 'Excluir arquivo de cookies',
+    cookiesDeletePrompt: 'Excluir o cookies.txt salvo?',
+    cookiesLocked:
+      'Gerenciado pela variável de ambiente DOWNTIFY_COOKIES_FILE. Remova-a para enviar um arquivo por aqui.',
+    cookiesEnvMissing:
+      'Este arquivo não existe dentro do container — verifique o caminho e a montagem do volume.',
     saved: 'Alterações salvas',
     saveError: 'Não foi possível salvar as configurações.',
     language: 'Idioma',
     languageHint: 'Escolha o idioma da interface',
-    youtubeSection: 'Cookies do YouTube (opcional)',
-    youtubeEnabled: 'Configurar cookies do YouTube',
-    youtubeEnabledHint:
-      'Opcional — só ajuda em alguns fallbacks do YouTube com idade. A maioria funciona sem isso.',
-    youtubeCookiesHint:
-      'Não é necessário para baixas normais. Use só se fallbacks falharem por verificação de idade.',
-    youtubeCookiesPath: 'Caminho do arquivo de cookies (no container)',
-    youtubeCookiesPathPlaceholder: '/data/youtube-cookies.txt',
-    youtubeCookiesUpload: 'Enviar cookies.txt',
-    youtubeCookiesClear: 'Remover cookies',
-    youtubeCookiesReady:
-      'Cookies de login detectadas — yt-dlp usará em vídeos com verificação de idade.',
-    youtubeCookiesWeak:
-      'Arquivo presente, mas sem sessão do YouTube. Exporte de novo de youtube.com logado.',
-    youtubeCookiesMissing:
-      'Caminho definido mas o arquivo não existe. Envie de novo ou confira o volume.',
-    slskdSection: 'slskd',
-    slskdHint:
-      'Soulseek via slskd. Com Navidrome ativo, playlists são criadas lá após varrer a biblioteca; arquivos podem ficar na pasta do slskd.',
-    slskdEnabled: 'Ativar provedor slskd',
-    slskdEnabledHint:
-      'Quando desativado, o slskd nunca é tentado na cadeia de fallback.',
-    slskdBaseUrl: 'URL base do slskd (exemplo: https://slskd.exemplo.com)',
-    slskdApiKey: 'API key do slskd',
-    slskdSourceDirTitle: 'Pasta de download do slskd (neste container)',
-    slskdSourceDirBullet1:
-      'O slskd grava transferências concluídas aqui (ex.: /slskd → music/slskd no host).',
-    slskdSourceDirBullet2:
-      'O Navidrome deve varrer a biblioteca que inclui esta pasta.',
-    slskdSourceDirBullet3:
-      'Caminho visto pelo Downtify — não o caminho do host nem a URL do slskd.',
-    slskdSourceDirExample:
-      'slskd:  /mnt/storage/music/slskd:/downloads\nDowntify: /mnt/storage/music/slskd:/slskd  → /slskd',
-    slskdSourceDirLabel: 'Pasta slskd no Downtify',
-    slskdSourceDirPlaceholder: '/slskd',
-    slskdSourceDirHint:
-      'O Downtify observa esta pasta. Sem cópia para /downloads com “deixar no lugar” ativo.',
-    slskdLeaveInPlace: 'Deixar arquivos do slskd no lugar',
-    slskdLeaveInPlaceHint:
-      'Não copiar para /downloads. Taguear no lugar e montar playlists no Navidrome após o scan.',
-    slskdDownloadTimeout: 'Tempo máximo slskd (segundos)',
-    slskdQueuedTimeout: 'Tempo na fila sem progresso (segundos)',
-    slskdTimeoutHint:
-      'Se o slskd não terminar a tempo, o Downtify tenta o próximo provedor (YouTube). Reduza o tempo na fila se ficar em "Queued on slskd".',
   },
   player: {
     title: 'Player',
@@ -352,13 +262,18 @@ export default {
     nowPlaying: 'Tocando agora',
     upNext: 'A seguir',
     playFromLibrary: 'Abrir no player',
-    selectAll: 'Selecionar tudo',
-    selectedCount: '{selected} de {total} selecionados',
-    deleteTrack: 'Remover da biblioteca',
     countOne: '{count} faixa',
     countMany: '{count} faixas',
+    playingFrom: 'Tocando de',
+    allSongs: 'Todas as músicas ({count})',
+    playlistsGroup: 'Playlists',
+    artistsGroup: 'Artistas',
+    albumsGroup: 'Álbuns',
+    hideBar: 'Ocultar barra do player',
+    showBar: 'Exibir barra do player',
   },
   footer: {
     tagline: 'Baixador de músicas de código aberto',
+    updateAvailable: 'A versão {version} está disponível',
   },
 }

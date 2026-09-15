@@ -3,25 +3,35 @@
 from __future__ import annotations
 
 import json
+import os
 import re
-import unicodedata
 from threading import Lock
 from typing import Any, Optional
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
+import yt_dlp
 from loguru import logger
 from ytmusicapi import YTMusic
+from ytmusicapi.continuations import (
+    get_continuations,
+    get_reloadable_continuation_params,
+)
+from ytmusicapi.navigation import (
+    CONTENT,
+    GRID,
+    GRID_ITEMS,
+    HEADER_SIDE,
+    MULTI_SELECT,
+    SECTION,
+    SECTION_LIST_CONTINUATION,
+    SECTION_LIST_ITEM,
+    SINGLE_COLUMN_TAB,
+    TITLE_TEXT,
+    nav,
+)
+from ytmusicapi.parsers.library import parse_albums as _parse_ytm_albums
 
 from .telemetry import json_log_blob, redact_sensitive_mapping
-from .track_tag_match import (
-    MIX_VARIANT_REMOTE_SKIP_KEYWORDS,
-    candidate_adds_mix_variant,
-    media_duration_matches_mix_variant,
-    media_duration_matches_song,
-    mix_variant_remote_skip_keywords,
-    remote_text_unacceptable,
-    strip_mix_suffix,
-)
 
 
 def _log_ytm_response(label: str, payload: Any) -> None:
@@ -61,8 +71,25 @@ _album_track_cache: dict[
     str,
     tuple[list[dict[str, Any]], Optional[int]],
 ] = {}
+# Album-level metadata (title/year/thumbnails) per browse id, populated
+# alongside ``_album_track_cache`` from the same ``get_album`` call.
+_album_meta_cache: dict[str, dict[str, Any]] = {}
 # ``artist|album`` (case-folded hints) → album ``browseId`` from a songs filter.
 _album_browse_search_cache: dict[str, str] = {}
+# Artist names per album browse id, captured from an albums-filter search
+# result (``search_albums``) — used as a fallback for the album artist tag
+# when the later ``get_album`` call for the same browse id doesn't itself
+# return an ``artists`` field.
+_album_search_artist_cache: dict[str, list[str]] = {}
+# Official-audio (ATV) preference result per original (OMV) video id.
+# ``album_tracks_from_browse_id`` gets called several times over for the
+# same album across a single download (once per caller resolving the
+# tracklist for display, once more when the download itself resolves it
+# server-side) even though the raw album payload is already cached above —
+# without this, every one of those calls reruns a live YouTube Music search
+# per music-video track, which is most of what makes an album "slow to
+# start" downloading.
+_omv_preference_cache: dict[str, tuple[str, int]] = {}
 
 
 def _ytm() -> YTMusic:
@@ -74,12 +101,39 @@ def _ytm() -> YTMusic:
     return _client
 
 
+DEFAULT_COVER_RESOLUTION = 600
+
+# Mutable module-level target, set from Settings (see
+# set_cover_resolution) so every function below that resolves a YouTube
+# Music thumbnail through _upgrade_thumbnail picks it up without each of
+# them needing to accept and thread a resolution parameter through their
+# own callers. Verified against the live CDN that requesting larger
+# than the hardcoded 600px default actually returns more real detail
+# (not just upscaling) up to roughly 1200-1400px depending on the
+# source image.
+_cover_resolution = DEFAULT_COVER_RESOLUTION
+
+
+def set_cover_resolution(pixels: int) -> None:
+    """Set the target size (in pixels, both dimensions) for YouTube
+    Music cover art requested via _upgrade_thumbnail from here on.
+
+    Spotify-sourced cover art is unaffected: Downtify already picks the
+    largest size Spotify's embed API offers (see spotify._largest_image)
+    and Spotify's image URLs have no equivalent resizable suffix to
+    raise further.
+    """
+    global _cover_resolution
+    _cover_resolution = pixels
+
+
 def _upgrade_thumbnail(url: str) -> str:
     """Replace the size suffix on a YT thumbnail with a larger one."""
 
     if not url:
         return url
-    return re.sub(r'=w\d+-h\d+.*$', '=w600-h600-l90-rj', url)
+    size = _cover_resolution
+    return re.sub(r'=w\d+-h\d+.*$', f'=w{size}-h{size}-l90-rj', url)
 
 
 def _parse_duration(value: Any) -> int:
@@ -99,16 +153,6 @@ def _parse_duration(value: Any) -> int:
     return 0
 
 
-def _ascii_fold_query(text: str) -> str:
-    """Drop diacritics and collapse whitespace for fallback queries."""
-
-    if not text:
-        return ''
-    folded = unicodedata.normalize('NFKD', text)
-    plain = ''.join(ch for ch in folded if not unicodedata.combining(ch))
-    return re.sub(r'\s+', ' ', plain).strip()
-
-
 def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
     video_id = result.get('videoId')
     if not video_id:
@@ -118,6 +162,7 @@ def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
         for a in (result.get('artists') or [])
         if isinstance(a, dict) and a.get('name')
     ]
+    artists = _extract_title_featuring_artist(result.get('title', ''), artists)
     thumbs = result.get('thumbnails') or []
     cover = thumbs[-1].get('url', '') if thumbs else ''
     cover = _upgrade_thumbnail(cover)
@@ -228,129 +273,853 @@ def search_songs(query: str, limit: int = 20) -> list[dict[str, Any]]:
     return songs
 
 
-def find_match(  # noqa: PLR0914
+def _album_summary(result: dict[str, Any]) -> Optional[dict[str, Any]]:
+    browse_id = result.get('browseId')
+    if not isinstance(browse_id, str) or not browse_id.strip():
+        return None
+    artists = [
+        a.get('name', '')
+        for a in (result.get('artists') or [])
+        if isinstance(a, dict) and a.get('name')
+    ]
+    if artists:
+        with _lock:
+            _album_search_artist_cache[browse_id.strip()] = artists
+    thumbs = result.get('thumbnails') or []
+    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+    return {
+        'album_id': browse_id.strip(),
+        'name': result.get('title', ''),
+        'artists': artists,
+        'artist': ', '.join(artists),
+        'cover_url': cover,
+        'year': str(result.get('year') or '').strip(),
+        'explicit': bool(result.get('isExplicit')),
+        'url': f'https://music.youtube.com/browse/{browse_id.strip()}',
+        'source': 'youtube',
+        # YouTube Music's own release-type classification: 'Album',
+        # 'Single', or 'EP'. Not every release is actually an "album" —
+        # surface it as-is so callers (UI badge, audio tags) don't have
+        # to guess.
+        'release_type': result.get('type') or '',
+    }
+
+
+def search_albums(query: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Search YouTube Music for albums matching ``query``.
+
+    Returns lightweight album summaries (not full tracklists) suitable
+    for a search-results list; resolve a chosen album's tracks via
+    :func:`album_tracks_from_browse_id`.
+    """
+
+    if not query.strip():
+        return []
+    try:
+        results = _ytm().search(query, filter='albums', limit=limit)
+    except Exception:
+        logger.exception('YouTube Music album search failed')
+        return []
+    titles = [
+        str(r.get('title') or '')[:60]
+        for r in results[:8]
+        if isinstance(r, dict)
+    ]
+    _log_ytm_summary_search(
+        phase='browse_albums',
+        query=query,
+        filt='albums',
+        results_len=len(results),
+        first_titles=titles,
+    )
+    _log_ytm_response(f'search albums q={query[:80]!r}', results)
+    albums: list[dict[str, Any]] = []
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        album = _album_summary(result)
+        if album:
+            albums.append(album)
+    return albums
+
+
+def _artist_summary(result: dict[str, Any]) -> Optional[dict[str, Any]]:
+    channel_id = result.get('browseId')
+    if not isinstance(channel_id, str) or not channel_id.strip():
+        return None
+    thumbs = result.get('thumbnails') or []
+    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+    return {
+        'artist_id': channel_id.strip(),
+        'name': result.get('artist') or '',
+        'cover_url': cover,
+        'url': f'https://music.youtube.com/channel/{channel_id.strip()}',
+        'source': 'youtube',
+    }
+
+
+def search_artists(query: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Search YouTube Music for artists matching ``query``.
+
+    Returns lightweight artist summaries; resolve a chosen artist's full
+    discography (every album and single, each with its full tracklist)
+    via :func:`artist_discography_from_channel_id`.
+    """
+
+    if not query.strip():
+        return []
+    try:
+        results = _ytm().search(query, filter='artists', limit=limit)
+    except Exception:
+        logger.exception('YouTube Music artist search failed')
+        return []
+    titles = [
+        str(r.get('artist') or '')[:60]
+        for r in results[:8]
+        if isinstance(r, dict)
+    ]
+    _log_ytm_summary_search(
+        phase='browse_artists',
+        query=query,
+        filt='artists',
+        results_len=len(results),
+        first_titles=titles,
+    )
+    _log_ytm_response(f'search artists q={query[:80]!r}', results)
+    artists: list[dict[str, Any]] = []
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        artist = _artist_summary(result)
+        if artist:
+            artists.append(artist)
+    return artists
+
+
+def _artist_discography_browse_id(channel_id: str) -> str:
+    """BrowseId for an artist's full "See all" albums/singles grid page.
+
+    Distinct from the artist's own channelId. YouTube Music's "More"
+    button on an artist's Albums/Singles shelf links to this same id
+    (``MPAD`` + channelId) — visible directly in the button's own
+    navigation endpoint, and in the URL if you click it yourself:
+    ``https://music.youtube.com/browse/MPAD<channelId>``.
+    """
+    return f'MPAD{channel_id}'
+
+
+def _fetch_full_artist_section(
+    channel_id: str, params: str
+) -> list[dict[str, Any]]:
+    """Fetch every entry of an artist's 'albums' or 'singles' shelf.
+
+    ytmusicapi's own ``get_artist_albums(channelId, params)`` sends the
+    artist's own channelId as the browseId, which returns the *artist's
+    home page* again (a channel can have several other carousels besides
+    Albums/Singles, e.g. "Top songs") instead of the dedicated
+    discography grid — its navigation code then assumes the first
+    section of that response is the grid it wants, finds an unrelated
+    shelf instead, and raises a KeyError. Upstream closed this as "not
+    planned": https://github.com/sigma67/ytmusicapi/issues/595. This
+    requests the correct discography browseId directly instead (see
+    ``_artist_discography_browse_id``), reusing ytmusicapi's own
+    lower-level request/parse/continuation helpers.
+    """
+    body = {
+        'browseId': _artist_discography_browse_id(channel_id),
+        'params': params,
+    }
+    ytm = _ytm()
+    response = ytm._send_request('browse', body)
+    results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM)
+    contents = nav(results, GRID_ITEMS, True) or []
+    albums = _parse_ytm_albums(contents)
+    grid = nav(results, GRID, True) or {}
+    if 'continuations' in grid:
+
+        def _request_more(additional_params: Any) -> Any:
+            return ytm._send_request('browse', body, additional_params)
+
+        albums.extend(
+            get_continuations(
+                grid,
+                'gridContinuation',
+                None,
+                _request_more,
+                _parse_ytm_albums,
+            )
+        )
+    return albums
+
+
+def _artist_albums_full_list(
+    channel_id: str, section: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Return every entry of an artist page's 'albums'/'singles' section.
+
+    The section as returned by ``get_artist`` only ever holds a short
+    preview (~10 entries); the ``params`` continuation token it carries
+    is used to fetch the complete list from the artist's discography
+    browse page (see ``_fetch_full_artist_section``).
+    """
+
+    results = [
+        r for r in (section.get('results') or []) if isinstance(r, dict)
+    ]
+    params = section.get('params')
+    if not params:
+        return results
+    try:
+        full = _fetch_full_artist_section(channel_id, params)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Fetching full artist discography failed for {}', channel_id
+        )
+        return results
+    return [r for r in (full or []) if isinstance(r, dict)] or results
+
+
+def artist_info_from_channel_id(channel_id: str) -> dict[str, Any]:
+    """Resolve an artist's own profile info: name, thumbnail, bio.
+
+    Distinct from :func:`artist_albums_from_channel_id` (their releases)
+    and :func:`artist_top_songs_from_channel_id`/
+    :func:`artist_top_albums_from_channel_id` (their popular tracks/
+    albums) - this is just the "About" info for the artist page itself.
+    Returns ``{}`` if the artist can't be resolved at all.
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return {}
+
+    thumbs = artist_data.get('thumbnails') or []
+    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+    return {
+        'artist_id': channel_id,
+        'name': str(artist_data.get('name') or '').strip(),
+        'cover_url': cover,
+        'description': str(artist_data.get('description') or '').strip(),
+        'url': f'https://music.youtube.com/channel/{channel_id}',
+        'source': 'youtube',
+    }
+
+
+def artist_similar_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
+    """Resolve an artist's "Fans might also like" shelf as lightweight
+    artist summaries. Same shape as :func:`search_artists` results.
+
+    YouTube Music only ever offers a short, fixed list here (~10 - no
+    'params' continuation is offered, unlike the albums/singles shelves).
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return []
+
+    section = artist_data.get('related')
+    if not isinstance(section, dict):
+        return []
+    artists = []
+    for entry in section.get('results') or []:
+        if not isinstance(entry, dict):
+            continue
+        related_id = entry.get('browseId')
+        if not isinstance(related_id, str) or not related_id.strip():
+            continue
+        thumbs = entry.get('thumbnails') or []
+        cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+        artists.append({
+            'artist_id': related_id.strip(),
+            'name': entry.get('title') or '',
+            'cover_url': cover,
+            'url': f'https://music.youtube.com/channel/{related_id.strip()}',
+            'source': 'youtube',
+        })
+    return artists
+
+
+def artist_albums_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
+    """Resolve every album and single for an artist as lightweight summaries.
+
+    Same shape as :func:`search_albums` results (no tracklists). This is
+    deliberate: listing an artist's releases never needs their tracks - a
+    caller that wants a specific release's tracks resolves it separately,
+    once the user actually opens it, via :func:`album_tracks_from_browse_id`.
+    Resolving every tracklist just to list the discography would mean one
+    extra YouTube Music round-trip *per release*, turning a single
+    ``get_artist`` call into dozens for a prolific artist. Duplicates (a
+    release appearing in both the albums and singles sections) are
+    de-duplicated.
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return []
+
+    artist_name = str(artist_data.get('name') or '').strip()
+    entries: list[tuple[dict[str, Any], str]] = []
+    for section_key, release_type in (
+        ('albums', 'Album'),
+        ('singles', 'Single'),
+    ):
+        section = artist_data.get(section_key)
+        if not isinstance(section, dict):
+            continue
+        for entry in _artist_albums_full_list(channel_id, section):
+            entries.append((entry, release_type))
+
+    # dedupe by browseId (a release occasionally shows up in both sections)
+    deduped: dict[str, tuple[dict[str, Any], str]] = {}
+    for entry, default_release_type in entries:
+        browse_id = entry.get('browseId')
+        if not isinstance(browse_id, str) or not browse_id.strip():
+            continue
+        deduped.setdefault(browse_id.strip(), (entry, default_release_type))
+
+    logger.info(
+        'YouTube Music get_artist {!r} channelId={} albums={} singles={} '
+        'unique={}',
+        artist_name,
+        channel_id,
+        sum(1 for _, rt in entries if rt == 'Album'),
+        sum(1 for _, rt in entries if rt == 'Single'),
+        len(deduped),
+    )
+
+    return [
+        _artist_album_entry_to_summary(
+            browse_id, entry, artist_name, default_release_type
+        )
+        for browse_id, (entry, default_release_type) in deduped.items()
+    ]
+
+
+def _artist_album_entry_to_summary(
+    browse_id: str,
+    entry: dict[str, Any],
+    artist_name: str,
+    default_release_type: str,
+) -> dict[str, Any]:
+    """Build one album summary dict from a raw ``get_artist`` shelf entry.
+
+    Same shape as :func:`search_albums` results (no tracklists) — shared
+    by :func:`artist_albums_from_channel_id` (full discography) and
+    :func:`artist_top_albums_from_channel_id` (the shelf's own preview,
+    unexpanded).
+    """
+    thumbs = entry.get('thumbnails') or []
+    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+    return {
+        'album_id': browse_id,
+        'name': entry.get('title') or '',
+        'artists': [artist_name] if artist_name else [],
+        'artist': artist_name,
+        'cover_url': cover,
+        'year': str(entry.get('year') or '').strip(),
+        'explicit': bool(entry.get('isExplicit')),
+        'url': f'https://music.youtube.com/browse/{browse_id}',
+        'source': 'youtube',
+        # the singles section carries YTM's own 'Single'/'EP' split;
+        # the albums section doesn't distinguish further, so it always
+        # falls back to the section's own default ('Album').
+        'release_type': entry.get('type') or default_release_type,
+    }
+
+
+_TOP_ALBUMS_LIMIT = 5
+
+
+def _popularity_sort_continuation(
+    response: dict[str, Any],
+) -> Optional[dict[str, Any]]:
+    """Find the "Popularity" entry in a discography page's sort-order
+    menu and return its reloadable-continuation payload, or ``None`` if
+    the page doesn't carry a sort menu at all (e.g. too few releases for
+    YouTube Music to bother offering one).
+    """
+    try:
+        sort_options = nav(
+            response,
+            SINGLE_COLUMN_TAB
+            + SECTION
+            + HEADER_SIDE
+            + [
+                'endItems',
+                0,
+                'musicSortFilterButtonRenderer',
+                'menu',
+                'musicMultiSelectMenuRenderer',
+                'options',
+            ],
+        )
+    except Exception:
+        return None
+    for option in sort_options:
+        title = nav(option, MULTI_SELECT + TITLE_TEXT, True)
+        if isinstance(title, str) and title.strip().lower() == 'popularity':
+            return nav(
+                option,
+                [
+                    *MULTI_SELECT,
+                    'selectedCommand',
+                    'commandExecutorCommand',
+                    'commands',
+                    -1,
+                    'browseSectionListReloadEndpoint',
+                ],
+                True,
+            )
+    return None
+
+
+def _fetch_artist_section_by_popularity(
+    channel_id: str, params: str, limit: int
+) -> list[dict[str, Any]]:
+    """Fetch an artist's 'albums'/'singles' shelf sorted by YouTube
+    Music's own "Popularity" ordering, truncated to ``limit`` entries.
+
+    This is literally what selecting "Popularity" from the sort dropdown
+    on an artist's discography page does — see
+    ``_fetch_full_artist_section``'s docstring for why the discography
+    browseId, not the artist's channelId itself, is needed to even reach
+    that page (and its sort menu) in the first place.
+    """
+    body = {
+        'browseId': _artist_discography_browse_id(channel_id),
+        'params': params,
+    }
+    ytm = _ytm()
+    response = ytm._send_request('browse', body)
+    continuation = _popularity_sort_continuation(response)
+    if not continuation:
+        return []
+    additional_params = get_reloadable_continuation_params({
+        'continuations': [continuation['continuation']]
+    })
+    response = ytm._send_request('browse', body, additional_params)
+    results = nav(response, SECTION_LIST_CONTINUATION + CONTENT)
+    contents = nav(results, GRID_ITEMS, True) or []
+    return _parse_ytm_albums(contents)[:limit]
+
+
+def artist_top_albums_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
+    """Resolve an artist's most popular albums as lightweight summaries.
+
+    Fetches the discography page sorted by YouTube Music's own
+    "Popularity" order and takes the first :data:`_TOP_ALBUMS_LIMIT`.
+    Falls back to the "Albums" shelf's own (unsorted) preview when no
+    'params' continuation is offered at all, or the popularity fetch
+    fails for any reason — an artist with too few releases for YouTube
+    Music to paginate doesn't get a sort menu either, so this covers the
+    same case that would make the continuation lookup a no-op anyway.
+    Singles/EPs are not included, matching the "Albums" shelf itself.
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return []
+
+    artist_name = str(artist_data.get('name') or '').strip()
+    section = artist_data.get('albums')
+    if not isinstance(section, dict):
+        return []
+
+    params = section.get('params')
+    entries: list[dict[str, Any]] = []
+    if params:
+        try:
+            entries = _fetch_artist_section_by_popularity(
+                channel_id, params, _TOP_ALBUMS_LIMIT
+            )
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Fetching popularity-sorted albums failed for {}',
+                channel_id,
+            )
+    if not entries:
+        entries = [
+            r for r in (section.get('results') or []) if isinstance(r, dict)
+        ][:_TOP_ALBUMS_LIMIT]
+
+    albums = []
+    for entry in entries:
+        browse_id = entry.get('browseId')
+        if not isinstance(browse_id, str) or not browse_id.strip():
+            continue
+        albums.append(
+            _artist_album_entry_to_summary(
+                browse_id.strip(), entry, artist_name, 'Album'
+            )
+        )
+    return albums
+
+
+def artist_top_songs_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
+    """Resolve an artist's 'Top songs' shelf as lightweight song summaries.
+
+    Same shape as :func:`search_songs` results. This is YouTube Music's
+    own popularity-ranked preview (~10 entries, no further pagination
+    offered) — distinct from the full discography, which is resolved a
+    release at a time via :func:`album_tracks_from_browse_id`.
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return []
+
+    section = artist_data.get('songs')
+    if not isinstance(section, dict):
+        return []
+    results = [
+        r for r in (section.get('results') or []) if isinstance(r, dict)
+    ]
+    songs: list[dict[str, Any]] = []
+    for result in results:
+        song = _result_to_song(result)
+        if song:
+            songs.append(song)
+    return songs
+
+
+_YOUTUBE_URL_HOSTS = ('youtube.com', 'youtu.be', 'music.youtube.com')
+_YOUTUBE_VIDEO_ID_RE = re.compile(
+    r'(?:[?&]v=|youtu\.be/|/shorts/)([A-Za-z0-9_-]{6,})'
+)
+_YOUTUBE_ALBUM_BROWSE_RE = re.compile(r'/browse/(MPREb_[A-Za-z0-9_-]+)')
+_YOUTUBE_ALBUM_PLAYLIST_RE = re.compile(r'[?&]list=(OLAK5uy_[A-Za-z0-9_-]+)')
+_YOUTUBE_ARTIST_CHANNEL_RE = re.compile(r'/channel/(UC[A-Za-z0-9_-]+)')
+_YOUTUBE_ARTIST_HANDLE_RE = re.compile(r'\.com/(@[^/?#&]+)')
+_YOUTUBE_PLAYLIST_ID_RE = re.compile(r'[?&]list=([A-Za-z0-9_-]+)')
+_YOUTUBE_PLAYLIST_BROWSE_RE = re.compile(r'/browse/VL([A-Za-z0-9_-]+)')
+
+
+def _is_radio_mix(playlist_id: str) -> bool:
+    # "RD..." ids are endless auto-generated radio mixes (not a fixed
+    # list); "RDCLAK5uy_..." ones are YouTube Music's curated playlists.
+    return playlist_id.startswith('RD') and not playlist_id.startswith(
+        'RDCLAK5uy_'
+    )
+
+
+def parse_youtube_url(url: str) -> Optional[tuple[str, str]]:
+    """Parse a YouTube/YouTube Music URL into ``(kind, id)``.
+
+    ``kind`` is ``'track'`` (a watchable videoId), ``'album'`` (a
+    ``MPREb_`` browse id, or an ``OLAK5uy_`` audio-playlist id — pass
+    either straight to :func:`album_tracks_from_browse_id`, which
+    resolves the playlist form to a browse id itself), ``'playlist'`` (a
+    user or curated playlist id — pass to :func:`playlist_tracks_from_id`)
+    or ``'artist'`` (a ``UC``-prefixed channel id, or an ``@handle`` —
+    pass either to :func:`resolve_artist_channel_id` first). Returns
+    ``None`` for URLs that aren't recognized YouTube links at all.
+
+    A ``watch?v=...&list=...`` URL is the song that was playing, not the
+    playlist around it, so it stays a ``'track'``.
+    """
+
+    if not url or not any(host in url for host in _YOUTUBE_URL_HOSTS):
+        return None
+    match = _YOUTUBE_ALBUM_BROWSE_RE.search(url)
+    if match:
+        return 'album', match.group(1)
+    match = _YOUTUBE_ALBUM_PLAYLIST_RE.search(url)
+    if match:
+        return 'album', match.group(1)
+    match = _YOUTUBE_ARTIST_CHANNEL_RE.search(url)
+    if match:
+        return 'artist', match.group(1)
+    match = _YOUTUBE_ARTIST_HANDLE_RE.search(url)
+    if match:
+        return 'artist', unquote(match.group(1))
+    match = _YOUTUBE_PLAYLIST_BROWSE_RE.search(url)
+    if match:
+        return 'playlist', match.group(1)
+    video = _YOUTUBE_VIDEO_ID_RE.search(url)
+    if video:
+        return 'track', video.group(1)
+    match = _YOUTUBE_PLAYLIST_ID_RE.search(url)
+    if match and not _is_radio_mix(match.group(1)):
+        return 'playlist', match.group(1)
+    return None
+
+
+_channel_id_cache: dict[str, str] = {}
+
+
+def resolve_artist_channel_id(channel_or_handle: str) -> str:
+    """Turn the ``'artist'`` id from :func:`parse_youtube_url` into a
+    ``UC...`` channel id.
+
+    A channel id is returned as is. An ``@handle`` is resolved through
+    YouTube Music's own URL resolver, the same call its web app makes
+    when a ``music.youtube.com/@handle`` link is opened. A handle that
+    doesn't belong to an artist resolves to the YouTube Music home page
+    instead of a channel, and raises ``ValueError``.
+    """
+
+    value = (channel_or_handle or '').strip()
+    if value.startswith('UC'):
+        return value
+    if not value.startswith('@'):
+        raise ValueError(f'Not a YouTube channel id or handle: {value!r}')
+    with _lock:
+        cached = _channel_id_cache.get(value.casefold())
+    if cached:
+        return cached
+    # The resolver only maps handles to artist pages on the
+    # music.youtube.com host; a www.youtube.com URL comes back unresolved.
+    response = _ytm()._send_request(
+        'navigation/resolve_url',
+        {'url': f'https://music.youtube.com/{quote(value, safe="@")}'},
+    )
+    _log_ytm_response(f'resolve_url {value}', response)
+    endpoint = (response or {}).get('endpoint') or {}
+    browse_id = (endpoint.get('browseEndpoint') or {}).get('browseId') or ''
+    if not browse_id.startswith('UC'):
+        raise ValueError(f'No YouTube Music artist found for {value}')
+    with _lock:
+        _channel_id_cache[value.casefold()] = browse_id
+    return browse_id
+
+
+# A YouTube Music hit further than this (seconds) from the source track's
+# length is a weak match — likely a different recording that happens to
+# share title and artist, such as a dubbed/translated version — so
+# standard YouTube is searched for a closer one before settling for it.
+_STRONG_MATCH_MAX_DURATION_DIFF = 10
+# Standard-YouTube hits are mostly music videos and user uploads; beyond
+# this gap it's a long intro/outro cut, a loop or a compilation, never the
+# song itself.
+_YOUTUBE_MAX_DURATION_DIFF = 30
+_YOUTUBE_SEARCH_LIMIT = 10
+
+
+def find_match(
     song: dict[str, Any],
 ) -> tuple[Optional[str], Optional[dict[str, Any]]]:
     """Return ``(videoId, full_result)`` that best matches ``song``.
 
+    YouTube Music is searched first (see :func:`_find_youtube_music_match`)
+    since its catalog uploads carry the cleanest audio. Some songs are
+    missing there, or only present as a different recording, so when it
+    finds nothing — or only a hit whose length is off by more than
+    :data:`_STRONG_MATCH_MAX_DURATION_DIFF` — standard YouTube is searched
+    too (:func:`_find_match_via_youtube`). A YouTube hit replaces a weak
+    YouTube Music one only when its length is strictly closer.
+
     The full result is the raw ytmusicapi search hit and is useful for
-    enrichment (album name, fallback cover, etc.). Either element may be
-    ``None`` if no acceptable match is found.
+    enrichment (album name, fallback cover, etc.); it is ``None`` for a
+    standard-YouTube match, which carries no catalog metadata. Both
+    elements are ``None`` if no acceptable match is found.
+    """
+
+    video_id, match = _find_youtube_music_match(song)
+    ytm_diff = _duration_diff(song, match)
+    if video_id and (
+        ytm_diff is None or ytm_diff <= _STRONG_MATCH_MAX_DURATION_DIFF
+    ):
+        return video_id, match
+
+    yt_video_id, yt_diff = _find_match_via_youtube(song)
+    if not yt_video_id:
+        return video_id, match
+    if video_id and (yt_diff is None or yt_diff >= ytm_diff):
+        logger.info(
+            'find_match keeping weak YouTube Music videoId={} (off by {}s) '
+            'over YouTube videoId={} (off by {}s)',
+            video_id,
+            ytm_diff,
+            yt_video_id,
+            yt_diff,
+        )
+        return video_id, match
+    logger.info(
+        'find_match using standard YouTube videoId={} for title={!r} '
+        '(YouTube Music: {})',
+        yt_video_id,
+        song.get('name'),
+        f'videoId={video_id} off by {ytm_diff}s' if video_id else 'no match',
+    )
+    return yt_video_id, None
+
+
+def _duration_diff(
+    song: dict[str, Any], result: Optional[dict[str, Any]]
+) -> Optional[int]:
+    """Seconds between ``song``'s and ``result``'s lengths, if both known."""
+
+    if not result:
+        return None
+    target = song.get('duration') or 0
+    candidate = result.get('duration_seconds') or _parse_duration(
+        result.get('duration')
+    )
+    if not target or not candidate:
+        return None
+    return abs(int(candidate) - int(target))
+
+
+def _find_youtube_music_match(
+    song: dict[str, Any],
+) -> tuple[Optional[str], Optional[dict[str, Any]]]:
+    """YouTube Music half of :func:`find_match`: ``(videoId, result)``.
+
+    Searches "<artists> <title>" first, then "<title> <artists>" (see
+    below), then the album's tracklist. Either element may be ``None``
+    if no acceptable match is found.
     """
 
     artists = song.get('artists') or []
     artists_q = ' '.join(artists)
     title = song.get('name', '')
+    album = song.get('album_name', '')
     query = f'{artists_q} {title}'.strip()
     if not query:
         return None, None
     duration = song.get('duration') or 0
-    title_only = title.strip()
 
-    def _search(
-        phase: str, q: str, filt: Optional[str]
-    ) -> list[dict[str, Any]]:
-        try:
-            if filt:
-                rows = _ytm().search(q, filter=filt, limit=10)
-            else:
-                rows = _ytm().search(q, limit=10)
-        except Exception:
-            logger.opt(exception=True).debug(
-                'YouTube Music match search failed phase={} filter={!r}',
-                phase,
-                filt,
+    video_id, result = _search_youtube_music_match(
+        query, title, artists, album, duration
+    )
+    if video_id:
+        return video_id, result
+
+    # YouTube Music's ranking depends on word order: for some tracks the
+    # artist-first query buries the right song below what the matcher
+    # looks at (or omits it), while "<title> <artist>" returns it as the
+    # very first result. Same stages and gates, just the other order.
+    title_first_query = f'{title} {artists_q}'.strip()
+    if title and artists_q and title_first_query != query:
+        video_id, result = _search_youtube_music_match(
+            title_first_query, title, artists, album, duration
+        )
+        if video_id:
+            logger.info(
+                'YouTube Music find_match resolved videoId={} via '
+                'title-first query={!r}',
+                video_id,
+                title_first_query[:160],
             )
-            rows = []
+            return video_id, result
+
+    # Text search sometimes never returns the correct video at all (see
+    # `_find_match_via_album`'s docstring) — try resolving it directly
+    # off the album's tracklist before giving up.
+    album_video_id, album_match = _find_match_via_album(song)
+    if album_video_id:
+        return album_video_id, album_match
+    logger.info(
+        'YouTube Music find_match: no title-matching result for '
+        'query={!r} or query={!r} target_title={!r}',
+        query[:160],
+        title_first_query[:160],
+        title,
+    )
+    return None, None
+
+
+def _search_youtube_music_match(
+    query: str,
+    title: str,
+    artists: list[str],
+    album: str,
+    duration: int,
+) -> tuple[Optional[str], Optional[dict[str, Any]]]:
+    """Best gated YouTube Music ``(videoId, result)`` for one ``query``.
+
+    Runs the unfiltered search (for the "Top result" card), then the
+    ``songs`` shelf (``videos`` when that's empty), through
+    :func:`_pick_best`. ``(None, None)`` when nothing qualifies.
+    """
+
+    # Try an unfiltered (default) search first. Unlike the category-
+    # filtered searches below, this is the only request that includes
+    # YouTube Music's own "Top result" card — its single best guess for
+    # the query — and it is empirically far more reliable than the
+    # `songs` shelf for tracks the filtered search omits entirely (e.g.
+    # "Held Together" and "Fallen Wires (Remastered 2023)" are both absent
+    # from `filter='songs'` results for their own artist+title query,
+    # yet resolve instantly as the unfiltered Top result).
+    try:
+        top_results = _ytm().search(query, limit=5)
+    except Exception:
+        logger.exception('YouTube Music top-result search failed')
+        top_results = []
+    _log_ytm_summary_search(
+        phase='match_top_result',
+        query=query,
+        filt='default',
+        results_len=len(top_results),
+        first_titles=[
+            str(r.get('title') or '')[:60]
+            for r in top_results[:8]
+            if isinstance(r, dict)
+        ],
+    )
+    _log_ytm_response(f'find_match top-result q={query[:80]!r}', top_results)
+    usable_top_results = [
+        r
+        for r in top_results
+        if isinstance(r, dict) and r.get('resultType') in {'song', 'video'}
+    ]
+    top_best = _pick_best(usable_top_results, duration, title, artists, album)
+    if top_best is not None:
+        logger.info(
+            'YouTube Music find_match picked videoId={} title={!r} '
+            'year={!r} via=top_result',
+            top_best.get('videoId'),
+            top_best.get('title'),
+            top_best.get('year'),
+        )
+        _log_ytm_response('find_match chosen row (top result)', top_best)
+        return top_best.get('videoId'), top_best
+
+    try:
+        results = _ytm().search(query, filter='songs', limit=10)
+    except Exception:
+        logger.exception('YouTube Music match search failed')
+        results = []
+    _log_ytm_summary_search(
+        phase='match_songs',
+        query=query,
+        filt='songs',
+        results_len=len(results),
+        first_titles=[
+            str(r.get('title') or '')[:60]
+            for r in results[:8]
+            if isinstance(r, dict)
+        ],
+    )
+    _log_ytm_response(f'find_match songs q={query[:80]!r}', results)
+    if not results:
+        try:
+            results = _ytm().search(query, filter='videos', limit=10)
+        except Exception:
+            results = []
         _log_ytm_summary_search(
-            phase=phase,
-            query=q,
-            filt=filt,
-            results_len=len(rows),
+            phase='match_videos_fallback',
+            query=query,
+            filt='videos',
+            results_len=len(results),
             first_titles=[
                 str(r.get('title') or '')[:60]
-                for r in rows[:8]
+                for r in results[:8]
                 if isinstance(r, dict)
             ],
         )
-        _log_ytm_response(f'find_match {phase} q={q[:80]!r}', rows)
-        return rows
-
-    candidates: list[dict[str, Any]] = []
-    # Start strict (artist + title) then progressively relax.
-    attempts = [
-        ('match_songs', query, 'songs'),
-        ('match_videos_fallback', query, 'videos'),
-        ('match_all_unfiltered', query, None),
-    ]
-    if title_only and title_only.casefold() != query.casefold():
-        attempts.extend([
-            ('match_songs_title_only', title_only, 'songs'),
-            ('match_videos_title_only', title_only, 'videos'),
-            ('match_all_title_only', title_only, None),
-        ])
-    folded_query = _ascii_fold_query(query)
-    folded_title = _ascii_fold_query(title_only)
-    if folded_query and folded_query.casefold() != query.casefold():
-        attempts.extend([
-            ('match_songs_ascii_fold', folded_query, 'songs'),
-            ('match_videos_ascii_fold', folded_query, 'videos'),
-            ('match_all_ascii_fold', folded_query, None),
-        ])
-    if (
-        folded_title
-        and title_only
-        and folded_title.casefold() != title_only.casefold()
-    ):
-        attempts.extend([
-            ('match_songs_title_ascii_fold', folded_title, 'songs'),
-            ('match_videos_title_ascii_fold', folded_title, 'videos'),
-            ('match_all_title_ascii_fold', folded_title, None),
-        ])
-    base_title = strip_mix_suffix(title_only)
-    if base_title and base_title.casefold() != title_only.casefold():
-        base_query = f'{artists_q} {base_title}'.strip()
-        attempts.extend([
-            ('match_songs_base_title', base_query, 'songs'),
-            ('match_videos_base_title', base_query, 'videos'),
-            ('match_all_base_title', base_query, None),
-        ])
-    seen_attempts: set[tuple[str, str]] = set()
-    for phase, q, filt in attempts:
-        key = (q.casefold(), filt or '')
-        if key in seen_attempts:
-            continue
-        seen_attempts.add(key)
-        rows = _search(phase, q, filt)
-        for row in rows:
-            if isinstance(row, dict) and row.get('videoId'):
-                candidates.append(row)
-
-    strict_candidates = [
-        row
-        for row in candidates
-        if isinstance(row, dict)
-        and row.get('videoId')
-        and not candidate_adds_mix_variant(title, str(row.get('title') or ''))
-    ]
-    best = _pick_best(strict_candidates, duration, title, artists)
-    if best is None and strict_candidates != candidates:
-        mix_candidates = [
-            row
-            for row in candidates
-            if isinstance(row, dict)
-            and row.get('videoId')
-            and candidate_adds_mix_variant(title, str(row.get('title') or ''))
-        ]
-        if mix_candidates:
-            logger.info(
-                'YouTube Music find_match: trying mix variants as last resort '
-                'for title={!r}',
-                title,
-            )
-            best = _pick_best(
-                mix_candidates, duration, title, artists, mix_variant=True
-            )
+        _log_ytm_response(f'find_match videos q={query[:80]!r}', results)
+    best = _pick_best(results, duration, title, artists, album)
     if best is not None:
         logger.info(
             'YouTube Music find_match picked videoId={} title={!r} year={!r}',
@@ -360,71 +1129,178 @@ def find_match(  # noqa: PLR0914
         )
         _log_ytm_response('find_match chosen row', best)
         return best.get('videoId'), best
-    strict_candidates = [
-        result
-        for result in candidates
-        if not candidate_adds_mix_variant(
-            title, str(result.get('title') or '')
-        )
-    ]
-    for result in strict_candidates or candidates:
-        vid = result.get('videoId')
-        if not vid:
-            continue
-        candidate_title = (result.get('title') or '').lower()
-        if remote_text_unacceptable(title, candidate_title):
-            continue
-        candidate_duration = result.get('duration_seconds') or _parse_duration(
-            result.get('duration')
-        )
-        if candidate_duration and not media_duration_matches_song(
-            {'duration': duration},
-            candidate_duration,
+    for result in results:
+        # Same hard title/artist requirements as `_pick_best`: never fall
+        # back to "the first result" if its title doesn't actually
+        # resemble the source track, or if it shares the title but not
+        # the artist (title collisions across unrelated artists happen).
+        if (
+            result.get('videoId')
+            and (not title or _titles_match(title, result.get('title')))
+            and _artists_overlap(artists, result)
         ):
-            continue
-        logger.info(
-            'YouTube Music find_match fallback first videoId={} title={!r}',
-            vid,
-            result.get('title'),
-        )
-        _log_ytm_response('find_match fallback row', result)
-        return vid, result
-    mix_only = [
-        result
-        for result in candidates
-        if candidate_adds_mix_variant(title, str(result.get('title') or ''))
-    ]
-    for result in mix_only:
-        vid = result.get('videoId')
-        if not vid:
-            continue
-        candidate_title = (result.get('title') or '').lower()
-        if remote_text_unacceptable(
-            title,
-            candidate_title,
-            skip_variant_keywords=MIX_VARIANT_REMOTE_SKIP_KEYWORDS,
-        ):
-            continue
-        candidate_duration = result.get('duration_seconds') or _parse_duration(
-            result.get('duration')
-        )
-        if candidate_duration and not media_duration_matches_mix_variant(
-            {'duration': duration},
-            candidate_duration,
-        ):
-            continue
-        logger.info(
-            'YouTube Music find_match mix-variant fallback videoId={} title={!r}',
-            vid,
-            result.get('title'),
-        )
-        _log_ytm_response('find_match mix-variant fallback row', result)
-        return vid, result
-    logger.info(
-        'YouTube Music find_match: no result for query={!r}',
-        query[:160],
-    )
+            logger.info(
+                'YouTube Music find_match fallback first videoId={} title={!r}',
+                result.get('videoId'),
+                result.get('title'),
+            )
+            _log_ytm_response('find_match fallback row', result)
+            return result['videoId'], result
     return None, None
+
+
+# Channel-name decorations that aren't part of the artist's name:
+# auto-generated "Artist - Topic" channels, "ArtistVEVO", "Artist Official".
+_YOUTUBE_CHANNEL_SUFFIX_RE = re.compile(
+    r'\s*(?:-\s*topic|vevo|official)\s*$', re.IGNORECASE
+)
+# Separators between artists in one credit string: an upload's "A & B feat. C
+# - Title" head, or a packed YouTube Music entry "A, B, and C".
+_ARTIST_CREDIT_SPLIT_RE = re.compile(
+    r'\s*(?:,|&|\+|\bx\b|\bvs\.?|\band\b|\bfeat\.?|\bft\.?|\bfeaturing\b)\s*',
+    re.IGNORECASE,
+)
+# A featured-artist credit anywhere in a title — "(feat. X)", "[with X]",
+# or a bare trailing "ft. X". Spotify and YouTube uploads format these
+# differently, so titles are compared with it stripped from both sides.
+_YOUTUBE_TITLE_FEATURING_RE = re.compile(
+    r'\s*(?:[\(\[]\s*(?:feat\.?|ft\.?|featuring|with)\s+[^\)\]]*[\)\]]'
+    r'|\b(?:feat\.?|ft\.?|featuring)\s+.*$)',
+    re.IGNORECASE,
+)
+
+
+def _youtube_core_title(title: Any) -> str:
+    """``title`` without featured-artist credits, for cross-site matching."""
+
+    value = str(title or '').replace('’', "'")
+    value = _YOUTUBE_TITLE_FEATURING_RE.sub('', value)
+    return re.sub(r'\s+', ' ', value).strip()
+
+
+def _youtube_search(query: str, limit: int) -> list[dict[str, Any]]:
+    """Flat standard-YouTube search results (``ytsearch``) via yt-dlp."""
+
+    opts: dict[str, Any] = {
+        'quiet': True,
+        'no_warnings': True,
+        'skip_download': True,
+        'extract_flat': 'in_playlist',
+    }
+    if os.getenv('DOWNTIFY_FORCE_IPV4', '').strip() in {'1', 'true', 'yes'}:
+        opts['source_address'] = '0.0.0.0'
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(f'ytsearch{limit}:{query}', download=False)
+    entries = (info or {}).get('entries') or []
+    return [e for e in entries if isinstance(e, dict)]
+
+
+def _youtube_entry_to_result(
+    entry: dict[str, Any],
+) -> Optional[dict[str, Any]]:
+    """A yt-dlp search entry in the shape :func:`_pick_best` scores.
+
+    Uploads rarely credit the artist in channel metadata the way YouTube
+    Music does, so the artists come from an "Artist - Title" video title
+    (split on "&", "feat." etc., keeping the unsplit credit too so names
+    like "Florence and the Machine" still match) plus the channel name.
+    """
+
+    video_id = entry.get('id')
+    if not isinstance(video_id, str) or not video_id:
+        return None
+    if entry.get('live_status') in {'is_live', 'is_upcoming', 'post_live'}:
+        return None
+    raw_title = str(entry.get('title') or '')
+    title, credited = _split_upload_title(raw_title, [])
+    # The artist isn't always the first segment: fan/OST uploads read
+    # "Game OST - Title - Artist", so every segment is a possible credit.
+    segments = _TITLE_NOISE_RE.sub('', raw_title).split(' - ')
+    if len(segments) > 1:
+        credited = [*credited, *(s.strip() for s in segments if s.strip())]
+    artists: list[str] = []
+    for credit in credited:
+        artists.extend([
+            credit,
+            *(p for p in _ARTIST_CREDIT_SPLIT_RE.split(credit) if p),
+        ])
+    channel = _YOUTUBE_CHANNEL_SUFFIX_RE.sub(
+        '', str(entry.get('channel') or entry.get('uploader') or '')
+    ).strip()
+    if channel:
+        artists.append(channel)
+    unique: list[str] = []
+    for artist in artists:
+        if artist.lower() not in {u.lower() for u in unique}:
+            unique.append(artist)
+    try:
+        duration = int(entry.get('duration') or 0)
+    except (TypeError, ValueError):
+        duration = 0
+    return {
+        'videoId': video_id,
+        'title': _youtube_core_title(title),
+        'artists': [{'name': a} for a in unique],
+        'duration_seconds': duration,
+        'resultType': 'video',
+    }
+
+
+def _find_match_via_youtube(
+    song: dict[str, Any],
+) -> tuple[Optional[str], Optional[int]]:
+    """Best standard-YouTube ``(videoId, duration_diff)`` for ``song``.
+
+    Held to the same gates as YouTube Music hits (title resemblance,
+    artist overlap, no karaoke/cover/sped-up variants — checked against
+    the raw title, before "(Official Audio)"-style noise is stripped) plus
+    a hard :data:`_YOUTUBE_MAX_DURATION_DIFF` length cap. ``(None, None)``
+    when nothing qualifies or the search fails.
+    """
+
+    artists = song.get('artists') or []
+    title = song.get('name', '')
+    query = f'{" ".join(artists)} {title}'.strip()
+    if not query:
+        return None, None
+    try:
+        entries = _youtube_search(query, _YOUTUBE_SEARCH_LIMIT)
+    except Exception:
+        logger.exception('YouTube fallback search failed')
+        return None, None
+
+    target_title_l = title.lower()
+    candidates = []
+    for entry in entries:
+        raw_title_l = str(entry.get('title') or '').lower()
+        if any(
+            kw in raw_title_l and kw not in target_title_l
+            for kw in _NEGATIVE_KEYWORDS
+        ):
+            continue
+        result = _youtube_entry_to_result(entry)
+        if result is None:
+            continue
+        diff = _duration_diff(song, result)
+        if diff is not None and diff > _YOUTUBE_MAX_DURATION_DIFF:
+            continue
+        candidates.append(result)
+
+    best = _pick_best(
+        candidates,
+        song.get('duration') or 0,
+        _youtube_core_title(title),
+        artists,
+    )
+    if best is None:
+        logger.info(
+            'YouTube fallback: no acceptable result for query={!r} '
+            '({} results)',
+            query[:160],
+            len(entries),
+        )
+        return None, None
+    return best['videoId'], _duration_diff(song, best)
 
 
 def find_match_for_video(
@@ -472,6 +1348,122 @@ def _norm_compact_title(value: Any) -> str:
     return re.sub(r'\s+', ' ', str(value or '').casefold()).strip()
 
 
+# Qualifiers that mark a genuinely different recording — a different
+# performance or edit, not just a different pressing of the same audio.
+# When one name is a prefix of the other (e.g. "Amber Field" vs "Local
+# Valley (Deluxe)"), the extra text is tolerated *unless* it contains one
+# of these — a plain "Fernglow" must never match "Fernglow (DJ Koze Remix)".
+# Extend this list as new special cases turn up.
+_VERSION_QUALIFIER_WORDS = (
+    'live',
+    'remix',
+    'cover',
+    'karaoke',
+    'acoustic',
+    'unplugged',
+    'demo',
+    'instrumental',
+    'tribute',
+    'ao vivo',
+    'en vivo',
+    'acústico',
+    'acustico',
+    # A song sung in another language is a different recording: a
+    # "(Spanish Version)" must never stand in for the original.
+    'spanish',
+    'español',
+    'espanol',
+    'english',
+    'inglés',
+    'ingles',
+    'portuguese',
+    'português',
+    'portugues',
+    'french',
+    'français',
+    'francais',
+    'italian',
+    'italiano',
+    'german',
+    'japanese',
+    'korean',
+    'chinese',
+)
+_VERSION_QUALIFIER_RE = re.compile(
+    r'\b(' + '|'.join(_VERSION_QUALIFIER_WORDS) + r')\b'
+)
+# Spotify writes a version as a dash suffix ("Tubarões - Ao Vivo",
+# "Song - Remastered 2011") where YouTube Music uses parentheses
+# ("Tubarões (Ao Vivo)"); only the last " - " segment is rewritten.
+_DASH_VERSION_SUFFIX_RE = re.compile(r'^(.*\S)\s+-\s+([^()\[\]]+?)$')
+
+
+def _names_match(target: Any, candidate: Any) -> bool:
+    """True when two free-text names (title or album) refer to the same release.
+
+    An exact normalized match always counts. Otherwise one name may be a
+    prefix of the other, tolerating cosmetic edition tags a reissue adds
+    without changing the underlying content (``"(Deluxe)"``,
+    ``"(Remastered 2023)"``, ``"(Anniversary Edition)"``). The extra
+    text is rejected, however, if it names a genuinely different
+    recording — see :data:`_VERSION_QUALIFIER_WORDS`. A common prefix
+    shorter than 4 characters is never accepted, so short unrelated
+    names don't collide (``"U"`` must not match ``"Unplugged"``).
+    Both names are compared with a trailing " - Suffix" rewritten as
+    " (Suffix)" — see :data:`_DASH_VERSION_SUFFIX_RE`.
+    """
+
+    t = _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', _norm_compact_title(target))
+    c = _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', _norm_compact_title(candidate))
+    if not t or not c:
+        return False
+    if t == c:
+        return True
+    shorter, longer = sorted((t, c), key=len)
+    if len(shorter) < 4 or not longer.startswith(shorter):
+        return False
+    tail = longer[len(shorter) :]
+    return not _VERSION_QUALIFIER_RE.search(tail)
+
+
+def _albums_match(target: Any, candidate: Any) -> bool:
+    """True when two album names refer to the same release. See :func:`_names_match`."""
+
+    return _names_match(target, candidate)
+
+
+def _titles_match(target: Any, candidate: Any) -> bool:
+    """True when two song titles refer to the same recording. See :func:`_names_match`.
+
+    A title may also match one " - "-separated segment of the other:
+    uploads bundle extra text that way — "くちづけDiamond - Kuchizuke
+    Diamond" (native script and romanization), "Smash Hit OST - Smash Hit
+    Theme Full Version - Douglas Holmquist" (game, title, artist). The
+    segment must start with the whole title (so "Smash Hit" never matches
+    "Smash Hit Theme"), and the remaining segments must not name a
+    different recording ("Yellow - Live" is still not "Yellow").
+    """
+
+    if _names_match(target, candidate):
+        return True
+    for whole, segmented in ((target, candidate), (candidate, target)):
+        whole_norm = _DASH_VERSION_SUFFIX_RE.sub(
+            r'\1 (\2)', _norm_compact_title(whole)
+        )
+        segments = _norm_compact_title(segmented).split(' - ')
+        if not whole_norm or len(segments) < 2:
+            continue
+        for i, segment in enumerate(segments):
+            rest = ' '.join(segments[:i] + segments[i + 1 :])
+            if (
+                segment.startswith(whole_norm)
+                and _names_match(whole_norm, segment)
+                and not _VERSION_QUALIFIER_RE.search(rest)
+            ):
+                return True
+    return False
+
+
 def _album_title_hints(
     match: dict[str, Any], song: Optional[dict[str, Any]]
 ) -> list[str]:
@@ -483,7 +1475,7 @@ def _album_title_hints(
             hints.append(n)
     if song:
         n = str(song.get('album_name') or '').strip()
-        if n not in hints:
+        if n and n not in hints:
             hints.append(n)
     # de-dupe while keeping order
     seen: set[str] = set()
@@ -538,7 +1530,7 @@ def _album_browse_id_from_search(
             'YouTube Music album search failed',
         )
         return ''
-    titles = [
+    result_titles = [
         str(r.get('title') or '')[:60]
         for r in results[:10]
         if isinstance(r, dict)
@@ -547,9 +1539,13 @@ def _album_browse_id_from_search(
         'YouTube Music album search title_match q={!r} hits={} sample_titles={}',
         query[:120],
         len(results),
-        titles,
+        result_titles,
     )
-    _log_ytm_response(f'albums search titles={titles!r}', results)
+    _log_ytm_response(f'albums search titles={result_titles!r}', results)
+    # Match against the *original* title hints we were looking for — not
+    # the search results' own titles (that used to shadow `titles` here,
+    # making this check a no-op that always accepted the first result
+    # regardless of whether it was actually the right album).
     want = {_norm_compact_title(t) for t in titles if t.strip()}
     for r in results:
         if not isinstance(r, dict):
@@ -675,10 +1671,347 @@ def _cached_album_tracks_and_count(
         total_ct = None
     if not total_ct and tracks:
         total_ct = len(tracks)
+    artists = [
+        a.get('name', '')
+        for a in (data.get('artists') or [])
+        if isinstance(a, dict) and a.get('name')
+    ]
     tup = (tracks, total_ct)
     with _lock:
         _album_track_cache[browse_id] = tup
+        if not artists:
+            # get_album's own response doesn't always carry an `artists`
+            # field — fall back to what the earlier albums-filter search
+            # for this same browse id already told us (search_albums /
+            # _album_summary), rather than losing it.
+            artists = list(_album_search_artist_cache.get(browse_id) or [])
+        _album_meta_cache[browse_id] = {
+            'title': data.get('title') or '',
+            'year': str(data.get('year') or '').strip(),
+            'thumbnails': data.get('thumbnails') or [],
+            # 'Album' / 'Single' / 'EP' — YouTube Music's own release
+            # classification.
+            'type': data.get('type') or '',
+            'artists': artists,
+        }
     return tup
+
+
+def _cached_album_meta(browse_id: str) -> dict[str, Any]:
+    """Album-level metadata for ``browse_id``, if already resolved and cached.
+
+    Only ever a cache read — populated as a side effect of
+    :func:`_cached_album_tracks_and_count`, never triggers its own
+    ``get_album`` call.
+    """
+
+    with _lock:
+        return dict(_album_meta_cache.get(browse_id) or {})
+
+
+def _cached_album_title(browse_id: str) -> str:
+    return _cached_album_meta(browse_id).get('title', '')
+
+
+def _cached_album_release_type(browse_id: str) -> str:
+    return _cached_album_meta(browse_id).get('type', '')
+
+
+def _cached_album_year(browse_id: str) -> str:
+    return _cached_album_meta(browse_id).get('year', '')
+
+
+# Separators YouTube Music uses when it collapses a featuring artist into
+# a single combined-name entry instead of a separate artist dict.
+# "and"/","/"with"/"x" are deliberately excluded even though YouTube
+# Music uses them too, because they routinely appear inside real band
+# names (e.g. a duo named "Harbor and the Wren") and could get mis-split
+# if the album's own metadata is ever internally inconsistent about the
+# artist name used as the anchor below. "&" carries the same risk but is
+# kept anyway since it's the single most common combined-name pattern in
+# practice, and the anchor check already guards against the common case.
+_FEATURING_ARTIST_SEPARATORS = (
+    ' feat. ',
+    ' feat ',
+    ' featuring ',
+    ' ft. ',
+    ' ft ',
+    ' & ',
+)
+
+
+def _split_combined_featuring_artist(
+    artists: list[str], album_artists: list[str]
+) -> list[str]:
+    """Split a "Primary feat. Featured" combined name YouTube Music
+    sometimes returns as a single artist entry (no separate channel id)
+    for featuring tracks — instead of the usual one-dict-per-artist list.
+
+    Only splits when the combined name is prefixed by an artist already
+    known to be on the album, so genuine band names aren't mistakenly
+    split apart.
+    """
+    if len(artists) != 1:
+        return artists
+    name = artists[0]
+    name_lower = name.lower()
+    for album_artist in album_artists:
+        for sep in _FEATURING_ARTIST_SEPARATORS:
+            prefix = f'{album_artist}{sep}'
+            if name_lower.startswith(prefix.lower()):
+                featured = name[len(prefix) :].strip()
+                if featured:
+                    return [album_artist, featured]
+    return artists
+
+
+# Matches a trailing "(feat. X)" / "(ft. X)" / "(featuring X)" — with
+# either parenthesis or square-bracket style — at the end of a title.
+_TITLE_FEATURING_RE = re.compile(
+    r'[\(\[]\s*(?:feat\.?|ft\.?|featuring)\s+(.+?)\s*[\)\]]\s*$',
+    re.IGNORECASE,
+)
+
+
+def _extract_title_featuring_artist(
+    title: str, artists: list[str]
+) -> list[str]:
+    """Add a featured artist named in the title's "(feat. X)" suffix to
+    ``artists``, for the case where YouTube Music's own artists list
+    doesn't credit them at all — e.g. a track titled "Better Way To Live
+    (feat. Grian Chatten)" whose ``artists`` is just ``[{"name":
+    "KNEECAP"}]``, with no entry whatsoever for the featured artist.
+    """
+    match = _TITLE_FEATURING_RE.search(title or '')
+    if not match:
+        return artists
+    featured = match.group(1).strip()
+    if not featured:
+        return artists
+    existing = {a.lower() for a in artists}
+    if featured.lower() in existing:
+        return artists
+    return [*artists, featured]
+
+
+# YouTube Music's own classification of a track's upload (see
+# `get_album`/search results' `videoType` field): "ATV" is a studio
+# recording uploaded by the artist with static cover art — the actual
+# album/single release. "OMV" is a genuine music video, which often uses
+# a different edit of the song (extended or spoken intro, alternate
+# mix) than the album version, even though it's nominally "the same
+# track". ytmusicapi doesn't expose both alternatives on one track
+# entry, so swapping requires a follow-up search.
+_MUSIC_VIDEO_TYPE_OFFICIAL_AUDIO = 'MUSIC_VIDEO_TYPE_ATV'
+_MUSIC_VIDEO_TYPE_MUSIC_VIDEO = 'MUSIC_VIDEO_TYPE_OMV'
+
+
+def _prefer_official_audio_track(
+    video_id: str,
+    duration: int,
+    title: str,
+    artists: list[str],
+    video_type: str,
+) -> tuple[str, int]:
+    """Swap a music-video (OMV) track for its official-audio (ATV)
+    counterpart when one can be found, since the video edit sometimes
+    differs from the actual album recording. Returns the original
+    ``(video_id, duration)`` unchanged when the track isn't an OMV, or
+    when no matching ATV alternative turns up.
+    """
+    if video_type != _MUSIC_VIDEO_TYPE_MUSIC_VIDEO:
+        return video_id, duration
+    with _lock:
+        cached = _omv_preference_cache.get(video_id)
+    if cached is not None:
+        return cached
+    query = f'{" ".join(artists)} {title}'.strip()
+    if not query:
+        return video_id, duration
+    try:
+        results = _ytm().search(query, filter='songs', limit=10)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Official-audio preference search failed for {!r}', title
+        )
+        return video_id, duration
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        if result.get('videoType') != _MUSIC_VIDEO_TYPE_OFFICIAL_AUDIO:
+            continue
+        if not _titles_match(title, result.get('title')):
+            continue
+        if not _artists_overlap(artists, result):
+            continue
+        candidate = result.get('videoId')
+        if not (isinstance(candidate, str) and candidate.strip()):
+            continue
+        candidate_duration = result.get('duration_seconds') or _parse_duration(
+            result.get('duration')
+        )
+        logger.info(
+            'Preferring official-audio (ATV) videoId={} over music-video '
+            '(OMV) videoId={} for title={!r}',
+            candidate,
+            video_id,
+            title,
+        )
+        chosen = (candidate.strip(), (candidate_duration or duration))
+        with _lock:
+            _omv_preference_cache[video_id] = chosen
+        return chosen
+    with _lock:
+        _omv_preference_cache[video_id] = (video_id, duration)
+    return video_id, duration
+
+
+def _album_track_song(
+    track: dict[str, Any],
+    video_id: str,
+    position: int,
+    total: int,
+    meta: dict[str, Any],
+) -> dict[str, Any]:
+    """Build one album-track song dict, given the album's cached metadata."""
+
+    artists = [
+        a.get('name', '')
+        for a in (track.get('artists') or [])
+        if isinstance(a, dict) and a.get('name')
+    ]
+    artists = _split_combined_featuring_artist(
+        artists, meta.get('artists') or []
+    )
+    artists = _extract_title_featuring_artist(track.get('title', ''), artists)
+    title = track.get('title', '')
+    duration = track.get('duration_seconds') or _parse_duration(
+        track.get('duration')
+    )
+    video_id, duration = _prefer_official_audio_track(
+        video_id, duration, title, artists, track.get('videoType', '')
+    )
+    year = meta.get('year', '')
+    thumbs = meta.get('thumbnails') or []
+    cover = _upgrade_thumbnail(thumbs[-1].get('url', '')) if thumbs else ''
+    track_number = _normalize_ytm_track_slot(
+        declared=track.get('trackNumber'), position_in_album_list=position
+    )
+    return {
+        'song_id': video_id,
+        'name': title,
+        'artists': artists,
+        'artist': ', '.join(artists),
+        'album_name': meta.get('title', ''),
+        'cover_url': cover,
+        'duration': duration,
+        'url': f'https://music.youtube.com/watch?v={video_id}',
+        'explicit': bool(track.get('isExplicit')),
+        'year': year,
+        'release_date': year,
+        'source': 'youtube',
+        'track_number': track_number,
+        'album_track_total': total,
+        'release_type': meta.get('type', ''),
+        # The album's own artist, so every track in the album gets the
+        # same "album artist" tag even when a track's own `artists` differs
+        # (a feature, a remix credit, ...) — see
+        # `downloader._album_artist_for_tags`, which falls back to a
+        # per-track heuristic when this isn't set.
+        'album_artist': ', '.join(meta.get('artists') or []),
+    }
+
+
+def album_tracks_from_browse_id(
+    browse_id_or_playlist_id: str,
+) -> list[dict[str, Any]]:
+    """Resolve a YouTube Music album into Spotify-shaped song dicts.
+
+    Accepts either a ``MPREb_`` browse id or an ``OLAK5uy_`` audio
+    playlist id (converted to a browse id first via
+    ``get_album_browse_id``). Mirrors
+    :func:`spotify.album_tracks_from_id`'s output shape so the same
+    batch-download/M3U frontend code path works unchanged for a
+    directly-pasted YouTube Music album URL. Returns ``[]`` if the
+    album can't be resolved at all.
+    """
+
+    browse_id = browse_id_or_playlist_id
+    if browse_id.startswith('OLAK5uy_'):
+        try:
+            resolved = _ytm().get_album_browse_id(browse_id)
+        except Exception:
+            logger.exception(
+                'YouTube Music get_album_browse_id failed for {}', browse_id
+            )
+            resolved = None
+        if not resolved:
+            return []
+        browse_id = resolved
+
+    tracks, total_ct = _cached_album_tracks_and_count(browse_id)
+    if not tracks:
+        return []
+    total = total_ct or len(tracks)
+    meta = _cached_album_meta(browse_id)
+
+    songs: list[dict[str, Any]] = []
+    for position, track in enumerate(tracks, start=1):
+        video_id = _row_video_id(track)
+        if not video_id:
+            continue
+        songs.append(_album_track_song(track, video_id, position, total, meta))
+    return songs
+
+
+def _find_match_via_album(
+    song: dict[str, Any],
+) -> tuple[Optional[str], Optional[dict[str, Any]]]:
+    """Resolve a track by scanning its album's tracklist directly.
+
+    YouTube Music's text search occasionally omits the correct video
+    from an "artist + title" query's own results entirely — e.g.
+    searching "Mica Ferreira Held Together" never surfaces "Held Together" itself,
+    while surfacing an unrelated track by the same artist (confirmed by
+    inspecting the raw search payload). When the source album is known,
+    resolving it via the ``albums`` filter and scanning its full
+    :func:`_cached_album_tracks_and_count` listing sidesteps that
+    search-relevance quirk entirely, since the tracklist is keyed by
+    album rather than by a fuzzy text query.
+    """
+
+    title = song.get('name', '')
+    album_name = str(song.get('album_name') or '').strip()
+    if not title or not album_name:
+        return None, None
+
+    browse_id = _album_browse_id_from_search({}, song)
+    if not browse_id:
+        return None, None
+
+    tracks, _total = _cached_album_tracks_and_count(browse_id)
+    for track in tracks:
+        if not isinstance(track, dict):
+            continue
+        video_id = _row_video_id(track)
+        if not video_id:
+            continue
+        if _titles_match(title, track.get('title')):
+            logger.info(
+                'YouTube Music find_match album-tracklist fallback hit '
+                'browseId={!r} videoId={} title={!r}',
+                browse_id,
+                video_id,
+                track.get('title'),
+            )
+            return video_id, track
+    logger.info(
+        'YouTube Music find_match album-tracklist fallback: no title '
+        'match in browseId={!r} for title={!r}',
+        browse_id,
+        title,
+    )
+    return None, None
 
 
 def youtube_music_track_index_for_match(
@@ -798,6 +2131,34 @@ def enrich_from_match(
         enriched.setdefault('track_number', yt_n)
     if yt_tot is not None:
         enriched.setdefault('album_track_total', yt_tot)
+    _need_year = not str(enriched.get('year') or '').strip()
+    if (
+        not enriched.get('album_name')
+        or not enriched.get('release_type')
+        or _need_year
+    ):
+        # `youtube_music_track_index_for_match` already resolved (and
+        # cached) the album's browseId while computing the track index
+        # above — reuse it to backfill the album title, release type
+        # and year too, since the search-derived `match` sometimes
+        # lacks `album.name` and a `year` even when the video is
+        # genuinely part of a catalogued release.
+        browse_id = _album_browse_id(match, enriched)
+        if browse_id:
+            if not enriched.get('album_name'):
+                album_title = _cached_album_title(browse_id)
+                if album_title:
+                    enriched['album_name'] = album_title
+            if not enriched.get('release_type'):
+                release_type = _cached_album_release_type(browse_id)
+                if release_type:
+                    enriched['release_type'] = release_type
+            if _need_year:
+                album_year = _cached_album_year(browse_id)
+                if len(album_year) == 4 and album_year.isdigit():
+                    enriched['year'] = album_year
+                    if not str(enriched.get('release_date') or '').strip():
+                        enriched['release_date'] = album_year
     spotify_tid = enriched.get('song_id')
     if yt_n is None:
         logger.info(
@@ -819,18 +2180,75 @@ def enrich_from_match(
     return enriched
 
 
+def _artists_overlap(
+    target_artists: Optional[list[str]], result: dict[str, Any]
+) -> bool:
+    """True when the candidate shares at least one artist with the target.
+
+    Vacuously true when the target's artist list is unknown, so callers
+    without artist context (e.g. an album-tracklist scan) aren't
+    unfairly blocked. Otherwise a hard requirement: a song that merely
+    shares its exact title with the target (title collisions across
+    unrelated artists are common for short/generic names — "Broken
+    Arrows" turns up from at least three different acts) must never be
+    picked just for being the "least wrong" duration match.
+    """
+
+    target_set = {_norm_artist_name(a) for a in (target_artists or []) if a}
+    target_set.discard('')
+    if not target_set:
+        return True
+    candidate_set: set[str] = set()
+    for a in result.get('artists') or []:
+        if not isinstance(a, dict):
+            continue
+        name = a.get('name') or ''
+        # YouTube Music sometimes packs every credit into one entry
+        # ("JIRAYAUAI, DOUTH!, VITOR BUENO, and SAM SAM"); the unsplit
+        # name is kept too so "Rionegro & Solimões" still matches whole.
+        candidate_set.add(_norm_artist_name(name))
+        candidate_set.update(
+            _norm_artist_name(p)
+            for p in _ARTIST_CREDIT_SPLIT_RE.split(name)
+            if p
+        )
+    return bool(target_set & candidate_set)
+
+
+def _norm_artist_name(name: str) -> str:
+    """Casefolded artist name without a leading "The" — Spotify and
+    YouTube Music disagree on it ("Eden Project" vs "The Eden Project")."""
+
+    value = re.sub(r'\s+', ' ', name.casefold()).strip()
+    return re.sub(r'^the\s+', '', value)
+
+
+_NEGATIVE_KEYWORDS = (
+    'karaoke',
+    'instrumental',
+    'cover ',
+    'cover)',
+    'tribute',
+    'guitar lesson',
+    'sped up',
+    'slowed',
+    'reverb',
+    'nightcore',
+    '8d audio',
+    '1 hour',
+    'bass boosted',
+)
+
+
 def _pick_best(
     results: list[dict[str, Any]],
     target_duration: int,
     target_title: str = '',
     target_artists: Optional[list[str]] = None,
-    *,
-    mix_variant: bool = False,
+    target_album: str = '',
 ) -> Optional[dict[str, Any]]:
     target_title_l = (target_title or '').lower()
-    target_artist_set = {
-        (a or '').lower() for a in (target_artists or []) if a
-    }
+    target_album_norm = _norm_compact_title(target_album)
 
     best: Optional[dict[str, Any]] = None
     best_score: float = float('inf')
@@ -839,48 +2257,56 @@ def _pick_best(
             continue
 
         candidate_title = (result.get('title') or '').lower()
-        # Skip karaoke/live/audiobook/etc. modifiers absent from Spotify.
-        variant_skip = (
-            MIX_VARIANT_REMOTE_SKIP_KEYWORDS
-            if mix_variant
-            else mix_variant_remote_skip_keywords(
-                target_title,
-                candidate_title,
-            )
-        )
-        if remote_text_unacceptable(
-            target_title,
-            candidate_title,
-            skip_variant_keywords=variant_skip,
+        # Skip results that add a "karaoke"/"instrumental"/etc. modifier
+        # which the source song does not have. Catches the most common
+        # source of wrong-audio matches.
+        if any(
+            kw in candidate_title and kw not in target_title_l
+            for kw in _NEGATIVE_KEYWORDS
         ):
+            continue
+
+        # Hard requirement: the title must actually resemble the source
+        # title. Duration/artist/album scoring alone can otherwise pick a
+        # completely unrelated song (e.g. a "- Remastered 2023" suffix
+        # throws off the search and every hit is a different track by the
+        # same artist) — better to reject the track than embed the wrong
+        # audio under the right metadata.
+        if target_title and not _titles_match(
+            target_title, result.get('title')
+        ):
+            continue
+
+        # Hard requirement: at least one artist must overlap. See
+        # `_artists_overlap`'s docstring — a title collision with an
+        # unrelated artist must never win on duration alone.
+        if not _artists_overlap(target_artists, result):
             continue
 
         candidate_duration = result.get('duration_seconds') or _parse_duration(
             result.get('duration')
         )
-        duration_ok = (
-            media_duration_matches_mix_variant
-            if mix_variant
-            else media_duration_matches_song
-        )
-        if candidate_duration and not duration_ok(
-            {'duration': target_duration},
-            candidate_duration,
-        ):
-            continue
         if target_duration and candidate_duration:
             score = abs(candidate_duration - target_duration)
         else:
             score = 5
 
-        # Reward results whose artist list overlaps the source artists.
-        candidate_artists = {
-            (a.get('name') or '').lower()
-            for a in (result.get('artists') or [])
-            if isinstance(a, dict)
-        }
-        if target_artist_set and not (target_artist_set & candidate_artists):
-            score += 30  # heavy penalty for wrong artist
+        # Album is the decisive signal when the source album is known: it
+        # separates the studio version from live / compilation / re-recorded
+        # takes of the same song that share title, artist and near-identical
+        # length (durations differ by a second or two, so duration alone is
+        # not enough). Only applied when the candidate carries album info so
+        # album-less `videos` results are not unfairly penalised.
+        if target_album_norm:
+            candidate_album = ''
+            alb = result.get('album')
+            if isinstance(alb, dict):
+                candidate_album = alb.get('name') or ''
+            if candidate_album:
+                if _albums_match(target_album, candidate_album):
+                    score -= 25
+                else:
+                    score += 15
 
         # Reward exact title matches over loosely-related ones.
         if candidate_title and target_title_l:
@@ -895,8 +2321,13 @@ def _pick_best(
     return best
 
 
-def song_from_video_id(video_id: str) -> dict[str, Any]:
-    """Look up basic song info for a YouTube videoId via YT Music."""
+def _song_from_video_details(video_id: str) -> dict[str, Any]:
+    """Basic song info from ``get_song``'s raw video-player payload.
+
+    This is the only reliable, always-available source for an arbitrary
+    videoId (title, uploader/author, duration, thumbnail) — but it is
+    raw player data with no catalog metadata (album, track number).
+    """
 
     try:
         info = _ytm().get_song(video_id)
@@ -927,3 +2358,134 @@ def song_from_video_id(video_id: str) -> dict[str, Any]:
         'release_date': '',
         'source': 'youtube',
     }
+
+
+def song_from_video_id(video_id: str) -> dict[str, Any]:
+    """Look up song info for a YouTube videoId, including album/track
+    metadata when the video is part of an official YouTube Music album.
+
+    ``get_song`` (raw player data) never carries catalog metadata, and
+    ``get_watch_playlist`` was found — empirically, against the live
+    API — not to reliably include it either. Catalog metadata (album,
+    track number) is only reliably available through search, so once
+    the basic title/artist/duration are known, the resolved title is
+    run through the same matching pipeline used for Spotify-sourced
+    downloads (:func:`_find_youtube_music_match`) to look up a catalog hit, and
+    :func:`enrich_from_match` fills in album/track metadata from it
+    when found — never overriding the video actually requested.
+    """
+
+    song = _song_from_video_details(video_id)
+    if not song.get('name'):
+        return song
+
+    # Catalog metadata only lives on YouTube Music, and the video itself is
+    # already pinned — a standard-YouTube fallback search would add nothing.
+    try:
+        _, match = _find_youtube_music_match(song)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'song_from_video_id: catalog lookup failed for {}', video_id
+        )
+        match = None
+    if not match:
+        return song
+
+    enriched = enrich_from_match(song, match)
+    # enrich_from_match never touches these, but pin them explicitly so
+    # the returned song always describes the video the caller asked
+    # for, never whichever video the catalog lookup happened to match.
+    enriched['song_id'] = video_id
+    enriched['url'] = f'https://music.youtube.com/watch?v={video_id}'
+    enriched['source'] = 'youtube'
+    return enriched
+
+
+# A catalog upload (the artist's own studio audio, or anything filed under
+# an album) already has the real artists and title. Anything else — a
+# user upload, or a music video reposted by a promo channel — is credited
+# to whoever uploaded it, and ytmusicapi sometimes even parses the upload
+# date or view count as the "artist". Those carry the real credit in the
+# title instead: "Artist - Title".
+_UPLOAD_METADATA_ARTIST_RE = re.compile(
+    r'^(?:[A-Z][a-z]{2,8}\.? \d{1,2}, \d{4}|[\d.,]+[KMB]? views?)$'
+)
+_TITLE_NOISE_RE = re.compile(
+    r'\s*[\(\[][^\)\]]*\b(?:official|lyrics?|visuali[sz]er|audio|video|'
+    r'hd|hq|4k|mv)\b[^\)\]]*[\)\]]',
+    re.IGNORECASE,
+)
+# The part after " - " names a version of the song, not the song: in
+# "Yellow - Live at Glastonbury", "Yellow" is the title, not an artist.
+_TITLE_VERSION_SUFFIX_RE = re.compile(
+    r'^(?:' + '|'.join(_VERSION_QUALIFIER_WORDS) + r'|ao vivo|en vivo|'
+    r'remaster\w*|radio edit|extended|edit|version|mix)\b',
+    re.IGNORECASE,
+)
+
+
+def _split_upload_title(
+    title: str, artists: list[str]
+) -> tuple[str, list[str]]:
+    """``(title, artists)`` for an upload whose title reads "Artist - Title"."""
+
+    clean = _TITLE_NOISE_RE.sub('', title or '').strip()
+    head, sep, tail = clean.partition(' - ')
+    if not sep or not head.strip() or not tail.strip():
+        return clean, artists
+    if _TITLE_VERSION_SUFFIX_RE.match(tail.strip()):
+        return clean, artists
+    credited = [a.strip() for a in head.split(',') if a.strip()]
+    return tail.strip(), credited
+
+
+def _playlist_track_song(track: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """One playlist row as a song dict, pinned to that exact video."""
+
+    video_id = track.get('videoId')
+    if not video_id or track.get('isAvailable') is False:
+        return None
+    song = _result_to_song(track)
+    if song is None:
+        return None
+    catalog = track.get('videoType') == _MUSIC_VIDEO_TYPE_OFFICIAL_AUDIO or (
+        isinstance(track.get('album'), dict) and track['album'].get('name')
+    )
+    if not catalog:
+        artists = [
+            a
+            for a in song['artists']
+            if not _UPLOAD_METADATA_ARTIST_RE.match(a)
+        ]
+        title, artists = _split_upload_title(track.get('title', ''), artists)
+        song['name'] = title
+        song['artists'] = _extract_title_featuring_artist(title, artists)
+    # Pin the download to the playlist's own video: for a song that isn't
+    # on Spotify, the upload in the playlist may be the only copy there is.
+    song['youtube_id'] = video_id
+    return song
+
+
+def playlist_info_and_tracks_from_id(
+    playlist_id: str,
+) -> tuple[str, list[dict[str, Any]]]:
+    """``(title, songs)`` for a YouTube Music playlist.
+
+    Mirrors :func:`spotify.playlist_info_and_tracks` so a YouTube Music
+    playlist goes through the same batch download, M3U and Playlist
+    Monitor code. Every track is fetched (``limit=None`` pages through
+    the whole list); unavailable (deleted/private) entries are dropped.
+    """
+
+    data = _ytm().get_playlist(playlist_id, limit=None)
+    _log_ytm_response(f'get_playlist {playlist_id}', data)
+    songs = [
+        song
+        for track in (data.get('tracks') or [])
+        if (song := _playlist_track_song(track)) is not None
+    ]
+    return str(data.get('title') or playlist_id), songs
+
+
+def playlist_tracks_from_id(playlist_id: str) -> list[dict[str, Any]]:
+    return playlist_info_and_tracks_from_id(playlist_id)[1]

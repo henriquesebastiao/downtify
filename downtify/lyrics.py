@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
-import requests
+import httpx
 from loguru import logger
 
 LRCLIB_BASE = 'https://lrclib.net/api'
@@ -62,13 +62,13 @@ def _fetch_lrclib(song: dict[str, Any]) -> Optional[Lyrics]:
         params['duration'] = int(duration)
 
     try:
-        response = requests.get(
+        response = httpx.get(
             f'{LRCLIB_BASE}/get',
             params=params,
             headers={'User-Agent': _USER_AGENT},
             timeout=10,
         )
-    except requests.RequestException:
+    except httpx.RequestError:
         logger.opt(exception=True).warning('lrclib request failed')
         return None
 

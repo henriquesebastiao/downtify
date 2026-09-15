@@ -4,19 +4,15 @@ import config from '/src/config.js'
 
 import { v4 as uuidv4 } from 'uuid'
 
-if (import.meta.env.DEV) {
-  console.log('using env:', process.env)
-  console.log('using config: ', config)
-}
+console.log('using env:', process.env)
+console.log('using config: ', config)
 
 const API = axios.create({
   baseURL: `${config.PROTOCOL}//${config.BACKEND}:${config.PORT}${config.BASEURL}`,
 })
 
 const sessionID = uuidv4()
-if (import.meta.env.DEV) {
-  console.log('session ID: ', sessionID)
-}
+console.log('session ID: ', sessionID)
 
 getVersion()
 
@@ -27,18 +23,14 @@ const wsConnection = new WebSocket(
 )
 
 wsConnection.onopen = (event) => {
-  if (import.meta.env.DEV) {
-    console.log('websocket connection opened', event)
-  }
+  console.log('websocket connection opened', event)
 }
 
 function getVersion() {
   API.get('/api/version')
     .then((res) => {
       const prevItem = localStorage.getItem('version')
-      if (import.meta.env.DEV) {
-        console.log('Backend version: ', res.data)
-      }
+      console.log('Backend version: ', res.data)
       localStorage.setItem('version', res.data)
       if (prevItem != res.data) {
         location.reload()
@@ -53,6 +45,10 @@ function getVersion() {
 
 function search(query) {
   return API.get('/api/songs/search', { params: { query } })
+}
+
+function searchAlbums(query) {
+  return API.get('/api/albums/search', { params: { query } })
 }
 
 function open(songURL) {
@@ -71,29 +67,8 @@ function downloadBatch(payload) {
   return API.post('/api/download/batch', payload)
 }
 
-function getIncompletePlaylists() {
-  return API.get('/api/playlists/incomplete')
-}
-
-function getPlaylistBatches() {
-  return API.get('/api/playlists/batches')
-}
-
-function getPlaylistBatchDetails(spotifyPlaylistId, { tracks = true } = {}) {
-  return API.get(
-    `/api/playlists/batches/${encodeURIComponent(spotifyPlaylistId)}`,
-    { params: tracks ? {} : { tracks: false } }
-  )
-}
-
-function downloadMissingPlaylistTracks(payload) {
-  return API.post('/api/playlists/incomplete/download-missing', payload)
-}
-
-function deletePlaylistBatch(spotifyPlaylistId) {
-  return API.delete(
-    `/api/playlists/batches/${encodeURIComponent(spotifyPlaylistId)}`
-  )
+function downloadCsv(payload) {
+  return API.post('/api/download/csv', payload)
 }
 
 function check_for_update() {
@@ -111,45 +86,23 @@ function encodePath(fileName) {
 }
 
 function downloadFileURL(fileName) {
-  return `/media/${encodePath(fileName)}`
-}
-
-function decodePathSegment(segment) {
-  try {
-    return decodeURIComponent(segment)
-  } catch {
-    return segment
-  }
-}
-
-/** Stored library path from a /media/... URL or plain relative path. */
-function mediaUrlToStoredPath(fileNameOrMediaUrl) {
-  let path = String(fileNameOrMediaUrl || '')
-  const mediaIdx = path.indexOf('/media/')
-  if (mediaIdx >= 0) {
-    path = path.slice(mediaIdx + '/media/'.length)
-  } else {
-    path = path.replace(/^\//, '')
-  }
-  return path.split('/').filter(Boolean).map(decodePathSegment).join('/')
-}
-
-/** Filename for the browser save dialog (decoded, no %20 etc.). */
-function downloadSaveName(fileNameOrMediaUrl) {
-  const stored = mediaUrlToStoredPath(fileNameOrMediaUrl)
-  if (!stored) return 'download'
-  const parts = stored.split('/')
-  return parts[parts.length - 1] || 'download'
+  return `/downloads/${encodePath(fileName)}`
 }
 
 function coverFileURL(fileName) {
   return `/cover?file=${encodeURIComponent(fileName)}`
 }
 
-function listDownloads(forceRefresh = false) {
-  return API.get('/list', {
-    params: forceRefresh ? { refresh: true } : {},
-  })
+function listDownloads() {
+  return API.get('/list')
+}
+
+function listPlaylists() {
+  return API.get('/playlists')
+}
+
+function listTracks() {
+  return API.get('/tracks')
 }
 
 function deleteDownload(file) {
@@ -157,13 +110,7 @@ function deleteDownload(file) {
 }
 
 function deleteDownloadsBatch(files) {
-  return API.post('/api/library/delete/batch', { files })
-}
-
-function deleteLibraryPlaylist(playlistName) {
-  return API.delete('/api/library/playlist', {
-    params: { playlist_name: playlistName },
-  })
+  return API.delete('/delete/batch', { data: { files } })
 }
 
 function writePlaylistM3u(payload) {
@@ -182,8 +129,20 @@ function clearQueue() {
   return API.delete('/api/queue')
 }
 
-function clearCompletedQueue() {
-  return API.delete('/api/queue/completed')
+function getCookiesStatus() {
+  return API.get('/api/cookies')
+}
+
+// The cookies.txt is sent as the raw request body rather than multipart
+// form-data, so the backend doesn't need python-multipart just for this.
+function uploadCookies(file) {
+  return API.post('/api/cookies', file, {
+    headers: { 'Content-Type': 'text/plain' },
+  })
+}
+
+function deleteCookies() {
+  return API.delete('/api/cookies')
 }
 
 function getSettings() {
@@ -195,25 +154,6 @@ function setSettings(settings) {
   })
 }
 
-function uploadYoutubeCookies(file) {
-  const form = new FormData()
-  form.append('file', file)
-  return API.post('/api/settings/youtube-cookies', form, {
-    params: { client_id: sessionID },
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
-}
-
-function clearYoutubeCookies() {
-  return API.delete('/api/settings/youtube-cookies', {
-    params: { client_id: sessionID },
-  })
-}
-
-function reconcileLibrary() {
-  return API.post('/api/library/reconcile')
-}
-
 function ws_onmessage(fn) {
   return (wsConnection.onmessage = fn)
 }
@@ -223,31 +163,27 @@ function ws_onerror(fn) {
 
 export default {
   search,
+  searchAlbums,
   open,
   download,
   downloadBatch,
-  getIncompletePlaylists,
-  getPlaylistBatches,
-  getPlaylistBatchDetails,
-  downloadMissingPlaylistTracks,
-  deletePlaylistBatch,
+  downloadCsv,
   downloadFileURL,
-  downloadSaveName,
   coverFileURL,
   listDownloads,
+  listPlaylists,
+  listTracks,
   deleteDownload,
   deleteDownloadsBatch,
-  deleteLibraryPlaylist,
   writePlaylistM3u,
   getQueue,
   removeQueueItem,
   clearQueue,
-  clearCompletedQueue,
   getSettings,
   setSettings,
-  uploadYoutubeCookies,
-  clearYoutubeCookies,
-  reconcileLibrary,
+  getCookiesStatus,
+  uploadCookies,
+  deleteCookies,
   check_for_update,
   ws_onmessage,
   ws_onerror,
