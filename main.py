@@ -18,6 +18,7 @@ import os
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Body, FastAPI, HTTPException
@@ -39,8 +40,6 @@ from downtify.cookies import CookiesStore
 from downtify.downloader import Downloader
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 from downtify.update_check import UpdateChecker, update_check_loop
-
-from contextlib import asynccontextmanager
 
 load_dotenv()
 
@@ -434,7 +433,7 @@ def build_app() -> FastAPI:
         # a page load.
         api.state.update_checker = UpdateChecker()
         asyncio.create_task(update_check_loop(api.state.update_checker))
-        
+
         yield
 
     app = FastAPI(
