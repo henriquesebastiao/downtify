@@ -491,10 +491,16 @@ def delete_playlist_from_library(
     if not pl_name:
         return {'ok': False, 'error': 'Empty playlist name'}
 
-    organize = bool(settings.get('organize_by_artist', False))
+    # With organize-by-artist or -album on, tracks live in artist/album
+    # folders, not a per-playlist folder — and a same-named album folder
+    # must not be swept as if it were the playlist's.
+    organize = bool(
+        settings.get('organize_by_artist', False)
+        or settings.get('organize_by_album', False)
+    )
     safe = sanitize_playlist_name(pl_name)
     logger.info(
-        'Deleting playlist {!r} (folder={!r}, organize_by_artist={})',
+        'Deleting playlist {!r} (folder={!r}, organized={})',
         pl_name,
         safe,
         organize,
@@ -532,7 +538,7 @@ def delete_playlist_from_library(
     else:
         logger.info(
             'Playlist delete: skipped folder scan for {!r} '
-            '(organize_by_artist enabled)',
+            '(organize by artist/album enabled)',
             pl_name,
         )
 

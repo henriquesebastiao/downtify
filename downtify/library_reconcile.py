@@ -258,7 +258,10 @@ def refresh_playlists_after_moves(  # noqa: PLR0914
         and settings.get('slskd', {}).get('source_dir')
         else None
     )
-    organize = bool(settings.get('organize_by_artist', False))
+    organize = bool(
+        settings.get('organize_by_artist', False)
+        or settings.get('organize_by_album', False)
+    )
     mismatch_delete: Optional[TagMismatchDeleteContext] = None
     if delete_tag_mismatches:
         mismatch_delete = TagMismatchDeleteContext(

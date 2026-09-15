@@ -113,3 +113,39 @@ def test_delete_playlist_from_library(tmp_path: Path) -> None:
     assert not t1.is_file()
     assert not t2.is_file()
     assert catalog.list_tracks('My Playlist') == []
+
+
+def test_delete_playlist_spares_same_named_album_folder_when_organized_by_album(
+    tmp_path: Path,
+) -> None:
+    # With organize-by-album on, a folder named like the playlist is an
+    # album's folder, not the playlist's: only the playlist's own tracks
+    # (from the catalog) may be deleted.
+    download_dir = tmp_path / 'downloads'
+    album_dir = download_dir / 'Summer'
+    album_dir.mkdir(parents=True)
+    playlist_track = album_dir / 'A - In Playlist.mp3'
+    album_only = album_dir / 'B - Album Only.mp3'
+    playlist_track.write_bytes(b'1')
+    album_only.write_bytes(b'2')
+
+    db = tmp_path / 'lib.db'
+    catalog = PlaylistCatalog(db)
+    catalog.ensure_playlist('Summer')
+    catalog.upsert_track(
+        'Summer',
+        {'song_id': '4uLU6hMCjMI75M1A2tKUQC'},
+        'Summer/A - In Playlist.mp3',
+        playlist_track,
+    )
+
+    result = delete_playlist_from_library(
+        'Summer',
+        download_dir,
+        {'organize_by_album': True, 'generate_m3u': False},
+        _DeleteState(catalog, TrackIndex(db)),
+    )
+
+    assert result.get('ok') is True
+    assert not playlist_track.is_file()
+    assert album_only.is_file()
