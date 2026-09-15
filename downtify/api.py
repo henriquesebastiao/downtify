@@ -36,6 +36,18 @@ working without changes:
   generate_m3u}`` - the raw CSV text, read client-side, not a multipart
   upload)
 * ``POST /api/playlist/m3u``
+* ``GET  /api/queue``, ``DELETE /api/queue``, ``DELETE /api/queue/item``
+  and ``DELETE /api/queue/completed`` (drop finished jobs only)
+* ``DELETE /api/library/playlist`` (delete a downloaded playlist's
+  tracks, M3U and catalog entry)
+* ``POST /api/library/reconcile`` (fix stored library paths after files
+  moved on disk, then refresh M3U/Navidrome playlists)
+* ``GET  /api/playlists/batches`` and
+  ``GET|DELETE /api/playlists/batches/{spotify_playlist_id}`` (Spotify
+  playlist downloads and their completeness against Spotify)
+* ``GET  /api/playlists/incomplete`` and
+  ``POST /api/playlists/incomplete/download-missing`` (queue only the
+  tracks a downloaded playlist is still missing)
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
 * ``GET  /api/cookies`` (current YouTube cookie configuration)

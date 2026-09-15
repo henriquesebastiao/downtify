@@ -43,9 +43,9 @@ Turn the whole thing off in **Settings → Mini player bar** if you'd rather not
 
 The player loads every audio file found recursively inside the downloads directory. Files are served directly from the container via the `/downloads` static mount. The playlist group is built from the `.m3u` files already on disk (`GET /playlists`); the artist/album groups are built from each file's embedded tags (`GET /tracks`) — no separate playlist or library database.
 
-Filenames in the format `Artist - Title.ext` are parsed so the now-playing card can show artist and title cleanly. Cover art is served from `/cover`, which reads embedded tags (and optional folder images like `cover.jpg`). When **Cache album art on disk** is enabled in Settings, covers are stored under `/data/cover_cache` for faster Library and player loads.
+Filenames in the format `Artist - Title.ext` are parsed so the now-playing card can show artist and title cleanly. Cover art is served from `/cover`, which reads embedded tags (and optional folder images like `cover.jpg`). When **Cache cover art on disk** is enabled in Settings, covers are stored under `/data/cover_cache` for faster Library and player loads.
 
-Files under `slskd/…` are played via `/media/slskd/…` URLs. See [Library catalog & path sync](library-catalog.md) for how paths and playlists are tracked.
+slskd downloads [left in place](slskd-navidrome.md#leave-files-in-place) are played through `/media/slskd/…` URLs, since they live outside the downloads folder.
 
 Playback uses the browser's native HTML5 audio element. No plugins, no extra processes.
 

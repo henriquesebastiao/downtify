@@ -48,6 +48,8 @@ Search YouTube Music by free text.
 
 **Response:** Array of song objects (up to 20 results).
 
+When YouTube Music returns nothing and slskd is an enabled audio source, the response is a single placeholder song built from the query itself (`"source": "text_search"`; `Artist - Title` is split into artist and title), so it can still be downloaded from Soulseek.
+
 ---
 
 ### `GET /api/song/url`
@@ -80,7 +82,9 @@ Download a single track. Blocks until complete.
 | `url` | string | yes | Spotify track URL or YouTube URL |
 | `client_id` | string | no | WebSocket client ID for progress events |
 
-**Response:** Filename string of the downloaded file.
+**Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` forces the audio source, and `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download.
+
+**Response:** Filename string of the downloaded file — a `slskd/…` path for a slskd download left in place. `404` when no audio source has a match for the track.
 
 ---
 
@@ -101,7 +105,7 @@ Download multiple tracks concurrently, gated by the [`max_parallel_downloads` se
 | Field | Type | Description |
 |-------|------|-------------|
 | `songs` | array | Song objects to download |
-| `playlist_url` | string | Optional. A Spotify or YouTube Music playlist URL, used to determine the playlist subfolder and M3U name. |
+| `playlist_url` | string | Optional. A Spotify or YouTube Music playlist URL, used to determine the playlist subfolder and M3U name. A Spotify playlist is also tracked as a [playlist download](#playlist-downloads). |
 | `generate_m3u` | boolean | Whether to write an M3U after the batch finishes. Default: `true`. |
 
 **Response:**
@@ -167,7 +171,15 @@ Returns `400` if the CSV has no recognizable title/artist columns, is empty, or 
 
 List all download jobs (queued, in progress, done, error).
 
-**Response:** Array of job objects.
+**Response:** Array of job objects (`song`, `status`, `progress`, `message`, `filename`, and `provider` — the audio source that served it: `youtube-music`, `youtube` or `slskd`).
+
+---
+
+### `DELETE /api/queue/completed`
+
+Remove finished (`done`) jobs, keeping queued, in-progress and failed ones.
+
+**Response:** `{ "removed": 3 }`
 
 ---
 
@@ -216,7 +228,29 @@ Return the current settings.
   "organize_by_artist": false,
   "organize_by_album": false,
   "search_albums": true,
-  "mini_player_enabled": true
+  "mini_player_enabled": true,
+  "cache_cover_art": false,
+  "sync_navidrome": true,
+  "slskd": {
+    "enabled": false,
+    "base_url": "",
+    "api_key": "",
+    "source_dir": "/slskd",
+    "leave_in_place": true,
+    "download_timeout_seconds": 600,
+    "queued_timeout_seconds": 180,
+    "…": "…"
+  },
+  "navidrome": {
+    "enabled": false,
+    "url": "",
+    "username": "",
+    "password": "",
+    "admin_username": "",
+    "admin_password": "",
+    "public_playlist": false,
+    "…": "…"
+  }
 }
 ```
 
@@ -227,7 +261,12 @@ Return the current settings.
 | `mini_player_enabled` | boolean | Whether the [mini player bar](features/player.md#mini-player-bar) appears on non-Player pages while a track is loaded. Purely a UI preference — the backend never reads it. |
 | `download_cover_art` | boolean | Whether to fetch and embed cover art at all. See [Download cover art](features/download-settings.md#download-cover-art). |
 | `cover_resolution` | integer | Target pixel size (width & height) for YouTube Music-sourced cover art. Clamped to `300–1200`. Only used when `download_cover_art` is true. See [Cover art resolution](features/download-settings.md#cover-art-resolution). |
-| `overwrite_existing_files` | boolean | When `false`, a song already anywhere in the download folder (matched by output filename) isn't downloaded again; the download returns the existing file's path instead. See [Overwrite existing files](features/download-settings.md#overwrite-existing-files). |
+| `overwrite_existing_files` | boolean | When `false`, a song already in the library (matched by output filename, or by Spotify track ID through the [library track index](features/library-catalog.md)) isn't downloaded again; the download returns the existing file's path instead. See [Overwrite existing files](features/download-settings.md#overwrite-existing-files). |
+| `audio_providers` | array | Ordered fallback list of audio sources: `youtube-music`, `youtube`, `slskd`. `slskd` is dropped while `slskd.enabled` is false. See [slskd & Navidrome](features/slskd-navidrome.md#audio-sources-and-fallback-order). |
+| `slskd` | object | slskd connection and matching options. Saving with `enabled: true` but no `base_url` or `api_key` returns `400`. |
+| `navidrome` | object | Navidrome connection. Saving with `enabled: true` but no `url`, `username` or `password` returns `400`. |
+| `sync_navidrome` | boolean | Create/update a Navidrome playlist after playlist downloads, Playlist Monitor sweeps and library changes. |
+| `cache_cover_art` | boolean | Keep extracted cover images under `/data/cover_cache`. |
 
 ---
 
@@ -299,9 +338,13 @@ Remove the uploaded cookie file.
 
 ### `GET /list`
 
-List all audio files in the downloads directory (recursive).
+List all audio files in the downloads directory (recursive), plus slskd downloads left in place (`slskd/…`).
 
-**Response:** Sorted array of relative paths (e.g. `["My Playlist/Song.mp3", "Artist - Track.mp3"]`).
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `refresh` | boolean | no | Rescan instead of using the briefly cached listing |
+
+**Response:** Sorted array of relative paths (e.g. `["My Playlist/Song.mp3", "Artist - Track.mp3", "slskd/user/Album/Track.flac"]`).
 
 ---
 
@@ -329,9 +372,18 @@ List downloaded tracks with artist/album read from each file's embedded tags. Us
 
 ```json
 [
-  { "file": "Artist - Song.mp3", "artist": "Artist", "album": "Some Album" }
+  {
+    "file": "Artist - Song.mp3",
+    "title": "Song",
+    "artist": "Artist",
+    "album": "Some Album",
+    "has_cover": true,
+    "playlists": ["My Playlist"]
+  }
 ]
 ```
+
+`playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes.
 
 Sorted by `file`, same order as `/list`. `artist`/`album` come back as `""` when the file has no readable tag for that field — the frontend then simply doesn't offer it as a filter for that track.
 
@@ -349,7 +401,9 @@ Delete a downloaded file, plus its leftovers — best-effort, so a missing or un
 |-----------|------|----------|-------------|
 | `file` | string | yes | Relative path to the file (as returned by `/list`) |
 
-**Response:** `{ "deleted": true }` or `{ "deleted": false, "error": "…" }`
+**Response:** `{ "deleted": true, "playlists_affected": [], "playlists_refresh_scheduled": false }` or `{ "deleted": false, "error": "…", … }`
+
+`playlists_affected` lists the downloaded playlists that contained the file; their M3U files and Navidrome playlists are rewritten in the background (`playlists_refresh_scheduled`).
 
 ---
 
@@ -378,7 +432,15 @@ Duplicate paths are deduplicated before processing. Capped at 2000 files per req
 }
 ```
 
-`results` maps each requested path to the same shape `DELETE /delete` returns for it.
+`results` maps each requested path to the same shape `DELETE /delete` returns for it. The response also carries `playlists_affected` and `playlists_refresh_scheduled`, as for `DELETE /delete`.
+
+---
+
+### `GET /media/{path}`
+
+Serve a library file by its library path. Unlike the `/downloads` static mount, this also serves slskd downloads left in place (`slskd/…`).
+
+**Response:** The audio file. `404` if the path isn't in the library.
 
 ---
 
@@ -391,6 +453,123 @@ Return the embedded cover art for a file.
 | `file` | string | yes | Relative path to the file |
 
 **Response:** Image bytes (`image/jpeg` or `image/png`). Returns `404` if no embedded cover is found.
+
+---
+
+## Library
+
+### `DELETE /api/library/playlist`
+
+Delete a downloaded playlist: every track registered to it (including tracks other playlists also contain), its playlist-folder leftovers, its M3U file(s) and its catalog entry.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `playlist_name` | string | yes | Playlist name |
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "playlist": "My Playlist",
+  "files": ["My Playlist/Artist - Song.mp3"],
+  "deleted_count": 1,
+  "failed_count": 0,
+  "failed": [],
+  "playlists_affected": ["My Playlist"],
+  "playlists_refresh_scheduled": true
+}
+```
+
+---
+
+### `POST /api/library/reconcile`
+
+Fix library paths after files were moved or deleted outside Downtify, then rewrite the affected M3U files / Navidrome playlists when those are enabled. See [Fix library paths](features/library-catalog.md#fix-library-paths).
+
+**Response:**
+
+```json
+{
+  "paths_updated": 0,
+  "pruned_stale": 0,
+  "content_keys_backfilled": 0,
+  "playlists_affected": [],
+  "refresh_m3u": false,
+  "refresh_navidrome": false
+}
+```
+
+---
+
+## Playlist downloads
+
+Spotify playlists downloaded through `POST /api/download/batch`, checked against Spotify for missing tracks. See [Playlist downloads](features/slskd-navidrome.md#playlist-downloads).
+
+A playlist report looks like:
+
+```json
+{
+  "batch_id": 4,
+  "spotify_playlist_id": "37i9dQZF1DXcBWIGoYBM5M",
+  "playlist_name": "Today's Top Hits",
+  "playlist_url": "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
+  "expected_count": 50,
+  "downloaded_count": 48,
+  "missing_count": 2,
+  "missing_tracks": [ /* song objects, when requested */ ],
+  "active_in_queue": 0,
+  "status": "incomplete",
+  "source": "spotify",
+  "started_at": "…",
+  "finished_at": "…"
+}
+```
+
+### `GET /api/playlists/batches`
+
+Every tracked playlist download, as summary reports.
+
+**Response:** `{ "playlists": [ /* reports */ ], "count": 1 }`
+
+---
+
+### `GET /api/playlists/batches/{spotify_playlist_id}`
+
+One playlist's report, checked against its cached Spotify track list.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `tracks` | boolean | no | Include `missing_tracks`. Default: `true` |
+| `refresh` | boolean | no | Refetch the track list from Spotify instead of the cache |
+
+**Response:** A playlist report. `404` if the playlist isn't tracked.
+
+---
+
+### `DELETE /api/playlists/batches/{spotify_playlist_id}`
+
+Delete the playlist like `DELETE /api/library/playlist`, and also stop tracking it (playlist download records, cached Spotify track list, and its Playlist Monitor entry, if any).
+
+**Response:** Same as `DELETE /api/library/playlist`, plus `spotify_playlist_id`.
+
+---
+
+### `GET /api/playlists/incomplete`
+
+Tracked playlist downloads that are still missing tracks.
+
+**Response:** `{ "playlists": [ /* reports */ ], "count": 1 }`
+
+---
+
+### `POST /api/playlists/incomplete/download-missing`
+
+Queue only the tracks of a Spotify playlist that aren't in the library yet.
+
+**Request body:** `{ "spotify_playlist_id": "…" }` or `{ "playlist_url": "https://open.spotify.com/playlist/…" }`, optionally with `"generate_m3u": true`.
+
+**Response:** Same as `POST /api/download/batch`, plus `missing_count` and `playlist_name`. When nothing is missing: `{ "count": 0, "message": "Playlist already complete", "catalog_linked": 12, "playlist_refresh": true }`.
 
 ---
 
@@ -498,7 +677,8 @@ Real-time download progress events.
   "progress": 42.5,
   "message": "Downloading…",
   "status": "downloading",
-  "filename": null
+  "filename": null,
+  "provider": "youtube-music"
 }
 ```
 

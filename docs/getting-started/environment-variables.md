@@ -14,7 +14,6 @@ All environment variables are optional. Downtify works out of the box without an
 | `DOWNLOAD_DIR` | `/downloads` | Directory where audio files are saved. Override if you mount your library at a custom path. |
 | `HOST` | `0.0.0.0` | Bind address for the web server. |
 | `DOWNTIFY_LOG_LEVEL` | `info` | Application log level (`debug`, `info`, `warning`, …). |
-| `DOWNTIFY_ACCESS_LOG` | _(off)_ | Set to `full` (or `1` / `true`) to log every HTTP request. Off by default so queue polling and static assets do not flood the log. |
 | `TZ` | `UTC` | Local timezone (IANA name, e.g. `America/Sao_Paulo`), used to interpret `DOWNTIFY_MONITOR_SYNC_TIME` below. |
 
 ## Playlist Monitor

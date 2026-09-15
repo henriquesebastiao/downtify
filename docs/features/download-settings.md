@@ -127,7 +127,9 @@ When a song is skipped:
 
 ## Audio provider
 
-Currently the only supported audio provider is **YouTube Music**. Downtify uses [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) to search for the best match by comparing track duration. When YouTube Music has no acceptable match, or only one whose duration is far off (a likely different recording), Downtify automatically falls back to searching standard YouTube — see [How it works](../how-it-works.md#fallback-to-standard-youtube).
+The default audio provider is **YouTube Music**. Downtify uses [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) to search for the best match by comparing track duration. When YouTube Music has no acceptable match, or only one whose duration is far off (a likely different recording), Downtify automatically falls back to searching standard YouTube — see [How it works](../how-it-works.md#fallback-to-standard-youtube).
+
+**Settings → Audio source** can also use standard **YouTube** only, or **slskd** (Soulseek), as an ordered fallback list — see [slskd & Navidrome](slskd-navidrome.md#audio-sources-and-fallback-order).
 
 ### Force a specific audio source
 
@@ -140,9 +142,9 @@ Paste `https://music.youtube.com/watch?v=…` (or a regular `youtube.com/watch?v
 !!! note
     When downloading via YouTube URL, metadata (title, artist, cover) comes from YouTube rather than Spotify. For clean tags, use Option B.
 
-**Option B — force audio on an already-queued track**
+**Option B — force audio on a failed track**
 
-1. In the **Download Queue**, click the 🔗 icon on any queued or completed track.
+1. In the **Download Queue**, click **Force audio source** under a failed track.
 2. Paste a YouTube or YouTube Music URL into the input that appears.
 3. Press **Enter** or click **Apply**.
 
