@@ -14,6 +14,7 @@ from loguru import logger
 
 from . import m3u, providers, spotify
 from .downloader import DOWNLOAD_EXECUTOR, Downloader, ProgressCallback
+from .library_paths_cache import invalidate_library_paths_cache
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
 # Seconds between filesystem reconciliation sweeps (see reconcile_loop).
@@ -523,6 +524,7 @@ async def check_playlist(
             await asyncio.to_thread(
                 db.mark_track_downloaded, playlist.id, track_id, filename
             )
+            invalidate_library_paths_cache()
             downloaded += 1
             if filename:
                 resolved[track_id] = filename
@@ -658,6 +660,7 @@ async def check_artist(
                 await asyncio.to_thread(
                     db.mark_track_downloaded, playlist.id, track_id, filename
                 )
+                invalidate_library_paths_cache()
                 known_tracks[track_id] = filename
                 downloaded += 1
                 if delay_seconds > 0:

@@ -11,34 +11,40 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import base64
 import logging
 import mimetypes
 import os
 import sys
-import threading
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Optional
 
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
 from loguru import logger
-from mutagen import File as MutagenFile
-from mutagen.flac import FLAC, Picture
-from mutagen.id3 import ID3
-from mutagen.mp4 import MP4
-from mutagen.oggopus import OggOpus
-from mutagen.oggvorbis import OggVorbis
 from uvicorn import Config, Server
 
 from downtify import __version__, api, m3u
 from downtify.cookies import CookiesStore
+from downtify.cover_art import extract_cover_art
+from downtify.cover_cache import CoverArtCache
 from downtify.downloader import Downloader
+from downtify.library_catalog import (
+    list_library_entries,
+    list_library_paths,
+    resolve_library_file,
+)
+from downtify.library_metadata_cache import LibraryMetadataCache
+from downtify.library_paths import SLSKD_LIBRARY_PREFIX
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
+from downtify.navidrome_index import NavidromeIndex
+from downtify.playlist_batches import PlaylistBatchStore
+from downtify.playlist_catalog import PlaylistCatalog
+from downtify.playlist_spotify_cache import PlaylistSpotifyCache
+from downtify.track_index import TrackIndex
 from downtify.update_check import UpdateChecker, update_check_loop
 
 load_dotenv()
@@ -115,151 +121,15 @@ def _fix_mime_types() -> None:
 
 
 def _extract_cover(path: Path) -> tuple[bytes | None, str | None]:
-    """Return ``(image_bytes, mime)`` for the embedded cover, or ``(None, None)``.
+    """Return ``(image_bytes, mime)`` for a track's cover, or ``(None, None)``.
 
-    Reads tags lazily — mutagen format detection handles MP3/FLAC/M4A/OGG/Opus
-    without us needing to dispatch on extension.
+    Embedded art first (ID3 APIC, FLAC Picture, MP4 ``covr``, Vorbis
+    METADATA_BLOCK_PICTURE), then a ``cover.jpg``/``folder.jpg`` next to
+    the file. The reader lives in ``downtify/cover_art.py`` so the library
+    catalog's ``has_cover`` flag and the cover cache use the same logic.
     """
 
-    try:
-        # ID3 (mp3, sometimes wav/aac)
-        try:
-            tag = ID3(str(path))
-            for frame in tag.getall('APIC'):
-                if frame.data:
-                    return frame.data, frame.mime or 'image/jpeg'
-        except Exception:
-            pass
-
-        # FLAC
-        if path.suffix.lower() == '.flac':
-            try:
-                f = FLAC(str(path))
-                if f.pictures:
-                    pic = f.pictures[0]
-                    return pic.data, pic.mime or 'image/jpeg'
-            except Exception:
-                pass
-
-        # MP4 / M4A
-        if path.suffix.lower() in {'.m4a', '.mp4', '.aac'}:
-            try:
-                m = MP4(str(path))
-                covr = m.tags.get('covr') if m.tags else None
-                if covr:
-                    pic = covr[0]
-                    fmt = getattr(pic, 'imageformat', None)
-                    mime = (
-                        'image/png'
-                        if fmt == 14  # MP4Cover.FORMAT_PNG
-                        else 'image/jpeg'
-                    )
-                    return bytes(pic), mime
-            except Exception:
-                pass
-
-        # Ogg Vorbis / Opus — METADATA_BLOCK_PICTURE base64
-        if path.suffix.lower() in {'.ogg', '.opus'}:
-            try:
-                ogg = (
-                    OggOpus(str(path))
-                    if path.suffix.lower() == '.opus'
-                    else OggVorbis(str(path))
-                )
-                blocks = ogg.get('metadata_block_picture') or []
-                for raw in blocks:
-                    try:
-                        pic = Picture(base64.b64decode(raw))
-                        if pic.data:
-                            return pic.data, pic.mime or 'image/jpeg'
-                    except Exception:
-                        continue
-            except Exception:
-                pass
-
-        # Generic fallback — let mutagen pick the right parser
-        try:
-            f = MutagenFile(str(path))
-            if f is not None and getattr(f, 'pictures', None):
-                pic = f.pictures[0]
-                return pic.data, pic.mime or 'image/jpeg'
-        except Exception:
-            pass
-    except Exception:
-        return None, None
-    return None, None
-
-
-def _extract_track_tags(path: Path) -> tuple[str, str]:
-    """Return ``(artist, album)`` read from ``path``'s embedded tags.
-
-    Powers the player's "play only this artist/album" filters. Uses
-    mutagen's "easy" wrappers so ID3 (MP3), MP4 (M4A/AAC) and Vorbis
-    comments (FLAC/OGG/Opus) all expose the same ``artist``/``album``
-    keys without us needing to dispatch on extension. Missing or
-    unreadable tags come back as ``''`` — the frontend then buckets the
-    track the same way it already does for artist-less filenames.
-    """
-
-    try:
-        tags = MutagenFile(str(path), easy=True)
-    except Exception:
-        return '', ''
-    if not tags:
-        return '', ''
-    artist = (tags.get('artist') or [''])[0]
-    album = (tags.get('album') or [''])[0]
-    return artist, album
-
-
-# (artist, album) per absolute path, valid while the file's mtime and size
-# are unchanged. The Player and Library pages call /tracks on every visit;
-# without this each visit re-parsed every file's tags.
-_TRACK_TAGS_CACHE: dict[str, tuple[tuple[int, int], tuple[str, str]]] = {}
-_TRACK_TAGS_LOCK = threading.Lock()
-# Tag reads on a cache miss are mostly waiting on the disk (seeks on an
-# HDD, round-trips on a NAS mount), where threads parallelize well:
-# 2,000 files with a simulated 2 ms I/O latency went from ~5 s sequential
-# to ~0.6 s on 8 threads. Processes aren't worth it here — the parsing
-# itself is small, and forking a server with live download threads isn't
-# safe.
-_TAG_READ_THREADS = 8
-
-
-def _cached_track_tags(path: Path) -> tuple[str, str]:
-    try:
-        stat = path.stat()
-    except OSError:
-        return '', ''
-    key = str(path)
-    signature = (stat.st_mtime_ns, stat.st_size)
-    with _TRACK_TAGS_LOCK:
-        cached = _TRACK_TAGS_CACHE.get(key)
-    if cached is not None and cached[0] == signature:
-        return cached[1]
-    tags = _extract_track_tags(path)
-    with _TRACK_TAGS_LOCK:
-        _TRACK_TAGS_CACHE[key] = (signature, tags)
-    return tags
-
-
-def _read_library_tags(paths: list[Path]) -> list[tuple[str, str]]:
-    """``(artist, album)`` for each of ``paths``, in order.
-
-    Unchanged files come from the cache; the rest are read on a thread
-    pool. Entries for files no longer in ``paths`` (deleted or moved) are
-    dropped so the cache doesn't grow forever.
-    """
-
-    with ThreadPoolExecutor(
-        max_workers=_TAG_READ_THREADS, thread_name_prefix='downtify-tags'
-    ) as pool:
-        tags = list(pool.map(_cached_track_tags, paths))
-    current = {str(p) for p in paths}
-    with _TRACK_TAGS_LOCK:
-        for key in [k for k in _TRACK_TAGS_CACHE if k not in current]:
-            del _TRACK_TAGS_CACHE[key]
-    return tags
+    return extract_cover_art(path)
 
 
 def _delete_lrc_sidecar(audio_path: Path) -> None:
@@ -340,18 +210,38 @@ def _prune_empty_parent_dirs(start_dir: Path, root: Path) -> None:
 MAX_BATCH_DELETE = 2000
 
 
-def _delete_track_file(file: str, base: Path) -> dict:
+def _library_root_for(
+    file: str, base: Path, slskd_dir: Optional[Path]
+) -> tuple[Path, str]:
+    """``(root, path relative to root)`` for a library path.
+
+    ``slskd/...`` paths are slskd downloads left in place under the slskd
+    folder; everything else is relative to the downloads folder.
+    """
+    text = str(file or '').replace('\\', '/')
+    if slskd_dir is not None and text.startswith(SLSKD_LIBRARY_PREFIX):
+        return slskd_dir.resolve(), text[len(SLSKD_LIBRARY_PREFIX) :]
+    return base, text
+
+
+def _delete_track_file(
+    file: str, base: Path, slskd_dir: Optional[Path] = None
+) -> dict:
     """Delete one track (``file``, relative to ``base``) plus its
     sidecars, and prune the folder it leaves behind if it's now empty.
+
+    ``slskd/...`` paths are resolved against ``slskd_dir`` instead, with the
+    same cleanup, and pruning stops at the slskd folder.
 
     Returns ``{'deleted': True}`` or ``{'deleted': False, 'error': str}``
     — this is the exact shape ``DELETE /delete`` has always returned;
     ``DELETE /delete/batch`` reuses it per file.
     """
-    # Resolve and confine to `base` to prevent path traversal.
+    root, relative = _library_root_for(file, base, slskd_dir)
+    # Resolve and confine to its root to prevent path traversal.
     try:
-        full = (base / file).resolve()
-        full.relative_to(base)
+        full = (root / relative).resolve()
+        full.relative_to(root)
     except (ValueError, RuntimeError):
         return {'deleted': False, 'error': 'Invalid path'}
     if not full.is_file():
@@ -362,11 +252,13 @@ def _delete_track_file(file: str, base: Path) -> dict:
         return {'deleted': False, 'error': str(exc)}
     _delete_lrc_sidecar(full)
     _delete_album_cover_if_orphaned(full)
-    _prune_empty_parent_dirs(full.parent, base)
+    _prune_empty_parent_dirs(full.parent, root)
     return {'deleted': True}
 
 
-def _delete_tracks_batch(files: list[str], base: Path) -> dict:
+def _delete_tracks_batch(
+    files: list[str], base: Path, slskd_dir: Optional[Path] = None
+) -> dict:
     """Delete every file in ``files`` (each relative to ``base``).
 
     Each file is handled independently through :func:`_delete_track_file`
@@ -383,13 +275,53 @@ def _delete_tracks_batch(files: list[str], base: Path) -> dict:
         raise ValueError(
             f'Cannot delete more than {MAX_BATCH_DELETE} files in one request'
         )
-    results = {f: _delete_track_file(f, base) for f in files}
+    results = {f: _delete_track_file(f, base, slskd_dir) for f in files}
     deleted = sum(1 for r in results.values() if r['deleted'])
     return {
         'deleted_count': deleted,
         'failed_count': len(files) - deleted,
         'results': results,
     }
+
+
+def _open_library_stores(monitor_db_path: Path) -> None:
+    """Open the library catalog/index/cache stores in /data and backfill the
+    track index and playlist catalog from Playlist Monitor history."""
+
+    library_db = DATABASE_DIR / 'downtify_library.db'
+    api.state.track_index = TrackIndex(library_db)
+    api.state.navidrome_index = NavidromeIndex(library_db)
+    api.state.metadata_cache = LibraryMetadataCache(library_db)
+    api.state.playlist_catalog = PlaylistCatalog(library_db)
+    api.state.playlist_batch_store = PlaylistBatchStore(library_db)
+    api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
+    api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
+    ctx = api.library_context()
+    try:
+        imported = api.state.track_index.backfill_from_monitor_db(
+            monitor_db_path
+        )
+        if imported:
+            logger.info(
+                'Track library index: imported {} path(s) from monitor '
+                'history',
+                imported,
+            )
+    except Exception:
+        logger.exception('Track library backfill from monitor db failed')
+    try:
+        linked = api.state.playlist_catalog.backfill_from_monitor_db(
+            monitor_db_path,
+            download_dir=ctx.download_dir,
+            slskd_dir=ctx.slskd_dir,
+        )
+        if linked:
+            logger.info(
+                'Playlist catalog: linked {} track(s) from monitor history',
+                linked,
+            )
+    except Exception:
+        logger.exception('Playlist catalog backfill from monitor db failed')
 
 
 def build_app() -> FastAPI:
@@ -407,6 +339,7 @@ def build_app() -> FastAPI:
         )
         db_path = DATABASE_DIR / 'downtify_monitor.db'
         api.state.monitor_db = PlaylistMonitorDB(db_path)
+        _open_library_stores(db_path)
         asyncio.create_task(
             monitor_loop(
                 db=api.state.monitor_db,
@@ -497,21 +430,17 @@ def build_app() -> FastAPI:
     app.include_router(api.router)
 
     @app.get('/list')
-    def list_downloads() -> list[str]:
-        base = DOWNLOAD_DIR.resolve()
-        if not base.exists():
-            return []
-        files: list[str] = []
-        # Walk recursively so per-playlist sub-folders show up alongside
-        # loose downloads in the library view.
-        for path in base.rglob('*'):
-            if not path.is_file():
-                continue
-            if path.suffix.lower() not in _AUDIO_EXTENSIONS:
-                continue
-            files.append(path.relative_to(base).as_posix())
-        files.sort()
-        return files
+    def list_downloads(refresh: bool = False) -> list[str]:
+        """Every playable library file: the downloads folder (recursively,
+        so per-playlist folders show up), slskd downloads left in place
+        (``slskd/...``) and files known to the track index.
+
+        The directory scan is cached briefly; ``?refresh=true`` forces a
+        rescan.
+        """
+        if refresh:
+            api.invalidate_library_paths_cache()
+        return list_library_paths(api.library_context())
 
     @app.get('/playlists')
     def list_playlists() -> list[dict]:
@@ -530,9 +459,10 @@ def build_app() -> FastAPI:
         base = DOWNLOAD_DIR.resolve()
         if not base.exists():
             return []
+        slskd_dir = api.library_context().slskd_dir
         playlists: list[dict] = []
         for m3u_path in sorted(base.rglob('*.m3u')):
-            tracks = m3u.read_m3u_tracks(m3u_path, base)
+            tracks = m3u.read_m3u_tracks(m3u_path, base, slskd_dir)
             if not tracks:
                 continue
             playlists.append({
@@ -545,39 +475,50 @@ def build_app() -> FastAPI:
 
     @app.get('/tracks')
     def list_tracks() -> list[dict]:
-        """List downloaded tracks with artist/album read from embedded tags.
+        """List library tracks with metadata read from embedded tags.
 
-        Powers the player's "play only this artist" / "play only this
-        album" filters (see the Vue Player view) — the flat ``/list``
-        endpoint only has filenames, and album in particular isn't
-        reliably derivable from the filename or folder layout unless
-        *Organize by artist/album* is on.
+        Powers the player's and Library's "only this artist" / "only
+        this album" filters — ``/list`` only has filenames, and album in
+        particular isn't reliably derivable from the filename or folder
+        layout unless *Organize by artist/album* is on.
+
+        Each row has ``file``, ``artist`` and ``album``, plus ``title``,
+        ``has_cover`` and, when the file belongs to a downloaded
+        playlist, ``playlists``. Tags are cached in /data per file and
+        re-read only when the file's modification time or size changes.
         """
-        base = DOWNLOAD_DIR.resolve()
-        if not base.exists():
-            return []
-        paths = [
-            path
-            for path in base.rglob('*')
-            if path.suffix.lower() in _AUDIO_EXTENSIONS and path.is_file()
-        ]
-        tracks = [
-            {
-                'file': path.relative_to(base).as_posix(),
-                'artist': artist,
-                'album': album,
-            }
-            for path, (artist, album) in zip(paths, _read_library_tags(paths))
-        ]
+        tracks = list_library_entries(api.library_context())
         tracks.sort(key=lambda t: t['file'])
         return tracks
 
+    @app.get('/media/{file_path:path}')
+    def serve_media(file_path: str) -> FileResponse:
+        """Serve a library file by its library path.
+
+        Covers what the ``/downloads`` static mount can't: slskd downloads
+        left in place under the slskd folder (``slskd/...``).
+        """
+        full = resolve_library_file(file_path, api.library_context())
+        if full is None:
+            raise HTTPException(status_code=404, detail='File not found')
+        return FileResponse(
+            full,
+            media_type=mimetypes.guess_type(str(full))[0]
+            or 'application/octet-stream',
+        )
+
     @app.delete('/delete')
-    def delete_download(file: str) -> dict:
-        return _delete_track_file(file, DOWNLOAD_DIR.resolve())
+    async def delete_download(file: str) -> dict:
+        result = await asyncio.to_thread(
+            _delete_track_file,
+            file,
+            DOWNLOAD_DIR.resolve(),
+            api.library_context().slskd_dir,
+        )
+        return await api.after_library_delete({file: result}, result)
 
     @app.delete('/delete/batch')
-    def delete_downloads_batch(
+    async def delete_downloads_batch(
         files: list[str] = Body(..., embed=True),
     ) -> dict:
         """Delete several tracks in one request.
@@ -589,25 +530,43 @@ def build_app() -> FastAPI:
         path or a file that's already gone doesn't stop the rest.
         """
         try:
-            return _delete_tracks_batch(files, DOWNLOAD_DIR.resolve())
+            result = await asyncio.to_thread(
+                _delete_tracks_batch,
+                files,
+                DOWNLOAD_DIR.resolve(),
+                api.library_context().slskd_dir,
+            )
         except ValueError as exc:
             raise HTTPException(status_code=413, detail=str(exc)) from exc
+        return await api.after_library_delete(result['results'], result)
 
     @app.get('/cover')
     def get_cover(file: str):
-        # Resolve and confine to DOWNLOAD_DIR to prevent path traversal.
-        base = DOWNLOAD_DIR.resolve()
-        try:
-            full = (base / file).resolve()
-            full.relative_to(base)
-        except (ValueError, RuntimeError):
-            raise HTTPException(status_code=400, detail='Invalid path')
-        if not full.is_file():
+        # Resolved and confined to the downloads or slskd folder, which
+        # prevents path traversal.
+        full = resolve_library_file(file, api.library_context())
+        if full is None:
             raise HTTPException(status_code=404, detail='File not found')
 
-        data, mime = _extract_cover(full)
+        data: bytes | None = None
+        mime: str | None = None
+        cache = (
+            api.state.cover_cache
+            if api.state.settings.get('cache_cover_art')
+            else None
+        )
+        if cache is not None:
+            hit = cache.lookup(file, full)
+            if hit is not None:
+                data, mime = hit
         if data is None:
-            raise HTTPException(status_code=404, detail='No embedded cover')
+            data, mime = _extract_cover(full)
+            if data is None:
+                raise HTTPException(
+                    status_code=404, detail='No embedded cover'
+                )
+            if cache is not None:
+                cache.store(file, full, data, mime or 'image/jpeg')
         return Response(
             content=data,
             media_type=mime or 'image/jpeg',

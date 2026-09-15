@@ -11,16 +11,21 @@ bad path or an already-gone file never stops the rest.
 
 ``DELETE /delete`` and ``DELETE /delete/batch`` live inside
 ``main.build_app()`` alongside the other file-management routes, none
-of which have route-level tests in this suite (no TestClient fixture —
-see test_main_tracks.py). Both underlying functions are plain
+of which have route-level tests in this suite (no TestClient fixture).
+Both underlying functions are plain
 module-level functions, so they're tested directly here.
 """
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 import main
+from downtify import api
+from downtify.playlist_catalog import PlaylistCatalog
+from downtify.track_index import TrackIndex
 
 
 def _track(base, name: str, content: bytes = b'audio') -> None:
@@ -149,3 +154,80 @@ def test_batch_at_exactly_the_limit_is_allowed(tmp_path, monkeypatch):
     monkeypatch.setattr(main, 'MAX_BATCH_DELETE', 3)
     result = main._delete_tracks_batch(['a', 'b', 'c'], tmp_path)
     assert result['failed_count'] == 3  # none of them exist, but no raise
+
+
+# ── slskd downloads left in place (PR #182) ────────────────────────────────
+
+
+def test_delete_track_file_resolves_slskd_paths_against_slskd_dir(tmp_path):
+    base = tmp_path / 'downloads'
+    slskd = tmp_path / 'slskd'
+    base.mkdir()
+    _track(slskd, 'peer/Album/01 - Song.mp3')
+    _track(slskd, 'peer/Album/01 - Song.lrc', b'[00:01.00]la')
+
+    result = main._delete_track_file(
+        'slskd/peer/Album/01 - Song.mp3', base.resolve(), slskd
+    )
+
+    assert result == {'deleted': True}
+    assert not (slskd / 'peer').exists()
+    # Pruning stops at the slskd folder itself.
+    assert slskd.is_dir()
+
+
+def test_delete_track_file_rejects_traversal_out_of_slskd_dir(tmp_path):
+    base = tmp_path / 'downloads'
+    slskd = tmp_path / 'slskd'
+    base.mkdir()
+    slskd.mkdir()
+    _track(tmp_path, 'secret.mp3')
+
+    result = main._delete_track_file(
+        'slskd/../secret.mp3', base.resolve(), slskd
+    )
+
+    assert result == {'deleted': False, 'error': 'Invalid path'}
+    assert (tmp_path / 'secret.mp3').exists()
+
+
+def test_slskd_paths_without_slskd_dir_stay_under_downloads(tmp_path):
+    _track(tmp_path, 'slskd/local.mp3')
+
+    result = main._delete_track_file('slskd/local.mp3', tmp_path)
+
+    assert result == {'deleted': True}
+
+
+def test_after_library_delete_forgets_files_and_reports_playlists(
+    tmp_path, monkeypatch
+):
+    track = tmp_path / 'Mix' / 'Artist - Song.mp3'
+    _track(tmp_path, 'Mix/Artist - Song.mp3')
+    song = {
+        'song_id': '4uLU6hMCjMI75M1A2tKUQC',
+        'name': 'Song',
+        'artists': ['Artist'],
+    }
+    db = tmp_path / 'library.db'
+    catalog = PlaylistCatalog(db)
+    catalog.ensure_playlist('Mix')
+    catalog.upsert_track('Mix', song, 'Mix/Artist - Song.mp3', track)
+    index = TrackIndex(db)
+    index.register_song(song, 'Mix/Artist - Song.mp3', full_path=track)
+    monkeypatch.setattr(api.state, 'playlist_catalog', catalog)
+    monkeypatch.setattr(api.state, 'track_index', index)
+    monkeypatch.setattr(api.state, 'navidrome_index', None)
+    monkeypatch.setattr(api.state, 'metadata_cache', None)
+    monkeypatch.setattr(api.state, 'cover_cache', None)
+    track.unlink()
+
+    response = asyncio.run(
+        api.after_library_delete(
+            {'Mix/Artist - Song.mp3': {'deleted': True}}, {'deleted': True}
+        )
+    )
+
+    assert response == {'deleted': True, 'playlists_affected': ['Mix']}
+    assert catalog.list_tracks('Mix') == []
+    assert index.lookup('4uLU6hMCjMI75M1A2tKUQC') is None

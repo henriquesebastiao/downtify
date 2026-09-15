@@ -67,12 +67,16 @@ from loguru import logger
 
 from . import library_import, m3u, providers, spotify
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
+from .cover_cache import CoverArtCache
 from .downloader import (
     AUDIO_PROVIDERS,
     DOWNLOAD_EXECUTOR,
     MAX_PARALLEL_DOWNLOADS,
     Downloader,
 )
+from .library_catalog import LibraryContext, library_context_from_state
+from .library_metadata_cache import LibraryMetadataCache
+from .library_paths_cache import invalidate_library_paths_cache
 from .monitor import (
     KIND_ARTIST,
     KIND_PLAYLIST,
@@ -82,7 +86,12 @@ from .monitor import (
     parse_playlist_url,
 )
 from .navidrome import _effective_navidrome_settings
+from .navidrome_index import NavidromeIndex
+from .playlist_batches import PlaylistBatchStore
+from .playlist_catalog import PlaylistCatalog
+from .playlist_spotify_cache import PlaylistSpotifyCache
 from .slskd_provider import reset_slskd_parallelism
+from .track_index import TrackIndex
 from .update_check import UpdateChecker
 
 MIN_PARALLEL_DOWNLOADS = 1
@@ -424,10 +433,82 @@ class AppState:
     monitor_db: Optional[PlaylistMonitorDB] = None
     download_jobs: dict[str, dict[str, Any]] = {}
     download_semaphore: Optional[asyncio.Semaphore] = None
+    # Library stores in /data/downtify_library.db (opened at startup).
+    track_index: Optional[TrackIndex] = None
+    navidrome_index: Optional[NavidromeIndex] = None
+    metadata_cache: Optional[LibraryMetadataCache] = None
+    cover_cache: Optional[CoverArtCache] = None
+    playlist_catalog: Optional[PlaylistCatalog] = None
+    playlist_batch_store: Optional[PlaylistBatchStore] = None
+    playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None
 
 
 state = AppState()
 router = APIRouter()
+
+
+def library_context() -> LibraryContext:
+    """Where library files live (downloads + slskd folder) and the
+    stores that describe them."""
+
+    download_dir = (
+        Path(state.downloader.download_dir)
+        if state.downloader is not None
+        else Path('/downloads')
+    )
+    return library_context_from_state(
+        download_dir,
+        state.settings,
+        state.track_index,
+        metadata_cache=state.metadata_cache,
+        playlist_catalog=state.playlist_catalog,
+    )
+
+
+def forget_library_file(stored_path: str) -> list[str]:
+    """Drop a deleted file from the library stores.
+
+    Removes it from the track index, playlist catalog, Navidrome song-id
+    index and the metadata/cover caches, all keyed by its library path
+    (the file itself is already gone). Returns the playlists it belonged
+    to.
+    """
+
+    name = str(stored_path or '').strip().replace('\\', '/')
+    if not name:
+        return []
+    affected: list[str] = []
+    if state.playlist_catalog is not None:
+        affected = state.playlist_catalog.remove_tracks_for_filename(name)
+    if state.track_index is not None:
+        state.track_index.remove_by_filename(name)
+    if state.navidrome_index is not None:
+        state.navidrome_index.forget_filename(name)
+    if state.metadata_cache is not None:
+        state.metadata_cache.forget(name)
+    if state.cover_cache is not None:
+        state.cover_cache.forget_by_stored_path(name)
+    return affected
+
+
+async def after_library_delete(
+    results: dict[str, dict[str, Any]], response: dict[str, Any]
+) -> dict[str, Any]:
+    """Update the library stores after ``DELETE /delete`` or
+    ``/delete/batch`` and report affected playlists on ``response``."""
+
+    deleted = [f for f, r in results.items() if r.get('deleted')]
+    affected: set[str] = set()
+    if deleted:
+
+        def _forget() -> None:
+            for name in deleted:
+                affected.update(forget_library_file(name))
+            invalidate_library_paths_cache()
+
+        await asyncio.to_thread(_forget)
+    response['playlists_affected'] = sorted(affected)
+    return response
 
 
 def _load_settings(path: Path) -> dict[str, Any]:
@@ -733,6 +814,8 @@ async def _run_download(
             job['status'] = 'done'
             job['filename'] = filename
             job['progress'] = 100
+            # /list and /tracks cache the directory scan briefly.
+            invalidate_library_paths_cache()
             await state.connections.broadcast({
                 'song': song,
                 'progress': 100,
