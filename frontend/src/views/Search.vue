@@ -29,9 +29,10 @@ const dm = useDownloadManager()
 
 watch(
   () => route.params.query,
-  (query) => {
-    sm.searchFor(query)
-  }
+  () => {
+    if (route.params.query) sm.searchFor(route.params.query)
+  },
+  { deep: true }
 )
 
 sm.searchFor(route.params.query)
