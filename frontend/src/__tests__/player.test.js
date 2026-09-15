@@ -70,6 +70,18 @@ describe('trackInfoFromFile', () => {
     const track = trackInfoFromFile('My Playlist/Artist - Title.mp3')
     expect(track.file).toBe('My Playlist/Artist - Title.mp3')
   })
+
+  it('serves downloads-folder tracks from the /downloads mount', () => {
+    const track = trackInfoFromFile('My Playlist/Artist - Title.mp3')
+    expect(track.url).toBe('/downloads/My%20Playlist%2FArtist%20-%20Title.mp3')
+  })
+
+  it('serves slskd tracks left in place through /media', () => {
+    const track = trackInfoFromFile('slskd/Some User/Artist - Title #1.flac')
+    expect(track.url).toBe(
+      '/media/slskd/Some%20User/Artist%20-%20Title%20%231.flac'
+    )
+  })
 })
 
 // player.js also reads `window.innerWidth` at module load time to decide

@@ -58,7 +58,14 @@ function ensureAudio() {
   return audio
 }
 
+// slskd downloads left in place live outside the downloads folder
+// ('slskd/...' library paths); only '/media' can serve those.
+const SLSKD_LIBRARY_PREFIX = 'slskd/'
+
 function fileUrl(file) {
+  if (file.startsWith(SLSKD_LIBRARY_PREFIX)) {
+    return `/media/${file.split('/').map(encodeURIComponent).join('/')}`
+  }
   return `/downloads/${encodeURIComponent(file)}`
 }
 

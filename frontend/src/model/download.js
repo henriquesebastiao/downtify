@@ -241,8 +241,9 @@ API.ws_onmessage((event) => {
     item.wsUpdate(data)
     item.setDownloading()
   }
+  // Progress messages can arrive many times a second across parallel
+  // downloads; the poll (not every message) reconciles with /api/queue.
   ensureQueuePoll()
-  syncQueueFromServer().catch(() => {})
 })
 API.ws_onerror((event) => {
   console.log('websocket error:', event)
@@ -261,18 +262,6 @@ _hydrateFromServer()
 export function useDownloadManager() {
   const loading = ref(false)
   const settingsManager = useSettingsManager()
-  async function pruneCompletedForNewPlaylist() {
-    downloadQueue.value = downloadQueue.value.filter(
-      (item) => !item.isDownloaded()
-    )
-    touchQueue()
-    try {
-      await API.clearCompletedQueue()
-    } catch (e) {
-      console.log('Failed to clear completed queue on server:', e)
-    }
-  }
-
   function _queueSongForBatch(song) {
     const existing = progressTracker.getBySong(song)
     if (existing) {
@@ -289,11 +278,7 @@ export function useDownloadManager() {
       isYouTubePlaylistURL(url)
     const generateM3u = settingsManager.settings.value.generate_m3u !== false
     loading.value = true
-    const playlistPrep = isPlaylistURL
-      ? pruneCompletedForNewPlaylist()
-      : Promise.resolve()
-    return playlistPrep
-      .then(() => API.open(url))
+    return API.open(url)
       .then((res) => {
         console.log('Received Response:', res)
         if (res.status !== 200) {
@@ -452,6 +437,7 @@ export function useDownloadManager() {
     downloadQueue.value = downloadQueue.value.filter(
       (item) => !item.isDownloaded()
     )
+    touchQueue()
   }
 
   function retry(song) {
