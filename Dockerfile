@@ -59,8 +59,8 @@ RUN apk update && apk upgrade --no-cache && \
     su-exec \
     tini \
     tzdata \
-    deno \
-    yt-dlp-ejs-rt-deno
+    nodejs \
+    yt-dlp-ejs-rt-nodejs
 
 RUN rm -rf /usr/local/lib/python3.14/site-packages/*
 

@@ -18,6 +18,7 @@ import os
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Body, FastAPI, HTTPException
@@ -395,7 +396,48 @@ def build_app() -> FastAPI:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
 
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        loop = asyncio.get_running_loop()
+        api.state.loop = loop
+        api.state.download_semaphore = asyncio.Semaphore(
+            api._clamp_parallel_downloads(
+                api.state.settings.get('max_parallel_downloads', 3)
+            )
+        )
+        db_path = DATABASE_DIR / 'downtify_monitor.db'
+        api.state.monitor_db = PlaylistMonitorDB(db_path)
+        asyncio.create_task(
+            monitor_loop(
+                db=api.state.monitor_db,
+                get_downloader=lambda: api.state.downloader,
+                broadcast=api.state.connections.broadcast,
+                loop=loop,
+                settings=api.state.settings,
+            )
+        )
+        # Separate hourly sweep that forgets a downloaded-track record once
+        # its file is gone from the downloads directory — see
+        # downtify/monitor.py:reconcile_loop for why this is a distinct,
+        # slower cadence from the per-watch monitor_loop above.
+        asyncio.create_task(
+            reconcile_loop(
+                db=api.state.monitor_db,
+                get_downloader=lambda: api.state.downloader,
+            )
+        )
+        # Hourly check against GitHub Releases (see
+        # downtify/update_check.py) so the footer can tell the user a
+        # newer Downtify is out. GET /api/check_update only ever reads
+        # this loop's cached result — the request to GitHub never blocks
+        # a page load.
+        api.state.update_checker = UpdateChecker()
+        asyncio.create_task(update_check_loop(api.state.update_checker))
+
+        yield
+
     app = FastAPI(
+        lifespan=lifespan,
         title='Downtify',
         description=(
             'Download your Spotify playlists and songs along with album '
@@ -451,44 +493,6 @@ def build_app() -> FastAPI:
         )
     )
     app.include_router(api.router)
-
-    @app.on_event('startup')
-    async def _startup() -> None:
-        loop = asyncio.get_running_loop()
-        api.state.loop = loop
-        api.state.download_semaphore = asyncio.Semaphore(
-            api._clamp_parallel_downloads(
-                api.state.settings.get('max_parallel_downloads', 3)
-            )
-        )
-        db_path = DATABASE_DIR / 'downtify_monitor.db'
-        api.state.monitor_db = PlaylistMonitorDB(db_path)
-        asyncio.create_task(
-            monitor_loop(
-                db=api.state.monitor_db,
-                get_downloader=lambda: api.state.downloader,
-                broadcast=api.state.connections.broadcast,
-                loop=loop,
-                settings=api.state.settings,
-            )
-        )
-        # Separate hourly sweep that forgets a downloaded-track record once
-        # its file is gone from the downloads directory — see
-        # downtify/monitor.py:reconcile_loop for why this is a distinct,
-        # slower cadence from the per-watch monitor_loop above.
-        asyncio.create_task(
-            reconcile_loop(
-                db=api.state.monitor_db,
-                get_downloader=lambda: api.state.downloader,
-            )
-        )
-        # Hourly check against GitHub Releases (see
-        # downtify/update_check.py) so the footer can tell the user a
-        # newer Downtify is out. GET /api/check_update only ever reads
-        # this loop's cached result — the request to GitHub never blocks
-        # a page load.
-        api.state.update_checker = UpdateChecker()
-        asyncio.create_task(update_check_loop(api.state.update_checker))
 
     @app.get('/list')
     def list_downloads() -> list[str]:
