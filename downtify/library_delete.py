@@ -56,7 +56,7 @@ def delete_if_spotify_tag_mismatch(
         return False
 
     label = spotify_file_tag_mismatch_label(song)
-    pl_note = f" playlist={playlist_name!r}" if playlist_name else ''
+    pl_note = f' playlist={playlist_name!r}' if playlist_name else ''
     result = delete_library_file(
         filename,
         del_ctx.ctx,
@@ -97,7 +97,11 @@ def tag_mismatch_delete_context_from_state(
     if downloader is None:
         return None
     dl_dir = download_dir or Path(downloader.download_dir)
-    cfg = settings if isinstance(settings, dict) else getattr(state, 'settings', {})
+    cfg = (
+        settings
+        if isinstance(settings, dict)
+        else getattr(state, 'settings', {})
+    )
     if not isinstance(cfg, dict):
         cfg = {}
     return TagMismatchDeleteContext(

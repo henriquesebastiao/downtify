@@ -49,7 +49,11 @@ def test_delete_if_spotify_tag_mismatch(tmp_path: Path) -> None:
     catalog.ensure_playlist('My Playlist')
     catalog.upsert_track(
         'My Playlist',
-        {'song_id': '4uLU6hMCjMI75M1A2tKUQC', 'name': '100 Kile', 'artists': ['Noizy']},
+        {
+            'song_id': '4uLU6hMCjMI75M1A2tKUQC',
+            'name': '100 Kile',
+            'artists': ['Noizy'],
+        },
         'My Playlist/Noizy - 100 Kile.mp3',
         wrong,
     )
@@ -64,7 +68,9 @@ def test_delete_if_spotify_tag_mismatch(tmp_path: Path) -> None:
         'library_from_tags': True,
     }
     del_ctx = TagMismatchDeleteContext(ctx=ctx, playlist_catalog=catalog)
-    assert delete_if_spotify_tag_mismatch(song, del_ctx, playlist_name='My Playlist')
+    assert delete_if_spotify_tag_mismatch(
+        song, del_ctx, playlist_name='My Playlist'
+    )
     assert not wrong.is_file()
     assert catalog.list_tracks('My Playlist') == []
 
