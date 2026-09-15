@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import zlib
 from threading import Lock
 from typing import Any, Optional
 from urllib.parse import quote, unquote
@@ -226,7 +227,7 @@ def song_stub_from_text_query(query: str) -> Optional[dict[str, Any]]:
     text = query.strip()
     if not text:
         return None
-    song_id = f'search-{abs(hash(text)) & 0xFFFFFFFF:08x}'
+    song_id = f'search-{zlib.crc32(text.encode()):08x}'
     row = {
         'song_id': song_id,
         'name': title,

@@ -200,7 +200,7 @@
         <!-- Actions -->
         <div class="flex items-center gap-1 shrink-0">
           <a
-            v-if="song.url"
+            v-if="song.url && song.source !== 'text_search'"
             class="icon-btn"
             :href="song.url"
             target="_blank"

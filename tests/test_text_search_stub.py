@@ -1,3 +1,5 @@
+import zlib
+
 from downtify.providers import (
     _parse_text_search_query,
     song_stub_from_text_query,
@@ -17,6 +19,10 @@ def test_song_stub_from_text_query():
     assert stub['name'] == 'One More Time'
     assert stub['artists'] == ['Daft Punk']
     assert stub['source'] == 'text_search'
+    # The id keys the download queue, so it must not change between runs.
+    assert stub['song_id'] == 'search-%08x' % zlib.crc32(
+        b'Daft Punk - One More Time'
+    )
     assert stub['spotify_url'] == (
         'https://open.spotify.com/search/Daft%20Punk%20One%20More%20Time'
     )
