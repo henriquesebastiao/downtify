@@ -1,27 +1,14 @@
 <template>
-  <div class="mb-8">
+  <div v-if="loadError || playlists.length > 0" class="mb-6">
     <div
       v-if="loadError"
       class="surface rounded-2xl p-4 mb-3 text-sm text-error flex gap-2 items-center"
     >
-      <Icon icon="clarity:exclamation-circle-line" class="h-5 w-5 shrink-0" />
+      <Icon icon="fa6-solid:circle-exclamation" class="h-5 w-5 shrink-0" />
       <span>{{ loadError }}</span>
     </div>
 
-    <div
-      v-if="loading && playlists.length === 0"
-      class="surface rounded-2xl p-8 flex flex-col items-center justify-center gap-3"
-    >
-      <span class="loading loading-spinner loading-md text-primary" />
-      <p class="text-sm text-base-content/50">
-        {{ t('search.playlistBatchesLoading') }}
-      </p>
-    </div>
-
-    <div
-      v-else-if="playlists.length > 0"
-      class="surface rounded-2xl p-4 sm:p-5"
-    >
+    <div v-if="playlists.length > 0" class="surface rounded-2xl p-4 sm:p-5">
       <button
         type="button"
         class="flex w-full items-start gap-2 text-left"
@@ -29,16 +16,16 @@
         @click="sectionOpen = !sectionOpen"
       >
         <Icon
-          icon="clarity:angle-line"
-          class="h-4 w-4 shrink-0 mt-0.5 transition-transform text-base-content/60"
-          :class="sectionOpen ? 'rotate-90' : '-rotate-90'"
+          icon="fa6-solid:chevron-right"
+          class="h-3.5 w-3.5 shrink-0 mt-1 transition-transform text-base-content/60"
+          :class="{ 'rotate-90': sectionOpen }"
         />
         <span class="min-w-0 flex-1">
           <span class="text-sm font-semibold block">
-            {{ t('search.playlistBatchesTitle') }}
+            {{ t('playlistBatches.title') }}
           </span>
           <span class="text-xs text-base-content/50 block mt-0.5">
-            {{ t('search.playlistBatchesHint') }}
+            {{ t('playlistBatches.hint') }}
           </span>
         </span>
         <span
@@ -51,14 +38,14 @@
         <div class="flex flex-wrap items-center gap-2">
           <div class="relative min-w-[12rem] flex-1">
             <Icon
-              icon="clarity:search-line"
+              icon="fa6-solid:magnifying-glass"
               class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40 pointer-events-none"
             />
             <input
               v-model="filterQuery"
               type="text"
               class="input input-bordered input-sm w-full pl-9 pr-9 rounded-full bg-base-100/85 border-white/10"
-              :placeholder="t('search.playlistBatchesSearchPlaceholder')"
+              :placeholder="t('playlistBatches.filterPlaceholder')"
               autocomplete="off"
             />
             <button
@@ -68,7 +55,7 @@
               :title="t('common.close')"
               @click="filterQuery = ''"
             >
-              <Icon icon="clarity:times-line" class="h-3.5 w-3.5" />
+              <Icon icon="fa6-solid:xmark" class="h-3.5 w-3.5" />
             </button>
           </div>
           <button
@@ -76,14 +63,14 @@
             class="btn btn-ghost btn-xs rounded-full shrink-0"
             @click="expandAll"
           >
-            {{ t('search.playlistBatchesExpandAll') }}
+            {{ t('playlistBatches.expandAll') }}
           </button>
           <button
             type="button"
             class="btn btn-ghost btn-xs rounded-full shrink-0"
             @click="collapseAll"
           >
-            {{ t('search.playlistBatchesCollapseAll') }}
+            {{ t('playlistBatches.collapseAll') }}
           </button>
         </div>
 
@@ -91,7 +78,7 @@
           v-if="filteredPlaylists.length === 0"
           class="text-sm text-base-content/50 text-center py-6"
         >
-          {{ t('search.playlistBatchesNoMatch') }}
+          {{ t('playlistBatches.noMatch') }}
         </p>
 
         <ul v-else class="space-y-2">
@@ -110,13 +97,9 @@
                 @click="toggleExpanded(pl.spotify_playlist_id)"
               >
                 <Icon
-                  icon="clarity:angle-line"
-                  class="h-4 w-4 shrink-0 transition-transform text-base-content/60"
-                  :class="
-                    isExpanded(pl.spotify_playlist_id)
-                      ? 'rotate-90'
-                      : '-rotate-90'
-                  "
+                  icon="fa6-solid:chevron-right"
+                  class="h-3.5 w-3.5 shrink-0 transition-transform text-base-content/60"
+                  :class="{ 'rotate-90': isExpanded(pl.spotify_playlist_id) }"
                 />
                 <span
                   class="icon-btn shrink-0 cursor-default pointer-events-none"
@@ -153,7 +136,7 @@
                     class="text-[10px] text-base-content/40 flex items-center gap-1 mt-0.5"
                   >
                     <span class="loading loading-spinner loading-xs" />
-                    {{ t('search.playlistBatchesVerifying') }}
+                    {{ t('playlistBatches.verifying') }}
                   </span>
                 </span>
               </button>
@@ -164,21 +147,24 @@
                   :href="pl.playlist_url"
                   target="_blank"
                   rel="noopener noreferrer"
-                  :title="t('search.openPlaylistOnSpotify')"
-                  :aria-label="t('search.openPlaylistOnSpotify')"
+                  :title="t('playlistBatches.openOnSpotify')"
+                  :aria-label="t('playlistBatches.openOnSpotify')"
                 >
-                  <Icon icon="clarity:pop-out-line" class="h-5 w-5" />
+                  <Icon
+                    icon="fa6-solid:arrow-up-right-from-square"
+                    class="h-5 w-5"
+                  />
                 </a>
                 <button
                   v-if="pl.downloaded_count > 0"
                   type="button"
                   class="icon-btn shrink-0"
                   :disabled="playingPlaylist === pl.spotify_playlist_id"
-                  :title="t('search.playPlaylist')"
-                  :aria-label="t('search.playPlaylist')"
+                  :title="t('playlistBatches.play')"
+                  :aria-label="t('playlistBatches.play')"
                   @click="onPlayPlaylist(pl)"
                 >
-                  <Icon icon="clarity:play-line" class="h-5 w-5" />
+                  <Icon icon="fa6-solid:play" class="h-5 w-5" />
                 </button>
                 <button
                   v-if="displayPl(pl).missing_count > 0"
@@ -186,18 +172,18 @@
                   class="icon-btn shrink-0 text-primary hover:bg-primary/10"
                   :disabled="downloadingMissing === pl.spotify_playlist_id"
                   :title="
-                    t('search.downloadMissing', {
+                    t('playlistBatches.downloadMissing', {
                       count: displayPl(pl).missing_count,
                     })
                   "
                   :aria-label="
-                    t('search.downloadMissing', {
+                    t('playlistBatches.downloadMissing', {
                       count: displayPl(pl).missing_count,
                     })
                   "
                   @click="onDownloadMissing(pl)"
                 >
-                  <Icon icon="clarity:download-line" class="h-5 w-5" />
+                  <Icon icon="fa6-solid:download" class="h-5 w-5" />
                 </button>
                 <button
                   type="button"
@@ -207,7 +193,7 @@
                   :aria-label="t('library.deletePlaylist')"
                   @click="onDeletePlaylist(pl)"
                 >
-                  <Icon icon="clarity:trash-line" class="h-5 w-5" />
+                  <Icon icon="fa6-solid:trash" class="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -222,7 +208,7 @@
               >
                 <span class="loading loading-spinner loading-sm text-primary" />
                 <p class="text-xs text-base-content/50">
-                  {{ t('search.playlistBatchesTracksLoading') }}
+                  {{ t('playlistBatches.tracksLoading') }}
                 </p>
               </div>
 
@@ -234,7 +220,7 @@
                   v-if="effectiveStatus(pl) === 'complete'"
                   class="px-4 py-3 text-xs text-base-content/50"
                 >
-                  {{ t('search.playlistBatchComplete') }}
+                  {{ t('playlistBatches.allInLibrary') }}
                 </li>
                 <li
                   v-else-if="missingTracksFor(pl).length === 0"
@@ -260,7 +246,7 @@
                         v-else
                         class="h-full w-full flex items-center justify-center text-base-content/30"
                       >
-                        <Icon icon="clarity:music-note-line" class="h-4 w-4" />
+                        <Icon icon="fa6-solid:music" class="h-4 w-4" />
                       </div>
                     </div>
                     <div class="min-w-0 flex-1">
@@ -277,7 +263,7 @@
                       :title="t('search.download')"
                       @click="onDownloadTrack(pl, track)"
                     >
-                      <Icon icon="clarity:download-line" class="h-5 w-5" />
+                      <Icon icon="fa6-solid:download" class="h-5 w-5" />
                     </button>
                   </li>
                 </template>
@@ -286,16 +272,6 @@
           </li>
         </ul>
       </div>
-    </div>
-
-    <div
-      v-else-if="!loading"
-      class="surface rounded-2xl p-6 text-center text-sm text-base-content/50"
-    >
-      <p>{{ t('search.playlistBatchesEmpty') }}</p>
-      <p class="text-xs mt-2 text-base-content/40">
-        {{ t('search.playlistBatchesEmptyHint') }}
-      </p>
     </div>
   </div>
 </template>
@@ -306,14 +282,10 @@ import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import API from '../model/api'
 import { syncQueueFromServer } from '../model/download'
-import {
-  normalizeLibraryEntry,
-  savePlayerViewPrefs,
-  usePlayer,
-} from '../model/player'
+import { usePlayer } from '../model/player'
 import { useI18n } from '../i18n'
 
-const emit = defineEmits(['download'])
+const emit = defineEmits(['download', 'deleted'])
 
 const { t } = useI18n()
 const router = useRouter()
@@ -448,15 +420,15 @@ function tracksDetailReady(pl) {
 function tracksEmptyMessage(pl) {
   const detail = playlistDetails[pl.spotify_playlist_id]
   if (detail?.error) {
-    return t('search.incompleteTracksLoading')
+    return t('playlistBatches.tracksUnavailable')
   }
   if (!tracksDetailReady(pl) && effectiveStatus(pl) !== 'complete') {
-    return t('search.incompleteTracksLoading')
+    return t('playlistBatches.tracksUnavailable')
   }
   if (filterQuery.value.trim()) {
-    return t('search.playlistBatchesNoTrackMatch')
+    return t('playlistBatches.noTrackMatch')
   }
-  return t('search.playlistBatchComplete')
+  return t('playlistBatches.allInLibrary')
 }
 
 function isExpanded(id) {
@@ -520,7 +492,13 @@ function clearProgressWatchIfSettled(pl) {
 }
 
 async function refreshInProgressPlaylists() {
-  if (progressRefreshBusy || loading.value || refreshing.value || verifyBusy) {
+  if (
+    !sectionOpen.value ||
+    progressRefreshBusy ||
+    loading.value ||
+    refreshing.value ||
+    verifyBusy
+  ) {
     return
   }
   const active = playlistsNeedingProgressRefresh()
@@ -617,7 +595,8 @@ function nextPlaylistToVerify() {
 }
 
 async function tickVerify() {
-  if (verifyBusy || loading.value || refreshing.value) {
+  // Counts are only visible while the panel is open.
+  if (!sectionOpen.value || verifyBusy || loading.value || refreshing.value) {
     return
   }
   const pl = nextPlaylistToVerify()
@@ -660,7 +639,7 @@ async function refreshPlaylists() {
       expanded[pl.spotify_playlist_id] = false
     }
   } catch (e) {
-    loadError.value = t('search.playlistBatchesLoadFailed')
+    loadError.value = t('playlistBatches.loadFailed')
     console.log('Failed to load playlist batches:', e)
   } finally {
     loading.value = false
@@ -686,7 +665,7 @@ function effectiveStatus(pl) {
 }
 
 function playlistSummary(pl) {
-  return t('search.incompleteSummary', {
+  return t('playlistBatches.summary', {
     downloaded: pl.downloaded_count,
     expected: pl.expected_count,
     missing: pl.missing_count,
@@ -694,10 +673,10 @@ function playlistSummary(pl) {
 }
 
 function statusLabel(status) {
-  if (status === 'pending') return t('search.playlistBatchesVerifying')
-  if (status === 'in_progress') return t('search.incompleteInProgress')
-  if (status === 'complete') return t('search.playlistBatchStatusComplete')
-  return t('search.incompleteFinished')
+  if (status === 'pending') return t('playlistBatches.verifying')
+  if (status === 'in_progress') return t('playlistBatches.statusInProgress')
+  if (status === 'complete') return t('playlistBatches.statusComplete')
+  return t('playlistBatches.statusIncomplete')
 }
 
 function statusLabelFor(pl) {
@@ -707,9 +686,9 @@ function statusLabelFor(pl) {
 function statusIconFor(pl) {
   const status = effectiveStatus(pl)
   if (status === 'in_progress') {
-    return 'clarity:sync-line'
+    return 'fa6-solid:arrows-rotate'
   }
-  return 'clarity:success-standard-line'
+  return 'fa6-solid:circle-check'
 }
 
 function statusIconClass(status) {
@@ -772,12 +751,13 @@ async function onDeletePlaylist(pl) {
   deletingPlaylist.value = pl.spotify_playlist_id
   try {
     await API.deletePlaylistBatch(pl.spotify_playlist_id)
+    emit('deleted', name)
     delete playlistDetails[pl.spotify_playlist_id]
     delete expanded[pl.spotify_playlist_id]
     await refreshPlaylists()
   } catch (e) {
     console.error('delete playlist failed:', e)
-    loadError.value = t('library.playlistDeleteFailed', { name })
+    loadError.value = t('library.deletePlaylistFailed', { name })
   } finally {
     deletingPlaylist.value = null
   }
@@ -788,16 +768,15 @@ async function onPlayPlaylist(pl) {
   if (!name) return
   playingPlaylist.value = pl.spotify_playlist_id
   try {
-    const res = await API.listDownloads()
-    const tracks = (res.data || [])
-      .map(normalizeLibraryEntry)
-      .filter((entry) => (entry.playlists || []).includes(name))
-    if (!tracks.length) {
-      window.alert(t('search.playlistBatchNothingToPlay'))
+    const res = await API.listTracks()
+    const files = (res.data || [])
+      .filter((track) => (track.playlists || []).includes(name))
+      .map((track) => track.file)
+    if (!files.length) {
+      window.alert(t('playlistBatches.nothingToPlay'))
       return
     }
-    savePlayerViewPrefs({ playlistFilter: name, filterQuery: '' })
-    player.setPlaylist(tracks, { startIndex: 0, autoplay: true })
+    player.setPlaylist(files, { startIndex: 0 })
     router.push({ name: 'Player' })
   } catch (e) {
     console.error('play playlist failed:', e)

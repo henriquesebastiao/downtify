@@ -39,6 +39,12 @@
         </div>
       </div>
 
+      <!-- Spotify playlist downloads and their missing tracks -->
+      <PlaylistBatches
+        @download="(song) => dm.queue(song)"
+        @deleted="refresh"
+      />
+
       <!-- Filter by playlist / artist / album -->
       <div v-if="hasFilterableGroups" class="mb-6">
         <label
@@ -90,6 +96,20 @@
             </option>
           </optgroup>
         </select>
+        <button
+          v-if="selectedGroup?.type === 'playlist'"
+          type="button"
+          class="btn btn-sm h-9 px-4 mt-2 sm:mt-0 sm:ml-2 rounded-full border-error/30 bg-error/10 text-error hover:bg-error/20"
+          :disabled="playlistDeleting"
+          @click="onDeletePlaylist(selectedGroup.name)"
+        >
+          <span
+            v-if="playlistDeleting"
+            class="loading loading-spinner loading-xs mr-1.5"
+          />
+          <Icon v-else icon="fa6-solid:trash" class="h-4 w-4 mr-1.5" />
+          {{ t('library.deletePlaylist') }}
+        </button>
       </div>
 
       <!-- Error -->
@@ -302,9 +322,11 @@ import { useRouter } from 'vue-router'
 import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
 import Pagination from '/src/components/Pagination.vue'
+import PlaylistBatches from '/src/components/PlaylistBatches.vue'
 import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
 import { usePlayer } from '/src/model/player'
+import { useDownloadManager } from '/src/model/download'
 import { buildGroups, filesForGroup } from '/src/model/trackGroups'
 
 const PAGE_SIZE = 10
@@ -312,6 +334,7 @@ const PAGE_SIZE = 10
 const { t } = useI18n()
 const player = usePlayer()
 const router = useRouter()
+const dm = useDownloadManager()
 
 const files = ref([])
 const tracks = ref([]) // [{ file, artist, album }] — from GET /tracks
@@ -325,6 +348,7 @@ const coverFailed = ref({})
 const currentPage = ref(1)
 const selectedFiles = ref(new Set())
 const bulkDeleting = ref(false)
+const playlistDeleting = ref(false)
 
 const artistGroups = computed(() => buildGroups(tracks.value, 'artist'))
 const albumGroups = computed(() => buildGroups(tracks.value, 'album'))
@@ -453,6 +477,23 @@ async function onBulkDelete() {
     clearSelection()
     bulkDeleting.value = false
   }
+}
+
+// Deletes the playlist's tracks, its M3U and its catalog entry; the
+// backend refreshes other playlists that shared those tracks.
+async function onDeletePlaylist(name) {
+  if (!confirm(t('library.deletePlaylistPrompt', { name }))) return
+  playlistDeleting.value = true
+  error.value = ''
+  try {
+    await API.deleteLibraryPlaylist(name)
+    selectedGroup.value = null
+  } catch {
+    error.value = t('library.deletePlaylistFailed', { name })
+  } finally {
+    playlistDeleting.value = false
+  }
+  await refresh()
 }
 
 function formatExt(file) {
