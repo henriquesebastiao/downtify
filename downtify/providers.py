@@ -1303,6 +1303,18 @@ def _find_match_via_youtube(
     return best['videoId'], _duration_diff(song, best)
 
 
+def find_match_youtube_only(song: dict[str, Any]) -> Optional[str]:
+    """Standard-YouTube-only match, for the ``youtube`` audio provider.
+
+    Same gates as :func:`_find_match_via_youtube`; used when the provider
+    order puts plain YouTube on its own instead of as YouTube Music's
+    fallback (which :func:`find_match` already covers).
+    """
+
+    video_id, _diff = _find_match_via_youtube(song)
+    return video_id
+
+
 def find_match_for_video(
     song: dict[str, Any], video_id: str
 ) -> Optional[dict[str, Any]]:

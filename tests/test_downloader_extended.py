@@ -629,7 +629,8 @@ def test_download_reports_done_via_progress_cb_when_skipped(
 
     calls = []
     d.download(
-        _OVERWRITE_SONG, progress_cb=lambda pct, msg: calls.append((pct, msg))
+        _OVERWRITE_SONG,
+        progress_cb=lambda pct, msg, provider=None: calls.append((pct, msg)),
     )
     assert calls == [(100.0, 'Already downloaded')]
 

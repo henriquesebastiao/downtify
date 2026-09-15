@@ -13,7 +13,7 @@ from typing import Any, Callable, Optional
 from loguru import logger
 
 from . import m3u, providers, spotify
-from .downloader import DOWNLOAD_EXECUTOR, Downloader
+from .downloader import DOWNLOAD_EXECUTOR, Downloader, ProgressCallback
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
 # Seconds between filesystem reconciliation sweeps (see reconcile_loop).
@@ -510,19 +510,8 @@ async def check_playlist(
         if from_spotify:
             await _fill_from_spotify_track(song)
 
-        def _make_cb(s: dict, name: str) -> Callable[[float, str], None]:
-            def _cb(pct: float, message: str) -> None:
-                asyncio.run_coroutine_threadsafe(
-                    broadcast({
-                        'song': s,
-                        'progress': pct,
-                        'message': message,
-                        'playlist_name': name,
-                    }),
-                    loop,
-                )
-
-            return _cb
+        def _make_cb(s: dict, name: str) -> ProgressCallback:
+            return _progress_cb(s, name, broadcast, loop)
 
         try:
             filename = await loop.run_in_executor(
@@ -569,15 +558,16 @@ def _progress_cb(
     label: str,
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
-) -> Callable[[float, str], None]:
+) -> ProgressCallback:
     """Build a downloader progress callback that broadcasts over the WS."""
 
-    def _cb(pct: float, message: str) -> None:
+    def _cb(pct: float, message: str, provider: Optional[str] = None) -> None:
         asyncio.run_coroutine_threadsafe(
             broadcast({
                 'song': song,
                 'progress': pct,
                 'message': message,
+                'provider': provider or '',
                 'playlist_name': label,
             }),
             loop,

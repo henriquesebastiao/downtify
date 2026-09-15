@@ -305,7 +305,10 @@ def test_progress_is_reported_once_per_whole_percent(tmp_path, monkeypatch):
     reports = []
     d = Downloader(tmp_path)
 
-    d.download(dict(_SONG), lambda pct, msg: reports.append((pct, msg)))
+    d.download(
+        dict(_SONG),
+        lambda pct, msg, provider=None: reports.append((pct, msg)),
+    )
 
     downloading = [int(p) for p, m in reports if m == 'Downloading']
     # 1,251 chunk callbacks collapse to one report per percent (0..95).

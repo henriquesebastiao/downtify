@@ -502,16 +502,21 @@ async def _run_download(
         'status': 'downloading',
     })
 
-    def progress(pct: float, message: str) -> None:
+    def progress(
+        pct: float, message: str, provider: Optional[str] = None
+    ) -> None:
         j = state.download_jobs.get(song_id)
         if j:
             j['progress'] = pct
             j['message'] = message
+            if provider:
+                j['provider'] = provider
         asyncio.run_coroutine_threadsafe(
             state.connections.broadcast({
                 'song': song,
                 'progress': pct,
                 'message': message,
+                'provider': provider or (j or {}).get('provider', ''),
                 'status': 'downloading',
             }),
             loop,
