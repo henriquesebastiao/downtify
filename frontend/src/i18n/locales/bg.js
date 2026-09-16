@@ -76,6 +76,7 @@ export default {
     filterQueued: 'Чакащи',
     filterDone: 'Завършени',
     filterFailed: 'Неуспешни',
+    providerTitle: 'Изтеглено от {provider}',
   },
   library: {
     title: 'Библиотека',

@@ -79,6 +79,7 @@ export default {
     filterQueued: 'Σε αναμονή',
     filterDone: 'Ολοκληρωμένα',
     filterFailed: 'Αποτυχημένα',
+    providerTitle: 'Λήφθηκε από {provider}',
   },
   library: {
     title: 'Βιβλιοθήκη',

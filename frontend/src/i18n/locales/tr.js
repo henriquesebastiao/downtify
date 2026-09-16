@@ -74,6 +74,7 @@ export default {
     filterQueued: 'Bekleyen',
     filterDone: 'Tamamlanan',
     filterFailed: 'Başarısız',
+    providerTitle: '{provider} üzerinden indirildi',
   },
   library: {
     title: 'Kütüphane',

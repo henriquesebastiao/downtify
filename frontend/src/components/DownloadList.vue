@@ -110,10 +110,15 @@
             <div class="flex flex-wrap items-center gap-2 mb-0.5">
               <span class="font-semibold truncate">{{ item.song.name }}</span>
               <span
-                v-if="providerLabel(item)"
-                class="badge badge-xs badge-outline opacity-80 shrink-0"
+                v-if="providerOf(item)"
+                class="shrink-0 gap-1"
+                :class="providerOf(item).badge"
+                :title="
+                  t('queue.providerTitle', { provider: providerOf(item).label })
+                "
               >
-                {{ providerLabel(item) }}
+                <Icon :icon="providerOf(item).icon" class="h-3 w-3" />
+                {{ providerOf(item).label }}
               </span>
               <span :class="statusClass(item)" class="shrink-0">
                 {{ item.message || item.web_status }}
@@ -332,14 +337,28 @@ function statusClass(item) {
   return 'badge-neutral-soft'
 }
 
-const PROVIDER_LABELS = {
-  'youtube-music': 'YouTube Music',
-  youtube: 'YouTube',
-  slskd: 'slskd',
+// Which audio source served the track (backend job field), styled like
+// the source badges on the Playlist Monitor page.
+const PROVIDERS = {
+  'youtube-music': {
+    label: 'YouTube Music',
+    badge: 'badge-youtube-music',
+    icon: 'fa6-brands:youtube',
+  },
+  youtube: {
+    label: 'YouTube',
+    badge: 'badge-youtube',
+    icon: 'fa6-brands:youtube',
+  },
+  slskd: {
+    label: 'slskd',
+    badge: 'badge-slskd',
+    icon: 'fa6-solid:share-nodes',
+  },
 }
 
-function providerLabel(item) {
-  return PROVIDER_LABELS[String(item.provider || '').trim()] || ''
+function providerOf(item) {
+  return PROVIDERS[String(item.provider || '').trim()] || null
 }
 
 function parseYoutubeId(url) {

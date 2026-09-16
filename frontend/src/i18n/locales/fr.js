@@ -80,6 +80,7 @@ export default {
     filterQueued: 'En attente',
     filterDone: 'Terminés',
     filterFailed: 'Échecs',
+    providerTitle: 'Téléchargé depuis {provider}',
   },
   library: {
     title: 'Bibliothèque',

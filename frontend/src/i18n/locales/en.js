@@ -77,6 +77,7 @@ export default {
     filterQueued: 'Waiting',
     filterDone: 'Done',
     filterFailed: 'Failed',
+    providerTitle: 'Downloaded from {provider}',
   },
   library: {
     title: 'Library',

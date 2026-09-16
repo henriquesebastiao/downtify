@@ -79,6 +79,7 @@ export default {
     filterQueued: 'Várakozik',
     filterDone: 'Kész',
     filterFailed: 'Sikertelen',
+    providerTitle: 'Letöltve: {provider}',
   },
   library: {
     title: 'Könyvtár',

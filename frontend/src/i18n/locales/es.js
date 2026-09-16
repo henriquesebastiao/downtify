@@ -79,6 +79,7 @@ export default {
     filterQueued: 'En espera',
     filterDone: 'Hechas',
     filterFailed: 'Fallidas',
+    providerTitle: 'Descargado de {provider}',
   },
   library: {
     title: 'Biblioteca',

@@ -168,6 +168,18 @@
   [data-theme='downtify-light'] .badge-youtube-music {
     @apply text-[#C4001F];
   }
+  .badge-youtube {
+    @apply pill bg-[#FF0000]/10 text-[#FF7A6B] border border-[#FF0000]/20;
+  }
+  [data-theme='downtify-light'] .badge-youtube {
+    @apply text-[#A82014];
+  }
+  .badge-slskd {
+    @apply pill bg-[#2F9BE8]/15 text-[#5FC0F5] border border-[#2F9BE8]/25;
+  }
+  [data-theme='downtify-light'] .badge-slskd {
+    @apply text-[#12628F];
+  }
 
   .card-hover-glow {
     @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow-sm;
