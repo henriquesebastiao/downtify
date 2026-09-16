@@ -143,6 +143,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'bitrate': '320',
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
+    'download_cover_art_playlists': False,
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
     'cover_resolution': providers.DEFAULT_COVER_RESOLUTION,

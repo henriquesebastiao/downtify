@@ -236,6 +236,9 @@ export default {
     generateM3u: 'M3U fájl létrehozása lejátszási listákhoz',
     generateM3uHint:
       'Playlists/<name>.m3u fájlokat ír a számok mellett a kézi lejátszási lista letöltésekhez és a Lejátszási lista felügyelő ellenőrzésekhez.',
+    downloadCoverArtPlaylists: 'Lejátszási lista borítójának letöltése',
+    downloadCoverArtPlaylistsHint:
+      'Letölti a lejátszási lista borítóját, és elmenti ide: Playlists/<name>.jpeg. Kapcsolja ki, ha nem szeretné letölteni a borítót.',
     audioSourceHint:
       'Válasszon egyet vagy többet. Minden dal sorrendben (1, 2, 3) próbálja a kiválasztott forrásokat, amíg az egyik sikerrel jár.',
     audioSourceMoveUp: 'Feljebb',

@@ -236,6 +236,9 @@ export default {
     generateM3u: 'Generar archivo M3U para las listas',
     generateM3uHint:
       'Escribe Playlists/<nombre>.m3u junto a las pistas, tanto para descargas manuales como para los barridos del Monitor.',
+    downloadCoverArtPlaylists: 'Descargar la carátula de la lista',
+    downloadCoverArtPlaylistsHint:
+      'Obtiene la carátula de la lista y la guarda en Playlists/<nombre>.jpeg. Desactívalo para no descargar la carátula.',
     audioSourceHint:
       'Elige una o más. Cada pista prueba las fuentes seleccionadas en orden (1, 2, 3) hasta que una funcione.',
     audioSourceMoveUp: 'Subir',
