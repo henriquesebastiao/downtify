@@ -170,8 +170,11 @@
                 {{ Math.round(item.progress) }}%
               </span>
             </div>
+            <!-- A queued item isn't downloading yet, so no spinner —
+                 only jobs actively downloading (progress not reported
+                 yet) get one. -->
             <span
-              v-else
+              v-else-if="queueItemState(item) === 'active'"
               class="loading loading-spinner loading-sm text-primary"
             />
 
@@ -309,6 +312,15 @@ const paginatedQueue = computed(() => {
 
 watch(statusFilter, () => {
   currentPage.value = 1
+})
+
+// Default to "In progress" as soon as something starts downloading, so
+// opening the queue (or a new batch kicking off) lands on what's
+// actually happening instead of last time's filter.
+watch(activeCount, (curr, prev) => {
+  if (curr > (prev ?? 0)) {
+    statusFilter.value = 'active'
+  }
 })
 
 watch(

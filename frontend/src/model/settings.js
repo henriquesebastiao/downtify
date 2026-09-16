@@ -129,6 +129,16 @@ API.getSettings().then((res) => {
   }
 })
 
+// Settings.vue's modal is a checkbox-driven daisyUI dialog (`#settings-modal`);
+// unchecking it is how the component itself closes on Cancel/backdrop click.
+function closeSettingsModal() {
+  if (typeof document === 'undefined') return
+  const modal = document.getElementById('settings-modal')
+  if (modal && 'checked' in modal) {
+    modal.checked = false
+  }
+}
+
 export function useSettingsManager() {
   const isSaved = ref()
   // Backend rejection reason (e.g. slskd enabled without an API key).
@@ -141,6 +151,7 @@ export function useSettingsManager() {
         if (res.status === 200) {
           console.log('Saved!')
           isSaved.value = true
+          closeSettingsModal()
           setTimeout(() => {
             isSaved.value = null
           }, 2000)
