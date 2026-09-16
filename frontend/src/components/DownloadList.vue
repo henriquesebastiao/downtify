@@ -1,7 +1,9 @@
 <template>
   <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
     <!-- Header -->
-    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div
+      class="mb-6 flex flex-col items-stretch gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between"
+    >
       <div>
         <h1 class="text-2xl font-bold tracking-tight">
           {{ t('queue.title') }}
@@ -10,10 +12,15 @@
           {{ t('queue.subtitle') }}
         </p>
       </div>
-      <div v-if="queueLength > 0" class="flex flex-wrap justify-end gap-2">
+      <!-- Stacked full-width on phones: right-aligned pills wrap one per
+           line there, which reads as misplaced rather than as a row. -->
+      <div
+        v-if="queueLength > 0"
+        class="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end"
+      >
         <button
           v-if="failedCount > 0"
-          class="btn btn-sm h-11 px-4 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100"
+          class="btn btn-sm h-11 w-full justify-center px-4 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 sm:w-auto"
           @click="dm.retryAllFailed()"
         >
           <Icon icon="fa6-solid:arrows-rotate" class="h-4 w-4 mr-1.5" />
@@ -21,13 +28,13 @@
         </button>
         <button
           v-if="doneCount > 0"
-          class="btn btn-sm h-11 px-4 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100"
+          class="btn btn-sm h-11 w-full justify-center px-4 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 sm:w-auto"
           @click="dm.clearCompleted()"
         >
           {{ t('queue.clearCompleted', { count: doneCount }) }}
         </button>
         <button
-          class="btn btn-sm h-11 px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 text-error/70 hover:text-error"
+          class="btn btn-sm h-11 w-full justify-center px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 text-error/70 hover:text-error sm:w-auto"
           @click="onClearAll"
           :title="t('queue.clearAll')"
         >
