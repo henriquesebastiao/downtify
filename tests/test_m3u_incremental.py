@@ -66,7 +66,9 @@ def test_process_batch_writes_m3u_before_slow_track_finishes(
 
     release_slow = asyncio.Event()
 
-    async def fake_run_download(song, song_id, subdir=None, delay_seconds=0):
+    async def fake_run_download(
+        song, song_id, subdir=None, delay_seconds=0, **_kwargs
+    ):
         if song['song_id'] == 'b':
             await release_slow.wait()
         return _write_track_file(dl, song, subdir)
@@ -125,7 +127,9 @@ def test_process_batch_m3u_grows_with_each_completed_track(
     release_b = asyncio.Event()
     release_c = asyncio.Event()
 
-    async def fake_run_download(song, song_id, subdir=None, delay_seconds=0):
+    async def fake_run_download(
+        song, song_id, subdir=None, delay_seconds=0, **_kwargs
+    ):
         if song['song_id'] == 'b':
             await release_b.wait()
         elif song['song_id'] == 'c':
@@ -190,7 +194,9 @@ def test_process_batch_skips_m3u_when_generation_disabled(
     monkeypatch.setattr(api.state, 'download_jobs', {})
     monkeypatch.setattr(api.state, 'download_semaphore', None)
 
-    async def fake_run_download(song, song_id, subdir=None, delay_seconds=0):
+    async def fake_run_download(
+        song, song_id, subdir=None, delay_seconds=0, **_kwargs
+    ):
         return _write_track_file(dl, song, subdir)
 
     monkeypatch.setattr(api, '_run_download', fake_run_download)
@@ -224,7 +230,9 @@ def test_process_batch_m3u_keeps_playlist_order_not_completion_order(
 
     b_done = asyncio.Event()
 
-    async def fake_run_download(song, song_id, subdir=None, delay_seconds=0):
+    async def fake_run_download(
+        song, song_id, subdir=None, delay_seconds=0, **_kwargs
+    ):
         if song['song_id'] == 'a':
             await b_done.wait()
         filename = _write_track_file(dl, song, subdir)

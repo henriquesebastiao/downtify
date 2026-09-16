@@ -565,7 +565,9 @@ def test_batch_from_youtube_music_playlist_uses_its_folder(
     monkeypatch.setattr(api.state, 'download_jobs', {})
     subdirs = []
 
-    async def fake_run_download(song, song_id, subdir=None, delay_seconds=0):
+    async def fake_run_download(
+        song, song_id, subdir=None, delay_seconds=0, **_kwargs
+    ):
         subdirs.append(subdir)
 
     monkeypatch.setattr(api, '_run_download', fake_run_download)

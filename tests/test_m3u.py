@@ -52,6 +52,61 @@ def _touch(tmp_path: Path, name: str) -> Path:
     return path
 
 
+def _slskd_track(tmp_path: Path) -> tuple[Path, Path, Path]:
+    download_dir = tmp_path / 'downloads'
+    slskd_dir = tmp_path / 'slskd'
+    download_dir.mkdir()
+    track = slskd_dir / 'peer' / 'song.mp3'
+    track.parent.mkdir(parents=True)
+    track.write_bytes(b'\x00')
+    return download_dir, slskd_dir, track
+
+
+def test_build_resolves_slskd_prefixed_paths_relative_to_m3u(tmp_path):
+    # An slskd download left in place lives outside download_dir; the M3U
+    # still points at it relative to its own folder, so a media server
+    # with the same /downloads + /slskd mount layout resolves it.
+    download_dir, slskd_dir, _track = _slskd_track(tmp_path)
+
+    content, kept = m3u.build_m3u_content(
+        [{'filename': 'slskd/peer/song.mp3', 'title': 'T', 'artist': 'A'}],
+        download_dir=download_dir,
+        slskd_dir=slskd_dir,
+    )
+    assert kept == 1
+    assert '../../slskd/peer/song.mp3' in content
+
+
+def test_read_maps_slskd_tracks_back_to_prefixed_paths(tmp_path):
+    download_dir, slskd_dir, _track = _slskd_track(tmp_path)
+    (download_dir / 'local.mp3').write_bytes(b'\x00')
+    target, kept = m3u.write_m3u(
+        download_dir,
+        'Mix',
+        [{'filename': 'local.mp3'}, {'filename': 'slskd/peer/song.mp3'}],
+        slskd_dir=slskd_dir,
+    )
+    assert kept == 2
+    assert m3u.read_m3u_tracks(target, download_dir, slskd_dir) == [
+        'local.mp3',
+        'slskd/peer/song.mp3',
+    ]
+    # Without the slskd folder the external track is out of bounds.
+    assert m3u.read_m3u_tracks(target, download_dir) == ['local.mp3']
+
+
+def test_read_accepts_absolute_paths(tmp_path):
+    # M3U files written with absolute container paths (as the PR's fork
+    # did) still read back.
+    download_dir, slskd_dir, track = _slskd_track(tmp_path)
+    m3u_file = download_dir / 'Playlists' / 'Old.m3u'
+    m3u_file.parent.mkdir()
+    m3u_file.write_text(f'#EXTM3U\n{track.resolve()}\n', encoding='utf-8')
+    assert m3u.read_m3u_tracks(m3u_file, download_dir, slskd_dir) == [
+        'slskd/peer/song.mp3'
+    ]
+
+
 def test_build_starts_with_extm3u_header(tmp_path):
     _touch(tmp_path, 'a.mp3')
     content, _ = m3u.build_m3u_content(

@@ -70,6 +70,16 @@ export default {
     overridePlaceholder: 'Illesz be egy YouTube vagy YouTube Music URL-t…',
     applyOverride: 'Elfogad',
     invalidYouTubeURL: 'Helytelen YouTube hivatkozás',
+    retry: 'Letöltés újrapróbálása',
+    retryAllFailed: 'Sikertelenek újrapróbálása ({count})',
+    clearCompleted: 'Befejezettek törlése ({count})',
+    emptyFilter: 'Egy dal sem felel meg ennek a szűrőnek.',
+    filterAll: 'Összes',
+    filterActive: 'Folyamatban',
+    filterQueued: 'Várakozik',
+    filterDone: 'Kész',
+    filterFailed: 'Sikertelen',
+    providerTitle: 'Letöltve: {provider}',
   },
   library: {
     title: 'Könyvtár',
@@ -97,6 +107,32 @@ export default {
     bulkDeletePrompt: 'Törlöd a kijelölt {count} fájlt?',
     bulkDeleteFailed: 'Nem sikerült törölni a kijelölt fájlokat.',
     bulkDeletePartialError: '{count} fájlt nem sikerült törölni.',
+    deletePlaylist: 'Lejátszási lista törlése',
+    deletePlaylistPrompt:
+      'Törli a(z) „{name}” összes dalát? A fájlok törlődnek a lemezről – a más listákban is szereplő dalokkal együtt –, a lista M3U fájljával együtt. Az M3U fájlok és a Navidrome-listák a háttérben frissülnek.',
+    deletePlaylistFailed: 'Nem sikerült törölni a(z) „{name}” listát.',
+  },
+  playlistBatches: {
+    title: 'Letöltött lejátszási listák',
+    hint: 'A Downtify-jal letöltött Spotify-listák, a Spotifyjal összevetve a hiányzó dalok miatt.',
+    loadFailed: 'Nem sikerült betölteni a letöltött listákat.',
+    filterPlaceholder: 'Listák vagy dalok szűrése…',
+    noMatch: 'Egy lista sem felel meg a szűrőnek.',
+    noTrackMatch: 'A lista egyik dala sem felel meg a szűrőnek.',
+    expandAll: 'Összes kibontása',
+    collapseAll: 'Összes becsukása',
+    verifying: 'Ellenőrzés a Spotifyjal…',
+    tracksLoading: 'Hiányzó dalok betöltése…',
+    tracksUnavailable: 'A dallista nem érhető el — próbálja újra később.',
+    allInLibrary: 'Minden dal megvan a könyvtárában.',
+    summary: '{downloaded}/{expected} letöltve · {missing} hiányzik',
+    statusComplete: 'Teljes',
+    statusInProgress: 'Folyamatban',
+    statusIncomplete: 'Hiányos',
+    downloadMissing: 'Hiányzók letöltése ({count})',
+    play: 'Lista lejátszása',
+    nothingToPlay: 'A lista egyik dala sincs még a könyvtárában.',
+    openOnSpotify: 'Lista megnyitása a Spotifyon',
   },
   monitor: {
     title: 'Lejátszási lista felügyelő',
@@ -196,6 +232,58 @@ export default {
     generateM3u: 'M3U fájl létrehozása lejátszási listákhoz',
     generateM3uHint:
       'Playlists/<name>.m3u fájlokat ír a számok mellett a kézi lejátszási lista letöltésekhez és a Lejátszási lista felügyelő ellenőrzésekhez.',
+    audioSourceHint:
+      'Válasszon egyet vagy többet. Minden dal sorrendben (1, 2, 3) próbálja a kiválasztott forrásokat, amíg az egyik sikerrel jár.',
+    audioSourceMoveUp: 'Feljebb',
+    audioSourceMoveDown: 'Lejjebb',
+    slskdSection: 'slskd (Soulseek)',
+    slskdHint:
+      'Dalok letöltése a Soulseekről a saját slskd szerverén keresztül. Amit az slskd nem talál, azt a következő hangforrás próbálja.',
+    slskdEnabled: 'slskd engedélyezése',
+    slskdEnabledHint:
+      'Szükséges hozzá az slskd URL-je és egy API-kulcs. Kikapcsolva az slskd sosem kerül sorra.',
+    slskdBaseUrl: 'slskd URL (pl. http://slskd:5030)',
+    slskdApiKey: 'slskd API-kulcs',
+    slskdSourceDir: 'Az slskd letöltési mappája, ahogy a Downtify látja',
+    slskdSourceDirHint:
+      'Csatolja az slskd letöltési mappáját a Downtify konténerbe, és itt a konténeren belüli útvonalat adja meg, ne a gazdagépét.',
+    slskdLeaveInPlace: 'slskd-fájlok helyben hagyása',
+    slskdLeaveInPlaceHint:
+      'A fájl címkézése az slskd mappában, a letöltési mappába másolás helyett. Kapcsolja ki, ha a többi letöltés mellé szeretné másolni.',
+    slskdDownloadTimeout: 'Teljes időkorlát (másodperc)',
+    slskdQueuedTimeout: 'Várakozási időkorlát (másodperc)',
+    slskdTimeoutHint:
+      'Ha az slskd nem végez időben, vagy egy átvitel előrehaladás nélkül várakozik, a Downtify a következő hangforrásra lép.',
+    navidromeSection: 'Navidrome',
+    navidromeHint:
+      'A letöltött lejátszási listák tükrözése a Navidrome-ba a Subsonic API-n keresztül. A Navidrome zenemappájának tartalmaznia kell a Downtify letöltéseit (és az slskd mappát, ha használja).',
+    navidromeEnabled: 'Navidrome engedélyezése',
+    navidromeEnabledHint:
+      'Szükséges a Navidrome URL-je, felhasználóneve és jelszava.',
+    navidromeUrl: 'Navidrome URL (pl. http://navidrome:4533)',
+    navidromeUsername: 'Felhasználónév',
+    navidromePassword: 'Jelszó',
+    navidromeAdminUsername: 'Admin felhasználónév (opcionális)',
+    navidromeAdminPassword: 'Admin jelszó (opcionális)',
+    navidromeAdminHint:
+      'Admin fiókkal a Downtify könyvtárvizsgálatot indíthat az új dalok egyeztetése előtt, így a lejátszási listák hamarabb tartalmazzák őket.',
+    syncNavidrome: 'Lejátszási listák létrehozása a Navidrome-ban',
+    syncNavidromeHint:
+      'Lejátszási lista letöltése vagy a listafigyelő ellenőrzése után azonos nevű Navidrome-listát hoz létre vagy frissít.',
+    navidromePublic: 'Navidrome-listák nyilvánossá tétele',
+    librarySection: 'Könyvtár',
+    cacheCoverArt: 'Borítók gyorsítótárazása lemezen',
+    cacheCoverArtHint:
+      'A kinyert borítóképeket a /data/cover_cache mappában tárolja, így a Könyvtár és a Lejátszó gyorsabban töltődik be. Több lemezterületet használ.',
+    reconcileHint:
+      'Áthelyezett vagy átnevezett fájlokat a lemezen? Frissíti a könyvtár tárolt útvonalait, és ha fent engedélyezve vannak, az M3U fájlokat és a Navidrome-listákat.',
+    reconcileButton: 'Könyvtár-útvonalak javítása',
+    reconcilePaths: '{count} útvonal frissítve.',
+    reconcilePruned: '{count} már nem létező fájl bejegyzése eltávolítva.',
+    reconcileIndexed: '{count} dal indexelve.',
+    reconcilePlaylists: 'Frissített lejátszási listák: {playlists}.',
+    reconcileNone: 'Minden naprakész.',
+    reconcileError: 'Nem sikerült javítani a könyvtár-útvonalakat.',
     organizationSection: 'Fájlszervezés',
     organizeByArtist: 'Szervezés előadó szerint',
     organizeByArtistHint:

@@ -13,6 +13,7 @@ All environment variables are optional. Downtify works out of the box without an
 | `DOWNTIFY_PORT` | `8000` | Port the server listens on inside the container. Change the left side of the port mapping to expose a different host port. |
 | `DOWNLOAD_DIR` | `/downloads` | Directory where audio files are saved. Override if you mount your library at a custom path. |
 | `HOST` | `0.0.0.0` | Bind address for the web server. |
+| `DOWNTIFY_LOG_LEVEL` | `info` | Application log level (`debug`, `info`, `warning`, …). |
 | `TZ` | `UTC` | Local timezone (IANA name, e.g. `America/Sao_Paulo`), used to interpret `DOWNTIFY_MONITOR_SYNC_TIME` below. |
 
 ## Playlist Monitor

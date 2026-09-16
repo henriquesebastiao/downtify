@@ -68,6 +68,16 @@ export default {
     overridePlaceholder: 'Paste a YouTube or YouTube Music URL…',
     applyOverride: 'Apply',
     invalidYouTubeURL: 'Invalid YouTube URL',
+    retry: 'Retry download',
+    retryAllFailed: 'Retry failed ({count})',
+    clearCompleted: 'Clear done ({count})',
+    emptyFilter: 'No tracks match this filter.',
+    filterAll: 'All',
+    filterActive: 'In progress',
+    filterQueued: 'Waiting',
+    filterDone: 'Done',
+    filterFailed: 'Failed',
+    providerTitle: 'Downloaded from {provider}',
   },
   library: {
     title: 'Library',
@@ -94,6 +104,32 @@ export default {
     bulkDeletePrompt: 'Delete {count} selected files?',
     bulkDeleteFailed: 'Failed to delete the selected files.',
     bulkDeletePartialError: '{count} file(s) could not be deleted.',
+    deletePlaylist: 'Delete playlist',
+    deletePlaylistPrompt:
+      'Delete every track in "{name}"? The files are removed from disk, including tracks other playlists also use, along with the playlist\'s M3U. M3U files and Navidrome playlists update in the background.',
+    deletePlaylistFailed: 'Couldn\'t delete the playlist "{name}".',
+  },
+  playlistBatches: {
+    title: 'Playlist downloads',
+    hint: 'Spotify playlists downloaded with Downtify, checked against Spotify for missing tracks.',
+    loadFailed: "Couldn't load playlist downloads.",
+    filterPlaceholder: 'Filter playlists or tracks…',
+    noMatch: 'No playlists match your filter.',
+    noTrackMatch: 'No tracks in this playlist match your filter.',
+    expandAll: 'Expand all',
+    collapseAll: 'Collapse all',
+    verifying: 'Checking against Spotify…',
+    tracksLoading: 'Loading missing tracks…',
+    tracksUnavailable: 'Track list unavailable — try again later.',
+    allInLibrary: 'Every track is in your library.',
+    summary: '{downloaded}/{expected} downloaded · {missing} missing',
+    statusComplete: 'Complete',
+    statusInProgress: 'In progress',
+    statusIncomplete: 'Incomplete',
+    downloadMissing: 'Download missing ({count})',
+    play: 'Play playlist',
+    nothingToPlay: "None of this playlist's tracks are in your library yet.",
+    openOnSpotify: 'Open playlist on Spotify',
   },
   monitor: {
     title: 'Playlist Monitor',
@@ -191,6 +227,58 @@ export default {
     generateM3u: 'Generate M3U file for playlists',
     generateM3uHint:
       'Writes Playlists/<name>.m3u alongside the tracks for both manual playlist downloads and Playlist Monitor sweeps.',
+    audioSourceHint:
+      'Pick one or more. Each track tries the selected sources in order (1, 2, 3) until one succeeds.',
+    audioSourceMoveUp: 'Move up',
+    audioSourceMoveDown: 'Move down',
+    slskdSection: 'slskd (Soulseek)',
+    slskdHint:
+      "Download tracks from Soulseek through your own slskd server. Tracks slskd can't find fall back to the next audio source.",
+    slskdEnabled: 'Enable slskd',
+    slskdEnabledHint:
+      'Requires the slskd URL and an API key. When off, slskd is never tried.',
+    slskdBaseUrl: 'slskd URL (e.g. http://slskd:5030)',
+    slskdApiKey: 'slskd API key',
+    slskdSourceDir: 'slskd download folder, as seen by Downtify',
+    slskdSourceDirHint:
+      "Mount slskd's downloads folder into the Downtify container and enter the container path here — not the host path.",
+    slskdLeaveInPlace: 'Leave slskd files in place',
+    slskdLeaveInPlaceHint:
+      'Tag the file inside the slskd folder instead of copying it into the downloads folder. Turn off to copy it next to your other downloads.',
+    slskdDownloadTimeout: 'Total timeout (seconds)',
+    slskdQueuedTimeout: 'Queued timeout (seconds)',
+    slskdTimeoutHint:
+      "If slskd doesn't finish in time, or a transfer sits queued without progress, Downtify moves on to the next audio source.",
+    navidromeSection: 'Navidrome',
+    navidromeHint:
+      "Mirror downloaded playlists into Navidrome through its Subsonic API. Navidrome's music folder must include Downtify's downloads (and the slskd folder, if used).",
+    navidromeEnabled: 'Enable Navidrome',
+    navidromeEnabledHint: 'Requires the Navidrome URL, username and password.',
+    navidromeUrl: 'Navidrome URL (e.g. http://navidrome:4533)',
+    navidromeUsername: 'Username',
+    navidromePassword: 'Password',
+    navidromeAdminUsername: 'Admin username (optional)',
+    navidromeAdminPassword: 'Admin password (optional)',
+    navidromeAdminHint:
+      'An admin account lets Downtify trigger a library scan before matching new tracks, so playlists pick them up sooner.',
+    syncNavidrome: 'Create playlists in Navidrome',
+    syncNavidromeHint:
+      'After a playlist download or Playlist Monitor sweep, create or update a Navidrome playlist with the same name.',
+    navidromePublic: 'Make Navidrome playlists public',
+    librarySection: 'Library',
+    cacheCoverArt: 'Cache cover art on disk',
+    cacheCoverArtHint:
+      'Keeps extracted cover images in /data/cover_cache so the Library and Player load faster. Uses extra disk space.',
+    reconcileHint:
+      'Moved or renamed files on disk? Update the stored library paths and, when enabled above, the M3U files and Navidrome playlists.',
+    reconcileButton: 'Fix library paths',
+    reconcilePaths: 'Updated {count} path(s).',
+    reconcilePruned:
+      'Removed {count} entry(ies) for files that no longer exist.',
+    reconcileIndexed: 'Indexed {count} track(s).',
+    reconcilePlaylists: 'Refreshed playlists: {playlists}.',
+    reconcileNone: 'Everything is already up to date.',
+    reconcileError: "Couldn't fix library paths.",
     organizationSection: 'File organization',
     organizeByArtist: 'Organize by artist',
     organizeByArtistHint:

@@ -9,6 +9,8 @@ services:
     volumes:
       - ./docker/downloads:/downloads
       - ./docker/data:/data
+      # slskd's download folder, when using the slskd audio source:
+      # - ./docker/slskd:/slskd
       # - ./docker/cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_PORT=30321

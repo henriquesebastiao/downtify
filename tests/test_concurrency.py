@@ -16,8 +16,7 @@ from pathlib import Path
 import pytest
 from mutagen.id3 import ID3
 
-import main
-from downtify import api, spotify
+from downtify import api, library_metadata_cache, spotify
 from downtify import downloader as downloader_mod
 from downtify.downloader import (
     DOWNLOAD_EXECUTOR,
@@ -305,7 +304,10 @@ def test_progress_is_reported_once_per_whole_percent(tmp_path, monkeypatch):
     reports = []
     d = Downloader(tmp_path)
 
-    d.download(dict(_SONG), lambda pct, msg: reports.append((pct, msg)))
+    d.download(
+        dict(_SONG),
+        lambda pct, msg, provider=None: reports.append((pct, msg)),
+    )
 
     downloading = [int(p) for p, m in reports if m == 'Downloading']
     # 1,251 chunk callbacks collapse to one report per percent (0..95).
@@ -375,72 +377,64 @@ def test_graphql_short_middle_page_falls_back_to_sequential(monkeypatch):
     assert 160 in requested
 
 
-# ── /tracks tag cache ────────────────────────────────────────────────────────
+# ── /tracks tag cache (LibraryMetadataCache) ─────────────────────────────
 
 
-@pytest.fixture
-def tag_reads(monkeypatch):
-    main._TRACK_TAGS_CACHE.clear()
+def _entry(stored, full):
+    return {
+        'file': stored,
+        'title': full.stem,
+        'artist': 'Artist',
+        'album': '',
+        'has_cover': False,
+    }
+
+
+def test_library_tags_are_cached_until_the_file_changes(tmp_path, monkeypatch):
     reads = []
 
-    def _extract(path):
-        reads.append(path.name)
-        return 'Artist', path.stem
+    def _read(stored, full):
+        reads.append(full.name)
+        return _entry(stored, full)
 
-    monkeypatch.setattr(main, '_extract_track_tags', _extract)
-    yield reads
-    main._TRACK_TAGS_CACHE.clear()
-
-
-def test_library_tags_are_cached_until_the_file_changes(tmp_path, tag_reads):
+    monkeypatch.setattr(
+        library_metadata_cache, 'library_entry_for_file', _read
+    )
+    cache = library_metadata_cache.LibraryMetadataCache(tmp_path / 'lib.db')
     a, b = tmp_path / 'a.mp3', tmp_path / 'b.mp3'
     a.write_bytes(b'1')
     b.write_bytes(b'2')
+    items = [('a.mp3', a), ('b.mp3', b)]
 
-    assert main._read_library_tags([a, b]) == [
-        ('Artist', 'a'),
-        ('Artist', 'b'),
-    ]
-    assert main._read_library_tags([a, b]) == [
-        ('Artist', 'a'),
-        ('Artist', 'b'),
-    ]
-    assert sorted(tag_reads) == ['a.mp3', 'b.mp3']
+    first = cache.get_entries_batch(items)
+    second = cache.get_entries_batch(items)
+
+    assert [e['title'] for e in first] == ['a', 'b']
+    assert second == first
+    assert sorted(reads) == ['a.mp3', 'b.mp3']
 
     b.write_bytes(b'retagged, different size')
-    main._read_library_tags([a, b])
-    assert sorted(tag_reads) == ['a.mp3', 'b.mp3', 'b.mp3']
-
-
-def test_library_tag_cache_forgets_removed_files(tmp_path, tag_reads):
-    a, b = tmp_path / 'a.mp3', tmp_path / 'b.mp3'
-    a.write_bytes(b'1')
-    b.write_bytes(b'2')
-    main._read_library_tags([a, b])
-
-    b.unlink()
-    main._read_library_tags([a])
-
-    assert set(main._TRACK_TAGS_CACHE) == {str(a)}
+    cache.get_entries_batch(items)
+    assert sorted(reads) == ['a.mp3', 'b.mp3', 'b.mp3']
 
 
 def test_library_tags_are_read_on_multiple_threads(tmp_path, monkeypatch):
-    main._TRACK_TAGS_CACHE.clear()
     barrier = threading.Barrier(4)
-    paths = []
+
+    def _read(stored, full):
+        barrier.wait(timeout=5)
+        return _entry(stored, full)
+
+    monkeypatch.setattr(
+        library_metadata_cache, 'library_entry_for_file', _read
+    )
+    cache = library_metadata_cache.LibraryMetadataCache(tmp_path / 'lib.db')
+    items = []
     for i in range(4):
         path = tmp_path / f'{i}.mp3'
         path.write_bytes(b'x')
-        paths.append(path)
+        items.append((f'{i}.mp3', path))
 
-    def _extract(path):
-        barrier.wait(timeout=5)
-        return 'Artist', path.stem
+    entries = cache.get_entries_batch(items)
 
-    monkeypatch.setattr(main, '_extract_track_tags', _extract)
-    try:
-        tags = main._read_library_tags(paths)
-    finally:
-        main._TRACK_TAGS_CACHE.clear()
-
-    assert tags == [('Artist', str(i)) for i in range(4)]
+    assert [e['title'] for e in entries] == ['0', '1', '2', '3']

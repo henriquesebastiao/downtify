@@ -67,6 +67,16 @@ export default {
     overridePlaceholder: 'Постави линк от YouTube или YouTube Music…',
     applyOverride: 'Приложи',
     invalidYouTubeURL: 'Невалиден YouTube линк',
+    retry: 'Повторен опит за изтегляне',
+    retryAllFailed: 'Повтори неуспешните ({count})',
+    clearCompleted: 'Изчисти завършените ({count})',
+    emptyFilter: 'Няма песни, отговарящи на този филтър.',
+    filterAll: 'Всички',
+    filterActive: 'В процес',
+    filterQueued: 'Чакащи',
+    filterDone: 'Завършени',
+    filterFailed: 'Неуспешни',
+    providerTitle: 'Изтеглено от {provider}',
   },
   library: {
     title: 'Библиотека',
@@ -93,6 +103,32 @@ export default {
     bulkDeletePrompt: 'Да се изтрият ли {count} избрани файла?',
     bulkDeleteFailed: 'Изтриването на избраните файлове се провали.',
     bulkDeletePartialError: '{count} файл(а) не можаха да бъдат изтрити.',
+    deletePlaylist: 'Изтрий плейлиста',
+    deletePlaylistPrompt:
+      'Да се изтрият ли всички песни в „{name}“? Файловете се премахват от диска, включително песни, използвани и от други плейлисти, заедно с M3U файла на плейлиста. M3U файловете и плейлистите в Navidrome се обновяват на заден план.',
+    deletePlaylistFailed: 'Плейлистът „{name}“ не можа да бъде изтрит.',
+  },
+  playlistBatches: {
+    title: 'Изтеглени плейлисти',
+    hint: 'Плейлисти от Spotify, изтеглени с Downtify, сравнени със Spotify за липсващи песни.',
+    loadFailed: 'Изтеглените плейлисти не можаха да се заредят.',
+    filterPlaceholder: 'Филтрирай плейлисти или песни…',
+    noMatch: 'Няма плейлисти, отговарящи на филтъра.',
+    noTrackMatch: 'Няма песни в този плейлист, отговарящи на филтъра.',
+    expandAll: 'Разгъни всички',
+    collapseAll: 'Свий всички',
+    verifying: 'Проверка в Spotify…',
+    tracksLoading: 'Зареждане на липсващите песни…',
+    tracksUnavailable: 'Списъкът с песни не е наличен — опитайте по-късно.',
+    allInLibrary: 'Всички песни са в библиотеката ви.',
+    summary: '{downloaded}/{expected} изтеглени · {missing} липсват',
+    statusComplete: 'Завършен',
+    statusInProgress: 'В процес',
+    statusIncomplete: 'Непълен',
+    downloadMissing: 'Изтегли липсващите ({count})',
+    play: 'Пусни плейлиста',
+    nothingToPlay: 'Все още няма песни от този плейлист в библиотеката ви.',
+    openOnSpotify: 'Отвори плейлиста в Spotify',
   },
   monitor: {
     title: 'Следене на плейлист',
@@ -190,6 +226,58 @@ export default {
     generateM3u: 'Генериране на M3U файл за плейлисти',
     generateM3uHint:
       'Създава файлове в Playlists/<име>.m3u съпътстващ песните за ръчно изтеглени плейлисти както и за следени такива.',
+    audioSourceHint:
+      'Изберете един или повече. Всяка песен опитва избраните източници по ред (1, 2, 3), докато някой успее.',
+    audioSourceMoveUp: 'Премести нагоре',
+    audioSourceMoveDown: 'Премести надолу',
+    slskdSection: 'slskd (Soulseek)',
+    slskdHint:
+      'Изтегляйте песни от Soulseek чрез собствения си slskd сървър. Песните, които slskd не намери, преминават към следващия аудио източник.',
+    slskdEnabled: 'Включи slskd',
+    slskdEnabledHint:
+      'Изисква URL адрес на slskd и API ключ. Когато е изключено, slskd никога не се използва.',
+    slskdBaseUrl: 'URL на slskd (напр. http://slskd:5030)',
+    slskdApiKey: 'API ключ на slskd',
+    slskdSourceDir: 'Папка за изтегляния на slskd, както я вижда Downtify',
+    slskdSourceDirHint:
+      'Монтирайте папката за изтегляния на slskd в контейнера на Downtify и въведете тук пътя в контейнера, а не на хоста.',
+    slskdLeaveInPlace: 'Остави файловете от slskd на място',
+    slskdLeaveInPlaceHint:
+      'Маркира файла в папката на slskd, вместо да го копира в папката за изтегляния. Изключете, за да се копира до другите изтегляния.',
+    slskdDownloadTimeout: 'Общо време за изчакване (секунди)',
+    slskdQueuedTimeout: 'Време в опашка (секунди)',
+    slskdTimeoutHint:
+      'Ако slskd не приключи навреме или трансферът стои в опашка без напредък, Downtify преминава към следващия аудио източник.',
+    navidromeSection: 'Navidrome',
+    navidromeHint:
+      'Копира изтеглените плейлисти в Navidrome чрез неговия Subsonic API. Музикалната папка на Navidrome трябва да включва изтеглянията на Downtify (и папката на slskd, ако се използва).',
+    navidromeEnabled: 'Включи Navidrome',
+    navidromeEnabledHint:
+      'Изисква URL адрес, потребителско име и парола за Navidrome.',
+    navidromeUrl: 'URL на Navidrome (напр. http://navidrome:4533)',
+    navidromeUsername: 'Потребителско име',
+    navidromePassword: 'Парола',
+    navidromeAdminUsername: 'Администратор (по избор)',
+    navidromeAdminPassword: 'Администраторска парола (по избор)',
+    navidromeAdminHint:
+      'Администраторски акаунт позволява на Downtify да стартира сканиране на библиотеката преди търсене на новите песни, за да ги включат плейлистите по-бързо.',
+    syncNavidrome: 'Създавай плейлисти в Navidrome',
+    syncNavidromeHint:
+      'След изтегляне на плейлист или проверка от наблюдението на плейлисти създава или обновява плейлист в Navidrome със същото име.',
+    navidromePublic: 'Направи плейлистите в Navidrome публични',
+    librarySection: 'Библиотека',
+    cacheCoverArt: 'Кеширай обложките на диска',
+    cacheCoverArtHint:
+      'Пази извлечените обложки в /data/cover_cache, за да се зареждат по-бързо библиотеката и плейърът. Използва допълнително дисково пространство.',
+    reconcileHint:
+      'Преместихте или преименувахте файлове на диска? Обновява запазените пътища в библиотеката и, ако са включени по-горе, M3U файловете и плейлистите в Navidrome.',
+    reconcileButton: 'Поправи пътищата в библиотеката',
+    reconcilePaths: 'Обновени пътища: {count}.',
+    reconcilePruned: 'Премахнати записи за несъществуващи файлове: {count}.',
+    reconcileIndexed: 'Индексирани песни: {count}.',
+    reconcilePlaylists: 'Обновени плейлисти: {playlists}.',
+    reconcileNone: 'Всичко е актуално.',
+    reconcileError: 'Пътищата в библиотеката не можаха да бъдат поправени.',
     organizationSection: 'Йерархия на файловете',
     organizeByArtist: 'Сортиране по артист',
     organizeByArtistHint:

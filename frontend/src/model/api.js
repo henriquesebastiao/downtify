@@ -71,6 +71,31 @@ function downloadCsv(payload) {
   return API.post('/api/download/csv', payload)
 }
 
+function getIncompletePlaylists() {
+  return API.get('/api/playlists/incomplete')
+}
+
+function getPlaylistBatches() {
+  return API.get('/api/playlists/batches')
+}
+
+function getPlaylistBatchDetails(spotifyPlaylistId, { tracks = true } = {}) {
+  return API.get(
+    `/api/playlists/batches/${encodeURIComponent(spotifyPlaylistId)}`,
+    { params: tracks ? {} : { tracks: false } }
+  )
+}
+
+function downloadMissingPlaylistTracks(payload) {
+  return API.post('/api/playlists/incomplete/download-missing', payload)
+}
+
+function deletePlaylistBatch(spotifyPlaylistId) {
+  return API.delete(
+    `/api/playlists/batches/${encodeURIComponent(spotifyPlaylistId)}`
+  )
+}
+
 function check_for_update() {
   return API.get('/api/check_update')
 }
@@ -85,16 +110,43 @@ function encodePath(fileName) {
     .join('/')
 }
 
+// slskd downloads left in place live outside the downloads folder, so the
+// '/downloads' static mount can't serve them; '/media' resolves both.
+const SLSKD_LIBRARY_PREFIX = 'slskd/'
+
 function downloadFileURL(fileName) {
-  return `/downloads/${encodePath(fileName)}`
+  const path = String(fileName || '')
+  if (path.startsWith(SLSKD_LIBRARY_PREFIX)) {
+    return `/media/${encodePath(path)}`
+  }
+  return `/downloads/${encodePath(path)}`
+}
+
+function decodePathSegment(segment) {
+  try {
+    return decodeURIComponent(segment)
+  } catch {
+    return segment
+  }
+}
+
+/** Filename for the browser save dialog (decoded, no %20 etc.). */
+function downloadSaveName(fileNameOrURL) {
+  const parts = String(fileNameOrURL || '')
+    .split('/')
+    .filter(Boolean)
+  const last = parts[parts.length - 1]
+  return last ? decodePathSegment(last) : 'download'
 }
 
 function coverFileURL(fileName) {
   return `/cover?file=${encodeURIComponent(fileName)}`
 }
 
-function listDownloads() {
-  return API.get('/list')
+function listDownloads(forceRefresh = false) {
+  return API.get('/list', {
+    params: forceRefresh ? { refresh: true } : {},
+  })
 }
 
 function listPlaylists() {
@@ -113,6 +165,16 @@ function deleteDownloadsBatch(files) {
   return API.delete('/delete/batch', { data: { files } })
 }
 
+function deleteLibraryPlaylist(playlistName) {
+  return API.delete('/api/library/playlist', {
+    params: { playlist_name: playlistName },
+  })
+}
+
+function reconcileLibrary() {
+  return API.post('/api/library/reconcile')
+}
+
 function writePlaylistM3u(payload) {
   return API.post('/api/playlist/m3u', payload)
 }
@@ -127,6 +189,10 @@ function removeQueueItem(songId) {
 
 function clearQueue() {
   return API.delete('/api/queue')
+}
+
+function clearCompletedQueue() {
+  return API.delete('/api/queue/completed')
 }
 
 function getCookiesStatus() {
@@ -168,17 +234,26 @@ export default {
   download,
   downloadBatch,
   downloadCsv,
+  getIncompletePlaylists,
+  getPlaylistBatches,
+  getPlaylistBatchDetails,
+  downloadMissingPlaylistTracks,
+  deletePlaylistBatch,
   downloadFileURL,
+  downloadSaveName,
   coverFileURL,
   listDownloads,
   listPlaylists,
   listTracks,
   deleteDownload,
   deleteDownloadsBatch,
+  deleteLibraryPlaylist,
+  reconcileLibrary,
   writePlaylistM3u,
   getQueue,
   removeQueueItem,
   clearQueue,
+  clearCompletedQueue,
   getSettings,
   setSettings,
   getCookiesStatus,

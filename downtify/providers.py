@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import zlib
 from threading import Lock
 from typing import Any, Optional
 from urllib.parse import quote, unquote
@@ -175,7 +176,7 @@ def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
     release_date = (
         year_str if len(year_str) == 4 and year_str.isdigit() else ''
     )
-    return {
+    row = {
         'song_id': video_id,
         'name': result.get('title', ''),
         'artists': artists,
@@ -188,6 +189,60 @@ def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
         'release_date': release_date,
         'source': 'youtube',
     }
+    row['spotify_url'] = spotify_open_url(row)
+    return row
+
+
+def spotify_open_url(song: dict[str, Any]) -> str:
+    """Web URL to open this row on Spotify (track link or search fallback)."""
+
+    raw = str(song.get('url') or '').strip()
+    if 'open.spotify.com' in raw:
+        return raw
+    artists = song.get('artists') or []
+    artist = ', '.join(str(a).strip() for a in artists[:3] if str(a).strip())
+    title = str(song.get('name') or '').strip()
+    term = f'{artist} {title}'.strip() if artist else title
+    if not term:
+        return ''
+    return f'https://open.spotify.com/search/{quote(term)}'
+
+
+def _parse_text_search_query(query: str) -> tuple[list[str], str]:
+    text = query.strip()
+    if not text:
+        return [], ''
+    if ' - ' in text:
+        left, right = text.split(' - ', 1)
+        artist = left.strip()
+        title = right.strip()
+        if artist and title:
+            return [artist], title
+    return [], text
+
+
+def song_stub_from_text_query(query: str) -> Optional[dict[str, Any]]:
+    """Build a minimal song row for slskd matching when browse search has no hits."""
+    artists, title = _parse_text_search_query(query)
+    text = query.strip()
+    if not text:
+        return None
+    song_id = f'search-{zlib.crc32(text.encode()):08x}'
+    row = {
+        'song_id': song_id,
+        'name': title,
+        'artists': artists,
+        'album_name': '',
+        'cover_url': '',
+        'duration': 0,
+        'url': f'downtify-search:{song_id}',
+        'explicit': False,
+        'year': '',
+        'release_date': '',
+        'source': 'text_search',
+    }
+    row['spotify_url'] = spotify_open_url(row)
+    return row
 
 
 def search_songs(query: str, limit: int = 20) -> list[dict[str, Any]]:
@@ -1247,6 +1302,18 @@ def _find_match_via_youtube(
         )
         return None, None
     return best['videoId'], _duration_diff(song, best)
+
+
+def find_match_youtube_only(song: dict[str, Any]) -> Optional[str]:
+    """Standard-YouTube-only match, for the ``youtube`` audio provider.
+
+    Same gates as :func:`_find_match_via_youtube`; used when the provider
+    order puts plain YouTube on its own instead of as YouTube Music's
+    fallback (which :func:`find_match` already covers).
+    """
+
+    video_id, _diff = _find_match_via_youtube(song)
+    return video_id
 
 
 def find_match_for_video(

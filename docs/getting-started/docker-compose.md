@@ -34,6 +34,22 @@ docker compose up -d
 
 Open **[http://localhost:8000](http://localhost:8000)**.
 
+## With slskd (Soulseek)
+
+To use [slskd as an audio source](../features/slskd-navidrome.md), mount slskd's download folder into Downtify too — the **same host folder** your slskd container writes to:
+
+```yaml
+services:
+  downtify:
+    # ...
+    volumes:
+      - ./downloads:/downloads
+      - /path/to/slskd/downloads:/slskd
+      - downtify_data:/data
+```
+
+Then, in **Settings → slskd (Soulseek)**, enable slskd, enter its URL (e.g. `http://slskd:5030` when both containers share a Docker network) and API key, and set the download folder to `/slskd`.
+
 ## Custom port
 
 If port 8000 is already in use, map a different host port and set the `DOWNTIFY_PORT` environment variable so the container listens on the same port internally:

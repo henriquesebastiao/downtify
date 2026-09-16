@@ -59,21 +59,169 @@
           >
             {{ t('settings.audioSource') }}
           </label>
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-3 gap-2">
             <button
               v-for="provider in sm.settingsOptions.audio_providers"
               :key="provider"
               type="button"
-              class="rounded-xl border px-3 py-2 text-sm transition-colors text-left"
+              class="relative rounded-xl border px-3 py-2 text-sm transition-colors text-left"
               :class="[
-                sm.settings.value.audio_providers[0] === provider
+                providerIndex(provider) >= 0
                   ? 'border-primary/50 bg-primary/10 text-primary'
                   : 'border-white/10 hover:border-white/20 hover:bg-white/5',
               ]"
-              @click="sm.settings.value.audio_providers = [provider]"
+              @click="toggleProvider(provider)"
             >
+              <span
+                v-if="providerIndex(provider) >= 0"
+                class="absolute top-1 right-1.5 text-[10px] font-bold opacity-80"
+              >
+                {{ providerIndex(provider) + 1 }}
+              </span>
               {{ providerLabel(provider) }}
             </button>
+          </div>
+          <ul
+            v-if="sm.settings.value.audio_providers.length > 1"
+            class="mt-2 space-y-1"
+          >
+            <li
+              v-for="(provider, index) in sm.settings.value.audio_providers"
+              :key="provider"
+              class="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-1 text-sm"
+            >
+              <span class="w-4 text-xs text-base-content/50">{{
+                index + 1
+              }}</span>
+              <span class="flex-1">{{ providerLabel(provider) }}</span>
+              <button
+                type="button"
+                class="icon-btn h-8 w-8"
+                :disabled="index === 0"
+                :title="t('settings.audioSourceMoveUp')"
+                @click="moveProvider(index, -1)"
+              >
+                <Icon icon="fa6-solid:chevron-up" class="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                class="icon-btn h-8 w-8"
+                :disabled="
+                  index === sm.settings.value.audio_providers.length - 1
+                "
+                :title="t('settings.audioSourceMoveDown')"
+                @click="moveProvider(index, 1)"
+              >
+                <Icon icon="fa6-solid:chevron-down" class="h-3.5 w-3.5" />
+              </button>
+            </li>
+          </ul>
+          <p class="text-[11px] text-base-content/40 mt-1.5">
+            {{ t('settings.audioSourceHint') }}
+          </p>
+        </div>
+
+        <!-- slskd -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.slskdSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/50 mb-3">
+            {{ t('settings.slskdHint') }}
+          </p>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.slskd.enabled"
+              @change="onSlskdToggled"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.slskdEnabled') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.slskdEnabledHint') }}
+              </span>
+            </span>
+          </label>
+          <div
+            v-if="sm.settings.value.slskd.enabled"
+            class="mt-2 grid grid-cols-1 gap-2"
+          >
+            <input
+              type="url"
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              :placeholder="t('settings.slskdBaseUrl')"
+              v-model.trim="sm.settings.value.slskd.base_url"
+            />
+            <input
+              type="password"
+              autocomplete="off"
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              :placeholder="t('settings.slskdApiKey')"
+              v-model.trim="sm.settings.value.slskd.api_key"
+            />
+            <label class="text-xs text-base-content/50 mt-1">
+              {{ t('settings.slskdSourceDir') }}
+            </label>
+            <input
+              type="text"
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60 font-mono text-sm"
+              placeholder="/slskd"
+              v-model.trim="sm.settings.value.slskd.source_dir"
+            />
+            <p class="text-[11px] text-base-content/40">
+              {{ t('settings.slskdSourceDirHint') }}
+            </p>
+            <label
+              class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+            >
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                v-model="sm.settings.value.slskd.leave_in_place"
+              />
+              <span class="flex-1 text-sm">
+                <span class="block">{{ t('settings.slskdLeaveInPlace') }}</span>
+                <span class="block text-[11px] text-base-content/50">
+                  {{ t('settings.slskdLeaveInPlaceHint') }}
+                </span>
+              </span>
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="text-xs text-base-content/50">
+                {{ t('settings.slskdDownloadTimeout') }}
+                <input
+                  type="number"
+                  inputmode="numeric"
+                  min="30"
+                  max="3600"
+                  class="input input-sm w-full mt-1 rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+                  v-model.number="
+                    sm.settings.value.slskd.download_timeout_seconds
+                  "
+                />
+              </label>
+              <label class="text-xs text-base-content/50">
+                {{ t('settings.slskdQueuedTimeout') }}
+                <input
+                  type="number"
+                  inputmode="numeric"
+                  min="15"
+                  max="3600"
+                  class="input input-sm w-full mt-1 rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+                  v-model.number="
+                    sm.settings.value.slskd.queued_timeout_seconds
+                  "
+                />
+              </label>
+            </div>
+            <p class="text-[11px] text-base-content/40">
+              {{ t('settings.slskdTimeoutHint') }}
+            </p>
           </div>
         </div>
 
@@ -246,6 +394,104 @@
               </span>
             </span>
           </label>
+        </div>
+
+        <!-- Navidrome -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.navidromeSection') }}
+          </label>
+          <p class="text-[11px] text-base-content/50 mb-3">
+            {{ t('settings.navidromeHint') }}
+          </p>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.navidrome.enabled"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.navidromeEnabled') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.navidromeEnabledHint') }}
+              </span>
+            </span>
+          </label>
+          <div
+            v-if="sm.settings.value.navidrome.enabled"
+            class="mt-2 grid grid-cols-1 gap-2"
+          >
+            <input
+              type="url"
+              class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+              :placeholder="t('settings.navidromeUrl')"
+              v-model.trim="sm.settings.value.navidrome.url"
+            />
+            <div class="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                autocomplete="off"
+                class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+                :placeholder="t('settings.navidromeUsername')"
+                v-model.trim="sm.settings.value.navidrome.username"
+              />
+              <input
+                type="password"
+                autocomplete="off"
+                class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+                :placeholder="t('settings.navidromePassword')"
+                v-model="sm.settings.value.navidrome.password"
+              />
+              <input
+                type="text"
+                autocomplete="off"
+                class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+                :placeholder="t('settings.navidromeAdminUsername')"
+                v-model.trim="sm.settings.value.navidrome.admin_username"
+              />
+              <input
+                type="password"
+                autocomplete="off"
+                class="input w-full rounded-xl bg-base-100/85 border border-white/10 focus:border-primary/60"
+                :placeholder="t('settings.navidromeAdminPassword')"
+                v-model="sm.settings.value.navidrome.admin_password"
+              />
+            </div>
+            <p class="text-[11px] text-base-content/40">
+              {{ t('settings.navidromeAdminHint') }}
+            </p>
+            <label
+              class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+            >
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                v-model="sm.settings.value.sync_navidrome"
+              />
+              <span class="flex-1 text-sm">
+                <span class="block">{{ t('settings.syncNavidrome') }}</span>
+                <span class="block text-[11px] text-base-content/50">
+                  {{ t('settings.syncNavidromeHint') }}
+                </span>
+              </span>
+            </label>
+            <label
+              class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+            >
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                v-model="sm.settings.value.navidrome.public_playlist"
+              />
+              <span class="flex-1 text-sm">
+                <span class="block">{{ t('settings.navidromePublic') }}</span>
+              </span>
+            </label>
+          </div>
         </div>
 
         <!-- File organization -->
@@ -490,6 +736,53 @@
           </label>
         </div>
 
+        <!-- Library -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            {{ t('settings.librarySection') }}
+          </label>
+          <label
+            class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20 mb-3"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-primary mt-0.5"
+              v-model="sm.settings.value.cache_cover_art"
+            />
+            <span class="flex-1 text-sm">
+              <span class="block">{{ t('settings.cacheCoverArt') }}</span>
+              <span class="block text-[11px] text-base-content/50">
+                {{ t('settings.cacheCoverArtHint') }}
+              </span>
+            </span>
+          </label>
+          <p class="text-[11px] text-base-content/50 mb-2">
+            {{ t('settings.reconcileHint') }}
+          </p>
+          <button
+            type="button"
+            class="btn btn-sm h-10 px-5 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100 w-full"
+            :disabled="reconcileBusy"
+            @click="runReconcile"
+          >
+            <span
+              v-if="reconcileBusy"
+              class="loading loading-spinner loading-xs mr-2"
+            />
+            <Icon v-else icon="fa6-solid:arrows-rotate" class="h-4 w-4 mr-2" />
+            {{ t('settings.reconcileButton') }}
+          </button>
+          <p
+            v-if="reconcileMessage"
+            class="text-[11px] mt-2"
+            :class="reconcileError ? 'text-error' : 'text-primary'"
+          >
+            {{ reconcileMessage }}
+          </p>
+        </div>
+
         <!-- YouTube cookies -->
         <div>
           <label
@@ -635,7 +928,7 @@
               icon="fa6-solid:circle-exclamation"
               class="h-4 w-4 shrink-0"
             />
-            {{ t('settings.saveError') }}
+            {{ sm.saveErrorText.value || t('settings.saveError') }}
           </div>
         </transition>
       </div>
@@ -674,6 +967,7 @@ import {
   useSettingsManager,
 } from '../model/settings'
 import { useCookiesManager } from '../model/cookies'
+import API from '../model/api'
 import { useI18n } from '../i18n'
 
 const sm = useSettingsManager()
@@ -711,7 +1005,91 @@ async function onDeleteCookies() {
 function providerLabel(provider) {
   if (provider === 'youtube-music') return 'YouTube Music'
   if (provider === 'youtube') return 'YouTube'
+  if (provider === 'slskd') return 'slskd'
   return provider
+}
+
+// audio_providers is an ordered fallback list: each track tries the
+// providers in order until one yields audio.
+function enabledProviders() {
+  return (sm.settings.value.audio_providers || []).filter(Boolean)
+}
+
+function providerIndex(provider) {
+  return enabledProviders().indexOf(provider)
+}
+
+function toggleProvider(provider) {
+  const list = enabledProviders()
+  const idx = list.indexOf(provider)
+  if (idx >= 0) {
+    if (list.length === 1) return // keep at least one source
+    list.splice(idx, 1)
+  } else {
+    list.push(provider)
+    if (provider === 'slskd') sm.settings.value.slskd.enabled = true
+  }
+  sm.settings.value.audio_providers = list
+}
+
+function moveProvider(index, delta) {
+  const list = enabledProviders()
+  const target = index + delta
+  if (target < 0 || target >= list.length) return
+  ;[list[index], list[target]] = [list[target], list[index]]
+  sm.settings.value.audio_providers = list
+}
+
+function onSlskdToggled() {
+  const list = enabledProviders()
+  const idx = list.indexOf('slskd')
+  if (sm.settings.value.slskd.enabled && idx < 0) {
+    sm.settings.value.audio_providers = ['slskd', ...list]
+  } else if (!sm.settings.value.slskd.enabled && idx >= 0) {
+    list.splice(idx, 1)
+    sm.settings.value.audio_providers = list.length ? list : ['youtube-music']
+  }
+}
+
+const reconcileBusy = ref(false)
+const reconcileMessage = ref('')
+const reconcileError = ref(false)
+
+async function runReconcile() {
+  reconcileBusy.value = true
+  reconcileMessage.value = ''
+  reconcileError.value = false
+  try {
+    const { data } = await API.reconcileLibrary()
+    const parts = []
+    if (data.paths_updated) {
+      parts.push(t('settings.reconcilePaths', { count: data.paths_updated }))
+    }
+    if (data.pruned_stale) {
+      parts.push(t('settings.reconcilePruned', { count: data.pruned_stale }))
+    }
+    if (data.content_keys_backfilled) {
+      parts.push(
+        t('settings.reconcileIndexed', {
+          count: data.content_keys_backfilled,
+        })
+      )
+    }
+    const refreshed = data.playlists_affected || []
+    if (refreshed.length && (data.refresh_m3u || data.refresh_navidrome)) {
+      parts.push(
+        t('settings.reconcilePlaylists', { playlists: refreshed.join(', ') })
+      )
+    }
+    reconcileMessage.value = parts.length
+      ? parts.join(' ')
+      : t('settings.reconcileNone')
+  } catch {
+    reconcileError.value = true
+    reconcileMessage.value = t('settings.reconcileError')
+  } finally {
+    reconcileBusy.value = false
+  }
 }
 
 function setParallelDownloads(value) {

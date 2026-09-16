@@ -16,6 +16,8 @@ from typing import Iterable, Optional
 
 from loguru import logger
 
+from .library_paths import SLSKD_LIBRARY_PREFIX, locate_library_file
+
 # Only characters that are genuinely illegal in FAT/NTFS/ext filenames are
 # dropped. Everything else — including accented and non-Latin letters such
 # as "ö" (Sólrún) or "é" (Renata Béranger) — is preserved so folder names
@@ -45,6 +47,7 @@ def build_m3u_content(
     *,
     download_dir: Path,
     m3u_dir: Optional[Path] = None,
+    slskd_dir: Optional[Path] = None,
 ) -> tuple[str, int]:
     """Render the body of a ``.m3u`` file.
 
@@ -71,9 +74,11 @@ def build_m3u_content(
         filename = (entry or {}).get('filename')
         if not filename:
             continue
-        path = (download_dir / filename).resolve()
-        if not path.exists():
-            logger.warning('Skipping missing track in M3U: {}', path)
+        # Also finds ``slskd/...`` files left in place under the slskd
+        # folder, outside download_dir.
+        path = locate_library_file(filename, download_dir, slskd_dir)
+        if path is None:
+            logger.warning('Skipping missing track in M3U: {}', filename)
             continue
         title = (entry.get('title') or '').strip()
         artist = (entry.get('artist') or '').strip()
@@ -91,19 +96,26 @@ def build_m3u_content(
     return '\n'.join(lines) + '\n', kept
 
 
-def read_m3u_tracks(m3u_path: Path, download_dir: Path) -> list[str]:
+def read_m3u_tracks(
+    m3u_path: Path,
+    download_dir: Path,
+    slskd_dir: Optional[Path] = None,
+) -> list[str]:
     """Return the tracks listed in *m3u_path*, as paths relative to
     *download_dir* (the same shape ``/list`` returns), in file order.
 
     Inverts the relative-path scheme :func:`build_m3u_content` writes:
     each non-comment line is relative to the M3U's own directory, not to
-    *download_dir*. Lines that don't resolve to an existing file under
-    *download_dir* are skipped — self-healing when a track was deleted
-    or a line is otherwise stale, and a hard guard against a malicious
-    or malformed M3U escaping the library root via ``../``.
+    *download_dir* (absolute lines are accepted too). Tracks under
+    *slskd_dir* — slskd downloads left in place — come back with the
+    virtual ``slskd/`` prefix. Lines that don't resolve to an existing
+    file under either root are skipped — self-healing when a track was
+    deleted or a line is otherwise stale, and a hard guard against a
+    malicious or malformed M3U escaping the library via ``../``.
     """
 
     download_dir = Path(download_dir).resolve()
+    slskd_root = Path(slskd_dir).resolve() if slskd_dir else None
     m3u_dir = m3u_path.resolve().parent
     try:
         lines = m3u_path.read_text(encoding='utf-8').splitlines()
@@ -117,12 +129,15 @@ def read_m3u_tracks(m3u_path: Path, download_dir: Path) -> list[str]:
             continue
         try:
             resolved = (m3u_dir / line).resolve()
-            rel = resolved.relative_to(download_dir)
-        except (OSError, ValueError):
+        except OSError:
             continue
         if not resolved.is_file():
             continue
-        tracks.append(rel.as_posix())
+        if resolved.is_relative_to(download_dir):
+            tracks.append(resolved.relative_to(download_dir).as_posix())
+        elif slskd_root is not None and resolved.is_relative_to(slskd_root):
+            rel = resolved.relative_to(slskd_root).as_posix()
+            tracks.append(f'{SLSKD_LIBRARY_PREFIX}{rel}')
     return tracks
 
 
@@ -132,6 +147,7 @@ def write_m3u(
     entries: Iterable[dict],
     *,
     playlist_subdir: Optional[str] = None,
+    slskd_dir: Optional[Path] = None,
 ) -> tuple[Optional[Path], int]:
     """Write an M3U for ``playlist_name``.
 
@@ -157,6 +173,7 @@ def write_m3u(
         list(entries),
         download_dir=Path(download_dir),
         m3u_dir=target_dir,
+        slskd_dir=slskd_dir,
     )
     if kept == 0:
         logger.warning(

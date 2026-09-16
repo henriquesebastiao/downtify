@@ -70,6 +70,16 @@ export default {
     overridePlaceholder: 'Cole uma URL do YouTube ou YouTube Music…',
     applyOverride: 'Aplicar',
     invalidYouTubeURL: 'URL do YouTube inválida',
+    retry: 'Tentar de novo',
+    retryAllFailed: 'Repetir falhas ({count})',
+    clearCompleted: 'Limpar concluídas ({count})',
+    emptyFilter: 'Nenhuma faixa neste filtro.',
+    filterAll: 'Todas',
+    filterActive: 'Em andamento',
+    filterQueued: 'Aguardando',
+    filterDone: 'Concluídas',
+    filterFailed: 'Com falha',
+    providerTitle: 'Baixado de {provider}',
   },
   library: {
     title: 'Biblioteca',
@@ -96,6 +106,32 @@ export default {
     bulkDeletePrompt: 'Excluir {count} arquivos selecionados?',
     bulkDeleteFailed: 'Não foi possível excluir os arquivos selecionados.',
     bulkDeletePartialError: '{count} arquivo(s) não puderam ser excluídos.',
+    deletePlaylist: 'Excluir playlist',
+    deletePlaylistPrompt:
+      'Excluir todas as faixas de "{name}"? Os arquivos são apagados do disco, inclusive faixas usadas por outras playlists, junto com o M3U da playlist. Os M3U e as playlists do Navidrome são atualizados em segundo plano.',
+    deletePlaylistFailed: 'Não foi possível excluir a playlist "{name}".',
+  },
+  playlistBatches: {
+    title: 'Downloads de playlists',
+    hint: 'Playlists do Spotify baixadas pelo Downtify, comparadas com o Spotify para achar faixas faltando.',
+    loadFailed: 'Não foi possível carregar os downloads de playlists.',
+    filterPlaceholder: 'Filtrar playlists ou faixas…',
+    noMatch: 'Nenhuma playlist corresponde ao filtro.',
+    noTrackMatch: 'Nenhuma faixa desta playlist corresponde ao filtro.',
+    expandAll: 'Expandir tudo',
+    collapseAll: 'Recolher tudo',
+    verifying: 'Verificando no Spotify…',
+    tracksLoading: 'Carregando faixas faltantes…',
+    tracksUnavailable: 'Lista de faixas indisponível — tente mais tarde.',
+    allInLibrary: 'Todas as faixas estão na sua biblioteca.',
+    summary: '{downloaded}/{expected} baixadas · {missing} faltando',
+    statusComplete: 'Completa',
+    statusInProgress: 'Em andamento',
+    statusIncomplete: 'Incompleta',
+    downloadMissing: 'Baixar faltantes ({count})',
+    play: 'Tocar playlist',
+    nothingToPlay: 'Ainda não há faixas desta playlist na sua biblioteca.',
+    openOnSpotify: 'Abrir playlist no Spotify',
   },
   monitor: {
     title: 'Monitor de playlists',
@@ -195,6 +231,58 @@ export default {
     generateM3u: 'Gerar arquivo M3U para playlists',
     generateM3uHint:
       'Grava Playlists/<nome>.m3u junto com as faixas, tanto para downloads manuais de playlist quanto para varreduras do Monitor.',
+    audioSourceHint:
+      'Escolha uma ou mais. Cada faixa tenta as fontes selecionadas na ordem (1, 2, 3) até uma funcionar.',
+    audioSourceMoveUp: 'Mover para cima',
+    audioSourceMoveDown: 'Mover para baixo',
+    slskdSection: 'slskd (Soulseek)',
+    slskdHint:
+      'Baixe faixas do Soulseek pelo seu próprio servidor slskd. Faixas que o slskd não encontrar passam para a próxima fonte de áudio.',
+    slskdEnabled: 'Ativar slskd',
+    slskdEnabledHint:
+      'Exige a URL do slskd e uma API key. Quando desativado, o slskd nunca é tentado.',
+    slskdBaseUrl: 'URL do slskd (ex.: http://slskd:5030)',
+    slskdApiKey: 'API key do slskd',
+    slskdSourceDir: 'Pasta de downloads do slskd, como o Downtify a vê',
+    slskdSourceDirHint:
+      'Monte a pasta de downloads do slskd no container do Downtify e informe aqui o caminho dentro do container, não o do host.',
+    slskdLeaveInPlace: 'Deixar arquivos do slskd no lugar',
+    slskdLeaveInPlaceHint:
+      'Aplica as tags no arquivo dentro da pasta do slskd em vez de copiá-lo para a pasta de downloads. Desative para copiá-lo junto aos outros downloads.',
+    slskdDownloadTimeout: 'Tempo máximo total (segundos)',
+    slskdQueuedTimeout: 'Tempo na fila (segundos)',
+    slskdTimeoutHint:
+      'Se o slskd não terminar a tempo, ou uma transferência ficar na fila sem progresso, o Downtify passa para a próxima fonte de áudio.',
+    navidromeSection: 'Navidrome',
+    navidromeHint:
+      'Espelha as playlists baixadas no Navidrome pela API Subsonic. A pasta de música do Navidrome deve incluir os downloads do Downtify (e a pasta do slskd, se usada).',
+    navidromeEnabled: 'Ativar Navidrome',
+    navidromeEnabledHint: 'Exige a URL, o usuário e a senha do Navidrome.',
+    navidromeUrl: 'URL do Navidrome (ex.: http://navidrome:4533)',
+    navidromeUsername: 'Usuário',
+    navidromePassword: 'Senha',
+    navidromeAdminUsername: 'Usuário admin (opcional)',
+    navidromeAdminPassword: 'Senha admin (opcional)',
+    navidromeAdminHint:
+      'Uma conta admin permite ao Downtify disparar uma varredura da biblioteca antes de procurar as faixas novas, para as playlists incluírem elas mais cedo.',
+    syncNavidrome: 'Criar playlists no Navidrome',
+    syncNavidromeHint:
+      'Depois de baixar uma playlist ou de uma verificação do Monitor de playlists, cria ou atualiza uma playlist no Navidrome com o mesmo nome.',
+    navidromePublic: 'Tornar públicas as playlists do Navidrome',
+    librarySection: 'Biblioteca',
+    cacheCoverArt: 'Guardar capas em cache no disco',
+    cacheCoverArtHint:
+      'Mantém as capas extraídas em /data/cover_cache para a Biblioteca e o Player carregarem mais rápido. Usa espaço extra em disco.',
+    reconcileHint:
+      'Moveu ou renomeou arquivos no disco? Atualiza os caminhos salvos da biblioteca e, se ativados acima, os M3U e as playlists do Navidrome.',
+    reconcileButton: 'Corrigir caminhos da biblioteca',
+    reconcilePaths: '{count} caminho(s) atualizado(s).',
+    reconcilePruned:
+      '{count} entrada(s) de arquivos que não existem mais removida(s).',
+    reconcileIndexed: '{count} faixa(s) indexada(s).',
+    reconcilePlaylists: 'Playlists atualizadas: {playlists}.',
+    reconcileNone: 'Tudo já está atualizado.',
+    reconcileError: 'Não foi possível corrigir os caminhos da biblioteca.',
     organizationSection: 'Organização de arquivos',
     organizeByArtist: 'Organizar por artista',
     organizeByArtistHint:
