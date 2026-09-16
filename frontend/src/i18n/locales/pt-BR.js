@@ -102,6 +102,10 @@ export default {
     selectedCount: '{count} selecionada(s)',
     selectFile: 'Selecionar {file}',
     deleteSelected: 'Excluir selecionadas',
+    downloadSelected: 'Baixar selecionadas',
+    downloadSelectedHint:
+      'Salva as faixas selecionadas neste dispositivo em um único ZIP, mantendo as pastas.',
+    downloadSelectedFailed: 'Não foi possível preparar o download.',
     clearSelection: 'Limpar seleção',
     bulkDeletePrompt: 'Excluir {count} arquivos selecionados?',
     bulkDeleteFailed: 'Não foi possível excluir os arquivos selecionados.',

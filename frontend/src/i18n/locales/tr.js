@@ -98,6 +98,10 @@ export default {
     selectedCount: '{count} seçildi',
     selectFile: '{file} dosyasını seç',
     deleteSelected: 'Seçilenleri sil',
+    downloadSelected: 'Seçilenleri indir',
+    downloadSelectedHint:
+      'Seçilen parçaları klasörleriyle birlikte tek bir ZIP dosyası olarak bu cihaza kaydeder.',
+    downloadSelectedFailed: 'İndirme hazırlanamadı.',
     clearSelection: 'Seçimi temizle',
     bulkDeletePrompt: 'Seçilen {count} dosya silinsin mi?',
     bulkDeleteFailed: 'Seçilen dosyalar silinemedi.',

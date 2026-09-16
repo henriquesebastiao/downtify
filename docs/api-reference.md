@@ -458,6 +458,34 @@ Return the embedded cover art for a file.
 
 ## Library
 
+### `POST /api/library/archive`
+
+Prepare a ZIP of several library tracks for download. Powers the Library page's **Download selected**, so a multi-track selection reaches the user's machine in one file instead of one click per track.
+
+**Request body:**
+
+```json
+{ "files": ["My Playlist/Song.mp3", "slskd/user/Album/Track.flac"] }
+```
+
+Duplicate paths are deduplicated and paths that aren't in the library are dropped. Capped at 2000 files (`413` if exceeded); `400` for an empty list and `404` when none of the paths exist.
+
+**Response:** `{ "token": "…", "count": 2, "filename": "downtify-library-20260915-215442.zip" }`
+
+The browser then navigates to the URL below — a `fetch` would hold the whole archive in memory.
+
+---
+
+### `GET /api/library/archive/{token}`
+
+Stream a prepared selection as one ZIP. Entries keep their library paths, so per-playlist and artist/album folders survive extraction, and they're stored rather than deflated (audio doesn't compress). The archive is built while it's sent, so there's no `Content-Length` and no temp file on the server.
+
+Tickets are single-use and expire after 5 minutes: `404` for an unknown, expired or already-downloaded token. A file deleted between preparing and downloading is skipped instead of failing the archive.
+
+**Response:** `application/zip` (chunked), as an attachment.
+
+---
+
 ### `DELETE /api/library/playlist`
 
 Delete a downloaded playlist: every track registered to it (including tracks other playlists also contain), its playlist-folder leftovers, its M3U file(s) and its catalog entry.

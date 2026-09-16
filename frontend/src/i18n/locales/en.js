@@ -100,6 +100,10 @@ export default {
     selectedCount: '{count} selected',
     selectFile: 'Select {file}',
     deleteSelected: 'Delete selected',
+    downloadSelected: 'Download selected',
+    downloadSelectedHint:
+      'Save the selected tracks to this device as one ZIP file, keeping their folders.',
+    downloadSelectedFailed: "Couldn't prepare the download.",
     clearSelection: 'Clear selection',
     bulkDeletePrompt: 'Delete {count} selected files?',
     bulkDeleteFailed: 'Failed to delete the selected files.',

@@ -21,7 +21,7 @@ from typing import Optional
 
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
 from loguru import logger
@@ -32,6 +32,12 @@ from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
 from downtify.downloader import Downloader
+from downtify.library_archive import (
+    MAX_ARCHIVE_FILES,
+    ArchiveTicketStore,
+    archive_filename,
+    stream_library_zip,
+)
 from downtify.library_catalog import (
     list_library_entries,
     list_library_paths,
@@ -134,6 +140,10 @@ def _extract_cover(path: Path) -> tuple[bytes | None, str | None]:
 #: "select everything" on a huge library can't tie up a request
 #: forever or send a payload that's obviously not a real selection.
 MAX_BATCH_DELETE = 2000
+
+#: Prepared "download these tracks as a ZIP" selections, claimed by the
+#: browser navigation that follows (see downtify/library_archive.py).
+_ARCHIVE_TICKETS = ArchiveTicketStore()
 
 
 def _library_root_for(
@@ -450,6 +460,82 @@ def build_app() -> FastAPI:
             full,
             media_type=mimetypes.guess_type(str(full))[0]
             or 'application/octet-stream',
+        )
+
+    @app.post('/api/library/archive')
+    async def prepare_library_archive(
+        files: list[str] = Body(..., embed=True),
+    ) -> dict:
+        """Prepare a ZIP of several library tracks for download.
+
+        Powers the Library page's "Download selected": saving a
+        multi-track selection to the machine in front of the user used
+        to be one click per track. Returns a single-use ticket the
+        browser then navigates to - the file list is too long for a URL,
+        and a fetch would have to hold the whole archive in memory.
+        """
+
+        if not files:
+            raise HTTPException(status_code=400, detail='No files selected')
+        if len(files) > MAX_ARCHIVE_FILES:
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f'Cannot archive more than {MAX_ARCHIVE_FILES} files '
+                    'in one request'
+                ),
+            )
+
+        ctx = api.library_context()
+
+        def _resolve() -> list[tuple[str, Path]]:
+            entries: list[tuple[str, Path]] = []
+            seen: set[str] = set()
+            for raw in files:
+                name = str(raw or '').strip().replace('\\', '/')
+                if not name or name in seen:
+                    continue
+                seen.add(name)
+                # Resolved and confined to the library roots, which
+                # prevents path traversal.
+                full = resolve_library_file(name, ctx)
+                if full is not None:
+                    entries.append((name, full))
+            return entries
+
+        entries = await asyncio.to_thread(_resolve)
+        if not entries:
+            raise HTTPException(status_code=404, detail='No files found')
+        token = _ARCHIVE_TICKETS.create(entries)
+        logger.info(
+            'Library archive: prepared {} of {} requested file(s)',
+            len(entries),
+            len(files),
+        )
+        return {
+            'token': token,
+            'count': len(entries),
+            'filename': archive_filename(),
+        }
+
+    @app.get('/api/library/archive/{token}')
+    def download_library_archive(token: str) -> StreamingResponse:
+        """Stream a prepared selection as one ZIP (single use)."""
+
+        entries = _ARCHIVE_TICKETS.pop(token)
+        if entries is None:
+            raise HTTPException(
+                status_code=404, detail='Archive expired or already downloaded'
+            )
+        name = archive_filename()
+        return StreamingResponse(
+            stream_library_zip(entries),
+            media_type='application/zip',
+            headers={
+                'Content-Disposition': f'attachment; filename="{name}"',
+                # Built on the fly: no length up front, never cached.
+                'Cache-Control': 'no-store',
+            },
         )
 
     @app.delete('/delete')

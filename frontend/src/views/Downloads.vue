@@ -189,8 +189,22 @@
           </span>
           <button
             type="button"
+            class="btn btn-sm h-9 px-4 rounded-full border-white/10 bg-base-100/85 hover:bg-base-100"
+            :disabled="bulkDeleting || archiving"
+            @click="onDownloadSelected"
+            :title="t('library.downloadSelectedHint')"
+          >
+            <span
+              v-if="archiving"
+              class="loading loading-spinner loading-xs mr-1.5"
+            />
+            <Icon v-else icon="fa6-solid:file-zipper" class="h-4 w-4 mr-1.5" />
+            {{ t('library.downloadSelected') }}
+          </button>
+          <button
+            type="button"
             class="btn btn-sm h-9 px-4 rounded-full border-error/30 bg-error/10 text-error hover:bg-error/20"
-            :disabled="bulkDeleting"
+            :disabled="bulkDeleting || archiving"
             @click="onBulkDelete"
           >
             <span
@@ -348,6 +362,7 @@ const coverFailed = ref({})
 const currentPage = ref(1)
 const selectedFiles = ref(new Set())
 const bulkDeleting = ref(false)
+const archiving = ref(false)
 const playlistDeleting = ref(false)
 
 const artistGroups = computed(() => buildGroups(tracks.value, 'artist'))
@@ -446,6 +461,33 @@ async function onDelete(file) {
     error.value = t('library.failedDelete', { file })
   } finally {
     deleting.value = { ...deleting.value, [file]: false }
+  }
+}
+
+// One ZIP for the whole selection: the per-track download icon means a
+// click per file, which is unusable for a library on a home server.
+async function onDownloadSelected() {
+  const targets = Array.from(selectedFiles.value)
+  if (!targets.length) return
+  archiving.value = true
+  error.value = ''
+  try {
+    const res = await API.prepareLibraryArchive(targets)
+    const token = res.data?.token
+    if (!token) {
+      error.value = t('library.downloadSelectedFailed')
+      return
+    }
+    // Navigation (not fetch) so the browser streams it straight to disk.
+    window.location.assign(API.libraryArchiveURL(token))
+  } catch (err) {
+    const detail = err?.response?.data?.detail
+    error.value =
+      typeof detail === 'string' && detail
+        ? detail
+        : t('library.downloadSelectedFailed')
+  } finally {
+    archiving.value = false
   }
 }
 

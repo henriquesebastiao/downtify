@@ -165,6 +165,17 @@ function deleteDownloadsBatch(files) {
   return API.delete('/delete/batch', { data: { files } })
 }
 
+// Two steps: the selection is POSTed (too long for a URL), then the
+// browser navigates to the ticket so the ZIP lands in its downloads
+// folder instead of being buffered in memory by fetch.
+function prepareLibraryArchive(files) {
+  return API.post('/api/library/archive', { files })
+}
+
+function libraryArchiveURL(token) {
+  return `/api/library/archive/${encodeURIComponent(token)}`
+}
+
 function deleteLibraryPlaylist(playlistName) {
   return API.delete('/api/library/playlist', {
     params: { playlist_name: playlistName },
@@ -248,6 +259,8 @@ export default {
   deleteDownload,
   deleteDownloadsBatch,
   deleteLibraryPlaylist,
+  prepareLibraryArchive,
+  libraryArchiveURL,
   reconcileLibrary,
   writePlaylistM3u,
   getQueue,

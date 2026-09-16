@@ -103,6 +103,10 @@ export default {
     selectedCount: '{count} επιλεγμένα',
     selectFile: 'Επιλογή {file}',
     deleteSelected: 'Διαγραφή επιλεγμένων',
+    downloadSelected: 'Λήψη επιλεγμένων',
+    downloadSelectedHint:
+      'Αποθηκεύει τα επιλεγμένα κομμάτια σε αυτή τη συσκευή ως ένα αρχείο ZIP, διατηρώντας τους φακέλους τους.',
+    downloadSelectedFailed: 'Δεν ήταν δυνατή η προετοιμασία της λήψης.',
     clearSelection: 'Καθαρισμός επιλογής',
     bulkDeletePrompt: 'Διαγραφή {count} επιλεγμένων αρχείων;',
     bulkDeleteFailed: 'Αποτυχία διαγραφής των επιλεγμένων αρχείων.',
