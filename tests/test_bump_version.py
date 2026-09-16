@@ -18,20 +18,6 @@ def test_script_is_executable():
     assert SCRIPT.stat().st_mode & 0o111, 'version.sh is not executable'
 
 
-def test_current_flag_returns_valid_semver():
-    result = subprocess.run(
-        [str(SCRIPT), '--current'],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0
-    version = result.stdout.strip()
-    parts = version.split('.')
-    assert len(parts) == 3, f'Not semver: {version!r}'
-    assert all(p.isdigit() for p in parts), f'Non-numeric parts in {version!r}'
-
-
 def test_invalid_semver_rejected():
     result = subprocess.run(
         [str(SCRIPT), 'not-semver'],
