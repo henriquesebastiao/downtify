@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.13.0-rc.1](https://github.com/henriquesebastiao/downtify/tree/2.13.0-rc.1) (2026-09-16)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.12.0...2.13.0-rc.1)
+
+**Implemented enhancements:**
+
+- 'Download All' button on Library page [\#344](https://github.com/henriquesebastiao/downtify/issues/344)
+- connect slskd to Downtify [\#174](https://github.com/henriquesebastiao/downtify/issues/174)
+
+**Fixed bugs:**
+
+- M4A/Quality Issue [\#281](https://github.com/henriquesebastiao/downtify/issues/281)
+- Year tag not written: enrich\_from\_match discards the album year that get\_album already returns [\#235](https://github.com/henriquesebastiao/downtify/issues/235)
+
+**Merged pull requests:**
+
+- feat\(library\): download selected tracks as one ZIP [\#345](https://github.com/henriquesebastiao/downtify/pull/345) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Replace deno with nodejs runtime; migrate FastAPI startup to lifespan handler [\#343](https://github.com/henriquesebastiao/downtify/pull/343) ([betterix](https://github.com/betterix))
+- perf: parallelize downloads, metadata lookups, Spotify paging and library tag reads [\#342](https://github.com/henriquesebastiao/downtify/pull/342) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(download\): honor the chosen bitrate for M4A/OPUS, fix OGG conversion crash [\#341](https://github.com/henriquesebastiao/downtify/pull/341) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(player\): hide the volume slider on mobile, keep audio at full volume [\#340](https://github.com/henriquesebastiao/downtify/pull/340) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Backfill track year from the resolved YT Music album [\#339](https://github.com/henriquesebastiao/downtify/pull/339) ([jusseppe88](https://github.com/jusseppe88))
+- Add slskd provider, Navidrome playlist sync, library paths, and queue UX [\#182](https://github.com/henriquesebastiao/downtify/pull/182) ([dx616b](https://github.com/dx616b))
+
 ## [2.12.0](https://github.com/henriquesebastiao/downtify/tree/2.12.0) (2026-09-13)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.11.0...2.12.0)
@@ -70,8 +94,6 @@
 
 **Closed issues:**
 
-- Possible fix\(deps\): yt-dlp 2026.6.9 → 2026.7.4 \(CVE-2026-55404\) in requirements.txt [\#292](https://github.com/henriquesebastiao/downtify/issues/292)
-- Possible fix\(deps\): uuid 9.0.1 → 11.1.1, 12.0.1, 13.0.1 \(CVE-2026-41907\) in package-lock.json [\#291](https://github.com/henriquesebastiao/downtify/issues/291)
 - Security: request to enable private vulnerability reporting [\#276](https://github.com/henriquesebastiao/downtify/issues/276)
 
 **Merged pull requests:**
@@ -91,7 +113,6 @@
 - feat: Add Artist Watch to the Playlist Monitor [\#301](https://github.com/henriquesebastiao/downtify/pull/301) ([henriquesebastiao](https://github.com/henriquesebastiao))
 - feat: Add {tracknumber} filename template token [\#300](https://github.com/henriquesebastiao/downtify/pull/300) ([henriquesebastiao](https://github.com/henriquesebastiao))
 - Feature/incremental m3u monitor [\#299](https://github.com/henriquesebastiao/downtify/pull/299) ([henriquesebastiao](https://github.com/henriquesebastiao))
-- Fix possible fix\(deps\): yt-dlp 2026.6.9 → 2026.7.4 \(CVE-2026-55404\) in requirements.txt [\#298](https://github.com/henriquesebastiao/downtify/pull/298) ([begininvoke](https://github.com/begininvoke))
 - Add CSV library import \(Soundiiz, TuneMyMusic, Exportify\) [\#297](https://github.com/henriquesebastiao/downtify/pull/297) ([henriquesebastiao](https://github.com/henriquesebastiao))
 - Add configurable delay between song downloads [\#296](https://github.com/henriquesebastiao/downtify/pull/296) ([henriquesebastiao](https://github.com/henriquesebastiao))
 - feat: Add DOWNTIFY\_MONITOR\_SYNC\_TIME to anchor daily+ playlist syncs [\#295](https://github.com/henriquesebastiao/downtify/pull/295) ([henriquesebastiao](https://github.com/henriquesebastiao))
