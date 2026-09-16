@@ -48,6 +48,18 @@ function localeData(code) {
   )
 }
 
+const PLURAL_FORMS = ['zero', 'one', 'two', 'few', 'many', 'other']
+
+/** `{ one: '…', other: '…' }` — a message with plural forms. */
+function isPlural(value) {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    typeof value.other === 'string' &&
+    Object.keys(value).every((form) => PLURAL_FORMS.includes(form))
+  )
+}
+
 function lookup(messages, key) {
   if (!messages) return undefined
   const parts = key.split('.')
@@ -56,25 +68,42 @@ function lookup(messages, key) {
     if (cur == null || typeof cur !== 'object') return undefined
     cur = cur[p]
   }
-  return typeof cur === 'string' ? cur : undefined
+  return typeof cur === 'string' || isPlural(cur) ? cur : undefined
 }
 
-function format(template, params) {
+const numberFormats = new Map()
+const pluralRules = new Map()
+
+function cached(map, code, make) {
+  if (!map.has(code)) map.set(code, make(code))
+  return map.get(code)
+}
+
+function format(template, params, code) {
   if (!params) return template
-  return template.replace(/\{(\w+)\}/g, (_, name) =>
-    params[name] !== undefined && params[name] !== null
-      ? String(params[name])
-      : `{${name}}`
-  )
+  const numbers = cached(numberFormats, code, (c) => new Intl.NumberFormat(c))
+  return template.replace(/\{(\w+)\}/g, (_, name) => {
+    const value = params[name]
+    if (value === undefined || value === null) return `{${name}}`
+    return typeof value === 'number' ? numbers.format(value) : String(value)
+  })
 }
 
 export function t(key, params) {
   const code = currentLocale.value
   let msg = lookup(localeData(code).messages, key)
+  let msgCode = code
   if (msg === undefined && code !== DEFAULT_LOCALE) {
     msg = lookup(localeData(DEFAULT_LOCALE).messages, key)
+    msgCode = DEFAULT_LOCALE
   }
-  return format(msg !== undefined ? msg : key, params)
+  if (msg === undefined) return key
+  if (isPlural(msg)) {
+    const rules = cached(pluralRules, msgCode, (c) => new Intl.PluralRules(c))
+    const count = Number(params?.count ?? 0)
+    msg = msg[rules.select(count)] ?? msg.other
+  }
+  return format(msg, params, code)
 }
 
 export function setLocale(code) {

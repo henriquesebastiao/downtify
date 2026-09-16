@@ -1,48 +1,92 @@
-// small file used as placeholder/settings for API calls via axios to server-side
-import axios from 'axios' // used to connect to server backend in ./server folder
+// HTTP + WebSocket client for the Downtify backend.
+import axios from 'axios'
 import config from '/src/config.js'
 
 import { v4 as uuidv4 } from 'uuid'
 
-console.log('using env:', process.env)
-console.log('using config: ', config)
+import { coverURL, fileURL, saveName } from '/src/lib/paths'
 
 const API = axios.create({
   baseURL: `${config.PROTOCOL}//${config.BACKEND}:${config.PORT}${config.BASEURL}`,
 })
 
 const sessionID = uuidv4()
-console.log('session ID: ', sessionID)
 
 getVersion()
 
-const wsConnection = new WebSocket(
-  `${config.WS_PROTOCOL}//${config.BACKEND}${
-    config.PORT !== '' ? ':' + config.PORT : ''
-  }${config.BASEURL}/api/ws?client_id=${sessionID}`
-)
+// ── WebSocket: progress events, reconnecting with backoff ────────────
+const listeners = new Set()
+const errorListeners = new Set()
+let socket = null
+let retryDelay = 1000
 
-wsConnection.onopen = (event) => {
-  console.log('websocket connection opened', event)
+function socketURL() {
+  const port = config.PORT !== '' ? `:${config.PORT}` : ''
+  return `${config.WS_PROTOCOL}//${config.BACKEND}${port}${config.BASEURL}/api/ws?client_id=${sessionID}`
+}
+
+function connect() {
+  if (typeof WebSocket === 'undefined') return
+  socket = new WebSocket(socketURL())
+  socket.onopen = () => {
+    retryDelay = 1000
+  }
+  socket.onmessage = (event) => {
+    let data
+    try {
+      data = JSON.parse(event.data)
+    } catch {
+      return
+    }
+    for (const fn of listeners) fn(data, event)
+  }
+  socket.onerror = (event) => {
+    for (const fn of errorListeners) fn(event)
+  }
+  socket.onclose = () => {
+    // A restarted backend (container update) comes back on its own.
+    setTimeout(connect, retryDelay)
+    retryDelay = Math.min(retryDelay * 2, 30000)
+  }
+}
+
+connect()
+
+/** Subscribe to progress events; returns an unsubscribe function. */
+function onMessage(fn) {
+  listeners.add(fn)
+  return () => listeners.delete(fn)
+}
+
+function ws_onmessage(fn) {
+  return onMessage((data, event) =>
+    fn({ ...event, data: JSON.stringify(data) })
+  )
+}
+
+function ws_onerror(fn) {
+  errorListeners.add(fn)
+  return () => errorListeners.delete(fn)
 }
 
 function getVersion() {
-  API.get('/api/version')
+  return API.get('/api/version')
     .then((res) => {
       const prevItem = localStorage.getItem('version')
-      console.log('Backend version: ', res.data)
       localStorage.setItem('version', res.data)
-      if (prevItem != res.data) {
+      if (prevItem && prevItem !== res.data) {
+        // A new backend ships a new SPA build.
         location.reload()
       }
+      return res.data
     })
-    .catch((error) => {
-      console.error(error)
-      console.log('Error getting version, using 0')
+    .catch(() => {
       localStorage.setItem('version', '0.0.0')
+      return '0.0.0'
     })
 }
 
+// ── Search & resolve ─────────────────────────────────────────────────
 function search(query) {
   return API.get('/api/songs/search', { params: { query } })
 }
@@ -51,10 +95,19 @@ function searchAlbums(query) {
   return API.get('/api/albums/search', { params: { query } })
 }
 
+function searchArtists(query) {
+  return API.get('/api/artists/search', { params: { query } })
+}
+
 function open(songURL) {
   return API.get('/api/song/url', { params: { url: songURL } })
 }
 
+function resolveUrl(url) {
+  return API.get('/api/url/resolve', { params: { url } })
+}
+
+// ── Downloads ────────────────────────────────────────────────────────
 function download(songURL) {
   const url = typeof songURL === 'string' ? songURL : songURL.url
   const hints = typeof songURL === 'string' ? undefined : songURL
@@ -67,10 +120,15 @@ function downloadBatch(payload) {
   return API.post('/api/download/batch', payload)
 }
 
+function downloadAlbum(url) {
+  return API.post('/api/download/album', null, { params: { url } })
+}
+
 function downloadCsv(payload) {
   return API.post('/api/download/csv', payload)
 }
 
+// ── Playlist download tracking ───────────────────────────────────────
 function getIncompletePlaylists() {
   return API.get('/api/playlists/incomplete')
 }
@@ -100,49 +158,7 @@ function check_for_update() {
   return API.get('/api/check_update')
 }
 
-function encodePath(fileName) {
-  // Encode each path segment individually so '/' separators survive —
-  // playlist downloads land under '<playlist>/<song>.mp3' and we need
-  // the URL to hit '/downloads/<playlist>/<song>.mp3' literally.
-  return String(fileName || '')
-    .split('/')
-    .map(encodeURIComponent)
-    .join('/')
-}
-
-// slskd downloads left in place live outside the downloads folder, so the
-// '/downloads' static mount can't serve them; '/media' resolves both.
-const SLSKD_LIBRARY_PREFIX = 'slskd/'
-
-function downloadFileURL(fileName) {
-  const path = String(fileName || '')
-  if (path.startsWith(SLSKD_LIBRARY_PREFIX)) {
-    return `/media/${encodePath(path)}`
-  }
-  return `/downloads/${encodePath(path)}`
-}
-
-function decodePathSegment(segment) {
-  try {
-    return decodeURIComponent(segment)
-  } catch {
-    return segment
-  }
-}
-
-/** Filename for the browser save dialog (decoded, no %20 etc.). */
-function downloadSaveName(fileNameOrURL) {
-  const parts = String(fileNameOrURL || '')
-    .split('/')
-    .filter(Boolean)
-  const last = parts[parts.length - 1]
-  return last ? decodePathSegment(last) : 'download'
-}
-
-function coverFileURL(fileName) {
-  return `/cover?file=${encodeURIComponent(fileName)}`
-}
-
+// ── Library ──────────────────────────────────────────────────────────
 function listDownloads(forceRefresh = false) {
   return API.get('/list', {
     params: forceRefresh ? { refresh: true } : {},
@@ -155,6 +171,10 @@ function listPlaylists() {
 
 function listTracks() {
   return API.get('/tracks')
+}
+
+function getLyrics(file) {
+  return API.get('/lyrics', { params: { file } })
 }
 
 function deleteDownload(file) {
@@ -190,6 +210,7 @@ function writePlaylistM3u(payload) {
   return API.post('/api/playlist/m3u', payload)
 }
 
+// ── Queue ────────────────────────────────────────────────────────────
 function getQueue() {
   return API.get('/api/queue')
 }
@@ -206,6 +227,7 @@ function clearCompletedQueue() {
   return API.delete('/api/queue/completed')
 }
 
+// ── Settings ─────────────────────────────────────────────────────────
 function getCookiesStatus() {
   return API.get('/api/cookies')
 }
@@ -225,37 +247,35 @@ function deleteCookies() {
 function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
+
 function setSettings(settings) {
   return API.post('/api/settings/update', settings, {
     params: { client_id: sessionID },
   })
 }
 
-function ws_onmessage(fn) {
-  return (wsConnection.onmessage = fn)
-}
-function ws_onerror(fn) {
-  return (wsConnection.onerror = fn)
-}
-
 export default {
   search,
   searchAlbums,
+  searchArtists,
   open,
+  resolveUrl,
   download,
   downloadBatch,
+  downloadAlbum,
   downloadCsv,
   getIncompletePlaylists,
   getPlaylistBatches,
   getPlaylistBatchDetails,
   downloadMissingPlaylistTracks,
   deletePlaylistBatch,
-  downloadFileURL,
-  downloadSaveName,
-  coverFileURL,
+  downloadFileURL: fileURL,
+  downloadSaveName: saveName,
+  coverFileURL: coverURL,
   listDownloads,
   listPlaylists,
   listTracks,
+  getLyrics,
   deleteDownload,
   deleteDownloadsBatch,
   deleteLibraryPlaylist,
@@ -273,6 +293,7 @@ export default {
   uploadCookies,
   deleteCookies,
   check_for_update,
+  onMessage,
   ws_onmessage,
   ws_onerror,
   getVersion,

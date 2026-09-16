@@ -18,6 +18,26 @@ from .sqlite_utils import connect_sqlite
 
 _TAG_READ_THREADS = 8
 
+#: Bumped whenever a row gains fields read from the file's tags: rows
+#: cached by an older version are treated as stale and re-read once.
+META_VERSION = 2
+
+#: Columns added after the table was first created, with their SQL type.
+_ADDED_COLUMNS = {
+    'has_cover': 'INTEGER NOT NULL DEFAULT 0',
+    'album_artist': "TEXT NOT NULL DEFAULT ''",
+    'track_number': 'INTEGER NOT NULL DEFAULT 0',
+    'year': "TEXT NOT NULL DEFAULT ''",
+    'duration': 'REAL NOT NULL DEFAULT 0',
+    'meta_version': 'INTEGER NOT NULL DEFAULT 1',
+}
+
+_ROW_COLUMNS = (
+    'content_key, filename, file_mtime_ns, file_size, title, artist, '
+    'album, has_cover, album_artist, track_number, year, duration, '
+    'meta_version'
+)
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -37,6 +57,26 @@ def _chunked(values: list[str], size: int):
         chunk = values[index : index + size]
         if chunk:
             yield chunk
+
+
+def _row_entry(
+    stored: str, row: sqlite3.Row, item: dict[str, Any]
+) -> dict[str, Any]:
+    """A ``/tracks`` row from a fresh cache row plus the file's stat."""
+
+    return {
+        'file': stored,
+        'title': str(row['title'] or ''),
+        'artist': str(row['artist'] or ''),
+        'album': str(row['album'] or ''),
+        'album_artist': str(row['album_artist'] or ''),
+        'track_number': int(row['track_number'] or 0),
+        'year': str(row['year'] or ''),
+        'duration': float(row['duration'] or 0.0),
+        'has_cover': bool(int(row['has_cover'] or 0)),
+        'added': int(item['mtime_ns']) // 1_000_000_000,
+        'size': int(item['size']),
+    }
 
 
 class LibraryMetadataCache:
@@ -63,6 +103,11 @@ class LibraryMetadataCache:
                         artist TEXT NOT NULL DEFAULT '',
                         album TEXT NOT NULL DEFAULT '',
                         has_cover INTEGER NOT NULL DEFAULT 0,
+                        album_artist TEXT NOT NULL DEFAULT '',
+                        track_number INTEGER NOT NULL DEFAULT 0,
+                        year TEXT NOT NULL DEFAULT '',
+                        duration REAL NOT NULL DEFAULT 0,
+                        meta_version INTEGER NOT NULL DEFAULT 1,
                         file_mtime_ns INTEGER NOT NULL,
                         file_size INTEGER NOT NULL,
                         cached_at TEXT NOT NULL
@@ -73,22 +118,21 @@ class LibraryMetadataCache:
                     ON library_metadata (filename)
                 """)
                 return
-            if row[0] and 'content_key' in str(row[0]):
-                self._ensure_has_cover_column(conn)
-                return
-            self._migrate_legacy_table(conn)
+            if not (row[0] and 'content_key' in str(row[0])):
+                self._migrate_legacy_table(conn)
+            self._ensure_columns(conn)
 
     @staticmethod
-    def _ensure_has_cover_column(conn: sqlite3.Connection) -> None:
+    def _ensure_columns(conn: sqlite3.Connection) -> None:
         cols = {
             str(r[1])
             for r in conn.execute('PRAGMA table_info(library_metadata)')
         }
-        if 'has_cover' in cols:
-            return
-        conn.execute(
-            'ALTER TABLE library_metadata ADD COLUMN has_cover INTEGER NOT NULL DEFAULT 0'
-        )
+        for name, sql_type in _ADDED_COLUMNS.items():
+            if name not in cols:
+                conn.execute(
+                    f'ALTER TABLE library_metadata ADD COLUMN {name} {sql_type}'
+                )
 
     @staticmethod
     def _migrate_legacy_table(conn: sqlite3.Connection) -> None:
@@ -136,7 +180,7 @@ class LibraryMetadataCache:
             ON library_metadata (filename)
         """)
 
-    def get_entry(self, stored_path: str, full_path: Path) -> dict[str, str]:
+    def get_entry(self, stored_path: str, full_path: Path) -> dict[str, Any]:
         """Return a ``/list`` row, reading tags only when cache is missing or stale."""
 
         rows = self.get_entries_batch([(stored_path, full_path)])
@@ -146,8 +190,8 @@ class LibraryMetadataCache:
 
     def get_entries_batch(
         self, items: list[tuple[str, Path]]
-    ) -> list[dict[str, str]]:
-        """Resolve many ``/list`` rows with one DB connection and batched lookups."""
+    ) -> list[dict[str, Any]]:
+        """Resolve many ``/tracks`` rows with one DB connection and batched lookups."""
 
         if not items:
             return []
@@ -192,22 +236,20 @@ class LibraryMetadataCache:
         with self._connect() as conn:
             for chunk in _chunked(content_keys, 400):
                 placeholders = ','.join('?' * len(chunk))
-                query = f"""SELECT content_key, filename, file_mtime_ns, file_size,
-                            title, artist, album, has_cover
+                query = f"""SELECT {_ROW_COLUMNS}
                             FROM library_metadata
                             WHERE content_key IN ({placeholders})"""
                 for row in conn.execute(query, chunk):
                     by_ck[str(row['content_key'])] = row
             for chunk in _chunked(filenames, 400):
                 placeholders = ','.join('?' * len(chunk))
-                query = f"""SELECT content_key, filename, file_mtime_ns, file_size,
-                            title, artist, album, has_cover
+                query = f"""SELECT {_ROW_COLUMNS}
                             FROM library_metadata
                             WHERE filename IN ({placeholders})"""
                 for row in conn.execute(query, chunk):
                     by_name[_norm_filename(str(row['filename']))] = row
 
-        results: list[Optional[dict[str, str]]] = []
+        results: list[Optional[dict[str, Any]]] = []
         filename_updates: list[tuple[str, str]] = []
         misses: list[tuple[int, dict[str, Any]]] = []
 
@@ -227,16 +269,11 @@ class LibraryMetadataCache:
                 row is not None
                 and int(row['file_mtime_ns']) == int(item['mtime_ns'])
                 and int(row['file_size']) == int(item['size'])
+                and int(row['meta_version'] or 1) >= META_VERSION
             ):
                 if _norm_filename(str(row['filename'])) != name and ck:
                     filename_updates.append((name, str(ck)))
-                results.append({
-                    'file': stored,
-                    'title': str(row['title'] or ''),
-                    'artist': str(row['artist'] or ''),
-                    'album': str(row['album'] or ''),
-                    'has_cover': bool(int(row['has_cover'] or 0)),
-                })
+                results.append(_row_entry(stored, row, item))
                 continue
             misses.append((len(results), item))
             results.append(None)
@@ -258,7 +295,7 @@ class LibraryMetadataCache:
             )
 
         pending_stores: list[
-            tuple[str, Optional[str], dict[str, str], int, int]
+            tuple[str, Optional[str], dict[str, Any], int, int]
         ] = []
         for (index, item), entry in zip(misses, read):
             results[index] = entry
@@ -290,7 +327,7 @@ class LibraryMetadataCache:
 
     def refresh(
         self, stored_path: str, full_path: Path
-    ) -> Optional[dict[str, str]]:
+    ) -> Optional[dict[str, Any]]:
         """Re-read tags from disk and update the cache (e.g. after download)."""
 
         name = _norm_filename(stored_path)
@@ -411,7 +448,7 @@ class LibraryMetadataCache:
         conn: sqlite3.Connection,
         filename: str,
         content_key: Optional[str],
-        entry: dict[str, str],
+        entry: dict[str, Any],
         mtime_ns: int,
         file_size: int,
     ) -> None:
@@ -421,14 +458,20 @@ class LibraryMetadataCache:
         conn.execute(
             """INSERT INTO library_metadata
                (content_key, filename, title, artist, album, has_cover,
+                album_artist, track_number, year, duration, meta_version,
                 file_mtime_ns, file_size, cached_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(content_key) DO UPDATE SET
                filename=excluded.filename,
                title=excluded.title,
                artist=excluded.artist,
                album=excluded.album,
                has_cover=excluded.has_cover,
+               album_artist=excluded.album_artist,
+               track_number=excluded.track_number,
+               year=excluded.year,
+               duration=excluded.duration,
+               meta_version=excluded.meta_version,
                file_mtime_ns=excluded.file_mtime_ns,
                file_size=excluded.file_size,
                cached_at=excluded.cached_at""",
@@ -439,6 +482,11 @@ class LibraryMetadataCache:
                 str(entry.get('artist') or ''),
                 str(entry.get('album') or ''),
                 1 if entry.get('has_cover') else 0,
+                str(entry.get('album_artist') or ''),
+                int(entry.get('track_number') or 0),
+                str(entry.get('year') or ''),
+                float(entry.get('duration') or 0.0),
+                META_VERSION,
                 mtime_ns,
                 file_size,
                 _now_iso(),
@@ -449,7 +497,7 @@ class LibraryMetadataCache:
         self,
         filename: str,
         full_path: Path,
-        entry: dict[str, str],
+        entry: dict[str, Any],
         mtime_ns: int,
         file_size: int,
     ) -> None:

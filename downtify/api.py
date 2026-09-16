@@ -26,6 +26,9 @@ working without changes:
   ``/api/albums/search`` - no tracklists; resolve a chosen release's
   tracks separately). A YouTube Music playlist URL resolves to its
   tracks, like a Spotify playlist.
+* ``GET  /api/url/resolve`` (the same links, always as
+  ``{kind, name, subtitle, cover_url, year, tracks, albums}`` - adds the
+  playlist/album name and cover the plain track list lacks)
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
   ``track_number`` / ``album_track_total`` survive re-fetch by URL)
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
@@ -934,6 +937,112 @@ def _resolve_url(url: str):
         )
 
     raise HTTPException(status_code=400, detail='Invalid URL')
+
+
+def _artists_label(song: dict[str, Any]) -> str:
+    artists = song.get('artists') or []
+    if isinstance(artists, list) and artists:
+        return ', '.join(str(a) for a in artists if a)
+    return str(song.get('artist') or '')
+
+
+def _collection_details(
+    kind: str, tracks: list[dict[str, Any]], name: str = ''
+) -> dict[str, Any]:
+    first = tracks[0] if tracks else {}
+    is_album = kind == 'album'
+    return {
+        'kind': kind,
+        'name': name or str(first.get('album_name') or ''),
+        'subtitle': _artists_label(first) if is_album else '',
+        # A playlist has no single cover in the track rows; the client
+        # builds a mosaic from the tracks' own covers instead.
+        'cover_url': str(first.get('cover_url') or '') if is_album else '',
+        'year': str(first.get('year') or '') if is_album else '',
+        'tracks': tracks,
+        'albums': [],
+    }
+
+
+def _track_details(song: dict[str, Any]) -> dict[str, Any]:
+    return {
+        'kind': 'track',
+        'name': str(song.get('name') or ''),
+        'subtitle': _artists_label(song),
+        'cover_url': str(song.get('cover_url') or ''),
+        'year': str(song.get('year') or ''),
+        'tracks': [song],
+        'albums': [],
+    }
+
+
+def _spotify_details(kind: str, sid: str) -> dict[str, Any]:
+    if kind == 'track':
+        return _track_details(spotify.track_from_id(sid))
+    if kind == 'album':
+        return _collection_details('album', spotify.album_tracks_from_id(sid))
+    if kind == 'playlist':
+        name, tracks = spotify.playlist_info_and_tracks(sid)
+        return _collection_details('playlist', tracks, name)
+    raise HTTPException(
+        status_code=400, detail=f'Unsupported entity type: {kind}'
+    )
+
+
+def _youtube_details(kind: str, yid: str) -> dict[str, Any]:
+    if kind == 'track':
+        return _track_details(providers.song_from_video_id(yid))
+    if kind == 'album':
+        return _collection_details(
+            'album', providers.album_tracks_from_browse_id(yid)
+        )
+    if kind == 'playlist':
+        name, tracks = providers.playlist_info_and_tracks_from_id(yid)
+        return _collection_details('playlist', tracks, name)
+    if kind == 'artist':
+        channel_id = providers.resolve_artist_channel_id(yid)
+        info = providers.artist_info_from_channel_id(channel_id)
+        return {
+            'kind': 'artist',
+            'name': str(info.get('name') or ''),
+            'subtitle': str(info.get('description') or ''),
+            'cover_url': str(info.get('cover_url') or ''),
+            'year': '',
+            'tracks': [],
+            'albums': providers.artist_albums_from_channel_id(channel_id),
+        }
+    raise HTTPException(
+        status_code=400, detail=f'Unsupported entity type: {kind}'
+    )
+
+
+@router.get('/api/url/resolve')
+def url_resolve_endpoint(url: str = Query(...)) -> dict[str, Any]:
+    """What a pasted link points at, with its tracks (or releases).
+
+    Same inputs as ``/api/song/url``, but always an object:
+    ``{kind, name, subtitle, cover_url, year, tracks, albums}`` -
+    ``kind`` is ``track``, ``album``, ``playlist`` or ``artist``; an
+    artist fills ``albums`` (release summaries) instead of ``tracks``.
+    """
+
+    spotify_parsed = spotify.parse_spotify_url(url)
+    youtube_parsed = (
+        None if spotify_parsed else providers.parse_youtube_url(url)
+    )
+    if spotify_parsed is None and youtube_parsed is None:
+        raise HTTPException(status_code=400, detail='Invalid URL')
+    try:
+        if spotify_parsed is not None:
+            return _spotify_details(*spotify_parsed)
+        return _youtube_details(*youtube_parsed)
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception('Failed to resolve URL {}', url)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 def _merge_client_track_hints(

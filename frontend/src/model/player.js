@@ -1,17 +1,21 @@
-import { ref, computed } from 'vue'
+// The built-in player: one <audio> element shared by the mini player and
+// the Now playing view, with its queue, shuffle/repeat, sleep timer and
+// OS media controls (Media Session).
+import { ref, computed, watch } from 'vue'
+
+import { normalizeTrack } from '/src/lib/library'
 
 const VOLUME_KEY = 'downtify-player-volume'
+const SESSION_KEY = 'downtify-player-session'
+// Queues past this size aren't persisted across reloads (localStorage
+// quota); the player still works, it just starts empty next time.
+const MAX_PERSISTED_TRACKS = 2000
 
-const playlist = ref([])
-const currentIndex = ref(-1)
-const isPlaying = ref(false)
-const currentTime = ref(0)
-const duration = ref(0)
-// Matches the `sm` breakpoint the mobile-only volume-UI hiding uses
-// (Player.vue, MiniPlayer.vue). Phones control the actual output level
-// with their hardware volume buttons, which scale whatever this element
-// outputs — so the element itself is kept at full volume there instead
-// of applying the desktop-saved level on top of the hardware one.
+// Matches the `sm` breakpoint the mobile-only volume-UI hiding uses.
+// Phones control the actual output level with their hardware volume
+// buttons, which scale whatever this element outputs — so the element
+// itself is kept at full volume there instead of applying the
+// desktop-saved level on top of the hardware one.
 const MOBILE_VOLUME_BREAKPOINT_PX = 640
 
 function isMobileViewport() {
@@ -21,18 +25,41 @@ function isMobileViewport() {
   )
 }
 
+function storage() {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage : null
+  } catch {
+    return null
+  }
+}
+
+const playlist = ref([])
+const currentIndex = ref(-1)
+const isPlaying = ref(false)
+const isBuffering = ref(false)
+const currentTime = ref(0)
+const duration = ref(0)
 const volume = ref(
-  isMobileViewport()
-    ? 1
-    : parseFloat(localStorage.getItem(VOLUME_KEY) || '0.85')
+  isMobileViewport() ? 1 : parseFloat(storage()?.getItem(VOLUME_KEY) || '0.85')
 )
 const isMuted = ref(false)
 const repeatMode = ref('off') // 'off' | 'all' | 'one'
 const shuffle = ref(false)
+// Where the queue came from: { type: 'album'|'playlist'|'artist'|
+// 'library'|'search', title, route } — shown as "Playing from".
+const context = ref(null)
+// Sleep timer: epoch ms to stop at, or 'track' to stop after this one.
+const sleepAt = ref(null)
+const playError = ref('')
+
+// shuffleOrder is a plain array; this makes `upcoming` notice changes.
+const shuffleVersion = ref(0)
 
 let audio = null
 let shuffleOrder = []
 let shufflePos = 0
+let sleepTimer = null
+let restoreTime = 0
 
 function ensureAudio() {
   if (audio) return audio
@@ -44,6 +71,10 @@ function ensureAudio() {
   })
   audio.addEventListener('loadedmetadata', () => {
     duration.value = isFinite(audio.duration) ? audio.duration : 0
+    if (restoreTime) {
+      audio.currentTime = Math.min(restoreTime, duration.value || 0)
+      restoreTime = 0
+    }
   })
   audio.addEventListener('durationchange', () => {
     duration.value = isFinite(audio.duration) ? audio.duration : 0
@@ -55,60 +86,40 @@ function ensureAudio() {
   audio.addEventListener('pause', () => {
     isPlaying.value = false
   })
+  audio.addEventListener('waiting', () => {
+    isBuffering.value = true
+  })
+  audio.addEventListener('playing', () => {
+    isBuffering.value = false
+    playError.value = ''
+  })
+  audio.addEventListener('error', () => {
+    isBuffering.value = false
+    playError.value = 'unplayable'
+  })
   return audio
 }
 
-// slskd downloads left in place live outside the downloads folder
-// ('slskd/...' library paths); only '/media' can serve those.
-const SLSKD_LIBRARY_PREFIX = 'slskd/'
-
-function fileUrl(file) {
-  if (file.startsWith(SLSKD_LIBRARY_PREFIX)) {
-    return `/media/${file.split('/').map(encodeURIComponent).join('/')}`
-  }
-  return `/downloads/${encodeURIComponent(file)}`
+function toTrack(item) {
+  return typeof item === 'string' ? normalizeTrack(item) : item
 }
 
-function coverUrl(file) {
-  return `/cover?file=${encodeURIComponent(file)}`
-}
-
-function trackFromFile(file) {
-  // Playlist/album downloads land in their own subfolder
-  // ("My Playlist/Artist - Title.mp3"), so the basename must be
-  // isolated before parsing "Artist - Title" — otherwise the first
-  // " - " found in the *whole path* wins, and the artist comes out as
-  // "My Playlist/Artist" instead of just "Artist".
-  const slash = file.lastIndexOf('/')
-  const basename = slash >= 0 ? file.slice(slash + 1) : file
-  const noExt = basename.replace(/\.[^.]+$/, '')
-  let artist = ''
-  let title = noExt
-  const dash = noExt.indexOf(' - ')
-  if (dash > 0) {
-    artist = noExt.slice(0, dash).trim()
-    title = noExt.slice(dash + 3).trim()
-  }
-  return {
-    file,
-    url: fileUrl(file),
-    cover: coverUrl(file),
-    title,
-    artist,
-  }
-}
-
+// ── Shuffle order ────────────────────────────────────────────────────
 function buildShuffleOrder() {
   const indices = playlist.value.map((_, i) => i)
   for (let i = indices.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[indices[i], indices[j]] = [indices[j], indices[i]]
   }
+  // The playing track stays first so shuffling never skips it.
+  const current = currentIndex.value
+  if (current >= 0) {
+    indices.splice(indices.indexOf(current), 1)
+    indices.unshift(current)
+  }
   shuffleOrder = indices
-  shufflePos =
-    currentIndex.value >= 0
-      ? Math.max(0, shuffleOrder.indexOf(currentIndex.value))
-      : 0
+  shufflePos = 0
+  shuffleVersion.value += 1
 }
 
 function sameTrackOrder(a, b) {
@@ -116,20 +127,24 @@ function sameTrackOrder(a, b) {
   return a.every((track, i) => track.file === b[i].file)
 }
 
+// ── Queue ────────────────────────────────────────────────────────────
 function setPlaylist(files, options = {}) {
-  const tracks = (files || []).map((f) =>
-    typeof f === 'string' ? trackFromFile(f) : f
-  )
+  const tracks = (files || []).map(toTrack)
+  if (options.context !== undefined) context.value = options.context
   if (
     typeof options.startIndex !== 'number' &&
     sameTrackOrder(tracks, playlist.value)
   ) {
-    // Re-selecting the queue that's already loaded (e.g. re-picking the
-    // active playlist) must not interrupt what's currently playing.
+    // Re-selecting the queue that's already loaded must not interrupt
+    // what's currently playing.
     return
   }
   playlist.value = tracks
   if (typeof options.startIndex === 'number') {
+    if (shuffle.value) {
+      currentIndex.value = options.startIndex
+      buildShuffleOrder()
+    }
     playAt(options.startIndex)
     return
   }
@@ -145,10 +160,136 @@ function setPlaylist(files, options = {}) {
   duration.value = 0
   if (shuffle.value) buildShuffleOrder()
   if (options.autoplay && tracks.length > 0) {
+    playAt(shuffle.value ? shuffleOrder[0] : 0)
+  }
+}
+
+/** Play a list, optionally shuffled, starting from the first track. */
+function playList(files, { context: ctx = null, shuffled = false } = {}) {
+  const tracks = (files || []).map(toTrack)
+  if (!tracks.length) return
+  shuffle.value = shuffled
+  playlist.value = tracks
+  context.value = ctx
+  currentIndex.value = -1
+  if (shuffled) {
+    buildShuffleOrder()
+    playAt(shuffleOrder[0])
+  } else {
     playAt(0)
   }
 }
 
+function insertTracks(files, position) {
+  const tracks = (files || []).map(toTrack)
+  if (!tracks.length) return
+  if (!playlist.value.length) {
+    setPlaylist(tracks, { autoplay: true, context: null })
+    return
+  }
+  const list = playlist.value.slice()
+  list.splice(position, 0, ...tracks)
+  playlist.value = list
+  if (currentIndex.value >= position) currentIndex.value += tracks.length
+  if (shuffle.value) {
+    // Keep the shuffled path, slotting the new tracks in right after
+    // the current one when asked to play them next.
+    shuffleOrder = shuffleOrder.map((i) =>
+      i >= position ? i + tracks.length : i
+    )
+    const added = tracks.map((_, k) => position + k)
+    const at =
+      position === currentIndex.value + 1 ? shufflePos + 1 : shuffleOrder.length
+    shuffleOrder.splice(at, 0, ...added)
+    shuffleVersion.value += 1
+  }
+}
+
+/** Add to the end of the queue. */
+function enqueue(files) {
+  insertTracks(files, playlist.value.length)
+}
+
+/** Add right after the current track. */
+function playNext(files) {
+  insertTracks(files, currentIndex.value + 1)
+}
+
+function moveTrack(from, to) {
+  const list = playlist.value.slice()
+  if (from === to || from < 0 || to < 0) return
+  if (from >= list.length || to >= list.length) return
+  const [track] = list.splice(from, 1)
+  list.splice(to, 0, track)
+  playlist.value = list
+  const current = currentIndex.value
+  if (current === from) currentIndex.value = to
+  else if (from < current && to >= current) currentIndex.value = current - 1
+  else if (from > current && to <= current) currentIndex.value = current + 1
+  if (shuffle.value) buildShuffleOrder()
+}
+
+function removeAt(index) {
+  if (index < 0 || index >= playlist.value.length) return
+  const list = playlist.value.slice()
+  list.splice(index, 1)
+  const wasCurrent = index === currentIndex.value
+  playlist.value = list
+  if (index < currentIndex.value) currentIndex.value -= 1
+  if (shuffle.value) buildShuffleOrder()
+  if (wasCurrent) {
+    if (!list.length) {
+      stop()
+    } else {
+      playAt(Math.min(index, list.length - 1))
+    }
+  }
+}
+
+/** Drop everything after the current track. */
+function clearUpcoming() {
+  if (currentIndex.value < 0) {
+    stop()
+    return
+  }
+  playlist.value = [playlist.value[currentIndex.value]]
+  currentIndex.value = 0
+  if (shuffle.value) buildShuffleOrder()
+}
+
+/** Remove files that no longer exist (deleted from the library). */
+function forgetFiles(files) {
+  const gone = new Set(files)
+  for (let i = playlist.value.length - 1; i >= 0; i--) {
+    if (gone.has(playlist.value[i].file)) removeAt(i)
+  }
+}
+
+/** Refresh queued track details (e.g. tags) from the library. */
+function refreshTracks(byFile) {
+  let changed = false
+  const list = playlist.value.map((track) => {
+    const fresh = byFile.get(track.file)
+    if (fresh && fresh !== track) {
+      changed = true
+      return fresh
+    }
+    return track
+  })
+  if (changed) playlist.value = list
+}
+
+function stop() {
+  pause()
+  if (audio) audio.removeAttribute('src')
+  playlist.value = []
+  currentIndex.value = -1
+  currentTime.value = 0
+  duration.value = 0
+  context.value = null
+}
+
+// ── Transport ────────────────────────────────────────────────────────
 function playAt(index) {
   if (index < 0 || index >= playlist.value.length) return
   const a = ensureAudio()
@@ -157,7 +298,9 @@ function playAt(index) {
     if (shuffleOrder.length !== playlist.value.length) buildShuffleOrder()
     const pos = shuffleOrder.indexOf(index)
     if (pos >= 0) shufflePos = pos
+    shuffleVersion.value += 1
   }
+  playError.value = ''
   a.src = playlist.value[index].url
   a.currentTime = 0
   currentTime.value = 0
@@ -168,7 +311,7 @@ function play() {
   if (playlist.value.length === 0) return
   const a = ensureAudio()
   if (currentIndex.value < 0) {
-    playAt(0)
+    playAt(shuffle.value && shuffleOrder.length ? shuffleOrder[0] : 0)
     return
   }
   if (!a.src) {
@@ -199,12 +342,16 @@ function seekRatio(ratio) {
   seek(duration.value * Math.max(0, Math.min(1, ratio)))
 }
 
+function seekBy(delta) {
+  seek(currentTime.value + delta)
+}
+
 function setVolume(v) {
   const clamped = Math.max(0, Math.min(1, v))
   volume.value = clamped
   if (audio) audio.volume = clamped
   try {
-    localStorage.setItem(VOLUME_KEY, String(clamped))
+    storage()?.setItem(VOLUME_KEY, String(clamped))
   } catch {
     // ignore
   }
@@ -223,7 +370,10 @@ function nextIndex() {
   if (playlist.value.length === 0) return -1
   if (shuffle.value) {
     if (shuffleOrder.length !== playlist.value.length) buildShuffleOrder()
-    const nextPos = (shufflePos + 1) % shuffleOrder.length
+    const nextPos = shufflePos + 1
+    if (nextPos >= shuffleOrder.length) {
+      return repeatMode.value === 'all' ? shuffleOrder[0] : -1
+    }
     return shuffleOrder[nextPos]
   }
   const i = currentIndex.value + 1
@@ -268,6 +418,11 @@ function prev() {
 }
 
 function onEnded() {
+  if (sleepAt.value === 'track') {
+    setSleepTimer(null)
+    pause()
+    return
+  }
   if (repeatMode.value === 'one') {
     seek(0)
     if (audio) audio.play().catch(() => {})
@@ -295,6 +450,33 @@ function toggleShuffle() {
   setShuffle(!shuffle.value)
 }
 
+// ── Sleep timer ──────────────────────────────────────────────────────
+/** `minutes` (number), `'track'` (end of this track) or null (off). */
+function setSleepTimer(minutes) {
+  if (sleepTimer) {
+    clearTimeout(sleepTimer)
+    sleepTimer = null
+  }
+  if (minutes === 'track') {
+    sleepAt.value = 'track'
+    return
+  }
+  if (!minutes) {
+    sleepAt.value = null
+    return
+  }
+  sleepAt.value = Date.now() + minutes * 60 * 1000
+  sleepTimer = setTimeout(
+    () => {
+      pause()
+      sleepAt.value = null
+      sleepTimer = null
+    },
+    minutes * 60 * 1000
+  )
+}
+
+// ── Derived state ────────────────────────────────────────────────────
 const currentTrack = computed(() =>
   currentIndex.value >= 0 && currentIndex.value < playlist.value.length
     ? playlist.value[currentIndex.value]
@@ -305,6 +487,128 @@ const progressPct = computed(() =>
   duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0
 )
 
+/** Upcoming tracks, in the order they'll play: `[{ track, index }]`. */
+const upcoming = computed(() => {
+  const list = playlist.value
+  // Reading these keeps the computed in step with shuffle/index changes.
+  const current = currentIndex.value
+  shuffleVersion.value
+  if (shuffle.value && shuffleOrder.length === list.length) {
+    return shuffleOrder
+      .slice(shufflePos + 1)
+      .map((index) => ({ track: list[index], index }))
+  }
+  return list
+    .slice(current + 1)
+    .map((track, k) => ({ track, index: current + 1 + k }))
+})
+
+// ── Media Session (lock screen / headset / keyboard media keys) ──────
+function updateMediaSession(track) {
+  if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) {
+    return
+  }
+  const session = navigator.mediaSession
+  if (!track) {
+    session.metadata = null
+    return
+  }
+  if (typeof MediaMetadata !== 'undefined') {
+    const origin = typeof location !== 'undefined' ? location.origin : ''
+    session.metadata = new MediaMetadata({
+      title: track.title,
+      artist: track.artist,
+      album: track.album || '',
+      artwork: track.hasCover
+        ? [{ src: `${origin}${track.cover}`, sizes: '512x512' }]
+        : [],
+    })
+  }
+  const handlers = {
+    play,
+    pause,
+    previoustrack: prev,
+    nexttrack: next,
+    seekbackward: () => seekBy(-10),
+    seekforward: () => seekBy(10),
+    seekto: (details) => seek(details.seekTime || 0),
+    stop: pause,
+  }
+  for (const [action, handler] of Object.entries(handlers)) {
+    try {
+      session.setActionHandler(action, handler)
+    } catch {
+      // Unsupported action on this browser.
+    }
+  }
+}
+
+watch(currentTrack, (track) => updateMediaSession(track))
+watch(isPlaying, (playing) => {
+  if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = playing ? 'playing' : 'paused'
+  }
+})
+
+// ── Persist the session across reloads ───────────────────────────────
+function saveSession() {
+  const store = storage()
+  if (!store) return
+  if (!playlist.value.length || playlist.value.length > MAX_PERSISTED_TRACKS) {
+    store.removeItem(SESSION_KEY)
+    return
+  }
+  try {
+    store.setItem(
+      SESSION_KEY,
+      JSON.stringify({
+        tracks: playlist.value,
+        index: currentIndex.value,
+        time: Math.floor(currentTime.value),
+        context: context.value,
+        shuffle: shuffle.value,
+        repeat: repeatMode.value,
+      })
+    )
+  } catch {
+    // Quota exceeded — keep playing, just don't persist.
+  }
+}
+
+function restoreSession() {
+  const raw = storage()?.getItem(SESSION_KEY)
+  if (!raw) return
+  try {
+    const saved = JSON.parse(raw)
+    if (!Array.isArray(saved.tracks) || !saved.tracks.length) return
+    playlist.value = saved.tracks
+    currentIndex.value = Math.min(saved.index ?? -1, saved.tracks.length - 1)
+    context.value = saved.context || null
+    repeatMode.value = saved.repeat || 'off'
+    shuffle.value = !!saved.shuffle
+    if (shuffle.value) buildShuffleOrder()
+    const track = currentTrack.value
+    if (track) {
+      const a = ensureAudio()
+      restoreTime = saved.time || 0
+      currentTime.value = restoreTime
+      a.src = track.url
+    }
+  } catch {
+    storage()?.removeItem(SESSION_KEY)
+  }
+}
+
+if (typeof window !== 'undefined' && typeof Audio !== 'undefined') {
+  restoreSession()
+  watch([playlist, currentIndex, context, shuffle, repeatMode], saveSession)
+  window.addEventListener('pagehide', saveSession)
+  setInterval(() => {
+    if (isPlaying.value) saveSession()
+  }, 5000)
+}
+
+// ── Public API ───────────────────────────────────────────────────────
 export function formatTime(seconds) {
   if (!isFinite(seconds) || seconds < 0) return '0:00'
   const total = Math.floor(seconds)
@@ -314,7 +618,7 @@ export function formatTime(seconds) {
 }
 
 export function trackInfoFromFile(file) {
-  return trackFromFile(file)
+  return normalizeTrack(file)
 }
 
 export function usePlayer() {
@@ -322,7 +626,11 @@ export function usePlayer() {
     playlist,
     currentIndex,
     currentTrack,
+    upcoming,
+    context,
     isPlaying,
+    isBuffering,
+    playError,
     currentTime,
     duration,
     progressPct,
@@ -330,13 +638,24 @@ export function usePlayer() {
     isMuted,
     repeatMode,
     shuffle,
+    sleepAt,
     setPlaylist,
+    playList,
+    enqueue,
+    playNext,
+    moveTrack,
+    removeAt,
+    clearUpcoming,
+    forgetFiles,
+    refreshTracks,
+    stop,
     playAt,
     play,
     pause,
     toggle,
     seek,
     seekRatio,
+    seekBy,
     setVolume,
     toggleMute,
     next,
@@ -345,5 +664,6 @@ export function usePlayer() {
     cycleRepeat,
     setShuffle,
     toggleShuffle,
+    setSleepTimer,
   }
 }

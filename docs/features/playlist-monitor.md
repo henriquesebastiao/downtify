@@ -34,12 +34,14 @@ A watch is never checked twice at the same time. Adding a watch starts its first
 
 ## Adding a playlist
 
-1. Click the eye icon (👁️) in the navigation bar
+1. Open **Monitor** from the sidebar (on phones: **More → Monitor**)
 2. Paste a playlist URL:
     - Spotify: `https://open.spotify.com/playlist/…`
     - YouTube Music: `https://music.youtube.com/playlist?list=…` (a `www.youtube.com/playlist?list=…` link works too)
 3. Choose a check interval (from 15 minutes to once a month)
 4. Click **Watch**
+
+You can also start watching from a playlist's page: paste its link in the search bar and use **Watch for new tracks** (or **Watch for new releases** on a YouTube Music artist). Downloaded playlists in the Library offer the same action in their **⋯** menu. Watches added this way use a 6-hour interval — change it on the Monitor page.
 
 ## YouTube Music playlists
 

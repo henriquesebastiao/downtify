@@ -1,69 +1,59 @@
-import { ref, computed } from 'vue'
+// Light / dark / follow-the-system theme, applied as
+// <html data-theme="dark|light"> (see the tokens in index.css).
+import { computed, ref, watch } from 'vue'
 
-const currentTheme = ref('')
+const STORAGE_KEY = 'downtify-theme'
+const MODES = ['dark', 'light', 'system']
 
-const lightAlias = ref('light')
-const darkAlias = ref('dark')
-
-export function useBinaryThemeManager({
-  useSystem = true,
-  initialTheme = '',
-  newLightAlias = '',
-  newDarkAlias = '',
-} = {}) {
-  function setLightAlias(alias) {
-    lightAlias.value = alias
-    _updateDocument()
+function readMode() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    return MODES.includes(stored) ? stored : 'dark'
+  } catch {
+    return 'dark'
   }
-  function setDarkAlias(alias) {
-    darkAlias.value = alias
-    _updateDocument()
-  }
+}
 
-  function getSystemTheme() {
-    const darkThemeMq = window.matchMedia('(prefers-color-scheme: dark)')
-    if (darkThemeMq.matches) {
-      return 'dark'
-    } else {
-      return 'light'
-    }
-  }
+const mode = ref(readMode())
+const systemDark = ref(true)
 
-  function setTheme(newTheme) {
-    currentTheme.value = newTheme
-    _updateDocument()
-  }
+if (typeof window !== 'undefined' && window.matchMedia) {
+  const query = window.matchMedia('(prefers-color-scheme: dark)')
+  systemDark.value = query.matches
+  query.addEventListener?.('change', (event) => {
+    systemDark.value = event.matches
+  })
+}
 
-  function switchTheme() {
-    if (currentTheme === 'dark') currentTheme.value = 'light'
-    else if (currentTheme === 'light') currentTheme.value = 'dark'
-    _updateDocument()
-  }
+const resolved = computed(() => {
+  if (mode.value === 'system') return systemDark.value ? 'dark' : 'light'
+  return mode.value
+})
 
-  function _updateDocument() {
-    document.documentElement.setAttribute(
-      'data-theme',
-      currentTheme.value === 'dark' ? darkAlias.value : lightAlias.value
-    )
-  }
+function apply(theme) {
+  if (typeof document === 'undefined') return
+  document.documentElement.setAttribute('data-theme', theme)
+  const meta = document.querySelector('meta[name="theme-color"]')
+  if (meta)
+    meta.setAttribute('content', theme === 'dark' ? '#0b0c0e' : '#f6f7f8')
+}
 
-  if (currentTheme.value !== 'light' && currentTheme.value !== 'dark') {
-    if (useSystem) setTheme(getSystemTheme())
-    if (initialTheme === 'light' || initialTheme === 'dark') {
-      currentTheme.value = initialTheme
-    }
-  }
-  if (newLightAlias) setLightAlias(newLightAlias)
-  if (newDarkAlias) setDarkAlias(newDarkAlias)
+watch(resolved, apply, { immediate: true })
 
-  _updateDocument()
-
-  return {
-    currentTheme,
-    setLightAlias,
-    setDarkAlias,
-    getSystemTheme,
-    setTheme,
-    switchTheme,
+function setMode(next) {
+  if (!MODES.includes(next)) return
+  mode.value = next
+  try {
+    localStorage.setItem(STORAGE_KEY, next)
+  } catch {
+    // ignore
   }
+}
+
+function toggle() {
+  setMode(resolved.value === 'dark' ? 'light' : 'dark')
+}
+
+export function useTheme() {
+  return { mode, resolved, setMode, toggle, modes: MODES }
 }

@@ -91,6 +91,6 @@ Downtify resolves metadata from Spotify and matches the audio on YouTube Music. 
 
 Open an issue at [github.com/henriquesebastiao/downtify/issues](https://github.com/henriquesebastiao/downtify/issues) with:
 
-- the Downtify version (shown in the UI footer),
+- the Downtify version (shown at the bottom of the sidebar, and in **Settings → About**),
 - the container logs around the failure (`docker compose logs downtify`),
 - and whether cookies are configured.

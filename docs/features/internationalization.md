@@ -4,7 +4,7 @@ icon: lucide/languages
 
 # Internationalization
 
-Downtify's UI is fully translatable. The default language is **English**, with six other languages included out of the box.
+Downtify's UI is fully translatable. The default language is **English**, with seven other languages included out of the box.
 
 ## Switching language
 
@@ -21,6 +21,7 @@ Go to **Settings → Language** and pick your preferred language. The choice is 
 | `tr` | Türkçe |
 | `el` | Ελληνικά |
 | `hu` | Magyar |
+| `bg` | Български |
 
 ## Adding a new language
 
@@ -53,6 +54,7 @@ export const AVAILABLE_LOCALES = [
   { code: 'tr', name: 'Türkçe', messages: tr },
   { code: 'el', name: 'Ελληνικά', messages: el },
   { code: 'hu', name: 'Magyar', messages: hu },
+  { code: 'bg', name: 'Български', messages: bg },
   { code: 'de', name: 'Deutsch', messages: de }, // new
 ]
 ```
@@ -66,6 +68,7 @@ cd frontend && npm run build
 ## Tips for translators
 
 - Missing keys fall back to English, so partial translations work fine — submit a PR with what you have.
+- Strings that depend on a number are objects with plural forms, e.g. `tracks: { one: '{count} track', other: '{count} tracks' }`. The form is chosen with the browser's [`Intl.PluralRules`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Intl/PluralRules) for your language, so add the forms your language uses (`zero`, `one`, `two`, `few`, `many`, `other`) — `other` is required. Numbers are formatted for the language automatically.
 - Placeholder tokens like `{count}` or `{file}` must be left unchanged; they are substituted at runtime.
 - Keep strings concise — the UI is laid out tightly and very long translations may wrap awkwardly.
 - After translating, run `npm run dev` from `frontend/` and navigate every page in your language to spot anything that overflows or reads oddly in context.

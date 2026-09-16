@@ -4,7 +4,7 @@ icon: lucide/sliders-horizontal
 
 # Download Settings
 
-Open the settings panel by clicking the gear icon (⚙️) in the navigation bar. Settings are saved to disk and survive container restarts.
+Open **Settings** from the sidebar (on phones: **More → Settings**). The page is split into sections — General, Audio sources, Downloads & files, Tags & lyrics, Navidrome, Library and About. Changes are held until you press **Save changes** in the bar that appears at the bottom; leaving the page with unsaved changes asks first. Settings are saved to disk and survive container restarts.
 
 ## Format
 

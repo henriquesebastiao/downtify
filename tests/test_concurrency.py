@@ -386,7 +386,13 @@ def _entry(stored, full):
         'title': full.stem,
         'artist': 'Artist',
         'album': '',
+        'album_artist': '',
+        'track_number': 0,
+        'year': '',
+        'duration': 0.0,
         'has_cover': False,
+        'added': int(full.stat().st_mtime),
+        'size': full.stat().st_size,
     }
 
 

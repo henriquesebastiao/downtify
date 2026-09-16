@@ -46,6 +46,7 @@ from downtify.library_catalog import (
 from downtify.library_cleanup import remove_track_leftovers
 from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.library_paths import SLSKD_LIBRARY_PREFIX
+from downtify.lyrics import read_track_lyrics
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 from downtify.navidrome_index import NavidromeIndex
 from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
@@ -570,6 +571,19 @@ def build_app() -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=413, detail=str(exc)) from exc
         return await api.after_library_delete(result['results'], result)
+
+    @app.get('/lyrics')
+    def get_lyrics(file: str) -> dict:
+        """Lyrics saved with a library track, for the player.
+
+        ``{"synced": "<LRC text>", "plain": "<text>"}`` - the ``.lrc``
+        sidecar and the lyrics embedded in the file's tags; either may be
+        empty.
+        """
+        full = resolve_library_file(file, api.library_context())
+        if full is None:
+            raise HTTPException(status_code=404, detail='File not found')
+        return read_track_lyrics(full)
 
     @app.get('/cover')
     def get_cover(file: str):

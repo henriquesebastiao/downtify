@@ -18,7 +18,7 @@ Returns the current Downtify version as a plain string.
 
 ### `GET /api/check_update`
 
-Result of the last hourly check against [GitHub Releases](https://github.com/henriquesebastiao/downtify/releases) — powers the update notice in the page footer. The request to GitHub happens on a background loop, never on this endpoint's own request; this just reads whatever that loop last found.
+Result of the last hourly check against [GitHub Releases](https://github.com/henriquesebastiao/downtify/releases) — powers the update notice in the sidebar (and the **More** sheet on phones). The request to GitHub happens on a background loop, never on this endpoint's own request; this just reads whatever that loop last found.
 
 **Response:**
 
@@ -68,6 +68,32 @@ Resolve a Spotify or YouTube Music URL to metadata.
 - **Artist URL** (YouTube Music `…/channel/UC…` or `…/@handle`) → array of release summaries. `404` if a handle doesn't belong to an artist.
 
 `GET /api/url` is an alias for this endpoint.
+
+---
+
+### `GET /api/url/resolve`
+
+Resolve a pasted link to a single object describing what it points at — used by the web UI's link page. Accepts the same URLs as [`GET /api/song/url`](#get-apisongurl).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | yes | Spotify track, album or playlist URL, or a YouTube / YouTube Music video, album, playlist or artist URL |
+
+**Response:**
+
+```json
+{
+  "kind": "album",
+  "name": "Whenever You Need Somebody",
+  "subtitle": "Rick Astley",
+  "cover_url": "https://…",
+  "year": "1987",
+  "tracks": [ /* song objects */ ],
+  "albums": []
+}
+```
+
+`kind` is `track`, `album`, `playlist` or `artist`. A track or collection fills `tracks`; an artist (YouTube Music only) fills `albums` with release summaries instead, and `subtitle` carries the artist description. `400` for a URL that isn't a supported link, `404` when the link resolves to nothing (e.g. a handle that isn't an artist), `502` when the upstream lookup fails.
 
 ---
 
@@ -258,7 +284,7 @@ Return the current settings.
 |-------|------|-------------|
 | `max_parallel_downloads` | integer | Concurrent download limit. Clamped to `1–30`. |
 | `download_delay_seconds` | number | Seconds to wait after each download in a batch before starting the next. Clamped to `0–300`. |
-| `mini_player_enabled` | boolean | Whether the [mini player bar](features/player.md#mini-player-bar) appears on non-Player pages while a track is loaded. Purely a UI preference — the backend never reads it. |
+| `mini_player_enabled` | boolean | Legacy UI preference, kept so older clients keep working. The web UI no longer reads it — the player bar always appears while a track is loaded. The backend never reads it either. |
 | `download_cover_art` | boolean | Whether to fetch and embed cover art at all. See [Download cover art](features/download-settings.md#download-cover-art). |
 | `cover_resolution` | integer | Target pixel size (width & height) for YouTube Music-sourced cover art. Clamped to `300–1200`. Only used when `download_cover_art` is true. See [Cover art resolution](features/download-settings.md#cover-art-resolution). |
 | `overwrite_existing_files` | boolean | When `false`, a song already in the library (matched by output filename, or by Spotify track ID through the [library track index](features/library-catalog.md)) isn't downloaded again; the download returns the existing file's path instead. See [Overwrite existing files](features/download-settings.md#overwrite-existing-files). |
@@ -377,13 +403,19 @@ List downloaded tracks with artist/album read from each file's embedded tags. Us
     "title": "Song",
     "artist": "Artist",
     "album": "Some Album",
+    "album_artist": "Artist",
+    "track_number": 3,
+    "year": "2024",
+    "duration": 213.08,
     "has_cover": true,
+    "added": 1789600669,
+    "size": 8567376,
     "playlists": ["My Playlist"]
   }
 ]
 ```
 
-`playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes.
+`album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes.
 
 Sorted by `file`, same order as `/list`. `artist`/`album` come back as `""` when the file has no readable tag for that field — the frontend then simply doesn't offer it as a filter for that track.
 
@@ -453,6 +485,24 @@ Return the embedded cover art for a file.
 | `file` | string | yes | Relative path to the file |
 
 **Response:** Image bytes (`image/jpeg` or `image/png`). Returns `404` if no embedded cover is found.
+
+---
+
+### `GET /lyrics`
+
+Return the lyrics saved for a library file — used by the player's lyrics panel.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | Relative path to the file (as returned by `/list`) |
+
+**Response:**
+
+```json
+{ "synced": "[00:00.00] First line\n[00:05.00] Second line", "plain": "First line\nSecond line" }
+```
+
+`synced` is the content of the `.lrc` sidecar next to the file, `plain` the lyrics embedded in its tags (ID3 `USLT`, MP4 `©lyr`, Vorbis `LYRICS`); either is `""` when missing. `404` if the file isn't in the library. See [Lyrics](features/lyrics.md).
 
 ---
 

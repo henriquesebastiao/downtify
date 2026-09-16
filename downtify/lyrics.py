@@ -8,10 +8,13 @@ are accepted as no-ops so existing settings keep round-tripping cleanly.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Optional
 
 import httpx
 from loguru import logger
+from mutagen import File as MutagenFile
+from mutagen.id3 import ID3
 
 LRCLIB_BASE = 'https://lrclib.net/api'
 _USER_AGENT = 'Downtify (https://github.com/henriquesebastiao/downtify)'
@@ -95,3 +98,60 @@ def _fetch_lrclib(song: dict[str, Any]) -> Optional[Lyrics]:
 _PROVIDER_FNS = {
     'lrclib': _fetch_lrclib,
 }
+
+
+#: Tag keys the downloader embeds plain lyrics under, per container:
+#: ID3 ``USLT`` frames (MP3), MP4 ``©lyr`` and Vorbis-comment ``lyrics``
+#: (FLAC, Ogg Vorbis, Opus). See ``downloader.embed_lyrics``.
+_MP4_LYRICS_KEY = '\xa9lyr'
+_VORBIS_LYRICS_KEY = 'lyrics'
+
+
+def _file_tags(path: Path) -> Any:
+    try:
+        audio = MutagenFile(str(path))
+    except Exception:
+        audio = None
+    tags = getattr(audio, 'tags', None)
+    if tags or path.suffix.lower() != '.mp3':
+        return tags
+    # MP3s mutagen can't identify as audio still carry an ID3 header.
+    try:
+        return ID3(str(path))
+    except Exception:
+        return None
+
+
+def _embedded_lyrics(path: Path) -> str:
+    tags = _file_tags(path)
+    if not tags:
+        return ''
+    if hasattr(tags, 'getall'):
+        frames = tags.getall('USLT')
+        return str(frames[0].text).strip() if frames else ''
+    for key in (_MP4_LYRICS_KEY, _VORBIS_LYRICS_KEY):
+        value = tags.get(key)
+        if value:
+            first = value[0] if isinstance(value, list) else value
+            return str(first).strip()
+    return ''
+
+
+def read_track_lyrics(path: Path) -> dict[str, str]:
+    """Lyrics saved with a downloaded track.
+
+    ``synced`` is the LRC text of the ``.lrc`` sidecar (empty when there
+    is none); ``plain`` is the text embedded in the file's tags. Either
+    can be empty. Unreadable files count as having no lyrics.
+    """
+
+    synced = ''
+    sidecar = path.with_suffix('.lrc')
+    if sidecar.is_file():
+        try:
+            synced = sidecar.read_text(encoding='utf-8').strip()
+        except (OSError, UnicodeDecodeError):
+            logger.opt(exception=True).warning(
+                'Could not read LRC sidecar {}', sidecar
+            )
+    return {'synced': synced, 'plain': _embedded_lyrics(path)}

@@ -50,12 +50,13 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 🔔 **Real-time progress** | Live download progress via WebSocket — no page reload needed |
 | 🐳 **One Docker command** | Up and running in under a minute |
 | 🏠 **Home server platforms** | Available on Umbrel, CasaOS and HomeDock |
-| 🎧 **Built-in player** | Play your downloaded music straight from the web UI — progress bar, shuffle, repeat, volume |
-| 🌍 **Multi-language UI** | English (default) plus 6 more languages — easy to add more |
+| 🎧 **Built-in player** | Full-screen now playing with synced lyrics, an editable queue, sleep timer, keyboard shortcuts and lock-screen controls |
+| 📚 **Library views** | Browse albums, artists, playlists and tracks in a grid or a list — sort, filter, multi-select, download as ZIP |
+| 🌍 **Multi-language UI** | English (default) plus 7 more languages — easy to add more |
 | 📱 **Installable (PWA)** | Add Downtify to your iOS or Android home screen — launches full-screen, no browser chrome |
 | 🍪 **Cookie upload** | Upload a YouTube `cookies.txt` from the settings screen to download explicit/age-restricted tracks — no bind mounts, works on Windows |
-| 🔔 **Update notifications** | Hourly check against GitHub Releases; a footer notice appears when a newer version is out |
-| 🎚️ **Mini player bar** | Playback controls stick to the bottom of every page while a track is loaded — collapsible, mobile-friendly, can be turned off |
+| 🔔 **Update notifications** | Hourly check against GitHub Releases; a notice appears in the sidebar when a newer version is out |
+| 🌗 **Responsive UI** | One layout from phone to widescreen, with light and dark themes |
 | 🔗 **slskd & Navidrome** | Optionally download from Soulseek through your own slskd server, and mirror downloaded playlists into Navidrome — see **[slskd & Navidrome](https://henriquesebastiao.github.io/downtify/features/slskd-navidrome/)** |
 
 ---
@@ -235,23 +236,15 @@ Track paths inside the M3U are written **relative to the M3U file itself**, so t
 
 ## 🎧 Built-in Player
 
-Downtify ships with a clean web player so you don't need a separate app to listen to what you've downloaded. Open the headphones icon (🎧) in the navigation bar — or hit the play button next to any file in the **Library** — and Downtify will load every audio file from your downloads folder into a queue.
+Downtify ships with a web player so you don't need a separate app to listen to what you've downloaded. Hit play on any album, artist, playlist or track in the **Library** and a player bar appears at the bottom of every page; open it for the full-screen **Now playing** view.
 
-**What's included:**
+- **Now playing** with large cover art, seek bar, shuffle, repeat and volume
+- **Synced lyrics** that follow the song — click a line to jump there
+- **Up next** queue: play next, add to queue, drag to reorder, remove
+- **Sleep timer**, keyboard shortcuts (press `?`), and lock-screen / media-key controls
+- Your queue and position are remembered between visits
 
-- Big now-playing card with embedded **album art** and a progress bar (click or drag to seek)
-- Play / pause / previous / next
-- **Shuffle** with a stable random order across the whole queue
-- **Repeat** modes: off → all → one
-- Volume slider with mute toggle (volume is remembered between sessions)
-- Side queue listing every track in your library, each one with its own thumbnail and the currently playing one highlighted
-- **Playing from** selector — play just one downloaded playlist, artist or album instead of your whole library queued at once. See **[Built-in Player](https://henriquesebastiao.github.io/downtify/features/player/)** in the full docs.
-
-The player parses `Artist - Title.ext` filenames so the now-playing card shows artist and title nicely, and pulls the cover art directly from the audio file's embedded tags (the same artwork Downtify wrote at download time). Playback uses your browser's native HTML5 audio element — no extra dependencies, no extra processes.
-
-The **Library** page has the same playlist/artist/album filter to narrow down the file list before playing, re-downloading or deleting a track. Check boxes let you select any number of tracks — including ones on other pages — and delete them all in one go; "Select all" grabs every track matching the current filter, so deleting a whole album or artist is just: filter to it, select all, delete.
-
-While a track is loaded, a **mini player bar** (cover, title/artist, shuffle, previous, play/pause, next, repeat, volume) sticks to the bottom of every other page, collapsible into a small floating "now playing" button — turn it off in **Settings → Mini player bar** if you don't want it. See **[Mini Player Bar](https://henriquesebastiao.github.io/downtify/features/player/#mini-player-bar)** in the full docs.
+The **Library** shows albums, artists and playlists as a grid or a list, plus a sortable track list with multi-select — play, queue, download as a ZIP or delete any selection. See **[Built-in Player](https://henriquesebastiao.github.io/downtify/features/player/)** and **[Library catalog](https://henriquesebastiao.github.io/downtify/features/library-catalog/)** in the full docs.
 
 ---
 

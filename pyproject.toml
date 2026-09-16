@@ -32,6 +32,8 @@ upgrade = true
 
 [tool.ruff]
 line-length = 79
+# Design-canvas generator scripts (design/), not shipped code.
+extend-exclude = ['design']
 
 [tool.ruff.lint]
 preview = true

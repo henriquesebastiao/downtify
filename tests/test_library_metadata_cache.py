@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from mutagen.id3 import ID3, TIT2, TPE1
 
+from downtify import library_metadata
 from downtify.library_catalog import LibraryContext, list_library_entries
 from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.sqlite_utils import connect_sqlite
@@ -121,3 +122,47 @@ def test_has_cover_column_migration_keeps_cached_mtime(tmp_path: Path) -> None:
         ).fetchone()
     assert int(row['file_mtime_ns']) == 123456
     assert int(row['has_cover']) == 0
+
+
+def test_cache_rows_carry_album_and_file_details(tmp_path: Path) -> None:
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    track = download_dir / 'Artist - Song.mp3'
+    _write_tagged_mp3(track, 'Song', 'Artist')
+
+    cache = LibraryMetadataCache(tmp_path / 'library.db')
+    first = cache.get_entry('Artist - Song.mp3', track)
+
+    with patch('downtify.library_metadata.read_audio_metadata') as read_meta:
+        cached = cache.get_entry('Artist - Song.mp3', track)
+        read_meta.assert_not_called()
+
+    for entry in (first, cached):
+        assert entry['size'] == track.stat().st_size
+        assert entry['added'] == int(track.stat().st_mtime)
+        assert entry['track_number'] == 0
+        assert 'album_artist' in entry
+        assert 'duration' in entry
+
+
+def test_rows_from_older_cache_version_are_read_again(tmp_path: Path) -> None:
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    track = download_dir / 'Artist - Song.mp3'
+    _write_tagged_mp3(track, 'Song', 'Artist')
+
+    db = tmp_path / 'library.db'
+    cache = LibraryMetadataCache(db)
+    cache.refresh('Artist - Song.mp3', track)
+    # Rows written before the album/duration fields existed.
+    with connect_sqlite(str(db)) as conn:
+        conn.execute('UPDATE library_metadata SET meta_version = 1')
+
+    with patch(
+        'downtify.library_metadata.read_audio_metadata',
+        wraps=library_metadata.read_audio_metadata,
+    ) as read_meta:
+        cache.get_entry('Artist - Song.mp3', track)
+        assert read_meta.call_count == 1
+        cache.get_entry('Artist - Song.mp3', track)
+        assert read_meta.call_count == 1
