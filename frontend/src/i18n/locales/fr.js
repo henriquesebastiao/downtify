@@ -105,6 +105,10 @@ export default {
     selectedCount: '{count} sélectionné(s)',
     selectFile: 'Sélectionner {file}',
     deleteSelected: 'Supprimer la sélection',
+    downloadSelected: 'Télécharger la sélection',
+    downloadSelectedHint:
+      'Enregistre les morceaux sélectionnés sur cet appareil dans un seul fichier ZIP, en conservant leurs dossiers.',
+    downloadSelectedFailed: 'Impossible de préparer le téléchargement.',
     clearSelection: 'Effacer la sélection',
     bulkDeletePrompt: 'Supprimer {count} fichiers sélectionnés ?',
     bulkDeleteFailed: 'Échec de la suppression des fichiers sélectionnés.',

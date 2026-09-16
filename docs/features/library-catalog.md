@@ -49,6 +49,8 @@ It only runs when you press the button (or call `POST /api/library/reconcile`) �
 
 Besides the existing filters and multi-select, the Library page shows your [playlist downloads](slskd-navidrome.md#playlist-downloads) and offers **Delete playlist** while a playlist filter is selected.
 
+**Download selected** saves the checked tracks to the device you're browsing from as a single ZIP, keeping their folder layout — handy when Downtify runs on a home server and you want a batch of tracks locally. Combine it with **Select all** to take everything the current filter shows. The archive is built while it downloads, so nothing is written to the server's disk, and it's capped at 2000 tracks per download.
+
 ## API
 
 | Method | Path | Description |
@@ -56,6 +58,8 @@ Besides the existing filters and multi-select, the Library page shows your [play
 | `GET` | `/list?refresh=true` | Library paths, bypassing the path scan cache |
 | `GET` | `/tracks` | Library tracks with tags and, when known, the `playlists` they belong to |
 | `GET` | `/media/{path}` | Serve a library file, including `slskd/…` paths |
+| `POST` | `/api/library/archive` | Prepare a ZIP of selected tracks (returns a single-use ticket) |
+| `GET` | `/api/library/archive/{token}` | Stream that ZIP to the browser |
 | `DELETE` | `/api/library/playlist?playlist_name=…` | Delete a playlist's tracks, M3U and catalog entry |
 | `POST` | `/api/library/reconcile` | Fix library paths, then refresh M3U/Navidrome playlists |
 

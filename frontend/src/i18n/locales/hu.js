@@ -103,6 +103,10 @@ export default {
     selectedCount: '{count} kijelölve',
     selectFile: '{file} kijelölése',
     deleteSelected: 'Kijelöltek törlése',
+    downloadSelected: 'Kijelöltek letöltése',
+    downloadSelectedHint:
+      'A kijelölt dalok mentése erre az eszközre egyetlen ZIP-fájlban, a mappáikkal együtt.',
+    downloadSelectedFailed: 'Nem sikerült előkészíteni a letöltést.',
     clearSelection: 'Kijelölés törlése',
     bulkDeletePrompt: 'Törlöd a kijelölt {count} fájlt?',
     bulkDeleteFailed: 'Nem sikerült törölni a kijelölt fájlokat.',

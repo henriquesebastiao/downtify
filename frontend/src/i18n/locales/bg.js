@@ -99,6 +99,10 @@ export default {
     selectedCount: '{count} избрани',
     selectFile: 'Избери {file}',
     deleteSelected: 'Изтрий избраните',
+    downloadSelected: 'Изтегли избраните',
+    downloadSelectedHint:
+      'Запазва избраните песни на това устройство като един ZIP файл, със запазени папки.',
+    downloadSelectedFailed: 'Изтеглянето не можа да бъде подготвено.',
     clearSelection: 'Изчисти избора',
     bulkDeletePrompt: 'Да се изтрият ли {count} избрани файла?',
     bulkDeleteFailed: 'Изтриването на избраните файлове се провали.',
