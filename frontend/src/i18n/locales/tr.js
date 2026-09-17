@@ -370,21 +370,11 @@ export default {
     title: 'Çalma Listesi İzleyici',
     subtitle:
       'Bu çalma listelerinden ve sanatçılardan gelen yeni parçalar otomatik indirilir.',
-    urlLabel: 'Çalma listesi veya sanatçı bağlantısı',
-    urlPlaceholder:
-      'Spotify veya YouTube Music çalma listesi ya da YouTube Music sanatçısı yapıştır',
     interval: 'Kontrol sıklığı',
-    watch: 'İzle',
     addFailed: 'Bu bağlantı izlenemedi. Kontrol edip tekrar dene.',
-    explainer:
-      'Bir çalma listesi eklemek içindeki her şeyi hemen indirir, sonra listeyi belirlenen aralıkta kontrol edip eklenenleri indirir. Sanatçılar da yeni yayınlarla aynı şekilde çalışır.',
     checkAll: 'Tümünü şimdi kontrol et',
     checkNow: 'Şimdi kontrol et',
     checking: '{name} kontrol ediliyor…',
-    checkingAll: 'Tüm etkin izlemeler kontrol ediliyor…',
-    emptyTitle: 'Henüz izlenen bir şey yok',
-    emptyBody:
-      'Senkronize tutmak için yukarıya bir çalma listesi veya sanatçı bağlantısı yapıştır.',
     filterAll: 'Tümü',
     filterPlaylists: 'Çalma listeleri',
     filterArtists: 'Sanatçılar',
@@ -396,7 +386,6 @@ export default {
     sortSize: 'Boyut',
     ascending: 'Artan',
     descending: 'Azalan',
-    colWatching: 'İzlenen',
     colSource: 'Kaynak',
     colChecks: 'Kontroller',
     colLastChecked: 'Son kontrol',
@@ -415,6 +404,55 @@ export default {
     everyDays: { one: 'Her gün', other: 'Her {count} günde' },
     everyWeeks: { one: 'Her hafta', other: 'Her {count} haftada' },
     everyMonths: { one: 'Her ay', other: 'Her {count} ayda' },
+    urlLabelPlaylist: 'Çalma listesi bağlantısı',
+    urlLabelArtist: 'Sanatçı bağlantısı',
+    urlPlaceholderPlaylist:
+      'Spotify veya YouTube Music çalma listesi bağlantısı yapıştır',
+    urlPlaceholderArtist:
+      'Spotify veya YouTube Music sanatçı bağlantısı yapıştır',
+    watchPlaylist: 'Çalma listesini izle',
+    watchArtist: 'Sanatçıyı izle',
+    explainerPlaylists:
+      'Bir çalma listesi eklemek içindeki her şeyi hemen indirir, sonra listeyi belirlenen aralıkta kontrol edip eklenenleri indirir.',
+    explainerArtists:
+      'Bir sanatçı eklemek tüm diskografisini hemen indirir, sonra belirlenen aralıkta kontrol edip her yeni yayını indirir.',
+    emptyPlaylistsTitle: 'Henüz izlenen çalma listesi yok',
+    emptyPlaylistsBody:
+      'Senkronize tutmak için yukarıya bir çalma listesi bağlantısı yapıştır.',
+    emptyArtistsTitle: 'Henüz izlenen sanatçı yok',
+    emptyArtistsBody:
+      'Yeni yayınlarını otomatik almak için yukarıya bir sanatçı bağlantısı yapıştır.',
+    searchPlaceholder: 'Ada veya bağlantıya göre filtrele',
+    colPlaylist: 'Çalma listesi',
+    colArtist: 'Sanatçı',
+    sortReleases: 'Yayın sayısı',
+    isArtistLink: 'Bu bir sanatçı bağlantısı.',
+    isPlaylistLink: 'Bu bir çalma listesi bağlantısı.',
+    addUnderArtists: 'Sanatçılar altına ekle',
+    addUnderPlaylists: 'Çalma listeleri altına ekle',
+    checkingAllPlaylists: 'Tüm etkin çalma listeleri kontrol ediliyor…',
+    checkingAllArtists: 'Tüm etkin sanatçılar kontrol ediliyor…',
+    edit: 'Düzenle',
+    editTitle: 'İzlemeyi düzenle',
+    link: 'Bağlantı',
+    copyLink: 'Bağlantıyı kopyala',
+    linkCopied: 'Bağlantı kopyalandı',
+    undoLink: 'Bağlantı değişikliğini geri al',
+    editLinkHintPlaylist:
+      'Aynı çalma listesinin başka bir bağlantısı yalnızca adresi günceller. Farklı bir çalma listesinin bağlantısı bu izlemeyi o listeye yönlendirir: liste baştan kontrol edilir ve kitaplığındaki parçalar yeniden indirilmez.',
+    editLinkHintArtist:
+      'Aynı sanatçının başka bir bağlantısı yalnızca adresi günceller. Farklı bir sanatçının bağlantısı bu izlemeyi o sanatçıya yönlendirir: yayınları baştan kontrol edilir ve kitaplığındaki parçalar yeniden indirilmez.',
+    linkRequired: 'Bir bağlantı yapıştır',
+    needArtistLink:
+      'Bu izleme bir sanatçıyı takip ediyor — sanatçı bağlantısı yapıştır.',
+    needPlaylistLink:
+      'Bu izleme bir çalma listesini takip ediyor — çalma listesi bağlantısı yapıştır.',
+    activeOn: 'Belirlenen aralıkta kontrol edilir',
+    activeOff: 'Duraklatıldı',
+    added: 'Eklenme',
+    save: 'Kaydet',
+    saved: 'İzleme güncellendi',
+    retargeted: 'Artık {name} izleniyor',
   },
   settings: {
     title: 'Ayarlar',

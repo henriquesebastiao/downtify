@@ -135,18 +135,18 @@ The **Playlist Monitor** lets Downtify watch your favorite Spotify and YouTube M
 
 **How to use it:**
 
-1. Open **Monitor** from the sidebar (on phones: **More → Monitor**)
-2. Paste a Spotify or YouTube Music playlist URL, or an **artist** URL (Spotify, or YouTube Music such as `music.youtube.com/@artist`) to watch everything they release
+1. Open **Monitor** from the sidebar (on phones: **More → Monitor**) and pick the **Playlists** or **Artists** tab
+2. Paste a Spotify or YouTube Music playlist URL — or, on the Artists tab, an **artist** URL (Spotify, or YouTube Music such as `music.youtube.com/@artist`) to watch everything they release
 3. Choose how often Downtify should check for new tracks (every 15 min up to once a month)
-4. Click **Watch**
+4. Click **Watch playlist** / **Watch artist**
 
-From that point on, whenever a new song appears in the playlist, Downtify will detect and download it on the next scheduled check. Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded.
+Downtify downloads what's already there right away, then detects and downloads every new song on the scheduled checks.
 
-Adding an **artist** works the same way: Downtify downloads their discography and then watches for new releases, so you don't need a dedicated playlist per artist. Each watch shows a **Spotify** or **YouTube Music** badge. You can pause, resume, force an immediate check, or stop any watch at any time from the same page.
+Adding an **artist** works the same way: Downtify downloads their discography and then watches for new releases, so you don't need a dedicated playlist per artist. Each watch shows the link it follows and a **Spotify** or **YouTube Music** badge. You can filter the list, pause, resume, force an immediate check, **edit** a watch (including pointing it at a different playlist or artist), or stop it at any time.
 
 YouTube Music playlists are handy for songs that aren't on Spotify: each track is downloaded from the exact video in the playlist.
 
-Playlists checked daily or less often can be pinned to a specific hour (e.g. always sync overnight at 3 AM) with the `DOWNTIFY_MONITOR_SYNC_TIME` and `TZ` environment variables, and can be sorted by date added, title, frequency, track count, or status. See **[Playlist Monitor](https://henriquesebastiao.github.io/downtify/features/playlist-monitor/)** in the full docs for details.
+Playlists checked daily or less often can be pinned to a specific hour (e.g. always sync overnight at 3 AM) with the `DOWNTIFY_MONITOR_SYNC_TIME` and `TZ` environment variables, and each tab can be sorted by date added, name, last check, frequency, or size. See **[Playlist Monitor](https://henriquesebastiao.github.io/downtify/features/playlist-monitor/)** in the full docs for details.
 
 ---
 

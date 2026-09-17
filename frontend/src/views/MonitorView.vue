@@ -4,7 +4,7 @@
   >
     <PageHeader :title="t('monitor.title')" :subtitle="t('monitor.subtitle')">
       <UiButton
-        v-if="items.length"
+        v-if="enabledInTab.length"
         variant="ghost"
         icon="retry"
         :loading="checkingAll"
@@ -14,6 +14,8 @@
       </UiButton>
     </PageHeader>
 
+    <UiTabs :items="tabs" :model-value="tab" />
+
     <form
       class="flex flex-col gap-2 rounded-panel border border-line-2 bg-surface p-2 sm:flex-row sm:items-center"
       @submit.prevent="add"
@@ -22,18 +24,18 @@
         class="flex h-11 min-w-0 flex-none items-center gap-3 px-3 sm:flex-1"
       >
         <AppIcon name="link" :size="18" class="text-faint" />
-        <span class="sr-only">{{ t('monitor.urlLabel') }}</span>
+        <span class="sr-only">{{ copy.urlLabel }}</span>
         <input
-          v-model="newUrl"
+          v-model="newUrl[tab]"
           type="url"
-          :placeholder="t('monitor.urlPlaceholder')"
+          :placeholder="copy.urlPlaceholder"
           class="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
         />
       </label>
       <div class="flex gap-2 px-1 pb-1 sm:p-0">
         <UiSelect
           v-model="newInterval"
-          :options="intervalOptions"
+          :options="intervalOptions(t)"
           :label="t('monitor.interval')"
           icon="clock"
           class="flex-1 sm:flex-none"
@@ -41,19 +43,38 @@
         <UiButton
           type="submit"
           variant="primary"
-          icon="radar"
+          :icon="tab === 'artist' ? 'user' : 'radar'"
           :loading="adding"
-          :disabled="!newUrl.trim()"
+          :disabled="!newUrl[tab].trim()"
         >
-          {{ t('monitor.watch') }}
+          {{ copy.add }}
         </UiButton>
       </div>
     </form>
-    <p v-if="addError" class="-mt-3 text-[13px] text-danger">{{ addError }}</p>
+    <p
+      v-if="addError[tab]"
+      class="-mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-danger"
+      role="alert"
+    >
+      {{ addError[tab] }}
+      <UiButton
+        v-if="wrongKind"
+        size="sm"
+        variant="ghost"
+        :icon-right="'chevron-right'"
+        @click="moveToOtherTab"
+      >
+        {{
+          wrongKind === 'artist'
+            ? t('monitor.addUnderArtists')
+            : t('monitor.addUnderPlaylists')
+        }}
+      </UiButton>
+    </p>
 
     <p class="flex items-start gap-2 text-[13px] text-pretty text-muted">
       <AppIcon name="info" :size="16" class="mt-0.5 shrink-0" />{{
-        t('monitor.explainer')
+        copy.explainer
       }}
     </p>
 
@@ -62,15 +83,27 @@
     </div>
 
     <UiEmpty
-      v-else-if="!items.length"
-      icon="radar"
-      :title="t('monitor.emptyTitle')"
-      :body="t('monitor.emptyBody')"
+      v-else-if="!inTab.length"
+      :icon="tab === 'artist' ? 'user' : 'playlist'"
+      :title="copy.emptyTitle"
+      :body="copy.emptyBody"
     />
 
     <template v-else>
       <div class="flex flex-wrap items-center gap-2">
-        <UiChips v-model="filter" :items="filters" />
+        <label
+          class="flex h-10 w-full items-center gap-2.5 rounded-control border border-line-2 bg-surface px-3 transition-colors focus-within:border-accent sm:w-72"
+        >
+          <AppIcon name="filter" :size="16" class="text-faint" />
+          <span class="sr-only">{{ t('monitor.searchPlaceholder') }}</span>
+          <input
+            v-model="query"
+            type="search"
+            :placeholder="t('monitor.searchPlaceholder')"
+            class="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
+          />
+        </label>
+        <UiChips v-model="show" :items="showFilters" />
         <div class="ml-auto flex items-center gap-2">
           <UiSelect
             v-model="sortKey"
@@ -90,125 +123,149 @@
         </div>
       </div>
 
-      <div
-        class="hidden grid-cols-[minmax(0,2fr)_140px_170px_150px_110px_64px_96px] items-center gap-4 border-b border-line px-4 pb-2.5 text-[11px] font-semibold tracking-[0.06em] text-faint uppercase lg:grid"
+      <UiEmpty
+        v-if="!visible.length"
+        icon="filter"
+        :title="t('library.noMatches')"
+        :body="t('library.noMatchesHint')"
       >
-        <span>{{ t('monitor.colWatching') }}</span>
-        <span>{{ t('monitor.colSource') }}</span>
-        <span>{{ t('monitor.colChecks') }}</span>
-        <span>{{ t('monitor.colLastChecked') }}</span>
-        <span>{{ t('monitor.colSize') }}</span>
-        <span>{{ t('monitor.colActive') }}</span>
-        <span />
-      </div>
+        <UiButton variant="secondary" @click="clearFilters">
+          {{ t('library.clearFilters') }}
+        </UiButton>
+      </UiEmpty>
 
-      <TransitionGroup name="list" tag="ul" class="-mt-3 flex flex-col">
-        <li
-          v-for="item in visible"
-          :key="item.id"
-          class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-[12px] px-4 py-3 transition-colors hover:bg-surface lg:grid-cols-[minmax(0,2fr)_140px_170px_150px_110px_64px_96px]"
+      <template v-else>
+        <div
+          class="hidden grid-cols-[minmax(0,2fr)_140px_170px_150px_110px_64px_128px] items-center gap-4 border-b border-line px-4 pb-2.5 text-[11px] font-semibold tracking-[0.06em] text-faint uppercase lg:grid"
         >
-          <div
-            class="flex min-w-0 items-center gap-3 transition-opacity"
-            :class="item.enabled ? '' : 'opacity-50'"
+          <span>{{
+            tab === 'artist' ? t('monitor.colArtist') : t('monitor.colPlaylist')
+          }}</span>
+          <span>{{ t('monitor.colSource') }}</span>
+          <span>{{ t('monitor.colChecks') }}</span>
+          <span>{{ t('monitor.colLastChecked') }}</span>
+          <span>{{ t('monitor.colSize') }}</span>
+          <span>{{ t('monitor.colActive') }}</span>
+          <span />
+        </div>
+
+        <TransitionGroup name="list" tag="ul" class="-mt-3 flex flex-col">
+          <li
+            v-for="item in visible"
+            :key="item.id"
+            class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-[12px] px-4 py-3 transition-colors hover:bg-surface lg:grid-cols-[minmax(0,2fr)_140px_170px_150px_110px_64px_128px]"
           >
-            <CoverArt
-              :name="item.name"
-              :round="item.kind === 'artist'"
-              :icon="item.kind === 'artist' ? 'user' : 'playlist'"
-              rounded="rounded-[8px]"
-              :letter-size="16"
-              class="size-11"
-            />
-            <div class="min-w-0">
-              <a
-                :href="item.url"
-                target="_blank"
-                rel="noopener"
-                class="block truncate text-sm font-semibold hover:underline"
-                >{{ item.name }}</a
-              >
-              <span class="text-xs text-muted">
+            <div
+              class="flex min-w-0 items-center gap-3 transition-opacity"
+              :class="item.enabled ? '' : 'opacity-50'"
+            >
+              <CoverArt
+                :name="item.name"
+                :round="tab === 'artist'"
+                :icon="tab === 'artist' ? 'user' : 'playlist'"
+                rounded="rounded-[8px]"
+                :letter-size="16"
+                class="size-11"
+              />
+              <div class="min-w-0">
+                <button
+                  type="button"
+                  class="block max-w-full truncate text-left text-sm font-semibold hover:underline"
+                  @click="editing = item"
+                >
+                  {{ item.name }}
+                </button>
+                <a
+                  :href="item.url"
+                  target="_blank"
+                  rel="noopener"
+                  :title="item.url"
+                  class="block truncate font-mono text-[11.5px] text-muted hover:text-fg hover:underline"
+                  >{{ displayUrl(item.url) }}</a
+                >
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-1 lg:order-last">
+              <UiIconButton
+                icon="retry"
+                :label="t('monitor.checkNow')"
+                size="sm"
+                :disabled="checking.has(item.id)"
+                :class="checking.has(item.id) ? 'animate-spin' : ''"
+                @click="check(item)"
+              />
+              <UiIconButton
+                icon="pencil"
+                :label="t('monitor.edit')"
+                size="sm"
+                @click="editing = item"
+              />
+              <UiMenu
+                :items="menuFor(item)"
+                :label="t('common.more')"
+                size="sm"
+              />
+            </div>
+
+            <div
+              class="col-span-2 flex flex-wrap items-center gap-2 lg:contents"
+            >
+              <span class="lg:block">
+                <WatchSourceBadge :source="item.source" />
+              </span>
+              <UiSelect
+                :model-value="item.interval_minutes"
+                :options="intervalOptions(t, item.interval_minutes)"
+                :label="t('monitor.interval')"
+                size="sm"
+                @update:model-value="
+                  (value) => update(item, { interval_minutes: value })
+                "
+              />
+              <span class="flex items-center gap-1.5 text-[13px] text-muted">
+                <AppIcon name="clock" :size="14" class="lg:hidden" />
                 {{
-                  item.kind === 'artist'
-                    ? t('monitor.kindArtist')
-                    : t('monitor.kindPlaylist')
+                  item.last_checked
+                    ? timeAgo(item.last_checked, locale)
+                    : t('monitor.never')
                 }}
               </span>
+              <span class="tabular text-[13px] text-muted">
+                {{
+                  tab === 'artist'
+                    ? t('monitor.releases', { count: item.last_track_count })
+                    : t('common.tracks', { count: item.last_track_count })
+                }}
+              </span>
+              <UiSwitch
+                :model-value="item.enabled"
+                class="ml-auto lg:ml-0"
+                :aria-label="`${t('monitor.colActive')}: ${item.name}`"
+                @update:model-value="
+                  (value) => update(item, { enabled: value })
+                "
+              />
             </div>
-          </div>
-
-          <div class="flex items-center justify-end gap-1 lg:order-last">
-            <UiIconButton
-              icon="retry"
-              :label="t('monitor.checkNow')"
-              size="sm"
-              :disabled="checking.has(item.id)"
-              :class="checking.has(item.id) ? 'animate-spin' : ''"
-              @click="check(item)"
-            />
-            <UiMenu
-              :items="menuFor(item)"
-              :label="t('common.more')"
-              size="sm"
-            />
-          </div>
-
-          <div class="col-span-2 flex flex-wrap items-center gap-2 lg:contents">
-            <span class="lg:block">
-              <UiBadge
-                v-if="item.source === 'youtube_music'"
-                tone="neutral"
-                icon="youtube"
-                >YouTube Music</UiBadge
-              >
-              <UiBadge v-else tone="spotify" icon="spotify">Spotify</UiBadge>
-            </span>
-            <UiSelect
-              :model-value="item.interval_minutes"
-              :options="intervalOptions"
-              :label="t('monitor.interval')"
-              size="sm"
-              @update:model-value="
-                (value) => update(item, { interval_minutes: value })
-              "
-            />
-            <span class="flex items-center gap-1.5 text-[13px] text-muted">
-              <AppIcon name="clock" :size="14" class="lg:hidden" />
-              {{
-                item.last_checked
-                  ? timeAgo(item.last_checked, locale)
-                  : t('monitor.never')
-              }}
-            </span>
-            <span class="tabular text-[13px] text-muted">
-              {{
-                item.kind === 'artist'
-                  ? t('monitor.releases', { count: item.last_track_count })
-                  : t('common.tracks', { count: item.last_track_count })
-              }}
-            </span>
-            <UiSwitch
-              :model-value="item.enabled"
-              class="ml-auto lg:ml-0"
-              :aria-label="
-                item.enabled ? t('monitor.pause') : t('monitor.resume')
-              "
-              @update:model-value="(value) => update(item, { enabled: value })"
-            />
-          </div>
-        </li>
-      </TransitionGroup>
+          </li>
+        </TransitionGroup>
+      </template>
     </template>
+
+    <WatchEditDialog
+      :watch="editing"
+      @close="editing = null"
+      @saved="onSaved"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import CoverArt from '/src/components/ui/CoverArt.vue'
-import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiChips from '/src/components/ui/UiChips.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
@@ -217,41 +274,113 @@ import UiMenu from '/src/components/ui/UiMenu.vue'
 import UiSelect from '/src/components/ui/UiSelect.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
+import UiTabs from '/src/components/ui/UiTabs.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
+import WatchEditDialog from '/src/components/monitor/WatchEditDialog.vue'
+import WatchSourceBadge from '/src/components/monitor/WatchSourceBadge.vue'
+import { intervalOptions } from '/src/components/monitor/intervals'
 import monitorAPI from '/src/model/monitor'
 import { useUi } from '/src/model/ui'
 import { timeAgo } from '/src/lib/format'
-import { compareText } from '/src/lib/library'
+import {
+  WATCH_SORT_KEYS,
+  countWatches,
+  filterWatches,
+  sortWatches,
+  watchKind,
+  watchKindOfUrl,
+} from '/src/lib/watches'
 import { useI18n } from '/src/i18n'
 
 const { t, locale } = useI18n()
 const ui = useUi()
+const route = useRoute()
+const router = useRouter()
 
 const items = ref([])
 const loading = ref(false)
 const adding = ref(false)
-const addError = ref('')
-const newUrl = ref('')
+// Per tab, so switching tabs keeps what was typed in each.
+const newUrl = reactive({ playlist: '', artist: '' })
+const addError = reactive({ playlist: '', artist: '' })
+const wrongKind = ref(null)
 const newInterval = ref(360)
 const checking = ref(new Set())
 const checkingAll = ref(false)
-const filter = ref('all')
+const query = ref('')
+const show = ref('all')
+const editing = ref(null)
 const sortKey = useLocalStorage('downtify-monitor-sort', 'created_at')
 const sortDir = useLocalStorage('downtify-monitor-sort-dir', 'desc')
+if (!WATCH_SORT_KEYS.includes(sortKey.value)) sortKey.value = 'created_at'
 
-const INTERVALS = [15, 30, 60, 180, 360, 720, 1440, 10080, 20160, 43200]
+const counts = computed(() => countWatches(items.value))
 
-function intervalLabel(minutes) {
-  if (minutes < 60) return t('monitor.everyMinutes', { count: minutes })
-  if (minutes < 1440) return t('monitor.everyHours', { count: minutes / 60 })
-  if (minutes < 10080) return t('monitor.everyDays', { count: minutes / 1440 })
-  if (minutes < 43200)
-    return t('monitor.everyWeeks', { count: minutes / 10080 })
-  return t('monitor.everyMonths', { count: Math.round(minutes / 43200) })
-}
+// /monitor/playlists and /monitor/artists; plain /monitor opens the tab
+// that has something in it.
+const tab = computed(() => {
+  if (route.params.tab === 'artists') return 'artist'
+  if (route.params.tab === 'playlists') return 'playlist'
+  return !counts.value.playlist && counts.value.artist ? 'artist' : 'playlist'
+})
 
-const intervalOptions = computed(() =>
-  INTERVALS.map((value) => ({ value, label: intervalLabel(value) }))
+const tabs = computed(() => [
+  {
+    id: 'playlist',
+    label: t('monitor.filterPlaylists'),
+    count: counts.value.playlist,
+    to: { name: 'Monitor', params: { tab: 'playlists' } },
+  },
+  {
+    id: 'artist',
+    label: t('monitor.filterArtists'),
+    count: counts.value.artist,
+    to: { name: 'Monitor', params: { tab: 'artists' } },
+  },
+])
+
+// Wording that depends on the tab.
+const copy = computed(() =>
+  tab.value === 'artist'
+    ? {
+        urlLabel: t('monitor.urlLabelArtist'),
+        urlPlaceholder: t('monitor.urlPlaceholderArtist'),
+        add: t('monitor.watchArtist'),
+        explainer: t('monitor.explainerArtists'),
+        emptyTitle: t('monitor.emptyArtistsTitle'),
+        emptyBody: t('monitor.emptyArtistsBody'),
+      }
+    : {
+        urlLabel: t('monitor.urlLabelPlaylist'),
+        urlPlaceholder: t('monitor.urlPlaceholderPlaylist'),
+        add: t('monitor.watchPlaylist'),
+        explainer: t('monitor.explainerPlaylists'),
+        emptyTitle: t('monitor.emptyPlaylistsTitle'),
+        emptyBody: t('monitor.emptyPlaylistsBody'),
+      }
+)
+
+const inTab = computed(() => filterWatches(items.value, { kind: tab.value }))
+const enabledInTab = computed(() => inTab.value.filter((i) => i.enabled))
+
+const showFilters = computed(() => {
+  const paused = inTab.value.filter((i) => !i.enabled).length
+  return [
+    { id: 'all', label: t('monitor.filterAll'), count: inTab.value.length },
+    { id: 'paused', label: t('monitor.filterPaused'), count: paused },
+  ].filter((item) => item.id === 'all' || item.count || show.value === item.id)
+})
+
+const visible = computed(() =>
+  sortWatches(
+    filterWatches(items.value, {
+      kind: tab.value,
+      query: query.value,
+      paused: show.value === 'paused',
+    }),
+    sortKey.value,
+    sortDir.value
+  )
 )
 
 const sortOptions = computed(() => [
@@ -259,47 +388,37 @@ const sortOptions = computed(() => [
   { value: 'name', label: t('monitor.sortName') },
   { value: 'last_checked', label: t('monitor.sortChecked') },
   { value: 'interval_minutes', label: t('monitor.sortInterval') },
-  { value: 'last_track_count', label: t('monitor.sortSize') },
+  {
+    value: 'last_track_count',
+    label:
+      tab.value === 'artist'
+        ? t('monitor.sortReleases')
+        : t('monitor.sortSize'),
+  },
 ])
 
-const filters = computed(() => {
-  const count = (fn) => items.value.filter(fn).length
-  return [
-    { id: 'all', label: t('monitor.filterAll'), count: items.value.length },
-    {
-      id: 'playlist',
-      label: t('monitor.filterPlaylists'),
-      count: count((i) => i.kind !== 'artist'),
-    },
-    {
-      id: 'artist',
-      label: t('monitor.filterArtists'),
-      count: count((i) => i.kind === 'artist'),
-    },
-    {
-      id: 'paused',
-      label: t('monitor.filterPaused'),
-      count: count((i) => !i.enabled),
-    },
-  ].filter((item) => item.id === 'all' || item.count)
+watch(tab, () => {
+  query.value = ''
+  show.value = 'all'
+  wrongKind.value = null
 })
 
-const visible = computed(() => {
-  let list = items.value
-  if (filter.value === 'playlist')
-    list = list.filter((i) => i.kind !== 'artist')
-  if (filter.value === 'artist') list = list.filter((i) => i.kind === 'artist')
-  if (filter.value === 'paused') list = list.filter((i) => !i.enabled)
-  const dir = sortDir.value === 'asc' ? 1 : -1
-  const key = sortKey.value
-  return [...list].sort((a, b) => {
-    if (key === 'name') return dir * compareText(a.name, b.name)
-    if (key === 'created_at' || key === 'last_checked') {
-      return dir * (new Date(a[key] || 0) - new Date(b[key] || 0))
-    }
-    return dir * ((a[key] || 0) - (b[key] || 0))
-  })
-})
+function clearFilters() {
+  query.value = ''
+  show.value = 'all'
+}
+
+/** open.spotify.com/playlist/… without the scheme and tracking query. */
+function displayUrl(url) {
+  try {
+    const parsed = new URL(url)
+    parsed.searchParams.delete('si')
+    const search = parsed.searchParams.toString()
+    return `${parsed.host}${parsed.pathname}${search ? `?${search}` : ''}`
+  } catch {
+    return url
+  }
+}
 
 async function load() {
   loading.value = true
@@ -311,22 +430,50 @@ async function load() {
   }
 }
 
+function tabRoute(kind) {
+  return {
+    name: 'Monitor',
+    params: { tab: kind === 'artist' ? 'artists' : 'playlists' },
+  }
+}
+
 async function add() {
-  addError.value = ''
+  const kind = tab.value
+  const url = newUrl[kind].trim()
+  addError[kind] = ''
+  wrongKind.value = null
+  const detected = watchKindOfUrl(url)
+  if (detected && detected !== kind) {
+    addError[kind] =
+      detected === 'artist'
+        ? t('monitor.isArtistLink')
+        : t('monitor.isPlaylistLink')
+    wrongKind.value = detected
+    return
+  }
   adding.value = true
   try {
-    const res = await monitorAPI.addMonitoredPlaylist(
-      newUrl.value.trim(),
-      newInterval.value
-    )
+    const res = await monitorAPI.addMonitoredPlaylist(url, newInterval.value)
     items.value = [res.data, ...items.value]
-    newUrl.value = ''
+    newUrl[kind] = ''
     ui.toast(t('toast.watching', { name: res.data.name }), { kind: 'success' })
+    // A link the page couldn't classify turned out to be the other kind.
+    if (watchKind(res.data) !== kind) router.push(tabRoute(watchKind(res.data)))
   } catch (err) {
-    addError.value = err?.response?.data?.detail || t('monitor.addFailed')
+    addError[kind] = err?.response?.data?.detail || t('monitor.addFailed')
   } finally {
     adding.value = false
   }
+}
+
+function moveToOtherTab() {
+  const target = wrongKind.value
+  const from = tab.value
+  newUrl[target] = newUrl[from]
+  newUrl[from] = ''
+  addError[from] = ''
+  wrongKind.value = null
+  router.push(tabRoute(target))
 }
 
 async function update(item, changes) {
@@ -339,6 +486,13 @@ async function update(item, changes) {
     Object.assign(item, before)
     ui.toast(t('toast.actionFailed'), { kind: 'error' })
   }
+}
+
+function onSaved(updated) {
+  const item = items.value.find((i) => i.id === updated.id)
+  if (item) Object.assign(item, updated)
+  // A retargeted watch downloads again: refresh its counts shortly.
+  setTimeout(load, 4000)
 }
 
 async function check(item) {
@@ -360,14 +514,28 @@ async function check(item) {
 
 async function checkAll() {
   checkingAll.value = true
-  for (const item of items.value.filter((i) => i.enabled)) {
+  const kind = tab.value
+  for (const item of enabledInTab.value) {
     await monitorAPI.checkMonitoredPlaylist(item.id).catch(() => {})
   }
-  ui.toast(t('monitor.checkingAll'))
+  ui.toast(
+    kind === 'artist'
+      ? t('monitor.checkingAllArtists')
+      : t('monitor.checkingAllPlaylists')
+  )
   setTimeout(() => {
     checkingAll.value = false
     load()
   }, 4000)
+}
+
+async function copyLink(item) {
+  try {
+    await navigator.clipboard.writeText(item.url)
+    ui.toast(t('monitor.linkCopied'), { kind: 'success' })
+  } catch {
+    ui.toast(t('toast.actionFailed'), { kind: 'error' })
+  }
 }
 
 async function remove(item) {
@@ -389,9 +557,19 @@ async function remove(item) {
 function menuFor(item) {
   return [
     {
+      label: t('monitor.edit'),
+      icon: 'pencil',
+      action: () => (editing.value = item),
+    },
+    {
       label: item.enabled ? t('monitor.pause') : t('monitor.resume'),
       icon: item.enabled ? 'pause' : 'play',
       action: () => update(item, { enabled: !item.enabled }),
+    },
+    {
+      label: t('monitor.copyLink'),
+      icon: 'copy',
+      action: () => copyLink(item),
     },
     {
       label: t('monitor.openSource'),

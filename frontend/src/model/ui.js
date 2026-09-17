@@ -39,6 +39,28 @@ function closeDialog(result) {
   current?.resolve(result)
 }
 
+// Open UiModal dialogs, topmost last: global shortcuts stay off while
+// any is open, and Escape closes the top one.
+const modals = ref([])
+let modalId = 0
+
+function pushModal(close) {
+  const id = ++modalId
+  modals.value = [...modals.value, { id, close }]
+  return id
+}
+
+function popModal(id) {
+  modals.value = modals.value.filter((modal) => modal.id !== id)
+}
+
+function closeTopModal() {
+  const top = modals.value.at(-1)
+  if (!top) return false
+  top.close()
+  return true
+}
+
 // The global search box registers a focus function here (Ctrl/Cmd+K).
 let focusSearchFn = null
 function registerSearchFocus(fn) {
@@ -56,6 +78,10 @@ export function useUi() {
     dialog,
     confirm,
     closeDialog,
+    modals,
+    pushModal,
+    popModal,
+    closeTopModal,
     registerSearchFocus,
     focusSearch,
   }

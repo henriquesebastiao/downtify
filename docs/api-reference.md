@@ -713,11 +713,19 @@ Add a watch. Triggers an immediate initial download.
 
 ### `PATCH /api/monitor/playlists/{playlist_id}`
 
-Update a monitored playlist (interval, enabled state).
+Update a watch.
 
-**Request body:** Partial object with `interval_minutes` and/or `enabled`.
+**Request body:** Partial object with any of:
 
-**Response:** Updated playlist monitor object.
+| Field | Type | Description |
+|-------|------|-------------|
+| `interval_minutes` | integer | Check interval |
+| `enabled` | boolean | Pause (`false`) or resume (`true`) |
+| `url` | string | A new link for the watch — same kinds as in `POST` |
+
+A `url` that points at the **same** playlist or artist only replaces the stored `url`. One that points at a **different** playlist or artist of the same kind retargets the watch: `spotify_id`, `name` and `url` change, `last_checked` becomes `null`, `last_track_count` becomes `0`, and its downloaded-track and seen-release history is cleared. If the watch is enabled, a first check starts in the background, as after `POST`. An unchanged `url` is ignored.
+
+**Response:** Updated watch object. `404` if there is no such watch; for a new `url`: `400` if it isn't a supported link or is the other kind (an artist link for a playlist watch, or the reverse), `409` if another watch already follows it, `404`/`502` if it can't be resolved. On an error nothing is changed.
 
 ---
 

@@ -380,21 +380,11 @@ export default {
     title: 'Surveillance de playlists',
     subtitle:
       'Les nouveaux titres de ces playlists et artistes sont téléchargés automatiquement.',
-    urlLabel: 'Lien de playlist ou d’artiste',
-    urlPlaceholder:
-      'Collez une playlist Spotify ou YouTube Music, ou un artiste YouTube Music',
     interval: 'Vérifier toutes les',
-    watch: 'Surveiller',
     addFailed: 'Impossible de surveiller ce lien. Vérifiez-le et réessayez.',
-    explainer:
-      'Ajouter une playlist télécharge tout son contenu maintenant, puis la vérifie selon l’intervalle et télécharge les ajouts. Les artistes fonctionnent de la même façon avec les nouvelles sorties.',
     checkAll: 'Tout vérifier',
     checkNow: 'Vérifier maintenant',
     checking: 'Vérification de {name}…',
-    checkingAll: 'Vérification de toutes les surveillances actives…',
-    emptyTitle: 'Rien n’est surveillé',
-    emptyBody:
-      'Collez ci-dessus un lien de playlist ou d’artiste pour le garder synchronisé.',
     filterAll: 'Tout',
     filterPlaylists: 'Playlists',
     filterArtists: 'Artistes',
@@ -406,7 +396,6 @@ export default {
     sortSize: 'Taille',
     ascending: 'Croissant',
     descending: 'Décroissant',
-    colWatching: 'Surveillé',
     colSource: 'Source',
     colChecks: 'Vérifications',
     colLastChecked: 'Dernière vérification',
@@ -425,6 +414,55 @@ export default {
     everyDays: { one: 'Chaque jour', other: 'Tous les {count} jours' },
     everyWeeks: { one: 'Chaque semaine', other: 'Toutes les {count} semaines' },
     everyMonths: { one: 'Chaque mois', other: 'Tous les {count} mois' },
+    urlLabelPlaylist: 'Lien de la playlist',
+    urlLabelArtist: 'Lien de l’artiste',
+    urlPlaceholderPlaylist:
+      'Collez le lien d’une playlist Spotify ou YouTube Music',
+    urlPlaceholderArtist:
+      'Collez le lien d’un artiste Spotify ou YouTube Music',
+    watchPlaylist: 'Surveiller la playlist',
+    watchArtist: 'Surveiller l’artiste',
+    explainerPlaylists:
+      'Ajouter une playlist télécharge tout son contenu maintenant, puis la vérifie selon l’intervalle et télécharge les ajouts.',
+    explainerArtists:
+      'Ajouter un artiste télécharge toute sa discographie maintenant, puis le vérifie selon l’intervalle et télécharge chaque nouvelle sortie.',
+    emptyPlaylistsTitle: 'Aucune playlist surveillée',
+    emptyPlaylistsBody:
+      'Collez ci-dessus le lien d’une playlist pour la garder synchronisée.',
+    emptyArtistsTitle: 'Aucun artiste surveillé',
+    emptyArtistsBody:
+      'Collez ci-dessus le lien d’un artiste pour recevoir ses nouvelles sorties automatiquement.',
+    searchPlaceholder: 'Filtrer par nom ou lien',
+    colPlaylist: 'Playlist',
+    colArtist: 'Artiste',
+    sortReleases: 'Nombre de sorties',
+    isArtistLink: 'C’est un lien d’artiste.',
+    isPlaylistLink: 'C’est un lien de playlist.',
+    addUnderArtists: 'L’ajouter dans Artistes',
+    addUnderPlaylists: 'L’ajouter dans Playlists',
+    checkingAllPlaylists: 'Vérification de toutes les playlists actives…',
+    checkingAllArtists: 'Vérification de tous les artistes actifs…',
+    edit: 'Modifier',
+    editTitle: 'Modifier la surveillance',
+    link: 'Lien',
+    copyLink: 'Copier le lien',
+    linkCopied: 'Lien copié',
+    undoLink: 'Annuler la modification du lien',
+    editLinkHintPlaylist:
+      'Un autre lien vers cette même playlist met seulement l’adresse à jour. Un lien vers une autre playlist fait suivre celle-ci à la surveillance : elle est vérifiée depuis le début, et les titres déjà dans votre bibliothèque ne sont pas retéléchargés.',
+    editLinkHintArtist:
+      'Un autre lien vers ce même artiste met seulement l’adresse à jour. Un lien vers un autre artiste fait suivre celui-ci à la surveillance : ses sorties sont vérifiées depuis le début, et les titres déjà dans votre bibliothèque ne sont pas retéléchargés.',
+    linkRequired: 'Collez un lien',
+    needArtistLink:
+      'Cette surveillance suit un artiste — collez un lien d’artiste.',
+    needPlaylistLink:
+      'Cette surveillance suit une playlist — collez un lien de playlist.',
+    activeOn: 'Vérifiée selon l’intervalle',
+    activeOff: 'En pause',
+    added: 'Ajoutée le',
+    save: 'Enregistrer',
+    saved: 'Surveillance mise à jour',
+    retargeted: 'Surveillance de {name}',
   },
   settings: {
     title: 'Paramètres',

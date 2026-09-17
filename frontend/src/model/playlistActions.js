@@ -67,7 +67,8 @@ export function usePlaylistActions() {
         kind: 'success',
         action: {
           label: t('nav.monitor'),
-          run: () => router.push({ name: 'Monitor' }),
+          run: () =>
+            router.push({ name: 'Monitor', params: { tab: 'playlists' } }),
         },
       })
     } catch (err) {

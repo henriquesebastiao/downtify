@@ -309,6 +309,7 @@ class PlaylistMonitorDB:
             'last_checked',
             'last_track_count',
             'name',
+            'url',
         }
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
@@ -325,6 +326,41 @@ class PlaylistMonitorDB:
                 (playlist_id,),
             ).fetchone()
             return _row_to_playlist(row) if row else None
+
+    def retarget_playlist(
+        self, playlist_id: int, spotify_id: str, name: str, url: str
+    ) -> Optional[MonitoredPlaylist]:
+        """Point a watch at a different playlist or artist.
+
+        Keeps its id, interval and enabled state, but starts over like a
+        new watch: the name follows the new target, and the download and
+        release history of the old one is dropped. Files already in the
+        library stay; ones the new target shares are reused when it's
+        checked.
+        """
+        with self._connect() as conn:
+            cur = conn.execute(
+                """UPDATE monitored_playlists
+                   SET spotify_id = ?, name = ?, url = ?,
+                       last_checked = NULL, last_track_count = 0
+                   WHERE id = ?""",
+                (spotify_id, name, url, playlist_id),
+            )
+            if cur.rowcount == 0:
+                return None
+            conn.execute(
+                'DELETE FROM downloaded_tracks WHERE playlist_id = ?',
+                (playlist_id,),
+            )
+            conn.execute(
+                'DELETE FROM seen_albums WHERE playlist_id = ?',
+                (playlist_id,),
+            )
+            row = conn.execute(
+                'SELECT * FROM monitored_playlists WHERE id = ?',
+                (playlist_id,),
+            ).fetchone()
+            return _row_to_playlist(row)
 
     def get_track_filenames(
         self, playlist_id: int

@@ -369,21 +369,11 @@ export default {
     title: 'Monitor de Playlists',
     subtitle:
       'Novas faixas destas playlists e artistas são baixadas automaticamente.',
-    urlLabel: 'Link da playlist ou artista',
-    urlPlaceholder:
-      'Cole uma playlist do Spotify ou YouTube Music, ou um artista do YouTube Music',
     interval: 'Verificar a cada',
-    watch: 'Monitorar',
     addFailed: 'Não foi possível monitorar esse link. Confira e tente de novo.',
-    explainer:
-      'Ao adicionar uma playlist, tudo nela é baixado agora; depois ela é verificada no intervalo definido e o que for adicionado é baixado. Artistas funcionam da mesma forma com novos lançamentos.',
     checkAll: 'Verificar tudo agora',
     checkNow: 'Verificar agora',
     checking: 'Verificando {name}…',
-    checkingAll: 'Verificando todos os monitoramentos ativos…',
-    emptyTitle: 'Nada monitorado ainda',
-    emptyBody:
-      'Cole acima o link de uma playlist ou artista para mantê-lo sincronizado.',
     filterAll: 'Todos',
     filterPlaylists: 'Playlists',
     filterArtists: 'Artistas',
@@ -395,7 +385,6 @@ export default {
     sortSize: 'Tamanho',
     ascending: 'Crescente',
     descending: 'Decrescente',
-    colWatching: 'Monitorando',
     colSource: 'Origem',
     colChecks: 'Verificações',
     colLastChecked: 'Última verificação',
@@ -414,6 +403,55 @@ export default {
     everyDays: { one: 'Todo dia', other: 'A cada {count} dias' },
     everyWeeks: { one: 'Toda semana', other: 'A cada {count} semanas' },
     everyMonths: { one: 'Todo mês', other: 'A cada {count} meses' },
+    urlLabelPlaylist: 'Link da playlist',
+    urlLabelArtist: 'Link do artista',
+    urlPlaceholderPlaylist:
+      'Cole o link de uma playlist do Spotify ou YouTube Music',
+    urlPlaceholderArtist:
+      'Cole o link de um artista do Spotify ou YouTube Music',
+    watchPlaylist: 'Monitorar playlist',
+    watchArtist: 'Monitorar artista',
+    explainerPlaylists:
+      'Ao adicionar uma playlist, tudo nela é baixado agora; depois ela é verificada no intervalo definido e o que for adicionado é baixado.',
+    explainerArtists:
+      'Ao adicionar um artista, toda a discografia é baixada agora; depois ele é verificado no intervalo definido e cada novo lançamento é baixado.',
+    emptyPlaylistsTitle: 'Nenhuma playlist monitorada',
+    emptyPlaylistsBody:
+      'Cole acima o link de uma playlist para mantê-la sincronizada.',
+    emptyArtistsTitle: 'Nenhum artista monitorado',
+    emptyArtistsBody:
+      'Cole acima o link de um artista para receber os novos lançamentos automaticamente.',
+    searchPlaceholder: 'Filtrar por nome ou link',
+    colPlaylist: 'Playlist',
+    colArtist: 'Artista',
+    sortReleases: 'Número de lançamentos',
+    isArtistLink: 'Esse é um link de artista.',
+    isPlaylistLink: 'Esse é um link de playlist.',
+    addUnderArtists: 'Adicionar em Artistas',
+    addUnderPlaylists: 'Adicionar em Playlists',
+    checkingAllPlaylists: 'Verificando todas as playlists ativas…',
+    checkingAllArtists: 'Verificando todos os artistas ativos…',
+    edit: 'Editar',
+    editTitle: 'Editar monitoramento',
+    link: 'Link',
+    copyLink: 'Copiar link',
+    linkCopied: 'Link copiado',
+    undoLink: 'Desfazer alteração do link',
+    editLinkHintPlaylist:
+      'Outro link desta mesma playlist só atualiza o endereço. Um link de outra playlist faz este monitoramento passar a segui-la: ela é verificada do zero, e as faixas que já estão na biblioteca não são baixadas de novo.',
+    editLinkHintArtist:
+      'Outro link deste mesmo artista só atualiza o endereço. Um link de outro artista faz este monitoramento passar a segui-lo: os lançamentos são verificados do zero, e as faixas que já estão na biblioteca não são baixadas de novo.',
+    linkRequired: 'Cole um link',
+    needArtistLink:
+      'Este monitoramento segue um artista — cole um link de artista.',
+    needPlaylistLink:
+      'Este monitoramento segue uma playlist — cole um link de playlist.',
+    activeOn: 'Verificado no intervalo',
+    activeOff: 'Pausado',
+    added: 'Adicionado',
+    save: 'Salvar',
+    saved: 'Monitoramento atualizado',
+    retargeted: 'Agora monitorando {name}',
   },
   settings: {
     title: 'Configurações',

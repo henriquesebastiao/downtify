@@ -51,7 +51,7 @@ const shortcutsOpen = ref(false)
 // The Now playing overlay lives in the query string (?np=1); it must not
 // remount the page underneath it.
 function viewKey(viewRoute) {
-  return viewRoute.path
+  return viewRoute.meta.viewKey || viewRoute.path
 }
 
 useLibrary().load()
@@ -64,6 +64,7 @@ useShortcuts({
   goTo: (name) => router.push({ name }),
   // A modal on top swallows every shortcut; Escape closes it.
   closeModal: () => {
+    if (ui.closeTopModal()) return true
     if (ui.dialog.value) {
       ui.closeDialog(false)
       return true
@@ -74,6 +75,9 @@ useShortcuts({
     }
     return false
   },
-  hasModal: () => Boolean(ui.dialog.value) || shortcutsOpen.value,
+  hasModal: () =>
+    Boolean(ui.dialog.value) ||
+    shortcutsOpen.value ||
+    ui.modals.value.length > 0,
 })
 </script>

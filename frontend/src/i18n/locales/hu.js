@@ -370,21 +370,11 @@ export default {
     title: 'Lejátszásilista-figyelő',
     subtitle:
       'Ezeknek a listáknak és előadóknak az új számai automatikusan letöltődnek.',
-    urlLabel: 'Lista vagy előadó linkje',
-    urlPlaceholder:
-      'Illessz be Spotify vagy YouTube Music listát, vagy YouTube Music előadót',
     interval: 'Ellenőrzés',
-    watch: 'Figyelés',
     addFailed: 'Nem sikerült figyelni a linket. Ellenőrizd és próbáld újra.',
-    explainer:
-      'Egy lista hozzáadása most letölti a teljes tartalmát, majd ütemezetten ellenőrzi és letölti az újakat. Az előadók ugyanígy működnek az új kiadásokkal.',
     checkAll: 'Összes ellenőrzése most',
     checkNow: 'Ellenőrzés most',
     checking: '{name} ellenőrzése…',
-    checkingAll: 'Minden aktív figyelés ellenőrzése…',
-    emptyTitle: 'Még nincs figyelt elem',
-    emptyBody:
-      'Illessz be fent egy lista- vagy előadólinket a szinkronban tartáshoz.',
     filterAll: 'Összes',
     filterPlaylists: 'Listák',
     filterArtists: 'Előadók',
@@ -396,7 +386,6 @@ export default {
     sortSize: 'Méret',
     ascending: 'Növekvő',
     descending: 'Csökkenő',
-    colWatching: 'Figyelt',
     colSource: 'Forrás',
     colChecks: 'Ellenőrzések',
     colLastChecked: 'Utolsó ellenőrzés',
@@ -415,6 +404,55 @@ export default {
     everyDays: { one: 'Naponta', other: '{count} naponta' },
     everyWeeks: { one: 'Hetente', other: '{count} hetente' },
     everyMonths: { one: 'Havonta', other: '{count} havonta' },
+    urlLabelPlaylist: 'Lista linkje',
+    urlLabelArtist: 'Előadó linkje',
+    urlPlaceholderPlaylist:
+      'Illessz be egy Spotify vagy YouTube Music lista linket',
+    urlPlaceholderArtist:
+      'Illessz be egy Spotify vagy YouTube Music előadó linket',
+    watchPlaylist: 'Lista figyelése',
+    watchArtist: 'Előadó figyelése',
+    explainerPlaylists:
+      'Egy lista hozzáadása most letölti a teljes tartalmát, majd ütemezetten ellenőrzi és letölti az újakat.',
+    explainerArtists:
+      'Egy előadó hozzáadása most letölti a teljes diszkográfiáját, majd ütemezetten ellenőrzi és letölti az új kiadásokat.',
+    emptyPlaylistsTitle: 'Még nincs figyelt lista',
+    emptyPlaylistsBody:
+      'Illessz be fent egy listalinket a szinkronban tartáshoz.',
+    emptyArtistsTitle: 'Még nincs figyelt előadó',
+    emptyArtistsBody:
+      'Illessz be fent egy előadólinket, hogy automatikusan megkapd az új kiadásait.',
+    searchPlaceholder: 'Szűrés név vagy link szerint',
+    colPlaylist: 'Lista',
+    colArtist: 'Előadó',
+    sortReleases: 'Kiadások száma',
+    isArtistLink: 'Ez egy előadólink.',
+    isPlaylistLink: 'Ez egy listalink.',
+    addUnderArtists: 'Hozzáadás az Előadókhoz',
+    addUnderPlaylists: 'Hozzáadás a Listákhoz',
+    checkingAllPlaylists: 'Minden aktív lista ellenőrzése…',
+    checkingAllArtists: 'Minden aktív előadó ellenőrzése…',
+    edit: 'Szerkesztés',
+    editTitle: 'Figyelés szerkesztése',
+    link: 'Link',
+    copyLink: 'Link másolása',
+    linkCopied: 'Link másolva',
+    undoLink: 'Linkmódosítás visszavonása',
+    editLinkHintPlaylist:
+      'Ugyanennek a listának egy másik linkje csak a címet frissíti. Egy másik lista linkje erre a listára állítja át a figyelést: elölről ellenőrzi, és a könyvtáradban már meglévő számokat nem tölti le újra.',
+    editLinkHintArtist:
+      'Ugyanennek az előadónak egy másik linkje csak a címet frissíti. Egy másik előadó linkje rá állítja át a figyelést: a kiadásait elölről ellenőrzi, és a könyvtáradban már meglévő számokat nem tölti le újra.',
+    linkRequired: 'Illessz be egy linket',
+    needArtistLink:
+      'Ez a figyelés egy előadót követ — illessz be előadólinket.',
+    needPlaylistLink:
+      'Ez a figyelés egy listát követ — illessz be listalinket.',
+    activeOn: 'Ütemezetten ellenőrizve',
+    activeOff: 'Szüneteltetve',
+    added: 'Hozzáadva',
+    save: 'Mentés',
+    saved: 'Figyelés frissítve',
+    retargeted: 'Most figyelve: {name}',
   },
   settings: {
     title: 'Beállítások',

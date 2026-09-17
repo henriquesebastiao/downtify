@@ -370,21 +370,11 @@ export default {
     title: 'Monitor de playlists',
     subtitle:
       'Las canciones nuevas de estas playlists y artistas se descargan automáticamente.',
-    urlLabel: 'Enlace de playlist o artista',
-    urlPlaceholder:
-      'Pega una playlist de Spotify o YouTube Music, o un artista de YouTube Music',
     interval: 'Comprobar cada',
-    watch: 'Vigilar',
     addFailed: 'No se pudo vigilar ese enlace. Revísalo e inténtalo de nuevo.',
-    explainer:
-      'Al añadir una playlist se descarga todo su contenido ahora; después se comprueba según el intervalo y se descarga lo que se añada. Los artistas funcionan igual con los nuevos lanzamientos.',
     checkAll: 'Comprobar todo ahora',
     checkNow: 'Comprobar ahora',
     checking: 'Comprobando {name}…',
-    checkingAll: 'Comprobando todas las vigilancias activas…',
-    emptyTitle: 'Aún no vigilas nada',
-    emptyBody:
-      'Pega arriba el enlace de una playlist o artista para mantenerlo sincronizado.',
     filterAll: 'Todo',
     filterPlaylists: 'Playlists',
     filterArtists: 'Artistas',
@@ -396,7 +386,6 @@ export default {
     sortSize: 'Tamaño',
     ascending: 'Ascendente',
     descending: 'Descendente',
-    colWatching: 'Vigilando',
     colSource: 'Origen',
     colChecks: 'Comprobaciones',
     colLastChecked: 'Última comprobación',
@@ -415,6 +404,55 @@ export default {
     everyDays: { one: 'Cada día', other: 'Cada {count} días' },
     everyWeeks: { one: 'Cada semana', other: 'Cada {count} semanas' },
     everyMonths: { one: 'Cada mes', other: 'Cada {count} meses' },
+    urlLabelPlaylist: 'Enlace de la playlist',
+    urlLabelArtist: 'Enlace del artista',
+    urlPlaceholderPlaylist:
+      'Pega el enlace de una playlist de Spotify o YouTube Music',
+    urlPlaceholderArtist:
+      'Pega el enlace de un artista de Spotify o YouTube Music',
+    watchPlaylist: 'Vigilar playlist',
+    watchArtist: 'Vigilar artista',
+    explainerPlaylists:
+      'Al añadir una playlist se descarga todo su contenido ahora; después se comprueba según el intervalo y se descarga lo que se añada.',
+    explainerArtists:
+      'Al añadir un artista se descarga toda su discografía ahora; después se comprueba según el intervalo y se descarga cada nuevo lanzamiento.',
+    emptyPlaylistsTitle: 'Aún no vigilas ninguna playlist',
+    emptyPlaylistsBody:
+      'Pega arriba el enlace de una playlist para mantenerla sincronizada.',
+    emptyArtistsTitle: 'Aún no vigilas ningún artista',
+    emptyArtistsBody:
+      'Pega arriba el enlace de un artista para recibir sus nuevos lanzamientos automáticamente.',
+    searchPlaceholder: 'Filtrar por nombre o enlace',
+    colPlaylist: 'Playlist',
+    colArtist: 'Artista',
+    sortReleases: 'Número de lanzamientos',
+    isArtistLink: 'Ese es un enlace de artista.',
+    isPlaylistLink: 'Ese es un enlace de playlist.',
+    addUnderArtists: 'Añadir en Artistas',
+    addUnderPlaylists: 'Añadir en Playlists',
+    checkingAllPlaylists: 'Comprobando todas las playlists activas…',
+    checkingAllArtists: 'Comprobando todos los artistas activos…',
+    edit: 'Editar',
+    editTitle: 'Editar vigilancia',
+    link: 'Enlace',
+    copyLink: 'Copiar enlace',
+    linkCopied: 'Enlace copiado',
+    undoLink: 'Deshacer cambio de enlace',
+    editLinkHintPlaylist:
+      'Otro enlace de esta misma playlist solo actualiza la dirección. Un enlace a otra playlist hace que esta vigilancia pase a seguirla: se comprueba desde cero y las canciones que ya están en tu biblioteca no se vuelven a descargar.',
+    editLinkHintArtist:
+      'Otro enlace de este mismo artista solo actualiza la dirección. Un enlace a otro artista hace que esta vigilancia pase a seguirlo: sus lanzamientos se comprueban desde cero y las canciones que ya están en tu biblioteca no se vuelven a descargar.',
+    linkRequired: 'Pega un enlace',
+    needArtistLink:
+      'Esta vigilancia sigue a un artista: pega un enlace de artista.',
+    needPlaylistLink:
+      'Esta vigilancia sigue una playlist: pega un enlace de playlist.',
+    activeOn: 'Se comprueba según el intervalo',
+    activeOff: 'En pausa',
+    added: 'Añadido',
+    save: 'Guardar',
+    saved: 'Vigilancia actualizada',
+    retargeted: 'Ahora vigilando {name}',
   },
   settings: {
     title: 'Ajustes',

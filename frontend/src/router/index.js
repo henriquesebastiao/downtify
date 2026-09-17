@@ -43,8 +43,10 @@ const routes = [
     component: () => import('/src/views/PlaylistView.vue'),
   },
   {
-    path: '/monitor',
+    path: '/monitor/:tab(playlists|artists)?',
     name: 'Monitor',
+    // Switching tabs keeps the page (and what was typed in it).
+    meta: { viewKey: 'monitor' },
     component: () => import('/src/views/MonitorView.vue'),
   },
   {

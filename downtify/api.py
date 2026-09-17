@@ -57,6 +57,11 @@ working without changes:
 * ``POST /api/cookies`` (upload a Netscape cookies.txt as the raw request
   body - no multipart, so no ``python-multipart`` dependency)
 * ``DELETE /api/cookies`` (remove the uploaded cookies.txt)
+* ``GET|POST /api/monitor/playlists`` and
+  ``PATCH|DELETE /api/monitor/playlists/{playlist_id}`` (playlist and
+  artist watches; ``PATCH`` takes ``interval_minutes``, ``enabled`` and
+  ``url`` - a link to a different playlist/artist of the same kind
+  retargets the watch), ``POST /api/monitor/playlists/{id}/check``
 * ``WS   /api/ws``
 * ``GET  /api/check_update``
 """
@@ -105,6 +110,7 @@ from .monitor import (
     KIND_PLAYLIST,
     SOURCE_SPOTIFY,
     LibraryStores,
+    MonitoredPlaylist,
     PlaylistMonitorDB,
     check_watch,
     fetch_playlist,
@@ -3166,29 +3172,69 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
     playlist = await asyncio.to_thread(
         db.add_playlist, watch_key, name, url, interval_minutes, kind
     )
-
-    # Kick off the first download pass immediately so the user does not have
-    # to wait up to a full monitor sweep interval for the initial backfill.
-    if state.downloader is not None:
-        loop = state.loop or asyncio.get_running_loop()
-
-        async def _initial_check(pl=playlist) -> None:
-            try:
-                await check_watch(
-                    pl,
-                    db,
-                    state.downloader,  # type: ignore[arg-type]
-                    state.connections.broadcast,
-                    loop,
-                    state.settings,
-                    library_stores(),
-                )
-            except Exception:
-                logger.exception('Initial check failed for watch {}', pl.id)
-
-        asyncio.create_task(_initial_check())
-
+    _start_initial_check(playlist, db)
     return playlist.to_dict()
+
+
+def _start_initial_check(
+    playlist: MonitoredPlaylist, db: PlaylistMonitorDB
+) -> None:
+    """Run a watch's first download pass now, in the background.
+
+    Saves waiting up to a full monitor sweep for the initial backfill.
+    """
+    if state.downloader is None:
+        return
+    loop = state.loop or asyncio.get_running_loop()
+
+    async def _initial_check() -> None:
+        try:
+            await check_watch(
+                playlist,
+                db,
+                state.downloader,  # type: ignore[arg-type]
+                state.connections.broadcast,
+                loop,
+                state.settings,
+                library_stores(),
+            )
+        except Exception:
+            logger.exception('Initial check failed for watch {}', playlist.id)
+
+    asyncio.create_task(_initial_check())
+
+
+async def _change_watch_url(
+    db: PlaylistMonitorDB, current: MonitoredPlaylist, url: str
+) -> Optional[MonitoredPlaylist]:
+    """Apply a new URL to a watch; return the retargeted watch, if any.
+
+    Another link to the same playlist or artist just replaces the stored
+    URL. A link to a different one of the same kind retargets the watch
+    (see :meth:`PlaylistMonitorDB.retarget_playlist`).
+    """
+    kind, watch_key, name = await _resolve_watch_target(url)
+    if kind != current.kind:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                'This watch follows an artist; paste an artist URL'
+                if current.kind == KIND_ARTIST
+                else 'This watch follows a playlist; paste a playlist URL'
+            ),
+        )
+    if watch_key == current.spotify_id:
+        await asyncio.to_thread(db.update_playlist, current.id, url=url)
+        return None
+    other = await asyncio.to_thread(db.get_by_spotify_id, watch_key)
+    if other is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f'"{other.name}" is already being watched',
+        )
+    return await asyncio.to_thread(
+        db.retarget_playlist, current.id, watch_key, name, url
+    )
 
 
 @router.patch('/api/monitor/playlists/{playlist_id}')
@@ -3200,6 +3246,17 @@ async def update_monitor_playlist(
         payload = await request.json()
     except Exception:
         payload = {}
+
+    current = await asyncio.to_thread(db.get_playlist, playlist_id)
+    if current is None:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
+
+    retargeted = None
+    url = str(payload.get('url') or '').strip()
+    if url and url != current.url:
+        retargeted = await _change_watch_url(db, current, url)
 
     kwargs: dict[str, Any] = {}
     if 'interval_minutes' in payload:
@@ -3214,6 +3271,8 @@ async def update_monitor_playlist(
         raise HTTPException(
             status_code=404, detail='Monitored playlist not found'
         )
+    if retargeted is not None and updated.enabled:
+        _start_initial_check(updated, db)
     return updated.to_dict()
 
 
