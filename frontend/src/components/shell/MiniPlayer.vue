@@ -6,10 +6,7 @@
     >
       <!-- Progress: a hairline on phones, a scrubber on desktop. -->
       <div class="absolute inset-x-3 bottom-0 h-0.5 bg-line-2 md:hidden">
-        <div
-          class="h-full bg-accent"
-          :style="{ width: `${player.progressPct.value}%` }"
-        />
+        <div class="h-full bg-accent" :style="{ width: `${smoothPercent}%` }" />
       </div>
       <div class="absolute inset-x-0 -top-2 hidden md:block">
         <SliderBar
@@ -18,6 +15,7 @@
           :label="t('player.seek')"
           :value-text="formatDuration(player.currentTime.value)"
           :hit-height="16"
+          :playing="player.isPlaying.value"
           track-class="bg-transparent"
           fill-class="bg-accent"
           thumb-class="bg-accent"
@@ -136,11 +134,13 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { useMediaQuery } from '@vueuse/core'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
 import UiIconButton from '../ui/UiIconButton.vue'
 import SliderBar from '../player/SliderBar.vue'
+import { useSmoothTime } from '../player/useSmoothTime'
 import VolumeControl from '../player/VolumeControl.vue'
 import { usePlayer } from '/src/model/player'
 import { useNowPlaying } from '/src/model/ui'
@@ -153,6 +153,20 @@ const { t } = useI18n()
 const scrub = ref(null)
 
 const track = computed(() => player.currentTrack.value)
+
+// The phone hairline glides like the desktop scrubber (only animated
+// while it's the one on screen).
+const isPhone = useMediaQuery('(max-width: 767px)')
+const smoothTime = useSmoothTime(
+  () => player.currentTime.value,
+  () => isPhone.value && player.isPlaying.value,
+  () => player.duration.value || 0
+)
+const smoothPercent = computed(() =>
+  isPhone.value && player.duration.value
+    ? Math.min(100, (smoothTime.value / player.duration.value) * 100)
+    : player.progressPct.value
+)
 
 const repeatLabel = computed(
   () =>

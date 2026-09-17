@@ -14,10 +14,10 @@ Click the title or cover, or the expand button, to open **Now playing**.
 
 ## Now playing
 
-A full-screen view tinted with the current cover's colours:
+A full-screen view tinted with colours picked from the current album cover:
 
 - **Large cover art**, title and artist (click the artist or the *Playing from* label to jump to that artist, album or playlist)
-- **Seek bar** — click or drag, or use the arrow keys when it's focused
+- **Seek bar** — click or drag, or use the arrow keys when it's focused. While a track plays, soft waves drift over the played part in colours picked from the album cover; they settle flat when paused, and stay still if your system asks for reduced motion
 - **Playback controls** — shuffle, previous, play/pause, next, repeat (off → repeat all → repeat one)
 - **Volume** with mute toggle, saved between sessions. Hidden on phones, where the hardware buttons control the level
 - **Sleep timer** — stop playback in 15, 30, 45, 60 or 90 minutes, or at the end of the current track. The remaining time shows next to the timer button

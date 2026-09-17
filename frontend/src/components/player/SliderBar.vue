@@ -40,7 +40,9 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
+import { useSlider } from './useSlider'
+import { useSmoothTime } from './useSmoothTime'
 
 const props = defineProps({
   modelValue: { type: Number, default: 0 },
@@ -54,65 +56,30 @@ const props = defineProps({
   trackClass: { type: String, default: 'bg-raised' },
   fillClass: { type: String, default: 'bg-fg group-hover:bg-accent' },
   thumbClass: { type: String, default: 'bg-fg' },
+  // For playback progress: glide between time updates while true.
+  playing: { type: Boolean, default: undefined },
 })
 const emit = defineEmits(['update:modelValue', 'commit'])
 
-const track = ref(null)
-const dragging = ref(false)
-const dragValue = ref(0)
+const {
+  track,
+  dragging,
+  percent: rawPercent,
+  onDown,
+  onKey,
+} = useSlider(props, emit)
 
-const shown = computed(() =>
-  dragging.value ? dragValue.value : props.modelValue
-)
+const smooth =
+  props.playing === undefined
+    ? null
+    : useSmoothTime(
+        () => props.modelValue,
+        () => !!props.playing && !dragging.value,
+        () => props.max
+      )
 const percent = computed(() =>
-  props.max > 0
-    ? Math.max(0, Math.min(100, (shown.value / props.max) * 100))
-    : 0
+  smooth && !dragging.value && props.max > 0
+    ? Math.min(100, (smooth.value / props.max) * 100)
+    : rawPercent.value
 )
-
-function valueAt(event) {
-  const rect = track.value.getBoundingClientRect()
-  const ratio = Math.max(
-    0,
-    Math.min(1, (event.clientX - rect.left) / rect.width)
-  )
-  return ratio * props.max
-}
-
-function onDown(event) {
-  if (event.button !== 0) return
-  dragging.value = true
-  dragValue.value = valueAt(event)
-  emit('update:modelValue', dragValue.value)
-  track.value.setPointerCapture(event.pointerId)
-  const move = (e) => {
-    dragValue.value = valueAt(e)
-    emit('update:modelValue', dragValue.value)
-  }
-  const up = () => {
-    dragging.value = false
-    emit('commit', dragValue.value)
-    track.value.removeEventListener('pointermove', move)
-    track.value.removeEventListener('pointerup', up)
-    track.value.removeEventListener('pointercancel', up)
-  }
-  track.value.addEventListener('pointermove', move)
-  track.value.addEventListener('pointerup', up)
-  track.value.addEventListener('pointercancel', up)
-}
-
-function onKey(event) {
-  const delta = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[
-    event.key
-  ]
-  if (!delta) return
-  event.preventDefault()
-  event.stopPropagation()
-  const next = Math.max(
-    0,
-    Math.min(props.max, props.modelValue + delta * props.step)
-  )
-  emit('update:modelValue', next)
-  emit('commit', next)
-}
 </script>

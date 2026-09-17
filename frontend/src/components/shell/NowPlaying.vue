@@ -10,7 +10,10 @@
       >
         <!-- Backdrop: the artwork, blown up and blurred. -->
         <div class="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div class="absolute inset-0" :style="{ backgroundColor: tint }" />
+          <div
+            class="absolute inset-0 transition-colors duration-700"
+            :style="{ backgroundColor: tint }"
+          />
           <img
             v-if="track.hasCover"
             :src="track.cover"
@@ -172,17 +175,14 @@
               <span class="tabular w-12 text-xs text-white/65">{{
                 formatDuration(scrub ?? player.currentTime.value)
               }}</span>
-              <SliderBar
+              <WaveSeekBar
                 class="flex-1"
                 :model-value="scrub ?? player.currentTime.value"
                 :max="player.duration.value || 1"
                 :label="t('player.seek')"
                 :value-text="formatDuration(player.currentTime.value)"
-                :thin="false"
-                always-thumb
-                track-class="bg-white/20"
-                fill-class="bg-white"
-                thumb-class="bg-white"
+                :playing="player.isPlaying.value"
+                :palette="palette"
                 @update:model-value="(v) => (scrub = v)"
                 @commit="commitSeek"
               />
@@ -355,7 +355,7 @@ import { useMediaQuery, useNow } from '@vueuse/core'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import UiMenu from '../ui/UiMenu.vue'
-import SliderBar from '../player/SliderBar.vue'
+import WaveSeekBar from '../player/WaveSeekBar.vue'
 import VolumeControl from '../player/VolumeControl.vue'
 import LyricsPanel from '../player/LyricsPanel.vue'
 import UpNextPanel from '../player/UpNextPanel.vue'
@@ -363,6 +363,7 @@ import TrackDetails from '../player/TrackDetails.vue'
 import { usePlayer } from '/src/model/player'
 import { useNowPlaying } from '/src/model/ui'
 import { formatBytes, formatDuration, hueFor } from '/src/lib/format'
+import { useCoverPalette } from '/src/model/coverPalette'
 import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
 
@@ -377,8 +378,11 @@ const scrub = ref(null)
 const closeButton = ref(null)
 
 const track = computed(() => player.currentTrack.value)
+const palette = useCoverPalette(track)
 const tint = computed(
-  () => `oklch(0.3 0.06 ${hueFor(track.value?.album || track.value?.title)})`
+  () =>
+    palette.value?.background ||
+    `oklch(0.3 0.06 ${hueFor(track.value?.album || track.value?.title)})`
 )
 
 const panels = computed(() => [
