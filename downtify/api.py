@@ -104,7 +104,7 @@ from .monitor import (
     LibraryStores,
     PlaylistMonitorDB,
     check_watch,
-    download_playlist_cover_if_enabled,
+    download_playlist_cover,
     fetch_playlist,
     parse_playlist_url,
 )
@@ -1446,7 +1446,7 @@ async def _process_batch(
         )
         if m3u_path is not None and target is not None:
             await asyncio.to_thread(
-                download_playlist_cover_if_enabled,
+                download_playlist_cover,
                 *target,
                 m3u_path,
                 state.settings,
@@ -2738,7 +2738,7 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
             status_code=400, detail='No tracks resolved to a file on disk'
         )
     await asyncio.to_thread(
-        download_playlist_cover_if_enabled,
+        download_playlist_cover,
         *source_and_id,
         target,
         state.settings,

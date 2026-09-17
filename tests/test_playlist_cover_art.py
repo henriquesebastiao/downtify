@@ -1,7 +1,7 @@
 """Tests for playlist cover art downloads (TSK-003 / TSK-004).
 
 Covers the source-dispatch helpers in ``monitor.py``, the gating/error
-handling in ``download_playlist_cover_if_enabled``, and the places that
+handling in ``download_playlist_cover``, and the places that
 trigger it: a manual playlist download (``api._process_batch`` — the
 actual path the frontend hits when a Spotify/YouTube Music playlist
 link is pasted), the ``/api/playlist/m3u`` endpoint (not currently
@@ -23,7 +23,7 @@ from downtify.downloader import Downloader
 from downtify.monitor import (
     SOURCE_SPOTIFY,
     SOURCE_YOUTUBE_MUSIC,
-    download_playlist_cover_if_enabled,
+    download_playlist_cover,
     fetch_playlist_cover_url,
 )
 
@@ -56,7 +56,7 @@ def test_fetch_playlist_cover_url_dispatches_to_youtube_music(monkeypatch):
     )
 
 
-# ── download_playlist_cover_if_enabled ──────────────────────────────────────
+# ── download_playlist_cover ──────────────────────────────────────
 
 
 def test_download_playlist_cover_noop_when_setting_disabled(
@@ -66,7 +66,7 @@ def test_download_playlist_cover_noop_when_setting_disabled(
         raise AssertionError('should not resolve a cover when disabled')
 
     monkeypatch.setattr(monitor, 'fetch_playlist_cover_url', _boom)
-    result = download_playlist_cover_if_enabled(
+    result = download_playlist_cover(
         SOURCE_SPOTIFY,
         'pl1',
         tmp_path / f'{PLAYLIST_NAME}.m3u',
@@ -84,7 +84,7 @@ def test_download_playlist_cover_noop_when_setting_absent(
         raise AssertionError('should not resolve a cover when unset')
 
     monkeypatch.setattr(monitor, 'fetch_playlist_cover_url', _boom)
-    result = download_playlist_cover_if_enabled(
+    result = download_playlist_cover(
         SOURCE_SPOTIFY, 'pl1', tmp_path / f'{PLAYLIST_NAME}.m3u', {}
     )
     assert result is None
@@ -95,7 +95,7 @@ def test_download_playlist_cover_swallows_fetch_errors(monkeypatch, tmp_path):
         raise RuntimeError('network is down')
 
     monkeypatch.setattr(monitor, 'fetch_playlist_cover_url', _boom)
-    result = download_playlist_cover_if_enabled(
+    result = download_playlist_cover(
         SOURCE_SPOTIFY,
         'pl1',
         tmp_path / f'{PLAYLIST_NAME}.m3u',
@@ -110,7 +110,7 @@ def test_download_playlist_cover_noop_when_no_cover_url(monkeypatch, tmp_path):
     monkeypatch.setattr(
         monitor, 'save_playlist_cover', lambda *a: calls.append(a)
     )
-    result = download_playlist_cover_if_enabled(
+    result = download_playlist_cover(
         SOURCE_SPOTIFY,
         'pl1',
         tmp_path / f'{PLAYLIST_NAME}.m3u',
@@ -130,7 +130,7 @@ def test_download_playlist_cover_saves_when_enabled(monkeypatch, tmp_path):
         'save_playlist_cover',
         lambda url, path: path.with_suffix('.jpg'),
     )
-    result = download_playlist_cover_if_enabled(
+    result = download_playlist_cover(
         SOURCE_SPOTIFY,
         'pl1',
         m3u_path,
@@ -439,7 +439,7 @@ def test_write_playlist_m3u_endpoint_downloads_cover_when_enabled(
     def _fake_cover(source, playlist_id, m3u_path, settings):
         captured['args'] = (source, playlist_id, m3u_path, settings)
 
-    monkeypatch.setattr(api, 'download_playlist_cover_if_enabled', _fake_cover)
+    monkeypatch.setattr(api, 'download_playlist_cover', _fake_cover)
 
     result = asyncio.run(
         api.write_playlist_m3u_endpoint(
@@ -474,7 +474,7 @@ def test_write_playlist_m3u_endpoint_skips_cover_when_no_tracks_resolved(
     def _boom(*_a, **_kw):
         raise AssertionError('should not attempt a cover download')
 
-    monkeypatch.setattr(api, 'download_playlist_cover_if_enabled', _boom)
+    monkeypatch.setattr(api, 'download_playlist_cover', _boom)
 
     with pytest.raises(HTTPException) as exc_info:
         asyncio.run(

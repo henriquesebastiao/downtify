@@ -170,7 +170,7 @@ def fetch_playlist_cover_url(source: str, playlist_id: str) -> str:
     return spotify.playlist_cover_url_from_id(playlist_id)
 
 
-def download_playlist_cover_if_enabled(
+def download_playlist_cover(
     source: str,
     playlist_id: str,
     m3u_path: Path,
@@ -1116,7 +1116,7 @@ def _regenerate_final_m3u_and_cover(
         playlist, tracks, downloader, None, known_tracks
     )
     if m3u_path is not None:
-        download_playlist_cover_if_enabled(
+        download_playlist_cover(
             playlist.source, playlist.spotify_id, m3u_path, settings
         )
 
