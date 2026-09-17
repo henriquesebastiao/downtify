@@ -129,6 +129,8 @@ The playlist's M3U is rewritten **after every track finishes**, so it grows as t
 
 Manual playlist/album downloads and CSV imports behave the same way. See [M3U Export](m3u-export.md#when-it-is-written) for details.
 
+If [Download playlist cover art](playlist-cover-art.md) is on, the cover is fetched once at that final rewrite — after the initial backfill when a watch is added, and again on any later sweep that downloads at least one new track. A sweep that finds nothing new doesn't re-fetch it.
+
 ## Storage
 
 Monitor state is stored in a SQLite database at `/data/downtify_monitor.db`. The database records:

@@ -17,6 +17,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | [slskd & Navidrome](slskd-navidrome.md) | Download from Soulseek through slskd, mirror playlists into Navidrome, and track playlist downloads |
 | [Library catalog & path sync](library-catalog.md) | How Downtify tracks library files and playlists, and fixing paths after moving files |
 | [M3U Export](m3u-export.md) | Auto-generated playlist files for Jellyfin, Navidrome, Plex and any media app |
+| [Playlist Cover Art](playlist-cover-art.md) | Save the playlist's own cover image alongside its M3U file |
 | [File Organization](file-organization.md) | Flat layout or per-artist subfolders |
 | [Lyrics](lyrics.md) | Automatically download and embed lyrics (plain and time-synced) |
 | [YouTube Cookies](youtube-cookies.md) | Upload a `cookies.txt` from the web UI to download explicit/age-restricted tracks |

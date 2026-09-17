@@ -23,6 +23,10 @@ Track paths inside the M3U are written **relative to the M3U file itself**, not 
 
 M3U generation is controlled by **Settings → Generate M3U file for playlists** (on by default). Turning it off skips M3U creation entirely; the rest of the download flow is unchanged.
 
+## Cover art
+
+Right next to the setting above, **Download playlist cover art** (off by default) saves the playlist's own cover image alongside its M3U file, under the same name. See [Playlist Cover Art](playlist-cover-art.md) for file location, sources and how it shows up automatically in Navidrome.
+
 ## When it is written
 
 The M3U is rewritten **after every track finishes downloading**, so the playlist file grows as the download progresses instead of appearing all at once at the end. This applies to playlist and album downloads, [CSV imports](library-import.md) and [Playlist Monitor](playlist-monitor.md#m3u-integration) sweeps alike.
