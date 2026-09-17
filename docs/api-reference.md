@@ -376,7 +376,7 @@ List all audio files in the downloads directory (recursive), plus slskd download
 
 ### `GET /playlists`
 
-List downloaded playlists, derived from the `.m3u` files already on disk (see [M3U Export](features/m3u-export.md)). Used by the [Built-in Player](features/player.md#playing-a-single-playlist-artist-or-album) and the Library page to offer "just this playlist" instead of the whole library.
+List downloaded playlists, derived from the `.m3u` files already on disk (see [M3U Export](features/m3u-export.md)). Used by the [Library page](features/library-catalog.md#library-page) to list playlists, and to play or queue just one of them.
 
 **Response:**
 
@@ -392,7 +392,7 @@ Sorted by name. A single track or an album downloaded without an M3U doesn't app
 
 ### `GET /tracks`
 
-List downloaded tracks with artist/album read from each file's embedded tags. Used by the [Built-in Player](features/player.md#playing-a-single-playlist-artist-or-album) and the Library page to offer "just this artist" / "just this album" filtering.
+List downloaded tracks with artist/album read from each file's embedded tags. Used by the [Library page](features/library-catalog.md#library-page) to build its album, artist and track views, and by the [Built-in Player](features/player.md#how-it-works).
 
 **Response:**
 

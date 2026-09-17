@@ -17,13 +17,20 @@ jobs:
     steps:
       - uses: actions/configure-pages@v6
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
         with:
-          python-version: 3.x
-      - run: pip install zensical
-      - run: zensical build --clean
+          # Full history, for each page's "Last updated" date.
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - run: npm ci --prefix docs
+      - run: npm test --prefix docs
+      # Fails on dead links and broken anchors.
+      - run: npm run build --prefix docs
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: site
+          path: docs/.vitepress/dist
       - uses: actions/deploy-pages@v5
         id: deployment

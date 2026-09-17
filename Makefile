@@ -23,10 +23,10 @@ run:
 
 format:
 	uv run ruff format .; ruff check . --fix
-	prettier --write frontend/src/.
+	prettier --write frontend/src/. docs/.vitepress/.
 
 lint:
-	prettier --check frontend/src/.
+	prettier --check frontend/src/. docs/.vitepress/.
 	uv run ruff check .; ruff check . --diff
 
 export:
@@ -38,6 +38,7 @@ changelog:
 
 test:
 	npm run test --prefix frontend
+	npm run test --prefix docs
 	uv run pytest -x -s -v
 
 version:
@@ -49,7 +50,12 @@ version:
 	prettier --write frontend/src/.
 
 doc:
-	uv run zensical serve
+	npm install --prefix docs
+	npm run dev --prefix docs
+
+doc-build:
+	npm ci --prefix docs
+	npm run build --prefix docs
 
 rm:
 	sudo rm -rf docker/downloads/*
@@ -58,4 +64,4 @@ rm:
 %:
 	@:
 
-.PHONY: all build clean up down run format lint export changelog version doc rm
+.PHONY: all build clean up down run format lint export changelog version doc doc-build rm

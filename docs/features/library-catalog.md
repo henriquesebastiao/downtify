@@ -39,11 +39,13 @@ Use this after you **move or rename files on disk** outside Downtify, or delete 
 
 It only runs when you press the button (or call `POST /api/library/reconcile`) — never on a schedule.
 
-!!! warning
-    Rewriting a playlist deletes library files whose tags clearly don't match the Spotify track they're registered for — see [slskd & Navidrome](slskd-navidrome.md#playlist-sync).
+::: warning
+Rewriting a playlist deletes library files whose tags clearly don't match the Spotify track they're registered for — see [slskd & Navidrome](slskd-navidrome.md#playlist-sync).
+:::
 
-!!! note "Deletes vs moves"
-    Deleting tracks from the **Library** page already cleans up the catalog and rewrites the affected M3U files and Navidrome playlists in the background, so there's nothing to fix afterwards.
+::: info Deletes vs moves
+Deleting tracks from the **Library** page already cleans up the catalog and rewrites the affected M3U files and Navidrome playlists in the background, so there's nothing to fix afterwards.
+:::
 
 ## Library page
 

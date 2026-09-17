@@ -21,7 +21,6 @@ dev = [
     "codeflash>=0.20.6",
     "pytest>=9.1.1",
     "ruff>=0.16.6",
-    "zensical>=0.0.60",
 ]
 
 [tool.pytest.ini_options]

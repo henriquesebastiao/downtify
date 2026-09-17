@@ -33,8 +33,9 @@ A final rewrite runs once the whole run completes. It resolves every track again
 
 Every write lists tracks in **playlist order**, not in the order downloads happened to finish, so a partially-written M3U is still correctly ordered.
 
-!!! note "Tracks already on disk"
-    Tracks downloaded by an earlier run stay in the M3U throughout — they're included from the first write, not only added by the final one.
+::: info Tracks already on disk
+Tracks downloaded by an earlier run stay in the M3U throughout — they're included from the first write, not only added by the final one.
+:::
 
 ## Regeneration
 

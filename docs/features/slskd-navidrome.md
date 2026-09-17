@@ -48,8 +48,9 @@ With **Leave slskd files in place** on (the default), the downloaded file stays 
 
 Turn it off to copy the file next to your other downloads instead, following your filename template and [file organization](file-organization.md) settings.
 
-!!! note
-    slskd files keep their original format — they aren't transcoded to the format chosen in Settings.
+::: info
+slskd files keep their original format — they aren't transcoded to the format chosen in Settings.
+:::
 
 ## Navidrome
 
@@ -69,8 +70,9 @@ With **Create playlists in Navidrome** on, Downtify creates (or updates) a Navid
 
 Tracks are matched to Navidrome songs by path first, then by tags. **Make Navidrome playlists public** controls the playlist's visibility in Navidrome.
 
-!!! warning "Files whose tags don't match the playlist are deleted"
-    When a playlist is refreshed (after deletes, **Fix library paths**, or **Download missing** on an already complete playlist), a library file registered for a Spotify track is **deleted from disk** if its embedded title/artist clearly don't match that track — Downtify treats it as a wrong download. Keep this in mind if you edit tags by hand.
+::: warning Files whose tags don't match the playlist are deleted
+When a playlist is refreshed (after deletes, **Fix library paths**, or **Download missing** on an already complete playlist), a library file registered for a Spotify track is **deleted from disk** if its embedded title/artist clearly don't match that track — Downtify treats it as a wrong download. Keep this in mind if you edit tags by hand.
+:::
 
 ## Playlist downloads
 

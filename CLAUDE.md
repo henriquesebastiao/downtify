@@ -11,11 +11,11 @@ Entry point: `main.py` (CLI flag `web` boots the FastAPI app on `DOWNTIFY_PORT`,
 ## Stack
 
 - **Backend**: Python 3.10–3.13 (Docker image pins 3.13), FastAPI, Uvicorn, `loguru`, `yt-dlp`, `mutagen`, `requests`, `ytmusicapi`.
-- **Frontend**: Vue 3 + Vue Router, Tailwind CSS v4 (design tokens in `frontend/src/index.css`), VueUse, Vite, Vitest.
+- **Frontend**: Vue 3 + Vue Router, Tailwind CSS v4 (design tokens in `frontend/src/styles/tokens.css`, shared with the docs site), VueUse, Vite, Vitest.
 - **Packaging**: `uv` (lockfile is `uv.lock`; `requirements.txt` is exported for Docker only — do **not** hand-edit).
 - **Container**: Alpine + `ffmpeg` + `tini` + `su-exec` (UID/GID/UMASK env-controlled).
 - **CI**: GitHub Actions (`build.yml`, `test.yml`, `docs.yml`, `codeflash.yaml`).
-- **Docs**: `zensical` (`make doc`).
+- **Docs**: VitePress with a custom Tailwind theme, its own npm package in `docs/` (`make doc`, `make doc-build`).
 
 ## Layout
 
@@ -31,7 +31,8 @@ downtify/
   monitor.py           # Playlist watcher (sqlite-backed), incremental sync
   telemetry.py         # Optional anonymous metrics
 frontend/              # Vue SPA (built into frontend/dist, served by FastAPI)
-tests/                 # pytest suite (Python) + Vitest under frontend/
+docs/                  # Documentation: Markdown pages + VitePress site (docs/.vitepress)
+tests/                 # pytest suite (Python) + Vitest under frontend/ and docs/.vitepress/tests
 docker/                # Compose volumes (downloads/, data/, slskd/)
 ```
 
@@ -39,12 +40,13 @@ docker/                # Compose volumes (downloads/, data/, slskd/)
 
 ```bash
 make run        # uv run python main.py web   (dev backend on :8000)
-make test       # frontend Vitest + pytest -x -s -v
-make format     # ruff format + ruff --fix + prettier
+make test       # frontend + docs Vitest, then pytest -x -s -v
+make format     # ruff format + ruff --fix + prettier (frontend/src, docs/.vitepress)
 make lint       # ruff check + prettier --check
 make export     # regenerate requirements.txt from uv.lock (Docker build input)
 make up / down  # docker compose
-make doc        # zensical serve (docs preview)
+make doc        # docs dev server (VitePress, hot reload)
+make doc-build  # production docs build into docs/.vitepress/dist
 ```
 
 Frontend dev: `npm --prefix frontend run dev` (Vite). The backend serves `frontend/dist` in production; during dev the SPA proxies API calls.
@@ -79,7 +81,14 @@ Version bump: `make version 2.7.1` — runs `version.sh`, rebuilds the frontend,
 There are two documentation surfaces, with different jobs — don't blur them:
 
 - **`README.md`** — a short overview for someone landing on the GitHub repo for the first time: what Downtify is, quick start, a features table, and brief pointers. Keep sections to a few lines each. When a feature needs more than that (full option tables, edge cases, env var reference, API shapes), the README gets a one-paragraph summary plus a link into `docs/` — the detail itself belongs in `docs/`, not duplicated in both places.
-- **`docs/`** (built by `zensical`, served at the project's GitHub Pages site — see `site_url` in `zensical.toml`) — the complete reference. This is where full option tables, every environment variable, the full API reference (`docs/api-reference.md`), and per-feature deep-dives (`docs/features/*.md`) live. New user-facing features get a page here (add it to `nav` in `zensical.toml` too), not just a README blurb.
+- **`docs/`** (built by VitePress, served at the project's GitHub Pages site under `/downtify/` — see `SITE_URL` in `docs/.vitepress/config.mjs`) — the complete reference. This is where full option tables, every environment variable, the full API reference (`docs/api-reference.md`), and per-feature deep-dives (`docs/features/*.md`) live. New user-facing features get a page here (add it to `NAV` in `docs/.vitepress/nav.mjs` too, and give it an `icon: lucide/<name>` front matter), not just a README blurb.
+
+Docs site gotchas:
+
+- Page URLs are directory-style (`features/player.md` → `/downtify/features/player/`) and heading ids follow Python-Markdown's rules (`GET /api/url/resolve` → `#get-apiurlresolve`, repeats get `_1`) — both kept from the old zensical site because README and issues link to them. Don't change `docs/.vitepress/lib/routes.mjs` or `slug.mjs` without checking existing links.
+- Write Markdown links relative to the source file (`[Lyrics](../features/lyrics.md#x)`); the build rewrites them. Callouts use `::: info|tip|warning Title` … `:::`.
+- The build fails on dead links **and** broken `#anchors`; run `make doc-build` after editing docs.
+- Pages are Vue templates: a literal `{{` or an unknown `<Tag>` outside code breaks the build.
 
 Cross-check both against the code, not against each other — a stale doc citing another stale doc just launders the error.
 

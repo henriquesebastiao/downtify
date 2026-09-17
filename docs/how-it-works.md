@@ -19,8 +19,9 @@ For **tracks**, the embed returns: title, artist(s), album name, release year, d
 
 For **albums and playlists**, the embed returns the track list. Playlist embeds are capped at roughly 50–100 entries, so Downtify also requests the full list from Spotify's anonymous `api.spotify.com` endpoint with pagination to handle playlists with hundreds of songs.
 
-!!! note "Per-track metadata enrichment"
-    Playlist embed entries are missing the release year and use the playlist cover instead of each track's own album cover. For the [Playlist Monitor](features/playlist-monitor.md), Downtify re-fetches every new track individually to get the correct cover and year before downloading.
+::: info Per-track metadata enrichment
+Playlist embed entries are missing the release year and use the playlist cover instead of each track's own album cover. For the [Playlist Monitor](features/playlist-monitor.md), Downtify re-fetches every new track individually to get the correct cover and year before downloading.
+:::
 
 ## 2. Audio match — YouTube Music, then YouTube
 

@@ -36,7 +36,7 @@ Be respectful, constructive, and patient. Reviews focus on code, not on the cont
 
 - Fixing a bug from the [issues page](https://github.com/henriquesebastiao/downtify/issues).
 - Adding a feature that has been discussed and accepted in an issue or discussion.
-- Improving documentation (`README.md`, in-repo docs, or the `zensical` site under `docs/`).
+- Improving documentation (`README.md`, in-repo docs, or the VitePress site under `docs/`).
 - Adding or improving tests, especially around the Spotify embed scraping, yt-dlp pipeline, and tag embedding.
 - Adding a UI translation (see [Translations](#translations)).
 - Reviewing open pull requests.
@@ -146,8 +146,11 @@ The Docker image is Alpine-based with `ffmpeg`, `tini`, and `su-exec`. UID / GID
 ### Docs site
 
 ```bash
-make doc     # uv run zensical serve
+make doc        # docs dev server (VitePress)
+make doc-build  # production build; fails on dead links and broken anchors
 ```
+
+Pages are Markdown in `docs/`; the sidebar lives in `docs/.vitepress/nav.mjs`. See [Contributing](https://henriquesebastiao.github.io/downtify/contributing/#work-on-the-documentation) in the docs for link and callout syntax.
 
 ---
 
