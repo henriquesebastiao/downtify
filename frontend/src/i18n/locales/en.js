@@ -328,6 +328,35 @@ export default {
     sleepEndOfTrackShort: 'End of track',
     sleepOff: 'Turn off timer',
     minutesLeft: '{count} min',
+    equalizer: 'Equalizer',
+    equalizerOn: 'On',
+    equalizerOff: 'Off',
+    experimental: 'Experimental',
+    experimentalHint:
+      'This feature is still being tested and may change or misbehave in some browsers.',
+    preset: 'Preset',
+    presets: {
+      flat: 'Flat',
+      bassBoost: 'Bass boost',
+      trebleBoost: 'Treble boost',
+      vocal: 'Vocal',
+      rock: 'Rock',
+      electronic: 'Electronic',
+      acoustic: 'Acoustic',
+      custom: 'Custom',
+    },
+    preamp: 'Preamp',
+    preampShort: 'Pre',
+    bandLabel: '{frequency} Hz',
+    resetEqualizer: 'Reset',
+    equalizerHint:
+      'Drag a band up or down to shape the sound. Double-click resets it.',
+    headroomHint:
+      'Volume lowered by {amount} dB so boosted bands don’t distort.',
+    clipWarning: 'With the preamp above 0 dB, loud passages may distort.',
+    equalizerUnsupported: "This browser can't run the equalizer.",
+    equalizerError:
+      "The equalizer couldn't start. Playback continues without it.",
   },
   monitor: {
     title: 'Playlist Monitor',
@@ -537,6 +566,7 @@ export default {
   },
   shortcuts: {
     title: 'Keyboard shortcuts',
+    equalizer: 'Equalizer',
     playPause: 'Play / pause',
     seek: 'Seek 5 seconds',
     next: 'Next track',

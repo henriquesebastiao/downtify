@@ -335,6 +335,36 @@ export default {
     sleepEndOfTrackShort: 'Szám vége',
     sleepOff: 'Időzítő kikapcsolása',
     minutesLeft: '{count} perc',
+    equalizer: 'Hangszínszabályzó',
+    equalizerOn: 'Be',
+    equalizerOff: 'Ki',
+    experimental: 'Kísérleti',
+    experimentalHint:
+      'Ez a funkció még tesztelés alatt áll, változhat, és egyes böngészőkben hibásan működhet.',
+    preset: 'Előbeállítás',
+    presets: {
+      flat: 'Lineáris',
+      bassBoost: 'Mélykiemelés',
+      trebleBoost: 'Magaskiemelés',
+      vocal: 'Ének',
+      rock: 'Rock',
+      electronic: 'Elektronikus',
+      acoustic: 'Akusztikus',
+      custom: 'Egyéni',
+    },
+    preamp: 'Előerősítő',
+    preampShort: 'Elő',
+    bandLabel: '{frequency} Hz',
+    resetEqualizer: 'Visszaállítás',
+    equalizerHint:
+      'Húzz felfelé vagy lefelé egy sávot a hangzás alakításához. Dupla kattintással nullázható.',
+    headroomHint:
+      'A hangerő {amount} dB-lel csökkentve, hogy a kiemelt sávok ne torzítsanak.',
+    clipWarning: '0 dB feletti előerősítésnél a hangos részek torzulhatnak.',
+    equalizerUnsupported:
+      'Ez a böngésző nem tudja futtatni a hangszínszabályzót.',
+    equalizerError:
+      'A hangszínszabályzó nem indult el. A lejátszás nélküle folytatódik.',
   },
   monitor: {
     title: 'Lejátszásilista-figyelő',
@@ -549,6 +579,7 @@ export default {
   },
   shortcuts: {
     title: 'Billentyűparancsok',
+    equalizer: 'Hangszínszabályzó',
     playPause: 'Lejátszás / szünet',
     seek: 'Ugrás 5 másodpercet',
     next: 'Következő szám',

@@ -70,7 +70,13 @@ export function useNowPlaying() {
   const router = useRouter()
   const isOpen = computed(() => route.query.np === '1')
   function open(panel) {
-    if (isOpen.value) return
+    if (isOpen.value) {
+      // Already open: just switch to the requested panel.
+      if (panel && route.query.panel !== panel) {
+        router.replace({ query: { ...route.query, panel } })
+      }
+      return
+    }
     router.push({
       query: { ...route.query, np: '1', ...(panel ? { panel } : {}) },
     })

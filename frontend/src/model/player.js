@@ -4,6 +4,7 @@
 import { ref, computed, watch } from 'vue'
 
 import { normalizeTrack } from '/src/lib/library'
+import { attachEqualizer, resumeEqualizer } from '/src/model/equalizer'
 
 const VOLUME_KEY = 'downtify-player-volume'
 const SESSION_KEY = 'downtify-player-session'
@@ -97,6 +98,7 @@ function ensureAudio() {
     isBuffering.value = false
     playError.value = 'unplayable'
   })
+  attachEqualizer(audio)
   return audio
 }
 
@@ -304,6 +306,11 @@ function playAt(index) {
   a.src = playlist.value[index].url
   a.currentTime = 0
   currentTime.value = 0
+  startPlayback(a)
+}
+
+function startPlayback(a) {
+  resumeEqualizer()
   a.play().catch(() => {})
 }
 
@@ -317,7 +324,7 @@ function play() {
   if (!a.src) {
     a.src = playlist.value[currentIndex.value].url
   }
-  a.play().catch(() => {})
+  startPlayback(a)
 }
 
 function pause() {
@@ -425,7 +432,7 @@ function onEnded() {
   }
   if (repeatMode.value === 'one') {
     seek(0)
-    if (audio) audio.play().catch(() => {})
+    if (audio) startPlayback(audio)
     return
   }
   next()

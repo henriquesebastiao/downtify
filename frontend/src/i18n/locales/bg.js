@@ -328,6 +328,35 @@ export default {
     sleepEndOfTrackShort: 'Край на песента',
     sleepOff: 'Изключи таймера',
     minutesLeft: '{count} мин',
+    equalizer: 'Еквалайзер',
+    equalizerOn: 'Вкл.',
+    equalizerOff: 'Изкл.',
+    experimental: 'Експериментално',
+    experimentalHint:
+      'Функцията все още се тества и може да се промени или да не работи добре в някои браузъри.',
+    preset: 'Профил',
+    presets: {
+      flat: 'Равен',
+      bassBoost: 'Усилени баси',
+      trebleBoost: 'Усилени високи',
+      vocal: 'Вокал',
+      rock: 'Рок',
+      electronic: 'Електронна',
+      acoustic: 'Акустична',
+      custom: 'Персонализиран',
+    },
+    preamp: 'Предусилване',
+    preampShort: 'Пред',
+    bandLabel: '{frequency} Hz',
+    resetEqualizer: 'Нулирай',
+    equalizerHint:
+      'Плъзни лента нагоре или надолу, за да оформиш звука. Двоен клик я нулира.',
+    headroomHint:
+      'Силата на звука е намалена с {amount} dB, за да не изкривяват усилените ленти.',
+    clipWarning: 'При предусилване над 0 dB силните пасажи може да изкривяват.',
+    equalizerUnsupported: 'Този браузър не поддържа еквалайзера.',
+    equalizerError:
+      'Еквалайзерът не можа да стартира. Възпроизвеждането продължава без него.',
   },
   monitor: {
     title: 'Наблюдение на плейлисти',
@@ -540,6 +569,7 @@ export default {
   },
   shortcuts: {
     title: 'Клавишни комбинации',
+    equalizer: 'Еквалайзер',
     playPause: 'Пусни / пауза',
     seek: 'Премести с 5 секунди',
     next: 'Следваща песен',

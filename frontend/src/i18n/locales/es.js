@@ -335,6 +335,36 @@ export default {
     sleepEndOfTrackShort: 'Fin de canción',
     sleepOff: 'Desactivar temporizador',
     minutesLeft: '{count} min',
+    equalizer: 'Ecualizador',
+    equalizerOn: 'Activado',
+    equalizerOff: 'Desactivado',
+    experimental: 'Experimental',
+    experimentalHint:
+      'Esta función aún está en pruebas y puede cambiar o fallar en algunos navegadores.',
+    preset: 'Preajuste',
+    presets: {
+      flat: 'Plano',
+      bassBoost: 'Refuerzo de graves',
+      trebleBoost: 'Refuerzo de agudos',
+      vocal: 'Voz',
+      rock: 'Rock',
+      electronic: 'Electrónica',
+      acoustic: 'Acústica',
+      custom: 'Personalizado',
+    },
+    preamp: 'Preamplificador',
+    preampShort: 'Pre',
+    bandLabel: '{frequency} Hz',
+    resetEqualizer: 'Restablecer',
+    equalizerHint:
+      'Arrastra una banda hacia arriba o abajo para ajustar el sonido. Doble clic para restablecerla.',
+    headroomHint:
+      'Volumen reducido en {amount} dB para que las bandas realzadas no distorsionen.',
+    clipWarning:
+      'Con el preamplificador por encima de 0 dB, los pasajes fuertes pueden distorsionar.',
+    equalizerUnsupported: 'Este navegador no puede usar el ecualizador.',
+    equalizerError:
+      'No se pudo iniciar el ecualizador. La reproducción continúa sin él.',
   },
   monitor: {
     title: 'Monitor de playlists',
@@ -551,6 +581,7 @@ export default {
   },
   shortcuts: {
     title: 'Atajos de teclado',
+    equalizer: 'Ecualizador',
     playPause: 'Reproducir / pausar',
     seek: 'Avanzar/retroceder 5 segundos',
     next: 'Siguiente canción',

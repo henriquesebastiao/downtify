@@ -158,6 +158,10 @@
               <LyricsPanel v-if="panel === 'lyrics'" :compact="isMobile" />
               <UpNextPanel v-else-if="panel === 'queue'" />
               <TrackDetails v-else-if="panel === 'details'" class="lg:pt-10" />
+              <EqualizerPanel
+                v-else-if="panel === 'equalizer'"
+                :palette="palette"
+              />
             </div>
 
             <!-- Up next always visible on wide screens -->
@@ -360,6 +364,7 @@ import VolumeControl from '../player/VolumeControl.vue'
 import LyricsPanel from '../player/LyricsPanel.vue'
 import UpNextPanel from '../player/UpNextPanel.vue'
 import TrackDetails from '../player/TrackDetails.vue'
+import EqualizerPanel from '../player/EqualizerPanel.vue'
 import { usePlayer } from '/src/model/player'
 import { useNowPlaying } from '/src/model/ui'
 import { formatBytes, formatDuration, hueFor } from '/src/lib/format'
@@ -389,6 +394,7 @@ const panels = computed(() => [
   { id: 'lyrics', icon: 'lyrics', label: t('player.lyrics') },
   { id: 'queue', icon: 'queue', label: t('player.upNext') },
   { id: 'details', icon: 'info', label: t('player.details') },
+  { id: 'equalizer', icon: 'equalizer', label: t('player.equalizer') },
 ])
 
 // ?panel= picks the side panel; phones show it instead of the artwork.

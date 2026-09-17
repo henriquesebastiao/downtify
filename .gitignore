@@ -36,8 +36,9 @@ develop-eggs/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Anchored: frontend/src/lib and docs/.vitepress/lib are source code.
+/lib/
+/lib64/
 parts/
 sdist/
 var/

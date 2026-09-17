@@ -345,6 +345,36 @@ export default {
     sleepEndOfTrackShort: 'Fin du titre',
     sleepOff: 'Désactiver la minuterie',
     minutesLeft: '{count} min',
+    equalizer: 'Égaliseur',
+    equalizerOn: 'Activé',
+    equalizerOff: 'Désactivé',
+    experimental: 'Expérimental',
+    experimentalHint:
+      'Cette fonction est encore en test et peut évoluer ou mal fonctionner dans certains navigateurs.',
+    preset: 'Préréglage',
+    presets: {
+      flat: 'Neutre',
+      bassBoost: 'Basses renforcées',
+      trebleBoost: 'Aigus renforcés',
+      vocal: 'Voix',
+      rock: 'Rock',
+      electronic: 'Électro',
+      acoustic: 'Acoustique',
+      custom: 'Personnalisé',
+    },
+    preamp: 'Préampli',
+    preampShort: 'Pré',
+    bandLabel: '{frequency} Hz',
+    resetEqualizer: 'Réinitialiser',
+    equalizerHint:
+      'Faites glisser une bande vers le haut ou le bas pour modeler le son. Double-cliquez pour la remettre à zéro.',
+    headroomHint:
+      'Volume réduit de {amount} dB pour que les bandes renforcées ne saturent pas.',
+    clipWarning:
+      'Avec le préampli au-dessus de 0 dB, les passages forts peuvent saturer.',
+    equalizerUnsupported: 'Ce navigateur ne prend pas en charge l’égaliseur.',
+    equalizerError:
+      'Impossible de démarrer l’égaliseur. La lecture continue sans lui.',
   },
   monitor: {
     title: 'Surveillance de playlists',
@@ -561,6 +591,7 @@ export default {
   },
   shortcuts: {
     title: 'Raccourcis clavier',
+    equalizer: 'Égaliseur',
     playPause: 'Lecture / pause',
     seek: 'Avancer/reculer de 5 secondes',
     next: 'Titre suivant',

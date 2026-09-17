@@ -337,6 +337,34 @@ export default {
     sleepEndOfTrackShort: 'Parça sonu',
     sleepOff: 'Zamanlayıcıyı kapat',
     minutesLeft: '{count} dk',
+    equalizer: 'Ekolayzır',
+    equalizerOn: 'Açık',
+    equalizerOff: 'Kapalı',
+    experimental: 'Deneysel',
+    experimentalHint:
+      'Bu özellik hâlâ test ediliyor; değişebilir veya bazı tarayıcılarda sorun çıkarabilir.',
+    preset: 'Hazır ayar',
+    presets: {
+      flat: 'Düz',
+      bassBoost: 'Bas güçlendirme',
+      trebleBoost: 'Tiz güçlendirme',
+      vocal: 'Vokal',
+      rock: 'Rock',
+      electronic: 'Elektronik',
+      acoustic: 'Akustik',
+      custom: 'Özel',
+    },
+    preamp: 'Ön amfi',
+    preampShort: 'Ön',
+    bandLabel: '{frequency} Hz',
+    resetEqualizer: 'Sıfırla',
+    equalizerHint:
+      'Sesi şekillendirmek için bir bandı yukarı veya aşağı sürükle. Sıfırlamak için çift tıkla.',
+    headroomHint:
+      'Güçlendirilen bantlar bozulmasın diye ses {amount} dB kısıldı.',
+    clipWarning: 'Ön amfi 0 dB’nin üzerindeyken yüksek bölümler bozulabilir.',
+    equalizerUnsupported: 'Bu tarayıcı ekolayzırı çalıştıramıyor.',
+    equalizerError: 'Ekolayzır başlatılamadı. Çalma onsuz devam ediyor.',
   },
   monitor: {
     title: 'Çalma Listesi İzleyici',
@@ -548,6 +576,7 @@ export default {
   },
   shortcuts: {
     title: 'Klavye kısayolları',
+    equalizer: 'Ekolayzır',
     playPause: 'Çal / duraklat',
     seek: '5 saniye ileri/geri',
     next: 'Sonraki parça',

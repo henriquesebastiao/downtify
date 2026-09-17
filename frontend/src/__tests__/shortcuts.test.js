@@ -62,6 +62,25 @@ describe('keyboard shortcuts', () => {
     expect(opts.goTo).toHaveBeenCalledWith('Library')
   })
 
+  it('opens the lyrics, queue and equalizer panels', () => {
+    const { handle, opts } = setup()
+    handle(key('l'))
+    handle(key('q'))
+    handle(key('E'))
+    expect(opts.nowPlaying.open.mock.calls).toEqual([
+      ['lyrics'],
+      ['queue'],
+      ['equalizer'],
+    ])
+  })
+
+  it('does not open panels when nothing is playing', () => {
+    const { handle, opts, player } = setup()
+    player.currentTrack.value = null
+    handle(key('e'))
+    expect(opts.nowPlaying.open).not.toHaveBeenCalled()
+  })
+
   it('closes now playing with Escape', () => {
     const { handle, opts } = setup()
     handle(key('Escape'))

@@ -12,6 +12,7 @@ export const SHORTCUTS = [
   { keys: ['R'], label: 'shortcuts.repeat' },
   { keys: ['L'], label: 'shortcuts.lyrics' },
   { keys: ['Q'], label: 'shortcuts.queue' },
+  { keys: ['E'], label: 'shortcuts.equalizer' },
   { keys: ['Ctrl', 'K'], label: 'shortcuts.search' },
   { keys: ['G', 'L'], label: 'shortcuts.goLibrary' },
   { keys: ['G', 'D'], label: 'shortcuts.goQueue' },
@@ -120,6 +121,9 @@ export function createShortcutHandler({
         break
       case 'q':
         if (player.currentTrack.value) nowPlaying.open('queue')
+        break
+      case 'e':
+        if (player.currentTrack.value) nowPlaying.open('equalizer')
         break
       case '/':
         event.preventDefault()

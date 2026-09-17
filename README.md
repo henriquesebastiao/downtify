@@ -51,6 +51,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 🐳 **One Docker command** | Up and running in under a minute |
 | 🏠 **Home server platforms** | Available on Umbrel, CasaOS and HomeDock |
 | 🎧 **Built-in player** | Full-screen now playing with synced lyrics, an editable queue, sleep timer, keyboard shortcuts and lock-screen controls |
+| 🎚️ **Equalizer** *(experimental)* | Ten-band equalizer with presets and a preamp in the full-screen player — see **[Equalizer](https://henriquesebastiao.github.io/downtify/features/player/#equalizer)** |
 | 📚 **Library views** | Browse albums, artists, playlists and tracks in a grid or a list — sort, filter, multi-select, download as ZIP |
 | 🌍 **Multi-language UI** | English (default) plus 7 more languages — easy to add more |
 | 📱 **Installable (PWA)** | Add Downtify to your iOS or Android home screen — launches full-screen, no browser chrome |
@@ -241,6 +242,7 @@ Downtify ships with a web player so you don't need a separate app to listen to w
 - **Now playing** with large cover art, seek bar, shuffle, repeat and volume
 - **Synced lyrics** that follow the song — click a line to jump there
 - **Up next** queue: play next, add to queue, drag to reorder, remove
+- **Ten-band equalizer** with presets and a preamp
 - **Sleep timer**, keyboard shortcuts (press `?`), and lock-screen / media-key controls
 - Your queue and position are remembered between visits
 
