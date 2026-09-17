@@ -134,7 +134,7 @@ The **Playlist Monitor** lets Downtify watch your favorite Spotify and YouTube M
 
 **How to use it:**
 
-1. Click the eye icon (👁) in the navigation bar
+1. Open **Monitor** from the sidebar (on phones: **More → Monitor**)
 2. Paste a Spotify or YouTube Music playlist URL, or an **artist** URL (Spotify, or YouTube Music such as `music.youtube.com/@artist`) to watch everything they release
 3. Choose how often Downtify should check for new tracks (every 15 min up to once a month)
 4. Click **Watch**

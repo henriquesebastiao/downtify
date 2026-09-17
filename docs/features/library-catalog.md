@@ -14,7 +14,7 @@ Downtify keeps a small **catalog** of the files under `/downloads` (and the slsk
 | **Playlist catalog** | `/data/downtify_library.db` | Which tracks belong to each downloaded Spotify playlist |
 | **Playlist downloads** | `/data/downtify_library.db` | Tracked Spotify playlist downloads and a cache of their Spotify track lists |
 | **Navidrome index** | `/data/downtify_library.db` | Navidrome song IDs per file |
-| **Library metadata cache** | `/data/downtify_library.db` | Title, artist and album per file for `GET /tracks`, re-read only when a file's modification time or size changes |
+| **Library metadata cache** | `/data/downtify_library.db` | Title, artist, album, album artist, track number, year and length per file for `GET /tracks`, re-read only when a file's modification time or size changes |
 | **Path scan cache** | In memory (short-lived) | The list of library paths, invalidated whenever Downtify adds or removes a file |
 | **Cover art cache** | `/data/cover_cache` (optional) | Extracted cover images for `GET /cover` |
 
@@ -47,9 +47,15 @@ It only runs when you press the button (or call `POST /api/library/reconcile`) �
 
 ## Library page
 
-Besides the existing filters and multi-select, the Library page shows your [playlist downloads](slskd-navidrome.md#playlist-downloads) and offers **Delete playlist** while a playlist filter is selected.
+The Library page has four tabs — **Albums**, **Artists**, **Playlists** and **Tracks**:
 
-**Download selected** saves the checked tracks to the device you're browsing from as a single ZIP, keeping their folder layout — handy when Downtify runs on a home server and you want a batch of tracks locally. Combine it with **Select all** to take everything the current filter shows. The archive is built while it downloads, so nothing is written to the server's disk, and it's capped at 2000 tracks per download.
+- **Albums, artists and playlists** show as a cover grid or a compact list (the toggle is remembered), with a text filter and sorting by recently added, name, artist, year or number of tracks. Albums and artists are built from each file's tags (album artist, album, year), so they don't depend on how files are organized on disk. A track without an album tag appears under Tracks and its artist, not under Albums.
+- **Playlists** are the downloaded playlists with an [M3U file](m3u-export.md), plus tracked [playlist downloads](slskd-navidrome.md#playlist-downloads) that don't have one yet.
+- **Tracks** is a sortable table (title, album, format, date added, length) with a text filter, a format filter, and checkboxes — click one, then Shift-click another to select a range.
+
+Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle**, **Add to queue** and **Download as ZIP**. A playlist page also shows how many of its tracks are downloaded, lists the missing ones with **Download missing**, and offers **Watch for new tracks** and **Delete playlist** in its **⋯** menu.
+
+**Download as ZIP** saves the selected tracks to the device you're browsing from as a single ZIP, keeping their folder layout — handy when Downtify runs on a home server and you want a batch of tracks locally. Combine it with **Select all** to take everything the current filter shows. The archive is built while it downloads, so nothing is written to the server's disk, and it's capped at 2000 tracks per download.
 
 ## API
 
