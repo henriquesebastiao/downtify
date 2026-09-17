@@ -24,6 +24,7 @@ from downtify.downloader import (
     _tag_mp3,
     embed_lyrics,
     embed_metadata,
+    save_playlist_cover,
 )
 from downtify.lyrics import Lyrics
 
@@ -502,6 +503,48 @@ def test_save_album_cover_noop_when_no_cover_bytes(tmp_path, monkeypatch):
     d = _make(tmp_path, organize_by_album=True)
     d._save_album_cover(tmp_path, _SONG)
     assert not (tmp_path / 'cover.jpg').exists()
+
+
+# ── save_playlist_cover ──────────────────────────────────────────────────────
+
+
+def test_save_playlist_cover_writes_jpg_next_to_m3u(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
+    )
+    m3u_path = tmp_path / 'My Playlist.m3u'
+    m3u_path.write_text('#EXTM3U\n', encoding='utf-8')
+    result = save_playlist_cover('https://img/cover', m3u_path)
+    expected = tmp_path / 'My Playlist.jpg'
+    assert result == expected
+    assert expected.read_bytes() == b'IMG-BYTES'
+
+
+def test_save_playlist_cover_noop_when_no_url(tmp_path, monkeypatch):
+    # _download_cover already no-ops on an empty URL; this just confirms
+    # save_playlist_cover propagates that as no file written.
+    monkeypatch.setattr(downloader_mod, '_download_cover', lambda url: None)
+    m3u_path = tmp_path / 'My Playlist.m3u'
+    assert save_playlist_cover('', m3u_path) is None
+    assert not m3u_path.with_suffix('.jpg').exists()
+
+
+def test_save_playlist_cover_noop_when_fetch_fails(tmp_path, monkeypatch):
+    monkeypatch.setattr(downloader_mod, '_download_cover', lambda url: None)
+    m3u_path = tmp_path / 'My Playlist.m3u'
+    assert save_playlist_cover('https://img/cover', m3u_path) is None
+    assert not (tmp_path / 'My Playlist.jpg').exists()
+
+
+def test_save_playlist_cover_returns_none_on_write_failure(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
+    )
+    # The parent directory doesn't exist, so write_bytes raises OSError.
+    m3u_path = tmp_path / 'missing-dir' / 'My Playlist.m3u'
+    assert save_playlist_cover('https://img/cover', m3u_path) is None
 
 
 # ── download_cover_art toggle ───────────────────────────────────────────────

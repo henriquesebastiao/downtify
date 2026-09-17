@@ -233,7 +233,7 @@ export default {
       'Writes Playlists/<name>.m3u alongside the tracks for both manual playlist downloads and Playlist Monitor sweeps.',
     downloadCoverArtPlaylists: 'Download playlist cover art',
     downloadCoverArtPlaylistsHint:
-      'Gets playlist artwork and saves it to Playlists/<name>.jpeg. Turn off to skip downloading the cover.',
+      'Gets playlist artwork and saves it to Playlists/<name>.jpg. Turn off to skip downloading the cover.',
     audioSourceHint:
       'Pick one or more. Each track tries the selected sources in order (1, 2, 3) until one succeeds.',
     audioSourceMoveUp: 'Move up',

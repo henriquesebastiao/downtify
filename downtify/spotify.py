@@ -880,6 +880,19 @@ def playlist_info_and_tracks(
     return embed_name, _parse_playlist_tracks(entity)
 
 
+def playlist_cover_url_from_id(playlist_id: str) -> str:
+    """Largest cover art Spotify's public playlist embed page offers.
+
+    Playlist tracks carry no cover of their own — every track's
+    ``cover_url`` already falls back to this same image (see
+    ``_parse_playlist_tracks``) — so this reads it once, directly off
+    the playlist entity, for saving alongside the playlist's M3U file.
+    """
+    payload = _fetch_embed_json('playlist', playlist_id)
+    entity = _entity_from(payload)
+    return _cover_url(entity)
+
+
 def _id_from_uri(uri: str) -> str:
     if not uri:
         return ''

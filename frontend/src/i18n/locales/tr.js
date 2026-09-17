@@ -232,7 +232,7 @@ export default {
       'Hem manuel çalma listesi indirmeleri hem de Çalma Listesi İzleyicisi taramaları için parçaların yanına Playlists/<isim>.m3u dosyalarını kaydeder.',
     downloadCoverArtPlaylists: 'Çalma listesi kapağını indir',
     downloadCoverArtPlaylistsHint:
-      'Çalma listesinin kapak resmini alır ve Playlists/<isim>.jpeg olarak kaydeder. Kapağı indirmemek için kapatın.',
+      'Çalma listesinin kapak resmini alır ve Playlists/<isim>.jpg olarak kaydeder. Kapağı indirmemek için kapatın.',
     audioSourceHint:
       'Bir veya daha fazlasını seçin. Her parça, biri başarılı olana kadar seçilen kaynakları sırayla (1, 2, 3) dener.',
     audioSourceMoveUp: 'Yukarı taşı',

@@ -237,7 +237,7 @@ export default {
       'Grava Playlists/<nome>.m3u junto com as faixas, tanto para downloads manuais de playlist quanto para varreduras do Monitor.',
     downloadCoverArtPlaylists: 'Baixar capa da playlist',
     downloadCoverArtPlaylistsHint:
-      'Obtém as artes das playlists e salva em Playlists/<nome>.jpeg. Desative para não baixar a capa.',
+      'Obtém as artes das playlists e salva em Playlists/<nome>.jpg. Desative para não baixar a capa.',
     audioSourceHint:
       'Escolha uma ou mais. Cada faixa tenta as fontes selecionadas na ordem (1, 2, 3) até uma funcionar.',
     audioSourceMoveUp: 'Mover para cima',

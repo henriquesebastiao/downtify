@@ -14,7 +14,12 @@ from loguru import logger
 
 from . import m3u, providers, spotify
 from .cover_cache import CoverArtCache
-from .downloader import DOWNLOAD_EXECUTOR, Downloader, ProgressCallback
+from .downloader import (
+    DOWNLOAD_EXECUTOR,
+    Downloader,
+    ProgressCallback,
+    save_playlist_cover,
+)
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .library_paths_cache import invalidate_library_paths_cache
@@ -156,6 +161,42 @@ def fetch_playlist(
     if source == SOURCE_YOUTUBE_MUSIC:
         return providers.playlist_info_and_tracks_from_id(playlist_id)
     return spotify.playlist_info_and_tracks(playlist_id)
+
+
+def fetch_playlist_cover_url(source: str, playlist_id: str) -> str:
+    """Largest playlist cover art available on either service (blocking)."""
+    if source == SOURCE_YOUTUBE_MUSIC:
+        return providers.playlist_cover_url_from_id(playlist_id)
+    return spotify.playlist_cover_url_from_id(playlist_id)
+
+
+def download_playlist_cover_if_enabled(
+    source: str,
+    playlist_id: str,
+    m3u_path: Path,
+    settings: dict[str, Any],
+) -> Optional[Path]:
+    """Save the playlist's cover art beside *m3u_path*, when enabled.
+
+    No-ops when ``download_cover_art_playlists`` is off. A cover
+    fetch/write failure is logged and swallowed — it must never fail
+    the playlist download itself, which has already succeeded by the
+    time this runs.
+    """
+    if not settings.get('download_cover_art_playlists'):
+        return None
+    try:
+        cover_url = fetch_playlist_cover_url(source, playlist_id)
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Failed to resolve playlist cover art for {} ({})',
+            playlist_id,
+            source,
+        )
+        return None
+    if not cover_url:
+        return None
+    return save_playlist_cover(cover_url, m3u_path)
 
 
 @dataclass
@@ -644,12 +685,12 @@ async def check_playlist(
         )
         if settings is None or settings.get('generate_m3u', True):
             await asyncio.to_thread(
-                _regenerate_m3u,
+                _regenerate_final_m3u_and_cover,
                 playlist,
                 tracks,
                 downloader,
-                None,
                 known_tracks,
+                settings or {},
             )
         await asyncio.to_thread(
             _sync_library_playlist,
@@ -994,8 +1035,9 @@ def _regenerate_m3u(
     downloader: Downloader,
     resolved: Optional[dict[str, str]] = None,
     known_tracks: Optional[dict[str, Optional[str]]] = None,
-) -> None:
-    """Rewrite the playlist's M3U, in playlist order.
+) -> Optional[Path]:
+    """Rewrite the playlist's M3U, in playlist order. Returns its path,
+    or ``None`` when nothing was written.
 
     Walks the full ordered track list (not just the freshly downloaded
     ones) and hands the entries to :func:`m3u.write_m3u`. Tracks with no
@@ -1041,18 +1083,42 @@ def _regenerate_m3u(
             'M3U skip for monitored playlist "{}": no tracks on disk',
             playlist.name,
         )
-        return
+        return None
     # When organize-by-artist/album is on the tracks live in those folders
     # rather than the per-playlist subfolder, so the M3U goes to the legacy
     # Playlists/ directory where its relative paths still resolve.
     organize = downloader.organize_by_artist or downloader.organize_by_album
-    m3u.write_m3u(
+    path, _kept = m3u.write_m3u(
         downloader.download_dir,
         playlist.name,
         entries,
         playlist_subdir=None if organize else pl_subdir,
         slskd_dir=slskd_dir,
     )
+    return path
+
+
+def _regenerate_final_m3u_and_cover(
+    playlist: MonitoredPlaylist,
+    tracks: list[dict[str, Any]],
+    downloader: Downloader,
+    known_tracks: dict[str, Optional[str]],
+    settings: dict[str, Any],
+) -> None:
+    """Authoritative end-of-sweep M3U rewrite, plus its cover art.
+
+    Cover art is only fetched here — once per sweep — rather than from
+    every incremental rewrite in :func:`check_playlist`'s download loop,
+    so a long sweep doesn't refetch the same playlist cover once per
+    track.
+    """
+    m3u_path = _regenerate_m3u(
+        playlist, tracks, downloader, None, known_tracks
+    )
+    if m3u_path is not None:
+        download_playlist_cover_if_enabled(
+            playlist.source, playlist.spotify_id, m3u_path, settings
+        )
 
 
 # Ids of watches with a check running right now. Adding a watch starts its
