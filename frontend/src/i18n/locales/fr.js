@@ -270,6 +270,11 @@ export default {
     nothingTitle: 'Rien à améliorer',
     nothingBody:
       'Tous les morceaux ont déjà une pochette à la taille voulue, des paroles et des étiquettes complètes.',
+    nothingCheckedBody: {
+      one: '{count} morceau a été vérifié récemment et ignoré. Analysez à nouveau sans cette mémoire pour tout parcourir.',
+      other:
+        '{count} morceaux ont été vérifiés récemment et ignorés. Analysez à nouveau sans cette mémoire pour tout parcourir.',
+    },
     notScannedTitle: 'Analysez d’abord votre bibliothèque',
     notScannedBody:
       'Une analyse ne change rien — vous choisissez ensuite quoi réparer.',

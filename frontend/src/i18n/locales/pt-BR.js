@@ -263,6 +263,11 @@ export default {
     nothingTitle: 'Nada a melhorar',
     nothingBody:
       'Todas as músicas já têm capa no tamanho desejado, letras e tags completas.',
+    nothingCheckedBody: {
+      one: '{count} música foi verificada há pouco e foi pulada. Analise de novo sem essa memória para passar por tudo.',
+      other:
+        '{count} músicas foram verificadas há pouco e foram puladas. Analise de novo sem essa memória para passar por tudo.',
+    },
     notScannedTitle: 'Analise sua biblioteca primeiro',
     notScannedBody:
       'A análise não altera nada — você escolhe o que consertar depois.',

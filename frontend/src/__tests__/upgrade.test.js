@@ -44,6 +44,7 @@ describe('normalizeStatus', () => {
         categories: { artwork: 12 },
         category_bytes: { artwork: 2048 },
         tracks: 12,
+        recently_checked: 9,
         library_tracks: 40,
         library_bytes: 4096,
       },
@@ -52,6 +53,7 @@ describe('normalizeStatus', () => {
     expect(status.state).toBe('ready')
     expect(status.counts.total).toBe(12)
     expect(status.summary.categoryBytes.artwork).toBe(2048)
+    expect(status.summary.recentlyChecked).toBe(9)
     expect(status.summary.libraryTracks).toBe(40)
     expect(status.options.artwork_min_px).toBe(900)
   })

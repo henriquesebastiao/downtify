@@ -531,8 +531,10 @@ def test_a_check_is_only_fresh_for_the_version_that_made_it(
     tmp_path: Path,
 ) -> None:
     db = LibraryUpgradeDB(tmp_path / 'lib.db')
-    db.record_check('a.mp3', app_version='3.0.0', artwork_px=1200)
-    check = db.checks_for(['a.mp3'])['a.mp3']
+    db.record_check(
+        'a.mp3', [CATEGORY_ARTWORK], app_version='3.0.0', artwork_px=1200
+    )
+    check = db.checks_for(['a.mp3'])['a.mp3'][CATEGORY_ARTWORK]
 
     assert check['artwork_px'] == 1200
     assert check_is_fresh(check, app_version='3.0.0', max_age_days=30)
@@ -542,10 +544,26 @@ def test_a_check_is_only_fresh_for_the_version_that_made_it(
     assert not check_is_fresh(None, app_version='3.0.0', max_age_days=30)
 
 
+def test_checks_are_kept_per_category(tmp_path: Path) -> None:
+    db = LibraryUpgradeDB(tmp_path / 'lib.db')
+    db.record_check('a.mp3', [CATEGORY_ARTWORK], app_version='3.0.0')
+
+    checks = db.checks_for(['a.mp3'])['a.mp3']
+
+    # Looking at a track's artwork says nothing about its lyrics.
+    assert set(checks) == {CATEGORY_ARTWORK}
+    assert check_is_fresh(
+        checks.get(CATEGORY_ARTWORK), app_version='3.0.0', max_age_days=30
+    )
+    assert not check_is_fresh(
+        checks.get(CATEGORY_LYRICS), app_version='3.0.0', max_age_days=30
+    )
+
+
 def test_a_check_expires(tmp_path: Path) -> None:
     db = LibraryUpgradeDB(tmp_path / 'lib.db')
-    db.record_check('a.mp3', app_version='3.0.0')
-    check = dict(db.checks_for(['a.mp3'])['a.mp3'])
+    db.record_check('a.mp3', [CATEGORY_LYRICS], app_version='3.0.0')
+    check = dict(db.checks_for(['a.mp3'])['a.mp3'][CATEGORY_LYRICS])
     check['checked_at'] = '2020-01-01T00:00:00+00:00'
 
     assert not check_is_fresh(check, app_version='3.0.0', max_age_days=30)
@@ -553,10 +571,15 @@ def test_a_check_expires(tmp_path: Path) -> None:
 
 def test_a_recorded_artwork_size_is_never_lowered(tmp_path: Path) -> None:
     db = LibraryUpgradeDB(tmp_path / 'lib.db')
-    db.record_check('a.mp3', app_version='3.0.0', artwork_px=1200)
-    db.record_check('a.mp3', app_version='3.0.0', artwork_px=0)
+    db.record_check(
+        'a.mp3', [CATEGORY_ARTWORK], app_version='3.0.0', artwork_px=1200
+    )
+    db.record_check(
+        'a.mp3', [CATEGORY_ARTWORK], app_version='3.0.0', artwork_px=0
+    )
 
-    assert db.checks_for(['a.mp3'])['a.mp3']['artwork_px'] == 1200
+    checks = db.checks_for(['a.mp3'])['a.mp3']
+    assert checks[CATEGORY_ARTWORK]['artwork_px'] == 1200
 
 
 # ── The runner ─────────────────────────────────────────────────────
@@ -663,6 +686,57 @@ def test_a_finished_track_is_remembered_so_the_next_scan_skips_it(
     _wait(runner)
 
     assert runner.status()['counts']['total'] == 0
+
+
+def test_repairing_one_category_leaves_the_others_due(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    # Fixing a track's artwork must not make the next scan believe its
+    # missing lyrics were ever looked for.
+    ctx = _context(tmp_path)
+    _write_track(ctx.download_dir / 'small.mp3', cover_px=300)
+    _stub_cover(monkeypatch, 1200)
+    runner = _runner(tmp_path, ctx)
+    runner.start_scan(UpgradeOptions(artwork_min_px=600))
+    _wait(runner)
+
+    runner.start((CATEGORY_ARTWORK,))
+    _wait(runner)
+    assert runner.status()['counts']['completed'] == 1
+
+    runner.start_scan(UpgradeOptions(artwork_min_px=600))
+    _wait(runner)
+
+    summary = runner.scan_summary()
+    assert summary['categories'][CATEGORY_LYRICS] == 1
+    # The artwork is both done and remembered, so it isn't queued again.
+    assert summary['categories'][CATEGORY_ARTWORK] == 0
+    assert runner.status()['counts']['total'] == 1
+
+
+def test_a_scan_reports_the_tracks_it_skipped_from_memory(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    _write_track(ctx.download_dir / 'small.mp3', cover_px=300)
+    _stub_cover(monkeypatch, None)
+    monkeypatch.setattr(
+        library_upgrade.lyrics_mod, 'fetch', lambda *_a, **_k: None
+    )
+    runner = _runner(tmp_path, ctx)
+    runner.start_scan(UpgradeOptions(artwork_min_px=600))
+    _wait(runner)
+    runner.start(library_upgrade.CATEGORIES)
+    _wait(runner)
+
+    runner.start_scan(UpgradeOptions(artwork_min_px=600))
+    _wait(runner)
+
+    summary = runner.scan_summary()
+    assert summary['tracks'] == 0
+    # Reported rather than silently missing, so "nothing to upgrade"
+    # is distinguishable from "everything was checked recently".
+    assert summary['recently_checked'] == 1
 
 
 def test_a_rescan_looks_again_once_the_memory_is_disabled(

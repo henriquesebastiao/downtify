@@ -159,7 +159,9 @@ def _metadata_gaps(entry: dict[str, Any]) -> list[str]:
     return gaps
 
 
-def _summarize(jobs: list[dict[str, Any]]) -> dict[str, Any]:
+def _summarize(
+    jobs: list[dict[str, Any]], recently_checked: int = 0
+) -> dict[str, Any]:
     """How many tracks (and bytes) each category accounts for."""
 
     counts = {name: 0 for name in CATEGORIES}
@@ -173,6 +175,9 @@ def _summarize(jobs: list[dict[str, Any]]) -> dict[str, Any]:
         'categories': counts,
         'category_bytes': sizes,
         'tracks': len(jobs),
+        # Tracks the scan didn't even read, because every category had
+        # been looked at recently enough.
+        'recently_checked': int(recently_checked),
     }
 
 
@@ -646,7 +651,9 @@ class LibraryUpgradeRunner:
             self._scan_total = len(entries)
             checks = self.db.checks_for([str(e['file']) for e in entries])
             jobs: list[dict[str, Any]] = []
+            checked: list[tuple[str, list[str]]] = []
             total_bytes = 0
+            skipped = 0
             for index, entry in enumerate(entries, start=1):
                 if self._stop.is_set():
                     self.db.set_state(run_id, STATE_CANCELLED)
@@ -656,18 +663,28 @@ class LibraryUpgradeRunner:
                 total_bytes += int(entry.get('size') or 0)
                 self._scanned = index
                 self._publish(throttle=True)
-                if check_is_fresh(
-                    checks.get(stored),
-                    app_version=self.deps.version,
-                    max_age_days=options.recheck_days,
-                ):
+                due = self._categories_due(
+                    checks.get(stored) or {}, options.recheck_days
+                )
+                if not due:
+                    # Every category was looked at recently: don't even
+                    # read the file.
+                    skipped += 1
                     continue
                 full = resolve_track(stored, ctx)
                 if full is None:
                     continue
-                found = track_findings(
-                    entry, full, artwork_min_px=options.artwork_min_px
+                behind = set(
+                    track_findings(
+                        entry, full, artwork_min_px=options.artwork_min_px
+                    )
                 )
+                found = [name for name in CATEGORIES if name in due & behind]
+                # Looking and finding nothing counts as a check, so the
+                # next scan doesn't read this file again for those.
+                clean = sorted(due - behind)
+                if clean:
+                    checked.append((stored, clean))
                 if found:
                     jobs.append({
                         'file': stored,
@@ -676,14 +693,35 @@ class LibraryUpgradeRunner:
                         'title': str(entry.get('title') or ''),
                         'artist': str(entry.get('artist') or ''),
                     })
+            self.db.record_checks(checked, app_version=self.deps.version)
             self.db.add_jobs(run_id, jobs)
             self.db.set_totals(run_id, len(entries), total_bytes)
-            self.db.set_summary(run_id, _summarize(jobs))
+            self.db.set_summary(run_id, _summarize(jobs, skipped))
             self.db.set_state(run_id, STATE_READY)
         except Exception:
             logger.opt(exception=True).error('Library upgrade scan failed')
             self.db.set_state(run_id, STATE_CANCELLED)
         self._publish()
+
+    def _categories_due(
+        self, track_checks: dict[str, Any], recheck_days: int
+    ) -> set[str]:
+        """Categories this track hasn't had looked at recently.
+
+        Kept per category: repairing a track's artwork says nothing
+        about whether anyone ever went looking for its lyrics, so a
+        later run for another category must still consider it.
+        """
+
+        return {
+            name
+            for name in CATEGORIES
+            if not check_is_fresh(
+                track_checks.get(name),
+                app_version=self.deps.version,
+                max_age_days=recheck_days,
+            )
+        }
 
     @staticmethod
     def _summary_for(run: dict[str, Any]) -> dict[str, Any]:
@@ -692,6 +730,7 @@ class LibraryUpgradeRunner:
             'categories': stored.get('categories') or {},
             'category_bytes': stored.get('category_bytes') or {},
             'tracks': int(stored.get('tracks') or 0),
+            'recently_checked': int(stored.get('recently_checked') or 0),
             'library_tracks': int(run['total_tracks'] or 0),
             'library_bytes': int(run['total_bytes'] or 0),
         }
@@ -807,12 +846,15 @@ class LibraryUpgradeRunner:
             changed=outcome.changed,
         )
         if outcome.status != JOB_FAILED:
+            # Only the categories this run actually looked at: the rest
+            # stay due, so a later run for them still considers the
+            # track.
             self.db.record_check(
                 stored,
+                todo,
                 app_version=self.deps.version,
                 artwork_px=outcome.artwork_px,
                 artwork_source=outcome.artwork_source,
-                categories=todo,
             )
 
     def pause(self) -> dict[str, Any]:

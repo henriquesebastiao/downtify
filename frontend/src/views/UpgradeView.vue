@@ -194,8 +194,24 @@
       v-else-if="state === 'ready'"
       icon="check"
       :title="t('upgrade.nothingTitle')"
-      :body="t('upgrade.nothingBody')"
-    />
+      :body="
+        summary.recentlyChecked
+          ? t('upgrade.nothingCheckedBody', {
+              count: summary.recentlyChecked,
+            })
+          : t('upgrade.nothingBody')
+      "
+    >
+      <UiButton
+        v-if="summary.recentlyChecked"
+        variant="secondary"
+        icon="refresh"
+        :loading="loading"
+        @click="rescanEverything"
+      >
+        {{ t('upgrade.recheckNever') }}
+      </UiButton>
+    </UiEmpty>
 
     <!-- Never scanned -->
     <UiEmpty
@@ -301,6 +317,13 @@ const runScan = () =>
     artwork_source: artworkSource.value,
     recheck_days: recheckDays.value,
   })
+
+// "Nothing to upgrade" when everything was simply checked recently is a
+// dead end without a way past the memory.
+function rescanEverything() {
+  recheckDays.value = 0
+  return runScan()
+}
 
 onMounted(() => load())
 

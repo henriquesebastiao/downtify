@@ -264,6 +264,11 @@ export default {
     nothingTitle: 'Nada que mejorar',
     nothingBody:
       'Todas las canciones ya tienen portada del tamaño deseado, letras y etiquetas completas.',
+    nothingCheckedBody: {
+      one: '{count} canción se revisó hace poco y se saltó. Analiza otra vez sin esa memoria para pasar por todo.',
+      other:
+        '{count} canciones se revisaron hace poco y se saltaron. Analiza otra vez sin esa memoria para pasar por todo.',
+    },
     notScannedTitle: 'Analiza tu biblioteca primero',
     notScannedBody:
       'El análisis no cambia nada — tú eliges después qué arreglar.',

@@ -261,6 +261,11 @@ export default {
     nothingTitle: 'Nincs mit feljavítani',
     nothingBody:
       'Minden számnak van a kívánt méretű borítója, dalszövege és teljes címkekészlete.',
+    nothingCheckedBody: {
+      one: '{count} számot nemrég megnéztük, ezért kimaradt. Vizsgáld át újra e nélkül a memória nélkül, hogy minden sorra kerüljön.',
+      other:
+        '{count} számot nemrég megnéztünk, ezért kimaradtak. Vizsgáld át újra e nélkül a memória nélkül, hogy minden sorra kerüljön.',
+    },
     notScannedTitle: 'Először vizsgáld át a könyvtárat',
     notScannedBody:
       'Az átvizsgálás semmit nem módosít — utána te választod ki, mi javuljon.',

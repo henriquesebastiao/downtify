@@ -130,14 +130,19 @@ class LibraryUpgradeDB:
                 CREATE INDEX IF NOT EXISTS idx_upgrade_jobs_status
                 ON library_upgrade_jobs (run_id, status)
             """)
+            # One row per track *and category*: repairing artwork says
+            # nothing about whether the track's lyrics were ever looked
+            # for, so a later run for another category must not treat the
+            # track as already handled.
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS library_upgrade_checks (
-                    stored_path TEXT PRIMARY KEY,
+                    stored_path TEXT NOT NULL,
+                    category TEXT NOT NULL,
                     checked_at TEXT NOT NULL,
                     app_version TEXT NOT NULL DEFAULT '',
                     artwork_px INTEGER NOT NULL DEFAULT 0,
                     artwork_source TEXT NOT NULL DEFAULT '',
-                    categories TEXT NOT NULL DEFAULT '[]'
+                    PRIMARY KEY (stored_path, category)
                 )
             """)
 
@@ -368,39 +373,84 @@ class LibraryUpgradeDB:
     def record_check(
         self,
         stored_path: str,
+        categories: list[str],
         *,
         app_version: str,
         artwork_px: int = 0,
         artwork_source: str = '',
-        categories: Optional[list[str]] = None,
     ) -> None:
+        """Remember that these categories were just looked at for a track."""
+
+        rows = [
+            (
+                stored_path,
+                category,
+                _now_iso(),
+                app_version,
+                int(artwork_px),
+                artwork_source,
+            )
+            for category in categories
+        ]
+        if not rows:
+            return
         with self._connect() as conn:
-            conn.execute(
+            conn.executemany(
                 """INSERT INTO library_upgrade_checks
-                   (stored_path, checked_at, app_version, artwork_px,
-                    artwork_source, categories)
+                   (stored_path, category, checked_at, app_version,
+                    artwork_px, artwork_source)
                    VALUES (?, ?, ?, ?, ?, ?)
-                   ON CONFLICT(stored_path) DO UPDATE SET
+                   ON CONFLICT(stored_path, category) DO UPDATE SET
                    checked_at = excluded.checked_at,
                    app_version = excluded.app_version,
                    artwork_px = MAX(excluded.artwork_px,
                                     library_upgrade_checks.artwork_px),
-                   artwork_source = excluded.artwork_source,
-                   categories = excluded.categories""",
-                (
-                    stored_path,
-                    _now_iso(),
-                    app_version,
-                    int(artwork_px),
-                    artwork_source,
-                    json.dumps(list(categories or [])),
-                ),
+                   artwork_source = excluded.artwork_source""",
+                rows,
             )
 
-    def checks_for(self, paths: list[str]) -> dict[str, dict[str, Any]]:
+    def record_checks(
+        self,
+        entries: Iterable[tuple[str, list[str]]],
+        *,
+        app_version: str,
+    ) -> int:
+        """Record many tracks' checks at once.
+
+        The scan uses this for the categories it examined and found
+        nothing to do for: looking and finding nothing is a check like
+        any other, and writing them one connection per track would cost
+        tens of thousands of round-trips on a large library.
+        """
+
+        now = _now_iso()
+        rows = [
+            (path, category, now, app_version)
+            for path, categories in entries
+            for category in categories
+        ]
+        if not rows:
+            return 0
+        with self._connect() as conn:
+            conn.executemany(
+                """INSERT INTO library_upgrade_checks
+                   (stored_path, category, checked_at, app_version)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT(stored_path, category) DO UPDATE SET
+                   checked_at = excluded.checked_at,
+                   app_version = excluded.app_version""",
+                rows,
+            )
+        return len(rows)
+
+    def checks_for(
+        self, paths: list[str]
+    ) -> dict[str, dict[str, dict[str, Any]]]:
+        """``{stored_path: {category: check}}`` for the paths given."""
+
         if not paths:
             return {}
-        found: dict[str, dict[str, Any]] = {}
+        found: dict[str, dict[str, dict[str, Any]]] = {}
         with self._connect() as conn:
             for start in range(0, len(paths), 400):
                 chunk = paths[start : start + 400]
@@ -411,12 +461,13 @@ class LibraryUpgradeDB:
                     chunk,
                 ).fetchall()
                 for row in rows:
-                    found[str(row['stored_path'])] = {
+                    found.setdefault(str(row['stored_path']), {})[
+                        str(row['category'])
+                    ] = {
                         'checked_at': str(row['checked_at'] or ''),
                         'app_version': str(row['app_version'] or ''),
                         'artwork_px': int(row['artwork_px'] or 0),
                         'artwork_source': str(row['artwork_source'] or ''),
-                        'categories': _json_list(row['categories']),
                     }
         return found
 

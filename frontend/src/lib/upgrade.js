@@ -37,6 +37,9 @@ export function normalizeStatus(payload) {
       categories: data.summary?.categories || {},
       categoryBytes: data.summary?.category_bytes || {},
       tracks: Number(data.summary?.tracks) || 0,
+      // Tracks the scan didn't read because every category had been
+      // looked at recently enough.
+      recentlyChecked: Number(data.summary?.recently_checked) || 0,
       libraryTracks: Number(data.summary?.library_tracks) || 0,
       libraryBytes: Number(data.summary?.library_bytes) || 0,
     },

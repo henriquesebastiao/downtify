@@ -65,10 +65,16 @@ This is also why a library downloaded before is often stuck at 300–640px: Spot
 
 After a track has been looked at, it is skipped by the next scan for this long, so a second run over a large library doesn't ask the same sources about the same tracks again.
 
+The memory is kept **per track and per category**, which is what makes partial runs work: repairing only the artwork of 16,000 tracks says nothing about whether anyone ever went looking for their lyrics, so a later lyrics run still considers every one of them. A scan also records the categories it examined and found nothing to do for — looking and finding nothing is a check like any other.
+
+Downtify remembers, for each track and category: when it was checked, the Downtify version that checked it, and — for artwork — the largest cover found and where it came from. Which lyrics providers were already asked is kept separately, per song and provider (see [Lyrics](lyrics.md)).
+
 Two things always override it:
 
 - a **newer Downtify version** re-checks everything, since it may match or tag better than the one that ran before;
 - choosing **Always check every track** ignores the memory for that scan.
+
+When a scan finds nothing left to do *because* everything was checked recently, it says so and offers to run again without the memory, rather than leaving you with an unexplained "nothing to upgrade".
 
 ## While it runs
 

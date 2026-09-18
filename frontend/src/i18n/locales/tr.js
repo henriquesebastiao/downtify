@@ -263,6 +263,11 @@ export default {
     nothingTitle: 'İyileştirilecek bir şey yok',
     nothingBody:
       'Her parçanın istediğiniz boyutta kapağı, şarkı sözü ve tam etiketleri var.',
+    nothingCheckedBody: {
+      one: '{count} parçaya yakında bakılmıştı ve atlandı. Her şeyi gözden geçirmek için bu hafızayı kullanmadan yeniden tarayın.',
+      other:
+        '{count} parçaya yakında bakılmıştı ve atlandı. Her şeyi gözden geçirmek için bu hafızayı kullanmadan yeniden tarayın.',
+    },
     notScannedTitle: 'Önce kitaplığınızı tarayın',
     notScannedBody:
       'Tarama hiçbir şeyi değiştirmez — neyin onarılacağını sonra siz seçersiniz.',

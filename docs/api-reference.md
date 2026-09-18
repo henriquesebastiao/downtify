@@ -646,6 +646,7 @@ The state of the library upgrade: the current (or last) run, its queue counts an
     "categories": { "artwork": 16921, "lyrics": 2104, "metadata": 5382 },
     "category_bytes": { "artwork": 110300000000, "lyrics": 13700000000, "metadata": 35100000000 },
     "tracks": 16921,
+    "recently_checked": 1204,
     "library_tracks": 18742,
     "library_bytes": 122406000000
   },
@@ -656,6 +657,8 @@ The state of the library upgrade: the current (or last) run, its queue counts an
 ```
 
 `state` is one of `idle`, `scanning`, `ready`, `running`, `paused`, `done` or `cancelled`.
+
+`summary.tracks` is what the scan queued; `summary.recently_checked` is how many tracks it skipped without reading them, because every category had been looked at inside the `recheck_days` window.
 
 ---
 

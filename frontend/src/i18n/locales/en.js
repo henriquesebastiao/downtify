@@ -257,6 +257,11 @@ export default {
     nothingTitle: 'Nothing to upgrade',
     nothingBody:
       'Every track has artwork at your target size, lyrics and complete tags.',
+    nothingCheckedBody: {
+      one: '{count} track was looked at recently and skipped. Scan again without that memory to go through everything.',
+      other:
+        '{count} tracks were looked at recently and skipped. Scan again without that memory to go through everything.',
+    },
     notScannedTitle: 'Scan your library first',
     notScannedBody:
       'Nothing is changed by a scan — you pick what to repair afterwards.',
