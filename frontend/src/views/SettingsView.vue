@@ -191,6 +191,13 @@
                     />
                   </div>
                 </div>
+                <div class="px-5 py-4">
+                  <ConnectionTest
+                    kind="slskd"
+                    :config="s.slskd"
+                    :url="s.slskd.base_url"
+                  />
+                </div>
                 <SettingRow
                   :label="t('settings.slskdInPlace')"
                   :description="t('settings.slskdInPlaceHint')"
@@ -484,6 +491,13 @@
                     type="password"
                   />
                 </div>
+                <div class="px-5 py-4">
+                  <ConnectionTest
+                    kind="navidrome"
+                    :config="s.navidrome"
+                    :url="s.navidrome.url"
+                  />
+                </div>
                 <SettingRow
                   :label="t('settings.navidromeSync')"
                   :description="t('settings.navidromeSyncHint')"
@@ -653,6 +667,7 @@ import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import CookiesCard from '/src/components/settings/CookiesCard.vue'
+import ConnectionTest from '/src/components/settings/ConnectionTest.vue'
 import PresetPicker from '/src/components/settings/PresetPicker.vue'
 import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'

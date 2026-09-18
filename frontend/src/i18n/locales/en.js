@@ -658,6 +658,42 @@ export default {
     navidromeAdminPassword: 'Admin password',
     navidromeAdminHint:
       'Optional — lets Downtify start a library scan so new songs show up sooner.',
+    test: {
+      button: 'Test connection',
+      testing: 'Testing…',
+      needFields: 'Fill in the fields above first.',
+      requestFailed: "The test couldn't run. Is Downtify still reachable?",
+      connected: 'Connected to {server}.',
+      unknown: 'Unexpected answer from the test ({code}).',
+      config_missing: 'Fill in the required fields first.',
+      connection_unreachable:
+        "Can't reach {url}. Check the address, and that the server is running and reachable from Downtify.",
+      connection_timeout: "{url} didn't answer in time.",
+      connection_bad_url:
+        'That address is not valid. Start it with http:// or https://.',
+      connection_tls:
+        "The HTTPS certificate isn't trusted. Use http://, or a certificate from a trusted authority.",
+      connection_not_slskd:
+        "Something answered at {url}, but it doesn't look like slskd. Check the address and port.",
+      connection_not_navidrome:
+        "Something answered at {url}, but it doesn't look like Navidrome. Check the address and port.",
+      connection_http_error: 'The server answered with an error ({detail}).',
+      auth_bad_key: 'slskd rejected the API key.',
+      auth_bad_credentials: 'Navidrome rejected the username or password.',
+      auth_api_error: 'Navidrome answered: {detail}',
+      soulseek_ok: 'slskd is logged in to Soulseek.',
+      soulseek_offline:
+        "slskd isn't logged in to Soulseek. It will find nothing until it is.",
+      folder_ok: 'Downtify can read {detail}.',
+      folder_missing:
+        "Downtify can't read {detail}. That must be the folder slskd downloads into, mounted in this container.",
+      scan_ok: 'This account can start library scans.',
+      scan_not_admin:
+        "This account can't start library scans — Navidrome only lets admins. Fill in the admin username and password so new songs show up sooner.",
+      scan_not_admin_separate:
+        "The admin account isn't an admin, so it can't start library scans.",
+      scan_bad_admin: 'Navidrome rejected the admin username or password.',
+    },
     navidromeSync: 'Create playlists in Navidrome',
     navidromeSyncHint:
       'After playlist downloads and monitor checks, keep a Navidrome playlist with the same name.',

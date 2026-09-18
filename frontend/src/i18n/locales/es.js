@@ -678,6 +678,44 @@ export default {
     navidromeAdminPassword: 'Contraseña de administrador',
     navidromeAdminHint:
       'Opcional — permite a Downtify iniciar un escaneo para que las canciones nuevas aparezcan antes.',
+    test: {
+      button: 'Probar conexión',
+      testing: 'Probando…',
+      needFields: 'Rellena primero los campos de arriba.',
+      requestFailed:
+        'No se pudo ejecutar la prueba. ¿Sigue accesible Downtify?',
+      connected: 'Conectado a {server}.',
+      unknown: 'Respuesta inesperada de la prueba ({code}).',
+      config_missing: 'Rellena primero los campos obligatorios.',
+      connection_unreachable:
+        'No se puede llegar a {url}. Revisa la dirección y que el servidor esté en marcha y accesible desde Downtify.',
+      connection_timeout: '{url} no respondió a tiempo.',
+      connection_bad_url:
+        'Esa dirección no es válida. Empieza con http:// o https://.',
+      connection_tls:
+        'El certificado HTTPS no es de confianza. Usa http://, o un certificado de una autoridad de confianza.',
+      connection_not_slskd:
+        'Algo respondió en {url}, pero no parece ser slskd. Revisa la dirección y el puerto.',
+      connection_not_navidrome:
+        'Algo respondió en {url}, pero no parece ser Navidrome. Revisa la dirección y el puerto.',
+      connection_http_error: 'El servidor respondió con un error ({detail}).',
+      auth_bad_key: 'slskd rechazó la clave de API.',
+      auth_bad_credentials: 'Navidrome rechazó el usuario o la contraseña.',
+      auth_api_error: 'Navidrome respondió: {detail}',
+      soulseek_ok: 'slskd está conectado a Soulseek.',
+      soulseek_offline:
+        'slskd no está conectado a Soulseek. No encontrará nada hasta que lo esté.',
+      folder_ok: 'Downtify puede leer {detail}.',
+      folder_missing:
+        'Downtify no puede leer {detail}. Debe ser la carpeta donde descarga slskd, montada en este contenedor.',
+      scan_ok: 'Esta cuenta puede iniciar escaneos de la biblioteca.',
+      scan_not_admin:
+        'Esta cuenta no puede iniciar escaneos de la biblioteca: Navidrome solo lo permite a los administradores. Rellena el usuario y la contraseña de administrador para que las canciones nuevas aparezcan antes.',
+      scan_not_admin_separate:
+        'La cuenta de administrador indicada no es administradora, así que no puede iniciar escaneos de la biblioteca.',
+      scan_bad_admin:
+        'Navidrome rechazó el usuario o la contraseña del administrador.',
+    },
     navidromeSync: 'Crear playlists en Navidrome',
     navidromeSyncHint:
       'Tras descargar playlists y comprobaciones del monitor, mantiene una playlist con el mismo nombre en Navidrome.',

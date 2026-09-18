@@ -688,6 +688,45 @@ export default {
     navidromeAdminPassword: 'Mot de passe administrateur',
     navidromeAdminHint:
       'Facultatif — permet à Downtify de lancer un scan pour que les nouveaux titres apparaissent plus vite.',
+    test: {
+      button: 'Tester la connexion',
+      testing: 'Test en cours…',
+      needFields: 'Remplissez d’abord les champs ci-dessus.',
+      requestFailed:
+        'Le test n’a pas pu s’exécuter. Downtify est-il toujours joignable ?',
+      connected: 'Connecté à {server}.',
+      unknown: 'Réponse inattendue du test ({code}).',
+      config_missing: 'Remplissez d’abord les champs obligatoires.',
+      connection_unreachable:
+        'Impossible de joindre {url}. Vérifiez l’adresse, et que le serveur tourne et est joignable depuis Downtify.',
+      connection_timeout: '{url} n’a pas répondu à temps.',
+      connection_bad_url:
+        'Cette adresse n’est pas valide. Commencez par http:// ou https://.',
+      connection_tls:
+        'Le certificat HTTPS n’est pas de confiance. Utilisez http://, ou un certificat d’une autorité de confiance.',
+      connection_not_slskd:
+        'Quelque chose répond sur {url}, mais cela ne ressemble pas à slskd. Vérifiez l’adresse et le port.',
+      connection_not_navidrome:
+        'Quelque chose répond sur {url}, mais cela ne ressemble pas à Navidrome. Vérifiez l’adresse et le port.',
+      connection_http_error: 'Le serveur a répondu par une erreur ({detail}).',
+      auth_bad_key: 'slskd a refusé la clé d’API.',
+      auth_bad_credentials:
+        'Navidrome a refusé le nom d’utilisateur ou le mot de passe.',
+      auth_api_error: 'Navidrome a répondu : {detail}',
+      soulseek_ok: 'slskd est connecté à Soulseek.',
+      soulseek_offline:
+        'slskd n’est pas connecté à Soulseek. Il ne trouvera rien tant qu’il ne l’est pas.',
+      folder_ok: 'Downtify peut lire {detail}.',
+      folder_missing:
+        'Downtify ne peut pas lire {detail}. Ce doit être le dossier où slskd télécharge, monté dans ce conteneur.',
+      scan_ok: 'Ce compte peut lancer des analyses de la bibliothèque.',
+      scan_not_admin:
+        'Ce compte ne peut pas lancer d’analyse de la bibliothèque : Navidrome la réserve aux administrateurs. Renseignez l’identifiant et le mot de passe administrateur pour que les nouveaux morceaux apparaissent plus vite.',
+      scan_not_admin_separate:
+        'Le compte administrateur indiqué n’est pas administrateur, il ne peut donc pas lancer d’analyses de la bibliothèque.',
+      scan_bad_admin:
+        'Navidrome a refusé le nom d’utilisateur ou le mot de passe de l’administrateur.',
+    },
     navidromeSync: 'Créer les playlists dans Navidrome',
     navidromeSyncHint:
       'Après les téléchargements de playlists et les vérifications, maintient une playlist du même nom dans Navidrome.',

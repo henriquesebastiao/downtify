@@ -60,7 +60,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 🍪 **Cookie upload** | Upload a YouTube `cookies.txt` from the settings screen to download explicit/age-restricted tracks — no bind mounts, works on Windows |
 | 🔔 **Update notifications** | Hourly check against GitHub Releases; a notice appears in the sidebar when a newer version is out |
 | 🌗 **Responsive UI** | One layout from phone to widescreen, with light and dark themes |
-| 🔗 **slskd & Navidrome** | Optionally download from Soulseek through your own slskd server, and mirror downloaded playlists into Navidrome — see **[slskd & Navidrome](https://henriquesebastiao.github.io/downtify/features/slskd-navidrome/)** |
+| 🔗 **slskd & Navidrome** | Optionally download from Soulseek through your own slskd server, and mirror downloaded playlists into Navidrome, each with a **Test connection** button in Settings — see **[slskd & Navidrome](https://henriquesebastiao.github.io/downtify/features/slskd-navidrome/)** |
 
 ---
 

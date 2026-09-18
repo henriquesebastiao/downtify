@@ -676,6 +676,44 @@ export default {
     navidromeAdminPassword: 'Adminisztrátor jelszó',
     navidromeAdminHint:
       'Nem kötelező — a Downtify könyvtárvizsgálatot indíthat, hogy az új dalok hamarabb megjelenjenek.',
+    test: {
+      button: 'Kapcsolat tesztelése',
+      testing: 'Tesztelés…',
+      needFields: 'Előbb töltsd ki a fenti mezőket.',
+      requestFailed: 'A teszt nem futhatott le. Elérhető még a Downtify?',
+      connected: 'Kapcsolódva ehhez: {server}.',
+      unknown: 'Váratlan válasz a teszttől ({code}).',
+      config_missing: 'Előbb töltsd ki a kötelező mezőket.',
+      connection_unreachable:
+        'A(z) {url} nem érhető el. Ellenőrizd a címet, és hogy a szerver fut és elérhető a Downtify felől.',
+      connection_timeout: 'A(z) {url} nem válaszolt időben.',
+      connection_bad_url:
+        'Ez a cím érvénytelen. http://-vel vagy https://-sel kezdődjön.',
+      connection_tls:
+        'A HTTPS-tanúsítvány nem megbízható. Használj http://-t, vagy megbízható hatóság tanúsítványát.',
+      connection_not_slskd:
+        'A(z) {url} címen válaszolt valami, de nem úgy néz ki, mint a slskd. Ellenőrizd a címet és a portot.',
+      connection_not_navidrome:
+        'A(z) {url} címen válaszolt valami, de nem úgy néz ki, mint a Navidrome. Ellenőrizd a címet és a portot.',
+      connection_http_error: 'A szerver hibával válaszolt ({detail}).',
+      auth_bad_key: 'A slskd elutasította az API-kulcsot.',
+      auth_bad_credentials:
+        'A Navidrome elutasította a felhasználónevet vagy a jelszót.',
+      auth_api_error: 'A Navidrome ezt válaszolta: {detail}',
+      soulseek_ok: 'A slskd be van jelentkezve a Soulseekbe.',
+      soulseek_offline:
+        'A slskd nincs bejelentkezve a Soulseekbe. Addig nem talál semmit.',
+      folder_ok: 'A Downtify olvasni tudja ezt: {detail}.',
+      folder_missing:
+        'A Downtify nem tudja olvasni ezt: {detail}. Ennek kell lennie annak a mappának, ahová a slskd letölt, és be kell csatolni ebbe a konténerbe.',
+      scan_ok: 'Ez a fiók indíthat könyvtárvizsgálatot.',
+      scan_not_admin:
+        'Ez a fiók nem indíthat könyvtárvizsgálatot — a Navidrome ezt csak adminisztrátoroknak engedi. Add meg az admin felhasználónevet és jelszót, hogy az új számok előbb megjelenjenek.',
+      scan_not_admin_separate:
+        'A megadott admin fiók nem adminisztrátor, ezért nem indíthat könyvtárvizsgálatot.',
+      scan_bad_admin:
+        'A Navidrome elutasította az admin felhasználónevet vagy jelszót.',
+    },
     navidromeSync: 'Listák létrehozása a Navidrome-ban',
     navidromeSyncHint:
       'Listaletöltések és figyelő-ellenőrzések után azonos nevű listát tart fenn a Navidrome-ban.',

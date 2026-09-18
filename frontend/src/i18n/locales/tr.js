@@ -673,6 +673,43 @@ export default {
     navidromeAdminPassword: 'Yönetici parolası',
     navidromeAdminHint:
       'İsteğe bağlı — yeni şarkıların daha çabuk görünmesi için Downtify’ın tarama başlatmasını sağlar.',
+    test: {
+      button: 'Bağlantıyı sına',
+      testing: 'Sınanıyor…',
+      needFields: 'Önce yukarıdaki alanları doldurun.',
+      requestFailed: 'Sınama çalıştırılamadı. Downtify hâlâ erişilebilir mi?',
+      connected: '{server} sunucusuna bağlandı.',
+      unknown: 'Sınamadan beklenmeyen yanıt ({code}).',
+      config_missing: 'Önce zorunlu alanları doldurun.',
+      connection_unreachable:
+        '{url} adresine ulaşılamıyor. Adresi ve sunucunun çalıştığını, Downtify’dan erişilebilir olduğunu denetleyin.',
+      connection_timeout: '{url} zamanında yanıt vermedi.',
+      connection_bad_url:
+        'Bu adres geçerli değil. http:// veya https:// ile başlayın.',
+      connection_tls:
+        'HTTPS sertifikası güvenilir değil. http:// kullanın ya da güvenilir bir yetkiliden sertifika alın.',
+      connection_not_slskd:
+        '{url} adresinde bir şey yanıt verdi ama slskd’ye benzemiyor. Adresi ve bağlantı noktasını denetleyin.',
+      connection_not_navidrome:
+        '{url} adresinde bir şey yanıt verdi ama Navidrome’a benzemiyor. Adresi ve bağlantı noktasını denetleyin.',
+      connection_http_error: 'Sunucu bir hatayla yanıt verdi ({detail}).',
+      auth_bad_key: 'slskd API anahtarını reddetti.',
+      auth_bad_credentials: 'Navidrome kullanıcı adını veya parolayı reddetti.',
+      auth_api_error: 'Navidrome şunu yanıtladı: {detail}',
+      soulseek_ok: 'slskd Soulseek’e bağlı.',
+      soulseek_offline:
+        'slskd Soulseek’e bağlı değil. Bağlanana kadar hiçbir şey bulamaz.',
+      folder_ok: 'Downtify {detail} yolunu okuyabiliyor.',
+      folder_missing:
+        'Downtify {detail} yolunu okuyamıyor. Burası slskd’nin indirdiği klasör olmalı ve bu kapsayıcıya bağlanmış olmalı.',
+      scan_ok: 'Bu hesap kitaplık taraması başlatabilir.',
+      scan_not_admin:
+        'Bu hesap kitaplık taraması başlatamaz — Navidrome bunu yalnızca yöneticilere verir. Yeni şarkılar daha erken görünsün diye yönetici kullanıcı adını ve parolasını doldurun.',
+      scan_not_admin_separate:
+        'Girilen yönetici hesabı yönetici değil, bu yüzden kitaplık taraması başlatamaz.',
+      scan_bad_admin:
+        'Navidrome yönetici kullanıcı adını veya parolasını reddetti.',
+    },
     navidromeSync: 'Navidrome’da çalma listesi oluştur',
     navidromeSyncHint:
       'Çalma listesi indirmeleri ve izleyici kontrollerinden sonra Navidrome’da aynı adlı bir liste tut.',

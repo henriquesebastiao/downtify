@@ -674,6 +674,44 @@ export default {
     navidromeAdminPassword: 'Senha do administrador',
     navidromeAdminHint:
       'Opcional — permite ao Downtify iniciar uma varredura para novas músicas aparecerem mais rápido.',
+    test: {
+      button: 'Testar conexão',
+      testing: 'Testando…',
+      needFields: 'Preencha os campos acima primeiro.',
+      requestFailed:
+        'Não foi possível executar o teste. O Downtify ainda está acessível?',
+      connected: 'Conectado a {server}.',
+      unknown: 'Resposta inesperada do teste ({code}).',
+      config_missing: 'Preencha os campos obrigatórios primeiro.',
+      connection_unreachable:
+        'Não foi possível alcançar {url}. Confira o endereço e se o servidor está rodando e acessível pelo Downtify.',
+      connection_timeout: '{url} não respondeu a tempo.',
+      connection_bad_url:
+        'Esse endereço não é válido. Comece com http:// ou https://.',
+      connection_tls:
+        'O certificado HTTPS não é confiável. Use http://, ou um certificado de uma autoridade confiável.',
+      connection_not_slskd:
+        'Algo respondeu em {url}, mas não parece ser o slskd. Confira o endereço e a porta.',
+      connection_not_navidrome:
+        'Algo respondeu em {url}, mas não parece ser o Navidrome. Confira o endereço e a porta.',
+      connection_http_error: 'O servidor respondeu com um erro ({detail}).',
+      auth_bad_key: 'O slskd recusou a chave de API.',
+      auth_bad_credentials: 'O Navidrome recusou o usuário ou a senha.',
+      auth_api_error: 'O Navidrome respondeu: {detail}',
+      soulseek_ok: 'O slskd está conectado ao Soulseek.',
+      soulseek_offline:
+        'O slskd não está conectado ao Soulseek. Ele não encontrará nada até se conectar.',
+      folder_ok: 'O Downtify consegue ler {detail}.',
+      folder_missing:
+        'O Downtify não consegue ler {detail}. Essa deve ser a pasta onde o slskd baixa, montada neste contêiner.',
+      scan_ok: 'Esta conta pode iniciar varreduras da biblioteca.',
+      scan_not_admin:
+        'Esta conta não pode iniciar varreduras da biblioteca — o Navidrome só permite a administradores. Preencha o usuário e a senha de administrador para as músicas novas aparecerem mais cedo.',
+      scan_not_admin_separate:
+        'A conta de administrador informada não é administradora, então não pode iniciar varreduras da biblioteca.',
+      scan_bad_admin:
+        'O Navidrome recusou o usuário ou a senha do administrador.',
+    },
     navidromeSync: 'Criar playlists no Navidrome',
     navidromeSyncHint:
       'Após downloads de playlists e verificações do monitor, mantém uma playlist com o mesmo nome no Navidrome.',

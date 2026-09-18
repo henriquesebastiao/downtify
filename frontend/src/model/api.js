@@ -277,6 +277,16 @@ function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
 
+// Try an integration with the values as they are in the form, saved or
+// not. A failed test is still a 200: the answer says what's wrong.
+function testSlskd(config) {
+  return API.post('/api/slskd/test', config)
+}
+
+function testNavidrome(config) {
+  return API.post('/api/navidrome/test', config)
+}
+
 function setSettings(settings) {
   return API.post('/api/settings/update', settings, {
     params: { client_id: sessionID },
@@ -325,6 +335,8 @@ export default {
   clearCompletedQueue,
   getSettings,
   setSettings,
+  testSlskd,
+  testNavidrome,
   getCookiesStatus,
   uploadCookies,
   deleteCookies,

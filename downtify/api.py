@@ -59,6 +59,8 @@ working without changes:
   tracks a downloaded playlist is still missing)
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
+* ``POST /api/slskd/test`` and ``POST /api/navidrome/test`` (try the
+  connection with the settings as they are in the form, saved or not)
 * ``GET  /api/cookies`` (current YouTube cookie configuration)
 * ``POST /api/cookies`` (upload a Netscape cookies.txt as the raw request
   body - no multipart, so no ``python-multipart`` dependency)
@@ -93,6 +95,7 @@ from loguru import logger
 
 from . import (
     cover_sources,
+    integration_check,
     library_import,
     library_upgrade,
     lyrics,
@@ -3223,6 +3226,49 @@ async def update_settings_endpoint(
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)
     return state.settings
+
+
+async def _json_object(request: Request) -> dict[str, Any]:
+    try:
+        payload = await request.json()
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+@router.post('/api/slskd/test')
+async def test_slskd_endpoint(request: Request) -> dict[str, Any]:
+    """Try a slskd configuration without saving it.
+
+    The body is the ``slskd`` settings object as it stands in the form; an
+    empty body tests the saved one. A failed test is a normal answer, not
+    an error: ``{ok, server, checks: [{id, status, code, detail}]}``.
+    """
+
+    payload = await _json_object(request)
+    saved = state.settings.get('slskd')
+    cfg = _effective_slskd_settings({
+        **state.settings,
+        'slskd': payload or (saved if isinstance(saved, dict) else {}),
+    })
+    return await asyncio.to_thread(integration_check.check_slskd, cfg)
+
+
+@router.post('/api/navidrome/test')
+async def test_navidrome_endpoint(request: Request) -> dict[str, Any]:
+    """Try a Navidrome configuration without saving it.
+
+    Same shape as ``POST /api/slskd/test``, with the ``navidrome`` settings
+    object as the body.
+    """
+
+    payload = await _json_object(request)
+    saved = state.settings.get('navidrome')
+    cfg = _effective_navidrome_settings({
+        **state.settings,
+        'navidrome': payload or (saved if isinstance(saved, dict) else {}),
+    })
+    return await asyncio.to_thread(integration_check.check_navidrome, cfg)
 
 
 @router.websocket('/api/ws')

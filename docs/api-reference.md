@@ -316,6 +316,56 @@ Update one or more settings. Takes effect immediately and is persisted to disk.
 
 ---
 
+### `POST /api/slskd/test`
+
+Try a slskd connection without saving anything. See [Testing the connection](features/slskd-navidrome.md#testing-the-connection).
+
+**Request body:** the `slskd` settings object as it stands in the form — at least `base_url` and `api_key`; `source_dir` is the folder Downtify checks it can read. The body wins over the saved settings, so a field that was cleared stays cleared. An empty body tests the saved settings instead.
+
+**Response:** always `200`, whether or not the test passed:
+
+```json
+{
+  "ok": true,
+  "server": "slskd 0.21.4",
+  "checks": [
+    { "id": "connection", "status": "ok", "code": "", "detail": "" },
+    { "id": "auth", "status": "ok", "code": "", "detail": "" },
+    { "id": "soulseek", "status": "ok", "code": "ok", "detail": "me" },
+    { "id": "folder", "status": "warn", "code": "missing", "detail": "/slskd" }
+  ]
+}
+```
+
+`ok` is `false` when any check has `status: "fail"`; a `warn` (slskd signed out of Soulseek, an unreadable folder) doesn't fail the test. `server` is set only when the address and key were both accepted. Each check is `{id, status, code, detail}`, where `detail` is only ever a short fact — a path, a state, an HTTP status — never text copied from an error.
+
+| `id` | `code` values |
+|------|---------------|
+| `config` | `missing` — the address or key is empty; nothing was tried |
+| `connection` | `unreachable`, `timeout`, `bad_url`, `tls`, `not_slskd`, `http_error` |
+| `auth` | `bad_key` |
+| `soulseek` | `ok`, `offline` |
+| `folder` | `ok`, `missing` |
+
+Each request gives up after 8 seconds.
+
+---
+
+### `POST /api/navidrome/test`
+
+Try a Navidrome connection without saving anything. Same behaviour and answer shape as `POST /api/slskd/test`, with the `navidrome` settings object as the body (`url`, `username`, `password`, and optionally `admin_username` and `admin_password`).
+
+| `id` | `code` values |
+|------|---------------|
+| `config` | `missing` |
+| `connection` | `unreachable`, `timeout`, `bad_url`, `tls`, `not_navidrome`, `http_error` |
+| `auth` | `bad_credentials`, `api_error` (`detail` holds the server's own message) |
+| `scan` | `ok`, `not_admin`, `not_admin_separate`, `bad_admin` |
+
+The `scan` check reads whether the account used for library scans (the admin login when set, else the normal one) is an admin — Navidrome only lets admins start a scan — and never starts one. It is left out when the account can't be looked up, and when scanning after a download is turned off.
+
+---
+
 ## YouTube cookies
 
 Backs the **Settings → YouTube cookies** screen. The uploaded file lives in the data directory (`/data/cookies.txt`) so it survives container updates. See [YouTube Cookies](features/youtube-cookies.md).

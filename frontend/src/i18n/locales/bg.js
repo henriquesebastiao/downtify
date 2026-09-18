@@ -666,6 +666,45 @@ export default {
     navidromeAdminPassword: 'Парола на администратора',
     navidromeAdminHint:
       'По избор — позволява на Downtify да стартира сканиране, за да се появяват новите песни по-бързо.',
+    test: {
+      button: 'Провери връзката',
+      testing: 'Проверка…',
+      needFields: 'Първо попълнете полетата по-горе.',
+      requestFailed:
+        'Проверката не можа да се изпълни. Достъпен ли е още Downtify?',
+      connected: 'Свързан с {server}.',
+      unknown: 'Неочакван отговор от проверката ({code}).',
+      config_missing: 'Първо попълнете задължителните полета.',
+      connection_unreachable:
+        'Няма достъп до {url}. Проверете адреса и дали сървърът работи и е достъпен от Downtify.',
+      connection_timeout: '{url} не отговори навреме.',
+      connection_bad_url:
+        'Този адрес не е валиден. Започнете с http:// или https://.',
+      connection_tls:
+        'HTTPS сертификатът не е доверен. Използвайте http:// или сертификат от доверен орган.',
+      connection_not_slskd:
+        'Нещо отговори на {url}, но не прилича на slskd. Проверете адреса и порта.',
+      connection_not_navidrome:
+        'Нещо отговори на {url}, но не прилича на Navidrome. Проверете адреса и порта.',
+      connection_http_error: 'Сървърът отговори с грешка ({detail}).',
+      auth_bad_key: 'slskd отхвърли API ключа.',
+      auth_bad_credentials:
+        'Navidrome отхвърли потребителското име или паролата.',
+      auth_api_error: 'Navidrome отговори: {detail}',
+      soulseek_ok: 'slskd е свързан със Soulseek.',
+      soulseek_offline:
+        'slskd не е свързан със Soulseek. Няма да намира нищо, докато не се свърже.',
+      folder_ok: 'Downtify може да чете {detail}.',
+      folder_missing:
+        'Downtify не може да чете {detail}. Това трябва да е папката, в която slskd изтегля, монтирана в този контейнер.',
+      scan_ok: 'Този акаунт може да стартира сканиране на библиотеката.',
+      scan_not_admin:
+        'Този акаунт не може да стартира сканиране на библиотеката — Navidrome го позволява само на администратори. Попълнете потребителското име и паролата на администратора, за да се показват новите песни по-рано.',
+      scan_not_admin_separate:
+        'Зададеният администраторски акаунт не е администратор, затова не може да стартира сканиране на библиотеката.',
+      scan_bad_admin:
+        'Navidrome отхвърли потребителското име или паролата на администратора.',
+    },
     navidromeSync: 'Създавай плейлисти в Navidrome',
     navidromeSyncHint:
       'След изтегляния на плейлисти и проверки поддържа плейлист със същото име в Navidrome.',
