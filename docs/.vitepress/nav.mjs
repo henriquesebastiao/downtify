@@ -26,6 +26,7 @@ export const NAV = [
       { title: 'Built-in Player', page: 'features/player.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
+      { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
       { title: 'M3U Export', page: 'features/m3u-export.md' },
       { title: 'File Organization', page: 'features/file-organization.md' },
       { title: 'Lyrics', page: 'features/lyrics.md' },

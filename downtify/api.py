@@ -45,6 +45,12 @@ working without changes:
   tracks, M3U and catalog entry)
 * ``POST /api/library/reconcile`` (fix stored library paths after files
   moved on disk, then refresh M3U/Navidrome playlists)
+* ``GET  /api/library/upgrade`` and ``GET /api/library/upgrade/jobs``
+  (an upgrade run's state, queue counts and per-track rows)
+* ``POST /api/library/upgrade/scan`` (look for tracks with low-resolution
+  artwork, no lyrics or incomplete tags; writes nothing),
+  ``POST /api/library/upgrade/start`` (body ``{categories}``) and
+  ``POST /api/library/upgrade/{pause,resume,cancel}``
 * ``GET  /api/playlists/batches`` and
   ``GET|DELETE /api/playlists/batches/{spotify_playlist_id}`` (Spotify
   playlist downloads and their completeness against Spotify)
@@ -85,7 +91,15 @@ from fastapi import (
 )
 from loguru import logger
 
-from . import library_import, lyrics, m3u, providers, spotify
+from . import (
+    cover_sources,
+    library_import,
+    library_upgrade,
+    lyrics,
+    m3u,
+    providers,
+    spotify,
+)
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
 from .downloader import (
@@ -205,12 +219,19 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # Keep extracted cover art under /data/cover_cache for faster Library
     # and Player loads.
     'cache_cover_art': False,
+    # Defaults the Library upgrade scan starts from (see
+    # downtify.library_upgrade); a scan request may override them.
+    'library_upgrade': {
+        'artwork_min_px': library_upgrade.DEFAULT_ARTWORK_MIN_PX,
+        'artwork_source': cover_sources.PREFERENCE_HIGHEST,
+        'recheck_days': library_upgrade.DEFAULT_RECHECK_DAYS,
+    },
 }
 
 # Settings stored as nested objects: saved values are merged over the
 # defaults key by key, so a settings.json from an older version still gets
 # every newer option.
-_NESTED_SETTINGS = ('slskd', 'navidrome')
+_NESTED_SETTINGS = ('slskd', 'navidrome', 'library_upgrade')
 
 
 def _clamp_parallel_downloads(value: Any) -> int:
@@ -500,6 +521,7 @@ class AppState:
     playlist_batch_store: Optional[PlaylistBatchStore] = None
     playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None
     lyrics_cache: Optional[LyricsLookupCache] = None
+    upgrade_runner: Optional[library_upgrade.LibraryUpgradeRunner] = None
 
 
 state = AppState()
@@ -2499,6 +2521,130 @@ async def reconcile_library_endpoint() -> dict[str, Any]:
         return result
 
     return await asyncio.to_thread(_run)
+
+
+# ---------------------------------------------------------------------------
+# Library upgrade (scan an existing library, then repair it)
+# ---------------------------------------------------------------------------
+
+
+def _require_upgrade_runner() -> library_upgrade.LibraryUpgradeRunner:
+    if state.upgrade_runner is None:
+        raise HTTPException(
+            status_code=500, detail='Library upgrade not ready'
+        )
+    return state.upgrade_runner
+
+
+def _upgrade_options(
+    payload: dict[str, Any],
+) -> library_upgrade.UpgradeOptions:
+    """Request body over the saved defaults."""
+
+    saved = state.settings.get('library_upgrade') or {}
+    merged = {**saved, **(payload or {})}
+    return library_upgrade.options_from(merged)
+
+
+def broadcast_upgrade_progress(status: dict[str, Any]) -> None:
+    """Push upgrade progress to connected clients from the worker thread."""
+
+    loop = state.loop
+    if loop is None:
+        return
+    asyncio.run_coroutine_threadsafe(
+        state.connections.broadcast({
+            'type': 'library_upgrade',
+            'upgrade': status,
+        }),
+        loop,
+    )
+
+
+def _upgrade_payload(
+    runner: library_upgrade.LibraryUpgradeRunner,
+) -> dict[str, Any]:
+    payload = runner.status()
+    payload['categories'] = list(library_upgrade.CATEGORIES)
+    payload['artwork_sources'] = list(cover_sources.ARTWORK_SOURCES)
+    return payload
+
+
+@router.get('/api/library/upgrade')
+def library_upgrade_status() -> dict[str, Any]:
+    """The current (or last) upgrade run, its queue counts and scan totals."""
+
+    return _upgrade_payload(_require_upgrade_runner())
+
+
+@router.get('/api/library/upgrade/jobs')
+def library_upgrade_jobs(
+    status: Optional[str] = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=1000),
+) -> list[dict[str, Any]]:
+    """Tracks in the current run, newest activity first."""
+
+    runner = _require_upgrade_runner()
+    run = runner.db.latest_run()
+    if run is None:
+        return []
+    return runner.db.jobs(int(run['id']), status=status, limit=limit)
+
+
+@router.post('/api/library/upgrade/scan')
+async def library_upgrade_scan(
+    payload: dict[str, Any] = Body(default={}),
+) -> dict[str, Any]:
+    """Look at every library track and report what is behind.
+
+    Nothing is written: the scan fills a queue the client then confirms
+    with ``/api/library/upgrade/start``.
+    """
+
+    runner = _require_upgrade_runner()
+    try:
+        return runner.start_scan(_upgrade_options(payload))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post('/api/library/upgrade/start')
+async def library_upgrade_start(
+    payload: dict[str, Any] = Body(default={}),
+) -> dict[str, Any]:
+    """Begin upgrading the scanned tracks, for the chosen categories."""
+
+    runner = _require_upgrade_runner()
+    categories = library_upgrade.normalize_categories(
+        (payload or {}).get('categories')
+    )
+    try:
+        return runner.start(categories)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post('/api/library/upgrade/pause')
+async def library_upgrade_pause() -> dict[str, Any]:
+    """Stop after the track being worked on; the queue is kept."""
+
+    return _require_upgrade_runner().pause()
+
+
+@router.post('/api/library/upgrade/resume')
+async def library_upgrade_resume() -> dict[str, Any]:
+    runner = _require_upgrade_runner()
+    try:
+        return runner.resume()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post('/api/library/upgrade/cancel')
+async def library_upgrade_cancel() -> dict[str, Any]:
+    """Drop the rest of the queue. Finished tracks stay upgraded."""
+
+    return _require_upgrade_runner().cancel()
 
 
 async def _schedule_playlist_refresh_after_delete(

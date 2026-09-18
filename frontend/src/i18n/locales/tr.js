@@ -241,6 +241,86 @@ export default {
     clearSelection: 'Seçimi temizle',
     downloadZip: 'ZIP olarak indir',
     saveToDevice: 'Bu cihaza kaydet',
+    upgrade: 'Kitaplığı iyileştir',
+  },
+  upgrade: {
+    title: 'Kitaplığı iyileştir',
+    subtitle:
+      'Zaten indirdiğiniz müzikleri yeniden indirmek yerine iyileştirin.',
+    intro:
+      'Downtify kitaplığınızdaki her parçaya bakar ve eski bir sürümün geride bıraktıklarını onarır: küçük kapaklar, eksik şarkı sözleri, yarım etiketler.',
+    audioNote:
+      'Ses dosyaları asla değiştirilmez: yalnızca kapak, şarkı sözü ve etiketler güncellenir. Yanlış kaynaktan inen bir parça olduğu gibi kalır — silip yeniden indirin.',
+    safeNote:
+      'Her parça, aslının yerine geçmeden önce doğrulanması gereken bir kopya üzerinde yeniden yazılır; bir şey ters giderse hiçbir şey kaybolmaz.',
+    scan: 'Kitaplığı tara',
+    rescan: 'Yeniden tara',
+    scanning: 'Kitaplığınız taranıyor',
+    scanProgress: '{total} parçanın {done} tanesi denetlendi',
+    scanResult: 'Tarama sonucu',
+    libraryCount: { one: '{count} parça', other: '{count} parça' },
+    librarySize: 'Kitaplık boyutu',
+    nothingTitle: 'İyileştirilecek bir şey yok',
+    nothingBody:
+      'Her parçanın istediğiniz boyutta kapağı, şarkı sözü ve tam etiketleri var.',
+    notScannedTitle: 'Önce kitaplığınızı tarayın',
+    notScannedBody:
+      'Tarama hiçbir şeyi değiştirmez — neyin onarılacağını sonra siz seçersiniz.',
+    pick: 'Ne onarılsın?',
+    artwork: 'Kapakları iyileştir',
+    artworkHint:
+      'Hedef boyutun altındaki kapakları Spotify, Apple Music veya YouTube Music’teki en büyüğüyle değiştirir.',
+    lyrics: 'Eksik şarkı sözlerini ekle',
+    lyricsHint:
+      'Hiç şarkı sözü olmayan parçaları sağlayıcı listenizle arar ve bulduğunu dosyaya gömer.',
+    metadata: 'Etiketleri yenile',
+    metadataHint:
+      'Albüm, albüm sanatçısı, çıkış tarihi ve parça numarasını Spotify’dan doldurur. Yalnızca Downtify’ın Spotify parçasını hâlâ bildiği parçalar için.',
+    tracksAffected: { one: '{count} parça', other: '{count} parça' },
+    options: 'Seçenekler',
+    artworkMin: 'Şu boyutun altındaki kapakları iyileştir',
+    artworkMinHint:
+      'Bu boyutta veya daha büyük bir kapağa dokunulmaz. Spotify en çok 640px yayınlar; Apple Music genelde 1200px ve üstünü sunar.',
+    artworkSource: 'Kapak kaynağı',
+    highest: 'Mevcut en yüksek çözünürlük',
+    preferSpotify: 'Spotify’ı yeğle',
+    preferItunes: 'Apple Music’i yeğle',
+    preferYoutube: 'YouTube Music’i yeğle',
+    recheck: 'Bir parçayı şu süre boyunca yeniden denetleme',
+    recheckHint:
+      'Yakında denetlenmiş bir parça sonraki taramada atlanır. Daha yeni bir Downtify her zaman her şeyi yeniden denetler.',
+    recheckDays: { one: '{count} gün', other: '{count} gün' },
+    recheckNever: 'Her parçayı her zaman denetle',
+    start: 'Başlat',
+    startCount: {
+      one: '{count} parçayı iyileştir',
+      other: '{count} parçayı iyileştir',
+    },
+    pickSomething: 'Onarılacak en az bir şey seçin.',
+    pause: 'Duraklat',
+    resume: 'Sürdür',
+    cancel: 'Durdur',
+    working: 'Kitaplığınız iyileştiriliyor',
+    ofTracks: '{total} parçanın {done} tanesi',
+    ofBytes: '{total} içinden {done}',
+    longJob:
+      'Büyük bir kitaplık zaman alır. Bu sayfadan çıkabilirsiniz; yeniden başlatma kuyruğu kaldığı yerden sürdürür.',
+    completed: 'İyileştirildi',
+    skipped: 'Yapacak bir şey yok',
+    failed: 'Başarısız',
+    queued: 'Bekliyor',
+    running: 'Çalışıyor',
+    done: 'İyileştirme bitti',
+    doneBody:
+      '{completed} iyileştirildi, {skipped} zaten iyiydi, {failed} başarısız.',
+    cancelled: 'İyileştirme durduruldu',
+    paused: 'İyileştirme duraklatıldı',
+    tracksTitle: 'Parçalar',
+    stageMatching: 'Eşleştiriliyor',
+    stageArtwork: 'Kapak aranıyor',
+    stageLyrics: 'Şarkı sözü aranıyor',
+    stageWriting: 'Dosya yazılıyor',
+    loadFailed: 'Kitaplık iyileştirmesi yüklenemedi',
   },
   album: {
     kicker: 'Albüm',

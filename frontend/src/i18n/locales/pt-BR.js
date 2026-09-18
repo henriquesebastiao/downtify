@@ -241,6 +241,86 @@ export default {
     clearSelection: 'Limpar seleção',
     downloadZip: 'Baixar como ZIP',
     saveToDevice: 'Salvar neste dispositivo',
+    upgrade: 'Melhorar biblioteca',
+  },
+  upgrade: {
+    title: 'Melhorar biblioteca',
+    subtitle:
+      'Melhore as músicas que você já baixou, em vez de baixá-las de novo.',
+    intro:
+      'O Downtify olha cada música da sua biblioteca e conserta as que ficaram para trás em uma versão antiga: capas pequenas, letras faltando, tags incompletas.',
+    audioNote:
+      'Os arquivos de áudio nunca são substituídos: só as capas, letras e tags são atualizadas. Uma música baixada da fonte errada continua como está — apague e baixe de novo.',
+    safeNote:
+      'Cada música é reescrita em uma cópia que precisa passar na verificação antes de substituir o original, então nada se perde se algo falhar.',
+    scan: 'Analisar biblioteca',
+    rescan: 'Analisar de novo',
+    scanning: 'Analisando sua biblioteca',
+    scanProgress: '{done} de {total} músicas verificadas',
+    scanResult: 'Resultado da análise',
+    libraryCount: { one: '{count} música', other: '{count} músicas' },
+    librarySize: 'Tamanho da biblioteca',
+    nothingTitle: 'Nada a melhorar',
+    nothingBody:
+      'Todas as músicas já têm capa no tamanho desejado, letras e tags completas.',
+    notScannedTitle: 'Analise sua biblioteca primeiro',
+    notScannedBody:
+      'A análise não altera nada — você escolhe o que consertar depois.',
+    pick: 'O que deve ser consertado?',
+    artwork: 'Melhorar capas',
+    artworkHint:
+      'Troca capas menores que o tamanho desejado pela maior que o Spotify, o Apple Music ou o YouTube Music tiver.',
+    lyrics: 'Adicionar letras faltando',
+    lyricsHint:
+      'Procura letras para músicas que não têm nenhuma, usando sua lista de provedores, e embute o que encontrar.',
+    metadata: 'Atualizar tags',
+    metadataHint:
+      'Preenche álbum, artista do álbum, data de lançamento e número da faixa pelo Spotify. Só para músicas cuja faixa do Spotify o Downtify ainda conhece.',
+    tracksAffected: { one: '{count} música', other: '{count} músicas' },
+    options: 'Opções',
+    artworkMin: 'Melhorar capas menores que',
+    artworkMinHint:
+      'Capas desse tamanho ou maiores ficam como estão. O Spotify publica até 640px; o Apple Music costuma ter 1200px ou mais.',
+    artworkSource: 'Origem das capas',
+    highest: 'Maior resolução disponível',
+    preferSpotify: 'Preferir o Spotify',
+    preferItunes: 'Preferir o Apple Music',
+    preferYoutube: 'Preferir o YouTube Music',
+    recheck: 'Não verificar uma música de novo por',
+    recheckHint:
+      'Uma música verificada há pouco é ignorada na próxima análise. Um Downtify mais novo sempre verifica tudo de novo.',
+    recheckDays: { one: '{count} dia', other: '{count} dias' },
+    recheckNever: 'Sempre verificar todas as músicas',
+    start: 'Começar',
+    startCount: {
+      one: 'Melhorar {count} música',
+      other: 'Melhorar {count} músicas',
+    },
+    pickSomething: 'Escolha ao menos uma coisa para consertar.',
+    pause: 'Pausar',
+    resume: 'Continuar',
+    cancel: 'Parar',
+    working: 'Melhorando sua biblioteca',
+    ofTracks: '{done} de {total} músicas',
+    ofBytes: '{done} de {total}',
+    longJob:
+      'Uma biblioteca grande demora. Você pode sair desta página, e um reinício continua a fila.',
+    completed: 'Melhoradas',
+    skipped: 'Nada a fazer',
+    failed: 'Falharam',
+    queued: 'Na fila',
+    running: 'Em andamento',
+    done: 'Melhoria concluída',
+    doneBody:
+      '{completed} melhoradas, {skipped} já estavam boas, {failed} falharam.',
+    cancelled: 'Melhoria interrompida',
+    paused: 'Melhoria pausada',
+    tracksTitle: 'Músicas',
+    stageMatching: 'Identificando',
+    stageArtwork: 'Procurando capa',
+    stageLyrics: 'Procurando letra',
+    stageWriting: 'Gravando o arquivo',
+    loadFailed: 'Não foi possível carregar a melhoria da biblioteca',
   },
   album: {
     kicker: 'Álbum',

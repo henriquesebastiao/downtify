@@ -248,6 +248,86 @@ export default {
     clearSelection: 'Effacer la sélection',
     downloadZip: 'Télécharger en ZIP',
     saveToDevice: 'Enregistrer sur cet appareil',
+    upgrade: 'Améliorer la bibliothèque',
+  },
+  upgrade: {
+    title: 'Améliorer la bibliothèque',
+    subtitle:
+      'Améliorez la musique déjà téléchargée, au lieu de la télécharger à nouveau.',
+    intro:
+      'Downtify examine chaque morceau de votre bibliothèque et répare ceux qu’une version plus ancienne a laissés de côté : pochettes trop petites, paroles manquantes, étiquettes incomplètes.',
+    audioNote:
+      'Les fichiers audio ne sont jamais remplacés : seules les pochettes, les paroles et les étiquettes sont mises à jour. Un morceau téléchargé depuis la mauvaise source reste tel quel — supprimez-le et téléchargez-le à nouveau.',
+    safeNote:
+      'Chaque morceau est réécrit dans une copie qui doit passer la vérification avant de remplacer l’original : rien n’est perdu en cas d’échec.',
+    scan: 'Analyser la bibliothèque',
+    rescan: 'Analyser à nouveau',
+    scanning: 'Analyse de votre bibliothèque',
+    scanProgress: '{done} morceaux vérifiés sur {total}',
+    scanResult: 'Résultat de l’analyse',
+    libraryCount: { one: '{count} morceau', other: '{count} morceaux' },
+    librarySize: 'Taille de la bibliothèque',
+    nothingTitle: 'Rien à améliorer',
+    nothingBody:
+      'Tous les morceaux ont déjà une pochette à la taille voulue, des paroles et des étiquettes complètes.',
+    notScannedTitle: 'Analysez d’abord votre bibliothèque',
+    notScannedBody:
+      'Une analyse ne change rien — vous choisissez ensuite quoi réparer.',
+    pick: 'Que faut-il réparer ?',
+    artwork: 'Améliorer les pochettes',
+    artworkHint:
+      'Remplace les pochettes plus petites que votre taille cible par la plus grande dont disposent Spotify, Apple Music ou YouTube Music.',
+    lyrics: 'Ajouter les paroles manquantes',
+    lyricsHint:
+      'Cherche des paroles pour les morceaux qui n’en ont aucune, via votre liste de fournisseurs, et intègre ce qui est trouvé.',
+    metadata: 'Actualiser les étiquettes',
+    metadataHint:
+      'Complète l’album, l’artiste de l’album, la date de sortie et le numéro de piste depuis Spotify. Uniquement pour les morceaux dont Downtify connaît encore la piste Spotify.',
+    tracksAffected: { one: '{count} morceau', other: '{count} morceaux' },
+    options: 'Options',
+    artworkMin: 'Améliorer les pochettes en dessous de',
+    artworkMinHint:
+      'Une pochette de cette taille ou plus est laissée telle quelle. Spotify publie jusqu’à 640px ; Apple Music propose souvent 1200px et plus.',
+    artworkSource: 'Source des pochettes',
+    highest: 'La plus haute résolution disponible',
+    preferSpotify: 'Préférer Spotify',
+    preferItunes: 'Préférer Apple Music',
+    preferYoutube: 'Préférer YouTube Music',
+    recheck: 'Ne pas revérifier un morceau pendant',
+    recheckHint:
+      'Un morceau vérifié récemment est ignoré à l’analyse suivante. Un Downtify plus récent revérifie toujours tout.',
+    recheckDays: { one: '{count} jour', other: '{count} jours' },
+    recheckNever: 'Toujours vérifier tous les morceaux',
+    start: 'Démarrer',
+    startCount: {
+      one: 'Améliorer {count} morceau',
+      other: 'Améliorer {count} morceaux',
+    },
+    pickSomething: 'Choisissez au moins une chose à réparer.',
+    pause: 'Mettre en pause',
+    resume: 'Reprendre',
+    cancel: 'Arrêter',
+    working: 'Amélioration de votre bibliothèque',
+    ofTracks: '{done} morceaux sur {total}',
+    ofBytes: '{done} sur {total}',
+    longJob:
+      'Une grande bibliothèque prend du temps. Vous pouvez quitter cette page, et un redémarrage reprend la file.',
+    completed: 'Améliorés',
+    skipped: 'Rien à faire',
+    failed: 'Échecs',
+    queued: 'En attente',
+    running: 'En cours',
+    done: 'Amélioration terminée',
+    doneBody:
+      '{completed} améliorés, {skipped} déjà corrects, {failed} en échec.',
+    cancelled: 'Amélioration arrêtée',
+    paused: 'Amélioration en pause',
+    tracksTitle: 'Morceaux',
+    stageMatching: 'Identification',
+    stageArtwork: 'Recherche de la pochette',
+    stageLyrics: 'Recherche des paroles',
+    stageWriting: 'Écriture du fichier',
+    loadFailed: 'Impossible de charger l’amélioration de la bibliothèque',
   },
   album: {
     kicker: 'Album',

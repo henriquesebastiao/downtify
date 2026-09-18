@@ -28,6 +28,12 @@ const routes = [
     component: () => import('/src/views/LibraryView.vue'),
   },
   {
+    // Library maintenance: scan what's on disk and repair it.
+    path: '/library/upgrade',
+    name: 'Upgrade',
+    component: () => import('/src/views/UpgradeView.vue'),
+  },
+  {
     path: '/library/album',
     name: 'Album',
     component: () => import('/src/views/AlbumView.vue'),

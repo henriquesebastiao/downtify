@@ -97,6 +97,25 @@ class TrackIndex:
             return None
         return self.lookup(tid)
 
+    def spotify_id_for_filename(self, filename: str) -> Optional[str]:
+        """The Spotify track a library file was downloaded for, if known.
+
+        The reverse of :meth:`lookup`: a library upgrade starts from a
+        file on disk and needs the track it came from to re-fetch its
+        metadata and cover.
+        """
+
+        name = str(filename or '').strip().replace('\\', '/')
+        if not name:
+            return None
+        with self._connect() as conn:
+            row = conn.execute(
+                """SELECT spotify_track_id FROM library_tracks
+                   WHERE filename = ? LIMIT 1""",
+                (name,),
+            ).fetchone()
+        return str(row['spotify_track_id']) if row is not None else None
+
     def register(
         self,
         spotify_track_id: str,

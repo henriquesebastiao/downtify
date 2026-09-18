@@ -20,11 +20,12 @@ _TAG_READ_THREADS = 8
 
 #: Bumped whenever a row gains fields read from the file's tags: rows
 #: cached by an older version are treated as stale and re-read once.
-META_VERSION = 2
+META_VERSION = 3
 
 #: Columns added after the table was first created, with their SQL type.
 _ADDED_COLUMNS = {
     'has_cover': 'INTEGER NOT NULL DEFAULT 0',
+    'cover_px': 'INTEGER NOT NULL DEFAULT 0',
     'album_artist': "TEXT NOT NULL DEFAULT ''",
     'track_number': 'INTEGER NOT NULL DEFAULT 0',
     'year': "TEXT NOT NULL DEFAULT ''",
@@ -34,8 +35,8 @@ _ADDED_COLUMNS = {
 
 _ROW_COLUMNS = (
     'content_key, filename, file_mtime_ns, file_size, title, artist, '
-    'album, has_cover, album_artist, track_number, year, duration, '
-    'meta_version'
+    'album, has_cover, cover_px, album_artist, track_number, year, '
+    'duration, meta_version'
 )
 
 
@@ -74,6 +75,7 @@ def _row_entry(
         'year': str(row['year'] or ''),
         'duration': float(row['duration'] or 0.0),
         'has_cover': bool(int(row['has_cover'] or 0)),
+        'cover_px': int(row['cover_px'] or 0),
         'added': int(item['mtime_ns']) // 1_000_000_000,
         'size': int(item['size']),
     }
@@ -103,6 +105,7 @@ class LibraryMetadataCache:
                         artist TEXT NOT NULL DEFAULT '',
                         album TEXT NOT NULL DEFAULT '',
                         has_cover INTEGER NOT NULL DEFAULT 0,
+                        cover_px INTEGER NOT NULL DEFAULT 0,
                         album_artist TEXT NOT NULL DEFAULT '',
                         track_number INTEGER NOT NULL DEFAULT 0,
                         year TEXT NOT NULL DEFAULT '',
@@ -458,15 +461,16 @@ class LibraryMetadataCache:
         conn.execute(
             """INSERT INTO library_metadata
                (content_key, filename, title, artist, album, has_cover,
-                album_artist, track_number, year, duration, meta_version,
-                file_mtime_ns, file_size, cached_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                cover_px, album_artist, track_number, year, duration,
+                meta_version, file_mtime_ns, file_size, cached_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(content_key) DO UPDATE SET
                filename=excluded.filename,
                title=excluded.title,
                artist=excluded.artist,
                album=excluded.album,
                has_cover=excluded.has_cover,
+               cover_px=excluded.cover_px,
                album_artist=excluded.album_artist,
                track_number=excluded.track_number,
                year=excluded.year,
@@ -482,6 +486,7 @@ class LibraryMetadataCache:
                 str(entry.get('artist') or ''),
                 str(entry.get('album') or ''),
                 1 if entry.get('has_cover') else 0,
+                int(entry.get('cover_px') or 0),
                 str(entry.get('album_artist') or ''),
                 int(entry.get('track_number') or 0),
                 str(entry.get('year') or ''),

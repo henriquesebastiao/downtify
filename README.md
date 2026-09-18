@@ -44,6 +44,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | 👁️ **Playlist & Artist Watch** | Watch Spotify or YouTube Music playlists **and artists** — new songs and new releases download automatically |
 | 🎨 **Rich metadata** | Album art, title, artist, album, year — all embedded in every file |
 | 📝 **Lyrics with fallback** | Plain and time-synced lyrics from LRCLIB and NetEase, tried in the order you choose — see **[Lyrics](https://henriquesebastiao.github.io/downtify/features/lyrics/)** |
+| 🪄 **Upgrade library** | Scan music you already downloaded and repair small covers, missing lyrics and incomplete tags — see **[Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/)** |
 | 🎚️ **Multiple formats** | MP3 · FLAC · M4A · OGG · OPUS |
 | 🔎 **Free-text search** | Search YouTube Music directly — no Spotify link needed |
 | 📥 **CSV library import** | Import a library export from Soundiiz, TuneMyMusic or Exportify and queue the whole thing |

@@ -239,6 +239,86 @@ export default {
     clearSelection: 'Kijelölés törlése',
     downloadZip: 'Letöltés ZIP-ként',
     saveToDevice: 'Mentés erre az eszközre',
+    upgrade: 'Könyvtár feljavítása',
+  },
+  upgrade: {
+    title: 'Könyvtár feljavítása',
+    subtitle:
+      'Javítsd fel a már letöltött zenéket, ahelyett hogy újra letöltenéd őket.',
+    intro:
+      'A Downtify végigmegy a könyvtár minden számán, és megjavítja azokat, amiket egy régebbi verzió hátrahagyott: kis borítók, hiányzó dalszövegek, hiányos címkék.',
+    audioNote:
+      'A hangfájlokat soha nem cseréli le: csak a borító, a dalszöveg és a címkék frissülnek. A rossz forrásból letöltött szám úgy marad — töröld, és töltsd le újra.',
+    safeNote:
+      'Minden szám egy másolatban íródik újra, aminek át kell mennie az ellenőrzésen, mielőtt felváltja az eredetit — így semmi nem veszik el, ha valami hibára fut.',
+    scan: 'Könyvtár átvizsgálása',
+    rescan: 'Átvizsgálás újra',
+    scanning: 'A könyvtár átvizsgálása',
+    scanProgress: '{total} számból {done} ellenőrizve',
+    scanResult: 'Az átvizsgálás eredménye',
+    libraryCount: { one: '{count} szám', other: '{count} szám' },
+    librarySize: 'Könyvtár mérete',
+    nothingTitle: 'Nincs mit feljavítani',
+    nothingBody:
+      'Minden számnak van a kívánt méretű borítója, dalszövege és teljes címkekészlete.',
+    notScannedTitle: 'Először vizsgáld át a könyvtárat',
+    notScannedBody:
+      'Az átvizsgálás semmit nem módosít — utána te választod ki, mi javuljon.',
+    pick: 'Mi javuljon meg?',
+    artwork: 'Borítók feljavítása',
+    artworkHint:
+      'A cél alatti borítókat lecseréli a legnagyobbra, amit a Spotify, az Apple Music vagy a YouTube Music kínál.',
+    lyrics: 'Hiányzó dalszövegek pótlása',
+    lyricsHint:
+      'Megkeresi a dalszöveget azokhoz a számokhoz, amelyeknek nincs, a szolgáltatólistád alapján, és beágyazza, amit talál.',
+    metadata: 'Címkék frissítése',
+    metadataHint:
+      'Kitölti az albumot, az albumelőadót, a megjelenés dátumát és a sorszámot a Spotifyról. Csak azoknál a számoknál, amelyek Spotify-felvételét a Downtify még ismeri.',
+    tracksAffected: { one: '{count} szám', other: '{count} szám' },
+    options: 'Beállítások',
+    artworkMin: 'Borítók feljavítása ez alatt',
+    artworkMinHint:
+      'Az ekkora vagy nagyobb borító marad. A Spotify legfeljebb 640px-et ad; az Apple Musicnál gyakran 1200px vagy több van.',
+    artworkSource: 'Borító forrása',
+    highest: 'A legnagyobb elérhető felbontás',
+    preferSpotify: 'A Spotify előnyben',
+    preferItunes: 'Az Apple Music előnyben',
+    preferYoutube: 'A YouTube Music előnyben',
+    recheck: 'Egy szám ne kerüljön újra sorra',
+    recheckHint:
+      'A nemrég ellenőrzött szám kimarad a következő átvizsgálásból. Egy újabb Downtify mindig mindent újra megnéz.',
+    recheckDays: { one: '{count} napig', other: '{count} napig' },
+    recheckNever: 'Mindig minden számot ellenőrizzen',
+    start: 'Indítás',
+    startCount: {
+      one: '{count} szám feljavítása',
+      other: '{count} szám feljavítása',
+    },
+    pickSomething: 'Válassz legalább egy dolgot, amit megjavítsunk.',
+    pause: 'Szünet',
+    resume: 'Folytatás',
+    cancel: 'Leállítás',
+    working: 'A könyvtár feljavítása',
+    ofTracks: '{total} számból {done}',
+    ofBytes: '{total} / {done}',
+    longJob:
+      'Egy nagy könyvtár sokáig tart. Elhagyhatod ezt az oldalt, és újraindítás után a sor folytatódik.',
+    completed: 'Feljavítva',
+    skipped: 'Nincs tennivaló',
+    failed: 'Hibára futott',
+    queued: 'Várakozik',
+    running: 'Folyamatban',
+    done: 'A feljavítás befejeződött',
+    doneBody:
+      '{completed} feljavítva, {skipped} már jó volt, {failed} hibára futott.',
+    cancelled: 'A feljavítás leállt',
+    paused: 'A feljavítás szünetel',
+    tracksTitle: 'Számok',
+    stageMatching: 'Azonosítás',
+    stageArtwork: 'Borító keresése',
+    stageLyrics: 'Dalszöveg keresése',
+    stageWriting: 'Fájl írása',
+    loadFailed: 'A könyvtár feljavítása nem tölthető be',
   },
   album: {
     kicker: 'Album',

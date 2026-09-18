@@ -14,7 +14,8 @@ Downtify keeps a small **catalog** of the files under `/downloads` (and the slsk
 | **Playlist catalog** | `/data/downtify_library.db` | Which tracks belong to each downloaded Spotify playlist |
 | **Playlist downloads** | `/data/downtify_library.db` | Tracked Spotify playlist downloads and a cache of their Spotify track lists |
 | **Navidrome index** | `/data/downtify_library.db` | Navidrome song IDs per file |
-| **Library metadata cache** | `/data/downtify_library.db` | Title, artist, album, album artist, track number, year and length per file for `GET /tracks`, re-read only when a file's modification time or size changes |
+| **Library metadata cache** | `/data/downtify_library.db` | Title, artist, album, album artist, track number, year, length and cover size per file for `GET /tracks`, re-read only when a file's modification time or size changes |
+| **Upgrade runs** | `/data/downtify_library.db` | The [library upgrade](library-upgrade.md) queue and when each track was last checked, so a run survives a restart |
 | **Path scan cache** | In memory (short-lived) | The list of library paths, invalidated whenever Downtify adds or removes a file |
 | **Cover art cache** | `/data/cover_cache` (optional) | Extracted cover images for `GET /cover` |
 
@@ -70,5 +71,6 @@ Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle**
 | `GET` | `/api/library/archive/{token}` | Stream that ZIP to the browser |
 | `DELETE` | `/api/library/playlist?playlist_name=…` | Delete a playlist's tracks, M3U and catalog entry |
 | `POST` | `/api/library/reconcile` | Fix library paths, then refresh M3U/Navidrome playlists |
+| `GET`/`POST` | `/api/library/upgrade…` | Scan and repair what is already downloaded — see [Upgrade library](library-upgrade.md#api) |
 
 See the [API reference](../api-reference.md#library) for request and response shapes.

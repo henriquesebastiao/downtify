@@ -30,6 +30,10 @@ _MIN_INTERVAL = 0.35  # seconds between API calls (rate-limit courtesy)
 _genre_cache: dict[str, str] = {}
 _cache_lock = Lock()
 
+# Same idea for cover art, which a library upgrade asks about once per
+# track: every track of an album shares one artwork URL.
+_artwork_cache: dict[str, str] = {}
+
 # Timestamp of the last outgoing request – used for rate pacing.
 _last_request_time: float = 0.0
 _rate_lock = Lock()
@@ -185,3 +189,63 @@ def fetch_genre(song: dict[str, Any]) -> str:
             _genre_cache.setdefault(cache_key, '')
 
     return genre
+
+
+# ── Cover art ─────────────────────────────────────────────────────
+#: Every artwork URL iTunes returns ends in ``<size>x<size>bb.<ext>``;
+#: asking for a larger size returns a genuinely larger image, up to the
+#: original master (commonly 1400px, sometimes 3000px).
+_ARTWORK_SIZE_SUFFIX = re.compile(r'/\d+x\d+bb\.(jpg|png)$')
+
+
+def artwork_url_at(url: str, size: int) -> str:
+    """Rewrite an iTunes artwork URL to ask for a ``size``-pixel square."""
+
+    if not url:
+        return ''
+    return _ARTWORK_SIZE_SUFFIX.sub(
+        lambda m: f'/{size}x{size}bb.{m.group(1)}', url
+    )
+
+
+def fetch_artwork_url(song: dict[str, Any], size: int = 1200) -> str:
+    """Return an iTunes cover URL for *song* at *size* px, or ``""``.
+
+    Same matching as :func:`fetch_genre`: artist and title must line up,
+    with a title-only fallback for differing "feat." credits.
+    """
+
+    artists = song.get('artists') or []
+    artist = artists[0] if artists else (song.get('artist') or '')
+    title = song.get('name', '') or song.get('title', '')
+    album = song.get('album_name', '') or song.get('album', '')
+
+    if not title:
+        return ''
+
+    cache_key = f'{_normalise(artist)}|{_normalise(album)}' if album else ''
+    if cache_key:
+        with _cache_lock:
+            cached = _artwork_cache.get(cache_key)
+        if cached is not None:
+            return artwork_url_at(cached, size) if cached else ''
+
+    query = f'{artist} {title}'.strip()
+    match = _pick_best(_search_itunes(query, limit=5), artist, title)
+    if match is None and album:
+        match = _pick_best(
+            _search_itunes(f'{artist} {title} {album}'.strip(), limit=5),
+            artist,
+            title,
+        )
+
+    base = str((match or {}).get('artworkUrl100') or '').strip()
+    if cache_key:
+        with _cache_lock:
+            _artwork_cache.setdefault(cache_key, base)
+    if not base:
+        logger.debug(
+            'iTunes artwork: no match for {!r} by {!r}', title, artist
+        )
+        return ''
+    return artwork_url_at(base, size)

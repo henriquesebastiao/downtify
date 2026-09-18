@@ -206,6 +206,35 @@ function reconcileLibrary() {
   return API.post('/api/library/reconcile')
 }
 
+// ── Library upgrade ──────────────────────────────────────────────────
+function getLibraryUpgrade() {
+  return API.get('/api/library/upgrade')
+}
+
+function getLibraryUpgradeJobs(params = {}) {
+  return API.get('/api/library/upgrade/jobs', { params })
+}
+
+function scanLibraryUpgrade(options = {}) {
+  return API.post('/api/library/upgrade/scan', options)
+}
+
+function startLibraryUpgrade(categories) {
+  return API.post('/api/library/upgrade/start', { categories })
+}
+
+function pauseLibraryUpgrade() {
+  return API.post('/api/library/upgrade/pause')
+}
+
+function resumeLibraryUpgrade() {
+  return API.post('/api/library/upgrade/resume')
+}
+
+function cancelLibraryUpgrade() {
+  return API.post('/api/library/upgrade/cancel')
+}
+
 function writePlaylistM3u(payload) {
   return API.post('/api/playlist/m3u', payload)
 }
@@ -282,6 +311,13 @@ export default {
   prepareLibraryArchive,
   libraryArchiveURL,
   reconcileLibrary,
+  getLibraryUpgrade,
+  getLibraryUpgradeJobs,
+  scanLibraryUpgrade,
+  startLibraryUpgrade,
+  pauseLibraryUpgrade,
+  resumeLibraryUpgrade,
+  cancelLibraryUpgrade,
   writePlaylistM3u,
   getQueue,
   removeQueueItem,

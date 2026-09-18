@@ -46,6 +46,8 @@ from downtify.library_catalog import (
 from downtify.library_cleanup import remove_track_leftovers
 from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.library_paths import SLSKD_LIBRARY_PREFIX
+from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
+from downtify.library_upgrade_db import LibraryUpgradeDB
 from downtify.lyrics import read_track_lyrics
 from downtify.lyrics_cache import LyricsLookupCache
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
@@ -220,6 +222,15 @@ def _delete_tracks_batch(
     }
 
 
+def _spotify_id_for_library_file(stored_path: str) -> str:
+    """The Spotify track a library file was downloaded for, if known."""
+
+    index = api.state.track_index
+    if index is None:
+        return ''
+    return index.spotify_id_for_filename(stored_path) or ''
+
+
 def _open_library_stores(monitor_db_path: Path) -> None:
     """Open the library catalog/index/cache stores in /data and backfill the
     track index and playlist catalog from Playlist Monitor history."""
@@ -233,6 +244,17 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
+    api.state.upgrade_runner = LibraryUpgradeRunner(
+        LibraryUpgradeDB(library_db),
+        UpgradeDeps(
+            context=api.library_context,
+            settings=lambda: api.state.settings,
+            version=api.state.version,
+            spotify_id_for=_spotify_id_for_library_file,
+            lyrics_cache=api.state.lyrics_cache,
+            publish=api.broadcast_upgrade_progress,
+        ),
+    )
     ctx = api.library_context()
     try:
         imported = api.state.track_index.backfill_from_monitor_db(
@@ -324,6 +346,13 @@ def build_app() -> FastAPI:
         # a page load.
         api.state.update_checker = UpdateChecker()
         asyncio.create_task(update_check_loop(api.state.update_checker))
+        # A library upgrade can run for hours, so a restart in the
+        # middle of one picks the queue back up where it stopped.
+        if api.state.upgrade_runner is not None:
+            try:
+                api.state.upgrade_runner.resume_after_restart()
+            except Exception:
+                logger.exception('Library upgrade: could not resume')
 
         yield
 

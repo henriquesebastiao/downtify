@@ -256,6 +256,11 @@ Return the current settings.
   "search_albums": true,
   "mini_player_enabled": true,
   "cache_cover_art": false,
+  "library_upgrade": {
+    "artwork_min_px": 600,
+    "artwork_source": "highest",
+    "recheck_days": 30
+  },
   "sync_navidrome": true,
   "slskd": {
     "enabled": false,
@@ -295,6 +300,7 @@ Return the current settings.
 | `navidrome` | object | Navidrome connection. Saving with `enabled: true` but no `url`, `username` or `password` returns `400`. |
 | `sync_navidrome` | boolean | Create/update a Navidrome playlist after playlist downloads, Playlist Monitor sweeps and library changes. |
 | `cache_cover_art` | boolean | Keep extracted cover images under `/data/cover_cache`. |
+| `library_upgrade` | object | Defaults a library upgrade scan starts from: `artwork_min_px` (clamped to `100–3000`), `artwork_source` (`highest`, `spotify`, `itunes`, `youtube-music`) and `recheck_days` (`0–3650`, `0` meaning always re-check). A scan request may override them. See [Upgrade library](features/library-upgrade.md#options). |
 
 ---
 
@@ -582,6 +588,134 @@ Fix library paths after files were moved or deleted outside Downtify, then rewri
 
 ---
 
+### `GET /api/library/upgrade`
+
+The state of the library upgrade: the current (or last) run, its queue counts and what the scan found. See [Upgrade library](features/library-upgrade.md).
+
+**Response:**
+
+```json
+{
+  "state": "ready",
+  "run": {
+    "id": 3,
+    "state": "ready",
+    "categories": ["artwork", "lyrics", "metadata"],
+    "options": {
+      "artwork_min_px": 600,
+      "artwork_source": "highest",
+      "recheck_days": 30
+    },
+    "total_tracks": 18742,
+    "total_bytes": 122406000000,
+    "created_at": "…",
+    "finished_at": ""
+  },
+  "counts": {
+    "total": 16921,
+    "queued": 16921,
+    "running": 0,
+    "completed": 0,
+    "skipped": 0,
+    "failed": 0,
+    "finished": 0,
+    "processed_bytes": 0
+  },
+  "summary": {
+    "categories": { "artwork": 16921, "lyrics": 2104, "metadata": 5382 },
+    "category_bytes": { "artwork": 110300000000, "lyrics": 13700000000, "metadata": 35100000000 },
+    "tracks": 16921,
+    "library_tracks": 18742,
+    "library_bytes": 122406000000
+  },
+  "scan": { "scanned": 18742, "total": 18742 },
+  "categories": ["artwork", "lyrics", "metadata"],
+  "artwork_sources": ["highest", "spotify", "itunes", "youtube-music"]
+}
+```
+
+`state` is one of `idle`, `scanning`, `ready`, `running`, `paused`, `done` or `cancelled`.
+
+---
+
+### `GET /api/library/upgrade/jobs`
+
+The tracks in the current run, most recently touched first.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Only `queued`, `running`, `done`, `skipped` or `failed` |
+| `limit` | int | 1–1000, default 100 |
+
+**Response:**
+
+```json
+[
+  {
+    "file": "Queen - Bohemian Rhapsody.mp3",
+    "status": "done",
+    "stage": "",
+    "categories": ["artwork"],
+    "size": 84664,
+    "title": "Bohemian Rhapsody",
+    "artist": "Queen",
+    "detail": "artwork 1200px (itunes)",
+    "changed": ["artwork"],
+    "updated_at": "…"
+  }
+]
+```
+
+While a track is running, `stage` is `matching`, `artwork`, `lyrics` or `writing`.
+
+---
+
+### `POST /api/library/upgrade/scan`
+
+Look at every library track and queue the ones that are behind. Writes nothing to the files — the queue is confirmed with `/start`.
+
+**Body** (all optional; defaults come from the `library_upgrade` settings):
+
+```json
+{
+  "artwork_min_px": 600,
+  "artwork_source": "highest",
+  "recheck_days": 30
+}
+```
+
+Returns the same shape as `GET /api/library/upgrade`. `409` when a scan or run is already going.
+
+---
+
+### `POST /api/library/upgrade/start`
+
+Start upgrading the scanned tracks.
+
+**Body:**
+
+```json
+{ "categories": ["artwork", "lyrics"] }
+```
+
+Unknown names are dropped; an empty or missing list means every category. `409` when nothing has been scanned, or a run is already going.
+
+---
+
+### `POST /api/library/upgrade/pause`
+
+Stop after the track being worked on. The queue is kept, and `POST /api/library/upgrade/resume` continues it with the same categories.
+
+---
+
+### `POST /api/library/upgrade/cancel`
+
+Drop the rest of the queue. Tracks already upgraded stay upgraded.
+
+---
+
 ## Playlist downloads
 
 Spotify playlists downloaded through `POST /api/download/batch`, checked against Spotify for missing tracks. See [Playlist downloads](features/slskd-navidrome.md#playlist-downloads).
@@ -773,3 +907,14 @@ Real-time download progress events.
 `status` is one of: `queued` · `downloading` · `done` · `error`.
 
 `filename` is set (non-null) on the final `done` event.
+
+A [library upgrade](features/library-upgrade.md) broadcasts its progress on the same socket, tagged so download clients can ignore it:
+
+```json
+{
+  "type": "library_upgrade",
+  "upgrade": { /* same shape as GET /api/library/upgrade */ }
+}
+```
+
+These are sent at most once a second while a scan or run is working, and once more when it finishes.

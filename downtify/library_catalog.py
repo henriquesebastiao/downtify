@@ -56,7 +56,16 @@ def library_context_from_state(
     )
 
 
+#: Marker in the name of the working copy a library upgrade writes
+#: before swapping it in (see ``downtify.library_upgrade``). It lives in
+#: the library folder for the few seconds a rewrite takes, and must
+#: never show up as a track of its own.
+UPGRADE_STAGING_MARKER = '.downtify-upgrade'
+
+
 def _is_audio(path: Path) -> bool:
+    if UPGRADE_STAGING_MARKER in path.name:
+        return False
     return path.is_file() and path.suffix.lower() in AUDIO_EXTENSIONS
 
 

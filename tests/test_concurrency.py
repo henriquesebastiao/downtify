@@ -391,6 +391,7 @@ def _entry(stored, full):
         'year': '',
         'duration': 0.0,
         'has_cover': False,
+        'cover_px': 0,
         'added': int(full.stat().st_mtime),
         'size': full.stat().st_size,
     }

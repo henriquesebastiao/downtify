@@ -8,7 +8,8 @@ from typing import Any
 from mutagen import File as MutagenFile
 from mutagen.id3 import ID3
 
-from .cover_art import file_has_cover_art
+from .cover_art import extract_cover_art
+from .image_size import image_short_side
 
 
 def _tag_text(value: Any) -> str:
@@ -149,6 +150,12 @@ def library_entry_for_file(
     title = str(meta.get('title') or '').strip() or fb_title
     artist = str(meta.get('artist') or '').strip() or fb_artist
     album = str(meta.get('album') or '').strip()
+    # The cover is read once and both answered from it: whether there is
+    # one, and how big it is (which the library upgrade scan needs for
+    # every track, and would otherwise pay a second full read for).
+    cover_data, _cover_mime = (
+        extract_cover_art(full_path) if full_path.is_file() else (None, None)
+    )
     return {
         'file': stored_path,
         'title': title,
@@ -158,7 +165,8 @@ def library_entry_for_file(
         'track_number': int(meta.get('track_number') or 0),
         'year': str(meta.get('year') or ''),
         'duration': float(meta.get('duration') or 0.0),
-        'has_cover': file_has_cover_art(full_path),
+        'has_cover': bool(cover_data),
+        'cover_px': image_short_side(cover_data),
         **file_stat_fields(full_path),
     }
 

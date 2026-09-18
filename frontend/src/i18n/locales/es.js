@@ -242,6 +242,86 @@ export default {
     clearSelection: 'Borrar selección',
     downloadZip: 'Descargar como ZIP',
     saveToDevice: 'Guardar en este dispositivo',
+    upgrade: 'Mejorar biblioteca',
+  },
+  upgrade: {
+    title: 'Mejorar biblioteca',
+    subtitle:
+      'Mejora la música que ya descargaste, en vez de descargarla otra vez.',
+    intro:
+      'Downtify revisa cada canción de tu biblioteca y arregla las que dejó atrás una versión anterior: portadas pequeñas, letras que faltan, etiquetas incompletas.',
+    audioNote:
+      'Los archivos de audio nunca se reemplazan: solo se actualizan portadas, letras y etiquetas. Una canción descargada de la fuente equivocada se queda como está — bórrala y descárgala de nuevo.',
+    safeNote:
+      'Cada canción se reescribe en una copia que tiene que pasar la verificación antes de reemplazar el original, así no se pierde nada si algo falla.',
+    scan: 'Analizar biblioteca',
+    rescan: 'Analizar otra vez',
+    scanning: 'Analizando tu biblioteca',
+    scanProgress: '{done} de {total} canciones revisadas',
+    scanResult: 'Resultado del análisis',
+    libraryCount: { one: '{count} canción', other: '{count} canciones' },
+    librarySize: 'Tamaño de la biblioteca',
+    nothingTitle: 'Nada que mejorar',
+    nothingBody:
+      'Todas las canciones ya tienen portada del tamaño deseado, letras y etiquetas completas.',
+    notScannedTitle: 'Analiza tu biblioteca primero',
+    notScannedBody:
+      'El análisis no cambia nada — tú eliges después qué arreglar.',
+    pick: '¿Qué hay que arreglar?',
+    artwork: 'Mejorar portadas',
+    artworkHint:
+      'Cambia las portadas más pequeñas que tu tamaño objetivo por la más grande que tenga Spotify, Apple Music o YouTube Music.',
+    lyrics: 'Añadir letras que faltan',
+    lyricsHint:
+      'Busca letras para las canciones que no tienen ninguna, con tu lista de proveedores, e incrusta lo que encuentre.',
+    metadata: 'Actualizar etiquetas',
+    metadataHint:
+      'Rellena álbum, artista del álbum, fecha de lanzamiento y número de pista desde Spotify. Solo para canciones cuya pista de Spotify Downtify todavía conoce.',
+    tracksAffected: { one: '{count} canción', other: '{count} canciones' },
+    options: 'Opciones',
+    artworkMin: 'Mejorar portadas menores de',
+    artworkMinHint:
+      'Una portada de ese tamaño o mayor se deja igual. Spotify publica hasta 640px; Apple Music suele tener 1200px o más.',
+    artworkSource: 'Origen de las portadas',
+    highest: 'La mayor resolución disponible',
+    preferSpotify: 'Preferir Spotify',
+    preferItunes: 'Preferir Apple Music',
+    preferYoutube: 'Preferir YouTube Music',
+    recheck: 'No volver a revisar una canción durante',
+    recheckHint:
+      'Una canción revisada hace poco se salta en el siguiente análisis. Un Downtify más nuevo siempre lo revisa todo otra vez.',
+    recheckDays: { one: '{count} día', other: '{count} días' },
+    recheckNever: 'Revisar siempre todas las canciones',
+    start: 'Empezar',
+    startCount: {
+      one: 'Mejorar {count} canción',
+      other: 'Mejorar {count} canciones',
+    },
+    pickSomething: 'Elige al menos una cosa que arreglar.',
+    pause: 'Pausar',
+    resume: 'Continuar',
+    cancel: 'Detener',
+    working: 'Mejorando tu biblioteca',
+    ofTracks: '{done} de {total} canciones',
+    ofBytes: '{done} de {total}',
+    longJob:
+      'Una biblioteca grande tarda. Puedes salir de esta página, y un reinicio retoma la cola.',
+    completed: 'Mejoradas',
+    skipped: 'Nada que hacer',
+    failed: 'Fallaron',
+    queued: 'En espera',
+    running: 'En curso',
+    done: 'Mejora terminada',
+    doneBody:
+      '{completed} mejoradas, {skipped} ya estaban bien, {failed} fallaron.',
+    cancelled: 'Mejora detenida',
+    paused: 'Mejora pausada',
+    tracksTitle: 'Canciones',
+    stageMatching: 'Identificando',
+    stageArtwork: 'Buscando portada',
+    stageLyrics: 'Buscando letra',
+    stageWriting: 'Escribiendo el archivo',
+    loadFailed: 'No se pudo cargar la mejora de la biblioteca',
   },
   album: {
     kicker: 'Álbum',
