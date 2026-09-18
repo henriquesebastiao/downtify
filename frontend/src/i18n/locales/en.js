@@ -55,6 +55,7 @@ export default {
     songsTitle: 'Songs',
     topSongsOf: 'Top Songs of {artist}',
     downloadTopSongs: 'Download',
+    createPlaylist: 'Create playlist',
   },
   queue: {
     title: 'Download Queue',

@@ -17,6 +17,7 @@ A **Top Songs of &lt;Artist&gt;** card appears at the top of the search results,
 
 - The artist's cover art
 - A stepper to choose how many top songs to download (1–10, default 5)
+- A **Create playlist** checkbox (on by default)
 - A **Download** button that queues the first N tracks as a batch
 
 ## Sources
@@ -33,6 +34,8 @@ Spotify results go through the same metadata-then-YouTube-audio-match pipeline a
 ## Downloading
 
 Downloading writes an [M3U playlist](m3u-export.md) named **Top Songs of &lt;Artist&gt;**, exactly like a manual playlist download. If **Download playlist cover art** is enabled (see [Playlist Cover Art](playlist-cover-art.md)), the artist's own image is saved alongside the M3U as its cover — there's no separate setting for this, it reuses the same toggle.
+
+Unchecking **Create playlist** before downloading skips both of those: no M3U is written and the artist's photo isn't downloaded as a cover, regardless of the **Download playlist cover art** setting. The tracks themselves still download normally.
 
 ## Known limitation: mixing Spotify and YouTube Music for the same artist
 

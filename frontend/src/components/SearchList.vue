@@ -84,6 +84,17 @@
 
         <!-- Actions -->
         <div class="flex items-center gap-2 shrink-0">
+          <label
+            class="inline-flex items-center gap-1.5 text-xs text-base-content/70 cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-xs checkbox-primary"
+              v-model="createArtistPlaylist"
+              :disabled="artistQueued"
+            />
+            {{ t('search.createPlaylist') }}
+          </label>
           <NumberSpinner
             v-model="topSongsCount"
             :min="1"
@@ -334,18 +345,23 @@ const { t } = useI18n()
 const currentPage = ref(1)
 const topSongsCount = ref(5)
 const artistQueued = ref(false)
+const createArtistPlaylist = ref(true)
 
 watch(
   () => props.artist,
   () => {
     topSongsCount.value = 5
     artistQueued.value = false
+    createArtistPlaylist.value = true
   }
 )
 
 function downloadArtistTopSongs() {
   artistQueued.value = true
-  emit('download-artist-top-songs', topSongsCount.value)
+  emit('download-artist-top-songs', {
+    count: topSongsCount.value,
+    createPlaylist: createArtistPlaylist.value,
+  })
 }
 
 // Which platform the top-songs shelf was resolved from, styled like the

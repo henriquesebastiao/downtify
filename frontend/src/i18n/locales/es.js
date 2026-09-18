@@ -57,6 +57,7 @@ export default {
     songsTitle: 'Canciones',
     topSongsOf: 'Top Songs of {artist}',
     downloadTopSongs: 'Descargar',
+    createPlaylist: 'Crear lista',
   },
   queue: {
     title: 'Cola de descargas',

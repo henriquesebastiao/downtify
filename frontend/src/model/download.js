@@ -328,12 +328,16 @@ export function useDownloadManager() {
   // (the `/api/artists/top_songs/url` response shape) as a batch — same
   // shape as fromURL's array branch, but there's no real Spotify/YouTube
   // Music playlist url behind it, so the playlist name and cover are
-  // passed explicitly instead.
-  function downloadArtistTopSongs(artist, count) {
+  // passed explicitly instead. `createPlaylist` is the card's own
+  // "Create playlist" checkbox — when off, no M3U is written and the
+  // artist's photo isn't downloaded as a cover, regardless of the global
+  // "generate M3U" setting.
+  function downloadArtistTopSongs(artist, count, createPlaylist = true) {
     if (!artist || !Array.isArray(artist.songs)) {
       return Promise.resolve()
     }
-    const generateM3u = settingsManager.settings.value.generate_m3u !== false
+    const generateM3u =
+      createPlaylist && settingsManager.settings.value.generate_m3u !== false
     const songs = artist.songs.slice(0, count).map((song, i) => ({
       ...song,
       downtify_track_order: i,
@@ -347,7 +351,7 @@ export function useDownloadManager() {
     return API.downloadBatch({
       songs,
       playlist_name: `Top Songs of ${artist.name}`,
-      cover_url: artist.cover_url || '',
+      cover_url: createPlaylist ? artist.cover_url || '' : '',
       generate_m3u: generateM3u,
     })
       .then(() => syncQueueFromServer())

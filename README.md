@@ -130,7 +130,7 @@ Spotify embed page  →  YouTube Music search  →  yt-dlp + ffmpeg + mutagen
 
 ## ⭐ Top Songs from an Artist
 
-Paste an artist's link — a Spotify `/artist/…` URL, or a YouTube Music `/channel/…`/`@handle` URL — and a **Top Songs of &lt;Artist&gt;** card appears at the top of the search results, with the artist's cover art, a 1–10 stepper for how many songs to grab, and a Download button. Downloading writes an M3U playlist (and the artist's image as its cover, if **Download playlist cover art** is enabled) just like a regular playlist download.
+Paste an artist's link — a Spotify `/artist/…` URL, or a YouTube Music `/channel/…`/`@handle` URL — and a **Top Songs of &lt;Artist&gt;** card appears at the top of the search results, with the artist's cover art, a 1–10 stepper for how many songs to grab, a **Create playlist** checkbox, and a Download button. With **Create playlist** checked, downloading writes an M3U playlist (and the artist's image as its cover, if **Download playlist cover art** is enabled) just like a regular playlist download; unchecked, the songs download without a playlist or cover.
 
 See **[Top Songs from an Artist](https://henriquesebastiao.github.io/downtify/features/top-songs/)** in the full docs.
 

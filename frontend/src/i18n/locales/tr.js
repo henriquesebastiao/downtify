@@ -58,6 +58,7 @@ export default {
     songsTitle: 'Şarkılar',
     topSongsOf: 'Top Songs of {artist}',
     downloadTopSongs: 'İndir',
+    createPlaylist: 'Çalma listesi oluştur',
   },
   queue: {
     title: 'İndirme Kuyruğu',

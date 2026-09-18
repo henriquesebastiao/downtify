@@ -57,6 +57,7 @@ export default {
     songsTitle: 'Músicas',
     topSongsOf: 'Top Songs of {artist}',
     downloadTopSongs: 'Baixar',
+    createPlaylist: 'Criar playlist',
   },
   queue: {
     title: 'Fila de download',

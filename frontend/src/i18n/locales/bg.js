@@ -55,6 +55,7 @@ export default {
     songsTitle: 'Песни',
     topSongsOf: 'Top Songs of {artist}',
     downloadTopSongs: 'Теглене',
+    createPlaylist: 'Създай плейлиста',
   },
   queue: {
     title: 'Опашка на теглене',

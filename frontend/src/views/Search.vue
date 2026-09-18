@@ -44,7 +44,7 @@ function resolveQuery(query) {
   }
 }
 
-function onDownloadArtistTopSongs(count) {
+function onDownloadArtistTopSongs({ count, createPlaylist }) {
   const artist = am.artist.value
   if (!artist) return
   const needsMore =
@@ -52,7 +52,9 @@ function onDownloadArtistTopSongs(count) {
   const ready = needsMore
     ? am.fetch(route.params.query, count)
     : Promise.resolve()
-  ready.then(() => dm.downloadArtistTopSongs(am.artist.value, count))
+  ready.then(() =>
+    dm.downloadArtistTopSongs(am.artist.value, count, createPlaylist)
+  )
 }
 
 watch(

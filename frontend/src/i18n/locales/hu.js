@@ -56,6 +56,7 @@ export default {
     songsTitle: 'Zenék',
     topSongsOf: 'Top Songs of {artist}',
     downloadTopSongs: 'Letöltés',
+    createPlaylist: 'Lejátszási lista létrehozása',
   },
   queue: {
     title: 'Letöltési sor',
