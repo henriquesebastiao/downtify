@@ -917,6 +917,61 @@ def artist_name_from_id(artist_id: str) -> str:
     return name
 
 
+def artist_top_songs_from_id(
+    artist_id: str,
+) -> tuple[str, str, list[dict[str, Any]]]:
+    """``(name, cover_url, songs)`` from an artist embed's top-tracks shelf.
+
+    This is Spotify's own "Popular"/top-tracks preview shown at the top of
+    the artist's home page (up to ~10 tracks, the same shelf a "This is
+    <Artist>" playlist draws its first entries from) — not a discography,
+    which :func:`artist_name_from_id`'s docstring already explains isn't
+    exposed here. Named ``artist_top_songs_*`` (not ``*_top_tracks_*``) to
+    match the equivalent YouTube Music primitive,
+    :func:`providers.artist_top_songs_from_channel_id`, even though Spotify
+    itself calls this shelf "Top Tracks". Raises ``ValueError`` when the
+    artist name can't be read; returns an empty song list (not an error)
+    when the shelf itself can't be parsed.
+
+    The shelf lives under ``entity['trackList']`` — the same field name
+    (and flat row shape, no ``track`` wrapper) already used by
+    :func:`_parse_playlist_tracks` for playlists/albums; confirmed against
+    a live embed fetch, since :func:`artist_name_from_id`'s own docstring
+    only promised the preview was *somewhere* in the payload. Unlike a
+    playlist row, a shelf row carries no per-track album art at all (no
+    ``album``/``coverArt``), so each track is enriched via
+    :func:`enrich_track_from_spotify_if_sparse` — the same per-track
+    re-fetch a monitored playlist already does — so every song gets its
+    own album cover instead of falling back to the artist's photo.
+    """
+
+    payload = _fetch_embed_json('artist', artist_id)
+    entity = _entity_from(payload)
+    name = (entity.get('name') or entity.get('title') or '').strip()
+    if not name:
+        raise ValueError(f'Could not read artist name for {artist_id}')
+    cover_url = _cover_url(entity)
+
+    items = entity.get('trackList') or []
+    songs: list[dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        track = _embed_row_track(item)
+        if not isinstance(track, dict):
+            continue
+        track_id = track.get('id') or _id_from_uri(track.get('uri', ''))
+        if not track_id:
+            continue
+        song = _track_dict(dict(track), track_id=track_id, fallback_cover=cover_url)
+        songs.append(enrich_track_from_spotify_if_sparse(song))
+    if not songs:
+        logger.warning(
+            'No top-songs parsed from Spotify artist embed for {}', artist_id
+        )
+    return name, cover_url, songs
+
+
 def resolve(url: str) -> Any:
     """Resolve any Spotify URL to a single song or a list of songs."""
 

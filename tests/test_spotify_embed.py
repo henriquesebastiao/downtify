@@ -16,6 +16,7 @@ from downtify.spotify import (
     _normalize_release_date_text,
     _track_dict,
     album_tracks_from_id,
+    artist_top_songs_from_id,
     enrich_track_from_spotify_if_sparse,
     playlist_cover_url_from_id,
 )
@@ -421,3 +422,89 @@ def test_playlist_cover_url_empty_when_no_art():
     ):
         cover = playlist_cover_url_from_id('dummyPlaylistId')
     assert not cover
+
+
+def test_artist_top_songs_resolves_trackList_shelf():
+    # Mirrors the real open.spotify.com/embed/artist/<id> payload shape,
+    # confirmed against a live fetch: the shelf is entity['trackList'], a
+    # bare list of flat rows (no 'track' wrapper) — same field name
+    # playlists/albums use, but with per-row subtitle as the artist name
+    # and no 'id' (only 'uri'). 22-char ids so enrich_track_from_spotify_
+    # if_sparse's id-shape guard doesn't skip them.
+    track_id_1 = '1' * 22
+    track_id_2 = '2' * 22
+    entity = {
+        'name': 'Test Artist',
+        'title': 'Test Artist',
+        'subtitle': 'Top tracks',
+        'visualIdentity': {
+            'image': [{'url': 'https://example.test/artist.jpeg', 'width': 640}]
+        },
+        'trackList': [
+            {
+                'uri': f'spotify:track:{track_id_1}',
+                'title': 'Song One',
+                'subtitle': 'Test Artist',
+                'duration': 200000,
+            },
+            {
+                'uri': f'spotify:track:{track_id_2}',
+                'title': 'Song Two',
+                'subtitle': 'Test Artist',
+                'duration': 210000,
+            },
+        ],
+    }
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch('downtify.spotify.track_from_id') as mock_track_from_id,
+    ):
+        mock_track_from_id.side_effect = lambda tid: {
+            'song_id': tid,
+            'source': 'spotify',
+            'year': '2002',
+            'release_date': '2002-06-04',
+            'album_name': 'Test Album',
+            'cover_url': f'https://example.test/album-{tid}.jpeg',
+        }
+        name, cover, songs = artist_top_songs_from_id('dummyArtistId')
+    assert name == 'Test Artist'
+    assert cover == 'https://example.test/artist.jpeg'
+    assert [s['song_id'] for s in songs] == [track_id_1, track_id_2]
+    assert songs[0]['name'] == 'Song One'
+    assert songs[0]['artists'] == ['Test Artist']
+    assert songs[0]['duration'] == 200
+    assert songs[0]['source'] == 'spotify'
+    # Each track gets its own album cover via enrichment (a shelf row
+    # carries no per-track art of its own) — not the artist's photo,
+    # and not the same cover for every track either.
+    assert songs[0]['cover_url'] == f'https://example.test/album-{track_id_1}.jpeg'
+    assert songs[1]['cover_url'] == f'https://example.test/album-{track_id_2}.jpeg'
+    assert songs[0]['cover_url'] != cover
+    assert songs[0]['album_name'] == 'Test Album'
+
+
+def test_artist_top_songs_empty_shelf_returns_empty_list():
+    entity = {'name': 'Test Artist'}
+    with patch(
+        'downtify.spotify._fetch_embed_json',
+        return_value=_embed_payload_for(entity),
+    ):
+        name, _cover, songs = artist_top_songs_from_id('dummyArtistId')
+    assert name == 'Test Artist'
+    assert songs == []
+
+
+def test_artist_top_songs_raises_when_name_missing():
+    entity = {'trackList': []}
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        pytest.raises(ValueError, match='Could not read artist name'),
+    ):
+        artist_top_songs_from_id('dummyArtistId')

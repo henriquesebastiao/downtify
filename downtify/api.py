@@ -26,11 +26,22 @@ working without changes:
   ``/api/albums/search`` - no tracklists; resolve a chosen release's
   tracks separately). A YouTube Music playlist URL resolves to its
   tracks, like a Spotify playlist.
+* ``GET  /api/artists/top_songs/url`` (a Spotify or YouTube Music artist
+  URL - ``open.spotify.com/artist/...``, ``/channel/UC...`` or
+  ``/@handle`` - resolved to ``{source, artist_id, name, cover_url,
+  songs, available}``; ``songs`` is capped at the ``limit`` query param
+  (1-10, default 5); for YouTube Music, ``limit`` beyond the ~5 item
+  shelf preview triggers one extra request for the shelf's full
+  auto-generated playlist)
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
   ``track_number`` / ``album_track_total`` survive re-fetch by URL)
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
   downloads every track from one shared, already-resolved tracklist so
   metadata stays consistent across the whole release)
+* ``POST /api/download/batch`` (JSON body ``{songs, playlist_url,
+  generate_m3u}``; ``playlist_url`` may instead be omitted in favor of an
+  explicit ``playlist_name`` and ``cover_url`` - e.g. for an artist's
+  top-songs selection, which isn't backed by a real playlist id)
 * ``POST /api/download/csv`` (import a library-export CSV from Soundiiz,
   TuneMyMusic, Exportify, etc.; JSON body ``{csv, playlist_name,
   generate_m3u}`` - the raw CSV text, read client-side, not a multipart
@@ -86,6 +97,7 @@ from .downloader import (
     MAX_PARALLEL_DOWNLOADS,
     Downloader,
     NoAudioMatchError,
+    save_playlist_cover,
 )
 from .library_catalog import LibraryContext, library_context_from_state
 from .library_delete import delete_playlist_from_library
@@ -938,6 +950,78 @@ def _resolve_url(url: str):
     raise HTTPException(status_code=400, detail='Invalid URL')
 
 
+def _resolve_artist_top_songs(url: str, limit: int) -> dict[str, Any]:
+    """Artist name, cover and up to ``limit`` top songs for a pasted
+    Spotify or YouTube Music artist URL.
+
+    Spotify is resolved against its own top-tracks shelf preview (see
+    :func:`spotify.artist_top_songs_from_id`). YouTube Music uses its own
+    "Top songs" shelf preview; when ``limit`` exceeds that preview, the
+    shelf's own full auto-generated playlist is fetched instead (see
+    :func:`providers.artist_full_top_songs_from_channel_id`).
+    """
+
+    spotify_parsed = spotify.parse_spotify_url(url)
+    if spotify_parsed is not None and spotify_parsed[0] == 'artist':
+        _, artist_id = spotify_parsed
+        try:
+            name, cover_url, songs = spotify.artist_top_songs_from_id(
+                artist_id
+            )
+        except Exception as exc:
+            logger.exception('Failed to resolve Spotify artist {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {
+            'source': 'spotify',
+            'artist_id': artist_id,
+            'name': name,
+            'cover_url': cover_url,
+            'songs': songs[:limit],
+            'available': len(songs),
+        }
+
+    youtube_parsed = providers.parse_youtube_url(url)
+    if youtube_parsed is not None and youtube_parsed[0] == 'artist':
+        _, channel_or_handle = youtube_parsed
+        try:
+            channel_id = providers.resolve_artist_channel_id(
+                channel_or_handle
+            )
+            info = providers.artist_info_from_channel_id(channel_id)
+            songs = providers.artist_top_songs_from_channel_id(channel_id)
+            if limit > len(songs):
+                fuller = providers.artist_full_top_songs_from_channel_id(
+                    channel_id
+                )
+                if fuller:
+                    songs = fuller
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception('Failed to resolve YouTube artist {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {
+            'source': 'youtube',
+            'artist_id': channel_id,
+            'name': info.get('name') or channel_id,
+            'cover_url': info.get('cover_url') or '',
+            'songs': songs[:limit],
+            'available': len(songs),
+        }
+
+    raise HTTPException(
+        status_code=400,
+        detail='A Spotify or YouTube Music artist URL is required',
+    )
+
+
+@router.get('/api/artists/top_songs/url')
+async def artist_top_songs_from_url_endpoint(
+    url: str = Query(...), limit: int = Query(5, ge=1, le=10)
+) -> dict[str, Any]:
+    return await asyncio.to_thread(_resolve_artist_top_songs, url, limit)
+
+
 def _merge_client_track_hints(
     base: dict[str, Any],
     hints: Optional[dict[str, Any]],
@@ -1342,6 +1426,25 @@ async def _write_batch_m3u(
     return m3u_path
 
 
+def _save_explicit_playlist_cover(
+    cover_url: str, m3u_path: Path, settings: dict[str, Any]
+) -> None:
+    """Save *cover_url* beside *m3u_path*, when enabled.
+
+    Counterpart to :func:`download_playlist_cover` for a batch that isn't
+    backed by a real Spotify/YouTube Music playlist id (e.g. an artist's
+    top-songs selection) — the caller already knows the cover to use, so
+    there's no playlist to re-fetch it from. Gated by the same
+    ``download_cover_art_playlists`` setting.
+    """
+    if not settings.get('download_cover_art_playlists'):
+        return
+    try:
+        save_playlist_cover(cover_url, m3u_path)
+    except Exception:
+        logger.exception('Failed to save cover art for {}', m3u_path)
+
+
 async def _process_batch(
     songs: list[dict[str, Any]],
     job_ids: list[str],
@@ -1350,6 +1453,7 @@ async def _process_batch(
     playlist_name: Optional[str] = None,
     *,
     batch_id: Optional[int] = None,
+    cover_url: Optional[str] = None,
 ) -> None:
     # Resolve the playlist name up-front so all tracks land in a single,
     # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
@@ -1448,6 +1552,13 @@ async def _process_batch(
             await asyncio.to_thread(
                 download_playlist_cover,
                 *target,
+                m3u_path,
+                state.settings,
+            )
+        elif m3u_path is not None and cover_url:
+            await asyncio.to_thread(
+                _save_explicit_playlist_cover,
+                cover_url,
                 m3u_path,
                 state.settings,
             )
@@ -2134,6 +2245,8 @@ async def _submit_playlist_batch(
     *,
     generate_m3u: bool,
     batch_id: Optional[int] = None,
+    playlist_name: Optional[str] = None,
+    cover_url: Optional[str] = None,
 ) -> dict[str, Any]:
     valid_songs: list[dict[str, Any]] = []
     job_ids: list[str] = []
@@ -2159,7 +2272,9 @@ async def _submit_playlist_batch(
             job_ids,
             playlist_url,
             generate_m3u,
+            playlist_name,
             batch_id=batch_id,
+            cover_url=cover_url,
         )
     )
 
@@ -2191,6 +2306,11 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         )
     playlist_url = str(payload.get('playlist_url') or '')
     generate_m3u = bool(payload.get('generate_m3u', True))
+    # No real Spotify/YouTube Music playlist id backs this batch (e.g. an
+    # artist's top-songs selection) - the caller names the playlist and its
+    # cover directly instead of us deriving them from playlist_url.
+    playlist_name = str(payload.get('playlist_name') or '') or None
+    cover_url = str(payload.get('cover_url') or '') or None
 
     # A Spotify playlist download is tracked as a playlist batch, so an
     # incomplete one can be finished later (see /api/playlists/incomplete).
@@ -2211,7 +2331,12 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         )
 
     return await _submit_playlist_batch(
-        songs, playlist_url, generate_m3u=generate_m3u, batch_id=batch_id
+        songs,
+        playlist_url,
+        generate_m3u=generate_m3u,
+        batch_id=batch_id,
+        playlist_name=playlist_name,
+        cover_url=cover_url,
     )
 
 
