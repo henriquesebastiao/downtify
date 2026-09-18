@@ -123,6 +123,8 @@ def test_delete_playlist_from_library(tmp_path: Path) -> None:
     t1.write_bytes(b'1')
     t2.write_bytes(b'2')
     (pl_dir / 'My Playlist.m3u').write_text('#EXTM3U\n', encoding='utf-8')
+    cover = pl_dir / 'My Playlist.jpg'
+    cover.write_bytes(b'cover-bytes')
 
     db = tmp_path / 'lib.db'
     catalog = PlaylistCatalog(db)
@@ -152,10 +154,57 @@ def test_delete_playlist_from_library(tmp_path: Path) -> None:
     assert result['deleted_count'] == 2
     assert not t1.is_file()
     assert not t2.is_file()
+    assert not cover.is_file()
     assert catalog.list_tracks('My Playlist') == []
-    # Folder is gone too: tracks, then the playlist's M3U, were its
+    # Folder is gone too: tracks, the M3U and the cover art were its
     # only contents.
     assert not pl_dir.exists()
+
+
+def test_delete_playlist_removes_cover_from_playlists_dir_when_organized(
+    tmp_path: Path,
+) -> None:
+    # With organize-by-artist on, tracks live in artist folders but the
+    # M3U (and its cover, saved alongside it — see
+    # downloader.save_playlist_cover) goes to the legacy Playlists/ dir.
+    download_dir = tmp_path / 'downloads'
+    artist_dir = download_dir / 'A'
+    artist_dir.mkdir(parents=True)
+    track = artist_dir / 'A - One.mp3'
+    track.write_bytes(b'1')
+
+    playlists_dir = download_dir / 'Playlists'
+    playlists_dir.mkdir()
+    (playlists_dir / 'My Playlist.m3u').write_text(
+        '#EXTM3U\n', encoding='utf-8'
+    )
+    cover = playlists_dir / 'My Playlist.jpg'
+    cover.write_bytes(b'cover-bytes')
+
+    db = tmp_path / 'lib.db'
+    catalog = PlaylistCatalog(db)
+    catalog.ensure_playlist('My Playlist')
+    catalog.upsert_track(
+        'My Playlist',
+        {'song_id': '4uLU6hMCjMI75M1A2tKUQC'},
+        'A/A - One.mp3',
+        track,
+    )
+
+    state = _DeleteState(catalog, TrackIndex(db))
+    settings = {'organize_by_artist': True, 'generate_m3u': False}
+    result = delete_playlist_from_library(
+        'My Playlist',
+        download_dir,
+        settings,
+        state,
+    )
+
+    assert result.get('ok') is True
+    assert not cover.is_file()
+    assert not (playlists_dir / 'My Playlist.m3u').is_file()
+    # The cover was the last thing in Playlists/, so it's pruned too.
+    assert not playlists_dir.exists()
 
 
 def test_delete_playlist_spares_same_named_album_folder_when_organized_by_album(

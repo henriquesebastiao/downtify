@@ -30,6 +30,7 @@ const settings = ref({
   bitrate: '320',
   output: '',
   generate_m3u: true,
+  download_cover_art_playlists: false,
   sync_navidrome: true,
   navidrome: {
     enabled: false,

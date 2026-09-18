@@ -45,6 +45,7 @@ def test_default_settings_has_required_keys():
         'bitrate',
         'output',
         'generate_m3u',
+        'download_cover_art_playlists',
         'organize_by_artist',
         'slskd',
         'sync_navidrome',
@@ -60,6 +61,10 @@ def test_default_organize_by_artist_is_false():
 
 def test_default_generate_m3u_is_true():
     assert DEFAULT_SETTINGS['generate_m3u'] is True
+
+
+def test_default_download_cover_art_playlists_is_false():
+    assert DEFAULT_SETTINGS['download_cover_art_playlists'] is False
 
 
 def test_default_download_lyrics_is_true():
@@ -377,6 +382,24 @@ def test_update_settings_toggles_mini_player_enabled(monkeypatch):
     # docs/features/player.md#mini-player-bar).
     result = _call_update_settings(monkeypatch, {'mini_player_enabled': False})
     assert result['mini_player_enabled'] is False
+
+
+def test_update_settings_toggles_download_cover_art_playlists(monkeypatch):
+    # A plain passthrough boolean for now — the downloader doesn't act on
+    # it yet, it's only stored and returned as-is.
+    result = _call_update_settings(
+        monkeypatch, {'download_cover_art_playlists': True}
+    )
+    assert result['download_cover_art_playlists'] is True
+
+
+def test_load_settings_preserves_download_cover_art_playlists(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(
+        json.dumps({'download_cover_art_playlists': True}), encoding='utf-8'
+    )
+    result = _load_settings(path)
+    assert result['download_cover_art_playlists'] is True
 
 
 # ── _clamp_download_delay ────────────────────────────────────────────────────

@@ -17,6 +17,7 @@ from downtify.spotify import (
     _track_dict,
     album_tracks_from_id,
     enrich_track_from_spotify_if_sparse,
+    playlist_cover_url_from_id,
 )
 
 # Aliases only — no real artist / track titles
@@ -368,3 +369,55 @@ def test_fetch_embed_json_does_not_retry_client_errors() -> None:
             _fetch_embed_json('playlist', 'missing')
 
     mock_sleep.assert_not_called()
+
+
+# ── playlist_cover_url_from_id ─────────────────────────────────────────────
+
+
+def _embed_payload_for(entity: dict) -> dict:
+    return {'props': {'pageProps': {'state': {'data': {'entity': entity}}}}}
+
+
+def test_playlist_cover_url_picks_largest_source():
+    entity = {
+        'name': 'Test Playlist',
+        'coverArt': {
+            'sources': [
+                {'url': 'https://example.test/small.jpeg', 'width': 300},
+                {'url': 'https://example.test/large.jpeg', 'width': 640},
+            ]
+        },
+    }
+    with patch(
+        'downtify.spotify._fetch_embed_json',
+        return_value=_embed_payload_for(entity),
+    ):
+        cover = playlist_cover_url_from_id('dummyPlaylistId')
+    assert cover == 'https://example.test/large.jpeg'
+
+
+def test_playlist_cover_url_falls_back_to_visual_identity():
+    entity = {
+        'name': 'Test Playlist',
+        'visualIdentity': {
+            'image': [
+                {'url': 'https://example.test/visual.jpeg', 'width': 512}
+            ]
+        },
+    }
+    with patch(
+        'downtify.spotify._fetch_embed_json',
+        return_value=_embed_payload_for(entity),
+    ):
+        cover = playlist_cover_url_from_id('dummyPlaylistId')
+    assert cover == 'https://example.test/visual.jpeg'
+
+
+def test_playlist_cover_url_empty_when_no_art():
+    entity = {'name': 'Test Playlist'}
+    with patch(
+        'downtify.spotify._fetch_embed_json',
+        return_value=_embed_payload_for(entity),
+    ):
+        cover = playlist_cover_url_from_id('dummyPlaylistId')
+    assert not cover

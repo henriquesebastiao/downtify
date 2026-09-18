@@ -1182,6 +1182,32 @@ def _download_cover(url: str) -> Optional[bytes]:
     return response.content
 
 
+def save_playlist_cover(cover_url: str, m3u_path: Path) -> Optional[Path]:
+    """Save a playlist's cover art next to its M3U file.
+
+    Writes ``<playlist-name>.jpg`` beside *m3u_path*, reusing whatever
+    URL the caller resolved as the largest cover art the source
+    (Spotify or YouTube Music) offers for that playlist — both always
+    serve JPEG for these URLs, so the extension is fixed rather than
+    sniffed from the response. Returns the written path, or ``None``
+    when there's no cover URL, the fetch fails, or the file can't be
+    written.
+    """
+
+    data = _download_cover(cover_url)
+    if not data:
+        return None
+    cover_path = m3u_path.with_suffix('.jpg')
+    try:
+        cover_path.write_bytes(data)
+    except OSError:
+        logger.opt(exception=True).warning(
+            'Could not write playlist cover {}', cover_path
+        )
+        return None
+    return cover_path
+
+
 def _album_track_index_for_tags(
     song: dict[str, Any],
 ) -> tuple[Optional[int], Optional[int]]:

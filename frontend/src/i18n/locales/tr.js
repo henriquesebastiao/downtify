@@ -627,6 +627,9 @@ export default {
     m3u: 'M3U çalma listeleri yaz',
     m3uHint:
       'Jellyfin, Plex, Navidrome ve diğerleri için indirilen her çalma listesine .m3u kaydet.',
+    playlistCover: 'Çalma listesi kapağını kaydet',
+    playlistCoverHint:
+      'Çalma listesinin kendi kapağını .m3u dosyasının yanına yazar; medya sunucuları genel bir simge yerine onu gösterir.',
     pacingGroup: 'Hız',
     parallel: 'Eşzamanlı indirmeler',
     parallelHint: 'Aynı anda kaç şarkı indirileceği.',

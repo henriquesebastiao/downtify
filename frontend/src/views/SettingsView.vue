@@ -313,6 +313,18 @@
                   :aria-label="t('settings.m3u')"
                 />
               </SettingRow>
+              <!-- The cover is saved next to the .m3u, so it only has
+                   somewhere to go while playlist files are written. -->
+              <SettingRow
+                v-if="s.generate_m3u"
+                :label="t('settings.playlistCover')"
+                :description="t('settings.playlistCoverHint')"
+              >
+                <UiSwitch
+                  v-model="s.download_cover_art_playlists"
+                  :aria-label="t('settings.playlistCover')"
+                />
+              </SettingRow>
             </SettingGroup>
 
             <SettingGroup :title="t('settings.pacingGroup')">

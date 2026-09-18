@@ -640,6 +640,9 @@ export default {
     m3u: 'Écrire des playlists M3U',
     m3uHint:
       'Enregistre un .m3u pour chaque playlist téléchargée, pour Jellyfin, Plex, Navidrome et d’autres.',
+    playlistCover: 'Enregistrer la pochette de la playlist',
+    playlistCoverHint:
+      'Écrit la pochette de la playlist à côté de son .m3u, pour que les serveurs multimédias l’affichent au lieu d’une icône générique.',
     pacingGroup: 'Cadence',
     parallel: 'Téléchargements simultanés',
     parallelHint: 'Nombre de titres téléchargés en même temps.',

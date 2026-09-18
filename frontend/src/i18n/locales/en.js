@@ -613,6 +613,9 @@ export default {
     m3u: 'Write M3U playlists',
     m3uHint:
       'Save a .m3u file for each downloaded playlist, for Jellyfin, Plex, Navidrome and others.',
+    playlistCover: 'Save playlist cover art',
+    playlistCoverHint:
+      "Write the playlist's own artwork next to its .m3u, so media servers show it instead of a generic icon.",
     pacingGroup: 'Pacing',
     parallel: 'Parallel downloads',
     parallelHint: 'How many songs download at the same time.',

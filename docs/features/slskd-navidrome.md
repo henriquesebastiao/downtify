@@ -74,6 +74,10 @@ Tracks are matched to Navidrome songs by path first, then by tags. **Make Navidr
 When a playlist is refreshed (after deletes, **Fix library paths**, or **Download missing** on an already complete playlist), a library file registered for a Spotify track is **deleted from disk** if its embedded title/artist clearly don't match that track — Downtify treats it as a wrong download. Keep this in mind if you edit tags by hand.
 :::
 
+### Playlist cover art
+
+Nothing to set up: with [Save playlist cover art](playlist-cover-art.md) on, Navidrome picks up the `.jpg` Downtify writes next to the playlist's M3U as a **sidecar image** — its own way of resolving playlist artwork — as long as its music folder covers that file. Downtify makes no API call for it.
+
 ## Playlist downloads
 
 The **Library** page lists the Spotify playlists you've downloaded through Downtify under **Playlist downloads**. Expand it to see, for each playlist, how many tracks are in your library against the current Spotify track list. From there you can:
@@ -85,4 +89,4 @@ The **Library** page lists the Spotify playlists you've downloaded through Downt
 
 ### Deleting a playlist
 
-Deleting a playlist (from this panel, or with **Delete playlist** next to the Library's playlist filter) removes from disk every track registered to it — **including tracks other playlists also contain** — plus its M3U file, and stops tracking it. Other playlists that shared those tracks get their M3U and Navidrome playlist rewritten in the background.
+Deleting a playlist (from this panel, or with **Delete playlist** next to the Library's playlist filter) removes from disk every track registered to it — **including tracks other playlists also contain** — plus its M3U file and the [cover art](playlist-cover-art.md) saved beside it, and stops tracking it. Other playlists that shared those tracks get their M3U and Navidrome playlist rewritten in the background.

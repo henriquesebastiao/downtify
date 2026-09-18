@@ -128,13 +128,25 @@ def set_cover_resolution(pixels: int) -> None:
     _cover_resolution = pixels
 
 
-def _upgrade_thumbnail(url: str) -> str:
-    """Replace the size suffix on a YT thumbnail with a larger one."""
+def _resize_thumbnail(url: str, size: int) -> str:
+    """Replace the size suffix on a YT thumbnail with the given one."""
 
     if not url:
         return url
-    size = _cover_resolution
     return re.sub(r'=w\d+-h\d+.*$', f'=w{size}-h{size}-l90-rj', url)
+
+
+def _upgrade_thumbnail(url: str) -> str:
+    """Replace the size suffix on a YT thumbnail with a larger one."""
+
+    return _resize_thumbnail(url, _cover_resolution)
+
+
+# Playlist (not per-track) cover art always targets this size, independent
+# of the user's configured cover_resolution — mirroring how Spotify
+# playlist covers already use the largest size its embed API offers,
+# unaffected by that same setting (see set_cover_resolution).
+_PLAYLIST_COVER_SIZE = 1200
 
 
 def _parse_duration(value: Any) -> int:
@@ -2502,3 +2514,16 @@ def playlist_info_and_tracks_from_id(
 
 def playlist_tracks_from_id(playlist_id: str) -> list[dict[str, Any]]:
     return playlist_info_and_tracks_from_id(playlist_id)[1]
+
+
+def playlist_cover_url_from_id(playlist_id: str) -> str:
+    """Largest cover art YouTube Music's API offers for a playlist.
+
+    Fetches only the playlist header (``limit=0`` skips paginating the
+    track list) since the cover art lives there regardless of how many
+    tracks are requested.
+    """
+    data = _ytm().get_playlist(playlist_id, limit=0)
+    thumbs = data.get('thumbnails') or []
+    cover = thumbs[-1].get('url', '') if thumbs else ''
+    return _resize_thumbnail(cover, _PLAYLIST_COVER_SIZE)

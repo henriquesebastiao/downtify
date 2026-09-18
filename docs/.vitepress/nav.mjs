@@ -28,6 +28,7 @@ export const NAV = [
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
       { title: 'M3U Export', page: 'features/m3u-export.md' },
+      { title: 'Playlist Cover Art', page: 'features/playlist-cover-art.md' },
       { title: 'File Organization', page: 'features/file-organization.md' },
       { title: 'Lyrics', page: 'features/lyrics.md' },
       { title: 'YouTube Cookies', page: 'features/youtube-cookies.md' },

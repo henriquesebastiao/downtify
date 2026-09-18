@@ -630,6 +630,9 @@ export default {
     m3u: 'M3U listák írása',
     m3uHint:
       'Minden letöltött listához .m3u fájlt ment Jellyfinhez, Plexhez, Navidrome-hoz és másokhoz.',
+    playlistCover: 'Lejátszási lista borítójának mentése',
+    playlistCoverHint:
+      'A lista saját borítóját a .m3u mellé írja, így a médiaszerverek azt mutatják egy általános ikon helyett.',
     pacingGroup: 'Ütemezés',
     parallel: 'Párhuzamos letöltések',
     parallelHint: 'Hány dal töltődik le egyszerre.',

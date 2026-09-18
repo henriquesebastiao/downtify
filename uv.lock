@@ -1147,11 +1147,11 @@ wheels = [
 
 [[package]]
 name = "platformdirs"
-version = "4.11.9"
+version = "4.11.10"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/58/b9/8adc4e1b422b27fd88540ec7bf1f406f77ef393ec070e26fc430e914cde8/platformdirs-4.11.9.tar.gz", hash = "sha256:e2c66a8d384596cd98e3c4aea2d761df7bac95d9d8a2cc3946daa8cdafdaebc1", size = 38345, upload-time = "2026-09-16T13:31:45.259Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/89/24/92d90bebedf197eb15b144367ce6fd4ad2de571927cd09dde190a36db8fc/platformdirs-4.11.10.tar.gz", hash = "sha256:9cd351c078ccf7dda1fdc5f8ccb9d8f5258984c63990e6df3627dde0b70b51d0", size = 39389, upload-time = "2026-09-18T01:45:15.107Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f3/94/803ba86705257d7eedddac4b02eb88a7483b1600e9200c1fefc6f1a9a3ff/platformdirs-4.11.9-py3-none-any.whl", hash = "sha256:0a3958f58a9e30321eaef0a424dd0b77cce242886b36b8aa992f9731ef2d59c1", size = 24472, upload-time = "2026-09-16T13:31:44.049Z" },
+    { url = "https://files.pythonhosted.org/packages/67/45/cae23ec98a49825d58de75c38cdb714605adeb6e6ab72a7ad2b28322892c/platformdirs-4.11.10-py3-none-any.whl", hash = "sha256:973c4c082b964958c71588448488d2b14fb253893dfbdb82325a14c84e540e8f", size = 24763, upload-time = "2026-09-18T01:45:13.878Z" },
 ]
 
 [[package]]
@@ -1165,7 +1165,7 @@ wheels = [
 
 [[package]]
 name = "posthog"
-version = "7.55.0"
+version = "7.57.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -1173,9 +1173,9 @@ dependencies = [
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ed/b0/ebf66f5a9047b7432a260db95940b388c1dd5f6091267008a99f10e5c504/posthog-7.55.0.tar.gz", hash = "sha256:60da1d0cd71e766dc1eb0986130925e10660610a776450d2aea07ea75e721400", size = 582884, upload-time = "2026-09-17T13:51:16.094Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9c/8f/849449c0b1d9c773aff8525bfe10094b2251f286451d87d186ef3a93f8a0/posthog-7.57.0.tar.gz", hash = "sha256:1ca4a1bf384857338b4b4deaa9ab7f31f8de1567427109e24593c0173a0505e3", size = 592664, upload-time = "2026-09-18T08:25:02.466Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a5/42/c459a5c1f639021cb90710dfce2e7cc0b500e0acfd3f08f52f6e8304c7f1/posthog-7.55.0-py3-none-any.whl", hash = "sha256:2df764fa04a1277168708f0a556d77d3fd321a38813f879fe1fb3c6f4c170763", size = 682952, upload-time = "2026-09-17T13:51:13.824Z" },
+    { url = "https://files.pythonhosted.org/packages/86/8a/10d6d374a36fda76d0dbe6873871dfa640989de7c9808475fdac3c8b4cba/posthog-7.57.0-py3-none-any.whl", hash = "sha256:c9897921ee1b149072a2ed3e1d562e82e3e7962bdf9a19f081f2d684910f3589", size = 692183, upload-time = "2026-09-18T08:25:00.538Z" },
 ]
 
 [[package]]
@@ -1349,15 +1349,15 @@ wheels = [
 
 [[package]]
 name = "pytest-memray"
-version = "1.10.0"
+version = "1.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "memray" },
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a7/61/d0ab0418ea7a2494a3a020a4bc388011b59b820e8335797cdc6489cfd9fe/pytest_memray-1.10.0.tar.gz", hash = "sha256:38f1068aa8562887d452ae14f77509f138be1acc74542dd5fc41e74f651cf932", size = 246123, upload-time = "2026-08-07T22:07:28.401Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/67/4d8d29f9edc0bd3a4ee2458197bc72cb8bac34beb5e3fee2d1a542c3252c/pytest_memray-1.11.0.tar.gz", hash = "sha256:d40a7914f63cf53d9cd3d1ed5bdaeb9039dde4821d80054fd678f3d4f2c1f13d", size = 246383, upload-time = "2026-09-17T16:42:52.198Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/03/d7/9e6d28d95cfe6a1f3643c46b06266f2eb2ea711b0bb6ef1b0f1697a19c2f/pytest_memray-1.10.0-py3-none-any.whl", hash = "sha256:eecdbad5c4df3c385892b1cfdde48266f21ae601a44c4fe6557b781d7d409b95", size = 20122, upload-time = "2026-08-07T22:07:27.269Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/93/880c259592072b43e416cca0ecd0ed8d9b6413700554997c78b39c946f39/pytest_memray-1.11.0-py3-none-any.whl", hash = "sha256:33e45b77e984459c3792ef111c2142d9ca960c874c075f62349fdcee91509de6", size = 20344, upload-time = "2026-09-17T16:42:50.73Z" },
 ]
 
 [[package]]
@@ -1806,11 +1806,11 @@ wheels = [
 
 [[package]]
 name = "wcwidth"
-version = "0.8.3"
+version = "0.8.4"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/36/57/ed58088fafdf4c55a0ad6bde846502567645424d7ebf325230b9237f4085/wcwidth-0.8.3.tar.gz", hash = "sha256:d128512515fbf4612e0ff21fd6380399210318b7b54a9af59dff8454cf9730eb", size = 1458450, upload-time = "2026-08-28T18:10:06.875Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/7a/f98d4ada7c499565ab0c0fcef28a4e54fafa72b8228a6309803c80493c92/wcwidth-0.8.4.tar.gz", hash = "sha256:2dae09efa25253ae2874188e86d6861af3b1652aef4118cdf3f0bda288a957fb", size = 414609, upload-time = "2026-09-17T23:31:45.287Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c4/0e/57f6bb3024a597b2e8ec4aee710ffe62ddc95af2e2bb1ee7a7abdc22c68c/wcwidth-0.8.3-py3-none-any.whl", hash = "sha256:d5b73dba6158a595ec9370350e7f2637bcac8d6c5e4fde34f30fcffb6103a5e4", size = 331669, upload-time = "2026-08-28T18:10:04.909Z" },
+    { url = "https://files.pythonhosted.org/packages/39/cc/9c0adc5861020de426ec71716b6c1bef8d90694b7d6d0a16202cdb1647f5/wcwidth-0.8.4-py3-none-any.whl", hash = "sha256:2097bb1d28a0ba8fe177c2eb607317f9b1627b03f33ebebfd3da670b337a65ba", size = 299474, upload-time = "2026-09-17T23:31:43.816Z" },
 ]
 
 [[package]]

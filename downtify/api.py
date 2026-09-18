@@ -128,6 +128,7 @@ from .monitor import (
     MonitoredPlaylist,
     PlaylistMonitorDB,
     check_watch,
+    download_playlist_cover,
     fetch_playlist,
     parse_playlist_url,
 )
@@ -167,6 +168,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'bitrate': '320',
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
+    'download_cover_art_playlists': False,
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
     'cover_resolution': providers.DEFAULT_COVER_RESOLUTION,
@@ -1470,17 +1472,17 @@ async def _write_batch_m3u(
     resolved: dict[int, Optional[str]],
     playlist_name: str,
     playlist_subdir: str,
-) -> None:
+) -> Optional[Path]:
     entries = _m3u_entries_for(songs, resolved)
     if not entries:
-        return
+        return None
     # When organize-by-artist/album is on, songs land in those folders
     # instead of the playlist subfolder, so the M3U must go to the legacy
     # Playlists/ directory (playlist_subdir=None) where relative paths
     # still resolve.
     organize = _organize_enabled()
     try:
-        await asyncio.to_thread(
+        m3u_path, _kept = await asyncio.to_thread(
             m3u.write_m3u,
             state.downloader.download_dir,
             playlist_name,
@@ -1490,6 +1492,8 @@ async def _write_batch_m3u(
         )
     except Exception:
         logger.exception('Failed to write M3U for {!r}', playlist_name)
+        return None
+    return m3u_path
 
 
 async def _process_batch(
@@ -1591,7 +1595,16 @@ async def _process_batch(
     )
 
     if wants_m3u:
-        await _write_batch_m3u(songs, resolved, playlist_name, playlist_subdir)
+        m3u_path = await _write_batch_m3u(
+            songs, resolved, playlist_name, playlist_subdir
+        )
+        if m3u_path is not None and target is not None:
+            await asyncio.to_thread(
+                download_playlist_cover,
+                *target,
+                m3u_path,
+                state.settings,
+            )
 
     await _finish_playlist_batch(
         songs,
@@ -2970,8 +2983,8 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
     playlist_url = str(payload.get('playlist_url') or '').strip()
     if not playlist_url:
         raise HTTPException(status_code=400, detail='Missing playlist_url')
-    target = parse_playlist_url(playlist_url)
-    if target is None:
+    source_and_id = parse_playlist_url(playlist_url)
+    if source_and_id is None:
         raise HTTPException(
             status_code=400,
             detail='Not a Spotify or YouTube Music playlist URL',
@@ -2982,7 +2995,9 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail='tracks must be a list')
 
     try:
-        playlist_name, _ = await asyncio.to_thread(fetch_playlist, *target)
+        playlist_name, _ = await asyncio.to_thread(
+            fetch_playlist, *source_and_id
+        )
     except Exception as exc:
         logger.exception('Failed to resolve playlist {}', playlist_url)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -3000,6 +3015,12 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(
             status_code=400, detail='No tracks resolved to a file on disk'
         )
+    await asyncio.to_thread(
+        download_playlist_cover,
+        *source_and_id,
+        target,
+        state.settings,
+    )
     return {'path': str(target), 'count': kept}
 
 

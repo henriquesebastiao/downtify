@@ -21,7 +21,11 @@ Track paths inside the M3U are written **relative to the M3U file itself**, not 
 
 ## Enabling / disabling
 
-M3U generation is controlled by **Settings → Generate M3U file for playlists** (on by default). Turning it off skips M3U creation entirely; the rest of the download flow is unchanged.
+M3U generation is controlled by **Settings → Downloads & files → Write M3U playlists** (on by default). Turning it off skips M3U creation entirely; the rest of the download flow is unchanged.
+
+## Cover art
+
+Right below that setting, **Save playlist cover art** (off by default) writes the playlist's own cover image next to its M3U, under the same name. See [Playlist cover art](playlist-cover-art.md) for where the file lands, which sources it comes from, and how Navidrome picks it up on its own.
 
 ## When it is written
 

@@ -18,6 +18,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Library catalog & path sync](library-catalog.md) | How Downtify tracks library files and playlists, and fixing paths after moving files |
 | [Upgrade library](library-upgrade.md) | Scan music you already downloaded and repair small covers, missing lyrics and incomplete tags |
 | [M3U Export](m3u-export.md) | Auto-generated playlist files for Jellyfin, Navidrome, Plex and any media app |
+| [Playlist cover art](playlist-cover-art.md) | Save the playlist's own cover image alongside its M3U file |
 | [File Organization](file-organization.md) | Flat layout or per-artist subfolders |
 | [Lyrics](lyrics.md) | Automatically download and embed lyrics (plain and time-synced) |
 | [YouTube Cookies](youtube-cookies.md) | Upload a `cookies.txt` from the web UI to download explicit/age-restricted tracks |

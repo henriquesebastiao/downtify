@@ -628,6 +628,9 @@ export default {
     m3u: 'Gerar playlists M3U',
     m3uHint:
       'Salva um .m3u para cada playlist baixada, para Jellyfin, Plex, Navidrome e outros.',
+    playlistCover: 'Salvar a capa da playlist',
+    playlistCoverHint:
+      'Grava a capa da própria playlist ao lado do .m3u, para os servidores de mídia mostrarem ela no lugar de um ícone genérico.',
     pacingGroup: 'Ritmo',
     parallel: 'Downloads simultâneos',
     parallelHint: 'Quantas músicas são baixadas ao mesmo tempo.',

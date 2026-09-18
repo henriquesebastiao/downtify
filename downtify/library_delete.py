@@ -378,6 +378,40 @@ def _remove_playlist_m3u_files(
     return removed
 
 
+def _remove_playlist_cover_file(
+    download_dir: Path,
+    playlist_name: str,
+    *,
+    organize_by_artist: bool,
+) -> bool:
+    """Remove the playlist's cover art, if any.
+
+    Saved by ``downloader.save_playlist_cover`` at the same path as the
+    playlist's M3U, with a ``.jpg`` suffix instead — see
+    ``_m3u_paths_for_playlist`` for the candidate locations. Returns
+    whether a file was removed.
+    """
+    for m3u_path in _m3u_paths_for_playlist(
+        download_dir,
+        playlist_name,
+        organize_by_artist=organize_by_artist,
+    ):
+        cover_path = m3u_path.with_suffix('.jpg')
+        try:
+            if cover_path.is_file():
+                cover_path.unlink()
+                logger.info(
+                    'Playlist delete: removed cover art {}', cover_path
+                )
+                prune_empty_parent_dirs(cover_path.parent, download_dir)
+                return True
+        except OSError as exc:
+            logger.warning(
+                'Could not remove cover art {}: {}', cover_path, exc
+            )
+    return False
+
+
 def _log_playlist_delete_summary(
     playlist_name: str,
     *,
@@ -387,26 +421,30 @@ def _log_playlist_delete_summary(
     folder_deleted: int,
     failed_count: int,
     m3u_removed: int,
+    cover_removed: bool,
 ) -> None:
     if deleted_count:
         logger.info(
             'Playlist delete finished for {!r}: {} audio file(s) removed '
-            '({} from catalog, {} from folder scan), {} failed, {} M3U file(s)',
+            '({} from catalog, {} from folder scan), {} failed, {} M3U '
+            'file(s), cover removed={}',
             playlist_name,
             deleted_count,
             catalog_deleted,
             folder_deleted,
             failed_count,
             m3u_removed,
+            cover_removed,
         )
         return
     logger.warning(
         'Playlist delete finished for {!r}: no audio files removed from disk '
-        '(catalog listed {}, failed {}, M3U removed {})',
+        '(catalog listed {}, failed {}, M3U removed {}, cover removed={})',
         playlist_name,
         catalog_count,
         failed_count,
         m3u_removed,
+        cover_removed,
     )
 
 
@@ -572,6 +610,9 @@ def delete_playlist_from_library(
         folder_deleted=len(extra_deleted),
         failed_count=len(failed),
         m3u_removed=m3u_removed,
+        cover_removed=_remove_playlist_cover_file(
+            download_dir, pl_name, organize_by_artist=organize
+        ),
     )
 
     return {
