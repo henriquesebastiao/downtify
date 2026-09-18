@@ -72,6 +72,10 @@ Tracks are matched to Navidrome songs by path first, then by tags. **Make Navidr
 !!! warning "Files whose tags don't match the playlist are deleted"
     When a playlist is refreshed (after deletes, **Fix library paths**, or **Download missing** on an already complete playlist), a library file registered for a Spotify track is **deleted from disk** if its embedded title/artist clearly don't match that track — Downtify treats it as a wrong download. Keep this in mind if you edit tags by hand.
 
+### Playlist cover art
+
+No extra setup needed: if [Download playlist cover art](playlist-cover-art.md) is on, Navidrome picks up the `.jpg` Downtify saves next to the playlist's M3U as a **sidecar image** — its own mechanism for resolving playlist artwork — as long as Navidrome's music folder includes that file. No API call from Downtify is involved.
+
 ## Playlist downloads
 
 The **Library** page lists the Spotify playlists you've downloaded through Downtify under **Playlist downloads**. Expand it to see, for each playlist, how many tracks are in your library against the current Spotify track list. From there you can:
@@ -83,4 +87,4 @@ The **Library** page lists the Spotify playlists you've downloaded through Downt
 
 ### Deleting a playlist
 
-Deleting a playlist (from this panel, or with **Delete playlist** next to the Library's playlist filter) removes from disk every track registered to it — **including tracks other playlists also contain** — plus its M3U file, and stops tracking it. Other playlists that shared those tracks get their M3U and Navidrome playlist rewritten in the background.
+Deleting a playlist (from this panel, or with **Delete playlist** next to the Library's playlist filter) removes from disk every track registered to it — **including tracks other playlists also contain** — plus its M3U file and its [cover art](playlist-cover-art.md) if it downloaded one, and stops tracking it. Other playlists that shared those tracks get their M3U and Navidrome playlist rewritten in the background.

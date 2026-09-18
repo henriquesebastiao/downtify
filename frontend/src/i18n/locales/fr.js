@@ -236,6 +236,9 @@ export default {
     generateM3u: 'Générer un fichier M3U pour les listes de lecture',
     generateM3uHint:
       'Enregistre les fichiers Playlists/<name>.m3u à côté des morceaux, tant pour les téléchargements manuels de listes de lecture que pour les analyses effectuées par Playlist Monitor.',
+    downloadCoverArtPlaylists: 'Télécharger la pochette de la liste de lecture',
+    downloadCoverArtPlaylistsHint:
+      "Récupère la pochette de la liste de lecture et l'enregistre dans Playlists/<name>.jpg. Désactivez pour ne pas la télécharger.",
     audioSourceHint:
       "Choisissez-en une ou plusieurs. Chaque morceau essaie les sources sélectionnées dans l'ordre (1, 2, 3) jusqu'à ce que l'une réussisse.",
     audioSourceMoveUp: 'Monter',

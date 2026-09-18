@@ -22,6 +22,7 @@ from downtify.providers import (
     enrich_from_match,
     find_match,
     parse_youtube_url,
+    playlist_cover_url_from_id,
     search_albums,
     search_artists,
     set_cover_resolution,
@@ -3215,3 +3216,56 @@ def test_upgrade_thumbnail_replaces_any_prior_size(monkeypatch):
     assert _upgrade_thumbnail(raw) == (
         'https://yt3.googleusercontent.com/abc123=w900-h900-l90-rj'
     )
+
+
+# ── playlist_cover_url_from_id ──────────────────────────────────────────────
+
+
+class _FakeYTMPlaylistHeader:
+    def __init__(self, data):
+        self._data = data
+        self.calls: list[tuple] = []
+
+    def get_playlist(self, playlist_id, limit=100):
+        self.calls.append((playlist_id, limit))
+        return self._data
+
+
+def test_playlist_cover_url_picks_largest_thumbnail_and_upgrades_it(
+    monkeypatch,
+):
+    client = _FakeYTMPlaylistHeader({
+        'title': 'Chill Mix',
+        'thumbnails': [
+            {'url': 'https://yt3.googleusercontent.com/small=w60-h60-l90-rj'},
+            {'url': 'https://yt3.googleusercontent.com/big=w544-h544-l90-rj'},
+        ],
+    })
+    monkeypatch.setattr(providers, '_ytm', lambda: client)
+    cover = playlist_cover_url_from_id('PLxyz')
+    assert cover == 'https://yt3.googleusercontent.com/big=w1200-h1200-l90-rj'
+    # Only the header is requested — no track pages are paginated.
+    assert client.calls == [('PLxyz', 0)]
+
+
+def test_playlist_cover_url_ignores_user_cover_resolution_setting(
+    monkeypatch,
+):
+    # Playlist cover art always targets the max size, independent of the
+    # per-track cover_resolution setting (mirrors Spotify's behavior).
+    monkeypatch.setattr(providers, '_cover_resolution', 300)
+    client = _FakeYTMPlaylistHeader({
+        'title': 'Chill Mix',
+        'thumbnails': [
+            {'url': 'https://yt3.googleusercontent.com/big=w544-h544-l90-rj'}
+        ],
+    })
+    monkeypatch.setattr(providers, '_ytm', lambda: client)
+    cover = playlist_cover_url_from_id('PLxyz')
+    assert cover == 'https://yt3.googleusercontent.com/big=w1200-h1200-l90-rj'
+
+
+def test_playlist_cover_url_empty_when_no_thumbnails(monkeypatch):
+    client = _FakeYTMPlaylistHeader({'title': 'Chill Mix', 'thumbnails': []})
+    monkeypatch.setattr(providers, '_ytm', lambda: client)
+    assert not playlist_cover_url_from_id('PLxyz')

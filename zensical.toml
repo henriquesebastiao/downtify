@@ -34,6 +34,7 @@ nav = [
     { "slskd & Navidrome"    = "features/slskd-navidrome.md"        },
     { "Library Catalog"      = "features/library-catalog.md"        },
     { "M3U Export"           = "features/m3u-export.md"             },
+    { "Playlist Cover Art"   = "features/playlist-cover-art.md"     },
     { "File Organization"    = "features/file-organization.md"      },
     { "Lyrics"               = "features/lyrics.md"                 },
     { "YouTube Cookies"      = "features/youtube-cookies.md"        },
