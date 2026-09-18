@@ -41,6 +41,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 | Feature | Details |
 |---------|---------|
 | 🎵 **Tracks, albums & playlists** | Any Spotify link works — single track, full album, or entire playlist |
+| ⭐ **Top Songs from an Artist** | Paste an artist link (Spotify or YouTube Music) and download their N most popular songs as a playlist |
 | 👁️ **Playlist & Artist Watch** | Watch Spotify or YouTube Music playlists **and artists** — new songs and new releases download automatically |
 | 🎨 **Rich metadata** | Album art, title, artist, album, year — all embedded in every file |
 | 🎚️ **Multiple formats** | MP3 · FLAC · M4A · OGG · OPUS |
@@ -127,6 +128,14 @@ Spotify embed page  →  YouTube Music search  →  yt-dlp + ffmpeg + mutagen
 
 ---
 
+## ⭐ Top Songs from an Artist
+
+Paste an artist's link — a Spotify `/artist/…` URL, or a YouTube Music `/channel/…`/`@handle` URL — and a **Top Songs of &lt;Artist&gt;** card appears at the top of the search results, with the artist's cover art, a 1–10 stepper for how many songs to grab, and a Download button. Downloading writes an M3U playlist (and the artist's image as its cover, if **Download playlist cover art** is enabled) just like a regular playlist download.
+
+See **[Top Songs from an Artist](https://henriquesebastiao.github.io/downtify/features/top-songs/)** in the full docs.
+
+---
+
 ## 👁️ Playlist Monitor
 
 The **Playlist Monitor** lets Downtify watch your favorite Spotify and YouTube Music playlists — and the artists you follow — and automatically download new songs and new releases, hands-free.
@@ -200,6 +209,7 @@ When the setting is **off** (default), the existing behaviour is preserved: sing
 | Spotify track | ✅ |
 | Spotify album | ✅ |
 | Spotify playlist | ✅ |
+| Spotify or YouTube Music artist (top songs) | ✅ |
 | YouTube Music playlist | ✅ |
 | YouTube Music search (free text) | ✅ |
 | Direct YouTube link | ✅ |
