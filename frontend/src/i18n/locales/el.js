@@ -568,8 +568,12 @@ export default {
     lyrics: 'Λήψη στίχων',
     lyricsHint:
       'Ενσωματώνει στίχους σε κάθε αρχείο και αποθηκεύει τους συγχρονισμένους ως .lrc δίπλα του.',
-    lyricsProvider: 'Πάροχος',
-    lyricsProviderHint: 'Το LRCLIB είναι ο μόνος διαθέσιμος πάροχος.',
+    lyricsProviders: 'Πάροχοι',
+    lyricsProvidersHint:
+      'Κάθε κομμάτι δοκιμάζει τους ενεργούς παρόχους με αυτή τη σειρά μέχρι κάποιος να έχει στίχους. Ό,τι δεν είχε ένας πάροχος καταγράφεται για έναν μήνα, ώστε να μην ερωτάται ξανά σε κάθε λήψη.',
+    lyricsLrclibHint: 'Κοινοτική βάση — απλοί και συγχρονισμένοι στίχοι',
+    lyricsNetease: 'NetEase Cloud Music',
+    lyricsNeteaseHint: 'Μεγάλος κατάλογος, συνήθως συγχρονισμένος',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Αντιγράφει τις λίστες στο Navidrome. Ο φάκελος μουσικής του πρέπει να περιλαμβάνει τις λήψεις του Downtify.',

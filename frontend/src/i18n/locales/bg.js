@@ -556,8 +556,12 @@ export default {
     lyrics: 'Изтегляне на текстове',
     lyricsHint:
       'Вгражда текста във всеки файл и запазва синхронизираните като .lrc до него.',
-    lyricsProvider: 'Доставчик',
-    lyricsProviderHint: 'LRCLIB е единственият наличен доставчик.',
+    lyricsProviders: 'Доставчици',
+    lyricsProvidersHint:
+      'Всяка песен пробва активните доставчици в този ред, докато някой има текст. Това, което даден доставчик не е имал, се помни един месец, за да не бъде питан отново при всяко изтегляне.',
+    lyricsLrclibHint: 'Общностна база — обикновени и синхронизирани текстове',
+    lyricsNetease: 'NetEase Cloud Music',
+    lyricsNeteaseHint: 'Голям каталог, обикновено синхронизиран',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Копира изтеглените плейлисти в Navidrome. Музикалната му папка трябва да включва изтеглянията на Downtify.',

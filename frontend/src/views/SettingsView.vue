@@ -398,13 +398,13 @@
               </SettingRow>
               <SettingRow
                 v-if="s.download_lyrics"
-                :label="t('settings.lyricsProvider')"
-                :description="t('settings.lyricsProviderHint')"
+                :label="t('settings.lyricsProviders')"
+                :description="t('settings.lyricsProvidersHint')"
+                stacked
               >
-                <UiSelect
-                  v-model="s.lyrics_providers[0]"
-                  :options="[{ value: 'lrclib', label: 'LRCLIB' }]"
-                  :label="t('settings.lyricsProvider')"
+                <LyricsOrder
+                  v-model="s.lyrics_providers"
+                  class="-mx-4 w-full"
                 />
               </SettingRow>
             </SettingGroup>
@@ -632,6 +632,7 @@ import PresetPicker from '/src/components/settings/PresetPicker.vue'
 import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import SourceOrder from '/src/components/settings/SourceOrder.vue'
+import LyricsOrder from '/src/components/settings/LyricsOrder.vue'
 import API from '/src/model/api'
 import {
   clampCoverResolution,

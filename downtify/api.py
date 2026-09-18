@@ -85,7 +85,7 @@ from fastapi import (
 )
 from loguru import logger
 
-from . import library_import, m3u, providers, spotify
+from . import library_import, lyrics, m3u, providers, spotify
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
 from .downloader import (
@@ -105,6 +105,7 @@ from .library_reconcile import (
     reconcile_and_refresh,
     refresh_playlists_after_moves,
 )
+from .lyrics_cache import LyricsLookupCache
 from .monitor import (
     KIND_ARTIST,
     KIND_PLAYLIST,
@@ -146,7 +147,7 @@ MAX_COVER_RESOLUTION = 1200
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
-    'lyrics_providers': ['lrclib'],
+    'lyrics_providers': list(lyrics.PROVIDER_ORDER),
     'download_lyrics': True,
     'format': 'mp3',
     'bitrate': '320',
@@ -412,13 +413,28 @@ def _organize_enabled() -> bool:
 
 
 def _effective_lyrics_providers(settings: dict[str, Any]) -> list[str]:
+    """The lyrics providers to try, in order.
+
+    Unknown names are dropped; a list left with nothing but the spotdl-era
+    placeholders (genius/musixmatch/azlyrics) falls back to the defaults,
+    since those settings were never asking for "no lyrics". An explicitly
+    empty list, and lyrics being off, both mean none.
+    """
+
     if not settings.get('download_lyrics', True):
         return []
-    return [
-        p
+    raw = [
+        p.strip()
         for p in (settings.get('lyrics_providers') or [])
-        if isinstance(p, str) and p
+        if isinstance(p, str) and p.strip()
     ]
+    if not raw:
+        return []
+    providers: list[str] = []
+    for name in raw:
+        if name in lyrics.SUPPORTED_PROVIDERS and name not in providers:
+            providers.append(name)
+    return providers or list(lyrics.PROVIDER_ORDER)
 
 
 class ConnectionManager:
@@ -483,6 +499,7 @@ class AppState:
     playlist_catalog: Optional[PlaylistCatalog] = None
     playlist_batch_store: Optional[PlaylistBatchStore] = None
     playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None
+    lyrics_cache: Optional[LyricsLookupCache] = None
 
 
 state = AppState()

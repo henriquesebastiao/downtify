@@ -549,8 +549,12 @@ export default {
     lyrics: 'Download lyrics',
     lyricsHint:
       'Embed lyrics in each file and save time-synced ones as .lrc next to it.',
-    lyricsProvider: 'Provider',
-    lyricsProviderHint: 'LRCLIB is the only provider available.',
+    lyricsProviders: 'Providers',
+    lyricsProvidersHint:
+      'Each track tries the enabled providers in this order until one has lyrics. What a provider didn’t have is remembered for a month, so it isn’t asked again for every download.',
+    lyricsLrclibHint: 'Community database — plain and time-synced lyrics',
+    lyricsNetease: 'NetEase Cloud Music',
+    lyricsNeteaseHint: 'Large catalogue, usually time-synced',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Mirror downloaded playlists into Navidrome. Its music folder must include Downtify’s downloads.',

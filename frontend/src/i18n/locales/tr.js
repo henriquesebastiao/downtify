@@ -563,8 +563,12 @@ export default {
     lyrics: 'Şarkı sözlerini indir',
     lyricsHint:
       'Sözleri her dosyaya göm, zamanlı olanları yanına .lrc olarak kaydet.',
-    lyricsProvider: 'Sağlayıcı',
-    lyricsProviderHint: 'Mevcut tek sağlayıcı LRCLIB.',
+    lyricsProviders: 'Sağlayıcılar',
+    lyricsProvidersHint:
+      'Her parça, biri sözleri bulana kadar etkin sağlayıcıları bu sırayla dener. Bir sağlayıcıda bulunmayan kayıt bir ay hatırlanır, böylece her indirmede yeniden sorulmaz.',
+    lyricsLrclibHint: 'Topluluk veritabanı — düz ve zamanlı sözler',
+    lyricsNetease: 'NetEase Cloud Music',
+    lyricsNeteaseHint: 'Geniş katalog, genellikle zamanlı',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'İndirilen çalma listelerini Navidrome’a yansıt. Müzik klasörü Downtify indirmelerini içermeli.',

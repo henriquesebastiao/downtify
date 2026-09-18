@@ -66,7 +66,7 @@ Version bump: `make version 2.7.1` — runs `version.sh`, rebuilds the frontend,
 - **Spotify embed schema**: playlist tracks expose `subtitle` (joined artist string), **not** an `artists` list, and have **no per-track cover** — fall back to the playlist cover. See `downtify/spotify.py`.
 - **Playlist size cap**: the embed endpoint caps at ~50–100 tracks. Full playlists require the anonymous token + `api.spotify.com` pagination path already implemented in `spotify.py`. Don't replace it with the embed-only path.
 - **yt-dlp anti-bot**: defaults use `player_client=tv,mweb` plus cookies / IPv4 env knobs. If YouTube returns "Sign in to confirm" errors, tune these in `downloader.py` rather than switching extractors.
-- **Lyrics**: only `lrclib` is wired end-to-end. `genius` / `musixmatch` / `azlyrics` exist as UI stubs — do not claim they work in docs.
+- **Lyrics**: `lrclib` and `netease` are wired end-to-end and tried in the user's order (`lyrics_providers`), with per-song misses cached in `downtify/lyrics_cache.py`. `genius` / `musixmatch` / `azlyrics` are accepted in saved settings but never fetch anything (AZLyrics forbids third-party use, Musixmatch needs credentials, Genius' robots.txt disallows its search endpoint) — do not claim they work in docs.
 - **Tag embedding**: cover art and lyrics must round-trip across MP3 (ID3 APIC/USLT), FLAC (Picture/Vorbis), M4A (`covr`/`©lyr`), Opus/Vorbis. The cover-extraction code in `main.py:_extract_cover` is the canonical reader — mirror its container handling when adding new formats.
 
 ## Testing

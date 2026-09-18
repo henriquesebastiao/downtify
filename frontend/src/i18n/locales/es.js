@@ -567,8 +567,12 @@ export default {
     lyrics: 'Descargar letras',
     lyricsHint:
       'Incrusta la letra en cada archivo y guarda las sincronizadas como .lrc al lado.',
-    lyricsProvider: 'Proveedor',
-    lyricsProviderHint: 'LRCLIB es el único proveedor disponible.',
+    lyricsProviders: 'Proveedores',
+    lyricsProvidersHint:
+      'Cada canción prueba los proveedores activados en este orden hasta que uno tenga la letra. Lo que un proveedor no tenía se recuerda durante un mes, para no volver a consultarlo en cada descarga.',
+    lyricsLrclibHint: 'Base comunitaria — letras simples y sincronizadas',
+    lyricsNetease: 'NetEase Cloud Music',
+    lyricsNeteaseHint: 'Catálogo amplio, normalmente sincronizado',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Replica las playlists descargadas en Navidrome. Su carpeta de música debe incluir las descargas de Downtify.',

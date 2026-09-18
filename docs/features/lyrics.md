@@ -4,20 +4,38 @@ icon: lucide/mic-vocal
 
 # Lyrics
 
-Downtify can download lyrics and embed them directly into audio files at download time.
+Downtify looks lyrics up while a track downloads and embeds them in the file, plus a `.lrc` sidecar when they're time-synced.
 
 ## Enabling lyrics
 
-Lyrics are **enabled by default**. You can toggle them in **Settings → Lyrics → Download lyrics**.
+Lyrics are **enabled by default**. Turn them off in **Settings → Tags & lyrics → Download lyrics**.
 
-## Provider
+## Providers and fallback order
 
-The only active provider is **[lrclib](https://lrclib.net)** — a free, open, community-maintained lyrics database. No API key is required.
+Catalogues differ: a song one provider has never heard of is often on another. Downtify therefore keeps an ordered list of providers and tries them one at a time, stopping at the first that has something.
 
-lrclib is queried with the track title, primary artist, album name and duration. It returns:
+| Provider | Lyrics | Notes |
+|----------|--------|-------|
+| **[LRCLIB](https://lrclib.net)** | Plain and time-synced | Free community database, no key. Matched on title, primary artist, album and duration. |
+| **NetEase Cloud Music** | Usually time-synced | Large catalogue, strong on Asian releases and often on Western ones too. Matched on title, artist and duration; a hit whose artist is spelled differently (traditional vs simplified Chinese, for example) is accepted only when the title and the length both line up. |
 
-- **Plain lyrics** — static text, embedded as standard lyrics tags
-- **Synced lyrics** — time-coded LRC format, embedded as a separate tag and also saved as a `.lrc` sidecar file alongside the audio
+In **Settings → Tags & lyrics → Providers** you can drag the providers into the order you prefer, or use the arrows, and switch any of them off. At least one stays on; to stop looking lyrics up entirely, use the **Download lyrics** switch.
+
+::: info What about Genius, Musixmatch and AZLyrics?
+They aren't available, and Downtify no longer offers them:
+
+- **AZLyrics** forbids third-party use of its lyrics in the page itself.
+- **Musixmatch**'s desktop API answers with an empty token unless you have credentials it doesn't hand out to applications.
+- **Genius**' `robots.txt` disallows the search endpoint needed to find a song's page.
+
+Saved settings that still name them keep working: the names are ignored, and a list left with nothing else falls back to the default providers.
+:::
+
+## Skipping providers that had nothing
+
+After a lookup, Downtify records for each song which providers answered and which came back empty, in `downtify_library.db` under `/data`.
+
+A provider that had nothing for a song isn't asked about it again for **30 days**, so re-downloads and large library passes don't repeat the same failed lookups. After that it's tried again, since catalogues grow. A provider that *did* have lyrics is never skipped, so a re-downloaded file gets them back.
 
 ## Embedding
 
@@ -30,14 +48,10 @@ lrclib is queried with the track title, primary artist, album name and duration.
 
 ## Sidecar .lrc file
 
-When synced lyrics are available, Downtify also saves a `.lrc` file next to the audio file with the same base name. This lets media players that support external lyrics files (like Jellyfin or certain portable players) show the time-synced lyrics independently of the embedded tags.
+When synced lyrics are available, Downtify also saves a `.lrc` file next to the audio file with the same base name. This lets media players that support external lyrics files (like Jellyfin or certain portable players) show the time-synced lyrics independently of the embedded tags. The [built-in player](player.md#now-playing) reads it too.
 
 Deleting the track from the Library page removes this `.lrc` sidecar along with the audio file, so lyrics never linger as an orphaned file.
 
-## Fallback behaviour
+## When nothing is found
 
-If lrclib returns no result for a track, the download continues normally — the audio file is saved without lyrics. No error is raised.
-
-## Legacy providers
-
-The settings UI may show `genius`, `musixmatch` and `azlyrics` as options inherited from an earlier version of Downtify. These are **no-ops** — selecting them has no effect. Only `lrclib` fetches real lyrics.
+If no provider has the song, the download continues normally — the audio file is saved without lyrics, and no error is raised.

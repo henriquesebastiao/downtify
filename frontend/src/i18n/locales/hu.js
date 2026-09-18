@@ -566,8 +566,12 @@ export default {
     lyrics: 'Dalszövegek letöltése',
     lyricsHint:
       'Beágyazza a dalszöveget minden fájlba, az időzítetteket .lrc-ként menti mellé.',
-    lyricsProvider: 'Szolgáltató',
-    lyricsProviderHint: 'Az LRCLIB az egyetlen elérhető szolgáltató.',
+    lyricsProviders: 'Szolgáltatók',
+    lyricsProvidersHint:
+      'Minden szám ebben a sorrendben próbálja az engedélyezett szolgáltatókat, amíg valamelyiknél nincs dalszöveg. Amit egy szolgáltató nem talált, azt egy hónapig megjegyzi, így nem kérdezi meg minden letöltésnél.',
+    lyricsLrclibHint: 'Közösségi adatbázis — sima és időzített dalszöveg',
+    lyricsNetease: 'NetEase Cloud Music',
+    lyricsNeteaseHint: 'Nagy katalógus, általában időzített',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Tükrözi a letöltött listákat a Navidrome-ba. A zenemappájának tartalmaznia kell a Downtify letöltéseit.',

@@ -47,6 +47,7 @@ from downtify.library_cleanup import remove_track_leftovers
 from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.library_paths import SLSKD_LIBRARY_PREFIX
 from downtify.lyrics import read_track_lyrics
+from downtify.lyrics_cache import LyricsLookupCache
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 from downtify.navidrome_index import NavidromeIndex
 from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
@@ -230,6 +231,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_catalog = PlaylistCatalog(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
+    api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
     ctx = api.library_context()
     try:
@@ -361,6 +363,7 @@ def build_app() -> FastAPI:
             '.{output-ext}', ''
         ),
         lyrics_providers=api._effective_lyrics_providers(api.state.settings),
+        lyrics_cache=api.state.lyrics_cache,
         organize_by_artist=bool(
             api.state.settings.get('organize_by_artist', False)
         ),

@@ -577,8 +577,12 @@ export default {
     lyrics: 'Télécharger les paroles',
     lyricsHint:
       'Intègre les paroles dans chaque fichier et enregistre les versions synchronisées en .lrc à côté.',
-    lyricsProvider: 'Fournisseur',
-    lyricsProviderHint: 'LRCLIB est le seul fournisseur disponible.',
+    lyricsProviders: 'Fournisseurs',
+    lyricsProvidersHint:
+      'Chaque titre essaie les fournisseurs activés dans cet ordre jusqu’à ce que l’un ait des paroles. Ce qu’un fournisseur n’avait pas est retenu un mois, pour ne pas l’interroger à chaque téléchargement.',
+    lyricsLrclibHint: 'Base communautaire — paroles simples et synchronisées',
+    lyricsNetease: 'NetEase Cloud Music',
+    lyricsNeteaseHint: 'Vaste catalogue, généralement synchronisé',
     navidromeTitle: 'Navidrome',
     navidromeHint:
       'Reproduit les playlists téléchargées dans Navidrome. Son dossier musical doit inclure les téléchargements de Downtify.',
