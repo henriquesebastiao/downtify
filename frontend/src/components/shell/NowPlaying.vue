@@ -366,13 +366,16 @@ import UpNextPanel from '../player/UpNextPanel.vue'
 import TrackDetails from '../player/TrackDetails.vue'
 import EqualizerPanel from '../player/EqualizerPanel.vue'
 import { usePlayer } from '/src/model/player'
+import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useNowPlaying } from '/src/model/ui'
 import { formatBytes, formatDuration, hueFor } from '/src/lib/format'
+import { availablePanels, defaultPanel, requestedPanel } from '/src/lib/panels'
 import { useCoverPalette } from '/src/model/coverPalette'
 import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
 
 const player = usePlayer()
+const { showLyrics } = usePlayerPrefs()
 const nowPlaying = useNowPlaying()
 const route = useRoute()
 const router = useRouter()
@@ -390,20 +393,32 @@ const tint = computed(
     `oklch(0.3 0.06 ${hueFor(track.value?.album || track.value?.title)})`
 )
 
-const panels = computed(() => [
-  { id: 'lyrics', icon: 'lyrics', label: t('player.lyrics') },
-  { id: 'queue', icon: 'queue', label: t('player.upNext') },
-  { id: 'details', icon: 'info', label: t('player.details') },
-  { id: 'equalizer', icon: 'equalizer', label: t('player.equalizer') },
-])
+const PANEL_TABS = {
+  lyrics: { icon: 'lyrics', label: 'player.lyrics' },
+  queue: { icon: 'queue', label: 'player.upNext' },
+  details: { icon: 'info', label: 'player.details' },
+  equalizer: { icon: 'equalizer', label: 'player.equalizer' },
+}
+
+const panels = computed(() =>
+  availablePanels({ lyrics: showLyrics.value }).map((id) => ({
+    id,
+    icon: PANEL_TABS[id].icon,
+    label: t(PANEL_TABS[id].label),
+  }))
+)
 
 // ?panel= picks the side panel; phones show it instead of the artwork.
-const panel = computed(() => {
-  const requested = String(route.query.panel || '')
-  if (panels.value.some((tab) => tab.id === requested)) return requested
-  return 'lyrics'
-})
-const mobilePanel = computed(() => isMobile.value && !!route.query.panel)
+const requested = computed(() =>
+  requestedPanel(
+    route.query.panel,
+    panels.value.map((tab) => tab.id)
+  )
+)
+const panel = computed(
+  () => requested.value || defaultPanel({ lyrics: showLyrics.value })
+)
+const mobilePanel = computed(() => isMobile.value && !!requested.value)
 
 function setPanel(id) {
   router.replace({ query: { ...route.query, panel: id } })

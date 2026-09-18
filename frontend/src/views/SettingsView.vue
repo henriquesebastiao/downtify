@@ -85,6 +85,19 @@
                 />
               </SettingRow>
             </SettingGroup>
+            <SettingGroup :title="t('settings.playerGroup')">
+              <!-- Per device and applied at once, like the theme: it isn't
+                   part of what "Save" sends to the server. -->
+              <SettingRow
+                :label="t('settings.showLyrics')"
+                :description="t('settings.showLyricsHint')"
+              >
+                <UiSwitch
+                  v-model="showLyrics"
+                  :aria-label="t('settings.showLyrics')"
+                />
+              </SettingRow>
+            </SettingGroup>
             <SettingGroup :title="t('settings.searchGroup')">
               <SettingRow
                 :label="t('settings.searchAlbums')"
@@ -653,6 +666,7 @@ import {
   useSettingsManager,
 } from '/src/model/settings'
 import { usePlayer } from '/src/model/player'
+import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useTheme } from '/src/model/theme'
 import { useUi } from '/src/model/ui'
 import { useUpdateCheck } from '/src/model/updateCheck'
@@ -662,6 +676,7 @@ const { t, locale, setLocale, locales } = useI18n()
 const route = useRoute()
 const sm = useSettingsManager()
 const theme = useTheme()
+const { showLyrics } = usePlayerPrefs()
 const ui = useUi()
 const player = usePlayer()
 const update = useUpdateCheck().status

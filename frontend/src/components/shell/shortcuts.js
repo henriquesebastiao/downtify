@@ -10,7 +10,7 @@ export const SHORTCUTS = [
   { keys: ['M'], label: 'shortcuts.mute' },
   { keys: ['S'], label: 'shortcuts.shuffle' },
   { keys: ['R'], label: 'shortcuts.repeat' },
-  { keys: ['L'], label: 'shortcuts.lyrics' },
+  { keys: ['L'], label: 'shortcuts.lyrics', needs: 'lyrics' },
   { keys: ['Q'], label: 'shortcuts.queue' },
   { keys: ['E'], label: 'shortcuts.equalizer' },
   { keys: ['Ctrl', 'K'], label: 'shortcuts.search' },
@@ -19,6 +19,11 @@ export const SHORTCUTS = [
   { keys: ['Esc'], label: 'shortcuts.close' },
   { keys: ['?'], label: 'shortcuts.help' },
 ]
+
+/** The shortcuts worth listing: none for a panel that's turned off. */
+export function visibleShortcuts({ lyrics = true } = {}) {
+  return SHORTCUTS.filter((item) => item.needs !== 'lyrics' || lyrics)
+}
 
 function isTyping(event) {
   const el = event.target
@@ -42,6 +47,7 @@ export function createShortcutHandler({
   goTo,
   closeModal = () => false,
   hasModal = () => false,
+  lyricsEnabled = () => true,
 }) {
   let pendingG = 0
 
@@ -117,7 +123,9 @@ export function createShortcutHandler({
         player.cycleRepeat()
         break
       case 'l':
-        if (player.currentTrack.value) nowPlaying.open('lyrics')
+        if (lyricsEnabled() && player.currentTrack.value) {
+          nowPlaying.open('lyrics')
+        }
         break
       case 'q':
         if (player.currentTrack.value) nowPlaying.open('queue')

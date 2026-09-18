@@ -8,7 +8,7 @@ Downtify ships with a web player so you can listen to your downloaded music with
 
 ## Player bar
 
-While a track is loaded, a player bar floats at the bottom of every page: cover art, title and artist, shuffle, previous, play/pause, next, repeat, elapsed/total time, and shortcuts to the lyrics and up-next panels. On wide screens it also has a volume slider and a seek bar along its top edge; on phones it shrinks to the essentials and shows a thin progress line.
+While a track is loaded, a player bar floats at the bottom of every page: cover art, title and artist, shuffle, previous, play/pause, next, repeat, elapsed/total time, and shortcuts to the lyrics and up-next panels (the lyrics one can be [hidden](#hiding-the-lyrics)). On wide screens it also has a volume slider and a seek bar along its top edge; on phones it shrinks to the essentials and shows a thin progress line.
 
 Click the title or cover, or the expand button, to open **Now playing**.
 
@@ -25,12 +25,28 @@ A full-screen view tinted with colours picked from the current album cover:
 
 Four panels sit next to the cover on wide screens, or replace it on phones:
 
-- **Lyrics** — time-synced lyrics highlight the current line and scroll with the song; click a line to jump there. Plain lyrics are shown as-is. Lyrics come from the `.lrc` file next to the track, or those embedded in its tags — see [Lyrics](lyrics.md).
+- **Lyrics** — time-synced lyrics highlight the current line and scroll with the song; click a line to jump there. Plain lyrics are shown as-is. Lyrics come from the `.lrc` file next to the track, or those embedded in its tags — see [Lyrics](lyrics.md). You can hide this panel — see [Hiding the lyrics](#hiding-the-lyrics).
 - **Up next** — the play queue. Drag tracks to reorder them, remove single tracks, or clear everything after the current one.
 - **Details** — title, artist, album, track number, year, length, format, size, date added and file path.
 - **Equalizer** — shape the sound with ten frequency bands; see [Equalizer](#equalizer).
 
 Now playing is part of the page address (`?np=1`, plus `&panel=lyrics|queue|details|equalizer`), so the browser's Back button closes it and a reload keeps it open.
+
+## Hiding the lyrics
+
+Prefer the artwork and the queue without the words? Turn off **Settings → General → Player → Show lyrics in the player**. It applies at once, and takes away everything that leads to lyrics in the player:
+
+- the **Lyrics** panel and its tab (on phones, its button in the Now playing footer);
+- the lyrics button on the player bar;
+- the `L` shortcut, which is also dropped from the shortcut list (`?`).
+
+Now playing then opens on **Up next** instead. A link to `&panel=lyrics` from before you turned it off lands there too, rather than on an empty tab. The player doesn't ask for a track's lyrics at all while they're hidden.
+
+::: info Hiding is not deleting
+This only changes what the player shows. Your files keep the lyrics Downtify embedded in them, and the `.lrc` files next to them stay in place, so media servers and other players still see them. Downloads keep fetching lyrics too — that's the separate **Download lyrics** setting under **Tags & lyrics** (see [Lyrics](lyrics.md)).
+:::
+
+Like the theme and the equalizer, the choice is saved in the browser (`localStorage`), so it is per device and per browser, not per Downtify server — you can hide the lyrics on a phone and keep them on a desktop.
 
 ## Equalizer
 
@@ -81,7 +97,7 @@ The queue, the current track, its position, shuffle and repeat are remembered, s
 | `M` | Mute |
 | `S` | Shuffle |
 | `R` | Repeat |
-| `L` | Open lyrics |
+| `L` | Open lyrics (unless [hidden](#hiding-the-lyrics)) |
 | `Q` | Open up next |
 | `E` | Open the equalizer |
 | `Ctrl` / `⌘` + `K` or `/` | Search |

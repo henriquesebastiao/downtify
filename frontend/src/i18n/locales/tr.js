@@ -566,6 +566,10 @@ export default {
     themeSystem: 'Sistem',
     language: 'Dil',
     languageHint: 'Tüm arayüzde kullanılır.',
+    playerGroup: 'Oynatıcı',
+    showLyrics: 'Oynatıcıda şarkı sözlerini göster',
+    showLyricsHint:
+      'Şarkı sözü panelini, düğmesini ve kısayolunu gizlemek için kapatın. Dosyalarınız sözlerini korur ve indirmeler onları getirmeye devam eder. Bu cihazda saklanır.',
     searchGroup: 'Arama',
     searchAlbums: 'Arama sonuçlarında albümleri göster',
     searchAlbumsHint:

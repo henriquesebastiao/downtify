@@ -37,11 +37,13 @@ import ShortcutsDialog from './ShortcutsDialog.vue'
 import UiToasts from '../ui/UiToasts.vue'
 import UiDialog from '../ui/UiDialog.vue'
 import { usePlayer } from '/src/model/player'
+import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useLibrary } from '/src/model/library'
 import { useNowPlaying, useUi } from '/src/model/ui'
 import { useShortcuts } from './shortcuts'
 
 const player = usePlayer()
+const { showLyrics } = usePlayerPrefs()
 const route = useRoute()
 const router = useRouter()
 const ui = useUi()
@@ -59,6 +61,8 @@ useLibrary().load()
 useShortcuts({
   player,
   nowPlaying,
+  // "L" opens the lyrics panel, which isn't there when they're hidden.
+  lyricsEnabled: () => showLyrics.value,
   focusSearch: ui.focusSearch,
   openHelp: () => (shortcutsOpen.value = true),
   goTo: (name) => router.push({ name }),

@@ -566,6 +566,10 @@ export default {
     themeSystem: 'Sistema',
     language: 'Idioma',
     languageHint: 'Se usa en toda la interfaz.',
+    playerGroup: 'Reproductor',
+    showLyrics: 'Mostrar letras en el reproductor',
+    showLyricsHint:
+      'Desactívalo para ocultar el panel de letras, su botón y su atajo. Tus archivos conservan las letras y las descargas siguen buscándolas. Se guarda en este dispositivo.',
     searchGroup: 'Búsqueda',
     searchAlbums: 'Mostrar álbumes en los resultados',
     searchAlbumsHint:

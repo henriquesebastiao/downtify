@@ -119,6 +119,7 @@
           >
         </span>
         <UiIconButton
+          v-if="showLyrics"
           icon="lyrics"
           :label="t('player.lyrics')"
           size="sm"
@@ -155,11 +156,13 @@ import SliderBar from '../player/SliderBar.vue'
 import { useSmoothTime } from '../player/useSmoothTime'
 import VolumeControl from '../player/VolumeControl.vue'
 import { usePlayer } from '/src/model/player'
+import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useNowPlaying } from '/src/model/ui'
 import { formatDuration, widestClock } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
 const player = usePlayer()
+const { showLyrics } = usePlayerPrefs()
 const nowPlaying = useNowPlaying()
 const { t } = useI18n()
 const scrub = ref(null)

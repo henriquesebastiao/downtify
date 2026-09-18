@@ -48,7 +48,7 @@ A provider that had nothing for a song isn't asked about it again for **30 days*
 
 ## Sidecar .lrc file
 
-When synced lyrics are available, Downtify also saves a `.lrc` file next to the audio file with the same base name. This lets media players that support external lyrics files (like Jellyfin or certain portable players) show the time-synced lyrics independently of the embedded tags. The [built-in player](player.md#now-playing) reads it too.
+When synced lyrics are available, Downtify also saves a `.lrc` file next to the audio file with the same base name. This lets media players that support external lyrics files (like Jellyfin or certain portable players) show the time-synced lyrics independently of the embedded tags. The [built-in player](player.md#now-playing) reads it too — unless you [hide the lyrics](player.md#hiding-the-lyrics) there, which only changes what the player shows and leaves the files and this sidecar alone.
 
 Deleting the track from the Library page removes this `.lrc` sidecar along with the audio file, so lyrics never linger as an orphaned file.
 

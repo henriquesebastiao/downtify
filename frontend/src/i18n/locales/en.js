@@ -552,6 +552,10 @@ export default {
     themeSystem: 'System',
     language: 'Language',
     languageHint: 'Used for the whole interface.',
+    playerGroup: 'Player',
+    showLyrics: 'Show lyrics in the player',
+    showLyricsHint:
+      'Turn off to hide the lyrics panel, its button and its shortcut. Your files keep their lyrics, and downloads still fetch them. Saved on this device.',
     searchGroup: 'Search',
     searchAlbums: 'Show albums in search results',
     searchAlbumsHint:

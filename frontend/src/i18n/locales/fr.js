@@ -576,6 +576,10 @@ export default {
     themeSystem: 'Système',
     language: 'Langue',
     languageHint: 'Utilisée dans toute l’interface.',
+    playerGroup: 'Lecteur',
+    showLyrics: 'Afficher les paroles dans le lecteur',
+    showLyricsHint:
+      'Désactivez pour masquer le panneau des paroles, son bouton et son raccourci. Vos fichiers conservent leurs paroles et les téléchargements continuent de les chercher. Enregistré sur cet appareil.',
     searchGroup: 'Recherche',
     searchAlbums: 'Afficher les albums dans les résultats',
     searchAlbumsHint:

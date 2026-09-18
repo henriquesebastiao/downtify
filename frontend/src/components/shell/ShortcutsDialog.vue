@@ -24,7 +24,7 @@
           </div>
           <ul class="grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
             <li
-              v-for="item in SHORTCUTS"
+              v-for="item in shortcuts"
               :key="item.label"
               class="flex items-center justify-between gap-4 text-sm"
             >
@@ -46,15 +46,18 @@
 </template>
 
 <script setup>
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import UiIconButton from '../ui/UiIconButton.vue'
-import { SHORTCUTS } from './shortcuts'
+import { visibleShortcuts } from './shortcuts'
+import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({ open: { type: Boolean, default: false } })
 defineEmits(['update:open'])
 const { t } = useI18n()
+const { showLyrics } = usePlayerPrefs()
 const closeButton = ref(null)
+const shortcuts = computed(() => visibleShortcuts({ lyrics: showLyrics.value }))
 
 watch(
   () => props.open,

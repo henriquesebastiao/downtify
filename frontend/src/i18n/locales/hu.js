@@ -566,6 +566,10 @@ export default {
     themeSystem: 'Rendszer',
     language: 'Nyelv',
     languageHint: 'A teljes felületen használatos.',
+    playerGroup: 'Lejátszó',
+    showLyrics: 'Dalszövegek megjelenítése a lejátszóban',
+    showLyricsHint:
+      'Kikapcsolva elrejti a dalszöveg panelt, a gombját és a billentyűparancsát. A fájlok megtartják a dalszövegeket, a letöltések pedig továbbra is lekérik őket. Ezen az eszközön tárolódik.',
     searchGroup: 'Keresés',
     searchAlbums: 'Albumok a találatok között',
     searchAlbumsHint:
