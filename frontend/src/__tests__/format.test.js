@@ -7,7 +7,32 @@ import {
   initials,
   splitLength,
   timeAgo,
+  widestClock,
 } from '../lib/format.js'
+
+describe('widestClock', () => {
+  it('is the total on both sides, every digit a zero', () => {
+    // A 3:30 track: the real text ("0:25 / 3:30") can never be wider.
+    expect(widestClock(210)).toBe('0:00 / 0:00')
+  })
+
+  it('keeps the shape of a long track, so the hour is reserved too', () => {
+    expect(widestClock(5400)).toBe('0:00:00 / 0:00:00')
+    expect(widestClock(754)).toBe('00:00 / 00:00')
+  })
+
+  it('has the same length as the real clock at its longest', () => {
+    for (const seconds of [59, 210, 754, 3599, 3725, 5400]) {
+      const total = formatDuration(seconds)
+      expect(widestClock(seconds)).toHaveLength(`${total} / ${total}`.length)
+    }
+  })
+
+  it('falls back to a short clock while the duration is unknown', () => {
+    expect(widestClock(0)).toBe('0:00 / 0:00')
+    expect(widestClock(NaN)).toBe('0:00 / 0:00')
+  })
+})
 
 describe('formatDuration', () => {
   it('formats minutes and seconds', () => {

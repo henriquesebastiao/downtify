@@ -104,9 +104,19 @@
       </div>
 
       <div class="hidden items-center justify-end gap-1 md:flex md:w-[300px]">
-        <span class="tabular mr-2 hidden text-xs text-muted lg:inline">
-          {{ formatDuration(player.currentTime.value) }} /
-          {{ formatDuration(player.duration.value) }}
+        <!-- Never wraps, and keeps one width for the whole track: the
+             invisible copy is the widest the text will get, so the
+             controls beside it don't shift as it ticks past 10:00. -->
+        <span
+          class="tabular mr-2 hidden shrink-0 text-xs whitespace-nowrap text-muted lg:inline-grid"
+        >
+          <span class="invisible col-start-1 row-start-1" aria-hidden="true">{{
+            clockSizer
+          }}</span>
+          <span class="col-start-1 row-start-1 text-right"
+            >{{ formatDuration(player.currentTime.value) }} /
+            {{ formatDuration(player.duration.value) }}</span
+          >
         </span>
         <UiIconButton
           icon="lyrics"
@@ -120,7 +130,9 @@
           size="sm"
           @click="nowPlaying.open('queue')"
         />
-        <VolumeControl class="hidden lg:flex" width="w-20" />
+        <!-- The slider is what gives when the row is tight, so the time
+             next to it never has to. -->
+        <VolumeControl class="hidden min-w-0 lg:flex" width="w-20 min-w-8" />
         <UiIconButton
           icon="expand"
           :label="t('player.openNowPlaying')"
@@ -144,7 +156,7 @@ import { useSmoothTime } from '../player/useSmoothTime'
 import VolumeControl from '../player/VolumeControl.vue'
 import { usePlayer } from '/src/model/player'
 import { useNowPlaying } from '/src/model/ui'
-import { formatDuration } from '/src/lib/format'
+import { formatDuration, widestClock } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
 const player = usePlayer()
@@ -167,6 +179,8 @@ const smoothPercent = computed(() =>
     ? Math.min(100, (smoothTime.value / player.duration.value) * 100)
     : player.progressPct.value
 )
+
+const clockSizer = computed(() => widestClock(player.duration.value))
 
 const repeatLabel = computed(
   () =>

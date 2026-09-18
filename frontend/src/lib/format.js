@@ -19,6 +19,20 @@ export function splitLength(seconds) {
   return { hours: Math.floor(minutes / 60), minutes: minutes % 60 }
 }
 
+/**
+ * The widest an "elapsed / total" clock can get for a track of `seconds`:
+ * the total on both sides (the elapsed time never has more digits than
+ * it), with every digit a "0". Rendered invisibly, it reserves the
+ * clock's room so it never wraps and the controls beside it never shift
+ * as it ticks. Digits are the widest at "0" in the UI font, and its
+ * `tabular-nums` doesn't equalise them — its "1" is under half as wide —
+ * so this is a real upper bound rather than a guess.
+ */
+export function widestClock(seconds) {
+  const widest = formatDuration(seconds).replace(/\d/g, '0')
+  return `${widest} / ${widest}`
+}
+
 const UNITS = ['B', 'KB', 'MB', 'GB', 'TB']
 
 /** `1536` -> `1.5 KB`, `62_400_000_000` -> `58.1 GB` (binary units). */
