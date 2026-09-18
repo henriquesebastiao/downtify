@@ -11,6 +11,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | Feature | What it does |
 |---------|-------------|
 | [Download Settings](download-settings.md) | Choose format (MP3/FLAC/M4A/OGG/OPUS), bitrate, parallel downloads and delay between downloads |
+| [Top Songs from an Artist](top-songs.md) | Paste an artist link and download their N most popular songs as a playlist |
 | [Playlist Monitor](playlist-monitor.md) | Watch Spotify or YouTube Music playlists and artists, and auto-download new tracks and releases |
 | [Library Import (CSV)](library-import.md) | Import a library export from Soundiiz, TuneMyMusic or Exportify and queue the whole thing |
 | [Built-in Player](player.md) | Play your downloaded music in the browser with shuffle, repeat and album art |
@@ -35,6 +36,7 @@ Downtify accepts several input types in the search bar:
 | Spotify playlist URL | `https://open.spotify.com/playlist/…` |
 | YouTube / YouTube Music URL | `https://www.youtube.com/watch?v=…` |
 | YouTube Music playlist URL | `https://music.youtube.com/playlist?list=…` |
+| Spotify or YouTube Music artist URL | `https://open.spotify.com/artist/…`, `https://music.youtube.com/@handle` — see [Top Songs from an Artist](top-songs.md) |
 | Free-text search | `The Night Owls Do I Still Recall` |
 
 Free-text searches are sent directly to YouTube Music — no Spotify link required.

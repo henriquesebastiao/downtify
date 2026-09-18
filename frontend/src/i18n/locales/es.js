@@ -55,6 +55,9 @@ export default {
     epBadge: 'EP',
     downloadAlbum: 'Descargar álbum',
     songsTitle: 'Canciones',
+    topSongsOf: 'Top Songs of {artist}',
+    downloadTopSongs: 'Descargar',
+    createPlaylist: 'Crear lista',
   },
   queue: {
     title: 'Cola de descargas',

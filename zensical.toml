@@ -28,6 +28,7 @@ nav = [
   { "Features" = [
     { "Overview"             = "features/index.md"                  },
     { "Download Settings"    = "features/download-settings.md"      },
+    { "Top Songs from an Artist" = "features/top-songs.md"          },
     { "Playlist Monitor"     = "features/playlist-monitor.md"       },
     { "Library Import (CSV)" = "features/library-import.md"         },
     { "Built-in Player"      = "features/player.md"                 },

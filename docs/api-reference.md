@@ -71,6 +71,32 @@ Resolve a Spotify or YouTube Music URL to metadata.
 
 ---
 
+### `GET /api/artists/top_songs/url`
+
+Resolve a Spotify or YouTube Music **artist** URL to its name, cover art and top songs — powers the [Top Songs from an Artist](features/top-songs.md) card. Unlike `GET /api/song/url`'s artist branch (YouTube Music only, discography), this works for **both** Spotify and YouTube Music artist links and returns songs, not releases.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | yes | A Spotify artist URL (`open.spotify.com/artist/…`), or a YouTube Music artist URL (`…/channel/UC…` or `…/@handle`) |
+| `limit` | integer | no | How many top songs to return, 1–10. Default: `5`. For YouTube Music, a `limit` beyond the ~5-song shelf preview triggers one extra request for the shelf's full auto-generated playlist. |
+
+**Response:**
+
+```json
+{
+  "source": "spotify",
+  "artist_id": "0p4nmQO2msCgU4IF37Wi3j",
+  "name": "Avril Lavigne",
+  "cover_url": "https://i.scdn.co/image/…",
+  "songs": [ /* array of song objects, length <= limit */ ],
+  "available": 10
+}
+```
+
+`available` is the total number of songs actually resolved (which may exceed `songs.length` when `limit` was smaller) — the frontend uses it to decide whether raising the spinner past what's already loaded needs another request. `404` for a YouTube Music `@handle` that doesn't resolve to an artist channel; `502` if the source can't be reached at all.
+
+---
+
 ## Downloads
 
 ### `POST /api/download/url`
@@ -106,6 +132,8 @@ Download multiple tracks concurrently, gated by the [`max_parallel_downloads` se
 |-------|------|-------------|
 | `songs` | array | Song objects to download |
 | `playlist_url` | string | Optional. A Spotify or YouTube Music playlist URL, used to determine the playlist subfolder and M3U name. A Spotify playlist is also tracked as a [playlist download](#playlist-downloads). |
+| `playlist_name` | string | Optional, used only when `playlist_url` is omitted — names the M3U/subfolder for a batch that isn't backed by a real playlist (e.g. an artist's [top songs](features/top-songs.md) selection). |
+| `cover_url` | string | Optional, used only when `playlist_url` is omitted — an image saved beside the M3U as its cover, gated by the same **Download playlist cover art** setting as [Playlist Cover Art](features/playlist-cover-art.md). |
 | `generate_m3u` | boolean | Whether to write an M3U after the batch finishes. Default: `true`. |
 
 **Response:**

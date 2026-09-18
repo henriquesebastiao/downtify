@@ -54,6 +54,9 @@ export default {
     epBadge: 'EP',
     downloadAlbum: 'Λήψη άλμπουμ',
     songsTitle: 'Τραγούδια',
+    topSongsOf: 'Top Songs of {artist}',
+    downloadTopSongs: 'Λήψη',
+    createPlaylist: 'Δημιουργία λίστας',
   },
   queue: {
     title: 'Ουρά λήψεων',

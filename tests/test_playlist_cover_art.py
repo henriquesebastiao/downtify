@@ -392,6 +392,79 @@ def test_process_batch_skips_playlist_cover_without_a_playlist_url(
     assert not (tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg').exists()
 
 
+# ── api._process_batch explicit cover_url (no real playlist, e.g. an
+# artist's top-songs selection) ─────────────────────────────────────────────
+
+
+def test_process_batch_saves_explicit_cover_url_when_enabled(
+    monkeypatch, tmp_path
+):
+    songs = [{'song_id': 'a', 'name': 'Song A', 'artists': ['Artist A']}]
+    dl = _make_downloader(tmp_path)
+    monkeypatch.setattr(api.state, 'downloader', dl)
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    monkeypatch.setattr(api.state, 'download_semaphore', None)
+    monkeypatch.setattr(
+        api.state, 'settings', {'download_cover_art_playlists': True}
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
+    )
+
+    async def fake_run_download(song, song_id, subdir=None, **_kwargs):
+        return _write_track_file(dl, song, subdir)
+
+    monkeypatch.setattr(api, '_run_download', fake_run_download)
+
+    asyncio.run(
+        api._process_batch(
+            songs,
+            ['job-a'],
+            playlist_url='',
+            generate_m3u=True,
+            playlist_name=PLAYLIST_NAME,
+            cover_url='https://img/artist-cover',
+        )
+    )
+
+    cover_path = tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg'
+    assert cover_path.read_bytes() == b'IMG-BYTES'
+
+
+def test_process_batch_skips_explicit_cover_url_when_disabled(
+    monkeypatch, tmp_path
+):
+    songs = [{'song_id': 'a', 'name': 'Song A', 'artists': ['Artist A']}]
+    dl = _make_downloader(tmp_path)
+    monkeypatch.setattr(api.state, 'downloader', dl)
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    monkeypatch.setattr(api.state, 'download_semaphore', None)
+    monkeypatch.setattr(api.state, 'settings', {})
+
+    def _boom(*_a, **_kw):
+        raise AssertionError('should not fetch a cover when off')
+
+    monkeypatch.setattr(downloader_mod, '_download_cover', _boom)
+
+    async def fake_run_download(song, song_id, subdir=None, **_kwargs):
+        return _write_track_file(dl, song, subdir)
+
+    monkeypatch.setattr(api, '_run_download', fake_run_download)
+
+    asyncio.run(
+        api._process_batch(
+            songs,
+            ['job-a'],
+            playlist_url='',
+            generate_m3u=True,
+            playlist_name=PLAYLIST_NAME,
+            cover_url='https://img/artist-cover',
+        )
+    )
+
+    assert not (tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg').exists()
+
+
 # ── api.write_playlist_m3u_endpoint integration ─────────────────────────────
 
 
