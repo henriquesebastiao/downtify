@@ -63,9 +63,18 @@
 
         <!-- Info -->
         <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 mb-0.5">
+          <div class="flex flex-wrap items-center gap-2 mb-0.5">
             <span class="font-semibold truncate">
               {{ t('search.topSongsOf', { artist: props.artist.name }) }}
+            </span>
+            <span
+              v-if="artistSourceBadge"
+              class="shrink-0 gap-1"
+              :class="artistSourceBadge.badge"
+              :title="artistSourceBadge.label"
+            >
+              <Icon :icon="artistSourceBadge.icon" class="h-3 w-3" />
+              {{ artistSourceBadge.label }}
             </span>
           </div>
           <p class="text-xs text-base-content/70 truncate">
@@ -338,6 +347,25 @@ function downloadArtistTopSongs() {
   artistQueued.value = true
   emit('download-artist-top-songs', topSongsCount.value)
 }
+
+// Which platform the top-songs shelf was resolved from, styled like the
+// source badges on the Downloads and Playlist Monitor pages.
+const ARTIST_SOURCES = {
+  spotify: {
+    label: t('monitor.sourceSpotify'),
+    badge: 'badge-spotify',
+    icon: 'fa6-brands:spotify',
+  },
+  youtube: {
+    label: t('monitor.sourceYouTubeMusic'),
+    badge: 'badge-youtube-music',
+    icon: 'fa6-brands:youtube',
+  },
+}
+
+const artistSourceBadge = computed(
+  () => ARTIST_SOURCES[props.artist?.source] || null
+)
 // Albums don't have a single stable id in the shared progress tracker
 // until their tracks are resolved, so "queued" is tracked locally here —
 // same "click, get a checkmark, stay put" confirmation songs already get.
