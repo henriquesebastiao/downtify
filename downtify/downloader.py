@@ -1199,6 +1199,9 @@ def save_playlist_cover(cover_url: str, m3u_path: Path) -> Optional[Path]:
         return None
     cover_path = m3u_path.with_suffix('.jpg')
     try:
+        # The cover can land before the first track, so the playlist's
+        # folder may not exist yet.
+        cover_path.parent.mkdir(parents=True, exist_ok=True)
         cover_path.write_bytes(data)
     except OSError:
         logger.opt(exception=True).warning(

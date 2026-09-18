@@ -392,11 +392,18 @@ List downloaded playlists, derived from the `.m3u` files already on disk (see [M
 
 ```json
 [
-  { "name": "My Playlist", "files": ["My Playlist/Artist - Song.mp3"], "count": 1 }
+  {
+    "name": "My Playlist",
+    "files": ["My Playlist/Artist - Song.mp3"],
+    "count": 1,
+    "cover": "My Playlist/My Playlist.jpg"
+  }
 ]
 ```
 
 Sorted by name. A single track or an album downloaded without an M3U doesn't appear here.
+
+`cover` is the library path of the playlist's own artwork when one was saved beside its M3U (see [Playlist cover art](features/playlist-cover-art.md)), and `""` otherwise. Fetch it from [`GET /playlist-cover`](#get-playlist-cover).
 
 ---
 
@@ -495,6 +502,18 @@ Return the embedded cover art for a file.
 | `file` | string | yes | Relative path to the file |
 
 **Response:** Image bytes (`image/jpeg` or `image/png`). Returns `404` if no embedded cover is found.
+
+---
+
+### `GET /playlist-cover`
+
+Return a playlist's own cover art — the sidecar image saved next to its M3U, not a cover read out of a track's tags. See [Playlist cover art](features/playlist-cover-art.md).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | The `cover` path from [`GET /playlists`](#get-playlists) |
+
+**Response:** Image bytes. Returns `404` when the path isn't an image inside the library, which also refuses an audio file or a path pointing outside it.
 
 ---
 

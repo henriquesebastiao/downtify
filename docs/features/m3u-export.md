@@ -25,7 +25,7 @@ M3U generation is controlled by **Settings → Downloads & files → Write M3U p
 
 ## Cover art
 
-Right below that setting, **Save playlist cover art** (off by default) writes the playlist's own cover image next to its M3U, under the same name. See [Playlist cover art](playlist-cover-art.md) for where the file lands, which sources it comes from, and how Navidrome picks it up on its own.
+Right below that setting, **Save playlist cover art** (off by default) writes the playlist's own cover image next to its M3U, under the same name — before the tracks, so the folder looks like the playlist from the start. Downtify then shows that artwork for the playlist instead of a grid of its track covers. See [Playlist cover art](playlist-cover-art.md).
 
 ## When it is written
 

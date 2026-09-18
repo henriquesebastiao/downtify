@@ -42,10 +42,11 @@ from downtify.library_catalog import (
     list_library_entries,
     list_library_paths,
     resolve_library_file,
+    resolve_library_image,
 )
 from downtify.library_cleanup import remove_track_leftovers
 from downtify.library_metadata_cache import LibraryMetadataCache
-from downtify.library_paths import SLSKD_LIBRARY_PREFIX
+from downtify.library_paths import SLSKD_LIBRARY_PREFIX, library_stored_path
 from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
 from downtify.lyrics import read_track_lyrics
@@ -453,10 +454,18 @@ def build_app() -> FastAPI:
             tracks = m3u.read_m3u_tracks(m3u_path, base, slskd_dir)
             if not tracks:
                 continue
+            # The sidecar artwork save_playlist_cover writes beside the
+            # M3U, when the playlist has one of its own.
+            cover = m3u_path.with_suffix('.jpg')
             playlists.append({
                 'name': m3u_path.stem,
                 'files': tracks,
                 'count': len(tracks),
+                'cover': (
+                    library_stored_path(cover, base, slskd_dir)
+                    if cover.is_file()
+                    else ''
+                ),
             })
         playlists.sort(key=lambda p: p['name'].casefold())
         return playlists
@@ -649,6 +658,28 @@ def build_app() -> FastAPI:
             media_type=mime or 'image/jpeg',
             headers={
                 # Cache by mtime — clients fetch once per file revision.
+                'Cache-Control': 'public, max-age=86400',
+                'ETag': f'"{int(full.stat().st_mtime)}"',
+            },
+        )
+
+    @app.get('/playlist-cover')
+    def get_playlist_cover(file: str) -> FileResponse:
+        """Serve a playlist's own cover art.
+
+        Unlike ``/cover``, which reads a cover out of an audio file's
+        tags, this serves the sidecar image saved next to a playlist's
+        M3U — the path ``GET /playlists`` reports as ``cover``. Resolved
+        and confined to the library folders, which prevents path
+        traversal.
+        """
+        full = resolve_library_image(file, api.library_context())
+        if full is None:
+            raise HTTPException(status_code=404, detail='File not found')
+        return FileResponse(
+            full,
+            media_type=mimetypes.guess_type(str(full))[0] or 'image/jpeg',
+            headers={
                 'Cache-Control': 'public, max-age=86400',
                 'ETag': f'"{int(full.stat().st_mtime)}"',
             },

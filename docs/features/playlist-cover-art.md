@@ -39,10 +39,16 @@ Both services serve JPEG for these URLs even when the original artwork was a PNG
 
 ## When it downloads
 
-- **A manual playlist download** — once, right after the playlist finishes (Spotify and YouTube Music links alike).
-- **[Playlist Monitor](playlist-monitor.md)** — after the initial backfill when a watch is added, and again on any later sweep that downloaded at least one new track. A sweep that finds nothing new doesn't re-fetch it.
+**Before the tracks**, in both cases — the folder already looks like the playlist while it fills up, and a media server that scans mid-download finds the artwork rather than a bare folder:
 
-Failing to resolve or download the cover (a network error, a playlist with no artwork) is logged and skipped — it never fails the playlist download itself, which has already succeeded by then.
+- **A manual playlist download** — once, as soon as the playlist name is resolved, before the first track starts.
+- **[Playlist Monitor](playlist-monitor.md)** — once per sweep that has something to download, before that sweep's first track. A sweep that finds nothing new doesn't re-fetch it.
+
+Failing to resolve or download the cover (a network error, a playlist with no artwork) is logged and skipped — it never holds up or fails the download itself.
+
+## In the Downtify interface
+
+A playlist that has its own artwork shows it everywhere the Library lists playlists — the grid, the playlist page, the sidebar and the player. Playlists without one keep the grid of four covers taken from the tracks they contain.
 
 ## Navidrome
 

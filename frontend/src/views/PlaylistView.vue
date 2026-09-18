@@ -10,7 +10,7 @@
         :title="playlist.name"
         :kicker="t('playlists.kicker')"
         :covers="playlist.covers"
-        :cover="playlist.covers[0] || ''"
+        :cover="playlist.cover || playlist.covers[0] || ''"
         :name="playlist.name"
         icon="playlist"
       >

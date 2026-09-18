@@ -20,7 +20,7 @@ export function usePlaylistActions() {
     return {
       type: 'playlist',
       title: playlist.name,
-      cover: playlist.covers[0] || '',
+      cover: playlist.cover || playlist.covers[0] || '',
       route: { name: 'Playlist', query: { name: playlist.name } },
     }
   }

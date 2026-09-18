@@ -1496,6 +1496,35 @@ async def _write_batch_m3u(
     return m3u_path
 
 
+async def _fetch_playlist_cover(
+    target: Optional[tuple[str, str]],
+    playlist_name: Optional[str],
+    playlist_subdir: Optional[str],
+) -> None:
+    """Save the playlist's own cover art beside where its M3U will go.
+
+    Resolving the M3U path without writing it (see ``m3u.m3u_path_for``)
+    means the cover can land before the first track does. No-ops when
+    the setting is off, or when the download didn't come from a
+    playlist link.
+    """
+
+    if target is None or not playlist_name or state.downloader is None:
+        return
+    # With organize-by-artist/album on, tracks are spread across those
+    # folders and the M3U goes to the legacy Playlists/ directory — the
+    # cover follows it, so both stay together.
+    subdir = None if _organize_enabled() else playlist_subdir
+    m3u_path = m3u.m3u_path_for(
+        Path(state.downloader.download_dir),
+        playlist_name,
+        playlist_subdir=subdir,
+    )
+    await asyncio.to_thread(
+        download_playlist_cover, *target, m3u_path, state.settings
+    )
+
+
 async def _process_batch(
     songs: list[dict[str, Any]],
     job_ids: list[str],
@@ -1555,6 +1584,11 @@ async def _process_batch(
     )
 
     wants_m3u = bool(generate_m3u and playlist_subdir and playlist_name)
+    if wants_m3u:
+        # Before the first track, so the folder already looks like the
+        # playlist while it fills up (and a media server scanning
+        # mid-download finds the artwork).
+        await _fetch_playlist_cover(target, playlist_name, playlist_subdir)
     # Filename per song index, filled in as downloads land. The M3U is
     # rewritten from this after every completed download, so the playlist
     # grows as it downloads instead of appearing all at once at the end,
@@ -1595,16 +1629,7 @@ async def _process_batch(
     )
 
     if wants_m3u:
-        m3u_path = await _write_batch_m3u(
-            songs, resolved, playlist_name, playlist_subdir
-        )
-        if m3u_path is not None and target is not None:
-            await asyncio.to_thread(
-                download_playlist_cover,
-                *target,
-                m3u_path,
-                state.settings,
-            )
+        await _write_batch_m3u(songs, resolved, playlist_name, playlist_subdir)
 
     await _finish_playlist_batch(
         songs,

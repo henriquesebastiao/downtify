@@ -28,6 +28,15 @@ export function coverURL(fileName) {
   return `/cover?file=${encodeURIComponent(fileName)}`
 }
 
+/**
+ * A playlist's own cover image — the sidecar saved next to its M3U,
+ * not a cover read out of a track's tags, so it has its own endpoint.
+ */
+export function playlistCoverURL(fileName) {
+  if (!fileName) return ''
+  return `/playlist-cover?file=${encodeURIComponent(fileName)}`
+}
+
 /** Last path segment, decoded — what the browser save dialog shows. */
 export function saveName(fileNameOrURL) {
   const parts = String(fileNameOrURL || '')

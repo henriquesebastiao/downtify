@@ -264,6 +264,7 @@
           :to="{ name: 'Playlist', query: { name: playlist.name } }"
           :title="playlist.name"
           :subtitle="t('common.tracks', { count: playlist.tracks.length })"
+          :cover="playlist.cover"
           :covers="playlist.covers"
           :name="playlist.name"
           icon="playlist"

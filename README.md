@@ -226,7 +226,7 @@ Downtify writes a standard `EXTM3U` file alongside your audio whenever a playlis
 
 The behaviour is governed by a single toggle in **Settings → Downloads & files → Write M3U playlists** (on by default). Flip it off if you'd rather not produce M3Us at all; the rest of the download flow is unchanged.
 
-Right below it, **Save playlist cover art** (off by default) writes the playlist's own cover image next to its M3U, under the same name (`<playlist-name>.jpg`) — for Spotify and YouTube Music playlists alike, at the largest size the source offers. If you mirror playlists into Navidrome, it picks that file up on its own as the playlist's artwork, with nothing extra to configure. See **[Playlist cover art](https://henriquesebastiao.github.io/downtify/features/playlist-cover-art/)**.
+Right below it, **Save playlist cover art** (off by default) writes the playlist's own cover image next to its M3U, under the same name (`<playlist-name>.jpg`) — for Spotify and YouTube Music playlists alike, at the largest size the source offers. It's fetched **before the tracks**, so the folder looks like the playlist while it fills up, and Downtify shows that artwork for the playlist instead of a grid of its track covers. If you mirror playlists into Navidrome, it picks the file up on its own, with nothing extra to configure. See **[Playlist cover art](https://henriquesebastiao.github.io/downtify/features/playlist-cover-art/)**.
 
 Tracks that failed to download or had no YouTube Music match are skipped (and logged). The M3U is regenerated fresh on every run, so re-pasting the same playlist URL — or letting the Monitor add new tracks over time — always produces a complete, in-order file.
 

@@ -154,7 +154,7 @@ The playlist's M3U is rewritten **after every track finishes**, so it grows as t
 
 Manual playlist/album downloads and CSV imports behave the same way. See [M3U Export](m3u-export.md#when-it-is-written) for details.
 
-With [Save playlist cover art](playlist-cover-art.md) on, the cover is fetched once at that final rewrite — after the initial backfill when a watch is added, and again on any later sweep that downloaded at least one new track. A sweep that finds nothing new doesn't re-fetch it.
+With [Save playlist cover art](playlist-cover-art.md) on, the cover is fetched once per sweep that has tracks to download — before the first of them, so the folder looks like the playlist while it fills up. A sweep that finds nothing new doesn't re-fetch it.
 
 ## Storage
 

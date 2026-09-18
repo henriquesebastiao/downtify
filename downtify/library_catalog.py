@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from .library_cache_keys import file_content_key
 from .library_metadata import library_entry_for_file
@@ -63,14 +63,27 @@ def library_context_from_state(
 UPGRADE_STAGING_MARKER = '.downtify-upgrade'
 
 
+#: Sidecar artwork Downtify writes (playlist covers) or that already
+#: sits beside downloaded tracks.
+IMAGE_EXTENSIONS = frozenset({'.jpg', '.jpeg', '.png', '.webp'})
+
+
 def _is_audio(path: Path) -> bool:
     if UPGRADE_STAGING_MARKER in path.name:
         return False
     return path.is_file() and path.suffix.lower() in AUDIO_EXTENSIONS
 
 
-def resolve_library_file(stored: str, ctx: LibraryContext) -> Optional[Path]:
-    """Resolve a library-relative path if it points to an allowed audio file."""
+def _is_image(path: Path) -> bool:
+    return path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+
+
+def _resolve_within_library(
+    stored: str,
+    ctx: LibraryContext,
+    accept: Callable[[Path], bool],
+) -> Optional[Path]:
+    """A library-relative path, confined to the library's own folders."""
 
     text = str(stored or '').strip().replace('\\', '/')
     if not text or text.startswith('/'):
@@ -79,7 +92,7 @@ def resolve_library_file(stored: str, ctx: LibraryContext) -> Optional[Path]:
         return None
 
     candidate = locate_library_file(text, ctx.download_dir, ctx.slskd_dir)
-    if candidate is None or not _is_audio(candidate):
+    if candidate is None or not accept(candidate):
         return None
 
     allowed_roots = [ctx.download_dir.resolve()]
@@ -95,6 +108,23 @@ def resolve_library_file(stored: str, ctx: LibraryContext) -> Optional[Path]:
         except ValueError:
             continue
     return None
+
+
+def resolve_library_file(stored: str, ctx: LibraryContext) -> Optional[Path]:
+    """Resolve a library-relative path if it points to an allowed audio file."""
+
+    return _resolve_within_library(stored, ctx, _is_audio)
+
+
+def resolve_library_image(stored: str, ctx: LibraryContext) -> Optional[Path]:
+    """Resolve a library-relative path to a cover image sitting in the library.
+
+    Same path-traversal confinement as :func:`resolve_library_file`, for
+    the sidecar artwork saved next to a playlist's M3U (see
+    ``downtify.downloader.save_playlist_cover``).
+    """
+
+    return _resolve_within_library(stored, ctx, _is_image)
 
 
 def _register_path(

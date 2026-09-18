@@ -131,6 +131,32 @@ describe('buildPlaylists', () => {
     expect(playlist.covers).toHaveLength(1)
     expect(tracked).toMatchObject({ name: 'Not downloaded yet', tracks: [] })
   })
+
+  it("points at the playlist's own artwork when it was downloaded", () => {
+    const [playlist] = buildPlaylists(
+      [
+        {
+          name: 'Late Night Drive',
+          files: ['Ana Luz - Blue Hour.mp3'],
+          cover: 'Late Night Drive/Late Night Drive.jpg',
+        },
+      ],
+      byFile
+    )
+    expect(playlist.cover).toBe(
+      '/playlist-cover?file=Late%20Night%20Drive%2FLate%20Night%20Drive.jpg'
+    )
+  })
+
+  it('has no cover of its own when none was downloaded', () => {
+    const [playlist] = buildPlaylists(
+      [{ name: 'Late Night Drive', files: ['Ana Luz - Blue Hour.mp3'] }],
+      byFile
+    )
+    // Falls back to the track covers, which the UI grids into a mosaic.
+    expect(playlist.cover).toBe('')
+    expect(playlist.covers).toHaveLength(1)
+  })
 })
 
 describe('sortItems and filterItems', () => {

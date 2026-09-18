@@ -536,14 +536,33 @@ def test_save_playlist_cover_noop_when_fetch_fails(tmp_path, monkeypatch):
     assert not (tmp_path / 'My Playlist.jpg').exists()
 
 
+def test_save_playlist_cover_creates_the_playlist_folder(
+    tmp_path, monkeypatch
+):
+    # The cover is saved before the first track, so the playlist's own
+    # folder usually doesn't exist yet.
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
+    )
+    m3u_path = tmp_path / 'My Playlist' / 'My Playlist.m3u'
+
+    result = save_playlist_cover('https://img/cover', m3u_path)
+
+    assert result == tmp_path / 'My Playlist' / 'My Playlist.jpg'
+    assert result.read_bytes() == b'IMG-BYTES'
+
+
 def test_save_playlist_cover_returns_none_on_write_failure(
     tmp_path, monkeypatch
 ):
     monkeypatch.setattr(
         downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
     )
-    # The parent directory doesn't exist, so write_bytes raises OSError.
-    m3u_path = tmp_path / 'missing-dir' / 'My Playlist.m3u'
+    # A file where the playlist folder should be: the write can't work.
+    blocked = tmp_path / 'blocked'
+    blocked.write_text('not a directory', encoding='utf-8')
+    m3u_path = blocked / 'My Playlist.m3u'
+
     assert save_playlist_cover('https://img/cover', m3u_path) is None
 
 

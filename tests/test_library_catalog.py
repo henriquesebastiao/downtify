@@ -9,6 +9,7 @@ from downtify.library_catalog import (
     list_library_entries,
     list_library_paths,
     resolve_library_file,
+    resolve_library_image,
 )
 from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.library_paths import library_stored_path
@@ -69,6 +70,37 @@ def test_list_library_entries_reads_embedded_tags(tmp_path):
     assert entries[0]['title'] == 'Real Title'
     assert entries[0]['artist'] == 'Real Artist'
     assert entries[0]['file'].startswith('slskd/')
+
+
+def test_resolve_library_image_finds_a_playlist_cover(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    cover = download_dir / 'My Playlist' / 'My Playlist.jpg'
+    cover.parent.mkdir(parents=True)
+    cover.write_bytes(b'\xff\xd8\xff')
+
+    ctx = LibraryContext(download_dir=download_dir)
+    stored = library_stored_path(cover, download_dir, None)
+
+    assert stored == 'My Playlist/My Playlist.jpg'
+    assert resolve_library_image(stored, ctx) == cover.resolve()
+
+
+def test_resolve_library_image_rejects_audio_and_escapes(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    (download_dir / 'Track.mp3').write_bytes(b'x')
+    outside = tmp_path / 'secret.jpg'
+    outside.write_bytes(b'\xff\xd8\xff')
+
+    ctx = LibraryContext(download_dir=download_dir)
+
+    # Only images, and only inside the library.
+    assert resolve_library_image('Track.mp3', ctx) is None
+    assert resolve_library_image('../secret.jpg', ctx) is None
+    assert resolve_library_image('/etc/hosts', ctx) is None
+    assert resolve_library_image('', ctx) is None
+    # And the audio resolver still refuses an image.
+    assert resolve_library_file('My Playlist/My Playlist.jpg', ctx) is None
 
 
 def test_resolve_library_file_legacy_dotdot_slskd_path(tmp_path):

@@ -2,7 +2,7 @@
 // and artists. Pure functions — the reactive store lives in
 // model/library.js.
 
-import { coverURL, fileURL } from './paths'
+import { coverURL, fileURL, playlistCoverURL } from './paths'
 import { fileFormat } from './format'
 
 const collator = new Intl.Collator(undefined, {
@@ -186,6 +186,9 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       key: playlist.name.toLowerCase(),
       name: playlist.name,
       tracks,
+      // The playlist's own artwork, when it was downloaded; the grid of
+      // track covers is only the fallback for playlists without one.
+      cover: playlistCoverURL(playlist.cover),
       covers,
       duration: tracks.reduce((sum, track) => sum + track.duration, 0),
       added: tracks.reduce((max, track) => Math.max(max, track.added), 0),
@@ -200,6 +203,7 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       key: String(batch.playlist_name || '').toLowerCase(),
       name: String(batch.playlist_name || ''),
       tracks: [],
+      cover: '',
       covers: [],
       duration: 0,
       added: 0,

@@ -79,7 +79,9 @@ watch(
   }
 )
 
-const mosaic = computed(() => props.covers.filter(Boolean))
+// A real cover always wins: a playlist with its own artwork shows it
+// instead of a grid of the tracks it happens to contain.
+const mosaic = computed(() => (props.src ? [] : props.covers.filter(Boolean)))
 const imageSrc = computed(() => props.src || mosaic.value[0] || '')
 const letters = computed(() => initials(props.name))
 const showFallback = computed(

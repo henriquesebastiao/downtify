@@ -428,6 +428,7 @@ function tileProps(item) {
     to: { name: 'Playlist', query: { name: item.name } },
     title: item.name,
     subtitle: playlistSubtitle(item),
+    cover: item.cover,
     covers: item.covers,
     name: item.name,
     icon: 'playlist',

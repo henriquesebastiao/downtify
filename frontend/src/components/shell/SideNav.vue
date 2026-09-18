@@ -68,7 +68,7 @@
         class="flex h-11 items-center gap-2.5 rounded-control px-3 transition-colors hover:bg-surface-2/60"
       >
         <CoverArt
-          :src="playlist.covers[0] || ''"
+          :src="playlist.cover || playlist.covers[0] || ''"
           :covers="playlist.covers"
           :name="playlist.name"
           rounded="rounded-[7px]"

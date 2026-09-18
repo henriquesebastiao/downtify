@@ -655,6 +655,12 @@ async def check_playlist(
             len(new_tracks),
             playlist.name,
         )
+        if settings is None or settings.get('generate_m3u', True):
+            # Once per sweep, and before the tracks — a sweep that finds
+            # nothing new never re-fetches it.
+            await asyncio.to_thread(
+                _download_cover_for_watch, playlist, downloader, settings or {}
+            )
 
     delay_seconds = (settings or {}).get('download_delay_seconds', 0) or 0
     track_positions = {id(t): i for i, t in enumerate(tracks)}
@@ -721,12 +727,12 @@ async def check_playlist(
         )
         if settings is None or settings.get('generate_m3u', True):
             await asyncio.to_thread(
-                _regenerate_final_m3u_and_cover,
+                _regenerate_m3u,
                 playlist,
                 tracks,
                 downloader,
+                None,
                 known_tracks,
-                settings or {},
             )
         await asyncio.to_thread(
             _sync_library_playlist,
@@ -1134,27 +1140,29 @@ def _regenerate_m3u(
     return path
 
 
-def _regenerate_final_m3u_and_cover(
+def _download_cover_for_watch(
     playlist: MonitoredPlaylist,
-    tracks: list[dict[str, Any]],
     downloader: Downloader,
-    known_tracks: dict[str, Optional[str]],
     settings: dict[str, Any],
-) -> None:
-    """Authoritative end-of-sweep M3U rewrite, plus its cover art.
+) -> Optional[Path]:
+    """Save a watched playlist's cover where its M3U lives.
 
-    Cover art is only fetched here — once per sweep — rather than from
-    every incremental rewrite in :func:`check_playlist`'s download loop,
-    so a long sweep doesn't refetch the same playlist cover once per
-    track.
+    Called once per sweep that has tracks to fetch, before the first of
+    them — the path is resolved from the playlist's name rather than
+    read back from a written M3U, so the artwork is in place while the
+    folder fills up.
     """
-    m3u_path = _regenerate_m3u(
-        playlist, tracks, downloader, None, known_tracks
+
+    organize = downloader.organize_by_artist or downloader.organize_by_album
+    pl_subdir = m3u.sanitize_playlist_name(playlist.name)
+    m3u_path = m3u.m3u_path_for(
+        downloader.download_dir,
+        playlist.name,
+        playlist_subdir=None if organize else pl_subdir,
     )
-    if m3u_path is not None:
-        download_playlist_cover(
-            playlist.source, playlist.spotify_id, m3u_path, settings
-        )
+    return download_playlist_cover(
+        playlist.source, playlist.spotify_id, m3u_path, settings
+    )
 
 
 # Ids of watches with a check running right now. Adding a watch starts its

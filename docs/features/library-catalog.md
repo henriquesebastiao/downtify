@@ -67,6 +67,7 @@ Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle**
 | `GET` | `/list?refresh=true` | Library paths, bypassing the path scan cache |
 | `GET` | `/tracks` | Library tracks with tags and, when known, the `playlists` they belong to |
 | `GET` | `/media/{path}` | Serve a library file, including `slskd/…` paths |
+| `GET` | `/playlist-cover?file=…` | Serve a playlist's own [cover art](playlist-cover-art.md), reported as `cover` by `/playlists` |
 | `POST` | `/api/library/archive` | Prepare a ZIP of selected tracks (returns a single-use ticket) |
 | `GET` | `/api/library/archive/{token}` | Stream that ZIP to the browser |
 | `DELETE` | `/api/library/playlist?playlist_name=…` | Delete a playlist's tracks, M3U and catalog entry |
