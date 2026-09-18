@@ -47,9 +47,15 @@ export default {
     empty: 'Hiçbir şarkı bulunamadı.',
     emptyHint:
       'Başka şekilde aratmayı dene — sanatçı + şarkı adı genellikle en iyi sonucu verir.',
-    openOnSpotify: 'Spotify üzerinde aç',
+    openSource: 'Kaynakta aç',
     inQueue: 'Kuyrukta',
     download: 'İndir',
+    albumsTitle: 'Albümler',
+    albumBadge: 'Albüm',
+    singleBadge: 'Single',
+    epBadge: 'EP',
+    downloadAlbum: 'Albümü indir',
+    songsTitle: 'Şarkılar',
   },
   queue: {
     title: 'İndirme Kuyruğu',
@@ -226,6 +232,10 @@ export default {
     outputTemplateReset: 'Varsayılana dön',
     outputTemplateHint:
       'Alt klasörler oluşturmak için "/" kullanılabilir. Değişkenler: {artists}, {artist}, {title}, {album}, {tracknumber}, {output-ext}',
+    searchSection: 'Arama',
+    searchAlbums: 'Arama sonuçlarında albümleri göster',
+    searchAlbumsHint:
+      'Arama yaptığınızda eşleşen albümleri de bulur, tamamını indirme seçeneğiyle birlikte.',
     playlistsSection: 'Çalma Listeleri',
     generateM3u: 'Çalma listeleri için M3U dosyaları oluştur',
     generateM3uHint:
