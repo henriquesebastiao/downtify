@@ -56,6 +56,8 @@ export default {
     epBadge: 'EP',
     downloadAlbum: 'Albümü indir',
     songsTitle: 'Şarkılar',
+    topSongsOf: 'Top Songs of {artist}',
+    downloadTopSongs: 'İndir',
   },
   queue: {
     title: 'İndirme Kuyruğu',

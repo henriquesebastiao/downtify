@@ -54,6 +54,8 @@ export default {
     epBadge: 'EP',
     downloadAlbum: 'Album letöltése',
     songsTitle: 'Zenék',
+    topSongsOf: 'Top Songs of {artist}',
+    downloadTopSongs: 'Letöltés',
   },
   queue: {
     title: 'Letöltési sor',

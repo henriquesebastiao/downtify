@@ -55,6 +55,10 @@ function open(songURL) {
   return API.get('/api/song/url', { params: { url: songURL } })
 }
 
+function getArtistTopSongsFromUrl(url, limit) {
+  return API.get('/api/artists/top_songs/url', { params: { url, limit } })
+}
+
 function download(songURL) {
   const url = typeof songURL === 'string' ? songURL : songURL.url
   const hints = typeof songURL === 'string' ? undefined : songURL
@@ -242,6 +246,7 @@ export default {
   search,
   searchAlbums,
   open,
+  getArtistTopSongsFromUrl,
   download,
   downloadBatch,
   downloadCsv,

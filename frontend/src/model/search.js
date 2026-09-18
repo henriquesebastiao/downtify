@@ -2,7 +2,11 @@ import { ref } from 'vue'
 
 import API from '/src/model/api'
 import { useSettingsManager } from '/src/model/settings'
-import { isYouTubePlaylistURL, normalizeSpotifyURL } from '/src/model/url'
+import {
+  isArtistURL,
+  isYouTubePlaylistURL,
+  normalizeSpotifyURL,
+} from '/src/model/url'
 
 const searchTerm = ref('')
 const results = ref()
@@ -36,7 +40,7 @@ function useSearchManager() {
       str.includes('://open.spotify.com/album/') ||
       str.includes('://open.spotify.com/playlist/') ||
       str.includes('://open.spotify.com/show/') ||
-      str.includes('://open.spotify.com/artist/') ||
+      isArtistURL(str) ||
       isYouTubeURL(str)
     ) {
       return false
@@ -107,6 +111,7 @@ function useSearchManager() {
     isValid,
     isValidSearch,
     isValidURL,
+    isArtistURL,
   }
 }
 

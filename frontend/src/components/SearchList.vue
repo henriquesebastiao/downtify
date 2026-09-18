@@ -38,6 +38,69 @@
       </span>
     </div>
 
+    <!-- Artist top songs -->
+    <div v-if="artistLoading" class="mb-8">
+      <div class="skeleton h-24 rounded-2xl" />
+    </div>
+    <div v-else-if="props.artist" class="mb-8">
+      <div class="surface rounded-2xl track-card">
+        <!-- Cover -->
+        <div class="track-cover">
+          <img
+            v-if="props.artist.cover_url"
+            :src="props.artist.cover_url"
+            :alt="props.artist.name"
+            class="h-full w-full object-cover"
+            loading="lazy"
+          />
+          <div
+            v-else
+            class="h-full w-full flex items-center justify-center text-base-content/30"
+          >
+            <Icon icon="fa6-solid:user" class="h-6 w-6" />
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-0.5">
+            <span class="font-semibold truncate">
+              {{ t('search.topSongsOf', { artist: props.artist.name }) }}
+            </span>
+          </div>
+          <p class="text-xs text-base-content/70 truncate">
+            {{ props.artist.name }}
+          </p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2 shrink-0">
+          <NumberSpinner
+            v-model="topSongsCount"
+            :min="1"
+            :max="10"
+            :disabled="artistQueued"
+          />
+          <button
+            v-if="artistQueued"
+            class="icon-btn text-primary cursor-default"
+            :title="t('search.inQueue')"
+            disabled
+          >
+            <Icon icon="fa6-solid:circle-check" class="h-5 w-5" />
+          </button>
+          <button
+            v-else
+            class="icon-btn text-primary hover:bg-primary/10"
+            @click="downloadArtistTopSongs"
+            :title="t('search.downloadTopSongs')"
+          >
+            <Icon icon="fa6-solid:download" class="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Albums -->
     <div v-if="sm.albumResults.value.length > 0" class="mb-8">
       <h2
@@ -244,14 +307,15 @@ import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
 import Pagination from './Pagination.vue'
+import NumberSpinner from './NumberSpinner.vue'
 import { useSearchManager } from '../model/search'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
 
 const PAGE_SIZE = 5
 
-const props = defineProps(['data', 'error'])
-const emit = defineEmits(['download'])
+const props = defineProps(['data', 'error', 'artist', 'artistLoading'])
+const emit = defineEmits(['download', 'download-artist-top-songs'])
 
 const sm = useSearchManager()
 const pt = useProgressTracker()
@@ -259,6 +323,21 @@ const dm = useDownloadManager()
 const { t } = useI18n()
 
 const currentPage = ref(1)
+const topSongsCount = ref(5)
+const artistQueued = ref(false)
+
+watch(
+  () => props.artist,
+  () => {
+    topSongsCount.value = 5
+    artistQueued.value = false
+  }
+)
+
+function downloadArtistTopSongs() {
+  artistQueued.value = true
+  emit('download-artist-top-songs', topSongsCount.value)
+}
 // Albums don't have a single stable id in the shared progress tracker
 // until their tracks are resolved, so "queued" is tracked locally here —
 // same "click, get a checkmark, stay put" confirmation songs already get.

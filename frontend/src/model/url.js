@@ -25,3 +25,23 @@ export function isYouTubePlaylistURL(str) {
   if (id.startsWith('OLAK5uy_')) return false
   return !(id.startsWith('RD') && !id.startsWith('RDCLAK5uy_'))
 }
+
+// A Spotify artist link, e.g. https://open.spotify.com/artist/0p4nmQO2msCgU4IF37Wi3j
+export function isSpotifyArtistURL(str) {
+  return normalizeSpotifyURL(str || '').includes('://open.spotify.com/artist/')
+}
+
+// A YouTube Music artist link — either a channel id
+// (music.youtube.com/channel/UC...) or an @handle
+// (music.youtube.com/@AvrilLavigne) — mirrors the backend's
+// providers.parse_youtube_url artist-kind regexes.
+export function isYouTubeArtistURL(str) {
+  const url = str || ''
+  if (!/(?:youtube\.com|music\.youtube\.com)\//.test(url)) return false
+  if (/\/channel\/UC[\w-]+/.test(url)) return true
+  return /\.com\/@[^/?#&]+/.test(url)
+}
+
+export function isArtistURL(str) {
+  return isSpotifyArtistURL(str) || isYouTubeArtistURL(str)
+}

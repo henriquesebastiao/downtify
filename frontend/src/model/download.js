@@ -324,6 +324,39 @@ export function useDownloadManager() {
       })
   }
 
+  // Queues the first `count` tracks of an artist's top-songs preview
+  // (the `/api/artists/top_songs/url` response shape) as a batch — same
+  // shape as fromURL's array branch, but there's no real Spotify/YouTube
+  // Music playlist url behind it, so the playlist name and cover are
+  // passed explicitly instead.
+  function downloadArtistTopSongs(artist, count) {
+    if (!artist || !Array.isArray(artist.songs)) {
+      return Promise.resolve()
+    }
+    const generateM3u = settingsManager.settings.value.generate_m3u !== false
+    const songs = artist.songs.slice(0, count).map((song, i) => ({
+      ...song,
+      downtify_track_order: i,
+    }))
+    if (!songs.length) return Promise.resolve()
+    for (const song of songs) {
+      _queueSongForBatch(song)
+    }
+    touchQueue()
+    ensureQueuePoll()
+    return API.downloadBatch({
+      songs,
+      playlist_name: `Top Songs of ${artist.name}`,
+      cover_url: artist.cover_url || '',
+      generate_m3u: generateM3u,
+    })
+      .then(() => syncQueueFromServer())
+      .then(() => ensureQueuePoll())
+      .catch((err) => {
+        console.log('Artist top-songs batch submit failed:', err.message)
+      })
+  }
+
   function _readFileAsText(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -457,6 +490,7 @@ export function useDownloadManager() {
   return {
     fromURL,
     fromCsvFile,
+    downloadArtistTopSongs,
     download,
     queue,
     retry,

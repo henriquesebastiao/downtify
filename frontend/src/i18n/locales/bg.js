@@ -53,6 +53,8 @@ export default {
     epBadge: 'EP',
     downloadAlbum: 'Изтегли албум',
     songsTitle: 'Песни',
+    topSongsOf: 'Top Songs of {artist}',
+    downloadTopSongs: 'Теглене',
   },
   queue: {
     title: 'Опашка на теглене',

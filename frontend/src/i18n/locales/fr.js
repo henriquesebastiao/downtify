@@ -56,6 +56,8 @@ export default {
     epBadge: 'EP',
     downloadAlbum: "Télécharger l'album",
     songsTitle: 'Titres',
+    topSongsOf: 'Top Songs of {artist}',
+    downloadTopSongs: 'Télécharger',
   },
   queue: {
     title: "File d'attente des téléchargements",

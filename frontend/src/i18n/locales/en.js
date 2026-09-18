@@ -53,6 +53,8 @@ export default {
     epBadge: 'EP',
     downloadAlbum: 'Download album',
     songsTitle: 'Songs',
+    topSongsOf: 'Top Songs of {artist}',
+    downloadTopSongs: 'Download',
   },
   queue: {
     title: 'Download Queue',
