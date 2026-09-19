@@ -31,8 +31,6 @@
   <img src="assets/readme-hero.png" alt="Downtify 3.0: paste a Spotify link, get the music. The home screen, the full-screen player and the mobile app." width="100%">
 </p>
 
----
-
 ## Overview
 
 Downtify is a self-hosted web app that turns Spotify and YouTube Music links into a tagged audio library. It never touches the Spotify API, and it needs no account and no Premium subscription. It also plays that library back, so what you download is one tab away from listening.
@@ -48,8 +46,6 @@ Spotify embed page  →  YouTube Music search  →  yt-dlp + ffmpeg + mutagen
 
 All of it runs inside a single Docker container. See **[How it works](https://henriquesebastiao.github.io/downtify/how-it-works/)** for the full pipeline.
 
----
-
 ## Features
 
 | | |
@@ -63,8 +59,6 @@ All of it runs inside a single Docker container. See **[How it works](https://he
 | **Playlist files** | Standard M3U files that Jellyfin, Navidrome and Plex pick up, plus each playlist's own cover art, saved before its tracks. A flat folder layout or one folder per artist. See [M3U export](https://henriquesebastiao.github.io/downtify/features/m3u-export/), [Playlist cover art](https://henriquesebastiao.github.io/downtify/features/playlist-cover-art/) and [File organization](https://henriquesebastiao.github.io/downtify/features/file-organization/). |
 | **Integrations** | Optionally download from Soulseek through your own slskd server and mirror playlists into Navidrome, each with a **Test connection** button in Settings. See [slskd & Navidrome](https://henriquesebastiao.github.io/downtify/features/slskd-navidrome/). |
 | **Interface** | Light and dark themes, one layout from phone to widescreen, an installable app ([PWA](https://henriquesebastiao.github.io/downtify/features/pwa/)), live download progress, update notices and eight languages. |
-
----
 
 ## Quick start
 
@@ -118,8 +112,6 @@ The remaining deployment options (timezone, monitor sync time, cookies file, IPv
 | CasaOS | [Install on CasaOS](https://casaos.zimaspace.com/) |
 | HomeDock OS | [Install on HomeDock](https://www.homedock.cloud/apps/downtify/) |
 
----
-
 ## What you can paste in
 
 | Input | Example |
@@ -133,15 +125,11 @@ The remaining deployment options (timezone, monitor sync time, cookies file, IPv
 
 Spotify artist pages can't be downloaded; search for the artist instead. Artists can also be watched for new releases with the **Playlist Monitor**.
 
----
-
 ## Troubleshooting
 
 Most download problems share one cause: YouTube wants a signed-in session. Upload a `cookies.txt` in **Settings → YouTube cookies** and they usually go away. If YouTube still rate-limits you, raise *Delay between downloads*, lower *Parallel downloads*, then try `DOWNTIFY_FORCE_IPV4=1`.
 
 See **[Troubleshooting](https://henriquesebastiao.github.io/downtify/troubleshooting/)** for the full list of symptoms and fixes, and **[YouTube cookies](https://henriquesebastiao.github.io/downtify/features/youtube-cookies/)** for how to export the file.
-
----
 
 ## Translations
 
@@ -156,8 +144,6 @@ Adding a language is a small change and needs no tooling beyond the existing Vit
 3. Register the locale in `frontend/src/i18n/index.js`.
 
 Missing keys fall back to English, so a partial translation is welcome. The full walkthrough, with the registration snippet and tips, is in **[Internationalization](https://henriquesebastiao.github.io/downtify/features/internationalization/)**.
-
----
 
 ## Documentation
 
@@ -175,8 +161,6 @@ Missing keys fall back to English, so a partial translation is welcome. The full
 > [!WARNING]
 > Users are responsible for their actions and any legal consequences. Downtify does not support unauthorized downloading of copyrighted material and takes no responsibility for user actions.
 
----
-
 ## Contributing
 
 Contributions, issues and feature requests are welcome. Check the [issues page](https://github.com/henriquesebastiao/downtify/issues) or open a pull request.
@@ -185,7 +169,15 @@ Before sending a pull request, read [**CONTRIBUTING.md**](./CONTRIBUTING.md). It
 
 If Downtify has been useful to you, a star on GitHub helps other people find it.
 
----
+## Support
+
+There are many ways to support Downtify:
+
+- Use it! Write about it! Star it! If you love Downtify, drop me a line and tell me what you love.
+- Blog about Downtify to spread the word. If you're good at writing, send PRs to improve the documentation at [downtify.henriquesebastiao.com](https://downtify.henriquesebastiao.com/).
+- Sponsor my work at https://www.buymeacoffee.com/henriquesebastiao
+
+<a href="https://www.buymeacoffee.com/henriquesebastiao" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ## License
 
