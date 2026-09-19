@@ -1,5 +1,5 @@
 // Post-build check: every internal link that points at an anchor
-// (`/downtify/features/player/#now-playing`, `#section`) must land on an
+// (`/features/player/#now-playing`, `#section`) must land on an
 // element with that id. VitePress' own dead-link check covers pages but
 // not anchors.
 import fs from 'node:fs'

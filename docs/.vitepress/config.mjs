@@ -14,8 +14,11 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const srcDir = path.resolve(here, '..')
 const repoRoot = path.resolve(srcDir, '..')
 
-const SITE_URL = 'https://henriquesebastiao.github.io/downtify/'
-const BASE = '/downtify/'
+// GitHub Pages serves the site from the custom domain (the project URL
+// under github.io redirects to it), so it lives at the domain root:
+// a base of '/downtify/' would point every asset at a path that 404s.
+const SITE_URL = 'https://downtify.henriquesebastiao.com/'
+const BASE = '/'
 const REPO = 'https://github.com/henriquesebastiao/downtify'
 const DESCRIPTION =
   'Self-hosted music downloader. Paste a Spotify link, get a perfectly tagged audio file — no API keys, no account, no hassle.'
