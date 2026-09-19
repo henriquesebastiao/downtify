@@ -29,7 +29,7 @@ httpcore==1.0.9
     # via httpx
 httpx==0.28.1
     # via downtify
-idna==3.19
+idna==3.20
     # via
     #   anyio
     #   httpx
@@ -62,9 +62,9 @@ typing-inspection==0.4.4
     # via
     #   fastapi
     #   pydantic
-urllib3==2.7.0
+urllib3==2.8.0
     # via requests
-uvicorn==0.52.4
+uvicorn==0.53.0
     # via downtify
 websockets==17.1
     # via downtify
@@ -72,5 +72,5 @@ win32-setctime==1.2.0 ; sys_platform == 'win32'
     # via loguru
 yt-dlp==2026.8.19
     # via downtify
-ytmusicapi==1.12.2
+ytmusicapi==1.12.3
     # via downtify

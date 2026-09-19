@@ -1,4 +1,5 @@
 FROM mwader/static-ffmpeg:latest AS ffmpeg-bin
+FROM denoland/deno:alpine AS deno
 
 FROM python:3.14-alpine AS builder
 
@@ -31,15 +32,15 @@ LABEL version="3.0.0"
 LABEL description="Self-hosted Spotify downloader"
 
 LABEL org.opencontainers.image.title="Downtify" \
-      org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker." \
-      org.opencontainers.image.version="3.0.0" \
-      org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>" \
-      org.opencontainers.image.url="https://github.com/henriquesebastiao/downtify" \
-      org.opencontainers.image.source="https://github.com/henriquesebastiao/downtify" \
-      org.opencontainers.image.licenses="GPL-3.0" \
-      org.opencontainers.image.documentation="https://github.com/henriquesebastiao/downtify#readme" \
-      org.opencontainers.image.vendor="Henrique Sebastião" \
-      org.opencontainers.image.base.name="python:3.14-alpine"
+    org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker." \
+    org.opencontainers.image.version="3.0.0" \
+    org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>" \
+    org.opencontainers.image.url="https://github.com/henriquesebastiao/downtify" \
+    org.opencontainers.image.source="https://github.com/henriquesebastiao/downtify" \
+    org.opencontainers.image.licenses="GPL-3.0" \
+    org.opencontainers.image.documentation="https://github.com/henriquesebastiao/downtify#readme" \
+    org.opencontainers.image.vendor="Henrique Sebastião" \
+    org.opencontainers.image.base.name="python:3.14-alpine"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -58,9 +59,12 @@ RUN apk update && apk upgrade --no-cache && \
     shadow \
     su-exec \
     tini \
-    tzdata \
-    nodejs \
-    yt-dlp-ejs-rt-nodejs
+    tzdata 
+
+COPY --from=deno /bin/deno /usr/local/bin/deno
+COPY --from=deno /usr/local/lib/glibc /usr/local/lib/glibc
+COPY --from=deno /lib/ld-linux-* /lib/
+RUN mkdir -p /lib64 && ln -sf /usr/local/lib/glibc/ld-linux-* /lib64/
 
 RUN rm -rf /usr/local/lib/python3.14/site-packages/*
 
