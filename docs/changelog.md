@@ -4,6 +4,54 @@ icon: lucide/history
 
 # Changelog
 
+## [3.0.0](https://github.com/henriquesebastiao/downtify/tree/3.0.0) (2026-09-19)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.13.0-rc.1...3.0.0)
+
+**Implemented enhancements:**
+
+- Add the ability to like songs [\#363](https://github.com/henriquesebastiao/downtify/issues/363)
+- Implement an equalizer for the built-in player [\#358](https://github.com/henriquesebastiao/downtify/issues/358)
+- Lyrics Provider Fallback / Priority Order Configuratino [\#354](https://github.com/henriquesebastiao/downtify/issues/354)
+- Repair / Refresh Existing Library Metadata Without Redownloading Audio [\#353](https://github.com/henriquesebastiao/downtify/issues/353)
+- Trigger Navidrome Playlist Refresh After Monitored Playlist Updates [\#352](https://github.com/henriquesebastiao/downtify/issues/352)
+- Save monitored playlist cover artwork alongside generated M3U playlists [\#351](https://github.com/henriquesebastiao/downtify/issues/351)
+- Add library upgrade/repair option using slskd for better files and higher-resolution artwork [\#350](https://github.com/henriquesebastiao/downtify/issues/350)
+- Separate Playlist Watch and Artist Watch into organized sections/tabs/page [\#349](https://github.com/henriquesebastiao/downtify/issues/349)
+
+**Fixed bugs:**
+
+- Library --\> Filter By \(dropdown\) broken/leaks accross windows/tiling/monitor [\#348](https://github.com/henriquesebastiao/downtify/issues/348)
+
+**Merged pull requests:**
+
+- Downtify v3 [\#359](https://github.com/henriquesebastiao/downtify/pull/359) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: download playlist cover art [\#356](https://github.com/henriquesebastiao/downtify/pull/356) ([fvidals](https://github.com/fvidals))
+
+## [2.13.0-rc.1](https://github.com/henriquesebastiao/downtify/tree/2.13.0-rc.1) (2026-09-16)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.12.0...2.13.0-rc.1)
+
+**Implemented enhancements:**
+
+- 'Download All' button on Library page [\#344](https://github.com/henriquesebastiao/downtify/issues/344)
+- connect slskd to Downtify [\#174](https://github.com/henriquesebastiao/downtify/issues/174)
+
+**Fixed bugs:**
+
+- M4A/Quality Issue [\#281](https://github.com/henriquesebastiao/downtify/issues/281)
+- Year tag not written: enrich\_from\_match discards the album year that get\_album already returns [\#235](https://github.com/henriquesebastiao/downtify/issues/235)
+
+**Merged pull requests:**
+
+- feat\(library\): download selected tracks as one ZIP [\#345](https://github.com/henriquesebastiao/downtify/pull/345) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Replace deno with nodejs runtime; migrate FastAPI startup to lifespan handler [\#343](https://github.com/henriquesebastiao/downtify/pull/343) ([betterix](https://github.com/betterix))
+- perf: parallelize downloads, metadata lookups, Spotify paging and library tag reads [\#342](https://github.com/henriquesebastiao/downtify/pull/342) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(download\): honor the chosen bitrate for M4A/OPUS, fix OGG conversion crash [\#341](https://github.com/henriquesebastiao/downtify/pull/341) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(player\): hide the volume slider on mobile, keep audio at full volume [\#340](https://github.com/henriquesebastiao/downtify/pull/340) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Backfill track year from the resolved YT Music album [\#339](https://github.com/henriquesebastiao/downtify/pull/339) ([jusseppe88](https://github.com/jusseppe88))
+- Add slskd provider, Navidrome playlist sync, library paths, and queue UX [\#182](https://github.com/henriquesebastiao/downtify/pull/182) ([dx616b](https://github.com/dx616b))
+
 ## [2.12.0](https://github.com/henriquesebastiao/downtify/tree/2.12.0) (2026-09-13)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.11.0...2.12.0)
