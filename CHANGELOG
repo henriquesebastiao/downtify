@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.0.0](https://github.com/henriquesebastiao/downtify/tree/3.0.0) (2026-09-19)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.13.0-rc.1...3.0.0)
+
+**Implemented enhancements:**
+
+- Add the ability to like songs [\#363](https://github.com/henriquesebastiao/downtify/issues/363)
+- Implement an equalizer for the built-in player [\#358](https://github.com/henriquesebastiao/downtify/issues/358)
+- Lyrics Provider Fallback / Priority Order Configuratino [\#354](https://github.com/henriquesebastiao/downtify/issues/354)
+- Repair / Refresh Existing Library Metadata Without Redownloading Audio [\#353](https://github.com/henriquesebastiao/downtify/issues/353)
+- Trigger Navidrome Playlist Refresh After Monitored Playlist Updates [\#352](https://github.com/henriquesebastiao/downtify/issues/352)
+- Save monitored playlist cover artwork alongside generated M3U playlists [\#351](https://github.com/henriquesebastiao/downtify/issues/351)
+- Add library upgrade/repair option using slskd for better files and higher-resolution artwork [\#350](https://github.com/henriquesebastiao/downtify/issues/350)
+- Separate Playlist Watch and Artist Watch into organized sections/tabs/page [\#349](https://github.com/henriquesebastiao/downtify/issues/349)
+
+**Fixed bugs:**
+
+- Library --\> Filter By \(dropdown\) broken/leaks accross windows/tiling/monitor [\#348](https://github.com/henriquesebastiao/downtify/issues/348)
+
+**Merged pull requests:**
+
+- Downtify v3 [\#359](https://github.com/henriquesebastiao/downtify/pull/359) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: download playlist cover art [\#356](https://github.com/henriquesebastiao/downtify/pull/356) ([fvidals](https://github.com/fvidals))
+
 ## [2.13.0-rc.1](https://github.com/henriquesebastiao/downtify/tree/2.13.0-rc.1) (2026-09-16)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.12.0...2.13.0-rc.1)
