@@ -1,5 +1,5 @@
 FROM mwader/static-ffmpeg:latest AS ffmpeg-bin
-FROM denoland/deno:alpine-2.9.6 AS deno
+FROM denoland/deno:alpine AS deno
 
 FROM python:3.14-alpine AS builder
 
