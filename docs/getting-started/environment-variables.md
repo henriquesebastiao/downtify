@@ -53,8 +53,9 @@ YouTube periodically challenges automated downloaders. These variables give you 
 | `DOWNTIFY_COOKIES_FILE` | _(unset)_ | Path to a Netscape-format `cookies.txt` **inside the container**. Lets yt-dlp authenticate as a real browser session — needed for explicit/age-restricted tracks and whenever YouTube enforces a login wall. Takes precedence over a file uploaded in the web UI, and makes that UI section read-only. See [YouTube Cookies](../features/youtube-cookies.md). |
 | `DOWNTIFY_COOKIES_FROM_BROWSER` | _(unset)_ | Browser name to extract cookies from (e.g. `chrome`, `firefox`). Requires the browser's cookie store to be accessible inside the container, so it's rarely usable in Docker. |
 
-!!! tip "You probably don't need these"
-    You can upload a `cookies.txt` straight from **Settings → YouTube cookies** in the web UI. It's stored in `/data` (so it survives container updates), needs no bind mount or container path, and works the same on Windows, macOS and Linux. The variables above stay supported for deployments that prefer to manage the file themselves.
+::: tip You probably don't need these
+You can upload a `cookies.txt` straight from **Settings → YouTube cookies** in the web UI. It's stored in `/data` (so it survives container updates), needs no bind mount or container path, and works the same on Windows, macOS and Linux. The variables above stay supported for deployments that prefer to manage the file themselves.
+:::
 
 ## Example: Docker Compose with anti-bot settings
 
@@ -80,5 +81,6 @@ Use a browser extension such as [Get cookies.txt LOCALLY](https://chrome.google.
 
 See [YouTube Cookies](../features/youtube-cookies.md) for the full walkthrough, and [Troubleshooting](../troubleshooting.md) when downloads still fail.
 
-!!! warning
-    Keep your `cookies.txt` private — it contains session tokens that grant access to your Google account.
+::: warning
+Keep your `cookies.txt` private — it contains session tokens that grant access to your Google account.
+:::

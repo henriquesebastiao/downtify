@@ -1,4 +1,6 @@
-import { ref, computed } from 'vue'
+// Download queue: mirrors the backend's jobs (`GET /api/queue`) and the
+// progress events it pushes over the WebSocket.
+import { ref } from 'vue'
 import { isYouTubePlaylistURL, normalizeSpotifyURL } from '/src/model/url'
 
 import API from '/src/model/api'
@@ -12,6 +14,7 @@ const STATUS = {
 }
 
 const downloadQueue = ref([])
+// Bumped on every in-place item change so computed counts refresh.
 const queueVersion = ref(0)
 
 function touchQueue() {
@@ -20,41 +23,9 @@ function touchQueue() {
 }
 
 /** Match backend ``_register_job`` / queue keys. */
-function jobSongKey(song) {
+export function jobSongKey(song) {
   if (!song || typeof song !== 'object') return ''
   return String(song.song_id || song.url || '').trim()
-}
-
-function applyServerJob(item, job) {
-  if (!item || !job) return
-  if (job.provider) item.provider = job.provider
-  if (job.status === 'done') {
-    item.progress = 100
-    item.message = job.message || ''
-    if (job.filename) {
-      item.setWebURL(API.downloadFileURL(job.filename))
-      item.setFilename(job.filename)
-    }
-    item.setDownloaded()
-    return
-  }
-  if (job.status === 'error') {
-    item.setError()
-    item.message = job.message || ''
-    item.progress = job.progress || 0
-    return
-  }
-  if (job.status === 'downloading') {
-    item.setDownloading()
-    item.progress = job.progress || 0
-    item.message = job.message || ''
-    touchQueue()
-    return
-  }
-  item.web_status = STATUS.QUEUED
-  item.progress = job.progress || 0
-  item.message = job.message || ''
-  touchQueue()
 }
 
 class DownloadItem {
@@ -66,21 +37,26 @@ class DownloadItem {
     this.provider = ''
     this.web_download_url = null
     this.filename = null
+    this.updatedAt = Date.now()
+  }
+  get key() {
+    return jobSongKey(this.song)
+  }
+  setStatus(status) {
+    if (this.web_status === status) return
+    this.web_status = status
+    this.updatedAt = Date.now()
+    touchQueue()
   }
   setDownloading() {
-    if (this.web_status === STATUS.DOWNLOADING) return
-    this.web_status = STATUS.DOWNLOADING
-    touchQueue()
+    this.setStatus(STATUS.DOWNLOADING)
   }
   setDownloaded() {
-    if (this.web_status === STATUS.DOWNLOADED) return
-    this.web_status = STATUS.DOWNLOADED
-    touchQueue()
+    this.progress = 100
+    this.setStatus(STATUS.DOWNLOADED)
   }
   setError() {
-    if (this.web_status === STATUS.ERROR) return
-    this.web_status = STATUS.ERROR
-    touchQueue()
+    this.setStatus(STATUS.ERROR)
   }
   resetForRetry() {
     this.web_status = STATUS.QUEUED
@@ -89,10 +65,16 @@ class DownloadItem {
     this.provider = ''
     this.web_download_url = null
     this.filename = null
+    this.updatedAt = Date.now()
     touchQueue()
   }
-  setWebURL(URL) {
-    this.web_download_url = URL
+  setFile(filename) {
+    if (!filename) return
+    this.filename = filename
+    this.web_download_url = API.downloadFileURL(filename)
+  }
+  setWebURL(url) {
+    this.web_download_url = url
   }
   setFilename(name) {
     this.filename = name
@@ -109,64 +91,87 @@ class DownloadItem {
   isErrored() {
     return this.web_status === STATUS.ERROR
   }
+  /** 'active' | 'queued' | 'done' | 'failed' */
+  get state() {
+    if (this.isErrored()) return 'failed'
+    if (this.isDownloaded()) return 'done'
+    if (this.isQueued()) return 'queued'
+    return 'active'
+  }
   wsUpdate(message) {
-    const progress = message.progress
-    const msg = message.message
-    const provider = message.provider
     let changed = false
-    if (progress !== this.progress) {
-      this.progress = progress
+    if (message.progress !== undefined && message.progress !== this.progress) {
+      this.progress = message.progress
       changed = true
     }
-    if (msg !== this.message) {
-      this.message = msg
+    if (message.message !== undefined && message.message !== this.message) {
+      this.message = message.message
       changed = true
     }
-    if (provider && provider !== this.provider) {
-      this.provider = provider
+    if (message.provider && message.provider !== this.provider) {
+      this.provider = message.provider
       changed = true
     }
     if (changed) touchQueue()
   }
 }
 
+function applyServerJob(item, job) {
+  if (job.provider) item.provider = job.provider
+  item.message = job.message || ''
+  item.progress = job.progress || 0
+  if (job.status === 'done') {
+    item.setFile(job.filename)
+    item.setDownloaded()
+  } else if (job.status === 'error') {
+    item.setError()
+  } else if (job.status === 'downloading') {
+    item.setDownloading()
+  } else {
+    item.setStatus(STATUS.QUEUED)
+  }
+  touchQueue()
+}
+
+function findItem(song) {
+  const key = jobSongKey(song)
+  if (!key) return null
+  return downloadQueue.value.find((item) => item.key === key) || null
+}
+
+function appendSong(song) {
+  const item = new DownloadItem(song)
+  downloadQueue.value.push(item)
+  touchQueue()
+  return item
+}
+
+function upsertSong(song) {
+  const existing = findItem(song)
+  if (existing) {
+    existing.song = { ...existing.song, ...song }
+    existing.resetForRetry()
+    return existing
+  }
+  return appendSong(song)
+}
+
 export function useProgressTracker() {
-  function _findIndex(song) {
-    const key = jobSongKey(song)
-    if (!key) return -1
-    return downloadQueue.value.findIndex(
-      (downloadItem) => jobSongKey(downloadItem.song) === key
-    )
-  }
-  function appendSong(song) {
-    downloadQueue.value.push(new DownloadItem(song))
-    touchQueue()
-  }
   function removeSong(song) {
     const key = jobSongKey(song)
-    downloadQueue.value = downloadQueue.value.filter(
-      (downloadItem) => jobSongKey(downloadItem.song) !== key
-    )
+    downloadQueue.value = downloadQueue.value.filter((item) => item.key !== key)
     touchQueue()
   }
-
-  function getBySong(song) {
-    const idx = _findIndex(song)
-    if (idx === -1) return null
-    return downloadQueue.value[idx]
-  }
-
   return {
     appendSong,
     removeSong,
-    getBySong,
+    getBySong: findItem,
     downloadQueue,
     queueVersion,
   }
 }
 
-const progressTracker = useProgressTracker()
-
+// ── Server sync ──────────────────────────────────────────────────────
 let queuePollTimer = null
 
 function queueHasActiveItems() {
@@ -195,48 +200,29 @@ function ensureQueuePoll() {
 
 export async function syncQueueFromServer() {
   const res = await API.getQueue()
-  const jobs = res.data || []
-  for (const job of jobs) {
-    const song = job.song
-    if (!song) continue
-    let item = progressTracker.getBySong(song)
-    if (!item) {
-      item = new DownloadItem(song)
-      downloadQueue.value.push(item)
-    }
+  for (const job of res.data || []) {
+    if (!job.song) continue
+    const item = findItem(job.song) || appendSong(job.song)
     applyServerJob(item, job)
   }
   touchQueue()
-  if (queueHasActiveItems()) {
-    ensureQueuePoll()
-  } else {
-    stopQueuePoll()
-  }
+  if (queueHasActiveItems()) ensureQueuePoll()
+  else stopQueuePoll()
 }
 
-API.ws_onmessage((event) => {
-  let data = JSON.parse(event.data)
-  let item = progressTracker.getBySong(data.song)
-  if (!item) {
-    progressTracker.appendSong(data.song)
-    item = progressTracker.getBySong(data.song)
-    if (!item) return
-  }
+API.onMessage((data) => {
+  if (!data || !data.song) return
+  const item = findItem(data.song) || appendSong(data.song)
   if (data.status === 'done') {
-    item.progress = 100
-    if (data.filename) {
-      item.setWebURL(API.downloadFileURL(data.filename))
-      item.setFilename(data.filename)
-    }
+    item.wsUpdate(data)
+    item.setFile(data.filename)
     item.setDownloaded()
   } else if (data.status === 'error') {
     item.wsUpdate(data)
     item.setError()
   } else if (data.status === 'queued') {
-    item.web_status = STATUS.QUEUED
-    item.message = data.message || ''
-    if (data.provider) item.provider = data.provider
-    touchQueue()
+    item.wsUpdate(data)
+    item.setStatus(STATUS.QUEUED)
   } else {
     item.wsUpdate(data)
     item.setDownloading()
@@ -245,86 +231,68 @@ API.ws_onmessage((event) => {
   // downloads; the poll (not every message) reconciles with /api/queue.
   ensureQueuePoll()
 })
-API.ws_onerror((event) => {
-  console.log('websocket error:', event)
-})
 
-async function _hydrateFromServer() {
-  try {
-    await syncQueueFromServer()
-  } catch (e) {
-    console.log('Failed to load queue from server:', e)
-  }
+syncQueueFromServer().catch(() => {})
+
+// ── Actions ──────────────────────────────────────────────────────────
+function isPlaylistLink(url) {
+  return (
+    normalizeSpotifyURL(url).includes('://open.spotify.com/playlist/') ||
+    isYouTubePlaylistURL(url)
+  )
 }
 
-_hydrateFromServer()
+const loading = ref(false)
 
 export function useDownloadManager() {
-  const loading = ref(false)
   const settingsManager = useSettingsManager()
-  function _queueSongForBatch(song) {
-    const existing = progressTracker.getBySong(song)
-    if (existing) {
-      existing.song = { ...existing.song, ...song }
-      existing.resetForRetry()
-      return
-    }
-    progressTracker.appendSong(song)
+
+  function generateM3u() {
+    return settingsManager.settings.value.generate_m3u !== false
   }
 
-  function fromURL(url) {
-    const isPlaylistURL =
-      normalizeSpotifyURL(url).includes('://open.spotify.com/playlist/') ||
-      isYouTubePlaylistURL(url)
-    const generateM3u = settingsManager.settings.value.generate_m3u !== false
+  /**
+   * Queue already-resolved songs as one batch. `playlistUrl` makes it a
+   * playlist download (folder, M3U, playlist tracking).
+   */
+  async function fromSongs(list, { playlistUrl = '' } = {}) {
+    const hints = playlistUrl ? { downtify_playlist_url: playlistUrl } : {}
+    const songs = list.map((song, i) => ({
+      ...song,
+      ...hints,
+      downtify_track_order: song.downtify_track_order ?? i,
+    }))
+    for (const song of songs) upsertSong(song)
+    touchQueue()
+    ensureQueuePoll()
+    await API.downloadBatch({
+      songs,
+      playlist_url: playlistUrl,
+      generate_m3u: generateM3u(),
+    })
+    await syncQueueFromServer().catch(() => {})
+    return songs.length
+  }
+
+  /** Resolve a link and queue everything it points at. */
+  async function fromURL(url) {
     loading.value = true
-    return API.open(url)
-      .then((res) => {
-        console.log('Received Response:', res)
-        if (res.status !== 200) {
-          console.log('Error:', res)
-          return
-        }
-        const songs = res.data
-        if (Array.isArray(songs)) {
-          const batchPlaylist = isPlaylistURL
-            ? { downtify_playlist_url: url }
-            : {}
-          for (let i = 0; i < songs.length; i++) {
-            const song = {
-              ...songs[i],
-              ...batchPlaylist,
-              downtify_track_order: i,
-            }
-            _queueSongForBatch(song)
-            songs[i] = song
-          }
-          touchQueue()
-          ensureQueuePoll()
-          return API.downloadBatch({
-            songs,
-            playlist_url: isPlaylistURL ? url : '',
-            generate_m3u: generateM3u,
-          })
-            .then(() => syncQueueFromServer())
-            .then(() => ensureQueuePoll())
-            .catch((err) => {
-              console.log('Batch submit failed:', err.message)
-            })
-        } else {
-          console.log('Opened Song:', songs)
-          queue(songs)
-        }
-      })
-      .catch((err) => {
-        console.log('Other Error:', err.message)
-      })
-      .finally(() => {
-        loading.value = false
-      })
+    try {
+      const res = await API.open(url)
+      const data = res.data
+      if (Array.isArray(data)) {
+        return await fromSongs(data, {
+          playlistUrl: isPlaylistLink(url) ? url : '',
+        })
+      }
+      queue(data)
+      return 1
+    } finally {
+      loading.value = false
+    }
   }
 
-  function _readFileAsText(file) {
+  function readFileAsText(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = () => resolve(String(reader.result || ''))
@@ -333,103 +301,65 @@ export function useDownloadManager() {
     })
   }
 
-  function fromCsvFile(file, playlistName) {
-    const generateM3u = settingsManager.settings.value.generate_m3u !== false
+  async function fromCsvFile(file, playlistName) {
     loading.value = true
-    return _readFileAsText(file)
-      .then((csv) =>
-        API.downloadCsv({
-          csv,
-          playlist_name: playlistName || '',
-          generate_m3u: generateM3u,
-        })
-      )
-      .then((res) => {
-        console.log('CSV import queued:', res.data)
-        return res.data
+    try {
+      const csv = await readFileAsText(file)
+      const res = await API.downloadCsv({
+        csv,
+        playlist_name: playlistName || '',
+        generate_m3u: generateM3u(),
       })
-      .finally(() => {
-        loading.value = false
-      })
+      syncQueueFromServer().catch(() => {})
+      return res.data
+    } finally {
+      loading.value = false
+    }
   }
 
-  function download(song) {
-    console.log('Downloading', song)
-    progressTracker.getBySong(song).setDownloading()
-    return API.download(song)
-      .then((res) => {
-        console.log('Received Response:', res)
-        if (res.status === 200) {
-          let filename = res.data
-          console.log('Download Complete:', filename)
-          progressTracker
-            .getBySong(song)
-            .setWebURL(API.downloadFileURL(filename))
-          progressTracker.getBySong(song).setFilename(filename)
-          progressTracker.getBySong(song).setDownloaded()
-          return { song, filename }
-        } else {
-          console.log('Error:', res)
-          progressTracker.getBySong(song).setError()
-          return { song, filename: null }
-        }
-      })
-      .catch((err) => {
-        console.log('Other Error:', err.message)
-        progressTracker.getBySong(song).setError()
-        return { song, filename: null }
-      })
+  async function download(song) {
+    const item = findItem(song) || appendSong(song)
+    item.setDownloading()
+    try {
+      const res = await API.download(song)
+      item.setFile(res.data)
+      item.setDownloaded()
+      return { song, filename: res.data }
+    } catch (err) {
+      item.message = err?.response?.data?.detail || item.message
+      item.setError()
+      return { song, filename: null }
+    }
   }
 
   function queue(song, beginDownload = true) {
-    progressTracker.appendSong(song)
+    upsertSong(song)
     if (beginDownload) return download(song)
     return Promise.resolve({ song, filename: null })
   }
 
   function retryWithAudio(song, youtubeVideoId) {
-    const overriddenSong = { ...song, youtube_id: youtubeVideoId }
-    const item = progressTracker.getBySong(song)
+    const item = findItem(song)
     if (item) {
-      item.song.youtube_id = youtubeVideoId
-      item.setDownloading()
-      item.progress = 0
-      item.message = ''
+      item.song = { ...item.song, youtube_id: youtubeVideoId }
+      item.resetForRetry()
     }
-    return API.download(overriddenSong)
-      .then((res) => {
-        const it = progressTracker.getBySong(overriddenSong)
-        if (res.status === 200) {
-          const filename = res.data
-          if (it) {
-            it.setWebURL(API.downloadFileURL(filename))
-            it.setFilename(filename)
-            it.setDownloaded()
-          }
-          return { song: overriddenSong, filename }
-        }
-        if (it) it.setError()
-        return { song: overriddenSong, filename: null }
-      })
-      .catch((err) => {
-        console.error('retryWithAudio error:', err.message)
-        const it = progressTracker.getBySong(overriddenSong)
-        if (it) it.setError()
-        return { song: overriddenSong, filename: null }
-      })
+    return download({ ...song, youtube_id: youtubeVideoId })
   }
 
   function remove(song) {
-    const songId = String(song.song_id || song.url || '')
-    progressTracker.removeSong(song)
-    if (songId) {
-      API.removeQueueItem(songId).catch(() => {})
-    }
+    const songId = jobSongKey(song)
+    downloadQueue.value = downloadQueue.value.filter(
+      (item) => item.key !== songId
+    )
+    touchQueue()
+    if (songId) API.removeQueueItem(songId).catch(() => {})
   }
 
   async function clearAll() {
     await API.clearQueue()
     downloadQueue.value = []
+    touchQueue()
   }
 
   async function clearCompleted() {
@@ -441,21 +371,20 @@ export function useDownloadManager() {
   }
 
   function retry(song) {
-    const item = progressTracker.getBySong(song)
+    const item = findItem(song)
     if (item) item.resetForRetry()
     return download(song)
   }
 
   function retryAllFailed() {
     const failed = downloadQueue.value.filter((item) => item.isErrored())
-    for (const item of failed) {
-      retry(item.song)
-    }
+    for (const item of failed) retry(item.song)
     return failed.length
   }
 
   return {
     fromURL,
+    fromSongs,
     fromCsvFile,
     download,
     queue,

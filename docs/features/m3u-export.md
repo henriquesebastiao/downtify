@@ -15,13 +15,19 @@ Downtify automatically generates a standard `EXTM3U` playlist file whenever a Sp
 
 When *Organize by artist* is on, tracks are spread across multiple artist folders, so the M3U is placed in a central `Playlists/` directory instead of the playlist subfolder.
 
+[Liked songs](liked-songs.md) are written to `Playlists/Downtify Liked Songs.m3u` too, whatever the layout and whether or not *Write M3U playlists* is on.
+
 ## Relative paths
 
 Track paths inside the M3U are written **relative to the M3U file itself**, not as absolute paths. This means the same file works whether it is read from inside the Downtify container (`/downloads/…`) or from another consumer that mounts the same library at a different root — for example Jellyfin under `/nas/music/…`. Just point your media server at the same library mount and the playlist will appear as a single unit.
 
 ## Enabling / disabling
 
-M3U generation is controlled by **Settings → Generate M3U file for playlists** (on by default). Turning it off skips M3U creation entirely; the rest of the download flow is unchanged.
+M3U generation is controlled by **Settings → Downloads & files → Write M3U playlists** (on by default). Turning it off skips M3U creation entirely; the rest of the download flow is unchanged.
+
+## Cover art
+
+Right below that setting, **Save playlist cover art** (off by default) writes the playlist's own cover image next to its M3U, under the same name — before the tracks, so the folder looks like the playlist from the start. Downtify then shows that artwork for the playlist instead of a grid of its track covers. See [Playlist cover art](playlist-cover-art.md).
 
 ## Cover art
 
@@ -37,8 +43,9 @@ A final rewrite runs once the whole run completes. It resolves every track again
 
 Every write lists tracks in **playlist order**, not in the order downloads happened to finish, so a partially-written M3U is still correctly ordered.
 
-!!! note "Tracks already on disk"
-    Tracks downloaded by an earlier run stay in the M3U throughout — they're included from the first write, not only added by the final one.
+::: info Tracks already on disk
+Tracks downloaded by an earlier run stay in the M3U throughout — they're included from the first write, not only added by the final one.
+:::
 
 ## Regeneration
 

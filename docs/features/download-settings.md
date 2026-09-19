@@ -4,7 +4,7 @@ icon: lucide/sliders-horizontal
 
 # Download Settings
 
-Open the settings panel by clicking the gear icon (⚙️) in the navigation bar. Settings are saved to disk and survive container restarts.
+Open **Settings** from the sidebar (on phones: **More → Settings**). The page is split into sections — General, Audio sources, Downloads & files, Tags & lyrics, Navidrome, Library and About. Changes are held until you press **Save changes** in the bar that appears at the bottom; leaving the page with unsaved changes asks first. Settings are saved to disk and survive container restarts.
 
 ## Format
 
@@ -29,8 +29,9 @@ Available for lossy formats (MP3, M4A, OGG, OPUS). FLAC ignores this setting.
 
 The downloaded audio is encoded at the bitrate you pick, for every lossy format. If the audio YouTube serves already has the target codec at roughly that bitrate (e.g. its ~128 kbps AAC stream for **M4A @ 128**), it's kept as-is instead of being re-encoded, since a re-encode would only lose quality.
 
-!!! note "A higher bitrate doesn't add quality"
-    YouTube's audio tops out at roughly **128–160 kbps** (AAC or Opus), and Downtify always downloads the best stream available. Encoding it at 256 or 320 kbps gives larger files that preserve that source faithfully, but can't restore detail the source never had. Pick a lower bitrate if file size matters more to you.
+::: info A higher bitrate doesn't add quality
+YouTube's audio tops out at roughly **128–160 kbps** (AAC or Opus), and Downtify always downloads the best stream available. Encoding it at 256 or 320 kbps gives larger files that preserve that source faithfully, but can't restore detail the source never had. Pick a lower bitrate if file size matters more to you.
+:::
 
 ## Output filename template
 
@@ -57,8 +58,9 @@ The template can also include `/` to build subfolders. For example, to lay out a
 {artists}/{album}/{tracknumber} - {title}
 ```
 
-!!! note
-    This is independent of the **Organize by artist** / **Organize by album** toggles below — those route playlist/album downloads into shared per-artist or per-album folders across your whole library. `{tracknumber}` just lets a template like the one above build that same layout manually, track by track, without turning those toggles on.
+::: info
+This is independent of the **Organize by artist** / **Organize by album** toggles below — those route playlist/album downloads into shared per-artist or per-album folders across your whole library. `{tracknumber}` just lets a template like the one above build that same layout manually, track by track, without turning those toggles on.
+:::
 
 ## Parallel downloads
 
@@ -100,8 +102,9 @@ Only relevant when **Download cover art** (above) is on. Sets the target size (w
 
 This is useful when feeding your library into a media server like Plex that displays cover art at higher resolution than Downtify embedded by default — verified against the live YouTube CDN, the higher sizes return genuinely more detail (not just upscaling) for most album art, up to the source image's own resolution.
 
-!!! note "Spotify-sourced covers aren't affected"
-    Downtify already embeds the **largest** cover Spotify's public embed API offers for Spotify-resolved tracks/albums/playlists — there's no larger size to request. This setting only raises the ceiling for tracks resolved through YouTube Music (free-text search, YouTube URLs, and any Spotify track re-matched to YouTube Music for the actual audio).
+::: info Spotify-sourced covers aren't affected
+Downtify already embeds the **largest** cover Spotify's public embed API offers for Spotify-resolved tracks/albums/playlists — there's no larger size to request. This setting only raises the ceiling for tracks resolved through YouTube Music (free-text search, YouTube URLs, and any Spotify track re-matched to YouTube Music for the actual audio).
+:::
 
 Changing this value in Settings takes effect immediately, including for the currently-open search page — it does not require re-downloading anything already on disk.
 
@@ -139,8 +142,9 @@ If Downtify picks the wrong YouTube Music video (e.g. a cover instead of the ori
 
 Paste `https://music.youtube.com/watch?v=…` (or a regular `youtube.com/watch?v=…` URL) into the search bar and hit download. Downtify fetches the audio from that exact video.
 
-!!! note
-    When downloading via YouTube URL, metadata (title, artist, cover) comes from YouTube rather than Spotify. For clean tags, use Option B.
+::: info
+When downloading via YouTube URL, metadata (title, artist, cover) comes from YouTube rather than Spotify. For clean tags, use Option B.
+:::
 
 **Option B — force audio on a failed track**
 

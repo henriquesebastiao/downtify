@@ -310,6 +310,7 @@ class Downloader:
         audio_bitrate: str = '320',
         output_template: str = '{artists} - {title}',
         lyrics_providers: Optional[list[str]] = None,
+        lyrics_cache: Optional[Any] = None,
         organize_by_artist: bool = False,
         organize_by_album: bool = False,
         download_cover_art: bool = True,
@@ -332,6 +333,9 @@ class Downloader:
         self.audio_bitrate = audio_bitrate
         self.output_template = output_template
         self.lyrics_providers = list(lyrics_providers or [])
+        # Optional LyricsLookupCache: skips providers that already came
+        # back empty for a song.
+        self.lyrics_cache = lyrics_cache
         self.organize_by_artist = organize_by_artist
         self.organize_by_album = organize_by_album
         self.overwrite_existing_files = overwrite_existing_files
@@ -1105,7 +1109,10 @@ class _MetadataLookups:
         )
         self._lyrics = (
             self._pool.submit(
-                lyrics_mod.fetch, song, downloader.lyrics_providers
+                lyrics_mod.fetch,
+                song,
+                downloader.lyrics_providers,
+                downloader.lyrics_cache,
             )
             if downloader.lyrics_providers
             else None
@@ -1192,6 +1199,9 @@ def save_playlist_cover(cover_url: str, m3u_path: Path) -> Optional[Path]:
         return None
     cover_path = m3u_path.with_suffix('.jpg')
     try:
+        # The cover can land before the first track, so the playlist's
+        # folder may not exist yet.
+        cover_path.parent.mkdir(parents=True, exist_ok=True)
         cover_path.write_bytes(data)
     except OSError:
         logger.opt(exception=True).warning(

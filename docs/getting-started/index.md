@@ -14,31 +14,25 @@ Downtify is a self-hosted web app that downloads music from Spotify — no API k
 
 ## Choose your setup
 
-<div class="grid cards" markdown>
+<div class="doc-cards">
 
--   :material-docker: **Docker run**
+- <DocIcon name="docker" /> **Docker run**
 
-    ---
+  The fastest way to get started. One command, up in under a minute.
 
-    The fastest way to get started. One command, up in under a minute.
+  [Installation →](installation.md)
 
-    [Installation →](installation.md)
+- <DocIcon name="file-code" /> **Docker Compose**
 
--   :material-file-code: **Docker Compose**
+  Recommended for persistent setups. Easier to update and manage.
 
-    ---
+  [Docker Compose →](docker-compose.md)
 
-    Recommended for persistent setups. Easier to update and manage.
+- <DocIcon name="house" /> **One-click install**
 
-    [Docker Compose →](docker-compose.md)
+  Running Umbrel, CasaOS or HomeDock OS? Install directly from their app stores.
 
--   :material-home: **One-click install**
-
-    ---
-
-    Running Umbrel, CasaOS or HomeDock OS? Install directly from their app stores.
-
-    [One-click install →](one-click.md)
+  [One-click install →](one-click.md)
 
 </div>
 

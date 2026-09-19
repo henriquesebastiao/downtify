@@ -18,7 +18,7 @@ Returns the current Downtify version as a plain string.
 
 ### `GET /api/check_update`
 
-Result of the last hourly check against [GitHub Releases](https://github.com/henriquesebastiao/downtify/releases) — powers the update notice in the page footer. The request to GitHub happens on a background loop, never on this endpoint's own request; this just reads whatever that loop last found.
+Result of the last hourly check against [GitHub Releases](https://github.com/henriquesebastiao/downtify/releases) — powers the update notice in the sidebar (and the **More** sheet on phones). The request to GitHub happens on a background loop, never on this endpoint's own request; this just reads whatever that loop last found.
 
 **Response:**
 
@@ -68,6 +68,32 @@ Resolve a Spotify or YouTube Music URL to metadata.
 - **Artist URL** (YouTube Music `…/channel/UC…` or `…/@handle`) → array of release summaries. `404` if a handle doesn't belong to an artist.
 
 `GET /api/url` is an alias for this endpoint.
+
+---
+
+### `GET /api/url/resolve`
+
+Resolve a pasted link to a single object describing what it points at — used by the web UI's link page. Accepts the same URLs as [`GET /api/song/url`](#get-apisongurl).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | yes | Spotify track, album or playlist URL, or a YouTube / YouTube Music video, album, playlist or artist URL |
+
+**Response:**
+
+```json
+{
+  "kind": "album",
+  "name": "Whenever You Need Somebody",
+  "subtitle": "Rick Astley",
+  "cover_url": "https://…",
+  "year": "1987",
+  "tracks": [ /* song objects */ ],
+  "albums": []
+}
+```
+
+`kind` is `track`, `album`, `playlist` or `artist`. A track or collection fills `tracks`; an artist (YouTube Music only) fills `albums` with release summaries instead, and `subtitle` carries the artist description. `400` for a URL that isn't a supported link, `404` when the link resolves to nothing (e.g. a handle that isn't an artist), `502` when the upstream lookup fails.
 
 ---
 
@@ -214,7 +240,7 @@ Return the current settings.
 ```json
 {
   "audio_providers": ["youtube-music"],
-  "lyrics_providers": ["lrclib"],
+  "lyrics_providers": ["lrclib", "netease"],
   "download_lyrics": true,
   "format": "mp3",
   "bitrate": "320",
@@ -231,6 +257,11 @@ Return the current settings.
   "search_albums": true,
   "mini_player_enabled": true,
   "cache_cover_art": false,
+  "library_upgrade": {
+    "artwork_min_px": 600,
+    "artwork_source": "highest",
+    "recheck_days": 30
+  },
   "sync_navidrome": true,
   "slskd": {
     "enabled": false,
@@ -259,16 +290,19 @@ Return the current settings.
 |-------|------|-------------|
 | `max_parallel_downloads` | integer | Concurrent download limit. Clamped to `1–30`. |
 | `download_delay_seconds` | number | Seconds to wait after each download in a batch before starting the next. Clamped to `0–300`. |
-| `mini_player_enabled` | boolean | Whether the [mini player bar](features/player.md#mini-player-bar) appears on non-Player pages while a track is loaded. Purely a UI preference — the backend never reads it. |
+| `mini_player_enabled` | boolean | Legacy UI preference, kept so older clients keep working. The web UI no longer reads it — the player bar always appears while a track is loaded. The backend never reads it either. |
 | `download_cover_art` | boolean | Whether to fetch and embed cover art at all. See [Download cover art](features/download-settings.md#download-cover-art). |
 | `cover_resolution` | integer | Target pixel size (width & height) for YouTube Music-sourced cover art. Clamped to `300–1200`. Only used when `download_cover_art` is true. See [Cover art resolution](features/download-settings.md#cover-art-resolution). |
 | `overwrite_existing_files` | boolean | When `false`, a song already in the library (matched by output filename, or by Spotify track ID through the [library track index](features/library-catalog.md)) isn't downloaded again; the download returns the existing file's path instead. See [Overwrite existing files](features/download-settings.md#overwrite-existing-files). |
-| `download_cover_art_playlists` | boolean | Whether to save the playlist's own cover art alongside its M3U file. Default: `false`. See [Playlist Cover Art](features/playlist-cover-art.md). |
+| `download_cover_art_playlists` | boolean | Save the playlist's own cover art alongside its M3U file, as `<playlist-name>.jpg`. Only applies while `generate_m3u` is true. Default: `false`. See [Playlist cover art](features/playlist-cover-art.md). |
+| `lyrics_providers` | array | Ordered fallback list of lyrics providers: `lrclib`, `netease`. Each track tries them in order until one has lyrics. Unknown names are dropped; a list left with only the legacy `genius`/`musixmatch`/`azlyrics` names falls back to the defaults. An empty list means no lyrics, as does `download_lyrics: false`. See [Lyrics](features/lyrics.md). |
+| `download_lyrics` | boolean | Whether to look lyrics up at all. |
 | `audio_providers` | array | Ordered fallback list of audio sources: `youtube-music`, `youtube`, `slskd`. `slskd` is dropped while `slskd.enabled` is false. See [slskd & Navidrome](features/slskd-navidrome.md#audio-sources-and-fallback-order). |
 | `slskd` | object | slskd connection and matching options. Saving with `enabled: true` but no `base_url` or `api_key` returns `400`. |
 | `navidrome` | object | Navidrome connection. Saving with `enabled: true` but no `url`, `username` or `password` returns `400`. |
 | `sync_navidrome` | boolean | Create/update a Navidrome playlist after playlist downloads, Playlist Monitor sweeps and library changes. |
 | `cache_cover_art` | boolean | Keep extracted cover images under `/data/cover_cache`. |
+| `library_upgrade` | object | Defaults a library upgrade scan starts from: `artwork_min_px` (clamped to `100–3000`), `artwork_source` (`highest`, `spotify`, `itunes`, `youtube-music`) and `recheck_days` (`0–3650`, `0` meaning always re-check). A scan request may override them. See [Upgrade library](features/library-upgrade.md#options). |
 
 ---
 
@@ -279,6 +313,56 @@ Update one or more settings. Takes effect immediately and is persisted to disk.
 **Request body:** Partial settings object with any subset of the fields above.
 
 **Response:** Full settings object after the update.
+
+---
+
+### `POST /api/slskd/test`
+
+Try a slskd connection without saving anything. See [Testing the connection](features/slskd-navidrome.md#testing-the-connection).
+
+**Request body:** the `slskd` settings object as it stands in the form — at least `base_url` and `api_key`; `source_dir` is the folder Downtify checks it can read. The body wins over the saved settings, so a field that was cleared stays cleared. An empty body tests the saved settings instead.
+
+**Response:** always `200`, whether or not the test passed:
+
+```json
+{
+  "ok": true,
+  "server": "slskd 0.21.4",
+  "checks": [
+    { "id": "connection", "status": "ok", "code": "", "detail": "" },
+    { "id": "auth", "status": "ok", "code": "", "detail": "" },
+    { "id": "soulseek", "status": "ok", "code": "ok", "detail": "me" },
+    { "id": "folder", "status": "warn", "code": "missing", "detail": "/slskd" }
+  ]
+}
+```
+
+`ok` is `false` when any check has `status: "fail"`; a `warn` (slskd signed out of Soulseek, an unreadable folder) doesn't fail the test. `server` is set only when the address and key were both accepted. Each check is `{id, status, code, detail}`, where `detail` is only ever a short fact — a path, a state, an HTTP status — never text copied from an error.
+
+| `id` | `code` values |
+|------|---------------|
+| `config` | `missing` — the address or key is empty; nothing was tried |
+| `connection` | `unreachable`, `timeout`, `bad_url`, `tls`, `not_slskd`, `http_error` |
+| `auth` | `bad_key` |
+| `soulseek` | `ok`, `offline` |
+| `folder` | `ok`, `missing` |
+
+Each request gives up after 8 seconds.
+
+---
+
+### `POST /api/navidrome/test`
+
+Try a Navidrome connection without saving anything. Same behaviour and answer shape as `POST /api/slskd/test`, with the `navidrome` settings object as the body (`url`, `username`, `password`, and optionally `admin_username` and `admin_password`).
+
+| `id` | `code` values |
+|------|---------------|
+| `config` | `missing` |
+| `connection` | `unreachable`, `timeout`, `bad_url`, `tls`, `not_navidrome`, `http_error` |
+| `auth` | `bad_credentials`, `api_error` (`detail` holds the server's own message) |
+| `scan` | `ok`, `not_admin`, `not_admin_separate`, `bad_admin` |
+
+The `scan` check reads whether the account used for library scans (the admin login when set, else the normal one) is an admin — Navidrome only lets admins start a scan — and never starts one. It is left out when the account can't be looked up, and when scanning after a download is turned off.
 
 ---
 
@@ -352,23 +436,31 @@ List all audio files in the downloads directory (recursive), plus slskd download
 
 ### `GET /playlists`
 
-List downloaded playlists, derived from the `.m3u` files already on disk (see [M3U Export](features/m3u-export.md)). Used by the [Built-in Player](features/player.md#playing-a-single-playlist-artist-or-album) and the Library page to offer "just this playlist" instead of the whole library.
+List downloaded playlists, derived from the `.m3u` files already on disk (see [M3U Export](features/m3u-export.md)). Used by the [Library page](features/library-catalog.md#library-page) to list playlists, and to play or queue just one of them.
 
 **Response:**
 
 ```json
 [
-  { "name": "My Playlist", "files": ["My Playlist/Artist - Song.mp3"], "count": 1 }
+  {
+    "name": "My Playlist",
+    "files": ["My Playlist/Artist - Song.mp3"],
+    "count": 1,
+    "cover": "My Playlist/My Playlist.jpg",
+    "liked": false
+  }
 ]
 ```
 
-Sorted by name. A single track or an album downloaded without an M3U doesn't appear here.
+Sorted by name, except that the [liked songs](features/liked-songs.md) playlist (`"liked": true`, named `Downtify Liked Songs`) comes first. A single track or an album downloaded without an M3U doesn't appear here.
+
+`cover` is the library path of the playlist's own artwork when one was saved beside its M3U (see [Playlist cover art](features/playlist-cover-art.md)), and `""` otherwise. Fetch it from [`GET /playlist-cover`](#get-playlist-cover).
 
 ---
 
 ### `GET /tracks`
 
-List downloaded tracks with artist/album read from each file's embedded tags. Used by the [Built-in Player](features/player.md#playing-a-single-playlist-artist-or-album) and the Library page to offer "just this artist" / "just this album" filtering.
+List downloaded tracks with artist/album read from each file's embedded tags. Used by the [Library page](features/library-catalog.md#library-page) to build its album, artist and track views, and by the [Built-in Player](features/player.md#how-it-works).
 
 **Response:**
 
@@ -379,13 +471,19 @@ List downloaded tracks with artist/album read from each file's embedded tags. Us
     "title": "Song",
     "artist": "Artist",
     "album": "Some Album",
+    "album_artist": "Artist",
+    "track_number": 3,
+    "year": "2024",
+    "duration": 213.08,
     "has_cover": true,
+    "added": 1789600669,
+    "size": 8567376,
     "playlists": ["My Playlist"]
   }
 ]
 ```
 
-`playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes.
+`album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes.
 
 Sorted by `file`, same order as `/list`. `artist`/`album` come back as `""` when the file has no readable tag for that field — the frontend then simply doesn't offer it as a filter for that track.
 
@@ -458,6 +556,36 @@ Return the embedded cover art for a file.
 
 ---
 
+### `GET /playlist-cover`
+
+Return a playlist's own cover art — the sidecar image saved next to its M3U, not a cover read out of a track's tags. See [Playlist cover art](features/playlist-cover-art.md).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | The `cover` path from [`GET /playlists`](#get-playlists) |
+
+**Response:** Image bytes. Returns `404` when the path isn't an image inside the library, which also refuses an audio file or a path pointing outside it.
+
+---
+
+### `GET /lyrics`
+
+Return the lyrics saved for a library file — used by the player's lyrics panel.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | Relative path to the file (as returned by `/list`) |
+
+**Response:**
+
+```json
+{ "synced": "[00:00.00] First line\n[00:05.00] Second line", "plain": "First line\nSecond line" }
+```
+
+`synced` is the content of the `.lrc` sidecar next to the file, `plain` the lyrics embedded in its tags (ID3 `USLT`, MP4 `©lyr`, Vorbis `LYRICS`); either is `""` when missing. `404` if the file isn't in the library. See [Lyrics](features/lyrics.md).
+
+---
+
 ## Library
 
 ### `POST /api/library/archive`
@@ -496,6 +624,10 @@ Delete a downloaded playlist: every track registered to it (including tracks oth
 |-----------|------|----------|-------------|
 | `playlist_name` | string | yes | Playlist name |
 
+::: warning The liked songs playlist is never deleted this way
+`Downtify Liked Songs` isn't a downloaded playlist, so no song is removed. Asking to delete it clears the likes instead (like [`POST /api/likes/clear`](#post-apilikesclear)) and answers with `deleted_count: 0`.
+:::
+
 **Response:**
 
 ```json
@@ -526,9 +658,196 @@ Fix library paths after files were moved or deleted outside Downtify, then rewri
   "content_keys_backfilled": 0,
   "playlists_affected": [],
   "refresh_m3u": false,
-  "refresh_navidrome": false
+  "refresh_navidrome": false,
+  "likes_updated": 0
 }
 ```
+
+`likes_updated` is how many [liked songs](features/liked-songs.md#keeping-likes-in-step-with-the-files) were pointed at a file's new location.
+
+---
+
+### `GET /api/library/upgrade`
+
+The state of the library upgrade: the current (or last) run, its queue counts and what the scan found. See [Upgrade library](features/library-upgrade.md).
+
+**Response:**
+
+```json
+{
+  "state": "ready",
+  "run": {
+    "id": 3,
+    "state": "ready",
+    "categories": ["artwork", "lyrics", "metadata"],
+    "options": {
+      "artwork_min_px": 600,
+      "artwork_source": "highest",
+      "recheck_days": 30
+    },
+    "total_tracks": 18742,
+    "total_bytes": 122406000000,
+    "created_at": "…",
+    "finished_at": ""
+  },
+  "counts": {
+    "total": 16921,
+    "queued": 16921,
+    "running": 0,
+    "completed": 0,
+    "skipped": 0,
+    "failed": 0,
+    "finished": 0,
+    "processed_bytes": 0
+  },
+  "summary": {
+    "categories": { "artwork": 16921, "lyrics": 2104, "metadata": 5382 },
+    "category_bytes": { "artwork": 110300000000, "lyrics": 13700000000, "metadata": 35100000000 },
+    "tracks": 16921,
+    "recently_checked": 1204,
+    "library_tracks": 18742,
+    "library_bytes": 122406000000
+  },
+  "scan": { "scanned": 18742, "total": 18742 },
+  "categories": ["artwork", "lyrics", "metadata"],
+  "artwork_sources": ["highest", "spotify", "itunes", "youtube-music"]
+}
+```
+
+`state` is one of `idle`, `scanning`, `ready`, `running`, `paused`, `done` or `cancelled`.
+
+`summary.tracks` is what the scan queued; `summary.recently_checked` is how many tracks it skipped without reading them, because every category had been looked at inside the `recheck_days` window.
+
+---
+
+### `GET /api/library/upgrade/jobs`
+
+The tracks in the current run, most recently touched first.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Only `queued`, `running`, `done`, `skipped` or `failed` |
+| `limit` | int | 1–1000, default 100 |
+
+**Response:**
+
+```json
+[
+  {
+    "file": "Queen - Bohemian Rhapsody.mp3",
+    "status": "done",
+    "stage": "",
+    "categories": ["artwork"],
+    "size": 84664,
+    "title": "Bohemian Rhapsody",
+    "artist": "Queen",
+    "detail": "artwork 1200px (itunes)",
+    "changed": ["artwork"],
+    "updated_at": "…"
+  }
+]
+```
+
+While a track is running, `stage` is `matching`, `artwork`, `lyrics` or `writing`.
+
+---
+
+### `POST /api/library/upgrade/scan`
+
+Look at every library track and queue the ones that are behind. Writes nothing to the files — the queue is confirmed with `/start`.
+
+**Body** (all optional; defaults come from the `library_upgrade` settings):
+
+```json
+{
+  "artwork_min_px": 600,
+  "artwork_source": "highest",
+  "recheck_days": 30
+}
+```
+
+Returns the same shape as `GET /api/library/upgrade`. `409` when a scan or run is already going.
+
+---
+
+### `POST /api/library/upgrade/start`
+
+Start upgrading the scanned tracks.
+
+**Body:**
+
+```json
+{ "categories": ["artwork", "lyrics"] }
+```
+
+Unknown names are dropped; an empty or missing list means every category. `409` when nothing has been scanned, or a run is already going.
+
+---
+
+### `POST /api/library/upgrade/pause`
+
+Stop after the track being worked on. The queue is kept, and `POST /api/library/upgrade/resume` continues it with the same categories.
+
+---
+
+### `POST /api/library/upgrade/cancel`
+
+Drop the rest of the queue. Tracks already upgraded stay upgraded.
+
+---
+
+## Likes
+
+The heart on a library track — see [Liked songs](features/liked-songs.md). Files are library paths, the same ones [`GET /tracks`](#get-tracks) uses.
+
+### `GET /api/likes`
+
+The liked files, most recently liked first.
+
+**Response:**
+
+```json
+{
+  "files": ["Artist - Song.mp3", "My Playlist/Other - Song.flac"],
+  "count": 2,
+  "playlist": "Downtify Liked Songs"
+}
+```
+
+`playlist` is the name of the playlist the likes are written to, under `Playlists/` (see [`GET /playlists`](#get-playlists)).
+
+---
+
+### `PUT /api/likes`
+
+Like or unlike one library file. Idempotent: sending the state you want twice changes nothing, so a tap that may not have arrived can be retried.
+
+**Request body:**
+
+```json
+{ "file": "Artist - Song.mp3", "liked": true }
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | string | yes | Library path of the song |
+| `liked` | boolean | no | `true` (the default) to like, `false` to take the like back |
+
+Liking needs a file that is in the library (`404` otherwise); unliking accepts any path, so the like of a file that has since vanished can still be cleared. `400` when `file` is missing.
+
+**Response:** `{ "file": "Artist - Song.mp3", "liked": true, "count": 2 }`
+
+The playlist file is written with the first like and removed with the last.
+
+---
+
+### `POST /api/likes/clear`
+
+Unlike everything, which also removes the playlist. No song is deleted.
+
+**Response:** `{ "cleared": 2, "count": 0 }`
 
 ---
 
@@ -665,11 +984,19 @@ Add a watch. Triggers an immediate initial download.
 
 ### `PATCH /api/monitor/playlists/{playlist_id}`
 
-Update a monitored playlist (interval, enabled state).
+Update a watch.
 
-**Request body:** Partial object with `interval_minutes` and/or `enabled`.
+**Request body:** Partial object with any of:
 
-**Response:** Updated playlist monitor object.
+| Field | Type | Description |
+|-------|------|-------------|
+| `interval_minutes` | integer | Check interval |
+| `enabled` | boolean | Pause (`false`) or resume (`true`) |
+| `url` | string | A new link for the watch — same kinds as in `POST` |
+
+A `url` that points at the **same** playlist or artist only replaces the stored `url`. One that points at a **different** playlist or artist of the same kind retargets the watch: `spotify_id`, `name` and `url` change, `last_checked` becomes `null`, `last_track_count` becomes `0`, and its downloaded-track and seen-release history is cleared. If the watch is enabled, a first check starts in the background, as after `POST`. An unchanged `url` is ignored.
+
+**Response:** Updated watch object. `404` if there is no such watch; for a new `url`: `400` if it isn't a supported link or is the other kind (an artist link for a playlist watch, or the reverse), `409` if another watch already follows it, `404`/`502` if it can't be resolved. On an error nothing is changed.
 
 ---
 
@@ -715,3 +1042,20 @@ Real-time download progress events.
 `status` is one of: `queued` · `downloading` · `done` · `error`.
 
 `filename` is set (non-null) on the final `done` event.
+
+A [library upgrade](features/library-upgrade.md) broadcasts its progress on the same socket, tagged so download clients can ignore it:
+
+```json
+{
+  "type": "library_upgrade",
+  "upgrade": { /* same shape as GET /api/library/upgrade */ }
+}
+```
+
+These are sent at most once a second while a scan or run is working, and once more when it finishes.
+
+A change to the [liked songs](features/liked-songs.md) is broadcast as well, so other open pages can catch up:
+
+```json
+{ "type": "likes", "count": 3 }
+```

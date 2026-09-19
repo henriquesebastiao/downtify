@@ -1,255 +1,49 @@
-@import url('https://rsms.me/inter/inter.css');
+@import 'tailwindcss';
+@import '@fontsource-variable/sora';
+@import '@fontsource-variable/dm-sans';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  html,
-  body {
-    @apply bg-base-300 text-base-content antialiased;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-  }
-
-  body {
-    background-image:
-      radial-gradient(
-        circle at 0% 0%,
-        rgba(26, 208, 92, 0.15),
-        transparent 45%
-      ),
-      radial-gradient(
-        circle at 100% 0%,
-        rgba(26, 208, 92, 0.08),
-        transparent 55%
-      ),
-      radial-gradient(
-        circle at 50% 100%,
-        rgba(26, 208, 92, 0.07),
-        transparent 60%
-      );
-    background-attachment: fixed;
-    min-height: 100dvh;
-  }
-
-  [data-theme='downtify-light'] body {
-    background-image:
-      radial-gradient(
-        circle at 0% 0%,
-        rgba(26, 208, 92, 0.18),
-        transparent 35%
-      ),
-      radial-gradient(
-        circle at 100% 0%,
-        rgba(26, 208, 92, 0.12),
-        transparent 45%
-      ),
-      radial-gradient(
-        circle at 50% 100%,
-        rgba(26, 208, 92, 0.08),
-        transparent 55%
-      );
-  }
-
-  ::selection {
-    background-color: rgba(26, 208, 92, 0.35);
-    color: #ffffff;
-  }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 9999px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(26, 208, 92, 0.45);
-  }
-  [data-theme='downtify-light'] ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.12);
-  }
-}
+@import './styles/tokens.css';
 
 @layer components {
-  .surface {
-    @apply bg-base-100/90 backdrop-blur-md border border-white/5;
+  /* Cover tiles: lift on hover and slide the play button in. */
+  .tile {
+    transition: transform 220ms var(--ease-out-soft);
   }
-  [data-theme='downtify-light'] .surface {
-    @apply bg-white/85 border-black/5;
+  .tile:hover {
+    transform: translateY(-4px);
   }
-
-  .surface-strong {
-    @apply bg-base-100 border border-white/10;
+  .tile .tile-play {
+    opacity: 0;
+    transform: translateY(6px);
+    transition: all 220ms var(--ease-out-soft);
   }
-  [data-theme='downtify-light'] .surface-strong {
-    @apply bg-white border-black/10;
-  }
-
-  .glass-nav {
-    background: linear-gradient(
-      to bottom,
-      rgba(18, 18, 18, 0.92),
-      rgba(18, 18, 18, 0.86)
-    );
-    backdrop-filter: saturate(180%) blur(22px);
-    -webkit-backdrop-filter: saturate(180%) blur(22px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.55);
-  }
-  [data-theme='downtify-light'] .glass-nav {
-    background: linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.92),
-      rgba(255, 255, 255, 0.86)
-    );
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.15);
-  }
-
-  .icon-btn {
-    @apply inline-flex h-10 w-10 items-center justify-center rounded-full text-base-content/80 hover:text-base-content hover:bg-white/10 transition-colors;
-  }
-  [data-theme='downtify-light'] .icon-btn {
-    @apply hover:bg-black/5;
-  }
-  .icon-btn-active {
-    @apply bg-primary text-primary-content hover:bg-primary hover:text-primary-content shadow-glow-sm;
-  }
-
-  .pill {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
-  }
-
-  .input-modern {
-    @apply w-full h-12 rounded-full bg-base-100/85 border border-white/10 px-5 pr-14 text-base-content placeholder:text-base-content/40 outline-none transition focus:border-primary/60 focus:shadow-glow-sm;
-  }
-  [data-theme='downtify-light'] .input-modern {
-    @apply bg-white border-black/10;
-  }
-
-  .track-card {
-    @apply relative flex items-center gap-4 rounded-2xl p-3 sm:p-4 transition-all duration-200 hover:bg-white/5;
-  }
-  [data-theme='downtify-light'] .track-card {
-    @apply hover:bg-black/5;
-  }
-
-  .track-cover {
-    @apply relative aspect-square w-16 sm:w-20 shrink-0 overflow-hidden rounded-xl bg-base-200 shadow-md;
-  }
-
-  .badge-soft {
-    @apply pill bg-primary/15 text-primary border border-primary/20;
-  }
-  .badge-error-soft {
-    @apply pill bg-error/15 text-error border border-error/25;
-  }
-  .badge-neutral-soft {
-    @apply pill bg-white/5 text-base-content/70 border border-white/10;
-  }
-  [data-theme='downtify-light'] .badge-neutral-soft {
-    @apply bg-black/5 border-black/10;
-  }
-  .badge-spotify {
-    @apply pill bg-[#1DB954]/15 text-[#1ED760] border border-[#1DB954]/25;
-  }
-  [data-theme='downtify-light'] .badge-spotify {
-    @apply text-[#0F7A36];
-  }
-  .badge-youtube-music {
-    @apply pill bg-[#FF0033]/15 text-[#FF4E45] border border-[#FF0033]/25;
-  }
-  [data-theme='downtify-light'] .badge-youtube-music {
-    @apply text-[#C4001F];
-  }
-  .badge-youtube {
-    @apply pill bg-[#FF0000]/10 text-[#FF7A6B] border border-[#FF0000]/20;
-  }
-  [data-theme='downtify-light'] .badge-youtube {
-    @apply text-[#A82014];
-  }
-  .badge-slskd {
-    @apply pill bg-[#2F9BE8]/15 text-[#5FC0F5] border border-[#2F9BE8]/25;
-  }
-  [data-theme='downtify-light'] .badge-slskd {
-    @apply text-[#12628F];
-  }
-
-  .card-hover-glow {
-    @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow-sm;
-  }
-
-  /* Styled <input type="range">: shared by the Player page's volume
-     slider and MiniPlayer's volume popover — the thumb/track styling
-     needs raw CSS (::-webkit-slider-thumb etc. aren't @apply-able), so
-     it lives here globally instead of duplicated in two scoped blocks. */
-  .player-range {
-    -webkit-appearance: none;
-    appearance: none;
-    background: rgba(255, 255, 255, 0.1);
-    height: 4px;
-    border-radius: 9999px;
-    outline: none;
-  }
-  [data-theme='downtify-light'] .player-range {
-    background: rgba(0, 0, 0, 0.1);
-  }
-  .player-range::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    height: 14px;
-    width: 14px;
-    border-radius: 9999px;
-    background: #1ad05c;
-    cursor: pointer;
-    box-shadow: 0 0 12px rgba(26, 208, 92, 0.45);
-  }
-  .player-range::-moz-range-thumb {
-    height: 14px;
-    width: 14px;
-    border-radius: 9999px;
-    background: #1ad05c;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 0 12px rgba(26, 208, 92, 0.45);
-  }
-
-  .equalizer {
-    @apply inline-flex items-end gap-0.5 h-4;
-  }
-  .equalizer span {
-    @apply block w-0.5 h-full origin-bottom rounded-full bg-primary;
-  }
-  .equalizer span:nth-child(1) {
-    animation: eq 1.05s ease-in-out infinite;
-  }
-  .equalizer span:nth-child(2) {
-    animation: eq 0.95s ease-in-out infinite -0.2s;
-  }
-  .equalizer span:nth-child(3) {
-    animation: eq 0.85s ease-in-out infinite -0.4s;
-  }
-
-  .skeleton {
-    @apply animate-pulse rounded-xl bg-white/10;
-  }
-  [data-theme='downtify-light'] .skeleton {
-    @apply bg-black/10;
+  .tile:hover .tile-play,
+  .tile:focus-within .tile-play {
+    opacity: 1;
+    transform: none;
   }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-  .grid-fluid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  }
+/* Now playing overlay */
+.now-playing-enter-active,
+.now-playing-leave-active {
+  transition:
+    opacity 260ms ease,
+    transform 360ms var(--ease-out-soft);
+}
+.now-playing-enter-from,
+.now-playing-leave-to {
+  opacity: 0;
+  transform: translateY(24px) scale(0.98);
+}
+
+/* List insert/remove */
+.list-enter-active,
+.list-leave-active {
+  transition: all 180ms ease-out;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }

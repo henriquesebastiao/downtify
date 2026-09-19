@@ -42,10 +42,16 @@ from downtify.library_catalog import (
     list_library_entries,
     list_library_paths,
     resolve_library_file,
+    resolve_library_image,
 )
 from downtify.library_cleanup import remove_track_leftovers
 from downtify.library_metadata_cache import LibraryMetadataCache
-from downtify.library_paths import SLSKD_LIBRARY_PREFIX
+from downtify.library_paths import SLSKD_LIBRARY_PREFIX, library_stored_path
+from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
+from downtify.library_upgrade_db import LibraryUpgradeDB
+from downtify.likes import LikedTracks, is_liked_playlist
+from downtify.lyrics import read_track_lyrics
+from downtify.lyrics_cache import LyricsLookupCache
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 from downtify.navidrome_index import NavidromeIndex
 from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
@@ -218,6 +224,15 @@ def _delete_tracks_batch(
     }
 
 
+def _spotify_id_for_library_file(stored_path: str) -> str:
+    """The Spotify track a library file was downloaded for, if known."""
+
+    index = api.state.track_index
+    if index is None:
+        return ''
+    return index.spotify_id_for_filename(stored_path) or ''
+
+
 def _open_library_stores(monitor_db_path: Path) -> None:
     """Open the library catalog/index/cache stores in /data and backfill the
     track index and playlist catalog from Playlist Monitor history."""
@@ -229,7 +244,20 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_catalog = PlaylistCatalog(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
+    api.state.lyrics_cache = LyricsLookupCache(library_db)
+    api.state.likes = LikedTracks(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
+    api.state.upgrade_runner = LibraryUpgradeRunner(
+        LibraryUpgradeDB(library_db),
+        UpgradeDeps(
+            context=api.library_context,
+            settings=lambda: api.state.settings,
+            version=api.state.version,
+            spotify_id_for=_spotify_id_for_library_file,
+            lyrics_cache=api.state.lyrics_cache,
+            publish=api.broadcast_upgrade_progress,
+        ),
+    )
     ctx = api.library_context()
     try:
         imported = api.state.track_index.backfill_from_monitor_db(
@@ -321,6 +349,19 @@ def build_app() -> FastAPI:
         # a page load.
         api.state.update_checker = UpdateChecker()
         asyncio.create_task(update_check_loop(api.state.update_checker))
+        # The liked songs playlist is a file; if it was deleted (or the
+        # library moved) while Downtify was off, write it again.
+        try:
+            api._sync_liked_playlist()
+        except Exception:
+            logger.exception('Liked songs playlist: could not sync')
+        # A library upgrade can run for hours, so a restart in the
+        # middle of one picks the queue back up where it stopped.
+        if api.state.upgrade_runner is not None:
+            try:
+                api.state.upgrade_runner.resume_after_restart()
+            except Exception:
+                logger.exception('Library upgrade: could not resume')
 
         yield
 
@@ -360,6 +401,7 @@ def build_app() -> FastAPI:
             '.{output-ext}', ''
         ),
         lyrics_providers=api._effective_lyrics_providers(api.state.settings),
+        lyrics_cache=api.state.lyrics_cache,
         organize_by_artist=bool(
             api.state.settings.get('organize_by_artist', False)
         ),
@@ -420,12 +462,22 @@ def build_app() -> FastAPI:
             tracks = m3u.read_m3u_tracks(m3u_path, base, slskd_dir)
             if not tracks:
                 continue
+            # The sidecar artwork save_playlist_cover writes beside the
+            # M3U, when the playlist has one of its own.
+            cover = m3u_path.with_suffix('.jpg')
             playlists.append({
                 'name': m3u_path.stem,
                 'files': tracks,
                 'count': len(tracks),
+                'cover': (
+                    library_stored_path(cover, base, slskd_dir)
+                    if cover.is_file()
+                    else ''
+                ),
+                # The playlist of hearted songs, not a downloaded one.
+                'liked': is_liked_playlist(m3u_path.stem),
             })
-        playlists.sort(key=lambda p: p['name'].casefold())
+        playlists.sort(key=lambda p: (not p['liked'], p['name'].casefold()))
         return playlists
 
     @app.get('/tracks')
@@ -571,6 +623,19 @@ def build_app() -> FastAPI:
             raise HTTPException(status_code=413, detail=str(exc)) from exc
         return await api.after_library_delete(result['results'], result)
 
+    @app.get('/lyrics')
+    def get_lyrics(file: str) -> dict:
+        """Lyrics saved with a library track, for the player.
+
+        ``{"synced": "<LRC text>", "plain": "<text>"}`` - the ``.lrc``
+        sidecar and the lyrics embedded in the file's tags; either may be
+        empty.
+        """
+        full = resolve_library_file(file, api.library_context())
+        if full is None:
+            raise HTTPException(status_code=404, detail='File not found')
+        return read_track_lyrics(full)
+
     @app.get('/cover')
     def get_cover(file: str):
         # Resolved and confined to the downloads or slskd folder, which
@@ -603,6 +668,28 @@ def build_app() -> FastAPI:
             media_type=mime or 'image/jpeg',
             headers={
                 # Cache by mtime — clients fetch once per file revision.
+                'Cache-Control': 'public, max-age=86400',
+                'ETag': f'"{int(full.stat().st_mtime)}"',
+            },
+        )
+
+    @app.get('/playlist-cover')
+    def get_playlist_cover(file: str) -> FileResponse:
+        """Serve a playlist's own cover art.
+
+        Unlike ``/cover``, which reads a cover out of an audio file's
+        tags, this serves the sidecar image saved next to a playlist's
+        M3U — the path ``GET /playlists`` reports as ``cover``. Resolved
+        and confined to the library folders, which prevents path
+        traversal.
+        """
+        full = resolve_library_image(file, api.library_context())
+        if full is None:
+            raise HTTPException(status_code=404, detail='File not found')
+        return FileResponse(
+            full,
+            media_type=mimetypes.guess_type(str(full))[0] or 'image/jpeg',
+            headers={
                 'Cache-Control': 'public, max-age=86400',
                 'ETag': f'"{int(full.stat().st_mtime)}"',
             },

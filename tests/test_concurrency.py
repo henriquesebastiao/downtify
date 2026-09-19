@@ -218,7 +218,7 @@ def test_metadata_lookups_run_while_yt_dlp_downloads(tmp_path, monkeypatch):
     def _cover(url):
         started['cover'].set()
 
-    def _lyrics(song, providers):
+    def _lyrics(song, providers, cache=None):
         started['lyrics'].set()
 
     def _download(opts):
@@ -386,7 +386,14 @@ def _entry(stored, full):
         'title': full.stem,
         'artist': 'Artist',
         'album': '',
+        'album_artist': '',
+        'track_number': 0,
+        'year': '',
+        'duration': 0.0,
         'has_cover': False,
+        'cover_px': 0,
+        'added': int(full.stat().st_mtime),
+        'size': full.stat().st_size,
     }
 
 

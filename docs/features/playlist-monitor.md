@@ -6,14 +6,14 @@ icon: lucide/eye
 
 The Playlist Monitor watches your favourite Spotify and YouTube Music playlists — and the artists you follow — and automatically downloads new tracks and new releases as they appear, hands-free.
 
-Two kinds of watch live side by side on the same page:
+There are two kinds of watch, each on its own tab of the Monitor page (**Playlists** and **Artists**, at `/monitor/playlists` and `/monitor/artists`):
 
 | Watch | Paste | Downloads |
 |-------|-------|-----------|
 | **Playlist** | A Spotify or YouTube Music playlist URL | Every track in the playlist, then any track added later |
 | **Artist** | A Spotify **artist** URL, or a YouTube Music artist URL | The artist's whole discography, then every new release |
 
-Every watch shows a **Spotify** or **YouTube Music** badge next to its name, naming the service it was added from.
+Every watch shows the link it follows under its name, and a **Spotify** or **YouTube Music** badge naming the service it was added from.
 
 See [Artist Watch](#artist-watch) for how artist watches work.
 
@@ -26,7 +26,7 @@ Downtify keeps a background task running every 60 seconds. On each sweep it chec
 3. Downloads any new tracks using the same pipeline as a manual download
 4. Updates the M3U file for the playlist (if M3U generation is enabled)
 
-Tracks that were already in the playlist when you added it are skipped — only *new* additions are downloaded. "Already downloaded" is tracked in a small SQLite database (`downtify_monitor.db` under `/data`), not by checking the downloads folder — so moving a downloaded file elsewhere on disk (into your own library layout, another drive, wherever) does **not** make Downtify think it's missing and re-download it on the next check.
+The first check, which starts as soon as you add the watch, downloads everything already in the playlist; later checks download only what was added since. "Already downloaded" is tracked in a small SQLite database (`downtify_monitor.db` under `/data`), not by checking the downloads folder — so moving a downloaded file elsewhere on disk (into your own library layout, another drive, wherever) does **not** make Downtify think it's missing and re-download it on the next check.
 
 A separate sweep runs every hour and checks whether each downloaded track's file is still there. Genuinely deleted files (as opposed to ones you moved) are forgotten at that point, so the track becomes eligible for download again — on the next watch check after that hourly sweep, not instantly.
 
@@ -34,12 +34,16 @@ A watch is never checked twice at the same time. Adding a watch starts its first
 
 ## Adding a playlist
 
-1. Click the eye icon (👁️) in the navigation bar
+1. Open **Monitor** from the sidebar (on phones: **More → Monitor**) and stay on the **Playlists** tab
 2. Paste a playlist URL:
     - Spotify: `https://open.spotify.com/playlist/…`
     - YouTube Music: `https://music.youtube.com/playlist?list=…` (a `www.youtube.com/playlist?list=…` link works too)
 3. Choose a check interval (from 15 minutes to once a month)
-4. Click **Watch**
+4. Click **Watch playlist**
+
+Each tab has its own box. Pasting an artist link into the Playlists tab (or a playlist link into Artists) doesn't add anything: the page says what kind of link it is and offers to move it to the right tab.
+
+You can also start watching from a playlist's page: paste its link in the search bar and use **Watch for new tracks** (or **Watch for new releases** on a YouTube Music artist). Downloaded playlists in the Library offer the same action in their **⋯** menu. Watches added this way use a 6-hour interval — change it on the Monitor page.
 
 ## YouTube Music playlists
 
@@ -51,7 +55,7 @@ Use a YouTube Music playlist for songs that aren't on Spotify: remixes, live set
 
 ## Artist Watch
 
-Instead of building a playlist per artist, paste an artist link and Downtify follows their whole catalogue. Add one exactly like a playlist — paste the URL, pick an interval, click **Watch**. Artist watches show an **Artist** badge and a release count instead of a track count.
+Instead of building a playlist per artist, paste an artist link and Downtify follows their whole catalogue. Add one from the **Artists** tab of the Monitor page — paste the URL, pick an interval, click **Watch artist**. Artist watches show a release count instead of a track count.
 
 Accepted URLs:
 
@@ -62,11 +66,13 @@ A handle is resolved to the artist's channel when you add the watch, so the same
 
 On each sweep Downtify lists the artist's discography, compares it against the releases it has already processed, and downloads every track of anything new. A steady-state sweep costs a single request — tracklists are only fetched for releases it hasn't seen before.
 
-!!! note "Why the discography comes from YouTube Music"
-    Spotify's public embed exposes an artist's name and a top-tracks preview, but **not** their discography — reading that would need Spotify API credentials, which Downtify deliberately doesn't use. So a Spotify artist link is resolved to its name and matched to the same artist on YouTube Music, which is also where the audio is fetched from. The upside: every release Downtify can see is one it can actually download. The trade-off: for an artist whose name is ambiguous, check that the watch's resolved name is the artist you meant — paste the YouTube Music artist URL directly if it picked the wrong one.
+::: info Why the discography comes from YouTube Music
+Spotify's public embed exposes an artist's name and a top-tracks preview, but **not** their discography — reading that would need Spotify API credentials, which Downtify deliberately doesn't use. So a Spotify artist link is resolved to its name and matched to the same artist on YouTube Music, which is also where the audio is fetched from. The upside: every release Downtify can see is one it can actually download. The trade-off: for an artist whose name is ambiguous, check that the watch's resolved name is the artist you meant — paste the YouTube Music artist URL directly if it picked the wrong one.
+:::
 
-!!! warning "The first sweep downloads the whole back catalogue"
-    Adding an artist queues **every** release they have, which for a prolific artist can be hundreds of albums and singles. Set **[Delay between downloads](download-settings.md#delay-between-downloads)** before adding a batch of artists, or you're very likely to get rate-limited.
+::: warning The first sweep downloads the whole back catalogue
+Adding an artist queues **every** release they have, which for a prolific artist can be hundreds of albums and singles. Set **[Delay between downloads](download-settings.md#delay-between-downloads)** before adding a batch of artists, or you're very likely to get rate-limited.
+:::
 
 A release is only recorded as processed once every one of its tracks is accounted for, so a track that fails on a transient error is retried on the next sweep rather than being skipped forever. Tracks that already downloaded are never fetched twice.
 
@@ -91,26 +97,45 @@ You can change the interval of an existing playlist at any time from the monitor
 
 ## Managing monitored playlists
 
-From the Monitor page you can:
+Each tab lists only its own kind of watch. Above the list:
 
-- **Pause / Resume** — temporarily disable a playlist without removing it
-- **Force check** — trigger an immediate check outside the scheduled interval
-- **Remove** — stop monitoring a playlist and delete its record (downloaded files are kept)
+- **Filter** — type part of a name or of the link (e.g. a playlist id) to narrow the list
+- **All / Paused** — show only paused watches
+- **Check all now** — check every active watch in the current tab
+
+On each row:
+
+- **Active** switch — pause or resume the watch without removing it
+- **Checks** — how often it's checked
+- **Check now** (↻) — check it immediately, outside the schedule
+- **Edit** (✎) — see and change the watch's link, interval and active state (see [Editing a watch](#editing-a-watch))
+- **⋯** — pause/resume, copy the link, open the original, or **Stop watching** (the record is deleted; downloaded files are kept)
+
+### Editing a watch
+
+Click a watch's name or its **Edit** button. The dialog shows the full link being followed, with **Copy link** and **Open original**, plus when the watch was added, when it was last checked and how many tracks or releases it has. You can change:
+
+- **Link** — must be the same kind of link (a playlist for a playlist watch, an artist for an artist watch):
+    - Another link to the **same** playlist or artist (for example with a different `?si=` share code, or the YouTube Music link instead of the `www.youtube.com` one) only updates the stored address. Nothing else changes.
+    - A link to a **different** playlist or artist points the watch at it. The watch keeps its interval and active state, but takes the new name and starts over: its download or release history is cleared and, if it's active, it's checked straight away. Tracks already in your library aren't downloaded again, and files from the previous target stay where they are.
+    - A link to something that's already watched is refused.
+- **Check every** and **Active**.
+
+This is handy for "live" playlists that get replaced: open the watch to check which playlist it really follows, and paste the new one if it changed.
 
 ## Sorting
 
-When you're watching more than one playlist, a **Sort by** control appears above the list. Sort by:
+The **Sort by** control above the list orders the current tab by:
 
 | Field | Notes |
 |-------|-------|
 | Date added | Default — newest first |
-| Title | Alphabetical |
-| Refresh frequency | Most frequent (shortest interval) first |
-| Number of tracks | Most tracks first |
-| Days since checked | Never-checked playlists surface first |
-| Paused / Active | Active playlists first |
+| Name | Alphabetical |
+| Last checked | Most recently checked first; never-checked watches last |
+| Check frequency | Least frequent (longest interval) first |
+| Number of tracks / releases | Most first |
 
-Click the direction button next to the dropdown to flip between ascending and descending order. The sort is applied client-side only — it doesn't change check order or scheduling.
+The button next to it flips between ascending and descending order. The choice is remembered in the browser, and it only changes the list — not check order or scheduling.
 
 ## Choosing a daily sync time
 
@@ -129,7 +154,7 @@ The playlist's M3U is rewritten **after every track finishes**, so it grows as t
 
 Manual playlist/album downloads and CSV imports behave the same way. See [M3U Export](m3u-export.md#when-it-is-written) for details.
 
-If [Download playlist cover art](playlist-cover-art.md) is on, the cover is fetched once at that final rewrite — after the initial backfill when a watch is added, and again on any later sweep that downloads at least one new track. A sweep that finds nothing new doesn't re-fetch it.
+With [Save playlist cover art](playlist-cover-art.md) on, the cover is fetched once per sweep that has tracks to download — before the first of them, so the folder looks like the playlist while it fills up. A sweep that finds nothing new doesn't re-fetch it.
 
 ## Storage
 

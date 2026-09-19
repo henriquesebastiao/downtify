@@ -21,7 +21,6 @@ dev = [
     "codeflash>=0.20.6",
     "pytest>=9.1.1",
     "ruff>=0.16.6",
-    "zensical>=0.0.60",
 ]
 
 [tool.pytest.ini_options]
@@ -32,6 +31,8 @@ upgrade = true
 
 [tool.ruff]
 line-length = 79
+# Design-canvas generator scripts (design/), not shipped code.
+extend-exclude = ['design']
 
 [tool.ruff.lint]
 preview = true

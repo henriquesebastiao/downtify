@@ -66,6 +66,17 @@ cd frontend && npm run build
 
 The compiled assets land in `frontend/dist/` and are served by the backend.
 
+### Work on the documentation
+
+The docs are Markdown files in `docs/`, built into a static site with [VitePress](https://vitepress.dev/) and a custom theme (in `docs/.vitepress/`) that shares its design tokens with the web app.
+
+```bash
+make doc         # dev server with hot reload
+make doc-build   # production build into docs/.vitepress/dist
+```
+
+Link to other pages with relative `.md` paths (`[Lyrics](lyrics.md)`), and use `::: tip Title` … `:::` for callouts (`info`, `tip`, `warning`, `danger`). New pages go in the sidebar in `docs/.vitepress/nav.mjs`. The build fails on dead links and on links to headings that don't exist.
+
 ## Project structure
 
 ```
@@ -81,6 +92,7 @@ downtify/
 ├── frontend/          # Vue 3 + Vite frontend
 │   └── src/
 │       └── i18n/      # Translation files
+├── docs/              # This documentation (Markdown + VitePress site)
 ├── main.py            # Entry point
 ├── Dockerfile
 └── docker-compose.yml

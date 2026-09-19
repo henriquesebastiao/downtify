@@ -21,8 +21,9 @@ The file is validated on upload — a file that isn't a Netscape cookie jar is r
 
 Once uploaded you can **replace** it (upload another file) or **delete** it from the same screen.
 
-!!! tip "This is the platform-agnostic route"
-    Uploading through the web UI needs no bind mounts, no file paths and no shell — which is what makes it work on Docker Desktop for Windows, where mounting a `cookies.txt` into the container is notoriously awkward.
+::: tip This is the platform-agnostic route
+Uploading through the web UI needs no bind mounts, no file paths and no shell — which is what makes it work on Docker Desktop for Windows, where mounting a `cookies.txt` into the container is notoriously awkward.
+:::
 
 ## Where it's stored
 
@@ -51,5 +52,6 @@ When it is set, the settings screen shows the cookie section as locked and refus
 - Exporting from a **private/incognito window** that you then close produces a longer-lived session, because closing a normal window can invalidate the exported session.
 - Some regions require full identity verification on the Google account before YouTube serves age-restricted content at all. Being signed in is not always enough.
 
-!!! warning "Treat the file like a password"
-    A `cookies.txt` contains live session tokens for your Google account. Anyone who can read it can act as you on YouTube. Downtify stores it with owner-only permissions where the filesystem supports it, and never exposes its contents through the API — only whether one is configured, its size and when it changed. Use a throwaway Google account if you'd rather not risk your main one.
+::: warning Treat the file like a password
+A `cookies.txt` contains live session tokens for your Google account. Anyone who can read it can act as you on YouTube. Downtify stores it with owner-only permissions where the filesystem supports it, and never exposes its contents through the API — only whether one is configured, its size and when it changed. Use a throwaway Google account if you'd rather not risk your main one.
+:::

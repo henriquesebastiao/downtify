@@ -1,11 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { AVAILABLE_LOCALES, setLocale, t } from '../i18n'
 import en from '../i18n/locales/en.js'
-import es from '../i18n/locales/es.js'
-import ptBR from '../i18n/locales/pt-BR.js'
 
 /**
  * Recursively collect every dotted key path in an i18n object.
  * e.g. { settings: { title: '…' } }  →  ['settings.title']
+ * Plural messages ({ one, other }) contribute one path per form.
  */
 function allKeys(obj, prefix = '') {
   return Object.entries(obj).flatMap(([key, value]) => {
@@ -16,47 +16,70 @@ function allKeys(obj, prefix = '') {
   })
 }
 
+function valueAt(obj, key) {
+  return key.split('.').reduce((cur, k) => cur?.[k], obj)
+}
+
 const enKeys = allKeys(en).sort()
+const placeholders = (text) =>
+  [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 
 describe('i18n locale key consistency', () => {
-  it('pt-BR has exactly the same keys as en', () => {
-    expect(allKeys(ptBR).sort()).toEqual(enKeys)
+  for (const { code, messages } of AVAILABLE_LOCALES) {
+    describe(code, () => {
+      it('has exactly the same keys as en', () => {
+        expect(allKeys(messages).sort()).toEqual(enKeys)
+      })
+
+      it('declares a language name', () => {
+        expect(messages.language.name.length).toBeGreaterThan(0)
+      })
+
+      it('has no empty strings', () => {
+        for (const key of allKeys(messages)) {
+          expect(valueAt(messages, key), `${code}: "${key}" is empty`).not.toBe(
+            ''
+          )
+        }
+      })
+
+      it('uses the same placeholders as en', () => {
+        for (const key of enKeys) {
+          // `one` forms may drop {count} ("Every hour").
+          if (key.endsWith('.one')) continue
+          const theirs = placeholders(valueAt(messages, key))
+          const ours = placeholders(valueAt(en, key))
+          expect(theirs, `${code}: "${key}"`).toEqual(ours)
+        }
+      })
+    })
+  }
+})
+
+describe('t()', () => {
+  afterEach(() => setLocale('en'))
+
+  it('interpolates params', () => {
+    expect(t('search.resultsFor', { query: 'abc' })).toBe('Results for “abc”')
   })
 
-  it('es has exactly the same keys as en', () => {
-    expect(allKeys(es).sort()).toEqual(enKeys)
+  it('picks plural forms from count', () => {
+    expect(t('common.tracks', { count: 1 })).toBe('1 track')
+    expect(t('common.tracks', { count: 3 })).toBe('3 tracks')
+    expect(t('monitor.everyHours', { count: 1 })).toBe('Every hour')
   })
 
-  it('all locales have the organize-by-artist setting keys', () => {
-    for (const locale of [en, ptBR, es]) {
-      expect(locale.settings).toHaveProperty('organizationSection')
-      expect(locale.settings).toHaveProperty('organizeByArtist')
-      expect(locale.settings).toHaveProperty('organizeByArtistHint')
-    }
+  it('formats numbers for the locale', () => {
+    expect(t('common.tracks', { count: 1200 })).toBe('1,200 tracks')
   })
 
-  it('all locales declare a language name', () => {
-    for (const locale of [en, ptBR, es]) {
-      expect(typeof locale.language.name).toBe('string')
-      expect(locale.language.name.length).toBeGreaterThan(0)
-    }
+  it('uses the locale plural rules', () => {
+    setLocale('pt-BR')
+    expect(t('common.tracks', { count: 2 })).toBe('2 faixas')
+    expect(t('common.tracks', { count: 1 })).toBe('1 faixa')
   })
 
-  it('no locale has an empty translation string', () => {
-    for (const [name, locale] of [
-      ['en', en],
-      ['pt-BR', ptBR],
-      ['es', es],
-    ]) {
-      for (const key of allKeys(locale)) {
-        const value = key.split('.').reduce((obj, k) => obj[k], locale)
-        expect(value, `${name}: "${key}" is empty`).not.toBe('')
-      }
-    }
-  })
-
-  it('all locales have the same number of keys', () => {
-    expect(allKeys(ptBR).length).toBe(enKeys.length)
-    expect(allKeys(es).length).toBe(enKeys.length)
+  it('returns the key when a message is missing', () => {
+    expect(t('nope.missing')).toBe('nope.missing')
   })
 })

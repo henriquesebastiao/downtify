@@ -114,9 +114,17 @@ export function clampCoverResolution(value) {
   return Math.min(MAX_COVER_RESOLUTION, Math.max(MIN_COVER_RESOLUTION, parsed))
 }
 
-API.getSettings().then((res) => {
-  if (res.status === 200) {
-    console.log('Received settings:', res.data)
+// Last state the server confirmed — the settings page compares against
+// it to show a "Save changes" bar only when something actually changed.
+const saved = ref('')
+const loaded = ref(false)
+
+function snapshot() {
+  return JSON.stringify(settings.value)
+}
+
+API.getSettings()
+  .then((res) => {
     // Merge nested blocks over the defaults so a settings file saved
     // before slskd/Navidrome existed still binds every form field.
     settings.value = {
@@ -125,54 +133,62 @@ API.getSettings().then((res) => {
       slskd: { ...settings.value.slskd, ...(res.data.slskd || {}) },
       navidrome: { ...settings.value.navidrome, ...(res.data.navidrome || {}) },
     }
-  } else {
-    console.log('Error loading settings')
-  }
-})
+    saved.value = snapshot()
+    loaded.value = true
+  })
+  .catch(() => {
+    loaded.value = true
+  })
 
-// Settings.vue's modal is a checkbox-driven daisyUI dialog (`#settings-modal`);
-// unchecking it is how the component itself closes on Cancel/backdrop click.
-function closeSettingsModal() {
-  if (typeof document === 'undefined') return
-  const modal = document.getElementById('settings-modal')
-  if (modal && 'checked' in modal) {
-    modal.checked = false
+const dirty = computed(() => loaded.value && snapshot() !== saved.value)
+const isSaved = ref()
+const saving = ref(false)
+// Backend rejection reason (e.g. slskd enabled without an API key).
+const saveErrorText = ref('')
+
+function reset() {
+  if (saved.value) settings.value = JSON.parse(saved.value)
+}
+
+/** Save everything; resolves true on success. */
+async function saveSettings() {
+  saving.value = true
+  saveErrorText.value = ''
+  try {
+    const res = await API.setSettings(settings.value)
+    settings.value = {
+      ...settings.value,
+      ...res.data,
+      slskd: { ...settings.value.slskd, ...(res.data.slskd || {}) },
+      navidrome: { ...settings.value.navidrome, ...(res.data.navidrome || {}) },
+    }
+    saved.value = snapshot()
+    isSaved.value = true
+    return true
+  } catch (error) {
+    const detail = error?.response?.data?.detail
+    saveErrorText.value =
+      typeof detail === 'string' && detail.trim() ? detail : ''
+    isSaved.value = false
+    return false
+  } finally {
+    saving.value = false
+    setTimeout(() => {
+      isSaved.value = null
+    }, 3000)
   }
 }
 
 export function useSettingsManager() {
-  const isSaved = ref()
-  // Backend rejection reason (e.g. slskd enabled without an API key).
-  const saveErrorText = ref('')
-  function saveSettings() {
-    console.log('Saving settings:', settings.value)
-    saveErrorText.value = ''
-    API.setSettings(settings.value)
-      .then((res) => {
-        if (res.status === 200) {
-          console.log('Saved!')
-          isSaved.value = true
-          closeSettingsModal()
-          setTimeout(() => {
-            isSaved.value = null
-          }, 2000)
-        } else {
-          console.error('Error saving settings.', res)
-          isSaved.value = false
-          setTimeout(() => {
-            isSaved.value = null
-          }, 2000)
-        }
-      })
-      .catch((error) => {
-        const detail = error?.response?.data?.detail
-        saveErrorText.value =
-          typeof detail === 'string' && detail.trim() ? detail : ''
-        isSaved.value = false
-        setTimeout(() => {
-          isSaved.value = null
-        }, 3000)
-      })
+  return {
+    saveSettings,
+    reset,
+    settings,
+    settingsOptions,
+    isSaved,
+    saving,
+    dirty,
+    loaded,
+    saveErrorText,
   }
-  return { saveSettings, settings, settingsOptions, isSaved, saveErrorText }
 }

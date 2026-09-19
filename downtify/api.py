@@ -26,6 +26,9 @@ working without changes:
   ``/api/albums/search`` - no tracklists; resolve a chosen release's
   tracks separately). A YouTube Music playlist URL resolves to its
   tracks, like a Spotify playlist.
+* ``GET  /api/url/resolve`` (the same links, always as
+  ``{kind, name, subtitle, cover_url, year, tracks, albums}`` - adds the
+  playlist/album name and cover the plain track list lacks)
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
   ``track_number`` / ``album_track_total`` survive re-fetch by URL)
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
@@ -42,6 +45,12 @@ working without changes:
   tracks, M3U and catalog entry)
 * ``POST /api/library/reconcile`` (fix stored library paths after files
   moved on disk, then refresh M3U/Navidrome playlists)
+* ``GET  /api/library/upgrade`` and ``GET /api/library/upgrade/jobs``
+  (an upgrade run's state, queue counts and per-track rows)
+* ``POST /api/library/upgrade/scan`` (look for tracks with low-resolution
+  artwork, no lyrics or incomplete tags; writes nothing),
+  ``POST /api/library/upgrade/start`` (body ``{categories}``) and
+  ``POST /api/library/upgrade/{pause,resume,cancel}``
 * ``GET  /api/playlists/batches`` and
   ``GET|DELETE /api/playlists/batches/{spotify_playlist_id}`` (Spotify
   playlist downloads and their completeness against Spotify)
@@ -50,10 +59,20 @@ working without changes:
   tracks a downloaded playlist is still missing)
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
+* ``POST /api/slskd/test`` and ``POST /api/navidrome/test`` (try the
+  connection with the settings as they are in the form, saved or not)
 * ``GET  /api/cookies`` (current YouTube cookie configuration)
 * ``POST /api/cookies`` (upload a Netscape cookies.txt as the raw request
   body - no multipart, so no ``python-multipart`` dependency)
 * ``DELETE /api/cookies`` (remove the uploaded cookies.txt)
+* ``GET|POST /api/monitor/playlists`` and
+  ``PATCH|DELETE /api/monitor/playlists/{playlist_id}`` (playlist and
+  artist watches; ``PATCH`` takes ``interval_minutes``, ``enabled`` and
+  ``url`` - a link to a different playlist/artist of the same kind
+  retargets the watch), ``POST /api/monitor/playlists/{id}/check``
+* ``GET|PUT /api/likes`` and ``POST /api/likes/clear`` (the heart on a
+  library track; while any song is liked they are also written out as a
+  playlist)
 * ``WS   /api/ws``
 * ``GET  /api/check_update``
 """
@@ -77,7 +96,16 @@ from fastapi import (
 )
 from loguru import logger
 
-from . import library_import, m3u, providers, spotify
+from . import (
+    cover_sources,
+    integration_check,
+    library_import,
+    library_upgrade,
+    lyrics,
+    m3u,
+    providers,
+    spotify,
+)
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
 from .downloader import (
@@ -87,8 +115,13 @@ from .downloader import (
     Downloader,
     NoAudioMatchError,
 )
-from .library_catalog import LibraryContext, library_context_from_state
+from .library_catalog import (
+    LibraryContext,
+    library_context_from_state,
+    resolve_library_file,
+)
 from .library_delete import delete_playlist_from_library
+from .library_metadata import read_audio_metadata
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .library_paths_cache import invalidate_library_paths_cache
@@ -97,11 +130,21 @@ from .library_reconcile import (
     reconcile_and_refresh,
     refresh_playlists_after_moves,
 )
+from .likes import (
+    LIKED_PLAYLIST_NAME,
+    LikedTracks,
+    content_key_for,
+    is_liked_playlist,
+    remap_moved,
+    sync_liked_playlist,
+)
+from .lyrics_cache import LyricsLookupCache
 from .monitor import (
     KIND_ARTIST,
     KIND_PLAYLIST,
     SOURCE_SPOTIFY,
     LibraryStores,
+    MonitoredPlaylist,
     PlaylistMonitorDB,
     check_watch,
     download_playlist_cover,
@@ -138,7 +181,7 @@ MAX_COVER_RESOLUTION = 1200
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
-    'lyrics_providers': ['lrclib'],
+    'lyrics_providers': list(lyrics.PROVIDER_ORDER),
     'download_lyrics': True,
     'format': 'mp3',
     'bitrate': '320',
@@ -197,12 +240,19 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # Keep extracted cover art under /data/cover_cache for faster Library
     # and Player loads.
     'cache_cover_art': False,
+    # Defaults the Library upgrade scan starts from (see
+    # downtify.library_upgrade); a scan request may override them.
+    'library_upgrade': {
+        'artwork_min_px': library_upgrade.DEFAULT_ARTWORK_MIN_PX,
+        'artwork_source': cover_sources.PREFERENCE_HIGHEST,
+        'recheck_days': library_upgrade.DEFAULT_RECHECK_DAYS,
+    },
 }
 
 # Settings stored as nested objects: saved values are merged over the
 # defaults key by key, so a settings.json from an older version still gets
 # every newer option.
-_NESTED_SETTINGS = ('slskd', 'navidrome')
+_NESTED_SETTINGS = ('slskd', 'navidrome', 'library_upgrade')
 
 
 def _clamp_parallel_downloads(value: Any) -> int:
@@ -405,13 +455,28 @@ def _organize_enabled() -> bool:
 
 
 def _effective_lyrics_providers(settings: dict[str, Any]) -> list[str]:
+    """The lyrics providers to try, in order.
+
+    Unknown names are dropped; a list left with nothing but the spotdl-era
+    placeholders (genius/musixmatch/azlyrics) falls back to the defaults,
+    since those settings were never asking for "no lyrics". An explicitly
+    empty list, and lyrics being off, both mean none.
+    """
+
     if not settings.get('download_lyrics', True):
         return []
-    return [
-        p
+    raw = [
+        p.strip()
         for p in (settings.get('lyrics_providers') or [])
-        if isinstance(p, str) and p
+        if isinstance(p, str) and p.strip()
     ]
+    if not raw:
+        return []
+    providers: list[str] = []
+    for name in raw:
+        if name in lyrics.SUPPORTED_PROVIDERS and name not in providers:
+            providers.append(name)
+    return providers or list(lyrics.PROVIDER_ORDER)
 
 
 class ConnectionManager:
@@ -476,6 +541,9 @@ class AppState:
     playlist_catalog: Optional[PlaylistCatalog] = None
     playlist_batch_store: Optional[PlaylistBatchStore] = None
     playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None
+    lyrics_cache: Optional[LyricsLookupCache] = None
+    upgrade_runner: Optional[library_upgrade.LibraryUpgradeRunner] = None
+    likes: Optional[LikedTracks] = None
 
 
 state = AppState()
@@ -536,6 +604,8 @@ def forget_library_file(stored_path: str) -> list[str]:
         state.metadata_cache.forget(name)
     if state.cover_cache is not None:
         state.cover_cache.forget_by_stored_path(name)
+    if state.likes is not None:
+        state.likes.unlike(name)
     return affected
 
 
@@ -550,9 +620,14 @@ async def after_library_delete(
     if deleted:
 
         def _forget() -> None:
+            liked_before = state.likes.count() if state.likes else 0
             for name in deleted:
                 affected.update(forget_library_file(name))
             invalidate_library_paths_cache()
+            if state.likes is not None and state.likes.count() != liked_before:
+                # A deleted song can't stay liked, or on the playlist.
+                _sync_liked_playlist()
+                _announce_likes()
 
         await asyncio.to_thread(_forget)
     response['playlists_affected'] = sorted(affected)
@@ -936,6 +1011,112 @@ def _resolve_url(url: str):
         )
 
     raise HTTPException(status_code=400, detail='Invalid URL')
+
+
+def _artists_label(song: dict[str, Any]) -> str:
+    artists = song.get('artists') or []
+    if isinstance(artists, list) and artists:
+        return ', '.join(str(a) for a in artists if a)
+    return str(song.get('artist') or '')
+
+
+def _collection_details(
+    kind: str, tracks: list[dict[str, Any]], name: str = ''
+) -> dict[str, Any]:
+    first = tracks[0] if tracks else {}
+    is_album = kind == 'album'
+    return {
+        'kind': kind,
+        'name': name or str(first.get('album_name') or ''),
+        'subtitle': _artists_label(first) if is_album else '',
+        # A playlist has no single cover in the track rows; the client
+        # builds a mosaic from the tracks' own covers instead.
+        'cover_url': str(first.get('cover_url') or '') if is_album else '',
+        'year': str(first.get('year') or '') if is_album else '',
+        'tracks': tracks,
+        'albums': [],
+    }
+
+
+def _track_details(song: dict[str, Any]) -> dict[str, Any]:
+    return {
+        'kind': 'track',
+        'name': str(song.get('name') or ''),
+        'subtitle': _artists_label(song),
+        'cover_url': str(song.get('cover_url') or ''),
+        'year': str(song.get('year') or ''),
+        'tracks': [song],
+        'albums': [],
+    }
+
+
+def _spotify_details(kind: str, sid: str) -> dict[str, Any]:
+    if kind == 'track':
+        return _track_details(spotify.track_from_id(sid))
+    if kind == 'album':
+        return _collection_details('album', spotify.album_tracks_from_id(sid))
+    if kind == 'playlist':
+        name, tracks = spotify.playlist_info_and_tracks(sid)
+        return _collection_details('playlist', tracks, name)
+    raise HTTPException(
+        status_code=400, detail=f'Unsupported entity type: {kind}'
+    )
+
+
+def _youtube_details(kind: str, yid: str) -> dict[str, Any]:
+    if kind == 'track':
+        return _track_details(providers.song_from_video_id(yid))
+    if kind == 'album':
+        return _collection_details(
+            'album', providers.album_tracks_from_browse_id(yid)
+        )
+    if kind == 'playlist':
+        name, tracks = providers.playlist_info_and_tracks_from_id(yid)
+        return _collection_details('playlist', tracks, name)
+    if kind == 'artist':
+        channel_id = providers.resolve_artist_channel_id(yid)
+        info = providers.artist_info_from_channel_id(channel_id)
+        return {
+            'kind': 'artist',
+            'name': str(info.get('name') or ''),
+            'subtitle': str(info.get('description') or ''),
+            'cover_url': str(info.get('cover_url') or ''),
+            'year': '',
+            'tracks': [],
+            'albums': providers.artist_albums_from_channel_id(channel_id),
+        }
+    raise HTTPException(
+        status_code=400, detail=f'Unsupported entity type: {kind}'
+    )
+
+
+@router.get('/api/url/resolve')
+def url_resolve_endpoint(url: str = Query(...)) -> dict[str, Any]:
+    """What a pasted link points at, with its tracks (or releases).
+
+    Same inputs as ``/api/song/url``, but always an object:
+    ``{kind, name, subtitle, cover_url, year, tracks, albums}`` -
+    ``kind`` is ``track``, ``album``, ``playlist`` or ``artist``; an
+    artist fills ``albums`` (release summaries) instead of ``tracks``.
+    """
+
+    spotify_parsed = spotify.parse_spotify_url(url)
+    youtube_parsed = (
+        None if spotify_parsed else providers.parse_youtube_url(url)
+    )
+    if spotify_parsed is None and youtube_parsed is None:
+        raise HTTPException(status_code=400, detail='Invalid URL')
+    try:
+        if spotify_parsed is not None:
+            return _spotify_details(*spotify_parsed)
+        return _youtube_details(*youtube_parsed)
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception('Failed to resolve URL {}', url)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 def _merge_client_track_hints(
@@ -1342,6 +1523,35 @@ async def _write_batch_m3u(
     return m3u_path
 
 
+async def _fetch_playlist_cover(
+    target: Optional[tuple[str, str]],
+    playlist_name: Optional[str],
+    playlist_subdir: Optional[str],
+) -> None:
+    """Save the playlist's own cover art beside where its M3U will go.
+
+    Resolving the M3U path without writing it (see ``m3u.m3u_path_for``)
+    means the cover can land before the first track does. No-ops when
+    the setting is off, or when the download didn't come from a
+    playlist link.
+    """
+
+    if target is None or not playlist_name or state.downloader is None:
+        return
+    # With organize-by-artist/album on, tracks are spread across those
+    # folders and the M3U goes to the legacy Playlists/ directory — the
+    # cover follows it, so both stay together.
+    subdir = None if _organize_enabled() else playlist_subdir
+    m3u_path = m3u.m3u_path_for(
+        Path(state.downloader.download_dir),
+        playlist_name,
+        playlist_subdir=subdir,
+    )
+    await asyncio.to_thread(
+        download_playlist_cover, *target, m3u_path, state.settings
+    )
+
+
 async def _process_batch(
     songs: list[dict[str, Any]],
     job_ids: list[str],
@@ -1401,6 +1611,11 @@ async def _process_batch(
     )
 
     wants_m3u = bool(generate_m3u and playlist_subdir and playlist_name)
+    if wants_m3u:
+        # Before the first track, so the folder already looks like the
+        # playlist while it fills up (and a media server scanning
+        # mid-download finds the artwork).
+        await _fetch_playlist_cover(target, playlist_name, playlist_subdir)
     # Filename per song index, filled in as downloads land. The M3U is
     # rewritten from this after every completed download, so the playlist
     # grows as it downloads instead of appearing all at once at the end,
@@ -1441,16 +1656,7 @@ async def _process_batch(
     )
 
     if wants_m3u:
-        m3u_path = await _write_batch_m3u(
-            songs, resolved, playlist_name, playlist_subdir
-        )
-        if m3u_path is not None and target is not None:
-            await asyncio.to_thread(
-                download_playlist_cover,
-                *target,
-                m3u_path,
-                state.settings,
-            )
+        await _write_batch_m3u(songs, resolved, playlist_name, playlist_subdir)
 
     await _finish_playlist_batch(
         songs,
@@ -2377,9 +2583,139 @@ async def reconcile_library_endpoint() -> dict[str, Any]:
             metadata_cache=state.metadata_cache,
         )
         invalidate_library_paths_cache()
+        if state.likes is not None:
+            moved = remap_moved(state.likes, library_context())
+            result['likes_updated'] = moved
+            if moved:
+                _sync_liked_playlist()
+                _announce_likes()
         return result
 
     return await asyncio.to_thread(_run)
+
+
+# ---------------------------------------------------------------------------
+# Library upgrade (scan an existing library, then repair it)
+# ---------------------------------------------------------------------------
+
+
+def _require_upgrade_runner() -> library_upgrade.LibraryUpgradeRunner:
+    if state.upgrade_runner is None:
+        raise HTTPException(
+            status_code=500, detail='Library upgrade not ready'
+        )
+    return state.upgrade_runner
+
+
+def _upgrade_options(
+    payload: dict[str, Any],
+) -> library_upgrade.UpgradeOptions:
+    """Request body over the saved defaults."""
+
+    saved = state.settings.get('library_upgrade') or {}
+    merged = {**saved, **(payload or {})}
+    return library_upgrade.options_from(merged)
+
+
+def broadcast_upgrade_progress(status: dict[str, Any]) -> None:
+    """Push upgrade progress to connected clients from the worker thread."""
+
+    loop = state.loop
+    if loop is None:
+        return
+    asyncio.run_coroutine_threadsafe(
+        state.connections.broadcast({
+            'type': 'library_upgrade',
+            'upgrade': status,
+        }),
+        loop,
+    )
+
+
+def _upgrade_payload(
+    runner: library_upgrade.LibraryUpgradeRunner,
+) -> dict[str, Any]:
+    payload = runner.status()
+    payload['categories'] = list(library_upgrade.CATEGORIES)
+    payload['artwork_sources'] = list(cover_sources.ARTWORK_SOURCES)
+    return payload
+
+
+@router.get('/api/library/upgrade')
+def library_upgrade_status() -> dict[str, Any]:
+    """The current (or last) upgrade run, its queue counts and scan totals."""
+
+    return _upgrade_payload(_require_upgrade_runner())
+
+
+@router.get('/api/library/upgrade/jobs')
+def library_upgrade_jobs(
+    status: Optional[str] = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=1000),
+) -> list[dict[str, Any]]:
+    """Tracks in the current run, newest activity first."""
+
+    runner = _require_upgrade_runner()
+    run = runner.db.latest_run()
+    if run is None:
+        return []
+    return runner.db.jobs(int(run['id']), status=status, limit=limit)
+
+
+@router.post('/api/library/upgrade/scan')
+async def library_upgrade_scan(
+    payload: dict[str, Any] = Body(default={}),
+) -> dict[str, Any]:
+    """Look at every library track and report what is behind.
+
+    Nothing is written: the scan fills a queue the client then confirms
+    with ``/api/library/upgrade/start``.
+    """
+
+    runner = _require_upgrade_runner()
+    try:
+        return runner.start_scan(_upgrade_options(payload))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post('/api/library/upgrade/start')
+async def library_upgrade_start(
+    payload: dict[str, Any] = Body(default={}),
+) -> dict[str, Any]:
+    """Begin upgrading the scanned tracks, for the chosen categories."""
+
+    runner = _require_upgrade_runner()
+    categories = library_upgrade.normalize_categories(
+        (payload or {}).get('categories')
+    )
+    try:
+        return runner.start(categories)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post('/api/library/upgrade/pause')
+async def library_upgrade_pause() -> dict[str, Any]:
+    """Stop after the track being worked on; the queue is kept."""
+
+    return _require_upgrade_runner().pause()
+
+
+@router.post('/api/library/upgrade/resume')
+async def library_upgrade_resume() -> dict[str, Any]:
+    runner = _require_upgrade_runner()
+    try:
+        return runner.resume()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post('/api/library/upgrade/cancel')
+async def library_upgrade_cancel() -> dict[str, Any]:
+    """Drop the rest of the queue. Finished tracks stay upgraded."""
+
+    return _require_upgrade_runner().cancel()
 
 
 async def _schedule_playlist_refresh_after_delete(
@@ -2427,6 +2763,22 @@ async def delete_library_playlist_endpoint(
 
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    if is_liked_playlist(playlist_name):
+        # Deleting a playlist deletes its tracks from disk. Here that must
+        # only ever mean "unlike everything": the songs are the user's
+        # library, the playlist merely lists the ones they hearted.
+        await asyncio.to_thread(_clear_likes)
+        return {
+            'ok': True,
+            'playlist': playlist_name,
+            'files': [],
+            'deleted_count': 0,
+            'failed_count': 0,
+            'failed': [],
+            'playlists_affected': [],
+            'playlists_refresh_scheduled': False,
+        }
 
     def _run() -> dict[str, Any]:
         return delete_playlist_from_library(
@@ -2922,6 +3274,162 @@ async def update_settings_endpoint(
     return state.settings
 
 
+async def _json_object(request: Request) -> dict[str, Any]:
+    try:
+        payload = await request.json()
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+@router.post('/api/slskd/test')
+async def test_slskd_endpoint(request: Request) -> dict[str, Any]:
+    """Try a slskd configuration without saving it.
+
+    The body is the ``slskd`` settings object as it stands in the form; an
+    empty body tests the saved one. A failed test is a normal answer, not
+    an error: ``{ok, server, checks: [{id, status, code, detail}]}``.
+    """
+
+    payload = await _json_object(request)
+    saved = state.settings.get('slskd')
+    cfg = _effective_slskd_settings({
+        **state.settings,
+        'slskd': payload or (saved if isinstance(saved, dict) else {}),
+    })
+    return await asyncio.to_thread(integration_check.check_slskd, cfg)
+
+
+@router.post('/api/navidrome/test')
+async def test_navidrome_endpoint(request: Request) -> dict[str, Any]:
+    """Try a Navidrome configuration without saving it.
+
+    Same shape as ``POST /api/slskd/test``, with the ``navidrome`` settings
+    object as the body.
+    """
+
+    payload = await _json_object(request)
+    saved = state.settings.get('navidrome')
+    cfg = _effective_navidrome_settings({
+        **state.settings,
+        'navidrome': payload or (saved if isinstance(saved, dict) else {}),
+    })
+    return await asyncio.to_thread(integration_check.check_navidrome, cfg)
+
+
+# ---------------------------------------------------------------------------
+# Liked songs
+# ---------------------------------------------------------------------------
+
+
+def _require_likes() -> LikedTracks:
+    if state.likes is None:
+        raise HTTPException(status_code=500, detail='Likes not ready')
+    return state.likes
+
+
+def _sync_liked_playlist() -> None:
+    """Rewrite (or remove) the liked songs playlist to match the likes."""
+
+    if state.likes is None or state.downloader is None:
+        return
+    ctx = library_context()
+    try:
+        sync_liked_playlist(state.likes, ctx.download_dir, ctx.slskd_dir)
+    except Exception:
+        logger.exception('Liked songs playlist sync failed')
+
+
+def _announce_likes() -> None:
+    """Tell open pages the likes changed, from any thread."""
+
+    loop = state.loop
+    if loop is None or state.likes is None:
+        return
+    asyncio.run_coroutine_threadsafe(
+        state.connections.broadcast({
+            'type': 'likes',
+            'count': state.likes.count(),
+        }),
+        loop,
+    )
+
+
+def _clear_likes() -> int:
+    likes = _require_likes()
+    cleared = likes.clear()
+    _sync_liked_playlist()
+    _announce_likes()
+    return cleared
+
+
+@router.get('/api/likes')
+def get_likes() -> dict[str, Any]:
+    """The liked files, newest like first, and the playlist's name.
+
+    ``files`` are library paths, the same ones ``GET /tracks`` uses.
+    """
+
+    likes = _require_likes()
+    files = likes.paths()
+    return {
+        'files': files,
+        'count': len(files),
+        'playlist': m3u.sanitize_playlist_name(LIKED_PLAYLIST_NAME),
+    }
+
+
+@router.put('/api/likes')
+async def set_like(request: Request) -> dict[str, Any]:
+    """Like or unlike one library file: ``{file, liked}``.
+
+    Idempotent — sending the state you want twice changes nothing — so a
+    client can retry a tap that may not have arrived. Liking needs a file
+    that is in the library; unliking accepts any path, so a heart on a
+    file that has since vanished can still be cleared.
+    """
+
+    payload = await _json_object(request)
+    file = str(payload.get('file') or '').strip().replace('\\', '/')
+    if not file:
+        raise HTTPException(status_code=400, detail='file is required')
+    liked = bool(payload.get('liked', True))
+    likes = _require_likes()
+
+    if liked:
+        full = resolve_library_file(file, library_context())
+        if full is None:
+            raise HTTPException(status_code=404, detail='File not found')
+        meta = await asyncio.to_thread(read_audio_metadata, full)
+        changed = await asyncio.to_thread(
+            lambda: likes.like(
+                file,
+                content_key=content_key_for(full),
+                title=str(meta.get('title') or full.stem),
+                artist=str(meta.get('artist') or ''),
+                duration=float(meta.get('duration') or 0.0),
+            )
+        )
+    else:
+        changed = await asyncio.to_thread(likes.unlike, file)
+
+    if changed:
+        await asyncio.to_thread(_sync_liked_playlist)
+        _announce_likes()
+    return {'file': file, 'liked': liked, 'count': likes.count()}
+
+
+@router.post('/api/likes/clear')
+async def clear_likes_endpoint() -> dict[str, Any]:
+    """Unlike everything, which also takes the playlist away.
+
+    Only the hearts and the playlist file go; no song is deleted.
+    """
+
+    cleared = await asyncio.to_thread(_clear_likes)
+    return {'cleared': cleared, 'count': 0}
+
+
 @router.websocket('/api/ws')
 async def websocket_endpoint(
     ws: WebSocket, client_id: str = Query(...)
@@ -3078,29 +3586,69 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
     playlist = await asyncio.to_thread(
         db.add_playlist, watch_key, name, url, interval_minutes, kind
     )
-
-    # Kick off the first download pass immediately so the user does not have
-    # to wait up to a full monitor sweep interval for the initial backfill.
-    if state.downloader is not None:
-        loop = state.loop or asyncio.get_running_loop()
-
-        async def _initial_check(pl=playlist) -> None:
-            try:
-                await check_watch(
-                    pl,
-                    db,
-                    state.downloader,  # type: ignore[arg-type]
-                    state.connections.broadcast,
-                    loop,
-                    state.settings,
-                    library_stores(),
-                )
-            except Exception:
-                logger.exception('Initial check failed for watch {}', pl.id)
-
-        asyncio.create_task(_initial_check())
-
+    _start_initial_check(playlist, db)
     return playlist.to_dict()
+
+
+def _start_initial_check(
+    playlist: MonitoredPlaylist, db: PlaylistMonitorDB
+) -> None:
+    """Run a watch's first download pass now, in the background.
+
+    Saves waiting up to a full monitor sweep for the initial backfill.
+    """
+    if state.downloader is None:
+        return
+    loop = state.loop or asyncio.get_running_loop()
+
+    async def _initial_check() -> None:
+        try:
+            await check_watch(
+                playlist,
+                db,
+                state.downloader,  # type: ignore[arg-type]
+                state.connections.broadcast,
+                loop,
+                state.settings,
+                library_stores(),
+            )
+        except Exception:
+            logger.exception('Initial check failed for watch {}', playlist.id)
+
+    asyncio.create_task(_initial_check())
+
+
+async def _change_watch_url(
+    db: PlaylistMonitorDB, current: MonitoredPlaylist, url: str
+) -> Optional[MonitoredPlaylist]:
+    """Apply a new URL to a watch; return the retargeted watch, if any.
+
+    Another link to the same playlist or artist just replaces the stored
+    URL. A link to a different one of the same kind retargets the watch
+    (see :meth:`PlaylistMonitorDB.retarget_playlist`).
+    """
+    kind, watch_key, name = await _resolve_watch_target(url)
+    if kind != current.kind:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                'This watch follows an artist; paste an artist URL'
+                if current.kind == KIND_ARTIST
+                else 'This watch follows a playlist; paste a playlist URL'
+            ),
+        )
+    if watch_key == current.spotify_id:
+        await asyncio.to_thread(db.update_playlist, current.id, url=url)
+        return None
+    other = await asyncio.to_thread(db.get_by_spotify_id, watch_key)
+    if other is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f'"{other.name}" is already being watched',
+        )
+    return await asyncio.to_thread(
+        db.retarget_playlist, current.id, watch_key, name, url
+    )
 
 
 @router.patch('/api/monitor/playlists/{playlist_id}')
@@ -3112,6 +3660,17 @@ async def update_monitor_playlist(
         payload = await request.json()
     except Exception:
         payload = {}
+
+    current = await asyncio.to_thread(db.get_playlist, playlist_id)
+    if current is None:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
+
+    retargeted = None
+    url = str(payload.get('url') or '').strip()
+    if url and url != current.url:
+        retargeted = await _change_watch_url(db, current, url)
 
     kwargs: dict[str, Any] = {}
     if 'interval_minutes' in payload:
@@ -3126,6 +3685,8 @@ async def update_monitor_playlist(
         raise HTTPException(
             status_code=404, detail='Monitored playlist not found'
         )
+    if retargeted is not None and updated.enabled:
+        _start_initial_check(updated, db)
     return updated.to_dict()
 
 

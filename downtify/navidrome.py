@@ -33,6 +33,21 @@ from .track_tag_match import (
 # playlists hit HTTP 414. POST form bodies avoid that; we still batch adds.
 _PLAYLIST_SONG_ID_BATCH = 80
 
+#: Subsonic error code for a wrong username or password.
+SUBSONIC_AUTH_FAILED = 40
+
+
+class SubsonicError(ValueError):
+    """A ``status: failed`` Subsonic reply, with the server's error code.
+
+    A ``ValueError`` like before, so existing callers catch it unchanged;
+    the code is what tells "wrong password" (40) from any other refusal.
+    """
+
+    def __init__(self, message: str, code: int = 0) -> None:
+        super().__init__(message)
+        self.code = code
+
 
 def _song_id_batches(
     song_ids: list[str], batch_size: int = _PLAYLIST_SONG_ID_BATCH
@@ -461,7 +476,11 @@ class NavidromeClient:
         if body.get('status') == 'failed':
             err = body.get('error') or {}
             message = err.get('message') if isinstance(err, dict) else str(err)
-            raise ValueError(str(message or 'Subsonic request failed'))
+            code = err.get('code') if isinstance(err, dict) else 0
+            raise SubsonicError(
+                str(message or 'Subsonic request failed'),
+                code if isinstance(code, int) else 0,
+            )
         return body
 
     def ping(self) -> bool:

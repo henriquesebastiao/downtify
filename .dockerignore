@@ -12,3 +12,6 @@ __pycache__
 .vscode
 frontend/node_modules
 frontend/dist
+docs/node_modules
+docs/.vitepress/cache
+docs/.vitepress/dist

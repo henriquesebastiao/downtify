@@ -1,0 +1,251 @@
+/*
+ * Nocturne — Downtify 3.0 design tokens.
+ *
+ * Shared by the web app (src/index.css) and the documentation site
+ * (docs-site/). No @import here: each consumer brings its own Tailwind
+ * and fonts.
+ *
+ * Colours are CSS variables so the light theme is a variable swap on
+ * <html data-theme="light">; `@theme inline` maps them onto Tailwind
+ * utilities (bg-surface, text-muted, border-line, ...).
+ */
+:root {
+  color-scheme: dark;
+  --c-bg: #0b0c0e;
+  --c-side: #0f1012;
+  --c-surface: #141518;
+  --c-surface-2: #1a1b1f;
+  --c-raised: #25262b;
+  --c-line: #1c1d21;
+  --c-line-2: #1f2025;
+  --c-line-3: #26272c;
+  --c-text: #ecedef;
+  --c-text-2: #d3d5da;
+  --c-text-3: #b5b8bf;
+  --c-muted: #8b8f98;
+  --c-faint: #5d616a;
+  --c-accent: #1ad05c;
+  --c-accent-hi: #48dd87;
+  --c-on-accent: #04140a;
+  --c-danger: #f26d6d;
+  --c-warn: #e8b04b;
+  --c-glass: rgb(22 23 27 / 0.86);
+  --c-invert: #ecedef;
+  --c-on-invert: #0b0c0e;
+  --c-src-ytm: #ff4e45;
+  --c-src-yt: #ff7a6b;
+  --c-src-slskd: #5fc0f5;
+  --c-spotify: #1ed760;
+  --sh-float: 0 20px 50px rgb(0 0 0 / 0.5);
+  --sh-cover: 0 10px 30px rgb(0 0 0 / 0.35);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --c-bg: #f6f7f8;
+  --c-side: #ffffff;
+  --c-surface: #ffffff;
+  --c-surface-2: #eef0f2;
+  --c-raised: #e4e7eb;
+  --c-line: #e6e8eb;
+  --c-line-2: #e1e4e8;
+  --c-line-3: #d8dce1;
+  --c-text: #0e0f11;
+  --c-text-2: #24272c;
+  --c-text-3: #3e434a;
+  --c-muted: #5e636c;
+  --c-faint: #8d939c;
+  --c-accent: #0e9f48;
+  --c-accent-hi: #0b8a3e;
+  --c-on-accent: #ffffff;
+  --c-danger: #d0393a;
+  --c-warn: #b7791f;
+  --c-glass: rgb(255 255 255 / 0.88);
+  --c-invert: #0e0f11;
+  --c-on-invert: #ffffff;
+  --c-src-ytm: #c4001f;
+  --c-src-yt: #a82014;
+  --c-src-slskd: #12628f;
+  --c-spotify: #13893f;
+  --sh-float: 0 16px 40px rgb(16 24 40 / 0.12);
+  --sh-cover: 0 8px 20px rgb(16 24 40 / 0.12);
+}
+
+@theme inline {
+  --font-sans: 'DM Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Sora Variable', 'Segoe UI', system-ui, sans-serif;
+
+  --color-bg: var(--c-bg);
+  --color-side: var(--c-side);
+  --color-surface: var(--c-surface);
+  --color-surface-2: var(--c-surface-2);
+  --color-raised: var(--c-raised);
+  --color-line: var(--c-line);
+  --color-line-2: var(--c-line-2);
+  --color-line-3: var(--c-line-3);
+  --color-fg: var(--c-text);
+  --color-fg-2: var(--c-text-2);
+  --color-fg-3: var(--c-text-3);
+  --color-muted: var(--c-muted);
+  --color-faint: var(--c-faint);
+  --color-accent: var(--c-accent);
+  --color-accent-hi: var(--c-accent-hi);
+  --color-on-accent: var(--c-on-accent);
+  --color-danger: var(--c-danger);
+  --color-warn: var(--c-warn);
+  --color-glass: var(--c-glass);
+  --color-invert: var(--c-invert);
+  --color-on-invert: var(--c-on-invert);
+  --color-src-ytm: var(--c-src-ytm);
+  --color-src-yt: var(--c-src-yt);
+  --color-src-slskd: var(--c-src-slskd);
+  --color-spotify: var(--c-spotify);
+
+  --shadow-float: var(--sh-float);
+  --shadow-cover: var(--sh-cover);
+
+  --radius-control: 10px;
+  --radius-cover: 12px;
+  --radius-panel: 18px;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-rise: rise 420ms var(--ease-out-soft) both;
+  --animate-eq: eq 1s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+
+  --breakpoint-xs: 400px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes eq {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--c-bg);
+    color: var(--c-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--c-accent) 35%, transparent);
+  }
+
+  button,
+  [role='button'] {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 2px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--c-line-3) transparent;
+  }
+}
+
+@layer components {
+  .text-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .shimmer {
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--c-text) 18%, transparent),
+      transparent
+    );
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--c-faint);
+  }
+}
+
+/* Route change */
+.page-enter-active,
+.page-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 220ms var(--ease-out-soft);
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-leave-to {
+  opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 160ms ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

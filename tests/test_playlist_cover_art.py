@@ -392,6 +392,103 @@ def test_process_batch_skips_playlist_cover_without_a_playlist_url(
     assert not (tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg').exists()
 
 
+def test_process_batch_saves_the_cover_before_the_first_track(
+    monkeypatch, tmp_path
+):
+    # The playlist's folder should already look like the playlist while
+    # it fills up, rather than only once the last track lands.
+    songs = [
+        {'song_id': 'a', 'name': 'Song A', 'artists': ['Artist A']},
+        {'song_id': 'b', 'name': 'Song B', 'artists': ['Artist B']},
+    ]
+    dl = _make_downloader(tmp_path)
+    monkeypatch.setattr(api.state, 'downloader', dl)
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    monkeypatch.setattr(api.state, 'download_semaphore', None)
+    monkeypatch.setattr(
+        api.state, 'settings', {'download_cover_art_playlists': True}
+    )
+    monkeypatch.setattr(
+        api, 'parse_playlist_url', lambda url: (SOURCE_SPOTIFY, 'pl123')
+    )
+    monkeypatch.setattr(
+        api, 'fetch_playlist', lambda source, pid: (PLAYLIST_NAME, songs)
+    )
+    monkeypatch.setattr(
+        monitor.spotify,
+        'playlist_cover_url_from_id',
+        lambda pid: 'https://img/cover',
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
+    )
+
+    cover_path = tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg'
+    cover_seen: list[bool] = []
+
+    async def fake_run_download(song, song_id, subdir=None, **_kwargs):
+        cover_seen.append(cover_path.is_file())
+        return _write_track_file(dl, song, subdir)
+
+    monkeypatch.setattr(api, '_run_download', fake_run_download)
+
+    asyncio.run(
+        api._process_batch(
+            songs,
+            ['job-a', 'job-b'],
+            playlist_url='https://open.spotify.com/playlist/pl123',
+            generate_m3u=True,
+        )
+    )
+
+    assert cover_seen == [True, True]
+
+
+def test_check_playlist_saves_the_cover_before_the_first_track(
+    monkeypatch, tmp_path
+):
+    tracks = [{'song_id': 'a', 'name': 'Song A', 'artists': ['Artist A']}]
+    dl = Downloader(download_dir=tmp_path, audio_format='mp3')
+
+    monkeypatch.setattr(
+        monitor.spotify, 'playlist_tracks_from_id', lambda spotify_id: tracks
+    )
+    monkeypatch.setattr(monitor.spotify, 'track_from_id', lambda track_id: {})
+    monkeypatch.setattr(
+        monitor.spotify,
+        'playlist_cover_url_from_id',
+        lambda pid: 'https://img/cover',
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
+    )
+
+    cover_path = tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg'
+    cover_seen: list[bool] = []
+
+    def _download(song, cb, subdir=None):
+        cover_seen.append(cover_path.is_file())
+        return _write_track_file(dl, song, subdir)
+
+    monkeypatch.setattr(dl, 'download', _download)
+
+    async def _scenario():
+        return await monitor.check_playlist(
+            _monitored_playlist(),
+            _FakeMonitorDB(),
+            dl,
+            _fake_broadcast,
+            asyncio.get_running_loop(),
+            settings={
+                'generate_m3u': True,
+                'download_cover_art_playlists': True,
+            },
+        )
+
+    assert asyncio.run(_scenario()) == 1
+    assert cover_seen == [True]
+
+
 # ── api.write_playlist_m3u_endpoint integration ─────────────────────────────
 
 

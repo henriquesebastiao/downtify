@@ -141,6 +141,26 @@ def read_m3u_tracks(
     return tracks
 
 
+def m3u_path_for(
+    download_dir: Path,
+    playlist_name: str,
+    *,
+    playlist_subdir: Optional[str] = None,
+) -> Path:
+    """Where :func:`write_m3u` would put this playlist's M3U.
+
+    Resolving the path without writing anything lets the playlist's
+    cover art be saved beside it before the first track is downloaded —
+    see ``downtify.monitor.download_playlist_cover``.
+    """
+
+    if playlist_subdir:
+        target_dir = Path(download_dir) / playlist_subdir
+    else:
+        target_dir = Path(download_dir) / 'Playlists'
+    return target_dir / f'{sanitize_playlist_name(playlist_name)}.m3u'
+
+
 def write_m3u(
     download_dir: Path,
     playlist_name: str,
@@ -162,11 +182,10 @@ def write_m3u(
     that case.
     """
 
-    safe_name = sanitize_playlist_name(playlist_name)
-    if playlist_subdir:
-        target_dir = Path(download_dir) / playlist_subdir
-    else:
-        target_dir = Path(download_dir) / 'Playlists'
+    target = m3u_path_for(
+        download_dir, playlist_name, playlist_subdir=playlist_subdir
+    )
+    target_dir = target.parent
     target_dir.mkdir(parents=True, exist_ok=True)
 
     content, kept = build_m3u_content(
@@ -181,7 +200,6 @@ def write_m3u(
         )
         return None, 0
 
-    target = target_dir / f'{safe_name}.m3u'
     # UTF-8, no BOM, LF line endings — encoding='utf-8' on text mode
     # gives us no BOM, and we built the content with '\n' already.
     target.write_text(content, encoding='utf-8', newline='\n')
