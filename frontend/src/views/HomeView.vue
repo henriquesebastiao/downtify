@@ -262,12 +262,13 @@
           v-for="playlist in recentPlaylists"
           :key="playlist.key"
           :to="{ name: 'Playlist', query: { name: playlist.name } }"
-          :title="playlist.name"
+          :title="playlist.title"
           :subtitle="t('common.tracks', { count: playlist.tracks.length })"
           :cover="playlist.cover"
           :covers="playlist.covers"
-          :name="playlist.name"
-          icon="playlist"
+          :name="playlist.title"
+          :icon="playlist.liked ? 'heart' : 'playlist'"
+          :symbol="playlist.liked"
           @play="playlistActions.play(playlist)"
         />
       </div>

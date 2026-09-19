@@ -185,6 +185,11 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
     return {
       key: playlist.name.toLowerCase(),
       name: playlist.name,
+      // What to show. The file on disk has a fixed name, so the liked
+      // songs playlist is given a translated title by the model.
+      title: playlist.name,
+      // The playlist of hearted songs, not a downloaded one.
+      liked: Boolean(playlist.liked),
       tracks,
       // The playlist's own artwork, when it was downloaded; the grid of
       // track covers is only the fallback for playlists without one.
@@ -202,6 +207,8 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
     .map((batch) => ({
       key: String(batch.playlist_name || '').toLowerCase(),
       name: String(batch.playlist_name || ''),
+      title: String(batch.playlist_name || ''),
+      liked: false,
       tracks: [],
       cover: '',
       covers: [],

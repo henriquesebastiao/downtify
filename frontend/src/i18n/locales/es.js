@@ -244,6 +244,19 @@ export default {
     saveToDevice: 'Guardar en este dispositivo',
     upgrade: 'Mejorar biblioteca',
   },
+  likes: {
+    like: 'Añadir a Canciones que me gustan',
+    unlike: 'Quitar de Canciones que me gustan',
+    playlist: 'Canciones que me gustan',
+    created: 'Añadida a Canciones que me gustan: tu playlist ya está lista.',
+    open: 'Abrir',
+    removeAllTitle: '¿Quitar todos los «me gusta»?',
+    removeAllBody:
+      'Tus canciones se quedan en la biblioteca. Solo se quitan los corazones y esta playlist.',
+    removeAll: 'Quitar todos los «me gusta»',
+    cleared: 'Todos los «me gusta» se han quitado',
+    failed: 'No se pudo actualizar el «me gusta»',
+  },
   upgrade: {
     title: 'Mejorar biblioteca',
     subtitle:

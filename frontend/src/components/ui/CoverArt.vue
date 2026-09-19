@@ -2,7 +2,7 @@
   <div
     class="relative isolate shrink-0 overflow-hidden"
     :class="[round ? 'rounded-full' : rounded, shadow ? 'shadow-cover' : '']"
-    :style="{ backgroundColor: placeholder }"
+    :style="{ background: placeholder }"
   >
     <div
       v-if="mosaic.length >= 4"
@@ -32,13 +32,13 @@
     <div
       v-if="showFallback"
       class="absolute inset-0 flex items-center justify-center"
-      :class="round ? '' : 'items-end justify-start p-[8%]'"
+      :class="round || symbol ? '' : 'items-end justify-start p-[8%]'"
     >
       <AppIcon
         v-if="!letters"
         :name="icon"
         :size="iconSize"
-        class="text-white/35"
+        :class="symbol ? 'text-white/90' : 'text-white/35'"
       />
       <span
         v-else
@@ -67,6 +67,9 @@ const props = defineProps({
   shadow: { type: Boolean, default: false },
   letterSize: { type: Number, default: 48 },
   iconSize: { type: Number, default: 28 },
+  // The icon on a fixed tile, whatever art or name there is — for
+  // collections that are recognised by what they are, like liked songs.
+  symbol: { type: Boolean, default: false },
 })
 
 const failed = ref(false)
@@ -81,15 +84,21 @@ watch(
 
 // A real cover always wins: a playlist with its own artwork shows it
 // instead of a grid of the tracks it happens to contain.
-const mosaic = computed(() => (props.src ? [] : props.covers.filter(Boolean)))
-const imageSrc = computed(() => props.src || mosaic.value[0] || '')
-const letters = computed(() => initials(props.name))
+const mosaic = computed(() =>
+  props.symbol || props.src ? [] : props.covers.filter(Boolean)
+)
+const imageSrc = computed(() =>
+  props.symbol ? '' : props.src || mosaic.value[0] || ''
+)
+const letters = computed(() => (props.symbol ? '' : initials(props.name)))
 const showFallback = computed(
   () => mosaic.value.length < 4 && (!imageSrc.value || failed.value)
 )
 // Placeholder tint derived from the name, so an album without art keeps
 // the same colour everywhere.
-const placeholder = computed(
-  () => `oklch(0.42 0.07 ${hueFor(props.name || props.alt)})`
+const placeholder = computed(() =>
+  props.symbol
+    ? 'linear-gradient(135deg, oklch(0.5 0.17 305), oklch(0.62 0.14 245))'
+    : `oklch(0.42 0.07 ${hueFor(props.name || props.alt)})`
 )
 </script>

@@ -243,6 +243,19 @@ export default {
     saveToDevice: 'Bu cihaza kaydet',
     upgrade: 'Kitaplığı iyileştir',
   },
+  likes: {
+    like: 'Beğenilen şarkılara ekle',
+    unlike: 'Beğenilen şarkılardan kaldır',
+    playlist: 'Beğenilen şarkılar',
+    created: 'Beğenilen şarkılara eklendi — çalma listeniz hazır.',
+    open: 'Aç',
+    removeAllTitle: 'Tüm beğeniler kaldırılsın mı?',
+    removeAllBody:
+      'Şarkılarınız kitaplıkta kalır. Yalnızca kalpler ve bu çalma listesi kaldırılır.',
+    removeAll: 'Tüm beğenileri kaldır',
+    cleared: 'Tüm beğeniler kaldırıldı',
+    failed: 'Beğeni güncellenemedi',
+  },
   upgrade: {
     title: 'Kitaplığı iyileştir',
     subtitle:

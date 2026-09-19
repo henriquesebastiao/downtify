@@ -206,6 +206,20 @@ function reconcileLibrary() {
   return API.post('/api/library/reconcile')
 }
 
+// ── Liked songs ──────────────────────────────────────────────────────
+function getLikes() {
+  return API.get('/api/likes')
+}
+
+// Idempotent: sending the state you want twice changes nothing.
+function setLike(file, liked) {
+  return API.put('/api/likes', { file, liked })
+}
+
+function clearLikes() {
+  return API.post('/api/likes/clear')
+}
+
 // ── Library upgrade ──────────────────────────────────────────────────
 function getLibraryUpgrade() {
   return API.get('/api/library/upgrade')
@@ -321,6 +335,9 @@ export default {
   prepareLibraryArchive,
   libraryArchiveURL,
   reconcileLibrary,
+  getLikes,
+  setLike,
+  clearLikes,
   getLibraryUpgrade,
   getLibraryUpgradeJobs,
   scanLibraryUpgrade,

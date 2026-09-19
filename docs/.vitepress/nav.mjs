@@ -24,6 +24,7 @@ export const NAV = [
       { title: 'Playlist Monitor', page: 'features/playlist-monitor.md' },
       { title: 'Library Import (CSV)', page: 'features/library-import.md' },
       { title: 'Built-in Player', page: 'features/player.md' },
+      { title: 'Liked Songs', page: 'features/liked-songs.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },

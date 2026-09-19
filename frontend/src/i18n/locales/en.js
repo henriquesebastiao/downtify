@@ -237,6 +237,19 @@ export default {
     saveToDevice: 'Save to this device',
     upgrade: 'Upgrade library',
   },
+  likes: {
+    like: 'Add to Liked songs',
+    unlike: 'Remove from Liked songs',
+    playlist: 'Liked songs',
+    created: 'Added to Liked songs — your playlist is ready.',
+    open: 'Open',
+    removeAllTitle: 'Remove all likes?',
+    removeAllBody:
+      'Your songs stay in the library. Only the hearts, and this playlist, are removed.',
+    removeAll: 'Remove all likes',
+    cleared: 'All likes removed',
+    failed: "Couldn't update the like",
+  },
   upgrade: {
     title: 'Upgrade library',
     subtitle:

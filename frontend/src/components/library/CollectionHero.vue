@@ -16,6 +16,7 @@
         :name="name || title"
         :round="round"
         :icon="icon"
+        :symbol="symbol"
         shadow
         :letter-size="96"
         :icon-size="64"
@@ -56,6 +57,7 @@ const props = defineProps({
   cover: { type: String, default: '' },
   covers: { type: Array, default: () => [] },
   icon: { type: String, default: 'disc' },
+  symbol: { type: Boolean, default: false },
   round: { type: Boolean, default: false },
 })
 

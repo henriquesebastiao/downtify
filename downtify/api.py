@@ -70,6 +70,9 @@ working without changes:
   artist watches; ``PATCH`` takes ``interval_minutes``, ``enabled`` and
   ``url`` - a link to a different playlist/artist of the same kind
   retargets the watch), ``POST /api/monitor/playlists/{id}/check``
+* ``GET|PUT /api/likes`` and ``POST /api/likes/clear`` (the heart on a
+  library track; while any song is liked they are also written out as a
+  playlist)
 * ``WS   /api/ws``
 * ``GET  /api/check_update``
 """
@@ -112,8 +115,13 @@ from .downloader import (
     Downloader,
     NoAudioMatchError,
 )
-from .library_catalog import LibraryContext, library_context_from_state
+from .library_catalog import (
+    LibraryContext,
+    library_context_from_state,
+    resolve_library_file,
+)
 from .library_delete import delete_playlist_from_library
+from .library_metadata import read_audio_metadata
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .library_paths_cache import invalidate_library_paths_cache
@@ -121,6 +129,14 @@ from .library_reconcile import (
     playlist_refresh_enabled,
     reconcile_and_refresh,
     refresh_playlists_after_moves,
+)
+from .likes import (
+    LIKED_PLAYLIST_NAME,
+    LikedTracks,
+    content_key_for,
+    is_liked_playlist,
+    remap_moved,
+    sync_liked_playlist,
 )
 from .lyrics_cache import LyricsLookupCache
 from .monitor import (
@@ -527,6 +543,7 @@ class AppState:
     playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None
     lyrics_cache: Optional[LyricsLookupCache] = None
     upgrade_runner: Optional[library_upgrade.LibraryUpgradeRunner] = None
+    likes: Optional[LikedTracks] = None
 
 
 state = AppState()
@@ -587,6 +604,8 @@ def forget_library_file(stored_path: str) -> list[str]:
         state.metadata_cache.forget(name)
     if state.cover_cache is not None:
         state.cover_cache.forget_by_stored_path(name)
+    if state.likes is not None:
+        state.likes.unlike(name)
     return affected
 
 
@@ -601,9 +620,14 @@ async def after_library_delete(
     if deleted:
 
         def _forget() -> None:
+            liked_before = state.likes.count() if state.likes else 0
             for name in deleted:
                 affected.update(forget_library_file(name))
             invalidate_library_paths_cache()
+            if state.likes is not None and state.likes.count() != liked_before:
+                # A deleted song can't stay liked, or on the playlist.
+                _sync_liked_playlist()
+                _announce_likes()
 
         await asyncio.to_thread(_forget)
     response['playlists_affected'] = sorted(affected)
@@ -2559,6 +2583,12 @@ async def reconcile_library_endpoint() -> dict[str, Any]:
             metadata_cache=state.metadata_cache,
         )
         invalidate_library_paths_cache()
+        if state.likes is not None:
+            moved = remap_moved(state.likes, library_context())
+            result['likes_updated'] = moved
+            if moved:
+                _sync_liked_playlist()
+                _announce_likes()
         return result
 
     return await asyncio.to_thread(_run)
@@ -2733,6 +2763,22 @@ async def delete_library_playlist_endpoint(
 
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    if is_liked_playlist(playlist_name):
+        # Deleting a playlist deletes its tracks from disk. Here that must
+        # only ever mean "unlike everything": the songs are the user's
+        # library, the playlist merely lists the ones they hearted.
+        await asyncio.to_thread(_clear_likes)
+        return {
+            'ok': True,
+            'playlist': playlist_name,
+            'files': [],
+            'deleted_count': 0,
+            'failed_count': 0,
+            'failed': [],
+            'playlists_affected': [],
+            'playlists_refresh_scheduled': False,
+        }
 
     def _run() -> dict[str, Any]:
         return delete_playlist_from_library(
@@ -3269,6 +3315,119 @@ async def test_navidrome_endpoint(request: Request) -> dict[str, Any]:
         'navidrome': payload or (saved if isinstance(saved, dict) else {}),
     })
     return await asyncio.to_thread(integration_check.check_navidrome, cfg)
+
+
+# ---------------------------------------------------------------------------
+# Liked songs
+# ---------------------------------------------------------------------------
+
+
+def _require_likes() -> LikedTracks:
+    if state.likes is None:
+        raise HTTPException(status_code=500, detail='Likes not ready')
+    return state.likes
+
+
+def _sync_liked_playlist() -> None:
+    """Rewrite (or remove) the liked songs playlist to match the likes."""
+
+    if state.likes is None or state.downloader is None:
+        return
+    ctx = library_context()
+    try:
+        sync_liked_playlist(state.likes, ctx.download_dir, ctx.slskd_dir)
+    except Exception:
+        logger.exception('Liked songs playlist sync failed')
+
+
+def _announce_likes() -> None:
+    """Tell open pages the likes changed, from any thread."""
+
+    loop = state.loop
+    if loop is None or state.likes is None:
+        return
+    asyncio.run_coroutine_threadsafe(
+        state.connections.broadcast({
+            'type': 'likes',
+            'count': state.likes.count(),
+        }),
+        loop,
+    )
+
+
+def _clear_likes() -> int:
+    likes = _require_likes()
+    cleared = likes.clear()
+    _sync_liked_playlist()
+    _announce_likes()
+    return cleared
+
+
+@router.get('/api/likes')
+def get_likes() -> dict[str, Any]:
+    """The liked files, newest like first, and the playlist's name.
+
+    ``files`` are library paths, the same ones ``GET /tracks`` uses.
+    """
+
+    likes = _require_likes()
+    files = likes.paths()
+    return {
+        'files': files,
+        'count': len(files),
+        'playlist': m3u.sanitize_playlist_name(LIKED_PLAYLIST_NAME),
+    }
+
+
+@router.put('/api/likes')
+async def set_like(request: Request) -> dict[str, Any]:
+    """Like or unlike one library file: ``{file, liked}``.
+
+    Idempotent — sending the state you want twice changes nothing — so a
+    client can retry a tap that may not have arrived. Liking needs a file
+    that is in the library; unliking accepts any path, so a heart on a
+    file that has since vanished can still be cleared.
+    """
+
+    payload = await _json_object(request)
+    file = str(payload.get('file') or '').strip().replace('\\', '/')
+    if not file:
+        raise HTTPException(status_code=400, detail='file is required')
+    liked = bool(payload.get('liked', True))
+    likes = _require_likes()
+
+    if liked:
+        full = resolve_library_file(file, library_context())
+        if full is None:
+            raise HTTPException(status_code=404, detail='File not found')
+        meta = await asyncio.to_thread(read_audio_metadata, full)
+        changed = await asyncio.to_thread(
+            lambda: likes.like(
+                file,
+                content_key=content_key_for(full),
+                title=str(meta.get('title') or full.stem),
+                artist=str(meta.get('artist') or ''),
+                duration=float(meta.get('duration') or 0.0),
+            )
+        )
+    else:
+        changed = await asyncio.to_thread(likes.unlike, file)
+
+    if changed:
+        await asyncio.to_thread(_sync_liked_playlist)
+        _announce_likes()
+    return {'file': file, 'liked': liked, 'count': likes.count()}
+
+
+@router.post('/api/likes/clear')
+async def clear_likes_endpoint() -> dict[str, Any]:
+    """Unlike everything, which also takes the playlist away.
+
+    Only the hearts and the playlist file go; no song is deleted.
+    """
+
+    cleared = await asyncio.to_thread(_clear_likes)
+    return {'cleared': cleared, 'count': 0}
 
 
 @router.websocket('/api/ws')

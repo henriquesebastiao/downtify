@@ -10,13 +10,15 @@ Downtify ships with a web player so you can listen to your downloaded music with
 
 While a track is loaded, a player bar floats at the bottom of every page: cover art, title and artist, shuffle, previous, play/pause, next, repeat, elapsed/total time, and shortcuts to the lyrics and up-next panels (the lyrics one can be [hidden](#hiding-the-lyrics)). On wide screens it also has a volume slider and a seek bar along its top edge; on phones it shrinks to the essentials and shows a thin progress line.
 
+Next to the title there is a heart to [like the song](liked-songs.md); phones leave it out of the bar to keep room for the title, and have it in **Now playing** and in the track lists instead.
+
 Click the title or cover, or the expand button, to open **Now playing**.
 
 ## Now playing
 
 A full-screen view tinted with colours picked from the current album cover:
 
-- **Large cover art**, title and artist (click the artist or the *Playing from* label to jump to that artist, album or playlist)
+- **Large cover art**, title and artist (click the artist or the *Playing from* label to jump to that artist, album or playlist), with a heart beside the title to [like the song](liked-songs.md)
 - **Seek bar** — click or drag, or use the arrow keys when it's focused. While a track plays, soft waves drift over the played part in colours picked from the album cover; they settle flat when paused, and stay still if your system asks for reduced motion
 - **Playback controls** — shuffle, previous, play/pause, next, repeat (off → repeat all → repeat one)
 - **Volume** with mute toggle, saved between sessions. Hidden on phones, where the hardware buttons control the level

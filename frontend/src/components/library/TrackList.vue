@@ -191,7 +191,8 @@
         <span class="tabular text-right text-[13px] text-muted max-md:hidden">
           {{ row.track.duration ? formatDuration(row.track.duration) : '' }}
         </span>
-        <span class="flex justify-end" @click.stop>
+        <span class="flex items-center justify-end" @click.stop>
+          <LikeButton :file="row.track.file" />
           <UiMenu
             :ref="(el) => (menus[row.track.file] = el)"
             :items="menuItems(row)"
@@ -211,6 +212,7 @@ import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
 import UiMenu from '../ui/UiMenu.vue'
+import LikeButton from '../player/LikeButton.vue'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
 import { formatDuration, timeAgo } from '/src/lib/format'
@@ -246,22 +248,22 @@ const selectionMode = computed(() => (props.selected?.size || 0) > 0)
 // so Tailwind picks it up.
 const gridClass = computed(() => {
   return [
-    'grid-cols-[minmax(0,1fr)_40px]',
+    'grid-cols-[minmax(0,1fr)_72px]',
     selectable.value
       ? props.showAlbum
         ? props.showAdded
-          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_40px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_40px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_64px_40px]'
-          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_40px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_40px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_64px_40px]'
+          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_64px_72px]'
+          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_64px_72px]'
         : props.showAdded
-          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_40px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_120px_64px_40px]'
-          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_40px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_64px_40px]'
+          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_120px_64px_72px]'
+          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_64px_72px]'
       : props.showAlbum
         ? props.showAdded
-          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_40px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_40px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_64px_40px]'
-          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_40px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_40px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_64px_40px]'
+          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_64px_72px]'
+          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_64px_72px]'
         : props.showAdded
-          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_40px] xl:grid-cols-[32px_minmax(0,1fr)_72px_120px_64px_40px]'
-          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_40px] xl:grid-cols-[32px_minmax(0,1fr)_72px_64px_40px]',
+          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[32px_minmax(0,1fr)_72px_120px_64px_72px]'
+          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[32px_minmax(0,1fr)_72px_64px_72px]',
   ]
 })
 

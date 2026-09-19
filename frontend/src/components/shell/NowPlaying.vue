@@ -90,7 +90,7 @@
 
           <!-- Body -->
           <div
-            class="grid min-h-0 flex-1 gap-6 py-4 lg:grid-cols-[minmax(0,min(460px,38vw))_minmax(0,1fr)] lg:items-center lg:gap-14 lg:py-6 xl:grid-cols-[minmax(0,min(460px,32vw))_minmax(0,1fr)_340px]"
+            class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 py-4 lg:grid-cols-[minmax(0,min(460px,38vw))_minmax(0,1fr)] lg:items-center lg:gap-14 lg:py-6 xl:grid-cols-[minmax(0,min(460px,32vw))_minmax(0,1fr)_340px]"
           >
             <!-- Artwork + title (hidden on phones while a panel is open) -->
             <div
@@ -126,21 +126,24 @@
                     {{ track.artist }}
                   </p>
                 </div>
-                <UiMenu
-                  :items="trackMenu"
-                  :label="t('common.more')"
-                  class="hidden lg:inline-flex"
-                >
-                  <template #trigger>
-                    <button
-                      type="button"
-                      class="flex size-10 items-center justify-center rounded-full hover:bg-white/10"
-                      :aria-label="t('common.more')"
-                    >
-                      <AppIcon name="more" :size="22" />
-                    </button>
-                  </template>
-                </UiMenu>
+                <div class="flex shrink-0 items-center gap-1">
+                  <LikeButton :file="track.file" size="lg" />
+                  <UiMenu
+                    :items="trackMenu"
+                    :label="t('common.more')"
+                    class="hidden lg:inline-flex"
+                  >
+                    <template #trigger>
+                      <button
+                        type="button"
+                        class="flex size-10 items-center justify-center rounded-full hover:bg-white/10"
+                        :aria-label="t('common.more')"
+                      >
+                        <AppIcon name="more" :size="22" />
+                      </button>
+                    </template>
+                  </UiMenu>
+                </div>
               </div>
               <p
                 v-if="player.playError.value"
@@ -361,6 +364,7 @@ import CoverArt from '../ui/CoverArt.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import WaveSeekBar from '../player/WaveSeekBar.vue'
 import VolumeControl from '../player/VolumeControl.vue'
+import LikeButton from '../player/LikeButton.vue'
 import LyricsPanel from '../player/LyricsPanel.vue'
 import UpNextPanel from '../player/UpNextPanel.vue'
 import TrackDetails from '../player/TrackDetails.vue'

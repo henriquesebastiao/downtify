@@ -5,12 +5,14 @@ import API from '/src/model/api'
 import monitorAPI from '/src/model/monitor'
 import { syncQueueFromServer } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
+import { useLikes } from '/src/model/likes'
 import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
 
 export function usePlaylistActions() {
   const library = useLibrary()
+  const likes = useLikes()
   const tracks = useTrackActions()
   const ui = useUi()
   const router = useRouter()
@@ -19,7 +21,7 @@ export function usePlaylistActions() {
   function contextFor(playlist) {
     return {
       type: 'playlist',
-      title: playlist.name,
+      title: playlist.title,
       cover: playlist.cover || playlist.covers[0] || '',
       route: { name: 'Playlist', query: { name: playlist.name } },
     }
@@ -78,7 +80,23 @@ export function usePlaylistActions() {
     }
   }
 
+  // Deleting the liked songs playlist would delete songs from disk, so it
+  // only ever means "unlike everything" (the server enforces this too).
+  async function removeLikes() {
+    const ok = await ui.confirm({
+      title: t('likes.removeAllTitle'),
+      body: t('likes.removeAllBody'),
+      confirmLabel: t('likes.removeAll'),
+      danger: true,
+    })
+    if (!ok) return false
+    const done = await likes.clear()
+    if (done) ui.toast(t('likes.cleared'), { kind: 'success' })
+    return done
+  }
+
   async function remove(playlist) {
+    if (playlist.liked) return removeLikes()
     const ok = await ui.confirm({
       title: t('confirm.deletePlaylistTitle', { name: playlist.name }),
       body: t('confirm.deletePlaylistBody'),
@@ -155,7 +173,7 @@ export function usePlaylistActions() {
       },
       { divider: true },
       {
-        label: t('playlists.delete'),
+        label: playlist.liked ? t('likes.removeAll') : t('playlists.delete'),
         icon: 'trash',
         danger: true,
         action: () => remove(playlist),

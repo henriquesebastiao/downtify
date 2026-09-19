@@ -49,6 +49,7 @@ from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.library_paths import SLSKD_LIBRARY_PREFIX, library_stored_path
 from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
+from downtify.likes import LikedTracks, is_liked_playlist
 from downtify.lyrics import read_track_lyrics
 from downtify.lyrics_cache import LyricsLookupCache
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
@@ -244,6 +245,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)
+    api.state.likes = LikedTracks(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
     api.state.upgrade_runner = LibraryUpgradeRunner(
         LibraryUpgradeDB(library_db),
@@ -347,6 +349,12 @@ def build_app() -> FastAPI:
         # a page load.
         api.state.update_checker = UpdateChecker()
         asyncio.create_task(update_check_loop(api.state.update_checker))
+        # The liked songs playlist is a file; if it was deleted (or the
+        # library moved) while Downtify was off, write it again.
+        try:
+            api._sync_liked_playlist()
+        except Exception:
+            logger.exception('Liked songs playlist: could not sync')
         # A library upgrade can run for hours, so a restart in the
         # middle of one picks the queue back up where it stopped.
         if api.state.upgrade_runner is not None:
@@ -466,8 +474,10 @@ def build_app() -> FastAPI:
                     if cover.is_file()
                     else ''
                 ),
+                # The playlist of hearted songs, not a downloaded one.
+                'liked': is_liked_playlist(m3u_path.stem),
             })
-        playlists.sort(key=lambda p: p['name'].casefold())
+        playlists.sort(key=lambda p: (not p['liked'], p['name'].casefold()))
         return playlists
 
     @app.get('/tracks')

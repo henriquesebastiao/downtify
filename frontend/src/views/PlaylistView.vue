@@ -7,12 +7,13 @@
       :missing="t('playlists.notFound')"
     >
       <CollectionHero
-        :title="playlist.name"
+        :title="playlist.title"
         :kicker="t('playlists.kicker')"
         :covers="playlist.covers"
         :cover="playlist.cover || playlist.covers[0] || ''"
-        :name="playlist.name"
-        icon="playlist"
+        :name="playlist.title"
+        :icon="playlist.liked ? 'heart' : 'playlist'"
+        :symbol="playlist.liked"
       >
         <template #subtitle>
           <span
@@ -30,7 +31,7 @@
             class="w-full max-w-sm basis-full"
           />
           <PlayButton
-            :label="t('actions.playItem', { name: playlist.name })"
+            :label="t('actions.playItem', { name: playlist.title })"
             :playing="isThisPlaying"
             :disabled="!playlist.tracks.length"
             @click="togglePlay"
@@ -179,7 +180,7 @@ const isThisPlaying = computed(
   () =>
     player.isPlaying.value &&
     player.context.value?.type === 'playlist' &&
-    player.context.value?.title === playlist.value?.name
+    player.context.value?.title === playlist.value?.title
 )
 
 function togglePlay() {
@@ -225,4 +226,12 @@ watch(
   () => route.query.name,
   () => (missing.value = [])
 )
+
+// The liked songs playlist goes when the last heart is removed: leave the
+// page rather than show "not found" for something that was just here.
+watch(playlist, (now, before) => {
+  if (before?.liked && !now && library.loaded.value) {
+    router.replace({ name: 'Library', params: { tab: 'playlists' } })
+  }
+})
 </script>

@@ -157,6 +157,26 @@ describe('buildPlaylists', () => {
     expect(playlist.cover).toBe('')
     expect(playlist.covers).toHaveLength(1)
   })
+
+  it('flags the liked songs playlist and keeps a title to show', () => {
+    const [liked, regular, tracked] = buildPlaylists(
+      [
+        {
+          name: 'Downtify Liked Songs',
+          files: ['Ana Luz - Blue Hour.mp3'],
+          liked: true,
+        },
+        { name: 'Late Night Drive', files: [] },
+      ],
+      byFile,
+      [{ playlist_name: 'Not downloaded yet' }]
+    )
+    expect(liked).toMatchObject({ liked: true, title: 'Downtify Liked Songs' })
+    // The title starts as the file name; the model swaps in a translation.
+    expect(liked.name).toBe('Downtify Liked Songs')
+    expect(regular.liked).toBe(false)
+    expect(tracked).toMatchObject({ liked: false, title: 'Not downloaded yet' })
+  })
 })
 
 describe('sortItems and filterItems', () => {

@@ -446,12 +446,13 @@ List downloaded playlists, derived from the `.m3u` files already on disk (see [M
     "name": "My Playlist",
     "files": ["My Playlist/Artist - Song.mp3"],
     "count": 1,
-    "cover": "My Playlist/My Playlist.jpg"
+    "cover": "My Playlist/My Playlist.jpg",
+    "liked": false
   }
 ]
 ```
 
-Sorted by name. A single track or an album downloaded without an M3U doesn't appear here.
+Sorted by name, except that the [liked songs](features/liked-songs.md) playlist (`"liked": true`, named `Downtify Liked Songs`) comes first. A single track or an album downloaded without an M3U doesn't appear here.
 
 `cover` is the library path of the playlist's own artwork when one was saved beside its M3U (see [Playlist cover art](features/playlist-cover-art.md)), and `""` otherwise. Fetch it from [`GET /playlist-cover`](#get-playlist-cover).
 
@@ -623,6 +624,10 @@ Delete a downloaded playlist: every track registered to it (including tracks oth
 |-----------|------|----------|-------------|
 | `playlist_name` | string | yes | Playlist name |
 
+::: warning The liked songs playlist is never deleted this way
+`Downtify Liked Songs` isn't a downloaded playlist, so no song is removed. Asking to delete it clears the likes instead (like [`POST /api/likes/clear`](#post-apilikesclear)) and answers with `deleted_count: 0`.
+:::
+
 **Response:**
 
 ```json
@@ -653,9 +658,12 @@ Fix library paths after files were moved or deleted outside Downtify, then rewri
   "content_keys_backfilled": 0,
   "playlists_affected": [],
   "refresh_m3u": false,
-  "refresh_navidrome": false
+  "refresh_navidrome": false,
+  "likes_updated": 0
 }
 ```
+
+`likes_updated` is how many [liked songs](features/liked-songs.md#keeping-likes-in-step-with-the-files) were pointed at a file's new location.
 
 ---
 
@@ -787,6 +795,59 @@ Stop after the track being worked on. The queue is kept, and `POST /api/library/
 ### `POST /api/library/upgrade/cancel`
 
 Drop the rest of the queue. Tracks already upgraded stay upgraded.
+
+---
+
+## Likes
+
+The heart on a library track — see [Liked songs](features/liked-songs.md). Files are library paths, the same ones [`GET /tracks`](#get-tracks) uses.
+
+### `GET /api/likes`
+
+The liked files, most recently liked first.
+
+**Response:**
+
+```json
+{
+  "files": ["Artist - Song.mp3", "My Playlist/Other - Song.flac"],
+  "count": 2,
+  "playlist": "Downtify Liked Songs"
+}
+```
+
+`playlist` is the name of the playlist the likes are written to, under `Playlists/` (see [`GET /playlists`](#get-playlists)).
+
+---
+
+### `PUT /api/likes`
+
+Like or unlike one library file. Idempotent: sending the state you want twice changes nothing, so a tap that may not have arrived can be retried.
+
+**Request body:**
+
+```json
+{ "file": "Artist - Song.mp3", "liked": true }
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | string | yes | Library path of the song |
+| `liked` | boolean | no | `true` (the default) to like, `false` to take the like back |
+
+Liking needs a file that is in the library (`404` otherwise); unliking accepts any path, so the like of a file that has since vanished can still be cleared. `400` when `file` is missing.
+
+**Response:** `{ "file": "Artist - Song.mp3", "liked": true, "count": 2 }`
+
+The playlist file is written with the first like and removed with the last.
+
+---
+
+### `POST /api/likes/clear`
+
+Unlike everything, which also removes the playlist. No song is deleted.
+
+**Response:** `{ "cleared": 2, "count": 0 }`
 
 ---
 
@@ -992,3 +1053,9 @@ A [library upgrade](features/library-upgrade.md) broadcasts its progress on the 
 ```
 
 These are sent at most once a second while a scan or run is working, and once more when it finishes.
+
+A change to the [liked songs](features/liked-songs.md) is broadcast as well, so other open pages can catch up:
+
+```json
+{ "type": "likes", "count": 3 }
+```

@@ -243,6 +243,19 @@ export default {
     saveToDevice: 'Salvar neste dispositivo',
     upgrade: 'Melhorar biblioteca',
   },
+  likes: {
+    like: 'Adicionar às Músicas curtidas',
+    unlike: 'Remover das Músicas curtidas',
+    playlist: 'Músicas curtidas',
+    created: 'Adicionada às Músicas curtidas — sua playlist está pronta.',
+    open: 'Abrir',
+    removeAllTitle: 'Remover todas as curtidas?',
+    removeAllBody:
+      'Suas músicas continuam na biblioteca. Só os corações e esta playlist são removidos.',
+    removeAll: 'Remover todas as curtidas',
+    cleared: 'Todas as curtidas foram removidas',
+    failed: 'Não foi possível atualizar a curtida',
+  },
   upgrade: {
     title: 'Melhorar biblioteca',
     subtitle:

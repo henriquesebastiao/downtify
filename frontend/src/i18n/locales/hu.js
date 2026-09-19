@@ -241,6 +241,19 @@ export default {
     saveToDevice: 'Mentés erre az eszközre',
     upgrade: 'Könyvtár feljavítása',
   },
+  likes: {
+    like: 'Hozzáadás a Kedvelt számokhoz',
+    unlike: 'Eltávolítás a Kedvelt számok közül',
+    playlist: 'Kedvelt számok',
+    created: 'Hozzáadva a Kedvelt számokhoz — kész a lejátszási listád.',
+    open: 'Megnyitás',
+    removeAllTitle: 'Eltávolítod az összes kedvelést?',
+    removeAllBody:
+      'A számaid a könyvtárban maradnak. Csak a szívek és ez a lista tűnnek el.',
+    removeAll: 'Összes kedvelés eltávolítása',
+    cleared: 'Az összes kedvelés eltávolítva',
+    failed: 'A kedvelést nem sikerült frissíteni',
+  },
   upgrade: {
     title: 'Könyvtár feljavítása',
     subtitle:

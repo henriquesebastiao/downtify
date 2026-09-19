@@ -15,6 +15,8 @@ Downtify automatically generates a standard `EXTM3U` playlist file whenever a Sp
 
 When *Organize by artist* is on, tracks are spread across multiple artist folders, so the M3U is placed in a central `Playlists/` directory instead of the playlist subfolder.
 
+[Liked songs](liked-songs.md) are written to `Playlists/Downtify Liked Songs.m3u` too, whatever the layout and whether or not *Write M3U playlists* is on.
+
 ## Relative paths
 
 Track paths inside the M3U are written **relative to the M3U file itself**, not as absolute paths. This means the same file works whether it is read from inside the Downtify container (`/downloads/…`) or from another consumer that mounts the same library at a different root — for example Jellyfin under `/nas/music/…`. Just point your media server at the same library mount and the playlist will appear as a single unit.

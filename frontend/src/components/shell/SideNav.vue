@@ -70,16 +70,17 @@
         <CoverArt
           :src="playlist.cover || playlist.covers[0] || ''"
           :covers="playlist.covers"
-          :name="playlist.name"
+          :name="playlist.title"
           rounded="rounded-[7px]"
           :letter-size="13"
           :icon-size="14"
-          icon="playlist"
+          :icon="playlist.liked ? 'heart' : 'playlist'"
+          :symbol="playlist.liked"
           class="size-[30px]"
         />
         <span class="flex min-w-0 flex-col">
           <span class="truncate text-[13px] font-medium text-fg-2">{{
-            playlist.name
+            playlist.title
           }}</span>
           <span class="tabular text-[11px] text-faint">{{
             t('common.tracks', { count: playlist.tracks.length })
@@ -186,7 +187,8 @@ const labelClass = computed(() =>
 const recentPlaylists = computed(() =>
   [...library.playlists.value]
     .filter((playlist) => playlist.tracks.length)
-    .sort((a, b) => b.added - a.added)
+    // The liked songs stay at the top; the rest are the newest.
+    .sort((a, b) => Number(b.liked) - Number(a.liked) || b.added - a.added)
     .slice(0, 6)
 )
 </script>

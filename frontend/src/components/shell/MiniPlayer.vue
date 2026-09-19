@@ -24,36 +24,47 @@
         />
       </div>
 
-      <button
-        type="button"
-        class="flex min-w-0 flex-1 items-center gap-3 text-left md:w-[300px] md:flex-none"
-        :aria-label="t('player.openNowPlaying')"
-        @click="nowPlaying.open()"
+      <!-- The heart sits beside the button that opens Now playing, not
+           inside it, so tapping it never opens the overlay. -->
+      <div
+        class="flex min-w-0 flex-1 items-center gap-1 md:w-[300px] md:flex-none"
       >
-        <CoverArt
-          :src="track.hasCover ? track.cover : ''"
-          :name="track.album || track.title"
-          rounded="rounded-[10px]"
-          :letter-size="18"
-          :icon-size="18"
-          class="size-11 md:size-[52px]"
-        />
-        <span class="flex min-w-0 flex-col">
-          <span class="flex items-center gap-2">
-            <span class="truncate text-sm font-semibold">{{
-              track.title
-            }}</span>
-            <EqBars
-              v-if="player.isPlaying.value"
-              :size="10"
-              class="hidden md:inline-flex"
-            />
+        <button
+          type="button"
+          class="flex min-w-0 flex-1 items-center gap-3 text-left"
+          :aria-label="t('player.openNowPlaying')"
+          @click="nowPlaying.open()"
+        >
+          <CoverArt
+            :src="track.hasCover ? track.cover : ''"
+            :name="track.album || track.title"
+            rounded="rounded-[10px]"
+            :letter-size="18"
+            :icon-size="18"
+            class="size-11 md:size-[52px]"
+          />
+          <span class="flex min-w-0 flex-col">
+            <span class="flex items-center gap-2">
+              <span class="truncate text-sm font-semibold">{{
+                track.title
+              }}</span>
+              <EqBars
+                v-if="player.isPlaying.value"
+                :size="10"
+                class="hidden md:inline-flex"
+              />
+            </span>
+            <span class="truncate text-xs text-muted">
+              {{ [track.artist, track.album].filter(Boolean).join(' · ') }}
+            </span>
           </span>
-          <span class="truncate text-xs text-muted">
-            {{ [track.artist, track.album].filter(Boolean).join(' · ') }}
-          </span>
-        </span>
-      </button>
+        </button>
+        <!-- Phones have no room for it beside the transport buttons;
+             the rows and the full player carry the heart there. -->
+        <span class="hidden sm:contents"
+          ><LikeButton :file="track.file"
+        /></span>
+      </div>
 
       <div class="flex items-center justify-center gap-1 md:flex-1 md:gap-3">
         <UiIconButton
@@ -152,6 +163,7 @@ import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
 import UiIconButton from '../ui/UiIconButton.vue'
+import LikeButton from '../player/LikeButton.vue'
 import SliderBar from '../player/SliderBar.vue'
 import { useSmoothTime } from '../player/useSmoothTime'
 import VolumeControl from '../player/VolumeControl.vue'

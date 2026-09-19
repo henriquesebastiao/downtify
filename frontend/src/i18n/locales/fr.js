@@ -250,6 +250,19 @@ export default {
     saveToDevice: 'Enregistrer sur cet appareil',
     upgrade: 'Améliorer la bibliothèque',
   },
+  likes: {
+    like: 'Ajouter aux Titres likés',
+    unlike: 'Retirer des Titres likés',
+    playlist: 'Titres likés',
+    created: 'Ajouté aux Titres likés : votre playlist est prête.',
+    open: 'Ouvrir',
+    removeAllTitle: 'Retirer tous les likes ?',
+    removeAllBody:
+      'Vos titres restent dans la bibliothèque. Seuls les cœurs et cette playlist sont retirés.',
+    removeAll: 'Retirer tous les likes',
+    cleared: 'Tous les likes ont été retirés',
+    failed: 'Impossible de mettre à jour le like',
+  },
   upgrade: {
     title: 'Améliorer la bibliothèque',
     subtitle:

@@ -373,7 +373,7 @@ const items = computed(() => {
     )
   }
   return sortItems(
-    filterItems(library.playlists.value, filter.value, ['name']),
+    filterItems(library.playlists.value, filter.value, ['title', 'name']),
     sortKey.value
   )
 })
@@ -426,16 +426,17 @@ function tileProps(item) {
   }
   return {
     to: { name: 'Playlist', query: { name: item.name } },
-    title: item.name,
+    title: item.title,
     subtitle: playlistSubtitle(item),
     cover: item.cover,
     covers: item.covers,
-    name: item.name,
-    icon: 'playlist',
+    name: item.title,
+    icon: item.liked ? 'heart' : 'playlist',
+    symbol: item.liked,
     playable: item.tracks.length > 0,
     playing:
       player.context.value?.type === 'playlist' &&
-      player.context.value?.title === item.name,
+      player.context.value?.title === item.title,
   }
 }
 

@@ -35,7 +35,8 @@ Use this after you **move or rename files on disk** outside Downtify, or delete 
 2. Downtify scans the library folders and:
     - **updates paths** in the track index and playlist catalog when a file is no longer where it was but the same file (same content key) is found elsewhere;
     - **removes stale entries** for files that no longer exist;
-    - **indexes** older entries that were stored before content keys existed.
+    - **indexes** older entries that were stored before content keys existed;
+    - **follows [liked songs](liked-songs.md#keeping-likes-in-step-with-the-files)** to their new location.
 3. If **Generate M3U** and/or **Create playlists in Navidrome** are enabled, the affected playlists are rewritten.
 
 It only runs when you press the button (or call `POST /api/library/reconcile`) — never on a schedule.
@@ -53,7 +54,7 @@ Deleting tracks from the **Library** page already cleans up the catalog and rewr
 The Library page has four tabs — **Albums**, **Artists**, **Playlists** and **Tracks**:
 
 - **Albums, artists and playlists** show as a cover grid or a compact list (the toggle is remembered), with a text filter and sorting by recently added, name, artist, year or number of tracks. Albums and artists are built from each file's tags (album artist, album, year), so they don't depend on how files are organized on disk. A track without an album tag appears under Tracks and its artist, not under Albums.
-- **Playlists** are the downloaded playlists with an [M3U file](m3u-export.md), plus tracked [playlist downloads](slskd-navidrome.md#playlist-downloads) that don't have one yet.
+- **Playlists** are the downloaded playlists with an [M3U file](m3u-export.md), plus tracked [playlist downloads](slskd-navidrome.md#playlist-downloads) that don't have one yet. Once you have [liked](liked-songs.md) a song, *Liked songs* is listed first.
 - **Tracks** is a sortable table (title, album, format, date added, length) with a text filter, a format filter, and checkboxes — click one, then Shift-click another to select a range.
 
 Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle**, **Add to queue** and **Download as ZIP**. A playlist page also shows how many of its tracks are downloaded, lists the missing ones with **Download missing**, and offers **Watch for new tracks** and **Delete playlist** in its **⋯** menu.

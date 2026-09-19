@@ -9,6 +9,7 @@
         :name="name || title"
         :round="round"
         :icon="icon"
+        :symbol="symbol"
         rounded="rounded-[8px]"
         :letter-size="20"
         :icon-size="20"
@@ -62,6 +63,7 @@ defineProps({
   cover: { type: String, default: '' },
   covers: { type: Array, default: () => [] },
   icon: { type: String, default: 'disc' },
+  symbol: { type: Boolean, default: false },
   round: { type: Boolean, default: false },
   playing: { type: Boolean, default: false },
   playable: { type: Boolean, default: true },

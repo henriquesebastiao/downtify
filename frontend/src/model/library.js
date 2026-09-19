@@ -13,6 +13,7 @@ import {
   songKey,
 } from '/src/lib/library'
 import { usePlayer } from '/src/model/player'
+import { useI18n } from '/src/i18n'
 
 const tracks = shallowRef([])
 const rawPlaylists = shallowRef([])
@@ -26,8 +27,12 @@ const tracksByFile = computed(
 )
 const albums = computed(() => groupAlbums(tracks.value))
 const artists = computed(() => groupArtists(tracks.value, albums.value))
+const { t } = useI18n()
 const playlists = computed(() =>
-  buildPlaylists(rawPlaylists.value, tracksByFile.value, batches.value)
+  buildPlaylists(rawPlaylists.value, tracksByFile.value, batches.value).map(
+    (playlist) =>
+      playlist.liked ? { ...playlist, title: t('likes.playlist') } : playlist
+  )
 )
 const totalSize = computed(() =>
   tracks.value.reduce((sum, track) => sum + track.size, 0)
