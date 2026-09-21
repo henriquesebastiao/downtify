@@ -56,6 +56,16 @@ const routes = [
     component: () => import('/src/views/MonitorView.vue'),
   },
   {
+    path: '/podcasts',
+    name: 'Podcasts',
+    component: () => import('/src/views/PodcastsView.vue'),
+  },
+  {
+    path: '/podcasts/show',
+    name: 'PodcastShow',
+    component: () => import('/src/views/PodcastShowView.vue'),
+  },
+  {
     path: '/settings/:section?',
     name: 'Settings',
     component: () => import('/src/views/SettingsView.vue'),

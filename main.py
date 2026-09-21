@@ -60,6 +60,7 @@ from downtify.playlist_spotify_cache import (
     PlaylistSpotifyCache,
     playlist_spotify_cache_loop,
 )
+from downtify.podcasts import PodcastStore
 from downtify.track_index import TrackIndex
 from downtify.update_check import UpdateChecker, update_check_loop
 
@@ -246,6 +247,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
+    api.state.podcasts = PodcastStore(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
     api.state.upgrade_runner = LibraryUpgradeRunner(
         LibraryUpgradeDB(library_db),
@@ -330,6 +332,7 @@ def build_app() -> FastAPI:
                 loop=loop,
                 settings=api.state.settings,
                 get_library=api.library_stores,
+                get_podcasts=lambda: api.state.podcasts,
             )
         )
         # Separate hourly sweep that forgets a downloaded-track record once

@@ -28,6 +28,7 @@ export default {
     library: 'Biblioteca',
     queue: 'Cola',
     monitor: 'Monitor',
+    podcasts: 'Podcasts',
     settings: 'Ajustes',
     more: 'Más',
     playlists: 'Playlists',
@@ -416,6 +417,8 @@ export default {
       artist: 'Reproduciendo del artista',
       library: 'Reproduciendo de tu biblioteca',
       search: 'Reproduciendo de la búsqueda',
+
+      podcast: 'Reproduciendo del podcast',
     },
     goToAlbum: 'Álbum',
     goToArtist: 'Artista',
@@ -783,6 +786,47 @@ export default {
     close: 'Cerrar reproducción actual',
     help: 'Ver atajos',
   },
+  podcasts: {
+    title: 'Podcasts',
+    subtitle:
+      'Suscríbete a un programa y sus nuevos episodios se descargan solos.',
+    addTitle: 'Añadir un podcast',
+    addBody:
+      'Pega la URL de un feed RSS, un enlace de programa o episodio de Spotify, o escribe un nombre para buscar.',
+    findPlaceholder: 'Feed RSS, enlace de Spotify o nombre de un programa',
+    find: 'Buscar',
+    noResults: 'No se encontraron programas',
+    findFailed: 'Ese enlace o búsqueda no funcionó — inténtalo de nuevo',
+    alreadySubscribed: 'Ya estás suscrito a este programa',
+    keep: 'Conservar',
+    retentionAll: 'Cada episodio nuevo',
+    retentionCount: {
+      one: 'Último episodio',
+      other: 'Últimos {count} episodios',
+    },
+    subscribe: 'Suscribirse',
+    subscribed: 'Suscrito a {name}',
+    emptyTitle: 'Aún no hay podcasts',
+    emptyBody:
+      'Suscríbete a un programa arriba y sus episodios aparecerán aquí.',
+    kicker: 'Podcast',
+    notFound: 'Ya no estás suscrito a este programa',
+    noEpisodesTitle: 'Aún no hay episodios',
+    noEpisodesBody: 'Downtify revisa este feed según su propio horario.',
+    download: 'Descargar episodio',
+    downloadFailed: 'No se pudo descargar el episodio',
+    played: 'Reproducido',
+    markPlayed: 'Marcar como reproducido',
+    markUnplayed: 'Marcar como no reproducido',
+    removeDownload: 'Quitar descarga',
+    resumeAt: 'Continuar en {time}',
+    unsubscribe: 'Cancelar suscripción',
+    unsubscribeKeepFiles:
+      'Cancelar suscripción, conservar episodios descargados',
+    skipBack: 'Retroceder 15 segundos',
+    skipForward: 'Avanzar 30 segundos',
+    playbackSpeed: 'Velocidad de reproducción',
+  },
   confirm: {
     deleteTrackTitle: '¿Eliminar «{title}»?',
     deleteTracksTitle: '¿Eliminar {count} canciones?',
@@ -796,6 +840,13 @@ export default {
       'Los elementos en espera y completados se quitan de la lista. Los archivos descargados se conservan.',
     stopWatchingTitle: '¿Dejar de vigilar «{name}»?',
     stopWatchingBody: 'Las canciones descargadas siguen en tu biblioteca.',
+    removeEpisodeTitle: '¿Quitar la descarga de «{name}»?',
+    removeEpisodeBody:
+      'No se descargará de nuevo automáticamente — puedes volver a descargarlo cuando quieras desde la página del programa.',
+    unsubscribeTitle: '¿Cancelar la suscripción a «{name}»?',
+    unsubscribeBody: 'Sus episodios descargados también se eliminan.',
+    unsubscribeKeepBody:
+      'Los episodios descargados se conservan; solo se elimina la suscripción.',
   },
   toast: {
     playingNext: {

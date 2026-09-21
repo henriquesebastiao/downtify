@@ -62,6 +62,13 @@ def library_context_from_state(
 #: never show up as a track of its own.
 UPGRADE_STAGING_MARKER = '.downtify-upgrade'
 
+#: Top-level folder podcast episodes live under (see
+#: ``downtify.podcasts``). Excluded from the library scan below, so
+#: episodes never show up as tracks, albums or artists, and never reach
+#: an Upgrade library run — they have no Spotify track id and no lyrics
+#: to look for, and neither module needs to know podcasts exist.
+PODCASTS_DIRNAME = 'Podcasts'
+
 
 #: Sidecar artwork Downtify writes (playlist covers) or that already
 #: sits beside downloaded tracks.
@@ -127,12 +134,22 @@ def resolve_library_image(stored: str, ctx: LibraryContext) -> Optional[Path]:
     return _resolve_within_library(stored, ctx, _is_image)
 
 
+def _under_podcasts(file_path: Path, download_dir: Path) -> bool:
+    try:
+        file_path.relative_to(download_dir / PODCASTS_DIRNAME)
+    except ValueError:
+        return False
+    return True
+
+
 def _register_path(
     file_path: Path,
     ctx: LibraryContext,
     by_resolved: dict[str, str],
 ) -> None:
     if not _is_audio(file_path):
+        return
+    if _under_podcasts(file_path, ctx.download_dir):
         return
     resolved_key = str(file_path.resolve())
     if resolved_key in by_resolved:

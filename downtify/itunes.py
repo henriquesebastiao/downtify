@@ -208,6 +208,56 @@ def artwork_url_at(url: str, size: int) -> str:
     )
 
 
+def search_podcasts(query: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Search the iTunes podcast directory for *query*.
+
+    Keyless, like the song search above. Each result carries a
+    ``feedUrl`` — the show's public RSS feed — when one is on file;
+    Spotify-exclusive shows and other feed-less listings come back
+    without it, which callers must treat as "can't be downloaded"
+    rather than retrying or guessing a feed.
+    """
+
+    if not query.strip():
+        return []
+    _rate_wait()
+    params = f'term={quote_plus(query)}&entity=podcast&limit={max(1, limit)}'
+    url = f'{_ITUNES_SEARCH_URL}?{params}'
+    try:
+        resp = httpx.get(url, timeout=_TIMEOUT)
+        resp.raise_for_status()
+        results = resp.json().get('results') or []
+    except Exception:
+        logger.opt(exception=True).debug('iTunes podcast search failed')
+        return []
+    return [r for r in results if r.get('feedUrl')]
+
+
+def resolve_podcast_feed(show_name: str) -> Optional[dict[str, Any]]:
+    """The best iTunes match for a show name, or ``None``.
+
+    Used to turn a Spotify show/episode link — which only ever gives a
+    name, never a feed — into an RSS feed URL. Matching is the same
+    "does the name line up" heuristic as songs; a podcast can't be
+    disambiguated by album the way a song can, so a false-positive
+    match here means the wrong show's episodes.
+    """
+
+    name = (show_name or '').strip()
+    if not name:
+        return None
+    for r in search_podcasts(name, limit=10):
+        if _names_match(r.get('collectionName', ''), name):
+            return {
+                'name': r.get('collectionName', name),
+                'author': r.get('artistName', ''),
+                'feed_url': r.get('feedUrl', ''),
+                'artwork_url': r.get('artworkUrl600', ''),
+            }
+    logger.info('iTunes podcast: no feed match for {!r}', name)
+    return None
+
+
 def fetch_artwork_url(song: dict[str, Any], size: int = 1200) -> str:
     """Return an iTunes cover URL for *song* at *size* px, or ``""``.
 

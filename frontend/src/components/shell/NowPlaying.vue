@@ -116,7 +116,7 @@
                     {{ track.title }}
                   </h2>
                   <RouterLink
-                    v-if="track.albumArtist"
+                    v-if="track.albumArtist && !track.isPodcast"
                     :to="{ name: 'Artist', query: { name: track.albumArtist } }"
                     class="mt-1 block truncate text-base text-white/70 hover:text-white hover:underline"
                     @click="nowPlaying.close()"
@@ -127,7 +127,11 @@
                   </p>
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
-                  <LikeButton :file="track.file" size="lg" />
+                  <LikeButton
+                    v-if="!track?.isPodcast"
+                    :file="track.file"
+                    size="lg"
+                  />
                   <UiMenu
                     :items="trackMenu"
                     :label="t('common.more')"
@@ -214,6 +218,16 @@
                 class="flex flex-1 items-center justify-between lg:flex-none lg:justify-center lg:gap-7"
               >
                 <button
+                  v-if="track?.isPodcast"
+                  type="button"
+                  class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
+                  :aria-label="t('podcasts.skipBack')"
+                  @click="player.seekBy(-15)"
+                >
+                  <AppIcon name="skip-back" :size="22" />
+                </button>
+                <button
+                  v-else
                   type="button"
                   class="flex size-11 items-center justify-center rounded-full transition-colors hover:bg-white/10"
                   :class="
@@ -257,6 +271,16 @@
                   <AppIcon name="next" :size="28" />
                 </button>
                 <button
+                  v-if="track?.isPodcast"
+                  type="button"
+                  class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
+                  :aria-label="t('podcasts.skipForward')"
+                  @click="player.seekBy(30)"
+                >
+                  <AppIcon name="skip-forward" :size="22" />
+                </button>
+                <button
+                  v-else
                   type="button"
                   class="relative flex size-11 items-center justify-center rounded-full transition-colors hover:bg-white/10"
                   :class="
@@ -279,6 +303,22 @@
               </div>
 
               <div class="hidden flex-1 items-center justify-end gap-2 lg:flex">
+                <UiMenu
+                  v-if="track?.isPodcast"
+                  :items="speedMenu"
+                  :label="t('podcasts.playbackSpeed')"
+                >
+                  <template #trigger>
+                    <button
+                      type="button"
+                      class="flex h-10 items-center gap-2 rounded-full px-3 text-xs font-semibold text-white/75 transition-colors hover:bg-white/10"
+                      :aria-label="t('podcasts.playbackSpeed')"
+                    >
+                      <AppIcon name="gauge" :size="20" />
+                      <span class="tabular">{{ speedLabel }}</span>
+                    </button>
+                  </template>
+                </UiMenu>
                 <UiMenu :items="sleepMenu" :label="t('player.sleepTimer')">
                   <template #trigger>
                     <button
@@ -308,27 +348,46 @@
 
             <!-- Phone extras -->
             <div class="mt-4 flex items-center justify-between lg:hidden">
-              <UiMenu
-                :items="sleepMenu"
-                :label="t('player.sleepTimer')"
-                align="start"
-              >
-                <template #trigger>
-                  <button
-                    type="button"
-                    class="flex h-10 items-center gap-2 rounded-full px-3 text-xs font-semibold"
-                    :class="
-                      player.sleepAt.value ? 'text-accent' : 'text-white/75'
-                    "
-                    :aria-label="t('player.sleepTimer')"
-                  >
-                    <AppIcon name="timer" :size="20" />
-                    <span v-if="sleepLabel" class="tabular">{{
-                      sleepLabel
-                    }}</span>
-                  </button>
-                </template>
-              </UiMenu>
+              <div class="flex items-center gap-1">
+                <UiMenu
+                  v-if="track?.isPodcast"
+                  :items="speedMenu"
+                  :label="t('podcasts.playbackSpeed')"
+                  align="start"
+                >
+                  <template #trigger>
+                    <button
+                      type="button"
+                      class="flex h-10 items-center gap-2 rounded-full px-3 text-xs font-semibold text-white/75"
+                      :aria-label="t('podcasts.playbackSpeed')"
+                    >
+                      <AppIcon name="gauge" :size="20" />
+                      <span class="tabular">{{ speedLabel }}</span>
+                    </button>
+                  </template>
+                </UiMenu>
+                <UiMenu
+                  :items="sleepMenu"
+                  :label="t('player.sleepTimer')"
+                  align="start"
+                >
+                  <template #trigger>
+                    <button
+                      type="button"
+                      class="flex h-10 items-center gap-2 rounded-full px-3 text-xs font-semibold"
+                      :class="
+                        player.sleepAt.value ? 'text-accent' : 'text-white/75'
+                      "
+                      :aria-label="t('player.sleepTimer')"
+                    >
+                      <AppIcon name="timer" :size="20" />
+                      <span v-if="sleepLabel" class="tabular">{{
+                        sleepLabel
+                      }}</span>
+                    </button>
+                  </template>
+                </UiMenu>
+              </div>
               <div class="flex gap-2">
                 <button
                   v-for="tab in panels"
@@ -405,7 +464,10 @@ const PANEL_TABS = {
 }
 
 const panels = computed(() =>
-  availablePanels({ lyrics: showLyrics.value }).map((id) => ({
+  availablePanels({
+    lyrics: showLyrics.value,
+    isPodcast: track.value?.isPodcast,
+  }).map((id) => ({
     id,
     icon: PANEL_TABS[id].icon,
     label: t(PANEL_TABS[id].label),
@@ -420,7 +482,12 @@ const requested = computed(() =>
   )
 )
 const panel = computed(
-  () => requested.value || defaultPanel({ lyrics: showLyrics.value })
+  () =>
+    requested.value ||
+    defaultPanel({
+      lyrics: showLyrics.value,
+      isPodcast: track.value?.isPodcast,
+    })
 )
 const mobilePanel = computed(() => isMobile.value && !!requested.value)
 
@@ -464,6 +531,16 @@ const sleepLabel = computed(() => {
   return t('player.minutesLeft', { count: minutes })
 })
 
+const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2]
+const speedLabel = computed(() => `${player.playbackRate.value}×`)
+const speedMenu = computed(() =>
+  SPEEDS.map((rate) => ({
+    label: `${rate}×`,
+    checked: player.playbackRate.value === rate,
+    action: () => player.setPlaybackRate(rate),
+  }))
+)
+
 const sleepMenu = computed(() => [
   { heading: t('player.sleepTimer') },
   ...[15, 30, 45, 60, 90].map((minutes) => ({
@@ -491,7 +568,7 @@ const trackMenu = computed(() => {
     {
       label: t('player.goToAlbum'),
       icon: 'disc',
-      hidden: !tr.album,
+      hidden: !tr.album || tr.isPodcast,
       action: () =>
         navigate({
           name: 'Album',
@@ -501,7 +578,7 @@ const trackMenu = computed(() => {
     {
       label: t('player.goToArtist'),
       icon: 'user',
-      hidden: !tr.albumArtist,
+      hidden: !tr.albumArtist || tr.isPodcast,
       action: () =>
         navigate({ name: 'Artist', query: { name: tr.albumArtist } }),
     },

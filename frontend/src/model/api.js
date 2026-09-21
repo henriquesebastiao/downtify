@@ -220,6 +220,56 @@ function clearLikes() {
   return API.post('/api/likes/clear')
 }
 
+// ── Podcasts ───────────────────────────────────────────────────────
+function resolvePodcast(url) {
+  return API.post('/api/podcasts/resolve', { url })
+}
+
+function searchPodcasts(q) {
+  return API.get('/api/podcasts/search', { params: { q } })
+}
+
+function subscribePodcast(payload) {
+  return API.post('/api/podcasts/subscribe', payload)
+}
+
+function listPodcastShows() {
+  return API.get('/api/podcasts/shows')
+}
+
+function getPodcastShow(showId) {
+  return API.get(`/api/podcasts/shows/${showId}`)
+}
+
+function listPodcastEpisodes(showId, includeDismissed = false) {
+  return API.get(`/api/podcasts/shows/${showId}/episodes`, {
+    params: { include_dismissed: includeDismissed },
+  })
+}
+
+function updatePodcastShow(showId, updates) {
+  return API.patch(`/api/podcasts/shows/${showId}`, updates)
+}
+
+function deletePodcastShow(showId, keepFiles = false) {
+  return API.delete(`/api/podcasts/shows/${showId}`, {
+    params: { keep_files: keepFiles },
+  })
+}
+
+function downloadPodcastEpisode(episodeId) {
+  return API.post(`/api/podcasts/episodes/${episodeId}/download`)
+}
+
+function deletePodcastEpisode(episodeId) {
+  return API.delete(`/api/podcasts/episodes/${episodeId}`)
+}
+
+// Throttled by the caller; idempotent, so a retried tick is harmless.
+function setPodcastPlayback(episodeId, payload) {
+  return API.put(`/api/podcasts/episodes/${episodeId}/playback`, payload)
+}
+
 // ── Library upgrade ──────────────────────────────────────────────────
 function getLibraryUpgrade() {
   return API.get('/api/library/upgrade')
@@ -338,6 +388,17 @@ export default {
   getLikes,
   setLike,
   clearLikes,
+  resolvePodcast,
+  searchPodcasts,
+  subscribePodcast,
+  listPodcastShows,
+  getPodcastShow,
+  listPodcastEpisodes,
+  updatePodcastShow,
+  deletePodcastShow,
+  downloadPodcastEpisode,
+  deletePodcastEpisode,
+  setPodcastPlayback,
   getLibraryUpgrade,
   getLibraryUpgradeJobs,
   scanLibraryUpgrade,

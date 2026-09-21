@@ -174,6 +174,12 @@ const items = [
   },
   { name: 'Queue', icon: 'download', label: 'nav.queue' },
   { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
+  {
+    name: 'Podcasts',
+    icon: 'mic',
+    label: 'nav.podcasts',
+    match: ['PodcastShow'],
+  },
 ]
 
 function isActive(item) {
