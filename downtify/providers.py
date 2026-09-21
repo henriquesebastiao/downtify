@@ -805,6 +805,43 @@ def artist_top_songs_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
     return songs
 
 
+def artist_full_top_songs_from_channel_id(
+    channel_id: str,
+) -> list[dict[str, Any]]:
+    """Full 'Top songs' playlist for an artist, beyond the ~5-10 item
+    preview :func:`artist_top_songs_from_channel_id` returns.
+
+    The artist's ``songs`` shelf carries its own ``browseId`` for an
+    auto-generated playlist covering the shelf in full — resolved the same
+    way any YouTube Music playlist is, via :func:`playlist_tracks_from_id`.
+    Returns ``[]`` if the artist, its songs shelf, or the shelf's browseId
+    can't be resolved at all.
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return []
+
+    section = artist_data.get('songs')
+    if not isinstance(section, dict):
+        return []
+    browse_id = section.get('browseId')
+    if not browse_id:
+        return []
+
+    try:
+        return playlist_tracks_from_id(browse_id)
+    except Exception:
+        logger.exception(
+            'Failed to resolve full top-songs playlist {} for artist {}',
+            browse_id,
+            channel_id,
+        )
+        return []
+
+
 _YOUTUBE_URL_HOSTS = ('youtube.com', 'youtu.be', 'music.youtube.com')
 _YOUTUBE_VIDEO_ID_RE = re.compile(
     r'(?:[?&]v=|youtu\.be/|/shorts/)([A-Za-z0-9_-]{6,})'

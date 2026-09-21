@@ -15,6 +15,7 @@ from downtify.providers import (
     _upgrade_thumbnail,
     album_tracks_from_browse_id,
     artist_albums_from_channel_id,
+    artist_full_top_songs_from_channel_id,
     artist_info_from_channel_id,
     artist_similar_from_channel_id,
     artist_top_albums_from_channel_id,
@@ -3073,6 +3074,102 @@ def test_artist_top_songs_returns_empty_when_no_songs_section(monkeypatch):
 def test_artist_top_songs_returns_empty_on_ytm_error(monkeypatch):
     monkeypatch.setattr(providers, '_ytm', _FakeYTMGetArtistRaises)
     assert artist_top_songs_from_channel_id('UCxxx') == []
+
+
+class _FakeYTMArtistAndPlaylist:
+    """Fake YTMusic client serving both get_artist and get_playlist, for
+    the 'full top songs' shelf which resolves a browseId through the
+    latter."""
+
+    def __init__(self, artist_data, playlists):
+        self._artist_data = artist_data
+        self._playlists = playlists
+
+    def get_artist(self, _channel_id):
+        return self._artist_data
+
+    def get_playlist(self, playlist_id, limit=None):
+        return self._playlists[playlist_id]
+
+
+def test_artist_full_top_songs_resolves_shelf_playlist(monkeypatch):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'songs': {
+            'browseId': 'VLPLshelf123',
+            'results': [_artist_song_row('aaaaaaaaaaa', 'Quiet Static')],
+        },
+    }
+    playlists = {
+        'VLPLshelf123': {
+            'title': 'Mica Ferreira - Top songs',
+            'tracks': [
+                _song_row(
+                    'Quiet Static',
+                    'Mica Ferreira',
+                    'Driftlight',
+                    200,
+                    'aaaaaaaaaaa',
+                ),
+                _song_row(
+                    'Held Together',
+                    'Mica Ferreira',
+                    'Driftlight',
+                    210,
+                    'bbbbbbbbbbb',
+                ),
+                _song_row(
+                    'Runaway',
+                    'Mica Ferreira',
+                    'Driftlight',
+                    190,
+                    'ccccccccccc',
+                ),
+            ],
+        }
+    }
+    monkeypatch.setattr(
+        providers,
+        '_ytm',
+        lambda: _FakeYTMArtistAndPlaylist(artist_data, playlists),
+    )
+    songs = artist_full_top_songs_from_channel_id('UCxxx')
+    assert [s['song_id'] for s in songs] == [
+        'aaaaaaaaaaa',
+        'bbbbbbbbbbb',
+        'ccccccccccc',
+    ]
+
+
+def test_artist_full_top_songs_returns_empty_when_no_browse_id(monkeypatch):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'songs': {
+            'results': [_artist_song_row('aaaaaaaaaaa', 'Quiet Static')]
+        },
+    }
+    monkeypatch.setattr(
+        providers, '_ytm', lambda: _FakeYTMArtistAndPlaylist(artist_data, {})
+    )
+    assert artist_full_top_songs_from_channel_id('UCxxx') == []
+
+
+def test_artist_full_top_songs_returns_empty_when_no_songs_section(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        providers,
+        '_ytm',
+        lambda: _FakeYTMArtistAndPlaylist({'name': 'Mica Ferreira'}, {}),
+    )
+    assert artist_full_top_songs_from_channel_id('UCxxx') == []
+
+
+def test_artist_full_top_songs_returns_empty_on_get_artist_error(
+    monkeypatch,
+):
+    monkeypatch.setattr(providers, '_ytm', _FakeYTMGetArtistRaises)
+    assert artist_full_top_songs_from_channel_id('UCxxx') == []
 
 
 class _FakeYTMGetArtistRaises:

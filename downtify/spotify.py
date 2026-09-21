@@ -932,6 +932,206 @@ def artist_name_from_id(artist_id: str) -> str:
     return name
 
 
+def _artist_entity(
+    artist_id: str,
+) -> tuple[dict[str, Any], str, str, Optional[str]]:
+    """``(entity, name, cover_url, token)`` from an artist embed page.
+
+    ``token`` is the anonymous session token baked into the same payload.
+    Raises ``ValueError`` when the artist name can't be read.
+    """
+
+    payload = _fetch_embed_json('artist', artist_id)
+    entity = _entity_from(payload)
+    name = (entity.get('name') or entity.get('title') or '').strip()
+    if not name:
+        raise ValueError(f'Could not read artist name for {artist_id}')
+    return entity, name, _cover_url(entity), _token_from_embed_payload(payload)
+
+
+def artist_info_from_id(artist_id: str) -> tuple[str, str]:
+    """``(name, cover_url)`` of a Spotify artist — no tracks, one request."""
+
+    _, name, cover_url, _token = _artist_entity(artist_id)
+    return name, cover_url
+
+
+# sha256 of the queryArtistOverview GraphQL document in the Spotify web
+# player. Update when the player bundle rolls and the API returns
+# PersistedQueryNotFound. Location in the bundle:
+# new tz.l("queryArtistOverview","query","<hash>",null)
+_ARTIST_OVERVIEW_HASH = (
+    '9f8134ef565e78621f1e1793555bd6633c5ac144ae0f89604ed3ae3f80b3c8e6'
+)
+
+
+def _artist_discography(artist_id: str, token: str) -> dict[str, Any]:
+    resp = httpx.get(
+        _PARTNER_API,
+        params={
+            'operationName': 'queryArtistOverview',
+            'variables': json.dumps({
+                'uri': f'spotify:artist:{artist_id}',
+                'locale': '',
+                'includePrerelease': True,
+            }),
+            'extensions': json.dumps({
+                'persistedQuery': {
+                    'version': 1,
+                    'sha256Hash': _ARTIST_OVERVIEW_HASH,
+                }
+            }),
+        },
+        headers={
+            'Authorization': f'Bearer {token}',
+            'User-Agent': _USER_AGENT,
+            'app-platform': 'WebPlayer',
+        },
+        timeout=15,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    if 'errors' in data:
+        raise ValueError(f'GraphQL errors: {data["errors"]}')
+    return data['data']['artistUnion']['discography']
+
+
+def _album_names_by_uri(node: Any) -> dict[str, str]:
+    """Every ``spotify:album:`` uri that comes with a name under *node*."""
+
+    found: dict[str, str] = {}
+    if isinstance(node, dict):
+        uri = node.get('uri')
+        name = node.get('name')
+        if (
+            isinstance(uri, str)
+            and uri.startswith('spotify:album:')
+            and isinstance(name, str)
+            and name.strip()
+        ):
+            found[uri] = name.strip()
+        for value in node.values():
+            found.update(_album_names_by_uri(value))
+    elif isinstance(node, list):
+        for value in node:
+            found.update(_album_names_by_uri(value))
+    return found
+
+
+def _album_name_from_embed(album_uri: str) -> str:
+    try:
+        payload = _fetch_embed_json('album', _id_from_uri(album_uri))
+        entity = _entity_from(payload)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Spotify album embed lookup failed for {}', album_uri
+        )
+        return ''
+    return str(entity.get('name') or entity.get('title') or '').strip()
+
+
+def _top_track_album_names(artist_id: str, token: str) -> dict[str, str]:
+    """``{track id: album name}`` for an artist's top tracks.
+
+    The artist embed's shelf rows carry no album at all, and neither does
+    the per-track embed. The web player's ``queryArtistOverview`` query
+    (the same anonymous-token GraphQL endpoint playlists use) lists each
+    top track's album by uri and, in the same response, the artist's
+    releases by name — one request covers almost every track. An album
+    missing from that list is looked up in its own embed instead.
+
+    Best effort: any failure (the persisted-query hash rolled, the
+    network) returns ``{}``, leaving the album blank rather than failing
+    the whole artist.
+    """
+
+    try:
+        discography = _artist_discography(artist_id, token)
+        names = _album_names_by_uri(discography)
+        top = (discography.get('topTracks') or {}).get('items') or []
+        album_uris: dict[str, str] = {}
+        for item in top:
+            track = item.get('track') if isinstance(item, dict) else None
+            if not isinstance(track, dict):
+                continue
+            track_id = track.get('id') or _id_from_uri(track.get('uri') or '')
+            album = track.get('albumOfTrack') or {}
+            album_uri = album.get('uri') if isinstance(album, dict) else ''
+            if track_id and album_uri:
+                album_uris[track_id] = album_uri
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Spotify album names unavailable for artist {}', artist_id
+        )
+        return {}
+
+    result: dict[str, str] = {}
+    for track_id, album_uri in album_uris.items():
+        if album_uri not in names:
+            names[album_uri] = _album_name_from_embed(album_uri)
+        if names[album_uri]:
+            result[track_id] = names[album_uri]
+    return result
+
+
+def artist_top_songs_from_id(
+    artist_id: str,
+) -> tuple[str, str, list[dict[str, Any]]]:
+    """``(name, cover_url, songs)`` from an artist embed's top-tracks shelf.
+
+    This is Spotify's own "Popular"/top-tracks preview shown at the top of
+    the artist's home page (up to ~10 tracks, the same shelf a "This is
+    <Artist>" playlist draws its first entries from) — not a discography,
+    which :func:`artist_name_from_id`'s docstring already explains isn't
+    exposed here. Named ``artist_top_songs_*`` (not ``*_top_tracks_*``) to
+    match the equivalent YouTube Music primitive,
+    :func:`providers.artist_top_songs_from_channel_id`, even though Spotify
+    itself calls this shelf "Top Tracks". Raises ``ValueError`` when the
+    artist name can't be read; returns an empty song list (not an error)
+    when the shelf itself can't be parsed.
+
+    The shelf lives under ``entity['trackList']`` — the same field name
+    (and flat row shape, no ``track`` wrapper) already used by
+    :func:`_parse_playlist_tracks` for playlists/albums; confirmed against
+    a live embed fetch, since :func:`artist_name_from_id`'s own docstring
+    only promised the preview was *somewhere* in the payload. Unlike a
+    playlist row, a shelf row carries no per-track album art at all (no
+    ``album``/``coverArt``), so each track is enriched via
+    :func:`enrich_track_from_spotify_if_sparse` — the same per-track
+    re-fetch a monitored playlist already does — so every song gets its
+    own album cover instead of falling back to the artist's photo. The
+    album *name* isn't in either embed; see :func:`_top_track_album_names`.
+    """
+
+    entity, name, cover_url, token = _artist_entity(artist_id)
+
+    items = entity.get('trackList') or []
+    songs: list[dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        track = _embed_row_track(item)
+        if not isinstance(track, dict):
+            continue
+        track_id = track.get('id') or _id_from_uri(track.get('uri', ''))
+        if not track_id:
+            continue
+        song = _track_dict(
+            dict(track), track_id=track_id, fallback_cover=cover_url
+        )
+        songs.append(enrich_track_from_spotify_if_sparse(song))
+    if not songs:
+        logger.warning(
+            'No top-songs parsed from Spotify artist embed for {}', artist_id
+        )
+    elif token:
+        album_names = _top_track_album_names(artist_id, token)
+        for song in songs:
+            if not song.get('album_name') and song['song_id'] in album_names:
+                song['album_name'] = album_names[song['song_id']]
+    return name, cover_url, songs
+
+
 def resolve(url: str) -> Any:
     """Resolve any Spotify URL to a single song or a list of songs."""
 
