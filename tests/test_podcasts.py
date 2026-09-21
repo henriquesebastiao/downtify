@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -399,6 +400,13 @@ def test_episode_filename_extension_follows_enclosure_type():
 
 
 # ── tagging: real files, no network ──────────────────────────────────
+# Same convention as test_downloader_extended.py: these need a real
+# ffmpeg to synthesize a decodable source file, which a bare CI runner
+# (unlike the Docker image, which bundles it for the app itself) may
+# not have — skip rather than fail where it's missing.
+_HAS_FFMPEG = bool(shutil.which('ffmpeg'))
+
+
 def _synth_audio(path: Path, codec: str) -> None:
     subprocess.run(
         [
@@ -420,6 +428,7 @@ def _synth_audio(path: Path, codec: str) -> None:
     )
 
 
+@pytest.mark.skipif(not _HAS_FFMPEG, reason='ffmpeg not installed')
 @pytest.mark.parametrize(
     ('filename', 'codec'),
     [('ep.mp3', 'libmp3lame'), ('ep.m4a', 'aac')],
@@ -463,6 +472,7 @@ def test_embed_podcast_tags_writes_episode_and_show_and_cover(
         assert audio['covr'][0] == cover
 
 
+@pytest.mark.skipif(not _HAS_FFMPEG, reason='ffmpeg not installed')
 def test_embed_podcast_tags_on_an_unsupported_container_does_not_raise(
     tmp_path,
 ):
