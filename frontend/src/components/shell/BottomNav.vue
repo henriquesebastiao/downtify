@@ -153,6 +153,7 @@ const items = [
 ]
 const moreLinks = [
   { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
+  { name: 'Podcasts', icon: 'mic', label: 'nav.podcasts' },
   { name: 'Settings', icon: 'settings', label: 'nav.settings' },
 ]
 

@@ -73,6 +73,18 @@ working without changes:
 * ``GET|PUT /api/likes`` and ``POST /api/likes/clear`` (the heart on a
   library track; while any song is liked they are also written out as a
   playlist)
+* ``POST /api/podcasts/resolve`` (preview a podcast from a pasted RSS
+  or Spotify show/episode link) and ``GET /api/podcasts/search``
+  (free-text, via the iTunes podcast directory)
+* ``POST /api/podcasts/subscribe``, ``GET /api/podcasts/shows``,
+  ``GET|PATCH|DELETE /api/podcasts/shows/{id}`` and
+  ``GET /api/podcasts/shows/{id}/episodes`` (subscriptions are a watch
+  kind in ``monitor.py``, checked on the same schedule as playlists and
+  artists — see ``downtify.podcasts``)
+* ``POST /api/podcasts/episodes/{id}/download``,
+  ``DELETE /api/podcasts/episodes/{id}`` and
+  ``PUT /api/podcasts/episodes/{id}/playback`` (per-episode download,
+  removal and resume position)
 * ``WS   /api/ws``
 * ``GET  /api/check_update``
 """
@@ -82,6 +94,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import shutil
 from pathlib import Path
 from typing import Any, Optional
 
@@ -142,6 +155,7 @@ from .lyrics_cache import LyricsLookupCache
 from .monitor import (
     KIND_ARTIST,
     KIND_PLAYLIST,
+    KIND_PODCAST,
     SOURCE_SPOTIFY,
     LibraryStores,
     MonitoredPlaylist,
@@ -162,6 +176,17 @@ from .playlist_catalog import PlaylistCatalog
 from .playlist_spotify_cache import (
     PlaylistSpotifyCache,
     fetch_playlist_tracks,
+)
+from .podcasts import (
+    PODCASTS_DIRNAME,
+    EpisodeInfo,
+    PodcastFeedNotFoundError,
+    PodcastStore,
+    best_cover_bytes,
+    download_episode,
+    fetch_feed,
+    resolve_spotify_podcast,
+    search_shows,
 )
 from .slskd_provider import reset_slskd_parallelism
 from .track_index import (
@@ -544,6 +569,7 @@ class AppState:
     lyrics_cache: Optional[LyricsLookupCache] = None
     upgrade_runner: Optional[library_upgrade.LibraryUpgradeRunner] = None
     likes: Optional[LikedTracks] = None
+    podcasts: Optional[PodcastStore] = None
 
 
 state = AppState()
@@ -3430,6 +3456,356 @@ async def clear_likes_endpoint() -> dict[str, Any]:
     return {'cleared': cleared, 'count': 0}
 
 
+# ── Podcasts ─────────────────────────────────────────────────────────
+def _require_podcasts() -> PodcastStore:
+    if state.podcasts is None:
+        raise HTTPException(status_code=500, detail='Podcast store not ready')
+    return state.podcasts
+
+
+def _podcast_watch(feed_url: str) -> Optional[MonitoredPlaylist]:
+    db = state.monitor_db
+    if db is None:
+        return None
+    return db.get_by_spotify_id(feed_url)
+
+
+def _show_payload(
+    show: dict[str, Any], watch: Optional[MonitoredPlaylist]
+) -> dict[str, Any]:
+    episodes = (
+        state.podcasts.list_episodes(show['id']) if state.podcasts else []
+    )
+    downloaded = sum(
+        1 for e in episodes if e['filename'] and not e['dismissed']
+    )
+    return {
+        **show,
+        'watch_id': watch.id if watch else None,
+        'interval_minutes': watch.interval_minutes if watch else None,
+        'enabled': watch.enabled if watch else None,
+        'last_checked': watch.last_checked if watch else None,
+        'episode_count': len(episodes),
+        'downloaded_count': downloaded,
+    }
+
+
+@router.post('/api/podcasts/resolve')
+async def resolve_podcast(request: Request) -> dict[str, Any]:
+    """Preview a podcast from a pasted link, before subscribing.
+
+    Accepts a direct RSS feed URL or a Spotify show/episode link (see
+    ``downtify.podcasts`` for how the latter is matched to a feed). Use
+    ``GET /api/podcasts/search`` for free-text search instead.
+    """
+
+    payload = await _json_object(request)
+    url = str(payload.get('url') or '').strip()
+    if not url:
+        raise HTTPException(status_code=400, detail='url is required')
+
+    matched_guid = None
+    if spotify.parse_spotify_url(url) is not None:
+        try:
+            feed, matched_guid = await asyncio.to_thread(
+                resolve_spotify_podcast, url
+            )
+        except PodcastFeedNotFoundError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f'"{exc.show_name}" has no public RSS feed — likely a '
+                    'Spotify-exclusive show, which Downtify cannot download'
+                ),
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    else:
+        try:
+            feed = await asyncio.to_thread(fetch_feed, url)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=400,
+                detail='Could not read a podcast feed from that link',
+            ) from exc
+        if not feed.episodes and not feed.name:
+            raise HTTPException(
+                status_code=400,
+                detail='That link is not a podcast RSS feed',
+            )
+
+    existing = await asyncio.to_thread(_podcast_watch, feed.feed_url)
+    return {
+        'show': {
+            'name': feed.name,
+            'author': feed.author,
+            'description': feed.description,
+            'artwork_url': feed.artwork_url,
+            'feed_url': feed.feed_url,
+            'source_url': url,
+        },
+        'episodes': [vars(e) for e in feed.episodes],
+        'matched_episode_guid': matched_guid,
+        'already_subscribed': existing is not None,
+    }
+
+
+@router.get('/api/podcasts/search')
+async def search_podcasts_endpoint(q: str = '') -> dict[str, Any]:
+    """Free-text podcast search, via the iTunes podcast directory."""
+
+    results = await asyncio.to_thread(search_shows, q, 10)
+    return {'results': results}
+
+
+@router.post('/api/podcasts/subscribe')
+async def subscribe_podcast(request: Request) -> dict[str, Any]:
+    """Subscribe to a show resolved with ``POST /api/podcasts/resolve``."""
+
+    podcasts = _require_podcasts()
+    db = _require_monitor_db()
+    payload = await _json_object(request)
+    feed_url = str(payload.get('feed_url') or '').strip()
+    name = str(payload.get('name') or '').strip()
+    if not feed_url or not name:
+        raise HTTPException(
+            status_code=400, detail='feed_url and name are required'
+        )
+    if await asyncio.to_thread(db.get_by_spotify_id, feed_url) is not None:
+        raise HTTPException(
+            status_code=409, detail='Already subscribed to this podcast'
+        )
+    retention = max(0, int(payload.get('retention') or 0))
+    interval_minutes = int(payload.get('interval_minutes') or 720)
+
+    show = await asyncio.to_thread(
+        podcasts.add_show,
+        feed_url,
+        name,
+        author=str(payload.get('author') or ''),
+        description=str(payload.get('description') or ''),
+        artwork_url=str(payload.get('artwork_url') or ''),
+        source_url=str(payload.get('source_url') or feed_url),
+        retention=retention,
+    )
+    watch = await asyncio.to_thread(
+        db.add_playlist,
+        feed_url,
+        name,
+        str(payload.get('source_url') or feed_url),
+        interval_minutes,
+        KIND_PODCAST,
+    )
+    _start_initial_check(watch, db)
+    return _show_payload(show, watch)
+
+
+@router.get('/api/podcasts/shows')
+async def list_podcast_shows() -> list[dict[str, Any]]:
+    podcasts = _require_podcasts()
+    shows = await asyncio.to_thread(podcasts.list_shows)
+    return [_show_payload(s, _podcast_watch(s['feed_url'])) for s in shows]
+
+
+@router.get('/api/podcasts/shows/{show_id}')
+async def get_podcast_show(show_id: int) -> dict[str, Any]:
+    podcasts = _require_podcasts()
+    show = await asyncio.to_thread(podcasts.get_show, show_id)
+    if show is None:
+        raise HTTPException(status_code=404, detail='Show not found')
+    return _show_payload(show, _podcast_watch(show['feed_url']))
+
+
+@router.get('/api/podcasts/shows/{show_id}/episodes')
+async def list_podcast_episodes(
+    show_id: int, include_dismissed: bool = False
+) -> dict[str, Any]:
+    podcasts = _require_podcasts()
+    show = await asyncio.to_thread(podcasts.get_show, show_id)
+    if show is None:
+        raise HTTPException(status_code=404, detail='Show not found')
+    episodes = await asyncio.to_thread(
+        podcasts.list_episodes, show_id, include_dismissed=include_dismissed
+    )
+    return {'show': show, 'episodes': episodes}
+
+
+@router.patch('/api/podcasts/shows/{show_id}')
+async def update_podcast_show(
+    show_id: int, request: Request
+) -> dict[str, Any]:
+    podcasts = _require_podcasts()
+    show = await asyncio.to_thread(podcasts.get_show, show_id)
+    if show is None:
+        raise HTTPException(status_code=404, detail='Show not found')
+    payload = await _json_object(request)
+
+    if 'retention' in payload:
+        show = await asyncio.to_thread(
+            podcasts.update_show,
+            show_id,
+            retention=max(0, int(payload['retention'] or 0)),
+        )
+
+    watch = _podcast_watch(show['feed_url'])
+    db = state.monitor_db
+    if watch is not None and db is not None:
+        kwargs: dict[str, Any] = {}
+        if 'interval_minutes' in payload:
+            kwargs['interval_minutes'] = int(payload['interval_minutes'])
+        if 'enabled' in payload:
+            kwargs['enabled'] = bool(payload['enabled'])
+        if kwargs:
+            watch = await asyncio.to_thread(
+                db.update_playlist, watch.id, **kwargs
+            )
+
+    return _show_payload(show, watch)
+
+
+@router.delete('/api/podcasts/shows/{show_id}')
+async def delete_podcast_show(
+    show_id: int, keep_files: bool = False
+) -> dict[str, Any]:
+    """Unsubscribe, deleting downloaded episodes unless ``keep_files``."""
+
+    podcasts = _require_podcasts()
+    show = await asyncio.to_thread(podcasts.delete_show, show_id)
+    if show is None:
+        raise HTTPException(status_code=404, detail='Show not found')
+    watch = _podcast_watch(show['feed_url'])
+    if watch is not None and state.monitor_db is not None:
+        await asyncio.to_thread(state.monitor_db.delete_playlist, watch.id)
+    deleted_files = False
+    if not keep_files:
+        show_dir = (
+            Path(state.downloader.download_dir)
+            / PODCASTS_DIRNAME
+            / show['folder_name']
+            if state.downloader is not None
+            else None
+        )
+        if show_dir is not None and show_dir.is_dir():
+            await asyncio.to_thread(
+                shutil.rmtree, show_dir, ignore_errors=True
+            )
+            deleted_files = True
+        invalidate_library_paths_cache()
+    return {'ok': True, 'show': show, 'files_deleted': deleted_files}
+
+
+@router.post('/api/podcasts/episodes/{episode_id}/download')
+async def download_podcast_episode(episode_id: int) -> dict[str, Any]:
+    """Download one episode on demand, outside the retention policy."""
+
+    podcasts = _require_podcasts()
+    episode = await asyncio.to_thread(podcasts.get_episode, episode_id)
+    if episode is None:
+        raise HTTPException(status_code=404, detail='Episode not found')
+    show = await asyncio.to_thread(podcasts.get_show, episode['show_id'])
+    if show is None:
+        raise HTTPException(status_code=404, detail='Show not found')
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+
+    info = EpisodeInfo(
+        guid=episode['guid'],
+        title=episode['title'],
+        description=episode['description'],
+        published_at=episode['published_at'],
+        duration_seconds=episode['duration_seconds'],
+        season_number=episode['season_number'],
+        episode_number=episode['episode_number'],
+        enclosure_url=episode['enclosure_url'],
+        enclosure_type=episode['enclosure_type'],
+    )
+    loop = state.loop or asyncio.get_running_loop()
+
+    def _progress(pct: float) -> None:
+        asyncio.run_coroutine_threadsafe(
+            state.connections.broadcast({
+                'type': 'podcast_progress',
+                'show': show['name'],
+                'episode': episode['title'],
+                'progress': pct,
+            }),
+            loop,
+        )
+
+    try:
+        cover_bytes = await asyncio.to_thread(
+            best_cover_bytes, show['artwork_url']
+        )
+        filename = await asyncio.to_thread(
+            download_episode,
+            info,
+            show_name=show['name'],
+            author=show['author'],
+            folder_name=show['folder_name'],
+            download_dir=Path(state.downloader.download_dir),
+            cover_bytes=cover_bytes,
+            progress=_progress,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail=f'Download failed: {exc}'
+        ) from exc
+    await asyncio.to_thread(podcasts.mark_downloaded, episode_id, filename)
+    invalidate_library_paths_cache()
+    await state.connections.broadcast({'type': 'podcasts'})
+    return await asyncio.to_thread(podcasts.get_episode, episode_id)
+
+
+@router.delete('/api/podcasts/episodes/{episode_id}')
+async def delete_podcast_episode(episode_id: int) -> dict[str, Any]:
+    """Remove a downloaded episode's file; never auto-downloaded again."""
+
+    podcasts = _require_podcasts()
+    episode = await asyncio.to_thread(podcasts.get_episode, episode_id)
+    if episode is None:
+        raise HTTPException(status_code=404, detail='Episode not found')
+    if episode['filename'] and state.downloader is not None:
+        full = Path(state.downloader.download_dir) / episode['filename']
+        try:
+            await asyncio.to_thread(full.unlink, missing_ok=True)
+        except OSError:
+            logger.opt(exception=True).warning(
+                'Could not remove podcast episode file {}', full
+            )
+        invalidate_library_paths_cache()
+    await asyncio.to_thread(
+        podcasts.prune_download, episode_id, dismissed=True
+    )
+    await state.connections.broadcast({'type': 'podcasts'})
+    return {'ok': True}
+
+
+@router.put('/api/podcasts/episodes/{episode_id}/playback')
+async def set_podcast_playback(
+    episode_id: int, request: Request
+) -> dict[str, Any]:
+    """Save an episode's resume position and/or played state.
+
+    Called periodically while a podcast episode plays (throttled on the
+    client) and once more on pause/seek/close, so the position survives
+    a reload or a switch to another device.
+    """
+
+    podcasts = _require_podcasts()
+    if await asyncio.to_thread(podcasts.get_episode, episode_id) is None:
+        raise HTTPException(status_code=404, detail='Episode not found')
+    payload = await _json_object(request)
+    position = payload.get('position_seconds')
+    played = payload.get('played')
+    await asyncio.to_thread(
+        podcasts.set_playback,
+        episode_id,
+        position_seconds=float(position) if position is not None else None,
+        played=bool(played) if played is not None else None,
+    )
+    return await asyncio.to_thread(podcasts.get_episode, episode_id)
+
+
 @router.websocket('/api/ws')
 async def websocket_endpoint(
     ws: WebSocket, client_id: str = Query(...)
@@ -3611,6 +3987,7 @@ def _start_initial_check(
                 loop,
                 state.settings,
                 library_stores(),
+                state.podcasts,
             )
         except Exception:
             logger.exception('Initial check failed for watch {}', playlist.id)
@@ -3726,6 +4103,7 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
                 # delay-between-downloads setting on a manual check.
                 state.settings,
                 library_stores(),
+                state.podcasts,
             )
             logger.info(
                 'Manual check: downloaded {} new track(s) from "{}"',

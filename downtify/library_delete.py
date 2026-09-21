@@ -10,6 +10,7 @@ from loguru import logger
 
 from .library_catalog import (
     AUDIO_EXTENSIONS,
+    PODCASTS_DIRNAME,
     LibraryContext,
     library_context_from_state,
     resolve_library_file,
@@ -309,6 +310,24 @@ def _delete_audio_under_dir(
     if not directory.is_dir():
         logger.debug(
             'Playlist folder scan: directory does not exist: {}',
+            directory,
+        )
+        return {
+            'deleted': deleted,
+            'failed': failed,
+            'playlists_affected': [],
+        }
+    try:
+        podcasts_root = (ctx.download_dir / PODCASTS_DIRNAME).resolve()
+        is_podcasts_root = directory.resolve() == podcasts_root
+    except OSError:
+        is_podcasts_root = False
+    if is_podcasts_root:
+        # A playlist named "Podcasts" would otherwise sweep every show's
+        # episodes at once — playlists and podcast subscriptions are
+        # deleted through entirely different paths on purpose.
+        logger.warning(
+            'Refusing to sweep the Podcasts folder as a playlist folder: {}',
             directory,
         )
         return {

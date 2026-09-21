@@ -15,6 +15,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Library Import (CSV)](library-import.md) | Import a library export from Soundiiz, TuneMyMusic or Exportify and queue the whole thing |
 | [Built-in Player](player.md) | Play your library in the browser: queue management, synced lyrics, sleep timer, keyboard and media keys |
 | [Liked songs](liked-songs.md) | Heart a song to like it; a playlist of everything you have liked appears on its own |
+| [Podcasts](podcasts.md) | Subscribe to a show by RSS feed, Spotify link or name; new episodes download and tag on their own |
 | [slskd & Navidrome](slskd-navidrome.md) | Download from Soulseek through slskd, mirror playlists into Navidrome, and track playlist downloads |
 | [Library catalog & path sync](library-catalog.md) | How Downtify tracks library files and playlists, and fixing paths after moving files |
 | [Upgrade library](library-upgrade.md) | Scan music you already downloaded and repair small covers, missing lyrics and incomplete tags |

@@ -954,7 +954,9 @@ Write an M3U file for a playlist after per-track downloads are complete. `playli
 
 List all watches (playlists and artists).
 
-**Response:** Array of watch objects. Each has a `kind` of `"playlist"` or `"artist"`, and a `source` of `"spotify"` or `"youtube_music"` (the service the watch was added from, read from its `url`). `spotify_id` is the watch's unique key: the Spotify or YouTube Music playlist id, or for an artist watch the YouTube Music channel id. For an artist watch, `last_track_count` is the number of releases.
+**Response:** Array of watch objects. Each has a `kind` of `"playlist"`, `"artist"` or `"podcast"`, and a `source` of `"spotify"` or `"youtube_music"` (the service the watch was added from, read from its `url`; meaningless for a podcast watch). `spotify_id` is the watch's unique key: the Spotify or YouTube Music playlist id, an artist's YouTube Music channel id, or a podcast's RSS feed URL. For an artist watch, `last_track_count` is the number of releases.
+
+A podcast watch only ever appears here — it's created, updated and deleted through [`POST /api/podcasts/subscribe`](#podcasts) and friends, not through this endpoint's `POST`/`PATCH`/`DELETE`, since a podcast needs a retention policy the generic watch shape has no room for.
 
 ---
 
@@ -1016,6 +1018,207 @@ Trigger an immediate check for a specific playlist outside the normal schedule.
 
 ---
 
+## Podcasts
+
+Subscribing to a show, its episodes, and per-episode playback position — see [Podcasts](features/podcasts.md). Scheduling (the interval, enabled flag and last-checked time) lives on the same watch object [`GET /api/monitor/playlists`](#get-apimonitorplaylists) returns for playlists and artists (`kind: "podcast"`); everything below is what that generic shape has no room for.
+
+### `POST /api/podcasts/resolve`
+
+Preview a podcast from a pasted link, before subscribing. Accepts a direct RSS feed URL or a Spotify show/episode link.
+
+**Request body:** `{ "url": "https://feeds.example.com/show.xml" }`
+
+**Response:**
+
+```json
+{
+  "show": {
+    "name": "Radiolab",
+    "author": "WNYC Studios",
+    "description": "…",
+    "artwork_url": "https://…",
+    "feed_url": "https://feeds.simplecast.com/EmVW7VGp",
+    "source_url": "https://feeds.simplecast.com/EmVW7VGp"
+  },
+  "episodes": [
+    {
+      "guid": "…",
+      "title": "The Sweetest Thing",
+      "description": "…",
+      "published_at": "2026-09-18T14:00:00+00:00",
+      "duration_seconds": 1862,
+      "season_number": null,
+      "episode_number": 712,
+      "enclosure_url": "https://…",
+      "enclosure_type": "audio/mpeg"
+    }
+  ],
+  "matched_episode_guid": null,
+  "already_subscribed": false
+}
+```
+
+`matched_episode_guid` is set only when a Spotify **episode** link's title could be matched into the feed. `400` for a link that isn't a podcast feed and isn't a Spotify show/episode link; `404` when Spotify resolves a show name but it has no public RSS feed (a Spotify-exclusive show) — the response `detail` names the show.
+
+---
+
+### `GET /api/podcasts/search`
+
+Free-text podcast search, via the iTunes podcast directory.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `q` | string | yes | Show name |
+
+**Response:** `{ "results": [ { "name": "…", "author": "…", "feed_url": "…", "artwork_url": "…" } ] }`. A result with an empty `feed_url` has no public feed and can't be subscribed to.
+
+---
+
+### `POST /api/podcasts/subscribe`
+
+Subscribe to a show resolved with `POST /api/podcasts/resolve`. Triggers an immediate initial sync in the background — see [How many episodes are downloaded](features/podcasts.md#how-many-episodes-are-downloaded).
+
+**Request body:**
+
+```json
+{
+  "feed_url": "https://feeds.simplecast.com/EmVW7VGp",
+  "name": "Radiolab",
+  "author": "WNYC Studios",
+  "description": "…",
+  "artwork_url": "https://…",
+  "source_url": "https://feeds.simplecast.com/EmVW7VGp",
+  "retention": 0,
+  "interval_minutes": 720
+}
+```
+
+Only `feed_url` and `name` are required. `retention` is `0` for "every new episode" or a positive integer for "keep the latest N"; default `0`. `409` if already subscribed to this feed.
+
+**Response:** The show object (see `GET /api/podcasts/shows/{id}`).
+
+---
+
+### `GET /api/podcasts/shows`
+
+List subscribed shows.
+
+**Response:** Array of show objects:
+
+```json
+{
+  "id": 1,
+  "feed_url": "https://feeds.simplecast.com/EmVW7VGp",
+  "name": "Radiolab",
+  "author": "WNYC Studios",
+  "description": "…",
+  "artwork_url": "https://…",
+  "source_url": "https://feeds.simplecast.com/EmVW7VGp",
+  "folder_name": "Radiolab",
+  "retention": 3,
+  "created_at": "…",
+  "watch_id": 1,
+  "interval_minutes": 720,
+  "enabled": true,
+  "last_checked": "…",
+  "episode_count": 671,
+  "downloaded_count": 3
+}
+```
+
+`folder_name` is the sanitized, on-disk folder name under `Podcasts/`, fixed at subscribe time. `watch_id`/`interval_minutes`/`enabled`/`last_checked` are `null` if the scheduling watch is somehow missing.
+
+---
+
+### `GET /api/podcasts/shows/{show_id}`
+
+One show. `404` if not subscribed.
+
+---
+
+### `GET /api/podcasts/shows/{show_id}/episodes`
+
+A show's episodes, newest first.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `include_dismissed` | boolean | no | Include episodes whose download was removed on purpose (default `false`) |
+
+**Response:** `{ "show": { /* show object */ }, "episodes": [ /* episode objects */ ] }`
+
+```json
+{
+  "id": 1,
+  "show_id": 1,
+  "guid": "…",
+  "title": "The Sweetest Thing",
+  "description": "…",
+  "published_at": "2026-09-18T14:00:00+00:00",
+  "duration_seconds": 1862,
+  "season_number": null,
+  "episode_number": 712,
+  "enclosure_url": "https://…",
+  "enclosure_type": "audio/mpeg",
+  "filename": "Podcasts/Radiolab/2026-09-18 - The Sweetest Thing.mp3",
+  "downloaded_at": "…",
+  "dismissed": false,
+  "position_seconds": 13.9,
+  "played": false
+}
+```
+
+`filename` is the library path — `null` until downloaded. `position_seconds`/`played` come from `PUT .../playback`.
+
+---
+
+### `PATCH /api/podcasts/shows/{show_id}`
+
+Update a show's retention, and/or its watch's interval or enabled state.
+
+**Request body:** Any of `{ "retention": 5, "interval_minutes": 360, "enabled": false }`.
+
+**Response:** The show object.
+
+---
+
+### `DELETE /api/podcasts/shows/{show_id}`
+
+Unsubscribe.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `keep_files` | boolean | no | Keep downloaded episode files on disk (default `false`, which deletes the show's whole folder) |
+
+**Response:** `{ "ok": true, "show": { /* the deleted show */ }, "files_deleted": true }`
+
+---
+
+### `POST /api/podcasts/episodes/{episode_id}/download`
+
+Download one episode on demand, regardless of the show's retention policy.
+
+**Response:** The episode object, with `filename` and `downloaded_at` set. `502` if the download fails.
+
+---
+
+### `DELETE /api/podcasts/episodes/{episode_id}`
+
+Remove a downloaded episode's file. Sets `dismissed: true` — see [Removing episodes](features/podcasts.md#removing-episodes) for why it is never re-downloaded automatically after this.
+
+**Response:** `{ "ok": true }`
+
+---
+
+### `PUT /api/podcasts/episodes/{episode_id}/playback`
+
+Save an episode's resume position and/or played state. Called periodically while an episode plays.
+
+**Request body:** `{ "position_seconds": 42.5, "played": false }` — either field alone is fine.
+
+**Response:** The episode object.
+
+---
+
 ## WebSocket
 
 ### `WS /api/ws`
@@ -1059,3 +1262,17 @@ A change to the [liked songs](features/liked-songs.md) is broadcast as well, so 
 ```json
 { "type": "likes", "count": 3 }
 ```
+
+A [podcast](features/podcasts.md) episode download reports its progress the same way as a music download, tagged so it can be told apart:
+
+```json
+{
+  "type": "podcast_progress",
+  "show": "Radiolab",
+  "episode": "The Sweetest Thing",
+  "progress": 42.5
+}
+```
+
+Once a podcast sync downloads at least one episode, a plain `{ "type": "podcasts" }` follows, telling open pages to refetch the shows/episodes they're showing.
+

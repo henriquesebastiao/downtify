@@ -39,6 +39,13 @@ export const STROKE = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   monitor:
     '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  mic: '<rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',
+  'skip-back':
+    '<path d="M12 5a7 7 0 1 1-6.32 4"/><path d="M8.3 5.7 5.5 9l3.6.8"/>',
+  'skip-forward':
+    '<path d="M12 5a7 7 0 1 0 6.32 4"/><path d="M15.7 5.7 18.5 9l-3.6.8"/>',
+  gauge:
+    '<path d="M4 15a8 8 0 1 1 16 0"/><path d="M12 15 15.5 10"/><path d="M4 15h.01M20 15h.01M12 5.5v.01"/>',
   check: '<path d="M5 12.5 10 17 19 7"/>',
   'check-circle':
     '<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.7L16 9.8"/>',

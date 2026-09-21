@@ -21,6 +21,10 @@ colorama==0.4.6 ; sys_platform == 'win32'
     # via loguru
 fastapi==0.141.1
     # via downtify
+feedparser==6.0.14
+    # via downtify
+feedparser-sgmllib==2.1.0
+    # via feedparser
 h11==0.16.0
     # via
     #   httpcore

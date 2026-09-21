@@ -21,6 +21,14 @@ describe('availablePanels', () => {
       'equalizer',
     ])
   })
+
+  it('drops the lyrics panel for a podcast episode even when lyrics are on', () => {
+    expect(availablePanels({ lyrics: true, isPodcast: true })).toEqual([
+      'queue',
+      'details',
+      'equalizer',
+    ])
+  })
 })
 
 describe('requestedPanel', () => {
@@ -57,5 +65,9 @@ describe('defaultPanel', () => {
     expect(fallback).toBe('queue')
     // Never a panel the view doesn't offer.
     expect(availablePanels({ lyrics: false })).toContain(fallback)
+  })
+
+  it('falls back to the queue for a podcast episode even with lyrics on', () => {
+    expect(defaultPanel({ lyrics: true, isPodcast: true })).toBe('queue')
   })
 })

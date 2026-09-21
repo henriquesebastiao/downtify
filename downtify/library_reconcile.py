@@ -13,6 +13,7 @@ from .downloader import Downloader
 from .library_cache_keys import file_content_key
 from .library_catalog import (
     AUDIO_EXTENSIONS,
+    PODCASTS_DIRNAME,
     LibraryContext,
     library_context_from_state,
 )
@@ -57,6 +58,11 @@ def build_disk_content_index(ctx: LibraryContext) -> dict[str, str]:
             return
         if file_path.suffix.lower() not in AUDIO_EXTENSIONS:
             return
+        try:
+            file_path.relative_to(ctx.download_dir / PODCASTS_DIRNAME)
+            return  # podcast episode: not part of the music library
+        except ValueError:
+            pass
         ck = file_content_key(file_path)
         if not ck:
             return

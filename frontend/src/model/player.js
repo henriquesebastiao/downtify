@@ -7,6 +7,7 @@ import { normalizeTrack } from '/src/lib/library'
 import { attachEqualizer, resumeEqualizer } from '/src/model/equalizer'
 
 const VOLUME_KEY = 'downtify-player-volume'
+const RATE_KEY = 'downtify-player-rate'
 const SESSION_KEY = 'downtify-player-session'
 // Queues past this size aren't persisted across reloads (localStorage
 // quota); the player still works, it just starts empty next time.
@@ -44,6 +45,9 @@ const volume = ref(
   isMobileViewport() ? 1 : parseFloat(storage()?.getItem(VOLUME_KEY) || '0.85')
 )
 const isMuted = ref(false)
+// Podcast episodes only, for now — music always plays at 1x. Per device,
+// like volume, so a listener doesn't have to reset it every episode.
+const playbackRate = ref(parseFloat(storage()?.getItem(RATE_KEY) || '1'))
 const repeatMode = ref('off') // 'off' | 'all' | 'one'
 const shuffle = ref(false)
 // Where the queue came from: { type: 'album'|'playlist'|'artist'|
@@ -67,6 +71,7 @@ function ensureAudio() {
   audio = new Audio()
   audio.preload = 'metadata'
   audio.volume = volume.value
+  audio.playbackRate = playbackRate.value
   audio.addEventListener('timeupdate', () => {
     currentTime.value = audio.currentTime
   })
@@ -305,6 +310,9 @@ function playAt(index) {
   playError.value = ''
   a.src = playlist.value[index].url
   a.currentTime = 0
+  // A track change doesn't reliably keep the rate in every browser — a
+  // podcast episode played at 1.5x shouldn't drop back to 1x on next.
+  a.playbackRate = playbackRate.value
   currentTime.value = 0
   startPlayback(a)
 }
@@ -371,6 +379,17 @@ function setVolume(v) {
 function toggleMute() {
   isMuted.value = !isMuted.value
   if (audio) audio.muted = isMuted.value
+}
+
+function setPlaybackRate(rate) {
+  const clamped = Math.max(0.5, Math.min(3, rate))
+  playbackRate.value = clamped
+  if (audio) audio.playbackRate = clamped
+  try {
+    storage()?.setItem(RATE_KEY, String(clamped))
+  } catch {
+    // ignore
+  }
 }
 
 function nextIndex() {
@@ -643,6 +662,7 @@ export function usePlayer() {
     progressPct,
     volume,
     isMuted,
+    playbackRate,
     repeatMode,
     shuffle,
     sleepAt,
@@ -665,6 +685,7 @@ export function usePlayer() {
     seekBy,
     setVolume,
     toggleMute,
+    setPlaybackRate,
     next,
     prev,
     setRepeat,

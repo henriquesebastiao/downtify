@@ -184,6 +184,21 @@ def _entity_from(payload: dict[str, Any]) -> dict[str, Any]:
     raise ValueError('Spotify entity not found in embed payload')
 
 
+def fetch_embed_entity(kind: str, spotify_id: str) -> dict[str, Any]:
+    """The raw embed entity for a Spotify URL of any ``kind``.
+
+    Tracks/albums/playlists are read through the richer helpers below
+    (:func:`playlist_info_and_tracks` and friends); this is for kinds
+    those don't model, namely ``show`` and ``episode`` — see
+    :mod:`downtify.podcasts`. The embed always resolves a show or
+    episode link to an ``entity`` of type ``"episode"`` (the show's most
+    recent one for a ``/show/`` link), whose ``subtitle`` is the show's
+    name — there is no separate "show" entity shape to parse.
+    """
+
+    return _entity_from(_fetch_embed_json(kind, spotify_id))
+
+
 def _embed_row_track(item: dict[str, Any]) -> Optional[dict[str, Any]]:
     """Track dict for a playlist/album embed row.
 
