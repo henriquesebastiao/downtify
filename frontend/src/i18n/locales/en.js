@@ -61,7 +61,7 @@ export default {
     inputPlaceholder:
       'Spotify or YouTube Music link, or an artist, album, song…',
     getIt: 'Get it',
-    hintSpotify: 'Tracks, albums and playlists',
+    hintSpotify: 'Tracks, albums, playlists and artists',
     hintYoutube: 'YouTube Music songs, albums, playlists and artists',
     hintCsv: 'Import a CSV (Soundiiz, Exportify…)',
     downloading: 'Downloading now',
@@ -116,8 +116,6 @@ export default {
     typeEp: 'EP',
     unsupportedLink:
       "Downtify can't download that link. Paste a Spotify track, album or playlist, or a YouTube Music link.",
-    spotifyArtistUnsupported:
-      "Spotify artist pages can't be downloaded — search for the artist here instead.",
     tipSearchTitle: 'Search by name',
     tipSearchBody:
       'Type an artist, album or song — results come from YouTube Music.',
@@ -153,6 +151,15 @@ export default {
     filterNew: 'New',
     filterLibrary: 'In library',
     filterQueue: 'In queue',
+    topSongs: 'Top Songs',
+    topSongsOf: 'Top Songs of {artist}',
+    topSongsEmpty: 'No top songs found for this artist',
+    noReleasesBody:
+      "Downtify doesn't support getting the discography from a Spotify artist link yet.",
+    createPlaylist: 'Create playlist',
+    createPlaylistHint:
+      "Save the songs as a playlist in this order, with the artist's photo as its cover when playlist cover art is on.",
+    selectAll: 'Select all',
   },
   queue: {
     title: 'Queue',

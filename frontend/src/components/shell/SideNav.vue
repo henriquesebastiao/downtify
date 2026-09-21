@@ -165,7 +165,12 @@ const version = computed(() => {
 
 const items = [
   { name: 'Home', icon: 'home', label: 'nav.home' },
-  { name: 'Search', icon: 'search', label: 'nav.search', match: ['Link'] },
+  {
+    name: 'Search',
+    icon: 'search',
+    label: 'nav.search',
+    match: ['Link', 'TopSongs'],
+  },
   {
     name: 'Library',
     icon: 'library',

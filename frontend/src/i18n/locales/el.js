@@ -61,7 +61,7 @@ export default {
     inputPlaceholder:
       'Σύνδεσμος Spotify ή YouTube Music, ή καλλιτέχνης, άλμπουμ, τραγούδι…',
     getIt: 'Λήψη',
-    hintSpotify: 'Κομμάτια, άλμπουμ και λίστες',
+    hintSpotify: 'Κομμάτια, άλμπουμ, λίστες και καλλιτέχνες',
     hintYoutube: 'Τραγούδια, άλμπουμ, λίστες και καλλιτέχνες του YouTube Music',
     hintCsv: 'Εισαγωγή CSV (Soundiiz, Exportify…)',
     downloading: 'Λήψη τώρα',
@@ -119,8 +119,6 @@ export default {
     typeEp: 'EP',
     unsupportedLink:
       'Το Downtify δεν μπορεί να κατεβάσει αυτόν τον σύνδεσμο. Επικόλλησε κομμάτι, άλμπουμ ή λίστα Spotify, ή σύνδεσμο YouTube Music.',
-    spotifyArtistUnsupported:
-      'Οι σελίδες καλλιτεχνών του Spotify δεν κατεβαίνουν — αναζήτησε τον καλλιτέχνη εδώ.',
     tipSearchTitle: 'Αναζήτηση με όνομα',
     tipSearchBody:
       'Γράψε καλλιτέχνη, άλμπουμ ή τραγούδι — τα αποτελέσματα έρχονται από το YouTube Music.',
@@ -156,6 +154,15 @@ export default {
     filterNew: 'Νέα',
     filterLibrary: 'Στη βιβλιοθήκη',
     filterQueue: 'Στην ουρά',
+    topSongs: 'Top Songs',
+    topSongsOf: 'Top Songs of {artist}',
+    topSongsEmpty: 'Δεν βρέθηκαν δημοφιλή τραγούδια για αυτόν τον καλλιτέχνη',
+    noReleasesBody:
+      'Το Downtify δεν υποστηρίζει ακόμη τη λήψη της δισκογραφίας από σύνδεσμο καλλιτέχνη του Spotify.',
+    createPlaylist: 'Δημιουργία λίστας',
+    createPlaylistHint:
+      'Αποθηκεύει τα τραγούδια ως λίστα με αυτή τη σειρά, με τη φωτογραφία του καλλιτέχνη ως εξώφυλλο όταν είναι ενεργό το εξώφυλλο λίστας.',
+    selectAll: 'Επιλογή όλων',
   },
   queue: {
     title: 'Ουρά',

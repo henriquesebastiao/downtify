@@ -31,7 +31,7 @@ export function classifyInput(raw) {
   const spotify = SPOTIFY_ENTITY.exec(text)
   if (spotify) {
     const kind = spotify[1]
-    if (['track', 'album', 'playlist'].includes(kind)) {
+    if (['track', 'album', 'playlist', 'artist'].includes(kind)) {
       return { type: 'link', source: 'spotify', kind, url: text }
     }
     return { type: 'unsupported', source: 'spotify', kind }

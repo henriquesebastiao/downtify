@@ -20,6 +20,7 @@ describe('classifyInput', () => {
       'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=x',
       'playlist',
     ],
+    ['https://open.spotify.com/artist/4tZwfgrHOc3mvqYlEYSvVi', 'artist'],
   ])('recognises Spotify %s', (url, kind) => {
     expect(classifyInput(url)).toMatchObject({
       type: 'link',
@@ -34,10 +35,10 @@ describe('classifyInput', () => {
     ).toBe('https://open.spotify.com/album/2dZMT4gp')
   })
 
-  it('rejects Spotify artists and podcasts', () => {
+  it('rejects Spotify podcasts', () => {
     expect(
-      classifyInput('https://open.spotify.com/artist/4tZwfgrHOc3mvqYlEYSvVi')
-    ).toMatchObject({ type: 'unsupported', kind: 'artist' })
+      classifyInput('https://open.spotify.com/show/4rOoJ6Egrf8K2IrywzwOMk')
+    ).toMatchObject({ type: 'unsupported', kind: 'show' })
   })
 
   it.each([

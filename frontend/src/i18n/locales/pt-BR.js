@@ -61,7 +61,7 @@ export default {
     inputPlaceholder:
       'Link do Spotify ou YouTube Music, ou um artista, álbum, música…',
     getIt: 'Baixar',
-    hintSpotify: 'Faixas, álbuns e playlists',
+    hintSpotify: 'Faixas, álbuns, playlists e artistas',
     hintYoutube: 'Músicas, álbuns, playlists e artistas do YouTube Music',
     hintCsv: 'Importe um CSV (Soundiiz, Exportify…)',
     downloading: 'Baixando agora',
@@ -119,8 +119,6 @@ export default {
     typeEp: 'EP',
     unsupportedLink:
       'O Downtify não consegue baixar esse link. Cole uma faixa, álbum ou playlist do Spotify, ou um link do YouTube Music.',
-    spotifyArtistUnsupported:
-      'Páginas de artista do Spotify não podem ser baixadas — busque o artista aqui.',
     tipSearchTitle: 'Busque pelo nome',
     tipSearchBody:
       'Digite um artista, álbum ou música — os resultados vêm do YouTube Music.',
@@ -156,6 +154,15 @@ export default {
     filterNew: 'Novas',
     filterLibrary: 'Na biblioteca',
     filterQueue: 'Na fila',
+    topSongs: 'Top Songs',
+    topSongsOf: 'Top Songs of {artist}',
+    topSongsEmpty: 'Nenhuma música popular encontrada para este artista',
+    noReleasesBody:
+      'O Downtify ainda não possui suporte para obter a discografia através de um link de um artista do Spotify.',
+    createPlaylist: 'Criar playlist',
+    createPlaylistHint:
+      'Salva as músicas como uma playlist nesta ordem, com a foto do artista como capa quando a capa de playlist está ativada.',
+    selectAll: 'Selecionar tudo',
   },
   queue: {
     title: 'Fila',

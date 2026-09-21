@@ -61,7 +61,7 @@ export default {
     inputPlaceholder:
       'Spotify vagy YouTube Music link, vagy előadó, album, dal…',
     getIt: 'Letöltés',
-    hintSpotify: 'Számok, albumok és lejátszási listák',
+    hintSpotify: 'Számok, albumok, lejátszási listák és előadók',
     hintYoutube: 'YouTube Music dalok, albumok, lejátszási listák és előadók',
     hintCsv: 'CSV importálása (Soundiiz, Exportify…)',
     downloading: 'Letöltés folyamatban',
@@ -116,8 +116,6 @@ export default {
     typeEp: 'EP',
     unsupportedLink:
       'A Downtify nem tudja letölteni ezt a linket. Illessz be Spotify számot, albumot vagy listát, vagy YouTube Music linket.',
-    spotifyArtistUnsupported:
-      'Spotify előadóoldalak nem tölthetők le — keresd az előadót itt.',
     tipSearchTitle: 'Keresés név szerint',
     tipSearchBody:
       'Írj be előadót, albumot vagy dalt — a találatok a YouTube Musicból jönnek.',
@@ -153,6 +151,15 @@ export default {
     filterNew: 'Új',
     filterLibrary: 'A könyvtárban',
     filterQueue: 'A sorban',
+    topSongs: 'Top Songs',
+    topSongsOf: 'Top Songs of {artist}',
+    topSongsEmpty: 'Nem található népszerű dal ehhez az előadóhoz',
+    noReleasesBody:
+      'A Downtify még nem támogatja a diszkográfia lekérését Spotify-előadói linkből.',
+    createPlaylist: 'Lejátszási lista létrehozása',
+    createPlaylistHint:
+      'A dalokat ebben a sorrendben lejátszási listaként menti, az előadó fotójával borítóként, ha a lejátszási lista borítója be van kapcsolva.',
+    selectAll: 'Összes kijelölése',
   },
   queue: {
     title: 'Sor',

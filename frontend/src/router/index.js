@@ -18,6 +18,12 @@ const routes = [
     component: () => import('/src/views/LinkView.vue'),
   },
   {
+    // An artist's most popular songs, to pick from before downloading.
+    path: '/link/top-songs',
+    name: 'TopSongs',
+    component: () => import('/src/views/TopSongsView.vue'),
+  },
+  {
     path: '/queue/:tab(active|queued|done|failed|all)?',
     name: 'Queue',
     component: () => import('/src/views/QueueView.vue'),

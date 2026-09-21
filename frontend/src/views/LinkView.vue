@@ -113,6 +113,15 @@
                 : t('link.watchPlaylist')
             }}
           </UiButton>
+          <UiButton
+            v-if="details.kind === 'artist'"
+            variant="ghost"
+            size="lg"
+            icon="trending"
+            :to="{ name: 'TopSongs', query: { url } }"
+          >
+            {{ t('link.topSongs') }}
+          </UiButton>
           <UiButton variant="plain" size="lg" icon="arrow-up-right" :href="url">
             <span class="max-sm:sr-only">{{ sourceLabel }}</span>
           </UiButton>
@@ -225,6 +234,13 @@
             :release="album"
           />
         </div>
+
+        <UiEmpty
+          v-else-if="details.kind === 'artist'"
+          icon="music"
+          :title="t('link.empty')"
+          :body="t('link.noReleasesBody')"
+        />
 
         <UiEmpty v-else icon="search" :title="t('link.empty')" />
       </div>

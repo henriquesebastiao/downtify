@@ -347,10 +347,7 @@ function submit() {
   } else if (result.type === 'search') {
     router.push({ name: 'Search', params: { query: result.query } })
   } else if (result.type === 'unsupported') {
-    unsupported.value =
-      result.kind === 'artist' && result.source === 'spotify'
-        ? t('search.spotifyArtistUnsupported')
-        : t('search.unsupportedLink')
+    unsupported.value = t('search.unsupportedLink')
   }
 }
 
