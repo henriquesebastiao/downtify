@@ -727,6 +727,7 @@ const templateTokens = [
   '{title}',
   '{album}',
   '{tracknumber}',
+  '{year}',
   '/',
 ]
 
@@ -746,6 +747,7 @@ const templatePreview = computed(() => {
     '{title}': 'Harbor Lights',
     '{album}': 'Glass Harbor',
     '{tracknumber}': '01',
+    '{year}': '2025',
     '{output-ext}': s.value.format || 'mp3',
   }
   return Object.entries(values).reduce(

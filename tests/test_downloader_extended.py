@@ -239,6 +239,63 @@ def test_format_basename_supports_full_artist_album_tracknumber_layout(
     assert result == 'The Night Owls/First Light/03 - Song'
 
 
+# ── {year} template token ────────────────────────────────────────────────────
+
+
+def test_format_basename_year_from_year_field(tmp_path):
+    d = _make(tmp_path, output_template='{album} ({year})')
+    result = d._format_basename({
+        'name': 'Song',
+        'artists': ['A'],
+        'album_name': 'Glass Harbor',
+        'year': '2025',
+    })
+    assert result == 'Glass Harbor (2025)'
+
+
+def test_format_basename_year_from_full_release_date(tmp_path):
+    # release_date wins over year (same preference as the embedded tag —
+    # see _recording_date_for_tags), and only the leading 4 digits are kept.
+    d = _make(tmp_path, output_template='{album} ({year})')
+    result = d._format_basename({
+        'name': 'Song',
+        'artists': ['A'],
+        'album_name': 'Glass Harbor',
+        'year': '2020',
+        'release_date': '2025-03-14',
+    })
+    assert result == 'Glass Harbor (2025)'
+
+
+def test_format_basename_year_missing_is_empty(tmp_path):
+    d = _make(tmp_path, output_template='{tracknumber} - {title} ({year})')
+    result = d._format_basename({'name': 'Song', 'artists': ['A']})
+    assert result == '- Song ()'
+
+
+def test_format_basename_year_non_numeric_is_empty(tmp_path):
+    d = _make(tmp_path, output_template='{title} ({year})')
+    result = d._format_basename({
+        'name': 'Song',
+        'artists': ['A'],
+        'year': 'unknown',
+    })
+    assert result == 'Song ()'
+
+
+def test_format_basename_supports_full_artist_album_year_layout(tmp_path):
+    # The layout requested alongside this token: Artist/Album (YYYY)/Title
+    # — grouping a full discography download by album and release year.
+    d = _make(tmp_path, output_template='{artists}/{album} ({year})/{title}')
+    result = d._format_basename({
+        'name': 'Song',
+        'artists': ['The Night Owls'],
+        'album_name': 'First Light',
+        'year': '2022',
+    })
+    assert result == 'The Night Owls/First Light (2022)/Song'
+
+
 # ── _artist_subdir ────────────────────────────────────────────────────────────
 
 

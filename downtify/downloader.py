@@ -556,12 +556,19 @@ class Downloader:
         # to 2 digits so "{tracknumber} - {title}" sorts correctly in a
         # file browser (2 < 10 lexicographically without padding).
         track_number, _ = _album_track_index_for_tags(song)
+        # Same source as the embedded tag (_recording_date_for_tags): a
+        # full release date or a bare year, so just the leading 4 digits.
+        # Empty when the source has no date at all, same tolerance as
+        # tracknumber above.
+        date = _recording_date_for_tags(song)
+        year = date[:4] if date[:4].isdigit() else ''
         return {
             'title': _sanitize(song.get('name', 'Unknown')),
             'artists': artists,
             'artist': artists,
             'album': _sanitize(song.get('album_name', '')),
             'tracknumber': f'{track_number:02d}' if track_number else '',
+            'year': year,
         }
 
     def _format_output_parts(self, song: dict[str, Any]) -> list[str]:

@@ -51,15 +51,16 @@ Available tokens:
 | `{artists}` | Comma-separated artist names |
 | `{album}` | Album name |
 | `{tracknumber}` | Track's position on its album, zero-padded to 2 digits (e.g. `01`, `12`). Empty when the source has no track number (e.g. a free-text/YouTube search result). |
+| `{year}` | Release year (e.g. `2025`). Empty when the source has no release date (e.g. a free-text/YouTube search result). |
 
-The template can also include `/` to build subfolders. For example, to lay out a library as `Artist/Album/01 - Title.mp3`:
+The template can also include `/` to build subfolders. For example, to lay out a library as `Artist/Album (2025)/01 - Title.mp3` — handy when downloading a full discography, since each album lands in its own folder alongside its release year:
 
 ```
-{artists}/{album}/{tracknumber} - {title}
+{artists}/{album} ({year})/{tracknumber} - {title}
 ```
 
 ::: info
-This is independent of the **Organize by artist** / **Organize by album** toggles below — those route playlist/album downloads into shared per-artist or per-album folders across your whole library. `{tracknumber}` just lets a template like the one above build that same layout manually, track by track, without turning those toggles on.
+This is independent of the **Organize by artist** / **Organize by album** toggles below — those route playlist/album downloads into shared per-artist or per-album folders across your whole library. `{tracknumber}` and `{year}` just let a template like the one above build that same layout manually, track by track, without turning those toggles on.
 :::
 
 ## Parallel downloads
