@@ -22,6 +22,7 @@ export const NAV = [
       { title: 'Overview', page: 'features/index.md' },
       { title: 'Download Settings', page: 'features/download-settings.md' },
       { title: 'Playlist Monitor', page: 'features/playlist-monitor.md' },
+      { title: 'Top Songs', page: 'features/top-songs.md' },
       { title: 'Library Import (CSV)', page: 'features/library-import.md' },
       { title: 'Built-in Player', page: 'features/player.md' },
       { title: 'Liked Songs', page: 'features/liked-songs.md' },

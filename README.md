@@ -50,7 +50,7 @@ All of it runs inside a single Docker container. See **[How it works](https://he
 
 | | |
 |---|---|
-| **Download** | Spotify tracks, albums and playlists; YouTube Music songs, albums, playlists and artists; free-text search; CSV imports from Soundiiz, TuneMyMusic and Exportify. MP3, FLAC, M4A, OGG or OPUS at the bitrate you pick. See [Download settings](https://henriquesebastiao.github.io/downtify/features/download-settings/) and [Library import](https://henriquesebastiao.github.io/downtify/features/library-import/). |
+| **Download** | Spotify tracks, albums, playlists and artists' top songs; YouTube Music songs, albums, playlists and artists; free-text search; CSV imports from Soundiiz, TuneMyMusic and Exportify. MP3, FLAC, M4A, OGG or OPUS at the bitrate you pick. See [Download settings](https://henriquesebastiao.github.io/downtify/features/download-settings/) and [Library import](https://henriquesebastiao.github.io/downtify/features/library-import/). |
 | **Tags and lyrics** | Title, artist, album, year and cover art embedded in every file. Plain and time-synced lyrics from LRCLIB and NetEase, tried in the order you choose. See [Lyrics](https://henriquesebastiao.github.io/downtify/features/lyrics/). |
 | **Playlist Monitor** | Watch Spotify or YouTube Music playlists and artists; new tracks and new releases download on a schedule you set. See [Playlist Monitor](https://henriquesebastiao.github.io/downtify/features/playlist-monitor/). |
 | **Built-in player** | Full-screen Now playing with synced lyrics, an editable queue, a sleep timer, keyboard shortcuts, media keys and a ten-band equalizer (experimental). See [Built-in player](https://henriquesebastiao.github.io/downtify/features/player/). |
@@ -117,14 +117,14 @@ The remaining deployment options (timezone, monitor sync time, cookies file, IPv
 
 | Input | Example |
 |-------|---------|
-| Spotify track, album or playlist | `open.spotify.com/track/…` |
+| Spotify track, album, playlist or artist | `open.spotify.com/track/…` |
 | YouTube Music playlist | `music.youtube.com/playlist?list=…` |
 | YouTube Music artist | `music.youtube.com/channel/UC…` or `music.youtube.com/@artist` |
 | YouTube or YouTube Music video | `youtube.com/watch?v=…` |
 | Free-text search | `The Night Owls Do I Still Recall` |
 | Library export (CSV) | Soundiiz, TuneMyMusic, Exportify |
 
-Spotify artist pages can't be downloaded; search for the artist instead. Artists can also be watched for new releases with the **Playlist Monitor**.
+An artist link opens the artist's page, with a **Top Songs** button to pick from their most popular songs and download them, optionally as a playlist ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/)). Artists can also be watched for new releases with the **Playlist Monitor**.
 
 ## Troubleshooting
 

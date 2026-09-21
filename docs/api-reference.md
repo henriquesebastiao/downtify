@@ -73,11 +73,11 @@ Resolve a Spotify or YouTube Music URL to metadata.
 
 ### `GET /api/url/resolve`
 
-Resolve a pasted link to a single object describing what it points at — used by the web UI's link page. Accepts the same URLs as [`GET /api/song/url`](#get-apisongurl).
+Resolve a pasted link to a single object describing what it points at — used by the web UI's link page. Accepts the same URLs as [`GET /api/song/url`](#get-apisongurl), plus Spotify artist URLs.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify track, album or playlist URL, or a YouTube / YouTube Music video, album, playlist or artist URL |
+| `url` | string | yes | Spotify track, album, playlist or artist URL, or a YouTube / YouTube Music video, album, playlist or artist URL |
 
 **Response:**
 
@@ -93,7 +93,31 @@ Resolve a pasted link to a single object describing what it points at — used b
 }
 ```
 
-`kind` is `track`, `album`, `playlist` or `artist`. A track or collection fills `tracks`; an artist (YouTube Music only) fills `albums` with release summaries instead, and `subtitle` carries the artist description. `400` for a URL that isn't a supported link, `404` when the link resolves to nothing (e.g. a handle that isn't an artist), `502` when the upstream lookup fails.
+`kind` is `track`, `album`, `playlist` or `artist`. A track or collection fills `tracks`; an artist fills `albums` with release summaries instead (empty for a Spotify artist, whose embed has no discography), and `subtitle` carries the artist description. An artist's songs come from [`GET /api/artists/top_songs/url`](#get-apiartiststop_songsurl). `400` for a URL that isn't a supported link, `404` when the link resolves to nothing (e.g. a handle that isn't an artist), `502` when the upstream lookup fails.
+
+---
+
+### `GET /api/artists/top_songs/url`
+
+An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.md) page.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | yes | Spotify artist URL (`open.spotify.com/artist/…`) or YouTube Music artist URL (`/channel/UC…` or `/@handle`) |
+
+**Response:**
+
+```json
+{
+  "source": "spotify",
+  "artist_id": "0p4nmQO2msCgU4IF37Wi3j",
+  "name": "Avril Lavigne",
+  "cover_url": "https://…",
+  "songs": [ /* song objects, most popular first */ ]
+}
+```
+
+`source` is `spotify` or `youtube`. Spotify returns the artist's own *Popular* shelf (up to 10 songs); YouTube Music returns the head of the artist's *Top songs* playlist (up to 50). `400` for a URL that isn't an artist link, `404` when a YouTube Music handle doesn't resolve to an artist, `502` when the upstream lookup fails.
 
 ---
 
@@ -132,6 +156,8 @@ Download multiple tracks concurrently, gated by the [`max_parallel_downloads` se
 |-------|------|-------------|
 | `songs` | array | Song objects to download |
 | `playlist_url` | string | Optional. A Spotify or YouTube Music playlist URL, used to determine the playlist subfolder and M3U name. A Spotify playlist is also tracked as a [playlist download](#playlist-downloads). |
+| `playlist_name` | string | Optional. Names the playlist subfolder and M3U when there is no `playlist_url`, e.g. an artist's [top songs](features/top-songs.md). Ignored when `playlist_url` resolves. |
+| `cover_url` | string | Optional. Image saved as the playlist's [cover art](features/playlist-cover-art.md) when there is no `playlist_url`. Only used when `generate_m3u` is true and the cover art setting is on. |
 | `generate_m3u` | boolean | Whether to write an M3U after the batch finishes. Default: `true`. |
 
 **Response:**
