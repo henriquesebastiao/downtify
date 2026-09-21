@@ -4,6 +4,26 @@ icon: lucide/history
 
 # Changelog
 
+## [3.1.0](https://github.com/henriquesebastiao/downtify/tree/3.1.0) (2026-09-21)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.0.0...3.1.0)
+
+**Implemented enhancements:**
+
+- Add "{year}" as file naming tag/variable [\#366](https://github.com/henriquesebastiao/downtify/issues/366)
+- Add support for podcasts [\#347](https://github.com/henriquesebastiao/downtify/issues/347)
+
+**Fixed bugs:**
+
+- \[error?\] The page needs to be reloaded. [\#368](https://github.com/henriquesebastiao/downtify/issues/368)
+- PWA on Android Chrome, This App Cannot Be Installed [\#367](https://github.com/henriquesebastiao/downtify/issues/367)
+- 2.13.0-rc.1: downloads fail with cookies set, node JS runtime is never enabled [\#362](https://github.com/henriquesebastiao/downtify/issues/362)
+
+**Merged pull requests:**
+
+- feat\(podcasts\): subscribe to shows, download episodes, remember where you left off [\#369](https://github.com/henriquesebastiao/downtify/pull/369) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix: restore deno as JS runtime for yt-dlp \(fixes \#362\) [\#365](https://github.com/henriquesebastiao/downtify/pull/365) ([betterix](https://github.com/betterix))
+
 ## [3.0.0](https://github.com/henriquesebastiao/downtify/tree/3.0.0) (2026-09-19)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/2.13.0-rc.1...3.0.0)
@@ -122,8 +142,6 @@ icon: lucide/history
 
 **Closed issues:**
 
-- Possible fix\(deps\): yt-dlp 2026.6.9 → 2026.7.4 \(CVE-2026-55404\) in requirements.txt [\#292](https://github.com/henriquesebastiao/downtify/issues/292)
-- Possible fix\(deps\): uuid 9.0.1 → 11.1.1, 12.0.1, 13.0.1 \(CVE-2026-41907\) in package-lock.json [\#291](https://github.com/henriquesebastiao/downtify/issues/291)
 - Security: request to enable private vulnerability reporting [\#276](https://github.com/henriquesebastiao/downtify/issues/276)
 
 **Merged pull requests:**
@@ -143,7 +161,6 @@ icon: lucide/history
 - feat: Add Artist Watch to the Playlist Monitor [\#301](https://github.com/henriquesebastiao/downtify/pull/301) ([henriquesebastiao](https://github.com/henriquesebastiao))
 - feat: Add {tracknumber} filename template token [\#300](https://github.com/henriquesebastiao/downtify/pull/300) ([henriquesebastiao](https://github.com/henriquesebastiao))
 - Feature/incremental m3u monitor [\#299](https://github.com/henriquesebastiao/downtify/pull/299) ([henriquesebastiao](https://github.com/henriquesebastiao))
-- Fix possible fix\(deps\): yt-dlp 2026.6.9 → 2026.7.4 \(CVE-2026-55404\) in requirements.txt [\#298](https://github.com/henriquesebastiao/downtify/pull/298) ([begininvoke](https://github.com/begininvoke))
 - Add CSV library import \(Soundiiz, TuneMyMusic, Exportify\) [\#297](https://github.com/henriquesebastiao/downtify/pull/297) ([henriquesebastiao](https://github.com/henriquesebastiao))
 - Add configurable delay between song downloads [\#296](https://github.com/henriquesebastiao/downtify/pull/296) ([henriquesebastiao](https://github.com/henriquesebastiao))
 - feat: Add DOWNTIFY\_MONITOR\_SYNC\_TIME to anchor daily+ playlist syncs [\#295](https://github.com/henriquesebastiao/downtify/pull/295) ([henriquesebastiao](https://github.com/henriquesebastiao))
