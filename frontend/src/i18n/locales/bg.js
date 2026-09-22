@@ -154,12 +154,12 @@ export default {
     topSongs: 'Top Songs',
     topSongsOf: 'Top Songs of {artist}',
     topSongsEmpty: 'Не са намерени популярни песни за този изпълнител',
-    noReleasesBody:
-      'Downtify все още не поддържа получаването на дискографията чрез връзка към изпълнител в Spotify.',
     createPlaylist: 'Създай плейлиста',
     createPlaylistHint:
       'Запазва песните като плейлист в този ред, със снимката на изпълнителя за корица, когато корицата на плейлиста е включена.',
     selectAll: 'Избери всички',
+    playCountSpotify: 'Възпроизвеждания в Spotify',
+    playCountYoutubeMusic: 'Възпроизвеждания в YouTube Music (приблизително)',
   },
   queue: {
     title: 'Опашка',

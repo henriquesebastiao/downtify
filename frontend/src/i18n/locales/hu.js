@@ -154,12 +154,12 @@ export default {
     topSongs: 'Top Songs',
     topSongsOf: 'Top Songs of {artist}',
     topSongsEmpty: 'Nem található népszerű dal ehhez az előadóhoz',
-    noReleasesBody:
-      'A Downtify még nem támogatja a diszkográfia lekérését Spotify-előadói linkből.',
     createPlaylist: 'Lejátszási lista létrehozása',
     createPlaylistHint:
       'A dalokat ebben a sorrendben lejátszási listaként menti, az előadó fotójával borítóként, ha a lejátszási lista borítója be van kapcsolva.',
     selectAll: 'Összes kijelölése',
+    playCountSpotify: 'Lejátszások a Spotifyon',
+    playCountYoutubeMusic: 'Lejátszások a YouTube Musicon (hozzávetőleges)',
   },
   queue: {
     title: 'Sor',

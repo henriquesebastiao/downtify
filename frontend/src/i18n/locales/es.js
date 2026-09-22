@@ -157,12 +157,12 @@ export default {
     topSongs: 'Top Songs',
     topSongsOf: 'Top Songs of {artist}',
     topSongsEmpty: 'No se encontraron canciones populares de este artista',
-    noReleasesBody:
-      'Downtify aún no permite obtener la discografía a partir de un enlace de un artista de Spotify.',
     createPlaylist: 'Crear playlist',
     createPlaylistHint:
       'Guarda las canciones como una playlist en este orden, con la foto del artista como portada cuando la portada de playlist está activada.',
     selectAll: 'Seleccionar todo',
+    playCountSpotify: 'Reproducciones en Spotify',
+    playCountYoutubeMusic: 'Reproducciones en YouTube Music (aproximado)',
   },
   queue: {
     title: 'Cola',

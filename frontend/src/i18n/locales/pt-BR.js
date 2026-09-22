@@ -157,12 +157,12 @@ export default {
     topSongs: 'Top Songs',
     topSongsOf: 'Top Songs of {artist}',
     topSongsEmpty: 'Nenhuma música popular encontrada para este artista',
-    noReleasesBody:
-      'O Downtify ainda não possui suporte para obter a discografia através de um link de um artista do Spotify.',
     createPlaylist: 'Criar playlist',
     createPlaylistHint:
       'Salva as músicas como uma playlist nesta ordem, com a foto do artista como capa quando a capa de playlist está ativada.',
     selectAll: 'Selecionar tudo',
+    playCountSpotify: 'Reproduções no Spotify',
+    playCountYoutubeMusic: 'Reproduções no YouTube Music (aproximado)',
   },
   queue: {
     title: 'Fila',

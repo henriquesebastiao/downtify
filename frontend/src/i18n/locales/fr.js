@@ -160,12 +160,12 @@ export default {
     topSongs: 'Top Songs',
     topSongsOf: 'Top Songs of {artist}',
     topSongsEmpty: 'Aucun titre populaire trouvé pour cet artiste',
-    noReleasesBody:
-      'Downtify ne permet pas encore d’obtenir la discographie à partir d’un lien d’artiste Spotify.',
     createPlaylist: 'Créer la playlist',
     createPlaylistHint:
       'Enregistre les titres en playlist dans cet ordre, avec la photo de l’artiste comme pochette lorsque les pochettes de playlist sont activées.',
     selectAll: 'Tout sélectionner',
+    playCountSpotify: 'Écoutes sur Spotify',
+    playCountYoutubeMusic: 'Écoutes sur YouTube Music (approximatif)',
   },
   queue: {
     title: 'File',

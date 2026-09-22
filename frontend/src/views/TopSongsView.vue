@@ -50,25 +50,38 @@
           </span>
         </template>
         <template #actions>
-          <UiButton
-            v-if="artist.songs.length"
-            variant="primary"
-            size="lg"
-            icon="download"
-            :loading="submitting"
-            :disabled="!selectedSongs.length"
-            @click="download"
-          >
-            {{ t('link.downloadSelected') }}
-          </UiButton>
-          <UiButton
-            variant="ghost"
-            size="lg"
-            icon="arrow-left"
-            :to="{ name: 'Link', query: { url } }"
-          >
-            {{ artist.name }}
-          </UiButton>
+          <template v-if="artist.songs.length">
+            <UiButton
+              v-if="newSongs.length"
+              variant="primary"
+              size="lg"
+              icon="download"
+              :loading="submitting"
+              @click="download(newSongs)"
+            >
+              {{
+                newSongs.length === artist.songs.length
+                  ? t('link.downloadAll', { count: newSongs.length })
+                  : t('link.downloadNew', { count: newSongs.length })
+              }}
+            </UiButton>
+            <span
+              v-else
+              class="inline-flex h-12 items-center gap-2 rounded-control bg-accent/12 px-5 text-[15px] font-semibold text-accent"
+            >
+              <AppIcon name="check-circle" :size="18" />{{
+                t('link.allInLibrary')
+              }}
+            </span>
+            <UiButton
+              v-if="newSongs.length && newSongs.length < artist.songs.length"
+              variant="ghost"
+              size="lg"
+              @click="download(artist.songs)"
+            >
+              {{ t('link.redownloadAll') }}
+            </UiButton>
+          </template>
           <UiButton variant="plain" size="lg" icon="arrow-up-right" :href="url">
             <span class="max-sm:sr-only">{{ sourceLabel }}</span>
           </UiButton>
@@ -88,21 +101,26 @@
             />
           </div>
 
-          <div class="flex flex-wrap items-center gap-2">
-            <UiButton size="sm" variant="ghost" @click="selectAll">
-              {{ t('link.selectAll') }}
-            </UiButton>
-            <UiButton
-              v-if="selected.size"
-              size="sm"
-              variant="ghost"
-              @click="selected = new Set()"
-            >
-              {{ t('library.clearSelection') }}
-            </UiButton>
-            <span class="tabular ml-auto text-sm text-muted">{{
-              t('library.selectedCount', { count: selected.size })
-            }}</span>
+          <div class="flex flex-wrap items-center gap-3">
+            <UiChips
+              :model-value="allSelected ? 'all' : ''"
+              :items="selectionChips"
+              @update:model-value="onSelectionChip"
+            />
+            <span class="ml-auto flex items-center gap-2">
+              <span class="tabular text-sm text-muted">{{
+                t('library.selectedCount', { count: selected.size })
+              }}</span>
+              <UiButton
+                v-if="selected.size"
+                size="sm"
+                variant="primary"
+                icon="download"
+                @click="download(selectedSongs)"
+              >
+                {{ t('link.downloadSelected') }}
+              </UiButton>
+            </span>
           </div>
 
           <ol class="-mx-3 flex flex-col">
@@ -160,6 +178,20 @@
               >
                 {{ row.song.duration ? formatDuration(row.song.duration) : '' }}
               </span>
+              <div
+                v-if="hasPlays"
+                class="hidden w-40 shrink-0 justify-end md:flex"
+              >
+                <UiBadge
+                  v-if="row.song.play_count"
+                  :tone="playsBadge(row.song).tone"
+                  icon="eye"
+                  class="tabular"
+                  :title="t(playsBadge(row.song).title)"
+                >
+                  {{ formatPlayCount(row.song.play_count, locale) }}
+                </UiBadge>
+              </div>
               <div class="flex w-28 shrink-0 justify-end">
                 <DownloadState :song="row.song" />
               </div>
@@ -178,26 +210,36 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import CoverArt from '/src/components/ui/CoverArt.vue'
+import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
+import UiChips from '/src/components/ui/UiChips.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DownloadState from '/src/components/search/DownloadState.vue'
 import API from '/src/model/api'
-import { jobSongKey, useDownloadManager } from '/src/model/download'
+import {
+  jobSongKey,
+  useDownloadManager,
+  useProgressTracker,
+} from '/src/model/download'
+import { useLibrary } from '/src/model/library'
 import { useUi } from '/src/model/ui'
 import { classifyInput } from '/src/lib/input'
-import { formatDuration, splitLength } from '/src/lib/format'
+import { formatPlayCount, formatDuration, splitLength } from '/src/lib/format'
+import { topSongsBatchOptions, topSongsPlaylistName } from '/src/lib/topSongs'
 import { useI18n } from '/src/i18n'
 
 // How many of the top songs start out selected.
 const PRESELECTED = 5
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const dm = useDownloadManager()
+const tracker = useProgressTracker()
+const library = useLibrary()
 const ui = useUi()
 
 const artist = ref(null)
@@ -205,13 +247,46 @@ const loading = ref(false)
 const error = ref('')
 const submitting = ref(false)
 const selected = ref(new Set())
-const createPlaylist = ref(false)
+// Off for a first visit; on when this artist's top-songs playlist already
+// exists, so later downloads keep feeding it. Once the switch is touched,
+// that choice wins.
+const playlistChoice = ref(null)
+const playlistExists = computed(
+  () =>
+    !!artist.value && !!library.findPlaylist(topSongsPlaylistName(artist.value))
+)
+const createPlaylist = computed({
+  get: () => playlistChoice.value ?? playlistExists.value,
+  set: (value) => {
+    playlistChoice.value = value
+  },
+})
 
 const url = computed(() => String(route.query.url || ''))
 const kind = computed(() => classifyInput(url.value))
 
+// The plays column only appears when the list has counts to show.
+const hasPlays = computed(() =>
+  (artist.value?.songs || []).some((song) => song.play_count)
+)
+
+// Spotify reports an exact play count, YouTube Music a rounded one; each
+// gets its own colour and tooltip.
+function playsBadge(song) {
+  return song.source === 'youtube'
+    ? { tone: 'ytm', title: 'link.playCountYoutubeMusic' }
+    : { tone: 'spotify', title: 'link.playCountSpotify' }
+}
+
 function keyOf(song, index) {
   return jobSongKey(song) || `row-${index}`
+}
+
+function statusOf(song) {
+  tracker.queueVersion.value
+  if (tracker.getBySong(song)) return 'queue'
+  const name = (song.artists || [])[0] || song.artist
+  return library.hasSong(name, song.name) ? 'library' : 'new'
 }
 
 const rows = computed(() =>
@@ -219,7 +294,14 @@ const rows = computed(() =>
     song,
     index,
     key: keyOf(song, index),
+    status: statusOf(song),
   }))
+)
+
+// What "Download all" sends: everything not already in the library or the
+// queue, in ranking order.
+const newSongs = computed(() =>
+  rows.value.filter((row) => row.status === 'new').map((row) => row.song)
 )
 
 async function load() {
@@ -228,7 +310,7 @@ async function load() {
   error.value = ''
   artist.value = null
   selected.value = new Set()
-  createPlaylist.value = false
+  playlistChoice.value = null
   try {
     const res = await API.artistTopSongs(url.value)
     artist.value = res.data
@@ -282,8 +364,26 @@ function selectAll() {
   selected.value = new Set(rows.value.map((row) => row.key))
 }
 
-async function download() {
-  const songs = selectedSongs.value
+const allSelected = computed(
+  () => rows.value.length > 0 && selected.value.size === rows.value.length
+)
+
+// "Select all" reads as pressed once everything is ticked, like the filter
+// chips on the album and playlist pages; "Clear selection" is an action, so
+// it only shows up while something is selected.
+const selectionChips = computed(() => [
+  { id: 'all', label: t('link.selectAll'), count: rows.value.length },
+  ...(selected.value.size
+    ? [{ id: 'none', label: t('library.clearSelection') }]
+    : []),
+])
+
+function onSelectionChip(id) {
+  if (id === 'all') selectAll()
+  else selected.value = new Set()
+}
+
+async function download(songs) {
   if (!songs.length) return
   submitting.value = true
   try {
@@ -294,11 +394,10 @@ async function download() {
       ...song,
       downtify_track_order: artist.value.songs.indexOf(song),
     }))
-    const count = await dm.fromSongs(ranked, {
-      playlistName: `Top Songs of ${artist.value.name}`,
-      coverUrl: createPlaylist.value ? artist.value.cover_url : '',
-      m3u: createPlaylist.value,
-    })
+    const count = await dm.fromSongs(
+      ranked,
+      topSongsBatchOptions(artist.value, createPlaylist.value)
+    )
     selected.value = new Set()
     ui.toast(t('toast.queuedTracks', { count, name: artist.value.name }), {
       kind: 'success',

@@ -157,12 +157,12 @@ export default {
     topSongs: 'Top Songs',
     topSongsOf: 'Top Songs of {artist}',
     topSongsEmpty: 'Δεν βρέθηκαν δημοφιλή τραγούδια για αυτόν τον καλλιτέχνη',
-    noReleasesBody:
-      'Το Downtify δεν υποστηρίζει ακόμη τη λήψη της δισκογραφίας από σύνδεσμο καλλιτέχνη του Spotify.',
     createPlaylist: 'Δημιουργία λίστας',
     createPlaylistHint:
       'Αποθηκεύει τα τραγούδια ως λίστα με αυτή τη σειρά, με τη φωτογραφία του καλλιτέχνη ως εξώφυλλο όταν είναι ενεργό το εξώφυλλο λίστας.',
     selectAll: 'Επιλογή όλων',
+    playCountSpotify: 'Αναπαραγωγές στο Spotify',
+    playCountYoutubeMusic: 'Αναπαραγωγές στο YouTube Music (κατά προσέγγιση)',
   },
   queue: {
     title: 'Ουρά',

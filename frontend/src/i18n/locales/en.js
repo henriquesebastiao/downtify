@@ -154,12 +154,12 @@ export default {
     topSongs: 'Top Songs',
     topSongsOf: 'Top Songs of {artist}',
     topSongsEmpty: 'No top songs found for this artist',
-    noReleasesBody:
-      "Downtify doesn't support getting the discography from a Spotify artist link yet.",
     createPlaylist: 'Create playlist',
     createPlaylistHint:
       "Save the songs as a playlist in this order, with the artist's photo as its cover when playlist cover art is on.",
     selectAll: 'Select all',
+    playCountSpotify: 'Plays on Spotify',
+    playCountYoutubeMusic: 'Plays on YouTube Music (approximate)',
   },
   queue: {
     title: 'Queue',

@@ -158,12 +158,12 @@ export default {
     topSongs: 'Top Songs',
     topSongsOf: 'Top Songs of {artist}',
     topSongsEmpty: 'Bu sanatçı için popüler şarkı bulunamadı',
-    noReleasesBody:
-      'Downtify henüz bir Spotify sanatçı bağlantısından diskografiyi almayı desteklemiyor.',
     createPlaylist: 'Çalma listesi oluştur',
     createPlaylistHint:
       'Şarkıları bu sırayla çalma listesi olarak kaydeder; çalma listesi kapağı açıksa sanatçının fotoğrafı kapak olur.',
     selectAll: 'Tümünü seç',
+    playCountSpotify: 'Spotify’daki dinlenme sayısı',
+    playCountYoutubeMusic: 'YouTube Music’teki dinlenme sayısı (yaklaşık)',
   },
   queue: {
     title: 'Kuyruk',

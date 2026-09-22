@@ -235,13 +235,6 @@
           />
         </div>
 
-        <UiEmpty
-          v-else-if="details.kind === 'artist'"
-          icon="music"
-          :title="t('link.empty')"
-          :body="t('link.noReleasesBody')"
-        />
-
         <UiEmpty v-else icon="search" :title="t('link.empty')" />
       </div>
     </div>

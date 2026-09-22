@@ -11,6 +11,22 @@ export function formatDuration(seconds) {
 }
 
 /**
+ * A play count the way people read one, in the interface's language:
+ * `1484408385` -> `1,5 bi` (pt-BR) / `1.5B` (en). Spotify's exact total and
+ * YouTube Music's rounded one both end up in the same short form.
+ */
+export function formatPlayCount(count, locale = 'en') {
+  const n = Number(count)
+  if (!Number.isFinite(n)) return ''
+  try {
+    return new Intl.NumberFormat(locale, { notation: 'compact' }).format(n)
+  } catch {
+    // A malformed locale tag throws instead of falling back on its own.
+    return new Intl.NumberFormat('en', { notation: 'compact' }).format(n)
+  }
+}
+
+/**
  * Coarse length of a whole album/playlist: `{ hours, minutes }`, with
  * minutes rounded so "2 h 31 min" style labels can be built by i18n.
  */
