@@ -949,13 +949,6 @@ def _artist_entity(
     return entity, name, _cover_url(entity), _token_from_embed_payload(payload)
 
 
-def artist_info_from_id(artist_id: str) -> tuple[str, str]:
-    """``(name, cover_url)`` of a Spotify artist — no tracks, one request."""
-
-    _, name, cover_url, _token = _artist_entity(artist_id)
-    return name, cover_url
-
-
 # sha256 of the queryArtistOverview GraphQL document in the Spotify web
 # player. Update when the player bundle rolls and the API returns
 # PersistedQueryNotFound. Location in the bundle:
@@ -965,21 +958,35 @@ _ARTIST_OVERVIEW_HASH = (
 )
 
 
-def _artist_discography(artist_id: str, token: str) -> dict[str, Any]:
+# sha256 of the artist discography GraphQL document (queryArtistDiscography
+# Albums / Singles / Compilations / All / Overview all share it). It lives
+# in a lazily loaded chunk of the web player, not the main bundle:
+# web-player/xpui-routes-artist.<hash>.js, as
+# new tz.l("queryArtistDiscographyAll","query","<hash>",null)
+_ARTIST_DISCOGRAPHY_HASH = (
+    '5e07d323febb57b4a56a42abbf781490e58764aa45feb6e3dc0591564fc56599'
+)
+# Unlike the overview, this query pages: ``limit`` is required (the
+# request fails without it) and larger values are accepted.
+_DISCOGRAPHY_PAGE_LIMIT = 100
+_DISCOGRAPHY_MAX_PAGES = 20
+
+
+def _partner_query(
+    operation: str,
+    variables: dict[str, Any],
+    sha256_hash: str,
+    token: str,
+) -> dict[str, Any]:
+    """The ``data`` of one persisted query against the player's GraphQL."""
+
     resp = httpx.get(
         _PARTNER_API,
         params={
-            'operationName': 'queryArtistOverview',
-            'variables': json.dumps({
-                'uri': f'spotify:artist:{artist_id}',
-                'locale': '',
-                'includePrerelease': True,
-            }),
+            'operationName': operation,
+            'variables': json.dumps(variables),
             'extensions': json.dumps({
-                'persistedQuery': {
-                    'version': 1,
-                    'sha256Hash': _ARTIST_OVERVIEW_HASH,
-                }
+                'persistedQuery': {'version': 1, 'sha256Hash': sha256_hash}
             }),
         },
         headers={
@@ -993,7 +1000,170 @@ def _artist_discography(artist_id: str, token: str) -> dict[str, Any]:
     data = resp.json()
     if 'errors' in data:
         raise ValueError(f'GraphQL errors: {data["errors"]}')
-    return data['data']['artistUnion']['discography']
+    return data['data']
+
+
+def _artist_discography(artist_id: str, token: str) -> dict[str, Any]:
+    """The ``discography`` section of the player's artist overview.
+
+    It holds ``topTracks`` (each with its album's uri only) and the
+    artist's releases (albums, singles, compilations) with names, cover
+    and date — though only the first page of each list: all the albums,
+    but for a long catalogue just the ten latest singles.
+    """
+
+    data = _partner_query(
+        'queryArtistOverview',
+        {
+            'uri': f'spotify:artist:{artist_id}',
+            'locale': '',
+            'includePrerelease': True,
+        },
+        _ARTIST_OVERVIEW_HASH,
+        token,
+    )
+    return data['artistUnion']['discography']
+
+
+def _artist_full_discography(artist_id: str, token: str) -> dict[str, Any]:
+    """Every release of an artist, paging through ``queryArtistDiscographyAll``.
+
+    Returns ``{'all': {'items': [...]}}``: one item per release group
+    (a release and its alternate editions), in the same shape
+    :func:`_artist_releases` reads from the overview.
+    """
+
+    items: list[Any] = []
+    for _ in range(_DISCOGRAPHY_MAX_PAGES):
+        data = _partner_query(
+            'queryArtistDiscographyAll',
+            {
+                'uri': f'spotify:artist:{artist_id}',
+                'locale': '',
+                'offset': len(items),
+                'limit': _DISCOGRAPHY_PAGE_LIMIT,
+            },
+            _ARTIST_DISCOGRAPHY_HASH,
+            token,
+        )
+        page = data['artistUnion']['discography']['all']
+        batch = page.get('items') or []
+        items.extend(batch)
+        if not batch or len(items) >= (page.get('totalCount') or 0):
+            break
+    return {'all': {'items': items}}
+
+
+_RELEASE_TYPES = {
+    'ALBUM': 'Album',
+    'SINGLE': 'Single',
+    'EP': 'EP',
+    'COMPILATION': 'Compilation',
+}
+
+
+def _release_nodes(node: Any) -> list[dict[str, Any]]:
+    """Every named ``spotify:album:`` node under *node*, in document order."""
+
+    found: list[dict[str, Any]] = []
+    if isinstance(node, dict):
+        uri = node.get('uri')
+        name = node.get('name')
+        if (
+            isinstance(uri, str)
+            and uri.startswith('spotify:album:')
+            and isinstance(name, str)
+            and name.strip()
+        ):
+            found.append(node)
+        for value in node.values():
+            found.extend(_release_nodes(value))
+    elif isinstance(node, list):
+        for value in node:
+            found.extend(_release_nodes(value))
+    return found
+
+
+def _release_sort_key(release: dict[str, Any]) -> tuple[int, int, int]:
+    date = release.get('date')
+    date = date if isinstance(date, dict) else {}
+
+    def part(key: str) -> int:
+        value = _calendar_component(date.get(key))
+        return value or 0
+
+    return part('year'), part('month'), part('day')
+
+
+def _artist_releases(
+    discography: dict[str, Any], artist_name: str
+) -> list[dict[str, Any]]:
+    """Release summaries (albums, singles, compilations), newest first.
+
+    Same shape as ``providers.artist_albums_from_channel_id`` so the
+    frontend lists them the same way. Reads either the full discography
+    or the overview's shorter one; a release can appear in more than one
+    section of the latter, so this de-duplicates.
+    """
+
+    nodes = _release_nodes({
+        k: v for k, v in discography.items() if k != 'topTracks'
+    })
+    unique: dict[str, dict[str, Any]] = {}
+    for node in nodes:
+        unique.setdefault(node['uri'], node)
+    releases: list[dict[str, Any]] = []
+    for node in sorted(unique.values(), key=_release_sort_key, reverse=True):
+        album_id = _id_from_uri(node['uri'])
+        cover = node.get('coverArt') or {}
+        kind = str(node.get('type') or '').upper()
+        year, _month, _day = _release_sort_key(node)
+        releases.append({
+            'album_id': album_id,
+            'name': node['name'].strip(),
+            'artists': [artist_name] if artist_name else [],
+            'artist': artist_name,
+            'cover_url': _largest_image(
+                cover.get('sources') or [] if isinstance(cover, dict) else []
+            ),
+            'year': str(year) if year else '',
+            'explicit': False,
+            'url': f'https://open.spotify.com/album/{album_id}',
+            'source': 'spotify',
+            'release_type': _RELEASE_TYPES.get(kind, kind.title() or 'Album'),
+        })
+    return releases
+
+
+def artist_page_from_id(
+    artist_id: str,
+) -> tuple[str, str, list[dict[str, Any]]]:
+    """``(name, cover_url, releases)`` for a Spotify artist.
+
+    The name and photo come from the artist embed. The embed has no
+    discography, so the releases come from the player's GraphQL: the
+    full, paged discography, or — if that query no longer resolves (its
+    hash rolled) — the overview's shorter list. If both fail the
+    releases are just empty.
+    """
+
+    _, name, cover_url, token = _artist_entity(artist_id)
+    releases: list[dict[str, Any]] = []
+    if token:
+        for source, fetch in (
+            ('full discography', _artist_full_discography),
+            ('overview', _artist_discography),
+        ):
+            try:
+                releases = _artist_releases(fetch(artist_id, token), name)
+                break
+            except Exception:
+                logger.opt(exception=True).warning(
+                    'Spotify releases unavailable for artist {} ({})',
+                    artist_id,
+                    source,
+                )
+    return name, cover_url, releases
 
 
 def _album_names_by_uri(node: Any) -> dict[str, str]:
@@ -1030,26 +1200,40 @@ def _album_name_from_embed(album_uri: str) -> str:
     return str(entity.get('name') or entity.get('title') or '').strip()
 
 
-def _top_track_album_names(artist_id: str, token: str) -> dict[str, str]:
-    """``{track id: album name}`` for an artist's top tracks.
+def _play_count(raw: Any) -> int:
+    """A ``playcount`` (the player sends it as a string), or 0 if unusable."""
 
-    The artist embed's shelf rows carry no album at all, and neither does
-    the per-track embed. The web player's ``queryArtistOverview`` query
-    (the same anonymous-token GraphQL endpoint playlists use) lists each
-    top track's album by uri and, in the same response, the artist's
-    releases by name — one request covers almost every track. An album
-    missing from that list is looked up in its own embed instead.
+    if isinstance(raw, bool):
+        return 0
+    try:
+        return max(int(raw), 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _top_track_overview(
+    artist_id: str, token: str
+) -> dict[str, dict[str, Any]]:
+    """``{track id: {'album_name', 'play_count'}}`` for an artist's top tracks.
+
+    The artist embed's shelf rows carry neither an album nor a play count,
+    and neither does the per-track embed. The web player's
+    ``queryArtistOverview`` query (the same anonymous-token GraphQL endpoint
+    playlists use) lists each top track's play count and its album by uri
+    and, in the same response, the artist's releases by name — one request
+    covers almost every track. An album missing from that list is looked up
+    in its own embed instead.
 
     Best effort: any failure (the persisted-query hash rolled, the
-    network) returns ``{}``, leaving the album blank rather than failing
-    the whole artist.
+    network) returns ``{}``, leaving those fields blank rather than failing
+    the whole artist. A track only carries the keys that are known.
     """
 
     try:
         discography = _artist_discography(artist_id, token)
         names = _album_names_by_uri(discography)
         top = (discography.get('topTracks') or {}).get('items') or []
-        album_uris: dict[str, str] = {}
+        tracks: dict[str, tuple[str, int]] = {}
         for item in top:
             track = item.get('track') if isinstance(item, dict) else None
             if not isinstance(track, dict):
@@ -1057,20 +1241,29 @@ def _top_track_album_names(artist_id: str, token: str) -> dict[str, str]:
             track_id = track.get('id') or _id_from_uri(track.get('uri') or '')
             album = track.get('albumOfTrack') or {}
             album_uri = album.get('uri') if isinstance(album, dict) else ''
-            if track_id and album_uri:
-                album_uris[track_id] = album_uri
+            if track_id:
+                tracks[track_id] = (
+                    album_uri or '',
+                    _play_count(track.get('playcount')),
+                )
     except Exception:
         logger.opt(exception=True).warning(
-            'Spotify album names unavailable for artist {}', artist_id
+            'Spotify top track details unavailable for artist {}', artist_id
         )
         return {}
 
-    result: dict[str, str] = {}
-    for track_id, album_uri in album_uris.items():
-        if album_uri not in names:
-            names[album_uri] = _album_name_from_embed(album_uri)
-        if names[album_uri]:
-            result[track_id] = names[album_uri]
+    result: dict[str, dict[str, Any]] = {}
+    for track_id, (album_uri, plays) in tracks.items():
+        info: dict[str, Any] = {}
+        if album_uri:
+            if album_uri not in names:
+                names[album_uri] = _album_name_from_embed(album_uri)
+            if names[album_uri]:
+                info['album_name'] = names[album_uri]
+        if plays:
+            info['play_count'] = plays
+        if info:
+            result[track_id] = info
     return result
 
 
@@ -1100,7 +1293,8 @@ def artist_top_songs_from_id(
     :func:`enrich_track_from_spotify_if_sparse` — the same per-track
     re-fetch a monitored playlist already does — so every song gets its
     own album cover instead of falling back to the artist's photo. The
-    album *name* isn't in either embed; see :func:`_top_track_album_names`.
+    album *name* and the play count aren't in either embed; see
+    :func:`_top_track_overview`.
     """
 
     entity, name, cover_url, token = _artist_entity(artist_id)
@@ -1125,10 +1319,13 @@ def artist_top_songs_from_id(
             'No top-songs parsed from Spotify artist embed for {}', artist_id
         )
     elif token:
-        album_names = _top_track_album_names(artist_id, token)
+        overview = _top_track_overview(artist_id, token)
         for song in songs:
-            if not song.get('album_name') and song['song_id'] in album_names:
-                song['album_name'] = album_names[song['song_id']]
+            info = overview.get(song['song_id']) or {}
+            if not song.get('album_name') and info.get('album_name'):
+                song['album_name'] = info['album_name']
+            if info.get('play_count'):
+                song['play_count'] = info['play_count']
     return name, cover_url, songs
 
 

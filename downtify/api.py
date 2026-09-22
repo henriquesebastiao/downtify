@@ -1095,10 +1095,10 @@ def _spotify_details(kind: str, sid: str) -> dict[str, Any]:
         name, tracks = spotify.playlist_info_and_tracks(sid)
         return _collection_details('playlist', tracks, name)
     if kind == 'artist':
-        # The embed has no discography (see spotify.artist_name_from_id),
-        # so the page is just the artist; the client offers their top
-        # songs from /api/artists/top_songs/url.
-        name, cover_url = spotify.artist_info_from_id(sid)
+        # The embed has no discography (see spotify.artist_name_from_id);
+        # the releases come from the player's artist overview. The client
+        # offers the top songs from /api/artists/top_songs/url.
+        name, cover_url, releases = spotify.artist_page_from_id(sid)
         return {
             'kind': 'artist',
             'name': name,
@@ -1106,7 +1106,7 @@ def _spotify_details(kind: str, sid: str) -> dict[str, Any]:
             'cover_url': cover_url,
             'year': '',
             'tracks': [],
-            'albums': [],
+            'albums': releases,
         }
     raise HTTPException(
         status_code=400, detail=f'Unsupported entity type: {kind}'

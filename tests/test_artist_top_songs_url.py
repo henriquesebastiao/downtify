@@ -133,11 +133,16 @@ def test_non_artist_url_is_400():
     assert exc.value.status_code == 400
 
 
-def test_url_resolve_spotify_artist_is_just_the_artist(monkeypatch):
+def test_url_resolve_spotify_artist_lists_the_releases(monkeypatch):
+    releases = [{'album_id': 'AAA', 'name': 'Test Album'}]
     monkeypatch.setattr(
         api.spotify,
-        'artist_info_from_id',
-        lambda artist_id: ('Test Artist', 'https://example.test/cover.jpg'),
+        'artist_page_from_id',
+        lambda artist_id: (
+            'Test Artist',
+            'https://example.test/cover.jpg',
+            releases,
+        ),
     )
     result = api.url_resolve_endpoint(
         'https://open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg'
@@ -146,7 +151,7 @@ def test_url_resolve_spotify_artist_is_just_the_artist(monkeypatch):
     assert result['name'] == 'Test Artist'
     assert result['cover_url'] == 'https://example.test/cover.jpg'
     assert result['tracks'] == []
-    assert result['albums'] == []
+    assert result['albums'] == releases
 
 
 class _FakeRequest:
