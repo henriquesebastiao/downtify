@@ -99,6 +99,47 @@ function searchArtists(query) {
   return API.get('/api/artists/search', { params: { query } })
 }
 
+// ── Artist photo & banner ───────────────────────────────────────────
+function getArtistArt(name) {
+  return API.get('/api/artists/art', { params: { name } })
+}
+
+// Saved photo/banner URLs for many artists in one call - used by the
+// Library page's artist grid so it doesn't send one request per tile.
+function getArtistArtBulk(names) {
+  return API.post('/api/artists/art/bulk', { names })
+}
+
+function searchArtistArt(name) {
+  return API.get('/api/artists/art/search', { params: { name } })
+}
+
+function getSpotifyArtistArtCandidate(file) {
+  return API.get('/api/artists/art/spotify_candidate', { params: { file } })
+}
+
+function setArtistArtFromUrl(name, kind, imageUrl) {
+  return API.post('/api/artists/art/from_url', {
+    name,
+    kind,
+    image_url: imageUrl,
+  })
+}
+
+// The file is sent as the raw request body rather than multipart
+// form-data, so the backend doesn't need python-multipart just for this
+// (same idea as uploadCookies below).
+function uploadArtistArt(name, kind, file) {
+  return API.post('/api/artists/art/upload', file, {
+    params: { name, kind },
+    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+  })
+}
+
+function deleteArtistArt(name, kind) {
+  return API.delete('/api/artists/art', { params: { name, kind } })
+}
+
 function open(songURL) {
   return API.get('/api/song/url', { params: { url: songURL } })
 }
@@ -365,6 +406,13 @@ export default {
   search,
   searchAlbums,
   searchArtists,
+  getArtistArt,
+  getArtistArtBulk,
+  searchArtistArt,
+  getSpotifyArtistArtCandidate,
+  setArtistArtFromUrl,
+  uploadArtistArt,
+  deleteArtistArt,
   open,
   resolveUrl,
   artistTopSongs,

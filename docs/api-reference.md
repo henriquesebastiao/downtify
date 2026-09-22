@@ -121,6 +121,99 @@ An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.
 
 ---
 
+## Artist photo & banner
+
+Manual picker for an artist's profile photo and banner — see [Artist photo & banner](features/artist-images.md). Saved as sidecar files under `<downloads>/Metadata/ArtistImage/` and `<downloads>/Metadata/ArtistBannerImage/`, served directly from the existing `/downloads` static mount.
+
+### `GET /api/artists/art`
+
+Whether an artist has a saved photo and/or banner.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
+
+**Response:**
+
+```json
+{ "photo_url": "/downloads/Metadata/ArtistImage/Avril Lavigne.jpg", "banner_url": null }
+```
+
+Either field is `null` when that image hasn't been saved yet.
+
+---
+
+### `GET /api/artists/art/search`
+
+Free-text artist photo candidates from YouTube Music and Deezer.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Search query (usually the artist's name) |
+
+**Response:** array of `{ "source": "youtube" | "deezer", "name": "…", "image_url": "…" }`, largest image each source offers.
+
+---
+
+### `GET /api/artists/art/spotify_candidate`
+
+A Spotify photo candidate resolved from one already-downloaded track, when that track came from Spotify. Not a name search — see [Artist photo & banner](features/artist-images.md#spotify).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | Library-relative path of one of the artist's tracks (as returned by `GET /tracks`) |
+
+**Response:** `{ "source": "spotify", "name": "…", "image_url": "…" }`, or `{}` when the track isn't a Spotify download or its artist can't be resolved.
+
+---
+
+### `POST /api/artists/art/from_url`
+
+Fetch an image and save it as an artist's photo or banner — used both for a picked search result and a pasted image link.
+
+**Request body:**
+
+```json
+{ "name": "Avril Lavigne", "kind": "photo", "image_url": "https://…" }
+```
+
+`kind` is `"photo"` or `"banner"`.
+
+**Response:** `{ "url": "/downloads/Metadata/ArtistImage/Avril Lavigne.jpg" }`. `400` when `name`/`kind` are missing or invalid, or the URL doesn't resolve to a real image.
+
+---
+
+### `POST /api/artists/art/upload`
+
+Save an uploaded photo or banner. The body is the **raw image file**, not multipart form-data — same idea as `POST /api/cookies`.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name |
+| `kind` | string | yes | `"photo"` or `"banner"` |
+
+**Response:** `{ "url": "…" }`.
+
+| Status | Meaning |
+|--------|---------|
+| `400` | `kind` isn't `photo`/`banner`, or the body isn't a real image. |
+| `413` | Larger than 15 MB. |
+
+---
+
+### `DELETE /api/artists/art`
+
+Remove a saved photo or banner.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name |
+| `kind` | string | yes | `"photo"` or `"banner"` |
+
+**Response:** `{ "removed": true }` when a file was deleted, `{ "removed": false }` when there was nothing to remove. `400` when `kind` isn't `photo`/`banner`.
+
+---
+
 ## Downloads
 
 ### `POST /api/download/url`
@@ -273,6 +366,8 @@ Return the current settings.
   "output": "{artists} - {title}.{output-ext}",
   "generate_m3u": true,
   "download_cover_art_playlists": false,
+  "download_cover_art_artist": false,
+  "download_cover_art_artist_banner": false,
   "max_parallel_downloads": 3,
   "download_delay_seconds": 0,
   "cover_resolution": 600,
@@ -321,6 +416,8 @@ Return the current settings.
 | `cover_resolution` | integer | Target pixel size (width & height) for YouTube Music-sourced cover art. Clamped to `300–1200`. Only used when `download_cover_art` is true. See [Cover art resolution](features/download-settings.md#cover-art-resolution). |
 | `overwrite_existing_files` | boolean | When `false`, a song already in the library (matched by output filename, or by Spotify track ID through the [library track index](features/library-catalog.md)) isn't downloaded again; the download returns the existing file's path instead. See [Overwrite existing files](features/download-settings.md#overwrite-existing-files). |
 | `download_cover_art_playlists` | boolean | Save the playlist's own cover art alongside its M3U file, as `<playlist-name>.jpg`. Only applies while `generate_m3u` is true. Default: `false`. See [Playlist cover art](features/playlist-cover-art.md). |
+| `download_cover_art_artist` | boolean | Reserved for a possible future automatic fetch of an artist's photo during the download pipeline. Currently unused - the manual picker on an artist's Library page is always available regardless of this setting. Default: `false`. See [Artist photo & banner](features/artist-images.md). |
+| `download_cover_art_artist_banner` | boolean | Same as above, for the artist's banner image. Default: `false`. See [Artist photo & banner](features/artist-images.md). |
 | `lyrics_providers` | array | Ordered fallback list of lyrics providers: `lrclib`, `netease`. Each track tries them in order until one has lyrics. Unknown names are dropped; a list left with only the legacy `genius`/`musixmatch`/`azlyrics` names falls back to the defaults. An empty list means no lyrics, as does `download_lyrics: false`. See [Lyrics](features/lyrics.md). |
 | `download_lyrics` | boolean | Whether to look lyrics up at all. |
 | `audio_providers` | array | Ordered fallback list of audio sources: `youtube-music`, `youtube`, `slskd`. `slskd` is dropped while `slskd.enabled` is false. See [slskd & Navidrome](features/slskd-navidrome.md#audio-sources-and-fallback-order). |

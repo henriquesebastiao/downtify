@@ -360,6 +360,26 @@ export default {
     notFound: 'Artista não encontrado',
     findMore: 'Encontrar mais',
   },
+  artistArt: {
+    editPhoto: 'Editar foto',
+    editBanner: 'Editar banner',
+    titlePhoto: 'Foto de {name}',
+    titleBanner: 'Banner de {name}',
+    description:
+      'Busque no YouTube Music e no Deezer, cole um link direto de imagem, ou envie a sua própria.',
+    searchPlaceholder: 'Link de imagem da internet ou Nome do artista',
+    upload: 'Enviar do computador',
+    noResults:
+      'Nenhum resultado ainda — busque pelo artista ou cole um link de imagem.',
+    saved: 'Imagem salva',
+    saveFailed: 'Não foi possível salvar essa imagem',
+    searchFailed: 'Não foi possível buscar imagens',
+    sourceLink: 'Link',
+    removePhoto: 'Remover foto',
+    removeBanner: 'Remover banner',
+    removed: 'Imagem removida',
+    removeFailed: 'Não foi possível remover essa imagem',
+  },
   playlists: {
     kicker: 'Playlist',
     notFound: 'Playlist não encontrada',
@@ -675,6 +695,12 @@ export default {
     coverSize: 'Tamanho da capa',
     coverSizeHint:
       'Para capas do YouTube Music. Capas do Spotify sempre usam o maior tamanho disponível.',
+    artistCover: 'Salvar foto do artista',
+    artistCoverHint:
+      'Baixa foto do artista para exibição no Downtify, também pode ser utilizada em serviços como Navidrome.',
+    artistCoverBanner: 'Salvar banner do artista',
+    artistCoverBannerHint:
+      'Baixa banner para ser usado como imagem de fundo para um visual mais aprimorado.',
     lyricsGroup: 'Letras',
     lyrics: 'Baixar letras',
     lyricsHint:
@@ -848,6 +874,10 @@ export default {
     unsubscribeBody: 'Os episódios baixados também são removidos.',
     unsubscribeKeepBody:
       'Os episódios baixados continuam; só a inscrição é removida.',
+    removeArtistPhotoTitle: 'Remover a foto de {name}?',
+    removeArtistBannerTitle: 'Remover o banner de {name}?',
+    removeArtistArtBody:
+      'Isso só remove o arquivo de imagem salvo — nada mais é afetado.',
   },
   toast: {
     playingNext: { one: 'Tocará a seguir', other: '{count} faixas a seguir' },

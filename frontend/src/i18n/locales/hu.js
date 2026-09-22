@@ -358,6 +358,26 @@ export default {
     notFound: 'Az előadó nem található',
     findMore: 'Továbbiak keresése',
   },
+  artistArt: {
+    editPhoto: 'Fotó szerkesztése',
+    editBanner: 'Banner szerkesztése',
+    titlePhoto: '{name} fotója',
+    titleBanner: '{name} bannere',
+    description:
+      'Keress a YouTube Musicon és a Deezeren, illessz be egy közvetlen képlinket, vagy tölts fel egy sajátot.',
+    searchPlaceholder: 'Internetes képlink vagy előadó neve',
+    upload: 'Feltöltés a számítógépről',
+    noResults:
+      'Még nincs találat — keress rá az előadóra, vagy illessz be egy képlinket.',
+    saved: 'Kép mentve',
+    saveFailed: 'Nem sikerült menteni a képet',
+    searchFailed: 'Nem sikerült képeket keresni',
+    sourceLink: 'Link',
+    removePhoto: 'Fotó eltávolítása',
+    removeBanner: 'Banner eltávolítása',
+    removed: 'Kép eltávolítva',
+    removeFailed: 'Nem sikerült eltávolítani a képet',
+  },
   playlists: {
     kicker: 'Lejátszási lista',
     notFound: 'A lista nem található',
@@ -677,6 +697,12 @@ export default {
     coverSize: 'Borító mérete',
     coverSizeHint:
       'YouTube Music borítókhoz. A Spotify borítók mindig a legnagyobb méretűek.',
+    artistCover: 'Előadó fotójának mentése',
+    artistCoverHint:
+      'Letölti az előadó fotóját a Downtify-ban való megjelenítéshez, és olyan szolgáltatásokban való használatra, mint a Navidrome.',
+    artistCoverBanner: 'Előadó bannerének mentése',
+    artistCoverBannerHint:
+      'Letölt egy bannert, amely háttérképként szolgál a gazdagabb megjelenésért.',
     lyricsGroup: 'Dalszövegek',
     lyrics: 'Dalszövegek letöltése',
     lyricsHint:
@@ -852,6 +878,10 @@ export default {
     unsubscribeBody: 'A letöltött epizódjai is törlődnek.',
     unsubscribeKeepBody:
       'A letöltött epizódok megmaradnak; csak a feliratkozás szűnik meg.',
+    removeArtistPhotoTitle: '{name} fotójának eltávolítása?',
+    removeArtistBannerTitle: '{name} bannerének eltávolítása?',
+    removeArtistArtBody:
+      'Ez csak a mentett képfájlt távolítja el — semmi mást nem érint.',
   },
   toast: {
     playingNext: {

@@ -358,6 +358,26 @@ export default {
     notFound: 'Ο καλλιτέχνης δεν βρέθηκε',
     findMore: 'Βρες περισσότερα',
   },
+  artistArt: {
+    editPhoto: 'Επεξεργασία φωτογραφίας',
+    editBanner: 'Επεξεργασία banner',
+    titlePhoto: 'Φωτογραφία του {name}',
+    titleBanner: 'Banner του {name}',
+    description:
+      'Αναζητήστε στο YouTube Music και στο Deezer, επικολλήστε έναν απευθείας σύνδεσμο εικόνας ή ανεβάστε τη δική σας.',
+    searchPlaceholder: 'Σύνδεσμος εικόνας από το διαδίκτυο ή όνομα καλλιτέχνη',
+    upload: 'Μεταφόρτωση από τον υπολογιστή',
+    noResults:
+      'Δεν υπάρχουν ακόμη αποτελέσματα — αναζητήστε τον καλλιτέχνη ή επικολλήστε έναν σύνδεσμο εικόνας.',
+    saved: 'Η εικόνα αποθηκεύτηκε',
+    saveFailed: 'Δεν ήταν δυνατή η αποθήκευση αυτής της εικόνας',
+    searchFailed: 'Δεν ήταν δυνατή η αναζήτηση εικόνων',
+    sourceLink: 'Σύνδεσμος',
+    removePhoto: 'Αφαίρεση φωτογραφίας',
+    removeBanner: 'Αφαίρεση banner',
+    removed: 'Η εικόνα αφαιρέθηκε',
+    removeFailed: 'Δεν ήταν δυνατή η αφαίρεση αυτής της εικόνας',
+  },
   playlists: {
     kicker: 'Λίστα',
     notFound: 'Η λίστα δεν βρέθηκε',
@@ -679,6 +699,12 @@ export default {
     coverSize: 'Μέγεθος εξωφύλλου',
     coverSizeHint:
       'Για εξώφυλλα YouTube Music. Του Spotify είναι πάντα στο μεγαλύτερο μέγεθος.',
+    artistCover: 'Αποθήκευση φωτογραφίας καλλιτέχνη',
+    artistCoverHint:
+      'Κατεβάζει τη φωτογραφία του καλλιτέχνη για προβολή στο Downtify, και για χρήση σε υπηρεσίες όπως το Navidrome.',
+    artistCoverBanner: 'Αποθήκευση banner καλλιτέχνη',
+    artistCoverBannerHint:
+      'Κατεβάζει ένα banner που χρησιμοποιείται ως εικόνα φόντου για πιο εντυπωσιακή εμφάνιση.',
     lyricsGroup: 'Στίχοι',
     lyrics: 'Λήψη στίχων',
     lyricsHint:
@@ -857,6 +883,10 @@ export default {
     unsubscribeBody: 'Τα κατεβασμένα επεισόδιά του αφαιρούνται επίσης.',
     unsubscribeKeepBody:
       'Τα κατεβασμένα επεισόδια παραμένουν· αφαιρείται μόνο η εγγραφή.',
+    removeArtistPhotoTitle: 'Αφαίρεση της φωτογραφίας του {name};',
+    removeArtistBannerTitle: 'Αφαίρεση του banner του {name};',
+    removeArtistArtBody:
+      'Αυτό αφαιρεί μόνο το αποθηκευμένο αρχείο εικόνας — τίποτα άλλο δεν επηρεάζεται.',
   },
   toast: {
     playingNext: { one: 'Παίζει επόμενο', other: '{count} κομμάτια επόμενα' },

@@ -360,6 +360,26 @@ export default {
     notFound: 'Sanatçı bulunamadı',
     findMore: 'Daha fazlasını bul',
   },
+  artistArt: {
+    editPhoto: 'Fotoğrafı düzenle',
+    editBanner: 'Afişi düzenle',
+    titlePhoto: '{name} fotoğrafı',
+    titleBanner: '{name} afişi',
+    description:
+      'YouTube Music ve Deezer üzerinde arayın, doğrudan bir görsel bağlantısı yapıştırın veya kendi görselinizi yükleyin.',
+    searchPlaceholder: 'İnternet görsel bağlantısı veya sanatçı adı',
+    upload: 'Bilgisayardan yükle',
+    noResults:
+      'Henüz sonuç yok — sanatçıyı arayın veya bir görsel bağlantısı yapıştırın.',
+    saved: 'Görsel kaydedildi',
+    saveFailed: 'Bu görsel kaydedilemedi',
+    searchFailed: 'Görseller aranamadı',
+    sourceLink: 'Bağlantı',
+    removePhoto: 'Fotoğrafı kaldır',
+    removeBanner: 'Afişi kaldır',
+    removed: 'Görsel kaldırıldı',
+    removeFailed: 'Bu görsel kaldırılamadı',
+  },
   playlists: {
     kicker: 'Çalma listesi',
     notFound: 'Çalma listesi bulunamadı',
@@ -674,6 +694,12 @@ export default {
     coverSize: 'Kapak boyutu',
     coverSizeHint:
       'YouTube Music kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',
+    artistCover: 'Sanatçı fotoğrafını kaydet',
+    artistCoverHint:
+      "Downtify'da görüntülemek ve Navidrome gibi servislerde kullanmak için sanatçı fotoğrafını indirir.",
+    artistCoverBanner: 'Sanatçı afişini kaydet',
+    artistCoverBannerHint:
+      'Daha zengin bir görünüm için arka plan olarak kullanılan bir afiş indirir.',
     lyricsGroup: 'Şarkı sözleri',
     lyrics: 'Şarkı sözlerini indir',
     lyricsHint:
@@ -846,6 +872,10 @@ export default {
     unsubscribeBody: 'İndirilen bölümleri de kaldırılır.',
     unsubscribeKeepBody:
       'İndirilen bölümler kalır; yalnızca abonelik kaldırılır.',
+    removeArtistPhotoTitle: '{name} fotoğrafı kaldırılsın mı?',
+    removeArtistBannerTitle: '{name} afişi kaldırılsın mı?',
+    removeArtistArtBody:
+      'Bu yalnızca kaydedilen görsel dosyasını kaldırır — başka hiçbir şeyi etkilemez.',
   },
   toast: {
     playingNext: {

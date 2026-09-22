@@ -417,6 +417,24 @@
                   "
                 />
               </SettingRow>
+              <SettingRow
+                :label="t('settings.artistCover')"
+                :description="t('settings.artistCoverHint')"
+              >
+                <UiSwitch
+                  v-model="s.download_cover_art_artist"
+                  :aria-label="t('settings.artistCover')"
+                />
+              </SettingRow>
+              <SettingRow
+                :label="t('settings.artistCoverBanner')"
+                :description="t('settings.artistCoverBannerHint')"
+              >
+                <UiSwitch
+                  v-model="s.download_cover_art_artist_banner"
+                  :aria-label="t('settings.artistCoverBanner')"
+                />
+              </SettingRow>
             </SettingGroup>
             <SettingGroup :title="t('settings.lyricsGroup')">
               <SettingRow

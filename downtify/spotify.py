@@ -222,7 +222,14 @@ def _largest_image(sources: list[dict[str, Any]]) -> str:
     sized = [s for s in sources if isinstance(s, dict) and s.get('url')]
     if not sized:
         return ''
-    sized.sort(key=lambda s: int(s.get('width') or 0), reverse=True)
+    # Track/album/playlist covers use ``width``; an artist's
+    # ``visualIdentity.image`` entries use ``maxWidth`` instead - check
+    # both so an artist photo actually sorts by size instead of staying
+    # in whatever order the embed happened to list it.
+    sized.sort(
+        key=lambda s: int(s.get('width') or s.get('maxWidth') or 0),
+        reverse=True,
+    )
     return sized[0]['url']
 
 
@@ -1327,6 +1334,41 @@ def artist_top_songs_from_id(
             if info.get('play_count'):
                 song['play_count'] = info['play_count']
     return name, cover_url, songs
+
+
+def artist_image_url_from_id(artist_id: str) -> str:
+    """Largest square photo an artist's embed page offers, or ``""``.
+
+    Reads the same ``visualIdentity.image`` field :func:`_cover_url`
+    already checks for tracks/albums/playlists — see
+    :func:`artist_name_from_id` for why an artist embed carries nothing
+    richer than a name and this one photo (no banner).
+    """
+
+    payload = _fetch_embed_json('artist', artist_id)
+    entity = _entity_from(payload)
+    return _cover_url(entity)
+
+
+def primary_artist_id_from_track_id(track_id: str) -> Optional[str]:
+    """Spotify id of *track_id*'s first credited artist, or ``None``.
+
+    A track embed's raw ``artists`` entries carry ``{name, uri}`` each;
+    :func:`_artist_names` throws the ``uri`` away since no other caller
+    needs it. Used to find an artist's photo starting from a track
+    already in the library (see :mod:`downtify.track_index`) instead of
+    searching Spotify by name, which has no public API.
+    """
+
+    payload = _fetch_embed_json('track', track_id)
+    entity = _entity_from(payload)
+    raw = entity.get('artists') or []
+    if not isinstance(raw, list) or not raw:
+        return None
+    first = raw[0]
+    if not isinstance(first, dict):
+        return None
+    return _id_from_uri(str(first.get('uri') or '')) or None
 
 
 def resolve(url: str) -> Any:

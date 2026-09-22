@@ -367,6 +367,26 @@ export default {
     notFound: 'Artiste introuvable',
     findMore: 'En trouver plus',
   },
+  artistArt: {
+    editPhoto: 'Modifier la photo',
+    editBanner: 'Modifier la bannière',
+    titlePhoto: 'Photo de {name}',
+    titleBanner: 'Bannière de {name}',
+    description:
+      "Cherchez sur YouTube Music et Deezer, collez un lien d'image direct, ou envoyez la vôtre.",
+    searchPlaceholder: "Lien d'image internet ou nom de l'artiste",
+    upload: 'Envoyer depuis votre ordinateur',
+    noResults:
+      "Aucun résultat pour l'instant — cherchez l'artiste ou collez un lien d'image.",
+    saved: 'Image enregistrée',
+    saveFailed: "Impossible d'enregistrer cette image",
+    searchFailed: 'Impossible de rechercher des images',
+    sourceLink: 'Lien',
+    removePhoto: 'Retirer la photo',
+    removeBanner: 'Retirer la bannière',
+    removed: 'Image supprimée',
+    removeFailed: 'Impossible de supprimer cette image',
+  },
   playlists: {
     kicker: 'Playlist',
     notFound: 'Playlist introuvable',
@@ -688,6 +708,12 @@ export default {
     coverSize: 'Taille de la pochette',
     coverSizeHint:
       'Pour les pochettes YouTube Music. Celles de Spotify utilisent toujours la plus grande taille.',
+    artistCover: "Enregistrer la photo de l'artiste",
+    artistCoverHint:
+      "Télécharge la photo de l'artiste pour l'afficher dans Downtify, et pour l'utiliser dans des services comme Navidrome.",
+    artistCoverBanner: "Enregistrer la bannière de l'artiste",
+    artistCoverBannerHint:
+      'Télécharge une bannière utilisée comme image de fond pour un rendu plus soigné.',
     lyricsGroup: 'Paroles',
     lyrics: 'Télécharger les paroles',
     lyricsHint:
@@ -864,6 +890,10 @@ export default {
     unsubscribeBody: 'Ses épisodes téléchargés sont aussi supprimés.',
     unsubscribeKeepBody:
       'Les épisodes téléchargés restent ; seul l’abonnement est supprimé.',
+    removeArtistPhotoTitle: 'Retirer la photo de « {name} » ?',
+    removeArtistBannerTitle: 'Retirer la bannière de « {name} » ?',
+    removeArtistArtBody:
+      "Cela ne supprime que le fichier image enregistré — rien d'autre n'est affecté.",
   },
   toast: {
     playingNext: { one: 'Lu ensuite', other: '{count} titres lus ensuite' },

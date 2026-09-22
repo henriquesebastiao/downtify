@@ -354,6 +354,27 @@ export default {
     notFound: 'Изпълнителят не е намерен',
     findMore: 'Намери още',
   },
+  artistArt: {
+    editPhoto: 'Редактиране на снимката',
+    editBanner: 'Редактиране на банера',
+    titlePhoto: 'Снимка на {name}',
+    titleBanner: 'Банер на {name}',
+    description:
+      'Търсете в YouTube Music и Deezer, поставете директна връзка към изображение или качете свое.',
+    searchPlaceholder:
+      'Връзка към изображение от интернет или име на изпълнител',
+    upload: 'Качване от компютъра',
+    noResults:
+      'Все още няма резултати — потърсете изпълнителя или поставете връзка към изображение.',
+    saved: 'Изображението е запазено',
+    saveFailed: 'Изображението не можа да бъде запазено',
+    searchFailed: 'Изображенията не можаха да бъдат търсени',
+    sourceLink: 'Връзка',
+    removePhoto: 'Премахване на снимката',
+    removeBanner: 'Премахване на банера',
+    removed: 'Изображението е премахнато',
+    removeFailed: 'Изображението не можа да бъде премахнато',
+  },
   playlists: {
     kicker: 'Плейлист',
     notFound: 'Плейлистът не е намерен',
@@ -667,6 +688,12 @@ export default {
     coverSize: 'Размер на обложката',
     coverSizeHint:
       'За обложки от YouTube Music. Тези от Spotify винаги са в най-голям размер.',
+    artistCover: 'Запазване на снимка на изпълнителя',
+    artistCoverHint:
+      'Изтегля снимката на изпълнителя за показване в Downtify, а също и за използване в услуги като Navidrome.',
+    artistCoverBanner: 'Запазване на банер на изпълнителя',
+    artistCoverBannerHint:
+      'Изтегля банер, използван като фоново изображение за по-богат външен вид.',
     lyricsGroup: 'Текстове',
     lyrics: 'Изтегляне на текстове',
     lyricsHint:
@@ -843,6 +870,10 @@ export default {
     unsubscribeBody: 'Изтеглените му епизоди също се премахват.',
     unsubscribeKeepBody:
       'Изтеглените епизоди остават; премахва се само абонаментът.',
+    removeArtistPhotoTitle: 'Премахване на снимката на {name}?',
+    removeArtistBannerTitle: 'Премахване на банера на {name}?',
+    removeArtistArtBody:
+      'Това само премахва запазения файл с изображение — нищо друго не се засяга.',
   },
   toast: {
     playingNext: { one: 'Ще звучи следваща', other: '{count} песни следват' },

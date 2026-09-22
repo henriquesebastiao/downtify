@@ -31,6 +31,8 @@ const settings = ref({
   output: '',
   generate_m3u: true,
   download_cover_art_playlists: false,
+  download_cover_art_artist: false,
+  download_cover_art_artist_banner: false,
   sync_navidrome: true,
   navidrome: {
     enabled: false,

@@ -219,6 +219,7 @@ import PageHeader from '/src/components/library/PageHeader.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
 import TrackList from '/src/components/library/TrackList.vue'
+import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
@@ -247,6 +248,30 @@ watch(tab, (value) => (lastTab.value = value), { immediate: true })
 if (!route.params.tab) {
   router.replace({ name: 'Library', params: { tab: tab.value } })
 }
+
+// Artist photos saved via the artist page's picker (see artist_profile.py)
+// - fetched once per visit to the artists tab so tiles use the real photo
+// instead of a track's cover when one has been picked. Falls back to
+// today's behaviour (a track cover) for any artist without one.
+const artistPhotos = ref({})
+watch(
+  // Re-fires when the tab switches to artists, and again once the
+  // library finishes loading if it hadn't yet (e.g. a direct page load
+  // on this tab, where artists.value starts out empty).
+  () => [tab.value, library.artists.value.length],
+  async ([currentTab]) => {
+    if (currentTab !== 'artists') return
+    const names = library.artists.value.map((artist) => artist.name)
+    if (!names.length) return
+    try {
+      const res = await API.getArtistArtBulk(names)
+      artistPhotos.value = res.data || {}
+    } catch {
+      artistPhotos.value = {}
+    }
+  },
+  { immediate: true }
+)
 
 const views = useLocalStorage('downtify-library-views', {
   albums: 'grid',
@@ -416,7 +441,7 @@ function tileProps(item) {
       ]
         .filter(Boolean)
         .join(' · '),
-      cover: item.cover,
+      cover: artistPhotos.value[item.name]?.photo_url || item.cover,
       name: item.name,
       icon: 'user',
       round: true,

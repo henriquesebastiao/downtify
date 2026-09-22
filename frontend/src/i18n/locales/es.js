@@ -361,6 +361,26 @@ export default {
     notFound: 'Artista no encontrado',
     findMore: 'Buscar más',
   },
+  artistArt: {
+    editPhoto: 'Editar foto',
+    editBanner: 'Editar banner',
+    titlePhoto: 'Foto de {name}',
+    titleBanner: 'Banner de {name}',
+    description:
+      'Busca en YouTube Music y Deezer, pega un enlace directo a una imagen, o sube la tuya.',
+    searchPlaceholder: 'Enlace de imagen de internet o nombre del artista',
+    upload: 'Subir desde tu computadora',
+    noResults:
+      'Aún no hay resultados — busca al artista o pega un enlace de imagen.',
+    saved: 'Imagen guardada',
+    saveFailed: 'No se pudo guardar esa imagen',
+    searchFailed: 'No se pudieron buscar imágenes',
+    sourceLink: 'Enlace',
+    removePhoto: 'Quitar foto',
+    removeBanner: 'Quitar banner',
+    removed: 'Imagen eliminada',
+    removeFailed: 'No se pudo eliminar esa imagen',
+  },
   playlists: {
     kicker: 'Playlist',
     notFound: 'Playlist no encontrada',
@@ -678,6 +698,12 @@ export default {
     coverSize: 'Tamaño de portada',
     coverSizeHint:
       'Para portadas de YouTube Music. Las de Spotify siempre usan el mayor tamaño disponible.',
+    artistCover: 'Guardar foto del artista',
+    artistCoverHint:
+      'Descarga la foto del artista para mostrarla en Downtify, y para usarla en servicios como Navidrome.',
+    artistCoverBanner: 'Guardar banner del artista',
+    artistCoverBannerHint:
+      'Descarga un banner usado como imagen de fondo para un aspecto más cuidado.',
     lyricsGroup: 'Letras',
     lyrics: 'Descargar letras',
     lyricsHint:
@@ -854,6 +880,10 @@ export default {
     unsubscribeBody: 'Sus episodios descargados también se eliminan.',
     unsubscribeKeepBody:
       'Los episodios descargados se conservan; solo se elimina la suscripción.',
+    removeArtistPhotoTitle: '¿Quitar la foto de {name}?',
+    removeArtistBannerTitle: '¿Quitar el banner de {name}?',
+    removeArtistArtBody:
+      'Esto solo elimina el archivo de imagen guardado — nada más se ve afectado.',
   },
   toast: {
     playingNext: {

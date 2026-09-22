@@ -353,6 +353,25 @@ export default {
     notFound: 'Artist not found',
     findMore: 'Find more',
   },
+  artistArt: {
+    editPhoto: 'Edit photo',
+    editBanner: 'Edit banner',
+    titlePhoto: '{name}’s photo',
+    titleBanner: '{name}’s banner',
+    description:
+      'Search YouTube Music and Deezer, paste a direct image link, or upload your own.',
+    searchPlaceholder: "Internet image link or artist's name",
+    upload: 'Upload from your computer',
+    noResults: 'No results yet — search for the artist or paste an image link.',
+    saved: 'Image saved',
+    saveFailed: 'Could not save that image',
+    searchFailed: 'Could not search for images',
+    sourceLink: 'Link',
+    removePhoto: 'Remove photo',
+    removeBanner: 'Remove banner',
+    removed: 'Image removed',
+    removeFailed: 'Could not remove that image',
+  },
   playlists: {
     kicker: 'Playlist',
     notFound: 'Playlist not found',
@@ -658,6 +677,12 @@ export default {
     coverSize: 'Cover size',
     coverSizeHint:
       'For art from YouTube Music. Spotify art is always the largest available.',
+    artistCover: 'Save artist photo',
+    artistCoverHint:
+      'Download the artist photo for display in Downtify, and for use in services like Navidrome.',
+    artistCoverBanner: 'Save artist banner',
+    artistCoverBannerHint:
+      'Download a banner used as a background image for a richer look.',
     lyricsGroup: 'Lyrics',
     lyrics: 'Download lyrics',
     lyricsHint:
@@ -828,6 +853,10 @@ export default {
     unsubscribeBody: 'Its downloaded episodes are removed too.',
     unsubscribeKeepBody:
       'Downloaded episodes stay; only the subscription is removed.',
+    removeArtistPhotoTitle: 'Remove {name}’s photo?',
+    removeArtistBannerTitle: 'Remove {name}’s banner?',
+    removeArtistArtBody:
+      'This only removes the saved image file — nothing else is affected.',
   },
   toast: {
     playingNext: { one: 'Playing next', other: '{count} tracks play next' },

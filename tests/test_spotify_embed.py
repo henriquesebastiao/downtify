@@ -16,14 +16,17 @@ from downtify.spotify import (
     _artists_from_subtitle,
     _embed_row_track,
     _fetch_embed_json,
+    _largest_image,
     _normalize_release_date_text,
     _top_track_overview,
     _track_dict,
     album_tracks_from_id,
+    artist_image_url_from_id,
     artist_page_from_id,
     artist_top_songs_from_id,
     enrich_track_from_spotify_if_sparse,
     playlist_cover_url_from_id,
+    primary_artist_id_from_track_id,
 )
 
 # Aliases only — no real artist / track titles
@@ -248,6 +251,78 @@ def test_album_tracks_fallback_open_page_when_embed_missing():
     assert len(songs) == 1
     assert songs[0]['release_date'] == '2025-10-03'
     assert songs[0]['year'] == '2025'
+
+
+def test_largest_image_sorts_by_max_width():
+    sources = [
+        {'url': 'https://example.com/small.jpg', 'maxWidth': 160},
+        {'url': 'https://example.com/large.jpg', 'maxWidth': 640},
+        {'url': 'https://example.com/medium.jpg', 'maxWidth': 320},
+    ]
+    assert _largest_image(sources) == 'https://example.com/large.jpg'
+
+
+def test_largest_image_sorts_by_width_when_present():
+    sources = [
+        {'url': 'https://example.com/small.jpg', 'width': 300},
+        {'url': 'https://example.com/large.jpg', 'width': 1200},
+    ]
+    assert _largest_image(sources) == 'https://example.com/large.jpg'
+
+
+def test_artist_image_url_from_id_reads_visual_identity():
+    entity = {
+        'type': 'artist',
+        'name': 'TestArtist',
+        'visualIdentity': {
+            'image': [
+                {'url': 'https://example.com/artist-320.jpg', 'maxWidth': 320},
+                {'url': 'https://example.com/artist-640.jpg', 'maxWidth': 640},
+            ],
+        },
+    }
+    payload = {
+        'props': {
+            'pageProps': {'state': {'data': {'entity': entity}}},
+        },
+    }
+    with patch('downtify.spotify._fetch_embed_json', return_value=payload):
+        assert (
+            artist_image_url_from_id('dummyArtistId')
+            == 'https://example.com/artist-640.jpg'
+        )
+
+
+def test_primary_artist_id_from_track_id_reads_first_artist_uri():
+    entity = {
+        'type': 'track',
+        'name': 'TestTrack',
+        'artists': [
+            {'name': _AL1, 'uri': 'spotify:artist:aaaaaaaaaaaaaaaaaaaaaa'},
+            {'name': _AL2, 'uri': 'spotify:artist:bbbbbbbbbbbbbbbbbbbbbb'},
+        ],
+    }
+    payload = {
+        'props': {
+            'pageProps': {'state': {'data': {'entity': entity}}},
+        },
+    }
+    with patch('downtify.spotify._fetch_embed_json', return_value=payload):
+        assert (
+            primary_artist_id_from_track_id('dummyTrackId')
+            == 'aaaaaaaaaaaaaaaaaaaaaa'
+        )
+
+
+def test_primary_artist_id_from_track_id_no_artists_returns_none():
+    entity = {'type': 'track', 'name': 'TestTrack'}
+    payload = {
+        'props': {
+            'pageProps': {'state': {'data': {'entity': entity}}},
+        },
+    }
+    with patch('downtify.spotify._fetch_embed_json', return_value=payload):
+        assert primary_artist_id_from_track_id('dummyTrackId') is None
 
 
 def test_album_tracks_inherit_album_release_date():
