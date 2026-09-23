@@ -26,6 +26,8 @@ const routes = [
   {
     path: '/queue/:tab(active|queued|done|failed|all)?',
     name: 'Queue',
+    // Switching tabs keeps the page (and the mounted queue list).
+    meta: { viewKey: 'queue' },
     component: () => import('/src/views/QueueView.vue'),
   },
   {
