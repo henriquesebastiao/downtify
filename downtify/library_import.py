@@ -23,7 +23,7 @@ import io
 import re
 from typing import Any
 
-MAX_CSV_ROWS = 2000
+MAX_CSV_ROWS = 5000
 
 _TITLE_HEADERS = {
     'title',
