@@ -159,12 +159,17 @@ def _default_profile(name: str) -> dict[str, Any]:
     return {
         'name': name,
         'bio': '',
-        'platforms_id': {'deezer': ''},
+        # 'deezer' is the only one any code resolves automatically today
+        # (fetch_bio, below); 'spotify'/'youtubemusic' are recognized so
+        # a manually edited profile JSON renders its platform icons too,
+        # even though nothing currently writes them.
+        'platforms_id': {'spotify': '', 'youtubemusic': '', 'deezer': ''},
         'social': {
             'twitter': '',
             'facebook': '',
             'website': '',
             'instagram': '',
+            'youtube': '',
         },
         'related_artists': [],
         'current_cover': '',
@@ -237,7 +242,11 @@ def fetch_bio(download_dir: Path, name: str, lang: str) -> dict[str, Any]:
         except ValueError:
             full = None
         if full is not None:
-            profile['social'] = full['social']
+            # Merge rather than replace: Deezer's response only ever
+            # covers its own four fields, so a manually-added one (e.g.
+            # 'youtube', which Deezer has no concept of) survives a
+            # later re-fetch instead of being wiped.
+            profile['social'] = {**profile['social'], **full['social']}
             profile['related_artists'] = full['related_artist_names']
             if full['bio_html']:
                 profile['bio'] = strip_html(full['bio_html'])
@@ -274,5 +283,38 @@ def remove_bio(download_dir: Path, name: str) -> dict[str, Any]:
 
     profile = load_profile(download_dir, name)
     profile['bio'] = ''
+    _save_profile(download_dir, name, profile)
+    return profile
+
+
+def save_bio(download_dir: Path, name: str, bio: str) -> dict[str, Any]:
+    """Manually set *name*'s bio text, overwriting a fetched or prior one.
+
+    Unlike :func:`fetch_bio`, this never touches Deezer/YouTube Music -
+    it's the user typing their own text into the artist page's editor.
+    """
+
+    profile = load_profile(download_dir, name)
+    profile['bio'] = (bio or '').strip()
+    _save_profile(download_dir, name, profile)
+    return profile
+
+
+def save_social(
+    download_dir: Path, name: str, social: dict[str, Any]
+) -> dict[str, Any]:
+    """Manually set *name*'s social links, replacing all four fields.
+
+    Like :func:`save_bio`, this is the user editing directly - it never
+    fetches anything. Unknown/missing keys in *social* are saved as
+    empty strings rather than left at whatever was there before, since
+    the editor always submits its full form.
+    """
+
+    profile = load_profile(download_dir, name)
+    default_social = _default_profile(name)['social']
+    profile['social'] = {
+        key: str(social.get(key) or '').strip() for key in default_social
+    }
     _save_profile(download_dir, name, profile)
     return profile

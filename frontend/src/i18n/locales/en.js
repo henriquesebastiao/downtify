@@ -355,9 +355,30 @@ export default {
   },
   artistArt: {
     editPhoto: 'Edit photo',
-    editBanner: 'Edit banner',
+    editArtist: 'Edit artist',
     titlePhoto: '{name}’s photo',
     titleBanner: '{name}’s banner',
+    tabBanner: 'Banner',
+    tabProfile: 'Profile',
+    currentPhoto: 'Current photo',
+    tabBio: 'Bio',
+    tabSocial: 'Social',
+    titleBio: '{name}’s bio',
+    titleSocial: '{name}’s social links',
+    bioDescription: 'Write or edit this artist’s biography yourself.',
+    socialDescription:
+      'Add links to this artist’s social profiles and website.',
+    bioPlaceholder: 'No biography yet — write one here.',
+    save: 'Save',
+    bioSaved: 'Bio saved',
+    bioSaveFailed: 'Could not save the bio',
+    socialSaved: 'Social links saved',
+    socialSaveFailed: 'Could not save social links',
+    socialTwitter: 'Twitter / X',
+    socialFacebook: 'Facebook',
+    socialYoutube: 'YouTube',
+    socialInstagram: 'Instagram',
+    socialWebsite: 'Website',
     description:
       'Search YouTube Music and Deezer, paste a direct image link, or upload your own.',
     searchPlaceholder: "Internet image link or artist's name",
@@ -375,14 +396,11 @@ export default {
   artistBio: {
     title: 'Bio',
     fetchButton: 'Fetch bio from Streams.',
-    removeButton: 'Remove bio',
     empty: 'No biography yet.',
     showMore: 'Show more',
     showLess: 'Show less',
     fetched: 'Bio updated',
     fetchFailed: 'Could not fetch a bio for this artist',
-    removed: 'Bio removed',
-    removeFailed: 'Could not remove the bio',
   },
   playlists: {
     kicker: 'Playlist',
@@ -869,9 +887,6 @@ export default {
     removeArtistBannerTitle: 'Remove {name}’s banner?',
     removeArtistArtBody:
       'This only removes the saved image file — nothing else is affected.',
-    removeArtistBioTitle: 'Clear artist bio?',
-    removeArtistBioBody:
-      'This only clears the saved biography text — nothing else is affected.',
   },
   toast: {
     playingNext: { one: 'Playing next', other: '{count} tracks play next' },

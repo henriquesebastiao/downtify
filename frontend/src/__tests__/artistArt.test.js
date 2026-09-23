@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   artCandidates,
   isImageUrlQuery,
-  sourceBadgeColor,
   sourceIcon,
   sourceLabel,
 } from '../lib/artistArt.js'
@@ -54,23 +53,6 @@ describe('sourceIcon', () => {
 
   it('falls back to the link icon for anything unknown', () => {
     expect(sourceIcon('mystery')).toBe('link')
-  })
-})
-
-describe('sourceBadgeColor', () => {
-  it('gives each brand source its own color token', () => {
-    expect(sourceBadgeColor('spotify')).toBe('var(--color-spotify)')
-    expect(sourceBadgeColor('youtube')).toBe('var(--color-src-ytm)')
-    expect(sourceBadgeColor('deezer')).toBe('var(--color-deezer)')
-  })
-
-  it('gives link and upload the same neutral accent color', () => {
-    expect(sourceBadgeColor('link')).toBe('var(--color-accent)')
-    expect(sourceBadgeColor('upload')).toBe('var(--color-accent)')
-  })
-
-  it('falls back to a muted color for anything unknown', () => {
-    expect(sourceBadgeColor('mystery')).toBe('var(--color-muted)')
   })
 })
 

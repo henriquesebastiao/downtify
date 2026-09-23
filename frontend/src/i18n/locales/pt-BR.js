@@ -362,9 +362,30 @@ export default {
   },
   artistArt: {
     editPhoto: 'Editar foto',
-    editBanner: 'Editar banner',
+    editArtist: 'Editar artista',
     titlePhoto: 'Foto de {name}',
     titleBanner: 'Banner de {name}',
+    tabBanner: 'Banner',
+    tabProfile: 'Perfil',
+    currentPhoto: 'Foto atual',
+    tabBio: 'Bio',
+    tabSocial: 'Redes sociais',
+    titleBio: 'Biografia de {name}',
+    titleSocial: 'Redes sociais de {name}',
+    bioDescription: 'Escreva ou edite você mesmo a biografia deste artista.',
+    socialDescription:
+      'Adicione links dos perfis sociais e do site deste artista.',
+    bioPlaceholder: 'Nenhuma biografia ainda — escreva uma aqui.',
+    save: 'Salvar',
+    bioSaved: 'Biografia salva',
+    bioSaveFailed: 'Não foi possível salvar a biografia',
+    socialSaved: 'Redes sociais salvas',
+    socialSaveFailed: 'Não foi possível salvar as redes sociais',
+    socialTwitter: 'Twitter / X',
+    socialFacebook: 'Facebook',
+    socialYoutube: 'YouTube',
+    socialInstagram: 'Instagram',
+    socialWebsite: 'Site',
     description:
       'Busque no YouTube Music e no Deezer, cole um link direto de imagem, ou envie a sua própria.',
     searchPlaceholder: 'Link de imagem da internet ou Nome do artista',
@@ -383,14 +404,11 @@ export default {
   artistBio: {
     title: 'Biografia',
     fetchButton: 'Buscar biografia em Streams.',
-    removeButton: 'Remover biografia',
     empty: 'Nenhuma biografia por enquanto.',
     showMore: 'Mostrar mais',
     showLess: 'Mostrar menos',
     fetched: 'Biografia atualizada',
     fetchFailed: 'Não foi possível buscar uma biografia para este artista',
-    removed: 'Biografia removida',
-    removeFailed: 'Não foi possível remover a biografia',
   },
   playlists: {
     kicker: 'Playlist',
@@ -890,9 +908,6 @@ export default {
     removeArtistBannerTitle: 'Remover o banner de {name}?',
     removeArtistArtBody:
       'Isso só remove o arquivo de imagem salvo — nada mais é afetado.',
-    removeArtistBioTitle: 'Limpar a biografia do artista',
-    removeArtistBioBody:
-      'Isso só limpa o texto da biografia salva — nada mais é afetado.',
   },
   toast: {
     playingNext: { one: 'Tocará a seguir', other: '{count} faixas a seguir' },

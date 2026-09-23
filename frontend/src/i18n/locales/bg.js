@@ -356,9 +356,31 @@ export default {
   },
   artistArt: {
     editPhoto: 'Редактиране на снимката',
-    editBanner: 'Редактиране на банера',
+    editArtist: 'Редактиране на изпълнителя',
     titlePhoto: 'Снимка на {name}',
     titleBanner: 'Банер на {name}',
+    tabBanner: 'Банер',
+    tabProfile: 'Профил',
+    currentPhoto: 'Текуща снимка',
+    tabBio: 'Биография',
+    tabSocial: 'Социални мрежи',
+    titleBio: 'Биография на {name}',
+    titleSocial: 'Социални мрежи на {name}',
+    bioDescription:
+      'Напишете или редактирайте сами биографията на този изпълнител.',
+    socialDescription:
+      'Добавете връзки към социалните профили и уебсайта на този изпълнител.',
+    bioPlaceholder: 'Все още няма биография — напишете я тук.',
+    save: 'Запазване',
+    bioSaved: 'Биографията е запазена',
+    bioSaveFailed: 'Неуспешно запазване на биографията',
+    socialSaved: 'Социалните мрежи са запазени',
+    socialSaveFailed: 'Неуспешно запазване на социалните мрежи',
+    socialTwitter: 'Twitter / X',
+    socialFacebook: 'Facebook',
+    socialYoutube: 'YouTube',
+    socialInstagram: 'Instagram',
+    socialWebsite: 'Уебсайт',
     description:
       'Търсете в YouTube Music и Deezer, поставете директна връзка към изображение или качете свое.',
     searchPlaceholder:
@@ -378,14 +400,11 @@ export default {
   artistBio: {
     title: 'Биография',
     fetchButton: 'Извличане на биография от Streams.',
-    removeButton: 'Премахване на биографията',
     empty: 'Все още няма биография.',
     showMore: 'Покажи повече',
     showLess: 'Покажи по-малко',
     fetched: 'Биографията е обновена',
     fetchFailed: 'Не можа да се извлече биография за този изпълнител',
-    removed: 'Биографията е премахната',
-    removeFailed: 'Не можа да се премахне биографията',
   },
   playlists: {
     kicker: 'Плейлист',
@@ -886,9 +905,6 @@ export default {
     removeArtistBannerTitle: 'Премахване на банера на {name}?',
     removeArtistArtBody:
       'Това само премахва запазения файл с изображение — нищо друго не се засяга.',
-    removeArtistBioTitle: 'Изчистване на биографията на изпълнителя?',
-    removeArtistBioBody:
-      'Това само изчиства запазения текст на биографията — нищо друго не се засяга.',
   },
   toast: {
     playingNext: { one: 'Ще звучи следваща', other: '{count} песни следват' },

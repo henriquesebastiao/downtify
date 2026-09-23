@@ -217,7 +217,7 @@ Remove a saved photo or banner.
 
 ### `GET /api/artists/profile`
 
-An artist's saved profile: bio, social links, related artists, platform ids, and which source (`spotify`/`youtube`/`deezer`/`link`/`upload`) their current photo/banner came from — see [Artist photo, banner & bio](features/artist-images.md#bio).
+An artist's saved profile: bio, social links, related artists, platform ids, and which source (`spotify`/`youtube`/`deezer`/`link`/`upload`) their current photo/banner came from — see [Artist photo, banner & bio](features/artist-images.md#fetching-a-bio-automatically).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -229,8 +229,14 @@ An artist's saved profile: bio, social links, related artists, platform ids, and
 {
   "name": "Avril Lavigne",
   "bio": "",
-  "platforms_id": { "deezer": "" },
-  "social": { "twitter": "", "facebook": "", "website": "", "instagram": "" },
+  "platforms_id": { "spotify": "", "youtubemusic": "", "deezer": "" },
+  "social": {
+    "twitter": "",
+    "facebook": "",
+    "website": "",
+    "instagram": "",
+    "youtube": ""
+  },
   "related_artists": [],
   "current_cover": "",
   "current_cover_banner": ""
@@ -266,6 +272,42 @@ Clear only the saved bio text. `social`, `related_artists` and `platforms_id` (i
 | `name` | string | yes | Artist name, exactly as shown in the Library |
 
 **Response:** the same shape as `GET /api/artists/profile`, with `bio` cleared.
+
+---
+
+### `PUT /api/artists/profile/bio`
+
+Manually set the bio text directly - the user's own writing, never fetched from Deezer/YouTube Music. `social`, `related_artists` and `platforms_id` are left untouched.
+
+**Request body:**
+
+```json
+{ "name": "Avril Lavigne", "bio": "…" }
+```
+
+**Response:** the same shape as `GET /api/artists/profile`, with `bio` set to exactly the given text (trimmed).
+
+---
+
+### `PUT /api/artists/profile/social`
+
+Manually set all four social links directly, replacing the whole object - never fetched. A field left out of `social` is saved as an empty string, not left at its previous value.
+
+**Request body:**
+
+```json
+{
+  "name": "Avril Lavigne",
+  "social": {
+    "twitter": "https://twitter.com/AvrilLavigne",
+    "facebook": "",
+    "website": "https://avrillavigne.com",
+    "instagram": ""
+  }
+}
+```
+
+**Response:** the same shape as `GET /api/artists/profile`, with `social` replaced.
 
 ---
 

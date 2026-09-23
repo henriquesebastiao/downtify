@@ -362,9 +362,31 @@ export default {
   },
   artistArt: {
     editPhoto: 'Fotoğrafı düzenle',
-    editBanner: 'Afişi düzenle',
+    editArtist: 'Sanatçıyı düzenle',
     titlePhoto: '{name} fotoğrafı',
     titleBanner: '{name} afişi',
+    tabBanner: 'Afiş',
+    tabProfile: 'Profil',
+    currentPhoto: 'Mevcut fotoğraf',
+    tabBio: 'Biyografi',
+    tabSocial: 'Sosyal medya',
+    titleBio: '{name} biyografisi',
+    titleSocial: '{name} sosyal medya bağlantıları',
+    bioDescription:
+      'Bu sanatçının biyografisini kendiniz yazın veya düzenleyin.',
+    socialDescription:
+      'Bu sanatçının sosyal medya profillerine ve web sitesine bağlantılar ekleyin.',
+    bioPlaceholder: 'Henüz biyografi yok — buraya bir tane yazın.',
+    save: 'Kaydet',
+    bioSaved: 'Biyografi kaydedildi',
+    bioSaveFailed: 'Biyografi kaydedilemedi',
+    socialSaved: 'Sosyal medya bağlantıları kaydedildi',
+    socialSaveFailed: 'Sosyal medya bağlantıları kaydedilemedi',
+    socialTwitter: 'Twitter / X',
+    socialFacebook: 'Facebook',
+    socialYoutube: 'YouTube',
+    socialInstagram: 'Instagram',
+    socialWebsite: 'Web sitesi',
     description:
       'YouTube Music ve Deezer üzerinde arayın, doğrudan bir görsel bağlantısı yapıştırın veya kendi görselinizi yükleyin.',
     searchPlaceholder: 'İnternet görsel bağlantısı veya sanatçı adı',
@@ -383,14 +405,11 @@ export default {
   artistBio: {
     title: 'Biyografi',
     fetchButton: "Streams'ten biyografi al.",
-    removeButton: 'Biyografiyi kaldır',
     empty: 'Henüz biyografi yok.',
     showMore: 'Daha fazla göster',
     showLess: 'Daha az göster',
     fetched: 'Biyografi güncellendi',
     fetchFailed: 'Bu sanatçı için biyografi alınamadı',
-    removed: 'Biyografi kaldırıldı',
-    removeFailed: 'Biyografi kaldırılamadı',
   },
   playlists: {
     kicker: 'Çalma listesi',
@@ -888,9 +907,6 @@ export default {
     removeArtistBannerTitle: '{name} afişi kaldırılsın mı?',
     removeArtistArtBody:
       'Bu yalnızca kaydedilen görsel dosyasını kaldırır — başka hiçbir şeyi etkilemez.',
-    removeArtistBioTitle: 'Sanatçı biyografisi temizlensin mi?',
-    removeArtistBioBody:
-      'Bu yalnızca kaydedilen biyografi metnini temizler — başka hiçbir şeyi etkilemez.',
   },
   toast: {
     playingNext: {

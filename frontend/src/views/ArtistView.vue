@@ -16,6 +16,8 @@
         :name="artist.name"
         icon="user"
         round
+        :social="profile.social"
+        :platforms-id="profile.platforms_id"
         @edit-photo="openArtModal('photo')"
         @edit-banner="openArtModal('banner')"
       >
@@ -57,33 +59,9 @@
         class="mx-auto flex max-w-[1680px] flex-col gap-12 px-4 sm:px-6 lg:px-10"
       >
         <section class="flex flex-col gap-2">
-          <div class="flex items-center gap-2">
-            <h2 class="text-display text-xl font-semibold">
-              {{ t('artistBio.title') }}
-            </h2>
-            <button
-              type="button"
-              :disabled="bioLoading"
-              :title="
-                profile.bio
-                  ? t('artistBio.removeButton')
-                  : t('artistBio.fetchButton')
-              "
-              :aria-label="
-                profile.bio
-                  ? t('artistBio.removeButton')
-                  : t('artistBio.fetchButton')
-              "
-              class="flex size-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-bg-2 hover:text-fg disabled:opacity-50"
-              @click="profile.bio ? removeBio() : fetchBio()"
-            >
-              <AppIcon
-                :name="profile.bio ? 'trash' : 'zap'"
-                :size="15"
-                :class="bioLoading ? 'animate-pulse' : ''"
-              />
-            </button>
-          </div>
+          <h2 class="text-display text-xl font-semibold">
+            {{ t('artistBio.title') }}
+          </h2>
           <template v-if="profile.bio">
             <p
               class="text-[15px] text-fg-3"
@@ -156,12 +134,17 @@
     <ArtistArtModal
       v-if="artist"
       :open="artModalOpen"
+      :initial-tab="artModalInitialTab"
       :artist-name="artist.name"
-      :kind="artModalKind"
       :track-files="trackFiles"
-      :has-current="artModalKind === 'banner' ? !!artBannerUrl : !!artPhotoUrl"
+      :photo-url="artPhotoUrl || artist.cover"
+      :current-cover="profile.current_cover"
+      :has-photo="!!artPhotoUrl"
+      :has-banner="!!artBannerUrl"
+      :bio="profile.bio"
+      :social="profile.social"
       @close="artModalOpen = false"
-      @saved="refreshArt"
+      @saved="onArtSaved"
     />
   </div>
 </template>
@@ -169,7 +152,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import AppIcon from '/src/components/ui/AppIcon.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
 import ArtistArtModal from '/src/components/library/ArtistArtModal.vue'
@@ -187,7 +169,7 @@ import { sortItems } from '/src/lib/library'
 import { splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const route = useRoute()
 const library = useLibrary()
 const player = usePlayer()
@@ -293,10 +275,10 @@ async function refreshArt() {
 watch(() => artist.value?.name, refreshArt, { immediate: true })
 
 const artModalOpen = ref(false)
-const artModalKind = ref('photo')
+const artModalInitialTab = ref('banner')
 
-function openArtModal(kind) {
-  artModalKind.value = kind
+function openArtModal(tab) {
+  artModalInitialTab.value = tab
   artModalOpen.value = true
 }
 
@@ -306,14 +288,19 @@ function blankProfile() {
   return {
     bio: '',
     platforms_id: {},
-    social: {},
+    social: {
+      twitter: '',
+      facebook: '',
+      website: '',
+      instagram: '',
+      youtube: '',
+    },
     related_artists: [],
     current_cover: '',
     current_cover_banner: '',
   }
 }
 const profile = ref(blankProfile())
-const bioLoading = ref(false)
 const bioExpanded = ref(false)
 const bioIsLong = computed(() => (profile.value.bio || '').length > 260)
 
@@ -333,44 +320,10 @@ async function refreshProfile() {
 
 watch(() => artist.value?.name, refreshProfile, { immediate: true })
 
-async function fetchBio() {
-  if (!artist.value?.name || bioLoading.value) return
-  bioLoading.value = true
-  try {
-    const res = await API.fetchArtistBio(artist.value.name, locale.value)
-    profile.value = res.data
-    bioExpanded.value = false
-    ui.toast(t('artistBio.fetched'), { kind: 'success' })
-  } catch (err) {
-    ui.toast(err?.response?.data?.detail || t('artistBio.fetchFailed'), {
-      kind: 'error',
-    })
-  } finally {
-    bioLoading.value = false
-  }
-}
-
-async function removeBio() {
-  if (!artist.value?.name || bioLoading.value) return
-  const ok = await ui.confirm({
-    title: t('confirm.removeArtistBioTitle'),
-    body: t('confirm.removeArtistBioBody'),
-    confirmLabel: t('artistBio.removeButton'),
-    danger: true,
-  })
-  if (!ok) return
-  bioLoading.value = true
-  try {
-    const res = await API.removeArtistBio(artist.value.name)
-    profile.value = res.data
-    bioExpanded.value = false
-    ui.toast(t('artistBio.removed'), { kind: 'success' })
-  } catch (err) {
-    ui.toast(err?.response?.data?.detail || t('artistBio.removeFailed'), {
-      kind: 'error',
-    })
-  } finally {
-    bioLoading.value = false
-  }
+// ArtistArtModal's single "saved" event covers photo, banner, bio and
+// social edits alike - simplest to just refresh both after any of them.
+function onArtSaved() {
+  refreshArt()
+  refreshProfile()
 }
 </script>

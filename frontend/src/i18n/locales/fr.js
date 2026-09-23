@@ -369,9 +369,31 @@ export default {
   },
   artistArt: {
     editPhoto: 'Modifier la photo',
-    editBanner: 'Modifier la bannière',
+    editArtist: "Modifier l'artiste",
     titlePhoto: 'Photo de {name}',
     titleBanner: 'Bannière de {name}',
+    tabBanner: 'Bannière',
+    tabProfile: 'Profil',
+    currentPhoto: 'Photo actuelle',
+    tabBio: 'Bio',
+    tabSocial: 'Réseaux sociaux',
+    titleBio: 'Biographie de {name}',
+    titleSocial: 'Réseaux sociaux de {name}',
+    bioDescription:
+      'Rédigez ou modifiez vous-même la biographie de cet artiste.',
+    socialDescription:
+      'Ajoutez des liens vers les réseaux sociaux et le site de cet artiste.',
+    bioPlaceholder: 'Aucune biographie pour le moment — rédigez-en une ici.',
+    save: 'Enregistrer',
+    bioSaved: 'Biographie enregistrée',
+    bioSaveFailed: "Impossible d'enregistrer la biographie",
+    socialSaved: 'Réseaux sociaux enregistrés',
+    socialSaveFailed: "Impossible d'enregistrer les réseaux sociaux",
+    socialTwitter: 'Twitter / X',
+    socialFacebook: 'Facebook',
+    socialYoutube: 'YouTube',
+    socialInstagram: 'Instagram',
+    socialWebsite: 'Site web',
     description:
       "Cherchez sur YouTube Music et Deezer, collez un lien d'image direct, ou envoyez la vôtre.",
     searchPlaceholder: "Lien d'image internet ou nom de l'artiste",
@@ -390,14 +412,11 @@ export default {
   artistBio: {
     title: 'Biographie',
     fetchButton: 'Récupérer la biographie depuis Streams.',
-    removeButton: 'Supprimer la biographie',
     empty: 'Aucune biographie pour le moment.',
     showMore: 'Afficher plus',
     showLess: 'Afficher moins',
     fetched: 'Biographie mise à jour',
     fetchFailed: 'Impossible de récupérer une biographie pour cet artiste',
-    removed: 'Biographie supprimée',
-    removeFailed: 'Impossible de supprimer la biographie',
   },
   playlists: {
     kicker: 'Playlist',
@@ -906,9 +925,6 @@ export default {
     removeArtistBannerTitle: 'Retirer la bannière de « {name} » ?',
     removeArtistArtBody:
       "Cela ne supprime que le fichier image enregistré — rien d'autre n'est affecté.",
-    removeArtistBioTitle: "Effacer la biographie de l'artiste ?",
-    removeArtistBioBody:
-      "Cela n'efface que le texte de la biographie enregistrée — rien d'autre n'est affecté.",
   },
   toast: {
     playingNext: { one: 'Lu ensuite', other: '{count} titres lus ensuite' },

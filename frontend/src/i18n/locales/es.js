@@ -363,9 +363,30 @@ export default {
   },
   artistArt: {
     editPhoto: 'Editar foto',
-    editBanner: 'Editar banner',
+    editArtist: 'Editar artista',
     titlePhoto: 'Foto de {name}',
     titleBanner: 'Banner de {name}',
+    tabBanner: 'Banner',
+    tabProfile: 'Perfil',
+    currentPhoto: 'Foto actual',
+    tabBio: 'Biografía',
+    tabSocial: 'Redes sociales',
+    titleBio: 'Biografía de {name}',
+    titleSocial: 'Redes sociales de {name}',
+    bioDescription: 'Escribe o edita tú mismo la biografía de este artista.',
+    socialDescription:
+      'Añade enlaces a los perfiles sociales y al sitio web de este artista.',
+    bioPlaceholder: 'Aún no hay biografía — escribe una aquí.',
+    save: 'Guardar',
+    bioSaved: 'Biografía guardada',
+    bioSaveFailed: 'No se pudo guardar la biografía',
+    socialSaved: 'Redes sociales guardadas',
+    socialSaveFailed: 'No se pudieron guardar las redes sociales',
+    socialTwitter: 'Twitter / X',
+    socialFacebook: 'Facebook',
+    socialYoutube: 'YouTube',
+    socialInstagram: 'Instagram',
+    socialWebsite: 'Sitio web',
     description:
       'Busca en YouTube Music y Deezer, pega un enlace directo a una imagen, o sube la tuya.',
     searchPlaceholder: 'Enlace de imagen de internet o nombre del artista',
@@ -384,14 +405,11 @@ export default {
   artistBio: {
     title: 'Biografía',
     fetchButton: 'Buscar biografía en Streams.',
-    removeButton: 'Quitar biografía',
     empty: 'Aún no hay biografía.',
     showMore: 'Mostrar más',
     showLess: 'Mostrar menos',
     fetched: 'Biografía actualizada',
     fetchFailed: 'No se pudo obtener una biografía para este artista',
-    removed: 'Biografía eliminada',
-    removeFailed: 'No se pudo eliminar la biografía',
   },
   playlists: {
     kicker: 'Playlist',
@@ -896,9 +914,6 @@ export default {
     removeArtistBannerTitle: '¿Quitar el banner de {name}?',
     removeArtistArtBody:
       'Esto solo elimina el archivo de imagen guardado — nada más se ve afectado.',
-    removeArtistBioTitle: '¿Borrar la biografía del artista?',
-    removeArtistBioBody:
-      'Esto solo borra el texto de la biografía guardada — nada más se ve afectado.',
   },
   toast: {
     playingNext: {

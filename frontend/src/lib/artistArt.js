@@ -30,19 +30,6 @@ export function sourceIcon(source) {
   return SOURCE_ICONS[source] ?? 'link'
 }
 
-const SOURCE_BADGE_COLORS = {
-  spotify: 'var(--color-spotify)',
-  youtube: 'var(--color-src-ytm)',
-  deezer: 'var(--color-deezer)',
-  link: 'var(--color-accent)',
-  upload: 'var(--color-accent)',
-}
-
-/** Badge background color for a candidate's source. */
-export function sourceBadgeColor(source) {
-  return SOURCE_BADGE_COLORS[source] ?? 'var(--color-muted)'
-}
-
 /**
  * Candidate cards for the results grid: the auto-detected Spotify photo
  * (if any) first, then whatever the name/URL search turned up.

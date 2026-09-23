@@ -360,9 +360,31 @@ export default {
   },
   artistArt: {
     editPhoto: 'Επεξεργασία φωτογραφίας',
-    editBanner: 'Επεξεργασία banner',
+    editArtist: 'Επεξεργασία καλλιτέχνη',
     titlePhoto: 'Φωτογραφία του {name}',
     titleBanner: 'Banner του {name}',
+    tabBanner: 'Banner',
+    tabProfile: 'Προφίλ',
+    currentPhoto: 'Τρέχουσα φωτογραφία',
+    tabBio: 'Βιογραφικό',
+    tabSocial: 'Κοινωνικά δίκτυα',
+    titleBio: 'Βιογραφικό του {name}',
+    titleSocial: 'Κοινωνικά δίκτυα του {name}',
+    bioDescription:
+      'Γράψτε ή επεξεργαστείτε εσείς οι ίδιοι το βιογραφικό αυτού του καλλιτέχνη.',
+    socialDescription:
+      'Προσθέστε συνδέσμους προς τα προφίλ κοινωνικών δικτύων και τον ιστότοπο αυτού του καλλιτέχνη.',
+    bioPlaceholder: 'Δεν υπάρχει ακόμα βιογραφικό — γράψτε ένα εδώ.',
+    save: 'Αποθήκευση',
+    bioSaved: 'Το βιογραφικό αποθηκεύτηκε',
+    bioSaveFailed: 'Δεν ήταν δυνατή η αποθήκευση του βιογραφικού',
+    socialSaved: 'Τα κοινωνικά δίκτυα αποθηκεύτηκαν',
+    socialSaveFailed: 'Δεν ήταν δυνατή η αποθήκευση των κοινωνικών δικτύων',
+    socialTwitter: 'Twitter / X',
+    socialFacebook: 'Facebook',
+    socialYoutube: 'YouTube',
+    socialInstagram: 'Instagram',
+    socialWebsite: 'Ιστότοπος',
     description:
       'Αναζητήστε στο YouTube Music και στο Deezer, επικολλήστε έναν απευθείας σύνδεσμο εικόνας ή ανεβάστε τη δική σας.',
     searchPlaceholder: 'Σύνδεσμος εικόνας από το διαδίκτυο ή όνομα καλλιτέχνη',
@@ -381,14 +403,11 @@ export default {
   artistBio: {
     title: 'Βιογραφικό',
     fetchButton: 'Λήψη βιογραφικού από Streams.',
-    removeButton: 'Αφαίρεση βιογραφικού',
     empty: 'Δεν υπάρχει βιογραφικό ακόμα.',
     showMore: 'Περισσότερα',
     showLess: 'Λιγότερα',
     fetched: 'Το βιογραφικό ενημερώθηκε',
     fetchFailed: 'Δεν ήταν δυνατή η λήψη βιογραφικού για αυτόν τον καλλιτέχνη',
-    removed: 'Το βιογραφικό αφαιρέθηκε',
-    removeFailed: 'Δεν ήταν δυνατή η αφαίρεση του βιογραφικού',
   },
   playlists: {
     kicker: 'Λίστα',
@@ -899,9 +918,6 @@ export default {
     removeArtistBannerTitle: 'Αφαίρεση του banner του {name};',
     removeArtistArtBody:
       'Αυτό αφαιρεί μόνο το αποθηκευμένο αρχείο εικόνας — τίποτα άλλο δεν επηρεάζεται.',
-    removeArtistBioTitle: 'Διαγραφή του βιογραφικού του καλλιτέχνη;',
-    removeArtistBioBody:
-      'Αυτό διαγράφει μόνο το αποθηκευμένο κείμενο του βιογραφικού — τίποτα άλλο δεν επηρεάζεται.',
   },
   toast: {
     playingNext: { one: 'Παίζει επόμενο', other: '{count} κομμάτια επόμενα' },

@@ -47,6 +47,11 @@ working without changes:
   use)
 * ``DELETE /api/artists/profile/bio`` (clear only the saved bio text -
   social links, related artists and the cached Deezer id are kept)
+* ``PUT  /api/artists/profile/bio`` (manually set the bio text directly -
+  body ``{name, bio}``; the user's own text, never fetched)
+* ``PUT  /api/artists/profile/social`` (manually set all four social
+  links directly - body ``{name, social: {twitter, facebook, website,
+  instagram}}``; replaces the whole object, never fetched)
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
   resolves an artist channel or ``@handle`` URL into every one of their
   albums/singles as lightweight summaries, same shape as
@@ -1223,6 +1228,33 @@ def artist_profile_bio_delete_endpoint(
     name: str = Query(...),
 ) -> dict[str, Any]:
     return artist_profile.remove_bio(_artist_profile_download_dir(), name)
+
+
+@router.put('/api/artists/profile/bio')
+async def artist_profile_bio_set_endpoint(request: Request) -> dict[str, Any]:
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    if not name:
+        raise HTTPException(status_code=400, detail='Invalid request')
+    return artist_profile.save_bio(
+        _artist_profile_download_dir(), name, str(payload.get('bio') or '')
+    )
+
+
+@router.put('/api/artists/profile/social')
+async def artist_profile_social_set_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    if not name:
+        raise HTTPException(status_code=400, detail='Invalid request')
+    social = payload.get('social')
+    return artist_profile.save_social(
+        _artist_profile_download_dir(),
+        name,
+        social if isinstance(social, dict) else {},
+    )
 
 
 @router.get('/api/song/url')

@@ -360,9 +360,30 @@ export default {
   },
   artistArt: {
     editPhoto: 'Fotó szerkesztése',
-    editBanner: 'Banner szerkesztése',
+    editArtist: 'Előadó szerkesztése',
     titlePhoto: '{name} fotója',
     titleBanner: '{name} bannere',
+    tabBanner: 'Banner',
+    tabProfile: 'Profil',
+    currentPhoto: 'Jelenlegi fotó',
+    tabBio: 'Életrajz',
+    tabSocial: 'Közösségi média',
+    titleBio: '{name} életrajza',
+    titleSocial: '{name} közösségimédia-linkjei',
+    bioDescription: 'Írja meg vagy szerkessze saját maga az előadó életrajzát.',
+    socialDescription:
+      'Adjon hozzá linkeket az előadó közösségimédia-profiljaihoz és weboldalához.',
+    bioPlaceholder: 'Még nincs életrajz — írjon ide egyet.',
+    save: 'Mentés',
+    bioSaved: 'Életrajz elmentve',
+    bioSaveFailed: 'Nem sikerült elmenteni az életrajzot',
+    socialSaved: 'Közösségimédia-linkek elmentve',
+    socialSaveFailed: 'Nem sikerült elmenteni a közösségimédia-linkeket',
+    socialTwitter: 'Twitter / X',
+    socialFacebook: 'Facebook',
+    socialYoutube: 'YouTube',
+    socialInstagram: 'Instagram',
+    socialWebsite: 'Weboldal',
     description:
       'Keress a YouTube Musicon és a Deezeren, illessz be egy közvetlen képlinket, vagy tölts fel egy sajátot.',
     searchPlaceholder: 'Internetes képlink vagy előadó neve',
@@ -381,14 +402,11 @@ export default {
   artistBio: {
     title: 'Életrajz',
     fetchButton: 'Életrajz lekérése a Streams-ből.',
-    removeButton: 'Életrajz eltávolítása',
     empty: 'Még nincs életrajz.',
     showMore: 'Több mutatása',
     showLess: 'Kevesebb mutatása',
     fetched: 'Az életrajz frissült',
     fetchFailed: 'Nem sikerült életrajzot lekérni ehhez az előadóhoz',
-    removed: 'Az életrajz eltávolítva',
-    removeFailed: 'Nem sikerült eltávolítani az életrajzot',
   },
   playlists: {
     kicker: 'Lejátszási lista',
@@ -894,9 +912,6 @@ export default {
     removeArtistBannerTitle: '{name} bannerének eltávolítása?',
     removeArtistArtBody:
       'Ez csak a mentett képfájlt távolítja el — semmi mást nem érint.',
-    removeArtistBioTitle: 'Törli az előadó életrajzát?',
-    removeArtistBioBody:
-      'Ez csak a mentett életrajz szövegét törli — semmi mást nem érint.',
   },
   toast: {
     playingNext: {

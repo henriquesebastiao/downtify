@@ -448,12 +448,13 @@ def test_load_profile_returns_blank_skeleton_when_missing(tmp_path):
     assert artist_profile.load_profile(tmp_path, 'Nobody') == {
         'name': 'Nobody',
         'bio': '',
-        'platforms_id': {'deezer': ''},
+        'platforms_id': {'spotify': '', 'youtubemusic': '', 'deezer': ''},
         'social': {
             'twitter': '',
             'facebook': '',
             'website': '',
             'instagram': '',
+            'youtube': '',
         },
         'related_artists': [],
         'current_cover': '',
@@ -528,6 +529,36 @@ def test_fetch_bio_resolves_id_fetches_and_saves(tmp_path):
     assert reloaded['bio'] == 'Hello world'
 
 
+def test_fetch_bio_preserves_manually_set_social_fields(tmp_path):
+    # 'youtube' has no Deezer equivalent (see downtify/deezer.py's fixed
+    # four-field 'social' shape) - a re-fetch must not wipe it.
+    artist_profile.save_social(
+        tmp_path, 'Avril Lavigne', {'youtube': 'https://youtube.com/x'}
+    )
+    with (
+        patch(
+            'downtify.artist_profile.deezer.resolve_artist_id',
+            return_value='35',
+        ),
+        patch(
+            'downtify.artist_profile.deezer.fetch_artist_full',
+            return_value={
+                'bio_html': '<p>Hello</p>',
+                'social': {
+                    'twitter': 'https://twitter.com/x',
+                    'facebook': '',
+                    'website': '',
+                    'instagram': '',
+                },
+                'related_artist_names': [],
+            },
+        ),
+    ):
+        profile = artist_profile.fetch_bio(tmp_path, 'Avril Lavigne', 'en')
+    assert profile['social']['twitter'] == 'https://twitter.com/x'
+    assert profile['social']['youtube'] == 'https://youtube.com/x'
+
+
 def test_fetch_bio_reuses_cached_deezer_id(tmp_path):
     existing = artist_profile.load_profile(tmp_path, 'Avril Lavigne')
     existing['platforms_id'] = {'deezer': '35'}
@@ -596,6 +627,7 @@ def test_fetch_bio_falls_back_to_youtube_when_deezer_has_no_match(tmp_path):
         'facebook': '',
         'website': '',
         'instagram': '',
+        'youtube': '',
     }
     assert profile['related_artists'] == []
 
@@ -789,3 +821,144 @@ def test_artist_profile_bio_delete_endpoint_clears_saved_bio(app_state):
     result = api.artist_profile_bio_delete_endpoint(name='Avril Lavigne')
     assert not result['bio']
     assert not api.artist_profile_endpoint(name='Avril Lavigne')['bio']
+
+
+# ── manual bio/social edits (save_bio, save_social) ──────────────────────
+
+
+def test_save_bio_sets_bio_text(tmp_path):
+    profile = artist_profile.save_bio(tmp_path, 'Avril Lavigne', 'My own bio.')
+    assert profile['bio'] == 'My own bio.'
+    reloaded = artist_profile.load_profile(tmp_path, 'Avril Lavigne')
+    assert reloaded['bio'] == 'My own bio.'
+
+
+def test_save_bio_strips_whitespace(tmp_path):
+    profile = artist_profile.save_bio(tmp_path, 'Avril Lavigne', '  padded  ')
+    assert profile['bio'] == 'padded'
+
+
+def test_save_bio_overwrites_a_fetched_bio_but_keeps_the_rest(tmp_path):
+    with (
+        patch(
+            'downtify.artist_profile.deezer.resolve_artist_id',
+            return_value='35',
+        ),
+        patch(
+            'downtify.artist_profile.deezer.fetch_artist_full',
+            return_value={
+                'bio_html': '<p>Fetched</p>',
+                'social': {
+                    'twitter': 'https://twitter.com/x',
+                    'facebook': '',
+                    'website': '',
+                    'instagram': '',
+                },
+                'related_artist_names': ['Simple Plan'],
+            },
+        ),
+    ):
+        artist_profile.fetch_bio(tmp_path, 'Avril Lavigne', 'en')
+
+    profile = artist_profile.save_bio(tmp_path, 'Avril Lavigne', 'My own bio.')
+    assert profile['bio'] == 'My own bio.'
+    assert profile['social']['twitter'] == 'https://twitter.com/x'
+    assert profile['related_artists'] == ['Simple Plan']
+    assert profile['platforms_id']['deezer'] == '35'
+
+
+def test_save_social_sets_all_five_fields(tmp_path):
+    profile = artist_profile.save_social(
+        tmp_path,
+        'Avril Lavigne',
+        {
+            'twitter': 'https://twitter.com/x',
+            'facebook': 'https://facebook.com/x',
+            'website': 'https://example.com',
+            'instagram': 'https://instagram.com/x',
+            'youtube': 'https://youtube.com/x',
+        },
+    )
+    assert profile['social'] == {
+        'twitter': 'https://twitter.com/x',
+        'facebook': 'https://facebook.com/x',
+        'website': 'https://example.com',
+        'instagram': 'https://instagram.com/x',
+        'youtube': 'https://youtube.com/x',
+    }
+    reloaded = artist_profile.load_profile(tmp_path, 'Avril Lavigne')
+    assert reloaded['social']['website'] == 'https://example.com'
+
+
+def test_save_social_missing_keys_become_empty_strings(tmp_path):
+    artist_profile.save_social(
+        tmp_path, 'Avril Lavigne', {'twitter': 'https://twitter.com/x'}
+    )
+    profile = artist_profile.save_social(
+        tmp_path, 'Avril Lavigne', {'facebook': 'https://facebook.com/x'}
+    )
+    # The second call's payload didn't include twitter, so it's cleared -
+    # the editor always submits its full form, this isn't a partial merge.
+    assert profile['social'] == {
+        'twitter': '',
+        'facebook': 'https://facebook.com/x',
+        'website': '',
+        'instagram': '',
+        'youtube': '',
+    }
+
+
+def test_save_social_ignores_unknown_keys(tmp_path):
+    profile = artist_profile.save_social(
+        tmp_path,
+        'Avril Lavigne',
+        {'twitter': 'https://twitter.com/x', 'tiktok': 'x'},
+    )
+    assert 'tiktok' not in profile['social']
+
+
+def test_artist_profile_bio_set_endpoint_saves_manual_text(app_state):
+    request = _JsonRequest({'name': 'Avril Lavigne', 'bio': 'Manual bio.'})
+    result = asyncio.run(api.artist_profile_bio_set_endpoint(request))
+    assert result['bio'] == 'Manual bio.'
+    assert api.artist_profile_endpoint(name='Avril Lavigne')['bio'] == (
+        'Manual bio.'
+    )
+
+
+def test_artist_profile_bio_set_endpoint_rejects_blank_name(app_state):
+    request = _JsonRequest({'name': '  ', 'bio': 'x'})
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(api.artist_profile_bio_set_endpoint(request))
+    assert exc.value.status_code == 400
+
+
+def test_artist_profile_social_set_endpoint_saves_links(app_state):
+    request = _JsonRequest({
+        'name': 'Avril Lavigne',
+        'social': {'twitter': 'https://twitter.com/x'},
+    })
+    result = asyncio.run(api.artist_profile_social_set_endpoint(request))
+    assert result['social']['twitter'] == 'https://twitter.com/x'
+    assert not result['social']['facebook']
+
+
+def test_artist_profile_social_set_endpoint_rejects_blank_name(app_state):
+    request = _JsonRequest({'name': '  ', 'social': {}})
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(api.artist_profile_social_set_endpoint(request))
+    assert exc.value.status_code == 400
+
+
+def test_artist_profile_social_set_endpoint_non_dict_social_becomes_empty(
+    app_state,
+):
+    request = _JsonRequest({'name': 'Avril Lavigne', 'social': 'not-a-dict'})
+    result = asyncio.run(api.artist_profile_social_set_endpoint(request))
+    assert result['social'] == {
+        'twitter': '',
+        'facebook': '',
+        'website': '',
+        'instagram': '',
+        'youtube': '',
+    }

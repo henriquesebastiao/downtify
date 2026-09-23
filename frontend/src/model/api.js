@@ -152,8 +152,12 @@ function fetchArtistBio(name, lang) {
   return API.post('/api/artists/profile/bio', { name, lang })
 }
 
-function removeArtistBio(name) {
-  return API.delete('/api/artists/profile/bio', { params: { name } })
+function saveArtistBio(name, bio) {
+  return API.put('/api/artists/profile/bio', { name, bio })
+}
+
+function saveArtistSocial(name, social) {
+  return API.put('/api/artists/profile/social', { name, social })
 }
 
 function open(songURL) {
@@ -431,7 +435,8 @@ export default {
   deleteArtistArt,
   getArtistProfile,
   fetchArtistBio,
-  removeArtistBio,
+  saveArtistBio,
+  saveArtistSocial,
   open,
   resolveUrl,
   artistTopSongs,
