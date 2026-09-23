@@ -126,6 +126,37 @@ def test_download_csv_honors_generate_m3u_flag(monkeypatch):
     assert batches[0]['generate_m3u'] is False
 
 
+def test_download_csv_broadcasts_one_queue_reload(monkeypatch):
+    monkeypatch.setattr(api.state, 'downloader', object())
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    sent = []
+
+    async def fake_broadcast(message):
+        sent.append(message)
+
+    async def fake_process_batch(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(api.state.connections, 'broadcast', fake_broadcast)
+    monkeypatch.setattr(api, '_process_batch', fake_process_batch)
+
+    rows = ''.join(f'Song {i},Artist {i}\n' for i in range(20))
+
+    async def _invoke():
+        result = await api.download_csv_endpoint(
+            _FakeRequest({'csv': f'Title,Artist\n{rows}'})
+        )
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        return result
+
+    result = asyncio.run(_invoke())
+    assert result['count'] == 20
+    assert sent == [{'type': 'queue_reload'}]
+    for job_id in result['job_ids']:
+        assert api.state.download_jobs[job_id]['status'] == 'queued'
+
+
 def test_download_csv_registers_jobs_for_every_row(monkeypatch):
     csv_text = 'Title,Artist\nSong A,Artist A\nSong B,Artist B\n'
     result, _ = _run(monkeypatch, {'csv': csv_text})

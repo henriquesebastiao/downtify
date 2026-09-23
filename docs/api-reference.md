@@ -1575,9 +1575,13 @@ Real-time download progress events.
 }
 ```
 
-`status` is one of: `queued` · `downloading` · `done` · `error`.
+`status` on a per-track event is `downloading`, `done`, or `error`. `filename` is set (non-null) on the final `done` event. A row that is still waiting has `status: "queued"` on [`GET /api/queue`](#get-apiqueue), not as its own socket event.
 
-`filename` is set (non-null) on the final `done` event.
+Queuing a playlist batch or a CSV import registers every job, then broadcasts one reload so open pages fetch that list once:
+
+```json
+{ "type": "queue_reload" }
+```
 
 A [library upgrade](features/library-upgrade.md) broadcasts its progress on the same socket, tagged so download clients can ignore it:
 

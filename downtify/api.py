@@ -1895,13 +1895,15 @@ async def _run_download(
 ) -> Optional[str]:
     """Run a single download to completion, updating jobs state and broadcasting WS events.
 
-    When *delay_seconds* is positive, the concurrency slot (semaphore
-    permit) is held for that long after a successful download before
-    being released, so the next queued download in a batch can't start
-    until the delay has elapsed. This is only meant for multi-song
-    orchestration (playlist/album batches); single manual downloads
-    should pass ``delay_seconds=0`` so a one-off download never waits
-    around for nothing.
+    The concurrency slot is acquired before the existing-file check and
+    before the ``downloading`` broadcast, so a batch that starts every
+    row at once cannot announce or look up all of them together. When
+    *delay_seconds* is positive, that same slot stays held for that long
+    after a successful download, so the next row can't start until the
+    delay has elapsed. This is only meant for multi-song orchestration
+    (playlist/album batches); single manual downloads should pass
+    ``delay_seconds=0`` so a one-off download never waits around for
+    nothing.
 
     With *Overwrite existing files* off, a song already in the library is
     not downloaded again: by its Spotify id in the track index (wherever it
@@ -1924,66 +1926,68 @@ async def _run_download(
         song_id = _register_job(song, status='downloading')
         job = state.download_jobs[song_id]
 
-    if not getattr(state.downloader, 'overwrite_existing_files', True):
-        existing_hit = await asyncio.to_thread(
-            resolve_existing_download,
-            state.downloader,
-            song,
-            subdir=subdir,
-            track_index=state.track_index,
-        )
-        if existing_hit:
-            existing, skip_message = existing_hit
-            logger.info(
-                'Skipping download ({}): {}', skip_message.lower(), existing
-            )
-            job.update(
-                status='done',
-                filename=existing,
-                progress=100,
-                message=skip_message,
-            )
-            await state.connections.broadcast({
-                'song': song,
-                'progress': 100,
-                'message': skip_message,
-                'status': 'done',
-                'filename': existing,
-            })
-            return existing
-
-    job['status'] = 'downloading'
-
-    await state.connections.broadcast({
-        'song': song,
-        'progress': 0,
-        'message': '',
-        'status': 'downloading',
-    })
-
-    def progress(
-        pct: float, message: str, provider: Optional[str] = None
-    ) -> None:
-        j = state.download_jobs.get(song_id)
-        if j:
-            j['progress'] = pct
-            j['message'] = message
-            if provider:
-                j['provider'] = provider
-        asyncio.run_coroutine_threadsafe(
-            state.connections.broadcast({
-                'song': song,
-                'progress': pct,
-                'message': message,
-                'provider': provider or (j or {}).get('provider', ''),
-                'status': 'downloading',
-            }),
-            loop,
-        )
-
     sem = state.download_semaphore
     try:
         async with sem if sem is not None else contextlib.nullcontext():
+            if not getattr(state.downloader, 'overwrite_existing_files', True):
+                existing_hit = await asyncio.to_thread(
+                    resolve_existing_download,
+                    state.downloader,
+                    song,
+                    subdir=subdir,
+                    track_index=state.track_index,
+                )
+                if existing_hit:
+                    existing, skip_message = existing_hit
+                    logger.info(
+                        'Skipping download ({}): {}',
+                        skip_message.lower(),
+                        existing,
+                    )
+                    job.update(
+                        status='done',
+                        filename=existing,
+                        progress=100,
+                        message=skip_message,
+                    )
+                    await state.connections.broadcast({
+                        'song': song,
+                        'progress': 100,
+                        'message': skip_message,
+                        'status': 'done',
+                        'filename': existing,
+                    })
+                    return existing
+
+            job['status'] = 'downloading'
+
+            await state.connections.broadcast({
+                'song': song,
+                'progress': 0,
+                'message': '',
+                'status': 'downloading',
+            })
+
+            def progress(
+                pct: float, message: str, provider: Optional[str] = None
+            ) -> None:
+                j = state.download_jobs.get(song_id)
+                if j:
+                    j['progress'] = pct
+                    j['message'] = message
+                    if provider:
+                        j['provider'] = provider
+                asyncio.run_coroutine_threadsafe(
+                    state.connections.broadcast({
+                        'song': song,
+                        'progress': pct,
+                        'message': message,
+                        'provider': provider or (j or {}).get('provider', ''),
+                        'status': 'downloading',
+                    }),
+                    loop,
+                )
+
             filename = await loop.run_in_executor(
                 DOWNLOAD_EXECUTOR,
                 lambda: state.downloader.download(
@@ -3051,15 +3055,13 @@ async def _submit_playlist_batch(
         song_id = _register_job(song, status='queued')
         valid_songs.append(song)
         job_ids.append(song_id)
-        await state.connections.broadcast({
-            'song': song,
-            'progress': 0,
-            'message': '',
-            'status': 'queued',
-        })
 
     if not valid_songs:
         raise HTTPException(status_code=400, detail='No valid songs in batch')
+
+    # One frame for the whole batch. Per-row ``queued`` events made a
+    # large playlist or CSV rebuild the queue once per track.
+    await state.connections.broadcast({'type': 'queue_reload'})
 
     task = asyncio.create_task(
         _process_batch(
@@ -3180,12 +3182,10 @@ async def download_csv_endpoint(request: Request) -> dict[str, Any]:
     for song in songs:
         song_id = _register_job(song, status='queued')
         job_ids.append(song_id)
-        await state.connections.broadcast({
-            'song': song,
-            'progress': 0,
-            'message': '',
-            'status': 'queued',
-        })
+
+    # Same single reload as _submit_playlist_batch. The rows are already
+    # in download_jobs; clients fetch them with GET /api/queue.
+    await state.connections.broadcast({'type': 'queue_reload'})
 
     task = asyncio.create_task(
         _process_batch(

@@ -137,6 +137,80 @@ class _WS:
         self.sent.append(text)
 
 
+def test_run_download_announces_downloading_only_inside_the_slot(
+    monkeypatch,
+):
+    """Rows started together must not all broadcast ``downloading``
+    before any of them holds the parallel-download semaphore."""
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    monkeypatch.setattr(api.state, 'loop', None)
+
+    release = threading.Event()
+    entered = threading.Event()
+
+    class _Downloader:
+        overwrite_existing_files = True
+
+        @staticmethod
+        def download(song, progress, subdir=None):
+            entered.set()
+            if not release.wait(timeout=5):
+                raise RuntimeError('download was not released')
+            return f'{song["song_id"]}.mp3'
+
+    broadcasts: list[dict] = []
+
+    async def fake_broadcast(message):
+        broadcasts.append(message)
+
+    async def _noop_record(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(api.state, 'downloader', _Downloader())
+    monkeypatch.setattr(api.state.connections, 'broadcast', fake_broadcast)
+    monkeypatch.setattr(api, '_record_finished_download', _noop_record)
+
+    songs = [{'song_id': str(i), 'name': f'Song {i}'} for i in range(3)]
+    previous_sem = api.state.download_semaphore
+
+    async def _scenario():
+        api.state.download_semaphore = asyncio.Semaphore(1)
+        for song in songs:
+            api._register_job(song, status='queued')
+        task = asyncio.create_task(
+            asyncio.gather(
+                *(
+                    api._run_download(song, song['song_id'])
+                    for song in songs
+                )
+            )
+        )
+        try:
+            for _ in range(50):
+                if entered.is_set():
+                    break
+                await asyncio.sleep(0.01)
+            assert entered.is_set(), 'first download never started'
+            # The other two rows are queued on the semaphore. Give them
+            # a chance to announce anyway, which is the bug.
+            await asyncio.sleep(0.05)
+            downloading = [
+                message
+                for message in broadcasts
+                if message.get('status') == 'downloading'
+            ]
+            assert len(downloading) == 1
+            assert not task.done()
+        finally:
+            release.set()
+            await task
+
+    try:
+        asyncio.run(_scenario())
+    finally:
+        api.state.download_semaphore = previous_sem
+
+
 def test_broadcast_sends_to_clients_concurrently():
     manager = api.ConnectionManager()
     slow_a, slow_b = _WS(delay=0.3), _WS(delay=0.3)
