@@ -60,6 +60,10 @@ export const STROKE = {
   zip: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M10 7h2M10 10h2M10 13h2M9.5 16h3v3h-3z"/>',
   grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
   filter: '<path d="M4 5h16l-6 7.5V19l-4 2v-8.5z"/>',
+  image:
+    '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5-4 4-3-3-6 6"/>',
+  instagram:
+    '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17 7h.01"/>',
   folder:
     '<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
@@ -109,6 +113,13 @@ export const STROKE = {
   sparkle:
     '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
   wand: '<path d="M4 20 15 9M14 4l1 2 2 1-2 1-1 2-1-2-2-1 2-1zM19 11l.7 1.3L21 13l-1.3.7L19 15l-.7-1.3L17 13l1.3-.7z"/>',
+  // Distinct from FILLED.youtube (the regular YouTube box mark) - a ring
+  // with a solid play triangle, closer to YouTube Music's own circular
+  // logo (https://music.youtube.com/img/on_platform_logo_dark.svg).
+  // Used only for the artist banner's platform links, never as a stand-in
+  // for the regular YouTube icon elsewhere.
+  'youtube-music':
+    '<circle cx="12" cy="12" r="9"/><path d="M10 8.4v7.2l6.2-3.6z" fill="currentColor" stroke="none"/>',
 }
 
 export const FILLED = {
@@ -125,6 +136,10 @@ export const FILLED = {
     '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.62.62 0 0 1-.86.2c-2.35-1.44-5.3-1.76-8.79-.96a.62.62 0 1 1-.28-1.21c3.81-.87 7.08-.5 9.72 1.11.3.18.39.57.21.86zm1.23-2.73a.78.78 0 0 1-1.07.26c-2.69-1.65-6.79-2.13-9.97-1.16a.78.78 0 0 1-.45-1.49c3.63-1.1 8.15-.57 11.24 1.33.36.22.48.7.25 1.06zm.1-2.85C14.7 8.9 9.38 8.73 6.3 9.66a.94.94 0 1 1-.54-1.8c3.53-1.07 9.4-.86 13.12 1.34a.94.94 0 0 1-.95 1.62z"/>',
   deezer:
     '<rect x="3" y="14" width="3" height="6" rx="1"/><rect x="8" y="10" width="3" height="10" rx="1"/><rect x="13" y="6" width="3" height="14" rx="1"/><rect x="18" y="2" width="3" height="18" rx="1"/>',
+  twitter:
+    '<path d="M3 3l7.5 9.4L3.4 21H6l5.4-6.9L16.3 21H21l-7.8-9.8L20.6 3H18l-5 6.4L8.7 3H3z"/>',
+  facebook:
+    '<path d="M14 3.5h-1.6c-2.3 0-3.8 1.5-3.8 3.9V9.5H6.3v3.2h2.3V21h3.4v-8.3h2.6l.5-3.2h-3.1V7.7c0-.9.4-1.4 1.4-1.4H14z"/>',
   heart:
     '<path d="M12 20s-7-4.4-9.2-8.6C1.2 8.2 3 4.5 6.6 4.5c2.1 0 3.6 1.2 5.4 3.1 1.8-1.9 3.3-3.1 5.4-3.1 3.6 0 5.4 3.7 3.8 6.9C19 15.6 12 20 12 20z"/>',
 }
