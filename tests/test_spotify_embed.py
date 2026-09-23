@@ -21,6 +21,7 @@ from downtify.spotify import (
     _top_track_overview,
     _track_dict,
     album_tracks_from_id,
+    artist_banner_url_from_id,
     artist_image_url_from_id,
     artist_page_from_id,
     artist_top_songs_from_id,
@@ -291,6 +292,87 @@ def test_artist_image_url_from_id_reads_visual_identity():
             artist_image_url_from_id('dummyArtistId')
             == 'https://example.com/artist-640.jpg'
         )
+
+
+def _embed_payload_with_token(token):
+    return {
+        'props': {
+            'pageProps': {
+                'state': {'settings': {'session': {'accessToken': token}}}
+            }
+        }
+    }
+
+
+def test_artist_banner_url_from_id_reads_header_image():
+    payload = _embed_payload_with_token('tok123')
+    graphql_response = MagicMock()
+    graphql_response.raise_for_status = lambda: None
+    graphql_response.json = lambda: {
+        'data': {
+            'artistUnion': {
+                '__typename': 'Artist',
+                'headerImage': {
+                    'data': {
+                        '__typename': 'ImageV2',
+                        'sources': [
+                            {
+                                'url': 'https://example.com/banner-1494.jpg',
+                                'maxWidth': 1494,
+                            },
+                            {
+                                'url': 'https://example.com/banner-1920.jpg',
+                                'maxWidth': 1920,
+                            },
+                        ],
+                    }
+                },
+            }
+        }
+    }
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch(
+            'downtify.spotify.httpx.get', return_value=graphql_response
+        ) as mock_get,
+    ):
+        url = artist_banner_url_from_id('dummyArtistId')
+    assert url == 'https://example.com/banner-1920.jpg'
+    assert (
+        mock_get.call_args.kwargs['headers']['Authorization']
+        == 'Bearer tok123'
+    )
+
+
+def test_artist_banner_url_from_id_returns_empty_when_no_header_image():
+    payload = _embed_payload_with_token('tok123')
+    graphql_response = MagicMock()
+    graphql_response.raise_for_status = lambda: None
+    graphql_response.json = lambda: {
+        'data': {'artistUnion': {'__typename': 'Artist', 'headerImage': None}}
+    }
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('downtify.spotify.httpx.get', return_value=graphql_response),
+    ):
+        assert not artist_banner_url_from_id('dummyArtistId')
+
+
+def test_artist_banner_url_from_id_returns_empty_when_no_token():
+    payload = {
+        'props': {'pageProps': {'state': {'settings': {'session': {}}}}}
+    }
+    with patch('downtify.spotify._fetch_embed_json', return_value=payload):
+        assert not artist_banner_url_from_id('dummyArtistId')
+
+
+def test_artist_banner_url_from_id_returns_empty_on_request_failure():
+    payload = _embed_payload_with_token('tok123')
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('downtify.spotify.httpx.get', side_effect=Exception('boom')),
+    ):
+        assert not artist_banner_url_from_id('dummyArtistId')
 
 
 def test_primary_artist_id_from_track_id_reads_first_artist_uri():

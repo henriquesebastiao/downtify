@@ -167,10 +167,13 @@ const removeLabel = computed(() =>
 async function findSpotifyCandidate() {
   // Tries a handful of the artist's own tracks - the first one that came
   // from Spotify (see downtify.track_index) resolves the artist's photo
-  // directly, no name search needed.
+  // or banner directly, no name search needed. Photo and banner are
+  // genuinely different Spotify images (see downtify.spotify), so the
+  // kind has to be passed through - many artists have no banner set at
+  // all, in which case no Spotify candidate is offered for one.
   for (const file of props.trackFiles.slice(0, 5)) {
     try {
-      const res = await API.getSpotifyArtistArtCandidate(file)
+      const res = await API.getSpotifyArtistArtCandidate(file, props.kind)
       if (res.data?.image_url) {
         spotifyCandidate.value = res.data
         return
@@ -210,7 +213,8 @@ async function choose(candidate) {
     const res = await API.setArtistArtFromUrl(
       props.artistName,
       props.kind,
-      candidate.image_url
+      candidate.image_url,
+      candidate.source
     )
     ui.toast(t('artistArt.saved'), { kind: 'success' })
     emit('saved', res.data.url)
@@ -229,7 +233,12 @@ async function onUploadChange(event) {
   saving.value = true
   errorText.value = ''
   try {
-    const res = await API.uploadArtistArt(props.artistName, props.kind, file)
+    const res = await API.uploadArtistArt(
+      props.artistName,
+      props.kind,
+      file,
+      'upload'
+    )
     ui.toast(t('artistArt.saved'), { kind: 'success' })
     emit('saved', res.data.url)
     emit('close')

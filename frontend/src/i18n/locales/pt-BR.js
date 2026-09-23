@@ -380,6 +380,18 @@ export default {
     removed: 'Imagem removida',
     removeFailed: 'Não foi possível remover essa imagem',
   },
+  artistBio: {
+    title: 'Biografia',
+    fetchButton: 'Buscar biografia em Streams.',
+    removeButton: 'Remover biografia',
+    empty: 'Nenhuma biografia por enquanto.',
+    showMore: 'Mostrar mais',
+    showLess: 'Mostrar menos',
+    fetched: 'Biografia atualizada',
+    fetchFailed: 'Não foi possível buscar uma biografia para este artista',
+    removed: 'Biografia removida',
+    removeFailed: 'Não foi possível remover a biografia',
+  },
   playlists: {
     kicker: 'Playlist',
     notFound: 'Playlist não encontrada',
@@ -878,6 +890,9 @@ export default {
     removeArtistBannerTitle: 'Remover o banner de {name}?',
     removeArtistArtBody:
       'Isso só remove o arquivo de imagem salvo — nada mais é afetado.',
+    removeArtistBioTitle: 'Limpar a biografia do artista',
+    removeArtistBioBody:
+      'Isso só limpa o texto da biografia salva — nada mais é afetado.',
   },
   toast: {
     playingNext: { one: 'Tocará a seguir', other: '{count} faixas a seguir' },

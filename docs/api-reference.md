@@ -121,9 +121,9 @@ An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.
 
 ---
 
-## Artist photo & banner
+## Artist photo, banner & bio
 
-Manual picker for an artist's profile photo and banner — see [Artist photo & banner](features/artist-images.md). Saved as sidecar files under `<downloads>/Metadata/ArtistImage/` and `<downloads>/Metadata/ArtistBannerImage/`, served directly from the existing `/downloads` static mount.
+Manual picker for an artist's profile photo and banner, plus their profile data (bio, social links, related artists) — see [Artist photo, banner & bio](features/artist-images.md). Images are saved as sidecar files under `<downloads>/Metadata/ArtistImage/` and `<downloads>/Metadata/ArtistBannerImage/`, served directly from the existing `/downloads` static mount; profile data lives in `<downloads>/Metadata/ArtistData/`.
 
 ### `GET /api/artists/art`
 
@@ -157,13 +157,14 @@ Free-text artist photo candidates from YouTube Music and Deezer.
 
 ### `GET /api/artists/art/spotify_candidate`
 
-A Spotify photo candidate resolved from one already-downloaded track, when that track came from Spotify. Not a name search — see [Artist photo & banner](features/artist-images.md#spotify).
+A Spotify photo or banner candidate resolved from one already-downloaded track, when that track came from Spotify. Not a name search — see [Artist photo, banner & bio](features/artist-images.md#spotify).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `file` | string | yes | Library-relative path of one of the artist's tracks (as returned by `GET /tracks`) |
+| `kind` | string | no | `"photo"` (default) or `"banner"` - these are different Spotify images, not the same one reused |
 
-**Response:** `{ "source": "spotify", "name": "…", "image_url": "…" }`, or `{}` when the track isn't a Spotify download or its artist can't be resolved.
+**Response:** `{ "source": "spotify", "name": "…", "image_url": "…" }`, or `{}` when the track isn't a Spotify download, its artist can't be resolved, or (for `kind=banner`) the artist has no banner set.
 
 ---
 
@@ -211,6 +212,60 @@ Remove a saved photo or banner.
 | `kind` | string | yes | `"photo"` or `"banner"` |
 
 **Response:** `{ "removed": true }` when a file was deleted, `{ "removed": false }` when there was nothing to remove. `400` when `kind` isn't `photo`/`banner`.
+
+---
+
+### `GET /api/artists/profile`
+
+An artist's saved profile: bio, social links, related artists, platform ids, and which source (`spotify`/`youtube`/`deezer`/`link`/`upload`) their current photo/banner came from — see [Artist photo, banner & bio](features/artist-images.md#bio).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
+
+**Response:**
+
+```json
+{
+  "name": "Avril Lavigne",
+  "bio": "",
+  "platforms_id": { "deezer": "" },
+  "social": { "twitter": "", "facebook": "", "website": "", "instagram": "" },
+  "related_artists": [],
+  "current_cover": "",
+  "current_cover_banner": ""
+}
+```
+
+A blank skeleton (as above) when nothing has been saved for this artist yet - never `404`.
+
+---
+
+### `POST /api/artists/profile/bio`
+
+Fetch an artist's bio and save it. Tries Deezer first (which also brings social links and related-artist names) by exact, case-insensitive name match - its resolved artist id is cached in the profile and reused on later calls. If Deezer has no match, or matches but has no bio text, YouTube Music's own artist description is tried as a bio-only fallback.
+
+**Request body:**
+
+```json
+{ "name": "Avril Lavigne", "lang": "pt-BR" }
+```
+
+`lang` affects the bio text itself, not just formatting: sent to Deezer as `Accept-Language`, and mapped to the closest language `ytmusicapi` ships for the YouTube Music fallback (falls back to English for a language it doesn't have, e.g. `bg`/`el`/`hu`).
+
+**Response:** the same shape as `GET /api/artists/profile`, with `bio` updated - plus `social`/`related_artists`/`platforms_id.deezer` too, when Deezer had a match. `400` only when neither source has anything for this artist.
+
+---
+
+### `DELETE /api/artists/profile/bio`
+
+Clear only the saved bio text. `social`, `related_artists` and `platforms_id` (including the cached Deezer id) are left as-is, so fetching again later doesn't need to search by name.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
+
+**Response:** the same shape as `GET /api/artists/profile`, with `bio` cleared.
 
 ---
 
@@ -416,8 +471,8 @@ Return the current settings.
 | `cover_resolution` | integer | Target pixel size (width & height) for YouTube Music-sourced cover art. Clamped to `300–1200`. Only used when `download_cover_art` is true. See [Cover art resolution](features/download-settings.md#cover-art-resolution). |
 | `overwrite_existing_files` | boolean | When `false`, a song already in the library (matched by output filename, or by Spotify track ID through the [library track index](features/library-catalog.md)) isn't downloaded again; the download returns the existing file's path instead. See [Overwrite existing files](features/download-settings.md#overwrite-existing-files). |
 | `download_cover_art_playlists` | boolean | Save the playlist's own cover art alongside its M3U file, as `<playlist-name>.jpg`. Only applies while `generate_m3u` is true. Default: `false`. See [Playlist cover art](features/playlist-cover-art.md). |
-| `download_cover_art_artist` | boolean | Reserved for a possible future automatic fetch of an artist's photo during the download pipeline. Currently unused - the manual picker on an artist's Library page is always available regardless of this setting. Default: `false`. See [Artist photo & banner](features/artist-images.md). |
-| `download_cover_art_artist_banner` | boolean | Same as above, for the artist's banner image. Default: `false`. See [Artist photo & banner](features/artist-images.md). |
+| `download_cover_art_artist` | boolean | Reserved for a possible future automatic fetch of an artist's photo during the download pipeline. Currently unused - the manual picker on an artist's Library page is always available regardless of this setting. Default: `false`. See [Artist photo, banner & bio](features/artist-images.md). |
+| `download_cover_art_artist_banner` | boolean | Same as above, for the artist's banner image. Default: `false`. See [Artist photo, banner & bio](features/artist-images.md). |
 | `lyrics_providers` | array | Ordered fallback list of lyrics providers: `lrclib`, `netease`. Each track tries them in order until one has lyrics. Unknown names are dropped; a list left with only the legacy `genius`/`musixmatch`/`azlyrics` names falls back to the defaults. An empty list means no lyrics, as does `download_lyrics: false`. See [Lyrics](features/lyrics.md). |
 | `download_lyrics` | boolean | Whether to look lyrics up at all. |
 | `audio_providers` | array | Ordered fallback list of audio sources: `youtube-music`, `youtube`, `slskd`. `slskd` is dropped while `slskd.enabled` is false. See [slskd & Navidrome](features/slskd-navidrome.md#audio-sources-and-fallback-order). |

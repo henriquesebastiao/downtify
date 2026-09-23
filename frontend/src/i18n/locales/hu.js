@@ -378,6 +378,18 @@ export default {
     removed: 'Kép eltávolítva',
     removeFailed: 'Nem sikerült eltávolítani a képet',
   },
+  artistBio: {
+    title: 'Életrajz',
+    fetchButton: 'Életrajz lekérése a Streams-ből.',
+    removeButton: 'Életrajz eltávolítása',
+    empty: 'Még nincs életrajz.',
+    showMore: 'Több mutatása',
+    showLess: 'Kevesebb mutatása',
+    fetched: 'Az életrajz frissült',
+    fetchFailed: 'Nem sikerült életrajzot lekérni ehhez az előadóhoz',
+    removed: 'Az életrajz eltávolítva',
+    removeFailed: 'Nem sikerült eltávolítani az életrajzot',
+  },
   playlists: {
     kicker: 'Lejátszási lista',
     notFound: 'A lista nem található',
@@ -882,6 +894,9 @@ export default {
     removeArtistBannerTitle: '{name} bannerének eltávolítása?',
     removeArtistArtBody:
       'Ez csak a mentett képfájlt távolítja el — semmi mást nem érint.',
+    removeArtistBioTitle: 'Törli az előadó életrajzát?',
+    removeArtistBioBody:
+      'Ez csak a mentett életrajz szövegét törli — semmi mást nem érint.',
   },
   toast: {
     playingNext: {

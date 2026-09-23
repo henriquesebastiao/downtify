@@ -28,14 +28,25 @@ working without changes:
   by the Library page's artist grid)
 * ``GET  /api/artists/art/search`` (free-text artist photo candidates from
   YouTube Music + Deezer, each ``{source, name, image_url}``)
-* ``GET  /api/artists/art/spotify_candidate`` (a Spotify photo candidate
-  resolved from one already-downloaded track's Spotify id, when known -
-  no name search, see ``downtify.track_index``)
+* ``GET  /api/artists/art/spotify_candidate`` (a Spotify photo or banner
+  candidate - ``kind`` query param - resolved from one already-downloaded
+  track's Spotify id, when known - no name search, see
+  ``downtify.track_index``)
 * ``POST /api/artists/art/from_url`` (fetch and save a chosen candidate or
   a pasted image link as an artist's photo or banner)
 * ``POST /api/artists/art/upload`` (save an uploaded photo/banner - the
   raw image bytes as the request body, like ``POST /api/cookies``)
 * ``DELETE /api/artists/art`` (remove a saved photo or banner)
+* ``GET  /api/artists/profile`` (an artist's saved profile JSON: bio,
+  social links, related artists, platform ids, which source their current
+  photo/banner came from - a blank skeleton if nothing was saved yet)
+* ``POST /api/artists/profile/bio`` (fetch bio (+ social/related-artists
+  when available) from Deezer and save them, falling back to YouTube
+  Music for a bio-only match when Deezer has none - body
+  ``{name, lang}``; resolves and caches the artist's Deezer id on first
+  use)
+* ``DELETE /api/artists/profile/bio`` (clear only the saved bio text -
+  social links, related artists and the cached Deezer id are kept)
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
   resolves an artist channel or ``@handle`` URL into every one of their
   albums/singles as lightweight summaries, same shape as
@@ -1089,6 +1100,7 @@ def artist_art_search_endpoint(
 @router.get('/api/artists/art/spotify_candidate')
 def artist_art_spotify_candidate_endpoint(
     file: str = Query(...),
+    kind: str = Query(artist_profile.KIND_PHOTO),
 ) -> dict[str, Any]:
     if state.track_index is None:
         return {}
@@ -1102,7 +1114,11 @@ def artist_art_spotify_candidate_endpoint(
         artist_id = spotify.primary_artist_id_from_track_id(track_id)
         if not artist_id:
             return {}
-        image_url = spotify.artist_image_url_from_id(artist_id)
+        image_url = (
+            spotify.artist_banner_url_from_id(artist_id)
+            if kind == artist_profile.KIND_BANNER
+            else spotify.artist_image_url_from_id(artist_id)
+        )
         if not image_url:
             return {}
         artist_name = spotify.artist_name_from_id(artist_id)
@@ -1121,6 +1137,7 @@ async def artist_art_from_url_endpoint(request: Request) -> dict[str, Any]:
     name = str(payload.get('name') or '').strip()
     kind = str(payload.get('kind') or '').strip()
     image_url = str(payload.get('image_url') or '').strip()
+    source = str(payload.get('source') or '').strip()
     if not name or kind not in {
         artist_profile.KIND_PHOTO,
         artist_profile.KIND_BANNER,
@@ -1133,6 +1150,7 @@ async def artist_art_from_url_endpoint(request: Request) -> dict[str, Any]:
             name,
             kind,
             image_url,
+            source,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -1141,7 +1159,10 @@ async def artist_art_from_url_endpoint(request: Request) -> dict[str, Any]:
 
 @router.post('/api/artists/art/upload')
 async def artist_art_upload_endpoint(
-    request: Request, name: str = Query(...), kind: str = Query(...)
+    request: Request,
+    name: str = Query(...),
+    kind: str = Query(...),
+    source: str = '',
 ) -> dict[str, Any]:
     if kind not in {artist_profile.KIND_PHOTO, artist_profile.KIND_BANNER}:
         raise HTTPException(status_code=400, detail='Invalid kind')
@@ -1155,6 +1176,7 @@ async def artist_art_upload_endpoint(
             name,
             kind,
             content,
+            source,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -1171,6 +1193,36 @@ def artist_art_delete_endpoint(
         _artist_profile_download_dir(), name, kind
     )
     return {'removed': removed}
+
+
+@router.get('/api/artists/profile')
+def artist_profile_endpoint(name: str = Query(...)) -> dict[str, Any]:
+    return artist_profile.load_profile(_artist_profile_download_dir(), name)
+
+
+@router.post('/api/artists/profile/bio')
+async def artist_profile_bio_endpoint(request: Request) -> dict[str, Any]:
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    lang = str(payload.get('lang') or 'en').strip()
+    if not name:
+        raise HTTPException(status_code=400, detail='Invalid request')
+    try:
+        return await asyncio.to_thread(
+            artist_profile.fetch_bio,
+            _artist_profile_download_dir(),
+            name,
+            lang,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.delete('/api/artists/profile/bio')
+def artist_profile_bio_delete_endpoint(
+    name: str = Query(...),
+) -> dict[str, Any]:
+    return artist_profile.remove_bio(_artist_profile_download_dir(), name)
 
 
 @router.get('/api/song/url')

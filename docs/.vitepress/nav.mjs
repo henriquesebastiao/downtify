@@ -32,7 +32,10 @@ export const NAV = [
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
       { title: 'M3U Export', page: 'features/m3u-export.md' },
       { title: 'Playlist Cover Art', page: 'features/playlist-cover-art.md' },
-      { title: 'Artist Photo & Banner', page: 'features/artist-images.md' },
+      {
+        title: 'Artist Photo, Banner & Bio',
+        page: 'features/artist-images.md',
+      },
       { title: 'File Organization', page: 'features/file-organization.md' },
       { title: 'Lyrics', page: 'features/lyrics.md' },
       { title: 'YouTube Cookies', page: 'features/youtube-cookies.md' },

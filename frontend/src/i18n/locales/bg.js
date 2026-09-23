@@ -375,6 +375,18 @@ export default {
     removed: 'Изображението е премахнато',
     removeFailed: 'Изображението не можа да бъде премахнато',
   },
+  artistBio: {
+    title: 'Биография',
+    fetchButton: 'Извличане на биография от Streams.',
+    removeButton: 'Премахване на биографията',
+    empty: 'Все още няма биография.',
+    showMore: 'Покажи повече',
+    showLess: 'Покажи по-малко',
+    fetched: 'Биографията е обновена',
+    fetchFailed: 'Не можа да се извлече биография за този изпълнител',
+    removed: 'Биографията е премахната',
+    removeFailed: 'Не можа да се премахне биографията',
+  },
   playlists: {
     kicker: 'Плейлист',
     notFound: 'Плейлистът не е намерен',
@@ -874,6 +886,9 @@ export default {
     removeArtistBannerTitle: 'Премахване на банера на {name}?',
     removeArtistArtBody:
       'Това само премахва запазения файл с изображение — нищо друго не се засяга.',
+    removeArtistBioTitle: 'Изчистване на биографията на изпълнителя?',
+    removeArtistBioBody:
+      'Това само изчиства запазения текст на биографията — нищо друго не се засяга.',
   },
   toast: {
     playingNext: { one: 'Ще звучи следваща', other: '{count} песни следват' },

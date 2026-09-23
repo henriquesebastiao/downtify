@@ -114,30 +114,46 @@ function searchArtistArt(name) {
   return API.get('/api/artists/art/search', { params: { name } })
 }
 
-function getSpotifyArtistArtCandidate(file) {
-  return API.get('/api/artists/art/spotify_candidate', { params: { file } })
+function getSpotifyArtistArtCandidate(file, kind) {
+  return API.get('/api/artists/art/spotify_candidate', {
+    params: { file, kind },
+  })
 }
 
-function setArtistArtFromUrl(name, kind, imageUrl) {
+function setArtistArtFromUrl(name, kind, imageUrl, source = '') {
   return API.post('/api/artists/art/from_url', {
     name,
     kind,
     image_url: imageUrl,
+    source,
   })
 }
 
 // The file is sent as the raw request body rather than multipart
 // form-data, so the backend doesn't need python-multipart just for this
 // (same idea as uploadCookies below).
-function uploadArtistArt(name, kind, file) {
+function uploadArtistArt(name, kind, file, source = '') {
   return API.post('/api/artists/art/upload', file, {
-    params: { name, kind },
+    params: { name, kind, source },
     headers: { 'Content-Type': file.type || 'application/octet-stream' },
   })
 }
 
 function deleteArtistArt(name, kind) {
   return API.delete('/api/artists/art', { params: { name, kind } })
+}
+
+// ── Artist profile: bio, social links, related artists, platform ids ──
+function getArtistProfile(name) {
+  return API.get('/api/artists/profile', { params: { name } })
+}
+
+function fetchArtistBio(name, lang) {
+  return API.post('/api/artists/profile/bio', { name, lang })
+}
+
+function removeArtistBio(name) {
+  return API.delete('/api/artists/profile/bio', { params: { name } })
 }
 
 function open(songURL) {
@@ -413,6 +429,9 @@ export default {
   setArtistArtFromUrl,
   uploadArtistArt,
   deleteArtistArt,
+  getArtistProfile,
+  fetchArtistBio,
+  removeArtistBio,
   open,
   resolveUrl,
   artistTopSongs,

@@ -380,6 +380,18 @@ export default {
     removed: 'Görsel kaldırıldı',
     removeFailed: 'Bu görsel kaldırılamadı',
   },
+  artistBio: {
+    title: 'Biyografi',
+    fetchButton: "Streams'ten biyografi al.",
+    removeButton: 'Biyografiyi kaldır',
+    empty: 'Henüz biyografi yok.',
+    showMore: 'Daha fazla göster',
+    showLess: 'Daha az göster',
+    fetched: 'Biyografi güncellendi',
+    fetchFailed: 'Bu sanatçı için biyografi alınamadı',
+    removed: 'Biyografi kaldırıldı',
+    removeFailed: 'Biyografi kaldırılamadı',
+  },
   playlists: {
     kicker: 'Çalma listesi',
     notFound: 'Çalma listesi bulunamadı',
@@ -876,6 +888,9 @@ export default {
     removeArtistBannerTitle: '{name} afişi kaldırılsın mı?',
     removeArtistArtBody:
       'Bu yalnızca kaydedilen görsel dosyasını kaldırır — başka hiçbir şeyi etkilemez.',
+    removeArtistBioTitle: 'Sanatçı biyografisi temizlensin mi?',
+    removeArtistBioBody:
+      'Bu yalnızca kaydedilen biyografi metnini temizler — başka hiçbir şeyi etkilemez.',
   },
   toast: {
     playingNext: {

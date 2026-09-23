@@ -15,6 +15,7 @@ from downtify.providers import (
     _upgrade_thumbnail,
     album_tracks_from_browse_id,
     artist_albums_from_channel_id,
+    artist_bio_from_channel_id,
     artist_full_top_songs_from_channel_id,
     artist_info_from_channel_id,
     artist_similar_from_channel_id,
@@ -24,6 +25,7 @@ from downtify.providers import (
     find_match,
     parse_youtube_url,
     playlist_cover_url_from_id,
+    resolve_artist_id_by_name,
     search_albums,
     search_artists,
     set_cover_resolution,
@@ -2519,6 +2521,79 @@ class _FakeYTMArtistSearchRaises:
 def test_search_artists_returns_empty_on_ytm_error(monkeypatch):
     monkeypatch.setattr(providers, '_ytm', _FakeYTMArtistSearchRaises)
     assert search_artists('anything') == []
+
+
+# ── resolve_artist_id_by_name ────────────────────────────────────────────────────
+
+
+def test_resolve_artist_id_by_name_matches_case_insensitively(monkeypatch):
+    fake = _FakeYTM([
+        _artist_search_row('UCother', 'Some Other Band'),
+        _artist_search_row('UCxxx', 'mica ferreira'),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    assert resolve_artist_id_by_name('Mica Ferreira') == 'UCxxx'
+
+
+def test_resolve_artist_id_by_name_no_exact_match_returns_none(monkeypatch):
+    fake = _FakeYTM([_artist_search_row('UCother', 'Someone Else')])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    assert resolve_artist_id_by_name('Mica Ferreira') is None
+
+
+def test_resolve_artist_id_by_name_empty_name_returns_none(monkeypatch):
+    def _boom(*_a, **_kw):
+        raise AssertionError('should not search for an empty name')
+
+    monkeypatch.setattr(providers, '_ytm', _boom)
+    assert resolve_artist_id_by_name('   ') is None
+
+
+# ── artist_bio_from_channel_id ───────────────────────────────────────────────────
+
+
+class _FakeYTMusicClient:
+    def __init__(self, artist_data):
+        self._artist_data = artist_data
+        self.language = None
+
+    def get_artist(self, _channel_id):
+        return self._artist_data
+
+
+def test_artist_bio_returns_description(monkeypatch):
+    def _factory(language):
+        assert language == 'pt'
+        return _FakeYTMusicClient({'description': 'Uma banda incrível.'})
+
+    monkeypatch.setattr(providers, 'YTMusic', _factory)
+    assert (
+        artist_bio_from_channel_id('UCxxx', 'pt-BR') == 'Uma banda incrível.'
+    )
+
+
+def test_artist_bio_falls_back_to_english_for_unsupported_locale(monkeypatch):
+    def _factory(language):
+        assert language == 'en'
+        return _FakeYTMusicClient({'description': 'An amazing band.'})
+
+    monkeypatch.setattr(providers, 'YTMusic', _factory)
+    assert artist_bio_from_channel_id('UCxxx', 'bg') == 'An amazing band.'
+
+
+def test_artist_bio_missing_description_returns_empty_string(monkeypatch):
+    monkeypatch.setattr(
+        providers, 'YTMusic', lambda language: _FakeYTMusicClient({})
+    )
+    assert not artist_bio_from_channel_id('UCxxx', 'en')
+
+
+def test_artist_bio_returns_empty_string_on_error(monkeypatch):
+    def _boom(language):
+        raise RuntimeError('network down')
+
+    monkeypatch.setattr(providers, 'YTMusic', _boom)
+    assert not artist_bio_from_channel_id('UCxxx', 'en')
 
 
 # ── _fetch_full_artist_section ──────────────────────────────────────────────────

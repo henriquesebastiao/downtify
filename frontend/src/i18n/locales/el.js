@@ -378,6 +378,18 @@ export default {
     removed: 'Η εικόνα αφαιρέθηκε',
     removeFailed: 'Δεν ήταν δυνατή η αφαίρεση αυτής της εικόνας',
   },
+  artistBio: {
+    title: 'Βιογραφικό',
+    fetchButton: 'Λήψη βιογραφικού από Streams.',
+    removeButton: 'Αφαίρεση βιογραφικού',
+    empty: 'Δεν υπάρχει βιογραφικό ακόμα.',
+    showMore: 'Περισσότερα',
+    showLess: 'Λιγότερα',
+    fetched: 'Το βιογραφικό ενημερώθηκε',
+    fetchFailed: 'Δεν ήταν δυνατή η λήψη βιογραφικού για αυτόν τον καλλιτέχνη',
+    removed: 'Το βιογραφικό αφαιρέθηκε',
+    removeFailed: 'Δεν ήταν δυνατή η αφαίρεση του βιογραφικού',
+  },
   playlists: {
     kicker: 'Λίστα',
     notFound: 'Η λίστα δεν βρέθηκε',
@@ -887,6 +899,9 @@ export default {
     removeArtistBannerTitle: 'Αφαίρεση του banner του {name};',
     removeArtistArtBody:
       'Αυτό αφαιρεί μόνο το αποθηκευμένο αρχείο εικόνας — τίποτα άλλο δεν επηρεάζεται.',
+    removeArtistBioTitle: 'Διαγραφή του βιογραφικού του καλλιτέχνη;',
+    removeArtistBioBody:
+      'Αυτό διαγράφει μόνο το αποθηκευμένο κείμενο του βιογραφικού — τίποτα άλλο δεν επηρεάζεται.',
   },
   toast: {
     playingNext: { one: 'Παίζει επόμενο', other: '{count} κομμάτια επόμενα' },

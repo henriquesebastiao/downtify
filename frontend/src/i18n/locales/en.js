@@ -372,6 +372,18 @@ export default {
     removed: 'Image removed',
     removeFailed: 'Could not remove that image',
   },
+  artistBio: {
+    title: 'Bio',
+    fetchButton: 'Fetch bio from Streams.',
+    removeButton: 'Remove bio',
+    empty: 'No biography yet.',
+    showMore: 'Show more',
+    showLess: 'Show less',
+    fetched: 'Bio updated',
+    fetchFailed: 'Could not fetch a bio for this artist',
+    removed: 'Bio removed',
+    removeFailed: 'Could not remove the bio',
+  },
   playlists: {
     kicker: 'Playlist',
     notFound: 'Playlist not found',
@@ -857,6 +869,9 @@ export default {
     removeArtistBannerTitle: 'Remove {name}’s banner?',
     removeArtistArtBody:
       'This only removes the saved image file — nothing else is affected.',
+    removeArtistBioTitle: 'Clear artist bio?',
+    removeArtistBioBody:
+      'This only clears the saved biography text — nothing else is affected.',
   },
   toast: {
     playingNext: { one: 'Playing next', other: '{count} tracks play next' },

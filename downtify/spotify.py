@@ -1342,12 +1342,82 @@ def artist_image_url_from_id(artist_id: str) -> str:
     Reads the same ``visualIdentity.image`` field :func:`_cover_url`
     already checks for tracks/albums/playlists — see
     :func:`artist_name_from_id` for why an artist embed carries nothing
-    richer than a name and this one photo (no banner).
+    richer than a name and this one photo. The wide banner shown on an
+    artist's real Spotify page is a separate image the embed doesn't
+    expose at all - see :func:`artist_banner_url_from_id`.
     """
 
     payload = _fetch_embed_json('artist', artist_id)
     entity = _entity_from(payload)
     return _cover_url(entity)
+
+
+# sha256 of the queryArtistOverview GraphQL document in the Spotify web
+# player - same persisted-query mechanism as _GRAPHQL_HASH above, just a
+# different operation. Update when the player bundle rolls and the API
+# returns PersistedQueryNotFound.
+# Location in the bundle: new tz.l("queryArtistOverview","query","<hash>",null)
+_ARTIST_OVERVIEW_HASH = (
+    '9f8134ef565e78621f1e1793555bd6633c5ac144ae0f89604ed3ae3f80b3c8e6'
+)
+
+
+def artist_banner_url_from_id(artist_id: str) -> str:
+    """Largest wide header/banner image an artist has set, or ``""``.
+
+    Not exposed by the embed page at all (see
+    :func:`artist_image_url_from_id`) - reuses the embed's anonymous
+    access token against the same persisted-GraphQL pathfinder API
+    :func:`_graphql_fetch_page` already calls for playlist pagination,
+    just a different operation (``queryArtistOverview``) that happens to
+    surface the artist page's real header image alongside data we don't
+    need here. Many artists simply don't have one set - this returns
+    ``""`` rather than falling back to the square photo, so callers
+    don't silently save the wrong shape as a "banner".
+    """
+
+    payload = _fetch_embed_json('artist', artist_id)
+    token = _token_from_embed_payload(payload)
+    if not token:
+        return ''
+    try:
+        resp = httpx.get(
+            _PARTNER_API,
+            params={
+                'operationName': 'queryArtistOverview',
+                'variables': json.dumps({
+                    'uri': f'spotify:artist:{artist_id}',
+                    'locale': '',
+                    'preReleaseV2': False,
+                }),
+                'extensions': json.dumps({
+                    'persistedQuery': {
+                        'version': 1,
+                        'sha256Hash': _ARTIST_OVERVIEW_HASH,
+                    }
+                }),
+            },
+            headers={
+                'Authorization': f'Bearer {token}',
+                'User-Agent': _USER_AGENT,
+                'app-platform': 'WebPlayer',
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Spotify artist banner fetch failed for {}', artist_id
+        )
+        return ''
+    artist = (data.get('data') or {}).get('artistUnion') or {}
+    if artist.get('__typename') != 'Artist':
+        return ''
+    header = (artist.get('headerImage') or {}).get('data') or {}
+    if header.get('__typename') != 'ImageV2':
+        return ''
+    return _largest_image(header.get('sources') or [])
 
 
 def primary_artist_id_from_track_id(track_id: str) -> Optional[str]:

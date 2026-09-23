@@ -520,6 +520,75 @@ def artist_info_from_channel_id(channel_id: str) -> dict[str, Any]:
     }
 
 
+def resolve_artist_id_by_name(name: str) -> Optional[str]:
+    """YouTube Music channel id for an exact (case-insensitive) name
+    match, or ``None`` if no search result's name matches exactly.
+
+    Deliberately strict, same reasoning as
+    :func:`downtify.deezer.resolve_artist_id`: an unrelated top result
+    would silently attach the wrong artist's bio.
+    """
+
+    text = name.strip()
+    if not text:
+        return None
+    wanted = text.lower()
+    for artist in search_artists(text, limit=25):
+        if str(artist.get('name') or '').strip().lower() == wanted:
+            return artist.get('artist_id') or None
+    return None
+
+
+# Locales ytmusicapi ships its own translated section labels for. Also
+# happens to be what actually changes the language of an artist's own
+# "About" description text (confirmed live): non-English locales pull a
+# Wikipedia excerpt in that language, with source/license attribution
+# baked into the text itself; English usually gets a press-style blurb
+# instead of a Wikipedia excerpt.
+_YTM_BIO_LANGUAGES = frozenset({
+    'ar',
+    'cs',
+    'de',
+    'en',
+    'es',
+    'fr',
+    'hi',
+    'it',
+    'ja',
+    'ko',
+    'nl',
+    'pt',
+    'ru',
+    'tr',
+    'ur',
+    'zh_CN',
+    'zh_TW',
+})
+
+
+def artist_bio_from_channel_id(channel_id: str, lang: str) -> str:
+    """An artist's YouTube Music "About" description, localized to
+    *lang* when ytmusicapi ships that locale (falls back to English -
+    e.g. ``pt-BR`` maps to ``pt``, and locales ytmusicapi doesn't ship
+    at all, like ``bg``/``el``/``hu``, just get English).
+
+    A fresh client is built per call - the shared one from :func:`_ytm`
+    is fixed to English at construction - which is cheap (no request of
+    its own, unlike ``get_artist``).
+    """
+
+    base = (lang or '').strip().split('-')[0].lower()
+    ytm_lang = base if base in _YTM_BIO_LANGUAGES else 'en'
+    try:
+        artist_data = YTMusic(language=ytm_lang).get_artist(channel_id)
+    except Exception:
+        logger.exception(
+            'YouTube Music artist bio fetch failed for {}', channel_id
+        )
+        return ''
+    return str(artist_data.get('description') or '').strip()
+
+
 def artist_similar_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
     """Resolve an artist's "Fans might also like" shelf as lightweight
     artist summaries. Same shape as :func:`search_artists` results.

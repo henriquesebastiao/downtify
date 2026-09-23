@@ -56,6 +56,57 @@
       <div
         class="mx-auto flex max-w-[1680px] flex-col gap-12 px-4 sm:px-6 lg:px-10"
       >
+        <section class="flex flex-col gap-2">
+          <div class="flex items-center gap-2">
+            <h2 class="text-display text-xl font-semibold">
+              {{ t('artistBio.title') }}
+            </h2>
+            <button
+              type="button"
+              :disabled="bioLoading"
+              :title="
+                profile.bio
+                  ? t('artistBio.removeButton')
+                  : t('artistBio.fetchButton')
+              "
+              :aria-label="
+                profile.bio
+                  ? t('artistBio.removeButton')
+                  : t('artistBio.fetchButton')
+              "
+              class="flex size-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-bg-2 hover:text-fg disabled:opacity-50"
+              @click="profile.bio ? removeBio() : fetchBio()"
+            >
+              <AppIcon
+                :name="profile.bio ? 'trash' : 'zap'"
+                :size="15"
+                :class="bioLoading ? 'animate-pulse' : ''"
+              />
+            </button>
+          </div>
+          <template v-if="profile.bio">
+            <p
+              class="text-[15px] text-fg-3"
+              :class="bioExpanded ? '' : 'line-clamp-4'"
+            >
+              {{ profile.bio }}
+            </p>
+            <button
+              v-if="bioIsLong"
+              type="button"
+              class="w-fit text-[13px] font-medium text-accent hover:underline"
+              @click="bioExpanded = !bioExpanded"
+            >
+              {{
+                bioExpanded ? t('artistBio.showLess') : t('artistBio.showMore')
+              }}
+            </button>
+          </template>
+          <p v-else class="text-[13px] text-muted">
+            {{ t('artistBio.empty') }}
+          </p>
+        </section>
+
         <section v-if="artist.albums.length" class="flex flex-col gap-4">
           <h2 class="text-display text-xl font-semibold">
             {{ t('library.albums') }}
@@ -118,6 +169,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import AppIcon from '/src/components/ui/AppIcon.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
 import ArtistArtModal from '/src/components/library/ArtistArtModal.vue'
@@ -130,15 +182,17 @@ import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
+import { useUi } from '/src/model/ui'
 import { sortItems } from '/src/lib/library'
 import { splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
+const ui = useUi()
 
 const artist = computed(() =>
   library.findArtist(String(route.query.name || ''))
@@ -244,5 +298,79 @@ const artModalKind = ref('photo')
 function openArtModal(kind) {
   artModalKind.value = kind
   artModalOpen.value = true
+}
+
+// ── Artist profile (bio, social links, related artists) - bio is
+// fetched from Deezer on demand only, never automatically ────────────
+function blankProfile() {
+  return {
+    bio: '',
+    platforms_id: {},
+    social: {},
+    related_artists: [],
+    current_cover: '',
+    current_cover_banner: '',
+  }
+}
+const profile = ref(blankProfile())
+const bioLoading = ref(false)
+const bioExpanded = ref(false)
+const bioIsLong = computed(() => (profile.value.bio || '').length > 260)
+
+async function refreshProfile() {
+  if (!artist.value?.name) {
+    profile.value = blankProfile()
+    return
+  }
+  try {
+    const res = await API.getArtistProfile(artist.value.name)
+    profile.value = res.data || blankProfile()
+  } catch {
+    profile.value = blankProfile()
+  }
+  bioExpanded.value = false
+}
+
+watch(() => artist.value?.name, refreshProfile, { immediate: true })
+
+async function fetchBio() {
+  if (!artist.value?.name || bioLoading.value) return
+  bioLoading.value = true
+  try {
+    const res = await API.fetchArtistBio(artist.value.name, locale.value)
+    profile.value = res.data
+    bioExpanded.value = false
+    ui.toast(t('artistBio.fetched'), { kind: 'success' })
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('artistBio.fetchFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    bioLoading.value = false
+  }
+}
+
+async function removeBio() {
+  if (!artist.value?.name || bioLoading.value) return
+  const ok = await ui.confirm({
+    title: t('confirm.removeArtistBioTitle'),
+    body: t('confirm.removeArtistBioBody'),
+    confirmLabel: t('artistBio.removeButton'),
+    danger: true,
+  })
+  if (!ok) return
+  bioLoading.value = true
+  try {
+    const res = await API.removeArtistBio(artist.value.name)
+    profile.value = res.data
+    bioExpanded.value = false
+    ui.toast(t('artistBio.removed'), { kind: 'success' })
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('artistBio.removeFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    bioLoading.value = false
+  }
 }
 </script>
