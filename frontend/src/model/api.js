@@ -107,6 +107,10 @@ function resolveUrl(url) {
   return API.get('/api/url/resolve', { params: { url } })
 }
 
+function artistTopSongs(url) {
+  return API.get('/api/artists/top_songs/url', { params: { url } })
+}
+
 // ── Downloads ────────────────────────────────────────────────────────
 function download(songURL) {
   const url = typeof songURL === 'string' ? songURL : songURL.url
@@ -363,6 +367,7 @@ export default {
   searchArtists,
   open,
   resolveUrl,
+  artistTopSongs,
   download,
   downloadBatch,
   downloadAlbum,

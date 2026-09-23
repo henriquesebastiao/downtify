@@ -77,7 +77,9 @@ watch(
   () => [route.name, route.params.query, route.query.url],
   ([name, query, url]) => {
     if (name === 'Search') text.value = String(query || '')
-    else if (name === 'Link') text.value = String(url || '')
+    else if (name === 'Link' || name === 'TopSongs') {
+      text.value = String(url || '')
+    }
   },
   { immediate: true }
 )
@@ -89,12 +91,7 @@ function submit() {
   } else if (result.type === 'link') {
     router.push({ name: 'Link', query: { url: result.url } })
   } else if (result.type === 'unsupported') {
-    ui.toast(
-      result.kind === 'artist' && result.source === 'spotify'
-        ? t('search.spotifyArtistUnsupported')
-        : t('search.unsupportedLink'),
-      { kind: 'error' }
-    )
+    ui.toast(t('search.unsupportedLink'), { kind: 'error' })
     return
   } else {
     return

@@ -25,6 +25,7 @@ const toneClass = computed(
       danger: 'border-transparent bg-danger/12 text-danger',
       neutral: 'border-line-3 bg-surface-2 text-muted',
       spotify: 'border-spotify/25 bg-spotify/12 text-spotify',
+      ytm: 'border-src-ytm/25 bg-src-ytm/15 text-src-ytm',
     })[props.tone]
 )
 </script>

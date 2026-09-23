@@ -15,6 +15,7 @@ from downtify.providers import (
     _upgrade_thumbnail,
     album_tracks_from_browse_id,
     artist_albums_from_channel_id,
+    artist_full_top_songs_from_channel_id,
     artist_info_from_channel_id,
     artist_similar_from_channel_id,
     artist_top_albums_from_channel_id,
@@ -3075,6 +3076,102 @@ def test_artist_top_songs_returns_empty_on_ytm_error(monkeypatch):
     assert artist_top_songs_from_channel_id('UCxxx') == []
 
 
+class _FakeYTMArtistAndPlaylist:
+    """Fake YTMusic client serving both get_artist and get_playlist, for
+    the 'full top songs' shelf which resolves a browseId through the
+    latter."""
+
+    def __init__(self, artist_data, playlists):
+        self._artist_data = artist_data
+        self._playlists = playlists
+
+    def get_artist(self, _channel_id):
+        return self._artist_data
+
+    def get_playlist(self, playlist_id, limit=None):
+        return self._playlists[playlist_id]
+
+
+def test_artist_full_top_songs_resolves_shelf_playlist(monkeypatch):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'songs': {
+            'browseId': 'VLPLshelf123',
+            'results': [_artist_song_row('aaaaaaaaaaa', 'Quiet Static')],
+        },
+    }
+    playlists = {
+        'VLPLshelf123': {
+            'title': 'Mica Ferreira - Top songs',
+            'tracks': [
+                _song_row(
+                    'Quiet Static',
+                    'Mica Ferreira',
+                    'Driftlight',
+                    200,
+                    'aaaaaaaaaaa',
+                ),
+                _song_row(
+                    'Held Together',
+                    'Mica Ferreira',
+                    'Driftlight',
+                    210,
+                    'bbbbbbbbbbb',
+                ),
+                _song_row(
+                    'Runaway',
+                    'Mica Ferreira',
+                    'Driftlight',
+                    190,
+                    'ccccccccccc',
+                ),
+            ],
+        }
+    }
+    monkeypatch.setattr(
+        providers,
+        '_ytm',
+        lambda: _FakeYTMArtistAndPlaylist(artist_data, playlists),
+    )
+    songs = artist_full_top_songs_from_channel_id('UCxxx')
+    assert [s['song_id'] for s in songs] == [
+        'aaaaaaaaaaa',
+        'bbbbbbbbbbb',
+        'ccccccccccc',
+    ]
+
+
+def test_artist_full_top_songs_returns_empty_when_no_browse_id(monkeypatch):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'songs': {
+            'results': [_artist_song_row('aaaaaaaaaaa', 'Quiet Static')]
+        },
+    }
+    monkeypatch.setattr(
+        providers, '_ytm', lambda: _FakeYTMArtistAndPlaylist(artist_data, {})
+    )
+    assert artist_full_top_songs_from_channel_id('UCxxx') == []
+
+
+def test_artist_full_top_songs_returns_empty_when_no_songs_section(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        providers,
+        '_ytm',
+        lambda: _FakeYTMArtistAndPlaylist({'name': 'Mica Ferreira'}, {}),
+    )
+    assert artist_full_top_songs_from_channel_id('UCxxx') == []
+
+
+def test_artist_full_top_songs_returns_empty_on_get_artist_error(
+    monkeypatch,
+):
+    monkeypatch.setattr(providers, '_ytm', _FakeYTMGetArtistRaises)
+    assert artist_full_top_songs_from_channel_id('UCxxx') == []
+
+
 class _FakeYTMGetArtistRaises:
     @staticmethod
     def get_artist(_channel_id):
@@ -3269,3 +3366,132 @@ def test_playlist_cover_url_empty_when_no_thumbnails(monkeypatch):
     client = _FakeYTMPlaylistHeader({'title': 'Chill Mix', 'thumbnails': []})
     monkeypatch.setattr(providers, '_ytm', lambda: client)
     assert not playlist_cover_url_from_id('PLxyz')
+
+
+@pytest.mark.parametrize(
+    ('text', 'expected'),
+    [
+        ('1.2B plays', 1_200_000_000),
+        ('500M plays', 500_000_000),
+        ('4.4M plays', 4_400_000),
+        ('950K plays', 950_000),
+        ('1B plays', 1_000_000_000),
+        ('12,345 plays', 12_345),
+        ('950 plays', 950),
+        ('1 play', 1),
+        ('Play next', 0),
+        ('plays', 0),
+        ('', 0),
+        (None, 0),
+    ],
+)
+def test_parse_play_count(text, expected):
+    assert providers._parse_play_count(text) == expected
+
+
+def _plays_response(rows):
+    """A playlist ``browse`` response: (videoId, [flex column texts])."""
+
+    return {
+        'contents': {
+            'section': [
+                {
+                    'musicResponsiveListItemRenderer': {
+                        'playlistItemData': {'videoId': video_id},
+                        'flexColumns': [
+                            {
+                                'musicResponsiveListItemFlexColumnRenderer': {
+                                    'text': {'runs': [{'text': text}]}
+                                }
+                            }
+                            for text in columns
+                        ],
+                    }
+                }
+                for video_id, columns in rows
+            ]
+        }
+    }
+
+
+class _FakeYTMWithPlays(_FakeYTMArtistAndPlaylist):
+    def __init__(self, artist_data, playlists, response=None, error=None):
+        super().__init__(artist_data, playlists)
+        self._response = response
+        self._error = error
+        self.requests = []
+
+    def _send_request(self, endpoint, body, *_args, **_kwargs):
+        self.requests.append((endpoint, body))
+        if self._error is not None:
+            raise self._error
+        return self._response
+
+
+def test_playlist_play_counts_read_the_plays_column(monkeypatch):
+    response = _plays_response([
+        ('aaaaaaaaaaa', ['Quiet Static', 'Mica', '1.2B plays', 'Driftlight']),
+        ('bbbbbbbbbbb', ['Held Together', 'Mica', 'Driftlight']),
+        ('ccccccccccc', ['Runaway', 'Mica', '4.4M plays', 'Driftlight']),
+    ])
+    fake = _FakeYTMWithPlays({}, {}, response=response)
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    counts = providers._playlist_play_counts('PLshelf123')
+    assert counts == {'aaaaaaaaaaa': 1_200_000_000, 'ccccccccccc': 4_400_000}
+    assert fake.requests == [('browse', {'browseId': 'VLPLshelf123'})]
+
+
+def test_playlist_play_counts_are_empty_when_the_request_fails(monkeypatch):
+    fake = _FakeYTMWithPlays({}, {}, error=RuntimeError('boom'))
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    assert providers._playlist_play_counts('VLPLshelf123') == {}
+
+
+def _top_songs_client(response=None, error=None):
+    artist_data = {
+        'name': 'Mica Ferreira',
+        'songs': {'browseId': 'VLPLshelf123', 'results': []},
+    }
+    playlists = {
+        'VLPLshelf123': {
+            'title': 'Mica Ferreira - Top songs',
+            'tracks': [
+                _song_row(
+                    'Quiet Static',
+                    'Mica Ferreira',
+                    'Driftlight',
+                    200,
+                    'aaaaaaaaaaa',
+                ),
+                _song_row(
+                    'Held Together',
+                    'Mica Ferreira',
+                    'Driftlight',
+                    210,
+                    'bbbbbbbbbbb',
+                ),
+            ],
+        }
+    }
+    return _FakeYTMWithPlays(artist_data, playlists, response, error)
+
+
+def test_artist_full_top_songs_carry_approximate_play_counts(monkeypatch):
+    response = _plays_response([
+        ('aaaaaaaaaaa', ['Quiet Static', 'Mica', '1.2B plays', 'Driftlight']),
+    ])
+    monkeypatch.setattr(providers, '_ytm', lambda: _top_songs_client(response))
+    songs = artist_full_top_songs_from_channel_id('UCxxx')
+    first, second = songs
+    assert first['play_count'] == 1_200_000_000
+    assert first['play_count_approx'] is True
+    assert 'play_count' not in second
+
+
+def test_artist_full_top_songs_survive_missing_play_counts(monkeypatch):
+    monkeypatch.setattr(
+        providers, '_ytm', lambda: _top_songs_client(error=RuntimeError('x'))
+    )
+    songs = artist_full_top_songs_from_channel_id('UCxxx')
+    assert [s['song_id'] for s in songs] == ['aaaaaaaaaaa', 'bbbbbbbbbbb']
+    assert all('play_count' not in s for s in songs)

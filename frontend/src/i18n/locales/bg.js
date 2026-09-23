@@ -61,7 +61,7 @@ export default {
     inputPlaceholder:
       'Линк от Spotify или YouTube Music, или изпълнител, албум, песен…',
     getIt: 'Изтегли',
-    hintSpotify: 'Песни, албуми и плейлисти',
+    hintSpotify: 'Песни, албуми, плейлисти и изпълнители',
     hintYoutube: 'Песни, албуми, плейлисти и изпълнители от YouTube Music',
     hintCsv: 'Импортирай CSV (Soundiiz, Exportify…)',
     downloading: 'Изтегля се сега',
@@ -116,8 +116,6 @@ export default {
     typeEp: 'EP',
     unsupportedLink:
       'Downtify не може да изтегли този линк. Постави песен, албум или плейлист от Spotify, или линк от YouTube Music.',
-    spotifyArtistUnsupported:
-      'Страниците на изпълнители в Spotify не могат да се изтеглят — потърси изпълнителя тук.',
     tipSearchTitle: 'Търси по име',
     tipSearchBody:
       'Въведи изпълнител, албум или песен — резултатите идват от YouTube Music.',
@@ -153,6 +151,15 @@ export default {
     filterNew: 'Нови',
     filterLibrary: 'В библиотеката',
     filterQueue: 'В опашката',
+    topSongs: 'Top Songs',
+    topSongsOf: 'Top Songs of {artist}',
+    topSongsEmpty: 'Не са намерени популярни песни за този изпълнител',
+    createPlaylist: 'Създай плейлиста',
+    createPlaylistHint:
+      'Запазва песните като плейлист в този ред, със снимката на изпълнителя за корица, когато корицата на плейлиста е включена.',
+    selectAll: 'Избери всички',
+    playCountSpotify: 'Възпроизвеждания в Spotify',
+    playCountYoutubeMusic: 'Възпроизвеждания в YouTube Music (приблизително)',
   },
   queue: {
     title: 'Опашка',

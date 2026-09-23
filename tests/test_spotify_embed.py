@@ -8,14 +8,20 @@ import httpx
 import pytest
 
 from downtify.spotify import (
+    _album_names_by_uri,
     _album_release_date_from_open_page,
+    _artist_full_discography,
     _artist_names,
+    _artist_releases,
     _artists_from_subtitle,
     _embed_row_track,
     _fetch_embed_json,
     _normalize_release_date_text,
+    _top_track_overview,
     _track_dict,
     album_tracks_from_id,
+    artist_page_from_id,
+    artist_top_songs_from_id,
     enrich_track_from_spotify_if_sparse,
     playlist_cover_url_from_id,
 )
@@ -421,3 +427,510 @@ def test_playlist_cover_url_empty_when_no_art():
     ):
         cover = playlist_cover_url_from_id('dummyPlaylistId')
     assert not cover
+
+
+def test_artist_top_songs_resolves_trackList_shelf():
+    # Mirrors the real open.spotify.com/embed/artist/<id> payload shape,
+    # confirmed against a live fetch: the shelf is entity['trackList'], a
+    # bare list of flat rows (no 'track' wrapper) — same field name
+    # playlists/albums use, but with per-row subtitle as the artist name
+    # and no 'id' (only 'uri'). 22-char ids so enrich_track_from_spotify_
+    # if_sparse's id-shape guard doesn't skip them.
+    track_id_1 = '1' * 22
+    track_id_2 = '2' * 22
+    entity = {
+        'name': 'Test Artist',
+        'title': 'Test Artist',
+        'subtitle': 'Top tracks',
+        'visualIdentity': {
+            'image': [
+                {'url': 'https://example.test/artist.jpeg', 'width': 640}
+            ]
+        },
+        'trackList': [
+            {
+                'uri': f'spotify:track:{track_id_1}',
+                'title': 'Song One',
+                'subtitle': 'Test Artist',
+                'duration': 200000,
+            },
+            {
+                'uri': f'spotify:track:{track_id_2}',
+                'title': 'Song Two',
+                'subtitle': 'Test Artist',
+                'duration': 210000,
+            },
+        ],
+    }
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch('downtify.spotify.track_from_id') as mock_track_from_id,
+    ):
+        mock_track_from_id.side_effect = lambda tid: {
+            'song_id': tid,
+            'source': 'spotify',
+            'year': '2002',
+            'release_date': '2002-06-04',
+            'cover_url': f'https://example.test/album-{tid}.jpeg',
+        }
+        name, cover, songs = artist_top_songs_from_id('dummyArtistId')
+    assert name == 'Test Artist'
+    assert cover == 'https://example.test/artist.jpeg'
+    assert [s['song_id'] for s in songs] == [track_id_1, track_id_2]
+    assert songs[0]['name'] == 'Song One'
+    assert songs[0]['artists'] == ['Test Artist']
+    assert songs[0]['duration'] == 200
+    assert songs[0]['source'] == 'spotify'
+    # Each track gets its own album cover via enrichment (a shelf row
+    # carries no per-track art of its own) — not the artist's photo,
+    # and not the same cover for every track either.
+    assert (
+        songs[0]['cover_url']
+        == f'https://example.test/album-{track_id_1}.jpeg'
+    )
+    assert (
+        songs[1]['cover_url']
+        == f'https://example.test/album-{track_id_2}.jpeg'
+    )
+    assert songs[0]['cover_url'] != cover
+    # No token in this payload, so there is no album lookup: the name
+    # stays blank rather than being invented.
+    assert not songs[0]['album_name']
+
+
+def test_artist_top_songs_empty_shelf_returns_empty_list():
+    entity = {'name': 'Test Artist'}
+    with patch(
+        'downtify.spotify._fetch_embed_json',
+        return_value=_embed_payload_for(entity),
+    ):
+        name, _cover, songs = artist_top_songs_from_id('dummyArtistId')
+    assert name == 'Test Artist'
+    assert songs == []
+
+
+def test_artist_top_songs_raises_when_name_missing():
+    entity = {'trackList': []}
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        pytest.raises(ValueError, match='Could not read artist name'),
+    ):
+        artist_top_songs_from_id('dummyArtistId')
+
+
+_TRACK_1 = '1' * 22
+_TRACK_2 = '2' * 22
+_TRACK_3 = '3' * 22
+
+
+def _discography(
+    top_albums: dict[str, str],
+    listed: dict[str, str],
+    plays: dict | None = None,
+) -> dict:
+    """A ``queryArtistOverview`` discography: top tracks reference their
+    album by uri only; released albums are listed with their names."""
+
+    plays = plays or {}
+
+    return {
+        'topTracks': {
+            'items': [
+                {
+                    'track': {
+                        'id': track_id,
+                        'uri': f'spotify:track:{track_id}',
+                        'albumOfTrack': {'uri': album_uri},
+                        'playcount': plays.get(track_id),
+                    }
+                }
+                for track_id, album_uri in top_albums.items()
+            ]
+        },
+        'albums': {
+            'items': [
+                {
+                    'releases': {
+                        'items': [{'uri': uri, 'name': name}],
+                    }
+                }
+                for uri, name in listed.items()
+            ]
+        },
+    }
+
+
+def test_album_names_by_uri_only_keeps_named_albums():
+    node = {
+        'a': {'uri': 'spotify:album:AAA', 'name': ' Album A '},
+        'b': [{'uri': 'spotify:album:BBB'}],
+        'c': {'uri': 'spotify:track:TTT', 'name': 'Not an album'},
+        'd': {'nested': {'uri': 'spotify:album:CCC', 'name': 'Album C'}},
+    }
+    assert _album_names_by_uri(node) == {
+        'spotify:album:AAA': 'Album A',
+        'spotify:album:CCC': 'Album C',
+    }
+
+
+def test_top_track_overview_albums_come_from_the_discography():
+    discography = _discography(
+        {_TRACK_1: 'spotify:album:AAA', _TRACK_2: 'spotify:album:AAA'},
+        {'spotify:album:AAA': 'Test Album'},
+    )
+    with (
+        patch(
+            'downtify.spotify._artist_discography', return_value=discography
+        ),
+        patch('downtify.spotify._fetch_embed_json') as embed,
+    ):
+        overview = _top_track_overview('artistId', 'token')
+    assert overview == {
+        _TRACK_1: {'album_name': 'Test Album'},
+        _TRACK_2: {'album_name': 'Test Album'},
+    }
+    embed.assert_not_called()
+
+
+def test_top_track_overview_falls_back_to_the_album_embed():
+    discography = _discography(
+        {_TRACK_1: 'spotify:album:AAA', _TRACK_2: 'spotify:album:OLD'},
+        {'spotify:album:AAA': 'Listed Album'},
+    )
+    with (
+        patch(
+            'downtify.spotify._artist_discography', return_value=discography
+        ),
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for({'name': 'Older Album'}),
+        ) as embed,
+    ):
+        overview = _top_track_overview('artistId', 'token')
+    assert overview == {
+        _TRACK_1: {'album_name': 'Listed Album'},
+        _TRACK_2: {'album_name': 'Older Album'},
+    }
+    embed.assert_called_once_with('album', 'OLD')
+
+
+def test_top_track_overview_leaves_an_album_blank_when_unresolvable():
+    discography = _discography({_TRACK_1: 'spotify:album:GONE'}, {})
+    with (
+        patch(
+            'downtify.spotify._artist_discography', return_value=discography
+        ),
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            side_effect=httpx.ConnectError('down'),
+        ),
+    ):
+        assert _top_track_overview('artistId', 'token') == {}
+
+
+def test_top_track_overview_survives_a_failed_lookup():
+    with patch(
+        'downtify.spotify._artist_discography',
+        side_effect=ValueError('PersistedQueryNotFound'),
+    ):
+        assert _top_track_overview('artistId', 'token') == {}
+
+
+def test_top_track_overview_reads_play_counts():
+    discography = _discography(
+        {
+            _TRACK_1: 'spotify:album:AAA',
+            _TRACK_2: 'spotify:album:AAA',
+            _TRACK_3: 'spotify:album:AAA',
+        },
+        {'spotify:album:AAA': 'Test Album'},
+        # The player sends counts as strings; junk and zero are ignored.
+        {_TRACK_1: '1484408385', _TRACK_2: 'n/a', _TRACK_3: 0},
+    )
+    with patch(
+        'downtify.spotify._artist_discography', return_value=discography
+    ):
+        overview = _top_track_overview('artistId', 'token')
+    assert overview[_TRACK_1] == {
+        'album_name': 'Test Album',
+        'play_count': 1484408385,
+    }
+    assert overview[_TRACK_2] == {'album_name': 'Test Album'}
+    assert overview[_TRACK_3] == {'album_name': 'Test Album'}
+
+
+def test_artist_top_songs_carry_the_album_name_and_play_count():
+    entity = {
+        'name': 'Test Artist',
+        'trackList': [
+            {
+                'uri': f'spotify:track:{track_id}',
+                'title': f'Song {i}',
+                'subtitle': 'Test Artist',
+                'duration': 200000,
+            }
+            for i, track_id in enumerate((_TRACK_1, _TRACK_2, _TRACK_3), 1)
+        ],
+    }
+    payload = _embed_payload_for(entity)
+    payload['props']['pageProps']['state']['settings'] = {
+        'session': {'accessToken': 'anon-token'}
+    }
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch(
+            'downtify.spotify.track_from_id',
+            side_effect=lambda tid: {
+                'song_id': tid,
+                'source': 'spotify',
+                'year': '2002',
+                'release_date': '2002-06-04',
+            },
+        ),
+        patch(
+            'downtify.spotify._top_track_overview',
+            return_value={
+                _TRACK_1: {'album_name': 'Album One', 'play_count': 1500},
+                _TRACK_2: {'album_name': 'Album Two'},
+            },
+        ) as lookup,
+    ):
+        _name, _cover, songs = artist_top_songs_from_id('artistId')
+    lookup.assert_called_once_with('artistId', 'anon-token')
+    assert [s['album_name'] for s in songs] == ['Album One', 'Album Two', '']
+    assert [s.get('play_count') for s in songs] == [1500, None, None]
+
+
+def _release(album_id, name, kind, when):
+    year, month, day = when
+    return {
+        'id': album_id,
+        'uri': f'spotify:album:{album_id}',
+        'name': name,
+        'type': kind,
+        'date': {'year': year, 'month': month, 'day': day},
+        'coverArt': {
+            'sources': [
+                {'url': 'https://example.test/small.jpg', 'width': 64},
+                {'url': f'https://example.test/{album_id}.jpg', 'width': 640},
+            ]
+        },
+    }
+
+
+def test_artist_releases_are_deduplicated_and_newest_first():
+    older = _release('OLD', 'Older Album', 'ALBUM', (2002, 1, 1))
+    newer = _release('NEW', 'Newer Single', 'SINGLE', (2022, 11, 25))
+    discography = {
+        'topTracks': {
+            'items': [
+                {
+                    'track': {
+                        'albumOfTrack': {
+                            'uri': 'spotify:album:TOP',
+                            'coverArt': {'sources': []},
+                        }
+                    }
+                }
+            ]
+        },
+        'albums': {'items': [{'releases': {'items': [older]}}]},
+        'singles': {'items': [{'releases': {'items': [newer]}}]},
+        'popularReleasesAlbums': {'items': [older]},
+        'latest': newer,
+    }
+    releases = _artist_releases(discography, 'Test Artist')
+    assert [r['album_id'] for r in releases] == ['NEW', 'OLD']
+    newest = releases[0]
+    assert newest == {
+        'album_id': 'NEW',
+        'name': 'Newer Single',
+        'artists': ['Test Artist'],
+        'artist': 'Test Artist',
+        'cover_url': 'https://example.test/NEW.jpg',
+        'year': '2022',
+        'explicit': False,
+        'url': 'https://open.spotify.com/album/NEW',
+        'source': 'spotify',
+        'release_type': 'Single',
+    }
+    assert releases[1]['release_type'] == 'Album'
+
+
+def test_artist_releases_label_compilations_and_ignore_track_only_albums():
+    discography = {
+        'compilations': {
+            'items': [
+                {
+                    'releases': {
+                        'items': [
+                            _release(
+                                'CMP', 'Best Of', 'COMPILATION', (2010, 1, 1)
+                            )
+                        ]
+                    }
+                }
+            ]
+        },
+        'albums': {
+            'items': [
+                {'releases': {'items': [{'uri': 'spotify:album:NONAME'}]}}
+            ]
+        },
+    }
+    releases = _artist_releases(discography, 'Test Artist')
+    assert [r['album_id'] for r in releases] == ['CMP']
+    assert releases[0]['release_type'] == 'Compilation'
+
+
+def test_artist_releases_keep_ep_upper_case():
+    discography = _full_discography(
+        _release('EPX', 'A Short One', 'EP', (2003, 1, 1))
+    )
+    releases = _artist_releases(discography, 'Test Artist')
+    assert releases[0]['release_type'] == 'EP'
+
+
+def _artist_embed_payload(token):
+    payload = _embed_payload_for({'name': 'Test Artist'})
+    if token:
+        payload['props']['pageProps']['state']['settings'] = {
+            'session': {'accessToken': token}
+        }
+    return payload
+
+
+def _full_discography(*releases):
+    return {
+        'all': {
+            'items': [
+                {'releases': {'items': [release]}} for release in releases
+            ]
+        }
+    }
+
+
+def test_artist_page_lists_the_full_discography():
+    full = _full_discography(
+        _release('SNG', 'Single', 'SINGLE', (2022, 11, 25)),
+        _release('AAA', 'Album', 'ALBUM', (2002, 1, 1)),
+    )
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_artist_embed_payload('anon-token'),
+        ),
+        patch(
+            'downtify.spotify._artist_full_discography', return_value=full
+        ) as full_lookup,
+        patch('downtify.spotify._artist_discography') as overview,
+    ):
+        name, _cover, releases = artist_page_from_id('artistId')
+    full_lookup.assert_called_once_with('artistId', 'anon-token')
+    overview.assert_not_called()
+    assert name == 'Test Artist'
+    assert [r['album_id'] for r in releases] == ['SNG', 'AAA']
+
+
+def test_artist_page_falls_back_to_the_overview():
+    overview = {
+        'albums': {
+            'items': [
+                {
+                    'releases': {
+                        'items': [
+                            _release('AAA', 'Album', 'ALBUM', (2002, 1, 1))
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_artist_embed_payload('anon-token'),
+        ),
+        patch(
+            'downtify.spotify._artist_full_discography',
+            side_effect=ValueError('PersistedQueryNotFound'),
+        ),
+        patch('downtify.spotify._artist_discography', return_value=overview),
+    ):
+        _name, _cover, releases = artist_page_from_id('artistId')
+    assert [r['album_id'] for r in releases] == ['AAA']
+
+
+def test_artist_page_has_no_releases_when_every_lookup_fails():
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_artist_embed_payload('anon-token'),
+        ),
+        patch(
+            'downtify.spotify._artist_full_discography',
+            side_effect=ValueError('PersistedQueryNotFound'),
+        ),
+        patch(
+            'downtify.spotify._artist_discography',
+            side_effect=ValueError('PersistedQueryNotFound'),
+        ),
+    ):
+        name, _cover, releases = artist_page_from_id('artistId')
+    assert name == 'Test Artist'
+    assert releases == []
+
+
+def test_artist_page_skips_the_lookups_without_a_token():
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_artist_embed_payload(None),
+        ),
+        patch('downtify.spotify._artist_full_discography') as full,
+        patch('downtify.spotify._artist_discography') as overview,
+    ):
+        _name, _cover, releases = artist_page_from_id('artistId')
+    full.assert_not_called()
+    overview.assert_not_called()
+    assert releases == []
+
+
+def _discography_page(count, total, first=0):
+    return {
+        'artistUnion': {
+            'discography': {
+                'all': {
+                    'totalCount': total,
+                    'items': [
+                        {'releases': {'items': [{'id': f'R{first + i}'}]}}
+                        for i in range(count)
+                    ],
+                }
+            }
+        }
+    }
+
+
+def test_full_discography_pages_until_the_total():
+    pages = [_discography_page(100, 130), _discography_page(30, 130, 100)]
+    with patch('downtify.spotify._partner_query', side_effect=pages) as query:
+        result = _artist_full_discography('artistId', 'tok')
+    assert len(result['all']['items']) == 130
+    offsets = [call.args[1]['offset'] for call in query.call_args_list]
+    assert offsets == [0, 100]
+    assert all(call.args[1]['limit'] == 100 for call in query.call_args_list)
+    assert query.call_args_list[0].args[0] == 'queryArtistDiscographyAll'
+
+
+def test_full_discography_stops_on_an_empty_page():
+    pages = [_discography_page(5, 50), _discography_page(0, 50)]
+    with patch('downtify.spotify._partner_query', side_effect=pages):
+        result = _artist_full_discography('artistId', 'tok')
+    assert len(result['all']['items']) == 5

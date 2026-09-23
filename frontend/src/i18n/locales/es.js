@@ -61,7 +61,7 @@ export default {
     inputPlaceholder:
       'Enlace de Spotify o YouTube Music, o un artista, álbum, canción…',
     getIt: 'Descargar',
-    hintSpotify: 'Canciones, álbumes y playlists',
+    hintSpotify: 'Canciones, álbumes, playlists y artistas',
     hintYoutube: 'Canciones, álbumes, playlists y artistas de YouTube Music',
     hintCsv: 'Importa un CSV (Soundiiz, Exportify…)',
     downloading: 'Descargando ahora',
@@ -116,8 +116,6 @@ export default {
     typeEp: 'EP',
     unsupportedLink:
       'Downtify no puede descargar ese enlace. Pega una canción, álbum o playlist de Spotify, o un enlace de YouTube Music.',
-    spotifyArtistUnsupported:
-      'Las páginas de artista de Spotify no se pueden descargar — busca al artista aquí.',
     tipSearchTitle: 'Busca por nombre',
     tipSearchBody:
       'Escribe un artista, álbum o canción — los resultados vienen de YouTube Music.',
@@ -156,6 +154,15 @@ export default {
     filterNew: 'Nuevas',
     filterLibrary: 'En la biblioteca',
     filterQueue: 'En cola',
+    topSongs: 'Top Songs',
+    topSongsOf: 'Top Songs of {artist}',
+    topSongsEmpty: 'No se encontraron canciones populares de este artista',
+    createPlaylist: 'Crear playlist',
+    createPlaylistHint:
+      'Guarda las canciones como una playlist en este orden, con la foto del artista como portada cuando la portada de playlist está activada.',
+    selectAll: 'Seleccionar todo',
+    playCountSpotify: 'Reproducciones en Spotify',
+    playCountYoutubeMusic: 'Reproducciones en YouTube Music (aproximado)',
   },
   queue: {
     title: 'Cola',

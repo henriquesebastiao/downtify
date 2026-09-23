@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   fileFormat,
   formatBytes,
+  formatPlayCount,
   formatDuration,
   hueFor,
   initials,
@@ -48,6 +49,35 @@ describe('formatDuration', () => {
     expect(formatDuration(0)).toBe('0:00')
     expect(formatDuration(NaN)).toBe('0:00')
     expect(formatDuration(-3)).toBe('0:00')
+  })
+})
+
+describe('formatPlayCount', () => {
+  it('shortens a count the way the locale does', () => {
+    // Intl puts a no-break space between the number and the unit.
+    expect(formatPlayCount(100000, 'pt-BR')).toBe('100\u00a0mil')
+    expect(formatPlayCount(4400000, 'pt-BR')).toBe('4,4\u00a0mi')
+    expect(formatPlayCount(1484408385, 'pt-BR')).toBe('1,5\u00a0bi')
+    expect(formatPlayCount(1484408385, 'en')).toBe('1.5B')
+    expect(formatPlayCount(892417619, 'en')).toBe('892M')
+  })
+
+  it('gives an exact and a rounded count the same short form', () => {
+    expect(formatPlayCount(1484408385, 'en')).toBe(
+      formatPlayCount(1500000000, 'en')
+    )
+  })
+
+  it('leaves small numbers alone and rejects junk', () => {
+    expect(formatPlayCount(950, 'pt-BR')).toBe('950')
+    expect(formatPlayCount('nope')).toBe('')
+    expect(formatPlayCount(undefined)).toBe('')
+  })
+
+  it('falls back to English for a malformed locale instead of throwing', () => {
+    expect(formatPlayCount(1484408385, 'pt_BR')).toBe('1.5B')
+    expect(formatPlayCount(1484408385, '')).toBe('1.5B')
+    expect(formatPlayCount(1484408385, null)).toBe('1.5B')
   })
 })
 

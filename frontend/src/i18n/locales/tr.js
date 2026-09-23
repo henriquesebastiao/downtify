@@ -61,7 +61,7 @@ export default {
     inputPlaceholder:
       'Spotify veya YouTube Music bağlantısı ya da sanatçı, albüm, şarkı…',
     getIt: 'İndir',
-    hintSpotify: 'Parçalar, albümler ve çalma listeleri',
+    hintSpotify: 'Parçalar, albümler, çalma listeleri ve sanatçılar',
     hintYoutube:
       'YouTube Music şarkıları, albümleri, çalma listeleri ve sanatçıları',
     hintCsv: 'CSV içe aktar (Soundiiz, Exportify…)',
@@ -120,8 +120,6 @@ export default {
     typeEp: 'EP',
     unsupportedLink:
       'Downtify bu bağlantıyı indiremiyor. Bir Spotify parçası, albümü veya çalma listesi ya da YouTube Music bağlantısı yapıştır.',
-    spotifyArtistUnsupported:
-      'Spotify sanatçı sayfaları indirilemez — sanatçıyı burada ara.',
     tipSearchTitle: 'Adla ara',
     tipSearchBody:
       'Bir sanatçı, albüm veya şarkı yaz — sonuçlar YouTube Music’ten gelir.',
@@ -157,6 +155,15 @@ export default {
     filterNew: 'Yeni',
     filterLibrary: 'Kitaplıkta',
     filterQueue: 'Kuyrukta',
+    topSongs: 'Top Songs',
+    topSongsOf: 'Top Songs of {artist}',
+    topSongsEmpty: 'Bu sanatçı için popüler şarkı bulunamadı',
+    createPlaylist: 'Çalma listesi oluştur',
+    createPlaylistHint:
+      'Şarkıları bu sırayla çalma listesi olarak kaydeder; çalma listesi kapağı açıksa sanatçının fotoğrafı kapak olur.',
+    selectAll: 'Tümünü seç',
+    playCountSpotify: 'Spotify’daki dinlenme sayısı',
+    playCountYoutubeMusic: 'YouTube Music’teki dinlenme sayısı (yaklaşık)',
   },
   queue: {
     title: 'Kuyruk',

@@ -253,9 +253,15 @@ export function useDownloadManager() {
 
   /**
    * Queue already-resolved songs as one batch. `playlistUrl` makes it a
-   * playlist download (folder, M3U, playlist tracking).
+   * playlist download (folder, M3U, playlist tracking). Without a real
+   * playlist behind it (an artist's top songs), `playlistName` and
+   * `coverUrl` name the playlist and its cover instead, and `m3u`
+   * overrides the "generate M3U" setting for this batch.
    */
-  async function fromSongs(list, { playlistUrl = '' } = {}) {
+  async function fromSongs(
+    list,
+    { playlistUrl = '', playlistName = '', coverUrl = '', m3u } = {}
+  ) {
     const hints = playlistUrl ? { downtify_playlist_url: playlistUrl } : {}
     const songs = list.map((song, i) => ({
       ...song,
@@ -268,7 +274,9 @@ export function useDownloadManager() {
     await API.downloadBatch({
       songs,
       playlist_url: playlistUrl,
-      generate_m3u: generateM3u(),
+      playlist_name: playlistName,
+      cover_url: coverUrl,
+      generate_m3u: m3u ?? generateM3u(),
     })
     await syncQueueFromServer().catch(() => {})
     return songs.length

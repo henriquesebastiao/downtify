@@ -805,6 +805,129 @@ def artist_top_songs_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
     return songs
 
 
+_PLAYS_RE = re.compile(r'^\s*(\d[\d.,]*)\s*([KMB])?\s+plays?\s*$', re.I)
+_PLAYS_MULTIPLIER = {'': 1, 'K': 10**3, 'M': 10**6, 'B': 10**9}
+
+
+def _parse_play_count(text: Any) -> int:
+    """``'1.2B plays'`` -> ``1200000000``; ``0`` if it isn't a play count.
+
+    YouTube Music only reports a rounded figure (``4.4M plays``), so the
+    result is an approximation, not the real total. The text is English
+    because the client is created without a language.
+    """
+
+    match = _PLAYS_RE.match(text) if isinstance(text, str) else None
+    if match is None:
+        return 0
+    digits, suffix = match.group(1), (match.group(2) or '').upper()
+    try:
+        value = float(digits.replace(',', ''))
+    except ValueError:
+        return 0
+    return int(round(value * _PLAYS_MULTIPLIER[suffix]))
+
+
+def _music_list_rows(node: Any) -> list[dict[str, Any]]:
+    """Every ``musicResponsiveListItemRenderer`` under *node*."""
+
+    rows: list[dict[str, Any]] = []
+    if isinstance(node, dict):
+        row = node.get('musicResponsiveListItemRenderer')
+        if isinstance(row, dict):
+            rows.append(row)
+        for value in node.values():
+            rows.extend(_music_list_rows(value))
+    elif isinstance(node, list):
+        for value in node:
+            rows.extend(_music_list_rows(value))
+    return rows
+
+
+def _playlist_play_counts(playlist_id: str) -> dict[str, int]:
+    """``{videoId: approximate play count}`` for a playlist's first page.
+
+    ``ytmusicapi`` reads the "plays" column only for albums, so
+    ``get_playlist`` reports ``views: None`` for a playlist like an
+    artist's Top songs even though every row carries it. This reads the
+    same ``browse`` response directly instead. Best effort: any failure
+    returns ``{}`` and the songs simply have no count.
+    """
+
+    browse_id = (
+        playlist_id if playlist_id.startswith('VL') else f'VL{playlist_id}'
+    )
+    try:
+        response = _ytm()._send_request('browse', {'browseId': browse_id})
+    except Exception:
+        logger.opt(exception=True).warning(
+            'YouTube Music play counts unavailable for {}', playlist_id
+        )
+        return {}
+
+    counts: dict[str, int] = {}
+    for row in _music_list_rows(response):
+        video_id = (row.get('playlistItemData') or {}).get('videoId')
+        if not video_id:
+            continue
+        for column in row.get('flexColumns') or []:
+            runs = (
+                column.get('musicResponsiveListItemFlexColumnRenderer') or {}
+            ).get('text', {}).get('runs') or []
+            plays = _parse_play_count(runs[0].get('text') if runs else None)
+            if plays:
+                counts[video_id] = plays
+                break
+    return counts
+
+
+def artist_full_top_songs_from_channel_id(
+    channel_id: str,
+) -> list[dict[str, Any]]:
+    """Full 'Top songs' playlist for an artist, beyond the ~5-10 item
+    preview :func:`artist_top_songs_from_channel_id` returns.
+
+    The artist's ``songs`` shelf carries its own ``browseId`` for an
+    auto-generated playlist covering the shelf in full — resolved the same
+    way any YouTube Music playlist is, via :func:`playlist_tracks_from_id`.
+    Each song gets an approximate ``play_count`` (with
+    ``play_count_approx``) when the response has one.
+    Returns ``[]`` if the artist, its songs shelf, or the shelf's browseId
+    can't be resolved at all.
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return []
+
+    section = artist_data.get('songs')
+    if not isinstance(section, dict):
+        return []
+    browse_id = section.get('browseId')
+    if not browse_id:
+        return []
+
+    try:
+        songs = playlist_tracks_from_id(browse_id)
+    except Exception:
+        logger.exception(
+            'Failed to resolve full top-songs playlist {} for artist {}',
+            browse_id,
+            channel_id,
+        )
+        return []
+
+    plays = _playlist_play_counts(browse_id) if songs else {}
+    for song in songs:
+        count = plays.get(song.get('song_id') or '')
+        if count:
+            song['play_count'] = count
+            song['play_count_approx'] = True
+    return songs
+
+
 _YOUTUBE_URL_HOSTS = ('youtube.com', 'youtu.be', 'music.youtube.com')
 _YOUTUBE_VIDEO_ID_RE = re.compile(
     r'(?:[?&]v=|youtu\.be/|/shorts/)([A-Za-z0-9_-]{6,})'

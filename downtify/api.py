@@ -29,8 +29,17 @@ working without changes:
 * ``GET  /api/url/resolve`` (the same links, always as
   ``{kind, name, subtitle, cover_url, year, tracks, albums}`` - adds the
   playlist/album name and cover the plain track list lacks)
+* ``GET  /api/artists/top_songs/url`` (a Spotify or YouTube Music artist
+  URL - ``open.spotify.com/artist/...``, ``/channel/UC...`` or
+  ``/@handle`` - resolved to ``{source, artist_id, name, cover_url,
+  songs}``: the artist's own "Popular" / "Top songs" shelf, in the order
+  the source ranks it)
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
   ``track_number`` / ``album_track_total`` survive re-fetch by URL)
+* ``POST /api/download/batch`` (JSON body ``{songs, playlist_url,
+  generate_m3u}``; instead of ``playlist_url`` a caller may pass an
+  explicit ``playlist_name`` and ``cover_url`` - e.g. an artist's top
+  songs selection, which isn't backed by a real playlist id)
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
   downloads every track from one shared, already-resolved tracklist so
   metadata stays consistent across the whole release)
@@ -127,6 +136,7 @@ from .downloader import (
     MAX_PARALLEL_DOWNLOADS,
     Downloader,
     NoAudioMatchError,
+    save_playlist_cover,
 )
 from .library_catalog import (
     LibraryContext,
@@ -1084,6 +1094,20 @@ def _spotify_details(kind: str, sid: str) -> dict[str, Any]:
     if kind == 'playlist':
         name, tracks = spotify.playlist_info_and_tracks(sid)
         return _collection_details('playlist', tracks, name)
+    if kind == 'artist':
+        # The embed has no discography (see spotify.artist_name_from_id);
+        # the releases come from the player's artist overview. The client
+        # offers the top songs from /api/artists/top_songs/url.
+        name, cover_url, releases = spotify.artist_page_from_id(sid)
+        return {
+            'kind': 'artist',
+            'name': name,
+            'subtitle': '',
+            'cover_url': cover_url,
+            'year': '',
+            'tracks': [],
+            'albums': releases,
+        }
     raise HTTPException(
         status_code=400, detail=f'Unsupported entity type: {kind}'
     )
@@ -1143,6 +1167,76 @@ def url_resolve_endpoint(url: str = Query(...)) -> dict[str, Any]:
     except Exception as exc:
         logger.exception('Failed to resolve URL {}', url)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+# The YouTube Music "Top songs" playlist is the artist's whole catalogue
+# ranked by popularity (well over a hundred rows, with alternate editions
+# of the same song), so only its head is worth listing.
+YOUTUBE_TOP_SONGS_LIMIT = 50
+
+
+def _resolve_artist_top_songs(url: str) -> dict[str, Any]:
+    """Artist name, cover and top songs for a pasted artist URL.
+
+    Spotify is read from the artist's own "Popular" shelf (see
+    :func:`spotify.artist_top_songs_from_id`). YouTube Music prefers the
+    shelf's full auto-generated playlist (see
+    :func:`providers.artist_full_top_songs_from_channel_id`), cut to
+    ``YOUTUBE_TOP_SONGS_LIMIT``, and falls back to the ~5 item preview on
+    the artist page.
+    """
+
+    spotify_parsed = spotify.parse_spotify_url(url)
+    if spotify_parsed is not None and spotify_parsed[0] == 'artist':
+        _, artist_id = spotify_parsed
+        try:
+            name, cover_url, songs = spotify.artist_top_songs_from_id(
+                artist_id
+            )
+        except Exception as exc:
+            logger.exception('Failed to resolve Spotify artist {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {
+            'source': 'spotify',
+            'artist_id': artist_id,
+            'name': name,
+            'cover_url': cover_url,
+            'songs': songs,
+        }
+
+    youtube_parsed = providers.parse_youtube_url(url)
+    if youtube_parsed is not None and youtube_parsed[0] == 'artist':
+        _, channel_or_handle = youtube_parsed
+        try:
+            channel_id = providers.resolve_artist_channel_id(channel_or_handle)
+            info = providers.artist_info_from_channel_id(channel_id)
+            songs = providers.artist_full_top_songs_from_channel_id(
+                channel_id
+            ) or providers.artist_top_songs_from_channel_id(channel_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception('Failed to resolve YouTube artist {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {
+            'source': 'youtube',
+            'artist_id': channel_id,
+            'name': info.get('name') or channel_id,
+            'cover_url': info.get('cover_url') or '',
+            'songs': songs[:YOUTUBE_TOP_SONGS_LIMIT],
+        }
+
+    raise HTTPException(
+        status_code=400,
+        detail='A Spotify or YouTube Music artist URL is required',
+    )
+
+
+@router.get('/api/artists/top_songs/url')
+async def artist_top_songs_from_url_endpoint(
+    url: str = Query(...),
+) -> dict[str, Any]:
+    return await asyncio.to_thread(_resolve_artist_top_songs, url)
 
 
 def _merge_client_track_hints(
@@ -1549,20 +1643,45 @@ async def _write_batch_m3u(
     return m3u_path
 
 
+def _save_explicit_playlist_cover(
+    cover_url: str, m3u_path: Path, settings: dict[str, Any]
+) -> None:
+    """Save *cover_url* beside *m3u_path*, when enabled.
+
+    Counterpart to :func:`download_playlist_cover` for a batch that isn't
+    backed by a real Spotify/YouTube Music playlist id (e.g. an artist's
+    top songs) - the caller already knows the cover to use, so there's no
+    playlist to re-fetch it from. Gated by the same
+    ``download_cover_art_playlists`` setting.
+    """
+
+    if not settings.get('download_cover_art_playlists'):
+        return
+    try:
+        save_playlist_cover(cover_url, m3u_path)
+    except Exception:
+        logger.exception('Failed to save cover art for {}', m3u_path)
+
+
 async def _fetch_playlist_cover(
     target: Optional[tuple[str, str]],
     playlist_name: Optional[str],
     playlist_subdir: Optional[str],
+    cover_url: Optional[str] = None,
 ) -> None:
     """Save the playlist's own cover art beside where its M3U will go.
 
     Resolving the M3U path without writing it (see ``m3u.m3u_path_for``)
     means the cover can land before the first track does. No-ops when
     the setting is off, or when the download didn't come from a
-    playlist link.
+    playlist link (unless the caller passed an explicit ``cover_url``).
     """
 
-    if target is None or not playlist_name or state.downloader is None:
+    if (
+        (target is None and not cover_url)
+        or not playlist_name
+        or state.downloader is None
+    ):
         return
     # With organize-by-artist/album on, tracks are spread across those
     # folders and the M3U goes to the legacy Playlists/ directory — the
@@ -1573,9 +1692,17 @@ async def _fetch_playlist_cover(
         playlist_name,
         playlist_subdir=subdir,
     )
-    await asyncio.to_thread(
-        download_playlist_cover, *target, m3u_path, state.settings
-    )
+    if target is not None:
+        await asyncio.to_thread(
+            download_playlist_cover, *target, m3u_path, state.settings
+        )
+    else:
+        await asyncio.to_thread(
+            _save_explicit_playlist_cover,
+            cover_url,
+            m3u_path,
+            state.settings,
+        )
 
 
 async def _process_batch(
@@ -1586,6 +1713,7 @@ async def _process_batch(
     playlist_name: Optional[str] = None,
     *,
     batch_id: Optional[int] = None,
+    cover_url: Optional[str] = None,
 ) -> None:
     # Resolve the playlist name up-front so all tracks land in a single,
     # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
@@ -1641,7 +1769,9 @@ async def _process_batch(
         # Before the first track, so the folder already looks like the
         # playlist while it fills up (and a media server scanning
         # mid-download finds the artwork).
-        await _fetch_playlist_cover(target, playlist_name, playlist_subdir)
+        await _fetch_playlist_cover(
+            target, playlist_name, playlist_subdir, cover_url
+        )
     # Filename per song index, filled in as downloads land. The M3U is
     # rewritten from this after every completed download, so the playlist
     # grows as it downloads instead of appearing all at once at the end,
@@ -2366,6 +2496,8 @@ async def _submit_playlist_batch(
     *,
     generate_m3u: bool,
     batch_id: Optional[int] = None,
+    playlist_name: Optional[str] = None,
+    cover_url: Optional[str] = None,
 ) -> dict[str, Any]:
     valid_songs: list[dict[str, Any]] = []
     job_ids: list[str] = []
@@ -2391,7 +2523,9 @@ async def _submit_playlist_batch(
             job_ids,
             playlist_url,
             generate_m3u,
+            playlist_name,
             batch_id=batch_id,
+            cover_url=cover_url,
         )
     )
 
@@ -2423,6 +2557,11 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         )
     playlist_url = str(payload.get('playlist_url') or '')
     generate_m3u = bool(payload.get('generate_m3u', True))
+    # No real Spotify/YouTube Music playlist id backs this batch (e.g. an
+    # artist's top songs) - the caller names the playlist and its cover
+    # directly instead of us deriving them from playlist_url.
+    playlist_name = str(payload.get('playlist_name') or '') or None
+    cover_url = str(payload.get('cover_url') or '') or None
 
     # A Spotify playlist download is tracked as a playlist batch, so an
     # incomplete one can be finished later (see /api/playlists/incomplete).
@@ -2443,7 +2582,12 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         )
 
     return await _submit_playlist_batch(
-        songs, playlist_url, generate_m3u=generate_m3u, batch_id=batch_id
+        songs,
+        playlist_url,
+        generate_m3u=generate_m3u,
+        batch_id=batch_id,
+        playlist_name=playlist_name,
+        cover_url=cover_url,
     )
 
 
