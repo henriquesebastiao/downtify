@@ -42,6 +42,8 @@ export default {
     play: 'Αναπαραγωγή',
     playAll: 'Αναπαραγωγή όλων',
     playItem: 'Αναπαραγωγή {name}',
+    playPreview: 'Αναπαραγωγή προεπισκόπησης του {name}',
+    pausePreview: 'Παύση προεπισκόπησης του {name}',
     shuffle: 'Τυχαία σειρά',
     playNext: 'Αναπαραγωγή επόμενο',
     addToQueue: 'Προσθήκη στην ουρά',

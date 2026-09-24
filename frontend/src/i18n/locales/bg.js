@@ -42,6 +42,8 @@ export default {
     play: 'Пусни',
     playAll: 'Пусни всички',
     playItem: 'Пусни {name}',
+    playPreview: 'Чуй откъс от {name}',
+    pausePreview: 'Пауза на откъса от {name}',
     shuffle: 'Разбъркано',
     playNext: 'Пусни следваща',
     addToQueue: 'Добави към опашката',

@@ -1,25 +1,65 @@
 <template>
   <div
     class="group flex h-16 items-center gap-3 rounded-[12px] px-3 transition-colors"
-    :class="isCurrent ? 'bg-surface' : 'hover:bg-surface'"
+    :class="highlighted ? 'bg-surface' : 'hover:bg-surface'"
     @click="onRowClick"
-    @dblclick="play"
+    @dblclick="ensurePlaying"
   >
     <span
       v-if="index !== null"
       class="flex w-6 items-center justify-center text-[13px] text-faint max-sm:hidden"
     >
       <EqBars v-if="isCurrent" :size="12" :playing="player.isPlaying.value" />
+      <!-- A clip that isn't downloaded yet, while it is loaded: play/pause
+           with a ring that fills as the clip goes, where the number was. -->
+      <button
+        v-else-if="previewActive"
+        type="button"
+        class="relative grid size-6 place-items-center text-fg"
+        :aria-label="playLabel"
+        @click.stop="toggle"
+      >
+        <svg
+          class="absolute inset-0 size-full -rotate-90"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            :r="PREVIEW_RING_RADIUS"
+            stroke="currentColor"
+            stroke-opacity="0.25"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            :r="PREVIEW_RING_RADIUS"
+            class="stroke-accent"
+            stroke-linecap="round"
+            :stroke-dasharray="PREVIEW_RING_LENGTH"
+            :stroke-dashoffset="ringOffset(preview.progress.value)"
+            style="transition: stroke-dashoffset 250ms linear"
+          />
+        </svg>
+        <AppIcon
+          :name="previewPlaying ? 'pause' : 'play'"
+          :size="10"
+          :class="previewLoading ? 'animate-pulse' : ''"
+        />
+      </button>
       <template v-else>
-        <span class="tabular" :class="track ? 'group-hover:hidden' : ''">{{
+        <span class="tabular" :class="playable ? 'group-hover:hidden' : ''">{{
           index + 1
         }}</span>
         <button
-          v-if="track"
+          v-if="playable"
           type="button"
           class="hidden text-fg group-hover:block"
-          :aria-label="t('actions.playItem', { name: song.name })"
-          @click.stop="play"
+          :aria-label="playLabel"
+          @click.stop="toggle"
         >
           <AppIcon name="play" :size="14" />
         </button>
@@ -27,11 +67,11 @@
     </span>
 
     <button
-      v-if="track"
+      v-if="playable"
       type="button"
-      class="relative shrink-0"
-      :aria-label="t('actions.playItem', { name: song.name })"
-      @click.stop="play"
+      class="shrink-0"
+      :aria-label="playLabel"
+      @click.stop="toggle"
     >
       <CoverArt
         :src="song.cover_url"
@@ -54,7 +94,7 @@
       <p class="flex items-center gap-1.5">
         <span
           class="truncate text-sm font-semibold"
-          :class="isCurrent ? 'text-accent' : ''"
+          :class="highlighted ? 'text-accent' : ''"
           >{{ song.name }}</span
         >
         <span
@@ -80,8 +120,9 @@
       {{ song.duration ? formatDuration(song.duration) : '' }}
     </span>
     <!-- Not downloaded: the download button, with its progress and retry;
-         downloaded: the "In library" label. Playing is on the left. -->
-    <div class="flex w-28 shrink-0 justify-end">
+         downloaded: the "In library" label. Playing is on the left. A click
+         here is the download's own, never the row's (a tap plays). -->
+    <div class="flex w-28 shrink-0 justify-end" @click.stop @dblclick.stop>
       <DownloadState :song="song" />
     </div>
   </div>
@@ -95,19 +136,30 @@
 // screen). On the right it shows the download state - the button, its
 // progress, or the "In library" label - the way a search result does.
 //
+// Until the song is downloaded the same affordances play its 30 s preview
+// clip, when it has one (`song.preview_url`): on the row itself, without the
+// built-in player - see model/preview.js.
+//
 // Deliberately standalone: it borrows the look of SongRow and the behaviour
 // of TrackList without importing or editing either, so neither grid can be
 // affected by it. It takes a *song* (what a search or link result is), not a
 // library track, and finds the file behind it once it has been downloaded.
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
 import DownloadState from '../search/DownloadState.vue'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
+import { usePreview } from '/src/model/preview'
 import { useTrackActions } from '/src/model/trackActions'
 import { formatDuration } from '/src/lib/format'
+import {
+  PREVIEW_RING_LENGTH,
+  PREVIEW_RING_RADIUS,
+  previewUrl,
+  ringOffset,
+} from '/src/lib/preview'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -125,6 +177,7 @@ const props = defineProps({
 const { t } = useI18n()
 const library = useLibrary()
 const player = usePlayer()
+const preview = usePreview()
 const actions = useTrackActions()
 
 const artists = computed(
@@ -145,6 +198,32 @@ const isCurrent = computed(
   () => !!track.value && player.currentTrack.value?.file === track.value.file
 )
 
+// A song that isn't in the library but has a clip to listen to.
+const previewable = computed(() => !track.value && !!previewUrl(props.song))
+const songId = computed(() => String(props.song.song_id || ''))
+const previewActive = computed(
+  () => previewable.value && preview.activeId.value === songId.value
+)
+const previewPlaying = computed(
+  () => previewActive.value && preview.isPlaying.value
+)
+const previewLoading = computed(
+  () => previewActive.value && preview.isLoading.value
+)
+// Something on this row plays: the downloaded song, or its clip.
+const playable = computed(() => !!track.value || previewable.value)
+const highlighted = computed(() => isCurrent.value || previewActive.value)
+const playLabel = computed(() =>
+  t(
+    track.value
+      ? 'actions.playItem'
+      : previewPlaying.value
+        ? 'actions.pausePreview'
+        : 'actions.playPreview',
+    { name: props.song.name }
+  )
+)
+
 function play() {
   if (!track.value) return
   const start = props.queue.findIndex((item) => item.file === track.value.file)
@@ -152,8 +231,30 @@ function play() {
   else actions.play(props.queue, start, props.context)
 }
 
+// The play button: the song from the library, or - not downloaded yet - its
+// clip, which the same button pauses again.
+function toggle() {
+  if (track.value) play()
+  else if (previewable.value) preview.toggle(props.song)
+}
+
+// A double click makes sure the song plays; it never pauses a clip.
+function ensurePlaying() {
+  if (track.value) play()
+  else if (previewable.value && !previewPlaying.value) {
+    preview.toggle(props.song)
+  }
+}
+
 // On a touch screen a tap on the row plays it (a double click can't).
 function onRowClick() {
-  if (window.matchMedia('(pointer: coarse)').matches) play()
+  if (window.matchMedia('(pointer: coarse)').matches) toggle()
 }
+
+// Once the song has been downloaded the row plays the real thing, so the
+// clip ends; a row that goes away takes its clip with it.
+watch(track, (found) => {
+  if (found) preview.stopFor(songId.value)
+})
+onBeforeUnmount(() => preview.stopFor(songId.value))
 </script>

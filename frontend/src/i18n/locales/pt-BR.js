@@ -42,6 +42,8 @@ export default {
     play: 'Tocar',
     playAll: 'Tocar tudo',
     playItem: 'Tocar {name}',
+    playPreview: 'Ouvir uma prévia de {name}',
+    pausePreview: 'Pausar a prévia de {name}',
     shuffle: 'Aleatório',
     playNext: 'Tocar a seguir',
     addToQueue: 'Adicionar à fila',

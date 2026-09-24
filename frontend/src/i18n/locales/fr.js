@@ -42,6 +42,8 @@ export default {
     play: 'Lire',
     playAll: 'Tout lire',
     playItem: 'Lire {name}',
+    playPreview: 'Écouter un extrait de {name}',
+    pausePreview: "Mettre en pause l'extrait de {name}",
     shuffle: 'Aléatoire',
     playNext: 'Lire ensuite',
     addToQueue: 'Ajouter à la file',

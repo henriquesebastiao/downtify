@@ -42,6 +42,8 @@ export default {
     play: 'Reproducir',
     playAll: 'Reproducir todo',
     playItem: 'Reproducir {name}',
+    playPreview: 'Escuchar un adelanto de {name}',
+    pausePreview: 'Pausar el adelanto de {name}',
     shuffle: 'Aleatorio',
     playNext: 'Reproducir a continuación',
     addToQueue: 'Añadir a la cola',
