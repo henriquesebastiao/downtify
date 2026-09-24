@@ -19,6 +19,11 @@ browser cannot ask for it directly). It is a pass-through, nothing more:
 * The browser is told to cache the response for three hours
   (:data:`BROWSER_CACHE_SECONDS`), which is the only cache that holds
   the pixels.
+* Only a real answer is ever cached - the photo, or Deezer saying this
+  artist has none. Anything that goes wrong (Deezer unreachable, over its
+  limit of 50 requests per 5 seconds, a refused or broken download) raises
+  :class:`PhotoUnavailable` instead, which is neither remembered here nor
+  cached by the browser: the next request simply tries again.
 """
 
 from __future__ import annotations
@@ -45,6 +50,14 @@ _url_cache: dict[str, tuple[Optional[str], float]] = {}
 _cache_lock = threading.Lock()
 _slots = threading.BoundedSemaphore(_MAX_CONCURRENT)
 _inflight: dict[str, threading.Lock] = {}
+
+
+class PhotoUnavailable(Exception):
+    """The photo couldn't be looked up or downloaded right now.
+
+    Not "this artist has no photo" (that is a ``None`` answer): a failure,
+    so nothing about it is remembered or cached anywhere.
+    """
 
 
 def _is_cdn_url(url: str) -> bool:
@@ -79,9 +92,10 @@ def _remember_url(key: str, url: Optional[str]) -> None:
 
 
 def _lookup_url(name: str) -> Optional[str]:
-    """The Deezer CDN URL for *name*, cached (a genuine "no photo" too,
-    but not a failed lookup) and deduped so a burst of identical requests
-    makes one search call."""
+    """The Deezer CDN URL for *name*, or ``None`` when Deezer says the
+    artist has no photo. Both are cached, and deduped so a burst of
+    identical requests makes one search call; a failed lookup is neither
+    (:class:`PhotoUnavailable`)."""
 
     key = name.strip().lower()
     hit, url = _cached_url(key)
@@ -97,12 +111,13 @@ def _lookup_url(name: str) -> Optional[str]:
             try:
                 with _slots:
                     url = deezer.exact_artist_picture(name)
-            except ValueError:
+            except ValueError as exc:
                 # Deezer unreachable or rate limiting us - not "no photo",
                 # so it is not remembered: the next request tries again.
-                return None
+                raise PhotoUnavailable('Deezer did not answer') from exc
             if url is not None and not _is_cdn_url(url):
-                url = None
+                # Not something to download - an oddity, not an answer.
+                raise PhotoUnavailable('Deezer sent an unexpected URL')
             _remember_url(key, url)
             return url
     finally:
@@ -112,9 +127,12 @@ def _lookup_url(name: str) -> Optional[str]:
 
 def fetch_proxied_photo(name: str) -> Optional[tuple[bytes, str]]:
     """``(image bytes, content type)`` for *name*'s Deezer photo, or
-    ``None`` when Deezer has no exact match / the download fails.
+    ``None`` when Deezer has no exact match for the name or only its
+    placeholder - the one answer that is a miss.
 
-    Display only - see the module docstring. The bytes are not kept.
+    Raises :class:`PhotoUnavailable` when anything fails: the lookup, the
+    download, or what came back not being a usable image. Display only -
+    see the module docstring. The bytes are not kept.
     """
 
     if not name.strip():
@@ -126,13 +144,13 @@ def fetch_proxied_photo(name: str) -> Optional[tuple[bytes, str]]:
         with _slots:
             resp = httpx.get(url, timeout=_TIMEOUT)
         resp.raise_for_status()
-    except Exception:
+    except Exception as exc:
         logger.opt(exception=True).debug('Artist photo proxy fetch failed')
-        return None
+        raise PhotoUnavailable('Could not download the photo') from exc
     data = resp.content
     if not data or len(data) > _MAX_BYTES:
-        return None
+        raise PhotoUnavailable('The photo is empty or too large')
     content_type = resp.headers.get('content-type', 'image/jpeg')
     if not content_type.startswith('image/'):
-        return None
+        raise PhotoUnavailable('The photo is not an image')
     return data, content_type.split(';')[0].strip()

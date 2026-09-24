@@ -1609,6 +1609,21 @@ def test_photo_proxy_endpoint_miss_is_a_cacheable_404(app_state, monkeypatch):
     assert resp.headers['cache-control'] == 'public, max-age=10800'
 
 
+def test_photo_proxy_endpoint_a_failure_is_a_503_that_is_never_cached(
+    app_state, monkeypatch
+):
+    # Deezer over its limit, unreachable, a broken download...: not "this
+    # artist has no photo", so the browser must not keep it for hours.
+    def down(name):
+        raise api.artist_photo_proxy.PhotoUnavailable('Deezer did not answer')
+
+    monkeypatch.setattr(api.artist_photo_proxy, 'fetch_proxied_photo', down)
+    resp = api.artist_photo_proxy_endpoint(name='Foo Fighters')
+    assert resp.status_code == 503
+    assert resp.headers['cache-control'] == 'no-store'
+    assert not (app_state / 'Metadata').exists()
+
+
 def test_photo_proxy_endpoint_prefers_saved_photo(app_state, monkeypatch):
     artist_profile.save_image(
         app_state, 'Avril Lavigne', artist_profile.KIND_PHOTO, _TINY_PNG

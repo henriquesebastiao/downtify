@@ -276,6 +276,8 @@ A **display-only** photo for an artist that has no saved photo, used for the til
 
 **Response:** the image bytes with `Cache-Control: public, max-age=10800` and an `ETag`, so the browser holds on to it for three hours. If a photo is already saved for that artist, that local file is sent instead, without browser caching (`Cache-Control: no-cache`), so a newly picked photo shows up right away. `404` (also cacheable for three hours) when Deezer has no exact match, or when the matched artist has no photo on Deezer (it only has a generic placeholder picture, which is never returned).
 
+Only a real answer is ever cached. If something goes wrong - Deezer can't be reached, it refuses because of its limit of 50 requests per 5 seconds, or the image download breaks - the answer is `503` with `Cache-Control: no-store`: nothing about it is kept, by the server or by the browser, so the next time the page asks (opening it again, or a reload) the photo simply comes through.
+
 ---
 
 ### `GET /api/artists/profile`

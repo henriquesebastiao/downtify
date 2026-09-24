@@ -97,14 +97,17 @@ def test_non_dzcdn_url_is_never_downloaded(monkeypatch):
         raise AssertionError('must not download')
 
     monkeypatch.setattr(artist_photo_proxy.httpx, 'get', boom)
-    assert artist_photo_proxy.fetch_proxied_photo('Paramore') is None
+    # An oddity, not an answer: refused, and nothing is remembered.
+    with pytest.raises(artist_photo_proxy.PhotoUnavailable):
+        artist_photo_proxy.fetch_proxied_photo('Paramore')
+    assert artist_photo_proxy._url_cache == {}
 
 
 @pytest.mark.parametrize(
     'headers',
     [{'content-type': 'text/html'}, {}],
 )
-def test_non_image_response_is_dropped(monkeypatch, headers):
+def test_non_image_response_is_refused(monkeypatch, headers):
     monkeypatch.setattr(deezer, 'exact_artist_picture', lambda n: CDN)
     monkeypatch.setattr(
         artist_photo_proxy.httpx,
@@ -112,12 +115,15 @@ def test_non_image_response_is_dropped(monkeypatch, headers):
         lambda *a, **k: _resp(content=b'<html>', headers=headers),
     )
     # A missing content-type defaults to jpeg; only an explicit non-image
-    # type is refused.
-    result = artist_photo_proxy.fetch_proxied_photo('Paramore')
-    assert (result is None) == bool(headers)
+    # type is refused - as a failure, not as "no photo".
+    if headers:
+        with pytest.raises(artist_photo_proxy.PhotoUnavailable):
+            artist_photo_proxy.fetch_proxied_photo('Paramore')
+    else:
+        assert artist_photo_proxy.fetch_proxied_photo('Paramore')
 
 
-def test_oversized_image_is_dropped(monkeypatch):
+def test_oversized_image_is_refused(monkeypatch):
     monkeypatch.setattr(deezer, 'exact_artist_picture', lambda n: CDN)
     big = b'x' * (artist_photo_proxy._MAX_BYTES + 1)
     monkeypatch.setattr(
@@ -127,7 +133,19 @@ def test_oversized_image_is_dropped(monkeypatch):
             content=big, headers={'content-type': 'image/jpeg'}
         ),
     )
-    assert artist_photo_proxy.fetch_proxied_photo('Paramore') is None
+    with pytest.raises(artist_photo_proxy.PhotoUnavailable):
+        artist_photo_proxy.fetch_proxied_photo('Paramore')
+
+
+def test_a_failed_download_is_a_failure_not_a_miss(monkeypatch):
+    monkeypatch.setattr(deezer, 'exact_artist_picture', lambda n: CDN)
+
+    def timeout(*a, **k):
+        raise httpx.ReadTimeout('slow CDN')
+
+    monkeypatch.setattr(artist_photo_proxy.httpx, 'get', timeout)
+    with pytest.raises(artist_photo_proxy.PhotoUnavailable):
+        artist_photo_proxy.fetch_proxied_photo('Paramore')
 
 
 def test_blank_name_makes_no_request(monkeypatch):
@@ -178,7 +196,8 @@ def test_a_failed_lookup_is_not_remembered_as_no_photo(monkeypatch):
             content=b'jpegbytes', headers={'content-type': 'image/jpeg'}
         ),
     )
-    assert artist_photo_proxy.fetch_proxied_photo('Paramore') is None
+    with pytest.raises(artist_photo_proxy.PhotoUnavailable):
+        artist_photo_proxy.fetch_proxied_photo('Paramore')
     assert 'paramore' not in artist_photo_proxy._url_cache
     # The outage is over: the very next request gets the photo.
     assert artist_photo_proxy.fetch_proxied_photo('Paramore') == (
@@ -193,5 +212,50 @@ def test_an_in_flight_marker_never_outlives_a_failed_lookup(monkeypatch):
         raise ValueError('Could not reach Deezer')
 
     monkeypatch.setattr(deezer, 'exact_artist_picture', down)
-    artist_photo_proxy.fetch_proxied_photo('Paramore')
+    with pytest.raises(artist_photo_proxy.PhotoUnavailable):
+        artist_photo_proxy.fetch_proxied_photo('Paramore')
     assert artist_photo_proxy._inflight == {}
+
+
+def test_deezers_request_limit_is_not_remembered_as_no_photo(monkeypatch):
+    # Over 50 requests per 5 seconds Deezer answers HTTP 200 with an
+    # ``error`` object and no ``data`` - end to end through the real lookup.
+    quota = _resp(
+        payload={
+            'error': {
+                'type': 'Exception',
+                'message': 'Quota limit exceeded',
+                'code': 4,
+            }
+        }
+    )
+    answers = [
+        quota,
+        _search([{'name': 'Foo Fighters', 'picture_medium': CDN}]),
+    ]
+    monkeypatch.setattr(
+        artist_photo_proxy.httpx,
+        'get',
+        lambda url, *a, **k: (
+            answers.pop(0)
+            if 'api.deezer.com' in str(url)
+            else _resp(
+                content=b'jpegbytes', headers={'content-type': 'image/jpeg'}
+            )
+        ),
+    )
+    with pytest.raises(artist_photo_proxy.PhotoUnavailable):
+        artist_photo_proxy.fetch_proxied_photo('Foo Fighters')
+    assert artist_photo_proxy._url_cache == {}
+    # A moment later the limit is gone, and the next request just works.
+    assert artist_photo_proxy.fetch_proxied_photo('Foo Fighters') == (
+        b'jpegbytes',
+        'image/jpeg',
+    )
+
+
+def test_only_deezers_own_no_photo_answer_is_remembered(monkeypatch):
+    rows = [{'name': 'Someone Else', 'picture_medium': CDN}]
+    monkeypatch.setattr(deezer.httpx, 'get', lambda *a, **k: _search(rows))
+    assert artist_photo_proxy.fetch_proxied_photo('Nobody') is None
+    assert artist_photo_proxy._cached_url('nobody') == (True, None)

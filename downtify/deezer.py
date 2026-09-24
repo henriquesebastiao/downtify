@@ -205,6 +205,35 @@ def _most_popular_exact_match(
     return max(matches, key=lambda row: int(row.get('nb_fan') or 0))
 
 
+def _search_rows(text: str, limit: int) -> list[Any]:
+    """The rows of Deezer's artist search for *text*.
+
+    Raises :class:`ValueError` whenever Deezer did not really answer: it
+    can't be reached, refuses (an HTTP error) or - the sneaky one - reports
+    a problem inside a *successful* response. Its limit of 50 requests per
+    5 seconds is reported that way: HTTP 200, an ``error`` object
+    (``{"code": 4, "message": "Quota limit exceeded"}``) and no ``data``,
+    which would read as "no such artist" if taken at face value. Callers
+    must not remember any of this as an answer.
+    """
+
+    try:
+        resp = httpx.get(
+            _SEARCH_URL, params={'q': text, 'limit': limit}, timeout=_TIMEOUT
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        logger.opt(exception=True).debug('Deezer artist search failed')
+        raise ValueError('Could not reach Deezer') from exc
+    if not isinstance(data, dict):
+        raise ValueError('Deezer sent an unexpected answer')
+    if data.get('error'):
+        logger.debug('Deezer refused the artist search: {}', data['error'])
+        raise ValueError('Deezer refused the request')
+    return data.get('data') or []
+
+
 def search_artist(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """Artist photo candidates for *query*, largest Deezer offers each.
 
@@ -218,19 +247,12 @@ def search_artist(query: str, limit: int = 10) -> list[dict[str, Any]]:
     if not text:
         return []
     try:
-        resp = httpx.get(
-            _SEARCH_URL,
-            params={'q': text, 'limit': max(1, limit)},
-            timeout=_TIMEOUT,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception:
-        logger.opt(exception=True).debug('Deezer artist search failed')
+        rows = _search_rows(text, max(1, limit))
+    except ValueError:
         return []
 
     results: list[dict[str, Any]] = []
-    for row in data.get('data') or []:
+    for row in rows:
         if not isinstance(row, dict):
             continue
         name = str(row.get('name') or '').strip()
@@ -268,15 +290,10 @@ def resolve_artist_id(name: str) -> Optional[str]:
     if not file_name_key(text):
         return None
     try:
-        resp = httpx.get(
-            _SEARCH_URL, params={'q': text, 'limit': 25}, timeout=_TIMEOUT
-        )
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception:
-        logger.opt(exception=True).debug('Deezer artist id lookup failed')
+        rows = _search_rows(text, 25)
+    except ValueError:
         return None
-    match = _most_popular_exact_match(data.get('data') or [], text)
+    match = _most_popular_exact_match(rows, text)
     if match is None:
         return None
     artist_id = match.get('id')
@@ -295,23 +312,14 @@ def exact_artist_picture(name: str) -> Optional[str]:
     not a namesake's photo or the placeholder.
 
     Raises :class:`ValueError` when Deezer can't be reached or refuses
-    (a rate limit, say): that is not "this artist has no photo", and the
-    caller must not remember it as one.
+    (a rate limit, say, see :func:`_search_rows`): that is not "this
+    artist has no photo", and the caller must not remember it as one.
     """
 
     text = name.strip()
     if not file_name_key(text):
         return None
-    try:
-        resp = httpx.get(
-            _SEARCH_URL, params={'q': text, 'limit': 25}, timeout=_TIMEOUT
-        )
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as exc:
-        logger.opt(exception=True).debug('Deezer artist photo lookup failed')
-        raise ValueError('Could not reach Deezer') from exc
-    match = _most_popular_exact_match(data.get('data') or [], text)
+    match = _most_popular_exact_match(_search_rows(text, 25), text)
     if match is None or not _has_real_picture(match):
         return None
     return match.get('picture_medium') or None

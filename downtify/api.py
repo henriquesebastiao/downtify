@@ -30,8 +30,9 @@ working without changes:
   that has no saved one - a related artist, or a Library artist (in the
   grid and on its own page) nobody picked a photo for - relayed from
   Deezer and never stored - see
-  ``downtify.artist_photo_proxy``; browser-cached for three hours, but a
-  photo already saved locally is served uncached instead)
+  ``downtify.artist_photo_proxy``; browser-cached for three hours - a
+  photo, or Deezer having none (404) - but a photo already saved locally
+  is served uncached instead, and a failure is a 503 that is never cached)
 * ``POST /api/artists/art/bulk`` (the same, for many artists at once -
   body ``{names}``, response ``{<name>: {photo_url, banner_url,
   photo_version, banner_version}}`` - used
@@ -1107,7 +1108,10 @@ def artist_photo_proxy_endpoint(name: str = Query(...)) -> Response:
 
     A photo already saved for the artist wins and is served uncached;
     otherwise Deezer's is relayed and cached by the browser for
-    three hours. Not a way to obtain a photo to keep - see
+    three hours, and so is Deezer saying the artist has none (404). A
+    failure - Deezer unreachable or over its request limit, a broken
+    download - is a 503 the browser is told not to keep, so the next visit
+    simply asks again. Not a way to obtain a photo to keep - see
     ``downtify.artist_photo_proxy``.
     """
 
@@ -1125,10 +1129,15 @@ def artist_photo_proxy_endpoint(name: str = Query(...)) -> Response:
             # at any moment, so the browser revalidates it every time.
             headers={'Cache-Control': 'no-cache'},
         )
-    photo = artist_photo_proxy.fetch_proxied_photo(name)
+    try:
+        photo = artist_photo_proxy.fetch_proxied_photo(name)
+    except artist_photo_proxy.PhotoUnavailable:
+        # Not "no photo": never cached, so whatever went wrong (a rate
+        # limit, say) is gone the next time the page asks.
+        return Response(status_code=503, headers={'Cache-Control': 'no-store'})
     if photo is None:
-        # A miss is cacheable too: the page would otherwise re-ask for
-        # every tile on every visit.
+        # Deezer's own answer that the artist has none: cacheable, or the
+        # page would re-ask for every tile on every visit.
         return Response(
             status_code=404, headers={'Cache-Control': cache_control}
         )

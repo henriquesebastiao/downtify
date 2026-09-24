@@ -329,6 +329,50 @@ def test_exact_artist_picture_raises_when_deezer_cant_be_reached():
         exact_artist_picture('Paramore')
 
 
+_QUOTA_ANSWER = {
+    'error': {
+        'type': 'Exception',
+        'message': 'Quota limit exceeded',
+        'code': 4,
+    }
+}
+
+
+def _ok_response(payload):
+    request = httpx.Request('GET', 'https://api.deezer.com/search/artist')
+    return httpx.Response(200, json=payload, request=request)
+
+
+def test_exact_artist_picture_raises_when_deezer_reports_its_quota():
+    """Over 50 requests per 5 s Deezer answers HTTP 200 with an ``error``
+    object and no ``data`` - not "no such artist"."""
+
+    with (
+        patch(
+            'downtify.deezer.httpx.get',
+            return_value=_ok_response(_QUOTA_ANSWER),
+        ),
+        pytest.raises(ValueError, match='refused'),
+    ):
+        exact_artist_picture('Foo Fighters')
+
+
+def test_resolve_artist_id_and_search_artist_do_not_take_the_quota_for_no_match():
+    with patch(
+        'downtify.deezer.httpx.get', return_value=_ok_response(_QUOTA_ANSWER)
+    ):
+        assert resolve_artist_id('Foo Fighters') is None
+        assert search_artist('Foo Fighters') == []
+
+
+def test_a_search_answer_that_is_not_an_object_counts_as_a_failure():
+    with (
+        patch('downtify.deezer.httpx.get', return_value=_ok_response([1, 2])),
+        pytest.raises(ValueError, match='unexpected'),
+    ):
+        exact_artist_picture('Foo Fighters')
+
+
 def test_exact_artist_picture_raises_on_a_refusal_such_as_a_rate_limit():
     request = httpx.Request('GET', 'https://api.deezer.com/search/artist')
     response = httpx.Response(429, request=request)
