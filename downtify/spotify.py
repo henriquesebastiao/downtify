@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
@@ -1362,24 +1363,20 @@ _ARTIST_OVERVIEW_HASH = (
 )
 
 
-def artist_banner_url_from_id(artist_id: str) -> str:
-    """Largest wide header/banner image an artist has set, or ``""``.
-
-    Not exposed by the embed page at all (see
-    :func:`artist_image_url_from_id`) - reuses the embed's anonymous
-    access token against the same persisted-GraphQL pathfinder API
-    :func:`_graphql_fetch_page` already calls for playlist pagination,
-    just a different operation (``queryArtistOverview``) that happens to
-    surface the artist page's real header image alongside data we don't
-    need here. Many artists simply don't have one set - this returns
-    ``""`` rather than falling back to the square photo, so callers
-    don't silently save the wrong shape as a "banner".
+def _artist_overview(artist_id: str) -> dict[str, Any]:
+    """Raw ``artistUnion`` from the persisted-GraphQL pathfinder API's
+    ``queryArtistOverview`` operation, or ``{}`` on any failure -
+    :func:`artist_banner_url_from_id` (``headerImage``) and
+    :func:`related_artist_names_from_id` (``relatedContent.
+    relatedArtists``) both read different fields off the same response,
+    so a caller wanting both only pays for the request once by calling
+    this directly instead.
     """
 
     payload = _fetch_embed_json('artist', artist_id)
     token = _token_from_embed_payload(payload)
     if not token:
-        return ''
+        return {}
     try:
         resp = httpx.get(
             _PARTNER_API,
@@ -1408,16 +1405,187 @@ def artist_banner_url_from_id(artist_id: str) -> str:
         data = resp.json()
     except Exception:
         logger.opt(exception=True).debug(
-            'Spotify artist banner fetch failed for {}', artist_id
+            'Spotify artist overview fetch failed for {}', artist_id
         )
-        return ''
+        return {}
     artist = (data.get('data') or {}).get('artistUnion') or {}
-    if artist.get('__typename') != 'Artist':
-        return ''
-    header = (artist.get('headerImage') or {}).get('data') or {}
+    return artist if artist.get('__typename') == 'Artist' else {}
+
+
+def artist_banner_url_from_id(artist_id: str) -> str:
+    """Largest wide header/banner image an artist has set, or ``""``.
+
+    Not exposed by the embed page at all (see
+    :func:`artist_image_url_from_id`) - reuses the embed's anonymous
+    access token against the same persisted-GraphQL pathfinder API
+    :func:`_graphql_fetch_page` already calls for playlist pagination,
+    just a different operation (``queryArtistOverview``, see
+    :func:`_artist_overview`) that happens to surface the artist page's
+    real header image alongside data we don't need here. Many artists
+    simply don't have one set - this returns ``""`` rather than falling
+    back to the square photo, so callers don't silently save the wrong
+    shape as a "banner".
+    """
+
+    header = (_artist_overview(artist_id).get('headerImage') or {}).get(
+        'data'
+    ) or {}
     if header.get('__typename') != 'ImageV2':
         return ''
     return _largest_image(header.get('sources') or [])
+
+
+def related_artist_names_from_id(artist_id: str) -> list[str]:
+    """ "Fans also like"-equivalent names for a Spotify artist id, or
+    ``[]`` - from the same ``queryArtistOverview`` call
+    :func:`artist_banner_url_from_id` uses (see :func:`_artist_overview`),
+    just ``relatedContent.relatedArtists`` instead of ``headerImage``.
+    Spotify's own version of this also carries an id and photo per
+    related artist, thrown away here since callers only want a name list
+    to merge with Deezer's own related-artist names (see
+    :func:`downtify.artist_profile.fetch_bio`).
+    """
+
+    items = (
+        (_artist_overview(artist_id).get('relatedContent') or {}).get(
+            'relatedArtists'
+        )
+        or {}
+    ).get('items') or []
+    names = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = str((item.get('profile') or {}).get('name') or '').strip()
+        if name:
+            names.append(name)
+    return names
+
+
+# sha256 of the searchSuggestions GraphQL document (the web player's
+# search-as-you-type box) - same persisted-query mechanism as above.
+# Update when the player bundle rolls and the API returns
+# PersistedQueryNotFound.
+# Location in the bundle: new tz.l("searchSuggestions","query","<hash>",null)
+_SEARCH_SUGGESTIONS_HASH = (
+    'b50ebd72524415b132ddaca04158fd7aca529da28be322c9924643c0633df5bd'
+)
+# Any public embed page carries an anonymous access token; this artist's
+# is only fetched to get one.
+_TOKEN_SEED_ARTIST_ID = '6XyY86QOPPrYVGvF9ch6wz'
+_TOKEN_FALLBACK_TTL = 300.0
+_token_lock = threading.Lock()
+_token_cache: Optional[tuple[str, float]] = None
+
+
+def _anonymous_token() -> Optional[str]:
+    """An anonymous web-player access token, cached until it expires."""
+
+    global _token_cache  # noqa: PLW0603
+    with _token_lock:
+        cached = _token_cache
+    if cached is not None and time.time() < cached[1]:
+        return cached[0]
+    try:
+        payload = _fetch_embed_json('artist', _TOKEN_SEED_ARTIST_ID)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Spotify anonymous token fetch failed'
+        )
+        return None
+    token = _token_from_embed_payload(payload)
+    if not token:
+        return None
+    try:
+        expires = (
+            int(
+                payload['props']['pageProps']['state']['settings']['session'][
+                    'accessTokenExpirationTimestampMs'
+                ]
+            )
+            / 1000
+            - 60
+        )
+    except (KeyError, TypeError, ValueError):
+        expires = time.time() + _TOKEN_FALLBACK_TTL
+    with _token_lock:
+        _token_cache = (token, expires)
+    return token
+
+
+def search_artist_by_name(name: str) -> Optional[dict[str, str]]:
+    """``{id, name}`` of the Spotify artist whose name matches *name*
+    exactly (case-insensitively), or ``None``.
+
+    Spotify has no public search API, but the web player's own
+    search-as-you-type box (``searchSuggestions``) also returns the top
+    entities, artists included, and that persisted query works with the
+    same anonymous token the embed pages hand out. It needs a large
+    ``numberOfTopResults`` (20): the default 5 often leaves the artist
+    out. The response mixes in other artists, so only an exact name match
+    counts - same strictness as every platform's own ``resolve_artist_id``
+    - never the first artist row. A name that's ambiguous on Spotify
+    resolves to whichever exact match ranks first, which is why an id
+    resolved from one of the artist's own downloaded tracks (see
+    :func:`primary_artist_id_from_track_id`) is always preferred.
+    """
+
+    text = name.strip()
+    if not text:
+        return None
+    token = _anonymous_token()
+    if not token:
+        return None
+    try:
+        resp = httpx.get(
+            _PARTNER_API,
+            params={
+                'operationName': 'searchSuggestions',
+                'variables': json.dumps({
+                    'query': text,
+                    'limit': 20,
+                    'numberOfTopResults': 20,
+                    'offset': 0,
+                    'includeAuthors': False,
+                }),
+                'extensions': json.dumps({
+                    'persistedQuery': {
+                        'version': 1,
+                        'sha256Hash': _SEARCH_SUGGESTIONS_HASH,
+                    }
+                }),
+            },
+            headers={
+                'Authorization': f'Bearer {token}',
+                'User-Agent': _USER_AGENT,
+                'app-platform': 'WebPlayer',
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Spotify artist search failed for {!r}', text
+        )
+        return None
+    items = (
+        ((data.get('data') or {}).get('searchV2') or {}).get('topResultsV2')
+        or {}
+    ).get('itemsV2') or []
+    wanted = text.lower()
+    for entry in items:
+        item = entry.get('item') if isinstance(entry, dict) else None
+        if not isinstance(item, dict):
+            continue
+        if item.get('__typename') != 'ArtistResponseWrapper':
+            continue
+        artist = item.get('data') or {}
+        artist_name = str((artist.get('profile') or {}).get('name') or '')
+        artist_id = _id_from_uri(str(artist.get('uri') or ''))
+        if artist_id and artist_name.strip().lower() == wanted:
+            return {'id': artist_id, 'name': artist_name.strip()}
+    return None
 
 
 def primary_artist_id_from_track_id(track_id: str) -> Optional[str]:
@@ -1426,8 +1594,9 @@ def primary_artist_id_from_track_id(track_id: str) -> Optional[str]:
     A track embed's raw ``artists`` entries carry ``{name, uri}`` each;
     :func:`_artist_names` throws the ``uri`` away since no other caller
     needs it. Used to find an artist's photo starting from a track
-    already in the library (see :mod:`downtify.track_index`) instead of
-    searching Spotify by name, which has no public API.
+    already in the library (see :mod:`downtify.track_index`) - the most
+    reliable route, since it can't pick a namesake the way
+    :func:`search_artist_by_name` can.
     """
 
     payload = _fetch_embed_json('track', track_id)

@@ -28,6 +28,7 @@ from downtify.spotify import (
     enrich_track_from_spotify_if_sparse,
     playlist_cover_url_from_id,
     primary_artist_id_from_track_id,
+    related_artist_names_from_id,
 )
 
 # Aliases only — no real artist / track titles
@@ -373,6 +374,58 @@ def test_artist_banner_url_from_id_returns_empty_on_request_failure():
         patch('downtify.spotify.httpx.get', side_effect=Exception('boom')),
     ):
         assert not artist_banner_url_from_id('dummyArtistId')
+
+
+def test_related_artist_names_from_id_reads_profile_names():
+    payload = _embed_payload_with_token('tok123')
+    graphql_response = MagicMock()
+    graphql_response.raise_for_status = lambda: None
+    graphql_response.json = lambda: {
+        'data': {
+            'artistUnion': {
+                '__typename': 'Artist',
+                'relatedContent': {
+                    'relatedArtists': {
+                        'items': [
+                            {'profile': {'name': 'Linkin Park'}},
+                            {'profile': {'name': 'Three Days Grace'}},
+                            {'profile': {'name': ''}},
+                            {'not-a-profile': True},
+                        ]
+                    }
+                },
+            }
+        }
+    }
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('downtify.spotify.httpx.get', return_value=graphql_response),
+    ):
+        names = related_artist_names_from_id('dummyArtistId')
+    assert names == ['Linkin Park', 'Three Days Grace']
+
+
+def test_related_artist_names_from_id_returns_empty_when_no_related_content():
+    payload = _embed_payload_with_token('tok123')
+    graphql_response = MagicMock()
+    graphql_response.raise_for_status = lambda: None
+    graphql_response.json = lambda: {
+        'data': {'artistUnion': {'__typename': 'Artist'}}
+    }
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('downtify.spotify.httpx.get', return_value=graphql_response),
+    ):
+        assert related_artist_names_from_id('dummyArtistId') == []
+
+
+def test_related_artist_names_from_id_returns_empty_on_request_failure():
+    payload = _embed_payload_with_token('tok123')
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('downtify.spotify.httpx.get', side_effect=Exception('boom')),
+    ):
+        assert related_artist_names_from_id('dummyArtistId') == []
 
 
 def test_primary_artist_id_from_track_id_reads_first_artist_uri():
