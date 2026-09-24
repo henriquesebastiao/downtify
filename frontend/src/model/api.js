@@ -114,9 +114,12 @@ function searchArtistArt(name) {
   return API.get('/api/artists/art/search', { params: { name } })
 }
 
-function getSpotifyArtistArtCandidate(file, kind) {
+// `file` (a library track from Spotify) is the reliable way to find the
+// artist; `name` is the fallback - an exact-name search - for artists
+// none of whose tracks came from Spotify.
+function getSpotifyArtistArtCandidate(file, kind, name = '') {
   return API.get('/api/artists/art/spotify_candidate', {
-    params: { file, kind },
+    params: { file, kind, name },
   })
 }
 
@@ -148,8 +151,21 @@ function getArtistProfile(name) {
   return API.get('/api/artists/profile', { params: { name } })
 }
 
-function fetchArtistBio(name, lang) {
-  return API.post('/api/artists/profile/bio', { name, lang })
+// Seeds a brand-new artist's profile the first time it's needed - a
+// no-op once a profile already exists, so it's safe to call on every
+// visit to an artist's page instead of the plain GET above.
+function ensureArtistProfile(name, lang, trackFiles) {
+  return API.post('/api/artists/profile/ensure', {
+    name,
+    lang,
+    track_files: trackFiles,
+  })
+}
+
+// `source` picks whose biography text is saved: 'applemusic' or 'deezer'
+// (no fallback to the other one), or 'auto' - Apple Music's, else Deezer's.
+function fetchArtistBio(name, lang, source = 'auto') {
+  return API.post('/api/artists/profile/bio', { name, lang, source })
 }
 
 function saveArtistBio(name, bio) {
@@ -434,6 +450,7 @@ export default {
   uploadArtistArt,
   deleteArtistArt,
   getArtistProfile,
+  ensureArtistProfile,
   fetchArtistBio,
   saveArtistBio,
   saveArtistSocial,

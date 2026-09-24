@@ -357,6 +357,7 @@ export default {
     kicker: 'Előadó',
     notFound: 'Az előadó nem található',
     findMore: 'Továbbiak keresése',
+    relatedArtists: 'A rajongók ezt is szeretik',
   },
   artistArt: {
     editPhoto: 'Fotó szerkesztése',
@@ -401,7 +402,10 @@ export default {
   },
   artistBio: {
     title: 'Életrajz',
-    fetchButton: 'Életrajz lekérése a Streams-ből.',
+    fetchAppleMusic: 'Lekérés az Apple Music-ból',
+    fetchDeezer: 'Lekérés a Deezerből',
+    formed: '{year}-ban alakult',
+    genre: 'Műfaj:',
     empty: 'Még nincs életrajz.',
     showMore: 'Több mutatása',
     showLess: 'Kevesebb mutatása',

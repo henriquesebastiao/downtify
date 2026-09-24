@@ -56,39 +56,11 @@
       </CollectionHero>
 
       <div
-        class="mx-auto flex max-w-[1680px] flex-col gap-12 px-4 sm:px-6 lg:px-10"
+        class="mx-auto flex max-w-[1680px] flex-col gap-6 px-4 sm:px-6 lg:px-10"
       >
-        <section class="flex flex-col gap-2">
-          <h2 class="text-display text-xl font-semibold">
-            {{ t('artistBio.title') }}
-          </h2>
-          <template v-if="profile.bio">
-            <p
-              class="text-[15px] text-fg-3"
-              :class="bioExpanded ? '' : 'line-clamp-4'"
-            >
-              {{ profile.bio }}
-            </p>
-            <button
-              v-if="bioIsLong"
-              type="button"
-              class="w-fit text-[13px] font-medium text-accent hover:underline"
-              @click="bioExpanded = !bioExpanded"
-            >
-              {{
-                bioExpanded ? t('artistBio.showLess') : t('artistBio.showMore')
-              }}
-            </button>
-          </template>
-          <p v-else class="text-[13px] text-muted">
-            {{ t('artistBio.empty') }}
-          </p>
-        </section>
+        <UiTabs class="mt-4" :items="tabs" :model-value="tab" />
 
-        <section v-if="artist.albums.length" class="flex flex-col gap-4">
-          <h2 class="text-display text-xl font-semibold">
-            {{ t('library.albums') }}
-          </h2>
+        <template v-if="tab === 'albums'">
           <div
             class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6"
           >
@@ -110,24 +82,59 @@
               @play="playAlbum(album)"
             />
           </div>
-        </section>
+        </template>
 
-        <section class="flex flex-col gap-4">
-          <div class="flex items-baseline justify-between gap-4">
-            <h2 class="text-display text-xl font-semibold">
-              {{ t('library.tracks') }}
-            </h2>
-            <span class="tabular text-[13px] text-muted">{{
-              t('common.tracks', { count: allTracks.length })
-            }}</span>
+        <template v-else-if="tab === 'related'">
+          <div
+            class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6"
+          >
+            <MediaTile
+              v-for="item in relatedArtistItems"
+              :key="item.name"
+              v-bind="item"
+              :playable="false"
+            />
           </div>
-          <TrackList
-            :tracks="allTracks"
-            :context="context"
-            :show-added="false"
-            :hide-menu="['artist']"
-          />
-        </section>
+        </template>
+
+        <template v-else-if="tab === 'bio'">
+          <section class="flex flex-col gap-3">
+            <div v-if="profile.genre" class="flex items-center gap-2">
+              <span class="text-[13px] text-muted">{{
+                t('artistBio.genre')
+              }}</span>
+              <UiBadge>{{ profile.genre }}</UiBadge>
+            </div>
+            <p v-if="bioFacts" class="text-[13px] text-muted">
+              {{ bioFacts }}
+            </p>
+            <!-- profile.bio is plain text: a blank line separates
+            paragraphs, a single line break stays a line break. -->
+            <div
+              v-if="bioParagraphs.length"
+              class="flex flex-col gap-3 text-[15px] text-fg-3"
+            >
+              <p
+                v-for="(paragraph, i) in bioParagraphs"
+                :key="i"
+                class="whitespace-pre-line"
+              >
+                {{ paragraph }}
+              </p>
+            </div>
+            <p v-else class="text-[13px] text-muted">
+              {{ t('artistBio.empty') }}
+            </p>
+          </section>
+        </template>
+
+        <TrackList
+          v-else
+          :tracks="allTracks"
+          :context="context"
+          :show-added="false"
+          :hide-menu="['artist']"
+        />
       </div>
     </DetailState>
 
@@ -152,8 +159,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
+import UiTabs from '/src/components/ui/UiTabs.vue'
 import ArtistArtModal from '/src/components/library/ArtistArtModal.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DetailState from '/src/components/library/DetailState.vue'
@@ -167,9 +176,10 @@ import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
 import { sortItems } from '/src/lib/library'
 import { splitLength } from '/src/lib/format'
+import { proxiedArtistPhotoUrl } from '/src/lib/artistPhotoProxy'
 import { useI18n } from '/src/i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const library = useLibrary()
 const player = usePlayer()
@@ -214,6 +224,49 @@ const facts = computed(() => {
     .join(' · ')
 })
 
+// Discography / tracks / related artists / bio, tab-switched the same
+// way as LibraryView/QueueView/MonitorView - the active one lives in the
+// route's own query string, so it's bookmarkable and survives a refresh.
+const TAB_IDS = ['albums', 'tracks', 'related', 'bio']
+const tab = computed(() => {
+  const requested = String(route.query.tab || '')
+  if (TAB_IDS.includes(requested)) return requested
+  return artist.value?.albums.length ? 'albums' : 'tracks'
+})
+const tabs = computed(() => {
+  const a = artist.value
+  if (!a) return []
+  const list = []
+  if (a.albums.length) {
+    list.push({
+      id: 'albums',
+      label: t('library.albums'),
+      count: a.albums.length,
+      to: { name: 'Artist', query: { name: a.name, tab: 'albums' } },
+    })
+  }
+  list.push({
+    id: 'tracks',
+    label: t('library.tracks'),
+    count: allTracks.value.length,
+    to: { name: 'Artist', query: { name: a.name, tab: 'tracks' } },
+  })
+  if (profile.value.related_artists.length) {
+    list.push({
+      id: 'related',
+      label: t('artist.relatedArtists'),
+      count: profile.value.related_artists.length,
+      to: { name: 'Artist', query: { name: a.name, tab: 'related' } },
+    })
+  }
+  list.push({
+    id: 'bio',
+    label: t('artistBio.title'),
+    to: { name: 'Artist', query: { name: a.name, tab: 'bio' } },
+  })
+  return list
+})
+
 const isThisPlaying = computed(
   () =>
     player.isPlaying.value &&
@@ -240,8 +293,8 @@ function playAlbum(album) {
 }
 
 // ── Artist photo / banner (manual picker, always available here - the
-// download_cover_art_artist(_banner) settings are reserved for a future
-// automatic fetch during the download pipeline, not this page) ────────
+// download_cover_art_artist(_banner) settings only gate the automatic
+// first-visit save done by ensure, see downtify/artist_profile.py) ─────
 const trackFiles = computed(() =>
   allTracks.value.map((track) => track.file).filter(Boolean)
 )
@@ -282,11 +335,16 @@ function openArtModal(tab) {
   artModalOpen.value = true
 }
 
-// ── Artist profile (bio, social links, related artists) - bio is
-// fetched from Deezer on demand only, never automatically ────────────
+// ── Artist profile (bio, origin, social links, related artists) - bio
+// is fetched from Apple Music/Deezer on demand only, never automatically
 function blankProfile() {
   return {
     bio: '',
+    origin: '',
+    born_or_formed: '',
+    genre: '',
+    is_group: null,
+    banner_bg_color: '',
     platforms_id: {},
     social: {
       twitter: '',
@@ -301,8 +359,84 @@ function blankProfile() {
   }
 }
 const profile = ref(blankProfile())
-const bioExpanded = ref(false)
-const bioIsLong = computed(() => (profile.value.bio || '').length > 260)
+
+// The saved bio is plain text (see artist_profile._format_bio_text): a
+// blank line separates paragraphs, anything within one stays a line break.
+const bioParagraphs = computed(() =>
+  (profile.value.bio || '')
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+)
+
+// origin/born_or_formed only ever come from Apple Music (see
+// downtify/apple_music.py) and aren't translated text, so they're shown
+// as a plain facts line above the bio itself.
+const bioFacts = computed(() =>
+  [
+    profile.value.born_or_formed
+      ? t('artistBio.formed', { year: profile.value.born_or_formed })
+      : '',
+    profile.value.origin,
+  ]
+    .filter(Boolean)
+    .join(' — ')
+)
+
+// Names only (see downtify/deezer.py's relatedArtist query) - links to
+// the artist page when they're already in this library, otherwise to a
+// search for the name instead of a dead link.
+//
+// A related artist's own saved profile photo (Metadata/ArtistImage/,
+// see artist_profile.py) isn't part of the library model itself - same
+// bulk lookup LibraryView's artist tiles use, fetched once the Related
+// tab is actually viewed, so a picked photo shows up here too instead of
+// always falling back to a track's cover.
+const relatedArtistPhotos = ref({})
+watch(
+  () => [tab.value, profile.value.related_artists],
+  async ([currentTab, names]) => {
+    if (currentTab !== 'related' || !names?.length) return
+    try {
+      const res = await API.getArtistArtBulk(names)
+      relatedArtistPhotos.value = res.data || {}
+    } catch {
+      relatedArtistPhotos.value = {}
+    }
+  },
+  { immediate: true }
+)
+
+const relatedArtistItems = computed(() =>
+  profile.value.related_artists.map((name) => {
+    const found = library.findArtist(name)
+    return {
+      to: found
+        ? { name: 'Artist', query: { name } }
+        : { name: 'Search', params: { query: name } },
+      title: name,
+      subtitle: found
+        ? [
+            found.albums.length
+              ? t('common.albums', { count: found.albums.length })
+              : '',
+            t('common.tracks', { count: found.tracks.length }),
+          ]
+            .filter(Boolean)
+            .join(' · ')
+        : '',
+      // Artists we don't own get a display-only photo from the backend's
+      // proxy (never saved); a saved photo, then a library cover, win.
+      cover:
+        relatedArtistPhotos.value[name]?.photo_url ||
+        found?.cover ||
+        proxiedArtistPhotoUrl(name),
+      name,
+      icon: 'user',
+      round: true,
+    }
+  })
+)
 
 async function refreshProfile() {
   if (!artist.value?.name) {
@@ -310,15 +444,29 @@ async function refreshProfile() {
     return
   }
   try {
-    const res = await API.getArtistProfile(artist.value.name)
+    // Seeds a brand-new artist's profile on their very first visit - a
+    // cheap no-op every time after, once a profile file exists at all.
+    const res = await API.ensureArtistProfile(
+      artist.value.name,
+      locale.value,
+      trackFiles.value
+    )
     profile.value = res.data || blankProfile()
   } catch {
     profile.value = blankProfile()
   }
-  bioExpanded.value = false
 }
 
-watch(() => artist.value?.name, refreshProfile, { immediate: true })
+// refreshArt above runs alongside this and usually answers before the
+// ensure has finished saving a brand-new artist's photo/banner, so the art
+// is asked for again once it's done - otherwise it'd only show up after a
+// reload.
+async function seedProfile() {
+  await refreshProfile()
+  await refreshArt()
+}
+
+watch(() => artist.value?.name, seedProfile, { immediate: true })
 
 // ArtistArtModal's single "saved" event covers photo, banner, bio and
 // social edits alike - simplest to just refresh both after any of them.

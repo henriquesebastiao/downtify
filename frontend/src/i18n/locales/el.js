@@ -357,6 +357,7 @@ export default {
     kicker: 'Καλλιτέχνης',
     notFound: 'Ο καλλιτέχνης δεν βρέθηκε',
     findMore: 'Βρες περισσότερα',
+    relatedArtists: 'Στους θαυμαστές αρέσει επίσης',
   },
   artistArt: {
     editPhoto: 'Επεξεργασία φωτογραφίας',
@@ -402,7 +403,10 @@ export default {
   },
   artistBio: {
     title: 'Βιογραφικό',
-    fetchButton: 'Λήψη βιογραφικού από Streams.',
+    fetchAppleMusic: 'Λήψη από το Apple Music',
+    fetchDeezer: 'Λήψη από το Deezer',
+    formed: 'Ιδρύθηκε το {year}',
+    genre: 'Είδος:',
     empty: 'Δεν υπάρχει βιογραφικό ακόμα.',
     showMore: 'Περισσότερα',
     showLess: 'Λιγότερα',

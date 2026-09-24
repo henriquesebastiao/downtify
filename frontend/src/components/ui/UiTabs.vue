@@ -11,20 +11,24 @@
       :type="item.to ? undefined : 'button'"
       role="tab"
       :aria-selected="item.id === modelValue"
-      class="relative shrink-0 whitespace-nowrap pb-3 text-sm transition-colors"
-      :class="
-        item.id === modelValue
-          ? 'font-semibold text-fg'
-          : 'font-medium text-muted hover:text-fg-3'
-      "
+      class="group relative flex shrink-0 items-center gap-2 pb-3 whitespace-nowrap transition-colors"
       @click="$emit('update:modelValue', item.id)"
     >
-      {{ item.label }}
       <span
-        v-if="item.count !== undefined && item.count !== null"
-        class="tabular ml-1 font-medium text-faint"
-        >{{ item.count }}</span
+        class="eyebrow"
+        :class="
+          item.id === modelValue
+            ? '!text-fg'
+            : '!text-muted group-hover:!text-fg-3'
+        "
+        >{{ item.label }}</span
       >
+      <UiBadge
+        v-if="item.count !== undefined && item.count !== null"
+        :tone="item.id === modelValue ? 'accent' : 'neutral'"
+      >
+        {{ item.count }}
+      </UiBadge>
       <span
         v-if="item.id === modelValue"
         class="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-accent"
@@ -35,6 +39,7 @@
 
 <script setup>
 import { RouterLink } from 'vue-router'
+import UiBadge from './UiBadge.vue'
 
 defineProps({
   items: { type: Array, required: true },

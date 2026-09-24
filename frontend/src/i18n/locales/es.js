@@ -360,6 +360,7 @@ export default {
     kicker: 'Artista',
     notFound: 'Artista no encontrado',
     findMore: 'Buscar más',
+    relatedArtists: 'A los fans también les gusta',
   },
   artistArt: {
     editPhoto: 'Editar foto',
@@ -404,7 +405,10 @@ export default {
   },
   artistBio: {
     title: 'Biografía',
-    fetchButton: 'Buscar biografía en Streams.',
+    fetchAppleMusic: 'Buscar en Apple Music',
+    fetchDeezer: 'Buscar en Deezer',
+    formed: 'Formado en {year}',
+    genre: 'Género:',
     empty: 'Aún no hay biografía.',
     showMore: 'Mostrar más',
     showLess: 'Mostrar menos',

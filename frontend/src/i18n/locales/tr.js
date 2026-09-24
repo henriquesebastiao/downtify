@@ -359,6 +359,7 @@ export default {
     kicker: 'Sanatçı',
     notFound: 'Sanatçı bulunamadı',
     findMore: 'Daha fazlasını bul',
+    relatedArtists: 'Hayranların beğendiği diğerleri',
   },
   artistArt: {
     editPhoto: 'Fotoğrafı düzenle',
@@ -404,7 +405,10 @@ export default {
   },
   artistBio: {
     title: 'Biyografi',
-    fetchButton: "Streams'ten biyografi al.",
+    fetchAppleMusic: "Apple Music'ten getir",
+    fetchDeezer: "Deezer'dan getir",
+    formed: '{year} yılında kuruldu',
+    genre: 'Tür:',
     empty: 'Henüz biyografi yok.',
     showMore: 'Daha fazla göster',
     showLess: 'Daha az göster',

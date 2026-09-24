@@ -353,6 +353,7 @@ export default {
     kicker: 'Изпълнител',
     notFound: 'Изпълнителят не е намерен',
     findMore: 'Намери още',
+    relatedArtists: 'На феновете допада и',
   },
   artistArt: {
     editPhoto: 'Редактиране на снимката',
@@ -399,7 +400,10 @@ export default {
   },
   artistBio: {
     title: 'Биография',
-    fetchButton: 'Извличане на биография от Streams.',
+    fetchAppleMusic: 'Извличане от Apple Music',
+    fetchDeezer: 'Извличане от Deezer',
+    formed: 'Основан през {year}',
+    genre: 'Жанр:',
     empty: 'Все още няма биография.',
     showMore: 'Покажи повече',
     showLess: 'Покажи по-малко',

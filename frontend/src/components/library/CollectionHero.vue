@@ -178,11 +178,11 @@ const socialLinks = computed(() =>
     }))
 )
 
-// Base URL each platform's saved id is appended to - only the Deezer id
-// is ever resolved automatically today (fetch_bio), spotify/youtubemusic
-// are only ever set by hand-editing the profile JSON for now. Unrecognized
-// keys are skipped rather than erroring, so this grows without a frontend
-// change needed elsewhere.
+// Base URL each platform's saved id is appended to. The backend resolves
+// all four automatically (see downtify/artist_profile.py) and a hand-edit
+// of the profile JSON can set any of them. Unrecognized keys are skipped
+// rather than erroring, so this grows without a frontend change needed
+// elsewhere.
 const PLATFORM_LINKS = {
   spotify: {
     icon: 'spotify',
@@ -198,6 +198,15 @@ const PLATFORM_LINKS = {
     icon: 'deezer',
     label: 'Deezer',
     prefix: 'https://www.deezer.com/artist/',
+  },
+  // Stored as 'slug/numeric-id' (e.g. 'evanescence/42102393', straight
+  // from Apple's own `url` field) - the 'us' storefront in this prefix
+  // is just a stable link target, not tied to the artist's real catalog
+  // availability elsewhere.
+  applemusic: {
+    icon: 'apple-music',
+    label: 'Apple Music',
+    prefix: 'https://music.apple.com/us/artist/',
   },
 }
 const platformLinks = computed(() =>

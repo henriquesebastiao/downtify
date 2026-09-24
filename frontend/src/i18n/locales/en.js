@@ -352,6 +352,7 @@ export default {
     kicker: 'Artist',
     notFound: 'Artist not found',
     findMore: 'Find more',
+    relatedArtists: 'Fans also like',
   },
   artistArt: {
     editPhoto: 'Edit photo',
@@ -395,7 +396,10 @@ export default {
   },
   artistBio: {
     title: 'Bio',
-    fetchButton: 'Fetch bio from Streams.',
+    fetchAppleMusic: 'Fetch from Apple Music',
+    fetchDeezer: 'Fetch from Deezer',
+    formed: 'Formed in {year}',
+    genre: 'Genre:',
     empty: 'No biography yet.',
     showMore: 'Show more',
     showLess: 'Show less',

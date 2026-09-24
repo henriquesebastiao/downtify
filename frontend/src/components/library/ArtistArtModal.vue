@@ -161,18 +161,22 @@
         </template>
 
         <template v-else-if="activeTab === 'bio'">
-          <button
-            type="button"
-            class="flex w-fit items-center gap-1.5 text-[13px] text-muted hover:text-fg disabled:opacity-50"
-            :disabled="bioFetching"
-            @click="fetchBioFromStreams"
-          >
-            <AppIcon
-              name="zap"
-              :size="14"
-              :class="bioFetching ? 'animate-pulse' : ''"
-            />{{ t('artistBio.fetchButton') }}
-          </button>
+          <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <button
+              v-for="option in BIO_SOURCES"
+              :key="option.source"
+              type="button"
+              class="flex w-fit items-center gap-1.5 text-[13px] text-muted hover:text-fg disabled:opacity-50"
+              :disabled="!!bioFetching"
+              @click="fetchBio(option.source)"
+            >
+              <AppIcon
+                :name="option.icon"
+                :size="14"
+                :class="bioFetching === option.source ? 'animate-pulse' : ''"
+              />{{ t(option.label) }}
+            </button>
+          </div>
           <textarea
             v-model="bioDraft"
             rows="10"
@@ -336,7 +340,17 @@ const socialDraft = ref({
 })
 const savingBio = ref(false)
 const savingSocial = ref(false)
-const bioFetching = ref(false)
+// Which service's biography is being fetched right now (its source id), or
+// '' - both links are disabled while one is running.
+const bioFetching = ref('')
+const BIO_SOURCES = [
+  {
+    source: 'applemusic',
+    icon: 'apple-music',
+    label: 'artistBio.fetchAppleMusic',
+  },
+  { source: 'deezer', icon: 'deezer', label: 'artistBio.fetchDeezer' },
+]
 
 const isUrlQuery = computed(() => isImageUrlQuery(query.value))
 const cards = computed(() =>
@@ -352,12 +366,14 @@ const removeLabel = computed(() =>
 )
 
 async function findSpotifyCandidate() {
-  // Tries a handful of the artist's own tracks - the first one that came
-  // from Spotify (see downtify.track_index) resolves the artist's photo
-  // or banner directly, no name search needed. Photo and banner are
-  // genuinely different Spotify images (see downtify.spotify), so the
-  // active tab has to be passed through - many artists have no banner
-  // set at all, in which case no Spotify candidate is offered for one.
+  // Tries a handful of the artist's own tracks first - the first one
+  // that came from Spotify (see downtify.track_index) resolves the
+  // artist's photo or banner directly, with no namesake risk. When none
+  // did (the tracks came from YouTube, say), one last request searches
+  // Spotify by the artist's exact name. Photo and banner are genuinely
+  // different Spotify images (see downtify.spotify), so the active tab
+  // has to be passed through - many artists have no banner set at all,
+  // in which case no Spotify candidate is offered for one.
   for (const file of props.trackFiles.slice(0, 5)) {
     try {
       const res = await API.getSpotifyArtistArtCandidate(file, activeTab.value)
@@ -368,6 +384,16 @@ async function findSpotifyCandidate() {
     } catch {
       // try the next track
     }
+  }
+  try {
+    const res = await API.getSpotifyArtistArtCandidate(
+      '',
+      activeTab.value,
+      props.artistName
+    )
+    if (res.data?.image_url) spotifyCandidate.value = res.data
+  } catch {
+    // no Spotify candidate - the other sources are still offered
   }
 }
 
@@ -458,12 +484,12 @@ async function removeArt() {
   }
 }
 
-async function fetchBioFromStreams() {
+async function fetchBio(source) {
   if (bioFetching.value) return
-  bioFetching.value = true
+  bioFetching.value = source
   errorText.value = ''
   try {
-    const res = await API.fetchArtistBio(props.artistName, locale.value)
+    const res = await API.fetchArtistBio(props.artistName, locale.value, source)
     bioDraft.value = res.data.bio
     socialDraft.value = { ...res.data.social }
     ui.toast(t('artistBio.fetched'), { kind: 'success' })
@@ -471,7 +497,7 @@ async function fetchBioFromStreams() {
   } catch (err) {
     errorText.value = err?.response?.data?.detail || t('artistBio.fetchFailed')
   } finally {
-    bioFetching.value = false
+    bioFetching.value = ''
   }
 }
 
