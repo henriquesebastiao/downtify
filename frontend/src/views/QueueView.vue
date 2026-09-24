@@ -55,30 +55,28 @@
           "
         />
 
-        <TransitionGroup
+        <div
           v-else
-          name="list"
-          tag="div"
-          class="flex flex-col gap-2"
+          ref="listRoot"
+          class="relative"
+          :style="{ height: `${totalSize}px` }"
         >
-          <QueueItem
-            v-for="item in visibleItems"
-            :key="item.key"
-            :item="item"
-            :compact="item.state === 'queued' || item.state === 'done'"
-          />
-        </TransitionGroup>
-
-        <button
-          v-if="items.length > visibleItems.length"
-          type="button"
-          class="self-center rounded-control px-4 py-2 text-[13px] font-semibold text-muted hover:bg-surface-2 hover:text-fg"
-          @click="limit += 200"
-        >
-          {{
-            t('queue.showMore', { count: items.length - visibleItems.length })
-          }}
-        </button>
+          <div
+            v-for="row in rows"
+            :key="row.item.key"
+            :ref="measureRow"
+            :data-index="row.index"
+            class="absolute inset-x-0 top-0 pb-2"
+            :style="{ transform: `translateY(${row.start}px)` }"
+          >
+            <QueueItem
+              :item="row.item"
+              :compact="
+                row.item.state === 'queued' || row.item.state === 'done'
+              "
+            />
+          </div>
+        </div>
       </div>
 
       <aside class="flex flex-col gap-4 xl:sticky xl:top-[96px]">
@@ -139,8 +137,9 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useWindowVirtualizer } from '@tanstack/vue-virtual'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiPanel from '/src/components/ui/UiPanel.vue'
@@ -157,6 +156,7 @@ import {
 } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
 import { useUi } from '/src/model/ui'
+import { queueRowEstimate } from '/src/lib/queueList'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
@@ -166,7 +166,8 @@ const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const library = useLibrary()
 const ui = useUi()
-const limit = ref(200)
+const listRoot = ref(null)
+const scrollMargin = ref(0)
 
 syncQueueFromServer().catch(() => {})
 
@@ -197,7 +198,6 @@ watch(
     }
   }
 )
-watch(tab, () => (limit.value = 200))
 
 const tabs = computed(() =>
   [
@@ -227,7 +227,42 @@ const items = computed(() => {
     : list
 })
 
-const visibleItems = computed(() => items.value.slice(0, limit.value))
+const virtualizer = useWindowVirtualizer(
+  computed(() => ({
+    count: items.value.length,
+    estimateSize: (index) => queueRowEstimate(items.value[index]?.state),
+    overscan: 8,
+    scrollMargin: scrollMargin.value,
+  }))
+)
+
+function measureOffset() {
+  if (!listRoot.value) return
+  scrollMargin.value =
+    listRoot.value.getBoundingClientRect().top + window.scrollY
+}
+
+function measureRow(el) {
+  if (el) virtualizer.value.measureElement(el)
+}
+
+onMounted(measureOffset)
+watch(
+  () => [tab.value, items.value.length],
+  () => requestAnimationFrame(measureOffset)
+)
+
+const totalSize = computed(() => virtualizer.value.getTotalSize())
+const rows = computed(() =>
+  virtualizer.value
+    .getVirtualItems()
+    .map((row) => ({
+      item: items.value[row.index],
+      index: row.index,
+      start: row.start - scrollMargin.value,
+    }))
+    .filter((row) => row.item)
+)
 
 const subtitle = computed(() => {
   if (!queue.value.length) return ''
