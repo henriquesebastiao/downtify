@@ -408,6 +408,7 @@ export default {
     fetchAppleMusic: 'Lekérés az Apple Music-ból',
     fetchDeezer: 'Lekérés a Deezerből',
     formed: '{year}-ban alakult',
+    born: 'Született: {date}',
     genre: 'Műfaj:',
     empty: 'Még nincs életrajz.',
     showMore: 'Több mutatása',

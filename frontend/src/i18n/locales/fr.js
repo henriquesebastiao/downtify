@@ -418,6 +418,7 @@ export default {
     fetchAppleMusic: 'Récupérer depuis Apple Music',
     fetchDeezer: 'Récupérer depuis Deezer',
     formed: 'Formé en {year}',
+    born: 'Naissance : {date}',
     genre: 'Genre :',
     empty: 'Aucune biographie pour le moment.',
     showMore: 'Afficher plus',

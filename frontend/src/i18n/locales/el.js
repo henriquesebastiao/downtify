@@ -409,6 +409,7 @@ export default {
     fetchAppleMusic: 'Λήψη από το Apple Music',
     fetchDeezer: 'Λήψη από το Deezer',
     formed: 'Ιδρύθηκε το {year}',
+    born: 'Γέννηση: {date}',
     genre: 'Είδος:',
     empty: 'Δεν υπάρχει βιογραφικό ακόμα.',
     showMore: 'Περισσότερα',

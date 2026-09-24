@@ -406,6 +406,7 @@ export default {
     fetchAppleMusic: 'Извличане от Apple Music',
     fetchDeezer: 'Извличане от Deezer',
     formed: 'Основан през {year}',
+    born: 'Дата на раждане: {date}',
     genre: 'Жанр:',
     empty: 'Все още няма биография.',
     showMore: 'Покажи повече',

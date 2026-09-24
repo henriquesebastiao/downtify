@@ -411,6 +411,7 @@ export default {
     fetchAppleMusic: "Apple Music'ten getir",
     fetchDeezer: "Deezer'dan getir",
     formed: '{year} yılında kuruldu',
+    born: '{date} doğumlu',
     genre: 'Tür:',
     empty: 'Henüz biyografi yok.',
     showMore: 'Daha fazla göster',

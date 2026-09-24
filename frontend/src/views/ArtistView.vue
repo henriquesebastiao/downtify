@@ -210,6 +210,7 @@ import { sortItems } from '/src/lib/library'
 import { splitLength } from '/src/lib/format'
 import { proxiedArtistPhotoUrl } from '/src/lib/artistPhotoProxy'
 import { versionedArtUrl } from '/src/lib/artistArt'
+import { artistFacts } from '/src/lib/artistBio'
 import { useI18n } from '/src/i18n'
 
 const { t, locale } = useI18n()
@@ -448,17 +449,9 @@ const bioParagraphs = computed(() =>
 
 // origin/born_or_formed only ever come from Apple Music (see
 // downtify/apple_music.py) and aren't translated text, so they're shown
-// as a plain facts line above the bio itself.
-const bioFacts = computed(() =>
-  [
-    profile.value.born_or_formed
-      ? t('artistBio.formed', { year: profile.value.born_or_formed })
-      : '',
-    profile.value.origin,
-  ]
-    .filter(Boolean)
-    .join(' — ')
-)
+// as a plain facts line above the bio itself - "Born ..." for a solo
+// artist, "Formed in ..." for a group (see lib/artistBio.js).
+const bioFacts = computed(() => artistFacts(profile.value, t))
 
 // Names only (see downtify/deezer.py's relatedArtist query) - links to
 // the artist page when they're already in this library, otherwise to a

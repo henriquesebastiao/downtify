@@ -402,6 +402,7 @@ export default {
     fetchAppleMusic: 'Fetch from Apple Music',
     fetchDeezer: 'Fetch from Deezer',
     formed: 'Formed in {year}',
+    born: 'Born {date}',
     genre: 'Genre:',
     empty: 'No biography yet.',
     showMore: 'Show more',
