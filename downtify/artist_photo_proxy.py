@@ -1,7 +1,9 @@
-"""DISPLAY-ONLY proxy for photos of artists that are not in the library.
+"""DISPLAY-ONLY proxy for photos of artists that have no photo saved.
 
-This module exists so the artist page can show a face next to a related
-artist the user does not own (Deezer's API sends no CORS headers, so the
+This module exists so the UI can show a face where there is no saved photo
+- next to a related artist the user does not own, in the Library's artists
+grid, and as the round photo on an artist's own page, for an artist
+without a picked photo (Deezer's API sends no CORS headers, so the
 browser cannot ask for it directly). It is a pass-through, nothing more:
 
 * The image bytes are returned to the caller and forgotten. Nothing is
@@ -77,8 +79,9 @@ def _remember_url(key: str, url: Optional[str]) -> None:
 
 
 def _lookup_url(name: str) -> Optional[str]:
-    """The Deezer CDN URL for *name*, cached (misses too) and deduped so
-    a burst of identical requests makes one search call."""
+    """The Deezer CDN URL for *name*, cached (a genuine "no photo" too,
+    but not a failed lookup) and deduped so a burst of identical requests
+    makes one search call."""
 
     key = name.strip().lower()
     hit, url = _cached_url(key)
@@ -86,18 +89,25 @@ def _lookup_url(name: str) -> Optional[str]:
         return url
     with _cache_lock:
         gate = _inflight.setdefault(key, threading.Lock())
-    with gate:
-        hit, url = _cached_url(key)
-        if hit:
+    try:
+        with gate:
+            hit, url = _cached_url(key)
+            if hit:
+                return url
+            try:
+                with _slots:
+                    url = deezer.exact_artist_picture(name)
+            except ValueError:
+                # Deezer unreachable or rate limiting us - not "no photo",
+                # so it is not remembered: the next request tries again.
+                return None
+            if url is not None and not _is_cdn_url(url):
+                url = None
+            _remember_url(key, url)
             return url
-        with _slots:
-            url = deezer.exact_artist_picture(name)
-        if url is not None and not _is_cdn_url(url):
-            url = None
-        _remember_url(key, url)
-    with _cache_lock:
-        _inflight.pop(key, None)
-    return url
+    finally:
+        with _cache_lock:
+            _inflight.pop(key, None)
 
 
 def fetch_proxied_photo(name: str) -> Optional[tuple[bytes, str]]:

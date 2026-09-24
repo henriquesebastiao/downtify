@@ -159,3 +159,39 @@ def test_module_has_no_persisting_helpers():
     assert 'artist_profile' not in code
     assert 'write_bytes' not in code
     assert 'open(' not in code
+
+
+def test_a_failed_lookup_is_not_remembered_as_no_photo(monkeypatch):
+    calls = []
+
+    def flaky(name):
+        calls.append(name)
+        if len(calls) == 1:
+            raise ValueError('Could not reach Deezer')
+        return CDN
+
+    monkeypatch.setattr(deezer, 'exact_artist_picture', flaky)
+    monkeypatch.setattr(
+        artist_photo_proxy.httpx,
+        'get',
+        lambda *a, **k: _resp(
+            content=b'jpegbytes', headers={'content-type': 'image/jpeg'}
+        ),
+    )
+    assert artist_photo_proxy.fetch_proxied_photo('Paramore') is None
+    assert 'paramore' not in artist_photo_proxy._url_cache
+    # The outage is over: the very next request gets the photo.
+    assert artist_photo_proxy.fetch_proxied_photo('Paramore') == (
+        b'jpegbytes',
+        'image/jpeg',
+    )
+    assert calls == ['Paramore', 'Paramore']
+
+
+def test_an_in_flight_marker_never_outlives_a_failed_lookup(monkeypatch):
+    def down(name):
+        raise ValueError('Could not reach Deezer')
+
+    monkeypatch.setattr(deezer, 'exact_artist_picture', down)
+    artist_photo_proxy.fetch_proxied_photo('Paramore')
+    assert artist_photo_proxy._inflight == {}

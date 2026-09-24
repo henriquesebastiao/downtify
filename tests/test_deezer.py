@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from downtify.deezer import (
@@ -314,3 +315,25 @@ def test_a_name_with_nothing_left_makes_no_request(name):
         assert resolve_artist_id(name) is None
         assert exact_artist_picture(name) is None
     get.assert_not_called()
+
+
+def test_exact_artist_picture_raises_when_deezer_cant_be_reached():
+    """Not 'no photo': a caller mustn't remember an outage as a miss."""
+
+    with (
+        patch(
+            'downtify.deezer.httpx.get', side_effect=Exception('network down')
+        ),
+        pytest.raises(ValueError, match='Could not reach Deezer'),
+    ):
+        exact_artist_picture('Paramore')
+
+
+def test_exact_artist_picture_raises_on_a_refusal_such_as_a_rate_limit():
+    request = httpx.Request('GET', 'https://api.deezer.com/search/artist')
+    response = httpx.Response(429, request=request)
+    with (
+        patch('downtify.deezer.httpx.get', return_value=response),
+        pytest.raises(ValueError, match='Could not reach Deezer'),
+    ):
+        exact_artist_picture('Paramore')

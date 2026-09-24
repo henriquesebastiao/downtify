@@ -293,6 +293,10 @@ def exact_artist_picture(name: str) -> Optional[str]:
     under this name. If that artist has no photo - Deezer only has its
     placeholder (see :data:`_NO_PICTURE_HASH`) - the answer is ``None``,
     not a namesake's photo or the placeholder.
+
+    Raises :class:`ValueError` when Deezer can't be reached or refuses
+    (a rate limit, say): that is not "this artist has no photo", and the
+    caller must not remember it as one.
     """
 
     text = name.strip()
@@ -304,9 +308,9 @@ def exact_artist_picture(name: str) -> Optional[str]:
         )
         resp.raise_for_status()
         data = resp.json()
-    except Exception:
+    except Exception as exc:
         logger.opt(exception=True).debug('Deezer artist photo lookup failed')
-        return None
+        raise ValueError('Could not reach Deezer') from exc
     match = _most_popular_exact_match(data.get('data') or [], text)
     if match is None or not _has_real_picture(match):
         return None
