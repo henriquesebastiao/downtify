@@ -8,7 +8,7 @@ Downtify's UI is fully translatable. The default language is **English**, with s
 
 ## Switching language
 
-Go to **Settings → Language** and pick your preferred language. The choice is saved in the browser's `localStorage` and applied instantly without a page reload.
+Go to **Settings → Language** and pick your preferred language. The choice is saved in the browser's `localStorage` and applied instantly without a page reload. The page also tells the server (the `ui_language` entry of `settings.json`, see [`POST /api/settings/update`](../api-reference.md#post-apisettingsupdate)), on every load and whenever you change it, so work that runs without a browser knows your language. Nothing to do on your side: if you chose a language before this existed, it is picked up the next time you open Downtify. With several browsers set to different languages, the last one that loaded or changed it wins.
 
 ## Available languages
 

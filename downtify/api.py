@@ -168,6 +168,7 @@ import contextlib
 import hashlib
 import json
 import mimetypes
+import re
 import shutil
 from pathlib import Path
 from typing import Any, Optional
@@ -307,6 +308,12 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'organize_by_album': False,
     'search_albums': True,
     'mini_player_enabled': True,
+    # The language the web UI is shown in (``en``, ``pt-BR``...). The choice
+    # lives in the browser, so the page tells the server (see
+    # ``model/settings.js``): work that runs without a browser, like an
+    # artist's bio fetched after a download, needs it. ``''`` until a page
+    # has said - then there is no language to fetch in.
+    'ui_language': '',
     # Soulseek via slskd, used when 'slskd' is in audio_providers.
     'slskd': {
         'enabled': False,
@@ -395,6 +402,18 @@ def _clamp_download_delay(value: Any) -> float:
     return min(
         MAX_DOWNLOAD_DELAY_SECONDS, max(MIN_DOWNLOAD_DELAY_SECONDS, delay)
     )
+
+
+_UI_LANGUAGE_RE = re.compile(r'[a-z]{2}(-[A-Z]{2})?')
+
+
+def _clean_ui_language(value: Any) -> str:
+    """*value* when it is a language code of the shape the web UI uses
+    (``en``, ``pt-BR``), else ``''``. It ends up in ``settings.json`` and in
+    other services' requests, so nothing else is kept."""
+
+    code = value.strip() if isinstance(value, str) else ''
+    return code if _UI_LANGUAGE_RE.fullmatch(code) else ''
 
 
 def _clamp_cover_resolution(value: Any) -> int:
@@ -964,6 +983,7 @@ def _load_settings(path: Path) -> dict[str, Any]:
             merged['cover_resolution'] = _clamp_cover_resolution(
                 merged['cover_resolution']
             )
+            merged['ui_language'] = _clean_ui_language(merged['ui_language'])
             return merged
     except Exception:
         pass
@@ -3860,6 +3880,11 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_download_delay(raw_value)
             elif key == 'cover_resolution':
                 state.settings[key] = _clamp_cover_resolution(raw_value)
+            elif key == 'ui_language':
+                # Not a language code: the saved one stays.
+                state.settings[key] = _clean_ui_language(raw_value) or (
+                    state.settings.get(key, '')
+                )
             elif key == 'slskd':
                 # The parallel limit is derived from max_parallel_downloads,
                 # not stored with slskd's own options.
