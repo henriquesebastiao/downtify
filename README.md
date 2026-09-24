@@ -124,7 +124,7 @@ The remaining deployment options (timezone, monitor sync time, cookies file, IPv
 | Free-text search | `The Night Owls Do I Still Recall` |
 | Library export (CSV) | Soundiiz, TuneMyMusic, Exportify |
 
-An artist link opens the artist's page, with their releases and a **Top Songs** button to pick from their most popular songs and download them, optionally as a playlist ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/)). Artists can also be watched for new releases with the **Playlist Monitor**.
+An artist link opens the artist's page, with their releases and a **Top Songs** button to pick from their most popular songs and download them, optionally as a playlist ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/)). Artists in your Library also get a **Top songs** tab with their first five Spotify top songs, kept in a per-artist file for a week ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/#on-an-artists-library-page)). Artists can also be watched for new releases with the **Playlist Monitor**.
 
 ## Troubleshooting
 

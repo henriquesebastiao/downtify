@@ -121,6 +121,36 @@ An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.
 
 ---
 
+### `GET /api/artists/top_songs/spotify`
+
+The first five Spotify top songs of an artist in your Library, for the [Top songs tab](features/top-songs.md#on-an-artists-library-page) of their page. They're read from `<downloads>/Metadata/ArtistTopSongs/<Artist>.json` while that file is fresh (7 days); with no file yet they're fetched from Spotify and saved (a few seconds), and a file older than that is returned right away with `"stale": true` while a refresh runs in the background. The Spotify artist comes from the artist's profile (`platforms_id.spotify`).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
+
+**Response:** the same shape as [`GET /api/artists/top_songs/url`](#get-apiartiststop_songsurl) for Spotify, plus when the songs were fetched:
+
+```json
+{
+  "source": "spotify",
+  "artist_id": "6XyY86QOPPrYVGvF9ch6wz",
+  "name": "Linkin Park",
+  "cover_url": "https://…",
+  "fetched_at": "2026-09-24T10:12:03+00:00",
+  "stale": false,
+  "songs": [ /* five song objects, most popular first */ ]
+}
+```
+
+| Status | When |
+|--------|------|
+| `400` | `name` is blank. |
+| `404` | The artist has no Spotify id saved yet. |
+| `502` | Nothing saved and Spotify couldn't be read. |
+
+---
+
 ## Artist photo, banner & bio
 
 Manual picker for an artist's profile photo and banner, plus their profile data (bio, social links, related artists) — see [Artist photo, banner & bio](features/artist-images.md). Images are saved as sidecar files under `<downloads>/Metadata/ArtistImage/` and `<downloads>/Metadata/ArtistBannerImage/`, served directly from the existing `/downloads` static mount; profile data lives in `<downloads>/Metadata/ArtistData/`.

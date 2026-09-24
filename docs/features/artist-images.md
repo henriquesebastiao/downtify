@@ -80,6 +80,7 @@ Clicking a link **only fills the text box** - nothing is saved until you press *
 <downloads>/Metadata/ArtistImage/<Artist>.jpg
 <downloads>/Metadata/ArtistBannerImage/<Artist>.banner.jpg
 <downloads>/Metadata/ArtistData/<Artist>.json
+<downloads>/Metadata/ArtistTopSongs/<Artist>.json
 ```
 
 One file per artist, named after them (sanitized the same way track filenames are) — no database record, so the file's presence on disk is what the artist page checks. Saving a new photo/banner overwrites the previous one, and `ArtistData/<Artist>.json` holds the bio/social/related-artist/platform-id data described above, plus which source (Spotify, YouTube Music, Deezer, a pasted link, or an upload) the current photo/banner came from. These are plain files under your downloads folder, so services like Navidrome can read them directly if you point them at the same location.

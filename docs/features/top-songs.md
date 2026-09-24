@@ -23,6 +23,12 @@ Some artists have huge catalogs where only a handful of tracks matter. Instead o
 
 Spotify's public embed has no discography, so Downtify reads the releases from the Spotify web player's own discography query, the same non-public API it uses for the album names. If Spotify changes it, Downtify falls back to a shorter list (every album, but only the ten most recent singles) and, failing that, shows no releases. Spotify songs go through the usual metadata-then-audio-match pipeline, with their album name attached up front; the download fills in the rest (track number, year) as it does for any Spotify song. YouTube Music songs are pinned to their own video, like any other YouTube Music link.
 
+## On an artist's Library page
+
+An artist Downtify knows on Spotify (see [Artist photo, banner & bio](artist-images.md)) also gets a **Top songs** tab on their page in your Library, next to Tracks and Fans also like. It shows the first **5** of their Spotify top songs exactly as the Top Songs page above does - play counts, the *In library* / queue status, the selection, the **Create playlist** switch and the download buttons - and the same five start out ticked. The tab only appears once the artist's Spotify id is known, which happens the first time their page is opened.
+
+Reading a song's cover, album and play count takes a few seconds, so Downtify keeps the five songs in a file per artist, `<downloads>/Metadata/ArtistTopSongs/<Artist>.json`, made in the background the first time the artist's page is opened. It is trusted for **7 days**: opening the tab reads the file at once, and once it is older than that the old list is shown right away while a fresh one is fetched behind it (you see the new numbers the next time). The file only holds the songs, their cover links and play counts - never the audio or the images, and never whether a song is in your library, which is worked out live. It's a cache: delete it whenever you like and it is made again.
+
 ## Creating a playlist
 
 The **Create playlist** switch on the Top Songs page starts **off** the first time you open an artist, and starts **on** once a playlist named **Top Songs of {artist}** already exists in your library, so later downloads keep adding to it. Flip the switch and your choice stays for as long as you are on that page. With it off, the songs download like any other individual songs: straight into your downloads folder, or into your artist/album folders when [File organization](file-organization.md) is on, with no folder of their own, no M3U and no artist photo.
