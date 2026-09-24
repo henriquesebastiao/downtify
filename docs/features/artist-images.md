@@ -80,7 +80,7 @@ Clicking a link **only fills the text box** - nothing is saved until you press *
 <downloads>/Metadata/ArtistImage/<Artist>.jpg
 <downloads>/Metadata/ArtistBannerImage/<Artist>.banner.jpg
 <downloads>/Metadata/ArtistData/<Artist>.json
-<downloads>/Metadata/ArtistTopSongs/<Artist>.json
+<downloads>/Metadata/ArtistTopSongs/<Artist>.topsongs.json
 ```
 
 One file per artist, named after them (sanitized the same way track filenames are) — no database record, so the file's presence on disk is what the artist page checks. Saving a new photo/banner overwrites the previous one (the web UI keeps its own copy of the old one from showing: each saved image's URL carries the file's modified time, so a replaced photo is fetched again while an untouched one stays cached), and `ArtistData/<Artist>.json` holds the bio/social/related-artist/platform-id data described above, plus, in `current_cover` and `current_cover_banner`, which image the current photo/banner is: the path of the URL it was downloaded from (host and query left out, so the same image from another CDN address still matches), or `upload` for one you uploaded. It's what the edit modal compares each candidate against to mark the one in use. These are plain files under your downloads folder, so services like Navidrome can read them directly if you point them at the same location.

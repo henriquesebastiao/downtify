@@ -26,7 +26,8 @@ the ones the user's settings allow - and bio/social/platform ids the same
 way the button would).
 
 The artist's Spotify top songs are kept here too, as a cache next to the
-profile (``Metadata/ArtistTopSongs/<name>.json``, see the last section):
+profile (``Metadata/ArtistTopSongs/<name>.topsongs.json``, see the last
+section):
 not part of the profile itself, so it has a file of its own.
 
 Function names are prefixed ``image_``/``_image`` for the photo/banner
@@ -70,6 +71,9 @@ _SUFFIXES = {
 }
 _PROFILE_DIRNAME = 'Metadata/ArtistData'
 _TOP_SONGS_DIRNAME = 'Metadata/ArtistTopSongs'
+# ``<name>.topsongs.json``: the artist's profile is ``<name>.json`` in its own
+# folder, and one JSON per artist in both is easy to mix up.
+_TOP_SONGS_SUFFIX = '.topsongs.json'
 
 #: How many of the artist's top songs are kept.
 TOP_SONGS_LIMIT = 5
@@ -870,8 +874,8 @@ def save_social(
 # Fetching an artist's top songs is slow - the artist embed, one embed per
 # song for its cover and album, and an overview request for the play counts
 # (see :func:`downtify.spotify.artist_top_songs_from_id`) - so the first
-# five are saved to ``Metadata/ArtistTopSongs/<name>.json``, next to the
-# artist's photo, banner and profile. It is a cache, not user data:
+# five are saved to ``Metadata/ArtistTopSongs/<name>.topsongs.json``, next
+# to the artist's photo, banner and profile. It is a cache, not user data:
 # machine-written, never edited by hand, and separate from
 # ``ArtistData/<name>.json`` on purpose (a bio or social-link save rewrites
 # that whole file, and deleting it to re-seed an artist shouldn't touch
@@ -897,7 +901,11 @@ _top_songs_locks_guard = threading.Lock()
 def profile_top_songs_path_for(download_dir: Path, name: str) -> Path:
     """The file for *name*'s top songs, whether or not it exists."""
 
-    return Path(download_dir) / _TOP_SONGS_DIRNAME / f'{_sanitize(name)}.json'
+    return (
+        Path(download_dir)
+        / _TOP_SONGS_DIRNAME
+        / f'{_sanitize(name)}{_TOP_SONGS_SUFFIX}'
+    )
 
 
 def _profile_top_songs_lock_for(
