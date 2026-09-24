@@ -3266,7 +3266,8 @@ async def download_csv_endpoint(request: Request) -> dict[str, Any]:
 
     Each row is resolved the same way a free-text search would be, via
     :func:`providers.find_match` inside :meth:`Downloader.download` -
-    there is no Spotify/YouTube URL per row, only a title and artist.
+    there is no Spotify/YouTube URL per row, only a title, artist, and
+    album when the CSV has it.
     """
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')

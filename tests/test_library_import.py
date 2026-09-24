@@ -1,5 +1,6 @@
 """Tests for downtify/library_import.py: parsing library-export CSVs
-(Soundiiz, TuneMyMusic, Exportify, ...) into title/artist song dicts."""
+(Soundiiz, TuneMyMusic, Exportify, ...) into title/artist/album song
+dicts."""
 
 from __future__ import annotations
 
@@ -30,7 +31,12 @@ def test_parses_exportify_style_headers():
     )
     songs = parse_library_csv(csv_text)
     assert songs == [
-        {'song_id': 'csv:0', 'name': 'Space Song', 'artists': ['Beach House']}
+        {
+            'song_id': 'csv:0',
+            'name': 'Space Song',
+            'artists': ['Beach House'],
+            'album_name': 'Depression Cherry',
+        }
     ]
 
 
@@ -45,8 +51,45 @@ def test_parses_tunemymusic_style_headers():
             'song_id': 'csv:0',
             'name': 'Motion Picture Soundtrack',
             'artists': ['Radiohead'],
+            'album_name': 'Kid A',
         }
     ]
+
+
+def test_omits_album_name_when_there_is_no_album_column():
+    csv_text = 'Title,Artist\nHeld Together,Slowdive\n'
+    songs = parse_library_csv(csv_text)
+    assert songs == [
+        {'song_id': 'csv:0', 'name': 'Held Together', 'artists': ['Slowdive']}
+    ]
+    assert 'album_name' not in songs[0]
+
+
+def test_omits_album_name_when_the_album_cell_is_blank():
+    csv_text = 'Title,Artist,Album\nSong,Artist,\n'
+    songs = parse_library_csv(csv_text)
+    assert songs == [
+        {'song_id': 'csv:0', 'name': 'Song', 'artists': ['Artist']}
+    ]
+    assert 'album_name' not in songs[0]
+
+
+def test_album_header_matching_is_case_insensitive():
+    csv_text = 'Title,Artist,ALBUM\nSong One,Artist One,Some Album\n'
+    songs = parse_library_csv(csv_text)
+    assert songs[0]['album_name'] == 'Some Album'
+
+
+def test_reads_album_title_header():
+    csv_text = 'Title,Artist,Album Title\nSong One,Artist One,Some Album\n'
+    songs = parse_library_csv(csv_text)
+    assert songs[0]['album_name'] == 'Some Album'
+
+
+def test_does_not_treat_playlist_name_as_album():
+    csv_text = 'Title,Artist,Playlist Name\nSong One,Artist One,Favorites\n'
+    songs = parse_library_csv(csv_text)
+    assert 'album_name' not in songs[0]
 
 
 def test_header_matching_is_case_insensitive():
