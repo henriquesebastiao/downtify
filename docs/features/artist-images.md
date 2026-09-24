@@ -19,7 +19,7 @@ The edit affordance is always available on every artist's Library page, no setti
 On an artist's Library page (`/library/artist?name=…`), hover the round photo (when shown) for an **Edit photo** button, or the banner area for an **Edit artist** button — both open the same modal: the artist's current photo at the top, and a menu below it with four tabs. It opens on **Profile** or **Banner** matching whichever button you clicked (defaults to **Banner** otherwise, since the photo itself may not always be visible to click).
 
 - **Profile** / **Banner** — pick an image the same way for either:
-  - **Search by name** — checks YouTube Music and Deezer for a matching artist photo. Type something else to search a different name, or a direct `http(s)://` image link to use it as a one-off candidate instead.
+  - **Search by name** — checks YouTube Music and Deezer for a matching artist photo (Deezer artists that only have its generic placeholder picture are left out). Type something else to search a different name, or a direct `http(s)://` image link to use it as a one-off candidate instead.
   - **Upload from your computer** — any image file.
   - **Remove photo / Remove banner** — only shown once the active tab's image is saved; asks for confirmation, then deletes the sidecar file.
 
@@ -90,4 +90,4 @@ One file per artist, named after them (sanitized the same way track filenames ar
 
 Choosing a photo/banner here never touches the download pipeline — it has no effect on what gets embedded in your audio files' own tags, and downloading a track never fetches an artist image automatically.
 
-The *Related* tab shows a photo for artists you don't own too, but it is display-only: the server relays Deezer's picture to your browser (which caches it for three hours) without saving it, and it never becomes an artist's photo or banner. Photos are only written to disk for artists you set one for yourself, or whose photo/banner was saved on first visit as described above (when the Settings allow it). See [`GET /api/artists/photo-proxy`](../api-reference.md#get-apiartistsphoto-proxy).
+The *Related* tab shows a photo for artists you don't own too - only a real one: an artist Deezer has no photo for (it serves a generic placeholder) gets the usual initial instead - but it is display-only: the server relays Deezer's picture to your browser (which caches it for three hours) without saving it, and it never becomes an artist's photo or banner. Photos are only written to disk for artists you set one for yourself, or whose photo/banner was saved on first visit as described above (when the Settings allow it). See [`GET /api/artists/photo-proxy`](../api-reference.md#get-apiartistsphoto-proxy).

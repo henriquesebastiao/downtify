@@ -222,9 +222,9 @@ A **display-only** photo for an artist that isn't in your library, used for the 
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `name` | string | yes | Artist name - matched against Deezer's results exactly (ignoring case), so a near-match never shows someone else's face |
+| `name` | string | yes | Artist name - matched against Deezer's results exactly (ignoring case), so a near-match never shows someone else's face. When several Deezer artists share the name, the one with the most fans is used |
 
-**Response:** the image bytes with `Cache-Control: public, max-age=10800` and an `ETag`, so the browser holds on to it for three hours. If a photo is already saved for that artist, that local file is sent instead, without browser caching (`Cache-Control: no-cache`), so a newly picked photo shows up right away. `404` (also cacheable for three hours) when Deezer has no exact match.
+**Response:** the image bytes with `Cache-Control: public, max-age=10800` and an `ETag`, so the browser holds on to it for three hours. If a photo is already saved for that artist, that local file is sent instead, without browser caching (`Cache-Control: no-cache`), so a newly picked photo shows up right away. `404` (also cacheable for three hours) when Deezer has no exact match, or when the matched artist has no photo on Deezer (it only has a generic placeholder picture, which is never returned).
 
 ---
 

@@ -154,11 +154,58 @@ fragment ArtistSocial on Artist {
 }"""
 
 
+# Deezer has no "this artist has no photo" flag: an artist without one gets
+# a picture whose CDN path carries the md5 of an empty string, which turns
+# out as a generic grey placeholder (found live: the obscure "Survivor" that
+# ranks above the real band). Recognising that hash is the only tell.
+_NO_PICTURE_HASH = 'd41d8cd98f00b204e9800998ecf8427e'
+
+
+def _has_real_picture(row: dict[str, Any]) -> bool:
+    """Whether a search row's artist has an actual photo, not Deezer's
+    placeholder (see :data:`_NO_PICTURE_HASH`)."""
+
+    for key in (
+        'picture_xl',
+        'picture_big',
+        'picture_medium',
+        'picture_small',
+    ):
+        url = str(row.get(key) or '')
+        if url:
+            return _NO_PICTURE_HASH not in url
+    return False
+
+
+def _most_popular_exact_match(
+    rows: list[Any], wanted: str
+) -> Optional[dict[str, Any]]:
+    """Of the rows whose name equals *wanted* (already lower-cased) exactly,
+    the one with the most fans - or ``None``.
+
+    Deezer doesn't rank namesakes by popularity: the well-known "Survivor"
+    (261k fans) comes after an unknown one (34 fans, no photo). Taking the
+    first exact match would attach the wrong artist's id or face.
+    """
+
+    matches = [
+        row
+        for row in rows
+        if isinstance(row, dict)
+        and str(row.get('name') or '').strip().lower() == wanted
+    ]
+    if not matches:
+        return None
+    return max(matches, key=lambda row: int(row.get('nb_fan') or 0))
+
+
 def search_artist(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """Artist photo candidates for *query*, largest Deezer offers each.
 
     Each result is ``{source: 'deezer', name, image_url, url}`` - same
-    shape the artist-image picker expects from every source.
+    shape the artist-image picker expects from every source. An artist
+    with only Deezer's placeholder picture is left out: it isn't a photo
+    anyone could pick.
     """
 
     text = query.strip()
@@ -187,7 +234,7 @@ def search_artist(query: str, limit: int = 10) -> list[dict[str, Any]]:
             or row.get('picture_medium')
             or ''
         )
-        if not name or not image:
+        if not name or not image or not _has_real_picture(row):
             continue
         results.append({
             'source': 'deezer',
@@ -205,7 +252,8 @@ def resolve_artist_id(name: str) -> Optional[str]:
     Deliberately stricter than :func:`search_artist`: an unrelated top
     result would silently attach the wrong bio/social/related-artists to
     this artist's profile, so a fuzzy "good enough" match isn't good
-    enough here.
+    enough here. Several artists can share the exact name; the one with
+    the most fans wins (see :func:`_most_popular_exact_match`).
     """
 
     text = name.strip()
@@ -220,14 +268,11 @@ def resolve_artist_id(name: str) -> Optional[str]:
     except Exception:
         logger.opt(exception=True).debug('Deezer artist id lookup failed')
         return None
-    wanted = text.lower()
-    for row in data.get('data') or []:
-        if not isinstance(row, dict):
-            continue
-        if str(row.get('name') or '').strip().lower() == wanted:
-            artist_id = row.get('id')
-            return str(artist_id) if artist_id is not None else None
-    return None
+    match = _most_popular_exact_match(data.get('data') or [], text.lower())
+    if match is None:
+        return None
+    artist_id = match.get('id')
+    return str(artist_id) if artist_id is not None else None
 
 
 def exact_artist_picture(name: str) -> Optional[str]:
@@ -235,8 +280,11 @@ def exact_artist_picture(name: str) -> Optional[str]:
     (case-insensitive) artist name match, or ``None``.
 
     One search call, no id needed. Same strictness as
-    :func:`resolve_artist_id`: a near match would show another artist's
-    face under this name.
+    :func:`resolve_artist_id`, and the same pick among namesakes (the
+    most popular one): a near match would show another artist's face
+    under this name. If that artist has no photo - Deezer only has its
+    placeholder (see :data:`_NO_PICTURE_HASH`) - the answer is ``None``,
+    not a namesake's photo or the placeholder.
     """
 
     text = name.strip()
@@ -251,13 +299,10 @@ def exact_artist_picture(name: str) -> Optional[str]:
     except Exception:
         logger.opt(exception=True).debug('Deezer artist photo lookup failed')
         return None
-    wanted = text.lower()
-    for row in data.get('data') or []:
-        if not isinstance(row, dict):
-            continue
-        if str(row.get('name') or '').strip().lower() == wanted:
-            return row.get('picture_medium') or None
-    return None
+    match = _most_popular_exact_match(data.get('data') or [], text.lower())
+    if match is None or not _has_real_picture(match):
+        return None
+    return match.get('picture_medium') or None
 
 
 def fetch_artist_full(artist_id: str, lang: str) -> dict[str, Any]:
