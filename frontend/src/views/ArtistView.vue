@@ -182,7 +182,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
@@ -517,7 +517,11 @@ watch(() => artist.value?.name, seedProfile, { immediate: true })
 
 // ── Top songs tab: the artist's first five Spotify top songs, read from
 // the file the backend keeps per artist (see downtify/artist_top_songs.py).
-// Loaded when the tab is opened, once per artist. ────────────────────────
+// Asked for as soon as the artist's Spotify id is known - not only when
+// the tab is opened - so the tab's count shows up on its own once the
+// backend has the songs, and the list is ready by the time it's clicked.
+// A file a week old comes back marked `stale` while the backend refreshes
+// it, so it's asked for again until the fresh one arrives. ─────────────────
 const topSongsData = ref(null)
 const topSongsLoading = ref(false)
 const topSongsError = ref('')
@@ -526,6 +530,33 @@ const topSongs = useTopSongs(topSongsData)
 // answer for an artist left behind can't overwrite the current one.
 let topSongsKey = ''
 let topSongsRun = 0
+let topSongsTimer = null
+// How long, and how many times, to wait for a stale file's refresh.
+const TOP_SONGS_POLL_MS = 4000
+const TOP_SONGS_POLL_MAX = 8
+
+function stopTopSongsPoll() {
+  clearTimeout(topSongsTimer)
+  topSongsTimer = null
+}
+
+// Swap in the refreshed list without touching the selection or the
+// "Create playlist" switch - it may be in the middle of being used.
+function pollTopSongs(run, name, attempt = 0) {
+  stopTopSongsPoll()
+  if (attempt >= TOP_SONGS_POLL_MAX) return
+  topSongsTimer = setTimeout(async () => {
+    if (run !== topSongsRun) return
+    try {
+      const res = await API.artistTopSongsSaved(name)
+      if (run !== topSongsRun) return
+      topSongsData.value = res.data
+      if (res.data?.stale) pollTopSongs(run, name, attempt + 1)
+    } catch {
+      // Keep showing what's there; the next visit asks again.
+    }
+  }, TOP_SONGS_POLL_MS)
+}
 
 async function loadTopSongs(force = false) {
   const name = artist.value?.name
@@ -534,6 +565,7 @@ async function loadTopSongs(force = false) {
   if (!force && key === topSongsKey) return
   topSongsKey = key
   const run = ++topSongsRun
+  stopTopSongsPoll()
   topSongsLoading.value = true
   topSongsError.value = ''
   topSongsData.value = null
@@ -543,6 +575,7 @@ async function loadTopSongs(force = false) {
     if (run !== topSongsRun) return
     topSongsData.value = res.data
     topSongs.reset()
+    if (res.data?.stale) pollTopSongs(run, name)
   } catch (err) {
     if (run !== topSongsRun) return
     topSongsError.value = err?.response?.data?.detail || err?.message || ''
@@ -557,6 +590,7 @@ async function loadTopSongs(force = false) {
 watch(
   () => artist.value?.name,
   () => {
+    stopTopSongsPoll()
     topSongsKey = ''
     topSongsRun++
     topSongsData.value = null
@@ -564,13 +598,15 @@ watch(
     topSongsLoading.value = false
   }
 )
-watch(
-  [tab, spotifyId, () => artist.value?.name],
-  () => {
-    if (tab.value === 'topsongs') loadTopSongs()
-  },
-  { immediate: true }
-)
+watch([spotifyId, () => artist.value?.name], () => loadTopSongs(), {
+  immediate: true,
+})
+// Opening the tab retries after a failure (the key is forgotten then); it
+// does nothing when the songs are already loaded.
+watch(tab, () => {
+  if (tab.value === 'topsongs') loadTopSongs()
+})
+onBeforeUnmount(stopTopSongsPoll)
 
 // ArtistArtModal's single "saved" event covers photo, banner, bio and
 // social edits alike - simplest to just refresh both after any of them.
