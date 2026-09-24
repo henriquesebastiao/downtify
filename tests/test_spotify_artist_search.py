@@ -207,3 +207,36 @@ def test_query_string_is_sent_url_safe(monkeypatch):
     request = httpx.Request('GET', seen[0][0], params=seen[0][1]['params'])
     sent = parse_qs(request.url.query.decode())
     assert json.loads(sent['variables'][0])['query'] == 'Panic! At The Disco'
+
+
+# ── names as the disk keeps them ───────────────────────────────────────
+
+
+def test_a_name_the_disk_shortened_still_finds_the_artist(monkeypatch):
+    """A track with no artist tag is named after its file: 'ACDC'."""
+
+    _patch_get(monkeypatch, [_artist_row('AC/DC', '711MCceyCBcFnzjGY4Q7Un')])
+    assert spotify.search_artist_by_name('ACDC') == {
+        'id': '711MCceyCBcFnzjGY4Q7Un',
+        'name': 'AC/DC',
+    }
+
+
+def test_the_spotify_spelling_finds_a_shortened_row(monkeypatch):
+    _patch_get(monkeypatch, [_artist_row('ACDC', 'x')])
+    assert spotify.search_artist_by_name('AC/DC')['id'] == 'x'
+
+
+def test_a_different_artist_is_still_not_matched(monkeypatch):
+    _patch_get(monkeypatch, [_artist_row('AC/DC Tribute', 'wrong')])
+    assert spotify.search_artist_by_name('ACDC') is None
+
+
+@pytest.mark.parametrize('name', ['???', '///', '...'])
+def test_a_name_with_nothing_left_makes_no_request(monkeypatch, name):
+    def boom(*a, **k):
+        raise AssertionError('no request expected')
+
+    monkeypatch.setattr(spotify.httpx, 'get', boom)
+    monkeypatch.setattr(spotify, '_fetch_embed_json', boom)
+    assert spotify.search_artist_by_name(name) is None

@@ -39,6 +39,7 @@ from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
 from .cookies import CookiesStore
+from .file_naming import sanitize_file_name
 from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
@@ -49,8 +50,6 @@ from .providers import (
     find_match_youtube_only,
 )
 from .slskd_provider import download_from_slskd
-
-_INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 
 # Extensions that count as "this song is already downloaded". Deliberately
 # excludes sidecars written next to the audio (.lrc, cover.jpg, .m3u) so a
@@ -183,8 +182,7 @@ class _ExtractAudioPP(FFmpegExtractAudioPP):
 
 
 def _sanitize(text: str) -> str:
-    safe = _INVALID_FS_CHARS.sub('', text or '').strip().strip('.')
-    return safe or 'unknown'
+    return sanitize_file_name(text)
 
 
 # Order matters — yt-dlp tries clients top-to-bottom and uses the first one

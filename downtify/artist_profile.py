@@ -42,6 +42,7 @@ from loguru import logger
 
 from . import apple_music, deezer, providers, spotify
 from .downloader import _sanitize
+from .file_naming import file_name_key
 from .image_size import image_dimensions
 from .podcasts import strip_html
 
@@ -539,7 +540,9 @@ def resolve_platform_ids(
     name: str, known: Optional[dict[str, str]] = None
 ) -> dict[str, str]:
     """*name* looked up across every stream platform with a name-search
-    API, requiring an exact (case-insensitive) match on each - same
+    API, requiring an exact match on each (ignoring case and the
+    characters a file name can't hold, see
+    :func:`downtify.file_naming.file_name_key`) - same
     strictness as every platform's own ``resolve_artist_id``, so an
     unrelated top result never gets attached to the wrong artist. Only
     the platforms that actually matched are in the returned dict.
@@ -652,9 +655,11 @@ def _seed_image_from_streams(
                 )
             return
 
-    wanted = name.strip().lower()
+    wanted = file_name_key(name)
+    if not wanted:
+        return
     for artist in providers.search_artists(name, limit=25):
-        if str(artist.get('name') or '').strip().lower() != wanted:
+        if file_name_key(str(artist.get('name') or '')) != wanted:
             continue
         url = artist.get('cover_url') or ''
         if url:

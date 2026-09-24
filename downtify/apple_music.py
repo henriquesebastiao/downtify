@@ -43,6 +43,8 @@ from typing import Any, Optional
 import httpx
 from loguru import logger
 
+from .file_naming import file_name_key
+
 _SEARCH_URL = 'https://itunes.apple.com/search'
 _BROWSE_URL = 'https://music.apple.com/us/browse'
 _CATALOG_URL = 'https://amp-api.music.apple.com/v1/catalog/{storefront}/artists/{artist_id}'
@@ -126,8 +128,10 @@ def _current_token() -> str:
 
 
 def _resolve_artist_row(name: str) -> Optional[dict[str, Any]]:
-    """The full iTunes Search API row for an exact (case-insensitive)
-    name match, or ``None`` - shared by :func:`resolve_artist_id`
+    """The full iTunes Search API row for an exact name match - ignoring
+    case and the characters a file name can't hold, so ``ACDC`` matches
+    ``AC/DC`` (see :func:`downtify.file_naming.file_name_key`) - or
+    ``None``. Shared by :func:`resolve_artist_id`
     (numeric id) and :func:`resolve_artist_slug_id` (``slug/numeric-id``,
     for ``platforms_id``), so both reuse the one search call/match loop
     instead of each doing their own.
@@ -138,7 +142,8 @@ def _resolve_artist_row(name: str) -> Optional[dict[str, Any]]:
     """
 
     text = name.strip()
-    if not text:
+    wanted = file_name_key(text)
+    if not wanted:
         return None
     try:
         resp = httpx.get(
@@ -151,19 +156,18 @@ def _resolve_artist_row(name: str) -> Optional[dict[str, Any]]:
     except Exception:
         logger.opt(exception=True).debug('Apple Music artist id lookup failed')
         return None
-    wanted = text.lower()
     for row in data.get('results') or []:
         if (
             isinstance(row, dict)
-            and str(row.get('artistName') or '').strip().lower() == wanted
+            and file_name_key(str(row.get('artistName') or '')) == wanted
         ):
             return row
     return None
 
 
 def resolve_artist_id(name: str) -> Optional[str]:
-    """Apple Music's numeric artist id for an exact (case-insensitive)
-    name match on the public iTunes Search API, or ``None``.
+    """Apple Music's numeric artist id for an exact name match on the
+    public iTunes Search API (see :func:`_resolve_artist_row`), or ``None``.
     """
 
     row = _resolve_artist_row(name)

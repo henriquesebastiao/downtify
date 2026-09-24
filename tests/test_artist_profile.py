@@ -2681,3 +2681,51 @@ def test_bio_preview_endpoint_rejects_a_blank_name(app_state):
             )
         )
     assert exc.value.status_code == 400
+
+
+# ── artists named as the disk keeps them (AC/DC -> ACDC) ───────────────
+
+
+def test_a_profile_saved_as_ac_dc_is_the_one_read_for_acdc(tmp_path):
+    """The files are named after the sanitized name, so the two spellings
+    of one artist already share every sidecar."""
+
+    artist_profile.save_bio(tmp_path, 'AC/DC', 'Thunderstruck.')
+    assert artist_profile.load_profile(tmp_path, 'ACDC')['bio'] == (
+        'Thunderstruck.'
+    )
+    assert artist_profile._profile_path_for(tmp_path, 'AC/DC') == (
+        artist_profile._profile_path_for(tmp_path, 'ACDC')
+    )
+
+
+def test_the_youtube_photo_fallback_matches_the_name_the_disk_kept(tmp_path):
+    with (
+        patch(
+            'downtify.artist_profile.providers.search_artists',
+            return_value=[{'name': 'AC/DC', 'cover_url': 'https://yt/x.jpg'}],
+        ),
+        patch('downtify.artist_profile.fetch_and_save_image') as mock_save,
+    ):
+        artist_profile._seed_image_from_streams(
+            tmp_path, 'ACDC', artist_profile.KIND_PHOTO, None
+        )
+    assert mock_save.call_count == 1
+    assert mock_save.call_args.args[3] == 'https://yt/x.jpg'
+    assert mock_save.call_args.kwargs['source'] == 'youtube'
+
+
+def test_the_youtube_photo_fallback_ignores_a_different_artist(tmp_path):
+    with (
+        patch(
+            'downtify.artist_profile.providers.search_artists',
+            return_value=[
+                {'name': 'AC/DC Tribute', 'cover_url': 'https://yt/x.jpg'}
+            ],
+        ),
+        patch('downtify.artist_profile.fetch_and_save_image') as mock_save,
+    ):
+        artist_profile._seed_image_from_streams(
+            tmp_path, 'ACDC', artist_profile.KIND_PHOTO, None
+        )
+    mock_save.assert_not_called()

@@ -3522,3 +3522,32 @@ def test_artist_full_top_songs_survive_missing_play_counts(monkeypatch):
     songs = artist_full_top_songs_from_channel_id('UCxxx')
     assert [s['song_id'] for s in songs] == ['aaaaaaaaaaa', 'bbbbbbbbbbb']
     assert all('play_count' not in s for s in songs)
+
+
+# ── resolve_artist_id: names as the disk keeps them ────────────────────
+
+
+def test_resolve_artist_id_finds_the_artist_by_the_name_the_disk_kept(
+    monkeypatch,
+):
+    fake = _FakeYTM([_artist_search_row('UCacdc', 'AC/DC')])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    assert resolve_artist_id('ACDC') == 'UCacdc'
+
+
+def test_resolve_artist_id_does_not_match_a_different_artist_by_disk_name(
+    monkeypatch,
+):
+    fake = _FakeYTM([_artist_search_row('UCother', 'AC/DC Tribute')])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    assert resolve_artist_id('ACDC') is None
+
+
+def test_resolve_artist_id_with_nothing_left_of_the_name_searches_nothing(
+    monkeypatch,
+):
+    def boom():
+        raise AssertionError('no search expected')
+
+    monkeypatch.setattr(providers, '_ytm', boom)
+    assert resolve_artist_id('???') is None

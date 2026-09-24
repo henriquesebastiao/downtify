@@ -326,3 +326,37 @@ def test_fetch_artist_full_genre_is_empty_without_usable_names(genres):
         ),
     ):
         assert not fetch_artist_full('1', 'en')['genre']
+
+
+# ── names as the disk keeps them ───────────────────────────────────────
+
+
+def test_resolve_artist_id_finds_the_artist_by_the_name_the_disk_kept():
+    payload = {
+        'results': [
+            {
+                'artistId': 5040714,
+                'artistName': 'AC/DC',
+                'artistLinkUrl': 'https://music.apple.com/us/artist/ac-dc/5040714',
+            }
+        ]
+    }
+    with patch(
+        'downtify.apple_music.httpx.get', return_value=_mock_response(payload)
+    ):
+        assert resolve_artist_id('ACDC') == '5040714'
+        assert resolve_artist_slug_id('ACDC') == 'ac-dc/5040714'
+
+
+def test_resolve_artist_id_does_not_match_a_different_artist_by_disk_name():
+    payload = {'results': [{'artistId': 1, 'artistName': 'AC/DC Tribute'}]}
+    with patch(
+        'downtify.apple_music.httpx.get', return_value=_mock_response(payload)
+    ):
+        assert resolve_artist_id('ACDC') is None
+
+
+def test_resolve_artist_id_with_nothing_left_of_the_name_makes_no_request():
+    with patch('downtify.apple_music.httpx.get') as get:
+        assert resolve_artist_id('???') is None
+    get.assert_not_called()

@@ -85,6 +85,8 @@ Clicking a link **only fills the text box** - nothing is saved until you press *
 
 One file per artist, named after them (sanitized the same way track filenames are) — no database record, so the file's presence on disk is what the artist page checks. Saving a new photo/banner overwrites the previous one, and `ArtistData/<Artist>.json` holds the bio/social/related-artist/platform-id data described above, plus which source (Spotify, YouTube Music, Deezer, a pasted link, or an upload) the current photo/banner came from. These are plain files under your downloads folder, so services like Navidrome can read them directly if you point them at the same location.
 
+Artist names are matched the way the disk keeps them: Downtify files `AC/DC` as `ACDC`, because a file name can't hold a `/`, and a track with no artist tag takes its artist from that file name - so the same artist can show up as `AC/DC` or `ACDC`. Every lookup by name (Spotify, Deezer, YouTube Music and Apple Music) ignores case and the characters a file name can't hold, so both spellings find the same artist, and both share the same files above. A name that differs in anything else - `AC/DC Tribute`, say - is still a different artist and never matches.
+
 `platforms_id` recognizes the keys `spotify`, `youtubemusic`, `deezer` and `applemusic`, all resolved automatically - Spotify from one of the artist's own Spotify tracks or, failing that, by exact name; the others by exact name. Fetching the bio fills in a missing Spotify id too, so an artist opened before this existed gets its Spotify icon after one fetch. An id already saved is never replaced, and you can still edit the JSON file directly to set one by hand.
 
 ## Out of scope

@@ -17,6 +17,7 @@ from typing import Any, Optional
 import httpx
 from loguru import logger
 
+from .file_naming import file_name_key
 from .telemetry import json_log_blob, redact_sensitive_mapping
 
 SPOTIFY_URL_RE = re.compile(
@@ -1542,7 +1543,9 @@ def _anonymous_token() -> Optional[str]:
 
 def search_artist_by_name(name: str) -> Optional[dict[str, str]]:
     """``{id, name}`` of the Spotify artist whose name matches *name*
-    exactly (case-insensitively), or ``None``.
+    exactly - ignoring case and the characters a file name can't hold, so
+    ``ACDC`` finds ``AC/DC`` (see :func:`downtify.file_naming.file_name_key`)
+    - or ``None``.
 
     Spotify has no public search API, but the web player's own
     search-as-you-type box (``searchSuggestions``) also returns the top
@@ -1558,7 +1561,8 @@ def search_artist_by_name(name: str) -> Optional[dict[str, str]]:
     """
 
     text = name.strip()
-    if not text:
+    wanted = file_name_key(text)
+    if not wanted:
         return None
     token = _anonymous_token()
     if not token:
@@ -1600,7 +1604,6 @@ def search_artist_by_name(name: str) -> Optional[dict[str, str]]:
         ((data.get('data') or {}).get('searchV2') or {}).get('topResultsV2')
         or {}
     ).get('itemsV2') or []
-    wanted = text.lower()
     for entry in items:
         item = entry.get('item') if isinstance(entry, dict) else None
         if not isinstance(item, dict):
@@ -1610,7 +1613,7 @@ def search_artist_by_name(name: str) -> Optional[dict[str, str]]:
         artist = item.get('data') or {}
         artist_name = str((artist.get('profile') or {}).get('name') or '')
         artist_id = _id_from_uri(str(artist.get('uri') or ''))
-        if artist_id and artist_name.strip().lower() == wanted:
+        if artist_id and file_name_key(artist_name) == wanted:
             return {'id': artist_id, 'name': artist_name.strip()}
     return None
 

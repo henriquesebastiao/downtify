@@ -24,6 +24,8 @@ from typing import Any, Optional
 import httpx
 from loguru import logger
 
+from .file_naming import file_name_key
+
 _SEARCH_URL = 'https://api.deezer.com/search/artist'
 _AUTH_URL = 'https://auth.deezer.com/login/anonymous'
 _GRAPHQL_URL = 'https://pipe.deezer.com/api'
@@ -178,21 +180,25 @@ def _has_real_picture(row: dict[str, Any]) -> bool:
 
 
 def _most_popular_exact_match(
-    rows: list[Any], wanted: str
+    rows: list[Any], name: str
 ) -> Optional[dict[str, Any]]:
-    """Of the rows whose name equals *wanted* (already lower-cased) exactly,
-    the one with the most fans - or ``None``.
+    """Of the rows whose name is *name* - the same name on disk, so
+    ``AC/DC`` matches ``ACDC`` (see :func:`file_name_key`) - the one with
+    the most fans, or ``None``.
 
     Deezer doesn't rank namesakes by popularity: the well-known "Survivor"
     (261k fans) comes after an unknown one (34 fans, no photo). Taking the
     first exact match would attach the wrong artist's id or face.
     """
 
+    wanted = file_name_key(name)
+    if not wanted:
+        return None
     matches = [
         row
         for row in rows
         if isinstance(row, dict)
-        and str(row.get('name') or '').strip().lower() == wanted
+        and file_name_key(str(row.get('name') or '')) == wanted
     ]
     if not matches:
         return None
@@ -246,8 +252,10 @@ def search_artist(query: str, limit: int = 10) -> list[dict[str, Any]]:
 
 
 def resolve_artist_id(name: str) -> Optional[str]:
-    """Deezer's numeric artist id for an exact (case-insensitive) name
-    match, or ``None`` if no result's name matches exactly.
+    """Deezer's numeric artist id for an exact name match, or ``None`` if
+    no result's name matches exactly. Case and the characters a file name
+    can't hold are ignored (``ACDC`` matches ``AC/DC``, see
+    :func:`downtify.file_naming.file_name_key`).
 
     Deliberately stricter than :func:`search_artist`: an unrelated top
     result would silently attach the wrong bio/social/related-artists to
@@ -257,7 +265,7 @@ def resolve_artist_id(name: str) -> Optional[str]:
     """
 
     text = name.strip()
-    if not text:
+    if not file_name_key(text):
         return None
     try:
         resp = httpx.get(
@@ -268,7 +276,7 @@ def resolve_artist_id(name: str) -> Optional[str]:
     except Exception:
         logger.opt(exception=True).debug('Deezer artist id lookup failed')
         return None
-    match = _most_popular_exact_match(data.get('data') or [], text.lower())
+    match = _most_popular_exact_match(data.get('data') or [], text)
     if match is None:
         return None
     artist_id = match.get('id')
@@ -276,8 +284,8 @@ def resolve_artist_id(name: str) -> Optional[str]:
 
 
 def exact_artist_picture(name: str) -> Optional[str]:
-    """Deezer's medium-size profile photo URL for an exact
-    (case-insensitive) artist name match, or ``None``.
+    """Deezer's medium-size profile photo URL for an exact artist name
+    match (same rule as :func:`resolve_artist_id`), or ``None``.
 
     One search call, no id needed. Same strictness as
     :func:`resolve_artist_id`, and the same pick among namesakes (the
@@ -288,7 +296,7 @@ def exact_artist_picture(name: str) -> Optional[str]:
     """
 
     text = name.strip()
-    if not text:
+    if not file_name_key(text):
         return None
     try:
         resp = httpx.get(
@@ -299,7 +307,7 @@ def exact_artist_picture(name: str) -> Optional[str]:
     except Exception:
         logger.opt(exception=True).debug('Deezer artist photo lookup failed')
         return None
-    match = _most_popular_exact_match(data.get('data') or [], text.lower())
+    match = _most_popular_exact_match(data.get('data') or [], text)
     if match is None or not _has_real_picture(match):
         return None
     return match.get('picture_medium') or None

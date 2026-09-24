@@ -32,6 +32,7 @@ from ytmusicapi.navigation import (
 )
 from ytmusicapi.parsers.library import parse_albums as _parse_ytm_albums
 
+from .file_naming import file_name_key
 from .telemetry import json_log_blob, redact_sensitive_mapping
 
 
@@ -410,8 +411,10 @@ def search_artists(query: str, limit: int = 10) -> list[dict[str, Any]]:
 
 
 def resolve_artist_id(name: str) -> Optional[str]:
-    """YouTube Music channel id for an exact (case-insensitive) name
-    match, or ``None`` if no search result's name matches exactly.
+    """YouTube Music channel id for an exact name match, or ``None`` if no
+    search result's name matches exactly. Case and the characters a file
+    name can't hold are ignored (``ACDC`` matches ``AC/DC``, see
+    :func:`downtify.file_naming.file_name_key`).
 
     Deliberately strict, same reasoning as
     :func:`downtify.deezer.resolve_artist_id`/
@@ -423,11 +426,11 @@ def resolve_artist_id(name: str) -> Optional[str]:
     """
 
     text = name.strip()
-    if not text:
+    wanted = file_name_key(text)
+    if not wanted:
         return None
-    wanted = text.lower()
     for artist in search_artists(text, limit=25):
-        if str(artist.get('name') or '').strip().lower() == wanted:
+        if file_name_key(str(artist.get('name') or '')) == wanted:
             return artist.get('artist_id') or None
     return None
 
