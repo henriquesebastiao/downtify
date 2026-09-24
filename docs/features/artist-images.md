@@ -25,7 +25,7 @@ On an artist's Library page (`/library/artist?name=…`), hover the round photo 
 
   Every search result card is badged with where it came from. Picking one downloads and saves it immediately.
 - **Bio** — a plain text box with whatever bio is currently saved (blank if none), for writing or editing it yourself. Saving overwrites the current text directly. A ⚡ **Fetch bio from Streams** button above the box can fill it in from Apple Music/Deezer instead of typing it by hand — see [Fetching a bio automatically](#fetching-a-bio-automatically) below.
-- **Social** — Twitter/X, Instagram, Facebook, YouTube and website links, editable directly. Saving always replaces all five fields with what the form has, even a field you leave blank.
+- **Social** — Twitter/X, Instagram, Facebook, YouTube and website links, editable directly. Saving always replaces all five fields with what the form has, even a field you leave blank. Fetching a bio never touches a link you've filled in: Deezer's social links only fill fields that are still empty (Deezer doesn't know every network, so complete the rest by hand and it stays that way).
 
 ## The first time you open a new artist
 

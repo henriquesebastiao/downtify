@@ -300,7 +300,7 @@ Fetch an artist's bio and save it. Apple Music is the primary source (also bring
 
 `lang` affects the bio text itself, not just formatting - but for Apple Music it's not a simple header: each supported language is tied to a specific Apple Music storefront (e.g. `pt-BR` uses the Brazil storefront, `el` uses Greece's), and a language with no working storefront (`bg`) falls back to whatever that artist's default-language bio is.
 
-**Response:** the same shape as `GET /api/artists/profile`, with `bio` updated - plus `origin`/`born_or_formed`/`genre`/`is_group`/`banner_bg_color`/`platforms_id.applemusic` when Apple Music had a match, and `social`/`related_artists`/`platforms_id.deezer` when Deezer had one. `400` only when neither source matched this artist at all.
+**Response:** the same shape as `GET /api/artists/profile`, with `bio` updated - plus `origin`/`born_or_formed`/`genre`/`is_group`/`banner_bg_color`/`platforms_id.applemusic` when Apple Music had a match, and `social` (only fields that are still empty - a link already saved, typed by hand or fetched earlier, is never replaced)/`related_artists`/`platforms_id.deezer` when Deezer had one. `400` only when neither source matched this artist at all.
 
 ---
 

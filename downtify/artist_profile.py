@@ -331,6 +331,26 @@ BIO_SOURCE_DEEZER = 'deezer'
 _BIO_SOURCES = (BIO_SOURCE_AUTO, BIO_SOURCE_APPLE_MUSIC, BIO_SOURCE_DEEZER)
 
 
+def _fill_empty_social(
+    current: dict[str, str], fetched: dict[str, str]
+) -> dict[str, str]:
+    """*current* with each of its empty links filled from *fetched*.
+
+    Deezer sends an empty string for every network it doesn't know, so a
+    plain ``{**current, **fetched}`` would blank a link the user typed
+    in to complete what Deezer lacks - and a link that is already there,
+    typed or fetched earlier, is never replaced either: there's no way to
+    tell a hand-corrected one from a fetched one, and losing someone's
+    edit is worse than keeping a stale link (they can clear the field).
+    """
+
+    merged = dict(current)
+    for key, url in fetched.items():
+        if url and not str(merged.get(key) or '').strip():
+            merged[key] = url
+    return merged
+
+
 def fetch_bio(
     download_dir: Path,
     name: str,
@@ -409,11 +429,9 @@ def fetch_bio(
             deezer_full = None
         if deezer_full is not None:
             got_anything = True
-            # Merge rather than replace: Deezer's response only ever
-            # covers its own four fields, so a manually-added one (e.g.
-            # 'youtube', which Deezer has no concept of) survives a
-            # later re-fetch instead of being wiped.
-            profile['social'] = {**profile['social'], **deezer_full['social']}
+            profile['social'] = _fill_empty_social(
+                profile['social'], deezer_full['social']
+            )
             profile['related_artists'] = deezer_full['related_artist_names']
             if deezer_full['bio_html']:
                 deezer_bio = _format_bio_text(deezer_full['bio_html'])

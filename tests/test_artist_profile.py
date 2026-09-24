@@ -2399,3 +2399,109 @@ def test_bio_endpoint_turns_a_missing_source_bio_into_a_400(app_state):
             )
     assert exc.value.status_code == 400
     assert 'Deezer has no biography' in exc.value.detail
+
+
+# ── a re-fetch must never wipe social links the user filled in ─────────
+
+_DEEZER_SOCIAL_SPARSE = {
+    **_DEEZER_FULL,
+    # What Deezer really sends for an artist it only partly knows: the
+    # networks it lacks come back as empty strings, not missing keys.
+    'social': {
+        'twitter': 'https://twitter.com/deezer_twitter',
+        'facebook': '',
+        'website': '',
+        'instagram': '',
+    },
+}
+
+
+def _refetch_social(tmp_path, saved_social, deezer_full):
+    artist_profile.save_social(tmp_path, 'Evanescence', saved_social)
+    with (
+        patch(
+            'downtify.artist_profile.apple_music.resolve_artist_id',
+            return_value=None,
+        ),
+        patch(
+            'downtify.artist_profile.deezer.resolve_artist_id',
+            return_value='98',
+        ),
+        patch(
+            'downtify.artist_profile.deezer.fetch_artist_full',
+            return_value=deezer_full,
+        ),
+    ):
+        profile = artist_profile.fetch_bio(tmp_path, 'Evanescence', 'en')
+    # What's on disk, not just the returned dict.
+    return artist_profile.load_profile(tmp_path, 'Evanescence')['social'], (
+        profile['social']
+    )
+
+
+def test_fetch_bio_keeps_links_the_user_added_for_networks_deezer_lacks(
+    tmp_path,
+):
+    on_disk, returned = _refetch_social(
+        tmp_path,
+        {
+            'instagram': 'https://instagram.com/evanescence',
+            'facebook': 'https://facebook.com/evanescence',
+            'website': 'https://evanescence.com',
+            'youtube': 'https://youtube.com/evanescence',
+        },
+        _DEEZER_SOCIAL_SPARSE,
+    )
+    for social in (on_disk, returned):
+        assert social['instagram'] == 'https://instagram.com/evanescence'
+        assert social['facebook'] == 'https://facebook.com/evanescence'
+        assert social['website'] == 'https://evanescence.com'
+        assert social['youtube'] == 'https://youtube.com/evanescence'
+        # ...while Deezer still fills the one that was empty.
+        assert social['twitter'] == 'https://twitter.com/deezer_twitter'
+
+
+def test_fetch_bio_does_not_replace_a_link_that_is_already_there(tmp_path):
+    on_disk, _ = _refetch_social(
+        tmp_path,
+        {'twitter': 'https://twitter.com/my_corrected_handle'},
+        _DEEZER_SOCIAL_SPARSE,
+    )
+    assert on_disk['twitter'] == 'https://twitter.com/my_corrected_handle'
+
+
+def test_fetch_bio_treats_a_blank_saved_link_as_empty(tmp_path):
+    on_disk, _ = _refetch_social(
+        tmp_path, {'twitter': '   '}, _DEEZER_SOCIAL_SPARSE
+    )
+    assert on_disk['twitter'] == 'https://twitter.com/deezer_twitter'
+
+
+def test_fetch_bio_with_deezer_lacking_every_network_changes_nothing(
+    tmp_path,
+):
+    saved = {
+        'twitter': 'https://twitter.com/a',
+        'instagram': 'https://instagram.com/a',
+    }
+    nothing = {
+        **_DEEZER_FULL,
+        'social': {
+            'twitter': '',
+            'facebook': '',
+            'website': '',
+            'instagram': '',
+        },
+    }
+    on_disk, _ = _refetch_social(tmp_path, saved, nothing)
+    assert on_disk['twitter'] == saved['twitter']
+    assert on_disk['instagram'] == saved['instagram']
+
+
+def test_fill_empty_social_never_mutates_its_inputs():
+    current = {'twitter': '', 'youtube': 'https://y'}
+    fetched = {'twitter': 'https://t', 'facebook': ''}
+    result = artist_profile._fill_empty_social(current, fetched)
+    assert result == {'twitter': 'https://t', 'youtube': 'https://y'}
+    assert current == {'twitter': '', 'youtube': 'https://y'}
+    assert fetched == {'twitter': 'https://t', 'facebook': ''}
