@@ -133,6 +133,7 @@ The first five Spotify top songs of an artist in your Library, for the [Top song
 
 ```json
 {
+  "schema": 2,
   "source": "spotify",
   "artist_id": "6XyY86QOPPrYVGvF9ch6wz",
   "name": "Linkin Park",
@@ -142,6 +143,8 @@ The first five Spotify top songs of an artist in your Library, for the [Top song
   "songs": [ /* five song objects, most popular first */ ]
 }
 ```
+
+Each song object also has `preview_url`: the 30-second clip Spotify's own player offers for the song (`https://p.scdn.co/mp3-preview/…`, MP3), or `""` when there is none. Downtify only passes on an `https` link on `p.scdn.co`. `schema` is the file's layout; a file of an older one is treated as stale.
 
 | Status | When |
 |--------|------|

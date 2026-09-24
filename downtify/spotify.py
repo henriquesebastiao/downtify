@@ -13,6 +13,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
+from urllib.parse import urlsplit
 
 import httpx
 from loguru import logger
@@ -1209,6 +1210,27 @@ def _album_name_from_embed(album_uri: str) -> str:
     return str(entity.get('name') or entity.get('title') or '').strip()
 
 
+# The embed player's 30 s clips live on this host, as
+# ``https://p.scdn.co/mp3-preview/<hash>``. Public, no auth, CORS open.
+_PREVIEW_HOST = 'p.scdn.co'
+
+
+def _track_preview_url(row: dict[str, Any]) -> str:
+    """The 30 s preview clip of an embed row (``audioPreview.url``), or
+    ``""`` when the row has none or it isn't an https link on
+    :data:`_PREVIEW_HOST` - the page plays this URL as is, so nothing else
+    is passed on."""
+
+    preview = row.get('audioPreview')
+    url = preview.get('url') if isinstance(preview, dict) else ''
+    if not isinstance(url, str):
+        return ''
+    parts = urlsplit(url)
+    if parts.scheme == 'https' and parts.hostname == _PREVIEW_HOST:
+        return url
+    return ''
+
+
 def _play_count(raw: Any) -> int:
     """A ``playcount`` (the player sends it as a string), or 0 if unusable."""
 
@@ -1310,7 +1332,9 @@ def artist_top_songs_from_id(
     re-fetch a monitored playlist already does — so every song gets its
     own album cover instead of falling back to the artist's photo. The
     album *name* and the play count aren't in either embed; see
-    :func:`_top_track_overview`.
+    :func:`_top_track_overview`. Each row also carries ``preview_url``: the
+    30 s clip the embed player plays (``""`` when the row has none), see
+    :func:`_track_preview_url`.
 
     *limit* keeps only the first that many songs, and is applied *before*
     the per-track enrichment - which is where the time goes - so asking
@@ -1331,11 +1355,11 @@ def artist_top_songs_from_id(
         track_id = track.get('id') or _id_from_uri(track.get('uri', ''))
         if not track_id:
             continue
-        songs.append(
-            _track_dict(
-                dict(track), track_id=track_id, fallback_cover=cover_url
-            )
+        song = _track_dict(
+            dict(track), track_id=track_id, fallback_cover=cover_url
         )
+        song['preview_url'] = _track_preview_url(track)
+        songs.append(song)
         if limit is not None and len(songs) >= limit:
             break
     if not songs:

@@ -713,6 +713,73 @@ def test_artist_top_songs_resolves_trackList_shelf():
     assert not songs[0]['album_name']
 
 
+def _preview_shelf(*previews):
+    """An artist embed whose shelf rows carry the given ``audioPreview``
+    values (``None`` leaves the field out)."""
+
+    rows = []
+    for i, preview in enumerate(previews, start=1):
+        row = {
+            'uri': f'spotify:track:{str(i) * 22}',
+            'title': f'Song {i}',
+            'subtitle': 'Test Artist',
+            'duration': 200000,
+        }
+        if preview is not None:
+            row['audioPreview'] = preview
+        rows.append(row)
+    return {'name': 'Test Artist', 'trackList': rows}
+
+
+def _top_song_previews(*previews):
+    entity = _preview_shelf(*previews)
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch('downtify.spotify.track_from_id') as mock_track_from_id,
+    ):
+        # A sparse row is enriched from its own embed; the preview must
+        # come through that merge untouched.
+        mock_track_from_id.side_effect = lambda tid: {
+            'song_id': tid,
+            'source': 'spotify',
+            'year': '2002',
+            'release_date': '2002-06-04',
+        }
+        _name, _cover, songs = artist_top_songs_from_id('dummyArtistId')
+    return [song['preview_url'] for song in songs]
+
+
+def test_artist_top_songs_carry_the_embeds_preview_clip():
+    clip = 'https://p.scdn.co/mp3-preview/b5ee275ca337899f762b1c1883c11e24a04075b0'
+    assert _top_song_previews({'format': 'MP3_96', 'url': clip}) == [clip]
+
+
+@pytest.mark.parametrize(
+    'preview',
+    [
+        None,
+        {},
+        {'format': 'MP3_96'},
+        {'url': None},
+        {'url': ''},
+        {'url': 42},
+        {'url': 'http://p.scdn.co/mp3-preview/abc'},
+        {'url': 'https://evil.test/mp3-preview/abc'},
+        {'url': 'https://p.scdn.co.evil.test/mp3-preview/abc'},
+        {'url': 'https://evil.test/?u=https://p.scdn.co/mp3-preview/abc'},
+        {'url': 'javascript:alert(1)'},
+        'https://p.scdn.co/mp3-preview/abc',
+    ],
+)
+def test_artist_top_songs_drop_a_preview_that_is_not_a_scdn_clip(preview):
+    # Missing or not an https link on p.scdn.co: no preview, an empty
+    # string (never a missing key, never the odd link).
+    assert _top_song_previews(preview) == ['']
+
+
 def test_artist_top_songs_empty_shelf_returns_empty_list():
     entity = {'name': 'Test Artist'}
     with patch(
