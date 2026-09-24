@@ -277,3 +277,17 @@ export function songKey(artist, title) {
     .trim()
   return `${clean(first)}|${clean(title)}`
 }
+
+/**
+ * `songKey` -> library track, for finding the file behind a song that is
+ * already downloaded (search and link results are songs, not files). The
+ * first track wins when two share a key.
+ */
+export function indexTracksBySong(tracks) {
+  const index = new Map()
+  for (const track of tracks || []) {
+    const key = songKey(track.artist, track.title)
+    if (!index.has(key)) index.set(key, track)
+  }
+  return index
+}
