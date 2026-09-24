@@ -35,3 +35,14 @@ export function topSongsBatchOptions(artist, createPlaylist) {
     m3u: true,
   }
 }
+
+/**
+ * The badge for a song's play count: Spotify reports an exact number,
+ * YouTube Music a rounded one, and each gets its own colour and tooltip
+ * (`title` is an i18n key).
+ */
+export function playsBadge(song) {
+  return song.source === 'youtube'
+    ? { tone: 'ytm', title: 'link.playCountYoutubeMusic' }
+    : { tone: 'spotify', title: 'link.playCountSpotify' }
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  playsBadge,
   sanitizePlaylistName,
   topSongsBatchOptions,
   topSongsPlaylistName,
@@ -54,5 +55,22 @@ describe('topSongsPlaylistName', () => {
     expect(topSongsPlaylistName({ name: 'Avril Lavigne' })).toBe(
       'Top Songs of Avril Lavigne'
     )
+  })
+})
+
+describe('playsBadge', () => {
+  it('gives YouTube Music its own tone and tooltip', () => {
+    expect(playsBadge({ source: 'youtube' })).toEqual({
+      tone: 'ytm',
+      title: 'link.playCountYoutubeMusic',
+    })
+  })
+
+  it('treats everything else as Spotify, the exact count', () => {
+    expect(playsBadge({ source: 'spotify' })).toEqual({
+      tone: 'spotify',
+      title: 'link.playCountSpotify',
+    })
+    expect(playsBadge({}).tone).toBe('spotify')
   })
 })
