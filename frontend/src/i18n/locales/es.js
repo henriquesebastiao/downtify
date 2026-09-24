@@ -369,7 +369,7 @@ export default {
     titleBanner: 'Banner de {name}',
     tabBanner: 'Banner',
     tabProfile: 'Perfil',
-    currentPhoto: 'Foto actual',
+    inUse: 'En uso',
     tabBio: 'Biografía',
     tabSocial: 'Redes sociales',
     titleBio: 'Biografía de {name}',

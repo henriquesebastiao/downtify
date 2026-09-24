@@ -375,7 +375,7 @@ export default {
     titleBanner: 'Bannière de {name}',
     tabBanner: 'Bannière',
     tabProfile: 'Profil',
-    currentPhoto: 'Photo actuelle',
+    inUse: 'Utilisée',
     tabBio: 'Bio',
     tabSocial: 'Réseaux sociaux',
     titleBio: 'Biographie de {name}',

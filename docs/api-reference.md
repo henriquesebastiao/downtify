@@ -166,10 +166,27 @@ Whether an artist has a saved photo and/or banner.
 **Response:**
 
 ```json
-{ "photo_url": "/downloads/Metadata/ArtistImage/Avril Lavigne.jpg", "banner_url": null }
+{
+  "photo_url": "/downloads/Metadata/ArtistImage/Avril Lavigne.jpg",
+  "photo_version": 1758700000123,
+  "banner_url": null,
+  "banner_version": null
+}
 ```
 
-Either field is `null` when that image hasn't been saved yet.
+Either URL is `null` (and its version with it) when that image hasn't been saved yet.
+
+A saved image keeps the same URL every time it's replaced, so a browser that already has it would never ask for the new one. `photo_version` and `banner_version` - the file's modified time, in milliseconds - change exactly when the file does: put them in the URL as `?v=<version>` (the web UI does) and a replaced photo shows up at once, while an untouched one stays cached.
+
+---
+
+### `POST /api/artists/art/bulk`
+
+The same answer for many artists at once, so a page listing them (the Library's *Artists* tab) doesn't send one request per tile.
+
+**Request body:** `{ "names": ["Avril Lavigne", "Evanescence"] }`
+
+**Response:** `{ "<name>": { "photo_url": …, "photo_version": …, "banner_url": …, "banner_version": … } }`, one entry per distinct, non-blank name, each shaped like the response above. A body without a `names` list gets `{}`.
 
 ---
 
@@ -248,7 +265,7 @@ Remove a saved photo or banner.
 
 ### `GET /api/artists/photo-proxy`
 
-A **display-only** photo for an artist that isn't in your library, used for the tiles in the artist page's *Related* tab. It is a relay, not a way to get a photo to keep: the image is fetched from Deezer, sent to your browser and forgotten - nothing is written to your downloads folder, and only the artist-name → Deezer image link is remembered (in memory, for three hours). To actually save a photo for an artist use the picker (`POST /api/artists/art/from_url`).
+A **display-only** photo for an artist that has no saved photo, used for the tiles in the artist page's *Related* tab, for the artists in the Library's *Artists* grid and for the round photo on an artist's own page, whenever nobody picked a photo for them. The search page doesn't use it. It is a relay, not a way to get a photo to keep: the image is fetched from Deezer, sent to your browser and forgotten - nothing is written to your downloads folder, and only the artist-name → Deezer image link is remembered (in memory, for three hours). To actually save a photo for an artist use the picker (`POST /api/artists/art/from_url`).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -260,7 +277,7 @@ A **display-only** photo for an artist that isn't in your library, used for the 
 
 ### `GET /api/artists/profile`
 
-An artist's saved profile: bio, origin, formation year, genre, group flag, banner hero colour, social links, related artists, platform ids, and which source (`spotify`/`youtube`/`deezer`/`link`/`upload`) their current photo/banner came from — see [Artist photo, banner & bio](features/artist-images.md#fetching-a-bio-automatically).
+An artist's saved profile: bio, origin, formation year, genre, group flag, banner hero colour, social links, related artists, platform ids, and which image their current photo/banner is (`current_cover`/`current_cover_banner`: the path of the URL it was downloaded from, e.g. `/image/ab67…`, without host or query; `upload` for an uploaded one; empty for none - an older profile may still hold the source name, such as `spotify`, instead) — see [Artist photo, banner & bio](features/artist-images.md#fetching-a-bio-automatically).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

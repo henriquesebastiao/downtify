@@ -9,7 +9,8 @@
       <CollectionHero
         :title="artist.name"
         :kicker="t('artist.kicker')"
-        :cover="artPhotoUrl || artist.cover"
+        :cover="heroPhoto.cover"
+        :cover-fallback="heroPhoto.fallback"
         :banner="artBannerUrl"
         photo-editable
         banner-editable
@@ -169,8 +170,10 @@
       :initial-tab="artModalInitialTab"
       :artist-name="artist.name"
       :track-files="trackFiles"
-      :photo-url="artPhotoUrl || artist.cover"
+      :photo-url="heroPhoto.cover"
+      :photo-fallback="heroPhoto.fallback"
       :current-cover="profile.current_cover"
+      :current-banner="profile.current_cover_banner"
       :has-photo="!!artPhotoUrl"
       :has-banner="!!artBannerUrl"
       :bio="profile.bio"
@@ -206,6 +209,7 @@ import { useUi } from '/src/model/ui'
 import { sortItems } from '/src/lib/library'
 import { splitLength } from '/src/lib/format'
 import { proxiedArtistPhotoUrl } from '/src/lib/artistPhotoProxy'
+import { versionedArtUrl } from '/src/lib/artistArt'
 import { useI18n } from '/src/i18n'
 
 const { t, locale } = useI18n()
@@ -339,6 +343,25 @@ const trackFiles = computed(() =>
 )
 const artPhotoUrl = ref('')
 const artBannerUrl = ref('')
+// Whether refreshArt has answered for this artist - until it has, they
+// might still turn out to have a saved photo, so the proxy isn't asked.
+const artLoaded = ref(false)
+
+// The round photo: the artist's saved one; without one, the display-only
+// photo from the backend's proxy (never saved), with what the page showed
+// before - a track's cover - behind it for an artist the proxy has none
+// for. `hasPhoto` below still means a *saved* photo.
+const heroPhoto = computed(() => {
+  const cover = artist.value?.cover || ''
+  if (artPhotoUrl.value) return { cover: artPhotoUrl.value, fallback: '' }
+  if (!artLoaded.value || !artist.value?.name) {
+    return { cover, fallback: '' }
+  }
+  return {
+    cover: proxiedArtistPhotoUrl(artist.value.name),
+    fallback: cover,
+  }
+})
 
 async function refreshArt() {
   if (!artist.value?.name) {
@@ -350,21 +373,30 @@ async function refreshArt() {
     const res = await API.getArtistArt(artist.value.name)
     // The saved file keeps the same URL across re-saves (named after the
     // artist, see downtify/artist_profile.py), so a re-upload never changes
-    // the <img> src on its own - a cache-busting suffix forces a reload.
-    const bust = Date.now()
-    artPhotoUrl.value = res.data?.photo_url
-      ? `${res.data.photo_url}?v=${bust}`
-      : ''
-    artBannerUrl.value = res.data?.banner_url
-      ? `${res.data.banner_url}?v=${bust}`
-      : ''
+    // the <img> src on its own - its version, which does change, goes in.
+    artPhotoUrl.value = versionedArtUrl(
+      res.data?.photo_url,
+      res.data?.photo_version
+    )
+    artBannerUrl.value = versionedArtUrl(
+      res.data?.banner_url,
+      res.data?.banner_version
+    )
   } catch {
     artPhotoUrl.value = ''
     artBannerUrl.value = ''
   }
+  artLoaded.value = true
 }
 
-watch(() => artist.value?.name, refreshArt, { immediate: true })
+watch(
+  () => artist.value?.name,
+  () => {
+    artLoaded.value = false
+    refreshArt()
+  },
+  { immediate: true }
+)
 
 const artModalOpen = ref(false)
 const artModalInitialTab = ref('banner')
@@ -473,7 +505,10 @@ const relatedArtistItems = computed(() =>
       // Artists we don't own get a display-only photo from the backend's
       // proxy (never saved); a saved photo, then a library cover, win.
       cover:
-        relatedArtistPhotos.value[name]?.photo_url ||
+        versionedArtUrl(
+          relatedArtistPhotos.value[name]?.photo_url,
+          relatedArtistPhotos.value[name]?.photo_version
+        ) ||
         found?.cover ||
         proxiedArtistPhotoUrl(name),
       name,

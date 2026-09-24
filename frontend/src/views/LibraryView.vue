@@ -226,6 +226,8 @@ import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useUi } from '/src/model/ui'
 import { albumKey, artistKey, filterItems, sortItems } from '/src/lib/library'
+import { proxiedArtistPhotoUrl } from '/src/lib/artistPhotoProxy'
+import { versionedArtUrl } from '/src/lib/artistArt'
 import { formatBytes, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -254,6 +256,9 @@ if (!route.params.tab) {
 // instead of a track's cover when one has been picked. Falls back to
 // today's behaviour (a track cover) for any artist without one.
 const artistPhotos = ref({})
+// Whether the lookup above has answered - until it has, an artist might
+// still turn out to have a saved photo, so no proxy request is made yet.
+const artistPhotosLoaded = ref(false)
 watch(
   // Re-fires when the tab switches to artists, and again once the
   // library finishes loading if it hadn't yet (e.g. a direct page load
@@ -269,9 +274,28 @@ watch(
     } catch {
       artistPhotos.value = {}
     }
+    artistPhotosLoaded.value = true
   },
   { immediate: true }
 )
+
+// An artist's picture on the artists tab: their saved photo when there is
+// one; otherwise the display-only photo from the backend's proxy (see
+// lib/artistPhotoProxy.js), with the track's own cover behind it for an
+// artist the proxy has no photo for. Only this tab - the search page's
+// artists come with their own picture and never go through here.
+function artistCover(item) {
+  const saved = versionedArtUrl(
+    artistPhotos.value[item.name]?.photo_url,
+    artistPhotos.value[item.name]?.photo_version
+  )
+  if (saved) return { cover: saved, fallback: '' }
+  if (!artistPhotosLoaded.value) return { cover: item.cover, fallback: '' }
+  return {
+    cover: proxiedArtistPhotoUrl(item.name),
+    fallback: item.cover || '',
+  }
+}
 
 const views = useLocalStorage('downtify-library-views', {
   albums: 'grid',
@@ -441,7 +465,7 @@ function tileProps(item) {
       ]
         .filter(Boolean)
         .join(' · '),
-      cover: artistPhotos.value[item.name]?.photo_url || item.cover,
+      ...artistCover(item),
       name: item.name,
       icon: 'user',
       round: true,

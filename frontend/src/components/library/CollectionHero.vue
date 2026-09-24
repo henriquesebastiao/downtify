@@ -71,6 +71,7 @@
       >
         <CoverArt
           :src="cover"
+          :fallback="coverFallback"
           :covers="covers"
           :name="name || title"
           :round="round"
@@ -133,6 +134,9 @@ const props = defineProps({
   kicker: { type: String, default: '' },
   name: { type: String, default: '' },
   cover: { type: String, default: '' },
+  // Shown when `cover` fails to load (see CoverArt) - for a `cover` that
+  // may not exist, like an artist photo from the proxy.
+  coverFallback: { type: String, default: '' },
   covers: { type: Array, default: () => [] },
   icon: { type: String, default: 'disc' },
   symbol: { type: Boolean, default: false },

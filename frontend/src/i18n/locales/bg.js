@@ -362,7 +362,7 @@ export default {
     titleBanner: 'Банер на {name}',
     tabBanner: 'Банер',
     tabProfile: 'Профил',
-    currentPhoto: 'Текуща снимка',
+    inUse: 'В употреба',
     tabBio: 'Биография',
     tabSocial: 'Социални мрежи',
     titleBio: 'Биография на {name}',

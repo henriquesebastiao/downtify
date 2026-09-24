@@ -27,7 +27,7 @@
       class="size-full object-cover transition-opacity duration-300"
       :class="ready ? 'opacity-100' : 'opacity-0'"
       @load="ready = true"
-      @error="failed = true"
+      @error="onImageError"
     />
     <div
       v-if="showFallback"
@@ -70,26 +70,43 @@ const props = defineProps({
   // The icon on a fixed tile, whatever art or name there is — for
   // collections that are recognised by what they are, like liked songs.
   symbol: { type: Boolean, default: false },
+  // Optional second image tried once `src` fails to load, before giving up
+  // on the initials: for a `src` that may simply not exist (an artist photo
+  // from a proxy), with a picture known to. Unset = today's behaviour.
+  fallback: { type: String, default: '' },
 })
 
 const failed = ref(false)
 const ready = ref(false)
+const usingFallback = ref(false)
 watch(
   () => props.src,
   () => {
     failed.value = false
     ready.value = false
+    usingFallback.value = false
   }
 )
+
+function onImageError() {
+  if (props.fallback && !usingFallback.value) {
+    usingFallback.value = true
+    ready.value = false
+    return
+  }
+  failed.value = true
+}
 
 // A real cover always wins: a playlist with its own artwork shows it
 // instead of a grid of the tracks it happens to contain.
 const mosaic = computed(() =>
   props.symbol || props.src ? [] : props.covers.filter(Boolean)
 )
-const imageSrc = computed(() =>
-  props.symbol ? '' : props.src || mosaic.value[0] || ''
-)
+const imageSrc = computed(() => {
+  if (props.symbol) return ''
+  if (usingFallback.value) return props.fallback
+  return props.src || mosaic.value[0] || ''
+})
 const letters = computed(() => (props.symbol ? '' : initials(props.name)))
 const showFallback = computed(
   () => mosaic.value.length < 4 && (!imageSrc.value || failed.value)

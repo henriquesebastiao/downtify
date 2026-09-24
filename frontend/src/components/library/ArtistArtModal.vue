@@ -15,6 +15,7 @@
         >
           <CoverArt
             :src="photoUrl"
+            :fallback="photoFallback"
             :name="artistName"
             round
             shadow
@@ -22,13 +23,6 @@
             :icon-size="40"
             class="size-32 ring-1 ring-line-2"
           />
-          <UiBadge :icon="currentCover ? sourceIcon(currentCover) : ''">
-            {{
-              currentCover
-                ? sourceLabel(currentCover, t('artistArt.sourceLink'))
-                : t('artistArt.currentPhoto')
-            }}
-          </UiBadge>
         </button>
 
         <nav
@@ -130,6 +124,7 @@
               type="button"
               class="group flex flex-col gap-1.5 text-left disabled:opacity-50"
               :disabled="saving"
+              :aria-current="isCurrent(candidate) ? 'true' : undefined"
               @click="choose(candidate)"
             >
               <CoverArt
@@ -137,13 +132,23 @@
                 :name="candidate.name"
                 :round="activeTab === 'photo'"
                 shadow
-                :class="
+                class="transition-transform group-hover:scale-[1.02]"
+                :class="[
                   activeTab === 'banner'
                     ? 'aspect-video w-full'
-                    : 'aspect-square w-full'
-                "
-                class="ring-1 ring-line-2 transition-transform group-hover:scale-[1.02]"
+                    : 'aspect-square w-full',
+                  isCurrent(candidate)
+                    ? 'ring-2 ring-accent'
+                    : 'ring-1 ring-line-2',
+                ]"
               >
+                <span
+                  v-if="isCurrent(candidate)"
+                  class="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full bg-accent text-on-accent shadow-[0_1px_4px_rgba(0,0,0,0.45)]"
+                >
+                  <AppIcon name="check" :size="14" stroke-width="3" />
+                  <span class="sr-only">{{ t('artistArt.inUse') }}</span>
+                </span>
                 <UiBadge
                   class="absolute bottom-1.5 left-1/2 -translate-x-1/2 shadow-[0_1px_4px_rgba(0,0,0,0.45)]"
                 >
@@ -253,7 +258,7 @@ import API from '/src/model/api'
 import {
   artCandidates,
   isImageUrlQuery,
-  sourceIcon,
+  isCurrentArt,
   sourceLabel,
 } from '/src/lib/artistArt'
 import { useUi } from '/src/model/ui'
@@ -266,11 +271,16 @@ const props = defineProps({
   // Shown above the tabs as a reminder of the current photo - the artist
   // page itself hides it once a banner is set (see CollectionHero).
   photoUrl: { type: String, default: '' },
-  // Which source the current photo came from (spotify/youtube/deezer/
-  // link/upload, matches artist_profile.py's current_cover) - badges the
-  // preview above the tabs the same way a search result card is badged.
-  // Empty when no photo is saved yet, or it predates this tracking.
+  // Shown when `photoUrl` fails to load (the picture above may come from
+  // the proxy, which doesn't have every artist).
+  photoFallback: { type: String, default: '' },
+  // What the saved photo was made from: the path of the URL it was
+  // downloaded from (artist_profile.py's current_cover) - the candidate
+  // with the same image is marked as the one in use. Empty when no photo
+  // is saved, it was uploaded, or it predates this tracking.
   currentCover: { type: String, default: '' },
+  // The same for the banner (`current_cover_banner`).
+  currentBanner: { type: String, default: '' },
   // Whether the artist already has a saved photo/banner - only then is
   // "Remove" offered for that tab.
   hasPhoto: { type: Boolean, default: false },
@@ -417,6 +427,15 @@ async function search() {
   } finally {
     loading.value = false
   }
+}
+
+// Whether a card is the image saved for the tab being looked at (each of
+// photo and banner records its own).
+function isCurrent(candidate) {
+  return isCurrentArt(
+    candidate,
+    activeTab.value === 'banner' ? props.currentBanner : props.currentCover
+  )
 }
 
 async function choose(candidate) {

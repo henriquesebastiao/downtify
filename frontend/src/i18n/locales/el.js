@@ -366,7 +366,7 @@ export default {
     titleBanner: 'Banner του {name}',
     tabBanner: 'Banner',
     tabProfile: 'Προφίλ',
-    currentPhoto: 'Τρέχουσα φωτογραφία',
+    inUse: 'Σε χρήση',
     tabBio: 'Βιογραφικό',
     tabSocial: 'Κοινωνικά δίκτυα',
     titleBio: 'Βιογραφικό του {name}',

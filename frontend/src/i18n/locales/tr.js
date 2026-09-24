@@ -368,7 +368,7 @@ export default {
     titleBanner: '{name} afişi',
     tabBanner: 'Afiş',
     tabProfile: 'Profil',
-    currentPhoto: 'Mevcut fotoğraf',
+    inUse: 'Kullanımda',
     tabBio: 'Biyografi',
     tabSocial: 'Sosyal medya',
     titleBio: '{name} biyografisi',

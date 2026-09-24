@@ -366,7 +366,7 @@ export default {
     titleBanner: '{name} bannere',
     tabBanner: 'Banner',
     tabProfile: 'Profil',
-    currentPhoto: 'Jelenlegi fotó',
+    inUse: 'Használatban',
     tabBio: 'Életrajz',
     tabSocial: 'Közösségi média',
     titleBio: '{name} életrajza',
