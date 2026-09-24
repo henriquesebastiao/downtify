@@ -177,14 +177,13 @@ def test_run_download_announces_downloading_only_inside_the_slot(
         api.state.download_semaphore = asyncio.Semaphore(1)
         for song in songs:
             api._register_job(song, status='queued')
-        task = asyncio.create_task(
-            asyncio.gather(
-                *(
-                    api._run_download(song, song['song_id'])
-                    for song in songs
-                )
+
+        async def _all_downloads():
+            await asyncio.gather(
+                *(api._run_download(song, song['song_id']) for song in songs)
             )
-        )
+
+        task = asyncio.create_task(_all_downloads())
         try:
             for _ in range(50):
                 if entered.is_set():
@@ -251,6 +250,90 @@ def test_broadcast_keeps_a_client_that_reconnected_mid_send():
     asyncio.run(manager.broadcast({'x': 1}))
 
     assert manager._clients == {'c': replacement}
+
+
+def test_close_all_closes_sockets_and_clears_clients():
+    manager = api.ConnectionManager()
+
+    class _Closable:
+        def __init__(self):
+            self.closed = None
+
+        async def close(self, code=1000):
+            self.closed = code
+
+    a, b = _Closable(), _Closable()
+    manager._clients = {'a': a, 'b': b}
+
+    asyncio.run(manager.close_all(code=1012))
+
+    assert manager._clients == {}
+    assert a.closed == b.closed == 1012
+
+
+def test_spawn_task_registers_then_discards_on_done():
+    async def _run():
+        task = api.spawn_task(asyncio.sleep(0), name='test-spawn')
+        assert task in api.state.background_tasks
+        await task
+        assert task not in api.state.background_tasks
+
+    asyncio.run(_run())
+
+
+def test_shutdown_resources_closes_ws_and_cancels_tasks(monkeypatch):
+    # Do not touch the real DOWNLOAD_EXECUTOR — other tests still use it.
+    monkeypatch.setattr(api, '_shutdown_done', False)
+    monkeypatch.setattr(
+        api.DOWNLOAD_EXECUTOR, 'shutdown', lambda *a, **k: None
+    )
+    monkeypatch.setattr(api, 'release_thread_pools', lambda: None)
+
+    class _Closable:
+        def __init__(self):
+            self.closed = None
+
+        async def close(self, code=1000):
+            self.closed = code
+
+    ws = _Closable()
+    api.state.connections._clients = {'c': ws}
+
+    started = asyncio.Event()
+    cancelled = asyncio.Event()
+
+    async def _hang():
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
+    async def _run():
+        task = api.spawn_task(_hang(), name='test-hang')
+        await started.wait()
+        await api.shutdown_resources()
+        assert ws.closed == 1012
+        assert api.state.connections._clients == {}
+        assert task.cancelled() or task.done()
+        assert cancelled.is_set()
+        # Second call is a no-op.
+        await api.shutdown_resources()
+
+    asyncio.run(_run())
+    monkeypatch.setattr(api, '_shutdown_done', False)
+
+
+def test_skip_threadpool_join_clears_threading_atexits():
+    sentinel = object()
+    original = list(threading._threading_atexits)
+    threading._threading_atexits.append(sentinel)
+    try:
+        api._skip_threadpool_join()
+        assert sentinel not in threading._threading_atexits
+    finally:
+        threading._threading_atexits[:] = original
 
 
 # ── Downloader: metadata lookups alongside yt-dlp ────────────────────────────
