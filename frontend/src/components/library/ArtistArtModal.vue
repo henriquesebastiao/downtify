@@ -484,16 +484,21 @@ async function removeArt() {
   }
 }
 
+// Only loads the chosen service's text into the box - nothing is saved
+// until the user presses Save (saveBio), so they can read it, edit it or
+// try the other service first.
 async function fetchBio(source) {
   if (bioFetching.value) return
   bioFetching.value = source
   errorText.value = ''
   try {
-    const res = await API.fetchArtistBio(props.artistName, locale.value, source)
+    const res = await API.previewArtistBio(
+      props.artistName,
+      locale.value,
+      source
+    )
     bioDraft.value = res.data.bio
-    socialDraft.value = { ...res.data.social }
-    ui.toast(t('artistBio.fetched'), { kind: 'success' })
-    emit('saved')
+    ui.toast(t('artistBio.loaded'), { kind: 'success' })
   } catch (err) {
     errorText.value = err?.response?.data?.detail || t('artistBio.fetchFailed')
   } finally {

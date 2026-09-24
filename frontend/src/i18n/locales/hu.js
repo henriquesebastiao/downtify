@@ -409,7 +409,7 @@ export default {
     empty: 'Még nincs életrajz.',
     showMore: 'Több mutatása',
     showLess: 'Kevesebb mutatása',
-    fetched: 'Az életrajz frissült',
+    loaded: 'Az életrajz betöltve — a megtartáshoz mentsd el',
     fetchFailed: 'Nem sikerült életrajzot lekérni ehhez az előadóhoz',
   },
   playlists: {

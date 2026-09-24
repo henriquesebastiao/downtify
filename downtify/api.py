@@ -60,6 +60,10 @@ working without changes:
   to save only that service's bio, no fallback; default: both, in that
   order); resolves and caches the artist's Apple Music/Deezer ids on first
   use)
+* ``POST /api/artists/profile/bio/preview`` (one service's bio text only -
+  body ``{name, lang, source}``, ``source`` = ``applemusic`` or ``deezer``;
+  response ``{bio}``; saves nothing, the edit modal loads it into its text
+  box and the user keeps it with ``PUT .../bio``)
 * ``DELETE /api/artists/profile/bio`` (clear only the saved bio text -
   everything else is kept)
 * ``PUT  /api/artists/profile/bio`` (manually set the bio text directly -
@@ -1342,6 +1346,32 @@ async def artist_profile_bio_endpoint(request: Request) -> dict[str, Any]:
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post('/api/artists/profile/bio/preview')
+async def artist_profile_bio_preview_endpoint(
+    request: Request,
+) -> dict[str, str]:
+    """One service's bio text for the edit modal's text box - saves
+    nothing; the user keeps it (or not) with ``PUT .../bio``."""
+
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    lang = str(payload.get('lang') or 'en').strip()
+    source = str(payload.get('source') or '').strip()
+    if not name:
+        raise HTTPException(status_code=400, detail='Invalid request')
+    try:
+        bio = await asyncio.to_thread(
+            artist_profile.preview_bio,
+            _artist_profile_download_dir(),
+            name,
+            lang,
+            source,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {'bio': bio}
 
 
 @router.delete('/api/artists/profile/bio')

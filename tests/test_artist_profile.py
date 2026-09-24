@@ -2505,3 +2505,175 @@ def test_fill_empty_social_never_mutates_its_inputs():
     assert result == {'twitter': 'https://t', 'youtube': 'https://y'}
     assert current == {'twitter': '', 'youtube': 'https://y'}
     assert fetched == {'twitter': 'https://t', 'facebook': ''}
+
+
+# ── preview_bio: load one service's bio without saving anything ────────
+
+
+def _preview(tmp_path, source, apple_full=None, deezer_full=None):
+    with (
+        patch(
+            'downtify.artist_profile.apple_music.resolve_artist_id',
+            return_value='42102393',
+        ),
+        patch(
+            'downtify.artist_profile.apple_music.fetch_artist_full',
+            return_value=apple_full or _APPLE_FULL,
+        ),
+        patch(
+            'downtify.artist_profile.deezer.resolve_artist_id',
+            return_value='35',
+        ),
+        patch(
+            'downtify.artist_profile.deezer.fetch_artist_full',
+            return_value=deezer_full or _DEEZER_FULL,
+        ),
+    ):
+        return artist_profile.preview_bio(tmp_path, 'Avril', 'en', source)
+
+
+def test_preview_bio_applemusic_returns_apples_text(tmp_path):
+    assert _preview(tmp_path, 'applemusic') == 'Hello world'
+
+
+def test_preview_bio_deezer_returns_deezers_text(tmp_path):
+    assert _preview(tmp_path, 'deezer') == 'Hello'
+
+
+def test_preview_bio_writes_nothing_to_disk(tmp_path):
+    artist_profile.save_bio(tmp_path, 'Avril', 'My own bio.')
+    before = artist_profile._profile_path_for(tmp_path, 'Avril').read_bytes()
+    _preview(tmp_path, 'applemusic')
+    _preview(tmp_path, 'deezer')
+    after = artist_profile._profile_path_for(tmp_path, 'Avril').read_bytes()
+    assert after == before
+    assert artist_profile.load_profile(tmp_path, 'Avril')['bio'] == (
+        'My own bio.'
+    )
+
+
+def test_preview_bio_creates_no_profile_file_for_a_new_artist(tmp_path):
+    _preview(tmp_path, 'deezer')
+    assert not artist_profile._profile_path_for(tmp_path, 'Avril').exists()
+    assert not (tmp_path / 'Metadata').exists()
+
+
+def test_preview_bio_fetches_nothing_but_the_one_bio(tmp_path):
+    with (
+        patch(
+            'downtify.artist_profile.deezer.resolve_artist_id',
+            return_value='35',
+        ),
+        patch(
+            'downtify.artist_profile.deezer.fetch_artist_full',
+            return_value=_DEEZER_FULL,
+        ),
+        patch('downtify.artist_profile.apple_music.fetch_artist_full') as ap,
+        patch(
+            'downtify.artist_profile.spotify.related_artist_names_from_id'
+        ) as sp,
+        patch('downtify.artist_profile.spotify.search_artist_by_name') as sn,
+    ):
+        artist_profile.preview_bio(tmp_path, 'Avril', 'en', 'deezer')
+    ap.assert_not_called()
+    sp.assert_not_called()
+    sn.assert_not_called()
+
+
+def test_preview_bio_reuses_a_cached_id_without_searching(tmp_path):
+    existing = artist_profile.load_profile(tmp_path, 'Avril')
+    existing['platforms_id']['deezer'] = '35'
+    artist_profile._save_profile(tmp_path, 'Avril', existing)
+    with (
+        patch('downtify.artist_profile.deezer.resolve_artist_id') as search,
+        patch(
+            'downtify.artist_profile.deezer.fetch_artist_full',
+            return_value=_DEEZER_FULL,
+        ) as fetch,
+    ):
+        artist_profile.preview_bio(tmp_path, 'Avril', 'en', 'deezer')
+    search.assert_not_called()
+    fetch.assert_called_once_with('35', 'en')
+
+
+def test_preview_bio_applemusic_without_a_bio_is_an_error(tmp_path):
+    with pytest.raises(ValueError, match='Apple Music has no biography'):
+        _preview(tmp_path, 'applemusic', apple_full=_APPLE_FULL_NO_BIO)
+
+
+def test_preview_bio_deezer_without_a_bio_is_an_error(tmp_path):
+    with pytest.raises(ValueError, match='Deezer has no biography'):
+        _preview(tmp_path, 'deezer', deezer_full=_DEEZER_FULL_NO_BIO)
+
+
+def test_preview_bio_with_no_artist_match_is_an_error(tmp_path):
+    with (
+        patch(
+            'downtify.artist_profile.deezer.resolve_artist_id',
+            return_value=None,
+        ),
+        pytest.raises(ValueError, match='Deezer has no biography'),
+    ):
+        artist_profile.preview_bio(tmp_path, 'Nobody', 'en', 'deezer')
+
+
+@pytest.mark.parametrize('source', ['', 'auto', 'spotify'])
+def test_preview_bio_rejects_other_sources(tmp_path, source):
+    with pytest.raises(ValueError, match='Unknown bio source'):
+        artist_profile.preview_bio(tmp_path, 'Avril', 'en', source)
+
+
+def test_bio_preview_endpoint_returns_only_the_text(app_state):
+    with patch(
+        'downtify.api.artist_profile.preview_bio', return_value='The bio'
+    ) as preview:
+        request = _JsonRequest({
+            'name': 'Avril',
+            'lang': 'pt-BR',
+            'source': 'deezer',
+        })
+        result = asyncio.run(api.artist_profile_bio_preview_endpoint(request))
+    assert result == {'bio': 'The bio'}
+    preview.assert_called_once_with(app_state, 'Avril', 'pt-BR', 'deezer')
+
+
+def test_bio_preview_endpoint_saves_nothing(app_state):
+    with (
+        patch(
+            'downtify.artist_profile.deezer.resolve_artist_id',
+            return_value='35',
+        ),
+        patch(
+            'downtify.artist_profile.deezer.fetch_artist_full',
+            return_value=_DEEZER_FULL,
+        ),
+    ):
+        request = _JsonRequest({'name': 'Avril', 'source': 'deezer'})
+        result = asyncio.run(api.artist_profile_bio_preview_endpoint(request))
+    assert result == {'bio': 'Hello'}
+    assert not (app_state / 'Metadata').exists()
+
+
+def test_bio_preview_endpoint_maps_errors_to_400(app_state):
+    with patch(
+        'downtify.api.artist_profile.preview_bio',
+        side_effect=ValueError('Deezer has no biography for this artist'),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            asyncio.run(
+                api.artist_profile_bio_preview_endpoint(
+                    _JsonRequest({'name': 'Avril', 'source': 'deezer'})
+                )
+            )
+    assert exc.value.status_code == 400
+    assert 'Deezer has no biography' in exc.value.detail
+
+
+def test_bio_preview_endpoint_rejects_a_blank_name(app_state):
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            api.artist_profile_bio_preview_endpoint(
+                _JsonRequest({'name': '  ', 'source': 'deezer'})
+            )
+        )
+    assert exc.value.status_code == 400

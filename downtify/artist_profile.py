@@ -475,6 +475,51 @@ def fetch_bio(
     return profile
 
 
+def preview_bio(download_dir: Path, name: str, lang: str, source: str) -> str:
+    """*name*'s biography text from one service, **without saving
+    anything** - what the artist edit modal loads into its text box so the
+    user decides whether to keep it (see :func:`save_bio`).
+
+    *source* is ``'applemusic'`` or ``'deezer'``; there's no fallback to
+    the other one. Read-only on the profile too: an artist id it has to
+    look up is not cached, unlike in :func:`fetch_bio`. Raises
+    :class:`ValueError` when that service has no biography.
+    """
+
+    if source not in {BIO_SOURCE_APPLE_MUSIC, BIO_SOURCE_DEEZER}:
+        raise ValueError(f'Unknown bio source: {source!r}')
+    profile = load_profile(download_dir, name)
+    html = ''
+    if source == BIO_SOURCE_APPLE_MUSIC:
+        apple_id = _cached_or_resolved_apple_music_id(profile, name)
+        if apple_id:
+            try:
+                html = apple_music.fetch_artist_full(apple_id, lang)[
+                    'bio_html'
+                ]
+            except ValueError:
+                html = ''
+        missing = (
+            'Apple Music has no biography for this artist in this language'
+        )
+    else:
+        deezer_id = (
+            profile['platforms_id'].get('deezer')
+            or deezer.resolve_artist_id(name)
+            or ''
+        )
+        if deezer_id:
+            try:
+                html = deezer.fetch_artist_full(deezer_id, lang)['bio_html']
+            except ValueError:
+                html = ''
+        missing = 'Deezer has no biography for this artist'
+    text = _format_bio_text(html) if html else ''
+    if not text:
+        raise ValueError(missing)
+    return text
+
+
 def _spotify_id_from_name(name: str) -> Optional[str]:
     """Spotify artist id by exact name (see
     :func:`downtify.spotify.search_artist_by_name`), or ``None`` - never

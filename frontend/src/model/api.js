@@ -168,6 +168,12 @@ function fetchArtistBio(name, lang, source = 'auto') {
   return API.post('/api/artists/profile/bio', { name, lang, source })
 }
 
+// Just the bio text of one service ('applemusic' or 'deezer'), saving
+// nothing - for loading it into an editor. Response: `{ bio }`.
+function previewArtistBio(name, lang, source) {
+  return API.post('/api/artists/profile/bio/preview', { name, lang, source })
+}
+
 function saveArtistBio(name, bio) {
   return API.put('/api/artists/profile/bio', { name, bio })
 }
@@ -452,6 +458,7 @@ export default {
   getArtistProfile,
   ensureArtistProfile,
   fetchArtistBio,
+  previewArtistBio,
   saveArtistBio,
   saveArtistSocial,
   open,

@@ -286,6 +286,22 @@ Seeds a brand-new artist's profile automatically the first time it's needed (e.g
 
 ---
 
+### `POST /api/artists/profile/bio/preview`
+
+One service's biography text, **without saving anything** - what the artist edit modal's *Fetch from Apple Music* / *Fetch from Deezer* links use to fill the text box, so the user decides whether to keep it (with `PUT /api/artists/profile/bio`). Unlike `POST /api/artists/profile/bio`, it doesn't touch the profile at all: no bio, no other field, and an artist id it had to look up isn't cached.
+
+**Request body:**
+
+```json
+{ "name": "Avril Lavigne", "lang": "pt-BR", "source": "deezer" }
+```
+
+`source` is required: `"applemusic"` or `"deezer"`, with no fallback to the other one. `lang` works as in `POST /api/artists/profile/bio`.
+
+**Response:** `{ "bio": "…" }` - the same plain text a saved bio has (blank lines between paragraphs, no HTML, no bullets). `400` with a `detail` when that service has no biography for the artist, the name is blank, or `source` is anything else.
+
+---
+
 ### `POST /api/artists/profile/bio`
 
 Fetch an artist's bio and save it. Apple Music is the primary source (also brings origin, formation year, group flag and the banner hero colour) by exact, case-insensitive name match against the public iTunes Search API - its resolved artist id is cached in the profile and reused on later calls. Deezer is the secondary source, used to fill the bio in only when Apple's is empty for that artist/language, and is the only source for social links and related-artist names, which it always contributes when it has a match.

@@ -411,7 +411,7 @@ export default {
     empty: 'Nenhuma biografia por enquanto.',
     showMore: 'Mostrar mais',
     showLess: 'Mostrar menos',
-    fetched: 'Biografia atualizada',
+    loaded: 'Biografia carregada — clique em Salvar para mantê-la',
     fetchFailed: 'Não foi possível buscar uma biografia para este artista',
   },
   playlists: {

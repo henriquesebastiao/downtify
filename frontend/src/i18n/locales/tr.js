@@ -412,7 +412,7 @@ export default {
     empty: 'Henüz biyografi yok.',
     showMore: 'Daha fazla göster',
     showLess: 'Daha az göster',
-    fetched: 'Biyografi güncellendi',
+    loaded: "Biyografi yüklendi — saklamak için Kaydet'e basın",
     fetchFailed: 'Bu sanatçı için biyografi alınamadı',
   },
   playlists: {

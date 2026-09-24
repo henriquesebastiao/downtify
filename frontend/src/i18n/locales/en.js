@@ -403,7 +403,7 @@ export default {
     empty: 'No biography yet.',
     showMore: 'Show more',
     showLess: 'Show less',
-    fetched: 'Bio updated',
+    loaded: 'Bio loaded - press Save to keep it',
     fetchFailed: 'Could not fetch a bio for this artist',
   },
   playlists: {
