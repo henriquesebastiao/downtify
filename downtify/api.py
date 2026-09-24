@@ -187,7 +187,6 @@ from loguru import logger
 from . import (
     artist_photo_proxy,
     artist_profile,
-    artist_top_songs,
     cover_sources,
     deezer,
     integration_check,
@@ -1314,7 +1313,8 @@ async def artist_top_songs_saved_endpoint(
     name: str = Query(...),
 ) -> dict[str, Any]:
     """An artist's saved Spotify top songs (see
-    ``downtify.artist_top_songs``), for the artist page's Top songs tab.
+    ``artist_profile.profile_top_songs_ensure``), for the artist page's Top
+    songs tab.
 
     A fresh file is returned as is. A stale one is returned right away
     while a refresh runs in the background; with no file yet the songs are
@@ -1332,16 +1332,18 @@ async def artist_top_songs_saved_endpoint(
         raise HTTPException(
             status_code=404, detail='No Spotify artist saved for this artist'
         )
-    saved, fresh = artist_top_songs.cached(download_dir, artist, spotify_id)
+    saved, fresh = artist_profile.profile_top_songs_cached(
+        download_dir, artist, spotify_id
+    )
     if saved is not None:
         if not fresh:
-            artist_top_songs.refresh_in_background(
+            artist_profile.profile_top_songs_refresh_in_background(
                 download_dir, artist, spotify_id
             )
         return {**saved, 'stale': not fresh}
     try:
         data = await asyncio.to_thread(
-            artist_top_songs.ensure_top_songs,
+            artist_profile.profile_top_songs_ensure,
             download_dir,
             artist,
             spotify_id,
@@ -1372,7 +1374,7 @@ async def artist_profile_ensure_endpoint(request: Request) -> dict[str, Any]:
     )
     # The artist page's Top songs tab reads this file: get it made (or
     # refreshed once it's a week old) without holding up the profile.
-    artist_top_songs.refresh_in_background(
+    artist_profile.profile_top_songs_refresh_in_background(
         download_dir, name, str(profile['platforms_id'].get('spotify') or '')
     )
     return profile

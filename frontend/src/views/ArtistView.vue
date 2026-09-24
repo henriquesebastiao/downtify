@@ -551,7 +551,7 @@ async function seedProfile() {
 watch(() => artist.value?.name, seedProfile, { immediate: true })
 
 // ── Top songs tab: the artist's first five Spotify top songs, read from
-// the file the backend keeps per artist (see downtify/artist_top_songs.py).
+// the file the backend keeps per artist (see the profile_top_songs_* functions in downtify/artist_profile.py).
 // Asked for as soon as the artist's Spotify id is known - not only when
 // the tab is opened - so the tab's count shows up on its own once the
 // backend has the songs, and the list is ready by the time it's clicked.

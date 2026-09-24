@@ -51,7 +51,9 @@ def _no_spotify_name_search(monkeypatch):
     )
     # ...nor may the ensure endpoint start its background top songs fetch.
     monkeypatch.setattr(
-        api.artist_top_songs, 'refresh_in_background', lambda *args: False
+        api.artist_profile,
+        'profile_top_songs_refresh_in_background',
+        lambda *args: False,
     )
 
 
