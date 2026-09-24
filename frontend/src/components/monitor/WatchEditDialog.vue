@@ -13,6 +13,7 @@
     >
       <div class="flex items-center gap-3">
         <CoverArt
+          :src="cover"
           :name="watch.name"
           :round="kind === 'artist'"
           :icon="kind === 'artist' ? 'user' : 'playlist'"
@@ -172,6 +173,8 @@ import { useI18n } from '/src/i18n'
 const props = defineProps({
   // The watch being edited, or null when closed.
   watch: { type: Object, default: null },
+  // Its picture (an artist's photo), when it has one.
+  cover: { type: String, default: '' },
 })
 const emit = defineEmits(['close', 'saved'])
 

@@ -160,6 +160,7 @@
               :class="item.enabled ? '' : 'opacity-50'"
             >
               <CoverArt
+                :src="tab === 'artist' ? artistCover(item) : ''"
                 :name="item.name"
                 :round="tab === 'artist'"
                 :icon="tab === 'artist' ? 'user' : 'playlist'"
@@ -254,6 +255,7 @@
 
     <WatchEditDialog
       :watch="editing"
+      :cover="editing && tab === 'artist' ? artistCover(editing) : ''"
       @close="editing = null"
       @saved="onSaved"
     />
@@ -279,8 +281,10 @@ import PageHeader from '/src/components/library/PageHeader.vue'
 import WatchEditDialog from '/src/components/monitor/WatchEditDialog.vue'
 import WatchSourceBadge from '/src/components/monitor/WatchSourceBadge.vue'
 import { intervalOptions } from '/src/components/monitor/intervals'
+import API from '/src/model/api'
 import monitorAPI from '/src/model/monitor'
 import { useUi } from '/src/model/ui'
+import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
 import { timeAgo } from '/src/lib/format'
 import {
   WATCH_SORT_KEYS,
@@ -323,6 +327,39 @@ const tab = computed(() => {
   if (route.params.tab === 'playlists') return 'playlist'
   return !counts.value.playlist && counts.value.artist ? 'artist' : 'playlist'
 })
+
+// Photos saved for the watched artists via the artist page's picker (see
+// artist_profile.py), asked for in one call whenever the artists tab opens or
+// its list changes. An artist is in here once the lookup has answered for
+// them: only then does one with no saved photo get the display-only photo
+// from the proxy (see lib/artistPhotoProxy.js) - and if the lookup fails,
+// they keep the initials, as before.
+const artistPhotos = ref({})
+const artistNames = computed(() =>
+  items.value.filter((i) => watchKind(i) === 'artist').map((i) => i.name)
+)
+let photosRequest = 0
+watch(
+  () => [tab.value, artistNames.value.join('\n')],
+  async ([currentTab]) => {
+    if (currentTab !== 'artist' || !artistNames.value.length) return
+    const request = ++photosRequest
+    try {
+      const res = await API.getArtistArtBulk(artistNames.value)
+      if (request === photosRequest) {
+        artistPhotos.value = { ...artistPhotos.value, ...(res.data || {}) }
+      }
+    } catch {
+      // No saved photos known: those artists keep their initials.
+    }
+  },
+  { immediate: true }
+)
+
+function artistCover(item) {
+  const entry = artistPhotos.value[item.name]
+  return artistPhotoSource(item.name, entry, entry !== undefined).cover
+}
 
 const tabs = computed(() => [
   {

@@ -226,8 +226,7 @@ import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useUi } from '/src/model/ui'
 import { albumKey, artistKey, filterItems, sortItems } from '/src/lib/library'
-import { proxiedArtistPhotoUrl } from '/src/lib/artistPhotoProxy'
-import { versionedArtUrl } from '/src/lib/artistArt'
+import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
 import { formatBytes, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -285,16 +284,12 @@ watch(
 // artist the proxy has no photo for. Only this tab - the search page's
 // artists come with their own picture and never go through here.
 function artistCover(item) {
-  const saved = versionedArtUrl(
-    artistPhotos.value[item.name]?.photo_url,
-    artistPhotos.value[item.name]?.photo_version
+  return artistPhotoSource(
+    item.name,
+    artistPhotos.value[item.name],
+    artistPhotosLoaded.value,
+    item.cover
   )
-  if (saved) return { cover: saved, fallback: '' }
-  if (!artistPhotosLoaded.value) return { cover: item.cover, fallback: '' }
-  return {
-    cover: proxiedArtistPhotoUrl(item.name),
-    fallback: item.cover || '',
-  }
 }
 
 const views = useLocalStorage('downtify-library-views', {

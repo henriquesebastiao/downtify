@@ -268,7 +268,7 @@ Remove a saved photo or banner.
 
 ### `GET /api/artists/photo-proxy`
 
-A **display-only** photo for an artist that has no saved photo, used for the tiles in the artist page's *Related* tab, for the artists in the Library's *Artists* grid and for the round photo on an artist's own page, whenever nobody picked a photo for them. The search page doesn't use it. It is a relay, not a way to get a photo to keep: the image is fetched from Deezer, sent to your browser and forgotten - nothing is written to your downloads folder, and only the artist-name → Deezer image link is remembered (in memory, for three hours). To actually save a photo for an artist use the picker (`POST /api/artists/art/from_url`).
+A **display-only** photo for an artist that has no saved photo, used for the tiles in the artist page's *Related* tab, for the artists in the Library's *Artists* grid, for the round photo on an artist's own page and for the artists on the Monitor's *Artists* tab, whenever nobody picked a photo for them. The search page doesn't use it. It is a relay, not a way to get a photo to keep: the image is fetched from Deezer, sent to your browser and forgotten - nothing is written to your downloads folder, and only the artist-name → Deezer image link is remembered (in memory, for three hours). To actually save a photo for an artist use the picker (`POST /api/artists/art/from_url`).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
