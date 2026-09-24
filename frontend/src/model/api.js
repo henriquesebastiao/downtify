@@ -194,6 +194,13 @@ function artistTopSongs(url) {
   return API.get('/api/artists/top_songs/url', { params: { url } })
 }
 
+// The first five Spotify top songs of a library artist, from the file the
+// backend keeps per artist (made or refreshed when missing or a week old).
+// Same shape as artistTopSongs, plus `fetched_at` and `stale`.
+function artistTopSongsSaved(name) {
+  return API.get('/api/artists/top_songs/spotify', { params: { name } })
+}
+
 // ── Downloads ────────────────────────────────────────────────────────
 function download(songURL) {
   const url = typeof songURL === 'string' ? songURL : songURL.url
@@ -464,6 +471,7 @@ export default {
   open,
   resolveUrl,
   artistTopSongs,
+  artistTopSongsSaved,
   download,
   downloadBatch,
   downloadAlbum,

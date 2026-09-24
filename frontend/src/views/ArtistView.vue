@@ -97,6 +97,31 @@
           </div>
         </template>
 
+        <template v-else-if="tab === 'topsongs'">
+          <div
+            v-if="topSongsLoading || !profileReady"
+            class="flex flex-col gap-2"
+            aria-busy="true"
+          >
+            <UiSkeleton v-for="n in 5" :key="n" class="h-16 w-full" />
+          </div>
+          <UiEmpty
+            v-else-if="topSongsError"
+            icon="alert"
+            :title="t('link.failed')"
+            :body="topSongsError"
+          >
+            <UiButton icon="refresh" @click="loadTopSongs(true)">{{
+              t('common.retry')
+            }}</UiButton>
+          </UiEmpty>
+          <TopSongsPanel
+            v-else-if="topSongsData?.songs.length"
+            :state="topSongs"
+          />
+          <UiEmpty v-else icon="music" :title="t('link.topSongsEmpty')" />
+        </template>
+
         <template v-else-if="tab === 'bio'">
           <section class="flex flex-col gap-3">
             <div v-if="profile.genre" class="flex items-center gap-2">
@@ -161,17 +186,21 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
+import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
+import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import ArtistArtModal from '/src/components/library/ArtistArtModal.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DetailState from '/src/components/library/DetailState.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'
 import PlayButton from '/src/components/library/PlayButton.vue'
+import TopSongsPanel from '/src/components/library/TopSongsPanel.vue'
 import TrackList from '/src/components/library/TrackList.vue'
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
+import { useTopSongs } from '/src/model/topSongs'
 import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
 import { sortItems } from '/src/lib/library'
@@ -227,7 +256,7 @@ const facts = computed(() => {
 // Discography / tracks / related artists / bio, tab-switched the same
 // way as LibraryView/QueueView/MonitorView - the active one lives in the
 // route's own query string, so it's bookmarkable and survives a refresh.
-const TAB_IDS = ['albums', 'tracks', 'related', 'bio']
+const TAB_IDS = ['albums', 'tracks', 'topsongs', 'related', 'bio']
 const tab = computed(() => {
   const requested = String(route.query.tab || '')
   if (TAB_IDS.includes(requested)) return requested
@@ -251,6 +280,16 @@ const tabs = computed(() => {
     count: allTracks.value.length,
     to: { name: 'Artist', query: { name: a.name, tab: 'tracks' } },
   })
+  // Only for an artist we know on Spotify: their top songs come from it.
+  if (spotifyId.value) {
+    list.push({
+      id: 'topsongs',
+      label: t('link.topSongs'),
+      // Unknown until the tab has been opened once.
+      count: topSongsData.value?.songs.length,
+      to: { name: 'Artist', query: { name: a.name, tab: 'topsongs' } },
+    })
+  }
   if (profile.value.related_artists.length) {
     list.push({
       id: 'related',
@@ -359,6 +398,12 @@ function blankProfile() {
   }
 }
 const profile = ref(blankProfile())
+// False until the first ensure of an artist has answered: the Spotify id,
+// and with it the Top songs tab, only exists after that.
+const profileReady = ref(false)
+const spotifyId = computed(() =>
+  String(profile.value.platforms_id?.spotify || '')
+)
 
 // The saved bio is plain text (see artist_profile._format_bio_text): a
 // blank line separates paragraphs, anything within one stays a line break.
@@ -462,11 +507,70 @@ async function refreshProfile() {
 // is asked for again once it's done - otherwise it'd only show up after a
 // reload.
 async function seedProfile() {
+  profileReady.value = false
   await refreshProfile()
+  profileReady.value = true
   await refreshArt()
 }
 
 watch(() => artist.value?.name, seedProfile, { immediate: true })
+
+// ── Top songs tab: the artist's first five Spotify top songs, read from
+// the file the backend keeps per artist (see downtify/artist_top_songs.py).
+// Loaded when the tab is opened, once per artist. ────────────────────────
+const topSongsData = ref(null)
+const topSongsLoading = ref(false)
+const topSongsError = ref('')
+const topSongs = useTopSongs(topSongsData)
+// Which artist + Spotify id the data belongs to, and a counter so a slow
+// answer for an artist left behind can't overwrite the current one.
+let topSongsKey = ''
+let topSongsRun = 0
+
+async function loadTopSongs(force = false) {
+  const name = artist.value?.name
+  if (!name || !spotifyId.value) return
+  const key = `${name}|${spotifyId.value}`
+  if (!force && key === topSongsKey) return
+  topSongsKey = key
+  const run = ++topSongsRun
+  topSongsLoading.value = true
+  topSongsError.value = ''
+  topSongsData.value = null
+  topSongs.reset()
+  try {
+    const res = await API.artistTopSongsSaved(name)
+    if (run !== topSongsRun) return
+    topSongsData.value = res.data
+    topSongs.reset()
+  } catch (err) {
+    if (run !== topSongsRun) return
+    topSongsError.value = err?.response?.data?.detail || err?.message || ''
+    // Forget the key so opening the tab again tries again.
+    topSongsKey = ''
+  } finally {
+    if (run === topSongsRun) topSongsLoading.value = false
+  }
+}
+
+// Another artist: drop the previous one's list (and its count in the tab).
+watch(
+  () => artist.value?.name,
+  () => {
+    topSongsKey = ''
+    topSongsRun++
+    topSongsData.value = null
+    topSongsError.value = ''
+    topSongsLoading.value = false
+  }
+)
+watch(
+  [tab, spotifyId, () => artist.value?.name],
+  () => {
+    if (tab.value === 'topsongs') loadTopSongs()
+  },
+  { immediate: true }
+)
 
 // ArtistArtModal's single "saved" event covers photo, banner, bio and
 // social edits alike - simplest to just refresh both after any of them.
