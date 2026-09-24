@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+import time
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -1144,3 +1146,139 @@ def test_full_discography_stops_on_an_empty_page():
     with patch('downtify.spotify._partner_query', side_effect=pages):
         result = _artist_full_discography('artistId', 'tok')
     assert len(result['all']['items']) == 5
+
+
+# ── artist_top_songs_from_id: limit and concurrency ────────────────────
+
+
+def _shelf_entity(count):
+    ids = [str(i + 1) * 22 for i in range(count)]
+    return ids, {
+        'name': 'Test Artist',
+        'visualIdentity': {
+            'image': [
+                {'url': 'https://example.test/artist.jpeg', 'width': 640}
+            ]
+        },
+        'trackList': [
+            {
+                'uri': f'spotify:track:{tid}',
+                'title': f'Song {i + 1}',
+                'subtitle': 'Test Artist',
+                'duration': 200000,
+            }
+            for i, tid in enumerate(ids)
+        ],
+    }
+
+
+def test_artist_top_songs_limit_enriches_only_the_songs_kept():
+    ids, entity = _shelf_entity(8)
+    enriched = []
+
+    def fake_enrich(song):
+        enriched.append(song['song_id'])
+        return song
+
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch(
+            'downtify.spotify.enrich_track_from_spotify_if_sparse',
+            side_effect=fake_enrich,
+        ),
+    ):
+        _name, _cover, songs = artist_top_songs_from_id('a', limit=5)
+    assert [s['song_id'] for s in songs] == ids[:5]
+    # The slow per-song fetch never ran for the three cut songs.
+    assert sorted(enriched) == sorted(ids[:5])
+
+
+def test_artist_top_songs_without_a_limit_keeps_the_whole_shelf():
+    ids, entity = _shelf_entity(8)
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch(
+            'downtify.spotify.enrich_track_from_spotify_if_sparse',
+            side_effect=lambda song: song,
+        ),
+    ):
+        _name, _cover, songs = artist_top_songs_from_id('a')
+    assert [s['song_id'] for s in songs] == ids
+
+
+def test_artist_top_songs_keep_shelf_order_when_enrichment_finishes_late():
+    ids, entity = _shelf_entity(5)
+
+    def slow_first(song):
+        # The first song finishes last.
+        time.sleep(0.15 if song['song_id'] == ids[0] else 0)
+        return song
+
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch(
+            'downtify.spotify.enrich_track_from_spotify_if_sparse',
+            side_effect=slow_first,
+        ),
+    ):
+        _name, _cover, songs = artist_top_songs_from_id('a')
+    assert [s['song_id'] for s in songs] == ids
+
+
+def test_artist_top_songs_enrichment_runs_concurrently():
+    ids, entity = _shelf_entity(4)
+    barrier = threading.Barrier(4, timeout=2)
+
+    def wait_for_the_others(song):
+        # Only passes if all four enrichments are in flight together; a
+        # sequential loop would time the barrier out.
+        barrier.wait()
+        return song
+
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch(
+            'downtify.spotify.enrich_track_from_spotify_if_sparse',
+            side_effect=wait_for_the_others,
+        ),
+    ):
+        _name, _cover, songs = artist_top_songs_from_id('a')
+    assert len(songs) == 4
+
+
+def test_artist_top_songs_overview_still_fills_plays_and_album():
+    ids, entity = _shelf_entity(2)
+    payload = _embed_payload_for(entity)
+    payload['props']['pageProps']['state']['settings'] = {
+        'session': {'accessToken': 'tok'}
+    }
+    overview = {
+        ids[0]: {'album_name': 'Album One', 'play_count': 123},
+        ids[1]: {'play_count': 456},
+    }
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch(
+            'downtify.spotify.enrich_track_from_spotify_if_sparse',
+            side_effect=lambda song: song,
+        ),
+        patch(
+            'downtify.spotify._top_track_overview', return_value=overview
+        ) as mock_overview,
+    ):
+        _name, _cover, songs = artist_top_songs_from_id('a', limit=2)
+    mock_overview.assert_called_once()
+    assert songs[0]['album_name'] == 'Album One'
+    assert [s['play_count'] for s in songs] == [123, 456]

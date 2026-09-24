@@ -1275,8 +1275,15 @@ def _top_track_overview(
     return result
 
 
+# Top songs are each enriched with their own embed fetch (~0.6 s apiece):
+# a handful at a time keeps a full shelf under a few seconds without
+# hammering Spotify.
+_TOP_SONGS_CONCURRENCY = 5
+
+
 def artist_top_songs_from_id(
     artist_id: str,
+    limit: Optional[int] = None,
 ) -> tuple[str, str, list[dict[str, Any]]]:
     """``(name, cover_url, songs)`` from an artist embed's top-tracks shelf.
 
@@ -1303,6 +1310,11 @@ def artist_top_songs_from_id(
     own album cover instead of falling back to the artist's photo. The
     album *name* and the play count aren't in either embed; see
     :func:`_top_track_overview`.
+
+    *limit* keeps only the first that many songs, and is applied *before*
+    the per-track enrichment - which is where the time goes - so asking
+    for 5 of the shelf's 10 costs about half. The enrichments (and the
+    overview request) run concurrently, in the shelf's own order.
     """
 
     entity, name, cover_url, token = _artist_entity(artist_id)
@@ -1318,16 +1330,31 @@ def artist_top_songs_from_id(
         track_id = track.get('id') or _id_from_uri(track.get('uri', ''))
         if not track_id:
             continue
-        song = _track_dict(
-            dict(track), track_id=track_id, fallback_cover=cover_url
+        songs.append(
+            _track_dict(
+                dict(track), track_id=track_id, fallback_cover=cover_url
+            )
         )
-        songs.append(enrich_track_from_spotify_if_sparse(song))
+        if limit is not None and len(songs) >= limit:
+            break
     if not songs:
         logger.warning(
             'No top-songs parsed from Spotify artist embed for {}', artist_id
         )
-    elif token:
-        overview = _top_track_overview(artist_id, token)
+        return name, cover_url, songs
+    with ThreadPoolExecutor(
+        max_workers=min(_TOP_SONGS_CONCURRENCY, len(songs)) + 1,
+        thread_name_prefix='downtify-spotify-top',
+    ) as pool:
+        overview_future = (
+            pool.submit(_top_track_overview, artist_id, token)
+            if token
+            else None
+        )
+        # map() keeps the shelf's order whichever enrichment finishes first.
+        songs = list(pool.map(enrich_track_from_spotify_if_sparse, songs))
+        overview = overview_future.result() if overview_future else None
+    if overview is not None:
         for song in songs:
             info = overview.get(song['song_id']) or {}
             if not song.get('album_name') and info.get('album_name'):
