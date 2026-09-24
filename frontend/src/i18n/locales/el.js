@@ -358,6 +358,7 @@ export default {
     notFound: 'Ο καλλιτέχνης δεν βρέθηκε',
     findMore: 'Βρες περισσότερα',
     relatedArtists: 'Στους θαυμαστές αρέσει επίσης',
+    topSongsLink: 'Περισσότερα δημοφιλή τραγούδια',
   },
   artistArt: {
     editPhoto: 'Επεξεργασία φωτογραφίας',

@@ -367,6 +367,7 @@ export default {
     notFound: 'Artiste introuvable',
     findMore: 'En trouver plus',
     relatedArtists: 'Les fans aiment aussi',
+    topSongsLink: 'Voir plus de titres populaires',
   },
   artistArt: {
     editPhoto: 'Modifier la photo',

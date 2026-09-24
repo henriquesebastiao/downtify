@@ -116,9 +116,10 @@
               t('common.retry')
             }}</UiButton>
           </UiEmpty>
-          <TopSongsPanel
+          <TopSongsShelf
             v-else-if="topSongsData?.songs.length"
-            :state="topSongs"
+            :data="topSongsData"
+            :context="context"
           />
           <UiEmpty v-else icon="music" :title="t('link.topSongsEmpty')" />
         </template>
@@ -198,12 +199,11 @@ import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DetailState from '/src/components/library/DetailState.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'
 import PlayButton from '/src/components/library/PlayButton.vue'
-import TopSongsPanel from '/src/components/library/TopSongsPanel.vue'
+import TopSongsShelf from '/src/components/library/TopSongsShelf.vue'
 import TrackList from '/src/components/library/TrackList.vue'
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
-import { useTopSongs } from '/src/model/topSongs'
 import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
 import { sortItems } from '/src/lib/library'
@@ -560,7 +560,6 @@ watch(() => artist.value?.name, seedProfile, { immediate: true })
 const topSongsData = ref(null)
 const topSongsLoading = ref(false)
 const topSongsError = ref('')
-const topSongs = useTopSongs(topSongsData)
 // Which artist + Spotify id the data belongs to, and a counter so a slow
 // answer for an artist left behind can't overwrite the current one.
 let topSongsKey = ''
@@ -575,8 +574,8 @@ function stopTopSongsPoll() {
   topSongsTimer = null
 }
 
-// Swap in the refreshed list without touching the selection or the
-// "Create playlist" switch - it may be in the middle of being used.
+// Swap in the refreshed list in place: rows are keyed by song, so one that
+// is downloading or playing keeps its state.
 function pollTopSongs(run, name, attempt = 0) {
   stopTopSongsPoll()
   if (attempt >= TOP_SONGS_POLL_MAX) return
@@ -604,12 +603,10 @@ async function loadTopSongs(force = false) {
   topSongsLoading.value = true
   topSongsError.value = ''
   topSongsData.value = null
-  topSongs.reset()
   try {
     const res = await API.artistTopSongsSaved(name)
     if (run !== topSongsRun) return
     topSongsData.value = res.data
-    topSongs.reset()
     if (res.data?.stale) pollTopSongs(run, name)
   } catch (err) {
     if (run !== topSongsRun) return

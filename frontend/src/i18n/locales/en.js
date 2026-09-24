@@ -353,6 +353,7 @@ export default {
     notFound: 'Artist not found',
     findMore: 'Find more',
     relatedArtists: 'Fans also like',
+    topSongsLink: 'See more popular songs',
   },
   artistArt: {
     editPhoto: 'Edit photo',

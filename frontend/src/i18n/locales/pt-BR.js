@@ -360,6 +360,7 @@ export default {
     notFound: 'Artista não encontrado',
     findMore: 'Encontrar mais',
     relatedArtists: 'Fãs também curtem',
+    topSongsLink: 'Ver mais músicas populares',
   },
   artistArt: {
     editPhoto: 'Editar foto',

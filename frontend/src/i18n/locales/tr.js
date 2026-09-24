@@ -360,6 +360,7 @@ export default {
     notFound: 'Sanatçı bulunamadı',
     findMore: 'Daha fazlasını bul',
     relatedArtists: 'Hayranların beğendiği diğerleri',
+    topSongsLink: 'Daha fazla popüler şarkı',
   },
   artistArt: {
     editPhoto: 'Fotoğrafı düzenle',

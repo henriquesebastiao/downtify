@@ -354,6 +354,7 @@ export default {
     notFound: 'Изпълнителят не е намерен',
     findMore: 'Намери още',
     relatedArtists: 'На феновете допада и',
+    topSongsLink: 'Още популярни песни',
   },
   artistArt: {
     editPhoto: 'Редактиране на снимката',

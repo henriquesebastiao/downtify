@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  playableQueue,
   playsBadge,
   sanitizePlaylistName,
   topSongsBatchOptions,
@@ -72,5 +73,37 @@ describe('playsBadge', () => {
       title: 'link.playCountSpotify',
     })
     expect(playsBadge({}).tone).toBe('spotify')
+  })
+})
+
+describe('playableQueue', () => {
+  const songs = [
+    { name: 'One', artists: ['Band'] },
+    { name: 'Two', artists: ['Band'] },
+    { name: 'Three', artist: 'Band' },
+  ]
+
+  it('keeps the songs that are in the library, in the list order', () => {
+    const tracks = { One: { file: '1.mp3' }, Three: { file: '3.mp3' } }
+    const find = (artist, title) => tracks[title]
+    expect(playableQueue(songs, find)).toEqual([
+      { file: '1.mp3' },
+      { file: '3.mp3' },
+    ])
+  })
+
+  it('looks each song up by its first artist (or the plain artist field)', () => {
+    const seen = []
+    playableQueue(songs, (artist, title) => seen.push([artist, title]) && null)
+    expect(seen).toEqual([
+      ['Band', 'One'],
+      ['Band', 'Two'],
+      ['Band', 'Three'],
+    ])
+  })
+
+  it('is empty when nothing is downloaded or there are no songs', () => {
+    expect(playableQueue(songs, () => null)).toEqual([])
+    expect(playableQueue(undefined, () => null)).toEqual([])
   })
 })

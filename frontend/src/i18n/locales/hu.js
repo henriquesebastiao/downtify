@@ -358,6 +358,7 @@ export default {
     notFound: 'Az előadó nem található',
     findMore: 'Továbbiak keresése',
     relatedArtists: 'A rajongók ezt is szeretik',
+    topSongsLink: 'További népszerű számok',
   },
   artistArt: {
     editPhoto: 'Fotó szerkesztése',
