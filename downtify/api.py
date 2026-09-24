@@ -47,6 +47,11 @@ working without changes:
   related artists, platform ids, which source their current photo/
   banner came from - a blank skeleton if nothing was saved yet; never
   seeds one, see ``POST .../ensure`` below for that)
+* ``GET  /api/artists/top_songs/spotify`` (the artist's first five Spotify
+  top songs, same shape as ``/api/artists/top_songs/url`` plus
+  ``fetched_at``/``stale`` - read from ``Metadata/ArtistTopSongs/`` while
+  fresh (7 days), fetched and saved when missing, refreshed in the
+  background when stale; needs ``platforms_id.spotify`` in the profile)
 * ``POST /api/artists/profile/ensure`` (seed a brand-new artist's
   profile the first time it's needed - Spotify/YouTube Music photo and
   banner (each only when its ``download_cover_art_artist``/``..._banner``
@@ -176,6 +181,7 @@ from loguru import logger
 from . import (
     artist_photo_proxy,
     artist_profile,
+    artist_top_songs,
     cover_sources,
     deezer,
     integration_check,
@@ -1293,6 +1299,49 @@ def artist_profile_endpoint(name: str = Query(...)) -> dict[str, Any]:
     return artist_profile.load_profile(_artist_profile_download_dir(), name)
 
 
+@router.get('/api/artists/top_songs/spotify')
+async def artist_top_songs_saved_endpoint(
+    name: str = Query(...),
+) -> dict[str, Any]:
+    """An artist's saved Spotify top songs (see
+    ``downtify.artist_top_songs``), for the artist page's Top songs tab.
+
+    A fresh file is returned as is. A stale one is returned right away
+    while a refresh runs in the background; with no file yet the songs are
+    fetched now and saved. The Spotify artist id is the one in the artist's
+    profile (``platforms_id.spotify``).
+    """
+
+    artist = name.strip()
+    if not artist:
+        raise HTTPException(status_code=400, detail='Invalid request')
+    download_dir = _artist_profile_download_dir()
+    profile = artist_profile.load_profile(download_dir, artist)
+    spotify_id = str(profile['platforms_id'].get('spotify') or '')
+    if not spotify_id:
+        raise HTTPException(
+            status_code=404, detail='No Spotify artist saved for this artist'
+        )
+    saved, fresh = artist_top_songs.cached(download_dir, artist, spotify_id)
+    if saved is not None:
+        if not fresh:
+            artist_top_songs.refresh_in_background(
+                download_dir, artist, spotify_id
+            )
+        return {**saved, 'stale': not fresh}
+    try:
+        data = await asyncio.to_thread(
+            artist_top_songs.ensure_top_songs,
+            download_dir,
+            artist,
+            spotify_id,
+        )
+    except Exception as exc:
+        logger.exception('Failed to fetch top songs for {}', artist)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {**data, 'stale': False}
+
+
 @router.post('/api/artists/profile/ensure')
 async def artist_profile_ensure_endpoint(request: Request) -> dict[str, Any]:
     payload = await _json_object(request)
@@ -1301,15 +1350,22 @@ async def artist_profile_ensure_endpoint(request: Request) -> dict[str, Any]:
     track_files = payload.get('track_files')
     if not name:
         raise HTTPException(status_code=400, detail='Invalid request')
-    return await asyncio.to_thread(
+    download_dir = _artist_profile_download_dir()
+    profile = await asyncio.to_thread(
         artist_profile.ensure_profile,
-        _artist_profile_download_dir(),
+        download_dir,
         name,
         track_files if isinstance(track_files, list) else [],
         lang,
         track_index=state.track_index,
         image_kinds=_artist_image_kinds_to_save(state.settings),
     )
+    # The artist page's Top songs tab reads this file: get it made (or
+    # refreshed once it's a week old) without holding up the profile.
+    artist_top_songs.refresh_in_background(
+        download_dir, name, str(profile['platforms_id'].get('spotify') or '')
+    )
+    return profile
 
 
 def _artist_image_kinds_to_save(settings: dict[str, Any]) -> tuple[str, ...]:

@@ -48,6 +48,10 @@ def _no_spotify_name_search(monkeypatch):
     monkeypatch.setattr(
         artist_profile.spotify, 'search_artist_by_name', lambda name: None
     )
+    # ...nor may the ensure endpoint start its background top songs fetch.
+    monkeypatch.setattr(
+        api.artist_top_songs, 'refresh_in_background', lambda *args: False
+    )
 
 
 @pytest.fixture
