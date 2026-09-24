@@ -10,14 +10,20 @@ disk is the source of truth. The download directory is already served at
 ``/downloads`` (see ``main.py``), so no dedicated read endpoint is needed
 - only a small existence check and the write paths below.
 
-The rest of the profile (bio, social links, related artists, platform
-ids, and which source each saved photo/banner came from) lives in one
-JSON sidecar per artist, ``Metadata/ArtistData/<name>.json`` - see
-:func:`load_profile`/:func:`fetch_bio`. Bio, social links and related
-artists all come from Deezer (:mod:`downtify.deezer`) when it has an
-exact name match; YouTube Music (:mod:`downtify.providers`) is a
-bio-only fallback for when Deezer doesn't. Always fetched on demand (a
-button on the artist page), never automatically.
+The rest of the profile (bio, origin, formation year, social links,
+related artists, platform ids, and which source each saved photo/banner
+came from) lives in one JSON sidecar per artist,
+``Metadata/ArtistData/<name>.json`` - see :func:`load_profile`/
+:func:`fetch_bio`. Apple Music (:mod:`downtify.apple_music`) is the
+primary bio source - it also brings origin/formation year/genre/group flag/
+hero colour, nothing else supplies those; Deezer (:mod:`downtify.deezer`)
+is the secondary bio source (used only when Apple's bio is empty for
+that artist/language) and the only source for social links and related
+artists. Always fetched on demand (a button on the artist page) - except
+for a brand-new artist's very first profile, seeded automatically by
+:func:`ensure_profile` (photo/banner from Spotify/YouTube Music - only
+the ones the user's settings allow - and bio/social/platform ids the same
+way the button would).
 
 Function names are prefixed ``image_``/``_image`` for the photo/banner
 half on purpose, to keep it visually distinct from the profile-data half
@@ -27,13 +33,14 @@ added later.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Optional
 
 import httpx
 from loguru import logger
 
-from . import deezer, providers
+from . import apple_music, deezer, providers, spotify
 from .downloader import _sanitize
 from .image_size import image_dimensions
 from .podcasts import strip_html
@@ -159,11 +166,22 @@ def _default_profile(name: str) -> dict[str, Any]:
     return {
         'name': name,
         'bio': '',
-        # 'deezer' is the only one any code resolves automatically today
-        # (fetch_bio, below); 'spotify'/'youtubemusic' are recognized so
-        # a manually edited profile JSON renders its platform icons too,
-        # even though nothing currently writes them.
-        'platforms_id': {'spotify': '', 'youtubemusic': '', 'deezer': ''},
+        # Apple Music only - not translated per-language, so these don't
+        # change when the bio is re-fetched in a different language.
+        'origin': '',
+        'born_or_formed': '',
+        'genre': '',
+        'is_group': None,
+        'banner_bg_color': '',
+        # Resolved automatically by ensure_profile/fetch_bio (Spotify: from
+        # one of the artist's own tracks, else an exact-name search); a
+        # manually edited profile JSON renders its platform icons too.
+        'platforms_id': {
+            'spotify': '',
+            'youtubemusic': '',
+            'deezer': '',
+            'applemusic': '',
+        },
         'social': {
             'twitter': '',
             'facebook': '',
@@ -189,11 +207,16 @@ def load_profile(download_dir: Path, name: str) -> dict[str, Any]:
     if not isinstance(data, dict):
         return default
     merged = {**default, **data}
-    merged['platforms_id'] = {
-        **default['platforms_id'],
-        **(data.get('platforms_id') or {}),
-    }
+    platforms = dict(data.get('platforms_id') or {})
+    # Files saved before the key was renamed call Apple Music's id
+    # 'itunes' - same id, same 'slug/numeric-id' shape. Read it under the
+    # new name; the file itself is rewritten on its next save.
+    legacy_apple_id = platforms.pop('itunes', '')
+    if legacy_apple_id and not platforms.get('applemusic'):
+        platforms['applemusic'] = legacy_apple_id
+    merged['platforms_id'] = {**default['platforms_id'], **platforms}
     merged['social'] = {**default['social'], **(data.get('social') or {})}
+    merged['bio'] = _normalize_stored_bio(str(merged.get('bio') or ''))
     return merged
 
 
@@ -216,20 +239,163 @@ def _set_current_cover(
     _save_profile(download_dir, name, profile)
 
 
-def fetch_bio(download_dir: Path, name: str, lang: str) -> dict[str, Any]:
-    """Fetch and save *name*'s bio, trying Deezer first, then YouTube Music.
+def _cached_or_resolved_apple_music_id(
+    profile: dict[str, Any], name: str
+) -> str:
+    # platforms_id['applemusic'] stores 'slug/numeric-id' (see fetch_artist_full
+    # below), but the catalog API only takes the numeric id - pull it back
+    # out of a cached value instead of re-searching by name every time.
+    cached = profile['platforms_id'].get('applemusic') or ''
+    match = re.search(r'(\d+)$', cached)
+    if match:
+        return match.group(1)
+    return apple_music.resolve_artist_id(name) or ''
 
-    Deezer also brings social links and related-artist names, so it's
-    tried first; its artist id is resolved once and cached (see
-    :func:`downtify.deezer.resolve_artist_id`). If Deezer has no exact
-    name match, or matches but has no bio text, YouTube Music's own
-    artist "About" description (:func:`downtify.providers.
-    artist_bio_from_channel_id`) is tried as a bio-only fallback - it
-    doesn't have social links or related artists. Raises
-    :class:`ValueError` only when neither source has anything at all.
+
+_BULLET_RE = re.compile(r'^•\s*')
+
+
+def _format_bio_text(raw: str) -> str:
+    """*raw* (Deezer's own ``<p>`` HTML, Apple Music's text with a ``•``
+    list, or a user's manually typed text) turned into plain text:
+    paragraphs separated by one blank line, and no HTML left at all.
+
+    Every ``•`` bullet is dropped and starts a paragraph of its own -
+    Apple separates its bullets with a single line break, so without this
+    they'd render as one long paragraph. A single line break anywhere
+    else is kept as it is.
+
+    Starts from :func:`downtify.podcasts.strip_html`, which already turns
+    block tags (``<p>``, ``<br>``, ``<li>`` ...) into line breaks and
+    drops every other tag, so Deezer's HTML comes out as paragraphs
+    separated by blank lines. Idempotent - running its own output through
+    again changes nothing.
     """
 
+    text = strip_html(raw)
+    if not text:
+        return ''
+    paragraphs: list[list[str]] = []
+    for block in re.split(r'\n\s*\n', text):
+        current: list[str] = []
+        for raw_line in block.split('\n'):
+            line = raw_line.strip()
+            if not line:
+                continue
+            if _BULLET_RE.match(line):
+                if current:
+                    paragraphs.append(current)
+                current = []
+                line = _BULLET_RE.sub('', line)
+            if line:
+                current.append(line)
+        if current:
+            paragraphs.append(current)
+    return '\n\n'.join('\n'.join(lines) for lines in paragraphs)
+
+
+def _normalize_stored_bio(bio: str) -> str:
+    """A bio saved by an earlier version (HTML, maybe with a ``<ul>``
+    list, or plain text still carrying ``•`` bullets) brought up to
+    today's plain-text shape on read - a no-op for one already in it.
+    Nothing is rewritten on disk until the next save.
+    """
+
+    if not bio or not ('<' in bio or '•' in bio):
+        return bio
+    # A list item is a bullet like any other: it ends up a paragraph.
+    bio = re.sub(r'<li[^>]*>', '\n• ', bio).replace('</li>', '\n')
+    return _format_bio_text(bio)
+
+
+def _merge_names(existing: list[str], new: list[str]) -> list[str]:
+    """*existing* followed by whichever of *new* isn't already present,
+    case-insensitively - combines two platforms' related-artist name
+    lists without duplicating an artist both happen to agree on.
+    """
+
+    seen = {n.strip().lower() for n in existing if n}
+    merged = list(existing)
+    for name in new:
+        key = name.strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            merged.append(name)
+    return merged
+
+
+#: Which service's biography :func:`fetch_bio` should use.
+BIO_SOURCE_AUTO = 'auto'
+BIO_SOURCE_APPLE_MUSIC = 'applemusic'
+BIO_SOURCE_DEEZER = 'deezer'
+_BIO_SOURCES = (BIO_SOURCE_AUTO, BIO_SOURCE_APPLE_MUSIC, BIO_SOURCE_DEEZER)
+
+
+def fetch_bio(
+    download_dir: Path,
+    name: str,
+    lang: str,
+    source: str = BIO_SOURCE_AUTO,
+) -> dict[str, Any]:
+    """Fetch and save *name*'s bio and related profile data.
+
+    Apple Music is the primary bio source, and the only one for origin/
+    formation year/genre/group flag/banner colour - its artist id is resolved
+    once and cached (see :func:`downtify.apple_music.resolve_artist_id`).
+    Deezer is the secondary bio source - only used to fill the bio in
+    when Apple's own is empty for that artist/language (see
+    :func:`downtify.apple_music.fetch_artist_full`'s docstring: Apple's
+    editorial bios aren't written for every artist in every language) -
+    and a source for social links and related-artist names, which it
+    contributes regardless of whether Apple already supplied a bio.
+    Spotify also contributes related-artist names, merged in alongside
+    Deezer's (see :func:`_merge_names`), using the cached
+    ``platforms_id.spotify`` - or, when there is none yet, an exact-name
+    search (:func:`_spotify_id_from_name`), cached the same way. An id
+    already there - e.g. resolved from one of the artist's own Spotify
+    tracks by :func:`ensure_profile` - is never replaced.
+
+    *source* only chooses whose biography *text* is saved - every other
+    field is fetched the same way whatever it is. ``'auto'`` (what
+    :func:`ensure_profile` uses) is the behaviour described above: Apple
+    Music's bio, Deezer's only as a fallback. ``'applemusic'`` and
+    ``'deezer'`` are the user picking one: that service's bio replaces
+    the saved one, with no fallback to the other, and nothing at all is
+    saved (the current bio stays) if it has none.
+
+    Raises :class:`ValueError` when nothing at all was found - or, for an
+    explicit *source*, when that service has no biography for the artist.
+    """
+
+    if source not in _BIO_SOURCES:
+        raise ValueError(f'Unknown bio source: {source!r}')
     profile = load_profile(download_dir, name)
+    got_anything = False
+    apple_bio = ''
+    deezer_bio = ''
+
+    apple_id = _cached_or_resolved_apple_music_id(profile, name)
+    if apple_id:
+        try:
+            apple_full = apple_music.fetch_artist_full(apple_id, lang)
+        except ValueError:
+            apple_full = None
+        if apple_full is not None:
+            got_anything = True
+            profile['origin'] = apple_full['origin']
+            profile['born_or_formed'] = apple_full['born_or_formed']
+            profile['genre'] = apple_full['genre']
+            profile['is_group'] = apple_full['is_group']
+            profile['banner_bg_color'] = apple_full['banner_bg_color']
+            if apple_full['applemusic_id']:
+                profile['platforms_id']['applemusic'] = apple_full[
+                    'applemusic_id'
+                ]
+            if apple_full['bio_html']:
+                apple_bio = _format_bio_text(apple_full['bio_html'])
+                if source == BIO_SOURCE_AUTO:
+                    profile['bio'] = apple_bio
+
     deezer_id = profile['platforms_id'].get('deezer') or ''
     if not deezer_id:
         deezer_id = deezer.resolve_artist_id(name) or ''
@@ -238,39 +404,278 @@ def fetch_bio(download_dir: Path, name: str, lang: str) -> dict[str, Any]:
 
     if deezer_id:
         try:
-            full = deezer.fetch_artist_full(deezer_id, lang)
+            deezer_full = deezer.fetch_artist_full(deezer_id, lang)
         except ValueError:
-            full = None
-        if full is not None:
+            deezer_full = None
+        if deezer_full is not None:
+            got_anything = True
             # Merge rather than replace: Deezer's response only ever
             # covers its own four fields, so a manually-added one (e.g.
             # 'youtube', which Deezer has no concept of) survives a
             # later re-fetch instead of being wiped.
-            profile['social'] = {**profile['social'], **full['social']}
-            profile['related_artists'] = full['related_artist_names']
-            if full['bio_html']:
-                profile['bio'] = strip_html(full['bio_html'])
-                _save_profile(download_dir, name, profile)
-                return profile
+            profile['social'] = {**profile['social'], **deezer_full['social']}
+            profile['related_artists'] = deezer_full['related_artist_names']
+            if deezer_full['bio_html']:
+                deezer_bio = _format_bio_text(deezer_full['bio_html'])
+                if source == BIO_SOURCE_AUTO and not profile['bio']:
+                    profile['bio'] = deezer_bio
 
-    channel_id = providers.resolve_artist_id_by_name(name)
-    bio_text = (
-        providers.artist_bio_from_channel_id(channel_id, lang)
-        if channel_id
-        else ''
+    spotify_id = profile['platforms_id'].get('spotify') or ''
+    if not spotify_id:
+        spotify_id = _spotify_id_from_name(name) or ''
+        if spotify_id:
+            profile['platforms_id']['spotify'] = spotify_id
+    if spotify_id:
+        try:
+            spotify_related = spotify.related_artist_names_from_id(spotify_id)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Spotify related-artist fetch failed for {}', spotify_id
+            )
+            spotify_related = []
+        if spotify_related:
+            got_anything = True
+            profile['related_artists'] = _merge_names(
+                profile['related_artists'], spotify_related
+            )
+
+    if source == BIO_SOURCE_APPLE_MUSIC:
+        if not apple_bio:
+            raise ValueError(
+                'Apple Music has no biography for this artist in this language'
+            )
+        profile['bio'] = apple_bio
+    elif source == BIO_SOURCE_DEEZER:
+        if not deezer_bio:
+            raise ValueError('Deezer has no biography for this artist')
+        profile['bio'] = deezer_bio
+
+    if not got_anything:
+        raise ValueError('No matching artist found on Apple Music or Deezer')
+
+    _save_profile(download_dir, name, profile)
+    return profile
+
+
+def _spotify_id_from_name(name: str) -> Optional[str]:
+    """Spotify artist id by exact name (see
+    :func:`downtify.spotify.search_artist_by_name`), or ``None`` - never
+    raises, so a Spotify hiccup can't fail a profile fetch."""
+
+    try:
+        found = spotify.search_artist_by_name(name)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Spotify artist search failed for {!r}', name
+        )
+        return None
+    return found['id'] if found else None
+
+
+def resolve_platform_ids(
+    name: str, known: Optional[dict[str, str]] = None
+) -> dict[str, str]:
+    """*name* looked up across every stream platform with a name-search
+    API, requiring an exact (case-insensitive) match on each - same
+    strictness as every platform's own ``resolve_artist_id``, so an
+    unrelated top result never gets attached to the wrong artist. Only
+    the platforms that actually matched are in the returned dict.
+
+    Covers Spotify (:func:`_spotify_id_from_name`), Deezer, YouTube Music
+    and Apple Music (via :func:`apple_music.resolve_artist_slug_id`,
+    already in the ``slug/numeric-id`` shape ``platforms_id.applemusic``
+    needs, resolved from the same search call as the plain id).
+
+    *known* is a ``platforms_id`` mapping: any platform with a non-empty
+    id there is skipped (no request, not in the result), so an id
+    already saved - above all a Spotify one resolved from the artist's
+    own track, which is more reliable than a name match - is never
+    replaced by a search result.
+    """
+
+    known = known or {}
+    ids: dict[str, str] = {}
+    if not known.get('spotify'):
+        spotify_id = _spotify_id_from_name(name)
+        if spotify_id:
+            ids['spotify'] = spotify_id
+    if not known.get('deezer'):
+        deezer_id = deezer.resolve_artist_id(name)
+        if deezer_id:
+            ids['deezer'] = deezer_id
+    if not known.get('youtubemusic'):
+        ytm_id = providers.resolve_artist_id(name)
+        if ytm_id:
+            ids['youtubemusic'] = ytm_id
+    if not known.get('applemusic'):
+        apple_id = apple_music.resolve_artist_slug_id(name)
+        if apple_id:
+            ids['applemusic'] = apple_id
+    return ids
+
+
+def resolve_spotify_artist_id(
+    track_files: list[str], track_index: Any, name: str = ''
+) -> Optional[str]:
+    """Spotify artist id, or ``None``.
+
+    First choice is the first of *track_files* that was itself
+    downloaded from Spotify (*track_index* may be ``None`` to skip this):
+    a track already known to be theirs can't resolve to a namesake. When
+    none is, *name* - if given - is searched on Spotify by exact name
+    (:func:`_spotify_id_from_name`). Not private: a caller with its own
+    track/track_index (e.g. a download-pipeline hook - see
+    :func:`ensure_profile`) can reuse this directly instead of
+    re-implementing the same loop.
+    """
+
+    for file in track_files[:5] if track_index is not None else []:
+        filename = str(file or '').strip().replace('\\', '/')
+        if not filename:
+            continue
+        track_id = track_index.spotify_id_for_filename(filename)
+        if not track_id:
+            continue
+        try:
+            artist_id = spotify.primary_artist_id_from_track_id(track_id)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Spotify artist id resolution failed for track {}', track_id
+            )
+            continue
+        if artist_id:
+            return artist_id
+    return _spotify_id_from_name(name) if name.strip() else None
+
+
+def _seed_image_from_streams(
+    download_dir: Path,
+    name: str,
+    kind: str,
+    spotify_artist_id: Optional[str],
+) -> None:
+    """Save *name*'s photo/banner from Spotify, given an already-
+    resolved artist id (see :func:`resolve_spotify_artist_id`). Falls
+    back to an exact YouTube Music name match when Spotify has nothing
+    (no id at all, or the artist simply has no banner set there). No-op
+    if this *kind* is already saved.
+    """
+
+    if image_path_for(download_dir, name, kind).is_file():
+        return
+
+    if spotify_artist_id:
+        url = ''
+        try:
+            url = (
+                spotify.artist_banner_url_from_id(spotify_artist_id)
+                if kind == KIND_BANNER
+                else spotify.artist_image_url_from_id(spotify_artist_id)
+            )
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Spotify artist art seed failed for {} ({})',
+                spotify_artist_id,
+                kind,
+            )
+        if url:
+            try:
+                fetch_and_save_image(
+                    download_dir, name, kind, url, source='spotify'
+                )
+            except ValueError:
+                logger.debug(
+                    'Could not save seeded Spotify {} for {}', kind, name
+                )
+            return
+
+    wanted = name.strip().lower()
+    for artist in providers.search_artists(name, limit=25):
+        if str(artist.get('name') or '').strip().lower() != wanted:
+            continue
+        url = artist.get('cover_url') or ''
+        if url:
+            try:
+                fetch_and_save_image(
+                    download_dir, name, kind, url, source='youtube'
+                )
+            except ValueError:
+                logger.debug(
+                    'Could not save seeded YouTube Music {} for {}',
+                    kind,
+                    name,
+                )
+        return
+
+
+def ensure_profile(
+    download_dir: Path,
+    name: str,
+    track_files: list[str],
+    lang: str,
+    track_index: Optional[Any] = None,
+    image_kinds: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    """Seed a brand-new artist's profile the first time it's needed
+    (e.g. opening their Library page) and nothing has been saved for
+    them yet: photo/banner from Spotify/YouTube Music (see
+    :func:`_seed_image_from_streams`) - only the kinds in *image_kinds*,
+    which callers derive from the user's ``download_cover_art_artist``/
+    ``download_cover_art_artist_banner`` settings (none by default: an
+    image is never saved unless the caller says the user wants it) -
+    plus bio/social/origin/etc via
+    :func:`fetch_bio` and platform ids via :func:`resolve_platform_ids` -
+    exactly as if the user had opened the picker and clicked the fetch
+    button themselves.
+
+    A no-op past the first call for a given artist: once a profile file
+    exists at all - even a mostly-empty one, if nothing could be found -
+    every later call just returns :func:`load_profile` directly, so an
+    obscure artist nothing matches doesn't re-run this full, several-
+    requests-deep lookup on every single page visit. *track_index* is
+    optional: with it, Spotify's artist id comes from one of the artist's
+    own Spotify tracks (the most reliable route); without it, or when no
+    track has one, from an exact-name search (see
+    :func:`resolve_spotify_artist_id`). Callers without an index handy -
+    or a future one, like the download pipeline resolving this right
+    after a new artist's first track finishes, not wired up yet - aren't
+    forced to fake it.
+
+    Spotify's artist id is cached into ``platforms_id.spotify`` *before*
+    :func:`fetch_bio` runs, so its own related-artist merge (see that
+    function's docstring) picks it up on this very first call, not just
+    on some later re-fetch.
+    """
+
+    if _profile_path_for(download_dir, name).is_file():
+        return load_profile(download_dir, name)
+
+    spotify_artist_id = resolve_spotify_artist_id(
+        track_files, track_index, name
     )
-    if bio_text:
-        profile['bio'] = strip_html(bio_text)
+    if spotify_artist_id:
+        profile = load_profile(download_dir, name)
+        profile['platforms_id']['spotify'] = spotify_artist_id
         _save_profile(download_dir, name, profile)
-        return profile
+    for kind in image_kinds:
+        _seed_image_from_streams(download_dir, name, kind, spotify_artist_id)
 
-    if deezer_id:
-        # Deezer matched (social/related may already be updated above)
-        # but neither source had bio text - still worth persisting.
-        _save_profile(download_dir, name, profile)
-        return profile
+    try:
+        profile = fetch_bio(download_dir, name, lang)
+    except ValueError:
+        profile = load_profile(download_dir, name)
 
-    raise ValueError('No matching artist found on Deezer or YouTube Music')
+    # Only what fetch_bio (and the Spotify step above) didn't already
+    # resolve - and never over an id that's already there.
+    platform_ids = resolve_platform_ids(name, known=profile['platforms_id'])
+    if platform_ids:
+        profile['platforms_id'] = {**profile['platforms_id'], **platform_ids}
+
+    # Always persist, even when nothing was found at all - the file's
+    # mere existence is what makes the next call take the fast path
+    # above instead of repeating this every visit.
+    _save_profile(download_dir, name, profile)
+    return profile
 
 
 def remove_bio(download_dir: Path, name: str) -> dict[str, Any]:
@@ -290,12 +695,15 @@ def remove_bio(download_dir: Path, name: str) -> dict[str, Any]:
 def save_bio(download_dir: Path, name: str, bio: str) -> dict[str, Any]:
     """Manually set *name*'s bio text, overwriting a fetched or prior one.
 
-    Unlike :func:`fetch_bio`, this never touches Deezer/YouTube Music -
-    it's the user typing their own text into the artist page's editor.
+    Unlike :func:`fetch_bio`, this never touches Apple Music/Deezer -
+    it's the user typing their own text into the artist page's editor
+    (plain text, blank lines between paragraphs). Still run through
+    :func:`_format_bio_text` so ``bio`` is always the same plain-text
+    shape (no HTML, no bullets) regardless of where it came from.
     """
 
     profile = load_profile(download_dir, name)
-    profile['bio'] = (bio or '').strip()
+    profile['bio'] = _format_bio_text(bio or '')
     _save_profile(download_dir, name, profile)
     return profile
 

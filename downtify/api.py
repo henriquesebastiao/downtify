@@ -23,6 +23,10 @@ working without changes:
 * ``GET  /api/artists/art`` (``{photo_url, banner_url}``, whichever of an
   artist's saved photo/banner sidecar files exist under
   ``/downloads/Metadata/...``)
+* ``GET  /api/artists/photo-proxy`` (DISPLAY-ONLY photo of an artist
+  that is not in the library, relayed from Deezer and never stored - see
+  ``downtify.artist_photo_proxy``; browser-cached for three hours, but a
+  photo already saved locally is served uncached instead)
 * ``POST /api/artists/art/bulk`` (the same, for many artists at once -
   body ``{names}``, response ``{<name>: {photo_url, banner_url}}`` - used
   by the Library page's artist grid)
@@ -30,28 +34,39 @@ working without changes:
   YouTube Music + Deezer, each ``{source, name, image_url}``)
 * ``GET  /api/artists/art/spotify_candidate`` (a Spotify photo or banner
   candidate - ``kind`` query param - resolved from one already-downloaded
-  track's Spotify id, when known - no name search, see
-  ``downtify.track_index``)
+  track's Spotify id when ``file`` gives one (see
+  ``downtify.track_index``), else from an exact-name search on the
+  optional ``name`` param)
 * ``POST /api/artists/art/from_url`` (fetch and save a chosen candidate or
   a pasted image link as an artist's photo or banner)
 * ``POST /api/artists/art/upload`` (save an uploaded photo/banner - the
   raw image bytes as the request body, like ``POST /api/cookies``)
 * ``DELETE /api/artists/art`` (remove a saved photo or banner)
 * ``GET  /api/artists/profile`` (an artist's saved profile JSON: bio,
-  social links, related artists, platform ids, which source their current
-  photo/banner came from - a blank skeleton if nothing was saved yet)
-* ``POST /api/artists/profile/bio`` (fetch bio (+ social/related-artists
-  when available) from Deezer and save them, falling back to YouTube
-  Music for a bio-only match when Deezer has none - body
-  ``{name, lang}``; resolves and caches the artist's Deezer id on first
+  origin, formation year, group flag, banner colour, social links,
+  related artists, platform ids, which source their current photo/
+  banner came from - a blank skeleton if nothing was saved yet; never
+  seeds one, see ``POST .../ensure`` below for that)
+* ``POST /api/artists/profile/ensure`` (seed a brand-new artist's
+  profile the first time it's needed - Spotify/YouTube Music photo and
+  banner (each only when its ``download_cover_art_artist``/``..._banner``
+  setting is on), then everything ``.../bio`` below would fetch - a no-op
+  once a profile file exists at all, even an empty one; body
+  ``{name, lang, track_files}``)
+* ``POST /api/artists/profile/bio`` (fetch bio and save it - Apple Music
+  primary (also brings origin/formation year/genre/group flag/banner
+  colour), Deezer secondary (bio fallback + social links + related artists) -
+  body ``{name, lang, source?}`` (``source`` = ``applemusic`` or ``deezer``
+  to save only that service's bio, no fallback; default: both, in that
+  order); resolves and caches the artist's Apple Music/Deezer ids on first
   use)
 * ``DELETE /api/artists/profile/bio`` (clear only the saved bio text -
-  social links, related artists and the cached Deezer id are kept)
+  everything else is kept)
 * ``PUT  /api/artists/profile/bio`` (manually set the bio text directly -
   body ``{name, bio}``; the user's own text, never fetched)
-* ``PUT  /api/artists/profile/social`` (manually set all four social
+* ``PUT  /api/artists/profile/social`` (manually set all five social
   links directly - body ``{name, social: {twitter, facebook, website,
-  instagram}}``; replaces the whole object, never fetched)
+  instagram, youtube}}``; replaces the whole object, never fetched)
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
   resolves an artist channel or ``@handle`` URL into every one of their
   albums/singles as lightweight summaries, same shape as
@@ -134,7 +149,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import json
+import mimetypes
 import shutil
 from pathlib import Path
 from typing import Any, Optional
@@ -145,12 +162,15 @@ from fastapi import (
     HTTPException,
     Query,
     Request,
+    Response,
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.responses import FileResponse
 from loguru import logger
 
 from . import (
+    artist_photo_proxy,
     artist_profile,
     cover_sources,
     deezer,
@@ -1055,6 +1075,48 @@ def artist_art_endpoint(name: str = Query(...)) -> dict[str, Any]:
     }
 
 
+@router.get('/api/artists/photo-proxy')
+def artist_photo_proxy_endpoint(name: str = Query(...)) -> Response:
+    """DISPLAY-ONLY artist photo for the UI, never persisted.
+
+    A photo already saved for the artist wins and is served uncached;
+    otherwise Deezer's is relayed and cached by the browser for
+    three hours. Not a way to obtain a photo to keep - see
+    ``downtify.artist_photo_proxy``.
+    """
+
+    cache_control = (
+        f'public, max-age={artist_photo_proxy.BROWSER_CACHE_SECONDS}'
+    )
+    local = artist_profile.image_path_for(
+        _artist_profile_download_dir(), name, artist_profile.KIND_PHOTO
+    )
+    if local.is_file():
+        return FileResponse(
+            local,
+            media_type=mimetypes.guess_type(str(local))[0] or 'image/jpeg',
+            # Only remote photos are cached: a saved one may be replaced
+            # at any moment, so the browser revalidates it every time.
+            headers={'Cache-Control': 'no-cache'},
+        )
+    photo = artist_photo_proxy.fetch_proxied_photo(name)
+    if photo is None:
+        # A miss is cacheable too: the page would otherwise re-ask for
+        # every tile on every visit.
+        return Response(
+            status_code=404, headers={'Cache-Control': cache_control}
+        )
+    data, content_type = photo
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={
+            'Cache-Control': cache_control,
+            'ETag': f'"{hashlib.sha1(data).hexdigest()}"',
+        },
+    )
+
+
 @router.post('/api/artists/art/bulk')
 async def artist_art_bulk_endpoint(request: Request) -> dict[str, Any]:
     """Saved photo/banner URLs for many artists in one call - the Library
@@ -1104,19 +1166,23 @@ def artist_art_search_endpoint(
 
 @router.get('/api/artists/art/spotify_candidate')
 def artist_art_spotify_candidate_endpoint(
-    file: str = Query(...),
+    file: str = Query(''),
     kind: str = Query(artist_profile.KIND_PHOTO),
+    name: str = Query(''),
 ) -> dict[str, Any]:
-    if state.track_index is None:
-        return {}
-    if resolve_library_file(file, library_context()) is None:
-        return {}
-    filename = file.strip().replace('\\', '/')
-    track_id = state.track_index.spotify_id_for_filename(filename)
-    if not track_id:
-        return {}
+    """A Spotify photo/banner candidate for an artist.
+
+    The artist is resolved from *file* (a library track downloaded from
+    Spotify - the most reliable route, no namesake risk) when that gives
+    one, else from an exact-name search on *name*.
+    """
+
+    artist_id: Optional[str] = None
     try:
-        artist_id = spotify.primary_artist_id_from_track_id(track_id)
+        artist_id = _spotify_artist_id_from_library_file(file)
+        if not artist_id and name.strip():
+            found = spotify.search_artist_by_name(name)
+            artist_id = found['id'] if found else None
         if not artist_id:
             return {}
         image_url = (
@@ -1129,11 +1195,29 @@ def artist_art_spotify_candidate_endpoint(
         artist_name = spotify.artist_name_from_id(artist_id)
     except Exception:
         logger.opt(exception=True).debug(
-            'Spotify artist art candidate lookup failed for track {}',
-            track_id,
+            'Spotify artist art candidate lookup failed (file={!r}, '
+            'name={!r})',
+            file,
+            name,
         )
         return {}
     return {'source': 'spotify', 'name': artist_name, 'image_url': image_url}
+
+
+def _spotify_artist_id_from_library_file(file: str) -> Optional[str]:
+    """Spotify id of the first artist of a library file's Spotify track,
+    or ``None`` when *file* is empty, unknown, or wasn't from Spotify."""
+
+    if not file.strip() or state.track_index is None:
+        return None
+    if resolve_library_file(file, library_context()) is None:
+        return None
+    track_id = state.track_index.spotify_id_for_filename(
+        file.strip().replace('\\', '/')
+    )
+    if not track_id:
+        return None
+    return spotify.primary_artist_id_from_track_id(track_id)
 
 
 @router.post('/api/artists/art/from_url')
@@ -1205,11 +1289,47 @@ def artist_profile_endpoint(name: str = Query(...)) -> dict[str, Any]:
     return artist_profile.load_profile(_artist_profile_download_dir(), name)
 
 
+@router.post('/api/artists/profile/ensure')
+async def artist_profile_ensure_endpoint(request: Request) -> dict[str, Any]:
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    lang = str(payload.get('lang') or 'en').strip()
+    track_files = payload.get('track_files')
+    if not name:
+        raise HTTPException(status_code=400, detail='Invalid request')
+    return await asyncio.to_thread(
+        artist_profile.ensure_profile,
+        _artist_profile_download_dir(),
+        name,
+        track_files if isinstance(track_files, list) else [],
+        lang,
+        track_index=state.track_index,
+        image_kinds=_artist_image_kinds_to_save(state.settings),
+    )
+
+
+def _artist_image_kinds_to_save(settings: dict[str, Any]) -> tuple[str, ...]:
+    """Which of an artist's photo/banner Downtify may save on its own,
+    per the user's ``download_cover_art_artist``/``..._banner`` settings.
+    Only automatic saving is gated by them - the artist-art picker is
+    always available and saves whatever the user picks."""
+
+    return tuple(
+        kind
+        for kind, key in (
+            (artist_profile.KIND_PHOTO, 'download_cover_art_artist'),
+            (artist_profile.KIND_BANNER, 'download_cover_art_artist_banner'),
+        )
+        if settings.get(key)
+    )
+
+
 @router.post('/api/artists/profile/bio')
 async def artist_profile_bio_endpoint(request: Request) -> dict[str, Any]:
     payload = await _json_object(request)
     name = str(payload.get('name') or '').strip()
     lang = str(payload.get('lang') or 'en').strip()
+    source = str(payload.get('source') or artist_profile.BIO_SOURCE_AUTO)
     if not name:
         raise HTTPException(status_code=400, detail='Invalid request')
     try:
@@ -1218,6 +1338,7 @@ async def artist_profile_bio_endpoint(request: Request) -> dict[str, Any]:
             _artist_profile_download_dir(),
             name,
             lang,
+            source,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

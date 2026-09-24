@@ -230,6 +230,36 @@ def resolve_artist_id(name: str) -> Optional[str]:
     return None
 
 
+def exact_artist_picture(name: str) -> Optional[str]:
+    """Deezer's medium-size profile photo URL for an exact
+    (case-insensitive) artist name match, or ``None``.
+
+    One search call, no id needed. Same strictness as
+    :func:`resolve_artist_id`: a near match would show another artist's
+    face under this name.
+    """
+
+    text = name.strip()
+    if not text:
+        return None
+    try:
+        resp = httpx.get(
+            _SEARCH_URL, params={'q': text, 'limit': 25}, timeout=_TIMEOUT
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception:
+        logger.opt(exception=True).debug('Deezer artist photo lookup failed')
+        return None
+    wanted = text.lower()
+    for row in data.get('data') or []:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get('name') or '').strip().lower() == wanted:
+            return row.get('picture_medium') or None
+    return None
+
+
 def fetch_artist_full(artist_id: str, lang: str) -> dict[str, Any]:
     """Bio, social links and related-artist names for a Deezer artist id.
 
