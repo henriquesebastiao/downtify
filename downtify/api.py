@@ -20,15 +20,21 @@ working without changes:
   bio - not their releases)
 * ``GET  /api/artists/similar`` (an artist's "Fans might also like"
   shelf, same shape as ``/api/artists/search``)
-* ``GET  /api/artists/art`` (``{photo_url, banner_url}``, whichever of an
+* ``GET  /api/artists/art`` (``{photo_url, banner_url, photo_version,
+  banner_version}`` - the version, the file's modified time in ms, goes in
+  the URL as ``?v=`` so a replaced image isn't served from a browser
+  cache - whichever of an
   artist's saved photo/banner sidecar files exist under
   ``/downloads/Metadata/...``)
 * ``GET  /api/artists/photo-proxy`` (DISPLAY-ONLY photo of an artist
-  that is not in the library, relayed from Deezer and never stored - see
+  that has no saved one - a related artist, or a Library artist (in the
+  grid and on its own page) nobody picked a photo for - relayed from
+  Deezer and never stored - see
   ``downtify.artist_photo_proxy``; browser-cached for three hours, but a
   photo already saved locally is served uncached instead)
 * ``POST /api/artists/art/bulk`` (the same, for many artists at once -
-  body ``{names}``, response ``{<name>: {photo_url, banner_url}}`` - used
+  body ``{names}``, response ``{<name>: {photo_url, banner_url,
+  photo_version, banner_version}}`` - used
   by the Library page's artist grid)
 * ``GET  /api/artists/art/search`` (free-text artist photo candidates from
   YouTube Music + Deezer, each ``{source, name, image_url}``)
@@ -1072,17 +1078,28 @@ def _artist_profile_download_dir() -> Path:
     )
 
 
+def _artist_art_entry(download_dir: Path, name: str) -> dict[str, Any]:
+    """An artist's saved photo/banner URLs, each with the version
+    (``*_version``, see ``artist_profile.image_version_for``) the client
+    puts in the URL so a replaced image isn't shown from a browser cache."""
+
+    entry: dict[str, Any] = {}
+    for prefix, kind in (
+        ('photo', artist_profile.KIND_PHOTO),
+        ('banner', artist_profile.KIND_BANNER),
+    ):
+        entry[f'{prefix}_url'] = artist_profile.image_url_for(
+            download_dir, name, kind
+        )
+        entry[f'{prefix}_version'] = artist_profile.image_version_for(
+            download_dir, name, kind
+        )
+    return entry
+
+
 @router.get('/api/artists/art')
 def artist_art_endpoint(name: str = Query(...)) -> dict[str, Any]:
-    download_dir = _artist_profile_download_dir()
-    return {
-        'photo_url': artist_profile.image_url_for(
-            download_dir, name, artist_profile.KIND_PHOTO
-        ),
-        'banner_url': artist_profile.image_url_for(
-            download_dir, name, artist_profile.KIND_BANNER
-        ),
-    }
+    return _artist_art_entry(_artist_profile_download_dir(), name)
 
 
 @router.get('/api/artists/photo-proxy')
@@ -1143,14 +1160,7 @@ async def artist_art_bulk_endpoint(request: Request) -> dict[str, Any]:
         name = str(raw_name or '').strip()
         if not name or name in result:
             continue
-        result[name] = {
-            'photo_url': artist_profile.image_url_for(
-                download_dir, name, artist_profile.KIND_PHOTO
-            ),
-            'banner_url': artist_profile.image_url_for(
-                download_dir, name, artist_profile.KIND_BANNER
-            ),
-        }
+        result[name] = _artist_art_entry(download_dir, name)
     return result
 
 

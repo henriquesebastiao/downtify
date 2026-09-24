@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import os
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -228,12 +229,23 @@ def test_bulk_endpoint_reports_each_artist(app_state):
     )
     request = _JsonRequest({'names': ['Avril Lavigne', 'Nobody']})
     result = asyncio.run(api.artist_art_bulk_endpoint(request))
+    version = artist_profile.image_version_for(
+        app_state, 'Avril Lavigne', artist_profile.KIND_PHOTO
+    )
+    assert version
     assert result == {
         'Avril Lavigne': {
             'photo_url': '/downloads/Metadata/ArtistImage/Avril Lavigne.jpg',
+            'photo_version': version,
             'banner_url': None,
+            'banner_version': None,
         },
-        'Nobody': {'photo_url': None, 'banner_url': None},
+        'Nobody': {
+            'photo_url': None,
+            'photo_version': None,
+            'banner_url': None,
+            'banner_version': None,
+        },
     }
 
 
@@ -2729,3 +2741,241 @@ def test_the_youtube_photo_fallback_ignores_a_different_artist(tmp_path):
             tmp_path, 'ACDC', artist_profile.KIND_PHOTO, None
         )
     mock_save.assert_not_called()
+
+
+# ── image versions: a replaced photo must not be served from a browser cache
+
+
+def test_image_version_is_none_when_there_is_no_file(tmp_path):
+    for kind in (artist_profile.KIND_PHOTO, artist_profile.KIND_BANNER):
+        assert (
+            artist_profile.image_version_for(tmp_path, 'Nobody', kind) is None
+        )
+
+
+def test_image_version_is_the_files_modified_time_in_milliseconds(tmp_path):
+    artist_profile.save_image(
+        tmp_path, 'Avril Lavigne', artist_profile.KIND_PHOTO, _TINY_PNG
+    )
+    path = artist_profile.image_path_for(
+        tmp_path, 'Avril Lavigne', artist_profile.KIND_PHOTO
+    )
+    assert artist_profile.image_version_for(
+        tmp_path, 'Avril Lavigne', artist_profile.KIND_PHOTO
+    ) == int(path.stat().st_mtime * 1000)
+
+
+def test_replacing_a_photo_changes_its_version_but_not_its_url(tmp_path):
+    kind = artist_profile.KIND_PHOTO
+    url = artist_profile.save_image(tmp_path, 'Avril Lavigne', kind, _TINY_PNG)
+    path = artist_profile.image_path_for(tmp_path, 'Avril Lavigne', kind)
+    os.utime(path, (1_600_000_000, 1_600_000_000))
+    before = artist_profile.image_version_for(tmp_path, 'Avril Lavigne', kind)
+    assert (
+        artist_profile.save_image(tmp_path, 'Avril Lavigne', kind, _TINY_PNG)
+        == url
+    )
+    after = artist_profile.image_version_for(tmp_path, 'Avril Lavigne', kind)
+    assert before == 1_600_000_000_000
+    assert after > before  # the URL alone would have looked unchanged
+
+
+def test_photo_and_banner_have_their_own_versions(tmp_path):
+    artist_profile.save_image(
+        tmp_path, 'Avril Lavigne', artist_profile.KIND_PHOTO, _TINY_PNG
+    )
+    banner = artist_profile.image_path_for(
+        tmp_path, 'Avril Lavigne', artist_profile.KIND_BANNER
+    )
+    assert not banner.exists()
+    assert (
+        artist_profile.image_version_for(
+            tmp_path, 'Avril Lavigne', artist_profile.KIND_BANNER
+        )
+        is None
+    )
+
+
+def test_art_endpoint_reports_the_versions(app_state):
+    artist_profile.save_image(
+        app_state, 'Avril Lavigne', artist_profile.KIND_PHOTO, _TINY_PNG
+    )
+    result = api.artist_art_endpoint(name='Avril Lavigne')
+    assert result['photo_version'] == artist_profile.image_version_for(
+        app_state, 'Avril Lavigne', artist_profile.KIND_PHOTO
+    )
+    assert result['banner_version'] is None
+    assert result['banner_url'] is None
+
+
+def test_art_endpoint_version_moves_when_the_photo_is_replaced(app_state):
+    kind = artist_profile.KIND_PHOTO
+    artist_profile.save_image(app_state, 'Avril Lavigne', kind, _TINY_PNG)
+    path = artist_profile.image_path_for(app_state, 'Avril Lavigne', kind)
+    os.utime(path, (1_600_000_000, 1_600_000_000))
+    first = api.artist_art_endpoint(name='Avril Lavigne')
+    artist_profile.save_image(app_state, 'Avril Lavigne', kind, _TINY_PNG)
+    second = api.artist_art_endpoint(name='Avril Lavigne')
+    assert first['photo_url'] == second['photo_url']
+    assert first['photo_version'] != second['photo_version']
+
+
+# ── current_cover: the tail of the URL the saved image came from ───────
+
+
+def _fetch_returning_png():
+    resp = MagicMock()
+    resp.raise_for_status = lambda: None
+    resp.content = _TINY_PNG
+    return patch('downtify.artist_profile.httpx.get', return_value=resp)
+
+
+@pytest.mark.parametrize(
+    ('url', 'expected'),
+    [
+        (
+            'https://image-cdn-ak.spotifycdn.com/image/ab6761610000e5eb527d',
+            '/image/ab6761610000e5eb527d',
+        ),
+        ('https://cdn.test/a/b.jpg?token=secret#frag', '/a/b.jpg'),
+        (
+            'https://lh3.googleusercontent.com/uE72em=w600-h600-l90-rj',
+            '/uE72em=w600-h600-l90-rj',
+        ),
+        ('https://cdn.test', ''),
+        ('https://cdn.test/', ''),
+        ('', ''),
+        ('   ', ''),
+    ],
+)
+def test_origin_path_keeps_only_what_names_the_image(url, expected):
+    assert artist_profile._origin_path(url) == expected
+
+
+def test_fetch_and_save_records_the_urls_path_not_the_host_or_query(tmp_path):
+    with _fetch_returning_png():
+        artist_profile.fetch_and_save_image(
+            tmp_path,
+            'Linkin Park',
+            artist_profile.KIND_PHOTO,
+            'https://image-cdn-ak.spotifycdn.com/image/ab67?sig=xyz',
+            source='spotify',
+        )
+    profile = artist_profile.load_profile(tmp_path, 'Linkin Park')
+    assert profile['current_cover'] == '/image/ab67'
+    assert not profile['current_cover_banner']
+
+
+def test_the_same_image_from_another_cdn_host_records_the_same_value(tmp_path):
+    values = []
+    for host in ('image-cdn-ak', 'image-cdn-fa'):
+        with _fetch_returning_png():
+            artist_profile.fetch_and_save_image(
+                tmp_path,
+                'Linkin Park',
+                artist_profile.KIND_PHOTO,
+                f'https://{host}.spotifycdn.com/image/ab67',
+                source='spotify',
+            )
+        values.append(
+            artist_profile.load_profile(tmp_path, 'Linkin Park')[
+                'current_cover'
+            ]
+        )
+    assert values == ['/image/ab67', '/image/ab67']
+
+
+def test_photo_and_banner_each_record_their_own_image(tmp_path):
+    with _fetch_returning_png():
+        artist_profile.fetch_and_save_image(
+            tmp_path, 'A', artist_profile.KIND_PHOTO, 'https://c.test/photo'
+        )
+        artist_profile.fetch_and_save_image(
+            tmp_path, 'A', artist_profile.KIND_BANNER, 'https://c.test/banner'
+        )
+    profile = artist_profile.load_profile(tmp_path, 'A')
+    assert profile['current_cover'] == '/photo'
+    assert profile['current_cover_banner'] == '/banner'
+
+
+def test_an_upload_records_upload_and_replaces_a_previous_url(tmp_path):
+    with _fetch_returning_png():
+        artist_profile.fetch_and_save_image(
+            tmp_path,
+            'A',
+            artist_profile.KIND_PHOTO,
+            'https://c.test/old',
+            source='deezer',
+        )
+    artist_profile.save_image(
+        tmp_path, 'A', artist_profile.KIND_PHOTO, _TINY_PNG, source='upload'
+    )
+    assert artist_profile.load_profile(tmp_path, 'A')['current_cover'] == (
+        'upload'
+    )
+
+
+def test_saving_with_no_origin_clears_what_described_the_previous_image(
+    tmp_path,
+):
+    with _fetch_returning_png():
+        artist_profile.fetch_and_save_image(
+            tmp_path, 'A', artist_profile.KIND_PHOTO, 'https://c.test/old'
+        )
+    assert artist_profile.load_profile(tmp_path, 'A')['current_cover']
+    artist_profile.save_image(
+        tmp_path, 'A', artist_profile.KIND_PHOTO, _TINY_PNG
+    )
+    assert not artist_profile.load_profile(tmp_path, 'A')['current_cover']
+
+
+def test_saving_with_no_origin_creates_no_profile_file(tmp_path):
+    artist_profile.save_image(
+        tmp_path, 'A', artist_profile.KIND_PHOTO, _TINY_PNG
+    )
+    assert not artist_profile._profile_path_for(tmp_path, 'A').exists()
+
+
+def test_a_source_without_a_url_is_recorded_as_given(tmp_path):
+    artist_profile.save_image(
+        tmp_path, 'A', artist_profile.KIND_PHOTO, _TINY_PNG, source='spotify'
+    )
+    assert artist_profile.load_profile(tmp_path, 'A')['current_cover'] == (
+        'spotify'
+    )
+
+
+def test_the_first_visit_seeding_records_the_seeded_images_path(tmp_path):
+    with (
+        _fetch_returning_png(),
+        patch(
+            'downtify.artist_profile.spotify.artist_image_url_from_id',
+            return_value='https://image-cdn-ak.spotifycdn.com/image/ab6761photo',
+        ),
+        patch(
+            'downtify.artist_profile.spotify.artist_banner_url_from_id',
+            return_value='https://image-cdn-ak.spotifycdn.com/image/ab6761banner',
+        ),
+    ):
+        for kind in (artist_profile.KIND_PHOTO, artist_profile.KIND_BANNER):
+            artist_profile._seed_image_from_streams(
+                tmp_path, 'Linkin Park', kind, 'sp123'
+            )
+    profile = artist_profile.load_profile(tmp_path, 'Linkin Park')
+    assert profile['current_cover'] == '/image/ab6761photo'
+    assert profile['current_cover_banner'] == '/image/ab6761banner'
+
+
+def test_from_url_endpoint_records_the_path_the_picker_will_match(app_state):
+    with _fetch_returning_png():
+        request = _JsonRequest({
+            'name': 'Linkin Park',
+            'kind': 'photo',
+            'image_url': 'https://cdn-images.dzcdn.net/images/artist/h4sh/1000x1000-000000-80-0-0.jpg',
+            'source': 'deezer',
+        })
+        asyncio.run(api.artist_art_from_url_endpoint(request))
+    profile = artist_profile.load_profile(app_state, 'Linkin Park')
+    assert profile['current_cover'] == (
+        '/images/artist/h4sh/1000x1000-000000-80-0-0.jpg'
+    )

@@ -36,6 +36,7 @@ import json
 import re
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlsplit
 
 import httpx
 from loguru import logger
@@ -85,6 +86,27 @@ def image_url_for(download_dir: Path, name: str, kind: str) -> Optional[str]:
     return f'/downloads/{rel}'
 
 
+def image_version_for(
+    download_dir: Path, name: str, kind: str
+) -> Optional[int]:
+    """When *name*'s photo/banner file last changed (milliseconds since
+    the epoch), or ``None`` if there is none.
+
+    A saved image keeps the same ``/downloads/...`` URL however often it
+    is replaced, so a browser holding the old one has no reason to ask
+    again. Callers put this in the URL (``?v=<version>``): it changes
+    exactly when the file does, so a replaced photo shows up at once and
+    an untouched one stays cached.
+    """
+
+    try:
+        return int(
+            image_path_for(download_dir, name, kind).stat().st_mtime * 1000
+        )
+    except OSError:
+        return None
+
+
 def _write_image(download_dir: Path, name: str, kind: str, data: bytes) -> str:
     path = image_path_for(download_dir, name, kind)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -93,18 +115,33 @@ def _write_image(download_dir: Path, name: str, kind: str, data: bytes) -> str:
     return f'/downloads/{rel}'
 
 
+def _origin_path(url: str) -> str:
+    """The part of an image URL that names the image rather than the CDN
+    serving it: the path, without host, query or fragment
+    (``https://image-cdn-ak.spotifycdn.com/image/ab67…?x=1`` ->
+    ``/image/ab67…``). ``''`` when there is none."""
+
+    path = urlsplit((url or '').strip()).path
+    return path if path.strip('/') else ''
+
+
 def save_image(
     download_dir: Path,
     name: str,
     kind: str,
     data: bytes,
     source: str = '',
+    origin: str = '',
 ) -> str:
     """Validate *data* is a real image and save it; returns its public URL.
 
-    *source* (``spotify``/``youtube``/``deezer``/``link``/``upload``), if
-    given, is recorded as ``current_cover``/``current_cover_banner`` in
-    the artist's profile JSON (see :func:`load_profile`).
+    What the image was made from is recorded as ``current_cover`` (photo) /
+    ``current_cover_banner`` (banner) in the artist's profile JSON (see
+    :func:`load_profile`), so the picker can highlight the candidate in
+    use: *origin*, the path of the URL it was downloaded from (see
+    :func:`_origin_path`), or - with none, an upload - *source*
+    (``upload``). Saving with neither clears a value already there, since
+    it described the previous image, not this one.
     """
 
     if (
@@ -114,8 +151,10 @@ def save_image(
     ):
         raise ValueError('Not a valid image')
     url = _write_image(download_dir, name, kind, data)
-    if source:
-        _set_current_cover(download_dir, name, kind, source)
+    recorded = origin or source
+    # Nothing to record and no profile yet: don't create one just for this.
+    if recorded or _profile_path_for(download_dir, name).is_file():
+        _set_current_cover(download_dir, name, kind, recorded)
     return url
 
 
@@ -141,7 +180,14 @@ def fetch_and_save_image(
             'Artist art fetch failed for {}', url[:200]
         )
         raise ValueError('Could not fetch that image') from exc
-    return save_image(download_dir, name, kind, resp.content, source=source)
+    return save_image(
+        download_dir,
+        name,
+        kind,
+        resp.content,
+        source=source,
+        origin=_origin_path(url),
+    )
 
 
 def delete_image(download_dir: Path, name: str, kind: str) -> bool:
@@ -191,6 +237,9 @@ def _default_profile(name: str) -> dict[str, Any]:
             'youtube': '',
         },
         'related_artists': [],
+        # Which image the saved photo/banner is: the path of the URL it was
+        # downloaded from, or 'upload' (see save_image). The picker marks the
+        # candidate with the same image as the one in use.
         'current_cover': '',
         'current_cover_banner': '',
     }
@@ -232,11 +281,11 @@ def _save_profile(
 
 
 def _set_current_cover(
-    download_dir: Path, name: str, kind: str, source: str
+    download_dir: Path, name: str, kind: str, value: str
 ) -> None:
     profile = load_profile(download_dir, name)
     field = 'current_cover' if kind == KIND_PHOTO else 'current_cover_banner'
-    profile[field] = source
+    profile[field] = value
     _save_profile(download_dir, name, profile)
 
 
