@@ -170,6 +170,12 @@ Before sending a pull request, read [**CONTRIBUTING.md**](./CONTRIBUTING.md). It
 
 If Downtify has been useful to you, a star on GitHub helps other people find it.
 
+## Contributors
+
+Thanks for your contribution to the project!
+
+[![Contributors Avatars](https://contributors-img.web.app/image?repo=henriquesebastiao/downtify)](https://github.com/henriquesebastiao/downtify/graphs/contributors)
+
 ## Support
 
 There are many ways to support Downtify:
