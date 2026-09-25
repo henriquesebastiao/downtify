@@ -294,9 +294,10 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
     'download_cover_art_playlists': False,
-    # Reserved for a future automatic fetch during the download pipeline
-    # (out of scope for now - see docs/features/artist-images.md). The
-    # manual picker on an artist's Library page never checks these.
+    # Whether Downtify may save an artist's photo/banner on its own: when
+    # their Library page is first opened and when one of their tracks
+    # finishes downloading (``enrich_artist_after_download``). The manual
+    # picker on an artist's Library page never checks these.
     'download_cover_art_artist': False,
     'download_cover_art_artist_banner': False,
     'max_parallel_downloads': 3,
@@ -1423,6 +1424,39 @@ def _artist_image_kinds_to_save(settings: dict[str, Any]) -> tuple[str, ...]:
         )
         if settings.get(key)
     )
+
+
+def _ui_language() -> str:
+    """The language the web UI is shown in (see ``ui_language`` in
+    ``DEFAULT_SETTINGS``), or ``en`` while no page has said."""
+
+    return str(state.settings.get('ui_language') or '') or 'en'
+
+
+def enrich_artist_after_download(song: dict[str, Any], filename: str) -> None:
+    """``Downloader.on_downloaded``: a track just finished, so its artist's
+    profile (bio, genre, origin, social links, platform ids) is seeded in the
+    background if they have none yet - the same seeding as opening their
+    Library page, see ``artist_profile.profile_seed_enqueue``.
+
+    Photo and banner are saved only if the user's settings allow it, read
+    now rather than at startup so a change applies to the very next track.
+    The artist's top songs are deliberately left alone: they are made when
+    their page is opened. Returns at once and never raises - this runs on
+    the download's own thread.
+    """
+
+    try:
+        artist_profile.profile_seed_enqueue(
+            _artist_profile_download_dir(),
+            song,
+            _ui_language(),
+            _artist_image_kinds_to_save(state.settings),
+        )
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not queue the artist profile of {}', filename
+        )
 
 
 @router.post('/api/artists/profile/bio')

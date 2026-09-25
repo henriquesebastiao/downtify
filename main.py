@@ -420,6 +420,9 @@ def build_app() -> FastAPI:
         audio_providers=api._effective_audio_providers(api.state.settings),
         slskd_settings=api._effective_slskd_settings(api.state.settings),
     )
+    # A finished download (from the UI or a monitor sweep alike) seeds its
+    # artist's profile in the background.
+    api.state.downloader.on_downloaded = api.enrich_artist_after_download
     api.providers.set_cover_resolution(
         api._clamp_cover_resolution(
             api.state.settings.get(

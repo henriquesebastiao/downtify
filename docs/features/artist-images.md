@@ -4,12 +4,12 @@ icon: lucide/image
 
 # Artist photo, banner & bio
 
-Downtify can show a real profile photo, a banner and a biography for each artist in your Library, instead of a generated initial and no text at all. The first time you open a new artist's page, this fills itself in automatically; after that, pick a different photo/banner yourself, re-fetch or write your own bio, and fill in social links by hand.
+Downtify can show a real profile photo, a banner and a biography for each artist in your Library, instead of a generated initial and no text at all. This fills itself in automatically the first time you open a new artist's page, or as soon as one of their tracks finishes downloading; after that, pick a different photo/banner yourself, re-fetch or write your own bio, and fill in social links by hand.
 
 The edit affordance is always available on every artist's Library page, no setting to turn on first.
 
 ::: info About "Save artist photo" / "Save artist banner" in Settings
-**Settings → Downloads & files → Save artist photo / Save artist banner** decide whether Downtify may save an artist's photo/banner on its own — today that only happens the first time you open an artist's page (see [The first time you open a new artist](#the-first-time-you-open-a-new-artist)). Both are off by default. They never limit the edit modal: you can always pick a photo or banner by hand, whatever these say.
+**Settings → Downloads & files → Save artist photo / Save artist banner** decide whether Downtify may save an artist's photo/banner on its own — that happens the first time you open an artist's page and when one of their tracks finishes downloading (see [The first time you open a new artist](#the-first-time-you-open-a-new-artist) and [When a download finishes](#when-a-download-finishes)). Both are off by default. They never limit the edit modal: you can always pick a photo or banner by hand, whatever these say.
 :::
 
 ## The edit modal
@@ -33,6 +33,17 @@ Opening a Library artist page seeds their profile automatically, but only if not
 
 - **Photo and banner** — from Spotify (see [Spotify](#spotify) below), falling back to an exact YouTube Music name match when Spotify has nothing. Only when you've turned on **Save artist photo** and/or **Save artist banner** in Settings (both are off by default, and each one is independent); the edit modal can always set either by hand.
 - **Bio, origin, formation year, genre, group flag, banner colour, social links, related artists and platform ids** — fetched from Apple Music and Deezer the way [Fetching a bio automatically](#fetching-a-bio-automatically) describes below.
+
+If Apple Music or Deezer **fails** while this runs (unreachable, or over its request limit), nothing is saved at all - not the bio, not a photo - and the page simply shows no profile yet, so the next visit tries again. Only a service answering that it doesn't know the artist counts as an answer: the profile is then made with what the other one had. Spotify's part (the related artists) never stops a profile from being made.
+
+## When a download finishes
+
+The same seeding runs in the background when one of an artist's tracks finishes downloading - whether you started it in the app or a [Playlist Monitor](playlist-monitor.md) sweep did - if that artist has no profile yet, so artists you download are ready before you ever open their page. It never slows the download down: the artist is queued and filled in a few seconds later, two artists at a time, and one that is already queued isn't queued again however many of their tracks come down (a playlist of fifty songs by one artist seeds them once). Songs that were already in your library aren't downloaded again and start nothing.
+
+- **Which artist** — the one the file is filed under: the album artist, else the first credited artist. `Various Artists` is skipped.
+- **Language** — the bio and genre come in the language of the web UI, which the page keeps on the server (see [Internationalization](internationalization.md)); until a page has told it, English.
+- **Photo and banner** — only as **Save artist photo** / **Save artist banner** allow, read at that moment, so changing a setting applies to the very next track.
+- **Top songs** — not made this way; they wait for the artist's page (see [Top songs](top-songs.md)).
 
 If nothing could be found anywhere for a given artist, this still only ever runs once - it doesn't retry on every later visit. Use the edit modal to pick a photo/banner by hand or try the fetch button again at any time afterwards.
 
