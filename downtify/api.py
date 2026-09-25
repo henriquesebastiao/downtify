@@ -25,7 +25,7 @@ working without changes:
   the URL as ``?v=`` so a replaced image isn't served from a browser
   cache - whichever of an
   artist's saved photo/banner sidecar files exist under
-  ``/downloads/Metadata/...``)
+  ``/downloads/.metadata/...``)
 * ``GET  /api/artists/photo-proxy`` (DISPLAY-ONLY photo of an artist
   that has no saved one - a related artist, or a Library artist (in the
   grid and on its own page) nobody picked a photo for - relayed from
@@ -56,7 +56,7 @@ working without changes:
   seeds one, see ``POST .../ensure`` below for that)
 * ``GET  /api/artists/top_songs/spotify`` (the artist's first five Spotify
   top songs, same shape as ``/api/artists/top_songs/url`` plus
-  ``fetched_at``/``stale`` - read from ``Metadata/ArtistTopSongs/`` while
+  ``fetched_at``/``stale`` - read from ``.metadata/ArtistTopSongs/`` while
   fresh (7 days), fetched and saved when missing, refreshed in the
   background when stale; needs ``platforms_id.spotify`` in the profile)
 * ``POST /api/artists/profile/ensure`` (seed a brand-new artist's

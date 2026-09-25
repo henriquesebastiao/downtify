@@ -99,7 +99,7 @@ def test_path_for_photo_uses_sanitized_name(tmp_path):
     path = artist_profile.image_path_for(
         tmp_path, 'Avril/Lavigne', artist_profile.KIND_PHOTO
     )
-    assert path == tmp_path / 'Metadata/ArtistImage/AvrilLavigne.jpg'
+    assert path == tmp_path / '.metadata/ArtistImage/AvrilLavigne.jpg'
 
 
 def test_path_for_banner_uses_banner_suffix(tmp_path):
@@ -108,7 +108,7 @@ def test_path_for_banner_uses_banner_suffix(tmp_path):
     )
     assert (
         path
-        == tmp_path / 'Metadata/ArtistBannerImage/Avril Lavigne.banner.jpg'
+        == tmp_path / '.metadata/ArtistBannerImage/Avril Lavigne.banner.jpg'
     )
 
 
@@ -125,7 +125,7 @@ def test_save_bytes_then_public_url_roundtrip(tmp_path):
     url = artist_profile.save_image(
         tmp_path, 'Avril Lavigne', artist_profile.KIND_PHOTO, _TINY_PNG
     )
-    assert url == '/downloads/Metadata/ArtistImage/Avril Lavigne.jpg'
+    assert url == '/downloads/.metadata/ArtistImage/Avril Lavigne.jpg'
     assert (
         artist_profile.image_url_for(
             tmp_path, 'Avril Lavigne', artist_profile.KIND_PHOTO
@@ -164,7 +164,8 @@ def test_fetch_and_save_downloads_and_stores(tmp_path):
             'https://example.com/photo.jpg',
         )
     assert (
-        url == '/downloads/Metadata/ArtistBannerImage/Avril Lavigne.banner.jpg'
+        url
+        == '/downloads/.metadata/ArtistBannerImage/Avril Lavigne.banner.jpg'
     )
 
 
@@ -198,7 +199,7 @@ def test_artist_art_endpoint_reports_existing_and_missing(app_state):
     )
     result = api.artist_art_endpoint(name='Avril Lavigne')
     assert result['photo_url'] == (
-        '/downloads/Metadata/ArtistImage/Avril Lavigne.jpg'
+        '/downloads/.metadata/ArtistImage/Avril Lavigne.jpg'
     )
     assert result['banner_url'] is None
 
@@ -258,7 +259,7 @@ def test_bulk_endpoint_reports_each_artist(app_state):
     assert version
     assert result == {
         'Avril Lavigne': {
-            'photo_url': '/downloads/Metadata/ArtistImage/Avril Lavigne.jpg',
+            'photo_url': '/downloads/.metadata/ArtistImage/Avril Lavigne.jpg',
             'photo_version': version,
             'banner_url': None,
             'banner_version': None,
@@ -410,7 +411,9 @@ def test_from_url_endpoint_saves_and_returns_url(app_state):
     })
     with patch('downtify.artist_profile.httpx.get', return_value=resp):
         result = asyncio.run(api.artist_art_from_url_endpoint(request))
-    assert result['url'] == '/downloads/Metadata/ArtistImage/Avril Lavigne.jpg'
+    assert (
+        result['url'] == '/downloads/.metadata/ArtistImage/Avril Lavigne.jpg'
+    )
 
 
 def test_from_url_endpoint_rejects_invalid_kind(app_state):
@@ -432,7 +435,7 @@ def test_upload_endpoint_saves_raw_body(app_state):
         )
     )
     assert result['url'] == (
-        '/downloads/Metadata/ArtistBannerImage/Avril Lavigne.banner.jpg'
+        '/downloads/.metadata/ArtistBannerImage/Avril Lavigne.banner.jpg'
     )
 
 
@@ -1617,8 +1620,8 @@ def test_photo_proxy_endpoint_relays_deezer_photo_without_saving(
     assert resp.media_type == 'image/jpeg'
     assert resp.headers['cache-control'] == 'public, max-age=10800'
     assert resp.headers['etag']
-    # Display only: nothing lands under the library's Metadata folder.
-    assert not (app_state / 'Metadata').exists()
+    # Display only: nothing lands under the library's .metadata folder.
+    assert not (app_state / '.metadata').exists()
 
 
 def test_photo_proxy_endpoint_miss_is_a_cacheable_404(app_state, monkeypatch):
@@ -1642,7 +1645,7 @@ def test_photo_proxy_endpoint_a_failure_is_a_503_that_is_never_cached(
     resp = api.artist_photo_proxy_endpoint(name='Foo Fighters')
     assert resp.status_code == 503
     assert resp.headers['cache-control'] == 'no-store'
-    assert not (app_state / 'Metadata').exists()
+    assert not (app_state / '.metadata').exists()
 
 
 def test_photo_proxy_endpoint_prefers_saved_photo(app_state, monkeypatch):
@@ -2609,7 +2612,7 @@ def test_preview_bio_writes_nothing_to_disk(tmp_path):
 def test_preview_bio_creates_no_profile_file_for_a_new_artist(tmp_path):
     _preview(tmp_path, 'deezer')
     assert not artist_profile._profile_path_for(tmp_path, 'Avril').exists()
-    assert not (tmp_path / 'Metadata').exists()
+    assert not (tmp_path / '.metadata').exists()
 
 
 def test_preview_bio_fetches_nothing_but_the_one_bio(tmp_path):
@@ -2705,7 +2708,7 @@ def test_bio_preview_endpoint_saves_nothing(app_state):
         request = _JsonRequest({'name': 'Avril', 'source': 'deezer'})
         result = asyncio.run(api.artist_profile_bio_preview_endpoint(request))
     assert result == {'bio': 'Hello'}
-    assert not (app_state / 'Metadata').exists()
+    assert not (app_state / '.metadata').exists()
 
 
 def test_bio_preview_endpoint_maps_errors_to_400(app_state):

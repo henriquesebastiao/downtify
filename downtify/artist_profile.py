@@ -2,7 +2,7 @@
 links, related artists and platform ids.
 
 Photo/banner are saved as flat sidecar files under the download
-directory's ``Metadata`` folder (``ArtistImage`` / ``ArtistBannerImage``),
+directory's ``.metadata`` folder (``ArtistImage`` / ``ArtistBannerImage``),
 named after the artist - the same idea as
 :func:`downtify.downloader.save_playlist_cover` saving a playlist's cover
 next to its M3U. There is no database row: whether the file exists on
@@ -13,7 +13,7 @@ disk is the source of truth. The download directory is already served at
 The rest of the profile (bio, origin, formation year, social links,
 related artists, platform ids, and which source each saved photo/banner
 came from) lives in one JSON sidecar per artist,
-``Metadata/ArtistData/<name>.json`` - see :func:`load_profile`/
+``.metadata/ArtistData/<name>.json`` - see :func:`load_profile`/
 :func:`fetch_bio`. Apple Music (:mod:`downtify.apple_music`) is the
 primary bio source - it also brings origin/formation year/genre/group flag/
 hero colour, nothing else supplies those; Deezer (:mod:`downtify.deezer`)
@@ -26,7 +26,7 @@ the ones the user's settings allow - and bio/social/platform ids the same
 way the button would).
 
 The artist's Spotify top songs are kept here too, as a cache next to the
-profile (``Metadata/ArtistTopSongs/<name>.topsongs.json``, see the last
+profile (``.metadata/ArtistTopSongs/<name>.topsongs.json``, see the last
 section):
 not part of the profile itself, so it has a file of its own.
 
@@ -63,15 +63,15 @@ KIND_PHOTO = 'photo'
 KIND_BANNER = 'banner'
 
 _DIRNAMES = {
-    KIND_PHOTO: 'Metadata/ArtistImage',
-    KIND_BANNER: 'Metadata/ArtistBannerImage',
+    KIND_PHOTO: '.metadata/ArtistImage',
+    KIND_BANNER: '.metadata/ArtistBannerImage',
 }
 _SUFFIXES = {
     KIND_PHOTO: '.jpg',
     KIND_BANNER: '.banner.jpg',
 }
-_PROFILE_DIRNAME = 'Metadata/ArtistData'
-_TOP_SONGS_DIRNAME = 'Metadata/ArtistTopSongs'
+_PROFILE_DIRNAME = '.metadata/ArtistData'
+_TOP_SONGS_DIRNAME = '.metadata/ArtistTopSongs'
 # ``<name>.topsongs.json``: the artist's profile is ``<name>.json`` in its own
 # folder, and one JSON per artist in both is easy to mix up.
 _TOP_SONGS_SUFFIX = '.topsongs.json'
@@ -1140,7 +1140,7 @@ def save_social(
 # Fetching an artist's top songs is slow - the artist embed, one embed per
 # song for its cover and album, and an overview request for the play counts
 # (see :func:`downtify.spotify.artist_top_songs_from_id`) - so the first
-# five are saved to ``Metadata/ArtistTopSongs/<name>.topsongs.json``, next
+# five are saved to ``.metadata/ArtistTopSongs/<name>.topsongs.json``, next
 # to the artist's photo, banner and profile. It is a cache, not user data:
 # machine-written, never edited by hand, and separate from
 # ``ArtistData/<name>.json`` on purpose (a bio or social-link save rewrites

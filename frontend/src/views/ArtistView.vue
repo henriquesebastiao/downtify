@@ -483,7 +483,7 @@ const bioFacts = computed(() => artistFacts(profile.value, t))
 // the artist page when they're already in this library, otherwise to a
 // search for the name instead of a dead link.
 //
-// A related artist's own saved profile photo (Metadata/ArtistImage/,
+// A related artist's own saved profile photo (.metadata/ArtistImage/,
 // see artist_profile.py) isn't part of the library model itself - same
 // bulk lookup LibraryView's artist tiles use, fetched once the Related
 // tab is actually viewed, so a picked photo shows up here too instead of

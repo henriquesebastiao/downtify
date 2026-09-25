@@ -156,7 +156,7 @@ def test_a_failing_service_saves_nothing_and_the_next_call_tries_again(
     # The service is back: the very next call makes the whole profile.
     services.fix(broken, services.working[broken])
     profile = ap.ensure_profile(tmp_path, 'ACDC', [], 'en')
-    assert _files(tmp_path) == ['Metadata/ArtistData/ACDC.json']
+    assert _files(tmp_path) == ['.metadata/ArtistData/ACDC.json']
     assert profile['bio'] == 'Apple bio'
 
 
@@ -165,7 +165,7 @@ def test_deezer_saying_there_is_no_such_artist_is_an_answer(
 ):
     _Services(monkeypatch, deezer_id=None)
     profile = ap.ensure_profile(tmp_path, 'ACDC', [], 'en')
-    assert _files(tmp_path) == ['Metadata/ArtistData/ACDC.json']
+    assert _files(tmp_path) == ['.metadata/ArtistData/ACDC.json']
     assert profile['bio'] == 'Apple bio'
     assert profile['genre'] == 'Hard rock'
     assert not profile['platforms_id']['deezer']
@@ -189,7 +189,7 @@ def test_neither_service_knowing_the_artist_still_makes_the_profile(
 ):
     services = _Services(monkeypatch, apple_id=None, deezer_id=None)
     ap.ensure_profile(tmp_path, 'Nobody', [], 'en')
-    assert _files(tmp_path) == ['Metadata/ArtistData/Nobody.json']
+    assert _files(tmp_path) == ['.metadata/ArtistData/Nobody.json']
     # ...and that file is what stops later visits from asking again.
     before = dict(services.calls)
     ap.ensure_profile(tmp_path, 'Nobody', [], 'en')
@@ -204,7 +204,7 @@ def test_spotify_being_down_does_not_stop_a_profile_from_being_made(
     _Services(monkeypatch, spotify_related=RuntimeError('hash rolled'))
     profile = ap.ensure_profile(tmp_path, 'ACDC', [], 'en')
     assert profile['bio'] == 'Apple bio'
-    assert _files(tmp_path) == ['Metadata/ArtistData/ACDC.json']
+    assert _files(tmp_path) == ['.metadata/ArtistData/ACDC.json']
 
 
 def test_the_photo_and_banner_come_after_the_saved_text(monkeypatch, tmp_path):
@@ -250,7 +250,7 @@ def test_an_error_in_the_photo_leaves_the_saved_text_alone(
         tmp_path, 'ACDC', [], 'en', image_kinds=(ap.KIND_PHOTO,)
     )
     assert profile['bio'] == 'Apple bio'
-    assert _files(tmp_path) == ['Metadata/ArtistData/ACDC.json']
+    assert _files(tmp_path) == ['.metadata/ArtistData/ACDC.json']
 
 
 def test_fetch_bio_on_demand_is_as_forgiving_as_before(monkeypatch, tmp_path):
@@ -259,7 +259,7 @@ def test_fetch_bio_on_demand_is_as_forgiving_as_before(monkeypatch, tmp_path):
     _Services(monkeypatch, deezer_id=ValueError('down'))
     profile = ap.fetch_bio(tmp_path, 'ACDC', 'en')
     assert profile['bio'] == 'Apple bio'
-    assert _files(tmp_path) == ['Metadata/ArtistData/ACDC.json']
+    assert _files(tmp_path) == ['.metadata/ArtistData/ACDC.json']
 
 
 # ── which artist a download seeds ───────────────────────────────────────────
@@ -433,7 +433,7 @@ def test_a_failed_job_is_not_remembered_the_next_track_tries_again(
     services.fix('deezer_id', '9')
     ap._run_seed_job(_drain()[0])
     # ...and now it works.
-    assert _files(tmp_path) == ['Metadata/ArtistData/ACDC.json']
+    assert _files(tmp_path) == ['.metadata/ArtistData/ACDC.json']
 
 
 def test_a_job_that_blows_up_still_frees_the_artist(
@@ -494,7 +494,7 @@ def test_workers_racing_for_one_artist_seed_them_once(monkeypatch, tmp_path):
         thread.join(10)
     assert services.calls['apple_full.fetch_artist_full'] == 1
     assert results.count(True) == 1
-    assert _files(tmp_path) == ['Metadata/ArtistData/ACDC.json']
+    assert _files(tmp_path) == ['.metadata/ArtistData/ACDC.json']
 
 
 def test_a_visit_and_a_download_racing_seed_the_artist_once(
@@ -521,7 +521,7 @@ def test_the_profile_is_written_atomically(monkeypatch, tmp_path):
     # No leftover temp file next to it, and never a half-written JSON.
     _Services(monkeypatch)
     ap.ensure_profile(tmp_path, 'ACDC', [], 'en')
-    folder = tmp_path / 'Metadata' / 'ArtistData'
+    folder = tmp_path / '.metadata' / 'ArtistData'
     assert [p.name for p in folder.iterdir()] == ['ACDC.json']
 
 

@@ -123,7 +123,7 @@ An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.
 
 ### `GET /api/artists/top_songs/spotify`
 
-The first five Spotify top songs of an artist in your Library, for the [Top songs tab](features/top-songs.md#on-an-artists-library-page) of their page. They're read from `<downloads>/Metadata/ArtistTopSongs/<Artist>.topsongs.json` while that file is fresh (7 days); with no file yet they're fetched from Spotify and saved (a few seconds), and a file older than that is returned right away with `"stale": true` while a refresh runs in the background (ask again a few seconds later for the fresh one, as the web UI does). The Spotify artist comes from the artist's profile (`platforms_id.spotify`).
+The first five Spotify top songs of an artist in your Library, for the [Top songs tab](features/top-songs.md#on-an-artists-library-page) of their page. They're read from `<downloads>/.metadata/ArtistTopSongs/<Artist>.topsongs.json` while that file is fresh (7 days); with no file yet they're fetched from Spotify and saved (a few seconds), and a file older than that is returned right away with `"stale": true` while a refresh runs in the background (ask again a few seconds later for the fresh one, as the web UI does). The Spotify artist comes from the artist's profile (`platforms_id.spotify`).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -156,7 +156,7 @@ Each song object also has `preview_url`: the 30-second clip Spotify's own player
 
 ## Artist photo, banner & bio
 
-Manual picker for an artist's profile photo and banner, plus their profile data (bio, social links, related artists) — see [Artist photo, banner & bio](features/artist-images.md). Images are saved as sidecar files under `<downloads>/Metadata/ArtistImage/` and `<downloads>/Metadata/ArtistBannerImage/`, served directly from the existing `/downloads` static mount; profile data lives in `<downloads>/Metadata/ArtistData/`.
+Manual picker for an artist's profile photo and banner, plus their profile data (bio, social links, related artists) — see [Artist photo, banner & bio](features/artist-images.md). Images are saved as sidecar files under `<downloads>/.metadata/ArtistImage/` and `<downloads>/.metadata/ArtistBannerImage/`, served directly from the existing `/downloads` static mount; profile data lives in `<downloads>/.metadata/ArtistData/`.
 
 ### `GET /api/artists/art`
 
@@ -170,7 +170,7 @@ Whether an artist has a saved photo and/or banner.
 
 ```json
 {
-  "photo_url": "/downloads/Metadata/ArtistImage/Avril Lavigne.jpg",
+  "photo_url": "/downloads/.metadata/ArtistImage/Avril Lavigne.jpg",
   "photo_version": 1758700000123,
   "banner_url": null,
   "banner_version": null
@@ -231,7 +231,7 @@ Fetch an image and save it as an artist's photo or banner — used both for a pi
 
 `kind` is `"photo"` or `"banner"`.
 
-**Response:** `{ "url": "/downloads/Metadata/ArtistImage/Avril Lavigne.jpg" }`. `400` when `name`/`kind` are missing or invalid, or the URL doesn't resolve to a real image.
+**Response:** `{ "url": "/downloads/.metadata/ArtistImage/Avril Lavigne.jpg" }`. `400` when `name`/`kind` are missing or invalid, or the URL doesn't resolve to a real image.
 
 ---
 
