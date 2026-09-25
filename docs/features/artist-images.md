@@ -47,12 +47,12 @@ The same seeding runs in the background when one of an artist's tracks finishes 
 
 If nothing could be found anywhere for a given artist, this still only ever runs once - it doesn't retry on every later visit. Use the edit modal to pick a photo/banner by hand or try the fetch button again at any time afterwards.
 
-## Icons on the banner
+## The Links tab
 
-When an artist has a banner set, two rows of small icon links appear in its bottom-right corner: social links on top, streaming platforms below. Only the ones actually saved are shown — an artist with just a Twitter link gets one icon, not five greyed-out placeholders.
+An artist with at least one saved link gets a **Links** tab, just before **Bio** (which stays the last tab), with a counter of how many. It lists them as cards, on any screen and whether or not the artist has a banner: **Streaming platforms** first, then **Social networks**. Each card shows the site's name and address and opens it in a new tab. Only what is actually saved is listed, and an artist with no links has no Links tab (`?tab=links` for them opens the first tab instead).
 
-- **Social** — one icon per non-empty field from the Social tab above.
-- **Streaming platforms** — built from the profile's `platforms_id`, each id turned into a link (e.g. a saved Deezer id becomes a link to that artist's Deezer page). Spotify, Apple Music, Deezer and YouTube Music ids are all resolved automatically the first time a bio is fetched, by exact name match on each platform (Spotify's comes from one of the artist's own Spotify tracks when there is one, which can't pick a namesake). You can also add or correct one by hand in the artist's profile JSON (see below).
+- **Streaming platforms** — Spotify, YouTube Music, Deezer and Apple Music, built from the profile's `platforms_id`: each saved id turned into a link (e.g. a saved Deezer id becomes a link to that artist's Deezer page). The ids are all resolved automatically the first time a bio is fetched, by exact name match on each platform (Spotify's comes from one of the artist's own Spotify tracks when there is one, which can't pick a namesake). You can also add or correct one by hand in the artist's profile JSON (see below).
+- **Social networks** — Twitter/X, Instagram, Facebook, YouTube and website: one card per non-empty field from the Social tab above. Only web addresses are opened: a link typed without `https://` gets it, and anything with another kind of address (a `javascript:` one, say) is ignored.
 
 ## Spotify
 

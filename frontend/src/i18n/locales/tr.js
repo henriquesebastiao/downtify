@@ -363,6 +363,9 @@ export default {
     findMore: 'Daha fazlasını bul',
     relatedArtists: 'Hayranların beğendiği diğerleri',
     topSongsLink: 'Daha fazla popüler şarkı',
+    linksTab: 'Bağlantılar',
+    linksPlatforms: 'Yayın platformları',
+    linksSocial: 'Sosyal ağlar',
   },
   artistArt: {
     editPhoto: 'Fotoğrafı düzenle',

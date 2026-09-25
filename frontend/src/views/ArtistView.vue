@@ -17,8 +17,6 @@
         :name="artist.name"
         icon="user"
         round
-        :social="profile.social"
-        :platforms-id="profile.platforms_id"
         @edit-photo="openArtModal('photo')"
         @edit-banner="openArtModal('banner')"
       >
@@ -155,6 +153,12 @@
           </section>
         </template>
 
+        <ArtistLinks
+          v-else-if="tab === 'links'"
+          :platforms="platformLinks"
+          :social="socialLinks"
+        />
+
         <TrackList
           v-else
           :tracks="allTracks"
@@ -195,6 +199,7 @@ import UiIconButton from '/src/components/ui/UiIconButton.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import ArtistArtModal from '/src/components/library/ArtistArtModal.vue'
+import ArtistLinks from '/src/components/library/ArtistLinks.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DetailState from '/src/components/library/DetailState.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'
@@ -211,6 +216,7 @@ import { splitLength } from '/src/lib/format'
 import { proxiedArtistPhotoUrl } from '/src/lib/artistPhotoProxy'
 import { versionedArtUrl } from '/src/lib/artistArt'
 import { artistFacts } from '/src/lib/artistBio'
+import { artistPlatformLinks, artistSocialLinks } from '/src/lib/artistLinks'
 import { useI18n } from '/src/i18n'
 
 const { t, locale } = useI18n()
@@ -258,13 +264,24 @@ const facts = computed(() => {
     .join(' · ')
 })
 
-// Discography / tracks / related artists / bio, tab-switched the same
-// way as LibraryView/QueueView/MonitorView - the active one lives in the
-// route's own query string, so it's bookmarkable and survives a refresh.
-const TAB_IDS = ['albums', 'tracks', 'topsongs', 'related', 'bio']
+// The profile's links, for the Links tab (and the icons on the banner).
+const socialLinks = computed(() => artistSocialLinks(profile.value.social))
+const platformLinks = computed(() =>
+  artistPlatformLinks(profile.value.platforms_id)
+)
+const linkCount = computed(
+  () => socialLinks.value.length + platformLinks.value.length
+)
+
+// Discography / tracks / related artists / bio / links, tab-switched the
+// same way as LibraryView/QueueView/MonitorView - the active one lives in
+// the route's own query string, so it's bookmarkable and survives a refresh.
+const TAB_IDS = ['albums', 'tracks', 'topsongs', 'related', 'bio', 'links']
 const tab = computed(() => {
   const requested = String(route.query.tab || '')
-  if (TAB_IDS.includes(requested)) return requested
+  // The Links tab only exists for an artist with links to show.
+  if (TAB_IDS.includes(requested) && (requested !== 'links' || linkCount.value))
+    return requested
   return artist.value?.albums.length ? 'albums' : 'tracks'
 })
 const tabs = computed(() => {
@@ -301,6 +318,15 @@ const tabs = computed(() => {
       label: t('artist.relatedArtists'),
       count: profile.value.related_artists.length,
       to: { name: 'Artist', query: { name: a.name, tab: 'related' } },
+    })
+  }
+  // Bio stays last.
+  if (linkCount.value) {
+    list.push({
+      id: 'links',
+      label: t('artist.linksTab'),
+      count: linkCount.value,
+      to: { name: 'Artist', query: { name: a.name, tab: 'links' } },
     })
   }
   list.push({

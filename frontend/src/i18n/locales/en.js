@@ -356,6 +356,9 @@ export default {
     findMore: 'Find more',
     relatedArtists: 'Fans also like',
     topSongsLink: 'See more popular songs',
+    linksTab: 'Links',
+    linksPlatforms: 'Streaming platforms',
+    linksSocial: 'Social networks',
   },
   artistArt: {
     editPhoto: 'Edit photo',

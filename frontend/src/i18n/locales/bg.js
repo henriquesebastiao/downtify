@@ -357,6 +357,9 @@ export default {
     findMore: 'Намери още',
     relatedArtists: 'На феновете допада и',
     topSongsLink: 'Още популярни песни',
+    linksTab: 'Връзки',
+    linksPlatforms: 'Стрийминг платформи',
+    linksSocial: 'Социални мрежи',
   },
   artistArt: {
     editPhoto: 'Редактиране на снимката',

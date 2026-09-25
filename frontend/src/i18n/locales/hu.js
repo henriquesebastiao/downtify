@@ -361,6 +361,9 @@ export default {
     findMore: 'Továbbiak keresése',
     relatedArtists: 'A rajongók ezt is szeretik',
     topSongsLink: 'További népszerű számok',
+    linksTab: 'Linkek',
+    linksPlatforms: 'Streaming platformok',
+    linksSocial: 'Közösségi hálózatok',
   },
   artistArt: {
     editPhoto: 'Fotó szerkesztése',

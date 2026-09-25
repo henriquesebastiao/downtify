@@ -30,39 +30,6 @@
       <AppIcon name="pencil" :size="16" />
     </button>
     <div
-      v-if="banner && (socialLinks.length || platformLinks.length)"
-      class="absolute right-4 bottom-4 z-10 flex flex-col items-end gap-2"
-    >
-      <div v-if="socialLinks.length" class="flex items-center gap-2">
-        <a
-          v-for="link in socialLinks"
-          :key="link.key"
-          :href="link.url"
-          target="_blank"
-          rel="noopener noreferrer"
-          :title="link.label"
-          :aria-label="link.label"
-          class="flex size-9 items-center justify-center rounded-full border border-line-2 bg-black/55 text-white backdrop-blur transition-colors hover:bg-black/70"
-        >
-          <AppIcon :name="link.icon" :size="16" />
-        </a>
-      </div>
-      <div v-if="platformLinks.length" class="flex items-center gap-2">
-        <a
-          v-for="link in platformLinks"
-          :key="link.key"
-          :href="link.url"
-          target="_blank"
-          rel="noopener noreferrer"
-          :title="link.label"
-          :aria-label="link.label"
-          class="flex size-9 items-center justify-center rounded-full border border-line-2 bg-black/55 text-white backdrop-blur transition-colors hover:bg-black/70"
-        >
-          <AppIcon :name="link.icon" :size="16" />
-        </a>
-      </div>
-    </div>
-    <div
       class="mr-auto flex max-w-[1680px] flex-col gap-6 px-4 pt-6 pb-6 sm:px-6 md:flex-row md:items-end md:gap-8 md:pt-10 lg:px-10"
     >
       <div
@@ -150,12 +117,6 @@ const props = defineProps({
   banner: { type: String, default: '' },
   photoEditable: { type: Boolean, default: false },
   bannerEditable: { type: Boolean, default: false },
-  // Artist profile links (see downtify/artist_profile.py) - only rendered
-  // over the banner, bottom-right, as two rows of icon links: social
-  // first, then streaming platforms. Each object's empty/unknown keys are
-  // silently skipped, so an artist with nothing saved yet shows neither.
-  social: { type: Object, default: () => ({}) },
-  platformsId: { type: Object, default: () => ({}) },
 })
 defineEmits(['edit-photo', 'edit-banner'])
 
@@ -163,64 +124,5 @@ const { t } = useI18n()
 
 const tint = computed(
   () => `oklch(0.45 0.08 ${hueFor(props.name || props.title)} / 0.55)`
-)
-
-const SOCIAL_LINKS = {
-  twitter: { icon: 'twitter', label: 'Twitter/X' },
-  instagram: { icon: 'instagram', label: 'Instagram' },
-  facebook: { icon: 'facebook', label: 'Facebook' },
-  youtube: { icon: 'youtube', label: 'YouTube' },
-  website: { icon: 'globe', label: 'Website' },
-}
-const socialLinks = computed(() =>
-  Object.keys(SOCIAL_LINKS)
-    .filter((key) => String(props.social?.[key] || '').trim())
-    .map((key) => ({
-      key,
-      url: String(props.social[key]).trim(),
-      ...SOCIAL_LINKS[key],
-    }))
-)
-
-// Base URL each platform's saved id is appended to. The backend resolves
-// all four automatically (see downtify/artist_profile.py) and a hand-edit
-// of the profile JSON can set any of them. Unrecognized keys are skipped
-// rather than erroring, so this grows without a frontend change needed
-// elsewhere.
-const PLATFORM_LINKS = {
-  spotify: {
-    icon: 'spotify',
-    label: 'Spotify',
-    prefix: 'https://open.spotify.com/artist/',
-  },
-  youtubemusic: {
-    icon: 'youtube-music',
-    label: 'YouTube Music',
-    prefix: 'https://music.youtube.com/channel/',
-  },
-  deezer: {
-    icon: 'deezer',
-    label: 'Deezer',
-    prefix: 'https://www.deezer.com/artist/',
-  },
-  // Stored as 'slug/numeric-id' (e.g. 'evanescence/42102393', straight
-  // from Apple's own `url` field) - the 'us' storefront in this prefix
-  // is just a stable link target, not tied to the artist's real catalog
-  // availability elsewhere.
-  applemusic: {
-    icon: 'apple-music',
-    label: 'Apple Music',
-    prefix: 'https://music.apple.com/us/artist/',
-  },
-}
-const platformLinks = computed(() =>
-  Object.keys(PLATFORM_LINKS)
-    .filter((key) => String(props.platformsId?.[key] || '').trim())
-    .map((key) => ({
-      key,
-      url: `${PLATFORM_LINKS[key].prefix}${String(props.platformsId[key]).trim()}`,
-      icon: PLATFORM_LINKS[key].icon,
-      label: PLATFORM_LINKS[key].label,
-    }))
 )
 </script>

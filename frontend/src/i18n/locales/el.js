@@ -361,6 +361,9 @@ export default {
     findMore: 'Βρες περισσότερα',
     relatedArtists: 'Στους θαυμαστές αρέσει επίσης',
     topSongsLink: 'Περισσότερα δημοφιλή τραγούδια',
+    linksTab: 'Σύνδεσμοι',
+    linksPlatforms: 'Πλατφόρμες streaming',
+    linksSocial: 'Κοινωνικά δίκτυα',
   },
   artistArt: {
     editPhoto: 'Επεξεργασία φωτογραφίας',

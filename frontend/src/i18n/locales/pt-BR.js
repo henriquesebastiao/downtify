@@ -363,6 +363,9 @@ export default {
     findMore: 'Encontrar mais',
     relatedArtists: 'Fãs também curtem',
     topSongsLink: 'Ver mais músicas populares',
+    linksTab: 'Links',
+    linksPlatforms: 'Plataformas de streaming',
+    linksSocial: 'Redes sociais',
   },
   artistArt: {
     editPhoto: 'Editar foto',
