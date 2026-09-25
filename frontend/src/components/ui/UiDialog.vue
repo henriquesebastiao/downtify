@@ -1,9 +1,12 @@
 <template>
   <Teleport to="body">
     <Transition name="fade">
+      <!-- Above UiModal's z-[80]: ui.confirm() is routinely called from
+           inside an already-open modal (e.g. a delete confirmation), so
+           this has to win the stack regardless of DOM/mount order. -->
       <div
         v-if="dialog"
-        class="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-4 backdrop-blur-sm sm:items-center"
+        class="fixed inset-0 z-[90] flex items-end justify-center bg-black/55 p-4 backdrop-blur-sm sm:items-center"
         @click.self="closeDialog(false)"
       >
         <div

@@ -376,6 +376,61 @@ def test_update_settings_accepts_in_range_parallel_downloads(monkeypatch):
     assert result['max_parallel_downloads'] == 25
 
 
+def test_ui_language_defaults_to_unknown():
+    assert not DEFAULT_SETTINGS['ui_language']
+
+
+@pytest.mark.parametrize('code', ['en', 'pt-BR', 'es', 'fr', 'tr', 'hu'])
+def test_update_settings_saves_the_ui_language(monkeypatch, tmp_path, code):
+    monkeypatch.setitem(api.state.settings, 'ui_language', '')
+    path = tmp_path / 'settings.json'
+    monkeypatch.setattr(api.state, 'settings_path', path)
+    result = asyncio.run(
+        api.update_settings_endpoint(_FakeRequest({'ui_language': code}))
+    )
+    assert result['ui_language'] == code
+    # ...and it is on disk, so it survives a restart.
+    assert json.loads(path.read_text(encoding='utf-8'))['ui_language'] == code
+    assert _load_settings(path)['ui_language'] == code
+
+
+@pytest.mark.parametrize(
+    'junk',
+    ['', 'PT-br', 'pt_BR', 'english', 'e', 'pt-BRA', '../x', 'en; drop', None],
+)
+def test_update_settings_keeps_the_saved_ui_language_on_junk(
+    monkeypatch, junk
+):
+    monkeypatch.setitem(api.state.settings, 'ui_language', 'pt-BR')
+    result = _call_update_settings(monkeypatch, {'ui_language': junk})
+    assert result['ui_language'] == 'pt-BR'
+
+
+def test_update_settings_of_other_keys_leaves_the_ui_language_alone(
+    monkeypatch,
+):
+    # The settings page saves everything but the language (it sends the
+    # whole form): whatever the page last told the server stays.
+    monkeypatch.setitem(api.state.settings, 'ui_language', 'fr')
+    result = _call_update_settings(monkeypatch, {'max_parallel_downloads': 4})
+    assert result['ui_language'] == 'fr'
+
+
+def test_load_settings_drops_a_malformed_ui_language(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(
+        json.dumps({'ui_language': 'not a code'}), encoding='utf-8'
+    )
+    assert not _load_settings(path)['ui_language']
+
+
+def test_load_settings_without_ui_language_is_unknown(tmp_path):
+    # A settings.json from before the key existed.
+    path = tmp_path / 'settings.json'
+    path.write_text(json.dumps({'format': 'flac'}), encoding='utf-8')
+    assert not _load_settings(path)['ui_language']
+
+
 def test_update_settings_toggles_mini_player_enabled(monkeypatch):
     # A plain passthrough boolean — the backend never acts on it, only
     # stores and returns whatever the UI last set (see

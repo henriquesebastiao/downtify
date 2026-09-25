@@ -35,3 +35,28 @@ export function topSongsBatchOptions(artist, createPlaylist) {
     m3u: true,
   }
 }
+
+/**
+ * The badge for a song's play count: Spotify reports an exact number,
+ * YouTube Music a rounded one, and each gets its own colour and tooltip
+ * (`title` is an i18n key).
+ */
+export function playsBadge(song) {
+  return song.source === 'youtube'
+    ? { tone: 'ytm', title: 'link.playCountYoutubeMusic' }
+    : { tone: 'spotify', title: 'link.playCountSpotify' }
+}
+
+/**
+ * The tracks a top-songs list can play right now: those of `songs` that are
+ * already in the library, in the list's own order. `find(artist, title)` is
+ * the library's lookup (`useLibrary().findTrack`).
+ */
+export function playableQueue(songs, find) {
+  const queue = []
+  for (const song of songs || []) {
+    const track = find((song.artists || [])[0] || song.artist, song.name)
+    if (track) queue.push(track)
+  }
+  return queue
+}

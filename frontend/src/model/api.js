@@ -99,6 +99,89 @@ function searchArtists(query) {
   return API.get('/api/artists/search', { params: { query } })
 }
 
+// ── Artist photo & banner ───────────────────────────────────────────
+function getArtistArt(name) {
+  return API.get('/api/artists/art', { params: { name } })
+}
+
+// Saved photo/banner URLs for many artists in one call - used by the
+// Library page's artist grid so it doesn't send one request per tile.
+function getArtistArtBulk(names) {
+  return API.post('/api/artists/art/bulk', { names })
+}
+
+function searchArtistArt(name) {
+  return API.get('/api/artists/art/search', { params: { name } })
+}
+
+// `file` (a library track from Spotify) is the reliable way to find the
+// artist; `name` is the fallback - an exact-name search - for artists
+// none of whose tracks came from Spotify.
+function getSpotifyArtistArtCandidate(file, kind, name = '') {
+  return API.get('/api/artists/art/spotify_candidate', {
+    params: { file, kind, name },
+  })
+}
+
+function setArtistArtFromUrl(name, kind, imageUrl, source = '') {
+  return API.post('/api/artists/art/from_url', {
+    name,
+    kind,
+    image_url: imageUrl,
+    source,
+  })
+}
+
+// The file is sent as the raw request body rather than multipart
+// form-data, so the backend doesn't need python-multipart just for this
+// (same idea as uploadCookies below).
+function uploadArtistArt(name, kind, file, source = '') {
+  return API.post('/api/artists/art/upload', file, {
+    params: { name, kind, source },
+    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+  })
+}
+
+function deleteArtistArt(name, kind) {
+  return API.delete('/api/artists/art', { params: { name, kind } })
+}
+
+// ── Artist profile: bio, social links, related artists, platform ids ──
+function getArtistProfile(name) {
+  return API.get('/api/artists/profile', { params: { name } })
+}
+
+// Seeds a brand-new artist's profile the first time it's needed - a
+// no-op once a profile already exists, so it's safe to call on every
+// visit to an artist's page instead of the plain GET above.
+function ensureArtistProfile(name, lang, trackFiles) {
+  return API.post('/api/artists/profile/ensure', {
+    name,
+    lang,
+    track_files: trackFiles,
+  })
+}
+
+// `source` picks whose biography text is saved: 'applemusic' or 'deezer'
+// (no fallback to the other one), or 'auto' - Apple Music's, else Deezer's.
+function fetchArtistBio(name, lang, source = 'auto') {
+  return API.post('/api/artists/profile/bio', { name, lang, source })
+}
+
+// Just the bio text of one service ('applemusic' or 'deezer'), saving
+// nothing - for loading it into an editor. Response: `{ bio }`.
+function previewArtistBio(name, lang, source) {
+  return API.post('/api/artists/profile/bio/preview', { name, lang, source })
+}
+
+function saveArtistBio(name, bio) {
+  return API.put('/api/artists/profile/bio', { name, bio })
+}
+
+function saveArtistSocial(name, social) {
+  return API.put('/api/artists/profile/social', { name, social })
+}
+
 function open(songURL) {
   return API.get('/api/song/url', { params: { url: songURL } })
 }
@@ -109,6 +192,13 @@ function resolveUrl(url) {
 
 function artistTopSongs(url) {
   return API.get('/api/artists/top_songs/url', { params: { url } })
+}
+
+// The first five Spotify top songs of a library artist, from the file the
+// backend keeps per artist (made or refreshed when missing or a week old).
+// Same shape as artistTopSongs, plus `fetched_at` and `stale`.
+function artistTopSongsSaved(name) {
+  return API.get('/api/artists/top_songs/spotify', { params: { name } })
 }
 
 // ── Downloads ────────────────────────────────────────────────────────
@@ -365,9 +455,23 @@ export default {
   search,
   searchAlbums,
   searchArtists,
+  getArtistArt,
+  getArtistArtBulk,
+  searchArtistArt,
+  getSpotifyArtistArtCandidate,
+  setArtistArtFromUrl,
+  uploadArtistArt,
+  deleteArtistArt,
+  getArtistProfile,
+  ensureArtistProfile,
+  fetchArtistBio,
+  previewArtistBio,
+  saveArtistBio,
+  saveArtistSocial,
   open,
   resolveUrl,
   artistTopSongs,
+  artistTopSongsSaved,
   download,
   downloadBatch,
   downloadAlbum,

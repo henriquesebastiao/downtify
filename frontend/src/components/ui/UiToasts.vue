@@ -1,6 +1,8 @@
 <template>
+  <!-- Above UiModal (z-[80]) and UiDialog (z-[90]): saving from inside a
+       modal toasts its result, which has to be seen on top of it. -->
   <div
-    class="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+9.5rem)] z-[75] flex flex-col items-center gap-2 px-4 lg:bottom-28"
+    class="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+9.5rem)] z-[100] flex flex-col items-center gap-2 px-4 lg:bottom-28"
     aria-live="polite"
   >
     <TransitionGroup name="list">

@@ -1,6 +1,8 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 import API from '/src/model/api'
+import { currentLocale } from '/src/i18n'
+import { needsLanguageSync, splitUiLanguage } from '/src/lib/uiLanguage'
 
 const settings = ref({
   audio_providers: ['youtube-music'],
@@ -31,6 +33,8 @@ const settings = ref({
   output: '',
   generate_m3u: true,
   download_cover_art_playlists: false,
+  download_cover_art_artist: false,
+  download_cover_art_artist_banner: false,
   sync_navidrome: true,
   navidrome: {
     enabled: false,
@@ -123,22 +127,52 @@ function snapshot() {
   return JSON.stringify(settings.value)
 }
 
+// The language the server has on file (`ui_language`). Deliberately not in
+// `settings`: the settings page saves that whole object, and the language is
+// owned by the language picker, not by the form.
+const uiLanguage = ref('')
+
+/**
+ * Tell the server the language the page is shown in, when it doesn't have it
+ * yet or has an old one. Runs on every page load - so someone who chose a
+ * language before the server kept it needs to do nothing - and whenever the
+ * language changes. A failure is not worth reporting: the next load or
+ * change tries again.
+ */
+async function syncUiLanguage() {
+  const code = currentLocale.value
+  if (!needsLanguageSync(uiLanguage.value, code)) return
+  try {
+    const res = await API.setSettings({ ui_language: code })
+    uiLanguage.value = splitUiLanguage(res.data).uiLanguage
+  } catch {
+    // Retried on the next page load or language change.
+  }
+}
+
 API.getSettings()
   .then((res) => {
+    const { uiLanguage: known, rest } = splitUiLanguage(res.data)
+    uiLanguage.value = known
     // Merge nested blocks over the defaults so a settings file saved
     // before slskd/Navidrome existed still binds every form field.
     settings.value = {
       ...settings.value,
-      ...res.data,
-      slskd: { ...settings.value.slskd, ...(res.data.slskd || {}) },
-      navidrome: { ...settings.value.navidrome, ...(res.data.navidrome || {}) },
+      ...rest,
+      slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
+      navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
     }
     saved.value = snapshot()
     loaded.value = true
+    syncUiLanguage()
   })
   .catch(() => {
     loaded.value = true
   })
+
+watch(currentLocale, () => {
+  if (loaded.value) syncUiLanguage()
+})
 
 const dirty = computed(() => loaded.value && snapshot() !== saved.value)
 const isSaved = ref()
@@ -156,11 +190,13 @@ async function saveSettings() {
   saveErrorText.value = ''
   try {
     const res = await API.setSettings(settings.value)
+    const { uiLanguage: known, rest } = splitUiLanguage(res.data)
+    uiLanguage.value = known
     settings.value = {
       ...settings.value,
-      ...res.data,
-      slskd: { ...settings.value.slskd, ...(res.data.slskd || {}) },
-      navidrome: { ...settings.value.navidrome, ...(res.data.navidrome || {}) },
+      ...rest,
+      slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
+      navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
     }
     saved.value = snapshot()
     isSaved.value = true

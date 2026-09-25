@@ -121,6 +121,307 @@ An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.
 
 ---
 
+### `GET /api/artists/top_songs/spotify`
+
+The first five Spotify top songs of an artist in your Library, for the [Top songs tab](features/top-songs.md#on-an-artists-library-page) of their page. They're read from `<downloads>/.metadata/ArtistTopSongs/<Artist>.topsongs.json` while that file is fresh (7 days); with no file yet they're fetched from Spotify and saved (a few seconds), and a file older than that is returned right away with `"stale": true` while a refresh runs in the background (ask again a few seconds later for the fresh one, as the web UI does). The Spotify artist comes from the artist's profile (`platforms_id.spotify`).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
+
+**Response:** the same shape as [`GET /api/artists/top_songs/url`](#get-apiartiststop_songsurl) for Spotify, plus when the songs were fetched:
+
+```json
+{
+  "schema": 2,
+  "source": "spotify",
+  "artist_id": "6XyY86QOPPrYVGvF9ch6wz",
+  "name": "Linkin Park",
+  "cover_url": "https://…",
+  "fetched_at": "2026-09-24T10:12:03+00:00",
+  "stale": false,
+  "songs": [ /* five song objects, most popular first */ ]
+}
+```
+
+Each song object also has `preview_url`: the 30-second clip Spotify's own player offers for the song (`https://p.scdn.co/mp3-preview/…`, MP3), or `""` when there is none. Downtify only passes on an `https` link on `p.scdn.co`. `schema` is the file's layout; a file of an older one is treated as stale.
+
+| Status | When |
+|--------|------|
+| `400` | `name` is blank. |
+| `404` | The artist has no Spotify id saved yet. |
+| `502` | Nothing saved and Spotify couldn't be read. |
+
+---
+
+## Artist photo, banner & bio
+
+Manual picker for an artist's profile photo and banner, plus their profile data (bio, social links, related artists) — see [Artist photo, banner & bio](features/artist-images.md). Images are saved as sidecar files under `<downloads>/.metadata/ArtistImage/` and `<downloads>/.metadata/ArtistBannerImage/`, served directly from the existing `/downloads` static mount; profile data lives in `<downloads>/.metadata/ArtistData/`.
+
+### `GET /api/artists/art`
+
+Whether an artist has a saved photo and/or banner.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
+
+**Response:**
+
+```json
+{
+  "photo_url": "/downloads/.metadata/ArtistImage/Avril Lavigne.jpg",
+  "photo_version": 1758700000123,
+  "banner_url": null,
+  "banner_version": null
+}
+```
+
+Either URL is `null` (and its version with it) when that image hasn't been saved yet.
+
+A saved image keeps the same URL every time it's replaced, so a browser that already has it would never ask for the new one. `photo_version` and `banner_version` - the file's modified time, in milliseconds - change exactly when the file does: put them in the URL as `?v=<version>` (the web UI does) and a replaced photo shows up at once, while an untouched one stays cached.
+
+---
+
+### `POST /api/artists/art/bulk`
+
+The same answer for many artists at once, so a page listing them (the Library's *Artists* tab) doesn't send one request per tile.
+
+**Request body:** `{ "names": ["Avril Lavigne", "Evanescence"] }`
+
+**Response:** `{ "<name>": { "photo_url": …, "photo_version": …, "banner_url": …, "banner_version": … } }`, one entry per distinct, non-blank name, each shaped like the response above. A body without a `names` list gets `{}`.
+
+---
+
+### `GET /api/artists/art/search`
+
+Free-text artist photo candidates from YouTube Music and Deezer.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Search query (usually the artist's name) |
+
+**Response:** array of `{ "source": "youtube" | "deezer", "name": "…", "image_url": "…" }`, largest image each source offers.
+
+---
+
+### `GET /api/artists/art/spotify_candidate`
+
+A Spotify photo or banner candidate. The artist is resolved from one already-downloaded track when that track came from Spotify (the most reliable route), otherwise from an exact-name search on Spotify - see [Artist photo, banner & bio](features/artist-images.md#spotify).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | no | Library-relative path of one of the artist's tracks (as returned by `GET /tracks`) |
+| `name` | string | no | Artist name, used for an exact-name Spotify search when `file` is missing or wasn't downloaded from Spotify |
+| `kind` | string | no | `"photo"` (default) or `"banner"` - these are different Spotify images, not the same one reused |
+
+**Response:** `{ "source": "spotify", "name": "…", "image_url": "…" }`, or `{}` when neither `file` nor `name` resolves a Spotify artist, or (for `kind=banner`) the artist has no banner set.
+
+---
+
+### `POST /api/artists/art/from_url`
+
+Fetch an image and save it as an artist's photo or banner — used both for a picked search result and a pasted image link.
+
+**Request body:**
+
+```json
+{ "name": "Avril Lavigne", "kind": "photo", "image_url": "https://…" }
+```
+
+`kind` is `"photo"` or `"banner"`.
+
+**Response:** `{ "url": "/downloads/.metadata/ArtistImage/Avril Lavigne.jpg" }`. `400` when `name`/`kind` are missing or invalid, or the URL doesn't resolve to a real image.
+
+---
+
+### `POST /api/artists/art/upload`
+
+Save an uploaded photo or banner. The body is the **raw image file**, not multipart form-data — same idea as `POST /api/cookies`.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name |
+| `kind` | string | yes | `"photo"` or `"banner"` |
+
+**Response:** `{ "url": "…" }`.
+
+| Status | Meaning |
+|--------|---------|
+| `400` | `kind` isn't `photo`/`banner`, or the body isn't a real image. |
+| `413` | Larger than 15 MB. |
+
+---
+
+### `DELETE /api/artists/art`
+
+Remove a saved photo or banner.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name |
+| `kind` | string | yes | `"photo"` or `"banner"` |
+
+**Response:** `{ "removed": true }` when a file was deleted, `{ "removed": false }` when there was nothing to remove. `400` when `kind` isn't `photo`/`banner`.
+
+---
+
+### `GET /api/artists/photo-proxy`
+
+A **display-only** photo for an artist that has no saved photo, used for the tiles in the artist page's *Related* tab, for the artists in the Library's *Artists* grid, for the round photo on an artist's own page and for the artists on the Monitor's *Artists* tab, whenever nobody picked a photo for them. The search page doesn't use it. It is a relay, not a way to get a photo to keep: the image is fetched from Deezer, sent to your browser and forgotten - nothing is written to your downloads folder, and only the artist-name → Deezer image link is remembered (in memory, for three hours). To actually save a photo for an artist use the picker (`POST /api/artists/art/from_url`).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name - matched against Deezer's results exactly (ignoring case and the characters a file name can't hold, so `ACDC` finds `AC/DC`), so a near-match never shows someone else's face. When several Deezer artists share the name, the one with the most fans is used |
+
+**Response:** the image bytes with `Cache-Control: public, max-age=10800` and an `ETag`, so the browser holds on to it for three hours. If a photo is already saved for that artist, that local file is sent instead, without browser caching (`Cache-Control: no-cache`), so a newly picked photo shows up right away. `404` (also cacheable for three hours) when Deezer has no exact match, or when the matched artist has no photo on Deezer (it only has a generic placeholder picture, which is never returned).
+
+Only a real answer is ever cached. If something goes wrong - Deezer can't be reached, it refuses because of its limit of 50 requests per 5 seconds, or the image download breaks - the answer is `503` with `Cache-Control: no-store`: nothing about it is kept, by the server or by the browser, so the next time the page asks (opening it again, or a reload) the photo simply comes through.
+
+---
+
+### `GET /api/artists/profile`
+
+An artist's saved profile: bio, origin, formation year, genre, group flag, banner hero colour, social links, related artists, platform ids, and which image their current photo/banner is (`current_cover`/`current_cover_banner`: the path of the URL it was downloaded from, e.g. `/image/ab67…`, without host or query; `upload` for an uploaded one; empty for none - an older profile may still hold the source name, such as `spotify`, instead) — see [Artist photo, banner & bio](features/artist-images.md#fetching-a-bio-automatically).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
+
+**Response:**
+
+```json
+{
+  "name": "Avril Lavigne",
+  "bio": "",
+  "origin": "",
+  "born_or_formed": "",
+  "genre": "",
+  "is_group": null,
+  "banner_bg_color": "",
+  "platforms_id": {
+    "spotify": "",
+    "youtubemusic": "",
+    "deezer": "",
+    "applemusic": ""
+  },
+  "social": {
+    "twitter": "",
+    "facebook": "",
+    "website": "",
+    "instagram": "",
+    "youtube": ""
+  },
+  "related_artists": [],
+  "current_cover": "",
+  "current_cover_banner": ""
+}
+```
+
+A blank skeleton (as above) when nothing has been saved for this artist yet - never `404`. `origin`/`born_or_formed`/`genre`/`is_group`/`banner_bg_color` only ever come from Apple Music. `genre` is one localized name (e.g. `Hard rock` / `Alternativo` in `pt-BR`, `Alternative` in `en`) and follows the `lang` of the last fetch; the others aren't translated, so they stay the same across a re-fetch in a different `lang`. `bio` is plain text - blank lines between paragraphs, single line breaks kept, no HTML and no bullet characters (each item of Apple Music's `•` list becomes its own paragraph, Deezer's HTML is flattened). Never seeds a profile that doesn't exist yet - see `POST .../ensure` below for that.
+
+---
+
+### `POST /api/artists/profile/ensure`
+
+Seeds a brand-new artist's profile automatically the first time it's needed (e.g. opening their Library page) - a no-op past the very first call for a given artist, so it's safe to call on every visit. Saves a photo and/or banner from Spotify (resolved from one of `track_files` already downloaded from there, else by an exact-name search on Spotify), falling back to an exact YouTube Music name match when Spotify has nothing - but only the ones enabled by the `download_cover_art_artist` (photo) and `download_cover_art_artist_banner` (banner) [settings](#post-apisettingsupdate); with both off (the default) no image is saved. Then fetches bio/origin/social/platform-ids the same way `POST .../bio` does - the profile JSON is always written, whatever those settings say, once Apple Music and Deezer have *answered*. If either of them fails (unreachable, over its limit), nothing is written - no JSON, no image - and the blank profile is returned, so the next call tries again; a service saying it doesn't know the artist is an answer. The same seeding also runs in the background when a download finishes (see [Artist photo, banner & bio](features/artist-images.md#when-a-download-finishes)).
+
+**Request body:**
+
+```json
+{ "name": "Avril Lavigne", "lang": "pt-BR", "track_files": ["Avril Lavigne/Let Go/Complicated.mp3"] }
+```
+
+`track_files` is optional (an empty/omitted list just skips the Spotify/YouTube Music image seeding, everything else still runs).
+
+**Response:** the same shape as `GET /api/artists/profile`. Never raises for an artist nothing could be found for - it still saves a (mostly empty) profile file so later calls take the fast, no-op path instead of repeating the lookup on every visit.
+
+---
+
+### `POST /api/artists/profile/bio/preview`
+
+One service's biography text, **without saving anything** - what the artist edit modal's *Fetch from Apple Music* / *Fetch from Deezer* links use to fill the text box, so the user decides whether to keep it (with `PUT /api/artists/profile/bio`). Unlike `POST /api/artists/profile/bio`, it doesn't touch the profile at all: no bio, no other field, and an artist id it had to look up isn't cached.
+
+**Request body:**
+
+```json
+{ "name": "Avril Lavigne", "lang": "pt-BR", "source": "deezer" }
+```
+
+`source` is required: `"applemusic"` or `"deezer"`, with no fallback to the other one. `lang` works as in `POST /api/artists/profile/bio`.
+
+**Response:** `{ "bio": "…" }` - the same plain text a saved bio has (blank lines between paragraphs, no HTML, no bullets). `400` with a `detail` when that service has no biography for the artist, the name is blank, or `source` is anything else.
+
+---
+
+### `POST /api/artists/profile/bio`
+
+Fetch an artist's bio and save it. Apple Music is the primary source (also brings origin, formation year, group flag and the banner hero colour) by exact, case-insensitive name match against the public iTunes Search API - its resolved artist id is cached in the profile and reused on later calls. Deezer is the secondary source, used to fill the bio in only when Apple's is empty for that artist/language, and is the only source for social links and related-artist names, which it always contributes when it has a match.
+
+**Request body:**
+
+```json
+{ "name": "Avril Lavigne", "lang": "pt-BR", "source": "deezer" }
+```
+
+`source` is optional and chooses whose biography *text* is saved: `"applemusic"` or `"deezer"` use only that service's bio (no fallback to the other one; a `400` `detail` says which service has none, and the saved bio is left as it was), while `"auto"` - the default, and what `POST .../ensure` does - saves Apple Music's bio and falls back to Deezer's only when Apple Music has none. Every other field is fetched the same way whatever `source` is; an unknown value is a `400`.
+
+`lang` affects the bio text itself, not just formatting - but for Apple Music it's not a simple header: each supported language is tied to a specific Apple Music storefront (e.g. `pt-BR` uses the Brazil storefront, `el` uses Greece's), and a language with no working storefront (`bg`) falls back to whatever that artist's default-language bio is.
+
+**Response:** the same shape as `GET /api/artists/profile`, with `bio` updated - plus `origin`/`born_or_formed`/`genre`/`is_group`/`banner_bg_color`/`platforms_id.applemusic` when Apple Music had a match, and `social` (only fields that are still empty - a link already saved, typed by hand or fetched earlier, is never replaced)/`related_artists`/`platforms_id.deezer` when Deezer had one. `400` only when neither source matched this artist at all.
+
+---
+
+### `DELETE /api/artists/profile/bio`
+
+Clear only the saved bio text. Everything else - `origin`, `born_or_formed`, `is_group`, `banner_bg_color`, `social`, `related_artists` and `platforms_id` (including the cached ids) - is left as-is, so fetching again later doesn't need to search by name.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
+
+**Response:** the same shape as `GET /api/artists/profile`, with `bio` cleared.
+
+---
+
+### `PUT /api/artists/profile/bio`
+
+Manually set the bio text directly - the user's own writing, never fetched from Apple Music/Deezer. `social`, `related_artists` and `platforms_id` are left untouched.
+
+**Request body:**
+
+```json
+{ "name": "Avril Lavigne", "bio": "…" }
+```
+
+`bio` is plain text: blank lines between paragraphs, single line breaks kept. HTML tags are stripped and each `•` bullet becomes its own paragraph before saving, so what's saved is the same shape `GET /api/artists/profile`'s `bio` always returns.
+
+**Response:** the same shape as `GET /api/artists/profile`, with `bio` set to the given text, formatted.
+
+---
+
+### `PUT /api/artists/profile/social`
+
+Manually set all four social links directly, replacing the whole object - never fetched. A field left out of `social` is saved as an empty string, not left at its previous value.
+
+**Request body:**
+
+```json
+{
+  "name": "Avril Lavigne",
+  "social": {
+    "twitter": "https://twitter.com/AvrilLavigne",
+    "facebook": "",
+    "website": "https://avrillavigne.com",
+    "instagram": ""
+  }
+}
+```
+
+**Response:** the same shape as `GET /api/artists/profile`, with `social` replaced.
+
+---
+
 ## Downloads
 
 ### `POST /api/download/url`
@@ -273,6 +574,8 @@ Return the current settings.
   "output": "{artists} - {title}.{output-ext}",
   "generate_m3u": true,
   "download_cover_art_playlists": false,
+  "download_cover_art_artist": false,
+  "download_cover_art_artist_banner": false,
   "max_parallel_downloads": 3,
   "download_delay_seconds": 0,
   "cover_resolution": 600,
@@ -282,6 +585,7 @@ Return the current settings.
   "organize_by_album": false,
   "search_albums": true,
   "mini_player_enabled": true,
+  "ui_language": "pt-BR",
   "cache_cover_art": false,
   "library_upgrade": {
     "artwork_min_px": 600,
@@ -317,10 +621,13 @@ Return the current settings.
 | `max_parallel_downloads` | integer | Concurrent download limit. Clamped to `1–30`. |
 | `download_delay_seconds` | number | Seconds to wait after each download in a batch before starting the next. Clamped to `0–300`. |
 | `mini_player_enabled` | boolean | Legacy UI preference, kept so older clients keep working. The web UI no longer reads it — the player bar always appears while a track is loaded. The backend never reads it either. |
+| `ui_language` | string | The language the web UI is shown in, as a code like `en` or `pt-BR`. You don't set it by hand: the page sends it every time it loads and whenever you change the language, so the server knows your language for work that runs without a browser. `""` until a page has said. Anything that isn't a language code of that shape is ignored, and the settings page's own save never touches it. See [Internationalization](features/internationalization.md). |
 | `download_cover_art` | boolean | Whether to fetch and embed cover art at all. See [Download cover art](features/download-settings.md#download-cover-art). |
 | `cover_resolution` | integer | Target pixel size (width & height) for YouTube Music-sourced cover art. Clamped to `300–1200`. Only used when `download_cover_art` is true. See [Cover art resolution](features/download-settings.md#cover-art-resolution). |
 | `overwrite_existing_files` | boolean | When `false`, a song already in the library (matched by output filename, or by Spotify track ID through the [library track index](features/library-catalog.md)) isn't downloaded again; the download returns the existing file's path instead. See [Overwrite existing files](features/download-settings.md#overwrite-existing-files). |
 | `download_cover_art_playlists` | boolean | Save the playlist's own cover art alongside its M3U file, as `<playlist-name>.jpg`. Only applies while `generate_m3u` is true. Default: `false`. See [Playlist cover art](features/playlist-cover-art.md). |
+| `download_cover_art_artist` | boolean | Let Downtify save an artist's photo on its own - when an artist's page is opened for the first time and when one of their tracks finishes downloading (see [`POST /api/artists/profile/ensure`](#post-apiartistsprofileensure)). The manual picker on an artist's Library page is always available regardless of this setting. Default: `false`. See [Artist photo, banner & bio](features/artist-images.md). |
+| `download_cover_art_artist_banner` | boolean | Same as above, for the artist's banner image - independent of the photo setting. Default: `false`. See [Artist photo, banner & bio](features/artist-images.md). |
 | `lyrics_providers` | array | Ordered fallback list of lyrics providers: `lrclib`, `netease`. Each track tries them in order until one has lyrics. Unknown names are dropped; a list left with only the legacy `genius`/`musixmatch`/`azlyrics` names falls back to the defaults. An empty list means no lyrics, as does `download_lyrics: false`. See [Lyrics](features/lyrics.md). |
 | `download_lyrics` | boolean | Whether to look lyrics up at all. |
 | `audio_providers` | array | Ordered fallback list of audio sources: `youtube-music`, `youtube`, `slskd`. `slskd` is dropped while `slskd.enabled` is false. See [slskd & Navidrome](features/slskd-navidrome.md#audio-sources-and-fallback-order). |

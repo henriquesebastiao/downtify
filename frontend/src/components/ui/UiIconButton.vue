@@ -11,9 +11,11 @@
     :class="[
       round ? 'rounded-full' : 'rounded-control',
       sizeClass,
-      active
-        ? 'text-accent hover:bg-accent/10'
-        : 'text-muted hover:bg-surface-2 hover:text-fg',
+      photo
+        ? 'bg-white/95 text-neutral-900 hover:bg-white'
+        : active
+          ? 'text-accent hover:bg-accent/10'
+          : 'text-muted hover:bg-surface-2 hover:text-fg',
     ]"
   >
     <AppIcon :name="icon" :size="iconSize" />
@@ -33,6 +35,9 @@ const props = defineProps({
   active: { type: Boolean, default: false },
   toggle: { type: Boolean, default: false },
   round: { type: Boolean, default: false },
+  // Fixed light pill, independent of theme - see UiButton's 'photo'
+  // variant for why (a control sitting on a banner image).
+  photo: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
   to: { type: [String, Object], default: null },
 })

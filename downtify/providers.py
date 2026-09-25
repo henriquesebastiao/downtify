@@ -32,6 +32,7 @@ from ytmusicapi.navigation import (
 )
 from ytmusicapi.parsers.library import parse_albums as _parse_ytm_albums
 
+from .file_naming import file_name_key
 from .telemetry import json_log_blob, redact_sensitive_mapping
 
 
@@ -407,6 +408,31 @@ def search_artists(query: str, limit: int = 10) -> list[dict[str, Any]]:
         if artist:
             artists.append(artist)
     return artists
+
+
+def resolve_artist_id(name: str) -> Optional[str]:
+    """YouTube Music channel id for an exact name match, or ``None`` if no
+    search result's name matches exactly. Case and the characters a file
+    name can't hold are ignored (``ACDC`` matches ``AC/DC``, see
+    :func:`downtify.file_naming.file_name_key`).
+
+    Deliberately strict, same reasoning as
+    :func:`downtify.deezer.resolve_artist_id`/
+    :func:`downtify.apple_music.resolve_artist_id`: an unrelated top
+    result would silently attach the wrong artist's id to this one's
+    profile. Used by :func:`downtify.artist_profile.resolve_platform_ids`
+    to fill in ``platforms_id.youtubemusic`` - YouTube Music has no bio
+    of its own in the profile picker anymore, just this id.
+    """
+
+    text = name.strip()
+    wanted = file_name_key(text)
+    if not wanted:
+        return None
+    for artist in search_artists(text, limit=25):
+        if file_name_key(str(artist.get('name') or '')) == wanted:
+            return artist.get('artist_id') or None
+    return None
 
 
 def _artist_discography_browse_id(channel_id: str) -> str:

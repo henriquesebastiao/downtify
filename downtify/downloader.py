@@ -39,6 +39,7 @@ from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
 from .cookies import CookiesStore
+from .file_naming import sanitize_file_name
 from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
@@ -49,8 +50,6 @@ from .providers import (
     find_match_youtube_only,
 )
 from .slskd_provider import download_from_slskd
-
-_INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 
 # Extensions that count as "this song is already downloaded". Deliberately
 # excludes sidecars written next to the audio (.lrc, cover.jpg, .m3u) so a
@@ -183,8 +182,7 @@ class _ExtractAudioPP(FFmpegExtractAudioPP):
 
 
 def _sanitize(text: str) -> str:
-    safe = _INVALID_FS_CHARS.sub('', text or '').strip().strip('.')
-    return safe or 'unknown'
+    return sanitize_file_name(text)
 
 
 # Order matters — yt-dlp tries clients top-to-bottom and uses the first one
@@ -302,6 +300,14 @@ def _translate_download_error(
 
 class Downloader:
     """Wraps ``yt-dlp`` plus ``mutagen`` tagging."""
+
+    #: Called as ``on_downloaded(song, filename)`` once a *new* file has been
+    #: downloaded and tagged - not for a song that was already in the library.
+    #: Set by the app (``main.py``) to hook work on to a finished download
+    #: (see ``api.enrich_artist_after_download``); it runs on the download's
+    #: own thread, so it must only hand the work off and return. Whatever it
+    #: raises is logged and never fails the download.
+    on_downloaded: Optional[Callable[[dict[str, Any], str], None]] = None
 
     def __init__(
         self,
@@ -793,13 +799,19 @@ class Downloader:
         song = enrich_from_match(song, match)
 
         if local_source is not None:
-            return self._finalize_local_source(
-                song, local_source, provider, progress_cb, subdir
+            return self._downloaded(
+                song,
+                self._finalize_local_source(
+                    song, local_source, provider, progress_cb, subdir
+                ),
             )
 
         if not skip_existing:
-            return self._fetch_and_tag(
-                song, video_id, progress_cb, subdir, provider
+            return self._downloaded(
+                song,
+                self._fetch_and_tag(
+                    song, video_id, progress_cb, subdir, provider
+                ),
             )
 
         # Re-checked after enrichment (which can fill in the album/track
@@ -811,9 +823,26 @@ class Downloader:
             existing = self.find_existing_download(song, subdir)
             if existing is not None:
                 return self._skip_existing(existing, progress_cb)
-            return self._fetch_and_tag(
-                song, video_id, progress_cb, subdir, provider
+            return self._downloaded(
+                song,
+                self._fetch_and_tag(
+                    song, video_id, progress_cb, subdir, provider
+                ),
             )
+
+    def _downloaded(self, song: dict[str, Any], filename: str) -> str:
+        """Tell :attr:`on_downloaded` that *filename* is new; returns it.
+        A hook that fails is logged and ignored: the file is already there."""
+
+        hook = self.on_downloaded
+        if hook is not None:
+            try:
+                hook(song, filename)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    'The after-download hook failed for {}', filename
+                )
+        return filename
 
     def _target_location(
         self, song: dict[str, Any], subdir: Optional[str]

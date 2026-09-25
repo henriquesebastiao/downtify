@@ -10,6 +10,7 @@ import {
   groupAlbums,
   groupArtists,
   normalizeTrack,
+  indexTracksBySong,
   songKey,
 } from '/src/lib/library'
 import { usePlayer } from '/src/model/player'
@@ -41,6 +42,8 @@ const totalSize = computed(() =>
 const songKeys = computed(
   () => new Set(tracks.value.map((track) => songKey(track.artist, track.title)))
 )
+// The file behind a downloaded song, to play it (see findTrack).
+const tracksBySong = computed(() => indexTracksBySong(tracks.value))
 
 let pending = null
 
@@ -140,6 +143,11 @@ function hasSong(artist, title) {
   return songKeys.value.has(songKey(artist, title))
 }
 
+/** The library track for a song that is already downloaded, or `null`. */
+function findTrack(artist, title) {
+  return tracksBySong.value.get(songKey(artist, title)) || null
+}
+
 export function useLibrary() {
   return {
     tracks,
@@ -161,5 +169,6 @@ export function useLibrary() {
     findArtist,
     findPlaylist,
     hasSong,
+    findTrack,
   }
 }

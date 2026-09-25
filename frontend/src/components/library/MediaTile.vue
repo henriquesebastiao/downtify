@@ -3,6 +3,7 @@
     <RouterLink :to="to" class="relative block" :aria-label="title">
       <CoverArt
         :src="cover"
+        :fallback="fallback"
         :covers="covers"
         :name="name || title"
         :round="round"
@@ -56,6 +57,8 @@ defineProps({
   subtitle: { type: String, default: '' },
   name: { type: String, default: '' },
   cover: { type: String, default: '' },
+  // Shown when `cover` fails to load (see CoverArt).
+  fallback: { type: String, default: '' },
   covers: { type: Array, default: () => [] },
   icon: { type: String, default: 'disc' },
   symbol: { type: Boolean, default: false },

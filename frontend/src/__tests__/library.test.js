@@ -4,6 +4,7 @@ import {
   filterItems,
   groupAlbums,
   groupArtists,
+  indexTracksBySong,
   normalizeTrack,
   songKey,
   sortItems,
@@ -224,5 +225,46 @@ describe('songKey', () => {
     expect(songKey('Ana Luz', 'Blue Hour (Cake Mix)')).not.toBe(plain)
     expect(songKey('Ana Luz', 'Blue Hour [Live]')).not.toBe(plain)
     expect(songKey('Ana Luz', 'Blue Hour (Without You)')).not.toBe(plain)
+  })
+})
+
+describe('indexTracksBySong', () => {
+  const a = {
+    file: 'A/Ana Luz - Blue Hour.mp3',
+    artist: 'Ana Luz',
+    title: 'Blue Hour',
+  }
+  const b = {
+    file: 'B/Ana Luz - Blue Hour (2).mp3',
+    artist: 'Ana Luz',
+    title: 'Blue Hour',
+  }
+  const c = {
+    file: 'C/Kenji Aoki - Undertow.flac',
+    artist: 'Kenji Aoki',
+    title: 'Undertow',
+  }
+
+  it('finds the track behind a song by the same loose key as songKey', () => {
+    const index = indexTracksBySong([a, c])
+    expect(index.get(songKey('ana luz', 'Blue Hour (Remastered)'))).toBe(a)
+    expect(index.get(songKey('Kenji Aoki, Someone', 'Undertow'))).toBe(c)
+  })
+
+  it('keeps the first track when two share a key', () => {
+    expect(indexTracksBySong([a, b]).get(songKey('Ana Luz', 'Blue Hour'))).toBe(
+      a
+    )
+  })
+
+  it('has nothing for a song that is not downloaded', () => {
+    expect(indexTracksBySong([a]).get(songKey('Ana Luz', 'Other Song'))).toBe(
+      undefined
+    )
+  })
+
+  it('copes with no tracks', () => {
+    expect(indexTracksBySong([]).size).toBe(0)
+    expect(indexTracksBySong(undefined).size).toBe(0)
   })
 })

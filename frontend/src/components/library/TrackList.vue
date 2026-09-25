@@ -19,7 +19,7 @@
       <button
         type="button"
         role="columnheader"
-        class="text-left"
+        class="text-left uppercase"
         @click="sortBy('title')"
       >
         {{ t('track.title') }}<SortMark field="title" />
@@ -28,7 +28,7 @@
         v-if="showAlbum"
         type="button"
         role="columnheader"
-        class="text-left max-lg:hidden"
+        class="text-left uppercase max-lg:hidden"
         @click="sortBy('album')"
       >
         {{ t('track.album') }}<SortMark field="album" />
@@ -40,7 +40,7 @@
         v-if="showAdded"
         type="button"
         role="columnheader"
-        class="text-left max-xl:hidden"
+        class="text-left uppercase max-xl:hidden"
         @click="sortBy('added')"
       >
         {{ t('track.added') }}<SortMark field="added" />

@@ -73,6 +73,11 @@ const variantClass = computed(
         'border-line-2 bg-transparent text-fg-3 hover:border-line-3 hover:bg-surface-2 hover:text-fg',
       danger: 'border-transparent bg-danger/12 text-danger hover:bg-danger/20',
       invert: 'border-invert bg-invert text-on-invert hover:opacity-90',
+      // Fixed light pill, independent of the app's own theme - for
+      // controls sitting directly on a photo (e.g. an artist banner),
+      // where a transparent/ghost button reads poorly against whatever
+      // the image happens to look like.
+      photo: 'border-transparent bg-white/95 text-neutral-900 hover:bg-white',
       plain:
         'border-transparent bg-transparent text-muted hover:bg-surface-2 hover:text-fg',
     })[props.variant]

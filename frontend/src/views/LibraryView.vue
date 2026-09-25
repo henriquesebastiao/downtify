@@ -219,12 +219,14 @@ import PageHeader from '/src/components/library/PageHeader.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
 import TrackList from '/src/components/library/TrackList.vue'
+import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useUi } from '/src/model/ui'
 import { albumKey, artistKey, filterItems, sortItems } from '/src/lib/library'
+import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
 import { formatBytes, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -246,6 +248,48 @@ const tab = computed(() => {
 watch(tab, (value) => (lastTab.value = value), { immediate: true })
 if (!route.params.tab) {
   router.replace({ name: 'Library', params: { tab: tab.value } })
+}
+
+// Artist photos saved via the artist page's picker (see artist_profile.py)
+// - fetched once per visit to the artists tab so tiles use the real photo
+// instead of a track's cover when one has been picked. Falls back to
+// today's behaviour (a track cover) for any artist without one.
+const artistPhotos = ref({})
+// Whether the lookup above has answered - until it has, an artist might
+// still turn out to have a saved photo, so no proxy request is made yet.
+const artistPhotosLoaded = ref(false)
+watch(
+  // Re-fires when the tab switches to artists, and again once the
+  // library finishes loading if it hadn't yet (e.g. a direct page load
+  // on this tab, where artists.value starts out empty).
+  () => [tab.value, library.artists.value.length],
+  async ([currentTab]) => {
+    if (currentTab !== 'artists') return
+    const names = library.artists.value.map((artist) => artist.name)
+    if (!names.length) return
+    try {
+      const res = await API.getArtistArtBulk(names)
+      artistPhotos.value = res.data || {}
+    } catch {
+      artistPhotos.value = {}
+    }
+    artistPhotosLoaded.value = true
+  },
+  { immediate: true }
+)
+
+// An artist's picture on the artists tab: their saved photo when there is
+// one; otherwise the display-only photo from the backend's proxy (see
+// lib/artistPhotoProxy.js), with the track's own cover behind it for an
+// artist the proxy has no photo for. Only this tab - the search page's
+// artists come with their own picture and never go through here.
+function artistCover(item) {
+  return artistPhotoSource(
+    item.name,
+    artistPhotos.value[item.name],
+    artistPhotosLoaded.value,
+    item.cover
+  )
 }
 
 const views = useLocalStorage('downtify-library-views', {
@@ -416,7 +460,7 @@ function tileProps(item) {
       ]
         .filter(Boolean)
         .join(' · '),
-      cover: item.cover,
+      ...artistCover(item),
       name: item.name,
       icon: 'user',
       round: true,

@@ -36,6 +36,7 @@
   --c-src-yt: #ff7a6b;
   --c-src-slskd: #5fc0f5;
   --c-spotify: #1ed760;
+  --c-deezer: #a238ff;
   --sh-float: 0 20px 50px rgb(0 0 0 / 0.5);
   --sh-cover: 0 10px 30px rgb(0 0 0 / 0.35);
 }
@@ -67,6 +68,7 @@
   --c-src-yt: #a82014;
   --c-src-slskd: #12628f;
   --c-spotify: #13893f;
+  --c-deezer: #7a1fd1;
   --sh-float: 0 16px 40px rgb(16 24 40 / 0.12);
   --sh-cover: 0 8px 20px rgb(16 24 40 / 0.12);
 }
@@ -100,6 +102,7 @@
   --color-src-yt: var(--c-src-yt);
   --color-src-slskd: var(--c-src-slskd);
   --color-spotify: var(--c-spotify);
+  --color-deezer: var(--c-deezer);
 
   --shadow-float: var(--sh-float);
   --shadow-cover: var(--sh-cover);

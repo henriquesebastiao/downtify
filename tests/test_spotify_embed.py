@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+import time
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -16,14 +18,19 @@ from downtify.spotify import (
     _artists_from_subtitle,
     _embed_row_track,
     _fetch_embed_json,
+    _largest_image,
     _normalize_release_date_text,
     _top_track_overview,
     _track_dict,
     album_tracks_from_id,
+    artist_banner_url_from_id,
+    artist_image_url_from_id,
     artist_page_from_id,
     artist_top_songs_from_id,
     enrich_track_from_spotify_if_sparse,
     playlist_cover_url_from_id,
+    primary_artist_id_from_track_id,
+    related_artist_names_from_id,
 )
 
 # Aliases only — no real artist / track titles
@@ -248,6 +255,211 @@ def test_album_tracks_fallback_open_page_when_embed_missing():
     assert len(songs) == 1
     assert songs[0]['release_date'] == '2025-10-03'
     assert songs[0]['year'] == '2025'
+
+
+def test_largest_image_sorts_by_max_width():
+    sources = [
+        {'url': 'https://example.com/small.jpg', 'maxWidth': 160},
+        {'url': 'https://example.com/large.jpg', 'maxWidth': 640},
+        {'url': 'https://example.com/medium.jpg', 'maxWidth': 320},
+    ]
+    assert _largest_image(sources) == 'https://example.com/large.jpg'
+
+
+def test_largest_image_sorts_by_width_when_present():
+    sources = [
+        {'url': 'https://example.com/small.jpg', 'width': 300},
+        {'url': 'https://example.com/large.jpg', 'width': 1200},
+    ]
+    assert _largest_image(sources) == 'https://example.com/large.jpg'
+
+
+def test_artist_image_url_from_id_reads_visual_identity():
+    entity = {
+        'type': 'artist',
+        'name': 'TestArtist',
+        'visualIdentity': {
+            'image': [
+                {'url': 'https://example.com/artist-320.jpg', 'maxWidth': 320},
+                {'url': 'https://example.com/artist-640.jpg', 'maxWidth': 640},
+            ],
+        },
+    }
+    payload = {
+        'props': {
+            'pageProps': {'state': {'data': {'entity': entity}}},
+        },
+    }
+    with patch('downtify.spotify._fetch_embed_json', return_value=payload):
+        assert (
+            artist_image_url_from_id('dummyArtistId')
+            == 'https://example.com/artist-640.jpg'
+        )
+
+
+def _embed_payload_with_token(token):
+    return {
+        'props': {
+            'pageProps': {
+                'state': {'settings': {'session': {'accessToken': token}}}
+            }
+        }
+    }
+
+
+def test_artist_banner_url_from_id_reads_header_image():
+    payload = _embed_payload_with_token('tok123')
+    graphql_response = MagicMock()
+    graphql_response.raise_for_status = lambda: None
+    graphql_response.json = lambda: {
+        'data': {
+            'artistUnion': {
+                '__typename': 'Artist',
+                'headerImage': {
+                    'data': {
+                        '__typename': 'ImageV2',
+                        'sources': [
+                            {
+                                'url': 'https://example.com/banner-1494.jpg',
+                                'maxWidth': 1494,
+                            },
+                            {
+                                'url': 'https://example.com/banner-1920.jpg',
+                                'maxWidth': 1920,
+                            },
+                        ],
+                    }
+                },
+            }
+        }
+    }
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch(
+            'downtify.spotify.httpx.get', return_value=graphql_response
+        ) as mock_get,
+    ):
+        url = artist_banner_url_from_id('dummyArtistId')
+    assert url == 'https://example.com/banner-1920.jpg'
+    assert (
+        mock_get.call_args.kwargs['headers']['Authorization']
+        == 'Bearer tok123'
+    )
+
+
+def test_artist_banner_url_from_id_returns_empty_when_no_header_image():
+    payload = _embed_payload_with_token('tok123')
+    graphql_response = MagicMock()
+    graphql_response.raise_for_status = lambda: None
+    graphql_response.json = lambda: {
+        'data': {'artistUnion': {'__typename': 'Artist', 'headerImage': None}}
+    }
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('downtify.spotify.httpx.get', return_value=graphql_response),
+    ):
+        assert not artist_banner_url_from_id('dummyArtistId')
+
+
+def test_artist_banner_url_from_id_returns_empty_when_no_token():
+    payload = {
+        'props': {'pageProps': {'state': {'settings': {'session': {}}}}}
+    }
+    with patch('downtify.spotify._fetch_embed_json', return_value=payload):
+        assert not artist_banner_url_from_id('dummyArtistId')
+
+
+def test_artist_banner_url_from_id_returns_empty_on_request_failure():
+    payload = _embed_payload_with_token('tok123')
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('downtify.spotify.httpx.get', side_effect=Exception('boom')),
+    ):
+        assert not artist_banner_url_from_id('dummyArtistId')
+
+
+def test_related_artist_names_from_id_reads_profile_names():
+    payload = _embed_payload_with_token('tok123')
+    graphql_response = MagicMock()
+    graphql_response.raise_for_status = lambda: None
+    graphql_response.json = lambda: {
+        'data': {
+            'artistUnion': {
+                '__typename': 'Artist',
+                'relatedContent': {
+                    'relatedArtists': {
+                        'items': [
+                            {'profile': {'name': 'Linkin Park'}},
+                            {'profile': {'name': 'Three Days Grace'}},
+                            {'profile': {'name': ''}},
+                            {'not-a-profile': True},
+                        ]
+                    }
+                },
+            }
+        }
+    }
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('downtify.spotify.httpx.get', return_value=graphql_response),
+    ):
+        names = related_artist_names_from_id('dummyArtistId')
+    assert names == ['Linkin Park', 'Three Days Grace']
+
+
+def test_related_artist_names_from_id_returns_empty_when_no_related_content():
+    payload = _embed_payload_with_token('tok123')
+    graphql_response = MagicMock()
+    graphql_response.raise_for_status = lambda: None
+    graphql_response.json = lambda: {
+        'data': {'artistUnion': {'__typename': 'Artist'}}
+    }
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('downtify.spotify.httpx.get', return_value=graphql_response),
+    ):
+        assert related_artist_names_from_id('dummyArtistId') == []
+
+
+def test_related_artist_names_from_id_returns_empty_on_request_failure():
+    payload = _embed_payload_with_token('tok123')
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('downtify.spotify.httpx.get', side_effect=Exception('boom')),
+    ):
+        assert related_artist_names_from_id('dummyArtistId') == []
+
+
+def test_primary_artist_id_from_track_id_reads_first_artist_uri():
+    entity = {
+        'type': 'track',
+        'name': 'TestTrack',
+        'artists': [
+            {'name': _AL1, 'uri': 'spotify:artist:aaaaaaaaaaaaaaaaaaaaaa'},
+            {'name': _AL2, 'uri': 'spotify:artist:bbbbbbbbbbbbbbbbbbbbbb'},
+        ],
+    }
+    payload = {
+        'props': {
+            'pageProps': {'state': {'data': {'entity': entity}}},
+        },
+    }
+    with patch('downtify.spotify._fetch_embed_json', return_value=payload):
+        assert (
+            primary_artist_id_from_track_id('dummyTrackId')
+            == 'aaaaaaaaaaaaaaaaaaaaaa'
+        )
+
+
+def test_primary_artist_id_from_track_id_no_artists_returns_none():
+    entity = {'type': 'track', 'name': 'TestTrack'}
+    payload = {
+        'props': {
+            'pageProps': {'state': {'data': {'entity': entity}}},
+        },
+    }
+    with patch('downtify.spotify._fetch_embed_json', return_value=payload):
+        assert primary_artist_id_from_track_id('dummyTrackId') is None
 
 
 def test_album_tracks_inherit_album_release_date():
@@ -499,6 +711,73 @@ def test_artist_top_songs_resolves_trackList_shelf():
     # No token in this payload, so there is no album lookup: the name
     # stays blank rather than being invented.
     assert not songs[0]['album_name']
+
+
+def _preview_shelf(*previews):
+    """An artist embed whose shelf rows carry the given ``audioPreview``
+    values (``None`` leaves the field out)."""
+
+    rows = []
+    for i, preview in enumerate(previews, start=1):
+        row = {
+            'uri': f'spotify:track:{str(i) * 22}',
+            'title': f'Song {i}',
+            'subtitle': 'Test Artist',
+            'duration': 200000,
+        }
+        if preview is not None:
+            row['audioPreview'] = preview
+        rows.append(row)
+    return {'name': 'Test Artist', 'trackList': rows}
+
+
+def _top_song_previews(*previews):
+    entity = _preview_shelf(*previews)
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch('downtify.spotify.track_from_id') as mock_track_from_id,
+    ):
+        # A sparse row is enriched from its own embed; the preview must
+        # come through that merge untouched.
+        mock_track_from_id.side_effect = lambda tid: {
+            'song_id': tid,
+            'source': 'spotify',
+            'year': '2002',
+            'release_date': '2002-06-04',
+        }
+        _name, _cover, songs = artist_top_songs_from_id('dummyArtistId')
+    return [song['preview_url'] for song in songs]
+
+
+def test_artist_top_songs_carry_the_embeds_preview_clip():
+    clip = 'https://p.scdn.co/mp3-preview/b5ee275ca337899f762b1c1883c11e24a04075b0'
+    assert _top_song_previews({'format': 'MP3_96', 'url': clip}) == [clip]
+
+
+@pytest.mark.parametrize(
+    'preview',
+    [
+        None,
+        {},
+        {'format': 'MP3_96'},
+        {'url': None},
+        {'url': ''},
+        {'url': 42},
+        {'url': 'http://p.scdn.co/mp3-preview/abc'},
+        {'url': 'https://evil.test/mp3-preview/abc'},
+        {'url': 'https://p.scdn.co.evil.test/mp3-preview/abc'},
+        {'url': 'https://evil.test/?u=https://p.scdn.co/mp3-preview/abc'},
+        {'url': 'javascript:alert(1)'},
+        'https://p.scdn.co/mp3-preview/abc',
+    ],
+)
+def test_artist_top_songs_drop_a_preview_that_is_not_a_scdn_clip(preview):
+    # Missing or not an https link on p.scdn.co: no preview, an empty
+    # string (never a missing key, never the odd link).
+    assert _top_song_previews(preview) == ['']
 
 
 def test_artist_top_songs_empty_shelf_returns_empty_list():
@@ -934,3 +1213,139 @@ def test_full_discography_stops_on_an_empty_page():
     with patch('downtify.spotify._partner_query', side_effect=pages):
         result = _artist_full_discography('artistId', 'tok')
     assert len(result['all']['items']) == 5
+
+
+# ── artist_top_songs_from_id: limit and concurrency ────────────────────
+
+
+def _shelf_entity(count):
+    ids = [str(i + 1) * 22 for i in range(count)]
+    return ids, {
+        'name': 'Test Artist',
+        'visualIdentity': {
+            'image': [
+                {'url': 'https://example.test/artist.jpeg', 'width': 640}
+            ]
+        },
+        'trackList': [
+            {
+                'uri': f'spotify:track:{tid}',
+                'title': f'Song {i + 1}',
+                'subtitle': 'Test Artist',
+                'duration': 200000,
+            }
+            for i, tid in enumerate(ids)
+        ],
+    }
+
+
+def test_artist_top_songs_limit_enriches_only_the_songs_kept():
+    ids, entity = _shelf_entity(8)
+    enriched = []
+
+    def fake_enrich(song):
+        enriched.append(song['song_id'])
+        return song
+
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch(
+            'downtify.spotify.enrich_track_from_spotify_if_sparse',
+            side_effect=fake_enrich,
+        ),
+    ):
+        _name, _cover, songs = artist_top_songs_from_id('a', limit=5)
+    assert [s['song_id'] for s in songs] == ids[:5]
+    # The slow per-song fetch never ran for the three cut songs.
+    assert sorted(enriched) == sorted(ids[:5])
+
+
+def test_artist_top_songs_without_a_limit_keeps_the_whole_shelf():
+    ids, entity = _shelf_entity(8)
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch(
+            'downtify.spotify.enrich_track_from_spotify_if_sparse',
+            side_effect=lambda song: song,
+        ),
+    ):
+        _name, _cover, songs = artist_top_songs_from_id('a')
+    assert [s['song_id'] for s in songs] == ids
+
+
+def test_artist_top_songs_keep_shelf_order_when_enrichment_finishes_late():
+    ids, entity = _shelf_entity(5)
+
+    def slow_first(song):
+        # The first song finishes last.
+        time.sleep(0.15 if song['song_id'] == ids[0] else 0)
+        return song
+
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch(
+            'downtify.spotify.enrich_track_from_spotify_if_sparse',
+            side_effect=slow_first,
+        ),
+    ):
+        _name, _cover, songs = artist_top_songs_from_id('a')
+    assert [s['song_id'] for s in songs] == ids
+
+
+def test_artist_top_songs_enrichment_runs_concurrently():
+    ids, entity = _shelf_entity(4)
+    barrier = threading.Barrier(4, timeout=2)
+
+    def wait_for_the_others(song):
+        # Only passes if all four enrichments are in flight together; a
+        # sequential loop would time the barrier out.
+        barrier.wait()
+        return song
+
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload_for(entity),
+        ),
+        patch(
+            'downtify.spotify.enrich_track_from_spotify_if_sparse',
+            side_effect=wait_for_the_others,
+        ),
+    ):
+        _name, _cover, songs = artist_top_songs_from_id('a')
+    assert len(songs) == 4
+
+
+def test_artist_top_songs_overview_still_fills_plays_and_album():
+    ids, entity = _shelf_entity(2)
+    payload = _embed_payload_for(entity)
+    payload['props']['pageProps']['state']['settings'] = {
+        'session': {'accessToken': 'tok'}
+    }
+    overview = {
+        ids[0]: {'album_name': 'Album One', 'play_count': 123},
+        ids[1]: {'play_count': 456},
+    }
+    with (
+        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch(
+            'downtify.spotify.enrich_track_from_spotify_if_sparse',
+            side_effect=lambda song: song,
+        ),
+        patch(
+            'downtify.spotify._top_track_overview', return_value=overview
+        ) as mock_overview,
+    ):
+        _name, _cover, songs = artist_top_songs_from_id('a', limit=2)
+    mock_overview.assert_called_once()
+    assert songs[0]['album_name'] == 'Album One'
+    assert [s['play_count'] for s in songs] == [123, 456]

@@ -5,6 +5,7 @@
     <RouterLink :to="to" class="flex min-w-0 flex-1 items-center gap-4">
       <CoverArt
         :src="cover"
+        :fallback="fallback"
         :covers="covers"
         :name="name || title"
         :round="round"
@@ -61,6 +62,8 @@ defineProps({
   aside: { type: String, default: '' },
   name: { type: String, default: '' },
   cover: { type: String, default: '' },
+  // Shown when `cover` fails to load (see CoverArt).
+  fallback: { type: String, default: '' },
   covers: { type: Array, default: () => [] },
   icon: { type: String, default: 'disc' },
   symbol: { type: Boolean, default: false },
