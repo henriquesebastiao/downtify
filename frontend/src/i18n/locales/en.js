@@ -373,10 +373,10 @@ export default {
     tabSocial: 'Social',
     titleBio: '{name}’s bio',
     titleSocial: '{name}’s social links',
-    bioDescription: 'Write or edit this artist’s biography yourself.',
+    bioDescription: 'Write or edit this artist’s biography yourself',
     socialDescription:
       'Add links to this artist’s social profiles and website.',
-    bioPlaceholder: 'No biography yet — write one here.',
+    bioPlaceholder: 'No biography yet — write one here',
     save: 'Save',
     bioSaved: 'Bio saved',
     bioSaveFailed: 'Could not save the bio',
@@ -388,9 +388,9 @@ export default {
     socialInstagram: 'Instagram',
     socialWebsite: 'Website',
     description:
-      'Search YouTube Music and Deezer, paste a direct image link, or upload your own.',
+      'Use images from the main streaming platforms, paste a web image link, or upload one from your device.',
     searchPlaceholder: "Internet image link or artist's name",
-    upload: 'Upload from your computer',
+    upload: 'Upload from your device',
     noResults: 'No results yet — search for the artist or paste an image link.',
     saved: 'Image saved',
     saveFailed: 'Could not save that image',
@@ -719,12 +719,12 @@ export default {
     coverSize: 'Cover size',
     coverSizeHint:
       'For art from YouTube Music. Spotify art is always the largest available.',
-    artistCover: 'Save artist photo',
+    artistCover: 'Automatically get artist photos',
     artistCoverHint:
-      'Download the artist photo for display in Downtify, and for use in services like Navidrome.',
-    artistCoverBanner: 'Save artist banner',
+      'Downloads the artist photo to .metadata/ArtistImage; also usable by services like Navidrome.',
+    artistCoverBanner: 'Automatically get artist banners',
     artistCoverBannerHint:
-      'Download a banner used as a background image for a richer look.',
+      "Downloads the artist's hero banner for a richer look, saved to .metadata/ArtistBannerImage.",
     lyricsGroup: 'Lyrics',
     lyrics: 'Download lyrics',
     lyricsHint:

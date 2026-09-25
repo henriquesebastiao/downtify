@@ -388,10 +388,10 @@ export default {
     titleBio: 'Biographie de {name}',
     titleSocial: 'Réseaux sociaux de {name}',
     bioDescription:
-      'Rédigez ou modifiez vous-même la biographie de cet artiste.',
+      'Rédigez ou modifiez vous-même la biographie de cet artiste',
     socialDescription:
       'Ajoutez des liens vers les réseaux sociaux et le site de cet artiste.',
-    bioPlaceholder: 'Aucune biographie pour le moment — rédigez-en une ici.',
+    bioPlaceholder: 'Aucune biographie pour le moment — rédigez-en une ici',
     save: 'Enregistrer',
     bioSaved: 'Biographie enregistrée',
     bioSaveFailed: "Impossible d'enregistrer la biographie",
@@ -403,9 +403,9 @@ export default {
     socialInstagram: 'Instagram',
     socialWebsite: 'Site web',
     description:
-      "Cherchez sur YouTube Music et Deezer, collez un lien d'image direct, ou envoyez la vôtre.",
+      "Utilisez les images des principales plateformes de streaming, collez un lien d'image du web ou envoyez-en une depuis votre appareil.",
     searchPlaceholder: "Lien d'image internet ou nom de l'artiste",
-    upload: 'Envoyer depuis votre ordinateur',
+    upload: 'Envoyer depuis votre appareil',
     noResults:
       "Aucun résultat pour l'instant — cherchez l'artiste ou collez un lien d'image.",
     saved: 'Image enregistrée',
@@ -751,12 +751,12 @@ export default {
     coverSize: 'Taille de la pochette',
     coverSizeHint:
       'Pour les pochettes YouTube Music. Celles de Spotify utilisent toujours la plus grande taille.',
-    artistCover: "Enregistrer la photo de l'artiste",
+    artistCover: "Obtenir automatiquement les photos d'artiste",
     artistCoverHint:
-      "Télécharge la photo de l'artiste pour l'afficher dans Downtify, et pour l'utiliser dans des services comme Navidrome.",
-    artistCoverBanner: "Enregistrer la bannière de l'artiste",
+      "Télécharge la photo de l'artiste dans .metadata/ArtistImage ; utilisable aussi par des services comme Navidrome.",
+    artistCoverBanner: "Obtenir automatiquement les bannières d'artiste",
     artistCoverBannerHint:
-      'Télécharge une bannière utilisée comme image de fond pour un rendu plus soigné.',
+      "Télécharge la bannière hero de l'artiste pour un rendu plus soigné, enregistrée dans .metadata/ArtistBannerImage.",
     lyricsGroup: 'Paroles',
     lyrics: 'Télécharger les paroles',
     lyricsHint:

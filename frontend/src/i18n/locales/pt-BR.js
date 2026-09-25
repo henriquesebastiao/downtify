@@ -380,10 +380,10 @@ export default {
     tabSocial: 'Redes sociais',
     titleBio: 'Biografia de {name}',
     titleSocial: 'Redes sociais de {name}',
-    bioDescription: 'Escreva ou edite você mesmo a biografia deste artista.',
+    bioDescription: 'Escreva ou edite você mesmo a biografia deste artista',
     socialDescription:
       'Adicione links dos perfis sociais e do site deste artista.',
-    bioPlaceholder: 'Nenhuma biografia ainda — escreva uma aqui.',
+    bioPlaceholder: 'Nenhuma biografia ainda — escreva uma aqui',
     save: 'Salvar',
     bioSaved: 'Biografia salva',
     bioSaveFailed: 'Não foi possível salvar a biografia',
@@ -395,9 +395,9 @@ export default {
     socialInstagram: 'Instagram',
     socialWebsite: 'Site',
     description:
-      'Busque no YouTube Music e no Deezer, cole um link direto de imagem, ou envie a sua própria.',
+      'Use as imagens das principais plataformas de streaming, cole um link de imagem da web ou envie uma imagem do seu dispositivo.',
     searchPlaceholder: 'Link de imagem da internet ou Nome do artista',
-    upload: 'Enviar do computador',
+    upload: 'Enviar do seu dispositivo',
     noResults:
       'Nenhum resultado ainda — busque pelo artista ou cole um link de imagem.',
     saved: 'Imagem salva',
@@ -737,12 +737,12 @@ export default {
     coverSize: 'Tamanho da capa',
     coverSizeHint:
       'Para capas do YouTube Music. Capas do Spotify sempre usam o maior tamanho disponível.',
-    artistCover: 'Salvar foto do artista',
+    artistCover: 'Obter fotos de artista automaticamente',
     artistCoverHint:
-      'Baixa foto do artista para exibição no Downtify, também pode ser utilizada em serviços como Navidrome.',
-    artistCoverBanner: 'Salvar banner do artista',
+      'Baixa foto do artista, salva em .metadata/ArtistImage, também pode ser utilizada em serviços como Navidrome.',
+    artistCoverBanner: 'Obter banners de artista automaticamente',
     artistCoverBannerHint:
-      'Baixa banner para ser usado como imagem de fundo para um visual mais aprimorado.',
+      'Baixa banner hero do artista para um visual mais aprimorado, salvo em .metadata/ArtistBannerImage.',
     lyricsGroup: 'Letras',
     lyrics: 'Baixar letras',
     lyricsHint:

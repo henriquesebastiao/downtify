@@ -378,10 +378,10 @@ export default {
     tabSocial: 'Közösségi média',
     titleBio: '{name} életrajza',
     titleSocial: '{name} közösségimédia-linkjei',
-    bioDescription: 'Írja meg vagy szerkessze saját maga az előadó életrajzát.',
+    bioDescription: 'Írja meg vagy szerkessze saját maga az előadó életrajzát',
     socialDescription:
       'Adjon hozzá linkeket az előadó közösségimédia-profiljaihoz és weboldalához.',
-    bioPlaceholder: 'Még nincs életrajz — írjon ide egyet.',
+    bioPlaceholder: 'Még nincs életrajz — írjon ide egyet',
     save: 'Mentés',
     bioSaved: 'Életrajz elmentve',
     bioSaveFailed: 'Nem sikerült elmenteni az életrajzot',
@@ -393,9 +393,9 @@ export default {
     socialInstagram: 'Instagram',
     socialWebsite: 'Weboldal',
     description:
-      'Keress a YouTube Musicon és a Deezeren, illessz be egy közvetlen képlinket, vagy tölts fel egy sajátot.',
+      'Használd a legnagyobb streamingplatformok képeit, illessz be egy internetes képlinket, vagy tölts fel egyet az eszközödről.',
     searchPlaceholder: 'Internetes képlink vagy előadó neve',
-    upload: 'Feltöltés a számítógépről',
+    upload: 'Feltöltés az eszközről',
     noResults:
       'Még nincs találat — keress rá az előadóra, vagy illessz be egy képlinket.',
     saved: 'Kép mentve',
@@ -739,12 +739,12 @@ export default {
     coverSize: 'Borító mérete',
     coverSizeHint:
       'YouTube Music borítókhoz. A Spotify borítók mindig a legnagyobb méretűek.',
-    artistCover: 'Előadó fotójának mentése',
+    artistCover: 'Előadófotók automatikus beszerzése',
     artistCoverHint:
-      'Letölti az előadó fotóját a Downtify-ban való megjelenítéshez, és olyan szolgáltatásokban való használatra, mint a Navidrome.',
-    artistCoverBanner: 'Előadó bannerének mentése',
+      'Letölti az előadó fotóját a .metadata/ArtistImage mappába; olyan szolgáltatásokban is használható, mint a Navidrome.',
+    artistCoverBanner: 'Előadóbannerek automatikus beszerzése',
     artistCoverBannerHint:
-      'Letölt egy bannert, amely háttérképként szolgál a gazdagabb megjelenésért.',
+      'Letölti az előadó hero bannerét a gazdagabb megjelenésért, elmentve a .metadata/ArtistBannerImage mappába.',
     lyricsGroup: 'Dalszövegek',
     lyrics: 'Dalszövegek letöltése',
     lyricsHint:

@@ -381,10 +381,10 @@ export default {
     titleBio: '{name} biyografisi',
     titleSocial: '{name} sosyal medya bağlantıları',
     bioDescription:
-      'Bu sanatçının biyografisini kendiniz yazın veya düzenleyin.',
+      'Bu sanatçının biyografisini kendiniz yazın veya düzenleyin',
     socialDescription:
       'Bu sanatçının sosyal medya profillerine ve web sitesine bağlantılar ekleyin.',
-    bioPlaceholder: 'Henüz biyografi yok — buraya bir tane yazın.',
+    bioPlaceholder: 'Henüz biyografi yok — buraya bir tane yazın',
     save: 'Kaydet',
     bioSaved: 'Biyografi kaydedildi',
     bioSaveFailed: 'Biyografi kaydedilemedi',
@@ -396,9 +396,9 @@ export default {
     socialInstagram: 'Instagram',
     socialWebsite: 'Web sitesi',
     description:
-      'YouTube Music ve Deezer üzerinde arayın, doğrudan bir görsel bağlantısı yapıştırın veya kendi görselinizi yükleyin.',
+      'Başlıca müzik platformlarındaki görselleri kullanın, bir web görsel bağlantısı yapıştırın veya cihazınızdan bir görsel yükleyin.',
     searchPlaceholder: 'İnternet görsel bağlantısı veya sanatçı adı',
-    upload: 'Bilgisayardan yükle',
+    upload: 'Cihazdan yükle',
     noResults:
       'Henüz sonuç yok — sanatçıyı arayın veya bir görsel bağlantısı yapıştırın.',
     saved: 'Görsel kaydedildi',
@@ -737,12 +737,12 @@ export default {
     coverSize: 'Kapak boyutu',
     coverSizeHint:
       'YouTube Music kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',
-    artistCover: 'Sanatçı fotoğrafını kaydet',
+    artistCover: 'Sanatçı fotoğraflarını otomatik al',
     artistCoverHint:
-      "Downtify'da görüntülemek ve Navidrome gibi servislerde kullanmak için sanatçı fotoğrafını indirir.",
-    artistCoverBanner: 'Sanatçı afişini kaydet',
+      'Sanatçı fotoğrafını .metadata/ArtistImage klasörüne indirir; Navidrome gibi servislerde de kullanılabilir.',
+    artistCoverBanner: 'Sanatçı afişlerini otomatik al',
     artistCoverBannerHint:
-      'Daha zengin bir görünüm için arka plan olarak kullanılan bir afiş indirir.',
+      'Sanatçının hero afişini daha zengin bir görünüm için indirir; .metadata/ArtistBannerImage klasörüne kaydedilir.',
     lyricsGroup: 'Şarkı sözleri',
     lyrics: 'Şarkı sözlerini indir',
     lyricsHint:

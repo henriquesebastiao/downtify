@@ -381,10 +381,10 @@ export default {
     tabSocial: 'Redes sociales',
     titleBio: 'Biografía de {name}',
     titleSocial: 'Redes sociales de {name}',
-    bioDescription: 'Escribe o edita tú mismo la biografía de este artista.',
+    bioDescription: 'Escribe o edita tú mismo la biografía de este artista',
     socialDescription:
       'Añade enlaces a los perfiles sociales y al sitio web de este artista.',
-    bioPlaceholder: 'Aún no hay biografía — escribe una aquí.',
+    bioPlaceholder: 'Aún no hay biografía — escribe una aquí',
     save: 'Guardar',
     bioSaved: 'Biografía guardada',
     bioSaveFailed: 'No se pudo guardar la biografía',
@@ -396,9 +396,9 @@ export default {
     socialInstagram: 'Instagram',
     socialWebsite: 'Sitio web',
     description:
-      'Busca en YouTube Music y Deezer, pega un enlace directo a una imagen, o sube la tuya.',
+      'Usa las imágenes de las principales plataformas de streaming, pega un enlace de imagen de la web o sube una desde tu dispositivo.',
     searchPlaceholder: 'Enlace de imagen de internet o nombre del artista',
-    upload: 'Subir desde tu computadora',
+    upload: 'Subir desde tu dispositivo',
     noResults:
       'Aún no hay resultados — busca al artista o pega un enlace de imagen.',
     saved: 'Imagen guardada',
@@ -740,12 +740,12 @@ export default {
     coverSize: 'Tamaño de portada',
     coverSizeHint:
       'Para portadas de YouTube Music. Las de Spotify siempre usan el mayor tamaño disponible.',
-    artistCover: 'Guardar foto del artista',
+    artistCover: 'Obtener fotos de artista automáticamente',
     artistCoverHint:
-      'Descarga la foto del artista para mostrarla en Downtify, y para usarla en servicios como Navidrome.',
-    artistCoverBanner: 'Guardar banner del artista',
+      'Descarga la foto del artista a .metadata/ArtistImage; también puede usarse en servicios como Navidrome.',
+    artistCoverBanner: 'Obtener banners de artista automáticamente',
     artistCoverBannerHint:
-      'Descarga un banner usado como imagen de fondo para un aspecto más cuidado.',
+      'Descarga el banner hero del artista para un aspecto más cuidado, guardado en .metadata/ArtistBannerImage.',
     lyricsGroup: 'Letras',
     lyrics: 'Descargar letras',
     lyricsHint:
