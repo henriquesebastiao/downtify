@@ -44,6 +44,7 @@ export default {
     playItem: 'Αναπαραγωγή {name}',
     playPreview: 'Αναπαραγωγή προεπισκόπησης του {name}',
     pausePreview: 'Παύση προεπισκόπησης του {name}',
+    previewLabel: 'Δείγμα',
     shuffle: 'Τυχαία σειρά',
     playNext: 'Αναπαραγωγή επόμενο',
     addToQueue: 'Προσθήκη στην ουρά',

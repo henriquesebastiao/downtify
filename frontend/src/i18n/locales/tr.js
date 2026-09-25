@@ -44,6 +44,7 @@ export default {
     playItem: '{name} çal',
     playPreview: '{name} önizlemesini çal',
     pausePreview: '{name} önizlemesini duraklat',
+    previewLabel: 'Önizleme',
     shuffle: 'Karıştır',
     playNext: 'Sıradaki olarak çal',
     addToQueue: 'Kuyruğa ekle',

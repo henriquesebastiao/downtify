@@ -44,6 +44,7 @@ export default {
     playItem: 'Lire {name}',
     playPreview: 'Écouter un extrait de {name}',
     pausePreview: "Mettre en pause l'extrait de {name}",
+    previewLabel: 'Extrait',
     shuffle: 'Aléatoire',
     playNext: 'Lire ensuite',
     addToQueue: 'Ajouter à la file',

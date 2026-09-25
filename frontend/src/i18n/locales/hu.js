@@ -44,6 +44,7 @@ export default {
     playItem: '{name} lejátszása',
     playPreview: '{name} előnézetének lejátszása',
     pausePreview: '{name} előnézetének szüneteltetése',
+    previewLabel: 'Előnézet',
     shuffle: 'Keverés',
     playNext: 'Lejátszás következőként',
     addToQueue: 'Hozzáadás a sorhoz',

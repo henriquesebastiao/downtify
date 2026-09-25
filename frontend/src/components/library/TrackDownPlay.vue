@@ -115,9 +115,30 @@
       song.album_name
     }}</span>
     <span
-      class="tabular hidden w-12 text-right text-[13px] text-muted sm:block"
+      class="tabular relative hidden w-12 text-right text-[13px] text-muted sm:block"
     >
-      {{ song.duration ? formatDuration(song.duration) : '' }}
+      <!-- Only a clip to hear (not downloaded): its length gives way to
+           "Preview" while the row is hovered, and for as long as the clip is
+           loaded (the row stays highlighted then, like a hovered one, with
+           the mouse gone). The length is hidden, not removed, so nothing
+           moves; the label sits on the cell's right edge and may run a little
+           to its left, over the gap before it. -->
+      <span
+        :class="
+          previewable
+            ? previewActive
+              ? 'invisible'
+              : 'group-hover:invisible'
+            : ''
+        "
+        >{{ song.duration ? formatDuration(song.duration) : '' }}</span
+      >
+      <span
+        v-if="previewable"
+        class="pointer-events-none absolute inset-y-0 right-0 items-center text-[10px] font-semibold tracking-[0.06em] whitespace-nowrap uppercase"
+        :class="previewActive ? 'flex' : 'hidden group-hover:flex'"
+        >{{ t('actions.previewLabel') }}</span
+      >
     </span>
     <!-- Not downloaded: the download button, with its progress and retry;
          downloaded: the "In library" label. Playing is on the left. A click

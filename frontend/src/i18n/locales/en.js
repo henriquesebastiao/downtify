@@ -44,6 +44,7 @@ export default {
     playItem: 'Play {name}',
     playPreview: 'Play a preview of {name}',
     pausePreview: 'Pause the preview of {name}',
+    previewLabel: 'Preview',
     shuffle: 'Shuffle',
     playNext: 'Play next',
     addToQueue: 'Add to queue',
