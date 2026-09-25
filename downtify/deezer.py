@@ -273,7 +273,7 @@ def search_artist(query: str, limit: int = 10) -> list[dict[str, Any]]:
     return results
 
 
-def resolve_artist_id(name: str) -> Optional[str]:
+def lookup_artist_id(name: str) -> Optional[str]:
     """Deezer's numeric artist id for an exact name match, or ``None`` if
     no result's name matches exactly. Case and the characters a file name
     can't hold are ignored (``ACDC`` matches ``AC/DC``, see
@@ -284,20 +284,31 @@ def resolve_artist_id(name: str) -> Optional[str]:
     this artist's profile, so a fuzzy "good enough" match isn't good
     enough here. Several artists can share the exact name; the one with
     the most fans wins (see :func:`_most_popular_exact_match`).
+
+    Raises :class:`ValueError` when Deezer didn't really answer (see
+    :func:`_search_rows`), so ``None`` always means "no such artist" -
+    :func:`resolve_artist_id` is the same without that distinction.
     """
 
     text = name.strip()
     if not file_name_key(text):
         return None
-    try:
-        rows = _search_rows(text, 25)
-    except ValueError:
-        return None
-    match = _most_popular_exact_match(rows, text)
+    match = _most_popular_exact_match(_search_rows(text, 25), text)
     if match is None:
         return None
     artist_id = match.get('id')
     return str(artist_id) if artist_id is not None else None
+
+
+def resolve_artist_id(name: str) -> Optional[str]:
+    """:func:`lookup_artist_id`, with a failed lookup reading as ``None``
+    - for the callers where "couldn't find out" and "no such artist" may
+    be treated alike."""
+
+    try:
+        return lookup_artist_id(name)
+    except ValueError:
+        return None
 
 
 def exact_artist_picture(name: str) -> Optional[str]:

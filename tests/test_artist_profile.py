@@ -25,6 +25,27 @@ _TINY_PNG = base64.b64decode(
 )
 
 
+@pytest.fixture(autouse=True)
+def _strict_lookups_answer_like_the_plain_ones(monkeypatch):
+    """Seeding a profile asks Apple Music and Deezer with their *strict*
+    ``lookup_artist_id`` (a failure raises instead of reading as "no such
+    artist"), while most tests here fake the plain ``resolve_artist_id``.
+    Let the strict ones give whatever the plain ones do at that moment, so
+    those tests stay offline; the ones about failures fake the strict
+    lookups themselves (tests/test_artist_profile_seeding.py)."""
+
+    # Looked up when called, not when the fixture runs: the tests fake the
+    # plain lookups after it.
+    def apple(name: str) -> Any:
+        return artist_profile.apple_music.resolve_artist_id(name)
+
+    def deezer(name: str) -> Any:
+        return artist_profile.deezer.resolve_artist_id(name)
+
+    monkeypatch.setattr(artist_profile.apple_music, 'lookup_artist_id', apple)
+    monkeypatch.setattr(artist_profile.deezer, 'lookup_artist_id', deezer)
+
+
 class _JsonRequest:
     def __init__(self, payload: Any):
         self._payload = payload

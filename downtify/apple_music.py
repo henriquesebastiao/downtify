@@ -127,14 +127,15 @@ def _current_token() -> str:
     return token
 
 
-def _resolve_artist_row(name: str) -> Optional[dict[str, Any]]:
+def _search_artist_row(name: str) -> Optional[dict[str, Any]]:
     """The full iTunes Search API row for an exact name match - ignoring
     case and the characters a file name can't hold, so ``ACDC`` matches
     ``AC/DC`` (see :func:`downtify.file_naming.file_name_key`) - or
-    ``None``. Shared by :func:`resolve_artist_id`
-    (numeric id) and :func:`resolve_artist_slug_id` (``slug/numeric-id``,
-    for ``platforms_id``), so both reuse the one search call/match loop
-    instead of each doing their own.
+    ``None`` when the search answered and nothing matches.
+
+    Raises :class:`ValueError` when the search itself failed: that is not
+    "no such artist", and a caller that saves what it finds must not treat
+    it as one (see :func:`lookup_artist_id`).
 
     Deliberately strict, same reasoning as
     :func:`downtify.deezer.resolve_artist_id`: an unrelated top result
@@ -153,10 +154,11 @@ def _resolve_artist_row(name: str) -> Optional[dict[str, Any]]:
         )
         resp.raise_for_status()
         data = resp.json()
-    except Exception:
+        results = data.get('results') or []
+    except Exception as exc:
         logger.opt(exception=True).debug('Apple Music artist id lookup failed')
-        return None
-    for row in data.get('results') or []:
+        raise ValueError('Could not reach Apple Music') from exc
+    for row in results:
         if (
             isinstance(row, dict)
             and file_name_key(str(row.get('artistName') or '')) == wanted
@@ -165,12 +167,37 @@ def _resolve_artist_row(name: str) -> Optional[dict[str, Any]]:
     return None
 
 
+def _resolve_artist_row(name: str) -> Optional[dict[str, Any]]:
+    """:func:`_search_artist_row`, with a failed search reading as no match
+    (``None``) - for the callers where that is good enough. Shared by
+    :func:`resolve_artist_id` (numeric id) and :func:`resolve_artist_slug_id`
+    (``slug/numeric-id``, for ``platforms_id``), so both reuse the one search
+    call/match loop instead of each doing their own."""
+
+    try:
+        return _search_artist_row(name)
+    except ValueError:
+        return None
+
+
 def resolve_artist_id(name: str) -> Optional[str]:
     """Apple Music's numeric artist id for an exact name match on the
     public iTunes Search API (see :func:`_resolve_artist_row`), or ``None``.
     """
 
     row = _resolve_artist_row(name)
+    if row is None:
+        return None
+    artist_id = row.get('artistId')
+    return str(artist_id) if artist_id is not None else None
+
+
+def lookup_artist_id(name: str) -> Optional[str]:
+    """Like :func:`resolve_artist_id`, but a failed search raises
+    :class:`ValueError` instead of reading as ``None``: ``None`` here really
+    means Apple Music has no artist by that name."""
+
+    row = _search_artist_row(name)
     if row is None:
         return None
     artist_id = row.get('artistId')

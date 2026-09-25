@@ -41,6 +41,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import queue
 import re
 import tempfile
 import threading
@@ -294,14 +295,27 @@ def load_profile(download_dir: Path, name: str) -> dict[str, Any]:
     return merged
 
 
+def _atomic_write_json(path: Path, data: dict[str, Any]) -> None:
+    """Write *data* to *path* atomically (a temp file in the same folder,
+    then a rename): a reader never sees a half-written file, even with a
+    request racing a background write of the same artist."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as handle:
+            json.dump(data, handle, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            Path(tmp).unlink()
+        raise
+
+
 def _save_profile(
     download_dir: Path, name: str, profile: dict[str, Any]
 ) -> None:
-    path = _profile_path_for(download_dir, name)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(profile, ensure_ascii=False, indent=2), encoding='utf-8'
-    )
+    _atomic_write_json(_profile_path_for(download_dir, name), profile)
 
 
 def _set_current_cover(
@@ -313,17 +327,28 @@ def _set_current_cover(
     _save_profile(download_dir, name, profile)
 
 
-def _cached_or_resolved_apple_music_id(
-    profile: dict[str, Any], name: str
-) -> str:
+def _cached_apple_music_id(profile: dict[str, Any]) -> str:
     # platforms_id['applemusic'] stores 'slug/numeric-id' (see fetch_artist_full
     # below), but the catalog API only takes the numeric id - pull it back
     # out of a cached value instead of re-searching by name every time.
     cached = profile['platforms_id'].get('applemusic') or ''
     match = re.search(r'(\d+)$', cached)
-    if match:
-        return match.group(1)
-    return apple_music.resolve_artist_id(name) or ''
+    return match.group(1) if match else ''
+
+
+def _cached_or_resolved_apple_music_id(
+    profile: dict[str, Any], name: str
+) -> str:
+    return _cached_apple_music_id(profile) or (
+        apple_music.resolve_artist_id(name) or ''
+    )
+
+
+class ProfileUnavailable(Exception):
+    """A service that had to answer (Apple Music, Deezer) failed - an error,
+    not "this artist isn't there". Seeding a profile raises it *before*
+    writing anything, so no half-made profile stands in for the real one: the
+    artist is seeded the next time they are needed."""
 
 
 _BULLET_RE = re.compile(r'^•\s*')
@@ -464,15 +489,52 @@ def fetch_bio(
     if source not in _BIO_SOURCES:
         raise ValueError(f'Unknown bio source: {source!r}')
     profile = load_profile(download_dir, name)
+    _fill_profile(profile, name, lang, source)
+    _save_profile(download_dir, name, profile)
+    return profile
+
+
+def _fill_profile(
+    profile: dict[str, Any],
+    name: str,
+    lang: str,
+    source: str,
+    *,
+    strict: bool = False,
+) -> None:
+    """The fetching half of :func:`fetch_bio`: fills *profile* in memory from
+    Apple Music, Deezer and Spotify and saves nothing. Raises
+    :class:`ValueError` exactly where :func:`fetch_bio` documents it.
+
+    Not *strict*, a service that fails is skipped, as if it had nothing.
+    *strict* is for a profile that is seeded on its own (see
+    :func:`_seed_profile`): there a failure of Apple Music or Deezer -
+    whose lookups then tell an error from "no such artist" - raises
+    :class:`ProfileUnavailable` instead, because what is saved would
+    otherwise pass for the artist's real profile. Spotify's part (related
+    names) stays best effort either way: it depends on a hash that Spotify
+    rolls now and then, and that must not stop a profile from being made.
+    """
+
     got_anything = False
     apple_bio = ''
     deezer_bio = ''
 
-    apple_id = _cached_or_resolved_apple_music_id(profile, name)
+    if strict:
+        apple_id = _cached_apple_music_id(profile)
+        if not apple_id:
+            try:
+                apple_id = apple_music.lookup_artist_id(name) or ''
+            except ValueError as exc:
+                raise ProfileUnavailable('Apple Music did not answer') from exc
+    else:
+        apple_id = _cached_or_resolved_apple_music_id(profile, name)
     if apple_id:
         try:
             apple_full = apple_music.fetch_artist_full(apple_id, lang)
-        except ValueError:
+        except ValueError as exc:
+            if strict:
+                raise ProfileUnavailable('Apple Music did not answer') from exc
             apple_full = None
         if apple_full is not None:
             got_anything = True
@@ -492,14 +554,22 @@ def fetch_bio(
 
     deezer_id = profile['platforms_id'].get('deezer') or ''
     if not deezer_id:
-        deezer_id = deezer.resolve_artist_id(name) or ''
+        if strict:
+            try:
+                deezer_id = deezer.lookup_artist_id(name) or ''
+            except ValueError as exc:
+                raise ProfileUnavailable('Deezer did not answer') from exc
+        else:
+            deezer_id = deezer.resolve_artist_id(name) or ''
         if deezer_id:
             profile['platforms_id']['deezer'] = deezer_id
 
     if deezer_id:
         try:
             deezer_full = deezer.fetch_artist_full(deezer_id, lang)
-        except ValueError:
+        except ValueError as exc:
+            if strict:
+                raise ProfileUnavailable('Deezer did not answer') from exc
             deezer_full = None
         if deezer_full is not None:
             got_anything = True
@@ -544,9 +614,6 @@ def fetch_bio(
 
     if not got_anything:
         raise ValueError('No matching artist found on Apple Music or Deezer')
-
-    _save_profile(download_dir, name, profile)
-    return profile
 
 
 def preview_bio(download_dir: Path, name: str, lang: str, source: str) -> str:
@@ -759,64 +826,263 @@ def ensure_profile(
 ) -> dict[str, Any]:
     """Seed a brand-new artist's profile the first time it's needed
     (e.g. opening their Library page) and nothing has been saved for
-    them yet: photo/banner from Spotify/YouTube Music (see
-    :func:`_seed_image_from_streams`) - only the kinds in *image_kinds*,
+    them yet: bio/social/origin/etc from Apple Music and Deezer (see
+    :func:`_fill_profile`) and platform ids via :func:`resolve_platform_ids`
+    - exactly as if the user had opened the picker and clicked the fetch
+    button themselves - then photo/banner from Spotify/YouTube Music (see
+    :func:`_seed_image_from_streams`), only the kinds in *image_kinds*,
     which callers derive from the user's ``download_cover_art_artist``/
     ``download_cover_art_artist_banner`` settings (none by default: an
-    image is never saved unless the caller says the user wants it) -
-    plus bio/social/origin/etc via
-    :func:`fetch_bio` and platform ids via :func:`resolve_platform_ids` -
-    exactly as if the user had opened the picker and clicked the fetch
-    button themselves.
+    image is never saved unless the caller says the user wants it).
 
     A no-op past the first call for a given artist: once a profile file
-    exists at all - even a mostly-empty one, if nothing could be found -
-    every later call just returns :func:`load_profile` directly, so an
-    obscure artist nothing matches doesn't re-run this full, several-
-    requests-deep lookup on every single page visit. *track_index* is
-    optional: with it, Spotify's artist id comes from one of the artist's
-    own Spotify tracks (the most reliable route); without it, or when no
-    track has one, from an exact-name search (see
-    :func:`resolve_spotify_artist_id`). Callers without an index handy -
-    or a future one, like the download pipeline resolving this right
-    after a new artist's first track finishes, not wired up yet - aren't
-    forced to fake it.
+    exists at all - even a mostly-empty one, if the services answered that
+    nothing matches - every later call just returns :func:`load_profile`
+    directly, so an obscure artist nothing matches doesn't re-run this
+    full, several-requests-deep lookup on every single page visit.
 
-    Spotify's artist id is cached into ``platforms_id.spotify`` *before*
-    :func:`fetch_bio` runs, so its own related-artist merge (see that
-    function's docstring) picks it up on this very first call, not just
-    on some later re-fetch.
+    A service that *fails* (Apple Music, Deezer: unreachable, over its
+    limit) is a different thing from one with nothing to say: nothing is
+    saved then - no file, no photo - and the blank profile comes back, so
+    the next visit tries again instead of keeping a hollow profile for
+    good (see :class:`ProfileUnavailable`).
+
+    *track_index* is optional: with it, Spotify's artist id comes from one
+    of the artist's own Spotify tracks (the most reliable route); without
+    it, or when no track has one, from an exact-name search (see
+    :func:`resolve_spotify_artist_id`). The download pipeline seeds through
+    :func:`profile_seed_enqueue` instead, with the id of the track it just
+    downloaded. Both share :func:`_seed_profile` and the per-artist lock, so
+    a visit and a download never seed the same artist twice.
     """
 
     if _profile_path_for(download_dir, name).is_file():
         return load_profile(download_dir, name)
 
-    spotify_artist_id = resolve_spotify_artist_id(
-        track_files, track_index, name
-    )
+    with _seed_lock_for(download_dir, name):
+        # Whoever held the lock (a download, another visit) may just have
+        # made it.
+        if _profile_path_for(download_dir, name).is_file():
+            return load_profile(download_dir, name)
+        spotify_artist_id = resolve_spotify_artist_id(
+            track_files, track_index, name
+        )
+        try:
+            return _seed_profile(
+                download_dir, name, spotify_artist_id, lang, image_kinds
+            )
+        except ProfileUnavailable:
+            logger.debug('Profile of {!r} not seeded: a service failed', name)
+            return load_profile(download_dir, name)
+
+
+def _seed_profile(
+    download_dir: Path,
+    name: str,
+    spotify_artist_id: Optional[str],
+    lang: str,
+    image_kinds: tuple[str, ...],
+) -> dict[str, Any]:
+    """Make *name*'s profile and save it; the caller holds the artist's lock
+    (see :func:`_seed_lock_for`) and has seen there is no profile yet.
+
+    Everything is fetched *before* anything is written, so
+    :class:`ProfileUnavailable` (Apple Music or Deezer failed) leaves no file
+    at all - not a profile holding just a bio, and no photo either. Neither
+    service knowing the artist is an answer, not a failure: the profile is
+    made with what is known, and the file's mere existence is what makes
+    later visits skip this. Photo/banner come last and are best effort: an
+    error there is logged and leaves the (already saved) text as it is.
+    """
+
+    profile = load_profile(download_dir, name)
     if spotify_artist_id:
-        profile = load_profile(download_dir, name)
         profile['platforms_id']['spotify'] = spotify_artist_id
-        _save_profile(download_dir, name, profile)
-    for kind in image_kinds:
-        _seed_image_from_streams(download_dir, name, kind, spotify_artist_id)
-
     try:
-        profile = fetch_bio(download_dir, name, lang)
+        _fill_profile(profile, name, lang, BIO_SOURCE_AUTO, strict=True)
     except ValueError:
-        profile = load_profile(download_dir, name)
-
-    # Only what fetch_bio (and the Spotify step above) didn't already
+        pass  # neither Apple Music nor Deezer has this artist
+    # Only what _fill_profile (and the Spotify id above) didn't already
     # resolve - and never over an id that's already there.
     platform_ids = resolve_platform_ids(name, known=profile['platforms_id'])
     if platform_ids:
         profile['platforms_id'] = {**profile['platforms_id'], **platform_ids}
-
-    # Always persist, even when nothing was found at all - the file's
-    # mere existence is what makes the next call take the fast path
-    # above instead of repeating this every visit.
     _save_profile(download_dir, name, profile)
-    return profile
+
+    for kind in image_kinds:
+        try:
+            _seed_image_from_streams(
+                download_dir, name, kind, spotify_artist_id
+            )
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Artist {} seed failed for {!r}', kind, name
+            )
+    return load_profile(download_dir, name)
+
+
+# ── Seeding from the download pipeline ──────────────────────────────
+#
+# A track that finishes downloading asks for its artist's profile (see
+# ``api.enrich_artist_after_download``, hooked to ``Downloader.on_downloaded``).
+# A playlist can finish hundreds of tracks by dozens of artists at once, so:
+#
+# 1. *distinct*: an artist already waiting or being seeded is not queued again
+#    (:data:`_seed_pending`, checked and set under one lock);
+# 2. a small pool of daemon threads does the work, so the download that asked
+#    never waits and the services aren't hit by hundreds of lookups at once;
+# 3. the worker takes the artist's lock (shared with :func:`ensure_profile`)
+#    and looks again for the file, so a visit and a download - or two workers -
+#    can't seed the same artist twice, whatever the timing.
+#
+# An artist whose services failed is simply not saved (see
+# :class:`ProfileUnavailable`), and the next track of theirs - or a visit to
+# their page - tries again; nothing remembers the failure.
+
+#: Artists seeded at the same time.
+SEED_WORKERS = 2
+
+_seed_locks: dict[str, threading.Lock] = {}
+_seed_locks_guard = threading.Lock()
+_seed_pending: set[str] = set()
+_seed_pending_guard = threading.Lock()
+_seed_jobs: queue.SimpleQueue = queue.SimpleQueue()
+_seed_workers: list[threading.Thread] = []
+_seed_workers_guard = threading.Lock()
+
+
+def _seed_key(download_dir: Path, name: str) -> str:
+    return str(_profile_path_for(download_dir, name)).lower()
+
+
+def _seed_lock_for(download_dir: Path, name: str) -> threading.Lock:
+    """One lock per artist, shared by every way of seeding them."""
+
+    with _seed_locks_guard:
+        return _seed_locks.setdefault(
+            _seed_key(download_dir, name), threading.Lock()
+        )
+
+
+def profile_seed_artist_of(song: dict[str, Any]) -> str:
+    """The artist whose profile a downloaded *song* seeds: the one its file
+    is filed under (the album artist, else the first credited artist - the
+    rule ``Downloader._artist_subdir`` uses), or ``''`` when that is no one
+    worth a profile (``Various Artists``)."""
+
+    album_artist = str(song.get('album_artist') or '').strip()
+    artists = song.get('artists') or []
+    first = str(artists[0]).strip() if artists else ''
+    name = album_artist or first
+    return '' if name.casefold() in {'various artists', 'unknown'} else name
+
+
+def _spotify_artist_id_for_song(
+    song: dict[str, Any], name: str
+) -> Optional[str]:
+    """Spotify's id for *name*: from the song's own Spotify track when its
+    first credited artist is *name* (it can't pick a namesake), else an
+    exact-name search."""
+
+    track_id = song.get('song_id')
+    artists = song.get('artists') or []
+    if (
+        song.get('source') == 'spotify'
+        and isinstance(track_id, str)
+        and re.fullmatch(r'[A-Za-z0-9]{22}', track_id)
+        and artists
+        and file_name_key(str(artists[0])) == file_name_key(name)
+    ):
+        try:
+            found = spotify.primary_artist_id_from_track_id(track_id)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Spotify artist id from track {} failed', track_id
+            )
+            found = None
+        if found:
+            return found
+    return _spotify_id_from_name(name)
+
+
+def profile_seed_song(
+    download_dir: Path,
+    song: dict[str, Any],
+    lang: str,
+    image_kinds: tuple[str, ...] = (),
+) -> bool:
+    """Seed the profile of *song*'s artist, unless it already exists (or
+    someone is making it). Blocking - what the pool's workers run. Returns
+    whether a profile was made; a failure of Apple Music or Deezer makes
+    none (see :class:`ProfileUnavailable`)."""
+
+    name = profile_seed_artist_of(song)
+    if not name or _profile_path_for(download_dir, name).is_file():
+        return False
+    with _seed_lock_for(download_dir, name):
+        if _profile_path_for(download_dir, name).is_file():
+            return False
+        spotify_artist_id = _spotify_artist_id_for_song(song, name)
+        try:
+            _seed_profile(
+                download_dir, name, spotify_artist_id, lang, image_kinds
+            )
+        except ProfileUnavailable:
+            logger.debug('Profile of {!r} not seeded: a service failed', name)
+            return False
+    return True
+
+
+def profile_seed_enqueue(
+    download_dir: Path,
+    song: dict[str, Any],
+    lang: str,
+    image_kinds: tuple[str, ...] = (),
+) -> bool:
+    """Queue seeding *song*'s artist and return at once (a download must not
+    wait for this); ``False`` when there is nothing to do - no artist worth a
+    profile, one that already has it, or one that is already queued."""
+
+    name = profile_seed_artist_of(song)
+    if not name or _profile_path_for(download_dir, name).is_file():
+        return False
+    key = _seed_key(download_dir, name)
+    with _seed_pending_guard:
+        if key in _seed_pending:
+            return False
+        _seed_pending.add(key)
+    _seed_jobs.put((key, Path(download_dir), dict(song), lang, image_kinds))
+    _start_seed_workers()
+    return True
+
+
+def _run_seed_job(job: tuple[Any, ...]) -> None:
+    key, download_dir, song, lang, image_kinds = job
+    try:
+        profile_seed_song(download_dir, song, lang, image_kinds)
+    except Exception:
+        logger.opt(exception=True).debug('Profile seeding failed')
+    finally:
+        with _seed_pending_guard:
+            _seed_pending.discard(key)
+
+
+def _seed_worker() -> None:
+    while True:
+        _run_seed_job(_seed_jobs.get())
+
+
+def _start_seed_workers() -> None:
+    # Daemon threads on purpose: a pool that runs its queue dry at exit would
+    # hold the app up for as long as a big playlist's artists take.
+    with _seed_workers_guard:
+        _seed_workers[:] = [t for t in _seed_workers if t.is_alive()]
+        while len(_seed_workers) < SEED_WORKERS:
+            worker = threading.Thread(
+                target=_seed_worker, name='downtify-profile-seed', daemon=True
+            )
+            worker.start()
+            _seed_workers.append(worker)
 
 
 def remove_bio(download_dir: Path, name: str) -> dict[str, Any]:
@@ -980,17 +1246,7 @@ def _profile_top_songs_write(
     """Write atomically (temp file, then rename): a reader never sees a
     half-written file, even with a request racing a background refresh."""
 
-    path = profile_top_songs_path_for(download_dir, name)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix='.tmp')
-    try:
-        with os.fdopen(fd, 'w', encoding='utf-8') as handle:
-            json.dump(data, handle, ensure_ascii=False, indent=2)
-        os.replace(tmp, path)
-    except BaseException:
-        with contextlib.suppress(OSError):
-            Path(tmp).unlink()
-        raise
+    _atomic_write_json(profile_top_songs_path_for(download_dir, name), data)
 
 
 def _profile_top_songs_fetch(spotify_artist_id: str) -> dict[str, Any]:
