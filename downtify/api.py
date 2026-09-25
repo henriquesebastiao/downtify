@@ -172,6 +172,7 @@ import mimetypes
 import re
 import shutil
 import threading
+import uuid
 from pathlib import Path
 from typing import Any, Optional
 
@@ -3255,6 +3256,18 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
     )
 
 
+def _scope_csv_song_ids(songs: list[dict[str, Any]]) -> None:
+    """Replace per-file ``csv:N`` ids with ids unique to this import.
+
+    ``parse_library_csv`` numbers from zero on every call. Two imports
+    would otherwise share ``csv:0`` and overwrite one ``download_jobs``
+    entry. The token is only a queue key; it is not a Spotify track id.
+    """
+    token = uuid.uuid4().hex[:12]
+    for index, song in enumerate(songs):
+        song['song_id'] = f'csv:{token}:{index}'
+
+
 @router.post('/api/download/csv')
 async def download_csv_endpoint(request: Request) -> dict[str, Any]:
     """Import a library-export CSV (Soundiiz, TuneMyMusic, Exportify, ...).
@@ -3296,6 +3309,10 @@ async def download_csv_endpoint(request: Request) -> dict[str, Any]:
         str(payload.get('playlist_name') or '').strip() or 'Imported Library'
     )
     generate_m3u = bool(payload.get('generate_m3u', True))
+    # Parser ids restart at csv:0 on every file. The queue is keyed by
+    # song_id, so a second import would replace the first import's jobs
+    # and the badge /queue tabs would count the longer file only.
+    _scope_csv_song_ids(songs)
 
     job_ids: list[str] = []
     for song in songs:

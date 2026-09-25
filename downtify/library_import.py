@@ -86,7 +86,10 @@ def parse_library_csv(text: str) -> list[dict[str, Any]]:
     known; ``album_name`` is optional and is omitted rather than set
     blank so YouTube Music can still fill it. ``song_id`` exists
     because the frontend's queue/progress tracking keys every song by
-    it and would otherwise conflate every CSV row into a single entry.
+    it and would otherwise conflate every CSV row of one file into a
+    single entry. They restart at ``csv:0`` on each call.
+    ``POST /api/download/csv`` replaces them with a per-import token
+    before the rows are queued, so two files do not share queue keys.
 
     Raises :class:`LibraryCsvError` when the file has no rows, or its
     header doesn't contain a recognizable title and artist column, or

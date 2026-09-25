@@ -14,9 +14,9 @@ Already exported your library from another service? Import the CSV and queue eve
 | [TuneMyMusic](https://www.tunemymusic.com/) | |
 | [Exportify](https://github.com/watsonbox/exportify) | |
 
-Downtify doesn't hard-code any one tool's exact column schema. Instead, it matches the CSV's header row case-insensitively against a set of known aliases (`Title` / `Track` / `Track Title` / `Track Name` / `Song` / …, and `Artist` / `Artists` / `Artist Name` / `Artist Name(s)` / …), so exports from any of the three — or a hand-made CSV using the same column names — work without renaming anything.
+Downtify doesn't hard-code any one tool's exact column schema. Instead, it matches the CSV's header row case-insensitively against a set of known aliases (`Title` / `Track` / `Track Title` / `Track Name` / `Song` / …, `Artist` / `Artists` / `Artist Name` / `Artist Name(s)` / …, and `Album` / `Album Name` / `Album Title` / …), so exports from any of the three — or a hand-made CSV using the same column names — work without renaming anything.
 
-Only the title and artist columns are read. Other columns some exporters include (album, ISRC, a Spotify track URI, duration) are ignored; each row is resolved the same way a free-text search is, via YouTube Music.
+Title and artist are required. Album is read when present and stored as the track's album name (Queue, matching, and file tags). Other columns some exporters include (ISRC, a Spotify track URI, duration) are ignored. Each row is resolved the same way a free-text search is, via YouTube Music.
 
 ## How to import
 
@@ -30,7 +30,7 @@ The imported batch is named after the file (its name minus `.csv`) and, like any
 ## Limits and error handling
 
 - Up to **2,000 rows** per file. Split larger exports into multiple files.
-- Rows missing a title or artist are silently skipped.
+- Rows missing a title or artist are silently skipped. A missing album column or a blank album cell is fine — YouTube Music may still fill album later.
 - Multiple artists in one cell (separated by `,` or `;`) are split into a list.
 - If the header doesn't contain a recognizable title/artist column, the whole import is rejected up front with an error naming the columns it did find — nothing is queued.
 

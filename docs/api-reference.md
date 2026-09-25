@@ -486,7 +486,7 @@ Download every track of a YouTube Music album/browse URL, resolving the full tra
 
 ### `POST /api/download/csv`
 
-Import a [library-export CSV](../features/library-import.md) (Soundiiz, TuneMyMusic, Exportify). The file is read client-side and sent as plain text, not a multipart upload. Reuses the same batch pipeline as `/api/download/batch` — same parallel-downloads limit, same delay-between-downloads, and an M3U is written under `playlist_name` if `generate_m3u` is true.
+Import a [library-export CSV](../features/library-import.md) (Soundiiz, TuneMyMusic, Exportify). Title and artist columns are required; album is used when present. The file is read client-side and sent as plain text, not a multipart upload. Reuses the same batch pipeline as `/api/download/batch` — same parallel-downloads limit, same delay-between-downloads, and an M3U is written under `playlist_name` if `generate_m3u` is true.
 
 **Request body:**
 
@@ -508,11 +508,13 @@ Import a [library-export CSV](../features/library-import.md) (Soundiiz, TuneMyMu
 
 ```json
 {
-  "job_ids": ["csv:0", "csv:1"],
+  "job_ids": ["csv:a1b2c3d4e5f6:0", "csv:a1b2c3d4e5f6:1"],
   "count": 2,
   "playlist_name": "My Old Library"
 }
 ```
+
+`job_ids` are `csv:{token}:{index}`. `token` is unique to that request and `index` restarts at 0 within the file, so a second import does not replace the first import's queue rows.
 
 Returns `400` if the CSV has no recognizable title/artist columns, is empty, or exceeds 2,000 rows.
 
