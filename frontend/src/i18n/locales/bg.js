@@ -154,6 +154,7 @@ export default {
     watchArtist: 'Следи за нови издания',
     openSpotify: 'Отвори в Spotify',
     openYoutube: 'Отвори в YouTube Music',
+    openDeezer: 'Отвори в Deezer',
     filterAll: 'Всички',
     filterNew: 'Нови',
     filterLibrary: 'В библиотеката',

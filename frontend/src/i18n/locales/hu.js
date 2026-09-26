@@ -154,6 +154,7 @@ export default {
     watchArtist: 'Új kiadások figyelése',
     openSpotify: 'Megnyitás a Spotifyban',
     openYoutube: 'Megnyitás a YouTube Musicban',
+    openDeezer: 'Megnyitás a Deezeren',
     filterAll: 'Összes',
     filterNew: 'Új',
     filterLibrary: 'A könyvtárban',

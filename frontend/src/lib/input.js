@@ -5,6 +5,12 @@ import { isYouTubePlaylistURL, normalizeSpotifyURL } from '../model/url'
 const SPOTIFY_ENTITY =
   /open\.spotify\.com\/(track|album|playlist|artist|show|episode)\//
 
+// `deezer.com/track/123`, with or without `www.` or a two-letter locale
+// segment (`deezer.com/br/track/123`, as Deezer's own share links carry).
+// Short `deezer.page.link` share links aren't recognized here.
+const DEEZER_ENTITY =
+  /deezer\.com\/(?:[a-z]{2}\/)?(track|album|playlist|artist)\//i
+
 function youtubeKind(text) {
   if (!/(?:youtube\.com|youtu\.be)\//.test(text)) return null
   if (/\/channel\/UC|youtube\.com\/@/.test(text)) return 'artist'
@@ -20,8 +26,8 @@ function youtubeKind(text) {
 /**
  * Classify the search box contents:
  * - `{ type: 'empty' }`
- * - `{ type: 'link', source: 'spotify' | 'youtube', kind, url }` for
- *   links Downtify can download (`kind`: track, album, playlist, artist)
+ * - `{ type: 'link', source: 'spotify' | 'youtube' | 'deezer', kind, url }`
+ *   for links Downtify can download (`kind`: track, album, playlist, artist)
  * - `{ type: 'unsupported', source, kind }` for other links
  * - `{ type: 'search', query }` for everything else
  */
@@ -35,6 +41,10 @@ export function classifyInput(raw) {
       return { type: 'link', source: 'spotify', kind, url: text }
     }
     return { type: 'unsupported', source: 'spotify', kind }
+  }
+  const deezer = DEEZER_ENTITY.exec(text)
+  if (deezer) {
+    return { type: 'link', source: 'deezer', kind: deezer[1], url: text }
   }
   const looksLikeURL =
     /^https?:\/\//i.test(text) || /(?:youtube\.com|youtu\.be)\//.test(text)

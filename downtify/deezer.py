@@ -1,5 +1,9 @@
-"""Search the public Deezer API for artist photo candidates, and fetch
-bio/social/related-artist data from Deezer's internal web-player API.
+"""Search the public Deezer API for artist photo candidates, fetch
+bio/social/related-artist data from Deezer's internal web-player API,
+and resolve a pasted Deezer track/album/playlist/artist link the same
+way :mod:`downtify.spotify` and :mod:`downtify.providers` do for Spotify
+and YouTube Music (see :func:`parse_deezer_url` and ``downtify.api``'s
+``_deezer_details``).
 
 ``api.deezer.com`` is unauthenticated and keyless, same shape of
 integration as :mod:`downtify.itunes`. Deezer's artist search never
@@ -23,6 +27,7 @@ that query shape, this needs a fresh capture, not a clever rewrite.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Optional
 from urllib.parse import urlsplit
 
@@ -554,3 +559,357 @@ def fetch_artist_full(artist_id: str, lang: str) -> dict[str, Any]:
         },
         'related_artist_names': related_names,
     }
+
+
+# ── Pasted-link resolution (track/album/playlist/artist) ───────────────
+#
+# Unlike the artist-photo search (no id needed), these read a specific
+# Deezer id the
+# same way downtify.spotify/downtify.providers do for a pasted Spotify or
+# YouTube Music link - see downtify.api's _deezer_details, wired into
+# GET /api/url/resolve, /api/song/url and /api/artists/top_songs/url next
+# to the existing Spotify/YouTube Music branches.
+
+_DEEZER_URL_RE = re.compile(
+    r'deezer\.com/(?:[a-z]{2}/)?(track|album|playlist|artist)/(\d+)',
+    re.IGNORECASE,
+)
+
+
+def parse_deezer_url(url: str) -> Optional[tuple[str, str]]:
+    """``(kind, id)`` for a Deezer track/album/playlist/artist URL, or
+    ``None``.
+
+    Matches ``deezer.com/track/123`` with or without a ``www.`` or a
+    two-letter locale segment (``deezer.com/br/track/123``, as Deezer's
+    own share links carry). Deezer's short ``deezer.page.link`` share
+    links aren't recognized - they'd need an extra redirect-following
+    request just to find out what they point at.
+    """
+
+    match = _DEEZER_URL_RE.search(str(url or ''))
+    if not match:
+        return None
+    return match.group(1).lower(), match.group(2)
+
+
+def _get_json(url: str, **params: Any) -> dict[str, Any]:
+    """A Deezer REST GET, or raise :class:`ValueError`.
+
+    Same "HTTP 200 but an ``error`` object instead of data" trap as
+    :func:`_search_rows` - an invalid id, a rate limit, all read this
+    way rather than as an HTTP error status.
+    """
+
+    try:
+        resp = httpx.get(url, params=params or None, timeout=_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        logger.opt(exception=True).debug('Deezer request failed: {}', url)
+        raise ValueError('Could not reach Deezer') from exc
+    if not isinstance(data, dict):
+        raise ValueError('Deezer sent an unexpected answer')
+    if data.get('error'):
+        logger.debug('Deezer refused {}: {}', url, data['error'])
+        raise ValueError('Deezer refused the request')
+    return data
+
+
+def _artists_from_track_row(row: dict[str, Any]) -> list[str]:
+    """Lead artist first, then any featured contributors - deduplicated."""
+
+    artist = row.get('artist') if isinstance(row.get('artist'), dict) else {}
+    artists: list[str] = []
+    lead = str(artist.get('name') or '').strip()
+    if lead:
+        artists.append(lead)
+    for contributor in row.get('contributors') or []:
+        if not isinstance(contributor, dict):
+            continue
+        name = str(contributor.get('name') or '').strip()
+        if name and name not in artists:
+            artists.append(name)
+    return artists
+
+
+def _cover_from_images(d: dict[str, Any], prefix: str = 'cover') -> str:
+    """Largest image Deezer offers under ``<prefix>_xl``/``_big``/
+    ``_medium`` - ``cover`` for a track/album/playlist, ``picture`` for
+    an artist."""
+
+    return (
+        d.get(f'{prefix}_xl')
+        or d.get(f'{prefix}_big')
+        or d.get(f'{prefix}_medium')
+        or ''
+    )
+
+
+def _year_from_release_date(value: str) -> str:
+    text = str(value or '').strip()
+    return text[:4] if len(text) >= 4 and text[:4].isdigit() else ''
+
+
+def _song_from_full_track(
+    row: dict[str, Any],
+    *,
+    track_number: int = 0,
+    album_track_total: int = 0,
+    release_date: str = '',
+) -> Optional[dict[str, Any]]:
+    """A full Deezer track resource - or an album/playlist tracklist row,
+    same shape minus a couple of fields - as a downloadable Downtify song.
+
+    Fills in a release date whenever one is available: the caller's own
+    (an album's ``release_date``, for every one of its tracks), else the
+    row's or its embedded album's.
+    """
+
+    track_id = row.get('id')
+    name = str(row.get('title') or row.get('title_short') or '').strip()
+    if not track_id or not name:
+        return None
+    artists = _artists_from_track_row(row)
+    if not artists:
+        return None
+    album = row.get('album') if isinstance(row.get('album'), dict) else {}
+    preview = str(row.get('preview') or '')
+    rd = (
+        release_date
+        or str(row.get('release_date') or '').strip()
+        or str(album.get('release_date') or '').strip()
+    )
+    song: dict[str, Any] = {
+        'song_id': f'deezer-{track_id}',
+        'name': name,
+        'artists': artists,
+        'album_name': str(album.get('title') or '').strip(),
+        'cover_url': _cover_from_images(album),
+        'duration': int(row.get('duration') or 0),
+        'url': str(row.get('link') or ''),
+        'preview_url': preview if preview.startswith('https://') else '',
+        'explicit': bool(row.get('explicit_lyrics')),
+        'year': _year_from_release_date(rd),
+        'release_date': rd,
+        'source': 'deezer',
+    }
+    if track_number:
+        song['track_number'] = track_number
+    if album_track_total:
+        song['album_track_total'] = album_track_total
+    return song
+
+
+def track_from_id(track_id: str) -> dict[str, Any]:
+    """A single Deezer track, as a downloadable Downtify song.
+
+    Raises :class:`ValueError` when the id doesn't resolve (Deezer
+    answers a missing id with an ``error`` object, not an HTTP 404 - see
+    :func:`_get_json`) or has no title/artist to build a song from.
+    """
+
+    row = _get_json(f'https://api.deezer.com/track/{track_id}')
+    song = _song_from_full_track(
+        row, track_number=int(row.get('track_position') or 0)
+    )
+    if song is None:
+        raise ValueError('Deezer track has no title or artist')
+    return song
+
+
+def _paginate_tracks(first_page: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every row of a Deezer tracklist, following ``next`` - a full URL
+    to the following page, present whenever there is one - until Deezer
+    stops offering one. Trusted the same way Spotify's playlist ``total``
+    is: Deezer's own cursor, not re-derived from a track count."""
+
+    rows: list[dict[str, Any]] = list(first_page.get('data') or [])
+    next_url = first_page.get('next')
+    while next_url:
+        page = _get_json(next_url)
+        rows.extend(page.get('data') or [])
+        next_url = page.get('next')
+    return rows
+
+
+def album_from_id(album_id: str) -> list[dict[str, Any]]:
+    """Every track of a Deezer album/single/EP, in tracklist order.
+
+    Each track's position in the list is its ``track_number`` - Deezer
+    already returns them in tracklist order - since the per-track rows
+    embedded in an album's response don't carry one of their own (unlike
+    a standalone :func:`track_from_id` lookup). The album's own
+    ``release_date`` fills in what those rows don't carry either.
+
+    Raises :class:`ValueError` when the id doesn't resolve or the
+    request fails.
+    """
+
+    payload = _get_json(f'https://api.deezer.com/album/{album_id}')
+    rows = _paginate_tracks(payload.get('tracks') or {})
+    release_date = str(payload.get('release_date') or '').strip()
+    total = len(rows)
+    songs: list[dict[str, Any]] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        song = _song_from_full_track(
+            row,
+            track_number=index + 1,
+            album_track_total=total,
+            release_date=release_date,
+        )
+        if song:
+            songs.append(song)
+    return songs
+
+
+def playlist_info_and_tracks(
+    playlist_id: str,
+) -> tuple[str, list[dict[str, Any]]]:
+    """``(name, tracks)`` for a Deezer playlist, fetching every track via
+    :func:`_paginate_tracks`.
+
+    Deliberately doesn't number the tracks: unlike an album, a playlist's
+    position isn't a track's real position on its own album, and its
+    tracks come from many different albums anyway - each keeps whatever
+    ``release_date`` its own row/album happens to carry (usually none;
+    Deezer's playlist-track rows carry a slimmer album reference than
+    :func:`track_from_id`'s or :func:`album_from_id`'s do).
+
+    Raises :class:`ValueError` when the id doesn't resolve or the
+    request fails.
+    """
+
+    payload = _get_json(f'https://api.deezer.com/playlist/{playlist_id}')
+    name = str(payload.get('title') or '').strip() or str(playlist_id)
+    rows = _paginate_tracks(payload.get('tracks') or {})
+    songs: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        song = _song_from_full_track(row)
+        if song:
+            songs.append(song)
+    return name, songs
+
+
+def playlist_cover_url_from_id(playlist_id: str) -> str:
+    """Largest cover art of a Deezer playlist, for saving alongside its
+    M3U file - same idea as
+    :func:`downtify.spotify.playlist_cover_url_from_id`.
+
+    A playlist's own image fields are named ``picture_*`` (like an
+    artist's), not ``cover_*`` (like a track/album's).
+
+    Raises :class:`ValueError` when the id doesn't resolve or the
+    request fails.
+    """
+
+    payload = _get_json(f'https://api.deezer.com/playlist/{playlist_id}')
+    return _cover_from_images(payload, prefix='picture')
+
+
+# Deezer's own release-type classification (``record_type``), title-cased
+# the same way downtify.spotify._RELEASE_TYPES is - ReleaseCard.vue only
+# translates 'album'/'single'/'ep' and shows anything else (a
+# 'compile'/"Compilation" release) as-is.
+_RECORD_TYPE_LABELS = {
+    'album': 'Album',
+    'single': 'Single',
+    'ep': 'EP',
+    'compile': 'Compilation',
+}
+
+
+def _artist_release_row(
+    row: dict[str, Any], artist_name: str
+) -> Optional[dict[str, Any]]:
+    """One row of a Deezer artist's discography as a release summary.
+
+    Unlike an album/playlist track row, an artist's own albums listing
+    doesn't repeat the artist's name on each row (it's implied), so
+    *artist_name* - the artist page's own name - fills it in.
+    """
+
+    album_id = row.get('id')
+    name = str(row.get('title') or '').strip()
+    if not album_id or not name:
+        return None
+    record_type = str(row.get('record_type') or '').strip().lower()
+    return {
+        'album_id': str(album_id),
+        'name': name,
+        'artist': artist_name,
+        'cover_url': _cover_from_images(row),
+        'year': _year_from_release_date(row.get('release_date')),
+        'explicit': bool(row.get('explicit_lyrics')),
+        'url': str(row.get('link') or ''),
+        'source': 'deezer',
+        'release_type': _RECORD_TYPE_LABELS.get(
+            record_type, record_type.title() or 'Album'
+        ),
+    }
+
+
+def artist_page_from_id(
+    artist_id: str,
+) -> tuple[str, str, list[dict[str, Any]]]:
+    """``(name, cover_url, releases)`` for a Deezer artist - their full
+    discography (every album, single, EP and compilation Deezer has),
+    Deezer's own order (most recent first).
+
+    Raises :class:`ValueError` when the id doesn't resolve or the
+    request fails.
+    """
+
+    info = _get_json(f'https://api.deezer.com/artist/{artist_id}')
+    name = str(info.get('name') or '').strip() or str(artist_id)
+    cover = _cover_from_images(info, prefix='picture')
+    first_page = _get_json(
+        f'https://api.deezer.com/artist/{artist_id}/albums', limit=100
+    )
+    rows = _paginate_tracks(first_page)
+    releases: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        release = _artist_release_row(row, name)
+        if release:
+            releases.append(release)
+    return name, cover, releases
+
+
+# The Deezer equivalent of downtify.api.YOUTUBE_TOP_SONGS_LIMIT - Deezer's
+# own artist "top" endpoint is already ranked by popularity, so only its
+# head is worth listing.
+TOP_SONGS_LIMIT = 50
+
+
+def artist_top_songs_from_id(
+    artist_id: str,
+) -> tuple[str, str, list[dict[str, Any]]]:
+    """``(name, cover_url, songs)`` for a Deezer artist's own "top"
+    ranking (their most-played tracks - the same shelf ``deezer.com``
+    shows on an artist's page).
+
+    Raises :class:`ValueError` when the id doesn't resolve or the
+    request fails.
+    """
+
+    info = _get_json(f'https://api.deezer.com/artist/{artist_id}')
+    name = str(info.get('name') or '').strip() or str(artist_id)
+    cover = _cover_from_images(info, prefix='picture')
+    top = _get_json(
+        f'https://api.deezer.com/artist/{artist_id}/top',
+        limit=TOP_SONGS_LIMIT,
+    )
+    songs: list[dict[str, Any]] = []
+    for row in top.get('data') or []:
+        if not isinstance(row, dict):
+            continue
+        song = _song_from_full_track(row)
+        if song:
+            songs.append(song)
+    return name, cover, songs

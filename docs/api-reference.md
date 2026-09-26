@@ -56,18 +56,18 @@ When YouTube Music returns nothing and slskd is an enabled audio source, the res
 
 ### `GET /api/song/url`
 
-Resolve a Spotify or YouTube Music URL to metadata.
+Resolve a Spotify, YouTube Music or Deezer URL to metadata.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify track, album or playlist URL, or a YouTube / YouTube Music video, album, playlist or artist URL |
+| `url` | string | yes | Spotify track, album or playlist URL; a YouTube / YouTube Music video, album, playlist or artist URL; or a Deezer track, album, playlist or artist URL (`deezer.com/track/…`) |
 
 **Response:**
 
-- **Track URL** → single song object
+- **Track URL** → single song object. A Deezer track's song object also carries `preview_url` - a 30-second MP3 clip Deezer streams (`https://` only), or `""` when it has none.
 - **Album URL** → array of song objects
 - **Playlist URL** → array of song objects. For a YouTube Music playlist (`…/playlist?list=…`), every song is pinned to the playlist's own video (`youtube_id`), and for uploads the artist/title are taken from an `Artist - Title` video title. See [YouTube Music playlists](features/playlist-monitor.md#youtube-music-playlists).
-- **Artist URL** (YouTube Music `…/channel/UC…` or `…/@handle`) → array of release summaries. `404` if a handle doesn't belong to an artist.
+- **Artist URL** (YouTube Music `…/channel/UC…`/`…/@handle`, or Deezer `deezer.com/artist/…`) → array of release summaries. `404` if a YouTube Music handle doesn't belong to an artist.
 
 `GET /api/url` is an alias for this endpoint.
 
@@ -79,7 +79,7 @@ Resolve a pasted link to a single object describing what it points at — used b
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify track, album, playlist or artist URL, or a YouTube / YouTube Music video, album, playlist or artist URL |
+| `url` | string | yes | Spotify track, album, playlist or artist URL; a YouTube / YouTube Music video, album, playlist or artist URL; or a Deezer track, album, playlist or artist URL |
 
 **Response:**
 
@@ -95,7 +95,7 @@ Resolve a pasted link to a single object describing what it points at — used b
 }
 ```
 
-`kind` is `track`, `album`, `playlist` or `artist`. A track or collection fills `tracks` (Spotify songs carry `preview_url`, their 30-second clip, or `""` — for a long playlist only the first tracks the embed lists have one; see [`GET /api/preview`](#get-apipreview) for the rest); an artist fills `albums` with release summaries instead, and, for YouTube Music, `subtitle` carries the artist description (it is empty for Spotify). A Spotify artist's releases come from the Spotify web player's discography query; if that stops resolving, a shorter list (every album, the latest singles) is returned instead, and `albums` is empty when both fail. An artist's songs come from [`GET /api/artists/top_songs/url`](#get-apiartiststop_songsurl). `400` for a URL that isn't a supported link, `404` when the link resolves to nothing (e.g. a handle that isn't an artist), `502` when the upstream lookup fails.
+`kind` is `track`, `album`, `playlist` or `artist`. A track or collection fills `tracks` (Spotify songs carry `preview_url`, their 30-second clip, or `""` — for a long playlist only the first tracks the embed lists have one; see [`GET /api/preview`](#get-apipreview) for the rest; Deezer songs carry Deezer's own clip); an artist fills `albums` with release summaries instead, and, for YouTube Music, `subtitle` carries the artist description (it is empty for Spotify and Deezer). A Spotify artist's releases come from the Spotify web player's discography query; if that stops resolving, a shorter list (every album, the latest singles) is returned instead, and `albums` is empty when both fail. YouTube Music and Deezer both have a real discography endpoint, so neither needs that fallback. An artist's songs come from [`GET /api/artists/top_songs/url`](#get-apiartiststop_songsurl). `400` for a URL that isn't a supported link, `404` when the link resolves to nothing (e.g. a handle that isn't an artist, or a Deezer id Deezer doesn't recognize), `502` when the upstream lookup fails.
 
 ---
 
@@ -105,7 +105,7 @@ An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify artist URL (`open.spotify.com/artist/…`) or YouTube Music artist URL (`/channel/UC…` or `/@handle`) |
+| `url` | string | yes | Spotify artist URL (`open.spotify.com/artist/…`), YouTube Music artist URL (`/channel/UC…` or `/@handle`), or Deezer artist URL (`deezer.com/artist/…`) |
 
 **Response:**
 
@@ -119,7 +119,7 @@ An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.
 }
 ```
 
-`source` is `spotify` or `youtube`. Songs also carry `play_count`, an integer, when the source reports one (left out otherwise). Spotify's is the exact total. YouTube Music only reports a rounded figure (`4.4M plays`), so its `play_count` is an approximation (`4400000`) and the song also has `play_count_approx: true`. Spotify returns the artist's own *Popular* shelf (up to 10 songs); YouTube Music returns the head of the artist's *Top songs* playlist (up to 50). `400` for a URL that isn't an artist link, `404` when a YouTube Music handle doesn't resolve to an artist, `502` when the upstream lookup fails.
+`source` is `spotify`, `youtube` or `deezer`. Songs also carry `play_count`, an integer, when the source reports one (left out otherwise - Deezer never does). Spotify's is the exact total. YouTube Music only reports a rounded figure (`4.4M plays`), so its `play_count` is an approximation (`4400000`) and the song also has `play_count_approx: true`. Spotify returns the artist's own *Popular* shelf (up to 10 songs); YouTube Music returns the head of the artist's *Top songs* playlist (up to 50); Deezer returns its own "top" ranking (up to 50). `400` for a URL that isn't an artist link, `404` when a YouTube Music handle doesn't resolve to an artist, `502` when the upstream lookup fails.
 
 ---
 
@@ -432,10 +432,10 @@ Download a single track. Blocks until complete.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify track URL or YouTube URL |
+| `url` | string | yes | Spotify track URL, YouTube URL, or Deezer track URL |
 | `client_id` | string | no | WebSocket client ID for progress events |
 
-**Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` forces the audio source, and `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download.
+**Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` forces the audio source, and `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download. A body with `"source": "deezer"` (a resolved Deezer link row) is taken as-is instead of re-fetching by `url` - Deezer isn't a URL this endpoint otherwise resolves on its own.
 
 **Response:** Filename string of the downloaded file — a `slskd/…` path for a slskd download left in place. `404` when no audio source has a match for the track.
 
@@ -458,7 +458,7 @@ Download multiple tracks concurrently, gated by the [`max_parallel_downloads` se
 | Field | Type | Description |
 |-------|------|-------------|
 | `songs` | array | Song objects to download |
-| `playlist_url` | string | Optional. A Spotify or YouTube Music playlist URL, used to determine the playlist subfolder and M3U name. A Spotify playlist is also tracked as a [playlist download](#playlist-downloads). |
+| `playlist_url` | string | Optional. A Spotify, YouTube Music or Deezer playlist URL, used to determine the playlist subfolder and M3U name. A Spotify playlist is also tracked as a [playlist download](#playlist-downloads) - Deezer and YouTube Music playlists get the same folder/M3U/cover treatment but aren't tracked that way. |
 | `playlist_name` | string | Optional. Names the playlist subfolder and M3U when there is no `playlist_url`, e.g. an artist's [top songs](features/top-songs.md). Ignored when `playlist_url` resolves. |
 | `cover_url` | string | Optional. Image saved as the playlist's [cover art](features/playlist-cover-art.md) when there is no `playlist_url`. Only used when `generate_m3u` is true, a `playlist_name` is set and the cover art setting is on. |
 | `generate_m3u` | boolean | Whether to write an M3U after the batch finishes. Default: `true`. |

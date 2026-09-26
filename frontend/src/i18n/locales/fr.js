@@ -160,6 +160,7 @@ export default {
     watchArtist: 'Surveiller les nouvelles sorties',
     openSpotify: 'Ouvrir dans Spotify',
     openYoutube: 'Ouvrir dans YouTube Music',
+    openDeezer: 'Ouvrir sur Deezer',
     filterAll: 'Tout',
     filterNew: 'Nouveaux',
     filterLibrary: 'Dans la bibliothèque',

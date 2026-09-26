@@ -157,6 +157,7 @@ export default {
     watchArtist: 'Παρακολούθηση νέων κυκλοφοριών',
     openSpotify: 'Άνοιγμα στο Spotify',
     openYoutube: 'Άνοιγμα στο YouTube Music',
+    openDeezer: 'Άνοιγμα στο Deezer',
     filterAll: 'Όλα',
     filterNew: 'Νέα',
     filterLibrary: 'Στη βιβλιοθήκη',

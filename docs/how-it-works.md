@@ -42,6 +42,10 @@ If neither site has an acceptable match, the track fails with `Could not find a 
 
 For YouTube URLs entered directly, this step is skipped — Downtify downloads that specific video.
 
+::: info Deezer links
+A pasted Deezer track/album/playlist/artist link (`deezer.com/track/…`) works the same way a Spotify one does: Deezer's public REST API supplies the title, artist(s), album, cover and — for a track — a 30-second preview clip you can listen to before downloading, and this same step then matches it on YouTube Music/YouTube. Downtify has no Deezer discography resolver of its own beyond what Deezer's API already returns, so a Deezer link downloads and (for a playlist) gets its own M3U and cover art, but can't be watched by the [Playlist Monitor](features/playlist-monitor.md).
+:::
+
 ## 3. Download & tag — yt-dlp + ffmpeg + mutagen
 
 ### Download

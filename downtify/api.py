@@ -84,25 +84,32 @@ working without changes:
   links directly - body ``{name, social: {twitter, facebook, website,
   instagram, youtube}}``; replaces the whole object, never fetched)
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
-  resolves an artist channel or ``@handle`` URL into every one of their
-  albums/singles as lightweight summaries, same shape as
-  ``/api/albums/search`` - no tracklists; resolve a chosen release's
-  tracks separately). A YouTube Music playlist URL resolves to its
-  tracks, like a Spotify playlist.
+  resolves an artist channel/``@handle`` (YouTube Music) or artist link
+  (Deezer) URL into every one of their albums/singles as lightweight
+  summaries, same shape as ``/api/albums/search`` - no tracklists;
+  resolve a chosen release's tracks separately). A YouTube Music or
+  Deezer playlist URL resolves to its tracks, like a Spotify playlist.
+  Accepts a Spotify, YouTube Music or Deezer track/album/playlist URL
+  (plus a YouTube Music/Deezer artist URL, as above).
 * ``GET  /api/url/resolve`` (the same links, always as
   ``{kind, name, subtitle, cover_url, year, tracks, albums}`` - adds the
-  playlist/album name and cover the plain track list lacks)
-* ``GET  /api/artists/top_songs/url`` (a Spotify or YouTube Music artist
-  URL - ``open.spotify.com/artist/...``, ``/channel/UC...`` or
-  ``/@handle`` - resolved to ``{source, artist_id, name, cover_url,
-  songs}``: the artist's own "Popular" / "Top songs" shelf, in the order
-  the source ranks it)
+  playlist/album name and cover the plain track list lacks; a Deezer
+  track's own ``preview_url`` survives into its song row)
+* ``GET  /api/artists/top_songs/url`` (a Spotify, YouTube Music or Deezer
+  artist URL - ``open.spotify.com/artist/...``, ``/channel/UC...``,
+  ``/@handle`` or ``deezer.com/artist/...`` - resolved to ``{source,
+  artist_id, name, cover_url, songs}``: the artist's own "Popular" /
+  "Top songs" / "top" shelf, in the order the source ranks it)
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
-  ``track_number`` / ``album_track_total`` survive re-fetch by URL)
+  ``track_number`` / ``album_track_total`` survive re-fetch by URL; a
+  ``"source": "deezer"`` body is taken as-is instead, see
+  ``_song_from_download_request``)
 * ``POST /api/download/batch`` (JSON body ``{songs, playlist_url,
   generate_m3u}``; instead of ``playlist_url`` a caller may pass an
   explicit ``playlist_name`` and ``cover_url`` - e.g. an artist's top
-  songs selection, which isn't backed by a real playlist id)
+  songs selection, which isn't backed by a real playlist id; a Deezer
+  ``playlist_url`` gets the same per-playlist folder, M3U and cover as a
+  Spotify/YouTube Music one, but isn't tracked as a resumable batch)
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
   downloads every track from one shared, already-resolved tracklist so
   metadata stays consistent across the whole release)
@@ -1950,6 +1957,29 @@ def _resolve_url(url: str):
             status_code=400, detail=f'Unsupported entity type: {kind}'
         )
 
+    deezer_parsed = deezer.parse_deezer_url(url)
+    if deezer_parsed is not None:
+        kind, did = deezer_parsed
+        try:
+            if kind == 'track':
+                return deezer.track_from_id(did)
+            if kind == 'album':
+                return deezer.album_from_id(did)
+            if kind == 'playlist':
+                _, tracks = deezer.playlist_info_and_tracks(did)
+                return tracks
+            if kind == 'artist':
+                _, _cover, releases = deezer.artist_page_from_id(did)
+                return releases
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception('Failed to resolve Deezer URL {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400, detail=f'Unsupported entity type: {kind}'
+        )
+
     raise HTTPException(status_code=400, detail='Invalid URL')
 
 
@@ -2044,6 +2074,34 @@ def _youtube_details(kind: str, yid: str) -> dict[str, Any]:
     )
 
 
+def _deezer_details(kind: str, did: str) -> dict[str, Any]:
+    if kind == 'track':
+        return _track_details(deezer.track_from_id(did))
+    if kind == 'album':
+        return _collection_details('album', deezer.album_from_id(did))
+    if kind == 'playlist':
+        name, tracks = deezer.playlist_info_and_tracks(did)
+        return _collection_details('playlist', tracks, name)
+    if kind == 'artist':
+        # Deezer has a real discography endpoint (unlike Spotify's embed),
+        # so - like YouTube Music - the releases come straight from it,
+        # no overview-shelf fallback needed. The client offers top songs
+        # from /api/artists/top_songs/url, same as the other two sources.
+        name, cover_url, releases = deezer.artist_page_from_id(did)
+        return {
+            'kind': 'artist',
+            'name': name,
+            'subtitle': '',
+            'cover_url': cover_url,
+            'year': '',
+            'tracks': [],
+            'albums': releases,
+        }
+    raise HTTPException(
+        status_code=400, detail=f'Unsupported entity type: {kind}'
+    )
+
+
 @router.get('/api/url/resolve')
 def url_resolve_endpoint(url: str = Query(...)) -> dict[str, Any]:
     """What a pasted link points at, with its tracks (or releases).
@@ -2058,12 +2116,19 @@ def url_resolve_endpoint(url: str = Query(...)) -> dict[str, Any]:
     youtube_parsed = (
         None if spotify_parsed else providers.parse_youtube_url(url)
     )
-    if spotify_parsed is None and youtube_parsed is None:
+    deezer_parsed = (
+        None
+        if spotify_parsed or youtube_parsed
+        else deezer.parse_deezer_url(url)
+    )
+    if spotify_parsed is None and youtube_parsed is None and not deezer_parsed:
         raise HTTPException(status_code=400, detail='Invalid URL')
     try:
         if spotify_parsed is not None:
             return _spotify_details(*spotify_parsed)
-        return _youtube_details(*youtube_parsed)
+        if youtube_parsed is not None:
+            return _youtube_details(*youtube_parsed)
+        return _deezer_details(*deezer_parsed)
     except HTTPException:
         raise
     except ValueError as exc:
@@ -2130,9 +2195,25 @@ def _resolve_artist_top_songs(url: str) -> dict[str, Any]:
             'songs': songs[:YOUTUBE_TOP_SONGS_LIMIT],
         }
 
+    deezer_parsed = deezer.parse_deezer_url(url)
+    if deezer_parsed is not None and deezer_parsed[0] == 'artist':
+        _, artist_id = deezer_parsed
+        try:
+            name, cover_url, songs = deezer.artist_top_songs_from_id(artist_id)
+        except Exception as exc:
+            logger.exception('Failed to resolve Deezer artist {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {
+            'source': 'deezer',
+            'artist_id': artist_id,
+            'name': name,
+            'cover_url': cover_url,
+            'songs': songs,
+        }
+
     raise HTTPException(
         status_code=400,
-        detail='A Spotify or YouTube Music artist URL is required',
+        detail='A Spotify, YouTube Music or Deezer artist URL is required',
     )
 
 
@@ -2225,6 +2306,15 @@ def _song_for_download(url: str) -> dict[str, Any]:
         raise HTTPException(
             status_code=400,
             detail='Only single YouTube video URLs are supported here',
+        )
+    deezer_parsed = deezer.parse_deezer_url(url)
+    if deezer_parsed is not None:
+        kind, did = deezer_parsed
+        if kind == 'track':
+            return deezer.track_from_id(did)
+        raise HTTPException(
+            status_code=400,
+            detail='Only Deezer track URLs are supported here',
         )
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
@@ -2555,6 +2645,66 @@ async def _write_batch_m3u(
     return m3u_path
 
 
+# A Deezer playlist download is named/covered here the same way a Spotify/
+# YouTube Music one is, without teaching Playlist Monitor's own
+# parse_playlist_url/fetch_playlist/download_playlist_cover (SOURCE_SPOTIFY/
+# SOURCE_YOUTUBE_MUSIC, imported above) about Deezer - Monitor has no Deezer
+# watch support, and _resolve_watch_target below still only recognizes a
+# Spotify or YouTube Music playlist/artist URL, unaffected by this.
+_SOURCE_DEEZER = 'deezer'
+
+
+def _playlist_target_for_batch(
+    playlist_url: str,
+) -> Optional[tuple[str, str]]:
+    """``(source, id)`` to name and cover a playlist download with - a
+    Spotify/YouTube Music playlist via :func:`parse_playlist_url`, or a
+    Deezer one (download-only, see :data:`_SOURCE_DEEZER`)."""
+
+    target = parse_playlist_url(playlist_url)
+    if target is not None:
+        return target
+    deezer_parsed = deezer.parse_deezer_url(playlist_url)
+    if deezer_parsed is not None and deezer_parsed[0] == 'playlist':
+        return _SOURCE_DEEZER, deezer_parsed[1]
+    return None
+
+
+def _fetch_playlist_for_batch(
+    source: str, playlist_id: str
+) -> tuple[str, list[dict[str, Any]]]:
+    if source == _SOURCE_DEEZER:
+        return deezer.playlist_info_and_tracks(playlist_id)
+    return fetch_playlist(source, playlist_id)
+
+
+def _download_playlist_cover_for_batch(
+    source: str,
+    playlist_id: str,
+    m3u_path: Path,
+    settings: dict[str, Any],
+) -> None:
+    if source != _SOURCE_DEEZER:
+        download_playlist_cover(source, playlist_id, m3u_path, settings)
+        return
+    if not settings.get('download_cover_art_playlists'):
+        return
+    try:
+        cover_url = deezer.playlist_cover_url_from_id(playlist_id)
+    except Exception:
+        logger.exception(
+            'Failed to resolve Deezer playlist cover art for {}',
+            playlist_id,
+        )
+        return
+    if not cover_url:
+        return
+    try:
+        save_playlist_cover(cover_url, m3u_path)
+    except Exception:
+        logger.exception('Failed to save cover art for {}', m3u_path)
+
+
 def _save_explicit_playlist_cover(
     cover_url: str, m3u_path: Path, settings: dict[str, Any]
 ) -> None:
@@ -2606,7 +2756,10 @@ async def _fetch_playlist_cover(
     )
     if target is not None:
         await asyncio.to_thread(
-            download_playlist_cover, *target, m3u_path, state.settings
+            _download_playlist_cover_for_batch,
+            *target,
+            m3u_path,
+            state.settings,
         )
     else:
         await asyncio.to_thread(
@@ -2630,16 +2783,16 @@ async def _process_batch(
     # Resolve the playlist name up-front so all tracks land in a single,
     # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
     # tracks) keep the legacy flat layout under download_dir. A caller
-    # without a Spotify/YouTube Music playlist_url (e.g. a CSV library
-    # import) can instead pass playlist_name directly.
+    # without a Spotify/YouTube Music/Deezer playlist_url (e.g. a CSV
+    # library import) can instead pass playlist_name directly.
     playlist_subdir: Optional[str] = None
     spotify_playlist_id: Optional[str] = None
     spotify_track_count = 0
-    target = parse_playlist_url(playlist_url) if playlist_url else None
+    target = _playlist_target_for_batch(playlist_url) if playlist_url else None
     if target is not None:
         try:
             playlist_name, tracks = await asyncio.to_thread(
-                fetch_playlist, *target
+                _fetch_playlist_for_batch, *target
             )
             playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
             if target[0] == SOURCE_SPOTIFY:

@@ -57,6 +57,19 @@ describe('classifyInput', () => {
     })
   })
 
+  it.each([
+    ['https://www.deezer.com/track/111', 'track'],
+    ['https://deezer.com/album/222', 'album'],
+    ['https://www.deezer.com/br/playlist/333', 'playlist'],
+    ['https://www.deezer.com/us/artist/444', 'artist'],
+  ])('recognises Deezer %s', (url, kind) => {
+    expect(classifyInput(url)).toMatchObject({
+      type: 'link',
+      source: 'deezer',
+      kind,
+    })
+  })
+
   it('does not search for other web links', () => {
     expect(classifyInput('https://example.com/song')).toMatchObject({
       type: 'unsupported',

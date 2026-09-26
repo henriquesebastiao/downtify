@@ -124,10 +124,11 @@ The remaining deployment options (timezone, monitor sync time, cookies file, IPv
 | YouTube Music playlist | `music.youtube.com/playlist?list=…` |
 | YouTube Music artist | `music.youtube.com/channel/UC…` or `music.youtube.com/@artist` |
 | YouTube or YouTube Music video | `youtube.com/watch?v=…` |
+| Deezer track, album, playlist or artist | `deezer.com/track/…` |
 | Free-text search | `The Night Owls Do I Still Recall` |
 | Library export (CSV) | Soundiiz, TuneMyMusic, Exportify |
 
-An artist link opens the artist's page, with their releases and a **Top Songs** button to pick from their most popular songs and download them, optionally as a playlist ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/)). Artists in your Library also get a **Top songs** tab with their first five Spotify top songs, kept in a per-artist file for a week, and a 30-second preview of each song you haven't downloaded yet; an artist's bio, genre and links are also filled in, in your language, in the background as their first track finishes downloading ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/#on-an-artists-library-page)). Artists can also be watched for new releases with the **Playlist Monitor** — just albums, singles or EPs if you like, and optionally only what comes out from now on, skipping the back catalogue.
+An artist link opens the artist's page, with their releases and a **Top Songs** button to pick from their most popular songs and download them, optionally as a playlist ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/)). Artists in your Library also get a **Top songs** tab with their first five Spotify top songs, kept in a per-artist file for a week, and a 30-second preview of each song you haven't downloaded yet; an artist's bio, genre and links are also filled in, in your language, in the background as their first track finishes downloading ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/#on-an-artists-library-page)). Artists can also be watched for new releases with the **Playlist Monitor** — just albums, singles or EPs if you like, and optionally only what comes out from now on, skipping the back catalogue. Deezer links can be downloaded but not watched.
 
 ## Downtify for Android
 

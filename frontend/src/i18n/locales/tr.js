@@ -158,6 +158,7 @@ export default {
     watchArtist: 'Yeni yayınları izle',
     openSpotify: 'Spotify’da aç',
     openYoutube: 'YouTube Music’te aç',
+    openDeezer: "Deezer'da aç",
     filterAll: 'Tümü',
     filterNew: 'Yeni',
     filterLibrary: 'Kitaplıkta',

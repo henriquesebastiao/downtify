@@ -11,8 +11,9 @@ Some artists have huge catalogs where only a handful of tracks matter. Instead o
 1. Paste an artist link into the search box or on the Home screen:
    - **Spotify**: `https://open.spotify.com/artist/…`
    - **YouTube Music**: `https://music.youtube.com/channel/UC…` or `https://music.youtube.com/@handle`
-2. The **artist page** opens with their photo and name, and lists their releases (albums, singles, EPs and compilations, where the service has them), newest first on Spotify; click one to see its tracks or download it. Next to **Watch for new releases** there is a **Top Songs** button.
-3. **Top Songs** opens the list of their most popular songs, in the order the service ranks them. A badge with an eye shows how many times each song has been played, shortened the way your language does it (`1,5 bi` in Portuguese, `1.5B` in English). Spotify's is green and YouTube Music's is red. YouTube Music only reports a rounded figure (`1.2B plays`), so its number is an approximation; Downtify reads it from the same YouTube Music request that lists the songs, plus one more request for the play counts. The first five are already ticked; tick more or untick any of them, then press **Download selected**.
+   - **Deezer**: `https://www.deezer.com/artist/…`
+2. The **artist page** opens with their photo and name, and lists their releases (albums, singles, EPs and compilations, where the service has them), newest first on Spotify and Deezer; click one to see its tracks or download it. Next to a **Top Songs** button, Spotify and YouTube Music artists also get **Watch for new releases** — Deezer artists don't, since the [Playlist Monitor](playlist-monitor.md) has no Deezer support.
+3. **Top Songs** opens the list of their most popular songs, in the order the service ranks them. For Spotify and YouTube Music, a badge with an eye shows how many times each song has been played, shortened the way your language does it (`1,5 bi` in Portuguese, `1.5B` in English) — Spotify's is green and YouTube Music's is red. YouTube Music only reports a rounded figure (`1.2B plays`), so its number is an approximation; Downtify reads it from the same YouTube Music request that lists the songs, plus one more request for the play counts. Deezer's own "top" ranking has no public play-count figure to show, so its songs list without a badge. The first five are already ticked; tick more or untick any of them, then press **Download selected**.
 
 ### Previewing songs before downloading
 
@@ -29,8 +30,9 @@ Where the clip comes from:
 |--------|------------------------|--------------|
 | Spotify | The artist's own **Popular** shelf, the same tracks shown at the top of their Spotify page | Up to 10 |
 | YouTube Music | The artist's **Top songs** playlist, ranked by popularity | The first 50 |
+| Deezer | The artist's own **top** ranking (the same shelf `deezer.com` shows on their page) | The first 50 |
 
-Spotify's public embed has no discography, so Downtify reads the releases from the Spotify web player's own discography query, the same non-public API it uses for the album names. If Spotify changes it, Downtify falls back to a shorter list (every album, but only the ten most recent singles) and, failing that, shows no releases. Spotify songs go through the usual metadata-then-audio-match pipeline, with their album name attached up front; the download fills in the rest (track number, year) as it does for any Spotify song. YouTube Music songs are pinned to their own video, like any other YouTube Music link.
+Spotify's public embed has no discography, so Downtify reads the releases from the Spotify web player's own discography query, the same non-public API it uses for the album names. If Spotify changes it, Downtify falls back to a shorter list (every album, but only the ten most recent singles) and, failing that, shows no releases. Spotify songs go through the usual metadata-then-audio-match pipeline, with their album name attached up front; the download fills in the rest (track number, year) as it does for any Spotify song. YouTube Music songs are pinned to their own video, like any other YouTube Music link. Deezer has a real, public discography endpoint, so its releases list needs no fallback; its songs go through the same metadata-then-audio-match pipeline as Spotify's, with a 30-second preview clip attached when Deezer offers one.
 
 ## On an artist's Library page
 
