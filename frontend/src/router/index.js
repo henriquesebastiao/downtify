@@ -64,6 +64,12 @@ const routes = [
     component: () => import('/src/views/MonitorView.vue'),
   },
   {
+    // Artists the library doesn't have yet, suggested from the ones it does.
+    path: '/discover',
+    name: 'Discover',
+    component: () => import('/src/views/DiscoverView.vue'),
+  },
+  {
     path: '/podcasts',
     name: 'Podcasts',
     component: () => import('/src/views/PodcastsView.vue'),

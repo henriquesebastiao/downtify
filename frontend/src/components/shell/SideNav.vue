@@ -178,6 +178,7 @@ const items = [
     match: ['Album', 'Artist', 'Playlist'],
   },
   { name: 'Queue', icon: 'download', label: 'nav.queue' },
+  { name: 'Discover', icon: 'sparkle', label: 'nav.discover' },
   { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
   {
     name: 'Podcasts',

@@ -314,6 +314,41 @@ function clearLikes() {
   return API.post('/api/likes/clear')
 }
 
+// ── Discover ───────────────────────────────────────────────────────
+// `library`: [{ name, tracks, liked }] per library artist.
+function getDiscover(library) {
+  return API.post('/api/discover', { library })
+}
+
+// A 30 s clip from Deezer for a song with no `preview_url` of its own.
+function findPreview({ artist, title, duration }) {
+  return API.get('/api/preview', { params: { artist, title, duration } })
+}
+
+function getDiscoverCollections(payload) {
+  return API.post('/api/discover/collections', payload)
+}
+
+function recordListen(artist) {
+  return API.post('/api/discover/listens', { artist })
+}
+
+function clearListens() {
+  return API.delete('/api/discover/listens')
+}
+
+function getBlockedArtists() {
+  return API.get('/api/discover/blocked')
+}
+
+function blockArtist(name) {
+  return API.post('/api/discover/blocked', { name })
+}
+
+function unblockArtist(name) {
+  return API.delete('/api/discover/blocked', { params: { name } })
+}
+
 // ── Podcasts ───────────────────────────────────────────────────────
 function resolvePodcast(url) {
   return API.post('/api/podcasts/resolve', { url })
@@ -497,6 +532,14 @@ export default {
   getLikes,
   setLike,
   clearLikes,
+  getDiscover,
+  getDiscoverCollections,
+  findPreview,
+  recordListen,
+  clearListens,
+  getBlockedArtists,
+  blockArtist,
+  unblockArtist,
   resolvePodcast,
   searchPodcasts,
   subscribePodcast,

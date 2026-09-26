@@ -4,10 +4,16 @@ import { nextTick } from 'vue'
 import {
   PREVIEW_RING_LENGTH,
   PREVIEW_SECONDS,
+  previewKey,
+  previewLookup,
   previewRatio,
   previewUrl,
   ringOffset,
 } from '../lib/preview.js'
+
+// GET /api/preview, for songs without a clip of their own.
+const findPreview = vi.fn()
+vi.mock('/src/model/api', () => ({ default: { findPreview } }))
 
 const CLIP = 'https://p.scdn.co/mp3-preview/b5ee275ca337899f762b1c1883c11e24'
 
@@ -23,6 +29,27 @@ describe('previewUrl', () => {
     expect(previewUrl({ preview_url: 42 })).toBe('')
     expect(previewUrl({ preview_url: 'http://p.scdn.co/x' })).toBe('')
     expect(previewUrl({ preview_url: 'javascript:alert(1)' })).toBe('')
+  })
+})
+
+describe('previewKey / previewLookup', () => {
+  it('keys a row by the song id, else by artist and title', () => {
+    expect(previewKey({ song_id: 'abc' })).toBe('abc')
+    expect(previewKey({ artists: ['Air'], name: 'La Femme' })).toBe(
+      'air|la femme'
+    )
+    expect(previewKey({ name: 'Nobody' })).toBe('')
+  })
+
+  it('asks for the first artist, the title and the length', () => {
+    expect(
+      previewLookup({ artists: ['Air', 'Beck'], name: 'X', duration: 200 })
+    ).toEqual({ artist: 'Air', title: 'X', duration: 200 })
+    expect(previewLookup({ artist: 'Air', name: 'X' })).toEqual({
+      artist: 'Air',
+      title: 'X',
+    })
+    expect(previewLookup({ name: 'X' })).toBeNull()
   })
 })
 
@@ -106,6 +133,7 @@ describe('usePreview', () => {
   beforeEach(async () => {
     vi.resetModules()
     FakeAudio.all = []
+    findPreview.mockReset()
     globalThis.localStorage = { getItem: () => null, setItem: () => {} }
     globalThis.Audio = FakeAudio
     ;({ usePlayer: player } = await import('../model/player.js'))
@@ -248,5 +276,54 @@ describe('usePreview', () => {
     expect(preview.activeId.value).toBe(SONG.song_id)
     preview.stopFor(SONG.song_id)
     expect(preview.activeId.value).toBe('')
+  })
+
+  const YTM = { song_id: 'ytm1', artists: ['Air'], name: 'La Femme' }
+  const DZ = 'https://cdnt-preview.dzcdn.net/api/1/clip.mp3'
+
+  it('looks up a clip for a song without one, once', async () => {
+    findPreview.mockResolvedValue({ data: { preview_url: DZ } })
+    expect(preview.canPreview(YTM)).toBe(true)
+    expect(await preview.toggle(YTM)).toBe(true)
+    expect(findPreview).toHaveBeenCalledWith({
+      artist: 'Air',
+      title: 'La Femme',
+    })
+    expect(clip().src).toBe(DZ)
+    expect(preview.activeId.value).toBe('ytm1')
+    preview.stop()
+    await preview.toggle(YTM)
+    expect(findPreview).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops offering a preview when Deezer has none', async () => {
+    findPreview.mockResolvedValue({ data: { preview_url: '' } })
+    expect(await preview.toggle(YTM)).toBe(false)
+    expect(preview.activeId.value).toBe('')
+    expect(preview.canPreview(YTM)).toBe(false)
+  })
+
+  it('asks again after a failed lookup', async () => {
+    findPreview.mockRejectedValueOnce(new Error('503'))
+    expect(await preview.toggle(YTM)).toBe(false)
+    expect(preview.canPreview(YTM)).toBe(true)
+    findPreview.mockResolvedValue({ data: { preview_url: DZ } })
+    expect(await preview.toggle(YTM)).toBe(true)
+  })
+
+  it('never plays a looked-up link that is not https', async () => {
+    findPreview.mockResolvedValue({ data: { preview_url: 'http://x/y.mp3' } })
+    expect(await preview.toggle(YTM)).toBe(false)
+  })
+
+  it('a newer row wins over a lookup still in flight', async () => {
+    let answer
+    findPreview.mockReturnValue(new Promise((resolve) => (answer = resolve)))
+    const pending = preview.toggle(YTM)
+    preview.toggle(SONG)
+    answer({ data: { preview_url: DZ } })
+    await pending
+    expect(preview.activeId.value).toBe(SONG.song_id)
+    expect(clip().src).toBe(CLIP)
   })
 })

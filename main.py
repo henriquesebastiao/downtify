@@ -31,6 +31,7 @@ from downtify import __version__, api, m3u
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
+from downtify.discover import DiscoverStore
 from downtify.downloader import Downloader
 from downtify.library_archive import (
     MAX_ARCHIVE_FILES,
@@ -266,6 +267,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
     api.state.podcasts = PodcastStore(library_db)
+    api.state.discover = DiscoverStore(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
     api.state.upgrade_runner = LibraryUpgradeRunner(
         LibraryUpgradeDB(library_db),

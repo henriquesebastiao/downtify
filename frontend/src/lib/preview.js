@@ -31,3 +31,26 @@ export function previewRatio(time, duration) {
 export function ringOffset(ratio) {
   return PREVIEW_RING_LENGTH * (1 - ratio)
 }
+
+/**
+ * Which row a clip belongs to: the song's own id, or - for a song without
+ * one - its artist and title. '' when there's nothing to go on.
+ */
+export function previewKey(song) {
+  const id = String(song?.song_id || '').trim()
+  if (id) return id
+  const { artist, title } = previewLookup(song) || {}
+  return artist && title ? `${artist}|${title}`.toLowerCase() : ''
+}
+
+/**
+ * What `GET /api/preview` needs to look a clip up for a song without one of
+ * its own - its first artist, title and length - or `null`.
+ */
+export function previewLookup(song) {
+  const artist = String((song?.artists || [])[0] || song?.artist || '').trim()
+  const title = String(song?.name || song?.title || '').trim()
+  if (!artist || !title) return null
+  const duration = Number(song?.duration) || 0
+  return duration > 0 ? { artist, title, duration } : { artist, title }
+}

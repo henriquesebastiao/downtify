@@ -157,6 +157,21 @@ working without changes:
   ``DELETE /api/podcasts/episodes/{id}`` and
   ``PUT /api/podcasts/episodes/{id}/playback`` (per-episode download,
   removal and resume position)
+* ``POST /api/discover`` (suggested artists the library doesn't have
+  yet - body ``{library: [{name, tracks, liked}]}``, the Library page's
+  own artist grouping; response ``{artists: [{name, deezer_id,
+  picture_url, fans, score, because}], seeds, partial}`` - see
+  ``downtify.discover``), ``POST /api/discover/collections`` (albums and
+  playlists built on those artists - same body plus ``albums: [{artist,
+  title}]`` and ``playlist_ids``; response ``{albums, more_albums,
+  playlists, artist_urls, partial}``), ``POST|DELETE
+  /api/discover/listens`` (count
+  one listen to an artist - body ``{artist}`` - or forget them all) and
+  ``GET|POST|DELETE /api/discover/blocked`` (artists never to suggest -
+  ``POST`` body ``{name}``, ``DELETE`` takes ``?name=``)
+* ``GET  /api/preview`` (a song's 30 s preview clip from Deezer, for a
+  song with no ``preview_url`` of its own - ``?artist=&title=&duration=``,
+  response ``{preview_url}``, ``""`` when Deezer has no matching song)
 * ``WS   /api/ws``
 * ``GET  /api/check_update``
 """
@@ -204,6 +219,7 @@ from . import (
 )
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
+from .discover import DiscoverStore, collections, recommendations
 from .downloader import (
     AUDIO_PROVIDERS,
     DOWNLOAD_EXECUTOR,
@@ -697,6 +713,7 @@ class AppState:
     upgrade_runner: Optional[library_upgrade.LibraryUpgradeRunner] = None
     likes: Optional[LikedTracks] = None
     podcasts: Optional[PodcastStore] = None
+    discover: Optional[DiscoverStore] = None
 
 
 state = AppState()
@@ -4284,6 +4301,128 @@ async def clear_likes_endpoint() -> dict[str, Any]:
 
     cleared = await asyncio.to_thread(_clear_likes)
     return {'cleared': cleared, 'count': 0}
+
+
+# ── Discover ─────────────────────────────────────────────────────────
+def _require_discover() -> DiscoverStore:
+    if state.discover is None:
+        raise HTTPException(status_code=500, detail='Discover store not ready')
+    return state.discover
+
+
+@router.post('/api/discover')
+async def discover_endpoint(request: Request) -> dict[str, Any]:
+    """Artists the library doesn't have yet, suggested from the ones it
+    does (see ``downtify.discover``).
+
+    Body ``{library: [{name, tracks, liked}]}``: every library artist with
+    its track and liked-track counts, as the Library page groups them. The
+    server adds how often each was listened to, and leaves out the library
+    and the block list. A Deezer failure for some seeds isn't an error -
+    the rest still count, and ``partial`` says so.
+    """
+
+    store = _require_discover()
+    payload = await _json_object(request)
+    library = payload.get('library')
+    if not isinstance(library, list):
+        raise HTTPException(status_code=400, detail='library is required')
+    return await asyncio.to_thread(recommendations, store, library)
+
+
+@router.post('/api/discover/collections')
+async def discover_collections_endpoint(request: Request) -> dict[str, Any]:
+    """Albums and playlists for the library (see
+    ``downtify.discover.collections``).
+
+    Body: the same ``library`` as ``POST /api/discover``, plus ``albums``
+    (``{artist, title}`` per library album) and ``playlist_ids`` (Spotify
+    ids of downloaded playlists), both left out of the answer.
+    """
+
+    store = _require_discover()
+    payload = await _json_object(request)
+    library = payload.get('library')
+    if not isinstance(library, list):
+        raise HTTPException(status_code=400, detail='library is required')
+    albums = payload.get('albums')
+    playlist_ids = payload.get('playlist_ids')
+    return await asyncio.to_thread(
+        collections,
+        store,
+        library,
+        albums if isinstance(albums, list) else [],
+        playlist_ids if isinstance(playlist_ids, list) else [],
+    )
+
+
+@router.get('/api/preview')
+async def song_preview_endpoint(
+    artist: str = Query(...),
+    title: str = Query(...),
+    duration: Optional[float] = Query(None),
+) -> dict[str, str]:
+    """A song's 30 s preview clip from Deezer, for a song without one of
+    its own (a YouTube Music result, a long Spotify playlist's later
+    tracks). ``""`` when Deezer has no song by that artist with that
+    title; ``503`` when Deezer couldn't be asked."""
+
+    try:
+        url = await asyncio.to_thread(
+            deezer.find_track_preview, artist, title, duration
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {'preview_url': url}
+
+
+@router.post('/api/discover/listens')
+async def record_listen_endpoint(request: Request) -> dict[str, Any]:
+    """Count one listen to ``{artist}`` - sent by the player once a track
+    has played long enough to count."""
+
+    store = _require_discover()
+    payload = await _json_object(request)
+    row = await asyncio.to_thread(
+        store.record_listen, str(payload.get('artist') or '')
+    )
+    if row is None:
+        raise HTTPException(status_code=400, detail='artist is required')
+    return row
+
+
+@router.delete('/api/discover/listens')
+async def clear_listens_endpoint() -> dict[str, Any]:
+    """Forget every counted listen. The library and likes are untouched."""
+
+    store = _require_discover()
+    cleared = await asyncio.to_thread(store.clear_listens)
+    return {'cleared': cleared}
+
+
+@router.get('/api/discover/blocked')
+async def blocked_artists_endpoint() -> list[dict[str, Any]]:
+    store = _require_discover()
+    return await asyncio.to_thread(store.blocked)
+
+
+@router.post('/api/discover/blocked')
+async def block_artist_endpoint(request: Request) -> dict[str, Any]:
+    """Never suggest ``{name}`` again. Blocking twice is a no-op."""
+
+    store = _require_discover()
+    payload = await _json_object(request)
+    row = await asyncio.to_thread(store.block, str(payload.get('name') or ''))
+    if row is None:
+        raise HTTPException(status_code=400, detail='name is required')
+    return row
+
+
+@router.delete('/api/discover/blocked')
+async def unblock_artist_endpoint(name: str = Query(...)) -> dict[str, Any]:
+    store = _require_discover()
+    removed = await asyncio.to_thread(store.unblock, name)
+    return {'name': name, 'removed': removed}
 
 
 # ── Podcasts ─────────────────────────────────────────────────────────
