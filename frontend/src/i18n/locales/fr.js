@@ -778,7 +778,7 @@ export default {
       'Désactivez pour des fichiers plus légers et des téléchargements plus rapides.',
     coverSize: 'Taille de la pochette',
     coverSizeHint:
-      'Pour les pochettes YouTube Music. Celles de Spotify utilisent toujours la plus grande taille.',
+      'Pour les pochettes YouTube Music et Deezer. Celles de Spotify utilisent toujours la plus grande taille.',
     artistCover: "Obtenir automatiquement les photos d'artiste",
     artistCoverHint:
       "Télécharge la photo de l'artiste dans .metadata/ArtistImage ; utilisable aussi par des services comme Navidrome.",

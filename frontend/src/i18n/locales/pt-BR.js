@@ -764,7 +764,7 @@ export default {
     coverArtHint: 'Desative para arquivos menores e downloads mais rápidos.',
     coverSize: 'Tamanho da capa',
     coverSizeHint:
-      'Para capas do YouTube Music. Capas do Spotify sempre usam o maior tamanho disponível.',
+      'Para capas do YouTube Music e Deezer. Capas do Spotify sempre usam o maior tamanho disponível.',
     artistCover: 'Obter fotos de artista automaticamente',
     artistCoverHint:
       'Baixa foto do artista, salva em .metadata/ArtistImage, também pode ser utilizada em serviços como Navidrome.',

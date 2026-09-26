@@ -746,7 +746,7 @@ export default {
     coverArtHint: 'Turn off for smaller files and faster downloads.',
     coverSize: 'Cover size',
     coverSizeHint:
-      'For art from YouTube Music. Spotify art is always the largest available.',
+      'For art from YouTube Music and Deezer. Spotify art is always the largest available.',
     artistCover: 'Automatically get artist photos',
     artistCoverHint:
       'Downloads the artist photo to .metadata/ArtistImage; also usable by services like Navidrome.',

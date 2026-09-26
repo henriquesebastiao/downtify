@@ -764,7 +764,7 @@ export default {
     coverArtHint: 'Daha küçük dosyalar ve daha hızlı indirmeler için kapat.',
     coverSize: 'Kapak boyutu',
     coverSizeHint:
-      'YouTube Music kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',
+      'YouTube Music ve Deezer kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',
     artistCover: 'Sanatçı fotoğraflarını otomatik al',
     artistCoverHint:
       'Sanatçı fotoğrafını .metadata/ArtistImage klasörüne indirir; Navidrome gibi servislerde de kullanılabilir.',

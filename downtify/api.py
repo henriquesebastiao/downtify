@@ -507,9 +507,15 @@ def _clamp_cover_resolution(value: Any) -> int:
     """Coerce and clamp the requested cover art target size, in pixels.
 
     Keeps the setting inside ``[MIN_COVER_RESOLUTION,
-    MAX_COVER_RESOLUTION]``. Only affects YouTube Music-sourced cover
-    art (see ``providers.set_cover_resolution``); Spotify-sourced
-    covers already use the largest size Spotify's embed API offers.
+    MAX_COVER_RESOLUTION]``. Affects YouTube Music-sourced cover art
+    (see ``providers.set_cover_resolution``, which resizes a thumbnail
+    URL directly) and Deezer-sourced cover art (see
+    ``deezer._cover_from_images``, which instead picks the smallest of
+    Deezer's four fixed image sizes that still meets it, reading this
+    same value via ``providers.cover_resolution``). Spotify-sourced
+    covers are unaffected: Downtify already uses the largest size
+    Spotify's embed API offers, with no equivalent to resize or pick
+    from.
     """
     try:
         px = int(value)

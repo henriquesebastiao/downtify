@@ -99,12 +99,17 @@ That `cover.jpg` is shared by every track in the album folder. Deleting a track 
 
 ## Cover art resolution
 
-Only relevant when **Download cover art** (above) is on. Sets the target size (width and height, in pixels) Downtify requests for embedded cover art sourced from **YouTube Music**. Pick a preset (300, 600, 800, 1000, 1200) or drag the slider anywhere from **300 to 1200**; the current value in pixels is shown next to it. Default is 600.
+Only relevant when **Download cover art** (above) is on. Sets the target size (width and height, in pixels) Downtify requests for embedded cover art sourced from **YouTube Music** or **Deezer**. Pick a preset (300, 600, 800, 1000, 1200) or drag the slider anywhere from **300 to 1200**; the current value in pixels is shown next to it. Default is 600.
 
-This is useful when feeding your library into a media server like Plex that displays cover art at higher resolution than Downtify embedded by default — verified against the live YouTube CDN, the higher sizes return genuinely more detail (not just upscaling) for most album art, up to the source image's own resolution.
+This is useful when feeding your library into a media server like Plex that displays cover art at higher resolution than Downtify embedded by default.
+
+The two sources apply the setting differently, since only one of them can actually be resized on demand:
+
+- **YouTube Music** thumbnails can be resized by editing their URL — verified against the live CDN, the higher presets return genuinely more detail (not just upscaling) for most album art, up to the source image's own resolution.
+- **Deezer** only ever offers four fixed sizes for any track, album, artist or playlist cover (56, 250, 500 and 1000px) — there's no in-between size to request. Downtify picks the smallest of those four that's still at least as big as the configured value (asking for 300px gets the 500px one, since there's no exact 300px size); asking for more than 1000px still gets the 1000px one, Deezer's largest.
 
 ::: info Spotify-sourced covers aren't affected
-Downtify already embeds the **largest** cover Spotify's public embed API offers for Spotify-resolved tracks/albums/playlists — there's no larger size to request. This setting only raises the ceiling for tracks resolved through YouTube Music (free-text search, YouTube URLs, and any Spotify track re-matched to YouTube Music for the actual audio).
+Downtify already embeds the **largest** cover Spotify's public embed API offers for Spotify-resolved tracks/albums/playlists — there's no larger size to request. This setting only raises the ceiling for tracks resolved through YouTube Music (free-text search, YouTube URLs, and any Spotify track re-matched to YouTube Music for the actual audio) or Deezer (a pasted Deezer link, or a track from [Charts](charts.md)).
 :::
 
 Changing this value in Settings takes effect immediately, including for the currently-open search page — it does not require re-downloading anything already on disk.
@@ -185,5 +190,5 @@ Downtify embeds the following tags in every downloaded file, regardless of forma
 | Artist(s) | Spotify embed |
 | Album | Spotify embed — for a single-track download, the album the track's public Spotify page names (the track embed itself has none) |
 | Year | Spotify embed (track-level fetch) |
-| Album art | Spotify embed (track-level cover) for Spotify-resolved tracks; YouTube Music thumbnail otherwise. Optional — see [Download cover art](#download-cover-art) and [Cover art resolution](#cover-art-resolution) |
+| Album art | Spotify embed (track-level cover) for Spotify-resolved tracks; YouTube Music thumbnail or Deezer cover otherwise. Optional — see [Download cover art](#download-cover-art) and [Cover art resolution](#cover-art-resolution) |
 | Lyrics | lrclib (if enabled) |

@@ -34,6 +34,7 @@ from urllib.parse import urlsplit
 import httpx
 from loguru import logger
 
+from . import providers
 from .file_naming import file_name_key, title_key
 
 _SEARCH_URL = 'https://api.deezer.com/search/artist'
@@ -616,12 +617,7 @@ def _chart_track_song(row: dict[str, Any]) -> Optional[dict[str, Any]]:
             artists.append(contributor_name)
     if not artists:
         return None
-    cover = (
-        album.get('cover_xl')
-        or album.get('cover_big')
-        or album.get('cover_medium')
-        or ''
-    )
+    cover = _cover_from_images(album)
     # A 30s MP3 clip Deezer's own player streams for unauthenticated users -
     # always https when present. See lib/preview.js on the frontend, which
     # refuses to hand anything else to an <audio> element.
@@ -655,12 +651,7 @@ def _chart_album_release(row: dict[str, Any]) -> Optional[dict[str, Any]]:
     if not album_id or not name:
         return None
     artist = row.get('artist') if isinstance(row.get('artist'), dict) else {}
-    cover = (
-        row.get('cover_xl')
-        or row.get('cover_big')
-        or row.get('cover_medium')
-        or ''
-    )
+    cover = _cover_from_images(row)
     return {
         'album_id': str(album_id),
         'name': name,
@@ -688,7 +679,7 @@ def _chart_artist_release(row: dict[str, Any]) -> Optional[dict[str, Any]]:
         'artist_id': str(artist_id),
         'name': name,
         'cover_url': (
-            row.get('picture_xl') or row.get('picture_big') or ''
+            _cover_from_images(row, prefix='picture')
             if _has_real_picture(row)
             else ''
         ),
@@ -709,12 +700,7 @@ def _chart_playlist_release(row: dict[str, Any]) -> Optional[dict[str, Any]]:
     if not playlist_id or not name:
         return None
     user = row.get('user') if isinstance(row.get('user'), dict) else {}
-    cover = (
-        row.get('picture_xl')
-        or row.get('picture_big')
-        or row.get('picture_medium')
-        or ''
-    )
+    cover = _cover_from_images(row, prefix='picture')
     return {
         'playlist_id': str(playlist_id),
         'name': name,
@@ -733,12 +719,7 @@ def _chart_podcast_release(row: dict[str, Any]) -> Optional[dict[str, Any]]:
     name = str(row.get('title') or '').strip()
     if not podcast_id or not name:
         return None
-    cover = (
-        row.get('picture_xl')
-        or row.get('picture_big')
-        or row.get('picture_medium')
-        or ''
-    )
+    cover = _cover_from_images(row, prefix='picture')
     return {
         'podcast_id': str(podcast_id),
         'name': name,
@@ -863,17 +844,35 @@ def _artists_from_track_row(row: dict[str, Any]) -> list[str]:
     return artists
 
 
-def _cover_from_images(d: dict[str, Any], prefix: str = 'cover') -> str:
-    """Largest image Deezer offers under ``<prefix>_xl``/``_big``/
-    ``_medium`` - ``cover`` for a track/album/playlist, ``picture`` for
-    an artist."""
+# Deezer's four fixed image sizes, smallest first - unlike a YouTube Music
+# thumbnail (any pixel size, by editing its URL - see
+# providers._resize_thumbnail), these are separately served images at
+# exactly these dimensions and nothing in between.
+_COVER_SIZES = (('small', 56), ('medium', 250), ('big', 500), ('xl', 1000))
 
-    return (
-        d.get(f'{prefix}_xl')
-        or d.get(f'{prefix}_big')
-        or d.get(f'{prefix}_medium')
-        or ''
-    )
+
+def _cover_from_images(d: dict[str, Any], prefix: str = 'cover') -> str:
+    """The smallest of Deezer's four image sizes that still meets the
+    configured cover size - the same ``cover_resolution`` setting Settings
+    already uses for YouTube Music cover art (see
+    :func:`downtify.providers.cover_resolution`). ``cover`` for a track/
+    album/playlist, ``picture`` for an artist.
+
+    When the configured size is bigger than every size Deezer offers
+    (its largest, ``xl``, is 1000px), the largest one present is used
+    instead - the best Deezer has, rather than nothing.
+    """
+
+    wanted = providers.cover_resolution()
+    largest_seen = ''
+    for suffix, pixels in _COVER_SIZES:
+        url = d.get(f'{prefix}_{suffix}')
+        if not url:
+            continue
+        largest_seen = url
+        if pixels >= wanted:
+            return url
+    return largest_seen
 
 
 def _year_from_release_date(value: str) -> str:
