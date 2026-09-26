@@ -8,12 +8,13 @@ tool's schema, headers are matched case-insensitively against a set of
 known aliases, so the same importer works across exporters without the
 user needing to rename columns.
 
-Only title and artist are read. Other columns some exporters include
-(album, ISRC, a Spotify track URI, duration) aren't used here — the
-importer intentionally sticks to the exact "track + artist" scope the
-feature was requested for; each row still goes through the same
-YouTube-Music matching (:func:`downtify.providers.find_match`) that a
-free-text search does today.
+Title and artist are required. Album is copied onto ``album_name``
+when the CSV has a recognizable album column (Exportify's
+``Album Name``, TuneMyMusic / Soundiiz ``Album``, ...). Other columns
+some exporters include (ISRC, a Spotify track URI, duration) aren't
+used here. Each row still goes through the same YouTube-Music
+matching (:func:`downtify.providers.find_match`) that a free-text
+search does today.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ import io
 import re
 from typing import Any
 
-MAX_CSV_ROWS = 2000
+MAX_CSV_ROWS = 5000
 
 _TITLE_HEADERS = {
     'title',
@@ -43,6 +44,13 @@ _ARTIST_HEADERS = {
     'track artist',
     'song artist',
     'performer',
+}
+_ALBUM_HEADERS = {
+    'album',
+    'album name',
+    'album title',
+    'release',
+    'release name',
 }
 
 _ARTIST_SPLIT_RE = re.compile(r'[,;]')
@@ -70,13 +78,18 @@ def parse_library_csv(text: str) -> list[dict[str, Any]]:
     """Parse *text* (a CSV file's decoded content) into song dicts.
 
     Each returned dict has ``name`` (track title), ``artists`` (a list
-    of one or more artist names), and a synthetic ``song_id`` (``csv:0``,
-    ``csv:1``, ...). ``name``/``artists`` are the minimum shape
+    of one or more artist names), a synthetic ``song_id`` (``csv:0``,
+    ``csv:1``, ...), and ``album_name`` when the CSV has a non-empty
+    album cell. ``name``/``artists`` are the minimum shape
     :meth:`downtify.downloader.Downloader.download` needs to resolve a
     track via YouTube Music search when no direct video/Spotify URL is
-    known; ``song_id`` exists because the frontend's queue/progress
-    tracking keys every song by it and would otherwise conflate every
-    CSV row into a single entry.
+    known; ``album_name`` is optional and is omitted rather than set
+    blank so YouTube Music can still fill it. ``song_id`` exists
+    because the frontend's queue/progress tracking keys every song by
+    it and would otherwise conflate every CSV row of one file into a
+    single entry. They restart at ``csv:0`` on each call.
+    ``POST /api/download/csv`` replaces them with a per-import token
+    before the rows are queued, so two files do not share queue keys.
 
     Raises :class:`LibraryCsvError` when the file has no rows, or its
     header doesn't contain a recognizable title and artist column, or
@@ -88,6 +101,7 @@ def parse_library_csv(text: str) -> list[dict[str, Any]]:
     fieldnames = reader.fieldnames or []
     title_col = _find_column(fieldnames, _TITLE_HEADERS)
     artist_col = _find_column(fieldnames, _ARTIST_HEADERS)
+    album_col = _find_column(fieldnames, _ALBUM_HEADERS)
     if not title_col or not artist_col:
         raise LibraryCsvError(
             'Could not find title/artist columns in the CSV. '
@@ -112,11 +126,15 @@ def parse_library_csv(text: str) -> list[dict[str, Any]]:
         ]
         if not artists:
             continue
-        songs.append({
+        song: dict[str, Any] = {
             'song_id': f'csv:{len(songs)}',
             'name': title,
             'artists': artists,
-        })
+        }
+        album = (row.get(album_col) or '').strip() if album_col else ''
+        if album:
+            song['album_name'] = album
+        songs.append(song)
 
     if not songs:
         raise LibraryCsvError('No track/artist rows found in the CSV.')

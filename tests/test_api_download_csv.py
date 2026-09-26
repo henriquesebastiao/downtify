@@ -83,6 +83,16 @@ def test_download_csv_rejects_unparsable_csv(monkeypatch):
     assert exc_info.value.status_code == 400
 
 
+def _assert_scoped_csv_ids(ids: list[str]) -> str:
+    """Ids are ``csv:{token}:{index}`` for one import, indexes from 0."""
+    assert ids
+    _csv, token, _index = ids[0].split(':')
+    assert len(token) == 12
+    assert all(c in '0123456789abcdef' for c in token)
+    assert ids == [f'csv:{token}:{i}' for i in range(len(ids))]
+    return token
+
+
 def test_download_csv_queues_every_row(monkeypatch):
     csv_text = 'Title,Artist\nSong A,Artist A\nSong B,Artist B\n'
     result, batches = _run(monkeypatch, {'csv': csv_text})
@@ -90,12 +100,11 @@ def test_download_csv_queues_every_row(monkeypatch):
     assert len(result['job_ids']) == 2
     assert len(batches) == 1
     songs = batches[0]['songs']
-    assert songs == [
-        {'song_id': 'csv:0', 'name': 'Song A', 'artists': ['Artist A']},
-        {'song_id': 'csv:1', 'name': 'Song B', 'artists': ['Artist B']},
-    ]
-    # job_ids must track the (unique) song_id per row, not collide.
-    assert result['job_ids'] == ['csv:0', 'csv:1']
+    assert [s['name'] for s in songs] == ['Song A', 'Song B']
+    assert [s['artists'] for s in songs] == [['Artist A'], ['Artist B']]
+    ids = [s['song_id'] for s in songs]
+    assert ids == result['job_ids']
+    _assert_scoped_csv_ids(ids)
 
 
 def test_download_csv_defaults_playlist_name(monkeypatch):
@@ -126,11 +135,83 @@ def test_download_csv_honors_generate_m3u_flag(monkeypatch):
     assert batches[0]['generate_m3u'] is False
 
 
+def test_download_csv_broadcasts_one_queue_reload(monkeypatch):
+    monkeypatch.setattr(api.state, 'downloader', object())
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    sent = []
+
+    async def fake_broadcast(message):
+        sent.append(message)
+
+    async def fake_process_batch(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(api.state.connections, 'broadcast', fake_broadcast)
+    monkeypatch.setattr(api, '_process_batch', fake_process_batch)
+
+    rows = ''.join(f'Song {i},Artist {i}\n' for i in range(20))
+
+    async def _invoke():
+        result = await api.download_csv_endpoint(
+            _FakeRequest({'csv': f'Title,Artist\n{rows}'})
+        )
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        return result
+
+    result = asyncio.run(_invoke())
+    assert result['count'] == 20
+    assert sent == [{'type': 'queue_reload'}]
+    for job_id in result['job_ids']:
+        assert api.state.download_jobs[job_id]['status'] == 'queued'
+
+
 def test_download_csv_registers_jobs_for_every_row(monkeypatch):
     csv_text = 'Title,Artist\nSong A,Artist A\nSong B,Artist B\n'
     result, _ = _run(monkeypatch, {'csv': csv_text})
     for job_id in result['job_ids']:
         assert job_id in api.state.download_jobs
+        assert api.state.download_jobs[job_id]['status'] == 'queued'
+
+
+def test_download_csv_second_import_keeps_the_first_jobs(monkeypatch):
+    """Two files both start at csv:0 in the parser. Queue keys must not."""
+    monkeypatch.setattr(api.state, 'downloader', object())
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+
+    async def fake_process_batch(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(api, '_process_batch', fake_process_batch)
+
+    async def _import(csv_text: str) -> dict:
+        result = await api.download_csv_endpoint(
+            _FakeRequest({'csv': csv_text, 'playlist_name': 'Imported'})
+        )
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        return result
+
+    async def _both():
+        first = await _import('Title,Artist\nA1,Artist\nA2,Artist\n')
+        second = await _import(
+            'Title,Artist\nB1,Artist\nB2,Artist\nB3,Artist\n'
+        )
+        return first, second
+
+    first, second = asyncio.run(_both())
+    assert len(first['job_ids']) == 2
+    assert len(second['job_ids']) == 3
+    assert len(api.state.download_jobs) == 5
+    assert set(first['job_ids']).isdisjoint(second['job_ids'])
+    assert _assert_scoped_csv_ids(first['job_ids']) != _assert_scoped_csv_ids(
+        second['job_ids']
+    )
+    assert api.state.download_jobs[first['job_ids'][0]]['song']['name'] == 'A1'
+    assert (
+        api.state.download_jobs[second['job_ids'][0]]['song']['name'] == 'B1'
+    )
+    for job_id in (*first['job_ids'], *second['job_ids']):
         assert api.state.download_jobs[job_id]['status'] == 'queued'
 
 

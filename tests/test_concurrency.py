@@ -137,6 +137,79 @@ class _WS:
         self.sent.append(text)
 
 
+def test_run_download_announces_downloading_only_inside_the_slot(
+    monkeypatch,
+):
+    """Rows started together must not all broadcast ``downloading``
+    before any of them holds the parallel-download semaphore."""
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    monkeypatch.setattr(api.state, 'loop', None)
+
+    release = threading.Event()
+    entered = threading.Event()
+
+    class _Downloader:
+        overwrite_existing_files = True
+
+        @staticmethod
+        def download(song, progress, subdir=None):
+            entered.set()
+            if not release.wait(timeout=5):
+                raise RuntimeError('download was not released')
+            return f'{song["song_id"]}.mp3'
+
+    broadcasts: list[dict] = []
+
+    async def fake_broadcast(message):
+        broadcasts.append(message)
+
+    async def _noop_record(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(api.state, 'downloader', _Downloader())
+    monkeypatch.setattr(api.state.connections, 'broadcast', fake_broadcast)
+    monkeypatch.setattr(api, '_record_finished_download', _noop_record)
+
+    songs = [{'song_id': str(i), 'name': f'Song {i}'} for i in range(3)]
+    previous_sem = api.state.download_semaphore
+
+    async def _scenario():
+        api.state.download_semaphore = asyncio.Semaphore(1)
+        for song in songs:
+            api._register_job(song, status='queued')
+
+        async def _all_downloads():
+            await asyncio.gather(
+                *(api._run_download(song, song['song_id']) for song in songs)
+            )
+
+        task = asyncio.create_task(_all_downloads())
+        try:
+            for _ in range(50):
+                if entered.is_set():
+                    break
+                await asyncio.sleep(0.01)
+            assert entered.is_set(), 'first download never started'
+            # The other two rows are queued on the semaphore. Give them
+            # a chance to announce anyway, which is the bug.
+            await asyncio.sleep(0.05)
+            downloading = [
+                message
+                for message in broadcasts
+                if message.get('status') == 'downloading'
+            ]
+            assert len(downloading) == 1
+            assert not task.done()
+        finally:
+            release.set()
+            await task
+
+    try:
+        asyncio.run(_scenario())
+    finally:
+        api.state.download_semaphore = previous_sem
+
+
 def test_broadcast_sends_to_clients_concurrently():
     manager = api.ConnectionManager()
     slow_a, slow_b = _WS(delay=0.3), _WS(delay=0.3)
@@ -177,6 +250,90 @@ def test_broadcast_keeps_a_client_that_reconnected_mid_send():
     asyncio.run(manager.broadcast({'x': 1}))
 
     assert manager._clients == {'c': replacement}
+
+
+def test_close_all_closes_sockets_and_clears_clients():
+    manager = api.ConnectionManager()
+
+    class _Closable:
+        def __init__(self):
+            self.closed = None
+
+        async def close(self, code=1000):
+            self.closed = code
+
+    a, b = _Closable(), _Closable()
+    manager._clients = {'a': a, 'b': b}
+
+    asyncio.run(manager.close_all(code=1012))
+
+    assert manager._clients == {}
+    assert a.closed == b.closed == 1012
+
+
+def test_spawn_task_registers_then_discards_on_done():
+    async def _run():
+        task = api.spawn_task(asyncio.sleep(0), name='test-spawn')
+        assert task in api.state.background_tasks
+        await task
+        assert task not in api.state.background_tasks
+
+    asyncio.run(_run())
+
+
+def test_shutdown_resources_closes_ws_and_cancels_tasks(monkeypatch):
+    # Do not touch the real DOWNLOAD_EXECUTOR — other tests still use it.
+    monkeypatch.setattr(api, '_shutdown_done', False)
+    monkeypatch.setattr(
+        api.DOWNLOAD_EXECUTOR, 'shutdown', lambda *a, **k: None
+    )
+    monkeypatch.setattr(api, 'release_thread_pools', lambda: None)
+
+    class _Closable:
+        def __init__(self):
+            self.closed = None
+
+        async def close(self, code=1000):
+            self.closed = code
+
+    ws = _Closable()
+    api.state.connections._clients = {'c': ws}
+
+    started = asyncio.Event()
+    cancelled = asyncio.Event()
+
+    async def _hang():
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
+    async def _run():
+        task = api.spawn_task(_hang(), name='test-hang')
+        await started.wait()
+        await api.shutdown_resources()
+        assert ws.closed == 1012
+        assert api.state.connections._clients == {}
+        assert task.cancelled() or task.done()
+        assert cancelled.is_set()
+        # Second call is a no-op.
+        await api.shutdown_resources()
+
+    asyncio.run(_run())
+    monkeypatch.setattr(api, '_shutdown_done', False)
+
+
+def test_skip_threadpool_join_clears_threading_atexits():
+    sentinel = object()
+    original = list(threading._threading_atexits)
+    threading._threading_atexits.append(sentinel)
+    try:
+        api._skip_threadpool_join()
+        assert sentinel not in threading._threading_atexits
+    finally:
+        threading._threading_atexits[:] = original
 
 
 # ── Downloader: metadata lookups alongside yt-dlp ────────────────────────────

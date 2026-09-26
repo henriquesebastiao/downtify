@@ -164,12 +164,15 @@ working without changes:
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures.thread as cf_thread
 import contextlib
 import hashlib
 import json
 import mimetypes
 import re
 import shutil
+import threading
+import uuid
 from pathlib import Path
 from typing import Any, Optional
 
@@ -650,6 +653,22 @@ class ConnectionManager:
             ):
                 self._clients.pop(client_id, None)
 
+    async def close_all(self, code: int = 1012) -> None:
+        """Close every tracked socket (``1012`` = service restart).
+
+        Cleared before awaiting so a concurrent reconnect cannot land in
+        the map we are tearing down. Safe if uvicorn already closed the
+        transport.
+        """
+        clients = list(self._clients.items())
+        self._clients.clear()
+        if not clients:
+            return
+        await asyncio.gather(
+            *(ws.close(code=code) for _, ws in clients),
+            return_exceptions=True,
+        )
+
 
 class AppState:
     version: str = '0.0.0'
@@ -663,6 +682,9 @@ class AppState:
     monitor_db: Optional[PlaylistMonitorDB] = None
     download_jobs: dict[str, dict[str, Any]] = {}
     download_semaphore: Optional[asyncio.Semaphore] = None
+    # Fire-and-forget work owned by the process (import batches, monitor
+    # loops, playlist refresh). Cancelled in :func:`shutdown_resources`.
+    background_tasks: set[asyncio.Task[Any]] = set()
     # Library stores in /data/downtify_library.db (opened at startup).
     track_index: Optional[TrackIndex] = None
     navidrome_index: Optional[NavidromeIndex] = None
@@ -679,6 +701,102 @@ class AppState:
 
 state = AppState()
 router = APIRouter()
+_shutdown_done = False
+
+
+def spawn_task(coro: Any, *, name: Optional[str] = None) -> asyncio.Task[Any]:
+    """Create a task and track it for :func:`shutdown_resources`."""
+    task = asyncio.create_task(coro, name=name)
+    state.background_tasks.add(task)
+    task.add_done_callback(state.background_tasks.discard)
+    return task
+
+
+_SHUTDOWN_TASK_TIMEOUT_SECONDS = 1.0
+
+
+def _skip_threadpool_join() -> None:
+    """Stop CPython from joining every ThreadPoolExecutor on exit.
+
+    Python 3.9+ registers ``concurrent.futures.thread._python_exit`` with
+    ``threading._register_atexit``, not ``atexit``. That hook ``join()``s
+    every worker still in ``_threads_queues`` — download, metadata, and
+    ``asyncio.to_thread`` pools. Setting ``daemon=True`` does not skip it.
+    A second Ctrl+C during shutdown was interrupting that join.
+    """
+    try:
+        threading._threading_atexits.clear()
+    except Exception:
+        pass
+    try:
+        for thread in list(getattr(cf_thread, '_threads_queues', {})):
+            try:
+                thread.daemon = True
+            except Exception:
+                pass
+    except Exception:
+        pass
+    for thread in threading.enumerate():
+        if thread is threading.main_thread():
+            continue
+        try:
+            thread.daemon = True
+        except Exception:
+            pass
+
+
+def release_thread_pools() -> None:
+    """Stop accepting pool work and do not join in-flight workers."""
+    DOWNLOAD_EXECUTOR.shutdown(wait=False, cancel_futures=True)
+    _skip_threadpool_join()
+
+
+async def shutdown_resources() -> None:
+    """Close WebSockets, cancel background work, release the download pool.
+
+    Idempotent: lifespan and ``main``'s ``finally`` may both call this.
+    """
+    global _shutdown_done
+    if _shutdown_done:
+        return
+    _shutdown_done = True
+
+    logger.info('Downtify shutdown: closing WebSockets and background tasks')
+    await state.connections.close_all()
+
+    tasks = list(state.background_tasks)
+    for task in tasks:
+        task.cancel()
+    if tasks:
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*tasks, return_exceptions=True),
+                timeout=_SHUTDOWN_TASK_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            still = sum(1 for task in tasks if not task.done())
+            logger.warning(
+                'Shutdown: {} background task(s) still running, continuing',
+                still,
+            )
+
+    if state.upgrade_runner is not None:
+        try:
+            state.upgrade_runner.pause()
+        except Exception:
+            logger.exception('Library upgrade: could not pause on shutdown')
+
+    try:
+        loop = asyncio.get_running_loop()
+        await asyncio.wait_for(
+            loop.shutdown_default_executor(),
+            timeout=_SHUTDOWN_TASK_TIMEOUT_SECONDS,
+        )
+    except Exception:
+        pass
+
+    release_thread_pools()
+    logger.info('Downtify shutdown: complete')
 
 
 def library_context() -> LibraryContext:
@@ -959,7 +1077,7 @@ async def _schedule_playlist_refresh_after_download(
                 ', '.join(sorted(playlist_names)[:5]),
             )
 
-    asyncio.create_task(_run())
+    spawn_task(_run(), name='playlist-refresh-after-download')
 
 
 def _load_settings(path: Path) -> dict[str, Any]:
@@ -1895,13 +2013,15 @@ async def _run_download(
 ) -> Optional[str]:
     """Run a single download to completion, updating jobs state and broadcasting WS events.
 
-    When *delay_seconds* is positive, the concurrency slot (semaphore
-    permit) is held for that long after a successful download before
-    being released, so the next queued download in a batch can't start
-    until the delay has elapsed. This is only meant for multi-song
-    orchestration (playlist/album batches); single manual downloads
-    should pass ``delay_seconds=0`` so a one-off download never waits
-    around for nothing.
+    The concurrency slot is acquired before the existing-file check and
+    before the ``downloading`` broadcast, so a batch that starts every
+    row at once cannot announce or look up all of them together. When
+    *delay_seconds* is positive, that same slot stays held for that long
+    after a successful download, so the next row can't start until the
+    delay has elapsed. This is only meant for multi-song orchestration
+    (playlist/album batches); single manual downloads should pass
+    ``delay_seconds=0`` so a one-off download never waits around for
+    nothing.
 
     With *Overwrite existing files* off, a song already in the library is
     not downloaded again: by its Spotify id in the track index (wherever it
@@ -1924,66 +2044,68 @@ async def _run_download(
         song_id = _register_job(song, status='downloading')
         job = state.download_jobs[song_id]
 
-    if not getattr(state.downloader, 'overwrite_existing_files', True):
-        existing_hit = await asyncio.to_thread(
-            resolve_existing_download,
-            state.downloader,
-            song,
-            subdir=subdir,
-            track_index=state.track_index,
-        )
-        if existing_hit:
-            existing, skip_message = existing_hit
-            logger.info(
-                'Skipping download ({}): {}', skip_message.lower(), existing
-            )
-            job.update(
-                status='done',
-                filename=existing,
-                progress=100,
-                message=skip_message,
-            )
-            await state.connections.broadcast({
-                'song': song,
-                'progress': 100,
-                'message': skip_message,
-                'status': 'done',
-                'filename': existing,
-            })
-            return existing
-
-    job['status'] = 'downloading'
-
-    await state.connections.broadcast({
-        'song': song,
-        'progress': 0,
-        'message': '',
-        'status': 'downloading',
-    })
-
-    def progress(
-        pct: float, message: str, provider: Optional[str] = None
-    ) -> None:
-        j = state.download_jobs.get(song_id)
-        if j:
-            j['progress'] = pct
-            j['message'] = message
-            if provider:
-                j['provider'] = provider
-        asyncio.run_coroutine_threadsafe(
-            state.connections.broadcast({
-                'song': song,
-                'progress': pct,
-                'message': message,
-                'provider': provider or (j or {}).get('provider', ''),
-                'status': 'downloading',
-            }),
-            loop,
-        )
-
     sem = state.download_semaphore
     try:
         async with sem if sem is not None else contextlib.nullcontext():
+            if not getattr(state.downloader, 'overwrite_existing_files', True):
+                existing_hit = await asyncio.to_thread(
+                    resolve_existing_download,
+                    state.downloader,
+                    song,
+                    subdir=subdir,
+                    track_index=state.track_index,
+                )
+                if existing_hit:
+                    existing, skip_message = existing_hit
+                    logger.info(
+                        'Skipping download ({}): {}',
+                        skip_message.lower(),
+                        existing,
+                    )
+                    job.update(
+                        status='done',
+                        filename=existing,
+                        progress=100,
+                        message=skip_message,
+                    )
+                    await state.connections.broadcast({
+                        'song': song,
+                        'progress': 100,
+                        'message': skip_message,
+                        'status': 'done',
+                        'filename': existing,
+                    })
+                    return existing
+
+            job['status'] = 'downloading'
+
+            await state.connections.broadcast({
+                'song': song,
+                'progress': 0,
+                'message': '',
+                'status': 'downloading',
+            })
+
+            def progress(
+                pct: float, message: str, provider: Optional[str] = None
+            ) -> None:
+                j = state.download_jobs.get(song_id)
+                if j:
+                    j['progress'] = pct
+                    j['message'] = message
+                    if provider:
+                        j['provider'] = provider
+                asyncio.run_coroutine_threadsafe(
+                    state.connections.broadcast({
+                        'song': song,
+                        'progress': pct,
+                        'message': message,
+                        'provider': provider or (j or {}).get('provider', ''),
+                        'status': 'downloading',
+                    }),
+                    loop,
+                )
+
             filename = await loop.run_in_executor(
                 DOWNLOAD_EXECUTOR,
                 lambda: state.downloader.download(
@@ -3051,17 +3173,15 @@ async def _submit_playlist_batch(
         song_id = _register_job(song, status='queued')
         valid_songs.append(song)
         job_ids.append(song_id)
-        await state.connections.broadcast({
-            'song': song,
-            'progress': 0,
-            'message': '',
-            'status': 'queued',
-        })
 
     if not valid_songs:
         raise HTTPException(status_code=400, detail='No valid songs in batch')
 
-    task = asyncio.create_task(
+    # One frame for the whole batch. Per-row ``queued`` events made a
+    # large playlist or CSV rebuild the queue once per track.
+    await state.connections.broadcast({'type': 'queue_reload'})
+
+    task = spawn_task(
         _process_batch(
             valid_songs,
             job_ids,
@@ -3070,7 +3190,8 @@ async def _submit_playlist_batch(
             playlist_name,
             batch_id=batch_id,
             cover_url=cover_url,
-        )
+        ),
+        name='playlist-batch',
     )
 
     def _log_batch_failure(t: asyncio.Task) -> None:
@@ -3135,6 +3256,18 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
     )
 
 
+def _scope_csv_song_ids(songs: list[dict[str, Any]]) -> None:
+    """Replace per-file ``csv:N`` ids with ids unique to this import.
+
+    ``parse_library_csv`` numbers from zero on every call. Two imports
+    would otherwise share ``csv:0`` and overwrite one ``download_jobs``
+    entry. The token is only a queue key; it is not a Spotify track id.
+    """
+    token = uuid.uuid4().hex[:12]
+    for index, song in enumerate(songs):
+        song['song_id'] = f'csv:{token}:{index}'
+
+
 @router.post('/api/download/csv')
 async def download_csv_endpoint(request: Request) -> dict[str, Any]:
     """Import a library-export CSV (Soundiiz, TuneMyMusic, Exportify, ...).
@@ -3146,7 +3279,8 @@ async def download_csv_endpoint(request: Request) -> dict[str, Any]:
 
     Each row is resolved the same way a free-text search would be, via
     :func:`providers.find_match` inside :meth:`Downloader.download` -
-    there is no Spotify/YouTube URL per row, only a title and artist.
+    there is no Spotify/YouTube URL per row, only a title, artist, and
+    album when the CSV has it.
     """
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
@@ -3175,22 +3309,25 @@ async def download_csv_endpoint(request: Request) -> dict[str, Any]:
         str(payload.get('playlist_name') or '').strip() or 'Imported Library'
     )
     generate_m3u = bool(payload.get('generate_m3u', True))
+    # Parser ids restart at csv:0 on every file. The queue is keyed by
+    # song_id, so a second import would replace the first import's jobs
+    # and the badge /queue tabs would count the longer file only.
+    _scope_csv_song_ids(songs)
 
     job_ids: list[str] = []
     for song in songs:
         song_id = _register_job(song, status='queued')
         job_ids.append(song_id)
-        await state.connections.broadcast({
-            'song': song,
-            'progress': 0,
-            'message': '',
-            'status': 'queued',
-        })
 
-    task = asyncio.create_task(
+    # Same single reload as _submit_playlist_batch. The rows are already
+    # in download_jobs; clients fetch them with GET /api/queue.
+    await state.connections.broadcast({'type': 'queue_reload'})
+
+    task = spawn_task(
         _process_batch(
             songs, job_ids, '', generate_m3u, playlist_name=playlist_name
-        )
+        ),
+        name='csv-batch',
     )
 
     def _log_batch_failure(t: asyncio.Task) -> None:
@@ -3466,7 +3603,7 @@ async def _schedule_playlist_refresh_after_delete(
                 ', '.join(sorted(playlist_names)[:5]),
             )
 
-    asyncio.create_task(_run())
+    spawn_task(_run(), name='playlist-refresh-after-delete')
 
 
 @router.delete('/api/library/playlist')
@@ -3510,7 +3647,7 @@ async def delete_library_playlist_endpoint(
         )
     affected = set(result.get('playlists_affected') or [])
     if affected:
-        asyncio.create_task(_schedule_playlist_refresh_after_delete(affected))
+        await _schedule_playlist_refresh_after_delete(affected)
     result['playlists_refresh_scheduled'] = bool(affected)
     return result
 
@@ -3612,7 +3749,7 @@ async def delete_playlist_batch_endpoint(
         )
     affected = set(result.get('playlists_affected') or [])
     if affected:
-        asyncio.create_task(_schedule_playlist_refresh_after_delete(affected))
+        await _schedule_playlist_refresh_after_delete(affected)
     result['spotify_playlist_id'] = sid
     result['playlists_refresh_scheduled'] = bool(affected)
     return result
@@ -4685,7 +4822,7 @@ def _start_initial_check(
         except Exception:
             logger.exception('Initial check failed for watch {}', playlist.id)
 
-    asyncio.create_task(_initial_check())
+    spawn_task(_initial_check(), name='monitor-initial-check')
 
 
 async def _change_watch_url(
@@ -4806,5 +4943,5 @@ async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
         except Exception:
             logger.exception('Manual check failed for watch {}', playlist_id)
 
-    asyncio.create_task(_run())
+    spawn_task(_run(), name='monitor-manual-check')
     return {'status': 'check_started', 'id': playlist_id}
