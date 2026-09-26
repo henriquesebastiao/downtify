@@ -141,7 +141,9 @@ working without changes:
   ``PATCH|DELETE /api/monitor/playlists/{playlist_id}`` (playlist and
   artist watches; ``PATCH`` takes ``interval_minutes``, ``enabled`` and
   ``url`` - a link to a different playlist/artist of the same kind
-  retargets the watch), ``POST /api/monitor/playlists/{id}/check``
+  retargets the watch; artist watches also take ``release_types``
+  (``album``/``single``/``ep``) and ``new_only``, on ``POST`` too),
+  ``POST /api/monitor/playlists/{id}/check``
 * ``GET|PUT /api/likes`` and ``POST /api/likes/clear`` (the heart on a
   library track; while any song is liked they are also written out as a
   playlist)
@@ -253,6 +255,7 @@ from .likes import (
 )
 from .lyrics_cache import LyricsLookupCache
 from .monitor import (
+    ALL_RELEASE_TYPES,
     KIND_ARTIST,
     KIND_PLAYLIST,
     KIND_PODCAST,
@@ -263,6 +266,7 @@ from .monitor import (
     check_watch,
     download_playlist_cover,
     fetch_playlist,
+    normalize_release_types,
     parse_playlist_url,
 )
 from .navidrome import _effective_navidrome_settings, cache_navidrome_song_id
@@ -4914,8 +4918,13 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
 
     url = payload.get('url', '')
     interval_minutes = int(payload.get('interval_minutes', 60))
+    release_types = _release_types_from(payload)
 
     kind, watch_key, name = await _resolve_watch_target(url)
+    # Release filters only mean something for an artist's discography.
+    new_only = kind == KIND_ARTIST and bool(payload.get('new_only'))
+    if kind != KIND_ARTIST:
+        release_types = ALL_RELEASE_TYPES
 
     existing = await asyncio.to_thread(db.get_by_spotify_id, watch_key)
     if existing is not None:
@@ -4929,10 +4938,32 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
         )
 
     playlist = await asyncio.to_thread(
-        db.add_playlist, watch_key, name, url, interval_minutes, kind
+        db.add_playlist,
+        watch_key,
+        name,
+        url,
+        interval_minutes,
+        kind,
+        release_types,
+        new_only,
     )
     _start_initial_check(playlist, db)
     return playlist.to_dict()
+
+
+def _release_types_from(payload: dict[str, Any]) -> str:
+    """``release_types`` from a request body, in its stored form; every
+    type when it isn't given. ``400`` for a list that names none."""
+
+    if 'release_types' not in payload:
+        return ALL_RELEASE_TYPES
+    types = normalize_release_types(payload.get('release_types'))
+    if not types:
+        raise HTTPException(
+            status_code=400,
+            detail='Choose at least one kind of release: album, single or ep',
+        )
+    return types
 
 
 def _start_initial_check(
@@ -5024,6 +5055,26 @@ async def update_monitor_playlist(
     if 'enabled' in payload:
         kwargs['enabled'] = bool(payload['enabled'])
 
+    # An artist's release filters: a check right away downloads what they
+    # now let through (a type just turned on, the back catalog after
+    # "new releases only" is turned off) instead of waiting for the
+    # next scheduled one.
+    filters_changed = False
+    if 'release_types' in payload or 'new_only' in payload:
+        if current.kind != KIND_ARTIST:
+            raise HTTPException(
+                status_code=400,
+                detail='Release filters only apply to artist watches',
+            )
+        if 'release_types' in payload:
+            types = _release_types_from(payload)
+            filters_changed = types != current.release_types
+            kwargs['release_types'] = types
+        if 'new_only' in payload:
+            new_only = bool(payload['new_only'])
+            filters_changed = filters_changed or new_only != current.new_only
+            await asyncio.to_thread(db.set_new_only, playlist_id, new_only)
+
     updated = await asyncio.to_thread(
         db.update_playlist, playlist_id, **kwargs
     )
@@ -5031,7 +5082,7 @@ async def update_monitor_playlist(
         raise HTTPException(
             status_code=404, detail='Monitored playlist not found'
         )
-    if retargeted is not None and updated.enabled:
+    if (retargeted is not None or filters_changed) and updated.enabled:
         _start_initial_check(updated, db)
     return updated.to_dict()
 

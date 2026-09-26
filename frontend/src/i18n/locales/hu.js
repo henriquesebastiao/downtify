@@ -539,6 +539,17 @@ export default {
       'A hangszínszabályzó nem indult el. A lejátszás nélküle folytatódik.',
   },
   monitor: {
+    releaseTypes: 'Letöltés',
+    releaseTypesAtLeastOne: 'Legalább egy megjelenéstípus maradjon',
+    release: { album: 'Albumok', single: 'Kislemezek', ep: 'EP-k' },
+    newOnly: 'Csak új megjelenések',
+    newOnlyHint:
+      'Kihagyja, amit az előadó már kiadott; csak a követés kezdete után megjelenők töltődnek le.',
+    newOnlyTurnOn:
+      'Mentés után minden már megjelent kimarad; csak a későbbi megjelenések töltődnek le.',
+    newOnlyTurnOff:
+      'Mentés után a kihagyott megjelenések a következő ellenőrzéskor letöltődnek.',
+    newOnlyBadge: 'Csak új',
     title: 'Lejátszásilista-figyelő',
     subtitle:
       'Ezeknek a listáknak és előadóknak az új számai automatikusan letöltődnek.',
@@ -588,6 +599,8 @@ export default {
       'Egy lista hozzáadása most letölti a teljes tartalmát, majd ütemezetten ellenőrzi és letölti az újakat.',
     explainerArtists:
       'Egy előadó hozzáadása most letölti a teljes diszkográfiáját, majd ütemezetten ellenőrzi és letölti az új kiadásokat.',
+    explainerArtistsNewOnly:
+      'Előadó hozzáadása most semmit sem tölt le; ütemezetten ellenőrzi, és letölti a kiválasztott típusok minden új megjelenését.',
     emptyPlaylistsTitle: 'Még nincs figyelt lista',
     emptyPlaylistsBody:
       'Illessz be fent egy listalinket a szinkronban tartáshoz.',

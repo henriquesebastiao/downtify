@@ -9,10 +9,12 @@ function listMonitoredPlaylists() {
   return API.get('/api/monitor/playlists')
 }
 
-function addMonitoredPlaylist(url, intervalMinutes = 60) {
+// `options`: an artist watch's `release_types` and `new_only`.
+function addMonitoredPlaylist(url, intervalMinutes = 60, options = {}) {
   return API.post('/api/monitor/playlists', {
     url,
     interval_minutes: intervalMinutes,
+    ...options,
   })
 }
 

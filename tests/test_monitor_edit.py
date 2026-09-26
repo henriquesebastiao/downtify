@@ -167,3 +167,60 @@ def test_retarget_drops_seen_releases(tmp_path):
     store.retarget_playlist(watch.id, 'UCother', 'Other', 'https://y')
     assert store.get_seen_album_ids(watch.id) == set()
     assert store.retarget_playlist(12345, 'a', 'b', 'c') is None
+
+
+# ── artist release filters ─────────────────────────────────────────────
+
+
+ARTIST_URL = f'https://music.youtube.com/channel/{CHANNEL}'
+
+
+def _post(payload):
+    return asyncio.run(api.add_monitor_playlist(_Req(payload)))
+
+
+def test_adding_an_artist_watch_with_filters(db, resolve):
+    watch = _post({
+        'url': ARTIST_URL,
+        'release_types': ['album', 'ep'],
+        'new_only': True,
+    })
+
+    assert watch['release_types'] == ['album', 'ep']
+    assert watch['new_only'] is True
+    assert db.get_playlist(watch['id']).baseline_pending is True
+
+
+def test_a_playlist_watch_ignores_release_filters(db, resolve):
+    watch = _post({'url': URL_A, 'release_types': ['ep'], 'new_only': True})
+
+    assert watch['release_types'] == ['album', 'single', 'ep']
+    assert watch['new_only'] is False
+
+
+def test_release_types_must_name_one(db, resolve):
+    with pytest.raises(HTTPException) as exc:
+        _post({'url': ARTIST_URL, 'release_types': []})
+    assert exc.value.status_code == 400
+
+
+def test_editing_an_artists_filters(db, resolve):
+    watch = _post({'url': ARTIST_URL})
+
+    updated = _patch(watch['id'], {'release_types': ['album']})
+    assert updated['release_types'] == ['album']
+    updated = _patch(watch['id'], {'new_only': True})
+    assert updated['new_only'] is True
+    assert db.get_playlist(watch['id']).baseline_pending is True
+
+    with pytest.raises(HTTPException) as exc:
+        _patch(watch['id'], {'release_types': ['video']})
+    assert exc.value.status_code == 400
+
+
+def test_filters_on_a_playlist_watch_are_rejected(db, resolve):
+    watch = _post({'url': URL_A})
+
+    with pytest.raises(HTTPException) as exc:
+        _patch(watch['id'], {'new_only': True})
+    assert exc.value.status_code == 400

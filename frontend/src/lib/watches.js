@@ -63,3 +63,46 @@ export function sortWatches(items, key, dir = 'desc') {
     return sign * ((a[key] || 0) - (b[key] || 0))
   })
 }
+
+// ── Artist watches: which kinds of release they download ──────────────
+
+/** YouTube Music's release kinds, in the order they are shown. */
+export const RELEASE_TYPES = ['album', 'single', 'ep']
+
+/** A watch's release types; every kind for rows from before the option. */
+export function watchReleaseTypes(item) {
+  const types = (item?.release_types || []).filter((type) =>
+    RELEASE_TYPES.includes(type)
+  )
+  return types.length ? types : [...RELEASE_TYPES]
+}
+
+/**
+ * `types` with `type` switched on or off, kept in RELEASE_TYPES order.
+ * The last one left can't be switched off: a watch that downloads no kind
+ * of release would silently do nothing.
+ */
+export function toggleReleaseType(types, type) {
+  const on = new Set(types)
+  if (on.has(type)) {
+    if (on.size === 1) return [...types]
+    on.delete(type)
+  } else if (RELEASE_TYPES.includes(type)) {
+    on.add(type)
+  }
+  return RELEASE_TYPES.filter((t) => on.has(t))
+}
+
+/**
+ * What an artist watch's row says about its filters: the release kinds
+ * when they aren't all of them (`[]` otherwise), and whether it only
+ * downloads new releases.
+ */
+export function releaseFilterSummary(item) {
+  if (watchKind(item) !== 'artist') return { types: [], newOnly: false }
+  const types = watchReleaseTypes(item)
+  return {
+    types: types.length === RELEASE_TYPES.length ? [] : types,
+    newOnly: Boolean(item.new_only),
+  }
+}

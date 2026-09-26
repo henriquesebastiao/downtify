@@ -105,6 +105,15 @@
         </div>
       </div>
 
+      <ReleaseFilters
+        v-if="kind === 'artist'"
+        v-model:types="releaseTypes"
+        v-model:new-only="newOnly"
+        existing
+        :was-new-only="!!watch.new_only"
+        class="rounded-[12px] border border-line-2 px-4 py-3"
+      />
+
       <dl
         class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-[12px] bg-surface-2 px-4 py-3 text-[13px]"
       >
@@ -163,11 +172,12 @@ import UiInput from '../ui/UiInput.vue'
 import UiModal from '../ui/UiModal.vue'
 import UiSelect from '../ui/UiSelect.vue'
 import UiSwitch from '../ui/UiSwitch.vue'
+import ReleaseFilters from './ReleaseFilters.vue'
 import WatchSourceBadge from './WatchSourceBadge.vue'
 import { intervalOptions } from './intervals'
 import monitorAPI from '/src/model/monitor'
 import { useUi } from '/src/model/ui'
-import { watchKind, watchKindOfUrl } from '/src/lib/watches'
+import { watchKind, watchKindOfUrl, watchReleaseTypes } from '/src/lib/watches'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -185,6 +195,8 @@ const formId = `watch-edit-${useId()}`
 const url = ref('')
 const interval = ref(360)
 const enabled = ref(true)
+const releaseTypes = ref([])
+const newOnly = ref(false)
 const saving = ref(false)
 const error = ref('')
 
@@ -195,6 +207,8 @@ watchValue(
     url.value = value.url
     interval.value = value.interval_minutes
     enabled.value = value.enabled
+    releaseTypes.value = watchReleaseTypes(value)
+    newOnly.value = Boolean(value.new_only)
     error.value = ''
   },
   { immediate: true }
@@ -226,6 +240,11 @@ const changes = computed(() => {
   if (interval.value !== w.interval_minutes)
     out.interval_minutes = interval.value
   if (enabled.value !== w.enabled) out.enabled = enabled.value
+  if (kind.value === 'artist') {
+    if (releaseTypes.value.join() !== watchReleaseTypes(w).join())
+      out.release_types = releaseTypes.value
+    if (newOnly.value !== Boolean(w.new_only)) out.new_only = newOnly.value
+  }
   return out
 })
 const dirty = computed(() => Object.keys(changes.value).length > 0)

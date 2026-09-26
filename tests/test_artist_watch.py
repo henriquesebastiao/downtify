@@ -460,3 +460,193 @@ def test_monitor_loop_uses_check_artist_for_artist_watches(
 
     asyncio.run(_scenario())
     assert sorted(called) == ['artist:Artist', 'playlist:Playlist']
+
+
+# ── release filters: album / single / EP, and "new releases only" ──────────
+
+
+def _typed(album_id: str, name: str, release_type: str) -> dict:
+    return {**_album(album_id, name), 'release_type': release_type}
+
+
+_TYPED_TRACKS = {
+    'ALB': [_track('ta', 'A', 'Album', 1)],
+    'SGL': [_track('ts', 'S', 'Single', 1)],
+    'EPP': [_track('te', 'E', 'EP', 1)],
+}
+_TYPED = [
+    _typed('ALB', 'Album', 'Album'),
+    _typed('SGL', 'Single', 'Single'),
+    _typed('EPP', 'EP', 'EP'),
+]
+
+
+def test_release_type_of_reads_youtube_musics_label():
+    assert monitor.release_type_of({'release_type': 'Single'}) == 'single'
+    assert monitor.release_type_of({'release_type': 'EP'}) == 'ep'
+    assert monitor.release_type_of({'release_type': 'Album'}) == 'album'
+    assert monitor.release_type_of({}) == 'album'
+
+
+@pytest.mark.parametrize(
+    ('value', 'stored'),
+    [
+        (['single', 'album'], 'album,single'),
+        ('EP, album', 'album,ep'),
+        (['album', 'single', 'ep', 'video'], 'album,single,ep'),
+        ([], ''),
+        (['video'], ''),
+        (None, ''),
+    ],
+)
+def test_normalize_release_types(value, stored):
+    assert monitor.normalize_release_types(value) == stored
+
+
+def test_only_the_chosen_release_types_download(monkeypatch, tmp_path):
+    _patch_provider(monkeypatch, _TYPED, _TYPED_TRACKS)
+    db = _db(tmp_path)
+    pl = db.add_playlist(
+        CHANNEL_ID, 'A', 'url', 60, monitor.KIND_ARTIST, 'album'
+    )
+    dl = _FakeDownloader(tmp_path)
+
+    assert _run_check(pl, db, dl) == 1
+    assert dl.calls == ['ta']
+    # The single and the EP aren't marked: turning them on picks them up.
+    assert db.get_seen_album_ids(pl.id) == {'ALB'}
+    pl = db.update_playlist(pl.id, release_types='album,single')
+    dl = _FakeDownloader(tmp_path)
+    assert _run_check(pl, db, dl) == 1
+    assert dl.calls == ['ts']
+
+
+def test_new_only_skips_the_existing_discography(monkeypatch, tmp_path):
+    _patch_provider(monkeypatch, _TYPED, _TYPED_TRACKS)
+    db = _db(tmp_path)
+    pl = db.add_playlist(
+        CHANNEL_ID, 'A', 'url', 60, monitor.KIND_ARTIST, new_only=True
+    )
+    assert pl.baseline_pending is True
+
+    dl = _FakeDownloader(tmp_path)
+    assert _run_check(pl, db, dl) == 0
+    assert dl.calls == []
+    pl = db.get_playlist(pl.id)
+    assert pl.baseline_pending is False
+    assert pl.last_track_count == 3
+
+    # A release that comes out afterwards is downloaded.
+    tracks = {**_TYPED_TRACKS, 'NEW': [_track('tn', 'N', 'New', 1)]}
+    _patch_provider(
+        monkeypatch, [_typed('NEW', 'New', 'Album'), *_TYPED], tracks
+    )
+    dl = _FakeDownloader(tmp_path)
+    assert _run_check(pl, db, dl) == 1
+    assert dl.calls == ['tn']
+
+
+def test_new_only_waits_for_a_non_empty_discography(monkeypatch, tmp_path):
+    _patch_provider(monkeypatch, [], {})
+    db = _db(tmp_path)
+    pl = db.add_playlist(
+        CHANNEL_ID, 'A', 'url', 60, monitor.KIND_ARTIST, new_only=True
+    )
+
+    assert _run_check(pl, db, _FakeDownloader(tmp_path)) == 0
+    assert db.get_playlist(pl.id).baseline_pending is True
+
+    _patch_provider(monkeypatch, _TYPED, _TYPED_TRACKS)
+    dl = _FakeDownloader(tmp_path)
+    assert _run_check(db.get_playlist(pl.id), db, dl) == 0
+    assert dl.calls == []
+
+
+def test_turning_new_only_off_downloads_the_back_catalog(
+    monkeypatch, tmp_path
+):
+    _patch_provider(monkeypatch, _TYPED, _TYPED_TRACKS)
+    db = _db(tmp_path)
+    pl = db.add_playlist(
+        CHANNEL_ID, 'A', 'url', 60, monitor.KIND_ARTIST, new_only=True
+    )
+    _run_check(pl, db, _FakeDownloader(tmp_path))
+
+    pl = db.set_new_only(pl.id, False)
+    assert (pl.new_only, pl.baseline_pending) == (False, False)
+    dl = _FakeDownloader(tmp_path)
+    assert _run_check(pl, db, dl) == 3
+
+
+def test_turning_new_only_on_keeps_what_was_downloaded(monkeypatch, tmp_path):
+    _patch_provider(monkeypatch, _TYPED[:1], _TYPED_TRACKS)
+    db = _db(tmp_path)
+    pl = _add_artist(db)
+    _run_check(pl, db, _FakeDownloader(tmp_path))  # ALB downloaded
+
+    pl = db.set_new_only(pl.id, True)
+    assert pl.baseline_pending is True
+    _patch_provider(monkeypatch, _TYPED, _TYPED_TRACKS)
+    dl = _FakeDownloader(tmp_path)
+    assert _run_check(pl, db, dl) == 0  # SGL and EPP skipped
+
+    # Off again: only the skipped ones come back, not the downloaded one.
+    pl = db.set_new_only(pl.id, False)
+    dl = _FakeDownloader(tmp_path)
+    assert _run_check(pl, db, dl) == 2
+    assert sorted(dl.calls) == ['te', 'ts']
+
+
+def test_retargeting_a_new_only_watch_skips_the_new_artists_catalog(
+    tmp_path,
+):
+    db = _db(tmp_path)
+    pl = db.add_playlist(
+        CHANNEL_ID, 'A', 'url', 60, monitor.KIND_ARTIST, new_only=True
+    )
+    db.update_playlist(pl.id, baseline_pending=0)
+
+    moved = db.retarget_playlist(pl.id, 'UCother', 'B', 'url2')
+
+    assert moved.baseline_pending is True
+
+
+def test_to_dict_lists_release_types_and_hides_the_baseline_flag(tmp_path):
+    db = _db(tmp_path)
+    pl = db.add_playlist(
+        CHANNEL_ID, 'A', 'url', 60, monitor.KIND_ARTIST, 'album,ep', True
+    )
+
+    data = pl.to_dict()
+
+    assert data['release_types'] == ['album', 'ep']
+    assert data['new_only'] is True
+    assert 'baseline_pending' not in data
+
+
+def test_an_old_database_gets_the_new_columns(tmp_path):
+    path = tmp_path / 'monitor.db'
+    conn = sqlite3.connect(path)
+    conn.executescript("""
+        CREATE TABLE monitored_playlists (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            spotify_id TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            url TEXT NOT NULL,
+            interval_minutes INTEGER NOT NULL DEFAULT 60,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            last_checked TEXT,
+            last_track_count INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'playlist'
+        );
+        INSERT INTO monitored_playlists (spotify_id, name, url, created_at,
+            kind) VALUES ('UCold', 'Old', 'u', '2026-01-01', 'artist');
+    """)
+    conn.commit()
+    conn.close()
+
+    pl = monitor.PlaylistMonitorDB(path).get_by_spotify_id('UCold')
+
+    assert pl.release_types == monitor.ALL_RELEASE_TYPES
+    assert (pl.new_only, pl.baseline_pending) == (False, False)

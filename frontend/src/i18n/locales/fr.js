@@ -550,6 +550,17 @@ export default {
       'Impossible de démarrer l’égaliseur. La lecture continue sans lui.',
   },
   monitor: {
+    releaseTypes: 'Télécharger',
+    releaseTypesAtLeastOne: 'Gardez au moins un type de sortie',
+    release: { album: 'Albums', single: 'Singles', ep: 'EP' },
+    newOnly: 'Nouvelles sorties uniquement',
+    newOnlyHint:
+      'Ignore tout ce que l’artiste a déjà sorti ; seul ce qui sort après le début du suivi est téléchargé.',
+    newOnlyTurnOn:
+      'Une fois enregistré, tout ce qui est déjà sorti est ignoré ; seules les sorties suivantes sont téléchargées.',
+    newOnlyTurnOff:
+      'Une fois enregistré, les sorties ignorées sont téléchargées à la prochaine vérification.',
+    newOnlyBadge: 'Nouveautés',
     title: 'Surveillance de playlists',
     subtitle:
       'Les nouveaux titres de ces playlists et artistes sont téléchargés automatiquement.',
@@ -599,6 +610,8 @@ export default {
       'Ajouter une playlist télécharge tout son contenu maintenant, puis la vérifie selon l’intervalle et télécharge les ajouts.',
     explainerArtists:
       'Ajouter un artiste télécharge toute sa discographie maintenant, puis le vérifie selon l’intervalle et télécharge chaque nouvelle sortie.',
+    explainerArtistsNewOnly:
+      'Ajouter un artiste ne télécharge rien pour l’instant ; il est vérifié selon l’intervalle et chaque nouvelle sortie des types choisis est téléchargée.',
     emptyPlaylistsTitle: 'Aucune playlist surveillée',
     emptyPlaylistsBody:
       'Collez ci-dessus le lien d’une playlist pour la garder synchronisée.',

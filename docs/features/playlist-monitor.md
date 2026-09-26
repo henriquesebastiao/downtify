@@ -71,8 +71,28 @@ Spotify's public embed exposes an artist's name and a top-tracks preview, but **
 :::
 
 ::: warning The first sweep downloads the whole back catalogue
-Adding an artist queues **every** release they have, which for a prolific artist can be hundreds of albums and singles. Set **[Delay between downloads](download-settings.md#delay-between-downloads)** before adding a batch of artists, or you're very likely to get rate-limited.
+Adding an artist queues **every** release they have, which for a prolific artist can be hundreds of albums and singles. Set **[Delay between downloads](download-settings.md#delay-between-downloads)** before adding a batch of artists, or you're very likely to get rate-limited — or turn on **New releases only** (below) to skip the back catalogue entirely.
 :::
+
+### Choosing what to download
+
+Below the link box on the **Artists** tab (and in a watch's **Edit** dialog) two options decide what an artist watch downloads:
+
+| Option | What it does |
+|--------|--------------|
+| **Download: Albums / Singles / EPs** | Only releases of the ticked kinds are downloaded. All three are on by default; at least one has to stay on. The kind is YouTube Music's own label for each release — a release it doesn't label counts as an album. |
+| **New releases only** | Everything the artist has already released when the watch starts is skipped; only what comes out after that is downloaded. Off by default. |
+
+How they behave when you change them later:
+
+- **Turning a kind on** downloads that kind's releases the next time the watch is checked — its back catalogue too, unless **New releases only** is on (then only the ones released since the watch started, or since the option was turned on). Releases of a kind that is off are never recorded, so nothing is lost by switching a kind off for a while.
+- **Turning New releases only on** for an existing watch records everything out at that point as skipped; releases already downloaded stay as they are.
+- **Turning it off** downloads the releases it skipped (of the ticked kinds) on the next check.
+- Saving either option in the **Edit** dialog checks the watch right away, instead of waiting for its next scheduled check.
+
+"Skipping" the existing releases needs one successful look at the artist's discography: if YouTube Music returns an empty list (which is more often a hiccup than an artist with nothing out), nothing is recorded and the next check tries again, so a bad answer can never make the back catalogue download later. Pointing a **New releases only** watch at a different artist skips that artist's back catalogue the same way.
+
+The Monitor list shows a watch's filters under its link when they're not the defaults (e.g. **Albums** · **New only**).
 
 A release is only recorded as processed once every one of its tracks is accounted for, so a track that fails on a transient error is retried on the next sweep rather than being skipped forever. Tracks that already downloaded are never fetched twice.
 
@@ -162,6 +182,6 @@ Monitor state is stored in a SQLite database at `/data/downtify_monitor.db`. The
 
 - Each watch (kind, Spotify or YouTube Music playlist ID or YouTube Music channel ID, name, URL, interval, enabled state, last check time). Whether a watch is Spotify or YouTube Music is read from its stored URL, so no extra column is needed.
 - Every track successfully downloaded per watch, including the filename on disk
-- For artist watches, the releases already processed, so a sweep only fetches tracklists for genuinely new ones
+- For artist watches, the releases already processed, so a sweep only fetches tracklists for genuinely new ones — including the ones **New releases only** skipped, marked as such so turning it off can bring them back — plus the watch's release kinds and whether it's new-releases-only
 
 Databases created before Artist Watch are migrated automatically on startup; existing rows keep working as playlist watches.
