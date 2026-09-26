@@ -635,6 +635,7 @@ def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
         )
         row['track_number'] = tracklist_slot
         row['album_track_total'] = album_track_total
+        row['preview_url'] = _track_preview_url(track)
         songs.append(row)
     return songs
 
@@ -652,13 +653,33 @@ def _parse_playlist_tracks(entity: dict[str, Any]) -> list[dict[str, Any]]:
         track_id = track.get('id') or _id_from_uri(track.get('uri', ''))
         if not track_id:
             continue
-        songs.append(
-            _track_dict(
-                dict(track),
-                track_id=track_id,
-                fallback_cover=fallback_cover,
-            )
+        song = _track_dict(
+            dict(track),
+            track_id=track_id,
+            fallback_cover=fallback_cover,
         )
+        song['preview_url'] = _track_preview_url(track)
+        songs.append(song)
+    return songs
+
+
+def _with_embed_previews(
+    songs: list[dict[str, Any]], entity: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """*songs* (from the paginated GraphQL path, which carries no preview
+    clips) with each one's ``preview_url`` taken from the embed page's own
+    track list where it has the song - the embed only lists the first
+    ~50-100 tracks, so the rest keep none (the page can still look a clip
+    up on demand, see ``GET /api/preview``)."""
+
+    previews = {
+        song['song_id']: song['preview_url']
+        for song in _parse_playlist_tracks(entity)
+        if song.get('preview_url')
+    }
+    for song in songs:
+        if not song.get('preview_url'):
+            song['preview_url'] = previews.get(song.get('song_id'), '')
     return songs
 
 
@@ -876,7 +897,7 @@ def playlist_tracks_from_id(playlist_id: str) -> list[dict[str, Any]]:
     if token:
         try:
             _, tracks = _graphql_all_tracks(playlist_id, token)
-            return tracks
+            return _with_embed_previews(tracks, entity)
         except Exception:
             logger.opt(exception=True).warning(
                 'GraphQL pagination failed for {}; using embed data (limited)',
@@ -896,7 +917,9 @@ def playlist_info_and_tracks(
     if token:
         try:
             graphql_name, tracks = _graphql_all_tracks(playlist_id, token)
-            return graphql_name or embed_name, tracks
+            return graphql_name or embed_name, _with_embed_previews(
+                tracks, entity
+            )
         except Exception:
             logger.opt(exception=True).warning(
                 'GraphQL pagination failed for {}; using embed data (limited)',
@@ -1565,32 +1588,20 @@ def _anonymous_token() -> Optional[str]:
     return token
 
 
-def search_artist_by_name(name: str) -> Optional[dict[str, str]]:
-    """``{id, name}`` of the Spotify artist whose name matches *name*
-    exactly - ignoring case and the characters a file name can't hold, so
-    ``ACDC`` finds ``AC/DC`` (see :func:`downtify.file_naming.file_name_key`)
-    - or ``None``.
+def _search_suggestion_items(text: str) -> list[Any]:
+    """The top results of the web player's search-as-you-type box
+    (``searchSuggestions``) for *text*: artists, albums, playlists, tracks
+    and more, each ``{item: {__typename, data}}``, in Spotify's order.
 
-    Spotify has no public search API, but the web player's own
-    search-as-you-type box (``searchSuggestions``) also returns the top
-    entities, artists included, and that persisted query works with the
-    same anonymous token the embed pages hand out. It needs a large
-    ``numberOfTopResults`` (20): the default 5 often leaves the artist
-    out. The response mixes in other artists, so only an exact name match
-    counts - same strictness as every platform's own ``resolve_artist_id``
-    - never the first artist row. A name that's ambiguous on Spotify
-    resolves to whichever exact match ranks first, which is why an id
-    resolved from one of the artist's own downloaded tracks (see
-    :func:`primary_artist_id_from_track_id`) is always preferred.
+    It works with the same anonymous token the embed pages hand out, and
+    needs a large ``numberOfTopResults`` (20): the default 5 often leaves
+    what's wanted out. Raises :class:`ValueError` when Spotify didn't
+    answer, so ``[]`` always means "nothing found".
     """
 
-    text = name.strip()
-    wanted = file_name_key(text)
-    if not wanted:
-        return None
     token = _anonymous_token()
     if not token:
-        return None
+        raise ValueError('No anonymous Spotify token')
     try:
         resp = httpx.get(
             _PARTNER_API,
@@ -1619,27 +1630,128 @@ def search_artist_by_name(name: str) -> Optional[dict[str, str]]:
         )
         resp.raise_for_status()
         data = resp.json()
-    except Exception:
+    except Exception as exc:
         logger.opt(exception=True).debug(
-            'Spotify artist search failed for {!r}', text
+            'Spotify search failed for {!r}', text
         )
-        return None
-    items = (
+        raise ValueError('Spotify search failed') from exc
+    return (
         ((data.get('data') or {}).get('searchV2') or {}).get('topResultsV2')
         or {}
     ).get('itemsV2') or []
+
+
+def search_artist_by_name(name: str) -> Optional[dict[str, str]]:
+    """``{id, name}`` of the Spotify artist whose name matches *name*
+    exactly - ignoring case and the characters a file name can't hold, so
+    ``ACDC`` finds ``AC/DC`` (see :func:`downtify.file_naming.file_name_key`)
+    - or ``None``.
+
+    Spotify has no public search API, but the web player's own
+    search-as-you-type box also returns the top entities, artists included
+    (see :func:`_search_suggestion_items`). The response mixes in other
+    artists, so only an exact name match counts - same strictness as every
+    platform's own ``resolve_artist_id`` - never the first artist row. A
+    name that's ambiguous on Spotify resolves to whichever exact match
+    ranks first, which is why an id resolved from one of the artist's own
+    downloaded tracks (see :func:`primary_artist_id_from_track_id`) is
+    always preferred.
+    """
+
+    text = name.strip()
+    wanted = file_name_key(text)
+    if not wanted:
+        return None
+    try:
+        items = _search_suggestion_items(text)
+    except ValueError:
+        return None
+    for artist in search_results(items)['artists']:
+        if file_name_key(artist['name']) == wanted:
+            return {'id': artist['id'], 'name': artist['name']}
+    return None
+
+
+def search_results(items: list[Any]) -> dict[str, list[dict[str, Any]]]:
+    """Search-suggestion *items* (see :func:`_search_suggestion_items`)
+    sorted into ``{artists, albums, playlists}``, in Spotify's order.
+
+    * artist: ``{id, name, image_url}``
+    * album: ``{id, name, artists, year, cover_url, type}`` - ``type`` is
+      Spotify's (``ALBUM``, ``SINGLE``, ``EP``, ``COMPILATION``)
+    * playlist: ``{id, name, owner, cover_url}``
+
+    Rows without an id or a name are left out.
+    """
+
+    out: dict[str, list[dict[str, Any]]] = {
+        'artists': [],
+        'albums': [],
+        'playlists': [],
+    }
     for entry in items:
         item = entry.get('item') if isinstance(entry, dict) else None
         if not isinstance(item, dict):
             continue
-        if item.get('__typename') != 'ArtistResponseWrapper':
+        data = item.get('data') or {}
+        if not isinstance(data, dict):
             continue
-        artist = item.get('data') or {}
-        artist_name = str((artist.get('profile') or {}).get('name') or '')
-        artist_id = _id_from_uri(str(artist.get('uri') or ''))
-        if artist_id and file_name_key(artist_name) == wanted:
-            return {'id': artist_id, 'name': artist_name.strip()}
-    return None
+        kind = item.get('__typename')
+        item_id = _id_from_uri(str(data.get('uri') or ''))
+        if kind == 'ArtistResponseWrapper':
+            name = str((data.get('profile') or {}).get('name') or '').strip()
+            sources = (
+                (data.get('visuals') or {}).get('avatarImage') or {}
+            ).get('sources') or []
+            if item_id and name:
+                out['artists'].append({
+                    'id': item_id,
+                    'name': name,
+                    'image_url': _largest_image(sources),
+                })
+        elif kind == 'AlbumResponseWrapper':
+            name = str(data.get('name') or '').strip()
+            artists = [
+                str((a.get('profile') or {}).get('name') or '').strip()
+                for a in (data.get('artists') or {}).get('items') or []
+                if isinstance(a, dict)
+            ]
+            year = (data.get('date') or {}).get('year')
+            if item_id and name:
+                out['albums'].append({
+                    'id': item_id,
+                    'name': name,
+                    'artists': [a for a in artists if a],
+                    'year': str(year) if year else '',
+                    'cover_url': _largest_image(
+                        (data.get('coverArt') or {}).get('sources') or []
+                    ),
+                    'type': str(data.get('type') or ''),
+                })
+        elif kind == 'PlaylistResponseWrapper':
+            name = str(data.get('name') or '').strip()
+            owner = (data.get('ownerV2') or {}).get('data') or {}
+            images = (data.get('images') or {}).get('items') or []
+            cover = (
+                _largest_image(images[0].get('sources') or [])
+                if images and isinstance(images[0], dict)
+                else ''
+            )
+            if item_id and name:
+                out['playlists'].append({
+                    'id': item_id,
+                    'name': name,
+                    'owner': str(owner.get('name') or '').strip(),
+                    'cover_url': cover,
+                })
+    return out
+
+
+def search(text: str) -> dict[str, list[dict[str, Any]]]:
+    """:func:`search_results` for *text*. Raises :class:`ValueError` when
+    Spotify didn't answer."""
+
+    return search_results(_search_suggestion_items(text.strip()))
 
 
 def primary_artist_id_from_track_id(track_id: str) -> Optional[str]:

@@ -2,13 +2,25 @@
 //
 // Deliberately apart from the built-in player: its own <audio> element, no
 // queue, no equalizer, no session saved, no Now playing. The row that asks
-// for a preview shows the state (see TrackDownPlay); this only keeps one
+// for a preview shows the state (see useSongPlay); this only keeps one
 // clip going at a time and stays out of the player's way - starting a clip
 // pauses the player, and the player starting stops the clip.
-import { ref, watch } from 'vue'
+//
+// A Spotify song brings its own clip (`preview_url`). Any other song - a
+// YouTube Music result, a long playlist's later tracks - is looked up on
+// Deezer the first time it's asked for (GET /api/preview); the answer is
+// remembered for the session, and a song Deezer has nothing for stops
+// offering a preview.
+import { ref, shallowRef, watch } from 'vue'
 
+import API from '/src/model/api'
 import { usePlayer } from '/src/model/player'
-import { previewRatio, previewUrl } from '/src/lib/preview'
+import {
+  previewKey,
+  previewLookup,
+  previewRatio,
+  previewUrl,
+} from '/src/lib/preview'
 
 const player = usePlayer()
 
@@ -20,6 +32,30 @@ const isLoading = ref(false)
 const progress = ref(0)
 
 let audio = null
+// Clips looked up on Deezer, by previewKey: the URL, or '' for none.
+const looked = new Map()
+// Songs known to have no clip at all (reactive, so their rows update).
+const unavailable = shallowRef(new Set())
+
+/** Whether `song` has a clip, or might have one worth looking up. */
+function canPreview(song) {
+  if (previewUrl(song)) return true
+  const key = previewKey(song)
+  return Boolean(key && previewLookup(song) && !unavailable.value.has(key))
+}
+
+async function lookUp(song) {
+  const key = previewKey(song)
+  if (looked.has(key)) return looked.get(key)
+  const lookup = previewLookup(song)
+  if (!lookup) return ''
+  // A failed request isn't remembered: the next tap asks again.
+  const res = await API.findPreview(lookup)
+  const url = previewUrl({ preview_url: res.data?.preview_url })
+  looked.set(key, url)
+  if (!url) unavailable.value = new Set([...unavailable.value, key])
+  return url
+}
 
 function ensureAudio() {
   if (audio) return audio
@@ -74,26 +110,57 @@ function run(a, id) {
   })
 }
 
+function start(a, id, url) {
+  a.src = url
+  run(a, id)
+}
+
+async function startLookedUp(song, a, id) {
+  let url = ''
+  try {
+    url = await lookUp(song)
+  } catch {
+    url = ''
+  }
+  // Another row (or the player) took over while this was looked up.
+  if (activeId.value !== id) return true
+  if (!url) {
+    stop()
+    return false
+  }
+  start(a, id, url)
+  return true
+}
+
 /**
  * The row's play/pause: starts `song`'s clip, or pauses/resumes it when it
  * is already the one loaded. A clip of another song is replaced.
+ *
+ * A song with its own clip starts right away; one that has to be looked up
+ * returns a promise, resolving `false` when it turned out to have no clip
+ * (or the lookup failed), so the row can say so.
  */
 function toggle(song) {
-  const url = previewUrl(song)
-  const id = String(song?.song_id || '')
-  if (!url || !id) return
+  const id = previewKey(song)
+  if (!id || !canPreview(song)) return false
   const a = ensureAudio()
   if (activeId.value === id) {
+    if (!a.src) return true // still being looked up
     if (a.paused) run(a, id)
     else a.pause()
-    return
+    return true
   }
   if (player.isPlaying.value) player.pause()
+  if (activeId.value) stop()
   activeId.value = id
   progress.value = 0
   isLoading.value = true
-  a.src = url
-  run(a, id)
+  const own = previewUrl(song)
+  if (own) {
+    start(a, id, own)
+    return true
+  }
+  return startLookedUp(song, a, id)
 }
 
 // The player starting (its own controls, the media keys, a downloaded row)
@@ -103,5 +170,15 @@ watch(player.isPlaying, (playing) => {
 })
 
 export function usePreview() {
-  return { activeId, isPlaying, isLoading, progress, toggle, stop, stopFor }
+  return {
+    activeId,
+    isPlaying,
+    isLoading,
+    progress,
+    unavailable,
+    canPreview,
+    toggle,
+    stop,
+    stopFor,
+  }
 }

@@ -182,10 +182,12 @@
                   stroke-width="3"
                 />
               </button>
-              <span
-                class="tabular w-6 text-center text-[13px] text-faint max-sm:hidden"
-                >{{ row.index + 1 }}</span
-              >
+              <SongPlayCell
+                :song="row.song"
+                :index="row.index"
+                :queue="playQueue"
+                :context="playContext"
+              />
               <CoverArt
                 :src="row.song.cover_url"
                 :name="row.song.album_name || row.song.name"
@@ -254,6 +256,7 @@ import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DownloadState from '/src/components/search/DownloadState.vue'
 import ReleaseCard from '/src/components/search/ReleaseCard.vue'
+import SongPlayCell from '/src/components/library/SongPlayCell.vue'
 import API from '/src/model/api'
 import monitorAPI from '/src/model/monitor'
 import {
@@ -264,6 +267,7 @@ import {
 import { useLibrary } from '/src/model/library'
 import { useUi } from '/src/model/ui'
 import { classifyInput } from '/src/lib/input'
+import { playableQueue } from '/src/lib/topSongs'
 import { formatDuration, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -315,6 +319,23 @@ const kicker = computed(() => {
   const source = kind.value.source === 'spotify' ? 'Spotify' : 'YouTube Music'
   return `${source} · ${t(`link.kind.${details.value?.kind || 'track'}`)}`
 })
+
+// Playing a downloaded song from here queues the list's other downloaded
+// songs after it, in the list's order; the rest play their preview clip.
+const playQueue = computed(() =>
+  playableQueue(details.value?.tracks || [], library.findTrack)
+)
+const playContext = computed(() =>
+  details.value
+    ? {
+        type: details.value.kind === 'playlist' ? 'playlist' : 'album',
+        title: details.value.name || '',
+        subtitle: details.value.subtitle || '',
+        cover: details.value.cover_url || '',
+        route: { name: 'Link', query: { url: url.value } },
+      }
+    : null
+)
 
 const watchable = computed(
   () => details.value?.kind === 'playlist' || details.value?.kind === 'artist'

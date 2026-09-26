@@ -157,6 +157,7 @@ const items = [
   { name: 'Queue', icon: 'download', label: 'nav.queue' },
 ]
 const moreLinks = [
+  { name: 'Discover', icon: 'sparkle', label: 'nav.discover' },
   { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
   { name: 'Podcasts', icon: 'mic', label: 'nav.podcasts' },
   { name: 'Settings', icon: 'settings', label: 'nav.settings' },

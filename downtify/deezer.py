@@ -5,9 +5,13 @@ bio/social/related-artist data from Deezer's internal web-player API.
 integration as :mod:`downtify.itunes`. Deezer's artist search never
 returns a banner-shaped image, only square profile photos.
 
-Bio/social/related-artist data has no public REST equivalent at all
-(verified live: ``/artist/{id}`` has no bio field, and
-``/artist/{id}/biography`` etc. all 400). The only way to get it is
+Bio/social data has no public REST equivalent at all (verified live:
+``/artist/{id}`` has no bio field, and ``/artist/{id}/biography`` etc.
+all 400). Related artists do - ``/artist/{id}/related``, keyless like the
+search, is what :func:`related_artists` (the Discover page, see
+:mod:`downtify.discover`) reads - but the artist profile keeps taking its
+related-artist names from the same call as the bio. The only way to get
+the bio is
 Deezer's *internal*, undocumented web-player GraphQL API
 (``pipe.deezer.com/api``), which is fragile by nature: it only accepts
 an anonymous token's exact, full, persisted "ArtistFull" query text
@@ -20,13 +24,18 @@ that query shape, this needs a fresh capture, not a clever rewrite.
 from __future__ import annotations
 
 from typing import Any, Optional
+from urllib.parse import urlsplit
 
 import httpx
 from loguru import logger
 
-from .file_naming import file_name_key
+from .file_naming import file_name_key, title_key
 
 _SEARCH_URL = 'https://api.deezer.com/search/artist'
+_RELATED_URL = 'https://api.deezer.com/artist/{artist_id}/related'
+_TRACK_SEARCH_URL = 'https://api.deezer.com/search/track'
+# Deezer's 30 s clips are served from here (``cdnt-preview.dzcdn.net``).
+_PREVIEW_HOST_SUFFIX = '.dzcdn.net'
 _AUTH_URL = 'https://auth.deezer.com/login/anonymous'
 _GRAPHQL_URL = 'https://pipe.deezer.com/api'
 _TIMEOUT = 10
@@ -334,6 +343,142 @@ def exact_artist_picture(name: str) -> Optional[str]:
     if match is None or not _has_real_picture(match):
         return None
     return match.get('picture_medium') or None
+
+
+def _picture(row: dict[str, Any]) -> str:
+    """A row's largest real photo, or ``""`` for Deezer's placeholder."""
+
+    if not _has_real_picture(row):
+        return ''
+    return str(
+        row.get('picture_big')
+        or row.get('picture_xl')
+        or row.get('picture_medium')
+        or ''
+    )
+
+
+def related_artists(artist_id: str, limit: int = 20) -> list[dict[str, Any]]:
+    """Deezer's "similar artists" for a Deezer artist id, best match first.
+
+    Each is ``{deezer_id, name, picture_url, fans}`` - ``picture_url`` is
+    ``""`` for an artist with only Deezer's placeholder (see
+    :data:`_NO_PICTURE_HASH`). Public and keyless, like the artist search.
+
+    Raises :class:`ValueError` when Deezer didn't really answer - including
+    its rate limit, which comes back as an HTTP 200 with an ``error``
+    object (see :func:`_search_rows`) - so ``[]`` always means "Deezer has
+    no related artists for this one".
+    """
+
+    try:
+        resp = httpx.get(
+            _RELATED_URL.format(artist_id=artist_id),
+            params={'limit': max(1, limit)},
+            timeout=_TIMEOUT,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        logger.opt(exception=True).debug(
+            'Deezer related-artists fetch failed for {}', artist_id
+        )
+        raise ValueError('Could not reach Deezer') from exc
+    if not isinstance(data, dict):
+        raise ValueError('Deezer sent an unexpected answer')
+    if data.get('error'):
+        logger.debug('Deezer refused the related artists: {}', data['error'])
+        raise ValueError('Deezer refused the request')
+
+    related: list[dict[str, Any]] = []
+    for row in data.get('data') or []:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get('name') or '').strip()
+        if not name or row.get('id') is None:
+            continue
+        related.append({
+            'deezer_id': str(row['id']),
+            'name': name,
+            'picture_url': _picture(row),
+            'fans': int(row.get('nb_fan') or 0),
+        })
+    return related
+
+
+def _preview_link(url: Any) -> str:
+    """*url* when it's an https link to Deezer's clip CDN, else ``""``."""
+
+    if not isinstance(url, str):
+        return ''
+    parts = urlsplit(url)
+    host = parts.hostname or ''
+    if parts.scheme == 'https' and host.endswith(_PREVIEW_HOST_SUFFIX):
+        return url
+    return ''
+
+
+def find_track_preview(
+    artist: str, title: str, duration: Optional[float] = None
+) -> str:
+    """The 30 s preview clip Deezer has for a song, or ``""``.
+
+    For a song with no clip of its own (a YouTube Music result, or a
+    Spotify playlist track past what the embed page lists). Deezer's
+    public track search is keyless; a row counts only when its artist is
+    *artist* and its title is *title*, both compared the way a file name
+    keeps them and ignoring ``(Live)``/``[Remastered]``/`` - Radio Edit``
+    style suffixes, so another artist's cover or a different song is never
+    played in its place. Among those, the one closest to *duration* wins,
+    so a live version doesn't beat the studio one.
+
+    Raises :class:`ValueError` when Deezer didn't really answer (see
+    :func:`_search_rows`), so ``""`` always means "no clip found".
+    """
+
+    wanted_artist = file_name_key(artist)
+    wanted_title = title_key(title)
+    if not wanted_artist or not wanted_title:
+        return ''
+    try:
+        resp = httpx.get(
+            _TRACK_SEARCH_URL,
+            params={'q': f'{artist} {title}', 'limit': 25},
+            timeout=_TIMEOUT,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        logger.opt(exception=True).debug('Deezer track search failed')
+        raise ValueError('Could not reach Deezer') from exc
+    if not isinstance(data, dict):
+        raise ValueError('Deezer sent an unexpected answer')
+    if data.get('error'):
+        logger.debug('Deezer refused the track search: {}', data['error'])
+        raise ValueError('Deezer refused the request')
+
+    matches = []
+    for row in data.get('data') or []:
+        if not isinstance(row, dict):
+            continue
+        preview = _preview_link(row.get('preview'))
+        row_artist = str((row.get('artist') or {}).get('name') or '')
+        if not preview or file_name_key(row_artist) != wanted_artist:
+            continue
+        titles = {
+            title_key(row.get('title')),
+            title_key(row.get('title_short')),
+        }
+        if wanted_title not in titles:
+            continue
+        matches.append((row, preview))
+    if not matches:
+        return ''
+    if duration:
+        matches.sort(
+            key=lambda m: abs(float(m[0].get('duration') or 0) - duration)
+        )
+    return matches[0][1]
 
 
 def fetch_artist_full(artist_id: str, lang: str) -> dict[str, Any]:

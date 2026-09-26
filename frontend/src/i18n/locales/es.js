@@ -28,6 +28,7 @@ export default {
     library: 'Biblioteca',
     queue: 'Cola',
     monitor: 'Monitor',
+    discover: 'Descubrir',
     podcasts: 'Podcasts',
     settings: 'Ajustes',
     more: 'Más',
@@ -45,6 +46,7 @@ export default {
     playPreview: 'Escuchar un adelanto de {name}',
     pausePreview: 'Pausar el adelanto de {name}',
     previewLabel: 'Adelanto',
+    noPreview: 'No se encontró una vista previa de {name}',
     shuffle: 'Aleatorio',
     playNext: 'Reproducir a continuación',
     addToQueue: 'Añadir a la cola',
@@ -860,6 +862,62 @@ export default {
     goQueue: 'Ir a la cola',
     close: 'Cerrar reproducción actual',
     help: 'Ver atajos',
+  },
+  discover: {
+    title: 'Descubrir',
+    subtitle:
+      'Artistas que aún no tienes, elegidos a partir de tu biblioteca y de lo que escuchas.',
+    refresh: 'Actualizar',
+    hiddenButton: 'Artistas ocultos ({count})',
+    emptyLibraryTitle: 'Aún no hay nada en qué basarse',
+    emptyLibraryBody:
+      'Descubrir sugiere artistas según los que hay en tu biblioteca. Descarga algo de música primero.',
+    findMusic: 'Buscar música',
+    failed: 'No se pudieron cargar las sugerencias',
+    noneTitle: 'No hay sugerencias nuevas',
+    noneBody:
+      'Todos los artistas sugeridos para tu biblioteca ya están en ella o están ocultos. Descarga o escucha más para obtener nuevas.',
+    partial:
+      'Algunos de tus artistas no se pudieron consultar ahora, así que la lista es más corta de lo habitual. Inténtalo más tarde.',
+    because: 'Porque te gusta {names}',
+    moreFor: 'Más opciones para {name}',
+    findSongs: 'Buscar canciones',
+    openDeezer: 'Abrir en Deezer',
+    notInterested: 'No me interesa',
+    hidden: '{name} no se volverá a sugerir',
+    undo: 'Deshacer',
+    actionFailed: 'Algo salió mal. Inténtalo de nuevo.',
+    hiddenTitle: 'Artistas ocultos',
+    hiddenBody: 'Estos artistas nunca se sugieren en Descubrir.',
+    hideByName: 'Ocultar un artista',
+    hideByNamePlaceholder: 'Nombre del artista',
+    hide: 'Ocultar',
+    unhide: 'Volver a mostrar',
+    hiddenEmpty: 'No hay artistas ocultos.',
+    listensBody:
+      'Una canción cuenta para Descubrir cuando se ha reproducido la mitad (o cuatro minutos).',
+    clearListens: 'Borrar historial de escucha',
+    clearListensTitle: '¿Borrar el historial de escucha?',
+    clearListensBody:
+      'Descubrir olvida lo que has escuchado. Tu biblioteca y tus canciones favoritas no cambian.',
+    listensCleared: 'Historial de escucha borrado',
+    artistsTitle: 'Artistas para ti',
+    showAll: 'Mostrar todos ({count})',
+    showLess: 'Mostrar menos',
+    albumsTitle: 'Álbumes para ti',
+    albumsBody: 'El álbum más conocido de artistas que te pueden gustar.',
+    moreAlbumsTitle: 'Más de tus artistas',
+    moreAlbumsBody:
+      'Álbumes populares de artistas que ya tienes y que aún no están en tu biblioteca.',
+    playlistsTitle: 'Playlists para ti',
+    playlistsBody:
+      'Mixes de Spotify en torno a los artistas que más escuchas, y lo esencial de artistas nuevos.',
+    radioFor: 'Mix en torno a {name}',
+    essentialsOf: 'Lo esencial de {name}',
+    collectionsFailed:
+      'No se pudieron cargar los álbumes y playlists ahora. Inténtalo más tarde.',
+    poweredBy:
+      'Los artistas vienen de los artistas similares de Deezer; los álbumes y playlists, de Spotify.',
   },
   podcasts: {
     title: 'Podcasts',

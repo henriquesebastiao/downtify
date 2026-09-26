@@ -58,10 +58,7 @@
             stroke-width="3"
           />
         </button>
-        <span
-          class="tabular w-6 text-center text-[13px] text-faint max-sm:hidden"
-          >{{ row.index + 1 }}</span
-        >
+        <SongPlayCell :song="row.song" :index="row.index" :queue="playQueue" />
         <CoverArt
           :src="row.song.cover_url"
           :name="row.song.album_name || row.song.name"
@@ -119,13 +116,26 @@ import UiButton from '../ui/UiButton.vue'
 import UiChips from '../ui/UiChips.vue'
 import UiSwitch from '../ui/UiSwitch.vue'
 import DownloadState from '../search/DownloadState.vue'
+import SongPlayCell from './SongPlayCell.vue'
+import { computed } from 'vue'
+import { useLibrary } from '/src/model/library'
 import { formatDuration, formatPlayCount } from '/src/lib/format'
-import { playsBadge } from '/src/lib/topSongs'
+import { playableQueue, playsBadge } from '/src/lib/topSongs'
 import { useI18n } from '/src/i18n'
 
-defineProps({
+const props = defineProps({
   state: { type: Object, required: true },
 })
 
 const { t, locale } = useI18n()
+const library = useLibrary()
+
+// A downloaded song plays with the list's other downloaded ones queued
+// after it, in ranking order; the rest play their preview clip.
+const playQueue = computed(() =>
+  playableQueue(
+    props.state.rows.map((row) => row.song),
+    library.findTrack
+  )
+)
 </script>

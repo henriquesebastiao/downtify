@@ -32,6 +32,11 @@
     >
       <AppIcon name="play" :size="16" />
     </button>
+    <!-- Controls over the cover (e.g. a menu): outside the link, so a
+    click on one doesn't also open the tile. -->
+    <div v-if="$slots.overlay" class="absolute top-2 right-2">
+      <slot name="overlay" />
+    </div>
     <RouterLink
       :to="to"
       class="flex min-w-0 flex-col gap-0.5"

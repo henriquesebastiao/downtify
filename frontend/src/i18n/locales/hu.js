@@ -28,6 +28,7 @@ export default {
     library: 'Könyvtár',
     queue: 'Sor',
     monitor: 'Figyelő',
+    discover: 'Felfedezés',
     podcasts: 'Podcastok',
     settings: 'Beállítások',
     more: 'Továbbiak',
@@ -45,6 +46,7 @@ export default {
     playPreview: '{name} előnézetének lejátszása',
     pausePreview: '{name} előnézetének szüneteltetése',
     previewLabel: 'Előnézet',
+    noPreview: 'Nem található előzetes ehhez: {name}',
     shuffle: 'Keverés',
     playNext: 'Lejátszás következőként',
     addToQueue: 'Hozzáadás a sorhoz',
@@ -858,6 +860,62 @@ export default {
     goQueue: 'Ugrás a sorhoz',
     close: 'Most szóló bezárása',
     help: 'Billentyűparancsok',
+  },
+  discover: {
+    title: 'Felfedezés',
+    subtitle:
+      'Előadók, akik még nincsenek meg neked – a könyvtárad és a hallgatott zenék alapján.',
+    refresh: 'Frissítés',
+    hiddenButton: 'Elrejtett előadók ({count})',
+    emptyLibraryTitle: 'Még nincs miből kiindulni',
+    emptyLibraryBody:
+      'A Felfedezés a könyvtáradban lévő előadók alapján ajánl. Előbb tölts le néhány zenét.',
+    findMusic: 'Zene keresése',
+    failed: 'Nem sikerült betölteni az ajánlásokat',
+    noneTitle: 'Nincs új ajánlás',
+    noneBody:
+      'Minden, a könyvtáradhoz ajánlott előadó már benne van, vagy el van rejtve. Tölts le vagy hallgass többet az újakért.',
+    partial:
+      'Néhány előadódat most nem sikerült ellenőrizni, ezért a lista a szokásosnál rövidebb. Próbáld újra később.',
+    because: 'Mert szereted: {names}',
+    moreFor: 'További lehetőségek: {name}',
+    findSongs: 'Dalok keresése',
+    openDeezer: 'Megnyitás a Deezeren',
+    notInterested: 'Nem érdekel',
+    hidden: '{name} többé nem lesz ajánlva',
+    undo: 'Visszavonás',
+    actionFailed: 'Hiba történt. Próbáld újra.',
+    hiddenTitle: 'Elrejtett előadók',
+    hiddenBody: 'Ezeket az előadókat a Felfedezés soha nem ajánlja.',
+    hideByName: 'Előadó elrejtése',
+    hideByNamePlaceholder: 'Előadó neve',
+    hide: 'Elrejtés',
+    unhide: 'Megjelenítés újra',
+    hiddenEmpty: 'Nincsenek elrejtett előadók.',
+    listensBody:
+      'Egy dal akkor számít a Felfedezéshez, ha a fele (vagy négy perce) lejátszódott.',
+    clearListens: 'Hallgatási előzmények törlése',
+    clearListensTitle: 'Törlöd a hallgatási előzményeket?',
+    clearListensBody:
+      'A Felfedezés elfelejti, mit hallgattál. A könyvtárad és a kedvelt dalaid nem változnak.',
+    listensCleared: 'Hallgatási előzmények törölve',
+    artistsTitle: 'Előadók neked',
+    showAll: 'Összes mutatása ({count})',
+    showLess: 'Kevesebb mutatása',
+    albumsTitle: 'Albumok neked',
+    albumsBody: 'Olyan előadók legismertebb albuma, akik tetszhetnek neked.',
+    moreAlbumsTitle: 'Még több az előadóidtól',
+    moreAlbumsBody:
+      'Már meglévő előadóid népszerű albumai, amelyek még nincsenek a könyvtáradban.',
+    playlistsTitle: 'Lejátszási listák neked',
+    playlistsBody:
+      'Spotify-mixek a legtöbbet hallgatott előadóid körül, és új előadók legjobbjai.',
+    radioFor: 'Mix {name} körül',
+    essentialsOf: '{name} legjobbjai',
+    collectionsFailed:
+      'Az albumokat és listákat most nem sikerült betölteni. Próbáld újra később.',
+    poweredBy:
+      'Az előadók a Deezer hasonló előadóiból, az albumok és listák a Spotifyról származnak.',
   },
   podcasts: {
     title: 'Podcastok',

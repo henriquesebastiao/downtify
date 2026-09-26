@@ -39,6 +39,7 @@ import UiDialog from '../ui/UiDialog.vue'
 import { usePlayer } from '/src/model/player'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useLibrary } from '/src/model/library'
+import { useDiscover } from '/src/model/discover'
 import { useNowPlaying, useUi } from '/src/model/ui'
 import { useShortcuts } from './shortcuts'
 
@@ -57,6 +58,8 @@ function viewKey(viewRoute) {
 }
 
 useLibrary().load()
+// Count listens for Discover, whichever page the music is playing on.
+useDiscover().startListenTracking()
 
 useShortcuts({
   player,

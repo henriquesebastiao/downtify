@@ -40,7 +40,7 @@
             class="stroke-accent"
             stroke-linecap="round"
             :stroke-dasharray="PREVIEW_RING_LENGTH"
-            :stroke-dashoffset="ringOffset(preview.progress.value)"
+            :stroke-dashoffset="ringOffset(progress)"
             style="transition: stroke-dashoffset 250ms linear"
           />
         </svg>
@@ -158,27 +158,24 @@
 // progress, or the "In library" label - the way a search result does.
 //
 // Until the song is downloaded the same affordances play its 30 s preview
-// clip, when it has one (`song.preview_url`): on the row itself, without the
-// built-in player - see model/preview.js.
+// clip: on the row itself, without the built-in player - see
+// model/songPlay.js and model/preview.js.
 //
 // Deliberately standalone: it borrows the look of SongRow and the behaviour
 // of TrackList without importing or editing either, so neither grid can be
 // affected by it. It takes a *song* (what a search or link result is), not a
 // library track, and finds the file behind it once it has been downloaded.
-import { computed, onBeforeUnmount, watch } from 'vue'
+import { computed } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
 import DownloadState from '../search/DownloadState.vue'
-import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
-import { usePreview } from '/src/model/preview'
-import { useTrackActions } from '/src/model/trackActions'
+import { useSongPlay } from '/src/model/songPlay'
 import { formatDuration } from '/src/lib/format'
 import {
   PREVIEW_RING_LENGTH,
   PREVIEW_RING_RADIUS,
-  previewUrl,
   ringOffset,
 } from '/src/lib/preview'
 import { useI18n } from '/src/i18n'
@@ -196,10 +193,20 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
-const library = useLibrary()
 const player = usePlayer()
-const preview = usePreview()
-const actions = useTrackActions()
+const {
+  isCurrent,
+  previewable,
+  previewActive,
+  previewPlaying,
+  previewLoading,
+  playable,
+  highlighted,
+  playLabel,
+  progress,
+  toggle,
+  ensurePlaying,
+} = useSongPlay(props)
 
 const artists = computed(
   () =>
@@ -207,75 +214,9 @@ const artists = computed(
     props.song.artist ||
     t('common.unknownArtist')
 )
-// The library track behind the song once it's downloaded - the library
-// refreshes itself shortly after a download finishes, and this follows.
-const track = computed(() =>
-  library.findTrack(
-    (props.song.artists || [])[0] || props.song.artist,
-    props.song.name
-  )
-)
-const isCurrent = computed(
-  () => !!track.value && player.currentTrack.value?.file === track.value.file
-)
-
-// A song that isn't in the library but has a clip to listen to.
-const previewable = computed(() => !track.value && !!previewUrl(props.song))
-const songId = computed(() => String(props.song.song_id || ''))
-const previewActive = computed(
-  () => previewable.value && preview.activeId.value === songId.value
-)
-const previewPlaying = computed(
-  () => previewActive.value && preview.isPlaying.value
-)
-const previewLoading = computed(
-  () => previewActive.value && preview.isLoading.value
-)
-// Something on this row plays: the downloaded song, or its clip.
-const playable = computed(() => !!track.value || previewable.value)
-const highlighted = computed(() => isCurrent.value || previewActive.value)
-const playLabel = computed(() =>
-  t(
-    track.value
-      ? 'actions.playItem'
-      : previewPlaying.value
-        ? 'actions.pausePreview'
-        : 'actions.playPreview',
-    { name: props.song.name }
-  )
-)
-
-function play() {
-  if (!track.value) return
-  const start = props.queue.findIndex((item) => item.file === track.value.file)
-  if (start < 0) actions.play([track.value], 0, props.context)
-  else actions.play(props.queue, start, props.context)
-}
-
-// The play button: the song from the library, or - not downloaded yet - its
-// clip, which the same button pauses again.
-function toggle() {
-  if (track.value) play()
-  else if (previewable.value) preview.toggle(props.song)
-}
-
-// A double click makes sure the song plays; it never pauses a clip.
-function ensurePlaying() {
-  if (track.value) play()
-  else if (previewable.value && !previewPlaying.value) {
-    preview.toggle(props.song)
-  }
-}
 
 // On a touch screen a tap on the row plays it (a double click can't).
 function onRowClick() {
   if (window.matchMedia('(pointer: coarse)').matches) toggle()
 }
-
-// Once the song has been downloaded the row plays the real thing, so the
-// clip ends; a row that goes away takes its clip with it.
-watch(track, (found) => {
-  if (found) preview.stopFor(songId.value)
-})
-onBeforeUnmount(() => preview.stopFor(songId.value))
 </script>

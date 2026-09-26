@@ -20,6 +20,9 @@ import re
 
 _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 _WHITESPACE = re.compile(r'\s+')
+# "Song (Remastered 2011)", "Song [Live]", "Song - Radio Edit": the part a
+# title match ignores.
+_TITLE_EXTRAS = re.compile(r'\s*(?:[(\[].*?[)\]]|\s-\s.*)$')
 
 
 def _without_invalid_chars(text: str) -> str:
@@ -47,3 +50,19 @@ def file_name_key(name: str) -> str:
     """
 
     return _WHITESPACE.sub(' ', _without_invalid_chars(name)).casefold()
+
+
+def title_key(title: str) -> str:
+    """A song or album title as a title match compares it: its
+    :func:`file_name_key`, without trailing ``(…)``/``[…]`` parts or a
+    `` - …`` suffix - so ``Dummy (Deluxe Edition)``, ``Roads - Live`` and
+    ``Glory Box [Remastered]`` match ``Dummy``, ``Roads`` and ``Glory Box``.
+    """
+
+    text = str(title or '').strip()
+    while True:
+        trimmed = _TITLE_EXTRAS.sub('', text).strip()
+        if trimmed == text or not trimmed:
+            break
+        text = trimmed
+    return file_name_key(text)

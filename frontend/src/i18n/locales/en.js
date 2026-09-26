@@ -28,6 +28,7 @@ export default {
     library: 'Library',
     queue: 'Queue',
     monitor: 'Monitor',
+    discover: 'Discover',
     podcasts: 'Podcasts',
     settings: 'Settings',
     more: 'More',
@@ -45,6 +46,7 @@ export default {
     playPreview: 'Play a preview of {name}',
     pausePreview: 'Pause the preview of {name}',
     previewLabel: 'Preview',
+    noPreview: 'No preview found for {name}',
     shuffle: 'Shuffle',
     playNext: 'Play next',
     addToQueue: 'Add to queue',
@@ -836,6 +838,62 @@ export default {
     goQueue: 'Go to queue',
     close: 'Close now playing',
     help: 'Show shortcuts',
+  },
+  discover: {
+    title: 'Discover',
+    subtitle:
+      'Artists you don’t have yet, picked from your library and what you play.',
+    refresh: 'Refresh',
+    hiddenButton: 'Hidden artists ({count})',
+    emptyLibraryTitle: 'Nothing to go on yet',
+    emptyLibraryBody:
+      'Discover suggests artists based on the ones in your library. Download some music first.',
+    findMusic: 'Find music',
+    failed: 'Couldn’t load suggestions',
+    noneTitle: 'No new suggestions',
+    noneBody:
+      'Every artist suggested for your library is already in it or hidden. Download or play more to get new ones.',
+    partial:
+      'Some of your artists couldn’t be checked right now, so this list is shorter than usual. Try again later.',
+    because: 'Because you like {names}',
+    moreFor: 'More options for {name}',
+    findSongs: 'Find songs',
+    openDeezer: 'Open on Deezer',
+    notInterested: 'Not interested',
+    hidden: '{name} won’t be suggested again',
+    undo: 'Undo',
+    actionFailed: 'Something went wrong. Try again.',
+    hiddenTitle: 'Hidden artists',
+    hiddenBody: 'These artists are never suggested in Discover.',
+    hideByName: 'Hide an artist',
+    hideByNamePlaceholder: 'Artist name',
+    hide: 'Hide',
+    unhide: 'Show again',
+    hiddenEmpty: 'No hidden artists.',
+    listensBody:
+      'Listening to a song counts toward Discover once half of it (or four minutes) has played.',
+    clearListens: 'Clear listening history',
+    clearListensTitle: 'Clear listening history?',
+    clearListensBody:
+      'Discover forgets what you’ve played. Your library and liked songs stay as they are.',
+    listensCleared: 'Listening history cleared',
+    artistsTitle: 'Artists for you',
+    showAll: 'Show all ({count})',
+    showLess: 'Show less',
+    albumsTitle: 'Albums for you',
+    albumsBody: 'The best-known album of artists you might like.',
+    moreAlbumsTitle: 'More from your artists',
+    moreAlbumsBody:
+      'Popular albums by artists you already have, not in your library yet.',
+    playlistsTitle: 'Playlists for you',
+    playlistsBody:
+      'Spotify mixes around the artists you play most, and the essentials of new ones.',
+    radioFor: 'Mix around {name}',
+    essentialsOf: 'The essentials of {name}',
+    collectionsFailed:
+      'Albums and playlists couldn’t be loaded right now. Try again later.',
+    poweredBy:
+      'Artists come from Deezer’s similar artists; albums and playlists from Spotify.',
   },
   podcasts: {
     title: 'Podcasts',

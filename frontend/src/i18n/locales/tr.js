@@ -28,6 +28,7 @@ export default {
     library: 'Kitaplık',
     queue: 'Kuyruk',
     monitor: 'İzleyici',
+    discover: 'Keşfet',
     podcasts: 'Podcastler',
     settings: 'Ayarlar',
     more: 'Daha fazla',
@@ -45,6 +46,7 @@ export default {
     playPreview: '{name} önizlemesini çal',
     pausePreview: '{name} önizlemesini duraklat',
     previewLabel: 'Önizleme',
+    noPreview: '{name} için önizleme bulunamadı',
     shuffle: 'Karıştır',
     playNext: 'Sıradaki olarak çal',
     addToQueue: 'Kuyruğa ekle',
@@ -855,6 +857,62 @@ export default {
     goQueue: 'Kuyruğa git',
     close: 'Şimdi çalanı kapat',
     help: 'Kısayolları göster',
+  },
+  discover: {
+    title: 'Keşfet',
+    subtitle:
+      'Henüz sahip olmadığınız sanatçılar; kitaplığınıza ve dinlediklerinize göre seçildi.',
+    refresh: 'Yenile',
+    hiddenButton: 'Gizlenen sanatçılar ({count})',
+    emptyLibraryTitle: 'Henüz dayanacak bir şey yok',
+    emptyLibraryBody:
+      'Keşfet, kitaplığınızdaki sanatçılara göre öneriler sunar. Önce biraz müzik indirin.',
+    findMusic: 'Müzik bul',
+    failed: 'Öneriler yüklenemedi',
+    noneTitle: 'Yeni öneri yok',
+    noneBody:
+      'Kitaplığınız için önerilen tüm sanatçılar zaten kitaplığınızda ya da gizli. Yeni öneriler için daha fazla indirin veya dinleyin.',
+    partial:
+      'Bazı sanatçılarınız şu anda kontrol edilemedi, bu yüzden liste her zamankinden kısa. Daha sonra tekrar deneyin.',
+    because: '{names} sevdiğiniz için',
+    moreFor: '{name} için diğer seçenekler',
+    findSongs: 'Şarkı bul',
+    openDeezer: 'Deezer’da aç',
+    notInterested: 'İlgilenmiyorum',
+    hidden: '{name} bir daha önerilmeyecek',
+    undo: 'Geri al',
+    actionFailed: 'Bir şeyler ters gitti. Tekrar deneyin.',
+    hiddenTitle: 'Gizlenen sanatçılar',
+    hiddenBody: 'Bu sanatçılar Keşfet’te hiçbir zaman önerilmez.',
+    hideByName: 'Bir sanatçıyı gizle',
+    hideByNamePlaceholder: 'Sanatçı adı',
+    hide: 'Gizle',
+    unhide: 'Yeniden göster',
+    hiddenEmpty: 'Gizlenen sanatçı yok.',
+    listensBody:
+      'Bir şarkı, yarısı (veya dört dakikası) çalındığında Keşfet için sayılır.',
+    clearListens: 'Dinleme geçmişini temizle',
+    clearListensTitle: 'Dinleme geçmişi temizlensin mi?',
+    clearListensBody:
+      'Keşfet dinlediklerinizi unutur. Kitaplığınız ve beğendiğiniz şarkılar olduğu gibi kalır.',
+    listensCleared: 'Dinleme geçmişi temizlendi',
+    artistsTitle: 'Sizin için sanatçılar',
+    showAll: 'Tümünü göster ({count})',
+    showLess: 'Daha az göster',
+    albumsTitle: 'Sizin için albümler',
+    albumsBody: 'Sevebileceğiniz sanatçıların en bilinen albümü.',
+    moreAlbumsTitle: 'Sanatçılarınızdan daha fazlası',
+    moreAlbumsBody:
+      'Zaten sahip olduğunuz sanatçıların henüz kitaplığınızda olmayan popüler albümleri.',
+    playlistsTitle: 'Sizin için çalma listeleri',
+    playlistsBody:
+      'En çok dinlediğiniz sanatçılar etrafında Spotify mix’leri ve yeni sanatçıların en iyileri.',
+    radioFor: '{name} etrafında mix',
+    essentialsOf: '{name} en iyileri',
+    collectionsFailed:
+      'Albümler ve çalma listeleri şu anda yüklenemedi. Daha sonra tekrar deneyin.',
+    poweredBy:
+      'Sanatçılar Deezer’ın benzer sanatçılarından; albümler ve çalma listeleri Spotify’dan gelir.',
   },
   podcasts: {
     title: 'Podcastler',

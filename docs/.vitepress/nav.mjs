@@ -27,6 +27,7 @@ export const NAV = [
       { title: 'Built-in Player', page: 'features/player.md' },
       { title: 'Liked Songs', page: 'features/liked-songs.md' },
       { title: 'Podcasts', page: 'features/podcasts.md' },
+      { title: 'Discover', page: 'features/discover.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },

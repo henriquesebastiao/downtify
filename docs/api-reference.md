@@ -93,7 +93,7 @@ Resolve a pasted link to a single object describing what it points at — used b
 }
 ```
 
-`kind` is `track`, `album`, `playlist` or `artist`. A track or collection fills `tracks`; an artist fills `albums` with release summaries instead, and, for YouTube Music, `subtitle` carries the artist description (it is empty for Spotify). A Spotify artist's releases come from the Spotify web player's discography query; if that stops resolving, a shorter list (every album, the latest singles) is returned instead, and `albums` is empty when both fail. An artist's songs come from [`GET /api/artists/top_songs/url`](#get-apiartiststop_songsurl). `400` for a URL that isn't a supported link, `404` when the link resolves to nothing (e.g. a handle that isn't an artist), `502` when the upstream lookup fails.
+`kind` is `track`, `album`, `playlist` or `artist`. A track or collection fills `tracks` (Spotify songs carry `preview_url`, their 30-second clip, or `""` — for a long playlist only the first tracks the embed lists have one; see [`GET /api/preview`](#get-apipreview) for the rest); an artist fills `albums` with release summaries instead, and, for YouTube Music, `subtitle` carries the artist description (it is empty for Spotify). A Spotify artist's releases come from the Spotify web player's discography query; if that stops resolving, a shorter list (every album, the latest singles) is returned instead, and `albums` is empty when both fail. An artist's songs come from [`GET /api/artists/top_songs/url`](#get-apiartiststop_songsurl). `400` for a URL that isn't a supported link, `404` when the link resolves to nothing (e.g. a handle that isn't an artist), `502` when the upstream lookup fails.
 
 ---
 
@@ -1183,6 +1183,168 @@ The playlist file is written with the first like and removed with the last.
 Unlike everything, which also removes the playlist. No song is deleted.
 
 **Response:** `{ "cleared": 2, "count": 0 }`
+
+---
+
+## Discover
+
+Suggested artists, counted listens and hidden artists — see [Discover](features/discover.md).
+
+### `POST /api/discover`
+
+Artists the library doesn't have yet, ranked from the ones it does. The client sends the library's artists (as the Library page groups them); the server adds listen counts, looks the heaviest ones up on Deezer (answers cached for 7 days) and leaves out the library and hidden artists.
+
+**Request body:**
+
+```json
+{
+  "library": [
+    { "name": "Portishead", "tracks": 12, "liked": 3 },
+    { "name": "Massive Attack", "tracks": 8, "liked": 0 }
+  ]
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `library` | array | yes | Every library artist: `name`, `tracks` (songs in the library), `liked` (of those, how many are liked) |
+
+**Response:**
+
+```json
+{
+  "artists": [
+    {
+      "name": "Hooverphonic",
+      "deezer_id": "1146",
+      "picture_url": "https://cdn-images.dzcdn.net/…/500x500-000000-80-0-0.jpg",
+      "fans": 402551,
+      "score": 4.428,
+      "because": ["Portishead", "Massive Attack"]
+    }
+  ],
+  "seeds": ["Portishead", "Massive Attack"],
+  "partial": false
+}
+```
+
+`artists` is best first (at most 48); `because` names up to three library artists that suggested it, the biggest contributor first. `picture_url` is `""` when Deezer has no photo. `seeds` are the library artists that were looked up. `partial` is `true` when Deezer couldn't be asked for some of them — the list is then built from the rest (plus any expired cached answer), not an error. `400` when `library` isn't a list.
+
+---
+
+### `POST /api/discover/collections`
+
+Albums and playlists built on the suggested artists — see [Albums and playlists](features/discover.md#albums-and-playlists). Reuses the (cached) answer of [`POST /api/discover`](#post-apidiscover) and adds one Spotify search per artist, cached for 7 days.
+
+**Request body:** the same `library` as `POST /api/discover`, plus:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `albums` | array | no | `{artist, title}` per library album — left out of the answer (titles match ignoring `(…)`/`[…]`/` - …` suffixes) |
+| `playlist_ids` | array | no | Spotify ids of playlists already downloaded — left out of the answer |
+
+**Response:**
+
+```json
+{
+  "albums": [
+    {
+      "name": "Grace",
+      "artist": "Jeff Buckley",
+      "year": "1994",
+      "cover_url": "https://i.scdn.co/image/…",
+      "spotify_id": "7yQtjAjhtNi76KRu05XWFS",
+      "url": "https://open.spotify.com/album/7yQtjAjhtNi76KRu05XWFS",
+      "reason": "similar",
+      "because": ["Radiohead"]
+    }
+  ],
+  "more_albums": [ /* same shape, "reason": "more_from" */ ],
+  "playlists": [
+    {
+      "name": "Portishead Radio",
+      "owner": "Spotify",
+      "cover_url": "https://…",
+      "spotify_id": "37i9dQZF1E4BveUiW5aK5l",
+      "url": "https://open.spotify.com/playlist/37i9dQZF1E4BveUiW5aK5l",
+      "reason": "radio",
+      "artist": "Portishead"
+    }
+  ],
+  "artist_urls": { "Jeff Buckley": "https://open.spotify.com/artist/3nnQpaTvKb5jCQabZefACI" },
+  "partial": false
+}
+```
+
+`albums`: the top album of each of the best 12 suggested artists. `more_albums`: up to two albums per heaviest library artist that aren't in `albums`. `playlists`: Spotify's `<artist> Radio` for the heaviest library artists (`reason: "radio"`), then its `This Is <artist>` for suggested artists (`reason: "this_is"`). `artist_urls`: the Spotify page of each suggested artist the search found by exact name. `partial` as in `POST /api/discover`, also counting failed Spotify searches. `400` when `library` isn't a list.
+
+---
+
+### `POST /api/discover/listens`
+
+Count one listen to an artist. Sent by the player once a library song has played half its length (or four minutes).
+
+**Request body:** `{ "artist": "Portishead" }`
+
+**Response:** `{ "name": "Portishead", "plays": 7, "last_played": "2026-09-26T17:31:40+00:00" }`
+
+`400` when `artist` is blank.
+
+---
+
+### `DELETE /api/discover/listens`
+
+Forget every counted listen. The library and likes are untouched.
+
+**Response:** `{ "cleared": 12 }`
+
+---
+
+### `GET /api/discover/blocked`
+
+Hidden artists, most recently hidden first.
+
+**Response:** `[{ "name": "Archive", "blocked_at": "2026-09-26T17:31:03+00:00" }]`
+
+---
+
+### `POST /api/discover/blocked`
+
+Never suggest an artist again. Hiding one twice is a no-op. Names are matched ignoring case and the characters a file name can't hold (`AC/DC` = `ACDC`).
+
+**Request body:** `{ "name": "Archive" }`
+
+**Response:** `{ "name": "Archive", "blocked_at": "2026-09-26T17:31:03+00:00" }` — `400` when `name` is blank.
+
+---
+
+### `DELETE /api/discover/blocked`
+
+Show a hidden artist again.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name (query parameter) |
+
+**Response:** `{ "name": "Archive", "removed": true }` — `removed` is `false` when it wasn't hidden.
+
+---
+
+## Previews
+
+### `GET /api/preview`
+
+A song's 30-second preview clip from Deezer, for a song without a `preview_url` of its own (a YouTube Music result, or a Spotify playlist track past what the embed lists). Used by the web UI the first time a song's preview is played.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist` | string | yes | The song's (first) artist |
+| `title` | string | yes | The song's title |
+| `duration` | number | no | Its length in seconds — among matches, the closest one wins |
+
+**Response:** `{ "preview_url": "https://cdnt-preview.dzcdn.net/…" }`
+
+Only a Deezer song by that artist with that title counts (both compared ignoring case and `(Live)`/`[Remastered]`/` - Radio Edit` style suffixes); `preview_url` is `""` when there's none. `503` when Deezer can't be reached or refuses (rate limit). The link is Deezer's own, short-lived — ask again rather than storing it.
 
 ---
 

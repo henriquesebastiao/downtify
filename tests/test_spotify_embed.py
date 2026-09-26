@@ -29,8 +29,11 @@ from downtify.spotify import (
     artist_top_songs_from_id,
     enrich_track_from_spotify_if_sparse,
     playlist_cover_url_from_id,
+    playlist_tracks_from_id,
     primary_artist_id_from_track_id,
     related_artist_names_from_id,
+    search,
+    search_results,
 )
 
 # Aliases only — no real artist / track titles
@@ -1349,3 +1352,155 @@ def test_artist_top_songs_overview_still_fills_plays_and_album():
     mock_overview.assert_called_once()
     assert songs[0]['album_name'] == 'Album One'
     assert [s['play_count'] for s in songs] == [123, 456]
+
+
+# ── preview clips on album / playlist rows, and the search helper ─────
+
+
+def _embed_payload(entity):
+    return {'props': {'pageProps': {'state': {'data': {'entity': entity}}}}}
+
+
+_CLIP = 'https://p.scdn.co/mp3-preview/abc'
+
+
+def test_album_tracks_carry_the_embed_preview_clip():
+    entity = {
+        'name': 'TestAlbum',
+        'releaseDate': {'isoString': '2020-01-01T00:00:00Z'},
+        'trackList': [
+            {
+                'uri': 'spotify:track:t1',
+                'title': 'One',
+                'subtitle': _AL1,
+                'audioPreview': {'url': _CLIP},
+            },
+            {
+                'uri': 'spotify:track:t2',
+                'title': 'Two',
+                'subtitle': _AL1,
+                'audioPreview': {'url': 'http://evil.example/clip.mp3'},
+            },
+        ],
+    }
+    with patch(
+        'downtify.spotify._fetch_embed_json',
+        return_value=_embed_payload(entity),
+    ):
+        songs = album_tracks_from_id('dummyAlbumId')
+    assert [s['preview_url'] for s in songs] == [_CLIP, '']
+
+
+def test_paginated_playlist_tracks_get_clips_from_the_embed():
+    entity = {
+        'name': 'TestPlaylist',
+        'trackList': [
+            {
+                'uri': 'spotify:track:t1',
+                'title': 'One',
+                'subtitle': _AL1,
+                'audioPreview': {'url': _CLIP},
+            },
+        ],
+    }
+    paged = [
+        {'song_id': 't1', 'name': 'One', 'preview_url': ''},
+        {'song_id': 't999', 'name': 'Late', 'preview_url': ''},
+    ]
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload(entity),
+        ),
+        patch(
+            'downtify.spotify._token_from_embed_payload', return_value='tok'
+        ),
+        patch(
+            'downtify.spotify._graphql_all_tracks',
+            return_value=('TestPlaylist', paged),
+        ),
+    ):
+        songs = playlist_tracks_from_id('pl1')
+    assert [s['preview_url'] for s in songs] == [_CLIP, '']
+
+
+def test_search_results_sorts_artists_albums_and_playlists():
+    items = [
+        {
+            'item': {
+                '__typename': 'ArtistResponseWrapper',
+                'data': {
+                    'uri': 'spotify:artist:a1',
+                    'profile': {'name': _AL1},
+                    'visuals': {
+                        'avatarImage': {
+                            'sources': [{'url': 'https://img/a', 'width': 640}]
+                        }
+                    },
+                },
+            }
+        },
+        {
+            'item': {
+                '__typename': 'AlbumResponseWrapper',
+                'data': {
+                    'uri': 'spotify:album:b1',
+                    'name': 'Record',
+                    'artists': {'items': [{'profile': {'name': _AL1}}]},
+                    'date': {'year': 1994},
+                    'coverArt': {
+                        'sources': [{'url': 'https://img/b', 'width': 640}]
+                    },
+                    'type': 'ALBUM',
+                },
+            }
+        },
+        {
+            'item': {
+                '__typename': 'PlaylistResponseWrapper',
+                'data': {
+                    'uri': 'spotify:playlist:c1',
+                    'name': f'{_AL1} Radio',
+                    'ownerV2': {'data': {'name': 'Spotify'}},
+                    'images': {
+                        'items': [
+                            {'sources': [{'url': 'https://img/c', 'width': 1}]}
+                        ]
+                    },
+                },
+            }
+        },
+        {'item': {'__typename': 'TrackResponseWrapper', 'data': {}}},
+        {'item': {'__typename': 'AlbumResponseWrapper', 'data': {}}},
+        'junk',
+    ]
+    assert search_results(items) == {
+        'artists': [{'id': 'a1', 'name': _AL1, 'image_url': 'https://img/a'}],
+        'albums': [
+            {
+                'id': 'b1',
+                'name': 'Record',
+                'artists': [_AL1],
+                'year': '1994',
+                'cover_url': 'https://img/b',
+                'type': 'ALBUM',
+            }
+        ],
+        'playlists': [
+            {
+                'id': 'c1',
+                'name': f'{_AL1} Radio',
+                'owner': 'Spotify',
+                'cover_url': 'https://img/c',
+            }
+        ],
+    }
+
+
+def test_search_raises_when_spotify_does_not_answer():
+    with (
+        patch('downtify.spotify._anonymous_token', return_value='tok'),
+        patch('downtify.spotify.httpx.get', side_effect=OSError('down')),
+        pytest.raises(ValueError, match='search failed'),
+    ):
+        search(_AL1)
