@@ -1451,7 +1451,7 @@ Write an M3U file for a playlist after per-track downloads are complete. `playli
 
 List all watches (playlists and artists).
 
-**Response:** Array of watch objects. Each has a `kind` of `"playlist"`, `"artist"` or `"podcast"`, and a `source` of `"spotify"` or `"youtube_music"` (the service the watch was added from, read from its `url`; meaningless for a podcast watch). `spotify_id` is the watch's unique key: the Spotify or YouTube Music playlist id, an artist's YouTube Music channel id, or a podcast's RSS feed URL. For an artist watch, `last_track_count` is the number of releases.
+**Response:** Array of watch objects. Each has a `kind` of `"playlist"`, `"artist"` or `"podcast"`, and a `source` of `"spotify"` or `"youtube_music"` (the service the watch was added from, read from its `url`; meaningless for a podcast watch). `spotify_id` is the watch's unique key: the Spotify or YouTube Music playlist id, an artist's YouTube Music channel id, or a podcast's RSS feed URL. For an artist watch, `last_track_count` is the number of releases, `release_types` the kinds of release it downloads (a subset of `["album", "single", "ep"]`, in that order) and `new_only` whether it skips what the artist had released when the watch started — see [Choosing what to download](features/playlist-monitor.md#choosing-what-to-download). Playlist watches carry the same two fields at their defaults (all kinds, `false`); they don't mean anything there.
 
 A podcast watch only ever appears here — it's created, updated and deleted through [`POST /api/podcasts/subscribe`](#podcasts) and friends, not through this endpoint's `POST`/`PATCH`/`DELETE`, since a podcast needs a retention policy the generic watch shape has no room for.
 
@@ -1477,6 +1477,15 @@ Add a watch. Triggers an immediate initial download.
 | Spotify artist URL | An artist watch (resolved to the matching YouTube Music artist — see [Artist Watch](features/playlist-monitor.md#artist-watch)) |
 | YouTube Music artist URL (`…/channel/UC…` or `…/@handle`) | An artist watch |
 
+An artist watch also takes:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `release_types` | array | Kinds of release to download: any of `album`, `single`, `ep` (default: all). Unknown values are ignored; `400` when none is left |
+| `new_only` | boolean | Skip everything already released; only later releases download (default `false`). The first check then records the discography instead of downloading it |
+
+Both are ignored for a playlist link.
+
 **Response:** Watch object. `400` if the URL is none of the above, `409` if it is already watched (an artist added by handle and by channel URL is the same watch), `404` if no matching YouTube Music artist exists.
 
 ---
@@ -1492,8 +1501,10 @@ Update a watch.
 | `interval_minutes` | integer | Check interval |
 | `enabled` | boolean | Pause (`false`) or resume (`true`) |
 | `url` | string | A new link for the watch — same kinds as in `POST` |
+| `release_types` | array | Artist watches only — as in `POST` |
+| `new_only` | boolean | Artist watches only. `true` records whatever is out at the next check as skipped; `false` forgets the skipped releases so the next check downloads them |
 
-A `url` that points at the **same** playlist or artist only replaces the stored `url`. One that points at a **different** playlist or artist of the same kind retargets the watch: `spotify_id`, `name` and `url` change, `last_checked` becomes `null`, `last_track_count` becomes `0`, and its downloaded-track and seen-release history is cleared. If the watch is enabled, a first check starts in the background, as after `POST`. An unchanged `url` is ignored.
+Changing `release_types` or `new_only` starts a check in the background if the watch is enabled, and is a `400` on a playlist watch. A `url` that points at the **same** playlist or artist only replaces the stored `url`. One that points at a **different** playlist or artist of the same kind retargets the watch: `spotify_id`, `name` and `url` change, `last_checked` becomes `null`, `last_track_count` becomes `0`, and its downloaded-track and seen-release history is cleared. If the watch is enabled, a first check starts in the background, as after `POST`. An unchanged `url` is ignored.
 
 **Response:** Updated watch object. `404` if there is no such watch; for a new `url`: `400` if it isn't a supported link or is the other kind (an artist link for a playlist watch, or the reverse), `409` if another watch already follows it, `404`/`502` if it can't be resolved. On an error nothing is changed.
 

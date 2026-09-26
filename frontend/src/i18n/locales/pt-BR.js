@@ -538,6 +538,17 @@ export default {
       'Não foi possível iniciar o equalizador. A reprodução continua sem ele.',
   },
   monitor: {
+    releaseTypes: 'Baixar',
+    releaseTypesAtLeastOne: 'Mantenha ao menos um tipo de lançamento',
+    release: { album: 'Álbuns', single: 'Singles', ep: 'EPs' },
+    newOnly: 'Só lançamentos novos',
+    newOnlyHint:
+      'Ignora tudo o que o artista já lançou; só o que sair depois que você começar a acompanhar é baixado.',
+    newOnlyTurnOn:
+      'Ao salvar, tudo o que já saiu é ignorado; só lançamentos futuros são baixados.',
+    newOnlyTurnOff:
+      'Ao salvar, os lançamentos ignorados são baixados na próxima verificação.',
+    newOnlyBadge: 'Só novos',
     title: 'Monitor de Playlists',
     subtitle:
       'Novas faixas destas playlists e artistas são baixadas automaticamente.',
@@ -587,6 +598,8 @@ export default {
       'Ao adicionar uma playlist, tudo nela é baixado agora; depois ela é verificada no intervalo definido e o que for adicionado é baixado.',
     explainerArtists:
       'Ao adicionar um artista, toda a discografia é baixada agora; depois ele é verificado no intervalo definido e cada novo lançamento é baixado.',
+    explainerArtistsNewOnly:
+      'Adicionar um artista não baixa nada agora; ele é verificado no intervalo escolhido e cada novo lançamento dos tipos selecionados é baixado.',
     emptyPlaylistsTitle: 'Nenhuma playlist monitorada',
     emptyPlaylistsBody:
       'Cole acima o link de uma playlist para mantê-la sincronizada.',

@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  RELEASE_TYPES,
   countWatches,
   filterWatches,
+  releaseFilterSummary,
   sortWatches,
+  toggleReleaseType,
   watchKind,
   watchKindOfUrl,
+  watchReleaseTypes,
 } from '../lib/watches.js'
 
 const watches = [
@@ -124,5 +128,49 @@ describe('sortWatches', () => {
     const copy = [...watches]
     sortWatches(watches, 'name', 'asc')
     expect(watches).toEqual(copy)
+  })
+})
+
+describe('artist release filters', () => {
+  it('reads a watch’s release types, all of them for old rows', () => {
+    expect(watchReleaseTypes({ release_types: ['ep', 'album'] })).toEqual([
+      'ep',
+      'album',
+    ])
+    expect(watchReleaseTypes({})).toEqual(RELEASE_TYPES)
+    expect(watchReleaseTypes({ release_types: ['video'] })).toEqual(
+      RELEASE_TYPES
+    )
+  })
+
+  it('toggles a type, in order, never down to none', () => {
+    expect(toggleReleaseType(['album', 'single', 'ep'], 'single')).toEqual([
+      'album',
+      'ep',
+    ])
+    expect(toggleReleaseType(['ep'], 'album')).toEqual(['album', 'ep'])
+    expect(toggleReleaseType(['album'], 'album')).toEqual(['album'])
+    expect(toggleReleaseType(['album'], 'video')).toEqual(['album'])
+  })
+
+  it('summarises only what differs from the default', () => {
+    expect(
+      releaseFilterSummary({
+        kind: 'artist',
+        release_types: ['album', 'single', 'ep'],
+        new_only: false,
+      })
+    ).toEqual({ types: [], newOnly: false })
+    expect(
+      releaseFilterSummary({
+        kind: 'artist',
+        release_types: ['album'],
+        new_only: true,
+      })
+    ).toEqual({ types: ['album'], newOnly: true })
+    expect(releaseFilterSummary({ kind: 'playlist', new_only: true })).toEqual({
+      types: [],
+      newOnly: false,
+    })
   })
 })

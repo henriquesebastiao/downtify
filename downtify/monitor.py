@@ -137,6 +137,41 @@ KIND_PODCAST = 'podcast'
 SOURCE_SPOTIFY = 'spotify'
 SOURCE_YOUTUBE_MUSIC = 'youtube_music'
 
+#: The kinds of release an artist watch can download (YouTube Music's own
+#: 'Album' / 'Single' / 'EP' split). A watch stores the ones it wants as a
+#: comma-separated list, in this order.
+RELEASE_ALBUM = 'album'
+RELEASE_SINGLE = 'single'
+RELEASE_EP = 'ep'
+RELEASE_TYPES = (RELEASE_ALBUM, RELEASE_SINGLE, RELEASE_EP)
+ALL_RELEASE_TYPES = ','.join(RELEASE_TYPES)
+
+
+def normalize_release_types(value: Any) -> str:
+    """*value* (a list or a comma-separated string) as the stored form:
+    the known release types it names, in :data:`RELEASE_TYPES` order.
+    ``""`` when it names none - callers treat that as invalid rather than
+    silently watching nothing."""
+
+    if isinstance(value, str):
+        items = value.split(',')
+    elif isinstance(value, (list, tuple, set)):
+        items = list(value)
+    else:
+        return ''
+    wanted = {str(item).strip().lower() for item in items}
+    return ','.join(t for t in RELEASE_TYPES if t in wanted)
+
+
+def release_type_of(album: dict[str, Any]) -> str:
+    """The :data:`RELEASE_TYPES` entry of a discography release. YouTube
+    Music labels each one 'Album', 'Single' or 'EP'; anything else (or no
+    label) counts as an album, which is what the albums shelf defaults
+    to."""
+
+    label = str(album.get('release_type') or '').strip().lower()
+    return label if label in {RELEASE_SINGLE, RELEASE_EP} else RELEASE_ALBUM
+
 
 def watch_source(url: str) -> str:
     """The service a watch was added from, read off the URL it was added with.
@@ -222,13 +257,24 @@ class MonitoredPlaylist:
     # the unique key a watch is addressed by: the Spotify or YouTube Music
     # playlist id, or for an artist the YouTube Music channel id.
     kind: str = KIND_PLAYLIST
+    # Artist watches only: which release types to download (see
+    # :data:`RELEASE_TYPES`), and whether to skip everything the artist
+    # had already released when the watch started ("new releases only").
+    release_types: str = ALL_RELEASE_TYPES
+    new_only: bool = False
+    # Set while a "new releases only" watch still has to record the
+    # artist's current discography as already there (see check_artist).
+    baseline_pending: bool = False
 
     @property
     def source(self) -> str:
         return watch_source(self.url)
 
     def to_dict(self) -> dict[str, Any]:
-        return {**asdict(self), 'source': self.source}
+        data = asdict(self)
+        data.pop('baseline_pending')
+        data['release_types'] = [t for t in self.release_types.split(',') if t]
+        return {**data, 'source': self.source}
 
 
 class PlaylistMonitorDB:
@@ -277,6 +323,22 @@ class PlaylistMonitorDB:
                     UNIQUE(playlist_id, album_id)
                 );
             """)
+            # Migrations: artist watch options, and releases a "new
+            # releases only" watch skipped (as opposed to downloaded).
+            for statement in (
+                'ALTER TABLE monitored_playlists ADD COLUMN release_types '
+                f"TEXT NOT NULL DEFAULT '{ALL_RELEASE_TYPES}'",
+                'ALTER TABLE monitored_playlists ADD COLUMN new_only '
+                'INTEGER NOT NULL DEFAULT 0',
+                'ALTER TABLE monitored_playlists ADD COLUMN baseline_pending '
+                'INTEGER NOT NULL DEFAULT 0',
+                'ALTER TABLE seen_albums ADD COLUMN skipped '
+                'INTEGER NOT NULL DEFAULT 0',
+            ):
+                try:
+                    conn.execute(statement)
+                except sqlite3.OperationalError:
+                    pass
             # Migration: add filename column if it doesn't exist yet
             try:
                 conn.execute(
@@ -300,14 +362,27 @@ class PlaylistMonitorDB:
         url: str,
         interval_minutes: int = 60,
         kind: str = KIND_PLAYLIST,
+        release_types: str = ALL_RELEASE_TYPES,
+        new_only: bool = False,
     ) -> MonitoredPlaylist:
         with self._connect() as conn:
             cur = conn.execute(
                 """INSERT INTO monitored_playlists
                    (spotify_id, name, url, interval_minutes, enabled,
-                    created_at, kind)
-                   VALUES (?, ?, ?, ?, 1, ?, ?)""",
-                (spotify_id, name, url, interval_minutes, _now_iso(), kind),
+                    created_at, kind, release_types, new_only,
+                    baseline_pending)
+                   VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)""",
+                (
+                    spotify_id,
+                    name,
+                    url,
+                    interval_minutes,
+                    _now_iso(),
+                    kind,
+                    release_types or ALL_RELEASE_TYPES,
+                    int(new_only),
+                    int(new_only),
+                ),
             )
             row = conn.execute(
                 'SELECT * FROM monitored_playlists WHERE id = ?',
@@ -358,6 +433,9 @@ class PlaylistMonitorDB:
             'last_track_count',
             'name',
             'url',
+            'release_types',
+            'new_only',
+            'baseline_pending',
         }
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
@@ -390,7 +468,8 @@ class PlaylistMonitorDB:
             cur = conn.execute(
                 """UPDATE monitored_playlists
                    SET spotify_id = ?, name = ?, url = ?,
-                       last_checked = NULL, last_track_count = 0
+                       last_checked = NULL, last_track_count = 0,
+                       baseline_pending = new_only
                    WHERE id = ?""",
                 (spotify_id, name, url, playlist_id),
             )
@@ -442,9 +521,69 @@ class PlaylistMonitorDB:
                    (playlist_id, album_id, name, seen_at)
                    VALUES (?, ?, ?, ?)
                    ON CONFLICT(playlist_id, album_id) DO UPDATE SET
-                   name=excluded.name""",
+                   name=excluded.name, skipped=0""",
                 (playlist_id, album_id, name, _now_iso()),
             )
+
+    def mark_albums_skipped(
+        self, playlist_id: int, albums: list[dict[str, Any]]
+    ) -> int:
+        """Record *albums* as already there when a "new releases only"
+        watch starts, without downloading them. A release that was
+        downloaded before keeps its row as is. Returns how many were
+        added."""
+
+        now = _now_iso()
+        added = 0
+        with self._connect() as conn:
+            for album in albums:
+                album_id = album.get('album_id')
+                if not album_id:
+                    continue
+                cur = conn.execute(
+                    """INSERT INTO seen_albums
+                       (playlist_id, album_id, name, seen_at, skipped)
+                       VALUES (?, ?, ?, ?, 1)
+                       ON CONFLICT(playlist_id, album_id) DO NOTHING""",
+                    (playlist_id, album_id, album.get('name'), now),
+                )
+                added += cur.rowcount
+        return added
+
+    def forget_skipped_albums(self, playlist_id: int) -> int:
+        """Drop the releases a "new releases only" watch skipped, so the
+        next check downloads them - turning the option off. Returns how
+        many."""
+
+        with self._connect() as conn:
+            cur = conn.execute(
+                'DELETE FROM seen_albums WHERE playlist_id = ? AND skipped = 1',
+                (playlist_id,),
+            )
+            return cur.rowcount
+
+    def set_new_only(
+        self, playlist_id: int, new_only: bool
+    ) -> Optional[MonitoredPlaylist]:
+        """Turn "new releases only" on or off for an artist watch.
+
+        On: the next check records whatever the artist has released by
+        then as already there (see :func:`check_artist`), so only later
+        releases download. Off: the releases it skipped are forgotten, so
+        the next check downloads the back catalog after all.
+        """
+
+        current = self.get_playlist(playlist_id)
+        if current is None or current.new_only == new_only:
+            return current
+        if new_only:
+            return self.update_playlist(
+                playlist_id, new_only=1, baseline_pending=1
+            )
+        self.forget_skipped_albums(playlist_id)
+        return self.update_playlist(
+            playlist_id, new_only=0, baseline_pending=0
+        )
 
     def playlists_for_track(self, track_spotify_id: str) -> set[str]:
         """Names of the watched playlists that downloaded this track."""
@@ -553,6 +692,14 @@ def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
         # when reading from a stale connection/schema cache.
         kind=(row['kind'] if 'kind' in keys else KIND_PLAYLIST)
         or KIND_PLAYLIST,
+        release_types=(row['release_types'] if 'release_types' in keys else '')
+        or ALL_RELEASE_TYPES,
+        new_only=bool(row['new_only']) if 'new_only' in keys else False,
+        baseline_pending=(
+            bool(row['baseline_pending'])
+            if 'baseline_pending' in keys
+            else False
+        ),
     )
 
 
@@ -980,6 +1127,15 @@ async def check_artist(
     from ``seen_albums`` have their tracklists fetched, so a steady-state
     sweep costs a single request. Returns the number of tracks
     downloaded.
+
+    Only releases of the watch's ``release_types`` are downloaded; one of
+    another type is left unmarked, so turning that type on later picks it
+    up. A "new releases only" watch first records everything already out
+    as skipped (``baseline_pending``) and downloads nothing that sweep -
+    but only once the discography actually came back non-empty, since an
+    empty answer is as likely a YouTube Music hiccup as an artist with no
+    releases, and taking it at face value would download the whole back
+    catalog on the next sweep.
     """
     logger.info(
         'Checking monitored artist "{}" ({})',
@@ -1000,9 +1156,45 @@ async def check_artist(
         )
         return 0
 
+    if playlist.baseline_pending:
+        if not albums:
+            logger.info(
+                'Artist "{}": no releases listed yet; will record the '
+                'existing ones on the next check',
+                playlist.name,
+            )
+            await asyncio.to_thread(
+                db.update_playlist, playlist.id, last_checked=_now_iso()
+            )
+            return 0
+        skipped = await asyncio.to_thread(
+            db.mark_albums_skipped, playlist.id, albums
+        )
+        logger.info(
+            'Artist "{}" watches new releases only: {} existing release(s) '
+            'skipped',
+            playlist.name,
+            skipped,
+        )
+        await asyncio.to_thread(
+            db.update_playlist,
+            playlist.id,
+            baseline_pending=0,
+            last_checked=_now_iso(),
+            last_track_count=len(albums),
+        )
+        return 0
+
+    wanted_types = set(
+        (playlist.release_types or ALL_RELEASE_TYPES).split(',')
+    )
     seen = await asyncio.to_thread(db.get_seen_album_ids, playlist.id)
     new_albums = [
-        a for a in albums if a.get('album_id') and a['album_id'] not in seen
+        a
+        for a in albums
+        if a.get('album_id')
+        and a['album_id'] not in seen
+        and release_type_of(a) in wanted_types
     ]
     if new_albums:
         logger.info(

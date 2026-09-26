@@ -540,6 +540,17 @@ export default {
     equalizerError: 'Ekolayzır başlatılamadı. Çalma onsuz devam ediyor.',
   },
   monitor: {
+    releaseTypes: 'İndir',
+    releaseTypesAtLeastOne: 'En az bir yayın türü bırakın',
+    release: { album: 'Albümler', single: 'Single’lar', ep: 'EP’ler' },
+    newOnly: 'Yalnızca yeni yayınlar',
+    newOnlyHint:
+      'Sanatçının zaten yayınladığı her şey atlanır; yalnızca takibe başladıktan sonra çıkanlar indirilir.',
+    newOnlyTurnOn:
+      'Kaydedince, zaten çıkmış her şey atlanır; yalnızca sonraki yayınlar indirilir.',
+    newOnlyTurnOff:
+      'Kaydedince, atlanan yayınlar bir sonraki kontrolde indirilir.',
+    newOnlyBadge: 'Yalnızca yeni',
     title: 'Çalma Listesi İzleyici',
     subtitle:
       'Bu çalma listelerinden ve sanatçılardan gelen yeni parçalar otomatik indirilir.',
@@ -589,6 +600,8 @@ export default {
       'Bir çalma listesi eklemek içindeki her şeyi hemen indirir, sonra listeyi belirlenen aralıkta kontrol edip eklenenleri indirir.',
     explainerArtists:
       'Bir sanatçı eklemek tüm diskografisini hemen indirir, sonra belirlenen aralıkta kontrol edip her yeni yayını indirir.',
+    explainerArtistsNewOnly:
+      'Sanatçı eklemek şimdilik hiçbir şey indirmez; planlı olarak kontrol edilir ve seçtiğiniz türlerdeki her yeni yayın indirilir.',
     emptyPlaylistsTitle: 'Henüz izlenen çalma listesi yok',
     emptyPlaylistsBody:
       'Senkronize tutmak için yukarıya bir çalma listesi bağlantısı yapıştır.',

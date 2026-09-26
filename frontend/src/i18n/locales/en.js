@@ -528,6 +528,17 @@ export default {
       "The equalizer couldn't start. Playback continues without it.",
   },
   monitor: {
+    releaseTypes: 'Download',
+    releaseTypesAtLeastOne: 'Keep at least one kind of release',
+    release: { album: 'Albums', single: 'Singles', ep: 'EPs' },
+    newOnly: 'New releases only',
+    newOnlyHint:
+      'Skip everything the artist has already released; only what comes out after you start watching downloads.',
+    newOnlyTurnOn:
+      'Once saved, everything already out is skipped; only later releases download.',
+    newOnlyTurnOff:
+      'Once saved, the releases it skipped download on the next check.',
+    newOnlyBadge: 'New only',
     title: 'Playlist Monitor',
     subtitle:
       'New tracks from these playlists and artists download automatically.',
@@ -575,6 +586,8 @@ export default {
       'Adding a playlist downloads everything on it now, then checks it on schedule and downloads whatever gets added.',
     explainerArtists:
       'Adding an artist downloads their whole discography now, then checks on schedule and downloads every new release.',
+    explainerArtistsNewOnly:
+      'Adding an artist downloads nothing now; it checks on schedule and downloads each new release of the kinds you picked.',
     emptyPlaylistsTitle: 'No playlists watched yet',
     emptyPlaylistsBody: 'Paste a playlist link above to keep it in sync.',
     emptyArtistsTitle: 'No artists watched yet',
