@@ -15,6 +15,7 @@ dependencies = [
     "websockets>=17.1",
     "yt-dlp>=2026.8.19",
     "ytmusicapi>=1.12.2",
+    "zeroconf>=0.147",
 ]
 
 [dependency-groups]

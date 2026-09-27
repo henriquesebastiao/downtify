@@ -573,6 +573,11 @@
             </SettingGroup>
           </template>
 
+          <!-- Apps: pairing, sign-in, the server's name -->
+          <template v-else-if="section === 'apps'">
+            <AppsSettings />
+          </template>
+
           <!-- About -->
           <template v-else-if="section === 'about'">
             <div
@@ -689,6 +694,7 @@ import PageHeader from '/src/components/library/PageHeader.vue'
 import CookiesCard from '/src/components/settings/CookiesCard.vue'
 import ConnectionTest from '/src/components/settings/ConnectionTest.vue'
 import PresetPicker from '/src/components/settings/PresetPicker.vue'
+import AppsSettings from '/src/components/settings/AppsSettings.vue'
 import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import SourceOrder from '/src/components/settings/SourceOrder.vue'
@@ -727,6 +733,7 @@ const sections = computed(() => [
   { id: 'tags', icon: 'tag', label: t('settings.tags') },
   { id: 'navidrome', icon: 'server', label: 'Navidrome' },
   { id: 'library', icon: 'library', label: t('settings.library') },
+  { id: 'apps', icon: 'monitor', label: t('settings.apps') },
   { id: 'about', icon: 'info', label: t('settings.about') },
 ])
 

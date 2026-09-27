@@ -4,7 +4,9 @@ icon: material/api
 
 # API Reference
 
-Downtify exposes a JSON REST API used by the web UI. All endpoints are served on the same port as the web UI (default: **8000**).
+Downtify exposes a JSON REST API used by the web UI and the mobile apps. All endpoints are served on the same port as the web UI (default: **8000**).
+
+Every endpoint is open unless **Require sign-in** is on — see [Server and sign-in](#server-and-sign-in) for what then needs which credentials, and [Mobile API (v1)](#mobile-api-v1) for the apps' own routes.
 
 ## General
 
@@ -810,6 +812,10 @@ List downloaded tracks with artist/album read from each file's embedded tags. Us
     "track_number": 3,
     "year": "2024",
     "duration": 213.08,
+    "codec": "mp3",
+    "bitrate": 320000,
+    "sample_rate": 44100,
+    "channels": 2,
     "has_cover": true,
     "added": 1789600669,
     "size": 8567376,
@@ -818,7 +824,7 @@ List downloaded tracks with artist/album read from each file's embedded tags. Us
 ]
 ```
 
-`album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes.
+`album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info, and `codec` (`mp3`, `flac`, `aac`, `alac`, `opus`, `vorbis`, or `""`), `bitrate` (bits/s), `sample_rate` (Hz) and `channels` (`0` when unknown) from the audio stream; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes.
 
 Sorted by `file`, same order as `/list`. `artist`/`album` come back as `""` when the file has no readable tag for that field — the frontend then simply doesn't offer it as a filter for that track.
 
@@ -1286,9 +1292,16 @@ Count one listen to an artist. Sent by the player once a library song has played
 
 **Request body:** `{ "artist": "Portishead" }`
 
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `artist` | string | one of these | The artist the play counts for |
+| `track_id` | string | one of these | A [track id](#mobile-api-v1) instead: its album artist is used |
+| `played_at` | string | no | ISO 8601 time of the play, for plays reported after being offline (a future time counts as now; a late report never moves `last_played` back) |
+| `play_id` | string | no | Identifies this play: reporting it again doesn't count it twice |
+
 **Response:** `{ "name": "Portishead", "plays": 7, "last_played": "2026-09-26T17:31:40+00:00" }`
 
-`400` when `artist` is blank.
+`400` when there's no artist to count it for.
 
 ---
 
@@ -1727,6 +1740,343 @@ Save an episode's resume position and/or played state. Called periodically while
 
 ---
 
+## Server and sign-in
+
+Who this server is, signing in, and pairing apps — see [Mobile Apps & Sign-in](features/mobile-apps.md). The routes an app uses are in [Mobile API (v1)](#mobile-api-v1), and the whole flow is in the [mobile client contract](mobile-client-contract.md).
+
+**Who may call what.** With "Require sign-in" off (the default) every endpoint is open, as it always was; a request that sends a device token still has it checked (`401` when it's revoked). With it on:
+
+| Scope | Credentials | Covers |
+|-------|-------------|--------|
+| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair` |
+| Client | a device token (`Authorization: Bearer dtfy_…`), a signed URL (reads only), a WebSocket ticket, or a web session | Library and media reads (`/tracks`, `/list`, `/playlists`, `/lyrics`, `/cover`, `/playlist-cover`, `/downloads/…`, `/media/…`), `/api/v1/…`, search and link resolving, previews, `POST /api/download/url\|batch\|album`, likes, Discover and listens, podcast reads, episode downloads and playback, the queue and monitor lists (read), `WS /api/ws` |
+| Admin | a web session (the `downtify_session` cookie) | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, devices, pairing, password |
+
+Without credentials: `401` (`WWW-Authenticate: Bearer`). A device calling an admin route: `403`. A cookie-authenticated change (`POST`/`PUT`/`PATCH`/`DELETE`, or the WebSocket) whose `Origin`/`Referer` is another site: `403`. CORS allows any origin **without** credentials, so a web session only works from Downtify's own page.
+
+### `GET /api/server/info`
+
+Public. What an app checks before it has credentials.
+
+```json
+{
+  "server_id": "cf12b3c4f530731551690cc62b1365a1",
+  "name": "nas",
+  "product": "Downtify",
+  "version": "3.2.0",
+  "api_version": 1,
+  "require_sign_in": false,
+  "capabilities": {
+    "transcoding": { "available": true, "formats": ["aac", "mp3", "opus"], "bitrates": [96, 128, 160, 192, 256, 320] },
+    "signed_urls": true,
+    "pairing": true,
+    "podcasts": true,
+    "discover": true,
+    "lyrics": true,
+    "library_sync": true
+  }
+}
+```
+
+`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `transcoding.available` is `false` (and the lists empty) without ffmpeg.
+
+---
+
+### `PATCH /api/server`
+
+Admin. Rename the server — the name apps and [LAN discovery](features/mobile-apps.md#finding-the-server-on-your-network) show.
+
+**Request body:** `{ "name": "Living room" }` — trimmed, one line, 64 characters at most. `400` when empty.
+
+**Response:** the new `GET /api/server/info`.
+
+---
+
+### `GET /api/auth/status`
+
+Public. How this request is signed in.
+
+```json
+{
+  "require_sign_in": true,
+  "forced_by_env": false,
+  "has_password": true,
+  "min_password_length": 8,
+  "signed_in": true,
+  "via": "device",
+  "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8" }
+}
+```
+
+`via` is `session` (a browser), `device` (an app's token) or `null`; `device` is `null` unless `via` is `device`. The web app shows its sign-in page when `require_sign_in` is `true` and `signed_in` is `false`.
+
+---
+
+### `POST /api/auth/login`
+
+Public, rate-limited per address (10 failures per 5 minutes, then `429` with `Retry-After`). Signs a browser in.
+
+**Request body:** `{ "password": "…" }`
+
+**Response:** `{ "signed_in": true }` and a `downtify_session` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` over HTTPS, 30 days since last use). `401` for a wrong password.
+
+---
+
+### `POST /api/auth/logout`
+
+Public. Ends this browser's session, if it has one. **Response:** `{ "signed_in": false }`.
+
+---
+
+### `PUT /api/auth/password`
+
+Admin. Set the web password, or change it.
+
+**Request body:** `{ "new_password": "…", "current_password": "…" }` — `current_password` only once a password exists (`403` when wrong; rate-limited like sign-in). `400` for a password under 8 characters. **Response:** `{ "has_password": true }`.
+
+---
+
+### `PUT /api/auth/require`
+
+Admin. Turn "Require sign-in" on or off.
+
+**Request body:** `{ "enabled": true, "password": "…" }` — turning it on needs the password (`403` when wrong) and also signs this browser in, so the page doing it doesn't lock itself out. `400` without a password set, or when `DOWNTIFY_REQUIRE_SIGN_IN` pins it. **Response:** `{ "require_sign_in": true }`.
+
+---
+
+### `GET /api/auth/devices`
+
+Admin. Paired apps, newest first.
+
+```json
+[
+  {
+    "id": "8uz4d35zjpn2",
+    "name": "Pixel 8",
+    "platform": "android",
+    "created_at": "2026-09-27T03:15:17+00:00",
+    "last_seen_at": "2026-09-27T09:02:41+00:00",
+    "last_ip": "192.168.1.31"
+  }
+]
+```
+
+`last_seen_at`/`last_ip` are updated at most once a minute.
+
+---
+
+### `PATCH /api/auth/devices/{id}`
+
+Admin. Rename a device: `{ "name": "…" }`. **Response:** the device. `404` when unknown or unpaired.
+
+---
+
+### `DELETE /api/auth/devices/{id}`
+
+Admin. Unpair a device: its token and signed URLs stop working and its WebSocket is closed (code `4401`). **Response:** `{ "id": "8uz4d35zjpn2", "revoked": true }`. `404` when unknown.
+
+---
+
+### `POST /api/auth/revoke-all`
+
+Admin. Unpairs every device, ends every web session (this one too) and voids every signed URL (a new signing key). **Response:** `{ "revoked": true }`.
+
+---
+
+### `POST /api/auth/pairing`
+
+Admin. Start pairing an app. **Response:** `{ "pairing_id": "rfLmICXqGfRBXyXl", "code": "34A3-MAMC", "expires_in": 300 }`.
+
+The web page shows `code` and a QR code for `downtify://pair?url=<this page's origin>&sid=<server_id>&code=<code>`, then follows the pairing with the next endpoint or the `device_paired` [WebSocket](#websocket) message.
+
+---
+
+### `GET /api/auth/pairing/{pairing_id}`
+
+Admin. `{ "status": "pending", "expires_in": 241 }`, `{ "status": "paired", "device": { … } }` or `{ "status": "expired" }`.
+
+---
+
+### `DELETE /api/auth/pairing/{pairing_id}`
+
+Admin. Cancel a pending pairing. **Response:** `{ "cancelled": true }`.
+
+---
+
+### `POST /api/auth/pair`
+
+Public, rate-limited per address (10 failures per 5 minutes). An app trades a pairing code for its device token.
+
+**Request body:** `{ "code": "34A3-MAMC", "device_name": "Pixel 8", "platform": "android" }` — the code in any case, with or without the dash.
+
+**Response:**
+
+```json
+{
+  "token": "dtfy_8uz4d35zjpn2_Zk3…",
+  "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8" },
+  "server": { "server_id": "cf12b3c4…", "name": "nas" }
+}
+```
+
+A code works once and for five minutes; `401` otherwise. The token is shown only here — the server keeps a hash.
+
+---
+
+### `POST /api/auth/ws-ticket`
+
+Client. A single-use ticket, valid for 60 seconds, for opening the [WebSocket](#websocket) as `/api/ws?client_id=…&ticket=…` without an `Authorization` header. **Response:** `{ "ticket": "…" }`. `400` when the request isn't signed in (without required sign-in the WebSocket needs no ticket).
+
+---
+
+## Mobile API (v1)
+
+What the apps use: everything by **track id**, which survives the file being moved or renamed. Versioned apart from the web app's routes (`api_version` in [`GET /api/server/info`](#get-apiserverinfo)). The flow is in the [mobile client contract](mobile-client-contract.md). All routes are in the client scope.
+
+### `GET /api/v1/library`
+
+The library as a change feed.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `since` | integer | no | The `cursor` from the last response; `0` (default) for everything |
+| `refresh` | boolean | no | Rescan the folder now instead of using the scan cached for about a minute |
+
+**Response:**
+
+```json
+{
+  "cursor": 1742,
+  "full": false,
+  "tracks": [
+    {
+      "id": "t7b255c87668ba03b",
+      "file": "Portishead - Roads.flac",
+      "title": "Roads",
+      "artist": "Portishead",
+      "artists": ["Portishead"],
+      "album": "Dummy",
+      "album_artist": "Portishead",
+      "album_id": "6aa1df0c3e5f2b11",
+      "artist_id": "0a92c1e0bb3d8f44",
+      "track_number": 3,
+      "year": "1994",
+      "duration": 305.12,
+      "codec": "flac",
+      "bitrate": 912000,
+      "sample_rate": 44100,
+      "channels": 2,
+      "size": 34812211,
+      "added": 1789600669,
+      "has_cover": true,
+      "playlists": ["Trip-hop"]
+    }
+  ],
+  "deleted": ["t0c4d5e6f7a8b9c0d"]
+}
+```
+
+`tracks` are the tracks added or changed after `since`, `deleted` the ids removed after it. `full: true` (for `since=0`, or a `since` older than the 90 days removed ids are kept, or newer than `cursor`) means `tracks` is the whole library: replace what you have. `artists` splits `artist` the way the web app does; `album_artist` is the tag, else the first artist; `album_id` (album artist + album, case-insensitive; `""` without an album) and `artist_id` (the album artist) are the keys the web app groups albums and artists by. `codec` is `mp3`, `flac`, `aac`, `alac`, `opus` or `vorbis` (`""` when unknown); `bitrate` in bits per second.
+
+`ETag` is set; a matching `If-None-Match` gets `304`. A sync that finds changes on disk also sends `library_changed` to other connected clients.
+
+**Track ids:** a file keeps its id when it's re-tagged in place, moved (same name and size) or renamed (same title, artist, album and length). A file moved *and* re-tagged in the same sweep gets a new id; the old one is reported in `deleted`.
+
+---
+
+### `GET /api/v1/tracks/{id}`
+
+One track row (the shape above). `404` for an unknown or removed id.
+
+---
+
+### `GET /api/v1/tracks/{id}/stream`
+
+The track's audio. Also `HEAD`.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `format` | string | no | `original` (default), `opus`, `aac` or `mp3` |
+| `bitrate` | integer | no | kbps for a transcoded format: 96, 128, 160 (default), 192, 256 or 320 (others round up) |
+| `download` | boolean | no | Add `Content-Disposition: attachment` (saving an offline copy) |
+
+**Response:** the audio with HTTP Range support (`206 Partial Content`, `Content-Range`, `Accept-Ranges: bytes`), exact `Content-Length`, and `Content-Type` `audio/flac`, `audio/mpeg`, `audio/mp4` or `audio/ogg`. `Cache-Control: private, max-age=604800`.
+
+A transcoded copy is made with ffmpeg on the first request (the request waits), cached in `/data/transcode_cache` and served like a file from then on; `X-Downtify-Transcoded: opus/160`. When the original is lossy and already at or below the requested bitrate it's served instead: `X-Downtify-Transcoded: no`. `400` for an unknown format, `501` without ffmpeg, `500` when ffmpeg fails. A client that disconnects while its copy is being made stops the run (unless another request is waiting for the same copy).
+
+---
+
+### `GET /api/v1/tracks/{id}/cover`
+
+The track's cover. Also `HEAD`.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `size` | integer | no | `150`, `300` or `600` (longest side, px; others round up). Omit for the full-size picture |
+
+**Response:** the image (thumbnails are JPEG), `ETag`, `Cache-Control: private, max-age=604800`; `304` for a matching `If-None-Match`. `404` when the file has no cover. Every size is made once and kept in `/data/cover_thumbs`.
+
+---
+
+### `GET /api/v1/tracks/{id}/lyrics`
+
+`{ "synced": "<LRC text>", "plain": "<text>" }` — the same as [`GET /lyrics`](#get-lyrics); either may be empty.
+
+---
+
+### `GET /api/v1/playlists`
+
+```json
+[
+  { "name": "Downtify Liked Songs", "liked": true, "count": 12, "cover": "", "track_ids": ["t7b2…", "…"] }
+]
+```
+
+The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playlist order. `cover` is a path for `GET /playlist-cover?file=`, or `""`.
+
+---
+
+### `GET /api/v1/likes`
+
+`{ "track_ids": ["t7b2…"] }`, most recently liked first.
+
+---
+
+### `PUT /api/v1/likes`
+
+Like or unlike a track: `{ "track_id": "t7b2…", "liked": true }`. Idempotent. **Response:** `{ "track_id": "t7b2…", "liked": true }`. `400` without `track_id`, `404` for an unknown one. The same likes as [`/api/likes`](#likes).
+
+---
+
+### `POST /api/v1/sign`
+
+Signed URLs for a player that can't send the device token (a Cast receiver). Only for a paired device (`400` otherwise).
+
+**Request body:**
+
+```json
+{
+  "items": [
+    { "path": "/api/v1/tracks/t7b2…/stream", "params": { "format": "aac", "bitrate": "256" } },
+    { "path": "/api/v1/tracks/t7b2…/cover", "params": { "size": "600" } }
+  ],
+  "ttl": 3600
+}
+```
+
+**Response:**
+
+```json
+{
+  "urls": ["/api/v1/tracks/t7b2…/stream?format=aac&bitrate=256&exp=1790479684&kid=8uz4d35zjpn2&sig=…", "…"],
+  "expires_at": 1790479684
+}
+```
+
+Paths must start with `/api/v1/tracks/`, `/downloads/`, `/media/`, `/cover` or `/playlist-cover` (`400` otherwise); at most 500 items. `ttl` is seconds, 60 to 86400 (default 3600). A URL is valid for `GET`/`HEAD` of exactly that path and those parameters until `exp`, while the device stays paired; changing any parameter breaks the signature (`401`).
+
+---
+
 ## WebSocket
 
 ### `WS /api/ws`
@@ -1736,6 +2086,9 @@ Real-time download progress events.
 | Query parameter | Required | Description |
 |----------------|----------|-------------|
 | `client_id` | yes | Unique client identifier (UUID recommended) |
+| `ticket` | no | A [WebSocket ticket](#post-apiauthws-ticket), for a client that can't send `Authorization` |
+
+With "Require sign-in" on, the handshake needs a device token (`Authorization: Bearer …`), a web session cookie (from Downtify's own page) or a ticket; otherwise it's refused. A device's socket is closed with code `4401` when the device is unpaired.
 
 **Events received from the server:**
 
@@ -1787,4 +2140,16 @@ A [podcast](features/podcasts.md) episode download reports its progress the same
 ```
 
 Once a podcast sync downloads at least one episode, a plain `{ "type": "podcasts" }` follows, telling open pages to refetch the shows/episodes they're showing.
+
+When tracks are added, removed or moved (a finished download, a delete, a reconcile, or a [library sync](#get-apiv1library) that found changes on disk), connected clients are told once, a couple of seconds later, however many files changed — the apps sync on it:
+
+```json
+{ "type": "library_changed" }
+```
+
+When an app is paired, the web page showing the code learns it at once:
+
+```json
+{ "type": "device_paired", "pairing_id": "rfLmICXqGfRBXyXl", "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8", "platform": "android", "…": "…" } }
+```
 

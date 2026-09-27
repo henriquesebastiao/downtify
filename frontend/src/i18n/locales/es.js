@@ -640,6 +640,7 @@ export default {
     retargeted: 'Ahora vigilando {name}',
   },
   settings: {
+    apps: 'Apps',
     title: 'Ajustes',
     subtitle: 'Cómo Downtify busca, descarga y etiqueta tu música.',
     sections: 'Secciones',
@@ -875,6 +876,78 @@ export default {
     goQueue: 'Ir a la cola',
     close: 'Cerrar reproducción actual',
     help: 'Ver atajos',
+  },
+  auth: {
+    signInTitle: 'Inicia sesión en Downtify',
+    signInBody: 'Este servidor requiere iniciar sesión.',
+    password: 'Contraseña',
+    signIn: 'Iniciar sesión',
+    wrongPassword: 'Contraseña incorrecta',
+    forgotHint:
+      '¿La olvidaste? Ejecuta “python main.py auth-reset” en el servidor.',
+  },
+  apps: {
+    serverGroup: 'Este servidor',
+    serverGroupHint: 'Cómo ven este servidor las apps de Downtify.',
+    serverName: 'Nombre del servidor',
+    serverNameHint:
+      'Se muestra en las apps y cuando buscan servidores en tu red.',
+    serverId: 'ID del servidor {id}',
+    save: 'Guardar',
+    saved: 'Guardado',
+    devicesGroup: 'Apps vinculadas',
+    devicesGroupHint:
+      'Teléfonos y otros dispositivos que pueden reproducir tu biblioteca.',
+    deviceCount: {
+      one: '{count} app vinculada',
+      other: '{count} apps vinculadas',
+    },
+    pair: 'Vincular un teléfono',
+    revoke: 'Desvincular',
+    revokeTitle: '¿Desvincular {name}?',
+    revokeBody:
+      'Deja de funcionar al instante, hasta que se vuelva a vincular.',
+    lastSeen: 'visto {when}',
+    signInGroup: 'Inicio de sesión',
+    signInGroupHint: 'Quién puede usar este servidor.',
+    setPassword: 'Establecer contraseña',
+    changePassword: 'Cambiar la contraseña',
+    passwordHint:
+      'Al menos {count} caracteres. Se usa para entrar en esta página.',
+    currentPassword: 'Contraseña actual',
+    newPassword: 'Nueva contraseña',
+    passwordSaved: 'Contraseña guardada',
+    requireSignIn: 'Requerir inicio de sesión',
+    requireOffHint:
+      'Desactivado: cualquiera que alcance este servidor puede usarlo, vincular una app y cambiar la configuración.',
+    requireOnHint:
+      'Activado: la página pide la contraseña y las apps deben estar vinculadas.',
+    requireForced: 'Definido por DOWNTIFY_REQUIRE_SIGN_IN en el servidor.',
+    requireTitle: 'Requerir inicio de sesión',
+    requireBody: 'Escribe la contraseña. Este navegador sigue conectado.',
+    requireConfirm: 'Requerir inicio de sesión',
+    requireOnDone: 'Ahora se requiere iniciar sesión',
+    requireOffTitle: '¿Dejar de requerir inicio de sesión?',
+    requireOffBody:
+      'Cualquiera que alcance este servidor podrá volver a usarlo, sin contraseña.',
+    requireOffConfirm: 'Dejar de requerir',
+    signOut: 'Cerrar sesión',
+    signOutEverywhere: 'Cerrar sesión en todas partes',
+    signOutEverywhereHint:
+      'Desvincula todas las apps y cierra la sesión de todos los navegadores, incluido este.',
+    signOutEverywhereButton: 'Cerrar sesión en todas partes',
+    signOutEverywhereTitle: '¿Cerrar sesión en todas partes?',
+    signOutEverywhereBody:
+      'Habrá que volver a vincular todas las apps e iniciar sesión en todos los navegadores.',
+    pairTitle: 'Vincular un teléfono',
+    pairBody:
+      'En la app de Downtify, elige “Escanear el código” y apunta la cámara aquí.',
+    qrLabel: 'Código QR para vincular',
+    orTypeCode: 'o escribe este código',
+    expiresIn: 'Caduca en {time}',
+    paired: '{name} está vinculado',
+    pairExpired: 'Este código caducó.',
+    newCode: 'Código nuevo',
   },
   discover: {
     title: 'Descubrir',

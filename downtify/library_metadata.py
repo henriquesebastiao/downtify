@@ -54,12 +54,55 @@ def _duration(audio: Any) -> float:
     return round(length, 2) if length > 0 else 0.0
 
 
+def _codec(audio: Any) -> str:
+    """The audio codec, in the names a client knows: ``mp3``, ``flac``,
+    ``aac``, ``alac``, ``opus``, ``vorbis`` - ``''`` when unknown."""
+
+    kind = type(audio).__name__.lower()
+    if kind in {'mp3', 'easymp3'}:
+        return 'mp3'
+    if kind == 'flac':
+        return 'flac'
+    if kind in {'oggopus'}:
+        return 'opus'
+    if kind in {'oggvorbis'}:
+        return 'vorbis'
+    if kind in {'mp4', 'easymp4'}:
+        codec = str(getattr(audio.info, 'codec', '') or '').lower()
+        if codec.startswith('mp4a'):
+            return 'aac'
+        return codec or 'aac'
+    return ''
+
+
+def audio_format(audio: Any) -> dict[str, Any]:
+    """``codec``, ``bitrate`` (bits/s), ``sample_rate`` (Hz) and
+    ``channels`` of a mutagen file; zeros and ``''`` when unknown."""
+
+    info = getattr(audio, 'info', None)
+
+    def number(name: str) -> int:
+        try:
+            return max(0, int(getattr(info, name, 0) or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    return {
+        'codec': _codec(audio) if audio is not None else '',
+        'bitrate': number('bitrate'),
+        'sample_rate': number('sample_rate'),
+        'channels': number('channels'),
+    }
+
+
 def read_audio_metadata(path: Path) -> dict[str, Any]:
     """Return display tags read from ``path``.
 
     ``title``, ``artist``, ``artists`` and ``album``, plus
     ``album_artist``, ``track_number`` (0 when unknown), ``year`` and
-    ``duration`` in seconds (0 when unknown).
+    ``duration`` in seconds (0 when unknown), plus the audio format:
+    ``codec``, ``bitrate``, ``sample_rate`` and ``channels`` (see
+    :func:`audio_format`).
     """
 
     empty: dict[str, Any] = {
@@ -71,6 +114,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'track_number': 0,
         'year': '',
         'duration': 0.0,
+        **audio_format(None),
     }
     if not path.is_file():
         return dict(empty)
@@ -87,6 +131,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         audio = MutagenFile(str(path), easy=True)
     except Exception:
         audio = None
+    fmt = audio_format(audio)
 
     if audio is not None:
         title = _tag_text(audio.get('title'))
@@ -127,6 +172,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'track_number': track_number,
         'year': year,
         'duration': duration,
+        **fmt,
     }
 
 
@@ -165,6 +211,10 @@ def library_entry_for_file(
         'track_number': int(meta.get('track_number') or 0),
         'year': str(meta.get('year') or ''),
         'duration': float(meta.get('duration') or 0.0),
+        'codec': str(meta.get('codec') or ''),
+        'bitrate': int(meta.get('bitrate') or 0),
+        'sample_rate': int(meta.get('sample_rate') or 0),
+        'channels': int(meta.get('channels') or 0),
         'has_cover': bool(cover_data),
         'cover_px': image_short_side(cover_data),
         **file_stat_fields(full_path),

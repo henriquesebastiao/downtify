@@ -28,6 +28,18 @@ environment:
   - DOWNTIFY_MONITOR_SYNC_TIME=03:00
 ```
 
+## Mobile apps and sign-in
+
+See [Mobile Apps & Sign-in](../features/mobile-apps.md).
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DOWNTIFY_REQUIRE_SIGN_IN` | _(unset)_ | `true` or `false` pins **Require sign-in** and locks the switch in Settings → Apps. Unset: the switch decides (off on a new install). Set the password in Settings → Apps **before** setting this to `true` — without one, nobody can sign in to the web page. |
+| `DOWNTIFY_TRUSTED_PROXIES` | _(unset)_ | Comma-separated addresses or networks of your reverse proxy (e.g. `172.18.0.0/16,10.0.0.5`). Only requests from these have their `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host` headers believed — for the client address that sign-in and pairing attempts are rate-limited by, the secure flag on the sign-in cookie, and the same-site check. Unset: those headers are ignored. |
+| `DOWNTIFY_DISCOVERY` | `true` | `false` stops announcing the server on the local network (mDNS, `_downtify._tcp`), which the apps use to list it under *Found on this network*. In Docker's bridge network the announcement doesn't reach the LAN anyway — see [Docker Compose](docker-compose.md#finding-the-server-from-the-apps). |
+| `DOWNTIFY_TRANSCODE_CACHE_MB` | `2048` | Largest size, in MB, the cache of transcoded copies (`/data/transcode_cache`) is kept under; least recently played copies go first. |
+| `DOWNTIFY_TRANSCODE_CONCURRENCY` | `2` | How many songs are transcoded at once for the apps' smaller streaming qualities. |
+
 ## Health check
 
 The image has a built-in [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) — no custom `--health-cmd` needed. It polls `GET /api/health` on the container's own port every 30 seconds (5 second timeout, 20 second start-up grace period, 3 retries before the container is marked unhealthy). `docker ps` and `docker inspect` show the result, and tools like Compose's `condition: service_healthy` or Watchtower can act on it.

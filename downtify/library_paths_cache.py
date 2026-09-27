@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING
+
+from loguru import logger
 
 if TYPE_CHECKING:
     from .library_catalog import LibraryContext
@@ -40,7 +43,32 @@ def get_cached_paths(
     return paths
 
 
-def invalidate_library_paths_cache() -> None:
-    """Drop cached path lists (call after downloads, deletes, or path reconcile)."""
+#: Called on every invalidation - i.e. whenever the library changed - with
+#: no arguments, from whichever thread invalidated. See
+#: :func:`add_invalidation_listener`.
+_LISTENERS: list[Callable[[], None]] = []
+
+
+def add_invalidation_listener(fn: Callable[[], None]) -> None:
+    """Call *fn* whenever the library changes (e.g. to tell connected
+    apps to sync). It must be quick and thread-safe."""
+
+    if fn not in _LISTENERS:
+        _LISTENERS.append(fn)
+
+
+def invalidate_library_paths_cache(*, notify: bool = True) -> None:
+    """Drop cached path lists (call after downloads, deletes, or path reconcile).
+
+    *notify* ``False`` is for a rescan that isn't a change in itself (a
+    client asking for a fresh scan): the listeners aren't told.
+    """
 
     _PATH_CACHE.clear()
+    if not notify:
+        return
+    for fn in list(_LISTENERS):
+        try:
+            fn()
+        except Exception:
+            logger.opt(exception=True).debug('Library change listener failed')

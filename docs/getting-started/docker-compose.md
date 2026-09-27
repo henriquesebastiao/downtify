@@ -50,6 +50,25 @@ services:
 
 Then, in **Settings → slskd (Soulseek)**, enable slskd, enter its URL (e.g. `http://slskd:5030` when both containers share a Docker network) and API key, and set the download folder to `/slskd`.
 
+## Finding the server from the apps
+
+The [mobile apps](../features/mobile-apps.md#finding-the-server-on-your-network) list Downtify servers on your network through mDNS. In Docker's default bridge network that announcement never leaves Docker, so phones don't see it. To have it listed, run the container on the host's network — the `ports:` mapping then no longer applies, and Downtify listens on `DOWNTIFY_PORT` directly:
+
+```yaml
+services:
+  downtify:
+    image: ghcr.io/henriquesebastiao/downtify:latest
+    network_mode: host
+    environment:
+      - DOWNTIFY_PORT=8000
+    volumes:
+      - ./downloads:/downloads
+      - downtify_data:/data
+    restart: unless-stopped
+```
+
+Otherwise just type the server's address into the app (`http://<host IP>:8000`); nothing else depends on discovery.
+
 ## Custom port
 
 If port 8000 is already in use, map a different host port and set the `DOWNTIFY_PORT` environment variable so the container listens on the same port internally:

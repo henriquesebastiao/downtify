@@ -14,6 +14,19 @@ _SENSITIVE_SUBSTRINGS = frozenset({
     'cookie',
 })
 
+# Query parameters that carry a credential: a signed URL's signature, a
+# WebSocket ticket, a pairing code. Masked in logged request lines.
+_URL_SECRET = re.compile(
+    r'([?&](?:sig|ticket|code|token|password)=)[^&\s"\']+', re.I
+)
+
+
+def redact_url_secrets(text: str) -> str:
+    """*text* (a log line) with credential query values masked."""
+
+    return _URL_SECRET.sub(r'\1<redacted>', text)
+
+
 # Spotify embed sentry / correlation blobs — noisy and irrelevant for parsing.
 _DROP_KEYS_CASEFOLD = frozenset({
     '_sentrytracedata',

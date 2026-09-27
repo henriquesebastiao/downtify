@@ -12,6 +12,25 @@ const API = axios.create({
 
 const sessionID = uuidv4()
 
+// ── Sign-in: a 401 anywhere means this browser has to sign in ─────────
+const unauthorizedListeners = new Set()
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const url = String(error?.config?.url || '')
+    if (error?.response?.status === 401 && !url.startsWith('/api/auth/')) {
+      for (const fn of unauthorizedListeners) fn()
+    }
+    return Promise.reject(error)
+  }
+)
+
+/** Called when a request is refused for lack of sign-in. */
+function onUnauthorized(fn) {
+  unauthorizedListeners.add(fn)
+  return () => unauthorizedListeners.delete(fn)
+}
+
 getVersion()
 
 // ── WebSocket: progress events, reconnecting with backoff ────────────
@@ -314,6 +333,66 @@ function clearLikes() {
   return API.post('/api/likes/clear')
 }
 
+// ── Sign-in, paired apps and the server's identity ─────────────────
+function getAuthStatus() {
+  return API.get('/api/auth/status')
+}
+
+function login(password) {
+  return API.post('/api/auth/login', { password })
+}
+
+function logout() {
+  return API.post('/api/auth/logout')
+}
+
+function setPassword(newPassword, currentPassword = '') {
+  return API.put('/api/auth/password', {
+    new_password: newPassword,
+    current_password: currentPassword,
+  })
+}
+
+function setRequireSignIn(enabled, password = '') {
+  return API.put('/api/auth/require', { enabled, password })
+}
+
+function listDevices() {
+  return API.get('/api/auth/devices')
+}
+
+function renameDevice(id, name) {
+  return API.patch(`/api/auth/devices/${encodeURIComponent(id)}`, { name })
+}
+
+function revokeDevice(id) {
+  return API.delete(`/api/auth/devices/${encodeURIComponent(id)}`)
+}
+
+function revokeAll() {
+  return API.post('/api/auth/revoke-all')
+}
+
+function startPairing() {
+  return API.post('/api/auth/pairing')
+}
+
+function getPairing(id) {
+  return API.get(`/api/auth/pairing/${encodeURIComponent(id)}`)
+}
+
+function cancelPairing(id) {
+  return API.delete(`/api/auth/pairing/${encodeURIComponent(id)}`)
+}
+
+function getServerInfo() {
+  return API.get('/api/server/info')
+}
+
+function renameServer(name) {
+  return API.patch('/api/server', { name })
+}
+
 // ── Discover ───────────────────────────────────────────────────────
 // `library`: [{ name, tracks, liked }] per library artist.
 function getDiscover(library) {
@@ -532,6 +611,21 @@ export default {
   getLikes,
   setLike,
   clearLikes,
+  onUnauthorized,
+  getAuthStatus,
+  login,
+  logout,
+  setPassword,
+  setRequireSignIn,
+  listDevices,
+  renameDevice,
+  revokeDevice,
+  revokeAll,
+  startPairing,
+  getPairing,
+  cancelPairing,
+  getServerInfo,
+  renameServer,
   getDiscover,
   getDiscoverCollections,
   findPreview,

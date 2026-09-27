@@ -265,6 +265,12 @@ class DiscoverStore:
                 )
             """)
             conn.execute("""
+                CREATE TABLE IF NOT EXISTS discover_plays (
+                    play_id TEXT PRIMARY KEY,
+                    recorded_at TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS discover_blocked (
                     artist_key TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
@@ -290,9 +296,18 @@ class DiscoverStore:
     # Listens
 
     def record_listen(
-        self, name: str, when: Optional[datetime] = None
+        self,
+        name: str,
+        when: Optional[datetime] = None,
+        play_id: str = '',
     ) -> Optional[dict[str, Any]]:
-        """Count one listen to *name*. ``None`` for a name with no key."""
+        """Count one listen to *name*. ``None`` for a name with no key.
+
+        *when* is when it was played - an app that was offline reports
+        its plays later; a late report never moves ``last_played`` back.
+        A *play_id* is counted once: the same play reported twice (a
+        retry after a lost answer) doesn't add up.
+        """
 
         name = str(name or '').strip()
         key = artist_key(name)
@@ -300,16 +315,25 @@ class DiscoverStore:
             return None
         stamp = (when or _now()).isoformat()
         with self._connect() as conn:
-            conn.execute(
-                """INSERT INTO discover_listens
-                   (artist_key, name, plays, last_played)
-                   VALUES (?, ?, 1, ?)
-                   ON CONFLICT(artist_key) DO UPDATE SET
-                     name = excluded.name,
-                     plays = plays + 1,
-                     last_played = excluded.last_played""",
-                (key, name, stamp),
-            )
+            fresh = True
+            if play_id:
+                cur = conn.execute(
+                    'INSERT INTO discover_plays (play_id, recorded_at) '
+                    'VALUES (?, ?) ON CONFLICT(play_id) DO NOTHING',
+                    (play_id[:64], _now().isoformat()),
+                )
+                fresh = cur.rowcount > 0
+            if fresh:
+                conn.execute(
+                    """INSERT INTO discover_listens
+                       (artist_key, name, plays, last_played)
+                       VALUES (?, ?, 1, ?)
+                       ON CONFLICT(artist_key) DO UPDATE SET
+                         name = excluded.name,
+                         plays = plays + 1,
+                         last_played = MAX(last_played, excluded.last_played)""",
+                    (key, name, stamp),
+                )
             row = conn.execute(
                 'SELECT name, plays, last_played FROM discover_listens '
                 'WHERE artist_key = ?',

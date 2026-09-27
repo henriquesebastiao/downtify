@@ -27,11 +27,14 @@ from load_dotenv import load_dotenv
 from loguru import logger
 from uvicorn import Config, Server
 
-from downtify import __version__, api, m3u
+from downtify import __version__, api, auth_routes, mobile_routes
+from downtify.auth import AuthMiddleware, AuthStore, forced_require_from_env
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
+from downtify.cover_thumbs import CoverThumbs
 from downtify.discover import DiscoverStore
+from downtify.discovery import Announcer, discovery_enabled
 from downtify.downloader import Downloader
 from downtify.library_archive import (
     MAX_ARCHIVE_FILES,
@@ -47,22 +50,27 @@ from downtify.library_catalog import (
 )
 from downtify.library_cleanup import remove_track_leftovers
 from downtify.library_metadata_cache import LibraryMetadataCache
-from downtify.library_paths import SLSKD_LIBRARY_PREFIX, library_stored_path
+from downtify.library_paths import SLSKD_LIBRARY_PREFIX
+from downtify.library_sync import LibrarySync
 from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
-from downtify.likes import LikedTracks, is_liked_playlist
+from downtify.likes import LikedTracks
 from downtify.lyrics import read_track_lyrics
 from downtify.lyrics_cache import LyricsLookupCache
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 from downtify.navidrome_index import NavidromeIndex
 from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
 from downtify.playlist_catalog import PlaylistCatalog
+from downtify.playlist_listing import list_library_playlists
 from downtify.playlist_spotify_cache import (
     PlaylistSpotifyCache,
     playlist_spotify_cache_loop,
 )
 from downtify.podcasts import PodcastStore
+from downtify.server_identity import ServerIdentity
+from downtify.telemetry import redact_url_secrets
 from downtify.track_index import TrackIndex
+from downtify.transcode import transcoder_from_env
 from downtify.update_check import UpdateChecker, update_check_loop
 
 load_dotenv()
@@ -99,8 +107,10 @@ class _InterceptHandler(logging.Handler):
         while frame and frame.f_code.co_filename == logging.__file__:
             frame = frame.f_back  # type: ignore[assignment]
             depth += 1
+        # Request lines (uvicorn.access) may carry a signed URL's
+        # signature or a WebSocket ticket.
         logger.opt(depth=depth, exception=record.exc_info).log(
-            level, record.getMessage()
+            level, redact_url_secrets(record.getMessage())
         )
 
 
@@ -132,6 +142,8 @@ DATABASE_DIR = Path(os.getenv('DATABASE_DIR', '/data'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
 DEFAULT_PORT = int(os.getenv('DOWNTIFY_PORT', os.getenv('PORT', '8000')))
+# Where the server listens, for the LAN announcement; set by main().
+_LISTEN = {'host': DEFAULT_HOST, 'port': DEFAULT_PORT}
 
 
 class SPAStaticFiles(StaticFiles):
@@ -267,6 +279,10 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
     api.state.podcasts = PodcastStore(library_db)
+    # The mobile API (downtify/mobile_routes.py).
+    api.state.library_sync = LibrarySync(library_db)
+    api.state.transcoder = transcoder_from_env(DATABASE_DIR)
+    api.state.cover_thumbs = CoverThumbs(DATABASE_DIR / 'cover_thumbs')
     api.state.discover = DiscoverStore(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
     api.state.upgrade_runner = LibraryUpgradeRunner(
@@ -318,6 +334,25 @@ def _open_library_stores(monitor_db_path: Path) -> None:
             )
     except Exception:
         logger.exception('Playlist batch sync from library failed')
+
+
+def open_auth_store() -> AuthStore:
+    """The sign-in store in /data (``downtify_auth.db``, ``.auth_secret``)."""
+
+    DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+    store = AuthStore(
+        DATABASE_DIR / 'downtify_auth.db',
+        DATABASE_DIR / '.auth_secret',
+        forced_require=forced_require_from_env(),
+    )
+    if store.require_sign_in and not store.has_password():
+        logger.error(
+            'Sign-in is required (DOWNTIFY_REQUIRE_SIGN_IN) but no password '
+            'is set: the web UI cannot be signed in to. Paired apps still '
+            'work. Unset the variable, set a password in Settings > Apps, '
+            'then set it again.'
+        )
+    return store
 
 
 def build_app() -> FastAPI:
@@ -378,6 +413,16 @@ def build_app() -> FastAPI:
             update_check_loop(api.state.update_checker),
             name='update-check-loop',
         )
+        # "Found on this network" in the apps (downtify/discovery.py).
+        if discovery_enabled() and api.state.identity is not None:
+            announcer = Announcer(
+                api.state.identity,
+                version=__version__,
+                port=_LISTEN['port'],
+                host=_LISTEN['host'],
+            )
+            if await announcer.start():
+                api.state.discovery = announcer
         # The liked songs playlist is a file; if it was deleted (or the
         # library moved) while Downtify was off, write it again.
         try:
@@ -394,6 +439,9 @@ def build_app() -> FastAPI:
 
         yield
 
+        if api.state.discovery is not None:
+            await api.state.discovery.stop()
+            api.state.discovery = None
         await api.shutdown_resources()
 
     app = FastAPI(
@@ -405,12 +453,33 @@ def build_app() -> FastAPI:
         ),
         version=__version__,
     )
+    # Sign-in and paired apps (downtify/auth.py). Added before CORS so
+    # CORS stays outermost and answers preflights without credentials.
+    api.state.identity = ServerIdentity(DATABASE_DIR)
+    api.state.auth = open_auth_store()
+    app.add_middleware(
+        AuthMiddleware,
+        get_store=lambda: api.state.auth,
+        get_tickets=lambda: api.state.ws_tickets,
+    )
+    # No credentials across origins: the web app is served from this same
+    # origin, and apps send a token header. Allowing credentials with a
+    # wildcard origin would let any website use a signed-in browser.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=['*'],
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=['*'],
         allow_headers=['*'],
+        # What a Cast receiver (or any player on another origin) reading
+        # a signed stream URL needs to see to seek.
+        expose_headers=[
+            'Accept-Ranges',
+            'Content-Length',
+            'Content-Range',
+            'ETag',
+            'X-Downtify-Transcoded',
+        ],
     )
 
     settings_path = DATABASE_DIR / 'settings.json'
@@ -459,6 +528,8 @@ def build_app() -> FastAPI:
         )
     )
     app.include_router(api.router)
+    app.include_router(auth_routes.router)
+    app.include_router(mobile_routes.router)
 
     @app.get('/list')
     def list_downloads(refresh: bool = False) -> list[str]:
@@ -475,44 +546,11 @@ def build_app() -> FastAPI:
 
     @app.get('/playlists')
     def list_playlists() -> list[dict]:
-        """List downloaded playlists, derived from the ``.m3u`` files
-        Downtify already writes for playlist/album downloads and
-        Playlist Monitor sweeps (see ``downtify/m3u.py``).
-
-        Each M3U file on disk is one playlist, regardless of whether
-        *Organize by artist/album* put its tracks in a per-playlist
-        folder or scattered them into artist/album folders — the M3U is
-        the one place that still records "these tracks belong together,
-        in this order" either way. Single tracks and albums downloaded
-        without an M3U (e.g. via the YouTube Music album endpoint)
-        aren't playlists and don't show up here.
-        """
-        base = DOWNLOAD_DIR.resolve()
-        if not base.exists():
-            return []
-        slskd_dir = api.library_context().slskd_dir
-        playlists: list[dict] = []
-        for m3u_path in sorted(base.rglob('*.m3u')):
-            tracks = m3u.read_m3u_tracks(m3u_path, base, slskd_dir)
-            if not tracks:
-                continue
-            # The sidecar artwork save_playlist_cover writes beside the
-            # M3U, when the playlist has one of its own.
-            cover = m3u_path.with_suffix('.jpg')
-            playlists.append({
-                'name': m3u_path.stem,
-                'files': tracks,
-                'count': len(tracks),
-                'cover': (
-                    library_stored_path(cover, base, slskd_dir)
-                    if cover.is_file()
-                    else ''
-                ),
-                # The playlist of hearted songs, not a downloaded one.
-                'liked': is_liked_playlist(m3u_path.stem),
-            })
-        playlists.sort(key=lambda p: (not p['liked'], p['name'].casefold()))
-        return playlists
+        """List downloaded playlists - see
+        ``downtify.playlist_listing.list_library_playlists``."""
+        return list_library_playlists(
+            DOWNLOAD_DIR, api.library_context().slskd_dir
+        )
 
     @app.get('/tracks')
     def list_tracks() -> list[dict]:
@@ -758,11 +796,30 @@ def _parse_args() -> argparse.Namespace:
     return args
 
 
+def _auth_reset() -> None:
+    """``python main.py auth-reset``: the way back in after a forgotten
+    password - sign-in no longer required, no password, browsers signed
+    out. Paired apps stay paired."""
+
+    store = open_auth_store()
+    store.reset()
+    if store.forced_by_env:
+        logger.warning(
+            'Password cleared, but DOWNTIFY_REQUIRE_SIGN_IN still requires '
+            'sign-in: unset it to reach the web UI.'
+        )
+    logger.info('Sign-in reset: no password, sign-in not required.')
+
+
 def main() -> None:
     args = _parse_args()
     _setup_logging(args.log_level)
+    if args.mode == 'auth-reset':
+        _auth_reset()
+        return None
 
     _fix_mime_types()
+    _LISTEN.update(host=args.host, port=args.port)
     app = build_app()
 
     loop = (

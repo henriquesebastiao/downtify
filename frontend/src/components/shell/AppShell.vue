@@ -1,5 +1,6 @@
 <template>
-  <div class="flex min-h-dvh bg-bg text-fg">
+  <SignIn v-if="auth.mustSignIn.value" />
+  <div v-else class="flex min-h-dvh bg-bg text-fg">
     <SideNav class="hidden md:flex" />
     <div class="flex min-w-0 flex-1 flex-col">
       <TopBar />
@@ -36,6 +37,8 @@ import NowPlaying from './NowPlaying.vue'
 import ShortcutsDialog from './ShortcutsDialog.vue'
 import UiToasts from '../ui/UiToasts.vue'
 import UiDialog from '../ui/UiDialog.vue'
+import SignIn from './SignIn.vue'
+import { useAuth } from '/src/model/auth'
 import { usePlayer } from '/src/model/player'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useLibrary } from '/src/model/library'
@@ -43,6 +46,7 @@ import { useDiscover } from '/src/model/discover'
 import { useNowPlaying, useUi } from '/src/model/ui'
 import { useShortcuts } from './shortcuts'
 
+const auth = useAuth()
 const player = usePlayer()
 const { showLyrics } = usePlayerPrefs()
 const route = useRoute()

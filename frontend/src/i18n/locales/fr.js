@@ -651,6 +651,7 @@ export default {
     retargeted: 'Surveillance de {name}',
   },
   settings: {
+    apps: 'Apps',
     title: 'Paramètres',
     subtitle: 'Comment Downtify trouve, télécharge et tague votre musique.',
     sections: 'Sections',
@@ -887,6 +888,77 @@ export default {
     goQueue: 'Aller à la file',
     close: 'Fermer la lecture en cours',
     help: 'Voir les raccourcis',
+  },
+  auth: {
+    signInTitle: 'Se connecter à Downtify',
+    signInBody: 'Ce serveur exige une connexion.',
+    password: 'Mot de passe',
+    signIn: 'Se connecter',
+    wrongPassword: 'Mot de passe incorrect',
+    forgotHint: 'Oublié ? Lancez « python main.py auth-reset » sur le serveur.',
+  },
+  apps: {
+    serverGroup: 'Ce serveur',
+    serverGroupHint: 'Comment les apps Downtify voient ce serveur.',
+    serverName: 'Nom du serveur',
+    serverNameHint:
+      'Affiché dans les apps et quand elles cherchent des serveurs sur votre réseau.',
+    serverId: 'ID du serveur {id}',
+    save: 'Enregistrer',
+    saved: 'Enregistré',
+    devicesGroup: 'Apps associées',
+    devicesGroupHint:
+      'Téléphones et autres appareils qui peuvent lire votre bibliothèque.',
+    deviceCount: {
+      one: '{count} app associée',
+      other: '{count} apps associées',
+    },
+    pair: 'Associer un téléphone',
+    revoke: 'Dissocier',
+    revokeTitle: 'Dissocier {name} ?',
+    revokeBody:
+      'Il cesse de fonctionner immédiatement, jusqu’à une nouvelle association.',
+    lastSeen: 'vu {when}',
+    signInGroup: 'Connexion',
+    signInGroupHint: 'Qui peut utiliser ce serveur.',
+    setPassword: 'Définir un mot de passe',
+    changePassword: 'Changer le mot de passe',
+    passwordHint:
+      'Au moins {count} caractères. Sert à se connecter à cette page.',
+    currentPassword: 'Mot de passe actuel',
+    newPassword: 'Nouveau mot de passe',
+    passwordSaved: 'Mot de passe enregistré',
+    requireSignIn: 'Exiger la connexion',
+    requireOffHint:
+      'Désactivé : toute personne qui atteint ce serveur peut l’utiliser, associer une app et modifier ses réglages.',
+    requireOnHint:
+      'Activé : la page demande le mot de passe et les apps doivent être associées.',
+    requireForced: 'Défini par DOWNTIFY_REQUIRE_SIGN_IN sur le serveur.',
+    requireTitle: 'Exiger la connexion',
+    requireBody: 'Saisissez le mot de passe. Ce navigateur reste connecté.',
+    requireConfirm: 'Exiger la connexion',
+    requireOnDone: 'La connexion est désormais exigée',
+    requireOffTitle: 'Ne plus exiger la connexion ?',
+    requireOffBody:
+      'Toute personne qui atteint ce serveur pourra de nouveau l’utiliser, sans mot de passe.',
+    requireOffConfirm: 'Ne plus exiger',
+    signOut: 'Se déconnecter',
+    signOutEverywhere: 'Se déconnecter partout',
+    signOutEverywhereHint:
+      'Dissocie toutes les apps et déconnecte tous les navigateurs, celui-ci compris.',
+    signOutEverywhereButton: 'Se déconnecter partout',
+    signOutEverywhereTitle: 'Se déconnecter partout ?',
+    signOutEverywhereBody:
+      'Toutes les apps devront être associées à nouveau, et tous les navigateurs reconnectés.',
+    pairTitle: 'Associer un téléphone',
+    pairBody:
+      'Dans l’app Downtify, choisissez « Scanner le code » et pointez l’appareil photo ici.',
+    qrLabel: 'Code QR d’association',
+    orTypeCode: 'ou saisissez ce code',
+    expiresIn: 'Expire dans {time}',
+    paired: '{name} est associé',
+    pairExpired: 'Ce code a expiré.',
+    newCode: 'Nouveau code',
   },
   discover: {
     title: 'Découvrir',

@@ -28,6 +28,7 @@ export const NAV = [
       { title: 'Liked Songs', page: 'features/liked-songs.md' },
       { title: 'Podcasts', page: 'features/podcasts.md' },
       { title: 'Discover', page: 'features/discover.md' },
+      { title: 'Mobile Apps & Sign-in', page: 'features/mobile-apps.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
@@ -51,6 +52,7 @@ export const NAV = [
   { title: 'How It Works', page: 'how-it-works.md' },
   { title: 'Troubleshooting', page: 'troubleshooting.md' },
   { title: 'API Reference', page: 'api-reference.md' },
+  { title: 'Mobile Client Contract', page: 'mobile-client-contract.md' },
   { title: 'Contributing', page: 'contributing.md' },
   { title: 'Changelog', page: 'changelog.md' },
 ]

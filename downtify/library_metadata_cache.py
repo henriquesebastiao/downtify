@@ -20,7 +20,8 @@ _TAG_READ_THREADS = 8
 
 #: Bumped whenever a row gains fields read from the file's tags: rows
 #: cached by an older version are treated as stale and re-read once.
-META_VERSION = 3
+#: 4: the audio format (codec, bitrate, sample rate, channels).
+META_VERSION = 4
 
 #: Columns added after the table was first created, with their SQL type.
 _ADDED_COLUMNS = {
@@ -31,12 +32,16 @@ _ADDED_COLUMNS = {
     'year': "TEXT NOT NULL DEFAULT ''",
     'duration': 'REAL NOT NULL DEFAULT 0',
     'meta_version': 'INTEGER NOT NULL DEFAULT 1',
+    'codec': "TEXT NOT NULL DEFAULT ''",
+    'bitrate': 'INTEGER NOT NULL DEFAULT 0',
+    'sample_rate': 'INTEGER NOT NULL DEFAULT 0',
+    'channels': 'INTEGER NOT NULL DEFAULT 0',
 }
 
 _ROW_COLUMNS = (
     'content_key, filename, file_mtime_ns, file_size, title, artist, '
     'album, has_cover, cover_px, album_artist, track_number, year, '
-    'duration, meta_version'
+    'duration, meta_version, codec, bitrate, sample_rate, channels'
 )
 
 
@@ -74,6 +79,10 @@ def _row_entry(
         'track_number': int(row['track_number'] or 0),
         'year': str(row['year'] or ''),
         'duration': float(row['duration'] or 0.0),
+        'codec': str(row['codec'] or ''),
+        'bitrate': int(row['bitrate'] or 0),
+        'sample_rate': int(row['sample_rate'] or 0),
+        'channels': int(row['channels'] or 0),
         'has_cover': bool(int(row['has_cover'] or 0)),
         'cover_px': int(row['cover_px'] or 0),
         'added': int(item['mtime_ns']) // 1_000_000_000,
@@ -111,6 +120,10 @@ class LibraryMetadataCache:
                         year TEXT NOT NULL DEFAULT '',
                         duration REAL NOT NULL DEFAULT 0,
                         meta_version INTEGER NOT NULL DEFAULT 1,
+                        codec TEXT NOT NULL DEFAULT '',
+                        bitrate INTEGER NOT NULL DEFAULT 0,
+                        sample_rate INTEGER NOT NULL DEFAULT 0,
+                        channels INTEGER NOT NULL DEFAULT 0,
                         file_mtime_ns INTEGER NOT NULL,
                         file_size INTEGER NOT NULL,
                         cached_at TEXT NOT NULL
@@ -462,8 +475,10 @@ class LibraryMetadataCache:
             """INSERT INTO library_metadata
                (content_key, filename, title, artist, album, has_cover,
                 cover_px, album_artist, track_number, year, duration,
-                meta_version, file_mtime_ns, file_size, cached_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                meta_version, codec, bitrate, sample_rate, channels,
+                file_mtime_ns, file_size, cached_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                       ?)
                ON CONFLICT(content_key) DO UPDATE SET
                filename=excluded.filename,
                title=excluded.title,
@@ -476,6 +491,10 @@ class LibraryMetadataCache:
                year=excluded.year,
                duration=excluded.duration,
                meta_version=excluded.meta_version,
+               codec=excluded.codec,
+               bitrate=excluded.bitrate,
+               sample_rate=excluded.sample_rate,
+               channels=excluded.channels,
                file_mtime_ns=excluded.file_mtime_ns,
                file_size=excluded.file_size,
                cached_at=excluded.cached_at""",
@@ -492,6 +511,10 @@ class LibraryMetadataCache:
                 str(entry.get('year') or ''),
                 float(entry.get('duration') or 0.0),
                 META_VERSION,
+                str(entry.get('codec') or ''),
+                int(entry.get('bitrate') or 0),
+                int(entry.get('sample_rate') or 0),
+                int(entry.get('channels') or 0),
                 mtime_ns,
                 file_size,
                 _now_iso(),

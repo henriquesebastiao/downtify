@@ -640,6 +640,7 @@ export default {
     retargeted: 'Most figyelve: {name}',
   },
   settings: {
+    apps: 'Alkalmazások',
     title: 'Beállítások',
     subtitle: 'Hogyan keresi, tölti le és címkézi a Downtify a zenéidet.',
     sections: 'Szakaszok',
@@ -873,6 +874,77 @@ export default {
     goQueue: 'Ugrás a sorhoz',
     close: 'Most szóló bezárása',
     help: 'Billentyűparancsok',
+  },
+  auth: {
+    signInTitle: 'Bejelentkezés a Downtifyba',
+    signInBody: 'Ez a szerver bejelentkezést kér.',
+    password: 'Jelszó',
+    signIn: 'Bejelentkezés',
+    wrongPassword: 'Hibás jelszó',
+    forgotHint:
+      'Elfelejtette? Futtassa a „python main.py auth-reset” parancsot a szerveren.',
+  },
+  apps: {
+    serverGroup: 'Ez a szerver',
+    serverGroupHint: 'Hogyan látják ezt a szervert a Downtify alkalmazások.',
+    serverName: 'Szerver neve',
+    serverNameHint:
+      'Megjelenik az alkalmazásokban és amikor szervereket keresnek a hálózaton.',
+    serverId: 'Szerverazonosító {id}',
+    save: 'Mentés',
+    saved: 'Mentve',
+    devicesGroup: 'Párosított alkalmazások',
+    devicesGroupHint:
+      'Telefonok és más eszközök, amelyek lejátszhatják a könyvtárát.',
+    deviceCount: {
+      one: '{count} alkalmazás párosítva',
+      other: '{count} alkalmazás párosítva',
+    },
+    pair: 'Telefon párosítása',
+    revoke: 'Párosítás bontása',
+    revokeTitle: 'Bontja a párosítást: {name}?',
+    revokeBody: 'Azonnal leáll, amíg újra nem párosítják.',
+    lastSeen: 'látva {when}',
+    signInGroup: 'Bejelentkezés',
+    signInGroupHint: 'Ki használhatja ezt a szervert.',
+    setPassword: 'Jelszó beállítása',
+    changePassword: 'Jelszó módosítása',
+    passwordHint:
+      'Legalább {count} karakter. Ehhez az oldalhoz való bejelentkezéshez.',
+    currentPassword: 'Jelenlegi jelszó',
+    newPassword: 'Új jelszó',
+    passwordSaved: 'Jelszó mentve',
+    requireSignIn: 'Bejelentkezés megkövetelése',
+    requireOffHint:
+      'Ki: bárki, aki eléri a szervert, használhatja, párosíthat alkalmazást és módosíthatja a beállításokat.',
+    requireOnHint:
+      'Be: az oldal jelszót kér, az alkalmazásokat párosítani kell.',
+    requireForced: 'A szerveren a DOWNTIFY_REQUIRE_SIGN_IN állítja be.',
+    requireTitle: 'Bejelentkezés megkövetelése',
+    requireBody: 'Adja meg a jelszót. Ez a böngésző bejelentkezve marad.',
+    requireConfirm: 'Megkövetelés',
+    requireOnDone: 'A bejelentkezés mostantól kötelező',
+    requireOffTitle: 'Nem kell többé bejelentkezni?',
+    requireOffBody:
+      'Bárki, aki eléri a szervert, újra jelszó nélkül használhatja.',
+    requireOffConfirm: 'Megkövetelés kikapcsolása',
+    signOut: 'Kijelentkezés',
+    signOutEverywhere: 'Kijelentkezés mindenhol',
+    signOutEverywhereHint:
+      'Minden alkalmazás párosítását bontja és minden böngészőt kijelentkeztet, ezt is.',
+    signOutEverywhereButton: 'Kijelentkezés mindenhol',
+    signOutEverywhereTitle: 'Kijelentkezés mindenhol?',
+    signOutEverywhereBody:
+      'Minden alkalmazást újra párosítani, minden böngészőben újra bejelentkezni kell.',
+    pairTitle: 'Telefon párosítása',
+    pairBody:
+      'A Downtify alkalmazásban válassza a „Kód beolvasása” lehetőséget, és irányítsa ide a kamerát.',
+    qrLabel: 'QR-kód a párosításhoz',
+    orTypeCode: 'vagy írja be ezt a kódot',
+    expiresIn: 'Lejár: {time}',
+    paired: '{name} párosítva',
+    pairExpired: 'Ez a kód lejárt.',
+    newCode: 'Új kód',
   },
   discover: {
     title: 'Felfedezés',

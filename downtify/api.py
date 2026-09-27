@@ -174,7 +174,25 @@ working without changes:
 * ``GET  /api/preview`` (a song's 30 s preview clip from Deezer, for a
   song with no ``preview_url`` of its own - ``?artist=&title=&duration=``,
   response ``{preview_url}``, ``""`` when Deezer has no matching song)
-* ``WS   /api/ws``
+* ``GET  /api/server/info`` (public: server id, name, version,
+  ``api_version``, whether sign-in is required, capabilities) and
+  ``PATCH /api/server`` (``{name}``) - see ``downtify/auth_routes.py``
+* ``GET  /api/auth/status``, ``POST /api/auth/login``,
+  ``POST /api/auth/logout``, ``PUT /api/auth/password``,
+  ``PUT /api/auth/require`` (sign-in), ``GET|PATCH|DELETE
+  /api/auth/devices[/{id}]``, ``POST /api/auth/revoke-all`` (paired
+  apps), ``POST /api/auth/pairing``, ``GET|DELETE
+  /api/auth/pairing/{id}``, ``POST /api/auth/pair`` (pairing an app) and
+  ``POST /api/auth/ws-ticket`` - see ``downtify/auth.py`` for who may
+  call what
+* ``/api/v1/...``: the apps' API, by track id - ``GET /api/v1/library``
+  (``?since=`` change feed), ``GET /api/v1/tracks/{id}`` (and
+  ``/stream``, ``/cover``, ``/lyrics``), ``GET /api/v1/playlists``,
+  ``GET|PUT /api/v1/likes`` and ``POST /api/v1/sign`` - see
+  ``downtify/mobile_routes.py`` and ``docs/mobile-client-contract.md``
+* ``WS   /api/ws`` (also ``library_changed``, ``device_paired``
+  messages; with sign-in required, a device token, session cookie or
+  ``?ticket=`` is needed)
 * ``GET  /api/check_update``
 """
 
@@ -190,6 +208,7 @@ import re
 import shutil
 import threading
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -219,8 +238,10 @@ from . import (
     providers,
     spotify,
 )
+from .auth import AuthStore, PairingStore, RateLimiter, TicketStore
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
+from .cover_thumbs import CoverThumbs
 from .discover import DiscoverStore, collections, recommendations
 from .downloader import (
     AUDIO_PROVIDERS,
@@ -239,12 +260,16 @@ from .library_delete import delete_playlist_from_library
 from .library_metadata import read_audio_metadata
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
-from .library_paths_cache import invalidate_library_paths_cache
+from .library_paths_cache import (
+    add_invalidation_listener,
+    invalidate_library_paths_cache,
+)
 from .library_reconcile import (
     playlist_refresh_enabled,
     reconcile_and_refresh,
     refresh_playlists_after_moves,
 )
+from .library_sync import LibrarySync
 from .likes import (
     LIKED_PLAYLIST_NAME,
     LikedTracks,
@@ -292,12 +317,14 @@ from .podcasts import (
     resolve_spotify_podcast,
     search_shows,
 )
+from .server_identity import ServerIdentity
 from .slskd_provider import reset_slskd_parallelism
 from .track_index import (
     TrackIndex,
     normalize_spotify_track_id,
     resolve_existing_download,
 )
+from .transcode import Transcoder
 from .update_check import UpdateChecker
 
 MIN_PARALLEL_DOWNLOADS = 1
@@ -637,13 +664,40 @@ class ConnectionManager:
 
     def __init__(self) -> None:
         self._clients: dict[str, WebSocket] = {}
+        # client_id -> the paired device it belongs to, if any, so a
+        # revoked device's socket can be closed at once.
+        self._devices: dict[str, str] = {}
 
-    async def connect(self, client_id: str, ws: WebSocket) -> None:
+    async def connect(
+        self, client_id: str, ws: WebSocket, device_id: str = ''
+    ) -> None:
         await ws.accept()
         self._clients[client_id] = ws
+        if device_id:
+            self._devices[client_id] = device_id
+        else:
+            self._devices.pop(client_id, None)
 
     def disconnect(self, client_id: str) -> None:
         self._clients.pop(client_id, None)
+        self._devices.pop(client_id, None)
+
+    async def close_device(self, device_id: str = '') -> None:
+        """Close the sockets of *device_id* - every paired device's when
+        it's empty (``4401``: signed out)."""
+
+        doomed = [
+            cid
+            for cid, dev in self._devices.items()
+            if dev and (not device_id or dev == device_id)
+        ]
+        sockets = [self._clients.pop(cid, None) for cid in doomed]
+        for cid in doomed:
+            self._devices.pop(cid, None)
+        await asyncio.gather(
+            *(ws.close(code=4401) for ws in sockets if ws is not None),
+            return_exceptions=True,
+        )
 
     async def send(self, client_id: str, message: dict[str, Any]) -> None:
         ws = self._clients.get(client_id)
@@ -682,6 +736,7 @@ class ConnectionManager:
         """
         clients = list(self._clients.items())
         self._clients.clear()
+        self._devices.clear()
         if not clients:
             return
         await asyncio.gather(
@@ -718,6 +773,18 @@ class AppState:
     likes: Optional[LikedTracks] = None
     podcasts: Optional[PodcastStore] = None
     discover: Optional[DiscoverStore] = None
+    # Sign-in and paired apps (see downtify/auth.py and auth_routes.py).
+    auth: Optional[AuthStore] = None
+    pairing: PairingStore = PairingStore()
+    ws_tickets: TicketStore = TicketStore()
+    login_limiter: RateLimiter = RateLimiter()
+    pair_limiter: RateLimiter = RateLimiter()
+    identity: Optional[ServerIdentity] = None
+    # The mobile API (downtify/mobile_routes.py).
+    library_sync: Optional[LibrarySync] = None
+    transcoder: Optional[Transcoder] = None
+    cover_thumbs: Optional[CoverThumbs] = None
+    discovery: Any = None
 
 
 state = AppState()
@@ -4217,6 +4284,42 @@ def _sync_liked_playlist() -> None:
         logger.exception('Liked songs playlist sync failed')
 
 
+_LIBRARY_ANNOUNCE_DELAY = 2.0
+# The pending "library changed" broadcast, if one is scheduled.
+_library_announce: dict[str, Optional[asyncio.TimerHandle]] = {'timer': None}
+
+
+def _broadcast_library_changed() -> None:
+    _library_announce['timer'] = None
+    spawn_task(
+        state.connections.broadcast({'type': 'library_changed'}),
+        name='library-changed',
+    )
+
+
+def _schedule_library_changed() -> None:
+    loop = state.loop
+    if loop is None or _library_announce['timer'] is not None:
+        return
+    _library_announce['timer'] = loop.call_later(
+        _LIBRARY_ANNOUNCE_DELAY, _broadcast_library_changed
+    )
+
+
+def announce_library_changed() -> None:
+    """Tell connected clients (the apps) the library changed, so they
+    sync - at most once every couple of seconds, however many files a
+    batch download adds. Safe from any thread."""
+
+    loop = state.loop
+    if loop is None:
+        return
+    loop.call_soon_threadsafe(_schedule_library_changed)
+
+
+add_invalidation_listener(announce_library_changed)
+
+
 def _announce_likes() -> None:
     """Tell open pages the likes changed, from any thread."""
 
@@ -4270,7 +4373,13 @@ async def set_like(request: Request) -> dict[str, Any]:
     file = str(payload.get('file') or '').strip().replace('\\', '/')
     if not file:
         raise HTTPException(status_code=400, detail='file is required')
-    liked = bool(payload.get('liked', True))
+    return await apply_like(file, bool(payload.get('liked', True)))
+
+
+async def apply_like(file: str, liked: bool) -> dict[str, Any]:
+    """Like or unlike a library path (``PUT /api/likes`` and, by track
+    id, ``PUT /api/v1/likes``)."""
+
     likes = _require_likes()
 
     if liked:
@@ -4383,16 +4492,46 @@ async def song_preview_endpoint(
 @router.post('/api/discover/listens')
 async def record_listen_endpoint(request: Request) -> dict[str, Any]:
     """Count one listen to ``{artist}`` - sent by the player once a track
-    has played long enough to count."""
+    has played long enough to count.
+
+    An app may also send ``track_id`` instead of ``artist`` (the track's
+    album artist is used), ``played_at`` (ISO 8601, for plays it reports
+    after being offline; a future time counts as now) and ``play_id``
+    (the same play reported twice counts once).
+    """
 
     store = _require_discover()
     payload = await _json_object(request)
+    artist = str(payload.get('artist') or '')
+    track_id = str(payload.get('track_id') or '')
+    if not artist and track_id and state.library_sync is not None:
+        row = await asyncio.to_thread(state.library_sync.row_for, track_id)
+        artist = str((row or {}).get('album_artist') or '')
+    when = _played_at(payload.get('played_at'))
     row = await asyncio.to_thread(
-        store.record_listen, str(payload.get('artist') or '')
+        store.record_listen,
+        artist,
+        when,
+        str(payload.get('play_id') or '').strip(),
     )
     if row is None:
         raise HTTPException(status_code=400, detail='artist is required')
     return row
+
+
+def _played_at(value: Any) -> Optional[datetime]:
+    """``played_at`` from a listen report: ``None`` (now) when missing,
+    unreadable or in the future."""
+
+    if not value:
+        return None
+    try:
+        when = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+    except ValueError:
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return None if when > datetime.now(timezone.utc) else when
 
 
 @router.delete('/api/discover/listens')
@@ -4783,7 +4922,10 @@ async def set_podcast_playback(
 async def websocket_endpoint(
     ws: WebSocket, client_id: str = Query(...)
 ) -> None:
-    await state.connections.connect(client_id, ws)
+    principal = (ws.scope.get('state') or {}).get('principal')
+    await state.connections.connect(
+        client_id, ws, getattr(principal, 'device_id', '') or ''
+    )
     try:
         while True:
             await ws.receive_text()
