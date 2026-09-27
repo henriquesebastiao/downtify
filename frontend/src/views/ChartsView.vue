@@ -46,16 +46,14 @@
         icon="music"
         :title="t('charts.empty')"
       />
-      <div v-else class="-mx-3 flex flex-col">
-        <TrackDownPlayHeader />
-        <TrackDownPlay
-          v-for="(song, i) in chart.tracks.value"
-          :key="song.song_id || song.url"
-          :song="song"
-          :index="i"
-          :queue="trackQueue"
-        />
-      </div>
+      <TrackDownPlayList
+        v-else
+        :songs="chart.tracks.value"
+        :queue="trackQueue"
+        :collection-name="t('charts.title')"
+        selectable
+        :toolbar-mode="TOOLBAR_LAZY"
+      />
     </template>
 
     <template v-else>
@@ -91,8 +89,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import ChartTile from '/src/components/charts/ChartTile.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
-import TrackDownPlay from '/src/components/library/TrackDownPlay.vue'
-import TrackDownPlayHeader from '/src/components/library/TrackDownPlayHeader.vue'
+import TrackDownPlayList, {
+  TOOLBAR_LAZY,
+} from '/src/components/library/TrackDownPlayList.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
