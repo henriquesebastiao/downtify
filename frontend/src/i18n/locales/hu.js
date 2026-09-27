@@ -71,6 +71,7 @@ export default {
     getIt: 'Letöltés',
     hintSpotify: 'Számok, albumok, lejátszási listák és előadók',
     hintYoutube: 'YouTube Music dalok, albumok, lejátszási listák és előadók',
+    hintDeezer: 'Deezer számok, albumok, lejátszási listák és előadók',
     hintCsv: 'CSV importálása (Soundiiz, Exportify…)',
     downloading: 'Letöltés folyamatban',
     waiting: { one: 'Még {count} vár', other: 'Még {count} vár' },

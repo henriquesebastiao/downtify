@@ -71,6 +71,7 @@ export default {
     getIt: 'Изтегли',
     hintSpotify: 'Песни, албуми, плейлисти и изпълнители',
     hintYoutube: 'Песни, албуми, плейлисти и изпълнители от YouTube Music',
+    hintDeezer: 'Песни, албуми, плейлисти и изпълнители от Deezer',
     hintCsv: 'Импортирай CSV (Soundiiz, Exportify…)',
     downloading: 'Изтегля се сега',
     waiting: { one: 'Още {count} чака', other: 'Още {count} чакат' },

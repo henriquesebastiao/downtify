@@ -71,6 +71,7 @@ export default {
     getIt: 'Get it',
     hintSpotify: 'Tracks, albums, playlists and artists',
     hintYoutube: 'YouTube Music songs, albums, playlists and artists',
+    hintDeezer: 'Deezer tracks, albums, playlists and artists',
     hintCsv: 'Import a CSV (Soundiiz, Exportify…)',
     downloading: 'Downloading now',
     waiting: { one: '{count} more waiting', other: '{count} more waiting' },

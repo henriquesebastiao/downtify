@@ -72,6 +72,7 @@ export default {
     hintSpotify: 'Parçalar, albümler, çalma listeleri ve sanatçılar',
     hintYoutube:
       'YouTube Music şarkıları, albümleri, çalma listeleri ve sanatçıları',
+    hintDeezer: 'Deezer parçaları, albümleri, çalma listeleri ve sanatçıları',
     hintCsv: 'CSV içe aktar (Soundiiz, Exportify…)',
     downloading: 'Şimdi indiriliyor',
     waiting: {

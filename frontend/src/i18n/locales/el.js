@@ -71,6 +71,7 @@ export default {
     getIt: 'Λήψη',
     hintSpotify: 'Κομμάτια, άλμπουμ, λίστες και καλλιτέχνες',
     hintYoutube: 'Τραγούδια, άλμπουμ, λίστες και καλλιτέχνες του YouTube Music',
+    hintDeezer: 'Κομμάτια, άλμπουμ, λίστες και καλλιτέχνες του Deezer',
     hintCsv: 'Εισαγωγή CSV (Soundiiz, Exportify…)',
     downloading: 'Λήψη τώρα',
     waiting: {

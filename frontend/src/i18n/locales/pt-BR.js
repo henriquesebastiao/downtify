@@ -71,6 +71,7 @@ export default {
     getIt: 'Baixar',
     hintSpotify: 'Faixas, álbuns, playlists e artistas',
     hintYoutube: 'Músicas, álbuns, playlists e artistas do YouTube Music',
+    hintDeezer: 'Faixas, álbuns, playlists e artistas do Deezer',
     hintCsv: 'Importe um CSV (Soundiiz, Exportify…)',
     downloading: 'Baixando agora',
     waiting: {
