@@ -141,7 +141,6 @@ export default {
     failed: 'Nem sikerült betölteni a listát',
     empty: 'Jelenleg nincs semmi a listán',
     playlist: 'Lejátszási lista',
-    podcast: 'Podcast',
   },
   link: {
     resolving: 'Link beolvasása…',

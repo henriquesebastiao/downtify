@@ -12,10 +12,10 @@ working without changes:
 * ``GET  /api/artists/search``
 * ``GET  /api/discover/chart`` (Deezer's own global "what's trending"
   chart - no auth, no genre filter - as ``{tracks, albums, artists,
-  playlists, podcasts}``; tracks are shaped like ``/api/songs/search``
+  playlists}``; tracks are shaped like ``/api/songs/search``
   (``source: 'deezer'``, plus ``preview_url`` when Deezer offers a 30s
-  clip) and downloadable the same way; albums/artists/playlists/podcasts
-  are read-only summaries - Downtify has no Deezer discography resolver,
+  clip) and downloadable the same way; albums/artists/playlists are
+  read-only summaries - Downtify has no Deezer discography resolver,
   so their ``url`` only opens on Deezer, unlike a YouTube Music/Spotify
   result)
 * ``GET  /api/artists/top_songs`` (an artist's "Top songs" shelf preview,

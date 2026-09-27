@@ -68,12 +68,7 @@
       >
         <ChartTile
           v-for="(item, i) in activeReleases"
-          :key="
-            item.album_id ||
-            item.artist_id ||
-            item.playlist_id ||
-            item.podcast_id
-          "
+          :key="item.album_id || item.artist_id || item.playlist_id"
           :item="item"
           :kind="RELEASE_KIND[tab]"
           :rank="i + 1"
@@ -107,12 +102,11 @@ const router = useRouter()
 const chart = useCharts()
 const library = useLibrary()
 
-const TABS = ['tracks', 'albums', 'artists', 'playlists', 'podcasts']
+const TABS = ['tracks', 'albums', 'artists', 'playlists']
 const RELEASE_KIND = {
   albums: 'album',
   artists: 'artist',
   playlists: 'playlist',
-  podcasts: 'podcast',
 }
 const lastTab = useLocalStorage('downtify-charts-tab', 'tracks')
 const tab = computed(() => {
@@ -129,8 +123,7 @@ const hasData = computed(
     chart.tracks.value.length ||
     chart.albums.value.length ||
     chart.artists.value.length ||
-    chart.playlists.value.length ||
-    chart.podcasts.value.length
+    chart.playlists.value.length
 )
 
 const tabs = computed(() => [
@@ -158,12 +151,6 @@ const tabs = computed(() => [
     count: chart.playlists.value.length,
     to: { name: 'Charts', params: { tab: 'playlists' } },
   },
-  {
-    id: 'podcasts',
-    label: t('nav.podcasts'),
-    count: chart.podcasts.value.length,
-    to: { name: 'Charts', params: { tab: 'podcasts' } },
-  },
 ])
 
 // The library tracks a chart track's preview/play button queues once it has
@@ -176,7 +163,6 @@ const activeReleases = computed(() => {
   if (tab.value === 'albums') return chart.albums.value
   if (tab.value === 'artists') return chart.artists.value
   if (tab.value === 'playlists') return chart.playlists.value
-  if (tab.value === 'podcasts') return chart.podcasts.value
   return []
 })
 

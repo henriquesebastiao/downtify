@@ -144,7 +144,6 @@ export default {
     failed: 'Impossible de charger le classement',
     empty: 'Rien dans le classement pour le moment',
     playlist: 'Playlist',
-    podcast: 'Podcast',
   },
   link: {
     resolving: 'Lecture du lien…',

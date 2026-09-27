@@ -144,7 +144,6 @@ export default {
     failed: 'Não deu para carregar a parada',
     empty: 'Nada na parada por enquanto',
     playlist: 'Playlist',
-    podcast: 'Podcast',
   },
   link: {
     resolving: 'Lendo o link…',

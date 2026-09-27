@@ -7,7 +7,6 @@ const tracks = ref([])
 const albums = ref([])
 const artists = ref([])
 const playlists = ref([])
-const podcasts = ref([])
 const loading = ref(false)
 const error = ref('')
 let loaded = false
@@ -22,7 +21,6 @@ async function load({ force = false } = {}) {
     albums.value = res.data?.albums || []
     artists.value = res.data?.artists || []
     playlists.value = res.data?.playlists || []
-    podcasts.value = res.data?.podcasts || []
     loaded = true
   } catch (err) {
     error.value = err?.response?.data?.detail || err?.message || ''
@@ -32,5 +30,5 @@ async function load({ force = false } = {}) {
 }
 
 export function useCharts() {
-  return { tracks, albums, artists, playlists, podcasts, loading, error, load }
+  return { tracks, albums, artists, playlists, loading, error, load }
 }

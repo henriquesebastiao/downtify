@@ -56,7 +56,7 @@ When YouTube Music returns nothing and slskd is an enabled audio source, the res
 
 ### `GET /api/discover/chart`
 
-Deezer's own global chart (no genre filter, no auth) — top tracks, albums, artists, playlists and podcasts, for the [Charts](features/charts.md) page.
+Deezer's own global chart (no genre filter, no auth) — top tracks, albums, artists and playlists, for the [Charts](features/charts.md) page.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -69,12 +69,11 @@ Deezer's own global chart (no genre filter, no auth) — top tracks, albums, art
   "tracks": [ /* song objects, "source": "deezer", plus "preview_url" when Deezer offers a 30s clip */ ],
   "albums": [ { "album_id": "…", "name": "…", "artist": "…", "cover_url": "https://…", "url": "https://www.deezer.com/album/…", "source": "deezer" } ],
   "artists": [ { "artist_id": "…", "name": "…", "cover_url": "https://…", "url": "https://www.deezer.com/artist/…", "source": "deezer" } ],
-  "playlists": [ { "playlist_id": "…", "name": "…", "owner": "…", "cover_url": "https://…", "url": "https://www.deezer.com/playlist/…", "source": "deezer" } ],
-  "podcasts": [ { "podcast_id": "…", "name": "…", "cover_url": "https://…", "url": "https://www.deezer.com/show/…", "source": "deezer" } ]
+  "playlists": [ { "playlist_id": "…", "name": "…", "owner": "…", "cover_url": "https://…", "url": "https://www.deezer.com/playlist/…", "source": "deezer" } ]
 }
 ```
 
-Track rows download the same way a search result does — Downtify has no Deezer discography resolver, so `POST /api/download/url` takes a `"source": "deezer"` row's body as-is instead of trying to parse its `url` as a Spotify/YouTube link (the same escape hatch a `text_search` row above uses), and matches it on YouTube Music/YouTube by title, artist and length. A track's `preview_url`, when present, is a 30-second MP3 clip Deezer streams directly (`https://` only) — the web UI plays it with the same preview player an artist's Spotify top songs use; it's `""` when Deezer has no clip for that track. Album, artist, playlist and podcast rows are read-only summaries — their `url` only opens the item on `deezer.com`. `502` when Deezer can't be reached or refuses the request.
+Track rows download the same way a search result does — Downtify has no Deezer discography resolver, so `POST /api/download/url` takes a `"source": "deezer"` row's body as-is instead of trying to parse its `url` as a Spotify/YouTube link (the same escape hatch a `text_search` row above uses), and matches it on YouTube Music/YouTube by title, artist and length. A track's `preview_url`, when present, is a 30-second MP3 clip Deezer streams directly (`https://` only) — the web UI plays it with the same preview player an artist's Spotify top songs use; it's `""` when Deezer has no clip for that track. Album, artist and playlist rows are read-only summaries — their `url` only opens the item on `deezer.com`. `502` when Deezer can't be reached or refuses the request.
 
 ---
 

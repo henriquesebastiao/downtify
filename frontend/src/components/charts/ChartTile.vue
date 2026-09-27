@@ -1,11 +1,6 @@
 <template>
   <article class="tile group relative flex min-w-0 flex-col gap-2.5">
-    <RouterLink
-      v-if="resolvable"
-      :to="linkTo"
-      class="block"
-      :aria-label="item.name"
-    >
+    <RouterLink :to="linkTo" class="block" :aria-label="item.name">
       <CoverArt
         :src="item.cover_url"
         :name="item.name"
@@ -22,29 +17,6 @@
         >
       </CoverArt>
     </RouterLink>
-    <a
-      v-else
-      :href="item.url"
-      target="_blank"
-      rel="noopener"
-      class="block"
-      :aria-label="item.name"
-    >
-      <CoverArt
-        :src="item.cover_url"
-        :name="item.name"
-        :icon="icon"
-        shadow
-        :letter-size="52"
-        class="aspect-square w-full"
-      >
-        <span
-          class="absolute right-2.5 bottom-2.5 flex size-8 items-center justify-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
-        >
-          <AppIcon name="arrow-up-right" :size="16" />
-        </span>
-      </CoverArt>
-    </a>
     <button
       v-if="downloadable"
       type="button"
@@ -61,7 +33,6 @@
       />
     </button>
     <RouterLink
-      v-if="resolvable"
       :to="linkTo"
       class="flex min-w-0 flex-col gap-0.5"
       :class="round ? 'items-center text-center' : ''"
@@ -69,29 +40,18 @@
       <span class="w-full truncate text-sm font-semibold">{{ item.name }}</span>
       <span class="w-full truncate text-[13px] text-muted">{{ subtitle }}</span>
     </RouterLink>
-    <a
-      v-else
-      :href="item.url"
-      target="_blank"
-      rel="noopener"
-      class="flex min-w-0 flex-col gap-0.5"
-    >
-      <span class="w-full truncate text-sm font-semibold">{{ item.name }}</span>
-      <span class="w-full truncate text-[13px] text-muted">{{ subtitle }}</span>
-    </a>
   </article>
 </template>
 
 <script setup>
-// A Deezer chart card (album, artist, playlist or podcast), styled and wired
-// like search's ReleaseCard: a cover that opens the item's /link page,
-// and - for kinds /link can turn into a flat downloadable tracklist
-// (album, playlist) - a green download button over it, same as
-// ReleaseCard's. An artist resolves to release summaries, not songs (like
-// ReleaseCard's own round/artist tiles), so it only navigates. Podcasts
-// aren't a Downtify input type at all, so their card still just opens on
-// Deezer. Chart tracks are the only immediately-downloadable kind and use
-// TrackDownPlay instead, not this card.
+// A Deezer chart card (album, artist or playlist), styled and wired like
+// search's ReleaseCard: a cover that opens the item's /link page, and -
+// for kinds /link can turn into a flat downloadable tracklist (album,
+// playlist) - a green download button over it, same as ReleaseCard's. An
+// artist resolves to release summaries, not songs (like ReleaseCard's own
+// round/artist tiles), so it only navigates. Chart tracks are the only
+// immediately-downloadable kind and use TrackDownPlay instead, not this
+// card.
 import { computed, ref } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
@@ -104,8 +64,7 @@ const props = defineProps({
   kind: {
     type: String,
     required: true,
-    validator: (value) =>
-      ['album', 'artist', 'playlist', 'podcast'].includes(value),
+    validator: (value) => ['album', 'artist', 'playlist'].includes(value),
   },
   rank: { type: Number, default: null },
 })
@@ -115,7 +74,6 @@ const ui = useUi()
 const queued = ref(false)
 
 const round = computed(() => props.kind === 'artist')
-const resolvable = computed(() => props.kind !== 'podcast')
 // An artist resolves to release summaries, not songs - nothing fromURL
 // could queue directly, so no download button for it (same reasoning as
 // ReleaseCard's own round tiles).
@@ -128,10 +86,7 @@ const linkTo = computed(() => ({
 }))
 
 const icon = computed(
-  () =>
-    ({ album: 'disc', artist: 'user', playlist: 'playlist', podcast: 'mic' })[
-      props.kind
-    ]
+  () => ({ album: 'disc', artist: 'user', playlist: 'playlist' })[props.kind]
 )
 
 const subtitle = computed(() => {
@@ -142,8 +97,6 @@ const subtitle = computed(() => {
       return props.item.artist || ''
     case 'playlist':
       return props.item.owner || t('charts.playlist')
-    case 'podcast':
-      return t('charts.podcast')
     default:
       return ''
   }

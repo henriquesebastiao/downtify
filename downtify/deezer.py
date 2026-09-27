@@ -711,24 +711,6 @@ def _chart_playlist_release(row: dict[str, Any]) -> Optional[dict[str, Any]]:
     }
 
 
-def _chart_podcast_release(row: dict[str, Any]) -> Optional[dict[str, Any]]:
-    """A chart podcast (show) row as a read-only release summary, or
-    ``None``. Same read-only reasoning as :func:`_chart_album_release`."""
-
-    podcast_id = row.get('id')
-    name = str(row.get('title') or '').strip()
-    if not podcast_id or not name:
-        return None
-    cover = _cover_from_images(row, prefix='picture')
-    return {
-        'podcast_id': str(podcast_id),
-        'name': name,
-        'cover_url': cover,
-        'url': str(row.get('link') or ''),
-        'source': 'deezer',
-    }
-
-
 def _chart_section(
     data: dict[str, Any],
     key: str,
@@ -746,14 +728,12 @@ def _chart_section(
 
 def fetch_chart(limit: int = 25) -> dict[str, Any]:
     """Deezer's global "what's trending" chart: top tracks, albums,
-    artists, playlists and podcasts -
-    ``{tracks, albums, artists, playlists, podcasts}``.
+    artists and playlists - ``{tracks, albums, artists, playlists}``.
 
     Tracks are downloadable Downtify song rows, with a 30s preview clip
     when Deezer offers one (see :func:`_chart_track_song`); everything
     else is a read-only summary (see :func:`_chart_album_release`,
-    :func:`_chart_artist_release`, :func:`_chart_playlist_release`,
-    :func:`_chart_podcast_release`).
+    :func:`_chart_artist_release`, :func:`_chart_playlist_release`).
 
     Raises :class:`ValueError` when Deezer can't be reached or refuses
     (see :func:`_chart_payload`).
@@ -767,7 +747,6 @@ def fetch_chart(limit: int = 25) -> dict[str, Any]:
         'playlists': _chart_section(
             data, 'playlists', _chart_playlist_release
         ),
-        'podcasts': _chart_section(data, 'podcasts', _chart_podcast_release),
     }
 
 

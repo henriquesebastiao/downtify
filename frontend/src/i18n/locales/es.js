@@ -141,7 +141,6 @@ export default {
     failed: 'No se pudo cargar la lista',
     empty: 'No hay nada en la lista por ahora',
     playlist: 'Playlist',
-    podcast: 'Podcast',
   },
   link: {
     resolving: 'Leyendo el enlace…',

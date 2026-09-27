@@ -153,16 +153,6 @@ _CHART_PAYLOAD = {
             },
         ],
     },
-    'podcasts': {
-        'data': [
-            {
-                'id': 666,
-                'title': 'Chart Podcast',
-                'link': 'https://www.deezer.com/show/666',
-                'picture_xl': 'https://example.com/podcast-xl.jpg',
-            },
-        ],
-    },
 }
 
 
@@ -226,15 +216,6 @@ def test_fetch_chart_maps_every_section():
             'source': 'deezer',
         }
     ]
-    assert chart['podcasts'] == [
-        {
-            'podcast_id': '666',
-            'name': 'Chart Podcast',
-            'cover_url': 'https://example.com/podcast-xl.jpg',
-            'url': 'https://www.deezer.com/show/666',
-            'source': 'deezer',
-        }
-    ]
 
 
 def test_fetch_chart_track_without_preview_has_empty_preview_url():
@@ -251,7 +232,6 @@ def test_fetch_chart_track_without_preview_has_empty_preview_url():
         'albums': {},
         'artists': {},
         'playlists': {},
-        'podcasts': {},
     }
     with patch(
         'downtify.deezer.httpx.get', return_value=_mock_response(payload)
@@ -285,7 +265,6 @@ def test_fetch_chart_clamps_limit():
             'albums': {},
             'artists': {},
             'playlists': {},
-            'podcasts': {},
         })
 
     with patch('downtify.deezer.httpx.get', side_effect=fake_get):

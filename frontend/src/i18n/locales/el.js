@@ -145,7 +145,6 @@ export default {
     failed: 'Δεν ήταν δυνατή η φόρτωση του chart',
     empty: 'Δεν υπάρχει τίποτα στο chart αυτή τη στιγμή',
     playlist: 'Λίστα αναπαραγωγής',
-    podcast: 'Podcast',
   },
   link: {
     resolving: 'Ανάγνωση συνδέσμου…',

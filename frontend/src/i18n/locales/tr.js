@@ -145,7 +145,6 @@ export default {
     failed: 'Liste yüklenemedi',
     empty: 'Şu anda listede bir şey yok',
     playlist: 'Çalma listesi',
-    podcast: 'Podcast',
   },
   link: {
     resolving: 'Bağlantı okunuyor…',

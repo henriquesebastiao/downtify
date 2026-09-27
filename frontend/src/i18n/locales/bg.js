@@ -141,7 +141,6 @@ export default {
     failed: 'Класацията не се зареди',
     empty: 'В момента няма нищо в класацията',
     playlist: 'Плейлист',
-    podcast: 'Подкаст',
   },
   link: {
     resolving: 'Четене на линка…',

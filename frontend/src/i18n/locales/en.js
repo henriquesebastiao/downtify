@@ -141,7 +141,6 @@ export default {
     failed: "Couldn't load the chart",
     empty: 'Nothing on the chart right now',
     playlist: 'Playlist',
-    podcast: 'Podcast',
   },
   link: {
     resolving: 'Reading the link…',
