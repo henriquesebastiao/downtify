@@ -1,10 +1,29 @@
 <template>
   <div
     class="group flex h-16 items-center gap-3 rounded-[12px] px-3 transition-colors"
-    :class="highlighted ? 'bg-surface' : 'hover:bg-surface'"
+    :class="
+      selected ? 'bg-accent/8' : highlighted ? 'bg-surface' : 'hover:bg-surface'
+    "
     @click="onRowClick"
     @dblclick="ensurePlaying"
   >
+    <button
+      v-if="selectable"
+      type="button"
+      role="checkbox"
+      :aria-checked="selected"
+      :aria-label="t('library.selectTrack', { title: song.name })"
+      class="flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] transition-colors"
+      :class="
+        selected
+          ? 'border-accent bg-accent text-on-accent'
+          : 'border-line-3 hover:border-fg-3'
+      "
+      @click.stop="emit('toggle')"
+      @dblclick.stop
+    >
+      <AppIcon v-if="selected" name="check" :size="13" stroke-width="3" />
+    </button>
     <span
       v-if="index !== null"
       class="flex w-6 items-center justify-center text-[13px] text-faint max-sm:hidden"
@@ -190,7 +209,15 @@ const props = defineProps({
   queue: { type: Array, default: () => [] },
   // Where the queue comes from, for the player's "playing from".
   context: { type: Object, default: null },
+  // Off by default: a caller doing multi-select (e.g. a "download selected"
+  // list) turns this on and owns the actual selection state itself - this
+  // row only shows the checkbox and reports clicks on it via `toggle`.
+  selectable: { type: Boolean, default: false },
+  // Whether this row is currently selected. Ignored unless `selectable`.
+  selected: { type: Boolean, default: false },
 })
+
+const emit = defineEmits(['toggle'])
 
 const { t } = useI18n()
 const player = usePlayer()
