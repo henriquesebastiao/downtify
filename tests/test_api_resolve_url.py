@@ -70,7 +70,7 @@ def test_url_resolve_takes_album_details_from_its_tracks(monkeypatch):
 
 
 def test_url_resolve_wraps_a_single_track(monkeypatch):
-    monkeypatch.setattr(api.spotify, 'track_from_id', lambda sid: _SONG)
+    monkeypatch.setattr(api.spotify, 'track_from_id', lambda sid, **_kw: _SONG)
 
     result = api.url_resolve_endpoint(_TRACK)
 
@@ -109,7 +109,7 @@ def test_url_resolve_rejects_unknown_links():
 
 
 def test_url_resolve_reports_upstream_failures_as_bad_gateway(monkeypatch):
-    def _boom(sid):
+    def _boom(sid, **_kw):
         raise RuntimeError('embed down')
 
     monkeypatch.setattr(api.spotify, 'track_from_id', _boom)

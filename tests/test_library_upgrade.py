@@ -205,7 +205,11 @@ def test_refreshed_metadata_never_blanks_what_the_file_has(
     monkeypatch.setattr(
         library_upgrade.spotify,
         'track_from_id',
-        lambda _id: {'album_name': '', 'year': '1999', 'track_number': 7},
+        lambda _id, **_kw: {
+            'album_name': '',
+            'year': '1999',
+            'track_number': 7,
+        },
     )
 
     song = song_for_track(
@@ -225,7 +229,7 @@ def test_a_failing_spotify_lookup_falls_back_to_the_tags(
     ctx = _context(tmp_path)
     _write_track(ctx.download_dir / 'a.mp3', cover_px=300)
 
-    def _boom(_id: str) -> dict[str, Any]:
+    def _boom(_id: str, **_kw: Any) -> dict[str, Any]:
         raise RuntimeError('no network')
 
     monkeypatch.setattr(library_upgrade.spotify, 'track_from_id', _boom)
@@ -372,7 +376,7 @@ def test_metadata_upgrade_fills_the_gaps_from_spotify(
     monkeypatch.setattr(
         library_upgrade.spotify,
         'track_from_id',
-        lambda _id: {
+        lambda _id, **_kw: {
             'album_name': 'Real Album',
             'year': '2011',
             'release_date': '2011-05-06',

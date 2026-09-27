@@ -24,7 +24,7 @@ An upgrade rewrites **artwork, lyrics and tags**. It does not fetch a different 
 |----------|--------------|----------------|
 | **Upgrade artwork** | Replaces a cover smaller than your target size | Spotify, Apple Music (iTunes), YouTube Music |
 | **Add missing lyrics** | Fills in lyrics for tracks that have none, embedded and as an `.lrc` sidecar | Your [lyrics providers](lyrics.md), in your order |
-| **Refresh tags** | Fills in album, album artist, release date and track number | Spotify |
+| **Refresh tags** | Fills in album, album artist, release date and track number — including the album older single-track downloads are missing | Spotify |
 
 A track counts as behind when:
 

@@ -163,7 +163,7 @@ Downtify embeds the following tags in every downloaded file, regardless of forma
 |-----|--------|
 | Title | Spotify embed |
 | Artist(s) | Spotify embed |
-| Album | Spotify embed |
+| Album | Spotify embed — for a single-track download, the album the track's public Spotify page names (the track embed itself has none) |
 | Year | Spotify embed (track-level fetch) |
 | Album art | Spotify embed (track-level cover) for Spotify-resolved tracks; YouTube Music thumbnail otherwise. Optional — see [Download cover art](#download-cover-art) and [Cover art resolution](#cover-art-resolution) |
 | Lyrics | lrclib (if enabled) |

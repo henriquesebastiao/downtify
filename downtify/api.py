@@ -1694,7 +1694,7 @@ def _resolve_url(url: str):
         kind, sid = spotify_parsed
         try:
             if kind == 'track':
-                return spotify.track_from_id(sid)
+                return spotify.track_from_id(sid, with_album=True)
             if kind == 'album':
                 return spotify.album_tracks_from_id(sid)
             if kind == 'playlist':
@@ -1771,7 +1771,7 @@ def _track_details(song: dict[str, Any]) -> dict[str, Any]:
 
 def _spotify_details(kind: str, sid: str) -> dict[str, Any]:
     if kind == 'track':
-        return _track_details(spotify.track_from_id(sid))
+        return _track_details(spotify.track_from_id(sid, with_album=True))
     if kind == 'album':
         return _collection_details('album', spotify.album_tracks_from_id(sid))
     if kind == 'playlist':
@@ -1991,7 +1991,7 @@ def _song_for_download(url: str) -> dict[str, Any]:
     if parsed is not None:
         kind, sid = parsed
         if kind == 'track':
-            return spotify.track_from_id(sid)
+            return spotify.track_from_id(sid, with_album=True)
         raise HTTPException(
             status_code=400,
             detail='Only Spotify track URLs are supported here',
