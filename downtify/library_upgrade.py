@@ -250,7 +250,12 @@ def song_for_track(
     if not (refresh_metadata and spotify_id):
         return song
     try:
-        remote = spotify.track_from_id(spotify_id)
+        # The album lookup costs two more requests; only a file with no
+        # album tag of its own needs it (single-track downloads before the
+        # fix that made them fetch it).
+        remote = spotify.track_from_id(
+            spotify_id, with_album=not song.get('album_name')
+        )
     except Exception:
         logger.opt(exception=True).debug(
             'Library upgrade: Spotify lookup failed for {}', spotify_id

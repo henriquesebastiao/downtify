@@ -32,8 +32,10 @@ from downtify.spotify import (
     playlist_tracks_from_id,
     primary_artist_id_from_track_id,
     related_artist_names_from_id,
+    resolve,
     search,
     search_results,
+    track_from_id,
 )
 
 # Aliases only — no real artist / track titles
@@ -190,7 +192,7 @@ def test_enrich_track_from_spotify_if_sparse_fetches_missing_fields(
         'cover_url': 'https://example.com/playlist.jpg',
     }
     out = enrich_track_from_spotify_if_sparse(sparse)
-    mock_track_from_id.assert_called_once_with('a' * 22)
+    mock_track_from_id.assert_called_once_with('a' * 22, with_album=True)
     assert out['year'] == '2016'
     assert out['track_number'] == 24
     assert out['cover_url'] == 'https://example.com/cover.jpg'
@@ -206,6 +208,7 @@ def test_enrich_track_from_spotify_if_sparse_skips_when_complete(
         'year': '2020',
         'release_date': '2020-01-01',
         'track_number': 1,
+        'album_name': 'TestAlbum',
     }
     assert enrich_track_from_spotify_if_sparse(complete) is complete
     mock_track_from_id.assert_not_called()
@@ -1246,7 +1249,7 @@ def test_artist_top_songs_limit_enriches_only_the_songs_kept():
     ids, entity = _shelf_entity(8)
     enriched = []
 
-    def fake_enrich(song):
+    def fake_enrich(song, **_kw):
         enriched.append(song['song_id'])
         return song
 
@@ -1275,7 +1278,7 @@ def test_artist_top_songs_without_a_limit_keeps_the_whole_shelf():
         ),
         patch(
             'downtify.spotify.enrich_track_from_spotify_if_sparse',
-            side_effect=lambda song: song,
+            side_effect=lambda song, **_kw: song,
         ),
     ):
         _name, _cover, songs = artist_top_songs_from_id('a')
@@ -1285,7 +1288,7 @@ def test_artist_top_songs_without_a_limit_keeps_the_whole_shelf():
 def test_artist_top_songs_keep_shelf_order_when_enrichment_finishes_late():
     ids, entity = _shelf_entity(5)
 
-    def slow_first(song):
+    def slow_first(song, **_kw):
         # The first song finishes last.
         time.sleep(0.15 if song['song_id'] == ids[0] else 0)
         return song
@@ -1308,7 +1311,7 @@ def test_artist_top_songs_enrichment_runs_concurrently():
     ids, entity = _shelf_entity(4)
     barrier = threading.Barrier(4, timeout=2)
 
-    def wait_for_the_others(song):
+    def wait_for_the_others(song, **_kw):
         # Only passes if all four enrichments are in flight together; a
         # sequential loop would time the barrier out.
         barrier.wait()
@@ -1342,7 +1345,7 @@ def test_artist_top_songs_overview_still_fills_plays_and_album():
         patch('downtify.spotify._fetch_embed_json', return_value=payload),
         patch(
             'downtify.spotify.enrich_track_from_spotify_if_sparse',
-            side_effect=lambda song: song,
+            side_effect=lambda song, **_kw: song,
         ),
         patch(
             'downtify.spotify._top_track_overview', return_value=overview
@@ -1504,3 +1507,179 @@ def test_search_raises_when_spotify_does_not_answer():
         pytest.raises(ValueError, match='search failed'),
     ):
         search(_AL1)
+
+
+# ── album of a single track (the track embed has none) ────────────────
+
+_TRACK_ID = 'a' * 22
+_ALBUM_ID = 'b' * 22
+_TRACK_PAGE = (
+    '<html><head>'
+    f'<meta name="music:album" content="https://open.spotify.com/album/{_ALBUM_ID}"/>'
+    '<meta name="music:album:track" content="3"/>'
+    '</head></html>'
+)
+
+
+def _track_entity():
+    return {
+        'name': 'TestSong',
+        'artists': [{'name': _AL1}],
+        'releaseDate': {'isoString': '2026-05-15T00:00:00Z'},
+        'duration': 178000,
+    }
+
+
+def _album_entity():
+    return {
+        'name': 'TestAlbum (Deluxe)',
+        'trackList': [{'uri': f'spotify:track:t{i}'} for i in range(12)],
+    }
+
+
+def _embeds(kind, _sid):
+    entity = _track_entity() if kind == 'track' else _album_entity()
+    return _embed_payload(entity)
+
+
+def _page_response(text):
+    resp = MagicMock()
+    resp.raise_for_status = lambda: None
+    resp.text = text
+    return resp
+
+
+def test_track_from_id_looks_up_the_album_when_asked():
+    with (
+        patch('downtify.spotify._fetch_embed_json', side_effect=_embeds),
+        patch(
+            'downtify.spotify.httpx.get',
+            return_value=_page_response(_TRACK_PAGE),
+        ) as get,
+    ):
+        song = track_from_id(_TRACK_ID, with_album=True)
+
+    assert get.call_args.args[0] == (
+        f'https://open.spotify.com/track/{_TRACK_ID}'
+    )
+    assert song['album_name'] == 'TestAlbum (Deluxe)'
+    assert song['track_number'] == 3
+    assert song['album_track_total'] == 12
+
+
+def test_track_from_id_skips_the_album_lookup_by_default():
+    with (
+        patch('downtify.spotify._fetch_embed_json', side_effect=_embeds),
+        patch('downtify.spotify.httpx.get') as get,
+    ):
+        song = track_from_id(_TRACK_ID)
+
+    get.assert_not_called()
+    assert not song['album_name']
+
+
+@pytest.mark.parametrize(
+    'page',
+    [
+        '<html><head></head></html>',
+        '<meta name="music:album" content="https://example.com/album/x"/>',
+    ],
+)
+def test_no_album_on_the_track_page_leaves_the_song_as_is(page):
+    with (
+        patch('downtify.spotify._fetch_embed_json', side_effect=_embeds),
+        patch('downtify.spotify.httpx.get', return_value=_page_response(page)),
+    ):
+        song = track_from_id(_TRACK_ID, with_album=True)
+
+    assert not song['album_name']
+    assert 'track_number' not in song
+
+
+def test_a_failed_album_lookup_never_fails_the_track():
+    def embeds(kind, sid):
+        if kind == 'album':
+            raise httpx.ConnectError('down')
+        return _embeds(kind, sid)
+
+    with (
+        patch('downtify.spotify._fetch_embed_json', side_effect=embeds),
+        patch(
+            'downtify.spotify.httpx.get',
+            return_value=_page_response(_TRACK_PAGE),
+        ),
+    ):
+        song = track_from_id(_TRACK_ID, with_album=True)
+    assert not song['album_name']
+
+    with (
+        patch('downtify.spotify._fetch_embed_json', side_effect=_embeds),
+        patch('downtify.spotify.httpx.get', side_effect=OSError('down')),
+    ):
+        assert not track_from_id(_TRACK_ID, with_album=True)['album_name']
+
+
+@patch('downtify.spotify.track_from_id')
+def test_enrich_fetches_the_album_when_only_the_album_is_missing(
+    mock_track_from_id,
+):
+    mock_track_from_id.return_value = {'album_name': 'TestAlbum'}
+    song = {
+        'song_id': _TRACK_ID,
+        'source': 'spotify',
+        'name': 'TestSong',
+        'artists': [_AL1],
+        'year': '2026',
+        'track_number': 1,
+    }
+
+    out = enrich_track_from_spotify_if_sparse(song)
+
+    mock_track_from_id.assert_called_once_with(_TRACK_ID, with_album=True)
+    assert out['album_name'] == 'TestAlbum'
+
+
+def test_resolving_a_track_link_includes_its_album():
+    with (
+        patch('downtify.spotify._fetch_embed_json', side_effect=_embeds),
+        patch(
+            'downtify.spotify.httpx.get',
+            return_value=_page_response(_TRACK_PAGE),
+        ),
+    ):
+        song = resolve(f'https://open.spotify.com/track/{_TRACK_ID}')
+
+    assert song['album_name'] == 'TestAlbum (Deluxe)'
+
+
+def test_top_songs_leave_the_album_to_the_overview():
+    calls = []
+
+    def enrich(song, **kw):
+        calls.append(kw)
+        return song
+
+    entity = {
+        'name': 'Test Artist',
+        'trackList': [
+            {
+                'uri': f'spotify:track:{_TRACK_ID}',
+                'title': 'One',
+                'subtitle': _AL1,
+            }
+        ],
+    }
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload(entity),
+        ),
+        patch(
+            'downtify.spotify.enrich_track_from_spotify_if_sparse',
+            side_effect=enrich,
+        ),
+        patch('downtify.spotify._top_track_overview', return_value={}),
+    ):
+        artist_top_songs_from_id('artist0000000000000000')
+
+    assert calls == [{'with_album': False}]

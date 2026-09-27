@@ -38,6 +38,19 @@ _USER_AGENT = (
 # for a minimal ``Mozilla/5.0`` probe — reuse that behaviour here only.
 _ALBUM_OPEN_PAGE_UA = 'Mozilla/5.0'
 
+# The track embed carries no album at all (no ``album`` key, no album
+# uri), but the canonical open.spotify.com/track/{id} HTML names it in
+# its Open Graph music tags, with the track's position on it.
+_TRACK_OPEN_PAGE_ALBUM = re.compile(
+    r'<meta\s+name=["\']music:album["\']\s+content=["\']'
+    r'https://open\.spotify\.com/album/([A-Za-z0-9]{22})',
+    re.I,
+)
+_TRACK_OPEN_PAGE_ALBUM_TRACK = re.compile(
+    r'<meta\s+name=["\']music:album:track["\']\s+content=["\'](\d+)["\']',
+    re.I,
+)
+
 # Embed album payloads often set ``releaseDate`` to ``null``. The canonical
 # open.spotify.com/album/{id} HTML still publishes ``music:release_date``.
 _ALBUM_OPEN_PAGE_META_RELEASE = re.compile(
@@ -557,12 +570,16 @@ def _merge_full_track_metadata(
 
 
 def enrich_track_from_spotify_if_sparse(
-    song: dict[str, Any],
+    song: dict[str, Any], *, with_album: bool = True
 ) -> dict[str, Any]:
     """Fill missing Spotify tagging fields from the per-track embed.
 
     Playlist browse rows often omit ``year``, ``release_date``, and
     ``track_number``; monitored playlists re-fetch each track the same way.
+    A row with no album (a single track from search) also gets its album
+    looked up (see :func:`track_from_id`'s ``with_album``), so the file
+    isn't left without an album tag - unless *with_album* is off, for a
+    caller that fills the album in some cheaper way.
     """
 
     if song.get('source') != 'spotify':
@@ -577,10 +594,15 @@ def enrich_track_from_spotify_if_sparse(
         or str(song.get('year') or '').strip()
     )
     has_track = song.get('track_number') is not None
-    if has_date and has_track:
+    need_album = with_album and not str(song.get('album_name') or '').strip()
+    if has_date and has_track and not need_album:
         return song
     try:
-        full = track_from_id(track_id)
+        full = (
+            track_from_id(track_id, with_album=True)
+            if need_album
+            else track_from_id(track_id)
+        )
     except Exception:
         logger.opt(exception=True).debug(
             'Per-track Spotify enrich failed for {}', track_id
@@ -589,10 +611,89 @@ def enrich_track_from_spotify_if_sparse(
     return _merge_full_track_metadata(song, full)
 
 
-def track_from_id(track_id: str) -> dict[str, Any]:
+def track_from_id(
+    track_id: str, *, with_album: bool = False
+) -> dict[str, Any]:
+    """A Spotify track as a song dict, from its embed page.
+
+    The track embed has no album (see :data:`_TRACK_OPEN_PAGE_ALBUM`), so
+    ``album_name`` comes back empty. With *with_album* it is looked up
+    too (:func:`_fill_album_from_open_page`, two more requests) - what a
+    single-track download needs, since nothing else supplies the album
+    tag for it. Callers that already know the album (a playlist or album
+    row being topped up) leave it off.
+    """
+
     payload = _fetch_embed_json('track', track_id)
     entity = _entity_from(payload)
-    return _track_dict(entity, track_id=track_id)
+    song = _track_dict(entity, track_id=track_id)
+    if with_album and not song.get('album_name'):
+        _fill_album_from_open_page(song, track_id)
+    return song
+
+
+def _album_ref_from_open_track_page(
+    track_id: str,
+) -> tuple[str, Optional[int]]:
+    """``(album_id, track_number)`` from the public track page's
+    ``music:album`` / ``music:album:track`` meta tags, or ``('', None)``
+    when the page can't be fetched or doesn't name an album."""
+
+    if not re.fullmatch(r'[A-Za-z0-9]{22}', track_id or ''):
+        return '', None
+    try:
+        resp = httpx.get(
+            f'https://open.spotify.com/track/{track_id}',
+            headers={
+                'User-Agent': _ALBUM_OPEN_PAGE_UA,
+                'Accept-Language': 'en-US,en;q=0.9',
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Spotify open track page fetch failed for album id={}', track_id
+        )
+        return '', None
+    html = resp.text
+    album = _TRACK_OPEN_PAGE_ALBUM.search(html)
+    if not album:
+        return '', None
+    number = _TRACK_OPEN_PAGE_ALBUM_TRACK.search(html)
+    track_number = int(number.group(1)) if number else None
+    return album.group(1), (track_number if track_number else None)
+
+
+def _fill_album_from_open_page(song: dict[str, Any], track_id: str) -> None:
+    """Fill *song*'s ``album_name`` - and, when it has none yet, its
+    ``track_number`` / ``album_track_total`` - from the album the public
+    track page names. Leaves *song* as it is on any failure: a missing
+    album tag is better than a failed download."""
+
+    album_id, track_number = _album_ref_from_open_track_page(track_id)
+    if not album_id:
+        return
+    try:
+        entity = _entity_from(_fetch_embed_json('album', album_id))
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Spotify album embed lookup failed for {}', album_id
+        )
+        return
+    name = str(entity.get('name') or entity.get('title') or '').strip()
+    if not name:
+        return
+    song['album_name'] = name
+    if track_number and not song.get('track_number'):
+        song['track_number'] = track_number
+    track_items = (
+        entity.get('trackList')
+        or (entity.get('tracks') or {}).get('items')
+        or []
+    )
+    if track_items and not song.get('album_track_total'):
+        song['album_track_total'] = len(track_items)
 
 
 def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
@@ -1400,7 +1501,16 @@ def artist_top_songs_from_id(
             else None
         )
         # map() keeps the shelf's order whichever enrichment finishes first.
-        songs = list(pool.map(enrich_track_from_spotify_if_sparse, songs))
+        # The overview below brings every top song's album name, so no
+        # per-song album lookup here.
+        songs = list(
+            pool.map(
+                lambda s: enrich_track_from_spotify_if_sparse(
+                    s, with_album=False
+                ),
+                songs,
+            )
+        )
         overview = overview_future.result() if overview_future else None
     if overview is not None:
         for song in songs:
@@ -1784,7 +1894,7 @@ def resolve(url: str) -> Any:
         raise ValueError('Not a Spotify URL')
     kind, sid = parsed
     if kind == 'track':
-        return track_from_id(sid)
+        return track_from_id(sid, with_album=True)
     if kind == 'album':
         return album_tracks_from_id(sid)
     if kind == 'playlist':
