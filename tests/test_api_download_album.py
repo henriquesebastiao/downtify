@@ -14,9 +14,13 @@ import asyncio
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from downtify import api
 from downtify.api import _songs_for_album_download, download_album_endpoint
+
+# The route functions take the request; these tests call them directly.
+_REQUEST = Request({'type': 'http', 'headers': []})
 
 ALBUM_URL = 'https://music.youtube.com/browse/MPREb_test123'
 
@@ -73,7 +77,7 @@ def test_songs_for_album_download_returns_resolved_tracks(monkeypatch):
 def test_download_album_endpoint_requires_downloader(monkeypatch):
     monkeypatch.setattr(api.state, 'downloader', None)
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(download_album_endpoint(url=ALBUM_URL))
+        asyncio.run(download_album_endpoint(_REQUEST, url=ALBUM_URL))
     assert exc_info.value.status_code == 500
 
 
@@ -97,7 +101,7 @@ def test_download_album_endpoint_keeps_shared_album_metadata(monkeypatch):
 
     monkeypatch.setattr(api, '_run_download', fake_run_download)
 
-    result = asyncio.run(download_album_endpoint(url=ALBUM_URL))
+    result = asyncio.run(download_album_endpoint(_REQUEST, url=ALBUM_URL))
 
     assert result == {'good-1': 'good-1.mp3', 'good-2': 'good-2.mp3'}
     # every track was downloaded using the exact, shared album metadata -
@@ -119,5 +123,5 @@ def test_download_album_endpoint_skips_songs_without_id(monkeypatch):
 
     monkeypatch.setattr(api, '_run_download', fake_run_download)
 
-    result = asyncio.run(download_album_endpoint(url=ALBUM_URL))
+    result = asyncio.run(download_album_endpoint(_REQUEST, url=ALBUM_URL))
     assert result == {}

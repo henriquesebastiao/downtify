@@ -11,6 +11,7 @@
         stacked
       >
         <form
+          v-if="auth.isAdmin.value"
           class="flex w-full flex-col gap-2 sm:flex-row sm:items-end"
           @submit.prevent="saveName"
         >
@@ -29,6 +30,7 @@
             {{ t('apps.save') }}
           </UiButton>
         </form>
+        <p v-else-if="info" class="text-sm font-semibold">{{ info.name }}</p>
         <p v-if="info" class="text-[12px] text-faint">
           {{ t('apps.serverId', { id: info.server_id }) }} · Downtify
           {{ info.version }}
@@ -39,7 +41,11 @@
     <!-- Paired apps -->
     <SettingGroup
       :title="t('apps.devicesGroup')"
-      :description="t('apps.devicesGroupHint')"
+      :description="
+        auth.isAdmin.value
+          ? t('apps.devicesGroupAdminHint')
+          : t('apps.devicesGroupHint')
+      "
     >
       <div class="flex items-center justify-between gap-3 px-5 py-4">
         <p class="text-sm text-muted">
@@ -80,80 +86,16 @@
       </ul>
     </SettingGroup>
 
-    <!-- Sign-in -->
+    <!-- Signing out -->
     <SettingGroup
-      :title="t('apps.signInGroup')"
-      :description="t('apps.signInGroupHint')"
+      v-if="!auth.authDisabled.value"
+      :title="t('apps.signOutGroup')"
     >
-      <SettingRow
-        :label="
-          status?.has_password
-            ? t('apps.changePassword')
-            : t('apps.setPassword')
-        "
-        :description="
-          t('apps.passwordHint', { count: status?.min_password_length || 8 })
-        "
-        stacked
-      >
-        <form
-          class="flex w-full flex-col gap-2 sm:flex-row sm:items-end"
-          @submit.prevent="savePassword"
-        >
-          <UiInput
-            v-if="status?.has_password"
-            v-model="currentPassword"
-            class="min-w-0 flex-1"
-            type="password"
-            :label="t('apps.currentPassword')"
-            autocomplete="current-password"
-          />
-          <UiInput
-            v-model="newPassword"
-            class="min-w-0 flex-1"
-            type="password"
-            :label="t('apps.newPassword')"
-            autocomplete="new-password"
-            :error="passwordError"
-          />
-          <UiButton
-            type="submit"
-            :loading="savingPassword"
-            :disabled="!newPassword"
-          >
-            {{ t('apps.save') }}
-          </UiButton>
-        </form>
-      </SettingRow>
-      <SettingRow
-        :label="t('apps.requireSignIn')"
-        :description="
-          status?.forced_by_env
-            ? t('apps.requireForced')
-            : status?.require_sign_in
-              ? t('apps.requireOnHint')
-              : t('apps.requireOffHint')
-        "
-      >
-        <UiSwitch
-          :model-value="Boolean(status?.require_sign_in)"
-          :disabled="Boolean(status?.forced_by_env) || !status?.has_password"
-          :aria-label="t('apps.requireSignIn')"
-          @update:model-value="toggleRequire"
-        />
-      </SettingRow>
       <SettingRow
         :label="t('apps.signOutEverywhere')"
         :description="t('apps.signOutEverywhereHint')"
       >
-        <UiButton
-          v-if="status?.via === 'session'"
-          variant="ghost"
-          @click="auth.signOut"
-        >
-          {{ t('apps.signOut') }}
-        </UiButton>
-        <UiButton variant="danger" icon="lock" @click="revokeEverything">
+        <UiButton variant="danger" icon="lock" @click="signOutEverywhere">
           {{ t('apps.signOutEverywhereButton') }}
         </UiButton>
       </SettingRow>
@@ -207,48 +149,18 @@
         </template>
       </div>
     </UiModal>
-
-    <!-- Turning sign-in on asks for the password (it also signs this
-         browser in, so the page doesn't lock itself out). -->
-    <UiModal
-      :open="requireOpen"
-      :title="t('apps.requireTitle')"
-      :description="t('apps.requireBody')"
-      @close="requireOpen = false"
-    >
-      <form
-        class="flex flex-col gap-4 px-5 py-5 sm:px-6"
-        @submit.prevent="confirmRequire"
-      >
-        <UiInput
-          v-model="requirePassword"
-          type="password"
-          :label="t('auth.password')"
-          autocomplete="current-password"
-          :error="requireError"
-        />
-        <UiButton
-          type="submit"
-          variant="primary"
-          :loading="savingRequire"
-          :disabled="!requirePassword"
-        >
-          {{ t('apps.requireConfirm') }}
-        </UiButton>
-      </form>
-    </UiModal>
   </div>
 </template>
 
 <script setup>
-// Settings > Apps: the server's name, paired apps (and pairing a new
-// one), the web password and "Require sign-in". See downtify/auth.py.
+// Settings > Apps: the server's name (an admin changes it), your paired
+// apps - everyone's, for an admin - and pairing a new one to your
+// account, and signing out everywhere. See downtify/auth.py.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiInput from '../ui/UiInput.vue'
 import UiModal from '../ui/UiModal.vue'
-import UiSwitch from '../ui/UiSwitch.vue'
 import SettingGroup from './SettingGroup.vue'
 import SettingRow from './SettingRow.vue'
 import API from '/src/model/api'
@@ -261,7 +173,6 @@ import { useI18n } from '/src/i18n'
 const { t, locale } = useI18n()
 const ui = useUi()
 const auth = useAuth()
-const status = auth.status
 
 const info = ref(null)
 const serverName = ref('')
@@ -309,6 +220,8 @@ async function saveName() {
 
 function deviceDetails(device) {
   const parts = []
+  if (auth.isAdmin.value && device.username)
+    parts.push(t('apps.ownedBy', { name: device.username }))
   if (device.platform) parts.push(device.platform)
   if (device.last_seen_at)
     parts.push(
@@ -412,71 +325,7 @@ function closePairing() {
   stopTimers()
 }
 
-// ── Password and "Require sign-in" ─────────────────────────────────
-const currentPassword = ref('')
-const newPassword = ref('')
-const passwordError = ref('')
-const savingPassword = ref(false)
-
-async function savePassword() {
-  savingPassword.value = true
-  passwordError.value = ''
-  try {
-    await API.setPassword(newPassword.value, currentPassword.value)
-    currentPassword.value = ''
-    newPassword.value = ''
-    await auth.load()
-    ui.toast(t('apps.passwordSaved'), { kind: 'success' })
-  } catch (err) {
-    passwordError.value = errorOf(err)
-  } finally {
-    savingPassword.value = false
-  }
-}
-
-const requireOpen = ref(false)
-const requirePassword = ref('')
-const requireError = ref('')
-const savingRequire = ref(false)
-
-async function toggleRequire(enabled) {
-  if (enabled) {
-    requirePassword.value = ''
-    requireError.value = ''
-    requireOpen.value = true
-    return
-  }
-  const ok = await ui.confirm({
-    title: t('apps.requireOffTitle'),
-    body: t('apps.requireOffBody'),
-    confirmLabel: t('apps.requireOffConfirm'),
-    danger: true,
-  })
-  if (!ok) return
-  try {
-    await API.setRequireSignIn(false)
-    await auth.load()
-  } catch (err) {
-    ui.toast(errorOf(err), { kind: 'error' })
-  }
-}
-
-async function confirmRequire() {
-  savingRequire.value = true
-  requireError.value = ''
-  try {
-    await API.setRequireSignIn(true, requirePassword.value)
-    requireOpen.value = false
-    await auth.load()
-    ui.toast(t('apps.requireOnDone'), { kind: 'success' })
-  } catch (err) {
-    requireError.value = errorOf(err)
-  } finally {
-    savingRequire.value = false
-  }
-}
-
-async function revokeEverything() {
+async function signOutEverywhere() {
   const ok = await ui.confirm({
     title: t('apps.signOutEverywhereTitle'),
     body: t('apps.signOutEverywhereBody'),
@@ -485,7 +334,7 @@ async function revokeEverything() {
   })
   if (!ok) return
   try {
-    await API.revokeAll()
+    await API.signOutEverywhere()
     window.location.reload()
   } catch (err) {
     ui.toast(errorOf(err), { kind: 'error' })
@@ -495,7 +344,6 @@ async function revokeEverything() {
 onMounted(() => {
   loadInfo()
   loadDevices()
-  auth.load()
   offMessage = API.onMessage((data) => {
     if (
       data?.type === 'device_paired' &&

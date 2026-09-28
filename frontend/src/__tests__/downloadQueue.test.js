@@ -16,6 +16,9 @@ const { listeners, getQueue, jobs } = vi.hoisted(() => {
 
 vi.mock('/src/model/api', () => ({
   default: {
+    onUnauthorized: () => () => {},
+    getAuthStatus: () =>
+      Promise.resolve({ data: { signed_in: true, user: { role: 'admin' } } }),
     onMessage(fn) {
       listeners.push(fn)
       return () => {}

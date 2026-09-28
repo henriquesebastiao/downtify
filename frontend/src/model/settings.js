@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue'
 
 import API from '/src/model/api'
+import { useAuth } from '/src/model/auth'
 import { currentLocale } from '/src/i18n'
 import { needsLanguageSync, splitUiLanguage } from '/src/lib/uiLanguage'
 
@@ -150,28 +151,52 @@ async function syncUiLanguage() {
   }
 }
 
-API.getSettings()
-  .then((res) => {
-    const { uiLanguage: known, rest } = splitUiLanguage(res.data)
-    uiLanguage.value = known
-    // Merge nested blocks over the defaults so a settings file saved
-    // before slskd/Navidrome existed still binds every form field.
-    settings.value = {
-      ...settings.value,
-      ...rest,
-      slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
-      navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
+// Server settings are an admin's: other users never load them (the
+// Settings page only shows them General, Apps and About).
+let requested = false
+
+function loadServerSettings() {
+  if (requested) return
+  requested = true
+  API.getSettings()
+    .then((res) => {
+      const { uiLanguage: known, rest } = splitUiLanguage(res.data)
+      uiLanguage.value = known
+      // Merge nested blocks over the defaults so a settings file saved
+      // before slskd/Navidrome existed still binds every form field.
+      settings.value = {
+        ...settings.value,
+        ...rest,
+        slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
+        navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
+      }
+      saved.value = snapshot()
+      loaded.value = true
+      syncUiLanguage()
+    })
+    .catch(() => {
+      loaded.value = true
+    })
+}
+
+const auth = useAuth()
+watch(
+  () => [auth.loaded.value, auth.isAdmin.value],
+  ([ready, admin]) => {
+    if (!ready) return
+    if (admin) {
+      loadServerSettings()
+    } else {
+      // Nothing of the server's to edit: never "unsaved".
+      saved.value = snapshot()
+      loaded.value = true
     }
-    saved.value = snapshot()
-    loaded.value = true
-    syncUiLanguage()
-  })
-  .catch(() => {
-    loaded.value = true
-  })
+  },
+  { immediate: true }
+)
 
 watch(currentLocale, () => {
-  if (loaded.value) syncUiLanguage()
+  if (loaded.value && auth.isAdmin.value) syncUiLanguage()
 })
 
 const dirty = computed(() => loaded.value && snapshot() !== saved.value)

@@ -13,7 +13,14 @@ import {
 
 // GET /api/preview, for songs without a clip of their own.
 const findPreview = vi.fn()
-vi.mock('/src/model/api', () => ({ default: { findPreview } }))
+vi.mock('/src/model/api', () => ({
+  default: {
+    findPreview,
+    onUnauthorized: () => () => {},
+    getAuthStatus: () =>
+      Promise.resolve({ data: { signed_in: true, user: { role: 'admin' } } }),
+  },
+}))
 
 const CLIP = 'https://p.scdn.co/mp3-preview/b5ee275ca337899f762b1c1883c11e24'
 

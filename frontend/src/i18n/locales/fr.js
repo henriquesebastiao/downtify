@@ -38,6 +38,8 @@ export default {
     collapse: 'Réduire la barre latérale',
     expand: 'Déployer la barre latérale',
     updateAvailable: 'Mise à jour {version} disponible',
+    signOut: 'Se déconnecter',
+    signOutAs: 'Se déconnecter ({name})',
   },
   actions: {
     play: 'Lire',
@@ -681,7 +683,7 @@ export default {
     playerGroup: 'Lecteur',
     showLyrics: 'Afficher les paroles dans le lecteur',
     showLyricsHint:
-      'Désactivez pour masquer le panneau des paroles, son bouton et son raccourci. Vos fichiers conservent leurs paroles et les téléchargements continuent de les chercher. Enregistré sur cet appareil.',
+      'Désactivez pour masquer le panneau des paroles, son bouton et son raccourci. Vos fichiers conservent leurs paroles et les téléchargements continuent de les chercher.',
     searchGroup: 'Recherche',
     searchAlbums: 'Afficher les albums dans les résultats',
     searchAlbumsHint:
@@ -869,6 +871,10 @@ export default {
     docs: 'Documentation',
     docsHint: 'Installation, paramètres et référence de l’API.',
     openDocs: 'Ouvrir la documentation',
+    users: 'Utilisateurs',
+    activity: 'Activité',
+    personalHint:
+      'Rien qu’à vous : ils suivent votre compte dans chaque navigateur et ne changent rien pour les autres.',
   },
   shortcuts: {
     title: 'Raccourcis clavier',
@@ -891,11 +897,21 @@ export default {
   },
   auth: {
     signInTitle: 'Se connecter à Downtify',
-    signInBody: 'Ce serveur exige une connexion.',
+    signInBody:
+      'Connectez-vous avec votre nom d’utilisateur et votre mot de passe.',
+    username: 'Nom d’utilisateur',
     password: 'Mot de passe',
     signIn: 'Se connecter',
-    wrongPassword: 'Mot de passe incorrect',
-    forgotHint: 'Oublié ? Lancez « python main.py auth-reset » sur le serveur.',
+    wrongPassword: 'Nom d’utilisateur ou mot de passe incorrect',
+    tooMany: 'Trop de tentatives. Patientez quelques minutes et réessayez.',
+    forgotHint:
+      'Mot de passe admin oublié ? Lancez « python main.py auth-reset » sur le serveur.',
+    noticeTitle: 'Downtify a maintenant des comptes utilisateur',
+    noticeBody:
+      'Chacun se connecte désormais avec un nom d’utilisateur et un mot de passe, et un admin peut créer des comptes pour d’autres personnes dans Réglages → Utilisateurs. Connectez-vous avec :',
+    noticeKeptPassword: 'le mot de passe défini auparavant',
+    noticeChange: 'Changez ensuite le mot de passe dans Réglages → Général.',
+    noticeOk: 'Compris',
   },
   apps: {
     serverGroup: 'Ce serveur',
@@ -919,37 +935,9 @@ export default {
     revokeBody:
       'Il cesse de fonctionner immédiatement, jusqu’à une nouvelle association.',
     lastSeen: 'vu {when}',
-    signInGroup: 'Connexion',
-    signInGroupHint: 'Qui peut utiliser ce serveur.',
-    setPassword: 'Définir un mot de passe',
-    changePassword: 'Changer le mot de passe',
-    passwordHint:
-      'Au moins {count} caractères. Sert à se connecter à cette page.',
-    currentPassword: 'Mot de passe actuel',
-    newPassword: 'Nouveau mot de passe',
-    passwordSaved: 'Mot de passe enregistré',
-    requireSignIn: 'Exiger la connexion',
-    requireOffHint:
-      'Désactivé : toute personne qui atteint ce serveur peut l’utiliser, associer une app et modifier ses réglages.',
-    requireOnHint:
-      'Activé : la page demande le mot de passe et les apps doivent être associées.',
-    requireForced: 'Défini par DOWNTIFY_REQUIRE_SIGN_IN sur le serveur.',
-    requireTitle: 'Exiger la connexion',
-    requireBody: 'Saisissez le mot de passe. Ce navigateur reste connecté.',
-    requireConfirm: 'Exiger la connexion',
-    requireOnDone: 'La connexion est désormais exigée',
-    requireOffTitle: 'Ne plus exiger la connexion ?',
-    requireOffBody:
-      'Toute personne qui atteint ce serveur pourra de nouveau l’utiliser, sans mot de passe.',
-    requireOffConfirm: 'Ne plus exiger',
-    signOut: 'Se déconnecter',
     signOutEverywhere: 'Se déconnecter partout',
-    signOutEverywhereHint:
-      'Dissocie toutes les apps et déconnecte tous les navigateurs, celui-ci compris.',
     signOutEverywhereButton: 'Se déconnecter partout',
     signOutEverywhereTitle: 'Se déconnecter partout ?',
-    signOutEverywhereBody:
-      'Toutes les apps devront être associées à nouveau, et tous les navigateurs reconnectés.',
     pairTitle: 'Associer un téléphone',
     pairBody:
       'Dans l’app Downtify, choisissez « Scanner le code » et pointez l’appareil photo ici.',
@@ -959,6 +947,127 @@ export default {
     paired: '{name} est associé',
     pairExpired: 'Ce code a expiré.',
     newCode: 'Nouveau code',
+    devicesGroupAdminHint:
+      'Téléphones et autres appareils qui peuvent lire la bibliothèque - ceux de tout le monde. Les applis que vous associez appartiennent à votre compte.',
+    ownedBy: 'de {name}',
+    signOutGroup: 'Déconnexion',
+    signOutEverywhereHint:
+      'Dissocie toutes vos applis et vous déconnecte de tous vos navigateurs, y compris celui-ci.',
+    signOutEverywhereBody:
+      'Vos applis devront être associées à nouveau, et vous devrez vous reconnecter dans chaque navigateur.',
+  },
+  account: {
+    title: 'Compte',
+    hint: 'Qui est connecté dans ce navigateur.',
+    roleAdmin: 'Admin',
+    roleUser: 'Utilisateur',
+    signOut: 'Se déconnecter',
+    defaultPasswordWarning:
+      'Vous utilisez encore le mot de passe par défaut. Changez-le ci-dessous pour que personne d’autre ne puisse se connecter à votre place.',
+    username: 'Nom d’utilisateur',
+    usernameHint: 'De 3 à 32 lettres, chiffres, points, tirets ou tirets bas.',
+    password: 'Mot de passe',
+    passwordHint: 'Au moins {count} caractères.',
+    currentPassword: 'Mot de passe actuel',
+    newPassword: 'Nouveau mot de passe',
+    confirmPassword: 'Répétez le nouveau mot de passe',
+    passwordsDiffer: 'Les nouveaux mots de passe ne correspondent pas',
+    wrongCurrentPassword: 'Le mot de passe actuel est incorrect',
+    passwordSaved: 'Mot de passe changé',
+    saved: 'Enregistré',
+    needsAdmin: 'Seul un admin peut faire cela',
+    defaultPasswordTitle: 'Changez le mot de passe par défaut',
+    defaultPasswordBody:
+      '{name} est connecté avec le mot de passe par défaut, connu de quiconque connaît Downtify. Changez-le dans Réglages → Général.',
+    later: 'Plus tard',
+    changePassword: 'Changer le mot de passe',
+  },
+  users: {
+    title: 'Utilisateurs',
+    hint: 'Qui peut se connecter à ce serveur. Les admins peuvent tout changer ; les utilisateurs peuvent écouter, chercher, télécharger et modifier leur propre compte.',
+    count: {
+      one: '{count} utilisateur',
+      other: '{count} utilisateurs',
+    },
+    add: 'Ajouter un utilisateur',
+    you: 'Vous',
+    edit: 'Modifier {name}',
+    delete: 'Supprimer {name}',
+    everyoneGroup: 'Tout le monde',
+    signOutAll: 'Déconnecter tout le monde',
+    signOutAllHint:
+      'Dissocie toutes les applis et déconnecte tous les navigateurs, de tous les utilisateurs - vous compris.',
+    signOutAllTitle: 'Déconnecter tout le monde ?',
+    signOutAllBody:
+      'Chaque utilisateur devra se reconnecter et associer à nouveau ses applis.',
+    editTitle: 'Modifier {name}',
+    addTitle: 'Ajouter un utilisateur',
+    newPassword: 'Nouveau mot de passe',
+    newPasswordHint:
+      'Laissez vide pour garder l’actuel. Un nouveau mot de passe le déconnecte de ses navigateurs.',
+    role: 'Rôle',
+    roleAdminHint:
+      'Tout : tous les réglages, tous les utilisateurs et le journal d’activité.',
+    roleUserHint:
+      'Écouter, chercher, télécharger et aimer ; dans les Réglages, seulement Général, Applis et À propos.',
+    lastSignIn: 'connecté {when}',
+    neverSignedIn: 'jamais connecté',
+    defaultPassword: 'mot de passe par défaut',
+    deleteTitle: 'Supprimer {name} ?',
+    deleteBody:
+      'Ses applis sont dissociées et ses navigateurs déconnectés. Ses téléchargements restent dans la bibliothèque.',
+    deleteConfirm: 'Supprimer',
+  },
+  activity: {
+    nowTitle: 'En cours de lecture',
+    nowHint:
+      'Ce que lit chaque navigateur et appli. Mis à jour toutes les quelques secondes.',
+    nowEmpty: 'Rien n’est en lecture pour le moment.',
+    paused: 'En pause',
+    logTitle: 'Historique',
+    logHint:
+      'Ce que chacun a fait : connexions, titres écoutés, téléchargements, modifications. Conservé 90 jours.',
+    filterUser: 'Utilisateur',
+    filterKind: 'Quoi',
+    logEmpty: 'Rien pour l’instant.',
+    someone: 'Quelqu’un',
+    more: 'Afficher plus',
+    allUsers: 'Tous les utilisateurs',
+    allKinds: 'Tout',
+    kinds: {
+      login: 'Connexions',
+      login_failed: 'Connexions refusées',
+      logout: 'Déconnexions',
+      playback: 'Titres écoutés',
+      download: 'Téléchargements',
+      like: 'J’aime',
+      unlike: 'J’aime retirés',
+      delete: 'Fichiers supprimés',
+      device_paired: 'Applis associées',
+      device_unpaired: 'Applis dissociées',
+      user_created: 'Utilisateurs ajoutés',
+      user_updated: 'Utilisateurs modifiés',
+      user_deleted: 'Utilisateurs supprimés',
+      password_changed: 'Mots de passe changés',
+      settings_changed: 'Réglages modifiés',
+    },
+    did: {
+      login: 's’est connecté',
+      login_failed: 'n’a pas pu se connecter (mauvais mot de passe)',
+      logout: 's’est déconnecté',
+      playback: 'a écouté {what}',
+      download: 'a téléchargé {what}',
+      like: 'a aimé {what}',
+      unlike: 'n’aime plus {what}',
+      delete: 'a supprimé {what}',
+      device_paired: 'a associé {what}',
+      device_unpaired: 'a dissocié {what}',
+      user_created: 'a ajouté l’utilisateur {what}',
+      user_updated: 'a modifié l’utilisateur {what}',
+      user_deleted: 'a supprimé l’utilisateur {what}',
+      password_changed: 'a changé le mot de passe de {what}',
+      settings_changed: 'a modifié des réglages : {what}',
+    },
   },
   discover: {
     title: 'Découvrir',

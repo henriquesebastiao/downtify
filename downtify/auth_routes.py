@@ -16,17 +16,18 @@ from loguru import logger
 
 from . import api
 from .auth import (
-    MIN_PASSWORD_LENGTH,
     SESSION_COOKIE,
     SESSION_TTL,
     AuthStore,
     Principal,
     client_ip,
     identify,
+    open_principal,
     session_cookie,
     trusted_proxies_from_env,
 )
 from .server_identity import server_info
+from .users import MIN_PASSWORD_LENGTH, ROLE_ADMIN
 
 router = APIRouter()
 
@@ -45,6 +46,31 @@ def _ip(request: Request) -> str:
 
 def _principal(request: Request) -> Optional[Principal]:
     return (request.scope.get('state') or {}).get('principal')
+
+
+def _me(request: Request) -> Principal:
+    """The signed-in user making *request* (the middleware made sure
+    there is one)."""
+
+    principal = _principal(request)
+    if principal is None or not principal.user_id:
+        raise HTTPException(status_code=401, detail='Sign in required')
+    return principal
+
+
+def _own_device(request: Request, device_id: str) -> dict[str, Any]:
+    """*device_id*, when the user may manage it (theirs, or anyone's for
+    an admin); else 404."""
+
+    me = _me(request)
+    device = _store().get_device(device_id)
+    if (
+        device is None
+        or device.get('revoked_at')
+        or (not me.is_admin and int(device['user_id']) != me.user_id)
+    ):
+        raise HTTPException(status_code=404, detail='Device not found')
+    return device
 
 
 def _is_https(request: Request) -> bool:
@@ -109,9 +135,7 @@ def get_server_info() -> dict[str, Any]:
     return server_info(
         identity,
         version=api.state.version,
-        require_sign_in=bool(
-            api.state.auth and api.state.auth.require_sign_in
-        ),
+        require_sign_in=not (api.state.auth and api.state.auth.auth_disabled),
         transcoding=transcoder.capability() if transcoder else None,
     )
 
@@ -139,52 +163,104 @@ async def update_server(request: Request) -> dict[str, Any]:
 
 @router.get('/api/auth/status')
 def auth_status(request: Request) -> dict[str, Any]:
-    """Whether sign-in is required, and who this request is signed in as.
+    """Who this request is signed in as.
 
     ``signed_in`` is what the web app checks before showing the sign-in
     page; ``via`` is ``session`` (a browser), ``device`` (a paired app) or
-    ``null``.
+    ``null``; ``user`` is ``{id, username, role, default_password}``.
+    ``notice`` (only while signed out) is the one-time "accounts are
+    here" message for a server upgraded from a version without them:
+    ``{username, password}`` - ``password`` is ``null`` when the old
+    sign-in password was kept.
     """
 
     store = _store()
-    principal, _bad = identify(request.scope, store, _ip(request))
+    principal, bad = identify(request.scope, store, _ip(request))
+    if principal is None and not bad:
+        principal = open_principal(store)
     device = None
-    if principal is not None and principal.kind == 'device':
-        found = store.get_device(principal.device_id)
-        device = {'id': principal.device_id, 'name': (found or {}).get('name')}
+    user = None
+    if principal is not None:
+        user = store.users.get(principal.user_id)
+        if principal.kind == 'device':
+            found = store.get_device(principal.device_id)
+            device = {
+                'id': principal.device_id,
+                'name': (found or {}).get('name'),
+            }
     return {
-        'require_sign_in': store.require_sign_in,
-        'forced_by_env': store.forced_by_env,
-        'has_password': store.has_password(),
+        'require_sign_in': not store.auth_disabled,
+        'auth_disabled': store.auth_disabled,
         'min_password_length': MIN_PASSWORD_LENGTH,
         'signed_in': principal is not None,
         'via': principal.kind if principal else None,
+        'user': user,
         'device': device,
+        'notice': None
+        if principal or store.auth_disabled
+        else store.users.notice(),
     }
 
 
 @router.post('/api/auth/login')
 async def login(request: Request, response: Response) -> dict[str, Any]:
-    """Sign a browser in with the password (``{password}``)."""
+    """Sign a browser in: ``{username, password}`` -> ``{signed_in,
+    user}``. Rate-limited per address."""
 
     store = _store()
+    if store.auth_disabled:
+        raise HTTPException(
+            status_code=409,
+            detail='Sign-in is turned off (DOWNTIFY_DISABLE_AUTH)',
+        )
     ip = _ip(request)
     wait = api.state.login_limiter.retry_after(ip)
     if wait:
         raise _too_many(wait)
     payload = await _json(request)
+    username = str(payload.get('username') or '').strip()[:64]
     password = str(payload.get('password') or '')
-    ok = await asyncio.to_thread(store.check_password, password)
-    if not ok:
+    user = await asyncio.to_thread(
+        store.users.authenticate, username, password
+    )
+    log = api.state.activity
+    if user is None:
         api.state.login_limiter.fail(ip)
-        logger.warning('Sign-in: wrong password from {}', ip)
-        raise HTTPException(status_code=401, detail='Wrong password')
+        logger.warning('Sign-in: wrong username or password from {}', ip)
+        if log is not None:
+            await asyncio.to_thread(
+                log.record,
+                'login_failed',
+                username=username,
+                summary=username,
+                client=api.client_label(request, None),
+                ip=ip,
+            )
+        raise HTTPException(
+            status_code=401, detail='Wrong username or password'
+        )
     api.state.login_limiter.reset(ip)
     token = await asyncio.to_thread(
-        store.create_session, ip, request.headers.get('user-agent', '')
+        store.create_session,
+        user['id'],
+        ip,
+        request.headers.get('user-agent', ''),
     )
+    await asyncio.to_thread(store.users.record_login, user['id'], ip)
+    if user['role'] == ROLE_ADMIN:
+        # An admin has seen the server with accounts: the notice is done.
+        await asyncio.to_thread(store.users.clear_notice)
+    if log is not None:
+        await asyncio.to_thread(
+            log.record,
+            'login',
+            user_id=user['id'],
+            username=user['username'],
+            client=api.client_label(request, None),
+            ip=ip,
+        )
     _set_session(response, request, token)
-    return {'signed_in': True}
+    return {'signed_in': True, 'user': user}
 
 
 @router.post('/api/auth/logout')
@@ -192,86 +268,40 @@ async def logout(request: Request, response: Response) -> dict[str, Any]:
     """End this browser's session (a no-op for one that has none)."""
 
     token = session_cookie(request.scope)
-    if token and api.state.auth is not None:
-        await asyncio.to_thread(api.state.auth.end_session, token)
+    store = api.state.auth
+    if token and store is not None:
+        user = await asyncio.to_thread(store.session_user, token)
+        await asyncio.to_thread(store.end_session, token)
+        log = api.state.activity
+        if user is not None and log is not None:
+            await asyncio.to_thread(
+                log.record,
+                'logout',
+                user_id=user['id'],
+                username=user['username'],
+                client=api.client_label(request, None),
+                ip=_ip(request),
+            )
     response.delete_cookie(SESSION_COOKIE, path='/')
     return {'signed_in': False}
-
-
-@router.put('/api/auth/password')
-async def change_password(request: Request) -> dict[str, Any]:
-    """Set or change the web password: ``{new_password,
-    current_password}`` (the current one only once a password exists)."""
-
-    store = _store()
-    payload = await _json(request)
-    if store.has_password():
-        ip = _ip(request)
-        wait = api.state.login_limiter.retry_after(ip)
-        if wait:
-            raise _too_many(wait)
-        current = str(payload.get('current_password') or '')
-        if not await asyncio.to_thread(store.check_password, current):
-            api.state.login_limiter.fail(ip)
-            raise HTTPException(
-                status_code=403, detail='The current password is wrong'
-            )
-    try:
-        await asyncio.to_thread(
-            store.set_password, str(payload.get('new_password') or '')
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {'has_password': True}
-
-
-@router.put('/api/auth/require')
-async def set_require_sign_in(
-    request: Request, response: Response
-) -> dict[str, Any]:
-    """Turn "Require sign-in" on (``{enabled: true, password}``) or off.
-
-    Turning it on also signs this browser in, with the password it has
-    to send - otherwise the page doing it would lock itself out.
-    """
-
-    store = _store()
-    payload = await _json(request)
-    enabled = bool(payload.get('enabled'))
-    token = ''
-    if enabled:
-        ip = _ip(request)
-        wait = api.state.login_limiter.retry_after(ip)
-        if wait:
-            raise _too_many(wait)
-        password = str(payload.get('password') or '')
-        if not await asyncio.to_thread(store.check_password, password):
-            api.state.login_limiter.fail(ip)
-            raise HTTPException(status_code=403, detail='Wrong password')
-        token = await asyncio.to_thread(
-            store.create_session, ip, request.headers.get('user-agent', '')
-        )
-    try:
-        await asyncio.to_thread(store.set_require_sign_in, enabled)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    if token:
-        _set_session(response, request, token)
-    logger.info('Require sign-in turned {}', 'on' if enabled else 'off')
-    return {'require_sign_in': store.require_sign_in}
 
 
 # ── Paired devices ──────────────────────────────────────────────────────
 
 
 @router.get('/api/auth/devices')
-def list_devices() -> list[dict[str, Any]]:
-    return _store().list_devices()
+def list_devices(request: Request) -> list[dict[str, Any]]:
+    """The user's paired devices - everyone's for an admin (each with
+    ``user_id`` and ``username``)."""
+
+    me = _me(request)
+    return _store().list_devices(None if me.is_admin else me.user_id)
 
 
 @router.patch('/api/auth/devices/{device_id}')
 async def rename_device(device_id: str, request: Request) -> dict[str, Any]:
     store = _store()
+    _own_device(request, device_id)
     payload = await _json(request)
     if not await asyncio.to_thread(
         store.rename_device, device_id, str(payload.get('name') or '')
@@ -281,25 +311,34 @@ async def rename_device(device_id: str, request: Request) -> dict[str, Any]:
 
 
 @router.delete('/api/auth/devices/{device_id}')
-async def revoke_device(device_id: str) -> dict[str, Any]:
+async def revoke_device(device_id: str, request: Request) -> dict[str, Any]:
     """Unpair a device: its token and signed URLs stop working and its
     WebSocket is closed."""
 
     store = _store()
+    device = _own_device(request, device_id)
     if not await asyncio.to_thread(store.revoke_device, device_id):
         raise HTTPException(status_code=404, detail='Device not found')
     await api.state.connections.close_device(device_id)
+    await api.log_activity(
+        request,
+        'device_unpaired',
+        str(device.get('name') or device_id),
+        {'device_id': device_id, 'owner': device.get('username')},
+    )
     logger.info('Unpaired device {}', device_id)
     return {'id': device_id, 'revoked': True}
 
 
 @router.post('/api/auth/revoke-all')
 async def revoke_all(response: Response) -> dict[str, Any]:
-    """Sign out everything: every device, every browser (this one too)
-    and every signed URL."""
+    """Sign out everything: every user's devices and browsers (this one
+    too) and every signed URL. Admins only."""
 
     await asyncio.to_thread(_store().revoke_everything)
     await api.state.connections.close_device('')
+    for user in await asyncio.to_thread(_store().users.list):
+        await api.state.connections.close_user(user['id'])
     response.delete_cookie(SESSION_COOKIE, path='/')
     logger.warning('Signed out every device and browser')
     return {'revoked': True}
@@ -308,24 +347,34 @@ async def revoke_all(response: Response) -> dict[str, Any]:
 # ── Pairing ─────────────────────────────────────────────────────────────
 
 
+def _own_pairing(request: Request, pairing_id: str) -> None:
+    me = _me(request)
+    owner = api.state.pairing.owner(pairing_id)
+    if owner is not None and owner != me.user_id and not me.is_admin:
+        raise HTTPException(status_code=404, detail='Pairing not found')
+
+
 @router.post('/api/auth/pairing')
-def start_pairing() -> dict[str, Any]:
-    """Start pairing an app: ``{pairing_id, code, expires_in}``. The page
-    shows the code (and a QR code carrying it) and follows the pairing
-    with ``GET /api/auth/pairing/{pairing_id}`` or the ``device_paired``
+def start_pairing(request: Request) -> dict[str, Any]:
+    """Start pairing an app to the signed-in user's account:
+    ``{pairing_id, code, expires_in}``. The page shows the code (and a
+    QR code carrying it) and follows the pairing with
+    ``GET /api/auth/pairing/{pairing_id}`` or the ``device_paired``
     WebSocket message."""
 
     _store()
-    return api.state.pairing.create()
+    return api.state.pairing.create(_me(request).user_id)
 
 
 @router.get('/api/auth/pairing/{pairing_id}')
-def pairing_status(pairing_id: str) -> dict[str, Any]:
+def pairing_status(pairing_id: str, request: Request) -> dict[str, Any]:
+    _own_pairing(request, pairing_id)
     return api.state.pairing.status(pairing_id)
 
 
 @router.delete('/api/auth/pairing/{pairing_id}')
-def cancel_pairing(pairing_id: str) -> dict[str, Any]:
+def cancel_pairing(pairing_id: str, request: Request) -> dict[str, Any]:
+    _own_pairing(request, pairing_id)
     api.state.pairing.cancel(pairing_id)
     return {'cancelled': True}
 
@@ -333,7 +382,8 @@ def cancel_pairing(pairing_id: str) -> dict[str, Any]:
 @router.post('/api/auth/pair')
 async def pair(request: Request) -> dict[str, Any]:
     """An app trades a pairing code for its device token:
-    ``{code, device_name, platform}`` -> ``{token, device, server}``.
+    ``{code, device_name, platform}`` -> ``{token, device, server,
+    user}``. The device belongs to the user who showed the code.
 
     Public and rate-limited per address; a code works once and for five
     minutes. The token is shown here once and never stored.
@@ -346,7 +396,11 @@ async def pair(request: Request) -> dict[str, Any]:
         raise _too_many(wait)
     payload = await _json(request)
     pairing_id = api.state.pairing.claim(payload.get('code'))
-    if pairing_id is None:
+    owner = (
+        api.state.pairing.owner(pairing_id) if pairing_id is not None else None
+    )
+    user = store.users.get(owner) if owner else None
+    if pairing_id is None or user is None:
         api.state.pair_limiter.fail(ip)
         logger.warning('Pairing: wrong or expired code from {}', ip)
         raise HTTPException(
@@ -357,13 +411,25 @@ async def pair(request: Request) -> dict[str, Any]:
         str(payload.get('device_name') or ''),
         str(payload.get('platform') or ''),
         ip,
+        user['id'],
     )
     api.state.pairing.complete(pairing_id, device)
-    await api.state.connections.broadcast({
-        'type': 'device_paired',
-        'pairing_id': pairing_id,
-        'device': device,
-    })
+    await api.state.connections.send_user(
+        user['id'],
+        {'type': 'device_paired', 'pairing_id': pairing_id, 'device': device},
+    )
+    log = api.state.activity
+    if log is not None:
+        await asyncio.to_thread(
+            log.record,
+            'device_paired',
+            user_id=user['id'],
+            username=user['username'],
+            summary=str(device.get('name') or ''),
+            detail={'device_id': device.get('id')},
+            client=str(device.get('name') or ''),
+            ip=ip,
+        )
     logger.info('Paired device {} ({})', device.get('name'), device.get('id'))
     identity = api.state.identity
     return {
@@ -373,6 +439,7 @@ async def pair(request: Request) -> dict[str, Any]:
             'server_id': identity.server_id if identity else '',
             'name': identity.name if identity else '',
         },
+        'user': {'username': user['username'], 'role': user['role']},
     }
 
 
@@ -382,8 +449,4 @@ def ws_ticket(request: Request) -> dict[str, Any]:
     ``/api/ws?client_id=…&ticket=…``, for a client that can't send an
     ``Authorization`` header with the handshake."""
 
-    principal = _principal(request)
-    if principal is None:
-        # Sign-in isn't required: the WebSocket needs no ticket at all.
-        raise HTTPException(status_code=400, detail='Not signed in')
-    return {'ticket': api.state.ws_tickets.create(principal)}
+    return {'ticket': api.state.ws_tickets.create(_me(request))}

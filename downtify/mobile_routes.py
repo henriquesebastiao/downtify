@@ -168,9 +168,9 @@ async def set_like(request: Request) -> dict[str, Any]:
     row = await asyncio.to_thread(_sync().row_for, track_id)
     if row is None:
         raise HTTPException(status_code=404, detail='Track not found')
-    result = await api.apply_like(
-        row['file'], bool(payload.get('liked', True))
-    )
+    liked = bool(payload.get('liked', True))
+    result = await api.apply_like(row['file'], liked)
+    await api.log_activity(request, 'like' if liked else 'unlike', row['file'])
     return {'track_id': track_id, 'liked': result['liked']}
 
 

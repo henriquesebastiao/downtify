@@ -175,24 +175,28 @@ working without changes:
   song with no ``preview_url`` of its own - ``?artist=&title=&duration=``,
   response ``{preview_url}``, ``""`` when Deezer has no matching song)
 * ``GET  /api/server/info`` (public: server id, name, version,
-  ``api_version``, whether sign-in is required, capabilities) and
+  ``api_version``, ``require_sign_in`` (always true), capabilities) and
   ``PATCH /api/server`` (``{name}``) - see ``downtify/auth_routes.py``
-* ``GET  /api/auth/status``, ``POST /api/auth/login``,
-  ``POST /api/auth/logout``, ``PUT /api/auth/password``,
-  ``PUT /api/auth/require`` (sign-in), ``GET|PATCH|DELETE
-  /api/auth/devices[/{id}]``, ``POST /api/auth/revoke-all`` (paired
-  apps), ``POST /api/auth/pairing``, ``GET|DELETE
-  /api/auth/pairing/{id}``, ``POST /api/auth/pair`` (pairing an app) and
-  ``POST /api/auth/ws-ticket`` - see ``downtify/auth.py`` for who may
-  call what
+* ``GET  /api/auth/status``, ``POST /api/auth/login`` (``{username,
+  password}``), ``POST /api/auth/logout`` (signing in), ``GET|PATCH|DELETE
+  /api/auth/devices[/{id}]`` (your paired apps; everyone's for an admin),
+  ``POST /api/auth/revoke-all`` (everyone signed out), ``POST
+  /api/auth/pairing``, ``GET|DELETE /api/auth/pairing/{id}``, ``POST
+  /api/auth/pair`` (pairing an app) and ``POST /api/auth/ws-ticket`` -
+  see ``downtify/auth.py`` for who may call what
+* ``GET|PATCH /api/me``, ``PUT /api/me/password``, ``GET|PUT
+  /api/me/preferences``, ``POST /api/me/sign-out-everywhere`` (your
+  account), ``GET|POST /api/users``, ``PATCH|DELETE /api/users/{id}``
+  (admins), ``GET /api/activity``, ``GET /api/activity/now`` (admins) and
+  ``POST /api/activity/playback`` (players report what they play) - see
+  ``downtify/account_routes.py``
 * ``/api/v1/...``: the apps' API, by track id - ``GET /api/v1/library``
   (``?since=`` change feed), ``GET /api/v1/tracks/{id}`` (and
   ``/stream``, ``/cover``, ``/lyrics``), ``GET /api/v1/playlists``,
   ``GET|PUT /api/v1/likes`` and ``POST /api/v1/sign`` - see
   ``downtify/mobile_routes.py`` and ``docs/mobile-client-contract.md``
 * ``WS   /api/ws`` (also ``library_changed``, ``device_paired``
-  messages; with sign-in required, a device token, session cookie or
-  ``?ticket=`` is needed)
+  messages; a device token, session cookie or ``?ticket=`` is needed)
 * ``GET  /api/check_update``
 """
 
@@ -238,7 +242,16 @@ from . import (
     providers,
     spotify,
 )
-from .auth import AuthStore, PairingStore, RateLimiter, TicketStore
+from .activity import ActivityLog, NowPlaying, describe_user_agent
+from .auth import (
+    AuthStore,
+    PairingStore,
+    Principal,
+    RateLimiter,
+    TicketStore,
+    client_ip,
+    trusted_proxies_from_env,
+)
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
 from .cover_thumbs import CoverThumbs
@@ -667,9 +680,16 @@ class ConnectionManager:
         # client_id -> the paired device it belongs to, if any, so a
         # revoked device's socket can be closed at once.
         self._devices: dict[str, str] = {}
+        # client_id -> the signed-in user, so a user signed out
+        # everywhere (or deleted) is disconnected too.
+        self._users: dict[str, int] = {}
 
     async def connect(
-        self, client_id: str, ws: WebSocket, device_id: str = ''
+        self,
+        client_id: str,
+        ws: WebSocket,
+        device_id: str = '',
+        user_id: int = 0,
     ) -> None:
         await ws.accept()
         self._clients[client_id] = ws
@@ -677,10 +697,34 @@ class ConnectionManager:
             self._devices[client_id] = device_id
         else:
             self._devices.pop(client_id, None)
+        if user_id:
+            self._users[client_id] = user_id
+        else:
+            self._users.pop(client_id, None)
 
     def disconnect(self, client_id: str) -> None:
         self._clients.pop(client_id, None)
         self._devices.pop(client_id, None)
+        self._users.pop(client_id, None)
+
+    async def send_user(self, user_id: int, message: dict[str, Any]) -> None:
+        """Send *message* to every socket of *user_id*."""
+
+        for cid in [c for c, uid in self._users.items() if uid == user_id]:
+            await self.send(cid, message)
+
+    async def close_user(self, user_id: int) -> None:
+        """Close every socket of *user_id*, browsers and apps (``4401``)."""
+
+        doomed = [cid for cid, uid in self._users.items() if uid == user_id]
+        sockets = [self._clients.pop(cid, None) for cid in doomed]
+        for cid in doomed:
+            self._users.pop(cid, None)
+            self._devices.pop(cid, None)
+        await asyncio.gather(
+            *(ws.close(code=4401) for ws in sockets if ws is not None),
+            return_exceptions=True,
+        )
 
     async def close_device(self, device_id: str = '') -> None:
         """Close the sockets of *device_id* - every paired device's when
@@ -780,6 +824,9 @@ class AppState:
     login_limiter: RateLimiter = RateLimiter()
     pair_limiter: RateLimiter = RateLimiter()
     identity: Optional[ServerIdentity] = None
+    # What users do (downtify/activity.py), for admins.
+    activity: Optional[ActivityLog] = None
+    now_playing: NowPlaying = NowPlaying()
     # The mobile API (downtify/mobile_routes.py).
     library_sync: Optional[LibrarySync] = None
     transcoder: Optional[Transcoder] = None
@@ -798,6 +845,87 @@ def spawn_task(coro: Any, *, name: Optional[str] = None) -> asyncio.Task[Any]:
     state.background_tasks.add(task)
     task.add_done_callback(state.background_tasks.discard)
     return task
+
+
+# ---------------------------------------------------------------------------
+# Who is asking (see downtify/auth.py) and the activity log
+# ---------------------------------------------------------------------------
+
+_TRUSTED_PROXIES = trusted_proxies_from_env()
+
+
+def principal_of(request: Request) -> Optional[Principal]:
+    """Who made *request* (set by the auth middleware), if anyone."""
+
+    return (request.scope.get('state') or {}).get('principal')
+
+
+def request_ip(request: Request) -> str:
+    return client_ip(request.scope, _TRUSTED_PROXIES)
+
+
+def client_label(request: Request, principal: Optional[Principal]) -> str:
+    """What a request came from, for the activity log: a paired app's
+    name, or ``Web (Firefox on Linux)``."""
+
+    if principal is not None and principal.device_id and state.auth:
+        device = state.auth.get_device(principal.device_id) or {}
+        return str(device.get('name') or 'App')
+    browser = describe_user_agent(request.headers.get('user-agent', ''))
+    return f'Web ({browser})' if browser else 'Web'
+
+
+def user_preferences(request: Request) -> dict[str, Any]:
+    """The signed-in user's own preferences (Settings > General)."""
+
+    if state.auth is None:
+        return {}
+    principal = principal_of(request)
+    if principal is None or not principal.user_id:
+        return {}
+    return state.auth.users.preferences(principal.user_id)
+
+
+async def log_activity(
+    request: Request,
+    kind: str,
+    summary: str = '',
+    detail: Optional[dict[str, Any]] = None,
+) -> None:
+    """Add what *request*'s user did to the activity log. Never fails the
+    request it's called from."""
+
+    log = state.activity
+    if log is None:
+        return
+    principal = principal_of(request)
+    try:
+        label = await asyncio.to_thread(client_label, request, principal)
+        await asyncio.to_thread(
+            log.record,
+            kind,
+            user_id=principal.user_id if principal else 0,
+            username=principal.username if principal else '',
+            summary=summary,
+            detail=detail,
+            client=label,
+            ip=request_ip(request),
+        )
+    except Exception:
+        logger.exception('Activity log: could not record {}', kind)
+
+
+def song_label(song: dict[str, Any]) -> str:
+    """``Artist - Title`` for a song as the download endpoints get it."""
+
+    artists = song.get('artists') or []
+    artist = (
+        ', '.join(str(a) for a in artists)
+        if isinstance(artists, list)
+        else str(artists)
+    )
+    title = str(song.get('name') or song.get('title') or '')
+    return ' - '.join(part for part in (artist, title) if part)
 
 
 _SHUTDOWN_TASK_TIMEOUT_SECONDS = 1.0
@@ -1258,10 +1386,15 @@ def search_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
 
 @router.get('/api/albums/search')
 def search_albums_endpoint(
+    request: Request,
     query: str = Query(''),
     limit: int = Query(25, ge=1, le=50),
 ) -> list[dict[str, Any]]:
-    if not state.settings.get('search_albums', True):
+    # A user's own choice (Settings > General) wins over the server's.
+    wanted = user_preferences(request).get(
+        'search_albums', state.settings.get('search_albums', True)
+    )
+    if not wanted:
         return []
     return providers.search_albums(query, limit=limit)
 
@@ -2299,6 +2432,7 @@ async def _record_finished_download(
 
 @router.post('/api/download/url')
 async def download_endpoint(
+    request: Request,
     url: str = Query(...),
     client_id: str = Query(''),
     client_hints: Optional[dict[str, Any]] = Body(None),
@@ -2327,6 +2461,9 @@ async def download_endpoint(
         pl_ctx.get('playlist_name'),
     )
     song_id = _register_job(song, status='downloading')
+    await log_activity(
+        request, 'download', song_label(song) or url[:200], {'url': url[:500]}
+    )
 
     try:
         filename = await _run_download(
@@ -3315,6 +3452,15 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
     # directly instead of us deriving them from playlist_url.
     playlist_name = str(payload.get('playlist_name') or '') or None
     cover_url = str(payload.get('cover_url') or '') or None
+    first_song = next((s for s in songs if isinstance(s, dict)), {})
+    await log_activity(
+        request,
+        'download',
+        playlist_name
+        or str(first_song.get('album_name') or '')
+        or song_label(first_song),
+        {'songs': len(songs), 'url': playlist_url[:500]},
+    )
 
     # A Spotify playlist download is tracked as a playlist batch, so an
     # incomplete one can be finished later (see /api/playlists/incomplete).
@@ -3450,7 +3596,9 @@ def _songs_for_album_download(url: str) -> list[dict[str, Any]]:
 
 
 @router.post('/api/download/album')
-async def download_album_endpoint(url: str = Query(...)) -> dict[str, str]:
+async def download_album_endpoint(
+    request: Request, url: str = Query(...)
+) -> dict[str, str]:
     """Download every track of a YouTube Music album/browse URL.
 
     Unlike ``POST /api/download/url`` (which only accepts a single video URL
@@ -3469,6 +3617,13 @@ async def download_album_endpoint(url: str = Query(...)) -> dict[str, str]:
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
     songs = await asyncio.to_thread(_songs_for_album_download, url)
+    first_song = songs[0] if songs else {}
+    await log_activity(
+        request,
+        'download',
+        str(first_song.get('album_name') or '') or url[:200],
+        {'songs': len(songs), 'url': url[:500]},
+    )
     # See _process_batch: only meaningful when there's a "next" track to
     # wait for, so a single-track album never waits around for nothing.
     delay_seconds = (
@@ -4121,6 +4276,8 @@ async def update_settings_endpoint(
         payload = await request.json()
     except Exception:
         payload = {}
+    before = json.dumps(state.settings, sort_keys=True, default=str)
+    previous = json.loads(before)
     if isinstance(payload, dict):
         # Validated up front so a rejected save changes nothing.
         pending = {**state.settings, **payload}
@@ -4215,6 +4372,18 @@ async def update_settings_endpoint(
             providers.set_cover_resolution(state.settings['cover_resolution'])
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)
+    after = json.loads(json.dumps(state.settings, sort_keys=True, default=str))
+    # Names only: values may be passwords and API keys. The page telling
+    # the server its language isn't somebody changing settings.
+    changed = sorted(
+        key
+        for key in after
+        if after.get(key) != previous.get(key) and key != 'ui_language'
+    )
+    if changed:
+        await log_activity(
+            request, 'settings_changed', ', '.join(changed), {'keys': changed}
+        )
     return state.settings
 
 
@@ -4373,7 +4542,10 @@ async def set_like(request: Request) -> dict[str, Any]:
     file = str(payload.get('file') or '').strip().replace('\\', '/')
     if not file:
         raise HTTPException(status_code=400, detail='file is required')
-    return await apply_like(file, bool(payload.get('liked', True)))
+    liked = bool(payload.get('liked', True))
+    result = await apply_like(file, liked)
+    await log_activity(request, 'like' if liked else 'unlike', file)
+    return result
 
 
 async def apply_like(file: str, liked: bool) -> dict[str, Any]:
@@ -4924,7 +5096,10 @@ async def websocket_endpoint(
 ) -> None:
     principal = (ws.scope.get('state') or {}).get('principal')
     await state.connections.connect(
-        client_id, ws, getattr(principal, 'device_id', '') or ''
+        client_id,
+        ws,
+        getattr(principal, 'device_id', '') or '',
+        getattr(principal, 'user_id', 0) or 0,
     )
     try:
         while True:

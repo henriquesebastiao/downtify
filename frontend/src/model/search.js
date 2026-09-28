@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 
 import API from '/src/model/api'
-import { useSettingsManager } from '/src/model/settings'
+import { useAccount } from '/src/model/account'
 
 const query = ref('')
 const songs = ref([])
@@ -24,8 +24,8 @@ async function searchFor(text) {
   const mine = ++serial
   loading.value = true
   error.value = ''
-  const { settings } = useSettingsManager()
-  const withAlbums = settings.value.search_albums !== false
+  // The signed-in user's own choice (Settings > General).
+  const withAlbums = useAccount().searchAlbums.value !== false
   // Albums and artists are extras: their failure never hides songs.
   const [songRes, albumRes, artistRes] = await Promise.allSettled([
     API.search(term),

@@ -1,9 +1,50 @@
 // Sign-in and pairing helpers. Pure, so they're unit-testable.
 import { encode } from 'uqr'
 
-/** Whether the web app has to show the sign-in page. */
+/**
+ * Whether the web app has to show the sign-in page: the server answered
+ * and this browser isn't signed in. An unreachable server (no status)
+ * doesn't lock the page - that's shown elsewhere.
+ */
 export function needsSignIn(status) {
-  return Boolean(status?.require_sign_in && !status?.signed_in)
+  return Boolean(status && !status.signed_in)
+}
+
+export const ROLE_ADMIN = 'admin'
+
+/**
+ * The Settings sections a user may open: everything for an admin, but
+ * the ones about accounts when accounts are turned off
+ * (`DOWNTIFY_DISABLE_AUTH`).
+ */
+export function settingsSectionsFor(role, sections, { authDisabled } = {}) {
+  const shown = authDisabled
+    ? sections.filter((section) => !section.accounts)
+    : sections
+  if (role === ROLE_ADMIN) return shown
+  return shown.filter((section) => !section.admin)
+}
+
+/**
+ * What a player sends to `POST /api/activity/playback` about `track`
+ * (a player track: `{ file, title, artists, album, duration, ... }`).
+ * `null` for nothing worth reporting (no track, a preview, a podcast).
+ */
+export function playbackReport(track, { player, state, position = 0 }) {
+  if (state === 'stopped') return { player, state, track: {}, position: 0 }
+  if (!track?.file || track.isPodcast || track.isPreview) return null
+  return {
+    player,
+    state,
+    position: Math.max(0, Math.round(Number(position) || 0)),
+    track: {
+      file: track.file,
+      title: track.title || '',
+      artist: (track.artists || []).join(', ') || track.artist || '',
+      album: track.album || '',
+      duration: Number(track.duration) || 0,
+    },
+  }
 }
 
 /**

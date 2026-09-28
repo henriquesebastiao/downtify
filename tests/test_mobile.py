@@ -501,6 +501,7 @@ def app_dirs(tmp_path, monkeypatch):
     monkeypatch.setattr(main, 'WEB_GUI_LOCATION', str(web))
     for name in (
         'auth',
+        'activity',
         'identity',
         'downloader',
         'settings',
@@ -522,7 +523,12 @@ def client(app_dirs):
     downloads, data = app_dirs
     app = main.build_app()
     main._open_library_stores(data / 'downtify_monitor.db')
-    return TestClient(app)
+    client = TestClient(app)
+    # A new install: the admin with the default password.
+    client.post(
+        '/api/auth/login', json={'username': 'admin', 'password': 'downtify'}
+    )
+    return client
 
 
 def _library(client) -> dict[str, Any]:
@@ -647,9 +653,7 @@ def test_signed_stream_url_for_a_cast_receiver(client, app_dirs):
     downloads, _data = app_dirs
     _make_mp3(downloads / 'Portishead - Roads.mp3')
     store = api.state.auth
-    store.set_password('correct horse battery')
-    store.set_require_sign_in(True)
-    _device, token = store.create_device('Pixel')
+    _device, token = store.create_device('Pixel', user_id=1)
     headers = {'Authorization': f'Bearer {token}'}
     track_id = client.get('/api/v1/library', headers=headers).json()['tracks'][
         0
@@ -665,6 +669,7 @@ def test_signed_stream_url_for_a_cast_receiver(client, app_dirs):
     assert 'sig=' in url
     assert token not in url
 
+    client.cookies.clear()
     assert client.get(path).status_code == 401  # no credentials
     ranged = client.get(url, headers={'Range': 'bytes=0-9'})
     assert ranged.status_code == 206

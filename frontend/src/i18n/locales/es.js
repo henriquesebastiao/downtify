@@ -38,6 +38,8 @@ export default {
     collapse: 'Contraer barra lateral',
     expand: 'Expandir barra lateral',
     updateAvailable: 'Actualización {version} disponible',
+    signOut: 'Cerrar sesión',
+    signOutAs: 'Cerrar sesión ({name})',
   },
   actions: {
     play: 'Reproducir',
@@ -670,7 +672,7 @@ export default {
     playerGroup: 'Reproductor',
     showLyrics: 'Mostrar letras en el reproductor',
     showLyricsHint:
-      'Desactívalo para ocultar el panel de letras, su botón y su atajo. Tus archivos conservan las letras y las descargas siguen buscándolas. Se guarda en este dispositivo.',
+      'Desactívalo para ocultar el panel de letras, su botón y su atajo. Tus archivos conservan las letras y las descargas siguen buscándolas.',
     searchGroup: 'Búsqueda',
     searchAlbums: 'Mostrar álbumes en los resultados',
     searchAlbumsHint:
@@ -857,6 +859,10 @@ export default {
     docs: 'Documentación',
     docsHint: 'Instalación, ajustes y referencia de la API.',
     openDocs: 'Abrir documentación',
+    users: 'Usuarios',
+    activity: 'Actividad',
+    personalHint:
+      'Solo tuyas: siguen a tu cuenta en cualquier navegador y no cambian nada para nadie más.',
   },
   shortcuts: {
     title: 'Atajos de teclado',
@@ -879,12 +885,20 @@ export default {
   },
   auth: {
     signInTitle: 'Inicia sesión en Downtify',
-    signInBody: 'Este servidor requiere iniciar sesión.',
+    signInBody: 'Inicia sesión con tu usuario y contraseña.',
+    username: 'Usuario',
     password: 'Contraseña',
     signIn: 'Iniciar sesión',
-    wrongPassword: 'Contraseña incorrecta',
+    wrongPassword: 'Usuario o contraseña incorrectos',
+    tooMany: 'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
     forgotHint:
-      '¿La olvidaste? Ejecuta “python main.py auth-reset” en el servidor.',
+      '¿Olvidaste la contraseña del admin? Ejecuta «python main.py auth-reset» en el servidor.',
+    noticeTitle: 'Downtify ahora tiene cuentas de usuario',
+    noticeBody:
+      'Ahora todos inician sesión con usuario y contraseña, y un admin puede crear cuentas para otras personas en Ajustes → Usuarios. Inicia sesión con:',
+    noticeKeptPassword: 'la contraseña que configuraste antes',
+    noticeChange: 'Después, cambia la contraseña en Ajustes → General.',
+    noticeOk: 'Entendido',
   },
   apps: {
     serverGroup: 'Este servidor',
@@ -908,37 +922,9 @@ export default {
     revokeBody:
       'Deja de funcionar al instante, hasta que se vuelva a vincular.',
     lastSeen: 'visto {when}',
-    signInGroup: 'Inicio de sesión',
-    signInGroupHint: 'Quién puede usar este servidor.',
-    setPassword: 'Establecer contraseña',
-    changePassword: 'Cambiar la contraseña',
-    passwordHint:
-      'Al menos {count} caracteres. Se usa para entrar en esta página.',
-    currentPassword: 'Contraseña actual',
-    newPassword: 'Nueva contraseña',
-    passwordSaved: 'Contraseña guardada',
-    requireSignIn: 'Requerir inicio de sesión',
-    requireOffHint:
-      'Desactivado: cualquiera que alcance este servidor puede usarlo, vincular una app y cambiar la configuración.',
-    requireOnHint:
-      'Activado: la página pide la contraseña y las apps deben estar vinculadas.',
-    requireForced: 'Definido por DOWNTIFY_REQUIRE_SIGN_IN en el servidor.',
-    requireTitle: 'Requerir inicio de sesión',
-    requireBody: 'Escribe la contraseña. Este navegador sigue conectado.',
-    requireConfirm: 'Requerir inicio de sesión',
-    requireOnDone: 'Ahora se requiere iniciar sesión',
-    requireOffTitle: '¿Dejar de requerir inicio de sesión?',
-    requireOffBody:
-      'Cualquiera que alcance este servidor podrá volver a usarlo, sin contraseña.',
-    requireOffConfirm: 'Dejar de requerir',
-    signOut: 'Cerrar sesión',
     signOutEverywhere: 'Cerrar sesión en todas partes',
-    signOutEverywhereHint:
-      'Desvincula todas las apps y cierra la sesión de todos los navegadores, incluido este.',
     signOutEverywhereButton: 'Cerrar sesión en todas partes',
     signOutEverywhereTitle: '¿Cerrar sesión en todas partes?',
-    signOutEverywhereBody:
-      'Habrá que volver a vincular todas las apps e iniciar sesión en todos los navegadores.',
     pairTitle: 'Vincular un teléfono',
     pairBody:
       'En la app de Downtify, elige “Escanear el código” y apunta la cámara aquí.',
@@ -948,6 +934,127 @@ export default {
     paired: '{name} está vinculado',
     pairExpired: 'Este código caducó.',
     newCode: 'Código nuevo',
+    devicesGroupAdminHint:
+      'Teléfonos y otros dispositivos que pueden reproducir la biblioteca - los de todos. Las apps que vincules son de tu cuenta.',
+    ownedBy: 'de {name}',
+    signOutGroup: 'Cerrar sesión',
+    signOutEverywhereHint:
+      'Desvincula todas tus apps y cierra tu sesión en todos los navegadores, también en este.',
+    signOutEverywhereBody:
+      'Tendrás que volver a vincular tus apps e iniciar sesión de nuevo en cada navegador.',
+  },
+  account: {
+    title: 'Cuenta',
+    hint: 'Quién ha iniciado sesión en este navegador.',
+    roleAdmin: 'Admin',
+    roleUser: 'Usuario',
+    signOut: 'Cerrar sesión',
+    defaultPasswordWarning:
+      'Todavía usas la contraseña predeterminada. Cámbiala abajo para que nadie más pueda entrar como tú.',
+    username: 'Usuario',
+    usernameHint: 'De 3 a 32 letras, dígitos, puntos, guiones o guiones bajos.',
+    password: 'Contraseña',
+    passwordHint: 'Al menos {count} caracteres.',
+    currentPassword: 'Contraseña actual',
+    newPassword: 'Contraseña nueva',
+    confirmPassword: 'Repite la contraseña nueva',
+    passwordsDiffer: 'Las contraseñas nuevas no coinciden',
+    wrongCurrentPassword: 'La contraseña actual es incorrecta',
+    passwordSaved: 'Contraseña cambiada',
+    saved: 'Guardado',
+    needsAdmin: 'Solo un admin puede hacer eso',
+    defaultPasswordTitle: 'Cambia la contraseña predeterminada',
+    defaultPasswordBody:
+      '{name} ha iniciado sesión con la contraseña predeterminada, que conoce cualquiera que conozca Downtify. Cámbiala en Ajustes → General.',
+    later: 'Más tarde',
+    changePassword: 'Cambiar contraseña',
+  },
+  users: {
+    title: 'Usuarios',
+    hint: 'Quién puede iniciar sesión en este servidor. Los admins pueden cambiarlo todo; los usuarios pueden escuchar, buscar, descargar y cambiar su propia cuenta.',
+    count: {
+      one: '{count} usuario',
+      other: '{count} usuarios',
+    },
+    add: 'Añadir usuario',
+    you: 'Tú',
+    edit: 'Editar {name}',
+    delete: 'Eliminar {name}',
+    everyoneGroup: 'Todos',
+    signOutAll: 'Cerrar la sesión de todos',
+    signOutAllHint:
+      'Desvincula todas las apps y cierra la sesión en todos los navegadores, de todos los usuarios - también la tuya.',
+    signOutAllTitle: '¿Cerrar la sesión de todos?',
+    signOutAllBody:
+      'Todos los usuarios tendrán que iniciar sesión de nuevo y volver a vincular sus apps.',
+    editTitle: 'Editar {name}',
+    addTitle: 'Añadir un usuario',
+    newPassword: 'Contraseña nueva',
+    newPasswordHint:
+      'Déjala vacía para mantener la actual. Una contraseña nueva cierra su sesión en sus navegadores.',
+    role: 'Rol',
+    roleAdminHint:
+      'Todo: todos los ajustes, todos los usuarios y el registro de actividad.',
+    roleUserHint:
+      'Escuchar, buscar, descargar y dar me gusta; en Ajustes solo General, Apps y Acerca de.',
+    lastSignIn: 'entró {when}',
+    neverSignedIn: 'nunca ha entrado',
+    defaultPassword: 'contraseña predeterminada',
+    deleteTitle: '¿Eliminar a {name}?',
+    deleteBody:
+      'Sus apps se desvinculan y sus navegadores cierran sesión. Sus descargas se quedan en la biblioteca.',
+    deleteConfirm: 'Eliminar',
+  },
+  activity: {
+    nowTitle: 'Sonando ahora',
+    nowHint:
+      'Lo que reproduce cada navegador y app. Se actualiza cada pocos segundos.',
+    nowEmpty: 'No suena nada ahora mismo.',
+    paused: 'En pausa',
+    logTitle: 'Historial',
+    logHint:
+      'Lo que ha hecho cada uno: inicios de sesión, canciones, descargas, cambios. Se guarda 90 días.',
+    filterUser: 'Usuario',
+    filterKind: 'Qué',
+    logEmpty: 'Aún no hay nada.',
+    someone: 'Alguien',
+    more: 'Mostrar más',
+    allUsers: 'Todos los usuarios',
+    allKinds: 'Todo',
+    kinds: {
+      login: 'Inicios de sesión',
+      login_failed: 'Inicios fallidos',
+      logout: 'Cierres de sesión',
+      playback: 'Canciones reproducidas',
+      download: 'Descargas',
+      like: 'Me gusta',
+      unlike: 'Me gusta quitados',
+      delete: 'Archivos eliminados',
+      device_paired: 'Apps vinculadas',
+      device_unpaired: 'Apps desvinculadas',
+      user_created: 'Usuarios añadidos',
+      user_updated: 'Usuarios cambiados',
+      user_deleted: 'Usuarios eliminados',
+      password_changed: 'Contraseñas cambiadas',
+      settings_changed: 'Ajustes cambiados',
+    },
+    did: {
+      login: 'inició sesión',
+      login_failed: 'no pudo iniciar sesión (contraseña incorrecta)',
+      logout: 'cerró sesión',
+      playback: 'escuchó {what}',
+      download: 'descargó {what}',
+      like: 'dio me gusta a {what}',
+      unlike: 'quitó el me gusta a {what}',
+      delete: 'eliminó {what}',
+      device_paired: 'vinculó {what}',
+      device_unpaired: 'desvinculó {what}',
+      user_created: 'añadió al usuario {what}',
+      user_updated: 'cambió al usuario {what}',
+      user_deleted: 'eliminó al usuario {what}',
+      password_changed: 'cambió la contraseña de {what}',
+      settings_changed: 'cambió ajustes: {what}',
+    },
   },
   discover: {
     title: 'Descubrir',

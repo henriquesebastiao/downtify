@@ -56,6 +56,12 @@ describe('the language sync in model/settings.js', () => {
     if (locale) store['downtify-locale'] = locale
     vi.doMock('/src/model/api', () => ({
       default: {
+        // Server settings are an admin's to load (model/auth.js).
+        onUnauthorized: () => () => {},
+        getAuthStatus: () =>
+          Promise.resolve({
+            data: { signed_in: true, user: { role: 'admin' } },
+          }),
         getSettings: vi.fn(() => Promise.resolve({ data: { ...server } })),
         setSettings: vi.fn((payload) =>
           Promise.resolve({ data: { ...server, ...payload } })
@@ -127,6 +133,12 @@ describe('the language sync in model/settings.js', () => {
     store['downtify-locale'] = 'tr'
     vi.doMock('/src/model/api', () => ({
       default: {
+        // Server settings are an admin's to load (model/auth.js).
+        onUnauthorized: () => () => {},
+        getAuthStatus: () =>
+          Promise.resolve({
+            data: { signed_in: true, user: { role: 'admin' } },
+          }),
         getSettings: vi.fn(() => Promise.resolve({ data: {} })),
         setSettings: vi.fn(() => Promise.reject(new Error('offline'))),
       },

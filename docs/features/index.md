@@ -17,7 +17,8 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Built-in Player](player.md) | Play your library in the browser: queue management, synced lyrics, sleep timer, keyboard and media keys |
 | [Liked songs](liked-songs.md) | Heart a song to like it; a playlist of everything you have liked appears on its own |
 | [Podcasts](podcasts.md) | Subscribe to a show by RSS feed, Spotify link or name; new episodes download and tag on their own |
-| [Mobile Apps & Sign-in](mobile-apps.md) | Pair phone apps by QR code, stream the library to them (original or transcoded), and optionally require sign-in for the web page and the API |
+| [Users & Sign-in](users.md) | Username and password sign-in (`admin` / `downtify` on a new server), admin and normal user accounts, per-user preferences, and an activity log of sign-ins and what everyone plays |
+| [Mobile Apps](mobile-apps.md) | Pair phone apps by QR code and stream the library to them (original or transcoded) |
 | [Discover](discover.md) | Artists, albums and playlists you don't have yet, suggested from your library, likes and listening; hide the ones you don't want |
 | [slskd & Navidrome](slskd-navidrome.md) | Download from Soulseek through slskd, mirror playlists into Navidrome, and track playlist downloads |
 | [Library catalog & path sync](library-catalog.md) | How Downtify tracks library files and playlists, and fixing paths after moving files |

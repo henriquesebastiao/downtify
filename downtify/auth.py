@@ -1,21 +1,23 @@
 """Sign-in for the web UI and paired apps.
 
-Downtify has always been open to anyone who can reach its port, and it
-still is by default - an upgrade never locks anyone out. Two things are
-added on top:
+Everything but the web app's own files and a few public routes needs a
+signed-in user (:mod:`downtify.users`): a browser signed in with a
+username and password (a session cookie), or an app paired to a user's
+account in Settings > Apps.
 
+* **Web sessions.** ``POST /api/auth/login`` with the username and
+  password sets an HttpOnly cookie that lasts 30 days after it was last
+  used. An *admin* user's session has the admin scope: everything. A
+  normal *user*'s has the user scope: what a paired app may do, plus
+  their own account, preferences and devices.
 * **Paired devices** (the Android app). Settings > Apps shows a short
   code (and a QR code carrying it); an app that sends it back to
   ``POST /api/auth/pair`` within five minutes gets a long-lived device
-  token, ``dtfy_<device id>_<secret>``, sent as ``Authorization: Bearer``.
-  Only a hash of the secret is stored; a device can be revoked at any
-  time. Device tokens work whether or not sign-in is required.
-* **"Require sign-in"**, off by default. On, every API route, audio and
-  cover URL and the WebSocket need a device token or a web session - a
-  cookie the browser gets by signing in with the password set in
-  Settings > Apps. Paired devices get the *client* scope: they can read
-  and play the library and ask for downloads, but settings, credentials,
-  deleting files and managing devices need a web session (*admin*).
+  token, ``dtfy_<device id>_<secret>``, sent as ``Authorization: Bearer``,
+  tied to the user who paired it. Only a hash of the secret is stored; a
+  device can be revoked at any time. Devices get the *client* scope: they
+  can read and play the library and ask for downloads, but settings,
+  credentials, deleting files and managing devices need a browser.
 
 Players that can't send headers (a Chromecast receiver fetching a stream
 itself) use **signed URLs**: ``exp``, ``kid`` (the device) and ``sig``
@@ -33,6 +35,11 @@ SHA-256. Every comparison of a secret is constant-time.
 and the WebSocket alike, from one table of path rules (:data:`RULES`);
 anything not listed there needs the admin scope, so a new route can't be
 left open by mistake (a test checks every route is listed on purpose).
+
+``DOWNTIFY_DISABLE_AUTH=true`` turns accounts off for a server nobody
+else can reach: nobody signs in, and every request without a device
+token is the first admin's (:func:`open_principal`). Paired apps, signed
+URLs and the same-site check keep working.
 """
 
 from __future__ import annotations
@@ -60,12 +67,27 @@ from urllib.parse import parse_qsl, urlencode
 from loguru import logger
 
 from .sqlite_utils import connect_sqlite
+from .users import ROLE_ADMIN, UserStore, public_user
 
 # ── Scopes and principals ───────────────────────────────────────────────
 
 PUBLIC = 'public'
+#: A paired app (or a signed URL for one).
 CLIENT = 'client'
+#: A browser signed in as a normal user: CLIENT, plus their own account.
+USER = 'user'
+#: A browser signed in as an admin: everything.
 ADMIN = 'admin'
+
+_RANK = {PUBLIC: 0, CLIENT: 1, USER: 2, ADMIN: 3}
+
+
+def allows(held: str, needed: str) -> bool:
+    """Whether a principal with scope *held* may use a route that needs
+    *needed*."""
+
+    return _RANK.get(held, 0) >= _RANK.get(needed, 3)
+
 
 #: The cookie a signed-in browser carries.
 SESSION_COOKIE = 'downtify_session'
@@ -82,8 +104,6 @@ WS_TICKET_TTL_SECONDS = 60
 #: Signed URLs: default and longest lifetime, in seconds.
 SIGNED_URL_DEFAULT_TTL = 3600
 SIGNED_URL_MAX_TTL = 24 * 3600
-#: Shortest password accepted.
-MIN_PASSWORD_LENGTH = 8
 #: Longest device name kept.
 MAX_DEVICE_NAME = 64
 
@@ -99,12 +119,6 @@ _PAIR_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
 _PAIR_CODE_LENGTH = 8
 _PAIR_TYPO_MAP = str.maketrans({'I': '1', 'L': '1', 'O': '0', 'U': 'V'})
 
-# scrypt: N=2**15, r=8, p=1 (~32 MiB, ~50-100 ms) - the OWASP minimum.
-_SCRYPT_N = 2**15
-_SCRYPT_R = 8
-_SCRYPT_P = 1
-_SCRYPT_MAXMEM = 64 * 1024 * 1024
-
 
 @dataclass(frozen=True)
 class Principal:
@@ -115,6 +129,15 @@ class Principal:
     kind: str
     scope: str
     device_id: str = ''
+    #: The signed-in user (``0`` for a signed URL, which only knows the
+    #: device), their name and role.
+    user_id: int = 0
+    username: str = ''
+    role: str = ''
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == ROLE_ADMIN
 
 
 def _now() -> datetime:
@@ -139,51 +162,6 @@ def _sha256(text: str) -> str:
 
 def _b64(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b'=').decode()
-
-
-# ── Passwords ───────────────────────────────────────────────────────────
-
-
-def hash_password(password: str) -> str:
-    """``scrypt$N$r$p$<salt>$<hash>`` for *password*."""
-
-    salt = secrets.token_bytes(16)
-    digest = hashlib.scrypt(
-        password.encode(),
-        salt=salt,
-        n=_SCRYPT_N,
-        r=_SCRYPT_R,
-        p=_SCRYPT_P,
-        maxmem=_SCRYPT_MAXMEM,
-    )
-    return (
-        f'scrypt${_SCRYPT_N}${_SCRYPT_R}${_SCRYPT_P}$'
-        f'{_b64(salt)}${_b64(digest)}'
-    )
-
-
-def verify_password(password: str, stored: str) -> bool:
-    """Whether *password* matches a :func:`hash_password` value."""
-
-    try:
-        scheme, n, r, p, salt_b64, hash_b64 = stored.split('$')
-        if scheme != 'scrypt':
-            return False
-        salt = base64.urlsafe_b64decode(salt_b64 + '=' * (-len(salt_b64) % 4))
-        expected = base64.urlsafe_b64decode(
-            hash_b64 + '=' * (-len(hash_b64) % 4)
-        )
-        digest = hashlib.scrypt(
-            password.encode(),
-            salt=salt,
-            n=int(n),
-            r=int(r),
-            p=int(p),
-            maxmem=_SCRYPT_MAXMEM,
-        )
-    except (ValueError, TypeError):
-        return False
-    return hmac.compare_digest(digest, expected)
 
 
 # ── Pairing codes ───────────────────────────────────────────────────────
@@ -237,8 +215,9 @@ class PairingStore:
             if entry['expires'] + (60 if entry['device'] else 0) < now:
                 del self._sessions[pid]
 
-    def create(self) -> dict[str, Any]:
-        """A new pairing session: ``{pairing_id, code, expires_in}``."""
+    def create(self, user_id: int = 0) -> dict[str, Any]:
+        """A new pairing session for *user_id*'s account:
+        ``{pairing_id, code, expires_in}``."""
 
         code = new_pairing_code()
         pairing_id = secrets.token_urlsafe(12)
@@ -249,6 +228,7 @@ class PairingStore:
                 'code_hash': _sha256(normalize_pairing_code(code)),
                 'expires': now + self._ttl,
                 'device': None,
+                'user_id': user_id,
             }
         return {
             'pairing_id': pairing_id,
@@ -276,6 +256,13 @@ class PairingStore:
                     entry['device'] = {}
                     return pid
         return None
+
+    def owner(self, pairing_id: str) -> Optional[int]:
+        """The user a pairing session is for, while it exists."""
+
+        with self._lock:
+            entry = self._sessions.get(pairing_id)
+        return None if entry is None else int(entry['user_id'])
 
     def complete(self, pairing_id: str, device: dict[str, Any]) -> None:
         with self._lock:
@@ -423,22 +410,30 @@ def _header(scope: MutableMapping[str, Any], name: str) -> str:
 
 
 class AuthStore:
-    """Password, web sessions, paired devices and the signing key."""
+    """Users, web sessions, paired devices and the signing key.
+
+    The accounts themselves are :attr:`users` (:class:`UserStore`); every
+    session and device belongs to one of them.
+    """
 
     def __init__(
         self,
         db_path: Path,
         secret_path: Path,
         *,
-        forced_require: Optional[bool] = None,
+        existing_install: bool = False,
+        auth_disabled: bool = False,
     ) -> None:
         self._path = str(db_path)
-        self._forced = forced_require
+        #: ``DOWNTIFY_DISABLE_AUTH``: no sign-in, one user (the admin).
+        self.auth_disabled = auth_disabled
         self._lock = threading.Lock()
         self._init_db()
+        self.users = UserStore(db_path)
+        if self.users.ensure_default_admin(existing_install=existing_install):
+            # Sessions from before accounts belong to nobody.
+            self.end_all_sessions()
         self.signer = UrlSigner(secret_path, self.device_active)
-        # Cached: every request asks.
-        self._require = self._read_require()
 
     # Storage
 
@@ -448,12 +443,6 @@ class AuthStore:
     def _init_db(self) -> None:
         with self._connect() as conn:
             conn.execute("""
-                CREATE TABLE IF NOT EXISTS auth_config (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL
-                )
-            """)
-            conn.execute("""
                 CREATE TABLE IF NOT EXISTS auth_devices (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
@@ -462,7 +451,8 @@ class AuthStore:
                     created_at TEXT NOT NULL,
                     last_seen_at TEXT,
                     last_ip TEXT NOT NULL DEFAULT '',
-                    revoked_at TEXT
+                    revoked_at TEXT,
+                    user_id INTEGER NOT NULL DEFAULT 0
                 )
             """)
             conn.execute("""
@@ -472,86 +462,36 @@ class AuthStore:
                     expires_at TEXT NOT NULL,
                     touched_at TEXT NOT NULL,
                     ip TEXT NOT NULL DEFAULT '',
-                    user_agent TEXT NOT NULL DEFAULT ''
+                    user_agent TEXT NOT NULL DEFAULT '',
+                    user_id INTEGER NOT NULL DEFAULT 0
                 )
             """)
-
-    def _get(self, key: str) -> Optional[str]:
-        with self._connect() as conn:
-            row = conn.execute(
-                'SELECT value FROM auth_config WHERE key = ?', (key,)
-            ).fetchone()
-        return row['value'] if row else None
-
-    def _set(self, key: str, value: Optional[str]) -> None:
-        with self._connect() as conn:
-            if value is None:
-                conn.execute('DELETE FROM auth_config WHERE key = ?', (key,))
-            else:
-                conn.execute(
-                    """INSERT INTO auth_config (key, value) VALUES (?, ?)
-                       ON CONFLICT(key) DO UPDATE SET value = excluded.value""",
-                    (key, value),
-                )
-
-    # Require sign-in
-
-    def _read_require(self) -> bool:
-        if self._forced is not None:
-            return self._forced
-        return self._get('require_sign_in') == '1'
-
-    @property
-    def require_sign_in(self) -> bool:
-        return self._require
-
-    @property
-    def forced_by_env(self) -> bool:
-        return self._forced is not None
-
-    def set_require_sign_in(self, enabled: bool) -> None:
-        """Turn "Require sign-in" on or off. Raises :class:`ValueError`
-        when it's set by the environment, or when turning it on without a
-        password (nobody could sign in to the web UI again)."""
-
-        if self._forced is not None:
-            raise ValueError(
-                'Require sign-in is set by DOWNTIFY_REQUIRE_SIGN_IN'
-            )
-        if enabled and not self.has_password():
-            raise ValueError('Set a password before requiring sign-in')
-        self._set('require_sign_in', '1' if enabled else '0')
-        self._require = bool(enabled)
-
-    # Password
-
-    def has_password(self) -> bool:
-        return bool(self._get('password_hash'))
-
-    def set_password(self, password: str) -> None:
-        if len(password or '') < MIN_PASSWORD_LENGTH:
-            raise ValueError(f'Use at least {MIN_PASSWORD_LENGTH} characters')
-        self._set('password_hash', hash_password(password))
-
-    def check_password(self, password: str) -> bool:
-        stored = self._get('password_hash')
-        if not stored:
-            # Same work either way, so timing doesn't say there's none.
-            verify_password(password or '', hash_password('x' * 8))
-            return False
-        return verify_password(password or '', stored)
+            # Databases from before accounts: sessions and devices gain
+            # their owner.
+            for table in ('auth_devices', 'auth_sessions'):
+                columns = {
+                    row[1]
+                    for row in conn.execute(f'PRAGMA table_info({table})')
+                }
+                if 'user_id' not in columns:
+                    conn.execute(
+                        f'ALTER TABLE {table} ADD COLUMN user_id '
+                        'INTEGER NOT NULL DEFAULT 0'
+                    )
 
     # Web sessions
 
-    def create_session(self, ip: str = '', user_agent: str = '') -> str:
+    def create_session(
+        self, user_id: int, ip: str = '', user_agent: str = ''
+    ) -> str:
         token = secrets.token_urlsafe(32)
         now = _now()
         with self._connect() as conn:
             conn.execute(
                 """INSERT INTO auth_sessions
                    (id_hash, created_at, expires_at, touched_at, ip,
-                    user_agent)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
+                    user_agent, user_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (
                     _sha256(token),
                     _iso(now),
@@ -559,31 +499,34 @@ class AuthStore:
                     _iso(now),
                     ip[:64],
                     user_agent[:200],
+                    user_id,
                 ),
             )
         return token
 
-    def session_valid(self, token: str) -> bool:
-        """Whether *token* is a live web session (and keep it alive)."""
+    def session_user(self, token: str) -> Optional[dict[str, Any]]:
+        """The user a live web session *token* belongs to (and keep the
+        session alive); ``None`` for an unknown or expired one."""
 
         if not token or len(token) > 128:
-            return False
+            return None
         key = _sha256(token)
         with self._connect() as conn:
             row = conn.execute(
-                'SELECT expires_at, touched_at FROM auth_sessions '
-                'WHERE id_hash = ?',
+                'SELECT s.expires_at, s.touched_at, u.* '
+                'FROM auth_sessions s JOIN users u ON u.id = s.user_id '
+                'WHERE s.id_hash = ?',
                 (key,),
             ).fetchone()
             if row is None:
-                return False
+                return None
             now = _now()
             expires = _parse(row['expires_at'])
             if expires is None or expires <= now:
                 conn.execute(
                     'DELETE FROM auth_sessions WHERE id_hash = ?', (key,)
                 )
-                return False
+                return None
             touched = _parse(row['touched_at'])
             if touched is None or now - touched >= SESSION_TOUCH_INTERVAL:
                 conn.execute(
@@ -591,7 +534,7 @@ class AuthStore:
                     'WHERE id_hash = ?',
                     (_iso(now + SESSION_TTL), _iso(now), key),
                 )
-        return True
+        return public_user(row)
 
     def end_session(self, token: str) -> None:
         with self._connect() as conn:
@@ -604,13 +547,23 @@ class AuthStore:
         with self._connect() as conn:
             return conn.execute('DELETE FROM auth_sessions').rowcount
 
+    def end_user_sessions(self, user_id: int, keep: str = '') -> int:
+        """Sign *user_id* out of every browser but the one with the
+        session *keep* (e.g. the one that just changed the password)."""
+
+        with self._connect() as conn:
+            return conn.execute(
+                'DELETE FROM auth_sessions WHERE user_id = ? AND id_hash != ?',
+                (user_id, _sha256(keep) if keep else ''),
+            ).rowcount
+
     # Devices
 
     def create_device(
-        self, name: str, platform: str = '', ip: str = ''
+        self, name: str, platform: str = '', ip: str = '', user_id: int = 0
     ) -> tuple[dict[str, Any], str]:
-        """Register a paired device: ``(device, token)``. The token is
-        shown to the app once and never stored."""
+        """Register a device paired to *user_id*: ``(device, token)``.
+        The token is shown to the app once and never stored."""
 
         device_id = ''.join(
             secrets.choice(_DEVICE_ID_ALPHABET)
@@ -622,8 +575,8 @@ class AuthStore:
             conn.execute(
                 """INSERT INTO auth_devices
                    (id, name, platform, token_hash, created_at,
-                    last_seen_at, last_ip)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    last_seen_at, last_ip, user_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     device_id,
                     clean_device_name(name),
@@ -632,27 +585,44 @@ class AuthStore:
                     now,
                     now,
                     ip[:64],
+                    user_id,
                 ),
             )
         return self.get_device(device_id) or {}, (
             f'{TOKEN_PREFIX}{device_id}_{secret}'
         )
 
+    _DEVICE_COLUMNS = (
+        'd.id, d.name, d.platform, d.created_at, d.last_seen_at, '
+        "d.last_ip, d.user_id, COALESCE(u.username, '') AS username"
+    )
+
     def get_device(self, device_id: str) -> Optional[dict[str, Any]]:
         with self._connect() as conn:
             row = conn.execute(
-                'SELECT id, name, platform, created_at, last_seen_at, '
-                'last_ip, revoked_at FROM auth_devices WHERE id = ?',
+                f'SELECT {self._DEVICE_COLUMNS}, d.revoked_at '
+                'FROM auth_devices d LEFT JOIN users u ON u.id = d.user_id '
+                'WHERE d.id = ?',
                 (device_id,),
             ).fetchone()
         return dict(row) if row else None
 
-    def list_devices(self) -> list[dict[str, Any]]:
+    def list_devices(
+        self, user_id: Optional[int] = None
+    ) -> list[dict[str, Any]]:
+        """Paired devices - *user_id*'s, or everyone's when ``None``."""
+
+        where = 'd.revoked_at IS NULL'
+        args: tuple[Any, ...] = ()
+        if user_id is not None:
+            where += ' AND d.user_id = ?'
+            args = (user_id,)
         with self._connect() as conn:
             rows = conn.execute(
-                'SELECT id, name, platform, created_at, last_seen_at, '
-                'last_ip FROM auth_devices WHERE revoked_at IS NULL '
-                'ORDER BY created_at DESC'
+                f'SELECT {self._DEVICE_COLUMNS} '
+                'FROM auth_devices d LEFT JOIN users u ON u.id = d.user_id '
+                f'WHERE {where} ORDER BY d.created_at DESC',
+                args,
             ).fetchall()
         return [dict(row) for row in rows]
 
@@ -668,8 +638,9 @@ class AuthStore:
     def verify_device_token(
         self, token: str, ip: str = ''
     ) -> Optional[dict[str, Any]]:
-        """The device *token* belongs to, when it's valid and not revoked
-        (and note that it was seen); else ``None``."""
+        """The device *token* belongs to and its user, when it's valid,
+        not revoked and its user still exists (and note that it was
+        seen); else ``None``."""
 
         match = _TOKEN_RE.match(token or '')
         if not match:
@@ -677,8 +648,10 @@ class AuthStore:
         device_id, secret = match.groups()
         with self._connect() as conn:
             row = conn.execute(
-                'SELECT id, name, token_hash, last_seen_at, revoked_at '
-                'FROM auth_devices WHERE id = ?',
+                'SELECT d.id, d.name, d.token_hash, d.last_seen_at, '
+                'd.revoked_at, d.user_id, u.username, u.role '
+                'FROM auth_devices d LEFT JOIN users u ON u.id = d.user_id '
+                'WHERE d.id = ?',
                 (device_id,),
             ).fetchone()
             if row is None:
@@ -687,7 +660,7 @@ class AuthStore:
                 return None
             if not hmac.compare_digest(row['token_hash'], _sha256(secret)):
                 return None
-            if row['revoked_at']:
+            if row['revoked_at'] or row['username'] is None:
                 return None
             now = _now()
             seen = _parse(row['last_seen_at'])
@@ -697,7 +670,13 @@ class AuthStore:
                     'WHERE id = ?',
                     (_iso(now), ip[:64], device_id),
                 )
-        return {'id': row['id'], 'name': row['name']}
+        return {
+            'id': row['id'],
+            'name': row['name'],
+            'user_id': int(row['user_id']),
+            'username': row['username'],
+            'role': row['role'],
+        }
 
     def rename_device(self, device_id: str, name: str) -> bool:
         with self._connect() as conn:
@@ -717,6 +696,27 @@ class AuthStore:
             )
             return cur.rowcount > 0
 
+    def revoke_user(self, user_id: int, keep_session: str = '') -> list[str]:
+        """Sign *user_id* out everywhere - every paired device and every
+        browser but *keep_session*. The ids of the devices unpaired."""
+
+        with self._connect() as conn:
+            ids = [
+                row['id']
+                for row in conn.execute(
+                    'SELECT id FROM auth_devices WHERE user_id = ? '
+                    'AND revoked_at IS NULL',
+                    (user_id,),
+                ).fetchall()
+            ]
+            conn.execute(
+                'UPDATE auth_devices SET revoked_at = ? WHERE user_id = ? '
+                'AND revoked_at IS NULL',
+                (_iso(_now()), user_id),
+            )
+        self.end_user_sessions(user_id, keep_session)
+        return ids
+
     def revoke_everything(self) -> None:
         """Sign every device and browser out, and void every signed URL
         (a new signing key)."""
@@ -731,15 +731,14 @@ class AuthStore:
                 conn.execute('DELETE FROM auth_sessions')
             self.signer.rotate()
 
-    def reset(self) -> None:
-        """Recovery (``python main.py auth-reset``): sign-in no longer
-        required, no password, every web session ended. Paired devices
-        stay paired."""
+    def reset(self) -> dict[str, Any]:
+        """Recovery (``python main.py auth-reset``): the admin ``admin``
+        with the default password, signed out of every browser. Paired
+        devices stay paired. The admin, as :meth:`UserStore.get` has it."""
 
-        self._set('require_sign_in', '0')
-        self._set('password_hash', None)
-        self.end_all_sessions()
-        self._require = self._read_require()
+        admin = self.users.reset_admin()
+        self.end_user_sessions(int(admin['id']))
+        return admin
 
 
 class UrlSigner:
@@ -864,7 +863,13 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('POST'), r'^/api/auth/login$', PUBLIC),
         (_m('POST'), r'^/api/auth/logout$', PUBLIC),
         (_m('POST'), r'^/api/auth/pair$', PUBLIC),
-        # Admin: sign-in, devices, pairing, settings and credentials.
+        # Any signed-in user: their own account, devices and pairing
+        # (the routes check whose), and a WebSocket ticket.
+        (_m('POST'), r'^/api/auth/ws-ticket$', CLIENT),
+        (_READ, r'^/api/me$', CLIENT),
+        (_ALL, r'^/api/me(/|$)', USER),
+        (_ALL, r'^/api/auth/(devices|pairing)(/|$)', USER),
+        # Admin: signing everyone out, settings and credentials.
         (_ALL, r'^/api/auth/', ADMIN),
         (_ALL, r'^/api/server$', ADMIN),
         (_ALL, r'^/api/settings', ADMIN),
@@ -875,7 +880,6 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_ALL, r'^/(delete|delete/batch)$', ADMIN),
         (_ALL, r'^/(docs|redoc|openapi\.json)', ADMIN),
         # Client: what a paired app does.
-        (_m('POST'), r'^/api/auth/ws-ticket$', CLIENT),
         (_ALL, r'^/api/v1/', CLIENT),
         (_ALL, r'^/api/ws$', CLIENT),
         (
@@ -902,6 +906,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
             CLIENT,
         ),
         (_m('PUT'), r'^/api/podcasts/episodes/\d+/playback$', CLIENT),
+        (_m('POST'), r'^/api/activity/playback$', CLIENT),
         (_READ, r'^/api/monitor/playlists$', CLIENT),
         (_READ, r'^/api/check_update$', CLIENT),
         # Admin (after the client rules, which carve out exceptions):
@@ -915,6 +920,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('DELETE'), r'^/api/discover/listens$', ADMIN),
         (_m('POST', 'PATCH', 'DELETE'), r'^/api/podcasts/', ADMIN),
         (_m('POST', 'PATCH', 'DELETE'), r'^/api/monitor/', ADMIN),
+        (_ALL, r'^/api/(users|activity)(/|$)', ADMIN),
     ]
 ]
 
@@ -1010,11 +1016,53 @@ def identify(
         device = store.verify_device_token(auth[7:].strip(), ip)
         if device is None:
             return None, True
-        return Principal('device', CLIENT, device['id']), False
+        return (
+            Principal(
+                'device',
+                CLIENT,
+                device['id'],
+                device['user_id'],
+                device['username'],
+                device['role'],
+            ),
+            False,
+        )
     session = _cookie(scope, SESSION_COOKIE)
-    if session and store.session_valid(session):
-        return Principal('session', ADMIN), False
+    user = store.session_user(session) if session else None
+    if user is not None:
+        return (
+            Principal(
+                'session',
+                ADMIN if user['role'] == ROLE_ADMIN else USER,
+                '',
+                user['id'],
+                user['username'],
+                user['role'],
+            ),
+            False,
+        )
     return None, False
+
+
+def open_principal(store: AuthStore) -> Optional[Principal]:
+    """Who a request without credentials is when sign-in is turned off
+    (``DOWNTIFY_DISABLE_AUTH``): the first admin. ``None`` otherwise."""
+
+    if not store.auth_disabled:
+        return None
+    admin = store.users.first_admin()
+    if admin is None:
+        return None
+    return Principal(
+        'open', ADMIN, '', admin['id'], admin['username'], ROLE_ADMIN
+    )
+
+
+def auth_disabled_from_env() -> bool:
+    """``DOWNTIFY_DISABLE_AUTH``: ``true`` turns accounts and sign-in off."""
+
+    raw = os.getenv('DOWNTIFY_DISABLE_AUTH', '').strip().lower()
+    return raw in {'1', 'true', 'yes', 'on'}
 
 
 def session_cookie(scope: MutableMapping[str, Any]) -> str:
@@ -1031,9 +1079,8 @@ class AuthMiddleware:
     for the routes that need to know (e.g. the WebSocket, to close a
     revoked device's socket).
 
-    With "Require sign-in" off everything passes as before; a request
-    that *does* send a device token still has it checked, so an app
-    learns its token was revoked instead of carrying on unaware.
+    A request that sends a revoked device token is told so (401) even on
+    a route anyone may use, so an app learns it was unpaired.
     """
 
     def __init__(
@@ -1077,29 +1124,29 @@ class AuthMiddleware:
 
         ip = client_ip(scope, self._trusted)
         principal, bad_token = self._authenticate(scope, store, ip, method)
+        if principal is None and not bad_token:
+            principal = open_principal(store)
         scope.setdefault('state', {})['principal'] = principal
 
         if bad_token:
             await self._deny(scope, send, 401, 'Invalid or revoked token')
             return
         if principal is None:
-            if store.require_sign_in:
-                await self._deny(scope, send, 401, 'Sign in required')
-                return
-        elif (
-            store.require_sign_in
-            and needed == ADMIN
-            and (principal.scope != ADMIN)
-        ):
-            await self._deny(
-                scope, send, 403, 'This needs a signed-in browser'
+            await self._deny(scope, send, 401, 'Sign in required')
+            return
+        if not allows(principal.scope, needed):
+            detail = (
+                'This needs an admin'
+                if principal.kind == 'session'
+                else 'This needs a signed-in browser'
             )
+            await self._deny(scope, send, 403, detail)
             return
         # A cookie is sent by the browser on its own, to any site that
         # asks: only this site's own pages may use it to change things.
         if (
             principal is not None
-            and principal.kind == 'session'
+            and principal.kind in {'session', 'open'}
             and (method in _UNSAFE or kind == 'websocket')
             and not _same_origin(scope, self._trusted)
         ):
@@ -1164,16 +1211,3 @@ class AuthMiddleware:
             'headers': headers,
         })
         await send({'type': 'http.response.body', 'body': body})
-
-
-def forced_require_from_env() -> Optional[bool]:
-    """``DOWNTIFY_REQUIRE_SIGN_IN``: ``true``/``false`` pins "Require
-    sign-in" (and locks the switch in the web UI); unset leaves it to
-    the web UI."""
-
-    raw = os.getenv('DOWNTIFY_REQUIRE_SIGN_IN', '').strip().lower()
-    if raw in {'1', 'true', 'yes', 'on'}:
-        return True
-    if raw in {'0', 'false', 'no', 'off'}:
-        return False
-    return None

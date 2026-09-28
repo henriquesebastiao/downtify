@@ -116,6 +116,22 @@
                   : t('settings.themeDark')
               }}
             </button>
+            <button
+              v-if="auth.user.value && !auth.authDisabled.value"
+              type="button"
+              class="flex h-14 w-full items-center gap-4 rounded-control px-2 text-[15px] font-medium"
+              @click="auth.signOut"
+            >
+              <span
+                class="flex size-9 items-center justify-center rounded-[10px] bg-surface-2 text-fg-3"
+              >
+                <AppIcon name="log-out" :size="18" />
+              </span>
+              {{ t('nav.signOut') }}
+              <span class="ml-auto truncate text-[13px] text-faint">{{
+                auth.user.value.username
+              }}</span>
+            </button>
           </div>
         </div>
       </Transition>
@@ -128,6 +144,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppIcon from '../ui/AppIcon.vue'
 import { useI18n } from '/src/i18n'
+import { useAuth } from '/src/model/auth'
 import { useTheme } from '/src/model/theme'
 import { useUpdateCheck } from '/src/model/updateCheck'
 import { usePendingCount } from './navState'
@@ -135,6 +152,7 @@ import { usePendingCount } from './navState'
 const { t } = useI18n()
 const route = useRoute()
 const theme = useTheme()
+const auth = useAuth()
 const pending = usePendingCount()
 const sheet = ref(false)
 const update = useUpdateCheck().status
