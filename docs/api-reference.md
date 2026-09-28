@@ -77,6 +77,72 @@ Track rows download the same way a search result does — Downtify has no Deezer
 
 ---
 
+### `GET /api/finder/search`
+
+Free-text search on Deezer alone, for the [Finder](features/finder.md) page.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | yes | Search query (blank → empty lists, no request to Deezer) |
+| `limit` | integer | no | Rows per section, 1–50 (default 25) |
+
+**Response:**
+
+```json
+{
+  "songs": [ /* song objects like /api/discover/chart's tracks, plus "deezer_artist_id" and "deezer_album_id" */ ],
+  "albums": [ { "album_id": "…", "name": "…", "artist": "…", "artist_id": "…", "cover_url": "https://…", "release_type": "Album", "track_count": 14, "explicit": false, "url": "https://www.deezer.com/album/…", "source": "deezer" } ],
+  "artists": [ { "artist_id": "…", "name": "…", "cover_url": "https://…", "fans": 5212632, "album_count": 36, "url": "https://www.deezer.com/artist/…", "source": "deezer" } ]
+}
+```
+
+Songs download the same way chart tracks do. Albums and artists are extras: when their part of the search fails they come back empty, while a failed song search is a `502`.
+
+---
+
+### `GET /api/finder/artist`
+
+Everything the Finder's artist column shows.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist_id` | string | yes | Deezer artist id (digits) |
+| `lang` | string | no | Language of the bio (default `en`) |
+
+**Response:** `{artist_id, name, cover_url, fans, album_count, url, source, bio, social, related, top_songs}`. `bio` is plain text, paragraphs separated by a blank line (the same cleanup a saved [artist bio](features/artist-images.md) gets). `social` holds `twitter`, `facebook`, `website` and `instagram` links. `related` lists up to 20 artists shaped like the search's artists, and `top_songs` lists their 10 most-played tracks shaped like the search's songs. Only the artist itself is required: the bio, related artists and top songs come back empty when fetching them fails. `502` when the artist doesn't resolve.
+
+---
+
+### `GET /api/finder/artist/albums`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist_id` | string | yes | Deezer artist id (digits) |
+
+**Response:** The artist's whole discography, most recent first, as album rows like the search's, plus `release_date`, `year` and `fans`. Deezer's discography listing carries no track count, so `track_count` is `null` until Downtify has looked it up (see below).
+
+---
+
+### `GET /api/finder/albums/track_counts`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ids` | string | yes | Comma-separated Deezer album ids, 50 at most |
+
+**Response:** `{"<album id>": <track count>}`, for the albums Deezer answered for. A lookup that fails, such as a rate limit, is left out so it can be asked again. It costs one small request per album, throttled to stay under Deezer's quota of 50 requests per 5 seconds, and counts are cached for the life of the process.
+
+---
+
+### `GET /api/finder/album`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `album_id` | string | yes | Deezer album id (digits) |
+
+**Response:** `{album_id, name, artist, artist_id, cover_url, release_date, year, label, genres, duration, track_count, fans, release_type, explicit, upc, url, contributors, source, tracks}`. `contributors` is a list of `{artist_id, name, role}` objects. `tracks` holds song objects numbered like a resolved album's (`track_number`, `album_track_total`), each with its `preview_url`. `502` when the album doesn't resolve.
+
+---
+
 ### `GET /api/song/url`
 
 Resolve a Spotify, YouTube Music or Deezer URL to metadata.
