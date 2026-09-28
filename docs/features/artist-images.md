@@ -9,7 +9,7 @@ Downtify can show a real profile photo, a banner and a biography for each artist
 The edit affordance is always available on every artist's Library page, no setting to turn on first.
 
 ::: info About "Automatically get artist photos" / "Automatically get artist banners" in Settings
-**Settings → Downloads & files → Automatically get artist photos / Automatically get artist banners** decide whether Downtify may save an artist's photo/banner on its own — that happens the first time you open an artist's page and when one of their tracks finishes downloading (see [The first time you open a new artist](#the-first-time-you-open-a-new-artist) and [When a download finishes](#when-a-download-finishes)). Both are off by default. They never limit the edit modal: you can always pick a photo or banner by hand, whatever these say.
+**Settings → Downloads & files → Automatically get artist photos / Automatically get artist banners** decide whether Downtify may save an artist's photo/banner on its own — that happens the first time you open an artist's page and when one of their tracks finishes downloading (see [The first time you open a new artist](#the-first-time-you-open-a-new-artist) and [When a download finishes](#when-a-download-finishes)). Photos are on by default, banners off. They never limit the edit modal: you can always pick a photo or banner by hand, whatever these say.
 :::
 
 ## The edit modal
