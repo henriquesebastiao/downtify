@@ -356,20 +356,20 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'bitrate': '320',
     'output': '{artists} - {title}.{output-ext}',
     'generate_m3u': True,
-    'download_cover_art_playlists': False,
+    'download_cover_art_playlists': True,
     # Whether Downtify may save an artist's photo/banner on its own: when
     # their Library page is first opened and when one of their tracks
     # finishes downloading (``enrich_artist_after_download``). The manual
     # picker on an artist's Library page never checks these.
-    'download_cover_art_artist': False,
+    'download_cover_art_artist': True,
     'download_cover_art_artist_banner': False,
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
     'cover_resolution': providers.DEFAULT_COVER_RESOLUTION,
     'download_cover_art': True,
     'overwrite_existing_files': True,
-    'organize_by_artist': False,
-    'organize_by_album': False,
+    'organize_by_artist': True,
+    'organize_by_album': True,
     'search_albums': True,
     'mini_player_enabled': True,
     # The language the web UI is shown in (``en``, ``pt-BR``...). The choice
@@ -1299,12 +1299,23 @@ async def _schedule_playlist_refresh_after_download(
     spawn_task(_run(), name='playlist-refresh-after-download')
 
 
+# Defaults that changed for new installs. A settings file saved before,
+# without the key, keeps the old default: turning organizing on by itself
+# would scatter an existing library's new downloads into other folders.
+_PREVIOUS_DEFAULTS: dict[str, Any] = {
+    'organize_by_artist': False,
+    'organize_by_album': False,
+    'download_cover_art_playlists': False,
+    'download_cover_art_artist': False,
+}
+
+
 def _load_settings(path: Path) -> dict[str, Any]:
     """Load saved settings from *path*, merging with DEFAULT_SETTINGS as base."""
     try:
         saved = json.loads(path.read_text(encoding='utf-8'))
         if isinstance(saved, dict):
-            merged = dict(DEFAULT_SETTINGS)
+            merged = {**DEFAULT_SETTINGS, **_PREVIOUS_DEFAULTS}
             for k, v in saved.items():
                 if k not in DEFAULT_SETTINGS:
                     continue

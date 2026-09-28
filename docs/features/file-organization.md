@@ -4,9 +4,9 @@ icon: lucide/file-headphone
 
 # File Organization
 
-By default Downtify saves files in a flat layout. An optional *Organize by artist* mode groups them into per-artist subfolders.
+A new server organizes files by artist and album (`Artist/Album/…`): **Organize by artist** and **Organize by album** are both on by default. Turn them off for the flat layout below. Servers set up before this default keep the choice they had.
 
-## Default layout (flat)
+## Flat layout (both off)
 
 Single tracks and YouTube searches go directly into the root of the downloads folder. Playlist and album tracks go into a per-playlist or per-album subfolder:
 
@@ -21,7 +21,7 @@ downloads/
 
 ## Organize by artist
 
-Enable **Settings → File organization → Organize by artist** to group every track — including playlist and album downloads — under a subfolder named after the primary artist:
+With **Settings → File organization → Organize by artist** on (the default), to group every track — including playlist and album downloads — under a subfolder named after the primary artist:
 
 ```
 downloads/

@@ -59,16 +59,38 @@ def test_default_settings_has_required_keys():
     assert required <= set(DEFAULT_SETTINGS)
 
 
-def test_default_organize_by_artist_is_false():
-    assert DEFAULT_SETTINGS['organize_by_artist'] is False
+def test_new_installs_organize_by_artist_and_album():
+    assert DEFAULT_SETTINGS['organize_by_artist'] is True
+    assert DEFAULT_SETTINGS['organize_by_album'] is True
+
+
+def test_default_overwrite_existing_files_is_true():
+    assert DEFAULT_SETTINGS['overwrite_existing_files'] is True
 
 
 def test_default_generate_m3u_is_true():
     assert DEFAULT_SETTINGS['generate_m3u'] is True
 
 
-def test_default_download_cover_art_playlists_is_false():
-    assert DEFAULT_SETTINGS['download_cover_art_playlists'] is False
+def test_an_older_settings_file_keeps_the_previous_defaults(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(json.dumps({'format': 'flac'}))
+    loaded = api._load_settings(path)
+    assert loaded['format'] == 'flac'
+    assert loaded['organize_by_artist'] is False
+    assert loaded['organize_by_album'] is False
+    assert loaded['download_cover_art_playlists'] is False
+    assert loaded['download_cover_art_artist'] is False
+    # A new install (no file yet) gets the new ones.
+    fresh = api._load_settings(tmp_path / 'missing.json')
+    assert fresh['organize_by_artist'] is True
+
+
+def test_new_installs_save_playlist_covers_and_artist_photos():
+    assert DEFAULT_SETTINGS['download_cover_art_playlists'] is True
+    assert DEFAULT_SETTINGS['download_cover_art_artist'] is True
+    # Banners stay opt-in.
+    assert DEFAULT_SETTINGS['download_cover_art_artist_banner'] is False
 
 
 def test_default_download_lyrics_is_true():
@@ -248,7 +270,8 @@ def test_load_settings_empty_object_returns_defaults(tmp_path):
     path = tmp_path / 'settings.json'
     path.write_text('{}', encoding='utf-8')
     result = _load_settings(path)
-    assert result == DEFAULT_SETTINGS
+    # A file saved before some defaults changed keeps the old ones.
+    assert result == {**DEFAULT_SETTINGS, **api._PREVIOUS_DEFAULTS}
 
 
 # ── _effective_lyrics_providers ───────────────────────────────────────────────

@@ -6,7 +6,7 @@ icon: lucide/image
 
 Downtify can save a playlist's own cover next to its [M3U file](m3u-export.md), so media servers and file browsers show the real artwork for the playlist instead of a generic icon.
 
-Off by default. Turn it on in **Settings → Downloads & files → Save playlist cover art**.
+On by default. Turn it off in **Settings → Downloads & files → Save playlist cover art**.
 
 ## Where the file goes
 
