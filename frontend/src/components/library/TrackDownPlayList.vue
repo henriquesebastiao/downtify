@@ -35,7 +35,7 @@
     </div>
 
     <div class="-mx-3 flex flex-col">
-      <TrackDownPlayHeader :selectable="selectable" />
+      <TrackDownPlayHeader :selectable="selectable" :hide-album="hideAlbum" />
       <TrackDownPlay
         v-for="(song, i) in songs"
         :key="keyOf(song, i)"
@@ -45,6 +45,8 @@
         :context="context"
         :selectable="selectable"
         :selected="selected.has(keyOf(song, i))"
+        :marked="!!markedKey && keyOf(song, i) === markedKey"
+        :hide-album="hideAlbum"
         @toggle="toggleSelected(keyOf(song, i))"
       />
     </div>
@@ -103,6 +105,11 @@ export const TOOLBAR_LAZY = 'lazy'
 // - `collectionName` (string, default ''): the `{name}` in the "Queued
 //   N tracks from {name}" toast after a selected-download. Falls back to
 //   a generic "Tracks" when left blank.
+// - `markedKey` (string, default ''): the key (`song_id`, else `url`) of
+//   one song to highlight like the one playing - e.g. the track a page
+//   was opened on. Its row gets `data-marked`, to scroll it into view.
+// - `hideAlbum` (boolean, default false): leave out the album column -
+//   for a list that is all one album anyway.
 //
 // Events:
 // - `download` (songs, count): after a selected-download request has
@@ -142,6 +149,8 @@ const props = defineProps({
   queue: { type: Array, default: () => [] },
   context: { type: Object, default: null },
   collectionName: { type: String, default: '' },
+  markedKey: { type: String, default: '' },
+  hideAlbum: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['download'])

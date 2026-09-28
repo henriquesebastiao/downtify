@@ -9,7 +9,7 @@
     <span role="columnheader" class="min-w-0 flex-1">{{
       t('track.title')
     }}</span>
-    <span role="columnheader" class="w-[30%] max-lg:hidden">{{
+    <span v-if="!hideAlbum" role="columnheader" class="w-[30%] max-lg:hidden">{{
       t('track.album')
     }}</span>
     <span role="columnheader" class="w-12 text-right">
@@ -30,6 +30,8 @@ defineProps({
   // Matches a leading spacer to TrackDownPlay's own checkbox column, so
   // the rest of the columns stay aligned when its rows are selectable.
   selectable: { type: Boolean, default: false },
+  // Matches TrackDownPlay's own `hideAlbum`.
+  hideAlbum: { type: Boolean, default: false },
 })
 
 const { t } = useI18n()

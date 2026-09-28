@@ -4,6 +4,7 @@
     :class="
       selected ? 'bg-accent/8' : highlighted ? 'bg-surface' : 'hover:bg-surface'
     "
+    :data-marked="marked || undefined"
     @click="onRowClick"
     @dblclick="ensurePlaying"
   >
@@ -93,7 +94,7 @@
       @click.stop="toggle"
     >
       <CoverArt
-        :src="song.cover_url"
+        :src="cover"
         :name="song.album_name || song.name"
         rounded="rounded-[8px]"
         :letter-size="14"
@@ -102,7 +103,7 @@
     </button>
     <CoverArt
       v-else
-      :src="song.cover_url"
+      :src="cover"
       :name="song.album_name || song.name"
       rounded="rounded-[8px]"
       :letter-size="14"
@@ -111,7 +112,17 @@
 
     <div class="min-w-0 flex-1">
       <p class="flex items-center gap-1.5">
+        <RouterLink
+          v-if="to"
+          :to="to"
+          class="truncate text-sm font-semibold hover:underline"
+          :class="highlighted ? 'text-accent' : ''"
+          @click.stop
+          @dblclick.stop
+          >{{ song.name }}</RouterLink
+        >
         <span
+          v-else
           class="truncate text-sm font-semibold"
           :class="highlighted ? 'text-accent' : ''"
           >{{ song.name }}</span
@@ -125,14 +136,16 @@
       </p>
       <p class="truncate text-[13px] text-muted">
         {{ artists
-        }}<span v-if="song.album_name" class="lg:hidden">
+        }}<span v-if="song.album_name && !hideAlbum" class="lg:hidden">
           · {{ song.album_name }}</span
         >
       </p>
     </div>
-    <span class="hidden w-[30%] truncate text-[13px] text-muted lg:block">{{
-      song.album_name
-    }}</span>
+    <span
+      v-if="!hideAlbum"
+      class="hidden w-[30%] truncate text-[13px] text-muted lg:block"
+      >{{ song.album_name }}</span
+    >
     <span
       class="tabular relative hidden w-12 text-right text-[13px] text-muted sm:block"
     >
@@ -191,6 +204,7 @@ import EqBars from '../ui/EqBars.vue'
 import DownloadState from '../search/DownloadState.vue'
 import { usePlayer } from '/src/model/player'
 import { useSongPlay } from '/src/model/songPlay'
+import { deezerImage } from '/src/lib/deezerImage'
 import { formatDuration } from '/src/lib/format'
 import {
   PREVIEW_RING_LENGTH,
@@ -215,6 +229,15 @@ const props = defineProps({
   selectable: { type: Boolean, default: false },
   // Whether this row is currently selected. Ignored unless `selectable`.
   selected: { type: Boolean, default: false },
+  // Makes the title a link to this route location (e.g. a page about the
+  // song); a plain title when unset.
+  to: { type: [String, Object], default: null },
+  // Highlights the row like the one playing - for a caller pointing at
+  // one song in the list (the Finder's, for the track it was opened on).
+  marked: { type: Boolean, default: false },
+  // Leaves out the album column (and the album after the artists on a
+  // narrow screen) - for a list that is all one album anyway.
+  hideAlbum: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['toggle'])
@@ -228,7 +251,7 @@ const {
   previewPlaying,
   previewLoading,
   playable,
-  highlighted,
+  highlighted: playing,
   playLabel,
   progress,
   toggle,
@@ -241,6 +264,11 @@ const artists = computed(
     props.song.artist ||
     t('common.unknownArtist')
 )
+// A Deezer cover at its medium size, for the 44px thumbnail - display only:
+// the song's own `cover_url` is what its download embeds.
+const cover = computed(() => deezerImage(props.song.cover_url))
+// Lit up while it plays (or its clip does), and when the caller points at it.
+const highlighted = computed(() => props.marked || playing.value)
 
 // On a touch screen a tap on the row plays it (a double click can't).
 function onRowClick() {
