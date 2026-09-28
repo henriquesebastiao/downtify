@@ -134,6 +134,11 @@ function searchArtists(query) {
   return API.get('/api/artists/search', { params: { query } })
 }
 
+// Deezer's own global "what's trending" chart - `{ tracks, albums, artists }`.
+function getChart(limit = 25) {
+  return API.get('/api/discover/chart', { params: { limit } })
+}
+
 // ── Artist photo & banner ───────────────────────────────────────────
 function getArtistArt(name) {
   return API.get('/api/artists/art', { params: { name } })
@@ -648,6 +653,7 @@ export default {
   search,
   searchAlbums,
   searchArtists,
+  getChart,
   getArtistArt,
   getArtistArtBulk,
   searchArtistArt,

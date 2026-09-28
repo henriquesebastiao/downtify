@@ -54,6 +54,30 @@ When YouTube Music returns nothing and slskd is an enabled audio source, the res
 
 ---
 
+### `GET /api/discover/chart`
+
+Deezer's own global chart (no genre filter, no auth) — top tracks, albums, artists, playlists and podcasts, for the [Charts](features/charts.md) page.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `limit` | integer | no | Rows per section, 1–50 (default 25) |
+
+**Response:**
+
+```json
+{
+  "tracks": [ /* song objects, "source": "deezer", plus "preview_url" when Deezer offers a 30s clip */ ],
+  "albums": [ { "album_id": "…", "name": "…", "artist": "…", "cover_url": "https://…", "url": "https://www.deezer.com/album/…", "source": "deezer" } ],
+  "artists": [ { "artist_id": "…", "name": "…", "cover_url": "https://…", "url": "https://www.deezer.com/artist/…", "source": "deezer" } ],
+  "playlists": [ { "playlist_id": "…", "name": "…", "owner": "…", "cover_url": "https://…", "url": "https://www.deezer.com/playlist/…", "source": "deezer" } ],
+  "podcasts": [ { "podcast_id": "…", "name": "…", "cover_url": "https://…", "url": "https://www.deezer.com/show/…", "source": "deezer" } ]
+}
+```
+
+Track rows download the same way a search result does — Downtify has no Deezer discography resolver, so `POST /api/download/url` takes a `"source": "deezer"` row's body as-is instead of trying to parse its `url` as a Spotify/YouTube link (the same escape hatch a `text_search` row above uses), and matches it on YouTube Music/YouTube by title, artist and length. A track's `preview_url`, when present, is a 30-second MP3 clip Deezer streams directly (`https://` only) — the web UI plays it with the same preview player an artist's Spotify top songs use; it's `""` when Deezer has no clip for that track. Album, artist, playlist and podcast rows are read-only summaries — their `url` only opens the item on `deezer.com`. `502` when Deezer can't be reached or refuses the request.
+
+---
+
 ### `GET /api/song/url`
 
 Resolve a Spotify, YouTube Music or Deezer URL to metadata.
@@ -435,7 +459,7 @@ Download a single track. Blocks until complete.
 | `url` | string | yes | Spotify track URL, YouTube URL, or Deezer track URL |
 | `client_id` | string | no | WebSocket client ID for progress events |
 
-**Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` forces the audio source, and `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download. A body with `"source": "deezer"` (a resolved Deezer link row) is taken as-is instead of re-fetching by `url` - Deezer isn't a URL this endpoint otherwise resolves on its own.
+**Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` forces the audio source, and `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download. A body with `"source": "deezer"` (a Deezer chart or resolved-link row) is taken as-is instead of re-fetching by `url` - Deezer isn't a URL this endpoint otherwise resolves on its own.
 
 **Response:** Filename string of the downloaded file — a `slskd/…` path for a slskd download left in place. `404` when no audio source has a match for the track.
 

@@ -30,6 +30,7 @@ export default {
     monitor: 'Наблюдение',
     discover: 'Откриване',
     podcasts: 'Подкасти',
+    charts: 'Класации',
     settings: 'Настройки',
     more: 'Още',
     playlists: 'Плейлисти',
@@ -132,6 +133,14 @@ export default {
     tipYoutubeTitle: 'Постави линк от YouTube Music',
     tipYoutubeBody:
       'Песни, албуми, плейлисти — или страница на изпълнител за всички издания.',
+  },
+  charts: {
+    title: 'Класации',
+    subtitle: 'Глобалната класация на Deezer: кое е популярно точно сега.',
+    failed: 'Класацията не се зареди',
+    empty: 'В момента няма нищо в класацията',
+    playlist: 'Плейлист',
+    podcast: 'Подкаст',
   },
   link: {
     resolving: 'Четене на линка…',

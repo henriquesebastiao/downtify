@@ -3,6 +3,7 @@ import config from '/src/config'
 import HomeView from '/src/views/HomeView.vue'
 
 const LIBRARY_TABS = 'tracks|albums|artists|playlists'
+const CHARTS_TABS = 'tracks|albums|artists|playlists|podcasts'
 
 const routes = [
   { path: '/', name: 'Home', component: HomeView },
@@ -78,6 +79,13 @@ const routes = [
     path: '/podcasts/show',
     name: 'PodcastShow',
     component: () => import('/src/views/PodcastShowView.vue'),
+  },
+  {
+    // Deezer's own "what's trending" chart: tracks, albums, artists,
+    // playlists and podcasts, one tab each.
+    path: `/charts/:tab(${CHARTS_TABS})?`,
+    name: 'Charts',
+    component: () => import('/src/views/ChartsView.vue'),
   },
   {
     path: '/settings/:section?',

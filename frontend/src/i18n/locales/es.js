@@ -30,6 +30,7 @@ export default {
     monitor: 'Monitor',
     discover: 'Descubrir',
     podcasts: 'Podcasts',
+    charts: 'Listas de éxitos',
     settings: 'Ajustes',
     more: 'Más',
     playlists: 'Playlists',
@@ -132,6 +133,14 @@ export default {
     tipYoutubeTitle: 'Pega un enlace de YouTube Music',
     tipYoutubeBody:
       'Canciones, álbumes, playlists — o la página de un artista para ver todos sus lanzamientos.',
+  },
+  charts: {
+    title: 'Listas de éxitos',
+    subtitle: 'La lista global de Deezer: lo que está sonando ahora mismo.',
+    failed: 'No se pudo cargar la lista',
+    empty: 'No hay nada en la lista por ahora',
+    playlist: 'Playlist',
+    podcast: 'Podcast',
   },
   link: {
     resolving: 'Leyendo el enlace…',

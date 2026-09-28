@@ -203,6 +203,7 @@ const items = [
     label: 'nav.podcasts',
     match: ['PodcastShow'],
   },
+  { name: 'Charts', icon: 'trending', label: 'nav.charts' },
 ]
 
 function isActive(item) {

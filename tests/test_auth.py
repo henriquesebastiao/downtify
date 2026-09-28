@@ -413,6 +413,7 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/downloads/Artist - Song.mp3', CLIENT),
         ('GET', '/media/slskd/x.flac', CLIENT),
         ('POST', '/api/download/url', CLIENT),
+        ('GET', '/api/discover/chart', CLIENT),
         ('PUT', '/api/likes', CLIENT),
         ('PUT', '/api/podcasts/episodes/12/playback', CLIENT),
         ('DELETE', '/api/podcasts/episodes/12', ADMIN),

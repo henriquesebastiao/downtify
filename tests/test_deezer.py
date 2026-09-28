@@ -11,6 +11,7 @@ import pytest
 from downtify.deezer import (
     exact_artist_picture,
     fetch_artist_full,
+    fetch_chart,
     resolve_artist_id,
     search_artist,
 )
@@ -81,6 +82,215 @@ def test_search_artist_empty_query_returns_empty_without_request():
 def test_search_artist_request_failure_returns_empty():
     with patch('downtify.deezer.httpx.get', side_effect=Exception('boom')):
         assert search_artist('TestArtist') == []
+
+
+# ── fetch_chart ──────────────────────────────────────────────────────────
+
+
+_CHART_PAYLOAD = {
+    'tracks': {
+        'data': [
+            {
+                'id': 111,
+                'title': 'Chart Track',
+                'link': 'https://www.deezer.com/track/111',
+                'duration': 200,
+                'explicit_lyrics': True,
+                'preview': 'https://cdnt-preview.dzcdn.net/api/1/track111.mp3',
+                'artist': {'id': 1, 'name': 'Main Artist'},
+                'album': {
+                    'title': 'Chart Album',
+                    'cover_xl': 'https://example.com/album-xl.jpg',
+                    'cover_big': 'https://example.com/album-big.jpg',
+                },
+                'contributors': [
+                    {'name': 'Main Artist'},
+                    {'name': 'Featured Artist'},
+                ],
+            },
+            # Missing an id: skipped rather than crashing the whole chart.
+            {'title': 'No id', 'artist': {'name': 'Nobody'}},
+        ],
+    },
+    'albums': {
+        'data': [
+            {
+                'id': 222,
+                'title': 'Chart Album',
+                'link': 'https://www.deezer.com/album/222',
+                'cover_xl': 'https://example.com/album2-xl.jpg',
+                'artist': {'name': 'Album Artist'},
+            },
+        ],
+    },
+    'artists': {
+        'data': [
+            {
+                'id': 333,
+                'name': 'Chart Artist',
+                'link': 'https://www.deezer.com/artist/333',
+                'picture_xl': 'https://example.com/artist-xl.jpg',
+            },
+            {
+                'id': 444,
+                'name': 'No Photo Artist',
+                'link': 'https://www.deezer.com/artist/444',
+                'picture_xl': (
+                    'https://e-cdns-images.dzcdn.net/images/artist/'
+                    'd41d8cd98f00b204e9800998ecf8427e/250x250.jpg'
+                ),
+            },
+        ],
+    },
+    'playlists': {
+        'data': [
+            {
+                'id': 555,
+                'title': 'Chart Playlist',
+                'link': 'https://www.deezer.com/playlist/555',
+                'picture_xl': 'https://example.com/playlist-xl.jpg',
+                'user': {'name': 'Editor Deezer'},
+            },
+        ],
+    },
+    'podcasts': {
+        'data': [
+            {
+                'id': 666,
+                'title': 'Chart Podcast',
+                'link': 'https://www.deezer.com/show/666',
+                'picture_xl': 'https://example.com/podcast-xl.jpg',
+            },
+        ],
+    },
+}
+
+
+def test_fetch_chart_maps_every_section():
+    with patch(
+        'downtify.deezer.httpx.get',
+        return_value=_mock_response(_CHART_PAYLOAD),
+    ):
+        chart = fetch_chart()
+
+    assert chart['tracks'] == [
+        {
+            'song_id': 'deezer-111',
+            'name': 'Chart Track',
+            'artists': ['Main Artist', 'Featured Artist'],
+            'album_name': 'Chart Album',
+            'cover_url': 'https://example.com/album-xl.jpg',
+            'duration': 200,
+            'url': 'https://www.deezer.com/track/111',
+            'preview_url': 'https://cdnt-preview.dzcdn.net/api/1/track111.mp3',
+            'explicit': True,
+            'year': '',
+            'release_date': '',
+            'source': 'deezer',
+        }
+    ]
+    assert chart['albums'] == [
+        {
+            'album_id': '222',
+            'name': 'Chart Album',
+            'artist': 'Album Artist',
+            'cover_url': 'https://example.com/album2-xl.jpg',
+            'url': 'https://www.deezer.com/album/222',
+            'source': 'deezer',
+        }
+    ]
+    # The placeholder-picture artist keeps its id/name/url but no cover_url.
+    assert chart['artists'] == [
+        {
+            'artist_id': '333',
+            'name': 'Chart Artist',
+            'cover_url': 'https://example.com/artist-xl.jpg',
+            'url': 'https://www.deezer.com/artist/333',
+            'source': 'deezer',
+        },
+        {
+            'artist_id': '444',
+            'name': 'No Photo Artist',
+            'cover_url': '',
+            'url': 'https://www.deezer.com/artist/444',
+            'source': 'deezer',
+        },
+    ]
+    assert chart['playlists'] == [
+        {
+            'playlist_id': '555',
+            'name': 'Chart Playlist',
+            'owner': 'Editor Deezer',
+            'cover_url': 'https://example.com/playlist-xl.jpg',
+            'url': 'https://www.deezer.com/playlist/555',
+            'source': 'deezer',
+        }
+    ]
+    assert chart['podcasts'] == [
+        {
+            'podcast_id': '666',
+            'name': 'Chart Podcast',
+            'cover_url': 'https://example.com/podcast-xl.jpg',
+            'url': 'https://www.deezer.com/show/666',
+            'source': 'deezer',
+        }
+    ]
+
+
+def test_fetch_chart_track_without_preview_has_empty_preview_url():
+    payload = {
+        'tracks': {
+            'data': [
+                {
+                    'id': 111,
+                    'title': 'No Preview',
+                    'artist': {'name': 'Someone'},
+                }
+            ]
+        },
+        'albums': {},
+        'artists': {},
+        'playlists': {},
+        'podcasts': {},
+    }
+    with patch(
+        'downtify.deezer.httpx.get', return_value=_mock_response(payload)
+    ):
+        chart = fetch_chart()
+    assert not chart['tracks'][0]['preview_url']
+
+
+def test_fetch_chart_raises_on_request_failure():
+    with patch('downtify.deezer.httpx.get', side_effect=Exception('boom')):
+        with pytest.raises(ValueError, match='Could not reach Deezer'):
+            fetch_chart()
+
+
+def test_fetch_chart_raises_on_reported_error():
+    payload = {'error': {'code': 4, 'message': 'Quota limit exceeded'}}
+    with patch(
+        'downtify.deezer.httpx.get', return_value=_mock_response(payload)
+    ):
+        with pytest.raises(ValueError, match='Deezer refused'):
+            fetch_chart()
+
+
+def test_fetch_chart_clamps_limit():
+    captured = {}
+
+    def fake_get(url, params=None, timeout=None):
+        captured['limit'] = params['limit']
+        return _mock_response({
+            'tracks': {},
+            'albums': {},
+            'artists': {},
+            'playlists': {},
+            'podcasts': {},
+        })
+
+    with patch('downtify.deezer.httpx.get', side_effect=fake_get):
+        fetch_chart(limit=999)
+    assert captured['limit'] == 50
 
 
 # ── resolve_artist_id ────────────────────────────────────────────────────

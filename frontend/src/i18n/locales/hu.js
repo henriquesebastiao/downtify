@@ -30,6 +30,7 @@ export default {
     monitor: 'Figyelő',
     discover: 'Felfedezés',
     podcasts: 'Podcastok',
+    charts: 'Toplisták',
     settings: 'Beállítások',
     more: 'Továbbiak',
     playlists: 'Lejátszási listák',
@@ -132,6 +133,14 @@ export default {
     tipYoutubeTitle: 'YouTube Music link beillesztése',
     tipYoutubeBody:
       'Dalok, albumok, listák — vagy egy előadó oldala az összes kiadásához.',
+  },
+  charts: {
+    title: 'Toplisták',
+    subtitle: 'A Deezer globális listája: ami most a legnépszerűbb.',
+    failed: 'Nem sikerült betölteni a listát',
+    empty: 'Jelenleg nincs semmi a listán',
+    playlist: 'Lejátszási lista',
+    podcast: 'Podcast',
   },
   link: {
     resolving: 'Link beolvasása…',

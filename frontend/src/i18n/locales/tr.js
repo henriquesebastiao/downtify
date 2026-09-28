@@ -30,6 +30,7 @@ export default {
     monitor: 'İzleyici',
     discover: 'Keşfet',
     podcasts: 'Podcastler',
+    charts: 'Müzik listeleri',
     settings: 'Ayarlar',
     more: 'Daha fazla',
     playlists: 'Çalma listeleri',
@@ -136,6 +137,14 @@ export default {
     tipYoutubeTitle: 'YouTube Music bağlantısı yapıştır',
     tipYoutubeBody:
       'Şarkılar, albümler, çalma listeleri — ya da tüm yayınları görmek için bir sanatçı sayfası.',
+  },
+  charts: {
+    title: 'Müzik listeleri',
+    subtitle: "Deezer'ın küresel listesi: şu anda trend olanlar.",
+    failed: 'Liste yüklenemedi',
+    empty: 'Şu anda listede bir şey yok',
+    playlist: 'Çalma listesi',
+    podcast: 'Podcast',
   },
   link: {
     resolving: 'Bağlantı okunuyor…',

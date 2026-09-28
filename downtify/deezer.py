@@ -1,9 +1,9 @@
 """Search the public Deezer API for artist photo candidates, fetch
 bio/social/related-artist data from Deezer's internal web-player API,
-and resolve a pasted Deezer track/album/playlist/artist link the same
-way :mod:`downtify.spotify` and :mod:`downtify.providers` do for Spotify
-and YouTube Music (see :func:`parse_deezer_url` and ``downtify.api``'s
-``_deezer_details``).
+read Deezer's own global "what's trending" chart, and resolve a pasted
+Deezer track/album/playlist/artist link the same way :mod:`downtify.spotify`
+and :mod:`downtify.providers` do for Spotify and YouTube Music (see
+:func:`parse_deezer_url` and ``downtify.api``'s ``_deezer_details``).
 
 ``api.deezer.com`` is unauthenticated and keyless, same shape of
 integration as :mod:`downtify.itunes`. Deezer's artist search never
@@ -43,6 +43,7 @@ _TRACK_SEARCH_URL = 'https://api.deezer.com/search/track'
 _PREVIEW_HOST_SUFFIX = '.dzcdn.net'
 _AUTH_URL = 'https://auth.deezer.com/login/anonymous'
 _GRAPHQL_URL = 'https://pipe.deezer.com/api'
+_CHART_URL = 'https://api.deezer.com/chart'
 _TIMEOUT = 10
 _GRAPHQL_TIMEOUT = 15
 
@@ -561,10 +562,238 @@ def fetch_artist_full(artist_id: str, lang: str) -> dict[str, Any]:
     }
 
 
+def _chart_payload(limit: int) -> dict[str, Any]:
+    """The raw ``GET /chart`` response (no genre id - Deezer's own overall
+    "what's trending" chart), or raise :class:`ValueError`.
+
+    Same "HTTP 200 but an ``error`` object instead of data" trap as
+    :func:`_search_rows` - a rate limit would otherwise read as an empty
+    chart.
+    """
+
+    try:
+        resp = httpx.get(_CHART_URL, params={'limit': limit}, timeout=_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        logger.opt(exception=True).debug('Deezer chart fetch failed')
+        raise ValueError('Could not reach Deezer') from exc
+    if not isinstance(data, dict):
+        raise ValueError('Deezer sent an unexpected answer')
+    if data.get('error'):
+        logger.debug('Deezer refused the chart request: {}', data['error'])
+        raise ValueError('Deezer refused the request')
+    return data
+
+
+def _chart_track_song(row: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """A chart track row as a Downtify song (``source: 'deezer'``), or
+    ``None`` when it's missing a title, an id or every artist name.
+
+    Shaped like :func:`downtify.providers._result_to_song` so it can be
+    queued for download exactly like a search result - see
+    :func:`downtify.api._song_from_download_request`, which lets a
+    ``source: 'deezer'`` row skip the Spotify/YouTube URL parsing
+    ``/api/download/url`` would otherwise require, since a Deezer track
+    link isn't one this app can resolve on its own.
+    """
+
+    track_id = row.get('id')
+    name = str(row.get('title') or row.get('title_short') or '').strip()
+    if not track_id or not name:
+        return None
+    artist = row.get('artist') if isinstance(row.get('artist'), dict) else {}
+    album = row.get('album') if isinstance(row.get('album'), dict) else {}
+    artists = []
+    lead = str(artist.get('name') or '').strip()
+    if lead:
+        artists.append(lead)
+    for contributor in row.get('contributors') or []:
+        if not isinstance(contributor, dict):
+            continue
+        contributor_name = str(contributor.get('name') or '').strip()
+        if contributor_name and contributor_name not in artists:
+            artists.append(contributor_name)
+    if not artists:
+        return None
+    cover = (
+        album.get('cover_xl')
+        or album.get('cover_big')
+        or album.get('cover_medium')
+        or ''
+    )
+    # A 30s MP3 clip Deezer's own player streams for unauthenticated users -
+    # always https when present. See lib/preview.js on the frontend, which
+    # refuses to hand anything else to an <audio> element.
+    preview = str(row.get('preview') or '')
+    return {
+        'song_id': f'deezer-{track_id}',
+        'name': name,
+        'artists': artists,
+        'album_name': str(album.get('title') or '').strip(),
+        'cover_url': cover,
+        'duration': int(row.get('duration') or 0),
+        'url': str(row.get('link') or ''),
+        'preview_url': preview if preview.startswith('https://') else '',
+        'explicit': bool(row.get('explicit_lyrics')),
+        'year': '',
+        'release_date': '',
+        'source': 'deezer',
+    }
+
+
+def _chart_album_release(row: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """A chart album row as a read-only release summary, or ``None``.
+
+    Downtify has no Deezer discography resolver (unlike its Spotify/
+    YouTube Music ones), so this is display-only: ``url`` opens the album
+    on Deezer rather than feeding ``/api/url/resolve``.
+    """
+
+    album_id = row.get('id')
+    name = str(row.get('title') or '').strip()
+    if not album_id or not name:
+        return None
+    artist = row.get('artist') if isinstance(row.get('artist'), dict) else {}
+    cover = (
+        row.get('cover_xl')
+        or row.get('cover_big')
+        or row.get('cover_medium')
+        or ''
+    )
+    return {
+        'album_id': str(album_id),
+        'name': name,
+        'artist': str(artist.get('name') or '').strip(),
+        'cover_url': cover,
+        'url': str(row.get('link') or ''),
+        'source': 'deezer',
+    }
+
+
+def _chart_artist_release(row: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """A chart artist row as a read-only release summary, or ``None``.
+
+    Same placeholder-picture check as :func:`_has_real_picture` - the
+    chart ranks by popularity, so an unphotographed artist here would be
+    unusual, but it's still not worth showing Deezer's generic grey face
+    for.
+    """
+
+    artist_id = row.get('id')
+    name = str(row.get('name') or '').strip()
+    if not artist_id or not name:
+        return None
+    return {
+        'artist_id': str(artist_id),
+        'name': name,
+        'cover_url': (
+            row.get('picture_xl') or row.get('picture_big') or ''
+            if _has_real_picture(row)
+            else ''
+        ),
+        'url': str(row.get('link') or ''),
+        'source': 'deezer',
+    }
+
+
+def _chart_playlist_release(row: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """A chart playlist row as a read-only release summary, or ``None``.
+
+    Same read-only reasoning as :func:`_chart_album_release`: Downtify has
+    no way to resolve a Deezer playlist into a tracklist.
+    """
+
+    playlist_id = row.get('id')
+    name = str(row.get('title') or '').strip()
+    if not playlist_id or not name:
+        return None
+    user = row.get('user') if isinstance(row.get('user'), dict) else {}
+    cover = (
+        row.get('picture_xl')
+        or row.get('picture_big')
+        or row.get('picture_medium')
+        or ''
+    )
+    return {
+        'playlist_id': str(playlist_id),
+        'name': name,
+        'owner': str(user.get('name') or '').strip(),
+        'cover_url': cover,
+        'url': str(row.get('link') or ''),
+        'source': 'deezer',
+    }
+
+
+def _chart_podcast_release(row: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """A chart podcast (show) row as a read-only release summary, or
+    ``None``. Same read-only reasoning as :func:`_chart_album_release`."""
+
+    podcast_id = row.get('id')
+    name = str(row.get('title') or '').strip()
+    if not podcast_id or not name:
+        return None
+    cover = (
+        row.get('picture_xl')
+        or row.get('picture_big')
+        or row.get('picture_medium')
+        or ''
+    )
+    return {
+        'podcast_id': str(podcast_id),
+        'name': name,
+        'cover_url': cover,
+        'url': str(row.get('link') or ''),
+        'source': 'deezer',
+    }
+
+
+def _chart_section(
+    data: dict[str, Any],
+    key: str,
+    mapper: Any,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in (data.get(key) or {}).get('data') or []:
+        if not isinstance(row, dict):
+            continue
+        mapped = mapper(row)
+        if mapped:
+            rows.append(mapped)
+    return rows
+
+
+def fetch_chart(limit: int = 25) -> dict[str, Any]:
+    """Deezer's global "what's trending" chart: top tracks, albums,
+    artists, playlists and podcasts -
+    ``{tracks, albums, artists, playlists, podcasts}``.
+
+    Tracks are downloadable Downtify song rows, with a 30s preview clip
+    when Deezer offers one (see :func:`_chart_track_song`); everything
+    else is a read-only summary (see :func:`_chart_album_release`,
+    :func:`_chart_artist_release`, :func:`_chart_playlist_release`,
+    :func:`_chart_podcast_release`).
+
+    Raises :class:`ValueError` when Deezer can't be reached or refuses
+    (see :func:`_chart_payload`).
+    """
+
+    data = _chart_payload(max(1, min(limit, 50)))
+    return {
+        'tracks': _chart_section(data, 'tracks', _chart_track_song),
+        'albums': _chart_section(data, 'albums', _chart_album_release),
+        'artists': _chart_section(data, 'artists', _chart_artist_release),
+        'playlists': _chart_section(
+            data, 'playlists', _chart_playlist_release
+        ),
+        'podcasts': _chart_section(data, 'podcasts', _chart_podcast_release),
+    }
+
+
 # ── Pasted-link resolution (track/album/playlist/artist) ───────────────
 #
-# Unlike the artist-photo search (no id needed), these read a specific
-# Deezer id the
+# Unlike the chart above (rows already embedded in one response) or the
+# artist-photo search (no id needed), these read a specific Deezer id the
 # same way downtify.spotify/downtify.providers do for a pasted Spotify or
 # YouTube Music link - see downtify.api's _deezer_details, wired into
 # GET /api/url/resolve, /api/song/url and /api/artists/top_songs/url next
@@ -617,7 +846,8 @@ def _get_json(url: str, **params: Any) -> dict[str, Any]:
 
 
 def _artists_from_track_row(row: dict[str, Any]) -> list[str]:
-    """Lead artist first, then any featured contributors - deduplicated."""
+    """Lead artist first, then any featured contributors - deduplicated,
+    same convention as :func:`_chart_track_song`."""
 
     artist = row.get('artist') if isinstance(row.get('artist'), dict) else {}
     artists: list[str] = []
@@ -661,7 +891,8 @@ def _song_from_full_track(
     """A full Deezer track resource - or an album/playlist tracklist row,
     same shape minus a couple of fields - as a downloadable Downtify song.
 
-    Fills in a release date whenever one is available: the caller's own
+    Unlike a chart row (:func:`_chart_track_song`), this fills in a
+    release date whenever one is available: the caller's own
     (an album's ``release_date``, for every one of its tracks), else the
     row's or its embedded album's.
     """

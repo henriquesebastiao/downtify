@@ -30,6 +30,7 @@ export default {
     monitor: 'Surveillance',
     discover: 'Découvrir',
     podcasts: 'Podcasts',
+    charts: 'Classements',
     settings: 'Paramètres',
     more: 'Plus',
     playlists: 'Playlists',
@@ -135,6 +136,14 @@ export default {
     tipYoutubeTitle: 'Collez un lien YouTube Music',
     tipYoutubeBody:
       'Titres, albums, playlists — ou la page d’un artiste pour voir toutes ses sorties.',
+  },
+  charts: {
+    title: 'Classements',
+    subtitle: 'Le classement mondial de Deezer : ce qui cartonne en ce moment.',
+    failed: 'Impossible de charger le classement',
+    empty: 'Rien dans le classement pour le moment',
+    playlist: 'Playlist',
+    podcast: 'Podcast',
   },
   link: {
     resolving: 'Lecture du lien…',

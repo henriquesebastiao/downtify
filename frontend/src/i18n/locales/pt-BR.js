@@ -30,6 +30,7 @@ export default {
     monitor: 'Monitor',
     discover: 'Descobrir',
     podcasts: 'Podcasts',
+    charts: 'Paradas de sucesso',
     settings: 'Configurações',
     more: 'Mais',
     playlists: 'Playlists',
@@ -135,6 +136,14 @@ export default {
     tipYoutubeTitle: 'Cole um link do YouTube Music',
     tipYoutubeBody:
       'Músicas, álbuns, playlists — ou a página de um artista para ver todos os lançamentos.',
+  },
+  charts: {
+    title: 'Paradas de sucesso',
+    subtitle: 'A parada global do Deezer: o que está bombando agora.',
+    failed: 'Não deu para carregar a parada',
+    empty: 'Nada na parada por enquanto',
+    playlist: 'Playlist',
+    podcast: 'Podcast',
   },
   link: {
     resolving: 'Lendo o link…',

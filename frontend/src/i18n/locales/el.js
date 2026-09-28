@@ -30,6 +30,7 @@ export default {
     monitor: 'Παρακολούθηση',
     discover: 'Ανακάλυψη',
     podcasts: 'Podcast',
+    charts: 'Λίστες επιτυχιών',
     settings: 'Ρυθμίσεις',
     more: 'Περισσότερα',
     playlists: 'Λίστες',
@@ -135,6 +136,15 @@ export default {
     tipYoutubeTitle: 'Επικόλλησε σύνδεσμο YouTube Music',
     tipYoutubeBody:
       'Τραγούδια, άλμπουμ, λίστες — ή σελίδα καλλιτέχνη για όλες τις κυκλοφορίες.',
+  },
+  charts: {
+    title: 'Λίστες επιτυχιών',
+    subtitle:
+      'Το παγκόσμιο chart του Deezer: τι είναι δημοφιλές αυτή τη στιγμή.',
+    failed: 'Δεν ήταν δυνατή η φόρτωση του chart',
+    empty: 'Δεν υπάρχει τίποτα στο chart αυτή τη στιγμή',
+    playlist: 'Λίστα αναπαραγωγής',
+    podcast: 'Podcast',
   },
   link: {
     resolving: 'Ανάγνωση συνδέσμου…',

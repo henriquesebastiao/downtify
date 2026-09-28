@@ -30,6 +30,7 @@ export default {
     monitor: 'Monitor',
     discover: 'Discover',
     podcasts: 'Podcasts',
+    charts: 'Charts',
     settings: 'Settings',
     more: 'More',
     playlists: 'Playlists',
@@ -132,6 +133,14 @@ export default {
     tipYoutubeTitle: 'Paste a YouTube Music link',
     tipYoutubeBody:
       'Songs, albums, playlists — or an artist’s page to see every release.',
+  },
+  charts: {
+    title: 'Charts',
+    subtitle: "Deezer's global chart: what's trending right now.",
+    failed: "Couldn't load the chart",
+    empty: 'Nothing on the chart right now',
+    playlist: 'Playlist',
+    podcast: 'Podcast',
   },
   link: {
     resolving: 'Reading the link…',

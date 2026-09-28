@@ -10,6 +10,14 @@ working without changes:
   requests, regardless of downloader/monitor readiness)
 * ``GET  /api/songs/search``
 * ``GET  /api/artists/search``
+* ``GET  /api/discover/chart`` (Deezer's own global "what's trending"
+  chart - no auth, no genre filter - as ``{tracks, albums, artists,
+  playlists, podcasts}``; tracks are shaped like ``/api/songs/search``
+  (``source: 'deezer'``, plus ``preview_url`` when Deezer offers a 30s
+  clip) and downloadable the same way; albums/artists/playlists/podcasts
+  are read-only summaries - Downtify has no Deezer discography resolver,
+  so their ``url`` only opens on Deezer, unlike a YouTube Music/Spotify
+  result)
 * ``GET  /api/artists/top_songs`` (an artist's "Top songs" shelf preview,
   same shape as ``/api/songs/search`` - no further pagination offered)
 * ``GET  /api/artists/top_albums`` (an artist's 5 most popular albums,
@@ -94,7 +102,8 @@ working without changes:
 * ``GET  /api/url/resolve`` (the same links, always as
   ``{kind, name, subtitle, cover_url, year, tracks, albums}`` - adds the
   playlist/album name and cover the plain track list lacks; a Deezer
-  track's own ``preview_url`` survives into its song row)
+  track's own ``preview_url`` survives into its song row, same as
+  ``/api/discover/chart``)
 * ``GET  /api/artists/top_songs/url`` (a Spotify, YouTube Music or Deezer
   artist URL - ``open.spotify.com/artist/...``, ``/channel/UC...``,
   ``/@handle`` or ``deezer.com/artist/...`` - resolved to ``{source,
@@ -1432,6 +1441,16 @@ def search_artists_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
     return providers.search_artists(query, limit=10)
 
 
+@router.get('/api/discover/chart')
+def discover_chart_endpoint(
+    limit: int = Query(25, ge=1, le=50),
+) -> dict[str, Any]:
+    try:
+        return deezer.fetch_chart(limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
 @router.get('/api/artists/top_songs')
 def artist_top_songs_endpoint(
     channel_id: str = Query(...),
@@ -2268,19 +2287,25 @@ def _merge_client_track_hints(
         base['youtube_id_override'] = True
 
 
+_CLIENT_RESOLVED_SOURCES = {'text_search', 'deezer'}
+
+
 def _song_from_download_request(
     url: str, client_hints: Optional[dict[str, Any]]
 ) -> dict[str, Any]:
     """The song to download for ``POST /api/download/url``.
 
     A slskd search stub (``source == 'text_search'``, see
-    :func:`search_endpoint`) has no URL to resolve and is taken from the
-    request body as-is.
+    :func:`search_endpoint`) or a Deezer chart row (``source ==
+    'deezer'``, see :func:`discover_chart_endpoint`) has no URL this app
+    can resolve on its own - both are taken from the request body as-is,
+    already-resolved metadata that :func:`downtify.providers.find_match`
+    can search YouTube/YouTube Music for directly.
     """
 
     if (
         isinstance(client_hints, dict)
-        and client_hints.get('source') == 'text_search'
+        and client_hints.get('source') in _CLIENT_RESOLVED_SOURCES
     ):
         return dict(client_hints)
     song = _song_for_download(url)
