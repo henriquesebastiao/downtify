@@ -1,5 +1,31 @@
 <template>
   <div class="flex min-w-0 flex-col gap-8">
+    <!-- What this section is for -->
+    <SettingGroup
+      :title="t('apps.androidGroup')"
+      :description="t('apps.androidHint')"
+    >
+      <div class="flex flex-col gap-4 px-5 py-4">
+        <p class="text-sm text-pretty text-fg-2">{{ t('apps.androidBody') }}</p>
+        <div
+          class="flex items-start gap-2.5 rounded-control bg-warn/10 px-3 py-2.5 text-[13px] text-pretty text-warn"
+          role="note"
+        >
+          <AppIcon name="alert" :size="16" class="mt-0.5 shrink-0" />
+          <span>{{ t('apps.androidUnreleased') }}</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <UiButton
+            :href="ANDROID_REPO"
+            icon="link"
+            icon-right="arrow-up-right"
+          >
+            {{ t('apps.androidRepo') }}
+          </UiButton>
+        </div>
+      </div>
+    </SettingGroup>
+
     <!-- This server -->
     <SettingGroup
       :title="t('apps.serverGroup')"
@@ -173,6 +199,9 @@ import { useI18n } from '/src/i18n'
 const { t, locale } = useI18n()
 const ui = useUi()
 const auth = useAuth()
+
+// The Android client, still in development - no release yet.
+const ANDROID_REPO = 'https://github.com/henriquesebastiao/downtify-android'
 
 const info = ref(null)
 const serverName = ref('')

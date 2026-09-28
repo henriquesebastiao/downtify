@@ -866,6 +866,9 @@ export default {
     server: 'Servidor',
     networkGroup: 'Red',
     networkHint: 'Cómo se llega a este servidor. Solo lo ven los admins.',
+    experimental: 'Experimental',
+    experimentalHint:
+      'Las apps para móvil todavía se están construyendo. La app de Android aún no tiene ninguna versión publicada, y la forma de vincular y reproducir puede cambiar entre versiones de Downtify.',
   },
   shortcuts: {
     title: 'Atajos de teclado',
@@ -945,6 +948,14 @@ export default {
       'Desvincula todas tus apps y cierra tu sesión en todos los navegadores, también en este.',
     signOutEverywhereBody:
       'Tendrás que volver a vincular tus apps e iniciar sesión de nuevo en cada navegador.',
+    androidGroup: 'Downtify para Android',
+    androidHint:
+      'Una app que explora y reproduce tu biblioteca directamente desde este servidor.',
+    androidBody:
+      'La app se vincula escaneando un código de esta página. Después explora tu biblioteca, la reproduce en la calidad original o en una menor para datos móviles, guarda canciones en el teléfono para escucharlas sin conexión y las envía a un Chromecast. Todo lo que hay en esta página — vincular, el nombre del servidor, las apps vinculadas — es la parte del servidor, y ya funciona.',
+    androidUnreleased:
+      'Todavía no se ha publicado ninguna versión: la app sigue en desarrollo, así que por ahora no hay nada que instalar.',
+    androidRepo: 'Ver el repositorio',
   },
   replace: {
     menu: 'Reemplazar audio…',

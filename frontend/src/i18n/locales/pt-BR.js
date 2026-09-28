@@ -862,6 +862,9 @@ export default {
     server: 'Servidor',
     networkGroup: 'Rede',
     networkHint: 'Como este servidor pode ser acessado. Só admins veem isto.',
+    experimental: 'Experimental',
+    experimentalHint:
+      'Os apps para celular ainda estão em construção. O app Android ainda não tem uma versão publicada, e a forma de parear e transmitir pode mudar entre versões do Downtify.',
   },
   shortcuts: {
     title: 'Atalhos de teclado',
@@ -937,6 +940,14 @@ export default {
       'Despareia todos os seus apps e sai de todos os navegadores em que você entrou, inclusive este.',
     signOutEverywhereBody:
       'Seus apps pareados vão precisar ser pareados de novo, e você vai precisar entrar de novo em cada navegador.',
+    androidGroup: 'Downtify para Android',
+    androidHint:
+      'Um app que navega e toca sua biblioteca direto deste servidor.',
+    androidBody:
+      'O app é pareado escaneando um código desta página. Depois ele navega pela sua biblioteca, toca na qualidade original ou numa menor para dados móveis, guarda músicas no celular para ouvir sem internet e envia para um Chromecast. Tudo nesta página — parear, o nome do servidor, os apps pareados — é o lado do servidor disso, e já funciona.',
+    androidUnreleased:
+      'Nenhuma versão foi publicada ainda: o app continua em desenvolvimento, então não há nada para instalar por enquanto.',
+    androidRepo: 'Ver o repositório',
   },
   replace: {
     menu: 'Substituir áudio…',

@@ -6,6 +6,12 @@ icon: lucide/smartphone
 
 Downtify can serve apps on your phone: they browse and stream the library straight from your server, and keep songs on the phone for offline listening. Everything an app needs is set up in **Settings → Apps**: pairing phones and the server's name. Who may use the server at all is set by the accounts in [Users & Sign-in](users.md).
 
+::: warning The app is still in development
+**Settings → Apps** is marked *Experimental*. The server side described on this page is finished and working, but **no version of the Android app has been published yet**, so there is nothing to install for now, and details of pairing and streaming may still change between Downtify versions.
+
+The app is built in the open at [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Anything else can be built against the same API — see the [mobile client contract](../mobile-client-contract.md).
+:::
+
 ## Pairing a phone
 
 1. Open **Settings → Apps** and press **Pair a phone**.

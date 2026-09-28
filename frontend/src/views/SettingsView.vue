@@ -31,6 +31,7 @@
             :class="section === item.id ? 'text-accent' : ''"
           />
           {{ item.label }}
+          <ExperimentalBadge v-if="item.experimental" class="lg:ml-auto" />
         </RouterLink>
       </nav>
 
@@ -711,6 +712,7 @@ import UiSegmented from '/src/components/ui/UiSegmented.vue'
 import UiSelect from '/src/components/ui/UiSelect.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
+import ExperimentalBadge from '/src/components/ui/ExperimentalBadge.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import CookiesCard from '/src/components/settings/CookiesCard.vue'
 import ConnectionTest from '/src/components/settings/ConnectionTest.vue'
@@ -797,7 +799,13 @@ const sections = computed(() =>
         label: t('settings.server'),
         admin: true,
       },
-      { id: 'apps', icon: 'monitor', label: t('settings.apps') },
+      {
+        id: 'apps',
+        icon: 'monitor',
+        label: t('settings.apps'),
+        // The apps themselves are still being built (AppsSettings).
+        experimental: true,
+      },
       { id: 'about', icon: 'info', label: t('settings.about') },
     ],
     { authDisabled: auth.authDisabled.value }

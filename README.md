@@ -58,7 +58,7 @@ All of it runs inside a single Docker container. See **[How it works](https://he
 | **Podcasts** | Subscribe by RSS feed, Spotify link or name; new episodes download, tag and keep their resume position on their own. See [Podcasts](https://henriquesebastiao.github.io/downtify/features/podcasts/). |
 | **Discover** | Artists, albums and playlists you don't have yet, suggested from your library, liked songs and what you play — no account or API key. Preview any album's or playlist's songs before downloading, and hide any artist you never want suggested. See [Discover](https://henriquesebastiao.github.io/downtify/features/discover/). |
 | **Users & activity** | Sign in with a username and password; admins add accounts for the rest of the house, users get General, Apps and About settings of their own, and an activity log shows who signed in and who is playing what. See [Users & sign-in](https://henriquesebastiao.github.io/downtify/features/users/). |
-| **Mobile apps** | Pair a phone app by QR code and stream your library to it — original quality or transcoded for mobile data — with offline copies and casting. See [Mobile apps](https://henriquesebastiao.github.io/downtify/features/mobile-apps/). |
+| **Mobile apps** *(experimental)* | Pair a phone app by QR code and stream your library to it — original quality or transcoded for mobile data — with offline copies and casting. The server side is ready; the Android app itself is [still in development](#downtify-for-android). See [Mobile apps](https://henriquesebastiao.github.io/downtify/features/mobile-apps/). |
 | **Library** | Albums, artists, playlists and tracks in a grid or a list, with filtering, multi-select and download as a ZIP. **Upgrade library** repairs small covers, missing lyrics and incomplete tags on music you already have, without re-downloading, and **Replace audio** swaps a wrongly matched song for the version you pick, keeping it in its playlists. Pick a real photo and banner for an artist from YouTube Music, Deezer, Spotify or your own upload. See [Library catalog](https://henriquesebastiao.github.io/downtify/features/library-catalog/), [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/), [Replace audio](https://henriquesebastiao.github.io/downtify/features/replace-audio/) and [Artist photo & banner](https://henriquesebastiao.github.io/downtify/features/artist-images/). |
 | **Playlist files** | Standard M3U files that Jellyfin, Navidrome and Plex pick up, plus each playlist's own cover art, saved before its tracks. A flat folder layout or one folder per artist. See [M3U export](https://henriquesebastiao.github.io/downtify/features/m3u-export/), [Playlist cover art](https://henriquesebastiao.github.io/downtify/features/playlist-cover-art/) and [File organization](https://henriquesebastiao.github.io/downtify/features/file-organization/). |
 | **Integrations** | Optionally download from Soulseek through your own slskd server and mirror playlists into Navidrome, each with a **Test connection** button in Settings. See [slskd & Navidrome](https://henriquesebastiao.github.io/downtify/features/slskd-navidrome/). |
@@ -128,6 +128,17 @@ The remaining deployment options (timezone, monitor sync time, cookies file, IPv
 | Library export (CSV) | Soundiiz, TuneMyMusic, Exportify |
 
 An artist link opens the artist's page, with their releases and a **Top Songs** button to pick from their most popular songs and download them, optionally as a playlist ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/)). Artists in your Library also get a **Top songs** tab with their first five Spotify top songs, kept in a per-artist file for a week, and a 30-second preview of each song you haven't downloaded yet; an artist's bio, genre and links are also filled in, in your language, in the background as their first track finishes downloading ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/#on-an-artists-library-page)). Artists can also be watched for new releases with the **Playlist Monitor** — just albums, singles or EPs if you like, and optionally only what comes out from now on, skipping the back catalogue.
+
+## Downtify for Android
+
+An Android app is being built: it pairs with your server by scanning a QR code from **Settings → Apps**, then browses your library, plays it in the original quality or a smaller one for mobile data, keeps songs on the phone for offline listening and casts to a Chromecast.
+
+> [!WARNING]
+> **The app is still in development and no version has been published yet** — there is nothing to install for now, and how it works may still change. The server side of it already ships with Downtify, which is why **Settings → Apps** is marked experimental.
+
+Repository: **[henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android)**
+
+Anything that talks to the server can be built against the same API — see the [mobile client contract](https://henriquesebastiao.github.io/downtify/mobile-client-contract/).
 
 ## Troubleshooting
 

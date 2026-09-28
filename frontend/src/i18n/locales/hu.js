@@ -864,6 +864,9 @@ export default {
     server: 'Szerver',
     networkGroup: 'Hálózat',
     networkHint: 'Hogyan érhető el ez a szerver. Ezt csak az adminok látják.',
+    experimental: 'Kísérleti',
+    experimentalHint:
+      'A mobilalkalmazások még készülnek. Az Android-alkalmazásnak még nincs kiadott verziója, és a párosítás és a lejátszás módja még változhat a Downtify verziói között.',
   },
   shortcuts: {
     title: 'Billentyűparancsok',
@@ -943,6 +946,14 @@ export default {
       'Megszünteti az összes alkalmazásod párosítását, és minden böngészőből kijelentkeztet, ebből is.',
     signOutEverywhereBody:
       'Az alkalmazásaidat újra párosítanod kell, és minden böngészőben újra be kell jelentkezned.',
+    androidGroup: 'Downtify Androidra',
+    androidHint:
+      'Alkalmazás, amely közvetlenül erről a szerverről böngészi és játssza a könyvtáradat.',
+    androidBody:
+      'Az alkalmazás az oldalon látható kód beolvasásával párosítható. Ezután böngészi a könyvtáradat, eredeti minőségben vagy mobiladathoz kisebb minőségben játssza le, dalokat tárol a telefonon offline hallgatáshoz, és Chromecastra küldi őket. Minden ezen az oldalon — a párosítás, a szerver neve, a párosított alkalmazások — ennek a szerveroldala, és már működik.',
+    androidUnreleased:
+      'Még nem jelent meg egyetlen verzió sem: az alkalmazás még fejlesztés alatt áll, így egyelőre nincs mit telepíteni.',
+    androidRepo: 'Tárhely megtekintése',
   },
   replace: {
     menu: 'Hang cseréje…',

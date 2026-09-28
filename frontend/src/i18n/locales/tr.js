@@ -861,6 +861,9 @@ export default {
     server: 'Sunucu',
     networkGroup: 'Ağ',
     networkHint: 'Bu sunucuya nasıl erişilir. Bunu yalnızca yöneticiler görür.',
+    experimental: 'Deneysel',
+    experimentalHint:
+      'Mobil uygulamalar hâlâ geliştiriliyor. Android uygulamasının henüz yayımlanmış bir sürümü yok ve eşleme ile yayın akışının çalışma biçimi Downtify sürümleri arasında değişebilir.',
   },
   shortcuts: {
     title: 'Klavye kısayolları',
@@ -937,6 +940,14 @@ export default {
       'Tüm uygulamalarınızın eşleşmesini kaldırır ve bu dahil giriş yaptığınız tüm tarayıcılardan çıkış yapar.',
     signOutEverywhereBody:
       'Uygulamalarınızı yeniden eşlemeniz ve her tarayıcıda yeniden giriş yapmanız gerekecek.',
+    androidGroup: 'Android için Downtify',
+    androidHint:
+      'Kitaplığınıza doğrudan bu sunucudan göz atıp çalan bir uygulama.',
+    androidBody:
+      'Uygulama, bu sayfadaki bir kodu taratarak eşlenir. Ardından kitaplığınıza göz atar, orijinal kalitede ya da mobil veri için daha küçük bir kalitede çalar, çevrimdışı dinlemek için şarkıları telefonda tutar ve Chromecast’e gönderir. Bu sayfadaki her şey — eşleme, sunucu adı, eşlenen uygulamalar — bunun sunucu tarafıdır ve hâlihazırda çalışıyor.',
+    androidUnreleased:
+      'Henüz hiçbir sürüm yayımlanmadı: uygulama hâlâ geliştirme aşamasında, dolayısıyla şimdilik kurulacak bir şey yok.',
+    androidRepo: 'Depoyu görüntüle',
   },
   replace: {
     menu: 'Sesi değiştir…',

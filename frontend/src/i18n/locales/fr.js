@@ -878,6 +878,9 @@ export default {
     server: 'Serveur',
     networkGroup: 'Réseau',
     networkHint: 'Comment joindre ce serveur. Seuls les admins voient ceci.',
+    experimental: 'Expérimental',
+    experimentalHint:
+      'Les applis mobiles sont encore en construction. L’appli Android n’a pas encore de version publiée, et la façon d’associer et de diffuser peut encore changer d’une version de Downtify à l’autre.',
   },
   shortcuts: {
     title: 'Raccourcis clavier',
@@ -958,6 +961,14 @@ export default {
       'Dissocie toutes vos applis et vous déconnecte de tous vos navigateurs, y compris celui-ci.',
     signOutEverywhereBody:
       'Vos applis devront être associées à nouveau, et vous devrez vous reconnecter dans chaque navigateur.',
+    androidGroup: 'Downtify pour Android',
+    androidHint:
+      'Une appli qui parcourt et lit votre bibliothèque directement depuis ce serveur.',
+    androidBody:
+      'L’appli s’associe en scannant un code de cette page. Elle parcourt ensuite votre bibliothèque, la lit en qualité d’origine ou dans une qualité réduite pour les données mobiles, garde des titres sur le téléphone pour l’écoute hors ligne et les envoie vers un Chromecast. Tout ce qui est sur cette page — l’association, le nom du serveur, les applis associées — en est la partie serveur, et fonctionne déjà.',
+    androidUnreleased:
+      'Aucune version n’a encore été publiée : l’appli est toujours en développement, il n’y a donc rien à installer pour l’instant.',
+    androidRepo: 'Voir le dépôt',
   },
   replace: {
     menu: 'Remplacer l’audio…',
