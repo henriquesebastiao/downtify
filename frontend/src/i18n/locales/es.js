@@ -863,6 +863,9 @@ export default {
     activity: 'Actividad',
     personalHint:
       'Solo tuyas: siguen a tu cuenta en cualquier navegador y no cambian nada para nadie más.',
+    server: 'Servidor',
+    networkGroup: 'Red',
+    networkHint: 'Cómo se llega a este servidor. Solo lo ven los admins.',
   },
   shortcuts: {
     title: 'Atajos de teclado',
@@ -942,6 +945,31 @@ export default {
       'Desvincula todas tus apps y cierra tu sesión en todos los navegadores, también en este.',
     signOutEverywhereBody:
       'Tendrás que volver a vincular tus apps e iniciar sesión de nuevo en cada navegador.',
+  },
+  port: {
+    label: 'Puerto',
+    hint: 'El puerto en el que escucha Downtify. Se aplica al iniciar el servidor, o en el momento con «Guardar y reiniciar».',
+    locked:
+      'Lo fija {source} en el servidor. Quítalo para elegir el puerto aquí.',
+    save: 'Guardar',
+    saveRestart: 'Guardar y reiniciar',
+    listening: 'Escuchando en el puerto {port}',
+    nextStart: 'próximo inicio: {port}',
+    saved: 'Puerto {port} guardado para el próximo inicio',
+    invalid: 'Usa un puerto de {min} a {max}',
+    dockerWarning:
+      'Downtify se ejecuta en Docker: cambia el mapeo de puertos al mismo puerto (ports: NUEVO:NUEVO) y vuelve a crear el contenedor, o usa network_mode: host; si no, Downtify quedará inaccesible. Definir DOWNTIFY_PORT devuelve el puerto anterior.',
+    proxyWarning:
+      'Llegas a Downtify por otra dirección (un proxy inverso o un mapeo de puertos): apúntala también al nuevo puerto.',
+    confirmTitle: '¿Reiniciar en el puerto {port}?',
+    confirmBody:
+      'Las descargas en curso se detienen, y todas las páginas y apps se reconectan en el nuevo puerto.',
+    restartingTitle: 'Reiniciando en el puerto {port}',
+    restartingBody:
+      'Esperando a que Downtify vuelva… Esta página abrirá la nueva dirección sola.',
+    unreachable:
+      'Downtify aún no responde en el nuevo puerto. Prueba la nueva dirección o revisa los registros del servidor.',
+    openNew: 'Downtify se está reiniciando. Ábrelo en su nueva dirección:',
   },
   account: {
     title: 'Cuenta',

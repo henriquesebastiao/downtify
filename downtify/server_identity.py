@@ -5,7 +5,8 @@ paired with before, by a **server ID**: a random value made once and kept
 in ``/data/server.json``, so it survives restarts, upgrades and a changed
 address. The file also holds the **server name** people see in the app's
 server list and in LAN discovery - editable in Settings > Apps, and the
-machine's hostname until someone changes it.
+machine's hostname until someone changes it - and the port chosen in
+Settings > Server, if any (see :mod:`downtify.server_port`).
 
 :func:`server_info` is what ``GET /api/server/info`` returns. That route
 is public even when sign-in is required (an app must be able to check an
@@ -59,7 +60,7 @@ class ServerIdentity:
         self._lock = threading.Lock()
         self._data = self._load()
 
-    def _load(self) -> dict[str, str]:
+    def _load(self) -> dict[str, Any]:
         try:
             data = json.loads(self._path.read_text(encoding='utf-8'))
         except (OSError, ValueError):
@@ -75,12 +76,15 @@ class ServerIdentity:
         if not name:
             name = _default_name()
             changed = True
-        result = {'server_id': server_id, 'name': name}
+        result: dict[str, Any] = {'server_id': server_id, 'name': name}
+        port = data.get('port')
+        if isinstance(port, int) and not isinstance(port, bool) and port > 0:
+            result['port'] = port
         if changed:
             self._write(result)
         return result
 
-    def _write(self, data: dict[str, str]) -> None:
+    def _write(self, data: dict[str, Any]) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(
             dir=self._path.parent, prefix='.server.', suffix='.json'
@@ -100,6 +104,18 @@ class ServerIdentity:
     @property
     def name(self) -> str:
         return self._data['name']
+
+    @property
+    def port(self) -> Optional[int]:
+        """The port chosen in Settings > Server, or ``None``."""
+
+        return self._data.get('port')
+
+    def set_port(self, port: int) -> None:
+        with self._lock:
+            data = {**self._data, 'port': int(port)}
+            self._write(data)
+            self._data = data
 
     def set_name(self, value: Any) -> str:
         """Rename the server. Raises :class:`ValueError` for an empty name."""

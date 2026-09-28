@@ -5,15 +5,15 @@ services:
     restart: unless-stopped
     build: .
     ports:
-      - '8000:30321'
+      - '8000:8000'
     volumes:
       - ./docker/downloads:/downloads
       - ./docker/data:/data
       # slskd's download folder, when using the slskd audio source:
       # - ./docker/slskd:/slskd
-      # - ./docker/cookies.txt:/cookies.txt
-    environment:
-      - DOWNTIFY_PORT=30321
+      # - settings/server./docker/cookies.txt:/cookies.txt
+    # environment:
+      # - DOWNTIFY_PORT=30321
       # https://downtify.henriquesebastiao.com/getting-started/environment-variables/#getting-a-cookiestxt
       # - DOWNTIFY_COOKIES_FILE=/cookies.txt
       # - TZ=America/Sao_Paulo

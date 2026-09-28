@@ -87,6 +87,8 @@ services:
     restart: unless-stopped
 ```
 
+You can also choose the port in **Settings → Server → Port** instead of setting `DOWNTIFY_PORT` (which, when set, wins over Settings). In the default bridge network, change the `ports:` mapping to the same port and recreate the container — see [Changing the port](../features/server.md#changing-the-port).
+
 ## With custom DNS (recommended)
 
 Some ISPs and corporate networks block YouTube. Adding explicit DNS resolvers improves reliability:

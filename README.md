@@ -97,7 +97,7 @@ volumes:
   downtify_data:
 ```
 
-To serve it on another port, set `DOWNTIFY_PORT` and map the same port:
+To serve it on another port, set `DOWNTIFY_PORT` and map the same port (or choose it in **Settings → Server → Port** and change the mapping to match):
 
 ```yaml
 ports:

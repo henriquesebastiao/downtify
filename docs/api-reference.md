@@ -1793,6 +1793,24 @@ Admin. Rename the server — the name apps and [LAN discovery](features/mobile-a
 
 ---
 
+### `GET /api/server/port`
+
+Admin. The port the server listens on and the one it starts on next:
+
+```json
+{ "port": 8000, "saved": 9000, "next": 9000, "locked_by": "", "in_docker": true, "can_restart": true, "min": 1024, "max": 65535 }
+```
+
+`saved` is the port chosen in Settings → Server (`null` when none). `locked_by` is `DOWNTIFY_PORT`, `PORT` or `--port` when one of those sets the port instead of Settings, `""` otherwise.
+
+---
+
+### `PUT /api/server/port`
+
+Admin. Choose the port: `{ "port": 9000, "restart": false }` — saved in `/data/server.json` for the next start; `restart: true` also restarts the server on it right away (after answering). `400` for a port outside 1024–65535, `409` when the environment or the command line sets the port, or the port is already in use. **Response:** the `GET` shape plus `restarting`.
+
+---
+
 ### `GET /api/auth/status`
 
 Public. How this request is signed in.

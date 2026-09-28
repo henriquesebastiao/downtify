@@ -27,6 +27,18 @@ from .auth import (
     trusted_proxies_from_env,
 )
 from .server_identity import server_info
+from .server_port import (
+    MAX_PORT,
+    MIN_PORT,
+    PortError,
+    can_restart,
+    clean_port,
+    in_docker,
+    locked_by,
+    port_available,
+    request_restart,
+    resolve_port,
+)
 from .users import MIN_PASSWORD_LENGTH, ROLE_ADMIN
 
 router = APIRouter()
@@ -156,6 +168,82 @@ async def update_server(request: Request) -> dict[str, Any]:
     if announcer is not None:
         await announcer.update(identity.name)
     return get_server_info()
+
+
+def _port_status() -> dict[str, Any]:
+    identity = api.state.identity
+    listen = api.state.listen or {}
+    saved = identity.port if identity else None
+    current = int(listen.get('port') or 0)
+    source = str(listen.get('source') or 'default')
+    # What the next start would use, with the environment as it is now.
+    cli = current if source == '--port' else None
+    next_port, next_source = resolve_port(cli, saved)
+    return {
+        'port': current,
+        'saved': saved,
+        'next': next_port,
+        'locked_by': locked_by(next_source),
+        'in_docker': in_docker(),
+        'can_restart': can_restart(),
+        'min': MIN_PORT,
+        'max': MAX_PORT,
+    }
+
+
+@router.get('/api/server/port')
+def get_server_port() -> dict[str, Any]:
+    """The port the server listens on and the one it starts on next:
+    ``{port, saved, next, locked_by, in_docker, can_restart, min, max}``.
+    ``locked_by`` names what chose the port instead of Settings
+    (``DOWNTIFY_PORT``, ``PORT`` or ``--port``), ``''`` when nothing."""
+
+    if api.state.identity is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    return _port_status()
+
+
+@router.put('/api/server/port')
+async def set_server_port(request: Request) -> dict[str, Any]:
+    """Choose the port: ``{port, restart}``. Saved for the next start;
+    ``restart: true`` restarts the server on it right away (the response
+    comes first). ``409`` when the environment or the command line sets
+    the port, or the port is taken."""
+
+    identity = api.state.identity
+    if identity is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    status = _port_status()
+    if status['locked_by']:
+        raise HTTPException(
+            status_code=409,
+            detail=f'The port is set by {status["locked_by"]}',
+        )
+    payload = await _json(request)
+    try:
+        port = clean_port(payload.get('port'))
+    except PortError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    host = str((api.state.listen or {}).get('host') or '0.0.0.0')
+    if port != status['port'] and not await asyncio.to_thread(
+        port_available, host, port
+    ):
+        raise HTTPException(
+            status_code=409, detail=f'Port {port} is already in use'
+        )
+    await asyncio.to_thread(identity.set_port, port)
+    await api.log_activity(
+        request, 'settings_changed', 'port', {'keys': ['port']}
+    )
+    restart = bool(payload.get('restart')) and port != status['port']
+    if restart and can_restart():
+        logger.warning('Port changed to {}: restarting', port)
+        # After this response has gone out.
+        asyncio.get_running_loop().call_later(0.5, request_restart)
+    else:
+        restart = False
+        logger.info('Port {} saved for the next start', port)
+    return {**_port_status(), 'restarting': restart}
 
 
 # ── Status, sign in and out ─────────────────────────────────────────────

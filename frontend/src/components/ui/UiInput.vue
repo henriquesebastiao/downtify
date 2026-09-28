@@ -7,8 +7,13 @@
       >{{ label }}</label
     >
     <span
-      class="flex h-11 items-center gap-2.5 rounded-control border bg-bg px-3 transition-colors focus-within:border-accent"
-      :class="error ? 'border-danger' : 'border-line-3'"
+      class="flex h-11 items-center gap-2.5 rounded-control border px-3 transition-colors"
+      :class="[
+        error ? 'border-danger' : 'border-line-3',
+        readonly
+          ? 'bg-surface-2 text-muted'
+          : 'bg-bg focus-within:border-accent',
+      ]"
     >
       <AppIcon v-if="icon" :name="icon" :size="17" class="text-faint" />
       <input
@@ -20,17 +25,22 @@
         :min="min"
         :max="max"
         :autocomplete="autocomplete"
+        :readonly="readonly"
+        :aria-readonly="readonly ? 'true' : undefined"
         :spellcheck="false"
         :aria-invalid="error ? 'true' : undefined"
         :aria-describedby="error || hint ? noteId : undefined"
-        class="h-full min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-faint"
-        :class="mono ? 'font-mono text-[13px]' : ''"
+        class="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
+        :class="[
+          mono ? 'font-mono text-[13px]' : '',
+          readonly ? 'cursor-default text-muted' : 'text-fg',
+        ]"
         @input="onInput"
         @change="$emit('change', $event.target.value)"
       />
       <span v-if="suffix" class="text-xs text-faint">{{ suffix }}</span>
       <button
-        v-if="type === 'password'"
+        v-if="type === 'password' && !readonly"
         type="button"
         class="text-xs font-semibold text-muted hover:text-fg"
         @click="reveal = !reveal"
@@ -62,6 +72,8 @@ const props = defineProps({
   icon: { type: String, default: '' },
   suffix: { type: String, default: '' },
   mono: { type: Boolean, default: false },
+  // Shown but not editable (e.g. a value set by the server's environment).
+  readonly: { type: Boolean, default: false },
   min: { type: [String, Number], default: undefined },
   max: { type: [String, Number], default: undefined },
   inputmode: { type: String, default: undefined },

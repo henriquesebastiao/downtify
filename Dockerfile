@@ -46,7 +46,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHON_COLORS=0 \
     DOWNTIFY_LOG_LEVEL=info \
-    DOWNTIFY_PORT=8000 \
     DOWNTIFY_HEALTHCHECK=1 \
     UID=1000 \
     GID=1000 \
@@ -85,7 +84,8 @@ ENV PATH="/home/downtify/.local/bin:${PATH}"
 VOLUME /downloads
 VOLUME /data
 
-EXPOSE ${DOWNTIFY_PORT}
+# 8000 unless DOWNTIFY_PORT or Settings > Apps choose another.
+EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD ./healthcheck.sh

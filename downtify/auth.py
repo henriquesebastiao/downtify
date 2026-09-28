@@ -871,7 +871,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_ALL, r'^/api/auth/(devices|pairing)(/|$)', USER),
         # Admin: signing everyone out, settings and credentials.
         (_ALL, r'^/api/auth/', ADMIN),
-        (_ALL, r'^/api/server$', ADMIN),
+        (_ALL, r'^/api/server(/port)?$', ADMIN),
         (_ALL, r'^/api/settings', ADMIN),
         (_ALL, r'^/api/cookies$', ADMIN),
         (_ALL, r'^/api/(slskd|navidrome)/test$', ADMIN),

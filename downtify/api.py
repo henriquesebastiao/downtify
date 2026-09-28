@@ -824,6 +824,9 @@ class AppState:
     login_limiter: RateLimiter = RateLimiter()
     pair_limiter: RateLimiter = RateLimiter()
     identity: Optional[ServerIdentity] = None
+    # {host, port, source}: where the server listens and what chose the
+    # port (downtify/server_port.py).
+    listen: dict[str, Any] = {}
     # What users do (downtify/activity.py), for admins.
     activity: Optional[ActivityLog] = None
     now_playing: NowPlaying = NowPlaying()

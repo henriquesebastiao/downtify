@@ -9,4 +9,7 @@ case "$(printf '%s' "${DOWNTIFY_HEALTHCHECK:-1}" | tr '[:upper:]' '[:lower:]')" 
     0 | false | no | off) exit 0 ;;
 esac
 
-wget -q -O /dev/null "http://127.0.0.1:${DOWNTIFY_PORT:-8000}/api/health"
+# The port the server listens on: DOWNTIFY_PORT, else what it wrote at
+# start (it may come from Settings), else the default.
+PORT="${DOWNTIFY_PORT:-$(cat /tmp/downtify.port 2>/dev/null)}"
+wget -q -O /dev/null "http://127.0.0.1:${PORT:-8000}/api/health"

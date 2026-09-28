@@ -17,7 +17,7 @@ import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -75,6 +75,13 @@ from downtify.playlist_spotify_cache import (
 )
 from downtify.podcasts import PodcastStore
 from downtify.server_identity import ServerIdentity
+from downtify.server_port import (
+    DEFAULT_PORT,
+    resolve_port,
+    restart_wanted,
+    set_restart_handler,
+    write_runtime_port,
+)
 from downtify.telemetry import redact_url_secrets
 from downtify.track_index import TrackIndex
 from downtify.transcode import transcoder_from_env
@@ -148,9 +155,12 @@ DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 DATABASE_DIR = Path(os.getenv('DATABASE_DIR', '/data'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
-DEFAULT_PORT = int(os.getenv('DOWNTIFY_PORT', os.getenv('PORT', '8000')))
 # Where the server listens, for the LAN announcement; set by main().
-_LISTEN = {'host': DEFAULT_HOST, 'port': DEFAULT_PORT}
+_LISTEN: dict[str, Any] = {
+    'host': DEFAULT_HOST,
+    'port': DEFAULT_PORT,
+    'source': 'default',
+}
 
 
 class SPAStaticFiles(StaticFiles):
@@ -481,6 +491,8 @@ def build_app() -> FastAPI:
     # Sign-in and paired apps (downtify/auth.py). Added before CORS so
     # CORS stays outermost and answers preflights without credentials.
     api.state.identity = ServerIdentity(DATABASE_DIR)
+    # Where this server listens (downtify/server_port.py), for Settings.
+    api.state.listen = _LISTEN
     api.state.auth = open_auth_store()
     api.state.activity = ActivityLog(DATABASE_DIR / 'downtify_activity.db')
     app.add_middleware(
@@ -822,7 +834,9 @@ def _parse_args() -> argparse.Namespace:
     # existing Docker images keep starting cleanly.
     parser.add_argument('mode', nargs='?', default='web')
     parser.add_argument('--host', default=DEFAULT_HOST)
-    parser.add_argument('--port', type=int, default=DEFAULT_PORT)
+    # Unset: DOWNTIFY_PORT, then the port chosen in Settings, then 8000
+    # (downtify/server_port.py).
+    parser.add_argument('--port', type=int, default=None)
     parser.add_argument('--log-level', default='info')
     parser.add_argument('--keep-alive', action='store_true')
     parser.add_argument('--keep-sessions', action='store_true')
@@ -853,7 +867,9 @@ def main() -> None:
         return None
 
     _fix_mime_types()
-    _LISTEN.update(host=args.host, port=args.port)
+    port, source = resolve_port(args.port, ServerIdentity(DATABASE_DIR).port)
+    _LISTEN.update(host=args.host, port=port, source=source)
+    write_runtime_port(port)
     app = build_app()
 
     loop = (
@@ -864,7 +880,7 @@ def main() -> None:
     config = Config(
         app=app,
         host=args.host,
-        port=args.port,
+        port=port,
         loop=loop,  # type: ignore[arg-type]
         log_level=args.log_level.lower(),
         log_config=None,
@@ -876,11 +892,18 @@ def main() -> None:
     )
     server = _Server(config)
 
+    def stop_for_restart() -> None:
+        # serve() returns after a graceful shutdown; __main__ then starts
+        # the process again on the new port.
+        server.should_exit = True
+
+    set_restart_handler(stop_for_restart)
+
     logger.info(
         'Starting Downtify {} on http://{}:{}',
         __version__,
         args.host,
-        args.port,
+        port,
     )
     logger.info('Application log level (Loguru): {}', args.log_level.upper())
     loop.run_until_complete(server.serve())
@@ -909,6 +932,10 @@ if __name__ == '__main__':
         except Exception:
             logger.exception('Shutdown cleanup failed')
         api.release_thread_pools()
+        if exit_code == 0 and restart_wanted():
+            # A new port from Settings: the same process starts over.
+            logger.info('Restarting Downtify')
+            os.execv(sys.executable, [sys.executable, *sys.argv])
         # Skip threading._python_exit joins on in-flight yt-dlp / iTunes
         # / cover-fetch workers. Without this the process stays alive
         # (and can look like it is still serving) until a second Ctrl+C.
