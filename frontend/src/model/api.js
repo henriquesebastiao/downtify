@@ -139,6 +139,35 @@ function getChart(limit = 25) {
   return API.get('/api/discover/chart', { params: { limit } })
 }
 
+// ── Finder (Deezer-only search and artist/album/track columns) ──────
+// `{ songs, albums, artists }`, every row carrying its Deezer ids.
+function finderSearch(query) {
+  return API.get('/api/finder/search', { params: { query } })
+}
+
+function finderArtist(artistId, lang) {
+  return API.get('/api/finder/artist', {
+    params: { artist_id: artistId, lang },
+  })
+}
+
+function finderArtistAlbums(artistId) {
+  return API.get('/api/finder/artist/albums', {
+    params: { artist_id: artistId },
+  })
+}
+
+// `{ <album id>: <track count> }` - up to 50 ids at once.
+function finderTrackCounts(albumIds) {
+  return API.get('/api/finder/albums/track_counts', {
+    params: { ids: albumIds.join(',') },
+  })
+}
+
+function finderAlbum(albumId) {
+  return API.get('/api/finder/album', { params: { album_id: albumId } })
+}
+
 // ── Artist photo & banner ───────────────────────────────────────────
 function getArtistArt(name) {
   return API.get('/api/artists/art', { params: { name } })
@@ -654,6 +683,11 @@ export default {
   searchAlbums,
   searchArtists,
   getChart,
+  finderSearch,
+  finderArtist,
+  finderArtistAlbums,
+  finderTrackCounts,
+  finderAlbum,
   getArtistArt,
   getArtistArtBulk,
   searchArtistArt,

@@ -88,6 +88,20 @@ const routes = [
     component: () => import('/src/views/ChartsView.vue'),
   },
   {
+    // A Deezer-only search (`?q=`)...
+    path: '/finder',
+    name: 'Finder',
+    component: () => import('/src/views/FinderView.vue'),
+  },
+  {
+    // ...and what a result opens: artist, albums and one album's tracks
+    // side by side (`?artist=&album=&track=`, Deezer ids). One path, so
+    // moving between artists doesn't remount the page.
+    path: '/finder/browse',
+    name: 'FinderBrowse',
+    component: () => import('/src/views/FinderBrowseView.vue'),
+  },
+  {
     path: '/settings/:section?',
     name: 'Settings',
     component: () => import('/src/views/SettingsView.vue'),

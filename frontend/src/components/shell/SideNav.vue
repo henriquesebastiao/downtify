@@ -204,6 +204,12 @@ const items = [
     match: ['PodcastShow'],
   },
   { name: 'Charts', icon: 'trending', label: 'nav.charts' },
+  {
+    name: 'Finder',
+    icon: 'columns',
+    label: 'nav.finder',
+    match: ['FinderBrowse'],
+  },
 ]
 
 function isActive(item) {
