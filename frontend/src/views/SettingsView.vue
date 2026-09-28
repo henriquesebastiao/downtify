@@ -586,6 +586,15 @@
             <ActivitySettings />
           </template>
 
+          <template v-else-if="section === 'server'">
+            <SettingGroup
+              :title="t('settings.networkGroup')"
+              :description="t('settings.networkHint')"
+            >
+              <ServerPortSetting />
+            </SettingGroup>
+          </template>
+
           <template v-else-if="section === 'apps'">
             <AppsSettings />
           </template>
@@ -709,6 +718,7 @@ import PresetPicker from '/src/components/settings/PresetPicker.vue'
 import AccountSettings from '/src/components/settings/AccountSettings.vue'
 import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
 import AppsSettings from '/src/components/settings/AppsSettings.vue'
+import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'
 import UsersSettings from '/src/components/settings/UsersSettings.vue'
 import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
@@ -779,6 +789,12 @@ const sections = computed(() =>
         id: 'activity',
         icon: 'activity',
         label: t('settings.activity'),
+        admin: true,
+      },
+      {
+        id: 'server',
+        icon: 'hard-drive',
+        label: t('settings.server'),
         admin: true,
       },
       { id: 'apps', icon: 'monitor', label: t('settings.apps') },

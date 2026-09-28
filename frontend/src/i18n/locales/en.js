@@ -839,6 +839,9 @@ export default {
     activity: 'Activity',
     personalHint:
       'Yours only: they follow your account to every browser and change nothing for anyone else.',
+    server: 'Server',
+    networkGroup: 'Network',
+    networkHint: 'How this server can be reached. Only admins see this.',
   },
   shortcuts: {
     title: 'Keyboard shortcuts',
@@ -913,6 +916,30 @@ export default {
       'Unpairs every app of yours and signs out every browser you’re signed in to, this one too.',
     signOutEverywhereBody:
       'Your paired apps have to be paired again, and you’ll have to sign in again in every browser.',
+  },
+  port: {
+    label: 'Port',
+    hint: 'The port Downtify listens on. It applies when the server starts, or right away with “Save and restart”.',
+    locked: 'Set by {source} on the server. Remove it to choose the port here.',
+    save: 'Save',
+    saveRestart: 'Save and restart',
+    listening: 'Listening on port {port}',
+    nextStart: 'next start: {port}',
+    saved: 'Port {port} saved for the next start',
+    invalid: 'Use a port from {min} to {max}',
+    dockerWarning:
+      'Downtify runs in Docker: change the port mapping to the same port (ports: NEW:NEW) and recreate the container, or use network_mode: host - otherwise Downtify becomes unreachable. Setting DOWNTIFY_PORT puts the old port back.',
+    proxyWarning:
+      'You reach Downtify through another address (a reverse proxy or a port mapping): point it at the new port too.',
+    confirmTitle: 'Restart on port {port}?',
+    confirmBody:
+      'Downloads in progress are stopped, and every page and app reconnects on the new port.',
+    restartingTitle: 'Restarting on port {port}',
+    restartingBody:
+      'Waiting for Downtify to come back… This page opens the new address by itself.',
+    unreachable:
+      'Downtify didn’t answer on the new port yet. Try the new address, or check the server’s logs.',
+    openNew: 'Downtify is restarting. Open it at its new address:',
   },
   account: {
     title: 'Account',

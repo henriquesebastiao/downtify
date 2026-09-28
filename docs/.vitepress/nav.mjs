@@ -30,6 +30,7 @@ export const NAV = [
       { title: 'Discover', page: 'features/discover.md' },
       { title: 'Users & Sign-in', page: 'features/users.md' },
       { title: 'Mobile Apps', page: 'features/mobile-apps.md' },
+      { title: 'Server Settings', page: 'features/server.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },

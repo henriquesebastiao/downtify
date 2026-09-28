@@ -858,6 +858,9 @@ export default {
     activity: 'Etkinlik',
     personalHint:
       'Yalnızca sizin: hesabınızla her tarayıcıya gelir ve başka kimse için bir şey değiştirmez.',
+    server: 'Sunucu',
+    networkGroup: 'Ağ',
+    networkHint: 'Bu sunucuya nasıl erişilir. Bunu yalnızca yöneticiler görür.',
   },
   shortcuts: {
     title: 'Klavye kısayolları',
@@ -934,6 +937,31 @@ export default {
       'Tüm uygulamalarınızın eşleşmesini kaldırır ve bu dahil giriş yaptığınız tüm tarayıcılardan çıkış yapar.',
     signOutEverywhereBody:
       'Uygulamalarınızı yeniden eşlemeniz ve her tarayıcıda yeniden giriş yapmanız gerekecek.',
+  },
+  port: {
+    label: 'Port',
+    hint: 'Downtify’ın dinlediği port. Sunucu başladığında ya da “Kaydet ve yeniden başlat” ile hemen uygulanır.',
+    locked:
+      'Sunucuda {source} tarafından belirlenmiş. Portu buradan seçmek için onu kaldırın.',
+    save: 'Kaydet',
+    saveRestart: 'Kaydet ve yeniden başlat',
+    listening: '{port} portunda dinliyor',
+    nextStart: 'sonraki başlangıç: {port}',
+    saved: '{port} portu sonraki başlangıç için kaydedildi',
+    invalid: '{min} ile {max} arasında bir port kullanın',
+    dockerWarning:
+      'Downtify Docker’da çalışıyor: port eşlemesini aynı porta çevirin (ports: YENİ:YENİ) ve kapsayıcıyı yeniden oluşturun ya da network_mode: host kullanın - yoksa Downtify’a erişilemez. DOWNTIFY_PORT ayarlamak eski portu geri getirir.',
+    proxyWarning:
+      'Downtify’a başka bir adresten (ters vekil veya port eşlemesi) erişiyorsunuz: onu da yeni porta yönlendirin.',
+    confirmTitle: '{port} portunda yeniden başlatılsın mı?',
+    confirmBody:
+      'Süren indirmeler durdurulur ve tüm sayfalar ile uygulamalar yeni porta yeniden bağlanır.',
+    restartingTitle: '{port} portunda yeniden başlatılıyor',
+    restartingBody:
+      'Downtify’ın geri gelmesi bekleniyor… Bu sayfa yeni adresi kendisi açacak.',
+    unreachable:
+      'Downtify henüz yeni portta yanıt vermedi. Yeni adresi deneyin veya sunucu günlüklerine bakın.',
+    openNew: 'Downtify yeniden başlıyor. Yeni adresinde açın:',
   },
   account: {
     title: 'Hesap',

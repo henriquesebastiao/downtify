@@ -18,6 +18,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Liked songs](liked-songs.md) | Heart a song to like it; a playlist of everything you have liked appears on its own |
 | [Podcasts](podcasts.md) | Subscribe to a show by RSS feed, Spotify link or name; new episodes download and tag on their own |
 | [Users & Sign-in](users.md) | Username and password sign-in (`admin` / `downtify` on a new server), admin and normal user accounts, per-user preferences, and an activity log of sign-ins and what everyone plays |
+| [Server Settings](server.md) | The port Downtify listens on, changed from Settings (admins), with a restart right away if you like |
 | [Mobile Apps](mobile-apps.md) | Pair phone apps by QR code and stream the library to them (original or transcoded) |
 | [Discover](discover.md) | Artists, albums and playlists you don't have yet, suggested from your library, likes and listening; hide the ones you don't want |
 | [slskd & Navidrome](slskd-navidrome.md) | Download from Soulseek through slskd, mirror playlists into Navidrome, and track playlist downloads |

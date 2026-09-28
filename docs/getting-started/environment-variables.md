@@ -10,7 +10,7 @@ All environment variables are optional. Downtify works out of the box without an
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DOWNTIFY_PORT` | `8000` | Port the server listens on inside the container. Change the left side of the port mapping to expose a different host port. |
+| `DOWNTIFY_PORT` | _(unset)_ | Port the server listens on (inside the container). Unset: the port chosen in **Settings → Server → Port**, else `8000`. Set, it wins and the Settings field is locked. Change the left side of the port mapping to expose a different host port. See [Changing the port](../features/server.md#changing-the-port). |
 | `DOWNLOAD_DIR` | `/downloads` | Directory where audio files are saved. Override if you mount your library at a custom path. |
 | `HOST` | `0.0.0.0` | Bind address for the web server. |
 | `DOWNTIFY_LOG_LEVEL` | `info` | Application log level (`debug`, `info`, `warning`, …). |

@@ -861,6 +861,9 @@ export default {
     activity: 'Tevékenység',
     personalHint:
       'Csak a tiéd: a fiókoddal együtt minden böngészőben megjelennek, és senki másnak nem változtatnak semmin.',
+    server: 'Szerver',
+    networkGroup: 'Hálózat',
+    networkHint: 'Hogyan érhető el ez a szerver. Ezt csak az adminok látják.',
   },
   shortcuts: {
     title: 'Billentyűparancsok',
@@ -940,6 +943,31 @@ export default {
       'Megszünteti az összes alkalmazásod párosítását, és minden böngészőből kijelentkeztet, ebből is.',
     signOutEverywhereBody:
       'Az alkalmazásaidat újra párosítanod kell, és minden böngészőben újra be kell jelentkezned.',
+  },
+  port: {
+    label: 'Port',
+    hint: 'A port, amelyen a Downtify figyel. A szerver indulásakor lép életbe, vagy azonnal a „Mentés és újraindítás” gombbal.',
+    locked:
+      'A szerveren a(z) {source} állítja be. Távolítsd el, hogy itt választhass portot.',
+    save: 'Mentés',
+    saveRestart: 'Mentés és újraindítás',
+    listening: 'Figyel a(z) {port} porton',
+    nextStart: 'következő indítás: {port}',
+    saved: 'A(z) {port} port mentve a következő indításhoz',
+    invalid: '{min} és {max} közötti portot adj meg',
+    dockerWarning:
+      'A Downtify Dockerben fut: állítsd a porttovábbítást ugyanarra a portra (ports: ÚJ:ÚJ), és hozd létre újra a konténert, vagy használd a network_mode: host beállítást - különben a Downtify elérhetetlen lesz. A DOWNTIFY_PORT beállítása visszaállítja a régi portot.',
+    proxyWarning:
+      'A Downtify-t más címen éred el (fordított proxy vagy porttovábbítás): azt is irányítsd az új portra.',
+    confirmTitle: 'Újraindítod a(z) {port} porton?',
+    confirmBody:
+      'A folyamatban lévő letöltések leállnak, és minden oldal és alkalmazás újracsatlakozik az új porton.',
+    restartingTitle: 'Újraindítás a(z) {port} porton',
+    restartingBody:
+      'Várakozás a Downtify-ra… Ez az oldal magától megnyitja az új címet.',
+    unreachable:
+      'A Downtify még nem válaszol az új porton. Próbáld az új címet, vagy nézd meg a szerver naplóit.',
+    openNew: 'A Downtify újraindul. Nyisd meg az új címén:',
   },
   account: {
     title: 'Fiók',

@@ -875,6 +875,9 @@ export default {
     activity: 'Activité',
     personalHint:
       'Rien qu’à vous : ils suivent votre compte dans chaque navigateur et ne changent rien pour les autres.',
+    server: 'Serveur',
+    networkGroup: 'Réseau',
+    networkHint: 'Comment joindre ce serveur. Seuls les admins voient ceci.',
   },
   shortcuts: {
     title: 'Raccourcis clavier',
@@ -955,6 +958,31 @@ export default {
       'Dissocie toutes vos applis et vous déconnecte de tous vos navigateurs, y compris celui-ci.',
     signOutEverywhereBody:
       'Vos applis devront être associées à nouveau, et vous devrez vous reconnecter dans chaque navigateur.',
+  },
+  port: {
+    label: 'Port',
+    hint: 'Le port sur lequel Downtify écoute. Il s’applique au démarrage du serveur, ou tout de suite avec « Enregistrer et redémarrer ».',
+    locked:
+      'Défini par {source} sur le serveur. Retirez-le pour choisir le port ici.',
+    save: 'Enregistrer',
+    saveRestart: 'Enregistrer et redémarrer',
+    listening: 'À l’écoute sur le port {port}',
+    nextStart: 'prochain démarrage : {port}',
+    saved: 'Port {port} enregistré pour le prochain démarrage',
+    invalid: 'Utilisez un port de {min} à {max}',
+    dockerWarning:
+      'Downtify tourne dans Docker : changez la redirection de ports vers le même port (ports: NOUVEAU:NOUVEAU) et recréez le conteneur, ou utilisez network_mode: host - sinon Downtify devient injoignable. Définir DOWNTIFY_PORT remet l’ancien port.',
+    proxyWarning:
+      'Vous accédez à Downtify par une autre adresse (un proxy inverse ou une redirection de ports) : dirigez-la aussi vers le nouveau port.',
+    confirmTitle: 'Redémarrer sur le port {port} ?',
+    confirmBody:
+      'Les téléchargements en cours sont arrêtés, et chaque page et appli se reconnecte sur le nouveau port.',
+    restartingTitle: 'Redémarrage sur le port {port}',
+    restartingBody:
+      'En attente du retour de Downtify… Cette page ouvrira la nouvelle adresse d’elle-même.',
+    unreachable:
+      'Downtify ne répond pas encore sur le nouveau port. Essayez la nouvelle adresse ou consultez les journaux du serveur.',
+    openNew: 'Downtify redémarre. Ouvrez-le à sa nouvelle adresse :',
   },
   account: {
     title: 'Compte',

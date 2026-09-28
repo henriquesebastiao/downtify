@@ -859,6 +859,9 @@ export default {
     activity: 'Atividade',
     personalHint:
       'Só suas: acompanham sua conta em qualquer navegador e não mudam nada para mais ninguém.',
+    server: 'Servidor',
+    networkGroup: 'Rede',
+    networkHint: 'Como este servidor pode ser acessado. Só admins veem isto.',
   },
   shortcuts: {
     title: 'Atalhos de teclado',
@@ -934,6 +937,31 @@ export default {
       'Despareia todos os seus apps e sai de todos os navegadores em que você entrou, inclusive este.',
     signOutEverywhereBody:
       'Seus apps pareados vão precisar ser pareados de novo, e você vai precisar entrar de novo em cada navegador.',
+  },
+  port: {
+    label: 'Porta',
+    hint: 'A porta em que o Downtify funciona. Vale quando o servidor inicia, ou na hora com “Salvar e reiniciar”.',
+    locked:
+      'Definida por {source} no servidor. Remova para escolher a porta aqui.',
+    save: 'Salvar',
+    saveRestart: 'Salvar e reiniciar',
+    listening: 'Funcionando na porta {port}',
+    nextStart: 'próxima inicialização: {port}',
+    saved: 'Porta {port} salva para a próxima inicialização',
+    invalid: 'Use uma porta de {min} a {max}',
+    dockerWarning:
+      'O Downtify roda no Docker: mude o mapeamento de portas para a mesma porta (ports: NOVA:NOVA) e recrie o contêiner, ou use network_mode: host - senão o Downtify fica inacessível. Definir DOWNTIFY_PORT volta para a porta antiga.',
+    proxyWarning:
+      'Você acessa o Downtify por outro endereço (um proxy reverso ou um mapeamento de portas): aponte-o para a nova porta também.',
+    confirmTitle: 'Reiniciar na porta {port}?',
+    confirmBody:
+      'Downloads em andamento são interrompidos, e todas as páginas e apps se reconectam na nova porta.',
+    restartingTitle: 'Reiniciando na porta {port}',
+    restartingBody:
+      'Esperando o Downtify voltar… Esta página abre o novo endereço sozinha.',
+    unreachable:
+      'O Downtify ainda não respondeu na nova porta. Tente o novo endereço ou veja os logs do servidor.',
+    openNew: 'O Downtify está reiniciando. Abra-o no novo endereço:',
   },
   account: {
     title: 'Conta',

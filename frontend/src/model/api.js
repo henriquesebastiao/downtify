@@ -452,6 +452,15 @@ function renameServer(name) {
   return API.patch('/api/server', { name })
 }
 
+function getServerPort() {
+  return API.get('/api/server/port')
+}
+
+/** Save the port; `restart` restarts the server on it right away. */
+function setServerPort(port, restart = false) {
+  return API.put('/api/server/port', { port: Number(port), restart })
+}
+
 // ── Discover ───────────────────────────────────────────────────────
 // `library`: [{ name, tracks, liked }] per library artist.
 function getDiscover(library) {
@@ -697,6 +706,8 @@ export default {
   cancelPairing,
   getServerInfo,
   renameServer,
+  getServerPort,
+  setServerPort,
   getDiscover,
   getDiscoverCollections,
   findPreview,
