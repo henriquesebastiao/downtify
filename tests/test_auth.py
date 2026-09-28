@@ -1,5 +1,6 @@
 """Sign-in, paired devices, pairing codes, signed URLs and the middleware
-that enforces them (downtify/auth.py, downtify/auth_routes.py)."""
+that enforces them (downtify/auth.py, downtify/auth_routes.py). Accounts
+themselves are tests/test_users.py."""
 
 from __future__ import annotations
 
@@ -18,31 +19,37 @@ from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 import main
-from downtify import api, auth_routes, mobile_routes
+from downtify import account_routes, api, auth_routes, mobile_routes
 from downtify.auth import (
     ADMIN,
     CLIENT,
     PUBLIC,
     SESSION_COOKIE,
+    USER,
     AuthStore,
     PairingStore,
     Principal,
     RateLimiter,
     TicketStore,
+    allows,
     classify,
     client_ip,
-    hash_password,
     normalize_pairing_code,
     rule_for,
-    verify_password,
 )
 from downtify.server_identity import ServerIdentity
+from downtify.users import hash_password, verify_password
 
 PASSWORD = 'correct horse battery'
+DEFAULT = {'username': 'admin', 'password': 'downtify'}
 
 
 def _store(tmp_path: Path, **kw: Any) -> AuthStore:
     return AuthStore(tmp_path / 'auth.db', tmp_path / '.secret', **kw)
+
+
+def _admin_id(store: AuthStore) -> int:
+    return store.users.by_username('admin')['id']
 
 
 # ── passwords ───────────────────────────────────────────────────────────
@@ -59,75 +66,66 @@ def test_password_hash_round_trip_and_salt():
     assert not verify_password(PASSWORD, 'garbage')
 
 
-def test_password_rules(tmp_path):
-    store = _store(tmp_path)
-    assert not store.has_password()
-    assert not store.check_password('')
-    with pytest.raises(ValueError, match='at least'):
-        store.set_password('short')
-    store.set_password(PASSWORD)
-    assert store.check_password(PASSWORD)
-    assert not store.check_password(PASSWORD + '!')
-
-
-# ── require sign-in ─────────────────────────────────────────────────────
-
-
-def test_require_sign_in_is_off_by_default_and_needs_a_password(tmp_path):
-    store = _store(tmp_path)
-    assert store.require_sign_in is False
-    with pytest.raises(ValueError, match='password'):
-        store.set_require_sign_in(True)
-    store.set_password(PASSWORD)
-    store.set_require_sign_in(True)
-    assert _store(tmp_path).require_sign_in is True  # persisted
-
-
-def test_the_environment_pins_require_sign_in(tmp_path):
-    store = _store(tmp_path, forced_require=True)
-    assert store.require_sign_in is True
-    assert store.forced_by_env
-    with pytest.raises(ValueError, match='DOWNTIFY_REQUIRE_SIGN_IN'):
-        store.set_require_sign_in(False)
-
-
-def test_reset_clears_password_and_sessions_but_keeps_devices(tmp_path):
-    store = _store(tmp_path)
-    store.set_password(PASSWORD)
-    store.set_require_sign_in(True)
-    session = store.create_session()
-    device, token = store.create_device('Pixel')
-
-    store.reset()
-
-    assert not store.require_sign_in
-    assert not store.has_password()
-    assert not store.session_valid(session)
-    assert store.verify_device_token(token)['id'] == device['id']
-
-
 # ── sessions ────────────────────────────────────────────────────────────
 
 
-def test_sessions(tmp_path):
+def test_sessions_belong_to_a_user(tmp_path):
     store = _store(tmp_path)
-    token = store.create_session('1.2.3.4', 'Firefox')
+    admin = _admin_id(store)
+    token = store.create_session(admin, '1.2.3.4', 'Firefox')
 
-    assert store.session_valid(token)
-    assert not store.session_valid(token + 'x')
-    assert not store.session_valid('')
+    assert store.session_user(token)['username'] == 'admin'
+    assert store.session_user(token + 'x') is None
+    assert store.session_user('') is None
     store.end_session(token)
-    assert not store.session_valid(token)
+    assert store.session_user(token) is None
 
 
 def test_an_expired_session_is_gone(tmp_path):
     store = _store(tmp_path)
-    token = store.create_session()
+    token = store.create_session(_admin_id(store))
     with store._connect() as conn:
         conn.execute(
             "UPDATE auth_sessions SET expires_at = '2000-01-01T00:00:00+00:00'"
         )
-    assert not store.session_valid(token)
+    assert store.session_user(token) is None
+
+
+def test_a_deleted_users_session_is_gone(tmp_path):
+    store = _store(tmp_path)
+    user = store.users.create('maria', PASSWORD)
+    token = store.create_session(user['id'])
+    store.users.delete(user['id'])
+    assert store.session_user(token) is None
+
+
+def test_end_user_sessions_can_keep_one(tmp_path):
+    store = _store(tmp_path)
+    admin = _admin_id(store)
+    keep = store.create_session(admin)
+    other = store.create_session(admin)
+    user = store.users.create('maria', PASSWORD)
+    theirs = store.create_session(user['id'])
+
+    assert store.end_user_sessions(admin, keep) == 1
+    assert store.session_user(keep)
+    assert store.session_user(other) is None
+    assert store.session_user(theirs)
+
+
+def test_reset_restores_the_default_admin(tmp_path):
+    store = _store(tmp_path)
+    admin = _admin_id(store)
+    store.users.set_password(admin, PASSWORD)
+    session = store.create_session(admin)
+    device, token = store.create_device('Pixel', user_id=admin)
+
+    store.reset()
+
+    assert store.users.authenticate('admin', 'downtify')['role'] == 'admin'
+    assert store.users.get(admin)['default_password']
+    assert store.session_user(session) is None
+    assert store.verify_device_token(token)['id'] == device['id']
 
 
 # ── devices ─────────────────────────────────────────────────────────────
@@ -135,13 +133,20 @@ def test_an_expired_session_is_gone(tmp_path):
 
 def test_device_token_round_trip(tmp_path):
     store = _store(tmp_path)
-    device, token = store.create_device('  Pixel   8 ', 'android', '10.0.0.5')
+    admin = _admin_id(store)
+    device, token = store.create_device(
+        '  Pixel   8 ', 'android', '10.0.0.5', admin
+    )
 
     assert re.fullmatch(r'dtfy_[a-z2-9]{12}_[A-Za-z0-9_-]{43}', token)
     assert device['name'] == 'Pixel 8'
+    assert device['username'] == 'admin'
     assert store.verify_device_token(token, '10.0.0.6') == {
         'id': device['id'],
         'name': 'Pixel 8',
+        'user_id': admin,
+        'username': 'admin',
+        'role': 'admin',
     }
     # Only a hash is stored.
     with store._connect() as conn:
@@ -151,7 +156,7 @@ def test_device_token_round_trip(tmp_path):
 
 def test_a_revoked_token_fails(tmp_path):
     store = _store(tmp_path)
-    device, token = store.create_device('Pixel')
+    device, token = store.create_device('Pixel', user_id=1)
 
     assert store.revoke_device(device['id'])
     assert store.verify_device_token(token) is None
@@ -175,21 +180,55 @@ def test_malformed_tokens_fail(tmp_path, bad):
 
 def test_a_wrong_secret_for_a_real_device_fails(tmp_path):
     store = _store(tmp_path)
-    _device, token = store.create_device('Pixel')
+    _device, token = store.create_device('Pixel', user_id=1)
     forged = token[:-4] + ('AAAA' if not token.endswith('AAAA') else 'BBBB')
     assert store.verify_device_token(forged) is None
 
 
+def test_a_deleted_users_devices_stop_working(tmp_path):
+    store = _store(tmp_path)
+    user = store.users.create('maria', PASSWORD)
+    _device, token = store.create_device('Pixel', user_id=user['id'])
+    assert store.verify_device_token(token)['username'] == 'maria'
+    store.users.delete(user['id'])
+    assert store.verify_device_token(token) is None
+
+
+def test_devices_are_listed_per_user(tmp_path):
+    store = _store(tmp_path)
+    user = store.users.create('maria', PASSWORD)
+    store.create_device('Admin phone', user_id=1)
+    store.create_device('Maria phone', user_id=user['id'])
+
+    assert [d['name'] for d in store.list_devices(user['id'])] == [
+        'Maria phone'
+    ]
+    assert len(store.list_devices()) == 2
+
+
+def test_revoke_user_signs_one_user_out_everywhere(tmp_path):
+    store = _store(tmp_path)
+    user = store.users.create('maria', PASSWORD)
+    device, token = store.create_device('Pixel', user_id=user['id'])
+    _other, admin_token = store.create_device('Admin', user_id=1)
+    session = store.create_session(user['id'])
+
+    assert store.revoke_user(user['id']) == [device['id']]
+    assert store.verify_device_token(token) is None
+    assert store.session_user(session) is None
+    assert store.verify_device_token(admin_token)
+
+
 def test_revoke_everything(tmp_path):
     store = _store(tmp_path)
-    device, token = store.create_device('Pixel')
-    session = store.create_session()
+    device, token = store.create_device('Pixel', user_id=1)
+    session = store.create_session(1)
     url = store.signer.sign_url('/cover', device_id=device['id'])
 
     store.revoke_everything()
 
     assert store.verify_device_token(token) is None
-    assert not store.session_valid(session)
+    assert store.session_user(session) is None
     path, query = url.split('?')
     assert store.signer.verify_signed('GET', path, query) is None
 
@@ -199,7 +238,8 @@ def test_revoke_everything(tmp_path):
 
 def test_pairing_code_is_single_use():
     pairing = PairingStore()
-    started = pairing.create()
+    started = pairing.create(7)
+    assert pairing.owner(started['pairing_id']) == 7
 
     assert re.fullmatch(r'[0-9A-Z]{4}-[0-9A-Z]{4}', started['code'])
     assert pairing.status(started['pairing_id'])['status'] == 'pending'
@@ -240,7 +280,7 @@ def test_a_cancelled_pairing_cannot_be_claimed():
 
 def test_ws_ticket_is_single_use_and_expires():
     tickets = TicketStore()
-    principal = Principal('device', CLIENT, 'abc')
+    principal = Principal('device', CLIENT, 'abc', 1, 'admin', 'admin')
     ticket = tickets.create(principal)
     assert tickets.claim(ticket) == principal
     assert tickets.claim(ticket) is None
@@ -289,7 +329,7 @@ def _signed(store, device_id, path='/api/v1/tracks/t1/stream', **kw):
 
 def test_signed_url_round_trip(tmp_path):
     store = _store(tmp_path)
-    device, _token = store.create_device('Cast')
+    device, _token = store.create_device('Cast', user_id=1)
     path, query = _signed(store, device['id'])
 
     assert store.signer.verify_signed('GET', path, query) == device['id']
@@ -309,7 +349,7 @@ def test_signed_url_round_trip(tmp_path):
 )
 def test_signature_tampering_fails(tmp_path, tamper):
     store = _store(tmp_path)
-    device, _token = store.create_device('Cast')
+    device, _token = store.create_device('Cast', user_id=1)
     path, query = tamper(*_signed(store, device['id']))
 
     assert store.signer.verify_signed('GET', path, query) is None
@@ -317,7 +357,7 @@ def test_signature_tampering_fails(tmp_path, tamper):
 
 def test_an_expired_signed_url_fails(tmp_path):
     store = _store(tmp_path)
-    device, _token = store.create_device('Cast')
+    device, _token = store.create_device('Cast', user_id=1)
     path, query = _signed(store, device['id'], ttl=1)
     query = re.sub(r'exp=\d+', f'exp={int(time.time()) - 5}', query)
     assert store.signer.verify_signed('GET', path, query) is None
@@ -325,7 +365,7 @@ def test_an_expired_signed_url_fails(tmp_path):
 
 def test_a_revoked_device_voids_its_signed_urls(tmp_path):
     store = _store(tmp_path)
-    device, _token = store.create_device('Cast')
+    device, _token = store.create_device('Cast', user_id=1)
     path, query = _signed(store, device['id'])
     store.revoke_device(device['id'])
     assert store.signer.verify_signed('GET', path, query) is None
@@ -333,7 +373,7 @@ def test_a_revoked_device_voids_its_signed_urls(tmp_path):
 
 def test_the_signing_key_is_private_and_kept(tmp_path):
     store = _store(tmp_path)
-    device, _token = store.create_device('Cast')
+    device, _token = store.create_device('Cast', user_id=1)
     path, query = _signed(store, device['id'])
 
     assert (tmp_path / '.secret').stat().st_mode & 0o077 == 0
@@ -352,8 +392,19 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/assets/index.js', PUBLIC),
         ('GET', '/api/server/info', PUBLIC),
         ('POST', '/api/auth/pair', PUBLIC),
-        ('POST', '/api/auth/pairing', ADMIN),
-        ('GET', '/api/auth/devices', ADMIN),
+        ('POST', '/api/auth/pairing', USER),
+        ('GET', '/api/auth/devices', USER),
+        ('DELETE', '/api/auth/devices/abc', USER),
+        ('POST', '/api/auth/revoke-all', ADMIN),
+        ('POST', '/api/auth/ws-ticket', CLIENT),
+        ('GET', '/api/me', CLIENT),
+        ('PUT', '/api/me/password', USER),
+        ('PUT', '/api/me/preferences', USER),
+        ('GET', '/api/users', ADMIN),
+        ('DELETE', '/api/users/3', ADMIN),
+        ('GET', '/api/activity', ADMIN),
+        ('GET', '/api/activity/now', ADMIN),
+        ('POST', '/api/activity/playback', CLIENT),
         ('GET', '/api/settings', ADMIN),
         ('POST', '/api/cookies', ADMIN),
         ('DELETE', '/delete', ADMIN),
@@ -374,6 +425,14 @@ def test_classify(method, path, scope):
     assert classify(method, path) == scope
 
 
+def test_scopes_are_ranked():
+    assert allows(ADMIN, USER)
+    assert allows(USER, CLIENT)
+    assert not allows(USER, ADMIN)
+    assert not allows(CLIENT, USER)
+    assert allows(CLIENT, PUBLIC)
+
+
 @pytest.fixture
 def app(tmp_path, monkeypatch):
     web = tmp_path / 'web'
@@ -383,7 +442,7 @@ def app(tmp_path, monkeypatch):
     monkeypatch.setattr(main, 'DATABASE_DIR', tmp_path / 'data')
     monkeypatch.setattr(main, 'WEB_GUI_LOCATION', str(web))
     # build_app sets these on the shared state; put them back afterwards.
-    for name in ('auth', 'identity', 'downloader', 'settings'):
+    for name in ('auth', 'activity', 'identity', 'downloader', 'settings'):
         monkeypatch.setattr(api.state, name, getattr(api.state, name))
     return main.build_app()
 
@@ -393,6 +452,7 @@ def _all_routes(app: FastAPI):
     yield from app.routes
     yield from api.router.routes
     yield from auth_routes.router.routes
+    yield from account_routes.router.routes
     yield from mobile_routes.router.routes
 
 
@@ -431,53 +491,51 @@ def client(app):
     return TestClient(app, base_url='http://testserver')
 
 
-def _enable_sign_in(store: AuthStore) -> None:
-    store.set_password(PASSWORD)
-    store.set_require_sign_in(True)
+def _sign_in(client, username='admin', password='downtify'):
+    return client.post(
+        '/api/auth/login', json={'username': username, 'password': password}
+    )
 
 
-def test_off_keeps_current_behaviour(client):
-    assert client.get('/api/queue').status_code == 200
-    assert client.get('/api/settings').status_code == 200
-    assert client.get('/').status_code == 200
+def test_a_new_install_requires_sign_in(client):
+    assert client.get('/api/queue').status_code == 401
+    assert client.get('/api/server/info').status_code == 200
+    assert client.get('/').status_code == 200  # the sign-in page loads
+    assert client.get('/downloads/x.mp3').status_code == 401
+    status = client.get('/api/auth/status').json()
+    assert status['signed_in'] is False
+    assert status['notice'] is None  # nothing to announce on a new install
 
 
-def test_off_still_rejects_a_revoked_token(client):
+def test_a_revoked_token_is_rejected(client):
     store = api.state.auth
-    device, token = store.create_device('Pixel')
+    device, token = store.create_device('Pixel', user_id=1)
     headers = {'Authorization': f'Bearer {token}'}
     assert client.get('/api/queue', headers=headers).status_code == 200
     store.revoke_device(device['id'])
     assert client.get('/api/queue', headers=headers).status_code == 401
 
 
-def test_on_requires_credentials(client):
-    _enable_sign_in(api.state.auth)
-
-    assert client.get('/api/queue').status_code == 401
-    assert client.get('/api/server/info').status_code == 200
-    assert client.get('/').status_code == 200  # the sign-in page loads
-    assert client.get('/downloads/x.mp3').status_code == 401
-
-
-def test_on_a_device_is_a_client_not_an_admin(client):
+def test_a_device_is_a_client_not_an_admin(client):
     store = api.state.auth
-    _enable_sign_in(store)
-    _device, token = store.create_device('Pixel')
+    _device, token = store.create_device('Pixel', user_id=1)
     headers = {'Authorization': f'Bearer {token}'}
 
     assert client.get('/api/queue', headers=headers).status_code == 200
     assert client.get('/api/settings', headers=headers).status_code == 403
     assert client.get('/api/auth/devices', headers=headers).status_code == 403
+    me = client.get('/api/me', headers=headers).json()
+    assert me['user']['username'] == 'admin'
 
 
-def test_login_sets_an_admin_session(client):
-    _enable_sign_in(api.state.auth)
-
-    wrong = client.post('/api/auth/login', json={'password': 'nope nope'})
+def test_login_with_the_default_admin(client):
+    wrong = _sign_in(client, password='nope nope')
     assert wrong.status_code == 401
-    ok = client.post('/api/auth/login', json={'password': PASSWORD})
+    unknown = _sign_in(client, username='nobody')
+    assert unknown.status_code == 401
+    ok = _sign_in(client)
     assert ok.status_code == 200
+    assert ok.json()['user']['default_password'] is True
     cookie = ok.cookies.get(SESSION_COOKIE) or client.cookies.get(
         SESSION_COOKIE
     )
@@ -485,15 +543,39 @@ def test_login_sets_an_admin_session(client):
     assert 'httponly' in ok.headers['set-cookie'].lower()
     assert 'samesite=lax' in ok.headers['set-cookie'].lower()
     assert client.get('/api/settings').status_code == 200
-    assert client.get('/api/auth/status').json()['via'] == 'session'
+    status = client.get('/api/auth/status').json()
+    assert status['via'] == 'session'
+    assert status['user']['role'] == 'admin'
     client.post('/api/auth/logout')
     client.cookies.clear()
     assert client.get('/api/settings').status_code == 401
 
 
+def test_usernames_are_case_insensitive_at_sign_in(client):
+    assert _sign_in(client, username='ADMIN').status_code == 200
+
+
+def test_a_normal_user_is_not_an_admin(client):
+    api.state.auth.users.create('maria', PASSWORD)
+    assert _sign_in(client, 'maria', PASSWORD).status_code == 200
+
+    assert client.get('/api/queue').status_code == 200
+    # Allowed (the like store isn't open without the lifespan).
+    assert client.put(
+        '/api/likes', json={'file': 'x.mp3', 'liked': False}
+    ).status_code not in {401, 403}
+    refused = client.get('/api/settings')
+    assert refused.status_code == 403
+    assert refused.json()['detail'] == 'This needs an admin'
+    assert client.get('/api/users').status_code == 403
+    assert client.get('/api/activity').status_code == 403
+    assert client.delete('/delete', params={'file': 'x'}).status_code == 403
+    assert client.get('/api/auth/devices').status_code == 200
+    assert client.get('/api/me').json()['user']['role'] == 'user'
+
+
 def test_a_cross_site_request_with_the_session_is_refused(client):
-    _enable_sign_in(api.state.auth)
-    client.post('/api/auth/login', json={'password': PASSWORD})
+    _sign_in(client)
 
     evil = client.put(
         '/api/likes',
@@ -506,20 +588,18 @@ def test_a_cross_site_request_with_the_session_is_refused(client):
 
 
 def test_login_is_rate_limited(client, monkeypatch):
-    _enable_sign_in(api.state.auth)
     monkeypatch.setattr(api.state, 'login_limiter', RateLimiter(limit=3))
     for _ in range(3):
-        assert (
-            client.post('/api/auth/login', json={'password': 'x'}).status_code
-            == 401
-        )
-    blocked = client.post('/api/auth/login', json={'password': PASSWORD})
+        assert _sign_in(client, password='x').status_code == 401
+    blocked = _sign_in(client)
     assert blocked.status_code == 429
     assert int(blocked.headers['retry-after']) > 0
 
 
 def test_pairing_end_to_end(client, monkeypatch):
     monkeypatch.setattr(api.state, 'pairing', PairingStore())
+    api.state.auth.users.create('maria', PASSWORD)
+    _sign_in(client, 'maria', PASSWORD)
     started = client.post('/api/auth/pairing').json()
 
     paired = client.post(
@@ -535,6 +615,7 @@ def test_pairing_end_to_end(client, monkeypatch):
     assert body['token'].startswith('dtfy_')
     assert body['device']['name'] == 'Pixel 8'
     assert body['server']['server_id'] == api.state.identity.server_id
+    assert body['user'] == {'username': 'maria', 'role': 'user'}
     assert (
         client.get(f'/api/auth/pairing/{started["pairing_id"]}').json()[
             'status'
@@ -549,6 +630,23 @@ def test_pairing_end_to_end(client, monkeypatch):
     ).json()
     assert status['via'] == 'device'
     assert status['device']['name'] == 'Pixel 8'
+    assert status['user']['username'] == 'maria'
+    # The device is Maria's: hers to see, and the admin sees it too.
+    assert [d['name'] for d in client.get('/api/auth/devices').json()] == [
+        'Pixel 8'
+    ]
+
+
+def test_users_manage_only_their_own_devices(client):
+    store = api.state.auth
+    store.users.create('maria', PASSWORD)
+    admin_device, _t = store.create_device('Admin phone', user_id=1)
+    _sign_in(client, 'maria', PASSWORD)
+
+    assert client.get('/api/auth/devices').json() == []
+    gone = client.delete(f'/api/auth/devices/{admin_device["id"]}')
+    assert gone.status_code == 404
+    assert store.device_active(admin_device['id'])
 
 
 def test_pairing_is_rate_limited(client, monkeypatch):
@@ -566,40 +664,9 @@ def test_pairing_is_rate_limited(client, monkeypatch):
     )
 
 
-def test_enabling_sign_in_needs_the_password_and_signs_this_browser_in(client):
-    store = api.state.auth
-    client.put('/api/auth/password', json={'new_password': PASSWORD})
-
-    refused = client.put(
-        '/api/auth/require', json={'enabled': True, 'password': 'x'}
-    )
-    assert refused.status_code == 403
-    ok = client.put(
-        '/api/auth/require', json={'enabled': True, 'password': PASSWORD}
-    )
-    assert ok.status_code == 200
-    assert store.require_sign_in
-    assert client.get('/api/settings').status_code == 200  # still signed in
-
-
-def test_changing_the_password_needs_the_current_one(client):
-    client.put('/api/auth/password', json={'new_password': PASSWORD})
-    bad = client.put(
-        '/api/auth/password',
-        json={'current_password': 'nope nope', 'new_password': 'another one!'},
-    )
-    assert bad.status_code == 403
-    good = client.put(
-        '/api/auth/password',
-        json={'current_password': PASSWORD, 'new_password': 'another one!'},
-    )
-    assert good.status_code == 200
-
-
 def test_signed_url_through_the_middleware(client):
     store = api.state.auth
-    _enable_sign_in(store)
-    device, _token = store.create_device('Cast')
+    device, _token = store.create_device('Cast', user_id=1)
     url = store.signer.sign_url('/api/queue', device_id=device['id'])
 
     assert client.get(url).status_code == 200
@@ -607,21 +674,20 @@ def test_signed_url_through_the_middleware(client):
     assert client.get(tampered).status_code == 401
 
 
-def test_websocket_needs_credentials_when_required(client):
+def test_websocket_needs_credentials(client):
     store = api.state.auth
-    _enable_sign_in(store)
     with (
         pytest.raises(WebSocketDisconnect),
         client.websocket_connect('/api/ws?client_id=a'),
     ):
         pass
-    device, token = store.create_device('Pixel')
+    device, token = store.create_device('Pixel', user_id=1)
     with client.websocket_connect(
         '/api/ws?client_id=b', headers={'Authorization': f'Bearer {token}'}
     ):
         pass
     ticket = api.state.ws_tickets.create(
-        Principal('device', CLIENT, device['id'])
+        Principal('device', CLIENT, device['id'], 1, 'admin', 'admin')
     )
     with client.websocket_connect(f'/api/ws?client_id=c&ticket={ticket}'):
         pass
@@ -639,10 +705,11 @@ def test_server_info_is_public_and_says_little(client):
         'capabilities',
     }
     assert info['api_version'] == 1
-    assert info['require_sign_in'] is False
+    assert info['require_sign_in'] is True
 
 
 def test_renaming_the_server(client):
+    _sign_in(client)
     renamed = client.patch('/api/server', json={'name': '  Living   room '})
     assert renamed.json()['name'] == 'Living room'
     assert client.patch('/api/server', json={'name': '   '}).status_code == 400

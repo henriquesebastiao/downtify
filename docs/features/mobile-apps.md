@@ -2,9 +2,9 @@
 icon: lucide/smartphone
 ---
 
-# Mobile Apps & Sign-in
+# Mobile Apps
 
-Downtify can serve apps on your phone: they browse and stream the library straight from your server, and keep songs on the phone for offline listening. Everything an app needs is set up in **Settings → Apps**: pairing phones, the server's name, and who is allowed to use the server at all.
+Downtify can serve apps on your phone: they browse and stream the library straight from your server, and keep songs on the phone for offline listening. Everything an app needs is set up in **Settings → Apps**: pairing phones and the server's name. Who may use the server at all is set by the accounts in [Users & Sign-in](users.md).
 
 ## Pairing a phone
 
@@ -12,42 +12,17 @@ Downtify can serve apps on your phone: they browse and stream the library straig
 2. In the app, choose **Scan the code** and point the camera at the QR code — or type the 8-character code shown under it (`K7QM-2XPD`; case and dashes don't matter).
 3. The dialog confirms when the phone is paired, and it shows up under **Paired apps**.
 
+The phone is paired to **your account**: it plays as you, and it shows up in your activity. Anyone with an account can pair their own phones.
+
 A code works **once**, for **five minutes**, and trying wrong codes is rate-limited. The phone gets a key of its own that it keeps; the server only stores a hash of it.
 
-**Paired apps** lists each phone with its platform, when it was last seen and from which address. **Unpair** stops a phone at once — its next request fails, an open connection is closed, and links it shared (see [Casting](#casting)) stop working. To use it again, pair it again.
+**Paired apps** lists your phones (an admin sees everyone's, with whose each is) with their platform, when it was last seen and from which address. **Unpair** stops a phone at once — its next request fails, an open connection is closed, and links it shared (see [Casting](#casting)) stop working. To use it again, pair it again.
 
-## Require sign-in
+## What a paired app may do
 
-By default a Downtify server is open, as it always has been: anyone who can reach its address can use the web page, the API and the apps' features.
+Paired apps can browse, play, like, keep songs offline and ask the server to download music — but not change settings, credentials or delete files; that needs the web page, signed in as an admin.
 
-::: warning "Require sign-in" off means open
-With it off, anyone who can reach the server — on your network, or on the internet if you expose the port — can play, download, delete music, change settings, and **pair a phone of their own**. Paired phones still work, but pairing doesn't protect anything by itself. Turn sign-in on before you make Downtify reachable from outside your home network.
-:::
-
-To turn it on:
-
-1. Under **Sign-in**, set a password (at least 8 characters).
-2. Switch **Require sign-in** on and confirm with the password. This browser stays signed in.
-
-From then on:
-
-- The web page asks for the password. A signed-in browser stays signed in for 30 days after it was last used.
-- Apps need to be paired.
-- Paired apps can browse, play, like, keep songs offline and ask the server to download music — but not change settings, credentials or delete files; that needs the web page.
-
-**Sign out everywhere** unpairs every app and signs out every browser, this one included.
-
-### Forgot the password?
-
-Run this on the server — it turns sign-in off and removes the password (paired apps stay paired):
-
-```bash
-docker exec downtify python main.py auth-reset
-```
-
-Outside Docker, run `python main.py auth-reset` (or `uv run python main.py auth-reset`) in Downtify's folder.
-
-Sign-in can also be forced on by the environment (`DOWNTIFY_REQUIRE_SIGN_IN=true`, see [Environment Variables](../getting-started/environment-variables.md#mobile-apps-and-sign-in)); the switch in Settings is then locked. Set the password first — without one, nobody can sign in to the web page.
+**Settings → Apps → Sign out everywhere** unpairs every app of yours and signs you out of every browser, this one included. Signing in, accounts and a forgotten password are in [Users & Sign-in](users.md).
 
 ## Finding the server on your network
 

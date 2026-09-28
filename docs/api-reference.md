@@ -6,7 +6,7 @@ icon: material/api
 
 Downtify exposes a JSON REST API used by the web UI and the mobile apps. All endpoints are served on the same port as the web UI (default: **8000**).
 
-Every endpoint is open unless **Require sign-in** is on — see [Server and sign-in](#server-and-sign-in) for what then needs which credentials, and [Mobile API (v1)](#mobile-api-v1) for the apps' own routes.
+Every endpoint needs a signed-in user except a few public ones — see [Server and sign-in](#server-and-sign-in) for which credentials each needs (admins can do everything, normal users less), [Accounts and activity](#accounts-and-activity) for users and the activity log, and [Mobile API (v1)](#mobile-api-v1) for the apps' own routes.
 
 ## General
 
@@ -1742,17 +1742,18 @@ Save an episode's resume position and/or played state. Called periodically while
 
 ## Server and sign-in
 
-Who this server is, signing in, and pairing apps — see [Mobile Apps & Sign-in](features/mobile-apps.md). The routes an app uses are in [Mobile API (v1)](#mobile-api-v1), and the whole flow is in the [mobile client contract](mobile-client-contract.md).
+Who this server is, signing in, and pairing apps — see [Users & Sign-in](features/users.md) and [Mobile Apps](features/mobile-apps.md). Accounts, preferences and the activity log are in [Accounts and activity](#accounts-and-activity). The routes an app uses are in [Mobile API (v1)](#mobile-api-v1), and the whole flow is in the [mobile client contract](mobile-client-contract.md).
 
-**Who may call what.** With "Require sign-in" off (the default) every endpoint is open, as it always was; a request that sends a device token still has it checked (`401` when it's revoked). With it on:
+**Who may call what.** Every request needs a signed-in user, except the public routes below. A request that sends a revoked device token gets `401` even on a public route, so an app learns it was unpaired.
 
 | Scope | Credentials | Covers |
 |-------|-------------|--------|
 | Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair` |
-| Client | a device token (`Authorization: Bearer dtfy_…`), a signed URL (reads only), a WebSocket ticket, or a web session | Library and media reads (`/tracks`, `/list`, `/playlists`, `/lyrics`, `/cover`, `/playlist-cover`, `/downloads/…`, `/media/…`), `/api/v1/…`, search and link resolving, previews, `POST /api/download/url\|batch\|album`, likes, Discover and listens, podcast reads, episode downloads and playback, the queue and monitor lists (read), `WS /api/ws` |
-| Admin | a web session (the `downtify_session` cookie) | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, devices, pairing, password |
+| Client | a device token (`Authorization: Bearer dtfy_…`), a signed URL (reads only), a WebSocket ticket, or any web session | Library and media reads (`/tracks`, `/list`, `/playlists`, `/lyrics`, `/cover`, `/playlist-cover`, `/downloads/…`, `/media/…`), `/api/v1/…`, search and link resolving, previews, `POST /api/download/url\|batch\|album`, likes, Discover and listens, podcast reads, episode downloads and playback, the queue and monitor lists (read), `GET /api/me`, `POST /api/activity/playback`, `POST /api/auth/ws-ticket`, `WS /api/ws` |
+| User | a web session of any user (the `downtify_session` cookie) | Client, plus your own account (`/api/me…`), your paired devices and pairing (`/api/auth/devices…`, `/api/auth/pairing…`) |
+| Admin | a web session of an **admin** | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, renaming the server, users, the activity log, signing everyone out |
 
-Without credentials: `401` (`WWW-Authenticate: Bearer`). A device calling an admin route: `403`. A cookie-authenticated change (`POST`/`PUT`/`PATCH`/`DELETE`, or the WebSocket) whose `Origin`/`Referer` is another site: `403`. CORS allows any origin **without** credentials, so a web session only works from Downtify's own page.
+Without credentials: `401` (`WWW-Authenticate: Bearer`). A normal user's browser calling an admin route: `403` `{"detail": "This needs an admin"}`; a device calling a route that needs a browser: `403` `{"detail": "This needs a signed-in browser"}`. A cookie-authenticated change (`POST`/`PUT`/`PATCH`/`DELETE`, or the WebSocket) whose `Origin`/`Referer` is another site: `403`. CORS allows any origin **without** credentials, so a web session only works from Downtify's own page.
 
 ### `GET /api/server/info`
 
@@ -1765,7 +1766,7 @@ Public. What an app checks before it has credentials.
   "product": "Downtify",
   "version": "3.2.0",
   "api_version": 1,
-  "require_sign_in": false,
+  "require_sign_in": true,
   "capabilities": {
     "transcoding": { "available": true, "formats": ["aac", "mp3", "opus"], "bitrates": [96, 128, 160, 192, 256, 320] },
     "signed_urls": true,
@@ -1778,7 +1779,7 @@ Public. What an app checks before it has credentials.
 }
 ```
 
-`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `transcoding.available` is `false` (and the lists empty) without ffmpeg.
+`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is always `true` (kept for apps written against earlier servers). `transcoding.available` is `false` (and the lists empty) without ffmpeg.
 
 ---
 
@@ -1799,16 +1800,18 @@ Public. How this request is signed in.
 ```json
 {
   "require_sign_in": true,
-  "forced_by_env": false,
-  "has_password": true,
   "min_password_length": 8,
   "signed_in": true,
   "via": "device",
-  "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8" }
+  "user": { "id": 2, "username": "maria", "role": "user", "default_password": false, "created_at": "…", "last_login_at": "…", "last_login_ip": "192.168.1.31" },
+  "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8" },
+  "notice": null
 }
 ```
 
-`via` is `session` (a browser), `device` (an app's token) or `null`; `device` is `null` unless `via` is `device`. The web app shows its sign-in page when `require_sign_in` is `true` and `signed_in` is `false`.
+`via` is `session` (a browser), `device` (an app's token) or `null`; `user` is who that is (`null` when signed out); `device` is `null` unless `via` is `device`. The web app shows its sign-in page when `signed_in` is `false`.
+
+`notice` is only set while signed out, on a server upgraded from a version without accounts, until an admin signs in: `{ "username": "admin", "password": "downtify" }` — `password` is `null` when the sign-in password of the older version was kept.
 
 ---
 
@@ -1816,9 +1819,9 @@ Public. How this request is signed in.
 
 Public, rate-limited per address (10 failures per 5 minutes, then `429` with `Retry-After`). Signs a browser in.
 
-**Request body:** `{ "password": "…" }`
+**Request body:** `{ "username": "admin", "password": "…" }` — the username in any case.
 
-**Response:** `{ "signed_in": true }` and a `downtify_session` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` over HTTPS, 30 days since last use). `401` for a wrong password.
+**Response:** `{ "signed_in": true, "user": { … } }` (the `user` shape above) and a `downtify_session` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` over HTTPS, 30 days since last use). `401` `{"detail": "Wrong username or password"}` otherwise — the same for an unknown user.
 
 ---
 
@@ -1828,25 +1831,9 @@ Public. Ends this browser's session, if it has one. **Response:** `{ "signed_in"
 
 ---
 
-### `PUT /api/auth/password`
-
-Admin. Set the web password, or change it.
-
-**Request body:** `{ "new_password": "…", "current_password": "…" }` — `current_password` only once a password exists (`403` when wrong; rate-limited like sign-in). `400` for a password under 8 characters. **Response:** `{ "has_password": true }`.
-
----
-
-### `PUT /api/auth/require`
-
-Admin. Turn "Require sign-in" on or off.
-
-**Request body:** `{ "enabled": true, "password": "…" }` — turning it on needs the password (`403` when wrong) and also signs this browser in, so the page doing it doesn't lock itself out. `400` without a password set, or when `DOWNTIFY_REQUIRE_SIGN_IN` pins it. **Response:** `{ "require_sign_in": true }`.
-
----
-
 ### `GET /api/auth/devices`
 
-Admin. Paired apps, newest first.
+User. Your paired apps, newest first — everyone's for an admin.
 
 ```json
 [
@@ -1856,7 +1843,9 @@ Admin. Paired apps, newest first.
     "platform": "android",
     "created_at": "2026-09-27T03:15:17+00:00",
     "last_seen_at": "2026-09-27T09:02:41+00:00",
-    "last_ip": "192.168.1.31"
+    "last_ip": "192.168.1.31",
+    "user_id": 2,
+    "username": "maria"
   }
 ]
 ```
@@ -1867,39 +1856,39 @@ Admin. Paired apps, newest first.
 
 ### `PATCH /api/auth/devices/{id}`
 
-Admin. Rename a device: `{ "name": "…" }`. **Response:** the device. `404` when unknown or unpaired.
+User. Rename one of your devices (an admin: anyone's): `{ "name": "…" }`. **Response:** the device. `404` when unknown, unpaired or someone else's.
 
 ---
 
 ### `DELETE /api/auth/devices/{id}`
 
-Admin. Unpair a device: its token and signed URLs stop working and its WebSocket is closed (code `4401`). **Response:** `{ "id": "8uz4d35zjpn2", "revoked": true }`. `404` when unknown.
+User. Unpair one of your devices (an admin: anyone's): its token and signed URLs stop working and its WebSocket is closed (code `4401`). **Response:** `{ "id": "8uz4d35zjpn2", "revoked": true }`. `404` when unknown or someone else's.
 
 ---
 
 ### `POST /api/auth/revoke-all`
 
-Admin. Unpairs every device, ends every web session (this one too) and voids every signed URL (a new signing key). **Response:** `{ "revoked": true }`.
+Admin. Unpairs every device of every user, ends every web session (this one too) and voids every signed URL (a new signing key). **Response:** `{ "revoked": true }`. To sign out only yourself everywhere, see [`POST /api/me/sign-out-everywhere`](#post-apimesign-out-everywhere).
 
 ---
 
 ### `POST /api/auth/pairing`
 
-Admin. Start pairing an app. **Response:** `{ "pairing_id": "rfLmICXqGfRBXyXl", "code": "34A3-MAMC", "expires_in": 300 }`.
+User. Start pairing an app to **your** account. **Response:** `{ "pairing_id": "rfLmICXqGfRBXyXl", "code": "34A3-MAMC", "expires_in": 300 }`.
 
-The web page shows `code` and a QR code for `downtify://pair?url=<this page's origin>&sid=<server_id>&code=<code>`, then follows the pairing with the next endpoint or the `device_paired` [WebSocket](#websocket) message.
+The web page shows `code` and a QR code for `downtify://pair?url=<this page's origin>&sid=<server_id>&code=<code>`, then follows the pairing with the next endpoint or the `device_paired` [WebSocket](#websocket) message (sent only to that user's pages).
 
 ---
 
 ### `GET /api/auth/pairing/{pairing_id}`
 
-Admin. `{ "status": "pending", "expires_in": 241 }`, `{ "status": "paired", "device": { … } }` or `{ "status": "expired" }`.
+User (the one who started it, or an admin). `{ "status": "pending", "expires_in": 241 }`, `{ "status": "paired", "device": { … } }` or `{ "status": "expired" }`.
 
 ---
 
 ### `DELETE /api/auth/pairing/{pairing_id}`
 
-Admin. Cancel a pending pairing. **Response:** `{ "cancelled": true }`.
+User (the one who started it, or an admin). Cancel a pending pairing. **Response:** `{ "cancelled": true }`.
 
 ---
 
@@ -1915,17 +1904,138 @@ Public, rate-limited per address (10 failures per 5 minutes). An app trades a pa
 {
   "token": "dtfy_8uz4d35zjpn2_Zk3…",
   "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8" },
-  "server": { "server_id": "cf12b3c4…", "name": "nas" }
+  "server": { "server_id": "cf12b3c4…", "name": "nas" },
+  "user": { "username": "maria", "role": "user" }
 }
 ```
 
-A code works once and for five minutes; `401` otherwise. The token is shown only here — the server keeps a hash.
+The device belongs to the user who showed the code. A code works once and for five minutes; `401` otherwise. The token is shown only here — the server keeps a hash.
 
 ---
 
 ### `POST /api/auth/ws-ticket`
 
-Client. A single-use ticket, valid for 60 seconds, for opening the [WebSocket](#websocket) as `/api/ws?client_id=…&ticket=…` without an `Authorization` header. **Response:** `{ "ticket": "…" }`. `400` when the request isn't signed in (without required sign-in the WebSocket needs no ticket).
+Client. A single-use ticket, valid for 60 seconds, for opening the [WebSocket](#websocket) as `/api/ws?client_id=…&ticket=…` without an `Authorization` header. **Response:** `{ "ticket": "…" }`.
+
+---
+
+## Accounts and activity
+
+Your own account, every account (admins), and what everyone does — see [Users & Sign-in](features/users.md).
+
+### `GET /api/me`
+
+Client. Who is signed in, and their preferences: `{ "user": { … }, "preferences": { "theme": "dark", "locale": "pt-BR", "show_lyrics": true, "search_albums": false } }` — a preference not set yet is missing.
+
+---
+
+### `PATCH /api/me`
+
+User. Change your username: `{ "username": "…" }` — 3 to 32 letters, digits, `.`, `-` or `_`, unique regardless of case (`400` otherwise). **Response:** `{ "user": { … } }`.
+
+---
+
+### `PUT /api/me/password`
+
+User. Change your password: `{ "current_password": "…", "new_password": "…" }`. `403` when the current one is wrong (rate-limited like sign-in), `400` for a new one under 8 characters. Your other browsers and apps stay signed in. **Response:** `{ "user": { … } }`.
+
+---
+
+### `GET /api/me/preferences` · `PUT /api/me/preferences`
+
+User. Your preferences (Settings → General): `theme` (`dark`/`light`/`system`), `locale`, `show_lyrics`, `search_albums`. `PUT` merges what it's sent into them and answers the result; other keys are ignored. `search_albums: false` makes `GET /api/albums/search` answer `[]` for you, whatever the server's setting.
+
+---
+
+### `POST /api/me/sign-out-everywhere`
+
+User. Unpairs every app of yours and ends every web session of yours, this one included. **Response:** `{ "revoked": true }`.
+
+---
+
+### `GET /api/users`
+
+Admin. Every account, by username: the `user` shape plus `devices` (how many apps it has paired).
+
+---
+
+### `POST /api/users`
+
+Admin. Add an account: `{ "username": "maria", "password": "…", "role": "user" }` (`role` is `admin` or `user`, default `user`). `400` for a taken or invalid username or a short password. **Response:** the user.
+
+---
+
+### `PATCH /api/users/{id}`
+
+Admin. Change an account — any of `{ "username", "role", "password" }`. A new password ends that user's web sessions (but the admin's own, when it's their account); their apps stay paired. `400` when it would leave the server without an admin. **Response:** the user.
+
+---
+
+### `DELETE /api/users/{id}`
+
+Admin. Delete an account: its apps are unpaired and its sessions ended. `400` for your own account or the last admin, `404` when unknown. **Response:** `{ "id": 2, "deleted": true }`.
+
+---
+
+### `GET /api/activity`
+
+Admin. The activity log, newest first.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `limit` | integer | no | 1–200, default 100 |
+| `before` | integer | no | The `next` of the previous page |
+| `user_id` | integer | no | Only this user |
+| `kind` | string | no | One kind, or several comma-separated |
+
+```json
+{
+  "entries": [
+    {
+      "id": 57,
+      "at": "2026-09-27T19:10:03+00:00",
+      "user_id": 2,
+      "username": "maria",
+      "kind": "playback",
+      "summary": "Portishead - Roads",
+      "detail": { "track": { "title": "Roads", "artist": "Portishead", "file": "Portishead - Roads.flac", "duration": 305.0 } },
+      "client": "Pixel 8",
+      "ip": "192.168.1.31"
+    }
+  ],
+  "next": 0
+}
+```
+
+`kind` is one of `login`, `login_failed`, `logout`, `playback` (a song started), `download`, `like`, `unlike`, `delete`, `device_paired`, `device_unpaired`, `user_created`, `user_updated`, `user_deleted`, `password_changed`, `settings_changed` (`summary` lists the setting names, never their values). `client` is the app's name or `Web (Firefox on Linux)`. Entries are kept for 90 days.
+
+---
+
+### `GET /api/activity/now`
+
+Admin. What each browser tab and app is playing — the players that reported in the last 90 seconds, playing ones first:
+
+```json
+[
+  {
+    "user_id": 2,
+    "username": "maria",
+    "client": "Pixel 8",
+    "ip": "192.168.1.31",
+    "track": { "title": "Roads", "artist": "Portishead", "track_id": "t7b255c87668ba03b", "duration": 305.0 },
+    "paused": false,
+    "position": 42.0,
+    "started_at": "2026-09-27T19:10:03+00:00",
+    "seconds_ago": 12
+  }
+]
+```
+
+---
+
+### `POST /api/activity/playback`
+
+Client. A player says what it plays: `{ "player": "<id stable for this player>", "state": "playing" | "paused" | "stopped", "track": { "title", "artist", "album", "file" or "track_id", "duration" }, "position": 42 }`. Send it when a song starts, on pause/resume and stop, and about every 30 seconds while playing. A new song adds a `playback` entry to the log; the rest only update `GET /api/activity/now`. `400` for an unknown `state`, or no `file`/`track_id` (except for `stopped`). **Response:** `{ "ok": true }`.
 
 ---
 
@@ -2088,7 +2198,7 @@ Real-time download progress events.
 | `client_id` | yes | Unique client identifier (UUID recommended) |
 | `ticket` | no | A [WebSocket ticket](#post-apiauthws-ticket), for a client that can't send `Authorization` |
 
-With "Require sign-in" on, the handshake needs a device token (`Authorization: Bearer …`), a web session cookie (from Downtify's own page) or a ticket; otherwise it's refused. A device's socket is closed with code `4401` when the device is unpaired.
+The handshake needs a device token (`Authorization: Bearer …`), a web session cookie (from Downtify's own page) or a ticket; otherwise it's refused. A socket is closed with code `4401` when its device is unpaired or its user is signed out everywhere or deleted.
 
 **Events received from the server:**
 

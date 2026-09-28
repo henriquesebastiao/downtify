@@ -23,11 +23,12 @@
     <ShortcutsDialog v-model:open="shortcutsOpen" />
     <UiToasts />
     <UiDialog />
+    <DefaultPasswordPrompt />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SideNav from './SideNav.vue'
 import TopBar from './TopBar.vue'
@@ -38,7 +39,11 @@ import ShortcutsDialog from './ShortcutsDialog.vue'
 import UiToasts from '../ui/UiToasts.vue'
 import UiDialog from '../ui/UiDialog.vue'
 import SignIn from './SignIn.vue'
+import DefaultPasswordPrompt from './DefaultPasswordPrompt.vue'
+import API from '/src/model/api'
+import { useAccount } from '/src/model/account'
 import { useAuth } from '/src/model/auth'
+import { useI18n } from '/src/i18n'
 import { usePlayer } from '/src/model/player'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useLibrary } from '/src/model/library'
@@ -47,6 +52,8 @@ import { useNowPlaying, useUi } from '/src/model/ui'
 import { useShortcuts } from './shortcuts'
 
 const auth = useAuth()
+const account = useAccount()
+const { t } = useI18n()
 const player = usePlayer()
 const { showLyrics } = usePlayerPrefs()
 const route = useRoute()
@@ -62,6 +69,20 @@ function viewKey(viewRoute) {
 }
 
 useLibrary().load()
+// The account's own preferences (theme, language...) and telling the
+// server what plays here, once someone is signed in.
+watch(
+  () => auth.user.value?.id,
+  (id) => {
+    if (!id) return
+    account.start()
+    account.startPlaybackReports()
+  },
+  { immediate: true }
+)
+API.onForbidden(() => {
+  ui.toast(t('account.needsAdmin'), { kind: 'error' })
+})
 // Count listens for Discover, whichever page the music is playing on.
 useDiscover().startListenTracking()
 

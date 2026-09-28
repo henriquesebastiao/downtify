@@ -13,7 +13,12 @@ from __future__ import annotations
 
 import asyncio
 
+from starlette.requests import Request
+
 from downtify import api, monitor
+
+# The route functions take the request; these tests call them directly.
+_REQUEST = Request({'type': 'http', 'headers': []})
 
 # ── _run_download ────────────────────────────────────────────────────────────
 
@@ -139,7 +144,9 @@ def test_download_album_endpoint_skips_delay_for_single_track(monkeypatch):
 
     monkeypatch.setattr(api, '_run_download', fake_run_download)
 
-    asyncio.run(api.download_album_endpoint(url='https://example.com/album'))
+    asyncio.run(
+        api.download_album_endpoint(_REQUEST, url='https://example.com/album')
+    )
     assert captured == [0]
 
 
@@ -163,7 +170,9 @@ def test_download_album_endpoint_applies_delay_for_multiple_tracks(
 
     monkeypatch.setattr(api, '_run_download', fake_run_download)
 
-    asyncio.run(api.download_album_endpoint(url='https://example.com/album'))
+    asyncio.run(
+        api.download_album_endpoint(_REQUEST, url='https://example.com/album')
+    )
     assert captured == [15, 15]
 
 

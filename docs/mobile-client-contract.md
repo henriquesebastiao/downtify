@@ -4,7 +4,7 @@ icon: lucide/file-code
 
 # Mobile Client Contract
 
-How an app (the official Android client, or any other) talks to a Downtify server: **discover → check → pair → sync → stream → report**. Everything here is `api_version` **1**; the full request/response shapes of each endpoint are in the [API reference](api-reference.md#server-and-sign-in). User-facing behaviour (pairing, "Require sign-in", transcoding limits) is described in [Mobile Apps & Sign-in](features/mobile-apps.md).
+How an app (the official Android client, or any other) talks to a Downtify server: **discover → check → pair → sync → stream → report**. Everything here is `api_version` **1**; the full request/response shapes of each endpoint are in the [API reference](api-reference.md#server-and-sign-in). User-facing behaviour (pairing, accounts, transcoding limits) is described in [Mobile Apps](features/mobile-apps.md) and [Users & Sign-in](features/users.md).
 
 ## 1. Discover
 
@@ -63,18 +63,20 @@ Content-Type: application/json
 {
   "token": "dtfy_8uz4d35zjpn2_<secret>",
   "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8" },
-  "server": { "server_id": "cf12b3c4…", "name": "nas" }
+  "server": { "server_id": "cf12b3c4…", "name": "nas" },
+  "user": { "username": "maria", "role": "user" }
 }
 ```
 
 - `401` wrong/expired/used code, `429` too many attempts (`Retry-After` seconds).
 - Store the token in the Android Keystore-backed storage (EncryptedSharedPreferences / Jetpack DataStore + Tink); it's shown once and can't be retrieved again.
-- Send it on **every** request as `Authorization: Bearer <token>` — even when `require_sign_in` is false (it lets the server tell the app when it was unpaired).
-- `GET /api/auth/status` with the token answers `{ "signed_in": true, "via": "device", "device": { "id", "name" }, … }` — a cheap "am I still paired?" check.
+- Send it on **every** request as `Authorization: Bearer <token>`. Every server requires credentials (`require_sign_in` is always `true`; older servers could say `false` — send the token anyway, it lets the server tell the app when it was unpaired).
+- The device belongs to the user who showed the code (`user` in the response: `{ "username", "role" }`); `GET /api/me` answers who that is. Show it in the app ("Signed in as maria").
+- `GET /api/auth/status` with the token answers `{ "signed_in": true, "via": "device", "user": { "username", "role", … }, "device": { "id", "name" }, … }` — a cheap "am I still paired?" check.
 
 **Unpaired / revoked:** any request answers `401` with `{"detail": "Invalid or revoked token"}` and the WebSocket closes with code `4401`. Drop the token and send the user back to pairing.
 
-**What a device may do:** everything below, plus the web API's read endpoints, searching and previews (`/api/songs/search`, `/api/url/resolve`, `/api/preview`), asking the server to download (`POST /api/download/url|batch|album`), likes, listens and podcast episode playback/downloads. Settings, credentials, deleting files and managing devices answer `403` for a device when sign-in is required.
+**What a device may do:** everything below, plus the web API's read endpoints, searching and previews (`/api/songs/search`, `/api/url/resolve`, `/api/preview`), asking the server to download (`POST /api/download/url|batch|album`), likes, listens and podcast episode playback/downloads. Settings, credentials, deleting files and managing devices answer `403` for a device. An account being deleted, or its owner choosing **Sign out everywhere**, unpairs the device (`401`).
 
 ## 4. Sync the library
 
@@ -185,6 +187,17 @@ POST /api/discover/listens
 
 - Report once per play, after half the track (or 4 minutes) has played — the web player's rule.
 - `play_id` makes retries safe (the same play counts once); `played_at` lets an app report plays made offline later (a future time counts as now). Queue reports while offline and send them when back.
+
+**What's playing now** (the admins' Activity page, like Jellyfin's dashboard) — separate from counting listens:
+
+```http
+POST /api/activity/playback
+
+{ "player": "<install id>", "state": "playing", "track": { "track_id": "t7b2…", "title": "Roads", "artist": "Portishead", "album": "Dummy", "duration": 305 }, "position": 42 }
+```
+
+- Send it when a song starts, on pause/resume (`state: "paused"`/`"playing"`), on stop (`"stopped"`, `track` may be `{}`), and about every 30 s while playing. Only while online; don't queue these.
+- `player` is any id stable for this install. The app shows up by its device name.
 
 Podcast episodes: `PUT /api/podcasts/episodes/{id}/playback` with `{ "position_seconds", "played" }` (see the API reference), roughly every 10 s while playing and on pause.
 

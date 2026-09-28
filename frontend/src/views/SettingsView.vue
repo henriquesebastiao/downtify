@@ -42,7 +42,11 @@
         <div :key="section" class="flex min-w-0 flex-col gap-8">
           <!-- General -->
           <template v-if="section === 'general'">
-            <SettingGroup :title="t('settings.appearance')">
+            <AccountSettings />
+            <SettingGroup
+              :title="t('settings.appearance')"
+              :description="t('settings.personalHint')"
+            >
               <SettingRow
                 :label="t('settings.theme')"
                 :description="t('settings.themeHint')"
@@ -86,8 +90,8 @@
               </SettingRow>
             </SettingGroup>
             <SettingGroup :title="t('settings.playerGroup')">
-              <!-- Per device and applied at once, like the theme: it isn't
-                   part of what "Save" sends to the server. -->
+              <!-- Yours, and applied at once like the theme: it isn't part
+                   of what "Save" sends to the server (model/account.js). -->
               <SettingRow
                 :label="t('settings.showLyrics')"
                 :description="t('settings.showLyricsHint')"
@@ -104,7 +108,7 @@
                 :description="t('settings.searchAlbumsHint')"
               >
                 <UiSwitch
-                  v-model="s.search_albums"
+                  v-model="account.searchAlbums.value"
                   :aria-label="t('settings.searchAlbums')"
                 />
               </SettingRow>
@@ -574,6 +578,14 @@
           </template>
 
           <!-- Apps: pairing, sign-in, the server's name -->
+          <template v-else-if="section === 'users'">
+            <UsersSettings />
+          </template>
+
+          <template v-else-if="section === 'activity'">
+            <ActivitySettings />
+          </template>
+
           <template v-else-if="section === 'apps'">
             <AppsSettings />
           </template>
@@ -694,7 +706,10 @@ import PageHeader from '/src/components/library/PageHeader.vue'
 import CookiesCard from '/src/components/settings/CookiesCard.vue'
 import ConnectionTest from '/src/components/settings/ConnectionTest.vue'
 import PresetPicker from '/src/components/settings/PresetPicker.vue'
+import AccountSettings from '/src/components/settings/AccountSettings.vue'
+import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
 import AppsSettings from '/src/components/settings/AppsSettings.vue'
+import UsersSettings from '/src/components/settings/UsersSettings.vue'
 import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import SourceOrder from '/src/components/settings/SourceOrder.vue'
@@ -707,6 +722,9 @@ import {
   useSettingsManager,
 } from '/src/model/settings'
 import { usePlayer } from '/src/model/player'
+import { useAccount } from '/src/model/account'
+import { useAuth } from '/src/model/auth'
+import { settingsSectionsFor } from '/src/lib/auth'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useTheme } from '/src/model/theme'
 import { useUi } from '/src/model/ui'
@@ -716,6 +734,8 @@ import { useI18n } from '/src/i18n'
 const { t, locale, setLocale, locales } = useI18n()
 const route = useRoute()
 const sm = useSettingsManager()
+const auth = useAuth()
+const account = useAccount()
 const theme = useTheme()
 const { showLyrics } = usePlayerPrefs()
 const ui = useUi()
@@ -726,16 +746,37 @@ const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
 const version = localStorage.getItem('version')
 
-const sections = computed(() => [
-  { id: 'general', icon: 'sliders', label: t('settings.general') },
-  { id: 'sources', icon: 'download', label: t('settings.sources') },
-  { id: 'files', icon: 'folder', label: t('settings.files') },
-  { id: 'tags', icon: 'tag', label: t('settings.tags') },
-  { id: 'navidrome', icon: 'server', label: 'Navidrome' },
-  { id: 'library', icon: 'library', label: t('settings.library') },
-  { id: 'apps', icon: 'monitor', label: t('settings.apps') },
-  { id: 'about', icon: 'info', label: t('settings.about') },
-])
+// Normal users see General, Apps and About; the rest is the server's,
+// an admin's to change.
+const sections = computed(() =>
+  settingsSectionsFor(auth.user.value?.role, [
+    { id: 'general', icon: 'sliders', label: t('settings.general') },
+    {
+      id: 'sources',
+      icon: 'download',
+      label: t('settings.sources'),
+      admin: true,
+    },
+    { id: 'files', icon: 'folder', label: t('settings.files'), admin: true },
+    { id: 'tags', icon: 'tag', label: t('settings.tags'), admin: true },
+    { id: 'navidrome', icon: 'server', label: 'Navidrome', admin: true },
+    {
+      id: 'library',
+      icon: 'library',
+      label: t('settings.library'),
+      admin: true,
+    },
+    { id: 'users', icon: 'users', label: t('settings.users'), admin: true },
+    {
+      id: 'activity',
+      icon: 'activity',
+      label: t('settings.activity'),
+      admin: true,
+    },
+    { id: 'apps', icon: 'monitor', label: t('settings.apps') },
+    { id: 'about', icon: 'info', label: t('settings.about') },
+  ])
+)
 
 const section = computed(() => {
   const requested = String(route.params.section || '')

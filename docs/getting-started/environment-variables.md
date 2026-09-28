@@ -30,11 +30,10 @@ environment:
 
 ## Mobile apps and sign-in
 
-See [Mobile Apps & Sign-in](../features/mobile-apps.md).
+See [Mobile Apps](../features/mobile-apps.md) and [Users & Sign-in](../features/users.md). Signing in is always required; `DOWNTIFY_REQUIRE_SIGN_IN` from earlier versions is no longer used (a warning is logged while it's set).
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DOWNTIFY_REQUIRE_SIGN_IN` | _(unset)_ | `true` or `false` pins **Require sign-in** and locks the switch in Settings → Apps. Unset: the switch decides (off on a new install). Set the password in Settings → Apps **before** setting this to `true` — without one, nobody can sign in to the web page. |
 | `DOWNTIFY_TRUSTED_PROXIES` | _(unset)_ | Comma-separated addresses or networks of your reverse proxy (e.g. `172.18.0.0/16,10.0.0.5`). Only requests from these have their `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host` headers believed — for the client address that sign-in and pairing attempts are rate-limited by, the secure flag on the sign-in cookie, and the same-site check. Unset: those headers are ignored. |
 | `DOWNTIFY_DISCOVERY` | `true` | `false` stops announcing the server on the local network (mDNS, `_downtify._tcp`), which the apps use to list it under *Found on this network*. In Docker's bridge network the announcement doesn't reach the LAN anyway — see [Docker Compose](docker-compose.md#finding-the-server-from-the-apps). |
 | `DOWNTIFY_TRANSCODE_CACHE_MB` | `2048` | Largest size, in MB, the cache of transcoded copies (`/data/transcode_cache`) is kept under; least recently played copies go first. |

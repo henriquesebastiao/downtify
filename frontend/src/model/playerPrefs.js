@@ -1,5 +1,5 @@
-// Player display preferences. Kept per device, like the theme: what one
-// screen wants to see says nothing about another's.
+// Player display preferences. Remembered in this browser, like the theme,
+// and kept with the signed-in account (see model/account.js).
 import { useLocalStorage } from '@vueuse/core'
 
 // Only hides the lyrics; the files keep the ones Downtify embedded, and

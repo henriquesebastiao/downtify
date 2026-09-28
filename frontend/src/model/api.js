@@ -12,14 +12,24 @@ const API = axios.create({
 
 const sessionID = uuidv4()
 
-// ── Sign-in: a 401 anywhere means this browser has to sign in ─────────
+// ── Sign-in: a 401 anywhere means this browser has to sign in; a 403
+// that something needs an admin is worth telling the user ─────────────
 const unauthorizedListeners = new Set()
+const forbiddenListeners = new Set()
 API.interceptors.response.use(
   (response) => response,
   (error) => {
     const url = String(error?.config?.url || '')
-    if (error?.response?.status === 401 && !url.startsWith('/api/auth/')) {
+    const status = error?.response?.status
+    if (status === 401 && !url.startsWith('/api/auth/')) {
       for (const fn of unauthorizedListeners) fn()
+    }
+    if (
+      status === 403 &&
+      error?.response?.data?.detail === 'This needs an admin' &&
+      !error?.config?.quiet
+    ) {
+      for (const fn of forbiddenListeners) fn()
     }
     return Promise.reject(error)
   }
@@ -29,6 +39,12 @@ API.interceptors.response.use(
 function onUnauthorized(fn) {
   unauthorizedListeners.add(fn)
   return () => unauthorizedListeners.delete(fn)
+}
+
+/** Called when a signed-in user's request needs an admin. */
+function onForbidden(fn) {
+  forbiddenListeners.add(fn)
+  return () => forbiddenListeners.delete(fn)
 }
 
 getVersion()
@@ -338,23 +354,66 @@ function getAuthStatus() {
   return API.get('/api/auth/status')
 }
 
-function login(password) {
-  return API.post('/api/auth/login', { password })
+function login(username, password) {
+  return API.post('/api/auth/login', { username, password })
 }
 
 function logout() {
   return API.post('/api/auth/logout')
 }
 
-function setPassword(newPassword, currentPassword = '') {
-  return API.put('/api/auth/password', {
-    new_password: newPassword,
+// ── Your account ──────────────────────────────────────────────────────
+function getMe() {
+  return API.get('/api/me')
+}
+
+function renameMe(username) {
+  return API.patch('/api/me', { username })
+}
+
+function changeMyPassword(currentPassword, newPassword) {
+  return API.put('/api/me/password', {
     current_password: currentPassword,
+    new_password: newPassword,
   })
 }
 
-function setRequireSignIn(enabled, password = '') {
-  return API.put('/api/auth/require', { enabled, password })
+function setPreferences(prefs) {
+  return API.put('/api/me/preferences', prefs)
+}
+
+function signOutEverywhere() {
+  return API.post('/api/me/sign-out-everywhere')
+}
+
+// ── Users and activity (admins) ───────────────────────────────────────
+function listUsers() {
+  return API.get('/api/users')
+}
+
+function createUser(user) {
+  return API.post('/api/users', user)
+}
+
+function updateUser(id, changes) {
+  return API.patch(`/api/users/${encodeURIComponent(id)}`, changes)
+}
+
+function deleteUser(id) {
+  return API.delete(`/api/users/${encodeURIComponent(id)}`)
+}
+
+function getActivity(params = {}) {
+  return API.get('/api/activity', { params })
+}
+
+function getNowPlaying() {
+  return API.get('/api/activity/now')
+}
+
+/** Tell the server what this tab plays (for the admins' Activity page). */
+function reportPlayback(report) {
+  return API.post('/api/activity/playback', report, { quiet: true })
 }
 
 function listDevices() {
@@ -611,12 +670,24 @@ export default {
   getLikes,
   setLike,
   clearLikes,
+  clientId: sessionID,
   onUnauthorized,
+  onForbidden,
   getAuthStatus,
   login,
   logout,
-  setPassword,
-  setRequireSignIn,
+  getMe,
+  renameMe,
+  changeMyPassword,
+  setPreferences,
+  signOutEverywhere,
+  listUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  getActivity,
+  getNowPlaying,
+  reportPlayback,
   listDevices,
   renameDevice,
   revokeDevice,

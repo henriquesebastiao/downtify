@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -27,8 +27,15 @@ from load_dotenv import load_dotenv
 from loguru import logger
 from uvicorn import Config, Server
 
-from downtify import __version__, api, auth_routes, mobile_routes
-from downtify.auth import AuthMiddleware, AuthStore, forced_require_from_env
+from downtify import (
+    __version__,
+    account_routes,
+    api,
+    auth_routes,
+    mobile_routes,
+)
+from downtify.activity import ActivityLog
+from downtify.auth import AuthMiddleware, AuthStore
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
@@ -337,22 +344,32 @@ def _open_library_stores(monitor_db_path: Path) -> None:
 
 
 def open_auth_store() -> AuthStore:
-    """The sign-in store in /data (``downtify_auth.db``, ``.auth_secret``)."""
+    """The sign-in store in /data (``downtify_auth.db``, ``.auth_secret``).
+
+    The first start creates the admin ``admin`` / ``downtify``; on a
+    server that ran an older version before (its files are in /data),
+    the web app also tells whoever signs in next that accounts exist now.
+    """
 
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
-    store = AuthStore(
+    existing = any(
+        (DATABASE_DIR / name).exists()
+        for name in (
+            'settings.json',
+            'downtify_monitor.db',
+            'downtify_auth.db',
+        )
+    )
+    if os.getenv('DOWNTIFY_REQUIRE_SIGN_IN', '').strip():
+        logger.warning(
+            'DOWNTIFY_REQUIRE_SIGN_IN is no longer used: signing in is '
+            'always required. Remove it from your configuration.'
+        )
+    return AuthStore(
         DATABASE_DIR / 'downtify_auth.db',
         DATABASE_DIR / '.auth_secret',
-        forced_require=forced_require_from_env(),
+        existing_install=existing,
     )
-    if store.require_sign_in and not store.has_password():
-        logger.error(
-            'Sign-in is required (DOWNTIFY_REQUIRE_SIGN_IN) but no password '
-            'is set: the web UI cannot be signed in to. Paired apps still '
-            'work. Unset the variable, set a password in Settings > Apps, '
-            'then set it again.'
-        )
-    return store
 
 
 def build_app() -> FastAPI:
@@ -457,6 +474,7 @@ def build_app() -> FastAPI:
     # CORS stays outermost and answers preflights without credentials.
     api.state.identity = ServerIdentity(DATABASE_DIR)
     api.state.auth = open_auth_store()
+    api.state.activity = ActivityLog(DATABASE_DIR / 'downtify_activity.db')
     app.add_middleware(
         AuthMiddleware,
         get_store=lambda: api.state.auth,
@@ -529,6 +547,7 @@ def build_app() -> FastAPI:
     )
     app.include_router(api.router)
     app.include_router(auth_routes.router)
+    app.include_router(account_routes.router)
     app.include_router(mobile_routes.router)
 
     @app.get('/list')
@@ -663,17 +682,19 @@ def build_app() -> FastAPI:
         )
 
     @app.delete('/delete')
-    async def delete_download(file: str) -> dict:
+    async def delete_download(file: str, request: Request) -> dict:
         result = await asyncio.to_thread(
             _delete_track_file,
             file,
             DOWNLOAD_DIR.resolve(),
             api.library_context().slskd_dir,
         )
+        await api.log_activity(request, 'delete', file)
         return await api.after_library_delete({file: result}, result)
 
     @app.delete('/delete/batch')
     async def delete_downloads_batch(
+        request: Request,
         files: list[str] = Body(..., embed=True),
     ) -> dict:
         """Delete several tracks in one request.
@@ -693,6 +714,12 @@ def build_app() -> FastAPI:
             )
         except ValueError as exc:
             raise HTTPException(status_code=413, detail=str(exc)) from exc
+        await api.log_activity(
+            request,
+            'delete',
+            files[0] if len(files) == 1 else f'{len(files)} files',
+            {'files': files[:50]},
+        )
         return await api.after_library_delete(result['results'], result)
 
     @app.get('/lyrics')
@@ -798,17 +825,16 @@ def _parse_args() -> argparse.Namespace:
 
 def _auth_reset() -> None:
     """``python main.py auth-reset``: the way back in after a forgotten
-    password - sign-in no longer required, no password, browsers signed
-    out. Paired apps stay paired."""
+    password - the admin ``admin`` gets the password ``downtify`` again
+    (and is created, as an admin, if it was deleted or renamed). Other
+    users and paired apps are left alone."""
 
     store = open_auth_store()
     store.reset()
-    if store.forced_by_env:
-        logger.warning(
-            'Password cleared, but DOWNTIFY_REQUIRE_SIGN_IN still requires '
-            'sign-in: unset it to reach the web UI.'
-        )
-    logger.info('Sign-in reset: no password, sign-in not required.')
+    logger.info(
+        'Sign-in reset: sign in as "admin" with the password "downtify", '
+        'then change it in Settings.'
+    )
 
 
 def main() -> None:

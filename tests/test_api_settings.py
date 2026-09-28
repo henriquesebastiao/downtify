@@ -9,6 +9,7 @@ import json
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from downtify import api
 from downtify.api import (
@@ -34,6 +35,9 @@ from downtify.api import (
     search_artists_endpoint,
 )
 from downtify.downloader import Downloader
+
+# The route functions take the request; these tests call them directly.
+_REQUEST = Request({'type': 'http', 'headers': []})
 
 
 def test_default_settings_has_required_keys():
@@ -93,7 +97,7 @@ def test_search_albums_endpoint_calls_provider_when_enabled(monkeypatch):
         'search_albums',
         lambda query, limit: [{'name': 'Driftlight'}],
     )
-    assert search_albums_endpoint(query='Driftlight') == [
+    assert search_albums_endpoint(_REQUEST, query='Driftlight') == [
         {'name': 'Driftlight'}
     ]
 
@@ -118,7 +122,7 @@ def test_search_albums_endpoint_honors_custom_limit(monkeypatch):
         return []
 
     monkeypatch.setattr(api.providers, 'search_albums', _fake)
-    search_albums_endpoint(query='Driftlight', limit=50)
+    search_albums_endpoint(_REQUEST, query='Driftlight', limit=50)
     assert captured['limit'] == 50
 
 
@@ -129,7 +133,7 @@ def test_search_albums_endpoint_short_circuits_when_disabled(monkeypatch):
         raise AssertionError('should not search when disabled')
 
     monkeypatch.setattr(api.providers, 'search_albums', _boom)
-    assert search_albums_endpoint(query='Driftlight') == []
+    assert search_albums_endpoint(_REQUEST, query='Driftlight') == []
 
 
 # ── search_artists_endpoint ────────────────────────────────────────────────────

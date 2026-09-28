@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 from mutagen.id3 import ID3
+from starlette.requests import Request
 
 from downtify import api, library_metadata_cache, spotify
 from downtify import downloader as downloader_mod
@@ -24,6 +25,9 @@ from downtify.downloader import (
     Downloader,
 )
 from tests.test_downloader_extended import _minimal_mp3
+
+# The route functions take the request; these tests call them directly.
+_REQUEST = Request({'type': 'http', 'headers': []})
 
 _SONG = {
     'name': 'Song',
@@ -95,6 +99,7 @@ def test_download_endpoint_resolves_the_song_off_the_event_loop(monkeypatch):
 
     result = asyncio.run(
         api.download_endpoint(
+            _REQUEST,
             url='https://open.spotify.com/track/x',
             client_id='',
             client_hints=None,
@@ -117,7 +122,7 @@ def test_download_album_endpoint_resolves_tracks_off_the_event_loop(
     monkeypatch.setattr(api.state, 'downloader', object())
     monkeypatch.setattr(api, '_songs_for_album_download', _resolve)
 
-    assert asyncio.run(api.download_album_endpoint(url='x')) == {}
+    assert asyncio.run(api.download_album_endpoint(_REQUEST, url='x')) == {}
     assert on_loop == [False]
 
 
