@@ -452,6 +452,17 @@ function renameServer(name) {
   return API.patch('/api/server', { name })
 }
 
+// ── Replacing a track's audio ─────────────────────────────────────
+function getReplaceCandidates(file, query = '') {
+  return API.get('/api/library/replace/candidates', {
+    params: { file, query },
+  })
+}
+
+function replaceAudio(file, videoId) {
+  return API.post('/api/library/replace', { file, video_id: videoId })
+}
+
 function getServerPort() {
   return API.get('/api/server/port')
 }
@@ -708,6 +719,8 @@ export default {
   renameServer,
   getServerPort,
   setServerPort,
+  getReplaceCandidates,
+  replaceAudio,
   getDiscover,
   getDiscoverCollections,
   findPreview,

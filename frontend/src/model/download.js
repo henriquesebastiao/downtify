@@ -364,7 +364,23 @@ export function useDownloadManager() {
     return Promise.resolve({ song, filename: null })
   }
 
+  // A job that replaced a library file's audio (song.replace) is retried
+  // by replacing again - never by downloading the song as a new track.
+  async function replaceAgain(song, videoId) {
+    const item = findItem(song)
+    if (item) item.resetForRetry()
+    try {
+      await API.replaceAudio(song.replace.file, videoId)
+    } catch (err) {
+      if (item) {
+        item.message = err?.response?.data?.detail || item.message
+        item.setError()
+      }
+    }
+  }
+
   function retryWithAudio(song, youtubeVideoId) {
+    if (song.replace) return replaceAgain(song, youtubeVideoId)
     const item = findItem(song)
     if (item) {
       item.song = { ...item.song, youtube_id: youtubeVideoId }
@@ -397,6 +413,7 @@ export function useDownloadManager() {
   }
 
   function retry(song) {
+    if (song.replace) return replaceAgain(song, song.replace.video_id)
     const item = findItem(song)
     if (item) item.resetForRetry()
     return download(song)

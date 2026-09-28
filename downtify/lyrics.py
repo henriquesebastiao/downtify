@@ -333,7 +333,11 @@ def _embedded_lyrics(path: Path) -> str:
         frames = tags.getall('USLT')
         return str(frames[0].text).strip() if frames else ''
     for key in (_MP4_LYRICS_KEY, _VORBIS_LYRICS_KEY):
-        value = tags.get(key)
+        try:
+            value = tags.get(key)
+        except (KeyError, ValueError):
+            # Vorbis comments refuse keys like MP4's "\xa9lyr" outright.
+            continue
         if value:
             first = value[0] if isinstance(value, list) else value
             return str(first).strip()

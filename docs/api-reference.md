@@ -1008,6 +1008,47 @@ Fix library paths after files were moved or deleted outside Downtify, then rewri
 
 ---
 
+### `GET /api/library/replace/candidates`
+
+Admin. Versions of a library track to [replace its audio](features/replace-audio.md) with.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | The track's library path |
+| `query` | string | no | What to search; default "Artist - Title" from its tags. A YouTube or YouTube Music link to one video returns just that video |
+
+```json
+{
+  "track": { "file": "Portishead/Dummy/Portishead - Roads.mp3", "title": "Roads", "artist": "Portishead", "album": "Dummy", "duration": 304.1 },
+  "query": "Portishead - Roads",
+  "candidates": [
+    {
+      "video_id": "7nxWP9BhI7w",
+      "title": "Roads",
+      "artist": "Portishead",
+      "album": "Dummy",
+      "duration": 304,
+      "duration_diff": 0,
+      "thumbnail": "https://lh3.googleusercontent.com/…",
+      "source": "youtube-music",
+      "url": "https://music.youtube.com/watch?v=7nxWP9BhI7w"
+    }
+  ]
+}
+```
+
+`source` is `youtube-music`, `youtube` or `link`. `duration_diff` is the candidate's length minus the file's, in seconds (`null` when either is unknown). `404` for an unknown file, `400` for a file that isn't `.mp3`, `.flac`, `.m4a`, `.ogg` or `.opus`, or a link to something other than one video.
+
+---
+
+### `POST /api/library/replace`
+
+Admin. Replace a library track's audio with a YouTube video: `{ "file": "…", "video_id": "7nxWP9BhI7w" }`. **Response:** `{ "job_id": "replace:<file>", "file": "…" }`.
+
+It runs as a queue job, with the usual [WebSocket](#websocket) progress messages (`song.song_id` is `job_id`, and `song.replace` is `{file, video_id}`), ending in `done` or `error`. The file keeps its path, format, tags and modification date; a failure leaves it untouched. `400` for an invalid video id or file type, `404` for an unknown file, `409` while the same file is already being replaced.
+
+---
+
 ### `GET /api/library/upgrade`
 
 The state of the library upgrade: the current (or last) run, its queue counts and what the scan found. See [Upgrade library](features/library-upgrade.md).

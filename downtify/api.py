@@ -117,6 +117,11 @@ working without changes:
   tracks, M3U and catalog entry)
 * ``POST /api/library/reconcile`` (fix stored library paths after files
   moved on disk, then refresh M3U/Navidrome playlists)
+* ``GET  /api/library/replace/candidates`` (versions of a library track
+  to pick from: YouTube Music and YouTube results, or a pasted link) and
+  ``POST /api/library/replace`` (body ``{file, video_id}``: replace the
+  track's audio with that video in place, as a queue job - see
+  ``downtify/audio_replace.py``)
 * ``GET  /api/library/upgrade`` and ``GET /api/library/upgrade/jobs``
   (an upgrade run's state, queue counts and per-track rows)
 * ``POST /api/library/upgrade/scan`` (look for tracks with low-resolution
@@ -215,6 +220,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import quote
 
 from fastapi import (
     APIRouter,
@@ -232,6 +238,7 @@ from loguru import logger
 from . import (
     artist_photo_proxy,
     artist_profile,
+    audio_replace,
     cover_sources,
     deezer,
     integration_check,
@@ -3700,6 +3707,205 @@ async def reconcile_library_endpoint() -> dict[str, Any]:
         return result
 
     return await asyncio.to_thread(_run)
+
+
+# ---------------------------------------------------------------------------
+# Replacing a track's audio with a version picked by hand
+# ---------------------------------------------------------------------------
+
+_VIDEO_ID_RE = re.compile(r'^[A-Za-z0-9_-]{11}$')
+# Files whose audio is being replaced right now.
+_replacing: set[str] = set()
+
+
+def _replaceable_track(file: str) -> tuple[Path, dict[str, Any]]:
+    """A library file and its tags, or 404/400."""
+
+    full = resolve_library_file(file, library_context())
+    if full is None:
+        raise HTTPException(status_code=404, detail='File not found')
+    try:
+        audio_replace.replacement_format(full)
+    except audio_replace.ReplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return full, read_audio_metadata(full)
+
+
+def _track_summary(file: str, entry: dict[str, Any]) -> dict[str, Any]:
+    return {
+        'file': file,
+        'title': str(entry.get('title') or ''),
+        'artist': str(entry.get('artist') or '').replace(';', ', '),
+        'album': str(entry.get('album') or ''),
+        'duration': round(float(entry.get('duration') or 0), 1),
+    }
+
+
+@router.get('/api/library/replace/candidates')
+async def replace_candidates(
+    file: str = Query(...), query: str = Query('')
+) -> dict[str, Any]:
+    """Versions of a library track to replace its audio with:
+    ``{track, query, candidates}``. ``query`` defaults to "Artist -
+    Title"; a YouTube or YouTube Music link is that one video. Each
+    candidate is ``{video_id, title, artist, album, duration,
+    duration_diff, thumbnail, source, url}``."""
+
+    full, entry = await asyncio.to_thread(_replaceable_track, file)
+    text = query.strip() or audio_replace.search_query(entry)
+    try:
+        found = await asyncio.to_thread(audio_replace.candidates, text)
+    except audio_replace.ReplaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    length = float(entry.get('duration') or 0)
+    for row in found:
+        row['duration_diff'] = (
+            round(row['duration'] - length)
+            if row['duration'] and length
+            else None
+        )
+    return {
+        'track': _track_summary(file, entry),
+        'query': text,
+        'candidates': found,
+    }
+
+
+@router.post('/api/library/replace')
+async def replace_track_audio(request: Request) -> dict[str, Any]:
+    """Replace a library track's audio with a YouTube video:
+    ``{file, video_id}`` -> ``{job_id, file}``. Runs as a queue job (the
+    usual progress messages, ``song.song_id`` = ``job_id``); the file keeps
+    its path, format and tags."""
+
+    payload = await _json_object(request)
+    file = str(payload.get('file') or '').strip().replace('\\', '/')
+    video_id = str(payload.get('video_id') or '').strip()
+    if not file:
+        raise HTTPException(status_code=400, detail='file is required')
+    if not _VIDEO_ID_RE.fullmatch(video_id):
+        raise HTTPException(status_code=400, detail='Unknown video')
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+    full, entry = await asyncio.to_thread(_replaceable_track, file)
+    if file in _replacing:
+        raise HTTPException(
+            status_code=409, detail='This track is already being replaced'
+        )
+    summary = _track_summary(file, entry)
+    song = {
+        'song_id': f'replace:{file}',
+        'name': summary['title'] or full.stem,
+        'artists': [
+            a.strip() for a in summary['artist'].split(',') if a.strip()
+        ],
+        'album_name': summary['album'],
+        'cover_url': f'/cover?file={quote(file)}',
+        'duration': summary['duration'],
+        'url': f'https://music.youtube.com/watch?v={video_id}',
+        # Tells the queue this job replaces a file's audio: a retry
+        # replaces again instead of downloading a new track.
+        'replace': {'file': file, 'video_id': video_id},
+    }
+    job_id = _register_job(song, status='downloading')
+    _replacing.add(file)
+    await log_activity(
+        request,
+        'audio_replaced',
+        f'{summary["artist"]} - {summary["title"]}'.strip(' -'),
+        {'file': file, 'video_id': video_id},
+    )
+    spawn_task(
+        _run_replacement(job_id, song, file, full, video_id),
+        name=f'replace-{video_id}',
+    )
+    return {'job_id': job_id, 'file': file}
+
+
+async def _run_replacement(
+    job_id: str,
+    song: dict[str, Any],
+    file: str,
+    full: Path,
+    video_id: str,
+) -> None:
+    loop = state.loop or asyncio.get_running_loop()
+    job = state.download_jobs[job_id]
+
+    def progress(
+        pct: float, message: str, provider: Optional[str] = None
+    ) -> None:
+        job.update(progress=pct, message=message, provider=provider or '')
+        asyncio.run_coroutine_threadsafe(
+            state.connections.broadcast({
+                'song': song,
+                'progress': pct,
+                'message': message,
+                'provider': provider or '',
+                'status': 'downloading',
+            }),
+            loop,
+        )
+
+    sem = state.download_semaphore
+    try:
+        await state.connections.broadcast({
+            'song': song,
+            'progress': 0,
+            'message': 'Replacing audio',
+            'status': 'downloading',
+        })
+        async with sem if sem is not None else contextlib.nullcontext():
+            await loop.run_in_executor(
+                DOWNLOAD_EXECUTOR,
+                lambda: audio_replace.replace_audio(
+                    state.downloader,
+                    full,
+                    video_id,
+                    song=song,
+                    progress_cb=progress,
+                ),
+            )
+    except Exception as exc:
+        _replacing.discard(file)
+        logger.opt(
+            exception=not isinstance(exc, audio_replace.ReplaceError)
+        ).warning('Replacing the audio of {} failed: {}', file, exc)
+        message = f'Error: {exc}'
+        job.update(status='error', message=message)
+        await state.connections.broadcast({
+            'song': song,
+            'progress': 0,
+            'message': message,
+            'status': 'error',
+        })
+        return
+    _replacing.discard(file)
+    await asyncio.to_thread(_after_replacement, file, full)
+    job.update(status='done', progress=100, filename=file, message='Replaced')
+    await state.connections.broadcast({
+        'song': song,
+        'progress': 100,
+        'message': 'Replaced',
+        'status': 'done',
+        'filename': file,
+    })
+    announce_library_changed()
+
+
+def _after_replacement(file: str, full: Path) -> None:
+    """The caches that describe the file by its contents catch up."""
+
+    if state.metadata_cache is not None:
+        try:
+            state.metadata_cache.refresh(file, full)
+        except Exception:
+            logger.debug('Metadata cache refresh failed for {}', file)
+    if state.track_index is not None:
+        spotify_id = state.track_index.spotify_id_for_filename(file)
+        if spotify_id:
+            state.track_index.register(spotify_id, file, full_path=full)
+    invalidate_library_paths_cache(notify=False)
 
 
 # ---------------------------------------------------------------------------

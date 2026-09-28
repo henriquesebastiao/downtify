@@ -875,7 +875,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_ALL, r'^/api/settings', ADMIN),
         (_ALL, r'^/api/cookies$', ADMIN),
         (_ALL, r'^/api/(slskd|navidrome)/test$', ADMIN),
-        (_ALL, r'^/api/library/(upgrade|reconcile|archive)', ADMIN),
+        (_ALL, r'^/api/library/(upgrade|reconcile|archive|replace)', ADMIN),
         (_ALL, r'^/api/library/playlist$', ADMIN),
         (_ALL, r'^/(delete|delete/batch)$', ADMIN),
         (_ALL, r'^/(docs|redoc|openapi\.json)', ADMIN),

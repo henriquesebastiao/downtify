@@ -9,7 +9,7 @@ A library built up over time carries whatever each Downtify version could do whe
 Open it from **Library → Upgrade library**.
 
 ::: info Audio files are never replaced
-An upgrade rewrites **artwork, lyrics and tags**. It does not fetch a different audio file, so a track that was matched to the wrong song, a live version or a remix stays as it is — delete it and download it again. See [Why audio isn't replaced](#why-audio-isnt-replaced).
+An upgrade rewrites **artwork, lyrics and tags**. It does not fetch a different audio file, so a track that was matched to the wrong song, a live version or a remix stays as it is — use [Replace audio](replace-audio.md) on that track to pick the right version. See [Why audio isn't replaced](#why-audio-isnt-replaced).
 :::
 
 ## How it works

@@ -5,7 +5,7 @@ Admins see both in Settings > Activity (``GET /api/activity``,
 
 * :class:`ActivityLog` - a history kept in ``<data>/downtify_activity.db``:
   sign-ins (and failed ones), sign-outs, songs started, downloads asked
-  for, likes, deleted files, apps paired and unpaired, accounts created,
+  for, likes, deleted files, tracks whose audio was replaced, apps paired and unpaired, accounts created,
   changed and deleted, settings saved. Entries older than
   :data:`RETENTION_DAYS` are dropped.
 * :class:`NowPlaying` - kept in memory: what each browser tab and app is
@@ -44,6 +44,7 @@ KINDS = (
     'like',
     'unlike',
     'delete',
+    'audio_replaced',
     'device_paired',
     'device_unpaired',
     'user_created',

@@ -5,6 +5,9 @@ import { usePlayer } from '/src/model/player'
 import { useLibrary } from '/src/model/library'
 import { useHistory } from '/src/model/history'
 import { useUi } from '/src/model/ui'
+import { useAuth } from '/src/model/auth'
+import { useReplaceAudio } from '/src/model/replaceAudio'
+import { canReplace } from '/src/lib/replaceAudio'
 import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
 
@@ -13,6 +16,8 @@ export function useTrackActions() {
   const library = useLibrary()
   const history = useHistory()
   const ui = useUi()
+  const auth = useAuth()
+  const replaceAudio = useReplaceAudio()
   const router = useRouter()
   const { t } = useI18n()
 
@@ -140,6 +145,13 @@ export function useTrackActions() {
         label: t('library.saveToDevice'),
         icon: 'download',
         action: () => saveToDevice(track),
+      },
+      {
+        // Wrong song or version: pick the right one by hand (admins).
+        label: t('replace.menu'),
+        icon: 'retry',
+        hidden: !auth.isAdmin.value || !canReplace(track),
+        action: () => replaceAudio.open(track),
       },
       { divider: true },
       {
