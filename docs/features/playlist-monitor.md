@@ -176,6 +176,29 @@ Manual playlist/album downloads and CSV imports behave the same way. See [M3U Ex
 
 With [Save playlist cover art](playlist-cover-art.md) on, the cover is fetched once per sweep that has tracks to download — before the first of them, so the folder looks like the playlist while it fills up. A sweep that finds nothing new doesn't re-fetch it.
 
+## What happens to songs that leave a playlist
+
+Live playlists (Spotify's *Top 50*, *Discover Weekly*, editorial charts) change every week. Downtify treats a watch as a **source of new music**, never as something that governs what you keep:
+
+- **Downloaded audio files are never deleted by a watch.** Not when a track leaves the playlist, not when it leaves every playlist you watch, not when the playlist itself shrinks, and not when you press **Stop watching**.
+- **Only the playlist follows the playlist.** On each sweep the [M3U file](m3u-export.md) is rewritten from the playlist's current tracks, in its current order, so a track that dropped out disappears from the M3U. Its file stays in the folder, and stays in your library, searchable and playable — including through Navidrome, Jellyfin or anything else pointed at the same folder.
+- **A track that is in no playlist at all is still a track.** Nothing sweeps for "orphaned" files.
+
+That makes a chart playlist usable as a discovery feed: new songs arrive automatically, and what they leave behind accumulates as your library.
+
+```
+Top 50 - USA        →  new song appears   →  Downtify downloads it
+                    →  song drops out     →  M3U updated, file kept
+```
+
+The only things that delete audio are ones you ask for explicitly: **Delete** on a track or a selection in the Library, deleting a playlist from the Library (which does delete its tracks — it asks first), or removing files yourself from the filesystem.
+
+::: info Deleting a watch vs. deleting a playlist
+**Stop watching** (in the watch's ⋯ menu) only forgets the watch: nothing on disk changes. **Delete** on a playlist in the **Library** page is the destructive one — it removes that playlist's tracks, its M3U and its catalog entry.
+:::
+
+If a file does disappear — you moved it out of the downloads folder, or deleted it by hand — an hourly sweep notices and forgets Downtify's record of it, so the next check of a watch that still lists the track downloads it again. A file merely *moved* inside the downloads folder is still found and is not re-downloaded.
+
 ## Storage
 
 Monitor state is stored in a SQLite database at `/data/downtify_monitor.db`. The database records:

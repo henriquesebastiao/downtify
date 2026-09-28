@@ -13,6 +13,7 @@ from downtify.track_index import TrackIndex
 
 TRACK_A = '4uLU6hMCjMI75M1A2tKUQC'
 TRACK_B = '7ouMYWpwJ422jRcDASZB7P'
+TRACK_C = '1301WleyT98MSxVHPZCA6M'
 PLAYLIST_ID = '37i9dQZF1DXcBWIGoYBM5M'
 
 
@@ -46,12 +47,24 @@ def _tracks():
     ]
 
 
-def _sweep(monkeypatch, tmp_path, downloader, settings, library):
-    tracks = _tracks()
-    monkeypatch.setattr(
-        monitor.spotify, 'playlist_tracks_from_id', lambda _id: tracks
-    )
-    monkeypatch.setattr(monitor.spotify, 'track_from_id', lambda _id: {})
+def _run(db, playlist, downloader, settings, library):
+    """One sweep of `playlist`, against whatever the playlist returns now."""
+
+    async def _broadcast(_msg):
+        return None
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(
+            monitor.check_playlist(
+                playlist, db, downloader, _broadcast, loop, settings, library
+            )
+        )
+    finally:
+        loop.close()
+
+
+def _watch(tmp_path):
     # Same file on every call, so a second sweep sees the first one's rows.
     db = PlaylistMonitorDB(tmp_path / 'monitor.db')
     playlist = db.get_by_spotify_id(PLAYLIST_ID) or db.add_playlist(
@@ -59,19 +72,17 @@ def _sweep(monkeypatch, tmp_path, downloader, settings, library):
         'Road Trip',
         f'https://open.spotify.com/playlist/{PLAYLIST_ID}',
     )
+    return db, playlist
 
-    async def _broadcast(_msg):
-        return None
 
-    loop = asyncio.new_event_loop()
-    try:
-        count = loop.run_until_complete(
-            monitor.check_playlist(
-                playlist, db, downloader, _broadcast, loop, settings, library
-            )
-        )
-    finally:
-        loop.close()
+def _sweep(monkeypatch, tmp_path, downloader, settings, library):
+    tracks = _tracks()
+    monkeypatch.setattr(
+        monitor.spotify, 'playlist_tracks_from_id', lambda _id: tracks
+    )
+    monkeypatch.setattr(monitor.spotify, 'track_from_id', lambda _id: {})
+    db, playlist = _watch(tmp_path)
+    count = _run(db, playlist, downloader, settings, library)
     return count, db, playlist
 
 
@@ -206,3 +217,44 @@ def test_sweep_without_library_stores_keeps_working(monkeypatch, tmp_path):
     )
 
     assert count == 2
+
+
+def test_a_track_leaving_the_playlist_keeps_its_file(monkeypatch, tmp_path):
+    """A live playlist (Top 50 and the like) drops tracks all the time.
+    The M3U follows the playlist; the audio stays in the library."""
+
+    downloader = _Downloader(tmp_path)
+    library = _library(tmp_path)
+    settings = {'generate_m3u': True}
+    _sweep(monkeypatch, tmp_path, downloader, settings, library)
+    folder = tmp_path / 'Road Trip'
+    m3u = folder / 'Road Trip.m3u'
+    assert sorted(p.name for p in folder.iterdir()) == [
+        'Alpha.mp3',
+        'Beta.mp3',
+        'Road Trip.m3u',
+    ]
+
+    # Alpha is out of the playlist now, Gamma is in.
+    monkeypatch.setattr(
+        monitor.spotify,
+        'playlist_tracks_from_id',
+        lambda _id: [
+            {'song_id': TRACK_B, 'name': 'Beta', 'artists': ['Artist']},
+            {'song_id': TRACK_C, 'name': 'Gamma', 'artists': ['Artist']},
+        ],
+    )
+    _run(*_watch(tmp_path), downloader, settings, library)
+
+    assert (folder / 'Alpha.mp3').exists()
+    listed = [
+        line
+        for line in m3u.read_text().splitlines()
+        if not line.startswith('#')
+    ]
+    assert listed == ['Beta.mp3', 'Gamma.mp3']
+    # It's no longer one of the playlist's tracks, but it is still a file.
+    assert (
+        library.playlist_catalog.playlists_for_track('Road Trip/Alpha.mp3')
+        == []
+    )

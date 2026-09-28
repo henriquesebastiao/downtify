@@ -113,6 +113,26 @@ Changing this value in Settings takes effect immediately, including for the curr
 
 On by default, matching Downtify's historical behavior: every download runs through the pipeline (audio fetch, tagging, cover art, lyrics) and overwrites whatever file already sits at the computed output path.
 
+### What "again" actually means
+
+With it on, a re-download is a **completely fresh run**, not a repair of the existing file. Downtify does not look at what you already have: it searches your [audio sources](#audio-provider) in their configured order — so if slskd is first, slskd is tried first, not only as a fallback — fetches the audio from whichever source answers, and writes today's tags, cover art and lyrics onto it.
+
+That has one consequence worth knowing before re-downloading a large library:
+
+::: warning A different format leaves the old file behind
+The new file is written at the path the [filename template](#output-filename-template) produces, with the **new** audio's extension. Downtify overwrites the old file only when both end up with the same extension.
+
+So re-downloading `Artist - Song.mp3` when slskd answers with a FLAC gives you **both** `Artist - Song.mp3` (the old one, untouched) and `Artist - Song.flac`. With [Leave slskd files in place](slskd-navidrome.md#leave-files-in-place) on — the default — the slskd file isn't even copied into your downloads folder, so the old file stays exactly where it was and the new one lives under `slskd/`.
+
+Nothing is lost, but you get duplicates. To actually replace a file, see [Replace audio](replace-audio.md), which keeps the path, the format and the tags.
+:::
+
+### Cover art comes from Spotify or YouTube Music, not from the file
+
+Whatever artwork the downloaded audio carries — including a high-resolution cover embedded in an slskd file — is **discarded and replaced** during tagging. Downtify always embeds the cover it fetches for the track from Spotify or YouTube Music, at the [cover art resolution](#cover-art-resolution) you configured (600 px by default). The same applies to the title, artists, album and the rest of the tags: the source's own tags are not kept.
+
+If what you want is bigger artwork on files you already have, re-downloading is the long way around. [Upgrade library](library-upgrade.md) does exactly that — it compares each file's embedded cover against Spotify, iTunes and YouTube Music, writes the largest one, fills in missing lyrics and tags, and never touches the audio.
+
 Turn this off to never download a song that is already on disk. This matters most when downloading a playlist, importing a [CSV library](library-import.md), or letting the [Playlist Monitor](playlist-monitor.md) sync playlists that share tracks with each other or with songs already in your library — with the option on, every one of those duplicates is downloaded again.
 
 With it off, Downtify looks for the song **anywhere in the download folder**, not just where the new download would go:
