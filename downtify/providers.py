@@ -1357,6 +1357,14 @@ def _youtube_search(query: str, limit: int) -> list[dict[str, Any]]:
     return [e for e in entries if isinstance(e, dict)]
 
 
+def youtube_search(query: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Standard-YouTube search results as yt-dlp lists them (``id``,
+    ``title``, ``channel``, ``duration``...) - for picking a version by
+    hand (see :mod:`downtify.audio_replace`)."""
+
+    return _youtube_search(query, limit)
+
+
 def _youtube_entry_to_result(
     entry: dict[str, Any],
 ) -> Optional[dict[str, Any]]:

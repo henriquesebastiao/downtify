@@ -24,6 +24,7 @@
     <UiToasts />
     <UiDialog />
     <DefaultPasswordPrompt />
+    <ReplaceAudioDialog v-if="auth.isAdmin.value" />
   </div>
 </template>
 
@@ -40,6 +41,7 @@ import UiToasts from '../ui/UiToasts.vue'
 import UiDialog from '../ui/UiDialog.vue'
 import SignIn from './SignIn.vue'
 import DefaultPasswordPrompt from './DefaultPasswordPrompt.vue'
+import ReplaceAudioDialog from '../library/ReplaceAudioDialog.vue'
 import API from '/src/model/api'
 import { useAccount } from '/src/model/account'
 import { useAuth } from '/src/model/auth'

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from mutagen.flac import VCFLACDict
 from mutagen.id3 import ID3, USLT
 
+from downtify import lyrics as lyrics_mod
 from downtify.lyrics import read_track_lyrics
 
 _LRC = '[00:12.00]The harbor lights are blinking out\n[00:15.50]One by one'
@@ -43,3 +45,15 @@ def test_track_without_lyrics(tmp_path):
     track.write_bytes(b'not really audio')
 
     assert read_track_lyrics(track) == {'synced': '', 'plain': ''}
+
+
+def test_embedded_lyrics_in_vorbis_comments(tmp_path, monkeypatch):
+    # FLAC/Ogg/Opus tags refuse MP4's "\xa9lyr" key outright (ValueError);
+    # that must not hide the Vorbis LYRICS comment behind it.
+    comments = VCFLACDict()
+    comments['LYRICS'] = ['Words in a FLAC']
+    monkeypatch.setattr(lyrics_mod, '_file_tags', lambda path: comments)
+
+    assert read_track_lyrics(tmp_path / 'Song.flac')['plain'] == (
+        'Words in a FLAC'
+    )
