@@ -3,7 +3,9 @@ bio/social/related-artist data from Deezer's internal web-player API,
 read Deezer's own global "what's trending" chart, and resolve a pasted
 Deezer track/album/playlist/artist link the same way :mod:`downtify.spotify`
 and :mod:`downtify.providers` do for Spotify and YouTube Music (see
-:func:`parse_deezer_url` and ``downtify.api``'s ``_deezer_details``).
+:func:`parse_deezer_url` and ``downtify.api``'s ``_deezer_details``), and
+back the Finder page's Deezer-only search and artist/album/track column
+view (see :func:`finder_search` and the functions after it).
 
 ``api.deezer.com`` is unauthenticated and keyless, same shape of
 integration as :mod:`downtify.itunes`. Deezer's artist search never
@@ -28,7 +30,11 @@ that query shape, this needs a fresh capture, not a clever rewrite.
 from __future__ import annotations
 
 import re
-from typing import Any, Optional
+import threading
+import time
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Callable, Optional
 from urllib.parse import urlsplit
 
 import httpx
@@ -955,7 +961,13 @@ def album_from_id(album_id: str) -> list[dict[str, Any]]:
     request fails.
     """
 
-    payload = _get_json(f'https://api.deezer.com/album/{album_id}')
+    return _album_songs(_get_json(f'https://api.deezer.com/album/{album_id}'))
+
+
+def _album_songs(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every track of an already-fetched ``GET /album/{id}`` response -
+    see :func:`album_from_id`."""
+
     rows = _paginate_tracks(payload.get('tracks') or {})
     release_date = str(payload.get('release_date') or '').strip()
     total = len(rows)
@@ -1046,7 +1058,6 @@ def _artist_release_row(
     name = str(row.get('title') or '').strip()
     if not album_id or not name:
         return None
-    record_type = str(row.get('record_type') or '').strip().lower()
     return {
         'album_id': str(album_id),
         'name': name,
@@ -1056,10 +1067,16 @@ def _artist_release_row(
         'explicit': bool(row.get('explicit_lyrics')),
         'url': str(row.get('link') or ''),
         'source': 'deezer',
-        'release_type': _RECORD_TYPE_LABELS.get(
-            record_type, record_type.title() or 'Album'
-        ),
+        'release_type': _release_type_label(row.get('record_type')),
     }
+
+
+def _release_type_label(record_type: Any) -> str:
+    """Deezer's ``record_type`` as a label (see :data:`_RECORD_TYPE_LABELS`),
+    ``Album`` when it has none."""
+
+    text = str(record_type or '').strip().lower()
+    return _RECORD_TYPE_LABELS.get(text, text.title() or 'Album')
 
 
 def artist_page_from_id(
@@ -1122,3 +1139,340 @@ def artist_top_songs_from_id(
         if song:
             songs.append(song)
     return name, cover, songs
+
+
+# ── Finder: free-text search, then artist → albums → tracks ────────────
+#
+# Deezer-only, read-only browsing for the Finder page: a free-text search
+# across tracks/albums/artists, then - in columns, like macOS Finder's
+# column view - an artist's profile, their discography and one album's
+# tracklist. Each carries as much as the public REST API offers for it,
+# not just what a download needs.
+
+_FINDER_SEARCH_URL = 'https://api.deezer.com/search'
+_FINDER_WORKERS = 4
+
+# How many album ids one album_track_counts() call looks up at most.
+TRACK_COUNTS_MAX_IDS = 50
+
+# An artist's albums listing carries no track count (only an album search
+# row does - verified live), so the Finder asks for each album's on its
+# own, one GET per album. Deezer allows 50 requests per 5 seconds per IP;
+# staying under 40 leaves room for everything else running meanwhile.
+_THROTTLE_WINDOW = 5.0
+_THROTTLE_MAX = 40
+_throttle_lock = threading.Lock()
+_throttle_times: deque[float] = deque()
+
+# Album id -> track count. A released album's count doesn't change, so it
+# is kept for the life of the process (bounded, just in case).
+_ALBUM_TRACK_COUNTS: dict[str, int] = {}
+_ALBUM_TRACK_COUNTS_MAX = 5000
+
+
+def _throttle() -> None:
+    """Wait until another request fits under :data:`_THROTTLE_MAX` per
+    :data:`_THROTTLE_WINDOW` seconds, then claim it."""
+
+    while True:
+        with _throttle_lock:
+            now = time.monotonic()
+            while (
+                _throttle_times
+                and now - _throttle_times[0] >= _THROTTLE_WINDOW
+            ):
+                _throttle_times.popleft()
+            if len(_throttle_times) < _THROTTLE_MAX:
+                _throttle_times.append(now)
+                return
+            wait = _THROTTLE_WINDOW - (now - _throttle_times[0])
+        time.sleep(max(wait, 0.05))
+
+
+def _remember_track_count(album_id: str, count: int) -> None:
+    if len(_ALBUM_TRACK_COUNTS) >= _ALBUM_TRACK_COUNTS_MAX:
+        _ALBUM_TRACK_COUNTS.clear()
+    _ALBUM_TRACK_COUNTS[album_id] = count
+
+
+def _rows_or_empty(url: str, **params: Any) -> list[Any]:
+    """The ``data`` rows of a Deezer list endpoint, or ``[]`` when it
+    fails - for the parts of a Finder answer that are extras."""
+
+    try:
+        return list(_get_json(url, **params).get('data') or [])
+    except ValueError:
+        return []
+
+
+def _map_rows(
+    rows: list[Any], mapper: Callable[[dict[str, Any]], Any]
+) -> list[dict[str, Any]]:
+    mapped_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        mapped = mapper(row)
+        if mapped:
+            mapped_rows.append(mapped)
+    return mapped_rows
+
+
+def _finder_song(row: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """A search/top track row as a downloadable song, plus the Deezer ids
+    of its artist and album - what the Finder opens when it's clicked."""
+
+    song = _song_from_full_track(row)
+    if song is None:
+        return None
+    artist = row.get('artist') if isinstance(row.get('artist'), dict) else {}
+    album = row.get('album') if isinstance(row.get('album'), dict) else {}
+    song['deezer_artist_id'] = str(artist.get('id') or '')
+    song['deezer_album_id'] = str(album.get('id') or '')
+    return song
+
+
+def _finder_artist_row(row: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """A search/related artist row: :func:`_chart_artist_release` plus its
+    fan and album counts."""
+
+    release = _chart_artist_release(row)
+    if release is None:
+        return None
+    release['fans'] = int(row.get('nb_fan') or 0)
+    release['album_count'] = int(row.get('nb_album') or 0)
+    return release
+
+
+def _finder_album_row(
+    row: dict[str, Any], artist_id: str = ''
+) -> Optional[dict[str, Any]]:
+    """An album search row or a row of an artist's albums listing:
+    :func:`_artist_release_row` plus the artist's id, the full release
+    date, fans and the track count - ``None`` when the row doesn't carry
+    one and it isn't known yet (see :func:`album_track_counts`)."""
+
+    artist = row.get('artist') if isinstance(row.get('artist'), dict) else {}
+    release = _artist_release_row(row, str(artist.get('name') or '').strip())
+    if release is None:
+        return None
+    album_id = release['album_id']
+    count = row.get('nb_tracks')
+    if count is not None:
+        _remember_track_count(album_id, int(count))
+    else:
+        count = _ALBUM_TRACK_COUNTS.get(album_id)
+    release.update({
+        'artist_id': str(artist.get('id') or artist_id),
+        'release_date': str(row.get('release_date') or '').strip(),
+        'track_count': int(count) if count is not None else None,
+        'fans': int(row.get('fans') or 0),
+    })
+    return release
+
+
+def finder_search(
+    query: str, limit: int = 25
+) -> dict[str, list[dict[str, Any]]]:
+    """``{songs, albums, artists}`` matching *query* on Deezer, each in
+    Deezer's own relevance order.
+
+    Songs are downloadable song rows (see :func:`_finder_song`); albums
+    and artists are summaries the Finder opens. Albums and artists are
+    extras: their failure leaves them empty, while a failed song search
+    raises :class:`ValueError` - the same split the regular search makes.
+    """
+
+    text = query.strip()
+    if not text:
+        return {'songs': [], 'albums': [], 'artists': []}
+    size = max(1, min(limit, 50))
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        songs = pool.submit(_get_json, _FINDER_SEARCH_URL, q=text, limit=size)
+        albums = pool.submit(
+            _rows_or_empty, f'{_FINDER_SEARCH_URL}/album', q=text, limit=size
+        )
+        artists = pool.submit(
+            _rows_or_empty, f'{_FINDER_SEARCH_URL}/artist', q=text, limit=size
+        )
+        song_rows = list(songs.result().get('data') or [])
+    return {
+        'songs': _map_rows(song_rows, _finder_song),
+        'albums': _map_rows(albums.result(), _finder_album_row),
+        'artists': _map_rows(artists.result(), _finder_artist_row),
+    }
+
+
+def _artist_full_or_none(artist_id: str, lang: str) -> Optional[dict]:
+    try:
+        return fetch_artist_full(artist_id, lang)
+    except ValueError:
+        return None
+
+
+def finder_artist(artist_id: str, lang: str = 'en') -> dict[str, Any]:
+    """Everything the Finder's first column shows about a Deezer artist:
+    photo, fans, album count, bio (as Deezer's HTML, in *lang* - see
+    :func:`fetch_artist_full`), social links, related artists and their
+    ten most-played tracks. Fetched in parallel.
+
+    Only the artist itself is required - raises :class:`ValueError` when
+    it doesn't resolve; every other part is left empty when it fails.
+    """
+
+    base = f'https://api.deezer.com/artist/{artist_id}'
+    with ThreadPoolExecutor(max_workers=_FINDER_WORKERS) as pool:
+        info = pool.submit(_get_json, base)
+        related = pool.submit(_rows_or_empty, f'{base}/related', limit=20)
+        top = pool.submit(_rows_or_empty, f'{base}/top', limit=10)
+        full = pool.submit(_artist_full_or_none, artist_id, lang)
+        payload = info.result()
+    extra = full.result() or {}
+    return {
+        'artist_id': str(artist_id),
+        'name': str(payload.get('name') or '').strip() or str(artist_id),
+        'cover_url': (
+            _cover_from_images(payload, prefix='picture')
+            if _has_real_picture(payload)
+            else ''
+        ),
+        'fans': int(payload.get('nb_fan') or 0),
+        'album_count': int(payload.get('nb_album') or 0),
+        'url': str(payload.get('link') or ''),
+        'source': 'deezer',
+        'bio_html': str(extra.get('bio_html') or ''),
+        'social': extra.get('social') or {},
+        'related': _map_rows(related.result(), _finder_artist_row),
+        'top_songs': _map_rows(top.result(), _finder_song),
+    }
+
+
+def finder_artist_albums(artist_id: str) -> list[dict[str, Any]]:
+    """A Deezer artist's whole discography, most recent first (Deezer's
+    own order), as :func:`_finder_album_row` summaries. Track counts are
+    only filled in when already known - see :func:`album_track_counts`.
+
+    Raises :class:`ValueError` when the id doesn't resolve or the
+    request fails.
+    """
+
+    first_page = _get_json(
+        f'https://api.deezer.com/artist/{artist_id}/albums', limit=100
+    )
+    return _map_rows(
+        _paginate_tracks(first_page),
+        lambda row: _finder_album_row(row, artist_id=str(artist_id)),
+    )
+
+
+def _album_track_count(album_id: str) -> Optional[int]:
+    """One album's track count - remembered, else the ``total`` of a
+    one-row page of its tracklist (much lighter than the whole album) -
+    or ``None`` when Deezer didn't answer."""
+
+    cached = _ALBUM_TRACK_COUNTS.get(album_id)
+    if cached is not None:
+        return cached
+    _throttle()
+    try:
+        page = _get_json(
+            f'https://api.deezer.com/album/{album_id}/tracks', limit=1
+        )
+    except ValueError:
+        return None
+    total = page.get('total')
+    if total is None:
+        return None
+    _remember_track_count(album_id, int(total))
+    return int(total)
+
+
+def album_track_counts(album_ids: list[str]) -> dict[str, int]:
+    """``{album_id: track_count}`` for up to :data:`TRACK_COUNTS_MAX_IDS`
+    album ids - the ones Deezer answered for; a failed lookup (a rate
+    limit, say) is just left out, so the caller can ask again later.
+
+    Throttled to stay under Deezer's request quota (see
+    :func:`_throttle`), so a long list takes a few seconds; the caller
+    asks in small batches to show counts as they arrive.
+    """
+
+    ids = list(
+        dict.fromkeys(
+            album_id
+            for album_id in (str(raw).strip() for raw in album_ids)
+            if album_id.isdigit()
+        )
+    )[:TRACK_COUNTS_MAX_IDS]
+    if not ids:
+        return {}
+    # More workers than elsewhere: these are tiny requests, and _throttle
+    # keeps the overall rate in check anyway.
+    with ThreadPoolExecutor(max_workers=_FINDER_WORKERS * 2) as pool:
+        counts = list(pool.map(_album_track_count, ids))
+    return {
+        album_id: count
+        for album_id, count in zip(ids, counts)
+        if count is not None
+    }
+
+
+def finder_album(album_id: str) -> dict[str, Any]:
+    """A Deezer album with every detail its own resource carries - label,
+    genres, UPC, length, fans, contributors - and its tracklist as
+    downloadable songs (see :func:`album_from_id`).
+
+    Raises :class:`ValueError` when the id doesn't resolve or the
+    request fails.
+    """
+
+    payload = _get_json(f'https://api.deezer.com/album/{album_id}')
+    name = str(payload.get('title') or '').strip() or str(album_id)
+    artist = (
+        payload.get('artist')
+        if isinstance(payload.get('artist'), dict)
+        else {}
+    )
+    cover = _cover_from_images(payload)
+    songs = _album_songs(payload)
+    for song in songs:
+        song['cover_url'] = song['cover_url'] or cover
+        song['album_name'] = song['album_name'] or name
+    count = int(payload.get('nb_tracks') or len(songs))
+    _remember_track_count(str(album_id), count)
+    release_date = str(payload.get('release_date') or '').strip()
+    genres = [
+        str(genre['name']).strip()
+        for genre in (payload.get('genres') or {}).get('data') or []
+        if isinstance(genre, dict) and genre.get('name')
+    ]
+    contributors = [
+        {
+            'artist_id': str(person.get('id') or ''),
+            'name': str(person['name']).strip(),
+            'role': str(person.get('role') or '').strip(),
+        }
+        for person in payload.get('contributors') or []
+        if isinstance(person, dict) and person.get('name')
+    ]
+    return {
+        'album_id': str(album_id),
+        'name': name,
+        'artist': str(artist.get('name') or '').strip(),
+        'artist_id': str(artist.get('id') or ''),
+        'cover_url': cover,
+        'release_date': release_date,
+        'year': _year_from_release_date(release_date),
+        'label': str(payload.get('label') or '').strip(),
+        'genres': genres,
+        'duration': int(payload.get('duration') or 0),
+        'track_count': count,
+        'fans': int(payload.get('fans') or 0),
+        'release_type': _release_type_label(payload.get('record_type')),
+        'explicit': bool(payload.get('explicit_lyrics')),
+        'upc': str(payload.get('upc') or '').strip(),
+        'url': str(payload.get('link') or ''),
+        'contributors': contributors,
+        'source': 'deezer',
+        'tracks': songs,
+    }

@@ -18,6 +18,21 @@ working without changes:
   read-only summaries - Downtify has no Deezer discography resolver,
   so their ``url`` only opens on Deezer, unlike a YouTube Music/Spotify
   result)
+* ``GET  /api/finder/search`` (the Finder page's Deezer-only free-text
+  search: ``{songs, albums, artists}``; songs shaped like the chart's
+  tracks plus ``deezer_artist_id``/``deezer_album_id``, albums/artists
+  as summaries with Deezer ids, fans and track/album counts)
+* ``GET  /api/finder/artist`` (``artist_id``, ``lang``: a Deezer
+  artist's photo, fans, album count, plain-text ``bio``, ``social``
+  links, ``related`` artists and ``top_songs``)
+* ``GET  /api/finder/artist/albums`` (``artist_id``: their whole
+  discography, most recent first; ``track_count`` is ``null`` until
+  known)
+* ``GET  /api/finder/albums/track_counts`` (``ids``, comma-separated, 50
+  at most: ``{album_id: track_count}`` for the ones Deezer answered -
+  throttled under Deezer's request quota)
+* ``GET  /api/finder/album`` (``album_id``: label, genres, UPC, length,
+  fans, contributors and ``tracks``, downloadable song rows)
 * ``GET  /api/artists/top_songs`` (an artist's "Top songs" shelf preview,
   same shape as ``/api/songs/search`` - no further pagination offered)
 * ``GET  /api/artists/top_albums`` (an artist's 5 most popular albums,
@@ -1457,6 +1472,62 @@ def discover_chart_endpoint(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
+_DEEZER_ID = r'^\d+$'
+
+
+@router.get('/api/finder/search')
+def finder_search_endpoint(
+    query: str = Query(''),
+    limit: int = Query(25, ge=1, le=50),
+) -> dict[str, Any]:
+    try:
+        return deezer.finder_search(query, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get('/api/finder/artist')
+def finder_artist_endpoint(
+    artist_id: str = Query(..., pattern=_DEEZER_ID),
+    lang: str = Query('en', max_length=16),
+) -> dict[str, Any]:
+    try:
+        artist = deezer.finder_artist(artist_id, lang)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    # Plain text, paragraphs split by a blank line - the same cleanup a
+    # saved artist bio gets, so the page never renders Deezer's HTML.
+    artist['bio'] = artist_profile._format_bio_text(artist.pop('bio_html'))
+    return artist
+
+
+@router.get('/api/finder/artist/albums')
+def finder_artist_albums_endpoint(
+    artist_id: str = Query(..., pattern=_DEEZER_ID),
+) -> list[dict[str, Any]]:
+    try:
+        return deezer.finder_artist_albums(artist_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get('/api/finder/albums/track_counts')
+def finder_album_track_counts_endpoint(
+    ids: str = Query(''),
+) -> dict[str, int]:
+    return deezer.album_track_counts(ids.split(','))
+
+
+@router.get('/api/finder/album')
+def finder_album_endpoint(
+    album_id: str = Query(..., pattern=_DEEZER_ID),
+) -> dict[str, Any]:
+    try:
+        return deezer.finder_album(album_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
 @router.get('/api/artists/top_songs')
 def artist_top_songs_endpoint(
     channel_id: str = Query(...),
@@ -2302,8 +2373,9 @@ def _song_from_download_request(
     """The song to download for ``POST /api/download/url``.
 
     A slskd search stub (``source == 'text_search'``, see
-    :func:`search_endpoint`) or a Deezer chart row (``source ==
-    'deezer'``, see :func:`discover_chart_endpoint`) has no URL this app
+    :func:`search_endpoint`) or a Deezer chart/Finder row (``source ==
+    'deezer'``, see :func:`discover_chart_endpoint` and
+    :func:`finder_search_endpoint`) has no URL this app
     can resolve on its own - both are taken from the request body as-is,
     already-resolved metadata that :func:`downtify.providers.find_match`
     can search YouTube/YouTube Music for directly.
