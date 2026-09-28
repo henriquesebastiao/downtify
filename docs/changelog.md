@@ -4,6 +4,46 @@ icon: lucide/history
 
 # Changelog
 
+## [3.2.0](https://github.com/henriquesebastiao/downtify/tree/3.2.0) (2026-09-28)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.1.0...3.2.0)
+
+**Implemented enhancements:**
+
+- Allow manual replacement of downloaded music [\#390](https://github.com/henriquesebastiao/downtify/issues/390)
+- Set the following settings to be enabled by default [\#387](https://github.com/henriquesebastiao/downtify/issues/387)
+- Change the web interface port via the settings menu [\#386](https://github.com/henriquesebastiao/downtify/issues/386)
+- Feature request: discovery section inspired by Aurral [\#380](https://github.com/henriquesebastiao/downtify/issues/380)
+- Artist Monitoring [\#379](https://github.com/henriquesebastiao/downtify/issues/379)
+- Artist pages: photo, banner, bio, origin & related artists [\#376](https://github.com/henriquesebastiao/downtify/issues/376)
+- refactor: some suggestions for better experience [\#375](https://github.com/henriquesebastiao/downtify/issues/375)
+- feat: download top songs as a playlist [\#360](https://github.com/henriquesebastiao/downtify/issues/360)
+- YouTube fallback [\#237](https://github.com/henriquesebastiao/downtify/issues/237)
+- User/Password login screen [\#64](https://github.com/henriquesebastiao/downtify/issues/64)
+
+**Fixed bugs:**
+
+- Duplicates Queued [\#377](https://github.com/henriquesebastiao/downtify/issues/377)
+- Single downloads write no album tag [\#373](https://github.com/henriquesebastiao/downtify/issues/373)
+
+**Closed issues:**
+
+- Add Umami Analytics to the documentation [\#396](https://github.com/henriquesebastiao/downtify/issues/396)
+
+**Merged pull requests:**
+
+- feat\(library\): replace a track's audio with a version picked by hand [\#400](https://github.com/henriquesebastiao/downtify/pull/400) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- docs: add Umami analytics to the documentation site [\#399](https://github.com/henriquesebastiao/downtify/pull/399) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(settings\): organize by artist/album, playlist covers and artist photos on by default [\#398](https://github.com/henriquesebastiao/downtify/pull/398) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: choose the server port in a new Settings \> Server section [\#397](https://github.com/henriquesebastiao/downtify/pull/397) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: user accounts - username/password sign-in, admin and user roles, per-user preferences, activity log [\#395](https://github.com/henriquesebastiao/downtify/pull/395) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(spotify\): write the album tag on single-track downloads [\#391](https://github.com/henriquesebastiao/downtify/pull/391) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(monitor\): filter artist watches by release type and new releases only [\#385](https://github.com/henriquesebastiao/downtify/pull/385) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: add Discover \(artists, albums, playlists\) and song previews on link pages [\#384](https://github.com/henriquesebastiao/downtify/pull/384) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix: support import many large playlists at once [\#382](https://github.com/henriquesebastiao/downtify/pull/382) ([wrong-commit](https://github.com/wrong-commit))
+- Artist pages: photo, banner, bio, origin & related artists [\#381](https://github.com/henriquesebastiao/downtify/pull/381) ([fvidals](https://github.com/fvidals))
+- feat: spotify artist discography and top songs as a playlist [\#372](https://github.com/henriquesebastiao/downtify/pull/372) ([fvidals](https://github.com/fvidals))
+
 ## [3.1.0](https://github.com/henriquesebastiao/downtify/tree/3.1.0) (2026-09-21)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.0.0...3.1.0)
@@ -16,7 +56,7 @@ icon: lucide/history
 **Fixed bugs:**
 
 - \[error?\] The page needs to be reloaded. [\#368](https://github.com/henriquesebastiao/downtify/issues/368)
-- PWA on Android Chrome, This App Cannot Be Installed [\#367](https://github.com/henriquesebastiao/downtify/issues/367)
+- PWA on Android Chrome, This App Cannot Be Installed, accessing via Tailscale url [\#367](https://github.com/henriquesebastiao/downtify/issues/367)
 - 2.13.0-rc.1: downloads fail with cookies set, node JS runtime is never enabled [\#362](https://github.com/henriquesebastiao/downtify/issues/362)
 
 **Merged pull requests:**
@@ -470,7 +510,6 @@ icon: lucide/history
 **Closed issues:**
 
 - ERROR:    Client 1...b not found [\#68](https://github.com/henriquesebastiao/downtify/issues/68)
-- \[ENHANCEMENT\] User | Password login screen [\#64](https://github.com/henriquesebastiao/downtify/issues/64)
 
 **Merged pull requests:**
 
@@ -676,7 +715,3 @@ icon: lucide/history
 ## [0.1.0](https://github.com/henriquesebastiao/downtify/tree/0.1.0) (2025-02-06)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/28292c064ed8d50fbdca0b6bc7a47f65f8772cd6...0.1.0)
-
-
-
-\* *This Changelog was automatically generated by [github_changelog_generator](https://github.com/github-changelog-generator/github-changelog-generator)*
