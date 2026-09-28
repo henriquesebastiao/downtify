@@ -46,7 +46,10 @@ function seen() {
 
 const dismissed = ref(seen())
 const open = computed(
-  () => Boolean(auth.user.value?.default_password) && !dismissed.value
+  () =>
+    Boolean(auth.user.value?.default_password) &&
+    !auth.authDisabled.value &&
+    !dismissed.value
 )
 
 function dismiss() {

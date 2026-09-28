@@ -121,7 +121,7 @@
         <span :class="labelClass">{{ t('nav.settings') }}</span>
       </RouterLink>
       <button
-        v-if="auth.user.value"
+        v-if="auth.user.value && !auth.authDisabled.value"
         type="button"
         class="flex h-10 items-center gap-3 rounded-control px-3 text-left text-sm font-medium text-muted transition-colors hover:bg-surface-2/60 hover:text-fg"
         :title="t('nav.signOutAs', { name: auth.user.value.username })"

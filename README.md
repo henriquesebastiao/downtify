@@ -75,7 +75,7 @@ docker run -d -p 8000:8000 --name downtify \
   ghcr.io/henriquesebastiao/downtify
 ```
 
-Open [http://localhost:8000](http://localhost:8000), sign in as **`admin`** / **`downtify`**, change that password in **Settings → General**, then paste a link and start the download. Replace `/path/to/downloads` with the folder where you want your music.
+Open [http://localhost:8000](http://localhost:8000), sign in as **`admin`** / **`downtify`**, change that password in **Settings → General** (or turn accounts off with `DOWNTIFY_DISABLE_AUTH=true` on a server only you can reach), then paste a link and start the download. Replace `/path/to/downloads` with the folder where you want your music.
 
 `/downloads` holds your audio files and `/data` holds Downtify's database and settings. Keep both persistent, or settings, likes and playlist tracking are lost when the container is recreated.
 

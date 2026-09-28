@@ -117,7 +117,7 @@
               }}
             </button>
             <button
-              v-if="auth.user.value"
+              v-if="auth.user.value && !auth.authDisabled.value"
               type="button"
               class="flex h-14 w-full items-center gap-4 rounded-control px-2 text-[15px] font-medium"
               @click="auth.signOut"

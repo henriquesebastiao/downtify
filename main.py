@@ -35,7 +35,7 @@ from downtify import (
     mobile_routes,
 )
 from downtify.activity import ActivityLog
-from downtify.auth import AuthMiddleware, AuthStore
+from downtify.auth import AuthMiddleware, AuthStore, auth_disabled_from_env
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
@@ -365,10 +365,18 @@ def open_auth_store() -> AuthStore:
             'DOWNTIFY_REQUIRE_SIGN_IN is no longer used: signing in is '
             'always required. Remove it from your configuration.'
         )
+    disabled = auth_disabled_from_env()
+    if disabled:
+        logger.warning(
+            'DOWNTIFY_DISABLE_AUTH is on: no sign-in, anyone who can reach '
+            'this server uses it as the admin. Only for a server nobody '
+            'else can reach.'
+        )
     return AuthStore(
         DATABASE_DIR / 'downtify_auth.db',
         DATABASE_DIR / '.auth_secret',
         existing_install=existing,
+        auth_disabled=disabled,
     )
 
 

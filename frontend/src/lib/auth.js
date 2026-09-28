@@ -12,10 +12,17 @@ export function needsSignIn(status) {
 
 export const ROLE_ADMIN = 'admin'
 
-/** The Settings sections a user may open: everything for an admin. */
-export function settingsSectionsFor(role, sections) {
-  if (role === ROLE_ADMIN) return sections
-  return sections.filter((section) => !section.admin)
+/**
+ * The Settings sections a user may open: everything for an admin, but
+ * the ones about accounts when accounts are turned off
+ * (`DOWNTIFY_DISABLE_AUTH`).
+ */
+export function settingsSectionsFor(role, sections, { authDisabled } = {}) {
+  const shown = authDisabled
+    ? sections.filter((section) => !section.accounts)
+    : sections
+  if (role === ROLE_ADMIN) return shown
+  return shown.filter((section) => !section.admin)
 }
 
 /**

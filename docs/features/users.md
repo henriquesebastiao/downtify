@@ -70,6 +70,28 @@ There's always at least one admin: the last one can't be deleted or made a user,
 
 Apps report what they play too — see the [mobile client contract](../mobile-client-contract.md#8-report-plays).
 
+## Turning accounts off
+
+A server only you can reach — on your own computer, or behind something that already asks for a password — may not need accounts at all. Set `DOWNTIFY_DISABLE_AUTH=true` (see [Environment Variables](../getting-started/environment-variables.md#mobile-apps-and-sign-in)):
+
+```yaml
+environment:
+  - DOWNTIFY_DISABLE_AUTH=true
+```
+
+Then:
+
+- There's no sign-in page: whoever opens Downtify uses it as the first admin (`admin` on a new server).
+- The sign-out buttons, **Settings → Users**, the **Account** part of **Settings → General** and **Sign out everywhere** in **Settings → Apps** are gone.
+- Phones can still be paired (to that admin), and **Settings → Activity** still shows what plays where.
+- Theme, language and the other **General** preferences are kept as that admin's.
+
+::: warning Anyone who can reach the server can do everything
+With accounts off, nothing asks who you are: everyone on your network — or on the internet, if the port is exposed — can change settings, delete music and pair a phone. Don't turn accounts off on a server others can reach.
+:::
+
+Set it to `false` (or remove it) and sign-in is required again, with the accounts, passwords and apps as they were.
+
 ## Forgot the password?
 
 Run this on the server — `admin` gets the password `downtify` back (and is recreated as an admin if it was renamed or deleted); other accounts and paired apps are left alone:

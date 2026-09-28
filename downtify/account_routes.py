@@ -38,6 +38,17 @@ def _users() -> UserStore:
     return _store().users
 
 
+def _accounts_on() -> None:
+    """409 when accounts are turned off (``DOWNTIFY_DISABLE_AUTH``):
+    there is one user and no password to manage."""
+
+    if _store().auth_disabled:
+        raise HTTPException(
+            status_code=409,
+            detail='Accounts are turned off (DOWNTIFY_DISABLE_AUTH)',
+        )
+
+
 def _me(request: Request) -> Principal:
     principal = api.principal_of(request)
     if principal is None or not principal.user_id:
@@ -89,6 +100,7 @@ def get_me(request: Request) -> dict[str, Any]:
 async def update_me(request: Request) -> dict[str, Any]:
     """Change your own username: ``{username}``."""
 
+    _accounts_on()
     me = _me(request)
     payload = await _json(request)
     try:
@@ -113,6 +125,7 @@ async def change_my_password(request: Request) -> dict[str, Any]:
     other browser and app of yours stays signed in; use
     ``POST /api/me/sign-out-everywhere`` for that."""
 
+    _accounts_on()
     me = _me(request)
     ip = api.request_ip(request)
     limiter = api.state.login_limiter
@@ -169,6 +182,7 @@ async def sign_out_everywhere(
     """Unpair every app of yours and sign out every browser of yours,
     this one included."""
 
+    _accounts_on()
     me = _me(request)
     await _sign_out_user(me.user_id)
     api.state.now_playing.forget_user(me.user_id)
@@ -192,6 +206,7 @@ def _with_devices(users: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def list_users() -> list[dict[str, Any]]:
     """Every account, with how many apps each has paired."""
 
+    _accounts_on()
     return _with_devices(_users().list())
 
 
@@ -200,6 +215,7 @@ async def create_user(request: Request) -> dict[str, Any]:
     """Add an account: ``{username, password, role}`` (``admin`` or
     ``user``, default ``user``)."""
 
+    _accounts_on()
     payload = await _json(request)
     try:
         user = await asyncio.to_thread(
@@ -223,6 +239,7 @@ async def update_user(user_id: int, request: Request) -> dict[str, Any]:
     password signs that user out of every browser (but this one, when
     it's your own) - their paired apps stay paired."""
 
+    _accounts_on()
     me = _me(request)
     payload = await _json(request)
     before = _users().get(user_id)
@@ -265,6 +282,7 @@ async def delete_user(user_id: int, request: Request) -> dict[str, Any]:
     """Delete an account: its apps are unpaired and its browsers signed
     out. Not your own, and not the last admin."""
 
+    _accounts_on()
     me = _me(request)
     if user_id == me.user_id:
         raise HTTPException(

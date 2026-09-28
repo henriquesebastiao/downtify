@@ -27,6 +27,7 @@ from downtify.users import (
 )
 
 PASSWORD = 'correct horse battery'
+DEFAULT_LOGIN = {'username': 'admin', 'password': 'downtify'}
 
 
 def _users(tmp_path: Path, **kw) -> UserStore:
@@ -474,3 +475,73 @@ def test_saved_settings_are_logged_by_name_only(client):
     entry = client.get('/api/activity').json()['entries'][0]
     assert entry['kind'] == 'settings_changed'
     assert entry['detail'] == {'keys': ['search_albums']}
+
+
+# ── DOWNTIFY_DISABLE_AUTH ───────────────────────────────────────────────
+
+
+@pytest.fixture
+def open_client(tmp_path, monkeypatch):
+    monkeypatch.setenv('DOWNTIFY_DISABLE_AUTH', 'true')
+    web = tmp_path / 'web'
+    web.mkdir()
+    (web / 'index.html').write_text('<html>Downtify</html>')
+    monkeypatch.setattr(main, 'DOWNLOAD_DIR', tmp_path / 'downloads')
+    monkeypatch.setattr(main, 'DATABASE_DIR', tmp_path / 'data')
+    monkeypatch.setattr(main, 'WEB_GUI_LOCATION', str(web))
+    for name in ('auth', 'activity', 'identity', 'downloader', 'settings'):
+        monkeypatch.setattr(api.state, name, getattr(api.state, name))
+    return TestClient(main.build_app(), base_url='http://testserver')
+
+
+def test_with_auth_disabled_everyone_is_the_admin(open_client):
+    status = open_client.get('/api/auth/status').json()
+    assert status['auth_disabled'] is True
+    assert status['signed_in'] is True
+    assert status['require_sign_in'] is False
+    assert status['user']['username'] == 'admin'
+    assert open_client.get('/api/settings').status_code == 200
+    assert open_client.get('/api/activity').status_code == 200
+    info = open_client.get('/api/server/info').json()
+    assert info['require_sign_in'] is False
+
+
+def test_with_auth_disabled_accounts_cannot_be_managed(open_client):
+    assert (
+        open_client.post('/api/auth/login', json=DEFAULT_LOGIN).status_code
+        == 409
+    )
+    assert open_client.get('/api/users').status_code == 409
+    assert (
+        open_client.post(
+            '/api/users', json={'username': 'maria', 'password': PASSWORD}
+        ).status_code
+        == 409
+    )
+    assert (
+        open_client.put(
+            '/api/me/password',
+            json={'current_password': 'x', 'new_password': PASSWORD},
+        ).status_code
+        == 409
+    )
+    # Preferences still work: they're the admin's.
+    prefs = open_client.put('/api/me/preferences', json={'theme': 'light'})
+    assert prefs.json() == {'theme': 'light'}
+
+
+def test_with_auth_disabled_apps_and_the_same_site_check_still_apply(
+    open_client,
+):
+    store = api.state.auth
+    device, token = store.create_device('Pixel', user_id=1)
+    headers = {'Authorization': f'Bearer {token}'}
+    assert open_client.get('/api/settings', headers=headers).status_code == 403
+    store.revoke_device(device['id'])
+    assert open_client.get('/api/queue', headers=headers).status_code == 401
+    evil = open_client.put(
+        '/api/likes',
+        json={'file': 'x.mp3', 'liked': False},
+        headers={'Origin': 'https://evil.example'},
+    )
+    assert evil.status_code == 403

@@ -70,7 +70,7 @@ Content-Type: application/json
 
 - `401` wrong/expired/used code, `429` too many attempts (`Retry-After` seconds).
 - Store the token in the Android Keystore-backed storage (EncryptedSharedPreferences / Jetpack DataStore + Tink); it's shown once and can't be retrieved again.
-- Send it on **every** request as `Authorization: Bearer <token>`. Every server requires credentials (`require_sign_in` is always `true`; older servers could say `false` — send the token anyway, it lets the server tell the app when it was unpaired).
+- Send it on **every** request as `Authorization: Bearer <token>`. `require_sign_in` is `false` only on a server with accounts turned off (`DOWNTIFY_DISABLE_AUTH`) or an older one — send the token anyway: it lets the server tell the app when it was unpaired.
 - The device belongs to the user who showed the code (`user` in the response: `{ "username", "role" }`); `GET /api/me` answers who that is. Show it in the app ("Signed in as maria").
 - `GET /api/auth/status` with the token answers `{ "signed_in": true, "via": "device", "user": { "username", "role", … }, "device": { "id", "name" }, … }` — a cheap "am I still paired?" check.
 

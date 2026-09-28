@@ -387,6 +387,17 @@ class UserStore:
             ).fetchall()
         return [public_user(r) for r in rows]
 
+    def first_admin(self) -> Optional[dict[str, Any]]:
+        """The oldest admin - who everyone is when sign-in is turned off
+        (``DOWNTIFY_DISABLE_AUTH``)."""
+
+        with self._connect() as conn:
+            row = conn.execute(
+                'SELECT * FROM users WHERE role = ? ORDER BY id LIMIT 1',
+                (ROLE_ADMIN,),
+            ).fetchone()
+        return public_user(row) if row else None
+
     def admin_count(self) -> int:
         with self._connect() as conn:
             row = conn.execute(

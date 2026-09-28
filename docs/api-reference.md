@@ -1744,7 +1744,7 @@ Save an episode's resume position and/or played state. Called periodically while
 
 Who this server is, signing in, and pairing apps — see [Users & Sign-in](features/users.md) and [Mobile Apps](features/mobile-apps.md). Accounts, preferences and the activity log are in [Accounts and activity](#accounts-and-activity). The routes an app uses are in [Mobile API (v1)](#mobile-api-v1), and the whole flow is in the [mobile client contract](mobile-client-contract.md).
 
-**Who may call what.** Every request needs a signed-in user, except the public routes below. A request that sends a revoked device token gets `401` even on a public route, so an app learns it was unpaired.
+**Who may call what.** Every request needs a signed-in user, except the public routes below — unless `DOWNTIFY_DISABLE_AUTH` is `true`: then a request without credentials is the first admin's, `POST /api/auth/login`, `/api/users…` and changing your username or password answer `409`, and device tokens and the same-site check work as usual. A request that sends a revoked device token gets `401` even on a public route, so an app learns it was unpaired.
 
 | Scope | Credentials | Covers |
 |-------|-------------|--------|
@@ -1779,7 +1779,7 @@ Public. What an app checks before it has credentials.
 }
 ```
 
-`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is always `true` (kept for apps written against earlier servers). `transcoding.available` is `false` (and the lists empty) without ffmpeg.
+`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `transcoding.available` is `false` (and the lists empty) without ffmpeg.
 
 ---
 
@@ -1800,6 +1800,7 @@ Public. How this request is signed in.
 ```json
 {
   "require_sign_in": true,
+  "auth_disabled": false,
   "min_password_length": 8,
   "signed_in": true,
   "via": "device",
@@ -1810,6 +1811,8 @@ Public. How this request is signed in.
 ```
 
 `via` is `session` (a browser), `device` (an app's token) or `null`; `user` is who that is (`null` when signed out); `device` is `null` unless `via` is `device`. The web app shows its sign-in page when `signed_in` is `false`.
+
+`auth_disabled` is `true` when accounts are turned off (`DOWNTIFY_DISABLE_AUTH`): then `signed_in` is `true`, `via` is `open` and `user` is the first admin.
 
 `notice` is only set while signed out, on a server upgraded from a version without accounts, until an admin signs in: `{ "username": "admin", "password": "downtify" }` — `password` is `null` when the sign-in password of the older version was kept.
 

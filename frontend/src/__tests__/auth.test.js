@@ -39,6 +39,17 @@ describe('settingsSectionsFor', () => {
     ])
     expect(settingsSectionsFor(undefined, sections)).toHaveLength(3)
   })
+
+  it('hides the accounts sections when accounts are turned off', () => {
+    const withUsers = sections.map((s) =>
+      s.id === 'users' ? { ...s, accounts: true } : s
+    )
+    const ids = settingsSectionsFor('admin', withUsers, {
+      authDisabled: true,
+    }).map((s) => s.id)
+    expect(ids).toEqual(['general', 'sources', 'apps', 'about'])
+    expect(settingsSectionsFor('admin', withUsers)).toHaveLength(5)
+  })
 })
 
 describe('playbackReport', () => {

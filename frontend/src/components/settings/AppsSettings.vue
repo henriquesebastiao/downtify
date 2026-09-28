@@ -87,7 +87,10 @@
     </SettingGroup>
 
     <!-- Signing out -->
-    <SettingGroup :title="t('apps.signOutGroup')">
+    <SettingGroup
+      v-if="!auth.authDisabled.value"
+      :title="t('apps.signOutGroup')"
+    >
       <SettingRow
         :label="t('apps.signOutEverywhere')"
         :description="t('apps.signOutEverywhereHint')"

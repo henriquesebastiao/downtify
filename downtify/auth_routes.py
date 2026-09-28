@@ -22,6 +22,7 @@ from .auth import (
     Principal,
     client_ip,
     identify,
+    open_principal,
     session_cookie,
     trusted_proxies_from_env,
 )
@@ -134,7 +135,7 @@ def get_server_info() -> dict[str, Any]:
     return server_info(
         identity,
         version=api.state.version,
-        require_sign_in=True,
+        require_sign_in=not (api.state.auth and api.state.auth.auth_disabled),
         transcoding=transcoder.capability() if transcoder else None,
     )
 
@@ -174,7 +175,9 @@ def auth_status(request: Request) -> dict[str, Any]:
     """
 
     store = _store()
-    principal, _bad = identify(request.scope, store, _ip(request))
+    principal, bad = identify(request.scope, store, _ip(request))
+    if principal is None and not bad:
+        principal = open_principal(store)
     device = None
     user = None
     if principal is not None:
@@ -186,13 +189,16 @@ def auth_status(request: Request) -> dict[str, Any]:
                 'name': (found or {}).get('name'),
             }
     return {
-        'require_sign_in': True,
+        'require_sign_in': not store.auth_disabled,
+        'auth_disabled': store.auth_disabled,
         'min_password_length': MIN_PASSWORD_LENGTH,
         'signed_in': principal is not None,
         'via': principal.kind if principal else None,
         'user': user,
         'device': device,
-        'notice': None if principal else store.users.notice(),
+        'notice': None
+        if principal or store.auth_disabled
+        else store.users.notice(),
     }
 
 
@@ -202,6 +208,11 @@ async def login(request: Request, response: Response) -> dict[str, Any]:
     user}``. Rate-limited per address."""
 
     store = _store()
+    if store.auth_disabled:
+        raise HTTPException(
+            status_code=409,
+            detail='Sign-in is turned off (DOWNTIFY_DISABLE_AUTH)',
+        )
     ip = _ip(request)
     wait = api.state.login_limiter.retry_after(ip)
     if wait:

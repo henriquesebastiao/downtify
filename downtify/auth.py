@@ -35,6 +35,11 @@ SHA-256. Every comparison of a secret is constant-time.
 and the WebSocket alike, from one table of path rules (:data:`RULES`);
 anything not listed there needs the admin scope, so a new route can't be
 left open by mistake (a test checks every route is listed on purpose).
+
+``DOWNTIFY_DISABLE_AUTH=true`` turns accounts off for a server nobody
+else can reach: nobody signs in, and every request without a device
+token is the first admin's (:func:`open_principal`). Paired apps, signed
+URLs and the same-site check keep working.
 """
 
 from __future__ import annotations
@@ -417,8 +422,11 @@ class AuthStore:
         secret_path: Path,
         *,
         existing_install: bool = False,
+        auth_disabled: bool = False,
     ) -> None:
         self._path = str(db_path)
+        #: ``DOWNTIFY_DISABLE_AUTH``: no sign-in, one user (the admin).
+        self.auth_disabled = auth_disabled
         self._lock = threading.Lock()
         self._init_db()
         self.users = UserStore(db_path)
@@ -1036,6 +1044,27 @@ def identify(
     return None, False
 
 
+def open_principal(store: AuthStore) -> Optional[Principal]:
+    """Who a request without credentials is when sign-in is turned off
+    (``DOWNTIFY_DISABLE_AUTH``): the first admin. ``None`` otherwise."""
+
+    if not store.auth_disabled:
+        return None
+    admin = store.users.first_admin()
+    if admin is None:
+        return None
+    return Principal(
+        'open', ADMIN, '', admin['id'], admin['username'], ROLE_ADMIN
+    )
+
+
+def auth_disabled_from_env() -> bool:
+    """``DOWNTIFY_DISABLE_AUTH``: ``true`` turns accounts and sign-in off."""
+
+    raw = os.getenv('DOWNTIFY_DISABLE_AUTH', '').strip().lower()
+    return raw in {'1', 'true', 'yes', 'on'}
+
+
 def session_cookie(scope: MutableMapping[str, Any]) -> str:
     """The web session cookie a request carries, or ``''``."""
 
@@ -1095,6 +1124,8 @@ class AuthMiddleware:
 
         ip = client_ip(scope, self._trusted)
         principal, bad_token = self._authenticate(scope, store, ip, method)
+        if principal is None and not bad_token:
+            principal = open_principal(store)
         scope.setdefault('state', {})['principal'] = principal
 
         if bad_token:
@@ -1115,7 +1146,7 @@ class AuthMiddleware:
         # asks: only this site's own pages may use it to change things.
         if (
             principal is not None
-            and principal.kind == 'session'
+            and principal.kind in {'session', 'open'}
             and (method in _UNSAFE or kind == 'websocket')
             and not _same_origin(scope, self._trusted)
         ):

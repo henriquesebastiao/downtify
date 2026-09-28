@@ -42,7 +42,7 @@
         <div :key="section" class="flex min-w-0 flex-col gap-8">
           <!-- General -->
           <template v-if="section === 'general'">
-            <AccountSettings />
+            <AccountSettings v-if="!auth.authDisabled.value" />
             <SettingGroup
               :title="t('settings.appearance')"
               :description="t('settings.personalHint')"
@@ -749,33 +749,43 @@ const version = localStorage.getItem('version')
 // Normal users see General, Apps and About; the rest is the server's,
 // an admin's to change.
 const sections = computed(() =>
-  settingsSectionsFor(auth.user.value?.role, [
-    { id: 'general', icon: 'sliders', label: t('settings.general') },
-    {
-      id: 'sources',
-      icon: 'download',
-      label: t('settings.sources'),
-      admin: true,
-    },
-    { id: 'files', icon: 'folder', label: t('settings.files'), admin: true },
-    { id: 'tags', icon: 'tag', label: t('settings.tags'), admin: true },
-    { id: 'navidrome', icon: 'server', label: 'Navidrome', admin: true },
-    {
-      id: 'library',
-      icon: 'library',
-      label: t('settings.library'),
-      admin: true,
-    },
-    { id: 'users', icon: 'users', label: t('settings.users'), admin: true },
-    {
-      id: 'activity',
-      icon: 'activity',
-      label: t('settings.activity'),
-      admin: true,
-    },
-    { id: 'apps', icon: 'monitor', label: t('settings.apps') },
-    { id: 'about', icon: 'info', label: t('settings.about') },
-  ])
+  settingsSectionsFor(
+    auth.user.value?.role,
+    [
+      { id: 'general', icon: 'sliders', label: t('settings.general') },
+      {
+        id: 'sources',
+        icon: 'download',
+        label: t('settings.sources'),
+        admin: true,
+      },
+      { id: 'files', icon: 'folder', label: t('settings.files'), admin: true },
+      { id: 'tags', icon: 'tag', label: t('settings.tags'), admin: true },
+      { id: 'navidrome', icon: 'server', label: 'Navidrome', admin: true },
+      {
+        id: 'library',
+        icon: 'library',
+        label: t('settings.library'),
+        admin: true,
+      },
+      {
+        id: 'users',
+        icon: 'users',
+        label: t('settings.users'),
+        admin: true,
+        accounts: true,
+      },
+      {
+        id: 'activity',
+        icon: 'activity',
+        label: t('settings.activity'),
+        admin: true,
+      },
+      { id: 'apps', icon: 'monitor', label: t('settings.apps') },
+      { id: 'about', icon: 'info', label: t('settings.about') },
+    ],
+    { authDisabled: auth.authDisabled.value }
+  )
 )
 
 const section = computed(() => {
