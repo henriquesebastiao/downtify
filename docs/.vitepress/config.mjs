@@ -126,6 +126,16 @@ export default defineConfig({
       'meta',
       { name: 'twitter:image', content: `${SITE_URL}assets/social-image.png` },
     ],
+    // Umami page-view analytics for the docs site (cookieless). The
+    // Downtify app itself never loads it.
+    [
+      'script',
+      {
+        defer: '',
+        src: 'https://server.henriquesebastiao.com:8006/script.js',
+        'data-website-id': '1ed37e5c-28bf-46bc-b02a-216ab72b7334',
+      },
+    ],
   ],
 
   transformPageData(pageData) {
