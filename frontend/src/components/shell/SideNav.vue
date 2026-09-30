@@ -195,7 +195,12 @@ const items = [
     match: ['Album', 'Artist', 'Playlist'],
   },
   { name: 'Queue', icon: 'download', label: 'nav.queue' },
-  { name: 'Discover', icon: 'sparkle', label: 'nav.discover' },
+  {
+    name: 'Discover',
+    icon: 'sparkle',
+    label: 'nav.discover',
+    match: ['Finder', 'FinderBrowse'],
+  },
   { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
   {
     name: 'Podcasts',
@@ -204,12 +209,6 @@ const items = [
     match: ['PodcastShow'],
   },
   { name: 'Charts', icon: 'trending', label: 'nav.charts' },
-  {
-    name: 'Finder',
-    icon: 'columns',
-    label: 'nav.finder',
-    match: ['FinderBrowse'],
-  },
 ]
 
 function isActive(item) {

@@ -8,7 +8,7 @@ icon: lucide/columns-3
 
 ## Searching
 
-Open **Finder** from the sidebar (or the **More** sheet on phones). The page works like the regular Search page, with tips and your recent searches while the box is empty, then songs, albums and artists with **All / Songs / Albums / Artists** chips. The difference is that it searches Deezer only, in its own box, and keeps its own list of recent searches.
+Open **Discover** from the sidebar (on phones: **More → Discover**) and pick the **Finder** tab. The page works like the regular Search page, with tips and your recent searches while the box is empty, then songs, albums and artists with **All / Songs / Albums / Artists** chips. The difference is that it searches Deezer only, in its own box, and keeps its own list of recent searches.
 
 - **Songs** play a 30-second Deezer preview and download like any search result. Downtify matches the song on YouTube Music (falling back to YouTube) by title, artist and length. Clicking a song's title opens its album in the column view, with the song highlighted.
 - **Albums** open on their artist, with that album selected. The download button on the cover queues the whole album.

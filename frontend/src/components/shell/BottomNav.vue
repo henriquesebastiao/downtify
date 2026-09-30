@@ -175,16 +175,15 @@ const items = [
   { name: 'Queue', icon: 'download', label: 'nav.queue' },
 ]
 const moreLinks = [
-  { name: 'Discover', icon: 'sparkle', label: 'nav.discover' },
+  {
+    name: 'Discover',
+    icon: 'sparkle',
+    label: 'nav.discover',
+    match: ['Finder', 'FinderBrowse'],
+  },
   { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
   { name: 'Podcasts', icon: 'mic', label: 'nav.podcasts' },
   { name: 'Charts', icon: 'trending', label: 'nav.charts' },
-  {
-    name: 'Finder',
-    icon: 'columns',
-    label: 'nav.finder',
-    match: ['FinderBrowse'],
-  },
   { name: 'Settings', icon: 'settings', label: 'nav.settings' },
 ]
 

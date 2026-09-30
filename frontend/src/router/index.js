@@ -65,10 +65,36 @@ const routes = [
     component: () => import('/src/views/MonitorView.vue'),
   },
   {
-    // Artists the library doesn't have yet, suggested from the ones it does.
+    // Discover and the Finder, one tab each: DiscoverHubView draws the tabs
+    // and each child is its own page. One viewKey for both, so switching
+    // tabs keeps the tabs mounted.
     path: '/discover',
-    name: 'Discover',
-    component: () => import('/src/views/DiscoverView.vue'),
+    component: () => import('/src/views/DiscoverHubView.vue'),
+    meta: { viewKey: 'discover' },
+    children: [
+      {
+        // Artists the library doesn't have yet, suggested from the ones it
+        // does.
+        path: '',
+        name: 'Discover',
+        component: () => import('/src/views/DiscoverView.vue'),
+      },
+      {
+        // A Deezer-only search (`?q=`).
+        path: 'finder',
+        name: 'Finder',
+        component: () => import('/src/views/FinderView.vue'),
+      },
+    ],
+  },
+  {
+    // What a Finder result opens: artist, albums and one album's tracks
+    // side by side (`?artist=&album=&track=`, Deezer ids). Outside the tabs,
+    // which the columns need the height of. One path, so moving between
+    // artists doesn't remount the page.
+    path: '/discover/finder/browse',
+    name: 'FinderBrowse',
+    component: () => import('/src/views/FinderBrowseView.vue'),
   },
   {
     path: '/podcasts',
@@ -86,20 +112,6 @@ const routes = [
     path: `/charts/:tab(${CHARTS_TABS})?`,
     name: 'Charts',
     component: () => import('/src/views/ChartsView.vue'),
-  },
-  {
-    // A Deezer-only search (`?q=`)...
-    path: '/finder',
-    name: 'Finder',
-    component: () => import('/src/views/FinderView.vue'),
-  },
-  {
-    // ...and what a result opens: artist, albums and one album's tracks
-    // side by side (`?artist=&album=&track=`, Deezer ids). One path, so
-    // moving between artists doesn't remount the page.
-    path: '/finder/browse',
-    name: 'FinderBrowse',
-    component: () => import('/src/views/FinderBrowseView.vue'),
   },
   {
     path: '/settings/:section?',
