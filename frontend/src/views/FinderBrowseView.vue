@@ -597,7 +597,7 @@
 // ids), so it survives a reload and the back button walks back through
 // the artists visited. Picking an album replaces the URL rather than
 // adding to the history, the way clicking around in Finder does.
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useElementSize, useMediaQuery } from '@vueuse/core'
 import AppIcon from '/src/components/ui/AppIcon.vue'
@@ -613,6 +613,7 @@ import TrackDownPlayList, {
 import { useDownloadManager } from '/src/model/download'
 import { useFinder } from '/src/model/finder'
 import { useLibrary } from '/src/model/library'
+import { useSongStarter } from '/src/model/songPlay'
 import { useUi } from '/src/model/ui'
 import {
   COLUMN_MIN,
@@ -809,6 +810,28 @@ async function loadAlbum() {
   await album.load(albumId.value)
   await nextTick()
   if (!revealMarkedTrack() && tracksEl.value) tracksEl.value.scrollTop = 0
+  playPickedTrack()
+}
+
+// A popular track, once picked, starts playing as soon as its album is on
+// screen - its preview, or the song itself once it's downloaded, like a
+// double click on its row. One-shot: dropped once it starts, or when
+// another album or artist is picked first.
+const startSong = useSongStarter()
+const pickedTrack = shallowRef(null)
+
+function playPickedTrack() {
+  const song = pickedTrack.value
+  if (!song || song.song_id !== trackId.value) return
+  const loaded = album.data.value
+  if (!loaded || String(loaded.album_id) !== albumId.value) return
+  pickedTrack.value = null
+  // The album's own row when it has the track (same song, plus its
+  // number); the popular track itself otherwise.
+  const row = (loaded.tracks || []).find(
+    (item) => item.song_id === song.song_id
+  )
+  startSong(row || song, { queue: albumQueue.value })
 }
 
 // Smooth, unless the system asks for less motion.
@@ -851,6 +874,7 @@ watch(
   () => {
     bioOpen.value = false
     typeFilter.value = 'all'
+    pickedTrack.value = null
     loadAlbums()
   },
   { immediate: true }
@@ -883,6 +907,7 @@ function revealTracks() {
 }
 
 function selectAlbum(id) {
+  pickedTrack.value = null
   const query = { artist: artistId.value }
   if (id) query.album = id
   router.replace({ name: 'FinderBrowse', query })
@@ -900,6 +925,7 @@ async function selectTrack(song) {
   if (row && !matchesReleaseType(row, typeFilter.value)) {
     typeFilter.value = 'all'
   }
+  pickedTrack.value = song
   await router.replace({
     name: 'FinderBrowse',
     query: { artist: artistId.value, album: id, track: song.song_id },
@@ -907,6 +933,8 @@ async function selectTrack(song) {
   await nextTick()
   revealSelectedAlbum()
   revealTracks()
+  // Its album already open (or cached): nothing left to wait for.
+  playPickedTrack()
 }
 
 // Back to the search this was opened from, when there was one.
