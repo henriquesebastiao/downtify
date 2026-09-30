@@ -55,7 +55,10 @@ working without changes:
   Deezer and never stored - see
   ``downtify.artist_photo_proxy``; browser-cached for three hours - a
   photo, or Deezer having none (404) - but a photo already saved locally
-  is served uncached instead, and a failure is a 503 that is never cached)
+  is served uncached instead, and a failure is a 503 that is never cached;
+  ``?url=``, optional, is the artist's Deezer picture when the page
+  already has it - Discover, the Finder - base64url-encoded, relayed
+  without a search by name)
 * ``POST /api/artists/art/bulk`` (the same, for many artists at once -
   body ``{names}``, response ``{<name>: {photo_url, banner_url,
   photo_version, banner_version}}`` - used
@@ -248,6 +251,7 @@ working without changes:
 from __future__ import annotations
 
 import asyncio
+import base64
 import concurrent.futures.thread as cf_thread
 import contextlib
 import hashlib
@@ -1601,8 +1605,22 @@ def artist_art_endpoint(name: str = Query(...)) -> dict[str, Any]:
     return _artist_art_entry(_artist_profile_download_dir(), name)
 
 
+def _decode_base64url(value: str) -> str:
+    """*value* decoded from base64url (padding optional) to text, or
+    :class:`ValueError` when it isn't valid base64url text."""
+
+    try:
+        padded = value + '=' * (-len(value) % 4)
+        return base64.urlsafe_b64decode(padded.encode('ascii')).decode('utf-8')
+    except ValueError as exc:
+        # binascii.Error and the Unicode errors are all ValueErrors.
+        raise ValueError('url is not base64url') from exc
+
+
 @router.get('/api/artists/photo-proxy')
-def artist_photo_proxy_endpoint(name: str = Query(...)) -> Response:
+def artist_photo_proxy_endpoint(
+    name: str = Query(...), url: str = ''
+) -> Response:
     """DISPLAY-ONLY artist photo for the UI, never persisted.
 
     A photo already saved for the artist wins and is served uncached;
@@ -1612,6 +1630,13 @@ def artist_photo_proxy_endpoint(name: str = Query(...)) -> Response:
     download - is a 503 the browser is told not to keep, so the next visit
     simply asks again. Not a way to obtain a photo to keep - see
     ``downtify.artist_photo_proxy``.
+
+    *url*, optional: the artist's Deezer picture, when the page already
+    has it (Discover's suggestions, the Finder), base64url-encoded (RFC
+    4648 section 5, padding optional) so the address travels as one plain
+    query value - relayed as the photo without searching Deezer for the
+    name. Only a Deezer CDN address is accepted; anything else, or a value
+    that isn't base64url, is a ``400``.
     """
 
     cache_control = (
@@ -1629,7 +1654,12 @@ def artist_photo_proxy_endpoint(name: str = Query(...)) -> Response:
             headers={'Cache-Control': 'no-cache'},
         )
     try:
-        photo = artist_photo_proxy.fetch_proxied_photo(name)
+        if url:
+            photo = artist_photo_proxy.fetch_photo_at(_decode_base64url(url))
+        else:
+            photo = artist_photo_proxy.fetch_proxied_photo(name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except artist_photo_proxy.PhotoUnavailable:
         # Not "no photo": never cached, so whatever went wrong (a rate
         # limit, say) is gone the next time the page asks.
