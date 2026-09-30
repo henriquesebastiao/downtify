@@ -1414,6 +1414,72 @@ Albums and playlists built on the suggested artists — see [Albums and playlist
 
 `albums`: the top album of each of the best 12 suggested artists. `more_albums`: up to two albums per heaviest library artist that aren't in `albums`. `playlists`: Spotify's `<artist> Radio` for the heaviest library artists (`reason: "radio"`), then its `This Is <artist>` for suggested artists (`reason: "this_is"`). `artist_urls`: the Spotify page of each suggested artist the search found by exact name. `partial` as in `POST /api/discover`, also counting failed Spotify searches. `400` when `library` isn't a list.
 
+The web page doesn't use this endpoint any more: it asks the two below, Deezer's answer first. It's kept as it is for other clients.
+
+---
+
+### `POST /api/discover/collections/deezer`
+
+The same shelves from Deezer alone — the web page's first, quick answer (see [Albums and playlists](features/discover.md#albums-and-playlists)). Reuses the (cached) answer of [`POST /api/discover`](#post-apidiscover) and reads each artist's Deezer discography and editorial playlist, cached for 7 days.
+
+**Request body:** what `POST /api/discover/collections` takes, plus:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `playlist_names` | array | no | The library's playlist names — a Deezer playlist already downloaded (known by its title) is left out |
+
+**Response:**
+
+```json
+{
+  "albums": [
+    {
+      "name": "Discovery",
+      "artist": "Daft Punk",
+      "year": "2001",
+      "cover_url": "https://cdn-images.dzcdn.net/images/cover/…",
+      "source": "deezer",
+      "deezer_album_id": "302127",
+      "deezer_artist_id": "27",
+      "url": "https://www.deezer.com/album/302127",
+      "key": "daft punk|discovery",
+      "reason": "similar",
+      "because": ["Justice"]
+    }
+  ],
+  "more_albums": [ /* same shape, "reason": "more_from" */ ],
+  "playlists": [
+    {
+      "name": "100% Radiohead",
+      "owner": "Deezer Artist Editor",
+      "cover_url": "https://cdn-images.dzcdn.net/images/playlist/…",
+      "source": "deezer",
+      "deezer_playlist_id": "3184748882",
+      "url": "https://www.deezer.com/playlist/3184748882",
+      "reason": "essentials",
+      "artist": "Radiohead"
+    }
+  ],
+  "partial": false
+}
+```
+
+An album is the artist's full album with the most fans (a single or EP only when there's no album). `key` identifies an album across services (artist and title, edition suffixes dropped). `playlists`: Deezer's editorial `100% <artist>` for the suggested artists, when its editors have one. `partial` as in `POST /api/discover`, also counting failed Deezer lookups. `400` when `library` isn't a list.
+
+---
+
+### `POST /api/discover/collections/spotify`
+
+What Spotify adds to the Deezer answer — the web page's second answer, loaded after it. Spotify's own picks (as in [`POST /api/discover/collections`](#post-apidiscovercollections), from the same cached searches), each album looked up on Deezer by artist and title.
+
+**Request body:** what `POST /api/discover/collections` takes, plus:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `shown` | array | no | The `key` of every album already on the page — left out without being looked up on Deezer |
+
+**Response:** `{albums, more_albums, playlists, partial}`. An album Deezer has comes in the Deezer shape above (`source: "deezer"`, opens in the Finder); one it doesn't keeps the Spotify shape of `POST /api/discover/collections` plus `source: "spotify"` and `key`. `playlists` are only Spotify's `This Is <artist>` (`reason: "this_is"`, `source: "spotify"`) — its `Radio` mixes aren't offered. A match is kept for 30 days (a missing one for 7); a failed lookup is never kept and makes `partial` true. `400` when `library` isn't a list.
+
 ---
 
 ### `POST /api/discover/listens`

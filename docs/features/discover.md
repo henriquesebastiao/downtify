@@ -21,7 +21,7 @@ No account or API key is needed: the suggestions come from [Deezer](https://www.
 
 Artists already in your library and artists you've [hidden](#hiding-artists) are never suggested.
 
-Click a suggestion to open the artist's Spotify page (their releases, and a **Top Songs** button) — or, if Spotify didn't find them by that exact name, a search for them. The **⋯** menu on a suggestion also has **Find songs** (the search), **Open on Deezer** and **Not interested**. The page shows the best 12 artists; **Show all** lists every suggestion (up to 48).
+Click a suggestion's photo to open the artist in the [Finder](finder.md)'s columns — their profile, whole discography and any album's tracks, all from Deezer. The **⋯** menu on a suggestion also has **Find songs** (the search), **Open on Deezer** and **Not interested**. The page shows the best 12 artists; **Show all** lists every suggestion (up to 48).
 
 ## Albums and playlists
 
@@ -31,11 +31,22 @@ Below the artists, built on them:
 |---------|--------------|
 | **Albums for you** | The best-known album of each of the top 12 suggested artists |
 | **More from your artists** | Up to two popular albums from each of your 6 heaviest artists that aren't in your library yet |
-| **Playlists for you** | Spotify's own **`<artist> Radio`** mixes for your heaviest artists (music around an artist you already love), then **`This Is <artist>`** for the suggested ones |
+| **Playlists on Deezer** | Deezer's own **`100% <artist>`** playlist of each suggested artist — the essentials, picked by Deezer's editors |
+| **Playlists on Spotify** | Spotify's own **`This Is <artist>`** playlist of each suggested artist |
 
-These come from Spotify's search (the same anonymous access Downtify uses everywhere, no account), one search per artist, kept for a week like the similar artists. They load a few seconds after the artists the first time. An album already in your library (matched by artist and title, so `Dummy (Deluxe Edition)` counts as `Dummy`) and a Spotify playlist you've already downloaded are left out; hiding an artist also takes their album and "This Is" playlist away.
+They come in two steps:
 
-Every album and playlist opens the same page a pasted Spotify link does, where you can **preview** its songs before downloading any of them — see [Previewing songs before downloading](top-songs.md#previewing-songs-before-downloading) — then download all of it, just the new songs, or a selection.
+1. **Deezer first.** Each artist's discography is read from Deezer: a full album comes before a single or EP, and among them the one with the most fans. This answer is quick, and fills the shelves.
+2. **Then Spotify.** A few seconds later, Spotify's own picks for the same artists (from its search) are added **at the end** of the album shelves — placeholders show where they'll appear while they load, and nothing already on the page moves. An album both services pick appears once. Each Spotify album is looked up on Deezer by artist and title; when Deezer has it, it opens in the Finder like the rest.
+
+A small icon in the bottom-left corner of each album cover says which service it opens on:
+
+- **Deezer** — the album opens in the [Finder](finder.md)'s columns, with its tracks ready to preview and download.
+- **Spotify** — Deezer doesn't have that album, so it opens the same page a pasted Spotify link does.
+
+Playlists always open that page — for Deezer's as well as Spotify's — where you can **preview** their songs before downloading any of them (see [Previewing songs before downloading](top-songs.md#previewing-songs-before-downloading)), then download all of it, just the new songs, or a selection.
+
+Everything is kept for a week like the similar artists, and a Spotify album's match on Deezer for a month (a week when Deezer didn't have it, in case it's added). An album already in your library (matched by artist and title, so `Dummy (Deluxe Edition)` counts as `Dummy`) and a playlist you've already downloaded are left out; hiding an artist also takes their album and playlists away.
 
 ## What counts as a listen
 
@@ -51,10 +62,10 @@ The same list shows every hidden artist, with **Show again** to take one back. N
 
 ## Good to know
 
-- **Suggestions are cached for a week.** Deezer's (and Spotify's) answer for each of your artists is kept for 7 days, so opening Discover again is instant and doesn't cost a round of requests. **Refresh** re-ranks with your latest library, likes and listens; an artist whose week is up is looked up again.
+- **Suggestions are cached for a week.** Deezer's and Spotify's answers for each of your artists are kept for 7 days, so opening Discover again is instant and doesn't cost a round of requests. **Refresh** re-ranks with your latest library, likes and listens; an artist whose week is up is looked up again.
 - **If Deezer can't be reached** (or rate-limits the requests) for some of your artists, the page still shows what it could build and says the list is shorter than usual — try again later. A failed lookup is never remembered as "no similar artists".
 - **An artist Deezer doesn't know** simply adds nothing; it isn't searched for again until its week is up.
-- Only artist *names* ever leave your server (as Deezer and Spotify searches). Nothing about what you play is sent anywhere.
+- Only artist and album *names* ever leave your server (as Deezer and Spotify searches). Nothing about what you play is sent anywhere.
 
 ## API
 
