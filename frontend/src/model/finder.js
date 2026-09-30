@@ -13,7 +13,11 @@ import {
 } from '/src/lib/finder'
 
 // ── Search ────────────────────────────────────────────────────────────
+// What is on screen: a search term, or `artist:<Deezer id>` for an artist's
+// songs - the answer stays, so showing the same one again asks nothing.
 const query = ref('')
+// The artist whose songs are on screen ({ id, name }), or null for a search.
+const searchedArtist = ref(null)
 const songs = ref([])
 const albums = ref([])
 const artists = ref([])
@@ -21,34 +25,65 @@ const loading = ref(false)
 const error = ref('')
 let serial = 0
 
-async function searchFor(text) {
-  const term = String(text || '').trim()
-  query.value = term
+function clearResults() {
+  songs.value = []
+  albums.value = []
+  artists.value = []
+}
+
+async function run(key, request) {
+  query.value = key
   const mine = ++serial
   error.value = ''
-  if (!term) {
-    songs.value = []
-    albums.value = []
-    artists.value = []
+  if (!request) {
+    clearResults()
     loading.value = false
     return
   }
   loading.value = true
   try {
-    const res = await API.finderSearch(term)
+    const res = await request()
     if (mine !== serial) return
     songs.value = res.data?.songs || []
     albums.value = res.data?.albums || []
     artists.value = res.data?.artists || []
   } catch (err) {
     if (mine !== serial) return
-    songs.value = []
-    albums.value = []
-    artists.value = []
+    clearResults()
     error.value = err?.response?.data?.detail || err?.message || ''
   } finally {
     if (mine === serial) loading.value = false
   }
+}
+
+function searchFor(text) {
+  const term = String(text || '').trim()
+  searchedArtist.value = null
+  return run(term, term ? () => API.finderSearch(term) : null)
+}
+
+/** The key `query` holds while an artist's songs are on screen. */
+export function artistSongsKey(artistId) {
+  return `artist:${artistId}`
+}
+
+/** An artist's songs (their Deezer id, and their name to search for). */
+function searchArtistSongs(artistId, name) {
+  const id = String(artistId || '').trim()
+  searchedArtist.value = id ? { id, name: String(name || '') } : null
+  return run(
+    artistSongsKey(id),
+    id ? () => API.finderArtistSongs(id, name) : null
+  )
+}
+
+/** The Discover page's query for what was last on screen (see
+ * DiscoverHubView): `{ q }` for a search, `{ artist, name }` for an
+ * artist's songs, `{}` for nothing. */
+function lastSearchQuery() {
+  const artist = searchedArtist.value
+  if (artist) return { artist: artist.id, name: artist.name }
+  return query.value ? { q: query.value } : {}
 }
 
 // ── Column view ───────────────────────────────────────────────────────
@@ -150,6 +185,8 @@ export function useFinder() {
     loading,
     error,
     searchFor,
+    searchArtistSongs,
+    lastSearchQuery,
     artist,
     artistAlbums,
     album,

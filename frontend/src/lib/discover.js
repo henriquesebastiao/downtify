@@ -140,3 +140,14 @@ export function deezerArtistUrl(item) {
     ? `https://www.deezer.com/artist/${encodeURIComponent(item.deezer_id)}`
     : ''
 }
+
+/**
+ * Where "Find songs" on a suggested artist goes: their songs in the Finder
+ * (by their Deezer id), or - no id - a Finder search for their name.
+ */
+export function findSongsLocation(item) {
+  const name = String(item?.name || '')
+  return item?.deezer_id
+    ? { name: 'Discover', query: { artist: String(item.deezer_id), name } }
+    : { name: 'Discover', query: { q: name } }
+}

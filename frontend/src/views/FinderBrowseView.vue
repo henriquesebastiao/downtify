@@ -947,13 +947,12 @@ async function selectTrack(song) {
   playPickedTrack()
 }
 
-// Back to the search this was opened from, when there was one - else to
-// Discover's suggestions.
-const searchLocation = computed(() =>
-  finder.query.value
-    ? { name: 'Discover', query: { q: finder.query.value } }
-    : { name: 'Discover' }
-)
+// Back to the search (or the artist's songs) this was opened from, when
+// there was one - else to Discover's suggestions.
+const searchLocation = computed(() => ({
+  name: 'Discover',
+  query: finder.lastSearchQuery(),
+}))
 
 function typeLabel(type) {
   const key = {

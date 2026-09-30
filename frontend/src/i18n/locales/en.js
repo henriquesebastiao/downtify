@@ -145,6 +145,7 @@ export default {
   finder: {
     placeholder: 'Search Deezer for an artist, album or song',
     resultsFor: 'Results for “{query}”',
+    songsBy: 'Songs by {name}',
     path: 'Location',
     artistColumn: 'Artist',
     tracksColumn: 'Tracks',

@@ -14,7 +14,12 @@
       </div>
     </div>
     <Transition name="page" mode="out-in">
-      <FinderResults v-if="query" key="results" :query="query" />
+      <FinderResults
+        v-if="query || artist"
+        key="results"
+        :query="query"
+        :artist="artist"
+      />
       <DiscoverView v-else key="discover" />
     </Transition>
   </div>
@@ -23,8 +28,9 @@
 <script setup>
 // Discover and the Finder on one page: the Finder's search box on top, with
 // the recent searches beside it; below, Discover's suggestions - replaced by
-// what the Finder found while a search (`?q=`) is on. Clearing the box, or
-// going back, brings the suggestions back.
+// what the Finder found while a search (`?q=`) is on, or by an artist's songs
+// (`?artist=<Deezer id>&name=`, Discover's "Find songs"). Clearing the box,
+// or going back, brings the suggestions back.
 //
 // A thin shell: DiscoverView and FinderResults are each whole on their own
 // and don't know about each other.
@@ -41,14 +47,18 @@ const router = useRouter()
 const { recent, remember, clear: clearRecent } = useRecentSearches()
 
 const query = computed(() => String(route.query.q || '').trim())
-const text = ref(query.value)
+const artist = computed(() => {
+  const id = String(route.query.artist || '').trim()
+  return id ? { id, name: String(route.query.name || '').trim() } : null
+})
+const text = ref('')
 
-// The box mirrors the search on screen (a recent search clicked, going
-// back), and every search on screen is remembered.
+// The box mirrors what's on screen (a recent search clicked, going back,
+// an artist's songs), and every typed search is remembered.
 watch(
-  query,
-  (value) => {
-    text.value = value
+  [query, artist],
+  ([value, shown]) => {
+    text.value = value || shown?.name || ''
     remember(value)
   },
   { immediate: true }
@@ -59,6 +69,6 @@ function search(term) {
 }
 
 function clearSearch() {
-  if (query.value) router.push({ name: 'Discover' })
+  if (query.value || artist.value) router.push({ name: 'Discover' })
 }
 </script>

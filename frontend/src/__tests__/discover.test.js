@@ -7,6 +7,7 @@ import {
   collectionRoute,
   collectionsPayload,
   deezerArtistUrl,
+  findSongsLocation,
   joinNames,
   libraryPayload,
   listenArtist,
@@ -201,6 +202,24 @@ describe('artistRoute', () => {
     expect(artistRoute({ name: 'Air', deezer_id: '' })).toEqual({
       name: 'Search',
       params: { query: 'Air' },
+    })
+  })
+})
+
+describe('findSongsLocation', () => {
+  it("opens the artist's songs in the Finder by their Deezer id", () => {
+    expect(
+      findSongsLocation({ name: 'Charlie Brown Jr.', deezer_id: 8691 })
+    ).toEqual({
+      name: 'Discover',
+      query: { artist: '8691', name: 'Charlie Brown Jr.' },
+    })
+  })
+
+  it('searches the Finder for the name when there is no id', () => {
+    expect(findSongsLocation({ name: 'Somebody', deezer_id: '' })).toEqual({
+      name: 'Discover',
+      query: { q: 'Somebody' },
     })
   })
 })

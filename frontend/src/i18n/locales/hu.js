@@ -145,6 +145,7 @@ export default {
   finder: {
     placeholder: 'Előadó, album vagy dal keresése a Deezeren',
     resultsFor: 'Találatok erre: „{query}”',
+    songsBy: '{name} dalai',
     path: 'Hely',
     artistColumn: 'Előadó',
     tracksColumn: 'Számok',

@@ -149,6 +149,7 @@ export default {
   finder: {
     placeholder: "Deezer'da sanatçı, albüm veya şarkı arayın",
     resultsFor: '“{query}” için sonuçlar',
+    songsBy: '{name} şarkıları',
     path: 'Konum',
     artistColumn: 'Sanatçı',
     tracksColumn: 'Parçalar',

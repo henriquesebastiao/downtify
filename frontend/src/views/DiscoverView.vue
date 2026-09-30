@@ -276,6 +276,7 @@ import {
   collectionRoute,
   collectionsPayload,
   deezerArtistUrl,
+  findSongsLocation,
   joinNames,
   libraryPayload,
 } from '/src/lib/discover'
@@ -400,8 +401,7 @@ function menuFor(item) {
     {
       label: t('discover.findSongs'),
       icon: 'search',
-      action: () =>
-        router.push({ name: 'Search', params: { query: item.name } }),
+      action: () => router.push(findSongsLocation(item)),
     },
     {
       label: t('discover.openDeezer'),

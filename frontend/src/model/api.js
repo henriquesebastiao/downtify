@@ -151,6 +151,13 @@ function finderArtist(artistId, lang) {
   })
 }
 
+// An artist's songs, shaped like a Finder search (albums/artists empty).
+function finderArtistSongs(artistId, name) {
+  return API.get('/api/finder/artist/songs', {
+    params: { artist_id: artistId, name },
+  })
+}
+
 function finderArtistAlbums(artistId) {
   return API.get('/api/finder/artist/albums', {
     params: { artist_id: artistId },
@@ -691,6 +698,7 @@ export default {
   getChart,
   finderSearch,
   finderArtist,
+  finderArtistSongs,
   finderArtistAlbums,
   finderTrackCounts,
   finderAlbum,

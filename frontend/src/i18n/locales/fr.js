@@ -148,6 +148,7 @@ export default {
   finder: {
     placeholder: 'Cherchez un artiste, un album ou un titre sur Deezer',
     resultsFor: 'Résultats pour « {query} »',
+    songsBy: 'Titres de {name}',
     path: 'Emplacement',
     artistColumn: 'Artiste',
     tracksColumn: 'Titres',

@@ -149,6 +149,7 @@ export default {
   finder: {
     placeholder: 'Αναζητήστε στο Deezer καλλιτέχνη, άλμπουμ ή τραγούδι',
     resultsFor: 'Αποτελέσματα για «{query}»',
+    songsBy: 'Τραγούδια του/της {name}',
     path: 'Τοποθεσία',
     artistColumn: 'Καλλιτέχνης',
     tracksColumn: 'Κομμάτια',

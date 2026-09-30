@@ -4,7 +4,11 @@
   >
     <div class="flex flex-col gap-4">
       <PageHeader
-        :title="t('finder.resultsFor', { query })"
+        :title="
+          artist
+            ? t('finder.songsBy', { name: artist.name })
+            : t('finder.resultsFor', { query })
+        "
         :subtitle="finder.loading.value ? t('search.searching') : ''"
       />
       <UiChips v-model="filter" :items="filters" />
@@ -26,9 +30,7 @@
       :title="t('search.failed')"
       :body="finder.error.value"
     >
-      <UiButton icon="refresh" @click="finder.searchFor(query)">{{
-        t('common.retry')
-      }}</UiButton>
+      <UiButton icon="refresh" @click="retry">{{ t('common.retry') }}</UiButton>
     </UiEmpty>
 
     <UiEmpty
@@ -109,7 +111,9 @@
 <script setup>
 // What a Finder search found on Deezer - songs, albums and artists, with
 // All / Songs / Albums / Artists chips - for `query`, searched as soon as it
-// changes. A result opens the column view (FinderBrowseView).
+// changes; or, given an `artist` ({ id, name }: a Deezer id), that artist's
+// songs, all of them listed. A result opens the column view
+// (FinderBrowseView).
 import { computed, ref, watch } from 'vue'
 import UiButton from '../ui/UiButton.vue'
 import UiChips from '../ui/UiChips.vue'
@@ -118,7 +122,7 @@ import UiSkeleton from '../ui/UiSkeleton.vue'
 import PageHeader from '../library/PageHeader.vue'
 import TrackDownPlay from '../library/TrackDownPlay.vue'
 import ReleaseCard from '../search/ReleaseCard.vue'
-import { useFinder } from '/src/model/finder'
+import { artistSongsKey, useFinder } from '/src/model/finder'
 import { useLibrary } from '/src/model/library'
 import { knownArtistPhoto } from '/src/lib/artistPhotoProxy'
 import { deezerImage } from '/src/lib/deezerImage'
@@ -127,7 +131,8 @@ import { playableQueue } from '/src/lib/topSongs'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
-  query: { type: String, required: true },
+  query: { type: String, default: '' },
+  artist: { type: Object, default: null },
 })
 
 const GRID =
@@ -138,33 +143,57 @@ const finder = useFinder()
 const library = useLibrary()
 const filter = ref('all')
 
+// What is asked for, as model/finder.js keys it.
+const key = computed(() =>
+  props.artist ? artistSongsKey(props.artist.id) : props.query
+)
+
 // The last answer is kept (model/finder.js): coming back to the same
 // search shows it again rather than asking Deezer twice.
 watch(
-  () => props.query,
+  key,
   (value) => {
-    filter.value = 'all'
-    if (value && (value !== finder.query.value || finder.error.value)) {
+    // An artist's songs are the whole answer: list them all at once.
+    filter.value = props.artist ? 'songs' : 'all'
+    if (!value || (value === finder.query.value && !finder.error.value)) {
+      return
+    }
+    if (props.artist) {
+      finder.searchArtistSongs(props.artist.id, props.artist.name)
+    } else {
       finder.searchFor(value)
     }
   },
   { immediate: true }
 )
 
-const filters = computed(() => [
-  { id: 'all', label: t('search.all') },
-  { id: 'songs', label: t('search.songs'), count: finder.songs.value.length },
-  {
-    id: 'albums',
-    label: t('search.albums'),
-    count: finder.albums.value.length,
-  },
-  {
-    id: 'artists',
-    label: t('search.artists'),
-    count: finder.artists.value.length,
-  },
-])
+function retry() {
+  if (props.artist) finder.searchArtistSongs(props.artist.id, props.artist.name)
+  else finder.searchFor(props.query)
+}
+
+// A chip with nothing behind it (an artist's songs have no albums or
+// artists) isn't offered.
+const filters = computed(() =>
+  [
+    { id: 'all', label: t('search.all') },
+    {
+      id: 'songs',
+      label: t('search.songs'),
+      count: finder.songs.value.length,
+    },
+    {
+      id: 'albums',
+      label: t('search.albums'),
+      count: finder.albums.value.length,
+    },
+    {
+      id: 'artists',
+      label: t('search.artists'),
+      count: finder.artists.value.length,
+    },
+  ].filter((chip) => chip.id === 'all' || chip.count || finder.loading.value)
+)
 
 function show(section) {
   return filter.value === 'all' || filter.value === section

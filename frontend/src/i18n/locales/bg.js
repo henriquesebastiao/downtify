@@ -145,6 +145,7 @@ export default {
   finder: {
     placeholder: 'Търсете в Deezer изпълнител, албум или песен',
     resultsFor: 'Резултати за „{query}“',
+    songsBy: 'Песни на {name}',
     path: 'Местоположение',
     artistColumn: 'Изпълнител',
     tracksColumn: 'Песни',
