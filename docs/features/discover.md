@@ -4,7 +4,7 @@ icon: lucide/compass
 
 # Discover
 
-Artists you don't have yet, suggested from the ones you do. Open **Discover** from the sidebar (on phones: **More → Discover**). Its second tab is the [Finder](finder.md), a Deezer-only search.
+Artists you don't have yet, suggested from the ones you do. Open **Discover** from the sidebar (on phones: **More → Discover**). The search box at the top is the [Finder](finder.md), a Deezer-only search: searching shows its results in place of the suggestions, and clearing it brings them back.
 
 No account or API key is needed: the suggestions come from [Deezer](https://www.deezer.com/)'s public "similar artists" list, which works without signing in.
 
