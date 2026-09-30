@@ -1476,3 +1476,119 @@ def finder_album(album_id: str) -> dict[str, Any]:
         'source': 'deezer',
         'tracks': songs,
     }
+
+
+# ── Discover: albums, editorial playlists and matching Spotify albums ──
+#
+# Discover (see downtify.discover) builds its album and playlist shelves
+# from Deezer first, then adds what Spotify picks on top, matched back to
+# Deezer. Everything here goes through _throttle: a cold Discover page
+# asks for a few dozen of these, next to its related-artist lookups.
+
+# Deezer's own editors publish a "100% <artist>" playlist - the very best
+# of one artist, the counterpart of Spotify's "This Is <artist>" - under
+# this account name (verified live for a range of artists).
+EDITORIAL_OWNER = 'Deezer Artist Editor'
+_EDITORIAL_PREFIX = '100%'
+
+
+def artist_discography(artist_id: str) -> list[dict[str, Any]]:
+    """Every release of a Deezer artist, as :func:`finder_artist_albums`
+    rows (with ``fans`` and ``release_type``), each page throttled.
+
+    Raises :class:`ValueError` when Deezer can't be asked or refuses.
+    """
+
+    _throttle()
+    page = _get_json(
+        f'https://api.deezer.com/artist/{artist_id}/albums', limit=100
+    )
+    rows = list(page.get('data') or [])
+    while page.get('next'):
+        _throttle()
+        page = _get_json(page['next'])
+        rows.extend(page.get('data') or [])
+    return _map_rows(
+        rows, lambda row: _finder_album_row(row, artist_id=str(artist_id))
+    )
+
+
+def editorial_playlist(name: str) -> Optional[dict[str, Any]]:
+    """Deezer's editorial "100% <name>" playlist, or ``None`` when its
+    editors have none for that artist.
+
+    ``{playlist_id, name, owner, cover_url, url}``. Only a playlist by
+    :data:`EDITORIAL_OWNER` whose title is exactly "100%" and the artist's
+    name (compared the way a file name is, see
+    :func:`~downtify.file_naming.file_name_key`) counts - a fan's
+    "100% Radiohead & friends" doesn't. Raises :class:`ValueError` when
+    Deezer can't be asked or refuses, so a failure isn't taken for "none".
+    """
+
+    wanted = file_name_key(name)
+    if not wanted:
+        return None
+    _throttle()
+    rows = (
+        _get_json(
+            f'{_FINDER_SEARCH_URL}/playlist',
+            q=f'{_EDITORIAL_PREFIX} {name}',
+            limit=10,
+        ).get('data')
+        or []
+    )
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        user = row.get('user') if isinstance(row.get('user'), dict) else {}
+        if str(user.get('name') or '') != EDITORIAL_OWNER:
+            continue
+        title = str(row.get('title') or '').strip()
+        if not title.startswith(_EDITORIAL_PREFIX):
+            continue
+        if file_name_key(title[len(_EDITORIAL_PREFIX) :]) != wanted:
+            continue
+        playlist_id = row.get('id')
+        if not playlist_id:
+            continue
+        return {
+            'playlist_id': str(playlist_id),
+            'name': title,
+            'owner': EDITORIAL_OWNER,
+            'cover_url': _cover_from_images(row, prefix='picture'),
+            'url': str(
+                row.get('link')
+                or f'https://www.deezer.com/playlist/{playlist_id}'
+            ),
+        }
+    return None
+
+
+def search_albums_by(artist: str, title: str) -> list[dict[str, Any]]:
+    """Deezer albums that may be *artist*'s *title*, as
+    :func:`_finder_album_row` rows, best match first - for matching an
+    album found elsewhere (Spotify) back to Deezer.
+
+    Deezer's field search (``artist:"..." album:"..."``) first; when none
+    of its rows is by *artist* - it's strict about punctuation, and loose
+    enough to answer with other artists' albums instead of nothing (seen
+    live for Blur's "Blur") - a plain search for both. Deciding which row
+    really is the album is the caller's job. Raises :class:`ValueError`
+    when Deezer can't be asked or refuses.
+    """
+
+    wanted = file_name_key(artist)
+    queries = [f'artist:"{artist}" album:"{title}"', f'{artist} {title}']
+    found: list[dict[str, Any]] = []
+    for query in queries:
+        _throttle()
+        rows = (
+            _get_json(f'{_FINDER_SEARCH_URL}/album', q=query, limit=10).get(
+                'data'
+            )
+            or []
+        )
+        found = _map_rows(rows, _finder_album_row)
+        if any(file_name_key(row['artist']) == wanted for row in found):
+            break
+    return found

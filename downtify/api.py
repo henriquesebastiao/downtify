@@ -202,7 +202,16 @@ working without changes:
   ``downtify.discover``), ``POST /api/discover/collections`` (albums and
   playlists built on those artists - same body plus ``albums: [{artist,
   title}]`` and ``playlist_ids``; response ``{albums, more_albums,
-  playlists, artist_urls, partial}``), ``POST|DELETE
+  playlists, artist_urls, partial}``; Spotify only), ``POST
+  /api/discover/collections/deezer`` (the same shelves from Deezer
+  alone, the web page's first answer - body adds ``playlist_names``;
+  every item carries ``source: 'deezer'`` and Deezer ids, albums also
+  ``key``, playlists are Deezer's "100% <artist>"), ``POST
+  /api/discover/collections/spotify`` (what Spotify adds, the second
+  answer - body adds ``shown``, the album ``key``\\ s already on the page;
+  albums matched to Deezer by name come with ``source: 'deezer'``, the
+  rest ``'spotify'``; playlists are only Spotify's "This Is <artist>"),
+  ``POST|DELETE
   /api/discover/listens`` (count
   one listen to an artist - body ``{artist}`` - or forget them all) and
   ``GET|POST|DELETE /api/discover/blocked`` (artists never to suggest -
@@ -293,7 +302,13 @@ from .auth import (
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
 from .cover_thumbs import CoverThumbs
-from .discover import DiscoverStore, collections, recommendations
+from .discover import (
+    DiscoverStore,
+    collections,
+    deezer_collections,
+    recommendations,
+    spotify_collections,
+)
 from .downloader import (
     AUDIO_PROVIDERS,
     DOWNLOAD_EXECUTOR,
@@ -5114,6 +5129,64 @@ async def discover_collections_endpoint(request: Request) -> dict[str, Any]:
         library,
         albums if isinstance(albums, list) else [],
         playlist_ids if isinstance(playlist_ids, list) else [],
+    )
+
+
+def _list_field(payload: dict[str, Any], name: str) -> list[Any]:
+    value = payload.get(name)
+    return value if isinstance(value, list) else []
+
+
+@router.post('/api/discover/collections/deezer')
+async def discover_deezer_collections_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Albums and playlists for the library from Deezer alone - the web
+    page's first answer (see ``downtify.discover.deezer_collections``).
+
+    Body: what ``POST /api/discover/collections`` takes, plus
+    ``playlist_names`` (the library's playlist names, so a Deezer playlist
+    already downloaded isn't suggested).
+    """
+
+    store = _require_discover()
+    payload = await _json_object(request)
+    library = payload.get('library')
+    if not isinstance(library, list):
+        raise HTTPException(status_code=400, detail='library is required')
+    return await asyncio.to_thread(
+        deezer_collections,
+        store,
+        library,
+        _list_field(payload, 'albums'),
+        _list_field(payload, 'playlist_names'),
+    )
+
+
+@router.post('/api/discover/collections/spotify')
+async def discover_spotify_collections_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """What Spotify adds to the Deezer answer, its albums matched to Deezer
+    - the web page's second answer (see
+    ``downtify.discover.spotify_collections``).
+
+    Body: what ``POST /api/discover/collections`` takes, plus ``shown``
+    (the album ``key``\\ s the page already shows, left out unmatched).
+    """
+
+    store = _require_discover()
+    payload = await _json_object(request)
+    library = payload.get('library')
+    if not isinstance(library, list):
+        raise HTTPException(status_code=400, detail='library is required')
+    return await asyncio.to_thread(
+        spotify_collections,
+        store,
+        library,
+        _list_field(payload, 'albums'),
+        _list_field(payload, 'playlist_ids'),
+        _list_field(payload, 'shown'),
     )
 
 

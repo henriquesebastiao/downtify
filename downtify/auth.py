@@ -899,7 +899,11 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_READ, r'^/api/playlists/(batches|incomplete)', CLIENT),
         (_READ, r'^/api/likes$', CLIENT),
         (_m('PUT'), r'^/api/likes$', CLIENT),
-        (_m('POST'), r'^/api/discover(/collections|/listens)?$', CLIENT),
+        (
+            _m('POST'),
+            r'^/api/discover(/collections(/deezer|/spotify)?|/listens)?$',
+            CLIENT,
+        ),
         (_ALL, r'^/api/discover/blocked$', CLIENT),
         (_READ, r'^/api/podcasts/', CLIENT),
         (
