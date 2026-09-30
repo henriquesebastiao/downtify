@@ -1217,12 +1217,9 @@ export default {
     moreAlbumsTitle: 'Plus de vos artistes',
     moreAlbumsBody:
       'Albums populaires d’artistes que vous avez déjà, pas encore dans votre bibliothèque.',
-    deezerPlaylistsTitle: 'Playlists sur Deezer',
-    deezerPlaylistsBody:
-      'Les playlists « 100% » de Deezer : l’essentiel d’artistes que vous pourriez aimer.',
-    spotifyPlaylistsTitle: 'Playlists sur Spotify',
-    spotifyPlaylistsBody:
-      'Les playlists « This Is » de Spotify : l’essentiel d’artistes que vous pourriez aimer.',
+    playlistsTitle: 'Playlists pour vous',
+    playlistsBody:
+      'L’essentiel d’artistes que vous pourriez aimer : les playlists « 100% » de Deezer et « This Is » de Spotify.',
     onPlatform: 'Sur {name}',
     essentialsOf: 'L’essentiel de {name}',
     collectionsFailed:

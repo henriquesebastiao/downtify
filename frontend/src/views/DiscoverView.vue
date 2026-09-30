@@ -150,8 +150,9 @@
             :icon="shelf.icon"
             :playable="false"
           >
-            <!-- Which service the album is from: Deezer's open in the
-                 Finder, Spotify's on their Link page. -->
+            <!-- Which service it's from. A Deezer album opens in the
+                 Finder, a Spotify one - and any playlist - on its Link
+                 page. -->
             <template v-if="shelf.badge && item.source" #badge>
               <span
                 class="absolute bottom-2.5 left-2.5 flex size-7 items-center justify-center rounded-full bg-black/60 backdrop-blur"
@@ -320,8 +321,7 @@ function platformName(item) {
 }
 
 // Deezer's answer fills the shelves (`loading` until it comes); Spotify's
-// is added at the end of the album shelves (`pending` until then) and is
-// the whole of its own playlist shelf.
+// is added at the end of each (`pending` until then).
 const shelves = computed(() => {
   const deezerLoading = discover.collectionsLoading.value
   const spotifyLoading = discover.spotifyLoading.value
@@ -353,24 +353,20 @@ const shelves = computed(() => {
       pending: !deezerLoading && spotifyLoading,
     },
     {
-      id: 'deezer-playlists',
-      title: t('discover.deezerPlaylistsTitle'),
-      body: t('discover.deezerPlaylistsBody'),
+      // Deezer's "100%" playlists, then Spotify's "This Is" added at the
+      // end as they come - each with its service on the cover.
+      id: 'playlists',
+      title: t('discover.playlistsTitle'),
+      body: t('discover.playlistsBody'),
       icon: 'playlist',
-      items: discover.deezerPlaylists.value,
+      badge: true,
+      items: [
+        ...discover.deezerPlaylists.value,
+        ...discover.spotifyPlaylists.value,
+      ],
       subtitle: playlistSubtitle,
       loading: deezerLoading,
-      pending: false,
-    },
-    {
-      id: 'spotify-playlists',
-      title: t('discover.spotifyPlaylistsTitle'),
-      body: t('discover.spotifyPlaylistsBody'),
-      icon: 'playlist',
-      items: discover.spotifyPlaylists.value,
-      subtitle: playlistSubtitle,
-      loading: deezerLoading || spotifyLoading,
-      pending: false,
+      pending: !deezerLoading && spotifyLoading,
     },
   ].filter((shelf) => shelf.items.length || shelf.loading || shelf.pending)
 })

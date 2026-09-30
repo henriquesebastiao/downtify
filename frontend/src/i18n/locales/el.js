@@ -1209,12 +1209,9 @@ export default {
     moreAlbumsTitle: 'Περισσότερα από τους καλλιτέχνες σας',
     moreAlbumsBody:
       'Δημοφιλή άλμπουμ καλλιτεχνών που ήδη έχετε, που δεν είναι ακόμα στη βιβλιοθήκη σας.',
-    deezerPlaylistsTitle: 'Playlist στο Deezer',
-    deezerPlaylistsBody:
-      'Οι playlist «100%» του Deezer: τα βασικά καλλιτεχνών που μπορεί να σας αρέσουν.',
-    spotifyPlaylistsTitle: 'Playlist στο Spotify',
-    spotifyPlaylistsBody:
-      'Οι playlist «This Is» του Spotify: τα βασικά καλλιτεχνών που μπορεί να σας αρέσουν.',
+    playlistsTitle: 'Playlist για εσάς',
+    playlistsBody:
+      'Τα βασικά καλλιτεχνών που μπορεί να σας αρέσουν: οι playlist «100%» του Deezer και «This Is» του Spotify.',
     onPlatform: 'Στο {name}',
     essentialsOf: 'Τα βασικά του/της {name}',
     collectionsFailed:

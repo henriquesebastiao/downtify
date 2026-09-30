@@ -1201,12 +1201,9 @@ export default {
     moreAlbumsTitle: 'Még több az előadóidtól',
     moreAlbumsBody:
       'Már meglévő előadóid népszerű albumai, amelyek még nincsenek a könyvtáradban.',
-    deezerPlaylistsTitle: 'Lejátszási listák a Deezeren',
-    deezerPlaylistsBody:
-      'A Deezer saját „100%” listái: előadók legjobbjai, akik tetszhetnek.',
-    spotifyPlaylistsTitle: 'Lejátszási listák a Spotifyon',
-    spotifyPlaylistsBody:
-      'A Spotify saját „This Is” listái: előadók legjobbjai, akik tetszhetnek.',
+    playlistsTitle: 'Lejátszási listák neked',
+    playlistsBody:
+      'Előadók legjobbjai, akik tetszhetnek: a Deezer „100%” és a Spotify „This Is” listái.',
     onPlatform: 'Itt: {name}',
     essentialsOf: '{name} legjobbjai',
     collectionsFailed:

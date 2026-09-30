@@ -1194,12 +1194,9 @@ export default {
     moreAlbumsTitle: 'Още от вашите изпълнители',
     moreAlbumsBody:
       'Популярни албуми на изпълнители, които вече имате, но още не са в библиотеката ви.',
-    deezerPlaylistsTitle: 'Плейлисти в Deezer',
-    deezerPlaylistsBody:
-      'Собствените плейлисти „100%“ на Deezer: най-доброто от изпълнители, които може да харесате.',
-    spotifyPlaylistsTitle: 'Плейлисти в Spotify',
-    spotifyPlaylistsBody:
-      'Собствените плейлисти „This Is“ на Spotify: най-доброто от изпълнители, които може да харесате.',
+    playlistsTitle: 'Плейлисти за вас',
+    playlistsBody:
+      'Най-доброто от изпълнители, които може да харесате: плейлистите „100%“ на Deezer и „This Is“ на Spotify.',
     onPlatform: 'В {name}',
     essentialsOf: 'Най-доброто от {name}',
     collectionsFailed:

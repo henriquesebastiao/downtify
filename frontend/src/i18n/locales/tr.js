@@ -1195,12 +1195,9 @@ export default {
     moreAlbumsTitle: 'Sanatçılarınızdan daha fazlası',
     moreAlbumsBody:
       'Zaten sahip olduğunuz sanatçıların henüz kitaplığınızda olmayan popüler albümleri.',
-    deezerPlaylistsTitle: 'Deezer’daki çalma listeleri',
-    deezerPlaylistsBody:
-      'Deezer’ın kendi “100%” listeleri: sevebileceğiniz sanatçıların en iyileri.',
-    spotifyPlaylistsTitle: 'Spotify’daki çalma listeleri',
-    spotifyPlaylistsBody:
-      'Spotify’ın kendi “This Is” listeleri: sevebileceğiniz sanatçıların en iyileri.',
+    playlistsTitle: 'Sizin için çalma listeleri',
+    playlistsBody:
+      'Sevebileceğiniz sanatçıların en iyileri: Deezer’ın “100%” ve Spotify’ın “This Is” listeleri.',
     onPlatform: '{name} üzerinde',
     essentialsOf: '{name} en iyileri',
     collectionsFailed:
