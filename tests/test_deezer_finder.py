@@ -15,6 +15,7 @@ from downtify.deezer import (
     finder_album,
     finder_artist,
     finder_artist_albums,
+    finder_artist_songs,
     finder_search,
 )
 
@@ -403,4 +404,85 @@ def test_finder_endpoints_turn_deezer_failures_into_502(monkeypatch):
     monkeypatch.setattr(api.deezer, 'finder_album', fail)
     with pytest.raises(HTTPException) as exc:
         api.finder_album_endpoint(album_id='70')
+    assert exc.value.status_code == 502
+
+
+# ── finder_artist_songs ──────────────────────────────────────────────────
+
+_NEXT = 'https://api.deezer.com/search?q=Charlie&limit=100&index=100'
+
+
+def test_finder_artist_songs_keeps_only_that_artist_across_pages():
+    table = {
+        'https://api.deezer.com/search': {
+            'data': [
+                _track_row(1, 'Only the Artist', artist_id=8691),
+                _track_row(2, 'A Namesake', artist_id=999),
+            ],
+            'next': _NEXT,
+        },
+        _NEXT: {'data': [_track_row(3, 'Page Two', artist_id=8691)]},
+    }
+    fake = _routes(table)
+    with (
+        patch('downtify.deezer.httpx.get', fake),
+        patch('downtify.deezer._throttle', lambda: None),
+    ):
+        songs = finder_artist_songs('8691', 'Charlie Brown Jr.')
+    assert [s['name'] for s in songs] == ['Only the Artist', 'Page Two']
+    assert all(s['deezer_artist_id'] == '8691' for s in songs)
+    # The name is searched as it is (Deezer's artist:"..." field search
+    # finds no tracks), then the "next" page is followed as Deezer gives it.
+    assert fake.calls[0] == (
+        'https://api.deezer.com/search',
+        {'q': 'Charlie Brown Jr.', 'limit': 100},
+    )
+    assert fake.calls[1][0] == _NEXT
+
+
+def test_finder_artist_songs_reads_a_bounded_number_of_pages(monkeypatch):
+    calls: list[str] = []
+
+    def fake_get(url, params=None, timeout=None):
+        calls.append(url)
+        return MagicMock(
+            raise_for_status=lambda: None,
+            json=lambda: {
+                'data': [_track_row(len(calls), f'T{len(calls)}', 8691)],
+                'next': f'https://api.deezer.com/search?index={len(calls)}',
+            },
+        )
+
+    monkeypatch.setattr('downtify.deezer._throttle', lambda: None)
+    with patch('downtify.deezer.httpx.get', side_effect=fake_get):
+        songs = finder_artist_songs('8691', 'Charlie Brown Jr.')
+    assert len(calls) == deezer.ARTIST_SONGS_MAX_PAGES
+    assert len(songs) == deezer.ARTIST_SONGS_MAX_PAGES
+
+
+def test_finder_artist_songs_blank_input_asks_nothing():
+    with patch('downtify.deezer.httpx.get') as get:
+        assert finder_artist_songs('', 'Name') == []
+        assert finder_artist_songs('8691', '  ') == []
+    get.assert_not_called()
+
+
+def test_finder_artist_songs_endpoint_is_shaped_like_a_search(monkeypatch):
+    monkeypatch.setattr(
+        api.deezer,
+        'finder_artist_songs',
+        lambda artist_id, name: [{'name': f'{name} {artist_id}'}],
+    )
+    assert api.finder_artist_songs_endpoint(artist_id='8691', name='X') == {
+        'songs': [{'name': 'X 8691'}],
+        'albums': [],
+        'artists': [],
+    }
+
+    def fail(*_args):
+        raise ValueError('Could not reach Deezer')
+
+    monkeypatch.setattr(api.deezer, 'finder_artist_songs', fail)
+    with pytest.raises(HTTPException) as exc:
+        api.finder_artist_songs_endpoint(artist_id='8691', name='X')
     assert exc.value.status_code == 502

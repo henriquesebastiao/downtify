@@ -419,6 +419,7 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('POST', '/api/discover/collections/other', ADMIN),
         ('GET', '/api/finder/search', CLIENT),
         ('GET', '/api/finder/albums/track_counts', CLIENT),
+        ('GET', '/api/finder/artist/songs', CLIENT),
         ('POST', '/api/finder/search', ADMIN),
         ('PUT', '/api/likes', CLIENT),
         ('PUT', '/api/podcasts/episodes/12/playback', CLIENT),

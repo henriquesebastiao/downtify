@@ -1303,6 +1303,55 @@ def finder_search(
     }
 
 
+# How many pages of a name search finder_artist_songs reads at most, 100
+# rows each - a big catalogue's first few hundred songs, a handful of
+# requests.
+ARTIST_SONGS_MAX_PAGES = 3
+
+
+def finder_artist_songs(artist_id: str, name: str) -> list[dict[str, Any]]:
+    """An artist's songs for the Finder, as :func:`_finder_song` rows in
+    Deezer's own relevance order: a plain search for *name*, keeping only
+    the rows whose main artist is *artist_id*.
+
+    Deezer's field search (``artist:"name"``) would be the direct way, but
+    for tracks it answers nothing at all today - for any artist, even the
+    documented ``artist:"..." track:"..."`` form (verified live). A plain
+    search for the name mostly finds that artist anyway, and matching the
+    id rather than the name keeps out a namesake, or a song merely called
+    that. Reads up to :data:`ARTIST_SONGS_MAX_PAGES` pages, each through
+    :func:`_throttle`. Raises :class:`ValueError` when Deezer can't be
+    asked or refuses.
+    """
+
+    wanted = str(artist_id).strip()
+    text = name.strip()
+    if not wanted or not text:
+        return []
+    rows: list[Any] = []
+    params: dict[str, Any] = {'q': text, 'limit': 100}
+    url: Optional[str] = _FINDER_SEARCH_URL
+    for _ in range(ARTIST_SONGS_MAX_PAGES):
+        if not url:
+            break
+        _throttle()
+        page = _get_json(url, **params)
+        rows.extend(page.get('data') or [])
+        # Deezer's own "next" already carries the query and the offset.
+        url, params = page.get('next'), {}
+
+    def by_artist(row: dict[str, Any]) -> bool:
+        artist = (
+            row.get('artist') if isinstance(row.get('artist'), dict) else {}
+        )
+        return str(artist.get('id') or '') == wanted
+
+    return _map_rows(
+        [row for row in rows if isinstance(row, dict) and by_artist(row)],
+        _finder_song,
+    )
+
+
 def _artist_full_or_none(artist_id: str, lang: str) -> Optional[dict]:
     try:
         return fetch_artist_full(artist_id, lang)

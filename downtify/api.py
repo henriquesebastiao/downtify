@@ -25,6 +25,9 @@ working without changes:
 * ``GET  /api/finder/artist`` (``artist_id``, ``lang``: a Deezer
   artist's photo, fans, album count, plain-text ``bio``, ``social``
   links, ``related`` artists and ``top_songs``)
+* ``GET  /api/finder/artist/songs`` (``artist_id``, ``name``: the
+  artist's songs as a Finder search's ``{songs, albums, artists}`` - a
+  name search kept to rows by that Deezer id; albums/artists empty)
 * ``GET  /api/finder/artist/albums`` (``artist_id``: their whole
   discography, most recent first; ``track_count`` is ``null`` until
   known)
@@ -1518,6 +1521,22 @@ def finder_artist_endpoint(
     # saved artist bio gets, so the page never renders Deezer's HTML.
     artist['bio'] = artist_profile._format_bio_text(artist.pop('bio_html'))
     return artist
+
+
+@router.get('/api/finder/artist/songs')
+def finder_artist_songs_endpoint(
+    artist_id: str = Query(..., pattern=_DEEZER_ID),
+    name: str = Query(..., min_length=1),
+) -> dict[str, Any]:
+    """A Deezer artist's songs, shaped like a Finder search's
+    ``{songs, albums, artists}`` (albums and artists always empty) - see
+    ``downtify.deezer.finder_artist_songs``."""
+
+    try:
+        songs = deezer.finder_artist_songs(artist_id, name)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {'songs': songs, 'albums': [], 'artists': []}
 
 
 @router.get('/api/finder/artist/albums')
