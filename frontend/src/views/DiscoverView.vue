@@ -129,7 +129,7 @@
           <p class="mt-1 text-[13px] text-muted">{{ shelf.body }}</p>
         </div>
         <div
-          v-if="discover.collectionsLoading.value && !shelf.items.length"
+          v-if="shelf.loading && !shelf.items.length"
           :class="GRID"
           aria-busy="true"
         >
@@ -138,18 +138,47 @@
             <UiSkeleton class="h-4 w-2/3" />
           </div>
         </div>
-        <div v-else :class="GRID">
+        <div v-else :class="GRID" :aria-busy="shelf.pending || undefined">
           <MediaTile
             v-for="item in shelf.items"
-            :key="item.spotify_id"
-            :to="{ name: 'Link', query: { url: item.url } }"
+            :key="item.key || item.url"
+            :to="collectionRoute(item)"
             :title="item.name"
             :subtitle="shelf.subtitle(item)"
             :cover="item.cover_url"
             :name="item.name"
             :icon="shelf.icon"
             :playable="false"
-          />
+          >
+            <!-- Which service the album is from: Deezer's open in the
+                 Finder, Spotify's on their Link page. -->
+            <template v-if="shelf.badge && item.source" #badge>
+              <span
+                class="absolute bottom-2.5 left-2.5 flex size-7 items-center justify-center rounded-full bg-black/60 backdrop-blur"
+                :class="
+                  item.source === 'spotify' ? 'text-spotify' : 'text-deezer'
+                "
+                :title="t('discover.onPlatform', { name: platformName(item) })"
+              >
+                <AppIcon :name="item.source" :size="15" />
+                <span class="sr-only">{{
+                  t('discover.onPlatform', { name: platformName(item) })
+                }}</span>
+              </span>
+            </template>
+          </MediaTile>
+          <!-- Spotify's suggestions are still on their way: they'll be
+               added here, at the end. -->
+          <template v-if="shelf.pending">
+            <div
+              v-for="n in 2"
+              :key="`pending-${n}`"
+              class="flex flex-col gap-2.5"
+            >
+              <UiSkeleton class="aspect-square w-full" />
+              <UiSkeleton class="h-4 w-2/3" />
+            </div>
+          </template>
         </div>
       </section>
 
@@ -242,6 +271,8 @@ import { useLibrary } from '/src/model/library'
 import { useLikes } from '/src/model/likes'
 import { useUi } from '/src/model/ui'
 import {
+  artistRoute,
+  collectionRoute,
   collectionsPayload,
   deezerArtistUrl,
   joinNames,
@@ -270,46 +301,67 @@ const shownArtists = computed(() =>
   showAllArtists.value ? items.value : items.value.slice(0, ARTISTS_SHOWN)
 )
 
-// A suggested artist opens their Spotify page (releases, and top songs to
-// preview) when the search found it; otherwise a search for the name.
-function artistRoute(item) {
-  const url = discover.artistUrls.value[item.name]
-  return url
-    ? { name: 'Link', query: { url } }
-    : { name: 'Search', params: { query: item.name } }
+const PLATFORMS = { deezer: 'Deezer', spotify: 'Spotify' }
+
+function platformName(item) {
+  return PLATFORMS[item.source] || item.source
 }
 
-const shelves = computed(() =>
-  [
+// Deezer's answer fills the shelves (`loading` until it comes); Spotify's
+// is added at the end of the album shelves (`pending` until then) and is
+// the whole of its own playlist shelf.
+const shelves = computed(() => {
+  const deezerLoading = discover.collectionsLoading.value
+  const spotifyLoading = discover.spotifyLoading.value
+  const albumSubtitle = (item) =>
+    [item.artist, item.year].filter(Boolean).join(' · ')
+  const playlistSubtitle = (item) =>
+    t('discover.essentialsOf', { name: item.artist })
+  return [
     {
       id: 'albums',
       title: t('discover.albumsTitle'),
       body: t('discover.albumsBody'),
       icon: 'disc',
+      badge: true,
       items: discover.albums.value,
-      subtitle: (item) => [item.artist, item.year].filter(Boolean).join(' · '),
+      subtitle: albumSubtitle,
+      loading: deezerLoading,
+      pending: !deezerLoading && spotifyLoading,
     },
     {
       id: 'more',
       title: t('discover.moreAlbumsTitle'),
       body: t('discover.moreAlbumsBody'),
       icon: 'disc',
+      badge: true,
       items: discover.moreAlbums.value,
-      subtitle: (item) => [item.artist, item.year].filter(Boolean).join(' · '),
+      subtitle: albumSubtitle,
+      loading: deezerLoading,
+      pending: !deezerLoading && spotifyLoading,
     },
     {
-      id: 'playlists',
-      title: t('discover.playlistsTitle'),
-      body: t('discover.playlistsBody'),
+      id: 'deezer-playlists',
+      title: t('discover.deezerPlaylistsTitle'),
+      body: t('discover.deezerPlaylistsBody'),
       icon: 'playlist',
-      items: discover.playlists.value,
-      subtitle: (item) =>
-        item.reason === 'radio'
-          ? t('discover.radioFor', { name: item.artist })
-          : t('discover.essentialsOf', { name: item.artist }),
+      items: discover.deezerPlaylists.value,
+      subtitle: playlistSubtitle,
+      loading: deezerLoading,
+      pending: false,
     },
-  ].filter((shelf) => shelf.items.length || discover.collectionsLoading.value)
-)
+    {
+      id: 'spotify-playlists',
+      title: t('discover.spotifyPlaylistsTitle'),
+      body: t('discover.spotifyPlaylistsBody'),
+      icon: 'playlist',
+      items: discover.spotifyPlaylists.value,
+      subtitle: playlistSubtitle,
+      loading: deezerLoading || spotifyLoading,
+      pending: false,
+    },
+  ].filter((shelf) => shelf.items.length || shelf.loading || shelf.pending)
+})
 
 const hiddenOpen = ref(false)
 const typedName = ref('')

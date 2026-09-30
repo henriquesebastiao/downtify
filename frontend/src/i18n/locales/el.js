@@ -1222,15 +1222,18 @@ export default {
     moreAlbumsTitle: 'Περισσότερα από τους καλλιτέχνες σας',
     moreAlbumsBody:
       'Δημοφιλή άλμπουμ καλλιτεχνών που ήδη έχετε, που δεν είναι ακόμα στη βιβλιοθήκη σας.',
-    playlistsTitle: 'Playlist για εσάς',
-    playlistsBody:
-      'Μείξεις του Spotify γύρω από τους καλλιτέχνες που ακούτε περισσότερο, και τα βασικά νέων καλλιτεχνών.',
-    radioFor: 'Μείξη γύρω από {name}',
+    deezerPlaylistsTitle: 'Playlist στο Deezer',
+    deezerPlaylistsBody:
+      'Οι playlist «100%» του Deezer: τα βασικά καλλιτεχνών που μπορεί να σας αρέσουν.',
+    spotifyPlaylistsTitle: 'Playlist στο Spotify',
+    spotifyPlaylistsBody:
+      'Οι playlist «This Is» του Spotify: τα βασικά καλλιτεχνών που μπορεί να σας αρέσουν.',
+    onPlatform: 'Στο {name}',
     essentialsOf: 'Τα βασικά του/της {name}',
     collectionsFailed:
       'Δεν ήταν δυνατή η φόρτωση άλμπουμ και playlist αυτή τη στιγμή. Δοκιμάστε ξανά αργότερα.',
     poweredBy:
-      'Οι καλλιτέχνες προέρχονται από τους παρόμοιους καλλιτέχνες του Deezer· τα άλμπουμ και οι playlist από το Spotify.',
+      'Οι καλλιτέχνες προέρχονται από τους παρόμοιους καλλιτέχνες του Deezer· τα άλμπουμ από το Deezer και το Spotify· οι playlist από το καθένα.',
   },
   podcasts: {
     title: 'Podcast',

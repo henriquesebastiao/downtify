@@ -1208,15 +1208,18 @@ export default {
     moreAlbumsTitle: 'Sanatçılarınızdan daha fazlası',
     moreAlbumsBody:
       'Zaten sahip olduğunuz sanatçıların henüz kitaplığınızda olmayan popüler albümleri.',
-    playlistsTitle: 'Sizin için çalma listeleri',
-    playlistsBody:
-      'En çok dinlediğiniz sanatçılar etrafında Spotify mix’leri ve yeni sanatçıların en iyileri.',
-    radioFor: '{name} etrafında mix',
+    deezerPlaylistsTitle: 'Deezer’daki çalma listeleri',
+    deezerPlaylistsBody:
+      'Deezer’ın kendi “100%” listeleri: sevebileceğiniz sanatçıların en iyileri.',
+    spotifyPlaylistsTitle: 'Spotify’daki çalma listeleri',
+    spotifyPlaylistsBody:
+      'Spotify’ın kendi “This Is” listeleri: sevebileceğiniz sanatçıların en iyileri.',
+    onPlatform: '{name} üzerinde',
     essentialsOf: '{name} en iyileri',
     collectionsFailed:
       'Albümler ve çalma listeleri şu anda yüklenemedi. Daha sonra tekrar deneyin.',
     poweredBy:
-      'Sanatçılar Deezer’ın benzer sanatçılarından; albümler ve çalma listeleri Spotify’dan gelir.',
+      'Sanatçılar Deezer’ın benzer sanatçılarından; albümler Deezer ve Spotify’dan; çalma listeleri her birinden gelir.',
   },
   podcasts: {
     title: 'Podcastler',

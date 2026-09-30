@@ -517,8 +517,14 @@ function findPreview({ artist, title, duration }) {
   return API.get('/api/preview', { params: { artist, title, duration } })
 }
 
-function getDiscoverCollections(payload) {
-  return API.post('/api/discover/collections', payload)
+// Albums and playlists in two answers: Deezer's first (quick), then what
+// Spotify adds, matched to Deezer - see downtify/discover.py.
+function getDiscoverDeezerCollections(payload) {
+  return API.post('/api/discover/collections/deezer', payload)
+}
+
+function getDiscoverSpotifyCollections(payload) {
+  return API.post('/api/discover/collections/spotify', payload)
 }
 
 function recordListen(artist) {
@@ -762,7 +768,8 @@ export default {
   getReplaceCandidates,
   replaceAudio,
   getDiscover,
-  getDiscoverCollections,
+  getDiscoverDeezerCollections,
+  getDiscoverSpotifyCollections,
   findPreview,
   recordListen,
   clearListens,

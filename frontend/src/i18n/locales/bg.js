@@ -1207,15 +1207,18 @@ export default {
     moreAlbumsTitle: 'Още от вашите изпълнители',
     moreAlbumsBody:
       'Популярни албуми на изпълнители, които вече имате, но още не са в библиотеката ви.',
-    playlistsTitle: 'Плейлисти за вас',
-    playlistsBody:
-      'Миксове на Spotify около изпълнителите, които слушате най-много, и най-доброто от нови изпълнители.',
-    radioFor: 'Микс около {name}',
+    deezerPlaylistsTitle: 'Плейлисти в Deezer',
+    deezerPlaylistsBody:
+      'Собствените плейлисти „100%“ на Deezer: най-доброто от изпълнители, които може да харесате.',
+    spotifyPlaylistsTitle: 'Плейлисти в Spotify',
+    spotifyPlaylistsBody:
+      'Собствените плейлисти „This Is“ на Spotify: най-доброто от изпълнители, които може да харесате.',
+    onPlatform: 'В {name}',
     essentialsOf: 'Най-доброто от {name}',
     collectionsFailed:
       'Албумите и плейлистите не можаха да се заредят сега. Опитайте отново по-късно.',
     poweredBy:
-      'Изпълнителите идват от сходните изпълнители в Deezer; албумите и плейлистите — от Spotify.',
+      'Изпълнителите идват от сходните изпълнители в Deezer; албумите — от Deezer и Spotify; плейлистите — от всяка услуга.',
   },
   podcasts: {
     title: 'Подкасти',

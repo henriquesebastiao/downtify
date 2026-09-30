@@ -1216,15 +1216,18 @@ export default {
     moreAlbumsTitle: 'Más de tus artistas',
     moreAlbumsBody:
       'Álbumes populares de artistas que ya tienes y que aún no están en tu biblioteca.',
-    playlistsTitle: 'Playlists para ti',
-    playlistsBody:
-      'Mixes de Spotify en torno a los artistas que más escuchas, y lo esencial de artistas nuevos.',
-    radioFor: 'Mix en torno a {name}',
+    deezerPlaylistsTitle: 'Playlists en Deezer',
+    deezerPlaylistsBody:
+      'Las playlists “100%” del propio Deezer: lo esencial de artistas que te pueden gustar.',
+    spotifyPlaylistsTitle: 'Playlists en Spotify',
+    spotifyPlaylistsBody:
+      'Las playlists “This Is” del propio Spotify: lo esencial de artistas que te pueden gustar.',
+    onPlatform: 'En {name}',
     essentialsOf: 'Lo esencial de {name}',
     collectionsFailed:
       'No se pudieron cargar los álbumes y playlists ahora. Inténtalo más tarde.',
     poweredBy:
-      'Los artistas vienen de los artistas similares de Deezer; los álbumes y playlists, de Spotify.',
+      'Los artistas vienen de los artistas similares de Deezer; los álbumes, de Deezer y Spotify; las playlists, de cada uno.',
   },
   podcasts: {
     title: 'Podcasts',

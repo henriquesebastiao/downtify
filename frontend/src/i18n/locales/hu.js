@@ -1214,15 +1214,18 @@ export default {
     moreAlbumsTitle: 'Még több az előadóidtól',
     moreAlbumsBody:
       'Már meglévő előadóid népszerű albumai, amelyek még nincsenek a könyvtáradban.',
-    playlistsTitle: 'Lejátszási listák neked',
-    playlistsBody:
-      'Spotify-mixek a legtöbbet hallgatott előadóid körül, és új előadók legjobbjai.',
-    radioFor: 'Mix {name} körül',
+    deezerPlaylistsTitle: 'Lejátszási listák a Deezeren',
+    deezerPlaylistsBody:
+      'A Deezer saját „100%” listái: előadók legjobbjai, akik tetszhetnek.',
+    spotifyPlaylistsTitle: 'Lejátszási listák a Spotifyon',
+    spotifyPlaylistsBody:
+      'A Spotify saját „This Is” listái: előadók legjobbjai, akik tetszhetnek.',
+    onPlatform: 'Itt: {name}',
     essentialsOf: '{name} legjobbjai',
     collectionsFailed:
       'Az albumokat és listákat most nem sikerült betölteni. Próbáld újra később.',
     poweredBy:
-      'Az előadók a Deezer hasonló előadóiból, az albumok és listák a Spotifyról származnak.',
+      'Az előadók a Deezer hasonló előadóiból, az albumok a Deezerről és a Spotifyról, a listák mindkettőről származnak.',
   },
   podcasts: {
     title: 'Podcastok',
