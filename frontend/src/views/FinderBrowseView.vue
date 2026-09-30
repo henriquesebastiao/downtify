@@ -109,7 +109,7 @@
             class="flex flex-col items-center gap-2 py-3"
           >
             <CoverArt
-              :src="deezerImage(artist.data.value.cover_url)"
+              v-bind="artistPhoto(artist.data.value)"
               :name="artist.data.value.name"
               round
               icon="user"
@@ -154,7 +154,7 @@
                 :aria-label="other.name"
               >
                 <CoverArt
-                  :src="deezerImage(other.cover_url)"
+                  v-bind="artistPhoto(other)"
                   :name="other.name"
                   round
                   icon="user"
@@ -205,7 +205,7 @@
           <div v-else class="flex flex-col gap-6 p-5">
             <div class="flex flex-col items-center gap-3 text-center">
               <CoverArt
-                :src="deezerImage(artist.data.value.cover_url)"
+                v-bind="artistPhoto(artist.data.value)"
                 :name="artist.data.value.name"
                 round
                 icon="user"
@@ -291,7 +291,7 @@
                 class="-mx-2 flex items-center gap-2.5 rounded-[8px] px-2 py-1.5 transition-colors hover:bg-surface-2"
               >
                 <CoverArt
-                  :src="deezerImage(other.cover_url)"
+                  v-bind="artistPhoto(other)"
                   :name="other.name"
                   round
                   icon="user"
@@ -622,12 +622,22 @@ import {
   matchesReleaseType,
   releaseTypes,
 } from '/src/lib/finder'
+import { knownArtistPhoto } from '/src/lib/artistPhotoProxy'
 import { deezerImage } from '/src/lib/deezerImage'
 import { splitLength } from '/src/lib/format'
 import { playableQueue } from '/src/lib/topSongs'
 import { useI18n } from '/src/i18n'
 
 const { t, locale } = useI18n()
+
+// An artist's photo: the one saved in the library when there is one, else
+// the Deezer picture this page already has (medium size) - relayed by the
+// photo proxy without a search by name, and loaded directly if the proxy
+// can't answer. As CoverArt's `src`/`fallback`.
+function artistPhoto(artist) {
+  const photo = knownArtistPhoto(artist?.name, deezerImage(artist?.cover_url))
+  return { src: photo.cover, fallback: photo.fallback }
+}
 const route = useRoute()
 const router = useRouter()
 const finder = useFinder()

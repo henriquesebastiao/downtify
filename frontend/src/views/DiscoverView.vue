@@ -93,7 +93,7 @@
             :to="artistRoute(item)"
             :title="item.name"
             :subtitle="because(item)"
-            :cover="item.picture_url || proxiedArtistPhotoUrl(item.name)"
+            v-bind="artistPhoto(item)"
             :name="item.name"
             icon="user"
             round
@@ -278,7 +278,11 @@ import {
   joinNames,
   libraryPayload,
 } from '/src/lib/discover'
-import { proxiedArtistPhotoUrl } from '/src/lib/artistPhotoProxy'
+import {
+  knownArtistPhoto,
+  proxiedArtistPhotoUrl,
+} from '/src/lib/artistPhotoProxy'
+import { deezerImage } from '/src/lib/deezerImage'
 import { useI18n } from '/src/i18n'
 import { useRouter } from 'vue-router'
 
@@ -302,6 +306,14 @@ const shownArtists = computed(() =>
 )
 
 const PLATFORMS = { deezer: 'Deezer', spotify: 'Spotify' }
+
+// A suggested artist's photo: a saved one when the library has it, else
+// the Deezer picture the suggestion came with (medium size) - relayed by
+// the photo proxy without a search by name, and loaded directly if the
+// proxy can't answer. As MediaTile's `cover`/`fallback`.
+function artistPhoto(item) {
+  return knownArtistPhoto(item.name, deezerImage(item.picture_url))
+}
 
 function platformName(item) {
   return PLATFORMS[item.source] || item.source

@@ -96,7 +96,7 @@
           <ReleaseCard
             v-for="artist in visibleArtists"
             :key="artist.artist_id"
-            :release="artist"
+            :release="withPhoto(artist)"
             :to="browseLocation('artist', artist)"
             round
           />
@@ -120,6 +120,8 @@ import TrackDownPlay from '../library/TrackDownPlay.vue'
 import ReleaseCard from '../search/ReleaseCard.vue'
 import { useFinder } from '/src/model/finder'
 import { useLibrary } from '/src/model/library'
+import { knownArtistPhoto } from '/src/lib/artistPhotoProxy'
+import { deezerImage } from '/src/lib/deezerImage'
 import { browseLocation } from '/src/lib/finder'
 import { playableQueue } from '/src/lib/topSongs'
 import { useI18n } from '/src/i18n'
@@ -186,6 +188,14 @@ const visibleArtists = computed(() =>
     ? finder.artists.value.slice(0, 6)
     : finder.artists.value
 )
+
+// An artist result shows the photo saved in the library when there is one,
+// else its Deezer picture - through the photo proxy, which relays the picture
+// it's given instead of searching Deezer for the name.
+function withPhoto(artist) {
+  const photo = knownArtistPhoto(artist.name, deezerImage(artist.cover_url))
+  return { ...artist, cover_url: photo.cover }
+}
 
 // Downloaded songs play from the library, in the results' order.
 const songQueue = computed(() =>

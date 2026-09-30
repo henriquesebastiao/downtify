@@ -9,14 +9,46 @@
 // for an artist that already has a saved photo — that one comes from
 // `getArtistArt`/`getArtistArtBulk` (ask those first, as LibraryView does;
 // the search page never uses this: its artists bring their own picture).
+// Discover and the Finder do, handing it the Deezer picture they already
+// have (`knownArtistPhoto`), so a saved photo shows instead when there is one.
 // Pure (no API client import), like
 // paths.js.
 import { versionedArtUrl } from './artistArt'
 
-export function proxiedArtistPhotoUrl(name) {
+/**
+ * `text` as base64url (RFC 4648 section 5, no padding): letters, digits,
+ * `-` and `_` only, so a whole address fits in a query value as it is.
+ */
+export function base64Url(text) {
+  let binary = ''
+  for (const byte of new TextEncoder().encode(String(text || ''))) {
+    binary += String.fromCharCode(byte)
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+/**
+ * The proxy's URL for `name`'s photo. `deezerUrl`, when the page already has
+ * the artist's Deezer picture, is sent along (base64url-encoded) and relayed
+ * instead of searching Deezer for the name - a saved photo still wins.
+ */
+export function proxiedArtistPhotoUrl(name, deezerUrl = '') {
   const text = String(name || '').trim()
   if (!text) return ''
-  return `/api/artists/photo-proxy?name=${encodeURIComponent(text)}`
+  const base = `/api/artists/photo-proxy?name=${encodeURIComponent(text)}`
+  return deezerUrl ? `${base}&url=${base64Url(deezerUrl)}` : base
+}
+
+/**
+ * An artist's photo on a page that already has their Deezer picture
+ * (Discover, the Finder), as the `{ cover, fallback }` a CoverArt takes: the
+ * proxy - the saved photo when there is one, else that picture, with no
+ * search by name - and the picture itself behind it, for when the proxy
+ * can't answer. No picture: the proxy searches by name, as before.
+ */
+export function knownArtistPhoto(name, deezerUrl) {
+  const url = String(deezerUrl || '')
+  return { cover: proxiedArtistPhotoUrl(name, url), fallback: url }
 }
 
 /**
