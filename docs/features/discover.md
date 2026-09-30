@@ -31,20 +31,19 @@ Below the artists, built on them:
 |---------|--------------|
 | **Albums for you** | The best-known album of each of the top 12 suggested artists |
 | **More from your artists** | Up to two popular albums from each of your 6 heaviest artists that aren't in your library yet |
-| **Playlists on Deezer** | Deezer's own **`100% <artist>`** playlist of each suggested artist — the essentials, picked by Deezer's editors |
-| **Playlists on Spotify** | Spotify's own **`This Is <artist>`** playlist of each suggested artist |
+| **Playlists for you** | The essentials of each suggested artist: Deezer's own **`100% <artist>`** playlist (picked by Deezer's editors), then Spotify's own **`This Is <artist>`** |
 
 They come in two steps:
 
 1. **Deezer first.** Each artist's discography is read from Deezer: a full album comes before a single or EP, and among them the one with the most fans. This answer is quick, and fills the shelves.
-2. **Then Spotify.** A few seconds later, Spotify's own picks for the same artists (from its search) are added **at the end** of the album shelves — placeholders show where they'll appear while they load, and nothing already on the page moves. An album both services pick appears once. Each Spotify album is looked up on Deezer by artist and title; when Deezer has it, it opens in the Finder like the rest.
+2. **Then Spotify.** A few seconds later, Spotify's own picks for the same artists (from its search) are added **at the end** of each shelf — placeholders show where they'll appear while they load, and nothing already on the page moves. An album both services pick appears once. Each Spotify album is looked up on Deezer by artist and title; when Deezer has it, it opens in the Finder like the rest.
 
-A small icon in the bottom-left corner of each album cover says which service it opens on:
+A small icon in the bottom-left corner of each album and playlist cover says which service it comes from:
 
-- **Deezer** — the album opens in the [Finder](finder.md)'s columns, with its tracks ready to preview and download.
+- **Deezer** — an album opens in the [Finder](finder.md)'s columns, with its tracks ready to preview and download.
 - **Spotify** — Deezer doesn't have that album, so it opens the same page a pasted Spotify link does.
 
-Playlists always open that page — for Deezer's as well as Spotify's — where you can **preview** their songs before downloading any of them (see [Previewing songs before downloading](top-songs.md#previewing-songs-before-downloading)), then download all of it, just the new songs, or a selection.
+Playlists — Deezer's as well as Spotify's — always open that page, where you can **preview** their songs before downloading any of them (see [Previewing songs before downloading](top-songs.md#previewing-songs-before-downloading)), then download all of it, just the new songs, or a selection.
 
 Everything is kept for a week like the similar artists, and a Spotify album's match on Deezer for a month (a week when Deezer didn't have it, in case it's added). An album already in your library (matched by artist and title, so `Dummy (Deluxe Edition)` counts as `Dummy`) and a playlist you've already downloaded are left out; hiding an artist also takes their album and playlists away.
 
