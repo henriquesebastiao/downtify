@@ -143,7 +143,7 @@ export default {
     playlist: 'Плейлист',
   },
   finder: {
-    placeholder: 'Търсете в Deezer изпълнител, албум или песен',
+    placeholder: 'Търсете изпълнител, албум или песен',
     resultsFor: 'Резултати за „{query}“',
     songsBy: 'Песни на {name}',
     path: 'Местоположение',

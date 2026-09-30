@@ -147,7 +147,7 @@ export default {
     playlist: 'Çalma listesi',
   },
   finder: {
-    placeholder: "Deezer'da sanatçı, albüm veya şarkı arayın",
+    placeholder: 'Sanatçı, albüm veya şarkı arayın',
     resultsFor: '“{query}” için sonuçlar',
     songsBy: '{name} şarkıları',
     path: 'Konum',

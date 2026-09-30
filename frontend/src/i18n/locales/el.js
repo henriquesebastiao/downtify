@@ -147,7 +147,7 @@ export default {
     playlist: 'Λίστα αναπαραγωγής',
   },
   finder: {
-    placeholder: 'Αναζητήστε στο Deezer καλλιτέχνη, άλμπουμ ή τραγούδι',
+    placeholder: 'Αναζητήστε καλλιτέχνη, άλμπουμ ή τραγούδι',
     resultsFor: 'Αποτελέσματα για «{query}»',
     songsBy: 'Τραγούδια του/της {name}',
     path: 'Τοποθεσία',

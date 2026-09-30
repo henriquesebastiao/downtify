@@ -143,7 +143,7 @@ export default {
     playlist: 'Lejátszási lista',
   },
   finder: {
-    placeholder: 'Előadó, album vagy dal keresése a Deezeren',
+    placeholder: 'Előadó, album vagy dal keresése',
     resultsFor: 'Találatok erre: „{query}”',
     songsBy: '{name} dalai',
     path: 'Hely',

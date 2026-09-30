@@ -143,7 +143,7 @@ export default {
     playlist: 'Playlist',
   },
   finder: {
-    placeholder: 'Busca en Deezer un artista, álbum o canción',
+    placeholder: 'Busca un artista, álbum o canción',
     resultsFor: 'Resultados para “{query}”',
     songsBy: 'Canciones de {name}',
     path: 'Ubicación',

@@ -7,7 +7,7 @@
     <span
       class="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-[12px] border border-line-2 bg-surface pr-1.5 pl-3.5 transition-colors focus-within:border-accent"
     >
-      <AppIcon name="deezer" :size="18" class="text-deezer" />
+      <AppIcon name="search" :size="18" class="text-faint" />
       <label for="finder-search" class="sr-only">{{
         t('finder.placeholder')
       }}</label>
@@ -44,7 +44,7 @@
 </template>
 
 <script setup>
-// The Finder's search box: Deezer only, with its own button. It only holds
+// The Finder's search box, with its own button. It only holds
 // the text - `submit` (with the term) and `clear` say what the user did,
 // and the page decides what that means.
 import { ref } from 'vue'
