@@ -21,7 +21,7 @@ No account or API key is needed: the suggestions come from [Deezer](https://www.
 
 Artists already in your library and artists you've [hidden](#hiding-artists) are never suggested.
 
-Click a suggestion's photo to open the artist in the [Finder](finder.md)'s columns — their profile, whole discography and any album's tracks, all from Deezer. The **⋯** menu on a suggestion also has **Find songs** (the search), **Open on Deezer** and **Not interested**. The page shows the best 12 artists; **Show all** lists every suggestion (up to 48).
+Click a suggestion's photo to open the artist in the [Finder](finder.md)'s columns — their profile, whole discography and any album's tracks, all from Deezer. The **⋯** menu on a suggestion also has **Find songs** (the artist's songs, shown as a [Finder](finder.md) search), **Open on Deezer** and **Not interested**. The page shows the best 12 artists; **Show all** lists every suggestion (up to 48).
 
 ## Albums and playlists
 

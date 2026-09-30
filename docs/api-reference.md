@@ -113,6 +113,19 @@ Everything the Finder's artist column shows.
 
 ---
 
+### `GET /api/finder/artist/songs`
+
+A Deezer artist's songs, shaped like a Finder search — Discover's **Find songs**.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist_id` | string | yes | Deezer artist id (digits) |
+| `name` | string | yes | The artist's name, searched for |
+
+**Response:** `{songs, albums, artists}` like [`GET /api/finder/search`](#get-apifindersearch), with `albums` and `artists` always empty. Deezer is searched for `name` (up to 3 pages of 100 results) and only the songs whose main artist is `artist_id` are kept, in Deezer's order. Deezer's field search (`artist:"..."`) would be the direct way, but it finds no tracks at all today. `502` when Deezer can't be reached or refuses.
+
+---
+
 ### `GET /api/finder/artist/albums`
 
 | Parameter | Type | Required | Description |
