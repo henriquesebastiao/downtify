@@ -179,7 +179,7 @@ const moreLinks = [
     name: 'Discover',
     icon: 'sparkle',
     label: 'nav.discover',
-    match: ['Finder', 'FinderBrowse'],
+    match: ['FinderBrowse'],
   },
   { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
   { name: 'Podcasts', icon: 'mic', label: 'nav.podcasts' },

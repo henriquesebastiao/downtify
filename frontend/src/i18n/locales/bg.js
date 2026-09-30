@@ -31,7 +31,6 @@ export default {
     discover: 'Откриване',
     podcasts: 'Подкасти',
     charts: 'Класации',
-    finder: 'Finder',
     settings: 'Настройки',
     more: 'Още',
     playlists: 'Плейлисти',
@@ -144,20 +143,8 @@ export default {
     playlist: 'Плейлист',
   },
   finder: {
-    title: 'Finder',
-    subtitle:
-      'Разгледайте Deezer: изпълнител, албумите му и всяка песен, една до друга.',
     placeholder: 'Търсете в Deezer изпълнител, албум или песен',
     resultsFor: 'Резултати за „{query}“',
-    tipSearchTitle: 'Търсене в Deezer',
-    tipSearchBody:
-      'Песни, албуми и изпълнители направо от каталога на Deezer — без акаунт.',
-    tipColumnsTitle: 'Разглеждане в колони',
-    tipColumnsBody:
-      'Отворете резултат, за да видите изпълнителя, цялата му дискография и песните от всеки албум една до друга.',
-    tipDownloadTitle: 'Чуйте, после изтеглете',
-    tipDownloadBody:
-      'Чуйте 30-секунден откъс, после изтеглете една песен или цял албум.',
     path: 'Местоположение',
     artistColumn: 'Изпълнител',
     tracksColumn: 'Песни',

@@ -31,7 +31,6 @@ export default {
     discover: 'Felfedezés',
     podcasts: 'Podcastok',
     charts: 'Toplisták',
-    finder: 'Finder',
     settings: 'Beállítások',
     more: 'Továbbiak',
     playlists: 'Lejátszási listák',
@@ -144,20 +143,8 @@ export default {
     playlist: 'Lejátszási lista',
   },
   finder: {
-    title: 'Finder',
-    subtitle:
-      'Fedezd fel a Deezert: egy előadó, az albumai és minden szám, egymás mellett.',
     placeholder: 'Előadó, album vagy dal keresése a Deezeren',
     resultsFor: 'Találatok erre: „{query}”',
-    tipSearchTitle: 'Keresés a Deezeren',
-    tipSearchBody:
-      'Dalok, albumok és előadók egyenesen a Deezer katalógusából — fiók nélkül.',
-    tipColumnsTitle: 'Böngészés oszlopokban',
-    tipColumnsBody:
-      'Nyiss meg egy találatot, és egymás mellett látod az előadót, a teljes diszkográfiáját és bármelyik album számait.',
-    tipDownloadTitle: 'Belehallgatás, majd letöltés',
-    tipDownloadBody:
-      'Hallgass bele 30 másodpercig, majd töltsd le a dalt vagy az egész albumot.',
     path: 'Hely',
     artistColumn: 'Előadó',
     tracksColumn: 'Számok',

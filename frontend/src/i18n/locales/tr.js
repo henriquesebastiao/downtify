@@ -31,7 +31,6 @@ export default {
     discover: 'Keşfet',
     podcasts: 'Podcastler',
     charts: 'Müzik listeleri',
-    finder: 'Finder',
     settings: 'Ayarlar',
     more: 'Daha fazla',
     playlists: 'Çalma listeleri',
@@ -148,20 +147,8 @@ export default {
     playlist: 'Çalma listesi',
   },
   finder: {
-    title: 'Finder',
-    subtitle:
-      "Deezer'ı keşfedin: bir sanatçı, albümleri ve her parça, yan yana.",
     placeholder: "Deezer'da sanatçı, albüm veya şarkı arayın",
     resultsFor: '“{query}” için sonuçlar',
-    tipSearchTitle: "Deezer'da arayın",
-    tipSearchBody:
-      'Şarkılar, albümler ve sanatçılar doğrudan Deezer kataloğundan — hesap gerekmez.',
-    tipColumnsTitle: 'Sütunlarda gezinin',
-    tipColumnsBody:
-      'Bir sonucu açarak sanatçıyı, tüm diskografisini ve herhangi bir albümün parçalarını yan yana görün.',
-    tipDownloadTitle: 'Önce dinleyin, sonra indirin',
-    tipDownloadBody:
-      '30 saniyelik bir önizleme dinleyin, sonra tek bir şarkıyı veya bütün albümü indirin.',
     path: 'Konum',
     artistColumn: 'Sanatçı',
     tracksColumn: 'Parçalar',

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  RECENT_LIMIT,
+  addRecent,
   browseLocation,
   chunk,
   clampColumnWidths,
@@ -126,5 +128,26 @@ describe('releaseTypes / matchesReleaseType', () => {
     )
     expect(albums.filter((a) => matchesReleaseType(a, 'album'))).toHaveLength(2)
     expect(albums.filter((a) => matchesReleaseType(a, 'all'))).toHaveLength(5)
+  })
+})
+
+describe('addRecent', () => {
+  it('puts the new search first, once', () => {
+    expect(addRecent(['b', 'a', 'c'], 'a')).toEqual(['a', 'b', 'c'])
+    expect(addRecent([], ' daft punk ')).toEqual(['daft punk'])
+  })
+
+  it('keeps at most the limit, dropping the oldest', () => {
+    const full = Array.from({ length: RECENT_LIMIT }, (_, i) => `t${i}`)
+    const next = addRecent(full, 'new')
+    expect(next).toHaveLength(RECENT_LIMIT)
+    expect(next[0]).toBe('new')
+    expect(next).not.toContain(`t${RECENT_LIMIT - 1}`)
+  })
+
+  it('changes nothing for a blank search', () => {
+    const list = ['a']
+    expect(addRecent(list, '   ')).toBe(list)
+    expect(addRecent(undefined, '')).toEqual([])
   })
 })

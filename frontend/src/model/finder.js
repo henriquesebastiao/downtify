@@ -2,9 +2,15 @@
 // column view, with what each fetch returned kept around so going back to
 // an artist or album is instant.
 import { reactive, ref } from 'vue'
+import { useLocalStorage } from '@vueuse/core'
 
 import API from '/src/model/api'
-import { TRACK_COUNT_BATCH, chunk, missingTrackCounts } from '/src/lib/finder'
+import {
+  TRACK_COUNT_BATCH,
+  addRecent,
+  chunk,
+  missingTrackCounts,
+} from '/src/lib/finder'
 
 // ── Search ────────────────────────────────────────────────────────────
 const query = ref('')
@@ -119,6 +125,19 @@ async function fillTrackCounts(list, stillWanted = () => true) {
     }
   } finally {
     for (const id of ids) pendingCounts.delete(id)
+  }
+}
+
+// ── Recent searches ───────────────────────────────────────────────────
+// Kept in this browser only, newest first (see lib/finder.js addRecent).
+let recent = null
+
+export function useRecentSearches() {
+  recent ??= useLocalStorage('downtify-finder-recent-searches', [])
+  return {
+    recent,
+    remember: (term) => (recent.value = addRecent(recent.value, term)),
+    clear: () => (recent.value = []),
   }
 }
 

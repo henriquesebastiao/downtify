@@ -12,7 +12,7 @@
         :to="searchLocation"
         class="flex shrink-0 items-center gap-1.5 font-semibold hover:text-fg"
       >
-        <AppIcon name="columns" :size="15" />{{ t('finder.title') }}
+        <AppIcon name="sparkle" :size="15" />{{ t('nav.discover') }}
       </RouterLink>
       <template v-if="artist.data.value">
         <AppIcon name="chevron-right" :size="14" class="shrink-0 text-faint" />
@@ -592,7 +592,7 @@
 <script setup>
 // The Finder's column view, after macOS Finder's: the artist, their
 // discography and one album's tracks side by side, from Deezer alone -
-// opened from a Finder search result (see FinderView). Which artist, album
+// opened from a Finder search result (see DiscoverHubView). Which artist, album
 // and track are open lives in the URL (`?artist=&album=&track=`, Deezer
 // ids), so it survives a reload and the back button walks back through
 // the artists visited. Picking an album replaces the URL rather than
@@ -937,11 +937,12 @@ async function selectTrack(song) {
   playPickedTrack()
 }
 
-// Back to the search this was opened from, when there was one.
+// Back to the search this was opened from, when there was one - else to
+// Discover's suggestions.
 const searchLocation = computed(() =>
   finder.query.value
-    ? { name: 'Finder', query: { q: finder.query.value } }
-    : { name: 'Finder' }
+    ? { name: 'Discover', query: { q: finder.query.value } }
+    : { name: 'Discover' }
 )
 
 function typeLabel(type) {

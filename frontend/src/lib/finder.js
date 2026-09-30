@@ -88,3 +88,19 @@ export function matchesReleaseType(album, type) {
   if (!type || type === 'all') return true
   return String(album?.release_type || 'album').toLowerCase() === type
 }
+
+/** How many recent searches are kept. */
+export const RECENT_LIMIT = 10
+
+/**
+ * The recent searches once `term` was searched for: it first (only once),
+ * at most `limit` of them. A blank term changes nothing.
+ */
+export function addRecent(list, term, limit = RECENT_LIMIT) {
+  const value = String(term || '').trim()
+  if (!value) return list || []
+  return [value, ...(list || []).filter((item) => item !== value)].slice(
+    0,
+    limit
+  )
+}

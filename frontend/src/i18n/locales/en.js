@@ -31,7 +31,6 @@ export default {
     discover: 'Discover',
     podcasts: 'Podcasts',
     charts: 'Charts',
-    finder: 'Finder',
     settings: 'Settings',
     more: 'More',
     playlists: 'Playlists',
@@ -144,20 +143,8 @@ export default {
     playlist: 'Playlist',
   },
   finder: {
-    title: 'Finder',
-    subtitle:
-      'Explore Deezer: an artist, their albums and every track, side by side.',
     placeholder: 'Search Deezer for an artist, album or song',
     resultsFor: 'Results for “{query}”',
-    tipSearchTitle: 'Search Deezer',
-    tipSearchBody:
-      "Songs, albums and artists straight from Deezer's catalogue — no account needed.",
-    tipColumnsTitle: 'Browse in columns',
-    tipColumnsBody:
-      "Open a result to see the artist, their whole discography and any album's tracks side by side.",
-    tipDownloadTitle: 'Preview, then download',
-    tipDownloadBody:
-      'Listen to a 30-second preview, then download a single song or a whole album.',
     path: 'Location',
     artistColumn: 'Artist',
     tracksColumn: 'Tracks',

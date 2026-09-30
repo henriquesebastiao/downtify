@@ -31,7 +31,6 @@ export default {
     discover: 'Descobrir',
     podcasts: 'Podcasts',
     charts: 'Paradas de sucesso',
-    finder: 'Finder',
     settings: 'Configurações',
     more: 'Mais',
     playlists: 'Playlists',
@@ -147,20 +146,8 @@ export default {
     playlist: 'Playlist',
   },
   finder: {
-    title: 'Finder',
-    subtitle:
-      'Explore o Deezer: um artista, os álbuns dele e cada faixa, lado a lado.',
     placeholder: 'Busque no Deezer um artista, álbum ou música',
     resultsFor: 'Resultados para “{query}”',
-    tipSearchTitle: 'Busque no Deezer',
-    tipSearchBody:
-      'Músicas, álbuns e artistas direto do catálogo do Deezer — sem precisar de conta.',
-    tipColumnsTitle: 'Navegue em colunas',
-    tipColumnsBody:
-      'Abra um resultado para ver o artista, toda a discografia e as faixas de qualquer álbum, lado a lado.',
-    tipDownloadTitle: 'Ouça a prévia e baixe',
-    tipDownloadBody:
-      'Ouça uma prévia de 30 segundos e baixe uma música ou um álbum inteiro.',
     path: 'Localização',
     artistColumn: 'Artista',
     tracksColumn: 'Faixas',

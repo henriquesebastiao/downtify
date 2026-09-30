@@ -31,7 +31,6 @@ export default {
     discover: 'Ανακάλυψη',
     podcasts: 'Podcast',
     charts: 'Λίστες επιτυχιών',
-    finder: 'Finder',
     settings: 'Ρυθμίσεις',
     more: 'Περισσότερα',
     playlists: 'Λίστες',
@@ -148,20 +147,8 @@ export default {
     playlist: 'Λίστα αναπαραγωγής',
   },
   finder: {
-    title: 'Finder',
-    subtitle:
-      'Εξερευνήστε το Deezer: έναν καλλιτέχνη, τα άλμπουμ του και κάθε κομμάτι, δίπλα-δίπλα.',
     placeholder: 'Αναζητήστε στο Deezer καλλιτέχνη, άλμπουμ ή τραγούδι',
     resultsFor: 'Αποτελέσματα για «{query}»',
-    tipSearchTitle: 'Αναζήτηση στο Deezer',
-    tipSearchBody:
-      'Τραγούδια, άλμπουμ και καλλιτέχνες απευθείας από τον κατάλογο του Deezer — χωρίς λογαριασμό.',
-    tipColumnsTitle: 'Περιήγηση σε στήλες',
-    tipColumnsBody:
-      'Ανοίξτε ένα αποτέλεσμα για να δείτε τον καλλιτέχνη, όλη τη δισκογραφία του και τα κομμάτια οποιουδήποτε άλμπουμ, δίπλα-δίπλα.',
-    tipDownloadTitle: 'Ακούστε και κατεβάστε',
-    tipDownloadBody:
-      'Ακούστε ένα δείγμα 30 δευτερολέπτων και κατεβάστε ένα τραγούδι ή ολόκληρο άλμπουμ.',
     path: 'Τοποθεσία',
     artistColumn: 'Καλλιτέχνης',
     tracksColumn: 'Κομμάτια',

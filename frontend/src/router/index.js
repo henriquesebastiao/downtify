@@ -65,32 +65,17 @@ const routes = [
     component: () => import('/src/views/MonitorView.vue'),
   },
   {
-    // Discover and the Finder, one tab each: DiscoverHubView draws the tabs
-    // and each child is its own page. One viewKey for both, so switching
-    // tabs keeps the tabs mounted.
+    // Discover and the Finder on one page: the Finder's search box on top,
+    // Discover's suggestions below - or, while a search is on (`?q=`), what
+    // the Finder found (see DiscoverHubView).
     path: '/discover',
+    name: 'Discover',
     component: () => import('/src/views/DiscoverHubView.vue'),
-    meta: { viewKey: 'discover' },
-    children: [
-      {
-        // Artists the library doesn't have yet, suggested from the ones it
-        // does.
-        path: '',
-        name: 'Discover',
-        component: () => import('/src/views/DiscoverView.vue'),
-      },
-      {
-        // A Deezer-only search (`?q=`).
-        path: 'finder',
-        name: 'Finder',
-        component: () => import('/src/views/FinderView.vue'),
-      },
-    ],
   },
   {
     // What a Finder result opens: artist, albums and one album's tracks
-    // side by side (`?artist=&album=&track=`, Deezer ids). Outside the tabs,
-    // which the columns need the height of. One path, so moving between
+    // side by side (`?artist=&album=&track=`, Deezer ids). A page of its
+    // own, the columns need its whole height. One path, so moving between
     // artists doesn't remount the page.
     path: '/discover/finder/browse',
     name: 'FinderBrowse',
