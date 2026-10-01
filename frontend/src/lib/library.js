@@ -28,6 +28,27 @@ function splitArtists(artist) {
   return [text]
 }
 
+const VARIOUS_ARTISTS = new Set(['various artists', 'various'])
+
+function isVariousArtists(name) {
+  return VARIOUS_ARTISTS.has(
+    String(name || '')
+      .trim()
+      .toLowerCase()
+  )
+}
+
+/** Album artist the Library groups under — skips a compilation tag. */
+export function groupingArtistName(track) {
+  const tagged = String(track?.albumArtist || '').trim()
+  if (tagged && !isVariousArtists(tagged)) return tagged
+  const first = String(track?.artists?.[0] || '').trim()
+  if (first && !isVariousArtists(first)) return first
+  return String(track?.artist || '')
+    .split(';')[0]
+    .trim()
+}
+
 function basenameTitle(file) {
   const base = String(file || '')
     .split('/')
@@ -48,13 +69,18 @@ export function normalizeTrack(row) {
   const fallback = basenameTitle(file)
   const artist = String(raw.artist || '').trim() || fallback.artist
   const artists = splitArtists(artist)
+  const albumArtist = groupingArtistName({
+    albumArtist: String(raw.album_artist || '').trim(),
+    artists,
+    artist,
+  })
   return {
     file,
     title: String(raw.title || '').trim() || fallback.title,
     artist,
     artists,
     album: String(raw.album || '').trim(),
-    albumArtist: String(raw.album_artist || '').trim() || artists[0] || '',
+    albumArtist,
     trackNumber: Number(raw.track_number) || 0,
     year: String(raw.year || ''),
     duration: Number(raw.duration) || 0,
@@ -91,13 +117,14 @@ export function groupAlbums(tracks) {
   const map = new Map()
   for (const track of tracks) {
     if (!track.album) continue
-    const key = albumKey(track.albumArtist, track.album)
+    const artist = groupingArtistName(track)
+    const key = albumKey(artist, track.album)
     let album = map.get(key)
     if (!album) {
       album = {
         key,
         title: track.album,
-        artist: track.albumArtist,
+        artist,
         year: '',
         tracks: [],
         cover: '',
@@ -142,7 +169,7 @@ export function groupArtists(tracks, albums = groupAlbums(tracks)) {
     return map.get(key)
   }
   for (const track of tracks) {
-    const name = track.albumArtist || track.artists[0]
+    const name = groupingArtistName(track)
     if (!name) continue
     const artist = entry(name)
     artist.tracks.push(track)

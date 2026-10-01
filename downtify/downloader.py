@@ -1321,11 +1321,15 @@ def _recording_date_for_tags(song: dict[str, Any]) -> str:
 
 
 def _album_artist_for_tags(artists: list[str]) -> Optional[str]:
+    """Album artist for a single download when the source has no album field.
+
+    One credited name is used as-is — including duo names with ``&``.
+    Several credited names (a collab list) still map to Various Artists.
+    """
+
     if not artists:
         return None
     if len(artists) > 1:
-        return 'Various Artists'
-    if re.search(r'\s*(?:,|，|&)\s*', artists[0]):
         return 'Various Artists'
     return artists[0]
 

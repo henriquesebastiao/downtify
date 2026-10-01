@@ -18,6 +18,7 @@ from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 from downtify import downloader as downloader_mod
 from downtify.downloader import (
     Downloader,
+    _album_artist_for_tags,
     _audio_bit_rate,
     _ExtractAudioPP,
     _release_type_for_tags,
@@ -343,6 +344,17 @@ def test_artist_subdir_falls_back_to_track_artists_when_album_artist_blank():
         'album_artist': '',
     })
     assert result == 'The Night Owls'
+
+
+def test_album_artist_keeps_duo_name_with_ampersand():
+    # A single credited name with "&" is the act, not a compilation.
+    assert _album_artist_for_tags(['Zé Neto & Cristiano']) == (
+        'Zé Neto & Cristiano'
+    )
+    assert _album_artist_for_tags(['Ana Luz', 'Kenji Aoki']) == (
+        'Various Artists'
+    )
+    assert _album_artist_for_tags([]) is None
 
 
 # ── organize_by_artist – existing_filename_for ────────────────────────────────

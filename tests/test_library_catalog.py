@@ -323,3 +323,23 @@ def test_library_indexes_omit_track_rows(tmp_path):
         [{'artists': ['Kenji Aoki'], 'name': 'Undertow (Remastered)'}],
     )
     assert [item['title'] for item in found] == ['Undertow']
+
+
+def test_library_artist_index_uses_artist_when_album_artist_is_various(
+    tmp_path,
+):
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    path = download_dir / 'duo.mp3'
+    tags = ID3()
+    tags.add(TIT2(encoding=3, text='Sintonia'))
+    tags.add(TPE1(encoding=3, text='Zé Neto & Cristiano'))
+    tags.add(TPE2(encoding=3, text='Various Artists'))
+    tags.add(TALB(encoding=3, text='Acústico'))
+    tags.save(str(path), v2_version=3)
+    invalidate_library_paths_cache()
+    cache = LibraryMetadataCache(tmp_path / 'library.db')
+    ctx = LibraryContext(download_dir=download_dir, metadata_cache=cache)
+    names = [row['name'] for row in library_artist_index(ctx)]
+    assert names == ['Zé Neto & Cristiano']
+    assert 'Various Artists' not in names

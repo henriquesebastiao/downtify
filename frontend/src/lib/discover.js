@@ -1,6 +1,8 @@
 // Discover: what the page sends the server, and when a play counts as a
 // listen. Pure, so it's unit-testable.
 
+import { groupingArtistName } from './library'
+
 /** A track shorter than this never counts as a listen. */
 export const LISTEN_MIN_DURATION = 30
 /** Past this many seconds played, any track counts (Last.fm's own rule). */
@@ -108,7 +110,7 @@ export function artistRoute(item) {
  */
 export function listenArtist(track) {
   if (!track?.file || track.isPodcast) return ''
-  return track.albumArtist || track.artists?.[0] || track.artist || ''
+  return groupingArtistName(track)
 }
 
 /** Seconds of a track that must actually play before it's a listen. */

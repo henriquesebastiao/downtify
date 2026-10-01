@@ -439,11 +439,18 @@ def song_key(artist: str, title: str) -> str:
     return f'{clean(first)}|{clean(title)}'
 
 
+_VARIOUS_ARTISTS = frozenset({'various artists', 'various'})
+
+
 def album_artist_of(entry: dict[str, Any]) -> str:
-    """The name Library grouping uses (album artist, else first artist)."""
+    """The name Library grouping uses (album artist, else first artist).
+
+    ``Various Artists`` is treated as missing so a duo tagged that way
+    (``Zé Neto & Cristiano`` in the artist tag) still appears as itself.
+    """
 
     album_artist = str(entry.get('album_artist') or '').strip()
-    if album_artist:
+    if album_artist and album_artist.casefold() not in _VARIOUS_ARTISTS:
         return album_artist
     return str(entry.get('artist') or '').split(';')[0].strip()
 

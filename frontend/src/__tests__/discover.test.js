@@ -50,7 +50,7 @@ describe('listenArtist', () => {
   it('uses the name the Library groups the track under', () => {
     expect(
       listenArtist(track('a.mp3', { albumArtist: 'Various', artists: ['Air'] }))
-    ).toBe('Various')
+    ).toBe('Air')
     expect(listenArtist(track('a.mp3', { artists: ['Air', 'Beck'] }))).toBe(
       'Air'
     )

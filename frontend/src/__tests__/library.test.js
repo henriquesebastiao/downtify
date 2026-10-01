@@ -114,6 +114,20 @@ describe('groupArtists', () => {
     expect(kenji.albums.map((a) => a.title)).toEqual(['Glass Harbor'])
     expect(artists.find((a) => a.name === 'Ana Luz').albums).toEqual([])
   })
+
+  it('files a duo tagged Various Artists under the artist name', () => {
+    const duo = normalizeTrack({
+      file: 'Acustico/Ze Neto & Cristiano - Sintonia.mp3',
+      title: 'Sintonia',
+      artist: 'Zé Neto & Cristiano',
+      album: 'Acústico',
+      album_artist: 'Various Artists',
+    })
+    expect(duo.albumArtist).toBe('Zé Neto & Cristiano')
+    const artists = groupArtists([duo])
+    expect(artists.map((a) => a.name)).toEqual(['Zé Neto & Cristiano'])
+    expect(artists[0].albums.map((a) => a.title)).toEqual(['Acústico'])
+  })
 })
 
 describe('buildPlaylists', () => {
