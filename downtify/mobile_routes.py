@@ -126,7 +126,10 @@ async def playlists() -> list[dict[str, Any]]:
     await asyncio.to_thread(_refresh)
     ctx = api.library_context()
     found = await asyncio.to_thread(
-        list_library_playlists, ctx.download_dir, ctx.slskd_dir
+        list_library_playlists,
+        ctx.download_dir,
+        ctx.slskd_dir,
+        ctx.extra_dirs,
     )
     paths = [f for p in found for f in p['files']]
     ids = await asyncio.to_thread(_sync().ids_for_paths, paths)
@@ -134,6 +137,7 @@ async def playlists() -> list[dict[str, Any]]:
         {
             'name': p['name'],
             'liked': p['liked'],
+            'manual': bool(p.get('manual')),
             'count': p['count'],
             'cover': p['cover'],
             'track_ids': [ids[f] for f in p['files'] if f in ids],

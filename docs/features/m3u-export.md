@@ -27,11 +27,7 @@ M3U generation is controlled by **Settings → Downloads & files → Write M3U p
 
 ## Cover art
 
-Right below that setting, **Save playlist cover art** (on by default) writes the playlist's own cover image next to its M3U, under the same name — before the tracks, so the folder looks like the playlist from the start. Downtify then shows that artwork for the playlist instead of a grid of its track covers. See [Playlist cover art](playlist-cover-art.md).
-
-## Cover art
-
-Right next to the setting above, **Download playlist cover art** (on by default) saves the playlist's own cover image alongside its M3U file, under the same name. See [Playlist Cover Art](playlist-cover-art.md) for file location, sources and how it shows up automatically in Navidrome.
+Right below that setting, **Save playlist cover art** (on by default) writes the playlist's own cover image next to its M3U, under the same name — before the tracks, so the folder looks like the playlist from the start. Downtify then shows that artwork for the playlist instead of a grid of its track covers. A playlist you create in the Library gets a mosaic of up to four track covers written the same way. See [Playlist cover art](playlist-cover-art.md).
 
 ## When it is written
 
@@ -62,3 +58,7 @@ The generated file uses:
 - The standard `#EXTM3U` / `#EXTINF` format
 
 This is compatible with Jellyfin, Navidrome, Plex, VLC, Kodi, Sonos and any other player or media server that consumes standard M3U playlists.
+
+## Playlists you create
+
+**Library → Playlists → New playlist** writes the same kind of M3U under `Playlists/`, with an extra `#EXTDOWNTIFY:manual` line so Downtify can tell it apart from a downloaded Spotify/YouTube playlist. You can rename it, and add or remove songs (including ones from [extra folders](external-library.md)). Deleting that playlist, deleting a track, or unmapping an extra folder updates the M3U; the audio is only deleted when you delete the track itself or an imported playlist.

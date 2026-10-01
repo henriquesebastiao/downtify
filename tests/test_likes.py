@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from downtify import api, likes, m3u
 from downtify.downloader import Downloader
 from downtify.library_catalog import LibraryContext
+from downtify.library_paths import library_stored_path
 from downtify.likes import (
     LIKED_PLAYLIST_NAME,
     LikedTracks,
@@ -258,6 +259,25 @@ def test_slskd_files_left_in_place_are_listed_too(tmp_path):
 
     assert path is not None
     assert 'Song.mp3' in path.read_text(encoding='utf-8')
+
+
+def test_extra_folder_likes_are_written_to_the_playlist(tmp_path):
+    downloads = tmp_path / 'downloads'
+    extra = tmp_path / 'ripped'
+    downloads.mkdir()
+    track = extra / 'Kenji Aoki - Undertow.mp3'
+    track.parent.mkdir(parents=True)
+    track.write_bytes(b'audio')
+    stored = library_stored_path(track, downloads, extra_dirs=(extra,))
+    store = _store(tmp_path)
+    store.like(stored, title='Undertow', artist='Kenji Aoki')
+
+    path = sync_liked_playlist(store, downloads, extra_dirs=(extra,))
+
+    assert path == _liked_m3u(downloads)
+    text = path.read_text(encoding='utf-8')
+    assert 'Undertow' in text
+    assert track.name in text
 
 
 def test_a_downloaded_playlist_with_a_similar_name_is_not_overwritten(

@@ -397,14 +397,18 @@ async function forgetListens() {
   }
 }
 
-onMounted(() => discover.loadBlocked())
+onMounted(() => {
+  library.ensureArtists()
+  library.ensureAlbums()
+  discover.loadBlocked()
+})
 
 // First visit: suggest as soon as the library is known. Coming back keeps
 // the last list (the server caches Deezer's answers for a week anyway).
 watch(
-  () => library.loaded.value,
-  (ready) => {
-    if (ready && !discover.loaded.value) refresh()
+  () => [library.artistsComplete.value, library.albumsComplete.value],
+  ([artistsReady]) => {
+    if (artistsReady && !discover.loaded.value) refresh()
   },
   { immediate: true }
 )

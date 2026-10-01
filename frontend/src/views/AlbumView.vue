@@ -1,7 +1,7 @@
 <template>
   <div>
     <DetailState
-      :loaded="library.loaded.value"
+      :loaded="ready"
       :found="!!album"
       icon="disc"
       :missing="t('album.notFound')"
@@ -103,7 +103,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
@@ -126,6 +126,20 @@ const router = useRouter()
 const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
+
+const ready = ref(false)
+
+async function loadAlbum() {
+  ready.value = false
+  await library.loadArtistTracks(String(route.query.artist || ''))
+  ready.value = true
+}
+
+onMounted(loadAlbum)
+watch(
+  () => [route.query.artist, route.query.title],
+  () => loadAlbum()
+)
 
 const album = computed(() =>
   library.findAlbum(

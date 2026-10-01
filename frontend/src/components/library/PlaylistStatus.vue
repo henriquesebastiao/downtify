@@ -11,7 +11,7 @@
           }}
         </template>
         <template v-else>{{
-          t('common.tracks', { count: playlist.tracks.length })
+          t('common.tracks', { count: itemTrackCount(playlist) })
         }}</template>
       </span>
       <UiBadge v-if="state === 'downloading'" tone="accent">
@@ -40,6 +40,7 @@ import EqBars from '../ui/EqBars.vue'
 import UiBadge from '../ui/UiBadge.vue'
 import UiProgress from '../ui/UiProgress.vue'
 import { useI18n } from '/src/i18n'
+import { itemTrackCount } from '/src/lib/library'
 
 const props = defineProps({ playlist: { type: Object, required: true } })
 const { t } = useI18n()

@@ -15,8 +15,10 @@ search endpoint needed to find a song's page.
 
 from __future__ import annotations
 
+import os
 import re
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -24,8 +26,14 @@ from typing import Any, Callable, Optional
 import httpx
 from loguru import logger
 from mutagen import File as MutagenFile
-from mutagen.id3 import ID3
+from mutagen.flac import FLAC
+from mutagen.id3 import ID3, USLT
+from mutagen.mp3 import MP3
+from mutagen.mp4 import MP4
+from mutagen.oggopus import OggOpus
+from mutagen.oggvorbis import OggVorbis
 
+from .library_paths import library_stored_path
 from .lyrics_cache import song_key
 
 LRCLIB_BASE = 'https://lrclib.net/api'
@@ -39,6 +47,232 @@ SUPPORTED_PROVIDERS = set(PROVIDER_ORDER)
 #: Accepted in saved settings, but nothing is fetched from them.
 LEGACY_PROVIDERS = {'genius', 'musixmatch', 'azlyrics'}
 
+DEFAULT_LYRICS_LRC_DIR = '/data/lyrics'
+MAX_LYRICS_LRC_DIR_LEN = 1024
+
+_LrcResolve = Callable[[Path], Path]
+_LrcRoot = Callable[[], Optional[Path]]
+_LrcSearch = Callable[[Path], Sequence[Path]]
+_lrc_resolve: Optional[_LrcResolve] = None
+_lrc_tree_root: Optional[_LrcRoot] = None
+_lrc_search: Optional[_LrcSearch] = None
+
+
+def set_lrc_resolver(
+    resolve: Optional[_LrcResolve],
+    *,
+    tree_root: Optional[_LrcRoot] = None,
+    search: Optional[_LrcSearch] = None,
+) -> None:
+    """Hook used by the API to place ``.lrc`` files from live settings."""
+
+    global _lrc_resolve, _lrc_tree_root, _lrc_search
+    _lrc_resolve = resolve
+    _lrc_tree_root = tree_root
+    _lrc_search = search
+
+
+def lrc_tree_root() -> Optional[Path]:
+    """Dedicated lyrics folder when sidecars are not kept beside audio."""
+
+    if _lrc_tree_root is None:
+        return None
+    try:
+        return _lrc_tree_root()
+    except Exception:
+        logger.opt(exception=True).debug('LRC tree root lookup failed')
+        return None
+
+
+def coerce_bool(value: Any, default: bool = True) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {'1', 'true', 'yes', 'on'}:
+            return True
+        if lowered in {'0', 'false', 'no', 'off', ''}:
+            return False
+        return default
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return default
+
+
+def _path_inside(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+def sanitize_lyrics_lrc_dir(
+    raw: Any,
+    *,
+    download_dir: Path,
+    slskd_dir: Optional[Path] = None,
+    extra_dirs: Optional[Sequence[Path]] = None,
+) -> str:
+    """Absolute lyrics tree that is not inside a music folder."""
+
+    text = str(raw or '').strip()
+    if not text or len(text) > MAX_LYRICS_LRC_DIR_LEN:
+        return DEFAULT_LYRICS_LRC_DIR
+    path = Path(text)
+    if not path.is_absolute():
+        return DEFAULT_LYRICS_LRC_DIR
+    try:
+        resolved = path.resolve()
+    except OSError:
+        resolved = path
+    if resolved == Path('/') or len(resolved.parts) < 2:
+        return DEFAULT_LYRICS_LRC_DIR
+    forbidden: list[Path] = [download_dir]
+    if slskd_dir is not None:
+        forbidden.append(slskd_dir)
+    forbidden.extend(extra_dirs or ())
+    for root in forbidden:
+        try:
+            root_resolved = root.resolve()
+        except OSError:
+            root_resolved = root
+        if _path_inside(resolved, root_resolved):
+            return DEFAULT_LYRICS_LRC_DIR
+    return str(path)
+
+
+def lrc_sidecar_path(
+    audio: Path,
+    *,
+    settings: dict[str, Any],
+    download_dir: Path,
+    slskd_dir: Optional[Path] = None,
+    extra_dirs: Optional[Sequence[Path]] = None,
+) -> Path:
+    """Where the ``.lrc`` for *audio* should live given *settings*."""
+
+    if coerce_bool(settings.get('lyrics_lrc_beside'), True):
+        return audio.with_suffix('.lrc')
+    root = Path(str(settings.get('lyrics_lrc_dir') or DEFAULT_LYRICS_LRC_DIR))
+    stored = library_stored_path(audio, download_dir, slskd_dir, extra_dirs)
+    return (root / stored).with_suffix('.lrc')
+
+
+def lrc_path_for(audio: Path, sidecar: Optional[Path] = None) -> Path:
+    """Sidecar path for *audio*, honouring the live settings hook."""
+
+    if sidecar is not None:
+        return sidecar
+    if _lrc_resolve is not None:
+        try:
+            return _lrc_resolve(audio)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'LRC path resolver failed for {}', audio
+            )
+    return audio.with_suffix('.lrc')
+
+
+def lrc_candidates(audio: Path) -> list[Path]:
+    """Possible sidecar locations (configured dest, beside, and extras)."""
+
+    dest = lrc_path_for(audio)
+    beside = audio.with_suffix('.lrc')
+    extra: list[Path] = []
+    if _lrc_search is not None:
+        try:
+            extra = [Path(item) for item in (_lrc_search(audio) or ())]
+        except Exception:
+            logger.opt(exception=True).debug(
+                'LRC search paths failed for {}', audio
+            )
+    found: list[Path] = []
+    for path in (dest, beside, *extra):
+        if path not in found:
+            found.append(path)
+    return found
+
+
+def can_mutate_audio(path: Path) -> bool:
+    """False when *path* (or its folder) cannot be rewritten in place.
+
+    Extra folders mounted read-only still yield tags and a dedicated
+    ``.lrc``; they must not be tagged or have leftover sidecars deleted.
+    """
+
+    try:
+        parent = path.parent
+        if not os.access(parent, os.W_OK):
+            return False
+        if path.exists() and not os.access(path, os.W_OK):
+            return False
+    except OSError:
+        return False
+    return True
+
+
+def relocate_lrc_sidecar(audio: Path) -> str:
+    """Put the sidecar at the configured location.
+
+    ``present`` — already there; ``copied`` — moved from the other place;
+    ``missing`` — nothing to copy.
+    """
+
+    dest = lrc_path_for(audio)
+    try:
+        if dest.is_file() and dest.stat().st_size:
+            _unlink_other_lrc(audio, dest)
+            return 'present'
+    except OSError:
+        pass
+    for candidate in lrc_candidates(audio):
+        if candidate == dest:
+            continue
+        try:
+            if not candidate.is_file():
+                continue
+            text = candidate.read_text(encoding='utf-8').strip()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if not text:
+            continue
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(text, encoding='utf-8')
+        except OSError:
+            logger.opt(exception=True).warning(
+                'Could not write LRC sidecar {}', dest
+            )
+            continue
+        _unlink_other_lrc(audio, dest)
+        return 'copied'
+    return 'missing'
+
+
+def _unlink_other_lrc(audio: Path, dest: Path) -> None:
+    for leftover in lrc_candidates(audio):
+        if leftover == dest:
+            continue
+        if leftover.exists() and not can_mutate_audio(leftover):
+            logger.debug('Leaving LRC on read-only tree {}', leftover)
+            continue
+        try:
+            leftover.unlink(missing_ok=True)
+        except OSError:
+            logger.opt(exception=True).debug(
+                'Could not remove old LRC sidecar {}', leftover
+            )
+
+
+_LRC_STAMP = re.compile(r'\[\d{1,2}:\d{2}')
+
+
+def looks_like_lrc(text: str) -> bool:
+    """True when *text* already carries LRC timestamps."""
+
+    return bool(text and _LRC_STAMP.search(text))
+
 
 @dataclass
 class Lyrics:
@@ -47,6 +281,31 @@ class Lyrics:
 
     def has_any(self) -> bool:
         return bool(self.plain) or bool(self.synced)
+
+
+def providers_from_settings(settings: dict[str, Any]) -> list[str]:
+    """Providers a download (and library sync) will try, in order.
+
+    Unknown names are dropped; a list left with nothing but the spotdl-era
+    placeholders (genius/musixmatch/azlyrics) falls back to the defaults,
+    since those settings were never asking for "no lyrics". An explicitly
+    empty list, and lyrics being off, both mean none.
+    """
+
+    if not settings.get('download_lyrics', True):
+        return []
+    raw = [
+        part.strip()
+        for part in (settings.get('lyrics_providers') or [])
+        if isinstance(part, str) and part.strip()
+    ]
+    if not raw:
+        return []
+    providers: list[str] = []
+    for name in raw:
+        if name in SUPPORTED_PROVIDERS and name not in providers:
+            providers.append(name)
+    return providers or list(PROVIDER_ORDER)
 
 
 def fetch(
@@ -353,12 +612,97 @@ def read_track_lyrics(path: Path) -> dict[str, str]:
     """
 
     synced = ''
-    sidecar = path.with_suffix('.lrc')
-    if sidecar.is_file():
-        try:
-            synced = sidecar.read_text(encoding='utf-8').strip()
-        except (OSError, UnicodeDecodeError):
-            logger.opt(exception=True).warning(
-                'Could not read LRC sidecar {}', sidecar
-            )
+    for sidecar in lrc_candidates(path):
+        synced = _read_lrc_text(sidecar)
+        if synced:
+            break
     return {'synced': synced, 'plain': _embedded_lyrics(path)}
+
+
+def _read_lrc_text(sidecar: Path) -> str:
+    if not sidecar.is_file():
+        return ''
+    try:
+        return sidecar.read_text(encoding='utf-8').strip()
+    except (OSError, UnicodeDecodeError):
+        logger.opt(exception=True).warning(
+            'Could not read LRC sidecar {}', sidecar
+        )
+        return ''
+
+
+def _strip_lrc_timestamps(synced: str) -> str:
+    cleaned = re.sub(r'\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]', '', synced)
+    return '\n'.join(
+        line.strip() for line in cleaned.splitlines() if line.strip()
+    )
+
+
+def write_to_file(
+    path: Path,
+    lyrics: Lyrics,
+    *,
+    sidecar: Optional[Path] = None,
+) -> None:
+    """Embed plain lyrics and write a ``.lrc`` sidecar when they are synced.
+
+    Same write a download uses (see ``downloader.embed_lyrics``).
+    """
+
+    if not path.exists() or not lyrics.has_any():
+        return
+
+    if lyrics.synced:
+        dest = lrc_path_for(path, sidecar)
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(lyrics.synced, encoding='utf-8')
+        except OSError:
+            logger.opt(exception=True).warning(
+                'Could not write LRC sidecar {}', dest
+            )
+        else:
+            _unlink_other_lrc(path, dest)
+
+    text = lyrics.plain or _strip_lrc_timestamps(lyrics.synced or '')
+    if not text:
+        return
+    if not can_mutate_audio(path):
+        logger.debug('Skipping lyrics embed in read-only file {}', path)
+        return
+
+    suffix = path.suffix.lower().lstrip('.')
+    if suffix == 'mp3':
+        audio = None
+        try:
+            audio = MP3(str(path), ID3=ID3)
+        except Exception:
+            audio = None
+        if audio is not None:
+            if audio.tags is None:
+                audio.add_tags()
+            tags = audio.tags
+        else:
+            tags = ID3(str(path))
+        tags.delall('USLT')
+        tags.add(USLT(encoding=3, lang='eng', desc='', text=text))
+        if audio is not None:
+            audio.save(v2_version=4)
+        else:
+            tags.save(v2_version=4)
+    elif suffix in {'m4a', 'mp4', 'aac'}:
+        audio = MP4(str(path))
+        audio['\xa9lyr'] = text
+        audio.save()
+    elif suffix == 'flac':
+        audio = FLAC(str(path))
+        audio['lyrics'] = text
+        audio.save()
+    elif suffix in {'ogg', 'oga'}:
+        audio = OggVorbis(str(path))
+        audio['lyrics'] = text
+        audio.save()
+    elif suffix == 'opus':
+        audio = OggOpus(str(path))
+        audio['lyrics'] = text
+        audio.save()

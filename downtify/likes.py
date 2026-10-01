@@ -20,6 +20,7 @@ Two things are easy to get wrong here, and both are handled on purpose:
 from __future__ import annotations
 
 import threading
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -191,6 +192,7 @@ def sync_liked_playlist(
     likes: LikedTracks,
     download_dir: Path,
     slskd_dir: Optional[Path] = None,
+    extra_dirs: Optional[Sequence[Path]] = None,
 ) -> Optional[Path]:
     """Write the liked playlist, or take it away when there is nothing to list.
 
@@ -220,6 +222,7 @@ def sync_liked_playlist(
                 LIKED_PLAYLIST_NAME,
                 entries,
                 slskd_dir=slskd_dir,
+                extra_dirs=extra_dirs,
             )
             if path is not None:
                 return path
@@ -254,7 +257,9 @@ def remap_moved(likes: LikedTracks, ctx: LibraryContext) -> int:
         new = disk.get(row['content_key'])
         if not new or new == old:
             continue
-        if locate_library_file(old, ctx.download_dir, ctx.slskd_dir):
+        if locate_library_file(
+            old, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+        ):
             continue  # Still where it was: the key just matches a twin.
         if likes.update_path(old, new):
             moved += 1

@@ -300,6 +300,7 @@ async function resolve() {
   try {
     const res = await API.resolveUrl(url.value)
     details.value = res.data
+    library.lookupSongs(res.data?.tracks || [])
   } catch (err) {
     error.value = err?.response?.data?.detail || err?.message || ''
   } finally {

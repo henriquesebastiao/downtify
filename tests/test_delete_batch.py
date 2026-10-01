@@ -24,6 +24,7 @@ import pytest
 
 import main
 from downtify import api
+from downtify.library_paths import EXTERNAL_LIBRARY_PREFIX, extra_dir_id
 from downtify.playlist_catalog import PlaylistCatalog
 from downtify.track_index import TrackIndex
 
@@ -197,6 +198,54 @@ def test_slskd_paths_without_slskd_dir_stay_under_downloads(tmp_path):
     result = main._delete_track_file('slskd/local.mp3', tmp_path)
 
     assert result == {'deleted': True}
+
+
+def test_delete_track_file_resolves_extra_folder_paths(tmp_path):
+    base = tmp_path / 'downloads'
+    extra = tmp_path / 'ripped'
+    base.mkdir()
+    _track(extra, 'Band/Song.mp3')
+    _track(extra, 'Band/Song.lrc', b'[00:01.00]la')
+    stored = f'{EXTERNAL_LIBRARY_PREFIX}{extra_dir_id(extra)}/Band/Song.mp3'
+
+    result = main._delete_track_file(
+        stored, base.resolve(), extra_dirs=(extra,)
+    )
+
+    assert result == {'deleted': True}
+    assert not (extra / 'Band').exists()
+    assert extra.is_dir()
+
+
+def test_delete_track_file_rejects_traversal_out_of_extra_dir(tmp_path):
+    base = tmp_path / 'downloads'
+    extra = tmp_path / 'ripped'
+    base.mkdir()
+    extra.mkdir()
+    _track(tmp_path, 'secret.mp3')
+    stored = f'{EXTERNAL_LIBRARY_PREFIX}{extra_dir_id(extra)}/../secret.mp3'
+
+    result = main._delete_track_file(
+        stored, base.resolve(), extra_dirs=(extra,)
+    )
+
+    assert result == {'deleted': False, 'error': 'Invalid path'}
+    assert (tmp_path / 'secret.mp3').exists()
+
+
+def test_batch_deletes_extra_folder_tracks(tmp_path):
+    base = tmp_path / 'downloads'
+    extra = tmp_path / 'ripped'
+    base.mkdir()
+    _track(extra, 'A.mp3')
+    stored = f'{EXTERNAL_LIBRARY_PREFIX}{extra_dir_id(extra)}/A.mp3'
+
+    result = main._delete_tracks_batch(
+        [stored], base.resolve(), extra_dirs=(extra,)
+    )
+
+    assert result['deleted_count'] == 1
+    assert not (extra / 'A.mp3').exists()
 
 
 def test_after_library_delete_forgets_files_and_reports_playlists(

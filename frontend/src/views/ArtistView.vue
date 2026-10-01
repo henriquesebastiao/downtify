@@ -1,7 +1,7 @@
 <template>
   <div>
     <DetailState
-      :loaded="library.loaded.value"
+      :loaded="ready"
       :found="!!artist"
       icon="user"
       :missing="t('artist.notFound')"
@@ -190,7 +190,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
@@ -225,6 +225,20 @@ const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
 const ui = useUi()
+
+const ready = ref(false)
+
+async function loadArtist() {
+  ready.value = false
+  await library.loadArtistTracks(String(route.query.name || ''))
+  ready.value = true
+}
+
+onMounted(loadArtist)
+watch(
+  () => route.query.name,
+  () => loadArtist()
+)
 
 const artist = computed(() =>
   library.findArtist(String(route.query.name || ''))

@@ -9,6 +9,8 @@ services:
     volumes:
       - ./docker/downloads:/downloads
       - ./docker/data:/data
+      # Existing music folders (container path goes in Settings):
+      # - ./mp3:/music/collection
       # slskd's download folder, when using the slskd audio source:
       # - ./docker/slskd:/slskd
       # - settings/server./docker/cookies.txt:/cookies.txt

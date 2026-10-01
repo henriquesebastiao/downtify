@@ -162,7 +162,7 @@
 
     <!-- Jump back in -->
     <section
-      v-if="history.recent.value.length"
+      v-if="jumpBackIn.length"
       class="flex flex-col gap-4 animate-rise [animation-delay:80ms]"
     >
       <h2 class="text-display text-xl font-semibold">
@@ -170,13 +170,14 @@
       </h2>
       <div class="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
         <RouterLink
-          v-for="entry in history.recent.value.slice(0, 6)"
+          v-for="entry in jumpBackIn"
           :key="entry.id"
           :to="entry.route || { name: 'Home' }"
           class="group flex h-16 items-center gap-3 overflow-hidden rounded-[12px] bg-surface pr-3 transition-colors hover:bg-surface-2"
         >
           <CoverArt
             :src="entry.cover"
+            :covers="entry.covers"
             :name="entry.title"
             :icon="
               entry.type === 'artist'
@@ -263,7 +264,7 @@
           :key="playlist.key"
           :to="{ name: 'Playlist', query: { name: playlist.name } }"
           :title="playlist.title"
-          :subtitle="t('common.tracks', { count: playlist.tracks.length })"
+          :subtitle="t('common.tracks', { count: itemTrackCount(playlist) })"
           :cover="playlist.cover"
           :covers="playlist.covers"
           :name="playlist.title"
@@ -276,7 +277,7 @@
 
     <!-- First run -->
     <section
-      v-if="library.loaded.value && !library.tracks.value.length"
+      v-if="library.loaded.value && !library.trackCount.value"
       class="grid gap-4 md:grid-cols-3"
     >
       <div
@@ -313,6 +314,7 @@ import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
 import { classifyInput } from '/src/lib/input'
 import { formatBytes } from '/src/lib/format'
+import { itemTrackCount } from '/src/lib/library'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
@@ -383,15 +385,15 @@ const pending = computed(() => activeItems.value.length + waiting.value)
 const stats = computed(() => [
   {
     label: t('library.tracks'),
-    value: library.tracks.value.length.toLocaleString(),
+    value: library.trackCount.value.toLocaleString(),
   },
   {
     label: t('library.albums'),
-    value: library.albums.value.length.toLocaleString(),
+    value: library.albumCount.value.toLocaleString(),
   },
   {
     label: t('library.artists'),
-    value: library.artists.value.length.toLocaleString(),
+    value: library.artistCount.value.toLocaleString(),
   },
   { label: t('home.size'), value: formatBytes(library.totalSize.value) },
 ])
@@ -401,8 +403,27 @@ const recentAlbums = computed(() =>
 )
 const recentPlaylists = computed(() =>
   [...library.playlists.value]
-    .filter((playlist) => playlist.tracks.length)
+    .filter((playlist) => itemTrackCount(playlist))
     .sort((a, b) => b.added - a.added)
+    .slice(0, 6)
+)
+
+const jumpBackIn = computed(() =>
+  history.recent.value
+    .map((entry) => {
+      if (entry.type !== 'playlist') return entry
+      const name = String(entry.route?.query?.name || entry.title || '')
+      const live = library.findPlaylist(name)
+      if (!live) return null
+      return {
+        ...entry,
+        title: live.title,
+        cover: live.cover || live.covers[0] || entry.cover || '',
+        covers: live.covers,
+        route: { name: 'Playlist', query: { name: live.name } },
+      }
+    })
+    .filter(Boolean)
     .slice(0, 6)
 )
 
@@ -415,15 +436,18 @@ function isPlaying(entry) {
   )
 }
 
-function playAlbum(album) {
-  actions.play(album.tracks, 0, {
+async function playAlbum(album) {
+  await library.loadArtistTracks(album.artist)
+  const live = library.findAlbum(album.artist, album.title) || album
+  if (!live.tracks.length) return
+  actions.play(live.tracks, 0, {
     type: 'album',
-    title: album.title,
-    subtitle: album.artist,
-    cover: album.cover,
+    title: live.title,
+    subtitle: live.artist,
+    cover: live.cover,
     route: {
       name: 'Album',
-      query: { artist: album.artist, title: album.title },
+      query: { artist: live.artist, title: live.title },
     },
   })
 }

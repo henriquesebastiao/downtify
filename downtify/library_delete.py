@@ -16,9 +16,13 @@ from .library_catalog import (
     resolve_library_file,
 )
 from .library_cleanup import prune_empty_parent_dirs, remove_track_leftovers
-from .library_paths import SLSKD_LIBRARY_PREFIX, library_stored_path
+from .library_paths import library_file_root, library_stored_path
 from .library_paths_cache import invalidate_library_paths_cache
-from .m3u import sanitize_playlist_name
+from .m3u import find_m3u_for_name, is_manual_m3u, sanitize_playlist_name
+from .manual_playlists import (
+    drop_manual_playlist,
+    prune_files_from_manual_playlists,
+)
 from .track_tag_match import (
     spotify_aligns_with_file_tags,
     spotify_file_tag_mismatch_label,
@@ -173,11 +177,8 @@ def delete_library_file(
         return {'file': file_key, 'deleted': False, 'error': str(exc)}
     # Same leftovers DELETE /delete removes: .lrc sidecar, orphaned
     # cover.jpg, and folders left empty (never the library roots).
-    root = (
-        ctx.slskd_dir
-        if ctx.slskd_dir is not None
-        and file_key.startswith(SLSKD_LIBRARY_PREFIX)
-        else ctx.download_dir
+    root, _rel = library_file_root(
+        file_key, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
     )
     remove_track_leftovers(full, root)
 
@@ -190,6 +191,12 @@ def delete_library_file(
         affected_playlists = playlist_catalog.remove_tracks_for_filename(
             file_key
         )
+    affected_playlists = list(
+        dict.fromkeys(
+            list(affected_playlists)
+            + prune_files_from_manual_playlists(ctx, [file_key])
+        )
+    )
     if track_index is not None:
         track_index.remove_by_filename(file_key)
     if navidrome_index is not None:
@@ -343,7 +350,9 @@ def _delete_audio_under_dir(
             continue
         if path.suffix.lower() not in AUDIO_EXTENSIONS:
             continue
-        stored = library_stored_path(path, ctx.download_dir, ctx.slskd_dir)
+        stored = library_stored_path(
+            path, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+        )
         if stored in skip_paths:
             continue
         result = delete_library_file(
@@ -548,6 +557,20 @@ def _delete_playlist_folder_extras(
     )
 
 
+def _drop_manual_playlist_if_any(
+    ctx: LibraryContext,
+    download_dir: Path,
+    playlist_name: str,
+) -> Optional[dict[str, Any]]:
+    found = find_m3u_for_name(download_dir, playlist_name)
+    if found is None or not is_manual_m3u(found):
+        return None
+    try:
+        return drop_manual_playlist(ctx, found.stem)
+    except Exception as exc:
+        return {'ok': False, 'error': str(exc)}
+
+
 def delete_playlist_from_library(
     playlist_name: str,
     download_dir: Path,
@@ -559,6 +582,24 @@ def delete_playlist_from_library(
     pl_name = str(playlist_name or '').strip()
     if not pl_name:
         return {'ok': False, 'error': 'Empty playlist name'}
+
+    ctx = library_context_from_state(
+        download_dir,
+        settings,
+        track_index=state.track_index,
+    )
+    return _drop_manual_playlist_if_any(
+        ctx, download_dir, pl_name
+    ) or _delete_imported_playlist(pl_name, download_dir, settings, state, ctx)
+
+
+def _delete_imported_playlist(
+    pl_name: str,
+    download_dir: Path,
+    settings: dict[str, Any],
+    state: Any,
+    ctx: LibraryContext,
+) -> dict[str, Any]:
 
     # With organize-by-artist or -album on, tracks live in artist/album
     # folders, not a per-playlist folder — and a same-named album folder
@@ -575,11 +616,6 @@ def delete_playlist_from_library(
         organize,
     )
 
-    ctx = library_context_from_state(
-        download_dir,
-        settings,
-        track_index=state.track_index,
-    )
     catalog = state.playlist_catalog
     if catalog is None:
         return {'ok': False, 'error': 'Playlist catalog not available'}

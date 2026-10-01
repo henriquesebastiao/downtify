@@ -4,7 +4,7 @@
   >
     <PageHeader :title="t('library.title')" :subtitle="summary">
       <UiButton
-        v-if="library.tracks.value.length"
+        v-if="library.trackCount.value"
         variant="ghost"
         icon="wand"
         :to="{ name: 'Upgrade' }"
@@ -43,6 +43,14 @@
         class="max-w-full"
       />
       <div class="ml-auto flex items-center gap-2">
+        <UiButton
+          v-if="tab === 'playlists' && auth.isAdmin.value"
+          variant="primary"
+          icon="plus"
+          @click="playlistActions.openCreate()"
+        >
+          {{ t('playlists.create') }}
+        </UiButton>
         <UiSelect
           v-if="tab !== 'tracks'"
           v-model="sortKey"
@@ -63,7 +71,7 @@
 
     <!-- Loading -->
     <div
-      v-if="!library.loaded.value && library.loading.value"
+      v-if="!catalogReady && library.loading.value"
       class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
     >
       <div v-for="n in 12" :key="n" class="flex flex-col gap-2.5">
@@ -74,7 +82,7 @@
     </div>
 
     <UiEmpty
-      v-else-if="library.error.value && !library.tracks.value.length"
+      v-else-if="library.error.value && !library.trackCount.value"
       icon="alert"
       :title="t('library.loadFailed')"
       :body="t('library.loadFailedHint')"
@@ -86,7 +94,9 @@
 
     <UiEmpty
       v-else-if="
-        !library.tracks.value.length && !library.playlists.value.length
+        tab !== 'playlists' &&
+        !library.trackCount.value &&
+        !library.playlists.value.length
       "
       icon="library"
       :title="t('library.emptyTitle')"
@@ -98,7 +108,7 @@
     </UiEmpty>
 
     <UiEmpty
-      v-else-if="!items.length"
+      v-else-if="!items.length && !(tab === 'playlists' && !filter)"
       icon="filter"
       :title="t('library.noMatches')"
       :body="t('library.noMatchesHint')"
@@ -120,6 +130,7 @@
         @enqueue="actions.enqueue(selectedTracks)"
         @zip="zipSelected"
         @delete="deleteSelected"
+        @add-to-playlist="playlistActions.openCreate(selectedTracks)"
       />
       <div class="flex flex-wrap items-center gap-2">
         <UiButton
@@ -201,7 +212,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import AppIcon from '/src/components/ui/AppIcon.vue'
@@ -222,10 +233,17 @@ import TrackList from '/src/components/library/TrackList.vue'
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
+import { useAuth } from '/src/model/auth'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useUi } from '/src/model/ui'
-import { albumKey, artistKey, filterItems, sortItems } from '/src/lib/library'
+import {
+  albumKey,
+  artistKey,
+  filterItems,
+  itemTrackCount,
+  sortItems,
+} from '/src/lib/library'
 import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
 import { formatBytes, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
@@ -235,6 +253,7 @@ const route = useRoute()
 const router = useRouter()
 const library = useLibrary()
 const player = usePlayer()
+const auth = useAuth()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
 const ui = useUi()
@@ -249,6 +268,26 @@ watch(tab, (value) => (lastTab.value = value), { immediate: true })
 if (!route.params.tab) {
   router.replace({ name: 'Library', params: { tab: tab.value } })
 }
+
+function loadTab(current) {
+  if (current === 'tracks') library.ensureTracks()
+  else if (current === 'albums') library.ensureAlbums()
+  else if (current === 'artists') library.ensureArtists()
+}
+
+onMounted(() => loadTab(tab.value))
+watch(tab, (value) => loadTab(value))
+
+const catalogReady = computed(() => {
+  if (tab.value === 'tracks') return library.tracksComplete.value
+  if (tab.value === 'albums') {
+    return library.albumsComplete.value || library.tracksComplete.value
+  }
+  if (tab.value === 'artists') {
+    return library.artistsComplete.value || library.tracksComplete.value
+  }
+  return library.loaded.value
+})
 
 // Artist photos saved via the artist page's picker (see artist_profile.py)
 // - fetched once per visit to the artists tab so tiles use the real photo
@@ -330,13 +369,13 @@ const tabs = computed(() => [
   {
     id: 'albums',
     label: t('library.albums'),
-    count: library.albums.value.length,
+    count: library.albumCount.value,
     to: { name: 'Library', params: { tab: 'albums' } },
   },
   {
     id: 'artists',
     label: t('library.artists'),
-    count: library.artists.value.length,
+    count: library.artistCount.value,
     to: { name: 'Library', params: { tab: 'artists' } },
   },
   {
@@ -348,7 +387,7 @@ const tabs = computed(() => [
   {
     id: 'tracks',
     label: t('library.tracks'),
-    count: library.tracks.value.length,
+    count: library.trackCount.value,
     to: { name: 'Library', params: { tab: 'tracks' } },
   },
 ])
@@ -356,9 +395,9 @@ const tabs = computed(() => [
 const summary = computed(() => {
   if (!library.loaded.value) return ''
   return [
-    t('common.tracks', { count: library.tracks.value.length }),
-    t('common.albums', { count: library.albums.value.length }),
-    t('common.artists', { count: library.artists.value.length }),
+    t('common.tracks', { count: library.trackCount.value }),
+    t('common.albums', { count: library.albumCount.value }),
+    t('common.artists', { count: library.artistCount.value }),
     formatBytes(library.totalSize.value),
   ].join(' · ')
 })
@@ -455,8 +494,12 @@ function tileProps(item) {
       subtitle: [
         item.albums.length
           ? t('common.albums', { count: item.albums.length })
-          : '',
-        t('common.tracks', { count: item.tracks.length }),
+          : item.albumCount
+            ? t('common.albums', { count: item.albumCount })
+            : '',
+        t('common.tracks', {
+          count: itemTrackCount(item),
+        }),
       ]
         .filter(Boolean)
         .join(' · '),
@@ -477,7 +520,7 @@ function tileProps(item) {
     name: item.title,
     icon: item.liked ? 'heart' : 'playlist',
     symbol: item.liked,
-    playable: item.tracks.length > 0,
+    playable: itemTrackCount(item) > 0,
     playing:
       player.context.value?.type === 'playlist' &&
       player.context.value?.title === item.title,
@@ -492,7 +535,7 @@ function playlistSubtitle(item) {
       total: batch.expected_count,
     })
   }
-  return t('common.tracks', { count: item.tracks.length })
+  return t('common.tracks', { count: itemTrackCount(item) })
 }
 
 function asideFor(item) {
@@ -503,9 +546,13 @@ function asideFor(item) {
     : t('common.lengthMinutes', { minutes })
 }
 
-function playItem(item) {
+async function playItem(item) {
   if (tab.value === 'albums') {
-    actions.play(item.tracks, 0, {
+    await library.loadArtistTracks(item.artist)
+    const album = library.findAlbum(item.artist, item.title)
+    const list = album?.tracks || []
+    if (!list.length) return
+    actions.play(list, 0, {
       type: 'album',
       title: item.title,
       subtitle: item.artist,
@@ -516,8 +563,12 @@ function playItem(item) {
       },
     })
   } else if (tab.value === 'artists') {
+    await library.loadArtistTracks(item.name)
+    const artist = library.findArtist(item.name)
+    const list = artist?.tracks || []
+    if (!list.length) return
     actions.play(
-      item.tracks,
+      list,
       0,
       {
         type: 'artist',
@@ -528,7 +579,11 @@ function playItem(item) {
       { shuffled: true }
     )
   } else {
-    actions.play(item.tracks, 0, playlistActions.contextFor(item))
+    await library.loadPlaylistTracks(item.name)
+    const live = library.findPlaylist(item.name)
+    const list = live?.tracks || []
+    if (!list.length) return
+    actions.play(list, 0, playlistActions.contextFor(live || item))
   }
 }
 

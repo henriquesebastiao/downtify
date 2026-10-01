@@ -113,6 +113,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'album_artist': '',
         'track_number': 0,
         'year': '',
+        'genre': '',
         'duration': 0.0,
         **audio_format(None),
     }
@@ -125,6 +126,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
     album_artist = ''
     track_number = 0
     year = ''
+    genre = ''
     duration = 0.0
 
     try:
@@ -140,6 +142,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         album_artist = _tag_text(audio.get('albumartist'))
         track_number = _track_number(audio.get('tracknumber'))
         year = _year(audio.get('date'))
+        genre = _tag_text(audio.get('genre'))
         duration = _duration(audio)
 
         if not title and audio.tags is not None:
@@ -161,6 +164,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
             album_artist = _tag_text(id3.get('TPE2'))
             track_number = _track_number(id3.get('TRCK'))
             year = _year(id3.get('TDRC'))
+            genre = _tag_text(id3.get('TCON'))
 
     artists = _split_artists(artist)
     return {
@@ -171,6 +175,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'album_artist': album_artist,
         'track_number': track_number,
         'year': year,
+        'genre': genre,
         'duration': duration,
         **fmt,
     }
@@ -210,6 +215,7 @@ def library_entry_for_file(
         'album_artist': str(meta.get('album_artist') or '').strip(),
         'track_number': int(meta.get('track_number') or 0),
         'year': str(meta.get('year') or ''),
+        'genre': str(meta.get('genre') or ''),
         'duration': float(meta.get('duration') or 0.0),
         'codec': str(meta.get('codec') or ''),
         'bitrate': int(meta.get('bitrate') or 0),

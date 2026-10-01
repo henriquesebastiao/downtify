@@ -67,7 +67,7 @@ def build_disk_content_index(ctx: LibraryContext) -> dict[str, str]:
         if not ck:
             return
         stored = library_stored_path(
-            file_path, ctx.download_dir, ctx.slskd_dir
+            file_path, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
         )
         index[ck] = stored
 
@@ -83,6 +83,22 @@ def build_disk_content_index(ctx: LibraryContext) -> dict[str, str]:
         if not same:
             for path in ctx.slskd_dir.rglob('*'):
                 _add(path)
+
+    for extra in ctx.extra_dirs:
+        if not extra.is_dir():
+            continue
+        try:
+            extra_resolved = extra.resolve()
+        except OSError:
+            extra_resolved = extra
+        try:
+            download_resolved = ctx.download_dir.resolve()
+        except OSError:
+            download_resolved = ctx.download_dir
+        if extra_resolved == download_resolved:
+            continue
+        for path in extra.rglob('*'):
+            _add(path)
 
     return index
 
@@ -116,7 +132,9 @@ def reconcile_library_paths(
             new_path = disk.get(ck)
             if not new_path or new_path == old_path:
                 continue
-            if locate_library_file(old_path, ctx.download_dir, ctx.slskd_dir):
+            if locate_library_file(
+                old_path, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+            ):
                 continue
             if track_index.update_filename(tid, new_path, content_key=ck):
                 updated += 1
@@ -134,7 +152,9 @@ def reconcile_library_paths(
             new_path = disk.get(ck)
             if not new_path or new_path == old_path:
                 continue
-            if locate_library_file(old_path, ctx.download_dir, ctx.slskd_dir):
+            if locate_library_file(
+                old_path, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+            ):
                 continue
             names = playlist_catalog.update_filename_by_content_key(
                 ck, new_path
@@ -173,7 +193,7 @@ def prune_stale_and_backfill(
             if not old_path or not pl_name or not tid:
                 continue
             full = locate_library_file(
-                old_path, ctx.download_dir, ctx.slskd_dir
+                old_path, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
             )
             if full is None:
                 if playlist_catalog.remove_track(pl_name, tid):
@@ -196,7 +216,7 @@ def prune_stale_and_backfill(
             if not old_path or not tid:
                 continue
             full = locate_library_file(
-                old_path, ctx.download_dir, ctx.slskd_dir
+                old_path, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
             )
             if full is None:
                 if track_index.remove_by_filename(old_path):

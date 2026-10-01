@@ -215,6 +215,7 @@ import UiMenu from '../ui/UiMenu.vue'
 import LikeButton from '../player/LikeButton.vue'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
+import { usePlaylistActions } from '/src/model/playlistActions'
 import { formatDuration, timeAgo } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -235,6 +236,7 @@ const emit = defineEmits(['update:selected', 'update:sort'])
 
 const player = usePlayer()
 const actions = useTrackActions()
+const playlistActions = usePlaylistActions()
 const { t, locale } = useI18n()
 const root = ref(null)
 const menus = {}
@@ -373,6 +375,25 @@ function menuItems(row) {
     context: props.context,
     hide: props.hideMenu,
   })
+  const addItems = playlistActions.addMenuItems([row.track])
+  if (addItems.length) {
+    const queueAt = items.findIndex((item) => item.icon === 'queue')
+    const at = queueAt >= 0 ? queueAt + 1 : 3
+    items.splice(at, 0, { divider: true }, ...addItems)
+  }
+  if (props.context?.manual && props.context?.playlistName) {
+    const playlist = playlistActions
+      .manuals()
+      .find((item) => item.name === props.context.playlistName)
+    if (playlist) {
+      const trashAt = items.findIndex((item) => item.danger)
+      items.splice(trashAt >= 0 ? trashAt : items.length, 0, {
+        label: t('playlists.removeTrack'),
+        icon: 'x',
+        action: () => playlistActions.removeFiles(playlist, [row.track]),
+      })
+    }
+  }
   if (selectable.value) {
     items.splice(3, 0, {
       label: isSelected(row.track)

@@ -12,6 +12,8 @@ from pathlib import Path
 
 from loguru import logger
 
+from . import lyrics as lyrics_mod
+
 _AUDIO_EXTENSIONS = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
 
 #: Filename written by Downloader._save_album_cover next to every track
@@ -20,20 +22,28 @@ ALBUM_COVER_FILENAME = 'cover.jpg'
 
 
 def delete_lrc_sidecar(audio_path: Path) -> None:
-    """Best-effort removal of the .lrc sidecar next to a deleted track.
+    """Best-effort removal of the .lrc sidecar for a deleted track.
 
-    Mirrors the naming ``downtify/downloader.py:embed_lyrics`` writes the
-    sidecar with — same basename as the audio file, ``.lrc`` extension.
-    A missing or unremovable sidecar must not fail the audio file's own
-    deletion, which has already succeeded by the time this runs.
+    Removes both a sidecar next to the audio file and one in a dedicated
+    lyrics folder (see ``lyrics.lrc_path_for``). A missing or unremovable
+    sidecar must not fail the audio file's own deletion.
     """
-    lrc = audio_path.with_suffix('.lrc')
-    try:
-        lrc.unlink(missing_ok=True)
-    except OSError:
-        logger.opt(exception=True).warning(
-            'Could not remove LRC sidecar {}', lrc
-        )
+
+    seen: set[Path] = set()
+    for lrc in lyrics_mod.lrc_candidates(audio_path):
+        key = str(lrc)
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            lrc.unlink(missing_ok=True)
+        except OSError:
+            logger.opt(exception=True).warning(
+                'Could not remove LRC sidecar {}', lrc
+            )
+        root = lyrics_mod.lrc_tree_root()
+        if root is not None:
+            prune_empty_parent_dirs(lrc.parent, root)
 
 
 def delete_album_cover_if_orphaned(audio_path: Path) -> None:

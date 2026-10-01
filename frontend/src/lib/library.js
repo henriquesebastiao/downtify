@@ -174,14 +174,11 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
   )
   const names = new Set(playlists.map((playlist) => playlist.name))
   const fromM3u = playlists.map((playlist) => {
-    const tracks = (playlist.files || [])
-      .map((file) => tracksByFile.get(file))
-      .filter(Boolean)
-    const covers = [
-      ...new Set(
-        tracks.filter((track) => track.hasCover).map((track) => track.cover)
-      ),
-    ].slice(0, 4)
+    const files = playlist.files || []
+    const tracks = files.map((file) => tracksByFile.get(file)).filter(Boolean)
+    // Mosaic from the M3U paths so the sidebar does not wait for
+    // GET /tracks rows. `/cover?file=` reads tags on its own.
+    const covers = [...new Set(files.map((file) => coverURL(file)))].slice(0, 4)
     return {
       key: playlist.name.toLowerCase(),
       name: playlist.name,
@@ -190,13 +187,18 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       title: playlist.name,
       // The playlist of hearted songs, not a downloaded one.
       liked: Boolean(playlist.liked),
+      manual: Boolean(playlist.manual),
+      fileCount: playlist.count != null ? Number(playlist.count) : files.length,
       tracks,
-      // The playlist's own artwork, when it was downloaded; the grid of
-      // track covers is only the fallback for playlists without one.
-      cover: playlistCoverURL(playlist.cover),
+      // Downloaded playlists keep their own artwork. Manual ones leave
+      // this empty so CoverArt mosaics up to four track covers (the
+      // sidecar JPEG is still written for Navidrome).
+      cover: playlist.manual ? '' : playlistCoverURL(playlist.cover),
       covers,
       duration: tracks.reduce((sum, track) => sum + track.duration, 0),
-      added: tracks.reduce((max, track) => Math.max(max, track.added), 0),
+      // M3U mtime from GET /playlists — not the resolved tracks, or the
+      // sidebar would reshuffle every time a playlist's songs load.
+      added: Number(playlist.added) || 0,
       batch: batchByName.get(playlist.name) || null,
     }
   })
@@ -209,6 +211,8 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       name: String(batch.playlist_name || ''),
       title: String(batch.playlist_name || ''),
       liked: false,
+      manual: false,
+      fileCount: 0,
       tracks: [],
       cover: '',
       covers: [],
@@ -228,10 +232,23 @@ const SORTERS = {
   album: (a, b) => compareText(a.album, b.album) || byTrackOrder(a, b),
   year: (a, b) => compareText(b.year, a.year) || compareText(a.title, b.title),
   duration: (a, b) => b.duration - a.duration,
-  count: (a, b) => b.tracks.length - a.tracks.length,
+  count: (a, b) => itemTrackCount(b) - itemTrackCount(a),
 }
 
 export const SORT_KEYS = Object.keys(SORTERS)
+
+/** Track count for a grouped album/artist/playlist, or an index row. */
+export function itemTrackCount(item) {
+  // Playlists always know how many files the M3U lists. Prefer that over
+  // `tracks.length`, which is only the songs already fetched.
+  if (item != null && Number.isFinite(Number(item.fileCount))) {
+    return Number(item.fileCount)
+  }
+  if (Array.isArray(item?.tracks) && item.tracks.length) {
+    return item.tracks.length
+  }
+  return Number(item?.trackCount || 0)
+}
 
 export function sortItems(items, key, direction = 'asc') {
   const sorter = SORTERS[key] || SORTERS.added

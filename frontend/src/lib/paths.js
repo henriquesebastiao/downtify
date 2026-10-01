@@ -4,6 +4,7 @@
 // slskd downloads left in place live outside the downloads folder, so
 // the '/downloads' static mount can't serve them; '/media' resolves both.
 export const SLSKD_LIBRARY_PREFIX = 'slskd/'
+export const EXTERNAL_LIBRARY_PREFIX = 'ext/'
 
 /**
  * Encode each path segment on its own so '/' separators survive —
@@ -18,7 +19,10 @@ export function encodePath(fileName) {
 
 export function fileURL(fileName) {
   const path = String(fileName || '')
-  if (path.startsWith(SLSKD_LIBRARY_PREFIX)) {
+  if (
+    path.startsWith(SLSKD_LIBRARY_PREFIX) ||
+    path.startsWith(EXTERNAL_LIBRARY_PREFIX)
+  ) {
     return `/media/${encodePath(path)}`
   }
   return `/downloads/${encodePath(path)}`

@@ -33,6 +33,10 @@ export const NAV = [
       { title: 'Server Settings', page: 'features/server.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
+      {
+        title: 'Existing music folders',
+        page: 'features/external-library.md',
+      },
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
       { title: 'Replace Audio', page: 'features/replace-audio.md' },
       { title: 'M3U Export', page: 'features/m3u-export.md' },
