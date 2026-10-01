@@ -61,6 +61,11 @@ rm:
 	sudo rm -rf docker/downloads/*
 	sudo rm -rf docker/data/*
 
+update:
+	uvx uv-bump
+	npm --prefix frontend update -S
+	uv export --no-hashes --no-dev -o requirements.txt
+
 %:
 	@:
 
