@@ -175,9 +175,15 @@ const items = [
   { name: 'Queue', icon: 'download', label: 'nav.queue' },
 ]
 const moreLinks = [
-  { name: 'Discover', icon: 'sparkle', label: 'nav.discover' },
+  {
+    name: 'Discover',
+    icon: 'sparkle',
+    label: 'nav.discover',
+    match: ['FinderBrowse'],
+  },
   { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
   { name: 'Podcasts', icon: 'mic', label: 'nav.podcasts' },
+  { name: 'Charts', icon: 'trending', label: 'nav.charts' },
   { name: 'Settings', icon: 'settings', label: 'nav.settings' },
 ]
 
@@ -185,9 +191,7 @@ function isActive(item) {
   return route.name === item.name || (item.match || []).includes(route.name)
 }
 
-const moreActive = computed(() =>
-  moreLinks.some((link) => link.name === route.name)
-)
+const moreActive = computed(() => moreLinks.some(isActive))
 
 watch(
   () => route.fullPath,

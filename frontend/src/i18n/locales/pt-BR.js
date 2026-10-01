@@ -30,6 +30,7 @@ export default {
     monitor: 'Monitor',
     discover: 'Descobrir',
     podcasts: 'Podcasts',
+    charts: 'Paradas de sucesso',
     settings: 'Configurações',
     more: 'Mais',
     playlists: 'Playlists',
@@ -70,6 +71,7 @@ export default {
     getIt: 'Baixar',
     hintSpotify: 'Faixas, álbuns, playlists e artistas',
     hintYoutube: 'Músicas, álbuns, playlists e artistas do YouTube Music',
+    hintDeezer: 'Faixas, álbuns, playlists e artistas do Deezer',
     hintCsv: 'Importe um CSV (Soundiiz, Exportify…)',
     downloading: 'Baixando agora',
     waiting: {
@@ -136,6 +138,43 @@ export default {
     tipYoutubeBody:
       'Músicas, álbuns, playlists — ou a página de um artista para ver todos os lançamentos.',
   },
+  charts: {
+    title: 'Paradas de sucesso',
+    subtitle: 'A parada global do Deezer: o que está bombando agora.',
+    failed: 'Não deu para carregar a parada',
+    empty: 'Nada na parada por enquanto',
+    playlist: 'Playlist',
+  },
+  finder: {
+    placeholder: 'Busque um artista, álbum ou música',
+    resultsFor: 'Resultados para “{query}”',
+    songsBy: 'Músicas de {name}',
+    path: 'Localização',
+    artistColumn: 'Artista',
+    tracksColumn: 'Faixas',
+    resizeColumn: 'Redimensionar coluna',
+    collapseColumn: 'Recolher coluna',
+    expandColumn: 'Expandir coluna',
+    resizeHint: 'Arraste para redimensionar · clique duplo para restaurar',
+    discography: 'Discografia',
+    failed: 'Não deu para carregar isso do Deezer',
+    noArtist: 'Nenhum artista aberto',
+    noAlbums: 'Nenhum lançamento aqui',
+    pickAlbum: 'Escolha um álbum',
+    pickAlbumHint:
+      'As faixas dele aparecem aqui, prontas para ouvir a prévia e baixar.',
+    about: 'Sobre',
+    showMore: 'Mostrar mais',
+    showLess: 'Mostrar menos',
+    popular: 'Populares',
+    related: 'Fãs também curtem',
+    downloadAlbum: 'Baixar álbum',
+    typeCompilation: 'Coletânea',
+    released: 'Lançamento',
+    label: 'Gravadora',
+    genres: 'Gêneros',
+    credits: 'Créditos',
+  },
   link: {
     resolving: 'Lendo o link…',
     failed: 'Não foi possível abrir este link',
@@ -157,6 +196,7 @@ export default {
     watchArtist: 'Monitorar novos lançamentos',
     openSpotify: 'Abrir no Spotify',
     openYoutube: 'Abrir no YouTube Music',
+    openDeezer: 'Abrir no Deezer',
     filterAll: 'Tudo',
     filterNew: 'Novas',
     filterLibrary: 'Na biblioteca',
@@ -754,7 +794,7 @@ export default {
     coverArtHint: 'Desative para arquivos menores e downloads mais rápidos.',
     coverSize: 'Tamanho da capa',
     coverSizeHint:
-      'Para capas do YouTube Music. Capas do Spotify sempre usam o maior tamanho disponível.',
+      'Para capas do YouTube Music e Deezer. Capas do Spotify sempre usam o maior tamanho disponível.',
     artistCover: 'Obter fotos de artista automaticamente',
     artistCoverHint:
       'Baixa foto do artista, salva em .metadata/ArtistImage, também pode ser utilizada em serviços como Navidrome.',
@@ -1158,13 +1198,13 @@ export default {
       'Álbuns populares de artistas que você já tem, ainda fora da sua biblioteca.',
     playlistsTitle: 'Playlists para você',
     playlistsBody:
-      'Mixes do Spotify em torno dos artistas que você mais ouve, e o essencial de artistas novos.',
-    radioFor: 'Mix em torno de {name}',
+      'O essencial de artistas que você pode curtir: as playlists “100%” do Deezer e “This Is” do Spotify.',
+    onPlatform: 'No {name}',
     essentialsOf: 'O essencial de {name}',
     collectionsFailed:
       'Não foi possível carregar álbuns e playlists agora. Tente novamente mais tarde.',
     poweredBy:
-      'Os artistas vêm dos artistas semelhantes do Deezer; álbuns e playlists, do Spotify.',
+      'Os artistas vêm dos artistas semelhantes do Deezer; os álbuns, do Deezer e do Spotify; as playlists, de cada um.',
   },
   podcasts: {
     title: 'Podcasts',

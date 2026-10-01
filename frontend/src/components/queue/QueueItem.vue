@@ -12,7 +12,7 @@
   >
     <div class="flex items-center gap-3.5">
       <CoverArt
-        :src="song.cover_url"
+        :src="deezerImage(song.cover_url)"
         :name="song.album_name || song.name"
         :rounded="compact ? 'rounded-[6px]' : 'rounded-[8px]'"
         :letter-size="compact ? 12 : 18"
@@ -140,6 +140,8 @@ import UiProgress from '../ui/UiProgress.vue'
 import { useDownloadManager } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
 import { useTrackActions } from '/src/model/trackActions'
+// Display only: the job's `cover_url` is what its file gets.
+import { deezerImage } from '/src/lib/deezerImage'
 import { normalizeTrack } from '/src/lib/library'
 import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'

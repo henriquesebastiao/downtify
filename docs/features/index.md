@@ -10,6 +10,8 @@ Downtify covers everything you need to build and maintain a local music library 
 
 | Feature | What it does |
 |---------|-------------|
+| [Charts](charts.md) | Browse Deezer's global chart and download whatever is trending |
+| [Finder](finder.md) | Search Deezer, then browse an artist, their albums and any album's tracks in columns |
 | [Download Settings](download-settings.md) | Choose format (MP3/FLAC/M4A/OGG/OPUS), bitrate, parallel downloads and delay between downloads |
 | [Playlist Monitor](playlist-monitor.md) | Watch Spotify or YouTube Music playlists and artists, and auto-download new tracks and releases |
 | [Top Songs](top-songs.md) | Paste an artist link and download their most popular songs, optionally as a playlist |
@@ -40,11 +42,10 @@ Downtify accepts several input types in the search bar:
 
 | Input | Example |
 |-------|---------|
-| Spotify track URL | `https://open.spotify.com/track/…` |
-| Spotify album URL | `https://open.spotify.com/album/…` |
-| Spotify playlist URL | `https://open.spotify.com/playlist/…` |
+| Spotify track, album, playlist or artist URL | `https://open.spotify.com/track/…` |
 | YouTube / YouTube Music URL | `https://www.youtube.com/watch?v=…` |
-| YouTube Music playlist URL | `https://music.youtube.com/playlist?list=…` |
+| YouTube Music playlist or artist URL | `https://music.youtube.com/playlist?list=…` |
+| Deezer track, album, playlist or artist URL | `https://www.deezer.com/track/…` |
 | Free-text search | `The Night Owls Do I Still Recall` |
 
 Free-text searches are sent directly to YouTube Music — no Spotify link required.

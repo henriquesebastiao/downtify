@@ -30,6 +30,7 @@ export default {
     monitor: 'Παρακολούθηση',
     discover: 'Ανακάλυψη',
     podcasts: 'Podcast',
+    charts: 'Λίστες επιτυχιών',
     settings: 'Ρυθμίσεις',
     more: 'Περισσότερα',
     playlists: 'Λίστες',
@@ -70,6 +71,7 @@ export default {
     getIt: 'Λήψη',
     hintSpotify: 'Κομμάτια, άλμπουμ, λίστες και καλλιτέχνες',
     hintYoutube: 'Τραγούδια, άλμπουμ, λίστες και καλλιτέχνες του YouTube Music',
+    hintDeezer: 'Κομμάτια, άλμπουμ, λίστες και καλλιτέχνες του Deezer',
     hintCsv: 'Εισαγωγή CSV (Soundiiz, Exportify…)',
     downloading: 'Λήψη τώρα',
     waiting: {
@@ -136,6 +138,44 @@ export default {
     tipYoutubeBody:
       'Τραγούδια, άλμπουμ, λίστες — ή σελίδα καλλιτέχνη για όλες τις κυκλοφορίες.',
   },
+  charts: {
+    title: 'Λίστες επιτυχιών',
+    subtitle:
+      'Το παγκόσμιο chart του Deezer: τι είναι δημοφιλές αυτή τη στιγμή.',
+    failed: 'Δεν ήταν δυνατή η φόρτωση του chart',
+    empty: 'Δεν υπάρχει τίποτα στο chart αυτή τη στιγμή',
+    playlist: 'Λίστα αναπαραγωγής',
+  },
+  finder: {
+    placeholder: 'Αναζητήστε καλλιτέχνη, άλμπουμ ή τραγούδι',
+    resultsFor: 'Αποτελέσματα για «{query}»',
+    songsBy: 'Τραγούδια του/της {name}',
+    path: 'Τοποθεσία',
+    artistColumn: 'Καλλιτέχνης',
+    tracksColumn: 'Κομμάτια',
+    resizeColumn: 'Αλλαγή πλάτους στήλης',
+    collapseColumn: 'Σύμπτυξη στήλης',
+    expandColumn: 'Ανάπτυξη στήλης',
+    resizeHint: 'Σύρετε για αλλαγή πλάτους · διπλό κλικ για επαναφορά',
+    discography: 'Δισκογραφία',
+    failed: 'Δεν ήταν δυνατή η φόρτωση από το Deezer',
+    noArtist: 'Κανένας καλλιτέχνης ανοιχτός',
+    noAlbums: 'Δεν υπάρχουν κυκλοφορίες εδώ',
+    pickAlbum: 'Επιλέξτε ένα άλμπουμ',
+    pickAlbumHint:
+      'Τα κομμάτια του εμφανίζονται εδώ, έτοιμα για ακρόαση και λήψη.',
+    about: 'Σχετικά',
+    showMore: 'Περισσότερα',
+    showLess: 'Λιγότερα',
+    popular: 'Δημοφιλή',
+    related: 'Στους θαυμαστές αρέσουν επίσης',
+    downloadAlbum: 'Λήψη άλμπουμ',
+    typeCompilation: 'Συλλογή',
+    released: 'Κυκλοφορία',
+    label: 'Δισκογραφική',
+    genres: 'Είδη',
+    credits: 'Συντελεστές',
+  },
   link: {
     resolving: 'Ανάγνωση συνδέσμου…',
     failed: 'Δεν ήταν δυνατό το άνοιγμα του συνδέσμου',
@@ -157,6 +197,7 @@ export default {
     watchArtist: 'Παρακολούθηση νέων κυκλοφοριών',
     openSpotify: 'Άνοιγμα στο Spotify',
     openYoutube: 'Άνοιγμα στο YouTube Music',
+    openDeezer: 'Άνοιγμα στο Deezer',
     filterAll: 'Όλα',
     filterNew: 'Νέα',
     filterLibrary: 'Στη βιβλιοθήκη',
@@ -759,7 +800,7 @@ export default {
       'Απενεργοποίησέ το για μικρότερα αρχεία και ταχύτερες λήψεις.',
     coverSize: 'Μέγεθος εξωφύλλου',
     coverSizeHint:
-      'Για εξώφυλλα YouTube Music. Του Spotify είναι πάντα στο μεγαλύτερο μέγεθος.',
+      'Για εξώφυλλα YouTube Music και Deezer. Του Spotify είναι πάντα στο μεγαλύτερο μέγεθος.',
     artistCover: 'Αυτόματη λήψη φωτογραφιών καλλιτεχνών',
     artistCoverHint:
       'Κατεβάζει τη φωτογραφία του καλλιτέχνη στο .metadata/ArtistImage· μπορεί επίσης να χρησιμοποιηθεί σε υπηρεσίες όπως το Navidrome.',
@@ -1171,13 +1212,13 @@ export default {
       'Δημοφιλή άλμπουμ καλλιτεχνών που ήδη έχετε, που δεν είναι ακόμα στη βιβλιοθήκη σας.',
     playlistsTitle: 'Playlist για εσάς',
     playlistsBody:
-      'Μείξεις του Spotify γύρω από τους καλλιτέχνες που ακούτε περισσότερο, και τα βασικά νέων καλλιτεχνών.',
-    radioFor: 'Μείξη γύρω από {name}',
+      'Τα βασικά καλλιτεχνών που μπορεί να σας αρέσουν: οι playlist «100%» του Deezer και «This Is» του Spotify.',
+    onPlatform: 'Στο {name}',
     essentialsOf: 'Τα βασικά του/της {name}',
     collectionsFailed:
       'Δεν ήταν δυνατή η φόρτωση άλμπουμ και playlist αυτή τη στιγμή. Δοκιμάστε ξανά αργότερα.',
     poweredBy:
-      'Οι καλλιτέχνες προέρχονται από τους παρόμοιους καλλιτέχνες του Deezer· τα άλμπουμ και οι playlist από το Spotify.',
+      'Οι καλλιτέχνες προέρχονται από τους παρόμοιους καλλιτέχνες του Deezer· τα άλμπουμ από το Deezer και το Spotify· οι playlist από το καθένα.',
   },
   podcasts: {
     title: 'Podcast',

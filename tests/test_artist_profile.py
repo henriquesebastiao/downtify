@@ -1662,6 +1662,76 @@ def test_photo_proxy_endpoint_prefers_saved_photo(app_state, monkeypatch):
     assert resp.headers['cache-control'] == 'no-cache'
 
 
+def _b64url(text: str) -> str:
+    """*text* the way the page encodes a picture URL (lib/artistPhotoProxy)."""
+
+    return base64.urlsafe_b64encode(text.encode()).decode().rstrip('=')
+
+
+def test_photo_proxy_endpoint_relays_the_given_url_without_searching(
+    app_state, monkeypatch
+):
+    def search(name):
+        raise AssertionError('no search by name when the URL is known')
+
+    seen = []
+
+    def fetch_at(url):
+        seen.append(url)
+        return b'jpegbytes', 'image/jpeg'
+
+    monkeypatch.setattr(api.artist_photo_proxy, 'fetch_proxied_photo', search)
+    monkeypatch.setattr(api.artist_photo_proxy, 'fetch_photo_at', fetch_at)
+    url = 'https://cdn-images.dzcdn.net/images/artist/abc/250x250.jpg'
+    resp = api.artist_photo_proxy_endpoint(name='Paramore', url=_b64url(url))
+    assert resp.body == b'jpegbytes'
+    assert resp.headers['cache-control'] == 'public, max-age=10800'
+    assert seen == [url]
+    assert not (app_state / '.metadata').exists()
+
+
+def test_photo_proxy_endpoint_saved_photo_beats_the_given_url(
+    app_state, monkeypatch
+):
+    artist_profile.save_image(
+        app_state, 'Avril Lavigne', artist_profile.KIND_PHOTO, _TINY_PNG
+    )
+
+    def boom(url):
+        raise AssertionError('the saved photo wins')
+
+    monkeypatch.setattr(api.artist_photo_proxy, 'fetch_photo_at', boom)
+    resp = api.artist_photo_proxy_endpoint(
+        name='Avril Lavigne',
+        url=_b64url(
+            'https://cdn-images.dzcdn.net/images/artist/abc/250x250.jpg'
+        ),
+    )
+    assert resp.path.name == 'Avril Lavigne.jpg'
+
+
+@pytest.mark.parametrize(
+    'url',
+    [
+        _b64url('https://evil.example/a.jpg'),
+        # Not base64url at all: a plain address, or broken encoding.
+        'https://cdn-images.dzcdn.net/images/artist/abc/250x250.jpg',
+        'a',
+        '%%%',
+    ],
+)
+def test_photo_proxy_endpoint_refuses_a_url_that_isnt_deezers(
+    app_state, monkeypatch, url
+):
+    def boom(url):
+        raise AssertionError('must not download')
+
+    monkeypatch.setattr(api.artist_photo_proxy.httpx, 'get', boom)
+    with pytest.raises(HTTPException) as exc:
+        api.artist_photo_proxy_endpoint(name='Paramore', url=url)
+    assert exc.value.status_code == 400
+
+
 # ── Spotify artist id by name ──────────────────────────────────────────
 
 

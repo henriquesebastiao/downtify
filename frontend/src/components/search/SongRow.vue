@@ -46,8 +46,8 @@
       target="_blank"
       rel="noopener"
       class="hidden size-8 items-center justify-center rounded-control text-faint hover:bg-surface-2 hover:text-fg sm:flex lg:opacity-0 lg:group-hover:opacity-100"
-      :title="t('search.openSource')"
-      :aria-label="t('search.openSource')"
+      :title="openSourceLabel"
+      :aria-label="openSourceLabel"
     >
       <AppIcon name="arrow-up-right" :size="16" />
     </a>
@@ -81,4 +81,9 @@ const sourceUrl = computed(() => {
   const url = String(props.song.url || '')
   return /^https?:\/\//.test(url) ? url : ''
 })
+// Charts' Deezer tracks reuse this row; their link opens Deezer, not
+// YouTube Music.
+const openSourceLabel = computed(() =>
+  props.song.source === 'deezer' ? t('link.openDeezer') : t('search.openSource')
+)
 </script>

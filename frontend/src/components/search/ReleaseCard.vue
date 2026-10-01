@@ -2,7 +2,7 @@
   <article class="tile group relative flex min-w-0 flex-col gap-2.5">
     <RouterLink :to="linkTo" class="block" :aria-label="release.name">
       <CoverArt
-        :src="release.cover_url"
+        :src="deezerImage(release.cover_url)"
         :name="release.name"
         :round="round"
         :icon="round ? 'user' : 'disc'"
@@ -49,6 +49,9 @@
 import { computed, ref } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
+// Display only (a Deezer cover at its medium size); the download below
+// resolves the release's own link, never this image.
+import { deezerImage } from '/src/lib/deezerImage'
 import { useDownloadManager } from '/src/model/download'
 import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
@@ -56,16 +59,22 @@ import { useI18n } from '/src/i18n'
 const props = defineProps({
   release: { type: Object, required: true },
   round: { type: Boolean, default: false },
+  // Where the card opens; by default the release's link, resolved like a
+  // pasted one (the Link page).
+  to: { type: [String, Object], default: null },
 })
 const { t } = useI18n()
 const dm = useDownloadManager()
 const ui = useUi()
 const queued = ref(false)
 
-const linkTo = computed(() => ({
-  name: 'Link',
-  query: { url: props.release.url },
-}))
+const linkTo = computed(
+  () =>
+    props.to || {
+      name: 'Link',
+      query: { url: props.release.url },
+    }
+)
 
 const typeLabel = computed(() => {
   const type = String(props.release.release_type || '').toLowerCase()

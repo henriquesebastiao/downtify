@@ -10,6 +10,32 @@ working without changes:
   requests, regardless of downloader/monitor readiness)
 * ``GET  /api/songs/search``
 * ``GET  /api/artists/search``
+* ``GET  /api/discover/chart`` (Deezer's own global "what's trending"
+  chart - no auth, no genre filter - as ``{tracks, albums, artists,
+  playlists}``; tracks are shaped like ``/api/songs/search``
+  (``source: 'deezer'``, plus ``preview_url`` when Deezer offers a 30s
+  clip) and downloadable the same way; albums/artists/playlists are
+  read-only summaries - Downtify has no Deezer discography resolver,
+  so their ``url`` only opens on Deezer, unlike a YouTube Music/Spotify
+  result)
+* ``GET  /api/finder/search`` (the Finder page's Deezer-only free-text
+  search: ``{songs, albums, artists}``; songs shaped like the chart's
+  tracks plus ``deezer_artist_id``/``deezer_album_id``, albums/artists
+  as summaries with Deezer ids, fans and track/album counts)
+* ``GET  /api/finder/artist`` (``artist_id``, ``lang``: a Deezer
+  artist's photo, fans, album count, plain-text ``bio``, ``social``
+  links, ``related`` artists and ``top_songs``)
+* ``GET  /api/finder/artist/songs`` (``artist_id``, ``name``: the
+  artist's songs as a Finder search's ``{songs, albums, artists}`` - a
+  name search kept to rows by that Deezer id; albums/artists empty)
+* ``GET  /api/finder/artist/albums`` (``artist_id``: their whole
+  discography, most recent first; ``track_count`` is ``null`` until
+  known)
+* ``GET  /api/finder/albums/track_counts`` (``ids``, comma-separated, 50
+  at most: ``{album_id: track_count}`` for the ones Deezer answered -
+  throttled under Deezer's request quota)
+* ``GET  /api/finder/album`` (``album_id``: label, genres, UPC, length,
+  fans, contributors and ``tracks``, downloadable song rows)
 * ``GET  /api/artists/top_songs`` (an artist's "Top songs" shelf preview,
   same shape as ``/api/songs/search`` - no further pagination offered)
 * ``GET  /api/artists/top_albums`` (an artist's 5 most popular albums,
@@ -32,7 +58,10 @@ working without changes:
   Deezer and never stored - see
   ``downtify.artist_photo_proxy``; browser-cached for three hours - a
   photo, or Deezer having none (404) - but a photo already saved locally
-  is served uncached instead, and a failure is a 503 that is never cached)
+  is served uncached instead, and a failure is a 503 that is never cached;
+  ``?url=``, optional, is the artist's Deezer picture when the page
+  already has it - Discover, the Finder - base64url-encoded, relayed
+  without a search by name)
 * ``POST /api/artists/art/bulk`` (the same, for many artists at once -
   body ``{names}``, response ``{<name>: {photo_url, banner_url,
   photo_version, banner_version}}`` - used
@@ -84,25 +113,33 @@ working without changes:
   links directly - body ``{name, social: {twitter, facebook, website,
   instagram, youtube}}``; replaces the whole object, never fetched)
 * ``GET  /api/song/url`` and ``GET /api/url`` (alias; ``/api/url`` also
-  resolves an artist channel or ``@handle`` URL into every one of their
-  albums/singles as lightweight summaries, same shape as
-  ``/api/albums/search`` - no tracklists; resolve a chosen release's
-  tracks separately). A YouTube Music playlist URL resolves to its
-  tracks, like a Spotify playlist.
+  resolves an artist channel/``@handle`` (YouTube Music) or artist link
+  (Deezer) URL into every one of their albums/singles as lightweight
+  summaries, same shape as ``/api/albums/search`` - no tracklists;
+  resolve a chosen release's tracks separately). A YouTube Music or
+  Deezer playlist URL resolves to its tracks, like a Spotify playlist.
+  Accepts a Spotify, YouTube Music or Deezer track/album/playlist URL
+  (plus a YouTube Music/Deezer artist URL, as above).
 * ``GET  /api/url/resolve`` (the same links, always as
   ``{kind, name, subtitle, cover_url, year, tracks, albums}`` - adds the
-  playlist/album name and cover the plain track list lacks)
-* ``GET  /api/artists/top_songs/url`` (a Spotify or YouTube Music artist
-  URL - ``open.spotify.com/artist/...``, ``/channel/UC...`` or
-  ``/@handle`` - resolved to ``{source, artist_id, name, cover_url,
-  songs}``: the artist's own "Popular" / "Top songs" shelf, in the order
-  the source ranks it)
+  playlist/album name and cover the plain track list lacks; a Deezer
+  track's own ``preview_url`` survives into its song row, same as
+  ``/api/discover/chart``)
+* ``GET  /api/artists/top_songs/url`` (a Spotify, YouTube Music or Deezer
+  artist URL - ``open.spotify.com/artist/...``, ``/channel/UC...``,
+  ``/@handle`` or ``deezer.com/artist/...`` - resolved to ``{source,
+  artist_id, name, cover_url, songs}``: the artist's own "Popular" /
+  "Top songs" / "top" shelf, in the order the source ranks it)
 * ``POST /api/download/url`` (optional JSON body: resolved Spotify row so
-  ``track_number`` / ``album_track_total`` survive re-fetch by URL)
+  ``track_number`` / ``album_track_total`` survive re-fetch by URL; a
+  ``"source": "deezer"`` body is taken as-is instead, see
+  ``_song_from_download_request``)
 * ``POST /api/download/batch`` (JSON body ``{songs, playlist_url,
   generate_m3u}``; instead of ``playlist_url`` a caller may pass an
   explicit ``playlist_name`` and ``cover_url`` - e.g. an artist's top
-  songs selection, which isn't backed by a real playlist id)
+  songs selection, which isn't backed by a real playlist id; a Deezer
+  ``playlist_url`` gets the same per-playlist folder, M3U and cover as a
+  Spotify/YouTube Music one, but isn't tracked as a resumable batch)
 * ``POST /api/download/album`` (YouTube Music album/browse URL only;
   downloads every track from one shared, already-resolved tracklist so
   metadata stays consistent across the whole release)
@@ -171,7 +208,16 @@ working without changes:
   ``downtify.discover``), ``POST /api/discover/collections`` (albums and
   playlists built on those artists - same body plus ``albums: [{artist,
   title}]`` and ``playlist_ids``; response ``{albums, more_albums,
-  playlists, artist_urls, partial}``), ``POST|DELETE
+  playlists, artist_urls, partial}``; Spotify only), ``POST
+  /api/discover/collections/deezer`` (the same shelves from Deezer
+  alone, the web page's first answer - body adds ``playlist_names``;
+  every item carries ``source: 'deezer'`` and Deezer ids, albums also
+  ``key``, playlists are Deezer's "100% <artist>"), ``POST
+  /api/discover/collections/spotify`` (what Spotify adds, the second
+  answer - body adds ``shown``, the album ``key``\\ s already on the page;
+  albums matched to Deezer by name come with ``source: 'deezer'``, the
+  rest ``'spotify'``; playlists are only Spotify's "This Is <artist>"),
+  ``POST|DELETE
   /api/discover/listens`` (count
   one listen to an artist - body ``{artist}`` - or forget them all) and
   ``GET|POST|DELETE /api/discover/blocked`` (artists never to suggest -
@@ -208,6 +254,7 @@ working without changes:
 from __future__ import annotations
 
 import asyncio
+import base64
 import concurrent.futures.thread as cf_thread
 import contextlib
 import hashlib
@@ -262,7 +309,13 @@ from .auth import (
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
 from .cover_thumbs import CoverThumbs
-from .discover import DiscoverStore, collections, recommendations
+from .discover import (
+    DiscoverStore,
+    collections,
+    deezer_collections,
+    recommendations,
+    spotify_collections,
+)
 from .downloader import (
     AUDIO_PROVIDERS,
     DOWNLOAD_EXECUTOR,
@@ -491,9 +544,15 @@ def _clamp_cover_resolution(value: Any) -> int:
     """Coerce and clamp the requested cover art target size, in pixels.
 
     Keeps the setting inside ``[MIN_COVER_RESOLUTION,
-    MAX_COVER_RESOLUTION]``. Only affects YouTube Music-sourced cover
-    art (see ``providers.set_cover_resolution``); Spotify-sourced
-    covers already use the largest size Spotify's embed API offers.
+    MAX_COVER_RESOLUTION]``. Affects YouTube Music-sourced cover art
+    (see ``providers.set_cover_resolution``, which resizes a thumbnail
+    URL directly) and Deezer-sourced cover art (see
+    ``deezer._cover_from_images``, which instead picks the smallest of
+    Deezer's four fixed image sizes that still meets it, reading this
+    same value via ``providers.cover_resolution``). Spotify-sourced
+    covers are unaffected: Downtify already uses the largest size
+    Spotify's embed API offers, with no equivalent to resize or pick
+    from.
     """
     try:
         px = int(value)
@@ -1425,6 +1484,88 @@ def search_artists_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
     return providers.search_artists(query, limit=10)
 
 
+@router.get('/api/discover/chart')
+def discover_chart_endpoint(
+    limit: int = Query(25, ge=1, le=50),
+) -> dict[str, Any]:
+    try:
+        return deezer.fetch_chart(limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+_DEEZER_ID = r'^\d+$'
+
+
+@router.get('/api/finder/search')
+def finder_search_endpoint(
+    query: str = Query(''),
+    limit: int = Query(25, ge=1, le=50),
+) -> dict[str, Any]:
+    try:
+        return deezer.finder_search(query, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get('/api/finder/artist')
+def finder_artist_endpoint(
+    artist_id: str = Query(..., pattern=_DEEZER_ID),
+    lang: str = Query('en', max_length=16),
+) -> dict[str, Any]:
+    try:
+        artist = deezer.finder_artist(artist_id, lang)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    # Plain text, paragraphs split by a blank line - the same cleanup a
+    # saved artist bio gets, so the page never renders Deezer's HTML.
+    artist['bio'] = artist_profile._format_bio_text(artist.pop('bio_html'))
+    return artist
+
+
+@router.get('/api/finder/artist/songs')
+def finder_artist_songs_endpoint(
+    artist_id: str = Query(..., pattern=_DEEZER_ID),
+    name: str = Query(..., min_length=1),
+) -> dict[str, Any]:
+    """A Deezer artist's songs, shaped like a Finder search's
+    ``{songs, albums, artists}`` (albums and artists always empty) - see
+    ``downtify.deezer.finder_artist_songs``."""
+
+    try:
+        songs = deezer.finder_artist_songs(artist_id, name)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {'songs': songs, 'albums': [], 'artists': []}
+
+
+@router.get('/api/finder/artist/albums')
+def finder_artist_albums_endpoint(
+    artist_id: str = Query(..., pattern=_DEEZER_ID),
+) -> list[dict[str, Any]]:
+    try:
+        return deezer.finder_artist_albums(artist_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get('/api/finder/albums/track_counts')
+def finder_album_track_counts_endpoint(
+    ids: str = Query(''),
+) -> dict[str, int]:
+    return deezer.album_track_counts(ids.split(','))
+
+
+@router.get('/api/finder/album')
+def finder_album_endpoint(
+    album_id: str = Query(..., pattern=_DEEZER_ID),
+) -> dict[str, Any]:
+    try:
+        return deezer.finder_album(album_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
 @router.get('/api/artists/top_songs')
 def artist_top_songs_endpoint(
     channel_id: str = Query(...),
@@ -1483,8 +1624,22 @@ def artist_art_endpoint(name: str = Query(...)) -> dict[str, Any]:
     return _artist_art_entry(_artist_profile_download_dir(), name)
 
 
+def _decode_base64url(value: str) -> str:
+    """*value* decoded from base64url (padding optional) to text, or
+    :class:`ValueError` when it isn't valid base64url text."""
+
+    try:
+        padded = value + '=' * (-len(value) % 4)
+        return base64.urlsafe_b64decode(padded.encode('ascii')).decode('utf-8')
+    except ValueError as exc:
+        # binascii.Error and the Unicode errors are all ValueErrors.
+        raise ValueError('url is not base64url') from exc
+
+
 @router.get('/api/artists/photo-proxy')
-def artist_photo_proxy_endpoint(name: str = Query(...)) -> Response:
+def artist_photo_proxy_endpoint(
+    name: str = Query(...), url: str = ''
+) -> Response:
     """DISPLAY-ONLY artist photo for the UI, never persisted.
 
     A photo already saved for the artist wins and is served uncached;
@@ -1494,6 +1649,13 @@ def artist_photo_proxy_endpoint(name: str = Query(...)) -> Response:
     download - is a 503 the browser is told not to keep, so the next visit
     simply asks again. Not a way to obtain a photo to keep - see
     ``downtify.artist_photo_proxy``.
+
+    *url*, optional: the artist's Deezer picture, when the page already
+    has it (Discover's suggestions, the Finder), base64url-encoded (RFC
+    4648 section 5, padding optional) so the address travels as one plain
+    query value - relayed as the photo without searching Deezer for the
+    name. Only a Deezer CDN address is accepted; anything else, or a value
+    that isn't base64url, is a ``400``.
     """
 
     cache_control = (
@@ -1511,7 +1673,12 @@ def artist_photo_proxy_endpoint(name: str = Query(...)) -> Response:
             headers={'Cache-Control': 'no-cache'},
         )
     try:
-        photo = artist_photo_proxy.fetch_proxied_photo(name)
+        if url:
+            photo = artist_photo_proxy.fetch_photo_at(_decode_base64url(url))
+        else:
+            photo = artist_photo_proxy.fetch_proxied_photo(name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except artist_photo_proxy.PhotoUnavailable:
         # Not "no photo": never cached, so whatever went wrong (a rate
         # limit, say) is gone the next time the page asks.
@@ -1950,6 +2117,29 @@ def _resolve_url(url: str):
             status_code=400, detail=f'Unsupported entity type: {kind}'
         )
 
+    deezer_parsed = deezer.parse_deezer_url(url)
+    if deezer_parsed is not None:
+        kind, did = deezer_parsed
+        try:
+            if kind == 'track':
+                return deezer.track_from_id(did)
+            if kind == 'album':
+                return deezer.album_from_id(did)
+            if kind == 'playlist':
+                _, tracks = deezer.playlist_info_and_tracks(did)
+                return tracks
+            if kind == 'artist':
+                _, _cover, releases = deezer.artist_page_from_id(did)
+                return releases
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception('Failed to resolve Deezer URL {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400, detail=f'Unsupported entity type: {kind}'
+        )
+
     raise HTTPException(status_code=400, detail='Invalid URL')
 
 
@@ -2044,6 +2234,34 @@ def _youtube_details(kind: str, yid: str) -> dict[str, Any]:
     )
 
 
+def _deezer_details(kind: str, did: str) -> dict[str, Any]:
+    if kind == 'track':
+        return _track_details(deezer.track_from_id(did))
+    if kind == 'album':
+        return _collection_details('album', deezer.album_from_id(did))
+    if kind == 'playlist':
+        name, tracks = deezer.playlist_info_and_tracks(did)
+        return _collection_details('playlist', tracks, name)
+    if kind == 'artist':
+        # Deezer has a real discography endpoint (unlike Spotify's embed),
+        # so - like YouTube Music - the releases come straight from it,
+        # no overview-shelf fallback needed. The client offers top songs
+        # from /api/artists/top_songs/url, same as the other two sources.
+        name, cover_url, releases = deezer.artist_page_from_id(did)
+        return {
+            'kind': 'artist',
+            'name': name,
+            'subtitle': '',
+            'cover_url': cover_url,
+            'year': '',
+            'tracks': [],
+            'albums': releases,
+        }
+    raise HTTPException(
+        status_code=400, detail=f'Unsupported entity type: {kind}'
+    )
+
+
 @router.get('/api/url/resolve')
 def url_resolve_endpoint(url: str = Query(...)) -> dict[str, Any]:
     """What a pasted link points at, with its tracks (or releases).
@@ -2058,12 +2276,19 @@ def url_resolve_endpoint(url: str = Query(...)) -> dict[str, Any]:
     youtube_parsed = (
         None if spotify_parsed else providers.parse_youtube_url(url)
     )
-    if spotify_parsed is None and youtube_parsed is None:
+    deezer_parsed = (
+        None
+        if spotify_parsed or youtube_parsed
+        else deezer.parse_deezer_url(url)
+    )
+    if spotify_parsed is None and youtube_parsed is None and not deezer_parsed:
         raise HTTPException(status_code=400, detail='Invalid URL')
     try:
         if spotify_parsed is not None:
             return _spotify_details(*spotify_parsed)
-        return _youtube_details(*youtube_parsed)
+        if youtube_parsed is not None:
+            return _youtube_details(*youtube_parsed)
+        return _deezer_details(*deezer_parsed)
     except HTTPException:
         raise
     except ValueError as exc:
@@ -2130,9 +2355,25 @@ def _resolve_artist_top_songs(url: str) -> dict[str, Any]:
             'songs': songs[:YOUTUBE_TOP_SONGS_LIMIT],
         }
 
+    deezer_parsed = deezer.parse_deezer_url(url)
+    if deezer_parsed is not None and deezer_parsed[0] == 'artist':
+        _, artist_id = deezer_parsed
+        try:
+            name, cover_url, songs = deezer.artist_top_songs_from_id(artist_id)
+        except Exception as exc:
+            logger.exception('Failed to resolve Deezer artist {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {
+            'source': 'deezer',
+            'artist_id': artist_id,
+            'name': name,
+            'cover_url': cover_url,
+            'songs': songs,
+        }
+
     raise HTTPException(
         status_code=400,
-        detail='A Spotify or YouTube Music artist URL is required',
+        detail='A Spotify, YouTube Music or Deezer artist URL is required',
     )
 
 
@@ -2187,19 +2428,26 @@ def _merge_client_track_hints(
         base['youtube_id_override'] = True
 
 
+_CLIENT_RESOLVED_SOURCES = {'text_search', 'deezer'}
+
+
 def _song_from_download_request(
     url: str, client_hints: Optional[dict[str, Any]]
 ) -> dict[str, Any]:
     """The song to download for ``POST /api/download/url``.
 
     A slskd search stub (``source == 'text_search'``, see
-    :func:`search_endpoint`) has no URL to resolve and is taken from the
-    request body as-is.
+    :func:`search_endpoint`) or a Deezer chart/Finder row (``source ==
+    'deezer'``, see :func:`discover_chart_endpoint` and
+    :func:`finder_search_endpoint`) has no URL this app
+    can resolve on its own - both are taken from the request body as-is,
+    already-resolved metadata that :func:`downtify.providers.find_match`
+    can search YouTube/YouTube Music for directly.
     """
 
     if (
         isinstance(client_hints, dict)
-        and client_hints.get('source') == 'text_search'
+        and client_hints.get('source') in _CLIENT_RESOLVED_SOURCES
     ):
         return dict(client_hints)
     song = _song_for_download(url)
@@ -2225,6 +2473,15 @@ def _song_for_download(url: str) -> dict[str, Any]:
         raise HTTPException(
             status_code=400,
             detail='Only single YouTube video URLs are supported here',
+        )
+    deezer_parsed = deezer.parse_deezer_url(url)
+    if deezer_parsed is not None:
+        kind, did = deezer_parsed
+        if kind == 'track':
+            return deezer.track_from_id(did)
+        raise HTTPException(
+            status_code=400,
+            detail='Only Deezer track URLs are supported here',
         )
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
@@ -2555,6 +2812,66 @@ async def _write_batch_m3u(
     return m3u_path
 
 
+# A Deezer playlist download is named/covered here the same way a Spotify/
+# YouTube Music one is, without teaching Playlist Monitor's own
+# parse_playlist_url/fetch_playlist/download_playlist_cover (SOURCE_SPOTIFY/
+# SOURCE_YOUTUBE_MUSIC, imported above) about Deezer - Monitor has no Deezer
+# watch support, and _resolve_watch_target below still only recognizes a
+# Spotify or YouTube Music playlist/artist URL, unaffected by this.
+_SOURCE_DEEZER = 'deezer'
+
+
+def _playlist_target_for_batch(
+    playlist_url: str,
+) -> Optional[tuple[str, str]]:
+    """``(source, id)`` to name and cover a playlist download with - a
+    Spotify/YouTube Music playlist via :func:`parse_playlist_url`, or a
+    Deezer one (download-only, see :data:`_SOURCE_DEEZER`)."""
+
+    target = parse_playlist_url(playlist_url)
+    if target is not None:
+        return target
+    deezer_parsed = deezer.parse_deezer_url(playlist_url)
+    if deezer_parsed is not None and deezer_parsed[0] == 'playlist':
+        return _SOURCE_DEEZER, deezer_parsed[1]
+    return None
+
+
+def _fetch_playlist_for_batch(
+    source: str, playlist_id: str
+) -> tuple[str, list[dict[str, Any]]]:
+    if source == _SOURCE_DEEZER:
+        return deezer.playlist_info_and_tracks(playlist_id)
+    return fetch_playlist(source, playlist_id)
+
+
+def _download_playlist_cover_for_batch(
+    source: str,
+    playlist_id: str,
+    m3u_path: Path,
+    settings: dict[str, Any],
+) -> None:
+    if source != _SOURCE_DEEZER:
+        download_playlist_cover(source, playlist_id, m3u_path, settings)
+        return
+    if not settings.get('download_cover_art_playlists'):
+        return
+    try:
+        cover_url = deezer.playlist_cover_url_from_id(playlist_id)
+    except Exception:
+        logger.exception(
+            'Failed to resolve Deezer playlist cover art for {}',
+            playlist_id,
+        )
+        return
+    if not cover_url:
+        return
+    try:
+        save_playlist_cover(cover_url, m3u_path)
+    except Exception:
+        logger.exception('Failed to save cover art for {}', m3u_path)
+
+
 def _save_explicit_playlist_cover(
     cover_url: str, m3u_path: Path, settings: dict[str, Any]
 ) -> None:
@@ -2606,7 +2923,10 @@ async def _fetch_playlist_cover(
     )
     if target is not None:
         await asyncio.to_thread(
-            download_playlist_cover, *target, m3u_path, state.settings
+            _download_playlist_cover_for_batch,
+            *target,
+            m3u_path,
+            state.settings,
         )
     else:
         await asyncio.to_thread(
@@ -2630,16 +2950,16 @@ async def _process_batch(
     # Resolve the playlist name up-front so all tracks land in a single,
     # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
     # tracks) keep the legacy flat layout under download_dir. A caller
-    # without a Spotify/YouTube Music playlist_url (e.g. a CSV library
-    # import) can instead pass playlist_name directly.
+    # without a Spotify/YouTube Music/Deezer playlist_url (e.g. a CSV
+    # library import) can instead pass playlist_name directly.
     playlist_subdir: Optional[str] = None
     spotify_playlist_id: Optional[str] = None
     spotify_track_count = 0
-    target = parse_playlist_url(playlist_url) if playlist_url else None
+    target = _playlist_target_for_batch(playlist_url) if playlist_url else None
     if target is not None:
         try:
             playlist_name, tracks = await asyncio.to_thread(
-                fetch_playlist, *target
+                _fetch_playlist_for_batch, *target
             )
             playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
             if target[0] == SOURCE_SPOTIFY:
@@ -4858,6 +5178,64 @@ async def discover_collections_endpoint(request: Request) -> dict[str, Any]:
         library,
         albums if isinstance(albums, list) else [],
         playlist_ids if isinstance(playlist_ids, list) else [],
+    )
+
+
+def _list_field(payload: dict[str, Any], name: str) -> list[Any]:
+    value = payload.get(name)
+    return value if isinstance(value, list) else []
+
+
+@router.post('/api/discover/collections/deezer')
+async def discover_deezer_collections_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Albums and playlists for the library from Deezer alone - the web
+    page's first answer (see ``downtify.discover.deezer_collections``).
+
+    Body: what ``POST /api/discover/collections`` takes, plus
+    ``playlist_names`` (the library's playlist names, so a Deezer playlist
+    already downloaded isn't suggested).
+    """
+
+    store = _require_discover()
+    payload = await _json_object(request)
+    library = payload.get('library')
+    if not isinstance(library, list):
+        raise HTTPException(status_code=400, detail='library is required')
+    return await asyncio.to_thread(
+        deezer_collections,
+        store,
+        library,
+        _list_field(payload, 'albums'),
+        _list_field(payload, 'playlist_names'),
+    )
+
+
+@router.post('/api/discover/collections/spotify')
+async def discover_spotify_collections_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """What Spotify adds to the Deezer answer, its albums matched to Deezer
+    - the web page's second answer (see
+    ``downtify.discover.spotify_collections``).
+
+    Body: what ``POST /api/discover/collections`` takes, plus ``shown``
+    (the album ``key``\\ s the page already shows, left out unmatched).
+    """
+
+    store = _require_discover()
+    payload = await _json_object(request)
+    library = payload.get('library')
+    if not isinstance(library, list):
+        raise HTTPException(status_code=400, detail='library is required')
+    return await asyncio.to_thread(
+        spotify_collections,
+        store,
+        library,
+        _list_field(payload, 'albums'),
+        _list_field(payload, 'playlist_ids'),
+        _list_field(payload, 'shown'),
     )
 
 

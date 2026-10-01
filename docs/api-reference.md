@@ -54,20 +54,122 @@ When YouTube Music returns nothing and slskd is an enabled audio source, the res
 
 ---
 
-### `GET /api/song/url`
+### `GET /api/discover/chart`
 
-Resolve a Spotify or YouTube Music URL to metadata.
+Deezer's own global chart (no genre filter, no auth) — top tracks, albums, artists and playlists, for the [Charts](features/charts.md) page.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify track, album or playlist URL, or a YouTube / YouTube Music video, album, playlist or artist URL |
+| `limit` | integer | no | Rows per section, 1–50 (default 25) |
 
 **Response:**
 
-- **Track URL** → single song object
+```json
+{
+  "tracks": [ /* song objects, "source": "deezer", plus "preview_url" when Deezer offers a 30s clip */ ],
+  "albums": [ { "album_id": "…", "name": "…", "artist": "…", "cover_url": "https://…", "url": "https://www.deezer.com/album/…", "source": "deezer" } ],
+  "artists": [ { "artist_id": "…", "name": "…", "cover_url": "https://…", "url": "https://www.deezer.com/artist/…", "source": "deezer" } ],
+  "playlists": [ { "playlist_id": "…", "name": "…", "owner": "…", "cover_url": "https://…", "url": "https://www.deezer.com/playlist/…", "source": "deezer" } ]
+}
+```
+
+Track rows download the same way a search result does — Downtify has no Deezer discography resolver, so `POST /api/download/url` takes a `"source": "deezer"` row's body as-is instead of trying to parse its `url` as a Spotify/YouTube link (the same escape hatch a `text_search` row above uses), and matches it on YouTube Music/YouTube by title, artist and length. A track's `preview_url`, when present, is a 30-second MP3 clip Deezer streams directly (`https://` only) — the web UI plays it with the same preview player an artist's Spotify top songs use; it's `""` when Deezer has no clip for that track. Album, artist and playlist rows are read-only summaries — their `url` only opens the item on `deezer.com`. `502` when Deezer can't be reached or refuses the request.
+
+---
+
+### `GET /api/finder/search`
+
+Free-text search on Deezer alone, for the [Finder](features/finder.md) page.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | yes | Search query (blank → empty lists, no request to Deezer) |
+| `limit` | integer | no | Rows per section, 1–50 (default 25) |
+
+**Response:**
+
+```json
+{
+  "songs": [ /* song objects like /api/discover/chart's tracks, plus "deezer_artist_id" and "deezer_album_id" */ ],
+  "albums": [ { "album_id": "…", "name": "…", "artist": "…", "artist_id": "…", "cover_url": "https://…", "release_type": "Album", "track_count": 14, "explicit": false, "url": "https://www.deezer.com/album/…", "source": "deezer" } ],
+  "artists": [ { "artist_id": "…", "name": "…", "cover_url": "https://…", "fans": 5212632, "album_count": 36, "url": "https://www.deezer.com/artist/…", "source": "deezer" } ]
+}
+```
+
+Songs download the same way chart tracks do. Albums and artists are extras: when their part of the search fails they come back empty, while a failed song search is a `502`.
+
+---
+
+### `GET /api/finder/artist`
+
+Everything the Finder's artist column shows.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist_id` | string | yes | Deezer artist id (digits) |
+| `lang` | string | no | Language of the bio (default `en`) |
+
+**Response:** `{artist_id, name, cover_url, fans, album_count, url, source, bio, social, related, top_songs}`. `bio` is plain text, paragraphs separated by a blank line (the same cleanup a saved [artist bio](features/artist-images.md) gets). `social` holds `twitter`, `facebook`, `website` and `instagram` links. `related` lists up to 20 artists shaped like the search's artists, and `top_songs` lists their 10 most-played tracks shaped like the search's songs. Only the artist itself is required: the bio, related artists and top songs come back empty when fetching them fails. `502` when the artist doesn't resolve.
+
+---
+
+### `GET /api/finder/artist/songs`
+
+A Deezer artist's songs, shaped like a Finder search — Discover's **Find songs**.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist_id` | string | yes | Deezer artist id (digits) |
+| `name` | string | yes | The artist's name, searched for |
+
+**Response:** `{songs, albums, artists}` like [`GET /api/finder/search`](#get-apifindersearch), with `albums` and `artists` always empty. Deezer is searched for `name` (up to 3 pages of 100 results) and only the songs whose main artist is `artist_id` are kept, in Deezer's order. Deezer's field search (`artist:"..."`) would be the direct way, but it finds no tracks at all today. `502` when Deezer can't be reached or refuses.
+
+---
+
+### `GET /api/finder/artist/albums`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist_id` | string | yes | Deezer artist id (digits) |
+
+**Response:** The artist's whole discography, most recent first, as album rows like the search's, plus `release_date`, `year` and `fans`. Deezer's discography listing carries no track count, so `track_count` is `null` until Downtify has looked it up (see below).
+
+---
+
+### `GET /api/finder/albums/track_counts`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ids` | string | yes | Comma-separated Deezer album ids, 50 at most |
+
+**Response:** `{"<album id>": <track count>}`, for the albums Deezer answered for. A lookup that fails, such as a rate limit, is left out so it can be asked again. It costs one small request per album, throttled to stay under Deezer's quota of 50 requests per 5 seconds, and counts are cached for the life of the process.
+
+---
+
+### `GET /api/finder/album`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `album_id` | string | yes | Deezer album id (digits) |
+
+**Response:** `{album_id, name, artist, artist_id, cover_url, release_date, year, label, genres, duration, track_count, fans, release_type, explicit, upc, url, contributors, source, tracks}`. `contributors` is a list of `{artist_id, name, role}` objects. `tracks` holds song objects numbered like a resolved album's (`track_number`, `album_track_total`), each with its `preview_url`. `502` when the album doesn't resolve.
+
+---
+
+### `GET /api/song/url`
+
+Resolve a Spotify, YouTube Music or Deezer URL to metadata.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | yes | Spotify track, album or playlist URL; a YouTube / YouTube Music video, album, playlist or artist URL; or a Deezer track, album, playlist or artist URL (`deezer.com/track/…`) |
+
+**Response:**
+
+- **Track URL** → single song object. A Deezer track's song object also carries `preview_url` - a 30-second MP3 clip Deezer streams (`https://` only), or `""` when it has none.
 - **Album URL** → array of song objects
 - **Playlist URL** → array of song objects. For a YouTube Music playlist (`…/playlist?list=…`), every song is pinned to the playlist's own video (`youtube_id`), and for uploads the artist/title are taken from an `Artist - Title` video title. See [YouTube Music playlists](features/playlist-monitor.md#youtube-music-playlists).
-- **Artist URL** (YouTube Music `…/channel/UC…` or `…/@handle`) → array of release summaries. `404` if a handle doesn't belong to an artist.
+- **Artist URL** (YouTube Music `…/channel/UC…`/`…/@handle`, or Deezer `deezer.com/artist/…`) → array of release summaries. `404` if a YouTube Music handle doesn't belong to an artist.
 
 `GET /api/url` is an alias for this endpoint.
 
@@ -79,7 +181,7 @@ Resolve a pasted link to a single object describing what it points at — used b
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify track, album, playlist or artist URL, or a YouTube / YouTube Music video, album, playlist or artist URL |
+| `url` | string | yes | Spotify track, album, playlist or artist URL; a YouTube / YouTube Music video, album, playlist or artist URL; or a Deezer track, album, playlist or artist URL |
 
 **Response:**
 
@@ -95,7 +197,7 @@ Resolve a pasted link to a single object describing what it points at — used b
 }
 ```
 
-`kind` is `track`, `album`, `playlist` or `artist`. A track or collection fills `tracks` (Spotify songs carry `preview_url`, their 30-second clip, or `""` — for a long playlist only the first tracks the embed lists have one; see [`GET /api/preview`](#get-apipreview) for the rest); an artist fills `albums` with release summaries instead, and, for YouTube Music, `subtitle` carries the artist description (it is empty for Spotify). A Spotify artist's releases come from the Spotify web player's discography query; if that stops resolving, a shorter list (every album, the latest singles) is returned instead, and `albums` is empty when both fail. An artist's songs come from [`GET /api/artists/top_songs/url`](#get-apiartiststop_songsurl). `400` for a URL that isn't a supported link, `404` when the link resolves to nothing (e.g. a handle that isn't an artist), `502` when the upstream lookup fails.
+`kind` is `track`, `album`, `playlist` or `artist`. A track or collection fills `tracks` (Spotify songs carry `preview_url`, their 30-second clip, or `""` — for a long playlist only the first tracks the embed lists have one; see [`GET /api/preview`](#get-apipreview) for the rest; Deezer songs carry Deezer's own clip); an artist fills `albums` with release summaries instead, and, for YouTube Music, `subtitle` carries the artist description (it is empty for Spotify and Deezer). A Spotify artist's releases come from the Spotify web player's discography query; if that stops resolving, a shorter list (every album, the latest singles) is returned instead, and `albums` is empty when both fail. YouTube Music and Deezer both have a real discography endpoint, so neither needs that fallback. An artist's songs come from [`GET /api/artists/top_songs/url`](#get-apiartiststop_songsurl). `400` for a URL that isn't a supported link, `404` when the link resolves to nothing (e.g. a handle that isn't an artist, or a Deezer id Deezer doesn't recognize), `502` when the upstream lookup fails.
 
 ---
 
@@ -105,7 +207,7 @@ An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify artist URL (`open.spotify.com/artist/…`) or YouTube Music artist URL (`/channel/UC…` or `/@handle`) |
+| `url` | string | yes | Spotify artist URL (`open.spotify.com/artist/…`), YouTube Music artist URL (`/channel/UC…` or `/@handle`), or Deezer artist URL (`deezer.com/artist/…`) |
 
 **Response:**
 
@@ -119,7 +221,7 @@ An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.
 }
 ```
 
-`source` is `spotify` or `youtube`. Songs also carry `play_count`, an integer, when the source reports one (left out otherwise). Spotify's is the exact total. YouTube Music only reports a rounded figure (`4.4M plays`), so its `play_count` is an approximation (`4400000`) and the song also has `play_count_approx: true`. Spotify returns the artist's own *Popular* shelf (up to 10 songs); YouTube Music returns the head of the artist's *Top songs* playlist (up to 50). `400` for a URL that isn't an artist link, `404` when a YouTube Music handle doesn't resolve to an artist, `502` when the upstream lookup fails.
+`source` is `spotify`, `youtube` or `deezer`. Songs also carry `play_count`, an integer, when the source reports one (left out otherwise - Deezer never does). Spotify's is the exact total. YouTube Music only reports a rounded figure (`4.4M plays`), so its `play_count` is an approximation (`4400000`) and the song also has `play_count_approx: true`. Spotify returns the artist's own *Popular* shelf (up to 10 songs); YouTube Music returns the head of the artist's *Top songs* playlist (up to 50); Deezer returns its own "top" ranking (up to 50). `400` for a URL that isn't an artist link, `404` when a YouTube Music handle doesn't resolve to an artist, `502` when the upstream lookup fails.
 
 ---
 
@@ -270,11 +372,12 @@ Remove a saved photo or banner.
 
 ### `GET /api/artists/photo-proxy`
 
-A **display-only** photo for an artist that has no saved photo, used for the tiles in the artist page's *Related* tab, for the artists in the Library's *Artists* grid, for the round photo on an artist's own page and for the artists on the Monitor's *Artists* tab, whenever nobody picked a photo for them. The search page doesn't use it. It is a relay, not a way to get a photo to keep: the image is fetched from Deezer, sent to your browser and forgotten - nothing is written to your downloads folder, and only the artist-name → Deezer image link is remembered (in memory, for three hours). To actually save a photo for an artist use the picker (`POST /api/artists/art/from_url`).
+A **display-only** photo for an artist that has no saved photo, used for the tiles in the artist page's *Related* tab, for the artists in the Library's *Artists* grid, for the round photo on an artist's own page, for the artists on the Monitor's *Artists* tab, and for the artists Discover suggests and the Finder shows, whenever nobody picked a photo for them. The search page doesn't use it. It is a relay, not a way to get a photo to keep: the image is fetched from Deezer, sent to your browser and forgotten - nothing is written to your downloads folder, and only the artist-name → Deezer image link is remembered (in memory, for three hours). To actually save a photo for an artist use the picker (`POST /api/artists/art/from_url`).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `name` | string | yes | Artist name - matched against Deezer's results exactly (ignoring case and the characters a file name can't hold, so `ACDC` finds `AC/DC`), so a near-match never shows someone else's face. When several Deezer artists share the name, the one with the most fans is used |
+| `url` | string | no | The artist's Deezer picture, when the page already has it (Discover's suggestions, the Finder), **base64url-encoded** (RFC 4648 §5, `=` padding optional) so the address travels as one plain query value. It is relayed as the photo, with no search by name. Only an `https://` address on Deezer's image CDN (`*.dzcdn.net`) is accepted; anything else, or a value that isn't base64url, is a `400` |
 
 **Response:** the image bytes with `Cache-Control: public, max-age=10800` and an `ETag`, so the browser holds on to it for three hours. If a photo is already saved for that artist, that local file is sent instead, without browser caching (`Cache-Control: no-cache`), so a newly picked photo shows up right away. `404` (also cacheable for three hours) when Deezer has no exact match, or when the matched artist has no photo on Deezer (it only has a generic placeholder picture, which is never returned).
 
@@ -432,10 +535,10 @@ Download a single track. Blocks until complete.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify track URL or YouTube URL |
+| `url` | string | yes | Spotify track URL, YouTube URL, or Deezer track URL |
 | `client_id` | string | no | WebSocket client ID for progress events |
 
-**Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` forces the audio source, and `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download.
+**Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` forces the audio source, and `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download. A body with `"source": "deezer"` (a Deezer chart or resolved-link row) is taken as-is instead of re-fetching by `url` - Deezer isn't a URL this endpoint otherwise resolves on its own.
 
 **Response:** Filename string of the downloaded file — a `slskd/…` path for a slskd download left in place. `404` when no audio source has a match for the track.
 
@@ -458,7 +561,7 @@ Download multiple tracks concurrently, gated by the [`max_parallel_downloads` se
 | Field | Type | Description |
 |-------|------|-------------|
 | `songs` | array | Song objects to download |
-| `playlist_url` | string | Optional. A Spotify or YouTube Music playlist URL, used to determine the playlist subfolder and M3U name. A Spotify playlist is also tracked as a [playlist download](#playlist-downloads). |
+| `playlist_url` | string | Optional. A Spotify, YouTube Music or Deezer playlist URL, used to determine the playlist subfolder and M3U name. A Spotify playlist is also tracked as a [playlist download](#playlist-downloads) - Deezer and YouTube Music playlists get the same folder/M3U/cover treatment but aren't tracked that way. |
 | `playlist_name` | string | Optional. Names the playlist subfolder and M3U when there is no `playlist_url`, e.g. an artist's [top songs](features/top-songs.md). Ignored when `playlist_url` resolves. |
 | `cover_url` | string | Optional. Image saved as the playlist's [cover art](features/playlist-cover-art.md) when there is no `playlist_url`. Only used when `generate_m3u` is true, a `playlist_name` is set and the cover art setting is on. |
 | `generate_m3u` | boolean | Whether to write an M3U after the batch finishes. Default: `true`. |
@@ -1324,6 +1427,72 @@ Albums and playlists built on the suggested artists — see [Albums and playlist
 ```
 
 `albums`: the top album of each of the best 12 suggested artists. `more_albums`: up to two albums per heaviest library artist that aren't in `albums`. `playlists`: Spotify's `<artist> Radio` for the heaviest library artists (`reason: "radio"`), then its `This Is <artist>` for suggested artists (`reason: "this_is"`). `artist_urls`: the Spotify page of each suggested artist the search found by exact name. `partial` as in `POST /api/discover`, also counting failed Spotify searches. `400` when `library` isn't a list.
+
+The web page doesn't use this endpoint any more: it asks the two below, Deezer's answer first. It's kept as it is for other clients.
+
+---
+
+### `POST /api/discover/collections/deezer`
+
+The same shelves from Deezer alone — the web page's first, quick answer (see [Albums and playlists](features/discover.md#albums-and-playlists)). Reuses the (cached) answer of [`POST /api/discover`](#post-apidiscover) and reads each artist's Deezer discography and editorial playlist, cached for 7 days.
+
+**Request body:** what `POST /api/discover/collections` takes, plus:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `playlist_names` | array | no | The library's playlist names — a Deezer playlist already downloaded (known by its title) is left out |
+
+**Response:**
+
+```json
+{
+  "albums": [
+    {
+      "name": "Discovery",
+      "artist": "Daft Punk",
+      "year": "2001",
+      "cover_url": "https://cdn-images.dzcdn.net/images/cover/…",
+      "source": "deezer",
+      "deezer_album_id": "302127",
+      "deezer_artist_id": "27",
+      "url": "https://www.deezer.com/album/302127",
+      "key": "daft punk|discovery",
+      "reason": "similar",
+      "because": ["Justice"]
+    }
+  ],
+  "more_albums": [ /* same shape, "reason": "more_from" */ ],
+  "playlists": [
+    {
+      "name": "100% Radiohead",
+      "owner": "Deezer Artist Editor",
+      "cover_url": "https://cdn-images.dzcdn.net/images/playlist/…",
+      "source": "deezer",
+      "deezer_playlist_id": "3184748882",
+      "url": "https://www.deezer.com/playlist/3184748882",
+      "reason": "essentials",
+      "artist": "Radiohead"
+    }
+  ],
+  "partial": false
+}
+```
+
+An album is the artist's full album with the most fans (a single or EP only when there's no album). `key` identifies an album across services (artist and title, edition suffixes dropped). `playlists`: Deezer's editorial `100% <artist>` for the suggested artists, when its editors have one. `partial` as in `POST /api/discover`, also counting failed Deezer lookups. `400` when `library` isn't a list.
+
+---
+
+### `POST /api/discover/collections/spotify`
+
+What Spotify adds to the Deezer answer — the web page's second answer, loaded after it. Spotify's own picks (as in [`POST /api/discover/collections`](#post-apidiscovercollections), from the same cached searches), each album looked up on Deezer by artist and title.
+
+**Request body:** what `POST /api/discover/collections` takes, plus:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `shown` | array | no | The `key` of every album already on the page — left out without being looked up on Deezer |
+
+**Response:** `{albums, more_albums, playlists, partial}`. An album Deezer has comes in the Deezer shape above (`source: "deezer"`, opens in the Finder); one it doesn't keeps the Spotify shape of `POST /api/discover/collections` plus `source: "spotify"` and `key`. `playlists` are only Spotify's `This Is <artist>` (`reason: "this_is"`, `source: "spotify"`) — its `Radio` mixes aren't offered. A match is kept for 30 days (a missing one for 7); a failed lookup is never kept and makes `partial` true. `400` when `library` isn't a list.
 
 ---
 

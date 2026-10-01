@@ -8,7 +8,12 @@ import { ref, shallowRef, watch } from 'vue'
 
 import API from '/src/model/api'
 import { usePlayer } from '/src/model/player'
-import { addPlayed, listenArtist, listenThreshold } from '/src/lib/discover'
+import {
+  addPlayed,
+  appendNew,
+  listenArtist,
+  listenThreshold,
+} from '/src/lib/discover'
 import { artistKey } from '/src/lib/library'
 
 const items = shallowRef([])
@@ -18,18 +23,24 @@ const loading = ref(false)
 const loaded = ref(false)
 const error = ref('')
 const blocked = shallowRef([])
-// Albums and playlists built on the artists (POST /api/discover/collections):
-// slower (a Spotify search per artist), so they load after the artists.
+// Albums and playlists built on the artists, in two answers after them:
+// Deezer's (POST .../collections/deezer), then what Spotify adds, its albums
+// matched to Deezer (POST .../collections/spotify) - slower, so they're
+// added at the end of each shelf once they come.
 const albums = shallowRef([])
 const moreAlbums = shallowRef([])
-const playlists = shallowRef([])
-// Spotify artist page per suggested artist, when the search found one.
-const artistUrls = shallowRef({})
+// Deezer's "100% <artist>" and Spotify's "This Is <artist>", one shelf each.
+const deezerPlaylists = shallowRef([])
+const spotifyPlaylists = shallowRef([])
 const collectionsLoading = ref(false)
+const spotifyLoading = ref(false)
 const collectionsError = ref('')
 
 let pending = null
 let pendingCollections = null
+// Bumped by every load of the collections: an answer from an older one
+// (the page refreshed meanwhile) is dropped instead of mixed in.
+let collectionsRun = 0
 
 /** Ask for suggestions; `library` is `libraryPayload(...)`. */
 async function load(library) {
@@ -53,31 +64,61 @@ async function load(library) {
   return pending
 }
 
+function errorText(err) {
+  return err?.response?.data?.detail || err?.message || 'failed'
+}
+
 /**
- * Albums and playlists; `payload` is `{ library, albums, playlist_ids }`
- * (see lib/discover.js `collectionsPayload`).
+ * Albums and playlists; `payload` is lib/discover.js `collectionsPayload`.
+ * Deezer's answer replaces what's shown; Spotify's is then asked for (told
+ * which albums are already there) and added at the end of each shelf.
  */
 async function loadCollections(payload) {
   if (pendingCollections) return pendingCollections
+  const run = ++collectionsRun
   collectionsLoading.value = true
   collectionsError.value = ''
   pendingCollections = (async () => {
     try {
-      const res = await API.getDiscoverCollections(payload)
+      const res = await API.getDiscoverDeezerCollections(payload)
+      if (run !== collectionsRun) return
       albums.value = res.data?.albums || []
       moreAlbums.value = res.data?.more_albums || []
-      playlists.value = res.data?.playlists || []
-      artistUrls.value = res.data?.artist_urls || {}
+      deezerPlaylists.value = res.data?.playlists || []
+      spotifyPlaylists.value = []
       if (res.data?.partial) partial.value = true
     } catch (err) {
-      collectionsError.value =
-        err?.response?.data?.detail || err?.message || 'failed'
+      if (run === collectionsRun) collectionsError.value = errorText(err)
     } finally {
-      collectionsLoading.value = false
+      if (run === collectionsRun) collectionsLoading.value = false
       pendingCollections = null
     }
+    if (run === collectionsRun) addFromSpotify(payload, run)
   })()
   return pendingCollections
+}
+
+async function addFromSpotify(payload, run) {
+  spotifyLoading.value = true
+  try {
+    const shown = [...albums.value, ...moreAlbums.value]
+      .map((item) => item.key)
+      .filter(Boolean)
+    const res = await API.getDiscoverSpotifyCollections({ ...payload, shown })
+    if (run !== collectionsRun) return
+    albums.value = appendNew(albums.value, res.data?.albums)
+    moreAlbums.value = appendNew(moreAlbums.value, res.data?.more_albums)
+    spotifyPlaylists.value = res.data?.playlists || []
+    if (res.data?.partial) partial.value = true
+  } catch (err) {
+    // Deezer's shelves stand on their own; only say something when there
+    // is nothing at all to show.
+    if (run === collectionsRun && !albums.value.length) {
+      collectionsError.value = errorText(err)
+    }
+  } finally {
+    if (run === collectionsRun) spotifyLoading.value = false
+  }
 }
 
 async function loadBlocked() {
@@ -92,12 +133,20 @@ async function loadBlocked() {
 /** Never suggest `name` again. Hides it at once, undone if that fails. */
 async function block(name) {
   const key = artistKey(name)
-  const before = [items.value, albums.value, playlists.value]
+  const before = [
+    items.value,
+    albums.value,
+    deezerPlaylists.value,
+    spotifyPlaylists.value,
+  ]
   items.value = before[0].filter((item) => artistKey(item.name) !== key)
-  // Their album and "This Is" playlist go with them.
+  // Their album and "100%" / "This Is" playlists go with them.
   albums.value = before[1].filter((item) => artistKey(item.artist) !== key)
-  playlists.value = before[2].filter(
-    (item) => item.reason !== 'this_is' || artistKey(item.artist) !== key
+  deezerPlaylists.value = before[2].filter(
+    (item) => artistKey(item.artist) !== key
+  )
+  spotifyPlaylists.value = before[3].filter(
+    (item) => artistKey(item.artist) !== key
   )
   try {
     const res = await API.blockArtist(name)
@@ -107,7 +156,12 @@ async function block(name) {
     ]
     return true
   } catch {
-    ;[items.value, albums.value, playlists.value] = before
+    ;[
+      items.value,
+      albums.value,
+      deezerPlaylists.value,
+      spotifyPlaylists.value,
+    ] = before
     return false
   }
 }
@@ -182,9 +236,10 @@ export function useDiscover() {
     blocked,
     albums,
     moreAlbums,
-    playlists,
-    artistUrls,
+    deezerPlaylists,
+    spotifyPlaylists,
     collectionsLoading,
+    spotifyLoading,
     collectionsError,
     load,
     loadCollections,

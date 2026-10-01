@@ -149,14 +149,22 @@ async function load() {
 
 watch(url, load, { immediate: true })
 
+const SOURCE_LABELS = {
+  spotify: () => t('link.openSpotify'),
+  youtube: () => t('link.openYoutube'),
+  deezer: () => t('link.openDeezer'),
+}
 const sourceLabel = computed(() =>
-  kind.value.source === 'spotify'
-    ? t('link.openSpotify')
-    : t('link.openYoutube')
+  (SOURCE_LABELS[kind.value.source] || SOURCE_LABELS.youtube)()
 )
 
 const kicker = computed(() => {
-  const source = kind.value.source === 'spotify' ? 'Spotify' : 'YouTube Music'
+  const names = {
+    spotify: 'Spotify',
+    youtube: 'YouTube Music',
+    deezer: 'Deezer',
+  }
+  const source = names[kind.value.source] || kind.value.source
   return `${source} · ${t('link.topSongs')}`
 })
 

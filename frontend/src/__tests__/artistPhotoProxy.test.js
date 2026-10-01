@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   artistPhotoSource,
+  base64Url,
+  knownArtistPhoto,
   proxiedArtistPhotoUrl,
 } from '../lib/artistPhotoProxy'
 
@@ -58,6 +60,47 @@ describe('artistPhotoSource', () => {
     expect(artistPhotoSource('Paramore', undefined, true, '/t.jpg')).toEqual({
       cover: proxy,
       fallback: '/t.jpg',
+    })
+  })
+})
+
+describe('base64Url', () => {
+  it('encodes without +, / or = padding', () => {
+    const url =
+      'https://cdn-images.dzcdn.net/images/artist/abc/250x250-000000-80-0-0.jpg'
+    const encoded = base64Url(url)
+    expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/)
+    const back = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))
+    expect(back).toBe(url)
+  })
+
+  it('keeps non-ASCII text intact', () => {
+    const encoded = base64Url('Björk')
+    const bytes = Uint8Array.from(
+      atob(encoded.replace(/-/g, '+').replace(/_/g, '/')),
+      (c) => c.charCodeAt(0)
+    )
+    expect(new TextDecoder().decode(bytes)).toBe('Björk')
+  })
+})
+
+describe('proxiedArtistPhotoUrl with a Deezer picture', () => {
+  const picture = 'https://cdn-images.dzcdn.net/images/artist/abc/250x250.jpg'
+
+  it('sends the picture base64url-encoded', () => {
+    expect(proxiedArtistPhotoUrl('Daft Punk', picture)).toBe(
+      `/api/artists/photo-proxy?name=Daft%20Punk&url=${base64Url(picture)}`
+    )
+  })
+
+  it('knownArtistPhoto keeps the picture itself behind the proxy', () => {
+    expect(knownArtistPhoto('Daft Punk', picture)).toEqual({
+      cover: `/api/artists/photo-proxy?name=Daft%20Punk&url=${base64Url(picture)}`,
+      fallback: picture,
+    })
+    expect(knownArtistPhoto('Daft Punk', '')).toEqual({
+      cover: '/api/artists/photo-proxy?name=Daft%20Punk',
+      fallback: '',
     })
   })
 })

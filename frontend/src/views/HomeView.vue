@@ -71,6 +71,11 @@
               t('home.hintYoutube')
             }}
           </span>
+          <span class="flex items-center gap-1.5">
+            <AppIcon name="deezer" :size="14" class="text-deezer" />{{
+              t('home.hintDeezer')
+            }}
+          </span>
           <button
             type="button"
             class="flex items-center gap-1.5 hover:text-fg"
