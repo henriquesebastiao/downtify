@@ -83,6 +83,10 @@ RESULT_LIMIT = 48
 LISTEN_HALF_LIFE_DAYS = 45
 #: Deezer requests in flight at once (it rate-limits at ~50 per 5 s).
 _WORKERS = 4
+#: For Deezer lookups that go through its throttle (discographies,
+#: playlists, album matches): more at once is safe, the throttle keeps the
+#: overall rate under Deezer's limit.
+_THROTTLED_WORKERS = 8
 #: How many of the best suggested artists get an album / playlist.
 COLLECTION_SUGGESTED = 12
 #: How many of the heaviest library artists get albums / a radio mix.
@@ -91,6 +95,13 @@ COLLECTION_SEEDS = 6
 MORE_FROM_PER_SEED = 2
 #: Spotify's own account, the owner of its editorial playlists.
 SPOTIFY_OWNER = 'spotify'
+#: How long a Spotify album's Deezer match is trusted: an album found on
+#: Deezer stays the same album, one missing may be added any week.
+MATCH_TTL_FOUND = timedelta(days=30)
+MATCH_TTL_MISSING = RELATED_TTL
+#: The per-artist Deezer cache's parts, by name -> column prefix (a fixed
+#: list: the name ends up in the SQL).
+_DEEZER_PARTS = {'albums': 'albums', 'playlist': 'playlist'}
 
 #: A seed's related artists, best match first (see ``deezer.related_artists``).
 Related = list[dict[str, Any]]
@@ -292,6 +303,28 @@ class DiscoverStore:
                     fetched_at TEXT NOT NULL
                 )
             """)
+            # An artist's Deezer discography and editorial "100%"
+            # playlist, each fetched (and trusted) on its own.
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS discover_deezer (
+                    artist_key TEXT PRIMARY KEY,
+                    albums_json TEXT,
+                    albums_at TEXT,
+                    playlist_json TEXT,
+                    playlist_at TEXT
+                )
+            """)
+            # A Spotify album's match on Deezer - '' ids when Deezer has
+            # no such album.
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS discover_album_map (
+                    spotify_id TEXT PRIMARY KEY,
+                    deezer_album_id TEXT NOT NULL DEFAULT '',
+                    deezer_artist_id TEXT NOT NULL DEFAULT '',
+                    cover_url TEXT NOT NULL DEFAULT '',
+                    fetched_at TEXT NOT NULL
+                )
+            """)
 
     # Listens
 
@@ -484,6 +517,98 @@ class DiscoverStore:
                      results_json = excluded.results_json,
                      fetched_at = excluded.fetched_at""",
                 (key, json.dumps(results), (when or _now()).isoformat()),
+            )
+
+    # Deezer discography / editorial playlist cache
+
+    def cached_deezer(self, key: str, part: str) -> Optional[dict[str, Any]]:
+        """``{value, fetched_at}`` for an artist's Deezer *part*
+        (``'albums'`` or ``'playlist'``), or ``None`` if never fetched."""
+
+        column = _DEEZER_PARTS[part]
+        with self._connect() as conn:
+            row = conn.execute(
+                f'SELECT {column}_json AS value, {column}_at AS fetched_at '
+                'FROM discover_deezer WHERE artist_key = ?',
+                (key,),
+            ).fetchone()
+        if row is None or row['fetched_at'] is None:
+            return None
+        try:
+            value = json.loads(row['value'] or 'null')
+        except ValueError:
+            value = None
+        return {'value': value, 'fetched_at': _parse_time(row['fetched_at'])}
+
+    def save_deezer(
+        self,
+        key: str,
+        part: str,
+        value: Any,
+        when: Optional[datetime] = None,
+    ) -> None:
+        column = _DEEZER_PARTS[part]
+        with self._connect() as conn:
+            conn.execute(
+                f"""INSERT INTO discover_deezer
+                    (artist_key, {column}_json, {column}_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(artist_key) DO UPDATE SET
+                      {column}_json = excluded.{column}_json,
+                      {column}_at = excluded.{column}_at""",
+                (key, json.dumps(value), (when or _now()).isoformat()),
+            )
+
+    # Spotify -> Deezer album matches
+
+    def cached_album_match(self, spotify_id: str) -> Optional[dict[str, Any]]:
+        """``{deezer_album_id, deezer_artist_id, cover_url, fetched_at}``
+        for a Spotify album, or ``None`` if never matched."""
+
+        with self._connect() as conn:
+            row = conn.execute(
+                'SELECT deezer_album_id, deezer_artist_id, cover_url, '
+                'fetched_at FROM discover_album_map WHERE spotify_id = ?',
+                (spotify_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return {
+            'deezer_album_id': row['deezer_album_id'],
+            'deezer_artist_id': row['deezer_artist_id'],
+            'cover_url': row['cover_url'],
+            'fetched_at': _parse_time(row['fetched_at']),
+        }
+
+    def save_album_match(
+        self,
+        spotify_id: str,
+        match: Optional[dict[str, Any]],
+        when: Optional[datetime] = None,
+    ) -> None:
+        """Remember *spotify_id*'s Deezer album (*match*, a
+        :func:`downtify.deezer.search_albums_by` row), or - ``None`` -
+        that Deezer has none."""
+
+        match = match or {}
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO discover_album_map
+                   (spotify_id, deezer_album_id, deezer_artist_id,
+                    cover_url, fetched_at)
+                   VALUES (?, ?, ?, ?, ?)
+                   ON CONFLICT(spotify_id) DO UPDATE SET
+                     deezer_album_id = excluded.deezer_album_id,
+                     deezer_artist_id = excluded.deezer_artist_id,
+                     cover_url = excluded.cover_url,
+                     fetched_at = excluded.fetched_at""",
+                (
+                    spotify_id,
+                    str(match.get('album_id') or ''),
+                    str(match.get('artist_id') or ''),
+                    str(match.get('cover_url') or ''),
+                    (when or _now()).isoformat(),
+                ),
             )
 
 
@@ -842,3 +967,398 @@ def collections(
         failed for _name, _found, failed in results
     )
     return picked
+
+
+# ── Deezer first, then Spotify matched to Deezer ─────────────────────────
+#
+# The web page's album and playlist shelves. Deezer's own picks come first
+# (deezer_collections: quick, and every album opens in the Finder); what
+# Spotify picks is added after (spotify_collections), each album matched
+# back to Deezer by name when Deezer has it. Playlists aren't matched - a
+# "100% <artist>" (Deezer's editors) and a "This Is <artist>" (Spotify's)
+# are different lists - so each service keeps its own shelf.
+#
+# collections() above, Spotify only, is kept as it is: other clients may
+# rely on it.
+
+
+def _release_rank(album: dict[str, Any]) -> tuple[bool, int]:
+    """Sort key for an artist's Deezer releases: full albums first (as
+    :func:`_albums_by` does on Spotify), then the most fans."""
+
+    kind = str(album.get('release_type') or '').lower()
+    return kind != 'album', -int(album.get('fans') or 0)
+
+
+def _deezer_album_item(
+    album: dict[str, Any], artist: str, reason: str, because: list[str]
+) -> dict[str, Any]:
+    album_id = str(album['album_id'])
+    return {
+        'name': album['name'],
+        'artist': artist,
+        'year': album.get('year') or '',
+        'cover_url': album.get('cover_url') or '',
+        'source': 'deezer',
+        'deezer_album_id': album_id,
+        'deezer_artist_id': str(album.get('artist_id') or ''),
+        'url': album.get('url') or f'https://www.deezer.com/album/{album_id}',
+        'key': album_key(artist, album['name']),
+        'reason': reason,
+        'because': because,
+    }
+
+
+def _deezer_playlist_item(
+    playlist: dict[str, Any], artist: str
+) -> dict[str, Any]:
+    return {
+        'name': playlist['name'],
+        'owner': playlist.get('owner') or '',
+        'cover_url': playlist.get('cover_url') or '',
+        'source': 'deezer',
+        'deezer_playlist_id': str(playlist['playlist_id']),
+        'url': playlist['url'],
+        'reason': 'essentials',
+        'artist': artist,
+    }
+
+
+def pick_deezer_collections(
+    suggested: list[dict[str, Any]],
+    seeds: list[str],
+    discographies: dict[str, list[dict[str, Any]]],
+    playlists: dict[str, Optional[dict[str, Any]]],
+    owned_albums: set[str],
+    owned_playlists: set[str],
+) -> dict[str, Any]:
+    """The same shelves as :func:`pick_collections`, from Deezer.
+
+    *discographies* and *playlists* are keyed by :func:`artist_key`: each
+    artist's :func:`downtify.deezer.artist_discography` and
+    :func:`downtify.deezer.editorial_playlist`. *owned_albums* holds
+    :func:`album_key` values, *owned_playlists* the
+    :func:`~downtify.file_naming.file_name_key` of every library playlist
+    name - a downloaded Deezer playlist keeps its title as its name.
+    Returns ``{albums, more_albums, playlists}``:
+
+    * ``albums``: each suggested artist's best album not owned - a full
+      album before a single or EP, the most fans first - ``reason:
+      'similar'``.
+    * ``more_albums``: up to :data:`MORE_FROM_PER_SEED` per seed, same
+      order, ``reason: 'more_from'``.
+    * ``playlists``: the suggested artists' "100%" playlists,
+      ``reason: 'essentials'``.
+    """
+
+    albums: list[dict[str, Any]] = []
+    more: list[dict[str, Any]] = []
+    lists: list[dict[str, Any]] = []
+    seen: set[str] = set(owned_albums)
+
+    def take(album, artist, reason, because, into) -> bool:
+        key = album_key(artist, album['name'])
+        if key in seen:
+            return False
+        seen.add(key)
+        into.append(_deezer_album_item(album, artist, reason, because))
+        return True
+
+    for seed in seeds:
+        taken = 0
+        releases = discographies.get(artist_key(seed)) or []
+        for album in sorted(releases, key=_release_rank):
+            if taken >= MORE_FROM_PER_SEED:
+                break
+            if take(album, seed, 'more_from', [seed], more):
+                taken += 1
+
+    for artist in suggested:
+        name = artist['name']
+        because = artist.get('because') or []
+        releases = discographies.get(artist_key(name)) or []
+        for album in sorted(releases, key=_release_rank):
+            if take(album, name, 'similar', because, albums):
+                break
+        playlist = playlists.get(artist_key(name))
+        if playlist and file_name_key(playlist['name']) not in owned_playlists:
+            lists.append(_deezer_playlist_item(playlist, name))
+
+    return {'albums': albums, 'more_albums': more, 'playlists': lists}
+
+
+def _deezer_part(
+    store: DiscoverStore,
+    key: str,
+    part: str,
+    fetch: Callable[[], Any],
+    *,
+    now: datetime,
+) -> tuple[Any, bool]:
+    """An artist's Deezer *part* from the cache while fresh, else
+    *fetch*. ``(value, failed)``, with the same rules as
+    :func:`_related_for_seed`: a failure falls back to a stale answer and
+    is never saved; "Deezer has none" (``None``) is saved like any answer.
+    """
+
+    cached = store.cached_deezer(key, part)
+    if (
+        cached is not None
+        and cached['fetched_at'] is not None
+        and now - cached['fetched_at'] < RELATED_TTL
+    ):
+        return cached['value'], False
+    try:
+        value = fetch()
+    except ValueError:
+        return (cached['value'] if cached else None), True
+    store.save_deezer(key, part, value, when=now)
+    return value, False
+
+
+def deezer_collections(
+    store: DiscoverStore,
+    library: list[dict[str, Any]],
+    owned_albums: Iterable[dict[str, Any]] = (),
+    owned_playlists: Iterable[str] = (),
+    *,
+    lookup_id: Callable[[str], Optional[str]] = deezer.lookup_artist_id,
+    fetch_related: Callable[[str, int], Related] = deezer.related_artists,
+    fetch_albums: Callable[
+        [str], list[dict[str, Any]]
+    ] = deezer.artist_discography,
+    fetch_playlist: Callable[
+        [str], Optional[dict[str, Any]]
+    ] = deezer.editorial_playlist,
+    now: Optional[datetime] = None,
+) -> dict[str, Any]:
+    """Albums and playlists for a library from Deezer alone (see
+    :func:`pick_deezer_collections`) - the page's first, quick answer.
+
+    *library* and *owned_albums* are what :func:`collections` takes;
+    *owned_playlists* are library playlist names. Built on the same ranked
+    artists (cached), so it only asks Deezer for discographies and
+    playlists: one each per artist, cached for :data:`RELATED_TTL`.
+    ``partial`` is ``True`` when some of those couldn't be fetched.
+    """
+
+    now = now or _now()
+    library = [a for a in library if isinstance(a, dict)]
+    ranked = recommendations(
+        store,
+        library,
+        lookup_id=lookup_id,
+        fetch_related=fetch_related,
+        now=now,
+    )
+    suggested = ranked['artists'][:COLLECTION_SUGGESTED]
+    seeds = ranked['seeds'][:COLLECTION_SEEDS]
+
+    # A suggestion carries its own Deezer id; a seed's was saved with its
+    # related artists.
+    names: dict[str, str] = {}
+    ids: dict[str, str] = {}
+    for seed in seeds:
+        key = artist_key(seed)
+        names[key] = seed
+        ids[key] = (store.cached_related(key) or {}).get('deezer_id') or ''
+    for artist in suggested:
+        key = artist_key(artist['name'])
+        names.setdefault(key, artist['name'])
+        ids.setdefault(key, str(artist.get('deezer_id') or ''))
+
+    jobs = [(key, 'albums') for key, deezer_id in ids.items() if deezer_id]
+    jobs += [(artist_key(a['name']), 'playlist') for a in suggested]
+
+    def fetcher(key: str, part: str) -> Callable[[], Any]:
+        if part == 'albums':
+            return lambda: fetch_albums(ids[key])
+        return lambda: fetch_playlist(names[key])
+
+    def run(job: tuple[str, str]) -> tuple[str, str, Any, bool]:
+        key, part = job
+        try:
+            value, failed = _deezer_part(
+                store, key, part, fetcher(key, part), now=now
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Discover: Deezer {} failed for {!r}', part, names[key]
+            )
+            return key, part, None, True
+        return key, part, value, failed
+
+    with ThreadPoolExecutor(max_workers=_THROTTLED_WORKERS) as pool:
+        results = list(pool.map(run, jobs))
+
+    discographies = {
+        key: value or [] for key, part, value, _ in results if part == 'albums'
+    }
+    playlists = {
+        key: value for key, part, value, _ in results if part == 'playlist'
+    }
+    picked = pick_deezer_collections(
+        suggested,
+        seeds,
+        discographies,
+        playlists,
+        {
+            album_key(a.get('artist'), a.get('title'))
+            for a in owned_albums
+            if isinstance(a, dict)
+        },
+        {file_name_key(str(name)) for name in owned_playlists if name},
+    )
+    picked['partial'] = ranked['partial'] or any(
+        failed for _key, _part, _value, failed in results
+    )
+    return picked
+
+
+def _match_album(
+    store: DiscoverStore,
+    item: dict[str, Any],
+    *,
+    find: Callable[[str, str], list[dict[str, Any]]],
+    now: datetime,
+) -> tuple[Optional[dict[str, Any]], bool]:
+    """A Spotify album *item*'s Deezer album, or ``None`` when Deezer has
+    none: ``(match, failed)``.
+
+    A row counts only when it's the same album by :func:`album_key` (same
+    artist, same title once edition suffixes are dropped) - never "the
+    closest". Matches are cached by Spotify id, a found one for
+    :data:`MATCH_TTL_FOUND`, a missing one for :data:`MATCH_TTL_MISSING`;
+    a failure falls back to a stale match and is never saved.
+    """
+
+    spotify_id = str(item['spotify_id'])
+    cached = store.cached_album_match(spotify_id)
+    if cached is not None and cached['fetched_at'] is not None:
+        found = bool(cached['deezer_album_id'])
+        ttl = MATCH_TTL_FOUND if found else MATCH_TTL_MISSING
+        if now - cached['fetched_at'] < ttl:
+            return (cached if found else None), False
+    try:
+        rows = find(item['artist'], item['name'])
+    except ValueError:
+        stale = cached if cached and cached['deezer_album_id'] else None
+        return stale, True
+    wanted = album_key(item['artist'], item['name'])
+    row = next(
+        (
+            row
+            for row in rows
+            if album_key(row.get('artist'), row.get('name')) == wanted
+        ),
+        None,
+    )
+    store.save_album_match(spotify_id, row, when=now)
+    if row is None:
+        return None, False
+    return {
+        'deezer_album_id': str(row['album_id']),
+        'deezer_artist_id': str(row.get('artist_id') or ''),
+        'cover_url': row.get('cover_url') or '',
+    }, False
+
+
+def _matched_album_item(
+    item: dict[str, Any], match: Optional[dict[str, Any]]
+) -> dict[str, Any]:
+    """A Spotify album *item* as Deezer's (opens in the Finder), or as
+    Spotify's when Deezer has no match (opens on its Spotify page)."""
+
+    key = album_key(item['artist'], item['name'])
+    if match is None:
+        return {**item, 'source': 'spotify', 'key': key}
+    album_id = match['deezer_album_id']
+    return {
+        'name': item['name'],
+        'artist': item['artist'],
+        'year': item.get('year') or '',
+        'cover_url': match.get('cover_url') or item.get('cover_url') or '',
+        'source': 'deezer',
+        'deezer_album_id': album_id,
+        'deezer_artist_id': match.get('deezer_artist_id') or '',
+        'url': f'https://www.deezer.com/album/{album_id}',
+        'key': key,
+        'reason': item['reason'],
+        'because': item['because'],
+    }
+
+
+def spotify_collections(
+    store: DiscoverStore,
+    library: list[dict[str, Any]],
+    owned_albums: Iterable[dict[str, Any]] = (),
+    owned_playlists: Iterable[str] = (),
+    shown: Iterable[str] = (),
+    *,
+    lookup_id: Callable[[str], Optional[str]] = deezer.lookup_artist_id,
+    fetch_related: Callable[[str, int], Related] = deezer.related_artists,
+    search: Callable[[str], dict[str, Any]] = spotify.search,
+    find_album: Callable[
+        [str, str], list[dict[str, Any]]
+    ] = deezer.search_albums_by,
+    now: Optional[datetime] = None,
+) -> dict[str, Any]:
+    """What Spotify adds to :func:`deezer_collections` - the page's
+    second, slower answer.
+
+    Spotify's own picks (:func:`collections`, its searches cached), less
+    the albums already *shown* (their :func:`album_key` values) - so an
+    album both services pick costs no match - each matched to Deezer (see
+    :func:`_match_album`). *owned_playlists* are Spotify playlist ids, as
+    for :func:`collections`. Returns ``{albums, more_albums, playlists,
+    partial}``: albums with ``source`` ``'deezer'`` (matched) or
+    ``'spotify'`` (no match), and only the "This Is <artist>" playlists -
+    Spotify's "Radio" mixes aren't offered here.
+    """
+
+    now = now or _now()
+    picked = collections(
+        store,
+        library,
+        owned_albums,
+        owned_playlists,
+        lookup_id=lookup_id,
+        fetch_related=fetch_related,
+        search=search,
+        now=now,
+    )
+    skip = {str(key) for key in shown if key}
+    jobs = [
+        (shelf, item)
+        for shelf in ('albums', 'more_albums')
+        for item in picked[shelf]
+        if album_key(item['artist'], item['name']) not in skip
+    ]
+
+    def run(job: tuple[str, dict[str, Any]]) -> tuple[str, dict, bool]:
+        shelf, item = job
+        try:
+            match, failed = _match_album(store, item, find=find_album, now=now)
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Discover: matching {!r} to Deezer failed', item['name']
+            )
+            match, failed = None, True
+        return shelf, _matched_album_item(item, match), failed
+
+    with ThreadPoolExecutor(max_workers=_THROTTLED_WORKERS) as pool:
+        results = list(pool.map(run, jobs))
+
+    return {
+        'albums': [item for shelf, item, _ in results if shelf == 'albums'],
+        'more_albums': [
+            item for shelf, item, _ in results if shelf == 'more_albums'
+        ],
+        'playlists': [
+            {**playlist, 'source': 'spotify'}
+            for playlist in picked['playlists']
+            if playlist['reason'] == 'this_is'
+        ],
+        'partial': picked['partial']
+        or any(failed for _shelf, _item, failed in results),
+    }

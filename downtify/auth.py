@@ -897,6 +897,8 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         ),
         (_READ, r'^/(downloads|media)/', CLIENT),
         (_READ, r'^/api/(songs|albums|artists)/search$', CLIENT),
+        (_READ, r'^/api/discover/chart$', CLIENT),
+        (_READ, r'^/api/finder/', CLIENT),
         (_READ, r'^/api/artists/', CLIENT),
         (_m('POST'), r'^/api/artists/(art/bulk|profile/ensure)$', CLIENT),
         (_READ, r'^/api/(song/url|url|url/resolve|preview)$', CLIENT),
@@ -905,7 +907,11 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_READ, r'^/api/playlists/(batches|incomplete)', CLIENT),
         (_READ, r'^/api/likes$', CLIENT),
         (_m('PUT'), r'^/api/likes$', CLIENT),
-        (_m('POST'), r'^/api/discover(/collections|/listens)?$', CLIENT),
+        (
+            _m('POST'),
+            r'^/api/discover(/collections(/deezer|/spotify)?|/listens)?$',
+            CLIENT,
+        ),
         (_ALL, r'^/api/discover/blocked$', CLIENT),
         (_READ, r'^/api/podcasts/', CLIENT),
         (

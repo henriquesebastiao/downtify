@@ -310,14 +310,22 @@ async function resolve() {
 
 watchValue(url, resolve, { immediate: true })
 
+const SOURCE_LABELS = {
+  spotify: () => t('link.openSpotify'),
+  youtube: () => t('link.openYoutube'),
+  deezer: () => t('link.openDeezer'),
+}
 const sourceLabel = computed(() =>
-  kind.value.source === 'spotify'
-    ? t('link.openSpotify')
-    : t('link.openYoutube')
+  (SOURCE_LABELS[kind.value.source] || SOURCE_LABELS.youtube)()
 )
 
 const kicker = computed(() => {
-  const source = kind.value.source === 'spotify' ? 'Spotify' : 'YouTube Music'
+  const names = {
+    spotify: 'Spotify',
+    youtube: 'YouTube Music',
+    deezer: 'Deezer',
+  }
+  const source = names[kind.value.source] || kind.value.source
   return `${source} · ${t(`link.kind.${details.value?.kind || 'track'}`)}`
 })
 
@@ -338,8 +346,12 @@ const playContext = computed(() =>
     : null
 )
 
+// Playlist Monitor has no Deezer support: watching a Deezer playlist or
+// artist for updates isn't offered, only downloading what's there now.
 const watchable = computed(
-  () => details.value?.kind === 'playlist' || details.value?.kind === 'artist'
+  () =>
+    (details.value?.kind === 'playlist' || details.value?.kind === 'artist') &&
+    kind.value.source !== 'deezer'
 )
 
 const mosaic = computed(() =>

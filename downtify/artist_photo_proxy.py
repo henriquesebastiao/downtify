@@ -24,6 +24,10 @@ browser cannot ask for it directly). It is a pass-through, nothing more:
   limit of 50 requests per 5 seconds, a refused or broken download) raises
   :class:`PhotoUnavailable` instead, which is neither remembered here nor
   cached by the browser: the next request simply tries again.
+* A caller that already holds the artist's Deezer picture URL (Discover's
+  suggestions and the Finder bring one) skips the search by name with
+  :func:`fetch_photo_at`. It only ever downloads from Deezer's CDN - this
+  is not a way to fetch arbitrary URLs.
 """
 
 from __future__ import annotations
@@ -140,6 +144,29 @@ def fetch_proxied_photo(name: str) -> Optional[tuple[bytes, str]]:
     url = _lookup_url(name)
     if url is None:
         return None
+    return _download(url)
+
+
+def fetch_photo_at(url: str) -> tuple[bytes, str]:
+    """``(image bytes, content type)`` of the Deezer photo at *url* - for
+    a caller that already has the artist's picture URL, so no search by
+    name is needed (one Deezer request saved per artist).
+
+    Raises :class:`ValueError` when *url* isn't on Deezer's CDN - it is
+    never fetched - and :class:`PhotoUnavailable` when the download fails
+    or isn't a usable image, as :func:`fetch_proxied_photo` does. Display
+    only - see the module docstring. The bytes are not kept.
+    """
+
+    if not _is_cdn_url(url):
+        raise ValueError('Not a Deezer image URL')
+    return _download(url)
+
+
+def _download(url: str) -> tuple[bytes, str]:
+    """The image at a Deezer CDN *url*: ``(bytes, content type)``, or
+    :class:`PhotoUnavailable`."""
+
     try:
         with _slots:
             resp = httpx.get(url, timeout=_TIMEOUT)

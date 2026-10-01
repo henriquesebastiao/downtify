@@ -129,6 +129,15 @@ def set_cover_resolution(pixels: int) -> None:
     _cover_resolution = pixels
 
 
+def cover_resolution() -> int:
+    """The currently configured cover-size target (see
+    set_cover_resolution). downtify.deezer reads this too, picking the
+    smallest of Deezer's four fixed image sizes that still meets it,
+    since a Deezer image can't be resized by editing its URL the way a
+    YouTube Music thumbnail can (see deezer._cover_from_images)."""
+    return _cover_resolution
+
+
 def _resize_thumbnail(url: str, size: int) -> str:
     """Replace the size suffix on a YT thumbnail with the given one."""
 

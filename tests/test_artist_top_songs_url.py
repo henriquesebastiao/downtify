@@ -125,6 +125,34 @@ def test_youtube_artist_handle_resolved_channel_not_found_is_404(
     assert exc.value.status_code == 404
 
 
+def test_deezer_artist_url_resolves_top_songs(monkeypatch):
+    monkeypatch.setattr(
+        api.deezer,
+        'artist_top_songs_from_id',
+        lambda artist_id: (
+            'Test Artist',
+            'https://example.test/cover.jpg',
+            [_song('d1'), _song('d2')],
+        ),
+    )
+    result = api._resolve_artist_top_songs('https://www.deezer.com/artist/42')
+    assert result['source'] == 'deezer'
+    assert result['artist_id'] == '42'
+    assert result['name'] == 'Test Artist'
+    assert result['cover_url'] == 'https://example.test/cover.jpg'
+    assert [s['song_id'] for s in result['songs']] == ['d1', 'd2']
+
+
+def test_deezer_artist_resolve_failure_is_502(monkeypatch):
+    def _raise(_artist_id):
+        raise RuntimeError('Deezer unreachable')
+
+    monkeypatch.setattr(api.deezer, 'artist_top_songs_from_id', _raise)
+    with pytest.raises(HTTPException) as exc:
+        api._resolve_artist_top_songs('https://www.deezer.com/artist/42')
+    assert exc.value.status_code == 502
+
+
 def test_non_artist_url_is_400():
     with pytest.raises(HTTPException) as exc:
         api._resolve_artist_top_songs(

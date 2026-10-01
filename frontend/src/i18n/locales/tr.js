@@ -30,6 +30,7 @@ export default {
     monitor: 'İzleyici',
     discover: 'Keşfet',
     podcasts: 'Podcastler',
+    charts: 'Müzik listeleri',
     settings: 'Ayarlar',
     more: 'Daha fazla',
     playlists: 'Çalma listeleri',
@@ -72,6 +73,7 @@ export default {
     hintSpotify: 'Parçalar, albümler, çalma listeleri ve sanatçılar',
     hintYoutube:
       'YouTube Music şarkıları, albümleri, çalma listeleri ve sanatçıları',
+    hintDeezer: 'Deezer parçaları, albümleri, çalma listeleri ve sanatçıları',
     hintCsv: 'CSV içe aktar (Soundiiz, Exportify…)',
     downloading: 'Şimdi indiriliyor',
     waiting: {
@@ -138,6 +140,43 @@ export default {
     tipYoutubeBody:
       'Şarkılar, albümler, çalma listeleri — ya da tüm yayınları görmek için bir sanatçı sayfası.',
   },
+  charts: {
+    title: 'Müzik listeleri',
+    subtitle: "Deezer'ın küresel listesi: şu anda trend olanlar.",
+    failed: 'Liste yüklenemedi',
+    empty: 'Şu anda listede bir şey yok',
+    playlist: 'Çalma listesi',
+  },
+  finder: {
+    placeholder: 'Sanatçı, albüm veya şarkı arayın',
+    resultsFor: '“{query}” için sonuçlar',
+    songsBy: '{name} şarkıları',
+    path: 'Konum',
+    artistColumn: 'Sanatçı',
+    tracksColumn: 'Parçalar',
+    resizeColumn: 'Sütunu yeniden boyutlandır',
+    collapseColumn: 'Sütunu daralt',
+    expandColumn: 'Sütunu genişlet',
+    resizeHint:
+      'Boyutlandırmak için sürükleyin · sıfırlamak için çift tıklayın',
+    discography: 'Diskografi',
+    failed: "Deezer'dan yüklenemedi",
+    noArtist: 'Açık sanatçı yok',
+    noAlbums: 'Burada yayın yok',
+    pickAlbum: 'Bir albüm seçin',
+    pickAlbumHint: 'Parçaları burada görünür; dinlemeye ve indirmeye hazır.',
+    about: 'Hakkında',
+    showMore: 'Daha fazla göster',
+    showLess: 'Daha az göster',
+    popular: 'Popüler',
+    related: 'Hayranlar bunları da seviyor',
+    downloadAlbum: 'Albümü indir',
+    typeCompilation: 'Derleme',
+    released: 'Yayın tarihi',
+    label: 'Plak şirketi',
+    genres: 'Türler',
+    credits: 'Katkıda bulunanlar',
+  },
   link: {
     resolving: 'Bağlantı okunuyor…',
     failed: 'Bu bağlantı açılamadı',
@@ -159,6 +198,7 @@ export default {
     watchArtist: 'Yeni yayınları izle',
     openSpotify: 'Spotify’da aç',
     openYoutube: 'YouTube Music’te aç',
+    openDeezer: "Deezer'da aç",
     filterAll: 'Tümü',
     filterNew: 'Yeni',
     filterLibrary: 'Kitaplıkta',
@@ -780,7 +820,7 @@ export default {
     coverArtHint: 'Daha küçük dosyalar ve daha hızlı indirmeler için kapat.',
     coverSize: 'Kapak boyutu',
     coverSizeHint:
-      'YouTube Music kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',
+      'YouTube Music ve Deezer kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',
     artistCover: 'Sanatçı fotoğraflarını otomatik al',
     artistCoverHint:
       'Sanatçı fotoğrafını .metadata/ArtistImage klasörüne indirir; Navidrome gibi servislerde de kullanılabilir.',
@@ -1240,13 +1280,13 @@ export default {
       'Zaten sahip olduğunuz sanatçıların henüz kitaplığınızda olmayan popüler albümleri.',
     playlistsTitle: 'Sizin için çalma listeleri',
     playlistsBody:
-      'En çok dinlediğiniz sanatçılar etrafında Spotify mix’leri ve yeni sanatçıların en iyileri.',
-    radioFor: '{name} etrafında mix',
+      'Sevebileceğiniz sanatçıların en iyileri: Deezer’ın “100%” ve Spotify’ın “This Is” listeleri.',
+    onPlatform: '{name} üzerinde',
     essentialsOf: '{name} en iyileri',
     collectionsFailed:
       'Albümler ve çalma listeleri şu anda yüklenemedi. Daha sonra tekrar deneyin.',
     poweredBy:
-      'Sanatçılar Deezer’ın benzer sanatçılarından; albümler ve çalma listeleri Spotify’dan gelir.',
+      'Sanatçılar Deezer’ın benzer sanatçılarından; albümler Deezer ve Spotify’dan; çalma listeleri her birinden gelir.',
   },
   podcasts: {
     title: 'Podcastler',

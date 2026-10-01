@@ -88,6 +88,52 @@ def test_cache_is_capped(monkeypatch):
     assert list(artist_photo_proxy._url_cache) == ['a2', 'a3', 'a4']
 
 
+def test_fetch_photo_at_downloads_without_searching(monkeypatch):
+    def search(name):
+        raise AssertionError('no search by name when the URL is known')
+
+    monkeypatch.setattr(deezer, 'exact_artist_picture', search)
+    monkeypatch.setattr(
+        artist_photo_proxy.httpx,
+        'get',
+        lambda *a, **k: _resp(
+            content=b'jpegbytes', headers={'content-type': 'image/jpeg'}
+        ),
+    )
+    assert artist_photo_proxy.fetch_photo_at(CDN) == (
+        b'jpegbytes',
+        'image/jpeg',
+    )
+
+
+@pytest.mark.parametrize(
+    'url',
+    [
+        'https://evil.example/a.jpg',
+        'http://cdn-images.dzcdn.net/images/artist/abc/250x250.jpg',
+        'https://dzcdn.net.evil.example/a.jpg',
+        'file:///etc/passwd',
+        '',
+    ],
+)
+def test_fetch_photo_at_only_fetches_deezers_cdn(monkeypatch, url):
+    def boom(*a, **k):
+        raise AssertionError('must not download')
+
+    monkeypatch.setattr(artist_photo_proxy.httpx, 'get', boom)
+    with pytest.raises(ValueError, match='Not a Deezer image URL'):
+        artist_photo_proxy.fetch_photo_at(url)
+
+
+def test_fetch_photo_at_failure_is_unavailable_not_a_miss(monkeypatch):
+    def down(*a, **k):
+        raise httpx.ConnectError('down')
+
+    monkeypatch.setattr(artist_photo_proxy.httpx, 'get', down)
+    with pytest.raises(artist_photo_proxy.PhotoUnavailable):
+        artist_photo_proxy.fetch_photo_at(CDN)
+
+
 def test_non_dzcdn_url_is_never_downloaded(monkeypatch):
     monkeypatch.setattr(
         deezer, 'exact_artist_picture', lambda n: 'https://evil.example/a.jpg'

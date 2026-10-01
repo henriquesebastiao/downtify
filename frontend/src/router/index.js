@@ -3,6 +3,7 @@ import config from '/src/config'
 import HomeView from '/src/views/HomeView.vue'
 
 const LIBRARY_TABS = 'tracks|albums|artists|playlists'
+const CHARTS_TABS = 'tracks|albums|artists|playlists'
 
 const routes = [
   { path: '/', name: 'Home', component: HomeView },
@@ -64,10 +65,21 @@ const routes = [
     component: () => import('/src/views/MonitorView.vue'),
   },
   {
-    // Artists the library doesn't have yet, suggested from the ones it does.
+    // Discover and the Finder on one page: the Finder's search box on top,
+    // Discover's suggestions below - or, while a search is on (`?q=`), what
+    // the Finder found (see DiscoverHubView).
     path: '/discover',
     name: 'Discover',
-    component: () => import('/src/views/DiscoverView.vue'),
+    component: () => import('/src/views/DiscoverHubView.vue'),
+  },
+  {
+    // What a Finder result opens: artist, albums and one album's tracks
+    // side by side (`?artist=&album=&track=`, Deezer ids). A page of its
+    // own, the columns need its whole height. One path, so moving between
+    // artists doesn't remount the page.
+    path: '/discover/finder/browse',
+    name: 'FinderBrowse',
+    component: () => import('/src/views/FinderBrowseView.vue'),
   },
   {
     path: '/podcasts',
@@ -78,6 +90,13 @@ const routes = [
     path: '/podcasts/show',
     name: 'PodcastShow',
     component: () => import('/src/views/PodcastShowView.vue'),
+  },
+  {
+    // Deezer's own "what's trending" chart: tracks, albums, artists and
+    // playlists, one tab each.
+    path: `/charts/:tab(${CHARTS_TABS})?`,
+    name: 'Charts',
+    component: () => import('/src/views/ChartsView.vue'),
   },
   {
     path: '/settings/:section?',

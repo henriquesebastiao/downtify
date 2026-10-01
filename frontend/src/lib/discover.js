@@ -29,9 +29,11 @@ export function libraryPayload(artists, liked = new Set()) {
 }
 
 /**
- * `POST /api/discover/collections`'s body: the library's artists (as for
- * `libraryPayload`), its albums - so one already downloaded isn't suggested
- * - and the Spotify ids of the playlists downloaded from Spotify.
+ * The body of `POST /api/discover/collections/deezer` and `.../spotify`:
+ * the library's artists (as for `libraryPayload`), its albums - so one
+ * already downloaded isn't suggested - the Spotify ids of the playlists
+ * downloaded from Spotify, and every library playlist's name (a downloaded
+ * Deezer playlist is only known by it).
  */
 export function collectionsPayload(artists, albums, playlists, liked) {
   return {
@@ -42,7 +44,61 @@ export function collectionsPayload(artists, albums, playlists, liked) {
     playlist_ids: (playlists || [])
       .map((playlist) => playlist?.batch?.spotify_playlist_id)
       .filter(Boolean),
+    playlist_names: (playlists || [])
+      .map((playlist) => playlist?.name)
+      .filter(Boolean),
   }
+}
+
+// Whatever tells two suggestions apart as the same album or playlist.
+function identities(item) {
+  return [
+    item?.key && `key:${item.key}`,
+    item?.deezer_album_id && `deezer:${item.deezer_album_id}`,
+    item?.url && `url:${item.url}`,
+  ].filter(Boolean)
+}
+
+/**
+ * `incoming` added at the end of `list`, leaving out any it already has -
+ * the same album (`key`, or Deezer id) or the same link. What's there never
+ * moves, so nothing jumps while more suggestions arrive.
+ */
+export function appendNew(list, incoming) {
+  const seen = new Set((list || []).flatMap(identities))
+  const added = []
+  for (const item of incoming || []) {
+    const ids = identities(item)
+    if (ids.some((id) => seen.has(id))) continue
+    ids.forEach((id) => seen.add(id))
+    added.push(item)
+  }
+  return added.length ? [...(list || []), ...added] : list || []
+}
+
+/**
+ * Where a suggested album or playlist opens: a Deezer album in the Finder's
+ * columns, anything else - a Spotify album, any playlist - on the Link page.
+ */
+export function collectionRoute(item) {
+  if (
+    item?.source === 'deezer' &&
+    item.deezer_album_id &&
+    item.deezer_artist_id
+  ) {
+    return {
+      name: 'FinderBrowse',
+      query: { artist: item.deezer_artist_id, album: item.deezer_album_id },
+    }
+  }
+  return { name: 'Link', query: { url: item?.url || '' } }
+}
+
+/** Where a suggested artist's photo opens: the Finder, when Deezer knows it. */
+export function artistRoute(item) {
+  return item?.deezer_id
+    ? { name: 'FinderBrowse', query: { artist: String(item.deezer_id) } }
+    : { name: 'Search', params: { query: item?.name || '' } }
 }
 
 /**
@@ -88,4 +144,15 @@ export function deezerArtistUrl(item) {
   return item?.deezer_id
     ? `https://www.deezer.com/artist/${encodeURIComponent(item.deezer_id)}`
     : ''
+}
+
+/**
+ * Where "Find songs" on a suggested artist goes: their songs in the Finder
+ * (by their Deezer id), or - no id - a Finder search for their name.
+ */
+export function findSongsLocation(item) {
+  const name = String(item?.name || '')
+  return item?.deezer_id
+    ? { name: 'Discover', query: { artist: String(item.deezer_id), name } }
+    : { name: 'Discover', query: { q: name } }
 }

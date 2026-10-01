@@ -17,6 +17,41 @@ import { previewKey } from '/src/lib/preview'
 import { useI18n } from '/src/i18n'
 
 /**
+ * `start(song, { queue, context })`: make sure `song` plays - the library
+ * track once it's downloaded (with `queue` after it), else its preview clip,
+ * never pausing one already playing. What a double click on a song's row
+ * does, for a caller holding the song but not its row (the Finder, starting
+ * the popular track it was just asked for). Call it during setup, like any
+ * composable; `start` itself can then be called any time.
+ */
+export function useSongStarter() {
+  const { t } = useI18n()
+  const library = useLibrary()
+  const preview = usePreview()
+  const actions = useTrackActions()
+  const ui = useUi()
+
+  return function start(song, { queue = [], context = null } = {}) {
+    const track = library.findTrack(
+      (song.artists || [])[0] || song.artist,
+      song.name
+    )
+    if (track) {
+      const index = (queue || []).findIndex((item) => item.file === track.file)
+      if (index < 0) actions.play([track], 0, context)
+      else actions.play(queue, index, context)
+      return
+    }
+    if (!preview.canPreview(song)) return
+    const id = previewKey(song)
+    if (id && preview.activeId.value === id && preview.isPlaying.value) return
+    Promise.resolve(preview.toggle(song)).then((ok) => {
+      if (!ok) ui.toast(t('actions.noPreview', { name: song.name }))
+    })
+  }
+}
+
+/**
  * `props`: `{ song, queue, context }` - the song (a search/link result),
  * the library tracks playing it starts a queue from, and the player's
  * "playing from" for them.
@@ -28,6 +63,7 @@ export function useSongPlay(props) {
   const preview = usePreview()
   const actions = useTrackActions()
   const ui = useUi()
+  const start = useSongStarter()
 
   // The library track behind the song once it's downloaded - the library
   // refreshes itself shortly after a download finishes, and this follows.
@@ -92,8 +128,7 @@ export function useSongPlay(props) {
 
   // A double click makes sure the song plays; it never pauses a clip.
   function ensurePlaying() {
-    if (track.value) play()
-    else if (previewable.value && !previewPlaying.value) playPreview()
+    start(props.song, { queue: props.queue, context: props.context })
   }
 
   // Once the song has been downloaded the row plays the real thing, so the

@@ -33,7 +33,7 @@ Browsers signed in before the upgrade sign in again. Phones paired before it sta
 
 | | Admin | User |
 |---|---|---|
-| Listen, search, download, like, Discover, podcasts | ✓ | ✓ |
+| Listen, search, download, like, Discover, Charts, Finder, podcasts | ✓ | ✓ |
 | Pair phone apps (to their own account) | ✓ | ✓ |
 | Settings → General (their own account and preferences), Apps, About | ✓ | ✓ |
 | Every other setting (sources, files, tags, Navidrome, library, server), renaming the server | ✓ | |

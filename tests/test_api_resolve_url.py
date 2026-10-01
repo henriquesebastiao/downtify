@@ -102,6 +102,121 @@ def test_url_resolve_lists_an_artists_releases(monkeypatch):
     assert result['tracks'] == []
 
 
+# ── Deezer ────────────────────────────────────────────────────────────
+
+_DEEZER_TRACK = 'https://www.deezer.com/track/111'
+_DEEZER_ALBUM = 'https://www.deezer.com/album/222'
+_DEEZER_PLAYLIST = 'https://www.deezer.com/playlist/333'
+_DEEZER_ARTIST = 'https://www.deezer.com/artist/444'
+
+_DEEZER_SONG = {**_SONG, 'source': 'deezer'}
+
+
+def test_resolve_url_deezer_track_returns_the_song(monkeypatch):
+    monkeypatch.setattr(api.deezer, 'track_from_id', lambda did: _DEEZER_SONG)
+    assert api._resolve_url(_DEEZER_TRACK) == _DEEZER_SONG
+
+
+def test_resolve_url_deezer_album_returns_tracks(monkeypatch):
+    monkeypatch.setattr(
+        api.deezer, 'album_from_id', lambda did: [_DEEZER_SONG, _DEEZER_SONG]
+    )
+    assert api._resolve_url(_DEEZER_ALBUM) == [_DEEZER_SONG, _DEEZER_SONG]
+
+
+def test_resolve_url_deezer_playlist_returns_tracks(monkeypatch):
+    monkeypatch.setattr(
+        api.deezer,
+        'playlist_info_and_tracks',
+        lambda did: ('A Playlist', [_DEEZER_SONG]),
+    )
+    assert api._resolve_url(_DEEZER_PLAYLIST) == [_DEEZER_SONG]
+
+
+def test_resolve_url_deezer_artist_returns_releases(monkeypatch):
+    releases = [{'album_id': 'AAA'}]
+    monkeypatch.setattr(
+        api.deezer,
+        'artist_page_from_id',
+        lambda did: (
+            'Test Artist',
+            'https://example.test/cover.jpg',
+            releases,
+        ),
+    )
+    assert api._resolve_url(_DEEZER_ARTIST) == releases
+
+
+def test_url_resolve_wraps_a_single_deezer_track(monkeypatch):
+    monkeypatch.setattr(api.deezer, 'track_from_id', lambda did: _DEEZER_SONG)
+    result = api.url_resolve_endpoint(_DEEZER_TRACK)
+    assert result['kind'] == 'track'
+    assert result['tracks'] == [_DEEZER_SONG]
+
+
+def test_url_resolve_takes_deezer_album_details_from_its_tracks(monkeypatch):
+    monkeypatch.setattr(
+        api.deezer, 'album_from_id', lambda did: [_DEEZER_SONG, _DEEZER_SONG]
+    )
+    result = api.url_resolve_endpoint(_DEEZER_ALBUM)
+    assert result['kind'] == 'album'
+    assert result['name'] == 'Glass Harbor'
+    assert len(result['tracks']) == 2
+
+
+def test_url_resolve_names_a_deezer_playlist(monkeypatch):
+    monkeypatch.setattr(
+        api.deezer,
+        'playlist_info_and_tracks',
+        lambda did: ('Weekend Coastline', [_DEEZER_SONG]),
+    )
+    result = api.url_resolve_endpoint(_DEEZER_PLAYLIST)
+    assert result['kind'] == 'playlist'
+    assert result['name'] == 'Weekend Coastline'
+    assert result['tracks'] == [_DEEZER_SONG]
+
+
+def test_url_resolve_lists_a_deezer_artists_releases(monkeypatch):
+    releases = [{'album_id': 'AAA', 'name': 'Test Album'}]
+    monkeypatch.setattr(
+        api.deezer,
+        'artist_page_from_id',
+        lambda did: (
+            'Test Artist',
+            'https://example.test/cover.jpg',
+            releases,
+        ),
+    )
+    result = api.url_resolve_endpoint(_DEEZER_ARTIST)
+    assert result['kind'] == 'artist'
+    assert result['name'] == 'Test Artist'
+    assert result['cover_url'] == 'https://example.test/cover.jpg'
+    assert result['tracks'] == []
+    assert result['albums'] == releases
+
+
+def test_url_resolve_deezer_reports_upstream_failures_as_bad_gateway(
+    monkeypatch,
+):
+    def _boom(did):
+        raise RuntimeError('Deezer unreachable')
+
+    monkeypatch.setattr(api.deezer, 'track_from_id', _boom)
+    with pytest.raises(HTTPException) as info:
+        api.url_resolve_endpoint(_DEEZER_TRACK)
+    assert info.value.status_code == 502
+
+
+def test_url_resolve_deezer_missing_track_is_404(monkeypatch):
+    def _missing(did):
+        raise ValueError('Deezer refused the request')
+
+    monkeypatch.setattr(api.deezer, 'track_from_id', _missing)
+    with pytest.raises(HTTPException) as info:
+        api.url_resolve_endpoint(_DEEZER_TRACK)
+    assert info.value.status_code == 404
+
+
 def test_url_resolve_rejects_unknown_links():
     with pytest.raises(HTTPException) as info:
         api.url_resolve_endpoint('https://example.com/music')

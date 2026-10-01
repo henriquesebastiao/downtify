@@ -93,7 +93,7 @@
             :to="artistRoute(item)"
             :title="item.name"
             :subtitle="because(item)"
-            :cover="item.picture_url || proxiedArtistPhotoUrl(item.name)"
+            v-bind="artistPhoto(item)"
             :name="item.name"
             icon="user"
             round
@@ -129,7 +129,7 @@
           <p class="mt-1 text-[13px] text-muted">{{ shelf.body }}</p>
         </div>
         <div
-          v-if="discover.collectionsLoading.value && !shelf.items.length"
+          v-if="shelf.loading && !shelf.items.length"
           :class="GRID"
           aria-busy="true"
         >
@@ -138,18 +138,48 @@
             <UiSkeleton class="h-4 w-2/3" />
           </div>
         </div>
-        <div v-else :class="GRID">
+        <div v-else :class="GRID" :aria-busy="shelf.pending || undefined">
           <MediaTile
             v-for="item in shelf.items"
-            :key="item.spotify_id"
-            :to="{ name: 'Link', query: { url: item.url } }"
+            :key="item.key || item.url"
+            :to="collectionRoute(item)"
             :title="item.name"
             :subtitle="shelf.subtitle(item)"
             :cover="item.cover_url"
             :name="item.name"
             :icon="shelf.icon"
             :playable="false"
-          />
+          >
+            <!-- Which service it's from. A Deezer album opens in the
+                 Finder, a Spotify one - and any playlist - on its Link
+                 page. -->
+            <template v-if="shelf.badge && item.source" #badge>
+              <span
+                class="absolute bottom-2.5 left-2.5 flex size-7 items-center justify-center rounded-full bg-black/60 backdrop-blur"
+                :class="
+                  item.source === 'spotify' ? 'text-spotify' : 'text-deezer'
+                "
+                :title="t('discover.onPlatform', { name: platformName(item) })"
+              >
+                <AppIcon :name="item.source" :size="15" />
+                <span class="sr-only">{{
+                  t('discover.onPlatform', { name: platformName(item) })
+                }}</span>
+              </span>
+            </template>
+          </MediaTile>
+          <!-- Spotify's suggestions are still on their way: they'll be
+               added here, at the end. -->
+          <template v-if="shelf.pending">
+            <div
+              v-for="n in 2"
+              :key="`pending-${n}`"
+              class="flex flex-col gap-2.5"
+            >
+              <UiSkeleton class="aspect-square w-full" />
+              <UiSkeleton class="h-4 w-2/3" />
+            </div>
+          </template>
         </div>
       </section>
 
@@ -242,12 +272,19 @@ import { useLibrary } from '/src/model/library'
 import { useLikes } from '/src/model/likes'
 import { useUi } from '/src/model/ui'
 import {
+  artistRoute,
+  collectionRoute,
   collectionsPayload,
   deezerArtistUrl,
+  findSongsLocation,
   joinNames,
   libraryPayload,
 } from '/src/lib/discover'
-import { proxiedArtistPhotoUrl } from '/src/lib/artistPhotoProxy'
+import {
+  knownArtistPhoto,
+  proxiedArtistPhotoUrl,
+} from '/src/lib/artistPhotoProxy'
+import { deezerImage } from '/src/lib/deezerImage'
 import { useI18n } from '/src/i18n'
 import { useRouter } from 'vue-router'
 
@@ -270,46 +307,70 @@ const shownArtists = computed(() =>
   showAllArtists.value ? items.value : items.value.slice(0, ARTISTS_SHOWN)
 )
 
-// A suggested artist opens their Spotify page (releases, and top songs to
-// preview) when the search found it; otherwise a search for the name.
-function artistRoute(item) {
-  const url = discover.artistUrls.value[item.name]
-  return url
-    ? { name: 'Link', query: { url } }
-    : { name: 'Search', params: { query: item.name } }
+const PLATFORMS = { deezer: 'Deezer', spotify: 'Spotify' }
+
+// A suggested artist's photo: a saved one when the library has it, else
+// the Deezer picture the suggestion came with (medium size) - relayed by
+// the photo proxy without a search by name, and loaded directly if the
+// proxy can't answer. As MediaTile's `cover`/`fallback`.
+function artistPhoto(item) {
+  return knownArtistPhoto(item.name, deezerImage(item.picture_url))
 }
 
-const shelves = computed(() =>
-  [
+function platformName(item) {
+  return PLATFORMS[item.source] || item.source
+}
+
+// Deezer's answer fills the shelves (`loading` until it comes); Spotify's
+// is added at the end of each (`pending` until then).
+const shelves = computed(() => {
+  const deezerLoading = discover.collectionsLoading.value
+  const spotifyLoading = discover.spotifyLoading.value
+  const albumSubtitle = (item) =>
+    [item.artist, item.year].filter(Boolean).join(' · ')
+  const playlistSubtitle = (item) =>
+    t('discover.essentialsOf', { name: item.artist })
+  return [
     {
       id: 'albums',
       title: t('discover.albumsTitle'),
       body: t('discover.albumsBody'),
       icon: 'disc',
+      badge: true,
       items: discover.albums.value,
-      subtitle: (item) => [item.artist, item.year].filter(Boolean).join(' · '),
+      subtitle: albumSubtitle,
+      loading: deezerLoading,
+      pending: !deezerLoading && spotifyLoading,
     },
     {
       id: 'more',
       title: t('discover.moreAlbumsTitle'),
       body: t('discover.moreAlbumsBody'),
       icon: 'disc',
+      badge: true,
       items: discover.moreAlbums.value,
-      subtitle: (item) => [item.artist, item.year].filter(Boolean).join(' · '),
+      subtitle: albumSubtitle,
+      loading: deezerLoading,
+      pending: !deezerLoading && spotifyLoading,
     },
     {
+      // Deezer's "100%" playlists, then Spotify's "This Is" added at the
+      // end as they come - each with its service on the cover.
       id: 'playlists',
       title: t('discover.playlistsTitle'),
       body: t('discover.playlistsBody'),
       icon: 'playlist',
-      items: discover.playlists.value,
-      subtitle: (item) =>
-        item.reason === 'radio'
-          ? t('discover.radioFor', { name: item.artist })
-          : t('discover.essentialsOf', { name: item.artist }),
+      badge: true,
+      items: [
+        ...discover.deezerPlaylists.value,
+        ...discover.spotifyPlaylists.value,
+      ],
+      subtitle: playlistSubtitle,
+      loading: deezerLoading,
+      pending: !deezerLoading && spotifyLoading,
     },
-  ].filter((shelf) => shelf.items.length || discover.collectionsLoading.value)
-)
+  ].filter((shelf) => shelf.items.length || shelf.loading || shelf.pending)
+})
 
 const hiddenOpen = ref(false)
 const typedName = ref('')
@@ -340,8 +401,7 @@ function menuFor(item) {
     {
       label: t('discover.findSongs'),
       icon: 'search',
-      action: () =>
-        router.push({ name: 'Search', params: { query: item.name } }),
+      action: () => router.push(findSongsLocation(item)),
     },
     {
       label: t('discover.openDeezer'),
