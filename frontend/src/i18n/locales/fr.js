@@ -53,6 +53,7 @@ export default {
     shuffle: 'Aléatoire',
     playNext: 'Lire ensuite',
     addToQueue: 'Ajouter à la file',
+    addToPlaylist: 'Ajouter à la playlist',
     goToAlbum: 'Aller à l’album',
     goToArtist: 'Aller à l’artiste',
     download: 'Télécharger',
@@ -499,9 +500,31 @@ export default {
     watch: 'Surveiller les nouveaux titres',
     openSource: 'Ouvrir la playlist d’origine',
     delete: 'Supprimer la playlist',
+    create: 'Nouvelle playlist',
+    createTitle: 'Créer une playlist',
+    createHint: 'Donnez-lui un nom. Vous pourrez ensuite y ajouter des titres.',
+    name: 'Nom',
+    namePlaceholder: 'Ma playlist',
+    addSongs: 'Ajouter des titres',
+    addSongsTitle: 'Ajouter des titres à « {name} »',
+    addSongsHint: 'Titres téléchargés et titres des dossiers extra.',
+    addTo: 'Ajouter à la playlist',
+    new: 'Nouvelle playlist…',
+    removeTrack: 'Retirer de la playlist',
+    added: {
+      one: 'Ajouté à « {name} »',
+      other: '{count} titres ajoutés à « {name} »',
+    },
+    removedTrack: 'Retiré de « {name} »',
+    created: 'Créée « {name} »',
+    rename: 'Renommer',
+    renameTitle: 'Renommer la playlist',
+    renameHint: 'Cela change uniquement le nom, pas les titres.',
+    renamed: 'Renommée en « {name} »',
     nothingYet: 'Aucun titre téléchargé',
     nothingYetHint:
       'Les titres apparaissent ici à mesure qu’ils sont téléchargés.',
+    nothingYetManualHint: 'Ajoutez des titres depuis votre bibliothèque.',
   },
   track: {
     title: 'Titre',
@@ -799,10 +822,13 @@ export default {
       'Écrit la pochette de la playlist à côté de son .m3u, pour que les serveurs multimédias l’affichent au lieu d’une icône générique.',
     pacingGroup: 'Cadence',
     parallel: 'Téléchargements simultanés',
-    parallelHint: 'Nombre de titres téléchargés en même temps.',
+    parallelHint: 'Nombre de titres téléchargés ou synchronisés en même temps.',
     delay: 'Pause entre téléchargements',
     delayHint:
       'Attendre entre les titres pour ressembler moins à un robot sur les grandes playlists.',
+    syncDelay: 'Pause entre les recherches de synchro',
+    syncDelayHint:
+      'Attend après chaque lot de titres importés (taille = Téléchargements simultanés) avant de chercher paroles, pochette et genre. Évite les limites de débit sur les gros dossiers.',
     artGroup: 'Pochette',
     coverArt: 'Intégrer la pochette',
     coverArtHint:
@@ -819,7 +845,14 @@ export default {
     lyricsGroup: 'Paroles',
     lyrics: 'Télécharger les paroles',
     lyricsHint:
-      'Intègre les paroles dans chaque fichier et enregistre les versions synchronisées en .lrc à côté.',
+      'Intègre les paroles dans chaque fichier. Les versions synchronisées sont aussi enregistrées en .lrc.',
+    lyricsLrcBeside: 'Garder le .lrc à côté de l’audio',
+    lyricsLrcBesideHint:
+      'Désactivez pour écrire les .lrc dans leur propre dossier, pas à côté de chaque MP3.',
+    lyricsLrcFolder: 'Dossier des paroles',
+    lyricsLrcFolderHint:
+      'Hors des téléchargements et des dossiers de musique extra. La même arborescence relative que l’audio est recréée ici.',
+    lyricsLrcFolderPlaceholder: '/data/lyrics',
     lyricsProviders: 'Fournisseurs',
     lyricsProvidersHint:
       'Chaque titre essaie les fournisseurs activés dans cet ordre jusqu’à ce que l’un ait des paroles. Ce qu’un fournisseur n’avait pas est retenu un mois, pour ne pas l’interroger à chaque téléchargement.',
@@ -905,6 +938,56 @@ export default {
     reconcilePlaylists: 'Playlists actualisées : {playlists}.',
     reconcileNone: 'Tout était déjà à jour.',
     reconcileError: 'Impossible de réparer les chemins de la bibliothèque.',
+    externalLibraryTitle: 'Dossiers de musique existants',
+    externalLibraryHint:
+      'Dossiers d’audio que vous avez déjà. Les fichiers restent en place ; Downtify lit leurs balises et les range sous les artistes correspondants. Dans Docker, utilisez le chemin dans le conteneur et montez le dossier de l’hôte.',
+    externalLibraryFolder: 'Dossier',
+    externalLibraryFolderHint:
+      'Le chemin dans le conteneur Downtify, pas sur l’hôte.',
+    externalLibraryPlaceholder: '/music/collection',
+    externalLibraryAdd: 'Ajouter un dossier',
+    externalLibraryRemove: 'Retirer le dossier',
+    externalLibrarySync: 'Synchroniser les dossiers',
+    externalLibrarySyncing: 'Synchronisation des dossiers…',
+    externalLibrarySyncProgress: '{done} sur {total} titres',
+    externalLibraryUnmapError:
+      'Impossible de retirer ce dossier de la bibliothèque.',
+    externalLibrarySynced: {
+      one: '{count} titre ajouté.',
+      other: '{count} titres ajoutés.',
+    },
+    externalLibrarySkipped: {
+      one: '{count} déjà présent dans la bibliothèque a été ignoré.',
+      other: '{count} déjà présents dans la bibliothèque ont été ignorés.',
+    },
+    externalLibraryMissing: {
+      one: '{count} dossier n’a pas pu être lu.',
+      other: '{count} dossiers n’ont pas pu être lus.',
+    },
+    externalLibraryLyrics: {
+      one: 'Paroles intégrées sur {count} titre.',
+      other: 'Paroles intégrées sur {count} titres.',
+    },
+    externalLibraryCovers: {
+      one: 'Pochette récupérée pour {count} titre.',
+      other: 'Pochettes récupérées pour {count} titres.',
+    },
+    externalLibrarySyncError: 'Impossible de synchroniser ces dossiers.',
+    externalLibraryErrors: {
+      one: '{count} titre a rencontré une erreur.',
+      other: '{count} titres ont rencontré une erreur.',
+    },
+    externalLibraryLogTitle: 'Journal de la dernière synchro',
+    externalLibraryLogImported: 'Importé · {artist} — {title}',
+    externalLibraryLogDuplicate: 'Doublon · {artist} — {title}',
+    externalLibraryLogDuplicateFolder: 'Déjà listé · {artist} — {title}',
+    externalLibraryLogError: 'Erreur · {artist} — {title}',
+    externalLibraryLogMissingFolder: 'Dossier introuvable · {file}',
+    externalLibraryLogUnknownArtist: 'Artiste inconnu',
+    externalLibraryLogNoteLyrics: 'paroles',
+    externalLibraryLogNoteCover: 'pochette',
+    externalLibraryLogNoteGenre: 'genre',
+    externalLibraryLogNoteNoLyrics: 'paroles introuvables',
     version: 'Version {version}',
     upToDate: 'À jour',
     source: 'Code source',
@@ -1276,6 +1359,8 @@ export default {
     deletePlaylistTitle: 'Supprimer la playlist « {name} » ?',
     deletePlaylistBody:
       'Ses titres sont supprimés du disque — y compris ceux utilisés par d’autres playlists — ainsi que son fichier M3U.',
+    deleteManualPlaylistBody:
+      'La playlist est retirée. Les morceaux restent dans votre bibliothèque.',
     clearQueueTitle: 'Vider la file ?',
     clearQueueBody:
       'Les éléments en attente et terminés sont retirés de la liste. Les fichiers téléchargés restent.',

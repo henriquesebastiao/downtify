@@ -74,7 +74,7 @@ Controls how many songs are downloaded simultaneously. Pick a preset (1, 2, 3, 5
 | **8** | Faster for large playlists |
 | **up to 30** | Best for very fast connections; uses more CPU and bandwidth, and increases the chance of YouTube rate-limiting you. |
 
-The limit applies to every batch download — playlist/album downloads, the batch queue endpoint, and CSV [library imports](library-import.md). It does **not** apply to Playlist Monitor sweeps, which download new tracks one at a time. Changing this value in Settings takes effect immediately without a restart; the server clamps any value outside `1–30`.
+The limit applies to every batch download — playlist/album downloads, the batch queue endpoint, and CSV [library imports](library-import.md) — and to **[Existing music folders](external-library.md)** Sync lookups (lyrics, covers, genre). It does **not** apply to Playlist Monitor sweeps, which download new tracks one at a time. Changing this value in Settings takes effect immediately without a restart; the server clamps any value outside `1–30`.
 
 ## Delay between downloads
 
@@ -88,6 +88,10 @@ Makes Downtify wait a configurable number of seconds after finishing one song be
 This applies to playlist, album and batch downloads, CSV [library imports](library-import.md), and Playlist Monitor's automatic sweeps. It is skipped for a single manual track download (there's no "next" song to wait for), and skipped after the *last* track in any batch so a run doesn't trail off with a pointless wait at the end.
 
 Combined with a lower **Parallel downloads** value, this is the main tool for avoiding YouTube rate-limiting when downloading a large playlist or an imported library unattended.
+
+## Pause between sync lookups
+
+The same idea, for **[Existing music folders](external-library.md)** rather than downloads. Sync looks up lyrics, missing covers and genre in batches of **[Parallel downloads](#parallel-downloads)** tracks at a time, then waits this many seconds before the next batch. Default **0** (lookups keep running concurrently, still capped by Parallel downloads). Use a few seconds on a large collection so LRCLIB, cover sources and iTunes aren't hit all at once.
 
 ## Download cover art
 

@@ -27,8 +27,13 @@ const settings = ref({
     extensions: ['mp3', 'flac'],
     min_bitrate: 256,
   },
+  external_library: {
+    folders: [],
+  },
   lyrics_providers: [''],
   download_lyrics: true,
+  lyrics_lrc_beside: true,
+  lyrics_lrc_dir: '/data/lyrics',
   format: '',
   bitrate: '320',
   output: '',
@@ -56,6 +61,7 @@ const settings = ref({
   organize_by_album: true,
   max_parallel_downloads: 3,
   download_delay_seconds: 0,
+  external_sync_delay_seconds: 0,
   cover_resolution: 600,
   download_cover_art: true,
   overwrite_existing_files: true,
@@ -83,6 +89,9 @@ const settingsOptions = {
   download_delay_seconds_presets: [0, 5, 15, 30, 60],
   download_delay_seconds_min: MIN_DOWNLOAD_DELAY_SECONDS,
   download_delay_seconds_max: MAX_DOWNLOAD_DELAY_SECONDS,
+  external_sync_delay_seconds_presets: [0, 5, 15, 30, 60],
+  external_sync_delay_seconds_min: MIN_DOWNLOAD_DELAY_SECONDS,
+  external_sync_delay_seconds_max: MAX_DOWNLOAD_DELAY_SECONDS,
   cover_resolution_presets: [300, 600, 800, 1000, 1200],
   cover_resolution_min: MIN_COVER_RESOLUTION,
   cover_resolution_max: MAX_COVER_RESOLUTION,
@@ -110,6 +119,8 @@ export function clampDownloadDelaySeconds(value) {
     Math.max(MIN_DOWNLOAD_DELAY_SECONDS, parsed)
   )
 }
+
+export const clampExternalSyncDelaySeconds = clampDownloadDelaySeconds
 
 export function clampCoverResolution(value) {
   const parsed = Number.parseInt(value, 10)
@@ -169,6 +180,13 @@ function loadServerSettings() {
         ...rest,
         slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
         navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
+        external_library: {
+          ...settings.value.external_library,
+          ...(rest.external_library || {}),
+          folders: Array.isArray(rest.external_library?.folders)
+            ? rest.external_library.folders
+            : settings.value.external_library.folders,
+        },
       }
       saved.value = snapshot()
       loaded.value = true
@@ -205,6 +223,25 @@ const saving = ref(false)
 // Backend rejection reason (e.g. slskd enabled without an API key).
 const saveErrorText = ref('')
 
+function rememberExternalFolders(folders) {
+  if (!Array.isArray(folders)) return
+  if (!settings.value.external_library) {
+    settings.value.external_library = { folders: [] }
+  }
+  settings.value.external_library.folders = folders
+  if (!saved.value) return
+  try {
+    const parsed = JSON.parse(saved.value)
+    parsed.external_library = {
+      ...(parsed.external_library || {}),
+      folders,
+    }
+    saved.value = JSON.stringify(parsed)
+  } catch {
+    /* ignore a corrupt snapshot */
+  }
+}
+
 function reset() {
   if (saved.value) settings.value = JSON.parse(saved.value)
 }
@@ -222,6 +259,13 @@ async function saveSettings() {
       ...rest,
       slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
       navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
+      external_library: {
+        ...settings.value.external_library,
+        ...(rest.external_library || {}),
+        folders: Array.isArray(rest.external_library?.folders)
+          ? rest.external_library.folders
+          : settings.value.external_library.folders,
+      },
     }
     saved.value = snapshot()
     isSaved.value = true
@@ -244,6 +288,7 @@ export function useSettingsManager() {
   return {
     saveSettings,
     reset,
+    rememberExternalFolders,
     settings,
     settingsOptions,
     isSaved,

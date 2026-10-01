@@ -53,6 +53,7 @@ export default {
     shuffle: 'Aleatorio',
     playNext: 'Reproducir a continuación',
     addToQueue: 'Añadir a la cola',
+    addToPlaylist: 'Añadir a playlist',
     goToAlbum: 'Ir al álbum',
     goToArtist: 'Ir al artista',
     download: 'Descargar',
@@ -488,8 +489,31 @@ export default {
     watch: 'Vigilar canciones nuevas',
     openSource: 'Abrir playlist original',
     delete: 'Eliminar playlist',
+    create: 'Nueva playlist',
+    createTitle: 'Crear una playlist',
+    createHint:
+      'Ponle un nombre. Luego puedes añadir canciones de tu biblioteca.',
+    name: 'Nombre',
+    namePlaceholder: 'Mi playlist',
+    addSongs: 'Añadir canciones',
+    addSongsTitle: 'Añadir canciones a “{name}”',
+    addSongsHint: 'Canciones descargadas y de carpetas extra.',
+    addTo: 'Añadir a la playlist',
+    new: 'Nueva playlist…',
+    removeTrack: 'Quitar de la playlist',
+    added: {
+      one: 'Añadida a “{name}”',
+      other: '{count} canciones añadidas a “{name}”',
+    },
+    removedTrack: 'Quitada de “{name}”',
+    created: 'Creada “{name}”',
+    rename: 'Renombrar',
+    renameTitle: 'Renombrar playlist',
+    renameHint: 'Solo cambia el nombre de la playlist, no las canciones.',
+    renamed: 'Renombrada a “{name}”',
     nothingYet: 'Aún no hay canciones descargadas',
     nothingYetHint: 'Las canciones aparecen aquí a medida que se descargan.',
+    nothingYetManualHint: 'Añade canciones de tu biblioteca.',
   },
   track: {
     title: 'Título',
@@ -787,10 +811,13 @@ export default {
       'Escribe la portada de la propia playlist junto a su .m3u, para que los servidores multimedia la muestren en vez de un icono genérico.',
     pacingGroup: 'Ritmo',
     parallel: 'Descargas simultáneas',
-    parallelHint: 'Cuántas canciones se descargan a la vez.',
+    parallelHint: 'Cuántas canciones se descargan o sincronizan a la vez.',
     delay: 'Pausa entre descargas',
     delayHint:
       'Espera entre canciones para parecer menos un bot en playlists grandes.',
+    syncDelay: 'Pausa entre la sincronización',
+    syncDelayHint:
+      'Espera después de cada lote de canciones importadas (tamaño = Descargas simultáneas) antes de buscar letra, portada y género. Evita límites de tasa en carpetas grandes.',
     artGroup: 'Portada',
     coverArt: 'Incrustar portada',
     coverArtHint:
@@ -807,7 +834,14 @@ export default {
     lyricsGroup: 'Letras',
     lyrics: 'Descargar letras',
     lyricsHint:
-      'Incrusta la letra en cada archivo y guarda las sincronizadas como .lrc al lado.',
+      'Incrusta la letra en cada archivo. Las sincronizadas también se guardan como .lrc.',
+    lyricsLrcBeside: 'Guardar .lrc junto al audio',
+    lyricsLrcBesideHint:
+      'Desactívalo para escribir los .lrc en su propia carpeta, no al lado de cada MP3.',
+    lyricsLrcFolder: 'Carpeta de letras',
+    lyricsLrcFolderHint:
+      'Fuera de las descargas y de las carpetas de música extra. Se recrea aquí el mismo árbol relativo del audio.',
+    lyricsLrcFolderPlaceholder: '/data/lyrics',
     lyricsProviders: 'Proveedores',
     lyricsProvidersHint:
       'Cada canción prueba los proveedores activados en este orden hasta que uno tenga la letra. Lo que un proveedor no tenía se recuerda durante un mes, para no volver a consultarlo en cada descarga.',
@@ -892,6 +926,55 @@ export default {
     reconcilePlaylists: 'Playlists actualizadas: {playlists}.',
     reconcileNone: 'Todo estaba al día.',
     reconcileError: 'No se pudieron reparar las rutas de la biblioteca.',
+    externalLibraryTitle: 'Carpetas de música existentes',
+    externalLibraryHint:
+      'Carpetas de audio que ya tienes. Los archivos se quedan donde están; Downtify lee las etiquetas y las agrupa con los artistas coincidentes. En Docker, usa la ruta dentro del contenedor y monta la carpeta del host.',
+    externalLibraryFolder: 'Carpeta',
+    externalLibraryFolderHint:
+      'La ruta dentro del contenedor de Downtify, no en el host.',
+    externalLibraryPlaceholder: '/music/collection',
+    externalLibraryAdd: 'Añadir carpeta',
+    externalLibraryRemove: 'Quitar carpeta',
+    externalLibrarySync: 'Sincronizar carpetas',
+    externalLibrarySyncing: 'Sincronizando carpetas…',
+    externalLibrarySyncProgress: '{done} de {total} canciones',
+    externalLibraryUnmapError: 'No se pudo desasignar esa carpeta.',
+    externalLibrarySynced: {
+      one: 'Se añadió {count} pista.',
+      other: 'Se añadieron {count} pistas.',
+    },
+    externalLibrarySkipped: {
+      one: 'Se omitió {count} que ya estaba en la biblioteca.',
+      other: 'Se omitieron {count} que ya estaban en la biblioteca.',
+    },
+    externalLibraryMissing: {
+      one: 'No se pudo leer {count} carpeta.',
+      other: 'No se pudieron leer {count} carpetas.',
+    },
+    externalLibraryLyrics: {
+      one: 'Letra incrustada en {count} pista.',
+      other: 'Letra incrustada en {count} pistas.',
+    },
+    externalLibraryCovers: {
+      one: 'Portada obtenida para {count} pista.',
+      other: 'Portadas obtenidas para {count} pistas.',
+    },
+    externalLibrarySyncError: 'No se pudieron sincronizar esas carpetas.',
+    externalLibraryErrors: {
+      one: '{count} pista tuvo un error.',
+      other: '{count} pistas tuvieron errores.',
+    },
+    externalLibraryLogTitle: 'Registro del último sync',
+    externalLibraryLogImported: 'Importada · {artist} — {title}',
+    externalLibraryLogDuplicate: 'Duplicada · {artist} — {title}',
+    externalLibraryLogDuplicateFolder: 'Ya listada · {artist} — {title}',
+    externalLibraryLogError: 'Error · {artist} — {title}',
+    externalLibraryLogMissingFolder: 'Carpeta no encontrada · {file}',
+    externalLibraryLogUnknownArtist: 'Artista desconocido',
+    externalLibraryLogNoteLyrics: 'letra',
+    externalLibraryLogNoteCover: 'portada',
+    externalLibraryLogNoteGenre: 'género',
+    externalLibraryLogNoteNoLyrics: 'letra no encontrada',
     version: 'Versión {version}',
     upToDate: 'Al día',
     source: 'Código fuente',
@@ -1263,6 +1346,8 @@ export default {
     deletePlaylistTitle: '¿Eliminar la playlist «{name}»?',
     deletePlaylistBody:
       'Sus canciones se borran del disco — incluidas las que usan otras playlists — junto con su archivo M3U.',
+    deleteManualPlaylistBody:
+      'Se elimina la playlist. Las canciones se quedan en tu biblioteca.',
     clearQueueTitle: '¿Vaciar la cola?',
     clearQueueBody:
       'Los elementos en espera y completados se quitan de la lista. Los archivos descargados se conservan.',

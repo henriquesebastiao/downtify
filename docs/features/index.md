@@ -25,13 +25,14 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Mobile Apps](mobile-apps.md) | Pair phone apps by QR code and stream the library to them (original or transcoded) |
 | [Discover](discover.md) | Artists, albums and playlists you don't have yet, suggested from your library, likes and listening; hide the ones you don't want |
 | [slskd & Navidrome](slskd-navidrome.md) | Download from Soulseek through slskd, mirror playlists into Navidrome, and track playlist downloads |
-| [Library catalog & path sync](library-catalog.md) | How Downtify tracks library files and playlists, and fixing paths after moving files |
+| [Library catalog & path sync](library-catalog.md) | How Downtify tracks library files and playlists, playlists you create in the Library, and fixing paths after moving files |
+| [Existing music folders](external-library.md) | Point Downtify at folders of audio you already have; Sync reads tags, matches artists and skips songs already in the library |
 | [Upgrade library](library-upgrade.md) | Scan music you already downloaded and repair small covers, missing lyrics and incomplete tags |
 | [M3U Export](m3u-export.md) | Auto-generated playlist files for Jellyfin, Navidrome, Plex and any media app |
 | [Playlist cover art](playlist-cover-art.md) | Save the playlist's own cover image alongside its M3U file |
 | [Artist photo, banner & bio](artist-images.md) | Pick a real photo and banner for an artist from YouTube Music, Deezer, Spotify or your own upload, and fetch their bio, origin and links from Apple Music and Deezer, automatically or on demand |
 | [File Organization](file-organization.md) | Flat layout or per-artist subfolders |
-| [Lyrics](lyrics.md) | Automatically download and embed lyrics (plain and time-synced) |
+| [Lyrics](lyrics.md) | Automatically download and embed lyrics (plain and time-synced); `.lrc` next to the file or in a folder you choose |
 | [YouTube Cookies](youtube-cookies.md) | Upload a `cookies.txt` from the web UI to download explicit/age-restricted tracks |
 | [Internationalization](internationalization.md) | English plus seven more languages out of the box |
 | [Update Notifications](updates.md) | Hourly check against GitHub Releases; a notice appears in the sidebar when a newer version is out |

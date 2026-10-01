@@ -151,9 +151,22 @@ working without changes:
 * ``GET  /api/queue``, ``DELETE /api/queue``, ``DELETE /api/queue/item``
   and ``DELETE /api/queue/completed`` (drop finished jobs only)
 * ``DELETE /api/library/playlist`` (delete a downloaded playlist's
-  tracks, M3U and catalog entry)
+  tracks, M3U and catalog entry; a manual playlist only loses the M3U)
+* ``GET  /api/library/summary`` (Home page: counts + recent albums)
+* ``GET  /api/library/albums`` (Library albums tab: albums without tracks)
+* ``GET  /api/library/artists`` (Library artists tab / Discover)
+* ``POST /api/library/lookup`` (search/link songs already in the library)
+* ``POST /api/library/playlists`` (create an empty editable playlist)
+* ``POST /api/library/playlists/tracks`` (add or remove tracks on a
+  manual playlist)
+* ``POST /api/library/playlists/rename`` (rename a manual playlist)
 * ``POST /api/library/reconcile`` (fix stored library paths after files
   moved on disk, then refresh M3U/Navidrome playlists)
+* ``POST /api/library/external/sync`` (start a background scan of
+  extra folders) and ``GET /api/library/external/sync`` (running or
+  last-finished status)
+* ``POST /api/library/external/unmap`` (drop one extra folder from
+  the library without deleting the audio files)
 * ``GET  /api/library/replace/candidates`` (versions of a library track
   to pick from: YouTube Music and YouTube results, or a pasted link) and
   ``POST /api/library/replace`` (body ``{file, video_id}``: replace the
@@ -173,6 +186,8 @@ working without changes:
   tracks a downloaded playlist is still missing)
 * ``GET  /api/settings``
 * ``POST /api/settings/update``
+* ``GET  /api/fs/dirs`` (admin: directory-name suggestions for path
+  fields, ``?path=``)
 * ``POST /api/slskd/test`` and ``POST /api/navidrome/test`` (try the
   connection with the settings as they are in the form, saved or not)
 * ``GET  /api/cookies`` (current YouTube cookie configuration)
@@ -324,9 +339,24 @@ from .downloader import (
     NoAudioMatchError,
     save_playlist_cover,
 )
+from .external_library import (
+    effective_external_library,
+    extra_dirs_from_settings,
+)
+from .external_sync import (
+    ExternalSyncJob,
+    folders_removed,
+    run_external_sync,
+    unmap_extra_folder,
+)
+from .fs_suggest import suggest_directories
 from .library_catalog import (
     LibraryContext,
+    library_album_index,
+    library_artist_index,
     library_context_from_state,
+    library_home_summary,
+    lookup_library_songs,
     resolve_library_file,
 )
 from .library_delete import delete_playlist_from_library
@@ -352,6 +382,12 @@ from .likes import (
     sync_liked_playlist,
 )
 from .lyrics_cache import LyricsLookupCache
+from .manual_playlists import (
+    ManualPlaylistError,
+    create_manual_playlist,
+    edit_manual_playlist,
+    rename_manual_playlist,
+)
 from .monitor import (
     ALL_RELEASE_TYPES,
     KIND_ARTIST,
@@ -412,6 +448,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
     'lyrics_providers': list(lyrics.PROVIDER_ORDER),
     'download_lyrics': True,
+    'lyrics_lrc_beside': True,
+    'lyrics_lrc_dir': lyrics.DEFAULT_LYRICS_LRC_DIR,
     'format': 'mp3',
     'bitrate': '320',
     'output': '{artists} - {title}.{output-ext}',
@@ -425,6 +463,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'download_cover_art_artist_banner': False,
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
+    'external_sync_delay_seconds': 0,
     'cover_resolution': providers.DEFAULT_COVER_RESOLUTION,
     'download_cover_art': True,
     'overwrite_existing_files': True,
@@ -478,6 +517,12 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'client_name': 'Downtify',
         'api_version': '1.16.1',
     },
+    # Folders of already-tagged audio to include in the library (in
+    # place). Synced from Settings → Library; see
+    # ``downtify.external_library``.
+    'external_library': {
+        'folders': [],
+    },
     # Keep extracted cover art under /data/cover_cache for faster Library
     # and Player loads.
     'cache_cover_art': False,
@@ -493,7 +538,12 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 # Settings stored as nested objects: saved values are merged over the
 # defaults key by key, so a settings.json from an older version still gets
 # every newer option.
-_NESTED_SETTINGS = ('slskd', 'navidrome', 'library_upgrade')
+_NESTED_SETTINGS = (
+    'slskd',
+    'navidrome',
+    'library_upgrade',
+    'external_library',
+)
 
 
 def _clamp_parallel_downloads(value: Any) -> int:
@@ -714,28 +764,9 @@ def _organize_enabled() -> bool:
 
 
 def _effective_lyrics_providers(settings: dict[str, Any]) -> list[str]:
-    """The lyrics providers to try, in order.
+    """The lyrics providers to try, in order."""
 
-    Unknown names are dropped; a list left with nothing but the spotdl-era
-    placeholders (genius/musixmatch/azlyrics) falls back to the defaults,
-    since those settings were never asking for "no lyrics". An explicitly
-    empty list, and lyrics being off, both mean none.
-    """
-
-    if not settings.get('download_lyrics', True):
-        return []
-    raw = [
-        p.strip()
-        for p in (settings.get('lyrics_providers') or [])
-        if isinstance(p, str) and p.strip()
-    ]
-    if not raw:
-        return []
-    providers: list[str] = []
-    for name in raw:
-        if name in lyrics.SUPPORTED_PROVIDERS and name not in providers:
-            providers.append(name)
-    return providers or list(lyrics.PROVIDER_ORDER)
+    return lyrics.providers_from_settings(settings)
 
 
 class ConnectionManager:
@@ -880,6 +911,7 @@ class AppState:
     playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None
     lyrics_cache: Optional[LyricsLookupCache] = None
     upgrade_runner: Optional[library_upgrade.LibraryUpgradeRunner] = None
+    external_sync: Optional[ExternalSyncJob] = None
     likes: Optional[LikedTracks] = None
     podcasts: Optional[PodcastStore] = None
     discover: Optional[DiscoverStore] = None
@@ -1395,10 +1427,18 @@ def _load_settings(path: Path) -> dict[str, Any]:
             merged['download_delay_seconds'] = _clamp_download_delay(
                 merged['download_delay_seconds']
             )
+            merged['external_sync_delay_seconds'] = _clamp_download_delay(
+                merged.get(
+                    'external_sync_delay_seconds',
+                    DEFAULT_SETTINGS['external_sync_delay_seconds'],
+                )
+            )
             merged['cover_resolution'] = _clamp_cover_resolution(
                 merged['cover_resolution']
             )
             merged['ui_language'] = _clean_ui_language(merged['ui_language'])
+            merged['external_library'] = effective_external_library(merged)
+            normalize_lyrics_location(merged)
             return merged
     except Exception:
         pass
@@ -1410,6 +1450,71 @@ def _save_settings(path: Path, settings: dict[str, Any]) -> None:
         path.write_text(json.dumps(settings, indent=2), encoding='utf-8')
     except Exception as exc:
         logger.warning('Could not persist settings: {}', exc)
+
+
+def _library_dirs() -> tuple[Path, Optional[Path]]:
+    download_dir = (
+        Path(state.downloader.download_dir)
+        if state.downloader is not None
+        else Path('/downloads')
+    )
+    slskd_dir = (
+        slskd_dir_from_downloader(state.downloader)
+        if state.downloader is not None
+        else None
+    )
+    return download_dir, slskd_dir
+
+
+def normalize_lyrics_location(settings: dict[str, Any]) -> None:
+    """Keep ``lyrics_lrc_*`` keys valid against the current music trees."""
+
+    download_dir, slskd_dir = _library_dirs()
+    extra = extra_dirs_from_settings(settings, download_dir, slskd_dir)
+    settings['lyrics_lrc_beside'] = lyrics.coerce_bool(
+        settings.get('lyrics_lrc_beside'), True
+    )
+    settings['lyrics_lrc_dir'] = lyrics.sanitize_lyrics_lrc_dir(
+        settings.get('lyrics_lrc_dir'),
+        download_dir=download_dir,
+        slskd_dir=slskd_dir,
+        extra_dirs=extra,
+    )
+
+
+def bind_lrc_resolver() -> None:
+    """Point sidecar writes at the live settings (folder vs beside)."""
+
+    def _resolve(audio: Path) -> Path:
+        ctx = library_context()
+        return lyrics.lrc_sidecar_path(
+            audio,
+            settings=state.settings,
+            download_dir=ctx.download_dir,
+            slskd_dir=ctx.slskd_dir,
+            extra_dirs=ctx.extra_dirs,
+        )
+
+    def _root() -> Optional[Path]:
+        return Path(
+            str(
+                state.settings.get('lyrics_lrc_dir')
+                or lyrics.DEFAULT_LYRICS_LRC_DIR
+            )
+        )
+
+    def _search(audio: Path) -> list[Path]:
+        ctx = library_context()
+        dedicated = lyrics.lrc_sidecar_path(
+            audio,
+            settings={**state.settings, 'lyrics_lrc_beside': False},
+            download_dir=ctx.download_dir,
+            slskd_dir=ctx.slskd_dir,
+            extra_dirs=ctx.extra_dirs,
+        )
+        return [dedicated]
+
+    lyrics.set_lrc_resolver(_resolve, tree_root=_root, search=_search)
 
 
 @router.get('/api/version')
@@ -4029,6 +4134,166 @@ async def reconcile_library_endpoint() -> dict[str, Any]:
     return await asyncio.to_thread(_run)
 
 
+def _require_external_sync() -> ExternalSyncJob:
+    if state.external_sync is None:
+        raise HTTPException(
+            status_code=503, detail='Extra-folder sync is not ready'
+        )
+    return state.external_sync
+
+
+def broadcast_external_sync(status: dict[str, Any]) -> None:
+    """Push extra-folder sync status from a worker thread."""
+
+    loop = state.loop
+    if loop is None:
+        return
+    asyncio.run_coroutine_threadsafe(
+        state.connections.broadcast({
+            'type': 'external_sync',
+            'sync': status,
+        }),
+        loop,
+    )
+
+
+def _unmap_extra_roots(
+    roots: list[Path], settings_for_dirs: dict[str, Any]
+) -> dict[str, Any]:
+    download_dir = (
+        Path(state.downloader.download_dir)
+        if state.downloader is not None
+        else Path('/downloads')
+    )
+    slskd_dir = (
+        slskd_dir_from_downloader(state.downloader)
+        if state.downloader is not None
+        else None
+    )
+    extra = extra_dirs_from_settings(
+        settings_for_dirs, download_dir, slskd_dir
+    )
+    unmapped = 0
+    folder_ids: list[str] = []
+    for root in roots:
+        info = unmap_extra_folder(
+            root,
+            download_dir=download_dir,
+            slskd_dir=slskd_dir,
+            extra_dirs=extra,
+            cover_cache=state.cover_cache,
+            metadata_cache=state.metadata_cache,
+            playlist_catalog=state.playlist_catalog,
+            track_index=state.track_index,
+            likes=state.likes,
+            navidrome_index=state.navidrome_index,
+        )
+        unmapped += int(info.get('unmapped') or 0)
+        folder_ids.append(str(info.get('folder_id') or ''))
+    return {'unmapped': unmapped, 'folder_ids': folder_ids}
+
+
+def _unmap_removed_extra_folders(
+    before: dict[str, Any], after: dict[str, Any]
+) -> None:
+    roots = folders_removed(before, after)
+    if roots:
+        _unmap_extra_roots(roots, before)
+
+
+@router.post('/api/library/external/sync')
+async def sync_external_library_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Start a background scan of extra library folders.
+
+    Optional JSON body ``{folders: ["/path", ...]}`` is saved into
+    settings first (absolute paths only). The request returns the job
+    status immediately; poll ``GET /api/library/external/sync`` or listen
+    for ``external_sync`` WebSocket frames for the last-finished log.
+    """
+
+    payload = await _json_object(request)
+    if 'folders' in payload:
+        previous = dict(state.settings)
+        state.settings['external_library'] = effective_external_library({
+            'external_library': {'folders': payload.get('folders')}
+        })
+        if state.settings_path is not None:
+            _save_settings(state.settings_path, state.settings)
+        invalidate_library_paths_cache()
+        _unmap_removed_extra_folders(previous, state.settings)
+
+    job = _require_external_sync()
+    if not job.try_begin():
+        raise HTTPException(
+            status_code=409,
+            detail='A folder sync is already running',
+        )
+    download_dir = (
+        Path(state.downloader.download_dir)
+        if state.downloader is not None
+        else Path('/downloads')
+    )
+    snapshot = job.snapshot()
+    broadcast_external_sync(snapshot)
+
+    async def _run() -> None:
+        await asyncio.to_thread(
+            run_external_sync,
+            job,
+            ctx=library_context(),
+            download_dir=download_dir,
+            settings=state.settings,
+            lang=_ui_language(),
+            image_kinds=_artist_image_kinds_to_save(state.settings),
+            lyrics_cache=state.lyrics_cache,
+            cover_cache=state.cover_cache,
+            on_update=broadcast_external_sync,
+        )
+
+    spawn_task(_run(), name='external-library-sync')
+    return snapshot
+
+
+@router.get('/api/library/external/sync')
+def get_external_sync_endpoint() -> dict[str, Any]:
+    """Running extra-folder sync, or the last finished log."""
+
+    return _require_external_sync().snapshot()
+
+
+@router.post('/api/library/external/unmap')
+async def unmap_external_folder_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Stop mapping a folder: drop it from the library, keep the audio."""
+
+    payload = await _json_object(request)
+    raw = str(payload.get('folder') or '').strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail='folder is required')
+    root = Path(raw)
+    previous = dict(state.settings)
+    folders = [
+        item
+        for item in effective_external_library(state.settings)['folders']
+        if Path(item) != root and str(item) != raw
+    ]
+    state.settings['external_library'] = effective_external_library({
+        'external_library': {'folders': folders}
+    })
+    if state.settings_path is not None:
+        _save_settings(state.settings_path, state.settings)
+    result = _unmap_extra_roots([root], previous)
+    normalize_lyrics_location(state.settings)
+    bind_lrc_resolver()
+    return {
+        **result,
+        'folders': list(effective_external_library(state.settings)['folders']),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Replacing a track's audio with a version picked by hand
 # ---------------------------------------------------------------------------
@@ -4387,6 +4652,115 @@ async def _schedule_playlist_refresh_after_delete(
             )
 
     spawn_task(_run(), name='playlist-refresh-after-delete')
+
+
+@router.get('/api/library/summary')
+def library_summary() -> dict[str, Any]:
+    """Home-page library stats and a short recent-album shelf.
+
+    Avoids sending every ``GET /tracks`` row to the browser when the
+    page only shows counts and a handful of albums.
+    """
+
+    return library_home_summary(library_context())
+
+
+@router.get('/api/library/albums')
+def library_albums() -> list[dict[str, Any]]:
+    """Album tiles for the Library page, without every track row."""
+
+    return library_album_index(library_context())
+
+
+@router.get('/api/library/artists')
+def library_artists() -> list[dict[str, Any]]:
+    """Artist tiles for the Library page and Discover's library payload."""
+
+    liked: set[str] = set()
+    if state.likes is not None:
+        liked = {
+            str(path or '').replace('\\', '/') for path in state.likes.paths()
+        }
+    return library_artist_index(library_context(), liked)
+
+
+@router.post('/api/library/lookup')
+async def library_lookup(request: Request) -> list[dict[str, Any]]:
+    """Library rows for search/link songs that are already downloaded."""
+
+    payload = await _json_object(request)
+    songs = payload.get('songs')
+    if not isinstance(songs, list):
+        songs = []
+    return lookup_library_songs(library_context(), songs)
+
+
+@router.post('/api/library/playlists')
+async def create_library_playlist_endpoint(request: Request) -> dict[str, Any]:
+    """Create an empty playlist the user can edit in the Library."""
+
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    ctx = library_context()
+    try:
+        result = await asyncio.to_thread(create_manual_playlist, ctx, name)
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    invalidate_library_paths_cache()
+    return result
+
+
+@router.post('/api/library/playlists/tracks')
+async def edit_library_playlist_tracks_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Add or remove library files on a manual playlist."""
+
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    add = payload.get('add') if isinstance(payload.get('add'), list) else []
+    remove = (
+        payload.get('remove')
+        if isinstance(payload.get('remove'), list)
+        else []
+    )
+    ctx = library_context()
+    try:
+        result = await asyncio.to_thread(
+            edit_manual_playlist,
+            ctx,
+            name,
+            add=[str(item) for item in add],
+            remove=[str(item) for item in remove],
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    invalidate_library_paths_cache()
+    return result
+
+
+@router.post('/api/library/playlists/rename')
+async def rename_library_playlist_endpoint(request: Request) -> dict[str, Any]:
+    """Rename a playlist the user created in the Library."""
+
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    new_name = str(payload.get('new_name') or '').strip()
+    ctx = library_context()
+    try:
+        result = await asyncio.to_thread(
+            rename_manual_playlist, ctx, name, new_name
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    invalidate_library_paths_cache()
+    return result
 
 
 @router.delete('/api/library/playlist')
@@ -4808,6 +5182,13 @@ def get_settings_endpoint(client_id: str = Query('')) -> dict[str, Any]:
     return state.settings
 
 
+@router.get('/api/fs/dirs')
+def suggest_fs_dirs_endpoint(path: str = Query('')) -> dict[str, Any]:
+    """Directory names that complete ``path`` as typed in Settings."""
+
+    return {'dirs': suggest_directories(path)}
+
+
 @router.post('/api/settings/update')
 async def update_settings_endpoint(
     request: Request, client_id: str = Query('')
@@ -4834,6 +5215,8 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_parallel_downloads(raw_value)
             elif key == 'download_delay_seconds':
                 state.settings[key] = _clamp_download_delay(raw_value)
+            elif key == 'external_sync_delay_seconds':
+                state.settings[key] = _clamp_download_delay(raw_value)
             elif key == 'cover_resolution':
                 state.settings[key] = _clamp_cover_resolution(raw_value)
             elif key == 'ui_language':
@@ -4851,6 +5234,16 @@ async def update_settings_endpoint(
                 }
             elif key == 'navidrome':
                 state.settings[key] = navidrome_cfg
+            elif key == 'external_library':
+                state.settings[key] = effective_external_library({
+                    'external_library': raw_value
+                    if isinstance(raw_value, dict)
+                    else {}
+                })
+            elif key == 'lyrics_lrc_beside':
+                state.settings[key] = lyrics.coerce_bool(raw_value, True)
+            elif key == 'lyrics_lrc_dir':
+                state.settings[key] = str(raw_value or '').strip()
             else:
                 state.settings[key] = raw_value
         if {'audio_providers', 'slskd'} & set(payload):
@@ -4910,6 +5303,11 @@ async def update_settings_endpoint(
             reset_slskd_parallelism(_effective_slskd_settings(state.settings))
         if 'cover_resolution' in payload:
             providers.set_cover_resolution(state.settings['cover_resolution'])
+        if 'external_library' in payload:
+            invalidate_library_paths_cache()
+            _unmap_removed_extra_folders(previous, state.settings)
+        normalize_lyrics_location(state.settings)
+        bind_lrc_resolver()
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)
     after = json.loads(json.dumps(state.settings, sort_keys=True, default=str))
@@ -4988,7 +5386,12 @@ def _sync_liked_playlist() -> None:
         return
     ctx = library_context()
     try:
-        sync_liked_playlist(state.likes, ctx.download_dir, ctx.slskd_dir)
+        sync_liked_playlist(
+            state.likes,
+            ctx.download_dir,
+            ctx.slskd_dir,
+            ctx.extra_dirs,
+        )
     except Exception:
         logger.exception('Liked songs playlist sync failed')
 

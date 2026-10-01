@@ -53,6 +53,7 @@ export default {
     shuffle: 'Τυχαία σειρά',
     playNext: 'Αναπαραγωγή επόμενο',
     addToQueue: 'Προσθήκη στην ουρά',
+    addToPlaylist: 'Προσθήκη στη λίστα',
     goToAlbum: 'Μετάβαση στο άλμπουμ',
     goToArtist: 'Μετάβαση στον καλλιτέχνη',
     download: 'Λήψη',
@@ -487,8 +488,30 @@ export default {
     watch: 'Παρακολούθηση νέων κομματιών',
     openSource: 'Άνοιγμα αρχικής λίστας',
     delete: 'Διαγραφή λίστας',
+    create: 'Νέα λίστα',
+    createTitle: 'Δημιουργία λίστας',
+    createHint: 'Δώστε της όνομα. Μετά προσθέτετε κομμάτια από τη βιβλιοθήκη.',
+    name: 'Όνομα',
+    namePlaceholder: 'Η λίστα μου',
+    addSongs: 'Προσθήκη κομματιών',
+    addSongsTitle: 'Προσθήκη κομματιών στη «{name}»',
+    addSongsHint: 'Κομμάτια που κατεβάσατε και από φακέλους extra.',
+    addTo: 'Προσθήκη στη λίστα',
+    new: 'Νέα λίστα…',
+    removeTrack: 'Αφαίρεση από τη λίστα',
+    added: {
+      one: 'Προστέθηκε στη «{name}»',
+      other: '{count} κομμάτια στη «{name}»',
+    },
+    removedTrack: 'Αφαιρέθηκε από τη «{name}»',
+    created: 'Δημιουργήθηκε η «{name}»',
+    rename: 'Μετονομασία',
+    renameTitle: 'Μετονομασία λίστας',
+    renameHint: 'Αλλάζει μόνο το όνομα, όχι τα κομμάτια.',
+    renamed: 'Μετονομάστηκε σε «{name}»',
     nothingYet: 'Δεν έχουν κατέβει κομμάτια ακόμα',
     nothingYetHint: 'Τα κομμάτια εμφανίζονται εδώ καθώς ολοκληρώνονται.',
+    nothingYetManualHint: 'Προσθέστε κομμάτια από τη βιβλιοθήκη.',
   },
   track: {
     title: 'Τίτλος',
@@ -790,10 +813,13 @@ export default {
       'Γράφει το εξώφυλλο της ίδιας της λίστας δίπλα στο .m3u, ώστε οι διακομιστές πολυμέσων να το δείχνουν αντί για ένα γενικό εικονίδιο.',
     pacingGroup: 'Ρυθμός',
     parallel: 'Ταυτόχρονες λήψεις',
-    parallelHint: 'Πόσα τραγούδια κατεβαίνουν ταυτόχρονα.',
+    parallelHint: 'Πόσα τραγούδια κατεβαίνουν ή συγχρονίζονται ταυτόχρονα.',
     delay: 'Παύση μεταξύ λήψεων',
     delayHint:
       'Αναμονή μεταξύ τραγουδιών ώστε να μοιάζει λιγότερο με bot σε μεγάλες λίστες.',
+    syncDelay: 'Παύση μεταξύ συγχρονισμού',
+    syncDelayHint:
+      'Περιμένει μετά από κάθε ομάδα εισαγόμενων κομματιών (μέγεθος = Ταυτόχρονες λήψεις) πριν αναζητήσει στίχους, εξώφυλλο και είδος. Αποφεύγει όρια ρυθμού σε μεγάλους φακέλους.',
     artGroup: 'Εξώφυλλο',
     coverArt: 'Ενσωμάτωση εξωφύλλου',
     coverArtHint:
@@ -810,7 +836,14 @@ export default {
     lyricsGroup: 'Στίχοι',
     lyrics: 'Λήψη στίχων',
     lyricsHint:
-      'Ενσωματώνει στίχους σε κάθε αρχείο και αποθηκεύει τους συγχρονισμένους ως .lrc δίπλα του.',
+      'Ενσωματώνει στίχους σε κάθε αρχείο. Οι συγχρονισμένοι αποθηκεύονται και ως .lrc.',
+    lyricsLrcBeside: 'Κράτα το .lrc δίπλα στο αρχείο ήχου',
+    lyricsLrcBesideHint:
+      'Απενεργοποιήστε το για να γράφονται τα .lrc σε δικό τους φάκελο, όχι δίπλα σε κάθε MP3.',
+    lyricsLrcFolder: 'Φάκελος στίχων',
+    lyricsLrcFolderHint:
+      'Έξω από τα downloads και τους επιπλέον φακέλους μουσικής. Εδώ ξαναδημιουργείται το ίδιο σχετικό δέντρο με το αρχείο ήχου.',
+    lyricsLrcFolderPlaceholder: '/data/lyrics',
     lyricsProviders: 'Πάροχοι',
     lyricsProvidersHint:
       'Κάθε κομμάτι δοκιμάζει τους ενεργούς παρόχους με αυτή τη σειρά μέχρι κάποιος να έχει στίχους. Ό,τι δεν είχε ένας πάροχος καταγράφεται για έναν μήνα, ώστε να μην ερωτάται ξανά σε κάθε λήψη.',
@@ -896,6 +929,56 @@ export default {
     reconcilePlaylists: 'Ανανεώθηκαν λίστες: {playlists}.',
     reconcileNone: 'Όλα ήταν ήδη ενημερωμένα.',
     reconcileError: 'Δεν ήταν δυνατή η διόρθωση των διαδρομών.',
+    externalLibraryTitle: 'Υπάρχοντες φάκελοι μουσικής',
+    externalLibraryHint:
+      'Φάκελοι ήχου που έχετε ήδη. Τα αρχεία μένουν εκεί που είναι· το Downtify διαβάζει τις ετικέτες και τα κατατάσσει στους αντίστοιχους καλλιτέχνες. Στο Docker, χρησιμοποιήστε τη διαδρομή μέσα στο κοντέινερ και προσαρτήστε τον φάκελο του κεντρικού υπολογιστή.',
+    externalLibraryFolder: 'Φάκελος',
+    externalLibraryFolderHint:
+      'Η διαδρομή μέσα στο κοντέινερ του Downtify, όχι στον κεντρικό υπολογιστή.',
+    externalLibraryPlaceholder: '/music/collection',
+    externalLibraryAdd: 'Προσθήκη φακέλου',
+    externalLibraryRemove: 'Αφαίρεση φακέλου',
+    externalLibrarySync: 'Συγχρονισμός φακέλων',
+    externalLibrarySyncing: 'Συγχρονισμός φακέλων…',
+    externalLibrarySyncProgress: '{done} από {total} κομμάτια',
+    externalLibraryUnmapError: 'Δεν ήταν δυνατή η αποσύνδεση του φακέλου.',
+    externalLibrarySynced: {
+      one: 'Προστέθηκε {count} κομμάτι.',
+      other: 'Προστέθηκαν {count} κομμάτια.',
+    },
+    externalLibrarySkipped: {
+      one: 'Παραλείφθηκε {count} που ήταν ήδη στη βιβλιοθήκη.',
+      other: 'Παραλείφθηκαν {count} που ήταν ήδη στη βιβλιοθήκη.',
+    },
+    externalLibraryMissing: {
+      one: 'Δεν ήταν δυνατή η ανάγνωση {count} φακέλου.',
+      other: 'Δεν ήταν δυνατή η ανάγνωση {count} φακέλων.',
+    },
+    externalLibraryLyrics: {
+      one: 'Στίχοι ενσωματώθηκαν σε {count} κομμάτι.',
+      other: 'Στίχοι ενσωματώθηκαν σε {count} κομμάτια.',
+    },
+    externalLibraryCovers: {
+      one: 'Εξώφυλλο για {count} κομμάτι.',
+      other: 'Εξώφυλλα για {count} κομμάτια.',
+    },
+    externalLibrarySyncError:
+      'Δεν ήταν δυνατός ο συγχρονισμός αυτών των φακέλων.',
+    externalLibraryErrors: {
+      one: '{count} κομμάτι είχε σφάλμα.',
+      other: '{count} κομμάτια είχαν σφάλμα.',
+    },
+    externalLibraryLogTitle: 'Αρχείο τελευταίου συγχρονισμού',
+    externalLibraryLogImported: 'Εισήχθη · {artist} — {title}',
+    externalLibraryLogDuplicate: 'Διπλότυπο · {artist} — {title}',
+    externalLibraryLogDuplicateFolder: 'Ήδη στη λίστα · {artist} — {title}',
+    externalLibraryLogError: 'Σφάλμα · {artist} — {title}',
+    externalLibraryLogMissingFolder: 'Ο φάκελος δεν βρέθηκε · {file}',
+    externalLibraryLogUnknownArtist: 'Άγνωστος καλλιτέχνης',
+    externalLibraryLogNoteLyrics: 'στίχοι',
+    externalLibraryLogNoteCover: 'εξώφυλλο',
+    externalLibraryLogNoteGenre: 'είδος',
+    externalLibraryLogNoteNoLyrics: 'δεν βρέθηκαν στίχοι',
     version: 'Έκδοση {version}',
     upToDate: 'Ενημερωμένο',
     source: 'Πηγαίος κώδικας',
@@ -1270,6 +1353,8 @@ export default {
     deletePlaylistTitle: 'Διαγραφή της λίστας «{name}»;',
     deletePlaylistBody:
       'Τα κομμάτια της διαγράφονται από τον δίσκο — και όσα χρησιμοποιούν άλλες λίστες — μαζί με το αρχείο M3U.',
+    deleteManualPlaylistBody:
+      'Η λίστα αφαιρείται. Τα κομμάτια μένουν στη βιβλιοθήκη σου.',
     clearQueueTitle: 'Άδειασμα ουράς;',
     clearQueueBody:
       'Τα στοιχεία σε αναμονή και τα ολοκληρωμένα αφαιρούνται. Τα αρχεία που κατέβηκαν παραμένουν.',

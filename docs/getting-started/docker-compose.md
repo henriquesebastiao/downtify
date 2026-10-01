@@ -50,6 +50,17 @@ services:
 
 Then, in **Settings → slskd (Soulseek)**, enable slskd, enter its URL (e.g. `http://slskd:5030` when both containers share a Docker network) and API key, and set the download folder to `/slskd`.
 
+## Existing music folders
+
+To have the Library pick up a collection you already keep on the host, [mount it](../features/external-library.md) the same way and type the **container** path in **Settings → Library**:
+
+```yaml
+    volumes:
+      - ./downloads:/downloads
+      - /path/on/host/to/mp3s:/music/collection
+      - downtify_data:/data
+```
+
 ## Finding the server from the apps
 
 The [mobile apps](../features/mobile-apps.md#finding-the-server-on-your-network) list Downtify servers on your network through mDNS. In Docker's default bridge network that announcement never leaves Docker, so phones don't see it. To have it listed, run the container on the host's network — the `ports:` mapping then no longer applies, and Downtify listens on `DOWNTIFY_PORT` directly:

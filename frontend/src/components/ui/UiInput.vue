@@ -30,6 +30,7 @@
         :spellcheck="false"
         :aria-invalid="error ? 'true' : undefined"
         :aria-describedby="error || hint ? noteId : undefined"
+        :list="list || undefined"
         class="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
         :class="[
           mono ? 'font-mono text-[13px]' : '',
@@ -78,6 +79,7 @@ const props = defineProps({
   max: { type: [String, Number], default: undefined },
   inputmode: { type: String, default: undefined },
   autocomplete: { type: String, default: 'off' },
+  list: { type: String, default: '' },
   modelModifiers: { type: Object, default: () => ({}) },
 })
 const emit = defineEmits(['update:modelValue', 'change'])

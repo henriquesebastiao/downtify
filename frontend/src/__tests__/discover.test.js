@@ -29,6 +29,15 @@ describe('libraryPayload', () => {
     ])
   })
 
+  it('uses trackCount when the artist index has no track rows', () => {
+    expect(
+      libraryPayload(
+        [{ name: 'Air', tracks: [], trackCount: 4, likedCount: 2 }],
+        new Set()
+      )
+    ).toEqual([{ name: 'Air', tracks: 4, liked: 2 }])
+  })
+
   it('works without likes or artists', () => {
     expect(libraryPayload(null)).toEqual([])
     expect(libraryPayload([{ name: 'Air', tracks: [track('a.mp3')] }])).toEqual(

@@ -339,8 +339,24 @@ function listPlaylists() {
   return API.get('/playlists')
 }
 
-function listTracks() {
-  return API.get('/tracks')
+function listTracks(params = {}) {
+  return API.get('/tracks', { params })
+}
+
+function getLibrarySummary() {
+  return API.get('/api/library/summary')
+}
+
+function getLibraryAlbums() {
+  return API.get('/api/library/albums')
+}
+
+function getLibraryArtists() {
+  return API.get('/api/library/artists')
+}
+
+function lookupLibrarySongs(songs) {
+  return API.post('/api/library/lookup', { songs })
 }
 
 function getLyrics(file) {
@@ -372,8 +388,35 @@ function deleteLibraryPlaylist(playlistName) {
   })
 }
 
+function createLibraryPlaylist(name) {
+  return API.post('/api/library/playlists', { name })
+}
+
+function editLibraryPlaylistTracks(name, { add = [], remove = [] } = {}) {
+  return API.post('/api/library/playlists/tracks', { name, add, remove })
+}
+
+function renameLibraryPlaylist(name, newName) {
+  return API.post('/api/library/playlists/rename', {
+    name,
+    new_name: newName,
+  })
+}
+
 function reconcileLibrary() {
   return API.post('/api/library/reconcile')
+}
+
+function syncExternalLibrary(folders) {
+  return API.post('/api/library/external/sync', { folders })
+}
+
+function getExternalSync() {
+  return API.get('/api/library/external/sync')
+}
+
+function unmapExternalFolder(folder) {
+  return API.post('/api/library/external/unmap', { folder })
 }
 
 // ── Liked songs ──────────────────────────────────────────────────────
@@ -675,6 +718,12 @@ function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
 
+function suggestDirs(path) {
+  return API.get('/api/fs/dirs', {
+    params: { path: path || '', client_id: sessionID },
+  })
+}
+
 // Try an integration with the values as they are in the form, saved or
 // not. A failed test is still a 200: the answer says what's wrong.
 function testSlskd(config) {
@@ -734,13 +783,23 @@ export default {
   listDownloads,
   listPlaylists,
   listTracks,
+  getLibrarySummary,
+  getLibraryAlbums,
+  getLibraryArtists,
+  lookupLibrarySongs,
   getLyrics,
   deleteDownload,
   deleteDownloadsBatch,
   deleteLibraryPlaylist,
+  createLibraryPlaylist,
+  editLibraryPlaylistTracks,
+  renameLibraryPlaylist,
   prepareLibraryArchive,
   libraryArchiveURL,
   reconcileLibrary,
+  syncExternalLibrary,
+  getExternalSync,
+  unmapExternalFolder,
   getLikes,
   setLike,
   clearLikes,
@@ -808,6 +867,7 @@ export default {
   clearQueue,
   clearCompletedQueue,
   getSettings,
+  suggestDirs,
   setSettings,
   testSlskd,
   testNavidrome,

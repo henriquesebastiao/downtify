@@ -409,6 +409,28 @@
                   "
                 />
               </SettingRow>
+              <SettingRow
+                :label="t('settings.syncDelay')"
+                :description="t('settings.syncDelayHint')"
+                stacked
+              >
+                <PresetPicker
+                  :model-value="s.external_sync_delay_seconds"
+                  :presets="
+                    sm.settingsOptions.external_sync_delay_seconds_presets
+                  "
+                  :min="sm.settingsOptions.external_sync_delay_seconds_min"
+                  :max="sm.settingsOptions.external_sync_delay_seconds_max"
+                  unit="s"
+                  :format="(v) => `${v}s`"
+                  :custom-label="t('settings.custom')"
+                  @update:model-value="
+                    (v) =>
+                      (s.external_sync_delay_seconds =
+                        clampExternalSyncDelaySeconds(v))
+                  "
+                />
+              </SettingRow>
             </SettingGroup>
           </template>
 
@@ -451,6 +473,27 @@
                 <UiSwitch
                   v-model="s.download_lyrics"
                   :aria-label="t('settings.lyrics')"
+                />
+              </SettingRow>
+              <SettingRow
+                v-if="s.download_lyrics"
+                :label="t('settings.lyricsLrcBeside')"
+                :description="t('settings.lyricsLrcBesideHint')"
+              >
+                <UiSwitch
+                  v-model="s.lyrics_lrc_beside"
+                  :aria-label="t('settings.lyricsLrcBeside')"
+                />
+              </SettingRow>
+              <SettingRow
+                v-if="s.download_lyrics && !s.lyrics_lrc_beside"
+                :label="t('settings.lyricsLrcFolder')"
+                :description="t('settings.lyricsLrcFolderHint')"
+                stacked
+              >
+                <PathSuggestInput
+                  v-model="s.lyrics_lrc_dir"
+                  :placeholder="t('settings.lyricsLrcFolderPlaceholder')"
                 />
               </SettingRow>
               <SettingRow
@@ -576,6 +619,7 @@
                 </p>
               </SettingRow>
             </SettingGroup>
+            <ExternalLibrarySettings />
           </template>
 
           <!-- Apps: pairing, sign-in, the server's name -->
@@ -716,6 +760,8 @@ import ExperimentalBadge from '/src/components/ui/ExperimentalBadge.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import CookiesCard from '/src/components/settings/CookiesCard.vue'
 import ConnectionTest from '/src/components/settings/ConnectionTest.vue'
+import ExternalLibrarySettings from '/src/components/settings/ExternalLibrarySettings.vue'
+import PathSuggestInput from '/src/components/settings/PathSuggestInput.vue'
 import PresetPicker from '/src/components/settings/PresetPicker.vue'
 import AccountSettings from '/src/components/settings/AccountSettings.vue'
 import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
@@ -730,6 +776,7 @@ import API from '/src/model/api'
 import {
   clampCoverResolution,
   clampDownloadDelaySeconds,
+  clampExternalSyncDelaySeconds,
   clampParallelDownloads,
   useSettingsManager,
 } from '/src/model/settings'

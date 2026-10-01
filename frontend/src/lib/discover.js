@@ -16,11 +16,16 @@ const MAX_TICK = 3
 export function libraryPayload(artists, liked = new Set()) {
   return (artists || [])
     .filter((artist) => artist?.name)
-    .map((artist) => ({
-      name: artist.name,
-      tracks: artist.tracks.length,
-      liked: artist.tracks.filter((track) => liked.has(track.file)).length,
-    }))
+    .map((artist) => {
+      const tracks = artist.tracks || []
+      return {
+        name: artist.name,
+        tracks: tracks.length || Number(artist.trackCount) || 0,
+        liked: tracks.length
+          ? tracks.filter((track) => liked.has(track.file)).length
+          : Number(artist.likedCount) || 0,
+      }
+    })
 }
 
 /**

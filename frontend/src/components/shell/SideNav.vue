@@ -68,7 +68,7 @@
         class="flex h-11 items-center gap-2.5 rounded-control px-3 transition-colors hover:bg-surface-2/60"
       >
         <CoverArt
-          :src="playlist.cover || playlist.covers[0] || ''"
+          :src="playlist.cover"
           :covers="playlist.covers"
           :name="playlist.title"
           rounded="rounded-[7px]"
@@ -83,7 +83,7 @@
             playlist.title
           }}</span>
           <span class="tabular text-[11px] text-faint">{{
-            t('common.tracks', { count: playlist.tracks.length })
+            t('common.tracks', { count: itemTrackCount(playlist) })
           }}</span>
         </span>
       </RouterLink>
@@ -163,6 +163,7 @@ import AppIcon from '../ui/AppIcon.vue'
 import AppLogo from '../ui/AppLogo.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import { useI18n } from '/src/i18n'
+import { itemTrackCount } from '/src/lib/library'
 import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
 import { useUpdateCheck } from '/src/model/updateCheck'
@@ -221,7 +222,7 @@ const labelClass = computed(() =>
 
 const recentPlaylists = computed(() =>
   [...library.playlists.value]
-    .filter((playlist) => playlist.tracks.length)
+    .filter((playlist) => itemTrackCount(playlist))
     // The liked songs stay at the top; the rest are the newest.
     .sort((a, b) => Number(b.liked) - Number(a.liked) || b.added - a.added)
     .slice(0, 6)

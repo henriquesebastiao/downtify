@@ -4,7 +4,7 @@ icon: lucide/library
 
 # Library catalog & path sync
 
-Downtify keeps a small **catalog** of the files under `/downloads` (and the slskd folder, when [slskd files are left in place](slskd-navidrome.md#leave-files-in-place)) so the Library page, player, M3U export, Navidrome sync and duplicate detection stay consistent when files move or playlists grow.
+Downtify keeps a small **catalog** of the files under `/downloads` (the slskd folder, when [slskd files are left in place](slskd-navidrome.md#leave-files-in-place), and [extra folders](external-library.md) you add in Settings) so the Library page, player, M3U export, Navidrome sync and duplicate detection stay consistent when files move or playlists grow.
 
 ## What gets stored
 
@@ -16,7 +16,7 @@ Downtify keeps a small **catalog** of the files under `/downloads` (and the slsk
 | **Navidrome index** | `/data/downtify_library.db` | Navidrome song IDs per file |
 | **Library metadata cache** | `/data/downtify_library.db` | Title, artist, album, album artist, track number, year, length and cover size per file for `GET /tracks`, re-read only when a file's modification time or size changes |
 | **Upgrade runs** | `/data/downtify_library.db` | The [library upgrade](library-upgrade.md) queue and when each track was last checked, so a run survives a restart |
-| **Path scan cache** | In memory (short-lived) | The list of library paths, invalidated whenever Downtify adds or removes a file |
+| **Path scan cache** | RAM, plus a snapshot in `/data/downtify_library.db` | Folded `GET /tracks` rows, playlist listings and path pairs. Reused while library folder mtimes are unchanged (and after a restart). Dropped when Downtify adds, removes or retags a file. |
 | **Cover art cache** | `/data/cover_cache` (optional) | Extracted cover images for `GET /cover` |
 
 Files are matched across moves by a **content key** — a hash of the file's name and size. Moving a file to another folder keeps its key; replacing it with a different file gives it a new one.
@@ -41,6 +41,10 @@ Use this after you **move or rename files on disk** outside Downtify, or delete 
 
 It only runs when you press the button (or call `POST /api/library/reconcile`) — never on a schedule.
 
+### Existing music folders
+
+To play a collection that Downtify did not download, add the folders in **Settings → Library** and press **Sync folders**. Files stay on disk; tags are read and artists are matched. See [Existing music folders](external-library.md).
+
 ::: warning
 Rewriting a playlist deletes library files whose tags clearly don't match the Spotify track they're registered for — see [slskd & Navidrome](slskd-navidrome.md#playlist-sync).
 :::
@@ -54,10 +58,10 @@ Deleting tracks from the **Library** page already cleans up the catalog and rewr
 The Library page has four tabs — **Albums**, **Artists**, **Playlists** and **Tracks**:
 
 - **Albums, artists and playlists** show as a cover grid or a compact list (the toggle is remembered), with a text filter and sorting by recently added, name, artist, year or number of tracks. Albums and artists are built from each file's tags (album artist, album, year), so they don't depend on how files are organized on disk. A track without an album tag appears under Tracks and its artist, not under Albums.
-- **Playlists** are the downloaded playlists with an [M3U file](m3u-export.md), plus tracked [playlist downloads](slskd-navidrome.md#playlist-downloads) that don't have one yet. Once you have [liked](liked-songs.md) a song, *Liked songs* is listed first.
+- **Playlists** are the downloaded playlists with an [M3U file](m3u-export.md), playlists you create with **New playlist** (editable), plus tracked [playlist downloads](slskd-navidrome.md#playlist-downloads) that don't have an M3U yet. Imported Spotify/YouTube playlists stay read-only. Once you have [liked](liked-songs.md) a song, *Liked songs* is listed first. A playlist you created uses a mosaic of up to four track covers; imported playlists keep the artwork saved with the M3U.
 - **Tracks** is a sortable table (title, album, format, date added, length) with a text filter, a format filter, and checkboxes — click one, then Shift-click another to select a range.
 
-Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle**, **Add to queue** and **Download as ZIP**. A playlist page also shows how many of its tracks are downloaded, lists the missing ones with **Download missing**, and offers **Watch for new tracks** and **Delete playlist** in its **⋯** menu.
+Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle**, **Add to queue** and **Download as ZIP**. A playlist you created also has **Add songs** and **Rename**; a downloaded playlist page shows how many of its tracks are downloaded, lists the missing ones with **Download missing**, and offers **Watch for new tracks**. **Delete playlist** is in the **⋯** menu: imported playlists delete the audio; a playlist you created only removes the playlist.
 
 **Download as ZIP** saves the selected tracks to the device you're browsing from as a single ZIP, keeping their folder layout — handy when Downtify runs on a home server and you want a batch of tracks locally. Combine it with **Select all** to take everything the current filter shows. The archive is built while it downloads, so nothing is written to the server's disk, and it's capped at 2000 tracks per download.
 
@@ -66,13 +70,23 @@ Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle**
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/list?refresh=true` | Library paths, bypassing the path scan cache |
-| `GET` | `/tracks` | Library tracks with tags and, when known, the `playlists` they belong to |
-| `GET` | `/media/{path}` | Serve a library file, including `slskd/…` paths |
+| `GET` | `/api/library/summary` | Home page counts and recent albums, without the full track list |
+| `GET` | `/api/library/albums` | Album tiles (counts + cover file), without every track |
+| `GET` | `/api/library/artists` | Artist tiles (counts + cover file) for Library and Discover |
+| `POST` | `/api/library/lookup` | Library rows for search/link songs already downloaded |
+| `GET` | `/tracks` | Library tracks with tags. `?playlist=`, `?artist=`, `?album=`, `?q=` and `?limit=` return a subset |
+| `GET` | `/media/{path}` | Serve a library file, including `slskd/…` and `ext/…` paths |
 | `GET` | `/playlist-cover?file=…` | Serve a playlist's own [cover art](playlist-cover-art.md), reported as `cover` by `/playlists` |
 | `POST` | `/api/library/archive` | Prepare a ZIP of selected tracks (returns a single-use ticket) |
 | `GET` | `/api/library/archive/{token}` | Stream that ZIP to the browser |
-| `DELETE` | `/api/library/playlist?playlist_name=…` | Delete a playlist's tracks, M3U and catalog entry |
+| `DELETE` | `/api/library/playlist?playlist_name=…` | Delete an imported playlist's tracks, M3U and catalog — or only the M3U of a playlist you created |
+| `POST` | `/api/library/playlists` | Create an empty editable playlist |
+| `POST` | `/api/library/playlists/tracks` | Add or remove library files on a playlist you created |
+| `POST` | `/api/library/playlists/rename` | Rename a playlist you created |
 | `POST` | `/api/library/reconcile` | Fix library paths, then refresh M3U/Navidrome playlists |
+| `POST` | `/api/library/external/sync` | Start a background scan of extra music folders |
+| `GET` | `/api/library/external/sync` | Running extra-folder sync, or the last finished log |
+| `POST` | `/api/library/external/unmap` | Drop an extra folder from the library without deleting audio |
 | `GET`/`POST` | `/api/library/upgrade…` | Scan and repair what is already downloaded — see [Upgrade library](library-upgrade.md#api) |
 
 See the [API reference](../api-reference.md#library) for request and response shapes.

@@ -45,6 +45,8 @@ def test_default_settings_has_required_keys():
         'audio_providers',
         'lyrics_providers',
         'download_lyrics',
+        'lyrics_lrc_beside',
+        'lyrics_lrc_dir',
         'format',
         'bitrate',
         'output',
@@ -55,6 +57,8 @@ def test_default_settings_has_required_keys():
         'sync_navidrome',
         'navidrome',
         'cache_cover_art',
+        'external_library',
+        'external_sync_delay_seconds',
     }
     assert required <= set(DEFAULT_SETTINGS)
 
@@ -86,6 +90,37 @@ def test_an_older_settings_file_keeps_the_previous_defaults(tmp_path):
     assert fresh['organize_by_artist'] is True
 
 
+def test_load_settings_sanitizes_external_library_folders(tmp_path):
+    path = tmp_path / 'settings.json'
+    good = tmp_path / 'music'
+    good.mkdir()
+    path.write_text(
+        json.dumps({
+            'external_library': {
+                'folders': [str(good), 'relative', str(good)],
+            }
+        })
+    )
+    loaded = api._load_settings(path)
+    assert loaded['external_library']['folders'] == [str(good)]
+
+
+def test_load_settings_rejects_lyrics_dir_inside_extra_folder(tmp_path):
+    path = tmp_path / 'settings.json'
+    music = tmp_path / 'music'
+    music.mkdir()
+    path.write_text(
+        json.dumps({
+            'lyrics_lrc_beside': False,
+            'lyrics_lrc_dir': str(music / 'lyrics'),
+            'external_library': {'folders': [str(music)]},
+        })
+    )
+    loaded = api._load_settings(path)
+    assert loaded['lyrics_lrc_beside'] is False
+    assert loaded['lyrics_lrc_dir'] == '/data/lyrics'
+
+
 def test_new_installs_save_playlist_covers_and_artist_photos():
     assert DEFAULT_SETTINGS['download_cover_art_playlists'] is True
     assert DEFAULT_SETTINGS['download_cover_art_artist'] is True
@@ -95,6 +130,8 @@ def test_new_installs_save_playlist_covers_and_artist_photos():
 
 def test_default_download_lyrics_is_true():
     assert DEFAULT_SETTINGS['download_lyrics'] is True
+    assert DEFAULT_SETTINGS['lyrics_lrc_beside'] is True
+    assert DEFAULT_SETTINGS['lyrics_lrc_dir'] == '/data/lyrics'
 
 
 def test_default_format_is_mp3():

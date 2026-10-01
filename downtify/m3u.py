@@ -12,17 +12,70 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Sequence
 
 from loguru import logger
 
-from .library_paths import SLSKD_LIBRARY_PREFIX, locate_library_file
+from .library_paths import (
+    EXTERNAL_LIBRARY_PREFIX,
+    SLSKD_LIBRARY_PREFIX,
+    ResolvedLibraryRoots,
+    locate_library_file,
+)
 
 # Only characters that are genuinely illegal in FAT/NTFS/ext filenames are
 # dropped. Everything else — including accented and non-Latin letters such
 # as "ö" (Sólrún) or "é" (Renata Béranger) — is preserved so folder names
 # match the original artist/album/playlist titles.
 _PLAYLIST_NAME_INVALID = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+#: Marks an M3U the user built in the Library, so it can be edited
+#: without touching downloaded Spotify/YouTube playlists.
+MANUAL_M3U_MARKER = '#EXTDOWNTIFY:manual'
+
+
+def is_manual_m3u(m3u_path: Path) -> bool:
+    """True when *m3u_path* was written as a Library-created playlist."""
+
+    try:
+        head = m3u_path.read_text(encoding='utf-8')[:2048]
+    except OSError:
+        return False
+    return any(
+        line.strip() == MANUAL_M3U_MARKER for line in head.splitlines()[:12]
+    )
+
+
+def iter_m3u_files(download_dir: Path) -> list[Path]:
+    """Every ``.m3u`` under *download_dir*, sorted by path."""
+
+    base = Path(download_dir)
+    found: list[Path] = []
+    try:
+        if not base.is_dir():
+            return []
+    except OSError:
+        return []
+    for dirpath, _dirnames, filenames in os.walk(base, followlinks=False):
+        current = Path(dirpath)
+        for name in filenames:
+            if name.lower().endswith('.m3u'):
+                found.append(current / name)
+    found.sort()
+    return found
+
+
+def find_m3u_for_name(
+    download_dir: Path, playlist_name: str
+) -> Optional[Path]:
+    """The M3U whose stem matches *playlist_name* (case-insensitive)."""
+
+    want = str(playlist_name or '').strip().casefold()
+    if not want:
+        return None
+    for path in iter_m3u_files(download_dir):
+        if path.stem.casefold() == want:
+            return path
+    return None
 
 
 def sanitize_playlist_name(name: str) -> str:
@@ -48,6 +101,7 @@ def build_m3u_content(
     download_dir: Path,
     m3u_dir: Optional[Path] = None,
     slskd_dir: Optional[Path] = None,
+    extra_dirs: Optional[Sequence[Path]] = None,
 ) -> tuple[str, int]:
     """Render the body of a ``.m3u`` file.
 
@@ -76,7 +130,9 @@ def build_m3u_content(
             continue
         # Also finds ``slskd/...`` files left in place under the slskd
         # folder, outside download_dir.
-        path = locate_library_file(filename, download_dir, slskd_dir)
+        path = locate_library_file(
+            filename, download_dir, slskd_dir, extra_dirs
+        )
         if path is None:
             logger.warning('Skipping missing track in M3U: {}', filename)
             continue
@@ -100,6 +156,9 @@ def read_m3u_tracks(
     m3u_path: Path,
     download_dir: Path,
     slskd_dir: Optional[Path] = None,
+    extra_dirs: Optional[Sequence[Path]] = None,
+    *,
+    keep_missing: bool = False,
 ) -> list[str]:
     """Return the tracks listed in *m3u_path*, as paths relative to
     *download_dir* (the same shape ``/list`` returns), in file order.
@@ -117,6 +176,9 @@ def read_m3u_tracks(
     download_dir = Path(download_dir).resolve()
     slskd_root = Path(slskd_dir).resolve() if slskd_dir else None
     m3u_dir = m3u_path.resolve().parent
+    extras = ResolvedLibraryRoots.from_dirs(
+        download_dir, slskd_dir, extra_dirs
+    ).extras
     try:
         lines = m3u_path.read_text(encoding='utf-8').splitlines()
     except OSError:
@@ -131,14 +193,40 @@ def read_m3u_tracks(
             resolved = (m3u_dir / line).resolve()
         except OSError:
             continue
-        if not resolved.is_file():
+        stored = _stored_library_path(
+            resolved, download_dir, slskd_root, extras
+        )
+        if not stored:
             continue
-        if resolved.is_relative_to(download_dir):
-            tracks.append(resolved.relative_to(download_dir).as_posix())
-        elif slskd_root is not None and resolved.is_relative_to(slskd_root):
-            rel = resolved.relative_to(slskd_root).as_posix()
-            tracks.append(f'{SLSKD_LIBRARY_PREFIX}{rel}')
+        if resolved.is_file() or keep_missing:
+            tracks.append(stored)
     return tracks
+
+
+def _stored_library_path(
+    resolved: Path,
+    download_dir: Path,
+    slskd_root: Optional[Path],
+    extras: Sequence[tuple[Path, str]],
+) -> str:
+    if resolved.is_relative_to(download_dir):
+        return resolved.relative_to(download_dir).as_posix()
+    if slskd_root is not None and resolved.is_relative_to(slskd_root):
+        rel = resolved.relative_to(slskd_root).as_posix()
+        return f'{SLSKD_LIBRARY_PREFIX}{rel}'
+    return _extra_stored_path(resolved, extras)
+
+
+def _extra_stored_path(
+    resolved: Path, extras: Sequence[tuple[Path, str]]
+) -> str:
+    for extra_root, folder_id in extras:
+        try:
+            rel = resolved.relative_to(extra_root).as_posix()
+        except ValueError:
+            continue
+        return f'{EXTERNAL_LIBRARY_PREFIX}{folder_id}/{rel}'
+    return ''
 
 
 def m3u_path_for(
@@ -168,6 +256,9 @@ def write_m3u(
     *,
     playlist_subdir: Optional[str] = None,
     slskd_dir: Optional[Path] = None,
+    extra_dirs: Optional[Sequence[Path]] = None,
+    manual: bool = False,
+    allow_empty: bool = False,
 ) -> tuple[Optional[Path], int]:
     """Write an M3U for ``playlist_name``.
 
@@ -193,8 +284,14 @@ def write_m3u(
         download_dir=Path(download_dir),
         m3u_dir=target_dir,
         slskd_dir=slskd_dir,
+        extra_dirs=extra_dirs,
     )
-    if kept == 0:
+    if manual:
+        lines = content.splitlines()
+        if lines[:1] == ['#EXTM3U'] and MANUAL_M3U_MARKER not in lines[:4]:
+            lines.insert(1, MANUAL_M3U_MARKER)
+            content = '\n'.join(lines) + '\n'
+    if kept == 0 and not allow_empty:
         logger.warning(
             'Refusing to write empty M3U for playlist {!r}', playlist_name
         )
