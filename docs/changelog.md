@@ -4,6 +4,18 @@ icon: lucide/history
 
 # Changelog
 
+## [3.3.0](https://github.com/henriquesebastiao/downtify/tree/3.3.0) (2026-10-01)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.2.0...3.3.0)
+
+**Implemented enhancements:**
+
+- feat: Expand Deezer integration \(Links, Cover Art Resolution, Finder Search & Top Charts\) [\#403](https://github.com/henriquesebastiao/downtify/issues/403)
+
+**Merged pull requests:**
+
+- feat: Expand Deezer integration \(Links, Cover Art Resolution, Finder Search & Top Charts\) [\#404](https://github.com/henriquesebastiao/downtify/pull/404) ([fvidals](https://github.com/fvidals))
+
 ## [3.2.0](https://github.com/henriquesebastiao/downtify/tree/3.2.0) (2026-09-28)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.1.0...3.2.0)
