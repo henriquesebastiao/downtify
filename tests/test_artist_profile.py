@@ -1358,7 +1358,7 @@ def test_ensure_profile_noop_when_file_already_exists(tmp_path):
 def test_ensure_profile_seeds_photo_and_banner_from_spotify(tmp_path):
     with (
         patch(
-            'downtify.artist_profile.spotify.primary_artist_id_from_track_id',
+            'downtify.artist_profile.spotify.credited_artist_id_from_track_id',
             return_value='artist123',
         ),
         patch(
@@ -1810,8 +1810,8 @@ def test_resolve_spotify_artist_id_prefers_the_track_over_the_name(
 ):
     monkeypatch.setattr(
         artist_profile.spotify,
-        'primary_artist_id_from_track_id',
-        lambda track_id: 'from_track',
+        'credited_artist_id_from_track_id',
+        lambda track_id, name: 'from_track',
     )
 
     def boom(name):
@@ -1982,7 +1982,7 @@ def test_ensure_profile_keeps_the_track_derived_spotify_id(
         c,
         d,
         patch(
-            'downtify.artist_profile.spotify.primary_artist_id_from_track_id',
+            'downtify.artist_profile.spotify.credited_artist_id_from_track_id',
             return_value='from_track',
         ),
         patch(
@@ -2069,7 +2069,7 @@ def test_spotify_candidate_endpoint_track_wins_over_the_name(
 
     with (
         patch(
-            'downtify.api.spotify.primary_artist_id_from_track_id',
+            'downtify.api.spotify.credited_artist_id_from_track_id',
             return_value='from_track',
         ),
         patch('downtify.api.spotify.search_artist_by_name', boom),
@@ -3090,3 +3090,57 @@ def test_from_url_endpoint_records_the_path_the_picker_will_match(app_state):
     assert profile['current_cover'] == (
         '/images/artist/h4sh/1000x1000-000000-80-0-0.jpg'
     )
+
+
+# ── A guest's page gets the guest's own Spotify id ─────────────────────────
+
+
+class _OneTrackIndex:
+    """A track index that knows one file, downloaded from Spotify."""
+
+    @staticmethod
+    def spotify_id_for_filename(filename):
+        return 'a' * 22 if filename == 'Owner/song.mp3' else None
+
+
+def _two_artist_embed(kind, track_id):
+    assert kind == 'track'
+    entity = {
+        'artists': [
+            {'name': 'Owner Artist', 'uri': 'spotify:artist:OWNERID'},
+            {'name': 'Guest & Friend', 'uri': 'spotify:artist:GUESTID'},
+        ]
+    }
+    return {'props': {'pageProps': {'state': {'data': {'entity': entity}}}}}
+
+
+def test_a_guest_never_gets_the_tracks_first_artist_id():
+    with patch(
+        'downtify.spotify._fetch_embed_json', side_effect=_two_artist_embed
+    ):
+        guest = artist_profile.resolve_spotify_artist_id(
+            ['Owner/song.mp3'], _OneTrackIndex(), 'Guest & Friend'
+        )
+        owner = artist_profile.resolve_spotify_artist_id(
+            ['Owner/song.mp3'], _OneTrackIndex(), 'Owner Artist'
+        )
+    assert guest == 'GUESTID'
+    assert owner == 'OWNERID'
+
+
+def test_a_name_the_track_does_not_credit_falls_back_to_a_search():
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            side_effect=_two_artist_embed,
+        ),
+        patch(
+            'downtify.artist_profile._spotify_id_from_name',
+            return_value='SEARCHED',
+        ) as search,
+    ):
+        found = artist_profile.resolve_spotify_artist_id(
+            ['Owner/song.mp3'], _OneTrackIndex(), 'Someone Else'
+        )
+    assert found == 'SEARCHED'
+    search.assert_called_once_with('Someone Else')

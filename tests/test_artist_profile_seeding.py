@@ -306,7 +306,9 @@ def test_a_spotify_track_gives_its_artists_id_without_a_name_search(
 ):
     _Services(monkeypatch)
     monkeypatch.setattr(
-        ap.spotify, 'primary_artist_id_from_track_id', lambda tid: 'FROMTRACK'
+        ap.spotify,
+        'credited_artist_id_from_track_id',
+        lambda tid, name: 'FROMTRACK',
     )
     monkeypatch.setattr(
         ap,

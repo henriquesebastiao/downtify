@@ -1867,7 +1867,7 @@ def artist_art_spotify_candidate_endpoint(
 
     artist_id: Optional[str] = None
     try:
-        artist_id = _spotify_artist_id_from_library_file(file)
+        artist_id = _spotify_artist_id_from_library_file(file, name)
         if not artist_id and name.strip():
             found = spotify.search_artist_by_name(name)
             artist_id = found['id'] if found else None
@@ -1892,9 +1892,13 @@ def artist_art_spotify_candidate_endpoint(
     return {'source': 'spotify', 'name': artist_name, 'image_url': image_url}
 
 
-def _spotify_artist_id_from_library_file(file: str) -> Optional[str]:
-    """Spotify id of the first artist of a library file's Spotify track,
-    or ``None`` when *file* is empty, unknown, or wasn't from Spotify."""
+def _spotify_artist_id_from_library_file(
+    file: str, name: str = ''
+) -> Optional[str]:
+    """Spotify id of *name* among the artists of a library file's Spotify
+    track - its first artist when *name* is blank - or ``None`` when
+    *file* is empty, unknown, wasn't from Spotify, or doesn't credit
+    *name* (a guest's track must not give the track's first artist)."""
 
     if not file.strip() or state.track_index is None:
         return None
@@ -1905,6 +1909,8 @@ def _spotify_artist_id_from_library_file(file: str) -> Optional[str]:
     )
     if not track_id:
         return None
+    if isinstance(name, str) and name.strip():
+        return spotify.credited_artist_id_from_track_id(track_id, name)
     return spotify.primary_artist_id_from_track_id(track_id)
 
 
