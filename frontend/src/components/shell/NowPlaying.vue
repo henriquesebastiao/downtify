@@ -29,7 +29,7 @@
           class="relative flex h-full flex-col px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:px-10 lg:pt-6 lg:pb-8"
         >
           <!-- Header -->
-          <header class="flex h-12 shrink-0 items-center gap-3">
+          <header class="relative z-10 flex h-12 shrink-0 items-center gap-3">
             <button
               ref="closeButton"
               type="button"
@@ -90,29 +90,27 @@
 
           <!-- Body -->
           <div
-            class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 py-4 lg:grid-cols-[minmax(0,min(460px,38vw))_minmax(0,1fr)] lg:items-center lg:gap-14 lg:py-6 xl:grid-cols-[minmax(0,min(460px,32vw))_minmax(0,1fr)_340px]"
+            class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 overflow-hidden py-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-stretch lg:gap-10 lg:py-4 xl:grid-cols-[auto_minmax(0,1fr)_minmax(220px,340px)] xl:gap-12"
           >
             <!-- Artwork + title (hidden on phones while a panel is open) -->
             <div
-              class="flex min-h-0 flex-col justify-center gap-6"
+              class="flex h-full min-h-0 w-full max-w-full flex-col justify-center gap-4 overflow-hidden lg:w-fit lg:gap-5"
               :class="mobilePanel ? 'max-lg:hidden' : ''"
             >
-              <div class="mx-auto w-full max-w-[min(100%,52vh)] lg:max-w-none">
+              <div class="now-playing-cover mx-auto">
                 <CoverArt
                   :src="track.hasCover ? track.cover : ''"
                   :name="track.album || track.title"
                   rounded="rounded-[20px]"
                   :letter-size="140"
                   :icon-size="72"
-                  class="aspect-square w-full shadow-[0_40px_100px_rgba(0,0,0,0.55)] transition-transform duration-500 ease-out-soft"
+                  class="aspect-square w-full min-h-0 min-w-0 shadow-[0_40px_100px_rgba(0,0,0,0.55)] transition-transform duration-500 ease-out-soft"
                   :class="player.isPlaying.value ? 'scale-100' : 'scale-[0.94]'"
                 />
               </div>
-              <div class="flex items-end justify-between gap-4">
+              <div class="flex shrink-0 items-end justify-between gap-4">
                 <div class="min-w-0">
-                  <h2
-                    class="text-display truncate text-2xl font-bold lg:text-[32px]"
-                  >
+                  <h2 class="now-playing-title text-display truncate font-bold">
                     {{ track.title }}
                   </h2>
                   <RouterLink
@@ -174,14 +172,14 @@
             <!-- Up next always visible on wide screens -->
             <aside
               v-if="panel !== 'queue'"
-              class="hidden h-full max-h-[620px] min-h-0 rounded-panel border border-white/10 bg-white/6 p-3 backdrop-blur-xl xl:block"
+              class="hidden h-full min-h-0 max-h-full rounded-panel border border-white/10 bg-white/6 p-3 backdrop-blur-xl xl:block"
             >
               <UpNextPanel />
             </aside>
           </div>
 
           <!-- Transport -->
-          <footer class="shrink-0">
+          <footer class="relative z-10 shrink-0">
             <div class="flex items-center gap-3">
               <span class="tabular w-12 text-xs text-white/65">{{
                 formatDuration(scrub ?? player.currentTime.value)
@@ -249,7 +247,7 @@
                 </button>
                 <button
                   type="button"
-                  class="flex size-[72px] items-center justify-center rounded-full bg-white text-[#0b0c0e] shadow-[0_12px_30px_rgba(0,0,0,0.35)] transition-transform hover:scale-105 active:scale-95"
+                  class="now-playing-play flex items-center justify-center rounded-full bg-white text-[#0b0c0e] shadow-[0_12px_30px_rgba(0,0,0,0.35)] transition-transform hover:scale-105 active:scale-95"
                   :aria-label="
                     player.isPlaying.value
                       ? t('player.pause')
