@@ -38,6 +38,7 @@ from downtify import (
 )
 from downtify.activity import ActivityLog
 from downtify.auth import AuthMiddleware, AuthStore, auth_disabled_from_env
+from downtify.compilation import CompilationMarks
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
@@ -339,6 +340,8 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
+    # Albums an admin marked (or unmarked) as Various Artists by hand.
+    api.state.compilation_marks = CompilationMarks(library_db)
     api.state.podcasts = PodcastStore(library_db)
     # The mobile API (downtify/mobile_routes.py).
     api.state.library_sync = LibrarySync(library_db)
@@ -614,6 +617,8 @@ def build_app() -> FastAPI:
     # A finished download (from the UI or a monitor sweep alike) seeds its
     # artist's profile in the background.
     api.state.downloader.on_downloaded = api.enrich_artist_after_download
+    # ...and gets the tags an admin set for its album by hand.
+    api.state.downloader.album_override = api.album_override_for
     api.providers.set_cover_resolution(
         api._clamp_cover_resolution(
             api.state.settings.get(

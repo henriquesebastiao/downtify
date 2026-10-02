@@ -24,6 +24,7 @@ _COMMA_BAND = 'Coast, Hill & Vale'
         'Various Artists',
         'various artists',
         '  Various   Artists ',
+        'Various',
         'Vários intérpretes',
         'Varios artistas',
     ],
@@ -33,7 +34,7 @@ def test_is_various_artists_by_name(name):
 
 
 @pytest.mark.parametrize(
-    'name', [_COMMA_BAND, 'Various', 'Artists', 'Alias & Guest', '', None]
+    'name', [_COMMA_BAND, 'Artists', 'Alias & Guest', '', None]
 )
 def test_real_artists_are_not_various_artists(name):
     assert not is_various_artists(name)

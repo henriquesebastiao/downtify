@@ -30,7 +30,9 @@ function splitArtists(artist) {
 
 const VARIOUS_ARTISTS = new Set(['various artists', 'various'])
 
-function isVariousArtists(name) {
+/** Whether an album artist is the "Various Artists" of a compilation
+ * (see downtify/album_artist.py). */
+export function isVariousArtists(name) {
   return VARIOUS_ARTISTS.has(
     String(name || '')
       .trim()
