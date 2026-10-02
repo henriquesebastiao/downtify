@@ -5,6 +5,7 @@ import {
   groupAlbums,
   groupArtists,
   indexTracksBySong,
+  itemTrackCount,
   normalizeTrack,
   songKey,
   sortItems,
@@ -70,6 +71,11 @@ describe('normalizeTrack', () => {
       url: '/media/slskd/peer/Artist%20-%20Title.mp3',
     })
   })
+
+  it('plays extra-folder tracks through /media', () => {
+    const track = normalizeTrack('ext/abc123def456/Artist - Title.mp3')
+    expect(track.url).toBe('/media/ext/abc123def456/Artist%20-%20Title.mp3')
+  })
 })
 
 describe('groupAlbums', () => {
@@ -108,6 +114,20 @@ describe('groupArtists', () => {
     expect(kenji.albums.map((a) => a.title)).toEqual(['Glass Harbor'])
     expect(artists.find((a) => a.name === 'Ana Luz').albums).toEqual([])
   })
+
+  it('files a duo tagged Various Artists under the artist name', () => {
+    const duo = normalizeTrack({
+      file: 'Acustico/Ze Neto & Cristiano - Sintonia.mp3',
+      title: 'Sintonia',
+      artist: 'Zé Neto & Cristiano',
+      album: 'Acústico',
+      album_artist: 'Various Artists',
+    })
+    expect(duo.albumArtist).toBe('Zé Neto & Cristiano')
+    const artists = groupArtists([duo])
+    expect(artists.map((a) => a.name)).toEqual(['Zé Neto & Cristiano'])
+    expect(artists[0].albums.map((a) => a.title)).toEqual(['Acústico'])
+  })
 })
 
 describe('buildPlaylists', () => {
@@ -129,8 +149,52 @@ describe('buildPlaylists', () => {
     )
     expect(playlist.tracks.map((t) => t.title)).toEqual(['Blue Hour'])
     expect(playlist.batch.missing_count).toBe(3)
-    expect(playlist.covers).toHaveLength(1)
+    expect(playlist.covers).toHaveLength(2)
     expect(tracked).toMatchObject({ name: 'Not downloaded yet', tracks: [] })
+    expect(playlist.fileCount).toBe(2)
+  })
+
+  it('keeps the M3U added time even when tracks are not loaded', () => {
+    const [playlist] = buildPlaylists(
+      [
+        {
+          name: 'Late Night Drive',
+          files: ['Ana Luz - Blue Hour.mp3'],
+          added: 1700000000,
+        },
+      ],
+      new Map()
+    )
+    expect(playlist.tracks).toEqual([])
+    expect(playlist.fileCount).toBe(1)
+    expect(playlist.added).toBe(1700000000)
+    expect(playlist.covers).toEqual([
+      '/cover?file=Ana%20Luz%20-%20Blue%20Hour.mp3',
+    ])
+  })
+
+  it('mosaics from M3U paths when only some tracks are loaded', () => {
+    const [playlist] = buildPlaylists(
+      [
+        {
+          name: 'Rock playlist',
+          files: [
+            'Pearl Jam - Alive.mp3',
+            'Van Halen - Devil.mp3',
+            'Green Day - 21 Guns.mp3',
+            'GnR - Patience.mp3',
+          ],
+          count: 134,
+          manual: true,
+        },
+      ],
+      byFile
+    )
+    expect(playlist.tracks).toEqual([])
+    expect(playlist.fileCount).toBe(134)
+    expect(playlist.cover).toBe('')
+    expect(playlist.covers).toHaveLength(4)
+    expect(playlist.covers[0]).toContain('/cover?file=')
   })
 
   it("points at the playlist's own artwork when it was downloaded", () => {
@@ -176,7 +240,24 @@ describe('buildPlaylists', () => {
     // The title starts as the file name; the model swaps in a translation.
     expect(liked.name).toBe('Downtify Liked Songs')
     expect(regular.liked).toBe(false)
+    expect(regular.manual).toBe(false)
     expect(tracked).toMatchObject({ liked: false, title: 'Not downloaded yet' })
+  })
+
+  it('flags a playlist the user created in the Library', () => {
+    const [playlist] = buildPlaylists(
+      [
+        {
+          name: 'Late Night Drive',
+          files: ['Ana Luz - Blue Hour.mp3'],
+          manual: true,
+        },
+      ],
+      byFile
+    )
+    expect(playlist.manual).toBe(true)
+    expect(playlist.cover).toBe('')
+    expect(playlist.covers.length).toBeGreaterThan(0)
   })
 })
 
@@ -266,5 +347,18 @@ describe('indexTracksBySong', () => {
   it('copes with no tracks', () => {
     expect(indexTracksBySong([]).size).toBe(0)
     expect(indexTracksBySong(undefined).size).toBe(0)
+  })
+})
+
+describe('itemTrackCount', () => {
+  it('uses the M3U file count even when only some tracks are loaded', () => {
+    expect(itemTrackCount({ tracks: [{}, {}], fileCount: 50 })).toBe(50)
+    expect(itemTrackCount({ tracks: [], fileCount: 3 })).toBe(3)
+  })
+
+  it('prefers loaded tracks, then index counts, when there is no fileCount', () => {
+    expect(itemTrackCount({ tracks: [{}, {}], trackCount: 9 })).toBe(2)
+    expect(itemTrackCount({ tracks: [], trackCount: 9 })).toBe(9)
+    expect(itemTrackCount({})).toBe(0)
   })
 })

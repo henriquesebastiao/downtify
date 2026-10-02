@@ -676,6 +676,8 @@ Return the current settings.
   "audio_providers": ["youtube-music"],
   "lyrics_providers": ["lrclib", "netease"],
   "download_lyrics": true,
+  "lyrics_lrc_beside": true,
+  "lyrics_lrc_dir": "/data/lyrics",
   "format": "mp3",
   "bitrate": "320",
   "output": "{artists} - {title}.{output-ext}",
@@ -685,6 +687,7 @@ Return the current settings.
   "download_cover_art_artist_banner": false,
   "max_parallel_downloads": 3,
   "download_delay_seconds": 0,
+  "external_sync_delay_seconds": 0,
   "cover_resolution": 600,
   "download_cover_art": true,
   "overwrite_existing_files": true,
@@ -698,6 +701,9 @@ Return the current settings.
     "artwork_min_px": 600,
     "artwork_source": "highest",
     "recheck_days": 30
+  },
+  "external_library": {
+    "folders": []
   },
   "sync_navidrome": true,
   "slskd": {
@@ -725,8 +731,9 @@ Return the current settings.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `max_parallel_downloads` | integer | Concurrent download limit. Clamped to `1–30`. |
+| `max_parallel_downloads` | integer | Concurrent download **and extra-folder Sync** limit. Clamped to `1–30`. |
 | `download_delay_seconds` | number | Seconds to wait after each download in a batch before starting the next. Clamped to `0–300`. |
+| `external_sync_delay_seconds` | number | Seconds to wait after each extra-folder **batch** (batch size = `max_parallel_downloads`) before looking up lyrics, covers and genre. Clamped to `0–300`. `0` keeps those lookups concurrent, still capped by `max_parallel_downloads`. See [Existing music folders](features/external-library.md). |
 | `mini_player_enabled` | boolean | Legacy UI preference, kept so older clients keep working. The web UI no longer reads it — the player bar always appears while a track is loaded. The backend never reads it either. |
 | `ui_language` | string | The language the web UI is shown in, as a code like `en` or `pt-BR`. You don't set it by hand: the page sends it every time it loads and whenever you change the language, so the server knows your language for work that runs without a browser. `""` until a page has said. Anything that isn't a language code of that shape is ignored, and the settings page's own save never touches it. See [Internationalization](features/internationalization.md). |
 | `download_cover_art` | boolean | Whether to fetch and embed cover art at all. See [Download cover art](features/download-settings.md#download-cover-art). |
@@ -737,12 +744,15 @@ Return the current settings.
 | `download_cover_art_artist_banner` | boolean | Same as above, for the artist's banner image - independent of the photo setting. Default: `false`. See [Artist photo, banner & bio](features/artist-images.md). |
 | `lyrics_providers` | array | Ordered fallback list of lyrics providers: `lrclib`, `netease`. Each track tries them in order until one has lyrics. Unknown names are dropped; a list left with only the legacy `genius`/`musixmatch`/`azlyrics` names falls back to the defaults. An empty list means no lyrics, as does `download_lyrics: false`. See [Lyrics](features/lyrics.md). |
 | `download_lyrics` | boolean | Whether to look lyrics up at all. |
+| `lyrics_lrc_beside` | boolean | When `true` (default), time-synced `.lrc` files are written next to the audio. When `false`, they go under `lyrics_lrc_dir`. See [Lyrics](features/lyrics.md#sidecar-lrc-file). |
+| `lyrics_lrc_dir` | string | Absolute folder for `.lrc` files when `lyrics_lrc_beside` is false. Default `/data/lyrics`. Paths inside downloads, slskd, or extra music folders are rejected. |
 | `audio_providers` | array | Ordered fallback list of audio sources: `youtube-music`, `youtube`, `slskd`. `slskd` is dropped while `slskd.enabled` is false. See [slskd & Navidrome](features/slskd-navidrome.md#audio-sources-and-fallback-order). |
 | `slskd` | object | slskd connection and matching options. Saving with `enabled: true` but no `base_url` or `api_key` returns `400`. |
 | `navidrome` | object | Navidrome connection. Saving with `enabled: true` but no `url`, `username` or `password` returns `400`. |
 | `sync_navidrome` | boolean | Create/update a Navidrome playlist after playlist downloads, Playlist Monitor sweeps and library changes. |
-| `cache_cover_art` | boolean | Keep extracted cover images under `/data/cover_cache`. |
+| `cache_cover_art` | boolean | Keep extracted cover images under `/data/cover_cache` to speed up `/cover`. Covers fetched for [read-only extra folders](features/external-library.md) are always stored there, even when this is `false`. |
 | `library_upgrade` | object | Defaults a library upgrade scan starts from: `artwork_min_px` (clamped to `100–3000`), `artwork_source` (`highest`, `spotify`, `itunes`, `youtube-music`) and `recheck_days` (`0–3650`, `0` meaning always re-check). A scan request may override them. See [Upgrade library](features/library-upgrade.md#options). |
+| `external_library` | object | Extra folders of already-tagged audio. `folders` is a list of absolute paths (as seen inside the container, max 20). Relative paths are dropped. See [Existing music folders](features/external-library.md). |
 
 ---
 
@@ -753,6 +763,14 @@ Update one or more settings. Takes effect immediately and is persisted to disk.
 **Request body:** Partial settings object with any subset of the fields above.
 
 **Response:** Full settings object after the update.
+
+---
+
+### `GET /api/fs/dirs`
+
+Admin. Directory names that complete a path as typed in Settings (extra music folders and the lyrics folder). Query `path` is the text in the field so far.
+
+**Response:** `{ "dirs": ["/music", "/music/collection"] }` — only directories, never files. `/proc`, `/sys` and `/dev` are skipped.
 
 ---
 
@@ -886,13 +904,15 @@ List downloaded playlists, derived from the `.m3u` files already on disk (see [M
     "name": "My Playlist",
     "files": ["My Playlist/Artist - Song.mp3"],
     "count": 1,
+    "added": 1789600669,
     "cover": "My Playlist/My Playlist.jpg",
-    "liked": false
+    "liked": false,
+    "manual": false
   }
 ]
 ```
 
-Sorted by name, except that the [liked songs](features/liked-songs.md) playlist (`"liked": true`, named `Downtify Liked Songs`) comes first. A single track or an album downloaded without an M3U doesn't appear here.
+Sorted by name, except that the [liked songs](features/liked-songs.md) playlist (`"liked": true`, named `Downtify Liked Songs`) comes first. `"manual": true` is a playlist created in the Library (editable); imported Spotify/YouTube playlists are `"manual": false`. A single track or an album downloaded without an M3U doesn't appear here. `added` is the M3U file's modification time (Unix seconds).
 
 `cover` is the library path of the playlist's own artwork when one was saved beside its M3U (see [Playlist cover art](features/playlist-cover-art.md)), and `""` otherwise. Fetch it from [`GET /playlist-cover`](#get-playlist-cover).
 
@@ -900,7 +920,7 @@ Sorted by name, except that the [liked songs](features/liked-songs.md) playlist 
 
 ### `GET /tracks`
 
-List downloaded tracks with artist/album read from each file's embedded tags. Used by the [Library page](features/library-catalog.md#library-page) to build its album, artist and track views, and by the [Built-in Player](features/player.md#how-it-works).
+List library tracks with artist/album read from each file's embedded tags — downloads, slskd files left in place, and [extra folders](features/external-library.md). The Library **Tracks** tab uses the unfiltered list; album and artist pages use `?artist=`; playlists use `?playlist=`. The [Built-in Player](features/player.md#how-it-works) plays the rows those pages already loaded.
 
 **Response:**
 
@@ -927,9 +947,21 @@ List downloaded tracks with artist/album read from each file's embedded tags. Us
 ]
 ```
 
-`album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info, and `codec` (`mp3`, `flac`, `aac`, `alac`, `opus`, `vorbis`, or `""`), `bitrate` (bits/s), `sample_rate` (Hz) and `channels` (`0` when unknown) from the audio stream; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes.
+`album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info, and `codec` (`mp3`, `flac`, `aac`, `alac`, `opus`, `vorbis`, or `""`), `bitrate` (bits/s), `sample_rate` (Hz) and `channels` (`0` when unknown) from the audio stream; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes. The assembled listing is kept in memory and snapshotted in `/data`. `GET /tracks`, [`GET /api/library/summary`](#get-apilibrarysummary), albums and artists serve that snapshot without walking the disk; a download keeps the track snapshot and refreshes it in the background so the UI stays usable while the queue is running. A library delete removes those files from the snapshot immediately. `GET /list?refresh=true` (and the mobile library `refresh` flag) drop the snapshot and rescan. Writing a playlist (including Liked songs) does not rebuild the catalog. The Home page uses [`GET /api/library/summary`](#get-apilibrarysummary) instead of this endpoint.
 
-Sorted by `file`, same order as `/list`. `artist`/`album` come back as `""` when the file has no readable tag for that field — the frontend then simply doesn't offer it as a filter for that track.
+Query filters so the browser does not download every track to show a short list:
+
+| Query | What it returns |
+|-------|-----------------|
+| `playlist=Name` | That playlist's files, in playlist order |
+| `artist=Name` | Tracks grouped under that album artist |
+| `album=Title` | Tracks on that album (combine with `artist=` when two albums share a title) |
+| `q=words` | Title / artist / album / path must contain every word |
+| `limit=N` | Cap the list (`1`–`200`). Used by the "add songs" picker |
+
+Unfiltered `GET /tracks` is still the Library **Tracks** tab. Album and artist pages use `?artist=`. Search and pasted links use [`POST /api/library/lookup`](#post-apilibrarylookup).
+
+Sorted by `file`, same order as `/list` (except `?playlist=`, which keeps playlist order). `artist`/`album` come back as `""` when the file has no readable tag for that field — the frontend then simply doesn't offer it as a filter for that track.
 
 ---
 
@@ -982,7 +1014,7 @@ Duplicate paths are deduplicated before processing. Capped at 2000 files per req
 
 ### `GET /media/{path}`
 
-Serve a library file by its library path. Unlike the `/downloads` static mount, this also serves slskd downloads left in place (`slskd/…`).
+Serve a library file by its library path. Unlike the `/downloads` static mount, this also serves slskd downloads left in place (`slskd/…`) and extra-folder tracks (`ext/<id>/…`).
 
 **Response:** The audio file. `404` if the path isn't in the library.
 
@@ -990,13 +1022,13 @@ Serve a library file by its library path. Unlike the `/downloads` static mount, 
 
 ### `GET /cover`
 
-Return the embedded cover art for a file.
+Return cover art for a library file: `/data/cover_cache` first (including covers Sync stored for a [read-only extra folder](features/external-library.md)), then embedded tags, then `cover.jpg` / `folder.jpg` next to the audio.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `file` | string | yes | Relative path to the file |
 
-**Response:** Image bytes (`image/jpeg` or `image/png`). Returns `404` if no embedded cover is found.
+**Response:** Image bytes (`image/jpeg` or `image/png`). Returns `404` if none of those sources have a cover.
 
 ---
 
@@ -1062,7 +1094,7 @@ Tickets are single-use and expire after 5 minutes: `404` for an unknown, expired
 
 ### `DELETE /api/library/playlist`
 
-Delete a downloaded playlist: every track registered to it (including tracks other playlists also contain), its playlist-folder leftovers, its M3U file(s) and its catalog entry.
+Delete a downloaded playlist: every track registered to it (including tracks other playlists also contain), its playlist-folder leftovers, its M3U file(s) and its catalog entry. A playlist created in the Library (`manual`) only removes the M3U — the audio stays.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -1089,6 +1121,84 @@ Delete a downloaded playlist: every track registered to it (including tracks oth
 
 ---
 
+### `GET /api/library/summary`
+
+Home page payload: how many tracks / albums / artists are in the library, the total size, and up to 12 recently added albums (each with their `GET /tracks` rows). The Home page uses this instead of downloading every track.
+
+**Response:**
+
+```json
+{
+  "track_count": 8234,
+  "album_count": 412,
+  "artist_count": 201,
+  "size": 12884901888,
+  "recent_albums": [
+    {
+      "title": "Some Album",
+      "artist": "Artist",
+      "year": "2024",
+      "added": 1789600669,
+      "tracks": [{ "file": "Artist - Song.mp3", "title": "Song" }]
+    }
+  ]
+}
+```
+
+---
+
+### `GET /api/library/albums`
+
+Album tiles for **Library → Albums**: title, artist, year, added, duration, size, `track_count`, and `cover_file` (a library path for `/cover`). Tracks themselves are not included — opening an album loads `GET /tracks?artist=&album=`.
+
+### `GET /api/library/artists`
+
+Artist tiles for **Library → Artists** and Discover: `name`, `track_count`, `album_count`, `liked_count`, `cover_file`, added and duration. Opening an artist loads `GET /tracks?artist=`.
+
+### `POST /api/library/lookup`
+
+Search / link / top-songs pages send the songs on screen (`{ "songs": [{ "artist", "name" }] }`, up to 200). The response is the matching `GET /tracks` rows already in the library, so "in library" and Play work without downloading the whole catalog.
+
+---
+
+### `POST /api/library/playlists`
+
+Create an empty playlist the user can edit in **Library → Playlists**. Writes `Playlists/<name>.m3u` with `#EXTDOWNTIFY:manual`. `409` if the name is taken or reserved (`Downtify Liked Songs`).
+
+**Request body:** `{ "name": "Late night" }`
+
+**Response:** `{ "name": "Late night", "manual": true, "files": [], "count": 0 }`
+
+---
+
+### `POST /api/library/playlists/tracks`
+
+Add or remove library files (downloads or [extra folders](features/external-library.md)) on a **manual** playlist. Imported playlists return `403`. Missing files are dropped from the M3U.
+
+**Request body:**
+
+```json
+{
+  "name": "Late night",
+  "add": ["Artist - Song.mp3", "ext/ab12cd34ef56/Other.mp3"],
+  "remove": ["old.mp3"]
+}
+```
+
+**Response:** `{ "name": "Late night", "manual": true, "files": ["Artist - Song.mp3"], "count": 1, "added": 1, "removed": 1 }`
+
+---
+
+### `POST /api/library/playlists/rename`
+
+Rename a **manual** playlist. Imported playlists return `403`. The M3U and sidecar JPEG are renamed; audio files stay put. `409` if the new name is taken or reserved.
+
+**Request body:** `{ "name": "Late night", "new_name": "Late night mix" }`
+
+**Response:** `{ "name": "Late night mix", "previous": "Late night", "manual": true, "files": ["Artist - Song.mp3"], "count": 1 }`
+
+---
+
 ### `POST /api/library/reconcile`
 
 Fix library paths after files were moved or deleted outside Downtify, then rewrite the affected M3U files / Navidrome playlists when those are enabled. See [Fix library paths](features/library-catalog.md#fix-library-paths).
@@ -1108,6 +1218,65 @@ Fix library paths after files were moved or deleted outside Downtify, then rewri
 ```
 
 `likes_updated` is how many [liked songs](features/liked-songs.md#keeping-likes-in-step-with-the-files) were pointed at a file's new location.
+
+---
+
+### `POST /api/library/external/sync`
+
+Admin. Start a **background** scan of [extra music folders](features/external-library.md). The request returns as soon as the job is queued. Progress is `GET /api/library/external/sync` and `external_sync` WebSocket frames. A second start while one is running is `409`.
+
+**Body** (optional): `{ "folders": ["/music/collection"] }` — saved first (absolute paths only). Omit to scan whatever is already saved.
+
+**Response:** job status (`state: "running"`), same shape as GET below.
+
+---
+
+### `GET /api/library/external/sync`
+
+Admin. The running extra-folder sync, or the last finished one.
+
+```json
+{
+  "state": "done",
+  "started_at": "2026-10-01T12:00:00+00:00",
+  "finished_at": "2026-10-01T12:04:12+00:00",
+  "progress": { "done": 80, "total": 80, "current": "" },
+  "error": "",
+  "result": {
+    "folders": ["/music/collection"],
+    "added": 80,
+    "skipped_duplicates": 40,
+    "lyrics_embedded": 75,
+    "covers_fetched": 2,
+    "errors": 0,
+    "log": [
+      {
+        "status": "imported",
+        "title": "Harbor Lights",
+        "artist": "Kenji Aoki",
+        "file": "ext/abc123def456/Song.mp3",
+        "lyrics": true,
+        "cover": false,
+        "genre": true,
+        "lyrics_missing": false,
+        "error": ""
+      }
+    ]
+  }
+}
+```
+
+`state` is `idle`, `running`, `done` or `error`. While `running`, Settings shows progress and hides the last log. `result` is the last finished job (same counters as before: `added`, `skipped_duplicates`, `log` with `imported` / `duplicate` / `error` / …).
+
+---
+
+### `POST /api/library/external/unmap`
+
+Admin. Stop mapping one extra folder. Audio stays on disk; tracks leave the Library/player; `.lrc` sidecars and cached covers for those tracks are deleted.
+
+**Body:** `{ "folder": "/music/collection" }`
+
+**Response:** `{ "folder", "folder_id", "unmapped", "folder_ids", "folders" }` — `folders` is the list left in settings.
 
 ---
 

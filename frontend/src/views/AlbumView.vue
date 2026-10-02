@@ -1,7 +1,7 @@
 <template>
   <div>
     <DetailState
-      :loaded="library.loaded.value"
+      :loaded="ready"
       :found="!!album"
       icon="disc"
       :missing="t('album.notFound')"
@@ -103,7 +103,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
@@ -115,6 +115,7 @@ import PlayButton from '/src/components/library/PlayButton.vue'
 import TrackList from '/src/components/library/TrackList.vue'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
+import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
 import { albumKey } from '/src/lib/library'
 import { formatBytes, splitLength } from '/src/lib/format'
@@ -126,6 +127,21 @@ const router = useRouter()
 const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
+const playlistActions = usePlaylistActions()
+
+const ready = ref(false)
+
+async function loadAlbum() {
+  ready.value = false
+  await library.loadArtistTracks(String(route.query.artist || ''))
+  ready.value = true
+}
+
+onMounted(loadAlbum)
+watch(
+  () => [route.query.artist, route.query.title],
+  () => loadAlbum()
+)
 
 const album = computed(() =>
   library.findAlbum(
@@ -182,12 +198,20 @@ const moreByArtist = computed(() => {
     .slice(0, 6)
 })
 
+// Admins can put the whole album in one of their playlists (or a new one).
+const addToPlaylist = computed(() =>
+  playlistActions.addMenuItems(album.value?.tracks || [])
+)
+
 const menu = computed(() => [
   {
     label: t('actions.playNext'),
     icon: 'play-next',
     action: () => actions.playNext(album.value.tracks),
   },
+  ...(addToPlaylist.value.length
+    ? [{ divider: true }, ...addToPlaylist.value, { divider: true }]
+    : []),
   {
     label: t('library.downloadZip'),
     icon: 'zip',

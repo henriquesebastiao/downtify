@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 import os
 import re
-import re as _re
 import shutil
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -28,7 +27,6 @@ from mutagen.id3 import (
     TPOS,
     TRCK,
     TXXX,
-    USLT,
 )
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4, MP4Cover, MP4FreeForm
@@ -1323,11 +1321,15 @@ def _recording_date_for_tags(song: dict[str, Any]) -> str:
 
 
 def _album_artist_for_tags(artists: list[str]) -> Optional[str]:
+    """Album artist for a single download when the source has no album field.
+
+    One credited name is used as-is — including duo names with ``&``.
+    Several credited names (a collab list) still map to Various Artists.
+    """
+
     if not artists:
         return None
     if len(artists) > 1:
-        return 'Various Artists'
-    if re.search(r'\s*(?:,|，|&)\s*', artists[0]):
         return 'Various Artists'
     return artists[0]
 
@@ -1729,56 +1731,13 @@ def _apply_vorbis_comments(
         audio['metadata_block_picture'] = [encoded_data]
 
 
-def embed_lyrics(path: Path, lyrics: 'lyrics_mod.Lyrics') -> None:
+def embed_lyrics(
+    path: Path,
+    lyrics: 'lyrics_mod.Lyrics',
+    *,
+    sidecar: Optional[Path] = None,
+) -> None:
     """Embed plain lyrics into the audio tag and write a .lrc sidecar
-    next to it when synced lyrics are available."""
+    when synced lyrics are available."""
 
-    if not path.exists() or not lyrics.has_any():
-        return
-
-    if lyrics.synced:
-        sidecar = path.with_suffix('.lrc')
-        try:
-            sidecar.write_text(lyrics.synced, encoding='utf-8')
-        except OSError:
-            logger.opt(exception=True).warning(
-                'Could not write LRC sidecar {}', sidecar
-            )
-
-    text = lyrics.plain or _strip_lrc_timestamps(lyrics.synced or '')
-    if not text:
-        return
-
-    suffix = path.suffix.lower().lstrip('.')
-    if suffix == 'mp3':
-        audio = MP3(str(path), ID3=ID3)
-        if audio.tags is None:
-            audio.add_tags()
-        audio.tags.delall('USLT')
-        audio.tags.add(USLT(encoding=3, lang='eng', desc='', text=text))
-        # See the matching comment in _tag_mp3: v2.3 forces a UTF-8 ->
-        # UTF-16 transcode on save that corrupts long text frames.
-        audio.save(v2_version=4)
-    elif suffix in {'m4a', 'mp4', 'aac'}:
-        audio = MP4(str(path))
-        audio['\xa9lyr'] = text
-        audio.save()
-    elif suffix == 'flac':
-        audio = FLAC(str(path))
-        audio['lyrics'] = text
-        audio.save()
-    elif suffix in {'ogg', 'oga'}:
-        audio = OggVorbis(str(path))
-        audio['lyrics'] = text
-        audio.save()
-    elif suffix == 'opus':
-        audio = OggOpus(str(path))
-        audio['lyrics'] = text
-        audio.save()
-
-
-def _strip_lrc_timestamps(synced: str) -> str:
-    cleaned = _re.sub(r'\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]', '', synced)
-    return '\n'.join(
-        line.strip() for line in cleaned.splitlines() if line.strip()
-    )
+    lyrics_mod.write_to_file(path, lyrics, sidecar=sidecar)

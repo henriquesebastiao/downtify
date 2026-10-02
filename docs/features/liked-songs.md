@@ -10,7 +10,7 @@ There is nothing to switch on.
 
 ## Liking a song
 
-The heart sits next to every song you have downloaded:
+The heart sits next to every song in your library — downloads and tracks from [existing music folders](external-library.md):
 
 - in the track lists — Library, albums, artists and playlists;
 - in the [player bar](player.md#player-bar) (on screens 640px wide and up);

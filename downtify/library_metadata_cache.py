@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import stat
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,7 +22,8 @@ _TAG_READ_THREADS = 8
 #: Bumped whenever a row gains fields read from the file's tags: rows
 #: cached by an older version are treated as stale and re-read once.
 #: 4: the audio format (codec, bitrate, sample rate, channels).
-META_VERSION = 4
+#: 5: genre (from tags, or iTunes when Sync cannot write the file).
+META_VERSION = 5
 
 #: Columns added after the table was first created, with their SQL type.
 _ADDED_COLUMNS = {
@@ -36,12 +38,14 @@ _ADDED_COLUMNS = {
     'bitrate': 'INTEGER NOT NULL DEFAULT 0',
     'sample_rate': 'INTEGER NOT NULL DEFAULT 0',
     'channels': 'INTEGER NOT NULL DEFAULT 0',
+    'genre': "TEXT NOT NULL DEFAULT ''",
 }
 
 _ROW_COLUMNS = (
     'content_key, filename, file_mtime_ns, file_size, title, artist, '
     'album, has_cover, cover_px, album_artist, track_number, year, '
-    'duration, meta_version, codec, bitrate, sample_rate, channels'
+    'duration, meta_version, codec, bitrate, sample_rate, channels, '
+    'genre'
 )
 
 
@@ -83,6 +87,7 @@ def _row_entry(
         'bitrate': int(row['bitrate'] or 0),
         'sample_rate': int(row['sample_rate'] or 0),
         'channels': int(row['channels'] or 0),
+        'genre': str(row['genre'] or '') if 'genre' in row.keys() else '',
         'has_cover': bool(int(row['has_cover'] or 0)),
         'cover_px': int(row['cover_px'] or 0),
         'added': int(item['mtime_ns']) // 1_000_000_000,
@@ -124,6 +129,7 @@ class LibraryMetadataCache:
                         bitrate INTEGER NOT NULL DEFAULT 0,
                         sample_rate INTEGER NOT NULL DEFAULT 0,
                         channels INTEGER NOT NULL DEFAULT 0,
+                        genre TEXT NOT NULL DEFAULT '',
                         file_mtime_ns INTEGER NOT NULL,
                         file_size INTEGER NOT NULL,
                         cached_at TEXT NOT NULL
@@ -215,7 +221,7 @@ class LibraryMetadataCache:
         prepared: list[dict[str, Any]] = []
         for stored_path, full_path in items:
             name = _norm_filename(stored_path)
-            if not name or not full_path.is_file():
+            if not name:
                 prepared.append({
                     'stored': stored_path,
                     'full': full_path,
@@ -223,7 +229,7 @@ class LibraryMetadataCache:
                 })
                 continue
             try:
-                mtime_ns, size = _file_stat(full_path)
+                file_stat = full_path.stat()
             except OSError:
                 prepared.append({
                     'stored': stored_path,
@@ -231,6 +237,14 @@ class LibraryMetadataCache:
                     'ready': False,
                 })
                 continue
+            if not stat.S_ISREG(file_stat.st_mode):
+                prepared.append({
+                    'stored': stored_path,
+                    'full': full_path,
+                    'ready': False,
+                })
+                continue
+            mtime_ns, size = int(file_stat.st_mtime_ns), int(file_stat.st_size)
             ck = file_content_key_from_name_and_size(full_path.name, size)
             prepared.append({
                 'stored': stored_path,
@@ -475,10 +489,10 @@ class LibraryMetadataCache:
             """INSERT INTO library_metadata
                (content_key, filename, title, artist, album, has_cover,
                 cover_px, album_artist, track_number, year, duration,
-                meta_version, codec, bitrate, sample_rate, channels,
+                meta_version, codec, bitrate, sample_rate, channels, genre,
                 file_mtime_ns, file_size, cached_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                       ?)
+                       ?, ?)
                ON CONFLICT(content_key) DO UPDATE SET
                filename=excluded.filename,
                title=excluded.title,
@@ -495,6 +509,7 @@ class LibraryMetadataCache:
                bitrate=excluded.bitrate,
                sample_rate=excluded.sample_rate,
                channels=excluded.channels,
+               genre=excluded.genre,
                file_mtime_ns=excluded.file_mtime_ns,
                file_size=excluded.file_size,
                cached_at=excluded.cached_at""",
@@ -515,6 +530,7 @@ class LibraryMetadataCache:
                 int(entry.get('bitrate') or 0),
                 int(entry.get('sample_rate') or 0),
                 int(entry.get('channels') or 0),
+                str(entry.get('genre') or ''),
                 mtime_ns,
                 file_size,
                 _now_iso(),
@@ -540,4 +556,39 @@ class LibraryMetadataCache:
                 entry,
                 mtime_ns,
                 file_size,
+            )
+
+    def merge_fields(
+        self,
+        stored_path: str,
+        full_path: Path,
+        fields: dict[str, Any],
+    ) -> None:
+        """Patch cached display fields without re-reading the audio file."""
+
+        name = _norm_filename(stored_path)
+        ck = file_content_key(full_path)
+        if not name or not ck or not fields:
+            return
+        assignments: list[str] = []
+        values: list[Any] = []
+        if 'has_cover' in fields:
+            assignments.append('has_cover = ?')
+            values.append(1 if fields.get('has_cover') else 0)
+        if 'cover_px' in fields:
+            assignments.append('cover_px = ?')
+            values.append(int(fields.get('cover_px') or 0))
+        if 'genre' in fields:
+            assignments.append('genre = ?')
+            values.append(str(fields.get('genre') or ''))
+        if not assignments:
+            return
+        assignments.append('cached_at = ?')
+        values.append(_now_iso())
+        values.append(ck)
+        with self._connect() as conn:
+            conn.execute(
+                f"""UPDATE library_metadata SET {', '.join(assignments)}
+                    WHERE content_key = ?""",
+                values,
             )

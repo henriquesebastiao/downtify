@@ -15,16 +15,18 @@ import logging
 import mimetypes
 import os
 import sys
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
 from loguru import logger
+from starlette.middleware.gzip import GZipMiddleware
 from uvicorn import Config, Server
 
 from downtify import (
@@ -43,6 +45,7 @@ from downtify.cover_thumbs import CoverThumbs
 from downtify.discover import DiscoverStore
 from downtify.discovery import Announcer, discovery_enabled
 from downtify.downloader import Downloader
+from downtify.external_sync import ExternalSyncJob
 from downtify.library_archive import (
     MAX_ARCHIVE_FILES,
     ArchiveTicketStore,
@@ -50,14 +53,23 @@ from downtify.library_archive import (
     stream_library_zip,
 )
 from downtify.library_catalog import (
+    TRACK_QUERY_LIMIT_MAX,
+    filter_library_entries,
+    list_entries_for_stored_paths,
     list_library_entries,
     list_library_paths,
+    listing_for_request,
     resolve_library_file,
     resolve_library_image,
 )
 from downtify.library_cleanup import remove_track_leftovers
 from downtify.library_metadata_cache import LibraryMetadataCache
-from downtify.library_paths import SLSKD_LIBRARY_PREFIX
+from downtify.library_paths import library_file_root
+from downtify.library_paths_cache import (
+    bind_listing_store,
+    set_listing_refresh_fn,
+    set_listing_refresh_gate,
+)
 from downtify.library_sync import LibrarySync
 from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
@@ -202,33 +214,38 @@ _ARCHIVE_TICKETS = ArchiveTicketStore()
 
 
 def _library_root_for(
-    file: str, base: Path, slskd_dir: Optional[Path]
+    file: str,
+    base: Path,
+    slskd_dir: Optional[Path],
+    extra_dirs: tuple[Path, ...] = (),
 ) -> tuple[Path, str]:
     """``(root, path relative to root)`` for a library path.
 
     ``slskd/...`` paths are slskd downloads left in place under the slskd
-    folder; everything else is relative to the downloads folder.
+    folder; ``ext/<id>/...`` paths are extra library folders. Everything
+    else is relative to the downloads folder.
     """
-    text = str(file or '').replace('\\', '/')
-    if slskd_dir is not None and text.startswith(SLSKD_LIBRARY_PREFIX):
-        return slskd_dir.resolve(), text[len(SLSKD_LIBRARY_PREFIX) :]
-    return base, text
+    return library_file_root(file, base, slskd_dir, extra_dirs)
 
 
 def _delete_track_file(
-    file: str, base: Path, slskd_dir: Optional[Path] = None
+    file: str,
+    base: Path,
+    slskd_dir: Optional[Path] = None,
+    extra_dirs: tuple[Path, ...] = (),
 ) -> dict:
     """Delete one track (``file``, relative to ``base``) plus its
     sidecars, and prune the folder it leaves behind if it's now empty.
 
     ``slskd/...`` paths are resolved against ``slskd_dir`` instead, with the
-    same cleanup, and pruning stops at the slskd folder.
+    same cleanup, and pruning stops at the slskd folder. Extra-folder
+    tracks (``ext/<id>/...``) resolve against ``extra_dirs``.
 
     Returns ``{'deleted': True}`` or ``{'deleted': False, 'error': str}``
     — this is the exact shape ``DELETE /delete`` has always returned;
     ``DELETE /delete/batch`` reuses it per file.
     """
-    root, relative = _library_root_for(file, base, slskd_dir)
+    root, relative = _library_root_for(file, base, slskd_dir, extra_dirs)
     # Resolve and confine to its root to prevent path traversal.
     try:
         full = (root / relative).resolve()
@@ -246,7 +263,10 @@ def _delete_track_file(
 
 
 def _delete_tracks_batch(
-    files: list[str], base: Path, slskd_dir: Optional[Path] = None
+    files: list[str],
+    base: Path,
+    slskd_dir: Optional[Path] = None,
+    extra_dirs: tuple[Path, ...] = (),
 ) -> dict:
     """Delete every file in ``files`` (each relative to ``base``).
 
@@ -264,7 +284,9 @@ def _delete_tracks_batch(
         raise ValueError(
             f'Cannot delete more than {MAX_BATCH_DELETE} files in one request'
         )
-    results = {f: _delete_track_file(f, base, slskd_dir) for f in files}
+    results = {
+        f: _delete_track_file(f, base, slskd_dir, extra_dirs) for f in files
+    }
     deleted = sum(1 for r in results.values() if r['deleted'])
     return {
         'deleted_count': deleted,
@@ -282,6 +304,26 @@ def _spotify_id_for_library_file(stored_path: str) -> str:
     return index.spotify_id_for_filename(stored_path) or ''
 
 
+def _downloads_using_disk() -> bool:
+    """True while a queue job is writing audio (yt-dlp / ffmpeg)."""
+
+    return any(
+        str(job.get('status') or '') in {'queued', 'downloading'}
+        for job in api.state.download_jobs.values()
+    )
+
+
+def _warm_library_listing() -> None:
+    """Build ``GET /tracks`` in the background so the first UI load is warm."""
+
+    try:
+        ctx = api.library_context()
+        set_listing_refresh_fn(lambda: list_library_entries(ctx))
+        list_library_entries(ctx)
+    except Exception:
+        logger.opt(exception=True).debug('Library listing warm failed')
+
+
 def _open_library_stores(monitor_db_path: Path) -> None:
     """Open the library catalog/index/cache stores in /data and backfill the
     track index and playlist catalog from Playlist Monitor history."""
@@ -290,6 +332,8 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.track_index = TrackIndex(library_db)
     api.state.navidrome_index = NavidromeIndex(library_db)
     api.state.metadata_cache = LibraryMetadataCache(library_db)
+    bind_listing_store(library_db)
+    set_listing_refresh_gate(_downloads_using_disk)
     api.state.playlist_catalog = PlaylistCatalog(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
@@ -312,6 +356,9 @@ def _open_library_stores(monitor_db_path: Path) -> None:
             lyrics_cache=api.state.lyrics_cache,
             publish=api.broadcast_upgrade_progress,
         ),
+    )
+    api.state.external_sync = ExternalSyncJob(
+        DATABASE_DIR / 'external_sync.json'
     )
     ctx = api.library_context()
     try:
@@ -406,6 +453,11 @@ def build_app() -> FastAPI:
         db_path = DATABASE_DIR / 'downtify_monitor.db'
         api.state.monitor_db = PlaylistMonitorDB(db_path)
         _open_library_stores(db_path)
+        threading.Thread(
+            target=_warm_library_listing,
+            name='downtify-library-warm',
+            daemon=True,
+        ).start()
         # Keeps the cached Spotify track lists of known playlists fresh for
         # the playlist batch reports.
         api.spawn_task(
@@ -519,6 +571,8 @@ def build_app() -> FastAPI:
             'X-Downtify-Transcoded',
         ],
     )
+    # Compress large JSON listings (``GET /tracks``) for the web UI.
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     settings_path = DATABASE_DIR / 'settings.json'
     api.state.settings_path = settings_path
@@ -555,6 +609,8 @@ def build_app() -> FastAPI:
         audio_providers=api._effective_audio_providers(api.state.settings),
         slskd_settings=api._effective_slskd_settings(api.state.settings),
     )
+    api.normalize_lyrics_location(api.state.settings)
+    api.bind_lrc_resolver()
     # A finished download (from the UI or a monitor sweep alike) seeds its
     # artist's profile in the background.
     api.state.downloader.on_downloaded = api.enrich_artist_after_download
@@ -574,25 +630,36 @@ def build_app() -> FastAPI:
     def list_downloads(refresh: bool = False) -> list[str]:
         """Every playable library file: the downloads folder (recursively,
         so per-playlist folders show up), slskd downloads left in place
-        (``slskd/...``) and files known to the track index.
+        (``slskd/...``), extra folders from Settings (``ext/<id>/...``)
+        and files known to the track index.
 
         The directory scan is cached briefly; ``?refresh=true`` forces a
         rescan.
         """
         if refresh:
-            api.invalidate_library_paths_cache()
+            api.invalidate_library_paths_cache(drop_entries=True)
         return list_library_paths(api.library_context())
 
     @app.get('/playlists')
     def list_playlists() -> list[dict]:
         """List downloaded playlists - see
         ``downtify.playlist_listing.list_library_playlists``."""
+        ctx = api.library_context()
         return list_library_playlists(
-            DOWNLOAD_DIR, api.library_context().slskd_dir
+            ctx.download_dir,
+            ctx.slskd_dir,
+            ctx.extra_dirs,
+            stale_ok=True,
         )
 
     @app.get('/tracks')
-    def list_tracks() -> list[dict]:
+    def list_tracks(
+        playlist: str = '',
+        artist: str = '',
+        album: str = '',
+        q: str = '',
+        limit: int = Query(0, ge=0, le=TRACK_QUERY_LIMIT_MAX),
+    ) -> list[dict]:
         """List library tracks with metadata read from embedded tags.
 
         Powers the player's and Library's "only this artist" / "only
@@ -600,13 +667,41 @@ def build_app() -> FastAPI:
         particular isn't reliably derivable from the filename or folder
         layout unless *Organize by artist/album* is on.
 
+        ``?playlist=``, ``?artist=``, ``?album=`` and ``?q=`` return a
+        subset so pages that show one list do not download the whole
+        library. ``?limit=`` caps that subset (search picker).
+
         Each row has ``file``, ``artist`` and ``album``, plus ``title``,
         ``has_cover`` and, when the file belongs to a downloaded
         playlist, ``playlists``. Tags are cached in /data per file and
         re-read only when the file's modification time or size changes.
+        The assembled listing is reused until audio files are added or
+        removed, and is snapshotted so a restart does not walk every
+        file again.
         """
-        tracks = list_library_entries(api.library_context())
-        tracks.sort(key=lambda t: t['file'])
+        ctx = api.library_context()
+        name = str(playlist or '').strip()
+        if name:
+            found = list_library_playlists(
+                ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+            )
+            match = next(
+                (
+                    item
+                    for item in found
+                    if str(item.get('name') or '') == name
+                ),
+                None,
+            )
+            files = list(match.get('files') or []) if match else []
+            tracks = list_entries_for_stored_paths(ctx, files)
+        else:
+            tracks = listing_for_request(ctx)
+            tracks.sort(key=lambda t: t['file'])
+        if artist or album or q or limit:
+            tracks = filter_library_entries(
+                tracks, artist=artist, album=album, q=q, limit=limit
+            )
         return tracks
 
     @app.get('/media/{file_path:path}')
@@ -614,7 +709,8 @@ def build_app() -> FastAPI:
         """Serve a library file by its library path.
 
         Covers what the ``/downloads`` static mount can't: slskd downloads
-        left in place under the slskd folder (``slskd/...``).
+        left in place under the slskd folder (``slskd/...``) and extra
+        library folders (``ext/<id>/...``).
         """
         full = resolve_library_file(file_path, api.library_context())
         if full is None:
@@ -703,11 +799,13 @@ def build_app() -> FastAPI:
 
     @app.delete('/delete')
     async def delete_download(file: str, request: Request) -> dict:
+        ctx = api.library_context()
         result = await asyncio.to_thread(
             _delete_track_file,
             file,
             DOWNLOAD_DIR.resolve(),
-            api.library_context().slskd_dir,
+            ctx.slskd_dir,
+            ctx.extra_dirs,
         )
         await api.log_activity(request, 'delete', file)
         return await api.after_library_delete({file: result}, result)
@@ -726,11 +824,13 @@ def build_app() -> FastAPI:
         path or a file that's already gone doesn't stop the rest.
         """
         try:
+            ctx = api.library_context()
             result = await asyncio.to_thread(
                 _delete_tracks_batch,
                 files,
                 DOWNLOAD_DIR.resolve(),
-                api.library_context().slskd_dir,
+                ctx.slskd_dir,
+                ctx.extra_dirs,
             )
         except ValueError as exc:
             raise HTTPException(status_code=413, detail=str(exc)) from exc
@@ -765,11 +865,7 @@ def build_app() -> FastAPI:
 
         data: bytes | None = None
         mime: str | None = None
-        cache = (
-            api.state.cover_cache
-            if api.state.settings.get('cache_cover_art')
-            else None
-        )
+        cache = api.state.cover_cache
         if cache is not None:
             hit = cache.lookup(file, full)
             if hit is not None:
@@ -780,7 +876,7 @@ def build_app() -> FastAPI:
                 raise HTTPException(
                     status_code=404, detail='No embedded cover'
                 )
-            if cache is not None:
+            if api.state.settings.get('cache_cover_art') and cache is not None:
                 cache.store(file, full, data, mime or 'image/jpeg')
         return Response(
             content=data,

@@ -195,6 +195,10 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
+# Local audio dumps / artefacts (never commit)
+*.mp3
+*.m4a
+
 # Generated using ignr.py - github.com/Antrikshy/ignr.py
 
 links.txt

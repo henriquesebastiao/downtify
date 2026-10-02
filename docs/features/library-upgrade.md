@@ -29,7 +29,7 @@ An upgrade rewrites **artwork, lyrics and tags**. It does not fetch a different 
 A track counts as behind when:
 
 - its embedded cover's short side is **smaller than the target size** (a track with no cover at all counts too);
-- it has **neither** embedded lyrics **nor** an `.lrc` sidecar next to it;
+- it has **neither** embedded lyrics **nor** an `.lrc` sidecar (next to the file or in the lyrics folder from Settings);
 - any of **album**, **album artist**, **year** or **track number** is missing from its tags.
 
 **Refresh tags** only works for tracks Downtify still has a Spotify track ID for — the ones it downloaded from a Spotify link, kept in the [track index](library-catalog.md#what-gets-stored). Other tracks are queued but come back as *Nothing to do*.

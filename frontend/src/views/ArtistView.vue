@@ -1,7 +1,7 @@
 <template>
   <div>
     <DetailState
-      :loaded="library.loaded.value"
+      :loaded="ready"
       :found="!!artist"
       icon="user"
       :missing="t('artist.notFound')"
@@ -51,6 +51,17 @@
           >
             {{ t('artist.findMore') }}
           </UiButton>
+          <UiMenu v-if="moreMenu.length" :items="moreMenu">
+            <template #trigger>
+              <UiIconButton
+                icon="more"
+                :label="t('common.more')"
+                size="lg"
+                round
+                :photo="!!artBannerUrl"
+              />
+            </template>
+          </UiMenu>
         </template>
       </CollectionHero>
 
@@ -190,12 +201,13 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
+import UiMenu from '/src/components/ui/UiMenu.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import ArtistArtModal from '/src/components/library/ArtistArtModal.vue'
@@ -209,6 +221,7 @@ import TrackList from '/src/components/library/TrackList.vue'
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
+import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
 import { sortItems } from '/src/lib/library'
@@ -224,7 +237,22 @@ const route = useRoute()
 const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
+const playlistActions = usePlaylistActions()
 const ui = useUi()
+
+const ready = ref(false)
+
+async function loadArtist() {
+  ready.value = false
+  await library.loadArtistTracks(String(route.query.name || ''))
+  ready.value = true
+}
+
+onMounted(loadArtist)
+watch(
+  () => route.query.name,
+  () => loadArtist()
+)
 
 const artist = computed(() =>
   library.findArtist(String(route.query.name || ''))
@@ -242,6 +270,10 @@ const allTracks = computed(() => {
   )
   return [...inAlbums, ...loose]
 })
+
+// Admins can put everything of the artist's in one of their playlists (or a
+// new one); there's nothing else in this menu, so it's hidden for others.
+const moreMenu = computed(() => playlistActions.addMenuItems(allTracks.value))
 
 const context = computed(() => ({
   type: 'artist',

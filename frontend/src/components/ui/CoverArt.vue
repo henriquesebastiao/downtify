@@ -5,8 +5,9 @@
     :style="{ background: placeholder }"
   >
     <div
-      v-if="mosaic.length >= 4"
-      class="grid size-full grid-cols-2 grid-rows-2"
+      v-if="mosaic.length >= 2"
+      class="grid size-full"
+      :class="mosaic.length === 2 ? 'grid-cols-2' : 'grid-cols-2 grid-rows-2'"
     >
       <img
         v-for="(url, i) in mosaic.slice(0, 4)"
@@ -15,7 +16,8 @@
         alt=""
         loading="lazy"
         decoding="async"
-        class="size-full object-cover"
+        class="size-full min-h-0 min-w-0 object-cover"
+        :class="i === 0 && mosaic.length === 3 ? 'row-span-2' : ''"
       />
     </div>
     <img
@@ -109,7 +111,7 @@ const imageSrc = computed(() => {
 })
 const letters = computed(() => (props.symbol ? '' : initials(props.name)))
 const showFallback = computed(
-  () => mosaic.value.length < 4 && (!imageSrc.value || failed.value)
+  () => mosaic.value.length < 2 && (!imageSrc.value || failed.value)
 )
 // Placeholder tint derived from the name, so an album without art keeps
 // the same colour everywhere.

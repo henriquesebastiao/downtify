@@ -3,7 +3,7 @@
 // download. Shared by the top-songs page (a pasted link) and the artist
 // page's Top songs tab, which show the same list the same way
 // (TopSongsPanel).
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { jobSongKey, useDownloadManager, useProgressTracker } from './download'
 import { useLibrary } from './library'
@@ -27,6 +27,12 @@ export function useTopSongs(artist) {
   const tracker = useProgressTracker()
   const library = useLibrary()
   const ui = useUi()
+
+  watch(
+    () => artist.value?.songs,
+    (songs) => library.lookupSongs(songs),
+    { immediate: true }
+  )
 
   const selected = ref(new Set())
   const submitting = ref(false)

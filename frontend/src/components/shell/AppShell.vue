@@ -23,6 +23,9 @@
     <ShortcutsDialog v-model:open="shortcutsOpen" />
     <UiToasts />
     <UiDialog />
+    <CreatePlaylistModal />
+    <RenamePlaylistModal />
+    <AddTracksToPlaylistModal />
     <DefaultPasswordPrompt />
     <ReplaceAudioDialog v-if="auth.isAdmin.value" />
   </div>
@@ -39,6 +42,9 @@ import NowPlaying from './NowPlaying.vue'
 import ShortcutsDialog from './ShortcutsDialog.vue'
 import UiToasts from '../ui/UiToasts.vue'
 import UiDialog from '../ui/UiDialog.vue'
+import CreatePlaylistModal from '../library/CreatePlaylistModal.vue'
+import RenamePlaylistModal from '../library/RenamePlaylistModal.vue'
+import AddTracksToPlaylistModal from '../library/AddTracksToPlaylistModal.vue'
 import SignIn from './SignIn.vue'
 import DefaultPasswordPrompt from './DefaultPasswordPrompt.vue'
 import ReplaceAudioDialog from '../library/ReplaceAudioDialog.vue'

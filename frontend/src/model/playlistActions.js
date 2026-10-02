@@ -1,4 +1,6 @@
-// Actions for downloaded playlists (library + Spotify download tracking).
+// Actions for downloaded playlists (library + Spotify download tracking)
+// and for playlists the user creates in the Library.
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import API from '/src/model/api'
@@ -8,13 +10,27 @@ import { useLibrary } from '/src/model/library'
 import { useLikes } from '/src/model/likes'
 import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
+import { useAuth } from '/src/model/auth'
+import { usePlayer } from '/src/model/player'
+import { useHistory } from '/src/model/history'
 import { useI18n } from '/src/i18n'
+import { itemTrackCount } from '/src/lib/library'
+
+const createOpen = ref(false)
+const createFiles = ref([])
+const addOpen = ref(false)
+const addPlaylist = ref(null)
+const renameOpen = ref(false)
+const renamePlaylist = ref(null)
 
 export function usePlaylistActions() {
   const library = useLibrary()
   const likes = useLikes()
   const tracks = useTrackActions()
   const ui = useUi()
+  const auth = useAuth()
+  const player = usePlayer()
+  const history = useHistory()
   const router = useRouter()
   const { t } = useI18n()
 
@@ -22,13 +38,148 @@ export function usePlaylistActions() {
     return {
       type: 'playlist',
       title: playlist.title,
-      cover: playlist.cover || playlist.covers[0] || '',
+      cover: playlist.cover || '',
+      covers: playlist.covers || [],
       route: { name: 'Playlist', query: { name: playlist.name } },
+      manual: Boolean(playlist.manual),
+      playlistName: playlist.name,
     }
   }
 
-  function play(playlist, options = {}) {
-    tracks.play(playlist.tracks, 0, contextFor(playlist), options)
+  async function play(playlist, options = {}) {
+    await library.loadPlaylistTracks(playlist.name)
+    const live = library.findPlaylist(playlist.name) || playlist
+    tracks.play(live.tracks, 0, contextFor(live), options)
+  }
+
+  function manuals() {
+    return library.playlists.value.filter((item) => item.manual)
+  }
+
+  function openCreate(files = []) {
+    createFiles.value = files.map((item) =>
+      typeof item === 'string' ? item : item.file
+    )
+    createOpen.value = true
+  }
+
+  function openAddSongs(playlist) {
+    addPlaylist.value = playlist
+    addOpen.value = true
+  }
+
+  function openRename(playlist) {
+    renamePlaylist.value = playlist
+    renameOpen.value = true
+  }
+
+  async function createNamed(name, files = []) {
+    try {
+      const res = await API.createLibraryPlaylist(name)
+      const created = res.data?.name || name
+      if (files.length) {
+        await API.editLibraryPlaylistTracks(created, { add: files })
+      }
+      await library.load({ force: true })
+      ui.toast(t('playlists.created', { name: created }), { kind: 'success' })
+      return created
+    } catch (err) {
+      ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+        kind: 'error',
+      })
+      throw err
+    }
+  }
+
+  async function renameNamed(playlist, newName) {
+    try {
+      const res = await API.renameLibraryPlaylist(playlist.name, newName)
+      const renamed = res.data?.name || newName
+      const previous = playlist.name
+      history.retitlePlaylist(previous, renamed)
+      const ctx = player.context.value
+      if (
+        ctx?.type === 'playlist' &&
+        (ctx.playlistName === previous ||
+          ctx.title === previous ||
+          ctx.route?.query?.name === previous)
+      ) {
+        player.context.value = {
+          ...ctx,
+          title: renamed,
+          playlistName: renamed,
+          route: { name: 'Playlist', query: { name: renamed } },
+        }
+      }
+      await library.load({ force: true })
+      ui.toast(t('playlists.renamed', { name: renamed }), { kind: 'success' })
+      return renamed
+    } catch (err) {
+      ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+        kind: 'error',
+      })
+      throw err
+    }
+  }
+
+  async function addFiles(playlist, files) {
+    const names = files.map((item) =>
+      typeof item === 'string' ? item : item.file
+    )
+    try {
+      const res = await API.editLibraryPlaylistTracks(playlist.name, {
+        add: names,
+      })
+      // The server skips what the playlist already has: report what it did.
+      const added = Number(res.data?.added ?? names.length)
+      await library.load({ force: true })
+      ui.toast(
+        added
+          ? t('playlists.added', { count: added, name: playlist.title })
+          : t('playlists.alreadyIn', { name: playlist.title }),
+        { kind: 'success' }
+      )
+    } catch (err) {
+      ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+        kind: 'error',
+      })
+    }
+  }
+
+  async function removeFiles(playlist, files) {
+    const names = files.map((item) =>
+      typeof item === 'string' ? item : item.file
+    )
+    try {
+      await API.editLibraryPlaylistTracks(playlist.name, { remove: names })
+      await library.load({ force: true })
+      ui.toast(t('playlists.removedTrack', { name: playlist.title }), {
+        kind: 'success',
+      })
+    } catch (err) {
+      ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+        kind: 'error',
+      })
+    }
+  }
+
+  function addMenuItems(files) {
+    if (!auth.isAdmin.value) return []
+    const list = Array.isArray(files) ? files : [files]
+    const items = [
+      { heading: t('playlists.addTo') },
+      ...manuals().map((playlist) => ({
+        label: playlist.title,
+        icon: 'playlist',
+        action: () => addFiles(playlist, list),
+      })),
+      {
+        label: t('playlists.new'),
+        icon: 'plus',
+        action: () => openCreate(list),
+      },
+    ]
+    return items
   }
 
   async function downloadMissing(playlist) {
@@ -99,7 +250,9 @@ export function usePlaylistActions() {
     if (playlist.liked) return removeLikes()
     const ok = await ui.confirm({
       title: t('confirm.deletePlaylistTitle', { name: playlist.name }),
-      body: t('confirm.deletePlaylistBody'),
+      body: playlist.manual
+        ? t('confirm.deleteManualPlaylistBody')
+        : t('confirm.deletePlaylistBody'),
       confirmLabel: t('common.delete'),
       danger: true,
     })
@@ -124,7 +277,7 @@ export function usePlaylistActions() {
 
   function menuFor(playlist, { hide = [] } = {}) {
     const batch = playlist.batch
-    const empty = !playlist.tracks.length
+    const empty = !itemTrackCount(playlist)
     return [
       {
         label: t('actions.play'),
@@ -142,7 +295,11 @@ export function usePlaylistActions() {
         label: t('actions.addToQueue'),
         icon: 'queue',
         hidden: empty,
-        action: () => tracks.enqueue(playlist.tracks),
+        action: async () => {
+          await library.loadPlaylistTracks(playlist.name)
+          const live = library.findPlaylist(playlist.name) || playlist
+          tracks.enqueue(live.tracks)
+        },
       },
       { divider: true },
       {
@@ -166,6 +323,18 @@ export function usePlaylistActions() {
         action: () => window.open(batch.playlist_url, '_blank', 'noopener'),
       },
       {
+        label: t('playlists.addSongs'),
+        icon: 'plus',
+        hidden: !playlist.manual || !auth.isAdmin.value,
+        action: () => openAddSongs(playlist),
+      },
+      {
+        label: t('playlists.rename'),
+        icon: 'pencil',
+        hidden: !playlist.manual || !auth.isAdmin.value,
+        action: () => openRename(playlist),
+      },
+      {
         label: t('library.downloadZip'),
         icon: 'zip',
         hidden: empty,
@@ -181,5 +350,27 @@ export function usePlaylistActions() {
     ]
   }
 
-  return { contextFor, play, downloadMissing, watch, remove, menuFor }
+  return {
+    contextFor,
+    play,
+    downloadMissing,
+    watch,
+    remove,
+    menuFor,
+    manuals,
+    openCreate,
+    openAddSongs,
+    openRename,
+    createNamed,
+    renameNamed,
+    addFiles,
+    removeFiles,
+    addMenuItems,
+    createOpen,
+    createFiles,
+    addOpen,
+    addPlaylist,
+    renameOpen,
+    renamePlaylist,
+  }
 }

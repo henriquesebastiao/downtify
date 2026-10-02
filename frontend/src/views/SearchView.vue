@@ -175,13 +175,20 @@ import PageHeader from '/src/components/library/PageHeader.vue'
 import ReleaseCard from '/src/components/search/ReleaseCard.vue'
 import SongRow from '/src/components/search/SongRow.vue'
 import { useSearch } from '/src/model/search'
+import { useLibrary } from '/src/model/library'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
 const route = useRoute()
 const search = useSearch()
+const library = useLibrary()
 const filter = ref('all')
 const recent = useLocalStorage('downtify-recent-searches', [])
+
+watch(
+  () => search.songs.value,
+  (songs) => library.lookupSongs(songs)
+)
 
 const query = computed(() => String(route.params.query || '').trim())
 

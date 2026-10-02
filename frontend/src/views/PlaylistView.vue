@@ -10,7 +10,7 @@
         :title="playlist.title"
         :kicker="t('playlists.kicker')"
         :covers="playlist.covers"
-        :cover="playlist.cover || playlist.covers[0] || ''"
+        :cover="playlist.cover"
         :name="playlist.title"
         :icon="playlist.liked ? 'heart' : 'playlist'"
         :symbol="playlist.liked"
@@ -53,6 +53,22 @@
             {{ t('playlists.downloadMissing', { count: batch.missing_count }) }}
           </UiButton>
           <UiButton
+            v-if="playlist.manual && auth.isAdmin.value"
+            variant="secondary"
+            icon="plus"
+            @click="playlistActions.openAddSongs(playlist)"
+          >
+            {{ t('playlists.addSongs') }}
+          </UiButton>
+          <UiButton
+            v-if="playlist.manual && auth.isAdmin.value"
+            variant="ghost"
+            icon="pencil"
+            @click="playlistActions.openRename(playlist)"
+          >
+            {{ t('playlists.rename') }}
+          </UiButton>
+          <UiButton
             v-if="playlist.tracks.length"
             variant="ghost"
             icon="zip"
@@ -77,7 +93,11 @@
           v-else
           icon="download"
           :title="t('playlists.nothingYet')"
-          :body="t('playlists.nothingYetHint')"
+          :body="
+            playlist.manual
+              ? t('playlists.nothingYetManualHint')
+              : t('playlists.nothingYetHint')
+          "
         />
 
         <UiPanel
@@ -143,6 +163,7 @@ import DownloadState from '/src/components/search/DownloadState.vue'
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
+import { useAuth } from '/src/model/auth'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
 import { splitLength } from '/src/lib/format'
@@ -153,6 +174,7 @@ const route = useRoute()
 const router = useRouter()
 const library = useLibrary()
 const player = usePlayer()
+const auth = useAuth()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
 
@@ -165,7 +187,7 @@ const facts = computed(() => {
   const p = playlist.value
   const { hours, minutes } = splitLength(p.duration)
   return [
-    t('common.tracks', { count: p.tracks.length }),
+    t('common.tracks', { count: p.tracks.length || p.fileCount || 0 }),
     p.duration
       ? hours
         ? t('common.lengthHours', { hours, minutes })
@@ -223,8 +245,12 @@ async function loadMissing() {
 }
 
 watch(
-  () => route.query.name,
-  () => (missing.value = [])
+  () => String(route.query.name || ''),
+  (name) => {
+    missing.value = []
+    library.loadPlaylistTracks(name)
+  },
+  { immediate: true }
 )
 
 // The liked songs playlist goes when the last heart is removed: leave the

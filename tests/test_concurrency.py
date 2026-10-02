@@ -556,6 +556,7 @@ def _entry(stored, full):
         'bitrate': 320000,
         'sample_rate': 44100,
         'channels': 2,
+        'genre': '',
         'has_cover': False,
         'cover_px': 0,
         'added': int(full.stat().st_mtime),

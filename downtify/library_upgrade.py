@@ -365,7 +365,9 @@ class UpgradeDeps:
 
 
 def resolve_track(stored_path: str, ctx: LibraryContext) -> Optional[Path]:
-    return locate_library_file(stored_path, ctx.download_dir, ctx.slskd_dir)
+    return locate_library_file(
+        stored_path, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+    )
 
 
 @dataclass
@@ -460,7 +462,11 @@ def _write_upgrade(
                 or (keep.data if keep is not None else None),
             )
         if new_lyrics is not None:
-            embed_lyrics(stage.staged, new_lyrics)
+            embed_lyrics(
+                stage.staged,
+                new_lyrics,
+                sidecar=stage.staged.with_suffix('.lrc'),
+            )
     except Exception as exc:
         _discard(stage)
         logger.opt(exception=True).warning(
@@ -473,8 +479,12 @@ def _write_upgrade(
         staged_lrc.unlink(missing_ok=True)
         return 'The rewritten file did not verify; kept the original'
     if new_lyrics is not None and staged_lrc.exists():
-        # embed_lyrics wrote the .lrc beside the working copy.
-        os.replace(str(staged_lrc), str(full.with_suffix('.lrc')))
+        dest_lrc = lyrics_mod.lrc_path_for(full)
+        dest_lrc.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(str(staged_lrc), str(dest_lrc))
+        beside = full.with_suffix('.lrc')
+        if dest_lrc != beside:
+            beside.unlink(missing_ok=True)
     return None
 
 
