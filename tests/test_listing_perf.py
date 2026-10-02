@@ -16,6 +16,7 @@ from downtify.library_catalog import (
     list_library_entries,
     listing_for_request,
     merge_library_listing_file,
+    refresh_library_listing_files,
 )
 from downtify.library_paths_cache import (
     invalidate_library_paths_cache,
@@ -145,3 +146,39 @@ def test_drop_listing_files_hides_deleted_album_without_rescan(tmp_path):
     files = [row['file'] for row in listing_for_request(ctx)]
     assert 'Oruam/Oh Garota/Oruam - Track.mp3' not in files
     assert 'Keep.mp3' in files
+
+
+def _tag(path, title, album_artist):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b'x')
+    tags = ID3()
+    tags.add(TIT2(encoding=3, text=title))
+    tags.add(TPE1(encoding=3, text='AliasNorth'))
+    tags.add(TPE2(encoding=3, text=album_artist))
+    tags.add(TALB(encoding=3, text='Glass Harbor'))
+    tags.save(str(path), v2_version=3)
+
+
+def test_refresh_listing_files_reads_a_retag_in_place(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    first = download_dir / 'AliasNorth' / 'a.mp3'
+    _tag(first, 'Harbor Lights', 'AliasNorth')
+    invalidate_library_paths_cache()
+    ctx = LibraryContext(download_dir=download_dir)
+    list_library_entries(ctx)
+    # Marked as a compilation: same path, new album artist.
+    _tag(first, 'Harbor Lights', 'Various Artists')
+    refresh_library_listing_files(ctx, ['AliasNorth/a.mp3'])
+    # A download finishing before the rescan stores the snapshot again
+    # under the tree's new fingerprint; the retag must survive it.
+    _tag(download_dir / 'AliasWest' / 'b.mp3', 'Tide Line', 'Various Artists')
+    merge_library_listing_file(ctx, 'AliasWest/b.mp3')
+    rows = {row['file']: row for row in listing_for_request(ctx)}
+    assert rows['AliasNorth/a.mp3']['album_artist'] == 'Various Artists'
+    albums = [
+        row
+        for row in library_album_index(ctx)
+        if row['title'] == 'Glass Harbor'
+    ]
+    assert len(albums) == 1
+    assert albums[0]['track_count'] == 2
