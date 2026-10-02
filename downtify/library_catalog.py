@@ -22,6 +22,9 @@ from .library_paths_cache import (
     get_cached_path_pairs,
     get_cached_track_entries,
     listing_lock,
+    peek_cached_path_pairs,
+    peek_cached_track_entries,
+    set_listing_refresh_fn,
     store_cached_track_entries,
 )
 from .playlist_catalog import PlaylistCatalog
@@ -341,6 +344,86 @@ def _attach_m3u_playlists_to_entries(
         entry['playlists'] = sorted(names)
 
 
+def listing_for_request(ctx: LibraryContext) -> list[dict[str, Any]]:
+    """Last snapshot for UI routes; never walks the library on a hit."""
+
+    set_listing_refresh_fn(lambda: list_library_entries(ctx))
+    peeked = peek_cached_track_entries(ctx)
+    if peeked is not None:
+        return peeked
+    return list_library_entries(ctx)
+
+
+def merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
+    """Add one downloaded file to the RAM snapshot without a tree walk.
+
+    UI artist/album lists read that snapshot; a full rescan still runs
+    later, after the download queue is idle.
+    """
+
+    name = str(stored or '').strip().replace('\\', '/')
+    if not name:
+        return
+    peeked = peek_cached_track_entries(ctx)
+    if peeked is None:
+        return
+    already = any(
+        str(row.get('file') or '').replace('\\', '/') == name for row in peeked
+    )
+    if already:
+        return
+    full = resolve_library_file(name, ctx)
+    if full is None:
+        return
+    cache = ctx.metadata_cache
+    if cache is not None:
+        rows = cache.get_entries_batch([(name, full)])
+    else:
+        rows = [library_entry_for_file(name, full)]
+    if not rows:
+        return
+    from .external_library import finish_library_entries  # noqa: PLC0415
+
+    merged = finish_library_entries([*peeked, *rows])
+    paths = peek_cached_path_pairs(ctx) or []
+    if not any(str(item[0]) == name for item in paths):
+        paths = [*paths, (name, str(full))]
+    store_cached_track_entries(ctx, merged, paths=paths)
+
+
+def drop_library_listing_files(
+    ctx: LibraryContext, stored_paths: Sequence[str]
+) -> None:
+    """Remove deleted files from the RAM snapshot without a tree walk.
+
+    Album/artist grids read that snapshot; a full rescan still runs
+    later, after the download queue is idle.
+    """
+
+    names = {
+        str(item or '').strip().replace('\\', '/') for item in stored_paths
+    }
+    names.discard('')
+    if not names:
+        return
+    peeked = peek_cached_track_entries(ctx)
+    if peeked is None:
+        return
+    kept = [
+        row
+        for row in peeked
+        if str(row.get('file') or '').replace('\\', '/') not in names
+    ]
+    if len(kept) == len(peeked):
+        return
+    paths = [
+        item
+        for item in (peek_cached_path_pairs(ctx) or [])
+        if str(item[0]).replace('\\', '/') not in names
+    ]
+    store_cached_track_entries(ctx, kept, paths=paths)
+
+
 def list_library_entries(
     ctx: LibraryContext,
     *,
@@ -351,6 +434,11 @@ def list_library_entries(
     ``fold_extra`` (default) drops extra-folder duplicates and remaps
     artist names. Sync passes ``False`` so it can log those skips itself.
     """
+
+    if fold_extra:
+        cached = get_cached_track_entries(ctx)
+        if cached is not None:
+            return cached
 
     with listing_lock():
         if fold_extra:
@@ -546,7 +634,7 @@ def lookup_library_songs(
     pending = set(wanted)
     found: list[dict[str, Any]] = []
     found_keys: set[str] = set()
-    for entry in list_library_entries(ctx):
+    for entry in listing_for_request(ctx):
         key = song_key(
             str(entry.get('artist') or ''),
             str(entry.get('title') or ''),
@@ -563,7 +651,7 @@ def lookup_library_songs(
 def library_album_index(ctx: LibraryContext) -> list[dict[str, Any]]:
     """Albums for the Library grid: counts and a cover file, not every track."""
 
-    grouped = _group_albums(list_library_entries(ctx))
+    grouped = _group_albums(listing_for_request(ctx))
     rows: list[dict[str, Any]] = []
     for bucket in grouped.values():
         tracks = bucket['tracks']
@@ -599,7 +687,7 @@ def library_artist_index(
 
     liked = liked_paths or set()
     artists: dict[str, dict[str, Any]] = {}
-    for entry in list_library_entries(ctx):
+    for entry in listing_for_request(ctx):
         name = album_artist_of(entry)
         if not name:
             continue
@@ -644,7 +732,7 @@ def library_home_summary(
 ) -> dict[str, Any]:
     """Counts and a short recent-album shelf for the Home page."""
 
-    entries = list_library_entries(ctx)
+    entries = listing_for_request(ctx)
     albums = _group_albums(entries)
     artists: set[str] = set()
     total_size = 0

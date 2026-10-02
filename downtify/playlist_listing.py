@@ -9,7 +9,7 @@ from typing import Any, Optional
 
 from . import m3u
 from .library_paths import library_stored_path
-from .library_paths_cache import get_cached_playlists
+from .library_paths_cache import get_cached_playlists, peek_cached_path_pairs
 from .likes import is_liked_playlist
 
 
@@ -17,6 +17,8 @@ def list_library_playlists(
     download_dir: Path,
     slskd_dir: Optional[Path] = None,
     extra_dirs: Optional[Sequence[Path]] = None,
+    *,
+    stale_ok: bool = False,
 ) -> list[dict[str, Any]]:
     """Every playlist on disk, from the ``.m3u`` files Downtify writes for
     playlist/album downloads and Playlist Monitor sweeps (see
@@ -37,6 +39,7 @@ def list_library_playlists(
         slskd_dir,
         extras,
         lambda: _scan_library_playlists(Path(download_dir), slskd_dir, extras),
+        stale_ok=stale_ok,
     )
 
 
@@ -44,15 +47,18 @@ def _known_library_files(
     download_dir: Path,
     slskd_dir: Optional[Path],
     extra_dirs: tuple[Path, ...],
-) -> set[str]:
-    from .library_catalog import LibraryContext, list_library_paths  # noqa: PLC0415
+) -> Optional[set[str]]:
+    from .library_catalog import LibraryContext  # noqa: PLC0415
 
     ctx = LibraryContext(
         download_dir=download_dir,
         slskd_dir=slskd_dir,
         extra_dirs=extra_dirs,
     )
-    return set(list_library_paths(ctx))
+    pairs = peek_cached_path_pairs(ctx)
+    if pairs is None:
+        return None
+    return {stored for stored, _resolved in pairs}
 
 
 def _scan_library_playlists(
@@ -76,7 +82,7 @@ def _scan_library_playlists(
                 extra_dirs,
                 keep_missing=True,
             )
-            if stored in known
+            if known is None or stored in known
         ]
         if not tracks and not manual:
             continue

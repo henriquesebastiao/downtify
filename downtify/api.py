@@ -357,6 +357,7 @@ from .library_catalog import (
     library_context_from_state,
     library_home_summary,
     lookup_library_songs,
+    merge_library_listing_file,
     resolve_library_file,
 )
 from .library_delete import delete_playlist_from_library
@@ -2719,7 +2720,15 @@ async def _run_download(
             job['status'] = 'done'
             job['filename'] = filename
             job['progress'] = 100
-            # /list and /tracks cache the directory scan briefly.
+            if filename:
+                await _record_finished_download(
+                    song,
+                    filename,
+                    playlist_name=playlist_name,
+                    spotify_playlist_id=spotify_playlist_id,
+                    track_order=track_order,
+                    refresh_playlists=refresh_playlists,
+                )
             invalidate_library_paths_cache()
             await state.connections.broadcast({
                 'song': song,
@@ -2747,16 +2756,6 @@ async def _run_download(
             'status': 'error',
         })
         raise
-
-    if filename:
-        await _record_finished_download(
-            song,
-            filename,
-            playlist_name=playlist_name,
-            spotify_playlist_id=spotify_playlist_id,
-            track_order=track_order,
-            refresh_playlists=refresh_playlists,
-        )
     return filename
 
 
@@ -2798,6 +2797,7 @@ async def _record_finished_download(
             state.metadata_cache.refresh_stored_path(
                 filename, download_dir=download_dir, slskd_dir=slskd_dir
             )
+        merge_library_listing_file(library_context(), filename)
         if state.settings.get('cache_cover_art') and state.cover_cache:
             state.cover_cache.refresh_stored_path(
                 filename, download_dir=download_dir, slskd_dir=slskd_dir
