@@ -32,6 +32,7 @@ from ytmusicapi.navigation import (
 )
 from ytmusicapi.parsers.library import parse_albums as _parse_ytm_albums
 
+from .album_artist import album_artist_fields
 from .file_naming import file_name_key
 from .telemetry import json_log_blob, redact_sensitive_mapping
 
@@ -2104,12 +2105,11 @@ def _album_track_song(
         'track_number': track_number,
         'album_track_total': total,
         'release_type': meta.get('type', ''),
-        # The album's own artist, so every track in the album gets the
-        # same "album artist" tag even when a track's own `artists` differs
-        # (a feature, a remix credit, ...) — see
-        # `downloader._album_artist_for_tags`, which falls back to a
-        # per-track heuristic when this isn't set.
-        'album_artist': ', '.join(meta.get('artists') or []),
+        # The album's own (first) artist, so every track in the album gets
+        # the same "album artist" tag even when a track's own `artists`
+        # differs (a feature, a remix credit, ...) - "Various Artists",
+        # plus `compilation`, for a compilation. See `album_artist.py`.
+        **album_artist_fields((meta.get('artists') or [''])[0]),
     }
 
 
@@ -2350,6 +2350,11 @@ def enrich_from_match(
                     enriched['year'] = album_year
                     if not str(enriched.get('release_date') or '').strip():
                         enriched['release_date'] = album_year
+    # Deliberately no album artist from the match's album: YouTube Music
+    # links one audio video to whichever of the releases sharing it it
+    # likes (often a compilation that doesn't even list that video), so
+    # it can't tell a track's own album artist - or that its album is a
+    # compilation. Only an album download (`_album_track_song`) knows that.
     spotify_tid = enriched.get('song_id')
     if yt_n is None:
         logger.info(
@@ -2512,6 +2517,31 @@ def _pick_best(
     return best
 
 
+def _watch_playlist_artists(video_id: str) -> list[str]:
+    """The artists of *video_id*, one per entry, from the first track of
+    its watch playlist - ``[]`` when that can't be read."""
+
+    try:
+        data = _ytm().get_watch_playlist(video_id, limit=1)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'YouTube Music get_watch_playlist failed for {}', video_id
+        )
+        return []
+    for track in (data or {}).get('tracks') or []:
+        if not isinstance(track, dict) or track.get('videoId') not in {
+            None,
+            video_id,
+        }:
+            continue
+        return [
+            a['name'].strip()
+            for a in track.get('artists') or []
+            if isinstance(a, dict) and str(a.get('name') or '').strip()
+        ]
+    return []
+
+
 def _song_from_video_details(video_id: str) -> dict[str, Any]:
     """Basic song info from ``get_song``'s raw video-player payload.
 
@@ -2535,7 +2565,10 @@ def _song_from_video_details(video_id: str) -> dict[str, Any]:
     except (TypeError, ValueError):
         duration = 0
     author = details.get('author', '')
-    artists = [author] if author else []
+    # `author` joins every artist into one string ("Christina Aguilera,
+    # Lil' Kim, Mya, & P!nk") that can't be split safely - "Earth, Wind &
+    # Fire" is one artist. The watch playlist lists them one by one.
+    artists = _watch_playlist_artists(video_id) or ([author] if author else [])
     return {
         'song_id': video_id,
         'name': details.get('title', ''),

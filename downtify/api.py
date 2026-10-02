@@ -2526,6 +2526,18 @@ def _merge_client_track_hints(
     yr = hints.get('year')
     if isinstance(yr, str) and yr.strip():
         base['year'] = yr.strip()
+    # The album artist of the album/playlist the row was listed in, so a
+    # track downloaded on its own is filed and tagged like its album-mates
+    # (see album_artist.py) - unless re-resolving the URL already found one.
+    album_artist = hints.get('album_artist')
+    if (
+        isinstance(album_artist, str)
+        and album_artist.strip()
+        and not str(base.get('album_artist') or '').strip()
+    ):
+        base['album_artist'] = album_artist.strip()
+        if hints.get('compilation') is True:
+            base['compilation'] = True
     # A video id the user pasted to retry a failed track: download exactly
     # that video instead of matching again.
     ytid = str(hints.get('youtube_id') or '').strip()
