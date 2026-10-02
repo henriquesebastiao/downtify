@@ -391,6 +391,54 @@ def merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
     store_cached_track_entries(ctx, merged, paths=paths)
 
 
+def refresh_library_listing_files(
+    ctx: LibraryContext, stored_paths: Sequence[str]
+) -> None:
+    """Re-read files whose tags were rewritten in place (the same path:
+    an album marked as a compilation, replaced audio) into the RAM
+    snapshot without a tree walk.
+
+    Not left to the background rescan: a download finishing first would
+    store the snapshot with these files' old rows under the tree's new
+    fingerprint (:func:`merge_library_listing_file`), and the old rows
+    would then never be read again.
+    """
+
+    names = {
+        str(item or '').strip().replace('\\', '/') for item in stored_paths
+    }
+    names.discard('')
+    if not names:
+        return
+    peeked = peek_cached_track_entries(ctx)
+    if peeked is None:
+        return
+    fresh: dict[str, dict[str, Any]] = {}
+    for name in names:
+        full = resolve_library_file(name, ctx)
+        if full is None:
+            continue
+        cache = ctx.metadata_cache
+        rows = (
+            cache.get_entries_batch([(name, full)])
+            if cache is not None
+            else [library_entry_for_file(name, full)]
+        )
+        if rows:
+            fresh[name] = rows[0]
+    if not fresh:
+        return
+    # A fresh row wins over the old one, which keeps what only the listing
+    # adds on top of the tags (the playlists a file is in).
+    rows = [
+        {**row, **fresh[key]}
+        if (key := str(row.get('file') or '').replace('\\', '/')) in fresh
+        else row
+        for row in peeked
+    ]
+    store_cached_track_entries(ctx, rows, paths=peek_cached_path_pairs(ctx))
+
+
 def drop_library_listing_files(
     ctx: LibraryContext, stored_paths: Sequence[str]
 ) -> None:

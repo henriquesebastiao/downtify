@@ -65,6 +65,18 @@ class CompilationError(ValueError):
     """The request can't be applied (no tracks, several albums, ...)."""
 
 
+class AlreadyInStateError(CompilationError):
+    """The files' tags are already what was asked: nothing to rewrite.
+
+    *result* is the album as the files say it is, so a caller whose own
+    view of them is stale (the Library's listing) can catch up with it.
+    """
+
+    def __init__(self, message: str, result: CompilationResult) -> None:
+        super().__init__(message)
+        self.result = result
+
+
 # ── The remembered marks ──────────────────────────────────────────────
 class CompilationMarks:
     """Albums whose compilation status an admin set by hand.
@@ -347,10 +359,13 @@ def set_album_compilation(
     current = _most_common([t.credited_as for t in tracks])
     is_compilation = is_various_artists(current)
     if compilation == is_compilation:
-        raise CompilationError(
+        raise AlreadyInStateError(
             'The album is already a compilation'
             if compilation
-            else 'The album is not a compilation'
+            else 'The album is not a compilation',
+            CompilationResult(
+                album=album, album_artist=current, compilation=compilation
+            ),
         )
 
     marked_artist: Optional[str] = None

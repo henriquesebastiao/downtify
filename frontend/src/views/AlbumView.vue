@@ -225,7 +225,9 @@ const changingCompilation = ref(false)
 // Marks (or unmarks) the album as a Various Artists compilation (admins
 // only, like Replace audio): the server rewrites every track's
 // album-artist tag and compilation flag, so the album moves to the artist
-// it now belongs to - follow it there.
+// it now belongs to - follow it there. Tracks whose files already were in
+// that state (a stale listing) come back unchanged but re-read: the album
+// they really are in is followed the same way.
 async function toggleCompilation() {
   if (changingCompilation.value) return
   const current = album.value
@@ -247,7 +249,7 @@ async function toggleCompilation() {
         { kind: 'success' }
       )
     }
-    if (data.changed?.length) {
+    if (data.album_artist && data.album_artist !== current.artist) {
       router.replace({
         name: 'Album',
         query: { artist: data.album_artist, title: current.title },

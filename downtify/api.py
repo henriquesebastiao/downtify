@@ -363,6 +363,7 @@ from .library_catalog import (
     library_home_summary,
     lookup_library_songs,
     merge_library_listing_file,
+    refresh_library_listing_files,
     resolve_library_file,
 )
 from .library_delete import delete_playlist_from_library
@@ -4512,6 +4513,13 @@ def _after_replacement(file: str, full: Path) -> None:
             state.metadata_cache.refresh(file, full)
         except Exception:
             logger.debug('Metadata cache refresh failed for {}', file)
+    # The listing the Library reads, right away (see the function).
+    try:
+        refresh_library_listing_files(library_context(), [file])
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Library listing refresh failed for {}', file
+        )
     if state.track_index is not None:
         spotify_id = state.track_index.spotify_id_for_filename(file)
         if spotify_id:
@@ -4539,7 +4547,12 @@ async def set_album_compilation_endpoint(request: Request) -> dict[str, Any]:
     compilation: ``{files, compilation}`` -> ``{album, album_artist,
     compilation, changed, failed}``. Rewrites only the album-artist tag and
     the compilation flag of every file, keeps them where they are, and
-    remembers the album for its later downloads."""
+    remembers the album for its later downloads.
+
+    Files already in the asked state are only re-read into the Library's
+    listing (``changed`` is empty): the button is only offered from a
+    listing that disagrees with the tags, so that listing is what's stale.
+    """
 
     if state.compilation_marks is None:
         raise HTTPException(status_code=500, detail='Library not ready')
@@ -4570,6 +4583,17 @@ async def set_album_compilation_endpoint(request: Request) -> dict[str, Any]:
             compilation=want,
             marks=state.compilation_marks,
         )
+    except compilation.AlreadyInStateError as exc:
+        for file, full in files:
+            await asyncio.to_thread(_after_replacement, file, full)
+        announce_library_changed()
+        return {
+            'album': exc.result.album,
+            'album_artist': exc.result.album_artist,
+            'compilation': exc.result.compilation,
+            'changed': [],
+            'failed': [],
+        }
     except compilation.CompilationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

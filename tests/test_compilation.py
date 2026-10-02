@@ -29,6 +29,10 @@ from downtify.compilation import (
     write_album_artist_tags,
 )
 from downtify.downloader import Downloader, embed_metadata
+from downtify.library_catalog import (
+    list_library_entries,
+    listing_for_request,
+)
 
 needs_ffmpeg = pytest.mark.skipif(
     shutil.which('ffmpeg') is None, reason='no ffmpeg'
@@ -376,6 +380,34 @@ def test_compilation_route_marks_the_album(client):
     assert _tags(folder / 'a.mp3')['compilation'] is True
     kinds = [e['kind'] for e in client.get('/api/activity').json()['entries']]
     assert 'album_compilation' in kinds
+
+
+@needs_ffmpeg
+def test_compilation_route_rereads_a_stale_listing(client):
+    """The file is already a compilation, but the Library's listing still
+    has it under its old album artist: the button shows "Mark", and
+    marking re-reads the listing instead of refusing."""
+
+    folder = client.downloads / 'AliasNorth' / 'Glass Harbor'
+    _track(folder / 'a.mp3', 'Harbor Lights', ['AliasNorth', 'AliasGuest'])
+    file = 'AliasNorth/Glass Harbor/a.mp3'
+    ctx = api.library_context()
+    list_library_entries(ctx)
+    # Retagged behind the listing's back.
+    retag_file(folder / 'a.mp3', 'Various Artists', compilation=True)
+    rows = {row['file']: row for row in listing_for_request(ctx)}
+    assert rows[file]['album_artist'] == 'AliasNorth'
+
+    res = client.post(
+        '/api/library/compilation', json={'files': [file], 'compilation': True}
+    )
+
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body['album_artist'] == 'Various Artists'
+    assert body['changed'] == []
+    rows = {row['file']: row for row in listing_for_request(ctx)}
+    assert rows[file]['album_artist'] == 'Various Artists'
 
 
 def test_compilation_route_rejects_a_bad_request(client):
