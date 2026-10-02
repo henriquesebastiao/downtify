@@ -1762,12 +1762,14 @@ def artist_photo_proxy_endpoint(
     simply asks again. Not a way to obtain a photo to keep - see
     ``downtify.artist_photo_proxy``.
 
-    *url*, optional: the artist's Deezer picture, when the page already
-    has it (Discover's suggestions, the Finder), base64url-encoded (RFC
-    4648 section 5, padding optional) so the address travels as one plain
-    query value - relayed as the photo without searching Deezer for the
-    name. Only a Deezer CDN address is accepted; anything else, or a value
-    that isn't base64url, is a ``400``.
+    *url*, optional: the artist's picture, when the page already has it -
+    Deezer's (Discover's suggestions, the Finder), YouTube Music's (the
+    search page) or any of the three for a pasted artist link -
+    base64url-encoded (RFC 4648 section 5, padding
+    optional) so the address travels as one plain query value - relayed
+    as the photo without searching Deezer for the name. Only those image
+    CDNs are accepted; anything else, or a value that isn't base64url, is
+    a ``400``.
     """
 
     cache_control = (
