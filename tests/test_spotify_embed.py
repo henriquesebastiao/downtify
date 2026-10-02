@@ -28,6 +28,7 @@ from downtify.spotify import (
     artist_image_url_from_id,
     artist_page_from_id,
     artist_top_songs_from_id,
+    credited_artist_id_from_track_id,
     enrich_track_from_spotify_if_sparse,
     playlist_cover_url_from_id,
     playlist_tracks_from_id,
@@ -1897,3 +1898,21 @@ def test_graphql_playlist_rows_carry_the_album_artist(name, uri, expected):
         'compilation': None,
         **expected,
     }
+
+
+def test_credited_artist_id_is_the_named_artists_own():
+    entity = {
+        'artists': [
+            {'name': _AL1, 'uri': 'spotify:artist:FIRSTID'},
+            {'name': 'AC/DC', 'uri': 'spotify:artist:ACDCID'},
+        ]
+    }
+    with patch(
+        'downtify.spotify._fetch_embed_json',
+        return_value=_embed_payload(entity),
+    ):
+        # Compared as file names: "ACDC" is how the disk keeps "AC/DC".
+        assert credited_artist_id_from_track_id('t' * 22, 'ACDC') == 'ACDCID'
+        assert credited_artist_id_from_track_id('t' * 22, _AL1) == 'FIRSTID'
+        assert credited_artist_id_from_track_id('t' * 22, _AL6) is None
+        assert credited_artist_id_from_track_id('t' * 22, '') is None

@@ -1969,6 +1969,30 @@ def primary_artist_id_from_track_id(track_id: str) -> Optional[str]:
     return _id_from_uri(str(first.get('uri') or '')) or None
 
 
+def credited_artist_id_from_track_id(
+    track_id: str, name: str
+) -> Optional[str]:
+    """Spotify id of the artist *name* (compared as
+    :func:`~downtify.file_naming.file_name_key`) among those credited on
+    *track_id*, or ``None`` when the track doesn't credit them.
+
+    Never another artist's id: a guest's page must not get the track's
+    first artist (:func:`primary_artist_id_from_track_id`) - their own
+    entry on the track carries their own ``uri``.
+    """
+
+    wanted = file_name_key(name)
+    if not wanted:
+        return None
+    payload = _fetch_embed_json('track', track_id)
+    for item in _entity_from(payload).get('artists') or []:
+        if not isinstance(item, dict):
+            continue
+        if file_name_key(str(item.get('name') or '')) == wanted:
+            return _id_from_uri(str(item.get('uri') or '')) or None
+    return None
+
+
 def resolve(url: str) -> Any:
     """Resolve any Spotify URL to a single song or a list of songs."""
 
