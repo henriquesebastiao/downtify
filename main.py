@@ -58,13 +58,18 @@ from downtify.library_catalog import (
     list_entries_for_stored_paths,
     list_library_entries,
     list_library_paths,
+    listing_for_request,
     resolve_library_file,
     resolve_library_image,
 )
 from downtify.library_cleanup import remove_track_leftovers
 from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.library_paths import library_file_root
-from downtify.library_paths_cache import bind_listing_store
+from downtify.library_paths_cache import (
+    bind_listing_store,
+    set_listing_refresh_fn,
+    set_listing_refresh_gate,
+)
 from downtify.library_sync import LibrarySync
 from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
@@ -299,11 +304,22 @@ def _spotify_id_for_library_file(stored_path: str) -> str:
     return index.spotify_id_for_filename(stored_path) or ''
 
 
+def _downloads_using_disk() -> bool:
+    """True while a queue job is writing audio (yt-dlp / ffmpeg)."""
+
+    return any(
+        str(job.get('status') or '') in {'queued', 'downloading'}
+        for job in api.state.download_jobs.values()
+    )
+
+
 def _warm_library_listing() -> None:
     """Build ``GET /tracks`` in the background so the first UI load is warm."""
 
     try:
-        list_library_entries(api.library_context())
+        ctx = api.library_context()
+        set_listing_refresh_fn(lambda: list_library_entries(ctx))
+        list_library_entries(ctx)
     except Exception:
         logger.opt(exception=True).debug('Library listing warm failed')
 
@@ -317,6 +333,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.navidrome_index = NavidromeIndex(library_db)
     api.state.metadata_cache = LibraryMetadataCache(library_db)
     bind_listing_store(library_db)
+    set_listing_refresh_gate(_downloads_using_disk)
     api.state.playlist_catalog = PlaylistCatalog(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
@@ -620,7 +637,7 @@ def build_app() -> FastAPI:
         rescan.
         """
         if refresh:
-            api.invalidate_library_paths_cache()
+            api.invalidate_library_paths_cache(drop_entries=True)
         return list_library_paths(api.library_context())
 
     @app.get('/playlists')
@@ -629,7 +646,10 @@ def build_app() -> FastAPI:
         ``downtify.playlist_listing.list_library_playlists``."""
         ctx = api.library_context()
         return list_library_playlists(
-            ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+            ctx.download_dir,
+            ctx.slskd_dir,
+            ctx.extra_dirs,
+            stale_ok=True,
         )
 
     @app.get('/tracks')
@@ -676,7 +696,7 @@ def build_app() -> FastAPI:
             files = list(match.get('files') or []) if match else []
             tracks = list_entries_for_stored_paths(ctx, files)
         else:
-            tracks = list_library_entries(ctx)
+            tracks = listing_for_request(ctx)
             tracks.sort(key=lambda t: t['file'])
         if artist or album or q or limit:
             tracks = filter_library_entries(

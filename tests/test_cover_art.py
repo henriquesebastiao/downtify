@@ -24,6 +24,16 @@ def test_extract_folder_cover_reads_cover_jpg(tmp_path: Path) -> None:
     assert mime == 'image/jpeg'
 
 
+def test_extract_folder_cover_matches_cover_jpg_case(tmp_path: Path) -> None:
+    track = tmp_path / 'release' / '01-track.mp3'
+    track.parent.mkdir(parents=True)
+    track.write_bytes(b'\x00')
+    (track.parent / 'Cover.JPG').write_bytes(b'folder-cover')
+    data, mime = extract_folder_cover(track)
+    assert data == b'folder-cover'
+    assert mime == 'image/jpeg'
+
+
 def test_extract_cover_art_prefers_embedded(tmp_path: Path) -> None:
     track = tmp_path / 't.mp3'
     track.write_bytes(b'\x00' * 64)

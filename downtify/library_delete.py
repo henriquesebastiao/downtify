@@ -12,6 +12,7 @@ from .library_catalog import (
     AUDIO_EXTENSIONS,
     PODCASTS_DIRNAME,
     LibraryContext,
+    drop_library_listing_files,
     library_context_from_state,
     resolve_library_file,
 )
@@ -203,6 +204,7 @@ def delete_library_file(
         navidrome_index.forget_filename(file_key, full_path=full)
 
     if invalidate_paths:
+        drop_library_listing_files(ctx, [file_key])
         invalidate_library_paths_cache()
 
     if affected_playlists:
@@ -263,6 +265,7 @@ def delete_library_files(
             })
 
     if deleted:
+        drop_library_listing_files(ctx, deleted)
         invalidate_library_paths_cache()
         pl_note = (
             f'; playlists: {", ".join(sorted(affected))}'
@@ -655,6 +658,7 @@ def _delete_imported_playlist(
 
     affected.add(pl_name)
     if deleted:
+        drop_library_listing_files(ctx, deleted)
         invalidate_library_paths_cache()
 
     _log_playlist_delete_summary(

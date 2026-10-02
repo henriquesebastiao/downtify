@@ -90,7 +90,7 @@ async def library(
     """
 
     if refresh:
-        invalidate_library_paths_cache(notify=False)
+        invalidate_library_paths_cache(notify=False, drop_entries=True)
     before = await asyncio.to_thread(_sync().cursor)
     cursor = await asyncio.to_thread(_refresh)
     if cursor != before:

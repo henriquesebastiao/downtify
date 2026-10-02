@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import mimetypes
+import os
 from pathlib import Path
 
 from mutagen import File as MutagenFile
@@ -126,21 +127,22 @@ def extract_folder_cover(path: Path) -> tuple[bytes | None, str | None]:
     parent = path.parent
     if not parent.is_dir():
         return None, None
-
+    candidates: list[Path] = []
     try:
-        entries = list(parent.iterdir())
+        with os.scandir(parent) as entries:
+            for entry in entries:
+                suffix = Path(entry.name).suffix.lower()
+                if suffix not in {'.jpg', '.jpeg', '.png', '.webp'}:
+                    continue
+                stem = Path(entry.name).stem.casefold()
+                if stem not in _FOLDER_COVER_STEMS:
+                    continue
+                if not entry.is_file(follow_symlinks=True):
+                    continue
+                candidates.append(Path(entry.path))
     except OSError:
         return None, None
-
-    for entry in sorted(entries, key=lambda p: p.name.casefold()):
-        if not entry.is_file():
-            continue
-        if entry.suffix.lower() not in {'.jpg', '.jpeg', '.png', '.webp'}:
-            continue
-        if entry.resolve() == path.resolve():
-            continue
-        if entry.stem.casefold() not in _FOLDER_COVER_STEMS:
-            continue
+    for entry in sorted(candidates, key=lambda item: item.name.casefold()):
         try:
             data = entry.read_bytes()
         except OSError:
