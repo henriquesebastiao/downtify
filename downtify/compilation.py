@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sqlite3
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -79,7 +80,7 @@ class CompilationMarks:
         self._path = str(db_path)
         self._init_db()
 
-    def _connect(self):
+    def _connect(self) -> sqlite3.Connection:
         return connect_sqlite(self._path, row_factory=True)
 
     def _init_db(self) -> None:

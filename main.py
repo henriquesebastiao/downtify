@@ -674,9 +674,15 @@ def build_app() -> FastAPI:
 
         ``?playlist=``, ``?artist=``, ``?album=`` and ``?q=`` return a
         subset so pages that show one list do not download the whole
-        library. ``?limit=`` caps that subset (search picker).
+        library - ``?artist=`` is every track that artist is credited on
+        (a guest too) or, for an album's page, every track of that album
+        artist's albums ("Various Artists" included). ``?limit=`` caps
+        that subset (search picker).
 
-        Each row has ``file``, ``artist`` and ``album``, plus ``title``,
+        Each row has ``file``, ``artist`` (the tag's text), ``artists``
+        (every credited artist, one per entry - see
+        ``library_metadata.read_audio_metadata``) and ``album``, plus
+        ``title``,
         ``has_cover`` and, when the file belongs to a downloaded
         playlist, ``playlists``. Tags are cached in /data per file and
         re-read only when the file's modification time or size changes.
