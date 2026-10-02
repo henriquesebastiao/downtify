@@ -582,6 +582,7 @@
             :toolbar-mode="TOOLBAR_NONE"
             :marked-key="trackId"
             hide-album
+            :search-links="false"
           />
         </div>
       </section>

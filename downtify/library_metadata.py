@@ -7,6 +7,7 @@ from typing import Any
 
 from mutagen import File as MutagenFile
 from mutagen.id3 import ID3
+from mutagen.mp4 import MP4
 
 from .cover_art import extract_cover_art
 from .image_size import image_short_side
@@ -21,14 +22,46 @@ def _tag_text(value: Any) -> str:
     return str(value).strip()
 
 
-def _split_artists(artist: str) -> list[str]:
-    text = artist.strip()
+def split_artists(artist: str, album_artist: str = '') -> list[str]:
+    """The artists in an artist tag's text, for a file with no ``ARTISTS``
+    tag: split on the first of ``;`` (how Downtify joins them in MP3 and
+    how a multi-value tag reads back), `` / `` or ``, `` it contains - the
+    web app's own rule (``frontend/src/lib/library.js``). ``AC/DC`` stays
+    whole, and so does a text that is the file's *album_artist* too
+    (``Earth, Wind & Fire`` on its own album): that is one name."""
+
+    text = str(artist or '').strip()
     if not text:
         return []
-    for sep in (';', '/', ',', '\\'):
+    if text.casefold() == str(album_artist or '').strip().casefold():
+        return [text]
+    for sep in (';', ' / ', ', '):
         if sep in text:
             return [part.strip() for part in text.split(sep) if part.strip()]
     return [text]
+
+
+def _multi_value_artists(path: Path, audio: Any) -> list[str]:
+    """The ``ARTISTS`` tag - one artist per value, as Downtify and
+    MusicBrainz Picard write it - or ``[]`` when the file has none."""
+
+    suffix = path.suffix.lower()
+    try:
+        if suffix == '.mp3':
+            frame = ID3(str(path)).get('TXXX:ARTISTS')
+            values = list(frame.text) if frame is not None else []
+        elif suffix in {'.m4a', '.mp4', '.aac'}:
+            tags = MP4(str(path)).tags or {}
+            values = [
+                bytes(value).decode('utf-8', 'replace')
+                for value in tags.get('----:com.apple.iTunes:ARTISTS', [])
+            ]
+        else:
+            tags = getattr(audio, 'tags', None)
+            values = list(tags.get('artists') or []) if tags else []
+    except Exception:
+        return []
+    return [str(value).strip() for value in values if str(value).strip()]
 
 
 def _track_number(value: Any) -> int:
@@ -166,7 +199,9 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
             year = _year(id3.get('TDRC'))
             genre = _tag_text(id3.get('TCON'))
 
-    artists = _split_artists(artist)
+    artists = _multi_value_artists(path, audio) or split_artists(
+        artist, album_artist
+    )
     return {
         'title': title,
         'artist': artist,
@@ -200,6 +235,11 @@ def library_entry_for_file(
     meta = read_audio_metadata(full_path)
     title = str(meta.get('title') or '').strip() or fb_title
     artist = str(meta.get('artist') or '').strip() or fb_artist
+    artists = [
+        str(name).strip()
+        for name in meta.get('artists') or []
+        if str(name).strip()
+    ] or split_artists(artist, str(meta.get('album_artist') or ''))
     album = str(meta.get('album') or '').strip()
     # The cover is read once and both answered from it: whether there is
     # one, and how big it is (which the library upgrade scan needs for
@@ -211,6 +251,8 @@ def library_entry_for_file(
         'file': stored_path,
         'title': title,
         'artist': artist,
+        # Every credited artist, one per entry (see read_audio_metadata).
+        'artists': artists,
         'album': album,
         'album_artist': str(meta.get('album_artist') or '').strip(),
         'track_number': int(meta.get('track_number') or 0),

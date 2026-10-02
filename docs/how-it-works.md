@@ -63,7 +63,9 @@ A pasted Deezer track/album/playlist/artist link (`deezer.com/track/…`) works 
 | Tag | Written |
 |-----|---------|
 | Title | Yes |
-| Artist(s) | Yes |
+| Artist(s) | Yes, every credited artist, also one per value in an `ARTISTS` tag |
+| Album artist | Yes, the album's own artist as the source credits it, else the first artist |
+| Compilation flag | Only for an album the source credits to "Various Artists" |
 | Album | Yes |
 | Year | Yes |
 | Album art (JPEG) | Yes |
@@ -79,4 +81,4 @@ Downtify streams download progress to the browser over a **WebSocket** connectio
 
 The output filename is built from the template configured in Settings (default: `{artists} - {title}`). Characters that are invalid in filenames are stripped.
 
-When *Organize by artist* is enabled, the file is placed inside a subfolder named after the primary artist. Otherwise, single tracks go into the root of the downloads directory and playlist/album tracks go into a per-playlist or per-album subfolder.
+When *Organize by artist* is enabled, the file is placed inside a subfolder named after the album artist — or, for a track from a various-artists compilation, its first artist. Otherwise, single tracks go into the root of the downloads directory and playlist/album tracks go into a per-playlist or per-album subfolder. See [Several artists and compilations](features/file-organization.md#several-artists-and-compilations).

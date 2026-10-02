@@ -172,6 +172,10 @@ working without changes:
   ``POST /api/library/replace`` (body ``{file, video_id}``: replace the
   track's audio with that video in place, as a queue job - see
   ``downtify/audio_replace.py``)
+* ``POST /api/library/compilation`` (body ``{files, compilation}``: mark
+  or unmark an album as a various-artists compilation - rewrites its
+  album-artist tag and compilation flag in place and remembers it for
+  later downloads; see ``downtify/compilation.py``)
 * ``GET  /api/library/upgrade`` and ``GET /api/library/upgrade/jobs``
   (an upgrade run's state, queue counts and per-track rows)
 * ``POST /api/library/upgrade/scan`` (look for tracks with low-resolution
@@ -301,6 +305,7 @@ from . import (
     artist_photo_proxy,
     artist_profile,
     audio_replace,
+    compilation,
     cover_sources,
     deezer,
     integration_check,
@@ -358,6 +363,7 @@ from .library_catalog import (
     library_home_summary,
     lookup_library_songs,
     merge_library_listing_file,
+    refresh_library_listing_files,
     resolve_library_file,
 )
 from .library_delete import delete_playlist_from_library
@@ -914,6 +920,7 @@ class AppState:
     upgrade_runner: Optional[library_upgrade.LibraryUpgradeRunner] = None
     external_sync: Optional[ExternalSyncJob] = None
     likes: Optional[LikedTracks] = None
+    compilation_marks: Optional[compilation.CompilationMarks] = None
     podcasts: Optional[PodcastStore] = None
     discover: Optional[DiscoverStore] = None
     # Sign-in and paired apps (see downtify/auth.py and auth_routes.py).
@@ -1756,12 +1763,14 @@ def artist_photo_proxy_endpoint(
     simply asks again. Not a way to obtain a photo to keep - see
     ``downtify.artist_photo_proxy``.
 
-    *url*, optional: the artist's Deezer picture, when the page already
-    has it (Discover's suggestions, the Finder), base64url-encoded (RFC
-    4648 section 5, padding optional) so the address travels as one plain
-    query value - relayed as the photo without searching Deezer for the
-    name. Only a Deezer CDN address is accepted; anything else, or a value
-    that isn't base64url, is a ``400``.
+    *url*, optional: the artist's picture, when the page already has it -
+    Deezer's (Discover's suggestions, the Finder), YouTube Music's (the
+    search page) or any of the three for a pasted artist link -
+    base64url-encoded (RFC 4648 section 5, padding
+    optional) so the address travels as one plain query value - relayed
+    as the photo without searching Deezer for the name. Only those image
+    CDNs are accepted; anything else, or a value that isn't base64url, is
+    a ``400``.
     """
 
     cache_control = (
@@ -1861,7 +1870,7 @@ def artist_art_spotify_candidate_endpoint(
 
     artist_id: Optional[str] = None
     try:
-        artist_id = _spotify_artist_id_from_library_file(file)
+        artist_id = _spotify_artist_id_from_library_file(file, name)
         if not artist_id and name.strip():
             found = spotify.search_artist_by_name(name)
             artist_id = found['id'] if found else None
@@ -1886,9 +1895,13 @@ def artist_art_spotify_candidate_endpoint(
     return {'source': 'spotify', 'name': artist_name, 'image_url': image_url}
 
 
-def _spotify_artist_id_from_library_file(file: str) -> Optional[str]:
-    """Spotify id of the first artist of a library file's Spotify track,
-    or ``None`` when *file* is empty, unknown, or wasn't from Spotify."""
+def _spotify_artist_id_from_library_file(
+    file: str, name: str = ''
+) -> Optional[str]:
+    """Spotify id of *name* among the artists of a library file's Spotify
+    track - its first artist when *name* is blank - or ``None`` when
+    *file* is empty, unknown, wasn't from Spotify, or doesn't credit
+    *name* (a guest's track must not give the track's first artist)."""
 
     if not file.strip() or state.track_index is None:
         return None
@@ -1899,6 +1912,8 @@ def _spotify_artist_id_from_library_file(file: str) -> Optional[str]:
     )
     if not track_id:
         return None
+    if isinstance(name, str) and name.strip():
+        return spotify.credited_artist_id_from_track_id(track_id, name)
     return spotify.primary_artist_id_from_track_id(track_id)
 
 
@@ -2526,6 +2541,18 @@ def _merge_client_track_hints(
     yr = hints.get('year')
     if isinstance(yr, str) and yr.strip():
         base['year'] = yr.strip()
+    # The album artist of the album/playlist the row was listed in, so a
+    # track downloaded on its own is filed and tagged like its album-mates
+    # (see album_artist.py) - unless re-resolving the URL already found one.
+    album_artist = hints.get('album_artist')
+    if (
+        isinstance(album_artist, str)
+        and album_artist.strip()
+        and not str(base.get('album_artist') or '').strip()
+    ):
+        base['album_artist'] = album_artist.strip()
+        if hints.get('compilation') is True:
+            base['compilation'] = True
     # A video id the user pasted to retry a failed track: download exactly
     # that video instead of matching again.
     ytid = str(hints.get('youtube_id') or '').strip()
@@ -4486,11 +4513,112 @@ def _after_replacement(file: str, full: Path) -> None:
             state.metadata_cache.refresh(file, full)
         except Exception:
             logger.debug('Metadata cache refresh failed for {}', file)
+    # The listing the Library reads, right away (see the function).
+    try:
+        refresh_library_listing_files(library_context(), [file])
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Library listing refresh failed for {}', file
+        )
     if state.track_index is not None:
         spotify_id = state.track_index.spotify_id_for_filename(file)
         if spotify_id:
             state.track_index.register(spotify_id, file, full_path=full)
     invalidate_library_paths_cache(notify=False)
+
+
+# ---------------------------------------------------------------------------
+# Marking an album as a various-artists compilation by hand
+# ---------------------------------------------------------------------------
+
+
+def album_override_for(song: dict[str, Any]) -> dict[str, Any]:
+    """What an admin set by hand for *song*'s album (see
+    ``compilation.CompilationMarks``) - the downloader's
+    ``album_override``."""
+
+    marks = state.compilation_marks
+    return marks.override_for(song) if marks is not None else {}
+
+
+@router.post('/api/library/compilation')
+async def set_album_compilation_endpoint(request: Request) -> dict[str, Any]:
+    """Mark (``compilation: true``) or unmark an album as a various-artists
+    compilation: ``{files, compilation}`` -> ``{album, album_artist,
+    compilation, changed, failed}``. Rewrites only the album-artist tag and
+    the compilation flag of every file, keeps them where they are, and
+    remembers the album for its later downloads.
+
+    Files already in the asked state are only re-read into the Library's
+    listing (``changed`` is empty): the button is only offered from a
+    listing that disagrees with the tags, so that listing is what's stale.
+    """
+
+    if state.compilation_marks is None:
+        raise HTTPException(status_code=500, detail='Library not ready')
+    payload = await _json_object(request)
+    raw_files = payload.get('files')
+    if not isinstance(raw_files, list) or not raw_files:
+        raise HTTPException(status_code=400, detail='files is required')
+    want = payload.get('compilation')
+    if not isinstance(want, bool):
+        raise HTTPException(
+            status_code=400, detail='compilation must be true or false'
+        )
+    ctx = library_context()
+    files: list[tuple[str, Path]] = []
+    for raw in raw_files:
+        file = str(raw or '').strip().replace('\\', '/')
+        full = resolve_library_file(file, ctx) if file else None
+        if full is None:
+            raise HTTPException(
+                status_code=404, detail=f'File not found: {file}'
+            )
+        files.append((file, full))
+
+    try:
+        result = await asyncio.to_thread(
+            compilation.set_album_compilation,
+            files,
+            compilation=want,
+            marks=state.compilation_marks,
+        )
+    except compilation.AlreadyInStateError as exc:
+        for file, full in files:
+            await asyncio.to_thread(_after_replacement, file, full)
+        announce_library_changed()
+        return {
+            'album': exc.result.album,
+            'album_artist': exc.result.album_artist,
+            'compilation': exc.result.compilation,
+            'changed': [],
+            'failed': [],
+        }
+    except compilation.CompilationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    for file in result.changed:
+        full = dict(files)[file]
+        await asyncio.to_thread(_after_replacement, file, full)
+    if result.changed:
+        announce_library_changed()
+    await log_activity(
+        request,
+        'album_compilation',
+        f'{result.album_artist} - {result.album}'.strip(' -'),
+        {
+            'album': result.album,
+            'compilation': result.compilation,
+            'files': len(result.changed),
+        },
+    )
+    return {
+        'album': result.album,
+        'album_artist': result.album_artist,
+        'compilation': result.compilation,
+        'changed': result.changed,
+        'failed': result.failed,
+    }
 
 
 # ---------------------------------------------------------------------------

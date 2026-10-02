@@ -272,7 +272,17 @@ def test_fetch_bio_on_demand_is_as_forgiving_as_before(monkeypatch, tmp_path):
         ({'artists': ['A'], 'album_artist': 'Album Artist'}, 'Album Artist'),
         ({'artists': [' Spaced '], 'album_artist': ''}, 'Spaced'),
         ({'artists': ['Various Artists']}, ''),
-        ({'artists': ['A'], 'album_artist': 'various artists'}, ''),
+        # A compilation track seeds its own first artist, whose folder
+        # it is filed under.
+        ({'artists': ['A'], 'album_artist': 'various artists'}, 'A'),
+        (
+            {
+                'artists': ['A', 'B'],
+                'album_artist': 'Various Artists',
+                'compilation': True,
+            },
+            'A',
+        ),
         ({'artists': ['unknown']}, ''),
         ({'artists': []}, ''),
         ({}, ''),
@@ -296,7 +306,9 @@ def test_a_spotify_track_gives_its_artists_id_without_a_name_search(
 ):
     _Services(monkeypatch)
     monkeypatch.setattr(
-        ap.spotify, 'primary_artist_id_from_track_id', lambda tid: 'FROMTRACK'
+        ap.spotify,
+        'credited_artist_id_from_track_id',
+        lambda tid, name: 'FROMTRACK',
     )
     monkeypatch.setattr(
         ap,

@@ -176,6 +176,7 @@
           :context="context"
           :show-added="false"
           :hide-menu="['artist']"
+          :guest-of="artist.name"
         />
       </div>
     </DetailState>

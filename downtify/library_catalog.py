@@ -391,6 +391,54 @@ def merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
     store_cached_track_entries(ctx, merged, paths=paths)
 
 
+def refresh_library_listing_files(
+    ctx: LibraryContext, stored_paths: Sequence[str]
+) -> None:
+    """Re-read files whose tags were rewritten in place (the same path:
+    an album marked as a compilation, replaced audio) into the RAM
+    snapshot without a tree walk.
+
+    Not left to the background rescan: a download finishing first would
+    store the snapshot with these files' old rows under the tree's new
+    fingerprint (:func:`merge_library_listing_file`), and the old rows
+    would then never be read again.
+    """
+
+    names = {
+        str(item or '').strip().replace('\\', '/') for item in stored_paths
+    }
+    names.discard('')
+    if not names:
+        return
+    peeked = peek_cached_track_entries(ctx)
+    if peeked is None:
+        return
+    fresh: dict[str, dict[str, Any]] = {}
+    for name in names:
+        full = resolve_library_file(name, ctx)
+        if full is None:
+            continue
+        cache = ctx.metadata_cache
+        rows = (
+            cache.get_entries_batch([(name, full)])
+            if cache is not None
+            else [library_entry_for_file(name, full)]
+        )
+        if rows:
+            fresh[name] = rows[0]
+    if not fresh:
+        return
+    # A fresh row wins over the old one, which keeps what only the listing
+    # adds on top of the tags (the playlists a file is in).
+    rows = [
+        {**row, **fresh[key]}
+        if (key := str(row.get('file') or '').replace('\\', '/')) in fresh
+        else row
+        for row in peeked
+    ]
+    store_cached_track_entries(ctx, rows, paths=peek_cached_path_pairs(ctx))
+
+
 def drop_library_listing_files(
     ctx: LibraryContext, stored_paths: Sequence[str]
 ) -> None:
@@ -530,17 +578,58 @@ def song_key(artist: str, title: str) -> str:
 _VARIOUS_ARTISTS = frozenset({'various artists', 'various'})
 
 
-def album_artist_of(entry: dict[str, Any]) -> str:
-    """The name Library grouping uses (album artist, else first artist).
+def _first_artist(entry: dict[str, Any]) -> str:
+    artists = entry.get('artists')
+    if isinstance(artists, list):
+        for name in artists:
+            if str(name).strip():
+                return str(name).strip()
+    return str(entry.get('artist') or '').split(';')[0].strip()
 
-    ``Various Artists`` is treated as missing so a duo tagged that way
-    (``Zé Neto & Cristiano`` in the artist tag) still appears as itself.
+
+def album_artist_of(entry: dict[str, Any]) -> str:
+    """The artist a track belongs to (album artist, else first artist).
+
+    ``Various Artists`` is treated as missing so a compilation's track - or
+    a duo tagged that way (``Zé Neto & Cristiano`` in the artist tag) -
+    belongs to its own first artist. Matches ``groupingArtistName`` in
+    ``frontend/src/lib/library.js``.
     """
 
     album_artist = str(entry.get('album_artist') or '').strip()
     if album_artist and album_artist.casefold() not in _VARIOUS_ARTISTS:
         return album_artist
-    return str(entry.get('artist') or '').split(';')[0].strip()
+    return _first_artist(entry)
+
+
+def album_owner_of(entry: dict[str, Any]) -> str:
+    """The artist an album is listed under: its album-artist tag as it is
+    - so a ``Various Artists`` compilation stays one album - else the
+    track's first artist. Matches ``groupAlbums`` in the web app."""
+
+    return str(entry.get('album_artist') or '').strip() or _first_artist(entry)
+
+
+def credited_artists_of(entry: dict[str, Any]) -> list[str]:
+    """Every artist with a Library page for this track: the one it belongs
+    to (:func:`album_artist_of`), then every other credited artist - a
+    guest gets a page too. Never ``Various Artists``. Matches
+    ``groupArtists`` in the web app."""
+
+    names: list[str] = []
+    seen: set[str] = set()
+    artists = entry.get('artists')
+    for name in [
+        album_artist_of(entry),
+        *(artists if isinstance(artists, list) else []),
+    ]:
+        text = str(name or '').strip()
+        key = text.casefold()
+        if not text or key in _VARIOUS_ARTISTS or key in seen:
+            continue
+        seen.add(key)
+        names.append(text)
+    return names
 
 
 def _group_albums(
@@ -551,7 +640,7 @@ def _group_albums(
         album = str(entry.get('album') or '').strip()
         if not album:
             continue
-        artist = album_artist_of(entry)
+        artist = album_owner_of(entry)
         key = (artist.casefold(), album.casefold())
         bucket = albums.get(key)
         if bucket is None:
@@ -586,7 +675,15 @@ def filter_library_entries(
     cap = min(max(int(limit or 0), 0), TRACK_QUERY_LIMIT_MAX)
     out: list[dict[str, Any]] = []
     for entry in entries:
-        if want_artist and album_artist_of(entry).casefold() != want_artist:
+        # An artist's page wants every track they're credited on; an
+        # album's page (artist = its album artist, "Various Artists"
+        # included) every track of that album.
+        if (
+            want_artist
+            and album_owner_of(entry).casefold() != want_artist
+            and want_artist
+            not in {name.casefold() for name in credited_artists_of(entry)}
+        ):
             continue
         if want_album:
             tagged = str(entry.get('album') or '').strip().casefold()
@@ -688,36 +785,37 @@ def library_artist_index(
     liked = liked_paths or set()
     artists: dict[str, dict[str, Any]] = {}
     for entry in listing_for_request(ctx):
-        name = album_artist_of(entry)
-        if not name:
-            continue
-        key = name.casefold()
-        bucket = artists.get(key)
-        if bucket is None:
-            bucket = {
-                'name': name,
-                'added': 0,
-                'duration': 0.0,
-                'track_count': 0,
-                'liked_count': 0,
-                'album_count': 0,
-                'cover_file': '',
-                '_albums': set(),
-            }
-            artists[key] = bucket
-        bucket['track_count'] += 1
-        bucket['duration'] += float(entry.get('duration') or 0)
-        bucket['added'] = max(
-            int(bucket['added'] or 0), int(entry.get('added') or 0)
-        )
         stored = str(entry.get('file') or '').replace('\\', '/')
-        if stored in liked:
-            bucket['liked_count'] += 1
-        if not bucket['cover_file'] and entry.get('has_cover'):
-            bucket['cover_file'] = stored
         album = str(entry.get('album') or '').strip()
-        if album:
-            bucket['_albums'].add(album.casefold())
+        owner = album_owner_of(entry).casefold()
+        # Every credited artist gets the track (a guest too); an album only
+        # counts for its own album artist.
+        for name in credited_artists_of(entry):
+            key = name.casefold()
+            bucket = artists.get(key)
+            if bucket is None:
+                bucket = {
+                    'name': name,
+                    'added': 0,
+                    'duration': 0.0,
+                    'track_count': 0,
+                    'liked_count': 0,
+                    'album_count': 0,
+                    'cover_file': '',
+                    '_albums': set(),
+                }
+                artists[key] = bucket
+            bucket['track_count'] += 1
+            bucket['duration'] += float(entry.get('duration') or 0)
+            bucket['added'] = max(
+                int(bucket['added'] or 0), int(entry.get('added') or 0)
+            )
+            if stored in liked:
+                bucket['liked_count'] += 1
+            if not bucket['cover_file'] and entry.get('has_cover'):
+                bucket['cover_file'] = stored
+            if album and key == owner:
+                bucket['_albums'].add(album.casefold())
     rows: list[dict[str, Any]] = []
     for bucket in artists.values():
         album_keys = bucket.pop('_albums')
@@ -738,9 +836,7 @@ def library_home_summary(
     total_size = 0
     for entry in entries:
         total_size += int(entry.get('size') or 0)
-        name = album_artist_of(entry)
-        if name:
-            artists.add(name.casefold())
+        artists.update(name.casefold() for name in credited_artists_of(entry))
     recent = sorted(albums.values(), key=lambda row: -int(row['added']))[
         :recent_albums
     ]

@@ -115,13 +115,16 @@
                   >
                     {{ track.title }}
                   </h2>
-                  <RouterLink
-                    v-if="track.albumArtist && !track.isPodcast"
-                    :to="{ name: 'Artist', query: { name: track.albumArtist } }"
-                    class="mt-1 block truncate text-base text-white/70 hover:text-white hover:underline"
-                    @click="nowPlaying.close()"
-                    >{{ track.artist }}</RouterLink
+                  <p
+                    v-if="track.artists?.length && !track.isPodcast"
+                    class="mt-1 truncate text-base text-white/70"
                   >
+                    <TrackArtistLinks
+                      :artists="track.artists"
+                      link-class="hover:text-white hover:underline"
+                      @navigate="nowPlaying.close()"
+                    />
+                  </p>
                   <p v-else class="mt-1 truncate text-base text-white/70">
                     {{ track.artist }}
                   </p>
@@ -427,6 +430,7 @@ import LikeButton from '../player/LikeButton.vue'
 import LyricsPanel from '../player/LyricsPanel.vue'
 import UpNextPanel from '../player/UpNextPanel.vue'
 import TrackDetails from '../player/TrackDetails.vue'
+import TrackArtistLinks from '../library/TrackArtistLinks.vue'
 import EqualizerPanel from '../player/EqualizerPanel.vue'
 import { usePlayer } from '/src/model/player'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
@@ -434,6 +438,7 @@ import { useNowPlaying } from '/src/model/ui'
 import { formatBytes, formatDuration, hueFor } from '/src/lib/format'
 import { availablePanels, defaultPanel, requestedPanel } from '/src/lib/panels'
 import { useCoverPalette } from '/src/model/coverPalette'
+import { groupingArtistName } from '/src/lib/library'
 import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
 
@@ -578,9 +583,9 @@ const trackMenu = computed(() => {
     {
       label: t('player.goToArtist'),
       icon: 'user',
-      hidden: !tr.albumArtist || tr.isPodcast,
+      hidden: !groupingArtistName(tr) || tr.isPodcast,
       action: () =>
-        navigate({ name: 'Artist', query: { name: tr.albumArtist } }),
+        navigate({ name: 'Artist', query: { name: groupingArtistName(tr) } }),
     },
     {
       label: t('library.saveToDevice'),
