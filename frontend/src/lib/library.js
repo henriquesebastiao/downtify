@@ -177,23 +177,64 @@ export function isGuestOn(track, name) {
 }
 
 /**
- * A track's credited artists as `{ name, linked }` for a line of artist
- * links: every name links to its Library page, unless `plain`; with
- * `hasPage`, only the names it says have one (a song not in the Library
- * yet). No artists: just `fallback`, never a link.
+ * A track's credited artists as `{ name, to }` for a line of artist links:
+ * `to` is the artist's Library page, or `null` for plain text. Every name
+ * links to its page, unless `plain`; with `hasPage`, only the names it
+ * says have one (a song not in the Library yet) - and with `searchMissing`
+ * the others link to a search for them instead. No artists: just
+ * `fallback`, never a link.
  */
 export function artistLinkItems(
   artists,
-  { fallback = '', plain = false, hasPage = null } = {}
+  { fallback = '', plain = false, hasPage = null, searchMissing = false } = {}
 ) {
   const names = (artists || [])
     .map((name) => String(name || '').trim())
     .filter(Boolean)
-  if (!names.length) return fallback ? [{ name: fallback, linked: false }] : []
-  return names.map((name) => ({
-    name,
-    linked: !plain && (!hasPage || !!hasPage(name)),
-  }))
+  if (!names.length) return fallback ? [{ name: fallback, to: null }] : []
+  return names.map((name) => {
+    if (plain) return { name, to: null }
+    if (!hasPage || hasPage(name)) {
+      return { name, to: { name: 'Artist', query: { name } } }
+    }
+    return {
+      name,
+      to: searchMissing ? { name: 'Search', params: { query: name } } : null,
+    }
+  })
+}
+
+/**
+ * Where a song's album name links: the album's Library page when the
+ * Library has it - same title (ignoring case and accents), by the song's
+ * album artist or one of its artists, or a compilation of that title -
+ * else a search for the album, unless `search` is off (then `null`).
+ * `null` when the song names no album.
+ */
+export function albumLinkFor(albums, song, { search = true } = {}) {
+  const title = String(song?.album_name || '').trim()
+  if (!title) return null
+  const artists = [song?.album_artist, ...(song?.artists || [])]
+    .map((name) => fold(String(name || '').trim()))
+    .filter(Boolean)
+  const sameTitle = (albums || []).filter(
+    (album) => fold(album.title) === fold(title)
+  )
+  const found =
+    sameTitle.find((album) => artists.includes(fold(album.artist))) ||
+    sameTitle.find((album) => isVariousArtists(album.artist))
+  if (found) {
+    return {
+      name: 'Album',
+      query: { artist: found.artist, title: found.title },
+    }
+  }
+  if (!search) return null
+  const artist = (song?.artists || [])[0] || song?.album_artist || ''
+  return {
+    name: 'Search',
+    params: { query: [artist, title].filter(Boolean).join(' ') },
+  }
 }
 
 /**
