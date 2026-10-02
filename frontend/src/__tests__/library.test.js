@@ -6,6 +6,7 @@ import {
   groupArtists,
   indexTracksBySong,
   itemTrackCount,
+  isVariousArtists,
   normalizeTrack,
   songKey,
   sortItems,
@@ -360,5 +361,19 @@ describe('itemTrackCount', () => {
     expect(itemTrackCount({ tracks: [{}, {}], trackCount: 9 })).toBe(2)
     expect(itemTrackCount({ tracks: [], trackCount: 9 })).toBe(9)
     expect(itemTrackCount({})).toBe(0)
+  })
+})
+
+describe('isVariousArtists', () => {
+  it('spots the album artist Downtify writes for a compilation', () => {
+    expect(isVariousArtists('Various Artists')).toBe(true)
+    expect(isVariousArtists(' various artists ')).toBe(true)
+    expect(isVariousArtists('Various')).toBe(true)
+  })
+
+  it('leaves real artists alone', () => {
+    expect(isVariousArtists('Kenji Aoki')).toBe(false)
+    expect(isVariousArtists('')).toBe(false)
+    expect(isVariousArtists(undefined)).toBe(false)
   })
 })

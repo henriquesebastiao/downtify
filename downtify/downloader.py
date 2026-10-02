@@ -309,6 +309,12 @@ class Downloader:
     #: own thread, so it must only hand the work off and return. Whatever it
     #: raises is logged and never fails the download.
     on_downloaded: Optional[Callable[[dict[str, Any], str], None]] = None
+    #: Called as ``album_override(song)`` once a song's metadata is complete,
+    #: before its path and tags are worked out: the ``album_artist`` /
+    #: ``compilation`` an admin set for its album by hand, or ``{}``. Set by
+    #: the app (``main.py``, see ``compilation.CompilationMarks``). Whatever
+    #: it raises is logged and the song keeps its source's values.
+    album_override: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None
 
     def __init__(
         self,
@@ -796,7 +802,7 @@ class Downloader:
                 f'Could not find {source} for {song.get("name")!r}'
             )
 
-        song = enrich_from_match(song, match)
+        song = self._with_album_override(enrich_from_match(song, match))
 
         if local_source is not None:
             return self._downloaded(
@@ -829,6 +835,21 @@ class Downloader:
                     song, video_id, progress_cb, subdir, provider
                 ),
             )
+
+    def _with_album_override(self, song: dict[str, Any]) -> dict[str, Any]:
+        """*song* with what :attr:`album_override` says for its album."""
+
+        hook = self.album_override
+        if hook is None:
+            return song
+        try:
+            override = hook(song)
+        except Exception:
+            logger.opt(exception=True).warning(
+                'The album override failed for {!r}', song.get('name')
+            )
+            return song
+        return {**song, **override} if override else song
 
     def _downloaded(self, song: dict[str, Any], filename: str) -> str:
         """Tell :attr:`on_downloaded` that *filename* is new; returns it.

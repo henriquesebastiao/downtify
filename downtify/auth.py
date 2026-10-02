@@ -881,7 +881,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('POST'), r'^/api/library/lookup$', CLIENT),
         (
             _ALL,
-            r'^/api/library/(upgrade|reconcile|archive|replace|external)',
+            r'^/api/library/(upgrade|reconcile|archive|replace|external|compilation)',
             ADMIN,
         ),
         (_ALL, r'^/api/library/playlist', ADMIN),

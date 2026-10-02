@@ -172,6 +172,10 @@ working without changes:
   ``POST /api/library/replace`` (body ``{file, video_id}``: replace the
   track's audio with that video in place, as a queue job - see
   ``downtify/audio_replace.py``)
+* ``POST /api/library/compilation`` (body ``{files, compilation}``: mark
+  or unmark an album as a various-artists compilation - rewrites its
+  album-artist tag and compilation flag in place and remembers it for
+  later downloads; see ``downtify/compilation.py``)
 * ``GET  /api/library/upgrade`` and ``GET /api/library/upgrade/jobs``
   (an upgrade run's state, queue counts and per-track rows)
 * ``POST /api/library/upgrade/scan`` (look for tracks with low-resolution
@@ -301,6 +305,7 @@ from . import (
     artist_photo_proxy,
     artist_profile,
     audio_replace,
+    compilation,
     cover_sources,
     deezer,
     integration_check,
@@ -914,6 +919,7 @@ class AppState:
     upgrade_runner: Optional[library_upgrade.LibraryUpgradeRunner] = None
     external_sync: Optional[ExternalSyncJob] = None
     likes: Optional[LikedTracks] = None
+    compilation_marks: Optional[compilation.CompilationMarks] = None
     podcasts: Optional[PodcastStore] = None
     discover: Optional[DiscoverStore] = None
     # Sign-in and paired apps (see downtify/auth.py and auth_routes.py).
@@ -4503,6 +4509,84 @@ def _after_replacement(file: str, full: Path) -> None:
         if spotify_id:
             state.track_index.register(spotify_id, file, full_path=full)
     invalidate_library_paths_cache(notify=False)
+
+
+# ---------------------------------------------------------------------------
+# Marking an album as a various-artists compilation by hand
+# ---------------------------------------------------------------------------
+
+
+def album_override_for(song: dict[str, Any]) -> dict[str, Any]:
+    """What an admin set by hand for *song*'s album (see
+    ``compilation.CompilationMarks``) - the downloader's
+    ``album_override``."""
+
+    marks = state.compilation_marks
+    return marks.override_for(song) if marks is not None else {}
+
+
+@router.post('/api/library/compilation')
+async def set_album_compilation_endpoint(request: Request) -> dict[str, Any]:
+    """Mark (``compilation: true``) or unmark an album as a various-artists
+    compilation: ``{files, compilation}`` -> ``{album, album_artist,
+    compilation, changed, failed}``. Rewrites only the album-artist tag and
+    the compilation flag of every file, keeps them where they are, and
+    remembers the album for its later downloads."""
+
+    if state.compilation_marks is None:
+        raise HTTPException(status_code=500, detail='Library not ready')
+    payload = await _json_object(request)
+    raw_files = payload.get('files')
+    if not isinstance(raw_files, list) or not raw_files:
+        raise HTTPException(status_code=400, detail='files is required')
+    want = payload.get('compilation')
+    if not isinstance(want, bool):
+        raise HTTPException(
+            status_code=400, detail='compilation must be true or false'
+        )
+    ctx = library_context()
+    files: list[tuple[str, Path]] = []
+    for raw in raw_files:
+        file = str(raw or '').strip().replace('\\', '/')
+        full = resolve_library_file(file, ctx) if file else None
+        if full is None:
+            raise HTTPException(
+                status_code=404, detail=f'File not found: {file}'
+            )
+        files.append((file, full))
+
+    try:
+        result = await asyncio.to_thread(
+            compilation.set_album_compilation,
+            files,
+            compilation=want,
+            marks=state.compilation_marks,
+        )
+    except compilation.CompilationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    for file in result.changed:
+        full = dict(files)[file]
+        await asyncio.to_thread(_after_replacement, file, full)
+    if result.changed:
+        announce_library_changed()
+    await log_activity(
+        request,
+        'album_compilation',
+        f'{result.album_artist} - {result.album}'.strip(' -'),
+        {
+            'album': result.album,
+            'compilation': result.compilation,
+            'files': len(result.changed),
+        },
+    )
+    return {
+        'album': result.album,
+        'album_artist': result.album_artist,
+        'compilation': result.compilation,
+        'changed': result.changed,
+        'failed': result.failed,
+    }
 
 
 # ---------------------------------------------------------------------------

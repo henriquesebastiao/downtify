@@ -37,6 +37,7 @@ _VARIOUS_ARTISTS_IDS = frozenset({
 # translations services use, in case one turns up.
 _VARIOUS_ARTISTS_NAMES = frozenset({
     'various artists',
+    'various',
     'vários artistas',
     'varios artistas',
     'vários intérpretes',
