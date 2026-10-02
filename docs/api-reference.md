@@ -1321,6 +1321,26 @@ It runs as a queue job, with the usual [WebSocket](#websocket) progress messages
 
 ---
 
+### `POST /api/library/compilation`
+
+Admin. Mark (`"compilation": true`) or unmark an album as a Various Artists compilation: `{ "files": ["…", "…"], "compilation": true }`, where `files` are every track of the album. See [Marking an album as Various Artists](features/file-organization.md#marking-an-album-as-various-artists).
+
+**Response:**
+
+```json
+{
+  "album": "Lady Marmalade",
+  "album_artist": "Various Artists",
+  "compilation": true,
+  "changed": ["Christina Aguilera/Lady Marmalade/…mp3"],
+  "failed": []
+}
+```
+
+Only the album-artist tag and the compilation flag of each file change; files keep their path and modification date, and one that fails to rewrite is left untouched and listed in `failed` (`{file, error}`). `album_artist` is the album's new album artist — "Various Artists", or when unmarking the one it had before. The album is remembered, so tracks of it downloaded later get the same tags. `400` when the files aren't all from one album or the album is already in that state, `404` for an unknown file.
+
+---
+
 ### `GET /api/library/upgrade`
 
 The state of the library upgrade: the current (or last) run, its queue counts and what the scan found. See [Upgrade library](features/library-upgrade.md).
