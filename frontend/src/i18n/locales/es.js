@@ -505,6 +505,7 @@ export default {
       one: 'Añadida a “{name}”',
       other: '{count} canciones añadidas a “{name}”',
     },
+    alreadyIn: 'Ya está en «{name}»',
     removedTrack: 'Quitada de “{name}”',
     created: 'Creada “{name}”',
     rename: 'Renombrar',

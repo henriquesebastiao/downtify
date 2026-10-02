@@ -504,6 +504,7 @@ export default {
       one: '“{name}” listesine eklendi',
       other: '{count} şarkı “{name}” listesine eklendi',
     },
+    alreadyIn: 'Zaten “{name}” içinde',
     removedTrack: '“{name}” listesinden çıkarıldı',
     created: '“{name}” oluşturuldu',
     rename: 'Yeniden adlandır',

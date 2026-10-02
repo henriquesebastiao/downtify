@@ -504,6 +504,7 @@ export default {
       one: 'Hozzáadva: „{name}”',
       other: '{count} szám hozzáadva: „{name}”',
     },
+    alreadyIn: 'Már benne van: „{name}”',
     removedTrack: 'Eltávolítva: „{name}”',
     created: 'Létrehozva: „{name}”',
     rename: 'Átnevezés',

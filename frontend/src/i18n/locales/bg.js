@@ -498,6 +498,7 @@ export default {
       one: 'Добавена към „{name}“',
       other: '{count} песни към „{name}“',
     },
+    alreadyIn: 'Вече е в „{name}“',
     removedTrack: 'Премахната от „{name}“',
     created: 'Създаден „{name}“',
     rename: 'Преименувай',

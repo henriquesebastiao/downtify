@@ -503,6 +503,7 @@ export default {
       one: 'Προστέθηκε στη «{name}»',
       other: '{count} κομμάτια στη «{name}»',
     },
+    alreadyIn: 'Ήδη στο «{name}»',
     removedTrack: 'Αφαιρέθηκε από τη «{name}»',
     created: 'Δημιουργήθηκε η «{name}»',
     rename: 'Μετονομασία',

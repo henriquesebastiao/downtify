@@ -494,6 +494,7 @@ export default {
       one: 'Added to “{name}”',
       other: '{count} songs added to “{name}”',
     },
+    alreadyIn: 'Already in “{name}”',
     removedTrack: 'Removed from “{name}”',
     created: 'Created “{name}”',
     rename: 'Rename',

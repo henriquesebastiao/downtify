@@ -62,3 +62,14 @@ This is compatible with Jellyfin, Navidrome, Plex, VLC, Kodi, Sonos and any othe
 ## Playlists you create
 
 **Library → Playlists → New playlist** writes the same kind of M3U under `Playlists/`, with an extra `#EXTDOWNTIFY:manual` line so Downtify can tell it apart from a downloaded Spotify/YouTube playlist. You can rename it, and add or remove songs (including ones from [extra folders](external-library.md)). Deleting that playlist, deleting a track, or unmapping an extra folder updates the M3U; the audio is only deleted when you delete the track itself or an imported playlist.
+
+### Adding songs to a playlist
+
+Admins can put songs in one of these playlists, or in a new one, from several places:
+
+- **A song's ⋯ menu** (in any track list) → **Add to playlist**.
+- **Select several songs** in the Library and press **Add to playlist**.
+- **An album's ⋯ menu** → **Add to playlist** adds every song of the album.
+- **An artist's ⋯ menu** (on the artist's page) → **Add to playlist** adds everything the artist has in your library, album by album.
+
+Each menu lists your playlists and a **New playlist…** entry that creates one with those songs already in it. A song a playlist already has is skipped, and the confirmation says how many were really added (or that they were all there already). A playlist holds at most 500 songs.

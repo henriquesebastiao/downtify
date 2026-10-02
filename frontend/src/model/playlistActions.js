@@ -127,10 +127,16 @@ export function usePlaylistActions() {
       typeof item === 'string' ? item : item.file
     )
     try {
-      await API.editLibraryPlaylistTracks(playlist.name, { add: names })
+      const res = await API.editLibraryPlaylistTracks(playlist.name, {
+        add: names,
+      })
+      // The server skips what the playlist already has: report what it did.
+      const added = Number(res.data?.added ?? names.length)
       await library.load({ force: true })
       ui.toast(
-        t('playlists.added', { count: names.length, name: playlist.title }),
+        added
+          ? t('playlists.added', { count: added, name: playlist.title })
+          : t('playlists.alreadyIn', { name: playlist.title }),
         { kind: 'success' }
       )
     } catch (err) {
