@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  albumLinkFor,
   artistLinkItems,
   buildPlaylists,
   filterItems,
@@ -470,28 +471,112 @@ describe('artists credited on a track', () => {
 })
 
 describe('artistLinkItems', () => {
+  const page = (name) => ({ name: 'Artist', query: { name } })
+  const search = (name) => ({ name: 'Search', params: { query: name } })
+
   it('links every credited artist to their own page', () => {
     expect(artistLinkItems(['Kenji Aoki', 'Mira Kovač'])).toEqual([
-      { name: 'Kenji Aoki', linked: true },
-      { name: 'Mira Kovač', linked: true },
+      { name: 'Kenji Aoki', to: page('Kenji Aoki') },
+      { name: 'Mira Kovač', to: page('Mira Kovač') },
     ])
   })
 
   it('links only the artists with a page for a song not in the Library', () => {
     const hasPage = (name) => name === 'Kenji Aoki'
     expect(artistLinkItems(['Kenji Aoki', 'Tom Reyes'], { hasPage })).toEqual([
-      { name: 'Kenji Aoki', linked: true },
-      { name: 'Tom Reyes', linked: false },
+      { name: 'Kenji Aoki', to: page('Kenji Aoki') },
+      { name: 'Tom Reyes', to: null },
+    ])
+  })
+
+  it('links the artists without a page to a search for them', () => {
+    const hasPage = (name) => name === 'Kenji Aoki'
+    expect(
+      artistLinkItems(['Kenji Aoki', 'Tom Reyes'], {
+        hasPage,
+        searchMissing: true,
+      })
+    ).toEqual([
+      { name: 'Kenji Aoki', to: page('Kenji Aoki') },
+      { name: 'Tom Reyes', to: search('Tom Reyes') },
     ])
   })
 
   it('shows plain names, or the fallback, when nothing links', () => {
-    expect(artistLinkItems(['Kenji Aoki'], { plain: true })).toEqual([
-      { name: 'Kenji Aoki', linked: false },
-    ])
-    expect(artistLinkItems([], { fallback: 'Unknown artist' })).toEqual([
-      { name: 'Unknown artist', linked: false },
-    ])
+    expect(
+      artistLinkItems(['Kenji Aoki'], { plain: true, searchMissing: true })
+    ).toEqual([{ name: 'Kenji Aoki', to: null }])
+    expect(
+      artistLinkItems([], { fallback: 'Unknown artist', searchMissing: true })
+    ).toEqual([{ name: 'Unknown artist', to: null }])
     expect(artistLinkItems(null)).toEqual([])
+  })
+})
+
+describe('albumLinkFor', () => {
+  const albums = [
+    { artist: 'Kenji Aoki', title: 'Glass Harbor' },
+    { artist: 'Various Artists', title: 'Soundtrack' },
+    { artist: 'Ana Luz', title: 'Night' },
+  ]
+  const album = (artist, title) => ({
+    name: 'Album',
+    query: { artist, title },
+  })
+
+  it('opens the album when the Library has it', () => {
+    const song = { album_name: 'glass harbor', artists: ['Kenji Aoki'] }
+    expect(albumLinkFor(albums, song)).toEqual(
+      album('Kenji Aoki', 'Glass Harbor')
+    )
+  })
+
+  it("matches the song's album artist or any of its artists", () => {
+    expect(
+      albumLinkFor(albums, {
+        album_name: 'Glass Harbor',
+        artists: ['Mira Kovač', 'Kenji Aoki'],
+      })
+    ).toEqual(album('Kenji Aoki', 'Glass Harbor'))
+    expect(
+      albumLinkFor(albums, {
+        album_name: 'Glass Harbor',
+        album_artist: 'kenji aoki',
+        artists: ['Tom Reyes'],
+      })
+    ).toEqual(album('Kenji Aoki', 'Glass Harbor'))
+  })
+
+  it("opens a compilation of that title, whoever's song it is", () => {
+    expect(
+      albumLinkFor(albums, { album_name: 'Soundtrack', artists: ['Tom Reyes'] })
+    ).toEqual(album('Various Artists', 'Soundtrack'))
+  })
+
+  it("searches for an album the Library doesn't have", () => {
+    // Same title, another artist: a namesake, not this album.
+    expect(
+      albumLinkFor(albums, { album_name: 'Night', artists: ['Tom Reyes'] })
+    ).toEqual({ name: 'Search', params: { query: 'Tom Reyes Night' } })
+  })
+
+  it('gives no search link when searching is off', () => {
+    const off = { search: false }
+    expect(
+      albumLinkFor(albums, { album_name: 'Night', artists: ['Tom Reyes'] }, off)
+    ).toBe(null)
+    // What the Library has still links.
+    expect(
+      albumLinkFor(
+        albums,
+        { album_name: 'Glass Harbor', artists: ['Kenji Aoki'] },
+        off
+      )
+    ).toEqual(album('Kenji Aoki', 'Glass Harbor'))
+  })
+
+  it('gives no link to a song without an album', () => {
+    expect(albumLinkFor(albums, { album_name: '', artists: ['A'] })).toBe(null)
+    expect(albumLinkFor(albums, null)).toBe(null)
   })
 })
