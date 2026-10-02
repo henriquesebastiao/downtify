@@ -59,14 +59,7 @@
                 : t('album.markCompilation')
             }}
           </UiButton>
-          <UiButton
-            variant="ghost"
-            icon="zip"
-            class="max-sm:hidden"
-            @click="actions.downloadZip(album.tracks)"
-          >
-            {{ t('library.downloadZip') }}
-          </UiButton>
+          <!-- Download as ZIP lives in the ⋯ menu below. -->
           <UiMenu :items="menu" :label="t('common.more')" size="lg" />
         </template>
       </CollectionHero>
