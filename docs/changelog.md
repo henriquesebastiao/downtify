@@ -4,6 +4,14 @@ icon: lucide/history
 
 # Changelog
 
+## [3.4.0](https://github.com/henriquesebastiao/downtify/tree/3.4.0) (2026-10-02)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.3.0...3.4.0)
+
+**Merged pull requests:**
+
+- Adding local music and creating custom playlists [\#408](https://github.com/henriquesebastiao/downtify/pull/408) ([luizbossoi](https://github.com/luizbossoi))
+
 ## [3.3.0](https://github.com/henriquesebastiao/downtify/tree/3.3.0) (2026-10-01)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.2.0...3.3.0)
