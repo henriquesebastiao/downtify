@@ -3,6 +3,7 @@
     <RouterLink :to="linkTo" class="block" :aria-label="release.name">
       <CoverArt
         :src="deezerImage(release.cover_url)"
+        :fallback="fallback"
         :name="release.name"
         :round="round"
         :icon="round ? 'user' : 'disc'"
@@ -59,6 +60,9 @@ import { useI18n } from '/src/i18n'
 const props = defineProps({
   release: { type: Object, required: true },
   round: { type: Boolean, default: false },
+  // A picture to show when `release.cover_url` doesn't load (see
+  // CoverArt's own `fallback`).
+  fallback: { type: String, default: '' },
   // Where the card opens; by default the release's link, resolved like a
   // pasted one (the Link page).
   to: { type: [String, Object], default: null },

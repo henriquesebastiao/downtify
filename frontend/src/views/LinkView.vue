@@ -35,7 +35,8 @@
       <CollectionHero
         :title="details.name || t('link.untitled')"
         :kicker="kicker"
-        :cover="details.cover_url"
+        :cover="heroCover.cover"
+        :cover-fallback="heroCover.fallback"
         :covers="details.cover_url ? [] : mosaic"
         :name="details.name"
         :icon="
@@ -254,6 +255,7 @@ import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
+import { knownArtistPhoto } from '/src/lib/artistPhotoProxy'
 import DownloadState from '/src/components/search/DownloadState.vue'
 import ReleaseCard from '/src/components/search/ReleaseCard.vue'
 import SongPlayCell from '/src/components/library/SongPlayCell.vue'
@@ -280,6 +282,15 @@ const library = useLibrary()
 const ui = useUi()
 
 const details = ref(null)
+// An artist link's photo: the one saved in the library when there is one,
+// else the platform's own (Spotify, Deezer or YouTube Music) relayed by the
+// photo proxy - and that picture straight from the platform if the proxy
+// can't answer. Any other link keeps its cover as it is.
+const heroCover = computed(() => {
+  const d = details.value
+  if (d?.kind !== 'artist') return { cover: d?.cover_url || '', fallback: '' }
+  return knownArtistPhoto(d.name, d.cover_url)
+})
 const loading = ref(false)
 const error = ref('')
 const submitting = ref(false)

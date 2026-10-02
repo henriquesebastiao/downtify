@@ -152,7 +152,8 @@
             <ReleaseCard
               v-for="artist in visibleArtists"
               :key="artist.artist_id || artist.url"
-              :release="artist"
+              :release="withPhoto(artist)"
+              :fallback="artist.cover_url"
               round
             />
           </div>
@@ -176,6 +177,7 @@ import ReleaseCard from '/src/components/search/ReleaseCard.vue'
 import SongRow from '/src/components/search/SongRow.vue'
 import { useSearch } from '/src/model/search'
 import { useLibrary } from '/src/model/library'
+import { knownArtistPhoto } from '/src/lib/artistPhotoProxy'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
@@ -245,6 +247,17 @@ const visibleArtists = computed(() =>
     ? search.artists.value.slice(0, 6)
     : search.artists.value
 )
+
+// An artist result shows the photo saved in the library when there is one,
+// else its YouTube Music picture relayed by the photo proxy (Google's image
+// CDN throttles a page's burst of hotlinked photos) - and that picture
+// straight from YouTube Music if the proxy can't answer (`fallback`).
+function withPhoto(artist) {
+  return {
+    ...artist,
+    cover_url: knownArtistPhoto(artist.name, artist.cover_url).cover,
+  }
+}
 
 const tips = computed(() => [
   {
