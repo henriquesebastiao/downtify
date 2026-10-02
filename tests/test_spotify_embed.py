@@ -22,6 +22,7 @@ from downtify.spotify import (
     _normalize_release_date_text,
     _top_track_overview,
     _track_dict,
+    _track_dict_from_graphql_item,
     album_tracks_from_id,
     artist_banner_url_from_id,
     artist_image_url_from_id,
@@ -47,6 +48,9 @@ _AL5 = 'AliasSolo'
 _AL6 = 'AliasGuest'
 _SUB_TWO_NBSP = f'{_AL1},\xa0{_AL2}'
 _SUB_FULLWIDTH = f'{_AL3}，{_AL4}'
+# One artist whose own name holds a comma ("Earth, Wind & Fire"): Spotify
+# separates artists with a comma + NO-BREAK space, never a plain space.
+_SUB_PLAIN_COMMA = 'AliasCoast, Hill & Vale'
 
 
 def test_embed_row_track_merges_wrapper_subtitle_onto_nested_track():
@@ -90,8 +94,9 @@ def test_embed_row_track_flat_row_returns_same_dict():
 @pytest.mark.parametrize(
     ('subtitle', 'expected'),
     [
-        (f'{_AL1}, {_AL2}', [_AL1, _AL2]),
+        (_SUB_PLAIN_COMMA, [_SUB_PLAIN_COMMA]),
         (_SUB_TWO_NBSP, [_AL1, _AL2]),
+        (f'{_SUB_PLAIN_COMMA}, {_AL6}', [_SUB_PLAIN_COMMA, _AL6]),
         (_SUB_FULLWIDTH, [_AL3, _AL4]),
     ],
 )
@@ -120,7 +125,7 @@ def test_artist_names_falls_back_to_subtitle():
     entity = {
         'uri': 'spotify:track:t',
         'title': 'T',
-        'subtitle': f'{_AL3}, {_AL4}',
+        'subtitle': f'{_AL3}, {_AL4}',
     }
     assert _artist_names(entity) == [_AL3, _AL4]
 
@@ -499,7 +504,7 @@ def test_track_dict_uses_subtitle_when_artists_empty():
             'uri': 'spotify:track:tid',
             'title': 'TestSong',
         },
-        'subtitle': f'{_AL1}, {_AL2}',
+        'subtitle': _SUB_TWO_NBSP,
     })
     td = _track_dict(track, track_id='tid', fallback_album='TestAlbum')
     assert td['artists'] == [_AL1, _AL2]
@@ -518,7 +523,7 @@ def test_album_tracks_from_id_merges_row_subtitle():
                     'uri': 'spotify:track:t1',
                     'title': 'TestTrackOne',
                 },
-                'subtitle': f'{_AL1}, {_AL2}',
+                'subtitle': _SUB_TWO_NBSP,
             },
         ],
     }
@@ -1683,3 +1688,212 @@ def test_top_songs_leave_the_album_to_the_overview():
         artist_top_songs_from_id('artist0000000000000000')
 
     assert calls == [{'with_album': False}]
+
+
+# ── Artists with commas, and the album artist ────────────────────────────
+
+
+def test_track_dict_flags_a_plain_comma_subtitle_for_checking():
+    row = _track_dict(
+        {'id': 'tid', 'title': 'T', 'subtitle': _SUB_PLAIN_COMMA},
+        track_id='tid',
+    )
+    assert row['artists'] == [_SUB_PLAIN_COMMA]
+    assert row['artists_unverified'] is True
+
+
+def test_track_dict_trusts_a_no_break_space_subtitle():
+    row = _track_dict(
+        {'id': 'tid', 'title': 'T', 'subtitle': _SUB_TWO_NBSP},
+        track_id='tid',
+    )
+    assert row['artists'] == [_AL1, _AL2]
+    assert 'artists_unverified' not in row
+
+
+def test_track_dict_trusts_structured_artists():
+    row = _track_dict(
+        {
+            'id': 'tid',
+            'title': 'T',
+            'artists': [{'name': _SUB_PLAIN_COMMA}],
+            'subtitle': _SUB_PLAIN_COMMA,
+        },
+        track_id='tid',
+    )
+    assert 'artists_unverified' not in row
+
+
+@patch('downtify.spotify.track_from_id')
+def test_enrich_rereads_unverified_artists_even_when_complete(
+    mock_track_from_id,
+):
+    mock_track_from_id.return_value = {
+        'artists': [_AL3, _AL4],
+        'artist': f'{_AL3}, {_AL4}',
+    }
+    row = {
+        'song_id': 'c' * 22,
+        'source': 'spotify',
+        'artists': [f'{_AL3}, {_AL4}'],
+        'artists_unverified': True,
+        'year': '2020',
+        'release_date': '2020-01-01',
+        'track_number': 1,
+        'album_name': 'TestAlbum',
+    }
+    out = enrich_track_from_spotify_if_sparse(row)
+    mock_track_from_id.assert_called_once_with('c' * 22)
+    assert out['artists'] == [_AL3, _AL4]
+    assert 'artists_unverified' not in out
+
+
+@patch('downtify.spotify.track_from_id')
+def test_enrich_keeps_the_row_artists_when_they_are_verified(
+    mock_track_from_id,
+):
+    mock_track_from_id.return_value = {'artists': [_AL2], 'year': '2020'}
+    row = {
+        'song_id': 'c' * 22,
+        'source': 'spotify',
+        'artists': [_AL1],
+        'album_name': 'TestAlbum',
+    }
+    assert enrich_track_from_spotify_if_sparse(row)['artists'] == [_AL1]
+
+
+@patch('downtify.spotify.track_from_id')
+def test_enrich_carries_the_album_artist_of_the_track_album(
+    mock_track_from_id,
+):
+    mock_track_from_id.return_value = {
+        'album_name': 'TestAlbum',
+        'album_artist': 'Various Artists',
+        'compilation': True,
+    }
+    sparse = {
+        'song_id': 'd' * 22,
+        'source': 'spotify',
+        'name': 'T',
+        'artists': [_AL1],
+    }
+    out = enrich_track_from_spotify_if_sparse(sparse)
+    assert out['album_artist'] == 'Various Artists'
+    assert out['compilation'] is True
+
+
+def _album_with_subtitle(subtitle):
+    return {
+        'name': 'TestAlbum',
+        'subtitle': subtitle,
+        'trackList': [
+            {
+                'track': {'id': 't1', 'uri': 'spotify:track:t1', 'title': 'A'},
+                'subtitle': f'{_AL1},\xa0{_AL6}',
+            },
+            {
+                'track': {'id': 't2', 'uri': 'spotify:track:t2', 'title': 'B'},
+                'subtitle': _AL1,
+            },
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    ('subtitle', 'expected'),
+    [
+        (_AL1, {'album_artist': _AL1, 'compilation': None}),
+        (
+            'Various Artists',
+            {'album_artist': 'Various Artists', 'compilation': True},
+        ),
+    ],
+)
+def test_album_tracks_carry_the_album_artist(subtitle, expected):
+    with (
+        patch(
+            'downtify.spotify._fetch_embed_json',
+            return_value=_embed_payload(_album_with_subtitle(subtitle)),
+        ),
+        patch(
+            'downtify.spotify._album_release_date_from_open_page',
+            return_value='',
+        ),
+    ):
+        songs = album_tracks_from_id('dummyAlbumId')
+
+    # A guest on one track changes neither track's album artist.
+    assert songs[0]['artists'] == [_AL1, _AL6]
+    for song in songs:
+        assert {k: song.get(k) for k in expected} == expected
+
+
+def test_track_from_id_with_album_reads_the_album_artist():
+    def embeds(kind, _sid):
+        if kind == 'track':
+            return _embed_payload(_track_entity())
+        return _embed_payload({
+            **_album_entity(),
+            'subtitle': 'Various Artists',
+        })
+
+    with (
+        patch('downtify.spotify._fetch_embed_json', side_effect=embeds),
+        patch(
+            'downtify.spotify.httpx.get',
+            return_value=_page_response(_TRACK_PAGE),
+        ),
+    ):
+        song = track_from_id(_TRACK_ID, with_album=True)
+
+    assert song['album_artist'] == 'Various Artists'
+    assert song['compilation'] is True
+
+
+def _graphql_item(album_artist, album_artist_uri):
+    return {
+        'itemV2': {
+            '__typename': 'TrackResponseWrapper',
+            'data': {
+                'uri': 'spotify:track:' + 'e' * 22,
+                'name': 'T',
+                'artists': {'items': [{'profile': {'name': _AL1}}]},
+                'albumOfTrack': {
+                    'name': 'TestAlbum',
+                    'artists': {
+                        'items': [
+                            {
+                                'profile': {'name': album_artist},
+                                'uri': album_artist_uri,
+                            }
+                        ]
+                    },
+                },
+            },
+        }
+    }
+
+
+@pytest.mark.parametrize(
+    ('name', 'uri', 'expected'),
+    [
+        (_AL5, 'spotify:artist:abc', {'album_artist': _AL5}),
+        (
+            'Various Artists',
+            'spotify:artist:0LyfQWJT6nXafLPZqxe9Of',
+            {'album_artist': 'Various Artists', 'compilation': True},
+        ),
+        # Spotify's own "Various Artists" id, whatever the name says.
+        (
+            'Localized Placeholder',
+            'spotify:artist:0LyfQWJT6nXafLPZqxe9Of',
+            {'album_artist': 'Various Artists', 'compilation': True},
+        ),
+    ],
+)
+def test_graphql_playlist_rows_carry_the_album_artist(name, uri, expected):
+    row = _track_dict_from_graphql_item(_graphql_item(name, uri))
+    assert {k: row.get(k) for k in ('album_artist', 'compilation')} == {
+        'compilation': None,
+        **expected,
+    }

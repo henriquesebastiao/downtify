@@ -54,6 +54,7 @@ import httpx
 from loguru import logger
 
 from . import apple_music, deezer, providers, spotify
+from .album_artist import filing_artist
 from .downloader import _sanitize
 from .file_naming import file_name_key
 from .image_size import image_dimensions
@@ -966,14 +967,11 @@ def _seed_lock_for(download_dir: Path, name: str) -> threading.Lock:
 
 def profile_seed_artist_of(song: dict[str, Any]) -> str:
     """The artist whose profile a downloaded *song* seeds: the one its file
-    is filed under (the album artist, else the first credited artist - the
-    rule ``Downloader._artist_subdir`` uses), or ``''`` when that is no one
-    worth a profile (``Various Artists``)."""
+    is filed under (:func:`downtify.album_artist.filing_artist` - the album
+    artist, or for a compilation the track's first artist), or ``''`` when
+    that is no one worth a profile (``Various Artists``)."""
 
-    album_artist = str(song.get('album_artist') or '').strip()
-    artists = song.get('artists') or []
-    first = str(artists[0]).strip() if artists else ''
-    name = album_artist or first
+    name = filing_artist(song)
     return '' if name.casefold() in {'various artists', 'unknown'} else name
 
 

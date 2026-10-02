@@ -13,6 +13,7 @@ from downtify.deezer import (
     album_from_id,
     artist_page_from_id,
     artist_top_songs_from_id,
+    enrich_track_from_deezer_if_sparse,
     parse_deezer_url,
     playlist_cover_url_from_id,
     playlist_info_and_tracks,
@@ -377,3 +378,130 @@ def test_artist_top_songs_from_id_maps_ranked_tracks():
     assert name == 'The Artist'
     assert cover == 'https://example.com/artist-xl.jpg'
     assert [s['name'] for s in songs] == ['Hit Song', 'Another Hit']
+
+
+# ── The album artist ─────────────────────────────────────────────────────
+
+
+def _album_payload(artist):
+    return {
+        'title': 'The Album',
+        'release_date': '2023-01-15',
+        'artist': artist,
+        'tracks': {
+            'data': [
+                _album_track_row(1, 'First', artist='Main Artist'),
+                _album_track_row(2, 'Second', artist='Other Artist'),
+            ]
+        },
+    }
+
+
+def test_album_from_id_tags_every_track_with_the_album_artist():
+    payload = _album_payload({'id': 77, 'name': 'Main Artist'})
+    with patch(
+        'downtify.deezer.httpx.get', return_value=_mock_response(payload)
+    ):
+        songs = album_from_id('999')
+    assert [s['album_artist'] for s in songs] == ['Main Artist'] * 2
+    assert not any(s.get('compilation') for s in songs)
+
+
+def test_album_from_id_spots_various_artists_by_id_not_name():
+    # Deezer localizes the name for a Brazilian client.
+    payload = _album_payload({'id': 5080, 'name': 'Vários intérpretes'})
+    with patch(
+        'downtify.deezer.httpx.get', return_value=_mock_response(payload)
+    ):
+        songs = album_from_id('999')
+    assert all(s['album_artist'] == 'Various Artists' for s in songs)
+    assert all(s['compilation'] is True for s in songs)
+
+
+def test_track_from_id_looks_up_its_album_artist():
+    track = {**_TRACK_PAYLOAD, 'album': {**_TRACK_PAYLOAD['album'], 'id': 5}}
+    album = {'id': 5, 'artist': {'id': 5080, 'name': 'Vários intérpretes'}}
+    with patch(
+        'downtify.deezer.httpx.get',
+        side_effect=_sequenced_responses(track, album),
+    ):
+        song = track_from_id('111')
+    assert song['album_artist'] == 'Various Artists'
+    assert song['compilation'] is True
+    assert song['artists'] == ['Main Artist', 'Featured Artist']
+
+
+def test_track_from_id_survives_a_failed_album_lookup():
+    track = {**_TRACK_PAYLOAD, 'album': {**_TRACK_PAYLOAD['album'], 'id': 5}}
+    responses = [_mock_response(track), Exception('album down')]
+    with patch('downtify.deezer.httpx.get', side_effect=responses):
+        song = track_from_id('111')
+    assert song['name'] == 'Track Title'
+    assert 'album_artist' not in song
+
+
+# ── Guest artists of album/playlist rows ─────────────────────────────────
+
+
+def test_album_rows_are_flagged_for_their_guest_artists():
+    payload = _album_payload({'id': 77, 'name': 'Main Artist'})
+    with patch(
+        'downtify.deezer.httpx.get', return_value=_mock_response(payload)
+    ):
+        songs = album_from_id('999')
+    assert all(s['artists_unverified'] is True for s in songs)
+
+
+def test_a_full_track_is_not_flagged():
+    with patch(
+        'downtify.deezer.httpx.get',
+        return_value=_mock_response(_TRACK_PAYLOAD),
+    ):
+        song = track_from_id('111')
+    assert 'artists_unverified' not in song
+
+
+def test_enrich_reads_every_artist_from_the_track():
+    song = {
+        'song_id': 'deezer-111',
+        'source': 'deezer',
+        'artists': ['Main Artist'],
+        'artists_unverified': True,
+    }
+    with patch(
+        'downtify.deezer.httpx.get',
+        return_value=_mock_response(_TRACK_PAYLOAD),
+    ) as get:
+        out = enrich_track_from_deezer_if_sparse(song)
+    assert get.call_args.args[0] == 'https://api.deezer.com/track/111'
+    assert out['artists'] == ['Main Artist', 'Featured Artist']
+    assert 'artists_unverified' not in out
+
+
+def test_enrich_keeps_the_row_when_deezer_fails():
+    song = {
+        'song_id': 'deezer-111',
+        'source': 'deezer',
+        'artists': ['Main Artist'],
+        'artists_unverified': True,
+    }
+    with patch('downtify.deezer.httpx.get', side_effect=Exception('down')):
+        assert enrich_track_from_deezer_if_sparse(song) == song
+
+
+@pytest.mark.parametrize(
+    'song',
+    [
+        {'song_id': 'deezer-111', 'source': 'deezer', 'artists': ['A']},
+        {
+            'song_id': 'abc',
+            'source': 'spotify',
+            'artists': ['A'],
+            'artists_unverified': True,
+        },
+    ],
+)
+def test_enrich_leaves_other_songs_alone(song):
+    with patch('downtify.deezer.httpx.get') as get:
+        assert enrich_track_from_deezer_if_sparse(song) is song
+    get.assert_not_called()
