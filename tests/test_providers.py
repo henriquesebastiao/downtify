@@ -3560,10 +3560,13 @@ class _FakeYTMVideo:
     """``get_song`` with a joined ``author``, and a watch playlist that
     lists the same artists one by one."""
 
-    def __init__(self, author, watch_artists, *, watch_fails=False):
+    def __init__(
+        self, author, watch_artists, *, watch_fails=False, watch_title=''
+    ):
         self._author = author
         self._watch_artists = watch_artists
         self._watch_fails = watch_fails
+        self._watch_title = watch_title
 
     def get_song(self, video_id):
         return {
@@ -3581,6 +3584,7 @@ class _FakeYTMVideo:
             'tracks': [
                 {
                     'videoId': video_id,
+                    'title': self._watch_title or 'Harbor Lights',
                     'artists': [
                         {'name': name, 'id': f'UC{i}'}
                         for i, name in enumerate(self._watch_artists)
@@ -3605,6 +3609,18 @@ def test_video_details_keeps_a_name_with_a_comma_whole(monkeypatch):
     monkeypatch.setattr(providers, '_ytm', lambda: fake)
     song = providers._song_from_video_details('vid00000001')
     assert song['artists'] == ['Coast, Hill & Vale']
+
+
+def test_video_details_adds_a_guest_named_only_in_the_title(monkeypatch):
+    # The watch playlist credits the lead alone; the guest is in the title.
+    fake = _FakeYTMVideo(
+        'Mica Ferreira',
+        ['Mica Ferreira'],
+        watch_title='Harbor Lights (feat. Kid Spirit)',
+    )
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    song = providers._song_from_video_details('vid00000001')
+    assert song['artists'] == ['Mica Ferreira', 'Kid Spirit']
 
 
 def test_video_details_falls_back_to_the_author(monkeypatch):

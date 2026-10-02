@@ -2519,7 +2519,9 @@ def _pick_best(
 
 def _watch_playlist_artists(video_id: str) -> list[str]:
     """The artists of *video_id*, one per entry, from the first track of
-    its watch playlist - ``[]`` when that can't be read."""
+    its watch playlist - ``[]`` when that can't be read. A guest that
+    track names only in its title ("Baby (feat. Ludacris)", credited to
+    Justin Bieber alone) is added too, as the album path does."""
 
     try:
         data = _ytm().get_watch_playlist(video_id, limit=1)
@@ -2534,11 +2536,16 @@ def _watch_playlist_artists(video_id: str) -> list[str]:
             video_id,
         }:
             continue
-        return [
+        artists = [
             a['name'].strip()
             for a in track.get('artists') or []
             if isinstance(a, dict) and str(a.get('name') or '').strip()
         ]
+        if not artists:
+            return []
+        return _extract_title_featuring_artist(
+            str(track.get('title') or ''), artists
+        )
     return []
 
 
