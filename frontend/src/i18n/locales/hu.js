@@ -408,6 +408,7 @@ export default {
     compilationFailed: 'Nem sikerült módosítani az albumot',
   },
   artist: {
+    guest: 'Közreműködő',
     kicker: 'Előadó',
     notFound: 'Az előadó nem található',
     findMore: 'Továbbiak keresése',

@@ -410,6 +410,7 @@ export default {
     compilationFailed: 'Não foi possível alterar o álbum',
   },
   artist: {
+    guest: 'Participação',
     kicker: 'Artista',
     notFound: 'Artista não encontrado',
     findMore: 'Encontrar mais',

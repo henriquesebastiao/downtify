@@ -13,12 +13,17 @@
         :name="album.title"
       >
         <template #subtitle>
+          <!-- "Various Artists" has no page: its tracks are on their own
+               artists' pages. -->
           <RouterLink
-            v-if="album.artist"
+            v-if="album.artist && !isCompilation"
             :to="{ name: 'Artist', query: { name: album.artist } }"
             class="font-semibold text-fg hover:underline"
             >{{ album.artist }}</RouterLink
           >
+          <span v-else-if="album.artist" class="font-semibold text-fg">{{
+            album.artist
+          }}</span>
           <span v-for="part in facts" :key="part"> · {{ part }}</span>
         </template>
         <template #actions>

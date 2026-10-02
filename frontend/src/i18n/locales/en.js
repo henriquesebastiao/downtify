@@ -402,6 +402,7 @@ export default {
     compilationFailed: "Couldn't change the album",
   },
   artist: {
+    guest: 'Guest',
     kicker: 'Artist',
     notFound: 'Artist not found',
     findMore: 'Find more',

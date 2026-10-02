@@ -410,6 +410,7 @@ export default {
     compilationFailed: 'Albüm değiştirilemedi',
   },
   artist: {
+    guest: 'Konuk',
     kicker: 'Sanatçı',
     notFound: 'Sanatçı bulunamadı',
     findMore: 'Daha fazlasını bul',

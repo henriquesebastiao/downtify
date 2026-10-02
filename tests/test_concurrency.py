@@ -547,6 +547,7 @@ def _entry(stored, full):
         'file': stored,
         'title': full.stem,
         'artist': 'Artist',
+        'artists': ['Artist'],
         'album': '',
         'album_artist': '',
         'track_number': 0,

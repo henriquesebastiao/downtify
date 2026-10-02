@@ -409,6 +409,7 @@ export default {
     compilationFailed: 'Δεν ήταν δυνατή η αλλαγή του άλμπουμ',
   },
   artist: {
+    guest: 'Συμμετοχή',
     kicker: 'Καλλιτέχνης',
     notFound: 'Ο καλλιτέχνης δεν βρέθηκε',
     findMore: 'Βρες περισσότερα',
