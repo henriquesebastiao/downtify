@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  artistLinkItems,
   buildPlaylists,
   filterItems,
   groupAlbums,
   groupArtists,
+  groupingArtistName,
   indexTracksBySong,
   itemTrackCount,
+  isGuestOn,
   isVariousArtists,
   normalizeTrack,
   songKey,
@@ -124,10 +127,16 @@ describe('groupArtists', () => {
       album: 'Acústico',
       album_artist: 'Various Artists',
     })
-    expect(duo.albumArtist).toBe('Zé Neto & Cristiano')
+    // The duo has its own page with the track...
+    expect(groupingArtistName(duo)).toBe('Zé Neto & Cristiano')
     const artists = groupArtists([duo])
     expect(artists.map((a) => a.name)).toEqual(['Zé Neto & Cristiano'])
-    expect(artists[0].albums.map((a) => a.title)).toEqual(['Acústico'])
+    expect(artists[0].tracks).toHaveLength(1)
+    // ...while the album keeps its tag: a "Various Artists" album stays
+    // one album (Unmark as Various Artists on its page fixes a wrong tag).
+    expect(duo.albumArtist).toBe('Various Artists')
+    expect(groupAlbums([duo]).map((a) => a.artist)).toEqual(['Various Artists'])
+    expect(artists[0].albums).toEqual([])
   })
 })
 
@@ -375,5 +384,114 @@ describe('isVariousArtists', () => {
     expect(isVariousArtists('Kenji Aoki')).toBe(false)
     expect(isVariousArtists('')).toBe(false)
     expect(isVariousArtists(undefined)).toBe(false)
+  })
+})
+
+describe('artists credited on a track', () => {
+  // A compilation track with four artists, a regular album with a guest,
+  // and one artist whose own name holds a comma.
+  const credited = [
+    {
+      file: 'a.mp3',
+      title: 'Marmalade',
+      artist: 'Kenji Aoki; Mira Kovač; Ana Luz; Tom Reyes',
+      artists: ['Kenji Aoki', 'Mira Kovač', 'Ana Luz', 'Tom Reyes'],
+      album: 'Soundtrack',
+      album_artist: 'Various Artists',
+    },
+    {
+      file: 'b.mp3',
+      title: 'Undertow',
+      artist: 'Kenji Aoki; Mira Kovač',
+      artists: ['Kenji Aoki', 'Mira Kovač'],
+      album: 'Glass Harbor',
+      album_artist: 'Kenji Aoki',
+    },
+    {
+      file: 'c.mp3',
+      title: 'September',
+      artist: 'Coast, Hill & Vale',
+      artists: ['Coast, Hill & Vale'],
+      album: 'Best Of',
+      album_artist: 'Coast, Hill & Vale',
+    },
+  ].map(normalizeTrack)
+  const artists = groupArtists(credited)
+  const byName = (name) => artists.find((a) => a.name === name)
+
+  it('takes the artist list the server read from the ARTISTS tag', () => {
+    expect(credited[2].artists).toEqual(['Coast, Hill & Vale'])
+  })
+
+  it('keeps a name with a comma whole when it is the album artist', () => {
+    // No list from the server (an older backend, or a bare row).
+    const track = normalizeTrack({
+      file: 'd.mp3',
+      artist: 'Coast, Hill & Vale',
+      album_artist: 'Coast, Hill & Vale',
+    })
+    expect(track.artists).toEqual(['Coast, Hill & Vale'])
+    expect(groupArtists([track]).map((a) => a.name)).toEqual([
+      'Coast, Hill & Vale',
+    ])
+  })
+
+  it('gives every credited artist a page, guests included', () => {
+    expect(artists.map((a) => a.name).sort()).toEqual([
+      'Ana Luz',
+      'Coast, Hill & Vale',
+      'Kenji Aoki',
+      'Mira Kovač',
+      'Tom Reyes',
+    ])
+    expect(byName('Mira Kovač').tracks.map((t) => t.title)).toEqual([
+      'Marmalade',
+      'Undertow',
+    ])
+    expect(byName('Kenji Aoki').tracks).toHaveLength(2)
+  })
+
+  it('never makes Various Artists a page, nor gives it albums', () => {
+    expect(byName('Various Artists')).toBeUndefined()
+    expect(byName('Kenji Aoki').albums.map((a) => a.title)).toEqual([
+      'Glass Harbor',
+    ])
+    // Albums stay with their album artist only.
+    expect(byName('Mira Kovač').albums).toEqual([])
+  })
+
+  it('links a track to the artist it belongs to', () => {
+    expect(groupingArtistName(credited[0])).toBe('Kenji Aoki')
+    expect(groupingArtistName(credited[1])).toBe('Kenji Aoki')
+    expect(isGuestOn(credited[1], 'Mira Kovač')).toBe(true)
+    expect(isGuestOn(credited[1], 'kenji aoki')).toBe(false)
+    expect(isGuestOn(credited[0], 'Kenji Aoki')).toBe(false)
+  })
+})
+
+describe('artistLinkItems', () => {
+  it('links every credited artist to their own page', () => {
+    expect(artistLinkItems(['Kenji Aoki', 'Mira Kovač'])).toEqual([
+      { name: 'Kenji Aoki', linked: true },
+      { name: 'Mira Kovač', linked: true },
+    ])
+  })
+
+  it('links only the artists with a page for a song not in the Library', () => {
+    const hasPage = (name) => name === 'Kenji Aoki'
+    expect(artistLinkItems(['Kenji Aoki', 'Tom Reyes'], { hasPage })).toEqual([
+      { name: 'Kenji Aoki', linked: true },
+      { name: 'Tom Reyes', linked: false },
+    ])
+  })
+
+  it('shows plain names, or the fallback, when nothing links', () => {
+    expect(artistLinkItems(['Kenji Aoki'], { plain: true })).toEqual([
+      { name: 'Kenji Aoki', linked: false },
+    ])
+    expect(artistLinkItems([], { fallback: 'Unknown artist' })).toEqual([
+      { name: 'Unknown artist', linked: false },
+    ])
+    expect(artistLinkItems(null)).toEqual([])
   })
 })

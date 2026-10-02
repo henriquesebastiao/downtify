@@ -403,6 +403,7 @@ export default {
     compilationFailed: 'Албумът не можа да бъде променен',
   },
   artist: {
+    guest: 'Участие',
     kicker: 'Изпълнител',
     notFound: 'Изпълнителят не е намерен',
     findMore: 'Намери още',

@@ -51,6 +51,12 @@ describe('listenArtist', () => {
     expect(
       listenArtist(track('a.mp3', { albumArtist: 'Various', artists: ['Air'] }))
     ).toBe('Air')
+    // A compilation's track counts for its own first artist.
+    expect(
+      listenArtist(
+        track('a.mp3', { albumArtist: 'Various Artists', artists: ['Air'] })
+      )
+    ).toBe('Air')
     expect(listenArtist(track('a.mp3', { artists: ['Air', 'Beck'] }))).toBe(
       'Air'
     )

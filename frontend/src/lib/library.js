@@ -14,9 +14,19 @@ export function compareText(a, b) {
   return collator.compare(String(a || ''), String(b || ''))
 }
 
-function splitArtists(artist) {
+// The artists in an artist tag's text, when the server sent no list (a
+// file without an ARTISTS tag). A text that is the album artist too is one
+// name - "Earth, Wind & Fire" on its own album - and isn't split.
+function splitArtists(artist, albumArtist = '') {
   const text = String(artist || '').trim()
   if (!text) return []
+  if (
+    text.toLowerCase() ===
+    String(albumArtist || '')
+      .trim()
+      .toLowerCase()
+  )
+    return [text]
   for (const sep of [';', ' / ', ', ']) {
     if (text.includes(sep)) {
       return text
@@ -70,12 +80,15 @@ export function normalizeTrack(row) {
   const file = String(raw.file || '')
   const fallback = basenameTitle(file)
   const artist = String(raw.artist || '').trim() || fallback.artist
-  const artists = splitArtists(artist)
-  const albumArtist = groupingArtistName({
-    albumArtist: String(raw.album_artist || '').trim(),
-    artists,
-    artist,
-  })
+  // Every credited artist: the server reads them one by one from the
+  // file's ARTISTS tag when it has one; only then is the text split here.
+  const listed = Array.isArray(raw.artists)
+    ? raw.artists.map((name) => String(name || '').trim()).filter(Boolean)
+    : []
+  const artists = listed.length
+    ? listed
+    : splitArtists(artist, raw.album_artist)
+  const albumArtist = String(raw.album_artist || '').trim() || artists[0] || ''
   return {
     file,
     title: String(raw.title || '').trim() || fallback.title,
@@ -112,14 +125,17 @@ function byTrackOrder(a, b) {
 }
 
 /**
- * Group tracks into albums by album artist + album title. Tracks with no
- * album tag aren't an album; they stay reachable from Tracks and Artists.
+ * Group tracks into albums by album artist + album title - the album
+ * artist tag as it is, so a compilation ("Various Artists") stays one
+ * album; its tracks are on their own artists' pages (groupArtists).
+ * Tracks with no album tag aren't an album; they stay reachable from
+ * Tracks and Artists.
  */
 export function groupAlbums(tracks) {
   const map = new Map()
   for (const track of tracks) {
     if (!track.album) continue
-    const artist = groupingArtistName(track)
+    const artist = track.albumArtist
     const key = albumKey(artist, track.album)
     let album = map.get(key)
     if (!album) {
@@ -152,7 +168,40 @@ export function artistKey(name) {
   return String(name || '').toLowerCase()
 }
 
-/** Group tracks by (album) artist, with their albums attached. */
+/**
+ * Whether `track` is only a guest appearance for `name`: they're credited
+ * on it, but it belongs to another artist (see groupingArtistName).
+ */
+export function isGuestOn(track, name) {
+  return artistKey(groupingArtistName(track)) !== artistKey(name)
+}
+
+/**
+ * A track's credited artists as `{ name, linked }` for a line of artist
+ * links: every name links to its Library page, unless `plain`; with
+ * `hasPage`, only the names it says have one (a song not in the Library
+ * yet). No artists: just `fallback`, never a link.
+ */
+export function artistLinkItems(
+  artists,
+  { fallback = '', plain = false, hasPage = null } = {}
+) {
+  const names = (artists || [])
+    .map((name) => String(name || '').trim())
+    .filter(Boolean)
+  if (!names.length) return fallback ? [{ name: fallback, linked: false }] : []
+  return names.map((name) => ({
+    name,
+    linked: !plain && (!hasPage || !!hasPage(name)),
+  }))
+}
+
+/**
+ * Group tracks by artist, with their albums attached. A track counts for
+ * the artist it belongs to (groupingArtistName) and for every other artist
+ * credited on it, so a guest gets a page of their own; albums only count
+ * for their album artist. "Various Artists" is never one of them.
+ */
 export function groupArtists(tracks, albums = groupAlbums(tracks)) {
   const map = new Map()
   const entry = (name) => {
@@ -171,16 +220,21 @@ export function groupArtists(tracks, albums = groupAlbums(tracks)) {
     return map.get(key)
   }
   for (const track of tracks) {
-    const name = groupingArtistName(track)
-    if (!name) continue
-    const artist = entry(name)
-    artist.tracks.push(track)
-    artist.added = Math.max(artist.added, track.added)
-    artist.duration += track.duration
-    if (!artist.cover && track.hasCover) artist.cover = track.cover
+    const names = new Map()
+    for (const name of [groupingArtistName(track), ...track.artists]) {
+      if (!name || isVariousArtists(name)) continue
+      if (!names.has(artistKey(name))) names.set(artistKey(name), name)
+    }
+    for (const name of names.values()) {
+      const artist = entry(name)
+      artist.tracks.push(track)
+      artist.added = Math.max(artist.added, track.added)
+      artist.duration += track.duration
+      if (!artist.cover && track.hasCover) artist.cover = track.cover
+    }
   }
   for (const album of albums) {
-    if (!album.artist) continue
+    if (!album.artist || isVariousArtists(album.artist)) continue
     entry(album.artist).albums.push(album)
   }
   const artists = [...map.values()]

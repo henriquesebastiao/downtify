@@ -411,6 +411,7 @@ export default {
     compilationFailed: 'No se pudo cambiar el álbum',
   },
   artist: {
+    guest: 'Colaboración',
     kicker: 'Artista',
     notFound: 'Artista no encontrado',
     findMore: 'Buscar más',

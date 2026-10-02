@@ -135,8 +135,11 @@
         >
       </p>
       <p class="truncate text-[13px] text-muted">
-        {{ artists
-        }}<span v-if="song.album_name && !hideAlbum" class="lg:hidden">
+        <TrackArtistLinks
+          :artists="song.artists"
+          :fallback="song.artist || t('common.unknownArtist')"
+          only-known
+        /><span v-if="song.album_name && !hideAlbum" class="lg:hidden">
           · {{ song.album_name }}</span
         >
       </p>
@@ -202,6 +205,7 @@ import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
 import DownloadState from '../search/DownloadState.vue'
+import TrackArtistLinks from './TrackArtistLinks.vue'
 import { usePlayer } from '/src/model/player'
 import { useSongPlay } from '/src/model/songPlay'
 import { deezerImage } from '/src/lib/deezerImage'
@@ -258,12 +262,6 @@ const {
   ensurePlaying,
 } = useSongPlay(props)
 
-const artists = computed(
-  () =>
-    (props.song.artists || []).join(', ') ||
-    props.song.artist ||
-    t('common.unknownArtist')
-)
 // A Deezer cover at its medium size, for the 44px thumbnail - display only:
 // the song's own `cover_url` is what its download embeds.
 const cover = computed(() => deezerImage(props.song.cover_url))

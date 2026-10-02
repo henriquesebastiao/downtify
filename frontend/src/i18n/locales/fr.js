@@ -418,6 +418,7 @@ export default {
     compilationFailed: 'Impossible de modifier l’album',
   },
   artist: {
+    guest: 'Invité',
     kicker: 'Artiste',
     notFound: 'Artiste introuvable',
     findMore: 'En trouver plus',
