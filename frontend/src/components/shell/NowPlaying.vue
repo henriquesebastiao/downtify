@@ -94,7 +94,7 @@
           >
             <!-- Artwork + title (hidden on phones while a panel is open) -->
             <div
-              class="flex h-full min-h-0 w-full max-w-full flex-col justify-center gap-4 overflow-hidden lg:w-fit lg:gap-5"
+              class="now-playing-stage flex h-full min-h-0 w-full min-w-0 max-w-full flex-col justify-center gap-4 overflow-hidden lg:gap-5"
               :class="mobilePanel ? 'max-lg:hidden' : ''"
             >
               <div class="now-playing-cover mx-auto">
@@ -104,12 +104,14 @@
                   rounded="rounded-[20px]"
                   :letter-size="140"
                   :icon-size="72"
-                  class="aspect-square w-full min-h-0 min-w-0 shadow-[0_40px_100px_rgba(0,0,0,0.55)] transition-transform duration-500 ease-out-soft"
+                  class="aspect-square w-full min-h-0 min-w-0 transition-transform duration-500 ease-out-soft"
                   :class="player.isPlaying.value ? 'scale-100' : 'scale-[0.94]'"
                 />
               </div>
-              <div class="flex shrink-0 items-end justify-between gap-4">
-                <div class="min-w-0">
+              <div
+                class="flex w-full min-w-0 shrink-0 items-end justify-between gap-4"
+              >
+                <div class="min-w-0 flex-1">
                   <h2 class="now-playing-title text-display truncate font-bold">
                     {{ track.title }}
                   </h2>

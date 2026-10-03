@@ -37,7 +37,9 @@
   transform: translateY(24px) scale(0.98);
 }
 
-/* Cover and lyrics follow leftover height, not only width breakpoints. */
+/* Cover and lyrics follow leftover height, not only width breakpoints.
+   The stage shares the cover's cap so a long title ellipsizes instead of
+   widening the auto grid column and pushing the lyrics aside. */
 .now-playing-cover {
   width: min(100%, 52vh);
   max-width: 100%;
@@ -46,6 +48,7 @@
   overflow: hidden;
 }
 @media (min-width: 1024px) {
+  .now-playing-stage,
   .now-playing-cover {
     /* Explicit px, not 100%, so the auto grid column can size to the cover. */
     width: min(460px, 38vw, calc(100dvh - 22rem));
