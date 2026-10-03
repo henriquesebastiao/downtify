@@ -37,6 +37,37 @@
   transform: translateY(24px) scale(0.98);
 }
 
+/* Cover and lyrics follow leftover height, not only width breakpoints.
+   The stage shares the cover's cap so a long title ellipsizes instead of
+   widening the auto grid column and pushing the lyrics aside. */
+.now-playing-cover {
+  width: min(100%, 52vh);
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+@media (min-width: 1024px) {
+  .now-playing-stage,
+  .now-playing-cover {
+    /* Explicit px, not 100%, so the auto grid column can size to the cover. */
+    width: min(460px, 38vw, calc(100dvh - 22rem));
+  }
+}
+.now-playing-title {
+  font-size: clamp(1.25rem, 1.6vh + 0.55vw, 2rem);
+}
+.now-playing-play {
+  width: clamp(3.5rem, 9vh, 4.5rem);
+  height: clamp(3.5rem, 9vh, 4.5rem);
+}
+.now-playing-lyric {
+  font-size: clamp(1.125rem, 2.2vh + 0.55vw, 2.125rem);
+}
+.now-playing-lyric-compact {
+  font-size: clamp(1.125rem, 2.4vw + 1vh, 1.5rem);
+}
+
 /* List insert/remove */
 .list-enter-active,
 .list-leave-active {

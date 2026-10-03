@@ -16,7 +16,7 @@
     <div
       v-else-if="lines.length"
       ref="scroller"
-      class="relative flex-1 overflow-y-auto overscroll-contain px-2 py-[30vh] [mask-image:linear-gradient(transparent,#000_18%,#000_82%,transparent)] [scrollbar-width:none]"
+      class="relative flex-1 overflow-y-auto overscroll-contain px-2 py-[min(30vh,9rem)] [mask-image:linear-gradient(transparent,#000_18%,#000_82%,transparent)] [scrollbar-width:none]"
       @wheel.passive="userScrolled"
       @touchmove.passive="userScrolled"
     >
@@ -27,7 +27,7 @@
         type="button"
         class="text-display block w-full origin-left py-2 text-left leading-tight font-semibold transition-all duration-300"
         :class="[
-          sizeClass,
+          compact ? 'now-playing-lyric-compact' : 'now-playing-lyric',
           i === active
             ? 'scale-100 text-white'
             : i < active
@@ -45,7 +45,7 @@
       class="flex-1 overflow-y-auto px-2 py-6 [scrollbar-width:thin]"
     >
       <p
-        class="text-display text-xl leading-relaxed font-medium whitespace-pre-line text-white/80"
+        class="now-playing-lyric text-display leading-relaxed font-medium whitespace-pre-line text-white/80"
       >
         {{ plain }}
       </p>
@@ -87,10 +87,6 @@ const plain = ref('')
 const scroller = ref(null)
 const lineEls = ref([])
 let manualUntil = 0
-
-const sizeClass = computed(() =>
-  props.compact ? 'text-xl sm:text-2xl' : 'text-2xl xl:text-[34px]'
-)
 
 watch(
   () => player.currentTrack.value?.file,
