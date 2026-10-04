@@ -33,7 +33,7 @@ jobs:
             type=org.opencontainers.image.source, value=https://github.com/henriquesebastiao/downtify
             type=org.opencontainers.image.version, value=${{ steps.version.outputs.VERSION }}
             type=org.opencontainers.image.authors, value=Henrique Sebastião <contato@henriquesebastiao.com>
-            type=org.opencontainers.image.licenses, value=GPL-3.0
+            type=org.opencontainers.image.licenses, value=AGPL-3.0
             type=org.opencontainers.image.vendor, value=Henrique Sebastião
             type=org.opencontainers.image.base.name, value=python:3.13-alpine
             type=org.opencontainers.image.title, value=Downtify

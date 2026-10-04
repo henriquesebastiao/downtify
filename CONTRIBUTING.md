@@ -2,7 +2,7 @@
 
 Thanks for your interest in improving Downtify! This document describes how to set up the project locally, the coding and formatting standards every contribution must follow, and the workflow for submitting changes.
 
-By submitting a pull request you agree that your contribution is licensed under the project's [GPL-3.0](./LICENSE) license.
+By submitting a pull request you agree that your contribution is licensed under the project's [AGPL-3.0](./LICENSE) license.
 
 ---
 
