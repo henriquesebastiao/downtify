@@ -170,6 +170,25 @@ def test_reconcile_removes_rows_whose_file_is_gone(tmp_path):
     assert db.get_track_filenames(pl.id) == {'present': 'present.mp3'}
 
 
+def test_reconcile_keeps_slskd_leave_in_place_tracks(tmp_path):
+    slskd_dir = tmp_path / 'slskd_source'
+    slskd_dir.mkdir()
+    (slskd_dir / 'AM (2013)').mkdir()
+    (slskd_dir / 'AM (2013)' / 'Mad Sounds.mp3').write_bytes(b'')
+
+    db, pl = _playlist(tmp_path)
+    db.mark_track_downloaded(pl.id, 'mad', 'slskd/AM (2013)/Mad Sounds.mp3')
+
+    downloader = _FakeDownloader(tmp_path)
+    downloader.slskd_settings = {'source_dir': str(slskd_dir)}
+    removed = asyncio.run(monitor.reconcile_downloaded_tracks(db, downloader))
+
+    assert removed == 0
+    assert db.get_track_filenames(pl.id) == {
+        'mad': 'slskd/AM (2013)/Mad Sounds.mp3'
+    }
+
+
 def test_reconcile_is_a_no_op_when_all_files_present(tmp_path):
     db, pl = _playlist(tmp_path)
     (tmp_path / 'a.mp3').write_bytes(b'')
