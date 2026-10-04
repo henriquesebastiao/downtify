@@ -1525,13 +1525,17 @@ async def reconcile_downloaded_tracks(
     the number of rows removed.
     """
     rows = await asyncio.to_thread(db.list_all_downloaded_tracks)
+    slskd_dir = slskd_dir_from_downloader(downloader)
     # One stat() per downloaded track — thousands of them on a slow disk
     # or network mount — so off the event loop.
     missing = await asyncio.to_thread(
         lambda: [
             (row['playlist_id'], row['track_spotify_id'])
             for row in rows
-            if not (downloader.download_dir / row['filename']).exists()
+            if locate_library_file(
+                row['filename'], downloader.download_dir, slskd_dir
+            )
+            is None
         ]
     )
     if missing:
