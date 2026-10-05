@@ -11,11 +11,31 @@ from downtify.album_artist import (
     VARIOUS_ARTISTS,
     album_artist_fields,
     filing_artist,
+    is_act_of,
     is_various_artists,
 )
 
 # One artist whose own name holds a comma and an ampersand.
 _COMMA_BAND = 'Coast, Hill & Vale'
+
+
+@pytest.mark.parametrize(
+    ('names', 'act', 'expected'),
+    [
+        (['Mica', 'Tomas'], 'Mica & Tomas', True),
+        (['Tomas', 'Mica'], 'Mica & Tomas', True),
+        (['Mica', 'Tomas'], 'mica e tomas', True),
+        (['Mica', 'Tomas'], 'Mica, Tomas', True),
+        (['Coast', 'Hill', 'Vale'], _COMMA_BAND, True),
+        (['Mica', 'Tomas', 'Solenne'], 'Mica & Tomas', False),
+        (['Mica', 'Tomas'], 'Mica', False),
+        (['Mica', 'Tomas'], 'Mica & Tomasz', False),
+        (['Mica'], 'Mica & Tomas', False),
+        (['Mica', 'Tomas'], '', False),
+    ],
+)
+def test_is_act_of(names, act, expected):
+    assert is_act_of(names, act) is expected
 
 
 @pytest.mark.parametrize(

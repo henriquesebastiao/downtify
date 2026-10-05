@@ -25,7 +25,9 @@ _TAG_READ_THREADS = 8
 #: 4: the audio format (codec, bitrate, sample rate, channels).
 #: 5: genre (from tags, or iTunes when Sync cannot write the file).
 #: 6: every credited artist (``artists``, from the ARTISTS tag).
-META_VERSION = 6
+#: 7: an act split into its members reads as its album artist
+#: (``library_metadata.split_artists``).
+META_VERSION = 7
 
 #: Columns added after the table was first created, with their SQL type.
 _ADDED_COLUMNS = {

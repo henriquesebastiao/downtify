@@ -120,6 +120,31 @@ describe('groupArtists', () => {
     expect(artists.find((a) => a.name === 'Ana Luz').albums).toEqual([])
   })
 
+  it('reads an act split into its members as its album artist', () => {
+    // How an older Downtify tagged a YouTube Music duo credited as its
+    // members: one act, named as its album is - no page per member.
+    const row = {
+      file: 'Mica, Tomas/Mica, Tomas - Tide Line.mp3',
+      title: 'Tide Line',
+      artist: 'Mica; Tomas',
+      album: 'Driftlight',
+      album_artist: 'Mica, Tomas',
+    }
+    expect(normalizeTrack(row).artists).toEqual(['Mica, Tomas'])
+    expect(groupArtists([normalizeTrack(row)]).map((a) => a.name)).toEqual([
+      'Mica, Tomas',
+    ])
+    // A guest on it is still a guest; a collaboration on one artist's
+    // album keeps both artists.
+    expect(
+      normalizeTrack({ ...row, artist: 'Mica; Tomas; Solenne' }).artists
+    ).toEqual(['Mica', 'Tomas', 'Solenne'])
+    expect(normalizeTrack({ ...row, album_artist: 'Mica' }).artists).toEqual([
+      'Mica',
+      'Tomas',
+    ])
+  })
+
   it('files a duo tagged Various Artists under the artist name', () => {
     const duo = normalizeTrack({
       file: 'Acustico/Ze Neto & Cristiano - Sintonia.mp3',

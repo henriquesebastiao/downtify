@@ -132,6 +132,21 @@ def test_split_artists_matches_the_web_app():
     assert row_artists({'artist': 'A, B', 'album_artist': 'A, B'}) == ['A, B']
 
 
+def test_an_act_split_into_its_members_reads_as_its_album_artist():
+    # An older Downtify wrote a YouTube Music duo credited as its members
+    # this way: one act, named as its album is - no page per member.
+    assert split_artists('Mica; Tomas', 'Mica, Tomas') == ['Mica, Tomas']
+    assert split_artists('Mica; Tomas', 'Mica & Tomas') == ['Mica & Tomas']
+    # A guest on a duo's album is still one.
+    assert split_artists('Mica; Tomas; Solenne', 'Mica, Tomas') == [
+        'Mica',
+        'Tomas',
+        'Solenne',
+    ]
+    # A real collaboration on one artist's album keeps both.
+    assert split_artists('Mica; Tomas', 'Mica') == ['Mica', 'Tomas']
+
+
 @needs_ffmpeg
 def test_the_tag_cache_keeps_every_artist(tmp_path):
     path = _audio(tmp_path / 'song.mp3')

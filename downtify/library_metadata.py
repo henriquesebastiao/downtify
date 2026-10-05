@@ -9,6 +9,7 @@ from mutagen import File as MutagenFile
 from mutagen.id3 import ID3
 from mutagen.mp4 import MP4
 
+from .album_artist import is_act_of
 from .cover_art import extract_cover_art
 from .image_size import image_short_side
 
@@ -28,16 +29,25 @@ def split_artists(artist: str, album_artist: str = '') -> list[str]:
     how a multi-value tag reads back), `` / `` or ``, `` it contains - the
     web app's own rule (``frontend/src/lib/library.js``). ``AC/DC`` stays
     whole, and so does a text that is the file's *album_artist* too
-    (``Earth, Wind & Fire`` on its own album): that is one name."""
+    (``Earth, Wind & Fire`` on its own album): that is one name.
+
+    So is a split whose names make up the album artist: an act YouTube
+    Music credited as its members, which older Downtify versions wrote as
+    ``Henrique; Juliano`` on an album by ``Henrique, Juliano`` - one act,
+    named as its album is."""
 
     text = str(artist or '').strip()
     if not text:
         return []
-    if text.casefold() == str(album_artist or '').strip().casefold():
+    album_artist = str(album_artist or '').strip()
+    if text.casefold() == album_artist.casefold():
         return [text]
     for sep in (';', ' / ', ', '):
         if sep in text:
-            return [part.strip() for part in text.split(sep) if part.strip()]
+            parts = [part.strip() for part in text.split(sep) if part.strip()]
+            if is_act_of(parts, album_artist):
+                return [album_artist]
+            return parts
     return [text]
 
 

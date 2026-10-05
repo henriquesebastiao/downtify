@@ -14,25 +14,46 @@ export function compareText(a, b) {
   return collator.compare(String(a || ''), String(b || ''))
 }
 
+// What sits between the members' names in an act's own name: "Henrique &
+// Juliano", "Simon + Garfunkel", "Sandy e Junior", "Zé Neto, Cristiano".
+const ACT_NAME_JOINER = String.raw`\s*(?:&|\+|,|/|\b(?:e|and|y|x)\b)\s*`
+
+/** Whether `act` is the name of an act made of exactly `names` (two or
+ * more), joined the way an act's name joins its members, in any order.
+ * Mirrors is_act_of in downtify/album_artist.py. */
+export function isActOf(names, act) {
+  if (names.length < 2) return false
+  const members = String(act || '')
+    .toLowerCase()
+    .split(new RegExp(ACT_NAME_JOINER))
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .sort()
+  const wanted = names.map((name) => String(name).trim().toLowerCase()).sort()
+  return (
+    members.length === wanted.length &&
+    members.every((part, i) => part === wanted[i])
+  )
+}
+
 // The artists in an artist tag's text, when the server sent no list (a
 // file without an ARTISTS tag). A text that is the album artist too is one
-// name - "Earth, Wind & Fire" on its own album - and isn't split.
+// name - "Earth, Wind & Fire" on its own album - and isn't split; so is a
+// split whose names make up the album artist ("Henrique; Juliano" on an
+// album by "Henrique, Juliano": an act YouTube Music credited as its
+// members). Mirrors split_artists in downtify/library_metadata.py.
 function splitArtists(artist, albumArtist = '') {
   const text = String(artist || '').trim()
   if (!text) return []
-  if (
-    text.toLowerCase() ===
-    String(albumArtist || '')
-      .trim()
-      .toLowerCase()
-  )
-    return [text]
+  const owner = String(albumArtist || '').trim()
+  if (text.toLowerCase() === owner.toLowerCase()) return [text]
   for (const sep of [';', ' / ', ', ']) {
     if (text.includes(sep)) {
-      return text
+      const parts = text
         .split(sep)
         .map((part) => part.trim())
         .filter(Boolean)
+      return isActOf(parts, owner) ? [owner] : parts
     }
   }
   return [text]

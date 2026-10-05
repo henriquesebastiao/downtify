@@ -16,6 +16,7 @@ which media servers like Navidrome want marked on every track (``TCMP`` /
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from loguru import logger
@@ -63,6 +64,29 @@ def is_various_artists(name: Any, *, artist_id: Any = '') -> bool:
     if text != VARIOUS_ARTISTS.casefold():
         logger.info('Treating album artist {!r} as Various Artists', name)
     return True
+
+
+# What sits between the members' names in an act's own name: "Henrique &
+# Juliano", "Simon + Garfunkel", "Sandy e Junior", "Zé Neto, Cristiano".
+_ACT_NAME_JOINER = r'\s*(?:&|\+|,|/|\b(?:e|and|y|x)\b)\s*'
+
+
+def is_act_of(names: list[str], act: Any) -> bool:
+    """Whether *act* is the name of an act made of exactly *names* (two or
+    more), joined the way an act's name joins its members, in any order:
+    ``(['Mateus', 'Jorge'], 'Jorge & Mateus')`` -> True. Mirrored by
+    ``isActOf`` in ``frontend/src/lib/library.js``."""
+
+    if len(names) < 2:
+        return False
+    members = [
+        part
+        for part in re.split(_ACT_NAME_JOINER, str(act or '').casefold())
+        if part.strip()
+    ]
+    return sorted(part.strip() for part in members) == sorted(
+        str(name).strip().casefold() for name in names
+    )
 
 
 def filing_artist(song: dict[str, Any]) -> str:
