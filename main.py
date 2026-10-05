@@ -38,6 +38,7 @@ from downtify import (
 )
 from downtify.activity import ActivityLog
 from downtify.auth import AuthMiddleware, AuthStore, auth_disabled_from_env
+from downtify.compilation import CompilationMarks
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
@@ -339,6 +340,8 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
+    # Albums an admin marked (or unmarked) as Various Artists by hand.
+    api.state.compilation_marks = CompilationMarks(library_db)
     api.state.podcasts = PodcastStore(library_db)
     # The mobile API (downtify/mobile_routes.py).
     api.state.library_sync = LibrarySync(library_db)
@@ -614,6 +617,8 @@ def build_app() -> FastAPI:
     # A finished download (from the UI or a monitor sweep alike) seeds its
     # artist's profile in the background.
     api.state.downloader.on_downloaded = api.enrich_artist_after_download
+    # ...and gets the tags an admin set for its album by hand.
+    api.state.downloader.album_override = api.album_override_for
     api.providers.set_cover_resolution(
         api._clamp_cover_resolution(
             api.state.settings.get(
@@ -669,9 +674,15 @@ def build_app() -> FastAPI:
 
         ``?playlist=``, ``?artist=``, ``?album=`` and ``?q=`` return a
         subset so pages that show one list do not download the whole
-        library. ``?limit=`` caps that subset (search picker).
+        library - ``?artist=`` is every track that artist is credited on
+        (a guest too) or, for an album's page, every track of that album
+        artist's albums ("Various Artists" included). ``?limit=`` caps
+        that subset (search picker).
 
-        Each row has ``file``, ``artist`` and ``album``, plus ``title``,
+        Each row has ``file``, ``artist`` (the tag's text), ``artists``
+        (every credited artist, one per entry - see
+        ``library_metadata.read_audio_metadata``) and ``album``, plus
+        ``title``,
         ``has_cover`` and, when the file belongs to a downloaded
         playlist, ``playlists``. Tags are cached in /data per file and
         re-read only when the file's modification time or size changes.

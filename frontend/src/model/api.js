@@ -547,6 +547,12 @@ function replaceAudio(file, videoId) {
   return API.post('/api/library/replace', { file, video_id: videoId })
 }
 
+// Mark (or unmark) an album's tracks as a Various Artists compilation:
+// rewrites their album-artist tag and compilation flag in place.
+function setAlbumCompilation(files, compilation) {
+  return API.post('/api/library/compilation', { files, compilation })
+}
+
 function getServerPort() {
   return API.get('/api/server/port')
 }
@@ -834,6 +840,7 @@ export default {
   setServerPort,
   getReplaceCandidates,
   replaceAudio,
+  setAlbumCompilation,
   getDiscover,
   getDiscoverDeezerCollections,
   getDiscoverSpotifyCollections,

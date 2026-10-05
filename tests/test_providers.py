@@ -52,6 +52,7 @@ def clear_ytm_album_cache():
     providers._album_browse_search_cache.clear()
     providers._album_search_artist_cache.clear()
     providers._omv_preference_cache.clear()
+    providers._artist_channel_name_cache.clear()
     yield
     providers._album_track_cache.clear()
     providers._album_meta_cache.clear()
@@ -3551,3 +3552,300 @@ def test_resolve_artist_id_with_nothing_left_of_the_name_searches_nothing(
 
     monkeypatch.setattr(providers, '_ytm', boom)
     assert resolve_artist_id('???') is None
+
+
+# ── Several artists, and the album artist ────────────────────────────────
+
+
+class _FakeYTMVideo:
+    """``get_song`` with a joined ``author``, and a watch playlist that
+    lists the same artists one by one."""
+
+    def __init__(
+        self,
+        author,
+        watch_artists,
+        *,
+        watch_fails=False,
+        watch_title='',
+        channels=None,
+    ):
+        self._author = author
+        self._watch_artists = watch_artists
+        self._watch_fails = watch_fails
+        self._watch_title = watch_title
+        # Artist channel id -> its own name; get_artist fails without one.
+        self._channels = channels or {}
+        self.artist_lookups = []
+
+    def get_artist(self, channel_id):
+        self.artist_lookups.append(channel_id)
+        if channel_id not in self._channels:
+            raise RuntimeError('no such channel')
+        return {'name': self._channels[channel_id]}
+
+    def get_song(self, video_id):
+        return {
+            'videoDetails': {
+                'title': 'Harbor Lights',
+                'author': self._author,
+                'lengthSeconds': '200',
+            }
+        }
+
+    def get_watch_playlist(self, video_id, limit=25):
+        if self._watch_fails:
+            raise RuntimeError('watch playlist down')
+        return {
+            'tracks': [
+                {
+                    'videoId': video_id,
+                    'title': self._watch_title or 'Harbor Lights',
+                    'artists': [
+                        {'name': name, 'id': f'UC{i}'}
+                        for i, name in enumerate(self._watch_artists)
+                    ],
+                }
+            ]
+        }
+
+
+def test_video_details_reads_artists_one_by_one(monkeypatch):
+    fake = _FakeYTMVideo(
+        'Mica Ferreira, Kid Spirit, & Solenne',
+        ['Mica Ferreira', 'Kid Spirit', 'Solenne'],
+    )
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    song = providers._song_from_video_details('vid00000001')
+    assert song['artists'] == ['Mica Ferreira', 'Kid Spirit', 'Solenne']
+
+
+def test_video_details_keeps_a_name_with_a_comma_whole(monkeypatch):
+    fake = _FakeYTMVideo('Coast, Hill & Vale', ['Coast, Hill & Vale'])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    song = providers._song_from_video_details('vid00000001')
+    assert song['artists'] == ['Coast, Hill & Vale']
+
+
+def test_video_details_adds_a_guest_named_only_in_the_title(monkeypatch):
+    # The watch playlist credits the lead alone; the guest is in the title.
+    fake = _FakeYTMVideo(
+        'Mica Ferreira',
+        ['Mica Ferreira'],
+        watch_title='Harbor Lights (feat. Kid Spirit)',
+    )
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    song = providers._song_from_video_details('vid00000001')
+    assert song['artists'] == ['Mica Ferreira', 'Kid Spirit']
+
+
+def test_video_details_falls_back_to_the_author(monkeypatch):
+    fake = _FakeYTMVideo('Mica Ferreira', [], watch_fails=True)
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    song = providers._song_from_video_details('vid00000001')
+    assert song['artists'] == ['Mica Ferreira']
+
+
+# ── An act YouTube Music credits as its members ─────────────────────────────
+
+
+def test_a_duo_split_into_its_members_is_joined_back(monkeypatch):
+    # The first member links to the duo's own channel, the second to an
+    # unrelated namesake; the guest after them stays a guest.
+    fake = _FakeYTMVideo(
+        'Mica & Tomas',
+        ['Mica', 'Tomas', 'Solenne'],
+        watch_title='Harbor Lights (feat. Kid Spirit)',
+        channels={'UC0': 'Mica & Tomas', 'UC1': 'Tomas', 'UC2': 'Solenne'},
+    )
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    song = providers._song_from_video_details('vid00000001')
+    assert song['artists'] == ['Mica & Tomas', 'Solenne', 'Kid Spirit']
+
+
+def test_a_real_collaboration_is_not_joined(monkeypatch):
+    # Each artist under their own channel's name: a collaboration, even
+    # though the joined credit reads like one act.
+    fake = _FakeYTMVideo(
+        'Mica & Tomas',
+        ['Mica', 'Tomas'],
+        channels={'UC0': 'Mica', 'UC1': 'Tomas'},
+    )
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    song = providers._song_from_video_details('vid00000001')
+    assert song['artists'] == ['Mica', 'Tomas']
+    assert fake.artist_lookups == ['UC0', 'UC1']
+
+
+def test_a_duo_credited_backwards_is_joined_back(monkeypatch):
+    # The namesake first, then the member linked to the duo's channel.
+    fake = _FakeYTMVideo(
+        'Tomas & Mica',
+        ['Tomas', 'Mica', 'Solenne'],
+        channels={'UC0': 'Tomas', 'UC1': 'Mica & Tomas', 'UC2': 'Solenne'},
+    )
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    song = providers._song_from_video_details('vid00000001')
+    assert song['artists'] == ['Mica & Tomas', 'Solenne']
+
+
+def test_a_single_artist_credit_is_not_looked_up(monkeypatch):
+    fake = _FakeYTMVideo('Mica', ['Mica'], channels={'UC0': 'Mica & Tomas'})
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    song = providers._song_from_video_details('vid00000001')
+    assert song['artists'] == ['Mica']
+    assert fake.artist_lookups == []
+
+
+def test_an_unreadable_channel_keeps_the_credit_as_is(monkeypatch):
+    fake = _FakeYTMVideo('Mica & Tomas', ['Mica', 'Tomas'])
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    song = providers._song_from_video_details('vid00000001')
+    assert song['artists'] == ['Mica', 'Tomas']
+
+
+class _FakeYTMDuoAlbum:
+    """An album YouTube Music credits, like each of its tracks, to the
+    duo's members."""
+
+    def __init__(self):
+        self.artist_lookups = []
+        members = [
+            {'name': 'Mica', 'id': 'UCduo'},
+            {'name': 'Tomas', 'id': 'UCnamesake'},
+        ]
+        self._album = {
+            'title': 'Driftlight',
+            'artists': members,
+            'tracks': [
+                {
+                    'videoId': f'vid0000000{n}',
+                    'title': title,
+                    'artists': members,
+                    'trackNumber': n,
+                }
+                for n, title in enumerate(['PULSE WIRE', 'Tide Line'], 1)
+            ],
+        }
+
+    def get_album(self, browse_id):
+        return self._album
+
+    def get_artist(self, channel_id):
+        self.artist_lookups.append(channel_id)
+        return {'name': {'UCduo': 'Mica & Tomas'}.get(channel_id, 'Tomas')}
+
+
+def test_an_album_credited_to_a_duos_members_belongs_to_the_duo(
+    monkeypatch,
+):
+    fake = _FakeYTMDuoAlbum()
+    monkeypatch.setattr(providers, '_ytm', lambda: fake)
+    monkeypatch.setattr(
+        providers,
+        '_prefer_official_audio_track',
+        lambda vid, duration, *_a: (vid, duration),
+    )
+    songs = album_tracks_from_browse_id('MPREb_duo')
+    assert [song['album_artist'] for song in songs] == ['Mica & Tomas'] * 2
+    assert [song['artists'] for song in songs] == [['Mica & Tomas']] * 2
+    # One lookup for the whole album.
+    assert fake.artist_lookups == ['UCduo']
+
+
+@pytest.mark.parametrize(
+    ('album_artists', 'expected'),
+    [
+        # A duo album: the first artist, never both joined.
+        (
+            ['Nova Ashworth', 'Wexler'],
+            {'album_artist': 'Nova Ashworth', 'compilation': None},
+        ),
+        (
+            ['Various Artists'],
+            {'album_artist': 'Various Artists', 'compilation': True},
+        ),
+    ],
+)
+def test_album_tracks_carry_the_album_artist(
+    monkeypatch, album_artists, expected
+):
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_tracks_and_count',
+        lambda _bid: (
+            [_album_track_row('aaaaaaaaaaa', 'PULSE WIRE', 1, 'Kid Spirit')],
+            1,
+        ),
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_meta',
+        lambda _bid: {'title': 'Driftlight', 'artists': album_artists},
+    )
+    (song,) = album_tracks_from_browse_id('MPREb_nQ0wPNHCFH9')
+    assert {k: song.get(k) for k in expected} == expected
+
+
+def test_a_single_video_is_never_a_compilation_by_its_catalog_album(
+    monkeypatch,
+):
+    # YouTube Music links an audio video to whichever release sharing
+    # it it likes - often a compilation that doesn't list that video.
+    monkeypatch.setattr(
+        providers,
+        '_song_from_video_details',
+        lambda _vid: {
+            'song_id': 'vid00000001',
+            'name': 'Harbor Lights',
+            'artists': ['Mica Ferreira', 'Kid Spirit'],
+            'source': 'youtube',
+        },
+    )
+    match = {
+        'videoId': 'vid00000001',
+        'title': 'Harbor Lights',
+        'album': {'name': 'Glass Harbor', 'id': 'MPREb_compilation'},
+    }
+    monkeypatch.setattr(
+        providers, '_find_youtube_music_match', lambda _s: ('x', match)
+    )
+    monkeypatch.setattr(
+        providers, 'youtube_music_track_index_for_match', lambda *_a: (2, 9)
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_meta',
+        lambda _bid: {'title': 'Glass Harbor', 'artists': ['Various Artists']},
+    )
+    song = song_from_video_id('vid00000001')
+    assert song['album_name'] == 'Glass Harbor'
+    assert 'album_artist' not in song
+    assert 'compilation' not in song
+
+
+def test_enrich_from_match_leaves_a_spotify_song_album_artist_alone(
+    monkeypatch,
+):
+    # The match may be another release (a compilation) of the same
+    # recording: a Spotify song keeps its own album's artist.
+    monkeypatch.setattr(
+        providers, 'youtube_music_track_index_for_match', lambda *_a: (2, 9)
+    )
+    monkeypatch.setattr(
+        providers,
+        '_cached_album_meta',
+        lambda _bid: {'title': 'Glass Harbor', 'artists': ['Various Artists']},
+    )
+    match = {'album': {'name': 'Glass Harbor', 'id': 'MPREb_compilation'}}
+    song = {
+        'name': 'Harbor Lights',
+        'artists': ['Mica Ferreira'],
+        'album_name': 'Glass Harbor',
+        'year': '2001',
+        'release_type': 'album',
+        'source': 'spotify',
+    }
+    out = providers.enrich_from_match(song, match)
+    assert 'album_artist' not in out
+    assert 'compilation' not in out

@@ -39,6 +39,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from . import library_metadata
 from .library_cache_keys import file_content_key_from_name_and_size
 from .sqlite_utils import connect_sqlite
 
@@ -73,18 +74,28 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def split_artists(artist: str) -> list[str]:
+def split_artists(artist: str, album_artist: str = '') -> list[str]:
     """The artists in a tag's artist string - the web app's own rule
     (``frontend/src/lib/library.js``): split on the first of ``;``,
-    `` / `` or ``, `` it contains."""
+    `` / `` or ``, `` it contains, unless it is the album artist too (see
+    :func:`downtify.library_metadata.split_artists`)."""
 
-    text = str(artist or '').strip()
-    if not text:
-        return []
-    for sep in (';', ' / ', ', '):
-        if sep in text:
-            return [part.strip() for part in text.split(sep) if part.strip()]
-    return [text]
+    return library_metadata.split_artists(artist, album_artist)
+
+
+def row_artists(row: dict[str, Any]) -> list[str]:
+    """Every credited artist of a ``/tracks`` row: its ``artists`` (read
+    from the ARTISTS tag when the file has one), else its artist text
+    split by :func:`split_artists`."""
+
+    artists = row.get('artists')
+    if isinstance(artists, list):
+        names = [str(name).strip() for name in artists if str(name).strip()]
+        if names:
+            return names
+    return split_artists(
+        row.get('artist', ''), str(row.get('album_artist') or '')
+    )
 
 
 def _short_hash(text: str) -> str:
@@ -97,7 +108,7 @@ def grouping_keys(row: dict[str, Any]) -> dict[str, str]:
     (album artist + album title, case-insensitive; ``''`` when the track
     has no album) and ``artist_id`` (the album artist)."""
 
-    artists = split_artists(row.get('artist', ''))
+    artists = row_artists(row)
     album_artist = str(row.get('album_artist') or '').strip() or (
         artists[0] if artists else ''
     )
@@ -120,7 +131,7 @@ def public_row(entry: dict[str, Any]) -> dict[str, Any]:
         'file': str(entry.get('file') or ''),
         'title': str(entry.get('title') or ''),
         'artist': str(entry.get('artist') or ''),
-        'artists': split_artists(entry.get('artist', '')),
+        'artists': row_artists(entry),
         'album': str(entry.get('album') or ''),
         'track_number': int(entry.get('track_number') or 0),
         'year': str(entry.get('year') or ''),

@@ -47,6 +47,7 @@
         :selected="selected.has(keyOf(song, i))"
         :marked="!!markedKey && keyOf(song, i) === markedKey"
         :hide-album="hideAlbum"
+        :search-links="searchLinks"
         @toggle="toggleSelected(keyOf(song, i))"
       />
     </div>
@@ -151,6 +152,8 @@ const props = defineProps({
   collectionName: { type: String, default: '' },
   markedKey: { type: String, default: '' },
   hideAlbum: { type: Boolean, default: false },
+  // Forwarded to every TrackDownPlay as-is (see its own `searchLinks`).
+  searchLinks: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['download'])

@@ -13,12 +13,17 @@
         :name="album.title"
       >
         <template #subtitle>
+          <!-- "Various Artists" has no page: its tracks are on their own
+               artists' pages. -->
           <RouterLink
-            v-if="album.artist"
+            v-if="album.artist && !isCompilation"
             :to="{ name: 'Artist', query: { name: album.artist } }"
             class="font-semibold text-fg hover:underline"
             >{{ album.artist }}</RouterLink
           >
+          <span v-else-if="album.artist" class="font-semibold text-fg">{{
+            album.artist
+          }}</span>
           <span v-for="part in facts" :key="part"> · {{ part }}</span>
         </template>
         <template #actions>
@@ -42,13 +47,19 @@
             {{ t('actions.addToQueue') }}
           </UiButton>
           <UiButton
+            v-if="auth.isAdmin.value"
             variant="ghost"
-            icon="zip"
-            class="max-sm:hidden"
-            @click="actions.downloadZip(album.tracks)"
+            :icon="isCompilation ? 'user' : 'users'"
+            :loading="changingCompilation"
+            @click="toggleCompilation"
           >
-            {{ t('library.downloadZip') }}
+            {{
+              isCompilation
+                ? t('album.unmarkCompilation')
+                : t('album.markCompilation')
+            }}
           </UiButton>
+          <!-- Download as ZIP lives in the ⋯ menu below. -->
           <UiMenu :items="menu" :label="t('common.more')" size="lg" />
         </template>
       </CollectionHero>
@@ -113,11 +124,14 @@ import DetailState from '/src/components/library/DetailState.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'
 import PlayButton from '/src/components/library/PlayButton.vue'
 import TrackList from '/src/components/library/TrackList.vue'
+import API from '/src/model/api'
+import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
-import { albumKey } from '/src/lib/library'
+import { useUi } from '/src/model/ui'
+import { albumKey, isVariousArtists } from '/src/lib/library'
 import { formatBytes, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -142,6 +156,8 @@ watch(
   () => [route.query.artist, route.query.title],
   () => loadAlbum()
 )
+const auth = useAuth()
+const ui = useUi()
 
 const album = computed(() =>
   library.findAlbum(
@@ -202,6 +218,51 @@ const moreByArtist = computed(() => {
 const addToPlaylist = computed(() =>
   playlistActions.addMenuItems(album.value?.tracks || [])
 )
+
+const isCompilation = computed(() => isVariousArtists(album.value?.artist))
+const changingCompilation = ref(false)
+
+// Marks (or unmarks) the album as a Various Artists compilation (admins
+// only, like Replace audio): the server rewrites every track's
+// album-artist tag and compilation flag, so the album moves to the artist
+// it now belongs to - follow it there. Tracks whose files already were in
+// that state (a stale listing) come back unchanged but re-read: the album
+// they really are in is followed the same way.
+async function toggleCompilation() {
+  if (changingCompilation.value) return
+  const current = album.value
+  const compilation = !isCompilation.value
+  changingCompilation.value = true
+  try {
+    const { data } = await API.setAlbumCompilation(
+      current.tracks.map((track) => track.file),
+      compilation
+    )
+    await library.load({ force: true })
+    if (data.failed?.length) {
+      ui.toast(t('album.compilationPartial'), { kind: 'error' })
+    } else {
+      ui.toast(
+        t(
+          compilation ? 'album.markedCompilation' : 'album.unmarkedCompilation'
+        ),
+        { kind: 'success' }
+      )
+    }
+    if (data.album_artist && data.album_artist !== current.artist) {
+      router.replace({
+        name: 'Album',
+        query: { artist: data.album_artist, title: current.title },
+      })
+    }
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('album.compilationFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    changingCompilation.value = false
+  }
+}
 
 const menu = computed(() => [
   {

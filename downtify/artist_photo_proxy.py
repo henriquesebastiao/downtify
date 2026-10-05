@@ -24,14 +24,18 @@ browser cannot ask for it directly). It is a pass-through, nothing more:
   limit of 50 requests per 5 seconds, a refused or broken download) raises
   :class:`PhotoUnavailable` instead, which is neither remembered here nor
   cached by the browser: the next request simply tries again.
-* A caller that already holds the artist's Deezer picture URL (Discover's
-  suggestions and the Finder bring one) skips the search by name with
-  :func:`fetch_photo_at`. It only ever downloads from Deezer's CDN - this
-  is not a way to fetch arbitrary URLs.
+* A caller that already holds the artist's picture URL skips the search
+  by name with :func:`fetch_photo_at`: Discover's suggestions and the
+  Finder bring a Deezer one, the search page a YouTube Music one (relayed
+  from here, Google's image CDN doesn't throttle the browser's burst of
+  hotlinked photos), and a pasted artist link Spotify's, Deezer's or
+  YouTube Music's. It only ever downloads from those image CDNs (see
+  :func:`_is_relay_url`) - this is not a way to fetch arbitrary URLs.
 """
 
 from __future__ import annotations
 
+import re
 import threading
 import time
 from typing import Optional
@@ -48,6 +52,16 @@ _MAX_CONCURRENT = 4
 _MAX_BYTES = 2 * 1024 * 1024
 _TIMEOUT = 10
 _CDN_SUFFIX = 'dzcdn.net'
+# YouTube Music's artist photos - exact hosts, not a whole domain.
+_YTM_IMAGE_HOSTS = frozenset({
+    'lh3.googleusercontent.com',
+    'yt3.googleusercontent.com',
+    'yt3.ggpht.com',
+})
+# Spotify's artist photos: i.scdn.co, or image-cdn-<region>.spotifycdn.com.
+_SPOTIFY_IMAGE_HOST = re.compile(
+    r'^(?:i\.scdn\.co|image-cdn-[a-z0-9]+\.spotifycdn\.com)$'
+)
 
 # name (lower-cased) -> (cdn url or None for "no match", monotonic stamp)
 _url_cache: dict[str, tuple[Optional[str], float]] = {}
@@ -72,6 +86,22 @@ def _is_cdn_url(url: str) -> bool:
     host = parsed.host or ''
     return parsed.scheme == 'https' and (
         host == _CDN_SUFFIX or host.endswith(f'.{_CDN_SUFFIX}')
+    )
+
+
+def _is_relay_url(url: str) -> bool:
+    """Whether :func:`fetch_photo_at` may download *url*: an https image
+    on Deezer's CDN, one of YouTube Music's image hosts or Spotify's."""
+
+    if _is_cdn_url(url):
+        return True
+    try:
+        parsed = httpx.URL(url)
+    except Exception:
+        return False
+    host = parsed.host or ''
+    return parsed.scheme == 'https' and (
+        host in _YTM_IMAGE_HOSTS or bool(_SPOTIFY_IMAGE_HOST.match(host))
     )
 
 
@@ -148,24 +178,24 @@ def fetch_proxied_photo(name: str) -> Optional[tuple[bytes, str]]:
 
 
 def fetch_photo_at(url: str) -> tuple[bytes, str]:
-    """``(image bytes, content type)`` of the Deezer photo at *url* - for
-    a caller that already has the artist's picture URL, so no search by
-    name is needed (one Deezer request saved per artist).
+    """``(image bytes, content type)`` of the photo at *url* - for a caller
+    that already has the artist's picture URL (Deezer's, YouTube Music's or
+    Spotify's), so no search by name is needed.
 
-    Raises :class:`ValueError` when *url* isn't on Deezer's CDN - it is
-    never fetched - and :class:`PhotoUnavailable` when the download fails
-    or isn't a usable image, as :func:`fetch_proxied_photo` does. Display
-    only - see the module docstring. The bytes are not kept.
+    Raises :class:`ValueError` when *url* isn't on one of those image CDNs
+    - it is never fetched - and :class:`PhotoUnavailable` when the download
+    fails or isn't a usable image, as :func:`fetch_proxied_photo` does.
+    Display only - see the module docstring. The bytes are not kept.
     """
 
-    if not _is_cdn_url(url):
-        raise ValueError('Not a Deezer image URL')
+    if not _is_relay_url(url):
+        raise ValueError('Not a Deezer, YouTube Music or Spotify image URL')
     return _download(url)
 
 
 def _download(url: str) -> tuple[bytes, str]:
-    """The image at a Deezer CDN *url*: ``(bytes, content type)``, or
-    :class:`PhotoUnavailable`."""
+    """The image at an allowed CDN *url* (see :func:`_is_relay_url`):
+    ``(bytes, content type)``, or :class:`PhotoUnavailable`."""
 
     try:
         with _slots:

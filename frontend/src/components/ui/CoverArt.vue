@@ -16,6 +16,7 @@
         alt=""
         loading="lazy"
         decoding="async"
+        referrerpolicy="no-referrer"
         class="size-full min-h-0 min-w-0 object-cover"
         :class="i === 0 && mosaic.length === 3 ? 'row-span-2' : ''"
       />
@@ -26,6 +27,7 @@
       :alt="alt"
       loading="lazy"
       decoding="async"
+      referrerpolicy="no-referrer"
       class="size-full object-cover transition-opacity duration-300"
       :class="ready ? 'opacity-100' : 'opacity-0'"
       @load="ready = true"
@@ -54,6 +56,12 @@
 </template>
 
 <script setup>
+// Every <img> here is sent without a Referer: Google's image CDN (YouTube
+// Music thumbnails and artist photos, yt3/lh3.googleusercontent.com)
+// answers a burst of hotlinked images that name this page with 429 Too
+// Many Requests, and serves the same burst fine without one. Only images
+// - the API's own requests keep their Origin/Referer, which the backend's
+// same-site check needs.
 import { computed, ref, watch } from 'vue'
 import AppIcon from './AppIcon.vue'
 import { hueFor, initials } from '/src/lib/format'

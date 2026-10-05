@@ -150,14 +150,16 @@
                 class="mr-1.5 inline-block rounded-[4px] border border-line-3 px-1 text-[10px] font-semibold text-faint md:hidden"
                 >{{ row.track.format }}</span
               >
-              <RouterLink
-                v-if="row.track.albumArtist && linkArtist"
-                :to="{ name: 'Artist', query: { name: row.track.albumArtist } }"
-                class="hover:text-fg hover:underline"
-                @click.stop
-                >{{ row.track.artist }}</RouterLink
+              <span
+                v-if="guestOf && isGuestOn(row.track, guestOf)"
+                class="mr-1.5 inline-block rounded-[4px] border border-line-3 px-1 text-[10px] font-semibold text-faint"
+                >{{ t('artist.guest') }}</span
               >
-              <template v-else>{{ row.track.artist }}</template>
+              <TrackArtistLinks
+                :artists="row.track.artists"
+                :fallback="row.track.artist"
+                :plain="!linkArtist"
+              />
             </p>
           </div>
         </div>
@@ -213,10 +215,12 @@ import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import LikeButton from '../player/LikeButton.vue'
+import TrackArtistLinks from './TrackArtistLinks.vue'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { formatDuration, timeAgo } from '/src/lib/format'
+import { isGuestOn } from '/src/lib/library'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -231,6 +235,9 @@ const props = defineProps({
   header: { type: Boolean, default: true },
   sort: { type: Object, default: null },
   hideMenu: { type: Array, default: () => [] },
+  // On an artist's page: their name, so the tracks they only guest on
+  // are labelled as such.
+  guestOf: { type: String, default: '' },
 })
 const emit = defineEmits(['update:selected', 'update:sort'])
 

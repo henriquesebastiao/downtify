@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import stat
 from concurrent.futures import ThreadPoolExecutor
@@ -23,7 +24,10 @@ _TAG_READ_THREADS = 8
 #: cached by an older version are treated as stale and re-read once.
 #: 4: the audio format (codec, bitrate, sample rate, channels).
 #: 5: genre (from tags, or iTunes when Sync cannot write the file).
-META_VERSION = 5
+#: 6: every credited artist (``artists``, from the ARTISTS tag).
+#: 7: an act split into its members reads as its album artist
+#: (``library_metadata.split_artists``).
+META_VERSION = 7
 
 #: Columns added after the table was first created, with their SQL type.
 _ADDED_COLUMNS = {
@@ -39,13 +43,14 @@ _ADDED_COLUMNS = {
     'sample_rate': 'INTEGER NOT NULL DEFAULT 0',
     'channels': 'INTEGER NOT NULL DEFAULT 0',
     'genre': "TEXT NOT NULL DEFAULT ''",
+    'artists': "TEXT NOT NULL DEFAULT '[]'",
 }
 
 _ROW_COLUMNS = (
     'content_key, filename, file_mtime_ns, file_size, title, artist, '
     'album, has_cover, cover_px, album_artist, track_number, year, '
     'duration, meta_version, codec, bitrate, sample_rate, channels, '
-    'genre'
+    'genre, artists'
 )
 
 
@@ -78,6 +83,7 @@ def _row_entry(
         'file': stored,
         'title': str(row['title'] or ''),
         'artist': str(row['artist'] or ''),
+        'artists': _artists_from_json(row['artists']),
         'album': str(row['album'] or ''),
         'album_artist': str(row['album_artist'] or ''),
         'track_number': int(row['track_number'] or 0),
@@ -93,6 +99,16 @@ def _row_entry(
         'added': int(item['mtime_ns']) // 1_000_000_000,
         'size': int(item['size']),
     }
+
+
+def _artists_from_json(raw: Any) -> list[str]:
+    try:
+        value = json.loads(raw or '[]')
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(value, list):
+        return []
+    return [str(name) for name in value if str(name).strip()]
 
 
 class LibraryMetadataCache:
@@ -130,6 +146,7 @@ class LibraryMetadataCache:
                         sample_rate INTEGER NOT NULL DEFAULT 0,
                         channels INTEGER NOT NULL DEFAULT 0,
                         genre TEXT NOT NULL DEFAULT '',
+                        artists TEXT NOT NULL DEFAULT '[]',
                         file_mtime_ns INTEGER NOT NULL,
                         file_size INTEGER NOT NULL,
                         cached_at TEXT NOT NULL
@@ -490,9 +507,9 @@ class LibraryMetadataCache:
                (content_key, filename, title, artist, album, has_cover,
                 cover_px, album_artist, track_number, year, duration,
                 meta_version, codec, bitrate, sample_rate, channels, genre,
-                file_mtime_ns, file_size, cached_at)
+                artists, file_mtime_ns, file_size, cached_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                       ?, ?)
+                       ?, ?, ?)
                ON CONFLICT(content_key) DO UPDATE SET
                filename=excluded.filename,
                title=excluded.title,
@@ -510,6 +527,7 @@ class LibraryMetadataCache:
                sample_rate=excluded.sample_rate,
                channels=excluded.channels,
                genre=excluded.genre,
+               artists=excluded.artists,
                file_mtime_ns=excluded.file_mtime_ns,
                file_size=excluded.file_size,
                cached_at=excluded.cached_at""",
@@ -531,6 +549,10 @@ class LibraryMetadataCache:
                 int(entry.get('sample_rate') or 0),
                 int(entry.get('channels') or 0),
                 str(entry.get('genre') or ''),
+                json.dumps(
+                    [str(a) for a in entry.get('artists') or []],
+                    ensure_ascii=False,
+                ),
                 mtime_ns,
                 file_size,
                 _now_iso(),
