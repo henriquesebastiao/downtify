@@ -1,8 +1,13 @@
 // Resolving a not-downloaded song to a playable stream URL. Pure apart
-// from the two backend calls, deliberately player-free (so the player
-// itself can import it without a module cycle) and browser-free at
-// import time (the API client reads `window` on load, so it is imported
-// lazily - the player module must stay importable without a browser).
+// from the two backend calls, and deliberately player-free, so the
+// player itself can import it (resolving on advance) without a module
+// cycle.
+//
+// Keep this import static: a dynamic `import('/src/model/api')` here
+// carves the API client into its own chunk with a vendor->api edge that
+// evaluates before init - the shipped app then dies on load with
+// `TypeError: e is not a function` in the vendor chunk.
+import API from '/src/model/api'
 
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/
 
@@ -33,7 +38,6 @@ export async function videoIdFor(song) {
   const artist = songArtist(song)
   const title = songTitle(song)
   if (!artist || !title) throw new Error('noartistortitle')
-  const { default: API } = await import('/src/model/api')
   const res = await API.search(`${artist} ${title}`)
   for (const row of res.data || []) {
     const candidate = directVideoId(row)
@@ -49,7 +53,6 @@ export async function videoIdFor(song) {
  */
 export async function resolveTrackUrl(track) {
   const videoId = await videoIdFor(track)
-  const { default: API } = await import('/src/model/api')
   const res = await API.getStreamUrl(videoId)
   const url = res.data?.url
   if (typeof url !== 'string' || !url.startsWith('https://')) {

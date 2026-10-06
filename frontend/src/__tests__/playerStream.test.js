@@ -53,7 +53,11 @@ describe('streaming in the player queue', () => {
     resolveTrackUrl.mockImplementation(async (track) => ({
       url: `https://stream.example/${encodeURIComponent(track.title)}`,
     }))
-    globalThis.window = { innerWidth: 1280, addEventListener: () => {} }
+    globalThis.window = {
+      innerWidth: 1280,
+      addEventListener: () => {},
+      location: { protocol: 'http:', hostname: 'localhost', port: '' },
+    }
     globalThis.localStorage = {
       getItem: () => null,
       setItem: () => {},
