@@ -164,6 +164,7 @@ export default {
     matchHint: 'Πόσο κοντά το κατατάσσει το Last.fm στο κομμάτι σας',
     openLastfm: 'Άνοιγμα στο Last.fm',
     openSettings: 'Άνοιγμα ρυθμίσεων',
+    findSimilar: 'Εύρεση παρόμοιων κομματιών',
     noDownloadMatch: 'Χωρίς αποτέλεσμα για λήψη για το “{name}”',
     resolveFailed: 'Δεν ήταν δυνατή η προετοιμασία του κομματιού για λήψη',
     tipSimilarTitle: 'Ξεκινήστε από ένα κομμάτι',
@@ -924,6 +925,12 @@ export default {
       auth_bad_credentials:
         'Το Navidrome απέρριψε το όνομα χρήστη ή τον κωδικό.',
       auth_api_error: 'Το Navidrome απάντησε: {detail}',
+      auth_missing_key: 'Εισαγάγετε πρώτα ένα κλειδί API.',
+      auth_invalid_key: 'Το Last.fm απέρριψε το κλειδί API.',
+      lastfm_unreachable:
+        'Δεν είναι δυνατή η επικοινωνία με το Last.fm. Ελέγξτε ότι το Downtify έχει πρόσβαση στο διαδίκτυο.',
+      lastfm_timeout: 'Το Last.fm δεν απάντησε εγκαίρως.',
+      lastfm_error: 'Το Last.fm απάντησε: {detail}',
       soulseek_ok: 'Το slskd είναι συνδεδεμένο στο Soulseek.',
       soulseek_offline:
         'Το slskd δεν είναι συνδεδεμένο στο Soulseek. Δεν θα βρίσκει τίποτα μέχρι να συνδεθεί.',

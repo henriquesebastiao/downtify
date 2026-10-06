@@ -233,6 +233,13 @@
                   mono
                 />
               </div>
+              <div class="px-5 py-4">
+                <ConnectionTest
+                  kind="lastfm"
+                  :config="lastfmConfig"
+                  url="Last.fm"
+                />
+              </div>
               <SettingRow
                 :label="t('settings.lastfmHow')"
                 :description="t('settings.lastfmHowHint')"
@@ -831,6 +838,10 @@ const update = useUpdateCheck().status
 
 const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
+// The Last.fm probe takes the key as typed (saved or not) - a fresh
+// object only when the key itself changes, so the test result isn't
+// cleared on every render.
+const lastfmConfig = computed(() => ({ api_key: s.value.lastfm_api_key }))
 const version = localStorage.getItem('version')
 
 // Normal users see General, Apps and About; the rest is the server's,

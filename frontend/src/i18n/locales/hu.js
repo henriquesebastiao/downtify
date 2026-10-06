@@ -159,6 +159,7 @@ export default {
     matchHint: 'Mennyire tartja a Last.fm hasonlónak a számához',
     openLastfm: 'Megnyitás a Last.fm-en',
     openSettings: 'Beállítások megnyitása',
+    findSimilar: 'Hasonló számok keresése',
     noDownloadMatch: 'Nincs letölthető találat ehhez: “{name}”',
     resolveFailed: 'A szám nem készíthető elő letöltésre',
     tipSimilarTitle: 'Induljon egy számból',
@@ -918,6 +919,12 @@ export default {
       auth_bad_credentials:
         'A Navidrome elutasította a felhasználónevet vagy a jelszót.',
       auth_api_error: 'A Navidrome ezt válaszolta: {detail}',
+      auth_missing_key: 'Először adjon meg egy API-kulcsot.',
+      auth_invalid_key: 'A Last.fm elutasította az API-kulcsot.',
+      lastfm_unreachable:
+        'A Last.fm nem érhető el. Ellenőrizze, hogy a Downtify eléri-e az internetet.',
+      lastfm_timeout: 'A Last.fm nem válaszolt időben.',
+      lastfm_error: 'A Last.fm válasza: {detail}',
       soulseek_ok: 'A slskd be van jelentkezve a Soulseekbe.',
       soulseek_offline:
         'A slskd nincs bejelentkezve a Soulseekbe. Addig nem talál semmit.',

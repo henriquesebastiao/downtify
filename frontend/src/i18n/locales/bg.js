@@ -160,6 +160,7 @@ export default {
     matchHint: 'Колко близка я оценява Last.fm до вашата песен',
     openLastfm: 'Отвори в Last.fm',
     openSettings: 'Отвори настройките',
+    findSimilar: 'Намери подобни песни',
     noDownloadMatch: 'Няма резултат за изтегляне за “{name}”',
     resolveFailed: 'Песента не можа да бъде подготвена за изтегляне',
     tipSimilarTitle: 'Започнете от една песен',
@@ -911,6 +912,12 @@ export default {
       auth_bad_credentials:
         'Navidrome отхвърли потребителското име или паролата.',
       auth_api_error: 'Navidrome отговори: {detail}',
+      auth_missing_key: 'Първо въведете API ключ.',
+      auth_invalid_key: 'Last.fm отхвърли API ключа.',
+      lastfm_unreachable:
+        'Last.fm не може да бъде достигнат. Проверете дали Downtify има достъп до интернет.',
+      lastfm_timeout: 'Last.fm не отговори навреме.',
+      lastfm_error: 'Last.fm отговори: {detail}',
       soulseek_ok: 'slskd е свързан със Soulseek.',
       soulseek_offline:
         'slskd не е свързан със Soulseek. Няма да намира нищо, докато не се свърже.',

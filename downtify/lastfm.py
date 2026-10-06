@@ -124,3 +124,74 @@ def get_similar_tracks(
         if shaped is not None:
             tracks.append(shaped)
     return {'artist': artist, 'track': track, 'tracks': tracks[:limit]}
+
+
+def _check(
+    check_id: str, status: str, code: str = '', detail: str = ''
+) -> dict[str, str]:
+    return {'id': check_id, 'status': status, 'code': code, 'detail': detail}
+
+
+def test_api_key(api_key: str) -> dict[str, Any]:
+    """Try *api_key* with one fixed lookup, for the Settings test button.
+
+    Returns ``{ok, server, checks}`` like the slskd/Navidrome probes (see
+    ``downtify.integration_check``), so the same UI draws the answer.
+    Never raises: every failure is a ``fail`` check. The key itself never
+    lands in ``detail``.
+    """
+
+    key = str(api_key or '').strip()
+    if not key:
+        return {
+            'ok': False,
+            'server': '',
+            'checks': [_check('auth', 'fail', 'missing_key')],
+        }
+    try:
+        resp = httpx.get(
+            _LASTFM_URL,
+            params={
+                'method': 'track.getsimilar',
+                'artist': 'Cher',
+                'track': 'Believe',
+                'api_key': key,
+                'format': 'json',
+                'autocorrect': '1',
+                'limit': '1',
+            },
+            timeout=_TIMEOUT,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+    except httpx.TimeoutException:
+        return {
+            'ok': False,
+            'server': '',
+            'checks': [_check('lastfm', 'fail', 'timeout')],
+        }
+    except Exception:
+        return {
+            'ok': False,
+            'server': '',
+            'checks': [_check('lastfm', 'fail', 'unreachable')],
+        }
+    if not isinstance(payload, dict):
+        return {
+            'ok': False,
+            'server': '',
+            'checks': [_check('lastfm', 'fail', 'error', 'unreadable reply')],
+        }
+    error = payload.get('error')
+    if error is not None:
+        message = str(payload.get('message') or '')
+        if 'Invalid API key' in message:
+            check = _check('auth', 'fail', 'invalid_key')
+        else:
+            check = _check('lastfm', 'fail', 'error', f'error {error}')
+        return {'ok': False, 'server': '', 'checks': [check]}
+    return {
+        'ok': True,
+        'server': 'Last.fm',
+        'checks': [_check('connection', 'ok', 'ok')],
+    }

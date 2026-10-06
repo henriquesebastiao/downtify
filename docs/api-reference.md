@@ -1756,6 +1756,10 @@ Tracks similar to one track, via Last.fm `track.getSimilar` (with `autocorrect=1
 
 `400` without a key or query, `502` when Last.fm can't be used (bad key, unknown track, network). Rows carry no downloadable URL of their own — the web UI previews them through [`GET /api/preview`](#get-apipreview) and downloads by resolving each through search first.
 
+### `POST /api/similar/test`
+
+Try a Last.fm API key without saving it, for the Settings page's **Test connection** button. Body `{ "api_key" }` is the key as typed (saved or not); an empty body tests the saved key. A failed test is still a `200`: the answer says what's wrong — `{ "ok": true|false, "server": "Last.fm", "checks": [{ "id", "status", "code", "detail" }] }`, where `auth/missing_key` means no key was given, `auth/invalid_key` that Last.fm rejected it, and `lastfm/timeout|unreachable|error` that Last.fm couldn't be reached or errored. Admins only.
+
 ---
 
 ## Playlist downloads

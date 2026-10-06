@@ -51,6 +51,7 @@
     >
       <AppIcon name="arrow-up-right" :size="16" />
     </a>
+    <SimilarButton :artist="firstArtist" :title="song.name" />
     <div class="flex w-28 shrink-0 justify-end">
       <DownloadState :song="song" />
     </div>
@@ -62,6 +63,7 @@ import { computed } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import DownloadState from './DownloadState.vue'
+import SimilarButton from '../similar/SimilarButton.vue'
 import { formatDuration } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -76,6 +78,9 @@ const artists = computed(
     (props.song.artists || []).join(', ') ||
     props.song.artist ||
     t('common.unknownArtist')
+)
+const firstArtist = computed(
+  () => (props.song.artists || [])[0] || props.song.artist || ''
 )
 const sourceUrl = computed(() => {
   const url = String(props.song.url || '')

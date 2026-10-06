@@ -175,6 +175,7 @@
     <!-- Not downloaded: the download button, with its progress and retry;
          downloaded: the "In library" label. Playing is on the left. A click
          here is the download's own, never the row's (a tap plays). -->
+    <SimilarButton :artist="firstArtist" :title="song.name" />
     <div class="flex w-28 shrink-0 justify-end" @click.stop @dblclick.stop>
       <DownloadState :song="song" />
     </div>
@@ -202,6 +203,7 @@ import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
 import DownloadState from '../search/DownloadState.vue'
+import SimilarButton from '../similar/SimilarButton.vue'
 import { usePlayer } from '/src/model/player'
 import { useSongPlay } from '/src/model/songPlay'
 import { deezerImage } from '/src/lib/deezerImage'
@@ -263,6 +265,9 @@ const artists = computed(
     (props.song.artists || []).join(', ') ||
     props.song.artist ||
     t('common.unknownArtist')
+)
+const firstArtist = computed(
+  () => (props.song.artists || [])[0] || props.song.artist || ''
 )
 // A Deezer cover at its medium size, for the 44px thumbnail - display only:
 // the song's own `cover_url` is what its download embeds.

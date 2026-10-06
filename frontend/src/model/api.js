@@ -182,6 +182,11 @@ function getSimilarTracks(artist, track, limit = 20) {
   return API.get('/api/similar/tracks', { params: { artist, track, limit } })
 }
 
+// Try a Last.fm API key without saving it (the Settings test button).
+function testLastfm(apiKey) {
+  return API.post('/api/similar/test', { api_key: apiKey })
+}
+
 // ── Artist photo & banner ───────────────────────────────────────────
 function getArtistArt(name) {
   return API.get('/api/artists/art', { params: { name } })
@@ -759,6 +764,7 @@ export default {
   finderTrackCounts,
   finderAlbum,
   getSimilarTracks,
+  testLastfm,
   getArtistArt,
   getArtistArtBulk,
   searchArtistArt,

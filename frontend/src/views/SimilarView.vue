@@ -114,6 +114,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
@@ -125,6 +126,8 @@ import { useSimilar } from '/src/model/similar'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const similar = useSimilar()
 
 const artistInput = ref(similar.artist.value)
@@ -134,6 +137,25 @@ watch(
   () => similar.songs.value,
   (songs) => similar.lookupSongs(songs)
 )
+
+// A track row's Similar button lands here with ?artist=&track=: fill the
+// form and search at once. Guarded by what's already searched, so typing
+// in the form (which rewrites the same query below) never re-triggers.
+function applyQuery() {
+  const artist = String(route.query.artist || '').trim()
+  const track = String(route.query.track || '').trim()
+  if (!artist || !track) return
+  if (artist === similar.artist.value && track === similar.track.value) {
+    return
+  }
+  artistInput.value = artist
+  trackInput.value = track
+  similar.searchFor(artist, track)
+}
+
+watch(() => [route.query.artist, route.query.track], applyQuery, {
+  immediate: true,
+})
 
 const canSearch = computed(
   () =>
@@ -151,8 +173,13 @@ const needsKey = computed(() =>
 )
 
 function submit() {
-  if (!artistInput.value.trim() || !trackInput.value.trim()) return
-  similar.searchFor(artistInput.value, trackInput.value)
+  const artist = artistInput.value.trim()
+  const track = trackInput.value.trim()
+  if (!artist || !track) return
+  // Keep the URL shareable; the watcher above ignores it when it matches
+  // what's already searched.
+  router.replace({ name: 'Similar', query: { artist, track } })
+  similar.searchFor(artist, track)
 }
 
 function retry() {

@@ -163,6 +163,7 @@ export default {
     matchHint: 'Last.fm bunu parçanıza ne kadar yakın görüyor',
     openLastfm: 'Last.fm’de aç',
     openSettings: 'Ayarları aç',
+    findSimilar: 'Benzer parçaları bul',
     noDownloadMatch: '“{name}” için indirilebilir eşleşme yok',
     resolveFailed: 'Bu parça indirme için hazırlanamadı',
     tipSimilarTitle: 'Tek parçadan başlayın',
@@ -915,6 +916,12 @@ export default {
       auth_bad_key: 'slskd API anahtarını reddetti.',
       auth_bad_credentials: 'Navidrome kullanıcı adını veya parolayı reddetti.',
       auth_api_error: 'Navidrome şunu yanıtladı: {detail}',
+      auth_missing_key: 'Önce bir API anahtarı girin.',
+      auth_invalid_key: 'Last.fm API anahtarını reddetti.',
+      lastfm_unreachable:
+        'Last.fm’e ulaşılamıyor. Downtify’nin internet erişimi olduğunu kontrol edin.',
+      lastfm_timeout: 'Last.fm zamanında yanıt vermedi.',
+      lastfm_error: 'Last.fm yanıt verdi: {detail}',
       soulseek_ok: 'slskd Soulseek’e bağlı.',
       soulseek_offline:
         'slskd Soulseek’e bağlı değil. Bağlanana kadar hiçbir şey bulamaz.',

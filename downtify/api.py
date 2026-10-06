@@ -244,6 +244,9 @@ working without changes:
    via Last.fm ``track.getSimilar`` - ``{artist, track, tracks:
    [{title, artist, match, url, image_url}]}``; needs the user's own
    Last.fm API key in settings - see ``downtify.lastfm``)
+ * ``POST /api/similar/test`` (try a Last.fm API key without saving it -
+   body ``{api_key}``, else the saved one; ``{ok, server, checks}`` like
+   the slskd/Navidrome probes, for the Settings test button)
 * ``GET  /api/server/info`` (public: server id, name, version,
   ``api_version``, ``require_sign_in`` (always true), capabilities) and
   ``PATCH /api/server`` (``{name}``) - see ``downtify/auth_routes.py``
@@ -5706,6 +5709,23 @@ async def similar_tracks_endpoint(
         )
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.post('/api/similar/test')
+async def test_similar_endpoint(request: Request) -> dict[str, Any]:
+    """Try a Last.fm API key without saving it, for the Settings page.
+
+    Body ``{api_key}`` is what the form holds (saved or not); an empty
+    body tests the saved key. A failed test is still a 200: the answer
+    says what's wrong (``{ok, server, checks}``, like the slskd/Navidrome
+    probes - see ``downtify.lastfm.test_api_key``).
+    """
+
+    payload = await _json_object(request)
+    key = str(payload.get('api_key') or '').strip()
+    if not key:
+        key = str(state.settings.get('lastfm_api_key') or '').strip()
+    return await asyncio.to_thread(lastfm.test_api_key, key)
 
 
 @router.post('/api/discover/listens')

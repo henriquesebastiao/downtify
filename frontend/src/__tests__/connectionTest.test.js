@@ -91,6 +91,28 @@ describe('describeTest', () => {
     expect(line.key).toBe('unknown')
     expect(line.params.code).toBe('connection_from_a_newer_backend')
   })
+
+  it('folds a working Last.fm key into one "Connected" line', () => {
+    const lines = describeTest({
+      ok: true,
+      server: 'Last.fm',
+      checks: [check('connection', 'ok', 'ok')],
+    })
+
+    expect(lines).toEqual([
+      { status: 'ok', key: 'connected', params: { server: 'Last.fm' } },
+    ])
+  })
+
+  it('names a rejected Last.fm key as itself', () => {
+    const lines = describeTest({
+      ok: false,
+      server: '',
+      checks: [check('auth', 'fail', 'invalid_key')],
+    })
+
+    expect(lines.map((line) => line.key)).toEqual(['auth_invalid_key'])
+  })
 })
 
 describe('canTest', () => {
@@ -115,6 +137,12 @@ describe('canTest', () => {
         REQUIRED_FIELDS.navidrome
       )
     ).toBe(false)
+  })
+
+  it('asks Last.fm for just the key', () => {
+    expect(REQUIRED_FIELDS.lastfm).toEqual(['api_key'])
+    expect(canTest({ api_key: 'k' }, REQUIRED_FIELDS.lastfm)).toBe(true)
+    expect(canTest({ api_key: '  ' }, REQUIRED_FIELDS.lastfm)).toBe(false)
   })
 
   it('is false, not an error, for a missing config', () => {

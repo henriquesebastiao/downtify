@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from fastapi import HTTPException
 
@@ -137,6 +138,100 @@ def test_similar_tracks_endpoint_maps_upstream_errors(monkeypatch):
 
 def test_lastfm_api_key_is_a_default_setting():
     assert not api.DEFAULT_SETTINGS['lastfm_api_key']
+
+
+def test_test_api_key_reports_a_missing_key():
+    result = lastfm.test_api_key('  ')
+    assert result == {
+        'ok': False,
+        'server': '',
+        'checks': [
+            {
+                'id': 'auth',
+                'status': 'fail',
+                'code': 'missing_key',
+                'detail': '',
+            }
+        ],
+    }
+
+
+def test_test_api_key_accepts_a_working_key():
+    payload = {'similartracks': {'track': []}}
+    with patch('downtify.lastfm.httpx.get', return_value=_response(payload)):
+        result = lastfm.test_api_key('key')
+    assert result['ok'] is True
+    assert result['server'] == 'Last.fm'
+
+
+def test_test_api_key_rejects_a_bad_key():
+    payload = {'error': 10, 'message': 'Invalid API key'}
+    with patch('downtify.lastfm.httpx.get', return_value=_response(payload)):
+        result = lastfm.test_api_key('bad')
+    assert result == {
+        'ok': False,
+        'server': '',
+        'checks': [
+            {
+                'id': 'auth',
+                'status': 'fail',
+                'code': 'invalid_key',
+                'detail': '',
+            }
+        ],
+    }
+
+
+def test_test_api_key_reports_other_api_errors_without_leaking():
+    payload = {'error': 6, 'message': 'No track'}
+    with patch('downtify.lastfm.httpx.get', return_value=_response(payload)):
+        result = lastfm.test_api_key('key')
+    assert result['ok'] is False
+    (check,) = result['checks']
+    assert (check['id'], check['status'], check['code']) == (
+        'lastfm',
+        'fail',
+        'error',
+    )
+
+
+def test_test_api_key_reports_network_failures():
+    with patch(
+        'downtify.lastfm.httpx.get',
+        side_effect=httpx.TimeoutException('slow'),
+    ):
+        result = lastfm.test_api_key('key')
+    assert [c['code'] for c in result['checks']] == ['timeout']
+    with patch(
+        'downtify.lastfm.httpx.get', side_effect=httpx.ConnectError('down')
+    ):
+        result = lastfm.test_api_key('key')
+    assert [c['code'] for c in result['checks']] == ['unreachable']
+
+
+def test_similar_test_endpoint_prefers_the_given_key(monkeypatch):
+    seen = {}
+    monkeypatch.setitem(api.state.settings, 'lastfm_api_key', 'saved')
+
+    def fake(key):
+        seen['key'] = key
+        return {'ok': True}
+
+    monkeypatch.setattr(api.lastfm, 'test_api_key', fake)
+    assert asyncio.run(
+        api.test_similar_endpoint(_FakeRequest({'api_key': '  typed  '}))
+    ) == {'ok': True}
+    assert seen == {'key': 'typed'}
+
+
+def test_similar_test_endpoint_falls_back_to_the_saved_key(monkeypatch):
+    seen = {}
+    monkeypatch.setitem(api.state.settings, 'lastfm_api_key', 'saved')
+    monkeypatch.setattr(
+        api.lastfm, 'test_api_key', lambda key: seen.setdefault('key', key)
+    )
+    asyncio.run(api.test_similar_endpoint(_FakeRequest({})))
+    assert seen == {'key': 'saved'}
 
 
 class _FakeRequest:

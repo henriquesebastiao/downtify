@@ -160,6 +160,7 @@ export default {
     matchHint: 'Qué tan parecida la considera Last.fm a tu canción',
     openLastfm: 'Abrir en Last.fm',
     openSettings: 'Abrir ajustes',
+    findSimilar: 'Buscar canciones similares',
     noDownloadMatch: 'Sin coincidencia descargable para “{name}”',
     resolveFailed: 'No se pudo preparar esa canción para descargar',
     tipSimilarTitle: 'Empieza con una canción',
@@ -921,6 +922,12 @@ export default {
       auth_bad_key: 'slskd rechazó la clave de API.',
       auth_bad_credentials: 'Navidrome rechazó el usuario o la contraseña.',
       auth_api_error: 'Navidrome respondió: {detail}',
+      auth_missing_key: 'Escribe primero una clave API.',
+      auth_invalid_key: 'Last.fm rechazó la clave API.',
+      lastfm_unreachable:
+        'No se puede contactar con Last.fm. Comprueba que Downtify tenga acceso a internet.',
+      lastfm_timeout: 'Last.fm no respondió a tiempo.',
+      lastfm_error: 'Last.fm respondió: {detail}',
       soulseek_ok: 'slskd está conectado a Soulseek.',
       soulseek_offline:
         'slskd no está conectado a Soulseek. No encontrará nada hasta que lo esté.',

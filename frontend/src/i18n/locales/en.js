@@ -159,6 +159,7 @@ export default {
     matchHint: 'How closely Last.fm ranks this with your track',
     openLastfm: 'Open on Last.fm',
     openSettings: 'Open settings',
+    findSimilar: 'Find similar tracks',
     noDownloadMatch: 'No downloadable match for “{name}”',
     resolveFailed: "Couldn't look that track up for download",
     tipSimilarTitle: 'Start from one track',
@@ -895,6 +896,12 @@ export default {
       auth_bad_key: 'slskd rejected the API key.',
       auth_bad_credentials: 'Navidrome rejected the username or password.',
       auth_api_error: 'Navidrome answered: {detail}',
+      auth_missing_key: 'Enter an API key first.',
+      auth_invalid_key: 'Last.fm rejected the API key.',
+      lastfm_unreachable:
+        "Can't reach Last.fm. Check that Downtify can access the internet.",
+      lastfm_timeout: "Last.fm didn't answer in time.",
+      lastfm_error: 'Last.fm answered: {detail}',
       soulseek_ok: 'slskd is logged in to Soulseek.',
       soulseek_offline:
         "slskd isn't logged in to Soulseek. It will find nothing until it is.",
