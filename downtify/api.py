@@ -237,9 +237,13 @@ working without changes:
   one listen to an artist - body ``{artist}`` - or forget them all) and
   ``GET|POST|DELETE /api/discover/blocked`` (artists never to suggest -
   ``POST`` body ``{name}``, ``DELETE`` takes ``?name=``)
-* ``GET  /api/preview`` (a song's 30 s preview clip from Deezer, for a
-  song with no ``preview_url`` of its own - ``?artist=&title=&duration=``,
-  response ``{preview_url}``, ``""`` when Deezer has no matching song)
+ * ``GET  /api/preview`` (a song's 30 s preview clip from Deezer, for a
+   song with no ``preview_url`` of its own - ``?artist=&title=&duration=``,
+   response ``{preview_url}``, ``""`` when Deezer has no matching song)
+ * ``GET  /api/similar/tracks`` (tracks similar to ``?artist=&track=``
+   via Last.fm ``track.getSimilar`` - ``{artist, track, tracks:
+   [{title, artist, match, url, image_url}]}``; needs the user's own
+   Last.fm API key in settings - see ``downtify.lastfm``)
 * ``GET  /api/server/info`` (public: server id, name, version,
   ``api_version``, ``require_sign_in`` (always true), capabilities) and
   ``PATCH /api/server`` (``{name}``) - see ``downtify/auth_routes.py``
@@ -304,6 +308,7 @@ from . import (
     cover_sources,
     deezer,
     integration_check,
+    lastfm,
     library_import,
     library_upgrade,
     lyrics,
@@ -472,6 +477,11 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'organize_by_album': True,
     'search_albums': True,
     'mini_player_enabled': True,
+    # The user's own Last.fm API key (free, from
+    # https://www.last.fm/api/account/create), for the Similar page's
+    # track.getSimilar lookup (see downtify.lastfm). '' until set in
+    # Settings → Audio sources.
+    'lastfm_api_key': '',
     # The language the web UI is shown in (``en``, ``pt-BR``...). The choice
     # lives in the browser, so the page tells the server (see
     # ``model/settings.js``): work that runs without a browser, like an
@@ -5244,6 +5254,10 @@ async def update_settings_endpoint(
                 state.settings[key] = lyrics.coerce_bool(raw_value, True)
             elif key == 'lyrics_lrc_dir':
                 state.settings[key] = str(raw_value or '').strip()
+            elif key == 'lastfm_api_key':
+                # An API key, not a secret to normalize beyond trimming:
+                # whitespace pasted with it would fail every lookup.
+                state.settings[key] = str(raw_value or '').strip()
             else:
                 state.settings[key] = raw_value
         if {'audio_providers', 'slskd'} & set(payload):
@@ -5660,6 +5674,38 @@ async def song_preview_endpoint(
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {'preview_url': url}
+
+
+@router.get('/api/similar/tracks')
+async def similar_tracks_endpoint(
+    artist: str = Query(..., min_length=1),
+    track: str = Query(..., min_length=1),
+    limit: int = Query(20, ge=1, le=50),
+) -> dict[str, Any]:
+    """Tracks similar to *track* by *artist* (Last.fm ``track.getSimilar``).
+
+    Response ``{artist, track, tracks: [{title, artist, match, url,
+    image_url}]}`` - artist/title rows the Similar page previews (via
+    ``GET /api/preview``) and downloads (by resolving through search).
+    ``400`` without a key or query, ``502`` when Last.fm can't be used.
+    """
+
+    api_key = str(state.settings.get('lastfm_api_key') or '').strip()
+    if not api_key:
+        raise HTTPException(
+            status_code=400,
+            detail='No Last.fm API key: set one in Settings → Audio sources',
+        )
+    try:
+        return await asyncio.to_thread(
+            lastfm.get_similar_tracks,
+            artist,
+            track,
+            api_key,
+            limit=limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.post('/api/discover/listens')

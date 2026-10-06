@@ -31,6 +31,7 @@ export default {
     discover: 'Felfedezés',
     podcasts: 'Podcastok',
     charts: 'Toplisták',
+    similar: 'Hasonlók',
     settings: 'Beállítások',
     more: 'Továbbiak',
     playlists: 'Lejátszási listák',
@@ -142,6 +143,33 @@ export default {
     failed: 'Nem sikerült betölteni a listát',
     empty: 'Jelenleg nincs semmi a listán',
     playlist: 'Lejátszási lista',
+  },
+  similar: {
+    title: 'Hasonlók',
+    subtitle: 'A megnevetthez hasonló zeneszámok, a Last.fm alapján.',
+    artist: 'Előadó',
+    artistPlaceholder: 'Cher',
+    track: 'Szám',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Hasonlók keresése',
+    resultsFor: 'Hasonlók ehhez: “{track}” – {artist}',
+    failed: 'Nem találhatók hasonló zeneszámok',
+    noResults: 'Nem található hasonló',
+    noResultsHint: 'Ellenőrizze a helyesírást — a Last.fm kényes a címekre.',
+    matchHint: 'Mennyire tartja a Last.fm hasonlónak a számához',
+    openLastfm: 'Megnyitás a Last.fm-en',
+    openSettings: 'Beállítások megnyitása',
+    noDownloadMatch: 'Nincs letölthető találat ehhez: “{name}”',
+    resolveFailed: 'A szám nem készíthető elő letöltésre',
+    tipSimilarTitle: 'Induljon egy számból',
+    tipSimilarBody:
+      'Írja be az előadót és a számot — a Last.fm azzal válaszol, amit hallgatói ezután játszanak.',
+    tipKeyTitle: 'Hozzon ingyenes Last.fm-kulcsot',
+    tipKeyBody:
+      'Illessze be egyszer a Beállítások → Hangforrások alatt; a Hasonlók oldal minden keresésnél ezt használja.',
+    tipDownloadTitle: 'Hallgassa meg, tartsa meg',
+    tipDownloadBody:
+      'Játssza le soronként a 30 másodperces előzetest, és töltse le a kedvenceit.',
   },
   finder: {
     placeholder: 'Előadó, album vagy dal keresése',
@@ -783,6 +811,13 @@ export default {
     cookiesLocked: 'A DOWNTIFY_COOKIES_FILE környezeti változó állítja be.',
     cookiesEnvMissing:
       'Ez a fájl nem létezik a konténerben — ellenőrizd az útvonalat és a kötetet.',
+    lastfmTitle: 'Last.fm',
+    lastfmHint:
+      'A Hasonlók oldalt hajtja: számok, amelyeket a Last.fm hallgatói ezután játszanak.',
+    lastfmKey: 'API-kulcs',
+    lastfmHow: 'Ingyenes kulcs beszerzése',
+    lastfmHowHint:
+      'Hozzon létre egyet a last.fm/api/account/create oldalon, és illessze be ide.',
     audioGroup: 'Hang',
     format: 'Formátum',
     formatHint:

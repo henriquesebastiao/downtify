@@ -31,6 +31,7 @@ export default {
     discover: 'Descubrir',
     podcasts: 'Podcasts',
     charts: 'Listas de éxitos',
+    similar: 'Similares',
     settings: 'Ajustes',
     more: 'Más',
     playlists: 'Playlists',
@@ -142,6 +143,34 @@ export default {
     failed: 'No se pudo cargar la lista',
     empty: 'No hay nada en la lista por ahora',
     playlist: 'Playlist',
+  },
+  similar: {
+    title: 'Similares',
+    subtitle: 'Canciones parecidas a una que nombres, vía Last.fm.',
+    artist: 'Artista',
+    artistPlaceholder: 'Cher',
+    track: 'Canción',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Buscar similares',
+    resultsFor: 'Parecidas a “{track}” de {artist}',
+    failed: 'No se pudieron encontrar canciones similares',
+    noResults: 'No se encontró nada similar',
+    noResultsHint:
+      'Revisa la ortografía — Last.fm es exigente con los títulos.',
+    matchHint: 'Qué tan parecida la considera Last.fm a tu canción',
+    openLastfm: 'Abrir en Last.fm',
+    openSettings: 'Abrir ajustes',
+    noDownloadMatch: 'Sin coincidencia descargable para “{name}”',
+    resolveFailed: 'No se pudo preparar esa canción para descargar',
+    tipSimilarTitle: 'Empieza con una canción',
+    tipSimilarBody:
+      'Escribe el artista y la canción — Last.fm responde con lo que sus oyentes escuchan después.',
+    tipKeyTitle: 'Trae una clave gratuita de Last.fm',
+    tipKeyBody:
+      'Pégala una vez en Ajustes → Fuentes de audio; la página Similares la usa en cada búsqueda.',
+    tipDownloadTitle: 'Escucha y quédate',
+    tipDownloadBody:
+      'Reproduce el adelanto de 30 segundos de cada fila y descarga las que te gusten.',
   },
   finder: {
     placeholder: 'Busca un artista, álbum o canción',
@@ -784,6 +813,12 @@ export default {
     cookiesLocked: 'Definido por la variable de entorno DOWNTIFY_COOKIES_FILE.',
     cookiesEnvMissing:
       'Ese archivo no existe dentro del contenedor — revisa la ruta y el volumen.',
+    lastfmTitle: 'Last.fm',
+    lastfmHint:
+      'Da vida a la página Similares: canciones que los oyentes de Last.fm escuchan después.',
+    lastfmKey: 'Clave API',
+    lastfmHow: 'Consigue una clave gratis',
+    lastfmHowHint: 'Créala en last.fm/api/account/create y pégala aquí.',
     audioGroup: 'Audio',
     format: 'Formato',
     formatHint:

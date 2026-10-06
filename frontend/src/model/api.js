@@ -175,6 +175,13 @@ function finderAlbum(albumId) {
   return API.get('/api/finder/album', { params: { album_id: albumId } })
 }
 
+// ── Similar tracks (Last.fm) ─────────────────────────────────────────
+// Tracks similar to one track, by artist + title - see
+// downtify/lastfm.py. Needs the Last.fm API key from Settings.
+function getSimilarTracks(artist, track, limit = 20) {
+  return API.get('/api/similar/tracks', { params: { artist, track, limit } })
+}
+
 // ── Artist photo & banner ───────────────────────────────────────────
 function getArtistArt(name) {
   return API.get('/api/artists/art', { params: { name } })
@@ -751,6 +758,7 @@ export default {
   finderArtistAlbums,
   finderTrackCounts,
   finderAlbum,
+  getSimilarTracks,
   getArtistArt,
   getArtistArtBulk,
   searchArtistArt,

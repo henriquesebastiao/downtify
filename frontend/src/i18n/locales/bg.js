@@ -31,6 +31,7 @@ export default {
     discover: 'Откриване',
     podcasts: 'Подкасти',
     charts: 'Класации',
+    similar: 'Подобни',
     settings: 'Настройки',
     more: 'Още',
     playlists: 'Плейлисти',
@@ -142,6 +143,34 @@ export default {
     failed: 'Класацията не се зареди',
     empty: 'В момента няма нищо в класацията',
     playlist: 'Плейлист',
+  },
+  similar: {
+    title: 'Подобни',
+    subtitle: 'Песни, подобни на посочената от вас, чрез Last.fm.',
+    artist: 'Изпълнител',
+    artistPlaceholder: 'Cher',
+    track: 'Песен',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Намери подобни',
+    resultsFor: 'Подобни на “{track}” от {artist}',
+    failed: 'Не можаха да бъдат намерени подобни песни',
+    noResults: 'Няма намерени подобни',
+    noResultsHint:
+      'Проверете правописа — Last.fm е взискателен към заглавията.',
+    matchHint: 'Колко близка я оценява Last.fm до вашата песен',
+    openLastfm: 'Отвори в Last.fm',
+    openSettings: 'Отвори настройките',
+    noDownloadMatch: 'Няма резултат за изтегляне за “{name}”',
+    resolveFailed: 'Песента не можа да бъде подготвена за изтегляне',
+    tipSimilarTitle: 'Започнете от една песен',
+    tipSimilarBody:
+      'Въведете изпълнителя и песента — Last.fm отговаря с това, което слушателите пускат след това.',
+    tipKeyTitle: 'Вземете безплатен ключ за Last.fm',
+    tipKeyBody:
+      'Поставете го веднъж в Настройки → Аудио източници; страницата Подобни го използва при всяко търсене.',
+    tipDownloadTitle: 'Чуйте и запазете',
+    tipDownloadBody:
+      'Пуснете 30-секундния откъс на всеки ред и изтеглете харесаните.',
   },
   finder: {
     placeholder: 'Търсете изпълнител, албум или песен',
@@ -775,6 +804,13 @@ export default {
     cookiesLocked: 'Зададено от променливата на средата DOWNTIFY_COOKIES_FILE.',
     cookiesEnvMissing:
       'Този файл не съществува в контейнера — провери пътя и тома.',
+    lastfmTitle: 'Last.fm',
+    lastfmHint:
+      'Захранва страницата Подобни: песни, които слушателите на Last.fm пускат след това.',
+    lastfmKey: 'API ключ',
+    lastfmHow: 'Вземете безплатен ключ',
+    lastfmHowHint:
+      'Създайте такъв на last.fm/api/account/create и го поставете тук.',
     audioGroup: 'Аудио',
     format: 'Формат',
     formatHint: 'Файловете от YouTube се конвертират в този формат.',

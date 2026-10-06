@@ -31,6 +31,7 @@ export default {
     discover: 'Descobrir',
     podcasts: 'Podcasts',
     charts: 'Paradas de sucesso',
+    similar: 'Similares',
     settings: 'Configurações',
     more: 'Mais',
     playlists: 'Playlists',
@@ -145,6 +146,33 @@ export default {
     failed: 'Não deu para carregar a parada',
     empty: 'Nada na parada por enquanto',
     playlist: 'Playlist',
+  },
+  similar: {
+    title: 'Similares',
+    subtitle: 'Faixas parecidas com uma que você indicar, via Last.fm.',
+    artist: 'Artista',
+    artistPlaceholder: 'Cher',
+    track: 'Faixa',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Buscar similares',
+    resultsFor: 'Parecidas com “{track}” de {artist}',
+    failed: 'Não foi possível encontrar faixas similares',
+    noResults: 'Nada parecido encontrado',
+    noResultsHint: 'Confira a ortografia — o Last.fm é exigente com títulos.',
+    matchHint: 'O quanto o Last.fm considera parecida com a sua faixa',
+    openLastfm: 'Abrir no Last.fm',
+    openSettings: 'Abrir configurações',
+    noDownloadMatch: 'Sem correspondência para baixar de “{name}”',
+    resolveFailed: 'Não foi possível preparar essa faixa para baixar',
+    tipSimilarTitle: 'Comece por uma faixa',
+    tipSimilarBody:
+      'Digite o artista e a faixa — o Last.fm responde com o que os ouvintes tocam em seguida.',
+    tipKeyTitle: 'Traga uma chave gratuita do Last.fm',
+    tipKeyBody:
+      'Cole uma vez em Configurações → Fontes de áudio; a página Similares a usa em cada busca.',
+    tipDownloadTitle: 'Ouça e fique',
+    tipDownloadBody:
+      'Toque a prévia de 30 segundos de cada linha e baixe as que gostar.',
   },
   finder: {
     placeholder: 'Busque um artista, álbum ou música',
@@ -781,6 +809,12 @@ export default {
     cookiesLocked: 'Definido pela variável de ambiente DOWNTIFY_COOKIES_FILE.',
     cookiesEnvMissing:
       'Esse arquivo não existe dentro do contêiner — verifique o caminho e o volume.',
+    lastfmTitle: 'Last.fm',
+    lastfmHint:
+      'Dá vida à página Similares: faixas que os ouvintes do Last.fm tocam em seguida.',
+    lastfmKey: 'Chave API',
+    lastfmHow: 'Obtenha uma chave grátis',
+    lastfmHowHint: 'Crie em last.fm/api/account/create e cole aqui.',
     audioGroup: 'Áudio',
     format: 'Formato',
     formatHint:

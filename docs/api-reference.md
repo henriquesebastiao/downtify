@@ -1740,6 +1740,24 @@ Only a Deezer song by that artist with that title counts (both compared ignoring
 
 ---
 
+## Similar tracks
+
+### `GET /api/similar/tracks`
+
+Tracks similar to one track, via Last.fm `track.getSimilar` (with `autocorrect=1`, so a slightly misspelled title still resolves). Used by the [Similar](features/similar.md) page. Needs the Last.fm API key from Settings → Audio sources (a free key from `https://www.last.fm/api/account/create`).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist` | string | yes | The seed track's artist |
+| `track` | string | yes | The seed track's title |
+| `limit` | number | no | How many similar tracks to return (default `20`, max `50`) |
+
+**Response:** `{ "artist": "Cher", "track": "Believe", "tracks": [{ "title": "Believe", "artist": "Cher", "match": 0.95, "url": "https://www.last.fm/music/Cher/_/Believe", "image_url": "https://…" }] }` — `match` is 0–1, `image_url` the largest Last.fm image (`""` when there is none).
+
+`400` without a key or query, `502` when Last.fm can't be used (bad key, unknown track, network). Rows carry no downloadable URL of their own — the web UI previews them through [`GET /api/preview`](#get-apipreview) and downloads by resolving each through search first.
+
+---
+
 ## Playlist downloads
 
 Spotify playlists downloaded through `POST /api/download/batch`, checked against Spotify for missing tracks. See [Playlist downloads](features/slskd-navidrome.md#playlist-downloads).

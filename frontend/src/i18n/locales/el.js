@@ -31,6 +31,7 @@ export default {
     discover: 'Ανακάλυψη',
     podcasts: 'Podcast',
     charts: 'Λίστες επιτυχιών',
+    similar: 'Παρόμοια',
     settings: 'Ρυθμίσεις',
     more: 'Περισσότερα',
     playlists: 'Λίστες',
@@ -146,6 +147,34 @@ export default {
     failed: 'Δεν ήταν δυνατή η φόρτωση του chart',
     empty: 'Δεν υπάρχει τίποτα στο chart αυτή τη στιγμή',
     playlist: 'Λίστα αναπαραγωγής',
+  },
+  similar: {
+    title: 'Παρόμοια',
+    subtitle: 'Κομμάτια που μοιάζουν με αυτό που θα ονομάσετε, μέσω Last.fm.',
+    artist: 'Καλλιτέχνης',
+    artistPlaceholder: 'Cher',
+    track: 'Κομμάτι',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Εύρεση παρόμοιων',
+    resultsFor: 'Παρόμοια με το “{track}” του {artist}',
+    failed: 'Δεν βρέθηκαν παρόμοια κομμάτια',
+    noResults: 'Δεν βρέθηκε τίποτα παρόμοιο',
+    noResultsHint:
+      'Ελέγξτε την ορθογραφία — το Last.fm είναι αυστηρό με τους τίτλους.',
+    matchHint: 'Πόσο κοντά το κατατάσσει το Last.fm στο κομμάτι σας',
+    openLastfm: 'Άνοιγμα στο Last.fm',
+    openSettings: 'Άνοιγμα ρυθμίσεων',
+    noDownloadMatch: 'Χωρίς αποτέλεσμα για λήψη για το “{name}”',
+    resolveFailed: 'Δεν ήταν δυνατή η προετοιμασία του κομματιού για λήψη',
+    tipSimilarTitle: 'Ξεκινήστε από ένα κομμάτι',
+    tipSimilarBody:
+      'Πληκτρολογήστε τον καλλιτέχνη και το κομμάτι — το Last.fm απαντά με ό,τι ακούνε μετά οι ακροατές του.',
+    tipKeyTitle: 'Φέρτε ένα δωρεάν κλειδί Last.fm',
+    tipKeyBody:
+      'Επικολλήστε το μία φορά στις Ρυθμίσεις → Πηγές ήχου· η σελίδα Παρόμοια το χρησιμοποιεί σε κάθε αναζήτηση.',
+    tipDownloadTitle: 'Ακούστε και κρατήστε',
+    tipDownloadBody:
+      'Παίξτε την προεπισκόπηση 30 δευτερολέπτων κάθε γραμμής και κατεβάστε όσα σας αρέσουν.',
   },
   finder: {
     placeholder: 'Αναζητήστε καλλιτέχνη, άλμπουμ ή τραγούδι',
@@ -787,6 +816,13 @@ export default {
       'Ορίζεται από τη μεταβλητή περιβάλλοντος DOWNTIFY_COOKIES_FILE.',
     cookiesEnvMissing:
       'Το αρχείο δεν υπάρχει μέσα στο container — έλεγξε τη διαδρομή και τον τόμο.',
+    lastfmTitle: 'Last.fm',
+    lastfmHint:
+      'Τροφοδοτεί τη σελίδα Παρόμοια: κομμάτια που ακούνε μετά οι ακροατές του Last.fm.',
+    lastfmKey: 'Κλειδί API',
+    lastfmHow: 'Αποκτήστε δωρεάν κλειδί',
+    lastfmHowHint:
+      'Δημιουργήστε ένα στο last.fm/api/account/create και επικολλήστε το εδώ.',
     audioGroup: 'Ήχος',
     format: 'Μορφή',
     formatHint: 'Τα αρχεία από το YouTube μετατρέπονται σε αυτή τη μορφή.',

@@ -31,6 +31,7 @@ export default {
     discover: 'Découvrir',
     podcasts: 'Podcasts',
     charts: 'Classements',
+    similar: 'Similaires',
     settings: 'Paramètres',
     more: 'Plus',
     playlists: 'Playlists',
@@ -145,6 +146,34 @@ export default {
     failed: 'Impossible de charger le classement',
     empty: 'Rien dans le classement pour le moment',
     playlist: 'Playlist',
+  },
+  similar: {
+    title: 'Similaires',
+    subtitle: 'Des morceaux proches de celui que vous nommez, via Last.fm.',
+    artist: 'Artiste',
+    artistPlaceholder: 'Cher',
+    track: 'Morceau',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Trouver des similaires',
+    resultsFor: 'Proches de « {track} » par {artist}',
+    failed: 'Impossible de trouver des morceaux similaires',
+    noResults: 'Rien de similaire trouvé',
+    noResultsHint:
+      'Vérifiez l’orthographe — Last.fm est exigeant sur les titres.',
+    matchHint: 'À quel point Last.fm le juge proche de votre morceau',
+    openLastfm: 'Ouvrir sur Last.fm',
+    openSettings: 'Ouvrir les réglages',
+    noDownloadMatch: 'Aucun résultat téléchargeable pour « {name} »',
+    resolveFailed: 'Impossible de préparer ce morceau au téléchargement',
+    tipSimilarTitle: 'Partez d’un morceau',
+    tipSimilarBody:
+      'Tapez l’artiste et le morceau — Last.fm répond avec ce que ses auditeurs écoutent ensuite.',
+    tipKeyTitle: 'Apportez une clé Last.fm gratuite',
+    tipKeyBody:
+      'Collez-la une fois dans Réglages → Sources audio ; la page Similaires l’utilise à chaque recherche.',
+    tipDownloadTitle: 'Écoutez, puis gardez',
+    tipDownloadBody:
+      'Lisez l’extrait de 30 secondes de chaque ligne, et téléchargez vos préférés.',
   },
   finder: {
     placeholder: 'Cherchez un artiste, un album ou un titre',
@@ -795,6 +824,13 @@ export default {
       'Défini par la variable d’environnement DOWNTIFY_COOKIES_FILE.',
     cookiesEnvMissing:
       'Ce fichier n’existe pas dans le conteneur — vérifiez le chemin et le volume.',
+    lastfmTitle: 'Last.fm',
+    lastfmHint:
+      'Anime la page Similaires : les morceaux que les auditeurs Last.fm écoutent ensuite.',
+    lastfmKey: 'Clé API',
+    lastfmHow: 'Obtenir une clé gratuite',
+    lastfmHowHint:
+      'Créez-en une sur last.fm/api/account/create et collez-la ici.',
     audioGroup: 'Audio',
     format: 'Format',
     formatHint:

@@ -99,6 +99,12 @@ const routes = [
     component: () => import('/src/views/ChartsView.vue'),
   },
   {
+    // Tracks similar to one track, via the user's own Last.fm API key.
+    path: '/similar',
+    name: 'Similar',
+    component: () => import('/src/views/SimilarView.vue'),
+  },
+  {
     path: '/settings/:section?',
     name: 'Settings',
     component: () => import('/src/views/SettingsView.vue'),

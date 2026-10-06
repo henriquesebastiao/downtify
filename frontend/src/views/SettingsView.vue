@@ -218,6 +218,34 @@
             <SettingGroup :title="t('settings.youtubeTitle')">
               <CookiesCard />
             </SettingGroup>
+
+            <SettingGroup
+              :title="t('settings.lastfmTitle')"
+              :description="t('settings.lastfmHint')"
+            >
+              <div class="grid gap-4 px-5 py-4 sm:grid-cols-2">
+                <UiInput
+                  v-model.trim="s.lastfm_api_key"
+                  class="sm:col-span-2"
+                  :label="t('settings.lastfmKey')"
+                  type="password"
+                  autocomplete="off"
+                  mono
+                />
+              </div>
+              <SettingRow
+                :label="t('settings.lastfmHow')"
+                :description="t('settings.lastfmHowHint')"
+              >
+                <UiButton
+                  variant="ghost"
+                  icon="arrow-up-right"
+                  href="https://www.last.fm/api/account/create"
+                >
+                  Last.fm API
+                </UiButton>
+              </SettingRow>
+            </SettingGroup>
           </template>
 
           <!-- Downloads & files -->
