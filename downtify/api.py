@@ -253,10 +253,6 @@ working without changes:
  * ``GET  /api/stream`` (a track's full audio as a fresh,
    short-lived direct URL - ``?video_id=``; the player behind a song
    that isn't downloaded yet - see ``downtify.stream``)
- * ``GET  /api/stream/chunk`` (a ``CHUNK_SECONDS`` MP3 piece of that
-   audio from ``?t=`` seconds in - what the player actually plays,
-   stitching pieces with the Media Source Extensions so a start or a
-   seek only ever costs one small fetch)
 * ``GET  /api/server/info`` (public: server id, name, version,
   ``api_version``, ``require_sign_in`` (always true), capabilities) and
   ``PATCH /api/server`` (``{name}``) - see ``downtify/auth_routes.py``
@@ -5794,51 +5790,7 @@ async def stream_endpoint(
         )
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    return {
-        'url': resolved['url'],
-        'ext': resolved['ext'],
-        'duration': resolved['duration'],
-    }
-
-
-@router.get('/api/stream/chunk')
-async def stream_chunk_endpoint(
-    video_id: str = Query(..., min_length=1, max_length=64),
-    t: float = Query(0, ge=0),
-) -> Response:
-    """A ``CHUNK_SECONDS`` MP3 piece of a track's audio from ``?t=``.
-
-    What the player actually plays, piece by piece: a self-contained
-    MP3 (every browser appends it to a Media Source buffer), so a
-    start or a seek into a part that isn't loaded yet only costs one
-    small fetch. ``X-Audio-Duration`` carries the whole track in
-    seconds when YouTube said. ``400`` for a malformed id or a
-    negative start, ``503`` when the audio can't be read (past the
-    end, unreachable, age-gated without usable cookies).
-    """
-
-    try:
-        vid = stream.clean_video_id(video_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    try:
-        cookies = await asyncio.to_thread(
-            stream.resolve_cookies_file, state.cookies_store
-        )
-        chunk = await asyncio.to_thread(
-            stream.audio_chunk, vid, t, cookies_file=cookies
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    return Response(
-        content=chunk['data'],
-        media_type='audio/mpeg',
-        headers={
-            'X-Chunk-Start': str(chunk['start']),
-            'X-Audio-Duration': str(chunk['duration']),
-            'Cache-Control': 'private, max-age=300',
-        },
-    )
+    return {'url': resolved['url']}
 
 
 @router.post('/api/discover/listens')

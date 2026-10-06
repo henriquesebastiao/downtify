@@ -1,23 +1,23 @@
 // Instant full-track streaming for songs that aren't downloaded yet.
 //
 // A tap on such a row doesn't download anything: it resolves the song
-// to a YouTube video and hands it to the player, which plays it piece
-// by piece (20-second chunks, see model/chunked.js) as a transient
-// track - never stored, never tagged, gone from the queue on reload.
-// The player keeps one track ahead prepared (see model/player.js), so
+// to a YouTube video, asks the backend for that video's current
+// direct-audio URL, and plays it in the built-in player as a transient
+// track (never stored, never tagged, gone from the queue on reload).
+// The player keeps one track ahead resolved (see model/player.js), so
 // the next song starts without waiting too.
 import { ref } from 'vue'
 
 import { usePlayer } from '/src/model/player'
 import {
   directVideoId,
+  resolveTrackUrl,
   rowKey,
   songArtist,
   songTitle,
-  videoIdFor,
 } from '/src/model/streamResolve'
 
-// `artist|title` of the song whose video id is being resolved right
+// `artist|title` of the song whose stream URL is being resolved right
 // now ('' when none) - its row shows a spinner meanwhile.
 const resolvingKey = ref('')
 
@@ -39,38 +39,37 @@ export function resolvingFor(song) {
   return !!key && resolvingKey.value === key
 }
 
+/** A player track streaming `song` once `url` is known. */
+export function streamTrack(song, url, videoId) {
+  return {
+    file: '',
+    stream: true,
+    video_id: videoId,
+    title: songTitle(song),
+    artist: songArtist(song),
+    album: String(song?.album_name || song?.album || ''),
+    albumArtist: songArtist(song),
+    cover: String(song?.cover_url || ''),
+    hasCover: !!song?.cover_url,
+    url,
+    duration: Number(song?.duration) || 0,
+  }
+}
+
 /**
- * Play `song` in full through the built-in player. Only the video id
- * resolves up front; the pieces load as the player asks for them.
- * Resolves `false` when there is nothing to play (the caller toasts);
- * anything else the caller can't fix surfaces the same way.
+ * Play `song` in full through the built-in player. Resolves `false`
+ * when there is nothing to play (the caller toasts); anything else the
+ * caller can't fix surfaces the same way.
  */
 export async function playStream(song, { context = null } = {}) {
   const key = rowKey(song)
   if (!key) return false
   resolvingKey.value = key
   try {
-    const videoId = await videoIdFor(song)
-    // Another song started while this resolved.
+    const { url, videoId } = await resolveTrackUrl(song)
+    // Another song started while this one resolved.
     if (resolvingKey.value !== key) return false
-    usePlayer().playList(
-      [
-        {
-          file: '',
-          stream: true,
-          video_id: videoId,
-          title: songTitle(song),
-          artist: songArtist(song),
-          album: String(song?.album_name || song?.album || ''),
-          albumArtist: songArtist(song),
-          cover: String(song?.cover_url || ''),
-          hasCover: !!song?.cover_url,
-          url: '',
-          duration: Number(song?.duration) || 0,
-        },
-      ],
-      { context }
-    )
+    usePlayer().playList([streamTrack(song, url, videoId)], { context })
     return true
   } catch {
     return false
