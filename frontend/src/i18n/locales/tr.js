@@ -176,9 +176,12 @@ export default {
     tipKeyTitle: 'Ücretsiz Last.fm anahtarı getirin',
     tipKeyBody:
       'Ayarlar → Ses kaynakları’na bir kez yapıştırın; Benzerler sayfası her aramada onu kullanır.',
-    tipDownloadTitle: 'Önizleyin, beğenin',
+    tipDownloadTitle: 'Tamamını dinleyin',
     tipDownloadBody:
-      'Her satırdaki 30 saniyelik önizlemeyi dinleyin ve beğendiklerinizi indirin.',
+      'Her satır oynatıcıda tamamıyla çalar; beğendiklerinizi indirin.',
+  },
+  stream: {
+    failed: '“{name}” çalınamadı.',
   },
   finder: {
     placeholder: 'Sanatçı, albüm veya şarkı arayın',

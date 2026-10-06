@@ -11,7 +11,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | Feature | What it does |
 |---------|-------------|
 | [Charts](charts.md) | Browse Deezer's global chart and download whatever is trending |
-| [Similar](similar.md) | Name an artist and a track; Last.fm or YouTube Music answer with similar tracks to preview and download (Last.fm needs a free key, YouTube needs nothing) |
+| [Similar](similar.md) | Name an artist and a track; Last.fm or YouTube Music answer with similar tracks that play in full and download (Last.fm needs a free key, YouTube needs nothing) |
 | [Finder](finder.md) | Search Deezer, then browse an artist, their albums and any album's tracks in columns |
 | [Download Settings](download-settings.md) | Choose format (MP3/FLAC/M4A/OGG/OPUS), bitrate, parallel downloads and delay between downloads |
 | [Playlist Monitor](playlist-monitor.md) | Watch Spotify or YouTube Music playlists and artists, and auto-download new tracks and releases |

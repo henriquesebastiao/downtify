@@ -824,9 +824,9 @@ async function loadAlbum() {
 }
 
 // A popular track, once picked, starts playing as soon as its album is on
-// screen - its preview, or the song itself once it's downloaded, like a
-// double click on its row. One-shot: dropped once it starts, or when
-// another album or artist is picked first.
+// screen - streamed in full, or the song itself once it's downloaded,
+// like a double click on its row. One-shot: dropped once it starts, or
+// when another album or artist is picked first.
 const startSong = useSongStarter()
 const pickedTrack = shallowRef(null)
 

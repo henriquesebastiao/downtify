@@ -172,9 +172,12 @@ export default {
     tipKeyTitle: 'Hozzon ingyenes Last.fm-kulcsot',
     tipKeyBody:
       'Illessze be egyszer a Beállítások → Hangforrások alatt; a Hasonlók oldal minden keresésnél ezt használja.',
-    tipDownloadTitle: 'Hallgassa meg, tartsa meg',
+    tipDownloadTitle: 'Hallgassa végig',
     tipDownloadBody:
-      'Játssza le soronként a 30 másodperces előzetest, és töltse le a kedvenceit.',
+      'Minden sor végig szól a lejátszóban; töltse le a kedvenceit.',
+  },
+  stream: {
+    failed: 'Nem játszható le: „{name}”.',
   },
   finder: {
     placeholder: 'Előadó, album vagy dal keresése',

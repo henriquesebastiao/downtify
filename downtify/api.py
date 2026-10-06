@@ -250,6 +250,9 @@ working without changes:
  * ``POST /api/similar/test`` (try a Last.fm API key without saving it -
    body ``{api_key}``, else the saved one; ``{ok, server, checks}`` like
    the slskd/Navidrome probes, for the Settings test button)
+ * ``GET  /api/stream`` (a track's full audio as a fresh,
+   short-lived direct URL - ``?video_id=``; the player behind a song
+   that isn't downloaded yet - see ``downtify.stream``)
 * ``GET  /api/server/info`` (public: server id, name, version,
   ``api_version``, ``require_sign_in`` (always true), capabilities) and
   ``PATCH /api/server`` (``{name}``) - see ``downtify/auth_routes.py``
@@ -321,6 +324,7 @@ from . import (
     m3u,
     providers,
     spotify,
+    stream,
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
 from .auth import (
@@ -5756,6 +5760,37 @@ async def test_similar_endpoint(request: Request) -> dict[str, Any]:
     if not key:
         key = str(state.settings.get('lastfm_api_key') or '').strip()
     return await asyncio.to_thread(lastfm.test_api_key, key)
+
+
+@router.get('/api/stream')
+async def stream_endpoint(
+    video_id: str = Query(..., min_length=1, max_length=64),
+) -> dict[str, str]:
+    """A track's full audio as a fresh direct URL (``?video_id=``).
+
+    What plays in the built-in player when the song behind a row isn't
+    downloaded yet: no download, no tags, nothing stored. The URL is
+    short-lived and bound to this server's network, so it is fetched
+    on demand and never cached or persisted - ask again rather than
+    storing it. ``400`` for a malformed id, ``503`` when YouTube can't
+    be reached or refuses (including age-gated tracks without usable
+    cookies - see Settings > YouTube cookies).
+    """
+
+    try:
+        vid = stream.clean_video_id(video_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    try:
+        cookies = await asyncio.to_thread(
+            stream.resolve_cookies_file, state.cookies_store
+        )
+        resolved = await asyncio.to_thread(
+            stream.stream_url_for_video, vid, cookies_file=cookies
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {'url': resolved['url']}
 
 
 @router.post('/api/discover/listens')

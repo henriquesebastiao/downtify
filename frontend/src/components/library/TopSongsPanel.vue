@@ -136,7 +136,7 @@ const { t, locale } = useI18n()
 const library = useLibrary()
 
 // A downloaded song plays with the list's other downloaded ones queued
-// after it, in ranking order; the rest play their preview clip.
+// after it, in ranking order; the rest stream in full.
 const playQueue = computed(() =>
   playableQueue(
     props.state.rows.map((row) => row.song),

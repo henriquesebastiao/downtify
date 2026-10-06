@@ -61,7 +61,9 @@
         </button>
         <!-- Phones have no room for it beside the transport buttons;
              the rows and the full player carry the heart there. -->
-        <span v-if="!track?.isPodcast" class="hidden sm:contents"
+        <span
+          v-if="!track?.isPodcast && !track?.stream"
+          class="hidden sm:contents"
           ><LikeButton :file="track.file"
         /></span>
       </div>

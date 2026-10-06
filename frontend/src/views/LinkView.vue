@@ -335,7 +335,7 @@ const kicker = computed(() => {
 })
 
 // Playing a downloaded song from here queues the list's other downloaded
-// songs after it, in the list's order; the rest play their preview clip.
+// songs after it, in the list's order; the rest stream in full.
 const playQueue = computed(() =>
   playableQueue(details.value?.tracks || [], library.findTrack)
 )

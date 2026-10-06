@@ -172,9 +172,12 @@ export default {
     tipKeyTitle: 'Bring a free Last.fm key',
     tipKeyBody:
       'Paste it once in Settings → Audio sources; the Similar page uses it for every search.',
-    tipDownloadTitle: 'Preview, then keep',
+    tipDownloadTitle: 'Hear it all',
     tipDownloadBody:
-      'Play the 30-second preview on each row, and download the ones you like.',
+      'Every row plays in full in the player; download the ones you like.',
+  },
+  stream: {
+    failed: "Couldn't stream “{name}”.",
   },
   finder: {
     placeholder: 'Search for an artist, album or song',

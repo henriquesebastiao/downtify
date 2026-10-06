@@ -129,9 +129,16 @@ function buildShuffleOrder() {
   shuffleVersion.value += 1
 }
 
+function trackIdentity(track) {
+  return track?.file || track?.url || ''
+}
+
 function sameTrackOrder(a, b) {
   if (a.length !== b.length) return false
-  return a.every((track, i) => track.file === b[i].file)
+  // A streamed track has no file: its (fresh, expiring) URL identifies
+  // it instead, so re-selecting the playing stream never restarts it by
+  // accident - and a new stream never compares equal to the old one.
+  return a.every((track, i) => trackIdentity(track) === trackIdentity(b[i]))
 }
 
 // ── Queue ────────────────────────────────────────────────────────────
@@ -541,13 +548,21 @@ function updateMediaSession(track) {
   }
   if (typeof MediaMetadata !== 'undefined') {
     const origin = typeof location !== 'undefined' ? location.origin : ''
+    const cover = String(track.cover || '')
+    const artwork =
+      track.hasCover && cover
+        ? [
+            {
+              src: cover.startsWith('http') ? cover : `${origin}${cover}`,
+              sizes: '512x512',
+            },
+          ]
+        : []
     session.metadata = new MediaMetadata({
       title: track.title,
       artist: track.artist,
       album: track.album || '',
-      artwork: track.hasCover
-        ? [{ src: `${origin}${track.cover}`, sizes: '512x512' }]
-        : [],
+      artwork,
     })
   }
   const handlers = {
@@ -580,7 +595,13 @@ watch(isPlaying, (playing) => {
 function saveSession() {
   const store = storage()
   if (!store) return
-  if (!playlist.value.length || playlist.value.length > MAX_PERSISTED_TRACKS) {
+  // A stream's URL expires within hours: persisting it would restore a
+  // dead track, so a queue holding one is never saved at all.
+  if (
+    !playlist.value.length ||
+    playlist.value.length > MAX_PERSISTED_TRACKS ||
+    playlist.value.some((track) => track?.stream)
+  ) {
     store.removeItem(SESSION_KEY)
     return
   }

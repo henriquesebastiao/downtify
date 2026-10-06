@@ -184,6 +184,12 @@ function getSimilarTracks(artist, track, limit = 20, source = 'lastfm') {
   })
 }
 
+// A track's full audio as a fresh direct URL - the player behind a song
+// that isn't downloaded yet. Short-lived: fetched on demand, never stored.
+function getStreamUrl(videoId) {
+  return API.get('/api/stream', { params: { video_id: videoId } })
+}
+
 // Try a Last.fm API key without saving it (the Settings test button).
 function testLastfm(apiKey) {
   return API.post('/api/similar/test', { api_key: apiKey })
@@ -766,6 +772,7 @@ export default {
   finderTrackCounts,
   finderAlbum,
   getSimilarTracks,
+  getStreamUrl,
   testLastfm,
   getArtistArt,
   getArtistArtBulk,

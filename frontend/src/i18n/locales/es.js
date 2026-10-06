@@ -173,9 +173,12 @@ export default {
     tipKeyTitle: 'Trae una clave gratuita de Last.fm',
     tipKeyBody:
       'Pégala una vez en Ajustes → Fuentes de audio; la página Similares la usa en cada búsqueda.',
-    tipDownloadTitle: 'Escucha y quédate',
+    tipDownloadTitle: 'Escúchala entera',
     tipDownloadBody:
-      'Reproduce el adelanto de 30 segundos de cada fila y descarga las que te gusten.',
+      'Cada fila suena entera en el reproductor; descarga las que te gusten.',
+  },
+  stream: {
+    failed: 'No se pudo reproducir “{name}”.',
   },
   finder: {
     placeholder: 'Busca un artista, álbum o canción',

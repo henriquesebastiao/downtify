@@ -14,7 +14,7 @@ Open **Similar** from the sidebar (under **Charts**, or the **More** sheet on ph
 
 You don't have to type, either: every track row in the app carries a **Similar** button (the wand icon next to the download button — in Search, Charts, Top songs, pasted links, and as a context-menu item on Library, Album, Artist and Playlist tracks). It opens this page already searching for that track.
 
-- **Preview** — tap the cover to hear the 30-second clip, the same preview player the [Charts](charts.md#how-to-use-it) tracks use (looked up on Deezer by artist and title).
+- **Play in full** — tap the cover and the track streams from YouTube straight into the built-in player, downloaded or not.
 - **Download** — YouTube rows already carry their video and download straight away. A Last.fm row carries no download link of its own, so its button first resolves the row into a real song: Downtify searches for the closest match to its title and artist and queues that, the same [matching pipeline](../how-it-works.md) every other download uses. From then on the row shows that download's progress, and a check once the song is in your library.
 - The arrow opens the track's Last.fm page.
 

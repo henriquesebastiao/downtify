@@ -65,7 +65,7 @@ export const TOOLBAR_LAZY = 'lazy'
 </script>
 
 <script setup>
-// A list of TrackDownPlay rows (download + library-play + preview), with
+// A list of TrackDownPlay rows (download + library/stream play), with
 // optional multi-select: a checkbox per row and, above the grid, "All"/
 // "New" quick-select chips plus a right-aligned "Download selected" once
 // something is checked. "New" (not yet in the library) only shows up when

@@ -2,51 +2,53 @@
 // yet - a link's album or playlist, an artist's top songs. Once the song is
 // in the library it plays through the built-in player (with the list's
 // other downloaded songs queued after it); until then the same controls
-// play its 30 s preview clip on the row itself (see model/preview.js).
+// stream it in full from YouTube (see model/stream.js), always shown in
+// the player - there are no 30 s preview clips anywhere.
 //
 // Shared by TrackDownPlay (the artist page's Top songs) and SongPlayCell
 // (the number cell of the selectable lists), so both behave the same.
-import { computed, onBeforeUnmount, watch } from 'vue'
+import { computed } from 'vue'
 
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
-import { usePreview } from '/src/model/preview'
+import {
+  isStreamingSong,
+  playStream,
+  resolvingFor,
+  songArtist,
+  songTitle,
+} from '/src/model/stream'
 import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
-import { previewKey } from '/src/lib/preview'
 import { useI18n } from '/src/i18n'
 
 /**
  * `start(song, { queue, context })`: make sure `song` plays - the library
- * track once it's downloaded (with `queue` after it), else its preview clip,
- * never pausing one already playing. What a double click on a song's row
- * does, for a caller holding the song but not its row (the Finder, starting
- * the popular track it was just asked for). Call it during setup, like any
- * composable; `start` itself can then be called any time.
+ * track once it's downloaded (with `queue` after it), else its full
+ * stream, never pausing one already playing. What a double click on a
+ * song's row does, for a caller holding the song but not its row (the
+ * Finder, starting the popular track it was just asked for). Call it
+ * during setup, like any composable; `start` itself can then be called
+ * any time.
  */
 export function useSongStarter() {
   const { t } = useI18n()
   const library = useLibrary()
-  const preview = usePreview()
+  const player = usePlayer()
   const actions = useTrackActions()
   const ui = useUi()
 
   return function start(song, { queue = [], context = null } = {}) {
-    const track = library.findTrack(
-      (song.artists || [])[0] || song.artist,
-      song.name
-    )
+    const track = library.findTrack(songArtist(song), songTitle(song))
     if (track) {
       const index = (queue || []).findIndex((item) => item.file === track.file)
       if (index < 0) actions.play([track], 0, context)
       else actions.play(queue, index, context)
       return
     }
-    if (!preview.canPreview(song)) return
-    const id = previewKey(song)
-    if (id && preview.activeId.value === id && preview.isPlaying.value) return
-    Promise.resolve(preview.toggle(song)).then((ok) => {
-      if (!ok) ui.toast(t('actions.noPreview', { name: song.name }))
+    if (isStreamingSong(song) && player.isPlaying.value) return
+    Promise.resolve(playStream(song, { context })).then((ok) => {
+      if (!ok) ui.toast(t('stream.failed', { name: songTitle(song) }))
     })
   }
 }
@@ -60,7 +62,6 @@ export function useSongPlay(props) {
   const { t } = useI18n()
   const library = useLibrary()
   const player = usePlayer()
-  const preview = usePreview()
   const actions = useTrackActions()
   const ui = useUi()
   const start = useSongStarter()
@@ -68,42 +69,26 @@ export function useSongPlay(props) {
   // The library track behind the song once it's downloaded - the library
   // refreshes itself shortly after a download finishes, and this follows.
   const track = computed(() =>
-    library.findTrack(
-      (props.song.artists || [])[0] || props.song.artist,
-      props.song.name
-    )
+    library.findTrack(songArtist(props.song), songTitle(props.song))
   )
   const isCurrent = computed(
-    () => !!track.value && player.currentTrack.value?.file === track.value.file
+    () =>
+      (!!track.value && player.currentTrack.value?.file === track.value.file) ||
+      isStreamingSong(props.song)
   )
 
-  // A song that isn't in the library but has (or may have) a clip.
-  const previewable = computed(
-    () => !track.value && preview.canPreview(props.song)
+  // Resolving the stream URL right now (the row spins meanwhile).
+  const loading = computed(() => resolvingFor(props.song))
+  // Anything with an artist and a title plays: from the library, else
+  // streamed in full.
+  const playable = computed(
+    () => !!track.value || (!!songArtist(props.song) && !!songTitle(props.song))
   )
-  const songId = computed(() => previewKey(props.song))
-  const previewActive = computed(
-    () =>
-      !track.value && !!songId.value && preview.activeId.value === songId.value
-  )
-  const previewPlaying = computed(
-    () => previewActive.value && preview.isPlaying.value
-  )
-  const previewLoading = computed(
-    () => previewActive.value && preview.isLoading.value
-  )
-  // Something on this row plays: the downloaded song, or its clip.
-  const playable = computed(() => !!track.value || previewable.value)
-  const highlighted = computed(() => isCurrent.value || previewActive.value)
+  const highlighted = computed(() => isCurrent.value)
   const playLabel = computed(() =>
-    t(
-      track.value
-        ? 'actions.playItem'
-        : previewPlaying.value
-          ? 'actions.pausePreview'
-          : 'actions.playPreview',
-      { name: props.song.name }
-    )
+    isCurrent.value && player.isPlaying.value
+      ? t('player.pause')
+      : t('actions.playItem', { name: songTitle(props.song) })
   )
 
   function play() {
@@ -114,41 +99,26 @@ export function useSongPlay(props) {
     else actions.play(queue, start, props.context)
   }
 
-  async function playPreview() {
-    const ok = await preview.toggle(props.song)
-    if (!ok) ui.toast(t('actions.noPreview', { name: props.song.name }))
-  }
-
   // The play button: the song from the library, or - not downloaded yet -
-  // its clip, which the same button pauses again.
+  // its full stream, which the same button pauses again.
   function toggle() {
     if (track.value) play()
-    else if (previewable.value) playPreview()
+    else if (isStreamingSong(props.song)) player.toggle()
+    else start(props.song, { queue: props.queue, context: props.context })
   }
 
-  // A double click makes sure the song plays; it never pauses a clip.
+  // A double click makes sure the song plays; it never pauses a stream.
   function ensurePlaying() {
     start(props.song, { queue: props.queue, context: props.context })
   }
 
-  // Once the song has been downloaded the row plays the real thing, so the
-  // clip ends; a row that goes away takes its clip with it.
-  watch(track, (found) => {
-    if (found) preview.stopFor(songId.value)
-  })
-  onBeforeUnmount(() => preview.stopFor(songId.value))
-
   return {
     track,
     isCurrent,
-    previewable,
-    previewActive,
-    previewPlaying,
-    previewLoading,
+    loading,
     playable,
     highlighted,
     playLabel,
-    progress: preview.progress,
     toggle,
     ensurePlaying,
   }

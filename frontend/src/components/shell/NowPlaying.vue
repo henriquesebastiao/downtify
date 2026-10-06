@@ -128,7 +128,7 @@
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
                   <LikeButton
-                    v-if="!track?.isPodcast"
+                    v-if="!track?.isPodcast && !track?.stream"
                     :file="track.file"
                     size="lg"
                   />
@@ -467,6 +467,7 @@ const panels = computed(() =>
   availablePanels({
     lyrics: showLyrics.value,
     isPodcast: track.value?.isPodcast,
+    isStream: track.value?.stream,
   }).map((id) => ({
     id,
     icon: PANEL_TABS[id].icon,
@@ -487,6 +488,7 @@ const panel = computed(
     defaultPanel({
       lyrics: showLyrics.value,
       isPodcast: track.value?.isPodcast,
+      isStream: track.value?.stream,
     })
 )
 const mobilePanel = computed(() => isMobile.value && !!requested.value)
@@ -585,6 +587,7 @@ const trackMenu = computed(() => {
     {
       label: t('library.saveToDevice'),
       icon: 'download',
+      hidden: !!tr.stream,
       action: () => saveFile(tr),
     },
     { divider: true },

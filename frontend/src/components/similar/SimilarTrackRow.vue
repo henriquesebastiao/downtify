@@ -25,13 +25,15 @@
       <span
         v-if="play.playable.value"
         class="absolute inset-0 hidden items-center justify-center rounded-[8px] bg-black/45 text-white group-hover:flex"
-        :class="play.previewActive.value || play.isCurrent.value ? '!flex' : ''"
+        :class="play.isCurrent.value ? '!flex' : ''"
       >
         <AppIcon
-          :name="overlayIcon"
+          v-if="play.loading.value"
+          name="refresh"
           :size="16"
-          :class="play.previewLoading.value ? 'animate-pulse' : ''"
+          class="animate-spin"
         />
+        <AppIcon v-else :name="overlayIcon" :size="16" />
       </span>
     </button>
     <div class="min-w-0 flex-1">
@@ -85,12 +87,12 @@
 </template>
 
 <script setup>
-// One similar track: a 30 s Deezer preview on the cover, and a download
-// button. YouTube rows already carry their video id and download
-// directly; Last.fm rows have no URL of their own, so the button first
-// resolves the row through search. Either way the row hands off to
-// DownloadState, so progress, queue and retry look exactly like search
-// results.
+// One similar track: full playback on the cover (from the library, else
+// streamed), and a download button. YouTube rows already carry their
+// video id and download directly; Last.fm rows have no URL of their
+// own, so the button first resolves the row through search. Either way
+// the row hands off to DownloadState, so progress, queue and retry look
+// exactly like search results.
 import { computed, ref } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
@@ -131,11 +133,9 @@ const artistName = computed(
 // goes in whole so a new song object for the row stays reactive;
 // useSongPlay only reads song/queue/context.
 const play = useSongPlay(props)
-
-const overlayIcon = computed(() => {
-  if (play.isCurrent.value) return player.isPlaying.value ? 'pause' : 'play'
-  return play.previewPlaying.value ? 'pause' : 'play'
-})
+const overlayIcon = computed(() =>
+  play.isCurrent.value && player.isPlaying.value ? 'pause' : 'play'
+)
 
 const inLibrary = computed(() =>
   library.hasSong(artistName.value, props.song.name)

@@ -175,9 +175,11 @@ export default {
     tipKeyTitle: 'Traga uma chave gratuita do Last.fm',
     tipKeyBody:
       'Cole uma vez em Configurações → Fontes de áudio; a página Similares a usa em cada busca.',
-    tipDownloadTitle: 'Ouça e fique',
-    tipDownloadBody:
-      'Toque a prévia de 30 segundos de cada linha e baixe as que gostar.',
+    tipDownloadTitle: 'Ouça na íntegra',
+    tipDownloadBody: 'Cada linha toca inteira no player; baixe as que gostar.',
+  },
+  stream: {
+    failed: 'Não foi possível tocar “{name}”.',
   },
   finder: {
     placeholder: 'Busque um artista, álbum ou música',

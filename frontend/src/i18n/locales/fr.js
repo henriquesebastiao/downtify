@@ -176,9 +176,12 @@ export default {
     tipKeyTitle: 'Apportez une clé Last.fm gratuite',
     tipKeyBody:
       'Collez-la une fois dans Réglages → Sources audio ; la page Similaires l’utilise à chaque recherche.',
-    tipDownloadTitle: 'Écoutez, puis gardez',
+    tipDownloadTitle: 'Écoutez en entier',
     tipDownloadBody:
-      'Lisez l’extrait de 30 secondes de chaque ligne, et téléchargez vos préférés.',
+      'Chaque ligne se lit en entier dans le lecteur ; téléchargez vos préférés.',
+  },
+  stream: {
+    failed: 'Impossible de lire « {name} ».',
   },
   finder: {
     placeholder: 'Cherchez un artiste, un album ou un titre',
