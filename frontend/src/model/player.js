@@ -5,6 +5,12 @@ import { ref, computed, watch } from 'vue'
 
 import { normalizeTrack } from '/src/lib/library'
 import { attachEqualizer, resumeEqualizer } from '/src/model/equalizer'
+import {
+  chunkingSupported,
+  createChunkSession,
+  ensureVideoId,
+  prepareTrack,
+} from '/src/model/chunked'
 import { resolveTrackUrl } from '/src/model/streamResolve'
 
 const VOLUME_KEY = 'downtify-player-volume'
@@ -81,6 +87,14 @@ function ensureAudio() {
   audio.playbackRate = playbackRate.value
   audio.addEventListener('timeupdate', () => {
     currentTime.value = audio.currentTime
+    if (chunkSession) {
+      try {
+        chunkSession.ensureTime(audio.currentTime)
+      } catch {
+        // Fetch-ahead is best effort; advancing retries.
+      }
+      watchChunkEnd(audio)
+    }
   })
   audio.addEventListener('loadedmetadata', () => {
     duration.value = isFinite(audio.duration) ? audio.duration : 0
@@ -137,14 +151,16 @@ function buildShuffleOrder() {
 }
 
 function trackIdentity(track) {
-  return track?.file || track?.url || ''
+  // Library rows by file; unstored rows by artist/title (stable across
+  // resolves - a fresh expiring URL must never count as a new track, or
+  // re-selecting the playing queue would restart it).
+  if (track?.file) return `file:${track.file}`
+  if (track?.stream) return `stream:${track.artist || ''}|${track.title || ''}`
+  return `url:${track?.url || ''}`
 }
 
 function sameTrackOrder(a, b) {
   if (a.length !== b.length) return false
-  // A streamed track has no file: its (fresh, expiring) URL identifies
-  // it instead, so re-selecting the playing stream never restarts it by
-  // accident - and a new stream never compares equal to the old one.
   return a.every((track, i) => trackIdentity(track) === trackIdentity(b[i]))
 }
 
@@ -160,6 +176,8 @@ function setPlaylist(files, options = {}) {
     // what's currently playing.
     return
   }
+  playGeneration += 1
+  detachChunks()
   playlist.value = tracks
   if (typeof options.startIndex === 'number') {
     if (shuffle.value) {
@@ -189,6 +207,8 @@ function setPlaylist(files, options = {}) {
 function playList(files, { context: ctx = null, shuffled = false } = {}) {
   const tracks = (files || []).map(toTrack)
   if (!tracks.length) return
+  playGeneration += 1
+  detachChunks()
   shuffle.value = shuffled
   playlist.value = tracks
   context.value = ctx
@@ -301,6 +321,8 @@ function refreshTracks(byFile) {
 }
 
 function stop() {
+  playGeneration += 1
+  detachChunks()
   pause()
   if (audio) audio.removeAttribute('src')
   playlist.value = []
@@ -313,6 +335,8 @@ function stop() {
 // ── Transport ────────────────────────────────────────────────────────
 function playAt(index) {
   if (index < 0 || index >= playlist.value.length) return
+  playGeneration += 1
+  detachChunks()
   const a = ensureAudio()
   currentIndex.value = index
   if (shuffle.value) {
@@ -323,10 +347,29 @@ function playAt(index) {
   }
   playError.value = ''
   if (needsStreamUrl(playlist.value[index])) {
-    void playUnresolved(index)
+    void playUnresolved(index, playGeneration)
     return
   }
   startAudio(a, index)
+}
+
+// Bumped by every queue change, so async resolves never land on a track
+// that moved on (or left the queue) while the network answered.
+let playGeneration = 0
+
+// The active piece-by-piece session of the current stream track, if any
+// (see model/chunked.js). Dropped on every track change, stop or queue.
+let chunkSession = null
+
+function detachChunks() {
+  if (chunkSession) {
+    try {
+      chunkSession.detach()
+    } catch {
+      // Already torn down.
+    }
+    chunkSession = null
+  }
 }
 
 // Unresolved stream failures in a row before giving up on the queue
@@ -353,60 +396,188 @@ function startAudio(a, index) {
   prefetchNext()
 }
 
-/** Resolve an unstored stream track, then play it - or skip past it. */
-async function playUnresolved(index) {
-  const track = playlist.value[index]
-  ensureAudio()
-  resolving.value = track
+/** Play an unstored stream track, piece by piece - or skip past it. */
+async function playUnresolved(index, gen) {
+  let entry = playlist.value[index]
+  const audio = ensureAudio()
+  resolving.value = entry
   isBuffering.value = true
   playError.value = ''
   currentTime.value = 0
-  duration.value = 0
-  let url = ''
-  try {
-    ;({ url } = await resolveTrackUrl(track))
-  } catch {
-    url = ''
-  } finally {
-    if (resolving.value === track) resolving.value = null
+  duration.value = Number(entry.duration) || 0
+  // Identity by content, not by object: reads through the reactive
+  // playlist come back wrapped in proxies, so `!==` against a stored
+  // raw object is always true after the first rewrite below.
+  const stale = () =>
+    gen !== playGeneration ||
+    currentIndex.value !== index ||
+    trackIdentity(playlist.value[index]) !== trackIdentity(entry)
+  const done = () => {
+    if (
+      resolving.value &&
+      trackIdentity(resolving.value) === trackIdentity(entry)
+    ) {
+      resolving.value = null
+    }
   }
-  // The queue moved on (or the track left it) while resolving.
-  if (playlist.value[index] !== track || currentIndex.value !== index) return
-  if (!url) {
-    resolveFailures += 1
-    if (resolveFailures >= MAX_RESOLVE_FAILURES) {
-      resolveFailures = 0
-      playError.value = 'unplayable'
-      isBuffering.value = false
-      pause()
+  let videoId = ''
+  try {
+    videoId = await ensureVideoId(entry)
+  } catch {
+    videoId = ''
+  }
+  if (stale()) {
+    done()
+    return
+  }
+  if (!videoId) {
+    done()
+    skipUnresolved()
+    return
+  }
+  entry = { ...entry, video_id: videoId }
+  playlist.value[index] = entry
+  if (chunkingSupported()) {
+    const session = createChunkSession(audio, {
+      videoId,
+      total: entry.duration || 0,
+    })
+    chunkSession = session
+    resumeEqualizer()
+    try {
+      await session.start()
+    } catch {
+      if (stale()) {
+        done()
+        return
+      }
+      done()
+      skipUnresolved()
       return
     }
-    next()
+    if (stale()) {
+      if (chunkSession === session) detachChunks()
+      done()
+      return
+    }
+    if (!entry.duration && session.total > 0) {
+      entry = { ...entry, duration: session.total }
+      playlist.value[index] = entry
+    }
+    resolveFailures = 0
+    done()
+    prefetchNext()
+    return
+  }
+  let url = ''
+  let fetchedDuration = 0
+  try {
+    ;({ url, duration: fetchedDuration } = await resolveTrackUrl({
+      ...entry,
+      youtube_id: videoId,
+    }))
+  } catch {
+    url = ''
+  }
+  if (stale()) {
+    done()
+    return
+  }
+  if (!url) {
+    done()
+    skipUnresolved()
     return
   }
   resolveFailures = 0
-  playlist.value[index] = { ...track, url }
+  playlist.value[index] = {
+    ...entry,
+    url,
+    duration: entry.duration || fetchedDuration,
+  }
+  done()
   startAudio(ensureAudio(), index)
 }
 
-/** Resolve the next unstored track while this one plays, one ahead. */
+function skipUnresolved() {
+  resolveFailures += 1
+  if (resolveFailures >= MAX_RESOLVE_FAILURES) {
+    resolveFailures = 0
+    playError.value = 'unplayable'
+    isBuffering.value = false
+    pause()
+    return
+  }
+  next()
+}
+
+/** Prepare the next unstored track while this one plays, one ahead. */
 function prefetchNext() {
   const upcoming = nextIndex()
   if (upcoming < 0) return
   const track = playlist.value[upcoming]
   if (!needsStreamUrl(track)) return
   const list = playlist.value
+  if (chunkingSupported()) {
+    // Its video id, length and first piece: advancing starts instantly.
+    prepareTrack(track).then(
+      (ready) => {
+        if (!ready) return
+        if (playlist.value === list && playlist.value[upcoming] === track) {
+          playlist.value[upcoming] = {
+            ...track,
+            video_id: ready.videoId,
+            duration: track.duration || ready.duration,
+          }
+        }
+      },
+      () => {
+        // Silent: advancing into it prepares again, with an error then.
+      }
+    )
+    return
+  }
   resolveTrackUrl(track).then(
-    ({ url }) => {
+    ({ url, duration }) => {
       // Another queue took its place meanwhile: leave it alone.
       if (playlist.value === list && playlist.value[upcoming] === track) {
-        playlist.value[upcoming] = { ...track, url }
+        playlist.value[upcoming] = {
+          ...track,
+          url,
+          duration: track.duration || duration,
+        }
       }
     },
     () => {
       // Silent: advancing into it resolves again, with an error then.
     }
   )
+}
+
+/** Safety net: a fully-appended stream that never fired `ended`. */
+let chunkEndStallTicks = 0
+
+function watchChunkEnd(audio) {
+  if (!chunkSession || !isPlaying.value) {
+    chunkEndStallTicks = 0
+    return
+  }
+  let end = 0
+  let ended = false
+  try {
+    end = chunkSession.bufferedEnd()
+    ended = chunkSession.isEnded()
+  } catch {
+    return
+  }
+  if (audio.currentTime >= end - 0.15 && ended) {
+    chunkEndStallTicks += 1
+    if (chunkEndStallTicks >= 8) {
+      chunkEndStallTicks = 0
+      onEnded()
+    }
+  } else {
+    chunkEndStallTicks = 0
+  }
 }
 
 function startPlayback(a) {
@@ -444,6 +615,24 @@ function toggle() {
 
 function seek(seconds) {
   const a = ensureAudio()
+  const track = playlist.value[currentIndex.value]
+  // A streamed track may not have the target part loaded yet: fetch its
+  // piece first, then jump. Buffered targets jump at once, inside.
+  if (chunkSession && track?.stream && !track.url) {
+    const max = duration.value || seconds
+    const clamped = Math.max(0, Math.min(max, seconds))
+    isBuffering.value = true
+    chunkSession
+      .seekTo(clamped)
+      .catch(() => {
+        // Keep the old position; the fetch-ahead recovers.
+      })
+      .finally(() => {
+        if (isPlaying.value) startPlayback(a)
+        else isBuffering.value = false
+      })
+    return
+  }
   const max = duration.value || 0
   const clamped = Math.max(0, Math.min(max, seconds))
   a.currentTime = clamped

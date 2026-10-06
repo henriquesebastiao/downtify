@@ -1744,17 +1744,28 @@ Only a Deezer song by that artist with that title counts (both compared ignoring
 
 ### `GET /api/stream`
 
-A track's full audio as a fresh direct URL — what plays in the built-in player when the song behind a row isn't downloaded yet. No download, no tags, nothing stored.
+A track's full audio as a fresh direct URL — the fallback behind a song that isn't downloaded yet when the browser can't stitch pieces (see below). No download, no tags, nothing stored.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `video_id` | string | yes | The song's YouTube video id (11 characters) |
 
-**Response:** `{ "url": "https://r1---sn.googlevideo.com/…" }` — usually AAC (`m4a`); either way a container every browser plays.
+**Response:** `{ "url": "https://r1---sn.googlevideo.com/…", "ext": "m4a", "duration": 200 }` — `duration` is the whole track in seconds (`0` when YouTube didn't say).
 
-The URL is short-lived and bound to the server's network: fetch it on demand, never cache or persist it. `400` for a malformed id, `503` when YouTube can't be reached or refuses — including age-gated tracks without usable cookies (see [YouTube Cookies](features/youtube-cookies.md)). A stream never lands in the library, the activity log or the saved player session.
+The URL is short-lived and bound to the server's network: the server reuses it from memory for a couple of hours, but never writes it anywhere — fetch it on demand. `400` for a malformed id, `503` when YouTube can't be reached or refuses — including age-gated tracks without usable cookies (see [YouTube Cookies](features/youtube-cookies.md)). A stream never lands in the library, the activity log or the saved player session.
 
-The web UI resolves a stream's URL when its turn comes in the queue and keeps one track ahead resolved while the current one plays, so playback runs through undownloaded rows without stopping; a run of unresolvable tracks is skipped (an error after three in a row).
+### `GET /api/stream/chunk`
+
+What the web UI actually plays: a 20-second MP3 piece of that audio from `?t=` seconds in, stitched piece by piece with the Media Source Extensions — so starting playback, or seeking into a part that isn't loaded yet, only ever costs one small fetch.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `video_id` | string | yes | The song's YouTube video id (11 characters) |
+| `t` | number | no | Start the piece at this second (default `0`) |
+
+**Response:** `audio/mpeg` bytes, with `X-Chunk-Start` (where the piece starts) and `X-Audio-Duration` (the whole track when known) headers. Every piece is self-contained: any browser appends it, and junctions stay ~20 s apart.
+
+The web UI resolves a stream's video id when its turn comes in the queue, plays its pieces while fetching the next ones ahead, and keeps the next track's first piece ready while the current one plays — playback runs through undownloaded rows without stopping; a run of unresolvable tracks is skipped (an error after three in a row).
 
 ---
 

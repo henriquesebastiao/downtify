@@ -1,10 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { resolveTrackUrl } = vi.hoisted(() => ({
-  resolveTrackUrl: vi.fn(),
+const { resolveTrackUrl, chunkingSupported, getStreamChunk } = vi.hoisted(
+  () => ({
+    resolveTrackUrl: vi.fn(),
+    chunkingSupported: vi.fn(() => false),
+    getStreamChunk: vi.fn(),
+  })
+)
+
+vi.mock('/src/model/streamResolve', () => ({
+  resolveTrackUrl,
+  videoIdFor: async () => 'dQw4w9WgXcQ',
 }))
 
-vi.mock('/src/model/streamResolve', () => ({ resolveTrackUrl }))
+// The real chunk engine, except for support detection (per-test).
+vi.mock('/src/model/chunked', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, chunkingSupported: (...args) => chunkingSupported(...args) }
+})
+
+vi.mock('/src/model/api', () => ({
+  default: {
+    getStreamChunk,
+  },
+}))
 
 const audios = vi.hoisted(() => ({ list: [] }))
 
@@ -43,16 +62,91 @@ const pending = (title) => ({
   url: '',
 })
 
+class FakeSourceBuffer {
+  constructor() {
+    this.appended = []
+    this.updating = false
+    this.timestampOffset = 0
+    this.listeners = {}
+  }
+
+  addEventListener(event, fn) {
+    ;(this.listeners[event] ||= []).push(fn)
+  }
+
+  removeEventListener(event, fn) {
+    this.listeners[event] = (this.listeners[event] || []).filter(
+      (f) => f !== fn
+    )
+  }
+
+  appendBuffer(data) {
+    this.updating = true
+    this.appended.push(data.byteLength)
+    queueMicrotask(() => {
+      this.updating = false
+      ;(this.listeners.updateend || []).forEach((fn) => fn())
+    })
+  }
+
+  remove() {
+    queueMicrotask(() =>
+      (this.listeners.updateend || []).forEach((fn) => fn())
+    )
+  }
+}
+
+class FakeMediaSource {
+  constructor() {
+    this.readyState = 'closed'
+    this.duration = Number.NaN
+    this.listeners = {}
+  }
+
+  addEventListener(event, fn) {
+    ;(this.listeners[event] ||= []).push(fn)
+    if (event === 'sourceopen' && this.readyState === 'closed') {
+      this.readyState = 'open'
+      queueMicrotask(() => this.listeners[event].forEach((f) => f()))
+    }
+  }
+
+  removeEventListener(event, fn) {
+    this.listeners[event] = (this.listeners[event] || []).filter(
+      (f) => f !== fn
+    )
+  }
+
+  addSourceBuffer() {
+    return new FakeSourceBuffer()
+  }
+
+  endOfStream() {
+    this.readyState = 'ended'
+  }
+
+  static isTypeSupported() {
+    return true
+  }
+}
+
 describe('streaming in the player queue', () => {
   let player
 
   beforeEach(async () => {
     vi.resetModules()
     audios.list.length = 0
+    chunkingSupported.mockReturnValue(false)
     resolveTrackUrl.mockReset()
     resolveTrackUrl.mockImplementation(async (track) => ({
       url: `https://stream.example/${encodeURIComponent(track.title)}`,
     }))
+    getStreamChunk.mockReset()
+    getStreamChunk.mockResolvedValue({
+      data: new ArrayBuffer(1000),
+      start: 0,
+      duration: 200,
+    })
     globalThis.window = {
       innerWidth: 1280,
       addEventListener: () => {},
@@ -126,5 +220,19 @@ describe('streaming in the player queue', () => {
     expect(
       setItem.mock.calls.some(([key]) => key === 'downtify-player-session')
     ).toBe(false)
+  })
+
+  it('plays piece by piece when the browser supports it', async () => {
+    chunkingSupported.mockReturnValue(true)
+    globalThis.MediaSource = FakeMediaSource
+    globalThis.URL.createObjectURL = () => 'blob:chunk'
+    globalThis.URL.revokeObjectURL = () => {}
+    player.playList([pending('B')])
+    await vi.waitFor(() => {
+      expect(audios.list[0].play).toHaveBeenCalled()
+    })
+    expect(audios.list[0].src).toBe('blob:chunk')
+    expect(player.playlist.value[0].video_id).toBe('dQw4w9WgXcQ')
+    expect(player.playError.value).toBe('')
   })
 })

@@ -25,10 +25,11 @@ export function rowKey(song) {
 
 /** This song's YouTube video id when it already carries one. */
 export function directVideoId(song) {
-  const direct = String(song?.youtube_id || '').trim()
-  if (VIDEO_ID_RE.test(direct)) return direct
-  const sid = String(song?.song_id || '').trim()
-  return VIDEO_ID_RE.test(sid) ? sid : ''
+  for (const field of ['youtube_id', 'song_id', 'video_id']) {
+    const candidate = String(song?.[field] || '').trim()
+    if (VIDEO_ID_RE.test(candidate)) return candidate
+  }
+  return ''
 }
 
 /** The video id to stream: the song's own, else the first search hit. */
@@ -58,5 +59,5 @@ export async function resolveTrackUrl(track) {
   if (typeof url !== 'string' || !url.startsWith('https://')) {
     throw new Error('nourl')
   }
-  return { url, videoId }
+  return { url, videoId, duration: Number(res.data?.duration) || 0 }
 }

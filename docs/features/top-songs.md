@@ -19,7 +19,7 @@ Some artists have huge catalogs where only a handful of tracks matter. Instead o
 
 On the Top Songs page, and on the page a pasted **album** or **playlist** link opens, every song plays in full: hover its row and the number turns into a play button (on a phone the play button is always there); press it and the song streams from YouTube straight into the built-in player. Press it again to pause, or another row's button to switch. A song that is already in your library plays from the library instead, with the list's other downloaded songs queued after it.
 
-A stream is fetched on demand and never saved: the row resolves to its YouTube video (its own, for a YouTube Music song, else the closest search match) and the server hands the player that video's current audio URL (see [`GET /api/stream`](../api-reference.md#get-apistream)). It needs YouTube to be reachable, and an age-gated track needs YouTube cookies (see [YouTube Cookies](youtube-cookies.md)) just like a download does.
+A stream is fetched piece by piece and never saved: the row resolves to its YouTube video (its own, for a YouTube Music song, else the closest search match) and the server cuts it into 20-second MP3 pieces the player stitches together, fetching ahead so playback never waits (see [`GET /api/stream/chunk`](../api-reference.md#get-apistreamchunk)). It needs YouTube to be reachable, and an age-gated track needs YouTube cookies (see [YouTube Cookies](youtube-cookies.md)) just like a download does.
 
 ## Sources
 

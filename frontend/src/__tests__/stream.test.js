@@ -71,17 +71,15 @@ describe('videoIdFor', () => {
 })
 
 describe('playStream', () => {
-  it('plays the resolved URL as a transient player track', async () => {
-    getStreamUrl.mockResolvedValueOnce({
-      data: { url: 'https://r1---sn.googlevideo.com/x' },
-    })
+  it('queues the video for piece-by-piece playback', async () => {
     const song = {
       ...SONG,
       youtube_id: 'dQw4w9WgXcQ',
       cover_url: 'https://img/xl',
     }
     await expect(playStream(song)).resolves.toBe(true)
-    expect(getStreamUrl).toHaveBeenCalledWith('dQw4w9WgXcQ')
+    // Only the id resolves up front; pieces load as the player plays.
+    expect(getStreamUrl).not.toHaveBeenCalled()
     expect(playList).toHaveBeenCalledOnce()
     const [tracks, options] = playList.mock.calls[0]
     expect(tracks).toHaveLength(1)
@@ -91,18 +89,9 @@ describe('playStream', () => {
       title: 'Believe',
       artist: 'Cher',
       cover: 'https://img/xl',
-      url: 'https://r1---sn.googlevideo.com/x',
+      url: '',
     })
     expect(options).toEqual({ context: null })
-  })
-
-  it('resolves false when the backend has no URL', async () => {
-    playList.mockClear()
-    getStreamUrl.mockResolvedValueOnce({ data: { url: '' } })
-    await expect(
-      playStream({ ...SONG, youtube_id: 'dQw4w9WgXcQ' })
-    ).resolves.toBe(false)
-    expect(playList).not.toHaveBeenCalled()
   })
 
   it('resolves false without artist and title', async () => {

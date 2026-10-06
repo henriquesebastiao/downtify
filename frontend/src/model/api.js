@@ -190,6 +190,21 @@ function getStreamUrl(videoId) {
   return API.get('/api/stream', { params: { video_id: videoId } })
 }
 
+// One 20-second MP3 piece of that audio, from `t` seconds in - what the
+// player actually plays, stitching pieces with the Media Source
+// Extensions, so a start or a seek only ever costs one small fetch.
+function getStreamChunk(videoId, t, { signal } = {}) {
+  return API.get('/api/stream/chunk', {
+    params: { video_id: videoId, t },
+    responseType: 'arraybuffer',
+    signal,
+  }).then((res) => ({
+    data: res.data,
+    start: Number(res.headers?.['x-chunk-start'] ?? t),
+    duration: Number(res.headers?.['x-audio-duration'] ?? 0),
+  }))
+}
+
 // Try a Last.fm API key without saving it (the Settings test button).
 function testLastfm(apiKey) {
   return API.post('/api/similar/test', { api_key: apiKey })
@@ -773,6 +788,7 @@ export default {
   finderAlbum,
   getSimilarTracks,
   getStreamUrl,
+  getStreamChunk,
   testLastfm,
   getArtistArt,
   getArtistArtBulk,
