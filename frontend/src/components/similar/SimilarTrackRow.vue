@@ -11,9 +11,9 @@
     <button
       type="button"
       class="relative shrink-0"
-      :aria-label="previewLabel"
-      :disabled="!canPreview"
-      @click="togglePreview"
+      :aria-label="play.playLabel.value"
+      :disabled="!play.playable.value"
+      @click.stop="play.toggle()"
     >
       <CoverArt
         :src="song.cover_url"
@@ -23,14 +23,14 @@
         class="size-11"
       />
       <span
-        v-if="canPreview"
+        v-if="play.playable.value"
         class="absolute inset-0 hidden items-center justify-center rounded-[8px] bg-black/45 text-white group-hover:flex"
-        :class="previewActive ? '!flex' : ''"
+        :class="play.previewActive.value || play.isCurrent.value ? '!flex' : ''"
       >
         <AppIcon
-          :name="previewPlaying ? 'pause' : 'play'"
+          :name="overlayIcon"
           :size="16"
-          :class="previewLoading ? 'animate-pulse' : ''"
+          :class="play.previewLoading.value ? 'animate-pulse' : ''"
         />
       </span>
     </button>
@@ -99,9 +99,9 @@ import DownloadState from '../search/DownloadState.vue'
 import API from '/src/model/api'
 import { useDownloadManager } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
-import { usePreview } from '/src/model/preview'
+import { usePlayer } from '/src/model/player'
+import { useSongPlay } from '/src/model/songPlay'
 import { useUi } from '/src/model/ui'
-import { previewKey } from '/src/lib/preview'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -110,7 +110,7 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
-const preview = usePreview()
+const player = usePlayer()
 const library = useLibrary()
 const dm = useDownloadManager()
 const ui = useUi()
@@ -125,22 +125,17 @@ const artistName = computed(
     t('common.unknownArtist')
 )
 
-const songId = computed(() => previewKey(props.song))
-const canPreview = computed(() => preview.canPreview(props.song))
-const previewActive = computed(
-  () => !!songId.value && preview.activeId.value === songId.value
-)
-const previewPlaying = computed(
-  () => previewActive.value && preview.isPlaying.value
-)
-const previewLoading = computed(
-  () => previewActive.value && preview.isLoading.value
-)
-const previewLabel = computed(() =>
-  t(previewPlaying.value ? 'actions.pausePreview' : 'actions.playPreview', {
-    name: props.song.name,
-  })
-)
+// Playing works like every other track row: a downloaded song plays in
+// full through the built-in player (so the player shows this track),
+// anything else plays its 30 s preview clip on the row itself. `props`
+// goes in whole so a new song object for the row stays reactive;
+// useSongPlay only reads song/queue/context.
+const play = useSongPlay(props)
+
+const overlayIcon = computed(() => {
+  if (play.isCurrent.value) return player.isPlaying.value ? 'pause' : 'play'
+  return play.previewPlaying.value ? 'pause' : 'play'
+})
 
 const inLibrary = computed(() =>
   library.hasSong(artistName.value, props.song.name)
@@ -149,13 +144,6 @@ const inLibrary = computed(() =>
 // A YouTube row already is a downloadable song (video id + link), so it
 // skips the resolve step a Last.fm row needs.
 const downloadable = computed(() => !!String(props.song.song_id || '').trim())
-
-function togglePreview() {
-  if (!canPreview.value) return
-  Promise.resolve(preview.toggle(props.song)).then((ok) => {
-    if (!ok) ui.toast(t('actions.noPreview', { name: props.song.name }))
-  })
-}
 
 async function resolveAndDownload() {
   if (resolving.value || resolved.value) return
