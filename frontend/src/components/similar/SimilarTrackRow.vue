@@ -60,7 +60,10 @@
       <UiBadge v-if="inLibrary" tone="accent" icon="check">
         {{ t('search.inLibrary') }}
       </UiBadge>
-      <DownloadState v-else-if="resolved" :song="resolved" />
+      <DownloadState
+        v-else-if="resolved || downloadable"
+        :song="resolved || song"
+      />
       <button
         v-else
         type="button"
@@ -82,11 +85,12 @@
 </template>
 
 <script setup>
-// One Last.fm similar track: a 30 s Deezer preview on the cover, and a
-// download button that first resolves the row into a real downloadable
-// song (Last.fm rows have no URL of their own). Once resolved, the row
-// hands off to DownloadState so progress, queue and retry look exactly
-// like search results.
+// One similar track: a 30 s Deezer preview on the cover, and a download
+// button. YouTube rows already carry their video id and download
+// directly; Last.fm rows have no URL of their own, so the button first
+// resolves the row through search. Either way the row hands off to
+// DownloadState, so progress, queue and retry look exactly like search
+// results.
 import { computed, ref } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
@@ -141,6 +145,10 @@ const previewLabel = computed(() =>
 const inLibrary = computed(() =>
   library.hasSong(artistName.value, props.song.name)
 )
+
+// A YouTube row already is a downloadable song (video id + link), so it
+// skips the resolve step a Last.fm row needs.
+const downloadable = computed(() => !!String(props.song.song_id || '').trim())
 
 function togglePreview() {
   if (!canPreview.value) return

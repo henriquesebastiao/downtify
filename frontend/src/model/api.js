@@ -178,8 +178,10 @@ function finderAlbum(albumId) {
 // ── Similar tracks (Last.fm) ─────────────────────────────────────────
 // Tracks similar to one track, by artist + title - see
 // downtify/lastfm.py. Needs the Last.fm API key from Settings.
-function getSimilarTracks(artist, track, limit = 20) {
-  return API.get('/api/similar/tracks', { params: { artist, track, limit } })
+function getSimilarTracks(artist, track, limit = 20, source = 'lastfm') {
+  return API.get('/api/similar/tracks', {
+    params: { artist, track, limit, source },
+  })
 }
 
 // Try a Last.fm API key without saving it (the Settings test button).

@@ -160,6 +160,10 @@ export default {
     openLastfm: 'Open on Last.fm',
     openSettings: 'Open settings',
     findSimilar: 'Find similar tracks',
+    sourceHint:
+      'Last.fm ranks by listeners, YouTube by its own radio mix — flip to compare.',
+    sourceLastfm: 'Last.fm',
+    sourceYoutube: 'YouTube',
     noDownloadMatch: 'No downloadable match for “{name}”',
     resolveFailed: "Couldn't look that track up for download",
     tipSimilarTitle: 'Start from one track',

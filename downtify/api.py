@@ -240,10 +240,13 @@ working without changes:
  * ``GET  /api/preview`` (a song's 30 s preview clip from Deezer, for a
    song with no ``preview_url`` of its own - ``?artist=&title=&duration=``,
    response ``{preview_url}``, ``""`` when Deezer has no matching song)
- * ``GET  /api/similar/tracks`` (tracks similar to ``?artist=&track=``
-   via Last.fm ``track.getSimilar`` - ``{artist, track, tracks:
-   [{title, artist, match, url, image_url}]}``; needs the user's own
-   Last.fm API key in settings - see ``downtify.lastfm``)
+ * ``GET  /api/similar/tracks`` (tracks similar to ``?artist=&track=`` -
+   ``?source=lastfm`` (default) via Last.fm ``track.getSimilar``
+   (``{artist, track, tracks: [{title, artist, match, url,
+   image_url}]}``; needs the user's own Last.fm API key in settings -
+   see ``downtify.lastfm``) or ``?source=youtube`` via YouTube Music's
+   own radio mix for the track (downloadable song rows plus ``match``,
+   no key - see ``downtify.providers.youtube_similar_tracks``))
  * ``POST /api/similar/test`` (try a Last.fm API key without saving it -
    body ``{api_key}``, else the saved one; ``{ok, server, checks}`` like
    the slskd/Navidrome probes, for the Settings test button)
@@ -5684,15 +5687,42 @@ async def similar_tracks_endpoint(
     artist: str = Query(..., min_length=1),
     track: str = Query(..., min_length=1),
     limit: int = Query(20, ge=1, le=50),
+    source: str = Query('lastfm'),
 ) -> dict[str, Any]:
-    """Tracks similar to *track* by *artist* (Last.fm ``track.getSimilar``).
+    """Tracks similar to *track* by *artist*, from two sources together.
 
-    Response ``{artist, track, tracks: [{title, artist, match, url,
-    image_url}]}`` - artist/title rows the Similar page previews (via
-    ``GET /api/preview``) and downloads (by resolving through search).
-    ``400`` without a key or query, ``502`` when Last.fm can't be used.
+    ``?source=lastfm`` (default): Last.fm ``track.getSimilar`` -
+    ``{artist, track, tracks: [{title, artist, match, url,
+    image_url}]}``; needs the user's own Last.fm API key in settings.
+    Artist/title rows the Similar page previews (via ``GET
+    /api/preview``) and downloads (by resolving through search).
+
+    ``?source=youtube``: YouTube Music's own radio mix for the track -
+    downloadable song rows plus ``match``; needs no key, so it works
+    alongside (and without) Last.fm.
+
+    ``400`` for an unknown source, or without a Last.fm key or query;
+    ``502`` when the source can't be used.
     """
 
+    if not isinstance(source, str):
+        # A direct call (tests) leaves FastAPI's default in place.
+        source = 'lastfm'
+    if source not in {'lastfm', 'youtube'}:
+        raise HTTPException(
+            status_code=400,
+            detail="source is 'lastfm' or 'youtube'",
+        )
+    if source == 'youtube':
+        try:
+            return await asyncio.to_thread(
+                providers.youtube_similar_tracks,
+                artist,
+                track,
+                limit=limit,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
     api_key = str(state.settings.get('lastfm_api_key') or '').strip()
     if not api_key:
         raise HTTPException(

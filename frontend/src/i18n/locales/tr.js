@@ -164,6 +164,10 @@ export default {
     openLastfm: 'Last.fm’de aç',
     openSettings: 'Ayarları aç',
     findSimilar: 'Benzer parçaları bul',
+    sourceHint:
+      'Last.fm dinleyicilere göre, YouTube kendi karma listesine göre sıralar — karşılaştırmak için değiştirin.',
+    sourceLastfm: 'Last.fm',
+    sourceYoutube: 'YouTube',
     noDownloadMatch: '“{name}” için indirilebilir eşleşme yok',
     resolveFailed: 'Bu parça indirme için hazırlanamadı',
     tipSimilarTitle: 'Tek parçadan başlayın',

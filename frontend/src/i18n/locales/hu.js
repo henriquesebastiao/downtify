@@ -160,6 +160,10 @@ export default {
     openLastfm: 'Megnyitás a Last.fm-en',
     openSettings: 'Beállítások megnyitása',
     findSimilar: 'Hasonló számok keresése',
+    sourceHint:
+      'A Last.fm a hallgatók alapján rangsorol, a YouTube a saját mixe alapján — váltson az összehasonlításhoz.',
+    sourceLastfm: 'Last.fm',
+    sourceYoutube: 'YouTube',
     noDownloadMatch: 'Nincs letölthető találat ehhez: “{name}”',
     resolveFailed: 'A szám nem készíthető elő letöltésre',
     tipSimilarTitle: 'Induljon egy számból',

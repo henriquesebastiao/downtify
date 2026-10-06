@@ -34,6 +34,16 @@
       </UiButton>
     </form>
 
+    <div class="flex flex-wrap items-center gap-3">
+      <UiSegmented
+        :model-value="similar.source.value"
+        show-labels
+        :options="sources"
+        @update:model-value="switchSource"
+      />
+      <p class="text-[13px] text-muted">{{ t('similar.sourceHint') }}</p>
+    </div>
+
     <div v-if="similar.loading.value" class="flex flex-col gap-2">
       <div v-for="n in 6" :key="n" class="flex h-16 items-center gap-3 px-3">
         <UiSkeleton class="size-11 !rounded-[8px]" />
@@ -119,6 +129,7 @@ import AppIcon from '/src/components/ui/AppIcon.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiInput from '/src/components/ui/UiInput.vue'
+import UiSegmented from '/src/components/ui/UiSegmented.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import SimilarTrackRow from '/src/components/similar/SimilarTrackRow.vue'
@@ -165,12 +176,19 @@ const canSearch = computed(
 )
 
 // Last.fm answers without a key explanation the page can't fix - point at
-// Settings instead of just offering a retry.
-const needsKey = computed(() =>
-  String(similar.error.value || '')
-    .toLowerCase()
-    .includes('api key')
+// Settings instead of just offering a retry. YouTube needs no key.
+const needsKey = computed(
+  () =>
+    similar.source.value === 'lastfm' &&
+    String(similar.error.value || '')
+      .toLowerCase()
+      .includes('api key')
 )
+
+const sources = computed(() => [
+  { value: 'lastfm', label: t('similar.sourceLastfm') },
+  { value: 'youtube', icon: 'youtube', label: t('similar.sourceYoutube') },
+])
 
 function submit() {
   const artist = artistInput.value.trim()
@@ -184,6 +202,17 @@ function submit() {
 
 function retry() {
   similar.searchFor(similar.artist.value, similar.track.value)
+}
+
+// Flipping the source re-searches the same seed, so Last.fm and YouTube
+// answer side by side in one place.
+function switchSource(value) {
+  const source = value === 'youtube' ? 'youtube' : 'lastfm'
+  if (source === similar.source.value) return
+  similar.source.value = source
+  if (similar.searched.value && similar.artist.value && similar.track.value) {
+    similar.searchFor(similar.artist.value, similar.track.value, source)
+  }
 }
 
 const tips = computed(() => [

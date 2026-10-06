@@ -17,6 +17,20 @@ vi.mock('/src/model/api', () => ({
   },
 }))
 
+vi.mock('@vueuse/core', () => ({
+  useLocalStorage: (key, initial) => {
+    let value = initial
+    return {
+      get value() {
+        return value
+      },
+      set value(next) {
+        value = next
+      },
+    }
+  },
+}))
+
 import { useSimilar } from '../model/similar'
 
 const ROWS = [
@@ -36,18 +50,65 @@ describe('useSimilar', () => {
     })
     const similar = useSimilar()
     await similar.searchFor('Cher', 'Believe')
-    expect(getSimilarTracks).toHaveBeenCalledWith('Cher', 'Believe')
+    expect(getSimilarTracks).toHaveBeenCalledWith(
+      'Cher',
+      'Believe',
+      20,
+      'lastfm'
+    )
     expect(similar.songs.value).toEqual([
       {
         name: 'Believe',
         artists: ['Cher'],
         artist: 'Cher',
         cover_url: 'https://img/xl',
+        duration: 0,
         match: 0.95,
         lastfm_url: 'https://www.last.fm/music/Cher/_/Believe',
       },
     ])
     expect(similar.error.value).toBe('')
+  })
+
+  it('keeps a YouTube row downloadable as-is', async () => {
+    getSimilarTracks.mockResolvedValueOnce({
+      data: {
+        artist: 'Cher',
+        track: 'Believe',
+        tracks: [
+          {
+            song_id: 'v1',
+            name: 'Strong Enough',
+            artists: ['Cher'],
+            cover_url: 'https://img/v1',
+            duration: 224,
+            url: 'https://music.youtube.com/watch?v=v1',
+            match: 0.9,
+          },
+        ],
+      },
+    })
+    const similar = useSimilar()
+    await similar.searchFor('Cher', 'Believe', 'youtube')
+    expect(getSimilarTracks).toHaveBeenCalledWith(
+      'Cher',
+      'Believe',
+      20,
+      'youtube'
+    )
+    expect(similar.songs.value).toEqual([
+      {
+        name: 'Strong Enough',
+        artists: ['Cher'],
+        artist: 'Cher',
+        cover_url: 'https://img/v1',
+        duration: 224,
+        match: 0.9,
+        song_id: 'v1',
+        url: 'https://music.youtube.com/watch?v=v1',
+      },
+    ])
+    expect(similar.source.value).toBe('youtube')
   })
 
   it('does not ask without both fields', async () => {

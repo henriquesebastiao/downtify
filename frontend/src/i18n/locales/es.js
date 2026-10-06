@@ -161,6 +161,10 @@ export default {
     openLastfm: 'Abrir en Last.fm',
     openSettings: 'Abrir ajustes',
     findSimilar: 'Buscar canciones similares',
+    sourceHint:
+      'Last.fm ordena por oyentes, YouTube por su propia mezcla — cambia para comparar.',
+    sourceLastfm: 'Last.fm',
+    sourceYoutube: 'YouTube',
     noDownloadMatch: 'Sin coincidencia descargable para “{name}”',
     resolveFailed: 'No se pudo preparar esa canción para descargar',
     tipSimilarTitle: 'Empieza con una canción',

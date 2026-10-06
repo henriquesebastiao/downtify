@@ -1744,17 +1744,18 @@ Only a Deezer song by that artist with that title counts (both compared ignoring
 
 ### `GET /api/similar/tracks`
 
-Tracks similar to one track, via Last.fm `track.getSimilar` (with `autocorrect=1`, so a slightly misspelled title still resolves). Used by the [Similar](features/similar.md) page. Needs the Last.fm API key from Settings → Audio sources (a free key from `https://www.last.fm/api/account/create`).
+Tracks similar to one track, from two sources that answer side by side on the [Similar](features/similar.md) page. `?source=lastfm` (default) asks Last.fm `track.getSimilar` (with `autocorrect=1`, so a slightly misspelled title still resolves) and needs the Last.fm API key from Settings → Audio sources (a free key from `https://www.last.fm/api/account/create`). `?source=youtube` reads YouTube Music's own radio mix for the track and needs no key.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `artist` | string | yes | The seed track's artist |
 | `track` | string | yes | The seed track's title |
 | `limit` | number | no | How many similar tracks to return (default `20`, max `50`) |
+| `source` | string | no | `lastfm` (default) or `youtube` |
 
-**Response:** `{ "artist": "Cher", "track": "Believe", "tracks": [{ "title": "Believe", "artist": "Cher", "match": 0.95, "url": "https://www.last.fm/music/Cher/_/Believe", "image_url": "https://…" }] }` — `match` is 0–1, `image_url` the largest Last.fm image (`""` when there is none).
+**Response:** `{ "artist": "Cher", "track": "Believe", "tracks": [{ "title": "Believe", "artist": "Cher", "match": 0.95, "url": "https://www.last.fm/music/Cher/_/Believe", "image_url": "https://…" }] }` — `match` is 0–1, `image_url` the largest Last.fm image (`""` when there is none). YouTube rows are full song objects instead (`song_id`, `artists`, `cover_url`, `duration`, watch `url`) plus `match`, which decays with the row's position since YouTube gives no score.
 
-`400` without a key or query, `502` when Last.fm can't be used (bad key, unknown track, network). Rows carry no downloadable URL of their own — the web UI previews them through [`GET /api/preview`](#get-apipreview) and downloads by resolving each through search first.
+`400` for an unknown source, or without a Last.fm key or query; `502` when the source can't be used (bad key, unknown track, network). Last.fm rows carry no downloadable URL of their own — the web UI previews them through [`GET /api/preview`](#get-apipreview) and downloads by resolving each through search first; YouTube rows download straight away.
 
 ### `POST /api/similar/test`
 

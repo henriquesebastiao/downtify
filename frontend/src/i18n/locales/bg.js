@@ -161,6 +161,10 @@ export default {
     openLastfm: 'Отвори в Last.fm',
     openSettings: 'Отвори настройките',
     findSimilar: 'Намери подобни песни',
+    sourceHint:
+      'Last.fm подрежда по слушатели, YouTube по собствения си микс — превключете, за да сравните.',
+    sourceLastfm: 'Last.fm',
+    sourceYoutube: 'YouTube',
     noDownloadMatch: 'Няма резултат за изтегляне за “{name}”',
     resolveFailed: 'Песента не можа да бъде подготвена за изтегляне',
     tipSimilarTitle: 'Започнете от една песен',

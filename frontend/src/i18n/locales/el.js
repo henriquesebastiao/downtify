@@ -165,6 +165,10 @@ export default {
     openLastfm: 'Άνοιγμα στο Last.fm',
     openSettings: 'Άνοιγμα ρυθμίσεων',
     findSimilar: 'Εύρεση παρόμοιων κομματιών',
+    sourceHint:
+      'Το Last.fm κατατάσσει με βάση τους ακροατές, το YouTube με το δικό του mix — αλλάξτε για σύγκριση.',
+    sourceLastfm: 'Last.fm',
+    sourceYoutube: 'YouTube',
     noDownloadMatch: 'Χωρίς αποτέλεσμα για λήψη για το “{name}”',
     resolveFailed: 'Δεν ήταν δυνατή η προετοιμασία του κομματιού για λήψη',
     tipSimilarTitle: 'Ξεκινήστε από ένα κομμάτι',
