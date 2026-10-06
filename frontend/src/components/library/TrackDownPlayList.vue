@@ -42,6 +42,7 @@
         :song="song"
         :index="i"
         :queue="queue"
+        :songs="songs"
         :context="context"
         :selectable="selectable"
         :selected="selected.has(keyOf(song, i))"

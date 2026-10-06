@@ -1754,6 +1754,8 @@ A track's full audio as a fresh direct URL — what plays in the built-in player
 
 The URL is short-lived and bound to the server's network: fetch it on demand, never cache or persist it. `400` for a malformed id, `503` when YouTube can't be reached or refuses — including age-gated tracks without usable cookies (see [YouTube Cookies](features/youtube-cookies.md)). A stream never lands in the library, the activity log or the saved player session.
 
+The web UI resolves a stream's URL when its turn comes in the queue and keeps one track ahead resolved while the current one plays, so playback runs through undownloaded rows without stopping; a run of unresolvable tracks is skipped (an error after three in a row).
+
 ---
 
 ## Similar tracks

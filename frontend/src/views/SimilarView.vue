@@ -98,6 +98,7 @@
             :key="`${song.artist}|${song.name}`"
             :song="song"
             :index="i"
+            :songs="similar.songs.value"
           />
         </div>
       </section>

@@ -841,7 +841,10 @@ function playPickedTrack() {
   const row = (loaded.tracks || []).find(
     (item) => item.song_id === song.song_id
   )
-  startSong(row || song, { queue: albumQueue.value })
+  startSong(row || song, {
+    queue: albumQueue.value,
+    songs: loaded.tracks || undefined,
+  })
 }
 
 // Smooth, unless the system asks for less motion.

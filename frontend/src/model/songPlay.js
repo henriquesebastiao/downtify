@@ -1,9 +1,10 @@
 // Playing one song from a list of songs that may or may not be downloaded
-// yet - a link's album or playlist, an artist's top songs. Once the song is
-// in the library it plays through the built-in player (with the list's
-// other downloaded songs queued after it); until then the same controls
-// stream it in full from YouTube (see model/stream.js), always shown in
-// the player - there are no 30 s preview clips anywhere.
+// yet - a link's album or playlist, an artist's top songs. The whole list
+// goes to the player as one queue: downloaded songs play from the
+// library, the rest stream in full from YouTube (see model/stream.js),
+// always shown in the player - there are no 30 s preview clips anywhere.
+// The player resolves a stream's URL when its turn comes and keeps one
+// track ahead resolved, so playback never waits on the network.
 //
 // Shared by TrackDownPlay (the artist page's Top songs) and SongPlayCell
 // (the number cell of the selectable lists), so both behave the same.
@@ -11,22 +12,42 @@ import { computed } from 'vue'
 
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
+import { isStreamingSong, playStream, resolvingFor } from '/src/model/stream'
 import {
-  isStreamingSong,
-  playStream,
-  resolvingFor,
+  directVideoId,
+  rowKey,
   songArtist,
   songTitle,
-} from '/src/model/stream'
+} from '/src/model/streamResolve'
 import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
 
+/** The player track behind a song: the library's, else an unstored one. */
+function toPlayerTrack(song, findTrack) {
+  const found = findTrack(songArtist(song), songTitle(song))
+  if (found) return found
+  return {
+    file: '',
+    stream: true,
+    video_id: directVideoId(song),
+    title: songTitle(song),
+    artist: songArtist(song),
+    album: String(song?.album_name || song?.album || ''),
+    albumArtist: songArtist(song),
+    cover: String(song?.cover_url || ''),
+    hasCover: !!song?.cover_url,
+    url: '',
+    duration: Number(song?.duration) || 0,
+  }
+}
+
 /**
- * `start(song, { queue, context })`: make sure `song` plays - the library
- * track once it's downloaded (with `queue` after it), else its full
- * stream, never pausing one already playing. What a double click on a
- * song's row does, for a caller holding the song but not its row (the
+ * `start(song, { queue, context, songs })`: make sure `song` plays - from
+ * the library once it's downloaded (with `queue` after it), else as one
+ * row of a mixed queue (`songs`: the whole list, downloaded or
+ * streamed) the player works through to the end. What a double click on
+ * a song's row does, for a caller holding the song but not its row (the
  * Finder, starting the popular track it was just asked for). Call it
  * during setup, like any composable; `start` itself can then be called
  * any time.
@@ -38,7 +59,23 @@ export function useSongStarter() {
   const actions = useTrackActions()
   const ui = useUi()
 
-  return function start(song, { queue = [], context = null } = {}) {
+  return function start(
+    song,
+    { queue = [], context = null, songs = null } = {}
+  ) {
+    if (Array.isArray(songs) && songs.length) {
+      const key = rowKey(song)
+      const at = Math.max(
+        0,
+        songs.findIndex((s) => s === song || rowKey(s) === key)
+      )
+      actions.play(
+        songs.map((s) => toPlayerTrack(s, library.findTrack)),
+        at,
+        context
+      )
+      return
+    }
     const track = library.findTrack(songArtist(song), songTitle(song))
     if (track) {
       const index = (queue || []).findIndex((item) => item.file === track.file)
@@ -54,9 +91,10 @@ export function useSongStarter() {
 }
 
 /**
- * `props`: `{ song, queue, context }` - the song (a search/link result),
- * the library tracks playing it starts a queue from, and the player's
- * "playing from" for them.
+ * `props`: `{ song, queue, context, songs }` - the song (a search/link
+ * result), the library tracks playing it starts a queue from, the
+ * player's "playing from" for them, and the whole song list for a mixed
+ * queue (downloaded rows from the library, the rest streamed).
  */
 export function useSongPlay(props) {
   const { t } = useI18n()
@@ -71,14 +109,21 @@ export function useSongPlay(props) {
   const track = computed(() =>
     library.findTrack(songArtist(props.song), songTitle(props.song))
   )
+  const streaming = computed(() => isStreamingSong(props.song))
   const isCurrent = computed(
     () =>
       (!!track.value && player.currentTrack.value?.file === track.value.file) ||
-      isStreamingSong(props.song)
+      streaming.value
   )
 
-  // Resolving the stream URL right now (the row spins meanwhile).
-  const loading = computed(() => resolvingFor(props.song))
+  // Resolving the stream URL right now (direct tap, or the player working
+  // through the queue): the row spins meanwhile.
+  const loading = computed(
+    () =>
+      resolvingFor(props.song) ||
+      (player.resolving.value != null &&
+        rowKey(player.resolving.value) === rowKey(props.song))
+  )
   // Anything with an artist and a title plays: from the library, else
   // streamed in full.
   const playable = computed(
@@ -100,16 +145,27 @@ export function useSongPlay(props) {
   }
 
   // The play button: the song from the library, or - not downloaded yet -
-  // its full stream, which the same button pauses again.
+  // its full stream (as one row of the whole list when the caller passes
+  // it, so the player works through to the end even past undownloaded
+  // rows), which the same button pauses again.
   function toggle() {
     if (track.value) play()
-    else if (isStreamingSong(props.song)) player.toggle()
-    else start(props.song, { queue: props.queue, context: props.context })
+    else if (streaming.value) player.toggle()
+    else
+      start(props.song, {
+        queue: props.queue,
+        context: props.context,
+        songs: props.songs,
+      })
   }
 
   // A double click makes sure the song plays; it never pauses a stream.
   function ensurePlaying() {
-    start(props.song, { queue: props.queue, context: props.context })
+    start(props.song, {
+      queue: props.queue,
+      context: props.context,
+      songs: props.songs,
+    })
   }
 
   return {

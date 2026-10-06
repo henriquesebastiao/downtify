@@ -187,6 +187,7 @@
                 :index="row.index"
                 :queue="playQueue"
                 :context="playContext"
+                :songs="playSongs"
               />
               <CoverArt
                 :src="row.song.cover_url"
@@ -339,6 +340,9 @@ const kicker = computed(() => {
 const playQueue = computed(() =>
   playableQueue(details.value?.tracks || [], library.findTrack)
 )
+// The whole list for a mixed queue: downloaded rows from the library,
+// the rest streamed, played through to the end.
+const playSongs = computed(() => visibleRows.value.map((row) => row.song))
 const playContext = computed(() =>
   details.value
     ? {

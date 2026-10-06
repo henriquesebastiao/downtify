@@ -164,6 +164,9 @@ const props = defineProps({
   // The library tracks playing this song starts a queue from (typically the
   // list's other downloaded songs, in order). Without it, just this song.
   queue: { type: Array, default: () => [] },
+  // The whole song list, for a mixed queue (downloaded rows from the
+  // library, the rest streamed) the player works through to the end.
+  songs: { type: Array, default: null },
   // Where the queue comes from, for the player's "playing from".
   context: { type: Object, default: null },
   // Off by default: a caller doing multi-select (e.g. a "download selected"

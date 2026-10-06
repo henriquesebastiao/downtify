@@ -109,6 +109,9 @@ import { useI18n } from '/src/i18n'
 const props = defineProps({
   song: { type: Object, required: true },
   index: { type: Number, default: null },
+  // The whole song list, for a mixed queue (downloaded rows from the
+  // library, the rest streamed) the player works through to the end.
+  songs: { type: Array, default: null },
 })
 
 const { t } = useI18n()

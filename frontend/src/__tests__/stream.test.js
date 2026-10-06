@@ -37,7 +37,8 @@ vi.mock('/src/model/library', () => ({
   useLibrary: () => ({ findTrack }),
 }))
 
-import { isStreamingSong, playStream, videoIdFor } from '../model/stream.js'
+import { isStreamingSong, playStream } from '../model/stream.js'
+import { videoIdFor } from '../model/streamResolve.js'
 
 const SONG = { name: 'Believe', artists: ['Cher'] }
 

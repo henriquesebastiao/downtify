@@ -58,7 +58,12 @@
             stroke-width="3"
           />
         </button>
-        <SongPlayCell :song="row.song" :index="row.index" :queue="playQueue" />
+        <SongPlayCell
+          :song="row.song"
+          :index="row.index"
+          :queue="playQueue"
+          :songs="playSongs"
+        />
         <CoverArt
           :src="row.song.cover_url"
           :name="row.song.album_name || row.song.name"
@@ -143,4 +148,7 @@ const playQueue = computed(() =>
     library.findTrack
   )
 )
+// The whole list for a mixed queue: downloaded rows from the library,
+// the rest streamed, played through to the end.
+const playSongs = computed(() => props.state.rows.map((row) => row.song))
 </script>

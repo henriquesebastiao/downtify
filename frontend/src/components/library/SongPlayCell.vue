@@ -47,6 +47,9 @@ const props = defineProps({
   queue: { type: Array, default: () => [] },
   // The player's "playing from".
   context: { type: Object, default: null },
+  // The whole song list, for a mixed queue (downloaded rows from the
+  // library, the rest streamed) the player works through to the end.
+  songs: { type: Array, default: null },
 })
 
 const player = usePlayer()
