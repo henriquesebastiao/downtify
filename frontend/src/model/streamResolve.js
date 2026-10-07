@@ -47,16 +47,15 @@ export async function videoIdFor(song) {
 }
 
 /**
- * A fresh direct-audio URL for `track` (a player track with no `url`
- * yet). Short-lived: resolved on demand, never stored. Throws when
- * there is nothing to play.
+ * The server URL streaming `track` (a player track with no `url` yet):
+ * the backend downloads the audio once into its stream cache and serves
+ * it from there, so playback never depends on the browser reaching
+ * YouTube itself. Throws when there is nothing to play.
  */
 export async function resolveTrackUrl(track) {
   const videoId = await videoIdFor(track)
-  const res = await API.getStreamUrl(videoId)
-  const url = res.data?.url
-  if (typeof url !== 'string' || !url.startsWith('https://')) {
-    throw new Error('nourl')
+  return {
+    url: `/api/stream/file?video_id=${encodeURIComponent(videoId)}`,
+    videoId,
   }
-  return { url, videoId }
 }

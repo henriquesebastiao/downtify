@@ -1,19 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 
-const { search, getStreamUrl, playList, playerState, findTrack } = vi.hoisted(
-  () => ({
-    search: vi.fn(),
-    getStreamUrl: vi.fn(),
-    playList: vi.fn(),
-    playerState: { current: null, playing: false },
-    findTrack: vi.fn(() => null),
-  })
-)
+const { search, playList, playerState, findTrack } = vi.hoisted(() => ({
+  search: vi.fn(),
+  playList: vi.fn(),
+  playerState: { current: null, playing: false },
+  findTrack: vi.fn(() => null),
+}))
 
 vi.mock('/src/model/api', () => ({
   default: {
     search,
-    getStreamUrl,
   },
 }))
 
@@ -38,7 +34,18 @@ vi.mock('/src/model/library', () => ({
 }))
 
 import { isStreamingSong, playStream } from '../model/stream.js'
-import { videoIdFor } from '../model/streamResolve.js'
+import { resolveTrackUrl, videoIdFor } from '../model/streamResolve.js'
+
+describe('resolveTrackUrl', () => {
+  it('points at the server cache, never at YouTube', async () => {
+    await expect(
+      resolveTrackUrl({ ...SONG, youtube_id: 'dQw4w9WgXcQ' })
+    ).resolves.toEqual({
+      url: '/api/stream/file?video_id=dQw4w9WgXcQ',
+      videoId: 'dQw4w9WgXcQ',
+    })
+  })
+})
 
 const SONG = { name: 'Believe', artists: ['Cher'] }
 
@@ -71,17 +78,15 @@ describe('videoIdFor', () => {
 })
 
 describe('playStream', () => {
-  it('plays the resolved URL as a transient player track', async () => {
-    getStreamUrl.mockResolvedValueOnce({
-      data: { url: 'https://r1---sn.googlevideo.com/x' },
-    })
+  it('plays the server file URL as a transient player track', async () => {
     const song = {
       ...SONG,
       youtube_id: 'dQw4w9WgXcQ',
       cover_url: 'https://img/xl',
     }
     await expect(playStream(song)).resolves.toBe(true)
-    expect(getStreamUrl).toHaveBeenCalledWith('dQw4w9WgXcQ')
+    // The browser never touches YouTube: the server caches and serves
+    // (no direct-URL call happens at all).
     expect(playList).toHaveBeenCalledOnce()
     const [tracks, options] = playList.mock.calls[0]
     expect(tracks).toHaveLength(1)
@@ -91,17 +96,15 @@ describe('playStream', () => {
       title: 'Believe',
       artist: 'Cher',
       cover: 'https://img/xl',
-      url: 'https://r1---sn.googlevideo.com/x',
+      url: '/api/stream/file?video_id=dQw4w9WgXcQ',
     })
     expect(options).toEqual({ context: null })
   })
 
-  it('resolves false when the backend has no URL', async () => {
+  it('resolves false when nothing resolves to a video', async () => {
     playList.mockClear()
-    getStreamUrl.mockResolvedValueOnce({ data: { url: '' } })
-    await expect(
-      playStream({ ...SONG, youtube_id: 'dQw4w9WgXcQ' })
-    ).resolves.toBe(false)
+    search.mockResolvedValueOnce({ data: [] })
+    await expect(playStream(SONG)).resolves.toBe(false)
     expect(playList).not.toHaveBeenCalled()
   })
 

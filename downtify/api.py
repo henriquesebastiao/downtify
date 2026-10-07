@@ -251,8 +251,13 @@ working without changes:
    body ``{api_key}``, else the saved one; ``{ok, server, checks}`` like
    the slskd/Navidrome probes, for the Settings test button)
  * ``GET  /api/stream`` (a track's full audio as a fresh,
-   short-lived direct URL - ``?video_id=``; the player behind a song
-   that isn't downloaded yet - see ``downtify.stream``)
+   short-lived direct URL - ``?video_id=`` - for third-party clients;
+   the web player behind a song that isn't downloaded yet uses
+   ``/api/stream/file`` below instead - see ``downtify.stream``)
+ * ``GET  /api/stream/file`` (that same audio downloaded once into
+   ``/data/stream_cache`` and served from this server with seeking
+   support - ``?video_id=``; what the web player streams, so playback
+   never depends on the browser reaching YouTube itself)
 * ``GET  /api/server/info`` (public: server id, name, version,
   ``api_version``, ``require_sign_in`` (always true), capabilities) and
   ``PATCH /api/server`` (``{name}``) - see ``downtify/auth_routes.py``
@@ -444,6 +449,7 @@ from .podcasts import (
 )
 from .server_identity import ServerIdentity
 from .slskd_provider import reset_slskd_parallelism
+from .stream import StreamCache
 from .track_index import (
     TrackIndex,
     normalize_spotify_track_id,
@@ -952,6 +958,7 @@ class AppState:
     # The mobile API (downtify/mobile_routes.py).
     library_sync: Optional[LibrarySync] = None
     transcoder: Optional[Transcoder] = None
+    stream_cache: Optional[StreamCache] = None
     cover_thumbs: Optional[CoverThumbs] = None
     discovery: Any = None
 
@@ -5791,6 +5798,42 @@ async def stream_endpoint(
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {'url': resolved['url']}
+
+
+@router.get('/api/stream/file')
+async def stream_file_endpoint(
+    video_id: str = Query(..., min_length=1, max_length=64),
+) -> FileResponse:
+    """A track's full audio, downloaded once and served from this server.
+
+    ``GET /api/stream/file?video_id=`` is what the web player behind a
+    song that isn't downloaded yet plays: the first request downloads
+    the audio into ``/data/stream_cache`` (concurrent requests for the
+    same video share one download), later ones are served from disk.
+    Served with seeking support, pruned least-recently-used past
+    ``DOWNTIFY_STREAM_CACHE_MB`` (see ``downtify.stream``). ``400`` for
+    a malformed id, ``503`` when YouTube can't provide the audio.
+    """
+
+    try:
+        vid = stream.clean_video_id(video_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    cache = state.stream_cache
+    if cache is None:
+        raise HTTPException(
+            status_code=503, detail='Streaming is not ready yet'
+        )
+    cookies = stream.resolve_cookies_file(state.cookies_store)
+    try:
+        path = await cache.get(vid, cookies_file=cookies)
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return FileResponse(
+        str(path),
+        media_type=stream.media_type_for(path),
+        filename=f'{vid}{path.suffix}',
+    )
 
 
 @router.post('/api/discover/listens')

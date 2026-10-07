@@ -1742,19 +1742,21 @@ Only a Deezer song by that artist with that title counts (both compared ignoring
 
 ## Streaming
 
-### `GET /api/stream`
+### `GET /api/stream/file`
 
-A track's full audio as a fresh direct URL — what plays in the built-in player when the song behind a row isn't downloaded yet. No download, no tags, nothing stored.
+A track's full audio, downloaded once into `/data/stream_cache` and served from this server with seeking support — what plays in the built-in player when the song behind a row isn't downloaded yet. This is what keeps playback working where the browser itself can't reach YouTube (or only slowly): the only YouTube traffic is server-side, and the second play of a track never touches YouTube at all.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `video_id` | string | yes | The song's YouTube video id (11 characters) |
 
-**Response:** `{ "url": "https://r1---sn.googlevideo.com/…" }` — usually AAC (`m4a`); either way a container every browser plays.
+The first request for a video downloads it (concurrent requests share one download); the cache is pruned least-recently-used past `DOWNTIFY_STREAM_CACHE_MB` (default 1024) with at most `DOWNTIFY_STREAM_CONCURRENCY` downloads at once (default 2). `400` for a malformed id, `503` when YouTube can't provide the audio — including age-gated tracks without usable cookies (see [YouTube Cookies](features/youtube-cookies.md)). A stream never lands in the library, the activity log or the saved player session.
 
-The URL is short-lived and bound to the server's network: fetch it on demand, never cache or persist it. `400` for a malformed id, `503` when YouTube can't be reached or refuses — including age-gated tracks without usable cookies (see [YouTube Cookies](features/youtube-cookies.md)). A stream never lands in the library, the activity log or the saved player session.
+The web UI plays the queue through undownloaded rows without stopping and keeps one track ahead cached while the current one plays; a run of unresolvable tracks is skipped (an error after three in a row).
 
-The web UI resolves a stream's URL when its turn comes in the queue and keeps one track ahead resolved while the current one plays, so playback runs through undownloaded rows without stopping; a run of unresolvable tracks is skipped (an error after three in a row).
+### `GET /api/stream`
+
+The same audio as a fresh direct URL (`{ "url": "https://r1---sn.googlevideo.com/…" }`, usually AAC) — for third-party clients. Short-lived and bound to the server's network: fetch it on demand, never cache or persist it. Same `400`/`503` contract as above.
 
 ---
 
