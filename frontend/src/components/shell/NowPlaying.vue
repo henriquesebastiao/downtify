@@ -132,21 +132,6 @@
                     :file="track.file"
                     size="lg"
                   />
-                  <!-- A stream isn't downloaded yet: queue the download.
-                       Anything downloaded (or since downloaded while
-                       streaming) can be deleted from here instead. -->
-                  <UiIconButton
-                    v-if="track?.stream && !streamDownloaded"
-                    icon="download"
-                    :label="t('actions.downloadItem', { name: track.title })"
-                    @click="downloadCurrent"
-                  />
-                  <UiIconButton
-                    v-else-if="track && !track.isPodcast"
-                    icon="trash"
-                    :label="t('actions.delete')"
-                    @click="removeCurrent"
-                  />
                   <UiMenu
                     :items="trackMenu"
                     :label="t('common.more')"
@@ -315,6 +300,32 @@
                     :size="22"
                   />
                 </button>
+                <!-- Right of repeat: a stream queues its download (once -
+                     while queued it spins instead), anything downloaded
+                     deletes from the library (with confirm). -->
+                <button
+                  v-if="showPlayerDownload"
+                  type="button"
+                  class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 disabled:opacity-50"
+                  :aria-label="t('actions.downloadItem', { name: track.title })"
+                  :disabled="downloadBusy"
+                  @click="downloadCurrent"
+                >
+                  <AppIcon
+                    :name="downloadBusy ? 'refresh' : 'download'"
+                    :size="22"
+                    :class="downloadBusy ? 'animate-spin' : ''"
+                  />
+                </button>
+                <button
+                  v-else-if="showPlayerDelete"
+                  type="button"
+                  class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
+                  :aria-label="t('actions.delete')"
+                  @click="removeCurrent"
+                >
+                  <AppIcon name="trash" :size="22" />
+                </button>
               </div>
 
               <div class="hidden flex-1 items-center justify-end gap-2 lg:flex">
@@ -435,7 +446,6 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useMediaQuery, useNow } from '@vueuse/core'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
-import UiIconButton from '../ui/UiIconButton.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import WaveSeekBar from '../player/WaveSeekBar.vue'
 import VolumeControl from '../player/VolumeControl.vue'
@@ -445,7 +455,7 @@ import UpNextPanel from '../player/UpNextPanel.vue'
 import TrackDetails from '../player/TrackDetails.vue'
 import EqualizerPanel from '../player/EqualizerPanel.vue'
 import { usePlayer } from '/src/model/player'
-import { useDownloadManager } from '/src/model/download'
+import { useDownloadManager, useProgressTracker } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
 import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
@@ -461,6 +471,7 @@ const player = usePlayer()
 const library = useLibrary()
 const actions = useTrackActions()
 const dm = useDownloadManager()
+const tracker = useProgressTracker()
 const ui = useUi()
 const { showLyrics } = usePlayerPrefs()
 const nowPlaying = useNowPlaying()
@@ -646,22 +657,56 @@ const streamDownloaded = computed(
     library.hasSong(track.value.artist, track.value.title)
 )
 
-/** Queue the playing stream as a download (it keeps streaming). */
-function downloadCurrent() {
+const showPlayerDownload = computed(
+  () => !!track.value?.stream && !streamDownloaded.value
+)
+const showPlayerDelete = computed(
+  () =>
+    !!track.value &&
+    !track.value.isPodcast &&
+    (!track.value.stream || streamDownloaded.value)
+)
+
+// The playing stream as a downloadable song: the watch URL is the
+// download key (so it can't be queued twice) and the known video id
+// pins the exact version, like a resolved search row.
+const pendingSong = computed(() => {
   const tr = track.value
-  if (!tr) return
-  dm.queue({
+  if (!tr?.stream || !tr.video_id) return null
+  return {
     name: tr.title,
     artists: tr.artist ? [tr.artist] : [],
     artist: tr.artist || '',
     album_name: tr.album || '',
     cover_url: tr.cover && String(tr.cover).startsWith('http') ? tr.cover : '',
     duration: tr.duration || 0,
-    youtube_id: tr.video_id || '',
-  })
-  ui.toast(t('toast.queuedTracks', { count: 1, name: tr.title }), {
-    kind: 'success',
-  })
+    url: `https://music.youtube.com/watch?v=${tr.video_id}`,
+    youtube_id: tr.video_id,
+  }
+})
+
+// The queued/finished job behind the button, if any - while one exists
+// the button spins instead of queueing a duplicate.
+const downloadJob = computed(() => {
+  tracker.queueVersion.value
+  return pendingSong.value ? tracker.getBySong(pendingSong.value) : null
+})
+const downloadBusy = computed(() => {
+  const state = downloadJob.value?.state
+  return state === 'queued' || state === 'active'
+})
+
+/** Queue the playing stream as a download (it keeps streaming). */
+function downloadCurrent() {
+  const song = pendingSong.value
+  if (!song || downloadBusy.value) return
+  if (downloadJob.value?.state === 'failed') dm.retry(song)
+  else {
+    dm.queue(song)
+    ui.toast(t('toast.queuedTracks', { count: 1, name: song.name }), {
+      kind: 'success',
+    })
+  }
 }
 
 /** Delete the playing download (with confirm); the player moves on. */
