@@ -175,13 +175,11 @@ function finderAlbum(albumId) {
   return API.get('/api/finder/album', { params: { album_id: albumId } })
 }
 
-// ── Similar tracks (Last.fm) ─────────────────────────────────────────
+// ── Similar tracks (YouTube Music) ───────────────────────────────
 // Tracks similar to one track, by artist + title - see
-// downtify/lastfm.py. Needs the Last.fm API key from Settings.
-function getSimilarTracks(artist, track, limit = 20, source = 'lastfm') {
-  return API.get('/api/similar/tracks', {
-    params: { artist, track, limit, source },
-  })
+// downtify/providers.py. Needs no key.
+function getSimilarTracks(artist, track, limit = 20) {
+  return API.get('/api/similar/tracks', { params: { artist, track, limit } })
 }
 
 // A track's full audio as a fresh direct URL - the player behind a song
@@ -190,9 +188,10 @@ function getStreamUrl(videoId) {
   return API.get('/api/stream', { params: { video_id: videoId } })
 }
 
-// Try a Last.fm API key without saving it (the Settings test button).
-function testLastfm(apiKey) {
-  return API.post('/api/similar/test', { api_key: apiKey })
+// Start caching a video's audio on the server without waiting for it -
+// how the player warms the next track up. Never fails the caller.
+function prefetchStream(videoId) {
+  return API.post('/api/stream/prefetch', { video_id: videoId })
 }
 
 // ── Artist photo & banner ───────────────────────────────────────────
@@ -773,7 +772,7 @@ export default {
   finderAlbum,
   getSimilarTracks,
   getStreamUrl,
-  testLastfm,
+  prefetchStream,
   getArtistArt,
   getArtistArtBulk,
   searchArtistArt,

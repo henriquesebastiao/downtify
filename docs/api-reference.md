@@ -1752,7 +1752,11 @@ A track's full audio, downloaded once into `/data/stream_cache` and served from 
 
 The first request for a video downloads it (concurrent requests share one download); the cache is pruned least-recently-used past `DOWNTIFY_STREAM_CACHE_MB` (default 1024) with at most `DOWNTIFY_STREAM_CONCURRENCY` downloads at once (default 2). `400` for a malformed id, `503` when YouTube can't provide the audio — including age-gated tracks without usable cookies (see [YouTube Cookies](features/youtube-cookies.md)). A stream never lands in the library, the activity log or the saved player session.
 
-The web UI plays the queue through undownloaded rows without stopping and keeps one track ahead cached while the current one plays; a run of unresolvable tracks is skipped (an error after three in a row).
+The web UI plays the queue through undownloaded rows without stopping and warms one track ahead: at each track's start, and again the moment it has fully loaded, the next track's download starts in the background (see [`POST /api/stream/prefetch`](#post-apistreamprefetch)), so skipping starts instantly. A run of unresolvable tracks is skipped (an error after three in a row).
+
+### `POST /api/stream/prefetch`
+
+Start caching a video's audio without waiting for it. Body `{ "video_id" }`; answers `{ "queued": true }` at once while the download continues detached — how the player warms the next track up the moment the current one has loaded, so skipping starts instantly. `400` for a malformed id, `503` when streaming isn't ready.
 
 ### `GET /api/stream`
 
@@ -1764,22 +1768,17 @@ The same audio as a fresh direct URL (`{ "url": "https://r1---sn.googlevideo.com
 
 ### `GET /api/similar/tracks`
 
-Tracks similar to one track, from two sources that answer side by side on the [Similar](features/similar.md) page. `?source=lastfm` (default) asks Last.fm `track.getSimilar` (with `autocorrect=1`, so a slightly misspelled title still resolves) and needs the Last.fm API key from Settings → Audio sources (a free key from `https://www.last.fm/api/account/create`). `?source=youtube` reads YouTube Music's own radio mix for the track and needs no key.
+Tracks similar to one track, from YouTube Music's own radio mix for it, backing the [Similar](features/similar.md) page. Needs no key.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `artist` | string | yes | The seed track's artist |
 | `track` | string | yes | The seed track's title |
 | `limit` | number | no | How many similar tracks to return (default `20`, max `50`) |
-| `source` | string | no | `lastfm` (default) or `youtube` |
 
-**Response:** `{ "artist": "Cher", "track": "Believe", "tracks": [{ "title": "Believe", "artist": "Cher", "match": 0.95, "url": "https://www.last.fm/music/Cher/_/Believe", "image_url": "https://…" }] }` — `match` is 0–1, `image_url` the largest Last.fm image (`""` when there is none). YouTube rows are full song objects instead (`song_id`, `artists`, `cover_url`, `duration`, watch `url`) plus `match`, which decays with the row's position since YouTube gives no score.
+**Response:** `{ "artist": "Cher", "track": "Believe", "source": "youtube", "tracks": [{ "song_id": "…", "name": "Strong Enough", "artists": ["Cher"], "cover_url": "https://…", "duration": 224, "url": "https://music.youtube.com/watch?v=…", "match": 0.9 }] }` — full song objects plus `match`, which decays with the row's position since YouTube gives no score.
 
-`400` for an unknown source, or without a Last.fm key or query; `502` when the source can't be used (bad key, unknown track, network). Last.fm rows carry no downloadable URL of their own — the web UI streams them through [`GET /api/stream`](#get-apistream) for playback and downloads by resolving each through search first; YouTube rows download straight away.
-
-### `POST /api/similar/test`
-
-Try a Last.fm API key without saving it, for the Settings page's **Test connection** button. Body `{ "api_key" }` is the key as typed (saved or not); an empty body tests the saved key. A failed test is still a `200`: the answer says what's wrong — `{ "ok": true|false, "server": "Last.fm", "checks": [{ "id", "status", "code", "detail" }] }`, where `auth/missing_key` means no key was given, `auth/invalid_key` that Last.fm rejected it, and `lastfm/timeout|unreachable|error` that Last.fm couldn't be reached or errored. Admins only.
+`502` when YouTube Music can't be used (unknown track, network). Rows stream through [`GET /api/stream/file`](#get-apistreamfile) for playback and download straight away.
 
 ---
 

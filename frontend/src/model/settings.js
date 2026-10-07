@@ -57,7 +57,6 @@ const settings = ref({
     api_version: '1.16.1',
   },
   organize_by_artist: true,
-  lastfm_api_key: '',
   cache_cover_art: false,
   organize_by_album: true,
   max_parallel_downloads: 3,

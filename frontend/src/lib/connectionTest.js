@@ -18,11 +18,6 @@ export const KNOWN_CODES = new Set([
   'auth_bad_key',
   'auth_bad_credentials',
   'auth_api_error',
-  'auth_missing_key',
-  'auth_invalid_key',
-  'lastfm_unreachable',
-  'lastfm_timeout',
-  'lastfm_error',
   'soulseek_ok',
   'soulseek_offline',
   'folder_ok',
@@ -72,5 +67,4 @@ export function canTest(config, fields) {
 export const REQUIRED_FIELDS = {
   slskd: ['base_url', 'api_key'],
   navidrome: ['url', 'username', 'password'],
-  lastfm: ['api_key'],
 }

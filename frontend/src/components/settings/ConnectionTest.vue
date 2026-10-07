@@ -59,8 +59,7 @@ import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
-  // 'slskd' | 'navidrome' | 'lastfm': which integration, and so which
-  // endpoint.
+  // 'slskd' | 'navidrome': which integration, and so which endpoint.
   kind: { type: String, required: true },
   // The settings object as it is in the form (saved or not).
   config: { type: Object, required: true },
@@ -103,15 +102,8 @@ async function run() {
   failed.value = false
   result.value = null
   try {
-    const call =
-      props.kind === 'slskd'
-        ? API.testSlskd
-        : props.kind === 'lastfm'
-          ? API.testLastfm
-          : API.testNavidrome
-    // The Last.fm probe takes the key itself, not a settings object.
-    const arg = props.kind === 'lastfm' ? props.config.api_key : props.config
-    const res = await call(arg)
+    const call = props.kind === 'slskd' ? API.testSlskd : API.testNavidrome
+    const res = await call(props.config)
     if (mine === serial) result.value = res.data
   } catch {
     if (mine === serial) failed.value = true

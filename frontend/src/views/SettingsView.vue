@@ -218,41 +218,6 @@
             <SettingGroup :title="t('settings.youtubeTitle')">
               <CookiesCard />
             </SettingGroup>
-
-            <SettingGroup
-              :title="t('settings.lastfmTitle')"
-              :description="t('settings.lastfmHint')"
-            >
-              <div class="grid gap-4 px-5 py-4 sm:grid-cols-2">
-                <UiInput
-                  v-model.trim="s.lastfm_api_key"
-                  class="sm:col-span-2"
-                  :label="t('settings.lastfmKey')"
-                  type="password"
-                  autocomplete="off"
-                  mono
-                />
-              </div>
-              <div class="px-5 py-4">
-                <ConnectionTest
-                  kind="lastfm"
-                  :config="lastfmConfig"
-                  url="Last.fm"
-                />
-              </div>
-              <SettingRow
-                :label="t('settings.lastfmHow')"
-                :description="t('settings.lastfmHowHint')"
-              >
-                <UiButton
-                  variant="ghost"
-                  icon="arrow-up-right"
-                  href="https://www.last.fm/api/account/create"
-                >
-                  Last.fm API
-                </UiButton>
-              </SettingRow>
-            </SettingGroup>
           </template>
 
           <!-- Downloads & files -->
@@ -838,10 +803,6 @@ const update = useUpdateCheck().status
 
 const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
-// The Last.fm probe takes the key as typed (saved or not) - a fresh
-// object only when the key itself changes, so the test result isn't
-// cleared on every render.
-const lastfmConfig = computed(() => ({ api_key: s.value.lastfm_api_key }))
 const version = localStorage.getItem('version')
 
 // Normal users see General, Apps and About; the rest is the server's,

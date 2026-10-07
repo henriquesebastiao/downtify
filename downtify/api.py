@@ -240,16 +240,10 @@ working without changes:
  * ``GET  /api/preview`` (a song's 30 s preview clip from Deezer, for a
    song with no ``preview_url`` of its own - ``?artist=&title=&duration=``,
    response ``{preview_url}``, ``""`` when Deezer has no matching song)
- * ``GET  /api/similar/tracks`` (tracks similar to ``?artist=&track=`` -
-   ``?source=lastfm`` (default) via Last.fm ``track.getSimilar``
-   (``{artist, track, tracks: [{title, artist, match, url,
-   image_url}]}``; needs the user's own Last.fm API key in settings -
-   see ``downtify.lastfm``) or ``?source=youtube`` via YouTube Music's
-   own radio mix for the track (downloadable song rows plus ``match``,
-   no key - see ``downtify.providers.youtube_similar_tracks``))
- * ``POST /api/similar/test`` (try a Last.fm API key without saving it -
-   body ``{api_key}``, else the saved one; ``{ok, server, checks}`` like
-   the slskd/Navidrome probes, for the Settings test button)
+ * ``GET  /api/similar/tracks`` (tracks similar to ``?artist=&track=``
+   via YouTube Music's own radio mix for the track - downloadable song
+   rows plus ``match`` - see
+   ``downtify.providers.youtube_similar_tracks``)
  * ``GET  /api/stream`` (a track's full audio as a fresh,
    short-lived direct URL - ``?video_id=`` - for third-party clients;
    the web player behind a song that isn't downloaded yet uses
@@ -258,6 +252,9 @@ working without changes:
    ``/data/stream_cache`` and served from this server with seeking
    support - ``?video_id=``; what the web player streams, so playback
    never depends on the browser reaching YouTube itself)
+ * ``POST /api/stream/prefetch`` (body ``{video_id}``: start caching
+   that audio in the background and answer ``{queued: true}`` at once -
+   how the player warms the next track up)
 * ``GET  /api/server/info`` (public: server id, name, version,
   ``api_version``, ``require_sign_in`` (always true), capabilities) and
   ``PATCH /api/server`` (``{name}``) - see ``downtify/auth_routes.py``
@@ -322,7 +319,6 @@ from . import (
     cover_sources,
     deezer,
     integration_check,
-    lastfm,
     library_import,
     library_upgrade,
     lyrics,
@@ -493,11 +489,6 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'organize_by_album': True,
     'search_albums': True,
     'mini_player_enabled': True,
-    # The user's own Last.fm API key (free, from
-    # https://www.last.fm/api/account/create), for the Similar page's
-    # track.getSimilar lookup (see downtify.lastfm). '' until set in
-    # Settings → Audio sources.
-    'lastfm_api_key': '',
     # The language the web UI is shown in (``en``, ``pt-BR``...). The choice
     # lives in the browser, so the page tells the server (see
     # ``model/settings.js``): work that runs without a browser, like an
@@ -5271,10 +5262,6 @@ async def update_settings_endpoint(
                 state.settings[key] = lyrics.coerce_bool(raw_value, True)
             elif key == 'lyrics_lrc_dir':
                 state.settings[key] = str(raw_value or '').strip()
-            elif key == 'lastfm_api_key':
-                # An API key, not a secret to normalize beyond trimming:
-                # whitespace pasted with it would fail every lookup.
-                state.settings[key] = str(raw_value or '').strip()
             else:
                 state.settings[key] = raw_value
         if {'audio_providers', 'slskd'} & set(payload):
@@ -5698,75 +5685,24 @@ async def similar_tracks_endpoint(
     artist: str = Query(..., min_length=1),
     track: str = Query(..., min_length=1),
     limit: int = Query(20, ge=1, le=50),
-    source: str = Query('lastfm'),
 ) -> dict[str, Any]:
-    """Tracks similar to *track* by *artist*, from two sources together.
+    """Tracks similar to *track* by *artist*, from YouTube Music's own
+    radio mix for the track (see
+    ``downtify.providers.youtube_similar_tracks``).
 
-    ``?source=lastfm`` (default): Last.fm ``track.getSimilar`` -
-    ``{artist, track, tracks: [{title, artist, match, url,
-    image_url}]}``; needs the user's own Last.fm API key in settings.
-    Artist/title rows the Similar page previews (via ``GET
-    /api/preview``) and downloads (by resolving through search).
-
-    ``?source=youtube``: YouTube Music's own radio mix for the track -
-    downloadable song rows plus ``match``; needs no key, so it works
-    alongside (and without) Last.fm.
-
-    ``400`` for an unknown source, or without a Last.fm key or query;
-    ``502`` when the source can't be used.
+    Response ``{artist, track, source, tracks}`` - downloadable song
+    rows plus ``match``. ``502`` when YouTube Music can't be used.
     """
 
-    if not isinstance(source, str):
-        # A direct call (tests) leaves FastAPI's default in place.
-        source = 'lastfm'
-    if source not in {'lastfm', 'youtube'}:
-        raise HTTPException(
-            status_code=400,
-            detail="source is 'lastfm' or 'youtube'",
-        )
-    if source == 'youtube':
-        try:
-            return await asyncio.to_thread(
-                providers.youtube_similar_tracks,
-                artist,
-                track,
-                limit=limit,
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-    api_key = str(state.settings.get('lastfm_api_key') or '').strip()
-    if not api_key:
-        raise HTTPException(
-            status_code=400,
-            detail='No Last.fm API key: set one in Settings → Audio sources',
-        )
     try:
         return await asyncio.to_thread(
-            lastfm.get_similar_tracks,
+            providers.youtube_similar_tracks,
             artist,
             track,
-            api_key,
             limit=limit,
         )
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-
-@router.post('/api/similar/test')
-async def test_similar_endpoint(request: Request) -> dict[str, Any]:
-    """Try a Last.fm API key without saving it, for the Settings page.
-
-    Body ``{api_key}`` is what the form holds (saved or not); an empty
-    body tests the saved key. A failed test is still a 200: the answer
-    says what's wrong (``{ok, server, checks}``, like the slskd/Navidrome
-    probes - see ``downtify.lastfm.test_api_key``).
-    """
-
-    payload = await _json_object(request)
-    key = str(payload.get('api_key') or '').strip()
-    if not key:
-        key = str(state.settings.get('lastfm_api_key') or '').strip()
-    return await asyncio.to_thread(lastfm.test_api_key, key)
 
 
 @router.get('/api/stream')
@@ -5834,6 +5770,45 @@ async def stream_file_endpoint(
         media_type=stream.media_type_for(path),
         filename=f'{vid}{path.suffix}',
     )
+
+
+async def _prefetch_stream_video(
+    cache: StreamCache, video_id: str, cookies_file: str
+) -> None:
+    """Cache one video's audio in the background (never raises)."""
+
+    try:
+        await cache.get(video_id, cookies_file=cookies_file)
+    except Exception:
+        logger.debug('Stream prefetch failed for videoId={}', video_id)
+
+
+@router.post('/api/stream/prefetch')
+async def stream_prefetch_endpoint(request: Request) -> dict[str, bool]:
+    """Start caching a video's audio without waiting for it.
+
+    Body ``{video_id}``; answers ``{queued: true}`` at once while the
+    download continues detached, so the player can warm the next track
+    up while the current one is still loading. ``400`` for a malformed
+    id, ``503`` when streaming isn't ready.
+    """
+
+    payload = await _json_object(request)
+    try:
+        vid = stream.clean_video_id(payload.get('video_id'))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    cache = state.stream_cache
+    if cache is None:
+        raise HTTPException(
+            status_code=503, detail='Streaming is not ready yet'
+        )
+    cookies = stream.resolve_cookies_file(state.cookies_store)
+    spawn_task(
+        _prefetch_stream_video(cache, vid, cookies),
+        name=f'stream-prefetch-{vid}',
+    )
+    return {'queued': True}
 
 
 @router.post('/api/discover/listens')

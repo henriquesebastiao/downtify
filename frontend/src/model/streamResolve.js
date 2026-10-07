@@ -59,3 +59,25 @@ export async function resolveTrackUrl(track) {
     videoId,
   }
 }
+
+/**
+ * Warm the server cache for `track` without waiting for it, so skipping
+ * to it starts instantly. Silent by design: a failed warm only means
+ * the advance resolves on demand, with an error then.
+ */
+export async function prefetchServerCache(track) {
+  try {
+    await warmServerCache(await videoIdFor(track))
+  } catch {
+    // The advance resolves again and reports failures itself.
+  }
+}
+
+/** Warm the server cache for a known video id (never throws). */
+export async function warmServerCache(videoId) {
+  try {
+    await API.prefetchStream(videoId)
+  } catch {
+    // The advance resolves again and reports failures itself.
+  }
+}

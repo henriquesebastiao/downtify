@@ -149,7 +149,7 @@ export default {
   },
   similar: {
     title: 'Similares',
-    subtitle: 'Faixas parecidas com uma que você indicar, via Last.fm.',
+    subtitle: 'Faixas parecidas com uma que você indicar, via YouTube Music.',
     artist: 'Artista',
     artistPlaceholder: 'Cher',
     track: 'Faixa',
@@ -158,23 +158,14 @@ export default {
     resultsFor: 'Parecidas com “{track}” de {artist}',
     failed: 'Não foi possível encontrar faixas similares',
     noResults: 'Nada parecido encontrado',
-    noResultsHint: 'Confira a ortografia — o Last.fm é exigente com títulos.',
-    matchHint: 'O quanto o Last.fm considera parecida com a sua faixa',
-    openLastfm: 'Abrir no Last.fm',
-    openSettings: 'Abrir configurações',
+    noResultsHint: 'Confira a ortografia de artista e faixa.',
+    matchHint: 'O quanto é parecida com a sua faixa',
     findSimilar: 'Buscar faixas similares',
-    sourceHint:
-      'O Last.fm ordena por ouvintes, o YouTube pela própria seleção — alterne para comparar.',
-    sourceLastfm: 'Last.fm',
-    sourceYoutube: 'YouTube',
     noDownloadMatch: 'Sem correspondência para baixar de “{name}”',
     resolveFailed: 'Não foi possível preparar essa faixa para baixar',
     tipSimilarTitle: 'Comece por uma faixa',
     tipSimilarBody:
-      'Digite o artista e a faixa — o Last.fm responde com o que os ouvintes tocam em seguida.',
-    tipKeyTitle: 'Traga uma chave gratuita do Last.fm',
-    tipKeyBody:
-      'Cole uma vez em Configurações → Fontes de áudio; a página Similares a usa em cada busca.',
+      'Digite o artista e a faixa — o YouTube responde com a seleção para ela.',
     tipDownloadTitle: 'Ouça na íntegra',
     tipDownloadBody: 'Cada linha toca inteira no player; baixe as que gostar.',
   },
@@ -816,12 +807,6 @@ export default {
     cookiesLocked: 'Definido pela variável de ambiente DOWNTIFY_COOKIES_FILE.',
     cookiesEnvMissing:
       'Esse arquivo não existe dentro do contêiner — verifique o caminho e o volume.',
-    lastfmTitle: 'Last.fm',
-    lastfmHint:
-      'Dá vida à página Similares: faixas que os ouvintes do Last.fm tocam em seguida.',
-    lastfmKey: 'Chave API',
-    lastfmHow: 'Obtenha uma chave grátis',
-    lastfmHowHint: 'Crie em last.fm/api/account/create e cole aqui.',
     audioGroup: 'Áudio',
     format: 'Formato',
     formatHint:
@@ -923,12 +908,6 @@ export default {
       auth_bad_key: 'O slskd recusou a chave de API.',
       auth_bad_credentials: 'O Navidrome recusou o usuário ou a senha.',
       auth_api_error: 'O Navidrome respondeu: {detail}',
-      auth_missing_key: 'Digite uma chave API primeiro.',
-      auth_invalid_key: 'O Last.fm rejeitou a chave API.',
-      lastfm_unreachable:
-        'Não foi possível alcançar o Last.fm. Verifique se o Downtify tem acesso à internet.',
-      lastfm_timeout: 'O Last.fm não respondeu a tempo.',
-      lastfm_error: 'O Last.fm respondeu: {detail}',
       soulseek_ok: 'O slskd está conectado ao Soulseek.',
       soulseek_offline:
         'O slskd não está conectado ao Soulseek. Ele não encontrará nada até se conectar.',

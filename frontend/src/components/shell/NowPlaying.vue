@@ -132,6 +132,21 @@
                     :file="track.file"
                     size="lg"
                   />
+                  <!-- A stream isn't downloaded yet: queue the download.
+                       Anything downloaded (or since downloaded while
+                       streaming) can be deleted from here instead. -->
+                  <UiIconButton
+                    v-if="track?.stream && !streamDownloaded"
+                    icon="download"
+                    :label="t('actions.downloadItem', { name: track.title })"
+                    @click="downloadCurrent"
+                  />
+                  <UiIconButton
+                    v-else-if="track && !track.isPodcast"
+                    icon="trash"
+                    :label="t('actions.delete')"
+                    @click="removeCurrent"
+                  />
                   <UiMenu
                     :items="trackMenu"
                     :label="t('common.more')"
@@ -420,6 +435,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useMediaQuery, useNow } from '@vueuse/core'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
+import UiIconButton from '../ui/UiIconButton.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import WaveSeekBar from '../player/WaveSeekBar.vue'
 import VolumeControl from '../player/VolumeControl.vue'
@@ -429,6 +445,10 @@ import UpNextPanel from '../player/UpNextPanel.vue'
 import TrackDetails from '../player/TrackDetails.vue'
 import EqualizerPanel from '../player/EqualizerPanel.vue'
 import { usePlayer } from '/src/model/player'
+import { useDownloadManager } from '/src/model/download'
+import { useLibrary } from '/src/model/library'
+import { useTrackActions } from '/src/model/trackActions'
+import { useUi } from '/src/model/ui'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useNowPlaying } from '/src/model/ui'
 import { formatBytes, formatDuration, hueFor } from '/src/lib/format'
@@ -438,6 +458,10 @@ import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
 
 const player = usePlayer()
+const library = useLibrary()
+const actions = useTrackActions()
+const dm = useDownloadManager()
+const ui = useUi()
 const { showLyrics } = usePlayerPrefs()
 const nowPlaying = useNowPlaying()
 const route = useRoute()
@@ -612,6 +636,41 @@ function saveFile(tr) {
   document.body.appendChild(a)
   a.click()
   a.remove()
+}
+
+// A stream that landed in the library while playing (downloaded from
+// anywhere) offers deletion instead of another download.
+const streamDownloaded = computed(
+  () =>
+    !!track.value?.stream &&
+    library.hasSong(track.value.artist, track.value.title)
+)
+
+/** Queue the playing stream as a download (it keeps streaming). */
+function downloadCurrent() {
+  const tr = track.value
+  if (!tr) return
+  dm.queue({
+    name: tr.title,
+    artists: tr.artist ? [tr.artist] : [],
+    artist: tr.artist || '',
+    album_name: tr.album || '',
+    cover_url: tr.cover && String(tr.cover).startsWith('http') ? tr.cover : '',
+    duration: tr.duration || 0,
+    youtube_id: tr.video_id || '',
+  })
+  ui.toast(t('toast.queuedTracks', { count: 1, name: tr.title }), {
+    kind: 'success',
+  })
+}
+
+/** Delete the playing download (with confirm); the player moves on. */
+function removeCurrent() {
+  const tr = track.value
+  if (!tr || tr.isPodcast) return
+  const target = tr.stream ? library.findTrack(tr.artist, tr.title) : tr
+  if (!target) return
+  actions.remove([target])
 }
 
 function commitSeek(value) {

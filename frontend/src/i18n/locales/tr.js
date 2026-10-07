@@ -150,7 +150,7 @@ export default {
   },
   similar: {
     title: 'Benzerler',
-    subtitle: 'Adını verdiğiniz parçaya benzeyen şarkılar, Last.fm ile.',
+    subtitle: 'Adını verdiğiniz parçaya benzeyen şarkılar, YouTube Music ile.',
     artist: 'Sanatçı',
     artistPlaceholder: 'Cher',
     track: 'Parça',
@@ -159,23 +159,14 @@ export default {
     resultsFor: '{artist} adlı sanatçının “{track}” parçasına benzeyenler',
     failed: 'Benzer parçalar bulunamadı',
     noResults: 'Benzer bir şey bulunamadı',
-    noResultsHint: 'Yazımı kontrol edin — Last.fm başlıklarda titizdir.',
-    matchHint: 'Last.fm bunu parçanıza ne kadar yakın görüyor',
-    openLastfm: 'Last.fm’de aç',
-    openSettings: 'Ayarları aç',
+    noResultsHint: 'Sanatçı ve parça yazımını kontrol edin.',
+    matchHint: 'Parçanıza ne kadar benziyor',
     findSimilar: 'Benzer parçaları bul',
-    sourceHint:
-      'Last.fm dinleyicilere göre, YouTube kendi karma listesine göre sıralar — karşılaştırmak için değiştirin.',
-    sourceLastfm: 'Last.fm',
-    sourceYoutube: 'YouTube',
     noDownloadMatch: '“{name}” için indirilebilir eşleşme yok',
     resolveFailed: 'Bu parça indirme için hazırlanamadı',
     tipSimilarTitle: 'Tek parçadan başlayın',
     tipSimilarBody:
-      'Sanatçıyı ve parçayı yazın — Last.fm, dinleyicilerinin sonra ne çaldığıyla yanıt verir.',
-    tipKeyTitle: 'Ücretsiz Last.fm anahtarı getirin',
-    tipKeyBody:
-      'Ayarlar → Ses kaynakları’na bir kez yapıştırın; Benzerler sayfası her aramada onu kullanır.',
+      'Sanatçıyı ve parçayı yazın — YouTube, karmasıyla yanıt verir.',
     tipDownloadTitle: 'Tamamını dinleyin',
     tipDownloadBody:
       'Her satır oynatıcıda tamamıyla çalar; beğendiklerinizi indirin.',
@@ -818,13 +809,6 @@ export default {
     cookiesDeleteTitle: 'Kayıtlı cookies.txt silinsin mi?',
     cookiesLocked: 'DOWNTIFY_COOKIES_FILE ortam değişkeniyle ayarlandı.',
     cookiesEnvMissing: 'Bu dosya kapsayıcıda yok — yolu ve birimi kontrol et.',
-    lastfmTitle: 'Last.fm',
-    lastfmHint:
-      'Benzerler sayfasına güç verir: Last.fm dinleyicilerinin sonra çaldığı parçalar.',
-    lastfmKey: 'API anahtarı',
-    lastfmHow: 'Ücretsiz anahtar alın',
-    lastfmHowHint:
-      'last.fm/api/account/create adresinde oluşturup buraya yapıştırın.',
     audioGroup: 'Ses',
     format: 'Biçim',
     formatHint: 'YouTube’dan indirilen dosyalar bu biçime dönüştürülür.',
@@ -923,12 +907,6 @@ export default {
       auth_bad_key: 'slskd API anahtarını reddetti.',
       auth_bad_credentials: 'Navidrome kullanıcı adını veya parolayı reddetti.',
       auth_api_error: 'Navidrome şunu yanıtladı: {detail}',
-      auth_missing_key: 'Önce bir API anahtarı girin.',
-      auth_invalid_key: 'Last.fm API anahtarını reddetti.',
-      lastfm_unreachable:
-        'Last.fm’e ulaşılamıyor. Downtify’nin internet erişimi olduğunu kontrol edin.',
-      lastfm_timeout: 'Last.fm zamanında yanıt vermedi.',
-      lastfm_error: 'Last.fm yanıt verdi: {detail}',
       soulseek_ok: 'slskd Soulseek’e bağlı.',
       soulseek_offline:
         'slskd Soulseek’e bağlı değil. Bağlanana kadar hiçbir şey bulamaz.',

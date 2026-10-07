@@ -5,7 +5,7 @@ import { ref, computed, watch } from 'vue'
 
 import { normalizeTrack } from '/src/lib/library'
 import { attachEqualizer, resumeEqualizer } from '/src/model/equalizer'
-import { resolveTrackUrl } from '/src/model/streamResolve'
+import { resolveTrackUrl, warmServerCache } from '/src/model/streamResolve'
 
 const VOLUME_KEY = 'downtify-player-volume'
 const RATE_KEY = 'downtify-player-rate'
@@ -81,6 +81,11 @@ function ensureAudio() {
   audio.playbackRate = playbackRate.value
   audio.addEventListener('timeupdate', () => {
     currentTime.value = audio.currentTime
+  })
+  audio.addEventListener('progress', () => {
+    // The current track finished loading: warm the next one now, so a
+    // skip starts instantly instead of waiting on the network.
+    if (fullyBuffered()) maybePrefetch()
   })
   audio.addEventListener('loadedmetadata', () => {
     duration.value = isFinite(audio.duration) ? audio.duration : 0
@@ -211,6 +216,9 @@ function insertTracks(files, position) {
   const list = playlist.value.slice()
   list.splice(position, 0, ...tracks)
   playlist.value = list
+  // New rows may hold the next stream: let the loaded trigger below
+  // reconsider what "one ahead" is.
+  prefetchedFor = -1
   if (currentIndex.value >= position) currentIndex.value += tracks.length
   if (shuffle.value) {
     // Keep the shuffled path, slotting the new tracks in right after
@@ -254,6 +262,7 @@ function removeAt(index) {
   if (index < 0 || index >= playlist.value.length) return
   const list = playlist.value.slice()
   list.splice(index, 1)
+  prefetchedFor = -1
   const wasCurrent = index === currentIndex.value
   playlist.value = list
   if (index < currentIndex.value) currentIndex.value -= 1
@@ -315,6 +324,7 @@ function playAt(index) {
   if (index < 0 || index >= playlist.value.length) return
   const a = ensureAudio()
   currentIndex.value = index
+  prefetchedFor = -1
   if (shuffle.value) {
     if (shuffleOrder.length !== playlist.value.length) buildShuffleOrder()
     const pos = shuffleOrder.indexOf(index)
@@ -350,7 +360,32 @@ function startAudio(a, index) {
   startPlayback(a)
   // One track ahead: the next stream resolves while this one plays, so
   // advancing into it (or the track ending) never waits on the network.
+  maybePrefetch()
+}
+
+// The next track is warmed once per current track: at its start, and
+// again the moment it has fully loaded (whichever finds work first).
+let prefetchedFor = -1
+
+function maybePrefetch() {
+  if (currentIndex.value < 0 || prefetchedFor === currentIndex.value) return
+  prefetchedFor = currentIndex.value
   prefetchNext()
+}
+
+/** True once the audio element holds the whole current track. */
+function fullyBuffered() {
+  const total = duration.value
+  if (!(total > 0) || !audio) return false
+  try {
+    const buffered = audio.buffered
+    for (let i = 0; i < buffered.length; i++) {
+      if (buffered.end(i) >= total - 1) return true
+    }
+  } catch {
+    return false
+  }
+  return false
 }
 
 /** Resolve an unstored stream track, then play it - or skip past it. */
@@ -397,11 +432,14 @@ function prefetchNext() {
   if (!needsStreamUrl(track)) return
   const list = playlist.value
   resolveTrackUrl(track).then(
-    ({ url }) => {
+    ({ url, videoId }) => {
       // Another queue took its place meanwhile: leave it alone.
       if (playlist.value === list && playlist.value[upcoming] === track) {
         playlist.value[upcoming] = { ...track, url }
       }
+      // Warm the server download too, so the file (not just its URL)
+      // already waits when the turn comes.
+      warmServerCache(videoId)
     },
     () => {
       // Silent: advancing into it resolves again, with an error then.

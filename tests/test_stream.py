@@ -218,6 +218,63 @@ def test_stream_file_endpoint_maps_download_failures(monkeypatch):
     assert exc.value.status_code == 503
 
 
+class _FakeRequest:
+    def __init__(self, payload):
+        self._payload = payload
+
+    async def json(self):
+        return self._payload
+
+
+def test_stream_prefetch_queues_a_background_download(monkeypatch):
+    seen = {}
+    started = {}
+
+    async def fake_get(video_id, cookies_file=''):
+        seen['video_id'] = video_id
+        seen['cookies_file'] = cookies_file
+
+    fake_cache = MagicMock()
+    fake_cache.get = fake_get
+
+    def fake_spawn(coro, name=None):
+        started['name'] = name
+        return asyncio.ensure_future(coro)
+
+    async def scenario():
+        result = await api.stream_prefetch_endpoint(
+            _FakeRequest({'video_id': 'dQw4w9WgXcQ'})
+        )
+        await asyncio.sleep(0.1)
+        return result
+
+    monkeypatch.setattr(api.state, 'stream_cache', fake_cache)
+    monkeypatch.setattr(api, 'spawn_task', fake_spawn)
+    monkeypatch.setattr(stream, 'resolve_cookies_file', lambda store: '/c.txt')
+    assert asyncio.run(scenario()) == {'queued': True}
+    assert started['name'] == 'stream-prefetch-dQw4w9WgXcQ'
+    assert seen == {'video_id': 'dQw4w9WgXcQ', 'cookies_file': '/c.txt'}
+
+
+def test_stream_prefetch_rejects_a_bad_id():
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            api.stream_prefetch_endpoint(_FakeRequest({'video_id': 'nope'}))
+        )
+    assert exc.value.status_code == 400
+
+
+def test_stream_prefetch_needs_a_cache(monkeypatch):
+    monkeypatch.setattr(api.state, 'stream_cache', None)
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            api.stream_prefetch_endpoint(
+                _FakeRequest({'video_id': 'dQw4w9WgXcQ'})
+            )
+        )
+    assert exc.value.status_code == 503
+
+
 def test_stream_cache_from_env_reads_limits(tmp_path, monkeypatch):
     monkeypatch.setenv('DOWNTIFY_STREAM_CACHE_MB', '10')
     monkeypatch.setenv('DOWNTIFY_STREAM_CONCURRENCY', '4')

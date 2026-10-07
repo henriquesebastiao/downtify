@@ -115,39 +115,24 @@ def test_youtube_similar_needs_artist_and_track():
         providers.youtube_similar_tracks(' ', 'Believe')
 
 
-def test_similar_endpoint_youtube_needs_no_key(monkeypatch):
-    monkeypatch.setitem(api.state.settings, 'lastfm_api_key', '')
+def test_similar_endpoint(monkeypatch):
     monkeypatch.setattr(
         providers,
         'youtube_similar_tracks',
         lambda a, t, limit=20: {'tracks': []},
     )
     assert asyncio.run(
-        api.similar_tracks_endpoint(
-            artist='Cher', track='Believe', source='youtube'
-        )
+        api.similar_tracks_endpoint(artist='Cher', track='Believe')
     ) == {'tracks': []}
 
 
-def test_similar_endpoint_youtube_maps_failures(monkeypatch):
+def test_similar_endpoint_maps_failures(monkeypatch):
     def down(*_args, **_kwargs):
         raise ValueError('YouTube Music did not answer: down')
 
     monkeypatch.setattr(providers, 'youtube_similar_tracks', down)
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
-            api.similar_tracks_endpoint(
-                artist='Cher', track='Believe', source='youtube'
-            )
+            api.similar_tracks_endpoint(artist='Cher', track='Believe')
         )
     assert exc.value.status_code == 502
-
-
-def test_similar_endpoint_rejects_an_unknown_source():
-    with pytest.raises(HTTPException) as exc:
-        asyncio.run(
-            api.similar_tracks_endpoint(
-                artist='Cher', track='Believe', source='spotify'
-            )
-        )
-    assert exc.value.status_code == 400

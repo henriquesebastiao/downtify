@@ -371,11 +371,10 @@ def youtube_similar_tracks(
     """Tracks similar to *track* by *artist*, from YouTube Music itself.
 
     Resolves the seed to a video, then reads its radio mix ("Up next"
-    for that video): what YouTube plays after it. Needs no API key,
-    unlike the Last.fm source. Returns ``{artist, track, source,
-    tracks}`` where each track is a downloadable song row plus
-    ``match``. Raises :class:`ValueError` when the seed has no match or
-    YouTube Music can't be reached.
+    for that video): what YouTube plays after it. Needs no API key.
+    Returns ``{artist, track, source, tracks}`` where each track is a
+    downloadable song row plus ``match``. Raises :class:`ValueError`
+    when the seed has no match or YouTube Music can't be reached.
     """
 
     artist = str(artist or '').strip()

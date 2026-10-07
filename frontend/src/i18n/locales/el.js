@@ -150,7 +150,8 @@ export default {
   },
   similar: {
     title: 'Παρόμοια',
-    subtitle: 'Κομμάτια που μοιάζουν με αυτό που θα ονομάσετε, μέσω Last.fm.',
+    subtitle:
+      'Κομμάτια που μοιάζουν με αυτό που θα ονομάσετε, μέσω YouTube Music.',
     artist: 'Καλλιτέχνης',
     artistPlaceholder: 'Cher',
     track: 'Κομμάτι',
@@ -159,24 +160,14 @@ export default {
     resultsFor: 'Παρόμοια με το “{track}” του {artist}',
     failed: 'Δεν βρέθηκαν παρόμοια κομμάτια',
     noResults: 'Δεν βρέθηκε τίποτα παρόμοιο',
-    noResultsHint:
-      'Ελέγξτε την ορθογραφία — το Last.fm είναι αυστηρό με τους τίτλους.',
-    matchHint: 'Πόσο κοντά το κατατάσσει το Last.fm στο κομμάτι σας',
-    openLastfm: 'Άνοιγμα στο Last.fm',
-    openSettings: 'Άνοιγμα ρυθμίσεων',
+    noResultsHint: 'Ελέγξτε την ορθογραφία καλλιτέχνη και τίτλου.',
+    matchHint: 'Πόσο κοντά είναι στο κομμάτι σας',
     findSimilar: 'Εύρεση παρόμοιων κομματιών',
-    sourceHint:
-      'Το Last.fm κατατάσσει με βάση τους ακροατές, το YouTube με το δικό του mix — αλλάξτε για σύγκριση.',
-    sourceLastfm: 'Last.fm',
-    sourceYoutube: 'YouTube',
     noDownloadMatch: 'Χωρίς αποτέλεσμα για λήψη για το “{name}”',
     resolveFailed: 'Δεν ήταν δυνατή η προετοιμασία του κομματιού για λήψη',
     tipSimilarTitle: 'Ξεκινήστε από ένα κομμάτι',
     tipSimilarBody:
-      'Πληκτρολογήστε τον καλλιτέχνη και το κομμάτι — το Last.fm απαντά με ό,τι ακούνε μετά οι ακροατές του.',
-    tipKeyTitle: 'Φέρτε ένα δωρεάν κλειδί Last.fm',
-    tipKeyBody:
-      'Επικολλήστε το μία φορά στις Ρυθμίσεις → Πηγές ήχου· η σελίδα Παρόμοια το χρησιμοποιεί σε κάθε αναζήτηση.',
+      'Πληκτρολογήστε τον καλλιτέχνη και το κομμάτι — το YouTube απαντά με το mix του.',
     tipDownloadTitle: 'Ακούστε ολόκληρο',
     tipDownloadBody:
       'Κάθε γραμμή παίζει ολόκληρη στο player· κατεβάστε όσα σας αρέσουν.',
@@ -824,13 +815,6 @@ export default {
       'Ορίζεται από τη μεταβλητή περιβάλλοντος DOWNTIFY_COOKIES_FILE.',
     cookiesEnvMissing:
       'Το αρχείο δεν υπάρχει μέσα στο container — έλεγξε τη διαδρομή και τον τόμο.',
-    lastfmTitle: 'Last.fm',
-    lastfmHint:
-      'Τροφοδοτεί τη σελίδα Παρόμοια: κομμάτια που ακούνε μετά οι ακροατές του Last.fm.',
-    lastfmKey: 'Κλειδί API',
-    lastfmHow: 'Αποκτήστε δωρεάν κλειδί',
-    lastfmHowHint:
-      'Δημιουργήστε ένα στο last.fm/api/account/create και επικολλήστε το εδώ.',
     audioGroup: 'Ήχος',
     format: 'Μορφή',
     formatHint: 'Τα αρχεία από το YouTube μετατρέπονται σε αυτή τη μορφή.',
@@ -932,12 +916,6 @@ export default {
       auth_bad_credentials:
         'Το Navidrome απέρριψε το όνομα χρήστη ή τον κωδικό.',
       auth_api_error: 'Το Navidrome απάντησε: {detail}',
-      auth_missing_key: 'Εισαγάγετε πρώτα ένα κλειδί API.',
-      auth_invalid_key: 'Το Last.fm απέρριψε το κλειδί API.',
-      lastfm_unreachable:
-        'Δεν είναι δυνατή η επικοινωνία με το Last.fm. Ελέγξτε ότι το Downtify έχει πρόσβαση στο διαδίκτυο.',
-      lastfm_timeout: 'Το Last.fm δεν απάντησε εγκαίρως.',
-      lastfm_error: 'Το Last.fm απάντησε: {detail}',
       soulseek_ok: 'Το slskd είναι συνδεδεμένο στο Soulseek.',
       soulseek_offline:
         'Το slskd δεν είναι συνδεδεμένο στο Soulseek. Δεν θα βρίσκει τίποτα μέχρι να συνδεθεί.',

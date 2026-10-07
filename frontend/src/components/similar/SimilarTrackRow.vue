@@ -47,17 +47,6 @@
     >
       {{ Math.round(song.match * 100) }}%
     </span>
-    <a
-      v-if="song.lastfm_url"
-      :href="song.lastfm_url"
-      target="_blank"
-      rel="noopener"
-      class="hidden size-8 items-center justify-center rounded-control text-faint hover:bg-surface-2 hover:text-fg sm:flex lg:opacity-0 lg:group-hover:opacity-100"
-      :title="t('similar.openLastfm')"
-      :aria-label="t('similar.openLastfm')"
-    >
-      <AppIcon name="arrow-up-right" :size="16" />
-    </a>
     <div class="flex w-28 shrink-0 justify-end">
       <UiBadge v-if="inLibrary" tone="accent" icon="check">
         {{ t('search.inLibrary') }}
@@ -88,11 +77,9 @@
 
 <script setup>
 // One similar track: full playback on the cover (from the library, else
-// streamed), and a download button. YouTube rows already carry their
-// video id and download directly; Last.fm rows have no URL of their
-// own, so the button first resolves the row through search. Either way
-// the row hands off to DownloadState, so progress, queue and retry look
-// exactly like search results.
+// streamed), and a download button straight from its video id. The row
+// hands off to DownloadState, so progress, queue and retry look exactly
+// like search results.
 import { computed, ref } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
@@ -144,8 +131,7 @@ const inLibrary = computed(() =>
   library.hasSong(artistName.value, props.song.name)
 )
 
-// A YouTube row already is a downloadable song (video id + link), so it
-// skips the resolve step a Last.fm row needs.
+// Every row already is a downloadable song (video id + link).
 const downloadable = computed(() => !!String(props.song.song_id || '').trim())
 
 async function resolveAndDownload() {

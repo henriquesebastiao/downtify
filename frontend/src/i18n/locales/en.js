@@ -146,7 +146,7 @@ export default {
   },
   similar: {
     title: 'Similar',
-    subtitle: 'Tracks that sound like one you name, via Last.fm.',
+    subtitle: 'Tracks that sound like one you name, from YouTube Music.',
     artist: 'Artist',
     artistPlaceholder: 'Cher',
     track: 'Track',
@@ -155,23 +155,14 @@ export default {
     resultsFor: 'Like “{track}” by {artist}',
     failed: "Couldn't find similar tracks",
     noResults: 'Nothing similar found',
-    noResultsHint: 'Check the spelling — Last.fm is picky about titles.',
-    matchHint: 'How closely Last.fm ranks this with your track',
-    openLastfm: 'Open on Last.fm',
-    openSettings: 'Open settings',
+    noResultsHint: 'Check the spelling — YouTube is picky about titles.',
+    matchHint: 'How closely this ranks with your track',
     findSimilar: 'Find similar tracks',
-    sourceHint:
-      'Last.fm ranks by listeners, YouTube by its own radio mix — flip to compare.',
-    sourceLastfm: 'Last.fm',
-    sourceYoutube: 'YouTube',
     noDownloadMatch: 'No downloadable match for “{name}”',
     resolveFailed: "Couldn't look that track up for download",
     tipSimilarTitle: 'Start from one track',
     tipSimilarBody:
-      'Type the artist and the track — Last.fm answers with what its listeners play next.',
-    tipKeyTitle: 'Bring a free Last.fm key',
-    tipKeyBody:
-      'Paste it once in Settings → Audio sources; the Similar page uses it for every search.',
+      'Type the artist and the track — YouTube answers with what plays next after it.',
     tipDownloadTitle: 'Hear it all',
     tipDownloadBody:
       'Every row plays in full in the player; download the ones you like.',
@@ -801,12 +792,6 @@ export default {
     cookiesLocked: 'Set by the DOWNTIFY_COOKIES_FILE environment variable.',
     cookiesEnvMissing:
       "That file doesn't exist inside the container — check the path and the volume.",
-    lastfmTitle: 'Last.fm',
-    lastfmHint: 'Powers the Similar page: tracks Last.fm listeners play next.',
-    lastfmKey: 'API key',
-    lastfmHow: 'Get a free key',
-    lastfmHowHint:
-      'Create one on last.fm/api/account/create and paste it here.',
     audioGroup: 'Audio',
     format: 'Format',
     formatHint: 'Files downloaded from YouTube are converted to this format.',
@@ -903,12 +888,6 @@ export default {
       auth_bad_key: 'slskd rejected the API key.',
       auth_bad_credentials: 'Navidrome rejected the username or password.',
       auth_api_error: 'Navidrome answered: {detail}',
-      auth_missing_key: 'Enter an API key first.',
-      auth_invalid_key: 'Last.fm rejected the API key.',
-      lastfm_unreachable:
-        "Can't reach Last.fm. Check that Downtify can access the internet.",
-      lastfm_timeout: "Last.fm didn't answer in time.",
-      lastfm_error: 'Last.fm answered: {detail}',
       soulseek_ok: 'slskd is logged in to Soulseek.',
       soulseek_offline:
         "slskd isn't logged in to Soulseek. It will find nothing until it is.",

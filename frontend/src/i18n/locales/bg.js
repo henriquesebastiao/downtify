@@ -146,7 +146,7 @@ export default {
   },
   similar: {
     title: 'Подобни',
-    subtitle: 'Песни, подобни на посочената от вас, чрез Last.fm.',
+    subtitle: 'Песни, подобни на посочената от вас, чрез YouTube Music.',
     artist: 'Изпълнител',
     artistPlaceholder: 'Cher',
     track: 'Песен',
@@ -155,24 +155,14 @@ export default {
     resultsFor: 'Подобни на “{track}” от {artist}',
     failed: 'Не можаха да бъдат намерени подобни песни',
     noResults: 'Няма намерени подобни',
-    noResultsHint:
-      'Проверете правописа — Last.fm е взискателен към заглавията.',
-    matchHint: 'Колко близка я оценява Last.fm до вашата песен',
-    openLastfm: 'Отвори в Last.fm',
-    openSettings: 'Отвори настройките',
+    noResultsHint: 'Проверете правописа на изпълнител и заглавие.',
+    matchHint: 'Колко е близка до вашата песен',
     findSimilar: 'Намери подобни песни',
-    sourceHint:
-      'Last.fm подрежда по слушатели, YouTube по собствения си микс — превключете, за да сравните.',
-    sourceLastfm: 'Last.fm',
-    sourceYoutube: 'YouTube',
     noDownloadMatch: 'Няма резултат за изтегляне за “{name}”',
     resolveFailed: 'Песента не можа да бъде подготвена за изтегляне',
     tipSimilarTitle: 'Започнете от една песен',
     tipSimilarBody:
-      'Въведете изпълнителя и песента — Last.fm отговаря с това, което слушателите пускат след това.',
-    tipKeyTitle: 'Вземете безплатен ключ за Last.fm',
-    tipKeyBody:
-      'Поставете го веднъж в Настройки → Аудио източници; страницата Подобни го използва при всяко търсене.',
+      'Въведете изпълнителя и песента — YouTube отговаря със своя микс.',
     tipDownloadTitle: 'Чуйте докрай',
     tipDownloadBody: 'Всеки ред звучи докрай в плеъра; изтеглете харесаните.',
   },
@@ -811,13 +801,6 @@ export default {
     cookiesLocked: 'Зададено от променливата на средата DOWNTIFY_COOKIES_FILE.',
     cookiesEnvMissing:
       'Този файл не съществува в контейнера — провери пътя и тома.',
-    lastfmTitle: 'Last.fm',
-    lastfmHint:
-      'Захранва страницата Подобни: песни, които слушателите на Last.fm пускат след това.',
-    lastfmKey: 'API ключ',
-    lastfmHow: 'Вземете безплатен ключ',
-    lastfmHowHint:
-      'Създайте такъв на last.fm/api/account/create и го поставете тук.',
     audioGroup: 'Аудио',
     format: 'Формат',
     formatHint: 'Файловете от YouTube се конвертират в този формат.',
@@ -918,12 +901,6 @@ export default {
       auth_bad_credentials:
         'Navidrome отхвърли потребителското име или паролата.',
       auth_api_error: 'Navidrome отговори: {detail}',
-      auth_missing_key: 'Първо въведете API ключ.',
-      auth_invalid_key: 'Last.fm отхвърли API ключа.',
-      lastfm_unreachable:
-        'Last.fm не може да бъде достигнат. Проверете дали Downtify има достъп до интернет.',
-      lastfm_timeout: 'Last.fm не отговори навреме.',
-      lastfm_error: 'Last.fm отговори: {detail}',
       soulseek_ok: 'slskd е свързан със Soulseek.',
       soulseek_offline:
         'slskd не е свързан със Soulseek. Няма да намира нищо, докато не се свърже.',

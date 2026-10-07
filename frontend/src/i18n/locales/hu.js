@@ -146,7 +146,7 @@ export default {
   },
   similar: {
     title: 'Hasonlók',
-    subtitle: 'A megnevetthez hasonló zeneszámok, a Last.fm alapján.',
+    subtitle: 'A megnevetthez hasonló zeneszámok, a YouTube Music alapján.',
     artist: 'Előadó',
     artistPlaceholder: 'Cher',
     track: 'Szám',
@@ -155,23 +155,14 @@ export default {
     resultsFor: 'Hasonlók ehhez: “{track}” – {artist}',
     failed: 'Nem találhatók hasonló zeneszámok',
     noResults: 'Nem található hasonló',
-    noResultsHint: 'Ellenőrizze a helyesírást — a Last.fm kényes a címekre.',
-    matchHint: 'Mennyire tartja a Last.fm hasonlónak a számához',
-    openLastfm: 'Megnyitás a Last.fm-en',
-    openSettings: 'Beállítások megnyitása',
+    noResultsHint: 'Ellenőrizze az előadó és a cím helyesírását.',
+    matchHint: 'Mennyire hasonlít a számához',
     findSimilar: 'Hasonló számok keresése',
-    sourceHint:
-      'A Last.fm a hallgatók alapján rangsorol, a YouTube a saját mixe alapján — váltson az összehasonlításhoz.',
-    sourceLastfm: 'Last.fm',
-    sourceYoutube: 'YouTube',
     noDownloadMatch: 'Nincs letölthető találat ehhez: “{name}”',
     resolveFailed: 'A szám nem készíthető elő letöltésre',
     tipSimilarTitle: 'Induljon egy számból',
     tipSimilarBody:
-      'Írja be az előadót és a számot — a Last.fm azzal válaszol, amit hallgatói ezután játszanak.',
-    tipKeyTitle: 'Hozzon ingyenes Last.fm-kulcsot',
-    tipKeyBody:
-      'Illessze be egyszer a Beállítások → Hangforrások alatt; a Hasonlók oldal minden keresésnél ezt használja.',
+      'Írja be az előadót és a számot — a YouTube a mixével válaszol.',
     tipDownloadTitle: 'Hallgassa végig',
     tipDownloadBody:
       'Minden sor végig szól a lejátszóban; töltse le a kedvenceit.',
@@ -819,13 +810,6 @@ export default {
     cookiesLocked: 'A DOWNTIFY_COOKIES_FILE környezeti változó állítja be.',
     cookiesEnvMissing:
       'Ez a fájl nem létezik a konténerben — ellenőrizd az útvonalat és a kötetet.',
-    lastfmTitle: 'Last.fm',
-    lastfmHint:
-      'A Hasonlók oldalt hajtja: számok, amelyeket a Last.fm hallgatói ezután játszanak.',
-    lastfmKey: 'API-kulcs',
-    lastfmHow: 'Ingyenes kulcs beszerzése',
-    lastfmHowHint:
-      'Hozzon létre egyet a last.fm/api/account/create oldalon, és illessze be ide.',
     audioGroup: 'Hang',
     format: 'Formátum',
     formatHint:
@@ -926,12 +910,6 @@ export default {
       auth_bad_credentials:
         'A Navidrome elutasította a felhasználónevet vagy a jelszót.',
       auth_api_error: 'A Navidrome ezt válaszolta: {detail}',
-      auth_missing_key: 'Először adjon meg egy API-kulcsot.',
-      auth_invalid_key: 'A Last.fm elutasította az API-kulcsot.',
-      lastfm_unreachable:
-        'A Last.fm nem érhető el. Ellenőrizze, hogy a Downtify eléri-e az internetet.',
-      lastfm_timeout: 'A Last.fm nem válaszolt időben.',
-      lastfm_error: 'A Last.fm válasza: {detail}',
       soulseek_ok: 'A slskd be van jelentkezve a Soulseekbe.',
       soulseek_offline:
         'A slskd nincs bejelentkezve a Soulseekbe. Addig nem talál semmit.',

@@ -1,14 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { resolveTrackUrl } = vi.hoisted(() => ({
+const { resolveTrackUrl, warmServerCache } = vi.hoisted(() => ({
   resolveTrackUrl: vi.fn(),
+  warmServerCache: vi.fn(),
 }))
 
-vi.mock('/src/model/streamResolve', () => ({ resolveTrackUrl }))
+vi.mock('/src/model/streamResolve', () => ({
+  resolveTrackUrl,
+  warmServerCache,
+}))
 
 const audios = vi.hoisted(() => ({ list: [] }))
 
 function stubAudio() {
+  const handlers = {}
   const audio = {
     src: '',
     currentTime: 0,
@@ -16,13 +21,17 @@ function stubAudio() {
     volume: 1,
     playbackRate: 1,
     muted: false,
+    buffered: { length: 0, end: () => 0 },
     play: vi.fn(() => Promise.resolve()),
     pause: vi.fn(),
     removeAttribute: vi.fn((name) => {
       if (name === 'src') audio.src = ''
     }),
-    addEventListener: vi.fn(),
+    addEventListener: vi.fn((event, fn) => {
+      handlers[event] = fn
+    }),
     load: vi.fn(),
+    fire: (event) => handlers[event]?.(),
   }
   audios.list.push(audio)
   return audio
@@ -52,7 +61,9 @@ describe('streaming in the player queue', () => {
     resolveTrackUrl.mockReset()
     resolveTrackUrl.mockImplementation(async (track) => ({
       url: `https://stream.example/${encodeURIComponent(track.title)}`,
+      videoId: `vid-${track.title}`,
     }))
+    warmServerCache.mockReset()
     globalThis.window = {
       innerWidth: 1280,
       addEventListener: () => {},
@@ -109,6 +120,30 @@ describe('streaming in the player queue', () => {
       expect(player.playError.value).toBe('unplayable')
     })
     expect(player.isPlaying.value).toBe(false)
+  })
+
+  it('warms the server cache for the next track', async () => {
+    player.playList([lib('A'), pending('B')])
+    await vi.waitFor(() => {
+      expect(warmServerCache).toHaveBeenCalledWith('vid-B')
+    })
+  })
+
+  it('warms a track enqueued while the current one plays', async () => {
+    player.playList([lib('A')])
+    await vi.waitFor(() => {
+      expect(audios.list[0].src).toBe('/downloads/A.mp3')
+    })
+    expect(warmServerCache).not.toHaveBeenCalled()
+    player.enqueue([pending('B')])
+    // The current track finishes loading: the new next one warms up.
+    audios.list[0].duration = 200
+    audios.list[0].fire('loadedmetadata')
+    audios.list[0].buffered = { length: 1, end: () => 200 }
+    audios.list[0].fire('progress')
+    await vi.waitFor(() => {
+      expect(warmServerCache).toHaveBeenCalledWith('vid-B')
+    })
   })
 
   it('never persists a queue holding a stream', async () => {
