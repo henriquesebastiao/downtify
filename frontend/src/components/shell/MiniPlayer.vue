@@ -70,6 +70,7 @@
 
       <div class="flex items-center justify-center gap-1 md:flex-1 md:gap-3">
         <UiIconButton
+          v-if="similarArtist && similarTitle"
           icon="wand"
           :label="t('similar.findSimilar')"
           @click="goSimilar"
@@ -126,6 +127,12 @@
           :disabled="downloadBusy"
           :class="downloadBusy ? '[&_svg]:animate-spin' : ''"
           @click="downloadCurrent"
+        />
+        <UiIconButton
+          v-if="showMiniDelete"
+          icon="trash"
+          :label="t('actions.delete')"
+          @click="removeCurrent"
         />
       </div>
 
@@ -186,6 +193,7 @@ import VolumeControl from '../player/VolumeControl.vue'
 import { usePlayer } from '/src/model/player'
 import { useDownloadManager, useProgressTracker } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
+import { useTrackActions } from '/src/model/trackActions'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useNowPlaying, useUi } from '/src/model/ui'
 import { formatDuration, widestClock } from '/src/lib/format'
@@ -197,6 +205,7 @@ const nowPlaying = useNowPlaying()
 const { t } = useI18n()
 const router = useRouter()
 const library = useLibrary()
+const actions = useTrackActions()
 const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const ui = useUi()
@@ -261,6 +270,26 @@ function downloadCurrent() {
       kind: 'success',
     })
   }
+}
+
+// Anything downloaded (or since downloaded while streaming) deletes
+// from the library (with confirm) - the same button as the full player.
+const showMiniDelete = computed(
+  () =>
+    !!track.value &&
+    !track.value.isPodcast &&
+    (!track.value.stream ||
+      library.hasSong(trackArtist.value, trackTitle.value))
+)
+
+function removeCurrent() {
+  const tr = track.value
+  if (!tr || tr.isPodcast) return
+  const target = tr.stream
+    ? library.findTrack(trackArtist.value, trackTitle.value)
+    : tr
+  if (!target) return
+  actions.remove([target])
 }
 
 // The phone hairline glides like the desktop scrubber (only animated

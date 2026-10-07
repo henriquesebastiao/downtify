@@ -226,8 +226,18 @@
                 >
                   <AppIcon name="skip-back" :size="22" />
                 </button>
+                <!-- Left of shuffle: tracks like this one
+                     (podcasts have none). -->
                 <button
-                  v-else
+                  v-if="similarArtist && similarTitle"
+                  type="button"
+                  class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
+                  :aria-label="t('similar.findSimilar')"
+                  @click="goSimilar"
+                >
+                  <AppIcon name="wand" :size="22" />
+                </button>
+                <button
                   type="button"
                   class="flex size-11 items-center justify-center rounded-full transition-colors hover:bg-white/10"
                   :class="
@@ -269,17 +279,6 @@
                   @click="player.next()"
                 >
                   <AppIcon name="next" :size="28" />
-                </button>
-                <!-- Right of next, mirroring shuffle on the left: tracks
-                     like this one (podcasts have none). -->
-                <button
-                  v-if="similarArtist && similarTitle"
-                  type="button"
-                  class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
-                  :aria-label="t('similar.findSimilar')"
-                  @click="goSimilar"
-                >
-                  <AppIcon name="wand" :size="22" />
                 </button>
                 <button
                   v-if="track?.isPodcast"
