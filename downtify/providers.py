@@ -296,6 +296,118 @@ def search_songs(query: str, limit: int = 20) -> list[dict[str, Any]]:
     return songs
 
 
+def _watch_track_to_song(
+    entry: Any, *, position: int, total: int
+) -> Optional[dict[str, Any]]:
+    """One ``get_watch_playlist`` entry as a downloadable song row.
+
+    ``match`` decays with the position: YouTube ranks "Up next" by
+    relevance but gives no score, so the first row counts as a perfect
+    match and the last one as barely related.
+    """
+
+    if not isinstance(entry, dict):
+        return None
+    video_id = str(entry.get('videoId') or '').strip()
+    title = str(entry.get('title') or '').strip()
+    artists = [
+        str(a.get('name') or '').strip()
+        for a in (entry.get('artists') or [])
+        if isinstance(a, dict) and str(a.get('name') or '').strip()
+    ]
+    if not video_id or not title or not artists:
+        return None
+    thumbs = entry.get('thumbnail') or []
+    cover = (
+        _upgrade_thumbnail(str(thumbs[-1].get('url') or ''))
+        if isinstance(thumbs, list) and thumbs
+        else ''
+    )
+    album = entry.get('album') if isinstance(entry.get('album'), dict) else {}
+    match = round(max(0.0, 1.0 - position / max(total, 1)), 4)
+    return {
+        'song_id': video_id,
+        'name': title,
+        'artists': artists,
+        'album_name': str(album.get('name') or ''),
+        'cover_url': cover,
+        'duration': _parse_duration(entry.get('length')),
+        'url': f'https://music.youtube.com/watch?v={video_id}',
+        'explicit': False,
+        'source': 'youtube',
+        'match': match,
+    }
+
+
+def _seed_video_id(
+    artist: str, track: str
+) -> tuple[str, list[dict[str, Any]]]:
+    """The seed track's videoId: the first search hit by its artist.
+
+    Falls back to the very first hit when none names the artist (a
+    translation, a feature credit) - a radio mix off a wrong video is
+    still closer than no mix at all.
+    """
+
+    hits = search_songs(f'{artist} {track}', limit=5)
+    if not hits:
+        raise ValueError(f'No match on YouTube Music for {artist} - {track}')
+    want = artist.casefold()
+    for hit in hits:
+        names = [str(a or '').casefold() for a in (hit.get('artists') or [])]
+        if want and any(want in name or name in want for name in names):
+            video_id = str(hit.get('song_id') or '').strip()
+            if video_id:
+                return video_id, hits
+    video_id = str(hits[0].get('song_id') or '').strip()
+    if not video_id:
+        raise ValueError(f'No match on YouTube Music for {artist} - {track}')
+    return video_id, hits
+
+
+def youtube_similar_tracks(
+    artist: str, track: str, *, limit: int = 20
+) -> dict[str, Any]:
+    """Tracks similar to *track* by *artist*, from YouTube Music itself.
+
+    Resolves the seed to a video, then reads its radio mix ("Up next"
+    for that video): what YouTube plays after it. Needs no API key.
+    Returns ``{artist, track, source, tracks}`` where each track is a
+    downloadable song row plus ``match``. Raises :class:`ValueError`
+    when the seed has no match or YouTube Music can't be reached.
+    """
+
+    artist = str(artist or '').strip()
+    track = str(track or '').strip()
+    if not artist or not track:
+        raise ValueError('artist and track are required')
+    limit = max(1, min(50, int(limit or 20)))
+    seed_id, _ = _seed_video_id(artist, track)
+    try:
+        mix = _ytm().get_watch_playlist(seed_id, limit=limit + 1, radio=True)
+    except Exception as exc:
+        raise ValueError(f'YouTube Music did not answer: {exc}') from exc
+    entries = mix.get('tracks') if isinstance(mix, dict) else None
+    if not isinstance(entries, list):
+        raise ValueError('YouTube Music answered with an unreadable reply')
+    tracks: list[dict[str, Any]] = []
+    seen = {seed_id}
+    for entry in entries:
+        song = _watch_track_to_song(entry, position=len(tracks), total=limit)
+        if song is None or song['song_id'] in seen:
+            continue
+        seen.add(song['song_id'])
+        tracks.append(song)
+        if len(tracks) >= limit:
+            break
+    return {
+        'artist': artist,
+        'track': track,
+        'source': 'youtube',
+        'tracks': tracks,
+    }
+
+
 def _album_summary(result: dict[str, Any]) -> Optional[dict[str, Any]]:
     browse_id = result.get('browseId')
     if not isinstance(browse_id, str) or not browse_id.strip():

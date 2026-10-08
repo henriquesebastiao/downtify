@@ -31,6 +31,7 @@ export default {
     discover: 'Découvrir',
     podcasts: 'Podcasts',
     charts: 'Classements',
+    similar: 'Similaires',
     settings: 'Paramètres',
     more: 'Plus',
     playlists: 'Playlists',
@@ -145,6 +146,33 @@ export default {
     failed: 'Impossible de charger le classement',
     empty: 'Rien dans le classement pour le moment',
     playlist: 'Playlist',
+  },
+  similar: {
+    title: 'Similaires',
+    subtitle:
+      'Des morceaux proches de celui que vous nommez, via YouTube Music.',
+    artist: 'Artiste',
+    artistPlaceholder: 'Cher',
+    track: 'Morceau',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Trouver des similaires',
+    resultsFor: 'Proches de « {track} » par {artist}',
+    failed: 'Impossible de trouver des morceaux similaires',
+    noResults: 'Rien de similaire trouvé',
+    noResultsHint: 'Vérifiez l’orthographe de l’artiste et du titre.',
+    matchHint: 'À quel point il est proche de votre morceau',
+    findSimilar: 'Trouver des morceaux similaires',
+    noDownloadMatch: 'Aucun résultat téléchargeable pour « {name} »',
+    resolveFailed: 'Impossible de préparer ce morceau au téléchargement',
+    tipSimilarTitle: 'Partez d’un morceau',
+    tipSimilarBody:
+      'Tapez l’artiste et le morceau — YouTube répond avec son mix pour lui.',
+    tipDownloadTitle: 'Écoutez en entier',
+    tipDownloadBody:
+      'Chaque ligne se lit en entier dans le lecteur ; téléchargez vos préférés.',
+  },
+  stream: {
+    failed: 'Impossible de lire « {name} ».',
   },
   finder: {
     placeholder: 'Cherchez un artiste, un album ou un titre',

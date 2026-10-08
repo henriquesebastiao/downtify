@@ -94,6 +94,7 @@ from downtify.server_port import (
     set_restart_handler,
     write_runtime_port,
 )
+from downtify.stream import stream_cache_from_env
 from downtify.telemetry import redact_url_secrets
 from downtify.track_index import TrackIndex
 from downtify.transcode import transcoder_from_env
@@ -343,6 +344,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     # The mobile API (downtify/mobile_routes.py).
     api.state.library_sync = LibrarySync(library_db)
     api.state.transcoder = transcoder_from_env(DATABASE_DIR)
+    api.state.stream_cache = stream_cache_from_env(DATABASE_DIR)
     api.state.cover_thumbs = CoverThumbs(DATABASE_DIR / 'cover_thumbs')
     api.state.discover = DiscoverStore(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
