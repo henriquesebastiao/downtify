@@ -24,7 +24,7 @@ import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
 
 /** The player track behind a song: the library's, else an unstored one. */
-function toPlayerTrack(song, findTrack) {
+export function songToPlayerTrack(song, findTrack) {
   const found = findTrack(songArtist(song), songTitle(song))
   if (found) return found
   return {
@@ -70,7 +70,7 @@ export function useSongStarter() {
         songs.findIndex((s) => s === song || rowKey(s) === key)
       )
       actions.play(
-        songs.map((s) => toPlayerTrack(s, library.findTrack)),
+        songs.map((s) => songToPlayerTrack(s, library.findTrack)),
         at,
         context
       )

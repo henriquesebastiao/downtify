@@ -72,4 +72,50 @@ describe('useSimilar', () => {
     expect(similar.tracks.value).toEqual([])
     expect(similar.error.value).toBe('YouTube Music did not answer')
   })
+
+  it('chains the next page from the last row', async () => {
+    getSimilarTracks.mockResolvedValueOnce({
+      data: { artist: 'Cher', track: 'Believe', tracks: ROWS },
+    })
+    const similar = useSimilar()
+    await similar.searchFor('Cher', 'Believe')
+    expect(similar.hasMore.value).toBe(true)
+    const next = {
+      song_id: 'v2',
+      name: 'The Power',
+      artists: ['Cher'],
+      artist: 'Cher',
+      cover_url: 'https://img/v2',
+      duration: 200,
+      url: 'https://music.youtube.com/watch?v=v2',
+      match: 0.8,
+    }
+    getSimilarTracks.mockResolvedValueOnce({
+      data: { tracks: [next, ROWS[0]] },
+    })
+    const added = await similar.loadMore()
+    expect(getSimilarTracks).toHaveBeenLastCalledWith('Cher', 'Strong Enough')
+    expect(added).toEqual([next])
+    expect(similar.songs.value).toHaveLength(2)
+    expect(similar.hasMore.value).toBe(true)
+  })
+
+  it('ends the list when a page adds nothing new', async () => {
+    getSimilarTracks.mockResolvedValueOnce({ data: { tracks: [] } })
+    const similar = useSimilar()
+    const added = await similar.loadMore()
+    expect(added).toEqual([])
+    expect(similar.hasMore.value).toBe(false)
+  })
+
+  it('restarts the endless list on a new search', async () => {
+    getSimilarTracks.mockResolvedValueOnce({
+      data: { artist: 'Cher', track: 'Believe', tracks: ROWS },
+    })
+    const similar = useSimilar()
+    expect(similar.hasMore.value).toBe(false)
+    await similar.searchFor('Cher', 'Believe')
+    expect(similar.hasMore.value).toBe(true)
+    expect(similar.songs.value).toHaveLength(1)
+  })
 })

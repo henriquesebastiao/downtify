@@ -79,6 +79,19 @@
             :songs="similar.songs.value"
           />
         </div>
+        <!-- The endless list: reaching the end loads the next page. -->
+        <div ref="sentinel" class="flex flex-col gap-2">
+          <div
+            v-if="similar.loadingMore.value"
+            class="flex h-16 items-center gap-3 px-3"
+          >
+            <UiSkeleton class="size-11 !rounded-[8px]" />
+            <div class="flex flex-1 flex-col gap-2">
+              <UiSkeleton class="h-3.5 w-1/3" />
+              <UiSkeleton class="h-3 w-1/5" />
+            </div>
+          </div>
+        </div>
       </section>
     </template>
 
@@ -102,7 +115,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
@@ -112,12 +125,17 @@ import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import SimilarTrackRow from '/src/components/similar/SimilarTrackRow.vue'
 import { useSimilar } from '/src/model/similar'
+import { useLibrary } from '/src/model/library'
+import { usePlayer } from '/src/model/player'
+import { songToPlayerTrack } from '/src/model/songPlay'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const similar = useSimilar()
+const library = useLibrary()
+const player = usePlayer()
 
 const artistInput = ref(similar.artist.value)
 const trackInput = ref(similar.track.value)
@@ -166,6 +184,71 @@ function submit() {
 function retry() {
   similar.searchFor(similar.artist.value, similar.track.value)
 }
+
+// Scrolling to the list end loads the next page, endlessly.
+const sentinel = ref(null)
+let observer = null
+watch(
+  sentinel,
+  (el) => {
+    observer?.disconnect()
+    observer = null
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) similar.loadMore()
+      },
+      { rootMargin: '600px' }
+    )
+    observer.observe(el)
+  },
+  { immediate: true }
+)
+onBeforeUnmount(() => observer?.disconnect())
+
+function isSongCurrent(song, current) {
+  if (!current) return false
+  const vid = String(song.song_id || '').trim()
+  if (vid && String(current.video_id || '').trim() === vid) return true
+  const a = String((song.artists || [])[0] || song.artist || '')
+    .trim()
+    .toLowerCase()
+  const n = String(song.name || '')
+    .trim()
+    .toLowerCase()
+  if (!a || !n) return false
+  const ca = String(current.artist || (current.artists || [])[0] || '')
+    .trim()
+    .toLowerCase()
+  const cn = String(current.title || current.name || '')
+    .trim()
+    .toLowerCase()
+  return a === ca && n === cn
+}
+
+// Playback reached the list tail: grow the list from it and queue what was
+// added, so listening never stops at twenty songs.
+let extending = false
+watch(
+  () => player.currentTrack.value,
+  async (current) => {
+    if (extending || !current || !similar.hasMore.value) return
+    const songs = similar.songs.value
+    if (!songs.length) return
+    if (!isSongCurrent(songs[songs.length - 1], current)) return
+    extending = true
+    try {
+      const added = await similar.loadMore()
+      if (added.length) {
+        player.enqueue(
+          added.map((song) => songToPlayerTrack(song, library.findTrack))
+        )
+      }
+    } finally {
+      extending = false
+    }
+  }
+)
 
 const tips = computed(() => [
   {

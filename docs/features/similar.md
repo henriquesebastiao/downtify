@@ -14,6 +14,7 @@ You don't have to type, either: every track row in the app carries a **Similar**
 
 - **Play in full** — tap the cover and the track streams from this server straight into the built-in player, downloaded or not.
 - **Download** — every row already carries its video and downloads straight away: Downtify queues the match through the same [matching pipeline](../how-it-works.md) every other download uses. From then on the row shows that download's progress, and a check once the song is in your library.
+- **Endless list** — scrolling to the end loads the next page from the last track's own mix, and playback past the last row keeps the queue growing the same way, without end.
 
 ## API
 
