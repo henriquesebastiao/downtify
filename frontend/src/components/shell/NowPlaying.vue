@@ -495,15 +495,10 @@ const closeButton = ref(null)
 
 const track = computed(() => player.currentTrack.value)
 
-// Tracks like this one (podcasts have none): right of next,
-// mirroring shuffle on the left.
+// Tracks like this one (podcasts have none): left of shuffle.
 const similarArtist = computed(() => {
   if (track.value?.isPodcast) return ''
-  return (
-    (track.value?.artists || [])[0] ||
-    track.value?.artist ||
-    t('common.unknownArtist')
-  )
+  return (track.value?.artists || [])[0] || track.value?.artist || ''
 })
 const similarTitle = computed(
   () => track.value?.name || track.value?.title || ''

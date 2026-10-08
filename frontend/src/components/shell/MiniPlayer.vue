@@ -70,7 +70,7 @@
 
       <div class="flex items-center justify-center gap-1 md:flex-1 md:gap-3">
         <UiIconButton
-          v-if="similarArtist && similarTitle"
+          v-if="canSimilar"
           icon="wand"
           :label="t('similar.findSimilar')"
           @click="goSimilar"
@@ -220,6 +220,13 @@ const trackArtist = computed(
     t('common.unknownArtist')
 )
 const trackTitle = computed(() => track.value?.name || track.value?.title || '')
+
+const canSimilar = computed(() => {
+  if (track.value?.isPodcast) return false
+  const artist = (track.value?.artists || [])[0] || track.value?.artist || ''
+  const title = track.value?.name || track.value?.title || ''
+  return !!artist.trim() && !!title.trim()
+})
 
 function goSimilar() {
   const artist = (track.value?.artists || [])[0] || track.value?.artist || ''
