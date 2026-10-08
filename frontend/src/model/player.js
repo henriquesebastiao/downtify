@@ -5,6 +5,7 @@ import { ref, computed, watch } from 'vue'
 
 import { normalizeTrack } from '/src/lib/library'
 import { attachEqualizer, resumeEqualizer } from '/src/model/equalizer'
+import { resolveTrackUrl, warmServerCache } from '/src/model/streamResolve'
 
 const VOLUME_KEY = 'downtify-player-volume'
 const RATE_KEY = 'downtify-player-rate'
@@ -56,6 +57,10 @@ const context = ref(null)
 // Sleep timer: epoch ms to stop at, or 'track' to stop after this one.
 const sleepAt = ref(null)
 const playError = ref('')
+// The unstored stream track being resolved right now (a tap, or the
+// queue advancing into it) - rows spin on it. Prefetches don't land
+// here: they resolve silently one track ahead.
+const resolving = ref(null)
 
 // shuffleOrder is a plain array; this makes `upcoming` notice changes.
 const shuffleVersion = ref(0)
@@ -69,11 +74,18 @@ let restoreTime = 0
 function ensureAudio() {
   if (audio) return audio
   audio = new Audio()
-  audio.preload = 'metadata'
+  // Buffer aggressively: a stream starts while it is still arriving, and
+  // the next one is already resolved one track ahead (see prefetchNext).
+  audio.preload = 'auto'
   audio.volume = volume.value
   audio.playbackRate = playbackRate.value
   audio.addEventListener('timeupdate', () => {
     currentTime.value = audio.currentTime
+  })
+  audio.addEventListener('progress', () => {
+    // The current track finished loading: warm the next one now, so a
+    // skip starts instantly instead of waiting on the network.
+    if (fullyBuffered()) maybePrefetch()
   })
   audio.addEventListener('loadedmetadata', () => {
     duration.value = isFinite(audio.duration) ? audio.duration : 0
@@ -129,9 +141,16 @@ function buildShuffleOrder() {
   shuffleVersion.value += 1
 }
 
+function trackIdentity(track) {
+  return track?.file || track?.url || ''
+}
+
 function sameTrackOrder(a, b) {
   if (a.length !== b.length) return false
-  return a.every((track, i) => track.file === b[i].file)
+  // A streamed track has no file: its (fresh, expiring) URL identifies
+  // it instead, so re-selecting the playing stream never restarts it by
+  // accident - and a new stream never compares equal to the old one.
+  return a.every((track, i) => trackIdentity(track) === trackIdentity(b[i]))
 }
 
 // ── Queue ────────────────────────────────────────────────────────────
@@ -197,6 +216,9 @@ function insertTracks(files, position) {
   const list = playlist.value.slice()
   list.splice(position, 0, ...tracks)
   playlist.value = list
+  // New rows may hold the next stream: let the loaded trigger below
+  // reconsider what "one ahead" is.
+  prefetchedFor = -1
   if (currentIndex.value >= position) currentIndex.value += tracks.length
   if (shuffle.value) {
     // Keep the shuffled path, slotting the new tracks in right after
@@ -240,6 +262,7 @@ function removeAt(index) {
   if (index < 0 || index >= playlist.value.length) return
   const list = playlist.value.slice()
   list.splice(index, 1)
+  prefetchedFor = -1
   const wasCurrent = index === currentIndex.value
   playlist.value = list
   if (index < currentIndex.value) currentIndex.value -= 1
@@ -301,6 +324,7 @@ function playAt(index) {
   if (index < 0 || index >= playlist.value.length) return
   const a = ensureAudio()
   currentIndex.value = index
+  prefetchedFor = -1
   if (shuffle.value) {
     if (shuffleOrder.length !== playlist.value.length) buildShuffleOrder()
     const pos = shuffleOrder.indexOf(index)
@@ -308,6 +332,25 @@ function playAt(index) {
     shuffleVersion.value += 1
   }
   playError.value = ''
+  if (needsStreamUrl(playlist.value[index])) {
+    void playUnresolved(index)
+    return
+  }
+  startAudio(a, index)
+}
+
+// Unresolved stream failures in a row before giving up on the queue
+// (reset by any success) - a run of unresolvable tracks skips itself
+// instead of stalling the player forever.
+const MAX_RESOLVE_FAILURES = 3
+let resolveFailures = 0
+
+/** A streamed track whose fresh URL isn't known yet. */
+function needsStreamUrl(track) {
+  return !!track?.stream && !track.url
+}
+
+function startAudio(a, index) {
   a.src = playlist.value[index].url
   a.currentTime = 0
   // A track change doesn't reliably keep the rate in every browser — a
@@ -315,6 +358,93 @@ function playAt(index) {
   a.playbackRate = playbackRate.value
   currentTime.value = 0
   startPlayback(a)
+  // One track ahead: the next stream resolves while this one plays, so
+  // advancing into it (or the track ending) never waits on the network.
+  maybePrefetch()
+}
+
+// The next track is warmed once per current track: at its start, and
+// again the moment it has fully loaded (whichever finds work first).
+let prefetchedFor = -1
+
+function maybePrefetch() {
+  if (currentIndex.value < 0 || prefetchedFor === currentIndex.value) return
+  prefetchedFor = currentIndex.value
+  prefetchNext()
+}
+
+/** True once the audio element holds the whole current track. */
+function fullyBuffered() {
+  const total = duration.value
+  if (!(total > 0) || !audio) return false
+  try {
+    const buffered = audio.buffered
+    for (let i = 0; i < buffered.length; i++) {
+      if (buffered.end(i) >= total - 1) return true
+    }
+  } catch {
+    return false
+  }
+  return false
+}
+
+/** Resolve an unstored stream track, then play it - or skip past it. */
+async function playUnresolved(index) {
+  const track = playlist.value[index]
+  ensureAudio()
+  resolving.value = track
+  isBuffering.value = true
+  playError.value = ''
+  currentTime.value = 0
+  duration.value = 0
+  let url = ''
+  try {
+    ;({ url } = await resolveTrackUrl(track))
+  } catch {
+    url = ''
+  } finally {
+    if (resolving.value === track) resolving.value = null
+  }
+  // The queue moved on (or the track left it) while resolving.
+  if (playlist.value[index] !== track || currentIndex.value !== index) return
+  if (!url) {
+    resolveFailures += 1
+    if (resolveFailures >= MAX_RESOLVE_FAILURES) {
+      resolveFailures = 0
+      playError.value = 'unplayable'
+      isBuffering.value = false
+      pause()
+      return
+    }
+    next()
+    return
+  }
+  resolveFailures = 0
+  playlist.value[index] = { ...track, url }
+  startAudio(ensureAudio(), index)
+}
+
+/** Resolve the next unstored track while this one plays, one ahead. */
+function prefetchNext() {
+  const upcoming = nextIndex()
+  if (upcoming < 0) return
+  const track = playlist.value[upcoming]
+  if (!needsStreamUrl(track)) return
+  const list = playlist.value
+  resolveTrackUrl(track).then(
+    ({ url, videoId }) => {
+      // Another queue took its place meanwhile: leave it alone.
+      if (playlist.value === list && playlist.value[upcoming] === track) {
+        playlist.value[upcoming] = { ...track, url }
+      }
+      // Warm the server download too, so the file (not just its URL)
+      // already waits when the turn comes.
+      warmServerCache(videoId)
+    },
+    () => {
+      // Silent: advancing into it resolves again, with an error then.
+    }
+  )
 }
 
 function startPlayback(a) {
@@ -330,6 +460,12 @@ function play() {
     return
   }
   if (!a.src) {
+    // Paused mid-resolve (or before it started): go through playAt so an
+    // unstored track resolves instead of loading an empty src.
+    if (needsStreamUrl(playlist.value[currentIndex.value])) {
+      playAt(currentIndex.value)
+      return
+    }
     a.src = playlist.value[currentIndex.value].url
   }
   startPlayback(a)
@@ -541,13 +677,21 @@ function updateMediaSession(track) {
   }
   if (typeof MediaMetadata !== 'undefined') {
     const origin = typeof location !== 'undefined' ? location.origin : ''
+    const cover = String(track.cover || '')
+    const artwork =
+      track.hasCover && cover
+        ? [
+            {
+              src: cover.startsWith('http') ? cover : `${origin}${cover}`,
+              sizes: '512x512',
+            },
+          ]
+        : []
     session.metadata = new MediaMetadata({
       title: track.title,
       artist: track.artist,
       album: track.album || '',
-      artwork: track.hasCover
-        ? [{ src: `${origin}${track.cover}`, sizes: '512x512' }]
-        : [],
+      artwork,
     })
   }
   const handlers = {
@@ -580,7 +724,13 @@ watch(isPlaying, (playing) => {
 function saveSession() {
   const store = storage()
   if (!store) return
-  if (!playlist.value.length || playlist.value.length > MAX_PERSISTED_TRACKS) {
+  // A stream's URL expires within hours: persisting it would restore a
+  // dead track, so a queue holding one is never saved at all.
+  if (
+    !playlist.value.length ||
+    playlist.value.length > MAX_PERSISTED_TRACKS ||
+    playlist.value.some((track) => track?.stream)
+  ) {
     store.removeItem(SESSION_KEY)
     return
   }
@@ -666,6 +816,7 @@ export function usePlayer() {
     repeatMode,
     shuffle,
     sleepAt,
+    resolving,
     setPlaylist,
     playList,
     enqueue,

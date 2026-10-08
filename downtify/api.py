@@ -240,6 +240,21 @@ working without changes:
 * ``GET  /api/preview`` (a song's 30 s preview clip from Deezer, for a
   song with no ``preview_url`` of its own - ``?artist=&title=&duration=``,
   response ``{preview_url}``, ``""`` when Deezer has no matching song)
+* ``GET  /api/similar/tracks`` (tracks similar to ``?artist=&track=``
+  via YouTube Music's own radio mix for the track - downloadable song
+  rows plus ``match`` - see
+  ``downtify.providers.youtube_similar_tracks``)
+* ``GET  /api/stream`` (a track's full audio as a fresh,
+  short-lived direct URL - ``?video_id=`` - for third-party clients;
+  the web player behind a song that isn't downloaded yet uses
+  ``/api/stream/file`` below instead - see ``downtify.stream``)
+* ``GET  /api/stream/file`` (that same audio downloaded once into
+  ``/data/stream_cache`` and served from this server with seeking
+  support - ``?video_id=``; what the web player streams, so playback
+  never depends on the browser reaching YouTube itself)
+* ``POST /api/stream/prefetch`` (body ``{video_id}``: start caching
+  that audio in the background and answer ``{queued: true}`` at once -
+  how the player warms the next track up)
 * ``GET  /api/server/info`` (public: server id, name, version,
   ``api_version``, ``require_sign_in`` (always true), capabilities) and
   ``PATCH /api/server`` (``{name}``) - see ``downtify/auth_routes.py``
@@ -310,6 +325,7 @@ from . import (
     m3u,
     providers,
     spotify,
+    stream,
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
 from .auth import (
@@ -429,6 +445,7 @@ from .podcasts import (
 )
 from .server_identity import ServerIdentity
 from .slskd_provider import reset_slskd_parallelism
+from .stream import StreamCache
 from .track_index import (
     TrackIndex,
     normalize_spotify_track_id,
@@ -932,6 +949,7 @@ class AppState:
     # The mobile API (downtify/mobile_routes.py).
     library_sync: Optional[LibrarySync] = None
     transcoder: Optional[Transcoder] = None
+    stream_cache: Optional[StreamCache] = None
     cover_thumbs: Optional[CoverThumbs] = None
     discovery: Any = None
 
@@ -5660,6 +5678,137 @@ async def song_preview_endpoint(
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {'preview_url': url}
+
+
+@router.get('/api/similar/tracks')
+async def similar_tracks_endpoint(
+    artist: str = Query(..., min_length=1),
+    track: str = Query(..., min_length=1),
+    limit: int = Query(20, ge=1, le=50),
+) -> dict[str, Any]:
+    """Tracks similar to *track* by *artist*, from YouTube Music's own
+    radio mix for the track (see
+    ``downtify.providers.youtube_similar_tracks``).
+
+    Response ``{artist, track, source, tracks}`` - downloadable song
+    rows plus ``match``. ``502`` when YouTube Music can't be used.
+    """
+
+    try:
+        return await asyncio.to_thread(
+            providers.youtube_similar_tracks,
+            artist,
+            track,
+            limit=limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get('/api/stream')
+async def stream_endpoint(
+    video_id: str = Query(..., min_length=1, max_length=64),
+) -> dict[str, str]:
+    """A track's full audio as a fresh direct URL (``?video_id=``).
+
+    What plays in the built-in player when the song behind a row isn't
+    downloaded yet: no download, no tags, nothing stored. The URL is
+    short-lived and bound to this server's network, so it is fetched
+    on demand and never cached or persisted - ask again rather than
+    storing it. ``400`` for a malformed id, ``503`` when YouTube can't
+    be reached or refuses (including age-gated tracks without usable
+    cookies - see Settings > YouTube cookies).
+    """
+
+    try:
+        vid = stream.clean_video_id(video_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    try:
+        cookies = await asyncio.to_thread(
+            stream.resolve_cookies_file, state.cookies_store
+        )
+        resolved = await asyncio.to_thread(
+            stream.stream_url_for_video, vid, cookies_file=cookies
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {'url': resolved['url']}
+
+
+@router.get('/api/stream/file')
+async def stream_file_endpoint(
+    video_id: str = Query(..., min_length=1, max_length=64),
+) -> FileResponse:
+    """A track's full audio, downloaded once and served from this server.
+
+    ``GET /api/stream/file?video_id=`` is what the web player behind a
+    song that isn't downloaded yet plays: the first request downloads
+    the audio into ``/data/stream_cache`` (concurrent requests for the
+    same video share one download), later ones are served from disk.
+    Served with seeking support, pruned least-recently-used past
+    ``DOWNTIFY_STREAM_CACHE_MB`` (see ``downtify.stream``). ``400`` for
+    a malformed id, ``503`` when YouTube can't provide the audio.
+    """
+
+    try:
+        vid = stream.clean_video_id(video_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    cache = state.stream_cache
+    if cache is None:
+        raise HTTPException(
+            status_code=503, detail='Streaming is not ready yet'
+        )
+    cookies = stream.resolve_cookies_file(state.cookies_store)
+    try:
+        path = await cache.get(vid, cookies_file=cookies)
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return FileResponse(
+        str(path),
+        media_type=stream.media_type_for(path),
+        filename=f'{vid}{path.suffix}',
+    )
+
+
+async def _prefetch_stream_video(
+    cache: StreamCache, video_id: str, cookies_file: str
+) -> None:
+    """Cache one video's audio in the background (never raises)."""
+
+    try:
+        await cache.get(video_id, cookies_file=cookies_file)
+    except Exception:
+        logger.debug('Stream prefetch failed for videoId={}', video_id)
+
+
+@router.post('/api/stream/prefetch')
+async def stream_prefetch_endpoint(request: Request) -> dict[str, bool]:
+    """Start caching a video's audio without waiting for it.
+
+    Body ``{video_id}``; answers ``{queued: true}`` at once while the
+    download continues detached, so the player can warm the next track
+    up while the current one is still loading. ``400`` for a malformed
+    id, ``503`` when streaming isn't ready.
+    """
+
+    payload = await _json_object(request)
+    try:
+        vid = stream.clean_video_id(payload.get('video_id'))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    cache = state.stream_cache
+    if cache is None:
+        raise HTTPException(
+            status_code=503, detail='Streaming is not ready yet'
+        )
+    cookies = stream.resolve_cookies_file(state.cookies_store)
+    spawn_task(
+        _prefetch_stream_video(cache, vid, cookies),
+        name=f'stream-prefetch-{vid}',
+    )
+    return {'queued': True}
 
 
 @router.post('/api/discover/listens')

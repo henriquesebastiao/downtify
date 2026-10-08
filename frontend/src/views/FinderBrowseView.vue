@@ -824,9 +824,9 @@ async function loadAlbum() {
 }
 
 // A popular track, once picked, starts playing as soon as its album is on
-// screen - its preview, or the song itself once it's downloaded, like a
-// double click on its row. One-shot: dropped once it starts, or when
-// another album or artist is picked first.
+// screen - streamed in full, or the song itself once it's downloaded,
+// like a double click on its row. One-shot: dropped once it starts, or
+// when another album or artist is picked first.
 const startSong = useSongStarter()
 const pickedTrack = shallowRef(null)
 
@@ -841,7 +841,10 @@ function playPickedTrack() {
   const row = (loaded.tracks || []).find(
     (item) => item.song_id === song.song_id
   )
-  startSong(row || song, { queue: albumQueue.value })
+  startSong(row || song, {
+    queue: albumQueue.value,
+    songs: loaded.tracks || undefined,
+  })
 }
 
 // Smooth, unless the system asks for less motion.

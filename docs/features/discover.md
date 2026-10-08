@@ -40,10 +40,10 @@ They come in two steps:
 
 A small icon in the bottom-left corner of each album and playlist cover says which service it comes from:
 
-- **Deezer** — an album opens in the [Finder](finder.md)'s columns, with its tracks ready to preview and download.
+- **Deezer** — an album opens in the [Finder](finder.md)'s columns, with its tracks ready to play in full and download.
 - **Spotify** — Deezer doesn't have that album, so it opens the same page a pasted Spotify link does.
 
-Playlists — Deezer's as well as Spotify's — always open that page, where you can **preview** their songs before downloading any of them (see [Previewing songs before downloading](top-songs.md#previewing-songs-before-downloading)), then download all of it, just the new songs, or a selection.
+Playlists — Deezer's as well as Spotify's — always open that page, where you can **play their songs in full** before downloading any of them (see [Playing songs before downloading](top-songs.md#playing-songs-before-downloading)), then download all of it, just the new songs, or a selection.
 
 Everything is kept for a week like the similar artists, and a Spotify album's match on Deezer for a month (a week when Deezer didn't have it, in case it's added). An album already in your library (matched by artist and title, so `Dummy (Deluxe Edition)` counts as `Dummy`) and a playlist you've already downloaded are left out; hiding an artist also takes their album and playlists away.
 

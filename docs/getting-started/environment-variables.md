@@ -39,6 +39,8 @@ See [Mobile Apps](../features/mobile-apps.md) and [Users & Sign-in](../features/
 | `DOWNTIFY_DISCOVERY` | `true` | `false` stops announcing the server on the local network (mDNS, `_downtify._tcp`), which the apps use to list it under *Found on this network*. In Docker's bridge network the announcement doesn't reach the LAN anyway — see [Docker Compose](docker-compose.md#finding-the-server-from-the-apps). |
 | `DOWNTIFY_TRANSCODE_CACHE_MB` | `2048` | Largest size, in MB, the cache of transcoded copies (`/data/transcode_cache`) is kept under; least recently played copies go first. |
 | `DOWNTIFY_TRANSCODE_CONCURRENCY` | `2` | How many songs are transcoded at once for the apps' smaller streaming qualities. |
+| `DOWNTIFY_STREAM_CACHE_MB` | `1024` | Largest size, in MB, the cache of streamed audio (`/data/stream_cache`) is kept under; least recently played copies go first. Streaming through the server is what plays undownloaded tracks where the browser itself can't reach YouTube. |
+| `DOWNTIFY_STREAM_CONCURRENCY` | `2` | How many stream downloads may run at once. |
 
 ## Health check
 

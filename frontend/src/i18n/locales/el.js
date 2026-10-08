@@ -31,6 +31,7 @@ export default {
     discover: 'Ανακάλυψη',
     podcasts: 'Podcast',
     charts: 'Λίστες επιτυχιών',
+    similar: 'Παρόμοια',
     settings: 'Ρυθμίσεις',
     more: 'Περισσότερα',
     playlists: 'Λίστες',
@@ -146,6 +147,33 @@ export default {
     failed: 'Δεν ήταν δυνατή η φόρτωση του chart',
     empty: 'Δεν υπάρχει τίποτα στο chart αυτή τη στιγμή',
     playlist: 'Λίστα αναπαραγωγής',
+  },
+  similar: {
+    title: 'Παρόμοια',
+    subtitle:
+      'Κομμάτια που μοιάζουν με αυτό που θα ονομάσετε, μέσω YouTube Music.',
+    artist: 'Καλλιτέχνης',
+    artistPlaceholder: 'Cher',
+    track: 'Κομμάτι',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Εύρεση παρόμοιων',
+    resultsFor: 'Παρόμοια με το “{track}” του {artist}',
+    failed: 'Δεν βρέθηκαν παρόμοια κομμάτια',
+    noResults: 'Δεν βρέθηκε τίποτα παρόμοιο',
+    noResultsHint: 'Ελέγξτε την ορθογραφία καλλιτέχνη και τίτλου.',
+    matchHint: 'Πόσο κοντά είναι στο κομμάτι σας',
+    findSimilar: 'Εύρεση παρόμοιων κομματιών',
+    noDownloadMatch: 'Χωρίς αποτέλεσμα για λήψη για το “{name}”',
+    resolveFailed: 'Δεν ήταν δυνατή η προετοιμασία του κομματιού για λήψη',
+    tipSimilarTitle: 'Ξεκινήστε από ένα κομμάτι',
+    tipSimilarBody:
+      'Πληκτρολογήστε τον καλλιτέχνη και το κομμάτι — το YouTube απαντά με το mix του.',
+    tipDownloadTitle: 'Ακούστε ολόκληρο',
+    tipDownloadBody:
+      'Κάθε γραμμή παίζει ολόκληρη στο player· κατεβάστε όσα σας αρέσουν.',
+  },
+  stream: {
+    failed: 'Δεν ήταν δυνατή η αναπαραγωγή του “{name}”.',
   },
   finder: {
     placeholder: 'Αναζητήστε καλλιτέχνη, άλμπουμ ή τραγούδι',

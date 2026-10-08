@@ -8,6 +8,7 @@
         :song="song"
         :index="i"
         :queue="queue"
+        :songs="data.songs"
         :context="context"
       />
     </div>
