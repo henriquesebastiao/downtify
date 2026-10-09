@@ -29,8 +29,11 @@ from typing import Any, Optional
 
 import yt_dlp
 from loguru import logger
+from mutagen import File as _mutagen_file
 
 from .downloader import (
+    MAX_TRACK_DURATION_SECONDS,
+    TrackTooLongError,
     _yt_player_clients,
     _YtdlpLogger,
     is_age_restricted_error,
@@ -161,6 +164,31 @@ def media_type_for(path: Any) -> str:
     return _MEDIA_TYPES.get(ext, 'application/octet-stream')
 
 
+#: Detail for the ``400`` when a stream is refused for length (mirrors
+#: the download message in ``downtify.downloader``; no name here, only
+#: a video id reached this layer).
+STREAM_TOO_LONG_DETAIL = (
+    'This track runs over 10 minutes; tracks over 10 minutes are not streamed'
+)
+
+
+def _probed_seconds(path: Path) -> float:
+    """The audio length of a cached file in seconds, ``0`` when unknown.
+
+    Read off the downloaded file itself (no extra YouTube request), so
+    the duration cap holds no matter which client asked. Fail-open: an
+    unreadable file is served rather than breaking playback.
+    """
+
+    try:
+        audio = _mutagen_file(path)
+        if audio is not None and audio.info is not None:
+            return float(getattr(audio.info, 'length', 0) or 0)
+    except Exception:
+        logger.opt(exception=True).debug('Stream length probe failed')
+    return 0.0
+
+
 class _StreamJob:
     """One cache download, shared by every request waiting for it."""
 
@@ -214,6 +242,27 @@ class StreamCache:
             return path
         return None
 
+    def streamable_path(self, video_id: str) -> Optional[Path]:
+        """The finished cached file for *video_id*, enforcing the cap.
+
+        A cached file past :data:`MAX_TRACK_DURATION_SECONDS` is
+        deleted and raises :class:`TrackTooLongError` instead of being
+        served, so long tracks never accumulate on disk.
+        """
+
+        path = self.cached_path(video_id)
+        if path is None:
+            return None
+        if _probed_seconds(path) > MAX_TRACK_DURATION_SECONDS:
+            with contextlib.suppress(OSError):
+                path.unlink()
+            logger.warning(
+                'Stream cache refused an overlong file for videoId={}',
+                video_id,
+            )
+            raise TrackTooLongError(STREAM_TOO_LONG_DETAIL)
+        return path
+
     async def get(self, video_id: str, *, cookies_file: str = '') -> Path:
         """The cached audio file for *video_id*, downloading it first.
 
@@ -223,7 +272,7 @@ class StreamCache:
         """
 
         vid = clean_video_id(video_id)
-        cached = self.cached_path(vid)
+        cached = self.streamable_path(vid)
         if cached is not None:
             return cached
         job = self._jobs.get(vid)
@@ -245,7 +294,7 @@ class StreamCache:
     async def _run(self, video_id: str, cookies_file: str) -> Path:
         self._dir.mkdir(parents=True, exist_ok=True)
         async with self._semaphore:
-            cached = self.cached_path(video_id)
+            cached = self.streamable_path(video_id)
             if cached is not None:
                 return cached
             self.running += 1
@@ -253,7 +302,7 @@ class StreamCache:
                 await asyncio.to_thread(self._fetch, video_id, cookies_file)
             finally:
                 self.running -= 1
-            found = self.cached_path(video_id)
+            found = self.streamable_path(video_id)
             if found is None:
                 raise ValueError(
                     'YouTube gave nothing to stream for this track'

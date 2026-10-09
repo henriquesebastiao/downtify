@@ -12,6 +12,7 @@ import pytest
 from fastapi import HTTPException
 
 from downtify import api, stream
+from downtify.downloader import TrackTooLongError
 
 
 def _ydl(info):
@@ -164,6 +165,37 @@ def test_cache_prunes_least_recently_used(tmp_path):
     assert new.exists()
 
 
+def test_probed_seconds_is_fail_open_on_garbage(tmp_path):
+    garbage = tmp_path / 'x.m4a'
+    garbage.write_bytes(b'not audio at all')
+    assert stream._probed_seconds(garbage) == 0.0
+
+
+def test_cache_refuses_an_overlong_download(tmp_path, monkeypatch):
+    cache = _cache(tmp_path)
+
+    def fake_fetch(video_id, cookies_file=''):
+        (cache._dir / f'{video_id}.m4a').write_bytes(b'audio')
+
+    monkeypatch.setattr(cache, '_fetch', fake_fetch)
+    monkeypatch.setattr(stream, '_probed_seconds', lambda path: 3600.0)
+    with pytest.raises(TrackTooLongError, match='10 minutes'):
+        asyncio.run(cache.get('dQw4w9WgXcQ'))
+    assert list(cache._dir.iterdir()) == []
+
+
+def test_cache_serves_a_file_of_unknown_length(tmp_path, monkeypatch):
+    cache = _cache(tmp_path)
+
+    def fake_fetch(video_id, cookies_file=''):
+        (cache._dir / f'{video_id}.m4a').write_bytes(b'audio')
+
+    monkeypatch.setattr(cache, '_fetch', fake_fetch)
+    monkeypatch.setattr(stream, '_probed_seconds', lambda path: 0.0)
+    found = asyncio.run(cache.get('dQw4w9WgXcQ'))
+    assert found.name == 'dQw4w9WgXcQ.m4a'
+
+
 def test_media_type_for_known_extensions(tmp_path):
     assert stream.media_type_for(tmp_path / 'x.m4a') == 'audio/mp4'
     assert stream.media_type_for(tmp_path / 'x.mp4') == 'audio/mp4'
@@ -187,7 +219,9 @@ def test_stream_file_endpoint_serves_the_cached_file(tmp_path, monkeypatch):
     fake_cache.get = fake_get
     monkeypatch.setattr(api.state, 'stream_cache', fake_cache)
     monkeypatch.setattr(stream, 'resolve_cookies_file', lambda store: '/c.txt')
-    response = asyncio.run(api.stream_file_endpoint(video_id='dQw4w9WgXcQ'))
+    response = asyncio.run(
+        api.stream_file_endpoint(video_id='dQw4w9WgXcQ', duration=0)
+    )
     assert response.status_code == 200
     assert response.media_type == 'audio/mp4'
 
@@ -201,7 +235,9 @@ def test_stream_file_endpoint_rejects_a_bad_id():
 def test_stream_file_endpoint_needs_a_cache(monkeypatch):
     monkeypatch.setattr(api.state, 'stream_cache', None)
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(api.stream_file_endpoint(video_id='dQw4w9WgXcQ'))
+        asyncio.run(
+            api.stream_file_endpoint(video_id='dQw4w9WgXcQ', duration=0)
+        )
     assert exc.value.status_code == 503
 
 
@@ -214,8 +250,39 @@ def test_stream_file_endpoint_maps_download_failures(monkeypatch):
     monkeypatch.setattr(api.state, 'stream_cache', fake_cache)
     monkeypatch.setattr(stream, 'resolve_cookies_file', lambda store: '')
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(api.stream_file_endpoint(video_id='dQw4w9WgXcQ'))
+        asyncio.run(
+            api.stream_file_endpoint(video_id='dQw4w9WgXcQ', duration=0)
+        )
     assert exc.value.status_code == 503
+
+
+def test_stream_file_endpoint_refuses_a_known_long_track(monkeypatch):
+    def boom(*_args, **_kwargs):
+        raise AssertionError('must not fetch')
+
+    fake_cache = MagicMock()
+    fake_cache.get = boom
+    monkeypatch.setattr(api.state, 'stream_cache', fake_cache)
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            api.stream_file_endpoint(video_id='dQw4w9WgXcQ', duration=3600)
+        )
+    assert exc.value.status_code == 400
+
+
+def test_stream_file_endpoint_maps_overlong_cache_files(monkeypatch):
+    async def too_long(*_args, **_kwargs):
+        raise TrackTooLongError(stream.STREAM_TOO_LONG_DETAIL)
+
+    fake_cache = MagicMock()
+    fake_cache.get = too_long
+    monkeypatch.setattr(api.state, 'stream_cache', fake_cache)
+    monkeypatch.setattr(stream, 'resolve_cookies_file', lambda store: '')
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            api.stream_file_endpoint(video_id='dQw4w9WgXcQ', duration=0)
+        )
+    assert exc.value.status_code == 400
 
 
 class _FakeRequest:

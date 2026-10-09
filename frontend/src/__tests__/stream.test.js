@@ -45,6 +45,15 @@ describe('resolveTrackUrl', () => {
       videoId: 'dQw4w9WgXcQ',
     })
   })
+
+  it('passes the known duration so the server can refuse long tracks', async () => {
+    await expect(
+      resolveTrackUrl({ ...SONG, youtube_id: 'dQw4w9WgXcQ', duration: 224 })
+    ).resolves.toEqual({
+      url: '/api/stream/file?video_id=dQw4w9WgXcQ&duration=224',
+      videoId: 'dQw4w9WgXcQ',
+    })
+  })
 })
 
 const SONG = { name: 'Believe', artists: ['Cher'] }
@@ -110,6 +119,16 @@ describe('playStream', () => {
 
   it('resolves false without artist and title', async () => {
     await expect(playStream({ name: '' })).resolves.toBe(false)
+  })
+
+  it('refuses tracks over 10 minutes without resolving', async () => {
+    playList.mockClear()
+    search.mockClear()
+    await expect(
+      playStream({ ...SONG, youtube_id: 'dQw4w9WgXcQ', duration: 3600 })
+    ).resolves.toBe(false)
+    expect(search).not.toHaveBeenCalled()
+    expect(playList).not.toHaveBeenCalled()
   })
 })
 

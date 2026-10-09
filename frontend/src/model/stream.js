@@ -10,6 +10,7 @@ import { ref } from 'vue'
 
 import { usePlayer } from '/src/model/player'
 import {
+  MAX_STREAM_SECONDS,
   directVideoId,
   resolveTrackUrl,
   rowKey,
@@ -64,6 +65,8 @@ export function streamTrack(song, url, videoId) {
 export async function playStream(song, { context = null } = {}) {
   const key = rowKey(song)
   if (!key) return false
+  // Known-long tracks are refused locally, before any YouTube request.
+  if ((Number(song?.duration) || 0) > MAX_STREAM_SECONDS) return false
   resolvingKey.value = key
   try {
     const { url, videoId } = await resolveTrackUrl(song)

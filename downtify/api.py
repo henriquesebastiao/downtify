@@ -351,6 +351,7 @@ from .downloader import (
     AUDIO_PROVIDERS,
     DOWNLOAD_EXECUTOR,
     MAX_PARALLEL_DOWNLOADS,
+    MAX_TRACK_DURATION_SECONDS,
     Downloader,
     NoAudioMatchError,
     TrackTooLongError,
@@ -5743,6 +5744,7 @@ async def stream_endpoint(
 @router.get('/api/stream/file')
 async def stream_file_endpoint(
     video_id: str = Query(..., min_length=1, max_length=64),
+    duration: float = Query(0, ge=0),
 ) -> FileResponse:
     """A track's full audio, downloaded once and served from this server.
 
@@ -5751,14 +5753,21 @@ async def stream_file_endpoint(
     the audio into ``/data/stream_cache`` (concurrent requests for the
     same video share one download), later ones are served from disk.
     Served with seeking support, pruned least-recently-used past
-    ``DOWNTIFY_STREAM_CACHE_MB`` (see ``downtify.stream``). ``400`` for
-    a malformed id, ``503`` when YouTube can't provide the audio.
+    ``DOWNTIFY_STREAM_CACHE_MB`` (see ``downtify.stream``). ``duration``
+    (seconds, when the caller knows it) refuses long tracks before any
+    download; the served file is probed either way. ``400`` for a
+    malformed id or a track over 10 minutes, ``503`` when YouTube
+    can't provide the audio.
     """
 
     try:
         vid = stream.clean_video_id(video_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if duration > MAX_TRACK_DURATION_SECONDS:
+        raise HTTPException(
+            status_code=400, detail=stream.STREAM_TOO_LONG_DETAIL
+        )
     cache = state.stream_cache
     if cache is None:
         raise HTTPException(
@@ -5767,6 +5776,8 @@ async def stream_file_endpoint(
     cookies = stream.resolve_cookies_file(state.cookies_store)
     try:
         path = await cache.get(vid, cookies_file=cookies)
+    except TrackTooLongError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return FileResponse(

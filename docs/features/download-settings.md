@@ -160,7 +160,7 @@ When a song is skipped:
 
 ## Long tracks
 
-Songs longer than **10 minutes** are refused before anything is fetched, with a *"tracks over 10 minutes are not downloaded"* queue error — hour-long mixes and uploads are never what a library track should be. The limit only applies to downloads: long tracks still stream in full, and podcast episodes (which are routinely longer) are unaffected.
+Songs longer than **10 minutes** are refused before anything is fetched, with a *"tracks over 10 minutes are not downloaded"* queue error — hour-long mixes and uploads are never what a library track should be. The same cap guards streaming: a longer track is refused with a `400` (callers that know its length pass `duration`, and the cached file is probed either way), so long uploads never accumulate in the stream cache either. Already-downloaded files and podcast episodes (which are routinely longer) are unaffected.
 
 ## Audio provider
 
