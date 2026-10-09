@@ -46,6 +46,7 @@ describe('useSimilar', () => {
         name: 'Strong Enough',
         artists: ['Cher'],
         artist: 'Cher',
+        album_name: '',
         cover_url: 'https://img/v1',
         duration: 224,
         url: 'https://music.youtube.com/watch?v=v1',

@@ -40,7 +40,21 @@
       <p class="truncate text-sm font-semibold">{{ song.name }}</p>
       <p class="truncate text-[13px] text-muted">{{ artistName }}</p>
     </div>
-    <div class="flex w-28 shrink-0 justify-end">
+    <span
+      v-if="song.album_name"
+      class="hidden w-[30%] truncate text-[13px] text-muted lg:block"
+      >{{ song.album_name }}</span
+    >
+    <span
+      class="tabular hidden w-12 text-right text-[13px] text-muted sm:block"
+    >
+      {{ song.duration ? formatDuration(song.duration) : '' }}
+    </span>
+    <!-- Same grid as every other track row: the wand re-seeds the mix
+         from this track, then the download state. Wide enough for the
+         wand plus the download's widest state (see TrackDownPlay). -->
+    <div class="flex w-40 shrink-0 items-center justify-end gap-2">
+      <SimilarButton :artist="firstArtist" :title="song.name" filled />
       <UiBadge v-if="inLibrary" tone="accent" icon="check">
         {{ t('search.inLibrary') }}
       </UiBadge>
@@ -78,6 +92,8 @@ import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import UiBadge from '../ui/UiBadge.vue'
 import DownloadState from '../search/DownloadState.vue'
+import SimilarButton from './SimilarButton.vue'
+import { formatDuration } from '/src/lib/format'
 import API from '/src/model/api'
 import { useDownloadManager } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
@@ -108,6 +124,9 @@ const artistName = computed(
     (props.song.artists || []).join(', ') ||
     props.song.artist ||
     t('common.unknownArtist')
+)
+const firstArtist = computed(
+  () => (props.song.artists || [])[0] || props.song.artist || ''
 )
 
 // Playing works like every other track row: a downloaded song plays in

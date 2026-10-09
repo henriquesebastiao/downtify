@@ -129,6 +129,7 @@ export function useSimilar() {
         ? item.artists
         : [item.artist].filter(Boolean),
       artist: item.artist || '',
+      album_name: item.album_name || '',
       cover_url: item.cover_url || '',
       duration: item.duration || 0,
       url: item.url || '',

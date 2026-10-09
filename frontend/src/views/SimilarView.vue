@@ -4,6 +4,7 @@
   >
     <PageHeader :title="t('similar.title')" :subtitle="t('similar.subtitle')" />
 
+    <!-- No search button: Enter (like the main search) starts the mix. -->
     <form
       class="flex flex-col gap-2 sm:flex-row sm:items-end"
       @submit.prevent="submit"
@@ -22,16 +23,6 @@
         :placeholder="t('similar.trackPlaceholder')"
         autocomplete="off"
       />
-      <UiButton
-        type="submit"
-        variant="primary"
-        size="lg"
-        icon="search"
-        :loading="similar.loading.value"
-        :disabled="!canSearch"
-      >
-        {{ t('similar.searchButton') }}
-      </UiButton>
     </form>
 
     <div v-if="similar.loading.value" class="flex flex-col gap-2">
@@ -66,6 +57,7 @@
           {{ resultsTitle }}
         </h2>
         <div class="-mx-3 flex flex-col">
+          <TrackDownPlayHeader />
           <SimilarTrackRow
             v-for="(song, i) in similar.songs.value"
             :key="`${song.artist}|${song.name}`"
@@ -118,6 +110,7 @@ import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiInput from '/src/components/ui/UiInput.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
+import TrackDownPlayHeader from '/src/components/library/TrackDownPlayHeader.vue'
 import SimilarTrackRow from '/src/components/similar/SimilarTrackRow.vue'
 import { useSimilar } from '/src/model/similar'
 import { useLibrary } from '/src/model/library'
@@ -158,12 +151,6 @@ function applyQuery() {
 watch(() => [route.query.artist, route.query.track], applyQuery, {
   immediate: true,
 })
-
-const canSearch = computed(
-  () =>
-    !similar.loading.value &&
-    (!!artistInput.value.trim() || !!trackInput.value.trim())
-)
 
 const resultsTitle = computed(() => {
   const a = similar.artist.value
