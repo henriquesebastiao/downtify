@@ -167,10 +167,11 @@ const canSearch = computed(
 
 const resultsTitle = computed(() => {
   const a = similar.artist.value
-  const t = similar.track.value
-  if (a && t) return t('similar.resultsFor', { track: t, artist: a })
+  const seedTrack = similar.track.value
+  if (a && seedTrack)
+    return t('similar.resultsFor', { track: seedTrack, artist: a })
   if (a) return t('similar.resultsForArtist', { artist: a })
-  return t('similar.resultsForTrack', { track: t })
+  return t('similar.resultsForTrack', { track: seedTrack })
 })
 
 function submit() {

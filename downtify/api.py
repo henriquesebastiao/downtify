@@ -353,6 +353,7 @@ from .downloader import (
     MAX_PARALLEL_DOWNLOADS,
     Downloader,
     NoAudioMatchError,
+    TrackTooLongError,
     save_playlist_cover,
 )
 from .external_library import (
@@ -2758,7 +2759,7 @@ async def _run_download(
             if delay_seconds > 0:
                 await asyncio.sleep(delay_seconds)
     except Exception as exc:
-        if isinstance(exc, NoAudioMatchError):
+        if isinstance(exc, (NoAudioMatchError, TrackTooLongError)):
             # An expected outcome, not a crash: no traceback in the log.
             logger.warning('{} ({})', exc, song_id)
             message = str(exc)
@@ -2877,6 +2878,8 @@ async def download_endpoint(
         )
     except NoAudioMatchError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TrackTooLongError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return filename

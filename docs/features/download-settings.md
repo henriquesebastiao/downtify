@@ -158,6 +158,10 @@ When a song is skipped:
 - The queue shows the song as finished, and playlist [M3U files](m3u-export.md) point at the existing file wherever it lives (e.g. `../Artist - Title.mp3`), so the playlist still plays in full.
 - If the same song is queued twice at the same time (listed twice in one playlist, or in two playlists downloading in parallel), only one copy is downloaded. The other waits for it and then skips.
 
+## Long tracks
+
+Songs longer than **10 minutes** are refused before anything is fetched, with a *"tracks over 10 minutes are not downloaded"* queue error — hour-long mixes and uploads are never what a library track should be. The limit only applies to downloads: long tracks still stream in full, and podcast episodes (which are routinely longer) are unaffected.
+
 ## Audio provider
 
 The default audio provider is **YouTube Music**. Downtify uses [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) to search for the best match by comparing track duration. When YouTube Music has no acceptable match, or only one whose duration is far off (a likely different recording), Downtify automatically falls back to searching standard YouTube — see [How it works](../how-it-works.md#fallback-to-standard-youtube).

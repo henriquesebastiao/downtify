@@ -66,6 +66,36 @@ class NoAudioMatchError(RuntimeError):
     """No enabled audio provider found a source for the song."""
 
 
+#: Songs longer than this are refused before any download: mixes and
+#: hour-long uploads are never what a library track should be. Episodes
+#: never reach this check (see ``podcasts.download_episode``) and
+#: streaming is unaffected, so long tracks still play in full.
+MAX_TRACK_DURATION_SECONDS = 600
+
+
+class TrackTooLongError(RuntimeError):
+    """The song's known duration is past :data:`MAX_TRACK_DURATION_SECONDS`."""
+
+
+def reject_overlong_song(song: dict[str, Any]) -> None:
+    """Raise :class:`TrackTooLongError` when *song* is too long to take.
+
+    Unknown durations (missing or ``0``) pass: with nothing to judge by
+    the download goes ahead.
+    """
+
+    try:
+        duration = float(song.get('duration') or 0)
+    except (TypeError, ValueError):
+        return
+    if duration > MAX_TRACK_DURATION_SECONDS:
+        name = song.get('name') or 'This track'
+        raise TrackTooLongError(
+            f'"{name}" is {duration / 60:.0f} minutes long; '
+            'tracks over 10 minutes are not downloaded'
+        )
+
+
 # Upper bound of the "Parallel downloads" setting (see api.py's clamp).
 MAX_PARALLEL_DOWNLOADS = 30
 
@@ -758,6 +788,9 @@ class Downloader:
             if existing is not None:
                 return self._skip_existing(existing, progress_cb)
 
+        # Known-long tracks are refused before any search or fetch.
+        reject_overlong_song(song)
+
         video_id = song.get('youtube_id')
         if not video_id and (song.get('source') == 'youtube'):
             video_id = song.get('song_id')
@@ -795,6 +828,10 @@ class Downloader:
             )
 
         song = enrich_from_match(song, match)
+
+        # Sparse rows learn their duration from the per-track embed
+        # above; re-check now that it is known.
+        reject_overlong_song(song)
 
         if local_source is not None:
             return self._downloaded(

@@ -51,8 +51,8 @@
     >
       <AppIcon name="arrow-up-right" :size="16" />
     </a>
-    <div class="flex w-28 shrink-0 items-center justify-end gap-1">
-      <SimilarButton :artist="firstArtist" :title="song.name" />
+    <SimilarButton :artist="firstArtist" :title="song.name" />
+    <div class="flex w-28 shrink-0 justify-end">
       <DownloadState :song="song" />
     </div>
   </div>

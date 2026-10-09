@@ -9,7 +9,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from downtify.downloader import Downloader
+import pytest
+
+from downtify.downloader import (
+    Downloader,
+    TrackTooLongError,
+    reject_overlong_song,
+)
 
 
 def _make_downloader(tmp_path: Path) -> Downloader:
@@ -83,6 +89,28 @@ def test_existing_filename_with_subdir_does_not_find_root_file(tmp_path):
         )
         is None
     )
+
+
+def test_reject_overlong_song_allows_normal_tracks():
+    reject_overlong_song({'name': 'Song', 'duration': 224})
+    reject_overlong_song({'name': 'Song', 'duration': 600})
+
+
+def test_reject_overlong_song_allows_unknown_durations():
+    reject_overlong_song({'name': 'Song'})
+    reject_overlong_song({'name': 'Song', 'duration': 0})
+    reject_overlong_song({'name': 'Song', 'duration': 'n/a'})
+
+
+def test_reject_overlong_song_refuses_long_tracks():
+    with pytest.raises(TrackTooLongError, match='10 minutes'):
+        reject_overlong_song({'name': 'Hour Mix', 'duration': 3600})
+
+
+def test_download_refuses_long_tracks_before_any_fetch(tmp_path):
+    d = _make_downloader(tmp_path)
+    with pytest.raises(TrackTooLongError, match='10 minutes'):
+        d.download({'name': 'Hour Mix', 'artists': ['DJ'], 'duration': 3600})
 
 
 def test_existing_filename_falls_back_to_alternate_extension(tmp_path):

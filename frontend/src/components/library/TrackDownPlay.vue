@@ -121,12 +121,15 @@
     <!-- Not downloaded: the download button, with its progress and retry;
          downloaded: the "In library" label. Playing is on the left. A click
          here is the download's own, never the row's (a tap plays). -->
+    <!-- Wide enough for the wand plus the download's widest state (its
+         progress bar is w-28 on its own), so nothing ever overlaps the
+         duration column; the header spacer below matches this width. -->
     <div
-      class="flex w-28 shrink-0 items-center justify-end gap-1"
+      class="flex w-40 shrink-0 items-center justify-end gap-2"
       @click.stop
       @dblclick.stop
     >
-      <SimilarButton :artist="firstArtist" :title="song.name" />
+      <SimilarButton :artist="firstArtist" :title="song.name" filled />
       <DownloadState :song="song" />
     </div>
   </div>
