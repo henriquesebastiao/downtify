@@ -10,7 +10,7 @@ icon: lucide/sparkles
 
 Open **Similar** from the sidebar (under **Charts**, or the **More** sheet on phones). Type the **Artist** or the **Track** (either one is enough — a bare artist seeds from its top hit), then **Find similar**:
 
-You don't have to type, either: every track row in the app carries a **Similar** button (the wand icon next to the download button, filled like it on Charts and Discover — in Search, Charts, Top songs, pasted links, and as a context-menu item on Library, Album, Artist and Playlist tracks). It opens this page already searching for that track.
+You don't have to type, either: every track row in the app carries a **Similar** button (the wand icon next to the download button, filled like it on Search, Charts and Discover — in Top songs and pasted links it is a ghost icon, and a context-menu item on Library, Album, Artist and Playlist tracks). It opens this page already searching for that track. Search results also play in full straight from the row, without downloading anything.
 
 - **Play in full** — tap the cover and the track streams from this server straight into the built-in player, downloaded or not.
 - **Download** — every row already carries its video and downloads straight away: Downtify queues the match through the same [matching pipeline](../how-it-works.md) every other download uses. From then on the row shows that download's progress, and a check once the song is in your library.
