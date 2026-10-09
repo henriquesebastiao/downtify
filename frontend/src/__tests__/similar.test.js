@@ -55,12 +55,22 @@ describe('useSimilar', () => {
     expect(similar.error.value).toBe('')
   })
 
-  it('does not ask without both fields', async () => {
+  it('does not ask without either field', async () => {
     getSimilarTracks.mockClear()
     const similar = useSimilar()
-    await similar.searchFor('Cher', '  ')
+    await similar.searchFor('  ', '  ')
     expect(getSimilarTracks).not.toHaveBeenCalled()
     expect(similar.searched.value).toBe(false)
+  })
+
+  it('asks with only the artist', async () => {
+    getSimilarTracks.mockClear()
+    getSimilarTracks.mockResolvedValueOnce({
+      data: { artist: 'Cher', track: 'Believe', tracks: ROWS },
+    })
+    const similar = useSimilar()
+    await similar.searchFor('Cher', '  ')
+    expect(getSimilarTracks).toHaveBeenCalledWith('Cher', '')
   })
 
   it('reports a backend failure', async () => {

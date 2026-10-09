@@ -121,8 +121,12 @@
     <!-- Not downloaded: the download button, with its progress and retry;
          downloaded: the "In library" label. Playing is on the left. A click
          here is the download's own, never the row's (a tap plays). -->
-    <SimilarButton :artist="firstArtist" :title="song.name" />
-    <div class="flex w-28 shrink-0 justify-end" @click.stop @dblclick.stop>
+    <div
+      class="flex w-28 shrink-0 items-center justify-end gap-1"
+      @click.stop
+      @dblclick.stop
+    >
+      <SimilarButton :artist="firstArtist" :title="song.name" />
       <DownloadState :song="song" />
     </div>
   </div>

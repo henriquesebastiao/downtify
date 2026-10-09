@@ -1772,8 +1772,8 @@ Tracks similar to one track, from YouTube Music's own radio mix for it, backing 
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `artist` | string | yes | The seed track's artist |
-| `track` | string | yes | The seed track's title |
+| `artist` | string | either this or `track` | The seed track's artist (a bare artist seeds from its top hit) |
+| `track` | string | either this or `artist` | The seed track's title |
 | `limit` | number | no | How many similar tracks to return (default `20`, max `50`) |
 
 **Response:** `{ "artist": "Cher", "track": "Believe", "source": "youtube", "tracks": [{ "song_id": "…", "name": "Strong Enough", "artists": ["Cher"], "cover_url": "https://…", "duration": 224, "url": "https://music.youtube.com/watch?v=…", "match": 0.9 }] }` — full song objects plus `match`, which decays with the row's position since YouTube gives no score.

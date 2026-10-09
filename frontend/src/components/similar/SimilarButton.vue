@@ -12,8 +12,8 @@
 </template>
 
 <script setup>
-// "What sounds like this?" on any track row, next to its download
-// button (phones included): opens the Similar page already searching
+// "What sounds like this?" on any track row, inside the download
+// block (phones included): opens the Similar page already searching
 // for this artist and title (via ?artist=&track=). Hidden when there is
 // nothing to search for.
 import { useRouter } from 'vue-router'

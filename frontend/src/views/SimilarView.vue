@@ -63,12 +63,7 @@
     <template v-else-if="similar.searched.value">
       <section class="flex flex-col gap-3">
         <h2 class="text-display text-xl font-semibold">
-          {{
-            t('similar.resultsFor', {
-              track: similar.track.value,
-              artist: similar.artist.value,
-            })
-          }}
+          {{ resultsTitle }}
         </h2>
         <div class="-mx-3 flex flex-col">
           <SimilarTrackRow
@@ -151,7 +146,7 @@ watch(
 function applyQuery() {
   const artist = String(route.query.artist || '').trim()
   const track = String(route.query.track || '').trim()
-  if (!artist || !track) return
+  if (!artist && !track) return
   if (artist === similar.artist.value && track === similar.track.value) {
     return
   }
@@ -167,14 +162,21 @@ watch(() => [route.query.artist, route.query.track], applyQuery, {
 const canSearch = computed(
   () =>
     !similar.loading.value &&
-    !!artistInput.value.trim() &&
-    !!trackInput.value.trim()
+    (!!artistInput.value.trim() || !!trackInput.value.trim())
 )
+
+const resultsTitle = computed(() => {
+  const a = similar.artist.value
+  const t = similar.track.value
+  if (a && t) return t('similar.resultsFor', { track: t, artist: a })
+  if (a) return t('similar.resultsForArtist', { artist: a })
+  return t('similar.resultsForTrack', { track: t })
+})
 
 function submit() {
   const artist = artistInput.value.trim()
   const track = trackInput.value.trim()
-  if (!artist || !track) return
+  if (!artist && !track) return
   // Keep the URL shareable; the watcher above ignores it when it matches
   // what's already searched.
   router.replace({ name: 'Similar', query: { artist, track } })

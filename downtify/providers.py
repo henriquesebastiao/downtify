@@ -346,22 +346,32 @@ def _seed_video_id(
 
     Falls back to the very first hit when none names the artist (a
     translation, a feature credit) - a radio mix off a wrong video is
-    still closer than no mix at all.
+    still closer than no mix at all. With only one of the two (an
+    artist or a bare title) the seed is simply the top hit for it.
     """
 
-    hits = search_songs(f'{artist} {track}', limit=5)
+    artist = str(artist or '').strip()
+    track = str(track or '').strip()
+    if not artist and not track:
+        raise ValueError('artist or track is required')
+    query = f'{artist} {track}'.strip()
+    hits = search_songs(query, limit=5)
+    label = f'{artist} - {track}' if artist and track else (artist or track)
     if not hits:
-        raise ValueError(f'No match on YouTube Music for {artist} - {track}')
-    want = artist.casefold()
-    for hit in hits:
-        names = [str(a or '').casefold() for a in (hit.get('artists') or [])]
-        if want and any(want in name or name in want for name in names):
-            video_id = str(hit.get('song_id') or '').strip()
-            if video_id:
-                return video_id, hits
+        raise ValueError(f'No match on YouTube Music for {label}')
+    if artist and track:
+        want = artist.casefold()
+        for hit in hits:
+            names = [
+                str(a or '').casefold() for a in (hit.get('artists') or [])
+            ]
+            if want and any(want in name or name in want for name in names):
+                video_id = str(hit.get('song_id') or '').strip()
+                if video_id:
+                    return video_id, hits
     video_id = str(hits[0].get('song_id') or '').strip()
     if not video_id:
-        raise ValueError(f'No match on YouTube Music for {artist} - {track}')
+        raise ValueError(f'No match on YouTube Music for {label}')
     return video_id, hits
 
 
@@ -372,6 +382,8 @@ def youtube_similar_tracks(
 
     Resolves the seed to a video, then reads its radio mix ("Up next"
     for that video): what YouTube plays after it. Needs no API key.
+    Either *artist* or *track* alone is enough: a bare artist seeds
+    from its top hit, a bare title from the top hit for it.
     Returns ``{artist, track, source, tracks}`` where each track is a
     downloadable song row plus ``match``. Raises :class:`ValueError`
     when the seed has no match or YouTube Music can't be reached.
@@ -379,10 +391,29 @@ def youtube_similar_tracks(
 
     artist = str(artist or '').strip()
     track = str(track or '').strip()
-    if not artist or not track:
-        raise ValueError('artist and track are required')
+    if not artist and not track:
+        raise ValueError('artist or track is required')
     limit = max(1, min(50, int(limit or 20)))
-    seed_id, _ = _seed_video_id(artist, track)
+    seed_id, hits = _seed_video_id(artist, track)
+    if not artist or not track:
+        seed_hit = next(
+            (
+                h
+                for h in hits
+                if str(h.get('song_id') or '').strip() == seed_id
+            ),
+            hits[0],
+        )
+        seed_artists = [
+            str(a or '').strip()
+            for a in (seed_hit.get('artists') or [])
+            if str(a or '').strip()
+        ]
+        seed_title = str(seed_hit.get('name') or '').strip()
+        if not artist and seed_artists:
+            artist = seed_artists[0]
+        if not track and seed_title:
+            track = seed_title
     try:
         mix = _ytm().get_watch_playlist(seed_id, limit=limit + 1, radio=True)
     except Exception as exc:

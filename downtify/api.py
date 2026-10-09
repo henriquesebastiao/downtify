@@ -5682,13 +5682,14 @@ async def song_preview_endpoint(
 
 @router.get('/api/similar/tracks')
 async def similar_tracks_endpoint(
-    artist: str = Query(..., min_length=1),
-    track: str = Query(..., min_length=1),
+    artist: str = Query('', max_length=200),
+    track: str = Query('', max_length=200),
     limit: int = Query(20, ge=1, le=50),
 ) -> dict[str, Any]:
     """Tracks similar to *track* by *artist*, from YouTube Music's own
     radio mix for the track (see
-    ``downtify.providers.youtube_similar_tracks``).
+    ``downtify.providers.youtube_similar_tracks``). Either *artist*
+    or *track* alone is enough for a seed.
 
     Response ``{artist, track, source, tracks}`` - downloadable song
     rows plus ``match``. ``502`` when YouTube Music can't be used.

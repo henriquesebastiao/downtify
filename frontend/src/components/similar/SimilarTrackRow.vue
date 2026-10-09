@@ -40,13 +40,6 @@
       <p class="truncate text-sm font-semibold">{{ song.name }}</p>
       <p class="truncate text-[13px] text-muted">{{ artistName }}</p>
     </div>
-    <span
-      v-if="song.match > 0"
-      class="tabular hidden w-14 text-right text-[13px] text-muted sm:block"
-      :title="t('similar.matchHint')"
-    >
-      {{ Math.round(song.match * 100) }}%
-    </span>
     <div class="flex w-28 shrink-0 justify-end">
       <UiBadge v-if="inLibrary" tone="accent" icon="check">
         {{ t('search.inLibrary') }}

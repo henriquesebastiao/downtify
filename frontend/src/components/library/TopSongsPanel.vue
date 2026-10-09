@@ -101,11 +101,11 @@
             {{ formatPlayCount(row.song.play_count, locale) }}
           </UiBadge>
         </div>
-        <SimilarButton
-          :artist="(row.song.artists || [])[0] || row.song.artist || ''"
-          :title="row.song.name"
-        />
-        <div class="flex w-28 shrink-0 justify-end">
+        <div class="flex w-28 shrink-0 items-center justify-end gap-1">
+          <SimilarButton
+            :artist="(row.song.artists || [])[0] || row.song.artist || ''"
+            :title="row.song.name"
+          />
           <DownloadState :song="row.song" />
         </div>
       </li>

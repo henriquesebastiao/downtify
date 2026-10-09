@@ -38,7 +38,7 @@ async function searchFor(seedArtist, seedTrack) {
   const t = String(seedTrack || '').trim()
   artist.value = a
   track.value = t
-  if (!a || !t) {
+  if (!a && !t) {
     tracks.value = []
     searched.value = false
     hasMore.value = true

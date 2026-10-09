@@ -111,8 +111,32 @@ def test_youtube_similar_reports_watch_failures(monkeypatch):
 
 
 def test_youtube_similar_needs_artist_and_track():
-    with pytest.raises(ValueError, match='artist and track'):
-        providers.youtube_similar_tracks(' ', 'Believe')
+    with pytest.raises(ValueError, match='artist or track'):
+        providers.youtube_similar_tracks(' ', ' ')
+
+
+def test_youtube_similar_seeds_from_artist_alone(monkeypatch):
+    _ytm(
+        monkeypatch,
+        [_hit('seed1', 'Believe', 'Cher')],
+        [_watch('v1', 'Strong Enough', 'Cher')],
+    )
+    result = providers.youtube_similar_tracks('Cher', ' ')
+    assert result['artist'] == 'Cher'
+    assert result['track'] == 'Believe'
+    assert [t['song_id'] for t in result['tracks']] == ['v1']
+
+
+def test_youtube_similar_seeds_from_track_alone(monkeypatch):
+    _ytm(
+        monkeypatch,
+        [_hit('seed1', 'Believe', 'Cher')],
+        [_watch('v1', 'Strong Enough', 'Cher')],
+    )
+    result = providers.youtube_similar_tracks('', 'Believe')
+    assert result['artist'] == 'Cher'
+    assert result['track'] == 'Believe'
+    assert [t['song_id'] for t in result['tracks']] == ['v1']
 
 
 def test_similar_endpoint(monkeypatch):
