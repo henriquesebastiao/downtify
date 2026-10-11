@@ -137,10 +137,7 @@ export function clampTrackDurationSeconds(value) {
   if (parsed <= 0) {
     return MIN_TRACK_DURATION_SECONDS
   }
-  return Math.min(
-    MAX_TRACK_DURATION_SECONDS,
-    Math.max(60, parsed)
-  )
+  return Math.min(MAX_TRACK_DURATION_SECONDS, Math.max(60, parsed))
 }
 
 export function clampCoverResolution(value) {

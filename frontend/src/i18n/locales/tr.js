@@ -1209,7 +1209,10 @@ export default {
     defaultPassword: 'varsayılan parola',
     tracksStat: { one: '{count} parça', other: '{count} parça' },
     likesStat: { one: '{count} beğeni', other: '{count} beğeni' },
-    playlistsStat: { one: '{count} çalma listesi', other: '{count} çalma listesi' },
+    playlistsStat: {
+      one: '{count} çalma listesi',
+      other: '{count} çalma listesi',
+    },
     trafficStat: 'gelen {down} · giden {up}',
     usageTotal: 'Toplam',
     deleteTitle: '{name} silinsin mi?',

@@ -1215,7 +1215,10 @@ export default {
     defaultPassword: 'alapértelmezett jelszó',
     tracksStat: { one: '{count} szám', other: '{count} szám' },
     likesStat: { one: '{count} kedvenc', other: '{count} kedvenc' },
-    playlistsStat: { one: '{count} lejátszási lista', other: '{count} lejátszási lista' },
+    playlistsStat: {
+      one: '{count} lejátszási lista',
+      other: '{count} lejátszási lista',
+    },
     trafficStat: 'bejövő {down} · kimenő {up}',
     usageTotal: 'Összesen',
     deleteTitle: 'Törlöd: {name}?',

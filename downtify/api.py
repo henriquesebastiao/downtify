@@ -3596,15 +3596,24 @@ async def _record_finished_download(
         return
 
     def _record() -> set[str]:
-        affected = _register_download_playlists_on_disk(
-            song,
-            filename,
-            playlist_name=playlist_name,
-            spotify_playlist_id=spotify_playlist_id,
-            track_order=track_order,
-            user_id=user_id,
-        )
+        # Ownership first, and every step isolated: a hiccup in one
+        # store (a locked sqlite under parallel downloads) must never
+        # hide a finished download from the account that ordered it,
+        # or from the library listing. Claiming is best-effort itself
+        # and never raises.
         _note_download_owner(filename, user_id)
+        try:
+            affected = _register_download_playlists_on_disk(
+                song,
+                filename,
+                playlist_name=playlist_name,
+                spotify_playlist_id=spotify_playlist_id,
+                track_order=track_order,
+                user_id=user_id,
+            )
+        except Exception:
+            logger.exception('Playlist bookkeeping failed for {}', filename)
+            affected = set()
         _record_download_traffic(filename, user_id)
         download_dir = Path(downloader.download_dir)
         slskd_dir = slskd_dir_from_downloader(downloader)

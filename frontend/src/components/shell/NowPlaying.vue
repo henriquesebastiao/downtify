@@ -311,8 +311,8 @@
                   />
                 </button>
                 <!-- Right of repeat: a stream queues its download (once -
-                     while queued it spins instead), anything downloaded
-                     deletes from the library (with confirm). -->
+                     while queued it spins instead), a downloaded track
+                     shows a static check that does nothing. -->
                 <button
                   v-if="showPlayerDownload"
                   type="button"
@@ -327,15 +327,14 @@
                     :class="downloadBusy ? 'animate-spin' : ''"
                   />
                 </button>
-                <button
-                  v-else-if="showPlayerDelete"
-                  type="button"
-                  class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
-                  :aria-label="t('actions.delete')"
-                  @click="removeCurrent"
+                <span
+                  v-else-if="showDownloadedCheck"
+                  class="flex size-11 items-center justify-center rounded-full text-accent"
+                  :title="t('search.inLibrary')"
+                  aria-hidden="true"
                 >
-                  <AppIcon name="trash" :size="22" />
-                </button>
+                  <AppIcon name="check" :size="22" />
+                </span>
               </div>
 
               <div class="hidden flex-1 items-center justify-end gap-2 lg:flex">
@@ -467,7 +466,6 @@ import EqualizerPanel from '../player/EqualizerPanel.vue'
 import { usePlayer } from '/src/model/player'
 import { useDownloadManager, useProgressTracker } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
-import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useNowPlaying } from '/src/model/ui'
@@ -479,7 +477,6 @@ import { useI18n } from '/src/i18n'
 
 const player = usePlayer()
 const library = useLibrary()
-const actions = useTrackActions()
 const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const ui = useUi()
@@ -690,7 +687,9 @@ const streamDownloaded = computed(
 const showPlayerDownload = computed(
   () => !!track.value?.stream && !streamDownloaded.value
 )
-const showPlayerDelete = computed(
+// A downloaded track shows a static check where the download button
+// was; deleting happens from the library rows.
+const showDownloadedCheck = computed(
   () =>
     !!track.value &&
     !track.value.isPodcast &&
@@ -737,15 +736,6 @@ function downloadCurrent() {
       kind: 'success',
     })
   }
-}
-
-/** Delete the playing download (with confirm); the player moves on. */
-function removeCurrent() {
-  const tr = track.value
-  if (!tr || tr.isPodcast) return
-  const target = tr.stream ? library.findTrack(tr.artist, tr.title) : tr
-  if (!target) return
-  actions.remove([target])
 }
 
 function commitSeek(value) {

@@ -128,12 +128,17 @@
           :class="downloadBusy ? '[&_svg]:animate-spin' : ''"
           @click="downloadCurrent"
         />
-        <UiIconButton
-          v-if="showMiniDelete"
-          icon="trash"
-          :label="t('actions.delete')"
-          @click="removeCurrent"
-        />
+        <!-- Downloaded tracks show a static check in the download
+             button's slot: it does nothing, deleting happens from the
+             library rows. -->
+        <span
+          v-if="showDownloadedCheck"
+          class="inline-flex size-10 shrink-0 items-center justify-center text-accent"
+          :title="t('search.inLibrary')"
+          aria-hidden="true"
+        >
+          <AppIcon name="check" :size="18" />
+        </span>
       </div>
 
       <div class="hidden items-center justify-end gap-1 md:flex md:w-[300px]">
@@ -193,7 +198,6 @@ import VolumeControl from '../player/VolumeControl.vue'
 import { usePlayer } from '/src/model/player'
 import { useDownloadManager, useProgressTracker } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
-import { useTrackActions } from '/src/model/trackActions'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useNowPlaying, useUi } from '/src/model/ui'
 import { formatDuration, widestClock } from '/src/lib/format'
@@ -205,7 +209,6 @@ const nowPlaying = useNowPlaying()
 const { t } = useI18n()
 const router = useRouter()
 const library = useLibrary()
-const actions = useTrackActions()
 const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const ui = useUi()
@@ -279,25 +282,15 @@ function downloadCurrent() {
   }
 }
 
-// Anything downloaded (or since downloaded while streaming) deletes
-// from the library (with confirm) - the same button as the full player.
-const showMiniDelete = computed(
+// A downloaded track (or a stream that landed in the library while
+// playing) shows a static check where the download button was.
+const showDownloadedCheck = computed(
   () =>
     !!track.value &&
     !track.value.isPodcast &&
     (!track.value.stream ||
       library.hasSong(trackArtist.value, trackTitle.value))
 )
-
-function removeCurrent() {
-  const tr = track.value
-  if (!tr || tr.isPodcast) return
-  const target = tr.stream
-    ? library.findTrack(trackArtist.value, trackTitle.value)
-    : tr
-  if (!target) return
-  actions.remove([target])
-}
 
 // The phone hairline glides like the desktop scrubber (only animated
 // while it's the one on screen).

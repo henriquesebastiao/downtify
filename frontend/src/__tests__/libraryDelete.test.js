@@ -29,8 +29,9 @@ describe('deleteFiles', () => {
       data: { results: { 'Shared.mp3': { released: true } } },
     })
 
-    const { deleted, released, failed } =
-      await useLibrary().deleteFiles(['Shared.mp3'])
+    const { deleted, released, failed } = await useLibrary().deleteFiles([
+      'Shared.mp3',
+    ])
 
     expect(deleteDownloadsBatch).toHaveBeenCalledWith(['Shared.mp3'])
     expect(deleted).toEqual(['Shared.mp3'])
