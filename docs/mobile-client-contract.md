@@ -176,7 +176,7 @@ Messages the app can rely on:
 | `{ "type": "podcasts" }` / `{ "type": "podcast_progress", … }` | Podcast episodes downloaded / progress |
 | `{ "type": "device_paired", … }` | A device was paired (for the web page; ignore) |
 
-"The server is downloading N songs": `GET /api/queue` (count rows with `status` `queued` or `downloading`), kept fresh by the progress messages. Close code `4401` = unpaired.
+"The server is downloading N songs": `GET /api/queue` (count rows with `status` `queued` or `downloading`), kept fresh by the progress messages. A waiting row carries `position` (1-based place in the queue, `null` once finished) and `user_ids` (every account waiting on that job — one shared row when two accounts ask for the same track at once). Close code `4401` = unpaired.
 
 ## 8. Report plays
 

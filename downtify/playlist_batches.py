@@ -351,8 +351,8 @@ def active_queue_count_for_playlist(
 ) -> int:
     """Count in-flight queue jobs tied to a Spotify playlist id.
 
-    With *user_id*: only theirs (pre-feature jobs belong to nobody and
-    are skipped).
+    With *user_id*: only the jobs they are waiting on (a shared job
+    counts for every waiter).
     """
 
     sid = str(spotify_playlist_id or '').strip()
@@ -364,8 +364,13 @@ def active_queue_count_for_playlist(
         status = str(job.get('status') or '')
         if status in {'done', 'error'}:
             continue
-        if user_id is not None and int(job.get('user_id') or 0) != user_id:
-            continue
+        if user_id is not None:
+            users = job.get('user_ids')
+            if isinstance(users, set):
+                if user_id not in users:
+                    continue
+            elif int(job.get('user_id') or 0) != user_id:
+                continue
         song = job.get('song') or {}
         pl_url = str(song.get('downtify_playlist_url') or '')
         if needle in pl_url:

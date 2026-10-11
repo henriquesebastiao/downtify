@@ -8,6 +8,13 @@ already guarantees that) and every downloader gets an ownership row
 here, keyed by the file's content key (basename + size, stable across
 folder moves - see :mod:`downtify.library_cache_keys`).
 
+The key changes when a file is rewritten in place (a re-download with
+different bytes, a tags/artwork upgrade, an audio replace). Rows heal
+themselves: every record carries the file's library path, so recording
+an owner re-points stale rows at the same path to the fresh key, and
+:func:`TrackOwners.rekey` does the same for flows that rewrite files
+without downloading.
+
 Files with no owners at all are pre-feature, monitor, reconcile or
 externally added files: admins see them, users don't. Removing the last
 owner is done only through the delete endpoints, which also take the
@@ -48,28 +55,105 @@ class TrackOwners:
                     content_key TEXT NOT NULL,
                     user_id INTEGER NOT NULL,
                     added_at TEXT NOT NULL,
+                    stored_path TEXT NOT NULL DEFAULT '',
                     PRIMARY KEY (content_key, user_id)
                 )
             """)
+            columns = {
+                row[1] for row in conn.execute('PRAGMA table_info(track_owners)')
+            }
+            if 'stored_path' not in columns:
+                conn.execute(
+                    'ALTER TABLE track_owners ADD COLUMN stored_path TEXT '
+                    "NOT NULL DEFAULT ''"
+                )
             conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_track_owners_user
                 ON track_owners (user_id)
             """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_track_owners_path
+                ON track_owners (stored_path)
+            """)
 
-    def add(self, content_key: str, user_id: int) -> bool:
-        """Record *user_id* as an owner. ``True`` when it is new."""
+    @staticmethod
+    def _norm_path(stored_path: str) -> str:
+        return str(stored_path or '').strip().replace('\\', '/')
+
+    def add(
+        self, content_key: str, user_id: int, stored_path: str = ''
+    ) -> bool:
+        """Record *user_id* as an owner. ``True`` when it is new.
+
+        Stale rows at the same path (the file was rewritten since) are
+        re-pointed at the fresh key along the way, so an upgrade or a
+        re-download never orphans anyone's ownership.
+        """
 
         key = str(content_key or '').strip()
         if not key or not user_id:
             return False
+        path = self._norm_path(stored_path)
         with self._lock, self._connect() as conn:
             cur = conn.execute(
-                """INSERT INTO track_owners (content_key, user_id, added_at)
-                   VALUES (?, ?, ?)
+                """INSERT INTO track_owners
+                   (content_key, user_id, added_at, stored_path)
+                   VALUES (?, ?, ?, ?)
                    ON CONFLICT(content_key, user_id) DO NOTHING""",
-                (key, int(user_id), _now_iso()),
+                (key, int(user_id), _now_iso(), path),
             )
-            return cur.rowcount > 0
+            new = cur.rowcount > 0
+            if path:
+                conn.execute(
+                    'UPDATE track_owners SET stored_path = ? '
+                    'WHERE content_key = ? AND user_id = ?',
+                    (path, key, int(user_id)),
+                )
+                self._heal_path(conn, path, key)
+            return new
+
+    @staticmethod
+    def _heal_path(
+        conn: sqlite3.Connection, path: str, key: str
+    ) -> None:
+        """Re-point rows at *path* whose key went stale, dropping the
+        exact duplicates left behind."""
+
+        conn.execute(
+            'UPDATE OR IGNORE track_owners SET content_key = ?, '
+            'stored_path = ? WHERE stored_path = ? AND content_key != ?',
+            (key, path, path, key),
+        )
+        conn.execute(
+            'DELETE FROM track_owners WHERE stored_path = ? '
+            'AND content_key != ?',
+            (path, key),
+        )
+
+    def rekey(self, old_key: str, new_key: str, stored_path: str = '') -> int:
+        """Point rows at a rewritten file (upgrade/replace in place).
+
+        Returns how many rows moved. Exact duplicates left behind (the
+        same user already owned the fresh key) are dropped.
+        """
+
+        old = str(old_key or '').strip()
+        new = str(new_key or '').strip()
+        if not old or not new or old == new:
+            return 0
+        path = self._norm_path(stored_path)
+        with self._lock, self._connect() as conn:
+            cur = conn.execute(
+                'UPDATE OR IGNORE track_owners SET content_key = ?, '
+                'stored_path = COALESCE(NULLIF(?, ?), stored_path) '
+                'WHERE content_key = ?',
+                (new, path, '', old),
+            )
+            moved = cur.rowcount
+            conn.execute(
+                'DELETE FROM track_owners WHERE content_key = ?', (old,)
+            )
+            return moved
 
     def remove(self, content_key: str, user_id: int) -> int:
         """Drop one owner's row; how many owners remain for the file."""

@@ -302,7 +302,7 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Collection, Optional
 from urllib.parse import quote
 
 from fastapi import (
@@ -928,19 +928,22 @@ class ConnectionManager:
             self._clients.pop(client_id, None)
 
     async def broadcast_job(
-        self, user_id: int, message: dict[str, Any]
+        self, user_ids: Collection[int], message: dict[str, Any]
     ) -> None:
-        """A download job event: its owner and the admins, nobody else.
+        """A download job event: its waiters and the admins, nobody else.
 
         The titles in job events would otherwise tell every connected
         client what someone else is downloading (``GET /api/queue`` is
         filtered the same way). Ownerless jobs keep the old broadcast.
         """
 
-        if not user_id:
+        targets_set = {int(uid) for uid in user_ids if uid}
+        if not targets_set:
             await self.broadcast(message)
             return
-        targets = [cid for cid, uid in self._users.items() if uid == user_id]
+        targets = [
+            cid for cid, uid in self._users.items() if uid in targets_set
+        ]
         targets += [cid for cid in self._admins if cid not in targets]
         for client_id in targets:
             await self.send(client_id, message)
@@ -1614,6 +1617,21 @@ def record_stream_fetch_traffic(video_path: Path, user_id: int) -> None:
         )
 
 
+def rekey_file_owners(
+    old_key: str, new_key: str, stored_path: str = ''
+) -> None:
+    """Point ownership rows at a rewritten file (best effort)."""
+
+    if state.track_owners is None:
+        return
+    try:
+        state.track_owners.rekey(old_key, new_key, stored_path)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not rekey owners for {}', stored_path
+        )
+
+
 def drop_file_owners(content_key: str) -> None:
     """Forget every owner (their file was just deleted from disk)."""
 
@@ -1694,7 +1712,8 @@ def migrate_first_run_ownership() -> dict[str, int]:
             key = stored_content_key(stored)
         except Exception:
             continue
-        if key and owners.add(key, user_id):
+        name = str(stored or '').strip().replace('\\', '/')
+        if key and owners.add(key, user_id, name):
             claimed += 1
     done['files'] = claimed
 
@@ -3200,20 +3219,61 @@ def _song_for_download(url: str) -> dict[str, Any]:
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
 
+#: One lock per song id, so two accounts asking for the same track at
+#: once share one download instead of writing one file twice.
+_download_locks: dict[str, asyncio.Lock] = {}
+
+
 def _register_job(
     song: dict[str, Any], status: str = 'queued', user_id: int = 0
 ) -> str:
+    """Register a queue job, joining the running one when there is one.
+
+    Two accounts asking for the same track share one job row (keyed by
+    the song id as before): the requester joins ``user_ids``, an active
+    job is never reset by a newcomer, and a finished one restarts fresh
+    - the retry/re-download behavior stays exactly as it was.
+    """
+
     song_id = str(song.get('song_id') or song.get('url') or id(song))
-    state.download_jobs[song_id] = {
-        'song': song,
-        'status': status,
-        'progress': 0,
-        'message': '',
-        'provider': '',
-        'filename': None,
-        'user_id': int(user_id or 0),
-    }
+    job = state.download_jobs.get(song_id)
+    if job is None:
+        job = {
+            'song': song,
+            'status': status,
+            'progress': 0,
+            'message': '',
+            'provider': '',
+            'filename': None,
+            'user_ids': set(),
+        }
+        state.download_jobs[song_id] = job
+    elif job.get('status') not in {'queued', 'downloading'}:
+        job.update(
+            status=status,
+            progress=0,
+            message='',
+            provider='',
+            filename=None,
+        )
+    if user_id:
+        users = job.setdefault('user_ids', set())
+        if isinstance(users, set):
+            users.add(user_id)
+        else:
+            job['user_ids'] = set(users) | {user_id}
     return song_id
+
+
+def _job_users(job: dict[str, Any]) -> set[int]:
+    """The accounts waiting on a job row (any shape it comes in)."""
+
+    users = job.get('user_ids')
+    if isinstance(users, set):
+        return {int(uid) for uid in users if uid}
+    if job.get('user_id'):
+        return {int(job['user_id'])}
+    return set()
 
 
 def _note_download_owner(stored_path: str, user_id: int) -> None:
@@ -3235,16 +3295,26 @@ def _note_download_owner(stored_path: str, user_id: int) -> None:
         if full is None:
             return
         key = content_key_for(full)
-        if key and state.track_owners.add(key, user_id):
-            # New to this user: poke the mobile feed so their next
-            # incremental sync picks the track up.
-            if state.library_sync is not None:
-                name = str(stored_path or '').strip().replace('\\', '/')
-                state.library_sync.touch(name)
+        if not key:
+            return
+        name = str(stored_path or '').strip().replace('\\', '/')
+        added = state.track_owners.add(key, user_id, name)
+        # New to this user: poke the mobile feed so their next
+        # incremental sync picks the track up.
+        if added and state.library_sync is not None:
+            state.library_sync.touch(name)
     except Exception:
         logger.opt(exception=True).debug(
             'Could not record owner for {}', stored_path
         )
+
+
+def _note_download_owners(stored_path: str, user_ids: Collection[int]) -> None:
+    """Claim one finished file for every account waiting on its job."""
+
+    for waiter in sorted(set(user_ids)):
+        if waiter:
+            _note_download_owner(stored_path, waiter)
 
 
 async def _run_download(
@@ -3292,7 +3362,68 @@ async def _run_download(
         song_id = _register_job(song, status='downloading', user_id=user_id)
         job = state.download_jobs[song_id]
     elif user_id:
-        job['user_id'] = user_id
+        users = job.setdefault('user_ids', set())
+        if isinstance(users, set):
+            users.add(user_id)
+        else:
+            job['user_ids'] = _job_users(job) | {user_id}
+
+    # One download per track no matter how many accounts asked for it:
+    # a second caller waits here, then shares the finished file (and
+    # its ownership) instead of fetching the same bytes twice.
+    lock = _download_locks.setdefault(song_id, asyncio.Lock())
+    try:
+        async with lock:
+            if job.get('status') == 'done' and job.get('filename'):
+                sharers = _job_users(job)
+                if sharers:
+                    await asyncio.to_thread(
+                        _note_download_owners,
+                        job['filename'],
+                        sharers,
+                    )
+                return job['filename']
+            return await _run_download_locked(
+                song,
+                song_id,
+                job,
+                loop,
+                subdir=subdir,
+                delay_seconds=delay_seconds,
+                playlist_name=playlist_name,
+                spotify_playlist_id=spotify_playlist_id,
+                track_order=track_order,
+                refresh_playlists=refresh_playlists,
+                user_id=user_id,
+            )
+    finally:
+        if not lock.locked():
+            _download_locks.pop(song_id, None)
+
+
+async def _run_download_locked(
+    song: dict[str, Any],
+    song_id: str,
+    job: dict[str, Any],
+    loop: asyncio.AbstractEventLoop,
+    *,
+    subdir: Optional[str] = None,
+    delay_seconds: float = 0,
+    playlist_name: Optional[str] = None,
+    spotify_playlist_id: Optional[str] = None,
+    track_order: int = 0,
+    refresh_playlists: bool = True,
+    user_id: int = 0,
+) -> Optional[str]:
+    """Single execution of a download job, for one owner of the lock.
+
+    Shares the exact semantics the old ``_run_download`` body had: the
+    concurrency slot is held across the existing-file check and the
+    ``downloading`` broadcast, the post-download delay, and the
+    skip-if-present path - except every broadcast and every ownership
+    claim now covers all accounts waiting on the shared job, not just
+    the caller that won the race to start it.
+    """
 
     sem = state.download_semaphore
     try:
@@ -3318,14 +3449,15 @@ async def _run_download(
                         progress=100,
                         message=skip_message,
                     )
-                    if user_id:
-                        # The file is shared, the ownership isn't: this
-                        # user asked for it too.
+                    sharers = _job_users(job)
+                    if sharers:
+                        # The file is shared, the ownership isn't:
+                        # everyone waiting on this job asked for it too.
                         await asyncio.to_thread(
-                            _note_download_owner, existing, user_id
+                            _note_download_owners, existing, sharers
                         )
                     await state.connections.broadcast_job(
-                        user_id,
+                        _job_users(job),
                         {
                             'song': song,
                             'progress': 100,
@@ -3339,7 +3471,7 @@ async def _run_download(
             job['status'] = 'downloading'
 
             await state.connections.broadcast_job(
-                user_id,
+                _job_users(job),
                 {
                     'song': song,
                     'progress': 0,
@@ -3359,7 +3491,7 @@ async def _run_download(
                         j['provider'] = provider
                 asyncio.run_coroutine_threadsafe(
                     state.connections.broadcast_job(
-                        user_id,
+                        _job_users(j or {}),
                         {
                             'song': song,
                             'progress': pct,
@@ -3391,9 +3523,17 @@ async def _run_download(
                     refresh_playlists=refresh_playlists,
                     user_id=user_id,
                 )
+                others = _job_users(job) - ({user_id} if user_id else set())
+                if others:
+                    # The leader is recorded inside
+                    # _record_finished_download; everyone else waiting
+                    # on the shared job claims the same file too.
+                    await asyncio.to_thread(
+                        _note_download_owners, filename, others
+                    )
             invalidate_library_paths_cache()
             await state.connections.broadcast_job(
-                user_id,
+                _job_users(job),
                 {
                     'song': song,
                     'progress': 100,
@@ -3415,7 +3555,7 @@ async def _run_download(
         job['status'] = 'error'
         job['message'] = message
         await state.connections.broadcast_job(
-            user_id,
+            _job_users(job),
             {
                 'song': song,
                 'progress': 0,
@@ -5184,6 +5324,10 @@ async def _run_replacement(
 
     sem = state.download_semaphore
     try:
+        old_key = content_key_for(full) or ''
+    except Exception:
+        old_key = ''
+    try:
         await state.connections.broadcast({
             'song': song,
             'progress': 0,
@@ -5216,7 +5360,7 @@ async def _run_replacement(
         })
         return
     _replacing.discard(file)
-    await asyncio.to_thread(_after_replacement, file, full)
+    await asyncio.to_thread(_after_replacement, file, full, old_key)
     job.update(status='done', progress=100, filename=file, message='Replaced')
     await state.connections.broadcast({
         'song': song,
@@ -5228,7 +5372,7 @@ async def _run_replacement(
     announce_library_changed()
 
 
-def _after_replacement(file: str, full: Path) -> None:
+def _after_replacement(file: str, full: Path, old_key: str = '') -> None:
     """The caches that describe the file by its contents catch up."""
 
     if state.metadata_cache is not None:
@@ -5240,6 +5384,15 @@ def _after_replacement(file: str, full: Path) -> None:
         spotify_id = state.track_index.spotify_id_for_filename(file)
         if spotify_id:
             state.track_index.register(spotify_id, file, full_path=full)
+    if old_key and state.track_owners is not None:
+        try:
+            new_key = content_key_for(full) or ''
+            if new_key:
+                state.track_owners.rekey(old_key, new_key, file)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not rekey owners for {}', file
+            )
     invalidate_library_paths_cache(notify=False)
 
 
@@ -5915,23 +6068,43 @@ async def download_missing_playlist_tracks_endpoint(
 
 
 def _queue_job_visible(job: dict[str, Any], request: Request) -> bool:
-    """Whether the queue *job* is *request*'s own (admins see every job,
-    including pre-feature ones with no owner)."""
+    """Whether the queue *job* is *request*'s own (admins see every job).
+
+    A shared job is visible to every account waiting on it; an ownerless
+    job (a system retry with no waiter yet) is admin-only.
+    """
 
     if request_is_admin(request):
         return True
-    return int(job.get('user_id') or 0) == request_user_id(request)
+    return request_user_id(request) in _job_users(job)
 
 
 @router.get('/api/queue')
 def get_queue(request: Request) -> list[dict[str, Any]]:
-    """The download queue: everyone's for an admin, one's own otherwise."""
+    """The download queue: everyone's for an admin, one's own otherwise.
 
-    return [
-        job
-        for job in state.download_jobs.values()
-        if _queue_job_visible(job, request)
-    ]
+    Every row carries ``position``: the 1-based place among the still
+    waiting jobs (``queued`` + ``downloading``) in the order shown, or
+    ``None`` once finished. An admin's positions are global, a user's
+    count their own slice. ``user_ids`` is the sorted waiter list; a
+    shared job shows the same row (and the same position) to everyone
+    waiting on it.
+    """
+
+    rows: list[dict[str, Any]] = []
+    position = 0
+    for job in state.download_jobs.values():
+        if not _queue_job_visible(job, request):
+            continue
+        row = dict(job)
+        if job.get('status') in {'queued', 'downloading'}:
+            position += 1
+            row['position'] = position
+        else:
+            row['position'] = None
+        row['user_ids'] = sorted(_job_users(job))
+        rows.append(row)
+    return rows
 
 
 @router.delete('/api/queue')

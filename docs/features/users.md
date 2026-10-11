@@ -52,7 +52,7 @@ Podcasts, playlist watches and Discover history work the same way: each account 
 
 A user sees only the tracks they asked to download — in the Library, in search results marked as downloaded, and on a paired phone. An admin sees everything. Files are never stored twice: when two people download the same song it lands on disk once, with one owner each.
 
-Likes, playlists (downloaded and Library-created) and the download queue work the same way: yours, unless you are an admin. Listening is shared — anyone can play, preview or stream any track, and add anything to their own library by downloading it.
+Likes, playlists (downloaded and Library-created) and the download queue work the same way: yours, unless you are an admin. Listening is shared — anyone can play, preview or stream any track, and add anything to their own library by downloading it. Asking for a track someone else is already downloading joins their job instead of fetching it twice: one queue row, one download, and an ownership each — each waiter sees their place in the queue.
 
 Deleting a track takes it out of your library. When nobody else has it, the file goes off disk too; when others still do, it stays for them. Deleting a playlist of yours never takes anyone else's files with it.
 

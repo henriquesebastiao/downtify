@@ -12,7 +12,7 @@ import json
 import sqlite3
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
@@ -412,6 +412,86 @@ def test_queue_clearing_is_scoped():
         assert api.state.download_jobs == {}
     finally:
         api.state.download_jobs.clear()
+
+
+def test_simultaneous_download_is_fetched_once_and_owned_by_both(
+    monkeypatch, tmp_path
+):
+    import threading
+
+    downloads = tmp_path / 'downloads'
+    downloads.mkdir()
+    entered = threading.Event()
+    release = threading.Event()
+    calls = []
+
+    def slow_download(song, progress_cb, subdir=None):
+        calls.append(song.get('song_id'))
+        entered.set()
+        assert release.wait(timeout=10)
+        target = downloads / 'Artist - Shared.mp3'
+        target.write_bytes(b'x' * 100)
+        return 'Artist - Shared.mp3'
+
+    downloader = Downloader(download_dir=downloads, audio_format='mp3')
+    downloader.download = slow_download
+    monkeypatch.setattr(api.state, 'downloader', downloader)
+    monkeypatch.setattr(
+        api.state, 'track_owners', TrackOwners(tmp_path / 'lib.db')
+    )
+    monkeypatch.setattr(api.state, 'library_sync', None)
+    monkeypatch.setattr(api.state, 'download_semaphore', None)
+    monkeypatch.setattr(api.state, 'playlist_catalog', None)
+    monkeypatch.setattr(api.state, 'settings', {})
+    connections = MagicMock()
+    connections.broadcast_job = AsyncMock()
+    monkeypatch.setattr(api.state, 'connections', connections)
+
+    song = {'song_id': 'shared-1', 'name': 'Shared', 'artists': ['Artist']}
+    song_id = api._register_job(
+        dict(song), status='queued', user_id=5
+    )
+
+    async def both():
+        first = asyncio.create_task(
+            api._run_download(dict(song), song_id, user_id=5)
+        )
+        assert await asyncio.to_thread(entered.wait, 10)
+        second = asyncio.create_task(
+            api._run_download(dict(song), song_id, user_id=7)
+        )
+        # Let the second caller join the shared job and block on it.
+        await asyncio.sleep(0.5)
+        release.set()
+        return await asyncio.gather(first, second)
+
+    loop = asyncio.new_event_loop()
+    prev_loop = api.state.loop
+    api.state.loop = loop
+    try:
+        first_file, second_file = loop.run_until_complete(both())
+    finally:
+        api.state.loop = prev_loop
+        loop.close()
+        api.state.download_jobs.clear()
+
+    assert first_file == 'Artist - Shared.mp3'
+    assert second_file == 'Artist - Shared.mp3'
+    # One fetch for two accounts.
+    assert calls == ['shared-1']
+    key = file_content_key_from_name_and_size('Artist - Shared.mp3', 100)
+    owners = api.state.track_owners
+    assert owners is not None
+    assert key in owners.owned_keys(5)
+    assert key in owners.owned_keys(7)
+    # Every progress event went to waiters only; the finished one
+    # reached both.
+    seen: set[frozenset] = set()
+    for call in connections.broadcast_job.await_args_list:
+        recipients = call.args[0]
+        assert set(recipients) <= {5, 7}
+        seen.add(frozenset(recipients))
+    assert frozenset({5, 7}) in seen
 
 
 # ── entry and playlist filtering ─────────────────────────────────────

@@ -636,7 +636,9 @@ Returns `400` if the CSV has no recognizable title/artist columns, is empty, or 
 
 List download jobs (queued, in progress, done, error): one's own for a user, everyone's for an admin. Download progress events on the WebSocket follow the same rule.
 
-**Response:** Array of job objects (`song`, `status`, `progress`, `message`, `filename`, `user_id`, and `provider` — the audio source that served it: `youtube-music`, `youtube` or `slskd`).
+**Response:** Array of job objects (`song`, `status`, `progress`, `message`, `filename`, `user_ids` — the sorted accounts waiting on the job — `position`, and `provider` — the audio source that served it: `youtube-music`, `youtube` or `slskd`).
+
+`position` is the 1-based place among the still-waiting jobs (`queued` + `downloading`) in the order shown, `null` once finished. An admin's positions span the whole queue; a user's count their own slice. When two accounts ask for the same track at once they share one job row (and one download): the second waiter joins `user_ids` and gets the finished file with an ownership row of their own, and both see the same `position`.
 
 ---
 

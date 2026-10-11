@@ -1086,6 +1086,7 @@ def _record_sweep_owner(
     library: LibraryStores,
     full: Path,
     owner_id: int,
+    stored_path: str = '',
 ) -> None:
     """Attribute a sweep download to the watch owner (best effort)."""
 
@@ -1094,7 +1095,7 @@ def _record_sweep_owner(
     try:
         key = file_content_key(full)
         if key:
-            library.track_owners.add(key, owner_id)
+            library.track_owners.add(key, owner_id, stored_path)
     except Exception:
         logger.opt(exception=True).debug(
             'Could not record sweep owner for {}', full
@@ -1121,7 +1122,7 @@ def _record_artist_sweep_owner(
             return
         key = file_content_key(full)
         if key:
-            library.track_owners.add(key, owner_id)
+            library.track_owners.add(key, owner_id, filename)
     except Exception:
         logger.opt(exception=True).debug(
             'Could not record sweep owner for {}', filename
@@ -1146,7 +1147,7 @@ def _register_monitored_download(
     full = locate_library_file(filename, download_dir, slskd_dir)
     if full is None:
         return
-    _record_sweep_owner(library, full, owner_id)
+    _record_sweep_owner(library, full, owner_id, filename)
     try:
         if library.track_index is not None:
             library.track_index.register_song(song, filename, full_path=full)

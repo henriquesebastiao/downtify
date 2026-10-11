@@ -363,6 +363,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
             spotify_id_for=_spotify_id_for_library_file,
             lyrics_cache=api.state.lyrics_cache,
             publish=api.broadcast_upgrade_progress,
+            rekey_owners=api.rekey_file_owners,
         ),
     )
     api.state.external_sync = ExternalSyncJob(
