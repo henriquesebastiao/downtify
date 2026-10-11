@@ -37,10 +37,24 @@ Browsers signed in before the upgrade sign in again. Phones paired before it sta
 | Pair phone apps (to their own account) | ✓ | ✓ |
 | Settings → General (their own account and preferences), Apps, About | ✓ | ✓ |
 | Every other setting (sources, files, tags, Navidrome, library, server), renaming the server | ✓ | |
-| Delete files and playlists, replace a track's audio, change playlist watches and podcast subscriptions, edit artist photos | ✓ | |
+| Delete files and playlists ([their own](#your-library) for a user), manage their own playlist watches and podcast subscriptions, replace a track's audio, edit artist photos | ✓ | ✓ (own only) |
 | Manage users, see the activity log | ✓ | |
 
 A user who tries something that needs an admin gets a message saying so.
+
+## Your library
+
+Podcasts, playlist watches and Discover history work the same way: each account subscribes to its own shows, follows its own playlists and artists, and trains its own suggestions. An admin sees every account’s rows. Listening itself stays shared — anyone can play, preview or stream any track.
+
+### Per-account usage
+
+**Settings › Users** lists, under every account, what it holds: tracks and their size, likes, playlists, downloads ordered and traffic both ways (fetched from upstream vs. served to clients), with the totals across everyone underneath.
+
+A user sees only the tracks they asked to download — in the Library, in search results marked as downloaded, and on a paired phone. An admin sees everything. Files are never stored twice: when two people download the same song it lands on disk once, with one owner each.
+
+Likes, playlists (downloaded and Library-created) and the download queue work the same way: yours, unless you are an admin. Listening is shared — anyone can play, preview or stream any track, and add anything to their own library by downloading it.
+
+Deleting a track takes it out of your library. When nobody else has it, the file goes off disk too; when others still do, it stays for them. Deleting a playlist of yours never takes anyone else's files with it.
 
 ## Your account and preferences
 
@@ -56,7 +70,7 @@ In **Settings → Users** an admin can:
 
 - **Add a user** — username (3 to 32 letters, digits, `.`, `-` or `_`), password (at least 8 characters) and role.
 - **Edit** a user — rename them, make them an admin or a user, or give them a new password (which signs them out of their browsers; their apps stay paired).
-- **Delete** a user — their apps are unpaired and their browsers signed out. What they downloaded stays in the library.
+- **Delete** a user — their apps are unpaired and their browsers signed out. Their files stay on disk (admins can still see them); their likes, playlists, podcast subscriptions, watches, suggestions history and traffic counters go with them.
 - **Sign out everyone** — every app of every user is unpaired and every browser signed out, yours too.
 
 There's always at least one admin: the last one can't be deleted or made a user, and you can't delete your own account.

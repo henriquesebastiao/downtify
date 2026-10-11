@@ -34,7 +34,7 @@ import hashlib
 import json
 import secrets
 import threading
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -353,33 +353,84 @@ class LibrarySync:
             floor = max(self._meta(conn, 'floor'), int(rows['seq']))
             self._set_meta(conn, 'floor', floor)
 
+    def touch(self, path: str) -> bool:
+        """Poke a live row so the next feed carries it, without changing it.
+
+        Ownership (who may see the track) lives outside this table, so
+        gaining or losing it doesn't bump ``seq`` by itself - and the
+        owner's next incremental sync would then miss the change. Returns
+        whether a row was poked.
+        """
+
+        if not path:
+            return False
+        with self._lock, self._connect() as conn:
+            seq = self._meta(conn, 'seq') + 1
+            cur = conn.execute(
+                'UPDATE sync_tracks SET seq = ? WHERE path = ? '
+                'AND deleted_at IS NULL',
+                (seq, path),
+            )
+            if cur.rowcount == 0:
+                return False
+            self._set_meta(conn, 'seq', seq)
+            return True
+
+    def touch_all(self) -> int:
+        """Poke every live row so the next feed re-emits the library.
+
+        The ownership backfill doesn't change files, so without this a
+        phone that synced before it would keep tracks it may no longer
+        see. Returns how many rows were poked.
+        """
+
+        with self._lock, self._connect() as conn:
+            seq = self._meta(conn, 'seq') + 1
+            cur = conn.execute(
+                'UPDATE sync_tracks SET seq = ? WHERE deleted_at IS NULL',
+                (seq,),
+            )
+            if cur.rowcount == 0:
+                return 0
+            self._set_meta(conn, 'seq', seq)
+            return cur.rowcount
+
     # Reading the feed
 
     def cursor(self) -> int:
         with self._connect() as conn:
             return self._meta(conn, 'seq')
 
-    def changes(self, since: int = 0) -> dict[str, Any]:
+    def changes(
+        self,
+        since: int = 0,
+        *,
+        allowed_keys: Optional[Collection[str]] = None,
+    ) -> dict[str, Any]:
         """``{cursor, full, tracks, deleted}`` after *since*.
 
         ``full`` is ``True`` for *since* ``0`` (or older than what's
         remembered): ``tracks`` is then the whole library and the client
-        should drop anything it has that isn't in it.
+        should drop anything it has that isn't in it. ``allowed_keys``
+        keeps only a non-admin's own rows (by content key); live rows
+        outside it join ``deleted`` on incremental syncs, so a client
+        that loses a track (ownership released) drops it too.
         """
 
+        allowed = None if allowed_keys is None else set(allowed_keys)
         with self._connect() as conn:
             cursor = self._meta(conn, 'seq')
             floor = self._meta(conn, 'floor')
             full = since <= 0 or since < floor or since > cursor
             if full:
                 live = conn.execute(
-                    'SELECT track_id, row_json FROM sync_tracks '
+                    'SELECT track_id, content_key, row_json FROM sync_tracks '
                     'WHERE deleted_at IS NULL ORDER BY path'
                 ).fetchall()
                 deleted: list[str] = []
             else:
                 live = conn.execute(
-                    'SELECT track_id, row_json FROM sync_tracks '
+                    'SELECT track_id, content_key, row_json FROM sync_tracks '
                     'WHERE deleted_at IS NULL AND seq > ? ORDER BY seq',
                     (since,),
                 ).fetchall()
@@ -392,9 +443,16 @@ class LibrarySync:
                         (since,),
                     ).fetchall()
                 ]
-        tracks = [
-            {'id': r['track_id'], **json.loads(r['row_json'])} for r in live
-        ]
+        tracks = []
+        for row in live:
+            key = str(row['content_key'] or '')
+            if allowed is None or key in allowed:
+                tracks.append({
+                    'id': row['track_id'],
+                    **json.loads(row['row_json']),
+                })
+            elif not full:
+                deleted.append(row['track_id'])
         return {
             'cursor': cursor,
             'full': full,

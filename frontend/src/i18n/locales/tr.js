@@ -841,6 +841,10 @@ export default {
     delay: 'İndirmeler arası bekleme',
     delayHint:
       'Büyük çalma listelerinde bot gibi görünmemek için şarkılar arasında bekle.',
+    maxDuration: 'En uzun parça',
+    maxDurationHint:
+      'Bundan uzun şarkılar indirilmez ve çalınmaz. 0 her şeyi kabul eder.',
+    unlimited: 'Sınırsız',
     syncDelay: 'Eşitleme araması arası bekleme',
     syncDelayHint:
       'İçe aktarılan her parça grubundan sonra (boyut = Eşzamanlı indirmeler) söz, kapak ve tür aramadan önce bekler. Büyük klasörlerde kota sınırını azaltır.',
@@ -1203,6 +1207,11 @@ export default {
     lastSignIn: '{when} giriş yaptı',
     neverSignedIn: 'hiç giriş yapmadı',
     defaultPassword: 'varsayılan parola',
+    tracksStat: { one: '{count} parça', other: '{count} parça' },
+    likesStat: { one: '{count} beğeni', other: '{count} beğeni' },
+    playlistsStat: { one: '{count} çalma listesi', other: '{count} çalma listesi' },
+    trafficStat: 'gelen {down} · giden {up}',
+    usageTotal: 'Toplam',
     deleteTitle: '{name} silinsin mi?',
     deleteBody:
       'Uygulamalarının eşleşmesi kaldırılır ve tarayıcılarındaki oturumlar kapatılır. İndirdikleri kitaplıkta kalır.',

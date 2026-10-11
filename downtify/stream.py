@@ -36,6 +36,7 @@ from .downloader import (
     TrackTooLongError,
     _yt_player_clients,
     _YtdlpLogger,
+    describe_duration,
     is_age_restricted_error,
 )
 
@@ -172,6 +173,15 @@ STREAM_TOO_LONG_DETAIL = (
 )
 
 
+def too_long_detail(max_seconds: int) -> str:
+    """The refusal for the configured bound (``0`` is never refused)."""
+
+    bound = describe_duration(max_seconds)
+    return (
+        f'This track runs over {bound}; tracks over {bound} are not streamed'
+    )
+
+
 def _probed_seconds(path: Path) -> float:
     """The audio length of a cached file in seconds, ``0`` when unknown.
 
@@ -242,28 +252,40 @@ class StreamCache:
             return path
         return None
 
-    def streamable_path(self, video_id: str) -> Optional[Path]:
+    def streamable_path(
+        self, video_id: str, max_seconds: Optional[int] = None
+    ) -> Optional[Path]:
         """The finished cached file for *video_id*, enforcing the cap.
 
-        A cached file past :data:`MAX_TRACK_DURATION_SECONDS` is
-        deleted and raises :class:`TrackTooLongError` instead of being
-        served, so long tracks never accumulate on disk.
+        A cached file past the bound is deleted and raises
+        :class:`TrackTooLongError` instead of being served, so long
+        tracks never accumulate on disk. ``None`` keeps the default
+        bound, ``0`` serves everything.
         """
 
+        limit = (
+            MAX_TRACK_DURATION_SECONDS if max_seconds is None else max_seconds
+        )
         path = self.cached_path(video_id)
         if path is None:
             return None
-        if _probed_seconds(path) > MAX_TRACK_DURATION_SECONDS:
+        if limit and _probed_seconds(path) > limit:
             with contextlib.suppress(OSError):
                 path.unlink()
             logger.warning(
                 'Stream cache refused an overlong file for videoId={}',
                 video_id,
             )
-            raise TrackTooLongError(STREAM_TOO_LONG_DETAIL)
+            raise TrackTooLongError(too_long_detail(limit))
         return path
 
-    async def get(self, video_id: str, *, cookies_file: str = '') -> Path:
+    async def get(
+        self,
+        video_id: str,
+        *,
+        cookies_file: str = '',
+        max_seconds: Optional[int] = None,
+    ) -> Path:
         """The cached audio file for *video_id*, downloading it first.
 
         Concurrent callers share one download; cancelling (the player
@@ -272,13 +294,15 @@ class StreamCache:
         """
 
         vid = clean_video_id(video_id)
-        cached = self.streamable_path(vid)
+        cached = self.streamable_path(vid, max_seconds)
         if cached is not None:
             return cached
         job = self._jobs.get(vid)
         if job is None:
             job = _StreamJob(
-                asyncio.ensure_future(self._run(vid, cookies_file))
+                asyncio.ensure_future(
+                    self._run(vid, cookies_file, max_seconds)
+                )
             )
             self._jobs[vid] = job
             job.task.add_done_callback(lambda _t: self._jobs.pop(vid, None))
@@ -291,10 +315,12 @@ class StreamCache:
                 job.task.cancel()
             raise
 
-    async def _run(self, video_id: str, cookies_file: str) -> Path:
+    async def _run(
+        self, video_id: str, cookies_file: str, max_seconds: Optional[int]
+    ) -> Path:
         self._dir.mkdir(parents=True, exist_ok=True)
         async with self._semaphore:
-            cached = self.streamable_path(video_id)
+            cached = self.streamable_path(video_id, max_seconds)
             if cached is not None:
                 return cached
             self.running += 1
@@ -302,7 +328,7 @@ class StreamCache:
                 await asyncio.to_thread(self._fetch, video_id, cookies_file)
             finally:
                 self.running -= 1
-            found = self.streamable_path(video_id)
+            found = self.streamable_path(video_id, max_seconds)
             if found is None:
                 raise ValueError(
                     'YouTube gave nothing to stream for this track'

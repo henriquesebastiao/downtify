@@ -27,7 +27,6 @@ from .cover_thumbs import normalize_size
 from .library_catalog import list_library_entries, resolve_library_file
 from .library_paths_cache import invalidate_library_paths_cache
 from .lyrics import read_track_lyrics
-from .playlist_listing import list_library_playlists
 from .transcode import (
     FORMATS,
     TranscodeError,
@@ -96,12 +95,16 @@ async def library(
     if cursor != before:
         # Found something new on disk: other apps should sync too.
         api.announce_library_changed()
-    etag = f'"lib-{cursor}-{since}"'
+    allowed = api.allowed_entry_keys(request)
+    scope = 'a' if allowed is None else api.request_user_id(request)
+    etag = f'"lib-{cursor}-{since}-{scope}"'
     if request.headers.get('if-none-match') == etag:
         return Response(status_code=304, headers={'ETag': etag})
     response.headers['ETag'] = etag
     response.headers['Cache-Control'] = 'private, no-cache'
-    return await asyncio.to_thread(_sync().changes, since)
+    return await asyncio.to_thread(
+        _sync().changes, since, allowed_keys=allowed
+    )
 
 
 @router.get('/tracks/{track_id}')
@@ -119,18 +122,14 @@ def track_lyrics(track_id: str) -> dict[str, Any]:
 
 
 @router.get('/playlists')
-async def playlists() -> list[dict[str, Any]]:
+async def playlists(request: Request) -> list[dict[str, Any]]:
     """Downloaded playlists as ``{name, liked, count, track_ids, cover}``
-    - ``cover`` is a path for ``GET /playlist-cover?file=`` or ``''``."""
+    - ``cover`` is a path for ``GET /playlist-cover?file=`` or ``''``.
+    A user sees their own playlists (and their own liked songs as the
+    liked one) only."""
 
     await asyncio.to_thread(_refresh)
-    ctx = api.library_context()
-    found = await asyncio.to_thread(
-        list_library_playlists,
-        ctx.download_dir,
-        ctx.slskd_dir,
-        ctx.extra_dirs,
-    )
+    found = await asyncio.to_thread(api.playlists_for_request, request)
     paths = [f for p in found for f in p['files']]
     ids = await asyncio.to_thread(_sync().ids_for_paths, paths)
     return [
@@ -147,13 +146,13 @@ async def playlists() -> list[dict[str, Any]]:
 
 
 @router.get('/likes')
-async def likes() -> dict[str, Any]:
+async def likes(request: Request) -> dict[str, Any]:
     """The liked tracks, most recently liked first: ``{track_ids}``."""
 
     store = api.state.likes
     if store is None:
         raise HTTPException(status_code=503, detail='Starting up')
-    paths = await asyncio.to_thread(store.paths)
+    paths = await asyncio.to_thread(store.paths, api.likes_scope(request))
     ids = await asyncio.to_thread(_sync().ids_for_paths, paths)
     return {'track_ids': [ids[p] for p in paths if p in ids]}
 
@@ -173,7 +172,9 @@ async def set_like(request: Request) -> dict[str, Any]:
     if row is None:
         raise HTTPException(status_code=404, detail='Track not found')
     liked = bool(payload.get('liked', True))
-    result = await api.apply_like(row['file'], liked)
+    result = await api.apply_like(
+        row['file'], liked, user_id=api.request_user_id(request)
+    )
     await api.log_activity(request, 'like' if liked else 'unlike', row['file'])
     return {'track_id': track_id, 'liked': result['liked']}
 

@@ -843,6 +843,10 @@ export default {
     delay: 'Szünet a letöltések között',
     delayHint:
       'Várakozik a dalok között, hogy nagy listáknál kevésbé tűnjön botnak.',
+    maxDuration: 'Leghosszabb szám',
+    maxDurationHint:
+      'Az ennél hosszabb számok nem töltődnek le és nem játszhatók le. 0 mindent engedélyez.',
+    unlimited: 'Korlátlan',
     syncDelay: 'Szünet a szinkronizálás között',
     syncDelayHint:
       'Minden importált köteg után vár (méret = Párhuzamos letöltések), mielőtt dalszöveget, borítót és műfajt keres. Nagy mappáknál elkerüli a korlátokat.',
@@ -1209,6 +1213,11 @@ export default {
     lastSignIn: 'bejelentkezett: {when}',
     neverSignedIn: 'még nem jelentkezett be',
     defaultPassword: 'alapértelmezett jelszó',
+    tracksStat: { one: '{count} szám', other: '{count} szám' },
+    likesStat: { one: '{count} kedvenc', other: '{count} kedvenc' },
+    playlistsStat: { one: '{count} lejátszási lista', other: '{count} lejátszási lista' },
+    trafficStat: 'bejövő {down} · kimenő {up}',
+    usageTotal: 'Összesen',
     deleteTitle: 'Törlöd: {name}?',
     deleteBody:
       'Az alkalmazásai párosítása megszűnik, a böngészőiből kijelentkezik. A letöltései a könyvtárban maradnak.',

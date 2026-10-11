@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from starlette.requests import Request
+
 from downtify import api
+
+
+def _request() -> Request:
+    return Request({'type': 'http', 'headers': []})
 
 
 def test_clear_completed_queue_removes_only_done_jobs():
@@ -18,7 +24,7 @@ def test_clear_completed_queue_removes_only_done_jobs():
             {'song_id': 'q-1', 'name': 'C'}, status='queued'
         )
 
-        result = api.clear_completed_queue()
+        result = api.clear_completed_queue(_request())
 
         assert result['removed'] == 1
         assert done_id not in api.state.download_jobs

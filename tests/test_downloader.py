@@ -107,6 +107,13 @@ def test_reject_overlong_song_refuses_long_tracks():
         reject_overlong_song({'name': 'Hour Mix', 'duration': 3600})
 
 
+def test_reject_overlong_song_follows_a_custom_limit():
+    with pytest.raises(TrackTooLongError, match='30 minutes'):
+        reject_overlong_song({'name': 'Hour Mix', 'duration': 3600}, 1800)
+    reject_overlong_song({'name': 'Hour Mix', 'duration': 3600}, 0)
+    reject_overlong_song({'name': 'Set', 'duration': 1500}, 1800)
+
+
 def test_download_refuses_long_tracks_before_any_fetch(tmp_path):
     d = _make_downloader(tmp_path)
     with pytest.raises(TrackTooLongError, match='10 minutes'):

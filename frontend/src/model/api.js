@@ -506,6 +506,10 @@ function deleteUser(id) {
   return API.delete(`/api/users/${encodeURIComponent(id)}`)
 }
 
+function getUserStats() {
+  return API.get('/api/users/stats')
+}
+
 function getActivity(params = {}) {
   return API.get('/api/activity', { params })
 }
@@ -840,6 +844,7 @@ export default {
   createUser,
   updateUser,
   deleteUser,
+  getUserStats,
   getActivity,
   getNowPlaying,
   reportPlayback,

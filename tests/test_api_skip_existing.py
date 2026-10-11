@@ -44,6 +44,7 @@ def test_run_download_skips_when_matching_file_exists(tmp_path):
         api.state.downloader = d
         api.state.connections = MagicMock()
         api.state.connections.broadcast = AsyncMock()
+        api.state.connections.broadcast_job = AsyncMock()
         song_id = api._register_job(song, status='queued')
 
         filename = _run_download(api._run_download(song, song_id))
@@ -85,6 +86,7 @@ def test_run_download_skips_via_global_library(tmp_path):
         api.state.track_index = library
         api.state.connections = MagicMock()
         api.state.connections.broadcast = AsyncMock()
+        api.state.connections.broadcast_job = AsyncMock()
         song = {
             'song_id': SPOTIFY_ID,
             'name': 'Track',
@@ -132,6 +134,7 @@ def test_run_download_skips_in_playlist_subdir(tmp_path):
         api.state.downloader = d
         api.state.connections = MagicMock()
         api.state.connections.broadcast = AsyncMock()
+        api.state.connections.broadcast_job = AsyncMock()
         song_id = api._register_job(song, status='queued')
 
         filename = _run_download(
@@ -164,6 +167,7 @@ def test_run_download_redownloads_existing_file_when_overwrite_is_on(tmp_path):
         api.state.downloader = d
         api.state.connections = MagicMock()
         api.state.connections.broadcast = AsyncMock()
+        api.state.connections.broadcast_job = AsyncMock()
         song = {'name': 'Track', 'artists': ['Artist']}
         song_id = api._register_job(song, status='queued')
 

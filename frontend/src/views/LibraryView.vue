@@ -44,7 +44,7 @@
       />
       <div class="ml-auto flex items-center gap-2">
         <UiButton
-          v-if="tab === 'playlists' && auth.isAdmin.value"
+          v-if="tab === 'playlists'"
           variant="primary"
           icon="plus"
           @click="playlistActions.openCreate()"
@@ -233,7 +233,6 @@ import TrackList from '/src/components/library/TrackList.vue'
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
-import { useAuth } from '/src/model/auth'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useUi } from '/src/model/ui'
@@ -253,7 +252,6 @@ const route = useRoute()
 const router = useRouter()
 const library = useLibrary()
 const player = usePlayer()
-const auth = useAuth()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
 const ui = useUi()

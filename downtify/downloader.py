@@ -68,31 +68,44 @@ class NoAudioMatchError(RuntimeError):
 
 #: Songs longer than this are refused before any download: mixes and
 #: hour-long uploads are never what a library track should be. Episodes
-#: never reach this check (see ``podcasts.download_episode``) and
-#: streaming is unaffected, so long tracks still play in full.
+#: never reach this check (see ``podcasts.download_episode``). The
+#: setting ``max_track_duration_seconds`` (Settings → Downloads) moves
+#: this bound, for downloads and streams alike; ``0`` means no limit.
 MAX_TRACK_DURATION_SECONDS = 600
 
 
 class TrackTooLongError(RuntimeError):
-    """The song's known duration is past :data:`MAX_TRACK_DURATION_SECONDS`."""
+    """The song's known duration is past the duration limit."""
 
 
-def reject_overlong_song(song: dict[str, Any]) -> None:
+def describe_duration(seconds: float) -> str:
+    """``90`` → ``"90 seconds"``, ``600`` → ``"10 minutes"``."""
+
+    if seconds >= 90:
+        return f'{seconds / 60:.0f} minutes'
+    return f'{seconds:.0f} seconds'
+
+
+def reject_overlong_song(
+    song: dict[str, Any], max_seconds: Optional[int] = None
+) -> None:
     """Raise :class:`TrackTooLongError` when *song* is too long to take.
 
     Unknown durations (missing or ``0``) pass: with nothing to judge by
-    the download goes ahead.
+    the download goes ahead. So does everything when *max_seconds* is
+    ``0`` (no limit); ``None`` keeps the default bound.
     """
 
+    limit = MAX_TRACK_DURATION_SECONDS if max_seconds is None else max_seconds
     try:
         duration = float(song.get('duration') or 0)
     except (TypeError, ValueError):
         return
-    if duration > MAX_TRACK_DURATION_SECONDS:
+    if limit and duration > limit:
         name = song.get('name') or 'This track'
         raise TrackTooLongError(
-            f'"{name}" is {duration / 60:.0f} minutes long; '
-            'tracks over 10 minutes are not downloaded'
+            f'"{name}" is {describe_duration(duration)} long; '
+            f'tracks over {describe_duration(limit)} are not downloaded'
         )
 
 
@@ -352,6 +365,7 @@ class Downloader:
         cookies_store: Optional[CookiesStore] = None,
         audio_providers: Optional[list[str]] = None,
         slskd_settings: Optional[dict[str, Any]] = None,
+        max_track_duration_seconds: int = MAX_TRACK_DURATION_SECONDS,
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
@@ -374,6 +388,8 @@ class Downloader:
         self.organize_by_album = organize_by_album
         self.overwrite_existing_files = overwrite_existing_files
         self.download_cover_art = download_cover_art
+        # ``0``: overlong tracks are taken, like unknown durations.
+        self.max_track_duration_seconds = max_track_duration_seconds
         self._target_locks: dict[str, threading.Lock] = {}
         self._target_locks_guard = threading.Lock()
 
@@ -789,7 +805,7 @@ class Downloader:
                 return self._skip_existing(existing, progress_cb)
 
         # Known-long tracks are refused before any search or fetch.
-        reject_overlong_song(song)
+        reject_overlong_song(song, self.max_track_duration_seconds)
 
         video_id = song.get('youtube_id')
         if not video_id and (song.get('source') == 'youtube'):
@@ -831,7 +847,7 @@ class Downloader:
 
         # Sparse rows learn their duration from the per-track embed
         # above; re-check now that it is known.
-        reject_overlong_song(song)
+        reject_overlong_song(song, self.max_track_duration_seconds)
 
         if local_source is not None:
             return self._downloaded(

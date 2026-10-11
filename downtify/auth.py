@@ -869,6 +869,25 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_READ, r'^/api/me$', CLIENT),
         (_ALL, r'^/api/me(/|$)', USER),
         (_ALL, r'^/api/auth/(devices|pairing)(/|$)', USER),
+        # A signed-in browser (a user or an admin - paired apps stay
+        # out): their own library rows, playlists, watches, shows and
+        # queue jobs. Every endpoint still checks whose, so a user only
+        # ever touches their own. These come before the admin blocks
+        # below on purpose: first match wins.
+        (_m('DELETE'), r'^/(delete|delete/batch)$', USER),
+        (_ALL, r'^/api/library/playlist', USER),
+        (_m('POST'), r'^/api/library/archive', USER),
+        (_READ, r'^/api/library/archive/', USER),
+        (_m('DELETE'), r'^/api/queue', USER),
+        (_m('POST'), r'^/api/likes/clear$', USER),
+        (_m('POST'), r'^/api/download/csv$', USER),
+        (_m('POST'), r'^/api/playlist/m3u$', USER),
+        (_m('POST', 'DELETE'), r'^/api/playlists/(incomplete|batches)', USER),
+        (_m('DELETE'), r'^/api/discover/listens$', USER),
+        (_m('POST'), r'^/api/podcasts/subscribe$', USER),
+        (_m('PATCH', 'DELETE'), r'^/api/podcasts/shows/\d+$', USER),
+        (_m('DELETE'), r'^/api/podcasts/episodes/\d+$', USER),
+        (_m('POST', 'PATCH', 'DELETE'), r'^/api/monitor/playlists', USER),
         # Admin: signing everyone out, settings and credentials.
         (_ALL, r'^/api/auth/', ADMIN),
         (_ALL, r'^/api/server(/port)?$', ADMIN),

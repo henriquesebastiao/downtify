@@ -822,6 +822,10 @@ export default {
     parallelHint: 'How many songs download or sync at the same time.',
     delay: 'Pause between downloads',
     delayHint: 'Wait between songs to look less like a bot on big playlists.',
+    maxDuration: 'Longest track taken',
+    maxDurationHint:
+      'Songs longer than this are neither downloaded nor streamed. 0 takes everything.',
+    unlimited: 'Unlimited',
     syncDelay: 'Pause between sync lookups',
     syncDelayHint:
       'Wait after each batch of imported tracks (size = Parallel downloads) before looking up lyrics, covers and genre. Helps avoid rate limits on large folders.',
@@ -1180,9 +1184,14 @@ export default {
     lastSignIn: 'signed in {when}',
     neverSignedIn: 'never signed in',
     defaultPassword: 'default password',
+    tracksStat: { one: '{count} track', other: '{count} tracks' },
+    likesStat: { one: '{count} like', other: '{count} likes' },
+    playlistsStat: { one: '{count} playlist', other: '{count} playlists' },
+    trafficStat: 'in {down} · out {up}',
+    usageTotal: 'Library totals',
     deleteTitle: 'Delete {name}?',
     deleteBody:
-      'Their apps are unpaired and their browsers signed out. Their downloads stay in the library.',
+      'Their apps are unpaired and their browsers signed out. Their files stay in the library; their likes, playlists and watches go with them.',
     deleteConfirm: 'Delete',
   },
   activity: {

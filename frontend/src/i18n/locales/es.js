@@ -844,6 +844,10 @@ export default {
     delay: 'Pausa entre descargas',
     delayHint:
       'Espera entre canciones para parecer menos un bot en playlists grandes.',
+    maxDuration: 'Duración máxima',
+    maxDurationHint:
+      'Las canciones más largas no se descargan ni se reproducen. 0 lo permite todo.',
+    unlimited: 'Ilimitado',
     syncDelay: 'Pausa entre la sincronización',
     syncDelayHint:
       'Espera después de cada lote de canciones importadas (tamaño = Descargas simultáneas) antes de buscar letra, portada y género. Evita límites de tasa en carpetas grandes.',
@@ -1212,6 +1216,11 @@ export default {
     lastSignIn: 'entró {when}',
     neverSignedIn: 'nunca ha entrado',
     defaultPassword: 'contraseña predeterminada',
+    tracksStat: { one: '{count} pista', other: '{count} pistas' },
+    likesStat: { one: '{count} me gusta', other: '{count} me gusta' },
+    playlistsStat: { one: '{count} lista', other: '{count} listas' },
+    trafficStat: 'entrada {down} · salida {up}',
+    usageTotal: 'Totales',
     deleteTitle: '¿Eliminar a {name}?',
     deleteBody:
       'Sus apps se desvinculan y sus navegadores cierran sesión. Sus descargas se quedan en la biblioteca.',

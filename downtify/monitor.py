@@ -20,6 +20,7 @@ from .downloader import (
     ProgressCallback,
     save_playlist_cover,
 )
+from .library_cache_keys import file_content_key
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .library_paths_cache import invalidate_library_paths_cache
@@ -34,6 +35,7 @@ from .playlist_catalog import PlaylistCatalog
 from .playlist_spotify_cache import PlaylistSpotifyCache
 from .podcasts import PodcastStore, sync_show
 from .track_index import TrackIndex, normalize_spotify_track_id
+from .track_owners import TrackOwners
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
 # Seconds between filesystem reconciliation sweeps (see reconcile_loop).
@@ -53,6 +55,7 @@ class LibraryStores:
     metadata_cache: Optional[LibraryMetadataCache] = None
     cover_cache: Optional[CoverArtCache] = None
     playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None
+    track_owners: Optional[TrackOwners] = None
 
 
 def _now_iso() -> str:
@@ -256,6 +259,8 @@ class MonitoredPlaylist:
     # Music artist's discography for new releases. ``spotify_id`` is just
     # the unique key a watch is addressed by: the Spotify or YouTube Music
     # playlist id, or for an artist the YouTube Music channel id.
+    # Who watches (``0``: before accounts could own anything).
+    user_id: int = 0
     kind: str = KIND_PLAYLIST
     # Artist watches only: which release types to download (see
     # :data:`RELEASE_TYPES`), and whether to skip everything the artist
@@ -294,14 +299,16 @@ class PlaylistMonitorDB:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS monitored_playlists (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    spotify_id TEXT NOT NULL UNIQUE,
+                    spotify_id TEXT NOT NULL,
                     name TEXT NOT NULL,
                     url TEXT NOT NULL,
                     interval_minutes INTEGER NOT NULL DEFAULT 60,
                     enabled INTEGER NOT NULL DEFAULT 1,
                     last_checked TEXT,
                     last_track_count INTEGER NOT NULL DEFAULT 0,
-                    created_at TEXT NOT NULL
+                    created_at TEXT NOT NULL,
+                    user_id INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(spotify_id, user_id)
                 );
                 CREATE TABLE IF NOT EXISTS downloaded_tracks (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -354,6 +361,58 @@ class PlaylistMonitorDB:
                 )
             except Exception:
                 pass
+            # Migration: one watch per URL became one watch per URL and
+            # owner, so two accounts can follow the same playlist.
+            columns = {
+                row[1]
+                for row in conn.execute(
+                    'PRAGMA table_info(monitored_playlists)'
+                )
+            }
+            if 'user_id' not in columns:
+                conn.execute('PRAGMA foreign_keys = OFF')
+                try:
+                    # Same shape as above, plus the owner (keep in sync;
+                    # 'album,single,ep' is ALL_RELEASE_TYPES).
+                    conn.execute("""
+                        CREATE TABLE monitored_playlists_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            spotify_id TEXT NOT NULL,
+                            name TEXT NOT NULL,
+                            url TEXT NOT NULL,
+                            interval_minutes INTEGER NOT NULL DEFAULT 60,
+                            enabled INTEGER NOT NULL DEFAULT 1,
+                            last_checked TEXT,
+                            last_track_count INTEGER NOT NULL DEFAULT 0,
+                            created_at TEXT NOT NULL,
+                            kind TEXT NOT NULL DEFAULT 'playlist',
+                            release_types TEXT NOT NULL
+                                DEFAULT 'album,single,ep',
+                            new_only INTEGER NOT NULL DEFAULT 0,
+                            baseline_pending INTEGER NOT NULL DEFAULT 0,
+                            user_id INTEGER NOT NULL DEFAULT 0,
+                            UNIQUE(spotify_id, user_id)
+                        )
+                    """)
+                    conn.execute("""
+                        INSERT INTO monitored_playlists_new
+                        (id, spotify_id, name, url, interval_minutes,
+                         enabled, last_checked, last_track_count,
+                         created_at, kind, release_types, new_only,
+                         baseline_pending, user_id)
+                        SELECT id, spotify_id, name, url, interval_minutes,
+                               enabled, last_checked, last_track_count,
+                               created_at, kind, release_types, new_only,
+                               baseline_pending, 0
+                        FROM monitored_playlists ORDER BY id
+                    """)
+                    conn.execute('DROP TABLE monitored_playlists')
+                    conn.execute(
+                        'ALTER TABLE monitored_playlists_new '
+                        'RENAME TO monitored_playlists'
+                    )
+                finally:
+                    conn.execute('PRAGMA foreign_keys = ON')
 
     def add_playlist(
         self,
@@ -364,14 +423,15 @@ class PlaylistMonitorDB:
         kind: str = KIND_PLAYLIST,
         release_types: str = ALL_RELEASE_TYPES,
         new_only: bool = False,
+        user_id: int = 0,
     ) -> MonitoredPlaylist:
         with self._connect() as conn:
             cur = conn.execute(
                 """INSERT INTO monitored_playlists
                    (spotify_id, name, url, interval_minutes, enabled,
                     created_at, kind, release_types, new_only,
-                    baseline_pending)
-                   VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)""",
+                    baseline_pending, user_id)
+                   VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)""",
                 (
                     spotify_id,
                     name,
@@ -382,6 +442,7 @@ class PlaylistMonitorDB:
                     release_types or ALL_RELEASE_TYPES,
                     int(new_only),
                     int(new_only),
+                    int(user_id or 0),
                 ),
             )
             row = conn.execute(
@@ -390,12 +451,34 @@ class PlaylistMonitorDB:
             ).fetchone()
             return _row_to_playlist(row)
 
-    def list_playlists(self) -> list[MonitoredPlaylist]:
+    def reassign_legacy(self, user_id: int) -> int:
+        """Give pre-feature watches (``user_id`` ``0``) to *user_id*."""
+
+        if not user_id:
+            return 0
         with self._connect() as conn:
-            rows = conn.execute(
-                'SELECT * FROM monitored_playlists ORDER BY created_at DESC'
-            ).fetchall()
-            return [_row_to_playlist(r) for r in rows]
+            cur = conn.execute(
+                'UPDATE monitored_playlists SET user_id = ? WHERE user_id = 0',
+                (int(user_id),),
+            )
+            return cur.rowcount
+
+    def list_playlists(
+        self, user_id: Optional[int] = None
+    ) -> list[MonitoredPlaylist]:
+        with self._connect() as conn:
+            if user_id is None:
+                rows = conn.execute(
+                    'SELECT * FROM monitored_playlists '
+                    'ORDER BY created_at DESC'
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    'SELECT * FROM monitored_playlists WHERE user_id = ? '
+                    'ORDER BY created_at DESC',
+                    (int(user_id),),
+                ).fetchall()
+        return [_row_to_playlist(r) for r in rows]
 
     def get_playlist(self, playlist_id: int) -> Optional[MonitoredPlaylist]:
         with self._connect() as conn:
@@ -406,13 +489,21 @@ class PlaylistMonitorDB:
             return _row_to_playlist(row) if row else None
 
     def get_by_spotify_id(
-        self, spotify_id: str
+        self, spotify_id: str, user_id: Optional[int] = None
     ) -> Optional[MonitoredPlaylist]:
         with self._connect() as conn:
-            row = conn.execute(
-                'SELECT * FROM monitored_playlists WHERE spotify_id = ?',
-                (spotify_id,),
-            ).fetchone()
+            if user_id is None:
+                row = conn.execute(
+                    'SELECT * FROM monitored_playlists WHERE spotify_id = ? '
+                    'ORDER BY id LIMIT 1',
+                    (spotify_id,),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    'SELECT * FROM monitored_playlists WHERE spotify_id = ? '
+                    'AND user_id = ?',
+                    (spotify_id, int(user_id)),
+                ).fetchone()
             return _row_to_playlist(row) if row else None
 
     def delete_playlist(self, playlist_id: int) -> bool:
@@ -676,6 +767,13 @@ class PlaylistMonitorDB:
         return len(pairs)
 
 
+def delete_user_watches(db: PlaylistMonitorDB, user_id: int) -> None:
+    """Drop a deleted account's watches (downloaded files stay put)."""
+
+    for watch in db.list_playlists(user_id):
+        db.delete_playlist(watch.id)
+
+
 def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
     keys = row.keys()
     return MonitoredPlaylist(
@@ -692,6 +790,7 @@ def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
         # when reading from a stale connection/schema cache.
         kind=(row['kind'] if 'kind' in keys else KIND_PLAYLIST)
         or KIND_PLAYLIST,
+        user_id=int(row['user_id']) if 'user_id' in keys else 0,
         release_types=(row['release_types'] if 'release_types' in keys else '')
         or ALL_RELEASE_TYPES,
         new_only=bool(row['new_only']) if 'new_only' in keys else False,
@@ -777,6 +876,7 @@ async def check_playlist(
             library.playlist_catalog.ensure_playlist,
             playlist.name,
             spotify_id=_catalog_spotify_id(playlist),
+            user_id=playlist.user_id or None,
         )
 
     known_tracks = await asyncio.to_thread(db.get_track_filenames, playlist.id)
@@ -854,6 +954,7 @@ async def check_playlist(
                     settings or {},
                     playlist_name=playlist.name,
                     track_order=track_positions[id(song)],
+                    owner_id=playlist.user_id,
                 )
             if settings is None or settings.get('generate_m3u', True):
                 # Rewrite the M3U after every track rather than once the
@@ -981,6 +1082,52 @@ def _library_file_for(
     return None
 
 
+def _record_sweep_owner(
+    library: LibraryStores,
+    full: Path,
+    owner_id: int,
+) -> None:
+    """Attribute a sweep download to the watch owner (best effort)."""
+
+    if not owner_id or library.track_owners is None:
+        return
+    try:
+        key = file_content_key(full)
+        if key:
+            library.track_owners.add(key, owner_id)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not record sweep owner for {}', full
+        )
+
+
+def _record_artist_sweep_owner(
+    library: LibraryStores,
+    filename: str,
+    downloader: Downloader,
+    owner_id: int,
+) -> None:
+    """Attribute an artist-watch download (best effort)."""
+
+    if not owner_id or library.track_owners is None:
+        return
+    try:
+        full = locate_library_file(
+            filename,
+            Path(downloader.download_dir),
+            slskd_dir_from_downloader(downloader),
+        )
+        if full is None:
+            return
+        key = file_content_key(full)
+        if key:
+            library.track_owners.add(key, owner_id)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not record sweep owner for {}', filename
+        )
+
+
 def _register_monitored_download(
     song: dict[str, Any],
     filename: str,
@@ -990,6 +1137,7 @@ def _register_monitored_download(
     *,
     playlist_name: str,
     track_order: int,
+    owner_id: int = 0,
 ) -> None:
     """Record a track a sweep downloaded in the library stores."""
 
@@ -998,6 +1146,7 @@ def _register_monitored_download(
     full = locate_library_file(filename, download_dir, slskd_dir)
     if full is None:
         return
+    _record_sweep_owner(library, full, owner_id)
     try:
         if library.track_index is not None:
             library.track_index.register_song(song, filename, full_path=full)
@@ -1053,7 +1202,10 @@ def _sync_library_playlist(
     if library.playlist_catalog is not None and rows:
         try:
             library.playlist_catalog.replace_playlist_tracks(
-                playlist.name, rows, spotify_id=_catalog_spotify_id(playlist)
+                playlist.name,
+                rows,
+                spotify_id=_catalog_spotify_id(playlist),
+                user_id=playlist.user_id or None,
             )
         except Exception:
             logger.exception(
@@ -1119,6 +1271,7 @@ async def check_artist(
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
     settings: Optional[dict[str, Any]] = None,
+    library: Optional[LibraryStores] = None,
 ) -> int:
     """Download every release of a watched artist that isn't known yet.
 
@@ -1242,6 +1395,14 @@ async def check_artist(
                 invalidate_library_paths_cache()
                 known_tracks[track_id] = filename
                 downloaded += 1
+                if library is not None and filename:
+                    await asyncio.to_thread(
+                        _record_artist_sweep_owner,
+                        library,
+                        filename,
+                        downloader,
+                        playlist.user_id,
+                    )
                 if delay_seconds > 0:
                     await asyncio.sleep(delay_seconds)
             except Exception:
@@ -1454,7 +1615,7 @@ async def check_watch(
             )
         if playlist.kind == KIND_ARTIST:
             return await check_artist(
-                playlist, db, downloader, broadcast, loop, settings
+                playlist, db, downloader, broadcast, loop, settings, library
             )
         return await check_playlist(
             playlist, db, downloader, broadcast, loop, settings, library

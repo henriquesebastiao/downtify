@@ -8,6 +8,9 @@ Tap the heart on a song to like it. As soon as one song is liked, Downtify keeps
 
 There is nothing to switch on.
 
+Hearts belong to whoever tapped them: on a server with several accounts each person has their own liked songs (see [Users & Sign-in](users.md#your-library)). The playlist file on disk holds the admins\u2019 hearts; everyone else\u2019s likes live in the library database and work the same in the apps.
+
+
 ## Liking a song
 
 The heart sits next to every song in your library — downloads and tracks from [existing music folders](external-library.md):

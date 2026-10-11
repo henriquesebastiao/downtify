@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import Body, FastAPI, HTTPException, Query, Request
+from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -58,7 +58,6 @@ from downtify.library_catalog import (
     list_entries_for_stored_paths,
     list_library_entries,
     list_library_paths,
-    listing_for_request,
     resolve_library_file,
     resolve_library_image,
 )
@@ -79,8 +78,10 @@ from downtify.lyrics_cache import LyricsLookupCache
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 from downtify.navidrome_index import NavidromeIndex
 from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
-from downtify.playlist_catalog import PlaylistCatalog
-from downtify.playlist_listing import list_library_playlists
+from downtify.playlist_catalog import (
+    ManualPlaylistOwners,
+    PlaylistCatalog,
+)
 from downtify.playlist_spotify_cache import (
     PlaylistSpotifyCache,
     playlist_spotify_cache_loop,
@@ -97,6 +98,8 @@ from downtify.server_port import (
 from downtify.stream import stream_cache_from_env
 from downtify.telemetry import redact_url_secrets
 from downtify.track_index import TrackIndex
+from downtify.track_owners import TrackOwners
+from downtify.traffic import TrafficCounters, TrafficMiddleware
 from downtify.transcode import transcoder_from_env
 from downtify.update_check import UpdateChecker, update_check_loop
 
@@ -336,10 +339,13 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     bind_listing_store(library_db)
     set_listing_refresh_gate(_downloads_using_disk)
     api.state.playlist_catalog = PlaylistCatalog(library_db)
+    api.state.manual_playlist_owners = ManualPlaylistOwners(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
+    api.state.track_owners = TrackOwners(library_db)
+    api.state.traffic = TrafficCounters(library_db)
     api.state.podcasts = PodcastStore(library_db)
     # The mobile API (downtify/mobile_routes.py).
     api.state.library_sync = LibrarySync(library_db)
@@ -455,6 +461,16 @@ def build_app() -> FastAPI:
         db_path = DATABASE_DIR / 'downtify_monitor.db'
         api.state.monitor_db = PlaylistMonitorDB(db_path)
         _open_library_stores(db_path)
+        # First start with per-user libraries: every file on disk
+        # becomes the migration user's (plus their likes, playlists,
+        # batches, shows, watches and history). Later arrivals record
+        # their real downloader.
+        try:
+            await asyncio.to_thread(api.migrate_first_run_ownership)
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Ownership backfill failed; will retry on next start'
+            )
         threading.Thread(
             target=_warm_library_listing,
             name='downtify-library-warm',
@@ -542,6 +558,11 @@ def build_app() -> FastAPI:
         ),
         version=__version__,
     )
+    # Per-user served bytes (Settings → Users). Added before the auth
+    # middleware so it runs inside it, seeing the principal it sets.
+    app.add_middleware(
+        TrafficMiddleware, get_counters=lambda: api.state.traffic
+    )
     # Sign-in and paired apps (downtify/auth.py). Added before CORS so
     # CORS stays outermost and answers preflights without credentials.
     api.state.identity = ServerIdentity(DATABASE_DIR)
@@ -610,6 +631,7 @@ def build_app() -> FastAPI:
         ),
         audio_providers=api._effective_audio_providers(api.state.settings),
         slskd_settings=api._effective_slskd_settings(api.state.settings),
+        max_track_duration_seconds=api._max_track_duration_seconds(),
     )
     api.normalize_lyrics_location(api.state.settings)
     api.bind_lrc_resolver()
@@ -629,39 +651,33 @@ def build_app() -> FastAPI:
     app.include_router(mobile_routes.router)
 
     @app.get('/list')
-    def list_downloads(refresh: bool = False) -> list[str]:
+    def list_downloads(request: Request, refresh: bool = False) -> list[str]:
         """Every playable library file: the downloads folder (recursively,
         so per-playlist folders show up), slskd downloads left in place
         (``slskd/...``), extra folders from Settings (``ext/<id>/...``)
         and files known to the track index.
 
         The directory scan is cached briefly; ``?refresh=true`` forces a
-        rescan.
+        rescan. A user sees their own files only.
         """
         if refresh:
             api.invalidate_library_paths_cache(drop_entries=True)
-        return list_library_paths(api.library_context())
-
-    @app.get('/playlists')
-    def list_playlists() -> list[dict]:
-        """List downloaded playlists - see
-        ``downtify.playlist_listing.list_library_playlists``."""
-        ctx = api.library_context()
-        return list_library_playlists(
-            ctx.download_dir,
-            ctx.slskd_dir,
-            ctx.extra_dirs,
-            stale_ok=True,
+        return api.filter_paths_for_request(
+            list_library_paths(api.library_context()), request
         )
 
+    @app.get('/playlists')
+    def list_playlists(request: Request) -> list[dict]:
+        """List downloaded playlists - see
+        ``downtify.playlist_listing.list_library_playlists``.
+
+        A user sees their own playlists (and their own liked songs as
+        the liked one) only.
+        """
+        return api.playlists_for_request(request)
+
     @app.get('/tracks')
-    def list_tracks(
-        playlist: str = '',
-        artist: str = '',
-        album: str = '',
-        q: str = '',
-        limit: int = Query(0, ge=0, le=TRACK_QUERY_LIMIT_MAX),
-    ) -> list[dict]:
+    def list_tracks(request: Request) -> list[dict]:
         """List library tracks with metadata read from embedded tags.
 
         Powers the player's and Library's "only this artist" / "only
@@ -671,7 +687,9 @@ def build_app() -> FastAPI:
 
         ``?playlist=``, ``?artist=``, ``?album=`` and ``?q=`` return a
         subset so pages that show one list do not download the whole
-        library. ``?limit=`` caps that subset (search picker).
+        library. ``?limit=`` caps that subset (search picker). The filters
+        come from the query string (one handler argument) so a user only
+        ever sees their own rows.
 
         Each row has ``file``, ``artist`` and ``album``, plus ``title``,
         ``has_cover`` and, when the file belongs to a downloaded
@@ -681,24 +699,26 @@ def build_app() -> FastAPI:
         removed, and is snapshotted so a restart does not walk every
         file again.
         """
+        query = request.query_params
+        playlist = str(query.get('playlist') or '')
+        artist = str(query.get('artist') or '')
+        album = str(query.get('album') or '')
+        q = str(query.get('q') or '')
+        try:
+            limit = int(query.get('limit') or 0)
+        except (TypeError, ValueError):
+            limit = 0
+        limit = max(0, min(limit, TRACK_QUERY_LIMIT_MAX))
         ctx = api.library_context()
         name = str(playlist or '').strip()
         if name:
-            found = list_library_playlists(
-                ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
-            )
-            match = next(
-                (
-                    item
-                    for item in found
-                    if str(item.get('name') or '') == name
-                ),
-                None,
-            )
+            # A playlist nobody may open reads as unknown (no oracle
+            # for other users' collections).
+            match = api.playlist_entry_for_request(name, request)
             files = list(match.get('files') or []) if match else []
             tracks = list_entries_for_stored_paths(ctx, files)
         else:
-            tracks = listing_for_request(ctx)
+            tracks = api.entries_for_request(request)
             tracks.sort(key=lambda t: t['file'])
         if artist or album or q or limit:
             tracks = filter_library_entries(
@@ -725,6 +745,7 @@ def build_app() -> FastAPI:
 
     @app.post('/api/library/archive')
     async def prepare_library_archive(
+        request: Request,
         files: list[str] = Body(..., embed=True),
     ) -> dict:
         """Prepare a ZIP of several library tracks for download.
@@ -733,7 +754,8 @@ def build_app() -> FastAPI:
         multi-track selection to the machine in front of the user used
         to be one click per track. Returns a single-use ticket the
         browser then navigates to - the file list is too long for a URL,
-        and a fetch would have to hold the whole archive in memory.
+        and a fetch would have to hold the whole archive in memory. A
+        user can only pack their own files.
         """
 
         if not files:
@@ -746,6 +768,21 @@ def build_app() -> FastAPI:
                     'in one request'
                 ),
             )
+        if not api.request_is_admin(request):
+            allowed = api.allowed_entry_keys(request)
+            if allowed is not None:
+                files = [
+                    name
+                    for name in files
+                    if api.stored_content_key(
+                        str(name or '').strip().replace('\\', '/')
+                    )
+                    in allowed
+                ]
+                if not files:
+                    raise HTTPException(
+                        status_code=404, detail='No files found'
+                    )
 
         ctx = api.library_context()
 
@@ -801,14 +838,31 @@ def build_app() -> FastAPI:
 
     @app.delete('/delete')
     async def delete_download(file: str, request: Request) -> dict:
+        """Delete one track: off disk (an admin, or the last owner), or
+        out of one's own library when others still have it."""
+
         ctx = api.library_context()
-        result = await asyncio.to_thread(
-            _delete_track_file,
-            file,
-            DOWNLOAD_DIR.resolve(),
-            ctx.slskd_dir,
-            ctx.extra_dirs,
+        principal = api.principal_of(request)
+        user_id = int(getattr(principal, 'user_id', 0) or 0)
+        action, key = await asyncio.to_thread(
+            api.ownership_action, file, request
         )
+        if action == 'foreign':
+            result = {'deleted': False, 'error': 'Not in your library'}
+        elif action == 'release':
+            result = await asyncio.to_thread(
+                api.release_file_ownership, file, key, user_id
+            )
+        else:
+            result = await asyncio.to_thread(
+                _delete_track_file,
+                file,
+                DOWNLOAD_DIR.resolve(),
+                ctx.slskd_dir,
+                ctx.extra_dirs,
+            )
+            if result.get('deleted') and key:
+                await asyncio.to_thread(api.drop_file_owners, key)
         await api.log_activity(request, 'delete', file)
         return await api.after_library_delete({file: result}, result)
 
@@ -823,17 +877,57 @@ def build_app() -> FastAPI:
         matching the active playlist/artist/album filter (including
         ones on other pages) and deleting them all is impractical one
         file at a time. Each file is deleted independently: one bad
-        path or a file that's already gone doesn't stop the rest.
+        path or a file that's already gone doesn't stop the rest. Files
+        others still own are only released, and reported as such.
         """
+        # Dedupe (order-preserving) so a client sending the same path
+        # twice can't have the second attempt report a spurious
+        # "File not found" for a file the first attempt already removed.
+        ordered = list(dict.fromkeys(files))
+        if len(ordered) > MAX_BATCH_DELETE:
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    'Cannot delete more than '
+                    f'{MAX_BATCH_DELETE} files in one request'
+                ),
+            )
         try:
             ctx = api.library_context()
-            result = await asyncio.to_thread(
-                _delete_tracks_batch,
-                files,
-                DOWNLOAD_DIR.resolve(),
-                ctx.slskd_dir,
-                ctx.extra_dirs,
-            )
+            principal = api.principal_of(request)
+            user_id = int(getattr(principal, 'user_id', 0) or 0)
+            results: dict[str, dict] = {}
+            for name in ordered:
+                action, key = await asyncio.to_thread(
+                    api.ownership_action, name, request
+                )
+                if action == 'foreign':
+                    results[name] = {
+                        'deleted': False,
+                        'error': 'Not in your library',
+                    }
+                elif action == 'release':
+                    results[name] = await asyncio.to_thread(
+                        api.release_file_ownership, name, key, user_id
+                    )
+                else:
+                    results[name] = await asyncio.to_thread(
+                        _delete_track_file,
+                        name,
+                        DOWNLOAD_DIR.resolve(),
+                        ctx.slskd_dir,
+                        ctx.extra_dirs,
+                    )
+                    if results[name].get('deleted') and key:
+                        await asyncio.to_thread(api.drop_file_owners, key)
+            deleted = sum(1 for r in results.values() if r.get('deleted'))
+            released = sum(1 for r in results.values() if r.get('released'))
+            result = {
+                'deleted_count': deleted,
+                'released_count': released,
+                'failed_count': len(results) - deleted - released,
+                'results': results,
+            }
         except ValueError as exc:
             raise HTTPException(status_code=413, detail=str(exc)) from exc
         await api.log_activity(
@@ -842,7 +936,7 @@ def build_app() -> FastAPI:
             files[0] if len(files) == 1 else f'{len(files)} files',
             {'files': files[:50]},
         )
-        return await api.after_library_delete(result['results'], result)
+        return await api.after_library_delete(results, result)
 
     @app.get('/lyrics')
     def get_lyrics(file: str) -> dict:

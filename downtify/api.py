@@ -2,7 +2,13 @@
 
 The endpoints intentionally mirror the surface that the previous
 ``spotdl``-powered backend exposed so the existing Vue frontend keeps
-working without changes:
+working without changes.
+
+Library reads are per-user: a ``user`` browses only tracks, likes,
+playlists, batches and queue jobs of their own (see
+:mod:`downtify.track_owners` and ``docs/features/users.md``); an
+``admin`` sees everything. Playing, streaming, searching and asking
+for downloads stay shared, and files are never stored twice.
 
 * ``GET  /api/version``
 * ``GET  /api/health`` (liveness probe for the Docker ``HEALTHCHECK`` -
@@ -370,15 +376,22 @@ from .external_sync import (
 from .fs_suggest import suggest_directories
 from .library_catalog import (
     LibraryContext,
+    entry_content_key,
     library_album_index,
     library_artist_index,
     library_context_from_state,
     library_home_summary,
+    list_library_paths,
+    listing_for_request,
     lookup_library_songs,
     merge_library_listing_file,
     resolve_library_file,
 )
-from .library_delete import delete_playlist_from_library
+from .library_delete import (
+    delete_library_files,
+    delete_playlist_from_library,
+    remove_playlist_shell,
+)
 from .library_metadata import read_audio_metadata
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
@@ -429,7 +442,8 @@ from .playlist_batches import (
     active_queue_count_for_playlist,
     split_tracks_by_library,
 )
-from .playlist_catalog import PlaylistCatalog
+from .playlist_catalog import ManualPlaylistOwners, PlaylistCatalog
+from .playlist_listing import list_library_playlists
 from .playlist_spotify_cache import (
     PlaylistSpotifyCache,
     fetch_playlist_tracks,
@@ -453,6 +467,8 @@ from .track_index import (
     normalize_spotify_track_id,
     resolve_existing_download,
 )
+from .track_owners import TrackOwners
+from .traffic import DIRECTION_IN, TrafficCounters
 from .transcode import Transcoder
 from .update_check import UpdateChecker
 
@@ -460,6 +476,11 @@ MIN_PARALLEL_DOWNLOADS = 1
 
 MIN_DOWNLOAD_DELAY_SECONDS = 0
 MAX_DOWNLOAD_DELAY_SECONDS = 300
+
+#: Longest track taken (seconds); ``0`` takes everything. The default
+#: is :data:`downtify.downloader.MAX_TRACK_DURATION_SECONDS`.
+MIN_TRACK_DURATION_SETTING_SECONDS = 0
+MAX_TRACK_DURATION_SETTING_SECONDS = 6 * 3600
 
 MIN_COVER_RESOLUTION = 300
 MAX_COVER_RESOLUTION = 1200
@@ -483,6 +504,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'download_cover_art_artist_banner': False,
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
+    'max_track_duration_seconds': MAX_TRACK_DURATION_SECONDS,
     'external_sync_delay_seconds': 0,
     'cover_resolution': providers.DEFAULT_COVER_RESOLUTION,
     'download_cover_art': True,
@@ -595,6 +617,34 @@ def _clamp_download_delay(value: Any) -> float:
         delay = DEFAULT_SETTINGS['download_delay_seconds']
     return min(
         MAX_DOWNLOAD_DELAY_SECONDS, max(MIN_DOWNLOAD_DELAY_SECONDS, delay)
+    )
+
+
+def _clamp_track_duration(value: Any) -> int:
+    """Coerce and clamp the longest track taken, in seconds.
+
+    ``0`` takes everything (mixes included); anything else lands inside
+    ``[60, MAX_TRACK_DURATION_SETTING_SECONDS]``. Applies to downloads
+    and streams alike (see :mod:`downtify.stream`).
+    """
+
+    try:
+        seconds = int(value)
+    except (TypeError, ValueError):
+        return int(DEFAULT_SETTINGS['max_track_duration_seconds'])
+    if seconds <= 0:
+        return MIN_TRACK_DURATION_SETTING_SECONDS
+    return min(MAX_TRACK_DURATION_SETTING_SECONDS, max(60, seconds))
+
+
+def _max_track_duration_seconds() -> int:
+    """The live duration bound (downloads and streams share it)."""
+
+    return _clamp_track_duration(
+        state.settings.get(
+            'max_track_duration_seconds',
+            DEFAULT_SETTINGS['max_track_duration_seconds'],
+        )
     )
 
 
@@ -800,6 +850,8 @@ class ConnectionManager:
         # client_id -> the signed-in user, so a user signed out
         # everywhere (or deleted) is disconnected too.
         self._users: dict[str, int] = {}
+        # Sockets that see every download job event (admins).
+        self._admins: set[str] = set()
 
     async def connect(
         self,
@@ -807,6 +859,7 @@ class ConnectionManager:
         ws: WebSocket,
         device_id: str = '',
         user_id: int = 0,
+        is_admin: bool = False,
     ) -> None:
         await ws.accept()
         self._clients[client_id] = ws
@@ -818,11 +871,16 @@ class ConnectionManager:
             self._users[client_id] = user_id
         else:
             self._users.pop(client_id, None)
+        if is_admin:
+            self._admins.add(client_id)
+        else:
+            self._admins.discard(client_id)
 
     def disconnect(self, client_id: str) -> None:
         self._clients.pop(client_id, None)
         self._devices.pop(client_id, None)
         self._users.pop(client_id, None)
+        self._admins.discard(client_id)
 
     async def send_user(self, user_id: int, message: dict[str, Any]) -> None:
         """Send *message* to every socket of *user_id*."""
@@ -869,6 +927,24 @@ class ConnectionManager:
         except Exception:
             self._clients.pop(client_id, None)
 
+    async def broadcast_job(
+        self, user_id: int, message: dict[str, Any]
+    ) -> None:
+        """A download job event: its owner and the admins, nobody else.
+
+        The titles in job events would otherwise tell every connected
+        client what someone else is downloading (``GET /api/queue`` is
+        filtered the same way). Ownerless jobs keep the old broadcast.
+        """
+
+        if not user_id:
+            await self.broadcast(message)
+            return
+        targets = [cid for cid, uid in self._users.items() if uid == user_id]
+        targets += [cid for cid in self._admins if cid not in targets]
+        for client_id in targets:
+            await self.send(client_id, message)
+
     async def broadcast(self, message: dict[str, Any]) -> None:
         # Serialized once, sent to every client concurrently: one slow
         # client (a phone on a weak connection) no longer delays the rest.
@@ -898,6 +974,7 @@ class ConnectionManager:
         clients = list(self._clients.items())
         self._clients.clear()
         self._devices.clear()
+        self._admins.clear()
         if not clients:
             return
         await asyncio.gather(
@@ -933,6 +1010,9 @@ class AppState:
     upgrade_runner: Optional[library_upgrade.LibraryUpgradeRunner] = None
     external_sync: Optional[ExternalSyncJob] = None
     likes: Optional[LikedTracks] = None
+    track_owners: Optional[TrackOwners] = None
+    manual_playlist_owners: Optional[ManualPlaylistOwners] = None
+    traffic: Optional[TrafficCounters] = None
     podcasts: Optional[PodcastStore] = None
     discover: Optional[DiscoverStore] = None
     # Sign-in and paired apps (see downtify/auth.py and auth_routes.py).
@@ -980,6 +1060,267 @@ def principal_of(request: Request) -> Optional[Principal]:
     """Who made *request* (set by the auth middleware), if anyone."""
 
     return (request.scope.get('state') or {}).get('principal')
+
+
+def request_user_id(request: Optional[Request]) -> int:
+    """The signed-in user behind *request* (``0`` when there is none)."""
+
+    if request is None:
+        return 0
+    principal = principal_of(request)
+    return int(getattr(principal, 'user_id', 0) or 0)
+
+
+def request_is_admin(request: Optional[Request]) -> bool:
+    """Whether *request* was made by an admin (sees every track)."""
+
+    if request is None:
+        return False
+    principal = principal_of(request)
+    return bool(principal is not None and principal.is_admin)
+
+
+def allowed_entry_keys(request: Optional[Request]) -> Optional[set[str]]:
+    """Content keys *request* may browse (``None``: everything).
+
+    Admins see the whole library, including files nobody owns (monitor
+    sweeps, reconciled drops, pre-feature downloads). Anyone else sees
+    only files they asked to download.
+    """
+
+    if request_is_admin(request) or state.track_owners is None:
+        return None
+    user_id = request_user_id(request)
+    if not user_id:
+        return set()
+    return state.track_owners.owned_keys(user_id)
+
+
+def _playlist_owner_maps() -> tuple[dict[str, int], dict[str, int]]:
+    """``({casefolded catalog name: user_id}, {manual name: user_id})``."""
+
+    catalog_names: dict[str, int] = {}
+    manual: dict[str, int] = {}
+    try:
+        catalog = state.playlist_catalog
+        if catalog is not None:
+            catalog_names = {
+                str(name or '').strip().casefold(): int(uid or 0)
+                for name, uid in catalog.playlist_owner_map().items()
+            }
+        owned = state.manual_playlist_owners
+        if owned is not None:
+            manual = dict(owned.owner_map())
+    except Exception:
+        logger.opt(exception=True).debug('Could not read playlist owners')
+    return catalog_names, manual
+
+
+def _playlist_visible(
+    name: str, *, liked: bool, manual: bool, user_id: int
+) -> bool:
+    """Whether *user_id* may open a playlist (admins bypass this)."""
+
+    if liked or not user_id:
+        return False
+    catalog_names, manual_owners = _playlist_owner_maps()
+    key = str(name or '').strip().casefold()
+    if manual:
+        return manual_owners.get(key) == user_id
+    return catalog_names.get(key) == user_id
+
+
+def _filter_playlists_for(
+    playlists: list[dict[str, Any]], request: Optional[Request]
+) -> list[dict[str, Any]]:
+    """Playlists *request* may open, with a personal liked entry.
+
+    Admins see everything as before. Anyone else sees playlists they
+    own (downloaded or Library-created); the shared liked-songs file
+    is swapped for their own hearts (which live in the database only).
+    """
+
+    if request_is_admin(request):
+        return playlists
+    user_id = request_user_id(request)
+    kept = [
+        playlist
+        for playlist in playlists
+        if not playlist.get('liked')
+        and _playlist_visible(
+            str(playlist.get('name') or ''),
+            liked=False,
+            manual=bool(playlist.get('manual')),
+            user_id=user_id,
+        )
+    ]
+    if user_id and state.likes is not None:
+        try:
+            liked_files = state.likes.paths(user_id)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not read likes for playlist listing'
+            )
+            liked_files = []
+        if liked_files:
+            kept.append({
+                'name': LIKED_PLAYLIST_NAME,
+                'files': liked_files,
+                'count': len(liked_files),
+                'added': 0,
+                'cover': '',
+                'liked': True,
+                'manual': False,
+            })
+    kept.sort(
+        key=lambda item: (
+            not item.get('liked'),
+            str(item.get('name') or '').casefold(),
+        )
+    )
+    return kept
+
+
+def _filter_entries_for(
+    entries: list[dict[str, Any]], request: Optional[Request]
+) -> list[dict[str, Any]]:
+    """Library rows *request* may browse, with foreign playlists cut.
+
+    A track can sit in playlists nobody else may open (someone else's
+    download shares the file): those names are scrubbed from its row,
+    so the row never reveals them. Rows are copied, never mutated - the
+    snapshot they come from is shared.
+    """
+
+    allowed = allowed_entry_keys(request)
+    if allowed is None:
+        return entries
+    user_id = request_user_id(request)
+    catalog_names, manual_owners = _playlist_owner_maps()
+    owned = {name for name, uid in catalog_names.items() if uid == user_id} | {
+        key for key, uid in manual_owners.items() if uid == user_id
+    }
+
+    def _scrubbed(row: dict[str, Any], names: Any) -> dict[str, Any]:
+        kept = [
+            str(raw)
+            for raw in names
+            if is_liked_playlist(raw)
+            or str(raw or '').strip().casefold() in owned
+        ]
+        return {**row, 'playlists': kept}
+
+    filtered = []
+    for entry in entries:
+        if entry_content_key(entry) not in allowed:
+            continue
+        names = entry.get('playlists')
+        filtered.append(_scrubbed(entry, names) if names else entry)
+    return filtered
+
+
+def entries_for_request(request: Optional[Request]) -> list[dict[str, Any]]:
+    """``GET /tracks`` rows *request* may browse."""
+
+    return _filter_entries_for(listing_for_request(library_context()), request)
+
+
+def filter_paths_for_request(
+    paths: list[str], request: Optional[Request]
+) -> list[str]:
+    """Library paths *request* may browse (``GET /list``), order kept."""
+
+    allowed = allowed_entry_keys(request)
+    if allowed is None:
+        return list(paths)
+    by_file = {}
+    for entry in listing_for_request(library_context()):
+        by_file[str(entry.get('file') or '').replace('\\', '/')] = (
+            entry_content_key(entry)
+        )
+    return [
+        path
+        for path in paths
+        if by_file.get(str(path or '').replace('\\', '/')) in allowed
+    ]
+
+
+def playlists_for_request(request: Optional[Request]) -> list[dict[str, Any]]:
+    """Playlist listing entries *request* may open."""
+
+    ctx = library_context()
+    found = list_library_playlists(
+        ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+    )
+    return _filter_playlists_for(found, request)
+
+
+def playlist_entry_for_request(
+    name: str, request: Optional[Request]
+) -> Optional[dict[str, Any]]:
+    """The listing entry for *name* when *request* may open it.
+
+    Falls back to the playlist catalog when the M3U is gone (a delete
+    still has tracks to take): admins see every catalog entry, anyone
+    else only entries they own.
+    """
+
+    wanted = str(name or '').strip()
+    if not wanted:
+        return None
+    for playlist in playlists_for_request(request):
+        if str(playlist.get('name') or '') == wanted:
+            return playlist
+    catalog = state.playlist_catalog
+    if catalog is None:
+        return None
+    try:
+        rows = catalog.list_tracks(wanted)
+    except Exception:
+        return None
+    if not rows:
+        return None
+    if not request_is_admin(request):
+        user_id = request_user_id(request)
+        try:
+            owner = catalog.playlist_owner_map().get(wanted)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not read owner for playlist {!r}', wanted
+            )
+            owner = None
+        if not user_id or int(owner or 0) != user_id:
+            return None
+    return {
+        'name': wanted,
+        'files': [str(row.get('filename') or '') for row in rows],
+        'count': len(rows),
+        'added': 0,
+        'cover': '',
+        'liked': False,
+        'manual': False,
+    }
+
+
+def require_playlist_visible(name: str, request: Optional[Request]) -> None:
+    """404 unless *request* may open the playlist (as if unknown)."""
+
+    if playlist_entry_for_request(name, request) is None:
+        raise HTTPException(status_code=404, detail='Playlist not found')
+
+
+def claim_manual_playlist(name: str, request: Optional[Request]) -> None:
+    """Record a Library-created playlist's owner (best effort)."""
+
+    user_id = request_user_id(request)
+    if not user_id or state.manual_playlist_owners is None:
+        return
+    try:
+        state.manual_playlist_owners.set_owner(name, user_id)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not record owner for playlist {!r}', name
+        )
 
 
 def request_ip(request: Request) -> str:
@@ -1165,7 +1506,236 @@ def library_stores() -> LibraryStores:
         metadata_cache=state.metadata_cache,
         cover_cache=state.cover_cache,
         playlist_spotify_cache=state.playlist_spotify_cache,
+        track_owners=state.track_owners,
     )
+
+
+def stored_content_key(stored_path: str) -> str:
+    """The ownership key of a library path (``''`` when not on disk)."""
+
+    try:
+        full = resolve_library_file(stored_path, library_context())
+    except Exception:
+        return ''
+    if full is None:
+        return ''
+    try:
+        return content_key_for(full) or ''
+    except Exception:
+        return ''
+
+
+def ownership_action(
+    stored_path: str, request: Optional[Request]
+) -> tuple[str, str]:
+    """How a delete treats one file: ``(action, content_key)``.
+
+    ``delete`` takes it off disk (an admin, or the last owner -
+    today's behavior when nobody else has it). ``release`` drops
+    one's own ownership row while the file stays for the rest.
+    ``missing`` isn't on disk; ``foreign`` isn't theirs.
+    """
+
+    key = stored_content_key(stored_path)
+    if not key:
+        return 'missing', ''
+    if state.track_owners is None:
+        return 'delete', key
+    if request_is_admin(request):
+        return 'delete', key
+    user_id = request_user_id(request)
+    try:
+        owners = state.track_owners.owners(key)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not read owners for {}', stored_path
+        )
+        owners = []
+    if user_id and user_id in owners:
+        return ('delete' if len(owners) == 1 else 'release'), key
+    return 'foreign', key
+
+
+def release_file_ownership(
+    stored_path: str, content_key: str, user_id: int
+) -> dict[str, Any]:
+    """Drop one owner's row after their delete; the file stays put."""
+
+    if state.track_owners is not None and content_key and user_id:
+        try:
+            state.track_owners.remove(content_key, user_id)
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Could not release {} for user {}', stored_path, user_id
+            )
+    if state.library_sync is not None:
+        try:
+            name = str(stored_path or '').strip().replace('\\', '/')
+            state.library_sync.touch(name)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not poke the sync feed for {}', stored_path
+            )
+    announce_library_changed()
+    return {'released': True}
+
+
+def _record_download_traffic(filename: str, user_id: int) -> None:
+    """Count a finished download's bytes as the downloader's upstream."""
+
+    if not user_id or state.traffic is None or state.downloader is None:
+        return
+    try:
+        full = locate_library_file(
+            filename,
+            Path(state.downloader.download_dir),
+            slskd_dir_from_downloader(state.downloader),
+        )
+        if full is None:
+            return
+        state.traffic.add(user_id, DIRECTION_IN, full.stat().st_size)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not record download traffic for {}', filename
+        )
+
+
+def record_stream_fetch_traffic(video_path: Path, user_id: int) -> None:
+    """Count a stream-cache fetch's bytes as upstream (it served no one
+    yet - the serve itself is counted on the way out)."""
+
+    if not user_id or state.traffic is None:
+        return
+    try:
+        state.traffic.add(user_id, DIRECTION_IN, video_path.stat().st_size)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not record stream traffic for {}', video_path
+        )
+
+
+def drop_file_owners(content_key: str) -> None:
+    """Forget every owner (their file was just deleted from disk)."""
+
+    if state.track_owners is None or not content_key:
+        return
+    try:
+        state.track_owners.drop_file(content_key)
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not drop owners for a deleted file'
+        )
+
+
+#: Who pre-feature files belong to on the first start with ownership.
+MIGRATION_USERNAME = 'brillik'
+
+
+def resolve_migration_user_id() -> int:
+    """Who files without owners belong to: ``brillik`` when that account
+    exists, else the oldest admin, else ``0`` (nobody - try again next
+    start)."""
+
+    users = state.auth.users if state.auth is not None else None
+    if users is None:
+        return 0
+    try:
+        found = users.by_username(MIGRATION_USERNAME)
+        if found is not None:
+            return int(found['id'])
+        first = users.first_admin()
+        return int(first['id']) if first is not None else 0
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not resolve the migration user'
+        )
+        return 0
+
+
+def migrate_first_run_ownership() -> dict[str, int]:
+    """Attribute every ownerless thing, once.
+
+    Runs on start while the ownership table is still empty (a fresh
+    install has no files yet, so this is a no-op there): every library
+    file becomes the migration user's, and pre-feature likes,
+    playlists, batches, podcast shows and progress, monitor watches and
+    discover history take the same owner. Later arrivals record their
+    real downloader instead. Returns what was attributed.
+    """
+
+    done = {
+        'files': 0,
+        'likes': 0,
+        'playlists': 0,
+        'batches': 0,
+        'podcasts': 0,
+        'watches': 0,
+        'listens': 0,
+    }
+    owners = state.track_owners
+    if owners is None or not owners.is_empty():
+        return done
+    user_id = resolve_migration_user_id()
+    if not user_id:
+        logger.warning(
+            'Ownership backfill: no users yet, will retry on next start'
+        )
+        return done
+    try:
+        paths = list_library_paths(library_context())
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Ownership backfill: could not list the library'
+        )
+        return done
+    claimed = 0
+    for stored in paths:
+        try:
+            key = stored_content_key(stored)
+        except Exception:
+            continue
+        if key and owners.add(key, user_id):
+            claimed += 1
+    done['files'] = claimed
+
+    def _migrate(label: str, store: Any, method: str) -> None:
+        if store is None:
+            return
+        try:
+            done[label] = getattr(store, method)(user_id)
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Ownership backfill: could not migrate {}', label
+            )
+
+    _migrate('likes', state.likes, 'reassign_legacy')
+    _migrate('playlists', state.playlist_catalog, 'reassign_legacy')
+    _migrate('batches', state.playlist_batch_store, 'reassign_legacy')
+    _migrate('podcasts', state.podcasts, 'reassign_legacy')
+    _migrate('watches', state.monitor_db, 'reassign_legacy')
+    _migrate('listens', state.discover, 'reassign_legacy')
+    if any(done.values()):
+        logger.info(
+            'Ownership backfill: {} file(s), {} like(s), {} playlist(s), '
+            '{} batch(es), {} podcast row(s), {} watch(es), {} listen row(s)'
+            ' now belong to user {}',
+            done['files'],
+            done['likes'],
+            done['playlists'],
+            done['batches'],
+            done['podcasts'],
+            done['watches'],
+            done['listens'],
+            user_id,
+        )
+        if state.library_sync is not None:
+            try:
+                state.library_sync.touch_all()
+            except Exception:
+                logger.opt(exception=True).debug(
+                    'Ownership backfill: could not poke the sync feed'
+                )
+    return done
 
 
 def forget_library_file(stored_path: str) -> list[str]:
@@ -1319,8 +1889,14 @@ def _upsert_track_in_playlists(
     primary_playlist: Optional[str] = None,
     primary_order: int = 0,
     spotify_playlist_id: Optional[str] = None,
+    user_id: int = 0,
 ) -> None:
-    """Register the file in the catalog for every affected playlist."""
+    """Register the file in the catalog for every affected playlist.
+
+    Only the playlist the user actually downloaded (*primary_playlist*)
+    is claimed for them; the other catalog playlists that happen to
+    hold the track keep their owners.
+    """
 
     if state.downloader is None or state.playlist_catalog is None:
         return
@@ -1339,7 +1915,11 @@ def _upsert_track_in_playlists(
             if pl_name == primary and spotify_playlist_id
             else catalog.spotify_id_for_playlist(pl_name)
         )
-        catalog.ensure_playlist(pl_name, spotify_id=sid)
+        catalog.ensure_playlist(
+            pl_name,
+            spotify_id=sid,
+            user_id=user_id if pl_name == primary else None,
+        )
         order = primary_order if pl_name == primary else 0
         catalog.upsert_track(pl_name, song, filename, full, track_order=order)
 
@@ -1351,6 +1931,7 @@ def _register_download_playlists_on_disk(
     playlist_name: Optional[str] = None,
     spotify_playlist_id: Optional[str] = None,
     track_order: int = 0,
+    user_id: int = 0,
 ) -> set[str]:
     """Update indexes, catalog, monitor paths; return playlists to refresh."""
 
@@ -1370,6 +1951,7 @@ def _register_download_playlists_on_disk(
         primary_playlist=playlist_name,
         primary_order=track_order,
         spotify_playlist_id=spotify_playlist_id,
+        user_id=user_id,
     )
     if state.track_index is not None:
         dl_dir = Path(state.downloader.download_dir)
@@ -1447,6 +2029,12 @@ def _load_settings(path: Path) -> dict[str, Any]:
             )
             merged['download_delay_seconds'] = _clamp_download_delay(
                 merged['download_delay_seconds']
+            )
+            merged['max_track_duration_seconds'] = _clamp_track_duration(
+                merged.get(
+                    'max_track_duration_seconds',
+                    DEFAULT_SETTINGS['max_track_duration_seconds'],
+                )
             )
             merged['external_sync_delay_seconds'] = _clamp_download_delay(
                 merged.get(
@@ -2612,7 +3200,9 @@ def _song_for_download(url: str) -> dict[str, Any]:
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
 
-def _register_job(song: dict[str, Any], status: str = 'queued') -> str:
+def _register_job(
+    song: dict[str, Any], status: str = 'queued', user_id: int = 0
+) -> str:
     song_id = str(song.get('song_id') or song.get('url') or id(song))
     state.download_jobs[song_id] = {
         'song': song,
@@ -2621,8 +3211,40 @@ def _register_job(song: dict[str, Any], status: str = 'queued') -> str:
         'message': '',
         'provider': '',
         'filename': None,
+        'user_id': int(user_id or 0),
     }
     return song_id
+
+
+def _note_download_owner(stored_path: str, user_id: int) -> None:
+    """Record *user_id* as an owner of an on-disk download (best effort).
+
+    Called for fresh downloads and for dedup hits alike, so two users
+    asking for the same track share the one file with one row each.
+    Never fails the download it runs next to.
+    """
+
+    if not user_id or state.track_owners is None or state.downloader is None:
+        return
+    try:
+        full = locate_library_file(
+            stored_path,
+            Path(state.downloader.download_dir),
+            slskd_dir_from_downloader(state.downloader),
+        )
+        if full is None:
+            return
+        key = content_key_for(full)
+        if key and state.track_owners.add(key, user_id):
+            # New to this user: poke the mobile feed so their next
+            # incremental sync picks the track up.
+            if state.library_sync is not None:
+                name = str(stored_path or '').strip().replace('\\', '/')
+                state.library_sync.touch(name)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not record owner for {}', stored_path
+        )
 
 
 async def _run_download(
@@ -2635,6 +3257,7 @@ async def _run_download(
     spotify_playlist_id: Optional[str] = None,
     track_order: int = 0,
     refresh_playlists: bool = True,
+    user_id: int = 0,
 ) -> Optional[str]:
     """Run a single download to completion, updating jobs state and broadcasting WS events.
 
@@ -2666,8 +3289,10 @@ async def _run_download(
     loop = state.loop or asyncio.get_running_loop()
     job = state.download_jobs.get(song_id)
     if job is None:
-        song_id = _register_job(song, status='downloading')
+        song_id = _register_job(song, status='downloading', user_id=user_id)
         job = state.download_jobs[song_id]
+    elif user_id:
+        job['user_id'] = user_id
 
     sem = state.download_semaphore
     try:
@@ -2693,23 +3318,35 @@ async def _run_download(
                         progress=100,
                         message=skip_message,
                     )
-                    await state.connections.broadcast({
-                        'song': song,
-                        'progress': 100,
-                        'message': skip_message,
-                        'status': 'done',
-                        'filename': existing,
-                    })
+                    if user_id:
+                        # The file is shared, the ownership isn't: this
+                        # user asked for it too.
+                        await asyncio.to_thread(
+                            _note_download_owner, existing, user_id
+                        )
+                    await state.connections.broadcast_job(
+                        user_id,
+                        {
+                            'song': song,
+                            'progress': 100,
+                            'message': skip_message,
+                            'status': 'done',
+                            'filename': existing,
+                        },
+                    )
                     return existing
 
             job['status'] = 'downloading'
 
-            await state.connections.broadcast({
-                'song': song,
-                'progress': 0,
-                'message': '',
-                'status': 'downloading',
-            })
+            await state.connections.broadcast_job(
+                user_id,
+                {
+                    'song': song,
+                    'progress': 0,
+                    'message': '',
+                    'status': 'downloading',
+                },
+            )
 
             def progress(
                 pct: float, message: str, provider: Optional[str] = None
@@ -2721,13 +3358,17 @@ async def _run_download(
                     if provider:
                         j['provider'] = provider
                 asyncio.run_coroutine_threadsafe(
-                    state.connections.broadcast({
-                        'song': song,
-                        'progress': pct,
-                        'message': message,
-                        'provider': provider or (j or {}).get('provider', ''),
-                        'status': 'downloading',
-                    }),
+                    state.connections.broadcast_job(
+                        user_id,
+                        {
+                            'song': song,
+                            'progress': pct,
+                            'message': message,
+                            'provider': provider
+                            or (j or {}).get('provider', ''),
+                            'status': 'downloading',
+                        },
+                    ),
                     loop,
                 )
 
@@ -2748,15 +3389,19 @@ async def _run_download(
                     spotify_playlist_id=spotify_playlist_id,
                     track_order=track_order,
                     refresh_playlists=refresh_playlists,
+                    user_id=user_id,
                 )
             invalidate_library_paths_cache()
-            await state.connections.broadcast({
-                'song': song,
-                'progress': 100,
-                'message': 'Done',
-                'status': 'done',
-                'filename': filename,
-            })
+            await state.connections.broadcast_job(
+                user_id,
+                {
+                    'song': song,
+                    'progress': 100,
+                    'message': 'Done',
+                    'status': 'done',
+                    'filename': filename,
+                },
+            )
             if delay_seconds > 0:
                 await asyncio.sleep(delay_seconds)
     except Exception as exc:
@@ -2769,12 +3414,15 @@ async def _run_download(
             message = f'Error: {exc}'
         job['status'] = 'error'
         job['message'] = message
-        await state.connections.broadcast({
-            'song': song,
-            'progress': 0,
-            'message': message,
-            'status': 'error',
-        })
+        await state.connections.broadcast_job(
+            user_id,
+            {
+                'song': song,
+                'progress': 0,
+                'message': message,
+                'status': 'error',
+            },
+        )
         raise
     return filename
 
@@ -2787,6 +3435,7 @@ async def _record_finished_download(
     spotify_playlist_id: Optional[str],
     track_order: int,
     refresh_playlists: bool,
+    user_id: int = 0,
 ) -> None:
     """Register a downloaded file in the library stores (best effort)."""
 
@@ -2801,7 +3450,10 @@ async def _record_finished_download(
             playlist_name=playlist_name,
             spotify_playlist_id=spotify_playlist_id,
             track_order=track_order,
+            user_id=user_id,
         )
+        _note_download_owner(filename, user_id)
+        _record_download_traffic(filename, user_id)
         download_dir = Path(downloader.download_dir)
         slskd_dir = slskd_dir_from_downloader(downloader)
         if state.navidrome_index is not None:
@@ -2863,7 +3515,8 @@ async def download_endpoint(
         song.get('release_date'),
         pl_ctx.get('playlist_name'),
     )
-    song_id = _register_job(song, status='downloading')
+    user_id = request_user_id(request)
+    song_id = _register_job(song, status='downloading', user_id=user_id)
     await log_activity(
         request, 'download', song_label(song) or url[:200], {'url': url[:500]}
     )
@@ -2876,6 +3529,7 @@ async def download_endpoint(
             playlist_name=pl_ctx.get('playlist_name'),
             spotify_playlist_id=pl_ctx.get('spotify_playlist_id'),
             track_order=int(pl_ctx.get('track_order') or 0),
+            user_id=user_id,
         )
     except NoAudioMatchError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -3073,6 +3727,7 @@ async def _process_batch(
     *,
     batch_id: Optional[int] = None,
     cover_url: Optional[str] = None,
+    user_id: int = 0,
 ) -> None:
     # Resolve the playlist name up-front so all tracks land in a single,
     # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
@@ -3149,6 +3804,7 @@ async def _process_batch(
                 spotify_playlist_id=spotify_playlist_id,
                 track_order=int(song.get('downtify_track_order') or index),
                 refresh_playlists=False,
+                user_id=user_id,
             )
         except Exception:
             filename = None
@@ -3399,12 +4055,24 @@ def _song_row_hint(song: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _known_spotify_playlist_sources() -> dict[str, dict[str, Any]]:
-    """Merge Spotify playlist ids from batch store, catalog, and monitor."""
+def _batch_scope(request: Optional[Request]) -> Optional[int]:
+    """Whose batches *request* sees: ``None`` (everyone's) for an admin."""
+
+    return None if request_is_admin(request) else request_user_id(request)
+
+
+def _known_spotify_playlist_sources(
+    user_id: Optional[int] = None,
+) -> dict[str, dict[str, Any]]:
+    """Merge Spotify playlist ids from batch store, catalog, and monitor.
+
+    With *user_id*: only their batches and playlists (monitor watches
+    are the admin's). Without it: everything.
+    """
 
     sources: dict[str, dict[str, Any]] = {}
     if state.playlist_batch_store is not None:
-        for batch in state.playlist_batch_store.list_latest_batches():
+        for batch in state.playlist_batch_store.list_latest_batches(user_id):
             sid = str(batch['spotify_playlist_id'] or '').strip()
             if not sid:
                 continue
@@ -3415,9 +4083,26 @@ def _known_spotify_playlist_sources() -> dict[str, dict[str, Any]]:
                 'batch': batch,
             }
     if state.playlist_catalog is not None:
+        owners: dict[str, int] = {}
+        if user_id is not None and state.playlist_catalog is not None:
+            try:
+                owners = {
+                    str(name or '').strip().casefold(): int(uid or 0)
+                    for name, uid in state.playlist_catalog.playlist_owner_map().items()
+                }
+            except Exception:
+                logger.opt(exception=True).debug(
+                    'Could not read playlist owners'
+                )
         for row in state.playlist_catalog.list_playlists_with_spotify_id():
             sid = str(row['spotify_id'] or '').strip()
             if not sid:
+                continue
+            if (
+                user_id is not None
+                and owners.get(str(row['name'] or '').strip().casefold(), 0)
+                != user_id
+            ):
                 continue
             if sid not in sources:
                 sources[sid] = {
@@ -3435,18 +4120,25 @@ def _known_spotify_playlist_sources() -> dict[str, dict[str, Any]]:
                 ):
                     entry['expected_hint'] = int(row['track_count'])
         monitor_by_name: dict[str, Any] = {}
-        if state.monitor_db is not None:
+        if state.monitor_db is not None and user_id is None:
             for pl in state.monitor_db.list_playlists():
                 name = str(pl.name or '').strip()
                 if name:
                     monitor_by_name[name] = pl
         batch_by_name: dict[str, dict[str, Any]] = {}
         if state.playlist_batch_store is not None:
-            for batch in state.playlist_batch_store.list_latest_batches():
+            for batch in state.playlist_batch_store.list_latest_batches(
+                user_id
+            ):
                 name = str(batch.get('playlist_name') or '').strip()
                 if name:
                     batch_by_name[name] = batch
         for name in state.playlist_catalog.list_playlist_names():
+            if (
+                user_id is not None
+                and owners.get(name.strip().casefold(), 0) != user_id
+            ):
+                continue
             sid = state.playlist_catalog.spotify_id_for_playlist(name) or ''
             if not sid:
                 mon = monitor_by_name.get(name)
@@ -3465,7 +4157,7 @@ def _known_spotify_playlist_sources() -> dict[str, dict[str, Any]]:
                 'expected_hint': track_count,
                 'batch': batch_by_name.get(name),
             }
-    if state.monitor_db is not None:
+    if state.monitor_db is not None and user_id is None:
         for pl in state.monitor_db.list_playlists():
             sid = str(pl.spotify_id or '').strip()
             if not sid:
@@ -3642,6 +4334,7 @@ def _playlist_completeness_report(
     expected_hint: int = 0,
     include_missing_tracks: bool = True,
     refresh: bool = False,
+    user_id: Optional[int] = None,
 ) -> dict[str, Any]:
     tracks: list[dict[str, Any]] = []
     try:
@@ -3661,12 +4354,16 @@ def _playlist_completeness_report(
         playlist_name,
         spotify_id,
     )
+    owned: Optional[set[str]] = None
+    if user_id is not None and state.track_owners is not None:
+        owned = state.track_owners.owned_keys(user_id)
     downloaded_count, missing_tracks = split_tracks_by_library(
         tracks,
         downloader=state.downloader,
         track_index=state.track_index,
         subdir=subdir,
         catalog_filenames=catalog_filenames,
+        owned_keys=owned,
     )
     expected_count = len(tracks) or int(expected_hint or 0)
     if batch is not None and not expected_count:
@@ -3676,7 +4373,7 @@ def _playlist_completeness_report(
         missing_count = expected_count - downloaded_count
 
     active_count = active_queue_count_for_playlist(
-        spotify_id, state.download_jobs
+        spotify_id, state.download_jobs, user_id
     )
 
     status = _resolve_playlist_batch_status(
@@ -3715,11 +4412,12 @@ def _report_for_spotify_playlist(
     mode: str = 'estimate',
     include_missing_tracks: bool = True,
     refresh: bool = False,
+    user_id: Optional[int] = None,
 ) -> Optional[dict[str, Any]]:
     sid = str(spotify_playlist_id or '').strip()
     if not sid:
         return None
-    meta = _known_spotify_playlist_sources().get(sid)
+    meta = _known_spotify_playlist_sources(user_id).get(sid)
     if meta is None:
         return None
     batch = meta.get('batch')
@@ -3737,6 +4435,7 @@ def _report_for_spotify_playlist(
             expected_hint=hint,
             include_missing_tracks=include_missing_tracks,
             refresh=refresh,
+            user_id=user_id,
         )
     report = _playlist_batch_summary(
         sid,
@@ -3751,6 +4450,7 @@ def _report_for_spotify_playlist(
 def _build_playlist_batch_reports(
     *,
     include_tracks: bool = False,
+    user_id: Optional[int] = None,
 ) -> list[dict[str, Any]]:
     if state.downloader is None or state.track_index is None:
         return []
@@ -3761,8 +4461,13 @@ def _build_playlist_batch_reports(
         else _playlist_batch_summary
     )
     reports: list[dict[str, Any]] = []
-    for sid, meta in _known_spotify_playlist_sources().items():
+    for sid, meta in _known_spotify_playlist_sources(user_id).items():
         batch = meta.get('batch')
+        kwargs: dict[str, Any] = (
+            {'user_id': user_id}
+            if builder is _playlist_completeness_report
+            else {}
+        )
         reports.append(
             builder(
                 sid,
@@ -3773,6 +4478,7 @@ def _build_playlist_batch_reports(
                 ),
                 batch=batch if isinstance(batch, dict) else None,
                 expected_hint=int(meta.get('expected_hint') or 0),
+                **kwargs,
             )
         )
     reports.sort(
@@ -3804,18 +4510,23 @@ def collect_playlist_batch_sync_rows() -> list[dict[str, Any]]:
 def _build_incomplete_playlist_reports(
     *,
     include_tracks: bool = False,
+    user_id: Optional[int] = None,
 ) -> list[dict[str, Any]]:
     """Playlists that still need work (missing tracks or active queue jobs)."""
 
     return [
         row
-        for row in _build_playlist_batch_reports(include_tracks=include_tracks)
+        for row in _build_playlist_batch_reports(
+            include_tracks=include_tracks, user_id=user_id
+        )
         if row['status'] != 'complete'
     ]
 
 
 def _missing_tracks_for_playlist(
     spotify_playlist_id: str,
+    *,
+    user_id: Optional[int] = None,
 ) -> tuple[str, str, list[dict[str, Any]]]:
     if state.downloader is None or state.track_index is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
@@ -3838,12 +4549,16 @@ def _missing_tracks_for_playlist(
         playlist_name,
         sid,
     )
+    owned: Optional[set[str]] = None
+    if user_id is not None and state.track_owners is not None:
+        owned = state.track_owners.owned_keys(user_id)
     _downloaded, missing = split_tracks_by_library(
         tracks,
         downloader=state.downloader,
         track_index=state.track_index,
         subdir=subdir,
         catalog_filenames=catalog_filenames,
+        owned_keys=owned,
     )
     playlist_url = f'https://open.spotify.com/playlist/{sid}'
     return playlist_name, playlist_url, missing
@@ -3857,13 +4572,14 @@ async def _submit_playlist_batch(
     batch_id: Optional[int] = None,
     playlist_name: Optional[str] = None,
     cover_url: Optional[str] = None,
+    user_id: int = 0,
 ) -> dict[str, Any]:
     valid_songs: list[dict[str, Any]] = []
     job_ids: list[str] = []
     for song in songs:
         if not isinstance(song, dict):
             continue
-        song_id = _register_job(song, status='queued')
+        song_id = _register_job(song, status='queued', user_id=user_id)
         valid_songs.append(song)
         job_ids.append(song_id)
 
@@ -3883,6 +4599,7 @@ async def _submit_playlist_batch(
             playlist_name,
             batch_id=batch_id,
             cover_url=cover_url,
+            user_id=user_id,
         ),
         name='playlist-batch',
     )
@@ -3940,12 +4657,14 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         and state.playlist_batch_store is not None
     ):
         first = next((s for s in songs if isinstance(s, dict)), {})
+        batch_user_id = request_user_id(request)
         batch_id = await asyncio.to_thread(
             state.playlist_batch_store.start_batch,
             target[1],
             str(first.get('album_name') or '').strip() or target[1],
             playlist_url,
             len(songs),
+            user_id=batch_user_id,
         )
 
     return await _submit_playlist_batch(
@@ -3955,6 +4674,7 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         batch_id=batch_id,
         playlist_name=playlist_name,
         cover_url=cover_url,
+        user_id=request_user_id(request),
     )
 
 
@@ -4016,9 +4736,10 @@ async def download_csv_endpoint(request: Request) -> dict[str, Any]:
     # and the badge /queue tabs would count the longer file only.
     _scope_csv_song_ids(songs)
 
+    user_id = request_user_id(request)
     job_ids: list[str] = []
     for song in songs:
-        song_id = _register_job(song, status='queued')
+        song_id = _register_job(song, status='queued', user_id=user_id)
         job_ids.append(song_id)
 
     # Same single reload as _submit_playlist_batch. The rows are already
@@ -4027,7 +4748,12 @@ async def download_csv_endpoint(request: Request) -> dict[str, Any]:
 
     task = spawn_task(
         _process_batch(
-            songs, job_ids, '', generate_m3u, playlist_name=playlist_name
+            songs,
+            job_ids,
+            '',
+            generate_m3u,
+            playlist_name=playlist_name,
+            user_id=user_id,
         ),
         name='csv-batch',
     )
@@ -4100,14 +4826,16 @@ async def download_album_endpoint(
         else 0
     )
 
+    user_id = request_user_id(request)
+
     async def _one(song: dict[str, Any]) -> tuple[str, Optional[str]]:
         song_id = str(song.get('song_id') or '')
         if not song_id:
             return '', None
-        job_id = _register_job(song, status='downloading')
+        job_id = _register_job(song, status='downloading', user_id=user_id)
         try:
             filename = await _run_download(
-                song, job_id, delay_seconds=delay_seconds
+                song, job_id, delay_seconds=delay_seconds, user_id=user_id
             )
         except Exception:
             logger.exception('Album track download failed for {}', song_id)
@@ -4677,33 +5405,41 @@ async def _schedule_playlist_refresh_after_delete(
 
 
 @router.get('/api/library/summary')
-def library_summary() -> dict[str, Any]:
+def library_summary(request: Request) -> dict[str, Any]:
     """Home-page library stats and a short recent-album shelf.
 
     Avoids sending every ``GET /tracks`` row to the browser when the
-    page only shows counts and a handful of albums.
+    page only shows counts and a handful of albums. A user sees their
+    own library only.
     """
 
-    return library_home_summary(library_context())
+    return library_home_summary(
+        library_context(), allowed_keys=allowed_entry_keys(request)
+    )
 
 
 @router.get('/api/library/albums')
-def library_albums() -> list[dict[str, Any]]:
+def library_albums(request: Request) -> list[dict[str, Any]]:
     """Album tiles for the Library page, without every track row."""
 
-    return library_album_index(library_context())
+    return library_album_index(
+        library_context(), allowed_keys=allowed_entry_keys(request)
+    )
 
 
 @router.get('/api/library/artists')
-def library_artists() -> list[dict[str, Any]]:
+def library_artists(request: Request) -> list[dict[str, Any]]:
     """Artist tiles for the Library page and Discover's library payload."""
 
     liked: set[str] = set()
     if state.likes is not None:
         liked = {
-            str(path or '').replace('\\', '/') for path in state.likes.paths()
+            str(path or '').replace('\\', '/')
+            for path in state.likes.paths(likes_scope(request))
         }
-    return library_artist_index(library_context(), liked)
+    return library_artist_index(
+        library_context(), liked, allowed_keys=allowed_entry_keys(request)
+    )
 
 
 @router.post('/api/library/lookup')
@@ -4714,7 +5450,9 @@ async def library_lookup(request: Request) -> list[dict[str, Any]]:
     songs = payload.get('songs')
     if not isinstance(songs, list):
         songs = []
-    return lookup_library_songs(library_context(), songs)
+    return lookup_library_songs(
+        library_context(), songs, allowed_keys=allowed_entry_keys(request)
+    )
 
 
 @router.post('/api/library/playlists')
@@ -4730,6 +5468,7 @@ async def create_library_playlist_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(
             status_code=exc.status_code, detail=str(exc)
         ) from exc
+    claim_manual_playlist(str(result.get('name') or name), request)
     invalidate_library_paths_cache()
     return result
 
@@ -4742,6 +5481,7 @@ async def edit_library_playlist_tracks_endpoint(
 
     payload = await _json_object(request)
     name = str(payload.get('name') or '').strip()
+    require_playlist_visible(name, request)
     add = payload.get('add') if isinstance(payload.get('add'), list) else []
     remove = (
         payload.get('remove')
@@ -4772,6 +5512,7 @@ async def rename_library_playlist_endpoint(request: Request) -> dict[str, Any]:
     payload = await _json_object(request)
     name = str(payload.get('name') or '').strip()
     new_name = str(payload.get('new_name') or '').strip()
+    require_playlist_visible(name, request)
     ctx = library_context()
     try:
         result = await asyncio.to_thread(
@@ -4781,15 +5522,32 @@ async def rename_library_playlist_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(
             status_code=exc.status_code, detail=str(exc)
         ) from exc
+    if state.manual_playlist_owners is not None:
+        try:
+            await asyncio.to_thread(
+                state.manual_playlist_owners.rename_owner,
+                name,
+                str(result.get('name') or new_name),
+            )
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not move owner for playlist {!r}', name
+            )
     invalidate_library_paths_cache()
     return result
 
 
 @router.delete('/api/library/playlist')
 async def delete_library_playlist_endpoint(
+    request: Request,
     playlist_name: str = Query(..., min_length=1),
 ) -> dict[str, Any]:
-    """Delete all tracks in a playlist, its M3U, and catalog entry."""
+    """Delete all tracks in a playlist, its M3U, and catalog entry.
+
+    A user deletes their own playlist only: files others still own
+    stay on disk (losing just this owner's row), files nobody else
+    owns go like a single delete.
+    """
 
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
@@ -4798,7 +5556,7 @@ async def delete_library_playlist_endpoint(
         # Deleting a playlist deletes its tracks from disk. Here that must
         # only ever mean "unlike everything": the songs are the user's
         # library, the playlist merely lists the ones they hearted.
-        await asyncio.to_thread(_clear_likes)
+        await asyncio.to_thread(_clear_likes, likes_scope(request))
         return {
             'ok': True,
             'playlist': playlist_name,
@@ -4810,15 +5568,31 @@ async def delete_library_playlist_endpoint(
             'playlists_refresh_scheduled': False,
         }
 
-    def _run() -> dict[str, Any]:
-        return delete_playlist_from_library(
-            playlist_name,
-            Path(state.downloader.download_dir),
-            state.settings,
-            state,
-        )
+    return await _delete_playlist_by_name(request, playlist_name)
 
-    result = await asyncio.to_thread(_run)
+
+async def _delete_playlist_by_name(
+    request: Request, playlist_name: str
+) -> dict[str, Any]:
+    """Shared core of both playlist delete endpoints."""
+
+    if request_is_admin(request):
+
+        def _run() -> dict[str, Any]:
+            assert state.downloader is not None
+            return delete_playlist_from_library(
+                playlist_name,
+                Path(state.downloader.download_dir),
+                state.settings,
+                state,
+            )
+
+        result = await asyncio.to_thread(_run)
+    else:
+        match = playlist_entry_for_request(playlist_name, request)
+        if match is None:
+            raise HTTPException(status_code=404, detail='Playlist not found')
+        result = await _delete_owned_playlist(request, match)
     if not result.get('ok'):
         raise HTTPException(
             status_code=400,
@@ -4831,28 +5605,110 @@ async def delete_library_playlist_endpoint(
     return result
 
 
+async def _delete_owned_playlist(
+    request: Request, match: dict[str, Any]
+) -> dict[str, Any]:
+    """One user's playlist delete (see
+    :func:`delete_library_playlist_endpoint`)."""
+
+    name = str(match.get('name') or '')
+    user_id = request_user_id(request)
+
+    def _run() -> dict[str, Any]:
+        assert state.downloader is not None
+        download_dir = Path(state.downloader.download_dir)
+        if match.get('manual'):
+            result = delete_playlist_from_library(
+                name, download_dir, state.settings, state
+            )
+            if state.manual_playlist_owners is not None:
+                state.manual_playlist_owners.forget_owner(name)
+            return result
+        files = [
+            str(item or '').strip().replace('\\', '/')
+            for item in (match.get('files') or [])
+            if str(item or '').strip()
+        ]
+        to_delete: list[str] = []
+        released = 0
+        for stored in files:
+            action, key = ownership_action(stored, request)
+            if action == 'delete' and key:
+                to_delete.append(stored)
+            elif action == 'release' and key:
+                release_file_ownership(stored, key, user_id)
+                released += 1
+        keys = {stored: stored_content_key(stored) for stored in to_delete}
+        batch = delete_library_files(
+            to_delete, library_context(), state, log_failures=False
+        )
+        for gone in batch.get('deleted') or []:
+            if keys.get(gone):
+                drop_file_owners(keys[gone])
+        if state.playlist_catalog is not None:
+            state.playlist_catalog.delete_playlist(name)
+        organize = bool(
+            state.settings.get('organize_by_artist', False)
+            or state.settings.get('organize_by_album', False)
+        )
+        shell = remove_playlist_shell(
+            name, download_dir, organize_by_artist=organize
+        )
+        affected = set(batch.get('playlists_affected') or [])
+        affected.add(name)
+        failed = list(batch.get('failed') or [])
+        logger.info(
+            'Playlist delete finished for {!r}: {} audio file(s) '
+            'removed, {} released, {} failed, {} M3U file(s)',
+            name,
+            len(batch.get('deleted') or []),
+            released,
+            len(failed),
+            shell['m3u_removed'],
+        )
+        return {
+            'ok': True,
+            'playlist': name,
+            'files': list(batch.get('deleted') or []),
+            'deleted_count': len(batch.get('deleted') or []),
+            'released_count': released,
+            'failed_count': len(failed),
+            'failed': failed,
+            'playlists_affected': sorted(affected),
+        }
+
+    result = await asyncio.to_thread(_run)
+    return result
+
+
 @router.get('/api/playlists/batches')
-async def list_playlist_batches_endpoint() -> dict[str, Any]:
+async def list_playlist_batches_endpoint(request: Request) -> dict[str, Any]:
     """Tracked Spotify playlist batches (summary from Spotify cache)."""
 
-    reports = await asyncio.to_thread(_build_playlist_batch_reports)
+    scope = _batch_scope(request)
+    reports = await asyncio.to_thread(
+        _build_playlist_batch_reports, user_id=scope
+    )
     return {'playlists': reports, 'count': len(reports)}
 
 
 @router.get('/api/playlists/batches/{spotify_playlist_id}')
 async def get_playlist_batch_detail_endpoint(
+    request: Request,
     spotify_playlist_id: str,
     tracks: bool = Query(default=True),
     refresh: bool = Query(default=False),
 ) -> dict[str, Any]:
     """Completeness for one playlist using cached Spotify track list."""
 
+    scope = _batch_scope(request)
     report = await asyncio.to_thread(
         _report_for_spotify_playlist,
         spotify_playlist_id,
         mode='spotify',
         include_missing_tracks=tracks,
         refresh=refresh,
+        user_id=scope,
     )
     if report is None:
         raise HTTPException(status_code=404, detail='Playlist not found')
@@ -4887,6 +5743,7 @@ def _purge_playlist_tracking(spotify_playlist_id: str) -> None:
 
 @router.delete('/api/playlists/batches/{spotify_playlist_id}')
 async def delete_playlist_batch_endpoint(
+    request: Request,
     spotify_playlist_id: str,
 ) -> dict[str, Any]:
     """Delete playlist audio, catalog, M3U, and batch/monitor/cache tracking."""
@@ -4899,7 +5756,8 @@ async def delete_playlist_batch_endpoint(
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
-    meta = _known_spotify_playlist_sources().get(sid)
+    scope = _batch_scope(request)
+    meta = _known_spotify_playlist_sources(scope).get(sid)
     if meta is None:
         raise HTTPException(status_code=404, detail='Playlist not found')
 
@@ -4910,17 +5768,31 @@ async def delete_playlist_batch_endpoint(
         sid,
     )
 
-    def _run() -> dict[str, Any]:
-        result = delete_playlist_from_library(
-            playlist_name,
-            Path(state.downloader.download_dir),
-            state.settings,
-            state,
-        )
-        _purge_playlist_tracking(sid)
-        return result
+    if request_is_admin(request):
 
-    result = await asyncio.to_thread(_run)
+        def _run() -> dict[str, Any]:
+            assert state.downloader is not None
+            result = delete_playlist_from_library(
+                playlist_name,
+                Path(state.downloader.download_dir),
+                state.settings,
+                state,
+            )
+            _purge_playlist_tracking(sid)
+            return result
+
+        result = await asyncio.to_thread(_run)
+    else:
+        batch = meta.get('batch')
+        if not isinstance(batch, dict) or not batch.get('id'):
+            raise HTTPException(status_code=404, detail='Playlist not found')
+        result = await _delete_playlist_by_name(request, playlist_name)
+        if state.playlist_batch_store is not None:
+            await asyncio.to_thread(
+                state.playlist_batch_store.delete_for_spotify_playlist,
+                sid,
+                request_user_id(request),
+            )
     if not result.get('ok'):
         raise HTTPException(
             status_code=400,
@@ -4935,15 +5807,21 @@ async def delete_playlist_batch_endpoint(
 
 
 @router.get('/api/playlists/incomplete')
-async def list_incomplete_playlists_endpoint() -> dict[str, Any]:
+async def list_incomplete_playlists_endpoint(
+    request: Request,
+) -> dict[str, Any]:
     """Playlist batches that are still missing tracks vs Spotify."""
 
-    reports = await asyncio.to_thread(_build_incomplete_playlist_reports)
+    scope = _batch_scope(request)
+    reports = await asyncio.to_thread(
+        _build_incomplete_playlist_reports, user_id=scope
+    )
     return {'playlists': reports, 'count': len(reports)}
 
 
 @router.post('/api/playlists/incomplete/download-missing')
 async def download_missing_playlist_tracks_endpoint(
+    request: Request,
     body: dict[str, Any] = Body(...),
 ) -> dict[str, Any]:
     """Queue only tracks from a Spotify playlist that are not in the library."""
@@ -4964,7 +5842,9 @@ async def download_missing_playlist_tracks_endpoint(
         )
 
     playlist_name, resolved_url, missing = await asyncio.to_thread(
-        _missing_tracks_for_playlist, spotify_playlist_id
+        _missing_tracks_for_playlist,
+        spotify_playlist_id,
+        user_id=_batch_scope(request),
     )
     if not missing:
         if state.playlist_batch_store is not None:
@@ -5012,6 +5892,7 @@ async def download_missing_playlist_tracks_endpoint(
             playlist_name,
             resolved_url,
             len(missing),
+            user_id=request_user_id(request),
         )
 
     songs: list[dict[str, Any]] = []
@@ -5026,30 +5907,54 @@ async def download_missing_playlist_tracks_endpoint(
         resolved_url,
         generate_m3u=generate_m3u,
         batch_id=batch_id,
+        user_id=request_user_id(request),
     )
     result['missing_count'] = len(missing)
     result['playlist_name'] = playlist_name
     return result
 
 
+def _queue_job_visible(job: dict[str, Any], request: Request) -> bool:
+    """Whether the queue *job* is *request*'s own (admins see every job,
+    including pre-feature ones with no owner)."""
+
+    if request_is_admin(request):
+        return True
+    return int(job.get('user_id') or 0) == request_user_id(request)
+
+
 @router.get('/api/queue')
-def get_queue() -> list[dict[str, Any]]:
-    return list(state.download_jobs.values())
+def get_queue(request: Request) -> list[dict[str, Any]]:
+    """The download queue: everyone's for an admin, one's own otherwise."""
+
+    return [
+        job
+        for job in state.download_jobs.values()
+        if _queue_job_visible(job, request)
+    ]
 
 
 @router.delete('/api/queue')
-def clear_queue() -> dict:
-    state.download_jobs.clear()
+def clear_queue(request: Request) -> dict:
+    if request_is_admin(request):
+        state.download_jobs.clear()
+        return {'cleared': True}
+    for song_id in [
+        key
+        for key, job in list(state.download_jobs.items())
+        if _queue_job_visible(job, request)
+    ]:
+        del state.download_jobs[song_id]
     return {'cleared': True}
 
 
 @router.delete('/api/queue/completed')
-def clear_completed_queue() -> dict:
+def clear_completed_queue(request: Request) -> dict:
     """Remove finished jobs so a new playlist queue is easier to read."""
     removed = [
         song_id
         for song_id, job in list(state.download_jobs.items())
-        if job.get('status') == 'done'
+        if job.get('status') == 'done' and _queue_job_visible(job, request)
     ]
     for song_id in removed:
         del state.download_jobs[song_id]
@@ -5057,8 +5962,9 @@ def clear_completed_queue() -> dict:
 
 
 @router.delete('/api/queue/item')
-def remove_queue_item(song_id: str = Query(...)) -> dict:
-    if song_id in state.download_jobs:
+def remove_queue_item(request: Request, song_id: str = Query(...)) -> dict:
+    job = state.download_jobs.get(song_id)
+    if job is not None and _queue_job_visible(job, request):
         del state.download_jobs[song_id]
         return {'removed': True}
     return {'removed': False}
@@ -5237,6 +6143,8 @@ async def update_settings_endpoint(
                 state.settings[key] = _clamp_parallel_downloads(raw_value)
             elif key == 'download_delay_seconds':
                 state.settings[key] = _clamp_download_delay(raw_value)
+            elif key == 'max_track_duration_seconds':
+                state.settings[key] = _clamp_track_duration(raw_value)
             elif key == 'external_sync_delay_seconds':
                 state.settings[key] = _clamp_download_delay(raw_value)
             elif key == 'cover_resolution':
@@ -5318,6 +6226,10 @@ async def update_settings_endpoint(
                 state.downloader.overwrite_existing_files = bool(
                     payload['overwrite_existing_files']
                 )
+            if 'max_track_duration_seconds' in payload:
+                state.downloader.max_track_duration_seconds = state.settings[
+                    'max_track_duration_seconds'
+                ]
         if 'max_parallel_downloads' in payload:
             state.download_semaphore = asyncio.Semaphore(
                 state.settings['max_parallel_downloads']
@@ -5401,6 +6313,22 @@ def _require_likes() -> LikedTracks:
     return state.likes
 
 
+def _admin_like_scope() -> set[int]:
+    """Whose likes the shared playlist file holds: every admin's, plus
+    pre-feature rows (``user_id`` ``0``, made when likes belonged to
+    whoever ran the single-user server)."""
+
+    ids = {0}
+    try:
+        users = state.auth.users if state.auth is not None else None
+        for user in users.list() if users is not None else []:
+            if user.get('role') == 'admin':
+                ids.add(int(user['id']))
+    except Exception:
+        logger.opt(exception=True).debug('Could not resolve the admin set')
+    return ids
+
+
 def _sync_liked_playlist() -> None:
     """Rewrite (or remove) the liked songs playlist to match the likes."""
 
@@ -5413,6 +6341,7 @@ def _sync_liked_playlist() -> None:
             ctx.download_dir,
             ctx.slskd_dir,
             ctx.extra_dirs,
+            user_ids=_admin_like_scope(),
         )
     except Exception:
         logger.exception('Liked songs playlist sync failed')
@@ -5469,23 +6398,30 @@ def _announce_likes() -> None:
     )
 
 
-def _clear_likes() -> int:
+def _clear_likes(user_id: Optional[int] = None) -> int:
     likes = _require_likes()
-    cleared = likes.clear()
+    cleared = likes.clear(user_id)
     _sync_liked_playlist()
     _announce_likes()
     return cleared
 
 
+def likes_scope(request: Request) -> Optional[int]:
+    """Whose likes *request* sees: ``None`` (everyone's) for an admin."""
+
+    return None if request_is_admin(request) else request_user_id(request)
+
+
 @router.get('/api/likes')
-def get_likes() -> dict[str, Any]:
+def get_likes(request: Request) -> dict[str, Any]:
     """The liked files, newest like first, and the playlist's name.
 
     ``files`` are library paths, the same ones ``GET /tracks`` uses.
+    A user sees their own hearts; an admin sees everyone's.
     """
 
     likes = _require_likes()
-    files = likes.paths()
+    files = likes.paths(likes_scope(request))
     return {
         'files': files,
         'count': len(files),
@@ -5500,7 +6436,8 @@ async def set_like(request: Request) -> dict[str, Any]:
     Idempotent — sending the state you want twice changes nothing — so a
     client can retry a tap that may not have arrived. Liking needs a file
     that is in the library; unliking accepts any path, so a heart on a
-    file that has since vanished can still be cleared.
+    file that has since vanished can still be cleared. The heart belongs
+    to whoever tapped it.
     """
 
     payload = await _json_object(request)
@@ -5508,12 +6445,14 @@ async def set_like(request: Request) -> dict[str, Any]:
     if not file:
         raise HTTPException(status_code=400, detail='file is required')
     liked = bool(payload.get('liked', True))
-    result = await apply_like(file, liked)
+    result = await apply_like(file, liked, user_id=request_user_id(request))
     await log_activity(request, 'like' if liked else 'unlike', file)
     return result
 
 
-async def apply_like(file: str, liked: bool) -> dict[str, Any]:
+async def apply_like(
+    file: str, liked: bool, user_id: int = 0
+) -> dict[str, Any]:
     """Like or unlike a library path (``PUT /api/likes`` and, by track
     id, ``PUT /api/v1/likes``)."""
 
@@ -5531,25 +6470,28 @@ async def apply_like(file: str, liked: bool) -> dict[str, Any]:
                 title=str(meta.get('title') or full.stem),
                 artist=str(meta.get('artist') or ''),
                 duration=float(meta.get('duration') or 0.0),
+                user_id=user_id,
             )
         )
     else:
-        changed = await asyncio.to_thread(likes.unlike, file)
+        changed = await asyncio.to_thread(likes.unlike, file, user_id)
 
     if changed:
         await asyncio.to_thread(_sync_liked_playlist)
         _announce_likes()
-    return {'file': file, 'liked': liked, 'count': likes.count()}
+    scope = None if user_id in _admin_like_scope() else user_id
+    return {'file': file, 'liked': liked, 'count': likes.count(scope)}
 
 
 @router.post('/api/likes/clear')
-async def clear_likes_endpoint() -> dict[str, Any]:
-    """Unlike everything, which also takes the playlist away.
+async def clear_likes_endpoint(request: Request) -> dict[str, Any]:
+    """Unlike everything of one's own (everything for an admin), which
+    also takes the playlist away.
 
     Only the hearts and the playlist file go; no song is deleted.
     """
 
-    cleared = await asyncio.to_thread(_clear_likes)
+    cleared = await asyncio.to_thread(_clear_likes, likes_scope(request))
     return {'cleared': cleared, 'count': 0}
 
 
@@ -5577,7 +6519,9 @@ async def discover_endpoint(request: Request) -> dict[str, Any]:
     library = payload.get('library')
     if not isinstance(library, list):
         raise HTTPException(status_code=400, detail='library is required')
-    return await asyncio.to_thread(recommendations, store, library)
+    return await asyncio.to_thread(
+        recommendations, store, library, user_id=request_user_id(request)
+    )
 
 
 @router.post('/api/discover/collections')
@@ -5743,6 +6687,7 @@ async def stream_endpoint(
 
 @router.get('/api/stream/file')
 async def stream_file_endpoint(
+    request: Request,
     video_id: str = Query(..., min_length=1, max_length=64),
     duration: float = Query(0, ge=0),
 ) -> FileResponse:
@@ -5756,17 +6701,18 @@ async def stream_file_endpoint(
     ``DOWNTIFY_STREAM_CACHE_MB`` (see ``downtify.stream``). ``duration``
     (seconds, when the caller knows it) refuses long tracks before any
     download; the served file is probed either way. ``400`` for a
-    malformed id or a track over 10 minutes, ``503`` when YouTube
-    can't provide the audio.
+    malformed id or a track past the duration limit (Settings →
+    Downloads), ``503`` when YouTube can't provide the audio.
     """
 
     try:
         vid = stream.clean_video_id(video_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    if duration > MAX_TRACK_DURATION_SECONDS:
+    limit = _max_track_duration_seconds()
+    if limit and duration > limit:
         raise HTTPException(
-            status_code=400, detail=stream.STREAM_TOO_LONG_DETAIL
+            status_code=400, detail=stream.too_long_detail(limit)
         )
     cache = state.stream_cache
     if cache is None:
@@ -5774,12 +6720,15 @@ async def stream_file_endpoint(
             status_code=503, detail='Streaming is not ready yet'
         )
     cookies = stream.resolve_cookies_file(state.cookies_store)
+    was_cached = await asyncio.to_thread(cache.cached_path, vid) is not None
     try:
-        path = await cache.get(vid, cookies_file=cookies)
+        path = await cache.get(vid, cookies_file=cookies, max_seconds=limit)
     except TrackTooLongError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if not was_cached:
+        record_stream_fetch_traffic(path, request_user_id(request))
     return FileResponse(
         str(path),
         media_type=stream.media_type_for(path),
@@ -5788,12 +6737,17 @@ async def stream_file_endpoint(
 
 
 async def _prefetch_stream_video(
-    cache: StreamCache, video_id: str, cookies_file: str
+    cache: StreamCache,
+    video_id: str,
+    cookies_file: str,
+    max_seconds: Optional[int] = None,
 ) -> None:
     """Cache one video's audio in the background (never raises)."""
 
     try:
-        await cache.get(video_id, cookies_file=cookies_file)
+        await cache.get(
+            video_id, cookies_file=cookies_file, max_seconds=max_seconds
+        )
     except Exception:
         logger.debug('Stream prefetch failed for videoId={}', video_id)
 
@@ -5820,7 +6774,9 @@ async def stream_prefetch_endpoint(request: Request) -> dict[str, bool]:
         )
     cookies = stream.resolve_cookies_file(state.cookies_store)
     spawn_task(
-        _prefetch_stream_video(cache, vid, cookies),
+        _prefetch_stream_video(
+            cache, vid, cookies, _max_track_duration_seconds()
+        ),
         name=f'stream-prefetch-{vid}',
     )
     return {'queued': True}
@@ -5850,6 +6806,7 @@ async def record_listen_endpoint(request: Request) -> dict[str, Any]:
         artist,
         when,
         str(payload.get('play_id') or '').strip(),
+        request_user_id(request),
     )
     if row is None:
         raise HTTPException(status_code=400, detail='artist is required')
@@ -5872,18 +6829,21 @@ def _played_at(value: Any) -> Optional[datetime]:
 
 
 @router.delete('/api/discover/listens')
-async def clear_listens_endpoint() -> dict[str, Any]:
-    """Forget every counted listen. The library and likes are untouched."""
+async def clear_listens_endpoint(request: Request) -> dict[str, Any]:
+    """Forget every counted listen of one's own. The library and likes
+    are untouched."""
 
     store = _require_discover()
-    cleared = await asyncio.to_thread(store.clear_listens)
+    scope = None if request_is_admin(request) else request_user_id(request)
+    cleared = await asyncio.to_thread(store.clear_listens, scope)
     return {'cleared': cleared}
 
 
 @router.get('/api/discover/blocked')
-async def blocked_artists_endpoint() -> list[dict[str, Any]]:
+async def blocked_artists_endpoint(request: Request) -> list[dict[str, Any]]:
     store = _require_discover()
-    return await asyncio.to_thread(store.blocked)
+    scope = None if request_is_admin(request) else request_user_id(request)
+    return await asyncio.to_thread(store.blocked, scope)
 
 
 @router.post('/api/discover/blocked')
@@ -5892,16 +6852,21 @@ async def block_artist_endpoint(request: Request) -> dict[str, Any]:
 
     store = _require_discover()
     payload = await _json_object(request)
-    row = await asyncio.to_thread(store.block, str(payload.get('name') or ''))
+    row = await asyncio.to_thread(
+        store.block, str(payload.get('name') or ''), request_user_id(request)
+    )
     if row is None:
         raise HTTPException(status_code=400, detail='name is required')
     return row
 
 
 @router.delete('/api/discover/blocked')
-async def unblock_artist_endpoint(name: str = Query(...)) -> dict[str, Any]:
+async def unblock_artist_endpoint(
+    request: Request, name: str = Query(...)
+) -> dict[str, Any]:
     store = _require_discover()
-    removed = await asyncio.to_thread(store.unblock, name)
+    scope = None if request_is_admin(request) else request_user_id(request)
+    removed = await asyncio.to_thread(store.unblock, name, scope)
     return {'name': name, 'removed': removed}
 
 
@@ -5912,18 +6877,60 @@ def _require_podcasts() -> PodcastStore:
     return state.podcasts
 
 
-def _podcast_watch(feed_url: str) -> Optional[MonitoredPlaylist]:
+def _podcast_watch(
+    feed_url: str, user_id: Optional[int] = None
+) -> Optional[MonitoredPlaylist]:
     db = state.monitor_db
     if db is None:
         return None
-    return db.get_by_spotify_id(feed_url)
+    return db.get_by_spotify_id(feed_url, user_id)
+
+
+def _podcast_show_for_request(
+    show_id: int, request: Optional[Request]
+) -> Optional[dict[str, Any]]:
+    """The show when *request* may open it (own or admin's)."""
+
+    podcasts = state.podcasts
+    if podcasts is None:
+        return None
+    show = podcasts.get_show(show_id)
+    if show is None:
+        return None
+    if request_is_admin(request):
+        return show
+    user_id = request_user_id(request)
+    if user_id and int(show.get('user_id') or 0) == user_id:
+        return show
+    return None
+
+
+def _podcast_episode_for_request(
+    episode_id: int, request: Optional[Request]
+) -> Optional[dict[str, Any]]:
+    """The episode (with its show) when *request* may open it."""
+
+    podcasts = state.podcasts
+    if podcasts is None:
+        return None
+    episode = podcasts.get_episode(episode_id)
+    if episode is None:
+        return None
+    show = _podcast_show_for_request(episode['show_id'], request)
+    if show is None:
+        return None
+    return episode
 
 
 def _show_payload(
-    show: dict[str, Any], watch: Optional[MonitoredPlaylist]
+    show: dict[str, Any],
+    watch: Optional[MonitoredPlaylist],
+    user_id: int = 0,
 ) -> dict[str, Any]:
     episodes = (
-        state.podcasts.list_episodes(show['id']) if state.podcasts else []
+        state.podcasts.list_episodes(show['id'], user_id=user_id)
+        if state.podcasts
+        else []
     )
     downloaded = sum(
         1 for e in episodes if e['filename'] and not e['dismissed']
@@ -5983,7 +6990,16 @@ async def resolve_podcast(request: Request) -> dict[str, Any]:
                 detail='That link is not a podcast RSS feed',
             )
 
-    existing = await asyncio.to_thread(_podcast_watch, feed.feed_url)
+    scope = None if request_is_admin(request) else request_user_id(request)
+    existing = await asyncio.to_thread(_podcast_watch, feed.feed_url, scope)
+    if existing is None and not request_is_admin(request):
+        podcasts = _require_podcasts()
+        show = await asyncio.to_thread(
+            podcasts.get_show_by_feed_url, feed.feed_url, scope
+        )
+        subscribed = show is not None
+    else:
+        subscribed = existing is not None
     return {
         'show': {
             'name': feed.name,
@@ -5995,7 +7011,7 @@ async def resolve_podcast(request: Request) -> dict[str, Any]:
         },
         'episodes': [vars(e) for e in feed.episodes],
         'matched_episode_guid': matched_guid,
-        'already_subscribed': existing is not None,
+        'already_subscribed': subscribed,
     }
 
 
@@ -6009,10 +7025,15 @@ async def search_podcasts_endpoint(q: str = '') -> dict[str, Any]:
 
 @router.post('/api/podcasts/subscribe')
 async def subscribe_podcast(request: Request) -> dict[str, Any]:
-    """Subscribe to a show resolved with ``POST /api/podcasts/resolve``."""
+    """Subscribe to a show resolved with ``POST /api/podcasts/resolve``.
+
+    Subscriptions belong to whoever subscribes (an admin sees every
+    show); the same feed subscribed twice lands in two folders.
+    """
 
     podcasts = _require_podcasts()
     db = _require_monitor_db()
+    user_id = request_user_id(request)
     payload = await _json_object(request)
     feed_url = str(payload.get('feed_url') or '').strip()
     name = str(payload.get('name') or '').strip()
@@ -6020,7 +7041,10 @@ async def subscribe_podcast(request: Request) -> dict[str, Any]:
         raise HTTPException(
             status_code=400, detail='feed_url and name are required'
         )
-    if await asyncio.to_thread(db.get_by_spotify_id, feed_url) is not None:
+    if (
+        await asyncio.to_thread(db.get_by_spotify_id, feed_url, user_id)
+        is not None
+    ):
         raise HTTPException(
             status_code=409, detail='Already subscribed to this podcast'
         )
@@ -6036,6 +7060,7 @@ async def subscribe_podcast(request: Request) -> dict[str, Any]:
         artwork_url=str(payload.get('artwork_url') or ''),
         source_url=str(payload.get('source_url') or feed_url),
         retention=retention,
+        user_id=user_id,
     )
     watch = await asyncio.to_thread(
         db.add_playlist,
@@ -6044,37 +7069,49 @@ async def subscribe_podcast(request: Request) -> dict[str, Any]:
         str(payload.get('source_url') or feed_url),
         interval_minutes,
         KIND_PODCAST,
+        user_id=user_id,
     )
     _start_initial_check(watch, db)
-    return _show_payload(show, watch)
+    return _show_payload(show, watch, user_id)
 
 
 @router.get('/api/podcasts/shows')
-async def list_podcast_shows() -> list[dict[str, Any]]:
+async def list_podcast_shows(request: Request) -> list[dict[str, Any]]:
     podcasts = _require_podcasts()
-    shows = await asyncio.to_thread(podcasts.list_shows)
-    return [_show_payload(s, _podcast_watch(s['feed_url'])) for s in shows]
+    scope = None if request_is_admin(request) else request_user_id(request)
+    shows = await asyncio.to_thread(podcasts.list_shows, scope)
+    user_id = request_user_id(request)
+    return [
+        _show_payload(s, _podcast_watch(s['feed_url'], user_id), user_id)
+        for s in shows
+    ]
 
 
 @router.get('/api/podcasts/shows/{show_id}')
-async def get_podcast_show(show_id: int) -> dict[str, Any]:
-    podcasts = _require_podcasts()
-    show = await asyncio.to_thread(podcasts.get_show, show_id)
+async def get_podcast_show(request: Request, show_id: int) -> dict[str, Any]:
+    show = _podcast_show_for_request(show_id, request)
     if show is None:
         raise HTTPException(status_code=404, detail='Show not found')
-    return _show_payload(show, _podcast_watch(show['feed_url']))
+    user_id = request_user_id(request)
+    return _show_payload(
+        show, _podcast_watch(show['feed_url'], user_id), user_id
+    )
 
 
 @router.get('/api/podcasts/shows/{show_id}/episodes')
 async def list_podcast_episodes(
-    show_id: int, include_dismissed: bool = False
+    request: Request, show_id: int, include_dismissed: bool = False
 ) -> dict[str, Any]:
-    podcasts = _require_podcasts()
-    show = await asyncio.to_thread(podcasts.get_show, show_id)
+    show = _podcast_show_for_request(show_id, request)
     if show is None:
         raise HTTPException(status_code=404, detail='Show not found')
+    podcasts = _require_podcasts()
+    user_id = request_user_id(request)
     episodes = await asyncio.to_thread(
-        podcasts.list_episodes, show_id, include_dismissed=include_dismissed
+        podcasts.list_episodes,
+        show_id,
+        include_dismissed=include_dismissed,
+        user_id=user_id,
     )
     return {'show': show, 'episodes': episodes}
 
@@ -6083,10 +7120,10 @@ async def list_podcast_episodes(
 async def update_podcast_show(
     show_id: int, request: Request
 ) -> dict[str, Any]:
-    podcasts = _require_podcasts()
-    show = await asyncio.to_thread(podcasts.get_show, show_id)
+    show = _podcast_show_for_request(show_id, request)
     if show is None:
         raise HTTPException(status_code=404, detail='Show not found')
+    podcasts = _require_podcasts()
     payload = await _json_object(request)
 
     if 'retention' in payload:
@@ -6095,8 +7132,12 @@ async def update_podcast_show(
             show_id,
             retention=max(0, int(payload['retention'] or 0)),
         )
+        if show is None:
+            raise HTTPException(status_code=404, detail='Show not found')
 
-    watch = _podcast_watch(show['feed_url'])
+    user_id = request_user_id(request)
+    scope = None if request_is_admin(request) else user_id
+    watch = _podcast_watch(show['feed_url'], scope)
     db = state.monitor_db
     if watch is not None and db is not None:
         kwargs: dict[str, Any] = {}
@@ -6109,20 +7150,23 @@ async def update_podcast_show(
                 db.update_playlist, watch.id, **kwargs
             )
 
-    return _show_payload(show, watch)
+    return _show_payload(show, watch, user_id)
 
 
 @router.delete('/api/podcasts/shows/{show_id}')
 async def delete_podcast_show(
-    show_id: int, keep_files: bool = False
+    request: Request, show_id: int, keep_files: bool = False
 ) -> dict[str, Any]:
     """Unsubscribe, deleting downloaded episodes unless ``keep_files``."""
 
+    show = _podcast_show_for_request(show_id, request)
+    if show is None:
+        raise HTTPException(status_code=404, detail='Show not found')
     podcasts = _require_podcasts()
     show = await asyncio.to_thread(podcasts.delete_show, show_id)
     if show is None:
         raise HTTPException(status_code=404, detail='Show not found')
-    watch = _podcast_watch(show['feed_url'])
+    watch = _podcast_watch(show['feed_url'], show['user_id'])
     if watch is not None and state.monitor_db is not None:
         await asyncio.to_thread(state.monitor_db.delete_playlist, watch.id)
     deleted_files = False
@@ -6144,13 +7188,15 @@ async def delete_podcast_show(
 
 
 @router.post('/api/podcasts/episodes/{episode_id}/download')
-async def download_podcast_episode(episode_id: int) -> dict[str, Any]:
+async def download_podcast_episode(
+    request: Request, episode_id: int
+) -> dict[str, Any]:
     """Download one episode on demand, outside the retention policy."""
 
-    podcasts = _require_podcasts()
-    episode = await asyncio.to_thread(podcasts.get_episode, episode_id)
+    episode = _podcast_episode_for_request(episode_id, request)
     if episode is None:
         raise HTTPException(status_code=404, detail='Episode not found')
+    podcasts = _require_podcasts()
     show = await asyncio.to_thread(podcasts.get_show, episode['show_id'])
     if show is None:
         raise HTTPException(status_code=404, detail='Show not found')
@@ -6206,13 +7252,15 @@ async def download_podcast_episode(episode_id: int) -> dict[str, Any]:
 
 
 @router.delete('/api/podcasts/episodes/{episode_id}')
-async def delete_podcast_episode(episode_id: int) -> dict[str, Any]:
+async def delete_podcast_episode(
+    request: Request, episode_id: int
+) -> dict[str, Any]:
     """Remove a downloaded episode's file; never auto-downloaded again."""
 
-    podcasts = _require_podcasts()
-    episode = await asyncio.to_thread(podcasts.get_episode, episode_id)
+    episode = _podcast_episode_for_request(episode_id, request)
     if episode is None:
         raise HTTPException(status_code=404, detail='Episode not found')
+    podcasts = _require_podcasts()
     if episode['filename'] and state.downloader is not None:
         full = Path(state.downloader.download_dir) / episode['filename']
         try:
@@ -6241,18 +7289,20 @@ async def set_podcast_playback(
     """
 
     podcasts = _require_podcasts()
-    if await asyncio.to_thread(podcasts.get_episode, episode_id) is None:
+    if _podcast_episode_for_request(episode_id, request) is None:
         raise HTTPException(status_code=404, detail='Episode not found')
     payload = await _json_object(request)
     position = payload.get('position_seconds')
     played = payload.get('played')
+    user_id = request_user_id(request)
     await asyncio.to_thread(
         podcasts.set_playback,
         episode_id,
         position_seconds=float(position) if position is not None else None,
         played=bool(played) if played is not None else None,
+        user_id=user_id,
     )
-    return await asyncio.to_thread(podcasts.get_episode, episode_id)
+    return await asyncio.to_thread(podcasts.get_episode, episode_id, user_id)
 
 
 @router.websocket('/api/ws')
@@ -6265,6 +7315,7 @@ async def websocket_endpoint(
         ws,
         getattr(principal, 'device_id', '') or '',
         getattr(principal, 'user_id', 0) or 0,
+        bool(getattr(principal, 'is_admin', False)),
     )
     try:
         while True:
@@ -6383,16 +7434,37 @@ async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
     )
 
 
+def _monitor_watch_for_request(
+    playlist_id: int, request: Optional[Request]
+) -> Optional[MonitoredPlaylist]:
+    """The watch when *request* may touch it (own or admin's)."""
+
+    db = state.monitor_db
+    if db is None:
+        return None
+    watch = db.get_playlist(playlist_id)
+    if watch is None:
+        return None
+    if request_is_admin(request):
+        return watch
+    user_id = request_user_id(request)
+    if user_id and watch.user_id == user_id:
+        return watch
+    return None
+
+
 @router.get('/api/monitor/playlists')
-async def list_monitor_playlists() -> list[dict[str, Any]]:
+async def list_monitor_playlists(request: Request) -> list[dict[str, Any]]:
     db = _require_monitor_db()
-    playlists = await asyncio.to_thread(db.list_playlists)
+    scope = None if request_is_admin(request) else request_user_id(request)
+    playlists = await asyncio.to_thread(db.list_playlists, scope)
     return [p.to_dict() for p in playlists]
 
 
 @router.post('/api/monitor/playlists')
 async def add_monitor_playlist(request: Request) -> dict[str, Any]:
     db = _require_monitor_db()
+    user_id = request_user_id(request)
     try:
         payload = await request.json()
     except Exception:
@@ -6408,7 +7480,9 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
     if kind != KIND_ARTIST:
         release_types = ALL_RELEASE_TYPES
 
-    existing = await asyncio.to_thread(db.get_by_spotify_id, watch_key)
+    existing = await asyncio.to_thread(
+        db.get_by_spotify_id, watch_key, user_id
+    )
     if existing is not None:
         raise HTTPException(
             status_code=409,
@@ -6428,6 +7502,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
         kind,
         release_types,
         new_only,
+        user_id,
     )
     _start_initial_check(playlist, db)
     return playlist.to_dict()
@@ -6478,7 +7553,10 @@ def _start_initial_check(
 
 
 async def _change_watch_url(
-    db: PlaylistMonitorDB, current: MonitoredPlaylist, url: str
+    db: PlaylistMonitorDB,
+    current: MonitoredPlaylist,
+    url: str,
+    user_id: Optional[int] = None,
 ) -> Optional[MonitoredPlaylist]:
     """Apply a new URL to a watch; return the retargeted watch, if any.
 
@@ -6499,7 +7577,7 @@ async def _change_watch_url(
     if watch_key == current.spotify_id:
         await asyncio.to_thread(db.update_playlist, current.id, url=url)
         return None
-    other = await asyncio.to_thread(db.get_by_spotify_id, watch_key)
+    other = await asyncio.to_thread(db.get_by_spotify_id, watch_key, user_id)
     if other is not None:
         raise HTTPException(
             status_code=409,
@@ -6520,7 +7598,9 @@ async def update_monitor_playlist(
     except Exception:
         payload = {}
 
-    current = await asyncio.to_thread(db.get_playlist, playlist_id)
+    current = await asyncio.to_thread(
+        _monitor_watch_for_request, playlist_id, request
+    )
     if current is None:
         raise HTTPException(
             status_code=404, detail='Monitored playlist not found'
@@ -6529,7 +7609,12 @@ async def update_monitor_playlist(
     retargeted = None
     url = str(payload.get('url') or '').strip()
     if url and url != current.url:
-        retargeted = await _change_watch_url(db, current, url)
+        retargeted = await _change_watch_url(
+            db,
+            current,
+            url,
+            None if request_is_admin(request) else request_user_id(request),
+        )
 
     kwargs: dict[str, Any] = {}
     if 'interval_minutes' in payload:
@@ -6570,8 +7655,17 @@ async def update_monitor_playlist(
 
 
 @router.delete('/api/monitor/playlists/{playlist_id}')
-async def delete_monitor_playlist(playlist_id: int) -> dict[str, Any]:
+async def delete_monitor_playlist(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
     db = _require_monitor_db()
+    visible = await asyncio.to_thread(
+        _monitor_watch_for_request, playlist_id, request
+    )
+    if visible is None:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
     deleted = await asyncio.to_thread(db.delete_playlist, playlist_id)
     if not deleted:
         raise HTTPException(
@@ -6581,9 +7675,13 @@ async def delete_monitor_playlist(playlist_id: int) -> dict[str, Any]:
 
 
 @router.post('/api/monitor/playlists/{playlist_id}/check')
-async def manual_check_playlist(playlist_id: int) -> dict[str, Any]:
+async def manual_check_playlist(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
     db = _require_monitor_db()
-    playlist = await asyncio.to_thread(db.get_playlist, playlist_id)
+    playlist = await asyncio.to_thread(
+        _monitor_watch_for_request, playlist_id, request
+    )
     if playlist is None:
         raise HTTPException(
             status_code=404, detail='Monitored playlist not found'

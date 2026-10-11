@@ -9,6 +9,9 @@
           {{ t('users.add') }}
         </UiButton>
       </div>
+      <p v-if="totalsLine()" class="px-5 pb-4 text-[12px] text-muted">
+        {{ t('users.usageTotal') }}: {{ totalsLine() }}
+      </p>
       <ul class="flex flex-col">
         <li
           v-for="user in users"
@@ -154,7 +157,7 @@ import SettingRow from './SettingRow.vue'
 import API from '/src/model/api'
 import { useAuth } from '/src/model/auth'
 import { useUi } from '/src/model/ui'
-import { timeAgo } from '/src/lib/format'
+import { formatBytes, timeAgo } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
 const { t, locale } = useI18n()
@@ -164,6 +167,7 @@ const me = auth.user
 const minLength = computed(() => auth.status.value?.min_password_length || 8)
 
 const users = ref([])
+const stats = ref(null)
 const editing = ref(null)
 const saving = ref(false)
 const formError = ref('')
@@ -178,6 +182,30 @@ async function load() {
   } catch (err) {
     ui.toast(errorOf(err), { kind: 'error' })
   }
+  try {
+    stats.value = (await API.getUserStats()).data || null
+  } catch {
+    stats.value = null
+  }
+}
+
+function usageParts(row) {
+  return [
+    t('users.tracksStat', { count: row.tracks }),
+    formatBytes(row.bytes),
+    t('users.likesStat', { count: row.likes }),
+    t('users.playlistsStat', { count: row.playlists }),
+    t('users.trafficStat', {
+      down: formatBytes(row.traffic_in),
+      up: formatBytes(row.traffic_out),
+    }),
+  ].join(' · ')
+}
+
+function usageOf(user) {
+  const row = stats.value?.users?.find((entry) => entry.id === user.id)
+  if (!row) return ''
+  return usageParts(row)
 }
 
 function details(user) {
@@ -190,7 +218,15 @@ function details(user) {
   ]
   if (user.devices) parts.push(t('apps.deviceCount', { count: user.devices }))
   if (user.default_password) parts.push(t('users.defaultPassword'))
+  const usage = usageOf(user)
+  if (usage) parts.push(usage)
   return parts.join(' · ')
+}
+
+function totalsLine() {
+  const totals = stats.value?.totals
+  if (!totals) return ''
+  return usageParts(totals)
 }
 
 function openCreate() {

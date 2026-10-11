@@ -510,6 +510,7 @@ def test_same_artist_by_handle_and_channel_is_one_watch(monkeypatch, tmp_path):
     class _Req:
         def __init__(self, url):
             self.url = url
+            self.scope = {}
 
         async def json(self):
             return {'url': self.url, 'interval_minutes': 60}

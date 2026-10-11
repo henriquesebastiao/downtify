@@ -76,7 +76,7 @@ Content-Type: application/json
 
 **Unpaired / revoked:** any request answers `401` with `{"detail": "Invalid or revoked token"}` and the WebSocket closes with code `4401`. Drop the token and send the user back to pairing.
 
-**What a device may do:** everything below, plus the web API's read endpoints, searching and previews (`/api/songs/search`, `/api/url/resolve`, `/api/preview`), asking the server to download (`POST /api/download/url|batch|album`), likes, listens and podcast episode playback/downloads. Settings, credentials, deleting files and managing devices answer `403` for a device. An account being deleted, or its owner choosing **Sign out everywhere**, unpairs the device (`401`).
+**What a device may do:** everything below, plus the web API's read endpoints, searching and previews (`/api/songs/search`, `/api/url/resolve`, `/api/preview`), asking the server to download (`POST /api/download/url|batch|album`), likes, listens and podcast episode playback/downloads. Settings, credentials, deleting files and managing devices answer `403` for a device. Searching, previews, streaming and asking the server to download are shared: a track anyone downloaded can be played and then claimed by downloading it. The library feed, playlists, likes and the queue hold the paired account’s own entries (everything, on an admin’s device). An account being deleted, or its owner choosing **Sign out everywhere**, unpairs the device (`401`).
 
 ## 4. Sync the library
 
@@ -112,6 +112,7 @@ GET /api/v1/library?since=<cursor>
 - `ETag`/`If-None-Match` are supported (`304` when nothing changed for that `since`).
 - `refresh=true` rescans the folder now (pull to refresh) — otherwise the scan behind the list is cached for about a minute.
 - When the server says the library changed (WebSocket `library_changed`, below), sync again.
+- **Whose library:** the feed holds the paired account’s own tracks (an admin’s device gets everything). Tracks outside the account arrive as removed ids. Nothing below changes shape because of this. Podcast shows, episode progress, listens and the block list are per-account the same way; subscribing to a show works from the web page.
 
 Other reads, all by track id:
 
@@ -171,7 +172,7 @@ Messages the app can rely on:
 | `{ "type": "library_changed" }` | Tracks were added, removed or moved (debounced ~2 s) — sync |
 | `{ "type": "likes", "count": 3 }` | Likes changed somewhere — refetch `GET /api/v1/likes` |
 | `{ "type": "queue_reload" }` | Many downloads were queued at once — refetch `GET /api/queue` |
-| `{ "song": {…}, "progress": 42.5, "status": "downloading"\|"done"\|"error", "message", "filename", "provider" }` | A server download's progress (no `type`) |
+| `{ "song": {…}, "progress": 42.5, "status": "downloading"\|"done"\|"error", "message", "filename", "provider" }` | A server download's progress (no `type`) — one’s own jobs only (every job on an admin’s device) |
 | `{ "type": "podcasts" }` / `{ "type": "podcast_progress", … }` | Podcast episodes downloaded / progress |
 | `{ "type": "device_paired", … }` | A device was paired (for the web page; ignore) |
 

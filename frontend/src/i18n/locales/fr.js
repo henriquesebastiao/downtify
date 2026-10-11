@@ -856,6 +856,10 @@ export default {
     delay: 'Pause entre téléchargements',
     delayHint:
       'Attendre entre les titres pour ressembler moins à un robot sur les grandes playlists.',
+    maxDuration: 'Durée maximale',
+    maxDurationHint:
+      'Les morceaux plus longs ne sont ni téléchargés ni lus. 0 accepte tout.',
+    unlimited: 'Illimité',
     syncDelay: 'Pause entre les recherches de synchro',
     syncDelayHint:
       'Attend après chaque lot de titres importés (taille = Téléchargements simultanés) avant de chercher paroles, pochette et genre. Évite les limites de débit sur les gros dossiers.',
@@ -1227,6 +1231,11 @@ export default {
     lastSignIn: 'connecté {when}',
     neverSignedIn: 'jamais connecté',
     defaultPassword: 'mot de passe par défaut',
+    tracksStat: { one: '{count} morceau', other: '{count} morceaux' },
+    likesStat: { one: '{count} coup de cœur', other: '{count} coups de cœur' },
+    playlistsStat: { one: '{count} playlist', other: '{count} playlists' },
+    trafficStat: 'entrant {down} · sortant {up}',
+    usageTotal: 'Totaux',
     deleteTitle: 'Supprimer {name} ?',
     deleteBody:
       'Ses applis sont dissociées et ses navigateurs déconnectés. Ses téléchargements restent dans la bibliothèque.',

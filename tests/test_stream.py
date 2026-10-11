@@ -10,9 +10,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from downtify import api, stream
 from downtify.downloader import TrackTooLongError
+
+_REQUEST = Request({'type': 'http', 'headers': []})
 
 
 def _ydl(info):
@@ -196,6 +199,20 @@ def test_cache_serves_a_file_of_unknown_length(tmp_path, monkeypatch):
     assert found.name == 'dQw4w9WgXcQ.m4a'
 
 
+def test_cache_follows_a_custom_limit(tmp_path, monkeypatch):
+    cache = _cache(tmp_path)
+
+    def fake_fetch(video_id, cookies_file=''):
+        (cache._dir / f'{video_id}.m4a').write_bytes(b'audio')
+
+    monkeypatch.setattr(cache, '_fetch', fake_fetch)
+    monkeypatch.setattr(stream, '_probed_seconds', lambda path: 3600.0)
+    with pytest.raises(TrackTooLongError, match='30 minutes'):
+        asyncio.run(cache.get('dQw4w9WgXcQ', max_seconds=1800))
+    found = asyncio.run(cache.get('dQw4w9WgXcQ', max_seconds=0))
+    assert found.name == 'dQw4w9WgXcQ.m4a'
+
+
 def test_media_type_for_known_extensions(tmp_path):
     assert stream.media_type_for(tmp_path / 'x.m4a') == 'audio/mp4'
     assert stream.media_type_for(tmp_path / 'x.mp4') == 'audio/mp4'
@@ -210,7 +227,7 @@ def test_stream_file_endpoint_serves_the_cached_file(tmp_path, monkeypatch):
     cached = tmp_path / 'dQw4w9WgXcQ.m4a'
     cached.write_bytes(b'audio')
 
-    async def fake_get(video_id, cookies_file=''):
+    async def fake_get(video_id, cookies_file='', **_kwargs):
         assert video_id == 'dQw4w9WgXcQ'
         assert cookies_file == '/c.txt'
         return cached
@@ -220,7 +237,7 @@ def test_stream_file_endpoint_serves_the_cached_file(tmp_path, monkeypatch):
     monkeypatch.setattr(api.state, 'stream_cache', fake_cache)
     monkeypatch.setattr(stream, 'resolve_cookies_file', lambda store: '/c.txt')
     response = asyncio.run(
-        api.stream_file_endpoint(video_id='dQw4w9WgXcQ', duration=0)
+        api.stream_file_endpoint(_REQUEST, video_id='dQw4w9WgXcQ', duration=0)
     )
     assert response.status_code == 200
     assert response.media_type == 'audio/mp4'
@@ -228,7 +245,7 @@ def test_stream_file_endpoint_serves_the_cached_file(tmp_path, monkeypatch):
 
 def test_stream_file_endpoint_rejects_a_bad_id():
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(api.stream_file_endpoint(video_id='nope'))
+        asyncio.run(api.stream_file_endpoint(_REQUEST, video_id='nope'))
     assert exc.value.status_code == 400
 
 
@@ -236,7 +253,9 @@ def test_stream_file_endpoint_needs_a_cache(monkeypatch):
     monkeypatch.setattr(api.state, 'stream_cache', None)
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
-            api.stream_file_endpoint(video_id='dQw4w9WgXcQ', duration=0)
+            api.stream_file_endpoint(
+                _REQUEST, video_id='dQw4w9WgXcQ', duration=0
+            )
         )
     assert exc.value.status_code == 503
 
@@ -251,7 +270,9 @@ def test_stream_file_endpoint_maps_download_failures(monkeypatch):
     monkeypatch.setattr(stream, 'resolve_cookies_file', lambda store: '')
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
-            api.stream_file_endpoint(video_id='dQw4w9WgXcQ', duration=0)
+            api.stream_file_endpoint(
+                _REQUEST, video_id='dQw4w9WgXcQ', duration=0
+            )
         )
     assert exc.value.status_code == 503
 
@@ -265,7 +286,9 @@ def test_stream_file_endpoint_refuses_a_known_long_track(monkeypatch):
     monkeypatch.setattr(api.state, 'stream_cache', fake_cache)
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
-            api.stream_file_endpoint(video_id='dQw4w9WgXcQ', duration=3600)
+            api.stream_file_endpoint(
+                _REQUEST, video_id='dQw4w9WgXcQ', duration=3600
+            )
         )
     assert exc.value.status_code == 400
 
@@ -280,7 +303,9 @@ def test_stream_file_endpoint_maps_overlong_cache_files(monkeypatch):
     monkeypatch.setattr(stream, 'resolve_cookies_file', lambda store: '')
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
-            api.stream_file_endpoint(video_id='dQw4w9WgXcQ', duration=0)
+            api.stream_file_endpoint(
+                _REQUEST, video_id='dQw4w9WgXcQ', duration=0
+            )
         )
     assert exc.value.status_code == 400
 
@@ -297,7 +322,7 @@ def test_stream_prefetch_queues_a_background_download(monkeypatch):
     seen = {}
     started = {}
 
-    async def fake_get(video_id, cookies_file=''):
+    async def fake_get(video_id, cookies_file='', **_kwargs):
         seen['video_id'] = video_id
         seen['cookies_file'] = cookies_file
 
