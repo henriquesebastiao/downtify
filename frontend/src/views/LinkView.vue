@@ -271,6 +271,7 @@ import {
   useProgressTracker,
 } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
+import { songDownloadState } from '/src/lib/downloadState'
 import { useUi } from '/src/model/ui'
 import { classifyInput } from '/src/lib/input'
 import { playableQueue } from '/src/lib/topSongs'
@@ -391,9 +392,14 @@ function keyOf(song, index) {
 
 function statusOf(song) {
   tracker.queueVersion.value
-  if (tracker.getBySong(song)) return 'queue'
   const artist = (song.artists || [])[0] || song.artist
-  return library.hasSong(artist, song.name) ? 'library' : 'new'
+  const state = songDownloadState(
+    tracker.getBySong(song),
+    library.hasSong(artist, song.name)
+  )
+  // Every queue state shows the same neutral chip here; a song that is
+  // neither queued nor in the library is downloadable.
+  return state === 'library' || state === 'new' ? state : 'queue'
 }
 
 const rows = computed(() =>
