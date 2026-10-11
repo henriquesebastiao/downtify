@@ -376,6 +376,7 @@ from .external_sync import (
 from .fs_suggest import suggest_directories
 from .library_catalog import (
     LibraryContext,
+    drop_library_listing_files,
     entry_content_key,
     library_album_index,
     library_artist_index,
@@ -1811,6 +1812,10 @@ async def after_library_delete(
                 for name in released:
                     state.likes.unlike(name, user_id)
             if deleted:
+                # The rows are gone from disk: the RAM snapshot must
+                # stop claiming them, or the search "already
+                # downloaded" badge keeps a deleted track downloaded.
+                drop_library_listing_files(library_context(), deleted)
                 invalidate_library_paths_cache()
             if state.likes is not None and state.likes.count() != liked_before:
                 # A deleted song can't stay liked, or on the playlist.
