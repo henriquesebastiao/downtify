@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -414,16 +415,11 @@ def test_queue_clearing_is_scoped():
         api.state.download_jobs.clear()
 
 
-def test_simultaneous_download_is_fetched_once_and_owned_by_both(
-    monkeypatch, tmp_path
-):
-    import threading
+def _slow_downloader(tmp_path, entered, release, calls):
+    """A downloader that holds its first fetch until *release* is set."""
 
     downloads = tmp_path / 'downloads'
     downloads.mkdir()
-    entered = threading.Event()
-    release = threading.Event()
-    calls = []
 
     def slow_download(song, progress_cb, subdir=None):
         calls.append(song.get('song_id'))
@@ -435,7 +431,20 @@ def test_simultaneous_download_is_fetched_once_and_owned_by_both(
 
     downloader = Downloader(download_dir=downloads, audio_format='mp3')
     downloader.download = slow_download
-    monkeypatch.setattr(api.state, 'downloader', downloader)
+    return downloader
+
+
+def test_simultaneous_download_is_fetched_once_and_owned_by_both(
+    monkeypatch, tmp_path
+):
+    entered = threading.Event()
+    release = threading.Event()
+    calls = []
+    monkeypatch.setattr(
+        api.state,
+        'downloader',
+        _slow_downloader(tmp_path, entered, release, calls),
+    )
     monkeypatch.setattr(
         api.state, 'track_owners', TrackOwners(tmp_path / 'lib.db')
     )
@@ -448,9 +457,7 @@ def test_simultaneous_download_is_fetched_once_and_owned_by_both(
     monkeypatch.setattr(api.state, 'connections', connections)
 
     song = {'song_id': 'shared-1', 'name': 'Shared', 'artists': ['Artist']}
-    song_id = api._register_job(
-        dict(song), status='queued', user_id=5
-    )
+    song_id = api._register_job(dict(song), status='queued', user_id=5)
 
     async def both():
         first = asyncio.create_task(
@@ -861,6 +868,27 @@ def test_releasing_drops_the_row_and_pokes_the_feed(monkeypatch, tmp_path):
     assert result == {'released': True}
     assert owners.owned_keys(5) == set()
     assert len(owners.owned_keys(7)) == 1
+    assert (downloads / 'Shared.mp3').is_file()
+
+
+def test_release_unlikes_only_for_the_releaser(monkeypatch, tmp_path):
+    downloads = _downloader_state(monkeypatch, tmp_path)
+    (downloads / 'Shared.mp3').write_bytes(b'shared')
+    likes = LikedTracks(tmp_path / 'lib.db')
+    monkeypatch.setattr(api.state, 'likes', likes)
+    api._note_download_owner('Shared.mp3', 5)
+    api._note_download_owner('Shared.mp3', 7)
+    likes.like('Shared.mp3', user_id=5)
+    likes.like('Shared.mp3', user_id=7)
+
+    asyncio.run(
+        api.after_library_delete(
+            {'Shared.mp3': {'released': True}}, {}, user_id=5
+        )
+    )
+
+    assert likes.paths(5) == []
+    assert likes.paths(7) == ['Shared.mp3']
     assert (downloads / 'Shared.mp3').is_file()
 
 

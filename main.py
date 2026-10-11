@@ -865,7 +865,7 @@ def build_app() -> FastAPI:
             if result.get('deleted') and key:
                 await asyncio.to_thread(api.drop_file_owners, key)
         await api.log_activity(request, 'delete', file)
-        return await api.after_library_delete({file: result}, result)
+        return await api.after_library_delete({file: result}, result, user_id)
 
     @app.delete('/delete/batch')
     async def delete_downloads_batch(
@@ -937,7 +937,7 @@ def build_app() -> FastAPI:
             files[0] if len(files) == 1 else f'{len(files)} files',
             {'files': files[:50]},
         )
-        return await api.after_library_delete(results, result)
+        return await api.after_library_delete(results, result, user_id)
 
     @app.get('/lyrics')
     def get_lyrics(file: str) -> dict:

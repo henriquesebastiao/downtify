@@ -328,26 +328,21 @@ function forgetByPrefix(prefix) {
 }
 
 /**
- * Delete tracks from disk; resolves `{ deleted, released, failed }`.
+ * Delete tracks; resolves `{ deleted, released, failed }`.
  *
- * `deleted` is every file gone from this account's library: wiped,
- * released (a shared file other accounts still keep), or already
- * missing. Only `foreign` denials and unknown files count as `failed`.
+ * `deleted` is every file gone from this account's library: wiped off
+ * disk (`deleted`), or released from it while other accounts still
+ * keep the shared file (the server answers `{ "released": true }`
+ * with no `deleted` flag). Only other people's files and unknown
+ * paths count as `failed`.
  */
 async function deleteFiles(files) {
   const res = await API.deleteDownloadsBatch(files)
   const results = res.data?.results || {}
-  const gone = files.filter((file) => {
-    const action = results[file]?.action
-    return (
-      results[file]?.deleted ||
-      action === 'released' ||
-      action === 'missing'
-    )
-  })
-  const released = files.filter(
-    (file) => results[file]?.action === 'released'
+  const gone = files.filter(
+    (file) => results[file]?.deleted || results[file]?.released
   )
+  const released = files.filter((file) => results[file]?.released)
   forget(gone)
   return { deleted: gone, released, failed: files.length - gone.length }
 }

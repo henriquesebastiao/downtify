@@ -988,7 +988,7 @@ Delete a downloaded file, plus its leftovers — best-effort, so a missing or un
 
 `playlists_affected` lists the downloaded playlists that contained the file; their M3U files and Navidrome playlists are rewritten in the background (`playlists_refresh_scheduled`).
 
-A user deleting a file others still own only releases it (`{ "released": true }`): the file stays on disk for the rest, and leaves their library. Someone else's file answers `Not in your library`.
+A user deleting a file others still own only releases it (`{ "released": true }`): the file stays on disk for the rest, and leaves their library — their like on it goes too, everyone else's stays. Someone else's file answers `Not in your library`.
 
 ---
 

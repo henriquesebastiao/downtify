@@ -1786,20 +1786,32 @@ def forget_library_file(stored_path: str) -> list[str]:
 
 
 async def after_library_delete(
-    results: dict[str, dict[str, Any]], response: dict[str, Any]
+    results: dict[str, dict[str, Any]],
+    response: dict[str, Any],
+    user_id: int = 0,
 ) -> dict[str, Any]:
     """Update the library stores after ``DELETE /delete`` or
-    ``/delete/batch`` and report affected playlists on ``response``."""
+    ``/delete/batch`` and report affected playlists on ``response``.
+
+    Wiped files leave every store (and everybody's likes); released
+    ones only drop *user_id*'s like — the file and everyone else's
+    hearts stay.
+    """
 
     deleted = [f for f, r in results.items() if r.get('deleted')]
+    released = [f for f, r in results.items() if r.get('released')]
     affected: set[str] = set()
-    if deleted:
+    if deleted or (released and user_id):
 
         def _forget() -> None:
             liked_before = state.likes.count() if state.likes else 0
             for name in deleted:
                 affected.update(forget_library_file(name))
-            invalidate_library_paths_cache()
+            if state.likes is not None and user_id:
+                for name in released:
+                    state.likes.unlike(name, user_id)
+            if deleted:
+                invalidate_library_paths_cache()
             if state.likes is not None and state.likes.count() != liked_before:
                 # A deleted song can't stay liked, or on the playlist.
                 _sync_liked_playlist()
