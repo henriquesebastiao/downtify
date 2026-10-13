@@ -10,7 +10,7 @@ Entry point: `main.py` (CLI flag `web` boots the FastAPI app on `DOWNTIFY_PORT`,
 
 ## Stack
 
-- **Backend**: Python 3.10–3.13 (Docker image pins 3.13), FastAPI, Uvicorn, `loguru`, `yt-dlp`, `mutagen`, `requests`, `ytmusicapi`.
+- **Backend**: Python 3.10–3.15 (Docker image pins 3.15), FastAPI, Uvicorn, `loguru`, `yt-dlp`, `mutagen`, `requests`, `ytmusicapi`.
 - **Frontend**: Vue 3 + Vue Router, Tailwind CSS v4 (design tokens in `frontend/src/styles/tokens.css`, shared with the docs site), VueUse, Vite, Vitest.
 - **Packaging**: `uv` (lockfile is `uv.lock`; `requirements.txt` is exported for Docker only — do **not** hand-edit).
 - **Container**: Alpine + `ffmpeg` + `tini` + `su-exec` (UID/GID/UMASK env-controlled).

@@ -77,7 +77,7 @@ You need the following installed locally:
 
 | Tool                | Minimum version | Purpose                                       |
 | ------------------- | --------------- | --------------------------------------------- |
-| Python              | 3.10 (3.13 rec) | Backend runtime (Docker pins 3.13)            |
+| Python              | 3.10 (3.15 rec) | Backend runtime (Docker pins 3.15)            |
 | [`uv`][uv]          | recent          | Python project + dependency manager           |
 | Node.js             | 20.x +          | Frontend build (Vue 3 + Vite)                 |
 | npm                 | 10.x +          | Frontend package manager                      |
