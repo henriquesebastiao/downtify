@@ -22,7 +22,7 @@ For bug reports, include:
 
 ### Prerequisites
 
-- Python 3.13+
+- Python 3.15+
 - Node.js 20+
 - [uv](https://github.com/astral-sh/uv) (Python package manager)
 - ffmpeg (must be on `PATH`)
