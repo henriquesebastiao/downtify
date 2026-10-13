@@ -321,6 +321,7 @@ const SOURCE_LABELS = {
   spotify: () => t('link.openSpotify'),
   youtube: () => t('link.openYoutube'),
   deezer: () => t('link.openDeezer'),
+  soundcloud: () => t('link.openSoundcloud'),
 }
 const sourceLabel = computed(() =>
   (SOURCE_LABELS[kind.value.source] || SOURCE_LABELS.youtube)()
@@ -331,6 +332,7 @@ const kicker = computed(() => {
     spotify: 'Spotify',
     youtube: 'YouTube Music',
     deezer: 'Deezer',
+    soundcloud: 'SoundCloud',
   }
   const source = names[kind.value.source] || kind.value.source
   return `${source} · ${t(`link.kind.${details.value?.kind || 'track'}`)}`

@@ -73,6 +73,7 @@ export default {
     getIt: 'Récupérer',
     hintSpotify: 'Titres, albums, playlists et artistes',
     hintYoutube: 'Titres, albums, playlists et artistes YouTube Music',
+    hintSoundcloud: 'Télécharger des liens de titres SoundCloud',
     hintDeezer: 'Titres, albums, playlists et artistes Deezer',
     hintCsv: 'Importer un CSV (Soundiiz, Exportify…)',
     downloading: 'Téléchargement en cours',
@@ -129,7 +130,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify ne peut pas télécharger ce lien. Collez un titre, un album ou une playlist Spotify, ou un lien YouTube Music.',
+      'Downtify ne peut pas télécharger ce lien. Collez un titre, un album ou une playlist Spotify, un lien YouTube Music ou un lien de titre SoundCloud.',
     tipSearchTitle: 'Cherchez par nom',
     tipSearchBody:
       'Tapez un artiste, un album ou un titre — les résultats viennent de YouTube Music.',
@@ -231,6 +232,7 @@ export default {
     openSpotify: 'Ouvrir dans Spotify',
     openYoutube: 'Ouvrir dans YouTube Music',
     openDeezer: 'Ouvrir sur Deezer',
+    openSoundcloud: 'Ouvrir sur SoundCloud',
     filterAll: 'Tout',
     filterNew: 'Nouveaux',
     filterLibrary: 'Dans la bibliothèque',
@@ -282,9 +284,10 @@ export default {
     retry: 'Réessayer',
     remove: 'Retirer de la file',
     failedGeneric: 'Le téléchargement a échoué.',
-    overridePlaceholder: 'Collez un lien YouTube à utiliser comme audio',
+    overridePlaceholder: 'Collez un lien de titre YouTube ou SoundCloud',
     useLink: 'Utiliser ce lien',
-    invalidYoutube: 'Ceci ne ressemble pas à un lien de vidéo YouTube.',
+    invalidAudioLink:
+      'Ceci ne ressemble pas à un lien de titre YouTube ou SoundCloud.',
     playlistDownloads: 'Téléchargements de playlists',
     sources: 'Téléchargé depuis',
     noSourcesYet: 'Les téléchargements terminés indiquent leur source ici.',
@@ -787,7 +790,7 @@ export default {
     showShortcuts: 'Voir les raccourcis',
     sourcesTitle: 'Provenance de l’audio',
     sourcesHint:
-      'Chaque titre essaie les sources activées dans cet ordre jusqu’à trouver une correspondance.',
+      'Chaque titre essaie les sources audio activées dans cet ordre. Les liens Spotify fournissent toujours les métadonnées du titre et de l’album.',
     moveUp: 'Monter',
     moveDown: 'Descendre',
     sourceSlskd: 'Soulseek (slskd)',
@@ -796,6 +799,9 @@ export default {
     sourceYtmHint: 'Meilleures correspondances de métadonnées',
     sourceYt: 'YouTube',
     sourceYtHint: 'Solution de repli pour les titres absents de YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Recherche de secours et liens directs vers des titres ; les liens Spotify conservent leurs métadonnées.',
     slskdTitle: 'slskd',
     slskdHint:
       'Téléchargez depuis Soulseek via votre serveur slskd. Les titres introuvables passent à la source suivante.',
@@ -1134,7 +1140,8 @@ export default {
     body: 'Mauvais titre ou mauvaise version ? Choisissez la bonne. Le fichier garde son nom, ses tags, sa pochette et ses paroles, et reste dans ses playlists.',
     current: 'Actuel',
     search: 'Rechercher',
-    searchHint: 'Ou collez un lien YouTube ou YouTube Music.',
+    searchHint:
+      'Ou collez un lien YouTube, YouTube Music ou un titre SoundCloud.',
     searchButton: 'Rechercher',
     results: 'Versions au choix',
     none: 'Rien trouvé. Essayez d’autres mots ou collez un lien.',
@@ -1146,6 +1153,7 @@ export default {
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',
+      soundcloud: 'SoundCloud',
       link: 'Lien',
     },
   },

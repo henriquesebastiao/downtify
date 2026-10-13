@@ -45,7 +45,9 @@ from .providers import (
     enrich_from_match,
     find_match,
     find_match_for_video,
+    find_match_soundcloud,
     find_match_youtube_only,
+    parse_soundcloud_url,
 )
 from .slskd_provider import download_from_slskd
 
@@ -55,11 +57,12 @@ from .slskd_provider import download_from_slskd
 _AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'ogg', 'opus', 'm4a'})
 
 # ``(percent, message, provider)`` — ``provider`` is the audio source
-# handling the download (``'slskd'``, ``'youtube-music'``, ``'youtube'``),
+# handling the download (``'slskd'``, ``'youtube-music'``, ``'youtube'``,
+# ``'soundcloud'``),
 # shown next to each queue row.
 ProgressCallback = Callable[[float, str, Optional[str]], None]
 
-AUDIO_PROVIDERS = ('youtube-music', 'youtube', 'slskd')
+AUDIO_PROVIDERS = ('youtube-music', 'youtube', 'soundcloud', 'slskd')
 
 
 class NoAudioMatchError(RuntimeError):
@@ -511,6 +514,10 @@ class Downloader:
                 youtube_searched = True
                 if video_id:
                     return video_id, None, 'youtube', None
+            elif provider == 'soundcloud':
+                soundcloud_url = find_match_soundcloud(song)
+                if soundcloud_url:
+                    return soundcloud_url, None, 'soundcloud', None
         return None, None, None, None
 
     def _resolve_cookies_file(self) -> str:
@@ -807,12 +814,22 @@ class Downloader:
         # Known-long tracks are refused before any search or fetch.
         reject_overlong_song(song, self.max_track_duration_seconds)
 
-        video_id = song.get('youtube_id')
+        soundcloud_url = str(song.get('soundcloud_url') or '').strip()
+        if not soundcloud_url and song.get('source') == 'soundcloud':
+            soundcloud_url = str(song.get('url') or '').strip()
+        is_soundcloud = bool(parse_soundcloud_url(soundcloud_url))
+        video_id = soundcloud_url if is_soundcloud else song.get('youtube_id')
         if not video_id and (song.get('source') == 'youtube'):
             video_id = song.get('song_id')
 
         match: Optional[dict[str, Any]] = None
-        provider: Optional[str] = 'youtube-music' if video_id else None
+        provider: Optional[str] = (
+            'soundcloud'
+            if is_soundcloud and video_id
+            else 'youtube-music'
+            if video_id
+            else None
+        )
         local_source: Optional[Path] = None
         if not video_id:
             # Playlist rows lack year/track number; the per-track embed has
@@ -821,7 +838,9 @@ class Downloader:
             video_id, match, provider, local_source = self._resolve_source(
                 song, progress_cb
             )
-        elif not song.get('album_name') or not song.get('cover_url'):
+        elif not is_soundcloud and (
+            not song.get('album_name') or not song.get('cover_url')
+        ):
             # We already have a target video, but the metadata is incomplete.
             # Look up the YT Music entry for THIS specific videoId so we
             # don't risk switching to a karaoke / cover that happens to
@@ -835,8 +854,11 @@ class Downloader:
         if not video_id and local_source is None:
             source = (
                 'an audio match'
-                if 'slskd' in self.audio_providers
-                and self.slskd_settings.get('enabled')
+                if 'soundcloud' in self.audio_providers
+                or (
+                    'slskd' in self.audio_providers
+                    and self.slskd_settings.get('enabled')
+                )
                 else 'a YouTube match'
             )
             raise NoAudioMatchError(
@@ -1134,7 +1156,7 @@ class Downloader:
         provider: Optional[str] = None,
         audio_format: Optional[str] = None,
     ) -> Path:
-        """Download YouTube video *video_id*'s audio as
+        """Download audio from a YouTube id or provider URL as
         ``<target_dir>/<basename>.<audio_format>`` (default: the chosen
         format) and return the file - untagged. *song* only words the
         error when it fails."""
@@ -1143,7 +1165,11 @@ class Downloader:
         out_template = str(target_dir / f'{basename}.%(ext)s')
         hook = self._progress_hook(progress_cb, provider)
         ydl_opts, has_cookies = self._ydl_options(out_template, hook)
-        url = f'https://music.youtube.com/watch?v={video_id}'
+        url = (
+            video_id
+            if video_id.startswith(('http://', 'https://'))
+            else f'https://music.youtube.com/watch?v={video_id}'
+        )
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 # Registered directly: `ydl_opts['postprocessors']` only

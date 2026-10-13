@@ -44,3 +44,34 @@ def test_merge_applies_youtube_id_override():
     _merge_client_track_hints(base, {'youtube_id': ' dQw4w9WgXcQ '})
     assert base['youtube_id'] == 'dQw4w9WgXcQ'
     assert base['youtube_id_override'] is True
+
+
+def test_merge_applies_soundcloud_track_url_override():
+    base = {
+        'song_id': 'spotify:id',
+        'name': 'Spotify track',
+        'album_name': 'Spotify album',
+        'source': 'spotify',
+    }
+
+    _merge_client_track_hints(
+        base,
+        {'soundcloud_url': 'https://soundcloud.com/artist/track'},
+    )
+
+    assert base['soundcloud_url'] == 'https://soundcloud.com/artist/track'
+    assert base['soundcloud_url_override'] is True
+    assert base['name'] == 'Spotify track'
+    assert base['album_name'] == 'Spotify album'
+    assert base['source'] == 'spotify'
+
+
+def test_merge_ignores_non_soundcloud_override_url():
+    base = {'song_id': 'spotify:id'}
+
+    _merge_client_track_hints(
+        base,
+        {'soundcloud_url': 'https://example.com/redirect'},
+    )
+
+    assert 'soundcloud_url' not in base

@@ -74,6 +74,7 @@ export default {
     hintSpotify: 'Parçalar, albümler, çalma listeleri ve sanatçılar',
     hintYoutube:
       'YouTube Music şarkıları, albümleri, çalma listeleri ve sanatçıları',
+    hintSoundcloud: 'SoundCloud parça bağlantılarını indir',
     hintDeezer: 'Deezer parçaları, albümleri, çalma listeleri ve sanatçıları',
     hintCsv: 'CSV içe aktar (Soundiiz, Exportify…)',
     downloading: 'Şimdi indiriliyor',
@@ -130,7 +131,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify bu bağlantıyı indiremiyor. Bir Spotify parçası, albümü veya çalma listesi ya da YouTube Music bağlantısı yapıştır.',
+      'Downtify bu bağlantıyı indiremiyor. Spotify parçası, albümü veya çalma listesi, YouTube Music bağlantısı ya da SoundCloud parça bağlantısı yapıştır.',
     tipSearchTitle: 'Adla ara',
     tipSearchBody:
       'Bir sanatçı, albüm veya şarkı yaz — sonuçlar YouTube Music’ten gelir.',
@@ -227,6 +228,7 @@ export default {
     openSpotify: 'Spotify’da aç',
     openYoutube: 'YouTube Music’te aç',
     openDeezer: "Deezer'da aç",
+    openSoundcloud: "SoundCloud'da aç",
     filterAll: 'Tümü',
     filterNew: 'Yeni',
     filterLibrary: 'Kitaplıkta',
@@ -275,10 +277,10 @@ export default {
     retry: 'Tekrar dene',
     remove: 'Kuyruktan kaldır',
     failedGeneric: 'İndirme başarısız oldu.',
-    overridePlaceholder:
-      'Ses olarak kullanılacak YouTube bağlantısını yapıştır',
+    overridePlaceholder: 'YouTube veya SoundCloud parça bağlantısı yapıştır',
     useLink: 'Bu bağlantıyı kullan',
-    invalidYoutube: 'Bu bir YouTube video bağlantısına benzemiyor.',
+    invalidAudioLink:
+      'Bu, YouTube veya SoundCloud parça bağlantısına benzemiyor.',
     playlistDownloads: 'Çalma listesi indirmeleri',
     sources: 'İndirme kaynağı',
     noSourcesYet: 'Tamamlanan indirmeler kaynaklarını burada gösterir.',
@@ -775,7 +777,7 @@ export default {
     showShortcuts: 'Kısayolları göster',
     sourcesTitle: 'Sesin geldiği yer',
     sourcesHint:
-      'Her parça, biri eşleşme bulana kadar etkin kaynakları bu sırayla dener.',
+      'Her parça etkin ses kaynaklarını bu sırayla dener. Spotify bağlantıları parça ve albüm meta verilerini sağlamaya devam eder.',
     moveUp: 'Yukarı taşı',
     moveDown: 'Aşağı taşı',
     sourceSlskd: 'Soulseek (slskd)',
@@ -784,6 +786,9 @@ export default {
     sourceYtmHint: 'En iyi meta veri eşleşmeleri',
     sourceYt: 'YouTube',
     sourceYtHint: 'YouTube Music’te olmayan şarkılar için yedek',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Yedek arama ve doğrudan parça bağlantıları; Spotify bağlantıları Spotify meta verilerini korur.',
     slskdTitle: 'slskd',
     slskdHint:
       'Soulseek’ten slskd sunucun üzerinden indir. Bulunamayan parçalar sonraki kaynağa geçer.',
@@ -1110,7 +1115,8 @@ export default {
     body: 'Yanlış şarkı ya da sürüm mü? Doğrusunu seçin. Dosya adını, etiketlerini, kapağını ve sözlerini korur, çalma listelerinde kalır.',
     current: 'Şu an',
     search: 'Ara',
-    searchHint: 'Ya da bir YouTube veya YouTube Music bağlantısı yapıştırın.',
+    searchHint:
+      'Ya da YouTube, YouTube Music veya SoundCloud parça bağlantısı yapıştırın.',
     searchButton: 'Ara',
     results: 'Seçilecek sürümler',
     none: 'Bir şey bulunamadı. Başka sözcükler deneyin ya da bağlantı yapıştırın.',
@@ -1122,6 +1128,7 @@ export default {
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',
+      soundcloud: 'SoundCloud',
       link: 'Bağlantı',
     },
   },

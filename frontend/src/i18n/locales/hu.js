@@ -73,6 +73,7 @@ export default {
     getIt: 'Letöltés',
     hintSpotify: 'Számok, albumok, lejátszási listák és előadók',
     hintYoutube: 'YouTube Music dalok, albumok, lejátszási listák és előadók',
+    hintSoundcloud: 'SoundCloud-dallinkek letöltése',
     hintDeezer: 'Deezer számok, albumok, lejátszási listák és előadók',
     hintCsv: 'CSV importálása (Soundiiz, Exportify…)',
     downloading: 'Letöltés folyamatban',
@@ -126,7 +127,7 @@ export default {
     typeSingle: 'Kislemez',
     typeEp: 'EP',
     unsupportedLink:
-      'A Downtify nem tudja letölteni ezt a linket. Illessz be Spotify számot, albumot vagy listát, vagy YouTube Music linket.',
+      'A Downtify nem tudja letölteni ezt a linket. Illessz be Spotify-számot, albumot vagy listát, YouTube Music-linket vagy SoundCloud-dallinket.',
     tipSearchTitle: 'Keresés név szerint',
     tipSearchBody:
       'Írj be előadót, albumot vagy dalt — a találatok a YouTube Musicból jönnek.',
@@ -223,6 +224,7 @@ export default {
     openSpotify: 'Megnyitás a Spotifyban',
     openYoutube: 'Megnyitás a YouTube Musicban',
     openDeezer: 'Megnyitás a Deezeren',
+    openSoundcloud: 'Megnyitás a SoundCloudon',
     filterAll: 'Összes',
     filterNew: 'Új',
     filterLibrary: 'A könyvtárban',
@@ -274,9 +276,9 @@ export default {
     retry: 'Újra',
     remove: 'Eltávolítás a sorból',
     failedGeneric: 'A letöltés nem sikerült.',
-    overridePlaceholder: 'Illessz be egy YouTube linket hangforrásként',
+    overridePlaceholder: 'Illessz be YouTube- vagy SoundCloud-dallinket',
     useLink: 'Link használata',
-    invalidYoutube: 'Ez nem tűnik YouTube videólinknek.',
+    invalidAudioLink: 'Ez nem tűnik YouTube- vagy SoundCloud-dallinknek.',
     playlistDownloads: 'Lejátszásilista-letöltések',
     sources: 'Letöltési forrás',
     noSourcesYet: 'A kész letöltések forrása itt jelenik meg.',
@@ -774,7 +776,7 @@ export default {
     showShortcuts: 'Billentyűparancsok',
     sourcesTitle: 'Honnan jön a hang',
     sourcesHint:
-      'Minden szám ebben a sorrendben próbálja az engedélyezett forrásokat, amíg egyezést nem talál.',
+      'Minden szám ebben a sorrendben próbálja az engedélyezett hangforrásokat. A Spotify-linkek továbbra is a szám és az album metaadatait adják.',
     moveUp: 'Feljebb',
     moveDown: 'Lejjebb',
     sourceSlskd: 'Soulseek (slskd)',
@@ -783,6 +785,9 @@ export default {
     sourceYtmHint: 'Legjobb metaadat-egyezések',
     sourceYt: 'YouTube',
     sourceYtHint: 'Tartalék a YouTube Musicból hiányzó dalokhoz',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Keresési tartalék és közvetlen dallinkek; a Spotify-linkek megtartják a Spotify-metaadatokat.',
     slskdTitle: 'slskd',
     slskdHint:
       'Letöltés a Soulseekről a slskd szervereden át. A nem talált számok a következő forráshoz kerülnek.',
@@ -1116,7 +1121,8 @@ export default {
     body: 'Rossz dal vagy változat? Válaszd ki a jót. A fájl megtartja a nevét, címkéit, borítóját és dalszövegét, és a lejátszási listákban marad.',
     current: 'Jelenlegi',
     search: 'Keresés',
-    searchHint: 'Vagy illessz be egy YouTube vagy YouTube Music linket.',
+    searchHint:
+      'Vagy illessz be YouTube-, YouTube Music- vagy SoundCloud-dallinket.',
     searchButton: 'Keresés',
     results: 'Választható változatok',
     none: 'Nincs találat. Próbálj más szavakat, vagy illessz be egy linket.',
@@ -1128,6 +1134,7 @@ export default {
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',
+      soundcloud: 'SoundCloud',
       link: 'Link',
     },
   },

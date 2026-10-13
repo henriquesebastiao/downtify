@@ -73,6 +73,7 @@ export default {
     getIt: 'Descargar',
     hintSpotify: 'Canciones, álbumes, playlists y artistas',
     hintYoutube: 'Canciones, álbumes, playlists y artistas de YouTube Music',
+    hintSoundcloud: 'Descargar enlaces de canciones de SoundCloud',
     hintDeezer: 'Canciones, álbumes, playlists y artistas de Deezer',
     hintCsv: 'Importa un CSV (Soundiiz, Exportify…)',
     downloading: 'Descargando ahora',
@@ -126,7 +127,7 @@ export default {
     typeSingle: 'Sencillo',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify no puede descargar ese enlace. Pega una canción, álbum o playlist de Spotify, o un enlace de YouTube Music.',
+      'Downtify no puede descargar ese enlace. Pega una canción, álbum o playlist de Spotify, un enlace de YouTube Music o un enlace de canción de SoundCloud.',
     tipSearchTitle: 'Busca por nombre',
     tipSearchBody:
       'Escribe un artista, álbum o canción — los resultados vienen de YouTube Music.',
@@ -226,6 +227,7 @@ export default {
     openSpotify: 'Abrir en Spotify',
     openYoutube: 'Abrir en YouTube Music',
     openDeezer: 'Abrir en Deezer',
+    openSoundcloud: 'Abrir en SoundCloud',
     filterAll: 'Todo',
     filterNew: 'Nuevas',
     filterLibrary: 'En la biblioteca',
@@ -273,9 +275,10 @@ export default {
     retry: 'Reintentar',
     remove: 'Quitar de la cola',
     failedGeneric: 'La descarga falló.',
-    overridePlaceholder: 'Pega un enlace de YouTube para usarlo como audio',
+    overridePlaceholder: 'Pega un enlace de canción de YouTube o SoundCloud',
     useLink: 'Usar este enlace',
-    invalidYoutube: 'Eso no parece un enlace de vídeo de YouTube.',
+    invalidAudioLink:
+      'Eso no parece un enlace de canción de YouTube o SoundCloud.',
     playlistDownloads: 'Descargas de playlists',
     sources: 'Descargado desde',
     noSourcesYet: 'Las descargas completadas muestran su origen aquí.',
@@ -775,7 +778,7 @@ export default {
     showShortcuts: 'Ver atajos',
     sourcesTitle: 'De dónde viene el audio',
     sourcesHint:
-      'Cada canción prueba las fuentes activadas en este orden hasta que una encuentra coincidencia.',
+      'Cada canción prueba las fuentes de audio activadas en este orden. Los enlaces de Spotify siguen aportando los metadatos de la canción y el álbum.',
     moveUp: 'Subir',
     moveDown: 'Bajar',
     sourceSlskd: 'Soulseek (slskd)',
@@ -784,6 +787,9 @@ export default {
     sourceYtmHint: 'Mejores coincidencias de metadatos',
     sourceYt: 'YouTube',
     sourceYtHint: 'Alternativa para canciones que faltan en YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Búsqueda alternativa y enlaces directos a canciones; los enlaces de Spotify conservan sus metadatos.',
     slskdTitle: 'slskd',
     slskdHint:
       'Descarga de Soulseek a través de tu servidor slskd. Lo que no encuentre pasa a la siguiente fuente.',
@@ -1119,7 +1125,8 @@ export default {
     body: '¿Canción o versión equivocada? Elige la correcta. El archivo conserva su nombre, etiquetas, portada y letra, y sigue en sus playlists.',
     current: 'Actual',
     search: 'Buscar',
-    searchHint: 'O pega un enlace de YouTube o YouTube Music.',
+    searchHint:
+      'O pega un enlace de YouTube, YouTube Music o una canción de SoundCloud.',
     searchButton: 'Buscar',
     results: 'Versiones para elegir',
     none: 'No se encontró nada. Prueba otras palabras o pega un enlace.',
@@ -1131,6 +1138,7 @@ export default {
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',
+      soundcloud: 'SoundCloud',
       link: 'Enlace',
     },
   },

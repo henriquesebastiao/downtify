@@ -177,6 +177,41 @@ def test_youtube_only_provider(tmp_path, monkeypatch, no_youtube):
     assert d.download(dict(_SONG)) == 'Artist - Track.mp3'
 
 
+def test_soundcloud_provider_is_tried_in_configured_order(
+    tmp_path, monkeypatch, no_youtube
+):
+    calls = []
+    monkeypatch.setattr(
+        downloader_mod,
+        'find_match_soundcloud',
+        lambda song: calls.append(song) or 'https://soundcloud.com/a/track',
+    )
+    d = Downloader(tmp_path, audio_providers=['soundcloud'])
+
+    assert d.download(dict(_SONG)) == 'Artist - Track.mp3'
+    assert calls == [_SONG]
+    assert no_youtube == ['https://soundcloud.com/a/track']
+
+
+def test_direct_soundcloud_track_url_is_downloaded(
+    tmp_path, monkeypatch, no_youtube
+):
+    song = {
+        **_SONG,
+        'song_id': 'soundcloud:track1',
+        'url': 'https://soundcloud.com/artist/track',
+        'soundcloud_url': 'https://soundcloud.com/artist/track',
+        'source': 'soundcloud',
+    }
+    reports = []
+    d = Downloader(tmp_path, audio_providers=['youtube-music'])
+
+    d.download(song, lambda pct, msg, provider=None: reports.append(provider))
+
+    assert no_youtube == ['https://soundcloud.com/artist/track']
+    assert reports[-1] == 'soundcloud'
+
+
 def test_youtube_is_not_searched_again_after_youtube_music(
     tmp_path, monkeypatch, no_youtube
 ):
@@ -225,4 +260,5 @@ def test_audio_providers_are_normalized():
         'bogus',
         'slskd',
         'youtube',
-    ]) == ['slskd', 'youtube']
+        'soundcloud',
+    ]) == ['slskd', 'youtube', 'soundcloud']
