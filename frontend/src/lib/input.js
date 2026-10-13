@@ -10,6 +10,8 @@ const SPOTIFY_ENTITY =
 // Short `deezer.page.link` share links aren't recognized here.
 const DEEZER_ENTITY =
   /deezer\.com\/(?:[a-z]{2}\/)?(track|album|playlist|artist)\//i
+const SOUNDCLOUD_TRACK =
+  /(?:www\.|m\.)?soundcloud\.com\/(?!sets(?:[/?#]|$))[^/?#]+\/(?!sets(?:[/?#]|$))[^/?#]+\/?(?:[?#]|$)/i
 
 function youtubeKind(text) {
   if (!/(?:youtube\.com|youtu\.be)\//.test(text)) return null
@@ -45,6 +47,10 @@ export function classifyInput(raw) {
   const deezer = DEEZER_ENTITY.exec(text)
   if (deezer) {
     return { type: 'link', source: 'deezer', kind: deezer[1], url: text }
+  }
+  if (SOUNDCLOUD_TRACK.test(text)) {
+    const url = /^https?:\/\//i.test(text) ? text : `https://${text}`
+    return { type: 'link', source: 'soundcloud', kind: 'track', url }
   }
   const looksLikeURL =
     /^https?:\/\//i.test(text) || /(?:youtube\.com|youtu\.be)\//.test(text)

@@ -30,7 +30,7 @@ pipeline:
   - title: Spotify embed
     text: metadata
   - title: YouTube Music
-    text: audio match
+    text: audio match · SoundCloud fallback
   - title: yt-dlp · ffmpeg · mutagen
     text: download & tag
 highlights:
@@ -72,7 +72,7 @@ quickStart:
 
 ## How it actually works
 
-Spotify's official API gates downloads behind a Premium subscription. Downtify takes the side door instead — it reads the metadata Spotify already exposes on its public embed pages, asks YouTube Music for the closest matching audio, hands the file to `yt-dlp` and `ffmpeg`, and writes proper tags with `mutagen`. The whole pipeline lives in a single Docker container.
+Spotify's official API gates downloads behind a Premium subscription. Downtify takes the side door instead — it reads the metadata Spotify already exposes on its public embed pages, asks YouTube Music for the closest matching audio (with optional YouTube and SoundCloud audio sources), hands the file to `yt-dlp` and `ffmpeg`, and writes proper tags with `mutagen`. Public SoundCloud track links can also be downloaded directly; text search remains on YouTube Music.
 
 <HomePipeline :steps="$frontmatter.pipeline" />
 
@@ -84,6 +84,7 @@ Spotify's official API gates downloads behind a Premium subscription. Downtify t
 | Spotify album      | `open.spotify.com/album/…`         |
 | Spotify playlist   | `open.spotify.com/playlist/…`      |
 | YouTube / YT Music | `youtube.com/watch?v=…`            |
+| SoundCloud track   | `soundcloud.com/artist/track`      |
 | Free-text search   | `The Night Owls Do I Still Recall` |
 
 ## Highlights

@@ -157,6 +157,7 @@ import { useTrackActions } from '/src/model/trackActions'
 import { deezerImage } from '/src/lib/deezerImage'
 import { normalizeTrack } from '/src/lib/library'
 import { saveName } from '/src/lib/paths'
+import { classifyInput } from '/src/lib/input'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -193,13 +194,23 @@ function youtubeId(url) {
 }
 
 function useLink() {
-  const id = youtubeId(override.value)
-  if (!id) {
-    overrideError.value = t('queue.invalidYoutube')
+  const parsed = classifyInput(override.value)
+  if (
+    parsed.type !== 'link' ||
+    !(
+      (parsed.source === 'youtube' && parsed.kind === 'track') ||
+      (parsed.source === 'soundcloud' && parsed.kind === 'track')
+    )
+  ) {
+    overrideError.value = t('queue.invalidAudioLink')
     return
   }
   overrideError.value = ''
-  dm.retryWithAudio(song.value, id)
+  if (parsed.source === 'soundcloud') {
+    dm.retryWithAudio(song.value, parsed.url, 'soundcloud')
+  } else {
+    dm.retryWithAudio(song.value, youtubeId(parsed.url))
+  }
   override.value = ''
 }
 </script>

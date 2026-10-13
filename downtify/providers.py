@@ -1,4 +1,4 @@
-"""YouTube Music search/match helpers, the audio source for downloads."""
+"""Audio search/match helpers for YouTube Music and SoundCloud downloads."""
 
 from __future__ import annotations
 
@@ -6,9 +6,10 @@ import json
 import os
 import re
 import zlib
+from difflib import SequenceMatcher
 from threading import Lock
 from typing import Any, Optional
-from urllib.parse import quote, unquote
+from urllib.parse import quote, unquote, urlparse
 
 import yt_dlp
 from loguru import logger
@@ -1515,6 +1516,169 @@ def youtube_search(query: str, limit: int = 10) -> list[dict[str, Any]]:
     hand (see :mod:`downtify.audio_replace`)."""
 
     return _youtube_search(query, limit)
+
+
+def parse_soundcloud_url(url: str) -> Optional[tuple[str, str]]:
+    """Recognize public SoundCloud track URLs."""
+
+    try:
+        parsed = urlparse(str(url or '').strip())
+    except ValueError:
+        return None
+    host = (parsed.hostname or '').lower()
+    if (
+        parsed.scheme not in {'http', 'https'}
+        or parsed.username
+        or parsed.password
+        or host
+        not in {'soundcloud.com', 'www.soundcloud.com', 'm.soundcloud.com'}
+    ):
+        return None
+    parts = [part for part in parsed.path.split('/') if part]
+    if len(parts) != 2 or 'sets' in parts:
+        return None
+    return 'track', parsed.geturl()
+
+
+def soundcloud_track_from_url(url: str) -> dict[str, Any]:
+    """Resolve a public SoundCloud track into Downtify's song shape."""
+
+    parsed = parse_soundcloud_url(url)
+    if parsed is None:
+        raise ValueError('Not a SoundCloud track URL')
+    opts: dict[str, Any] = {
+        'quiet': True,
+        'no_warnings': True,
+        'skip_download': True,
+        'noplaylist': True,
+    }
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(parsed[1], download=False)
+    if not isinstance(info, dict) or not info.get('title'):
+        raise ValueError('SoundCloud track metadata is unavailable')
+    title = str(info.get('title') or '').strip()
+    artist = str(
+        info.get('artist') or info.get('uploader') or info.get('creator') or ''
+    ).strip()
+    thumbnails = info.get('thumbnails') or []
+    cover_url = str(
+        info.get('thumbnail')
+        or next(
+            (
+                thumb.get('url')
+                for thumb in reversed(thumbnails)
+                if isinstance(thumb, dict) and thumb.get('url')
+            ),
+            '',
+        )
+        or ''
+    )
+    track_url = str(info.get('webpage_url') or parsed[1])
+    if parse_soundcloud_url(track_url) is None:
+        track_url = parsed[1]
+    track_id = str(info.get('id') or track_url)
+    album = str(info.get('album') or '').strip()
+    return {
+        'song_id': f'soundcloud:{track_id}',
+        'name': title,
+        'artists': [artist] if artist else [],
+        'artist': artist,
+        'album_name': album or title,
+        'album_artist': artist,
+        'cover_url': cover_url,
+        'duration': info.get('duration') or 0,
+        'url': track_url,
+        'soundcloud_url': track_url,
+        'source': 'soundcloud',
+    }
+
+
+def _soundcloud_normalize(value: str) -> str:
+    return ''.join(char for char in value.casefold() if char.isalnum())
+
+
+def _soundcloud_candidate_score(
+    title: str, artist: str, duration: float, entry: dict[str, Any]
+) -> Optional[tuple[float, str]]:
+    """Score a flat SoundCloud result against a catalog track."""
+
+    result_title = str(entry.get('title') or '')
+    result_artist = str(
+        entry.get('artist')
+        or entry.get('uploader')
+        or entry.get('creator')
+        or ''
+    )
+    normalized_title = _soundcloud_normalize(title)
+    normalized_result_title = _soundcloud_normalize(result_title)
+    normalized_artist = _soundcloud_normalize(artist)
+    if (
+        not normalized_title
+        or not normalized_result_title
+        or not normalized_artist
+    ):
+        return None
+    title_score = SequenceMatcher(
+        None, normalized_title, normalized_result_title
+    ).ratio()
+    artist_match = normalized_artist in _soundcloud_normalize(
+        f'{result_artist} {result_title}'
+    )
+    try:
+        result_duration = float(entry.get('duration') or 0)
+    except (TypeError, ValueError):
+        result_duration = 0
+    duration_match = (
+        not duration
+        or not result_duration
+        or abs(duration - result_duration) <= max(30, duration * 0.2)
+    )
+    result_url = str(
+        entry.get('webpage_url') or entry.get('url') or ''
+    ).strip()
+    if (
+        title_score < 0.72
+        or not artist_match
+        or not duration_match
+        or not parse_soundcloud_url(result_url)
+    ):
+        return None
+    return title_score, result_url
+
+
+def find_match_soundcloud(song: dict[str, Any]) -> Optional[str]:
+    """Find a likely SoundCloud track for a song's Spotify metadata."""
+
+    title = str(song.get('name') or '').strip()
+    artists = song.get('artists') or []
+    artist = str(artists[0] if artists else song.get('artist') or '').strip()
+    if not title or not artist:
+        return None
+    opts: dict[str, Any] = {
+        'quiet': True,
+        'no_warnings': True,
+        'skip_download': True,
+        'extract_flat': 'in_playlist',
+    }
+    if os.getenv('DOWNTIFY_FORCE_IPV4', '').strip() in {'1', 'true', 'yes'}:
+        opts['source_address'] = '0.0.0.0'
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(f'scsearch10:{artist} {title}', download=False)
+    try:
+        duration = float(song.get('duration') or 0)
+    except (TypeError, ValueError):
+        duration = 0
+    candidates: list[tuple[float, str]] = []
+    for entry in (info or {}).get('entries') or []:
+        if isinstance(entry, dict):
+            score = _soundcloud_candidate_score(title, artist, duration, entry)
+            if score is not None:
+                candidates.append(score)
+    return (
+        max(candidates, key=lambda candidate: candidate[0])[1]
+        if candidates
+        else None
+    )
 
 
 def _youtube_entry_to_result(

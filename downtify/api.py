@@ -124,8 +124,9 @@ for downloads stay shared, and files are never stored twice.
   summaries, same shape as ``/api/albums/search`` - no tracklists;
   resolve a chosen release's tracks separately). A YouTube Music or
   Deezer playlist URL resolves to its tracks, like a Spotify playlist.
-  Accepts a Spotify, YouTube Music or Deezer track/album/playlist URL
-  (plus a YouTube Music/Deezer artist URL, as above).
+  Accepts a Spotify, YouTube Music or Deezer track/album/playlist URL,
+  or a SoundCloud track URL (plus a YouTube Music/Deezer artist URL, as
+  above).
 * ``GET  /api/url/resolve`` (the same links, always as
   ``{kind, name, subtitle, cover_url, year, tracks, albums}`` - adds the
   playlist/album name and cover the plain track list lacks; a Deezer
@@ -2890,6 +2891,16 @@ def _resolve_url(url: str):
             status_code=400, detail=f'Unsupported entity type: {kind}'
         )
 
+    soundcloud_parsed = providers.parse_soundcloud_url(url)
+    if soundcloud_parsed is not None:
+        try:
+            return providers.soundcloud_track_from_url(url)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception('Failed to resolve SoundCloud URL {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
     raise HTTPException(status_code=400, detail='Invalid URL')
 
 
@@ -3012,6 +3023,10 @@ def _deezer_details(kind: str, did: str) -> dict[str, Any]:
     )
 
 
+def _soundcloud_details(url: str) -> dict[str, Any]:
+    return _track_details(providers.soundcloud_track_from_url(url))
+
+
 @router.get('/api/url/resolve')
 def url_resolve_endpoint(url: str = Query(...)) -> dict[str, Any]:
     """What a pasted link points at, with its tracks (or releases).
@@ -3031,14 +3046,26 @@ def url_resolve_endpoint(url: str = Query(...)) -> dict[str, Any]:
         if spotify_parsed or youtube_parsed
         else deezer.parse_deezer_url(url)
     )
-    if spotify_parsed is None and youtube_parsed is None and not deezer_parsed:
+    soundcloud_parsed = (
+        None
+        if spotify_parsed or youtube_parsed or deezer_parsed
+        else providers.parse_soundcloud_url(url)
+    )
+    if (
+        spotify_parsed is None
+        and youtube_parsed is None
+        and not deezer_parsed
+        and not soundcloud_parsed
+    ):
         raise HTTPException(status_code=400, detail='Invalid URL')
     try:
         if spotify_parsed is not None:
             return _spotify_details(*spotify_parsed)
         if youtube_parsed is not None:
             return _youtube_details(*youtube_parsed)
-        return _deezer_details(*deezer_parsed)
+        if deezer_parsed is not None:
+            return _deezer_details(*deezer_parsed)
+        return _soundcloud_details(url)
     except HTTPException:
         raise
     except ValueError as exc:
@@ -3170,6 +3197,10 @@ def _merge_client_track_hints(
     yr = hints.get('year')
     if isinstance(yr, str) and yr.strip():
         base['year'] = yr.strip()
+    soundcloud_url = str(hints.get('soundcloud_url') or '').strip()
+    if soundcloud_url and providers.parse_soundcloud_url(soundcloud_url):
+        base['soundcloud_url'] = soundcloud_url
+        base['soundcloud_url_override'] = True
     # A video id the user pasted to retry a failed track: download exactly
     # that video instead of matching again.
     ytid = str(hints.get('youtube_id') or '').strip()
@@ -3233,6 +3264,17 @@ def _song_for_download(url: str) -> dict[str, Any]:
             status_code=400,
             detail='Only Deezer track URLs are supported here',
         )
+    soundcloud_parsed = providers.parse_soundcloud_url(url)
+    if soundcloud_parsed is not None:
+        try:
+            return providers.soundcloud_track_from_url(url)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception(
+                'Failed to resolve SoundCloud download URL {}', url
+            )
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
 

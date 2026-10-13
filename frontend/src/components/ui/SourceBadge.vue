@@ -33,6 +33,11 @@ const SOURCES = {
     icon: 'youtube',
     classes: 'border-src-yt/20 bg-src-yt/10 text-src-yt',
   },
+  soundcloud: {
+    label: 'SoundCloud',
+    icon: 'music',
+    classes: 'border-orange-500/25 bg-orange-500/10 text-orange-500',
+  },
   slskd: {
     label: 'slskd',
     icon: 'share',

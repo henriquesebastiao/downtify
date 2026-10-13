@@ -4,6 +4,14 @@ icon: lucide/history
 
 # Changelog
 
+## Unreleased
+
+**Implemented enhancements:**
+
+- Add SoundCloud as an optional, reorderable audio source, with direct track links and SoundCloud links accepted for failed-download retries.
+- Keep Spotify as the metadata source for Spotify links and preserve YouTube Music artist, album and track search behavior.
+- Update the interface and documentation to identify SoundCloud as a supported download source.
+
 ## [3.4.0](https://github.com/henriquesebastiao/downtify/tree/3.4.0) (2026-10-02)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.3.0...3.4.0)

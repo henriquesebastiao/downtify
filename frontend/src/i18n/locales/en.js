@@ -66,13 +66,14 @@ export default {
     greetingAfternoon: 'Good afternoon',
     greetingEvening: 'Good evening',
     greetingNight: 'Up late?',
-    lead: 'Paste a link to download it, or search for something new.',
+    lead: 'Paste a Spotify, YouTube Music or SoundCloud track link to download it, or search for something new.',
     inputLabel: 'Link or search',
     inputPlaceholder:
       'Spotify or YouTube Music link, or an artist, album, song…',
     getIt: 'Get it',
     hintSpotify: 'Tracks, albums, playlists and artists',
     hintYoutube: 'YouTube Music songs, albums, playlists and artists',
+    hintSoundcloud: 'Download SoundCloud track links',
     hintDeezer: 'Deezer tracks, albums, playlists and artists',
     hintCsv: 'Import a CSV (Soundiiz, Exportify…)',
     downloading: 'Downloading now',
@@ -92,7 +93,7 @@ export default {
     },
     step1Title: 'Find music',
     step1Body:
-      'Search YouTube Music, or paste a Spotify or YouTube Music link to a song, album or playlist.',
+      'Search YouTube Music, or paste a Spotify or YouTube Music link to a song, album or playlist. SoundCloud track links can also be downloaded directly.',
     step2Title: 'Download it',
     step2Body:
       'Downtify fetches the audio and tags every file with title, artist, album, cover art and lyrics.',
@@ -126,7 +127,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      "Downtify can't download that link. Paste a Spotify track, album or playlist, or a YouTube Music link.",
+      "Downtify can't download that link. Paste a Spotify track, album or playlist, a YouTube Music link, or a SoundCloud track link.",
     tipSearchTitle: 'Search by name',
     tipSearchBody:
       'Type an artist, album or song — results come from YouTube Music.',
@@ -221,6 +222,7 @@ export default {
     watchArtist: 'Watch for new releases',
     openSpotify: 'Open on Spotify',
     openYoutube: 'Open on YouTube Music',
+    openSoundcloud: 'Open on SoundCloud',
     openDeezer: 'Open on Deezer',
     filterAll: 'All',
     filterNew: 'New',
@@ -269,9 +271,10 @@ export default {
     retry: 'Retry',
     remove: 'Remove from queue',
     failedGeneric: 'The download failed.',
-    overridePlaceholder: 'Paste a YouTube link to use as the audio',
+    overridePlaceholder: 'Paste a YouTube or SoundCloud track link',
     useLink: 'Use this link',
-    invalidYoutube: "That doesn't look like a YouTube video link.",
+    invalidAudioLink:
+      "That doesn't look like a YouTube or SoundCloud track link.",
     playlistDownloads: 'Playlist downloads',
     sources: 'Downloaded from',
     noSourcesYet: 'Finished downloads show their source here.',
@@ -757,7 +760,7 @@ export default {
     showShortcuts: 'Show shortcuts',
     sourcesTitle: 'Where audio comes from',
     sourcesHint:
-      'Each track tries the enabled sources in this order until one has a match.',
+      'Each track tries the enabled audio sources in this order. Spotify links still provide the track and album metadata.',
     moveUp: 'Move up',
     moveDown: 'Move down',
     sourceSlskd: 'Soulseek (slskd)',
@@ -766,6 +769,9 @@ export default {
     sourceYtmHint: 'Best metadata matches',
     sourceYt: 'YouTube',
     sourceYtHint: 'Fallback for songs missing from YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Search fallback and direct track links; Spotify links keep Spotify metadata.',
     slskdTitle: 'slskd',
     slskdHint:
       'Download from Soulseek through your slskd server. Tracks it can’t find fall through to the next source.',
@@ -1088,7 +1094,7 @@ export default {
     body: 'Wrong song or version? Pick the right one. The file keeps its name, tags, cover and lyrics, and stays in its playlists.',
     current: 'Now',
     search: 'Search',
-    searchHint: 'Or paste a YouTube or YouTube Music link.',
+    searchHint: 'Or paste a YouTube, YouTube Music or SoundCloud track link.',
     searchButton: 'Search',
     results: 'Versions to pick from',
     none: 'Nothing found. Try other words, or paste a link.',
@@ -1100,6 +1106,7 @@ export default {
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',
+      soundcloud: 'SoundCloud',
       link: 'Link',
     },
   },

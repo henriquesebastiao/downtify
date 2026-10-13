@@ -73,6 +73,7 @@ export default {
     getIt: 'Λήψη',
     hintSpotify: 'Κομμάτια, άλμπουμ, λίστες και καλλιτέχνες',
     hintYoutube: 'Τραγούδια, άλμπουμ, λίστες και καλλιτέχνες του YouTube Music',
+    hintSoundcloud: 'Λήψη από συνδέσμους κομματιών SoundCloud',
     hintDeezer: 'Κομμάτια, άλμπουμ, λίστες και καλλιτέχνες του Deezer',
     hintCsv: 'Εισαγωγή CSV (Soundiiz, Exportify…)',
     downloading: 'Λήψη τώρα',
@@ -129,7 +130,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'Το Downtify δεν μπορεί να κατεβάσει αυτόν τον σύνδεσμο. Επικόλλησε κομμάτι, άλμπουμ ή λίστα Spotify, ή σύνδεσμο YouTube Music.',
+      'Το Downtify δεν μπορεί να κατεβάσει αυτόν τον σύνδεσμο. Επικόλλησε κομμάτι, άλμπουμ ή λίστα Spotify, σύνδεσμο YouTube Music ή σύνδεσμο κομματιού SoundCloud.',
     tipSearchTitle: 'Αναζήτηση με όνομα',
     tipSearchBody:
       'Γράψε καλλιτέχνη, άλμπουμ ή τραγούδι — τα αποτελέσματα έρχονται από το YouTube Music.',
@@ -228,6 +229,7 @@ export default {
     openSpotify: 'Άνοιγμα στο Spotify',
     openYoutube: 'Άνοιγμα στο YouTube Music',
     openDeezer: 'Άνοιγμα στο Deezer',
+    openSoundcloud: 'Άνοιγμα στο SoundCloud',
     filterAll: 'Όλα',
     filterNew: 'Νέα',
     filterLibrary: 'Στη βιβλιοθήκη',
@@ -276,9 +278,10 @@ export default {
     retry: 'Επανάληψη',
     remove: 'Αφαίρεση από την ουρά',
     failedGeneric: 'Η λήψη απέτυχε.',
-    overridePlaceholder: 'Επικόλλησε σύνδεσμο YouTube για χρήση ως ήχο',
+    overridePlaceholder: 'Επικόλλησε σύνδεσμο κομματιού YouTube ή SoundCloud',
     useLink: 'Χρήση συνδέσμου',
-    invalidYoutube: 'Αυτό δεν μοιάζει με σύνδεσμο βίντεο YouTube.',
+    invalidAudioLink:
+      'Αυτό δεν μοιάζει με σύνδεσμο κομματιού YouTube ή SoundCloud.',
     playlistDownloads: 'Λήψεις λιστών',
     sources: 'Πηγή λήψης',
     noSourcesYet: 'Οι ολοκληρωμένες λήψεις δείχνουν εδώ την πηγή τους.',
@@ -778,7 +781,7 @@ export default {
     showShortcuts: 'Εμφάνιση συντομεύσεων',
     sourcesTitle: 'Από πού έρχεται ο ήχος',
     sourcesHint:
-      'Κάθε κομμάτι δοκιμάζει τις ενεργές πηγές με αυτή τη σειρά μέχρι να βρεθεί αντιστοιχία.',
+      'Κάθε κομμάτι δοκιμάζει τις ενεργές πηγές ήχου με αυτή τη σειρά. Οι σύνδεσμοι Spotify εξακολουθούν να παρέχουν τα μεταδεδομένα κομματιού και άλμπουμ.',
     moveUp: 'Μετακίνηση πάνω',
     moveDown: 'Μετακίνηση κάτω',
     sourceSlskd: 'Soulseek (slskd)',
@@ -787,6 +790,9 @@ export default {
     sourceYtmHint: 'Καλύτερες αντιστοιχίες μεταδεδομένων',
     sourceYt: 'YouTube',
     sourceYtHint: 'Εναλλακτική για τραγούδια που λείπουν από το YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Εφεδρική αναζήτηση και απευθείας σύνδεσμοι κομματιών· οι σύνδεσμοι Spotify διατηρούν τα μεταδεδομένα Spotify.',
     slskdTitle: 'slskd',
     slskdHint:
       'Λήψη από Soulseek μέσω του διακομιστή slskd. Όσα δεν βρεθούν περνούν στην επόμενη πηγή.',
@@ -1125,7 +1131,8 @@ export default {
     body: 'Λάθος τραγούδι ή εκδοχή; Διαλέξτε τη σωστή. Το αρχείο κρατά όνομα, ετικέτες, εξώφυλλο και στίχους και μένει στις λίστες του.',
     current: 'Τώρα',
     search: 'Αναζήτηση',
-    searchHint: 'Ή επικολλήστε σύνδεσμο YouTube ή YouTube Music.',
+    searchHint:
+      'Ή επικολλήστε σύνδεσμο YouTube, YouTube Music ή κομματιού SoundCloud.',
     searchButton: 'Αναζήτηση',
     results: 'Εκδοχές για επιλογή',
     none: 'Δεν βρέθηκε τίποτα. Δοκιμάστε άλλες λέξεις ή επικολλήστε σύνδεσμο.',
@@ -1137,6 +1144,7 @@ export default {
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',
+      soundcloud: 'SoundCloud',
       link: 'Σύνδεσμος',
     },
   },

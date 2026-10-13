@@ -70,6 +70,26 @@ describe('classifyInput', () => {
     })
   })
 
+  it('recognises SoundCloud track links without changing text search', () => {
+    expect(
+      classifyInput('https://soundcloud.com/artist/track-name?si=abc')
+    ).toMatchObject({
+      type: 'link',
+      source: 'soundcloud',
+      kind: 'track',
+    })
+    expect(classifyInput('soundcloud.com/artist/track-name').url).toBe(
+      'https://soundcloud.com/artist/track-name'
+    )
+    expect(classifyInput('artist search')).toEqual({
+      type: 'search',
+      query: 'artist search',
+    })
+    expect(
+      classifyInput('https://soundcloud.com/artist/sets/playlist-name')
+    ).toMatchObject({ type: 'unsupported' })
+  })
+
   it('does not search for other web links', () => {
     expect(classifyInput('https://example.com/song')).toMatchObject({
       type: 'unsupported',

@@ -73,6 +73,7 @@ export default {
     getIt: 'Изтегли',
     hintSpotify: 'Песни, албуми, плейлисти и изпълнители',
     hintYoutube: 'Песни, албуми, плейлисти и изпълнители от YouTube Music',
+    hintSoundcloud: 'Изтегляне от линкове към SoundCloud песни',
     hintDeezer: 'Песни, албуми, плейлисти и изпълнители от Deezer',
     hintCsv: 'Импортирай CSV (Soundiiz, Exportify…)',
     downloading: 'Изтегля се сега',
@@ -126,7 +127,7 @@ export default {
     typeSingle: 'Сингъл',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify не може да изтегли този линк. Постави песен, албум или плейлист от Spotify, или линк от YouTube Music.',
+      'Downtify не може да изтегли този линк. Постави Spotify песен, албум или плейлист, YouTube Music линк или SoundCloud линк към песен.',
     tipSearchTitle: 'Търси по име',
     tipSearchBody:
       'Въведи изпълнител, албум или песен — резултатите идват от YouTube Music.',
@@ -221,6 +222,7 @@ export default {
     openSpotify: 'Отвори в Spotify',
     openYoutube: 'Отвори в YouTube Music',
     openDeezer: 'Отвори в Deezer',
+    openSoundcloud: 'Отвори в SoundCloud',
     filterAll: 'Всички',
     filterNew: 'Нови',
     filterLibrary: 'В библиотеката',
@@ -269,9 +271,10 @@ export default {
     retry: 'Опитай отново',
     remove: 'Премахни от опашката',
     failedGeneric: 'Изтеглянето не успя.',
-    overridePlaceholder: 'Постави линк от YouTube за аудио',
+    overridePlaceholder: 'Постави линк към песен от YouTube или SoundCloud',
     useLink: 'Използвай този линк',
-    invalidYoutube: 'Това не прилича на линк към видео в YouTube.',
+    invalidAudioLink:
+      'Това не прилича на линк към песен от YouTube или SoundCloud.',
     playlistDownloads: 'Изтегляния на плейлисти',
     sources: 'Изтеглено от',
     noSourcesYet: 'Завършените изтегляния показват източника си тук.',
@@ -766,7 +769,7 @@ export default {
     showShortcuts: 'Покажи клавишните комбинации',
     sourcesTitle: 'Откъде идва аудиото',
     sourcesHint:
-      'Всяка песен пробва активните източници в този ред, докато някой намери съвпадение.',
+      'Всяка песен пробва активните аудио източници в този ред. Spotify линковете продължават да предоставят метаданните за песента и албума.',
     moveUp: 'Премести нагоре',
     moveDown: 'Премести надолу',
     sourceSlskd: 'Soulseek (slskd)',
@@ -775,6 +778,9 @@ export default {
     sourceYtmHint: 'Най-добри съвпадения на метаданни',
     sourceYt: 'YouTube',
     sourceYtHint: 'Резерва за песни, които липсват в YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Резервно търсене и директни линкове към песни; Spotify линковете запазват Spotify метаданните.',
     slskdTitle: 'slskd',
     slskdHint:
       'Изтегляй от Soulseek чрез своя slskd сървър. Ненамерените песни минават към следващия източник.',
@@ -1107,7 +1113,8 @@ export default {
     body: 'Грешна песен или версия? Изберете правилната. Файлът запазва името, таговете, обложката и текста си и остава в плейлистите.',
     current: 'Сега',
     search: 'Търсене',
-    searchHint: 'Или поставете връзка от YouTube или YouTube Music.',
+    searchHint:
+      'Или поставете връзка от YouTube, YouTube Music или SoundCloud песен.',
     searchButton: 'Търсене',
     results: 'Версии за избор',
     none: 'Няма резултати. Опитайте други думи или поставете връзка.',
@@ -1119,6 +1126,7 @@ export default {
     source: {
       'youtube-music': 'YouTube Music',
       youtube: 'YouTube',
+      soundcloud: 'SoundCloud',
       link: 'Връзка',
     },
   },

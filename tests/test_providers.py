@@ -87,6 +87,139 @@ def test_enrich_from_match_backfills_artists_when_empty():
     assert out['artist'] == 'AliasFromYT'
 
 
+def test_parse_soundcloud_url_accepts_track_and_rejects_playlists():
+    assert providers.parse_soundcloud_url(
+        'https://www.soundcloud.com/artist/track?si=abc'
+    ) == (
+        'track',
+        'https://www.soundcloud.com/artist/track?si=abc',
+    )
+    assert (
+        providers.parse_soundcloud_url(
+            'https://soundcloud.com/artist/sets/album'
+        )
+        is None
+    )
+    assert (
+        providers.parse_soundcloud_url(
+            'https://soundcloud.com.evil.example/artist/track'
+        )
+        is None
+    )
+
+
+def test_soundcloud_track_metadata_uses_yt_dlp(monkeypatch):
+    class _YoutubeDL:
+        def __init__(self, opts):
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc_info):
+            return False
+
+        @staticmethod
+        def extract_info(url, download=False):
+            assert url == 'https://soundcloud.com/artist/track'
+            assert download is False
+            return {
+                'id': 'track-id',
+                'title': 'A Track',
+                'artist': 'An Artist',
+                'album': 'An Album',
+                'thumbnail': 'https://example.test/cover.jpg',
+                'duration': 181,
+                'webpage_url': url,
+            }
+
+    monkeypatch.setattr(providers.yt_dlp, 'YoutubeDL', _YoutubeDL)
+
+    song = providers.soundcloud_track_from_url(
+        'https://soundcloud.com/artist/track'
+    )
+
+    assert song == {
+        'song_id': 'soundcloud:track-id',
+        'name': 'A Track',
+        'artists': ['An Artist'],
+        'artist': 'An Artist',
+        'album_name': 'An Album',
+        'album_artist': 'An Artist',
+        'cover_url': 'https://example.test/cover.jpg',
+        'duration': 181,
+        'url': 'https://soundcloud.com/artist/track',
+        'soundcloud_url': 'https://soundcloud.com/artist/track',
+        'source': 'soundcloud',
+    }
+
+
+def test_find_match_soundcloud_filters_unrelated_results(monkeypatch):
+    class _YoutubeDL:
+        def __init__(self, opts):
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc_info):
+            return False
+
+        @staticmethod
+        def extract_info(query, download=False):
+            assert query == 'scsearch10:Artist Track'
+            assert download is False
+            return {
+                'entries': [
+                    {
+                        'title': 'Track (Live)',
+                        'uploader': 'Artist',
+                        'duration': 200,
+                        'webpage_url': 'https://soundcloud.com/artist/live',
+                    },
+                    {
+                        'title': 'Track',
+                        'uploader': 'Artist',
+                        'duration': 200,
+                        'webpage_url': 'https://soundcloud.com/artist/track',
+                    },
+                    {
+                        'title': 'Track',
+                        'uploader': 'Someone Else',
+                        'duration': 200,
+                        'webpage_url': 'https://soundcloud.com/other/track',
+                    },
+                ]
+            }
+
+    monkeypatch.setattr(providers.yt_dlp, 'YoutubeDL', _YoutubeDL)
+
+    assert (
+        providers.find_match_soundcloud({
+            'name': 'Track',
+            'artists': ['Artist'],
+            'duration': 200,
+        })
+        == 'https://soundcloud.com/artist/track'
+    )
+
+
+def test_soundcloud_match_preserves_non_latin_text():
+    assert (
+        providers._soundcloud_candidate_score(
+            '東京',
+            'Artist',
+            0,
+            {
+                'title': '大阪',
+                'uploader': 'Artist',
+                'webpage_url': 'https://soundcloud.com/artist/osaka',
+            },
+        )
+        is None
+    )
+
+
 def test_enrich_from_match_does_not_replace_existing_artists():
     song = {
         'name': 'Test Song',
