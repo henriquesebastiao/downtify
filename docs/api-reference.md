@@ -529,6 +529,11 @@ Manually set all four social links directly, replacing the whole object - never 
 
 ## Downloads
 
+**Settings → Downloads → Longest track taken** caps the track length for downloads *and* streams alike (default 10 minutes, `0` takes everything).
+
+Whoever asks for a download owns the tracks: a second user asking for the same songs shares the files on disk (nothing is downloaded twice) and gains their own ownership rows. Users browse their own library only — see [Users & Sign-in](features/users.md#your-library).
+
+
 ### `POST /api/download/url`
 
 Download a single track. Blocks until complete.
@@ -629,15 +634,17 @@ Returns `400` if the CSV has no recognizable title/artist columns, is empty, or 
 
 ### `GET /api/queue`
 
-List all download jobs (queued, in progress, done, error).
+List download jobs (queued, in progress, done, error): one's own for a user, everyone's for an admin. Download progress events on the WebSocket follow the same rule.
 
-**Response:** Array of job objects (`song`, `status`, `progress`, `message`, `filename`, and `provider` — the audio source that served it: `youtube-music`, `youtube` or `slskd`).
+**Response:** Array of job objects (`song`, `status`, `progress`, `message`, `filename`, `user_ids` — the sorted accounts waiting on the job — `position`, and `provider` — the audio source that served it: `youtube-music`, `youtube` or `slskd`).
+
+`position` is the 1-based place among the still-waiting jobs (`queued` + `downloading`) in the order shown, `null` once finished. An admin's positions span the whole queue; a user's count their own slice. When two accounts ask for the same track at once they share one job row (and one download): the second waiter joins `user_ids` and gets the finished file with an ownership row of their own, and both see the same `position`.
 
 ---
 
 ### `DELETE /api/queue/completed`
 
-Remove finished (`done`) jobs, keeping queued, in-progress and failed ones.
+Remove finished (`done`) jobs, keeping queued, in-progress and failed ones. A user clears their own only.
 
 **Response:** `{ "removed": 3 }`
 
@@ -645,7 +652,7 @@ Remove finished (`done`) jobs, keeping queued, in-progress and failed ones.
 
 ### `DELETE /api/queue`
 
-Clear the entire download queue/history.
+Clear the download queue/history — one's own for a user, the entire one for an admin.
 
 **Response:** `{ "cleared": true }`
 
@@ -653,7 +660,7 @@ Clear the entire download queue/history.
 
 ### `DELETE /api/queue/item`
 
-Remove a single job from the queue.
+Remove a single job from the queue (one's own, unless admin).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -882,7 +889,7 @@ Remove the uploaded cookie file.
 
 ### `GET /list`
 
-List all audio files in the downloads directory (recursive), plus slskd downloads left in place (`slskd/…`).
+List audio files in the downloads directory (recursive), plus slskd downloads left in place (`slskd/...`) — one's own files for a user, everything for an admin (see [Users & Sign-in](features/users.md#your-library)).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -894,7 +901,7 @@ List all audio files in the downloads directory (recursive), plus slskd download
 
 ### `GET /playlists`
 
-List downloaded playlists, derived from the `.m3u` files already on disk (see [M3U Export](features/m3u-export.md)). Used by the [Library page](features/library-catalog.md#library-page) to list playlists, and to play or queue just one of them.
+List downloaded playlists, derived from the `.m3u` files already on disk (see [M3U Export](features/m3u-export.md)). Used by the [Library page](features/library-catalog.md#library-page) to list playlists, and to play or queue just one of them. A user sees their own playlists only (with their own liked songs as the liked one); an admin sees everything.
 
 **Response:**
 
@@ -920,7 +927,7 @@ Sorted by name, except that the [liked songs](features/liked-songs.md) playlist 
 
 ### `GET /tracks`
 
-List library tracks with artist/album read from each file's embedded tags — downloads, slskd files left in place, and [extra folders](features/external-library.md). The Library **Tracks** tab uses the unfiltered list; album and artist pages use `?artist=`; playlists use `?playlist=`. The [Built-in Player](features/player.md#how-it-works) plays the rows those pages already loaded.
+List library tracks with artist/album read from each file's embedded tags — downloads, slskd files left in place, and [extra folders](features/external-library.md). A user sees their own tracks only (an admin sees everything); an unknown — or someone else's — `?playlist=` reads as empty. The Library **Tracks** tab uses the unfiltered list; album and artist pages use `?artist=`; playlists use `?playlist=`. The [Built-in Player](features/player.md#how-it-works) plays the rows those pages already loaded.
 
 **Response:**
 
@@ -981,6 +988,8 @@ Delete a downloaded file, plus its leftovers — best-effort, so a missing or un
 
 `playlists_affected` lists the downloaded playlists that contained the file; their M3U files and Navidrome playlists are rewritten in the background (`playlists_refresh_scheduled`).
 
+A user deleting a file others still own only releases it (`{ "released": true }`): the file stays on disk for the rest, and leaves their library — their like on it goes too, everyone else's stays. Someone else's file answers `Not in your library`.
+
 ---
 
 ### `DELETE /delete/batch`
@@ -1008,7 +1017,7 @@ Duplicate paths are deduplicated before processing. Capped at 2000 files per req
 }
 ```
 
-`results` maps each requested path to the same shape `DELETE /delete` returns for it. The response also carries `playlists_affected` and `playlists_refresh_scheduled`, as for `DELETE /delete`.
+`results` maps each requested path to the same shape `DELETE /delete` returns for it. The response also carries `playlists_affected` and `playlists_refresh_scheduled`, as for `DELETE /delete` — plus `released_count` for files that left one's own library without leaving the disk (see above).
 
 ---
 
@@ -1454,7 +1463,7 @@ Drop the rest of the queue. Tracks already upgraded stay upgraded.
 
 ## Likes
 
-The heart on a library track — see [Liked songs](features/liked-songs.md). Files are library paths, the same ones [`GET /tracks`](#get-tracks) uses.
+The heart on a library track — see [Liked songs](features/liked-songs.md). Files are library paths, the same ones [`GET /tracks`](#get-tracks) uses. Hearts belong to whoever tapped them: a user sees their own, an admin sees everyone's.
 
 ### `GET /api/likes`
 
@@ -1499,7 +1508,7 @@ The playlist file is written with the first like and removed with the last.
 
 ### `POST /api/likes/clear`
 
-Unlike everything, which also removes the playlist. No song is deleted.
+Unlike everything of one's own (everything for an admin), which also removes the playlist. No song is deleted.
 
 **Response:** `{ "cleared": 2, "count": 0 }`
 
@@ -1726,7 +1735,7 @@ Show a hidden artist again.
 
 ### `GET /api/preview`
 
-A song's 30-second preview clip from Deezer, for a song without a `preview_url` of its own (a YouTube Music result, or a Spotify playlist track past what the embed lists). Used by the web UI the first time a song's preview is played.
+A song's 30-second preview clip from Deezer, for a song without a `preview_url` of its own (a YouTube Music result, or a Spotify playlist track past what the embed lists). Kept for third-party clients: the web UI streams songs in full through [`GET /api/stream`](#get-apistream) instead.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -1737,6 +1746,49 @@ A song's 30-second preview clip from Deezer, for a song without a `preview_url` 
 **Response:** `{ "preview_url": "https://cdnt-preview.dzcdn.net/…" }`
 
 Only a Deezer song by that artist with that title counts (both compared ignoring case and `(Live)`/`[Remastered]`/` - Radio Edit` style suffixes); `preview_url` is `""` when there's none. `503` when Deezer can't be reached or refuses (rate limit). The link is Deezer's own, short-lived — ask again rather than storing it.
+
+---
+
+## Streaming
+
+### `GET /api/stream/file`
+
+A track's full audio, downloaded once into `/data/stream_cache` and served from this server with seeking support — what plays in the built-in player when the song behind a row isn't downloaded yet. This is what keeps playback working where the browser itself can't reach YouTube (or only slowly): the only YouTube traffic is server-side, and the second play of a track never touches YouTube at all.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `video_id` | string | yes | The song's YouTube video id (11 characters) |
+| `duration` | number | no | The track's length in seconds, when the caller knows it — refused before any download when over 10 minutes |
+
+The first request for a video downloads it (concurrent requests share one download); the cache is pruned least-recently-used past `DOWNTIFY_STREAM_CACHE_MB` (default 1024) with at most `DOWNTIFY_STREAM_CONCURRENCY` downloads at once (default 2). `400` for a malformed id and for tracks over 10 minutes (the served file's probed length is enforced either way, so long uploads never accumulate), `503` when YouTube can't provide the audio — including age-gated tracks without usable cookies (see [YouTube Cookies](features/youtube-cookies.md)). A stream never lands in the library, the activity log or the saved player session.
+
+The web UI plays the queue through undownloaded rows without stopping and warms one track ahead: at each track's start, and again the moment it has fully loaded, the next track's download starts in the background (see [`POST /api/stream/prefetch`](#post-apistreamprefetch)), so skipping starts instantly. A run of unresolvable tracks is skipped (an error after three in a row).
+
+### `POST /api/stream/prefetch`
+
+Start caching a video's audio without waiting for it. Body `{ "video_id" }`; answers `{ "queued": true }` at once while the download continues detached — how the player warms the next track up the moment the current one has loaded, so skipping starts instantly. `400` for a malformed id, `503` when streaming isn't ready.
+
+### `GET /api/stream`
+
+The same audio as a fresh direct URL (`{ "url": "https://r1---sn.googlevideo.com/…" }`, usually AAC) — for third-party clients. Short-lived and bound to the server's network: fetch it on demand, never cache or persist it. Same `400`/`503` contract as above.
+
+---
+
+## Similar tracks
+
+### `GET /api/similar/tracks`
+
+Tracks similar to one track, from YouTube Music's own radio mix for it, backing the [Similar](features/similar.md) page. Needs no key.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist` | string | either this or `track` | The seed track's artist (a bare artist seeds from its top hit) |
+| `track` | string | either this or `artist` | The seed track's title |
+| `limit` | number | no | How many similar tracks to return (default `20`, max `50`) |
+
+**Response:** `{ "artist": "Cher", "track": "Believe", "source": "youtube", "tracks": [{ "song_id": "…", "name": "Strong Enough", "artists": ["Cher"], "cover_url": "https://…", "duration": 224, "url": "https://music.youtube.com/watch?v=…", "match": 0.9 }] }` — full song objects plus `match`, which decays with the row's position since YouTube gives no score.
+
+`502` when YouTube Music can't be used (unknown track, network). Rows stream through [`GET /api/stream/file`](#get-apistreamfile) for playback and download straight away.
 
 ---
 
@@ -1766,7 +1818,7 @@ A playlist report looks like:
 
 ### `GET /api/playlists/batches`
 
-Every tracked playlist download, as summary reports.
+Every tracked playlist download, as summary reports: one's own for a user, everyone's for an admin.
 
 **Response:** `{ "playlists": [ /* reports */ ], "count": 1 }`
 
@@ -1781,7 +1833,7 @@ One playlist's report, checked against its cached Spotify track list.
 | `tracks` | boolean | no | Include `missing_tracks`. Default: `true` |
 | `refresh` | boolean | no | Refetch the track list from Spotify instead of the cache |
 
-**Response:** A playlist report. `404` if the playlist isn't tracked.
+**Response:** A playlist report. `404` if the playlist isn't tracked (or isn't theirs, for a user).
 
 ---
 
@@ -1795,7 +1847,7 @@ Delete the playlist like `DELETE /api/library/playlist`, and also stop tracking 
 
 ### `GET /api/playlists/incomplete`
 
-Tracked playlist downloads that are still missing tracks.
+Tracked playlist downloads that are still missing tracks (one's own for a user).
 
 **Response:** `{ "playlists": [ /* reports */ ], "count": 1 }`
 
@@ -1803,7 +1855,7 @@ Tracked playlist downloads that are still missing tracks.
 
 ### `POST /api/playlists/incomplete/download-missing`
 
-Queue only the tracks of a Spotify playlist that aren't in the library yet.
+Queue only the tracks of a Spotify playlist that aren't in the library yet. For a user, tracks on disk that aren't theirs count as missing: queuing them claims the shared files instead of downloading twice.
 
 **Request body:** `{ "spotify_playlist_id": "…" }` or `{ "playlist_url": "https://open.spotify.com/playlist/…" }`, optionally with `"generate_m3u": true`.
 
@@ -1838,6 +1890,8 @@ Write an M3U file for a playlist after per-track downloads are complete. `playli
 ---
 
 ## Playlist Monitor
+
+Watches belong to whoever created them (admins see every watch); sweeps attribute their downloads to the watch owner.
 
 ### `GET /api/monitor/playlists`
 
@@ -1920,7 +1974,7 @@ Trigger an immediate check for a specific playlist outside the normal schedule.
 
 ## Podcasts
 
-Subscribing to a show, its episodes, and per-episode playback position — see [Podcasts](features/podcasts.md). Scheduling (the interval, enabled flag and last-checked time) lives on the same watch object [`GET /api/monitor/playlists`](#get-apimonitorplaylists) returns for playlists and artists (`kind: "podcast"`); everything below is what that generic shape has no room for.
+Subscriptions belong to whoever subscribes (an admin sees every show); episodes, resume positions and dismissals follow the subscription. Subscribing to a show, its episodes, and per-episode playback position — see [Podcasts](features/podcasts.md). Scheduling (the interval, enabled flag and last-checked time) lives on the same watch object [`GET /api/monitor/playlists`](#get-apimonitorplaylists) returns for playlists and artists (`kind: "podcast"`); everything below is what that generic shape has no room for.
 
 ### `POST /api/podcasts/resolve`
 
@@ -2377,6 +2431,19 @@ Admin. Delete an account: its apps are unpaired and its sessions ended. `400` fo
 
 ---
 
+### `GET /api/users/stats`
+
+Admin. Per-account usage for Settings → Users: tracks and bytes owned,
+likes, playlists, downloads ordered and traffic both ways (fetched from
+upstream vs. served to clients), plus the totals across everyone.
+
+**Response:** `{ "users": [{ "id", "username", "role", "tracks", "bytes",
+"likes", "playlists", "downloads", "traffic_in", "traffic_out" }],
+"totals": { "users", "tracks", "bytes", "likes", "playlists", "downloads",
+"traffic_in", "traffic_out" } }`
+
+---
+
 ### `GET /api/activity`
 
 Admin. The activity log, newest first.
@@ -2445,7 +2512,7 @@ What the apps use: everything by **track id**, which survives the file being mov
 
 ### `GET /api/v1/library`
 
-The library as a change feed.
+The library as a change feed — one's own tracks for a paired user account, everything for an admin (see [Users & Sign-in](features/users.md#your-library)). Tracks outside the account read as removed.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -2542,7 +2609,7 @@ The track's cover. Also `HEAD`.
 ]
 ```
 
-The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playlist order. `cover` is a path for `GET /playlist-cover?file=`, or `""`.
+The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playlist order — one's own for a user (with their own liked songs as the liked one), everything for an admin. `cover` is a path for `GET /playlist-cover?file=`, or `""`.
 
 ---
 
@@ -2554,7 +2621,7 @@ The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playli
 
 ### `PUT /api/v1/likes`
 
-Like or unlike a track: `{ "track_id": "t7b2…", "liked": true }`. Idempotent. **Response:** `{ "track_id": "t7b2…", "liked": true }`. `400` without `track_id`, `404` for an unknown one. The same likes as [`/api/likes`](#likes).
+Like or unlike a track: `{ "track_id": "t7b2…", "liked": true }`. Idempotent. **Response:** `{ "track_id": "t7b2…", "liked": true }`. `400` without `track_id`, `404` for an unknown one. The same per-user likes as [`/api/likes`](#likes).
 
 ---
 

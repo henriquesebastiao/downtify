@@ -33,7 +33,6 @@
           <span class="max-sm:sr-only">{{ t('actions.addToQueue') }}</span>
         </UiButton>
         <UiButton
-          v-if="auth.isAdmin.value"
           size="sm"
           variant="secondary"
           icon="playlist"
@@ -72,7 +71,6 @@
 <script setup>
 import UiButton from '../ui/UiButton.vue'
 import UiIconButton from '../ui/UiIconButton.vue'
-import { useAuth } from '/src/model/auth'
 import { useI18n } from '/src/i18n'
 
 defineProps({
@@ -90,5 +88,4 @@ defineEmits([
   'add-to-playlist',
 ])
 const { t } = useI18n()
-const auth = useAuth()
 </script>

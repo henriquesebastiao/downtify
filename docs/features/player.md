@@ -74,7 +74,7 @@ iOS may pause Web Audio when the screen locks or you switch apps, which stops pl
 
 ## Building the queue
 
-Playing an album, artist, playlist or the track list queues those tracks in order, starting from the one you picked. **Shuffle** on a collection starts it in a random order.
+Playing an album, artist, playlist or the track list queues those tracks in order, starting from the one you picked. **Shuffle** on a collection starts it in a random order. Tracks you haven't downloaded play in full right in the queue, served from the server's stream cache: while one plays, the next one is already being prepared one track ahead, so playback runs through undownloaded rows without stopping — even where the browser itself can't reach YouTube. A streamed track is never saved, liked or remembered across reloads.
 
 Every track's menu (the **⋯** button, or right-click on desktop) has:
 

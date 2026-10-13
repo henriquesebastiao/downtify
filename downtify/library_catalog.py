@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -344,14 +344,22 @@ def _attach_m3u_playlists_to_entries(
         entry['playlists'] = sorted(names)
 
 
-def listing_for_request(ctx: LibraryContext) -> list[dict[str, Any]]:
-    """Last snapshot for UI routes; never walks the library on a hit."""
+def listing_for_request(
+    ctx: LibraryContext,
+    *,
+    allowed_keys: Optional[Collection[str]] = None,
+) -> list[dict[str, Any]]:
+    """Last snapshot for UI routes; never walks the library on a hit.
+
+    ``allowed_keys`` keeps only a non-admin's own rows (the snapshot
+    itself is never narrowed).
+    """
 
     set_listing_refresh_fn(lambda: list_library_entries(ctx))
     peeked = peek_cached_track_entries(ctx)
     if peeked is not None:
-        return peeked
-    return list_library_entries(ctx)
+        return _filter_entries(peeked, allowed_keys)
+    return list_library_entries(ctx, allowed_keys=allowed_keys)
 
 
 def merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
@@ -424,27 +432,43 @@ def drop_library_listing_files(
     store_cached_track_entries(ctx, kept, paths=paths)
 
 
+def entry_content_key(entry: dict[str, Any]) -> str:
+    """The ownership key of a listing row (no disk access needed)."""
+
+    try:
+        size = int(entry.get('size') or 0)
+    except (TypeError, ValueError):
+        return ''
+    return (
+        file_content_key_from_name_and_size(str(entry.get('file') or ''), size)
+        or ''
+    )
+
+
 def list_library_entries(
     ctx: LibraryContext,
     *,
     fold_extra: bool = True,
+    allowed_keys: Optional[Collection[str]] = None,
 ) -> list[dict[str, Any]]:
     """Playable library rows with title/artist from embedded tags.
 
     ``fold_extra`` (default) drops extra-folder duplicates and remaps
     artist names. Sync passes ``False`` so it can log those skips itself.
+    ``allowed_keys`` keeps only rows whose content key is in it (a
+    non-admin's library); the shared snapshot itself is never narrowed.
     """
 
     if fold_extra:
         cached = get_cached_track_entries(ctx)
         if cached is not None:
-            return cached
+            return _filter_entries(cached, allowed_keys)
 
     with listing_lock():
         if fold_extra:
             cached = get_cached_track_entries(ctx)
             if cached is not None:
-                return cached
+                return _filter_entries(cached, allowed_keys)
 
         path_rows = list_library_path_pairs(ctx)
         pairs: list[tuple[str, Path]] = [
@@ -469,7 +493,17 @@ def list_library_entries(
 
         entries = finish_library_entries(entries)
         store_cached_track_entries(ctx, entries, paths=path_rows)
+        return _filter_entries(entries, allowed_keys)
+
+
+def _filter_entries(
+    entries: list[dict[str, Any]],
+    allowed_keys: Optional[Collection[str]],
+) -> list[dict[str, Any]]:
+    if allowed_keys is None:
         return entries
+    allowed = set(allowed_keys)
+    return [e for e in entries if entry_content_key(e) in allowed]
 
 
 def list_entries_for_stored_paths(
@@ -610,9 +644,16 @@ def filter_library_entries(
 
 
 def lookup_library_songs(
-    ctx: LibraryContext, songs: Sequence[Any]
+    ctx: LibraryContext,
+    songs: Sequence[Any],
+    *,
+    allowed_keys: Optional[Collection[str]] = None,
 ) -> list[dict[str, Any]]:
-    """``GET /tracks`` rows that match search/link songs already downloaded."""
+    """``GET /tracks`` rows that match search/link songs already downloaded.
+
+    ``allowed_keys`` keeps only a non-admin's own matches, so the search
+    page doesn't offer someone else's file as "already downloaded".
+    """
 
     wanted: list[str] = []
     seen_keys: set[str] = set()
@@ -634,7 +675,7 @@ def lookup_library_songs(
     pending = set(wanted)
     found: list[dict[str, Any]] = []
     found_keys: set[str] = set()
-    for entry in listing_for_request(ctx):
+    for entry in listing_for_request(ctx, allowed_keys=allowed_keys):
         key = song_key(
             str(entry.get('artist') or ''),
             str(entry.get('title') or ''),
@@ -648,10 +689,16 @@ def lookup_library_songs(
     return found
 
 
-def library_album_index(ctx: LibraryContext) -> list[dict[str, Any]]:
+def library_album_index(
+    ctx: LibraryContext,
+    *,
+    allowed_keys: Optional[Collection[str]] = None,
+) -> list[dict[str, Any]]:
     """Albums for the Library grid: counts and a cover file, not every track."""
 
-    grouped = _group_albums(listing_for_request(ctx))
+    grouped = _group_albums(
+        listing_for_request(ctx, allowed_keys=allowed_keys)
+    )
     rows: list[dict[str, Any]] = []
     for bucket in grouped.values():
         tracks = bucket['tracks']
@@ -682,12 +729,14 @@ def library_album_index(ctx: LibraryContext) -> list[dict[str, Any]]:
 def library_artist_index(
     ctx: LibraryContext,
     liked_paths: Optional[set[str]] = None,
+    *,
+    allowed_keys: Optional[Collection[str]] = None,
 ) -> list[dict[str, Any]]:
     """Artists for the Library grid and Discover, without every track row."""
 
     liked = liked_paths or set()
     artists: dict[str, dict[str, Any]] = {}
-    for entry in listing_for_request(ctx):
+    for entry in listing_for_request(ctx, allowed_keys=allowed_keys):
         name = album_artist_of(entry)
         if not name:
             continue
@@ -728,11 +777,14 @@ def library_artist_index(
 
 
 def library_home_summary(
-    ctx: LibraryContext, *, recent_albums: int = 12
+    ctx: LibraryContext,
+    *,
+    recent_albums: int = 12,
+    allowed_keys: Optional[Collection[str]] = None,
 ) -> dict[str, Any]:
     """Counts and a short recent-album shelf for the Home page."""
 
-    entries = listing_for_request(ctx)
+    entries = listing_for_request(ctx, allowed_keys=allowed_keys)
     albums = _group_albums(entries)
     artists: set[str] = set()
     total_size = 0

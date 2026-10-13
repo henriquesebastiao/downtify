@@ -55,6 +55,7 @@
             :song="song"
             :index="i"
             :queue="songQueue"
+            :songs="visibleSongs"
             :to="browseLocation('song', song)"
           />
         </div>

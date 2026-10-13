@@ -31,6 +31,7 @@ export default {
     discover: 'Descubrir',
     podcasts: 'Podcasts',
     charts: 'Listas de éxitos',
+    similar: 'Similares',
     settings: 'Ajustes',
     more: 'Más',
     playlists: 'Playlists',
@@ -142,6 +143,33 @@ export default {
     failed: 'No se pudo cargar la lista',
     empty: 'No hay nada en la lista por ahora',
     playlist: 'Playlist',
+  },
+  similar: {
+    title: 'Similares',
+    subtitle: 'Canciones parecidas a una que nombres, vía YouTube Music.',
+    artist: 'Artista',
+    artistPlaceholder: 'Cher',
+    track: 'Canción',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Buscar similares',
+    resultsFor: 'Parecidas a “{track}” de {artist}',
+    resultsForArtist: 'Parecidas a {artist}',
+    resultsForTrack: 'Parecidas a “{track}”',
+    failed: 'No se pudieron encontrar canciones similares',
+    noResults: 'No se encontró nada similar',
+    noResultsHint: 'Revisa la ortografía de artista y canción.',
+    findSimilar: 'Buscar canciones similares',
+    noDownloadMatch: 'Sin coincidencia descargable para “{name}”',
+    resolveFailed: 'No se pudo preparar esa canción para descargar',
+    tipSimilarTitle: 'Empieza con una canción',
+    tipSimilarBody:
+      'Escribe el artista o la canción — YouTube responde con su mezcla para ella.',
+    tipDownloadTitle: 'Escúchala entera',
+    tipDownloadBody:
+      'Cada fila suena entera en el reproductor; descarga las que te gusten.',
+  },
+  stream: {
+    failed: 'No se pudo reproducir “{name}”.',
   },
   finder: {
     placeholder: 'Busca un artista, álbum o canción',
@@ -816,6 +844,10 @@ export default {
     delay: 'Pausa entre descargas',
     delayHint:
       'Espera entre canciones para parecer menos un bot en playlists grandes.',
+    maxDuration: 'Duración máxima',
+    maxDurationHint:
+      'Las canciones más largas no se descargan ni se reproducen. 0 lo permite todo.',
+    unlimited: 'Ilimitado',
     syncDelay: 'Pausa entre la sincronización',
     syncDelayHint:
       'Espera después de cada lote de canciones importadas (tamaño = Descargas simultáneas) antes de buscar letra, portada y género. Evita límites de tasa en carpetas grandes.',
@@ -1184,6 +1216,11 @@ export default {
     lastSignIn: 'entró {when}',
     neverSignedIn: 'nunca ha entrado',
     defaultPassword: 'contraseña predeterminada',
+    tracksStat: { one: '{count} pista', other: '{count} pistas' },
+    likesStat: { one: '{count} me gusta', other: '{count} me gusta' },
+    playlistsStat: { one: '{count} lista', other: '{count} listas' },
+    trafficStat: 'entrada {down} · salida {up}',
+    usageTotal: 'Totales',
     deleteTitle: '¿Eliminar a {name}?',
     deleteBody:
       'Sus apps se desvinculan y sus navegadores cierran sesión. Sus descargas se quedan en la biblioteca.',

@@ -8,6 +8,8 @@ Subscribe to a show and its new episodes download on their own — no re-pasting
 
 Open **Podcasts** from the sidebar (on phones: **More → Podcasts**).
 
+Subscriptions belong to whoever subscribes: each account follows its own shows (the same feed subscribed twice lands in two folders), with its own episodes, resume positions and dismissals. An admin sees every subscription.
+
 ## Subscribing
 
 Paste one of these into the **Add a podcast** box, or type a name to search:

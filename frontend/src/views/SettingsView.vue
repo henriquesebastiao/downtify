@@ -410,6 +410,33 @@
                 />
               </SettingRow>
               <SettingRow
+                :label="t('settings.maxDuration')"
+                :description="t('settings.maxDurationHint')"
+                stacked
+              >
+                <PresetPicker
+                  :model-value="s.max_track_duration_seconds"
+                  :presets="
+                    sm.settingsOptions.max_track_duration_seconds_presets
+                  "
+                  :min="sm.settingsOptions.max_track_duration_seconds_min"
+                  :max="sm.settingsOptions.max_track_duration_seconds_max"
+                  unit="s"
+                  :format="
+                    (v) =>
+                      v === 0
+                        ? t('settings.unlimited')
+                        : `${Math.round(v / 60)} min`
+                  "
+                  :custom-label="t('settings.custom')"
+                  @update:model-value="
+                    (v) =>
+                      (s.max_track_duration_seconds =
+                        clampTrackDurationSeconds(v))
+                  "
+                />
+              </SettingRow>
+              <SettingRow
                 :label="t('settings.syncDelay')"
                 :description="t('settings.syncDelayHint')"
                 stacked
@@ -778,6 +805,7 @@ import {
   clampDownloadDelaySeconds,
   clampExternalSyncDelaySeconds,
   clampParallelDownloads,
+  clampTrackDurationSeconds,
   useSettingsManager,
 } from '/src/model/settings'
 import { usePlayer } from '/src/model/player'

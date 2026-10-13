@@ -574,6 +574,27 @@ def _drop_manual_playlist_if_any(
         return {'ok': False, 'error': str(exc)}
 
 
+def remove_playlist_shell(
+    playlist_name: str,
+    download_dir: Path,
+    *,
+    organize_by_artist: bool = False,
+) -> dict[str, Any]:
+    """Remove a playlist's M3U file(s) and sidecar cover; audio and the
+    catalog entry are left alone (the caller handles those)."""
+
+    pl_name = str(playlist_name or '').strip()
+    if not pl_name:
+        return {'m3u_removed': 0, 'cover_removed': False}
+    m3u_removed = _remove_playlist_m3u_files(
+        download_dir, pl_name, organize_by_artist=organize_by_artist
+    )
+    cover_removed = _remove_playlist_cover_file(
+        download_dir, pl_name, organize_by_artist=organize_by_artist
+    )
+    return {'m3u_removed': m3u_removed, 'cover_removed': cover_removed}
+
+
 def delete_playlist_from_library(
     playlist_name: str,
     download_dir: Path,

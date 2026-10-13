@@ -53,7 +53,7 @@
             {{ t('playlists.downloadMissing', { count: batch.missing_count }) }}
           </UiButton>
           <UiButton
-            v-if="playlist.manual && auth.isAdmin.value"
+            v-if="playlist.manual"
             variant="secondary"
             icon="plus"
             @click="playlistActions.openAddSongs(playlist)"
@@ -61,10 +61,10 @@
             {{ t('playlists.addSongs') }}
           </UiButton>
           <UiButton
-            v-if="playlist.manual && auth.isAdmin.value"
+            v-if="playlist.manual"
             variant="ghost"
             icon="pencil"
-            @click="playlistActions.openRename(playlist)"
+            @click="playlistActions.rename(playlist)"
           >
             {{ t('playlists.rename') }}
           </UiButton>
@@ -163,7 +163,6 @@ import DownloadState from '/src/components/search/DownloadState.vue'
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
-import { useAuth } from '/src/model/auth'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
 import { splitLength } from '/src/lib/format'
@@ -174,7 +173,6 @@ const route = useRoute()
 const router = useRouter()
 const library = useLibrary()
 const player = usePlayer()
-const auth = useAuth()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
 

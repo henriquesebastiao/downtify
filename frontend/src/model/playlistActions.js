@@ -10,7 +10,6 @@ import { useLibrary } from '/src/model/library'
 import { useLikes } from '/src/model/likes'
 import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
-import { useAuth } from '/src/model/auth'
 import { usePlayer } from '/src/model/player'
 import { useHistory } from '/src/model/history'
 import { useI18n } from '/src/i18n'
@@ -28,7 +27,6 @@ export function usePlaylistActions() {
   const likes = useLikes()
   const tracks = useTrackActions()
   const ui = useUi()
-  const auth = useAuth()
   const player = usePlayer()
   const history = useHistory()
   const router = useRouter()
@@ -164,7 +162,6 @@ export function usePlaylistActions() {
   }
 
   function addMenuItems(files) {
-    if (!auth.isAdmin.value) return []
     const list = Array.isArray(files) ? files : [files]
     const items = [
       { heading: t('playlists.addTo') },
@@ -325,13 +322,13 @@ export function usePlaylistActions() {
       {
         label: t('playlists.addSongs'),
         icon: 'plus',
-        hidden: !playlist.manual || !auth.isAdmin.value,
+        hidden: !playlist.manual,
         action: () => openAddSongs(playlist),
       },
       {
         label: t('playlists.rename'),
         icon: 'pencil',
-        hidden: !playlist.manual || !auth.isAdmin.value,
+        hidden: !playlist.manual,
         action: () => openRename(playlist),
       },
       {

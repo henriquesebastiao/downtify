@@ -18,6 +18,7 @@ class _StubDownloader:
 class _FakeRequest:
     def __init__(self, payload):
         self._payload = payload
+        self.scope = {}
 
     async def json(self):
         return self._payload
@@ -29,7 +30,12 @@ def _run(monkeypatch, payload, *, downloader=object()):
     captured_batches = []
 
     async def fake_process_batch(
-        songs, job_ids, playlist_url, generate_m3u, playlist_name=None
+        songs,
+        job_ids,
+        playlist_url,
+        generate_m3u,
+        playlist_name=None,
+        **_kwargs,
     ):
         captured_batches.append({
             'songs': songs,

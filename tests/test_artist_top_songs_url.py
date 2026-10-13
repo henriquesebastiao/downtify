@@ -185,6 +185,7 @@ def test_url_resolve_spotify_artist_lists_the_releases(monkeypatch):
 class _FakeRequest:
     def __init__(self, payload):
         self._payload = payload
+        self.scope = {}
 
     async def json(self):
         return self._payload

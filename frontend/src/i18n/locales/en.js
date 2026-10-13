@@ -31,6 +31,7 @@ export default {
     discover: 'Discover',
     podcasts: 'Podcasts',
     charts: 'Charts',
+    similar: 'Similar',
     settings: 'Settings',
     more: 'More',
     playlists: 'Playlists',
@@ -142,6 +143,33 @@ export default {
     failed: "Couldn't load the chart",
     empty: 'Nothing on the chart right now',
     playlist: 'Playlist',
+  },
+  similar: {
+    title: 'Similar',
+    subtitle: 'Tracks that sound like one you name, from YouTube Music.',
+    artist: 'Artist',
+    artistPlaceholder: 'Cher',
+    track: 'Track',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Find similar',
+    resultsFor: 'Like “{track}” by {artist}',
+    resultsForArtist: 'Like {artist}',
+    resultsForTrack: 'Like “{track}”',
+    failed: "Couldn't find similar tracks",
+    noResults: 'Nothing similar found',
+    noResultsHint: 'Check the spelling — YouTube is picky about titles.',
+    findSimilar: 'Find similar tracks',
+    noDownloadMatch: 'No downloadable match for “{name}”',
+    resolveFailed: "Couldn't look that track up for download",
+    tipSimilarTitle: 'Start from one track',
+    tipSimilarBody:
+      'Type the artist or the track — YouTube answers with what plays next after it.',
+    tipDownloadTitle: 'Hear it all',
+    tipDownloadBody:
+      'Every row plays in full in the player; download the ones you like.',
+  },
+  stream: {
+    failed: "Couldn't stream “{name}”.",
   },
   finder: {
     placeholder: 'Search for an artist, album or song',
@@ -794,6 +822,10 @@ export default {
     parallelHint: 'How many songs download or sync at the same time.',
     delay: 'Pause between downloads',
     delayHint: 'Wait between songs to look less like a bot on big playlists.',
+    maxDuration: 'Longest track taken',
+    maxDurationHint:
+      'Songs longer than this are neither downloaded nor streamed. 0 takes everything.',
+    unlimited: 'Unlimited',
     syncDelay: 'Pause between sync lookups',
     syncDelayHint:
       'Wait after each batch of imported tracks (size = Parallel downloads) before looking up lyrics, covers and genre. Helps avoid rate limits on large folders.',
@@ -1152,9 +1184,14 @@ export default {
     lastSignIn: 'signed in {when}',
     neverSignedIn: 'never signed in',
     defaultPassword: 'default password',
+    tracksStat: { one: '{count} track', other: '{count} tracks' },
+    likesStat: { one: '{count} like', other: '{count} likes' },
+    playlistsStat: { one: '{count} playlist', other: '{count} playlists' },
+    trafficStat: 'in {down} · out {up}',
+    usageTotal: 'Library totals',
     deleteTitle: 'Delete {name}?',
     deleteBody:
-      'Their apps are unpaired and their browsers signed out. Their downloads stay in the library.',
+      'Their apps are unpaired and their browsers signed out. Their files stay in the library; their likes, playlists and watches go with them.',
     deleteConfirm: 'Delete',
   },
   activity: {

@@ -23,6 +23,8 @@ from loguru import logger
 from . import api
 from .activity import KINDS, clean_track, track_label
 from .auth import SESSION_COOKIE, AuthStore, Principal, session_cookie
+from .library_catalog import entry_content_key, listing_for_request
+from .monitor import delete_user_watches
 from .users import ROLE_USER, UserError, UserStore
 
 router = APIRouter()
@@ -295,9 +297,126 @@ async def delete_user(user_id: int, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=status, detail=str(exc)) from exc
     await _sign_out_user(user_id)
     api.state.now_playing.forget_user(user_id)
+    await asyncio.to_thread(_forget_user_library, user_id)
     await api.log_activity(request, 'user_deleted', user['username'])
     logger.info('Deleted user {}', user['username'])
     return {'id': user_id, 'deleted': True}
+
+
+@router.get('/api/users/stats')
+async def user_library_stats(request: Request) -> dict[str, Any]:
+    """Per-account usage for Settings → Users (admins): tracks and bytes
+    owned, likes, playlists, downloads ordered and traffic both ways,
+    plus the totals across everyone."""
+
+    _me(request)
+    return await asyncio.to_thread(_build_user_stats)
+
+
+def _build_user_stats() -> dict[str, Any]:
+    users = _users().list()
+    try:
+        entries = listing_for_request(api.library_context())
+    except Exception:
+        entries = []
+    live: dict[str, int] = {}
+    for entry in entries:
+        try:
+            live[entry_content_key(entry)] = int(entry.get('size') or 0)
+        except (TypeError, ValueError):
+            continue
+    live.pop('', None)
+    owners = api.state.track_owners
+    owned: dict[int, set[str]] = {}
+    if owners is not None:
+        for user in users:
+            try:
+                owned[user['id']] = owners.owned_keys(user['id'])
+            except Exception:
+                owned[user['id']] = set()
+    likes = (
+        api.state.likes.count_by_user() if api.state.likes is not None else {}
+    )
+    playlists: dict[int, int] = {}
+    catalog = api.state.playlist_catalog
+    if catalog is not None:
+        try:
+            for uid in catalog.playlist_owner_map().values():
+                playlists[int(uid)] = playlists.get(int(uid), 0) + 1
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not count catalog playlists per user'
+            )
+    manual = api.state.manual_playlist_owners
+    if manual is not None:
+        try:
+            for uid in manual.owner_map().values():
+                playlists[int(uid)] = playlists.get(int(uid), 0) + 1
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not count manual playlists per user'
+            )
+    traffic = (
+        api.state.traffic.totals() if api.state.traffic is not None else {}
+    )
+    rows = []
+    for user in users:
+        uid = user['id']
+        keys = owned.get(uid, set()) & live.keys()
+        flow = traffic.get(uid, {})
+        rows.append({
+            'id': uid,
+            'username': user['username'],
+            'role': user['role'],
+            'tracks': len(keys),
+            'bytes': sum(live[key] for key in keys),
+            'likes': likes.get(uid, 0),
+            'playlists': playlists.get(uid, 0),
+            'downloads': len(owned.get(uid, set())),
+            'traffic_in': flow.get('in', 0),
+            'traffic_out': flow.get('out', 0),
+        })
+    return {
+        'users': rows,
+        'totals': {
+            'users': len(rows),
+            'tracks': len(live),
+            'bytes': sum(live.values()),
+            'likes': sum(likes.values()),
+            'playlists': sum(playlists.values()),
+            'downloads': sum(len(keys) for keys in owned.values()),
+            'traffic_in': sum(flow.get('in', 0) for flow in traffic.values()),
+            'traffic_out': sum(
+                flow.get('out', 0) for flow in traffic.values()
+            ),
+        },
+    }
+
+
+def _forget_user_library(user_id: int) -> None:
+    """Release a deleted account's library: track ownership, likes,
+    manual playlists, podcast shows, watches, listens and traffic.
+    Files stay on disk (now admin-visible)."""
+
+    try:
+        if api.state.track_owners is not None:
+            api.state.track_owners.remove_user(user_id)
+        if api.state.likes is not None:
+            api.state.likes.remove_user(user_id)
+        if api.state.manual_playlist_owners is not None:
+            api.state.manual_playlist_owners.remove_user(user_id)
+        if api.state.podcasts is not None:
+            api.state.podcasts.remove_user(user_id)
+        if api.state.discover is not None:
+            api.state.discover.remove_user(user_id)
+        if api.state.traffic is not None:
+            api.state.traffic.remove_user(user_id)
+        if api.state.monitor_db is not None:
+            delete_user_watches(api.state.monitor_db, user_id)
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not release the library of deleted user {}', user_id
+        )
 
 
 # ── Activity ────────────────────────────────────────────────────────────

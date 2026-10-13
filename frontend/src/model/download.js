@@ -40,6 +40,8 @@ class DownloadItem {
     this.provider = ''
     this.web_download_url = null
     this.filename = null
+    // 1-based place among the waiting jobs (`GET /api/queue`), or null.
+    this.position = null
     this.updatedAt = Date.now()
   }
   get key() {
@@ -68,6 +70,7 @@ class DownloadItem {
     this.provider = ''
     this.web_download_url = null
     this.filename = null
+    this.position = null
     this.updatedAt = Date.now()
     touchQueue()
   }
@@ -123,6 +126,7 @@ function applyServerJob(item, job) {
   if (job.provider) item.provider = job.provider
   item.message = job.message || ''
   item.progress = job.progress || 0
+  item.position = job.position ?? null
   if (job.status === 'done') {
     item.setFile(job.filename)
     item.setDownloaded()

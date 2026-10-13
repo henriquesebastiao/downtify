@@ -44,6 +44,13 @@
             <span class="tabular w-9 shrink-0 text-right text-xs text-fg-3">
               {{ item.progress ? `${Math.round(item.progress)}%` : '' }}
             </span>
+            <span
+              v-if="item.position != null"
+              class="tabular shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted"
+              :title="t('queue.statusQueued')"
+            >
+              #{{ item.position }}
+            </span>
           </div>
           <p v-if="item.message" class="mt-1 truncate text-xs text-muted">
             {{ item.message }}
@@ -61,6 +68,12 @@
       </div>
 
       <div class="flex shrink-0 items-center gap-1">
+        <span
+          v-if="item.state === 'queued' && item.position != null"
+          class="tabular rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted max-sm:hidden"
+        >
+          #{{ item.position }}
+        </span>
         <span
           v-if="item.state === 'queued'"
           class="text-xs text-faint max-sm:hidden"

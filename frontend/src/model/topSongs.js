@@ -7,6 +7,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { jobSongKey, useDownloadManager, useProgressTracker } from './download'
 import { useLibrary } from './library'
+import { songDownloadState } from '/src/lib/downloadState'
 import { useUi } from './ui'
 import { topSongsBatchOptions, topSongsPlaylistName } from '/src/lib/topSongs'
 import { useI18n } from '/src/i18n'
@@ -63,9 +64,12 @@ export function useTopSongs(artist) {
 
   function statusOf(song) {
     tracker.queueVersion.value
-    if (tracker.getBySong(song)) return 'queue'
     const name = (song.artists || [])[0] || song.artist
-    return library.hasSong(name, song.name) ? 'library' : 'new'
+    const state = songDownloadState(
+      tracker.getBySong(song),
+      library.hasSong(name, song.name)
+    )
+    return state === 'library' || state === 'new' ? state : 'queue'
   }
 
   const rows = computed(() =>

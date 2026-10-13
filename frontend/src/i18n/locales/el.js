@@ -31,6 +31,7 @@ export default {
     discover: 'Ανακάλυψη',
     podcasts: 'Podcast',
     charts: 'Λίστες επιτυχιών',
+    similar: 'Παρόμοια',
     settings: 'Ρυθμίσεις',
     more: 'Περισσότερα',
     playlists: 'Λίστες',
@@ -146,6 +147,34 @@ export default {
     failed: 'Δεν ήταν δυνατή η φόρτωση του chart',
     empty: 'Δεν υπάρχει τίποτα στο chart αυτή τη στιγμή',
     playlist: 'Λίστα αναπαραγωγής',
+  },
+  similar: {
+    title: 'Παρόμοια',
+    subtitle:
+      'Κομμάτια που μοιάζουν με αυτό που θα ονομάσετε, μέσω YouTube Music.',
+    artist: 'Καλλιτέχνης',
+    artistPlaceholder: 'Cher',
+    track: 'Κομμάτι',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Εύρεση παρόμοιων',
+    resultsFor: 'Παρόμοια με το “{track}” του {artist}',
+    resultsForArtist: 'Παρόμοια με {artist}',
+    resultsForTrack: 'Παρόμοια με το “{track}”',
+    failed: 'Δεν βρέθηκαν παρόμοια κομμάτια',
+    noResults: 'Δεν βρέθηκε τίποτα παρόμοιο',
+    noResultsHint: 'Ελέγξτε την ορθογραφία καλλιτέχνη και τίτλου.',
+    findSimilar: 'Εύρεση παρόμοιων κομματιών',
+    noDownloadMatch: 'Χωρίς αποτέλεσμα για λήψη για το “{name}”',
+    resolveFailed: 'Δεν ήταν δυνατή η προετοιμασία του κομματιού για λήψη',
+    tipSimilarTitle: 'Ξεκινήστε από ένα κομμάτι',
+    tipSimilarBody:
+      'Πληκτρολογήστε τον καλλιτέχνη ή το κομμάτι — το YouTube απαντά με το mix του.',
+    tipDownloadTitle: 'Ακούστε ολόκληρο',
+    tipDownloadBody:
+      'Κάθε γραμμή παίζει ολόκληρη στο player· κατεβάστε όσα σας αρέσουν.',
+  },
+  stream: {
+    failed: 'Δεν ήταν δυνατή η αναπαραγωγή του “{name}”.',
   },
   finder: {
     placeholder: 'Αναζητήστε καλλιτέχνη, άλμπουμ ή τραγούδι',
@@ -818,6 +847,10 @@ export default {
     delay: 'Παύση μεταξύ λήψεων',
     delayHint:
       'Αναμονή μεταξύ τραγουδιών ώστε να μοιάζει λιγότερο με bot σε μεγάλες λίστες.',
+    maxDuration: 'Μεγαλύτερη διάρκεια',
+    maxDurationHint:
+      'Μεγαλύτερα τραγούδια δεν λαμβάνονται ούτε αναπαράγονται. 0 επιτρέπει τα πάντα.',
+    unlimited: 'Χωρίς όριο',
     syncDelay: 'Παύση μεταξύ συγχρονισμού',
     syncDelayHint:
       'Περιμένει μετά από κάθε ομάδα εισαγόμενων κομματιών (μέγεθος = Ταυτόχρονες λήψεις) πριν αναζητήσει στίχους, εξώφυλλο και είδος. Αποφεύγει όρια ρυθμού σε μεγάλους φακέλους.',
@@ -1190,6 +1223,11 @@ export default {
     lastSignIn: 'συνδέθηκε {when}',
     neverSignedIn: 'δεν έχει συνδεθεί ποτέ',
     defaultPassword: 'προεπιλεγμένος κωδικός',
+    tracksStat: { one: '{count} τραγούδι', other: '{count} τραγούδια' },
+    likesStat: { one: '{count} αγαπημένα', other: '{count} αγαπημένα' },
+    playlistsStat: { one: '{count} λίστες', other: '{count} λίστες' },
+    trafficStat: 'εισερχόμενα {down} · εξερχόμενα {up}',
+    usageTotal: 'Σύνολα',
     deleteTitle: 'Διαγραφή {name};',
     deleteBody:
       'Οι εφαρμογές του αποσυνδέονται και τα προγράμματα περιήγησής του αποσυνδέονται. Οι λήψεις του μένουν στη βιβλιοθήκη.',

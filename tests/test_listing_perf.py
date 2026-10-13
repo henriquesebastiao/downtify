@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import threading
 import time
 
 from mutagen.id3 import ID3, TALB, TIT2, TPE1, TPE2
 
+from downtify import api
+from downtify.downloader import Downloader
 from downtify.library_catalog import (
     LibraryContext,
     drop_library_listing_files,
@@ -15,6 +18,7 @@ from downtify.library_catalog import (
     library_home_summary,
     list_library_entries,
     listing_for_request,
+    lookup_library_songs,
     merge_library_listing_file,
 )
 from downtify.library_paths_cache import (
@@ -145,3 +149,32 @@ def test_drop_listing_files_hides_deleted_album_without_rescan(tmp_path):
     files = [row['file'] for row in listing_for_request(ctx)]
     assert 'Oruam/Oh Garota/Oruam - Track.mp3' not in files
     assert 'Keep.mp3' in files
+
+
+def test_a_delete_removes_the_search_downloaded_badge(tmp_path, monkeypatch):
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    (download_dir / 'Ryder Spot - Pursuit.mp3').write_bytes(b'p')
+    set_listing_refresh_fn(lambda: None)
+    invalidate_library_paths_cache(drop_entries=True)
+    monkeypatch.setattr(
+        api.state,
+        'downloader',
+        Downloader(download_dir=download_dir, audio_format='mp3'),
+    )
+    ctx = api.library_context()
+    list_library_entries(ctx)
+    wanted = [{'artist': 'Ryder Spot', 'title': 'Pursuit'}]
+    assert [row['file'] for row in lookup_library_songs(ctx, wanted)] == [
+        'Ryder Spot - Pursuit.mp3'
+    ]
+
+    (download_dir / 'Ryder Spot - Pursuit.mp3').unlink()
+    asyncio.run(
+        api.after_library_delete(
+            {'Ryder Spot - Pursuit.mp3': {'deleted': True}}, {}
+        )
+    )
+
+    assert lookup_library_songs(ctx, wanted) == []
+    assert listing_for_request(ctx) == []

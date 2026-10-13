@@ -31,6 +31,7 @@ export default {
     discover: 'Descobrir',
     podcasts: 'Podcasts',
     charts: 'Paradas de sucesso',
+    similar: 'Similares',
     settings: 'Configurações',
     more: 'Mais',
     playlists: 'Playlists',
@@ -145,6 +146,32 @@ export default {
     failed: 'Não deu para carregar a parada',
     empty: 'Nada na parada por enquanto',
     playlist: 'Playlist',
+  },
+  similar: {
+    title: 'Similares',
+    subtitle: 'Faixas parecidas com uma que você indicar, via YouTube Music.',
+    artist: 'Artista',
+    artistPlaceholder: 'Cher',
+    track: 'Faixa',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Buscar similares',
+    resultsFor: 'Parecidas com “{track}” de {artist}',
+    resultsForArtist: 'Parecidas com {artist}',
+    resultsForTrack: 'Parecidas com “{track}”',
+    failed: 'Não foi possível encontrar faixas similares',
+    noResults: 'Nada parecido encontrado',
+    noResultsHint: 'Confira a ortografia de artista e faixa.',
+    findSimilar: 'Buscar faixas similares',
+    noDownloadMatch: 'Sem correspondência para baixar de “{name}”',
+    resolveFailed: 'Não foi possível preparar essa faixa para baixar',
+    tipSimilarTitle: 'Comece por uma faixa',
+    tipSimilarBody:
+      'Digite o artista ou a faixa — o YouTube responde com a seleção para ela.',
+    tipDownloadTitle: 'Ouça na íntegra',
+    tipDownloadBody: 'Cada linha toca inteira no player; baixe as que gostar.',
+  },
+  stream: {
+    failed: 'Não foi possível tocar “{name}”.',
   },
   finder: {
     placeholder: 'Busque um artista, álbum ou música',
@@ -814,6 +841,10 @@ export default {
     delay: 'Pausa entre downloads',
     delayHint:
       'Aguarda entre músicas para parecer menos um robô em playlists grandes.',
+    maxDuration: 'Duração máxima',
+    maxDurationHint:
+      'Músicas mais longas não são baixadas nem tocadas. 0 permite tudo.',
+    unlimited: 'Ilimitado',
     syncDelay: 'Pausa entre a sincronização',
     syncDelayHint:
       'Espera depois de cada lote de faixas importadas (tamanho = Downloads simultâneos) antes de buscar letra, capa e gênero. Evita limite de taxa em pastas grandes.',
@@ -1176,6 +1207,11 @@ export default {
     lastSignIn: 'entrou {when}',
     neverSignedIn: 'nunca entrou',
     defaultPassword: 'senha padrão',
+    tracksStat: { one: '{count} faixa', other: '{count} faixas' },
+    likesStat: { one: '{count} curtida', other: '{count} curtidas' },
+    playlistsStat: { one: '{count} playlist', other: '{count} playlists' },
+    trafficStat: 'entrada {down} · saída {up}',
+    usageTotal: 'Totais',
     deleteTitle: 'Excluir {name}?',
     deleteBody:
       'Os apps dele são despareados e os navegadores desconectados. Os downloads continuam na biblioteca.',

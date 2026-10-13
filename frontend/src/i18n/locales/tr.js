@@ -31,6 +31,7 @@ export default {
     discover: 'Keşfet',
     podcasts: 'Podcastler',
     charts: 'Müzik listeleri',
+    similar: 'Benzerler',
     settings: 'Ayarlar',
     more: 'Daha fazla',
     playlists: 'Çalma listeleri',
@@ -146,6 +147,33 @@ export default {
     failed: 'Liste yüklenemedi',
     empty: 'Şu anda listede bir şey yok',
     playlist: 'Çalma listesi',
+  },
+  similar: {
+    title: 'Benzerler',
+    subtitle: 'Adını verdiğiniz parçaya benzeyen şarkılar, YouTube Music ile.',
+    artist: 'Sanatçı',
+    artistPlaceholder: 'Cher',
+    track: 'Parça',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Benzerleri bul',
+    resultsFor: '{artist} adlı sanatçının “{track}” parçasına benzeyenler',
+    resultsForArtist: '{artist} adlı sanatçıya benzeyenler',
+    resultsForTrack: '“{track}” parçasına benzeyenler',
+    failed: 'Benzer parçalar bulunamadı',
+    noResults: 'Benzer bir şey bulunamadı',
+    noResultsHint: 'Sanatçı ve parça yazımını kontrol edin.',
+    findSimilar: 'Benzer parçaları bul',
+    noDownloadMatch: '“{name}” için indirilebilir eşleşme yok',
+    resolveFailed: 'Bu parça indirme için hazırlanamadı',
+    tipSimilarTitle: 'Tek parçadan başlayın',
+    tipSimilarBody:
+      'Sanatçıyı veya parçayı yazın — YouTube, karmasıyla yanıt verir.',
+    tipDownloadTitle: 'Tamamını dinleyin',
+    tipDownloadBody:
+      'Her satır oynatıcıda tamamıyla çalar; beğendiklerinizi indirin.',
+  },
+  stream: {
+    failed: '“{name}” çalınamadı.',
   },
   finder: {
     placeholder: 'Sanatçı, albüm veya şarkı arayın',
@@ -813,6 +841,10 @@ export default {
     delay: 'İndirmeler arası bekleme',
     delayHint:
       'Büyük çalma listelerinde bot gibi görünmemek için şarkılar arasında bekle.',
+    maxDuration: 'En uzun parça',
+    maxDurationHint:
+      'Bundan uzun şarkılar indirilmez ve çalınmaz. 0 her şeyi kabul eder.',
+    unlimited: 'Sınırsız',
     syncDelay: 'Eşitleme araması arası bekleme',
     syncDelayHint:
       'İçe aktarılan her parça grubundan sonra (boyut = Eşzamanlı indirmeler) söz, kapak ve tür aramadan önce bekler. Büyük klasörlerde kota sınırını azaltır.',
@@ -1175,6 +1207,14 @@ export default {
     lastSignIn: '{when} giriş yaptı',
     neverSignedIn: 'hiç giriş yapmadı',
     defaultPassword: 'varsayılan parola',
+    tracksStat: { one: '{count} parça', other: '{count} parça' },
+    likesStat: { one: '{count} beğeni', other: '{count} beğeni' },
+    playlistsStat: {
+      one: '{count} çalma listesi',
+      other: '{count} çalma listesi',
+    },
+    trafficStat: 'gelen {down} · giden {up}',
+    usageTotal: 'Toplam',
     deleteTitle: '{name} silinsin mi?',
     deleteBody:
       'Uygulamalarının eşleşmesi kaldırılır ve tarayıcılarındaki oturumlar kapatılır. İndirdikleri kitaplıkta kalır.',

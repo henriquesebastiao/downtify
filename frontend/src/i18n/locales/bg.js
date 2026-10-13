@@ -31,6 +31,7 @@ export default {
     discover: 'Откриване',
     podcasts: 'Подкасти',
     charts: 'Класации',
+    similar: 'Подобни',
     settings: 'Настройки',
     more: 'Още',
     playlists: 'Плейлисти',
@@ -142,6 +143,32 @@ export default {
     failed: 'Класацията не се зареди',
     empty: 'В момента няма нищо в класацията',
     playlist: 'Плейлист',
+  },
+  similar: {
+    title: 'Подобни',
+    subtitle: 'Песни, подобни на посочената от вас, чрез YouTube Music.',
+    artist: 'Изпълнител',
+    artistPlaceholder: 'Cher',
+    track: 'Песен',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Намери подобни',
+    resultsFor: 'Подобни на “{track}” от {artist}',
+    resultsForArtist: 'Подобни на {artist}',
+    resultsForTrack: 'Подобни на “{track}”',
+    failed: 'Не можаха да бъдат намерени подобни песни',
+    noResults: 'Няма намерени подобни',
+    noResultsHint: 'Проверете правописа на изпълнител и заглавие.',
+    findSimilar: 'Намери подобни песни',
+    noDownloadMatch: 'Няма резултат за изтегляне за “{name}”',
+    resolveFailed: 'Песента не можа да бъде подготвена за изтегляне',
+    tipSimilarTitle: 'Започнете от една песен',
+    tipSimilarBody:
+      'Въведете изпълнителя или песента — YouTube отговаря със своя микс.',
+    tipDownloadTitle: 'Чуйте докрай',
+    tipDownloadBody: 'Всеки ред звучи докрай в плеъра; изтеглете харесаните.',
+  },
+  stream: {
+    failed: '“{name}” не можа да бъде пусната.',
   },
   finder: {
     placeholder: 'Търсете изпълнител, албум или песен',
@@ -806,6 +833,10 @@ export default {
     delay: 'Пауза между изтеглянията',
     delayHint:
       'Изчаква между песните, за да прилича по-малко на бот при големи плейлисти.',
+    maxDuration: 'Максимална продължителност',
+    maxDurationHint:
+      'По-дългите песни не се изтеглят и не се възпроизвеждат. 0 позволява всичко.',
+    unlimited: 'Без ограничение',
     syncDelay: 'Пауза между синхронизациите',
     syncDelayHint:
       'Изчаква след всяка група импортирани песни (размер = Едновременни изтегляния) преди да търси текст, обложка и жанр. Намалява лимитите при големи папки.',
@@ -1174,6 +1205,11 @@ export default {
     lastSignIn: 'влязъл {when}',
     neverSignedIn: 'никога не е влизал',
     defaultPassword: 'парола по подразбиране',
+    tracksStat: { one: '{count} песен', other: '{count} песни' },
+    likesStat: { one: '{count} харесване', other: '{count} харесвания' },
+    playlistsStat: { one: '{count} плейлист', other: '{count} плейлиста' },
+    trafficStat: 'входящ {down} · изходящ {up}',
+    usageTotal: 'Общо',
     deleteTitle: 'Изтриване на {name}?',
     deleteBody:
       'Сдвояването на приложенията му се прекратява, а браузърите му се отписват. Изтеглянията му остават в библиотеката.',

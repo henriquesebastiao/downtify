@@ -17,6 +17,8 @@ Every watch shows the link it follows under its name, and a **Spotify** or **You
 
 See [Artist Watch](#artist-watch) for how artist watches work.
 
+Watches belong to whoever created them: each account follows its own playlists and artists (the same URL watched twice sweeps twice), and a sweep attributes its downloads to the watch owner. An admin sees every watch.
+
 ## How it works
 
 Downtify keeps a background task running every 60 seconds. On each sweep it checks every enabled watch to see if it is due for inspection (based on its configured interval). When a *playlist* is due, Downtify:

@@ -187,6 +187,7 @@
                 :index="row.index"
                 :queue="playQueue"
                 :context="playContext"
+                :songs="playSongs"
               />
               <CoverArt
                 :src="row.song.cover_url"
@@ -212,6 +213,10 @@
               >
                 {{ row.song.duration ? formatDuration(row.song.duration) : '' }}
               </span>
+              <SimilarButton
+                :artist="(row.song.artists || [])[0] || row.song.artist || ''"
+                :title="row.song.name"
+              />
               <div class="flex w-28 shrink-0 justify-end">
                 <DownloadState :song="row.song" />
               </div>
@@ -255,6 +260,7 @@ import UiIconButton from '/src/components/ui/UiIconButton.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DownloadState from '/src/components/search/DownloadState.vue'
+import SimilarButton from '/src/components/similar/SimilarButton.vue'
 import ReleaseCard from '/src/components/search/ReleaseCard.vue'
 import SongPlayCell from '/src/components/library/SongPlayCell.vue'
 import API from '/src/model/api'
@@ -265,6 +271,7 @@ import {
   useProgressTracker,
 } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
+import { songDownloadState } from '/src/lib/downloadState'
 import { useUi } from '/src/model/ui'
 import { classifyInput } from '/src/lib/input'
 import { playableQueue } from '/src/lib/topSongs'
@@ -330,10 +337,13 @@ const kicker = computed(() => {
 })
 
 // Playing a downloaded song from here queues the list's other downloaded
-// songs after it, in the list's order; the rest play their preview clip.
+// songs after it, in the list's order; the rest stream in full.
 const playQueue = computed(() =>
   playableQueue(details.value?.tracks || [], library.findTrack)
 )
+// The whole list for a mixed queue: downloaded rows from the library,
+// the rest streamed, played through to the end.
+const playSongs = computed(() => visibleRows.value.map((row) => row.song))
 const playContext = computed(() =>
   details.value
     ? {
@@ -382,9 +392,14 @@ function keyOf(song, index) {
 
 function statusOf(song) {
   tracker.queueVersion.value
-  if (tracker.getBySong(song)) return 'queue'
   const artist = (song.artists || [])[0] || song.artist
-  return library.hasSong(artist, song.name) ? 'library' : 'new'
+  const state = songDownloadState(
+    tracker.getBySong(song),
+    library.hasSong(artist, song.name)
+  )
+  // Every queue state shows the same neutral chip here; a song that is
+  // neither queued nor in the library is downloadable.
+  return state === 'library' || state === 'new' ? state : 'queue'
 }
 
 const rows = computed(() =>

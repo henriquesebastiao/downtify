@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -12,8 +13,10 @@ import pytest
 from fastapi import HTTPException
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
+from starlette.requests import Request
 
 from downtify import api, monitor
+from downtify.auth import Principal
 from downtify.downloader import Downloader
 from downtify.library_catalog import (
     PODCASTS_DIRNAME,
@@ -545,6 +548,28 @@ def test_deleting_a_playlist_named_podcasts_never_touches_episodes(tmp_path):
 
 
 # ── the API endpoints ────────────────────────────────────────────────
+_ADMIN = Principal('device', 'client', '', 1, 'admin', 'admin')
+
+
+def _request(payload: Any = None) -> Request:
+    """A signed-in admin request (the pre-ownership global view)."""
+
+    body = json.dumps(payload if payload is not None else {}).encode()
+
+    async def receive() -> dict[str, Any]:
+        return {'type': 'http.request', 'body': body, 'more_body': False}
+
+    return Request(
+        {
+            'type': 'http',
+            'method': 'POST',
+            'headers': [],
+            'state': {'principal': _ADMIN},
+        },
+        receive,
+    )
+
+
 class _Body:
     def __init__(self, payload: Any = None):
         self._payload = payload
@@ -582,7 +607,7 @@ def test_resolve_reads_a_direct_feed_url(monkeypatch, podcast_state):
     monkeypatch.setattr(api, 'fetch_feed', lambda url: feed)
 
     result = asyncio.run(
-        api.resolve_podcast(_Body({'url': 'https://example.com/feed.xml'}))
+        api.resolve_podcast(_request({'url': 'https://example.com/feed.xml'}))
     )
     assert result['show']['name'] == 'The Sample Hour'
     assert len(result['episodes']) == 4
@@ -603,7 +628,7 @@ def test_resolve_reports_a_spotify_exclusive_show_plainly(
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
             api.resolve_podcast(
-                _Body({'url': 'https://open.spotify.com/show/abc123'})
+                _request({'url': 'https://open.spotify.com/show/abc123'})
             )
         )
     assert exc.value.status_code == 404
@@ -617,7 +642,7 @@ def test_resolve_rejects_a_link_that_is_not_a_feed(monkeypatch, podcast_state):
     monkeypatch.setattr(api, 'fetch_feed', _raise)
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
-            api.resolve_podcast(_Body({'url': 'https://example.com/nope'}))
+            api.resolve_podcast(_request({'url': 'https://example.com/nope'}))
         )
     assert exc.value.status_code == 400
 
@@ -625,7 +650,7 @@ def test_resolve_rejects_a_link_that_is_not_a_feed(monkeypatch, podcast_state):
 def test_subscribe_then_list_then_get_episodes(monkeypatch, podcast_state):
     result = asyncio.run(
         api.subscribe_podcast(
-            _Body({
+            _request({
                 'feed_url': 'https://example.com/feed.xml',
                 'name': 'The Sample Hour',
                 'author': 'Sample Studios',
@@ -637,11 +662,13 @@ def test_subscribe_then_list_then_get_episodes(monkeypatch, podcast_state):
     assert result['name'] == 'The Sample Hour'
     assert result['interval_minutes'] == 60
 
-    shows = asyncio.run(api.list_podcast_shows())
+    shows = asyncio.run(api.list_podcast_shows(_request()))
     assert len(shows) == 1
     assert shows[0]['feed_url'] == 'https://example.com/feed.xml'
 
-    payload = asyncio.run(api.list_podcast_episodes(shows[0]['id']))
+    payload = asyncio.run(
+        api.list_podcast_episodes(_request(), shows[0]['id'])
+    )
     assert payload['show']['id'] == shows[0]['id']
     assert payload['episodes'] == []  # nothing downloaded yet in this test
 
@@ -653,16 +680,16 @@ def test_subscribing_twice_to_the_same_feed_is_rejected(
         'feed_url': 'https://example.com/feed.xml',
         'name': 'The Sample Hour',
     }
-    asyncio.run(api.subscribe_podcast(_Body(dict(body))))
+    asyncio.run(api.subscribe_podcast(_request(dict(body))))
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(api.subscribe_podcast(_Body(dict(body))))
+        asyncio.run(api.subscribe_podcast(_request(dict(body))))
     assert exc.value.status_code == 409
 
 
 def test_update_show_retention_and_watch_interval(monkeypatch, podcast_state):
     show = asyncio.run(
         api.subscribe_podcast(
-            _Body({
+            _request({
                 'feed_url': 'https://example.com/feed.xml',
                 'name': 'The Sample Hour',
             })
@@ -670,7 +697,7 @@ def test_update_show_retention_and_watch_interval(monkeypatch, podcast_state):
     )
     updated = asyncio.run(
         api.update_podcast_show(
-            show['id'], _Body({'retention': 5, 'interval_minutes': 120})
+            show['id'], _request({'retention': 5, 'interval_minutes': 120})
         )
     )
     assert updated['retention'] == 5
@@ -682,7 +709,7 @@ def test_delete_show_removes_downloaded_files_by_default(
 ):
     show = asyncio.run(
         api.subscribe_podcast(
-            _Body({
+            _request({
                 'feed_url': 'https://example.com/feed.xml',
                 'name': 'The Sample Hour',
             })
@@ -692,7 +719,7 @@ def test_delete_show_removes_downloaded_files_by_default(
     show_dir.mkdir(parents=True)
     (show_dir / 'ep.mp3').write_bytes(b'audio')
 
-    result = asyncio.run(api.delete_podcast_show(show['id']))
+    result = asyncio.run(api.delete_podcast_show(_request(), show['id']))
     assert result['files_deleted'] is True
     assert not show_dir.exists()
     assert api.state.podcasts.get_show(show['id']) is None
@@ -705,7 +732,7 @@ def test_delete_show_removes_downloaded_files_by_default(
 def test_delete_show_keeps_files_when_asked(monkeypatch, podcast_state):
     show = asyncio.run(
         api.subscribe_podcast(
-            _Body({
+            _request({
                 'feed_url': 'https://example.com/feed.xml',
                 'name': 'The Sample Hour',
             })
@@ -715,7 +742,9 @@ def test_delete_show_keeps_files_when_asked(monkeypatch, podcast_state):
     show_dir.mkdir(parents=True)
     (show_dir / 'ep.mp3').write_bytes(b'audio')
 
-    result = asyncio.run(api.delete_podcast_show(show['id'], keep_files=True))
+    result = asyncio.run(
+        api.delete_podcast_show(_request(), show['id'], keep_files=True)
+    )
     assert result['files_deleted'] is False
     assert (show_dir / 'ep.mp3').exists()
 
@@ -725,7 +754,7 @@ def test_delete_episode_dismisses_it_so_it_never_comes_back(
 ):
     show = asyncio.run(
         api.subscribe_podcast(
-            _Body({
+            _request({
                 'feed_url': 'https://example.com/feed.xml',
                 'name': 'The Sample Hour',
             })
@@ -743,7 +772,7 @@ def test_delete_episode_dismisses_it_so_it_never_comes_back(
         ep['id'], f'{PODCASTS_DIRNAME}/{show["folder_name"]}/ep.mp3'
     )
 
-    result = asyncio.run(api.delete_podcast_episode(ep['id']))
+    result = asyncio.run(api.delete_podcast_episode(_request(), ep['id']))
     assert result == {'ok': True}
     assert not file_path.exists()
     row = store.get_episode(ep['id'])
@@ -754,7 +783,7 @@ def test_delete_episode_dismisses_it_so_it_never_comes_back(
 def test_set_playback_endpoint_saves_position(monkeypatch, podcast_state):
     show = asyncio.run(
         api.subscribe_podcast(
-            _Body({
+            _request({
                 'feed_url': 'https://example.com/feed.xml',
                 'name': 'The Sample Hour',
             })
@@ -765,12 +794,14 @@ def test_set_playback_endpoint_saves_position(monkeypatch, podcast_state):
     ep = store.upsert_episodes(show['id'], feed.episodes)[0]
 
     result = asyncio.run(
-        api.set_podcast_playback(ep['id'], _Body({'position_seconds': 12.5}))
+        api.set_podcast_playback(
+            ep['id'], _request({'position_seconds': 12.5})
+        )
     )
     assert result['position_seconds'] == 12.5
 
     result2 = asyncio.run(
-        api.set_podcast_playback(ep['id'], _Body({'played': True}))
+        api.set_podcast_playback(ep['id'], _request({'played': True}))
     )
     assert result2['played'] is True
     assert result2['position_seconds'] == 12.5

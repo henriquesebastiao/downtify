@@ -408,7 +408,19 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/api/settings', ADMIN),
         ('GET', '/api/fs/dirs', ADMIN),
         ('POST', '/api/cookies', ADMIN),
-        ('DELETE', '/delete', ADMIN),
+        ('DELETE', '/delete', USER),
+        ('DELETE', '/delete/batch', USER),
+        ('DELETE', '/api/queue', USER),
+        ('DELETE', '/api/queue/item', USER),
+        ('POST', '/api/likes/clear', USER),
+        ('POST', '/api/download/csv', USER),
+        ('POST', '/api/playlist/m3u', USER),
+        ('POST', '/api/playlists/incomplete/download-missing', USER),
+        ('DELETE', '/api/playlists/batches/abc', USER),
+        ('DELETE', '/api/library/playlist', USER),
+        ('POST', '/api/library/playlists', USER),
+        ('POST', '/api/library/archive', USER),
+        ('DELETE', '/api/discover/listens', USER),
         ('GET', '/openapi.json', ADMIN),
         ('GET', '/tracks', CLIENT),
         ('GET', '/downloads/Artist - Song.mp3', CLIENT),
@@ -421,11 +433,21 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/api/finder/search', CLIENT),
         ('GET', '/api/finder/albums/track_counts', CLIENT),
         ('GET', '/api/finder/artist/songs', CLIENT),
+        ('GET', '/api/similar/tracks', CLIENT),
+        ('GET', '/api/stream', CLIENT),
+        ('GET', '/api/stream/file', CLIENT),
+        ('POST', '/api/stream/prefetch', CLIENT),
         ('POST', '/api/finder/search', ADMIN),
         ('PUT', '/api/likes', CLIENT),
         ('PUT', '/api/podcasts/episodes/12/playback', CLIENT),
-        ('DELETE', '/api/podcasts/episodes/12', ADMIN),
-        ('POST', '/api/monitor/playlists', ADMIN),
+        ('DELETE', '/api/podcasts/episodes/12', USER),
+        ('POST', '/api/podcasts/subscribe', USER),
+        ('PATCH', '/api/podcasts/shows/3', USER),
+        ('DELETE', '/api/podcasts/shows/3', USER),
+        ('POST', '/api/monitor/playlists', USER),
+        ('PATCH', '/api/monitor/playlists/3', USER),
+        ('DELETE', '/api/monitor/playlists/3', USER),
+        ('POST', '/api/monitor/playlists/3/check', USER),
         ('GET', '/api/library/summary', CLIENT),
         ('GET', '/api/library/albums', CLIENT),
         ('GET', '/api/library/artists', CLIENT),
@@ -582,7 +604,10 @@ def test_a_normal_user_is_not_an_admin(client):
     assert refused.json()['detail'] == 'This needs an admin'
     assert client.get('/api/users').status_code == 403
     assert client.get('/api/activity').status_code == 403
-    assert client.delete('/delete', params={'file': 'x'}).status_code == 403
+    # Their own deletes are allowed (missing files just report so).
+    missing = client.delete('/delete', params={'file': 'x'})
+    assert missing.status_code == 200
+    assert missing.json()['deleted'] is False
     assert client.get('/api/auth/devices').status_code == 200
     assert client.get('/api/me').json()['user']['role'] == 'user'
 
@@ -745,12 +770,12 @@ def test_auth_routes_are_served(client):
     [
         ('POST', '/api/podcasts/resolve', CLIENT),
         ('POST', '/api/podcasts/episodes/3/download', CLIENT),
-        ('POST', '/api/podcasts/subscribe', ADMIN),
+        ('POST', '/api/podcasts/subscribe', USER),
         ('POST', '/api/artists/art/bulk', CLIENT),
         ('POST', '/api/artists/profile/ensure', CLIENT),
         ('POST', '/api/artists/art/upload', ADMIN),
         ('PUT', '/api/artists/profile/bio', ADMIN),
-        ('DELETE', '/api/queue/item', ADMIN),
+        ('DELETE', '/api/queue/item', USER),
         ('GET', '/api/queue', CLIENT),
     ],
 )

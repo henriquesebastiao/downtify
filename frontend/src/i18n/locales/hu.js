@@ -31,6 +31,7 @@ export default {
     discover: 'Felfedezés',
     podcasts: 'Podcastok',
     charts: 'Toplisták',
+    similar: 'Hasonlók',
     settings: 'Beállítások',
     more: 'Továbbiak',
     playlists: 'Lejátszási listák',
@@ -142,6 +143,33 @@ export default {
     failed: 'Nem sikerült betölteni a listát',
     empty: 'Jelenleg nincs semmi a listán',
     playlist: 'Lejátszási lista',
+  },
+  similar: {
+    title: 'Hasonlók',
+    subtitle: 'A megnevetthez hasonló zeneszámok, a YouTube Music alapján.',
+    artist: 'Előadó',
+    artistPlaceholder: 'Cher',
+    track: 'Szám',
+    trackPlaceholder: 'Believe',
+    searchButton: 'Hasonlók keresése',
+    resultsFor: 'Hasonlók ehhez: “{track}” – {artist}',
+    resultsForArtist: 'Hasonlók: {artist}',
+    resultsForTrack: 'Hasonlók ehhez: “{track}”',
+    failed: 'Nem találhatók hasonló zeneszámok',
+    noResults: 'Nem található hasonló',
+    noResultsHint: 'Ellenőrizze az előadó és a cím helyesírását.',
+    findSimilar: 'Hasonló számok keresése',
+    noDownloadMatch: 'Nincs letölthető találat ehhez: “{name}”',
+    resolveFailed: 'A szám nem készíthető elő letöltésre',
+    tipSimilarTitle: 'Induljon egy számból',
+    tipSimilarBody:
+      'Írja be az előadót vagy a számot — a YouTube a mixével válaszol.',
+    tipDownloadTitle: 'Hallgassa végig',
+    tipDownloadBody:
+      'Minden sor végig szól a lejátszóban; töltse le a kedvenceit.',
+  },
+  stream: {
+    failed: 'Nem játszható le: „{name}”.',
   },
   finder: {
     placeholder: 'Előadó, album vagy dal keresése',
@@ -815,6 +843,10 @@ export default {
     delay: 'Szünet a letöltések között',
     delayHint:
       'Várakozik a dalok között, hogy nagy listáknál kevésbé tűnjön botnak.',
+    maxDuration: 'Leghosszabb szám',
+    maxDurationHint:
+      'Az ennél hosszabb számok nem töltődnek le és nem játszhatók le. 0 mindent engedélyez.',
+    unlimited: 'Korlátlan',
     syncDelay: 'Szünet a szinkronizálás között',
     syncDelayHint:
       'Minden importált köteg után vár (méret = Párhuzamos letöltések), mielőtt dalszöveget, borítót és műfajt keres. Nagy mappáknál elkerüli a korlátokat.',
@@ -1181,6 +1213,14 @@ export default {
     lastSignIn: 'bejelentkezett: {when}',
     neverSignedIn: 'még nem jelentkezett be',
     defaultPassword: 'alapértelmezett jelszó',
+    tracksStat: { one: '{count} szám', other: '{count} szám' },
+    likesStat: { one: '{count} kedvenc', other: '{count} kedvenc' },
+    playlistsStat: {
+      one: '{count} lejátszási lista',
+      other: '{count} lejátszási lista',
+    },
+    trafficStat: 'bejövő {down} · kimenő {up}',
+    usageTotal: 'Összesen',
     deleteTitle: 'Törlöd: {name}?',
     deleteBody:
       'Az alkalmazásai párosítása megszűnik, a böngészőiből kijelentkezik. A letöltései a könyvtárban maradnak.',

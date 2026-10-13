@@ -138,7 +138,9 @@ def test_download_album_endpoint_skips_delay_for_single_track(monkeypatch):
 
     captured = []
 
-    async def fake_run_download(song, job_id, subdir=None, delay_seconds=0):
+    async def fake_run_download(
+        song, job_id, subdir=None, delay_seconds=0, **_kwargs
+    ):
         captured.append(delay_seconds)
         return f'{song["song_id"]}.mp3'
 
@@ -164,7 +166,9 @@ def test_download_album_endpoint_applies_delay_for_multiple_tracks(
 
     captured = []
 
-    async def fake_run_download(song, job_id, subdir=None, delay_seconds=0):
+    async def fake_run_download(
+        song, job_id, subdir=None, delay_seconds=0, **_kwargs
+    ):
         captured.append(delay_seconds)
         return f'{song["song_id"]}.mp3'
 
