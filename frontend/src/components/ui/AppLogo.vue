@@ -8,10 +8,95 @@
     aria-label="RaveVault"
   >
     <circle cx="14" cy="14" r="14" class="fill-accent" />
-    <path
-      d="M9.5 8.2c3-.3 6-.3 9 0v3.1h2.6c.4 0 .6.3.5.6-1.5 5-5.5 9-7 10.4a.9.9 0 0 1-1.2 0C11.9 20.9 7.9 16.9 6.4 11.9c-.1-.3.1-.6.5-.6h2.6z"
-      class="fill-bg"
+    <circle cx="14" cy="14" r="12.7" fill="#0b0c0e" />
+    <circle
+      cx="14"
+      cy="14"
+      r="11.4"
+      fill="none"
+      class="stroke-accent"
+      stroke-width="0.5"
+      opacity="0.55"
     />
+    <circle
+      cx="14"
+      cy="14"
+      r="10.2"
+      fill="none"
+      class="stroke-accent"
+      stroke-width="0.5"
+      opacity="0.4"
+    />
+    <circle
+      cx="14"
+      cy="14"
+      r="9.0"
+      fill="none"
+      class="stroke-accent"
+      stroke-width="0.5"
+      opacity="0.3"
+    />
+    <circle
+      cx="14"
+      cy="14"
+      r="7.9"
+      fill="none"
+      class="stroke-accent"
+      stroke-width="0.5"
+      opacity="0.22"
+    />
+    <path
+      d="M5.3 10.6 A9.4 9.4 0 0 1 10.6 5.3"
+      fill="none"
+      class="stroke-accent"
+      stroke-width="1.1"
+      stroke-linecap="round"
+      opacity="0.9"
+    />
+    <path
+      d="M22.7 17.4 A9.4 9.4 0 0 1 17.4 22.7"
+      fill="none"
+      class="stroke-accent"
+      stroke-width="1.1"
+      stroke-linecap="round"
+      opacity="0.9"
+    />
+    <circle cx="14" cy="14" r="6.6" class="fill-accent" />
+    <line
+      x1="14.00"
+      y1="9.50"
+      x2="14.00"
+      y2="18.50"
+      stroke="#0b0c0e"
+      stroke-width="1.35"
+      stroke-linecap="round"
+    />
+    <circle cx="14.00" cy="9.50" r="1.05" fill="#0b0c0e" />
+    <circle cx="14.00" cy="18.50" r="1.05" fill="#0b0c0e" />
+    <line
+      x1="10.10"
+      y1="11.75"
+      x2="17.90"
+      y2="16.25"
+      stroke="#0b0c0e"
+      stroke-width="1.35"
+      stroke-linecap="round"
+    />
+    <circle cx="10.10" cy="11.75" r="1.05" fill="#0b0c0e" />
+    <circle cx="17.90" cy="16.25" r="1.05" fill="#0b0c0e" />
+    <line
+      x1="10.10"
+      y1="16.25"
+      x2="17.90"
+      y2="11.75"
+      stroke="#0b0c0e"
+      stroke-width="1.35"
+      stroke-linecap="round"
+    />
+    <circle cx="10.10" cy="16.25" r="1.05" fill="#0b0c0e" />
+    <circle cx="17.90" cy="11.75" r="1.05" fill="#0b0c0e" />
+    <circle cx="14" cy="14" r="2.1" fill="#0b0c0e" />
+    <circle cx="14" cy="14" r="0.85" class="fill-accent" />
   </svg>
 </template>
 
