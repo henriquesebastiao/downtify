@@ -309,7 +309,8 @@ export default {
     noMatchesHint: 'Tente outro filtro.',
     clearFilters: 'Limpar filtros',
     loadFailed: 'Não foi possível carregar a biblioteca',
-    loadFailedHint: 'Verifique se o RaveVault está em execução e tente de novo.',
+    loadFailedHint:
+      'Verifique se o RaveVault está em execução e tente de novo.',
     maybeDeleted: 'Pode ter sido excluído ou renomeado.',
     backToLibrary: 'Voltar à biblioteca',
     selectAll: 'Selecionar tudo',

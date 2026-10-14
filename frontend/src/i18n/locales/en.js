@@ -774,7 +774,8 @@ export default {
     slskdUrl: 'Server URL',
     slskdKey: 'API key',
     slskdFolder: 'slskd download folder',
-    slskdFolderHint: 'The path inside the RaveVault container, not on the host.',
+    slskdFolderHint:
+      'The path inside the RaveVault container, not on the host.',
     slskdTimeout: 'Total timeout',
     slskdQueuedTimeout: 'Queued timeout',
     slskdInPlace: 'Leave files in the slskd folder',
