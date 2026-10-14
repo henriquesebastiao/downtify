@@ -841,6 +841,9 @@ export default {
     byAlbum: 'Classer par album',
     byAlbumHint:
       'Enregistrer les titres dans un dossier par album. Avec « par artiste », cela donne Artiste/Album.',
+    archiveFlat: 'ZIP sans dossiers',
+    archiveFlatHint:
+      'Place tous les titres à plat dans le ZIP téléchargé, sans dossiers d’artiste, d’album ou de playlist.',
     overwrite: 'Retélécharger si le fichier existe',
     overwriteHint:
       'Désactivez pour ignorer les titres déjà présents et économiser de la bande passante.',

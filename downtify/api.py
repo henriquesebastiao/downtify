@@ -512,6 +512,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'overwrite_existing_files': True,
     'organize_by_artist': True,
     'organize_by_album': True,
+    # ZIP downloads (Library / playlist / album): False keeps the folders
+    # the tracks have on disk, True puts every track loose in the ZIP.
+    'archive_flat': False,
     'search_albums': True,
     'mini_player_enabled': True,
     # The language the web UI is shown in (``en``, ``pt-BR``...). The choice
@@ -6369,6 +6372,8 @@ async def update_settings_endpoint(
                     if isinstance(raw_value, dict)
                     else {}
                 })
+            elif key == 'archive_flat':
+                state.settings[key] = lyrics.coerce_bool(raw_value, False)
             elif key == 'lyrics_lrc_beside':
                 state.settings[key] = lyrics.coerce_bool(raw_value, True)
             elif key == 'lyrics_lrc_dir':

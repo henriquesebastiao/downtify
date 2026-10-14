@@ -50,6 +50,7 @@ from downtify.library_archive import (
     MAX_ARCHIVE_FILES,
     ArchiveTicketStore,
     archive_filename,
+    flatten_archive_entries,
     stream_library_zip,
 )
 from downtify.library_catalog import (
@@ -805,6 +806,8 @@ def build_app() -> FastAPI:
         entries = await asyncio.to_thread(_resolve)
         if not entries:
             raise HTTPException(status_code=404, detail='No files found')
+        if api.state.settings.get('archive_flat', False):
+            entries = flatten_archive_entries(entries)
         token = _ARCHIVE_TICKETS.create(entries)
         logger.info(
             'Library archive: prepared {} of {} requested file(s)',

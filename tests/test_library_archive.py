@@ -10,6 +10,7 @@ from pathlib import Path
 from downtify.library_archive import (
     ArchiveTicketStore,
     archive_filename,
+    flatten_archive_entries,
     stream_library_zip,
 )
 
@@ -83,7 +84,7 @@ def test_stream_library_zip_skips_missing_files(tmp_path: Path) -> None:
 
 def test_archive_filename_is_timestamped() -> None:
     moment = datetime(2026, 9, 15, 20, 58, 1, tzinfo=timezone.utc)
-    assert archive_filename(moment) == 'downtify-library-20260915-205801.zip'
+    assert archive_filename(moment) == 'ravevault-library-20260915-205801.zip'
 
 
 def test_archive_ticket_is_single_use(tmp_path: Path) -> None:
@@ -111,3 +112,36 @@ def test_archive_tickets_are_independent(tmp_path: Path) -> None:
     assert first != second
     assert store.pop(second) == [('b.mp3', tmp_path / 'b.mp3')]
     assert store.pop(first) == [('a.mp3', tmp_path / 'a.mp3')]
+
+
+def test_flatten_drops_folders() -> None:
+    entries = [
+        ('KUKO/Catharsis/KUKO - Staub.mp3', Path('/x/a.mp3')),
+        ('Playlists/Hard Techno/KOBOSIL - Track.mp3', Path('/x/b.mp3')),
+    ]
+    assert [n for n, _ in flatten_archive_entries(entries)] == [
+        'KUKO - Staub.mp3',
+        'KOBOSIL - Track.mp3',
+    ]
+
+
+def test_flatten_numbers_duplicate_names() -> None:
+    entries = [
+        ('A/Song.mp3', Path('/x/1.mp3')),
+        ('B/song.mp3', Path('/x/2.mp3')),
+        ('C/Song.mp3', Path('/x/3.mp3')),
+        ('D/README', Path('/x/4')),
+        ('E/README', Path('/x/5')),
+    ]
+    names = [n for n, _ in flatten_archive_entries(entries)]
+    assert names == [
+        'Song.mp3',
+        'song (2).mp3',
+        'Song (3).mp3',
+        'README',
+        'README (2)',
+    ]
+    # paden blijven gekoppeld aan de juiste bron
+    assert [p for _, p in flatten_archive_entries(entries)][1] == Path(
+        '/x/2.mp3'
+    )
