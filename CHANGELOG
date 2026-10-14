@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.5.0](https://github.com/henriquesebastiao/downtify/tree/3.5.0) (2026-10-14)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.4.0...3.5.0)
+
+**Implemented enhancements:**
+
+- Jellyfin/Plex Integration for Organized Music Libraries [\#227](https://github.com/henriquesebastiao/downtify/issues/227)
+
+**Fixed bugs:**
+
+- Playlist Monitor reconciliation removes valid slskd leave-in-place tracks [\#393](https://github.com/henriquesebastiao/downtify/issues/393)
+
+**Merged pull requests:**
+
+- chore: remove personal production compose file [\#422](https://github.com/henriquesebastiao/downtify/pull/422) ([MrBrillik](https://github.com/MrBrillik))
+- chore: bump to Python 3.15, refresh dependencies, add httpx2 for tests [\#421](https://github.com/henriquesebastiao/downtify/pull/421) ([betterix](https://github.com/betterix))
+- Full-track streaming and Similar tracks page [\#419](https://github.com/henriquesebastiao/downtify/pull/419) ([MrBrillik](https://github.com/MrBrillik))
+- chore\(deps\): bump websockets from 17.1 to 17.2 [\#415](https://github.com/henriquesebastiao/downtify/pull/415) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Fix reconcile removing valid slskd leave-in-place tracks [\#413](https://github.com/henriquesebastiao/downtify/pull/413) ([chiliec](https://github.com/chiliec))
+- fix: big player responsive layout [\#409](https://github.com/henriquesebastiao/downtify/pull/409) ([luizbossoi](https://github.com/luizbossoi))
+
 ## [3.4.0](https://github.com/henriquesebastiao/downtify/tree/3.4.0) (2026-10-02)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.3.0...3.4.0)
