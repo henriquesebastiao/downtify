@@ -60,7 +60,8 @@ class TrackOwners:
                 )
             """)
             columns = {
-                row[1] for row in conn.execute('PRAGMA table_info(track_owners)')
+                row[1]
+                for row in conn.execute('PRAGMA table_info(track_owners)')
             }
             if 'stored_path' not in columns:
                 conn.execute(
@@ -113,9 +114,7 @@ class TrackOwners:
             return new
 
     @staticmethod
-    def _heal_path(
-        conn: sqlite3.Connection, path: str, key: str
-    ) -> None:
+    def _heal_path(conn: sqlite3.Connection, path: str, key: str) -> None:
         """Re-point rows at *path* whose key went stale, dropping the
         exact duplicates left behind."""
 
