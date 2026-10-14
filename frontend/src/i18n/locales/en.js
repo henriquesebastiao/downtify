@@ -809,6 +809,9 @@ export default {
     byAlbum: 'Organize by album',
     byAlbumHint:
       'Save songs in a folder per album. With “by artist” it becomes Artist/Album.',
+    archiveFlat: 'ZIP without folders',
+    archiveFlatHint:
+      'Put every track loose in a downloaded ZIP, without artist, album or playlist folders.',
     overwrite: 'Download again if the file exists',
     overwriteHint:
       'Turn off to skip songs already in your library and save bandwidth.',

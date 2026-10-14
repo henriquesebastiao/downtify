@@ -826,6 +826,9 @@ export default {
     byAlbum: 'Organizar por álbum',
     byAlbumHint:
       'Salvar músicas em uma pasta por álbum. Com “por artista”, vira Artista/Álbum.',
+    archiveFlat: 'ZIP sem pastas',
+    archiveFlatHint:
+      'Coloca todas as músicas soltas no ZIP baixado, sem pastas de artista, álbum ou playlist.',
     overwrite: 'Baixar de novo se o arquivo existir',
     overwriteHint:
       'Desative para pular músicas que já estão na biblioteca e economizar banda.',

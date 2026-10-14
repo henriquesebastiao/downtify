@@ -826,6 +826,9 @@ export default {
     byAlbum: 'Albüme göre düzenle',
     byAlbumHint:
       'Şarkıları albüm başına bir klasöre kaydet. “Sanatçıya göre” ile Sanatçı/Albüm olur.',
+    archiveFlat: 'Klasörsüz ZIP',
+    archiveFlatHint:
+      "İndirilen ZIP'teki tüm parçaları sanatçı, albüm veya çalma listesi klasörü olmadan düz koyar.",
     overwrite: 'Dosya varsa yeniden indir',
     overwriteHint:
       'Kitaplıktaki şarkıları atlayıp bant genişliğinden tasarruf etmek için kapat.',

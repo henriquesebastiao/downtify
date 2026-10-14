@@ -828,6 +828,9 @@ export default {
     byAlbum: 'Rendezés album szerint',
     byAlbumHint:
       'Albumonként külön mappába menti a dalokat. „Előadó szerint”-tel együtt: Előadó/Album.',
+    archiveFlat: 'ZIP mappák nélkül',
+    archiveFlatHint:
+      'A letöltött ZIP-be minden szám egy helyre kerül, előadó-, album- és lejátszásilista-mappák nélkül.',
     overwrite: 'Újratöltés, ha a fájl létezik',
     overwriteHint:
       'Kapcsold ki, hogy a könyvtárban lévő dalokat kihagyja és sávszélességet spóroljon.',

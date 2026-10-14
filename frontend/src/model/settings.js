@@ -59,6 +59,7 @@ const settings = ref({
   organize_by_artist: true,
   cache_cover_art: false,
   organize_by_album: true,
+  archive_flat: false,
   max_parallel_downloads: 3,
   download_delay_seconds: 0,
   max_track_duration_seconds: 600,

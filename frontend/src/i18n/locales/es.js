@@ -829,6 +829,9 @@ export default {
     byAlbum: 'Organizar por álbum',
     byAlbumHint:
       'Guardar las canciones en una carpeta por álbum. Con «por artista» queda Artista/Álbum.',
+    archiveFlat: 'ZIP sin carpetas',
+    archiveFlatHint:
+      'Pone todas las canciones sueltas en el ZIP descargado, sin carpetas de artista, álbum o playlist.',
     overwrite: 'Descargar de nuevo si el archivo existe',
     overwriteHint:
       'Desactívalo para omitir canciones que ya tienes y ahorrar ancho de banda.',

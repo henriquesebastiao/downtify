@@ -321,6 +321,15 @@
                 />
               </SettingRow>
               <SettingRow
+                :label="t('settings.archiveFlat')"
+                :description="t('settings.archiveFlatHint')"
+              >
+                <UiSwitch
+                  v-model="s.archive_flat"
+                  :aria-label="t('settings.archiveFlat')"
+                />
+              </SettingRow>
+              <SettingRow
                 :label="t('settings.overwrite')"
                 :description="t('settings.overwriteHint')"
               >

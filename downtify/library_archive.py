@@ -24,7 +24,7 @@ import time
 import zipfile
 from collections.abc import Iterable, Iterator
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from threading import Lock
 
 from loguru import logger
@@ -83,7 +83,35 @@ def archive_filename(now: datetime | None = None) -> str:
     """Name for the downloaded ZIP, stamped so repeats don't collide."""
 
     moment = now or datetime.now(timezone.utc).astimezone()
-    return f'downtify-library-{moment.strftime("%Y%m%d-%H%M%S")}.zip'
+    return f'ravevault-library-{moment.strftime("%Y%m%d-%H%M%S")}.zip'
+
+
+def flatten_archive_entries(
+    entries: Iterable[tuple[str, Path]],
+) -> list[tuple[str, Path]]:
+    """Drop the folders from every archive name: all tracks side by side.
+
+    Used when the "ZIP without folders" setting is on. Two tracks with the
+    same file name (same song saved in two playlists/albums) would clash in
+    one folder, so later ones get `` (2)``, `` (3)``... before the
+    extension. Names are compared case-insensitively, because the Finder
+    and Windows Explorer treat ``A.mp3`` and ``a.mp3`` as the same file.
+    """
+
+    used: set[str] = set()
+    flat: list[tuple[str, Path]] = []
+    for name, path in entries:
+        base = PurePosixPath(name).name or path.name
+        stem, dot, ext = base.rpartition('.')
+        if not stem:
+            stem, dot, ext = base, '', ''
+        candidate, n = base, 2
+        while candidate.casefold() in used:
+            candidate = f'{stem} ({n}){dot}{ext}'
+            n += 1
+        used.add(candidate.casefold())
+        flat.append((candidate, path))
+    return flat
 
 
 def _entry_chunks(
