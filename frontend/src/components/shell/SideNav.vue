@@ -11,7 +11,7 @@
       >
         <AppLogo :size="28" />
         <span class="text-display text-[19px] font-bold" :class="labelClass"
-          >Downtify</span
+          >RaveVault</span
         >
       </RouterLink>
     </div>

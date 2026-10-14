@@ -95,7 +95,7 @@ export default {
       'Search YouTube Music, or paste a Spotify or YouTube Music link to a song, album or playlist.',
     step2Title: 'Download it',
     step2Body:
-      'Downtify fetches the audio and tags every file with title, artist, album, cover art and lyrics.',
+      'RaveVault fetches the audio and tags every file with title, artist, album, cover art and lyrics.',
     step3Title: 'Listen anywhere',
     step3Body:
       'Play it here, keep playlists in sync with Playlist Monitor, or point Jellyfin, Plex or Navidrome at your library.',
@@ -126,7 +126,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      "Downtify can't download that link. Paste a Spotify track, album or playlist, or a YouTube Music link.",
+      "RaveVault can't download that link. Paste a Spotify track, album or playlist, or a YouTube Music link.",
     tipSearchTitle: 'Search by name',
     tipSearchBody:
       'Type an artist, album or song — results come from YouTube Music.',
@@ -306,7 +306,7 @@ export default {
     noMatchesHint: 'Try another filter.',
     clearFilters: 'Clear filters',
     loadFailed: "Couldn't load the library",
-    loadFailedHint: 'Check that Downtify is running, then try again.',
+    loadFailedHint: 'Check that RaveVault is running, then try again.',
     maybeDeleted: 'It may have been deleted or renamed.',
     backToLibrary: 'Back to library',
     selectAll: 'Select all',
@@ -338,7 +338,7 @@ export default {
     subtitle:
       'Improve music you already downloaded, instead of downloading it again.',
     intro:
-      'Downtify looks at every track in your library and repairs the ones an older version left behind — small covers, missing lyrics, incomplete tags.',
+      'RaveVault looks at every track in your library and repairs the ones an older version left behind — small covers, missing lyrics, incomplete tags.',
     audioNote:
       'Audio files are never replaced: this updates artwork, lyrics and tags only. A track downloaded from the wrong source stays as it is — delete it and download it again.',
     safeNote:
@@ -370,7 +370,7 @@ export default {
       'Look up tracks with no lyrics through your provider list, and embed what is found.',
     metadata: 'Refresh tags',
     metadataHint:
-      'Fill in album, album artist, release date and track number from Spotify. Only for tracks Downtify still knows the Spotify track of.',
+      'Fill in album, album artist, release date and track number from Spotify. Only for tracks RaveVault still knows the Spotify track of.',
     tracksAffected: { one: '{count} track', other: '{count} tracks' },
     options: 'Options',
     artworkMin: 'Upgrade artwork below',
@@ -383,7 +383,7 @@ export default {
     preferYoutube: 'Prefer YouTube Music',
     recheck: "Don't check a track again for",
     recheckHint:
-      'A track that was just looked at is skipped on the next scan. A newer Downtify always checks everything again.',
+      'A track that was just looked at is skipped on the next scan. A newer RaveVault always checks everything again.',
     recheckDays: { one: '{count} day', other: '{count} days' },
     recheckNever: 'Always check every track',
     start: 'Start upgrade',
@@ -719,7 +719,7 @@ export default {
   settings: {
     apps: 'Apps',
     title: 'Settings',
-    subtitle: 'How Downtify finds, downloads and tags your music.',
+    subtitle: 'How RaveVault finds, downloads and tags your music.',
     sections: 'Sections',
     general: 'General',
     sources: 'Audio sources',
@@ -774,7 +774,7 @@ export default {
     slskdUrl: 'Server URL',
     slskdKey: 'API key',
     slskdFolder: 'slskd download folder',
-    slskdFolderHint: 'The path inside the Downtify container, not on the host.',
+    slskdFolderHint: 'The path inside the RaveVault container, not on the host.',
     slskdTimeout: 'Total timeout',
     slskdQueuedTimeout: 'Queued timeout',
     slskdInPlace: 'Leave files in the slskd folder',
@@ -860,7 +860,7 @@ export default {
     lyricsNeteaseHint: 'Large catalogue, usually time-synced',
     navidromeTitle: 'Navidrome',
     navidromeHint:
-      'Mirror downloaded playlists into Navidrome. Its music folder must include Downtify’s downloads.',
+      'Mirror downloaded playlists into Navidrome. Its music folder must include RaveVault’s downloads.',
     navidromeEnabled: 'Use Navidrome',
     navidromeEnabledHint: 'Needs the server URL, a username and a password.',
     navidromeUrl: 'Server URL',
@@ -869,17 +869,17 @@ export default {
     navidromeAdminUser: 'Admin username',
     navidromeAdminPassword: 'Admin password',
     navidromeAdminHint:
-      'Optional — lets Downtify start a library scan so new songs show up sooner.',
+      'Optional — lets RaveVault start a library scan so new songs show up sooner.',
     test: {
       button: 'Test connection',
       testing: 'Testing…',
       needFields: 'Fill in the fields above first.',
-      requestFailed: "The test couldn't run. Is Downtify still reachable?",
+      requestFailed: "The test couldn't run. Is RaveVault still reachable?",
       connected: 'Connected to {server}.',
       unknown: 'Unexpected answer from the test ({code}).',
       config_missing: 'Fill in the required fields first.',
       connection_unreachable:
-        "Can't reach {url}. Check the address, and that the server is running and reachable from Downtify.",
+        "Can't reach {url}. Check the address, and that the server is running and reachable from RaveVault.",
       connection_timeout: "{url} didn't answer in time.",
       connection_bad_url:
         'That address is not valid. Start it with http:// or https://.',
@@ -896,9 +896,9 @@ export default {
       soulseek_ok: 'slskd is logged in to Soulseek.',
       soulseek_offline:
         "slskd isn't logged in to Soulseek. It will find nothing until it is.",
-      folder_ok: 'Downtify can read {detail}.',
+      folder_ok: 'RaveVault can read {detail}.',
       folder_missing:
-        "Downtify can't read {detail}. That must be the folder slskd downloads into, mounted in this container.",
+        "RaveVault can't read {detail}. That must be the folder slskd downloads into, mounted in this container.",
       scan_ok: 'This account can start library scans.',
       scan_not_admin:
         "This account can't start library scans — Navidrome only lets admins. Fill in the admin username and password so new songs show up sooner.",
@@ -916,7 +916,7 @@ export default {
       'Keep extracted artwork on disk so the library loads faster. Uses extra space.',
     reconcile: 'Fix library paths',
     reconcileHint:
-      'Moved or renamed files outside Downtify? This updates the paths it stored, and rewrites M3U and Navidrome playlists when those are on.',
+      'Moved or renamed files outside RaveVault? This updates the paths it stored, and rewrites M3U and Navidrome playlists when those are on.',
     reconcileButton: 'Fix paths',
     reconcilePaths: {
       one: 'Updated {count} path.',
@@ -938,7 +938,7 @@ export default {
       'Folders of audio you already have. Files stay where they are. Sync reads tags, fetches lyrics and a cover when missing — the same extras a download would — and files them under matching artists. In Docker, use the path inside the container and mount the host folder.',
     externalLibraryFolder: 'Folder',
     externalLibraryFolderHint:
-      'The path inside the Downtify container, not on the host.',
+      'The path inside the RaveVault container, not on the host.',
     externalLibraryPlaceholder: '/music/collection',
     externalLibraryAdd: 'Add folder',
     externalLibraryRemove: 'Remove folder',
@@ -985,7 +985,7 @@ export default {
     version: 'Version {version}',
     upToDate: 'Up to date',
     source: 'Source code',
-    sourceHint: 'Downtify is open source.',
+    sourceHint: 'RaveVault is open source, based on Downtify.',
     docs: 'Documentation',
     docsHint: 'Setup, settings and the API reference.',
     openDocs: 'Open docs',
@@ -998,7 +998,7 @@ export default {
     networkHint: 'How this server can be reached. Only admins see this.',
     experimental: 'Experimental',
     experimentalHint:
-      'Mobile apps are still being built. The Android app has no release yet, and how pairing and streaming work may still change between Downtify versions.',
+      'Mobile apps are still being built. The Android app has no release yet, and how pairing and streaming work may still change between RaveVault versions.',
   },
   shortcuts: {
     title: 'Keyboard shortcuts',
@@ -1020,7 +1020,7 @@ export default {
     help: 'Show shortcuts',
   },
   auth: {
-    signInTitle: 'Sign in to Downtify',
+    signInTitle: 'Sign in to RaveVault',
     signInBody: 'Sign in with your username and password.',
     username: 'Username',
     password: 'Password',
@@ -1029,7 +1029,7 @@ export default {
     tooMany: 'Too many attempts. Wait a few minutes and try again.',
     forgotHint:
       'Forgot the admin password? Run “python main.py auth-reset” on the server.',
-    noticeTitle: 'Downtify now has user accounts',
+    noticeTitle: 'RaveVault now has user accounts',
     noticeBody:
       'Everyone signs in with a username and password now, and an admin can add accounts for other people in Settings → Users. Sign in with:',
     noticeKeptPassword: 'the password you set before',
@@ -1038,7 +1038,7 @@ export default {
   },
   apps: {
     serverGroup: 'This server',
-    serverGroupHint: 'How the Downtify apps see this server.',
+    serverGroupHint: 'How the RaveVault apps see this server.',
     serverName: 'Server name',
     serverNameHint:
       'Shown in the apps and when they look for servers on your network.',
@@ -1058,7 +1058,7 @@ export default {
     signOutEverywhereTitle: 'Sign out everywhere?',
     pairTitle: 'Pair a phone',
     pairBody:
-      'In the Downtify app, choose “Scan the code” and point the camera here.',
+      'In the RaveVault app, choose “Scan the code” and point the camera here.',
     qrLabel: 'QR code for pairing',
     orTypeCode: 'or type this code',
     expiresIn: 'Expires in {time}',
@@ -1073,7 +1073,7 @@ export default {
       'Unpairs every app of yours and signs out every browser you’re signed in to, this one too.',
     signOutEverywhereBody:
       'Your paired apps have to be paired again, and you’ll have to sign in again in every browser.',
-    androidGroup: 'Downtify for Android',
+    androidGroup: 'RaveVault for Android',
     androidHint:
       'An app that browses and plays your library straight from this server.',
     androidBody:
@@ -1105,7 +1105,7 @@ export default {
   },
   port: {
     label: 'Port',
-    hint: 'The port Downtify listens on. It applies when the server starts, or right away with “Save and restart”.',
+    hint: 'The port RaveVault listens on. It applies when the server starts, or right away with “Save and restart”.',
     locked: 'Set by {source} on the server. Remove it to choose the port here.',
     save: 'Save',
     saveRestart: 'Save and restart',
@@ -1114,18 +1114,18 @@ export default {
     saved: 'Port {port} saved for the next start',
     invalid: 'Use a port from {min} to {max}',
     dockerWarning:
-      'Downtify runs in Docker: change the port mapping to the same port (ports: NEW:NEW) and recreate the container, or use network_mode: host - otherwise Downtify becomes unreachable. Setting DOWNTIFY_PORT puts the old port back.',
+      'RaveVault runs in Docker: change the port mapping to the same port (ports: NEW:NEW) and recreate the container, or use network_mode: host - otherwise RaveVault becomes unreachable. Setting DOWNTIFY_PORT puts the old port back.',
     proxyWarning:
-      'You reach Downtify through another address (a reverse proxy or a port mapping): point it at the new port too.',
+      'You reach RaveVault through another address (a reverse proxy or a port mapping): point it at the new port too.',
     confirmTitle: 'Restart on port {port}?',
     confirmBody:
       'Downloads in progress are stopped, and every page and app reconnects on the new port.',
     restartingTitle: 'Restarting on port {port}',
     restartingBody:
-      'Waiting for Downtify to come back… This page opens the new address by itself.',
+      'Waiting for RaveVault to come back… This page opens the new address by itself.',
     unreachable:
-      'Downtify didn’t answer on the new port yet. Try the new address, or check the server’s logs.',
-    openNew: 'Downtify is restarting. Open it at its new address:',
+      'RaveVault didn’t answer on the new port yet. Try the new address, or check the server’s logs.',
+    openNew: 'RaveVault is restarting. Open it at its new address:',
   },
   account: {
     title: 'Account',
@@ -1149,7 +1149,7 @@ export default {
     needsAdmin: 'Only an admin can do that',
     defaultPasswordTitle: 'Change the default password',
     defaultPasswordBody:
-      '{name} is signed in with the default password, which anyone who knows Downtify knows. Change it in Settings → General.',
+      '{name} is signed in with the default password, which anyone who knows RaveVault knows. Change it in Settings → General.',
     later: 'Later',
     changePassword: 'Change password',
   },
@@ -1326,7 +1326,7 @@ export default {
     kicker: 'Podcast',
     notFound: 'This show is no longer subscribed to',
     noEpisodesTitle: 'No episodes yet',
-    noEpisodesBody: 'Downtify checks this feed on its own schedule.',
+    noEpisodesBody: 'RaveVault checks this feed on its own schedule.',
     download: 'Download episode',
     downloadFailed: 'The episode could not be downloaded',
     played: 'Played',

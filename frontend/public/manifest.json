@@ -1,7 +1,7 @@
 {
-  "name": "Downtify",
-  "short_name": "Downtify",
-  "description": "Self-hosted Spotify downloader — tracks, albums and playlists with full metadata, cover art and lyrics.",
+  "name": "RaveVault",
+  "short_name": "RaveVault",
+  "description": "RaveVault — self-hosted music vault — tracks, albums and playlists with full metadata, cover art and lyrics.",
   "start_url": "/",
   "scope": "/",
   "id": "/",

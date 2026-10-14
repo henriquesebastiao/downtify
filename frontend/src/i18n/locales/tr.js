@@ -99,7 +99,7 @@ export default {
       'YouTube Music’te ara ya da bir şarkı, albüm veya çalma listesinin Spotify veya YouTube Music bağlantısını yapıştır.',
     step2Title: 'İndir',
     step2Body:
-      'Downtify sesi alır ve her dosyaya başlık, sanatçı, albüm, kapak ve şarkı sözü ekler.',
+      'RaveVault sesi alır ve her dosyaya başlık, sanatçı, albüm, kapak ve şarkı sözü ekler.',
     step3Title: 'Her yerde dinle',
     step3Body:
       'Burada çal, çalma listelerini İzleyici ile senkronize tut ya da Jellyfin, Plex veya Navidrome’u kitaplığına yönlendir.',
@@ -130,7 +130,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify bu bağlantıyı indiremiyor. Bir Spotify parçası, albümü veya çalma listesi ya da YouTube Music bağlantısı yapıştır.',
+      'RaveVault bu bağlantıyı indiremiyor. Bir Spotify parçası, albümü veya çalma listesi ya da YouTube Music bağlantısı yapıştır.',
     tipSearchTitle: 'Adla ara',
     tipSearchBody:
       'Bir sanatçı, albüm veya şarkı yaz — sonuçlar YouTube Music’ten gelir.',
@@ -313,7 +313,7 @@ export default {
     noMatchesHint: 'Başka bir filtre dene.',
     clearFilters: 'Filtreleri temizle',
     loadFailed: 'Kitaplık yüklenemedi',
-    loadFailedHint: 'Downtify’ın çalıştığından emin ol ve tekrar dene.',
+    loadFailedHint: 'RaveVault’ın çalıştığından emin ol ve tekrar dene.',
     maybeDeleted: 'Silinmiş veya yeniden adlandırılmış olabilir.',
     backToLibrary: 'Kitaplığa dön',
     selectAll: 'Tümünü seç',
@@ -345,7 +345,7 @@ export default {
     subtitle:
       'Zaten indirdiğiniz müzikleri yeniden indirmek yerine iyileştirin.',
     intro:
-      'Downtify kitaplığınızdaki her parçaya bakar ve eski bir sürümün geride bıraktıklarını onarır: küçük kapaklar, eksik şarkı sözleri, yarım etiketler.',
+      'RaveVault kitaplığınızdaki her parçaya bakar ve eski bir sürümün geride bıraktıklarını onarır: küçük kapaklar, eksik şarkı sözleri, yarım etiketler.',
     audioNote:
       'Ses dosyaları asla değiştirilmez: yalnızca kapak, şarkı sözü ve etiketler güncellenir. Yanlış kaynaktan inen bir parça olduğu gibi kalır — silip yeniden indirin.',
     safeNote:
@@ -377,7 +377,7 @@ export default {
       'Hiç şarkı sözü olmayan parçaları sağlayıcı listenizle arar ve bulduğunu dosyaya gömer.',
     metadata: 'Etiketleri yenile',
     metadataHint:
-      'Albüm, albüm sanatçısı, çıkış tarihi ve parça numarasını Spotify’dan doldurur. Yalnızca Downtify’ın Spotify parçasını hâlâ bildiği parçalar için.',
+      'Albüm, albüm sanatçısı, çıkış tarihi ve parça numarasını Spotify’dan doldurur. Yalnızca RaveVault’ın Spotify parçasını hâlâ bildiği parçalar için.',
     tracksAffected: { one: '{count} parça', other: '{count} parça' },
     options: 'Seçenekler',
     artworkMin: 'Şu boyutun altındaki kapakları iyileştir',
@@ -390,7 +390,7 @@ export default {
     preferYoutube: 'YouTube Music’i yeğle',
     recheck: 'Bir parçayı şu süre boyunca yeniden denetleme',
     recheckHint:
-      'Yakında denetlenmiş bir parça sonraki taramada atlanır. Daha yeni bir Downtify her zaman her şeyi yeniden denetler.',
+      'Yakında denetlenmiş bir parça sonraki taramada atlanır. Daha yeni bir RaveVault her zaman her şeyi yeniden denetler.',
     recheckDays: { one: '{count} gün', other: '{count} gün' },
     recheckNever: 'Her parçayı her zaman denetle',
     start: 'Başlat',
@@ -737,7 +737,7 @@ export default {
   settings: {
     apps: 'Uygulamalar',
     title: 'Ayarlar',
-    subtitle: 'Downtify’ın müziğini nasıl bulduğu, indirdiği ve etiketlediği.',
+    subtitle: 'RaveVault’ın müziğini nasıl bulduğu, indirdiği ve etiketlediği.',
     sections: 'Bölümler',
     general: 'Genel',
     sources: 'Ses kaynakları',
@@ -792,7 +792,7 @@ export default {
     slskdUrl: 'Sunucu URL’si',
     slskdKey: 'API anahtarı',
     slskdFolder: 'slskd indirme klasörü',
-    slskdFolderHint: 'Ana makinedeki değil, Downtify kapsayıcısındaki yol.',
+    slskdFolderHint: 'Ana makinedeki değil, RaveVault kapsayıcısındaki yol.',
     slskdTimeout: 'Toplam zaman aşımı',
     slskdQueuedTimeout: 'Kuyruk zaman aşımı',
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
@@ -879,7 +879,7 @@ export default {
     lyricsNeteaseHint: 'Geniş katalog, genellikle zamanlı',
     navidromeTitle: 'Navidrome',
     navidromeHint:
-      'İndirilen çalma listelerini Navidrome’a yansıt. Müzik klasörü Downtify indirmelerini içermeli.',
+      'İndirilen çalma listelerini Navidrome’a yansıt. Müzik klasörü RaveVault indirmelerini içermeli.',
     navidromeEnabled: 'Navidrome kullan',
     navidromeEnabledHint: 'Sunucu URL’si, kullanıcı adı ve parola gerekir.',
     navidromeUrl: 'Sunucu URL’si',
@@ -888,17 +888,17 @@ export default {
     navidromeAdminUser: 'Yönetici kullanıcı adı',
     navidromeAdminPassword: 'Yönetici parolası',
     navidromeAdminHint:
-      'İsteğe bağlı — yeni şarkıların daha çabuk görünmesi için Downtify’ın tarama başlatmasını sağlar.',
+      'İsteğe bağlı — yeni şarkıların daha çabuk görünmesi için RaveVault’ın tarama başlatmasını sağlar.',
     test: {
       button: 'Bağlantıyı sına',
       testing: 'Sınanıyor…',
       needFields: 'Önce yukarıdaki alanları doldurun.',
-      requestFailed: 'Sınama çalıştırılamadı. Downtify hâlâ erişilebilir mi?',
+      requestFailed: 'Sınama çalıştırılamadı. RaveVault hâlâ erişilebilir mi?',
       connected: '{server} sunucusuna bağlandı.',
       unknown: 'Sınamadan beklenmeyen yanıt ({code}).',
       config_missing: 'Önce zorunlu alanları doldurun.',
       connection_unreachable:
-        '{url} adresine ulaşılamıyor. Adresi ve sunucunun çalıştığını, Downtify’dan erişilebilir olduğunu denetleyin.',
+        '{url} adresine ulaşılamıyor. Adresi ve sunucunun çalıştığını, RaveVault’dan erişilebilir olduğunu denetleyin.',
       connection_timeout: '{url} zamanında yanıt vermedi.',
       connection_bad_url:
         'Bu adres geçerli değil. http:// veya https:// ile başlayın.',
@@ -915,9 +915,9 @@ export default {
       soulseek_ok: 'slskd Soulseek’e bağlı.',
       soulseek_offline:
         'slskd Soulseek’e bağlı değil. Bağlanana kadar hiçbir şey bulamaz.',
-      folder_ok: 'Downtify {detail} yolunu okuyabiliyor.',
+      folder_ok: 'RaveVault {detail} yolunu okuyabiliyor.',
       folder_missing:
-        'Downtify {detail} yolunu okuyamıyor. Burası slskd’nin indirdiği klasör olmalı ve bu kapsayıcıya bağlanmış olmalı.',
+        'RaveVault {detail} yolunu okuyamıyor. Burası slskd’nin indirdiği klasör olmalı ve bu kapsayıcıya bağlanmış olmalı.',
       scan_ok: 'Bu hesap kitaplık taraması başlatabilir.',
       scan_not_admin:
         'Bu hesap kitaplık taraması başlatamaz — Navidrome bunu yalnızca yöneticilere verir. Yeni şarkılar daha erken görünsün diye yönetici kullanıcı adını ve parolasını doldurun.',
@@ -936,7 +936,7 @@ export default {
       'Kitaplığın daha hızlı yüklenmesi için çıkarılan kapakları diskte tut. Ek alan kullanır.',
     reconcile: 'Kitaplık yollarını düzelt',
     reconcileHint:
-      'Dosyaları Downtify dışında taşıdın veya yeniden adlandırdın mı? Bu, kayıtlı yolları günceller ve etkinse M3U ve Navidrome listelerini yeniden yazar.',
+      'Dosyaları RaveVault dışında taşıdın veya yeniden adlandırdın mı? Bu, kayıtlı yolları günceller ve etkinse M3U ve Navidrome listelerini yeniden yazar.',
     reconcileButton: 'Yolları düzelt',
     reconcilePaths: {
       one: '{count} yol güncellendi.',
@@ -955,10 +955,10 @@ export default {
     reconcileError: 'Kitaplık yolları düzeltilemedi.',
     externalLibraryTitle: 'Mevcut müzik klasörleri',
     externalLibraryHint:
-      'Zaten sahip olduğunuz ses klasörleri. Dosyalar yerinde kalır; Downtify etiketlerini okur ve eşleşen sanatçıların altına koyar. Docker’da kapsayıcı içindeki yolu kullanın ve ana makine klasörünü bağlayın.',
+      'Zaten sahip olduğunuz ses klasörleri. Dosyalar yerinde kalır; RaveVault etiketlerini okur ve eşleşen sanatçıların altına koyar. Docker’da kapsayıcı içindeki yolu kullanın ve ana makine klasörünü bağlayın.',
     externalLibraryFolder: 'Klasör',
     externalLibraryFolderHint:
-      'Downtify kapsayıcısındaki yol, ana makinedeki değil.',
+      'RaveVault kapsayıcısındaki yol, ana makinedeki değil.',
     externalLibraryPlaceholder: '/music/collection',
     externalLibraryAdd: 'Klasör ekle',
     externalLibraryRemove: 'Klasörü kaldır',
@@ -1005,7 +1005,7 @@ export default {
     version: 'Sürüm {version}',
     upToDate: 'Güncel',
     source: 'Kaynak kodu',
-    sourceHint: 'Downtify açık kaynaklıdır.',
+    sourceHint: 'RaveVault açık kaynaklıdır, Downtify tabanlıdır.',
     docs: 'Belgeler',
     docsHint: 'Kurulum, ayarlar ve API başvurusu.',
     openDocs: 'Belgeleri aç',
@@ -1018,7 +1018,7 @@ export default {
     networkHint: 'Bu sunucuya nasıl erişilir. Bunu yalnızca yöneticiler görür.',
     experimental: 'Deneysel',
     experimentalHint:
-      'Mobil uygulamalar hâlâ geliştiriliyor. Android uygulamasının henüz yayımlanmış bir sürümü yok ve eşleme ile yayın akışının çalışma biçimi Downtify sürümleri arasında değişebilir.',
+      'Mobil uygulamalar hâlâ geliştiriliyor. Android uygulamasının henüz yayımlanmış bir sürümü yok ve eşleme ile yayın akışının çalışma biçimi RaveVault sürümleri arasında değişebilir.',
   },
   shortcuts: {
     title: 'Klavye kısayolları',
@@ -1040,7 +1040,7 @@ export default {
     help: 'Kısayolları göster',
   },
   auth: {
-    signInTitle: 'Downtify’a giriş yap',
+    signInTitle: 'RaveVault’a giriş yap',
     signInBody: 'Kullanıcı adınız ve parolanızla giriş yapın.',
     username: 'Kullanıcı adı',
     password: 'Parola',
@@ -1049,7 +1049,7 @@ export default {
     tooMany: 'Çok fazla deneme. Birkaç dakika bekleyip tekrar deneyin.',
     forgotHint:
       'Yönetici parolasını mı unuttunuz? Sunucuda “python main.py auth-reset” komutunu çalıştırın.',
-    noticeTitle: 'Downtify artık kullanıcı hesaplarına sahip',
+    noticeTitle: 'RaveVault artık kullanıcı hesaplarına sahip',
     noticeBody:
       'Artık herkes kullanıcı adı ve parolayla giriş yapıyor; bir yönetici Ayarlar → Kullanıcılar bölümünden başkalarına hesap açabilir. Şununla giriş yapın:',
     noticeKeptPassword: 'daha önce belirlediğiniz parola',
@@ -1058,7 +1058,7 @@ export default {
   },
   apps: {
     serverGroup: 'Bu sunucu',
-    serverGroupHint: 'Downtify uygulamalarının bu sunucuyu nasıl gördüğü.',
+    serverGroupHint: 'RaveVault uygulamalarının bu sunucuyu nasıl gördüğü.',
     serverName: 'Sunucu adı',
     serverNameHint: 'Uygulamalarda ve ağınızda sunucu ararken gösterilir.',
     serverId: 'Sunucu kimliği {id}',
@@ -1080,7 +1080,7 @@ export default {
     signOutEverywhereTitle: 'Her yerden çıkış yapılsın mı?',
     pairTitle: 'Telefon eşleştir',
     pairBody:
-      'Downtify uygulamasında “Kodu tara”yı seçin ve kamerayı buraya tutun.',
+      'RaveVault uygulamasında “Kodu tara”yı seçin ve kamerayı buraya tutun.',
     qrLabel: 'Eşleştirme için QR kodu',
     orTypeCode: 'veya bu kodu yazın',
     expiresIn: '{time} içinde sona erer',
@@ -1095,7 +1095,7 @@ export default {
       'Tüm uygulamalarınızın eşleşmesini kaldırır ve bu dahil giriş yaptığınız tüm tarayıcılardan çıkış yapar.',
     signOutEverywhereBody:
       'Uygulamalarınızı yeniden eşlemeniz ve her tarayıcıda yeniden giriş yapmanız gerekecek.',
-    androidGroup: 'Android için Downtify',
+    androidGroup: 'Android için RaveVault',
     androidHint:
       'Kitaplığınıza doğrudan bu sunucudan göz atıp çalan bir uygulama.',
     androidBody:
@@ -1127,7 +1127,7 @@ export default {
   },
   port: {
     label: 'Port',
-    hint: 'Downtify’ın dinlediği port. Sunucu başladığında ya da “Kaydet ve yeniden başlat” ile hemen uygulanır.',
+    hint: 'RaveVault’ın dinlediği port. Sunucu başladığında ya da “Kaydet ve yeniden başlat” ile hemen uygulanır.',
     locked:
       'Sunucuda {source} tarafından belirlenmiş. Portu buradan seçmek için onu kaldırın.',
     save: 'Kaydet',
@@ -1137,18 +1137,18 @@ export default {
     saved: '{port} portu sonraki başlangıç için kaydedildi',
     invalid: '{min} ile {max} arasında bir port kullanın',
     dockerWarning:
-      'Downtify Docker’da çalışıyor: port eşlemesini aynı porta çevirin (ports: YENİ:YENİ) ve kapsayıcıyı yeniden oluşturun ya da network_mode: host kullanın - yoksa Downtify’a erişilemez. DOWNTIFY_PORT ayarlamak eski portu geri getirir.',
+      'RaveVault Docker’da çalışıyor: port eşlemesini aynı porta çevirin (ports: YENİ:YENİ) ve kapsayıcıyı yeniden oluşturun ya da network_mode: host kullanın - yoksa RaveVault’a erişilemez. DOWNTIFY_PORT ayarlamak eski portu geri getirir.',
     proxyWarning:
-      'Downtify’a başka bir adresten (ters vekil veya port eşlemesi) erişiyorsunuz: onu da yeni porta yönlendirin.',
+      'RaveVault’a başka bir adresten (ters vekil veya port eşlemesi) erişiyorsunuz: onu da yeni porta yönlendirin.',
     confirmTitle: '{port} portunda yeniden başlatılsın mı?',
     confirmBody:
       'Süren indirmeler durdurulur ve tüm sayfalar ile uygulamalar yeni porta yeniden bağlanır.',
     restartingTitle: '{port} portunda yeniden başlatılıyor',
     restartingBody:
-      'Downtify’ın geri gelmesi bekleniyor… Bu sayfa yeni adresi kendisi açacak.',
+      'RaveVault’ın geri gelmesi bekleniyor… Bu sayfa yeni adresi kendisi açacak.',
     unreachable:
-      'Downtify henüz yeni portta yanıt vermedi. Yeni adresi deneyin veya sunucu günlüklerine bakın.',
-    openNew: 'Downtify yeniden başlıyor. Yeni adresinde açın:',
+      'RaveVault henüz yeni portta yanıt vermedi. Yeni adresi deneyin veya sunucu günlüklerine bakın.',
+    openNew: 'RaveVault yeniden başlıyor. Yeni adresinde açın:',
   },
   account: {
     title: 'Hesap',
@@ -1172,7 +1172,7 @@ export default {
     needsAdmin: 'Bunu yalnızca bir yönetici yapabilir',
     defaultPasswordTitle: 'Varsayılan parolayı değiştirin',
     defaultPasswordBody:
-      '{name} varsayılan parolayla giriş yaptı; bu parolayı Downtify’ı bilen herkes bilir. Ayarlar → Genel bölümünden değiştirin.',
+      '{name} varsayılan parolayla giriş yaptı; bu parolayı RaveVault’ı bilen herkes bilir. Ayarlar → Genel bölümünden değiştirin.',
     later: 'Sonra',
     changePassword: 'Parolayı değiştir',
   },
@@ -1354,7 +1354,7 @@ export default {
     kicker: 'Podcast',
     notFound: 'Artık bu programa abone değilsiniz',
     noEpisodesTitle: 'Henüz bölüm yok',
-    noEpisodesBody: 'Downtify bu beslemeyi kendi zamanlamasında kontrol eder.',
+    noEpisodesBody: 'RaveVault bu beslemeyi kendi zamanlamasında kontrol eder.',
     download: 'Bölümü indir',
     downloadFailed: 'Bölüm indirilemedi',
     played: 'Dinlendi',

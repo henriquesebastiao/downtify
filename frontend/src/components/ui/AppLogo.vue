@@ -5,7 +5,7 @@
     viewBox="0 0 28 28"
     class="shrink-0"
     role="img"
-    aria-label="Downtify"
+    aria-label="RaveVault"
   >
     <circle cx="14" cy="14" r="14" class="fill-accent" />
     <path

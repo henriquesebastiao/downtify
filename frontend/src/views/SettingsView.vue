@@ -678,7 +678,7 @@
             >
               <AppLogo :size="56" />
               <div class="min-w-0">
-                <p class="text-display text-2xl font-bold">Downtify</p>
+                <p class="text-display text-2xl font-bold">RaveVault</p>
                 <p class="tabular text-sm text-muted">
                   {{ t('settings.version', { version: version || '—' }) }}
                 </p>
@@ -711,7 +711,7 @@
                 <UiButton
                   variant="ghost"
                   icon="arrow-up-right"
-                  href="https://github.com/henriquesebastiao/downtify"
+                  href="https://github.com/fke-dev/downtify"
                 >
                   GitHub
                 </UiButton>

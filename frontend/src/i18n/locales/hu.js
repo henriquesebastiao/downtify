@@ -95,7 +95,7 @@ export default {
       'Keress a YouTube Musicban, vagy illessz be egy Spotify vagy YouTube Music linket egy dalhoz, albumhoz vagy listához.',
     step2Title: 'Töltsd le',
     step2Body:
-      'A Downtify letölti a hangot, és minden fájlt ellát címmel, előadóval, albummal, borítóval és dalszöveggel.',
+      'A RaveVault letölti a hangot, és minden fájlt ellát címmel, előadóval, albummal, borítóval és dalszöveggel.',
     step3Title: 'Hallgasd bárhol',
     step3Body:
       'Játszd le itt, tartsd szinkronban a listákat a Figyelővel, vagy irányítsd a Jellyfint, Plexet vagy Navidrome-ot a könyvtáradra.',
@@ -126,7 +126,7 @@ export default {
     typeSingle: 'Kislemez',
     typeEp: 'EP',
     unsupportedLink:
-      'A Downtify nem tudja letölteni ezt a linket. Illessz be Spotify számot, albumot vagy listát, vagy YouTube Music linket.',
+      'A RaveVault nem tudja letölteni ezt a linket. Illessz be Spotify számot, albumot vagy listát, vagy YouTube Music linket.',
     tipSearchTitle: 'Keresés név szerint',
     tipSearchBody:
       'Írj be előadót, albumot vagy dalt — a találatok a YouTube Musicból jönnek.',
@@ -311,7 +311,7 @@ export default {
     noMatchesHint: 'Próbálj másik szűrőt.',
     clearFilters: 'Szűrők törlése',
     loadFailed: 'Nem sikerült betölteni a könyvtárat',
-    loadFailedHint: 'Ellenőrizd, hogy fut-e a Downtify, majd próbáld újra.',
+    loadFailedHint: 'Ellenőrizd, hogy fut-e a RaveVault, majd próbáld újra.',
     maybeDeleted: 'Lehet, hogy törölték vagy átnevezték.',
     backToLibrary: 'Vissza a könyvtárhoz',
     selectAll: 'Összes kijelölése',
@@ -343,7 +343,7 @@ export default {
     subtitle:
       'Javítsd fel a már letöltött zenéket, ahelyett hogy újra letöltenéd őket.',
     intro:
-      'A Downtify végigmegy a könyvtár minden számán, és megjavítja azokat, amiket egy régebbi verzió hátrahagyott: kis borítók, hiányzó dalszövegek, hiányos címkék.',
+      'A RaveVault végigmegy a könyvtár minden számán, és megjavítja azokat, amiket egy régebbi verzió hátrahagyott: kis borítók, hiányzó dalszövegek, hiányos címkék.',
     audioNote:
       'A hangfájlokat soha nem cseréli le: csak a borító, a dalszöveg és a címkék frissülnek. A rossz forrásból letöltött szám úgy marad — töröld, és töltsd le újra.',
     safeNote:
@@ -375,7 +375,7 @@ export default {
       'Megkeresi a dalszöveget azokhoz a számokhoz, amelyeknek nincs, a szolgáltatólistád alapján, és beágyazza, amit talál.',
     metadata: 'Címkék frissítése',
     metadataHint:
-      'Kitölti az albumot, az albumelőadót, a megjelenés dátumát és a sorszámot a Spotifyról. Csak azoknál a számoknál, amelyek Spotify-felvételét a Downtify még ismeri.',
+      'Kitölti az albumot, az albumelőadót, a megjelenés dátumát és a sorszámot a Spotifyról. Csak azoknál a számoknál, amelyek Spotify-felvételét a RaveVault még ismeri.',
     tracksAffected: { one: '{count} szám', other: '{count} szám' },
     options: 'Beállítások',
     artworkMin: 'Borítók feljavítása ez alatt',
@@ -388,7 +388,7 @@ export default {
     preferYoutube: 'A YouTube Music előnyben',
     recheck: 'Egy szám ne kerüljön újra sorra',
     recheckHint:
-      'A nemrég ellenőrzött szám kimarad a következő átvizsgálásból. Egy újabb Downtify mindig mindent újra megnéz.',
+      'A nemrég ellenőrzött szám kimarad a következő átvizsgálásból. Egy újabb RaveVault mindig mindent újra megnéz.',
     recheckDays: { one: '{count} napig', other: '{count} napig' },
     recheckNever: 'Mindig minden számot ellenőrizzen',
     start: 'Indítás',
@@ -736,7 +736,7 @@ export default {
   settings: {
     apps: 'Alkalmazások',
     title: 'Beállítások',
-    subtitle: 'Hogyan keresi, tölti le és címkézi a Downtify a zenéidet.',
+    subtitle: 'Hogyan keresi, tölti le és címkézi a RaveVault a zenéidet.',
     sections: 'Szakaszok',
     general: 'Általános',
     sources: 'Hangforrások',
@@ -792,7 +792,7 @@ export default {
     slskdKey: 'API-kulcs',
     slskdFolder: 'slskd letöltési mappa',
     slskdFolderHint:
-      'Az útvonal a Downtify konténeren belül, nem a gazdagépen.',
+      'Az útvonal a RaveVault konténeren belül, nem a gazdagépen.',
     slskdTimeout: 'Teljes időkorlát',
     slskdQueuedTimeout: 'Sorban állási időkorlát',
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
@@ -881,7 +881,7 @@ export default {
     lyricsNeteaseHint: 'Nagy katalógus, általában időzített',
     navidromeTitle: 'Navidrome',
     navidromeHint:
-      'Tükrözi a letöltött listákat a Navidrome-ba. A zenemappájának tartalmaznia kell a Downtify letöltéseit.',
+      'Tükrözi a letöltött listákat a Navidrome-ba. A zenemappájának tartalmaznia kell a RaveVault letöltéseit.',
     navidromeEnabled: 'Navidrome használata',
     navidromeEnabledHint: 'Szükséges a szerver URL, felhasználónév és jelszó.',
     navidromeUrl: 'Szerver URL',
@@ -890,17 +890,17 @@ export default {
     navidromeAdminUser: 'Adminisztrátor felhasználónév',
     navidromeAdminPassword: 'Adminisztrátor jelszó',
     navidromeAdminHint:
-      'Nem kötelező — a Downtify könyvtárvizsgálatot indíthat, hogy az új dalok hamarabb megjelenjenek.',
+      'Nem kötelező — a RaveVault könyvtárvizsgálatot indíthat, hogy az új dalok hamarabb megjelenjenek.',
     test: {
       button: 'Kapcsolat tesztelése',
       testing: 'Tesztelés…',
       needFields: 'Előbb töltsd ki a fenti mezőket.',
-      requestFailed: 'A teszt nem futhatott le. Elérhető még a Downtify?',
+      requestFailed: 'A teszt nem futhatott le. Elérhető még a RaveVault?',
       connected: 'Kapcsolódva ehhez: {server}.',
       unknown: 'Váratlan válasz a teszttől ({code}).',
       config_missing: 'Előbb töltsd ki a kötelező mezőket.',
       connection_unreachable:
-        'A(z) {url} nem érhető el. Ellenőrizd a címet, és hogy a szerver fut és elérhető a Downtify felől.',
+        'A(z) {url} nem érhető el. Ellenőrizd a címet, és hogy a szerver fut és elérhető a RaveVault felől.',
       connection_timeout: 'A(z) {url} nem válaszolt időben.',
       connection_bad_url:
         'Ez a cím érvénytelen. http://-vel vagy https://-sel kezdődjön.',
@@ -918,9 +918,9 @@ export default {
       soulseek_ok: 'A slskd be van jelentkezve a Soulseekbe.',
       soulseek_offline:
         'A slskd nincs bejelentkezve a Soulseekbe. Addig nem talál semmit.',
-      folder_ok: 'A Downtify olvasni tudja ezt: {detail}.',
+      folder_ok: 'A RaveVault olvasni tudja ezt: {detail}.',
       folder_missing:
-        'A Downtify nem tudja olvasni ezt: {detail}. Ennek kell lennie annak a mappának, ahová a slskd letölt, és be kell csatolni ebbe a konténerbe.',
+        'A RaveVault nem tudja olvasni ezt: {detail}. Ennek kell lennie annak a mappának, ahová a slskd letölt, és be kell csatolni ebbe a konténerbe.',
       scan_ok: 'Ez a fiók indíthat könyvtárvizsgálatot.',
       scan_not_admin:
         'Ez a fiók nem indíthat könyvtárvizsgálatot — a Navidrome ezt csak adminisztrátoroknak engedi. Add meg az admin felhasználónevet és jelszót, hogy az új számok előbb megjelenjenek.',
@@ -939,7 +939,7 @@ export default {
       'A kinyert borítókat lemezen tartja a gyorsabb betöltésért. Extra helyet foglal.',
     reconcile: 'Könyvtárútvonalak javítása',
     reconcileHint:
-      'Áthelyeztél vagy átneveztél fájlokat a Downtifyon kívül? Ez frissíti a tárolt útvonalakat, és újraírja az M3U és Navidrome listákat, ha be vannak kapcsolva.',
+      'Áthelyeztél vagy átneveztél fájlokat a RaveVaulton kívül? Ez frissíti a tárolt útvonalakat, és újraírja az M3U és Navidrome listákat, ha be vannak kapcsolva.',
     reconcileButton: 'Útvonalak javítása',
     reconcilePaths: {
       one: '{count} útvonal frissítve.',
@@ -958,10 +958,10 @@ export default {
     reconcileError: 'Nem sikerült javítani a könyvtárútvonalakat.',
     externalLibraryTitle: 'Meglévő zenei mappák',
     externalLibraryHint:
-      'Mappák a már megvan zenéiddel. A fájlok a helyükön maradnak; a Downtify olvassa a címkéiket, és a megfelelő előadókhoz sorolja őket. Dockerben a konténeren belüli útvonalat add meg, és csatold a gazdagép mappáját.',
+      'Mappák a már megvan zenéiddel. A fájlok a helyükön maradnak; a RaveVault olvassa a címkéiket, és a megfelelő előadókhoz sorolja őket. Dockerben a konténeren belüli útvonalat add meg, és csatold a gazdagép mappáját.',
     externalLibraryFolder: 'Mappa',
     externalLibraryFolderHint:
-      'A Downtify konténeren belüli útvonal, nem a gazdagépen.',
+      'A RaveVault konténeren belüli útvonal, nem a gazdagépen.',
     externalLibraryPlaceholder: '/music/collection',
     externalLibraryAdd: 'Mappa hozzáadása',
     externalLibraryRemove: 'Mappa eltávolítása',
@@ -1008,7 +1008,7 @@ export default {
     version: 'Verzió: {version}',
     upToDate: 'Naprakész',
     source: 'Forráskód',
-    sourceHint: 'A Downtify nyílt forráskódú.',
+    sourceHint: 'A RaveVault nyílt forráskódú, a Downtify alapján.',
     docs: 'Dokumentáció',
     docsHint: 'Telepítés, beállítások és API-referencia.',
     openDocs: 'Dokumentáció megnyitása',
@@ -1021,7 +1021,7 @@ export default {
     networkHint: 'Hogyan érhető el ez a szerver. Ezt csak az adminok látják.',
     experimental: 'Kísérleti',
     experimentalHint:
-      'A mobilalkalmazások még készülnek. Az Android-alkalmazásnak még nincs kiadott verziója, és a párosítás és a lejátszás módja még változhat a Downtify verziói között.',
+      'A mobilalkalmazások még készülnek. Az Android-alkalmazásnak még nincs kiadott verziója, és a párosítás és a lejátszás módja még változhat a RaveVault verziói között.',
   },
   shortcuts: {
     title: 'Billentyűparancsok',
@@ -1043,7 +1043,7 @@ export default {
     help: 'Billentyűparancsok',
   },
   auth: {
-    signInTitle: 'Bejelentkezés a Downtify-ba',
+    signInTitle: 'Bejelentkezés a RaveVault-ba',
     signInBody: 'Jelentkezz be a felhasználóneveddel és a jelszavaddal.',
     username: 'Felhasználónév',
     password: 'Jelszó',
@@ -1052,7 +1052,7 @@ export default {
     tooMany: 'Túl sok próbálkozás. Várj néhány percet, és próbáld újra.',
     forgotHint:
       'Elfelejtetted az admin jelszavát? Futtasd a „python main.py auth-reset” parancsot a szerveren.',
-    noticeTitle: 'A Downtify-ban mostantól felhasználói fiókok vannak',
+    noticeTitle: 'A RaveVault-ban mostantól felhasználói fiókok vannak',
     noticeBody:
       'Mostantól mindenki felhasználónévvel és jelszóval jelentkezik be, és egy admin a Beállítások → Felhasználók alatt fiókot hozhat létre másoknak. Jelentkezz be ezzel:',
     noticeKeptPassword: 'a korábban beállított jelszó',
@@ -1062,7 +1062,7 @@ export default {
   },
   apps: {
     serverGroup: 'Ez a szerver',
-    serverGroupHint: 'Hogyan látják ezt a szervert a Downtify alkalmazások.',
+    serverGroupHint: 'Hogyan látják ezt a szervert a RaveVault alkalmazások.',
     serverName: 'Szerver neve',
     serverNameHint:
       'Megjelenik az alkalmazásokban és amikor szervereket keresnek a hálózaton.',
@@ -1086,7 +1086,7 @@ export default {
     signOutEverywhereTitle: 'Kijelentkezés mindenhol?',
     pairTitle: 'Telefon párosítása',
     pairBody:
-      'A Downtify alkalmazásban válassza a „Kód beolvasása” lehetőséget, és irányítsa ide a kamerát.',
+      'A RaveVault alkalmazásban válassza a „Kód beolvasása” lehetőséget, és irányítsa ide a kamerát.',
     qrLabel: 'QR-kód a párosításhoz',
     orTypeCode: 'vagy írja be ezt a kódot',
     expiresIn: 'Lejár: {time}',
@@ -1101,7 +1101,7 @@ export default {
       'Megszünteti az összes alkalmazásod párosítását, és minden böngészőből kijelentkeztet, ebből is.',
     signOutEverywhereBody:
       'Az alkalmazásaidat újra párosítanod kell, és minden böngészőben újra be kell jelentkezned.',
-    androidGroup: 'Downtify Androidra',
+    androidGroup: 'RaveVault Androidra',
     androidHint:
       'Alkalmazás, amely közvetlenül erről a szerverről böngészi és játssza a könyvtáradat.',
     androidBody:
@@ -1133,7 +1133,7 @@ export default {
   },
   port: {
     label: 'Port',
-    hint: 'A port, amelyen a Downtify figyel. A szerver indulásakor lép életbe, vagy azonnal a „Mentés és újraindítás” gombbal.',
+    hint: 'A port, amelyen a RaveVault figyel. A szerver indulásakor lép életbe, vagy azonnal a „Mentés és újraindítás” gombbal.',
     locked:
       'A szerveren a(z) {source} állítja be. Távolítsd el, hogy itt választhass portot.',
     save: 'Mentés',
@@ -1143,18 +1143,18 @@ export default {
     saved: 'A(z) {port} port mentve a következő indításhoz',
     invalid: '{min} és {max} közötti portot adj meg',
     dockerWarning:
-      'A Downtify Dockerben fut: állítsd a porttovábbítást ugyanarra a portra (ports: ÚJ:ÚJ), és hozd létre újra a konténert, vagy használd a network_mode: host beállítást - különben a Downtify elérhetetlen lesz. A DOWNTIFY_PORT beállítása visszaállítja a régi portot.',
+      'A RaveVault Dockerben fut: állítsd a porttovábbítást ugyanarra a portra (ports: ÚJ:ÚJ), és hozd létre újra a konténert, vagy használd a network_mode: host beállítást - különben a RaveVault elérhetetlen lesz. A DOWNTIFY_PORT beállítása visszaállítja a régi portot.',
     proxyWarning:
-      'A Downtify-t más címen éred el (fordított proxy vagy porttovábbítás): azt is irányítsd az új portra.',
+      'A RaveVault-t más címen éred el (fordított proxy vagy porttovábbítás): azt is irányítsd az új portra.',
     confirmTitle: 'Újraindítod a(z) {port} porton?',
     confirmBody:
       'A folyamatban lévő letöltések leállnak, és minden oldal és alkalmazás újracsatlakozik az új porton.',
     restartingTitle: 'Újraindítás a(z) {port} porton',
     restartingBody:
-      'Várakozás a Downtify-ra… Ez az oldal magától megnyitja az új címet.',
+      'Várakozás a RaveVault-ra… Ez az oldal magától megnyitja az új címet.',
     unreachable:
-      'A Downtify még nem válaszol az új porton. Próbáld az új címet, vagy nézd meg a szerver naplóit.',
-    openNew: 'A Downtify újraindul. Nyisd meg az új címén:',
+      'A RaveVault még nem válaszol az új porton. Próbáld az új címet, vagy nézd meg a szerver naplóit.',
+    openNew: 'A RaveVault újraindul. Nyisd meg az új címén:',
   },
   account: {
     title: 'Fiók',
@@ -1178,7 +1178,7 @@ export default {
     needsAdmin: 'Ezt csak admin teheti meg',
     defaultPasswordTitle: 'Változtasd meg az alapértelmezett jelszót',
     defaultPasswordBody:
-      '{name} az alapértelmezett jelszóval jelentkezett be, amelyet bárki ismer, aki ismeri a Downtify-t. Változtasd meg a Beállítások → Általános alatt.',
+      '{name} az alapértelmezett jelszóval jelentkezett be, amelyet bárki ismer, aki ismeri a RaveVault-t. Változtasd meg a Beállítások → Általános alatt.',
     later: 'Később',
     changePassword: 'Jelszó módosítása',
   },
@@ -1362,7 +1362,7 @@ export default {
     notFound: 'Már nem vagy feliratkozva erre a műsorra',
     noEpisodesTitle: 'Még nincs epizód',
     noEpisodesBody:
-      'A Downtify a saját ütemezése szerint ellenőrzi ezt a hírcsatornát.',
+      'A RaveVault a saját ütemezése szerint ellenőrzi ezt a hírcsatornát.',
     download: 'Epizód letöltése',
     downloadFailed: 'Az epizódot nem sikerült letölteni',
     played: 'Meghallgatva',
