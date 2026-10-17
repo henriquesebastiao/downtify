@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Collection
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -14,6 +15,8 @@ from .sqlite_utils import connect_sqlite
 from .track_index import normalize_spotify_track_id, resolve_existing_download
 
 _BATCH_STATUSES = frozenset({'in_progress', 'incomplete', 'complete'})
+#: What :meth:`Downloader.existing_filename_for` accepts as a match.
+_AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'ogg', 'opus', 'm4a'})
 
 
 def _now_iso() -> str:
@@ -292,6 +295,105 @@ def _existing_content_key(
         return ''
 
 
+def _norm_stored(name: str) -> str:
+    return str(name or '').strip().replace('\\', '/')
+
+
+@dataclass(frozen=True)
+class LibrarySnapshot:
+    """The library as already known in memory, for checking thousands of
+    playlist tracks without asking the disk (or a NAS) about each one.
+
+    *track_files* is the track index (``{spotify_id: filename}``),
+    *stored* the playable library paths from the listing snapshot.
+    """
+
+    track_files: dict[str, str]
+    stored: frozenset[str]
+    by_stem: dict[str, str]
+
+    @classmethod
+    def build(
+        cls, track_files: dict[str, str], stored_paths: Collection[str]
+    ) -> LibrarySnapshot:
+        stored = frozenset(_norm_stored(p) for p in stored_paths if p)
+        by_stem: dict[str, str] = {}
+        for path in sorted(stored):
+            stem, dot, ext = path.rpartition('.')
+            if dot and ext.lower() in _AUDIO_EXTENSIONS:
+                by_stem.setdefault(stem, path)
+        return cls(
+            track_files={
+                tid: _norm_stored(name) for tid, name in track_files.items()
+            },
+            stored=stored,
+            by_stem=by_stem,
+        )
+
+    def has(self, filename: str) -> bool:
+        return _norm_stored(filename) in self.stored
+
+    def file_for_stem(self, stem: str) -> Optional[str]:
+        return self.by_stem.get(_norm_stored(stem))
+
+
+def _file_on_disk(
+    track: dict[str, Any],
+    *,
+    downloader: Any,
+    track_index: Any,
+    subdir: Optional[str],
+    catalog_filenames: Optional[dict[str, str]],
+) -> Optional[str]:
+    """The library file holding *track*, checked on disk."""
+
+    hit = resolve_existing_download(
+        downloader,
+        track,
+        subdir=subdir,
+        track_index=track_index,
+    )
+    if hit:
+        return hit[0]
+    tid = normalize_spotify_track_id(track)
+    if tid and catalog_filenames:
+        candidate = str(catalog_filenames.get(tid) or '').strip()
+        if candidate and locate_library_file(
+            candidate,
+            Path(downloader.download_dir),
+            slskd_dir_from_downloader(downloader),
+        ):
+            return candidate
+    return None
+
+
+def _file_in_snapshot(
+    track: dict[str, Any],
+    snapshot: LibrarySnapshot,
+    *,
+    downloader: Any,
+    subdir: Optional[str],
+    catalog_filenames: Optional[dict[str, str]],
+) -> Optional[str]:
+    """The library file holding *track*, by the same rules as
+    :func:`_file_on_disk` (index, expected name, catalog), in memory."""
+
+    tid = normalize_spotify_track_id(track)
+    canonical = snapshot.track_files.get(tid) if tid else None
+    if canonical and snapshot.has(canonical):
+        return canonical
+    found = snapshot.file_for_stem(
+        downloader.expected_stem_for(track, subdir=subdir)
+    )
+    if found:
+        return found
+    if tid and catalog_filenames:
+        candidate = str(catalog_filenames.get(tid) or '').strip()
+        if candidate and snapshot.has(candidate):
+            return candidate
+    return None
+
+
 def split_tracks_by_library(
     tracks: list[dict[str, Any]],
     *,
@@ -300,12 +402,18 @@ def split_tracks_by_library(
     subdir: Optional[str] = None,
     catalog_filenames: Optional[dict[str, str]] = None,
     owned_keys: Optional[Collection[str]] = None,
+    snapshot: Optional[LibrarySnapshot] = None,
 ) -> tuple[int, list[dict[str, Any]]]:
     """Return ``(downloaded_count, missing_tracks)`` for *tracks*.
 
     With *owned_keys*: on-disk files nobody listed owns count as
     missing, so queuing them grants ownership through the usual dedup
     hit instead of skipping them silently.
+
+    With *snapshot*: tracks are matched against it instead of the disk
+    - no file system access and no track index writes, for summaries
+    that check every tracked playlist at once. It may lag the disk by a
+    listing refresh; callers that act on the result check the disk.
     """
 
     download_dir = Path(downloader.download_dir)
@@ -316,23 +424,22 @@ def split_tracks_by_library(
     for track in tracks:
         if not track.get('song_id') and not normalize_spotify_track_id(track):
             continue
-        filename: Optional[str] = None
-        hit = resolve_existing_download(
-            downloader,
-            track,
-            subdir=subdir,
-            track_index=track_index,
-        )
-        if hit:
-            filename = hit[0]
+        if snapshot is not None:
+            filename = _file_in_snapshot(
+                track,
+                snapshot,
+                downloader=downloader,
+                subdir=subdir,
+                catalog_filenames=catalog_filenames,
+            )
         else:
-            tid = normalize_spotify_track_id(track)
-            if tid and catalog_filenames:
-                candidate = str(catalog_filenames.get(tid) or '').strip()
-                if candidate and locate_library_file(
-                    candidate, download_dir, slskd_dir
-                ):
-                    filename = candidate
+            filename = _file_on_disk(
+                track,
+                downloader=downloader,
+                track_index=track_index,
+                subdir=subdir,
+                catalog_filenames=catalog_filenames,
+            )
         if filename is not None and owned is not None:
             key = _existing_content_key(filename, download_dir, slskd_dir)
             if not key or key not in owned:
