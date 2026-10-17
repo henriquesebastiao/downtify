@@ -69,7 +69,10 @@ const virtualizer = useWindowVirtualizer(
 )
 
 function measure(el) {
-  if (el) virtualizer.value.measureElement(el)
+  // Called with null as a row unmounts: that is when the virtualizer
+  // stops observing rows no longer in the page. Skipping it kept every
+  // row ever shown alive (its ResizeObserver held them).
+  virtualizer.value.measureElement(el)
 }
 
 function measureOffset() {
