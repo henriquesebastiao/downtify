@@ -38,6 +38,7 @@ from downtify import (
 )
 from downtify.activity import ActivityLog
 from downtify.auth import AuthMiddleware, AuthStore, auth_disabled_from_env
+from downtify.catalog_worker import start_catalog_worker
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
@@ -453,6 +454,7 @@ def build_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         loop = asyncio.get_running_loop()
+        start_catalog_worker()
         api.state.loop = loop
         api.state.download_semaphore = asyncio.Semaphore(
             api._clamp_parallel_downloads(
