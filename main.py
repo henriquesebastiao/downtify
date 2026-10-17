@@ -42,6 +42,7 @@ from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
 from downtify.cover_thumbs import CoverThumbs
+from downtify.cover_thumbs import normalize_size as normalize_cover_size
 from downtify.discover import DiscoverStore
 from downtify.discovery import Announcer, discovery_enabled
 from downtify.downloader import Downloader
@@ -953,12 +954,31 @@ def build_app() -> FastAPI:
         return read_track_lyrics(full)
 
     @app.get('/cover')
-    def get_cover(file: str):
+    def get_cover(file: str, size: str = ''):
+        """A library track's cover. ``size=150|300|600`` (longest side,
+        px) serves a scaled copy cached under ``<data>/cover_thumbs``, for
+        lists and grids that show it small; without it, the full image."""
         # Resolved and confined to the downloads or slskd folder, which
         # prevents path traversal.
         full = resolve_library_file(file, api.library_context())
         if full is None:
             raise HTTPException(status_code=404, detail='File not found')
+
+        thumbs = api.state.cover_thumbs
+        wanted = normalize_cover_size(size) if size else 0
+        # A cover only known to the cover cache (read-only extra folders)
+        # has nothing to scale: it falls through to the full image below.
+        found = thumbs.get(full, wanted) if wanted and thumbs else None
+        if found is not None:
+            thumb, thumb_mime, etag = found
+            return Response(
+                content=thumb,
+                media_type=thumb_mime,
+                headers={
+                    'Cache-Control': 'public, max-age=86400',
+                    'ETag': etag,
+                },
+            )
 
         data: bytes | None = None
         mime: str | None = None
