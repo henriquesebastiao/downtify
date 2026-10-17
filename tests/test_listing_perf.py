@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
+from types import SimpleNamespace
 
 from mutagen.id3 import ID3, TALB, TIT2, TPE1, TPE2
 
@@ -250,3 +251,52 @@ def test_a_hand_edited_m3u_shows_up_after_the_recheck_window(
         p['name'] for p in list_library_playlists(download_dir, stale_ok=True)
     ]
     assert names == ['Manual']
+
+
+def test_merging_a_download_neither_walks_nor_rewrites_the_snapshot(
+    tmp_path, monkeypatch
+):
+    """Each downloaded track used to fingerprint every library folder and
+    rewrite the whole sqlite snapshot - slow on a NAS, and repeated for
+    every track of a playlist. The refresh after the queue stores it."""
+
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    (download_dir / 'One.mp3').write_bytes(b'1')
+    invalidate_library_paths_cache()
+    set_listing_refresh_fn(lambda: None)
+    ctx = LibraryContext(download_dir=download_dir)
+    list_library_entries(ctx)
+    (download_dir / 'Two.mp3').write_bytes(b'2')
+
+    def no_walk(*_args, **_kwargs):
+        raise AssertionError('the library tree was fingerprinted')
+
+    def no_save(*_args, **_kwargs):
+        raise AssertionError('the snapshot was rewritten')
+
+    monkeypatch.setattr(paths_cache, 'library_tree_fingerprint', no_walk)
+    monkeypatch.setattr(
+        paths_cache, '_STORE', SimpleNamespace(save=no_save, load=no_save)
+    )
+    merge_library_listing_file(ctx, 'Two.mp3')
+    drop_library_listing_files(ctx, ['One.mp3'])
+
+    files = [row['file'] for row in listing_for_request(ctx)]
+    assert files == ['Two.mp3']
+
+
+def test_a_patched_listing_is_rebuilt_on_the_next_live_read(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    (download_dir / 'One.mp3').write_bytes(b'1')
+    invalidate_library_paths_cache()
+    set_listing_refresh_fn(lambda: None)
+    ctx = LibraryContext(download_dir=download_dir)
+    list_library_entries(ctx)
+    (download_dir / 'Two.mp3').write_bytes(b'2')
+    merge_library_listing_file(ctx, 'Two.mp3')
+    (download_dir / 'Three.mp3').write_bytes(b'3')
+
+    files = sorted(row['file'] for row in list_library_entries(ctx))
+    assert files == ['One.mp3', 'Three.mp3', 'Two.mp3']

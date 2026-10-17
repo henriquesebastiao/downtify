@@ -345,14 +345,32 @@ def get_cached_track_entries(
     return None
 
 
+#: Fingerprint of a RAM listing patched in place (one file added or
+#: removed): never equal to a real one, so the next live read rebuilds.
+PROVISIONAL_FINGERPRINT = ''
+
+
 def store_cached_track_entries(
     ctx: LibraryContext,
     entries: list[dict[str, Any]],
     playlists: Optional[list[dict[str, Any]]] = None,
     paths: Optional[list[tuple[str, str]]] = None,
+    *,
+    provisional: bool = False,
 ) -> None:
+    """Remember a folded listing in RAM and in sqlite.
+
+    *provisional* (a download or delete patching the listing) keeps it in
+    RAM only, without fingerprinting the tree: walking every library
+    folder and rewriting the whole snapshot for each downloaded track
+    was slow on a NAS. The refresh that follows the change (see
+    :func:`invalidate_library_paths_cache`) stores the real one.
+    """
+
     key = _cache_key(ctx)
-    fingerprint = _ctx_fingerprint(ctx)
+    fingerprint = (
+        PROVISIONAL_FINGERPRINT if provisional else _ctx_fingerprint(ctx)
+    )
     copied = list(entries)
     with _DATA_LOCK:
         _ENTRIES_CACHE[key] = (fingerprint, copied)
@@ -368,7 +386,7 @@ def store_cached_track_entries(
             if playlists is not None
             else list(_PLAYLIST_CACHE.get(key, (fingerprint, []))[1])
         )
-    if _STORE is None:
+    if _STORE is None or provisional:
         return
     try:
         _STORE.save(key, fingerprint, path_rows, playlist_rows, copied)

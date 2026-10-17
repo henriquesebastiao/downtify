@@ -396,7 +396,7 @@ def merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
     paths = peek_cached_path_pairs(ctx) or []
     if not any(str(item[0]) == name for item in paths):
         paths = [*paths, (name, str(full))]
-    store_cached_track_entries(ctx, merged, paths=paths)
+    store_cached_track_entries(ctx, merged, paths=paths, provisional=True)
 
 
 def drop_library_listing_files(
@@ -429,7 +429,7 @@ def drop_library_listing_files(
         for item in (peek_cached_path_pairs(ctx) or [])
         if str(item[0]).replace('\\', '/') not in names
     ]
-    store_cached_track_entries(ctx, kept, paths=paths)
+    store_cached_track_entries(ctx, kept, paths=paths, provisional=True)
 
 
 def entry_content_key(entry: dict[str, Any]) -> str:
