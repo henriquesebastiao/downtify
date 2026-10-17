@@ -90,6 +90,12 @@ Every write goes to a working copy beside the original (`<name>.downtify-upgrade
 
 The original **modification time is kept**, so upgrading a library doesn't reshuffle *Recently added*.
 
+### Read-only music folders
+
+An upgrade rewrites tags in place, so tracks on a read-only filesystem are **skipped**, with an explanation, before looking up metadata, artwork or lyrics. They remain playable and in their playlists; their files and mount permissions are left unchanged. A skipped read-only track is not remembered as successfully checked, so it can be considered again if its folder becomes writable later. Unexpected permission, disk-space and I/O errors still appear as failures.
+
+This differs from [existing-folder enrichment](external-library.md), which can keep artwork and lyrics separately in Downtify's data folder without rewriting protected audio files.
+
 ## Why audio isn't replaced
 
 Swapping the audio file a user already has is a different problem from rewriting its tags: it needs match confidence, a review step for uncertain matches, and every M3U, Navidrome playlist and catalog entry that points at the old filename has to follow it. Doing that half-way risks overwriting a good file with a worse one, so it is deliberately left out rather than guessed at.
