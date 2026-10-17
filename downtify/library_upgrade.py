@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import tempfile
 import threading
 import time
 from dataclasses import dataclass, field
@@ -436,6 +437,36 @@ def _pick_lyrics(
     return found if found is not None and found.has_any() else None
 
 
+def _publish_staged_lrc(source: Path, destination: Path) -> None:
+    """Publish on the destination filesystem, keeping source until verified.
+
+    Audio and centralized lyrics may be different Docker bind mounts;
+    os.replace(source, destination) would then raise EXDEV.
+    """
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Optional[Path] = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=destination.parent,
+            prefix='.downtify-upgrade-lrc-',
+            suffix='.tmp',
+            delete=False,
+        ) as output:
+            temporary = Path(output.name)
+            with source.open('rb') as incoming:
+                shutil.copyfileobj(incoming, output)
+            shutil.copymode(source, temporary)
+            output.flush()
+            os.fsync(output.fileno())
+        if temporary.read_bytes() != source.read_bytes():
+            raise OSError('Staged lyrics copy failed verification')
+        os.replace(str(temporary), str(destination))
+        source.unlink()
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def _write_upgrade(
     full: Path,
     song: dict[str, Any],
@@ -483,7 +514,7 @@ def _write_upgrade(
     if new_lyrics is not None and staged_lrc.exists():
         dest_lrc = lyrics_mod.lrc_path_for(full)
         dest_lrc.parent.mkdir(parents=True, exist_ok=True)
-        os.replace(str(staged_lrc), str(dest_lrc))
+        _publish_staged_lrc(staged_lrc, dest_lrc)
         beside = full.with_suffix('.lrc')
         if dest_lrc != beside:
             beside.unlink(missing_ok=True)
