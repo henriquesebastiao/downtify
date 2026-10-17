@@ -896,7 +896,16 @@ def _parse_soulseek_path(filename: str) -> tuple[str, str]:
 
 def _transfer_failed(status: dict[str, Any]) -> bool:
     state = str(status.get('state') or '')
-    return 'Errored' in state or 'Cancelled' in state or 'Aborted' in state
+    return any(
+        failure in state
+        for failure in (
+            'Errored',
+            'Cancelled',
+            'Aborted',
+            'Rejected',
+            'TimedOut',
+        )
+    )
 
 
 def _transfer_succeeded(status: dict[str, Any]) -> bool:
