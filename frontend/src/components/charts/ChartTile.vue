@@ -1,37 +1,39 @@
 <template>
   <article class="tile group relative flex min-w-0 flex-col gap-2.5">
-    <RouterLink :to="linkTo" class="block" :aria-label="item.name">
-      <CoverArt
-        :src="item.cover_url"
-        :name="item.name"
-        :round="round"
-        :icon="icon"
-        shadow
-        :letter-size="round ? 40 : 52"
-        class="aspect-square w-full"
-      >
-        <span
-          v-if="rank && !round"
-          class="absolute top-2.5 left-2.5 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur"
-          >{{ rank }}</span
+    <div class="relative">
+      <RouterLink :to="linkTo" class="block" :aria-label="item.name">
+        <CoverArt
+          :src="item.cover_url"
+          :name="item.name"
+          :round="round"
+          :icon="icon"
+          shadow
+          :letter-size="round ? 40 : 52"
+          class="aspect-square w-full"
         >
-      </CoverArt>
-    </RouterLink>
-    <button
-      v-if="downloadable"
-      type="button"
-      class="tile-play absolute right-3 bottom-[4.25rem] flex size-11 items-center justify-center rounded-full shadow-float transition-transform hover:scale-105"
-      :class="queued ? 'bg-surface text-accent' : 'bg-accent text-on-accent'"
-      :aria-label="t('actions.downloadItem', { name: item.name })"
-      :disabled="queued"
-      @click="download"
-    >
-      <AppIcon
-        :name="queued ? 'check' : 'download'"
-        :size="18"
-        stroke-width="2.2"
-      />
-    </button>
+          <span
+            v-if="rank && !round"
+            class="absolute top-2.5 left-2.5 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur"
+            >{{ rank }}</span
+          >
+        </CoverArt>
+      </RouterLink>
+      <button
+        v-if="downloadable"
+        type="button"
+        class="tile-play absolute right-3 bottom-3 flex size-11 items-center justify-center rounded-full shadow-float transition-transform hover:scale-105"
+        :class="queued ? 'bg-surface text-accent' : 'bg-accent text-on-accent'"
+        :aria-label="t('actions.downloadItem', { name: item.name })"
+        :disabled="queued"
+        @click="download"
+      >
+        <AppIcon
+          :name="queued ? 'check' : 'download'"
+          :size="18"
+          stroke-width="2.2"
+        />
+      </button>
+    </div>
     <RouterLink
       :to="linkTo"
       class="flex min-w-0 flex-col gap-0.5"
@@ -40,6 +42,30 @@
       <span class="w-full truncate text-sm font-semibold">{{ item.name }}</span>
       <span class="w-full truncate text-[13px] text-muted">{{ subtitle }}</span>
     </RouterLink>
+    <div v-if="kind === 'playlist'" class="flex flex-wrap gap-1">
+      <UiButton
+        size="sm"
+        variant="ghost"
+        icon="radar"
+        class="max-w-full !whitespace-normal"
+        :loading="watching"
+        :disabled="watched"
+        @click="watchPlaylist"
+      >
+        {{ watched ? t('nav.monitor') : t('monitor.watchPlaylist') }}
+      </UiButton>
+      <UiButton
+        v-if="auth.isAdmin.value"
+        size="sm"
+        variant="ghost"
+        icon="plus"
+        class="max-w-full !whitespace-normal"
+        :loading="adding"
+        @click="addDownloaded"
+      >
+        {{ t('playlists.addDownloaded') }}
+      </UiButton>
+    </div>
   </article>
 </template>
 
@@ -55,6 +81,13 @@
 import { computed, ref } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
+import UiButton from '../ui/UiButton.vue'
+import API from '/src/model/api'
+import monitorAPI from '/src/model/monitor'
+import { useAuth } from '/src/model/auth'
+import { useLibrary } from '/src/model/library'
+import { usePlaylistActions } from '/src/model/playlistActions'
+import { playableQueue } from '/src/lib/topSongs'
 import { useDownloadManager } from '/src/model/download'
 import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
@@ -72,6 +105,12 @@ const { t } = useI18n()
 const dm = useDownloadManager()
 const ui = useUi()
 const queued = ref(false)
+const watching = ref(false)
+const watched = ref(false)
+const adding = ref(false)
+const auth = useAuth()
+const library = useLibrary()
+const playlistActions = usePlaylistActions()
 
 const round = computed(() => props.kind === 'artist')
 // An artist resolves to release summaries, not songs - nothing fromURL
@@ -114,6 +153,43 @@ async function download() {
     ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
       kind: 'error',
     })
+  }
+}
+
+async function watchPlaylist() {
+  if (watching.value || watched.value) return
+  watching.value = true
+  try {
+    await monitorAPI.addMonitoredPlaylist(props.item.url, 360)
+    watched.value = true
+    ui.toast(t('toast.watching', { name: props.item.name }), {
+      kind: 'success',
+    })
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    watching.value = false
+  }
+}
+
+async function addDownloaded() {
+  if (adding.value) return
+  adding.value = true
+  try {
+    const { data } = await API.open(props.item.url)
+    if (!Array.isArray(data)) throw new Error('Expected playlist tracks')
+    await library.lookupSongs(data)
+    const tracks = playableQueue(data, library.findTrack)
+    if (tracks.length) playlistActions.openCreate(tracks)
+    else ui.toast(t('playlists.downloadFirst'), { kind: 'error' })
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    adding.value = false
   }
 }
 </script>

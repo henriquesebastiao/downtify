@@ -1897,7 +1897,7 @@ Watches belong to whoever created them (admins see every watch); sweeps attribut
 
 List all watches (playlists and artists).
 
-**Response:** Array of watch objects. Each has a `kind` of `"playlist"`, `"artist"` or `"podcast"`, and a `source` of `"spotify"` or `"youtube_music"` (the service the watch was added from, read from its `url`; meaningless for a podcast watch). `spotify_id` is the watch's unique key: the Spotify or YouTube Music playlist id, an artist's YouTube Music channel id, or a podcast's RSS feed URL. For an artist watch, `last_track_count` is the number of releases, `release_types` the kinds of release it downloads (a subset of `["album", "single", "ep"]`, in that order) and `new_only` whether it skips what the artist had released when the watch started — see [Choosing what to download](features/playlist-monitor.md#choosing-what-to-download). Playlist watches carry the same two fields at their defaults (all kinds, `false`); they don't mean anything there.
+**Response:** Array of watch objects. Each has a `kind` of `"playlist"`, `"artist"` or `"podcast"`, and a `source` of `"spotify"`, `"deezer"` or `"youtube_music"` (the service the watch was added from, read from its `url`; meaningless for a podcast watch). `spotify_id` is the watch's unique key: the Spotify or YouTube Music playlist id, `deezer:playlist:<id>` for a Deezer playlist, an artist's YouTube Music channel id, or a podcast's RSS feed URL. For an artist watch, `last_track_count` is the number of releases, `release_types` the kinds of release it downloads (a subset of `["album", "single", "ep"]`, in that order) and `new_only` whether it skips what the artist had released when the watch started — see [Choosing what to download](features/playlist-monitor.md#choosing-what-to-download). Playlist watches carry the same two fields at their defaults (all kinds, `false`); they don't mean anything there.
 
 A podcast watch only ever appears here — it's created, updated and deleted through [`POST /api/podcasts/subscribe`](#podcasts) and friends, not through this endpoint's `POST`/`PATCH`/`DELETE`, since a podcast needs a retention policy the generic watch shape has no room for.
 
@@ -1919,6 +1919,7 @@ Add a watch. Triggers an immediate initial download.
 | `url` | Creates |
 |-------|---------|
 | Spotify playlist URL | A playlist watch |
+| Public Deezer playlist URL (`deezer.com/playlist/…`) | A playlist watch |
 | YouTube Music playlist URL (`…/playlist?list=…`) | A playlist watch |
 | Spotify artist URL | An artist watch (resolved to the matching YouTube Music artist — see [Artist Watch](features/playlist-monitor.md#artist-watch)) |
 | YouTube Music artist URL (`…/channel/UC…` or `…/@handle`) | An artist watch |
