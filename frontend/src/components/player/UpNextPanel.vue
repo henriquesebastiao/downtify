@@ -25,6 +25,7 @@
         class="mb-1 flex h-14 items-center gap-3 rounded-[10px] bg-white/10 px-2.5"
       >
         <CoverArt
+          :thumb="150"
           :src="current.hasCover ? current.cover : ''"
           :name="current.album || current.title"
           rounded="rounded-[6px]"
@@ -60,6 +61,7 @@
             @click="player.playAt(item.index)"
           >
             <CoverArt
+              :thumb="150"
               :src="item.track.hasCover ? item.track.cover : ''"
               :name="item.track.album || item.track.title"
               rounded="rounded-[6px]"

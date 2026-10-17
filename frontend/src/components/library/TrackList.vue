@@ -124,6 +124,7 @@
             @click.stop="playRow(row)"
           >
             <CoverArt
+              :thumb="150"
               :src="row.track.hasCover ? row.track.cover : ''"
               :name="row.track.album || row.track.title"
               rounded="rounded-[6px]"
