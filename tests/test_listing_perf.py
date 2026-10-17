@@ -8,7 +8,8 @@ import time
 
 from mutagen.id3 import ID3, TALB, TIT2, TPE1, TPE2
 
-from downtify import api
+from downtify import api, m3u
+from downtify import library_paths_cache as paths_cache
 from downtify.downloader import Downloader
 from downtify.library_catalog import (
     LibraryContext,
@@ -178,3 +179,74 @@ def test_a_delete_removes_the_search_downloaded_badge(tmp_path, monkeypatch):
 
     assert lookup_library_songs(ctx, wanted) == []
     assert listing_for_request(ctx) == []
+
+
+def _count_m3u_walks(monkeypatch):
+    calls = []
+    real = paths_cache.playlist_listing_fingerprint
+
+    def counting(download_dir):
+        calls.append(download_dir)
+        return real(download_dir)
+
+    monkeypatch.setattr(paths_cache, 'playlist_listing_fingerprint', counting)
+    return calls
+
+
+def test_ui_playlist_reads_skip_the_m3u_walk_while_fresh(
+    tmp_path, monkeypatch
+):
+    """Walking the downloads folder for M3U files on every page took
+    ~300 ms on a NAS: a recently checked listing is served as is."""
+
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    (download_dir / 'Song.mp3').write_bytes(b'x')
+    invalidate_library_paths_cache()
+    set_listing_refresh_fn(lambda: None)
+    walks = _count_m3u_walks(monkeypatch)
+
+    list_library_playlists(download_dir, stale_ok=True)
+    list_library_playlists(download_dir, stale_ok=True)
+    list_library_playlists(download_dir, stale_ok=True)
+
+    assert len(walks) == 1
+
+
+def test_writing_an_m3u_shows_up_on_the_next_ui_read(tmp_path):
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    (download_dir / 'Song.mp3').write_bytes(b'x')
+    invalidate_library_paths_cache()
+    set_listing_refresh_fn(lambda: None)
+    assert list_library_playlists(download_dir, stale_ok=True) == []
+
+    m3u.write_m3u(download_dir, 'Road Trip', [{'filename': 'Song.mp3'}])
+
+    names = [
+        p['name'] for p in list_library_playlists(download_dir, stale_ok=True)
+    ]
+    assert names == ['Road Trip']
+
+
+def test_a_hand_edited_m3u_shows_up_after_the_recheck_window(
+    tmp_path, monkeypatch
+):
+    download_dir = tmp_path / 'downloads'
+    (download_dir / 'Playlists').mkdir(parents=True)
+    (download_dir / 'Song.mp3').write_bytes(b'x')
+    invalidate_library_paths_cache()
+    set_listing_refresh_fn(lambda: None)
+    assert list_library_playlists(download_dir, stale_ok=True) == []
+
+    (download_dir / 'Playlists' / 'Manual.m3u').write_text(
+        '#EXTM3U\n../Song.mp3\n', encoding='utf-8'
+    )
+    assert list_library_playlists(download_dir, stale_ok=True) == []
+
+    clock = time.monotonic() + paths_cache.PLAYLIST_RECHECK_SECONDS + 1
+    monkeypatch.setattr(paths_cache.time, 'monotonic', lambda: clock)
+    names = [
+        p['name'] for p in list_library_playlists(download_dir, stale_ok=True)
+    ]
+    assert names == ['Manual']

@@ -41,6 +41,13 @@ _REFRESH_GATE: Optional[Callable[[], bool]] = None
 # Seconds to wait after the last invalidation before walking the tree,
 # so a playlist queue does not rescan extra folders after every track.
 _REFRESH_DEBOUNCE_S = 5.0
+#: Seconds a checked ``GET /playlists`` listing is served without walking
+#: the downloads folder for M3U files again (slow on a NAS). Downtify's
+#: own M3U writes drop it at once (:func:`forget_cached_playlists`); this
+#: bounds how late an M3U changed by hand shows up.
+PLAYLIST_RECHECK_SECONDS = 60.0
+#: When each playlist listing was last checked against the disk.
+_PLAYLIST_CHECKED: dict[str, float] = {}
 
 
 def set_listing_refresh_fn(fn: Callable[[], None]) -> None:
@@ -127,7 +134,17 @@ def drop_listing_memory_caches() -> None:
     with _DATA_LOCK:
         _PATH_CACHE.clear()
         _PLAYLIST_CACHE.clear()
+        _PLAYLIST_CHECKED.clear()
         _ENTRIES_CACHE.clear()
+
+
+def forget_cached_playlists() -> None:
+    """Drop the playlist listing (an M3U was just written); the next
+    ``GET /playlists`` reads the M3U files again."""
+
+    with _DATA_LOCK:
+        _PLAYLIST_CACHE.clear()
+        _PLAYLIST_CHECKED.clear()
 
 
 def _hydrate_snapshot(key: str, snap: dict[str, Any]) -> None:
@@ -280,32 +297,34 @@ def get_cached_playlists(
 ) -> list[dict[str, Any]]:
     """``GET /playlists`` rows.
 
-    *stale_ok* returns the RAM snapshot immediately (no M3U walk) and
-    rebuilds in the background. Live callers omit it so tests and writes
-    see a new M3U on the next listing.
+    *stale_ok* (UI reads) serves the RAM listing without walking the
+    downloads folder when it was checked in the last
+    :data:`PLAYLIST_RECHECK_SECONDS`. Without it, every call checks the
+    M3U files, so tests and writes see a new M3U on the next listing.
     """
 
     key = cache_key_for_dirs(download_dir, slskd_dir, extra_dirs)
     with _DATA_LOCK:
         hit = _PLAYLIST_CACHE.get(key)
         cached = list(hit[1]) if hit is not None else None
-    if cached is not None and stale_ok:
+        checked = _PLAYLIST_CHECKED.get(key)
+    fresh = (
+        checked is not None
+        and time.monotonic() - checked < PLAYLIST_RECHECK_SECONDS
+    )
+    if cached is not None and stale_ok and fresh:
         return cached
-    if cached is not None:
-        fingerprint = playlist_listing_fingerprint(download_dir)
-        with _DATA_LOCK:
-            hit = _PLAYLIST_CACHE.get(key)
-            if hit is not None and hit[0] == fingerprint:
-                return list(hit[1])
     with _PLAYLIST_LOCK:
         fingerprint = playlist_listing_fingerprint(download_dir)
         with _DATA_LOCK:
             hit = _PLAYLIST_CACHE.get(key)
             if hit is not None and hit[0] == fingerprint:
+                _PLAYLIST_CHECKED[key] = time.monotonic()
                 return list(hit[1])
         playlists = build_fn()
         with _DATA_LOCK:
             _PLAYLIST_CACHE[key] = (fingerprint, playlists)
+            _PLAYLIST_CHECKED[key] = time.monotonic()
         return list(playlists)
 
 
@@ -388,6 +407,7 @@ def invalidate_library_paths_cache(
 
     with _DATA_LOCK:
         _PLAYLIST_CACHE.clear()
+        _PLAYLIST_CHECKED.clear()
         if drop_entries:
             _PATH_CACHE.clear()
             _ENTRIES_CACHE.clear()
