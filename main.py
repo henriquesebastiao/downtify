@@ -99,7 +99,11 @@ from downtify.stream import stream_cache_from_env
 from downtify.telemetry import redact_url_secrets
 from downtify.track_index import TrackIndex
 from downtify.track_owners import TrackOwners
-from downtify.traffic import TrafficCounters, TrafficMiddleware
+from downtify.traffic import (
+    TrafficCounters,
+    TrafficMiddleware,
+    traffic_flush_loop,
+)
 from downtify.transcode import transcoder_from_env
 from downtify.update_check import UpdateChecker, update_check_loop
 
@@ -497,6 +501,12 @@ def build_app() -> FastAPI:
                 get_podcasts=lambda: api.state.podcasts,
             ),
             name='monitor-loop',
+        )
+        # Served bytes are counted in memory (an event-loop write per
+        # response stalled every request); this saves them.
+        api.spawn_task(
+            traffic_flush_loop(lambda: api.state.traffic),
+            name='traffic-flush',
         )
         # Separate hourly sweep that forgets a downloaded-track record once
         # its file is gone from the downloads directory — see

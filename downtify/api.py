@@ -1469,6 +1469,12 @@ async def shutdown_resources() -> None:
         except Exception:
             logger.exception('Library upgrade: could not pause on shutdown')
 
+    if state.traffic is not None:
+        try:
+            await asyncio.to_thread(state.traffic.flush)
+        except Exception:
+            logger.exception('Traffic counters: could not save on shutdown')
+
     try:
         loop = asyncio.get_running_loop()
         await asyncio.wait_for(
