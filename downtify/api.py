@@ -423,9 +423,11 @@ from .manual_playlists import (
 )
 from .monitor import (
     ALL_RELEASE_TYPES,
+    DEEZER_PLAYLIST_PREFIX,
     KIND_ARTIST,
     KIND_PLAYLIST,
     KIND_PODCAST,
+    SOURCE_DEEZER,
     SOURCE_SPOTIFY,
     LibraryStores,
     MonitoredPlaylist,
@@ -3759,22 +3761,14 @@ async def _write_batch_m3u(
     return m3u_path
 
 
-# A Deezer playlist download is named/covered here the same way a Spotify/
-# YouTube Music one is, without teaching Playlist Monitor's own
-# parse_playlist_url/fetch_playlist/download_playlist_cover (SOURCE_SPOTIFY/
-# SOURCE_YOUTUBE_MUSIC, imported above) about Deezer - Monitor has no Deezer
-# watch support, and _resolve_watch_target below still only recognizes a
-# Spotify or YouTube Music playlist/artist URL, unaffected by this.
+# Batch downloads and watches share the public playlist URL parser.
 _SOURCE_DEEZER = 'deezer'
 
 
 def _playlist_target_for_batch(
     playlist_url: str,
 ) -> Optional[tuple[str, str]]:
-    """``(source, id)`` to name and cover a playlist download with - a
-    Spotify/YouTube Music playlist via :func:`parse_playlist_url`, or a
-    Deezer one (download-only, see :data:`_SOURCE_DEEZER`)."""
-
+    """``(source, id)`` to name and cover a playlist download with."""
     target = parse_playlist_url(playlist_url)
     if target is not None:
         return target
@@ -6196,7 +6190,7 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
     if source_and_id is None:
         raise HTTPException(
             status_code=400,
-            detail='Not a Spotify or YouTube Music playlist URL',
+            detail='Not a Spotify, Deezer or YouTube Music playlist URL',
         )
 
     tracks = payload.get('tracks') or []
@@ -7580,7 +7574,7 @@ async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
 
     playlist_target = parse_playlist_url(url)
     if playlist_target is not None:
-        _, playlist_id = playlist_target
+        source, playlist_id = playlist_target
         try:
             name, _tracks = await asyncio.to_thread(
                 fetch_playlist, *playlist_target
@@ -7588,7 +7582,12 @@ async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
         except Exception as exc:
             logger.exception('Failed to resolve playlist {}', playlist_id)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
-        return KIND_PLAYLIST, playlist_id, name
+        watch_key = (
+            DEEZER_PLAYLIST_PREFIX + playlist_id
+            if source == SOURCE_DEEZER
+            else playlist_id
+        )
+        return KIND_PLAYLIST, watch_key, name
 
     spotify_parsed = spotify.parse_spotify_url(url)
     if spotify_parsed is not None and spotify_parsed[0] == 'artist':
@@ -7627,7 +7626,7 @@ async def _resolve_watch_target(url: str) -> tuple[str, str, str]:
     raise HTTPException(
         status_code=400,
         detail=(
-            'A Spotify or YouTube Music playlist URL, or a Spotify or '
+            'A Spotify, Deezer or YouTube Music playlist URL, or a Spotify or '
             'YouTube Music artist URL, is required'
         ),
     )

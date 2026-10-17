@@ -487,6 +487,8 @@ export default {
     fetchFailed: 'Could not fetch a bio for this artist',
   },
   playlists: {
+    addDownloaded: 'Add downloaded to playlist',
+    downloadFirst: 'Download some tracks from this playlist first.',
     kicker: 'Playlist',
     notFound: 'Playlist not found',
     progress: '{have} of {total} downloaded',
@@ -621,6 +623,9 @@ export default {
       "The equalizer couldn't start. Playback continues without it.",
   },
   monitor: {
+    artistLinkFallback:
+      'The Spotify artist link could not be resolved. Paste the correct link to follow this artist.',
+    needSpotifyArtist: 'Paste a Spotify artist link.',
     releaseTypes: 'Download',
     releaseTypesAtLeastOne: 'Keep at least one kind of release',
     release: { album: 'Albums', single: 'Singles', ep: 'EPs' },
@@ -671,7 +676,8 @@ export default {
     everyMonths: { one: 'Every month', other: 'Every {count} months' },
     urlLabelPlaylist: 'Playlist link',
     urlLabelArtist: 'Artist link',
-    urlPlaceholderPlaylist: 'Paste a Spotify or YouTube Music playlist link',
+    urlPlaceholderPlaylist:
+      'Paste a Spotify, Deezer or YouTube Music playlist link',
     urlPlaceholderArtist: 'Paste a Spotify or YouTube Music artist link',
     watchPlaylist: 'Watch playlist',
     watchArtist: 'Watch artist',

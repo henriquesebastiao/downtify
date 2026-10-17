@@ -21,6 +21,26 @@ def _norm_path(filename: str) -> str:
     return str(filename or '').strip().replace('\\', '/')
 
 
+def _catalog_track_id(song: dict[str, Any]) -> Optional[str]:
+    """Stable playlist membership key; never put Deezer in TrackIndex.
+
+    The legacy column name is ``track_spotify_id``, but its TEXT key can
+    also hold the Deezer resolver's explicitly namespaced track identity.
+    """
+    spotify_id = normalize_spotify_track_id(song)
+    if spotify_id:
+        return spotify_id
+    track_id = str(song.get('song_id') or '')
+    if (
+        song.get('source') == 'deezer'
+        and track_id.startswith('deezer-')
+        and track_id.removeprefix('deezer-').isascii()
+        and track_id.removeprefix('deezer-').isdigit()
+    ):
+        return track_id
+    return None
+
+
 def _chunked(values: list[str], size: int):
     for index in range(0, len(values), size):
         chunk = values[index : index + size]
@@ -29,7 +49,7 @@ def _chunked(values: list[str], size: int):
 
 
 class PlaylistCatalog:
-    """Maps playlist names to ordered Spotify tracks and library paths."""
+    """Maps playlist names to ordered track identities and library paths."""
 
     def __init__(self, db_path: Path) -> None:
         self._path = str(db_path)
@@ -122,7 +142,7 @@ class PlaylistCatalog:
         track_order: int = 0,
     ) -> None:
         pl_name = str(playlist_name or '').strip()
-        tid = normalize_spotify_track_id(song)
+        tid = _catalog_track_id(song)
         name = _norm_path(filename)
         if not pl_name or not tid or not name:
             return

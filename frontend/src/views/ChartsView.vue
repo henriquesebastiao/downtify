@@ -68,7 +68,7 @@
       >
         <ChartTile
           v-for="(item, i) in activeReleases"
-          :key="item.album_id || item.artist_id || item.playlist_id"
+          :key="`${tab}:${item.album_id || item.artist_id || item.playlist_id}`"
           :item="item"
           :kind="RELEASE_KIND[tab]"
           :rank="i + 1"
