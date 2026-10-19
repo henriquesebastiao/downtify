@@ -433,6 +433,9 @@ def test_titles_match_accepts_differently_formatted_live_tag():
         ('Tubarões - Ao Vivo', 'Tubarões', False),
         ('Yellow', 'Yellow - Live', False),
         ('A - B', 'A - B (Live)', False),
+        # Text that continues the shared dash segment names another take.
+        ('Wait It Out - Live', 'Wait It Out - Live at Wembley', False),
+        ('A - B', 'A - B - Bonus', False),
         ('U', 'Unplugged', False),
     ],
 )

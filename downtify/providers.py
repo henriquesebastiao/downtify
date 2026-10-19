@@ -1749,13 +1749,19 @@ def _names_match(target: Any, candidate: Any) -> bool:
 
     t = _norm_compact_title(target)
     c = _norm_compact_title(candidate)
-    # The rewrite only touches the last " - " segment, so a name that itself
-    # contains " - " can be rewritten on one side but not on the other (a
-    # "(feat. …)" suffix blocks it); compare the plain forms as well.
-    return _normalized_names_match(
+    if _normalized_names_match(
         _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', t),
         _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', c),
-    ) or _normalized_names_match(t, c)
+    ):
+        return True
+    # The rewrite only touches the last " - " segment, so a name that itself
+    # contains " - " can be rewritten on one side but not on the other (a
+    # "(feat. …)" suffix blocks it); compare the plain forms as well. Only a
+    # bracketed tag may follow the shared name there: text that continues
+    # its last segment ("- Live" vs "- Live at Wembley") names another take.
+    shorter, longer = sorted((t, c), key=len)
+    tail = longer[len(shorter) :].lstrip()
+    return tail.startswith(('(', '[')) and _normalized_names_match(t, c)
 
 
 def _normalized_names_match(t: str, c: str) -> bool:
