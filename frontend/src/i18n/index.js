@@ -7,6 +7,7 @@ import fr from './locales/fr.js'
 import tr from './locales/tr.js'
 import hu from './locales/hu.js'
 import bg from './locales/bg.js'
+import de from './locales/de.js'
 
 // Registry of available locales. To add a new language:
 //   1. Create ./locales/<code>.js exporting the same key shape as en.js
@@ -22,6 +23,7 @@ export const AVAILABLE_LOCALES = [
   { code: 'tr', name: 'Türkçe', messages: tr },
   { code: 'hu', name: 'Magyar', messages: hu },
   { code: 'bg', name: 'Български', messages: bg },
+  { code: 'de', name: 'Deutsch', messages: de },
 ]
 
 const DEFAULT_LOCALE = 'en'
