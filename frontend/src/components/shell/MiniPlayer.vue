@@ -36,6 +36,7 @@
           @click="nowPlaying.open()"
         >
           <CoverArt
+            :thumb="150"
             :src="track.hasCover ? track.cover : ''"
             :name="track.album || track.title"
             rounded="rounded-[10px]"

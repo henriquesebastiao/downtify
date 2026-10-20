@@ -4,6 +4,7 @@
   >
     <RouterLink :to="to" class="flex min-w-0 flex-1 items-center gap-4">
       <CoverArt
+        :thumb="150"
         :src="cover"
         :fallback="fallback"
         :covers="covers"

@@ -159,54 +159,59 @@
       />
     </template>
 
-    <!-- Albums / artists / playlists: grid -->
-    <div
+    <!-- Albums / artists / playlists: grid (only the rows on screen) -->
+    <VirtualGrid
       v-else-if="view === 'grid'"
-      class="grid grid-cols-2 gap-x-4 gap-y-7 xs:gap-x-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 min-[1900px]:grid-cols-7"
+      :key="`grid-${tab}`"
+      :items="items"
     >
-      <MediaTile
-        v-for="item in items"
-        :key="item.key"
-        v-bind="tileProps(item)"
-        class="[contain-intrinsic-size:auto_260px] [content-visibility:auto]"
-        @play="playItem(item)"
-      >
-        <template
-          v-if="tab === 'playlists' && item.batch?.missing_count"
-          #badge
-        >
-          <span
-            class="absolute right-2.5 bottom-2.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-warn backdrop-blur"
+      <template #default="{ item }">
+        <MediaTile v-bind="tileProps(item)" @play="playItem(item)">
+          <template
+            v-if="tab === 'playlists' && item.batch?.missing_count"
+            #badge
           >
-            {{
-              t('playlists.missingShort', { count: item.batch.missing_count })
-            }}
-          </span>
-        </template>
-      </MediaTile>
-    </div>
+            <span
+              class="absolute right-2.5 bottom-2.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-warn backdrop-blur"
+            >
+              {{
+                t('playlists.missingShort', {
+                  count: item.batch.missing_count,
+                })
+              }}
+            </span>
+          </template>
+        </MediaTile>
+      </template>
+    </VirtualGrid>
 
-    <!-- Albums / artists / playlists: list -->
-    <div v-else class="-mx-3 flex flex-col">
-      <MediaRow
-        v-for="item in items"
-        :key="item.key"
-        v-bind="tileProps(item)"
-        :aside="asideFor(item)"
-        class="[contain-intrinsic-size:auto_72px] [content-visibility:auto]"
-        @play="playItem(item)"
+    <!-- Albums / artists / playlists: list (only the rows on screen) -->
+    <div v-else class="-mx-3">
+      <VirtualGrid
+        :key="`list-${tab}`"
+        :items="items"
+        layout="list"
+        :row-height="72"
       >
-        <template v-if="tab === 'playlists'" #meta>
-          <PlaylistStatus :playlist="item" class="w-56" />
+        <template #default="{ item }">
+          <MediaRow
+            v-bind="tileProps(item)"
+            :aside="asideFor(item)"
+            @play="playItem(item)"
+          >
+            <template v-if="tab === 'playlists'" #meta>
+              <PlaylistStatus :playlist="item" class="w-56" />
+            </template>
+            <template v-if="tab === 'playlists'" #actions>
+              <UiMenu
+                :items="playlistMenu(item)"
+                :label="t('common.more')"
+                size="sm"
+              />
+            </template>
+          </MediaRow>
         </template>
-        <template v-if="tab === 'playlists'" #actions>
-          <UiMenu
-            :items="playlistMenu(item)"
-            :label="t('common.more')"
-            size="sm"
-          />
-        </template>
-      </MediaRow>
+      </VirtualGrid>
     </div>
   </div>
 </template>
@@ -226,6 +231,7 @@ import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import MediaRow from '/src/components/library/MediaRow.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'
+import VirtualGrid from '/src/components/library/VirtualGrid.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'

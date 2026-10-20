@@ -1036,6 +1036,7 @@ Return cover art for a library file: `/data/cover_cache` first (including covers
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `file` | string | yes | Relative path to the file |
+| `size` | integer | no | `150`, `300` or `600` (longest side, px; other values round up to the next one, anything above `600` is full size). Serves a scaled JPEG made once with ffmpeg and kept under `/data/cover_thumbs`, with an `ETag`. The web UI asks for `300` in grids and `150` in lists. A cover only found in `/data/cover_cache` (or without ffmpeg) comes back full size. |
 
 **Response:** Image bytes (`image/jpeg` or `image/png`). Returns `404` if none of those sources have a cover.
 

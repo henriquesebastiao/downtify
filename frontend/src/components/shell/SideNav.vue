@@ -68,6 +68,7 @@
         class="flex h-11 items-center gap-2.5 rounded-control px-3 transition-colors hover:bg-surface-2/60"
       >
         <CoverArt
+          :thumb="150"
           :src="playlist.cover"
           :covers="playlist.covers"
           :name="playlist.title"

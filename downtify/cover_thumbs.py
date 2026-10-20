@@ -17,6 +17,7 @@ import hashlib
 import json
 import shutil
 import subprocess
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -26,6 +27,10 @@ from .cover_art import extract_cover_art
 
 #: The sizes (px, longest side) a client may ask for; ``0`` is full size.
 SIZES = (150, 300, 600)
+#: ffmpeg processes scaling covers at once. A first scroll through a
+#: large library asks for thousands of thumbnails; each is made once.
+MAX_PARALLEL_SCALES = 4
+_SCALE_SLOTS = threading.BoundedSemaphore(MAX_PARALLEL_SCALES)
 
 
 def normalize_size(value: object) -> int:
@@ -100,35 +105,41 @@ class CoverThumbs:
         if not self._ffmpeg:
             return None
         try:
-            result = subprocess.run(
-                [
-                    self._ffmpeg,
-                    '-nostdin',
-                    '-hide_banner',
-                    '-loglevel',
-                    'error',
-                    '-i',
-                    'pipe:0',
-                    '-vf',
-                    f'scale={size}:{size}:force_original_aspect_ratio=decrease',
-                    '-frames:v',
-                    '1',
-                    '-q:v',
-                    '4',
-                    '-f',
-                    'image2',
-                    '-c:v',
-                    'mjpeg',
-                    'pipe:1',
-                ],
-                input=data,
-                capture_output=True,
-                timeout=20,
-                check=False,
-            )
+            with _SCALE_SLOTS:
+                result = self._run_ffmpeg(data, size)
         except (OSError, subprocess.TimeoutExpired):
             logger.opt(exception=True).debug('Cover scaling failed')
             return None
         if result.returncode != 0 or not result.stdout:
             return None
         return result.stdout
+
+    def _run_ffmpeg(
+        self, data: bytes, size: int
+    ) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.run(
+            [
+                self._ffmpeg,
+                '-nostdin',
+                '-hide_banner',
+                '-loglevel',
+                'error',
+                '-i',
+                'pipe:0',
+                '-vf',
+                f'scale={size}:{size}:force_original_aspect_ratio=decrease',
+                '-frames:v',
+                '1',
+                '-q:v',
+                '4',
+                '-f',
+                'image2',
+                '-c:v',
+                'mjpeg',
+                'pipe:1',
+            ],
+            input=data,
+            capture_output=True,
+            timeout=20,
+            check=False,
+        )

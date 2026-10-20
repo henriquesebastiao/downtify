@@ -2,6 +2,7 @@
   <article class="tile group relative flex min-w-0 flex-col gap-2.5">
     <RouterLink :to="to" class="relative block" :aria-label="title">
       <CoverArt
+        :thumb="300"
         :src="cover"
         :fallback="fallback"
         :covers="covers"
