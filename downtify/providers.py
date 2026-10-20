@@ -2789,12 +2789,42 @@ def _split_upload_title(
     return tail.strip(), credited
 
 
+# A video's thumbnail lives at ``.../vi/<11-character id>/...`` (or
+# ``vi_webp``); other artwork (album covers) never matches.
+_THUMBNAIL_VIDEO_ID_RE = re.compile(r'/vi(?:_webp)?/([A-Za-z0-9_-]{11})/')
+
+
+def _video_id_from_thumbnails(track: dict[str, Any]) -> Optional[str]:
+    """The video id a playlist row's thumbnail URLs point at, if any."""
+
+    for thumb in track.get('thumbnails') or []:
+        match = _THUMBNAIL_VIDEO_ID_RE.search(str((thumb or {}).get('url')))
+        if match:
+            return match.group(1)
+    return None
+
+
 def _playlist_track_song(track: dict[str, Any]) -> Optional[dict[str, Any]]:
-    """One playlist row as a song dict, pinned to that exact video."""
+    """One playlist row as a song dict, pinned to that exact video.
+
+    Playlists made by importers and converters often list their songs as
+    uploads YouTube Music has no catalog entry for: the row comes back with
+    ``videoId: null`` and ``isAvailable: false``, yet its thumbnail is the
+    video's own and the video plays fine on YouTube. Such a row is kept
+    under the id its thumbnail gives. A row that *does* carry a ``videoId``
+    but is flagged unavailable is a deleted or private video, and is
+    dropped.
+    """
 
     video_id = track.get('videoId')
-    if not video_id or track.get('isAvailable') is False:
-        return None
+    if video_id:
+        if track.get('isAvailable') is False:
+            return None
+    else:
+        video_id = _video_id_from_thumbnails(track)
+        if not video_id:
+            return None
+        track = {**track, 'videoId': video_id}
     song = _result_to_song(track)
     if song is None:
         return None
