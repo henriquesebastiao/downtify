@@ -154,7 +154,7 @@ See **[Troubleshooting](https://henriquesebastiao.github.io/downtify/troubleshoo
 
 ## Translations
 
-The interface is available in English, Spanish, Brazilian Portuguese, French, Turkish, Hungarian, Greek and Bulgarian. Switch language in **Settings → Language**; the choice is saved in the browser and applies without a reload.
+The interface is available in English, Spanish, Brazilian Portuguese, French, Turkish, Hungarian, Greek, Bulgarian and German. Switch language in **Settings → Language**; the choice is saved in the browser and applies without a reload.
 
 ### Contributing translations
 
