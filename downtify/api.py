@@ -399,6 +399,7 @@ from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .library_paths_cache import (
     add_invalidation_listener,
     invalidate_library_paths_cache,
+    peek_cached_path_pairs,
 )
 from .library_reconcile import (
     playlist_refresh_enabled,
@@ -439,6 +440,7 @@ from .monitor import (
 from .navidrome import _effective_navidrome_settings, cache_navidrome_song_id
 from .navidrome_index import NavidromeIndex
 from .playlist_batches import (
+    LibrarySnapshot,
     PlaylistBatchStore,
     active_queue_count_for_playlist,
     split_tracks_by_library,
@@ -4389,8 +4391,13 @@ def _playlist_batch_summary(
     *,
     batch: Optional[dict[str, Any]] = None,
     expected_hint: int = 0,
+    snapshot: Optional[LibrarySnapshot] = None,
 ) -> dict[str, Any]:
-    """Counts from cached Spotify track list + library scan."""
+    """Counts from cached Spotify track list + library scan.
+
+    *snapshot* (see :func:`_library_snapshot`) matches the tracks in
+    memory instead of on disk.
+    """
 
     active_count = active_queue_count_for_playlist(
         spotify_id, state.download_jobs
@@ -4433,6 +4440,7 @@ def _playlist_batch_summary(
                 track_index=state.track_index,
                 subdir=subdir,
                 catalog_filenames=catalog_filenames,
+                snapshot=snapshot,
             )
             missing_count = len(missing_tracks)
         status = _resolve_playlist_batch_status(
@@ -4617,6 +4625,25 @@ def _report_for_spotify_playlist(
     return report
 
 
+def _library_snapshot() -> Optional[LibrarySnapshot]:
+    """The track index and the listing's paths, read once, so a batch
+    summary checks thousands of tracks without touching the disk.
+    ``None`` until the listing snapshot exists (the summary then checks
+    on disk, as before)."""
+
+    if state.track_index is None:
+        return None
+    pairs = peek_cached_path_pairs(library_context())
+    if pairs is None:
+        return None
+    try:
+        track_files = state.track_index.filenames_by_spotify_id()
+    except Exception:
+        logger.opt(exception=True).debug('Could not read the track index')
+        return None
+    return LibrarySnapshot.build(track_files, [s for s, _r in pairs])
+
+
 def _build_playlist_batch_reports(
     *,
     include_tracks: bool = False,
@@ -4630,14 +4657,14 @@ def _build_playlist_batch_reports(
         if include_tracks
         else _playlist_batch_summary
     )
+    kwargs: dict[str, Any] = (
+        {'user_id': user_id}
+        if builder is _playlist_completeness_report
+        else {'snapshot': _library_snapshot()}
+    )
     reports: list[dict[str, Any]] = []
     for sid, meta in _known_spotify_playlist_sources(user_id).items():
         batch = meta.get('batch')
-        kwargs: dict[str, Any] = (
-            {'user_id': user_id}
-            if builder is _playlist_completeness_report
-            else {}
-        )
         reports.append(
             builder(
                 sid,

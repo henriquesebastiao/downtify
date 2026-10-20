@@ -655,16 +655,7 @@ class Downloader:
         ``download_dir`` (``<subdir>/<file>.<ext>``).
         """
 
-        output_parts = self._format_output_parts(song)
-        basename = output_parts[-1]
-        output_subdir = (
-            Path(*output_parts[:-1]) if len(output_parts) > 1 else None
-        )
-        effective_subdir = self._effective_subdir(song, subdir)
-        target_dir, prefix = self._resolve_target_dir(effective_subdir)
-        if output_subdir is not None:
-            target_dir /= output_subdir
-            prefix = f'{prefix}{output_subdir.as_posix()}/'
+        target_dir, prefix, basename = self._expected_location(song, subdir)
         primary = target_dir / f'{basename}.{self.audio_format}'
         if primary.exists():
             return f'{prefix}{primary.name}'
@@ -680,6 +671,34 @@ class Downloader:
                 ):
                     return f'{prefix}{candidate.name}'
         return None
+
+    def _expected_location(
+        self, song: dict[str, Any], subdir: Optional[str]
+    ) -> tuple[Path, str, str]:
+        """``(target_dir, relative_prefix, basename)`` a download of
+        ``song`` lands at - no disk access."""
+
+        output_parts = self._format_output_parts(song)
+        basename = output_parts[-1]
+        output_subdir = (
+            Path(*output_parts[:-1]) if len(output_parts) > 1 else None
+        )
+        effective_subdir = self._effective_subdir(song, subdir)
+        target_dir, prefix = self._resolve_target_dir(effective_subdir)
+        if output_subdir is not None:
+            target_dir /= output_subdir
+            prefix = f'{prefix}{output_subdir.as_posix()}/'
+        return target_dir, prefix, basename
+
+    def expected_stem_for(
+        self, song: dict[str, Any], subdir: Optional[str] = None
+    ) -> str:
+        """The library path :meth:`existing_filename_for` looks for,
+        without the extension (``<subdir>/<file>``) - no disk access, so
+        many songs can be checked against an in-memory listing."""
+
+        _target_dir, prefix, basename = self._expected_location(song, subdir)
+        return f'{prefix}{basename}'
 
     def find_existing_download(
         self,

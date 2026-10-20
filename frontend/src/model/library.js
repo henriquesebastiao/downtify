@@ -172,15 +172,17 @@ async function load({ force = false } = {}) {
   error.value = ''
   pending = (async () => {
     try {
-      const [summaryRes, playlistsRes, batchesRes] = await Promise.all([
+      const [summaryRes, playlistsRes] = await Promise.all([
         API.getLibrarySummary(),
         API.listPlaylists(),
-        API.getPlaylistBatches().catch(() => ({ data: { playlists: [] } })),
       ])
       applySummary(summaryRes.data)
       rawPlaylists.value = playlistsRes.data || []
-      batches.value = batchesRes.data?.playlists || []
       loaded.value = true
+      // Batch reports only add completeness badges to playlists, and the
+      // server checks every tracked Spotify track to build them: the page
+      // shows first and the badges fill in when they arrive.
+      refreshBatches()
       if (tracksComplete.value) await ensureTracks({ force: true })
       if (albumsComplete.value) await ensureAlbums({ force: true })
       if (artistsComplete.value) await ensureArtists({ force: true })
@@ -192,6 +194,21 @@ async function load({ force = false } = {}) {
     }
   })()
   return pending
+}
+
+let pendingBatches = null
+
+function refreshBatches() {
+  if (pendingBatches) return pendingBatches
+  pendingBatches = API.getPlaylistBatches()
+    .then((res) => {
+      batches.value = res.data?.playlists || []
+    })
+    .catch(() => {})
+    .finally(() => {
+      pendingBatches = null
+    })
+  return pendingBatches
 }
 
 async function ensureTracks({ force = false } = {}) {
