@@ -322,6 +322,7 @@ from . import (
     artist_photo_proxy,
     artist_profile,
     audio_replace,
+    catalog_worker,
     cover_sources,
     deezer,
     integration_check,
@@ -1475,6 +1476,8 @@ async def shutdown_resources() -> None:
             state.upgrade_runner.pause()
         except Exception:
             logger.exception('Library upgrade: could not pause on shutdown')
+
+    await asyncio.to_thread(catalog_worker.stop_catalog_worker)
 
     if state.traffic is not None:
         try:

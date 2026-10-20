@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
+from downtify import api
 from downtify import catalog_worker as worker
 from downtify import library_catalog as catalog
 from downtify.external_library import finish_library_entries
@@ -42,6 +44,19 @@ def test_worker_can_restart_and_restores_inline_library_use() -> None:
         worker.stop_catalog_worker()
         assert worker._pool is None
         assert worker.fold_library_entries([]) == []
+
+
+def test_shutdown_resources_stops_the_worker(monkeypatch) -> None:
+    monkeypatch.setattr(api, '_shutdown_done', False)
+    monkeypatch.setattr(api, 'release_thread_pools', lambda: None)
+    worker.start_catalog_worker()
+    try:
+        assert worker._pool.submit(os.getpid).result(timeout=15)
+        asyncio.run(api.shutdown_resources())
+        assert worker._pool is None
+    finally:
+        worker.stop_catalog_worker()
+    monkeypatch.setattr(api, '_shutdown_done', False)
 
 
 def test_concurrent_merges_keep_both_tracks_and_readable_snapshot(
