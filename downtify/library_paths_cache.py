@@ -41,6 +41,13 @@ _REFRESH_GATE: Optional[Callable[[], bool]] = None
 # Seconds to wait after the last invalidation before walking the tree,
 # so a playlist queue does not rescan extra folders after every track.
 _REFRESH_DEBOUNCE_S = 5.0
+#: Seconds a checked ``GET /playlists`` listing is served without walking
+#: the downloads folder for M3U files again (slow on a NAS). Downtify's
+#: own M3U writes drop it at once (:func:`forget_cached_playlists`); this
+#: bounds how late an M3U changed by hand shows up.
+PLAYLIST_RECHECK_SECONDS = 60.0
+#: When each playlist listing was last checked against the disk.
+_PLAYLIST_CHECKED: dict[str, float] = {}
 
 
 def set_listing_refresh_fn(fn: Callable[[], None]) -> None:
@@ -127,7 +134,17 @@ def drop_listing_memory_caches() -> None:
     with _DATA_LOCK:
         _PATH_CACHE.clear()
         _PLAYLIST_CACHE.clear()
+        _PLAYLIST_CHECKED.clear()
         _ENTRIES_CACHE.clear()
+
+
+def forget_cached_playlists() -> None:
+    """Drop the playlist listing (an M3U was just written); the next
+    ``GET /playlists`` reads the M3U files again."""
+
+    with _DATA_LOCK:
+        _PLAYLIST_CACHE.clear()
+        _PLAYLIST_CHECKED.clear()
 
 
 def _hydrate_snapshot(key: str, snap: dict[str, Any]) -> None:
@@ -280,32 +297,34 @@ def get_cached_playlists(
 ) -> list[dict[str, Any]]:
     """``GET /playlists`` rows.
 
-    *stale_ok* returns the RAM snapshot immediately (no M3U walk) and
-    rebuilds in the background. Live callers omit it so tests and writes
-    see a new M3U on the next listing.
+    *stale_ok* (UI reads) serves the RAM listing without walking the
+    downloads folder when it was checked in the last
+    :data:`PLAYLIST_RECHECK_SECONDS`. Without it, every call checks the
+    M3U files, so tests and writes see a new M3U on the next listing.
     """
 
     key = cache_key_for_dirs(download_dir, slskd_dir, extra_dirs)
     with _DATA_LOCK:
         hit = _PLAYLIST_CACHE.get(key)
         cached = list(hit[1]) if hit is not None else None
-    if cached is not None and stale_ok:
+        checked = _PLAYLIST_CHECKED.get(key)
+    fresh = (
+        checked is not None
+        and time.monotonic() - checked < PLAYLIST_RECHECK_SECONDS
+    )
+    if cached is not None and stale_ok and fresh:
         return cached
-    if cached is not None:
-        fingerprint = playlist_listing_fingerprint(download_dir)
-        with _DATA_LOCK:
-            hit = _PLAYLIST_CACHE.get(key)
-            if hit is not None and hit[0] == fingerprint:
-                return list(hit[1])
     with _PLAYLIST_LOCK:
         fingerprint = playlist_listing_fingerprint(download_dir)
         with _DATA_LOCK:
             hit = _PLAYLIST_CACHE.get(key)
             if hit is not None and hit[0] == fingerprint:
+                _PLAYLIST_CHECKED[key] = time.monotonic()
                 return list(hit[1])
         playlists = build_fn()
         with _DATA_LOCK:
             _PLAYLIST_CACHE[key] = (fingerprint, playlists)
+            _PLAYLIST_CHECKED[key] = time.monotonic()
         return list(playlists)
 
 
@@ -326,14 +345,32 @@ def get_cached_track_entries(
     return None
 
 
+#: Fingerprint of a RAM listing patched in place (one file added or
+#: removed): never equal to a real one, so the next live read rebuilds.
+PROVISIONAL_FINGERPRINT = ''
+
+
 def store_cached_track_entries(
     ctx: LibraryContext,
     entries: list[dict[str, Any]],
     playlists: Optional[list[dict[str, Any]]] = None,
     paths: Optional[list[tuple[str, str]]] = None,
+    *,
+    provisional: bool = False,
 ) -> None:
+    """Remember a folded listing in RAM and in sqlite.
+
+    *provisional* (a download or delete patching the listing) keeps it in
+    RAM only, without fingerprinting the tree: walking every library
+    folder and rewriting the whole snapshot for each downloaded track
+    was slow on a NAS. The refresh that follows the change (see
+    :func:`invalidate_library_paths_cache`) stores the real one.
+    """
+
     key = _cache_key(ctx)
-    fingerprint = _ctx_fingerprint(ctx)
+    fingerprint = (
+        PROVISIONAL_FINGERPRINT if provisional else _ctx_fingerprint(ctx)
+    )
     copied = list(entries)
     with _DATA_LOCK:
         _ENTRIES_CACHE[key] = (fingerprint, copied)
@@ -349,7 +386,7 @@ def store_cached_track_entries(
             if playlists is not None
             else list(_PLAYLIST_CACHE.get(key, (fingerprint, []))[1])
         )
-    if _STORE is None:
+    if _STORE is None or provisional:
         return
     try:
         _STORE.save(key, fingerprint, path_rows, playlist_rows, copied)
@@ -388,6 +425,7 @@ def invalidate_library_paths_cache(
 
     with _DATA_LOCK:
         _PLAYLIST_CACHE.clear()
+        _PLAYLIST_CHECKED.clear()
         if drop_entries:
             _PATH_CACHE.clear()
             _ENTRIES_CACHE.clear()

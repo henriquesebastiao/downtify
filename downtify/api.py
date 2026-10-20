@@ -1252,11 +1252,16 @@ def filter_paths_for_request(
 
 
 def playlists_for_request(request: Optional[Request]) -> list[dict[str, Any]]:
-    """Playlist listing entries *request* may open."""
+    """Playlist listing entries *request* may open.
+
+    Served from memory while recently checked (see
+    ``library_paths_cache.PLAYLIST_RECHECK_SECONDS``): walking the
+    downloads folder for M3U files on every page took ~300 ms on a NAS.
+    """
 
     ctx = library_context()
     found = list_library_playlists(
-        ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+        ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs, stale_ok=True
     )
     return _filter_playlists_for(found, request)
 
