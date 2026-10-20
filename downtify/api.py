@@ -4243,6 +4243,23 @@ def _batch_scope(request: Optional[Request]) -> Optional[int]:
     return None if request_is_admin(request) else request_user_id(request)
 
 
+def _is_spotify_playlist_watch(watch: MonitoredPlaylist) -> bool:
+    """Whether *watch* follows a Spotify playlist.
+
+    A watch's ``spotify_id`` column holds whatever it follows: a YouTube
+    Music playlist id, an artist's channel id or a podcast's id. Only a
+    Spotify playlist's id may be looked up on Spotify (the playlist cache
+    does that in the background); anything else only fills the log with
+    "Spotify entity not found" errors.
+    """
+
+    return (
+        watch.kind == KIND_PLAYLIST
+        and watch.source == SOURCE_SPOTIFY
+        and bool(str(watch.spotify_id or '').strip())
+    )
+
+
 def _known_spotify_playlist_sources(
     user_id: Optional[int] = None,
 ) -> dict[str, dict[str, Any]]:
@@ -4324,7 +4341,7 @@ def _known_spotify_playlist_sources(
             sid = state.playlist_catalog.spotify_id_for_playlist(name) or ''
             if not sid:
                 mon = monitor_by_name.get(name)
-                if mon and mon.spotify_id:
+                if mon and _is_spotify_playlist_watch(mon):
                     sid = str(mon.spotify_id).strip()
                 else:
                     batch = batch_by_name.get(name)
@@ -4341,6 +4358,8 @@ def _known_spotify_playlist_sources(
             }
     if state.monitor_db is not None and user_id is None:
         for pl in state.monitor_db.list_playlists():
+            if not _is_spotify_playlist_watch(pl):
+                continue
             sid = str(pl.spotify_id or '').strip()
             if not sid:
                 continue
