@@ -68,8 +68,7 @@ export default {
     greetingNight: '밤늦게까지 깨어 계신가요?',
     lead: '링크를 붙여넣어 다운로드하거나, 새로운 음악을 검색해보세요.',
     inputLabel: '링크 또는 검색',
-    inputPlaceholder:
-      'Spotify 또는 YouTube Music 링크, 아티스트, 앨범, 곡명…',
+    inputPlaceholder: 'Spotify 또는 YouTube Music 링크, 아티스트, 앨범, 곡명…',
     getIt: '가져오기',
     hintSpotify: '트랙, 앨범, 재생목록 및 아티스트',
     hintYoutube: 'YouTube Music 곡, 앨범, 재생목록 및 아티스트',
@@ -146,7 +145,8 @@ export default {
   },
   similar: {
     title: '유사 음악',
-    subtitle: '입력한 곡과 비슷한 분위기의 트랙을 YouTube Music에서 찾아줍니다.',
+    subtitle:
+      '입력한 곡과 비슷한 분위기의 트랙을 YouTube Music에서 찾아줍니다.',
     artist: '아티스트',
     artistPlaceholder: 'Cher',
     track: '트랙',
@@ -187,7 +187,8 @@ export default {
     noArtist: '선택된 아티스트 없음',
     noAlbums: '발매된 앨범이 없습니다',
     pickAlbum: '앨범 선택',
-    pickAlbumHint: '선택한 앨범의 수록곡이 여기에 표시되며, 미리듣기 및 다운로드가 가능합니다.',
+    pickAlbumHint:
+      '선택한 앨범의 수록곡이 여기에 표시되며, 미리듣기 및 다운로드가 가능합니다.',
     about: '정보',
     showMore: '더보기',
     showLess: '간략히',
@@ -213,7 +214,10 @@ export default {
     },
     releases: { one: '발매작 {count}개', other: '발매작 {count}개' },
     downloadAll: { one: '다운로드', other: '전체 다운로드 ({count}개)' },
-    downloadNew: { one: '신규 {count}개 다운로드', other: '신규 {count}개 다운로드' },
+    downloadNew: {
+      one: '신규 {count}개 다운로드',
+      other: '신규 {count}개 다운로드',
+    },
     redownloadAll: '전체 다시 다운로드',
     downloadSelected: '선택 항목 다운로드',
     allInLibrary: '모두 라이브러리에 있음',
@@ -243,14 +247,18 @@ export default {
     tabDone: '완료',
     tabFailed: '실패',
     tabAll: '전체',
-    countActive: { one: '{count}개 다운로드 중', other: '{count}개 다운로드 중' },
+    countActive: {
+      one: '{count}개 다운로드 중',
+      other: '{count}개 다운로드 중',
+    },
     countQueued: { one: '{count}개 대기 중', other: '{count}개 대기 중' },
     countFailed: { one: '{count}개 실패', other: '{count}개 실패' },
     retryFailed: '실패 항목 다시 시도 ({count})',
     clearDone: '완료 항목 지우기 ({count})',
     clearAll: '대기열 비우기',
     emptyTitle: '대기열이 비어 있습니다',
-    emptyBody: '음악을 검색하거나 링크를 붙여넣으면 다운로드 항목이 여기에 표시됩니다.',
+    emptyBody:
+      '음악을 검색하거나 링크를 붙여넣으면 다운로드 항목이 여기에 표시됩니다.',
     emptyAction: '음악 찾기',
     emptyTab: {
       active: '현재 다운로드 중인 항목이 없습니다',
@@ -276,8 +284,7 @@ export default {
     sources: '다운로드 출처',
     noSourcesYet: '완료된 다운로드의 출처가 여기에 표시됩니다.',
     importTitle: '라이브러리 가져오기',
-    importHint:
-      'Soundiiz, TuneMyMusic, Exportify 등에서 내보낸 CSV 파일.',
+    importHint: 'Soundiiz, TuneMyMusic, Exportify 등에서 내보낸 CSV 파일.',
     importButton: 'CSV 파일 선택',
     importFailed: '해당 CSV 파일을 가져올 수 없습니다.',
   },
@@ -406,7 +413,8 @@ export default {
     queued: '대기 중',
     running: '작업 중',
     done: '업그레이드 종료',
-    doneBody: '{completed}개 업그레이드됨, {skipped}개 정상 유지, {failed}개 실패.',
+    doneBody:
+      '{completed}개 업그레이드됨, {skipped}개 정상 유지, {failed}개 실패.',
     cancelled: '업그레이드 중지됨',
     paused: '업그레이드 일시정지됨',
     tracksTitle: '트랙',
@@ -463,7 +471,8 @@ export default {
       '주요 스트리밍 플랫폼의 이미지를 사용하거나 웹 이미지 링크를 붙여넣고, 기기에서 직접 업로드할 수도 있습니다.',
     searchPlaceholder: '웹 이미지 링크 또는 아티스트 이름',
     upload: '기기에서 업로드',
-    noResults: '결과가 없습니다 — 아티스트를 검색하거나 이미지 링크를 붙여넣으세요.',
+    noResults:
+      '결과가 없습니다 — 아티스트를 검색하거나 이미지 링크를 붙여넣으세요.',
     saved: '이미지가 저장되었습니다',
     saveFailed: '이미지를 저장하지 못했습니다',
     searchFailed: '이미지를 검색하지 못했습니다',
@@ -502,14 +511,18 @@ export default {
       one: '누락된 {count}개 다운로드',
       other: '누락된 {count}개 다운로드',
     },
-    downloading: { one: '{count}개 다운로드 중', other: '{count}개 다운로드 중' },
+    downloading: {
+      one: '{count}개 다운로드 중',
+      other: '{count}개 다운로드 중',
+    },
     complete: '완료',
     watch: '새 트랙 모니터링',
     openSource: '원본 재생목록 열기',
     delete: '재생목록 삭제',
     create: '새 재생목록',
     createTitle: '재생목록 만들기',
-    createHint: '재생목록 이름을 지정하세요. 만든 후 라이브러리에서 곡을 추가할 수 있습니다.',
+    createHint:
+      '재생목록 이름을 지정하세요. 만든 후 라이브러리에서 곡을 추가할 수 있습니다.',
     name: '이름',
     namePlaceholder: '내 재생목록',
     addSongs: '곡 추가',
@@ -527,7 +540,8 @@ export default {
     created: '“{name}” 생성 완료',
     rename: '이름 변경',
     renameTitle: '재생목록 이름 변경',
-    renameHint: '재생목록의 이름만 변경되며 수록곡 파일에는 영향을 주지 않습니다.',
+    renameHint:
+      '재생목록의 이름만 변경되며 수록곡 파일에는 영향을 주지 않습니다.',
     renamed: '“{name}”(으)로 이름이 변경되었습니다',
     nothingYet: '아직 트랙이 없습니다',
     nothingYetHint: '다운로드가 완료되면 트랙이 여기에 나타납니다.',
@@ -615,7 +629,8 @@ export default {
       '밴드를 위아래로 드래그하여 음색을 조절하세요. 더블 클릭하면 기본값으로 리셋됩니다.',
     headroomHint:
       '강조된 주파수 밴드의 왜곡(클리핑)을 방지하기 위해 음량을 {amount} dB 낮췄습니다.',
-    clipWarning: '프리앰프를 0 dB 초과로 설정하면 음량이 큰 구간에서 소리가 왜곡될 수 있습니다.',
+    clipWarning:
+      '프리앰프를 0 dB 초과로 설정하면 음량이 큰 구간에서 소리가 왜곡될 수 있습니다.',
     equalizerUnsupported: '이 브라우저는 이퀄라이저 기능을 지원하지 않습니다.',
     equalizerError:
       '이퀄라이저를 시작할 수 없습니다. 이퀄라이저 없이 재생을 계속합니다.',
@@ -636,7 +651,8 @@ export default {
     subtitle:
       '등록한 재생목록과 아티스트의 새 트랙을 주기적으로 감지하여 자동으로 다운로드합니다.',
     interval: '확인 주기',
-    addFailed: '해당 링크를 모니터링할 수 없습니다. 링크를 확인한 후 다시 시도하세요.',
+    addFailed:
+      '해당 링크를 모니터링할 수 없습니다. 링크를 확인한 후 다시 시도하세요.',
     checkAll: '지금 전체 확인',
     checkNow: '지금 확인',
     checking: '{name} 확인 중…',
@@ -671,8 +687,10 @@ export default {
     everyMonths: { one: '매달', other: '{count}개월마다' },
     urlLabelPlaylist: '재생목록 링크',
     urlLabelArtist: '아티스트 링크',
-    urlPlaceholderPlaylist: 'Spotify 또는 YouTube Music 재생목록 링크를 붙여넣으세요',
-    urlPlaceholderArtist: 'Spotify 또는 YouTube Music 아티스트 링크를 붙여넣으세요',
+    urlPlaceholderPlaylist:
+      'Spotify 또는 YouTube Music 재생목록 링크를 붙여넣으세요',
+    urlPlaceholderArtist:
+      'Spotify 또는 YouTube Music 아티스트 링크를 붙여넣으세요',
     watchPlaylist: '재생목록 모니터링',
     watchArtist: '아티스트 모니터링',
     explainerPlaylists:
@@ -682,7 +700,8 @@ export default {
     explainerArtistsNewOnly:
       '아티스트를 추가해도 기존 발매작은 다운로드하지 않으며, 주기적으로 새 발매작이 나오는지 확인하여 선택한 유형의 신곡만 다운로드합니다.',
     emptyPlaylistsTitle: '모니터링 중인 재생목록이 없습니다',
-    emptyPlaylistsBody: '위에 재생목록 링크를 붙여넣어 지속적으로 동기화하세요.',
+    emptyPlaylistsBody:
+      '위에 재생목록 링크를 붙여넣어 지속적으로 동기화하세요.',
     emptyArtistsTitle: '모니터링 중인 아티스트가 없습니다',
     emptyArtistsBody:
       '위에 아티스트 링크를 붙여넣으면 신규 발매작을 자동으로 다운로드합니다.',
@@ -707,8 +726,10 @@ export default {
     editLinkHintArtist:
       '동일한 아티스트의 다른 링크로 변경하면 주소만 업데이트됩니다. 다른 아티스트 링크를 입력하면 대상을 변경하며, 발매작을 처음부터 다시 검사하지만 라이브러리에 이미 있는 트랙은 재다운로드하지 않습니다.',
     linkRequired: '링크를 입력하세요',
-    needArtistLink: '아티스트 모니터링 항목입니다 — 아티스트 링크를 붙여넣으세요.',
-    needPlaylistLink: '재생목록 모니터링 항목입니다 — 재생목록 링크를 붙여넣으세요.',
+    needArtistLink:
+      '아티스트 모니터링 항목입니다 — 아티스트 링크를 붙여넣으세요.',
+    needPlaylistLink:
+      '재생목록 모니터링 항목입니다 — 재생목록 링크를 붙여넣으세요.',
     activeOn: '정기 검사 진행 중',
     activeOff: '일시정지됨',
     added: '추가일',
@@ -774,7 +795,8 @@ export default {
     slskdUrl: '서버 URL',
     slskdKey: 'API 키',
     slskdFolder: 'slskd 다운로드 폴더',
-    slskdFolderHint: '호스트 경로가 아닌 Downtify 컨테이너 내부 경로를 입력해야 합니다.',
+    slskdFolderHint:
+      '호스트 경로가 아닌 Downtify 컨테이너 내부 경로를 입력해야 합니다.',
     slskdTimeout: '전체 타임아웃',
     slskdQueuedTimeout: '대기 타임아웃',
     slskdInPlace: 'slskd 폴더에 파일 그대로 유지',
@@ -804,7 +826,8 @@ export default {
     templateHint: '/ 문자를 사용하여 하위 폴더를 구성할 수 있습니다.',
     templatePreview: '예시:',
     byArtist: '아티스트별로 정리',
-    byArtistHint: '아티스트별 폴더에 곡을 저장합니다 — 재생목록 트랙도 포함됩니다.',
+    byArtistHint:
+      '아티스트별 폴더에 곡을 저장합니다 — 재생목록 트랙도 포함됩니다.',
     byAlbum: '앨범별로 정리',
     byAlbumHint:
       '앨범별 폴더에 곡을 저장합니다. “아티스트별로 정리”와 함께 사용하면 아티스트/앨범 구조가 됩니다.',
@@ -821,7 +844,8 @@ export default {
     parallel: '동시 다운로드 수',
     parallelHint: '동시에 다운로드하거나 동기화할 곡의 수입니다.',
     delay: '다운로드 간격',
-    delayHint: '대규모 재생목록 처리 시 봇 감지를 방지하기 위해 각 곡 다운로드 사이에 대기할 시간입니다.',
+    delayHint:
+      '대규모 재생목록 처리 시 봇 감지를 방지하기 위해 각 곡 다운로드 사이에 대기할 시간입니다.',
     maxDuration: '최대 허용 곡 길이',
     maxDurationHint:
       '이 길이보다 긴 곡은 다운로드하거나 스트리밍하지 않습니다. 0으로 설정하면 무제한입니다.',
@@ -831,7 +855,8 @@ export default {
       '가져온 트랙 묶음(동시 다운로드 수 단위)마다 가사, 커버, 장르를 조회하기 전 잠시 대기합니다. 대규모 폴더 처리 시 API 요청 제한(Rate Limit)을 방지합니다.',
     artGroup: '커버 아트',
     coverArt: '커버 아트 포함',
-    coverArtHint: '비활성화하면 파일 크기가 줄어들고 다운로드 속도가 빨라집니다.',
+    coverArtHint:
+      '비활성화하면 파일 크기가 줄어들고 다운로드 속도가 빨라집니다.',
     coverSize: '커버 해상도',
     coverSizeHint:
       'YouTube Music 및 Deezer에서 가져오는 커버에 적용됩니다. Spotify 커버는 항상 사용 가능한 최대 해상도로 저장됩니다.',
@@ -855,7 +880,8 @@ export default {
     lyricsProviders: '가사 공급자',
     lyricsProvidersHint:
       '각 트랙은 가사를 찾을 때까지 활성화된 공급자를 순서대로 시도합니다. 특정 공급자에서 찾지 못한 결과는 1개월 동안 캐시되어 매 다운로드마다 반복 요청되지 않습니다.',
-    lyricsLrclibHint: '커뮤니티 기반 데이터베이스 — 일반 가사 및 싱크 가사 제공',
+    lyricsLrclibHint:
+      '커뮤니티 기반 데이터베이스 — 일반 가사 및 싱크 가사 제공',
     lyricsNetease: 'NetEase Cloud Music (왕이윈)',
     lyricsNeteaseHint: '방대한 데이터베이스 보유, 대부분 싱크 가사 지원',
     navidromeTitle: 'Navidrome',
@@ -874,7 +900,8 @@ export default {
       button: '연결 테스트',
       testing: '테스트 중…',
       needFields: '위 필드를 먼저 입력하세요.',
-      requestFailed: '테스트를 실행하지 못했습니다. Downtify 서버에 접근할 수 있습니까?',
+      requestFailed:
+        '테스트를 실행하지 못했습니다. Downtify 서버에 접근할 수 있습니까?',
       connected: '{server}에 성공적으로 연결되었습니다.',
       unknown: '테스트에서 예기치 않은 응답을 반환했습니다 ({code}).',
       config_missing: '필수 필드를 먼저 입력하세요.',
@@ -891,7 +918,8 @@ export default {
         '{url}에서 응답은 왔으나 Navidrome 서버가 아닌 것으로 보입니다. 주소와 포트를 확인하세요.',
       connection_http_error: '서버에서 오류를 반환했습니다 ({detail}).',
       auth_bad_key: 'slskd에서 API 키를 거부했습니다.',
-      auth_bad_credentials: 'Navidrome에서 사용자 이름 또는 비밀번호를 거부했습니다.',
+      auth_bad_credentials:
+        'Navidrome에서 사용자 이름 또는 비밀번호를 거부했습니다.',
       auth_api_error: 'Navidrome 응답 오류: {detail}',
       soulseek_ok: 'slskd가 Soulseek에 로그인되어 있습니다.',
       soulseek_offline:
@@ -904,7 +932,8 @@ export default {
         '이 계정으로는 라이브러리 검사를 시작할 수 없습니다. Navidrome은 관리자 계정만 검사를 허용합니다. 새 곡이 빠르게 반영되도록 관리자 정보를 입력하세요.',
       scan_not_admin_separate:
         '입력한 관리자 계정에 관리자 권한이 없어 라이브러리 검사를 시작할 수 없습니다.',
-      scan_bad_admin: 'Navidrome에서 관리자 사용자 이름 또는 비밀번호를 거부했습니다.',
+      scan_bad_admin:
+        'Navidrome에서 관리자 사용자 이름 또는 비밀번호를 거부했습니다.',
     },
     navidromeSync: 'Navidrome에 재생목록 생성',
     navidromeSyncHint:
@@ -1046,7 +1075,8 @@ export default {
     save: '저장',
     saved: '저장 완료',
     devicesGroup: '연결된 앱 기기',
-    devicesGroupHint: '내 라이브러리를 재생할 수 있는 스마트폰 및 기타 기기 목록입니다.',
+    devicesGroupHint:
+      '내 라이브러리를 재생할 수 있는 스마트폰 및 기타 기기 목록입니다.',
     deviceCount: { one: '앱 {count}개 연결됨', other: '앱 {count}개 연결됨' },
     pair: '스마트폰 연결',
     revoke: '연결 해제',
@@ -1106,7 +1136,8 @@ export default {
   port: {
     label: '포트',
     hint: 'Downtify가 수신 대기할 네트워크 포트입니다. 서버를 재시작하거나 “저장 후 재시작”을 누르면 즉시 적용됩니다.',
-    locked: '서버의 {source} 환경 설정에 의해 고정되어 있습니다. 이 설정을 제거해야 여기서 포트를 변경할 수 있습니다.',
+    locked:
+      '서버의 {source} 환경 설정에 의해 고정되어 있습니다. 이 설정을 제거해야 여기서 포트를 변경할 수 있습니다.',
     save: '저장',
     saveRestart: '저장 후 재시작',
     listening: '{port}번 포트에서 수신 대기 중',
@@ -1196,7 +1227,8 @@ export default {
   },
   activity: {
     nowTitle: '현재 재생 중',
-    nowHint: '각 웹 브라우저 및 앱에서 현재 재생 중인 음악입니다. 몇 초마다 갱신됩니다.',
+    nowHint:
+      '각 웹 브라우저 및 앱에서 현재 재생 중인 음악입니다. 몇 초마다 갱신됩니다.',
     nowEmpty: '현재 재생 중인 음악이 없습니다.',
     paused: '일시정지됨',
     logTitle: '활동 기록',
@@ -1368,7 +1400,10 @@ export default {
       '저장된 이미지 파일만 삭제되며 다른 데이터에는 영향을 주지 않습니다.',
   },
   toast: {
-    playingNext: { one: '다음 곡으로 재생', other: '{count}개 트랙을 다음 곡으로 재생' },
+    playingNext: {
+      one: '다음 곡으로 재생',
+      other: '{count}개 트랙을 다음 곡으로 재생',
+    },
     addedToQueue: {
       one: '대기열에 추가됨',
       other: '{count}개 트랙을 대기열에 추가함',
