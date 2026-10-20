@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
+from downtify.downloader import Downloader
 from downtify.playlist_batches import (
+    LibrarySnapshot,
     PlaylistBatchStore,
     active_queue_count_for_playlist,
     ensure_batch_records,
@@ -129,3 +131,114 @@ def test_active_queue_count_for_playlist() -> None:
         },
     }
     assert active_queue_count_for_playlist(sid, jobs) == 1
+
+
+def _snapshot_fixture(tmp_path: Path):
+    download_dir = tmp_path / 'downloads'
+    (download_dir / 'Mix').mkdir(parents=True)
+    indexed = download_dir / 'Artist - Indexed.mp3'
+    indexed.write_bytes(b'audio')
+    # Not in the track index: found by its expected name, which keeps
+    # an upstream extension (opus) as existing_filename_for allows.
+    (download_dir / 'Mix' / 'Artist - Named.opus').write_bytes(b'audio')
+    downloader = Downloader(download_dir, audio_format='mp3')
+    index = TrackIndex(tmp_path / 'lib.db')
+    index.register(
+        '4uLU6hMCjMI75M1A2tKUQC', 'Artist - Indexed.mp3', full_path=indexed
+    )
+    songs = [
+        {
+            'song_id': '4uLU6hMCjMI75M1A2tKUQC',
+            'name': 'Indexed',
+            'artists': ['Artist'],
+        },
+        {
+            'song_id': '2x00000000000000000000',
+            'name': 'Named',
+            'artists': ['Artist'],
+        },
+        {
+            'song_id': '1x00000000000000000000',
+            'name': 'Missing',
+            'artists': ['Artist'],
+        },
+    ]
+    stored = ['Artist - Indexed.mp3', 'Mix/Artist - Named.opus']
+    return download_dir, downloader, index, songs, stored
+
+
+def test_split_with_snapshot_matches_the_disk_check(tmp_path: Path) -> None:
+    _dir, downloader, index, songs, stored = _snapshot_fixture(tmp_path)
+    snapshot = LibrarySnapshot.build(index.filenames_by_spotify_id(), stored)
+
+    on_disk = split_tracks_by_library(
+        songs, downloader=downloader, track_index=index, subdir='Mix'
+    )
+    in_memory = split_tracks_by_library(
+        songs,
+        downloader=downloader,
+        track_index=index,
+        subdir='Mix',
+        snapshot=snapshot,
+    )
+
+    assert in_memory == on_disk
+    assert in_memory[0] == 2
+    assert [s['name'] for s in in_memory[1]] == ['Missing']
+
+
+def test_split_with_snapshot_never_touches_disk_or_index(
+    tmp_path: Path,
+) -> None:
+    """A summary of thousands of tracks on a NAS must not stat each one,
+    nor rewrite the track index from a GET."""
+
+    download_dir, downloader, index, songs, stored = _snapshot_fixture(
+        tmp_path
+    )
+    snapshot = LibrarySnapshot.build(index.filenames_by_spotify_id(), stored)
+    for path in download_dir.rglob('*.*'):
+        path.unlink()
+
+    downloaded, _missing = split_tracks_by_library(
+        songs,
+        downloader=downloader,
+        track_index=index,
+        subdir='Mix',
+        snapshot=snapshot,
+    )
+
+    assert downloaded == 2
+    assert index.lookup('4uLU6hMCjMI75M1A2tKUQC') == 'Artist - Indexed.mp3'
+
+
+def test_split_with_snapshot_uses_catalog_filenames(tmp_path: Path) -> None:
+    downloader = Downloader(tmp_path, audio_format='mp3')
+    snapshot = LibrarySnapshot.build({}, ['Elsewhere/Renamed.mp3'])
+    song = {'song_id': '3x00000000000000000000', 'name': 'X'}
+
+    downloaded, missing = split_tracks_by_library(
+        [song],
+        downloader=downloader,
+        track_index=None,
+        catalog_filenames={'3x00000000000000000000': 'Elsewhere/Renamed.mp3'},
+        snapshot=snapshot,
+    )
+
+    assert (downloaded, missing) == (1, [])
+
+
+def test_snapshot_ignores_index_entries_whose_file_is_gone() -> None:
+    snapshot = LibrarySnapshot.build(
+        {'4uLU6hMCjMI75M1A2tKUQC': 'Gone.mp3'}, []
+    )
+    downloader = MagicMock()
+    downloader.download_dir = '/nowhere'
+    downloader.expected_stem_for.return_value = 'Artist - Gone'
+    song = {'song_id': '4uLU6hMCjMI75M1A2tKUQC', 'name': 'Gone'}
+
+    downloaded, missing = split_tracks_by_library(
+        [song], downloader=downloader, track_index=None, snapshot=snapshot
+    )
+
+    assert (downloaded, missing) == (0, [song])

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from .catalog_worker import fold_library_entries
 from .library_cache_keys import file_content_key_from_name_and_size
 from .library_metadata import library_entry_for_file
 from .library_metadata_cache import LibraryMetadataCache
@@ -369,6 +370,13 @@ def merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
     later, after the download queue is idle.
     """
 
+    with listing_lock():
+        _merge_library_listing_file(ctx, stored)
+
+
+def _merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
+    """Read/modify/publish under the writer lock, never the UI read lock."""
+
     name = str(stored or '').strip().replace('\\', '/')
     if not name:
         return
@@ -390,9 +398,7 @@ def merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
         rows = [library_entry_for_file(name, full)]
     if not rows:
         return
-    from .external_library import finish_library_entries  # noqa: PLC0415
-
-    merged = finish_library_entries([*peeked, *rows])
+    merged = fold_library_entries([*peeked, *rows])
     paths = peek_cached_path_pairs(ctx) or []
     if not any(str(item[0]) == name for item in paths):
         paths = [*paths, (name, str(full))]
@@ -408,6 +414,13 @@ def drop_library_listing_files(
     later, after the download queue is idle.
     """
 
+    with listing_lock():
+        _drop_library_listing_files(ctx, stored_paths)
+
+
+def _drop_library_listing_files(
+    ctx: LibraryContext, stored_paths: Sequence[str]
+) -> None:
     names = {
         str(item or '').strip().replace('\\', '/') for item in stored_paths
     }
@@ -487,11 +500,7 @@ def list_library_entries(
             _attach_m3u_playlists_to_entries(entries, ctx)
         if not fold_extra:
             return entries
-        from .external_library import (  # noqa: PLC0415  # import cycle
-            finish_library_entries,
-        )
-
-        entries = finish_library_entries(entries)
+        entries = fold_library_entries(entries)
         store_cached_track_entries(ctx, entries, paths=path_rows)
         return _filter_entries(entries, allowed_keys)
 

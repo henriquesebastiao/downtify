@@ -67,6 +67,8 @@ All of it runs inside a single Docker container. See **[How it works](https://he
 | **Integrations** | Optionally download from Soulseek through your own slskd server and mirror playlists into Navidrome, each with a **Test connection** button in Settings. See [slskd & Navidrome](https://henriquesebastiao.github.io/downtify/features/slskd-navidrome/). |
 | **Interface** | Light and dark themes, one layout from phone to widescreen, an installable app ([PWA](https://henriquesebastiao.github.io/downtify/features/pwa/)), live download progress, update notices and eight languages. |
 
+Read-only music folders stay protected during **Upgrade library**: their tracks are skipped before remote lookups, without changing files or marking unchecked categories as complete. See [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/#read-only-music-folders).
+
 ## Quick start
 
 You only need [Docker](https://docs.docker.com/get-docker/).
