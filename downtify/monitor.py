@@ -828,6 +828,9 @@ async def _fill_from_spotify_track(song: dict[str, Any]) -> None:
     for key in ('track_number', 'album_track_total'):
         if not song.get(key) and full.get(key):
             song[key] = full[key]
+    # The track's own page is the surer word on explicit lyrics.
+    if full.get('explicit'):
+        song['explicit'] = True
 
 
 async def check_playlist(

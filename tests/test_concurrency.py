@@ -557,6 +557,7 @@ def _entry(stored, full):
         'sample_rate': 44100,
         'channels': 2,
         'genre': '',
+        'explicit': False,
         'has_cover': False,
         'cover_px': 0,
         'added': int(full.stat().st_mtime),

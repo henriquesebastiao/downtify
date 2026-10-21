@@ -49,6 +49,7 @@
               <span class="truncate text-sm font-semibold">{{
                 track.title
               }}</span>
+              <ExplicitBadge v-if="track.explicit" />
               <EqBars
                 v-if="player.isPlaying.value"
                 :size="10"
@@ -191,6 +192,7 @@ import { useRouter } from 'vue-router'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
+import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import UiIconButton from '../ui/UiIconButton.vue'
 import LikeButton from '../player/LikeButton.vue'
 import SliderBar from '../player/SliderBar.vue'

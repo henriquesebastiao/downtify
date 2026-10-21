@@ -2455,6 +2455,10 @@ def enrich_from_match(
         match,
     )
     enriched = dict(song)
+    # The mark describes the audio that gets downloaded, which is this hit:
+    # explicit if either source says so, never un-marked by the match.
+    if match.get('isExplicit'):
+        enriched['explicit'] = True
     if not enriched.get('album_name'):
         album = match.get('album') or {}
         if isinstance(album, dict) and album.get('name'):
@@ -2745,6 +2749,11 @@ def song_from_video_id(video_id: str) -> dict[str, Any]:
     # enrich_from_match never touches these, but pin them explicitly so
     # the returned song always describes the video the caller asked
     # for, never whichever video the catalog lookup happened to match.
+    # That goes for the explicit mark too: the hit may be the album's
+    # version of a song whose video this is a clean edit of.
+    enriched['explicit'] = bool(
+        match.get('isExplicit') and match.get('videoId') == video_id
+    )
     enriched['song_id'] = video_id
     enriched['url'] = f'https://music.youtube.com/watch?v={video_id}'
     enriched['source'] = 'youtube'

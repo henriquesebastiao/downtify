@@ -41,12 +41,7 @@
     <div class="min-w-0 flex-1">
       <p class="flex items-center gap-1.5">
         <span class="truncate text-sm font-semibold">{{ song.name }}</span>
-        <span
-          v-if="song.explicit"
-          class="shrink-0 rounded-[3px] bg-muted px-1 text-[9px] leading-[14px] font-bold text-bg"
-          :title="t('search.explicit')"
-          >E</span
-        >
+        <ExplicitBadge v-if="song.explicit" />
       </p>
       <p class="truncate text-[13px] text-muted">
         {{ artists
@@ -88,6 +83,7 @@
 import { computed } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
+import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import DownloadState from './DownloadState.vue'
 import SimilarButton from '../similar/SimilarButton.vue'
 import { formatDuration } from '/src/lib/format'

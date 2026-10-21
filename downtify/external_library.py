@@ -407,6 +407,7 @@ def _song_for_import(entry: dict[str, Any]) -> dict[str, Any]:
         'genre': str(entry.get('genre') or ''),
         'track_number': int(entry.get('track_number') or 0),
         'duration': float(entry.get('duration') or 0.0),
+        'explicit': bool(entry.get('explicit')),
     }
 
 
