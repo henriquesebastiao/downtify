@@ -1,16 +1,17 @@
-<h1 align="center">
-  <a href="https://github.com/henriquesebastiao/downtify" target="_blank" rel="noopener noreferrer">
-    <picture>
-      <img width="80" src="https://github.com/user-attachments/assets/628d4334-7326-446e-9f2a-4d3ab4fc95c3">
-    </picture>
-  </a>
-  <br>
-  Downtify
-</h1>
-
+<p align="center"><img width="80" src="https://github.com/user-attachments/assets/628d4334-7326-446e-9f2a-4d3ab4fc95c3"></p>
+<h1 align="center">Downtify</h1>
 <p align="center">
-  <strong>Self-hosted music downloader. Paste a Spotify link, get a perfectly tagged audio file — no API keys, no account, no hassle.</strong>
+  <a href="https://downtify.henriquesebastiao.com/getting-started/installation/">Install</a> •
+  <a href="https://downtify.henriquesebastiao.com/">Documentation</a>
 </p>
+<p align="center">
+  <a href="https://downtify.henriquesebastiao.com/features/">Features</a> •
+  <a href="https://downtify.henriquesebastiao.com/changelog/">Changelog</a> •
+  <a href="https://github.com/sponsors/henriquesebastiao">Sponsor</a> •
+  <a href="https://github.com/henriquesebastiao/downtify/blob/main/CONTRIBUTING.md">Contributing</a>
+</p>
+
+<p align="center">Self-hosted music downloader. Paste a Spotify link, <br> get a perfectly tagged audio file no API keys, no account, no hassle</p>
 
 <div align="center">
 
@@ -19,11 +20,6 @@
 [![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify?color=blue)](/LICENSE)
 [![Docker Pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Fhenriquesebastiao%2Fdowntify%2Fdowntify&query=downloadCount&style=flat&label=docker%20pulls)](https://github.com/henriquesebastiao/downtify/pkgs/container/downtify)
 [![Visitors](https://api.visitorbadge.io/api/visitors?path=henriquesebastiao%2Fdowntify&label=repository%20visits&countColor=%231182c3&style=flat)](https://github.com/henriquesebastiao/downtify)
-
-[Documentation](https://henriquesebastiao.github.io/downtify/) ·
-[Installation](https://henriquesebastiao.github.io/downtify/getting-started/installation/) ·
-[Features](https://henriquesebastiao.github.io/downtify/features/) ·
-[Changelog](https://henriquesebastiao.github.io/downtify/changelog/)
 
 </div>
 
