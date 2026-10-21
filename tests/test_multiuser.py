@@ -1,8 +1,10 @@
-"""Per-user libraries: ownership, scoped likes/playlists/queue/feeds.
+"""Multi-user: shared library, ownership, scoped likes/playlists/queue/feeds.
 
-A ``user`` sees only tracks they asked to download (one file on disk,
-one ownership row each - see ``downtify/track_owners.py``); an
-``admin`` sees everything. Offline.
+The library is shared - a ``user`` browses every track anyone downloaded
+minus what an admin hid (see ``tests/test_library_visibility.py``). What
+stays per user: likes, playlists, batches and queue jobs, and who may
+delete a file (one file on disk, one ownership row per asker - see
+``downtify/track_owners.py``); an ``admin`` sees everything. Offline.
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ from downtify.discover import DiscoverStore, artist_key
 from downtify.downloader import Downloader
 from downtify.library_cache_keys import file_content_key_from_name_and_size
 from downtify.library_sync import LibrarySync
+from downtify.library_visibility import LibraryVisibility
 from downtify.likes import LikedTracks, sync_liked_playlist
 from downtify.monitor import (
     LibraryStores,
@@ -341,14 +344,21 @@ def test_promotion_shows_everything_without_losing_rows(monkeypatch, tmp_path):
         'state': {'principal': _principal(5, 'admin', 'maria')},
     })
 
-    # As a user: only their own track.
+    hidden = LibraryVisibility(tmp_path / 'lib.db')
+    hidden.hide('track', _key('b.mp3'), path='b.mp3')
+    monkeypatch.setattr(api.state, 'library_visibility', hidden)
+
+    # As a user: the shared library minus what an admin hid.
     assert [
         e['file'] for e in api._filter_entries_for(entries, user_request)
     ] == ['a.mp3']
-    # Promoted to admin: the whole library, same rows underneath.
-    assert api._filter_entries_for(entries, admin_request) == entries
+    # Promoted to admin: the whole library, hidden rows marked.
+    promoted = api._filter_entries_for(entries, admin_request)
+    assert [e['file'] for e in promoted] == ['a.mp3', 'b.mp3']
+    assert promoted[1]['hidden_by'] == 'track'
+    assert 'hidden_by' not in promoted[0]
     assert api._filter_playlists_for([], admin_request) == []
-    # Demoted back: only their own again, nothing was dropped.
+    # Demoted back: hidden again, nothing was dropped.
     assert [
         e['file'] for e in api._filter_entries_for(entries, user_request)
     ] == ['a.mp3']
@@ -511,14 +521,16 @@ def _wired_state(monkeypatch, tmp_path, owners: dict[str, int]) -> None:
     monkeypatch.setattr(api.state, 'track_owners', store)
 
 
-def test_entries_keep_only_owned_files(monkeypatch, tmp_path):
+def test_entries_are_shared_between_users(monkeypatch, tmp_path):
     _wired_state(monkeypatch, tmp_path, {_key('a.mp3'): 5})
     entries = [_entry('a.mp3'), _entry('b.mp3')]
 
-    mine = api._filter_entries_for(entries, _request(5))
-    assert [e['file'] for e in mine] == ['a.mp3']
-    assert api._filter_entries_for(entries, _request(7)) == []
+    # Whoever downloaded it, every signed-in user browses both files.
+    for user_id in (5, 7):
+        seen = api._filter_entries_for(entries, _request(user_id))
+        assert [e['file'] for e in seen] == ['a.mp3', 'b.mp3']
     assert api._filter_entries_for(entries, _admin_request()) == entries
+    # Without an identity there is nothing to show.
     assert api._filter_entries_for(entries, _request()) == []
 
 

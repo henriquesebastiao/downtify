@@ -147,6 +147,15 @@
                 >{{ row.track.title }}</span
               >
               <ExplicitBadge v-if="row.track.explicit" />
+              <span
+                v-if="row.track.hiddenBy && auth.isAdmin.value"
+                class="shrink-0 text-faint"
+                role="img"
+                :title="t(`visibility.hiddenBy.${row.track.hiddenBy}`)"
+                :aria-label="t(`visibility.hiddenBy.${row.track.hiddenBy}`)"
+              >
+                <AppIcon name="eye-off" :size="14" />
+              </span>
             </p>
             <p class="truncate text-[13px] text-muted">
               <span
@@ -217,6 +226,7 @@ import EqBars from '../ui/EqBars.vue'
 import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import LikeButton from '../player/LikeButton.vue'
+import { useAuth } from '/src/model/auth'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
@@ -238,6 +248,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:selected', 'update:sort'])
 
+const auth = useAuth()
 const player = usePlayer()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()

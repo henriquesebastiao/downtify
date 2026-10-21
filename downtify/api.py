@@ -4,11 +4,14 @@ The endpoints intentionally mirror the surface that the previous
 ``spotdl``-powered backend exposed so the existing Vue frontend keeps
 working without changes.
 
-Library reads are per-user: a ``user`` browses only tracks, likes,
-playlists, batches and queue jobs of their own (see
-:mod:`downtify.track_owners` and ``docs/features/users.md``); an
-``admin`` sees everything. Playing, streaming, searching and asking
-for downloads stay shared, and files are never stored twice.
+The library is shared: every account browses every downloaded track,
+album and artist - minus what an admin hid from users (see
+:mod:`downtify.library_visibility`, ``GET|POST /api/library/visibility``
+and ``docs/features/users.md``). Likes, playlists, batches and queue
+jobs stay per-user (a ``user`` sees their own; an ``admin`` sees
+everything), and who downloaded a file (:mod:`downtify.track_owners`)
+decides who may delete it. Playing, streaming, searching and asking for
+downloads are shared, and files are never stored twice.
 
 * ``GET  /api/version``
 * ``GET  /api/health`` (liveness probe for the Docker ``HEALTHCHECK`` -
@@ -328,6 +331,7 @@ from . import (
     integration_check,
     library_import,
     library_upgrade,
+    library_visibility,
     lyrics,
     m3u,
     providers,
@@ -408,6 +412,7 @@ from .library_reconcile import (
     refresh_playlists_after_moves,
 )
 from .library_sync import LibrarySync
+from .library_visibility import HiddenRules, LibraryVisibility
 from .likes import (
     LIKED_PLAYLIST_NAME,
     LikedTracks,
@@ -1018,6 +1023,7 @@ class AppState:
     external_sync: Optional[ExternalSyncJob] = None
     likes: Optional[LikedTracks] = None
     track_owners: Optional[TrackOwners] = None
+    library_visibility: Optional[LibraryVisibility] = None
     manual_playlist_owners: Optional[ManualPlaylistOwners] = None
     traffic: Optional[TrafficCounters] = None
     podcasts: Optional[PodcastStore] = None
@@ -1087,20 +1093,48 @@ def request_is_admin(request: Optional[Request]) -> bool:
     return bool(principal is not None and principal.is_admin)
 
 
+def hidden_rules() -> HiddenRules:
+    """What admins hid from users (nothing, until they hide something)."""
+
+    if state.library_visibility is None:
+        return HiddenRules()
+    try:
+        return state.library_visibility.rules()
+    except Exception:
+        logger.opt(exception=True).warning('Could not read hidden items')
+        return HiddenRules()
+
+
+def admin_hidden_rules(request: Optional[Request]) -> Optional[HiddenRules]:
+    """The rules to mark rows with for an admin's view, else ``None``
+    (users get the rows themselves cut instead)."""
+
+    if not request_is_admin(request):
+        return None
+    rules = hidden_rules()
+    return rules if rules else None
+
+
 def allowed_entry_keys(request: Optional[Request]) -> Optional[set[str]]:
     """Content keys *request* may browse (``None``: everything).
 
-    Admins see the whole library, including files nobody owns (monitor
-    sweeps, reconciled drops, pre-feature downloads). Anyone else sees
-    only files they asked to download.
+    The library is shared: an admin sees all of it, and so does everyone
+    else - except what an admin hid from users, which is cut here (one
+    pass over the listing, and only while something is hidden).
     """
 
-    if request_is_admin(request) or state.track_owners is None:
+    if request_is_admin(request):
         return None
-    user_id = request_user_id(request)
-    if not user_id:
+    if not request_user_id(request):
         return set()
-    return state.track_owners.owned_keys(user_id)
+    rules = hidden_rules()
+    if not rules:
+        return None
+    return {
+        entry_content_key(entry)
+        for entry in listing_for_request(library_context())
+        if not rules.hides(entry)
+    }
 
 
 def _playlist_owner_maps() -> tuple[dict[str, int], dict[str, int]]:
@@ -1191,18 +1225,31 @@ def _filter_playlists_for(
 def _filter_entries_for(
     entries: list[dict[str, Any]], request: Optional[Request]
 ) -> list[dict[str, Any]]:
-    """Library rows *request* may browse, with foreign playlists cut.
+    """Library rows *request* may browse.
 
-    A track can sit in playlists nobody else may open (someone else's
-    download shares the file): those names are scrubbed from its row,
-    so the row never reveals them. Rows are copied, never mutated - the
-    snapshot they come from is shared.
+    An admin gets every row; those hidden from users carry ``hidden_by``
+    (``track``, ``album`` or ``artist``). Anyone else gets every row an
+    admin hasn't hidden, with foreign playlists cut: a track can sit in
+    playlists nobody else may open (someone else's download shares the
+    file), and those names are scrubbed from its row so it never reveals
+    them. Rows are copied, never mutated - the snapshot they come from
+    is shared.
     """
 
-    allowed = allowed_entry_keys(request)
-    if allowed is None:
-        return entries
+    if request_is_admin(request):
+        rules = admin_hidden_rules(request)
+        if rules is None:
+            return entries
+        marked = []
+        for entry in entries:
+            reason = rules.reason(entry)
+            marked.append({**entry, 'hidden_by': reason} if reason else entry)
+        return marked
+
     user_id = request_user_id(request)
+    if not user_id:
+        return []
+    rules = hidden_rules()
     catalog_names, manual_owners = _playlist_owner_maps()
     owned = {name for name, uid in catalog_names.items() if uid == user_id} | {
         key for key, uid in manual_owners.items() if uid == user_id
@@ -1219,11 +1266,21 @@ def _filter_entries_for(
 
     filtered = []
     for entry in entries:
-        if entry_content_key(entry) not in allowed:
+        if rules and rules.hides(entry):
             continue
         names = entry.get('playlists')
         filtered.append(_scrubbed(entry, names) if names else entry)
     return filtered
+
+
+def visible_entries(
+    entries: list[dict[str, Any]], request: Optional[Request]
+) -> list[dict[str, Any]]:
+    """*entries* as *request* may see them (hidden songs cut for a user,
+    marked for an admin) - for a listing built from a subset, such as one
+    playlist's tracks."""
+
+    return _filter_entries_for(entries, request)
 
 
 def entries_for_request(request: Optional[Request]) -> list[dict[str, Any]]:
@@ -1545,6 +1602,10 @@ def stored_content_key(stored_path: str) -> str:
         return ''
 
 
+#: What a delete answers for a file that isn't the caller's to delete.
+NOT_YOURS_ERROR = 'Only an admin or whoever downloaded it can delete this song'
+
+
 def ownership_action(
     stored_path: str, request: Optional[Request]
 ) -> tuple[str, str]:
@@ -1637,29 +1698,46 @@ def record_stream_fetch_traffic(video_path: Path, user_id: int) -> None:
 def rekey_file_owners(
     old_key: str, new_key: str, stored_path: str = ''
 ) -> None:
-    """Point ownership rows at a rewritten file (best effort)."""
+    """Point ownership rows (and a hidden song's rule) at a rewritten
+    file (best effort)."""
 
-    if state.track_owners is None:
-        return
-    try:
-        state.track_owners.rekey(old_key, new_key, stored_path)
-    except Exception:
-        logger.opt(exception=True).debug(
-            'Could not rekey owners for {}', stored_path
-        )
+    if state.track_owners is not None:
+        try:
+            state.track_owners.rekey(old_key, new_key, stored_path)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not rekey owners for {}', stored_path
+            )
+    # A hidden song stays hidden after its file is rewritten.
+    if state.library_visibility is not None:
+        try:
+            state.library_visibility.rekey_track(old_key, new_key, stored_path)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not rekey hidden item for {}', stored_path
+            )
 
 
 def drop_file_owners(content_key: str) -> None:
-    """Forget every owner (their file was just deleted from disk)."""
+    """Forget every owner and any hidden-song rule (the file was just
+    deleted from disk)."""
 
-    if state.track_owners is None or not content_key:
+    if not content_key:
         return
-    try:
-        state.track_owners.drop_file(content_key)
-    except Exception:
-        logger.opt(exception=True).warning(
-            'Could not drop owners for a deleted file'
-        )
+    if state.track_owners is not None:
+        try:
+            state.track_owners.drop_file(content_key)
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Could not drop owners for a deleted file'
+            )
+    if state.library_visibility is not None:
+        try:
+            state.library_visibility.drop_track(content_key)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not drop a hidden item for a deleted file'
+            )
 
 
 #: Who pre-feature files belong to on the first start with ownership.
@@ -5652,8 +5730,8 @@ def library_summary(request: Request) -> dict[str, Any]:
     """Home-page library stats and a short recent-album shelf.
 
     Avoids sending every ``GET /tracks`` row to the browser when the
-    page only shows counts and a handful of albums. A user sees their
-    own library only.
+    page only shows counts and a handful of albums. A user's counts leave
+    out what an admin hid from users.
     """
 
     return library_home_summary(
@@ -5666,7 +5744,9 @@ def library_albums(request: Request) -> list[dict[str, Any]]:
     """Album tiles for the Library page, without every track row."""
 
     return library_album_index(
-        library_context(), allowed_keys=allowed_entry_keys(request)
+        library_context(),
+        allowed_keys=allowed_entry_keys(request),
+        hidden=admin_hidden_rules(request),
     )
 
 
@@ -5681,8 +5761,171 @@ def library_artists(request: Request) -> list[dict[str, Any]]:
             for path in state.likes.paths(likes_scope(request))
         }
     return library_artist_index(
-        library_context(), liked, allowed_keys=allowed_entry_keys(request)
+        library_context(),
+        liked,
+        allowed_keys=allowed_entry_keys(request),
+        hidden=admin_hidden_rules(request),
     )
+
+
+#: Most items one visibility request may carry.
+MAX_VISIBILITY_ITEMS = 2000
+
+
+def _visibility_store() -> LibraryVisibility:
+    store = state.library_visibility
+    if store is None:
+        raise HTTPException(
+            status_code=503, detail='Library visibility is not ready'
+        )
+    return store
+
+
+def _hidden_paths(rules: HiddenRules) -> set[str]:
+    """Paths of the library rows *rules* hide from users right now."""
+
+    return {
+        str(entry.get('file') or '').replace('\\', '/')
+        for entry in listing_for_request(library_context())
+        if rules.hides(entry)
+    }
+
+
+def _apply_visibility_item(
+    store: LibraryVisibility,
+    action: str,
+    item: dict[str, Any],
+    by_path: dict[str, dict[str, Any]],
+) -> str:
+    """Hide or show one item. Its label when the rules changed, else ``''``."""
+
+    kind = str(item.get('kind') or '')
+    hide = action == 'hide'
+    if kind == library_visibility.KIND_TRACK:
+        file = str(item.get('file') or '').strip().replace('\\', '/')
+        entry = by_path.get(file)
+        title = (
+            str(entry.get('title') or entry.get('name') or file)
+            if entry
+            else file
+        )
+        artist = str(entry.get('artist') or '') if entry else ''
+        label = f'{artist} - {title}' if artist else title
+        if not hide:
+            key = (
+                entry_content_key(entry)
+                if entry
+                else str(item.get('key') or '')
+            )
+            changed = store.show(kind, key) if key else False
+            return (
+                label if store.show_track_by_path(file) > 0 or changed else ''
+            )
+        if entry is None:
+            raise HTTPException(status_code=404, detail='No such track')
+        added = store.hide(
+            kind,
+            entry_content_key(entry),
+            label=label,
+            detail=str(entry.get('album') or ''),
+            path=file,
+        )
+        return label if added else ''
+    if kind == library_visibility.KIND_ALBUM:
+        artist = str(item.get('artist') or '').strip()
+        title = str(item.get('title') or '').strip()
+        if not title:
+            raise HTTPException(status_code=400, detail='Album needs a title')
+        key = library_visibility.album_key(artist, title)
+        if hide:
+            changed = store.hide(kind, key, label=title, detail=artist)
+        else:
+            changed = store.show(kind, key)
+        return title if changed else ''
+    if kind == library_visibility.KIND_ARTIST:
+        name = str(item.get('name') or '').strip()
+        if not name:
+            raise HTTPException(status_code=400, detail='Artist needs a name')
+        key = library_visibility.artist_key(name)
+        if hide:
+            changed = store.hide(kind, key, label=name)
+        else:
+            changed = store.show(kind, key)
+        return name if changed else ''
+    raise HTTPException(status_code=400, detail='Unknown item kind')
+
+
+@router.get('/api/library/visibility')
+def library_visibility_list() -> dict[str, list[dict[str, Any]]]:
+    """What admins hid from users: ``{tracks, albums, artists}``."""
+
+    return _visibility_store().items()
+
+
+@router.post('/api/library/visibility')
+async def library_visibility_update(request: Request) -> dict[str, Any]:
+    """Hide songs, albums or artists from users (or show them again).
+
+    Body: ``{"action": "hide"|"show", "items": [...]}`` where an item is
+    ``{"kind": "track", "file": <library path>}``, ``{"kind": "album",
+    "artist", "title"}`` or ``{"kind": "artist", "name"}``. Admins keep
+    seeing everything either way.
+    """
+
+    payload = await _json_object(request)
+    action = str(payload.get('action') or '')
+    items = payload.get('items')
+    if action not in {'hide', 'show'} or not isinstance(items, list):
+        raise HTTPException(
+            status_code=400, detail='Needs an action and a list of items'
+        )
+    if len(items) > MAX_VISIBILITY_ITEMS:
+        raise HTTPException(status_code=413, detail='Too many items')
+    store = _visibility_store()
+    result = await asyncio.to_thread(_update_visibility, store, action, items)
+    labels = result.pop('labels')
+    if labels:
+        shown = ', '.join(labels[:3]) + (' …' if len(labels) > 3 else '')
+        await log_activity(
+            request,
+            'library_hidden' if action == 'hide' else 'library_shown',
+            shown,
+            {'count': len(labels)},
+        )
+    return result
+
+
+def _update_visibility(
+    store: LibraryVisibility, action: str, items: list[Any]
+) -> dict[str, Any]:
+    entries = listing_for_request(library_context())
+    by_path = {
+        str(entry.get('file') or '').replace('\\', '/'): entry
+        for entry in entries
+    }
+    before = _hidden_paths(store.rules())
+    labels: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        label = _apply_visibility_item(store, action, item, by_path)
+        if label:
+            labels.append(label)
+    changed = len(labels)
+    if changed:
+        # Users' apps learn from the sync feed: poke every row whose
+        # visibility flipped so the next sync drops or restores it.
+        after = _hidden_paths(store.rules())
+        if state.library_sync is not None:
+            for path in before ^ after:
+                try:
+                    state.library_sync.touch(path)
+                except Exception:
+                    logger.opt(exception=True).debug(
+                        'Could not poke the sync feed for {}', path
+                    )
+        announce_library_changed()
+    return {'changed': changed, 'labels': labels, **store.items()}
 
 
 @router.post('/api/library/lookup')

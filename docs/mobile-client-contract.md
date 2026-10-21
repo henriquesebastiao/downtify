@@ -113,7 +113,7 @@ GET /api/v1/library?since=<cursor>
 - `ETag`/`If-None-Match` are supported (`304` when nothing changed for that `since`).
 - `refresh=true` rescans the folder now (pull to refresh) — otherwise the scan behind the list is cached for about a minute.
 - When the server says the library changed (WebSocket `library_changed`, below), sync again.
-- **Whose library:** the feed holds the paired account’s own tracks (an admin’s device gets everything). Tracks outside the account arrive as removed ids. Nothing below changes shape because of this. Podcast shows, episode progress, listens and the block list are per-account the same way; subscribing to a show works from the web page.
+- **Whose library:** the library is shared, so the feed holds every track except what an admin [hid from users](features/users.md#hiding-from-users) (an admin’s device gets everything). A track that becomes hidden arrives as a removed id, and one shown again arrives as an ordinary row. Nothing below changes shape because of this. Podcast shows, episode progress, listens and the block list are per-account the same way; subscribing to a show works from the web page.
 
 Other reads, all by track id:
 

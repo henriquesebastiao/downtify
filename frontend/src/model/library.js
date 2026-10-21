@@ -124,6 +124,7 @@ function albumFromIndex(row) {
     added: Number(row.added) || 0,
     duration: Number(row.duration) || 0,
     size: Number(row.size) || 0,
+    hiddenBy: String(row.hidden_by || ''),
   }
 }
 
@@ -140,6 +141,7 @@ function artistFromIndex(row) {
     cover: coverFile ? coverURL(coverFile) : '',
     added: Number(row.added) || 0,
     duration: Number(row.duration) || 0,
+    hiddenBy: String(row.hidden_by || ''),
   }
 }
 
@@ -347,21 +349,25 @@ function forgetByPrefix(prefix) {
 /**
  * Delete tracks; resolves `{ deleted, released, failed }`.
  *
- * `deleted` is every file gone from this account's library: wiped off
- * disk (`deleted`), or released from it while other accounts still
- * keep the shared file (the server answers `{ "released": true }`
- * with no `deleted` flag). Only other people's files and unknown
- * paths count as `failed`.
+ * `deleted` is every file wiped off disk. `released` are files other
+ * accounts downloaded too: the account only gives up its own claim (the
+ * server answers `{ "released": true }` with no `deleted` flag) and the
+ * song stays in the shared library. Anything else - an unknown path, a
+ * file someone else downloaded - counts as `failed`.
  */
 async function deleteFiles(files) {
   const res = await API.deleteDownloadsBatch(files)
   const results = res.data?.results || {}
-  const gone = files.filter(
-    (file) => results[file]?.deleted || results[file]?.released
+  const gone = files.filter((file) => results[file]?.deleted)
+  const released = files.filter(
+    (file) => !results[file]?.deleted && results[file]?.released
   )
-  const released = files.filter((file) => results[file]?.released)
   forget(gone)
-  return { deleted: gone, released, failed: files.length - gone.length }
+  return {
+    deleted: gone,
+    released,
+    failed: files.length - gone.length - released.length,
+  }
 }
 
 async function deletePlaylist(playlist) {

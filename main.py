@@ -74,6 +74,7 @@ from downtify.library_paths_cache import (
 from downtify.library_sync import LibrarySync
 from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
+from downtify.library_visibility import LibraryVisibility
 from downtify.likes import LikedTracks
 from downtify.lyrics import read_track_lyrics
 from downtify.lyrics_cache import LyricsLookupCache
@@ -351,6 +352,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
     api.state.track_owners = TrackOwners(library_db)
+    api.state.library_visibility = LibraryVisibility(library_db)
     api.state.traffic = TrafficCounters(library_db)
     api.state.podcasts = PodcastStore(library_db)
     # The mobile API (downtify/mobile_routes.py).
@@ -672,7 +674,7 @@ def build_app() -> FastAPI:
         and files known to the track index.
 
         The directory scan is cached briefly; ``?refresh=true`` forces a
-        rescan. A user sees their own files only.
+        rescan. A user sees every file but those an admin hid from users.
         """
         if refresh:
             api.invalidate_library_paths_cache(drop_entries=True)
@@ -686,7 +688,7 @@ def build_app() -> FastAPI:
         ``downtify.playlist_listing.list_library_playlists``.
 
         A user sees their own playlists (and their own liked songs as
-        the liked one) only.
+        the liked one) only; the tracks inside leave out hidden songs.
         """
         return api.playlists_for_request(request)
 
@@ -702,8 +704,8 @@ def build_app() -> FastAPI:
         ``?playlist=``, ``?artist=``, ``?album=`` and ``?q=`` return a
         subset so pages that show one list do not download the whole
         library. ``?limit=`` caps that subset (search picker). The filters
-        come from the query string (one handler argument) so a user only
-        ever sees their own rows.
+        come from the query string (one handler argument) so a user never
+        sees a row an admin hid from users.
 
         Each row has ``file``, ``artist`` and ``album``, plus ``title``,
         ``has_cover`` and, when the file belongs to a downloaded
@@ -730,7 +732,9 @@ def build_app() -> FastAPI:
             # for other users' collections).
             match = api.playlist_entry_for_request(name, request)
             files = list(match.get('files') or []) if match else []
-            tracks = list_entries_for_stored_paths(ctx, files)
+            tracks = api.visible_entries(
+                list_entries_for_stored_paths(ctx, files), request
+            )
         else:
             tracks = api.entries_for_request(request)
             tracks.sort(key=lambda t: t['file'])
@@ -769,7 +773,7 @@ def build_app() -> FastAPI:
         to be one click per track. Returns a single-use ticket the
         browser then navigates to - the file list is too long for a URL,
         and a fetch would have to hold the whole archive in memory. A
-        user can only pack their own files.
+        user cannot pack what an admin hid from users.
         """
 
         if not files:
@@ -862,7 +866,7 @@ def build_app() -> FastAPI:
             api.ownership_action, file, request
         )
         if action == 'foreign':
-            result = {'deleted': False, 'error': 'Not in your library'}
+            result = {'deleted': False, 'error': api.NOT_YOURS_ERROR}
         elif action == 'release':
             result = await asyncio.to_thread(
                 api.release_file_ownership, file, key, user_id
@@ -918,7 +922,7 @@ def build_app() -> FastAPI:
                 if action == 'foreign':
                     results[name] = {
                         'deleted': False,
-                        'error': 'Not in your library',
+                        'error': api.NOT_YOURS_ERROR,
                     }
                 elif action == 'release':
                     results[name] = await asyncio.to_thread(

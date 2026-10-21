@@ -50,6 +50,24 @@
           <span class="max-sm:sr-only">{{ t('library.downloadZip') }}</span>
         </UiButton>
         <UiButton
+          v-if="canHide"
+          size="sm"
+          variant="secondary"
+          icon="eye-off"
+          @click="$emit('hide-from-users')"
+        >
+          <span class="max-sm:sr-only">{{ t('visibility.hide') }}</span>
+        </UiButton>
+        <UiButton
+          v-if="canShow"
+          size="sm"
+          variant="secondary"
+          icon="eye"
+          @click="$emit('show-to-users')"
+        >
+          <span class="max-sm:sr-only">{{ t('visibility.show') }}</span>
+        </UiButton>
+        <UiButton
           size="sm"
           variant="danger"
           icon="trash"
@@ -77,6 +95,9 @@ defineProps({
   count: { type: Number, default: 0 },
   total: { type: Number, default: 0 },
   zipping: { type: Boolean, default: false },
+  // Admins: whether the selection has songs to hide from users / show.
+  canHide: { type: Boolean, default: false },
+  canShow: { type: Boolean, default: false },
 })
 defineEmits([
   'select-all',
@@ -86,6 +107,8 @@ defineEmits([
   'delete',
   'clear',
   'add-to-playlist',
+  'hide-from-users',
+  'show-to-users',
 ])
 const { t } = useI18n()
 </script>

@@ -17,6 +17,7 @@ Downtify keeps a small **catalog** of the files under `/downloads` (the slskd fo
 | **Library metadata cache** | `/data/downtify_library.db` | Title, artist, album, album artist, track number, year, length and cover size per file for `GET /tracks`, re-read only when a file's modification time or size changes |
 | **Upgrade runs** | `/data/downtify_library.db` | The [library upgrade](library-upgrade.md) queue and when each track was last checked, so a run survives a restart |
 | **Path scan cache** | RAM, plus a snapshot in `/data/downtify_library.db` | Folded `GET /tracks` rows, playlist listings and path pairs. UI routes serve this snapshot without walking the disk. Each finished download is **merged into the snapshot immediately** (so a new artist shows up without waiting). A delete **drops those files from the snapshot immediately** (so an album disappears from the grid without waiting). A full tree walk runs in the background a few seconds after the download queue is idle — not on a fixed timer. `GET /list?refresh=true` drops the snapshot and rescans now. |
+| **Hidden items** | `/data/downtify_library.db` | The songs, albums and artists an admin [hid from users](users.md#hiding-from-users) |
 | **Cover art cache** | `/data/cover_cache` (optional) | Extracted cover images for `GET /cover` |
 
 Files are matched across moves by a **content key** — a hash of the file's name and size. Moving a file to another folder keeps its key; replacing it with a different file gives it a new one.
@@ -63,6 +64,8 @@ The Library page has four tabs — **Albums**, **Artists**, **Playlists** and **
 
 Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle**, **Add to queue** and **Download as ZIP**. A playlist you created also has **Add songs** and **Rename**; a downloaded playlist page shows how many of its tracks are downloaded, lists the missing ones with **Download missing**, and offers **Watch for new tracks**. **Delete playlist** is in the **⋯** menu: imported playlists delete the audio; a playlist you created only removes the playlist.
 
+Every account sees the same library: what an admin [hides from users](users.md#hiding-from-users) is left out for them, and an admin sees it all with a crossed-out eye on what is hidden. Admins hide and show from the `…` menu of a song, album or artist, or from the selection bar in **Tracks**.
+
 **Download as ZIP** saves the selected tracks to the device you're browsing from as a single ZIP, keeping their folder layout — handy when Downtify runs on a home server and you want a batch of tracks locally. Combine it with **Select all** to take everything the current filter shows. The archive is built while it downloads, so nothing is written to the server's disk, and it's capped at 2000 tracks per download.
 
 ## API
@@ -73,6 +76,7 @@ Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle**
 | `GET` | `/api/library/summary` | Home page counts and recent albums, without the full track list |
 | `GET` | `/api/library/albums` | Album tiles (counts + cover file), without every track |
 | `GET` | `/api/library/artists` | Artist tiles (counts + cover file) for Library and Discover |
+| `GET` `POST` | `/api/library/visibility` | Admins: what is hidden from users, and hide / show items |
 | `POST` | `/api/library/lookup` | Library rows for search/link songs already downloaded |
 | `GET` | `/tracks` | Library tracks with tags. `?playlist=`, `?artist=`, `?album=`, `?q=` and `?limit=` return a subset |
 | `GET` | `/media/{path}` | Serve a library file, including `slskd/…` and `ext/…` paths |

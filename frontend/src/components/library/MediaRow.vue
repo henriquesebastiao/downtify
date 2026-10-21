@@ -23,6 +23,15 @@
             title
           }}</span>
           <EqBars v-if="playing" :size="10" />
+          <span
+            v-if="hiddenBy"
+            class="shrink-0 text-faint"
+            role="img"
+            :title="t(`visibility.hiddenBy.${hiddenBy}`)"
+            :aria-label="t(`visibility.hiddenBy.${hiddenBy}`)"
+          >
+            <AppIcon name="eye-off" :size="14" />
+          </span>
         </span>
         <span class="truncate text-[13px] text-muted">{{ subtitle }}</span>
       </span>
@@ -51,6 +60,7 @@
 </template>
 
 <script setup>
+import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
 import UiIconButton from '../ui/UiIconButton.vue'
@@ -71,6 +81,8 @@ defineProps({
   round: { type: Boolean, default: false },
   playing: { type: Boolean, default: false },
   playable: { type: Boolean, default: true },
+  // Admins: the rule hiding this from users ('album', 'artist'), or ''.
+  hiddenBy: { type: String, default: '' },
 })
 defineEmits(['play'])
 const { t } = useI18n()

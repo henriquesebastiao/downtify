@@ -22,9 +22,10 @@ describe('deleteFiles', () => {
     deleteDownloadsBatch.mockReset()
   })
 
-  it('counts a released shared file as gone from the library', async () => {
+  it('keeps a released shared file in the library', async () => {
     // The server answers `{ "released": true }` with no `deleted`
-    // flag when the file stays on disk for its other owners.
+    // flag when the file stays on disk for its other owners: it stays
+    // in the shared library, and isn't a failure either.
     deleteDownloadsBatch.mockResolvedValue({
       data: { results: { 'Shared.mp3': { released: true } } },
     })
@@ -34,7 +35,7 @@ describe('deleteFiles', () => {
     ])
 
     expect(deleteDownloadsBatch).toHaveBeenCalledWith(['Shared.mp3'])
-    expect(deleted).toEqual(['Shared.mp3'])
+    expect(deleted).toEqual([])
     expect(released).toEqual(['Shared.mp3'])
     expect(failed).toBe(0)
   })
@@ -44,7 +45,11 @@ describe('deleteFiles', () => {
       data: {
         results: {
           'Solo.mp3': { deleted: true },
-          'Old.mp3': { deleted: false, error: 'Not in your library' },
+          'Old.mp3': {
+            deleted: false,
+            error:
+              'Only an admin or whoever downloaded it can delete this song',
+          },
         },
       },
     })

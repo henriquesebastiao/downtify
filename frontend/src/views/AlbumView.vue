@@ -117,6 +117,7 @@ import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
+import { useVisibility } from '/src/model/visibility'
 import { albumKey } from '/src/lib/library'
 import { formatBytes, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
@@ -128,6 +129,7 @@ const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
+const visibility = useVisibility()
 
 const ready = ref(false)
 
@@ -226,6 +228,7 @@ const menu = computed(() => [
         params: { query: `${album.value.artist} ${album.value.title}` },
       }),
   },
+  ...(album.value ? visibility.albumMenu(album.value) : []),
   { divider: true },
   {
     label: t('album.delete'),
