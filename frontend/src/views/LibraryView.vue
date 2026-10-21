@@ -151,7 +151,8 @@
         >
           {{ t('actions.shuffle') }}
         </UiButton>
-        <span class="tabular ml-auto text-[13px] text-muted">
+        <TrackSortSelect v-model="trackSort" class="ml-auto" />
+        <span class="tabular text-[13px] text-muted">
           {{ t('common.tracks', { count: items.length }) }}
         </span>
       </div>
@@ -258,6 +259,7 @@ import PageHeader from '/src/components/library/PageHeader.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
 import TrackList from '/src/components/library/TrackList.vue'
+import TrackSortSelect from '/src/components/library/TrackSortSelect.vue'
 import API from '/src/model/api'
 import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'

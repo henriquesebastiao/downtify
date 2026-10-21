@@ -44,10 +44,12 @@ export function usePlaylistActions() {
     }
   }
 
-  async function play(playlist, options = {}) {
+  // `options.tracks`: play the list in this order (the page's sort)
+  // instead of the playlist's own.
+  async function play(playlist, { tracks: ordered = null, ...options } = {}) {
     await library.loadPlaylistTracks(playlist.name)
     const live = library.findPlaylist(playlist.name) || playlist
-    tracks.play(live.tracks, 0, contextFor(live), options)
+    tracks.play(ordered || live.tracks, 0, contextFor(live), options)
   }
 
   function manuals() {

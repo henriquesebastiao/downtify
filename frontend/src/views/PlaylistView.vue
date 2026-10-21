@@ -84,11 +84,16 @@
       <div
         class="mx-auto flex max-w-[1680px] flex-col gap-10 px-4 sm:px-6 lg:px-10"
       >
-        <TrackList
-          v-if="playlist.tracks.length"
-          :tracks="playlist.tracks"
-          :context="playlistActions.contextFor(playlist)"
-        />
+        <div v-if="playlist.tracks.length" class="flex flex-col gap-3">
+          <div class="flex justify-end">
+            <TrackSortSelect v-model="trackSort" playlist-order />
+          </div>
+          <TrackList
+            v-model:sort="trackSort"
+            :tracks="sortedTracks"
+            :context="playlistActions.contextFor(playlist)"
+          />
+        </div>
         <UiEmpty
           v-else
           icon="download"
@@ -146,6 +151,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { useLocalStorage } from '@vueuse/core'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import CoverArt from '/src/components/ui/CoverArt.vue'
@@ -159,12 +165,14 @@ import DetailState from '/src/components/library/DetailState.vue'
 import PlayButton from '/src/components/library/PlayButton.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import TrackList from '/src/components/library/TrackList.vue'
+import TrackSortSelect from '/src/components/library/TrackSortSelect.vue'
 import DownloadState from '/src/components/search/DownloadState.vue'
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
+import { sortTracks } from '/src/lib/library'
 import { splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -180,6 +188,16 @@ const playlist = computed(() =>
   library.findPlaylist(String(route.query.name || ''))
 )
 const batch = computed(() => playlist.value?.batch || null)
+
+// How the songs are ordered: the playlist's own order until picked
+// otherwise (remembered for every playlist).
+const trackSort = useLocalStorage('downtify-playlist-track-sort', {
+  key: 'order',
+  dir: 'asc',
+})
+const sortedTracks = computed(() =>
+  sortTracks(playlist.value?.tracks || [], trackSort.value)
+)
 
 const facts = computed(() => {
   const p = playlist.value
@@ -205,7 +223,7 @@ const isThisPlaying = computed(
 
 function togglePlay() {
   if (isThisPlaying.value) player.pause()
-  else playlistActions.play(playlist.value)
+  else playlistActions.play(playlist.value, { tracks: sortedTracks.value })
 }
 
 const menu = computed(() =>
