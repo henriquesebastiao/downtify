@@ -16,6 +16,7 @@ docker/
 
 # Local scratch file for drafting commit messages
 commit-message.md
+release-notes.md
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
