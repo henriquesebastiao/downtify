@@ -85,6 +85,9 @@ export function normalizeTrack(row) {
     year: String(raw.year || ''),
     duration: Number(raw.duration) || 0,
     explicit: Boolean(raw.explicit),
+    // Admins only: why users can't see this track ('track', 'album' or
+    // 'artist' - the widest rule that hides it), '' when they can.
+    hiddenBy: String(raw.hidden_by || ''),
     added: Number(raw.added) || 0,
     size: Number(raw.size) || 0,
     // Bare paths (no /tracks row) don't know; try the cover endpoint.
@@ -132,6 +135,7 @@ export function groupAlbums(tracks) {
         added: 0,
         duration: 0,
         size: 0,
+        hiddenBy: '',
       }
       map.set(key, album)
     }
@@ -139,6 +143,12 @@ export function groupAlbums(tracks) {
     album.added = Math.max(album.added, track.added)
     album.duration += track.duration
     album.size += track.size
+    // A rule on the album (or its artist) hides the whole album; one on a
+    // single track doesn't.
+    if (track.hiddenBy === 'artist') album.hiddenBy = 'artist'
+    else if (track.hiddenBy === 'album' && !album.hiddenBy) {
+      album.hiddenBy = 'album'
+    }
     if (!album.year && track.year) album.year = track.year
     if (!album.cover && track.hasCover) album.cover = track.cover
   }
@@ -165,6 +175,7 @@ export function groupArtists(tracks, albums = groupAlbums(tracks)) {
         cover: '',
         added: 0,
         duration: 0,
+        hiddenBy: '',
       })
     }
     return map.get(key)
@@ -176,6 +187,7 @@ export function groupArtists(tracks, albums = groupAlbums(tracks)) {
     artist.tracks.push(track)
     artist.added = Math.max(artist.added, track.added)
     artist.duration += track.duration
+    if (track.hiddenBy === 'artist') artist.hiddenBy = 'artist'
     if (!artist.cover && track.hasCover) artist.cover = track.cover
   }
   for (const album of albums) {

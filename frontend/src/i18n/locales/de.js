@@ -1217,6 +1217,32 @@ export default {
     later: 'Später',
     changePassword: 'Passwort ändern',
   },
+  visibility: {
+    hide: 'Vor Nutzern verbergen',
+    show: 'Nutzern zeigen',
+    hiddenShort: 'Verborgen',
+    hidden: {
+      one: 'Vor Nutzern verborgen',
+      other: '{count} Einträge vor Nutzern verborgen',
+    },
+    shown: {
+      one: 'Nutzern gezeigt',
+      other: '{count} Einträge Nutzern gezeigt',
+    },
+    hiddenBy: {
+      track: 'Vor Nutzern verborgen',
+      album: 'Vor Nutzern verborgen, zusammen mit dem Album',
+      artist: 'Vor Nutzern verborgen, zusammen mit dem Interpreten',
+    },
+    title: 'Vor Nutzern verborgen',
+    hint: 'Alle sehen jeden heruntergeladenen Song. Was du hier verbirgst, sehen Nutzer nicht mehr; Admins sehen weiterhin alles. Verberge Songs, Alben oder Interpreten über die Bibliothek.',
+    none: 'Nichts ist verborgen. Nutze „Vor Nutzern verbergen“ bei einem Song, Album oder Interpreten in der Bibliothek.',
+    group: {
+      artists: 'Interpreten',
+      albums: 'Alben',
+      tracks: 'Songs',
+    },
+  },
   users: {
     title: 'Benutzer',
     hint: 'Wer sich an diesem Server anmelden kann. Admins können alles ändern; Benutzer können Musik hören, suchen und herunterladen sowie ihr eigenes Konto ändern.',
@@ -1284,6 +1310,8 @@ export default {
       unlike: 'Likes entfernt',
       delete: 'Gelöschte Dateien',
       audio_replaced: 'Audio ersetzt',
+      library_hidden: 'Vor Nutzern verborgene Einträge',
+      library_shown: 'Nutzern gezeigte Einträge',
       device_paired: 'Apps gekoppelt',
       device_unpaired: 'Apps entkoppelt',
       user_created: 'Benutzer hinzugefügt',
@@ -1302,6 +1330,8 @@ export default {
       unlike: 'hat den Like für {what} entfernt',
       delete: 'hat {what} gelöscht',
       audio_replaced: 'hat das Audio von {what} ersetzt',
+      library_hidden: 'hat {what} vor Nutzern verborgen',
+      library_shown: 'hat {what} Nutzern gezeigt',
       device_paired: 'hat {what} gekoppelt',
       device_unpaired: 'hat die Kopplung von {what} aufgehoben',
       user_created: 'hat den Benutzer {what} hinzugefügt',
@@ -1446,6 +1476,11 @@ export default {
       other: '{count} Titel zur Warteschlange hinzugefügt',
     },
     deleted: { one: 'Titel gelöscht', other: '{count} Titel gelöscht' },
+    releasedShared: {
+      one: '{count} Song bleibt in der gemeinsamen Bibliothek (jemand anderes hat ihn auch heruntergeladen)',
+      other:
+        '{count} Songs bleiben in der gemeinsamen Bibliothek (andere haben sie auch heruntergeladen)',
+    },
     deletePartial: {
       one: '{count} Datei konnte nicht gelöscht werden',
       other: '{count} Dateien konnten nicht gelöscht werden',

@@ -1185,6 +1185,32 @@ export default {
     later: 'Más tarde',
     changePassword: 'Cambiar contraseña',
   },
+  visibility: {
+    hide: 'Ocultar a los usuarios',
+    show: 'Mostrar a los usuarios',
+    hiddenShort: 'Oculto',
+    hidden: {
+      one: 'Oculto para los usuarios',
+      other: '{count} elementos ocultos para los usuarios',
+    },
+    shown: {
+      one: 'Visible para los usuarios',
+      other: '{count} elementos visibles para los usuarios',
+    },
+    hiddenBy: {
+      track: 'Oculta para los usuarios',
+      album: 'Oculta para los usuarios junto con su álbum',
+      artist: 'Oculta para los usuarios junto con su artista',
+    },
+    title: 'Oculto para los usuarios',
+    hint: 'Todos ven todas las canciones descargadas. Lo que ocultes aquí no lo ven los usuarios; los administradores siguen viéndolo todo. Oculta canciones, álbumes o artistas desde la Biblioteca.',
+    none: 'No hay nada oculto. Usa «Ocultar a los usuarios» en una canción, álbum o artista de la Biblioteca.',
+    group: {
+      artists: 'Artistas',
+      albums: 'Álbumes',
+      tracks: 'Canciones',
+    },
+  },
   users: {
     title: 'Usuarios',
     hint: 'Quién puede iniciar sesión en este servidor. Los admins pueden cambiarlo todo; los usuarios pueden escuchar, buscar, descargar y cambiar su propia cuenta.',
@@ -1252,6 +1278,8 @@ export default {
       unlike: 'Me gusta quitados',
       delete: 'Archivos eliminados',
       audio_replaced: 'Audios reemplazados',
+      library_hidden: 'Elementos ocultos a los usuarios',
+      library_shown: 'Elementos mostrados a los usuarios',
       device_paired: 'Apps vinculadas',
       device_unpaired: 'Apps desvinculadas',
       user_created: 'Usuarios añadidos',
@@ -1270,6 +1298,8 @@ export default {
       unlike: 'quitó el me gusta a {what}',
       delete: 'eliminó {what}',
       audio_replaced: 'reemplazó el audio de {what}',
+      library_hidden: 'ocultó {what} a los usuarios',
+      library_shown: 'mostró {what} a los usuarios',
       device_paired: 'vinculó {what}',
       device_unpaired: 'desvinculó {what}',
       user_created: 'añadió al usuario {what}',
@@ -1415,6 +1445,11 @@ export default {
     deleted: {
       one: 'Canción eliminada',
       other: '{count} canciones eliminadas',
+    },
+    releasedShared: {
+      one: '{count} canción sigue en la biblioteca compartida (otra persona también la descargó)',
+      other:
+        '{count} canciones siguen en la biblioteca compartida (otras personas también las descargaron)',
     },
     deletePartial: {
       one: 'No se pudo eliminar {count} archivo',

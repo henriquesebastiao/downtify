@@ -374,6 +374,15 @@ function getLibraryArtists() {
   return API.get('/api/library/artists')
 }
 
+// What admins hid from users (downtify/library_visibility.py).
+function getLibraryVisibility() {
+  return API.get('/api/library/visibility')
+}
+
+function updateLibraryVisibility(action, items) {
+  return API.post('/api/library/visibility', { action, items })
+}
+
 function lookupLibrarySongs(songs) {
   return API.post('/api/library/lookup', { songs })
 }
@@ -812,6 +821,8 @@ export default {
   getLibrarySummary,
   getLibraryAlbums,
   getLibraryArtists,
+  getLibraryVisibility,
+  updateLibraryVisibility,
   lookupLibrarySongs,
   getLyrics,
   deleteDownload,

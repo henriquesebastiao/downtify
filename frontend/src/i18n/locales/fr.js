@@ -1200,6 +1200,32 @@ export default {
     later: 'Plus tard',
     changePassword: 'Changer le mot de passe',
   },
+  visibility: {
+    hide: 'Masquer aux utilisateurs',
+    show: 'Afficher aux utilisateurs',
+    hiddenShort: 'Masqué',
+    hidden: {
+      one: 'Masqué aux utilisateurs',
+      other: '{count} éléments masqués aux utilisateurs',
+    },
+    shown: {
+      one: 'Affiché aux utilisateurs',
+      other: '{count} éléments affichés aux utilisateurs',
+    },
+    hiddenBy: {
+      track: 'Masqué aux utilisateurs',
+      album: 'Masqué aux utilisateurs avec son album',
+      artist: 'Masqué aux utilisateurs avec son artiste',
+    },
+    title: 'Masqué aux utilisateurs',
+    hint: 'Tout le monde voit tous les morceaux téléchargés. Ce que vous masquez ici disparaît pour les utilisateurs ; les admins voient toujours tout. Masquez des morceaux, albums ou artistes depuis la Bibliothèque.',
+    none: 'Rien n’est masqué. Utilisez « Masquer aux utilisateurs » sur un morceau, un album ou un artiste dans la Bibliothèque.',
+    group: {
+      artists: 'Artistes',
+      albums: 'Albums',
+      tracks: 'Morceaux',
+    },
+  },
   users: {
     title: 'Utilisateurs',
     hint: 'Qui peut se connecter à ce serveur. Les admins peuvent tout changer ; les utilisateurs peuvent écouter, chercher, télécharger et modifier leur propre compte.',
@@ -1267,6 +1293,8 @@ export default {
       unlike: 'J’aime retirés',
       delete: 'Fichiers supprimés',
       audio_replaced: 'Audios remplacés',
+      library_hidden: 'Éléments masqués aux utilisateurs',
+      library_shown: 'Éléments affichés aux utilisateurs',
       device_paired: 'Applis associées',
       device_unpaired: 'Applis dissociées',
       user_created: 'Utilisateurs ajoutés',
@@ -1285,6 +1313,8 @@ export default {
       unlike: 'n’aime plus {what}',
       delete: 'a supprimé {what}',
       audio_replaced: 'a remplacé l’audio de {what}',
+      library_hidden: 'a masqué {what} aux utilisateurs',
+      library_shown: 'a affiché {what} aux utilisateurs',
       device_paired: 'a associé {what}',
       device_unpaired: 'a dissocié {what}',
       user_created: 'a ajouté l’utilisateur {what}',
@@ -1424,6 +1454,11 @@ export default {
       other: '{count} titres ajoutés à la file',
     },
     deleted: { one: 'Titre supprimé', other: '{count} titres supprimés' },
+    releasedShared: {
+      one: '{count} morceau reste dans la bibliothèque partagée (quelqu’un d’autre l’a aussi téléchargé)',
+      other:
+        '{count} morceaux restent dans la bibliothèque partagée (d’autres les ont aussi téléchargés)',
+    },
     deletePartial: {
       one: '{count} fichier n’a pas pu être supprimé',
       other: '{count} fichiers n’ont pas pu être supprimés',

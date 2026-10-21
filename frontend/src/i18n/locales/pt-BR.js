@@ -1176,6 +1176,32 @@ export default {
     later: 'Depois',
     changePassword: 'Trocar senha',
   },
+  visibility: {
+    hide: 'Ocultar dos usuários',
+    show: 'Mostrar aos usuários',
+    hiddenShort: 'Oculto',
+    hidden: {
+      one: 'Oculto dos usuários',
+      other: '{count} itens ocultos dos usuários',
+    },
+    shown: {
+      one: 'Visível aos usuários',
+      other: '{count} itens visíveis aos usuários',
+    },
+    hiddenBy: {
+      track: 'Oculta dos usuários',
+      album: 'Oculta dos usuários junto com o álbum',
+      artist: 'Oculta dos usuários junto com o artista',
+    },
+    title: 'Oculto dos usuários',
+    hint: 'Todos veem todas as músicas baixadas. O que você oculta aqui some para os usuários; os administradores continuam vendo tudo. Oculte músicas, álbuns ou artistas pela Biblioteca.',
+    none: 'Nada está oculto. Use “Ocultar dos usuários” em uma música, álbum ou artista na Biblioteca.',
+    group: {
+      artists: 'Artistas',
+      albums: 'Álbuns',
+      tracks: 'Músicas',
+    },
+  },
   users: {
     title: 'Usuários',
     hint: 'Quem pode entrar neste servidor. Admins podem mudar tudo; usuários podem ouvir, buscar, baixar e mudar a própria conta.',
@@ -1243,6 +1269,8 @@ export default {
       unlike: 'Descurtidas',
       delete: 'Arquivos excluídos',
       audio_replaced: 'Áudios substituídos',
+      library_hidden: 'Itens ocultos dos usuários',
+      library_shown: 'Itens mostrados aos usuários',
       device_paired: 'Apps pareados',
       device_unpaired: 'Apps despareados',
       user_created: 'Usuários criados',
@@ -1261,6 +1289,8 @@ export default {
       unlike: 'descurtiu {what}',
       delete: 'excluiu {what}',
       audio_replaced: 'substituiu o áudio de {what}',
+      library_hidden: 'ocultou {what} dos usuários',
+      library_shown: 'mostrou {what} aos usuários',
       device_paired: 'pareou {what}',
       device_unpaired: 'despareou {what}',
       user_created: 'criou o usuário {what}',
@@ -1399,6 +1429,11 @@ export default {
       other: '{count} faixas adicionadas à fila',
     },
     deleted: { one: 'Faixa excluída', other: '{count} faixas excluídas' },
+    releasedShared: {
+      one: '{count} música continua na biblioteca compartilhada (outra pessoa também a baixou)',
+      other:
+        '{count} músicas continuam na biblioteca compartilhada (outras pessoas também as baixaram)',
+    },
     deletePartial: {
       one: '{count} arquivo não pôde ser excluído',
       other: '{count} arquivos não puderam ser excluídos',

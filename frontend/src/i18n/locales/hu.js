@@ -1182,6 +1182,32 @@ export default {
     later: 'Később',
     changePassword: 'Jelszó módosítása',
   },
+  visibility: {
+    hide: 'Elrejtés a felhasználók elől',
+    show: 'Megjelenítés a felhasználóknak',
+    hiddenShort: 'Rejtett',
+    hidden: {
+      one: 'Elrejtve a felhasználók elől',
+      other: '{count} elem elrejtve a felhasználók elől',
+    },
+    shown: {
+      one: 'Megjelenítve a felhasználóknak',
+      other: '{count} elem megjelenítve a felhasználóknak',
+    },
+    hiddenBy: {
+      track: 'Elrejtve a felhasználók elől',
+      album: 'Az albumával együtt elrejtve a felhasználók elől',
+      artist: 'Az előadójával együtt elrejtve a felhasználók elől',
+    },
+    title: 'Elrejtve a felhasználók elől',
+    hint: 'Mindenki látja az összes letöltött dalt. Amit itt elrejtesz, azt a felhasználók nem látják; az adminok továbbra is mindent látnak. Dalokat, albumokat vagy előadókat a Könyvtárból rejthetsz el.',
+    none: 'Semmi sincs elrejtve. Használd az „Elrejtés a felhasználók elől” lehetőséget egy dalnál, albumnál vagy előadónál a Könyvtárban.',
+    group: {
+      artists: 'Előadók',
+      albums: 'Albumok',
+      tracks: 'Dalok',
+    },
+  },
   users: {
     title: 'Felhasználók',
     hint: 'Kik jelentkezhetnek be erre a szerverre. Az adminok mindent módosíthatnak; a felhasználók hallgathatnak, kereshetnek, letölthetnek és a saját fiókjukat módosíthatják.',
@@ -1252,6 +1278,8 @@ export default {
       unlike: 'Visszavont kedvelések',
       delete: 'Törölt fájlok',
       audio_replaced: 'Lecserélt hangok',
+      library_hidden: 'A felhasználók elől elrejtett elemek',
+      library_shown: 'A felhasználóknak megjelenített elemek',
       device_paired: 'Párosított alkalmazások',
       device_unpaired: 'Leválasztott alkalmazások',
       user_created: 'Új felhasználók',
@@ -1270,6 +1298,8 @@ export default {
       unlike: 'visszavonta a kedvelést: {what}',
       delete: 'törölte: {what}',
       audio_replaced: 'lecserélte ennek a hangját: {what}',
+      library_hidden: 'elrejtette a felhasználók elől: {what}',
+      library_shown: 'megjelenítette a felhasználóknak: {what}',
       device_paired: 'párosította: {what}',
       device_unpaired: 'leválasztotta: {what}',
       user_created: 'felhasználót adott hozzá: {what}',
@@ -1413,6 +1443,11 @@ export default {
       other: '{count} szám hozzáadva a sorhoz',
     },
     deleted: { one: 'Szám törölve', other: '{count} szám törölve' },
+    releasedShared: {
+      one: '{count} dal a megosztott könyvtárban marad (más is letöltötte)',
+      other:
+        '{count} dal a megosztott könyvtárban marad (más is letöltötte őket)',
+    },
     deletePartial: {
       one: '{count} fájlt nem sikerült törölni',
       other: '{count} fájlt nem sikerült törölni',

@@ -8,7 +8,7 @@ import unicodedata
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from .catalog_worker import fold_library_entries
 from .library_cache_keys import file_content_key_from_name_and_size
@@ -30,6 +30,9 @@ from .library_paths_cache import (
 )
 from .playlist_catalog import PlaylistCatalog
 from .track_index import TrackIndex
+
+if TYPE_CHECKING:
+    from .library_visibility import HiddenRules
 
 AUDIO_EXTENSIONS = frozenset({
     '.mp3',
@@ -702,8 +705,14 @@ def library_album_index(
     ctx: LibraryContext,
     *,
     allowed_keys: Optional[Collection[str]] = None,
+    hidden: Optional[HiddenRules] = None,
 ) -> list[dict[str, Any]]:
-    """Albums for the Library grid: counts and a cover file, not every track."""
+    """Albums for the Library grid: counts and a cover file, not every track.
+
+    ``hidden`` (an admin's view, see :mod:`downtify.library_visibility`)
+    marks albums hidden from other users with ``hidden_by`` (``album`` or
+    ``artist``); they stay in the list.
+    """
 
     grouped = _group_albums(
         listing_for_request(ctx, allowed_keys=allowed_keys)
@@ -719,7 +728,7 @@ def library_album_index(
             size += int(track.get('size') or 0)
             if not cover_file and track.get('has_cover'):
                 cover_file = str(track.get('file') or '')
-        rows.append({
+        row = {
             'title': bucket['title'],
             'artist': bucket['artist'],
             'year': bucket['year'],
@@ -728,7 +737,12 @@ def library_album_index(
             'size': size,
             'track_count': len(tracks),
             'cover_file': cover_file,
-        })
+        }
+        if hidden:
+            reason = hidden.album_reason(bucket['artist'], bucket['title'])
+            if reason:
+                row['hidden_by'] = reason
+        rows.append(row)
     rows.sort(
         key=lambda row: (-int(row['added']), str(row['title']).casefold())
     )
@@ -740,8 +754,13 @@ def library_artist_index(
     liked_paths: Optional[set[str]] = None,
     *,
     allowed_keys: Optional[Collection[str]] = None,
+    hidden: Optional[HiddenRules] = None,
 ) -> list[dict[str, Any]]:
-    """Artists for the Library grid and Discover, without every track row."""
+    """Artists for the Library grid and Discover, without every track row.
+
+    ``hidden`` (an admin's view) marks artists hidden from other users
+    with ``hidden_by: 'artist'``; they stay in the list.
+    """
 
     liked = liked_paths or set()
     artists: dict[str, dict[str, Any]] = {}
@@ -780,6 +799,8 @@ def library_artist_index(
     for bucket in artists.values():
         album_keys = bucket.pop('_albums')
         bucket['album_count'] = len(album_keys)
+        if hidden and hidden.artist_hidden(bucket['name']):
+            bucket['hidden_by'] = 'artist'
         rows.append(bucket)
     rows.sort(key=lambda row: str(row['name']).casefold())
     return rows

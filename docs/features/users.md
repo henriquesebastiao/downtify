@@ -37,24 +37,43 @@ Browsers signed in before the upgrade sign in again. Phones paired before it sta
 | Pair phone apps (to their own account) | ✓ | ✓ |
 | Settings → General (their own account and preferences), Apps, About | ✓ | ✓ |
 | Every other setting (sources, files, tags, Navidrome, library, server), renaming the server | ✓ | |
-| Delete files and playlists ([their own](#your-library) for a user), manage their own playlist watches and podcast subscriptions, replace a track's audio, edit artist photos | ✓ | ✓ (own only) |
+| Delete files and playlists (a user only [what they downloaded](#deleting-songs) and their own playlists), manage their own playlist watches and podcast subscriptions, replace a track's audio, edit artist photos | ✓ | ✓ (own only) |
+| [Hide songs, albums and artists from users](#hiding-from-users) | ✓ | |
 | Manage users, see the activity log | ✓ | |
 
 A user who tries something that needs an admin gets a message saying so.
 
 ## Your library
 
+The library is shared: every account sees every song anyone downloaded — in the Library, in search results marked as downloaded, and on a paired phone. Files are never stored twice: when two people download the same song it lands on disk once, with one owner each.
+
+Likes, playlists (downloaded and Library-created) and the download queue stay yours, unless you are an admin. Listening is shared — anyone can play, preview or stream any track, and add anything to their own playlists. Asking for a track someone else is already downloading joins their job instead of fetching it twice: one queue row, one download, and an ownership each — each waiter sees their place in the queue.
+
 Podcasts, playlist watches and Discover history work the same way: each account subscribes to its own shows, follows its own playlists and artists, and trains its own suggestions. An admin sees every account’s rows. Listening itself stays shared — anyone can play, preview or stream any track.
+
+### Hiding from users
+
+Admins decide what the other accounts see. Everything is visible to everyone until an admin hides something: a **song**, a whole **album** or a whole **artist**. Hidden items leave the Library, search's "in library" marks, playlists' track lists and what a paired phone syncs — for users, not for admins.
+
+- **In the Library**, open the `…` menu of a song, album or artist and choose **Hide from users** (or **Show to users** to undo it). In the Tracks tab, select several songs and use **Hide from users** in the selection bar.
+- Admins keep seeing everything. What is hidden carries a small crossed-out eye, and its tooltip says why: hidden on its own, with its album, or with its artist.
+- **Settings › Users › Hidden from users** lists every hidden artist, album and song, with **Show to users** next to each.
+- A hidden song stays hidden when it is moved to another folder, and when [Upgrade library](library-upgrade.md) or [Replace audio](replace-audio.md) rewrite its file. Deleting the file forgets the rule.
+- An album rule matches the album's artist and title, and an artist rule the artist the Library groups the song under — the same names the Library's Albums and Artists tabs use.
+
+::: info Hiding is about what is listed
+It controls what accounts see in the app, not who can fetch a file whose address they already know. Don't use it to protect sensitive files.
+:::
+
+Hiding and showing are recorded in the [activity log](#activity).
+
+### Deleting songs
+
+Deleting a song takes it off the disk for everyone, so it follows who downloaded it. An admin can delete anything. A user can delete a song they downloaded themselves; when someone else downloaded the same song too, deleting only gives up their own claim and the song stays in the shared library. A song nobody downloaded through an account (a playlist-monitor sweep, a pre-accounts download, an [extra folder](external-library.md)) can only be deleted by an admin. Deleting a playlist of yours never takes anyone else's files with it.
 
 ### Per-account usage
 
-**Settings › Users** lists, under every account, what it holds: tracks and their size, likes, playlists, downloads ordered and traffic both ways (fetched from upstream vs. served to clients), with the totals across everyone underneath.
-
-A user sees only the tracks they asked to download — in the Library, in search results marked as downloaded, and on a paired phone. An admin sees everything. Files are never stored twice: when two people download the same song it lands on disk once, with one owner each.
-
-Likes, playlists (downloaded and Library-created) and the download queue work the same way: yours, unless you are an admin. Listening is shared — anyone can play, preview or stream any track, and add anything to their own library by downloading it. Asking for a track someone else is already downloading joins their job instead of fetching it twice: one queue row, one download, and an ownership each — each waiter sees their place in the queue.
-
-Deleting a track takes it out of your library. When nobody else has it, the file goes off disk too; when others still do, it stays for them. Deleting a playlist of yours never takes anyone else's files with it.
+**Settings › Users** lists, under every account, what it holds: tracks and their size, likes, playlists, downloads ordered and traffic both ways (fetched from upstream vs. served to clients), with the totals across everyone underneath. "Tracks" counts the songs an account downloaded, not what it can see.
 
 ## Your account and preferences
 
@@ -80,7 +99,7 @@ There's always at least one admin: the last one can't be deleted or made a user,
 **Settings → Activity** (admins) shows, like Jellyfin's dashboard:
 
 - **Playing now** — what each browser and app is playing, by whom, where it is in the song, and whether it's paused. It refreshes every few seconds.
-- **History** — sign-ins (and failed ones, with the address they came from), sign-outs, songs played, downloads, likes, deleted files, apps paired and unpaired, accounts added, changed or deleted, passwords and settings changed. Filter by user or by kind. Saved settings are listed by name only, never their values. Entries are kept for 90 days.
+- **History** — sign-ins (and failed ones, with the address they came from), sign-outs, songs played, downloads, likes, deleted files, songs hidden from or shown to users, apps paired and unpaired, accounts added, changed or deleted, passwords and settings changed. Filter by user or by kind. Saved settings are listed by name only, never their values. Entries are kept for 90 days.
 
 Apps report what they play too — see the [mobile client contract](../mobile-client-contract.md#8-report-plays).
 
