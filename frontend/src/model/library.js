@@ -13,6 +13,7 @@ import {
   normalizeTrack,
   indexTracksBySong,
   songKey,
+  splitPlaylists,
 } from '/src/lib/library'
 import { coverURL } from '/src/lib/paths'
 import { usePlayer } from '/src/model/player'
@@ -62,6 +63,10 @@ const playlists = computed(() =>
       playlist.liked ? { ...playlist, title: t('likes.playlist') } : playlist
   )
 )
+const playlistSections = computed(() => splitPlaylists(playlists.value))
+const ownPlaylists = computed(() => playlistSections.value.own)
+const sharedPlaylists = computed(() => playlistSections.value.shared)
+const publicPlaylists = computed(() => playlistSections.value.public)
 const totalSize = computed(() =>
   tracksComplete.value
     ? tracks.value.reduce((sum, track) => sum + track.size, 0)
@@ -318,8 +323,25 @@ function refreshSoon(delay = 2500) {
   refreshTimer = setTimeout(() => load({ force: true }), delay)
 }
 
+/** Read the playlists again (shared, followed, unshared...). */
+async function refreshPlaylists() {
+  if (!loaded.value) return
+  try {
+    const res = await API.listPlaylists()
+    rawPlaylists.value = res.data || []
+  } catch {
+    // The next load picks them up.
+  }
+}
+
+let playlistsTimer = null
+
 API.onMessage((data) => {
   if (data?.status === 'done') refreshSoon()
+  if (data?.type === 'playlists_changed') {
+    clearTimeout(playlistsTimer)
+    playlistsTimer = setTimeout(refreshPlaylists, 400)
+  }
 })
 
 function forget(files) {
@@ -424,6 +446,9 @@ export function useLibrary() {
     albums,
     artists,
     playlists,
+    ownPlaylists,
+    sharedPlaylists,
+    publicPlaylists,
     batches,
     tracksByFile,
     totalSize,
@@ -437,6 +462,7 @@ export function useLibrary() {
     artistsComplete,
     error,
     load,
+    refreshPlaylists,
     ensureTracks,
     ensureAlbums,
     ensureArtists,

@@ -240,6 +240,17 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       // sidebar would reshuffle every time a playlist's songs load.
       added: Number(playlist.added) || 0,
       batch: batchByName.get(playlist.name) || null,
+      // Sharing (see downtify/playlist_shares.py). Without these fields a
+      // playlist is the user's own and private.
+      mine: playlist.mine !== false,
+      owner: String(playlist.owner || ''),
+      visibility: playlist.visibility || 'private',
+      sharedWith: Array.isArray(playlist.shared_with)
+        ? playlist.shared_with
+        : [],
+      followed: Boolean(playlist.followed),
+      sharedWithMe: Boolean(playlist.shared_with_me),
+      isNew: Boolean(playlist.new),
     }
   })
   // A tracked Spotify playlist whose M3U isn't written (M3U export off,
@@ -259,8 +270,37 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       duration: 0,
       added: 0,
       batch,
+      mine: true,
+      owner: '',
+      visibility: 'private',
+      sharedWith: [],
+      followed: false,
+      sharedWithMe: false,
+      isNew: false,
     }))
   return [...fromM3u, ...tracked]
+}
+
+/**
+ * The playlists in the three places they are listed, never mixed: the
+ * user's own, those shared with them by name (new ones first) and other
+ * people's public ones (by owner, then name).
+ */
+export function splitPlaylists(playlists) {
+  const own = []
+  const shared = []
+  const publicOnes = []
+  for (const playlist of playlists) {
+    if (playlist.mine) own.push(playlist)
+    else if (playlist.sharedWithMe) shared.push(playlist)
+    else publicOnes.push(playlist)
+  }
+  const byOwner = (a, b) =>
+    compareText(a.owner, b.owner) ||
+    compareText(a.title ?? a.name, b.title ?? b.name)
+  shared.sort((a, b) => Number(b.isNew) - Number(a.isNew) || byOwner(a, b))
+  publicOnes.sort(byOwner)
+  return { own, shared, public: publicOnes }
 }
 
 const SORTERS = {

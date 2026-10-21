@@ -407,7 +407,7 @@ const recentAlbums = computed(() =>
   [...library.albums.value].sort((a, b) => b.added - a.added).slice(0, 12)
 )
 const recentPlaylists = computed(() =>
-  [...library.playlists.value]
+  [...library.ownPlaylists.value]
     .filter((playlist) => itemTrackCount(playlist))
     .sort((a, b) => b.added - a.added)
     .slice(0, 6)

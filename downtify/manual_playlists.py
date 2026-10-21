@@ -154,6 +154,77 @@ def edit_manual_playlist(
     }
 
 
+def detach_imported_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
+    """Turn an imported playlist into a Library one (tracks kept).
+
+    Only the M3U changes: it gets the manual marker, so it can be edited
+    and no longer counts as downloaded from a link. Its artwork stays
+    until the first edit. Unlinking it from its source (catalog row,
+    watch) is the caller's job.
+    """
+
+    path = m3u.find_m3u_for_name(ctx.download_dir, name)
+    if path is None:
+        raise ManualPlaylistError(
+            f'Playlist {name!r} was not found', status_code=404
+        )
+    if m3u.is_manual_m3u(path):
+        raise ManualPlaylistError(
+            f'Playlist {path.stem!r} can already be edited', status_code=409
+        )
+    try:
+        lines = path.read_text(encoding='utf-8').splitlines()
+    except OSError as exc:
+        raise ManualPlaylistError(f'Could not read {path.name}') from exc
+    if lines[:1] != ['#EXTM3U']:
+        lines.insert(0, '#EXTM3U')
+    lines.insert(1, m3u.MANUAL_M3U_MARKER)
+    try:
+        path.write_text(
+            '\n'.join(lines) + '\n', encoding='utf-8', newline='\n'
+        )
+    except OSError as exc:
+        raise ManualPlaylistError(f'Could not write {path.name}') from exc
+    invalidate_library_paths_cache()
+    kept = _read_files(ctx, path)
+    logger.info('Detached playlist {!r} from its source', path.stem)
+    return {
+        'name': path.stem,
+        'manual': True,
+        'files': kept,
+        'count': len(kept),
+    }
+
+
+def copy_playlist(
+    ctx: LibraryContext, files: list[str], new_name: str
+) -> dict[str, Any]:
+    """Save *files* as a new Library playlist called *new_name*."""
+
+    safe = _validated_name(new_name)
+    if safe.casefold() in existing_playlist_names(ctx.download_dir):
+        raise ManualPlaylistError(
+            f'A playlist named {safe!r} already exists', status_code=409
+        )
+    path = m3u.m3u_path_for(ctx.download_dir, safe)
+    unique = list(
+        dict.fromkeys(
+            str(item or '').strip().replace('\\', '/')
+            for item in files
+            if str(item or '').strip()
+        )
+    )
+    written = _write(ctx, unique, path)
+    kept = _read_files(ctx, written)
+    logger.info('Saved a copy of a playlist as {!r}', written.stem)
+    return {
+        'name': written.stem,
+        'manual': True,
+        'files': kept,
+        'count': len(kept),
+    }
+
+
 def rename_manual_playlist(
     ctx: LibraryContext, name: str, new_name: str
 ) -> dict[str, Any]:

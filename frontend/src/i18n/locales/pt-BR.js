@@ -744,6 +744,52 @@ export default {
     saved: 'Monitoramento atualizado',
     retargeted: 'Agora monitorando {name}',
   },
+  sharing: {
+    title: 'Compartilhar “{name}”',
+    hint: 'Quem receber pode ouvir, seguir e salvar uma cópia, mas não pode alterar a playlist.',
+    private: 'Privada',
+    privateHint: 'Só você pode ver.',
+    shared: 'Pessoas específicas',
+    sharedHint: 'Escolha quem pode ver.',
+    public: 'Pública',
+    publicHint: 'Todos neste servidor podem ver.',
+    noOtherUsers: 'Não há outras contas para compartilhar.',
+    findUser: 'Procurar pessoa',
+    loadingUsers: 'Carregando pessoas…',
+    saved: {
+      private: '“{name}” voltou a ser privada',
+      shared: '“{name}” compartilhada',
+      public: '“{name}” agora é pública',
+    },
+    share: 'Compartilhar…',
+    new: 'Nova',
+    following: 'Seguindo',
+    follow: 'Seguir',
+    unfollow: 'Deixar de seguir',
+    followed: 'Seguindo “{name}”',
+    unfollowed: 'Você deixou de seguir “{name}”',
+    saveCopy: 'Salvar uma cópia',
+    copied: 'Cópia salva como “{name}”',
+    open: 'Abrir',
+    detach: 'Desvincular da origem',
+    detachTitle: 'Desvincular “{name}” da origem?',
+    detachBody:
+      'Você poderá adicionar e remover músicas. As músicas continuam como estão, mas o Downtify deixa de manter a playlist em sincronia com o Spotify ou YouTube Music e remove o monitoramento, se houver.',
+    detached: '“{name}” agora pode ser editada',
+    by: 'de {owner}',
+    sharedWithCount: {
+      one: 'Compartilhada com {count} pessoa',
+      other: 'Compartilhada com {count} pessoas',
+    },
+    sharedWithMe: 'Compartilhadas comigo',
+    sharedWithMeHint:
+      'Playlists que outras pessoas compartilharam com você. Você pode ouvir, mas não alterar.',
+    publicPlaylists: 'Playlists públicas',
+    publicPlaylistsHint:
+      'Compartilhadas com todos neste servidor. Siga uma para mantê-la na barra lateral.',
+    navTitle: 'Compartilhadas com você',
+    showMore: 'Mostrar mais {count}',
+  },
   settings: {
     apps: 'Apps',
     title: 'Configurações',
@@ -777,6 +823,13 @@ export default {
     showLyricsHint:
       'Desative para esconder o painel de letras, o botão e o atalho. Seus arquivos mantêm as letras, e os downloads continuam buscando.',
     searchGroup: 'Busca',
+    playlistsGroup: 'Playlists',
+    showPublicPlaylists: 'Mostrar playlists públicas',
+    showPublicPlaylistsHint:
+      'Lista as playlists públicas de outras pessoas na Biblioteca. As que você segue sempre aparecem.',
+    allowPlaylistSharing: 'Permitir que usuários compartilhem playlists',
+    allowPlaylistSharingHint:
+      'Usuários podem compartilhar playlists com outros usuários ou torná-las públicas. Desativado, todas as playlists compartilhadas ficam ocultas até você reativar.',
     searchAlbums: 'Mostrar álbuns nos resultados',
     searchAlbumsHint:
       'Também buscar álbuns, com a opção de baixar o álbum inteiro.',

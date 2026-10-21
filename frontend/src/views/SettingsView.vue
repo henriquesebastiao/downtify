@@ -103,6 +103,17 @@
                 />
               </SettingRow>
             </SettingGroup>
+            <SettingGroup :title="t('settings.playlistsGroup')">
+              <SettingRow
+                :label="t('settings.showPublicPlaylists')"
+                :description="t('settings.showPublicPlaylistsHint')"
+              >
+                <UiSwitch
+                  v-model="account.showPublicPlaylists.value"
+                  :aria-label="t('settings.showPublicPlaylists')"
+                />
+              </SettingRow>
+            </SettingGroup>
             <SettingGroup :title="t('settings.searchGroup')">
               <SettingRow
                 :label="t('settings.searchAlbums')"
@@ -622,6 +633,15 @@
                 <UiSwitch
                   v-model="s.cache_cover_art"
                   :aria-label="t('settings.coverCache')"
+                />
+              </SettingRow>
+              <SettingRow
+                :label="t('settings.allowPlaylistSharing')"
+                :description="t('settings.allowPlaylistSharingHint')"
+              >
+                <UiSwitch
+                  v-model="s.allow_playlist_sharing"
+                  :aria-label="t('settings.allowPlaylistSharing')"
                 />
               </SettingRow>
               <SettingRow

@@ -759,6 +759,52 @@ export default {
     saved: 'Surveillance mise à jour',
     retargeted: 'Surveillance de {name}',
   },
+  sharing: {
+    title: 'Partager « {name} »',
+    hint: 'Les personnes avec qui vous la partagez peuvent l’écouter, la suivre et en enregistrer une copie, mais pas la modifier.',
+    private: 'Privée',
+    privateHint: 'Vous seul pouvez la voir.',
+    shared: 'Certaines personnes',
+    sharedHint: 'Choisissez qui peut la voir.',
+    public: 'Publique',
+    publicHint: 'Tout le monde sur ce serveur peut la voir.',
+    noOtherUsers: 'Il n’y a pas d’autre compte avec qui partager.',
+    findUser: 'Chercher une personne',
+    loadingUsers: 'Chargement des personnes…',
+    saved: {
+      private: '« {name} » est de nouveau privée',
+      shared: '« {name} » partagée',
+      public: '« {name} » est maintenant publique',
+    },
+    share: 'Partager…',
+    new: 'Nouveau',
+    following: 'Suivie',
+    follow: 'Suivre',
+    unfollow: 'Ne plus suivre',
+    followed: 'Vous suivez « {name} »',
+    unfollowed: 'Vous ne suivez plus « {name} »',
+    saveCopy: 'Enregistrer une copie',
+    copied: 'Copie enregistrée sous « {name} »',
+    open: 'Ouvrir',
+    detach: 'Détacher de la source',
+    detachTitle: 'Détacher « {name} » de sa source ?',
+    detachBody:
+      'Vous pourrez ajouter et retirer des titres. Les titres restent tels quels, mais Downtify cesse de synchroniser la playlist avec Spotify ou YouTube Music et supprime sa surveillance, s’il y en a une.',
+    detached: '« {name} » peut maintenant être modifiée',
+    by: 'par {owner}',
+    sharedWithCount: {
+      one: 'Partagée avec {count} personne',
+      other: 'Partagée avec {count} personnes',
+    },
+    sharedWithMe: 'Partagées avec moi',
+    sharedWithMeHint:
+      'Playlists que d’autres personnes ont partagées avec vous. Vous pouvez les écouter, pas les modifier.',
+    publicPlaylists: 'Playlists publiques',
+    publicPlaylistsHint:
+      'Partagées avec tout le monde sur ce serveur. Suivez-en une pour la garder dans la barre latérale.',
+    navTitle: 'Partagées avec vous',
+    showMore: 'Afficher {count} de plus',
+  },
   settings: {
     apps: 'Apps',
     title: 'Paramètres',
@@ -792,6 +838,13 @@ export default {
     showLyricsHint:
       'Désactivez pour masquer le panneau des paroles, son bouton et son raccourci. Vos fichiers conservent leurs paroles et les téléchargements continuent de les chercher.',
     searchGroup: 'Recherche',
+    playlistsGroup: 'Playlists',
+    showPublicPlaylists: 'Afficher les playlists publiques',
+    showPublicPlaylistsHint:
+      'Affiche les playlists publiques des autres dans la bibliothèque. Celles que vous suivez apparaissent toujours.',
+    allowPlaylistSharing: 'Autoriser les utilisateurs à partager des playlists',
+    allowPlaylistSharingHint:
+      'Les utilisateurs peuvent partager leurs playlists avec d’autres ou les rendre publiques. Désactivé, toutes les playlists partagées restent masquées jusqu’à la réactivation.',
     searchAlbums: 'Afficher les albums dans les résultats',
     searchAlbumsHint:
       'Chercher aussi les albums, avec la possibilité de télécharger l’album entier.',

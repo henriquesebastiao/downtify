@@ -169,6 +169,11 @@ downloads are shared, and files are never stored twice.
 * ``POST /api/library/playlists/tracks`` (add or remove tracks on a
   manual playlist)
 * ``POST /api/library/playlists/rename`` (rename a manual playlist)
+* ``PUT  /api/library/playlists/visibility`` (share a playlist you own,
+  view-only: private, with named users, or public),
+  ``POST /api/library/playlists/copy`` (save a copy of a playlist you can
+  open) and ``POST /api/library/playlists/detach`` (turn an imported
+  playlist into an editable one)
 * ``POST /api/library/reconcile`` (fix stored library paths after files
   moved on disk, then refresh M3U/Navidrome playlists)
 * ``POST /api/library/external/sync`` (start a background scan of
@@ -283,10 +288,12 @@ downloads are shared, and files are never stored twice.
 * ``/api/v1/...``: the apps' API, by track id - ``GET /api/v1/library``
   (``?since=`` change feed), ``GET /api/v1/tracks/{id}`` (and
   ``/stream``, ``/cover``, ``/lyrics``), ``GET /api/v1/playlists``,
-  ``GET|PUT /api/v1/likes`` and ``POST /api/v1/sign`` - see
+  ``POST|DELETE /api/v1/playlists/follow``, ``POST /api/v1/playlists/seen``,
+  ``GET /api/v1/usernames``, ``GET|PUT /api/v1/likes`` and
+  ``POST /api/v1/sign`` - see
   ``downtify/mobile_routes.py`` and ``docs/mobile-client-contract.md``
-* ``WS   /api/ws`` (also ``library_changed``, ``device_paired``
-  messages; a device token, session cookie or ``?ticket=`` is needed)
+* ``WS   /api/ws`` (also ``library_changed``, ``playlists_changed``,
+  ``device_paired`` messages; a device token, session cookie or ``?ticket=`` is needed)
 * ``GET  /api/check_update``
 """
 
@@ -303,6 +310,7 @@ import re
 import shutil
 import threading
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Collection, Optional
@@ -424,8 +432,11 @@ from .likes import (
 from .lyrics_cache import LyricsLookupCache
 from .manual_playlists import (
     ManualPlaylistError,
+    copy_playlist,
     create_manual_playlist,
+    detach_imported_playlist,
     edit_manual_playlist,
+    existing_playlist_names,
     rename_manual_playlist,
 )
 from .monitor import (
@@ -453,6 +464,14 @@ from .playlist_batches import (
 )
 from .playlist_catalog import ManualPlaylistOwners, PlaylistCatalog
 from .playlist_listing import list_library_playlists
+from .playlist_shares import (
+    PRIVATE,
+    SHARED,
+    VISIBILITIES,
+    PlaylistShares,
+    ShareView,
+    share_key,
+)
 from .playlist_spotify_cache import (
     PlaylistSpotifyCache,
     fetch_playlist_tracks,
@@ -552,6 +571,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     },
     # Navidrome (Subsonic API) playlist sync after playlist downloads.
     'sync_navidrome': True,
+    # Whether users may share their playlists with other users (each user
+    # also chooses whether to see public ones: ``show_public_playlists``).
+    'allow_playlist_sharing': True,
     'navidrome': {
         'enabled': False,
         'url': '',
@@ -1025,6 +1047,7 @@ class AppState:
     track_owners: Optional[TrackOwners] = None
     library_visibility: Optional[LibraryVisibility] = None
     manual_playlist_owners: Optional[ManualPlaylistOwners] = None
+    playlist_shares: Optional[PlaylistShares] = None
     traffic: Optional[TrafficCounters] = None
     podcasts: Optional[PodcastStore] = None
     discover: Optional[DiscoverStore] = None
@@ -1157,47 +1180,165 @@ def _playlist_owner_maps() -> tuple[dict[str, int], dict[str, int]]:
     return catalog_names, manual
 
 
+def sharing_enabled() -> bool:
+    """Whether the admin lets users share playlists (Settings)."""
+
+    return bool(state.settings.get('allow_playlist_sharing', True))
+
+
+def _share_view(user_id: int) -> ShareView:
+    """What *user_id* is shown of other people's playlists (nothing while
+    sharing is off)."""
+
+    shares = state.playlist_shares
+    if shares is None or not user_id or not sharing_enabled():
+        return ShareView()
+    try:
+        return shares.view_for(user_id)
+    except Exception:
+        logger.opt(exception=True).debug('Could not read playlist shares')
+        return ShareView()
+
+
+def _usernames() -> dict[int, str]:
+    """``{user id: username}`` for labelling whose playlist it is."""
+
+    if state.auth is None:
+        return {}
+    try:
+        return {
+            int(user['id']): str(user['username'])
+            for user in state.auth.users.list()
+        }
+    except Exception:
+        logger.opt(exception=True).debug('Could not list usernames')
+        return {}
+
+
 def _playlist_visible(
     name: str, *, liked: bool, manual: bool, user_id: int
 ) -> bool:
-    """Whether *user_id* may open a playlist (admins bypass this)."""
+    """Whether *user_id* may open a playlist (admins bypass this): their
+    own, one shared with them, or a public one."""
 
     if liked or not user_id:
         return False
     catalog_names, manual_owners = _playlist_owner_maps()
-    key = str(name or '').strip().casefold()
-    if manual:
-        return manual_owners.get(key) == user_id
-    return catalog_names.get(key) == user_id
+    key = share_key(name)
+    owner = (manual_owners if manual else catalog_names).get(key, 0)
+    if owner == user_id:
+        return True
+    if not owner:
+        return False
+    view = _share_view(user_id)
+    return key in view.public or key in view.to_me
+
+
+@dataclass
+class _PlaylistLens:
+    """Who is looking, and what every playlist's owner and sharing are -
+    read once per listing."""
+
+    admin: bool
+    user_id: int
+    owners: tuple[dict[str, int], dict[str, int]]
+    visibility: dict[str, str]
+    shared_users: dict[str, list[int]]
+    view: ShareView
+    show_public: bool
+    names: dict[int, str]
+
+    def row(self, playlist: dict[str, Any]) -> Optional[dict[str, Any]]:
+        """*playlist* as the viewer sees it, or ``None`` when hidden."""
+
+        key = share_key(str(playlist.get('name') or ''))
+        owner_id = self.owners[1 if playlist.get('manual') else 0].get(key, 0)
+        mine = self.admin or bool(self.user_id and owner_id == self.user_id)
+        followed = key in self.view.followed
+        invited = key in self.view.to_me
+        if not mine and not (
+            owner_id
+            and (
+                invited
+                or (key in self.view.public and (followed or self.show_public))
+            )
+        ):
+            return None
+        row = {
+            **playlist,
+            'owner_id': owner_id,
+            'owner': self.names.get(owner_id, ''),
+            'visibility': self.visibility.get(key, PRIVATE),
+            'mine': mine,
+            'followed': followed,
+            'shared_with_me': invited,
+            'new': invited and not self.view.to_me[key],
+        }
+        if mine:
+            row['shared_with'] = [
+                self.names[uid]
+                for uid in self.shared_users.get(key, [])
+                if uid in self.names
+            ]
+        return row
+
+
+def _playlist_lens(request: Optional[Request]) -> _PlaylistLens:
+    admin = request_is_admin(request)
+    user_id = request_user_id(request)
+    visibility: dict[str, str] = {}
+    shared_users: dict[str, list[int]] = {}
+    shares = state.playlist_shares
+    if shares is not None and sharing_enabled():
+        try:
+            visibility = shares.visibility_map()
+            shared_users = shares.shared_users()
+        except Exception:
+            logger.opt(exception=True).debug('Could not read playlist shares')
+    return _PlaylistLens(
+        admin=admin,
+        user_id=user_id,
+        owners=_playlist_owner_maps(),
+        visibility=visibility,
+        shared_users=shared_users,
+        view=ShareView() if admin else _share_view(user_id),
+        show_public=admin
+        or bool(user_preferences(request).get('show_public_playlists', True)),
+        names=_usernames(),
+    )
 
 
 def _filter_playlists_for(
     playlists: list[dict[str, Any]], request: Optional[Request]
 ) -> list[dict[str, Any]]:
-    """Playlists *request* may open, with a personal liked entry.
+    """Playlists *request* may open, each labelled with its owner.
 
-    Admins see everything as before. Anyone else sees playlists they
-    own (downloaded or Library-created); the shared liked-songs file
-    is swapped for their own hearts (which live in the database only).
+    Admins see everything. Anyone else sees playlists they own
+    (downloaded or Library-created), those shared with them by name,
+    the public ones they follow and - unless they switched
+    *Show public playlists* off - the rest of the public ones. The
+    shared liked-songs file is swapped for their own hearts (which live
+    in the database only).
+
+    Rows are copies carrying ``owner_id``, ``owner``, ``visibility``,
+    ``mine`` (theirs to change: their own, or anything for an admin),
+    ``followed``, ``shared_with_me`` and ``new`` (shared with them, not
+    opened yet); the owner's also list ``shared_with`` (usernames).
     """
 
-    if request_is_admin(request):
-        return playlists
-    user_id = request_user_id(request)
-    kept = [
-        playlist
-        for playlist in playlists
-        if not playlist.get('liked')
-        and _playlist_visible(
-            str(playlist.get('name') or ''),
-            liked=False,
-            manual=bool(playlist.get('manual')),
-            user_id=user_id,
-        )
-    ]
-    if user_id and state.likes is not None:
+    lens = _playlist_lens(request)
+    kept: list[dict[str, Any]] = []
+    for playlist in playlists:
+        if playlist.get('liked'):
+            if lens.admin:
+                kept.append(playlist)
+            continue
+        row = lens.row(playlist)
+        if row is not None:
+            kept.append(row)
+    if lens.user_id and not lens.admin and state.likes is not None:
         try:
-            liked_files = state.likes.paths(user_id)
+            liked_files = state.likes.paths(lens.user_id)
         except Exception:
             logger.opt(exception=True).debug(
                 'Could not read likes for playlist listing'
@@ -1212,6 +1353,8 @@ def _filter_playlists_for(
                 'cover': '',
                 'liked': True,
                 'manual': False,
+                'mine': True,
+                'visibility': PRIVATE,
             })
     kept.sort(
         key=lambda item: (
@@ -1371,11 +1514,22 @@ def playlist_entry_for_request(
     }
 
 
-def require_playlist_visible(name: str, request: Optional[Request]) -> None:
-    """404 unless *request* may open the playlist (as if unknown)."""
+def require_playlist_visible(
+    name: str, request: Optional[Request], *, manage: bool = False
+) -> dict[str, Any]:
+    """The playlist's entry; 404 unless *request* may open it (as if
+    unknown). With *manage*, 403 unless it is also theirs to change - a
+    playlist shared with them is view-only."""
 
-    if playlist_entry_for_request(name, request) is None:
+    entry = playlist_entry_for_request(name, request)
+    if entry is None:
         raise HTTPException(status_code=404, detail='Playlist not found')
+    if manage and not entry.get('mine', True):
+        raise HTTPException(
+            status_code=403,
+            detail='Only the owner can change this playlist',
+        )
+    return entry
 
 
 def claim_manual_playlist(name: str, request: Optional[Request]) -> None:
@@ -1386,6 +1540,10 @@ def claim_manual_playlist(name: str, request: Optional[Request]) -> None:
         return
     try:
         state.manual_playlist_owners.set_owner(name, user_id)
+        if state.playlist_shares is not None:
+            # A new playlist never inherits what an older one by that name
+            # was shared with.
+            state.playlist_shares.forget(name)
     except Exception:
         logger.opt(exception=True).debug(
             'Could not record owner for playlist {!r}', name
@@ -5967,7 +6125,7 @@ async def edit_library_playlist_tracks_endpoint(
 
     payload = await _json_object(request)
     name = str(payload.get('name') or '').strip()
-    require_playlist_visible(name, request)
+    require_playlist_visible(name, request, manage=True)
     add = payload.get('add') if isinstance(payload.get('add'), list) else []
     remove = (
         payload.get('remove')
@@ -5998,7 +6156,7 @@ async def rename_library_playlist_endpoint(request: Request) -> dict[str, Any]:
     payload = await _json_object(request)
     name = str(payload.get('name') or '').strip()
     new_name = str(payload.get('new_name') or '').strip()
-    require_playlist_visible(name, request)
+    require_playlist_visible(name, request, manage=True)
     ctx = library_context()
     try:
         result = await asyncio.to_thread(
@@ -6019,7 +6177,208 @@ async def rename_library_playlist_endpoint(request: Request) -> dict[str, Any]:
             logger.opt(exception=True).debug(
                 'Could not move owner for playlist {!r}', name
             )
+    if state.playlist_shares is not None:
+        try:
+            await asyncio.to_thread(
+                state.playlist_shares.rename,
+                name,
+                str(result.get('name') or new_name),
+            )
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not move sharing for playlist {!r}', name
+            )
     invalidate_library_paths_cache()
+    await announce_playlists_changed()
+    return result
+
+
+async def announce_playlists_changed() -> None:
+    """Tell connected clients playlists were shared, followed, copied,
+    detached, renamed or deleted, so they list them again."""
+
+    await state.connections.broadcast({'type': 'playlists_changed'})
+
+
+def _owner_of(entry: dict[str, Any]) -> int:
+    """The user id that owns the playlist *entry* (``0``: nobody)."""
+
+    if entry.get('owner_id') is not None:
+        return int(entry['owner_id'] or 0)
+    catalog_names, manual_owners = _playlist_owner_maps()
+    owners = manual_owners if entry.get('manual') else catalog_names
+    return int(owners.get(share_key(str(entry.get('name') or '')), 0))
+
+
+@router.put('/api/library/playlists/visibility')
+async def set_playlist_visibility_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Share a playlist you own (view-only): ``{name, visibility,
+    shared_with}`` with ``visibility`` ``private`` (the default),
+    ``shared`` (with the usernames in ``shared_with``) or ``public``
+    (everyone on the server). Liked songs are never shareable."""
+
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    visibility = str(payload.get('visibility') or '').strip().lower()
+    if visibility not in VISIBILITIES:
+        raise HTTPException(status_code=400, detail='Unknown visibility')
+    if is_liked_playlist(name):
+        raise HTTPException(
+            status_code=400, detail='Liked songs cannot be shared'
+        )
+    entry = require_playlist_visible(name, request, manage=True)
+    shares = state.playlist_shares
+    if shares is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    if visibility != PRIVATE and not sharing_enabled():
+        raise HTTPException(
+            status_code=403, detail='Sharing playlists is turned off'
+        )
+    owner_id = _owner_of(entry)
+    if not owner_id:
+        raise HTTPException(
+            status_code=400, detail='This playlist has no owner to share it'
+        )
+    wanted = payload.get('shared_with')
+    by_name = {
+        username.casefold(): uid for uid, username in _usernames().items()
+    }
+    user_ids: list[int] = []
+    for raw in wanted if isinstance(wanted, list) else []:
+        uid = by_name.get(str(raw or '').strip().casefold())
+        if uid is None:
+            raise HTTPException(status_code=400, detail=f'Unknown user {raw}')
+        if uid != owner_id and uid not in user_ids:
+            user_ids.append(uid)
+    if visibility == SHARED and not user_ids:
+        raise HTTPException(
+            status_code=400, detail='Choose who to share the playlist with'
+        )
+    stored = str(entry.get('name') or name)
+    await asyncio.to_thread(
+        shares.set_visibility, stored, visibility, user_ids
+    )
+    await announce_playlists_changed()
+    usernames = _usernames()
+    return {
+        'name': stored,
+        'visibility': visibility,
+        'shared_with': [
+            usernames[uid] for uid in user_ids if uid in usernames
+        ],
+    }
+
+
+@router.post('/api/library/playlists/copy')
+async def copy_library_playlist_endpoint(request: Request) -> dict[str, Any]:
+    """Save a copy of a playlist you can open (your own, one shared with
+    you or a public one) as a new playlist of yours, which you can edit.
+    ``{name, new_name?}``; songs an admin hid from users are left out."""
+
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    entry = require_playlist_visible(name, request)
+    ctx = library_context()
+    files = await asyncio.to_thread(
+        filter_paths_for_request, list(entry.get('files') or []), request
+    )
+    taken = existing_playlist_names(ctx.download_dir)
+    new_name = str(payload.get('new_name') or '').strip()
+    if not new_name:
+        base = f'{entry.get("name") or name} (copy)'
+        new_name = base
+        number = 2
+        while new_name.casefold() in taken:
+            new_name = f'{base} {number}'
+            number += 1
+    try:
+        result = await asyncio.to_thread(copy_playlist, ctx, files, new_name)
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    claim_manual_playlist(str(result.get('name') or new_name), request)
+    invalidate_library_paths_cache()
+    await announce_playlists_changed()
+    return result
+
+
+def _unlink_imported_playlist(entry: dict[str, Any], name: str) -> None:
+    """Forget where an imported playlist came from: its catalog row (and
+    cached Spotify tracks and batches), its watch, and move its owner to
+    the Library playlists'."""
+
+    owner_id = _owner_of(entry)
+    key = share_key(name)
+    sid = ''
+    catalog = state.playlist_catalog
+    if catalog is not None:
+        exact = next(
+            (n for n in catalog.list_playlist_names() if share_key(n) == key),
+            None,
+        )
+        if exact is not None:
+            sid = catalog.spotify_id_for_playlist(exact) or ''
+            catalog.delete_playlist(exact)
+    if state.manual_playlist_owners is not None and owner_id:
+        state.manual_playlist_owners.set_owner(name, owner_id)
+    if state.monitor_db is not None:
+        for watch in state.monitor_db.list_playlists(owner_id or None):
+            if watch.kind == KIND_PLAYLIST and (
+                share_key(watch.name) == key
+                or (sid and watch.spotify_id == sid)
+            ):
+                state.monitor_db.delete_playlist(watch.id)
+    if not sid:
+        return
+    if state.playlist_batch_store is not None:
+        state.playlist_batch_store.delete_for_spotify_playlist(
+            sid, user_id=owner_id
+        )
+    still_used = catalog is not None and any(
+        row['spotify_id'] == sid
+        for row in catalog.list_playlists_with_spotify_id()
+    )
+    if state.playlist_spotify_cache is not None and not still_used:
+        state.playlist_spotify_cache.delete_playlist(sid)
+
+
+@router.post('/api/library/playlists/detach')
+async def detach_library_playlist_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Make an imported (Spotify / YouTube Music) playlist a Library one
+    so it can be edited: tracks and owner stay, the link to its source
+    and its watch go. ``{name}``."""
+
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    entry = require_playlist_visible(name, request, manage=True)
+    if entry.get('liked') or entry.get('manual'):
+        raise HTTPException(
+            status_code=409, detail='This playlist can already be edited'
+        )
+    ctx = library_context()
+    try:
+        result = await asyncio.to_thread(
+            detach_imported_playlist, ctx, str(entry.get('name') or name)
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    try:
+        await asyncio.to_thread(
+            _unlink_imported_playlist, entry, str(result['name'])
+        )
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not unlink {!r} from its source', result['name']
+        )
+    invalidate_library_paths_cache()
+    await announce_playlists_changed()
     return result
 
 
@@ -6075,9 +6434,7 @@ async def _delete_playlist_by_name(
 
         result = await asyncio.to_thread(_run)
     else:
-        match = playlist_entry_for_request(playlist_name, request)
-        if match is None:
-            raise HTTPException(status_code=404, detail='Playlist not found')
+        match = require_playlist_visible(playlist_name, request, manage=True)
         result = await _delete_owned_playlist(request, match)
     if not result.get('ok'):
         raise HTTPException(
@@ -6088,6 +6445,9 @@ async def _delete_playlist_by_name(
     if affected:
         await _schedule_playlist_refresh_after_delete(affected)
     result['playlists_refresh_scheduled'] = bool(affected)
+    if state.playlist_shares is not None:
+        await asyncio.to_thread(state.playlist_shares.forget, playlist_name)
+    await announce_playlists_changed()
     return result
 
 

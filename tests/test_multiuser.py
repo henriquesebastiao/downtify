@@ -625,10 +625,17 @@ def test_playlist_listing_is_scoped_with_a_personal_liked(
     assert liked['files'] == ['a.mp3']
     assert not liked['cover']
 
-    assert api._filter_playlists_for(found, _request(7)) == [
-        p for p in found if p['name'] == 'Theirs'
+    theirs = api._filter_playlists_for(found, _request(7))
+    assert [p['name'] for p in theirs] == ['Theirs']
+    assert theirs[0]['mine'] is True
+    assert theirs[0]['owner_id'] == 7
+    everything = api._filter_playlists_for(found, _admin_request())
+    assert [p['name'] for p in everything] == [
+        'Downtify Liked Songs',
+        'Mine',
+        'My Mix',
+        'Theirs',
     ]
-    assert api._filter_playlists_for(found, _admin_request()) == found
 
 
 # ── first-start backfill ─────────────────────────────────────────────

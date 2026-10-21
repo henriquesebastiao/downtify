@@ -17,6 +17,11 @@ import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useTheme } from '/src/model/theme'
 
 const searchAlbums = ref(true)
+// Other people's public playlists in the lists (the server also applies
+// it, so apps agree). On unless switched off.
+const showPublicPlaylists = ref(true)
+// Whether the admin lets users share playlists at all.
+const playlistSharing = ref(true)
 const ready = ref(false)
 let started = false
 
@@ -28,6 +33,7 @@ function current() {
     locale: currentLocale.value,
     show_lyrics: showLyrics.value,
     search_albums: searchAlbums.value,
+    show_public_playlists: showPublicPlaylists.value,
   }
 }
 
@@ -41,6 +47,8 @@ function apply(prefs) {
     showLyrics.value = prefs.show_lyrics
   if (typeof prefs.search_albums === 'boolean')
     searchAlbums.value = prefs.search_albums
+  if (typeof prefs.show_public_playlists === 'boolean')
+    showPublicPlaylists.value = prefs.show_public_playlists
 }
 
 async function save() {
@@ -57,7 +65,9 @@ async function start() {
   started = true
   let prefs = {}
   try {
-    prefs = (await API.getMe()).data?.preferences || {}
+    const me = (await API.getMe()).data || {}
+    prefs = me.preferences || {}
+    playlistSharing.value = me.playlist_sharing !== false
   } catch {
     started = false
     return
@@ -68,9 +78,11 @@ async function start() {
   if (Object.keys(prefs).length < 4) save()
   const theme = useTheme()
   const { showLyrics } = usePlayerPrefs()
-  watch([theme.mode, currentLocale, showLyrics, searchAlbums], () => save(), {
-    flush: 'post',
-  })
+  watch(
+    [theme.mode, currentLocale, showLyrics, searchAlbums, showPublicPlaylists],
+    () => save(),
+    { flush: 'post' }
+  )
 }
 
 // ── Playback reports ──────────────────────────────────────────────────
@@ -124,5 +136,13 @@ function startPlaybackReports() {
 
 export function useAccount() {
   const auth = useAuth()
-  return { searchAlbums, ready, start, startPlaybackReports, user: auth.user }
+  return {
+    searchAlbums,
+    showPublicPlaylists,
+    playlistSharing,
+    ready,
+    start,
+    startPlaybackReports,
+    user: auth.user,
+  }
 }

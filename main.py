@@ -85,6 +85,7 @@ from downtify.playlist_catalog import (
     ManualPlaylistOwners,
     PlaylistCatalog,
 )
+from downtify.playlist_shares import PlaylistShares
 from downtify.playlist_spotify_cache import (
     PlaylistSpotifyCache,
     playlist_spotify_cache_loop,
@@ -347,6 +348,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     set_listing_refresh_gate(_downloads_using_disk)
     api.state.playlist_catalog = PlaylistCatalog(library_db)
     api.state.manual_playlist_owners = ManualPlaylistOwners(library_db)
+    api.state.playlist_shares = PlaylistShares(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)

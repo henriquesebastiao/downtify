@@ -766,6 +766,52 @@ export default {
     saved: 'Überwachung aktualisiert',
     retargeted: '{name} wird jetzt überwacht',
   },
+  sharing: {
+    title: '„{name}“ teilen',
+    hint: 'Wer sie bekommt, kann sie abspielen, ihr folgen und eine Kopie speichern, aber nichts daran ändern.',
+    private: 'Privat',
+    privateHint: 'Nur du kannst sie sehen.',
+    shared: 'Bestimmte Personen',
+    sharedHint: 'Wähle, wer sie sehen darf.',
+    public: 'Öffentlich',
+    publicHint: 'Alle auf diesem Server können sie sehen.',
+    noOtherUsers: 'Es gibt keine weiteren Konten zum Teilen.',
+    findUser: 'Person suchen',
+    loadingUsers: 'Personen werden geladen…',
+    saved: {
+      private: '„{name}“ ist wieder privat',
+      shared: '„{name}“ geteilt',
+      public: '„{name}“ ist jetzt öffentlich',
+    },
+    share: 'Teilen…',
+    new: 'Neu',
+    following: 'Folge ich',
+    follow: 'Folgen',
+    unfollow: 'Nicht mehr folgen',
+    followed: 'Du folgst jetzt „{name}“',
+    unfollowed: 'Du folgst „{name}“ nicht mehr',
+    saveCopy: 'Kopie speichern',
+    copied: 'Kopie als „{name}“ gespeichert',
+    open: 'Öffnen',
+    detach: 'Von der Quelle lösen',
+    detachTitle: '„{name}“ von der Quelle lösen?',
+    detachBody:
+      'Du kannst dann Titel hinzufügen und entfernen. Die Titel bleiben, wie sie sind, aber Downtify hält die Playlist nicht mehr mit Spotify oder YouTube Music abgeglichen und entfernt ihre Überwachung, falls vorhanden.',
+    detached: '„{name}“ kann jetzt bearbeitet werden',
+    by: 'von {owner}',
+    sharedWithCount: {
+      one: 'Mit {count} Person geteilt',
+      other: 'Mit {count} Personen geteilt',
+    },
+    sharedWithMe: 'Mit mir geteilt',
+    sharedWithMeHint:
+      'Playlists, die andere mit dir geteilt haben. Du kannst sie abspielen, aber nicht ändern.',
+    publicPlaylists: 'Öffentliche Playlists',
+    publicPlaylistsHint:
+      'Mit allen auf diesem Server geteilt. Folge einer, um sie in der Seitenleiste zu behalten.',
+    navTitle: 'Mit dir geteilt',
+    showMore: '{count} weitere anzeigen',
+  },
   settings: {
     apps: 'Apps',
     title: 'Einstellungen',
@@ -800,6 +846,13 @@ export default {
     showLyricsHint:
       'Deaktiviere die Option, um das Songtextfeld, die Schaltfläche und den Tastaturkurzbefehl auszublenden. Songtexte bleiben in deinen Dateien und werden weiterhin heruntergeladen.',
     searchGroup: 'Suche',
+    playlistsGroup: 'Playlists',
+    showPublicPlaylists: 'Öffentliche Playlists anzeigen',
+    showPublicPlaylistsHint:
+      'Listet öffentliche Playlists anderer in der Bibliothek auf. Playlists, denen du folgst, erscheinen immer.',
+    allowPlaylistSharing: 'Nutzern das Teilen von Playlists erlauben',
+    allowPlaylistSharingHint:
+      'Nutzer können ihre Playlists mit anderen teilen oder öffentlich machen. Ausgeschaltet bleiben alle geteilten Playlists verborgen, bis du es wieder einschaltest.',
     searchAlbums: 'Alben in Suchergebnissen anzeigen',
     searchAlbumsHint:
       'Suche auch nach Alben und biete die Möglichkeit, das gesamte Album herunterzuladen.',

@@ -729,6 +729,52 @@ export default {
     saved: 'Watch updated',
     retargeted: 'Now watching {name}',
   },
+  sharing: {
+    title: 'Share “{name}”',
+    hint: 'People you share with can play it, follow it and save a copy. They can’t change it.',
+    private: 'Private',
+    privateHint: 'Only you can see it.',
+    shared: 'Specific people',
+    sharedHint: 'Choose who can see it.',
+    public: 'Public',
+    publicHint: 'Everyone on this server can see it.',
+    noOtherUsers: 'There are no other accounts to share with.',
+    findUser: 'Find a person',
+    loadingUsers: 'Loading people…',
+    saved: {
+      private: '“{name}” is private again',
+      shared: 'Shared “{name}”',
+      public: '“{name}” is now public',
+    },
+    share: 'Share…',
+    new: 'New',
+    following: 'Following',
+    follow: 'Follow',
+    unfollow: 'Unfollow',
+    followed: 'Following “{name}”',
+    unfollowed: 'Stopped following “{name}”',
+    saveCopy: 'Save a copy',
+    copied: 'Saved a copy as “{name}”',
+    open: 'Open',
+    detach: 'Detach from source',
+    detachTitle: 'Detach “{name}” from its source?',
+    detachBody:
+      'You will be able to add and remove songs. Its songs stay as they are, but Downtify stops keeping it in step with Spotify or YouTube Music and removes its watch, if it has one.',
+    detached: '“{name}” can now be edited',
+    by: 'by {owner}',
+    sharedWithCount: {
+      one: 'Shared with {count} person',
+      other: 'Shared with {count} people',
+    },
+    sharedWithMe: 'Shared with me',
+    sharedWithMeHint:
+      'Playlists other people shared with you. You can play them, but not change them.',
+    publicPlaylists: 'Public playlists',
+    publicPlaylistsHint:
+      'Shared with everyone on this server. Follow one to keep it in your sidebar.',
+    navTitle: 'Shared with you',
+    showMore: 'Show {count} more',
+  },
   settings: {
     apps: 'Apps',
     title: 'Settings',
@@ -762,6 +808,13 @@ export default {
     showLyricsHint:
       'Turn off to hide the lyrics panel, its button and its shortcut. Your files keep their lyrics, and downloads still fetch them.',
     searchGroup: 'Search',
+    playlistsGroup: 'Playlists',
+    showPublicPlaylists: 'Show public playlists',
+    showPublicPlaylistsHint:
+      'List other people’s public playlists in the Library. Playlists you follow always show.',
+    allowPlaylistSharing: 'Allow users to share playlists',
+    allowPlaylistSharingHint:
+      'Users can share their playlists with other users, or make them public. When off, every shared playlist stays hidden until you turn it back on.',
     searchAlbums: 'Show albums in search results',
     searchAlbumsHint:
       'Also look up albums when searching, with an option to download the whole thing.',

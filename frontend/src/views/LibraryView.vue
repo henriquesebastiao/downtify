@@ -236,6 +236,26 @@
         </template>
       </VirtualGrid>
     </div>
+
+    <!-- Other people's playlists, never mixed into the user's own -->
+    <template v-if="tab === 'playlists' && library.loaded.value">
+      <SharedPlaylists
+        :title="t('sharing.sharedWithMe')"
+        :hint="t('sharing.sharedWithMeHint')"
+        :items="sharedItems"
+        @play="playItem"
+      />
+      <SharedPlaylists
+        v-if="account.showPublicPlaylists.value || followedItems.length"
+        :title="t('sharing.publicPlaylists')"
+        :hint="t('sharing.publicPlaylistsHint')"
+        :items="publicItems"
+        collapsible
+        storage-key="downtify-public-playlists-open"
+        :searching="Boolean(filter.trim())"
+        @play="playItem"
+      />
+    </template>
   </div>
 </template>
 
@@ -258,9 +278,11 @@ import VirtualGrid from '/src/components/library/VirtualGrid.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
+import SharedPlaylists from '/src/components/library/SharedPlaylists.vue'
 import TrackList from '/src/components/library/TrackList.vue'
 import TrackSortSelect from '/src/components/library/TrackSortSelect.vue'
 import API from '/src/model/api'
+import { useAccount } from '/src/model/account'
 import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
@@ -289,6 +311,7 @@ const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
 const ui = useUi()
 const auth = useAuth()
+const account = useAccount()
 const visibility = useVisibility()
 
 const TABS = ['albums', 'artists', 'playlists', 'tracks']
@@ -414,7 +437,7 @@ const tabs = computed(() => [
   {
     id: 'playlists',
     label: t('library.playlists'),
-    count: library.playlists.value.length,
+    count: library.ownPlaylists.value.length,
     to: { name: 'Library', params: { tab: 'playlists' } },
   },
   {
@@ -489,10 +512,31 @@ const items = computed(() => {
     )
   }
   return sortItems(
-    filterItems(library.playlists.value, filter.value, ['title', 'name']),
+    filterItems(library.ownPlaylists.value, filter.value, ['title', 'name']),
     sortKey.value
   )
 })
+
+// Other people's playlists, searched by name and owner. The public ones
+// shown are those the user follows, plus all of them unless they turned
+// "Show public playlists" off (the server applies that too).
+const sharedItems = computed(() =>
+  filterItems(library.sharedPlaylists.value, filter.value, [
+    'title',
+    'name',
+    'owner',
+  ])
+)
+const publicItems = computed(() =>
+  filterItems(library.publicPlaylists.value, filter.value, [
+    'title',
+    'name',
+    'owner',
+  ])
+)
+const followedItems = computed(() =>
+  library.publicPlaylists.value.filter((playlist) => playlist.followed)
+)
 
 const selectedTracks = computed(() =>
   items.value.filter((track) => selected.value.has(track.file))

@@ -746,6 +746,52 @@ export default {
     saved: 'Figyelés frissítve',
     retargeted: 'Most figyelve: {name}',
   },
+  sharing: {
+    title: '„{name}” megosztása',
+    hint: 'Akikkel megosztod, lejátszhatják, követhetik és másolatot menthetnek róla, de nem módosíthatják.',
+    private: 'Privát',
+    privateHint: 'Csak te látod.',
+    shared: 'Meghatározott személyek',
+    sharedHint: 'Válaszd ki, kik láthatják.',
+    public: 'Nyilvános',
+    publicHint: 'Ezen a szerveren mindenki látja.',
+    noOtherUsers: 'Nincs más fiók, akivel megosztható.',
+    findUser: 'Személy keresése',
+    loadingUsers: 'Személyek betöltése…',
+    saved: {
+      private: '„{name}” ismét privát',
+      shared: '„{name}” megosztva',
+      public: '„{name}” mostantól nyilvános',
+    },
+    share: 'Megosztás…',
+    new: 'Új',
+    following: 'Követve',
+    follow: 'Követés',
+    unfollow: 'Követés megszüntetése',
+    followed: 'Követed: „{name}”',
+    unfollowed: 'Már nem követed: „{name}”',
+    saveCopy: 'Másolat mentése',
+    copied: 'Másolat mentve ezen a néven: „{name}”',
+    open: 'Megnyitás',
+    detach: 'Leválasztás a forrásról',
+    detachTitle: 'Leválasztod a(z) „{name}” listát a forrásáról?',
+    detachBody:
+      'Ezután számokat adhatsz hozzá és vehetsz el. A számok maradnak, de a Downtify már nem tartja szinkronban a listát a Spotify-jal vagy a YouTube Musickal, és törli a figyelését, ha volt.',
+    detached: 'A(z) „{name}” mostantól szerkeszthető',
+    by: '{owner} listája',
+    sharedWithCount: {
+      one: '{count} személlyel megosztva',
+      other: '{count} személlyel megosztva',
+    },
+    sharedWithMe: 'Velem megosztott',
+    sharedWithMeHint:
+      'Mások által veled megosztott listák. Lejátszhatod őket, de nem módosíthatod.',
+    publicPlaylists: 'Nyilvános listák',
+    publicPlaylistsHint:
+      'A szerver mindenkivel megosztva. Kövess egyet, hogy az oldalsávban maradjon.',
+    navTitle: 'Veled megosztott',
+    showMore: '{count} további megjelenítése',
+  },
   settings: {
     apps: 'Alkalmazások',
     title: 'Beállítások',
@@ -779,6 +825,13 @@ export default {
     showLyricsHint:
       'Kikapcsolva elrejti a dalszöveg panelt, a gombját és a billentyűparancsát. A fájlok megtartják a dalszövegeket, a letöltések pedig továbbra is lekérik őket.',
     searchGroup: 'Keresés',
+    playlistsGroup: 'Lejátszási listák',
+    showPublicPlaylists: 'Nyilvános listák megjelenítése',
+    showPublicPlaylistsHint:
+      'Mások nyilvános listáit is felsorolja a Könyvtárban. A követett listák mindig látszanak.',
+    allowPlaylistSharing: 'Felhasználók listamegosztásának engedélyezése',
+    allowPlaylistSharingHint:
+      'A felhasználók megoszthatják listáikat másokkal, vagy nyilvánossá tehetik azokat. Kikapcsolva minden megosztott lista rejtve marad, amíg vissza nem kapcsolod.',
     searchAlbums: 'Albumok a találatok között',
     searchAlbumsHint:
       'Albumokat is keres, és felkínálja a teljes album letöltését.',
