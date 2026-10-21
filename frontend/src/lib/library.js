@@ -296,6 +296,50 @@ export function sortItems(items, key, direction = 'asc') {
   return direction === 'desc' ? sorted.reverse() : sorted
 }
 
+/**
+ * The orders a track list can be sorted in, as the sort picker offers
+ * them: `[name, key, dir]` for `sortItems`. `order` is a playlist's own
+ * order (not a sorter). Note that for `added` and `duration` the
+ * library's "ascending" is newest / longest first, as the column
+ * headers have always sorted.
+ */
+export const TRACK_SORTS = [
+  ['order', 'order', 'asc'],
+  ['addedNew', 'added', 'asc'],
+  ['addedOld', 'added', 'desc'],
+  ['titleAsc', 'title', 'asc'],
+  ['titleDesc', 'title', 'desc'],
+  ['artistAsc', 'artist', 'asc'],
+  ['artistDesc', 'artist', 'desc'],
+  ['albumAsc', 'album', 'asc'],
+  ['albumDesc', 'album', 'desc'],
+  ['longest', 'duration', 'asc'],
+  ['shortest', 'duration', 'desc'],
+]
+
+/** The picker's name for a `{ key, dir }` sort, or '' when it has none. */
+export function trackSortName(sort) {
+  const found = TRACK_SORTS.find(
+    ([, key, dir]) => key === sort?.key && dir === (sort?.dir || 'asc')
+  )
+  return found ? found[0] : ''
+}
+
+/** The `{ key, dir }` sort for a picker name (the default for an unknown one). */
+export function trackSortByName(name) {
+  const found = TRACK_SORTS.find(([id]) => id === name) || TRACK_SORTS[1]
+  return { key: found[1], dir: found[2] }
+}
+
+/**
+ * `tracks` in the order `sort` (`{ key, dir }`) says. `order` keeps the
+ * list as it came, which for a playlist is the playlist's own order.
+ */
+export function sortTracks(tracks, sort) {
+  if (!sort || sort.key === 'order') return tracks
+  return sortItems(tracks, sort.key, sort.dir)
+}
+
 export function fold(text) {
   return String(text || '')
     .normalize('NFD')
