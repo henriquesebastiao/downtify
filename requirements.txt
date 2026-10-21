@@ -19,7 +19,7 @@ click==8.5.0
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
     # via loguru
-fastapi==0.154.0
+fastapi==0.156.8
     # via downtify
 feedparser==6.0.14
     # via downtify
