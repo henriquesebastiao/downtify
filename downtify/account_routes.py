@@ -88,14 +88,19 @@ async def _sign_out_user(user_id: int, keep_session: str = '') -> None:
 
 @router.get('/api/me')
 def get_me(request: Request) -> dict[str, Any]:
-    """``{user, preferences}`` for whoever is signed in (a browser or a
-    paired app)."""
+    """``{user, preferences, playlist_sharing}`` for whoever is signed
+    in (a browser or a paired app); ``playlist_sharing`` is whether the
+    admin lets users share playlists."""
 
     me = _me(request)
     user = _users().get(me.user_id)
     if user is None:
         raise HTTPException(status_code=401, detail='Sign in required')
-    return {'user': user, 'preferences': _users().preferences(me.user_id)}
+    return {
+        'user': user,
+        'preferences': _users().preferences(me.user_id),
+        'playlist_sharing': api.sharing_enabled(),
+    }
 
 
 @router.patch('/api/me')
@@ -166,7 +171,8 @@ def get_my_preferences(request: Request) -> dict[str, Any]:
 
 @router.put('/api/me/preferences')
 async def set_my_preferences(request: Request) -> dict[str, Any]:
-    """Merge ``{theme, locale, show_lyrics, search_albums}`` (any of them)
+    """Merge ``{theme, locale, show_lyrics, search_albums,
+    show_public_playlists}`` (any of them)
     into your preferences; the result. Yours only - nobody else's
     Downtify changes."""
 
@@ -405,6 +411,8 @@ def _forget_user_library(user_id: int) -> None:
             api.state.likes.remove_user(user_id)
         if api.state.manual_playlist_owners is not None:
             api.state.manual_playlist_owners.remove_user(user_id)
+        if api.state.playlist_shares is not None:
+            api.state.playlist_shares.remove_user(user_id)
         if api.state.podcasts is not None:
             api.state.podcasts.remove_user(user_id)
         if api.state.discover is not None:

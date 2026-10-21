@@ -750,6 +750,52 @@ export default {
     saved: '모니터링 설정이 업데이트되었습니다',
     retargeted: '이제 {name}을(를) 모니터링합니다',
   },
+  sharing: {
+    title: '“{name}” 공유',
+    hint: '공유받은 사람은 재생하고, 팔로우하고, 사본을 저장할 수 있지만 변경할 수는 없습니다.',
+    private: '비공개',
+    privateHint: '나만 볼 수 있습니다.',
+    shared: '특정 사용자',
+    sharedHint: '볼 수 있는 사람을 고르세요.',
+    public: '공개',
+    publicHint: '이 서버의 모든 사람이 볼 수 있습니다.',
+    noOtherUsers: '공유할 다른 계정이 없습니다.',
+    findUser: '사용자 찾기',
+    loadingUsers: '사용자 불러오는 중…',
+    saved: {
+      private: '“{name}”을(를) 다시 비공개로 전환했습니다',
+      shared: '“{name}”을(를) 공유했습니다',
+      public: '“{name}”이(가) 공개되었습니다',
+    },
+    share: '공유…',
+    new: '새로움',
+    following: '팔로잉',
+    follow: '팔로우',
+    unfollow: '팔로우 취소',
+    followed: '“{name}” 팔로우 중',
+    unfollowed: '“{name}” 팔로우를 취소했습니다',
+    saveCopy: '사본 저장',
+    copied: '“{name}”(으)로 사본을 저장했습니다',
+    open: '열기',
+    detach: '원본에서 분리',
+    detachTitle: '“{name}”을(를) 원본에서 분리할까요?',
+    detachBody:
+      '곡을 추가하고 제거할 수 있게 됩니다. 곡은 그대로 유지되지만 Downtify가 Spotify 또는 YouTube Music과 동기화하지 않으며, 모니터링이 있다면 함께 제거됩니다.',
+    detached: '“{name}”을(를) 이제 편집할 수 있습니다',
+    by: '{owner}님의 재생목록',
+    sharedWithCount: {
+      one: '{count}명과 공유됨',
+      other: '{count}명과 공유됨',
+    },
+    sharedWithMe: '나에게 공유됨',
+    sharedWithMeHint:
+      '다른 사람이 나와 공유한 재생목록입니다. 재생할 수는 있지만 변경할 수는 없습니다.',
+    publicPlaylists: '공개 재생목록',
+    publicPlaylistsHint:
+      '이 서버의 모든 사람과 공유됩니다. 팔로우하면 사이드바에 유지됩니다.',
+    navTitle: '나에게 공유됨',
+    showMore: '{count}개 더 보기',
+  },
   settings: {
     apps: '앱 연동',
     title: '설정',
@@ -783,6 +829,13 @@ export default {
     showLyricsHint:
       '비활성화하면 가사 패널, 버튼, 단축키가 숨겨집니다. 파일에 포함된 가사는 유지되며 새 다운로드 시에도 정상적으로 수집됩니다.',
     searchGroup: '검색',
+    playlistsGroup: '재생목록',
+    showPublicPlaylists: '공개 재생목록 표시',
+    showPublicPlaylistsHint:
+      '라이브러리에 다른 사람의 공개 재생목록을 표시합니다. 팔로우한 재생목록은 항상 표시됩니다.',
+    allowPlaylistSharing: '사용자의 재생목록 공유 허용',
+    allowPlaylistSharingHint:
+      '사용자가 재생목록을 다른 사용자와 공유하거나 공개할 수 있습니다. 끄면 다시 켤 때까지 공유된 재생목록이 모두 숨겨집니다.',
     searchAlbums: '검색 결과에 앨범 표시',
     searchAlbumsHint:
       '검색 시 앨범도 함께 검색하며 전체 앨범 다운로드 옵션을 제공합니다.',

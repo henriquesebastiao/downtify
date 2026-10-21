@@ -23,6 +23,7 @@
             <AppIcon name="spotify" :size="14" />Spotify
           </span>
           {{ facts }}
+          <template v-if="sharingLine"> · {{ sharingLine }}</template>
         </template>
         <template #actions>
           <PlaylistStatus
@@ -53,7 +54,7 @@
             {{ t('playlists.downloadMissing', { count: batch.missing_count }) }}
           </UiButton>
           <UiButton
-            v-if="playlist.manual"
+            v-if="playlist.manual && playlist.mine"
             variant="secondary"
             icon="plus"
             @click="playlistActions.openAddSongs(playlist)"
@@ -61,12 +62,52 @@
             {{ t('playlists.addSongs') }}
           </UiButton>
           <UiButton
-            v-if="playlist.manual"
+            v-if="playlist.manual && playlist.mine"
             variant="ghost"
             icon="pencil"
             @click="playlistActions.rename(playlist)"
           >
             {{ t('playlists.rename') }}
+          </UiButton>
+          <UiButton
+            v-if="!playlist.mine && playlist.visibility === 'public'"
+            :variant="playlist.followed ? 'secondary' : 'primary'"
+            :icon="playlist.followed ? 'heart' : 'heart-outline'"
+            @click="playlistActions.setFollowing(playlist, !playlist.followed)"
+          >
+            {{
+              playlist.followed ? t('sharing.following') : t('sharing.follow')
+            }}
+          </UiButton>
+          <UiButton
+            v-if="!playlist.mine"
+            variant="secondary"
+            icon="copy"
+            @click="playlistActions.copy(playlist)"
+          >
+            {{ t('sharing.saveCopy') }}
+          </UiButton>
+          <UiButton
+            v-if="canShare"
+            variant="ghost"
+            :icon="
+              playlist.visibility === 'public'
+                ? 'globe'
+                : playlist.visibility === 'shared'
+                  ? 'users'
+                  : 'share'
+            "
+            @click="playlistActions.openShare(playlist)"
+          >
+            {{ t('sharing.share') }}
+          </UiButton>
+          <UiButton
+            v-if="canDetach"
+            variant="ghost"
+            icon="link"
+            @click="playlistActions.detach(playlist)"
+          >
+            {{ t('sharing.detach') }}
           </UiButton>
           <UiButton
             v-if="playlist.tracks.length"
@@ -168,6 +209,7 @@ import TrackList from '/src/components/library/TrackList.vue'
 import TrackSortSelect from '/src/components/library/TrackSortSelect.vue'
 import DownloadState from '/src/components/search/DownloadState.vue'
 import API from '/src/model/api'
+import { useAccount } from '/src/model/account'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { usePlaylistActions } from '/src/model/playlistActions'
@@ -183,6 +225,7 @@ const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
+const account = useAccount()
 
 const playlist = computed(() =>
   library.findPlaylist(String(route.query.name || ''))
@@ -198,6 +241,33 @@ const trackSort = useLocalStorage('downtify-playlist-track-sort', {
 const sortedTracks = computed(() =>
   sortTracks(playlist.value?.tracks || [], trackSort.value)
 )
+
+const canShare = computed(
+  () =>
+    playlist.value?.mine &&
+    !playlist.value.liked &&
+    account.playlistSharing.value
+)
+// An imported playlist can be turned into an editable one.
+const canDetach = computed(
+  () =>
+    playlist.value?.mine &&
+    !playlist.value.liked &&
+    !playlist.value.manual &&
+    playlist.value.fileCount > 0
+)
+
+// "by ana", or how the user's own playlist is shared.
+const sharingLine = computed(() => {
+  const p = playlist.value
+  if (!p || p.liked) return ''
+  if (!p.mine) return t('sharing.by', { owner: p.owner })
+  if (p.visibility === 'public') return t('sharing.public')
+  if (p.visibility === 'shared') {
+    return t('sharing.sharedWithCount', { count: p.sharedWith.length })
+  }
+  return ''
+})
 
 const facts = computed(() => {
   const p = playlist.value
@@ -262,9 +332,11 @@ async function loadMissing() {
 
 watch(
   () => String(route.query.name || ''),
-  (name) => {
+  async (name) => {
     missing.value = []
-    library.loadPlaylistTracks(name)
+    await library.loadPlaylistTracks(name)
+    // Opening a playlist shared with the user clears its "new" marker.
+    playlistActions.markSeen(library.findPlaylist(name))
   },
   { immediate: true }
 )

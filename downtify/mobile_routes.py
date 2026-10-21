@@ -123,10 +123,18 @@ def track_lyrics(track_id: str) -> dict[str, Any]:
 
 @router.get('/playlists')
 async def playlists(request: Request) -> list[dict[str, Any]]:
-    """Downloaded playlists as ``{name, liked, count, track_ids, cover}``
-    - ``cover`` is a path for ``GET /playlist-cover?file=`` or ``''``.
+    """Downloaded playlists as ``{name, liked, manual, count, track_ids,
+    cover, owner, visibility, mine, followed, shared_with_me, new}`` -
+    ``cover`` is a path for ``GET /playlist-cover?file=`` or ``''``.
+
     A user sees their own playlists (and their own liked songs as the
-    liked one) only."""
+    liked one), those shared with them (``shared_with_me``; ``new`` until
+    opened) and public ones: the ones they follow, and - unless they
+    switched *Show public playlists* off - the rest. ``mine`` says whether
+    it is theirs to change, ``owner`` is the owner's username and
+    ``visibility`` is ``private``, ``shared`` or ``public``. Own playlists
+    also list ``shared_with`` (usernames).
+    """
 
     await asyncio.to_thread(_refresh)
     found = await asyncio.to_thread(api.playlists_for_request, request)
@@ -140,9 +148,99 @@ async def playlists(request: Request) -> list[dict[str, Any]]:
             'count': p['count'],
             'cover': p['cover'],
             'track_ids': [ids[f] for f in p['files'] if f in ids],
+            'owner': p.get('owner', ''),
+            'visibility': p.get('visibility', 'private'),
+            'mine': bool(p.get('mine', True)),
+            'followed': bool(p.get('followed')),
+            'shared_with_me': bool(p.get('shared_with_me')),
+            'new': bool(p.get('new')),
+            **(
+                {'shared_with': p['shared_with']}
+                if p.get('shared_with')
+                else {}
+            ),
         }
         for p in found
     ]
+
+
+@router.get('/usernames')
+async def usernames(request: Request) -> dict[str, Any]:
+    """``{enabled, usernames}``: who a playlist can be shared with
+    (everyone but you) - names only, since users can't list accounts.
+    ``enabled`` is the admin's *Allow users to share playlists*."""
+
+    me = api.request_user_id(request)
+    enabled = api.sharing_enabled()
+    names = sorted(
+        (name for uid, name in api._usernames().items() if uid != me),
+        key=str.casefold,
+    )
+    return {'enabled': enabled, 'usernames': names if enabled else []}
+
+
+async def _playlist_name(request: Request) -> str:
+    name = request.query_params.get('name', '')
+    if not name:
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+        name = str((payload or {}).get('name') or '')
+    name = name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail='name is required')
+    return name
+
+
+def _shares():
+    if api.state.playlist_shares is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    return api.state.playlist_shares
+
+
+@router.post('/playlists/follow')
+async def follow_playlist(request: Request) -> dict[str, Any]:
+    """Follow a public playlist (``{name}``): it stays in your list and
+    follows its owner's changes, until they make it private."""
+
+    name = await _playlist_name(request)
+    user_id = api.request_user_id(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail='Sign in required')
+    entry = api.require_playlist_visible(name, request)
+    if entry.get('mine') or entry.get('visibility') != 'public':
+        raise HTTPException(
+            status_code=400, detail='Only public playlists can be followed'
+        )
+    await asyncio.to_thread(_shares().follow, user_id, entry['name'], True)
+    await api.announce_playlists_changed()
+    return {'name': entry['name'], 'followed': True}
+
+
+@router.delete('/playlists/follow')
+async def unfollow_playlist(request: Request) -> dict[str, Any]:
+    """Stop following a playlist (``?name=``). Idempotent."""
+
+    name = await _playlist_name(request)
+    user_id = api.request_user_id(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail='Sign in required')
+    await asyncio.to_thread(_shares().follow, user_id, name, False)
+    await api.announce_playlists_changed()
+    return {'name': name, 'followed': False}
+
+
+@router.post('/playlists/seen')
+async def playlist_seen(request: Request) -> dict[str, Any]:
+    """Clear the *new* marker of a playlist shared with you (``{name}``)."""
+
+    name = await _playlist_name(request)
+    user_id = api.request_user_id(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail='Sign in required')
+    await asyncio.to_thread(_shares().mark_seen, name, user_id)
+    return {'name': name, 'new': False}
 
 
 @router.get('/likes')

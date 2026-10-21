@@ -12,6 +12,7 @@ import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
 import { usePlayer } from '/src/model/player'
 import { useHistory } from '/src/model/history'
+import { useAccount } from '/src/model/account'
 import { useI18n } from '/src/i18n'
 import { itemTrackCount } from '/src/lib/library'
 
@@ -21,6 +22,8 @@ const addOpen = ref(false)
 const addPlaylist = ref(null)
 const renameOpen = ref(false)
 const renamePlaylist = ref(null)
+const shareOpen = ref(false)
+const sharePlaylist = ref(null)
 
 export function usePlaylistActions() {
   const library = useLibrary()
@@ -31,6 +34,7 @@ export function usePlaylistActions() {
   const history = useHistory()
   const router = useRouter()
   const { t } = useI18n()
+  const { playlistSharing: sharingOn } = useAccount()
 
   function contextFor(playlist) {
     return {
@@ -39,7 +43,9 @@ export function usePlaylistActions() {
       cover: playlist.cover || '',
       covers: playlist.covers || [],
       route: { name: 'Playlist', query: { name: playlist.name } },
-      manual: Boolean(playlist.manual),
+      // Editing is for the owner: a playlist shared with the user is
+      // view-only.
+      manual: Boolean(playlist.manual && playlist.mine),
       playlistName: playlist.name,
     }
   }
@@ -53,7 +59,8 @@ export function usePlaylistActions() {
   }
 
   function manuals() {
-    return library.playlists.value.filter((item) => item.manual)
+    // Only the user's own: a playlist shared with them is view-only.
+    return library.ownPlaylists.value.filter((item) => item.manual)
   }
 
   function openCreate(files = []) {
@@ -71,6 +78,88 @@ export function usePlaylistActions() {
   function openRename(playlist) {
     renamePlaylist.value = playlist
     renameOpen.value = true
+  }
+
+  function openShare(playlist) {
+    sharePlaylist.value = playlist
+    shareOpen.value = true
+  }
+
+  function failed(err) {
+    ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+      kind: 'error',
+    })
+  }
+
+  async function setFollowing(playlist, follow) {
+    try {
+      if (follow) await API.followPlaylist(playlist.name)
+      else await API.unfollowPlaylist(playlist.name)
+      await library.refreshPlaylists()
+      ui.toast(
+        t(follow ? 'sharing.followed' : 'sharing.unfollowed', {
+          name: playlist.title,
+        }),
+        { kind: 'success' }
+      )
+    } catch (err) {
+      failed(err)
+    }
+  }
+
+  // Clears the "new" marker of a playlist shared with the user.
+  async function markSeen(playlist) {
+    if (!playlist?.isNew) return
+    try {
+      await API.markPlaylistSeen(playlist.name)
+      await library.refreshPlaylists()
+    } catch {
+      // Only a marker.
+    }
+  }
+
+  // Saves a private, editable copy of someone else's playlist (or the
+  // user's own); the name it got is returned.
+  async function copy(playlist) {
+    try {
+      const res = await API.copyLibraryPlaylist(playlist.name)
+      const created = res.data?.name || playlist.name
+      await library.load({ force: true })
+      ui.toast(t('sharing.copied', { name: created }), {
+        kind: 'success',
+        action: {
+          label: t('sharing.open'),
+          run: () =>
+            router.push({ name: 'Playlist', query: { name: created } }),
+        },
+      })
+      return created
+    } catch (err) {
+      failed(err)
+      return ''
+    }
+  }
+
+  // An imported playlist becomes a Library one: editable, no longer kept
+  // in step with its Spotify / YouTube Music source.
+  async function detach(playlist) {
+    const ok = await ui.confirm({
+      title: t('sharing.detachTitle', { name: playlist.title }),
+      body: t('sharing.detachBody'),
+      confirmLabel: t('sharing.detach'),
+    })
+    if (!ok) return false
+    try {
+      await API.detachLibraryPlaylist(playlist.name)
+      await library.load({ force: true })
+      ui.toast(t('sharing.detached', { name: playlist.title }), {
+        kind: 'success',
+      })
+      return true
+    } catch (err) {
+      failed(err)
+      return false
+    }
   }
 
   async function createNamed(name, files = []) {
@@ -274,9 +363,64 @@ export function usePlaylistActions() {
     }
   }
 
+  // What someone else's playlist offers: play it, follow it, keep a copy.
+  function viewerMenuFor(playlist) {
+    const empty = !itemTrackCount(playlist)
+    return [
+      {
+        label: t('actions.play'),
+        icon: 'play',
+        hidden: empty,
+        action: () => play(playlist),
+      },
+      {
+        label: t('actions.shuffle'),
+        icon: 'shuffle',
+        hidden: empty,
+        action: () => play(playlist, { shuffled: true }),
+      },
+      {
+        label: t('actions.addToQueue'),
+        icon: 'queue',
+        hidden: empty,
+        action: async () => {
+          await library.loadPlaylistTracks(playlist.name)
+          const live = library.findPlaylist(playlist.name) || playlist
+          tracks.enqueue(live.tracks)
+        },
+      },
+      { divider: true },
+      {
+        label: t('sharing.follow'),
+        icon: 'heart-outline',
+        hidden: playlist.visibility !== 'public' || playlist.followed,
+        action: () => setFollowing(playlist, true),
+      },
+      {
+        label: t('sharing.unfollow'),
+        icon: 'heart',
+        hidden: !playlist.followed,
+        action: () => setFollowing(playlist, false),
+      },
+      {
+        label: t('sharing.saveCopy'),
+        icon: 'copy',
+        action: () => copy(playlist),
+      },
+      {
+        label: t('library.downloadZip'),
+        icon: 'zip',
+        hidden: empty,
+        action: () => tracks.downloadZip(playlist.tracks),
+      },
+    ]
+  }
+
   function menuFor(playlist, { hide = [] } = {}) {
+    if (!playlist.mine) return viewerMenuFor(playlist)
     const batch = playlist.batch
     const empty = !itemTrackCount(playlist)
+    const imported = !playlist.manual && !playlist.liked
     return [
       {
         label: t('actions.play'),
@@ -334,6 +478,18 @@ export function usePlaylistActions() {
         action: () => openRename(playlist),
       },
       {
+        label: t('sharing.detach'),
+        icon: 'link',
+        hidden: !imported || !playlist.fileCount,
+        action: () => detach(playlist),
+      },
+      {
+        label: t('sharing.share'),
+        icon: 'share',
+        hidden: playlist.liked || !sharingOn.value,
+        action: () => openShare(playlist),
+      },
+      {
         label: t('library.downloadZip'),
         icon: 'zip',
         hidden: empty,
@@ -360,6 +516,11 @@ export function usePlaylistActions() {
     openCreate,
     openAddSongs,
     openRename,
+    openShare,
+    setFollowing,
+    markSeen,
+    copy,
+    detach,
     createNamed,
     renameNamed,
     addFiles,
@@ -371,5 +532,7 @@ export function usePlaylistActions() {
     addPlaylist,
     renameOpen,
     renamePlaylist,
+    shareOpen,
+    sharePlaylist,
   }
 }

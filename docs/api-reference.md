@@ -757,6 +757,7 @@ Return the current settings.
 | `slskd` | object | slskd connection and matching options. Saving with `enabled: true` but no `base_url` or `api_key` returns `400`. |
 | `navidrome` | object | Navidrome connection. Saving with `enabled: true` but no `url`, `username` or `password` returns `400`. |
 | `sync_navidrome` | boolean | Create/update a Navidrome playlist after playlist downloads, Playlist Monitor sweeps and library changes. |
+| `allow_playlist_sharing` | boolean | Whether users may [share their playlists](features/users.md#sharing-playlists) (default `true`). While `false` every share is hidden from the people it was shared with and nobody can share or follow; the shares come back when it is turned on again. |
 | `cache_cover_art` | boolean | Keep extracted cover images under `/data/cover_cache` to speed up `/cover`. Covers fetched for [read-only extra folders](features/external-library.md) are always stored there, even when this is `false`. |
 | `library_upgrade` | object | Defaults a library upgrade scan starts from: `artwork_min_px` (clamped to `100–3000`), `artwork_source` (`highest`, `spotify`, `itunes`, `youtube-music`) and `recheck_days` (`0–3650`, `0` meaning always re-check). A scan request may override them. See [Upgrade library](features/library-upgrade.md#options). |
 | `external_library` | object | Extra folders of already-tagged audio. `folders` is a list of absolute paths (as seen inside the container, max 20). Relative paths are dropped. See [Existing music folders](features/external-library.md). |
@@ -1244,6 +1245,38 @@ Rename a **manual** playlist. Imported playlists return `403`. The M3U and sidec
 **Request body:** `{ "name": "Late night", "new_name": "Late night mix" }`
 
 **Response:** `{ "name": "Late night mix", "previous": "Late night", "manual": true, "files": ["Artist - Song.mp3"], "count": 1 }`
+
+---
+
+### `PUT /api/library/playlists/visibility`
+
+Share a playlist you own, view-only (an admin may change any). Liked songs are never shareable (`400`). `403` for anyone who can open the playlist without owning it, and `403` while the admin's `allow_playlist_sharing` setting is off (making a playlist `private` is always allowed). `404` for a playlist the caller can't open.
+
+**Request body:** `{ "name": "Late night", "visibility": "shared", "shared_with": ["bob", "cyd"] }`
+
+`visibility` is `private` (the default: the owner and admins only), `shared` (the usernames in `shared_with`, which must exist and not be empty) or `public` (everyone on the server). Anyone not listed — or everyone, once it is `private` again — loses it at once: it leaves their lists, and a follow ends. Saved copies stay with whoever made them.
+
+**Response:** `{ "name": "Late night", "visibility": "shared", "shared_with": ["bob", "cyd"] }`
+
+---
+
+### `POST /api/library/playlists/copy`
+
+Save a copy of a playlist the caller can open (their own, one shared with them, or a public one) as a new **manual** playlist of theirs: private, editable, and independent of the original. Songs an admin hid from users are left out. `404` for a playlist the caller can't open, `409` if `new_name` is taken.
+
+**Request body:** `{ "name": "Late night", "new_name": "Late night (mine)" }` — without `new_name` the copy is called `<name> (copy)`, then `<name> (copy) 2`, and so on.
+
+**Response:** `{ "name": "Late night (mine)", "manual": true, "files": [...], "count": 12 }`
+
+---
+
+### `POST /api/library/playlists/detach`
+
+Turn an **imported** (Spotify or YouTube Music) playlist you own into a manual one, so it can be edited with [`/api/library/playlists/tracks`](#post-apilibraryplayliststracks). Its songs and owner stay; the link to its source goes — the playlist catalog row, the Playlist Monitor watch (if there is one) and its cached tracklist and download batches — and it is no longer rewritten by sweeps. Its artwork stays until the first edit. `409` if the playlist can already be edited, `403` for someone who can open it without owning it.
+
+**Request body:** `{ "name": "Road trip" }`
+
+**Response:** `{ "name": "Road trip", "manual": true, "files": [...], "count": 42 }`
 
 ---
 
@@ -2418,7 +2451,7 @@ Your own account, every account (admins), and what everyone does — see [Users 
 
 ### `GET /api/me`
 
-Client. Who is signed in, and their preferences: `{ "user": { … }, "preferences": { "theme": "dark", "locale": "pt-BR", "show_lyrics": true, "search_albums": false } }` — a preference not set yet is missing.
+Client. Who is signed in, and their preferences: `{ "user": { … }, "preferences": { "theme": "dark", "locale": "pt-BR", "show_lyrics": true, "search_albums": false, "show_public_playlists": true }, "playlist_sharing": true }` — a preference not set yet is missing. `playlist_sharing` is whether the admin lets users [share playlists](features/users.md#sharing-playlists).
 
 ---
 
@@ -2436,7 +2469,7 @@ User. Change your password: `{ "current_password": "…", "new_password": "…" 
 
 ### `GET /api/me/preferences` · `PUT /api/me/preferences`
 
-User. Your preferences (Settings → General): `theme` (`dark`/`light`/`system`), `locale`, `show_lyrics`, `search_albums`. `PUT` merges what it's sent into them and answers the result; other keys are ignored. `search_albums: false` makes `GET /api/albums/search` answer `[]` for you, whatever the server's setting.
+User. Your preferences (Settings → General): `theme` (`dark`/`light`/`system`), `locale`, `show_lyrics`, `search_albums`, `show_public_playlists` (other people's public playlists in your lists; on unless set to `false`, and the playlists you follow show either way). `PUT` merges what it's sent into them and answers the result; other keys are ignored. `search_albums: false` makes `GET /api/albums/search` answer `[]` for you, whatever the server's setting.
 
 ---
 
@@ -2645,11 +2678,44 @@ The track's cover. Also `HEAD`.
 
 ```json
 [
-  { "name": "Downtify Liked Songs", "liked": true, "count": 12, "cover": "", "track_ids": ["t7b2…", "…"] }
+  { "name": "Downtify Liked Songs", "liked": true, "manual": false, "count": 12, "cover": "", "track_ids": ["t7b2…", "…"],
+    "owner": "", "visibility": "private", "mine": true, "followed": false, "shared_with_me": false, "new": false },
+  { "name": "Late night", "liked": false, "manual": true, "count": 8, "cover": "", "track_ids": ["…"],
+    "owner": "ana", "visibility": "public", "mine": false, "followed": true, "shared_with_me": false, "new": false }
 ]
 ```
 
-The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playlist order — one's own for a user (with their own liked songs as the liked one), everything for an admin. `cover` is a path for `GET /playlist-cover?file=`, or `""`.
+The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playlist order. A user gets their own (with their own liked songs as the liked one), the ones [shared with them](features/users.md#sharing-playlists) by name, the public ones they follow and — unless they turned *Show public playlists* off — every other public one. An admin gets everything. `cover` is a path for `GET /playlist-cover?file=`, or `""`.
+
+| Field | Meaning |
+|-------|---------|
+| `owner` | The owner's username (`""` for liked songs) |
+| `visibility` | `private`, `shared` or `public` |
+| `mine` | `true` when it is the caller's to change (their own, or any for an admin); `false` means view-only — don't offer edit, rename or delete |
+| `shared_with_me` | Shared with the caller by name |
+| `new` | Shared with the caller and not opened yet; clear it with [`POST /api/v1/playlists/seen`](#post-apiv1playlistsseen) |
+| `followed` | A public playlist the caller follows |
+| `shared_with` | On the caller's own shared playlists: the usernames it is shared with |
+
+Keep the other people's playlists apart from the caller's own (a "Shared with me" and a "Public playlists" section, each entry labelled with its `owner`).
+
+---
+
+### `GET /api/v1/usernames`
+
+`{ "enabled": true, "usernames": ["bob", "cyd"] }` — everyone but the caller, for a share picker; users can't list accounts otherwise. `enabled` is the admin's *Allow users to share playlists* (the list is empty while it is off).
+
+---
+
+### `POST /api/v1/playlists/follow` · `DELETE /api/v1/playlists/follow`
+
+Follow a public playlist of someone else's (`{ "name": "Late night" }`), so it stays in the caller's lists — even with *Show public playlists* off — and follows its owner's changes; or stop following it (`DELETE`, with `?name=` or the same body; idempotent). `POST` answers `400` for a playlist that isn't public or is the caller's own, `404` for one they can't open. A follow ends by itself when the owner makes the playlist private or shares it by name. **Response:** `{ "name": "Late night", "followed": true }`.
+
+---
+
+### `POST /api/v1/playlists/seen`
+
+Clear the `new` marker of a playlist shared with the caller (`{ "name": "Late night" }`). **Response:** `{ "name": "Late night", "new": false }`.
 
 ---
 
@@ -2762,6 +2828,12 @@ When tracks are added, removed or moved (a finished download, a delete, a reconc
 
 ```json
 { "type": "library_changed" }
+```
+
+When a playlist is shared, unshared, followed, copied, detached, renamed or deleted, connected clients are told, so they list the playlists again (`GET /playlists` or [`GET /api/v1/playlists`](#get-apiv1playlists)):
+
+```json
+{ "type": "playlists_changed" }
 ```
 
 When an app is paired, the web page showing the code learns it at once:

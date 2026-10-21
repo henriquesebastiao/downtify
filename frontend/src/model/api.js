@@ -431,6 +431,41 @@ function renameLibraryPlaylist(name, newName) {
   })
 }
 
+function setPlaylistVisibility(name, visibility, sharedWith = []) {
+  return API.put('/api/library/playlists/visibility', {
+    name,
+    visibility,
+    shared_with: sharedWith,
+  })
+}
+
+function copyLibraryPlaylist(name, newName = '') {
+  return API.post('/api/library/playlists/copy', {
+    name,
+    new_name: newName,
+  })
+}
+
+function detachLibraryPlaylist(name) {
+  return API.post('/api/library/playlists/detach', { name })
+}
+
+function followPlaylist(name) {
+  return API.post('/api/v1/playlists/follow', { name })
+}
+
+function unfollowPlaylist(name) {
+  return API.delete('/api/v1/playlists/follow', { params: { name } })
+}
+
+function markPlaylistSeen(name) {
+  return API.post('/api/v1/playlists/seen', { name })
+}
+
+function listShareableUsernames() {
+  return API.get('/api/v1/usernames')
+}
+
 function reconcileLibrary() {
   return API.post('/api/library/reconcile')
 }
@@ -831,6 +866,13 @@ export default {
   createLibraryPlaylist,
   editLibraryPlaylistTracks,
   renameLibraryPlaylist,
+  setPlaylistVisibility,
+  copyLibraryPlaylist,
+  detachLibraryPlaylist,
+  followPlaylist,
+  unfollowPlaylist,
+  markPlaylistSeen,
+  listShareableUsernames,
   prepareLibraryArchive,
   libraryArchiveURL,
   reconcileLibrary,

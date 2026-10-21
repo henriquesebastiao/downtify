@@ -747,6 +747,52 @@ export default {
     saved: 'İzleme güncellendi',
     retargeted: 'Artık {name} izleniyor',
   },
+  sharing: {
+    title: '“{name}” paylaş',
+    hint: 'Paylaştığın kişiler listeyi çalabilir, takip edebilir ve kopyasını kaydedebilir; ama değiştiremez.',
+    private: 'Özel',
+    privateHint: 'Yalnızca sen görebilirsin.',
+    shared: 'Belirli kişiler',
+    sharedHint: 'Kimlerin görebileceğini seç.',
+    public: 'Herkese açık',
+    publicHint: 'Bu sunucudaki herkes görebilir.',
+    noOtherUsers: 'Paylaşılacak başka hesap yok.',
+    findUser: 'Kişi bul',
+    loadingUsers: 'Kişiler yükleniyor…',
+    saved: {
+      private: '“{name}” yine özel',
+      shared: '“{name}” paylaşıldı',
+      public: '“{name}” artık herkese açık',
+    },
+    share: 'Paylaş…',
+    new: 'Yeni',
+    following: 'Takip ediliyor',
+    follow: 'Takip et',
+    unfollow: 'Takibi bırak',
+    followed: '“{name}” takip ediliyor',
+    unfollowed: '“{name}” takibi bırakıldı',
+    saveCopy: 'Kopyasını kaydet',
+    copied: 'Kopya “{name}” olarak kaydedildi',
+    open: 'Aç',
+    detach: 'Kaynaktan ayır',
+    detachTitle: '“{name}” kaynağından ayrılsın mı?',
+    detachBody:
+      'Şarkı ekleyip çıkarabilirsin. Şarkılar olduğu gibi kalır, ancak Downtify listeyi Spotify veya YouTube Music ile eşit tutmayı bırakır ve varsa izlemesini kaldırır.',
+    detached: '“{name}” artık düzenlenebilir',
+    by: '{owner} tarafından',
+    sharedWithCount: {
+      one: '{count} kişiyle paylaşıldı',
+      other: '{count} kişiyle paylaşıldı',
+    },
+    sharedWithMe: 'Benimle paylaşılanlar',
+    sharedWithMeHint:
+      'Başkalarının seninle paylaştığı listeler. Çalabilirsin ama değiştiremezsin.',
+    publicPlaylists: 'Herkese açık listeler',
+    publicPlaylistsHint:
+      'Bu sunucudaki herkesle paylaşılır. Kenar çubuğunda tutmak için birini takip et.',
+    navTitle: 'Seninle paylaşılanlar',
+    showMore: '{count} tane daha göster',
+  },
   settings: {
     apps: 'Uygulamalar',
     title: 'Ayarlar',
@@ -780,6 +826,13 @@ export default {
     showLyricsHint:
       'Şarkı sözü panelini, düğmesini ve kısayolunu gizlemek için kapatın. Dosyalarınız sözlerini korur ve indirmeler onları getirmeye devam eder.',
     searchGroup: 'Arama',
+    playlistsGroup: 'Çalma listeleri',
+    showPublicPlaylists: 'Herkese açık listeleri göster',
+    showPublicPlaylistsHint:
+      'Başkalarının herkese açık listelerini Kitaplık’ta gösterir. Takip ettiklerin her zaman görünür.',
+    allowPlaylistSharing: 'Kullanıcıların liste paylaşmasına izin ver',
+    allowPlaylistSharingHint:
+      'Kullanıcılar listelerini başkalarıyla paylaşabilir veya herkese açık yapabilir. Kapalıyken paylaşılan tüm listeler, yeniden açana kadar gizli kalır.',
     searchAlbums: 'Arama sonuçlarında albümleri göster',
     searchAlbumsHint:
       'Aramada albümleri de getir ve albümün tamamını indirme seçeneği sun.',
