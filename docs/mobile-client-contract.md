@@ -97,7 +97,7 @@ GET /api/v1/library?since=<cursor>
       "album_id": "6aa1df0c3e5f2b11", "artist_id": "0a92c1e0bb3d8f44",
       "track_number": 3, "year": "1994", "duration": 305.12,
       "codec": "flac", "bitrate": 912000, "sample_rate": 44100, "channels": 2,
-      "size": 34812211, "added": 1789600669, "has_cover": true, "playlists": ["Trip-hop"]
+      "size": 34812211, "added": 1789600669, "has_cover": true, "explicit": true, "playlists": ["Trip-hop"]
     }
   ],
   "deleted": ["t0c4…"]
@@ -108,6 +108,7 @@ GET /api/v1/library?since=<cursor>
 - Later: `since=<last cursor>` → only tracks added or changed since, and ids of removed ones. Save `cursor` only after applying the response.
 - **`full: true` at any time** (a cursor too old — removed tracks are remembered for 90 days — or one the server doesn't recognise) means: replace the local library with `tracks`.
 - **`id`** is stable across moves and renames of the file (see `downtify/library_sync.py` for the exact rules); a file moved *and* re-tagged in the same sweep comes back as a new id plus a deleted old one. Key everything local (offline files, likes, queue, history) by `id`, never by `file`.
+- **`explicit`** is `true` on a track whose file is marked explicit and **absent** on every other track: read absent as `false`. Show it like the web app does, a small "E" next to the title (see [Explicit Marker](features/explicit-marker.md)).
 - **Grouping:** albums group by `album_id` (album artist + album title, case-insensitive; `""` = no album), artists by `artist_id` (the album artist). This is exactly the web app's grouping.
 - `ETag`/`If-None-Match` are supported (`304` when nothing changed for that `since`).
 - `refresh=true` rescans the folder now (pull to refresh) — otherwise the scan behind the list is cached for about a minute.

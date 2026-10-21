@@ -84,6 +84,7 @@ export function normalizeTrack(row) {
     trackNumber: Number(raw.track_number) || 0,
     year: String(raw.year || ''),
     duration: Number(raw.duration) || 0,
+    explicit: Boolean(raw.explicit),
     added: Number(raw.added) || 0,
     size: Number(raw.size) || 0,
     // Bare paths (no /tracks row) don't know; try the cover endpoint.

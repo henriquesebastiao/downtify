@@ -447,17 +447,10 @@
                     <span class="truncate text-sm font-semibold">{{
                       item.name
                     }}</span>
-                    <span
+                    <ExplicitBadge
                       v-if="item.explicit"
-                      class="shrink-0 rounded-[3px] px-1 text-[9px] leading-[14px] font-bold"
-                      :class="
-                        item.album_id === albumId
-                          ? 'bg-on-accent text-accent'
-                          : 'bg-muted text-bg'
-                      "
-                      :title="t('search.explicit')"
-                      >E</span
-                    >
+                      :tone="item.album_id === albumId ? 'accent' : 'default'"
+                    />
                   </span>
                   <span
                     class="block truncate text-xs"
@@ -602,6 +595,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useElementSize, useMediaQuery } from '@vueuse/core'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import CoverArt from '/src/components/ui/CoverArt.vue'
+import ExplicitBadge from '/src/components/ui/ExplicitBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiChips from '/src/components/ui/UiChips.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'

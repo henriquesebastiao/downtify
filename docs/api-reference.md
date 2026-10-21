@@ -946,6 +946,7 @@ List library tracks with artist/album read from each file's embedded tags — do
     "bitrate": 320000,
     "sample_rate": 44100,
     "channels": 2,
+    "explicit": true,
     "has_cover": true,
     "added": 1789600669,
     "size": 8567376,
@@ -954,7 +955,7 @@ List library tracks with artist/album read from each file's embedded tags — do
 ]
 ```
 
-`album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info, and `codec` (`mp3`, `flac`, `aac`, `alac`, `opus`, `vorbis`, or `""`), `bitrate` (bits/s), `sample_rate` (Hz) and `channels` (`0` when unknown) from the audio stream; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes. The assembled listing is kept in memory and snapshotted in `/data`. `GET /tracks`, [`GET /api/library/summary`](#get-apilibrarysummary), albums and artists serve that snapshot without walking the disk; a download keeps the track snapshot and refreshes it in the background so the UI stays usable while the queue is running. A library delete removes those files from the snapshot immediately. `GET /list?refresh=true` (and the mobile library `refresh` flag) drop the snapshot and rescan. Writing a playlist (including Liked songs) does not rebuild the catalog. The Home page uses [`GET /api/library/summary`](#get-apilibrarysummary) instead of this endpoint.
+`album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info, and `codec` (`mp3`, `flac`, `aac`, `alac`, `opus`, `vorbis`, or `""`), `bitrate` (bits/s), `sample_rate` (Hz) and `channels` (`0` when unknown) from the audio stream; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `explicit` is whether the file is marked explicit (see [Explicit Marker](features/explicit-marker.md)). `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes. The assembled listing is kept in memory and snapshotted in `/data`. `GET /tracks`, [`GET /api/library/summary`](#get-apilibrarysummary), albums and artists serve that snapshot without walking the disk; a download keeps the track snapshot and refreshes it in the background so the UI stays usable while the queue is running. A library delete removes those files from the snapshot immediately. `GET /list?refresh=true` (and the mobile library `refresh` flag) drop the snapshot and rescan. Writing a playlist (including Liked songs) does not rebuild the catalog. The Home page uses [`GET /api/library/summary`](#get-apilibrarysummary) instead of this endpoint.
 
 Query filters so the browser does not download every track to show a short list:
 
@@ -2547,6 +2548,7 @@ The library as a change feed — one's own tracks for a paired user account, eve
       "size": 34812211,
       "added": 1789600669,
       "has_cover": true,
+      "explicit": true,
       "playlists": ["Trip-hop"]
     }
   ],
@@ -2554,7 +2556,7 @@ The library as a change feed — one's own tracks for a paired user account, eve
 }
 ```
 
-`tracks` are the tracks added or changed after `since`, `deleted` the ids removed after it. `full: true` (for `since=0`, or a `since` older than the 90 days removed ids are kept, or newer than `cursor`) means `tracks` is the whole library: replace what you have. `artists` splits `artist` the way the web app does; `album_artist` is the tag, else the first artist; `album_id` (album artist + album, case-insensitive; `""` without an album) and `artist_id` (the album artist) are the keys the web app groups albums and artists by. `codec` is `mp3`, `flac`, `aac`, `alac`, `opus` or `vorbis` (`""` when unknown); `bitrate` in bits per second.
+`tracks` are the tracks added or changed after `since`, `deleted` the ids removed after it. `full: true` (for `since=0`, or a `since` older than the 90 days removed ids are kept, or newer than `cursor`) means `tracks` is the whole library: replace what you have. `artists` splits `artist` the way the web app does; `album_artist` is the tag, else the first artist; `album_id` (album artist + album, case-insensitive; `""` without an album) and `artist_id` (the album artist) are the keys the web app groups albums and artists by. `codec` is `mp3`, `flac`, `aac`, `alac`, `opus` or `vorbis` (`""` when unknown); `bitrate` in bits per second. `explicit` is `true` on a track marked explicit and **absent** on every other track (read absent as `false`).
 
 `ETag` is set; a matching `If-None-Match` gets `304`. A sync that finds changes on disk also sends `library_changed` to other connected clients.
 

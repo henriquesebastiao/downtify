@@ -217,6 +217,9 @@ def _song_from_tags(entry: dict[str, Any]) -> dict[str, Any]:
         'year': str(entry.get('year') or ''),
         'track_number': int(entry.get('track_number') or 0),
         'duration': float(entry.get('duration') or 0.0),
+        # A file already marked explicit stays so when its tags are
+        # written back (the mark is only ever added, never cleared).
+        'explicit': bool(entry.get('explicit')),
     }
 
 

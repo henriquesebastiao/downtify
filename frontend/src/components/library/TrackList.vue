@@ -140,11 +140,13 @@
             </span>
           </button>
           <div class="min-w-0">
-            <p
-              class="truncate text-sm font-semibold"
-              :class="isCurrent(row.track) ? 'text-accent' : 'text-fg'"
-            >
-              {{ row.track.title }}
+            <p class="flex items-center gap-1.5">
+              <span
+                class="truncate text-sm font-semibold"
+                :class="isCurrent(row.track) ? 'text-accent' : 'text-fg'"
+                >{{ row.track.title }}</span
+              >
+              <ExplicitBadge v-if="row.track.explicit" />
             </p>
             <p class="truncate text-[13px] text-muted">
               <span
@@ -212,6 +214,7 @@ import { useWindowVirtualizer } from '@tanstack/vue-virtual'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
+import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import LikeButton from '../player/LikeButton.vue'
 import { usePlayer } from '/src/model/player'

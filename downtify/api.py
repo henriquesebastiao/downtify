@@ -3180,6 +3180,10 @@ def _merge_client_track_hints(
         else:
             if tv > 0:
                 base['album_track_total'] = tv
+    # The search row says whether *that* upload has explicit lyrics, which
+    # the URL alone (a bare video id) can't. It only ever adds the mark.
+    if hints.get('explicit') is True:
+        base['explicit'] = True
     rd = hints.get('release_date')
     if isinstance(rd, str) and rd.strip():
         base['release_date'] = rd.strip()
