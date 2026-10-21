@@ -124,12 +124,16 @@
         :count="selected.size"
         :total="items.length"
         :zipping="zipping"
+        :can-hide="auth.isAdmin.value && selectionPlan.hide.length > 0"
+        :can-show="auth.isAdmin.value && selectionPlan.show.length > 0"
         @select-all="selected = new Set(items.map((track) => track.file))"
         @clear="selected = new Set()"
         @play="actions.play(selectedTracks, 0, libraryContext)"
         @enqueue="actions.enqueue(selectedTracks)"
         @zip="zipSelected"
         @delete="deleteSelected"
+        @hide-from-users="visibility.change('hide', selectionPlan.hide)"
+        @show-to-users="visibility.change('show', selectionPlan.show)"
         @add-to-playlist="playlistActions.openCreate(selectedTracks)"
       />
       <div class="flex flex-wrap items-center gap-2">
@@ -167,6 +171,19 @@
     >
       <template #default="{ item }">
         <MediaTile v-bind="tileProps(item)" @play="playItem(item)">
+          <template v-if="adminMenu(item).length" #overlay>
+            <UiMenu :items="adminMenu(item)" :label="t('common.more')">
+              <template #trigger>
+                <button
+                  type="button"
+                  class="flex size-9 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur transition-colors hover:bg-black/75"
+                  :aria-label="t('common.more')"
+                >
+                  <AppIcon name="more" :size="18" />
+                </button>
+              </template>
+            </UiMenu>
+          </template>
           <template
             v-if="tab === 'playlists' && item.batch?.missing_count"
             #badge
@@ -202,9 +219,14 @@
             <template v-if="tab === 'playlists'" #meta>
               <PlaylistStatus :playlist="item" class="w-56" />
             </template>
-            <template v-if="tab === 'playlists'" #actions>
+            <template
+              v-if="tab === 'playlists' || adminMenu(item).length"
+              #actions
+            >
               <UiMenu
-                :items="playlistMenu(item)"
+                :items="
+                  tab === 'playlists' ? playlistMenu(item) : adminMenu(item)
+                "
                 :label="t('common.more')"
                 size="sm"
               />
@@ -237,11 +259,13 @@ import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
 import TrackList from '/src/components/library/TrackList.vue'
 import API from '/src/model/api'
+import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useUi } from '/src/model/ui'
+import { useVisibility } from '/src/model/visibility'
 import {
   albumKey,
   artistKey,
@@ -250,6 +274,7 @@ import {
   sortItems,
 } from '/src/lib/library'
 import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
+import { selectionChanges } from '/src/lib/visibility'
 import { formatBytes, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -261,6 +286,8 @@ const player = usePlayer()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
 const ui = useUi()
+const auth = useAuth()
+const visibility = useVisibility()
 
 const TABS = ['albums', 'artists', 'playlists', 'tracks']
 const lastTab = useLocalStorage('downtify-library-tab', 'albums')
@@ -469,6 +496,16 @@ const selectedTracks = computed(() =>
   items.value.filter((track) => selected.value.has(track.file))
 )
 
+// What the selection's hide / show buttons would change (admins).
+const selectionPlan = computed(() => selectionChanges(selectedTracks.value))
+
+// Admins: hide an album or artist from users, or show it again.
+function adminMenu(item) {
+  if (tab.value === 'albums') return visibility.albumMenu(item)
+  if (tab.value === 'artists') return visibility.artistMenu(item)
+  return []
+}
+
 const libraryContext = computed(() => ({
   type: 'library',
   title: t('library.allTracks'),
@@ -486,6 +523,7 @@ function tileProps(item) {
       cover: item.cover,
       name: item.title,
       icon: 'disc',
+      hiddenBy: auth.isAdmin.value ? item.hiddenBy || '' : '',
       playing:
         !!current.value &&
         albumKey(current.value.albumArtist, current.value.album) === item.key,
@@ -511,6 +549,7 @@ function tileProps(item) {
       name: item.name,
       icon: 'user',
       round: true,
+      hiddenBy: auth.isAdmin.value ? item.hiddenBy || '' : '',
       playing:
         !!current.value && artistKey(current.value.albumArtist) === item.key,
     }

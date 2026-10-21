@@ -1176,6 +1176,32 @@ export default {
     later: 'Sonra',
     changePassword: 'Parolayı değiştir',
   },
+  visibility: {
+    hide: 'Kullanıcılardan gizle',
+    show: 'Kullanıcılara göster',
+    hiddenShort: 'Gizli',
+    hidden: {
+      one: 'Kullanıcılardan gizlendi',
+      other: '{count} öğe kullanıcılardan gizlendi',
+    },
+    shown: {
+      one: 'Kullanıcılara gösterildi',
+      other: '{count} öğe kullanıcılara gösterildi',
+    },
+    hiddenBy: {
+      track: 'Kullanıcılardan gizli',
+      album: 'Albümüyle birlikte kullanıcılardan gizli',
+      artist: 'Sanatçısıyla birlikte kullanıcılardan gizli',
+    },
+    title: 'Kullanıcılardan gizlenenler',
+    hint: 'Herkes indirilen tüm şarkıları görür. Burada gizlediğiniz öğeleri kullanıcılar görmez; yöneticiler her şeyi görmeye devam eder. Şarkıları, albümleri veya sanatçıları Kitaplık’tan gizleyin.',
+    none: 'Hiçbir şey gizli değil. Kitaplık’ta bir şarkıda, albümde veya sanatçıda “Kullanıcılardan gizle”yi kullanın.',
+    group: {
+      artists: 'Sanatçılar',
+      albums: 'Albümler',
+      tracks: 'Şarkılar',
+    },
+  },
   users: {
     title: 'Kullanıcılar',
     hint: 'Bu sunucuya kimlerin giriş yapabileceği. Yöneticiler her şeyi değiştirebilir; kullanıcılar dinleyebilir, arayabilir, indirebilir ve kendi hesaplarını değiştirebilir.',
@@ -1246,6 +1272,8 @@ export default {
       unlike: 'Kaldırılan beğeniler',
       delete: 'Silinen dosyalar',
       audio_replaced: 'Değiştirilen sesler',
+      library_hidden: 'Kullanıcılardan gizlenen öğeler',
+      library_shown: 'Kullanıcılara gösterilen öğeler',
       device_paired: 'Eşlenen uygulamalar',
       device_unpaired: 'Eşleşmesi kaldırılan uygulamalar',
       user_created: 'Eklenen kullanıcılar',
@@ -1264,6 +1292,8 @@ export default {
       unlike: 'beğeniyi kaldırdı: {what}',
       delete: 'sildi: {what}',
       audio_replaced: 'şunun sesini değiştirdi: {what}',
+      library_hidden: '{what} öğesini kullanıcılardan gizledi',
+      library_shown: '{what} öğesini kullanıcılara gösterdi',
       device_paired: 'eşledi: {what}',
       device_unpaired: 'eşleşmeyi kaldırdı: {what}',
       user_created: 'kullanıcı ekledi: {what}',
@@ -1405,6 +1435,11 @@ export default {
       other: '{count} parça kuyruğa eklendi',
     },
     deleted: { one: 'Parça silindi', other: '{count} parça silindi' },
+    releasedShared: {
+      one: '{count} şarkı paylaşılan kitaplıkta kalıyor (başkası da indirmiş)',
+      other:
+        '{count} şarkı paylaşılan kitaplıkta kalıyor (başkaları da indirmiş)',
+    },
     deletePartial: {
       one: '{count} dosya silinemedi',
       other: '{count} dosya silinemedi',

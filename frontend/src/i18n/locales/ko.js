@@ -1184,6 +1184,32 @@ export default {
     later: '나중에',
     changePassword: '비밀번호 변경',
   },
+  visibility: {
+    hide: '사용자에게서 숨기기',
+    show: '사용자에게 표시',
+    hiddenShort: '숨김',
+    hidden: {
+      one: '사용자에게서 숨겼습니다',
+      other: '항목 {count}개를 사용자에게서 숨겼습니다',
+    },
+    shown: {
+      one: '사용자에게 표시했습니다',
+      other: '항목 {count}개를 사용자에게 표시했습니다',
+    },
+    hiddenBy: {
+      track: '사용자에게서 숨김',
+      album: '앨범과 함께 사용자에게서 숨김',
+      artist: '아티스트와 함께 사용자에게서 숨김',
+    },
+    title: '사용자에게서 숨긴 항목',
+    hint: '다운로드한 모든 곡은 누구에게나 보입니다. 여기서 숨긴 항목은 사용자에게 보이지 않으며, 관리자는 계속 모두 볼 수 있습니다. 보관함에서 곡, 앨범, 아티스트를 숨길 수 있습니다.',
+    none: '숨긴 항목이 없습니다. 보관함에서 곡, 앨범, 아티스트의 “사용자에게서 숨기기”를 사용하세요.',
+    group: {
+      artists: '아티스트',
+      albums: '앨범',
+      tracks: '곡',
+    },
+  },
   users: {
     title: '사용자 관리',
     hint: '이 서버에 로그인할 수 있는 계정 목록입니다. 관리자는 모든 설정을 변경할 수 있으며, 일반 사용자는 재생, 검색, 다운로드 및 본인 계정 정보만 변경할 수 있습니다.',
@@ -1251,6 +1277,8 @@ export default {
       unlike: '좋아요 해제',
       delete: '파일 삭제',
       audio_replaced: '음원 교체',
+      library_hidden: '사용자에게서 숨긴 항목',
+      library_shown: '사용자에게 표시한 항목',
       device_paired: '앱 연결',
       device_unpaired: '앱 연결 해제',
       user_created: '사용자 생성',
@@ -1269,6 +1297,8 @@ export default {
       unlike: '{what} 좋아요 해제함',
       delete: '{what} 삭제함',
       audio_replaced: '{what}의 음원을 교체함',
+      library_hidden: '{what}을(를) 사용자에게서 숨김',
+      library_shown: '{what}을(를) 사용자에게 표시함',
       device_paired: '{what} 기기를 연결함',
       device_unpaired: '{what} 기기 연결을 해제함',
       user_created: '{what} 사용자를 추가함',
@@ -1409,6 +1439,10 @@ export default {
       other: '{count}개 트랙을 대기열에 추가함',
     },
     deleted: { one: '트랙 삭제됨', other: '{count}개 트랙 삭제됨' },
+    releasedShared: {
+      one: '곡 {count}개는 공유 보관함에 남습니다 (다른 사람도 다운로드함)',
+      other: '곡 {count}개는 공유 보관함에 남습니다 (다른 사람도 다운로드함)',
+    },
     deletePartial: {
       one: '파일 {count}개를 삭제하지 못했습니다',
       other: '파일 {count}개를 삭제하지 못했습니다',

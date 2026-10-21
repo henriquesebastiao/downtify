@@ -7,6 +7,7 @@ import { useHistory } from '/src/model/history'
 import { useUi } from '/src/model/ui'
 import { useAuth } from '/src/model/auth'
 import { useReplaceAudio } from '/src/model/replaceAudio'
+import { useVisibility } from '/src/model/visibility'
 import { canReplace } from '/src/lib/replaceAudio'
 import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
@@ -18,6 +19,7 @@ export function useTrackActions() {
   const ui = useUi()
   const auth = useAuth()
   const replaceAudio = useReplaceAudio()
+  const visibility = useVisibility()
   const router = useRouter()
   const { t } = useI18n()
 
@@ -85,15 +87,19 @@ export function useTrackActions() {
     })
     if (!ok) return []
     try {
-      const { deleted, failed } = await library.deleteFiles(
+      const { deleted, released, failed } = await library.deleteFiles(
         tracks.map((track) => track.file)
       )
       if (failed) {
         ui.toast(t('toast.deletePartial', { count: failed }), { kind: 'error' })
-      } else {
+      } else if (deleted.length) {
         ui.toast(t('toast.deleted', { count: deleted.length }), {
           kind: 'success',
         })
+      }
+      // Others downloaded these too: they stay in the shared library.
+      if (released.length) {
+        ui.toast(t('toast.releasedShared', { count: released.length }))
       }
       return deleted
     } catch {
@@ -163,6 +169,8 @@ export function useTrackActions() {
         hidden: !auth.isAdmin.value || !canReplace(track),
         action: () => replaceAudio.open(track),
       },
+      // Admins: take the song out of (or back into) what users see.
+      ...visibility.trackMenu(track),
       { divider: true },
       {
         label: t('actions.delete'),

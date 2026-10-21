@@ -651,7 +651,10 @@
 
           <!-- Apps: pairing, sign-in, the server's name -->
           <template v-else-if="section === 'users'">
-            <UsersSettings />
+            <div class="flex min-w-0 flex-col gap-8">
+              <UsersSettings />
+              <HiddenLibrarySettings />
+            </div>
           </template>
 
           <template v-else-if="section === 'activity'">
@@ -794,6 +797,7 @@ import AccountSettings from '/src/components/settings/AccountSettings.vue'
 import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
 import AppsSettings from '/src/components/settings/AppsSettings.vue'
 import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'
+import HiddenLibrarySettings from '/src/components/settings/HiddenLibrarySettings.vue'
 import UsersSettings from '/src/components/settings/UsersSettings.vue'
 import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'

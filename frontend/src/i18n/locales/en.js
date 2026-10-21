@@ -1153,6 +1153,32 @@ export default {
     later: 'Later',
     changePassword: 'Change password',
   },
+  visibility: {
+    hide: 'Hide from users',
+    show: 'Show to users',
+    hiddenShort: 'Hidden',
+    hidden: {
+      one: 'Hidden from users',
+      other: '{count} items hidden from users',
+    },
+    shown: {
+      one: 'Shown to users',
+      other: '{count} items shown to users',
+    },
+    hiddenBy: {
+      track: 'Hidden from users',
+      album: 'Hidden from users with its album',
+      artist: 'Hidden from users with its artist',
+    },
+    title: 'Hidden from users',
+    hint: 'Everyone sees every song that was downloaded. What you hide here is left out of what users see; admins still see everything. Hide songs, albums or artists from the Library.',
+    none: 'Nothing is hidden. Use “Hide from users” on a song, album or artist in the Library.',
+    group: {
+      artists: 'Artists',
+      albums: 'Albums',
+      tracks: 'Songs',
+    },
+  },
   users: {
     title: 'Users',
     hint: 'Who can sign in to this server. Admins can change everything; users can listen, search, download and change their own account.',
@@ -1219,6 +1245,8 @@ export default {
       unlike: 'Unlikes',
       delete: 'Deleted files',
       audio_replaced: 'Audio replaced',
+      library_hidden: 'Items hidden from users',
+      library_shown: 'Items shown to users',
       device_paired: 'Apps paired',
       device_unpaired: 'Apps unpaired',
       user_created: 'Users added',
@@ -1237,6 +1265,8 @@ export default {
       unlike: 'unliked {what}',
       delete: 'deleted {what}',
       audio_replaced: 'replaced the audio of {what}',
+      library_hidden: 'hid {what} from users',
+      library_shown: 'showed {what} to users',
       device_paired: 'paired {what}',
       device_unpaired: 'unpaired {what}',
       user_created: 'added the user {what}',
@@ -1374,6 +1404,11 @@ export default {
       other: '{count} tracks added to queue',
     },
     deleted: { one: 'Track deleted', other: '{count} tracks deleted' },
+    releasedShared: {
+      one: '{count} song stays in the shared library (someone else downloaded it too)',
+      other:
+        '{count} songs stay in the shared library (someone else downloaded them too)',
+    },
     deletePartial: {
       one: "{count} file couldn't be deleted",
       other: "{count} files couldn't be deleted",

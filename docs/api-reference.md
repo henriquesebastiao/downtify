@@ -531,7 +531,7 @@ Manually set all four social links directly, replacing the whole object - never 
 
 **Settings → Downloads → Longest track taken** caps the track length for downloads *and* streams alike (default 10 minutes, `0` takes everything).
 
-Whoever asks for a download owns the tracks: a second user asking for the same songs shares the files on disk (nothing is downloaded twice) and gains their own ownership rows. Users browse their own library only — see [Users & Sign-in](features/users.md#your-library).
+Whoever asks for a download owns the tracks: a second user asking for the same songs shares the files on disk (nothing is downloaded twice) and gains their own ownership rows. The library is shared — users browse every downloaded song except what an admin [hid from users](#get-apilibraryvisibility); who asked for a download only decides who may delete it. See [Users & Sign-in](features/users.md#your-library).
 
 
 ### `POST /api/download/url`
@@ -927,7 +927,7 @@ Sorted by name, except that the [liked songs](features/liked-songs.md) playlist 
 
 ### `GET /tracks`
 
-List library tracks with artist/album read from each file's embedded tags — downloads, slskd files left in place, and [extra folders](features/external-library.md). A user sees their own tracks only (an admin sees everything); an unknown — or someone else's — `?playlist=` reads as empty. The Library **Tracks** tab uses the unfiltered list; album and artist pages use `?artist=`; playlists use `?playlist=`. The [Built-in Player](features/player.md#how-it-works) plays the rows those pages already loaded.
+List library tracks with artist/album read from each file's embedded tags — downloads, slskd files left in place, and [extra folders](features/external-library.md). Everyone sees every track except what an admin [hid from users](#get-apilibraryvisibility); an admin sees everything, and each row an admin has hidden carries `hidden_by`. A `?playlist=` that isn't the caller's — or doesn't exist — reads as empty, and a playlist's tracks leave out what is hidden from a user. The Library **Tracks** tab uses the unfiltered list; album and artist pages use `?artist=`; playlists use `?playlist=`. The [Built-in Player](features/player.md#how-it-works) plays the rows those pages already loaded.
 
 **Response:**
 
@@ -954,6 +954,8 @@ List library tracks with artist/album read from each file's embedded tags — do
   }
 ]
 ```
+
+`hidden_by` appears only for an admin, and only on rows hidden from users: `"track"` (hidden on its own), `"album"` or `"artist"` (the widest rule that hides it).
 
 `album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info, and `codec` (`mp3`, `flac`, `aac`, `alac`, `opus`, `vorbis`, or `""`), `bitrate` (bits/s), `sample_rate` (Hz) and `channels` (`0` when unknown) from the audio stream; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `explicit` is whether the file is marked explicit (see [Explicit Marker](features/explicit-marker.md)). `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes. The assembled listing is kept in memory and snapshotted in `/data`. `GET /tracks`, [`GET /api/library/summary`](#get-apilibrarysummary), albums and artists serve that snapshot without walking the disk; a download keeps the track snapshot and refreshes it in the background so the UI stays usable while the queue is running. A library delete removes those files from the snapshot immediately. `GET /list?refresh=true` (and the mobile library `refresh` flag) drop the snapshot and rescan. Writing a playlist (including Liked songs) does not rebuild the catalog. The Home page uses [`GET /api/library/summary`](#get-apilibrarysummary) instead of this endpoint.
 
@@ -989,7 +991,7 @@ Delete a downloaded file, plus its leftovers — best-effort, so a missing or un
 
 `playlists_affected` lists the downloaded playlists that contained the file; their M3U files and Navidrome playlists are rewritten in the background (`playlists_refresh_scheduled`).
 
-A user deleting a file others still own only releases it (`{ "released": true }`): the file stays on disk for the rest, and leaves their library — their like on it goes too, everyone else's stays. Someone else's file answers `Not in your library`.
+Deleting follows who downloaded the file. An admin deletes anything. A user who is the only one to have downloaded it deletes it. When others downloaded it too, the user only gives up their own claim (`{ "released": true }`) and the file stays on disk and in the shared library. A file the user didn't download answers `Only an admin or whoever downloaded it can delete this song`.
 
 ---
 
@@ -1018,7 +1020,7 @@ Duplicate paths are deduplicated before processing. Capped at 2000 files per req
 }
 ```
 
-`results` maps each requested path to the same shape `DELETE /delete` returns for it. The response also carries `playlists_affected` and `playlists_refresh_scheduled`, as for `DELETE /delete` — plus `released_count` for files that left one's own library without leaving the disk (see above).
+`results` maps each requested path to the same shape `DELETE /delete` returns for it. The response also carries `playlists_affected` and `playlists_refresh_scheduled`, as for `DELETE /delete` — plus `released_count` for files where the caller only gave up their own claim and the file stayed (see above).
 
 ---
 
@@ -1160,15 +1162,50 @@ Home page payload: how many tracks / albums / artists are in the library, the to
 
 ### `GET /api/library/albums`
 
-Album tiles for **Library → Albums**: title, artist, year, added, duration, size, `track_count`, and `cover_file` (a library path for `/cover`). Tracks themselves are not included — opening an album loads `GET /tracks?artist=&album=`.
+Album tiles for **Library → Albums**: title, artist, year, added, duration, size, `track_count`, and `cover_file` (a library path for `/cover`). Tracks themselves are not included — opening an album loads `GET /tracks?artist=&album=`. Users get no tile for an album that is entirely hidden; an admin gets every album, with `hidden_by` (`"album"` or `"artist"`) on the ones [hidden from users](#get-apilibraryvisibility).
 
 ### `GET /api/library/artists`
 
-Artist tiles for **Library → Artists** and Discover: `name`, `track_count`, `album_count`, `liked_count`, `cover_file`, added and duration. Opening an artist loads `GET /tracks?artist=`.
+Artist tiles for **Library → Artists** and Discover: `name`, `track_count`, `album_count`, `liked_count`, `cover_file`, added and duration. Opening an artist loads `GET /tracks?artist=`. Counts leave out what is hidden from a user; an admin's tiles carry `hidden_by: "artist"` on artists [hidden from users](#get-apilibraryvisibility).
+
+### `GET /api/library/visibility`
+
+Admin. What admins hid from users, newest first:
+
+```json
+{
+  "artists": [{ "name": "Ana", "label": "Ana", "key": "ana", "hidden_at": "2026-10-20T12:00:00+00:00" }],
+  "albums": [{ "title": "Sun", "artist": "Ana", "key": "ana\u001fsun", "hidden_at": "…" }],
+  "tracks": [{ "file": "Bo/Sea/Bo - Four.mp3", "label": "Bo - Four", "detail": "Sea", "key": "7add…", "hidden_at": "…" }]
+}
+```
+
+Nothing is hidden on a new server. See [Hiding from users](features/users.md#hiding-from-users).
+
+### `POST /api/library/visibility`
+
+Admin. Hide items from users, or show them again. Admins keep seeing everything either way.
+
+```json
+{
+  "action": "hide",
+  "items": [
+    { "kind": "track", "file": "Bo/Sea/Bo - Four.mp3" },
+    { "kind": "album", "artist": "Ana", "title": "Sun" },
+    { "kind": "artist", "name": "Ana" }
+  ]
+}
+```
+
+`action` is `hide` or `show`; `items` takes up to 2000. A track is a library path (as in [`GET /tracks`](#get-tracks)); an album and an artist are matched by name, ignoring case, the way the Library groups them — an album by its album artist and title, an artist by the artist its songs are filed under. A track rule survives the file being moved, upgraded or replaced.
+
+**Response:** `{ "changed": 2, "artists": […], "albums": […], "tracks": […] }` — how many items actually changed (hiding something already hidden changes nothing), then the same lists as `GET /api/library/visibility`. `400` for a bad `action`, an unknown `kind`, or an album without a title or an artist without a name; `404` when a track to hide isn't in the library; `413` for more than 2000 items.
+
+Paired apps pick the change up on their next sync: tracks that became hidden arrive in `deleted`, and tracks shown again arrive as ordinary rows. The change is recorded in the [activity log](features/users.md#activity) as `library_hidden` / `library_shown`.
 
 ### `POST /api/library/lookup`
 
-Search / link / top-songs pages send the songs on screen (`{ "songs": [{ "artist", "name" }] }`, up to 200). The response is the matching `GET /tracks` rows already in the library, so "in library" and Play work without downloading the whole catalog.
+Search / link / top-songs pages send the songs on screen (`{ "songs": [{ "artist", "name" }] }`, up to 200). The response is the matching `GET /tracks` rows already in the library (not the ones hidden from the caller), so "in library" and Play work without downloading the whole catalog.
 
 ---
 
@@ -1857,7 +1894,7 @@ Tracked playlist downloads that are still missing tracks (one's own for a user).
 
 ### `POST /api/playlists/incomplete/download-missing`
 
-Queue only the tracks of a Spotify playlist that aren't in the library yet. For a user, tracks on disk that aren't theirs count as missing: queuing them claims the shared files instead of downloading twice.
+Queue only the tracks of a Spotify playlist that aren't in the library yet. For a user, tracks on disk that someone else downloaded count as missing: queuing them claims the shared files instead of downloading twice.
 
 **Request body:** `{ "spotify_playlist_id": "…" }` or `{ "playlist_url": "https://open.spotify.com/playlist/…" }`, optionally with `"generate_m3u": true`.
 
@@ -2186,7 +2223,7 @@ Who this server is, signing in, and pairing apps — see [Users & Sign-in](featu
 | Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair` |
 | Client | a device token (`Authorization: Bearer dtfy_…`), a signed URL (reads only), a WebSocket ticket, or any web session | Library and media reads (`/tracks`, `/list`, `/playlists`, `/lyrics`, `/cover`, `/playlist-cover`, `/downloads/…`, `/media/…`), `/api/v1/…`, search and link resolving, previews, `POST /api/download/url\|batch\|album`, likes, Discover and listens, podcast reads, episode downloads and playback, the queue and monitor lists (read), `GET /api/me`, `POST /api/activity/playback`, `POST /api/auth/ws-ticket`, `WS /api/ws` |
 | User | a web session of any user (the `downtify_session` cookie) | Client, plus your own account (`/api/me…`), your paired devices and pairing (`/api/auth/devices…`, `/api/auth/pairing…`) |
-| Admin | a web session of an **admin** | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, renaming the server, users, the activity log, signing everyone out |
+| Admin | a web session of an **admin** | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, hiding songs from users, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, renaming the server, users, the activity log, signing everyone out |
 
 Without credentials: `401` (`WWW-Authenticate: Bearer`). A normal user's browser calling an admin route: `403` `{"detail": "This needs an admin"}`; a device calling a route that needs a browser: `403` `{"detail": "This needs a signed-in browser"}`. A cookie-authenticated change (`POST`/`PUT`/`PATCH`/`DELETE`, or the WebSocket) whose `Origin`/`Referer` is another site: `403`. CORS allows any origin **without** credentials, so a web session only works from Downtify's own page.
 
@@ -2514,7 +2551,7 @@ What the apps use: everything by **track id**, which survives the file being mov
 
 ### `GET /api/v1/library`
 
-The library as a change feed — one's own tracks for a paired user account, everything for an admin (see [Users & Sign-in](features/users.md#your-library)). Tracks outside the account read as removed.
+The library as a change feed — every track for a paired account except what an admin [hid from users](features/users.md#hiding-from-users), everything for an admin (see [Users & Sign-in](features/users.md#your-library)). A track hidden from the account reads as removed.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
