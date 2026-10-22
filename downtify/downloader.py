@@ -42,6 +42,7 @@ from .content_advisory import (
     MP4_ADVISORY_ATOM,
 )
 from .cookies import CookiesStore
+from .deemix_provider import download_from_deemix, normalize_settings
 from .file_naming import sanitize_file_name
 from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
@@ -64,7 +65,7 @@ _AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'ogg', 'opus', 'm4a'})
 # shown next to each queue row.
 ProgressCallback = Callable[[float, str, Optional[str]], None]
 
-AUDIO_PROVIDERS = ('youtube-music', 'youtube', 'slskd')
+AUDIO_PROVIDERS = ('youtube-music', 'youtube', 'slskd', 'deemix')
 
 
 class NoAudioMatchError(RuntimeError):
@@ -371,9 +372,11 @@ class Downloader:
         audio_providers: Optional[list[str]] = None,
         slskd_settings: Optional[dict[str, Any]] = None,
         max_track_duration_seconds: int = MAX_TRACK_DURATION_SECONDS,
+        deemix_settings: Optional[dict[str, Any]] = None,
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
+        self.deemix_settings = normalize_settings(deemix_settings)
         self.audio_providers = self._normalize_audio_providers(audio_providers)
         self.slskd_settings = self._normalize_slskd_settings(slskd_settings)
         # slskd copies a finished transfer here when it isn't left in place.
@@ -487,7 +490,16 @@ class Downloader:
 
         youtube_searched = False
         for provider in self.audio_providers:
-            if provider == 'slskd':
+            if provider == 'deemix':
+                if not self.deemix_settings.get('enabled'):
+                    continue
+                local = download_from_deemix(
+                    song, self.deemix_settings, progress_cb=progress_cb
+                )
+                if local is not None:
+                    return None, None, 'deemix', local
+                _report(progress_cb, 0.0, 'Trying next source', 'deemix')
+            elif provider == 'slskd':
                 if not self.slskd_settings.get('enabled'):
                     continue
                 local = download_from_slskd(
@@ -996,6 +1008,16 @@ class Downloader:
         destination a YouTube download would use, keeping its original
         format — slskd files are not transcoded.
         """
+
+        if provider == 'deemix':
+            stored = library_stored_path(
+                source_path,
+                self.download_dir,
+                slskd_dir_from_downloader(self),
+                [Path(self.deemix_settings['source_dir'])],
+            )
+            _report(progress_cb, 100.0, 'Done', provider)
+            return stored
 
         lookups = _MetadataLookups(self, song)
         try:

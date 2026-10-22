@@ -793,6 +793,10 @@ function suggestDirs(path) {
 
 // Try an integration with the values as they are in the form, saved or
 // not. A failed test is still a 200: the answer says what's wrong.
+function testDeemix(config) {
+  return API.post('/api/deemix/test', config)
+}
+
 function testSlskd(config) {
   return API.post('/api/slskd/test', config)
 }
@@ -950,6 +954,7 @@ export default {
   suggestDirs,
   setSettings,
   testSlskd,
+  testDeemix,
   testNavidrome,
   getCookiesStatus,
   uploadCookies,

@@ -853,6 +853,16 @@ export default {
     sourceYtmHint: '가장 일치도가 높은 메타데이터 제공',
     sourceYt: 'YouTube',
     sourceYtHint: 'YouTube Music에 없는 곡을 위한 대체 출처',
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
+    deemixEnabled: 'Use Deemix',
+    deemixInPlace:
+      'Keep audio, artwork and lyrics in the shared Deemix folder, without rewriting its tags. Configure a private ARL file on the server; do not paste it here.',
+    deemixUrl: 'Deemix server URL',
+    deemixRemote: 'Download folder inside Deemix',
+    deemixLocal: 'Same folder inside Downtify (read-only is supported)',
+    deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
     slskdHint:
       'slskd 서버를 통해 Soulseek에서 음원을 다운로드합니다. 찾지 못한 트랙은 다음 음원 출처로 넘어갑니다.',
@@ -963,6 +973,10 @@ export default {
     navidromeAdminHint:
       '선택 사항 — 설정하면 새 곡이 빠르게 반영되도록 Downtify가 라이브러리 검사를 직접 트리거할 수 있습니다.',
     test: {
+      connection_not_deemix: 'The server is not a compatible Deemix instance.',
+      quality_unavailable:
+        'The Deezer account cannot stream the requested quality.',
+
       button: '연결 테스트',
       testing: '테스트 중…',
       needFields: '위 필드를 먼저 입력하세요.',
