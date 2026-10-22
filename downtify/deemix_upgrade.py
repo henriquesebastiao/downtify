@@ -288,7 +288,9 @@ class DeemixLibraryUpgrade:
             raise ValueError('Replacement changed; original retained')
         return target
 
-    def finalize(self, run_id: int, stopped: Callable[[], bool]) -> None:
+    def finalize(
+        self, run_id: int, stopped: Callable[[], bool]
+    ) -> list[dict[str, Any]]:
         receipts = self.store.for_run(run_id)
         ctx = self.context()
         mapping: dict[Path, tuple[Path, float]] = {}
@@ -346,6 +348,7 @@ class DeemixLibraryUpgrade:
                     receipt['old_key'], receipt['new_key'], receipt['new_file']
                 )
         self.publish_catalog()
+
         for receipt in eligible:
             if stopped():
                 raise InterruptedError('Replacement paused before cleanup')
@@ -374,6 +377,7 @@ class DeemixLibraryUpgrade:
             if ctx.metadata_cache is not None:
                 ctx.metadata_cache.forget(old_file)
         self.publish_catalog()
+        return self.store.for_run(run_id)
 
 
 def alias_file(

@@ -898,9 +898,22 @@ class LibraryUpgradeRunner:
             if job is None:
                 if options.replace_audio_deemix and 'audio' in wanted:
                     try:
-                        self.deps.audio_replacement.finalize(
+                        completed = self.deps.audio_replacement.finalize(
                             run_id, self._stop.is_set
                         )
+                        for receipt in completed or []:
+                            detail = (
+                                'Deemix imported; old copy removed'
+                                if receipt['source_deleted']
+                                else 'Deemix imported; original kept'
+                            )
+                            self.db.finish_job(
+                                run_id,
+                                receipt['old_file'],
+                                JOB_DONE,
+                                detail=detail,
+                                changed=['audio'],
+                            )
                     except Exception as exc:
                         self._finalization_error = str(exc)[:200]
                         self.db.set_state(

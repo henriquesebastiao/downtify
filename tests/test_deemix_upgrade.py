@@ -579,6 +579,21 @@ def test_runner_finalization_failure_pauses_and_resumes(
         ['audio'], UpgradeOptions(replace_audio_deemix=True).as_dict()
     )
     assert run_id == 1
+    runner.db.add_jobs(
+        run_id,
+        [
+            {
+                'file': 'old.mp3',
+                'categories': ['audio'],
+                'size': 10,
+                'title': 'Song',
+                'artist': 'Artist',
+            }
+        ],
+    )
+    runner.db.finish_job(
+        run_id, 'old.mp3', 'done', detail='Publication pending'
+    )
     s.service.playing = lambda: {'old.mp3'}
     runner._run(
         run_id,
@@ -593,3 +608,7 @@ def test_runner_finalization_failure_pauses_and_resumes(
     )
     assert runner.status()['state'] == 'done'
     assert not s.old.exists()
+    assert (
+        runner.db.jobs(run_id)[0]['detail']
+        == 'Deemix imported; old copy removed'
+    )
