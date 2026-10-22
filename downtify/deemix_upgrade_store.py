@@ -223,6 +223,9 @@ class AudioReplacementStore:
                     for r in receipts
                 ],
             )
+            db.execute(
+                'CREATE INDEX audio_relink_old_key ON audio_relink(old_key)'
+            )
             tables = {
                 row[0]
                 for row in db.execute(
@@ -287,7 +290,9 @@ class AudioReplacementStore:
                     WHERE kind='track' AND item_key IN (SELECT new_key FROM audio_hidden)""")
             if 'sync_tracks' in tables:
                 db.execute("""INSERT OR REPLACE INTO library_audio_sync_aliases(track_id,old_file)
-                    SELECT s.track_id,s.path FROM sync_tracks s JOIN audio_relink m ON s.path=m.old_file""")
+                    SELECT s.track_id,m.old_file FROM sync_tracks s JOIN audio_relink m
+                    ON s.path=m.old_file OR (s.path IS NULL AND s.content_key=m.old_key
+                    AND (SELECT count(*) FROM audio_relink a WHERE a.old_key=m.old_key)=1)""")
             db.execute(
                 """UPDATE library_audio_replacements SET state='linked',detail='',updated_at=?
                 WHERE old_file IN (SELECT old_file FROM audio_relink)""",

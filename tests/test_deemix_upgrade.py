@@ -304,8 +304,10 @@ def test_cleanup_is_optional(setup: SimpleNamespace) -> None:
     assert s.store.summary(1)['retained'] == 1
 
 
+@pytest.mark.parametrize('already_tombstoned', [False, True])
 def test_mobile_old_id_resolves_replacement_even_if_new_has_id(
     setup: SimpleNamespace,
+    already_tombstoned: bool,
 ) -> None:
     s = setup
     sync = LibrarySync(s.db)
@@ -314,6 +316,12 @@ def test_mobile_old_id_resolves_replacement_even_if_new_has_id(
         s.receipt['new_metadata'],
     ])
     old_id = sync.ids_for_paths(['old.mp3'])['old.mp3']
+    with s.store.connect() as db:
+        s.receipt['old_key'] = db.execute(
+            'SELECT content_key FROM sync_tracks WHERE track_id=?', (old_id,)
+        ).fetchone()[0]
+    if already_tombstoned:
+        sync.refresh([s.receipt['new_metadata']])
     save(s)
     s.store.relink(s.store.for_run(1))
     sync.refresh([s.receipt['new_metadata']])
