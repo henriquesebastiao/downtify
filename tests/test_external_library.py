@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from mutagen.id3 import ID3, TALB, TIT2, TPE1, TPE2, USLT
 
 from downtify import external_library as ext
@@ -91,6 +92,62 @@ def test_artist_match_strips_the_and_punctuation():
     assert match_artist('AC/DC', ['ACDC']) == 'ACDC'
     assert artist_match_key('The Beatles') == artist_match_key('beatles')
     assert match_artist('Radiohead', catalog) is None
+
+
+@pytest.mark.parametrize(
+    ('name', 'catalog', 'expected'),
+    [
+        ('ACDC', ['AC/DC', 'ACDC'], 'AC/DC'),
+        ('AC/DC', ['ACDC', 'AC/DC'], 'ACDC'),
+        ('The Béatles', ['Beatles', 'The Beatles'], 'Beatles'),
+        ('Band Extra', ['Band Extri', 'Band'], 'Band'),
+        ('Radiohead', ['Radioheae', 'Radioheat'], None),
+        ('Long Artist Name', ['Long Artist Namo'], 'Long Artist Namo'),
+        ('abc', ['abcd'], None),
+        ('!!!', ['', 'Band'], None),
+    ],
+)
+def test_prepared_artist_matching_preserves_candidate_order(
+    name, catalog, expected
+) -> None:
+    assert match_artist(name, catalog) == expected
+    assert ext._ArtistMatcher(catalog).match(name) == expected
+
+
+def test_partition_caches_misses_and_rebuilds_for_new_catalog(
+    monkeypatch,
+) -> None:
+    owned = [{'file': 'one.mp3', 'artist': 'The Beatles', 'title': 'Help'}]
+    extras = [
+        {
+            'file': EXTERNAL_LIBRARY_PREFIX + f'extra/{i}.mp3',
+            'artist': 'Unrelated Ensemble',
+            'title': f'Song {i}',
+        }
+        for i in range(30)
+    ]
+    calls = 0
+    original = ext.SequenceMatcher
+
+    def count(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(ext, 'SequenceMatcher', count)
+    original_rows = [dict(row) for row in owned + extras]
+    assert len(partition_extra_entries(owned + extras)[1]) == 30
+    assert calls == 1
+    assert owned + extras == original_rows
+    added = {
+        'file': 'new.mp3',
+        'artist': 'The Unrelated Ensemble',
+        'title': 'Song 0',
+    }
+    _owned, kept, skipped = partition_extra_entries(owned + [added] + extras)
+    assert len(kept) == 29
+    assert skipped[0][1] == 'duplicate'
+    assert all(row['album_artist'] == 'The Unrelated Ensemble' for row in kept)
 
 
 def test_list_library_includes_extra_folder(tmp_path):

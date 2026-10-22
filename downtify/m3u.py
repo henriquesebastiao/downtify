@@ -22,6 +22,7 @@ from .library_paths import (
     ResolvedLibraryRoots,
     locate_library_file,
 )
+from .library_paths_cache import forget_cached_playlists
 
 # Only characters that are genuinely illegal in FAT/NTFS/ext filenames are
 # dropped. Everything else — including accented and non-Latin letters such
@@ -300,5 +301,6 @@ def write_m3u(
     # UTF-8, no BOM, LF line endings — encoding='utf-8' on text mode
     # gives us no BOM, and we built the content with '\n' already.
     target.write_text(content, encoding='utf-8', newline='\n')
+    forget_cached_playlists()
     logger.info('Wrote M3U: {} with {} tracks', target, kept)
     return target, kept

@@ -23,7 +23,8 @@ _TAG_READ_THREADS = 8
 #: cached by an older version are treated as stale and re-read once.
 #: 4: the audio format (codec, bitrate, sample rate, channels).
 #: 5: genre (from tags, or iTunes when Sync cannot write the file).
-META_VERSION = 5
+#: 6: the explicit mark.
+META_VERSION = 6
 
 #: Columns added after the table was first created, with their SQL type.
 _ADDED_COLUMNS = {
@@ -39,13 +40,14 @@ _ADDED_COLUMNS = {
     'sample_rate': 'INTEGER NOT NULL DEFAULT 0',
     'channels': 'INTEGER NOT NULL DEFAULT 0',
     'genre': "TEXT NOT NULL DEFAULT ''",
+    'explicit': 'INTEGER NOT NULL DEFAULT 0',
 }
 
 _ROW_COLUMNS = (
     'content_key, filename, file_mtime_ns, file_size, title, artist, '
     'album, has_cover, cover_px, album_artist, track_number, year, '
     'duration, meta_version, codec, bitrate, sample_rate, channels, '
-    'genre'
+    'genre, explicit'
 )
 
 
@@ -88,6 +90,9 @@ def _row_entry(
         'sample_rate': int(row['sample_rate'] or 0),
         'channels': int(row['channels'] or 0),
         'genre': str(row['genre'] or '') if 'genre' in row.keys() else '',
+        'explicit': bool(int(row['explicit'] or 0))
+        if 'explicit' in row.keys()
+        else False,
         'has_cover': bool(int(row['has_cover'] or 0)),
         'cover_px': int(row['cover_px'] or 0),
         'added': int(item['mtime_ns']) // 1_000_000_000,
@@ -130,6 +135,7 @@ class LibraryMetadataCache:
                         sample_rate INTEGER NOT NULL DEFAULT 0,
                         channels INTEGER NOT NULL DEFAULT 0,
                         genre TEXT NOT NULL DEFAULT '',
+                        explicit INTEGER NOT NULL DEFAULT 0,
                         file_mtime_ns INTEGER NOT NULL,
                         file_size INTEGER NOT NULL,
                         cached_at TEXT NOT NULL
@@ -490,9 +496,9 @@ class LibraryMetadataCache:
                (content_key, filename, title, artist, album, has_cover,
                 cover_px, album_artist, track_number, year, duration,
                 meta_version, codec, bitrate, sample_rate, channels, genre,
-                file_mtime_ns, file_size, cached_at)
+                explicit, file_mtime_ns, file_size, cached_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                       ?, ?)
+                       ?, ?, ?)
                ON CONFLICT(content_key) DO UPDATE SET
                filename=excluded.filename,
                title=excluded.title,
@@ -510,6 +516,7 @@ class LibraryMetadataCache:
                sample_rate=excluded.sample_rate,
                channels=excluded.channels,
                genre=excluded.genre,
+               explicit=excluded.explicit,
                file_mtime_ns=excluded.file_mtime_ns,
                file_size=excluded.file_size,
                cached_at=excluded.cached_at""",
@@ -531,6 +538,7 @@ class LibraryMetadataCache:
                 int(entry.get('sample_rate') or 0),
                 int(entry.get('channels') or 0),
                 str(entry.get('genre') or ''),
+                1 if entry.get('explicit') else 0,
                 mtime_ns,
                 file_size,
                 _now_iso(),

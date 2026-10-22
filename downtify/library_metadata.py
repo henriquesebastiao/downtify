@@ -8,6 +8,11 @@ from typing import Any
 from mutagen import File as MutagenFile
 from mutagen.id3 import ID3
 
+from .content_advisory import (
+    ADVISORY_TAG,
+    EXPLICIT_VALUES,
+    MP4_ADVISORY_ATOM,
+)
 from .cover_art import extract_cover_art
 from .image_size import image_short_side
 
@@ -95,6 +100,31 @@ def audio_format(audio: Any) -> dict[str, Any]:
     }
 
 
+def read_explicit(path: Path) -> bool:
+    """Whether the file is marked explicit: an ``ITUNESADVISORY`` text
+    (ID3 TXXX frame, Vorbis/FLAC/Opus comment) or an MP4 ``rtng`` atom."""
+
+    try:
+        if path.suffix.lower() == '.mp3':
+            frames = ID3(str(path)).getall('TXXX')
+            values = [
+                str(text)
+                for frame in frames
+                if str(frame.desc).upper() == ADVISORY_TAG
+                for text in frame.text
+            ]
+        else:
+            audio = MutagenFile(str(path))
+            tags = audio.tags if audio is not None else None
+            if tags is None:
+                return False
+            raw = tags.get(MP4_ADVISORY_ATOM) or tags.get(ADVISORY_TAG)
+            values = [str(item) for item in (raw or [])]
+    except Exception:
+        return False
+    return any(value.strip() in EXPLICIT_VALUES for value in values)
+
+
 def read_audio_metadata(path: Path) -> dict[str, Any]:
     """Return display tags read from ``path``.
 
@@ -102,7 +132,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
     ``album_artist``, ``track_number`` (0 when unknown), ``year`` and
     ``duration`` in seconds (0 when unknown), plus the audio format:
     ``codec``, ``bitrate``, ``sample_rate`` and ``channels`` (see
-    :func:`audio_format`).
+    :func:`audio_format`), and ``explicit`` (:func:`read_explicit`).
     """
 
     empty: dict[str, Any] = {
@@ -115,6 +145,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'year': '',
         'genre': '',
         'duration': 0.0,
+        'explicit': False,
         **audio_format(None),
     }
     if not path.is_file():
@@ -177,6 +208,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'year': year,
         'genre': genre,
         'duration': duration,
+        'explicit': read_explicit(path),
         **fmt,
     }
 
@@ -221,6 +253,7 @@ def library_entry_for_file(
         'bitrate': int(meta.get('bitrate') or 0),
         'sample_rate': int(meta.get('sample_rate') or 0),
         'channels': int(meta.get('channels') or 0),
+        'explicit': bool(meta.get('explicit')),
         'has_cover': bool(cover_data),
         'cover_px': image_short_side(cover_data),
         **file_stat_fields(full_path),

@@ -1747,8 +1747,24 @@ def _names_match(target: Any, candidate: Any) -> bool:
     " (Suffix)" — see :data:`_DASH_VERSION_SUFFIX_RE`.
     """
 
-    t = _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', _norm_compact_title(target))
-    c = _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', _norm_compact_title(candidate))
+    t = _norm_compact_title(target)
+    c = _norm_compact_title(candidate)
+    if _normalized_names_match(
+        _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', t),
+        _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', c),
+    ):
+        return True
+    # The rewrite only touches the last " - " segment, so a name that itself
+    # contains " - " can be rewritten on one side but not on the other (a
+    # "(feat. …)" suffix blocks it); compare the plain forms as well. Only a
+    # bracketed tag may follow the shared name there: text that continues
+    # its last segment ("- Live" vs "- Live at Wembley") names another take.
+    shorter, longer = sorted((t, c), key=len)
+    tail = longer[len(shorter) :].lstrip()
+    return tail.startswith(('(', '[')) and _normalized_names_match(t, c)
+
+
+def _normalized_names_match(t: str, c: str) -> bool:
     if not t or not c:
         return False
     if t == c:
@@ -2439,6 +2455,10 @@ def enrich_from_match(
         match,
     )
     enriched = dict(song)
+    # The mark describes the audio that gets downloaded, which is this hit:
+    # explicit if either source says so, never un-marked by the match.
+    if match.get('isExplicit'):
+        enriched['explicit'] = True
     if not enriched.get('album_name'):
         album = match.get('album') or {}
         if isinstance(album, dict) and album.get('name'):
@@ -2729,6 +2749,11 @@ def song_from_video_id(video_id: str) -> dict[str, Any]:
     # enrich_from_match never touches these, but pin them explicitly so
     # the returned song always describes the video the caller asked
     # for, never whichever video the catalog lookup happened to match.
+    # That goes for the explicit mark too: the hit may be the album's
+    # version of a song whose video this is a clean edit of.
+    enriched['explicit'] = bool(
+        match.get('isExplicit') and match.get('videoId') == video_id
+    )
     enriched['song_id'] = video_id
     enriched['url'] = f'https://music.youtube.com/watch?v={video_id}'
     enriched['source'] = 'youtube'
@@ -2773,12 +2798,42 @@ def _split_upload_title(
     return tail.strip(), credited
 
 
+# A video's thumbnail lives at ``.../vi/<11-character id>/...`` (or
+# ``vi_webp``); other artwork (album covers) never matches.
+_THUMBNAIL_VIDEO_ID_RE = re.compile(r'/vi(?:_webp)?/([A-Za-z0-9_-]{11})/')
+
+
+def _video_id_from_thumbnails(track: dict[str, Any]) -> Optional[str]:
+    """The video id a playlist row's thumbnail URLs point at, if any."""
+
+    for thumb in track.get('thumbnails') or []:
+        match = _THUMBNAIL_VIDEO_ID_RE.search(str((thumb or {}).get('url')))
+        if match:
+            return match.group(1)
+    return None
+
+
 def _playlist_track_song(track: dict[str, Any]) -> Optional[dict[str, Any]]:
-    """One playlist row as a song dict, pinned to that exact video."""
+    """One playlist row as a song dict, pinned to that exact video.
+
+    Playlists made by importers and converters often list their songs as
+    uploads YouTube Music has no catalog entry for: the row comes back with
+    ``videoId: null`` and ``isAvailable: false``, yet its thumbnail is the
+    video's own and the video plays fine on YouTube. Such a row is kept
+    under the id its thumbnail gives. A row that *does* carry a ``videoId``
+    but is flagged unavailable is a deleted or private video, and is
+    dropped.
+    """
 
     video_id = track.get('videoId')
-    if not video_id or track.get('isAvailable') is False:
-        return None
+    if video_id:
+        if track.get('isAvailable') is False:
+            return None
+    else:
+        video_id = _video_id_from_thumbnails(track)
+        if not video_id:
+            return None
+        track = {**track, 'videoId': video_id}
     song = _result_to_song(track)
     if song is None:
         return None

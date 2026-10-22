@@ -25,6 +25,7 @@
     <UiDialog />
     <CreatePlaylistModal />
     <RenamePlaylistModal />
+    <PlaylistShareModal />
     <AddTracksToPlaylistModal />
     <DefaultPasswordPrompt />
     <ReplaceAudioDialog v-if="auth.isAdmin.value" />
@@ -43,6 +44,7 @@ import ShortcutsDialog from './ShortcutsDialog.vue'
 import UiToasts from '../ui/UiToasts.vue'
 import UiDialog from '../ui/UiDialog.vue'
 import CreatePlaylistModal from '../library/CreatePlaylistModal.vue'
+import PlaylistShareModal from '../library/PlaylistShareModal.vue'
 import RenamePlaylistModal from '../library/RenamePlaylistModal.vue'
 import AddTracksToPlaylistModal from '../library/AddTracksToPlaylistModal.vue'
 import SignIn from './SignIn.vue'

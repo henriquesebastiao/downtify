@@ -135,7 +135,12 @@ def public_row(entry: dict[str, Any]) -> dict[str, Any]:
         'playlists': sorted(entry.get('playlists') or []),
     }
     row.update(grouping_keys(entry))
-    return {key: row[key] for key in ROW_FIELDS}
+    public = {key: row[key] for key in ROW_FIELDS}
+    # Present (true) only on explicit tracks: absent means "not explicit",
+    # and the rows of every other track - hash included - stay as they were.
+    if entry.get('explicit'):
+        public['explicit'] = True
+    return public
 
 
 def _row_hash(row: dict[str, Any]) -> str:

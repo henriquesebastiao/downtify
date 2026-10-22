@@ -418,6 +418,33 @@ def test_titles_match_accepts_differently_formatted_live_tag():
     )
 
 
+@pytest.mark.parametrize(
+    ('target', 'candidate', 'expected'),
+    [
+        # A title that itself contains " - " still matches its upload with
+        # a "(feat. …)" suffix (#433).
+        (
+            'Tu - Na Sever, Ya - Na Yug',
+            'Tu - Na Sever, Ya - Na Yug (feat. Ирина Билык)',
+            True,
+        ),
+        ('Song - Remastered 2011', 'Song (Remastered 2011)', True),
+        ('Yellow - Live', 'Yellow (Live)', True),
+        ('Tubarões - Ao Vivo', 'Tubarões', False),
+        ('Yellow', 'Yellow - Live', False),
+        ('A - B', 'A - B (Live)', False),
+        # Text that continues the shared dash segment names another take.
+        ('Wait It Out - Live', 'Wait It Out - Live at Wembley', False),
+        ('A - B', 'A - B - Bonus', False),
+        ('U', 'Unplugged', False),
+    ],
+)
+def test_titles_match_title_with_dash_and_feat_suffix(
+    target, candidate, expected
+):
+    assert _titles_match(target, candidate) is expected
+
+
 def test_titles_match_studio_target_rejects_live_candidate():
     # The mirror case: a plain studio target must not accept a live take.
     assert not _titles_match('Wait It Out', 'Wait It Out (Live)')

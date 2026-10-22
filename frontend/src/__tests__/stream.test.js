@@ -33,7 +33,7 @@ vi.mock('/src/model/library', () => ({
   useLibrary: () => ({ findTrack }),
 }))
 
-import { isStreamingSong, playStream } from '../model/stream.js'
+import { isStreamingSong, playStream, streamTrack } from '../model/stream.js'
 import { resolveTrackUrl, videoIdFor } from '../model/streamResolve.js'
 
 describe('resolveTrackUrl', () => {
@@ -161,5 +161,14 @@ describe('isStreamingSong', () => {
       title: 'Believe',
     }
     expect(isStreamingSong(SONG)).toBe(false)
+  })
+})
+
+describe('streamTrack', () => {
+  it('carries the explicit mark of the song it plays', () => {
+    const loud = streamTrack({ name: 'A', explicit: true }, 'blob:x', 'vid')
+    const plain = streamTrack({ name: 'B' }, 'blob:y', 'vid2')
+    expect(loud.explicit).toBe(true)
+    expect(plain.explicit).toBe(false)
   })
 })

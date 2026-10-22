@@ -80,7 +80,7 @@ def test_publish_between_real_linux_filesystems(tmp_path):
         source.write_bytes(b'[00:01.00] checked copy')
         destination = Path(target) / 'lyrics' / 'track.lrc'
         destination.parent.mkdir()
-        with pytest.raises(OSError, match='Cross-device link') as error:
+        with pytest.raises(OSError) as error:
             os.replace(source, destination)
         assert error.value.errno == errno.EXDEV
         library_upgrade._publish_staged_lrc(source, destination)

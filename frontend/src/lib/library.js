@@ -84,6 +84,10 @@ export function normalizeTrack(row) {
     trackNumber: Number(raw.track_number) || 0,
     year: String(raw.year || ''),
     duration: Number(raw.duration) || 0,
+    explicit: Boolean(raw.explicit),
+    // Admins only: why users can't see this track ('track', 'album' or
+    // 'artist' - the widest rule that hides it), '' when they can.
+    hiddenBy: String(raw.hidden_by || ''),
     added: Number(raw.added) || 0,
     size: Number(raw.size) || 0,
     // Bare paths (no /tracks row) don't know; try the cover endpoint.
@@ -131,6 +135,7 @@ export function groupAlbums(tracks) {
         added: 0,
         duration: 0,
         size: 0,
+        hiddenBy: '',
       }
       map.set(key, album)
     }
@@ -138,6 +143,12 @@ export function groupAlbums(tracks) {
     album.added = Math.max(album.added, track.added)
     album.duration += track.duration
     album.size += track.size
+    // A rule on the album (or its artist) hides the whole album; one on a
+    // single track doesn't.
+    if (track.hiddenBy === 'artist') album.hiddenBy = 'artist'
+    else if (track.hiddenBy === 'album' && !album.hiddenBy) {
+      album.hiddenBy = 'album'
+    }
     if (!album.year && track.year) album.year = track.year
     if (!album.cover && track.hasCover) album.cover = track.cover
   }
@@ -164,6 +175,7 @@ export function groupArtists(tracks, albums = groupAlbums(tracks)) {
         cover: '',
         added: 0,
         duration: 0,
+        hiddenBy: '',
       })
     }
     return map.get(key)
@@ -175,6 +187,7 @@ export function groupArtists(tracks, albums = groupAlbums(tracks)) {
     artist.tracks.push(track)
     artist.added = Math.max(artist.added, track.added)
     artist.duration += track.duration
+    if (track.hiddenBy === 'artist') artist.hiddenBy = 'artist'
     if (!artist.cover && track.hasCover) artist.cover = track.cover
   }
   for (const album of albums) {
@@ -227,6 +240,17 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       // sidebar would reshuffle every time a playlist's songs load.
       added: Number(playlist.added) || 0,
       batch: batchByName.get(playlist.name) || null,
+      // Sharing (see downtify/playlist_shares.py). Without these fields a
+      // playlist is the user's own and private.
+      mine: playlist.mine !== false,
+      owner: String(playlist.owner || ''),
+      visibility: playlist.visibility || 'private',
+      sharedWith: Array.isArray(playlist.shared_with)
+        ? playlist.shared_with
+        : [],
+      followed: Boolean(playlist.followed),
+      sharedWithMe: Boolean(playlist.shared_with_me),
+      isNew: Boolean(playlist.new),
     }
   })
   // A tracked Spotify playlist whose M3U isn't written (M3U export off,
@@ -246,8 +270,37 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       duration: 0,
       added: 0,
       batch,
+      mine: true,
+      owner: '',
+      visibility: 'private',
+      sharedWith: [],
+      followed: false,
+      sharedWithMe: false,
+      isNew: false,
     }))
   return [...fromM3u, ...tracked]
+}
+
+/**
+ * The playlists in the three places they are listed, never mixed: the
+ * user's own, those shared with them by name (new ones first) and other
+ * people's public ones (by owner, then name).
+ */
+export function splitPlaylists(playlists) {
+  const own = []
+  const shared = []
+  const publicOnes = []
+  for (const playlist of playlists) {
+    if (playlist.mine) own.push(playlist)
+    else if (playlist.sharedWithMe) shared.push(playlist)
+    else publicOnes.push(playlist)
+  }
+  const byOwner = (a, b) =>
+    compareText(a.owner, b.owner) ||
+    compareText(a.title ?? a.name, b.title ?? b.name)
+  shared.sort((a, b) => Number(b.isNew) - Number(a.isNew) || byOwner(a, b))
+  publicOnes.sort(byOwner)
+  return { own, shared, public: publicOnes }
 }
 
 const SORTERS = {
@@ -281,6 +334,50 @@ export function sortItems(items, key, direction = 'asc') {
   const sorter = SORTERS[key] || SORTERS.added
   const sorted = [...items].sort(sorter)
   return direction === 'desc' ? sorted.reverse() : sorted
+}
+
+/**
+ * The orders a track list can be sorted in, as the sort picker offers
+ * them: `[name, key, dir]` for `sortItems`. `order` is a playlist's own
+ * order (not a sorter). Note that for `added` and `duration` the
+ * library's "ascending" is newest / longest first, as the column
+ * headers have always sorted.
+ */
+export const TRACK_SORTS = [
+  ['order', 'order', 'asc'],
+  ['addedNew', 'added', 'asc'],
+  ['addedOld', 'added', 'desc'],
+  ['titleAsc', 'title', 'asc'],
+  ['titleDesc', 'title', 'desc'],
+  ['artistAsc', 'artist', 'asc'],
+  ['artistDesc', 'artist', 'desc'],
+  ['albumAsc', 'album', 'asc'],
+  ['albumDesc', 'album', 'desc'],
+  ['longest', 'duration', 'asc'],
+  ['shortest', 'duration', 'desc'],
+]
+
+/** The picker's name for a `{ key, dir }` sort, or '' when it has none. */
+export function trackSortName(sort) {
+  const found = TRACK_SORTS.find(
+    ([, key, dir]) => key === sort?.key && dir === (sort?.dir || 'asc')
+  )
+  return found ? found[0] : ''
+}
+
+/** The `{ key, dir }` sort for a picker name (the default for an unknown one). */
+export function trackSortByName(name) {
+  const found = TRACK_SORTS.find(([id]) => id === name) || TRACK_SORTS[1]
+  return { key: found[1], dir: found[2] }
+}
+
+/**
+ * `tracks` in the order `sort` (`{ key, dir }`) says. `order` keeps the
+ * list as it came, which for a playlist is the playlist's own order.
+ */
+export function sortTracks(tracks, sort) {
+  if (!sort || sort.key === 'order') return tracks
+  return sortItems(tracks, sort.key, sort.dir)
 }
 
 export function fold(text) {

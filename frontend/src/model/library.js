@@ -13,6 +13,7 @@ import {
   normalizeTrack,
   indexTracksBySong,
   songKey,
+  splitPlaylists,
 } from '/src/lib/library'
 import { coverURL } from '/src/lib/paths'
 import { usePlayer } from '/src/model/player'
@@ -62,6 +63,10 @@ const playlists = computed(() =>
       playlist.liked ? { ...playlist, title: t('likes.playlist') } : playlist
   )
 )
+const playlistSections = computed(() => splitPlaylists(playlists.value))
+const ownPlaylists = computed(() => playlistSections.value.own)
+const sharedPlaylists = computed(() => playlistSections.value.shared)
+const publicPlaylists = computed(() => playlistSections.value.public)
 const totalSize = computed(() =>
   tracksComplete.value
     ? tracks.value.reduce((sum, track) => sum + track.size, 0)
@@ -124,6 +129,7 @@ function albumFromIndex(row) {
     added: Number(row.added) || 0,
     duration: Number(row.duration) || 0,
     size: Number(row.size) || 0,
+    hiddenBy: String(row.hidden_by || ''),
   }
 }
 
@@ -140,6 +146,7 @@ function artistFromIndex(row) {
     cover: coverFile ? coverURL(coverFile) : '',
     added: Number(row.added) || 0,
     duration: Number(row.duration) || 0,
+    hiddenBy: String(row.hidden_by || ''),
   }
 }
 
@@ -172,15 +179,17 @@ async function load({ force = false } = {}) {
   error.value = ''
   pending = (async () => {
     try {
-      const [summaryRes, playlistsRes, batchesRes] = await Promise.all([
+      const [summaryRes, playlistsRes] = await Promise.all([
         API.getLibrarySummary(),
         API.listPlaylists(),
-        API.getPlaylistBatches().catch(() => ({ data: { playlists: [] } })),
       ])
       applySummary(summaryRes.data)
       rawPlaylists.value = playlistsRes.data || []
-      batches.value = batchesRes.data?.playlists || []
       loaded.value = true
+      // Batch reports only add completeness badges to playlists, and the
+      // server checks every tracked Spotify track to build them: the page
+      // shows first and the badges fill in when they arrive.
+      refreshBatches()
       if (tracksComplete.value) await ensureTracks({ force: true })
       if (albumsComplete.value) await ensureAlbums({ force: true })
       if (artistsComplete.value) await ensureArtists({ force: true })
@@ -192,6 +201,21 @@ async function load({ force = false } = {}) {
     }
   })()
   return pending
+}
+
+let pendingBatches = null
+
+function refreshBatches() {
+  if (pendingBatches) return pendingBatches
+  pendingBatches = API.getPlaylistBatches()
+    .then((res) => {
+      batches.value = res.data?.playlists || []
+    })
+    .catch(() => {})
+    .finally(() => {
+      pendingBatches = null
+    })
+  return pendingBatches
 }
 
 async function ensureTracks({ force = false } = {}) {
@@ -299,8 +323,25 @@ function refreshSoon(delay = 2500) {
   refreshTimer = setTimeout(() => load({ force: true }), delay)
 }
 
+/** Read the playlists again (shared, followed, unshared...). */
+async function refreshPlaylists() {
+  if (!loaded.value) return
+  try {
+    const res = await API.listPlaylists()
+    rawPlaylists.value = res.data || []
+  } catch {
+    // The next load picks them up.
+  }
+}
+
+let playlistsTimer = null
+
 API.onMessage((data) => {
   if (data?.status === 'done') refreshSoon()
+  if (data?.type === 'playlists_changed') {
+    clearTimeout(playlistsTimer)
+    playlistsTimer = setTimeout(refreshPlaylists, 400)
+  }
 })
 
 function forget(files) {
@@ -330,21 +371,25 @@ function forgetByPrefix(prefix) {
 /**
  * Delete tracks; resolves `{ deleted, released, failed }`.
  *
- * `deleted` is every file gone from this account's library: wiped off
- * disk (`deleted`), or released from it while other accounts still
- * keep the shared file (the server answers `{ "released": true }`
- * with no `deleted` flag). Only other people's files and unknown
- * paths count as `failed`.
+ * `deleted` is every file wiped off disk. `released` are files other
+ * accounts downloaded too: the account only gives up its own claim (the
+ * server answers `{ "released": true }` with no `deleted` flag) and the
+ * song stays in the shared library. Anything else - an unknown path, a
+ * file someone else downloaded - counts as `failed`.
  */
 async function deleteFiles(files) {
   const res = await API.deleteDownloadsBatch(files)
   const results = res.data?.results || {}
-  const gone = files.filter(
-    (file) => results[file]?.deleted || results[file]?.released
+  const gone = files.filter((file) => results[file]?.deleted)
+  const released = files.filter(
+    (file) => !results[file]?.deleted && results[file]?.released
   )
-  const released = files.filter((file) => results[file]?.released)
   forget(gone)
-  return { deleted: gone, released, failed: files.length - gone.length }
+  return {
+    deleted: gone,
+    released,
+    failed: files.length - gone.length - released.length,
+  }
 }
 
 async function deletePlaylist(playlist) {
@@ -401,6 +446,9 @@ export function useLibrary() {
     albums,
     artists,
     playlists,
+    ownPlaylists,
+    sharedPlaylists,
+    publicPlaylists,
     batches,
     tracksByFile,
     totalSize,
@@ -414,6 +462,7 @@ export function useLibrary() {
     artistsComplete,
     error,
     load,
+    refreshPlaylists,
     ensureTracks,
     ensureAlbums,
     ensureArtists,
