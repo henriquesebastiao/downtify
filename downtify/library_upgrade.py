@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import errno
 import os
+import re
 import shutil
 import threading
 import time
@@ -108,6 +109,7 @@ class UpgradeOptions:
     replace_audio_deemix: bool = False
     delete_replaced_audio: bool = False
     files: tuple[str, ...] = ()
+    deemix_recordings: dict[str, str] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         result = {
@@ -119,6 +121,8 @@ class UpgradeOptions:
         if self.replace_audio_deemix:
             result['replace_audio_deemix'] = True
             result['delete_replaced_audio'] = self.delete_replaced_audio
+            if self.deemix_recordings:
+                result['deemix_recordings'] = dict(self.deemix_recordings)
         if self.files:
             result['files'] = list(self.files)
         return result
@@ -144,6 +148,17 @@ def options_from(payload: dict[str, Any]) -> UpgradeOptions:
             value = default
         return min(high, max(low, value))
 
+    raw_recordings = payload.get('deemix_recordings')
+    recordings = {}
+    if isinstance(raw_recordings, dict):
+        for stored, ident in list(raw_recordings.items())[:1000]:
+            if (
+                isinstance(stored, str)
+                and not stored.startswith(('/', 'ext/', 'slskd/'))
+                and '..' not in stored.replace('\\', '/').split('/')
+                and re.fullmatch(r'[1-9][0-9]{0,19}', str(ident))
+            ):
+                recordings[stored] = str(ident)
     source = str(payload.get('artwork_source') or '')
     if source not in cover_sources.ARTWORK_SOURCES:
         source = cover_sources.PREFERENCE_HIGHEST
@@ -156,6 +171,7 @@ def options_from(payload: dict[str, Any]) -> UpgradeOptions:
         recheck_days=_int('recheck_days', DEFAULT_RECHECK_DAYS, 0, 3650),
         replace_audio_deemix=payload.get('replace_audio_deemix') is True,
         delete_replaced_audio=payload.get('delete_replaced_audio') is True,
+        deemix_recordings=recordings,
         files=tuple(str(f) for f in payload.get('files', [])[:1000])
         if isinstance(payload.get('files'), list)
         else (),

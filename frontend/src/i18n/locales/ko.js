@@ -354,6 +354,15 @@ export default {
     failed: '좋아요 상태를 업데이트하지 못했습니다',
   },
   upgrade: {
+    chooseRecording: 'Choose a Deezer recording',
+    chooseRecordingHint:
+      'Review an exact recording when old album tags do not match. The artist and full title must still match.',
+    recordingLink: 'Deezer track link',
+    previewRecording: 'Preview',
+    recordingReviewHint:
+      'Review the album and duration. This prepares a single-track scan; replacement starts only after you confirm the scan.',
+    analyzeRecording: 'Analyze this choice',
+    recordingPreviewFailed: 'Unable to preview this Deezer track.',
     replacementRescan: 'Options changed: scan again before starting.',
     deemixTitle: 'Replace recordings with Deemix',
     replaceAudio: 'Use verified Deemix recordings',

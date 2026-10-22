@@ -88,6 +88,113 @@ def setup(tmp_path: Path) -> SimpleNamespace:
     return SimpleNamespace(**locals())
 
 
+def test_recording_choices_are_scoped_catalog_ids() -> None:
+    options = options_from({
+        'replace_audio_deemix': True,
+        'deemix_recordings': {
+            'song.mp3': '42',
+            'other.mp3': 'https://untrusted.test/',
+            '../outside.mp3': '42',
+            'ext/library/song.mp3': '42',
+            'bad.mp3': '0',
+        },
+    })
+    assert options.deemix_recordings == {'song.mp3': '42'}
+    assert options.as_dict()['deemix_recordings'] == {'song.mp3': '42'}
+    assert 'deemix_recordings' not in options_from({}).as_dict()
+
+
+@pytest.mark.parametrize('chosen', [False, True])
+def test_only_explicit_choice_can_correct_old_album(
+    setup: SimpleNamespace,
+    prepare_mocks: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    chosen: bool,
+) -> None:
+    s = setup
+    original = module.library_entry_for_file
+
+    def metadata(stored: str, path: Path) -> dict:
+        row = original(stored, path)
+        if path == s.old:
+            row['album'] = 'Old single label'
+        return row
+
+    monkeypatch.setattr(module, 'library_entry_for_file', metadata)
+    result = s.service.prepare(
+        'old.mp3',
+        UpgradeOptions(
+            replace_audio_deemix=True,
+            deemix_recordings={'old.mp3': '42'} if chosen else {},
+        ),
+        1,
+        lambda _: None,
+    )
+    assert result.status == ('done' if chosen else 'skipped')
+    assert s.old.exists()
+    if chosen:
+        assert s.store.get('old.mp3')['new_metadata']['album'] == 'Album'
+
+
+def test_explicit_recording_cannot_change_artist(
+    setup: SimpleNamespace,
+    prepare_mocks: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    s = setup
+    prepare_mocks['artist'] = {'name': 'Different singer'}
+    monkeypatch.setattr(
+        module,
+        'download_from_deemix',
+        lambda *args: pytest.fail('Wrong artist must never download'),
+    )
+    result = s.service.prepare(
+        'old.mp3',
+        UpgradeOptions(
+            replace_audio_deemix=True, deemix_recordings={'old.mp3': '42'}
+        ),
+        1,
+        lambda _: None,
+    )
+    assert result.status == 'skipped'
+    assert s.old.exists()
+
+
+def test_receipt_cannot_silently_reuse_a_different_choice(
+    setup: SimpleNamespace,
+) -> None:
+    s = setup
+    save(s)
+    with pytest.raises(ValueError, match='different replacement'):
+        s.service.prepare(
+            'old.mp3',
+            UpgradeOptions(deemix_recordings={'old.mp3': '99'}),
+            1,
+            lambda _: None,
+        )
+    assert s.old.exists()
+
+
+def test_known_explicit_original_does_not_become_clean(
+    setup: SimpleNamespace,
+    prepare_mocks: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    s = setup
+    original = module.library_entry_for_file
+    monkeypatch.setattr(
+        module,
+        'library_entry_for_file',
+        lambda stored, path: {**original(stored, path), 'explicit': True},
+    )
+    prepare_mocks['explicit_lyrics'] = False
+    result = s.service.prepare(
+        'old.mp3', UpgradeOptions(replace_audio_deemix=True), 1, lambda _: None
+    )
+    assert result.status == 'skipped'
+    assert s.old.exists()
+
+
 def save(s: SimpleNamespace) -> None:
     s.store.save_prepared(s.receipt)
 

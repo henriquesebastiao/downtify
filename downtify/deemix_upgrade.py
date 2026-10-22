@@ -102,8 +102,13 @@ class DeemixLibraryUpgrade:
                 JOB_SKIPPED, 'Already in the Deemix collection', checked=False
             )
         receipt = self.store.get(stored)
+        chosen_id = options.deemix_recordings.get(stored)
         old_sha = digest(old)
         if receipt:
+            if chosen_id and str(receipt['catalog'].get('id')) != chosen_id:
+                raise ValueError(
+                    'A different replacement was already prepared; review that operation first'
+                )
             if receipt['old_sha'] != old_sha:
                 raise ValueError(
                     'Original changed since preparation; kept for review'
@@ -116,7 +121,10 @@ class DeemixLibraryUpgrade:
                 checked=False,
             )
         entry = library_entry_for_file(stored, old)
-        if not all(entry.get(key) for key in ('title', 'artist', 'album')):
+        required = (
+            ('title', 'artist') if chosen_id else ('title', 'artist', 'album')
+        )
+        if not all(entry.get(key) for key in required):
             return UpgradeOutcome(
                 JOB_SKIPPED,
                 'Artist, title and album are required for safe matching',
@@ -140,13 +148,31 @@ class DeemixLibraryUpgrade:
             'artist': entry['artist'],
             'album_name': entry['album'],
         }
+        if entry.get('explicit'):
+            song['explicit'] = True
         on_stage('matching')
+        requested = {'song_id': 'deezer-' + chosen_id} if chosen_id else song
         client = DeemixClient(cfg)
         try:
             client.connect()
-            row = _catalog_track(client, song)
+            row = _catalog_track(client, requested)
         finally:
             client.close()
+        if chosen_id and row is not None:
+            # An explicitly reviewed catalog link can correct an old
+            # album label. It must still be the same artist/title/version.
+            if str(row.get('id')) != chosen_id or not candidate_matches(
+                {**song, 'album_name': ''}, row
+            ):
+                return UpgradeOutcome(
+                    JOB_SKIPPED,
+                    'Selected recording does not match the artist and title; original retained',
+                    checked=False,
+                )
+            song = {
+                **song,
+                'album_name': (row.get('album') or {}).get('title'),
+            }
         if row is None or not candidate_matches(song, row):
             return UpgradeOutcome(
                 JOB_SKIPPED,
@@ -199,6 +225,7 @@ class DeemixLibraryUpgrade:
                 'title': metadata.get('title'),
                 'artist': {'name': metadata.get('artist')},
                 'album': {'title': metadata.get('album')},
+                'explicit_lyrics': bool(metadata.get('explicit')),
             },
         ):
             raise ValueError(

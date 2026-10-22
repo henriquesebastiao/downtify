@@ -5,6 +5,28 @@
 export const CATEGORIES = ['artwork', 'lyrics', 'metadata']
 const SUPPORTED_CATEGORIES = [...CATEGORIES, 'audio']
 
+/** Only explicit catalog tracks can override an old album label. */
+export function deezerRecordingId(value) {
+  try {
+    const url = new URL(String(value || '').trim())
+    if (
+      url.protocol !== 'https:' ||
+      !['deezer.com', 'www.deezer.com'].includes(url.hostname) ||
+      url.username ||
+      url.password ||
+      url.port
+    )
+      return ''
+    return (
+      url.pathname.match(
+        /^\/(?:[a-z]{2}\/)?track\/([1-9][0-9]{0,19})\/?$/
+      )?.[1] || ''
+    )
+  } catch {
+    return ''
+  }
+}
+
 /** Where artwork may come from; `highest` compares every source. */
 export const ARTWORK_SOURCES = ['highest', 'spotify', 'itunes', 'youtube-music']
 

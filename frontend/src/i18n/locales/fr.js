@@ -363,7 +363,17 @@ export default {
     failed: 'Impossible de mettre à jour le like',
   },
   upgrade: {
-    replacementRescan: 'Options modifiées : relancez l’analyse avant de démarrer.',
+    chooseRecording: 'Choisir une piste Deezer',
+    chooseRecordingHint:
+      'Vérifiez la version exacte si l’ancien album ne correspond pas. L’artiste et le titre complet doivent toujours correspondre.',
+    recordingLink: 'Lien de la piste Deezer',
+    previewRecording: 'Prévisualiser',
+    recordingReviewHint:
+      'Vérifiez l’album et la durée. Ce choix prépare une analyse d’un seul morceau ; le remplacement démarre après confirmation de cette analyse.',
+    analyzeRecording: 'Analyser ce choix',
+    recordingPreviewFailed: 'Impossible de prévisualiser cette piste Deezer.',
+    replacementRescan:
+      'Options modifiées : relancez l’analyse avant de démarrer.',
     deemixTitle: 'Remplacer les anciennes musiques avec Deemix',
     replaceAudio: 'Utiliser les versions Deemix vérifiées',
     replaceAudioHint:

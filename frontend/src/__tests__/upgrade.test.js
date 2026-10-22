@@ -10,6 +10,7 @@ import {
   canResume,
   canScan,
   defaultSelection,
+  deezerRecordingId,
   foundCategories,
   groupJobs,
   isBusy,
@@ -23,6 +24,25 @@ import {
 } from '/src/lib/upgrade'
 
 const counts = (over = {}) => normalizeStatus({ counts: over }).counts
+
+describe('explicit recording links', () => {
+  it('accepts only exact Deezer track links', () => {
+    expect(
+      deezerRecordingId(
+        'https://www.deezer.com/fr/track/61542538?utm_source=test'
+      )
+    ).toBe('61542538')
+    expect(deezerRecordingId('https://deezer.com/track/42')).toBe('42')
+    for (const url of [
+      'https://evil.test/track/42',
+      'https://www.deezer.com/album/42',
+      'http://deezer.com/track/42',
+      'https://user:secret@deezer.com/track/42',
+      'https://deezer.com/track/0',
+    ])
+      expect(deezerRecordingId(url)).toBe('')
+  })
+})
 
 describe('optional Deemix recording replacement', () => {
   it('keeps native categories unchanged and selects audio only when found', () => {

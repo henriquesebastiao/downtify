@@ -117,6 +117,12 @@ For NAS consumers whose mount names differ from Docker paths, an administrator c
 
 The scan API accepts `replace_audio_deemix: true`, optional `delete_replaced_audio: true`, and optional `files: ["relative/original.mp3"]` for a bounded pilot. Starting that scan selects `categories: ["audio"]`. Run status includes replacement counts and a `finalization_error` when publication pauses. No source file is removed just because a Deemix queue item says completed.
 
+### Review an uncertain recording
+
+A skipped or failed audio job offers **Choose a Deezer recording**. Paste an exact track link, preview its artist, album and duration, then choose **Analyze this choice**. This only prepares a new single-track scan; confirm that scan to start replacement. The default automatic matcher never guesses a different album.
+
+This explicit choice can correct an old album label, but the full title/version and artist must still match. A known explicit original cannot silently become a clean version. The selected recording undergoes the same duration, quality, decode, reference and deletion checks. A different choice cannot silently reuse an already prepared receipt. The advanced scan payload records the choice as `deemix_recordings: {"relative/original.mp3": "123456"}`; it is scoped to that file and saved for restart/resume.
+
 ## API
 
 | Method | Path                          | Description                                     |

@@ -297,9 +297,25 @@
           <UiBadge :tone="toneFor(job)" :icon="iconFor(job)">
             {{ labelFor(job) }}
           </UiBadge>
+          <UiButton
+            v-if="
+              canScan &&
+              status.deemixAvailable &&
+              job.categories?.includes('audio') &&
+              ['skipped', 'failed'].includes(job.status)
+            "
+            variant="ghost"
+            @click="reviewJob = job"
+            >{{ t('upgrade.chooseRecording') }}</UiButton
+          >
         </li>
       </ul>
     </UiPanel>
+    <DeemixRecordingDialog
+      :job="reviewJob"
+      @close="reviewJob = null"
+      @choose="analyzeRecording"
+    />
   </div>
 </template>
 
@@ -315,6 +331,7 @@ import UiProgress from '/src/components/ui/UiProgress.vue'
 import UiSelect from '/src/components/ui/UiSelect.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
+import DeemixRecordingDialog from '/src/components/library/DeemixRecordingDialog.vue'
 import { formatBytes } from '/src/lib/format'
 import { ARTWORK_SIZES } from '/src/lib/upgrade'
 import { useUpgrade } from '/src/model/upgrade'
@@ -357,9 +374,23 @@ const artworkSource = ref('highest')
 const recheckDays = ref(30)
 const replaceAudio = ref(false)
 const deleteOriginals = ref(false)
-const replacementOptionsChanged = computed(() =>
-  replaceAudio.value !== Boolean(status.value.options.replace_audio_deemix) ||
-  (replaceAudio.value && deleteOriginals.value !== Boolean(status.value.options.delete_replaced_audio))
+const reviewJob = ref(null)
+async function analyzeRecording({ file, id }) {
+  if (!canScan.value) return
+  reviewJob.value = null
+  return startScan({
+    replace_audio_deemix: true,
+    delete_replaced_audio: deleteOriginals.value,
+    files: [file],
+    deemix_recordings: { [file]: id },
+  })
+}
+const replacementOptionsChanged = computed(
+  () =>
+    replaceAudio.value !== Boolean(status.value.options.replace_audio_deemix) ||
+    (replaceAudio.value &&
+      deleteOriginals.value !==
+        Boolean(status.value.options.delete_replaced_audio))
 )
 
 const runScan = () =>
