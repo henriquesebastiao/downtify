@@ -3,6 +3,7 @@
 
 /** Categories the backend scans for, in the order they're shown. */
 export const CATEGORIES = ['artwork', 'lyrics', 'metadata']
+const SUPPORTED_CATEGORIES = [...CATEGORIES, 'audio']
 
 /** Where artwork may come from; `highest` compares every source. */
 export const ARTWORK_SOURCES = ['highest', 'spotify', 'itunes', 'youtube-music']
@@ -27,6 +28,9 @@ export function normalizeStatus(payload) {
   const run = data.run || null
   return {
     state: String(data.state || 'idle'),
+    deemixAvailable: Boolean(data.deemix_available),
+    finalizationError: String(data.finalization_error || ''),
+    replacements: data.replacements || {},
     run,
     counts: { ...EMPTY_COUNTS, ...(data.counts || {}) },
     scan: {
@@ -119,7 +123,7 @@ export function scanProgress(scan) {
 
 /** Total bytes of the tracks a scan queued, for the byte estimate. */
 export function queuedBytes(summary) {
-  return CATEGORIES.reduce(
+  return SUPPORTED_CATEGORIES.reduce(
     (max, name) => Math.max(max, Number(summary.categoryBytes[name]) || 0),
     0
   )
@@ -127,7 +131,9 @@ export function queuedBytes(summary) {
 
 /** Categories a scan actually found something for. */
 export function foundCategories(summary) {
-  return CATEGORIES.filter((name) => (summary.categories[name] || 0) > 0)
+  return SUPPORTED_CATEGORIES.filter(
+    (name) => (summary.categories[name] || 0) > 0
+  )
 }
 
 /**
@@ -142,7 +148,7 @@ export function toggleCategory(selected, name, on) {
   const next = new Set(selected)
   if (on) next.add(name)
   else next.delete(name)
-  return CATEGORIES.filter((item) => next.has(item))
+  return SUPPORTED_CATEGORIES.filter((item) => next.has(item))
 }
 
 /** Tracks that would run, given a selection (a track may need several). */

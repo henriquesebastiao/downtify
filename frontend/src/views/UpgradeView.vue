@@ -30,6 +30,46 @@
       {{ error }}
     </p>
 
+    <UiPanel
+      v-if="canScan && status.deemixAvailable"
+      :title="t('upgrade.deemixTitle')"
+    >
+      <UiSwitch
+        v-model="replaceAudio"
+        :label="t('upgrade.replaceAudio')"
+        :description="t('upgrade.replaceAudioHint')"
+      />
+      <UiSwitch
+        v-if="replaceAudio"
+        v-model="deleteOriginals"
+        class="mt-4"
+        :label="t('upgrade.deleteOriginals')"
+        :description="t('upgrade.deleteOriginalsHint')"
+      />
+    </UiPanel>
+    <p v-if="status.finalizationError" role="alert" class="text-sm text-danger">
+      {{ status.finalizationError }}
+    </p>
+    <p
+      v-if="
+        status.replacements.prepared ||
+        status.replacements.linked ||
+        status.replacements.removed ||
+        status.replacements.retained
+      "
+      class="text-sm text-muted"
+    >
+      {{
+        t('upgrade.replacementProgress', {
+          pending:
+            (status.replacements.prepared || 0) +
+            (status.replacements.linked || 0),
+          removed: status.replacements.removed || 0,
+          kept: status.replacements.retained || 0,
+        })
+      }}
+    </p>
+
     <!-- Scanning -->
     <UiPanel v-if="isScanning" :title="t('upgrade.scanning')">
       <UiProgress :value="scan.pct" :indeterminate="!scan.total" :height="6" />
@@ -170,19 +210,24 @@
         </p>
         <p class="flex items-start gap-2 text-[13px] text-pretty text-muted">
           <AppIcon name="info" :size="16" class="mt-0.5 shrink-0" />
-          {{ t('upgrade.audioNote') }}
+          {{
+            t(replaceAudio ? 'upgrade.replaceAudioHint' : 'upgrade.audioNote')
+          }}
         </p>
         <div class="flex flex-wrap items-center gap-3">
           <UiButton
             variant="primary"
             size="lg"
             icon="wand"
-            :disabled="!selected.length"
+            :disabled="!selected.length || replacementOptionsChanged"
             @click="start"
           >
             {{ t('upgrade.startCount', { count: willRun }) }}
           </UiButton>
-          <p v-if="!selected.length" class="text-[13px] text-muted">
+          <p v-if="replacementOptionsChanged" class="text-[13px] text-muted">
+            {{ t('upgrade.replacementRescan') }}
+          </p>
+          <p v-else-if="!selected.length" class="text-[13px] text-muted">
             {{ t('upgrade.pickSomething') }}
           </p>
         </div>
@@ -310,9 +355,17 @@ const {
 const artworkMin = ref(600)
 const artworkSource = ref('highest')
 const recheckDays = ref(30)
+const replaceAudio = ref(false)
+const deleteOriginals = ref(false)
+const replacementOptionsChanged = computed(() =>
+  replaceAudio.value !== Boolean(status.value.options.replace_audio_deemix) ||
+  (replaceAudio.value && deleteOriginals.value !== Boolean(status.value.options.delete_replaced_audio))
+)
 
 const runScan = () =>
   startScan({
+    replace_audio_deemix: replaceAudio.value,
+    delete_replaced_audio: replaceAudio.value && deleteOriginals.value,
     artwork_min_px: artworkMin.value,
     artwork_source: artworkSource.value,
     recheck_days: recheckDays.value,
@@ -333,6 +386,8 @@ watch(
   () => status.value.options,
   (options) => {
     if (!options) return
+    replaceAudio.value = Boolean(options.replace_audio_deemix)
+    deleteOriginals.value = Boolean(options.delete_replaced_audio)
     if (options.artwork_min_px) artworkMin.value = options.artwork_min_px
     if (options.artwork_source) artworkSource.value = options.artwork_source
     if (typeof options.recheck_days === 'number') {

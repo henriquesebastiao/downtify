@@ -24,6 +24,30 @@ import {
 
 const counts = (over = {}) => normalizeStatus({ counts: over }).counts
 
+describe('optional Deemix recording replacement', () => {
+  it('keeps native categories unchanged and selects audio only when found', () => {
+    expect(CATEGORIES).toEqual(['artwork', 'lyrics', 'metadata'])
+    const summary = normalizeStatus({
+      summary: { categories: { audio: 4 }, category_bytes: { audio: 2048 } },
+    }).summary
+    expect(foundCategories(summary)).toEqual(['audio'])
+    expect(defaultSelection(summary)).toEqual(['audio'])
+    expect(toggleCategory([], 'audio', true)).toEqual(['audio'])
+    expect(queuedBytes(summary)).toBe(2048)
+  })
+  it('exposes deferred cleanup rather than claiming the originals were removed', () => {
+    const status = normalizeStatus({
+      state: 'paused',
+      deemix_available: true,
+      finalization_error: 'Original changed; retained',
+      replacements: { prepared: 2, removed: 0 },
+    })
+    expect(status.deemixAvailable).toBe(true)
+    expect(status.finalizationError).toContain('retained')
+    expect(status.replacements.removed).toBe(0)
+  })
+})
+
 describe('normalizeStatus', () => {
   it('fills in every field for an empty payload', () => {
     const status = normalizeStatus(null)

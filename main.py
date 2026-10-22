@@ -26,6 +26,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
 from loguru import logger
+from starlette.exceptions import HTTPException as StaticHTTPException
 from starlette.middleware.gzip import GZipMiddleware
 from uvicorn import Config, Server
 
@@ -44,6 +45,8 @@ from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
 from downtify.cover_thumbs import CoverThumbs
 from downtify.cover_thumbs import normalize_size as normalize_cover_size
+from downtify.deemix_upgrade import DeemixLibraryUpgrade, alias_file
+from downtify.deemix_upgrade_store import AudioReplacementStore
 from downtify.discover import DiscoverStore
 from downtify.discovery import Announcer, discovery_enabled
 from downtify.downloader import Downloader
@@ -185,6 +188,32 @@ _LISTEN: dict[str, Any] = {
     'port': DEFAULT_PORT,
     'source': 'default',
 }
+
+
+def _read_library_file(stored: str) -> Optional[Path]:
+    ctx = api.library_context()
+    full = resolve_library_file(stored, ctx)
+    if full is None and api.state.audio_replacements is not None:
+        full = alias_file(stored, api.state.audio_replacements, ctx)
+    return full
+
+
+class LibraryAudioFiles(StaticFiles):
+    """Old playback URLs survive a verified audio replacement."""
+
+    async def get_response(self, path: str, scope: dict) -> Any:
+        try:
+            return await super().get_response(path, scope)
+        except StaticHTTPException as exc:
+            if exc.status_code != 404 or scope['method'] not in {
+                'GET',
+                'HEAD',
+            }:
+                raise
+            full = _read_library_file(path)
+            if full is None:
+                raise
+            return FileResponse(full)
 
 
 class SPAStaticFiles(StaticFiles):
@@ -364,6 +393,26 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.cover_thumbs = CoverThumbs(DATABASE_DIR / 'cover_thumbs')
     api.state.discover = DiscoverStore(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
+    api.state.audio_replacements = AudioReplacementStore(library_db)
+
+    def publish_replacements() -> None:
+        api.state.library_visibility.invalidate()
+        api.invalidate_library_paths_cache(drop_entries=True)
+        ctx = api.library_context()
+        api.state.library_sync.refresh(list_library_entries(ctx))
+
+    replacement = DeemixLibraryUpgrade(
+        api.state.audio_replacements,
+        api.library_context,
+        lambda: api.state.settings,
+        lambda: {
+            str(p['track'].get('file') or '')
+            for p in api.state.now_playing.active()
+        },
+        publish_replacements,
+        rekey_owners=api.rekey_file_owners,
+        lyrics_cache=api.state.lyrics_cache,
+    )
     api.state.upgrade_runner = LibraryUpgradeRunner(
         LibraryUpgradeDB(library_db),
         UpgradeDeps(
@@ -374,6 +423,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
             lyrics_cache=api.state.lyrics_cache,
             publish=api.broadcast_upgrade_progress,
             rekey_owners=api.rekey_file_owners,
+            audio_replacement=replacement,
         ),
     )
     api.state.external_sync = ExternalSyncJob(
@@ -755,7 +805,7 @@ def build_app() -> FastAPI:
         left in place under the slskd folder (``slskd/...``) and extra
         library folders (``ext/<id>/...``).
         """
-        full = resolve_library_file(file_path, api.library_context())
+        full = _read_library_file(file_path)
         if full is None:
             raise HTTPException(status_code=404, detail='File not found')
         return FileResponse(
@@ -967,7 +1017,7 @@ def build_app() -> FastAPI:
         sidecar and the lyrics embedded in the file's tags; either may be
         empty.
         """
-        full = resolve_library_file(file, api.library_context())
+        full = _read_library_file(file)
         if full is None:
             raise HTTPException(status_code=404, detail='File not found')
         return read_track_lyrics(full)
@@ -979,7 +1029,7 @@ def build_app() -> FastAPI:
         lists and grids that show it small; without it, the full image."""
         # Resolved and confined to the downloads or slskd folder, which
         # prevents path traversal.
-        full = resolve_library_file(file, api.library_context())
+        full = _read_library_file(file)
         if full is None:
             raise HTTPException(status_code=404, detail='File not found')
 
@@ -1048,7 +1098,7 @@ def build_app() -> FastAPI:
 
     app.mount(
         '/downloads',
-        StaticFiles(directory=str(DOWNLOAD_DIR)),
+        LibraryAudioFiles(directory=str(DOWNLOAD_DIR)),
         name='downloads',
     )
     app.mount(

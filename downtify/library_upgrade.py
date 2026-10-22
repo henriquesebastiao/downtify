@@ -18,10 +18,10 @@ Three categories are handled, all of them writes to tags:
     Re-read the track from Spotify and write back album, album artist,
     release date and track number.
 
-Audio itself is never replaced: swapping the file a user already has is
-a different problem (match confidence, review of uncertain matches,
-playlists and M3Us pointing at the old name) and is deliberately left
-out rather than done half-way.
+Audio replacement is a separate, explicitly selected Deemix mode. It
+prepares verified recordings, publishes playlist/catalog references,
+then optionally removes only unchanged originals with durable receipts.
+The default artwork/lyrics/metadata workflow is unchanged.
 
 Every write goes to a copy beside the original, which is verified and
 only then moved into place, so an interrupted or failed upgrade leaves
@@ -35,7 +35,7 @@ import os
 import shutil
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -79,6 +79,7 @@ CATEGORY_METADATA = 'metadata'
 
 #: Every category a scan reports on, in the order the UI shows them.
 CATEGORIES = (CATEGORY_ARTWORK, CATEGORY_LYRICS, CATEGORY_METADATA)
+SUPPORTED_CATEGORIES = (*CATEGORIES, 'audio')
 
 #: How far a rewritten file's duration may drift from the original
 #: before it is rejected. Tag writes don't touch audio, so this only
@@ -104,14 +105,23 @@ class UpgradeOptions:
     artwork_min_px: int = DEFAULT_ARTWORK_MIN_PX
     artwork_source: str = cover_sources.PREFERENCE_HIGHEST
     recheck_days: int = DEFAULT_RECHECK_DAYS
+    replace_audio_deemix: bool = False
+    delete_replaced_audio: bool = False
+    files: tuple[str, ...] = ()
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        result = {
             'categories': list(self.categories),
             'artwork_min_px': self.artwork_min_px,
             'artwork_source': self.artwork_source,
             'recheck_days': self.recheck_days,
         }
+        if self.replace_audio_deemix:
+            result['replace_audio_deemix'] = True
+            result['delete_replaced_audio'] = self.delete_replaced_audio
+        if self.files:
+            result['files'] = list(self.files)
+        return result
 
 
 def normalize_categories(raw: Any) -> tuple[str, ...]:
@@ -120,7 +130,7 @@ def normalize_categories(raw: Any) -> tuple[str, ...]:
     if not isinstance(raw, (list, tuple)):
         return CATEGORIES
     wanted = {str(item) for item in raw}
-    picked = tuple(name for name in CATEGORIES if name in wanted)
+    picked = tuple(name for name in SUPPORTED_CATEGORIES if name in wanted)
     return picked or CATEGORIES
 
 
@@ -144,6 +154,11 @@ def options_from(payload: dict[str, Any]) -> UpgradeOptions:
         ),
         artwork_source=source,
         recheck_days=_int('recheck_days', DEFAULT_RECHECK_DAYS, 0, 3650),
+        replace_audio_deemix=payload.get('replace_audio_deemix') is True,
+        delete_replaced_audio=payload.get('delete_replaced_audio') is True,
+        files=tuple(str(f) for f in payload.get('files', [])[:1000])
+        if isinstance(payload.get('files'), list)
+        else (),
     )
 
 
@@ -170,6 +185,9 @@ def _summarize(
 
     counts = {name: 0 for name in CATEGORIES}
     sizes = {name: 0 for name in CATEGORIES}
+    if any('audio' in job.get('categories', []) for job in jobs):
+        counts['audio'] = 0
+        sizes['audio'] = 0
     for job in jobs:
         for name in job.get('categories') or []:
             if name in counts:
@@ -387,6 +405,7 @@ class UpgradeDeps:
     lyrics_cache: Any = None
     publish: Optional[Callable[[dict[str, Any]], None]] = None
     rekey_owners: Optional[Callable[[str, str, str], None]] = None
+    audio_replacement: Any = None
 
 
 def resolve_track(stored_path: str, ctx: LibraryContext) -> Optional[Path]:
@@ -638,6 +657,7 @@ class LibraryUpgradeRunner:
         self._scanned = 0
         self._scan_total = 0
         self._last_publish = 0.0
+        self._finalization_error = ''
 
     # -- helpers --
     def _publish(
@@ -679,6 +699,12 @@ class LibraryUpgradeRunner:
         }
         if extra:
             payload.update(extra)
+        if self._finalization_error:
+            payload['finalization_error'] = self._finalization_error
+        if self.deps.audio_replacement is not None:
+            payload['replacements'] = (
+                self.deps.audio_replacement.store.summary(int(run['id']))
+            )
         return payload
 
     def busy(self) -> bool:
@@ -690,6 +716,11 @@ class LibraryUpgradeRunner:
         with self._lock:
             if self.busy():
                 raise RuntimeError('A library upgrade is already running')
+            if (
+                options.replace_audio_deemix
+                and self.deps.audio_replacement is None
+            ):
+                raise RuntimeError('Deemix replacement is unavailable')
             run_id = self.db.create_run(list(CATEGORIES), options.as_dict())
             self._cancelled = False
             self._stop.clear()
@@ -707,7 +738,20 @@ class LibraryUpgradeRunner:
     def _scan(self, run_id: int, options: UpgradeOptions) -> None:
         try:
             ctx = self.deps.context()
-            entries = list_library_entries(ctx)
+            entries = (
+                list_library_entries(ctx, fold_extra=False)
+                if options.replace_audio_deemix
+                else list_library_entries(ctx)
+            )
+            if options.replace_audio_deemix:
+                entries = [
+                    e
+                    for e in entries
+                    if not str(e['file']).startswith(('ext/', 'slskd/'))
+                ]
+            if options.files:
+                wanted_files = set(options.files)
+                entries = [e for e in entries if e['file'] in wanted_files]
             self._scan_total = len(entries)
             checks = self.db.checks_for([str(e['file']) for e in entries])
             jobs: list[dict[str, Any]] = []
@@ -723,6 +767,15 @@ class LibraryUpgradeRunner:
                 total_bytes += int(entry.get('size') or 0)
                 self._scanned = index
                 self._publish(throttle=True)
+                if options.replace_audio_deemix:
+                    jobs.append({
+                        'file': stored,
+                        'categories': ['audio'],
+                        'size': int(entry.get('size') or 0),
+                        'title': str(entry.get('title') or ''),
+                        'artist': str(entry.get('artist') or ''),
+                    })
+                    continue
                 due = self._categories_due(
                     checks.get(stored) or {}, options.recheck_days
                 )
@@ -818,25 +871,15 @@ class LibraryUpgradeRunner:
             # Remembered so a resume after a restart runs the same
             # categories the user picked, not everything the scan found.
             self.db.set_categories(run_id, list(categories))
-            options = UpgradeOptions(
-                categories=categories,
-                artwork_min_px=int(
-                    run['options'].get('artwork_min_px')
-                    or DEFAULT_ARTWORK_MIN_PX
-                ),
-                artwork_source=str(
-                    run['options'].get('artwork_source')
-                    or cover_sources.PREFERENCE_HIGHEST
-                ),
-                recheck_days=int(
-                    run['options'].get('recheck_days') or DEFAULT_RECHECK_DAYS
-                ),
+            options = replace(
+                options_from(run['options']), categories=categories
             )
             self._begin(run_id, options)
         return self.status()
 
     def _begin(self, run_id: int, options: UpgradeOptions) -> None:
         self._cancelled = False
+        self._finalization_error = ''
         self._stop.clear()
         self.db.requeue_running(run_id)
         self.db.set_state(run_id, STATE_RUNNING)
@@ -853,6 +896,20 @@ class LibraryUpgradeRunner:
         while not self._stop.is_set():
             job = self.db.take_next(run_id)
             if job is None:
+                if options.replace_audio_deemix and 'audio' in wanted:
+                    try:
+                        self.deps.audio_replacement.finalize(
+                            run_id, self._stop.is_set
+                        )
+                    except Exception as exc:
+                        self._finalization_error = str(exc)[:200]
+                        self.db.set_state(
+                            run_id,
+                            STATE_CANCELLED
+                            if self._cancelled
+                            else STATE_PAUSED,
+                        )
+                        break
                 self.db.set_state(run_id, STATE_DONE)
                 break
             stored = str(job['file'])
@@ -881,17 +938,29 @@ class LibraryUpgradeRunner:
             self.db.set_stage(run_id, stored, stage)
 
         try:
-            outcome = upgrade_track(
-                stored,
-                deps=self.deps,
-                options=UpgradeOptions(
-                    categories=tuple(todo),
-                    artwork_min_px=options.artwork_min_px,
-                    artwork_source=options.artwork_source,
-                    recheck_days=options.recheck_days,
-                ),
-                on_stage=on_stage,
-            )
+            if 'audio' in todo:
+                if (
+                    not options.replace_audio_deemix
+                    or self.deps.audio_replacement is None
+                ):
+                    raise ValueError(
+                        'Audio replacement was not enabled for this scan'
+                    )
+                outcome = self.deps.audio_replacement.prepare(
+                    stored, options, run_id, on_stage
+                )
+            else:
+                outcome = upgrade_track(
+                    stored,
+                    deps=self.deps,
+                    options=UpgradeOptions(
+                        categories=tuple(todo),
+                        artwork_min_px=options.artwork_min_px,
+                        artwork_source=options.artwork_source,
+                        recheck_days=options.recheck_days,
+                    ),
+                    on_stage=on_stage,
+                )
         except Exception as exc:
             logger.opt(exception=True).warning(
                 'Library upgrade: {} failed', stored
@@ -951,18 +1020,9 @@ class LibraryUpgradeRunner:
         if run['state'] != STATE_RUNNING:
             return
         requeued = self.db.requeue_running(run_id)
-        options = UpgradeOptions(
+        options = replace(
+            options_from(run['options']),
             categories=normalize_categories(run['categories']),
-            artwork_min_px=int(
-                run['options'].get('artwork_min_px') or DEFAULT_ARTWORK_MIN_PX
-            ),
-            artwork_source=str(
-                run['options'].get('artwork_source')
-                or cover_sources.PREFERENCE_HIGHEST
-            ),
-            recheck_days=int(
-                run['options'].get('recheck_days') or DEFAULT_RECHECK_DAYS
-            ),
         )
         logger.info(
             'Library upgrade: resuming run {} ({} track(s) re-queued)',
