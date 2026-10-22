@@ -666,6 +666,27 @@
                 </p>
               </SettingRow>
             </SettingGroup>
+            <SettingGroup
+              :title="t('settings.primaryLibrary')"
+              :description="t('settings.primaryLibraryHint')"
+            >
+              <label class="grid gap-2 px-5 py-4 text-sm">
+                {{ t('settings.primaryLibrary') }}
+                <select
+                  v-model="s.external_library.primary_folder"
+                  class="rounded-lg border border-line-3 bg-surface-2 p-2"
+                >
+                  <option value="">Downtify</option>
+                  <option
+                    v-for="folder in s.external_library.folders"
+                    :key="folder"
+                    :value="folder"
+                  >
+                    {{ folder }}
+                  </option>
+                </select>
+              </label>
+            </SettingGroup>
             <ExternalLibrarySettings />
           </template>
 

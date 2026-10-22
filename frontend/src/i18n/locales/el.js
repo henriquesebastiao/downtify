@@ -1006,6 +1006,9 @@ export default {
     navidromeSyncHint:
       'Μετά από λήψεις λιστών και ελέγχους, διατηρεί λίστα με το ίδιο όνομα στο Navidrome.',
     navidromePublic: 'Δημόσιες λίστες Navidrome',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
     libraryGroup: 'Βιβλιοθήκη',
     coverCache: 'Προσωρινή μνήμη εξωφύλλων',
     coverCacheHint:

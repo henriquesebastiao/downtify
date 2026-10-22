@@ -28,6 +28,7 @@ const settings = ref({
     min_bitrate: 256,
   },
   external_library: {
+    primary_folder: '',
     folders: [],
   },
   lyrics_providers: [''],
@@ -202,6 +203,7 @@ function loadServerSettings() {
         external_library: {
           ...settings.value.external_library,
           ...(rest.external_library || {}),
+          primary_folder: rest.external_library?.primary_folder || '',
           folders: Array.isArray(rest.external_library?.folders)
             ? rest.external_library.folders
             : settings.value.external_library.folders,
@@ -248,11 +250,15 @@ function rememberExternalFolders(folders) {
     settings.value.external_library = { folders: [] }
   }
   settings.value.external_library.folders = folders
+  if (!folders.includes(settings.value.external_library.primary_folder)) {
+    settings.value.external_library.primary_folder = ''
+  }
   if (!saved.value) return
   try {
     const parsed = JSON.parse(saved.value)
     parsed.external_library = {
       ...(parsed.external_library || {}),
+      primary_folder: settings.value.external_library.primary_folder || '',
       folders,
     }
     saved.value = JSON.stringify(parsed)
@@ -281,6 +287,7 @@ async function saveSettings() {
       external_library: {
         ...settings.value.external_library,
         ...(rest.external_library || {}),
+        primary_folder: rest.external_library?.primary_folder || '',
         folders: Array.isArray(rest.external_library?.folders)
           ? rest.external_library.folders
           : settings.value.external_library.folders,
