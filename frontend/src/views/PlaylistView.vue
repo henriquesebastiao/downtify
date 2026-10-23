@@ -54,7 +54,7 @@
             {{ t('playlists.downloadMissing', { count: batch.missing_count }) }}
           </UiButton>
           <UiButton
-            v-if="playlist.manual && playlist.mine"
+            v-if="playlist.manual && (playlist.mine || playlist.canEditTracks)"
             variant="secondary"
             icon="plus"
             @click="playlistActions.openAddSongs(playlist)"

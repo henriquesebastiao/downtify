@@ -243,6 +243,8 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       // Sharing (see downtify/playlist_shares.py). Without these fields a
       // playlist is the user's own and private.
       mine: playlist.mine !== false,
+      canEditTracks: Boolean(playlist.can_edit_tracks),
+      editors: Array.isArray(playlist.editors) ? playlist.editors : [],
       owner: String(playlist.owner || ''),
       visibility: playlist.visibility || 'private',
       sharedWith: Array.isArray(playlist.shared_with)

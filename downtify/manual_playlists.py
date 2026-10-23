@@ -7,6 +7,7 @@ edited, and so deleting them never removes the audio files.
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import Any, Optional
 
@@ -19,6 +20,7 @@ from .playlist_mosaic import refresh_manual_playlist_cover
 
 MAX_PLAYLIST_NAME_LEN = 120
 MAX_TRACKS_PER_EDIT = 500
+_MANUAL_EDIT_LOCK = threading.RLock()
 
 
 class ManualPlaylistError(ValueError):
@@ -108,6 +110,18 @@ def create_manual_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
 
 
 def edit_manual_playlist(
+    ctx: LibraryContext,
+    name: str,
+    *,
+    add: Optional[list[str]] = None,
+    remove: Optional[list[str]] = None,
+) -> dict[str, Any]:
+    # Read/modify/write is one operation when collaborators edit together.
+    with _MANUAL_EDIT_LOCK:
+        return _edit_manual_playlist(ctx, name, add=add, remove=remove)
+
+
+def _edit_manual_playlist(
     ctx: LibraryContext,
     name: str,
     *,

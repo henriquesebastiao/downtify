@@ -1356,6 +1356,23 @@ def _filter_playlists_for(
                 'mine': True,
                 'visibility': PRIVATE,
             })
+    editors = (
+        state.playlist_shares.editor_map() if state.playlist_shares else {}
+    )
+    kept = [dict(row) for row in kept]
+    for row in kept:
+        members = editors.get(share_key(row['name']), set())
+        row['can_edit_tracks'] = bool(
+            row.get('manual')
+            and (
+                row.get('mine')
+                or (sharing_enabled() and lens.user_id in members)
+            )
+        )
+        if row.get('mine'):
+            row['editors'] = [
+                lens.names[uid] for uid in sorted(members) if uid in lens.names
+            ]
     kept.sort(
         key=lambda item: (
             not item.get('liked'),
@@ -6125,7 +6142,11 @@ async def edit_library_playlist_tracks_endpoint(
 
     payload = await _json_object(request)
     name = str(payload.get('name') or '').strip()
-    require_playlist_visible(name, request, manage=True)
+    entry = require_playlist_visible(name, request)
+    if not entry.get('can_edit_tracks'):
+        raise HTTPException(
+            status_code=403, detail='You cannot edit this playlist'
+        )
     add = payload.get('add') if isinstance(payload.get('add'), list) else []
     remove = (
         payload.get('remove')
@@ -6133,6 +6154,9 @@ async def edit_library_playlist_tracks_endpoint(
         else []
     )
     ctx = library_context()
+    added_paths = [str(item).strip().replace('\\', '/') for item in add]
+    if set(added_paths) - set(filter_paths_for_request(added_paths, request)):
+        raise HTTPException(status_code=403, detail='Track not accessible')
     try:
         result = await asyncio.to_thread(
             edit_manual_playlist,
@@ -6256,15 +6280,43 @@ async def set_playlist_visibility_endpoint(
         raise HTTPException(
             status_code=400, detail='Choose who to share the playlist with'
         )
+    raw_editors = payload.get('editors', [])
+    if not isinstance(raw_editors, list):
+        raise HTTPException(status_code=400, detail='editors must be a list')
+    editor_ids = {
+        by_name.get(str(value).strip().casefold()) for value in raw_editors
+    }
+    if editor_ids and (
+        not entry.get('manual')
+        or visibility != SHARED
+        or None in editor_ids
+        or not editor_ids.issubset(set(user_ids))
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail='Choose collaborators among the named viewers of a local playlist',
+        )
     stored = str(entry.get('name') or name)
     await asyncio.to_thread(
         shares.set_visibility, stored, visibility, user_ids
     )
+    await asyncio.to_thread(shares.set_editors, stored, editor_ids)
     await announce_playlists_changed()
     usernames = _usernames()
     return {
         'name': stored,
         'visibility': visibility,
+        **(
+            {
+                'editors': [
+                    usernames[uid]
+                    for uid in sorted(editor_ids)
+                    if uid in usernames
+                ]
+            }
+            if editor_ids
+            else {}
+        ),
         'shared_with': [
             usernames[uid] for uid in user_ids if uid in usernames
         ],

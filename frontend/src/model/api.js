@@ -431,11 +431,17 @@ function renameLibraryPlaylist(name, newName) {
   })
 }
 
-function setPlaylistVisibility(name, visibility, sharedWith = []) {
+function setPlaylistVisibility(
+  name,
+  visibility,
+  sharedWith = [],
+  editors = []
+) {
   return API.put('/api/library/playlists/visibility', {
     name,
     visibility,
     shared_with: sharedWith,
+    editors,
   })
 }
 

@@ -73,6 +73,40 @@ class PlaylistShares:
                     PRIMARY KEY (user_id, name_key)
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS playlist_editors (
+                    name_key TEXT NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    PRIMARY KEY (name_key, user_id)
+                )
+            """)
+
+    def editor_map(self) -> dict[str, set[int]]:
+        editors: dict[str, set[int]] = {}
+        with self._connect() as conn:
+            for row in conn.execute(
+                'SELECT name_key, user_id FROM playlist_editors'
+            ):
+                editors.setdefault(str(row['name_key']), set()).add(
+                    int(row['user_id'])
+                )
+        return editors
+
+    def set_editors(self, name: str, user_ids: Iterable[int]) -> None:
+        key = share_key(name)
+        with self._connect() as conn:
+            conn.execute(
+                'DELETE FROM playlist_editors WHERE name_key = ?', (key,)
+            )
+            conn.executemany(
+                'INSERT INTO playlist_editors (name_key, user_id) VALUES (?, ?)',
+                [
+                    (key, uid)
+                    for uid in {
+                        int(value) for value in user_ids if int(value) > 0
+                    }
+                ],
+            )
 
     # Reading
 
@@ -183,6 +217,10 @@ class PlaylistShares:
             }
             for uid in have - wanted:
                 conn.execute(
+                    'DELETE FROM playlist_editors WHERE name_key = ? AND user_id = ?',
+                    (key, uid),
+                )
+                conn.execute(
                     'DELETE FROM playlist_share_users '
                     'WHERE name_key = ? AND user_id = ?',
                     (key, uid),
@@ -235,6 +273,7 @@ class PlaylistShares:
                 'playlist_shares',
                 'playlist_share_users',
                 'playlist_follows',
+                'playlist_editors',
             ):
                 conn.execute(
                     f'UPDATE OR REPLACE {table} SET name_key = ? '
@@ -252,6 +291,7 @@ class PlaylistShares:
                 'playlist_shares',
                 'playlist_share_users',
                 'playlist_follows',
+                'playlist_editors',
             ):
                 conn.execute(f'DELETE FROM {table} WHERE name_key = ?', (key,))
 
@@ -259,6 +299,10 @@ class PlaylistShares:
         """A deleted account's follows, and being on anyone's list."""
 
         with self._connect() as conn:
+            conn.execute(
+                'DELETE FROM playlist_editors WHERE user_id = ?',
+                (int(user_id),),
+            )
             conn.execute(
                 'DELETE FROM playlist_follows WHERE user_id = ?',
                 (int(user_id),),

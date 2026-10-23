@@ -129,6 +129,83 @@ def _share(request: Request) -> dict[str, Any]:
     return asyncio.run(api.set_playlist_visibility_endpoint(request))
 
 
+def test_collaborator_can_edit_tracks_but_cannot_manage(world):
+    (world.ctx.download_dir / 'a.mp3').write_bytes(b'audio-a')
+    (world.ctx.download_dir / 'b.mp3').write_bytes(b'audio-b')
+    target = world.ctx.download_dir / 'Mix.m3u'
+    target.write_text('#EXTM3U\n' + MANUAL_M3U_MARKER + '\na.mp3\n')
+    _share(
+        _request(
+            ANA,
+            body={
+                'name': 'Mix',
+                'visibility': SHARED,
+                'shared_with': ['bob'],
+                'editors': ['bob'],
+            },
+        )
+    )
+    entry = api.require_playlist_visible('Mix', _request(BO))
+    assert entry['can_edit_tracks'] is True
+    result = asyncio.run(
+        api.edit_library_playlist_tracks_endpoint(
+            _request(BO, body={'name': 'Mix', 'add': ['b.mp3']})
+        )
+    )
+    assert result['files'] == ['a.mp3', 'b.mp3']
+    for action in (
+        api.rename_library_playlist_endpoint,
+        api.set_playlist_visibility_endpoint,
+    ):
+        with pytest.raises(HTTPException) as error:
+            asyncio.run(
+                action(
+                    _request(
+                        BO,
+                        body={
+                            'name': 'Mix',
+                            'new_name': 'No',
+                            'visibility': PRIVATE,
+                        },
+                    )
+                )
+            )
+        assert error.value.status_code == 403
+
+
+def test_collaboration_is_revoked_with_sharing(world):
+    world.shares.set_visibility('Mix', SHARED, [BO])
+    world.shares.set_editors('Mix', [BO])
+    assert api.require_playlist_visible('Mix', _request(BO))['can_edit_tracks']
+    world.shares.set_visibility('Mix', PUBLIC)
+    assert not api.require_playlist_visible('Mix', _request(BO))[
+        'can_edit_tracks'
+    ]
+    assert not world.shares.editor_map()
+
+
+@pytest.mark.parametrize(
+    ('name', 'editors'), [('Road', ['bob']), ('Mix', ['cyd'])]
+)
+def test_collaboration_rejects_imported_playlists_and_unlisted_users(
+    world, name, editors
+):
+    with pytest.raises(HTTPException) as error:
+        _share(
+            _request(
+                ANA,
+                body={
+                    'name': name,
+                    'visibility': SHARED,
+                    'shared_with': ['bob'],
+                    'editors': editors,
+                },
+            )
+        )
+    assert error.value.status_code == 400
+    assert world.shares.visibility(name) == PRIVATE
+
+
 # ── the store ────────────────────────────────────────────────────────
 
 

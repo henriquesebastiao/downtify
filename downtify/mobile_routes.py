@@ -152,6 +152,7 @@ async def playlists(request: Request) -> list[dict[str, Any]]:
             'visibility': p.get('visibility', 'private'),
             'mine': bool(p.get('mine', True)),
             'followed': bool(p.get('followed')),
+            'can_edit_tracks': bool(p.get('can_edit_tracks')),
             'shared_with_me': bool(p.get('shared_with_me')),
             'new': bool(p.get('new')),
             **(

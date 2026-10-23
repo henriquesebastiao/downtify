@@ -1,4 +1,10 @@
 export default {
+  collaboration: {
+    canEdit: 'Autoriser l’ajout et le retrait de morceaux',
+    copyHint:
+      'Créez une copie indépendante pour collaborer tout en conservant la synchronisation de l’original.',
+    copy: 'Créer une copie collaborative',
+  },
   language: {
     name: 'Français',
   },
