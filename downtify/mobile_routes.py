@@ -152,6 +152,7 @@ async def playlists(request: Request) -> list[dict[str, Any]]:
             'visibility': p.get('visibility', 'private'),
             'mine': bool(p.get('mine', True)),
             'followed': bool(p.get('followed')),
+            'favorite': bool(p.get('favorite')),
             'shared_with_me': bool(p.get('shared_with_me')),
             'new': bool(p.get('new')),
             **(
@@ -177,6 +178,12 @@ async def usernames(request: Request) -> dict[str, Any]:
         key=str.casefold,
     )
     return {'enabled': enabled, 'usernames': names if enabled else []}
+
+
+@router.put('/playlists/favorite')
+async def favorite_playlist(request: Request) -> dict[str, Any]:
+    """Set the same account preference as the web player."""
+    return await api.set_playlist_favorite_endpoint(request)
 
 
 async def _playlist_name(request: Request) -> str:

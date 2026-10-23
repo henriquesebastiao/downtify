@@ -1,4 +1,9 @@
 export default {
+  playlistFavorites: {
+    title: 'Αγαπημένες λίστες',
+    add: 'Προσθήκη λίστας στα αγαπημένα',
+    remove: 'Αφαίρεση λίστας από τα αγαπημένα',
+  },
   language: {
     name: 'Ελληνικά',
   },

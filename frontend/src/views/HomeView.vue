@@ -165,52 +165,29 @@
       </section>
     </div>
 
-    <!-- Jump back in -->
-    <section
-      v-if="jumpBackIn.length"
-      class="flex flex-col gap-4 animate-rise [animation-delay:80ms]"
+    <!-- Personal shortcuts stay below the welcome and library summary. -->
+    <div
+      v-if="jumpBackIn.length || favoriteEntries.length"
+      class="grid gap-5"
+      :class="
+        jumpBackIn.length && favoriteEntries.length ? 'lg:grid-cols-2' : ''
+      "
+      data-home-access
     >
-      <h2 class="text-display text-xl font-semibold">
-        {{ t('home.jumpBackIn') }}
-      </h2>
-      <div class="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-        <RouterLink
-          v-for="entry in jumpBackIn"
-          :key="entry.id"
-          :to="entry.route || { name: 'Home' }"
-          class="group flex h-16 items-center gap-3 overflow-hidden rounded-[12px] bg-surface pr-3 transition-colors hover:bg-surface-2"
-        >
-          <CoverArt
-            :src="entry.cover"
-            :covers="entry.covers"
-            :name="entry.title"
-            :icon="
-              entry.type === 'artist'
-                ? 'user'
-                : entry.type === 'playlist'
-                  ? 'playlist'
-                  : 'disc'
-            "
-            rounded="rounded-none"
-            :letter-size="18"
-            :icon-size="20"
-            class="size-16"
-          />
-          <span class="flex min-w-0 flex-1 flex-col">
-            <span class="truncate text-sm font-semibold">{{
-              entry.title
-            }}</span>
-            <span class="truncate text-xs text-muted">
-              {{ t(`home.kind.${entry.type}`)
-              }}<template v-if="entry.subtitle">
-                · {{ entry.subtitle }}</template
-              >
-            </span>
-          </span>
-          <EqBars v-if="isPlaying(entry)" :size="12" />
-        </RouterLink>
-      </div>
-    </section>
+      <HomeShelf
+        v-if="jumpBackIn.length"
+        kind="recent"
+        :title="t('home.jumpBackIn')"
+        :entries="jumpBackIn"
+      />
+      <HomeShelf
+        v-if="favoriteEntries.length"
+        kind="favorites"
+        :title="t('playlistFavorites.title')"
+        :entries="favoriteEntries"
+        @play="favoriteActions.play($event)"
+      />
+    </div>
 
     <!-- Recently added -->
     <section
@@ -305,7 +282,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import CoverArt from '/src/components/ui/CoverArt.vue'
-import EqBars from '/src/components/ui/EqBars.vue'
+import HomeShelf from '/src/components/home/HomeShelf.vue'
 import SourceBadge from '/src/components/ui/SourceBadge.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiProgress from '/src/components/ui/UiProgress.vue'
@@ -325,6 +302,22 @@ import { useI18n } from '/src/i18n'
 const { t } = useI18n()
 const router = useRouter()
 const library = useLibrary()
+const favoriteActions = usePlaylistActions()
+const favoritePlaylists = computed(() =>
+  library.playlists.value.filter((playlist) => playlist.favorite)
+)
+const favoriteEntries = computed(() =>
+  favoritePlaylists.value.map((playlist) => ({
+    id: playlist.key,
+    type: 'playlist',
+    title: playlist.title,
+    subtitle: t('common.tracks', { count: itemTrackCount(playlist) }),
+    cover: playlist.cover,
+    covers: playlist.covers,
+    route: { name: 'Playlist', query: { name: playlist.name } },
+    playlist,
+  }))
+)
 const history = useHistory()
 const player = usePlayer()
 const tracker = useProgressTracker()
@@ -429,7 +422,7 @@ const jumpBackIn = computed(() =>
       }
     })
     .filter(Boolean)
-    .slice(0, 6)
+    .map((entry) => ({ ...entry, playing: isPlaying(entry) }))
 )
 
 function isPlaying(entry) {
