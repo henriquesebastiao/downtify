@@ -184,6 +184,11 @@ class LibraryVisibility:
     def _changed(self) -> None:
         self._rules = None
 
+    def invalidate(self) -> None:
+        """Reload rules after an atomic audio-reference transaction."""
+        with self._lock:
+            self._changed()
+
     def hide(
         self,
         kind: str,

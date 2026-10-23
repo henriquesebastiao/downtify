@@ -363,6 +363,29 @@ export default {
     failed: 'Impossible de mettre à jour le like',
   },
   upgrade: {
+    chooseRecording: 'Choisir une piste Deezer',
+    chooseRecordingHint:
+      'Vérifiez la version exacte si l’ancien album ne correspond pas. L’artiste et le titre complet doivent toujours correspondre.',
+    recordingLink: 'Lien de la piste Deezer',
+    previewRecording: 'Prévisualiser',
+    recordingReviewHint:
+      'Vérifiez l’album et la durée. Ce choix prépare une analyse d’un seul morceau ; le remplacement démarre après confirmation de cette analyse.',
+    analyzeRecording: 'Analyser ce choix',
+    recordingPreviewFailed: 'Impossible de prévisualiser cette piste Deezer.',
+    replacementRescan:
+      'Options modifiées : relancez l’analyse avant de démarrer.',
+    deemixTitle: 'Remplacer les anciennes musiques avec Deemix',
+    replaceAudio: 'Utiliser les versions Deemix vérifiées',
+    replaceAudioHint:
+      'Exiger le même artiste, titre et album. Conserver la musique dans le dossier Deemix. Une correspondance ambiguë garde l’original. Cette analyse remplace l’audio au lieu de réécrire ses étiquettes.',
+    deleteOriginals: 'Nettoyer les anciennes copies Downtify après import',
+    deleteOriginalsHint:
+      'Supprimer uniquement chaque original vérifié après mise à jour des playlists, favoris et références de lecture. Les fichiers externes et paroles ne sont jamais supprimés.',
+    replacementProgress:
+      'En attente de publication ou nettoyage : {pending}. Anciennes copies supprimées : {removed}. Originaux conservés : {kept}.',
+    audio: 'Versions Deemix',
+    audioHint:
+      'Vérifier la durée du catalogue et le décodage avant de mettre à jour les playlists et retirer l’ancienne copie.',
     title: 'Améliorer la bibliothèque',
     subtitle:
       'Améliorez la musique déjà téléchargée, au lieu de la télécharger à nouveau.',
