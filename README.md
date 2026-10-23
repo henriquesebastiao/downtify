@@ -207,7 +207,3 @@ There are many ways to support Downtify:
 Licensed under the [AGPL-3.0](https://github.com/henriquesebastiao/downtify?tab=AGPL-3.0-1-ov-file#readme) License.
 
 Icons by [Font Awesome](https://fontawesome.com) (Free, [CC BY 4.0](https://fontawesome.com/license/free)), loaded via [Iconify](https://iconify.design).
-
-Optional [Deemix audio source](docs/features/deemix.md) keeps native tagged audio and lyrics in a shared folder.
-
-Optional [Deemix library replacement](docs/features/library-upgrade.md#deemix-recording-replacement) verifies album recordings, offers explicit review of uncertain versions, preserves playlist references and can remove their old Downtify copies after import.

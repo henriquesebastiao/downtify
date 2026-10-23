@@ -1026,6 +1026,9 @@ export default {
     navidromeSyncHint:
       'След изтегляния на плейлисти и проверки поддържа плейлист със същото име в Navidrome.',
     navidromePublic: 'Направи плейлистите в Navidrome публични',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
     libraryGroup: 'Библиотека',
     coverCache: 'Кеш за обложки',
     coverCacheHint:

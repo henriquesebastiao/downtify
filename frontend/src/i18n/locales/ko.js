@@ -1041,6 +1041,9 @@ export default {
     navidromeSyncHint:
       '재생목록 다운로드 및 모니터링 확인 후, Navidrome에 동일한 이름의 재생목록을 동기화합니다.',
     navidromePublic: 'Navidrome 재생목록 공개 설정',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
     libraryGroup: '라이브러리',
     coverCache: '커버 아트 캐싱',
     coverCacheHint:

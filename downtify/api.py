@@ -5469,7 +5469,10 @@ async def sync_external_library_endpoint(
     if 'folders' in payload:
         previous = dict(state.settings)
         state.settings['external_library'] = effective_external_library({
-            'external_library': {'folders': payload.get('folders')}
+            'external_library': {
+                **state.settings.get('external_library', {}),
+                'folders': payload.get('folders'),
+            }
         })
         if state.settings_path is not None:
             _save_settings(state.settings_path, state.settings)
@@ -5533,7 +5536,10 @@ async def unmap_external_folder_endpoint(
         if Path(item) != root and str(item) != raw
     ]
     state.settings['external_library'] = effective_external_library({
-        'external_library': {'folders': folders}
+        'external_library': {
+            **state.settings.get('external_library', {}),
+            'folders': folders,
+        }
     })
     if state.settings_path is not None:
         _save_settings(state.settings_path, state.settings)

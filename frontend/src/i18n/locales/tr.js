@@ -1032,6 +1032,9 @@ export default {
     navidromeSyncHint:
       'Çalma listesi indirmeleri ve izleyici kontrollerinden sonra Navidrome’da aynı adlı bir liste tut.',
     navidromePublic: 'Navidrome çalma listelerini herkese açık yap',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
     libraryGroup: 'Kitaplık',
     coverCache: 'Kapakları önbelleğe al',
     coverCacheHint:
