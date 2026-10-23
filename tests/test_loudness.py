@@ -74,7 +74,7 @@ def test_pause_and_restart_preserve_pending_work_without_auto_resume(
         (root / name).write_bytes(b'audio')
     ctx = LibraryContext(download_dir=root)
     db = tmp_path / 'library.db'
-    runner = LoudnessAnalyzer(db, lambda: ctx)
+    runner = LoudnessAnalyzer(db, lambda: ctx, workers=1)
     started, release = threading.Event(), threading.Event()
 
     def measure(path):
@@ -91,7 +91,7 @@ def test_pause_and_restart_preserve_pending_work_without_auto_resume(
     assert runner.status()['done'] == 1
     assert runner.status()['pending'] == 1
     runner.close()
-    restarted = LoudnessAnalyzer(db, lambda: ctx)
+    restarted = LoudnessAnalyzer(db, lambda: ctx, workers=1)
     assert not restarted.status()['active']
     assert restarted.status()['pending'] == 1
     monkeypatch.setattr(restarted, '_measure', measure)

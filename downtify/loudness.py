@@ -1,10 +1,12 @@
-"""Read-only loudness measurement and a durable, single-worker analysis queue."""
+"""Read-only loudness measurement and a durable, CPU-bounded analysis queue."""
 
 from __future__ import annotations
 
 import hashlib
 import json
 import math
+import os
+import re
 import shutil
 import subprocess
 import threading
@@ -59,11 +61,47 @@ def file_signature(path: Path) -> str:
     return hashlib.sha256(repr(identity).encode()).hexdigest()
 
 
+def analysis_workers() -> int:
+    """Respect the container quota and leave a fixed upper bound for library IO."""
+    capacity = float(os.cpu_count() or 1)
+    try:
+        capacity = min(capacity, len(os.sched_getaffinity(0)))
+    except (AttributeError, OSError):
+        pass
+    try:
+        quota, period = (
+            Path('/sys/fs/cgroup/cpu.max').read_text(encoding='utf-8').split()
+        )
+        if quota != 'max':
+            capacity = min(capacity, float(quota) / float(period))
+    except (OSError, ValueError, ZeroDivisionError):
+        try:
+            quota = float(
+                Path('/sys/fs/cgroup/cpu/cpu.cfs_quota_us').read_text(
+                    encoding='utf-8'
+                )
+            )
+            period = float(
+                Path('/sys/fs/cgroup/cpu/cpu.cfs_period_us').read_text(
+                    encoding='utf-8'
+                )
+            )
+            if quota > 0:
+                capacity = min(capacity, quota / period)
+        except (OSError, ValueError, ZeroDivisionError):
+            pass
+    return max(1, min(2, int(capacity)))
+
+
 class LoudnessAnalyzer:
     """No analysis starts on construction or after a restart."""
 
     def __init__(
-        self, db_path: Path, context: Callable[[], LibraryContext]
+        self,
+        db_path: Path,
+        context: Callable[[], LibraryContext],
+        *,
+        workers: int | None = None,
     ) -> None:
         self.path = str(db_path)
         self.context = context
@@ -71,12 +109,18 @@ class LoudnessAnalyzer:
         self._pause = threading.Event()
         self._closed = threading.Event()
         self._thread: threading.Thread | None = None
-        self._process: subprocess.Popen | None = None
+        self._processes: set[subprocess.Popen] = set()
+        self._workers = max(
+            1, min(2, workers if workers is not None else analysis_workers())
+        )
         with connect_sqlite(self.path) as conn:
             conn.execute("""CREATE TABLE IF NOT EXISTS loudness_measurements (
                 file TEXT PRIMARY KEY, signature TEXT NOT NULL, profile TEXT NOT NULL)""")
             conn.execute("""CREATE TABLE IF NOT EXISTS loudness_jobs (
                 file TEXT PRIMARY KEY, position INTEGER NOT NULL, status TEXT NOT NULL)""")
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS loudness_jobs_pending ON loudness_jobs(status, position)'
+            )
             conn.execute(
                 "UPDATE loudness_jobs SET status='pending' WHERE status='running'"
             )
@@ -111,6 +155,7 @@ class LoudnessAnalyzer:
             'failed': counts.get('failed', 0),
             'pending': counts.get('pending', 0),
             'running': counts.get('running', 0),
+            'workers': self._workers,
         }
 
     def start(self, files: list[str]) -> None:
@@ -141,16 +186,17 @@ class LoudnessAnalyzer:
 
     def pause(self) -> None:
         # Finish the current file, preserving the rest of the queue.
-        self._pause.set()
+        with self._lock:
+            self._pause.set()
 
     def close(self) -> None:
         self._closed.set()
         self._pause.set()
         with self._lock:
-            process = self._process
             thread = self._thread
-            if process is not None and process.poll() is None:
-                process.terminate()
+            for process in self._processes:
+                if process.poll() is None:
+                    process.terminate()
         if thread is not None:
             thread.join(timeout=5)
 
@@ -178,7 +224,13 @@ class LoudnessAnalyzer:
             '-filter_threads',
             '1',
             '-af',
-            'loudnorm=I=-18:TP=-1:LRA=50:print_format=json',
+            # Keep the existing true-peak sampling rate, without normalizing
+            # an unused output. Padding only this discarded analysis stream
+            # flushes the final partial block, including its last sample peak.
+            'aresample=192000,apad=pad_dur=0.1,'
+            'ebur128=peak=sample:metadata=1,'
+            'ametadata=print:key=lavfi.r128.I,'
+            'ametadata=print:key=lavfi.r128.sample_peak',
             '-f',
             'null',
             '-',
@@ -186,7 +238,7 @@ class LoudnessAnalyzer:
         with self._lock:
             if self._closed.is_set():
                 raise ValueError('Analyzer is closed')
-            self._process = subprocess.Popen(
+            process = subprocess.Popen(
                 command,
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
@@ -195,15 +247,31 @@ class LoudnessAnalyzer:
                 encoding='utf-8',
                 errors='replace',
             )
-            process = self._process
+            self._processes.add(process)
+            if hasattr(os, 'setpriority'):
+                try:
+                    os.setpriority(os.PRIO_PROCESS, process.pid, 10)
+                except OSError:
+                    pass
         try:
             _, stderr = process.communicate(timeout=1800)
             if process.returncode:
                 raise ValueError('Audio could not be analyzed')
-            data, _ = json.JSONDecoder().raw_decode(
-                '{' + stderr.rsplit('{', 1)[1]
+            levels = re.findall(r'lavfi\.r128\.I=([^\r\n]+)', stderr)
+            peaks = re.findall(r'lavfi\.r128\.sample_peak=([^\r\n]+)', stderr)
+            summary = stderr.rsplit('Summary:', 1)[-1]
+            final_peaks = re.findall(r'Peak:\s+([-+\w.]+)\s+dBFS', summary)
+            if not levels or not peaks or not final_peaks:
+                raise ValueError('Audio measurement unavailable')
+            integrated = float(levels[-1])
+            amplitude = max(float(value) for value in peaks)
+            peak = max(
+                20 * math.log10(amplitude) if amplitude > 0 else float('-inf'),
+                # The summary rounds to 0.1 dB: take its conservative bound.
+                max(float(value) for value in final_peaks) + 0.05,
             )
-            integrated, peak = float(data['input_i']), float(data['input_tp'])
+            if integrated <= -70:
+                integrated = float('-inf')
             if not math.isfinite(integrated) or not math.isfinite(peak):
                 return {
                     'state': 'silent',
@@ -223,21 +291,41 @@ class LoudnessAnalyzer:
             raise ValueError('Analysis timed out') from None
         finally:
             with self._lock:
-                self._process = None
+                self._processes.discard(process)
 
     def _run(self) -> None:
+        if self._workers == 1:
+            self._drain()
+            return
+        threads = [
+            threading.Thread(
+                target=self._drain,
+                name=f'loudness-worker-{index}',
+                daemon=True,
+            )
+            for index in range(self._workers)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+    def _drain(self) -> None:
         while not self._pause.is_set() and not self._closed.is_set():
-            with connect_sqlite(self.path) as conn:
-                row = conn.execute(
-                    "SELECT file FROM loudness_jobs WHERE status='pending' ORDER BY position LIMIT 1"
-                ).fetchone()
-                if row is None:
+            with self._lock:
+                if self._pause.is_set() or self._closed.is_set():
                     return
-                file = row[0]
-                conn.execute(
-                    "UPDATE loudness_jobs SET status='running' WHERE file=?",
-                    (file,),
-                )
+                with connect_sqlite(self.path) as conn:
+                    row = conn.execute(
+                        "SELECT file FROM loudness_jobs WHERE status='pending' ORDER BY position LIMIT 1"
+                    ).fetchone()
+                    if row is None:
+                        return
+                    file = row[0]
+                    conn.execute(
+                        "UPDATE loudness_jobs SET status='running' WHERE file=?",
+                        (file,),
+                    )
             result = 'failed'
             try:
                 full = resolve_library_file(file, self.context())
