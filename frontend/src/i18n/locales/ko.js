@@ -225,6 +225,11 @@ export default {
     },
     redownloadAll: '전체 다시 다운로드',
     downloadSelected: '선택 항목 다운로드',
+    allHandled: '이미 라이브러리 또는 대기열에 있음',
+    addPlaylist: '내 재생목록에 추가',
+    noAvailableTracks: '아직 추가할 수 있는 다운로드된 곡이 없습니다.',
+    saveAvailableHint:
+      '{total}곡 중 {count}곡을 사용할 수 있습니다. 기존 오디오 파일을 사용하며 누락된 곡은 다운로드하지 않습니다.',
     allInLibrary: '모두 라이브러리에 있음',
     watchPlaylist: '새 트랙 모니터링',
     watchArtist: '새 발매작 모니터링',
@@ -359,6 +364,28 @@ export default {
     failed: '좋아요 상태를 업데이트하지 못했습니다',
   },
   upgrade: {
+    chooseRecording: 'Choose a Deezer recording',
+    chooseRecordingHint:
+      'Review an exact recording when old album tags do not match. The artist and full title must still match.',
+    recordingLink: 'Deezer track link',
+    previewRecording: 'Preview',
+    recordingReviewHint:
+      'Review the album and duration. This prepares a single-track scan; replacement starts only after you confirm the scan.',
+    analyzeRecording: 'Analyze this choice',
+    recordingPreviewFailed: 'Unable to preview this Deezer track.',
+    replacementRescan: 'Options changed: scan again before starting.',
+    deemixTitle: 'Replace recordings with Deemix',
+    replaceAudio: 'Use verified Deemix recordings',
+    replaceAudioHint:
+      'Match the exact artist, title and album. Keep music in the Deemix folder. Ambiguous matches leave originals untouched. This scan replaces audio instead of retagging it.',
+    deleteOriginals: 'Remove old Downtify audio after import',
+    deleteOriginalsHint:
+      'Only remove each verified original after playlists, likes and playback references are updated. External files and sidecars are never removed.',
+    replacementProgress:
+      'Awaiting publication or cleanup: {pending}. Old copies removed: {removed}. Originals kept: {kept}.',
+    audio: 'Deemix recordings',
+    audioHint:
+      'Verify catalog duration and decoded audio before updating playlists and removing an old copy.',
     title: '라이브러리 업그레이드',
     subtitle:
       '이미 다운로드한 음악을 다시 다운로드하지 않고 정보를 개선합니다.',
@@ -858,6 +885,16 @@ export default {
     sourceYtmHint: '가장 일치도가 높은 메타데이터 제공',
     sourceYt: 'YouTube',
     sourceYtHint: 'YouTube Music에 없는 곡을 위한 대체 출처',
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
+    deemixEnabled: 'Use Deemix',
+    deemixInPlace:
+      'Keep audio, artwork and lyrics in the shared Deemix folder, without rewriting its tags. Configure a private ARL file on the server; do not paste it here.',
+    deemixUrl: 'Deemix server URL',
+    deemixRemote: 'Download folder inside Deemix',
+    deemixLocal: 'Same folder inside Downtify (read-only is supported)',
+    deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
     slskdHint:
       'slskd 서버를 통해 Soulseek에서 음원을 다운로드합니다. 찾지 못한 트랙은 다음 음원 출처로 넘어갑니다.',
@@ -968,6 +1005,10 @@ export default {
     navidromeAdminHint:
       '선택 사항 — 설정하면 새 곡이 빠르게 반영되도록 Downtify가 라이브러리 검사를 직접 트리거할 수 있습니다.',
     test: {
+      connection_not_deemix: 'The server is not a compatible Deemix instance.',
+      quality_unavailable:
+        'The Deezer account cannot stream the requested quality.',
+
       button: '연결 테스트',
       testing: '테스트 중…',
       needFields: '위 필드를 먼저 입력하세요.',
@@ -1010,6 +1051,9 @@ export default {
     navidromeSyncHint:
       '재생목록 다운로드 및 모니터링 확인 후, Navidrome에 동일한 이름의 재생목록을 동기화합니다.',
     navidromePublic: 'Navidrome 재생목록 공개 설정',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
     libraryGroup: '라이브러리',
     coverCache: '커버 아트 캐싱',
     coverCacheHint:

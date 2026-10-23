@@ -420,8 +420,16 @@ function createLibraryPlaylist(name) {
   return API.post('/api/library/playlists', { name })
 }
 
-function editLibraryPlaylistTracks(name, { add = [], remove = [] } = {}) {
-  return API.post('/api/library/playlists/tracks', { name, add, remove })
+function editLibraryPlaylistTracks(
+  name,
+  { add = [], remove = [], sourcePlaylistUrl = '' } = {}
+) {
+  return API.post('/api/library/playlists/tracks', {
+    name,
+    add,
+    remove,
+    ...(sourcePlaylistUrl ? { source_playlist_url: sourcePlaylistUrl } : {}),
+  })
 }
 
 function renameLibraryPlaylist(name, newName) {
@@ -797,6 +805,10 @@ function suggestDirs(path) {
 
 // Try an integration with the values as they are in the form, saved or
 // not. A failed test is still a 200: the answer says what's wrong.
+function testDeemix(config) {
+  return API.post('/api/deemix/test', config)
+}
+
 function testSlskd(config) {
   return API.post('/api/slskd/test', config)
 }
@@ -955,6 +967,7 @@ export default {
   suggestDirs,
   setSettings,
   testSlskd,
+  testDeemix,
   testNavidrome,
   getCookiesStatus,
   uploadCookies,

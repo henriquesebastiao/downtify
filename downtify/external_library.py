@@ -32,6 +32,7 @@ from .library_catalog import (
 from .library_metadata import library_entry_for_file
 from .library_paths import EXTERNAL_LIBRARY_PREFIX
 from .library_paths_cache import invalidate_library_paths_cache
+from .library_preference import prefer_entries
 from .library_upgrade import (
     CATEGORY_ARTWORK,
     UpgradeOptions,
@@ -106,7 +107,12 @@ def effective_external_library(settings: dict[str, Any]) -> dict[str, Any]:
     raw = settings.get('external_library')
     if not isinstance(raw, dict):
         raw = {}
-    return {'folders': sanitize_external_folders(raw.get('folders'))}
+    folders = sanitize_external_folders(raw.get('folders'))
+    result: dict[str, Any] = {'folders': folders}
+    primary = str(raw.get('primary_folder') or '')
+    if primary in folders:
+        result['primary_folder'] = primary
+    return result
 
 
 def extra_dirs_from_settings(
@@ -355,6 +361,7 @@ def partition_extra_entries(
 
 def finish_library_entries(
     entries: list[dict[str, Any]],
+    primary_extra_id: str = '',
 ) -> list[dict[str, Any]]:
     """Fold extra-folder tracks onto the rest of the library.
 
@@ -367,6 +374,10 @@ def finish_library_entries(
         is_external_stored(str(entry.get('file') or '')) for entry in entries
     ):
         return entries
+    if primary_extra_id:
+        return prefer_entries(
+            entries, primary_extra_id, finish_library_entries
+        )
     owned, kept, _skipped = partition_extra_entries(entries)
     return owned + kept
 

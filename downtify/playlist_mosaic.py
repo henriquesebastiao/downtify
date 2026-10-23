@@ -150,6 +150,8 @@ def refresh_manual_playlist_cover(
     """Write or remove ``m3u_path``'s ``.jpg`` from the playlist's tracks."""
 
     dest = m3u_path.with_suffix('.jpg')
+    if has_explicit_cover(m3u_path):
+        return dest
     images = unique_cover_images(ctx, files)
     if not images:
         dest.unlink(missing_ok=True)
@@ -159,3 +161,33 @@ def refresh_manual_playlist_cover(
         return dest
     dest.unlink(missing_ok=True)
     return None
+
+
+EXPLICIT_COVER_MARKER = '#EXTDOWNTIFY:cover=explicit'
+
+
+def has_explicit_cover(m3u_path: Path) -> bool:
+    """A source image takes precedence over a generated manual mosaic."""
+
+    if not m3u_path.with_suffix('.jpg').is_file():
+        return False
+    try:
+        with m3u_path.open(encoding='utf-8-sig') as stream:
+            return any(
+                line.strip() == EXPLICIT_COVER_MARKER
+                for _, line in zip(range(5), stream)
+            )
+    except OSError:
+        return False
+
+
+def keep_explicit_cover(m3u_path: Path) -> None:
+    """Remember a successfully saved source image, without changing tracks."""
+
+    if not m3u_path.with_suffix('.jpg').is_file():
+        return
+    text = m3u_path.read_text(encoding='utf-8')
+    if EXPLICIT_COVER_MARKER not in text.splitlines()[:5]:
+        lines = text.splitlines()
+        lines.insert(1, EXPLICIT_COVER_MARKER)
+        m3u_path.write_text('\n'.join(lines) + '\n', encoding='utf-8')

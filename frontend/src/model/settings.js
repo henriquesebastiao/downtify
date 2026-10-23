@@ -7,6 +7,14 @@ import { needsLanguageSync, splitUiLanguage } from '/src/lib/uiLanguage'
 
 const settings = ref({
   audio_providers: ['youtube-music'],
+  deemix: {
+    enabled: false,
+    base_url: '',
+    remote_dir: '/downloads',
+    source_dir: '/deemix',
+    bitrate: '3',
+    download_timeout_seconds: 600,
+  },
   slskd: {
     enabled: false,
     base_url: '',
@@ -28,6 +36,7 @@ const settings = ref({
     min_bitrate: 256,
   },
   external_library: {
+    primary_folder: '',
     folders: [],
   },
   lyrics_providers: [''],
@@ -84,7 +93,7 @@ const MIN_COVER_RESOLUTION = 300
 const MAX_COVER_RESOLUTION = 1200
 
 const settingsOptions = {
-  audio_providers: ['youtube', 'youtube-music', 'slskd'],
+  audio_providers: ['youtube', 'youtube-music', 'slskd', 'deemix'],
   lyrics_providers: ['lrclib', 'genius', 'musixmatch', 'azlyrics'],
   format: ['mp3', 'flac', 'ogg', 'opus', 'm4a'],
   bitrate: ['128', '192', '256', '320'],
@@ -198,10 +207,12 @@ function loadServerSettings() {
         ...settings.value,
         ...rest,
         slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
+        deemix: { ...settings.value.deemix, ...(rest.deemix || {}) },
         navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
         external_library: {
           ...settings.value.external_library,
           ...(rest.external_library || {}),
+          primary_folder: rest.external_library?.primary_folder || '',
           folders: Array.isArray(rest.external_library?.folders)
             ? rest.external_library.folders
             : settings.value.external_library.folders,
@@ -248,11 +259,15 @@ function rememberExternalFolders(folders) {
     settings.value.external_library = { folders: [] }
   }
   settings.value.external_library.folders = folders
+  if (!folders.includes(settings.value.external_library.primary_folder)) {
+    settings.value.external_library.primary_folder = ''
+  }
   if (!saved.value) return
   try {
     const parsed = JSON.parse(saved.value)
     parsed.external_library = {
       ...(parsed.external_library || {}),
+      primary_folder: settings.value.external_library.primary_folder || '',
       folders,
     }
     saved.value = JSON.stringify(parsed)
@@ -277,10 +292,12 @@ async function saveSettings() {
       ...settings.value,
       ...rest,
       slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
+      deemix: { ...settings.value.deemix, ...(rest.deemix || {}) },
       navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
       external_library: {
         ...settings.value.external_library,
         ...(rest.external_library || {}),
+        primary_folder: rest.external_library?.primary_folder || '',
         folders: Array.isArray(rest.external_library?.folders)
           ? rest.external_library.folders
           : settings.value.external_library.folders,
