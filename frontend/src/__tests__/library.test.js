@@ -76,6 +76,17 @@ describe('normalizeTrack', () => {
     const track = normalizeTrack('ext/abc123def456/Artist - Title.mp3')
     expect(track.url).toBe('/media/ext/abc123def456/Artist%20-%20Title.mp3')
   })
+
+  it('keeps the explicit mark, and is clean without one', () => {
+    const loud = normalizeTrack({ file: 'a.mp3', title: 'A', explicit: true })
+    const rows = [
+      normalizeTrack({ file: 'b.mp3', title: 'B' }),
+      normalizeTrack({ file: 'c.mp3', title: 'C', explicit: false }),
+      normalizeTrack('d.mp3'),
+    ]
+    expect(loud.explicit).toBe(true)
+    expect(rows.map((track) => track.explicit)).toEqual([false, false, false])
+  })
 })
 
 describe('groupAlbums', () => {

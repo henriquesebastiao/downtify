@@ -97,7 +97,7 @@ GET /api/v1/library?since=<cursor>
       "album_id": "6aa1df0c3e5f2b11", "artist_id": "0a92c1e0bb3d8f44",
       "track_number": 3, "year": "1994", "duration": 305.12,
       "codec": "flac", "bitrate": 912000, "sample_rate": 44100, "channels": 2,
-      "size": 34812211, "added": 1789600669, "has_cover": true, "playlists": ["Trip-hop"]
+      "size": 34812211, "added": 1789600669, "has_cover": true, "explicit": true, "playlists": ["Trip-hop"]
     }
   ],
   "deleted": ["t0c4…"]
@@ -108,11 +108,12 @@ GET /api/v1/library?since=<cursor>
 - Later: `since=<last cursor>` → only tracks added or changed since, and ids of removed ones. Save `cursor` only after applying the response.
 - **`full: true` at any time** (a cursor too old — removed tracks are remembered for 90 days — or one the server doesn't recognise) means: replace the local library with `tracks`.
 - **`id`** is stable across moves and renames of the file (see `downtify/library_sync.py` for the exact rules); a file moved *and* re-tagged in the same sweep comes back as a new id plus a deleted old one. Key everything local (offline files, likes, queue, history) by `id`, never by `file`.
+- **`explicit`** is `true` on a track whose file is marked explicit and **absent** on every other track: read absent as `false`. Show it like the web app does, a small "E" next to the title (see [Explicit Marker](features/explicit-marker.md)).
 - **Grouping:** albums group by `album_id` (album artist + album title, case-insensitive; `""` = no album), artists by `artist_id` (the album artist). This is exactly the web app's grouping.
 - `ETag`/`If-None-Match` are supported (`304` when nothing changed for that `since`).
 - `refresh=true` rescans the folder now (pull to refresh) — otherwise the scan behind the list is cached for about a minute.
 - When the server says the library changed (WebSocket `library_changed`, below), sync again.
-- **Whose library:** the feed holds the paired account’s own tracks (an admin’s device gets everything). Tracks outside the account arrive as removed ids. Nothing below changes shape because of this. Podcast shows, episode progress, listens and the block list are per-account the same way; subscribing to a show works from the web page.
+- **Whose library:** the library is shared, so the feed holds every track except what an admin [hid from users](features/users.md#hiding-from-users) (an admin’s device gets everything). A track that becomes hidden arrives as a removed id, and one shown again arrives as an ordinary row. Nothing below changes shape because of this. Podcast shows, episode progress, listens and the block list are per-account the same way; subscribing to a show works from the web page.
 
 Other reads, all by track id:
 
@@ -121,7 +122,10 @@ Other reads, all by track id:
 | `GET /api/v1/tracks/{id}` | One track row |
 | `GET /api/v1/tracks/{id}/lyrics` | `{ "synced": "<LRC>", "plain": "…" }` (either may be empty) |
 | `GET /api/v1/tracks/{id}/cover?size=150\|300\|600` | JPEG thumbnail; omit `size` for the full picture. `ETag` + `Cache-Control: private, max-age=604800` |
-| `GET /api/v1/playlists` | `[{ "name", "liked", "count", "cover", "track_ids": [...] }]` (`cover` is a path for `GET /playlist-cover?file=`, or `""`) |
+| `GET /api/v1/playlists` | `[{ "name", "liked", "manual", "count", "cover", "track_ids": [...], "owner", "visibility", "mine", "followed", "shared_with_me", "new" }]` (`cover` is a path for `GET /playlist-cover?file=`, or `""`). Other people's shared or followed playlists are in here, view-only (`mine: false`): list them apart from the user's own, labelled with `owner` |
+| `GET /api/v1/usernames` | `{ "enabled", "usernames": [...] }` — who a playlist can be shared with |
+| `POST` / `DELETE /api/v1/playlists/follow` | Body (or `?name=`) `{ "name" }` — follow a public playlist, or stop |
+| `POST /api/v1/playlists/seen` | Body `{ "name" }` — clear the `new` marker of a playlist shared with the user |
 | `GET /api/v1/likes` | `{ "track_ids": [...] }`, newest first |
 | `PUT /api/v1/likes` | Body `{ "track_id", "liked" }` — idempotent |
 
@@ -170,6 +174,7 @@ Messages the app can rely on:
 | Message | When |
 |---------|------|
 | `{ "type": "library_changed" }` | Tracks were added, removed or moved (debounced ~2 s) — sync |
+| `{ "type": "playlists_changed" }` | A playlist was shared, unshared, followed, copied, detached, renamed or deleted — refetch `GET /api/v1/playlists` |
 | `{ "type": "likes", "count": 3 }` | Likes changed somewhere — refetch `GET /api/v1/likes` |
 | `{ "type": "queue_reload" }` | Many downloads were queued at once — refetch `GET /api/queue` |
 | `{ "song": {…}, "progress": 42.5, "status": "downloading"\|"done"\|"error", "message", "filename", "provider" }` | A server download's progress (no `type`) — one’s own jobs only (every job on an admin’s device) |

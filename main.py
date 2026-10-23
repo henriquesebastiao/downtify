@@ -38,10 +38,12 @@ from downtify import (
 )
 from downtify.activity import ActivityLog
 from downtify.auth import AuthMiddleware, AuthStore, auth_disabled_from_env
+from downtify.catalog_worker import start_catalog_worker
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
 from downtify.cover_thumbs import CoverThumbs
+from downtify.cover_thumbs import normalize_size as normalize_cover_size
 from downtify.discover import DiscoverStore
 from downtify.discovery import Announcer, discovery_enabled
 from downtify.downloader import Downloader
@@ -72,6 +74,7 @@ from downtify.library_paths_cache import (
 from downtify.library_sync import LibrarySync
 from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
+from downtify.library_visibility import LibraryVisibility
 from downtify.likes import LikedTracks
 from downtify.lyrics import read_track_lyrics
 from downtify.lyrics_cache import LyricsLookupCache
@@ -82,6 +85,7 @@ from downtify.playlist_catalog import (
     ManualPlaylistOwners,
     PlaylistCatalog,
 )
+from downtify.playlist_shares import PlaylistShares
 from downtify.playlist_spotify_cache import (
     PlaylistSpotifyCache,
     playlist_spotify_cache_loop,
@@ -99,7 +103,11 @@ from downtify.stream import stream_cache_from_env
 from downtify.telemetry import redact_url_secrets
 from downtify.track_index import TrackIndex
 from downtify.track_owners import TrackOwners
-from downtify.traffic import TrafficCounters, TrafficMiddleware
+from downtify.traffic import (
+    TrafficCounters,
+    TrafficMiddleware,
+    traffic_flush_loop,
+)
 from downtify.transcode import transcoder_from_env
 from downtify.update_check import UpdateChecker, update_check_loop
 
@@ -340,11 +348,13 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     set_listing_refresh_gate(_downloads_using_disk)
     api.state.playlist_catalog = PlaylistCatalog(library_db)
     api.state.manual_playlist_owners = ManualPlaylistOwners(library_db)
+    api.state.playlist_shares = PlaylistShares(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
     api.state.track_owners = TrackOwners(library_db)
+    api.state.library_visibility = LibraryVisibility(library_db)
     api.state.traffic = TrafficCounters(library_db)
     api.state.podcasts = PodcastStore(library_db)
     # The mobile API (downtify/mobile_routes.py).
@@ -453,6 +463,7 @@ def build_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         loop = asyncio.get_running_loop()
+        start_catalog_worker()
         api.state.loop = loop
         api.state.download_semaphore = asyncio.Semaphore(
             api._clamp_parallel_downloads(
@@ -497,6 +508,12 @@ def build_app() -> FastAPI:
                 get_podcasts=lambda: api.state.podcasts,
             ),
             name='monitor-loop',
+        )
+        # Served bytes are counted in memory (an event-loop write per
+        # response stalled every request); this saves them.
+        api.spawn_task(
+            traffic_flush_loop(lambda: api.state.traffic),
+            name='traffic-flush',
         )
         # Separate hourly sweep that forgets a downloaded-track record once
         # its file is gone from the downloads directory — see
@@ -659,7 +676,7 @@ def build_app() -> FastAPI:
         and files known to the track index.
 
         The directory scan is cached briefly; ``?refresh=true`` forces a
-        rescan. A user sees their own files only.
+        rescan. A user sees every file but those an admin hid from users.
         """
         if refresh:
             api.invalidate_library_paths_cache(drop_entries=True)
@@ -673,7 +690,7 @@ def build_app() -> FastAPI:
         ``downtify.playlist_listing.list_library_playlists``.
 
         A user sees their own playlists (and their own liked songs as
-        the liked one) only.
+        the liked one) only; the tracks inside leave out hidden songs.
         """
         return api.playlists_for_request(request)
 
@@ -689,8 +706,8 @@ def build_app() -> FastAPI:
         ``?playlist=``, ``?artist=``, ``?album=`` and ``?q=`` return a
         subset so pages that show one list do not download the whole
         library. ``?limit=`` caps that subset (search picker). The filters
-        come from the query string (one handler argument) so a user only
-        ever sees their own rows.
+        come from the query string (one handler argument) so a user never
+        sees a row an admin hid from users.
 
         Each row has ``file``, ``artist`` and ``album``, plus ``title``,
         ``has_cover`` and, when the file belongs to a downloaded
@@ -717,7 +734,9 @@ def build_app() -> FastAPI:
             # for other users' collections).
             match = api.playlist_entry_for_request(name, request)
             files = list(match.get('files') or []) if match else []
-            tracks = list_entries_for_stored_paths(ctx, files)
+            tracks = api.visible_entries(
+                list_entries_for_stored_paths(ctx, files), request
+            )
         else:
             tracks = api.entries_for_request(request)
             tracks.sort(key=lambda t: t['file'])
@@ -756,7 +775,7 @@ def build_app() -> FastAPI:
         to be one click per track. Returns a single-use ticket the
         browser then navigates to - the file list is too long for a URL,
         and a fetch would have to hold the whole archive in memory. A
-        user can only pack their own files.
+        user cannot pack what an admin hid from users.
         """
 
         if not files:
@@ -849,7 +868,7 @@ def build_app() -> FastAPI:
             api.ownership_action, file, request
         )
         if action == 'foreign':
-            result = {'deleted': False, 'error': 'Not in your library'}
+            result = {'deleted': False, 'error': api.NOT_YOURS_ERROR}
         elif action == 'release':
             result = await asyncio.to_thread(
                 api.release_file_ownership, file, key, user_id
@@ -905,7 +924,7 @@ def build_app() -> FastAPI:
                 if action == 'foreign':
                     results[name] = {
                         'deleted': False,
-                        'error': 'Not in your library',
+                        'error': api.NOT_YOURS_ERROR,
                     }
                 elif action == 'release':
                     results[name] = await asyncio.to_thread(
@@ -953,12 +972,31 @@ def build_app() -> FastAPI:
         return read_track_lyrics(full)
 
     @app.get('/cover')
-    def get_cover(file: str):
+    def get_cover(file: str, size: str = ''):
+        """A library track's cover. ``size=150|300|600`` (longest side,
+        px) serves a scaled copy cached under ``<data>/cover_thumbs``, for
+        lists and grids that show it small; without it, the full image."""
         # Resolved and confined to the downloads or slskd folder, which
         # prevents path traversal.
         full = resolve_library_file(file, api.library_context())
         if full is None:
             raise HTTPException(status_code=404, detail='File not found')
+
+        thumbs = api.state.cover_thumbs
+        wanted = normalize_cover_size(size) if size else 0
+        # A cover only known to the cover cache (read-only extra folders)
+        # has nothing to scale: it falls through to the full image below.
+        found = thumbs.get(full, wanted) if wanted and thumbs else None
+        if found is not None:
+            thumb, thumb_mime, etag = found
+            return Response(
+                content=thumb,
+                media_type=thumb_mime,
+                headers={
+                    'Cache-Control': 'public, max-age=86400',
+                    'ETag': etag,
+                },
+            )
 
         data: bytes | None = None
         mime: str | None = None

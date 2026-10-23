@@ -383,7 +383,7 @@ async function refresh() {
     collectionsPayload(
       library.artists.value,
       library.albums.value,
-      library.playlists.value,
+      library.ownPlaylists.value,
       likes.liked.value
     )
   )

@@ -124,12 +124,16 @@
         :count="selected.size"
         :total="items.length"
         :zipping="zipping"
+        :can-hide="auth.isAdmin.value && selectionPlan.hide.length > 0"
+        :can-show="auth.isAdmin.value && selectionPlan.show.length > 0"
         @select-all="selected = new Set(items.map((track) => track.file))"
         @clear="selected = new Set()"
         @play="actions.play(selectedTracks, 0, libraryContext)"
         @enqueue="actions.enqueue(selectedTracks)"
         @zip="zipSelected"
         @delete="deleteSelected"
+        @hide-from-users="visibility.change('hide', selectionPlan.hide)"
+        @show-to-users="visibility.change('show', selectionPlan.show)"
         @add-to-playlist="playlistActions.openCreate(selectedTracks)"
       />
       <div class="flex flex-wrap items-center gap-2">
@@ -147,7 +151,8 @@
         >
           {{ t('actions.shuffle') }}
         </UiButton>
-        <span class="tabular ml-auto text-[13px] text-muted">
+        <TrackSortSelect v-model="trackSort" class="ml-auto" />
+        <span class="tabular text-[13px] text-muted">
           {{ t('common.tracks', { count: items.length }) }}
         </span>
       </div>
@@ -159,55 +164,98 @@
       />
     </template>
 
-    <!-- Albums / artists / playlists: grid -->
-    <div
+    <!-- Albums / artists / playlists: grid (only the rows on screen) -->
+    <VirtualGrid
       v-else-if="view === 'grid'"
-      class="grid grid-cols-2 gap-x-4 gap-y-7 xs:gap-x-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 min-[1900px]:grid-cols-7"
+      :key="`grid-${tab}`"
+      :items="items"
     >
-      <MediaTile
-        v-for="item in items"
-        :key="item.key"
-        v-bind="tileProps(item)"
-        class="[contain-intrinsic-size:auto_260px] [content-visibility:auto]"
-        @play="playItem(item)"
-      >
-        <template
-          v-if="tab === 'playlists' && item.batch?.missing_count"
-          #badge
-        >
-          <span
-            class="absolute right-2.5 bottom-2.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-warn backdrop-blur"
+      <template #default="{ item }">
+        <MediaTile v-bind="tileProps(item)" @play="playItem(item)">
+          <template v-if="adminMenu(item).length" #overlay>
+            <UiMenu :items="adminMenu(item)" :label="t('common.more')">
+              <template #trigger>
+                <button
+                  type="button"
+                  class="flex size-9 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur transition-colors hover:bg-black/75"
+                  :aria-label="t('common.more')"
+                >
+                  <AppIcon name="more" :size="18" />
+                </button>
+              </template>
+            </UiMenu>
+          </template>
+          <template
+            v-if="tab === 'playlists' && item.batch?.missing_count"
+            #badge
           >
-            {{
-              t('playlists.missingShort', { count: item.batch.missing_count })
-            }}
-          </span>
+            <span
+              class="absolute right-2.5 bottom-2.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-warn backdrop-blur"
+            >
+              {{
+                t('playlists.missingShort', {
+                  count: item.batch.missing_count,
+                })
+              }}
+            </span>
+          </template>
+        </MediaTile>
+      </template>
+    </VirtualGrid>
+
+    <!-- Albums / artists / playlists: list (only the rows on screen) -->
+    <div v-else class="-mx-3">
+      <VirtualGrid
+        :key="`list-${tab}`"
+        :items="items"
+        layout="list"
+        :row-height="72"
+      >
+        <template #default="{ item }">
+          <MediaRow
+            v-bind="tileProps(item)"
+            :aside="asideFor(item)"
+            @play="playItem(item)"
+          >
+            <template v-if="tab === 'playlists'" #meta>
+              <PlaylistStatus :playlist="item" class="w-56" />
+            </template>
+            <template
+              v-if="tab === 'playlists' || adminMenu(item).length"
+              #actions
+            >
+              <UiMenu
+                :items="
+                  tab === 'playlists' ? playlistMenu(item) : adminMenu(item)
+                "
+                :label="t('common.more')"
+                size="sm"
+              />
+            </template>
+          </MediaRow>
         </template>
-      </MediaTile>
+      </VirtualGrid>
     </div>
 
-    <!-- Albums / artists / playlists: list -->
-    <div v-else class="-mx-3 flex flex-col">
-      <MediaRow
-        v-for="item in items"
-        :key="item.key"
-        v-bind="tileProps(item)"
-        :aside="asideFor(item)"
-        class="[contain-intrinsic-size:auto_72px] [content-visibility:auto]"
-        @play="playItem(item)"
-      >
-        <template v-if="tab === 'playlists'" #meta>
-          <PlaylistStatus :playlist="item" class="w-56" />
-        </template>
-        <template v-if="tab === 'playlists'" #actions>
-          <UiMenu
-            :items="playlistMenu(item)"
-            :label="t('common.more')"
-            size="sm"
-          />
-        </template>
-      </MediaRow>
-    </div>
+    <!-- Other people's playlists, never mixed into the user's own -->
+    <template v-if="tab === 'playlists' && library.loaded.value">
+      <SharedPlaylists
+        :title="t('sharing.sharedWithMe')"
+        :hint="t('sharing.sharedWithMeHint')"
+        :items="sharedItems"
+        @play="playItem"
+      />
+      <SharedPlaylists
+        v-if="account.showPublicPlaylists.value || followedItems.length"
+        :title="t('sharing.publicPlaylists')"
+        :hint="t('sharing.publicPlaylistsHint')"
+        :items="publicItems"
+        collapsible
+        storage-key="downtify-public-playlists-open"
+        :searching="Boolean(filter.trim())"
+        @play="playItem"
+      />
+    </template>
   </div>
 </template>
 
@@ -226,16 +274,22 @@ import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import MediaRow from '/src/components/library/MediaRow.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'
+import VirtualGrid from '/src/components/library/VirtualGrid.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
+import SharedPlaylists from '/src/components/library/SharedPlaylists.vue'
 import TrackList from '/src/components/library/TrackList.vue'
+import TrackSortSelect from '/src/components/library/TrackSortSelect.vue'
 import API from '/src/model/api'
+import { useAccount } from '/src/model/account'
+import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useUi } from '/src/model/ui'
+import { useVisibility } from '/src/model/visibility'
 import {
   albumKey,
   artistKey,
@@ -244,6 +298,7 @@ import {
   sortItems,
 } from '/src/lib/library'
 import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
+import { selectionChanges } from '/src/lib/visibility'
 import { formatBytes, splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -255,6 +310,9 @@ const player = usePlayer()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
 const ui = useUi()
+const auth = useAuth()
+const account = useAccount()
+const visibility = useVisibility()
 
 const TABS = ['albums', 'artists', 'playlists', 'tracks']
 const lastTab = useLocalStorage('downtify-library-tab', 'albums')
@@ -379,7 +437,7 @@ const tabs = computed(() => [
   {
     id: 'playlists',
     label: t('library.playlists'),
-    count: library.playlists.value.length,
+    count: library.ownPlaylists.value.length,
     to: { name: 'Library', params: { tab: 'playlists' } },
   },
   {
@@ -454,14 +512,45 @@ const items = computed(() => {
     )
   }
   return sortItems(
-    filterItems(library.playlists.value, filter.value, ['title', 'name']),
+    filterItems(library.ownPlaylists.value, filter.value, ['title', 'name']),
     sortKey.value
   )
 })
 
+// Other people's playlists, searched by name and owner. The public ones
+// shown are those the user follows, plus all of them unless they turned
+// "Show public playlists" off (the server applies that too).
+const sharedItems = computed(() =>
+  filterItems(library.sharedPlaylists.value, filter.value, [
+    'title',
+    'name',
+    'owner',
+  ])
+)
+const publicItems = computed(() =>
+  filterItems(library.publicPlaylists.value, filter.value, [
+    'title',
+    'name',
+    'owner',
+  ])
+)
+const followedItems = computed(() =>
+  library.publicPlaylists.value.filter((playlist) => playlist.followed)
+)
+
 const selectedTracks = computed(() =>
   items.value.filter((track) => selected.value.has(track.file))
 )
+
+// What the selection's hide / show buttons would change (admins).
+const selectionPlan = computed(() => selectionChanges(selectedTracks.value))
+
+// Admins: hide an album or artist from users, or show it again.
+function adminMenu(item) {
+  if (tab.value === 'albums') return visibility.albumMenu(item)
+  if (tab.value === 'artists') return visibility.artistMenu(item)
+  return []
+}
 
 const libraryContext = computed(() => ({
   type: 'library',
@@ -480,6 +569,7 @@ function tileProps(item) {
       cover: item.cover,
       name: item.title,
       icon: 'disc',
+      hiddenBy: auth.isAdmin.value ? item.hiddenBy || '' : '',
       playing:
         !!current.value &&
         albumKey(current.value.albumArtist, current.value.album) === item.key,
@@ -505,6 +595,7 @@ function tileProps(item) {
       name: item.name,
       icon: 'user',
       round: true,
+      hiddenBy: auth.isAdmin.value ? item.hiddenBy || '' : '',
       playing:
         !!current.value && artistKey(current.value.albumArtist) === item.key,
     }

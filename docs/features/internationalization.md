@@ -4,7 +4,7 @@ icon: lucide/languages
 
 # Internationalization
 
-Downtify's UI is fully translatable. The default language is **English**, with seven other languages included out of the box.
+Downtify's UI is fully translatable. The default language is **English**, with eight other languages included out of the box.
 
 ## Switching language
 
@@ -12,16 +12,17 @@ Go to **Settings → Language** and pick your preferred language. The choice is 
 
 ## Available languages
 
-| Code | Language |
-|------|---------|
-| `en` | English (default) |
-| `es` | Español |
+| Code    | Language           |
+| ------- | ------------------ |
+| `en`    | English (default)  |
+| `es`    | Español            |
 | `pt-BR` | Português (Brasil) |
-| `fr` | Français |
-| `tr` | Türkçe |
-| `el` | Ελληνικά |
-| `hu` | Magyar |
-| `bg` | Български |
+| `fr`    | Français           |
+| `tr`    | Türkçe             |
+| `el`    | Ελληνικά           |
+| `hu`    | Magyar             |
+| `bg`    | Български          |
+| `de`    | Deutsch            |
 
 ## Adding a new language
 

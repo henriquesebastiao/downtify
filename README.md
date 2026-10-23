@@ -1,16 +1,17 @@
-<h1 align="center">
-  <a href="https://github.com/henriquesebastiao/downtify" target="_blank" rel="noopener noreferrer">
-    <picture>
-      <img width="80" src="https://github.com/user-attachments/assets/628d4334-7326-446e-9f2a-4d3ab4fc95c3">
-    </picture>
-  </a>
-  <br>
-  Downtify
-</h1>
-
+<p align="center"><img width="80" src="https://github.com/user-attachments/assets/628d4334-7326-446e-9f2a-4d3ab4fc95c3"></p>
+<h1 align="center">Downtify</h1>
 <p align="center">
-  <strong>Self-hosted music downloader. Paste a Spotify link, get a perfectly tagged audio file — no API keys, no account, no hassle.</strong>
+  <a href="https://downtify.henriquesebastiao.com/getting-started/installation/">Install</a> •
+  <a href="https://downtify.henriquesebastiao.com/">Documentation</a>
 </p>
+<p align="center">
+  <a href="https://downtify.henriquesebastiao.com/features/">Features</a> •
+  <a href="https://downtify.henriquesebastiao.com/changelog/">Changelog</a> •
+  <a href="https://github.com/sponsors/henriquesebastiao">Sponsor</a> •
+  <a href="https://github.com/henriquesebastiao/downtify/blob/main/CONTRIBUTING.md">Contributing</a>
+</p>
+
+<p align="center">Self-hosted music downloader. Paste a Spotify link, <br> get a perfectly tagged audio file no API keys, no account, no hassle</p>
 
 <div align="center">
 
@@ -19,11 +20,6 @@
 [![GitHub License](https://img.shields.io/github/license/henriquesebastiao/downtify?color=blue)](/LICENSE)
 [![Docker Pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Fhenriquesebastiao%2Fdowntify%2Fdowntify&query=downloadCount&style=flat&label=docker%20pulls)](https://github.com/henriquesebastiao/downtify/pkgs/container/downtify)
 [![Visitors](https://api.visitorbadge.io/api/visitors?path=henriquesebastiao%2Fdowntify&label=repository%20visits&countColor=%231182c3&style=flat)](https://github.com/henriquesebastiao/downtify)
-
-[Documentation](https://henriquesebastiao.github.io/downtify/) ·
-[Installation](https://henriquesebastiao.github.io/downtify/getting-started/installation/) ·
-[Features](https://henriquesebastiao.github.io/downtify/features/) ·
-[Changelog](https://henriquesebastiao.github.io/downtify/changelog/)
 
 </div>
 
@@ -54,18 +50,20 @@ All of it runs inside a single Docker container. See **[How it works](https://he
 | **Charts** | Browse Deezer's global "what's trending" chart — tracks (streaming in full, downloadable straight from the list), plus albums, artists and playlists to explore. See [Charts](https://henriquesebastiao.github.io/downtify/features/charts/). |
 | **Similar** | Name an artist and a track to get similar tracks from YouTube Music's radio mix — every row plays in full in the player, downloaded or streamed, no key needed. See [Similar](https://henriquesebastiao.github.io/downtify/features/similar/). |
 | **Finder** | Discover's search box: search Deezer, then explore an artist in Finder-style columns: their profile and bio, their whole discography, and any album's tracks playing in full, ready to download. See [Finder](https://henriquesebastiao.github.io/downtify/features/finder/). |
-| **Tags and lyrics** | Title, artist, album, year and cover art embedded in every file. Plain and time-synced lyrics from LRCLIB and NetEase, tried in the order you choose. See [Lyrics](https://henriquesebastiao.github.io/downtify/features/lyrics/). |
+| **Tags and lyrics** | Title, artist, album, year and cover art embedded in every file, plus an explicit marker (the "E" you know from Spotify) on songs with explicit lyrics, shown in search, the Library and the player. Plain and time-synced lyrics from LRCLIB and NetEase, tried in the order you choose. See [Lyrics](https://henriquesebastiao.github.io/downtify/features/lyrics/) and [Explicit marker](https://henriquesebastiao.github.io/downtify/features/explicit-marker/). |
 | **Playlist Monitor** | Watch Spotify, public Deezer or YouTube Music playlists, plus Spotify/YouTube Music artists. Start from a library artist page or a chart playlist card. Artist watches can be limited to albums, singles or EPs, and to releases from now on. See [Playlist Monitor](https://henriquesebastiao.github.io/downtify/features/playlist-monitor/). |
 | **Built-in player** | Full-screen Now playing with synced lyrics, an editable queue, a sleep timer, keyboard shortcuts, media keys and a ten-band equalizer (experimental). See [Built-in player](https://henriquesebastiao.github.io/downtify/features/player/). |
 | **Liked songs** | Tap the heart on a song and a *Liked songs* playlist of everything you have liked appears, in Downtify and in your media server. See [Liked songs](https://henriquesebastiao.github.io/downtify/features/liked-songs/). |
 | **Podcasts** | Subscribe by RSS feed, Spotify link or name; new episodes download, tag and keep their resume position on their own. See [Podcasts](https://henriquesebastiao.github.io/downtify/features/podcasts/). |
 | **Discover** | Artists, albums and playlists you don't have yet, suggested from your library, liked songs and what you play — from Deezer first, with Spotify's picks added as they arrive, no account or API key. Artists and Deezer albums open in the Finder; play any album's or playlist's songs in full before downloading, and hide any artist you never want suggested. See [Discover](https://henriquesebastiao.github.io/downtify/features/discover/). |
-| **Users & activity** | Sign in with a username and password; admins add accounts for the rest of the house, each user sees only the tracks, likes and playlists they added themselves (admins see everything; files are never stored twice), and an activity log shows who signed in and who is playing what. See [Users & sign-in](https://henriquesebastiao.github.io/downtify/features/users/). |
+| **Users & activity** | Sign in with a username and password; admins add accounts for the rest of the house. The library is shared — everyone sees every downloaded song — and admins can hide songs, albums or artists from users. Likes and playlists stay per account unless you share a playlist, view-only, with named users or with everyone, and an activity log shows who signed in and who is playing what. See [Users & sign-in](https://henriquesebastiao.github.io/downtify/features/users/). |
 | **Mobile apps** *(experimental)* | Pair a phone app by QR code and stream your library to it — original quality or transcoded for mobile data — with offline copies and casting. The server side is ready; the Android app itself is [still in development](#downtify-for-android). See [Mobile apps](https://henriquesebastiao.github.io/downtify/features/mobile-apps/). |
-| **Library** | Albums, artists, playlists and tracks in a grid or a list, with filtering, multi-select and download as a ZIP. Create your own playlists (and rename them), and add songs from downloads or extra folders (imported Spotify/YouTube playlists stay read-only). **Existing music folders** import a collection you already have (tags stay on disk; artists are matched to the library). **Upgrade library** repairs small covers, missing lyrics and incomplete tags on music you already have, without re-downloading, and **Replace audio** swaps a wrongly matched song for the version you pick, keeping it in its playlists. Pick a real photo and banner for an artist from YouTube Music, Deezer, Spotify or your own upload. See [Library catalog](https://henriquesebastiao.github.io/downtify/features/library-catalog/), [Existing music folders](https://henriquesebastiao.github.io/downtify/features/external-library/), [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/), [Replace audio](https://henriquesebastiao.github.io/downtify/features/replace-audio/) and [Artist photo & banner](https://henriquesebastiao.github.io/downtify/features/artist-images/). |
+| **Library** | Albums, artists, playlists and tracks in a grid or a list, with filtering, sorting (the Tracks tab and every playlist's songs too), multi-select and download as a ZIP. Create your own playlists (and rename them), and add songs from downloads or extra folders (imported Spotify/YouTube playlists stay read-only until you detach them from their source to edit them). **Existing music folders** import a collection you already have (tags stay on disk; artists are matched to the library). **Upgrade library** repairs small covers, missing lyrics and incomplete tags on music you already have, without re-downloading, and **Replace audio** swaps a wrongly matched song for the version you pick, keeping it in its playlists. Pick a real photo and banner for an artist from YouTube Music, Deezer, Spotify or your own upload. See [Library catalog](https://henriquesebastiao.github.io/downtify/features/library-catalog/), [Existing music folders](https://henriquesebastiao.github.io/downtify/features/external-library/), [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/), [Replace audio](https://henriquesebastiao.github.io/downtify/features/replace-audio/) and [Artist photo & banner](https://henriquesebastiao.github.io/downtify/features/artist-images/). |
 | **Playlist files** | Standard M3U files that Jellyfin, Navidrome and Plex pick up, plus each playlist's own cover art, saved before its tracks. A flat folder layout or one folder per artist. See [M3U export](https://henriquesebastiao.github.io/downtify/features/m3u-export/), [Playlist cover art](https://henriquesebastiao.github.io/downtify/features/playlist-cover-art/) and [File organization](https://henriquesebastiao.github.io/downtify/features/file-organization/). |
 | **Integrations** | Optionally download from Soulseek through your own slskd server and mirror playlists into Navidrome, each with a **Test connection** button in Settings. See [slskd & Navidrome](https://henriquesebastiao.github.io/downtify/features/slskd-navidrome/). |
 | **Interface** | Light and dark themes, one layout from phone to widescreen, an installable app ([PWA](https://henriquesebastiao.github.io/downtify/features/pwa/)), live download progress, update notices and eight languages. |
+
+Read-only music folders stay protected during **Upgrade library**: their tracks are skipped before remote lookups, without changing files or marking unchecked categories as complete. See [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/#read-only-music-folders).
 
 ## Quick start
 
@@ -152,7 +150,7 @@ See **[Troubleshooting](https://henriquesebastiao.github.io/downtify/troubleshoo
 
 ## Translations
 
-The interface is available in English, Spanish, Brazilian Portuguese, French, Turkish, Hungarian, Greek and Bulgarian. Switch language in **Settings → Language**; the choice is saved in the browser and applies without a reload.
+The interface is available in English, Spanish, Brazilian Portuguese, French, Turkish, Hungarian, Greek, Bulgarian and German. Switch language in **Settings → Language**; the choice is saved in the browser and applies without a reload.
 
 ### Contributing translations
 

@@ -68,6 +68,7 @@
         class="flex h-11 items-center gap-2.5 rounded-control px-3 transition-colors hover:bg-surface-2/60"
       >
         <CoverArt
+          :thumb="150"
           :src="playlist.cover"
           :covers="playlist.covers"
           :name="playlist.title"
@@ -86,6 +87,52 @@
             t('common.tracks', { count: itemTrackCount(playlist) })
           }}</span>
         </span>
+      </RouterLink>
+    </div>
+
+    <div
+      v-if="sharedNav.length"
+      class="flex flex-col gap-1"
+      :class="labelClass"
+    >
+      <div class="flex items-center justify-between px-3 pb-1.5">
+        <span class="eyebrow">{{ t('sharing.navTitle') }}</span>
+        <RouterLink
+          :to="{ name: 'Library', params: { tab: 'playlists' } }"
+          class="text-xs font-semibold text-faint hover:text-fg"
+          >{{ t('common.seeAll') }}</RouterLink
+        >
+      </div>
+      <RouterLink
+        v-for="playlist in sharedNav"
+        :key="playlist.key"
+        :to="{ name: 'Playlist', query: { name: playlist.name } }"
+        class="flex h-11 items-center gap-2.5 rounded-control px-3 transition-colors hover:bg-surface-2/60"
+      >
+        <CoverArt
+          :thumb="150"
+          :src="playlist.cover"
+          :covers="playlist.covers"
+          :name="playlist.title"
+          rounded="rounded-[7px]"
+          :letter-size="13"
+          :icon-size="14"
+          icon="playlist"
+          class="size-[30px]"
+        />
+        <span class="flex min-w-0 flex-col">
+          <span class="truncate text-[13px] font-medium text-fg-2">{{
+            playlist.title
+          }}</span>
+          <span class="truncate text-[11px] text-faint">{{
+            playlist.owner
+          }}</span>
+        </span>
+        <span
+          v-if="playlist.isNew"
+          class="ml-auto size-2 shrink-0 rounded-full bg-accent"
+          :title="t('sharing.new')"
+        />
       </RouterLink>
     </div>
 
@@ -222,10 +269,21 @@ const labelClass = computed(() =>
 )
 
 const recentPlaylists = computed(() =>
-  [...library.playlists.value]
+  [...library.ownPlaylists.value]
     .filter((playlist) => itemTrackCount(playlist))
     // The liked songs stay at the top; the rest are the newest.
     .sort((a, b) => Number(b.liked) - Number(a.liked) || b.added - a.added)
     .slice(0, 6)
+)
+
+// Other people's: what was shared with the user (new ones first) and the
+// public playlists they follow.
+const sharedNav = computed(() =>
+  [
+    ...library.sharedPlaylists.value,
+    ...library.publicPlaylists.value.filter((playlist) => playlist.followed),
+  ]
+    .sort((a, b) => Number(b.isNew) - Number(a.isNew))
+    .slice(0, 4)
 )
 </script>

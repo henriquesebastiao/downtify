@@ -68,6 +68,7 @@ A pasted Deezer track/album/playlist/artist link (`deezer.com/track/…`) works 
 | Year | Yes |
 | Album art (JPEG) | Yes |
 | Lyrics (plain + synced) | Yes, if lrclib returns a result |
+| Explicit mark | Yes, when the song is flagged explicit (see [Explicit Marker](features/explicit-marker.md)) |
 
 The exact ID3/Vorbis/MP4 tags used depend on the output format. See [Lyrics](features/lyrics.md) for details on how lyrics are embedded.
 

@@ -34,6 +34,7 @@ from .navidrome_index import NavidromeIndex
 from .playlist_catalog import PlaylistCatalog
 from .playlist_spotify_cache import PlaylistSpotifyCache
 from .podcasts import PodcastStore, sync_show
+from .sqlite_utils import ClosingConnection
 from .track_index import TrackIndex, normalize_spotify_track_id
 from .track_owners import TrackOwners
 
@@ -302,7 +303,9 @@ class PlaylistMonitorDB:
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self._path, check_same_thread=False)
+        conn = sqlite3.connect(
+            self._path, check_same_thread=False, factory=ClosingConnection
+        )
         conn.execute('PRAGMA foreign_keys = ON')
         conn.row_factory = sqlite3.Row
         return conn
@@ -838,6 +841,9 @@ async def _fill_from_spotify_track(song: dict[str, Any]) -> None:
     for key in ('track_number', 'album_track_total'):
         if not song.get(key) and full.get(key):
             song[key] = full[key]
+    # The track's own page is the surer word on explicit lyrics.
+    if full.get('explicit'):
+        song['explicit'] = True
 
 
 async def check_playlist(

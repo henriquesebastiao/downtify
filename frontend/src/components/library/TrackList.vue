@@ -124,6 +124,7 @@
             @click.stop="playRow(row)"
           >
             <CoverArt
+              :thumb="150"
               :src="row.track.hasCover ? row.track.cover : ''"
               :name="row.track.album || row.track.title"
               rounded="rounded-[6px]"
@@ -139,11 +140,22 @@
             </span>
           </button>
           <div class="min-w-0">
-            <p
-              class="truncate text-sm font-semibold"
-              :class="isCurrent(row.track) ? 'text-accent' : 'text-fg'"
-            >
-              {{ row.track.title }}
+            <p class="flex items-center gap-1.5">
+              <span
+                class="truncate text-sm font-semibold"
+                :class="isCurrent(row.track) ? 'text-accent' : 'text-fg'"
+                >{{ row.track.title }}</span
+              >
+              <ExplicitBadge v-if="row.track.explicit" />
+              <span
+                v-if="row.track.hiddenBy && auth.isAdmin.value"
+                class="shrink-0 text-faint"
+                role="img"
+                :title="t(`visibility.hiddenBy.${row.track.hiddenBy}`)"
+                :aria-label="t(`visibility.hiddenBy.${row.track.hiddenBy}`)"
+              >
+                <AppIcon name="eye-off" :size="14" />
+              </span>
             </p>
             <p class="truncate text-[13px] text-muted">
               <span
@@ -211,8 +223,10 @@ import { useWindowVirtualizer } from '@tanstack/vue-virtual'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
+import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import LikeButton from '../player/LikeButton.vue'
+import { useAuth } from '/src/model/auth'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
@@ -234,6 +248,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:selected', 'update:sort'])
 
+const auth = useAuth()
 const player = usePlayer()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()

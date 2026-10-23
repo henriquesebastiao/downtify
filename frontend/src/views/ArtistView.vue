@@ -231,6 +231,7 @@ import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
+import { useVisibility } from '/src/model/visibility'
 import { useUi } from '/src/model/ui'
 import { sortItems } from '/src/lib/library'
 import { splitLength } from '/src/lib/format'
@@ -245,6 +246,7 @@ const route = useRoute()
 const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
+const visibility = useVisibility()
 const playlistActions = usePlaylistActions()
 const ui = useUi()
 
@@ -281,7 +283,13 @@ const allTracks = computed(() => {
 
 // Admins can put everything of the artist's in one of their playlists (or a
 // new one); there's nothing else in this menu, so it's hidden for others.
-const moreMenu = computed(() => playlistActions.addMenuItems(allTracks.value))
+const moreMenu = computed(() => {
+  const add = playlistActions.addMenuItems(allTracks.value)
+  const hide = artist.value ? visibility.artistMenu(artist.value) : []
+  return add.length && hide.length
+    ? [...add, { divider: true }, ...hide]
+    : [...add, ...hide]
+})
 
 const context = computed(() => ({
   type: 'artist',

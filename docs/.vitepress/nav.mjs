@@ -50,6 +50,7 @@ export const NAV = [
       },
       { title: 'File Organization', page: 'features/file-organization.md' },
       { title: 'Lyrics', page: 'features/lyrics.md' },
+      { title: 'Explicit Marker', page: 'features/explicit-marker.md' },
       { title: 'YouTube Cookies', page: 'features/youtube-cookies.md' },
       {
         title: 'Internationalization',

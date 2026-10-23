@@ -214,32 +214,52 @@ def _durations_compatible(left: dict[str, Any], right: dict[str, Any]) -> bool:
 def match_artist(name: str, catalog: list[str]) -> Optional[str]:
     """Return a catalog name when *name* is the same artist, else ``None``."""
 
-    wanted = artist_match_key(name)
-    compact = _compact_key(name)
-    if not wanted and not compact:
-        return None
-    for candidate in catalog:
-        if artist_match_key(candidate) == wanted:
-            return candidate
-        if compact and _compact_key(candidate) == compact:
-            return candidate
-    if len(wanted) < 4:
-        return None
-    best_name = ''
-    best_ratio = 0.0
-    for candidate in catalog:
-        other = artist_match_key(candidate)
-        if not other:
-            continue
-        if wanted in other or other in wanted:
-            return candidate
-        ratio = SequenceMatcher(None, wanted, other).ratio()
-        if ratio > best_ratio:
-            best_ratio = ratio
-            best_name = candidate
-    if best_ratio >= _NAME_RATIO:
-        return best_name
-    return None
+    return _ArtistMatcher(catalog).match(name)
+
+
+class _ArtistMatcher:
+    """Prepared names and per-fold results, including unmatched artists.
+
+    The cache belongs to one catalog snapshot: a newly downloaded artist
+    must be considered by the next fold. Candidate order is significant
+    for exact/compact matches, substring matches, and fuzzy-score ties.
+    """
+
+    def __init__(self, catalog: list[str]) -> None:
+        self._catalog = [
+            (candidate, artist_match_key(candidate)) for candidate in catalog
+        ]
+        self._results: dict[str, Optional[str]] = {}
+
+    def match(self, name: str) -> Optional[str]:
+        if name not in self._results:
+            self._results[name] = self._match(name)
+        return self._results[name]
+
+    def _match(self, name: str) -> Optional[str]:
+        wanted = artist_match_key(name)
+        compact = wanted.replace(' ', '')
+        if not wanted:
+            return None
+        for candidate, other in self._catalog:
+            if other == wanted or (
+                compact and other.replace(' ', '') == compact
+            ):
+                return candidate
+        if len(wanted) < 4:
+            return None
+        best_name = ''
+        best_ratio = 0.0
+        for candidate, other in self._catalog:
+            if not other:
+                continue
+            if wanted in other or other in wanted:
+                return candidate
+            ratio = SequenceMatcher(None, wanted, other).ratio()
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_name = candidate
+        return best_name if best_ratio >= _NAME_RATIO else None
 
 
 def _catalog_from_owned(owned: list[dict[str, Any]]) -> list[str]:
@@ -269,11 +289,13 @@ def _replace_primary_artist(artist: str, canonical: str) -> str:
     return canonical
 
 
-def _remap_entry(entry: dict[str, Any], catalog: list[str]) -> dict[str, Any]:
+def _remap_entry(
+    entry: dict[str, Any], matcher: _ArtistMatcher
+) -> dict[str, Any]:
     primary = _primary_artist(entry)
     if not primary:
         return entry
-    canonical = match_artist(primary, catalog)
+    canonical = matcher.match(primary)
     if not canonical or canonical == primary:
         return entry
     out = dict(entry)
@@ -308,7 +330,7 @@ def partition_extra_entries(
     if not extra:
         return owned, [], []
 
-    catalog = _catalog_from_owned(owned)
+    matcher = _ArtistMatcher(_catalog_from_owned(owned))
     owned_by_id: dict[str, list[dict[str, Any]]] = {}
     for item in owned:
         owned_by_id.setdefault(song_identity(item), []).append(item)
@@ -317,7 +339,7 @@ def partition_extra_entries(
     skipped: list[tuple[dict[str, Any], str]] = []
     seen_extra: set[str] = set()
     for entry in extra:
-        remapped = _remap_entry(entry, catalog)
+        remapped = _remap_entry(entry, matcher)
         ident = song_identity(remapped)
         if ident in seen_extra:
             skipped.append((remapped, 'duplicate_folder'))
@@ -385,6 +407,7 @@ def _song_for_import(entry: dict[str, Any]) -> dict[str, Any]:
         'genre': str(entry.get('genre') or ''),
         'track_number': int(entry.get('track_number') or 0),
         'duration': float(entry.get('duration') or 0.0),
+        'explicit': bool(entry.get('explicit')),
     }
 
 
