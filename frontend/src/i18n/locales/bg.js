@@ -503,6 +503,8 @@ export default {
     fetchFailed: 'Не можа да се извлече биография за този изпълнител',
   },
   playlists: {
+    addDownloaded: 'Добавяне на изтеглените в плейлист',
+    downloadFirst: 'Първо изтеглете песни от този плейлист.',
     kicker: 'Плейлист',
     notFound: 'Плейлистът не е намерен',
     progress: '{have} от {total} изтеглени',
@@ -638,6 +640,9 @@ export default {
       'Еквалайзерът не можа да стартира. Възпроизвеждането продължава без него.',
   },
   monitor: {
+    artistLinkFallback:
+      'Връзката към изпълнителя в Spotify не е намерена. Поставете правилната връзка, за да го следите.',
+    needSpotifyArtist: 'Поставете връзка към изпълнител в Spotify.',
     releaseTypes: 'Изтегляне',
     releaseTypesAtLeastOne: 'Оставете поне един вид издание',
     release: { album: 'Албуми', single: 'Сингли', ep: 'EP' },
@@ -689,7 +694,7 @@ export default {
     urlLabelPlaylist: 'Линк към плейлиста',
     urlLabelArtist: 'Линк към изпълнителя',
     urlPlaceholderPlaylist:
-      'Постави линк към плейлист от Spotify или YouTube Music',
+      'Поставете връзка към плейлист от Spotify, Deezer или YouTube Music',
     urlPlaceholderArtist:
       'Постави линк към изпълнител от Spotify или YouTube Music',
     watchPlaylist: 'Следи плейлиста',

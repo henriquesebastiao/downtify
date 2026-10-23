@@ -549,6 +549,8 @@ export default {
       'Gib ihr einen Namen. Danach kannst du Titel aus deiner Bibliothek hinzufügen.',
     name: 'Name',
     namePlaceholder: 'Meine Playlist',
+    addDownloaded: 'Heruntergeladene Titel zur Playlist hinzufügen',
+    downloadFirst: 'Lade zuerst einige Titel dieser Playlist herunter.',
     addSongs: 'Titel hinzufügen',
     addSongsTitle: 'Titel zu „{name}“ hinzufügen',
     addSongsHint: 'Heruntergeladene Titel und Titel aus zusätzlichen Ordnern.',
@@ -754,6 +756,9 @@ export default {
       'Ein weiterer Link zu derselben Playlist aktualisiert nur die Adresse. Ein Link zu einer anderen Playlist ändert das Ziel dieser Überwachung: Sie wird von Grund auf geprüft, bereits vorhandene Titel werden aber nicht erneut heruntergeladen.',
     editLinkHintArtist:
       'Ein weiterer Link zu demselben Künstler aktualisiert nur die Adresse. Ein Link zu einem anderen Künstler ändert das Ziel dieser Überwachung: Seine Veröffentlichungen werden von Grund auf geprüft, bereits vorhandene Titel werden aber nicht erneut heruntergeladen.',
+    artistLinkFallback:
+      'Kein Spotify-Link gefunden. Füge einen Spotify-Künstlerlink ein.',
+    needSpotifyArtist: 'Füge einen Spotify-Künstlerlink ein.',
     linkRequired: 'Füge einen Link ein',
     needArtistLink:
       'Diese Überwachung folgt einem Künstler - füge einen Künstlerlink ein.',

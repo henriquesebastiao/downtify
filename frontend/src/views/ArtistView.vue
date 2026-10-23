@@ -51,6 +51,13 @@
           >
             {{ t('artist.findMore') }}
           </UiButton>
+          <ArtistWatchButton
+            :key="artist.name"
+            :name="artist.name"
+            :spotify-id="spotifyId"
+            :ready="profileReady"
+            :variant="artBannerUrl ? 'photo' : 'ghost'"
+          />
           <UiMenu v-if="moreMenu.length" :items="moreMenu">
             <template #trigger>
               <UiIconButton
@@ -212,6 +219,7 @@ import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import ArtistArtModal from '/src/components/library/ArtistArtModal.vue'
 import ArtistLinks from '/src/components/library/ArtistLinks.vue'
+import ArtistWatchButton from '/src/components/monitor/ArtistWatchButton.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DetailState from '/src/components/library/DetailState.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'

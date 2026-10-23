@@ -510,6 +510,8 @@ export default {
     fetchFailed: 'Δεν ήταν δυνατή η λήψη βιογραφικού για αυτόν τον καλλιτέχνη',
   },
   playlists: {
+    addDownloaded: 'Προσθήκη ληφθέντων στη λίστα',
+    downloadFirst: 'Κατεβάστε πρώτα μερικά κομμάτια αυτής της λίστας.',
     kicker: 'Λίστα',
     notFound: 'Η λίστα δεν βρέθηκε',
     progress: '{have} από {total} κατεβασμένα',
@@ -647,6 +649,9 @@ export default {
       'Ο ισοσταθμιστής δεν ξεκίνησε. Η αναπαραγωγή συνεχίζει χωρίς αυτόν.',
   },
   monitor: {
+    artistLinkFallback:
+      'Δεν βρέθηκε ο σύνδεσμος Spotify του καλλιτέχνη. Επικολλήστε τον σωστό σύνδεσμο για παρακολούθηση.',
+    needSpotifyArtist: 'Επικολλήστε έναν σύνδεσμο καλλιτέχνη Spotify.',
     releaseTypes: 'Λήψη',
     releaseTypesAtLeastOne: 'Κρατήστε τουλάχιστον ένα είδος κυκλοφορίας',
     release: { album: 'Άλμπουμ', single: 'Single', ep: 'EP' },
@@ -699,7 +704,7 @@ export default {
     urlLabelPlaylist: 'Σύνδεσμος λίστας',
     urlLabelArtist: 'Σύνδεσμος καλλιτέχνη',
     urlPlaceholderPlaylist:
-      'Επικόλλησε σύνδεσμο λίστας Spotify ή YouTube Music',
+      'Επικολλήστε σύνδεσμο λίστας Spotify, Deezer ή YouTube Music',
     urlPlaceholderArtist:
       'Επικόλλησε σύνδεσμο καλλιτέχνη Spotify ή YouTube Music',
     watchPlaylist: 'Παρακολούθηση λίστας',

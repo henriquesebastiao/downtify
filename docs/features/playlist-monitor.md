@@ -4,16 +4,16 @@ icon: lucide/eye
 
 # Playlist Monitor
 
-The Playlist Monitor watches your favourite Spotify and YouTube Music playlists — and the artists you follow — and automatically downloads new tracks and new releases as they appear, hands-free.
+The Playlist Monitor watches your favourite Spotify, public Deezer and YouTube Music playlists — and the artists you follow — and automatically downloads new tracks and new releases as they appear, hands-free.
 
 There are two kinds of watch, each on its own tab of the Monitor page (**Playlists** and **Artists**, at `/monitor/playlists` and `/monitor/artists`):
 
 | Watch | Paste | Downloads |
 |-------|-------|-----------|
-| **Playlist** | A Spotify or YouTube Music playlist URL | Every track in the playlist, then any track added later |
+| **Playlist** | A Spotify, public Deezer or YouTube Music playlist URL | Every track in the playlist, then any track added later |
 | **Artist** | A Spotify **artist** URL, or a YouTube Music artist URL | The artist's whole discography, then every new release |
 
-Every watch shows the link it follows under its name, and a **Spotify** or **YouTube Music** badge naming the service it was added from.
+Every watch shows the link it follows under its name, and a **Spotify**, **Deezer** or **YouTube Music** badge naming the service it was added from.
 
 See [Artist Watch](#artist-watch) for how artist watches work.
 
@@ -23,7 +23,7 @@ Watches belong to whoever created them: each account follows its own playlists a
 
 Downtify keeps a background task running every 60 seconds. On each sweep it checks every enabled watch to see if it is due for inspection (based on its configured interval). When a *playlist* is due, Downtify:
 
-1. Fetches the full track list from Spotify or YouTube Music
+1. Fetches the full track list from Spotify, Deezer or YouTube Music
 2. Compares it against the set of tracks already downloaded
 3. Downloads any new tracks using the same pipeline as a manual download
 4. Updates the M3U file for the playlist (if M3U generation is enabled)
@@ -39,6 +39,7 @@ A watch is never checked twice at the same time. Adding a watch starts its first
 1. Open **Monitor** from the sidebar (on phones: **More → Monitor**) and stay on the **Playlists** tab
 2. Paste a playlist URL:
     - Spotify: `https://open.spotify.com/playlist/…`
+    - Public Deezer playlist: `https://www.deezer.com/playlist/…` (locale-prefixed links also work)
     - YouTube Music: `https://music.youtube.com/playlist?list=…` (a `www.youtube.com/playlist?list=…` link works too)
 3. Choose a check interval (from 15 minutes to once a month)
 4. Click **Watch playlist**
@@ -46,6 +47,17 @@ A watch is never checked twice at the same time. Adding a watch starts its first
 Each tab has its own box. Pasting an artist link into the Playlists tab (or a playlist link into Artists) doesn't add anything: the page says what kind of link it is and offers to move it to the right tab.
 
 You can also start watching from a playlist's page: paste its link in the search bar and use **Watch for new tracks** (or **Watch for new releases** on a YouTube Music artist). Downloaded playlists in the Library offer the same action in their **⋯** menu. Watches added this way use a 6-hour interval — change it on the Monitor page.
+
+## Deezer playlists
+
+Public Deezer playlists can be followed from their resolved link page or
+directly from **Charts → Playlists**, without finding a Spotify equivalent.
+The existing Deezer resolver fetches every page of tracks. The monitor
+remembers Deezer track identities between checks, downloads new additions
+through the configured audio providers and keeps the existing playlist
+catalog, ownership and M3U behavior. It does not delete downloaded files
+when the source playlist removes a track. Private playlists, account-wide
+sync and private favourites are not supported by this public-link workflow.
 
 ## YouTube Music playlists
 
@@ -57,6 +69,19 @@ Use a YouTube Music playlist for songs that aren't on Spotify: remixes, live set
 - **Not every `list=` link is a playlist.** An album's `OLAK5uy_…` link is still downloaded as an album. A `watch?v=…&list=…` link is the one song that was playing. A radio mix (`list=RD…`) has no fixed track list and can't be watched.
 
 ## Artist Watch
+
+### Starting from the library
+
+On a library artist page, **Watch artist** uses its resolved Spotify artist
+link and starts a daily watch with **New releases only** enabled. It does
+not download the back catalogue. If the Spotify link is missing or cannot
+be resolved, a dialog asks for the correct Spotify artist link and offers
+the existing release-type and new-only filters before submission. The
+button reports success only once the server accepts the watch. Manage its
+interval and filters on **Monitor → Artists** afterwards.
+
+The artist monitor still resolves Spotify artists through YouTube Music,
+as described below. The supplied Spotify link is not an account login.
 
 Instead of building a playlist per artist, paste an artist link and Downtify follows their whole catalogue. Add one from the **Artists** tab of the Monitor page — paste the URL, pick an interval, click **Watch artist**. Artist watches show a release count instead of a track count.
 

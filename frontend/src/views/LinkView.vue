@@ -356,12 +356,12 @@ const playContext = computed(() =>
     : null
 )
 
-// Playlist Monitor has no Deezer support: watching a Deezer playlist or
-// artist for updates isn't offered, only downloading what's there now.
+// Deezer playlists can be watched; artist discographies still use
+// Spotify/YouTube Music's existing artist-monitor resolution.
 const watchable = computed(
   () =>
     (details.value?.kind === 'playlist' || details.value?.kind === 'artist') &&
-    kind.value.source !== 'deezer'
+    (kind.value.source !== 'deezer' || details.value?.kind === 'playlist')
 )
 
 const mosaic = computed(() =>

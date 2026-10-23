@@ -507,6 +507,8 @@ export default {
     fetchFailed: 'Nem sikerült életrajzot lekérni ehhez az előadóhoz',
   },
   playlists: {
+    addDownloaded: 'Letöltöttek hozzáadása listához',
+    downloadFirst: 'Előbb tölts le néhány számot ebből a lejátszási listából.',
     kicker: 'Lejátszási lista',
     notFound: 'A lista nem található',
     progress: '{total} számból {have} letöltve',
@@ -646,6 +648,9 @@ export default {
       'A hangszínszabályzó nem indult el. A lejátszás nélküle folytatódik.',
   },
   monitor: {
+    artistLinkFallback:
+      'Az előadó Spotify-linkje nem található. Illeszd be a megfelelő linket az előadó követéséhez.',
+    needSpotifyArtist: 'Illessz be egy Spotify-előadólinket.',
     releaseTypes: 'Letöltés',
     releaseTypesAtLeastOne: 'Legalább egy megjelenéstípus maradjon',
     release: { album: 'Albumok', single: 'Kislemezek', ep: 'EP-k' },
@@ -697,7 +702,7 @@ export default {
     urlLabelPlaylist: 'Lista linkje',
     urlLabelArtist: 'Előadó linkje',
     urlPlaceholderPlaylist:
-      'Illessz be egy Spotify vagy YouTube Music lista linket',
+      'Illessz be egy Spotify-, Deezer- vagy YouTube Music-listalinket',
     urlPlaceholderArtist:
       'Illessz be egy Spotify vagy YouTube Music előadó linket',
     watchPlaylist: 'Lista figyelése',

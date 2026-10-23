@@ -508,6 +508,8 @@ export default {
     fetchFailed: 'Não foi possível buscar uma biografia para este artista',
   },
   playlists: {
+    addDownloaded: 'Adicionar baixadas à playlist',
+    downloadFirst: 'Baixe primeiro algumas faixas desta playlist.',
     kicker: 'Playlist',
     notFound: 'Playlist não encontrada',
     progress: '{have} de {total} baixadas',
@@ -644,6 +646,9 @@ export default {
       'Não foi possível iniciar o equalizador. A reprodução continua sem ele.',
   },
   monitor: {
+    artistLinkFallback:
+      'Não foi possível resolver o link do artista no Spotify. Cole o link correto para acompanhar este artista.',
+    needSpotifyArtist: 'Cole um link de artista do Spotify.',
     releaseTypes: 'Baixar',
     releaseTypesAtLeastOne: 'Mantenha ao menos um tipo de lançamento',
     release: { album: 'Álbuns', single: 'Singles', ep: 'EPs' },
@@ -695,7 +700,7 @@ export default {
     urlLabelPlaylist: 'Link da playlist',
     urlLabelArtist: 'Link do artista',
     urlPlaceholderPlaylist:
-      'Cole o link de uma playlist do Spotify ou YouTube Music',
+      'Cole um link de playlist do Spotify, Deezer ou YouTube Music',
     urlPlaceholderArtist:
       'Cole o link de um artista do Spotify ou YouTube Music',
     watchPlaylist: 'Monitorar playlist',

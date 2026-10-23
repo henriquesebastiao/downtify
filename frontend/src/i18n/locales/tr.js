@@ -510,6 +510,8 @@ export default {
     fetchFailed: 'Bu sanatçı için biyografi alınamadı',
   },
   playlists: {
+    addDownloaded: 'İndirilenleri listeye ekle',
+    downloadFirst: 'Önce bu çalma listesinden bazı parçaları indirin.',
     kicker: 'Çalma listesi',
     notFound: 'Çalma listesi bulunamadı',
     progress: '{total} parçadan {have} tanesi indirildi',
@@ -647,6 +649,9 @@ export default {
     equalizerError: 'Ekolayzır başlatılamadı. Çalma onsuz devam ediyor.',
   },
   monitor: {
+    artistLinkFallback:
+      'Sanatçının Spotify bağlantısı bulunamadı. Takip etmek için doğru bağlantıyı yapıştırın.',
+    needSpotifyArtist: 'Bir Spotify sanatçı bağlantısı yapıştırın.',
     releaseTypes: 'İndir',
     releaseTypesAtLeastOne: 'En az bir yayın türü bırakın',
     release: { album: 'Albümler', single: 'Single’lar', ep: 'EP’ler' },
@@ -698,7 +703,7 @@ export default {
     urlLabelPlaylist: 'Çalma listesi bağlantısı',
     urlLabelArtist: 'Sanatçı bağlantısı',
     urlPlaceholderPlaylist:
-      'Spotify veya YouTube Music çalma listesi bağlantısı yapıştır',
+      'Spotify, Deezer veya YouTube Music çalma listesi bağlantısı yapıştırın',
     urlPlaceholderArtist:
       'Spotify veya YouTube Music sanatçı bağlantısı yapıştır',
     watchPlaylist: 'Çalma listesini izle',
