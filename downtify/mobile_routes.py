@@ -179,6 +179,12 @@ async def usernames(request: Request) -> dict[str, Any]:
     return {'enabled': enabled, 'usernames': names if enabled else []}
 
 
+@router.get('/tracks/{track_id}/loudness')
+async def track_loudness(track_id: str, request: Request) -> dict[str, Any]:
+    row, _ = await asyncio.to_thread(_track_path, track_id)
+    return await api.track_loudness(request, str(row['file']))
+
+
 async def _playlist_name(request: Request) -> str:
     name = request.query_params.get('name', '')
     if not name:

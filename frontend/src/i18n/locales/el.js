@@ -1,4 +1,24 @@
 export default {
+  normalization: {
+    title: 'Volume normalization',
+    hint: 'Balance track loudness during playback without changing your audio files.',
+    enable: 'Normalize playback volume',
+    enableHint:
+      'Uses measured loudness, limits amplification to 12 dB and preserves peak headroom. Unmeasured tracks keep their original level.',
+    analysisHint:
+      'Analysis reads your music once, one file at a time. Start it explicitly; it does not run automatically after a restart.',
+    progress: '{done} / {total} analyzed · {failed} unavailable',
+    analyze: 'Analyze library',
+    pause: 'Pause analysis',
+    resume: 'Resume analysis',
+    pausing: 'Finishing the current file before pausing…',
+    states: {
+      ready: 'Measured volume applied to the current track.',
+      silent: 'Silent track: original level preserved.',
+      unanalysed: 'No measurement for this track: original level preserved.',
+      unavailable: 'Normalization unavailable: original level preserved.',
+    },
+  },
   language: {
     name: 'Ελληνικά',
   },

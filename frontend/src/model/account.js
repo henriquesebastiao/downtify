@@ -27,11 +27,12 @@ let started = false
 
 function current() {
   const theme = useTheme()
-  const { showLyrics } = usePlayerPrefs()
+  const { showLyrics, normalizeVolume } = usePlayerPrefs()
   return {
     theme: theme.mode.value,
     locale: currentLocale.value,
     show_lyrics: showLyrics.value,
+    normalize_volume: normalizeVolume.value,
     search_albums: searchAlbums.value,
     show_public_playlists: showPublicPlaylists.value,
   }
@@ -39,7 +40,8 @@ function current() {
 
 function apply(prefs) {
   const theme = useTheme()
-  const { showLyrics } = usePlayerPrefs()
+  const { showLyrics, normalizeVolume } = usePlayerPrefs()
+  normalizeVolume.value = prefs.normalize_volume === true
   if (prefs.theme) theme.setMode(prefs.theme)
   if (prefs.locale && prefs.locale !== currentLocale.value)
     setLocale(prefs.locale)
@@ -77,9 +79,16 @@ async function start() {
   // An account without them adopts this browser's.
   if (Object.keys(prefs).length < 4) save()
   const theme = useTheme()
-  const { showLyrics } = usePlayerPrefs()
+  const { showLyrics, normalizeVolume } = usePlayerPrefs()
   watch(
-    [theme.mode, currentLocale, showLyrics, searchAlbums, showPublicPlaylists],
+    [
+      theme.mode,
+      currentLocale,
+      showLyrics,
+      normalizeVolume,
+      searchAlbums,
+      showPublicPlaylists,
+    ],
     () => save(),
     { flush: 'post' }
   )

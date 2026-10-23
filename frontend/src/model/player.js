@@ -6,6 +6,11 @@ import { ref, computed, watch } from 'vue'
 import { normalizeTrack } from '/src/lib/library'
 import { attachEqualizer, resumeEqualizer } from '/src/model/equalizer'
 import { resolveTrackUrl, warmServerCache } from '/src/model/streamResolve'
+import {
+  normalizationEnabled,
+  getTrackNormalization,
+  applyTrackNormalization,
+} from '/src/model/normalization'
 
 const VOLUME_KEY = 'downtify-player-volume'
 const RATE_KEY = 'downtify-player-rate'
@@ -70,6 +75,7 @@ let shuffleOrder = []
 let shufflePos = 0
 let sleepTimer = null
 let restoreTime = 0
+let playbackAttempt = 0
 
 function ensureAudio() {
   if (audio) return audio
@@ -448,6 +454,31 @@ function prefetchNext() {
 }
 
 function startPlayback(a) {
+  const attempt = ++playbackAttempt
+  if (normalizationEnabled.value) {
+    const track = playlist.value[currentIndex.value]
+    const identity = trackIdentity(track)
+    const url = a.src
+    a.pause()
+    applyTrackNormalization(null)
+    // Build/resume during the user gesture, before awaiting the measurement.
+    resumeEqualizer()
+    isBuffering.value = true
+    void getTrackNormalization(track).then((profile) => {
+      if (
+        attempt !== playbackAttempt ||
+        a.src !== url ||
+        trackIdentity(playlist.value[currentIndex.value]) !== identity
+      )
+        return
+      applyTrackNormalization(profile)
+      isBuffering.value = false
+      resumeEqualizer()
+      a.play().catch(() => {})
+    })
+    return
+  }
+  applyTrackNormalization(null)
   resumeEqualizer()
   a.play().catch(() => {})
 }
@@ -472,6 +503,8 @@ function play() {
 }
 
 function pause() {
+  playbackAttempt += 1
+  isBuffering.value = false
   if (audio) audio.pause()
 }
 
