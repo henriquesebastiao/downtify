@@ -862,6 +862,16 @@ export default {
     sourceYtmHint: 'Meilleures correspondances de métadonnées',
     sourceYt: 'YouTube',
     sourceYtHint: 'Solution de repli pour les titres absents de YouTube Music',
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Télécharger avec votre serveur Deemix. La qualité demandée nécessite les droits Deezer correspondants.',
+    deemixEnabled: 'Utiliser Deemix',
+    deemixInPlace:
+      'Conserver la musique, les pochettes et les paroles dans le dossier partagé Deemix, sans réécrire les tags. Configurer un fichier ARL privé sur le serveur ; ne pas le saisir ici.',
+    deemixUrl: 'Adresse du serveur Deemix',
+    deemixRemote: 'Dossier de téléchargement dans Deemix',
+    deemixLocal: 'Même dossier dans Downtify (lecture seule acceptée)',
+    deemixQuality: 'Qualité audio',
     slskdTitle: 'slskd',
     slskdHint:
       'Téléchargez depuis Soulseek via votre serveur slskd. Les titres introuvables passent à la source suivante.',
@@ -973,6 +983,10 @@ export default {
     navidromeAdminHint:
       'Facultatif — permet à Downtify de lancer un scan pour que les nouveaux titres apparaissent plus vite.',
     test: {
+      connection_not_deemix:
+        'Le serveur ne r\u00e9pond pas comme une instance Deemix compatible.',
+      quality_unavailable:
+        'Le compte Deezer ne permet pas la qualit\u00e9 demand\u00e9e.',
       button: 'Tester la connexion',
       testing: 'Test en cours…',
       needFields: 'Remplissez d’abord les champs ci-dessus.',

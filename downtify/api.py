@@ -359,6 +359,19 @@ from .auth import (
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
 from .cover_thumbs import CoverThumbs
+from .deemix_provider import (
+    DEFAULT_SETTINGS as DEEMIX_DEFAULTS,
+)
+from .deemix_provider import (
+    DeemixError,
+    check_deemix,
+)
+from .deemix_provider import (
+    normalize_settings as normalize_deemix_settings,
+)
+from .deemix_provider import (
+    validate_settings as validate_deemix_settings,
+)
 from .discover import (
     DiscoverStore,
     collections,
@@ -515,6 +528,7 @@ MAX_COVER_RESOLUTION = 1200
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
+    'deemix': dict(DEEMIX_DEFAULTS),
     'lyrics_providers': list(lyrics.PROVIDER_ORDER),
     'download_lyrics': True,
     'lyrics_lrc_beside': True,
@@ -612,6 +626,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 # defaults key by key, so a settings.json from an older version still gets
 # every newer option.
 _NESTED_SETTINGS = (
+    'deemix',
     'slskd',
     'navidrome',
     'library_upgrade',
@@ -800,6 +815,10 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _effective_deemix_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    return normalize_deemix_settings(settings.get('deemix'))
+
+
 def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
     """Enabled audio providers in the configured order.
 
@@ -813,6 +832,11 @@ def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
     for raw in settings.get('audio_providers') or []:
         name = str(raw or '').strip()
         if name == 'slskd' and not slskd_enabled:
+            continue
+        if (
+            name == 'deemix'
+            and not _effective_deemix_settings(settings)['enabled']
+        ):
             continue
         if name in AUDIO_PROVIDERS and name not in out:
             out.append(name)
@@ -2384,6 +2408,17 @@ def bind_lrc_resolver() -> None:
 
     def _resolve(audio: Path) -> Path:
         ctx = library_context()
+        deemix = _effective_deemix_settings(state.settings)
+        if deemix['enabled']:
+            try:
+                audio.resolve().relative_to(
+                    Path(deemix['source_dir']).resolve()
+                )
+                beside = audio.with_suffix('.lrc')
+                if beside.is_file():
+                    return beside
+            except (OSError, ValueError):
+                pass
         return lyrics.lrc_sidecar_path(
             audio,
             settings=state.settings,
@@ -7004,6 +7039,21 @@ async def update_settings_endpoint(
         pending = {**state.settings, **payload}
         slskd_cfg = _effective_slskd_settings(pending)
         navidrome_cfg = _effective_navidrome_settings(pending)
+        deemix_cfg = _effective_deemix_settings(pending)
+        if deemix_cfg['enabled']:
+            try:
+                validate_deemix_settings(deemix_cfg)
+            except DeemixError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from None
+            external = effective_external_library(pending)
+            folder = deemix_cfg['source_dir']
+            if folder not in external['folders']:
+                if len(external['folders']) >= 20:
+                    raise HTTPException(
+                        status_code=400, detail='Too many library folders'
+                    )
+                external['folders'].append(folder)
+            payload = {**payload, 'external_library': external}
         _validate_integration_settings(
             slskd_cfg if 'slskd' in payload else {},
             navidrome_cfg if 'navidrome' in payload else {},
@@ -7036,6 +7086,8 @@ async def update_settings_endpoint(
                 }
             elif key == 'navidrome':
                 state.settings[key] = navidrome_cfg
+            elif key == 'deemix':
+                state.settings[key] = deemix_cfg
             elif key == 'external_library':
                 state.settings[key] = effective_external_library({
                     'external_library': raw_value
@@ -7048,14 +7100,18 @@ async def update_settings_endpoint(
                 state.settings[key] = str(raw_value or '').strip()
             else:
                 state.settings[key] = raw_value
-        if {'audio_providers', 'slskd'} & set(payload):
+        if {'audio_providers', 'slskd', 'deemix'} & set(payload):
             state.settings['audio_providers'] = _effective_audio_providers(
                 state.settings
             )
         if state.downloader is not None:
-            if {'audio_providers', 'slskd', 'max_parallel_downloads'} & set(
-                payload
-            ):
+            state.downloader.deemix_settings = deemix_cfg
+            if {
+                'audio_providers',
+                'slskd',
+                'deemix',
+                'max_parallel_downloads',
+            } & set(payload):
                 state.downloader.slskd_settings = (
                     state.downloader._normalize_slskd_settings(
                         _effective_slskd_settings(state.settings)
@@ -7137,6 +7193,14 @@ async def _json_object(request: Request) -> dict[str, Any]:
     except Exception:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+@router.post('/api/deemix/test')
+async def test_deemix_endpoint(request: Request) -> dict[str, Any]:
+    """Test the unsaved Deemix form without adding any queue item."""
+    payload = await _json_object(request)
+    cfg = normalize_deemix_settings(payload or state.settings.get('deemix'))
+    return await asyncio.to_thread(check_deemix, cfg)
 
 
 @router.post('/api/slskd/test')

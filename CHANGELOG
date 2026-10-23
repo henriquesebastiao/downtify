@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.7.0](https://github.com/henriquesebastiao/downtify/tree/3.7.0) (2026-10-21)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.6.0...3.7.0)
+
+**Implemented enhancements:**
+
+- Feature request: share playlists with other users \(view-only\), and detach imported playlists so they can be edited [\#465](https://github.com/henriquesebastiao/downtify/issues/465)
+- Explicit marker on tracks [\#431](https://github.com/henriquesebastiao/downtify/issues/431)
+
+**Fixed bugs:**
+
+- YouTube Music playlists are incorrectly processed as Spotify playlists \(0 tracks downloaded\) [\#460](https://github.com/henriquesebastiao/downtify/issues/460)
+- Library [\#430](https://github.com/henriquesebastiao/downtify/issues/430)
+- Can't sort in playlist view [\#427](https://github.com/henriquesebastiao/downtify/issues/427)
+- Could not find a YouTube match for ... [\#338](https://github.com/henriquesebastiao/downtify/issues/338)
+
+**Merged pull requests:**
+
+- feat\(playlists\): share playlists view-only, and detach an imported playlist [\#467](https://github.com/henriquesebastiao/downtify/pull/467) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(library\): sort a playlist's songs, and a sort menu for the Tracks tab [\#464](https://github.com/henriquesebastiao/downtify/pull/464) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix: share the library with every user, and let admins hide songs from them [\#463](https://github.com/henriquesebastiao/downtify/pull/463) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: explicit marker on songs, in the file, the Library and the player [\#462](https://github.com/henriquesebastiao/downtify/pull/462) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(monitor\): YouTube Music playlists no longer hit Spotify and no longer come out empty [\#461](https://github.com/henriquesebastiao/downtify/pull/461) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(i18n\): add Korean \(ko\) translation [\#459](https://github.com/henriquesebastiao/downtify/pull/459) ([gitcodeB](https://github.com/gitcodeB))
+
 ## [3.6.0](https://github.com/henriquesebastiao/downtify/tree/3.6.0) (2026-10-20)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.5.0...3.6.0)

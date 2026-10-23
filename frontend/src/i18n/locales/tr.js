@@ -850,6 +850,16 @@ export default {
     sourceYtmHint: 'En iyi meta veri eşleşmeleri',
     sourceYt: 'YouTube',
     sourceYtHint: 'YouTube Music’te olmayan şarkılar için yedek',
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
+    deemixEnabled: 'Use Deemix',
+    deemixInPlace:
+      'Keep audio, artwork and lyrics in the shared Deemix folder, without rewriting its tags. Configure a private ARL file on the server; do not paste it here.',
+    deemixUrl: 'Deemix server URL',
+    deemixRemote: 'Download folder inside Deemix',
+    deemixLocal: 'Same folder inside Downtify (read-only is supported)',
+    deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
     slskdHint:
       'Soulseek’ten slskd sunucun üzerinden indir. Bulunamayan parçalar sonraki kaynağa geçer.',
@@ -956,6 +966,10 @@ export default {
     navidromeAdminHint:
       'İsteğe bağlı — yeni şarkıların daha çabuk görünmesi için Downtify’ın tarama başlatmasını sağlar.',
     test: {
+      connection_not_deemix: 'The server is not a compatible Deemix instance.',
+      quality_unavailable:
+        'The Deezer account cannot stream the requested quality.',
+
       button: 'Bağlantıyı sına',
       testing: 'Sınanıyor…',
       needFields: 'Önce yukarıdaki alanları doldurun.',

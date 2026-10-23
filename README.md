@@ -207,5 +207,3 @@ There are many ways to support Downtify:
 Licensed under the [AGPL-3.0](https://github.com/henriquesebastiao/downtify?tab=AGPL-3.0-1-ov-file#readme) License.
 
 Icons by [Font Awesome](https://fontawesome.com) (Free, [CC BY 4.0](https://fontawesome.com/license/free)), loaded via [Iconify](https://iconify.design).
-
-Choose a [primary external library folder](docs/features/external-library.md#primary-library-folder) without moving or deleting files.

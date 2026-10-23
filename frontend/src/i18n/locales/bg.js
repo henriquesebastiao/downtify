@@ -841,6 +841,16 @@ export default {
     sourceYtmHint: 'Най-добри съвпадения на метаданни',
     sourceYt: 'YouTube',
     sourceYtHint: 'Резерва за песни, които липсват в YouTube Music',
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
+    deemixEnabled: 'Use Deemix',
+    deemixInPlace:
+      'Keep audio, artwork and lyrics in the shared Deemix folder, without rewriting its tags. Configure a private ARL file on the server; do not paste it here.',
+    deemixUrl: 'Deemix server URL',
+    deemixRemote: 'Download folder inside Deemix',
+    deemixLocal: 'Same folder inside Downtify (read-only is supported)',
+    deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
     slskdHint:
       'Изтегляй от Soulseek чрез своя slskd сървър. Ненамерените песни минават към следващия източник.',
@@ -948,6 +958,10 @@ export default {
     navidromeAdminHint:
       'По избор — позволява на Downtify да стартира сканиране, за да се появяват новите песни по-бързо.',
     test: {
+      connection_not_deemix: 'The server is not a compatible Deemix instance.',
+      quality_unavailable:
+        'The Deezer account cannot stream the requested quality.',
+
       button: 'Провери връзката',
       testing: 'Проверка…',
       needFields: 'Първо попълнете полетата по-горе.',

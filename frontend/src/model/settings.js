@@ -7,6 +7,14 @@ import { needsLanguageSync, splitUiLanguage } from '/src/lib/uiLanguage'
 
 const settings = ref({
   audio_providers: ['youtube-music'],
+  deemix: {
+    enabled: false,
+    base_url: '',
+    remote_dir: '/downloads',
+    source_dir: '/deemix',
+    bitrate: '3',
+    download_timeout_seconds: 600,
+  },
   slskd: {
     enabled: false,
     base_url: '',
@@ -85,7 +93,7 @@ const MIN_COVER_RESOLUTION = 300
 const MAX_COVER_RESOLUTION = 1200
 
 const settingsOptions = {
-  audio_providers: ['youtube', 'youtube-music', 'slskd'],
+  audio_providers: ['youtube', 'youtube-music', 'slskd', 'deemix'],
   lyrics_providers: ['lrclib', 'genius', 'musixmatch', 'azlyrics'],
   format: ['mp3', 'flac', 'ogg', 'opus', 'm4a'],
   bitrate: ['128', '192', '256', '320'],
@@ -199,6 +207,7 @@ function loadServerSettings() {
         ...settings.value,
         ...rest,
         slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
+        deemix: { ...settings.value.deemix, ...(rest.deemix || {}) },
         navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
         external_library: {
           ...settings.value.external_library,
@@ -283,6 +292,7 @@ async function saveSettings() {
       ...settings.value,
       ...rest,
       slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
+      deemix: { ...settings.value.deemix, ...(rest.deemix || {}) },
       navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
       external_library: {
         ...settings.value.external_library,

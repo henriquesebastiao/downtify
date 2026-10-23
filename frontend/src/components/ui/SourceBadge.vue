@@ -23,6 +23,11 @@ const { t } = useI18n()
 
 // The audio source a track was downloaded from (backend job `provider`).
 const SOURCES = {
+  deemix: {
+    label: 'Deemix',
+    icon: 'music',
+    classes: 'border-accent/25 bg-accent/15 text-accent',
+  },
   'youtube-music': {
     label: 'YouTube Music',
     icon: 'youtube',
