@@ -73,6 +73,34 @@ class PlaylistShares:
                     PRIMARY KEY (user_id, name_key)
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS playlist_display_names (
+                    identity TEXT PRIMARY KEY,
+                    display_name TEXT NOT NULL
+                )
+            """)
+
+    def display_names(self) -> dict[str, str]:
+        with self._connect() as conn:
+            return {
+                str(row['identity']): str(row['display_name'])
+                for row in conn.execute('SELECT * FROM playlist_display_names')
+            }
+
+    def set_display_name(self, identity: str, display_name: str) -> None:
+        with self._connect() as conn:
+            if display_name:
+                conn.execute(
+                    'INSERT INTO playlist_display_names (identity, display_name) '
+                    'VALUES (?, ?) ON CONFLICT(identity) DO UPDATE SET '
+                    'display_name = excluded.display_name',
+                    (identity, display_name),
+                )
+            else:
+                conn.execute(
+                    'DELETE FROM playlist_display_names WHERE identity = ?',
+                    (identity,),
+                )
 
     # Reading
 

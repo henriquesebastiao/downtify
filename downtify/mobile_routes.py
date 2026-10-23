@@ -143,6 +143,7 @@ async def playlists(request: Request) -> list[dict[str, Any]]:
     return [
         {
             'name': p['name'],
+            'display_name': p.get('display_name', p['name']),
             'liked': p['liked'],
             'manual': bool(p.get('manual')),
             'count': p['count'],

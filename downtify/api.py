@@ -1356,13 +1356,35 @@ def _filter_playlists_for(
                 'mine': True,
                 'visibility': PRIVATE,
             })
+    labels = (
+        state.playlist_shares.display_names() if state.playlist_shares else {}
+    )
+    kept = [
+        {
+            **row,
+            'display_name': labels.get(
+                playlist_display_identity(row), row['name']
+            ),
+        }
+        for row in kept
+    ]
     kept.sort(
         key=lambda item: (
             not item.get('liked'),
-            str(item.get('name') or '').casefold(),
+            str(item.get('display_name') or item.get('name') or '').casefold(),
         )
     )
     return kept
+
+
+def playlist_display_identity(entry: dict[str, Any]) -> str:
+    """Keep a source-backed playlist's label through source-name updates."""
+    name = str(entry['name'])
+    catalog = state.playlist_catalog
+    source = (
+        catalog.spotify_id_for_playlist(name) if catalog is not None else None
+    )
+    return f'source:{source}' if source else f'name:{share_key(name)}'
 
 
 def _filter_entries_for(
@@ -6156,7 +6178,39 @@ async def rename_library_playlist_endpoint(request: Request) -> dict[str, Any]:
     payload = await _json_object(request)
     name = str(payload.get('name') or '').strip()
     new_name = str(payload.get('new_name') or '').strip()
-    require_playlist_visible(name, request, manage=True)
+    entry = require_playlist_visible(name, request, manage=True)
+    if not entry.get('manual'):
+        if entry.get('liked'):
+            raise HTTPException(
+                status_code=403, detail='Liked songs cannot be renamed'
+            )
+        reset = payload.get('reset_display_name') is True
+        if not reset and (not new_name or len(new_name) > 120):
+            raise HTTPException(
+                status_code=400,
+                detail='Enter a name of at most 120 characters',
+            )
+        if not reset and is_liked_playlist(new_name):
+            raise HTTPException(
+                status_code=409, detail='That playlist name is reserved'
+            )
+        for other in playlists_for_request(request):
+            if other['name'] != entry['name'] and share_key(
+                other.get('display_name', other['name'])
+            ) == share_key(new_name):
+                raise HTTPException(
+                    status_code=409,
+                    detail='A playlist with that name already exists',
+                )
+        if state.playlist_shares is None:
+            raise HTTPException(status_code=503, detail='Starting up')
+        await asyncio.to_thread(
+            state.playlist_shares.set_display_name,
+            playlist_display_identity(entry),
+            '' if reset else new_name,
+        )
+        await announce_playlists_changed()
+        return {**entry, 'display_name': entry['name'] if reset else new_name}
     ctx = library_context()
     try:
         result = await asyncio.to_thread(

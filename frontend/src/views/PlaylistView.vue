@@ -62,7 +62,7 @@
             {{ t('playlists.addSongs') }}
           </UiButton>
           <UiButton
-            v-if="playlist.manual && playlist.mine"
+            v-if="!playlist.liked && playlist.mine"
             variant="ghost"
             icon="pencil"
             @click="playlistActions.rename(playlist)"

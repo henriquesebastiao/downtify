@@ -1,4 +1,5 @@
 export default {
+  playlistNames: { restore: 'Restore source name' },
   language: {
     name: '한국어',
   },

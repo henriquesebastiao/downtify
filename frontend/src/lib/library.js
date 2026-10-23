@@ -224,7 +224,7 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       name: playlist.name,
       // What to show. The file on disk has a fixed name, so the liked
       // songs playlist is given a translated title by the model.
-      title: playlist.name,
+      title: playlist.display_name || playlist.name,
       // The playlist of hearted songs, not a downloaded one.
       liked: Boolean(playlist.liked),
       manual: Boolean(playlist.manual),
