@@ -173,7 +173,12 @@ function mergeTrackRows(rows) {
 }
 
 async function load({ force = false } = {}) {
-  if (pending) return pending
+  if (pending) {
+    if (!force) return pending
+    // A mutation must not reuse a response requested before the write.
+    await pending
+    return load({ force: true })
+  }
   if (loaded.value && !force) return undefined
   loading.value = true
   error.value = ''
@@ -398,6 +403,12 @@ async function deletePlaylist(playlist) {
     ? await API.deletePlaylistBatch(sid)
     : await API.deleteLibraryPlaylist(playlist.name)
   forget(res.data?.files || [])
+  rawPlaylists.value = rawPlaylists.value.filter(
+    (item) => item.name !== playlist.name
+  )
+  batches.value = batches.value.filter(
+    (item) => item.playlist_name !== playlist.name
+  )
   await load({ force: true })
   return res.data
 }

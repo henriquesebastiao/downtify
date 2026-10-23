@@ -227,6 +227,12 @@ export default {
     redownloadAll: 'Tout retélécharger',
     downloadSelected: 'Télécharger la sélection',
     allInLibrary: 'Tout est dans votre bibliothèque',
+    allHandled: 'Déjà dans votre bibliothèque ou dans la file',
+    addPlaylist: 'Ajouter à mes playlists',
+    noAvailableTracks:
+      'Aucun titre téléchargé n’est encore disponible à ajouter.',
+    saveAvailableHint:
+      '{count} titres disponibles sur {total}. Les fichiers audio sont réutilisés ; les titres manquants ne seront pas téléchargés.',
     watchPlaylist: 'Surveiller les nouveaux titres',
     watchArtist: 'Surveiller les nouvelles sorties',
     openSpotify: 'Ouvrir dans Spotify',
@@ -364,6 +370,29 @@ export default {
     failed: 'Impossible de mettre à jour le like',
   },
   upgrade: {
+    chooseRecording: 'Choisir une piste Deezer',
+    chooseRecordingHint:
+      'Vérifiez la version exacte si l’ancien album ne correspond pas. L’artiste et le titre complet doivent toujours correspondre.',
+    recordingLink: 'Lien de la piste Deezer',
+    previewRecording: 'Prévisualiser',
+    recordingReviewHint:
+      'Vérifiez l’album et la durée. Ce choix prépare une analyse d’un seul morceau ; le remplacement démarre après confirmation de cette analyse.',
+    analyzeRecording: 'Analyser ce choix',
+    recordingPreviewFailed: 'Impossible de prévisualiser cette piste Deezer.',
+    replacementRescan:
+      'Options modifiées : relancez l’analyse avant de démarrer.',
+    deemixTitle: 'Remplacer les anciennes musiques avec Deemix',
+    replaceAudio: 'Utiliser les versions Deemix vérifiées',
+    replaceAudioHint:
+      'Exiger le même artiste, titre et album. Conserver la musique dans le dossier Deemix. Une correspondance ambiguë garde l’original. Cette analyse remplace l’audio au lieu de réécrire ses étiquettes.',
+    deleteOriginals: 'Nettoyer les anciennes copies Downtify après import',
+    deleteOriginalsHint:
+      'Supprimer uniquement chaque original vérifié après mise à jour des playlists, favoris et références de lecture. Les fichiers externes et paroles ne sont jamais supprimés.',
+    replacementProgress:
+      'En attente de publication ou nettoyage : {pending}. Anciennes copies supprimées : {removed}. Originaux conservés : {kept}.',
+    audio: 'Versions Deemix',
+    audioHint:
+      'Vérifier la durée du catalogue et le décodage avant de mettre à jour les playlists et retirer l’ancienne copie.',
     title: 'Améliorer la bibliothèque',
     subtitle:
       'Améliorez la musique déjà téléchargée, au lieu de la télécharger à nouveau.',
@@ -863,6 +892,16 @@ export default {
     sourceYtmHint: 'Meilleures correspondances de métadonnées',
     sourceYt: 'YouTube',
     sourceYtHint: 'Solution de repli pour les titres absents de YouTube Music',
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Télécharger avec votre serveur Deemix. La qualité demandée nécessite les droits Deezer correspondants.',
+    deemixEnabled: 'Utiliser Deemix',
+    deemixInPlace:
+      'Conserver la musique, les pochettes et les paroles dans le dossier partagé Deemix, sans réécrire les tags. Configurer un fichier ARL privé sur le serveur ; ne pas le saisir ici.',
+    deemixUrl: 'Adresse du serveur Deemix',
+    deemixRemote: 'Dossier de téléchargement dans Deemix',
+    deemixLocal: 'Même dossier dans Downtify (lecture seule acceptée)',
+    deemixQuality: 'Qualité audio',
     slskdTitle: 'slskd',
     slskdHint:
       'Téléchargez depuis Soulseek via votre serveur slskd. Les titres introuvables passent à la source suivante.',
@@ -974,6 +1013,10 @@ export default {
     navidromeAdminHint:
       'Facultatif — permet à Downtify de lancer un scan pour que les nouveaux titres apparaissent plus vite.',
     test: {
+      connection_not_deemix:
+        'Le serveur ne r\u00e9pond pas comme une instance Deemix compatible.',
+      quality_unavailable:
+        'Le compte Deezer ne permet pas la qualit\u00e9 demand\u00e9e.',
       button: 'Tester la connexion',
       testing: 'Test en cours…',
       needFields: 'Remplissez d’abord les champs ci-dessus.',
@@ -1016,6 +1059,9 @@ export default {
     navidromeSyncHint:
       'Après les téléchargements de playlists et les vérifications, maintient une playlist du même nom dans Navidrome.',
     navidromePublic: 'Rendre publiques les playlists Navidrome',
+    primaryLibrary: 'Dossier principal',
+    primaryLibraryHint:
+      'Préférer ce dossier pour les chansons du même artiste et du même album. Les fichiers et les chemins des playlists sont conservés ; aucune suppression.',
     libraryGroup: 'Bibliothèque',
     coverCache: 'Cache des pochettes',
     coverCacheHint:

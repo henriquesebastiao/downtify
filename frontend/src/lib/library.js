@@ -230,10 +230,12 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       manual: Boolean(playlist.manual),
       fileCount: playlist.count != null ? Number(playlist.count) : files.length,
       tracks,
-      // Downloaded playlists keep their own artwork. Manual ones leave
-      // this empty so CoverArt mosaics up to four track covers (the
-      // sidecar JPEG is still written for Navidrome).
-      cover: playlist.manual ? '' : playlistCoverURL(playlist.cover),
+      // A manual playlist uses a live mosaic unless a source image was
+      // explicitly imported with it.
+      cover:
+        playlist.manual && !playlist.explicit_cover
+          ? ''
+          : playlistCoverURL(playlist.cover),
       covers,
       duration: tracks.reduce((sum, track) => sum + track.duration, 0),
       // M3U mtime from GET /playlists — not the resolved tracks, or the
