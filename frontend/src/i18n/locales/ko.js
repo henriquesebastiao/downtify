@@ -538,6 +538,8 @@ export default {
       '재생목록 이름을 지정하세요. 만든 후 라이브러리에서 곡을 추가할 수 있습니다.',
     name: '이름',
     namePlaceholder: '내 재생목록',
+    addDownloaded: '다운로드한 곡을 재생목록에 추가',
+    downloadFirst: '먼저 이 재생목록의 곡을 다운로드하세요.',
     addSongs: '곡 추가',
     addSongsTitle: '“{name}”에 곡 추가',
     addSongsHint: '다운로드한 곡 및 외부 폴더의 곡을 추가할 수 있습니다.',
@@ -738,6 +740,9 @@ export default {
       '동일한 재생목록의 다른 링크로 변경하면 주소만 업데이트됩니다. 다른 재생목록 링크를 입력하면 대상을 변경하며, 처음부터 다시 검사하지만 라이브러리에 이미 있는 트랙은 재다운로드하지 않습니다.',
     editLinkHintArtist:
       '동일한 아티스트의 다른 링크로 변경하면 주소만 업데이트됩니다. 다른 아티스트 링크를 입력하면 대상을 변경하며, 발매작을 처음부터 다시 검사하지만 라이브러리에 이미 있는 트랙은 재다운로드하지 않습니다.',
+    artistLinkFallback:
+      'Spotify 링크를 찾을 수 없습니다. Spotify 아티스트 링크를 입력하세요.',
+    needSpotifyArtist: 'Spotify 아티스트 링크를 입력하세요.',
     linkRequired: '링크를 입력하세요',
     needArtistLink:
       '아티스트 모니터링 항목입니다 — 아티스트 링크를 붙여넣으세요.',
