@@ -583,6 +583,24 @@ def test_prepare_uses_catalog_duration_not_old_youtube_clip(
     assert s.store.get('old.mp3')['state'] == 'prepared'
 
 
+def test_prepare_rejects_replacement_changed_during_verification(
+    setup: SimpleNamespace,
+    prepare_mocks: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    s = setup
+    original = s.old.read_bytes()
+
+    def decode(*args, **kwargs) -> None:
+        s.new.write_bytes(b'changed during verification')
+
+    monkeypatch.setattr(module.subprocess, 'run', decode)
+    with pytest.raises(ValueError, match='Replacement changed'):
+        s.service.prepare('old.mp3', UpgradeOptions(), 1, lambda _: None)
+    assert s.store.get('old.mp3') is None
+    assert s.old.read_bytes() == original
+
+
 def test_prepare_ambiguous_catalog_never_downloads(
     setup: SimpleNamespace,
     prepare_mocks: dict,

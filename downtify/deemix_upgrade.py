@@ -151,11 +151,13 @@ class DeemixLibraryUpgrade:
         if entry.get('explicit'):
             song['explicit'] = True
         on_stage('matching')
-        requested = {'song_id': 'deezer-' + chosen_id} if chosen_id else song
         client = DeemixClient(cfg)
         try:
             client.connect()
-            row = _catalog_track(client, requested)
+            row = _catalog_track(
+                client,
+                {'song_id': 'deezer-' + chosen_id} if chosen_id else song,
+            )
         finally:
             client.close()
         if chosen_id and row is not None:
@@ -190,6 +192,7 @@ class DeemixLibraryUpgrade:
             raise ValueError(
                 'Replacement must remain inside the separate Deemix collection'
             )
+        target_sha = digest(target)
         if not verified_audio(target, row, cfg['bitrate']):
             raise ValueError('Replacement metadata or duration did not verify')
         on_stage('verifying')
@@ -239,6 +242,10 @@ class DeemixLibraryUpgrade:
         ):
             raise ValueError('Replacement could not be registered')
         self._missing_lyrics(target, row)
+        if digest(target) != target_sha:
+            raise ValueError(
+                'Replacement changed during verification; original retained'
+            )
         self.store.save_prepared({
             'old_file': stored,
             'run_id': run_id,
@@ -246,7 +253,7 @@ class DeemixLibraryUpgrade:
             'old_key': file_content_key(old),
             'new_key': file_content_key(target),
             'old_sha': old_sha,
-            'new_sha': digest(target),
+            'new_sha': target_sha,
             'new_metadata': metadata,
             'catalog': row,
             'delete_original': int(options.delete_replaced_audio),
