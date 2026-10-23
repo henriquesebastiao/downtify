@@ -7,7 +7,10 @@
       :label="t('normalization.enable')"
       :description="t('normalization.enableHint')"
     >
-      <UiSwitch v-model="normalizeVolume" :label="t('normalization.enable')" />
+      <UiSwitch
+        v-model="normalizeVolume"
+        :aria-label="t('normalization.enable')"
+      />
     </SettingRow>
     <p
       v-if="normalizeVolume"

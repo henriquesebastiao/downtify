@@ -200,7 +200,9 @@ class LoudnessAnalyzer:
             _, stderr = process.communicate(timeout=1800)
             if process.returncode:
                 raise ValueError('Audio could not be analyzed')
-            data = json.loads('{' + stderr.rsplit('{', 1)[1])
+            data, _ = json.JSONDecoder().raw_decode(
+                '{' + stderr.rsplit('{', 1)[1]
+            )
             integrated, peak = float(data['input_i']), float(data['input_tp'])
             if not math.isfinite(integrated) or not math.isfinite(peak):
                 return {

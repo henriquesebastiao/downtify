@@ -1,5 +1,4 @@
 <template>
-  <NormalizationSettings />
   <SettingGroup :title="t('account.title')" :description="t('account.hint')">
     <div class="flex items-center gap-3 px-5 py-4">
       <span
@@ -106,7 +105,6 @@
 </template>
 
 <script setup>
-import NormalizationSettings from './NormalizationSettings.vue'
 // Settings > General > Account: who is signed in, their username and
 // password, and signing out. Everyone manages their own here; admins
 // manage the others in Settings > Users.
