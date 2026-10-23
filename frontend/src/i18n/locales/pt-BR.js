@@ -225,6 +225,12 @@ export default {
     downloadNew: { one: 'Baixar {count} nova', other: 'Baixar {count} novas' },
     redownloadAll: 'Baixar tudo de novo',
     downloadSelected: 'Baixar selecionadas',
+    allHandled: 'Já está na biblioteca ou na fila',
+    addPlaylist: 'Adicionar às minhas playlists',
+    noAvailableTracks:
+      'Ainda não há faixas baixadas disponíveis para adicionar.',
+    saveAvailableHint:
+      '{count} de {total} faixas disponíveis. Os arquivos de áudio são reutilizados; as faixas ausentes não serão baixadas.',
     allInLibrary: 'Tudo já está na biblioteca',
     watchPlaylist: 'Monitorar novas faixas',
     watchArtist: 'Monitorar novos lançamentos',
@@ -359,6 +365,28 @@ export default {
     failed: 'Não foi possível atualizar a curtida',
   },
   upgrade: {
+    chooseRecording: 'Choose a Deezer recording',
+    chooseRecordingHint:
+      'Review an exact recording when old album tags do not match. The artist and full title must still match.',
+    recordingLink: 'Deezer track link',
+    previewRecording: 'Preview',
+    recordingReviewHint:
+      'Review the album and duration. This prepares a single-track scan; replacement starts only after you confirm the scan.',
+    analyzeRecording: 'Analyze this choice',
+    recordingPreviewFailed: 'Unable to preview this Deezer track.',
+    replacementRescan: 'Options changed: scan again before starting.',
+    deemixTitle: 'Replace recordings with Deemix',
+    replaceAudio: 'Use verified Deemix recordings',
+    replaceAudioHint:
+      'Match the exact artist, title and album. Keep music in the Deemix folder. Ambiguous matches leave originals untouched. This scan replaces audio instead of retagging it.',
+    deleteOriginals: 'Remove old Downtify audio after import',
+    deleteOriginalsHint:
+      'Only remove each verified original after playlists, likes and playback references are updated. External files and sidecars are never removed.',
+    replacementProgress:
+      'Awaiting publication or cleanup: {pending}. Old copies removed: {removed}. Originals kept: {kept}.',
+    audio: 'Deemix recordings',
+    audioHint:
+      'Verify catalog duration and decoded audio before updating playlists and removing an old copy.',
     title: 'Melhorar biblioteca',
     subtitle:
       'Melhore as músicas que você já baixou, em vez de baixá-las de novo.',
@@ -853,6 +881,16 @@ export default {
     sourceYtmHint: 'Melhores correspondências de metadados',
     sourceYt: 'YouTube',
     sourceYtHint: 'Alternativa para músicas ausentes do YouTube Music',
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
+    deemixEnabled: 'Use Deemix',
+    deemixInPlace:
+      'Keep audio, artwork and lyrics in the shared Deemix folder, without rewriting its tags. Configure a private ARL file on the server; do not paste it here.',
+    deemixUrl: 'Deemix server URL',
+    deemixRemote: 'Download folder inside Deemix',
+    deemixLocal: 'Same folder inside Downtify (read-only is supported)',
+    deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
     slskdHint:
       'Baixe do Soulseek pelo seu servidor slskd. Faixas não encontradas passam para a próxima fonte.',
@@ -962,6 +1000,10 @@ export default {
     navidromeAdminHint:
       'Opcional — permite ao Downtify iniciar uma varredura para novas músicas aparecerem mais rápido.',
     test: {
+      connection_not_deemix: 'The server is not a compatible Deemix instance.',
+      quality_unavailable:
+        'The Deezer account cannot stream the requested quality.',
+
       button: 'Testar conexão',
       testing: 'Testando…',
       needFields: 'Preencha os campos acima primeiro.',
@@ -1003,6 +1045,9 @@ export default {
     navidromeSyncHint:
       'Após downloads de playlists e verificações do monitor, mantém uma playlist com o mesmo nome no Navidrome.',
     navidromePublic: 'Tornar públicas as playlists do Navidrome',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
     libraryGroup: 'Biblioteca',
     coverCache: 'Cache de capas',
     coverCacheHint:

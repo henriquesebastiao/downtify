@@ -16,6 +16,7 @@ from .library_metadata import library_entry_for_file
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import (
     ResolvedLibraryRoots,
+    extra_dir_id,
     library_stored_path,
     locate_library_file,
 )
@@ -53,6 +54,7 @@ class LibraryContext:
     track_index: Optional[TrackIndex] = None
     metadata_cache: Optional[LibraryMetadataCache] = None
     playlist_catalog: Optional[PlaylistCatalog] = None
+    primary_extra_id: str = ''
 
 
 def library_context_from_state(
@@ -73,7 +75,17 @@ def library_context_from_state(
     extra_dirs = extra_dirs_from_settings(
         settings, Path(download_dir), slskd_dir
     )
+    external = settings.get('external_library')
+    primary = (
+        str(external.get('primary_folder') or '')
+        if isinstance(external, dict)
+        else ''
+    )
+    primary_id = next(
+        (extra_dir_id(root) for root in extra_dirs if str(root) == primary), ''
+    )
     return LibraryContext(
+        primary_extra_id=primary_id,
         download_dir=Path(download_dir),
         slskd_dir=slskd_dir,
         extra_dirs=extra_dirs,
@@ -503,7 +515,11 @@ def list_library_entries(
             _attach_m3u_playlists_to_entries(entries, ctx)
         if not fold_extra:
             return entries
-        entries = fold_library_entries(entries)
+        entries = (
+            fold_library_entries(entries, ctx.primary_extra_id)
+            if ctx.primary_extra_id
+            else fold_library_entries(entries)
+        )
         store_cached_track_entries(ctx, entries, paths=path_rows)
         return _filter_entries(entries, allowed_keys)
 

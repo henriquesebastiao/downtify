@@ -18,6 +18,9 @@ import { itemTrackCount } from '/src/lib/library'
 
 const createOpen = ref(false)
 const createFiles = ref([])
+const createName = ref('')
+const createDescription = ref('')
+const createSourceUrl = ref('')
 const addOpen = ref(false)
 const addPlaylist = ref(null)
 const renameOpen = ref(false)
@@ -67,10 +70,16 @@ export function usePlaylistActions() {
     )
   }
 
-  function openCreate(files = []) {
+  function openCreate(
+    files = [],
+    { name = '', description = '', sourcePlaylistUrl = '' } = {}
+  ) {
     createFiles.value = files.map((item) =>
       typeof item === 'string' ? item : item.file
     )
+    createName.value = name
+    createDescription.value = description
+    createSourceUrl.value = sourcePlaylistUrl
     createOpen.value = true
   }
 
@@ -166,12 +175,19 @@ export function usePlaylistActions() {
     }
   }
 
-  async function createNamed(name, files = []) {
+  async function createNamed(
+    name,
+    files = [],
+    { sourcePlaylistUrl = '' } = {}
+  ) {
     try {
       const res = await API.createLibraryPlaylist(name)
       const created = res.data?.name || name
       if (files.length) {
-        await API.editLibraryPlaylistTracks(created, { add: files })
+        await API.editLibraryPlaylistTracks(created, {
+          add: files,
+          sourcePlaylistUrl,
+        })
       }
       await library.load({ force: true })
       ui.toast(t('playlists.created', { name: created }), { kind: 'success' })
@@ -538,6 +554,9 @@ export function usePlaylistActions() {
     addMenuItems,
     createOpen,
     createFiles,
+    createName,
+    createDescription,
+    createSourceUrl,
     addOpen,
     addPlaylist,
     renameOpen,

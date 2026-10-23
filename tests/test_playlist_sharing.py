@@ -153,6 +153,19 @@ def test_collaborator_can_edit_tracks_but_cannot_manage(world):
         )
     )
     assert result['files'] == ['a.mp3', 'b.mp3']
+    with pytest.raises(HTTPException) as cover_error:
+        asyncio.run(
+            api.edit_library_playlist_tracks_endpoint(
+                _request(
+                    BO,
+                    body={
+                        'name': 'Mix',
+                        'source_playlist_url': 'https://deezer.com/playlist/333',
+                    },
+                )
+            )
+        )
+    assert cover_error.value.status_code == 403
     for action in (
         api.rename_library_playlist_endpoint,
         api.set_playlist_visibility_endpoint,
@@ -204,6 +217,28 @@ def test_collaboration_rejects_imported_playlists_and_unlisted_users(
         )
     assert error.value.status_code == 400
     assert world.shares.visibility(name) == PRIVATE
+
+
+def test_source_cover_cannot_edit_someone_elses_playlist(world, monkeypatch):
+    monkeypatch.setattr(
+        api,
+        '_download_playlist_cover_for_batch',
+        lambda *a: pytest.fail('network'),
+    )
+    with pytest.raises(HTTPException) as caught:
+        asyncio.run(
+            api.edit_library_playlist_tracks_endpoint(
+                _request(
+                    BO,
+                    body={
+                        'name': 'Mix',
+                        'source_playlist_url': 'https://deezer.com/playlist/333',
+                    },
+                )
+            )
+        )
+    # A private playlist is deliberately hidden, even from other users.
+    assert caught.value.status_code == 404
 
 
 # ── the store ────────────────────────────────────────────────────────

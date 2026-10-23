@@ -41,6 +41,7 @@ def stop_catalog_worker() -> None:
 
 def fold_library_entries(
     entries: list[dict[str, Any]],
+    primary_extra_id: str = '',
 ) -> list[dict[str, Any]]:
     """Fold in the worker, or inline outside a web application's lifespan.
 
@@ -54,10 +55,16 @@ def fold_library_entries(
         with _LOCK:
             pool = _pool
             future = (
-                pool.submit(finish_library_entries, entries)
+                pool.submit(finish_library_entries, entries, primary_extra_id)
+                if primary_extra_id and pool is not None
+                else pool.submit(finish_library_entries, entries)
                 if pool is not None
                 else None
             )
         if future is not None:
             return future.result()
-        return finish_library_entries(entries)
+        return (
+            finish_library_entries(entries, primary_extra_id)
+            if primary_extra_id
+            else finish_library_entries(entries)
+        )
