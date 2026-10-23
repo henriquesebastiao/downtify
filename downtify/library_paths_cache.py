@@ -103,11 +103,13 @@ def cache_key_for_dirs(
 
 
 def _cache_key(ctx: LibraryContext) -> str:
-    return cache_key_for_dirs(
+    key = cache_key_for_dirs(
         ctx.download_dir,
         ctx.slskd_dir,
         getattr(ctx, 'extra_dirs', ()) or (),
     )
+    primary = getattr(ctx, 'primary_extra_id', '')
+    return f'{key}|primary={primary}' if primary else key
 
 
 def listing_fingerprint(

@@ -989,6 +989,9 @@ export default {
     navidromeSyncHint:
       'After playlist downloads and monitor checks, keep a Navidrome playlist with the same name.',
     navidromePublic: 'Make Navidrome playlists public',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
     libraryGroup: 'Library',
     coverCache: 'Cache cover art',
     coverCacheHint:

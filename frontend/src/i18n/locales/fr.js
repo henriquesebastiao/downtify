@@ -1029,6 +1029,9 @@ export default {
     navidromeSyncHint:
       'Après les téléchargements de playlists et les vérifications, maintient une playlist du même nom dans Navidrome.',
     navidromePublic: 'Rendre publiques les playlists Navidrome',
+    primaryLibrary: 'Dossier principal',
+    primaryLibraryHint:
+      'Préférer ce dossier pour les chansons du même artiste et du même album. Les fichiers et les chemins des playlists sont conservés ; aucune suppression.',
     libraryGroup: 'Bibliothèque',
     coverCache: 'Cache des pochettes',
     coverCacheHint:

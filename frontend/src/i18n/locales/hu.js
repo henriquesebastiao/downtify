@@ -1013,6 +1013,9 @@ export default {
     navidromeSyncHint:
       'Listaletöltések és figyelő-ellenőrzések után azonos nevű listát tart fenn a Navidrome-ban.',
     navidromePublic: 'Navidrome listák nyilvánossá tétele',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
     libraryGroup: 'Könyvtár',
     coverCache: 'Borítók gyorsítótárazása',
     coverCacheHint:
