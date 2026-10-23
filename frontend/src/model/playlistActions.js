@@ -171,12 +171,19 @@ export function usePlaylistActions() {
     }
   }
 
-  async function createNamed(name, files = [], { sourcePlaylistUrl = '' } = {}) {
+  async function createNamed(
+    name,
+    files = [],
+    { sourcePlaylistUrl = '' } = {}
+  ) {
     try {
       const res = await API.createLibraryPlaylist(name)
       const created = res.data?.name || name
       if (files.length) {
-        await API.editLibraryPlaylistTracks(created, { add: files, sourcePlaylistUrl })
+        await API.editLibraryPlaylistTracks(created, {
+          add: files,
+          sourcePlaylistUrl,
+        })
       }
       await library.load({ force: true })
       ui.toast(t('playlists.created', { name: created }), { kind: 'success' })

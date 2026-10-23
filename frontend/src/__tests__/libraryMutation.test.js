@@ -8,8 +8,10 @@ const api = vi.hoisted(() => ({
   deleteLibraryPlaylist: vi.fn(),
 }))
 vi.mock('../model/api', () => ({ default: api }))
-vi.mock('../model/player', () => ({ usePlayer: () => ({ forgetFiles() {}, refreshTracks() {} }) }))
-vi.mock('../i18n', () => ({ useI18n: () => ({ t: key => key }) }))
+vi.mock('../model/player', () => ({
+  usePlayer: () => ({ forgetFiles() {}, refreshTracks() {} }),
+}))
+vi.mock('../i18n', () => ({ useI18n: () => ({ t: (key) => key }) }))
 
 beforeEach(() => {
   vi.resetModules()
@@ -21,14 +23,21 @@ beforeEach(() => {
 
 it('fetches after a delete even when a pre-delete listing is in flight', async () => {
   let finishOldListing
-  api.listPlaylists.mockImplementationOnce(() => new Promise(resolve => { finishOldListing = resolve }))
+  api.listPlaylists.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finishOldListing = resolve
+      })
+  )
   api.listPlaylists.mockResolvedValue({ data: [] })
   const { useLibrary } = await import('../model/library.js')
   const library = useLibrary()
   const oldLoad = library.load()
   const removal = library.deletePlaylist({ name: 'Mix', manual: true })
   await Promise.resolve()
-  finishOldListing({ data: [{ name: 'Mix', files: ['one.mp3'], count: 1, manual: true }] })
+  finishOldListing({
+    data: [{ name: 'Mix', files: ['one.mp3'], count: 1, manual: true }],
+  })
   await oldLoad
   await removal
   expect(api.listPlaylists).toHaveBeenCalledTimes(2)

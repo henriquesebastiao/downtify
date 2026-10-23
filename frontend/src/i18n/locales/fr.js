@@ -228,7 +228,8 @@ export default {
     allInLibrary: 'Tout est dans votre bibliothèque',
     allHandled: 'Déjà dans votre bibliothèque ou dans la file',
     addPlaylist: 'Ajouter à mes playlists',
-    noAvailableTracks: 'Aucun titre téléchargé n’est encore disponible à ajouter.',
+    noAvailableTracks:
+      'Aucun titre téléchargé n’est encore disponible à ajouter.',
     saveAvailableHint:
       '{count} titres disponibles sur {total}. Les fichiers audio sont réutilisés ; les titres manquants ne seront pas téléchargés.',
     watchPlaylist: 'Surveiller les nouveaux titres',

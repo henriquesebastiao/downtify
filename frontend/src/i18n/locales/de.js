@@ -226,10 +226,12 @@ export default {
     },
     redownloadAll: 'Alle erneut herunterladen',
     downloadSelected: 'Ausgewählte herunterladen',
-    allHandled: "Bereits in deiner Bibliothek oder Warteschlange",
-    addPlaylist: "Zu meinen Playlists hinzufügen",
-    noAvailableTracks: "Noch keine heruntergeladenen Titel zum Hinzufügen verfügbar.",
-    saveAvailableHint: "{count} von {total} Titeln sind verfügbar. Vorhandene Audiodateien werden verwendet; fehlende Titel werden nicht heruntergeladen.",
+    allHandled: 'Bereits in deiner Bibliothek oder Warteschlange',
+    addPlaylist: 'Zu meinen Playlists hinzufügen',
+    noAvailableTracks:
+      'Noch keine heruntergeladenen Titel zum Hinzufügen verfügbar.',
+    saveAvailableHint:
+      '{count} von {total} Titeln sind verfügbar. Vorhandene Audiodateien werden verwendet; fehlende Titel werden nicht heruntergeladen.',
     allInLibrary: 'Alles in deiner Bibliothek',
     watchPlaylist: 'Auf neue Titel achten',
     watchArtist: 'Auf neue Veröffentlichungen achten',

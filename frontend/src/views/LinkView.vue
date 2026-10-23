@@ -86,9 +86,10 @@
               v-else
               class="inline-flex h-12 items-center gap-2 rounded-control bg-accent/12 px-5 text-[15px] font-semibold text-accent"
             >
-              <AppIcon :name="allInLibrary ? 'check-circle' : 'queue'" :size="18" />{{
-                t(allInLibrary ? 'link.allInLibrary' : 'link.allHandled')
-              }}
+              <AppIcon
+                :name="allInLibrary ? 'check-circle' : 'queue'"
+                :size="18"
+              />{{ t(allInLibrary ? 'link.allInLibrary' : 'link.allHandled') }}
             </span>
             <UiButton
               v-if="newSongs.length && newSongs.length < details.tracks.length"
@@ -428,7 +429,8 @@ const newSongs = computed(() =>
   rows.value.filter((row) => row.status === 'new').map((row) => row.song)
 )
 const allInLibrary = computed(
-  () => rows.value.length > 0 && rows.value.every((row) => row.status === 'library')
+  () =>
+    rows.value.length > 0 && rows.value.every((row) => row.status === 'library')
 )
 
 async function savePlaylist() {
