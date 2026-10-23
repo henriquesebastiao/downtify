@@ -1003,6 +1003,15 @@ def playlist_info_and_tracks(
     request fails.
     """
 
+    name, _cover, songs = playlist_page_from_id(playlist_id)
+    return name, songs
+
+
+def playlist_page_from_id(
+    playlist_id: str,
+) -> tuple[str, str, list[dict[str, Any]]]:
+    """Name, official image and tracks from one playlist response."""
+
     payload = _get_json(f'https://api.deezer.com/playlist/{playlist_id}')
     name = str(payload.get('title') or '').strip() or str(playlist_id)
     rows = _paginate_tracks(payload.get('tracks') or {})
@@ -1013,7 +1022,7 @@ def playlist_info_and_tracks(
         song = _song_from_full_track(row)
         if song:
             songs.append(song)
-    return name, songs
+    return name, _cover_from_images(payload, prefix='picture'), songs
 
 
 def playlist_cover_url_from_id(playlist_id: str) -> str:

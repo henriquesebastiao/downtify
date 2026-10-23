@@ -1,4 +1,4 @@
-// Sidebar tree — same sections and order the zensical site had.
+// Sidebar tree â€” same sections and order the zensical site had.
 // `page` is the Markdown file under docs/; titles and icons are filled in
 // from each page (see config.mjs).
 export const NAV = [
@@ -35,6 +35,7 @@ export const NAV = [
       { title: 'Mobile Apps', page: 'features/mobile-apps.md' },
       { title: 'Server Settings', page: 'features/server.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
+      { title: 'Deemix', page: 'features/deemix.md' },
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
       {
         title: 'Existing music folders',

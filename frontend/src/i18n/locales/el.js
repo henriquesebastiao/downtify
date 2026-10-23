@@ -242,6 +242,11 @@ export default {
     downloadNew: { one: 'Λήψη {count} νέου', other: 'Λήψη {count} νέων' },
     redownloadAll: 'Λήψη όλων ξανά',
     downloadSelected: 'Λήψη επιλεγμένων',
+    allHandled: 'Ήδη στη βιβλιοθήκη ή στην ουρά',
+    addPlaylist: 'Προσθήκη στις λίστες μου',
+    noAvailableTracks: 'Δεν υπάρχουν ακόμη διαθέσιμα κατεβασμένα κομμάτια.',
+    saveAvailableHint:
+      'Διαθέσιμα {count} από {total} κομμάτια. Χρησιμοποιούνται τα υπάρχοντα αρχεία ήχου· τα κομμάτια που λείπουν δεν θα ληφθούν.',
     allInLibrary: 'Όλα είναι στη βιβλιοθήκη σου',
     watchPlaylist: 'Παρακολούθηση νέων κομματιών',
     watchArtist: 'Παρακολούθηση νέων κυκλοφοριών',
@@ -374,6 +379,28 @@ export default {
     failed: 'Δεν ήταν δυνατή η ενημέρωση',
   },
   upgrade: {
+    chooseRecording: 'Choose a Deezer recording',
+    chooseRecordingHint:
+      'Review an exact recording when old album tags do not match. The artist and full title must still match.',
+    recordingLink: 'Deezer track link',
+    previewRecording: 'Preview',
+    recordingReviewHint:
+      'Review the album and duration. This prepares a single-track scan; replacement starts only after you confirm the scan.',
+    analyzeRecording: 'Analyze this choice',
+    recordingPreviewFailed: 'Unable to preview this Deezer track.',
+    replacementRescan: 'Options changed: scan again before starting.',
+    deemixTitle: 'Replace recordings with Deemix',
+    replaceAudio: 'Use verified Deemix recordings',
+    replaceAudioHint:
+      'Match the exact artist, title and album. Keep music in the Deemix folder. Ambiguous matches leave originals untouched. This scan replaces audio instead of retagging it.',
+    deleteOriginals: 'Remove old Downtify audio after import',
+    deleteOriginalsHint:
+      'Only remove each verified original after playlists, likes and playback references are updated. External files and sidecars are never removed.',
+    replacementProgress:
+      'Awaiting publication or cleanup: {pending}. Old copies removed: {removed}. Originals kept: {kept}.',
+    audio: 'Deemix recordings',
+    audioHint:
+      'Verify catalog duration and decoded audio before updating playlists and removing an old copy.',
     title: 'Αναβάθμιση βιβλιοθήκης',
     subtitle:
       'Βελτιώστε τη μουσική που έχετε ήδη κατεβάσει, αντί να την κατεβάσετε ξανά.',
@@ -873,6 +900,16 @@ export default {
     sourceYtmHint: 'Καλύτερες αντιστοιχίες μεταδεδομένων',
     sourceYt: 'YouTube',
     sourceYtHint: 'Εναλλακτική για τραγούδια που λείπουν από το YouTube Music',
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
+    deemixEnabled: 'Use Deemix',
+    deemixInPlace:
+      'Keep audio, artwork and lyrics in the shared Deemix folder, without rewriting its tags. Configure a private ARL file on the server; do not paste it here.',
+    deemixUrl: 'Deemix server URL',
+    deemixRemote: 'Download folder inside Deemix',
+    deemixLocal: 'Same folder inside Downtify (read-only is supported)',
+    deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
     slskdHint:
       'Λήψη από Soulseek μέσω του διακομιστή slskd. Όσα δεν βρεθούν περνούν στην επόμενη πηγή.',
@@ -983,6 +1020,10 @@ export default {
     navidromeAdminHint:
       'Προαιρετικό — επιτρέπει στο Downtify να ξεκινά σάρωση ώστε τα νέα τραγούδια να εμφανίζονται νωρίτερα.',
     test: {
+      connection_not_deemix: 'The server is not a compatible Deemix instance.',
+      quality_unavailable:
+        'The Deezer account cannot stream the requested quality.',
+
       button: 'Δοκιμή σύνδεσης',
       testing: 'Δοκιμή…',
       needFields: 'Συμπληρώστε πρώτα τα παραπάνω πεδία.',
@@ -1026,6 +1067,9 @@ export default {
     navidromeSyncHint:
       'Μετά από λήψεις λιστών και ελέγχους, διατηρεί λίστα με το ίδιο όνομα στο Navidrome.',
     navidromePublic: 'Δημόσιες λίστες Navidrome',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
     libraryGroup: 'Βιβλιοθήκη',
     coverCache: 'Προσωρινή μνήμη εξωφύλλων',
     coverCacheHint:
