@@ -380,6 +380,10 @@ from .external_library import (
     effective_external_library,
     extra_dirs_from_settings,
 )
+from .external_playlists import (
+    ExternalPlaylistImports,
+    discover_external_playlists,
+)
 from .external_sync import (
     ExternalSyncJob,
     folders_removed,
@@ -1048,6 +1052,7 @@ class AppState:
     library_visibility: Optional[LibraryVisibility] = None
     manual_playlist_owners: Optional[ManualPlaylistOwners] = None
     playlist_shares: Optional[PlaylistShares] = None
+    external_playlist_imports: Optional[ExternalPlaylistImports] = None
     traffic: Optional[TrafficCounters] = None
     podcasts: Optional[PodcastStore] = None
     discover: Optional[DiscoverStore] = None
@@ -6117,6 +6122,96 @@ async def create_library_playlist_endpoint(request: Request) -> dict[str, Any]:
     return result
 
 
+@router.get('/api/library/playlists/external')
+async def external_playlist_candidates(request: Request) -> dict[str, Any]:
+    user_id = request_user_id(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail='Sign in required')
+    store = state.external_playlist_imports
+    if store is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    candidates, warnings, truncated = await asyncio.to_thread(
+        discover_external_playlists, library_context()
+    )
+    imported = await asyncio.to_thread(store.imported, user_id)
+    rows = []
+    for candidate in candidates:
+        files = filter_paths_for_request(list(candidate.files), request)
+        if not files and candidate.files and not request_is_admin(request):
+            continue
+        rows.append({
+            'source_id': candidate.source_id,
+            'revision': candidate.revision,
+            'name': candidate.name,
+            'folder': candidate.folder,
+            'files': files,
+            'count': len(files),
+            'missing': candidate.missing + len(candidate.files) - len(files),
+            'duplicates': candidate.duplicates,
+            'imported_name': imported.get(candidate.source_id, ''),
+        })
+    return {'playlists': rows, 'warnings': warnings, 'truncated': truncated}
+
+
+@router.post('/api/library/playlists/external')
+async def import_external_playlists_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    user_id = request_user_id(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail='Sign in required')
+    payload = await _json_object(request)
+    selected = payload.get('selected')
+    if (
+        not isinstance(selected, list)
+        or not 1 <= len(selected) <= 50
+        or not all(isinstance(item, dict) for item in selected)
+    ):
+        raise HTTPException(
+            status_code=400, detail='Choose between 1 and 50 playlists'
+        )
+    store = state.external_playlist_imports
+    if store is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    ctx = library_context()
+    candidates, _, _ = await asyncio.to_thread(
+        discover_external_playlists, ctx
+    )
+    by_id = {item.source_id: item for item in candidates}
+    results = []
+    for wanted in selected:
+        candidate = by_id.get(str(wanted.get('source_id') or ''))
+        if candidate is None or wanted.get('revision') != candidate.revision:
+            results.append({
+                'source_id': wanted.get('source_id'),
+                'status': 'changed',
+                'detail': 'Refresh the preview before importing',
+            })
+            continue
+        files = filter_paths_for_request(list(candidate.files), request)
+        if not files:
+            results.append({
+                'source_id': candidate.source_id,
+                'status': 'unavailable',
+                'detail': 'No accessible tracks found',
+            })
+            continue
+        try:
+            result = await asyncio.to_thread(
+                store.import_snapshot, ctx, user_id, candidate, files
+            )
+            results.append(result)
+        except (ManualPlaylistError, OSError):
+            results.append({
+                'source_id': candidate.source_id,
+                'status': 'error',
+                'detail': 'Playlist could not be imported',
+            })
+    invalidate_library_paths_cache()
+    await announce_playlists_changed()
+    return {'results': results}
+
+
 @router.post('/api/library/playlists/tracks')
 async def edit_library_playlist_tracks_endpoint(
     request: Request,
@@ -6177,6 +6272,12 @@ async def rename_library_playlist_endpoint(request: Request) -> dict[str, Any]:
             logger.opt(exception=True).debug(
                 'Could not move owner for playlist {!r}', name
             )
+    if state.external_playlist_imports is not None:
+        await asyncio.to_thread(
+            state.external_playlist_imports.rename,
+            name,
+            str(result.get('name') or new_name),
+        )
     if state.playlist_shares is not None:
         try:
             await asyncio.to_thread(
@@ -6447,6 +6548,10 @@ async def _delete_playlist_by_name(
     result['playlists_refresh_scheduled'] = bool(affected)
     if state.playlist_shares is not None:
         await asyncio.to_thread(state.playlist_shares.forget, playlist_name)
+    if state.external_playlist_imports is not None:
+        await asyncio.to_thread(
+            state.external_playlist_imports.forget, playlist_name
+        )
     await announce_playlists_changed()
     return result
 

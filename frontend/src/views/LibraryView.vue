@@ -3,6 +3,7 @@
     class="mx-auto flex max-w-[1680px] flex-col gap-6 px-4 pt-6 sm:px-6 md:pt-8 lg:px-10"
   >
     <PageHeader :title="t('library.title')" :subtitle="summary">
+      <ExternalPlaylistImport v-if="tab === 'playlists'" />
       <UiButton
         v-if="library.trackCount.value"
         variant="ghost"
@@ -276,6 +277,7 @@ import MediaRow from '/src/components/library/MediaRow.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'
 import VirtualGrid from '/src/components/library/VirtualGrid.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
+import ExternalPlaylistImport from '/src/components/library/ExternalPlaylistImport.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
 import SharedPlaylists from '/src/components/library/SharedPlaylists.vue'
