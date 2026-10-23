@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import errno
+import os
 import struct
 from pathlib import Path
 from types import SimpleNamespace
@@ -38,6 +39,42 @@ from downtify.library_upgrade_db import (
     check_is_fresh,
 )
 from downtify.lyrics import Lyrics
+
+
+def test_upgrade_with_central_lyrics_on_another_volume(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(ctx.download_dir / 'a.mp3')
+    before_mtime = track.stat().st_mtime_ns
+    destination = tmp_path / 'central-lyrics' / 'a.lrc'
+    monkeypatch.setattr(
+        library_upgrade.lyrics_mod, '_lrc_resolve', lambda _audio: destination
+    )
+    monkeypatch.setattr(
+        library_upgrade.lyrics_mod,
+        'fetch',
+        lambda *_a, **_k: Lyrics(plain='line', synced='[00:01.00] line'),
+    )
+    replace = os.replace
+
+    def same_volume(src: str, dst: str) -> None:
+        if Path(src).parent != Path(dst).parent:
+            raise OSError(errno.EXDEV, 'Cross-device link')
+        replace(src, dst)
+
+    monkeypatch.setattr(library_upgrade.os, 'replace', same_volume)
+    outcome = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx),
+        options=UpgradeOptions(categories=(CATEGORY_LYRICS,)),
+    )
+    assert outcome.status == JOB_DONE
+    assert destination.is_file()
+    assert '[00:01.00] line' in destination.read_text(encoding='utf-8')
+    assert track.stat().st_mtime_ns == before_mtime
+    assert not staging_path(track).with_suffix('.lrc').exists()
+
 
 # One MPEG-1 Layer III frame at 128 kbit/s, 44.1 kHz. mutagen reads the
 # duration from the header plus the file size, so a stream of these is a
