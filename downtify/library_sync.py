@@ -39,6 +39,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from .deemix_upgrade_store import replacement_for_id
 from .library_cache_keys import file_content_key_from_name_and_size
 from .sqlite_utils import connect_sqlite
 
@@ -469,6 +470,9 @@ class LibrarySync:
 
     def path_for(self, track_id: str) -> Optional[str]:
         with self._connect() as conn:
+            replacement = replacement_for_id(conn, track_id)
+            if replacement is not None:
+                return replacement['file']
             row = conn.execute(
                 'SELECT path FROM sync_tracks WHERE track_id = ? '
                 'AND deleted_at IS NULL',
@@ -478,6 +482,15 @@ class LibrarySync:
 
     def row_for(self, track_id: str) -> Optional[dict[str, Any]]:
         with self._connect() as conn:
+            replacement = replacement_for_id(conn, track_id)
+            if replacement is not None:
+                current = conn.execute(
+                    'SELECT row_json FROM sync_tracks WHERE path=? AND deleted_at IS NULL',
+                    (replacement['file'],),
+                ).fetchone()
+                if current is not None:
+                    return {'id': track_id, **json.loads(current['row_json'])}
+                return {'id': track_id, **public_row(replacement)}
             row = conn.execute(
                 'SELECT track_id, row_json FROM sync_tracks '
                 'WHERE track_id = ? AND deleted_at IS NULL',

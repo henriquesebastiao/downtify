@@ -129,6 +129,28 @@ def _share(request: Request) -> dict[str, Any]:
     return asyncio.run(api.set_playlist_visibility_endpoint(request))
 
 
+def test_source_cover_cannot_edit_someone_elses_playlist(world, monkeypatch):
+    monkeypatch.setattr(
+        api,
+        '_download_playlist_cover_for_batch',
+        lambda *a: pytest.fail('network'),
+    )
+    with pytest.raises(HTTPException) as caught:
+        asyncio.run(
+            api.edit_library_playlist_tracks_endpoint(
+                _request(
+                    BO,
+                    body={
+                        'name': 'Mix',
+                        'source_playlist_url': 'https://deezer.com/playlist/333',
+                    },
+                )
+            )
+        )
+    # A private playlist is deliberately hidden, even from other users.
+    assert caught.value.status_code == 404
+
+
 # ── the store ────────────────────────────────────────────────────────
 
 

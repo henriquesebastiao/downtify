@@ -167,13 +167,18 @@ def test_url_resolve_takes_deezer_album_details_from_its_tracks(monkeypatch):
 def test_url_resolve_names_a_deezer_playlist(monkeypatch):
     monkeypatch.setattr(
         api.deezer,
-        'playlist_info_and_tracks',
-        lambda did: ('Weekend Coastline', [_DEEZER_SONG]),
+        'playlist_page_from_id',
+        lambda did: (
+            'Weekend Coastline',
+            'https://example.test/official-playlist.jpg',
+            [_DEEZER_SONG],
+        ),
     )
     result = api.url_resolve_endpoint(_DEEZER_PLAYLIST)
     assert result['kind'] == 'playlist'
     assert result['name'] == 'Weekend Coastline'
     assert result['tracks'] == [_DEEZER_SONG]
+    assert result['cover_url'] == 'https://example.test/official-playlist.jpg'
 
 
 def test_url_resolve_lists_a_deezer_artists_releases(monkeypatch):
