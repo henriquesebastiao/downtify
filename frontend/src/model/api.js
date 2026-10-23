@@ -439,6 +439,10 @@ function setPlaylistVisibility(name, visibility, sharedWith = []) {
   })
 }
 
+function setPlaylistFavorite(name, favorite) {
+  return API.put('/api/library/playlists/favorite', { name, favorite })
+}
+
 function copyLibraryPlaylist(name, newName = '') {
   return API.post('/api/library/playlists/copy', {
     name,
@@ -867,6 +871,7 @@ export default {
   editLibraryPlaylistTracks,
   renameLibraryPlaylist,
   setPlaylistVisibility,
+  setPlaylistFavorite,
   copyLibraryPlaylist,
   detachLibraryPlaylist,
   followPlaylist,

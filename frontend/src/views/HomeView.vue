@@ -2,6 +2,25 @@
   <div
     class="mx-auto flex max-w-[1680px] flex-col gap-10 px-4 pt-6 sm:px-6 md:pt-8 lg:px-10"
   >
+    <section v-if="favoritePlaylists.length" class="flex flex-col gap-4">
+      <h2 class="text-display text-xl font-semibold">
+        {{ t('playlistFavorites.title') }}
+      </h2>
+      <div
+        class="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+      >
+        <MediaTile
+          v-for="playlist in favoritePlaylists"
+          :key="playlist.key"
+          :to="{ name: 'Playlist', query: { name: playlist.name } }"
+          :title="playlist.title"
+          :cover="playlist.cover"
+          :covers="playlist.covers"
+          :name="playlist.title"
+          @play="favoriteActions.play(playlist)"
+        />
+      </div>
+    </section>
     <!-- Hero: paste or search -->
     <div
       class="grid gap-4 animate-rise lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
@@ -325,6 +344,10 @@ import { useI18n } from '/src/i18n'
 const { t } = useI18n()
 const router = useRouter()
 const library = useLibrary()
+const favoriteActions = usePlaylistActions()
+const favoritePlaylists = computed(() =>
+  library.playlists.value.filter((playlist) => playlist.favorite)
+)
 const history = useHistory()
 const player = usePlayer()
 const tracker = useProgressTracker()

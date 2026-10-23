@@ -249,6 +249,7 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
         ? playlist.shared_with
         : [],
       followed: Boolean(playlist.followed),
+      favorite: Boolean(playlist.favorite),
       sharedWithMe: Boolean(playlist.shared_with_me),
       isNew: Boolean(playlist.new),
     }
@@ -278,7 +279,9 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       sharedWithMe: false,
       isNew: false,
     }))
-  return [...fromM3u, ...tracked]
+  return [...fromM3u, ...tracked].sort(
+    (a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))
+  )
 }
 
 /**
@@ -298,8 +301,13 @@ export function splitPlaylists(playlists) {
   const byOwner = (a, b) =>
     compareText(a.owner, b.owner) ||
     compareText(a.title ?? a.name, b.title ?? b.name)
-  shared.sort((a, b) => Number(b.isNew) - Number(a.isNew) || byOwner(a, b))
-  publicOnes.sort(byOwner)
+  const favoritesFirst = (a, b) =>
+    Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))
+  shared.sort(
+    (a, b) =>
+      favoritesFirst(a, b) || Number(b.isNew) - Number(a.isNew) || byOwner(a, b)
+  )
+  publicOnes.sort((a, b) => favoritesFirst(a, b) || byOwner(a, b))
   return { own, shared, public: publicOnes }
 }
 
@@ -333,7 +341,10 @@ export function itemTrackCount(item) {
 export function sortItems(items, key, direction = 'asc') {
   const sorter = SORTERS[key] || SORTERS.added
   const sorted = [...items].sort(sorter)
-  return direction === 'desc' ? sorted.reverse() : sorted
+  const ordered = direction === 'desc' ? sorted.reverse() : sorted
+  return ordered.sort(
+    (a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))
+  )
 }
 
 /**
