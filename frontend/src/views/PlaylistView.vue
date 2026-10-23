@@ -65,7 +65,7 @@
             v-if="!playlist.liked && playlist.mine"
             variant="ghost"
             icon="pencil"
-            @click="playlistActions.rename(playlist)"
+            @click="playlistActions.openRename(playlist)"
           >
             {{ t('playlists.rename') }}
           </UiButton>
