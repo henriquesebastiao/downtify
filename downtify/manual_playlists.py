@@ -8,6 +8,7 @@ edited, and so deleting them never removes the audio files.
 from __future__ import annotations
 
 from pathlib import Path
+from shutil import copyfile
 from typing import Any, Optional
 
 from loguru import logger
@@ -15,7 +16,12 @@ from loguru import logger
 from . import m3u
 from .library_catalog import LibraryContext, resolve_library_file
 from .library_paths_cache import invalidate_library_paths_cache
-from .playlist_mosaic import refresh_manual_playlist_cover
+from .playlist_mosaic import (
+    EXPLICIT_COVER_MARKER,
+    has_explicit_cover,
+    keep_explicit_cover,
+    refresh_manual_playlist_cover,
+)
 
 MAX_PLAYLIST_NAME_LEN = 120
 MAX_TRACKS_PER_EDIT = 500
@@ -40,6 +46,7 @@ def _entries_for(files: list[str]) -> list[dict[str, str]]:
 
 
 def _write(ctx: LibraryContext, files: list[str], path: Path) -> Path:
+    explicit_cover = has_explicit_cover(path)
     content, _kept = m3u.build_m3u_content(
         _entries_for(files),
         download_dir=ctx.download_dir,
@@ -50,6 +57,8 @@ def _write(ctx: LibraryContext, files: list[str], path: Path) -> Path:
     lines = content.splitlines()
     if lines[:1] == ['#EXTM3U'] and m3u.MANUAL_M3U_MARKER not in lines[:4]:
         lines.insert(1, m3u.MANUAL_M3U_MARKER)
+        if explicit_cover:
+            lines.insert(2, EXPLICIT_COVER_MARKER)
         content = '\n'.join(lines) + '\n'
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding='utf-8', newline='\n')
@@ -252,9 +261,13 @@ def rename_manual_playlist(
                 f'A playlist named {safe!r} already exists', status_code=409
             )
     files = _read_files(ctx, path)
+    explicit_cover = has_explicit_cover(path)
     written = _write(ctx, files, dest)
     if written.resolve() != path.resolve():
         old_cover = path.with_suffix('.jpg')
+        if explicit_cover:
+            copyfile(old_cover, written.with_suffix('.jpg'))
+            keep_explicit_cover(written)
         try:
             path.unlink(missing_ok=True)
         except OSError as exc:

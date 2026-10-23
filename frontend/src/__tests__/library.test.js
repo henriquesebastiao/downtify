@@ -51,6 +51,21 @@ const rows = [
 ]
 const tracks = rows.map(normalizeTrack)
 
+describe('explicit manual playlist artwork', () => {
+  it('uses imported source artwork while ordinary manual playlists keep mosaics', () => {
+    const base = {
+      name: 'Mix',
+      files: [],
+      manual: true,
+      cover: 'Playlists/Mix.jpg',
+    }
+    expect(buildPlaylists([base], new Map())[0].cover).toBe('')
+    expect(
+      buildPlaylists([{ ...base, explicit_cover: true }], new Map())[0].cover
+    ).toContain('Mix.jpg')
+  })
+})
+
 describe('normalizeTrack', () => {
   it('builds playable URLs and splits artists', () => {
     const [, harbor] = tracks

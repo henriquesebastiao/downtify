@@ -219,6 +219,12 @@ export default {
     downloadNew: { one: 'Baixar {count} nova', other: 'Baixar {count} novas' },
     redownloadAll: 'Baixar tudo de novo',
     downloadSelected: 'Baixar selecionadas',
+    allHandled: 'Já está na biblioteca ou na fila',
+    addPlaylist: 'Adicionar às minhas playlists',
+    noAvailableTracks:
+      'Ainda não há faixas baixadas disponíveis para adicionar.',
+    saveAvailableHint:
+      '{count} de {total} faixas disponíveis. Os arquivos de áudio são reutilizados; as faixas ausentes não serão baixadas.',
     allInLibrary: 'Tudo já está na biblioteca',
     watchPlaylist: 'Monitorar novas faixas',
     watchArtist: 'Monitorar novos lançamentos',

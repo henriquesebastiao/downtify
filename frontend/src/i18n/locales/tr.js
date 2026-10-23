@@ -221,6 +221,11 @@ export default {
     downloadNew: { one: '{count} yeniyi indir', other: '{count} yeniyi indir' },
     redownloadAll: 'Tümünü yeniden indir',
     downloadSelected: 'Seçilenleri indir',
+    allHandled: 'Zaten kitaplığınızda veya kuyrukta',
+    addPlaylist: 'Çalma listelerime ekle',
+    noAvailableTracks: 'Henüz eklenebilecek indirilmiş parça yok.',
+    saveAvailableHint:
+      '{total} parçadan {count} tanesi kullanılabilir. Mevcut ses dosyaları kullanılır; eksik parçalar indirilmez.',
     allInLibrary: 'Hepsi kitaplığında',
     watchPlaylist: 'Yeni parçaları izle',
     watchArtist: 'Yeni yayınları izle',

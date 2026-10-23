@@ -222,6 +222,11 @@ export default {
     downloadNew: { one: 'Λήψη {count} νέου', other: 'Λήψη {count} νέων' },
     redownloadAll: 'Λήψη όλων ξανά',
     downloadSelected: 'Λήψη επιλεγμένων',
+    allHandled: 'Ήδη στη βιβλιοθήκη ή στην ουρά',
+    addPlaylist: 'Προσθήκη στις λίστες μου',
+    noAvailableTracks: 'Δεν υπάρχουν ακόμη διαθέσιμα κατεβασμένα κομμάτια.',
+    saveAvailableHint:
+      'Διαθέσιμα {count} από {total} κομμάτια. Χρησιμοποιούνται τα υπάρχοντα αρχεία ήχου· τα κομμάτια που λείπουν δεν θα ληφθούν.',
     allInLibrary: 'Όλα είναι στη βιβλιοθήκη σου',
     watchPlaylist: 'Παρακολούθηση νέων κομματιών',
     watchArtist: 'Παρακολούθηση νέων κυκλοφοριών',
