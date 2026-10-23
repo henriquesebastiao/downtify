@@ -17,7 +17,7 @@ def _key(value: Any) -> str:
 
 def _release(entry: dict[str, Any]) -> tuple[str, str, str]:
     return (
-        _key(entry.get('album_artist') or entry.get('artist')),
+        _key(entry.get('artist')),
         _key(entry.get('title')),
         _key(entry.get('album')),
     )

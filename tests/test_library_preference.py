@@ -50,6 +50,34 @@ def test_unknown_album_does_not_hide_another_file():
     assert len(finish_library_entries(entries, 'preferred')) == 2
 
 
+def test_compilation_album_artist_cannot_replace_a_different_performer():
+    entries = [
+        row(
+            'owned.mp3',
+            title='Intro',
+            artist='Singer A',
+            album_artist='Various Artists',
+        ),
+        row(
+            'ext/preferred/preferred.flac',
+            title='Intro',
+            artist='Singer B',
+            album_artist='Various Artists',
+        ),
+    ]
+    assert {
+        e['file'] for e in finish_library_entries(entries, 'preferred')
+    } == {e['file'] for e in entries}
+
+
+def test_missing_performer_does_not_match_via_album_artist():
+    entries = [
+        row('owned.mp3', artist='', album_artist='Artist'),
+        row('ext/preferred/preferred.flac', album_artist='Artist'),
+    ]
+    assert len(finish_library_entries(entries, 'preferred')) == 2
+
+
 def test_default_behavior_stays_owned_first():
     entries = [row('owned.mp3'), row('ext/preferred/preferred.mp3')]
     assert finish_library_entries(entries) == entries[:1]
