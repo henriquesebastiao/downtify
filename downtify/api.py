@@ -464,6 +464,7 @@ from .playlist_batches import (
 )
 from .playlist_catalog import ManualPlaylistOwners, PlaylistCatalog
 from .playlist_listing import list_library_playlists
+from .playlist_mosaic import keep_explicit_cover
 from .playlist_shares import (
     PRIVATE,
     SHARED,
@@ -3242,8 +3243,10 @@ def _deezer_details(kind: str, did: str) -> dict[str, Any]:
     if kind == 'album':
         return _collection_details('album', deezer.album_from_id(did))
     if kind == 'playlist':
-        name, tracks = deezer.playlist_info_and_tracks(did)
-        return _collection_details('playlist', tracks, name)
+        name, cover, tracks = deezer.playlist_page_from_id(did)
+        details = _collection_details('playlist', tracks, name)
+        details['cover_url'] = cover
+        return details
     if kind == 'artist':
         # Deezer has a real discography endpoint (unlike Spotify's embed),
         # so - like YouTube Music - the releases come straight from it,
@@ -4053,10 +4056,9 @@ def _download_playlist_cover_for_batch(
     playlist_id: str,
     m3u_path: Path,
     settings: dict[str, Any],
-) -> None:
+) -> Optional[Path]:
     if source != _SOURCE_DEEZER:
-        download_playlist_cover(source, playlist_id, m3u_path, settings)
-        return
+        return download_playlist_cover(source, playlist_id, m3u_path, settings)
     if not settings.get('download_cover_art_playlists'):
         return
     try:
@@ -4070,7 +4072,7 @@ def _download_playlist_cover_for_batch(
     if not cover_url:
         return
     try:
-        save_playlist_cover(cover_url, m3u_path)
+        return save_playlist_cover(cover_url, m3u_path)
     except Exception:
         logger.exception('Failed to save cover art for {}', m3u_path)
 
@@ -6126,6 +6128,14 @@ async def edit_library_playlist_tracks_endpoint(
     payload = await _json_object(request)
     name = str(payload.get('name') or '').strip()
     require_playlist_visible(name, request, manage=True)
+    source_url = str(payload.get('source_playlist_url') or '').strip()
+    cover_target = (
+        _playlist_target_for_batch(source_url) if source_url else None
+    )
+    if source_url and cover_target is None:
+        raise HTTPException(
+            status_code=400, detail='Invalid playlist source URL'
+        )
     add = payload.get('add') if isinstance(payload.get('add'), list) else []
     remove = (
         payload.get('remove')
@@ -6145,6 +6155,17 @@ async def edit_library_playlist_tracks_endpoint(
         raise HTTPException(
             status_code=exc.status_code, detail=str(exc)
         ) from exc
+    if cover_target is not None:
+        path = m3u.find_m3u_for_name(ctx.download_dir, name)
+        if path is not None:
+            saved = await asyncio.to_thread(
+                _download_playlist_cover_for_batch,
+                *cover_target,
+                path,
+                state.settings,
+            )
+            if saved:
+                await asyncio.to_thread(keep_explicit_cover, path)
     invalidate_library_paths_cache()
     return result
 

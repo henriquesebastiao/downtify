@@ -420,8 +420,16 @@ function createLibraryPlaylist(name) {
   return API.post('/api/library/playlists', { name })
 }
 
-function editLibraryPlaylistTracks(name, { add = [], remove = [] } = {}) {
-  return API.post('/api/library/playlists/tracks', { name, add, remove })
+function editLibraryPlaylistTracks(
+  name,
+  { add = [], remove = [], sourcePlaylistUrl = '' } = {}
+) {
+  return API.post('/api/library/playlists/tracks', {
+    name,
+    add,
+    remove,
+    ...(sourcePlaylistUrl ? { source_playlist_url: sourcePlaylistUrl } : {}),
+  })
 }
 
 function renameLibraryPlaylist(name, newName) {

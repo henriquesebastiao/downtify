@@ -217,6 +217,11 @@ export default {
     redownloadAll: 'Download all again',
     downloadSelected: 'Download selected',
     allInLibrary: 'All in your library',
+    allHandled: 'Already in your library or queue',
+    addPlaylist: 'Add to my playlists',
+    noAvailableTracks: 'No downloaded tracks are available to add yet.',
+    saveAvailableHint:
+      '{count} of {total} tracks are available. Audio files are reused; missing tracks will not be downloaded.',
     watchPlaylist: 'Watch for new tracks',
     watchArtist: 'Watch for new releases',
     openSpotify: 'Open on Spotify',
