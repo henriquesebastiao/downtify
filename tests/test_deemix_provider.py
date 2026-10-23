@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -215,14 +216,61 @@ def test_recording_verification_checks_audio_not_just_completed_status(
         dp.mutagen,
         'File',
         lambda p, **kw: SimpleNamespace(
-            tags={'title': ['Song'], 'artist': ['Artist']},
+            tags={'title': ['Song'], 'artist': ['Artist'], 'album': ['Album']},
             info=SimpleNamespace(length=173, bitrate=320000),
+            mime=['audio/mpeg'],
         ),
     )
     assert dp.verified_audio(path, catalog, '3')
     assert not dp.verified_audio(path, catalog, '9')
     monkeypatch.setattr(dp.mutagen, 'File', lambda p, **kw: None)
     assert not dp.verified_audio(path, catalog, '3')
+
+
+@pytest.mark.parametrize(
+    ('album', 'expected'), [('Single', False), ('', False), ('Album', True)]
+)
+def test_downloaded_album_must_match_the_requested_release(
+    cfg, catalog, monkeypatch, album, expected
+):
+    path = Path(cfg['source_dir']) / 'Song.mp3'
+    path.write_bytes(b'fixture')
+    monkeypatch.setattr(
+        dp.mutagen,
+        'File',
+        lambda *a, **kw: SimpleNamespace(
+            tags={'title': ['Song'], 'artist': ['Artist'], 'album': [album]},
+            info=SimpleNamespace(length=173, bitrate=320000),
+            mime=['audio/mpeg'],
+        ),
+    )
+    assert dp.verified_audio(path, catalog, '3') is expected
+
+
+@pytest.mark.parametrize(
+    'case',
+    [
+        ('audio/mpeg', '9', False),
+        ('audio/flac', '9', True),
+        ('audio/flac', '3', True),
+    ],
+)
+def test_decoded_codec_controls_lossless_quality_not_filename(
+    cfg, catalog, monkeypatch, case
+):
+    mime, bitrate, expected = case
+    path = Path(cfg['source_dir']) / 'Renamed.flac'
+    path.write_bytes(b'fixture')
+    monkeypatch.setattr(
+        dp.mutagen,
+        'File',
+        lambda *a, **kw: SimpleNamespace(
+            tags={'title': ['Song'], 'artist': ['Artist'], 'album': ['Album']},
+            info=SimpleNamespace(length=173, bitrate=90000),
+            mime=[mime],
+        ),
+    )
+    assert dp.verified_audio(path, catalog, bitrate) is expected
 
 
 def test_deemix_finalize_preserves_native_tags_and_lrc(
@@ -247,6 +295,84 @@ def test_deemix_finalize_preserves_native_tags_and_lrc(
     result = lyrics.read_track_lyrics(path)
     assert result['synced'] == '[00:01.00]Native synced lyrics'
     assert result['plain'] == 'Native plain lyrics'
+
+
+def test_non_latin_catalog_recordings_remain_distinct(catalog):
+    song = {'name': '晴天', 'artists': ['周杰伦'], 'album_name': '葉惠美'}
+    row = {
+        **catalog,
+        'title': '晴天',
+        'artist': {'name': '周杰伦'},
+        'album': {'title': '葉惠美'},
+    }
+    assert dp.candidate_matches(song, row)
+    assert not dp.candidate_matches(song, {**row, 'title': '夜曲'})
+
+
+def test_non_latin_file_tags_cannot_match_a_different_title(
+    cfg, catalog, monkeypatch
+):
+    path = Path(cfg['source_dir']) / 'Song.mp3'
+    path.write_bytes(b'fixture')
+    row = {
+        **catalog,
+        'title': '晴天',
+        'artist': {'name': '周杰伦'},
+        'album': {'title': '葉惠美'},
+    }
+    monkeypatch.setattr(
+        dp.mutagen,
+        'File',
+        lambda *a, **kw: SimpleNamespace(
+            tags={
+                'title': ['夜曲'],
+                'artist': ['周杰伦'],
+                'album': ['葉惠美'],
+            },
+            info=SimpleNamespace(length=173, bitrate=320000),
+            mime=['audio/mpeg'],
+        ),
+    )
+    assert not dp.verified_audio(path, row, '3')
+
+
+@pytest.mark.parametrize(
+    ('codec', 'lossless'), [('libmp3lame', False), ('flac', True)]
+)
+def test_real_audio_codec_is_verified_even_with_a_flac_filename(
+    tmp_path, catalog, codec, lossless
+):
+    path = tmp_path / ('audio.mp3' if codec == 'libmp3lame' else 'audio.flac')
+    subprocess.run(
+        [
+            'ffmpeg',
+            '-v',
+            'error',
+            '-f',
+            'lavfi',
+            '-i',
+            'anullsrc=r=44100:cl=stereo',
+            '-t',
+            '2',
+            '-c:a',
+            codec,
+            '-metadata',
+            'title=Song',
+            '-metadata',
+            'artist=Artist',
+            '-metadata',
+            'album=Album',
+            str(path),
+        ],
+        check=True,
+    )
+    renamed = path.with_name('renamed.flac')
+    path.rename(renamed)
+    assert (
+        dp.verified_audio(renamed, {**catalog, 'duration': 2}, '9') is lossless
+    )
+    if lossless:
+        assert dp.verified_audio(renamed, {**catalog, 'duration': 2}, '3')
 
 
 def test_deemix_is_opt_in_and_does_not_change_default_provider(tmp_path):

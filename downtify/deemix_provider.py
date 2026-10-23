@@ -145,7 +145,7 @@ class DeemixClient:
 def _key(value: Any) -> str:
     text = unicodedata.normalize('NFKD', str(value or '').casefold())
     return re.sub(
-        r'[^a-z0-9]+',
+        r'[^\w]+',
         '',
         ''.join(c for c in text if not unicodedata.combining(c)),
     )
@@ -235,11 +235,17 @@ def verified_audio(path: Path, row: dict[str, Any], bitrate: str) -> bool:
             (row.get('artist') or {}).get('name')
         ):
             return False
+        album = _key((row.get('album') or {}).get('title'))
+        if album and _key((tags.get('album') or [''])[0]) != album:
+            return False
         expected = float(row.get('duration') or 0)
         if expected <= 0 or abs(audio.info.length - expected) > 3:
             return False
+        lossless = 'audio/flac' in (getattr(audio, 'mime', None) or [])
         if bitrate == '9':
-            return path.suffix.lower() == '.flac'
+            return lossless
+        if lossless:
+            return True
         minimum = 300000 if bitrate == '3' else 115000
         return getattr(audio.info, 'bitrate', 0) >= minimum
     except (OSError, ValueError, mutagen.MutagenError):
