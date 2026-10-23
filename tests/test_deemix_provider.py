@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -339,6 +340,7 @@ def test_non_latin_file_tags_cannot_match_a_different_title(
 @pytest.mark.parametrize(
     ('codec', 'lossless'), [('libmp3lame', False), ('flac', True)]
 )
+@pytest.mark.skipif(shutil.which('ffmpeg') is None, reason='FFmpeg required')
 def test_real_audio_codec_is_verified_even_with_a_flac_filename(
     tmp_path, catalog, codec, lossless
 ):
