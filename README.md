@@ -150,17 +150,17 @@ See **[Troubleshooting](https://henriquesebastiao.github.io/downtify/troubleshoo
 
 ## Translations
 
-The interface is available in English, Spanish, Brazilian Portuguese, French, Turkish, Hungarian, Greek, Bulgarian and German. Switch language in **Settings → Language**; the choice is saved in the browser and applies without a reload.
+The interface is available in English, Spanish, Brazilian Portuguese, French, Turkish, Hungarian, Greek, Bulgarian, German and Korean, and so is the [documentation](https://downtify.henriquesebastiao.com/): it opens in your browser's language when it is translated into it (English otherwise), and the globe button in the top bar switches language. Switch the app's language in **Settings → Language**; the choice is saved in the browser and applies without a reload.
 
 ### Contributing translations
 
-Adding a language is a small change and needs no tooling beyond the existing Vite setup:
+You can translate the app, the documentation, or both — they are independent, and partial work is welcome. For the app, adding a language is a small change and needs no tooling beyond the existing Vite setup:
 
 1. Copy `frontend/src/i18n/locales/en.js` to a new file named after an [IETF language tag](https://en.wikipedia.org/wiki/IETF_language_tag) (`de.js`, `it.js`, `pt-PT.js`).
 2. Translate the values. Keep the keys and placeholder tokens (`{count}`, `{name}`, `{file}`) unchanged, and set `language.name` to the language's native name.
 3. Register the locale in `frontend/src/i18n/index.js`.
 
-Missing keys fall back to English, so a partial translation is welcome. The full walkthrough, with the registration snippet and tips, is in **[Internationalization](https://henriquesebastiao.github.io/downtify/features/internationalization/)**.
+Missing keys fall back to English, so a partial translation is welcome. For the documentation, each language is a folder in `docs/` with the same pages as English; `npm run i18n -- status <code>` (from `docs/`) shows what is left to translate. The full walkthrough for both, with the registration snippet and tips, is in **[Internationalization](https://henriquesebastiao.github.io/downtify/features/internationalization/)**.
 
 ## Documentation
 
