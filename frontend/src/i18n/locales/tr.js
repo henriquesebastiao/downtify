@@ -1,4 +1,9 @@
 export default {
+  playlistFavorites: {
+    title: 'Favori çalma listeleri',
+    add: 'Çalma listesini favorilere ekle',
+    remove: 'Çalma listesini favorilerden kaldır',
+  },
   normalization: {
     title: 'Volume normalization',
     hint: 'Balance track loudness during playback without changing your audio files.',

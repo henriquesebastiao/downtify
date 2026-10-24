@@ -10,18 +10,18 @@
         class="inline-flex items-center gap-1.5 font-medium hover:text-accent"
       >
         <Icon name="pencil" :size="15" />
-        Edit this page on GitHub
+        {{ ui.editPage }}
       </a>
       <p v-if="updated" class="inline-flex items-center gap-1.5">
         <Icon name="clock" :size="15" />
-        Last updated
+        {{ ui.lastUpdated }}
         <time :datetime="isoDate">{{ updated }}</time>
       </p>
     </div>
 
     <nav
       v-if="nav.prev.value || nav.next.value"
-      aria-label="Previous and next pages"
+      :aria-label="ui.previousNext"
       class="grid gap-3 sm:grid-cols-2"
     >
       <a
@@ -30,7 +30,7 @@
         class="group flex flex-col gap-1 rounded-panel border border-line-2 bg-surface px-5 py-4 transition-colors hover:border-accent/60"
       >
         <span class="eyebrow inline-flex items-center gap-1.5">
-          <Icon name="arrow-left" :size="13" /> Previous
+          <Icon name="arrow-left" :size="13" /> {{ ui.previous }}
         </span>
         <span class="font-semibold text-fg group-hover:text-accent">{{
           nav.prev.value.title
@@ -42,7 +42,7 @@
         class="group flex flex-col items-end gap-1 rounded-panel border border-line-2 bg-surface px-5 py-4 text-right transition-colors hover:border-accent/60 sm:col-start-2"
       >
         <span class="eyebrow inline-flex items-center gap-1.5">
-          Next <Icon name="arrow-right" :size="13" />
+          {{ ui.next }} <Icon name="arrow-right" :size="13" />
         </span>
         <span class="font-semibold text-fg group-hover:text-accent">{{
           nav.next.value.title
@@ -57,8 +57,10 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useData, withBase } from 'vitepress'
 import Icon from './Icon.vue'
 import { useNav } from '../composables/nav'
+import { useUi } from '../composables/ui'
 
-const { page, theme } = useData()
+const { page, theme, lang } = useData()
+const { ui } = useUi()
 const nav = useNav()
 
 const editUrl = computed(() => theme.value.editBase + page.value.filePath)
@@ -70,7 +72,7 @@ const isoDate = computed(() =>
 const updated = ref('')
 function format() {
   updated.value = page.value.lastUpdated
-    ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(
+    ? new Intl.DateTimeFormat(lang.value, { dateStyle: 'medium' }).format(
         new Date(page.value.lastUpdated)
       )
     : ''

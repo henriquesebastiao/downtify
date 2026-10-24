@@ -1,4 +1,9 @@
 export default {
+  playlistFavorites: {
+    title: 'Любими плейлисти',
+    add: 'Добавяне на плейлиста в любими',
+    remove: 'Премахване на плейлиста от любими',
+  },
   normalization: {
     title: 'Volume normalization',
     hint: 'Balance track loudness during playback without changing your audio files.',

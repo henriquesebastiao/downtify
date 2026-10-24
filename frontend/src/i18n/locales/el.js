@@ -1,4 +1,9 @@
 export default {
+  playlistFavorites: {
+    title: 'Αγαπημένες λίστες',
+    add: 'Προσθήκη λίστας στα αγαπημένα',
+    remove: 'Αφαίρεση λίστας από τα αγαπημένα',
+  },
   normalization: {
     title: 'Volume normalization',
     hint: 'Balance track loudness during playback without changing your audio files.',

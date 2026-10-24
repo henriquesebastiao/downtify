@@ -1,4 +1,9 @@
 export default {
+  playlistFavorites: {
+    title: 'Playlists favoritas',
+    add: 'Añadir playlist a favoritos',
+    remove: 'Quitar playlist de favoritos',
+  },
   normalization: {
     title: 'Volume normalization',
     hint: 'Balance track loudness during playback without changing your audio files.',

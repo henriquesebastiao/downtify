@@ -1,4 +1,9 @@
 export default {
+  playlistFavorites: {
+    title: 'Kedvenc lejátszási listák',
+    add: 'Lista hozzáadása a kedvencekhez',
+    remove: 'Lista eltávolítása a kedvencekből',
+  },
   normalization: {
     title: 'Volume normalization',
     hint: 'Balance track loudness during playback without changing your audio files.',

@@ -1,4 +1,5 @@
 import Layout from './components/Layout.vue'
+import EnglishOnly from './components/EnglishOnly.vue'
 import Icon from './components/Icon.vue'
 import HomeActions from './components/HomeActions.vue'
 import HomeHighlights from './components/HomeHighlights.vue'
@@ -10,6 +11,7 @@ export default {
   enhanceApp({ app }) {
     // Used from the Markdown pages.
     app.component('DocIcon', Icon)
+    app.component('EnglishOnly', EnglishOnly)
     app.component('HomeActions', HomeActions)
     app.component('HomeHighlights', HomeHighlights)
     app.component('HomePipeline', HomePipeline)
