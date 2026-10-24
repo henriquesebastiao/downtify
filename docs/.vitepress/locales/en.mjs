@@ -94,6 +94,7 @@ export default {
       'features/external-library.md': 'Existing music folders',
       'features/library-upgrade.md': 'Upgrade Library',
       'features/replace-audio.md': 'Replace Audio',
+      'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U Export',
       'features/playlist-cover-art.md': 'Playlist Cover Art',
       'features/artist-images.md': 'Artist Photo, Banner & Bio',

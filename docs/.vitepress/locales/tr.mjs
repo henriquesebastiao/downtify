@@ -86,6 +86,7 @@ export default {
       'features/external-library.md': 'Mevcut müzik klasörleri',
       'features/library-upgrade.md': 'Kitaplığı iyileştir',
       'features/replace-audio.md': 'Sesi değiştir',
+      'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U dışa aktarma',
       'features/playlist-cover-art.md': 'Çalma listesi kapakları',
       'features/artist-images.md': 'Sanatçı fotoğrafı, afişi ve biyografisi',

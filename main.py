@@ -50,6 +50,7 @@ from downtify.deemix_upgrade_store import AudioReplacementStore
 from downtify.discover import DiscoverStore
 from downtify.discovery import Announcer, discovery_enabled
 from downtify.downloader import Downloader
+from downtify.external_playlists import ExternalPlaylistImports
 from downtify.external_sync import ExternalSyncJob
 from downtify.library_archive import (
     MAX_ARCHIVE_FILES,
@@ -378,6 +379,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_catalog = PlaylistCatalog(library_db)
     api.state.manual_playlist_owners = ManualPlaylistOwners(library_db)
     api.state.playlist_shares = PlaylistShares(library_db)
+    api.state.external_playlist_imports = ExternalPlaylistImports(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)

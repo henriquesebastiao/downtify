@@ -86,6 +86,7 @@ export default {
       'features/external-library.md': 'Съществуващи папки с музика',
       'features/library-upgrade.md': 'Подобряване на библиотеката',
       'features/replace-audio.md': 'Замяна на аудио',
+      'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U експорт',
       'features/playlist-cover-art.md': 'Корици на плейлисти',
       'features/artist-images.md': 'Снимка, банер и биография на изпълнителя',

@@ -87,6 +87,7 @@ export default {
       'features/external-library.md': 'Υπάρχοντες φάκελοι μουσικής',
       'features/library-upgrade.md': 'Αναβάθμιση βιβλιοθήκης',
       'features/replace-audio.md': 'Αντικατάσταση ήχου',
+      'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'Εξαγωγή M3U',
       'features/playlist-cover-art.md': 'Εξώφυλλα λιστών',
       'features/artist-images.md':

@@ -86,6 +86,7 @@ export default {
       'features/external-library.md': 'Carpetas de música existentes',
       'features/library-upgrade.md': 'Mejorar la biblioteca',
       'features/replace-audio.md': 'Reemplazar audio',
+      'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'Exportación M3U',
       'features/playlist-cover-art.md': 'Portadas de playlists',
       'features/artist-images.md': 'Foto, banner y bio del artista',

@@ -5,6 +5,22 @@ export default {
     add: 'Mettre la playlist en favoris',
     remove: 'Retirer la playlist des favoris',
   },
+  externalPlaylistImport: {
+    open: 'Importer les playlists des dossiers',
+    title: 'Playlists de vos dossiers de musique',
+    hint: 'Choisissez les playlists à ajouter, 50 au maximum par ajout. Seuls les morceaux disponibles sont référencés. Les fichiers sources et les audios restent inchangés.',
+    loading: 'Recherche des fichiers de playlists…',
+    empty:
+      'Aucun fichier de playlist M3U ou M3U8 trouvé dans les dossiers ajoutés.',
+    counts:
+      '{count} disponibles · {missing} indisponibles · {duplicates} entrées répétées',
+    existing: 'Déjà ajoutée sous le nom {name}',
+    preview: 'Aperçu des 30 premiers morceaux',
+    truncated: 'La recherche a atteint sa limite ; cette liste est incomplète.',
+    add: 'Ajouter la sélection ({count})',
+    result:
+      '{added} ajoutées · {existing} déjà présentes · {failed} à vérifier ou non importées',
+  },
   language: {
     name: 'Français',
   },

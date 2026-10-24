@@ -86,6 +86,7 @@ export default {
       'features/external-library.md': 'Meglévő zenemappák',
       'features/library-upgrade.md': 'Könyvtár javítása',
       'features/replace-audio.md': 'Hang cseréje',
+      'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U-exportálás',
       'features/playlist-cover-art.md': 'Lejátszási lista borítók',
       'features/artist-images.md': 'Előadó fotója, bannere és bemutatkozása',

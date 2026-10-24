@@ -85,6 +85,7 @@ export default {
       'features/external-library.md': '기존 음악 폴더',
       'features/library-upgrade.md': '라이브러리 업그레이드',
       'features/replace-audio.md': '오디오 교체',
+      'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U 내보내기',
       'features/playlist-cover-art.md': '재생목록 커버 아트',
       'features/artist-images.md': '아티스트 사진, 배너, 소개',

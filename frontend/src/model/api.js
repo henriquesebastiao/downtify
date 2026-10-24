@@ -420,6 +420,14 @@ function createLibraryPlaylist(name) {
   return API.post('/api/library/playlists', { name })
 }
 
+function discoverExternalPlaylists() {
+  return API.get('/api/library/playlists/external')
+}
+
+function importExternalPlaylists(selected) {
+  return API.post('/api/library/playlists/external', { selected })
+}
+
 function editLibraryPlaylistTracks(
   name,
   { add = [], remove = [], sourcePlaylistUrl = '' } = {}
@@ -881,6 +889,8 @@ export default {
   deleteDownloadsBatch,
   deleteLibraryPlaylist,
   createLibraryPlaylist,
+  discoverExternalPlaylists,
+  importExternalPlaylists,
   editLibraryPlaylistTracks,
   renameLibraryPlaylist,
   setPlaylistVisibility,

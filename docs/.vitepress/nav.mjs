@@ -45,6 +45,10 @@ export const NAV = [
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
       { title: 'Replace Audio', page: 'features/replace-audio.md' },
       { title: 'M3U Export', page: 'features/m3u-export.md' },
+      {
+        title: 'Import existing playlists',
+        page: 'features/external-playlists.md',
+      },
       { title: 'Playlist Cover Art', page: 'features/playlist-cover-art.md' },
       {
         title: 'Artist Photo, Banner & Bio',
