@@ -23,6 +23,16 @@ export default {
   language: {
     name: 'Deutsch',
   },
+  buy: {
+    menu: 'Künstler unterstützen',
+    title: 'Künstler unterstützen',
+    body: 'Kaufe die Musik oder besuche die eigene Website des Künstlers.',
+    inStore: 'Im Shop öffnen',
+    search: 'Nach „{query}“ suchen',
+    website: 'Offizielle Website',
+    failed: 'Die Shops konnten nicht abgefragt werden.',
+    note: 'Bandcamp gibt den Großteil jedes Verkaufs an den Künstler weiter. Das sind einfache Links: Downtify verkauft nichts und verdient nichts daran.',
+  },
   common: {
     cancel: 'Abbrechen',
     confirm: 'Bestätigen',

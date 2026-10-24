@@ -259,6 +259,11 @@ downloads are shared, and files are never stored twice.
  * ``GET  /api/preview`` (a song's 30 s preview clip from Deezer, for a
    song with no ``preview_url`` of its own - ``?artist=&title=&duration=``,
    response ``{preview_url}``, ``""`` when Deezer has no matching song)
+ * ``GET  /api/buy`` (where to buy a song, album or artist's music to
+   support them - ``?artist=&title=&album=&country=``, response ``{kind,
+   query, links}``: the iTunes Store item with its price when found,
+   Bandcamp and Qobuz searches, the artist's website from their saved
+   profile - see ``downtify.buy_links``)
  * ``GET  /api/similar/tracks`` (tracks similar to ``?artist=&track=``
    via YouTube Music's own radio mix for the track - downloadable song
    rows plus ``match`` - see
@@ -362,6 +367,7 @@ from .auth import (
     client_ip,
     trusted_proxies_from_env,
 )
+from .buy_links import buy_links
 from .cookies import MAX_COOKIES_BYTES, CookiesStore, InvalidCookiesFile
 from .cover_cache import CoverArtCache
 from .cover_thumbs import CoverThumbs
@@ -8103,6 +8109,46 @@ async def song_preview_endpoint(
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {'preview_url': url}
+
+
+@router.get('/api/buy')
+async def buy_links_endpoint(
+    artist: str = Query('', max_length=200),
+    title: str = Query('', max_length=300),
+    album: str = Query('', max_length=300),
+    country: str = Query('', max_length=8),
+) -> dict[str, Any]:
+    """Where to buy a song (``title``), an album (``album``, no title) or
+    an artist's music (``artist`` alone), to support the artist - see
+    :mod:`downtify.buy_links`. ``country`` (two letters, ``US`` by
+    default) picks the iTunes store. ``{kind, query, links}``."""
+
+    artist = artist.strip()
+    if not artist:
+        raise HTTPException(status_code=400, detail='artist is required')
+    website = await asyncio.to_thread(_artist_website, artist)
+    return await asyncio.to_thread(
+        buy_links,
+        artist,
+        title,
+        album,
+        country=country,
+        website=website,
+    )
+
+
+def _artist_website(name: str) -> str:
+    """The website in *name*'s saved profile (``''`` without one; a
+    profile is never fetched for this)."""
+
+    try:
+        profile = artist_profile.load_profile(
+            _artist_profile_download_dir(), name
+        )
+    except Exception:
+        logger.opt(exception=True).debug('Could not read profile of {}', name)
+        return ''
+    return str((profile.get('social') or {}).get('website') or '')
 
 
 @router.get('/api/similar/tracks')

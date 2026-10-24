@@ -90,6 +90,7 @@ export default {
       'features/m3u-export.md': 'M3U 내보내기',
       'features/playlist-cover-art.md': '재생목록 커버 아트',
       'features/artist-images.md': '아티스트 사진, 배너, 소개',
+      'features/support-artists.md': '아티스트 응원하기',
       'features/file-organization.md': '파일 정리',
       'features/lyrics.md': '가사',
       'features/explicit-marker.md': '성인 콘텐츠 표시',

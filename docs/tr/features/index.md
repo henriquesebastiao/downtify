@@ -34,6 +34,7 @@ Downtify, Spotify’dan yerel bir müzik kitaplığı oluşturmak ve sürdürmek
 | [M3U dışa aktarma](m3u-export.md) | Jellyfin, Navidrome, Plex ve her medya uygulaması için otomatik üretilen çalma listesi dosyaları |
 | [Çalma listesi kapakları](playlist-cover-art.md) | Çalma listesinin kendi kapak resmini M3U dosyasının yanına kaydedin |
 | [Sanatçı fotoğrafı, afişi ve biyografisi](artist-images.md) | Bir sanatçı için YouTube Music, Deezer, Spotify veya kendi yüklemenizden gerçek bir fotoğraf ve afiş seçin; biyografisini, kökenini ve bağlantılarını Apple Music ve Deezer’dan otomatik ya da isteğe bağlı olarak alın |
+| [Sanatçıyı destekle](support-artists.md) | Bir şarkıyı, albümü ya da sanatçıyı nereden satın alacağını bul: fiyatıyla iTunes Store ürünü, Bandcamp ve Qobuz, sanatçının web sitesi |
 | [Dosya düzeni](file-organization.md) | Düz yapı ya da sanatçı başına alt klasörler |
 | [Şarkı sözleri](lyrics.md) | Sözleri (düz ve zamanla eşzamanlı) otomatik indirin ve gömün; `.lrc` dosyanın yanında ya da seçtiğiniz bir klasörde |
 | [YouTube çerezleri](youtube-cookies.md) | Açık içerikli/yaş sınırlı parçaları indirmek için web arayüzünden bir `cookies.txt` yükleyin |

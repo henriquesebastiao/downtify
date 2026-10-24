@@ -91,6 +91,7 @@ export default {
       'features/m3u-export.md': 'M3U-exportálás',
       'features/playlist-cover-art.md': 'Lejátszási lista borítók',
       'features/artist-images.md': 'Előadó fotója, bannere és bemutatkozása',
+      'features/support-artists.md': 'Az előadó támogatása',
       'features/file-organization.md': 'Fájlszervezés',
       'features/lyrics.md': 'Dalszövegek',
       'features/explicit-marker.md': 'Explicit jelölés',

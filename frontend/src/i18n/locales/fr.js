@@ -24,6 +24,16 @@ export default {
   language: {
     name: 'Français',
   },
+  buy: {
+    menu: 'Soutenir l’artiste',
+    title: 'Soutenir l’artiste',
+    body: 'Achetez la musique, ou visitez le site de l’artiste.',
+    inStore: 'Ouvrir dans la boutique',
+    search: 'Rechercher « {query} »',
+    website: 'Site officiel',
+    failed: 'Impossible d’interroger les boutiques.',
+    note: 'Bandcamp reverse l’essentiel de chaque vente à l’artiste. Ce sont de simples liens : Downtify ne vend rien et n’en tire aucun revenu.',
+  },
   common: {
     cancel: 'Annuler',
     confirm: 'Confirmer',

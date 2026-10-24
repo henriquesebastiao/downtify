@@ -34,6 +34,7 @@ Downtify deckt alles ab, was du brauchst, um aus Spotify eine lokale Musikbiblio
 | [M3U-Export](m3u-export.md) | Automatisch erzeugte Playlist-Dateien für Jellyfin, Navidrome, Plex und jede Medien-App |
 | [Playlist-Cover](playlist-cover-art.md) | Das eigene Titelbild der Playlist neben ihrer M3U-Datei speichern |
 | [Künstlerfoto, Banner und Bio](artist-images.md) | Ein echtes Foto und Banner für einen Künstler von YouTube Music, Deezer, Spotify oder aus eigenem Upload wählen und Bio, Herkunft und Links von Apple Music und Deezer holen, automatisch oder auf Abruf |
+| [Künstler unterstützen](support-artists.md) | Finde, wo du einen Titel, ein Album oder einen Künstler kaufen kannst: der Artikel im iTunes Store mit Preis, Bandcamp und Qobuz, die Website des Künstlers |
 | [Dateiorganisation](file-organization.md) | Flaches Layout oder Unterordner pro Künstler |
 | [Songtexte](lyrics.md) | Songtexte (einfach und zeitsynchron) automatisch herunterladen und einbetten; `.lrc` neben der Datei oder in einem Ordner deiner Wahl |
 | [YouTube-Cookies](youtube-cookies.md) | Eine `cookies.txt` über die Weboberfläche hochladen, um explizite/altersbeschränkte Titel herunterzuladen |

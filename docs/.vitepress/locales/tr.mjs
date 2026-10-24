@@ -91,6 +91,7 @@ export default {
       'features/m3u-export.md': 'M3U dışa aktarma',
       'features/playlist-cover-art.md': 'Çalma listesi kapakları',
       'features/artist-images.md': 'Sanatçı fotoğrafı, afişi ve biyografisi',
+      'features/support-artists.md': 'Sanatçıyı destekle',
       'features/file-organization.md': 'Dosya düzeni',
       'features/lyrics.md': 'Şarkı sözleri',
       'features/explicit-marker.md': 'Müstehcen içerik işareti',

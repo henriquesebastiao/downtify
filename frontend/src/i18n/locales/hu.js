@@ -23,6 +23,16 @@ export default {
   language: {
     name: 'Magyar',
   },
+  buy: {
+    menu: 'Az előadó támogatása',
+    title: 'Az előadó támogatása',
+    body: 'Vásárold meg a zenét, vagy látogasd meg az előadó saját weboldalát.',
+    inStore: 'Megnyitás a boltban',
+    search: 'Keresés: „{query}”',
+    website: 'Hivatalos weboldal',
+    failed: 'Nem sikerült lekérdezni a boltokat.',
+    note: 'A Bandcamp minden eladás nagy részét az előadónak adja. Ezek egyszerű linkek: a Downtify nem árul semmit, és nem keres rajtuk.',
+  },
   common: {
     cancel: 'Mégse',
     confirm: 'Megerősítés',
