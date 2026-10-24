@@ -1,4 +1,9 @@
 export default {
+  playlistFavorites: {
+    title: 'Playlists favoritas',
+    add: 'Añadir playlist a favoritos',
+    remove: 'Quitar playlist de favoritos',
+  },
   externalPlaylistImport: {
     open: 'Import folder playlists',
     title: 'Playlists in your music folders',

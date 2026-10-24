@@ -1,4 +1,9 @@
 export default {
+  playlistFavorites: {
+    title: 'Любими плейлисти',
+    add: 'Добавяне на плейлиста в любими',
+    remove: 'Премахване на плейлиста от любими',
+  },
   externalPlaylistImport: {
     open: 'Import folder playlists',
     title: 'Playlists in your music folders',

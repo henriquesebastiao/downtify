@@ -1,4 +1,9 @@
 export default {
+  playlistFavorites: {
+    title: 'Αγαπημένες λίστες',
+    add: 'Προσθήκη λίστας στα αγαπημένα',
+    remove: 'Αφαίρεση λίστας από τα αγαπημένα',
+  },
   externalPlaylistImport: {
     open: 'Import folder playlists',
     title: 'Playlists in your music folders',

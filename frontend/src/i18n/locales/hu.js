@@ -1,4 +1,9 @@
 export default {
+  playlistFavorites: {
+    title: 'Kedvenc lejátszási listák',
+    add: 'Lista hozzáadása a kedvencekhez',
+    remove: 'Lista eltávolítása a kedvencekből',
+  },
   externalPlaylistImport: {
     open: 'Import folder playlists',
     title: 'Playlists in your music folders',

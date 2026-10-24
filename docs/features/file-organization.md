@@ -21,7 +21,7 @@ downloads/
 
 ## Organize by artist
 
-With **Settings → File organization → Organize by artist** on (the default), to group every track — including playlist and album downloads — under a subfolder named after the primary artist:
+With **Settings → Downloads & files → Organize by artist** on (the default), to group every track — including playlist and album downloads — under a subfolder named after the primary artist:
 
 ```
 downloads/
