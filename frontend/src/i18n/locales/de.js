@@ -4,6 +4,12 @@ export default {
     add: 'Playlist zu Favoriten hinzufügen',
     remove: 'Playlist aus Favoriten entfernen',
   },
+  collaboration: {
+    canEdit: 'Allow adding and removing tracks',
+    copyHint:
+      'Create an independent copy to collaborate without changing the source synchronization.',
+    copy: 'Create a collaborative copy',
+  },
   language: {
     name: 'Deutsch',
   },

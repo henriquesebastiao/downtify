@@ -76,6 +76,7 @@ export default {
       'features/liked-songs.md': 'Canciones que me gustan',
       'features/podcasts.md': 'Podcasts',
       'features/discover.md': 'Descubrir',
+      'features/collaborative-playlists.md': 'Collaborative playlists',
       'features/users.md': 'Usuarios e inicio de sesión',
       'features/mobile-apps.md': 'Apps móviles',
       'features/server.md': 'Ajustes del servidor',

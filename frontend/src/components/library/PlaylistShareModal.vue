@@ -58,11 +58,32 @@
                 />
                 <span class="truncate">{{ name }}</span>
               </label>
+              <label
+                v-if="playlist?.manual && picked.includes(name)"
+                class="flex items-center gap-3 px-8 pb-3 text-xs text-muted"
+              >
+                <input
+                  v-model="editors"
+                  type="checkbox"
+                  :value="name"
+                  class="size-4 accent-[var(--color-accent)]"
+                />
+                {{ t('collaboration.canEdit') }}
+              </label>
             </li>
           </ul>
         </template>
       </div>
 
+      <div
+        v-if="playlist && !playlist.manual"
+        class="flex flex-col gap-2 text-sm text-muted"
+      >
+        <p>{{ t('collaboration.copyHint') }}</p>
+        <UiButton variant="ghost" icon="copy" @click="makeCollaborativeCopy">{{
+          t('collaboration.copy')
+        }}</UiButton>
+      </div>
       <p v-if="error" class="text-[13px] text-danger" role="alert">
         {{ error }}
       </p>
@@ -85,7 +106,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiInput from '../ui/UiInput.vue'
@@ -105,6 +126,7 @@ const open = actions.shareOpen
 const playlist = computed(() => actions.sharePlaylist.value)
 const visibility = ref('private')
 const picked = ref([])
+const editors = ref([])
 const usernames = ref([])
 const filter = ref('')
 const loading = ref(false)
@@ -150,6 +172,7 @@ watch(open, async (value) => {
   const current = playlist.value
   visibility.value = current?.visibility || 'private'
   picked.value = [...(current?.sharedWith || [])]
+  editors.value = [...(current?.editors || [])]
   filter.value = ''
   error.value = ''
   loading.value = true
@@ -166,6 +189,16 @@ function close() {
   open.value = false
 }
 
+async function makeCollaborativeCopy() {
+  const created = await actions.copy(playlist.value)
+  if (created) {
+    close()
+    await nextTick()
+    const copied = library.findPlaylist(created)
+    if (copied) actions.openShare(copied)
+  }
+}
+
 async function save() {
   const current = playlist.value
   if (!current || !canSave.value) return
@@ -175,7 +208,10 @@ async function save() {
     await API.setPlaylistVisibility(
       current.name,
       visibility.value,
-      visibility.value === 'shared' ? picked.value : []
+      visibility.value === 'shared' ? picked.value : [],
+      visibility.value === 'shared' && current.manual
+        ? editors.value.filter((name) => picked.value.includes(name))
+        : []
     )
     await library.refreshPlaylists()
     ui.toast(t(`sharing.saved.${visibility.value}`, { name: current.title }), {

@@ -48,7 +48,9 @@ export function usePlaylistActions() {
       route: { name: 'Playlist', query: { name: playlist.name } },
       // Editing is for the owner: a playlist shared with the user is
       // view-only.
-      manual: Boolean(playlist.manual && playlist.mine),
+      manual: Boolean(
+        playlist.manual && (playlist.mine || playlist.canEditTracks)
+      ),
       playlistName: playlist.name,
     }
   }
@@ -63,7 +65,9 @@ export function usePlaylistActions() {
 
   function manuals() {
     // Only the user's own: a playlist shared with them is view-only.
-    return library.ownPlaylists.value.filter((item) => item.manual)
+    return library.playlists.value.filter(
+      (item) => item.manual && (item.mine || item.canEditTracks)
+    )
   }
 
   function openCreate(
@@ -403,6 +407,12 @@ export function usePlaylistActions() {
     const empty = !itemTrackCount(playlist)
     return [
       favoriteAction(playlist),
+      {
+        label: t('playlists.addSongs'),
+        icon: 'plus',
+        hidden: !playlist.canEditTracks,
+        action: () => openAddSongs(playlist),
+      },
       {
         label: t('actions.play'),
         icon: 'play',

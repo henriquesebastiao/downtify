@@ -4,6 +4,12 @@ export default {
     add: '재생목록을 즐겨찾기에 추가',
     remove: '재생목록을 즐겨찾기에서 제거',
   },
+  collaboration: {
+    canEdit: 'Allow adding and removing tracks',
+    copyHint:
+      'Create an independent copy to collaborate without changing the source synchronization.',
+    copy: 'Create a collaborative copy',
+  },
   language: {
     name: '한국어',
   },

@@ -77,6 +77,7 @@ export default {
       'features/liked-songs.md': 'Αγαπημένα τραγούδια',
       'features/podcasts.md': 'Podcasts',
       'features/discover.md': 'Ανακάλυψη',
+      'features/collaborative-playlists.md': 'Collaborative playlists',
       'features/users.md': 'Χρήστες και σύνδεση',
       'features/mobile-apps.md': 'Εφαρμογές κινητού',
       'features/server.md': 'Ρυθμίσεις διακομιστή',
