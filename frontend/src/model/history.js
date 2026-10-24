@@ -43,10 +43,10 @@ function remember(entry) {
   persist(next)
 }
 
-function retitlePlaylist(previous, name) {
+function retitlePlaylist(previous, name, displayName = name) {
   const from = String(previous || '')
   const to = String(name || '')
-  if (!from || !to || from === to) return
+  if (!from || !to || (from === to && displayName === to)) return
   const next = []
   const seen = new Set()
   for (const entry of recent.value) {
@@ -60,7 +60,7 @@ function retitlePlaylist(previous, name) {
               query: { ...(entry.route.query || {}), name: to },
             }
           : { name: 'Playlist', query: { name: to } }
-        item = { ...entry, title: to, route }
+        item = { ...entry, title: displayName, route }
         item.id = entryId(item)
       }
     }

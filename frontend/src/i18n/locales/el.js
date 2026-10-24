@@ -1,4 +1,5 @@
 export default {
+  playlistNames: { restore: 'Restore source name' },
   playlistFavorites: {
     title: 'Αγαπημένες λίστες',
     add: 'Προσθήκη λίστας στα αγαπημένα',

@@ -196,12 +196,17 @@ export function usePlaylistActions() {
     }
   }
 
-  async function renameNamed(playlist, newName) {
+  async function renameNamed(playlist, newName, resetDisplayName = false) {
     try {
-      const res = await API.renameLibraryPlaylist(playlist.name, newName)
+      const res = await API.renameLibraryPlaylist(
+        playlist.name,
+        newName,
+        resetDisplayName
+      )
       const renamed = res.data?.name || newName
+      const displayName = res.data?.display_name || renamed
       const previous = playlist.name
-      history.retitlePlaylist(previous, renamed)
+      history.retitlePlaylist(previous, renamed, displayName)
       const ctx = player.context.value
       if (
         ctx?.type === 'playlist' &&
@@ -211,13 +216,15 @@ export function usePlaylistActions() {
       ) {
         player.context.value = {
           ...ctx,
-          title: renamed,
+          title: displayName,
           playlistName: renamed,
           route: { name: 'Playlist', query: { name: renamed } },
         }
       }
       await library.load({ force: true })
-      ui.toast(t('playlists.renamed', { name: renamed }), { kind: 'success' })
+      ui.toast(t('playlists.renamed', { name: displayName }), {
+        kind: 'success',
+      })
       return renamed
     } catch (err) {
       ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
@@ -511,8 +518,15 @@ export function usePlaylistActions() {
       {
         label: t('playlists.rename'),
         icon: 'pencil',
-        hidden: !playlist.manual,
+        hidden: playlist.liked,
         action: () => openRename(playlist),
+      },
+      {
+        label: t('playlistNames.restore'),
+        icon: 'refresh',
+        hidden:
+          playlist.manual || playlist.liked || playlist.title === playlist.name,
+        action: () => renameNamed(playlist, '', true),
       },
       {
         label: t('sharing.detach'),

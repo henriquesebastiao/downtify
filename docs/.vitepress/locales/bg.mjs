@@ -69,6 +69,7 @@ export default {
       'features/similar.md': 'Подобни',
       'features/finder.md': 'Търсач',
       'features/download-settings.md': 'Настройки за сваляне',
+      'features/playlist-names.md': 'Playlist display names',
       'features/playlist-monitor.md': 'Следене на плейлисти',
       'features/top-songs.md': 'Най-популярни песни',
       'features/library-import.md': 'Импорт на библиотека (CSV)',

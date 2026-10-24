@@ -1,4 +1,5 @@
 export default {
+  playlistNames: { restore: 'Restore source name' },
   playlistFavorites: {
     title: 'Любими плейлисти',
     add: 'Добавяне на плейлиста в любими',

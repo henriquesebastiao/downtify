@@ -1,4 +1,5 @@
 export default {
+  playlistNames: { restore: 'Restore source name' },
   playlistFavorites: {
     title: '즐겨찾는 재생목록',
     add: '재생목록을 즐겨찾기에 추가',

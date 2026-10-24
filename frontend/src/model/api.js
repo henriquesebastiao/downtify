@@ -432,10 +432,11 @@ function editLibraryPlaylistTracks(
   })
 }
 
-function renameLibraryPlaylist(name, newName) {
+function renameLibraryPlaylist(name, newName, resetDisplayName = false) {
   return API.post('/api/library/playlists/rename', {
     name,
     new_name: newName,
+    reset_display_name: resetDisplayName,
   })
 }
 

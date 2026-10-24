@@ -1,4 +1,5 @@
 export default {
+  playlistNames: { restore: 'Restore source name' },
   playlistFavorites: {
     title: 'Playlists favoritas',
     add: 'Adicionar playlist aos favoritos',

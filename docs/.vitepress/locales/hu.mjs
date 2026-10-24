@@ -69,6 +69,7 @@ export default {
       'features/similar.md': 'Hasonlók',
       'features/finder.md': 'Kereső',
       'features/download-settings.md': 'Letöltési beállítások',
+      'features/playlist-names.md': 'Playlist display names',
       'features/playlist-monitor.md': 'Lejátszási lista figyelő',
       'features/top-songs.md': 'Legnépszerűbb számok',
       'features/library-import.md': 'Könyvtár importálása (CSV)',

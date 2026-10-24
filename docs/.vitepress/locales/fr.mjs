@@ -69,6 +69,7 @@ export default {
       'features/similar.md': 'Similaires',
       'features/finder.md': 'Explorateur',
       'features/download-settings.md': 'Réglages de téléchargement',
+      'features/playlist-names.md': 'Noms affichés des playlists',
       'features/playlist-monitor.md': 'Surveillance de playlists',
       'features/top-songs.md': 'Titres les plus écoutés',
       'features/library-import.md': 'Import de bibliothèque (CSV)',
