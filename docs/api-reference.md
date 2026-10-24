@@ -1284,6 +1284,29 @@ Detaching forgets the playlist's [hidden songs](features/hidden-playlist-songs.m
 
 ---
 
+### `GET /api/library/playlists/details`
+
+What the playlist page [filters its songs by](features/library-catalog.md#search-a-playlist), for a playlist the caller can open (`404` otherwise).
+
+**Query:** `?name=Road trip`
+
+**Response:**
+
+```json
+{
+  "name": "Road trip",
+  "providers": {
+    "Road trip/Artist - Song.mp3": "youtube-music",
+    "slskd/Artist/Album/02 - Other.flac": "slskd"
+  },
+  "navidrome": { "enabled": true, "unmatched": ["Road trip/Artist - Third.mp3"] }
+}
+```
+
+`providers` maps the playlist's files (as `GET /tracks` lists them) to the audio provider that fetched them: `youtube-music`, `youtube`, `slskd` or `deemix`, or `folder` for a file from an [extra music folder](features/external-library.md). Downtify records it when a download finishes, so files downloaded before that are left out — except slskd files left in place, recognised by their `slskd/` path. `navidrome.enabled` is whether Navidrome sync is on; while it is, `unmatched` lists the playlist's files that have no Navidrome song id in Downtify's index yet (not matched by a playlist sync or after a download). Songs an admin hid from users are left out for them.
+
+---
+
 ### `GET /api/library/playlists/hidden`
 
 The songs hidden from an **imported** playlist the caller may change (their own; any for an admin), most recently hidden first. See [Hidden playlist songs](features/hidden-playlist-songs.md). `403` for someone who can open the playlist without owning it, `404` for one they can't open, `409` for a manual playlist or liked songs.

@@ -350,6 +350,8 @@ class Downloader:
 
     #: Called as ``on_downloaded(song, filename)`` once a *new* file has been
     #: downloaded and tagged - not for a song that was already in the library.
+    #: ``song['download_provider']`` says which audio provider fetched it
+    #: (``youtube-music``, ``youtube``, ``slskd``, ``deemix``).
     #: Set by the app (``main.py``) to hook work on to a finished download
     #: (see ``api.enrich_artist_after_download``); it runs on the download's
     #: own thread, so it must only hand the work off and return. Whatever it
@@ -891,6 +893,7 @@ class Downloader:
                 self._finalize_local_source(
                     song, local_source, provider, progress_cb, subdir
                 ),
+                provider,
             )
 
         if not skip_existing:
@@ -899,6 +902,7 @@ class Downloader:
                 self._fetch_and_tag(
                     song, video_id, progress_cb, subdir, provider
                 ),
+                provider,
             )
 
         # Re-checked after enrichment (which can fill in the album/track
@@ -915,16 +919,23 @@ class Downloader:
                 self._fetch_and_tag(
                     song, video_id, progress_cb, subdir, provider
                 ),
+                provider,
             )
 
-    def _downloaded(self, song: dict[str, Any], filename: str) -> str:
-        """Tell :attr:`on_downloaded` that *filename* is new; returns it.
-        A hook that fails is logged and ignored: the file is already there."""
+    def _downloaded(
+        self,
+        song: dict[str, Any],
+        filename: str,
+        provider: Optional[str] = None,
+    ) -> str:
+        """Tell :attr:`on_downloaded` that *filename* is new (and which
+        *provider* fetched it); returns it. A hook that fails is logged and
+        ignored: the file is already there."""
 
         hook = self.on_downloaded
         if hook is not None:
             try:
-                hook(song, filename)
+                hook({**song, 'download_provider': provider or ''}, filename)
             except Exception:
                 logger.opt(exception=True).warning(
                     'The after-download hook failed for {}', filename

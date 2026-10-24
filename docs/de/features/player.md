@@ -103,6 +103,7 @@ Warteschlange, aktueller Titel, seine Position, Zufall und Wiederholen werden ge
 | `Q` | Als Nächstes öffnen |
 | `E` | Equalizer öffnen |
 | `Ctrl` / `⌘` + `K` oder `/` | Suche |
+| `Ctrl` / `⌘` + `F` | In der Playlist suchen (auf der Seite einer Playlist) |
 | `G` dann `L` / `D` | Zur Bibliothek / Warteschlange |
 | `Esc` | Wiedergabe schließen |
 | `?` | Alle Kürzel anzeigen |

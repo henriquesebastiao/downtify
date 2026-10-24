@@ -174,6 +174,9 @@ downloads are shared, and files are never stored twice.
   ``POST /api/library/playlists/copy`` (save a copy of a playlist you can
   open) and ``POST /api/library/playlists/detach`` (turn an imported
   playlist into an editable one)
+* ``GET  /api/library/playlists/details`` (what the playlist page
+  filters by: ``{name, providers: {file: provider}, navidrome: {enabled,
+  unmatched}}`` - see ``downtify/file_providers.py``)
 * ``GET|POST /api/library/playlists/hidden`` (songs hidden from an
   imported playlist - ``POST`` body ``{name, hide, show}``: library
   paths to hide, hidden song keys to show again; a hidden song stays
@@ -415,6 +418,7 @@ from .external_sync import (
     run_external_sync,
     unmap_extra_folder,
 )
+from .file_providers import FileProviders, providers_for
 from .fs_suggest import suggest_directories
 from .library_catalog import (
     LibraryContext,
@@ -1106,6 +1110,8 @@ class AppState:
     manual_playlist_owners: Optional[ManualPlaylistOwners] = None
     playlist_shares: Optional[PlaylistShares] = None
     playlist_hidden: Optional[PlaylistHiddenSongs] = None
+    # Which audio provider fetched each file (downtify/file_providers.py).
+    file_providers: Optional[FileProviders] = None
     external_playlist_imports: Optional[ExternalPlaylistImports] = None
     traffic: Optional[TrafficCounters] = None
     podcasts: Optional[PodcastStore] = None
@@ -2001,6 +2007,14 @@ def rekey_file_owners(
             logger.opt(exception=True).debug(
                 'Could not rekey hidden playlist song {}', stored_path
             )
+    # And what fetched it.
+    if state.file_providers is not None:
+        try:
+            state.file_providers.rekey(old_key, new_key, stored_path)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not rekey the provider of {}', stored_path
+            )
 
 
 def drop_file_owners(content_key: str) -> None:
@@ -2022,6 +2036,13 @@ def drop_file_owners(content_key: str) -> None:
         except Exception:
             logger.opt(exception=True).debug(
                 'Could not drop a hidden item for a deleted file'
+            )
+    if state.file_providers is not None:
+        try:
+            state.file_providers.drop(content_key)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not drop the provider of a deleted file'
             )
 
 
@@ -3100,6 +3121,32 @@ def _ui_language() -> str:
     ``DEFAULT_SETTINGS``), or ``en`` while no page has said."""
 
     return str(state.settings.get('ui_language') or '') or 'en'
+
+
+def after_download(song: dict[str, Any], filename: str) -> None:
+    """``Downloader.on_downloaded`` (set in ``main.py``): remember which
+    provider fetched the new file, then seed its artist's profile. Runs on
+    the download's own thread; never raises."""
+
+    record_download_provider(song, filename)
+    enrich_artist_after_download(song, filename)
+
+
+def record_download_provider(song: dict[str, Any], filename: str) -> None:
+    """Store ``song['download_provider']`` for *filename* (see
+    :mod:`downtify.file_providers`) - best effort."""
+
+    provider = str(song.get('download_provider') or '').strip()
+    if not provider or state.file_providers is None:
+        return
+    try:
+        state.file_providers.record(
+            stored_content_key(filename), filename, provider
+        )
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not record the provider of {}', filename
+        )
 
 
 def enrich_artist_after_download(song: dict[str, Any], filename: str) -> None:
@@ -6924,6 +6971,54 @@ def _sync_navidrome_playlist(name: str) -> None:
         logger.opt(exception=True).warning(
             'Navidrome sync failed for {!r}', synced
         )
+
+
+@router.get('/api/library/playlists/details')
+async def playlist_details_endpoint(
+    request: Request, name: str = Query(..., min_length=1)
+) -> dict[str, Any]:
+    """What the playlist page filters its songs by, for a playlist the
+    caller can open: ``{name, providers, navidrome}`` - ``providers`` is
+    ``{file: provider}`` for the songs whose provider is known, and
+    ``navidrome`` is ``{enabled, unmatched}``: while Navidrome sync is on,
+    the songs that have no Navidrome song id yet."""
+
+    entry = require_playlist_visible(name, request)
+    files = await asyncio.to_thread(
+        filter_paths_for_request, list(entry.get('files') or []), request
+    )
+    return await asyncio.to_thread(
+        _playlist_details, str(entry['name']), files
+    )
+
+
+def _playlist_details(name: str, files: list[str]) -> dict[str, Any]:
+    by_file = {
+        str(row.get('file') or '').replace('\\', '/'): row
+        for row in listing_for_request(library_context())
+    }
+    keys = {
+        path: entry_content_key(by_file[path]) if path in by_file else ''
+        for path in dict.fromkeys(files)
+    }
+    enabled = (
+        _navidrome_playlist_sync_on() and state.navidrome_index is not None
+    )
+    unmatched: list[str] = []
+    if enabled:
+        try:
+            matched = state.navidrome_index.matched_files(keys)
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Could not read the Navidrome matches of {!r}', name
+            )
+            matched = set(keys)
+        unmatched = [path for path in keys if path not in matched]
+    return {
+        'name': name,
+        'providers': providers_for(state.file_providers, keys),
+        'navidrome': {'enabled': enabled, 'unmatched': unmatched},
+    }
 
 
 @router.get('/api/library/playlists/hidden')

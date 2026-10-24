@@ -103,6 +103,7 @@ La file, le morceau actuel, sa position, l’aléatoire et la répétition sont 
 | `Q` | Ouvrir À suivre |
 | `E` | Ouvrir l’égaliseur |
 | `Ctrl` / `⌘` + `K` ou `/` | Rechercher |
+| `Ctrl` / `⌘` + `F` | Rechercher dans la playlist (sur la page d’une playlist) |
 | `G` puis `L` / `D` | Aller à la bibliothèque / la file |
 | `Esc` | Fermer Lecture en cours |
 | `?` | Afficher tous les raccourcis |

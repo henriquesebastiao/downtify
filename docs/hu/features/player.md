@@ -103,6 +103,7 @@ A sor, az aktuális szám, annak pozíciója, a véletlen sorrend és az ismétl
 | `Q` | A következők megnyitása |
 | `E` | A hangszínszabályzó megnyitása |
 | `Ctrl` / `⌘` + `K` vagy `/` | Keresés |
+| `Ctrl` / `⌘` + `F` | Keresés a listában (egy lista oldalán) |
 | `G` majd `L` / `D` | Ugrás a könyvtárra / sorra |
 | `Esc` | A Most szól bezárása |
 | `?` | Az összes gyorsgomb megjelenítése |

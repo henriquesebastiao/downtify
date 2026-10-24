@@ -103,6 +103,7 @@ Kuyruk, geçerli parça, konumu, karıştır ve tekrarla hatırlanır; böylece 
 | `Q` | Sıradakini aç |
 | `E` | Ekolayzırı aç |
 | `Ctrl` / `⌘` + `K` veya `/` | Ara |
+| `Ctrl` / `⌘` + `F` | Listede ara (bir listenin sayfasında) |
 | `G` sonra `L` / `D` | Kitaplığa / kuyruğa git |
 | `Esc` | Şimdi çalıyor’u kapat |
 | `?` | Tüm kısayolları göster |
