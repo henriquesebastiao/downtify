@@ -4,6 +4,26 @@ export default {
     add: 'Mettre la playlist en favoris',
     remove: 'Retirer la playlist des favoris',
   },
+  normalization: {
+    title: 'Normalisation du volume',
+    hint: 'Équilibrez le volume entre les morceaux pendant la lecture, sans modifier vos fichiers audio.',
+    enable: 'Normaliser le volume de lecture',
+    enableHint:
+      'Utilise le volume mesuré, limite l’amplification à 12 dB et préserve les crêtes. Les morceaux non analysés gardent leur volume d’origine.',
+    analysisHint:
+      'L’analyse lit votre musique, un fichier à la fois. Lancez-la explicitement ; elle ne redémarre pas toute seule.',
+    progress: '{done} / {total} analysés · {failed} indisponibles',
+    analyze: 'Analyser la bibliothèque',
+    pause: 'Suspendre l’analyse',
+    resume: 'Reprendre l’analyse',
+    pausing: 'Fin du fichier en cours avant la pause…',
+    states: {
+      ready: 'Volume mesuré appliqué au morceau en cours.',
+      silent: 'Morceau silencieux : volume d’origine conservé.',
+      unanalysed: 'Morceau non analysé : volume d’origine conservé.',
+      unavailable: 'Normalisation indisponible : volume d’origine conservé.',
+    },
+  },
   language: {
     name: 'Français',
   },

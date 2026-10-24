@@ -72,6 +72,7 @@ export default {
       'features/playlist-monitor.md': 'Следене на плейлисти',
       'features/top-songs.md': 'Най-популярни песни',
       'features/library-import.md': 'Импорт на библиотека (CSV)',
+      'features/playback-normalization.md': 'Playback normalization',
       'features/player.md': 'Вграден плейър',
       'features/liked-songs.md': 'Харесани песни',
       'features/podcasts.md': 'Подкасти',

@@ -9,6 +9,10 @@
 // Web Audio once — and switching off just flattens every filter.
 import { computed, ref, watch } from 'vue'
 import {
+  normalizationEnabled,
+  normalizationGain,
+} from '/src/model/normalization'
+import {
   BAND_Q,
   BANDS,
   CUSTOM,
@@ -81,11 +85,16 @@ function set(param, value) {
   param.setTargetAtTime(value, context.currentTime, RAMP)
 }
 
-function apply() {
+function apply(immediate = false) {
   if (!context) return
   const on = enabled.value
   filters.forEach((filter, i) => set(filter.gain, on ? gains.value[i] : 0))
-  set(output.gain, on ? dbToGain(preamp.value + headroom.value) : 1)
+  const normalDb = normalizationEnabled.value ? normalizationGain.value : 0
+  const target = dbToGain((on ? preamp.value + headroom.value : 0) + normalDb)
+  if (immediate && typeof output.gain.setValueAtTime === 'function') {
+    output.gain.cancelScheduledValues(context.currentTime)
+    output.gain.setValueAtTime(target, context.currentTime)
+  } else set(output.gain, target)
 }
 
 function build() {
@@ -136,7 +145,7 @@ export function attachEqualizer(audio) {
  * element would play in silence.
  */
 export function resumeEqualizer() {
-  if (enabled.value && !context) build()
+  if ((enabled.value || normalizationEnabled.value) && !context) build()
   if (context && context.state !== 'running') {
     context.resume().catch(() => {})
   }
@@ -205,7 +214,12 @@ if (
   })
 }
 
-watch(headroom, apply)
+watch(headroom, () => apply())
+watch(normalizationGain, () => apply(true), { flush: 'sync' })
+watch(normalizationEnabled, () => {
+  if (normalizationEnabled.value) resumeEqualizer()
+  apply()
+})
 
 export function useEqualizer() {
   return {

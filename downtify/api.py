@@ -442,6 +442,7 @@ from .likes import (
     remap_moved,
     sync_liked_playlist,
 )
+from .loudness import LoudnessAnalyzer
 from .lyrics_cache import LyricsLookupCache
 from .manual_playlists import (
     ManualPlaylistError,
@@ -1074,6 +1075,7 @@ class AppState:
     library_visibility: Optional[LibraryVisibility] = None
     manual_playlist_owners: Optional[ManualPlaylistOwners] = None
     playlist_shares: Optional[PlaylistShares] = None
+    loudness_analyzer: Optional[LoudnessAnalyzer] = None
     traffic: Optional[TrafficCounters] = None
     podcasts: Optional[PodcastStore] = None
     discover: Optional[DiscoverStore] = None
@@ -1713,6 +1715,8 @@ async def shutdown_resources() -> None:
     _shutdown_done = True
 
     logger.info('Downtify shutdown: closing WebSockets and background tasks')
+    if state.loudness_analyzer is not None:
+        await asyncio.to_thread(state.loudness_analyzer.close)
     await state.connections.close_all()
 
     tasks = list(state.background_tasks)
@@ -5829,7 +5833,9 @@ def _upgrade_payload(
     payload = runner.status()
     payload['categories'] = list(library_upgrade.CATEGORIES)
     payload['artwork_sources'] = list(cover_sources.ARTWORK_SOURCES)
-    payload['deemix_available'] = bool((state.settings.get('deemix') or {}).get('enabled'))
+    payload['deemix_available'] = bool(
+        (state.settings.get('deemix') or {}).get('enabled')
+    )
     return payload
 
 
@@ -6179,6 +6185,57 @@ async def create_library_playlist_endpoint(request: Request) -> dict[str, Any]:
     claim_manual_playlist(str(result.get('name') or name), request)
     invalidate_library_paths_cache()
     return result
+
+
+@router.get('/api/library/loudness')
+async def track_loudness(
+    request: Request, file: str = Query(..., min_length=1)
+) -> dict[str, Any]:
+    if not request_user_id(request) and not request_is_admin(request):
+        raise HTTPException(status_code=401, detail='Sign in required')
+    if not filter_paths_for_request([file], request):
+        raise HTTPException(status_code=404, detail='Track not found')
+    full = resolve_library_file(file, library_context())
+    if full is None:
+        raise HTTPException(status_code=404, detail='Track not found')
+    runner = state.loudness_analyzer
+    if runner is None:
+        return {'state': 'unavailable', 'gain_db': 0.0}
+    profile = await asyncio.to_thread(runner.info, file, full)
+    return profile or {'state': 'unanalysed', 'gain_db': 0.0}
+
+
+@router.get('/api/library/loudness/status')
+async def loudness_status(request: Request) -> dict[str, Any]:
+    if not request_is_admin(request):
+        raise HTTPException(status_code=403, detail='This needs an admin')
+    if state.loudness_analyzer is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    return await asyncio.to_thread(state.loudness_analyzer.status)
+
+
+@router.post('/api/library/loudness/{action}')
+async def control_loudness(request: Request, action: str) -> dict[str, Any]:
+    if not request_is_admin(request):
+        raise HTTPException(status_code=403, detail='This needs an admin')
+    runner = state.loudness_analyzer
+    if runner is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    try:
+        if action == 'start':
+            entries = await asyncio.to_thread(entries_for_request, request)
+            await asyncio.to_thread(
+                runner.start, [entry['file'] for entry in entries]
+            )
+        elif action == 'pause':
+            runner.pause()
+        elif action == 'resume':
+            runner.resume()
+        else:
+            raise HTTPException(status_code=404, detail='Unknown action')
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return await asyncio.to_thread(runner.status)
 
 
 @router.post('/api/library/playlists/tracks')

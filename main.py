@@ -79,6 +79,7 @@ from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
 from downtify.library_visibility import LibraryVisibility
 from downtify.likes import LikedTracks
+from downtify.loudness import LoudnessAnalyzer
 from downtify.lyrics import read_track_lyrics
 from downtify.lyrics_cache import LyricsLookupCache
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
@@ -378,6 +379,9 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_catalog = PlaylistCatalog(library_db)
     api.state.manual_playlist_owners = ManualPlaylistOwners(library_db)
     api.state.playlist_shares = PlaylistShares(library_db)
+    api.state.loudness_analyzer = LoudnessAnalyzer(
+        library_db, api.library_context
+    )
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)

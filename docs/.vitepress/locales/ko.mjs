@@ -71,6 +71,7 @@ export default {
       'features/playlist-monitor.md': '재생목록 모니터',
       'features/top-songs.md': '인기곡',
       'features/library-import.md': '라이브러리 가져오기(CSV)',
+      'features/playback-normalization.md': 'Playback normalization',
       'features/player.md': '내장 플레이어',
       'features/liked-songs.md': '좋아요 표시한 곡',
       'features/podcasts.md': '팟캐스트',

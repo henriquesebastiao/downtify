@@ -72,6 +72,7 @@ export default {
       'features/playlist-monitor.md': 'Surveillance de playlists',
       'features/top-songs.md': 'Titres les plus écoutés',
       'features/library-import.md': 'Import de bibliothèque (CSV)',
+      'features/playback-normalization.md': 'Normalisation du volume',
       'features/player.md': 'Lecteur intégré',
       'features/liked-songs.md': 'Titres likés',
       'features/podcasts.md': 'Podcasts',

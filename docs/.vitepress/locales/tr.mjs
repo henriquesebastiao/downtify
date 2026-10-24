@@ -72,6 +72,7 @@ export default {
       'features/playlist-monitor.md': 'Çalma listesi izleyici',
       'features/top-songs.md': 'En çok dinlenen şarkılar',
       'features/library-import.md': 'Kitaplığı içe aktarma (CSV)',
+      'features/playback-normalization.md': 'Playback normalization',
       'features/player.md': 'Yerleşik oynatıcı',
       'features/liked-songs.md': 'Beğenilen şarkılar',
       'features/podcasts.md': 'Podcast’ler',
