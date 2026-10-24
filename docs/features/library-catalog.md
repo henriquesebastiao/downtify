@@ -64,7 +64,23 @@ The Library page has four tabs — **Albums**, **Artists**, **Playlists** and **
 
 A playlist's songs have the same **Sort by** menu, with **Playlist order** (the playlist's own order, which is where it starts) added to the choices; clicking a column heading works too. **Play** and the song list follow the order you picked, and the choice is remembered, for every playlist.
 
-Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle**, **Add to queue** and **Download as ZIP**. A playlist you created also has **Add songs**, **Rename** and **Share…** (see [sharing playlists](users.md#sharing-playlists)); an imported one has **Share…** and **Detach from source** (below); a downloaded playlist page shows how many of its tracks are downloaded, lists the missing ones with **Download missing**, and offers **Watch for new tracks**. **Delete playlist** is in the **⋯** menu: imported playlists delete the audio; a playlist you created only removes the playlist.
+Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle**, **Add to queue** and **Download as ZIP**. A playlist you created also has **Add songs**, **Rename** and **Share…** (see [sharing playlists](users.md#sharing-playlists)); an imported one has **Share…** and **Detach from source** (below); a downloaded playlist page shows how many of its tracks are downloaded, lists the missing ones under the **Missing** filter (below) with **Download missing**, and offers **Watch for new tracks**. **Delete playlist** is in the **⋯** menu: imported playlists delete the audio; a playlist you created only removes the playlist.
+
+### Search a playlist
+
+A long playlist only draws the songs on screen, so the browser's own find (`Ctrl` + `F`) can't see the rest. The **Search this playlist** box above the songs looks through all of them — title, artist, album and file name, ignoring case and accents. On a playlist page `Ctrl` / `⌘` + `F` puts the cursor there (press it again in the box for the browser's find), and `Esc` clears it.
+
+Next to it, filters narrow the list. Each shows how many songs it holds, and appears only when it has some:
+
+| Filter | Shows |
+|--------|-------|
+| **All** | Every downloaded song of the playlist |
+| **Missing** | Songs of the source playlist that aren't in the library yet (Spotify playlist downloads), with their download state — looked up on Spotify when you pick it |
+| **Failed** | The missing songs whose download failed, each with a retry button — once **Missing** has been looked up |
+| **YouTube Music**, **Soulseek (slskd)**, **Deemix**… | The songs that source fetched. Downtify remembers it for songs downloaded from now on; older ones count as **Unknown source**, except slskd files left in place and songs from your own folders |
+| **Not in Navidrome** | With [Navidrome sync](slskd-navidrome.md) on, the songs Downtify hasn't matched to a Navidrome song yet |
+
+The search and a filter work together, and the number of songs shown appears under them. Each song keeps its number in the playlist, and sorting, playing and each song's menu work on what is shown.
 
 ### Detach an imported playlist
 

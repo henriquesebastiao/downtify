@@ -52,6 +52,7 @@ from downtify.discovery import Announcer, discovery_enabled
 from downtify.downloader import Downloader
 from downtify.external_playlists import ExternalPlaylistImports
 from downtify.external_sync import ExternalSyncJob
+from downtify.file_providers import FileProviders
 from downtify.library_archive import (
     MAX_ARCHIVE_FILES,
     ArchiveTicketStore,
@@ -381,6 +382,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.manual_playlist_owners = ManualPlaylistOwners(library_db)
     api.state.playlist_shares = PlaylistShares(library_db)
     api.state.playlist_hidden = PlaylistHiddenSongs(library_db)
+    api.state.file_providers = FileProviders(library_db)
     api.state.external_playlist_imports = ExternalPlaylistImports(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
@@ -708,9 +710,9 @@ def build_app() -> FastAPI:
     )
     api.normalize_lyrics_location(api.state.settings)
     api.bind_lrc_resolver()
-    # A finished download (from the UI or a monitor sweep alike) seeds its
-    # artist's profile in the background.
-    api.state.downloader.on_downloaded = api.enrich_artist_after_download
+    # A finished download (from the UI or a monitor sweep alike) records
+    # which provider fetched it and seeds its artist's profile.
+    api.state.downloader.on_downloaded = api.after_download
     api.providers.set_cover_resolution(
         api._clamp_cover_resolution(
             api.state.settings.get(

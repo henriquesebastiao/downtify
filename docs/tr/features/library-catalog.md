@@ -66,6 +66,22 @@ Bir çalma listesinin şarkıları aynı **Sırala** menüsüne sahiptir; seçen
 
 Bir albüm, sanatçı veya çalma listesini açmak parçalarını **Çal**, **Karıştır**, **Kuyruğa ekle** ve **ZIP olarak indir** ile gösterir. Sizin oluşturduğunuz bir çalma listesinde ayrıca **Şarkı ekle**, **Yeniden adlandır** ve **Paylaş…** vardır (bkz. [çalma listelerini paylaşma](users.md#sharing-playlists)); içe aktarılanda **Paylaş…** ve **Kaynaktan ayır** (aşağıda) vardır; indirilmiş bir çalma listesi sayfası kaç parçasının indirildiğini gösterir, eksik olanları **Eksikleri indir** ile listeler ve **Yeni parçaları izle** sunar. **Çalma listesini sil** **⋯** menüsündedir: içe aktarılan çalma listeleri sesi siler; sizin oluşturduğunuz bir çalma listesi yalnızca çalma listesini kaldırır.
 
+### Bir listede arama
+
+Uzun bir liste yalnızca ekrandaki şarkıları çizer, bu yüzden tarayıcının kendi araması (`Ctrl` + `F`) gerisini göremez. Şarkıların üstündeki **Bu listede ara** kutusu hepsinde arar — başlık, sanatçı, albüm ve dosya adında, büyük/küçük harf ve aksan farkı gözetmeden. Bir listenin sayfasında `Ctrl` / `⌘` + `F` imleci bu kutuya koyar (kutunun içindeyken tekrar basarsan tarayıcının araması açılır), `Esc` de kutuyu temizler.
+
+Yanındaki filtreler listeyi daraltır. Her biri kaç şarkı içerdiğini gösterir ve yalnızca şarkısı olduğunda görünür:
+
+| Filtre | Gösterir |
+|--------|----------|
+| **Tümü** | Listenin indirilen tüm şarkıları |
+| **Eksik** | Kaynak listede olup henüz kitaplıkta olmayan şarkılar (Spotify listesi indirmeleri), indirme durumlarıyla — filtreyi seçtiğinde Spotify’da aranır |
+| **Başarısız** | İndirmesi başarısız olan eksik şarkılar, her biri tekrar deneme düğmesiyle — **Eksik** sorgulandıktan sonra |
+| **YouTube Music**, **Soulseek (slskd)**, **Deemix**… | O kaynağın getirdiği şarkılar. Downtify bunu bundan sonra indirilen şarkılar için hatırlar; eskiler **Bilinmeyen kaynak** sayılır, yerinde bırakılan slskd dosyaları ve kendi klasörlerindeki şarkılar hariç |
+| **Navidrome’da yok** | [Navidrome eşitlemesi](slskd-navidrome.md) açıkken Downtify’ın henüz bir Navidrome şarkısıyla eşleştiremediği şarkılar |
+
+Arama ve bir filtre birlikte çalışır, gösterilen şarkı sayısı da altlarında görünür. Her şarkı listedeki numarasını korur; sıralama, çalma ve her şarkının menüsü gösterilenler üzerinde çalışır.
+
 ### İçe aktarılan bir çalma listesini ayırma
 
 Bir Spotify veya YouTube Music bağlantısından içe aktarılan bir çalma listesi düzenlenemez, çünkü Downtify onu kaynağıyla eşzamanlı tutar. Birini toparlamak için — ait olmayan bir şarkıyı atmak, ait olan birini eklemek — açın ve **Kaynaktan ayır**’ı seçin. Oluşturduklarınız gibi bir çalma listesi olur: şarkıları ve sahibi olduğu gibi kalır ve **Şarkı ekle**, **Yeniden adlandır** ve şarkı kaldırma elde edersiniz. Karşılığında kaynağıyla bağ kesilir: artık Spotify veya YouTube Music’ten güncellenmez, [Çalma Listesi İzleyici](playlist-monitor.md) izlemesi (varsa) kaldırılır ve “eksik şarkılar” takibi gider. Zaten indirilmiş şarkılara asla dokunulmaz ve görseli ilk düzenlemenize kadar kalır; o zaman şarkılarının bir mozaiği onun yerine geçer. Ayırma uygulamadan geri alınamaz; bağlantıyı yeniden indirmek yeni bir içe aktarılmış çalma listesi oluşturur.

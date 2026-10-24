@@ -66,6 +66,22 @@ As músicas de uma playlist têm o mesmo menu **Ordenar por**, com **Ordem da pl
 
 Abrir um álbum, artista ou playlist mostra as faixas com **Tocar**, **Aleatório**, **Adicionar à fila** e **Baixar como ZIP**. Uma playlist criada por você também tem **Adicionar músicas**, **Renomear** e **Compartilhar…** (veja [compartilhando playlists](users.md#sharing-playlists)); uma importada tem **Compartilhar…** e **Desvincular da origem** (abaixo); a página de uma playlist baixada mostra quantas faixas dela foram baixadas, lista as que faltam com **Baixar o que falta** e oferece **Monitorar novas faixas**. **Excluir playlist** fica no menu **⋯**: playlists importadas excluem o áudio; uma playlist criada por você só remove a playlist.
 
+### Buscar numa playlist
+
+Uma playlist longa só desenha as músicas que estão na tela, então a busca do próprio navegador (`Ctrl` + `F`) não enxerga o resto. A caixa **Buscar nesta playlist**, acima das músicas, procura em todas elas — título, artista, álbum e nome do arquivo, sem diferenciar maiúsculas nem acentos. Na página de uma playlist, `Ctrl` / `⌘` + `F` põe o cursor nela (aperte de novo dentro da caixa para a busca do navegador), e `Esc` a limpa.
+
+Ao lado, filtros estreitam a lista. Cada um mostra quantas músicas tem e só aparece quando tem alguma:
+
+| Filtro | Mostra |
+|--------|--------|
+| **Todas** | Todas as músicas baixadas da playlist |
+| **Faltando** | Músicas da playlist de origem que ainda não estão na biblioteca (downloads de playlists do Spotify), com o estado do download — consultadas no Spotify quando você escolhe o filtro |
+| **Falharam** | As músicas faltando cujo download falhou, cada uma com o botão de tentar de novo — depois que **Faltando** foi consultado |
+| **YouTube Music**, **Soulseek (slskd)**, **Deemix**… | As músicas que essa origem baixou. O Downtify passa a lembrar disso para as músicas baixadas a partir de agora; as mais antigas contam como **Origem desconhecida**, exceto arquivos do slskd deixados no lugar e músicas das suas próprias pastas |
+| **Fora do Navidrome** | Com a [sincronização com o Navidrome](slskd-navidrome.md) ligada, as músicas que o Downtify ainda não associou a uma música do Navidrome |
+
+A busca e um filtro funcionam juntos, e o número de músicas exibidas aparece logo abaixo. Cada música mantém seu número na playlist, e ordenar, tocar e o menu de cada música valem para o que está sendo exibido.
+
 ### Desvincular uma playlist importada
 
 Uma playlist importada de um link do Spotify ou do YouTube Music não pode ser editada, porque o Downtify a mantém em sincronia com a origem. Para arrumar uma — tirar uma música que não pertence, acrescentar uma que pertence — abra-a e escolha **Desvincular da origem**. Ela vira uma playlist como as que você cria: as músicas e o dono continuam como estão, e você ganha **Adicionar músicas**, **Renomear** e a remoção de músicas. Em troca, o vínculo com a origem é cortado: ela deixa de ser atualizada pelo Spotify ou pelo YouTube Music, o monitoramento dela no [Monitor de playlists](playlist-monitor.md) (se tinha) é removido e o acompanhamento de "músicas ausentes" some. As músicas já baixadas nunca são tocadas, e a arte dela fica até a sua primeira edição, quando um mosaico das músicas a substitui. Desvincular não pode ser desfeito pelo app; baixar o link de novo cria uma nova playlist importada.

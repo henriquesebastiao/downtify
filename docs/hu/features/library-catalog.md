@@ -66,6 +66,22 @@ Egy lejátszási lista daljainak ugyanaz a **Rendezés** menüje van, a választ
 
 Egy album, előadó vagy lejátszási lista megnyitása a számait mutatja **Lejátszás**, **Keverés**, **Hozzáadás a sorhoz** és **Letöltés ZIP-ként** gombokkal. Az általad létrehozott lejátszási listának van még **Számok hozzáadása**, **Átnevezés** és **Megosztás…** parancsa is (lásd: [lejátszási listák megosztása](users.md#sharing-playlists)); az importáltnak **Megosztás…** és **Leválasztás a forrásról** (lent); egy letöltött lejátszási lista oldala megmutatja, hány száma van letöltve, a hiányzókat a **Hiányzók letöltése** gombbal sorolja fel, és felkínálja az **Új számok figyelése** lehetőséget. A **Lista törlése** a **⋯** menüben van: az importált listák a hangot törlik; az általad létrehozott lista csak a listát távolítja el.
 
+### Keresés egy listában
+
+Egy hosszú lista csak a képernyőn látható számokat rajzolja ki, ezért a böngésző saját keresése (`Ctrl` + `F`) nem látja a többit. A számok fölötti **Keresés ebben a listában** mező mindegyikben keres – cím, előadó, album és fájlnév alapján, kis- és nagybetűtől és ékezetektől függetlenül. Egy lista oldalán a `Ctrl` / `⌘` + `F` ebbe a mezőbe teszi a kurzort (a mezőben újra megnyomva a böngésző keresése jön), az `Esc` pedig kiüríti.
+
+Mellette szűrők szűkítik a listát. Mindegyik mutatja, hány szám tartozik hozzá, és csak akkor jelenik meg, ha van ilyen:
+
+| Szűrő | Mit mutat |
+|-------|-----------|
+| **Mind** | A lista összes letöltött számát |
+| **Hiányzó** | A forráslista azon számait, amelyek még nincsenek a könyvtárban (Spotify-listák letöltésénél), a letöltésük állapotával – a szűrő kiválasztásakor a Spotify-on néz utána |
+| **Sikertelen** | Azokat a hiányzó számokat, amelyek letöltése nem sikerült, mindegyiket újrapróbálás gombbal – miután a **Hiányzó** lekérdezése megtörtént |
+| **YouTube Music**, **Soulseek (slskd)**, **Deemix**… | Az adott forrásból letöltött számokat. A Downtify ezt mostantól megjegyzi a letöltött számoknál; a régebbiek **Ismeretlen forrás** alá kerülnek, kivéve a helyükön hagyott slskd-fájlokat és a saját mappáidból származó számokat |
+| **Nincs a Navidrome-ban** | Bekapcsolt [Navidrome-szinkronizálásnál](slskd-navidrome.md) azokat a számokat, amelyeket a Downtify még nem párosított Navidrome-számmal |
+
+A keresés és egy szűrő együtt működik, alattuk pedig látszik, hány szám jelenik meg. Minden szám megtartja a sorszámát a listában, a rendezés, a lejátszás és a számok menüje pedig a megjelenített számokra vonatkozik.
+
 ### Importált lejátszási lista leválasztása
 
 A Spotify- vagy YouTube Music-hivatkozásból importált lejátszási lista nem szerkeszthető, mert a Downtify szinkronban tartja a forrásával. Egy rendbetételéhez — kivenni egy dalt, ami nem oda tartozik, hozzáadni egyet, ami igen — nyisd meg, és válaszd a **Leválasztás a forrásról** lehetőséget. Olyan lejátszási listává válik, mint amilyeneket te hozol létre: a dalai és a tulajdonosa változatlanok maradnak, és megkapod a **Számok hozzáadása**, **Átnevezés** és a dalok eltávolításának lehetőségét. Cserébe a forrásához fűző kapocs megszakad: többé nem frissül a Spotifyból vagy a YouTube Musicból, a [Lejátszási lista figyelő](playlist-monitor.md)-megfigyelése (ha volt) megszűnik, és a „hiányzó dalok” követése is megszűnik. A már letöltött dalokhoz soha nem nyúl hozzá, a képe pedig az első szerkesztésedig megmarad, amikor a daljaiból készült mozaik váltja fel. A leválasztás az alkalmazásból nem vonható vissza; a hivatkozás újbóli letöltése új importált lejátszási listát hoz létre.

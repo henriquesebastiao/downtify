@@ -103,7 +103,7 @@
             <span class="tabular group-hover:hidden">{{
               numbering === 'track'
                 ? row.track.trackNumber || '–'
-                : row.index + 1
+                : positions?.get(row.track.file) || row.index + 1
             }}</span>
             <button
               type="button"
@@ -243,6 +243,9 @@ const props = defineProps({
   showCover: { type: Boolean, default: true },
   linkArtist: { type: Boolean, default: true },
   numbering: { type: String, default: 'index' },
+  // file -> place in the whole list, numbered instead of the row's own
+  // place while a filtered list is shown (a playlist search).
+  positions: { type: Map, default: null },
   header: { type: Boolean, default: true },
   sort: { type: Object, default: null },
   hideMenu: { type: Array, default: () => [] },

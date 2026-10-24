@@ -471,6 +471,12 @@ function detachLibraryPlaylist(name) {
   return API.post('/api/library/playlists/detach', { name })
 }
 
+// What the playlist page filters by: who fetched each song and which ones
+// Navidrome hasn't matched - see downtify/file_providers.py.
+function getPlaylistDetails(name) {
+  return API.get('/api/library/playlists/details', { params: { name } })
+}
+
 // Songs hidden from an imported playlist (they stay out when its watch
 // or link brings them back).
 function getHiddenPlaylistSongs(name) {
@@ -913,6 +919,7 @@ export default {
   setPlaylistFavorite,
   copyLibraryPlaylist,
   detachLibraryPlaylist,
+  getPlaylistDetails,
   getHiddenPlaylistSongs,
   changeHiddenPlaylistSongs,
   followPlaylist,

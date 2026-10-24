@@ -103,6 +103,7 @@ A fila, a faixa atual, a posição, o aleatório e a repetição são lembrados,
 | `Q` | Abrir a seguir |
 | `E` | Abrir o equalizador |
 | `Ctrl` / `⌘` + `K` ou `/` | Pesquisar |
+| `Ctrl` / `⌘` + `F` | Buscar na playlist (na página de uma playlist) |
 | `G` e depois `L` / `D` | Ir para a biblioteca / fila |
 | `Esc` | Fechar Tocando agora |
 | `?` | Mostrar todos os atalhos |
