@@ -2,7 +2,8 @@
 <h1 align="center">Downtify</h1>
 <p align="center">
   <a href="https://downtify.henriquesebastiao.com/getting-started/installation/">Install</a> •
-  <a href="https://downtify.henriquesebastiao.com/">Documentation</a>
+  <a href="https://downtify.henriquesebastiao.com/">Documentation</a> •
+  <a href="https://github.com/henriquesebastiao/downtify-android">Android App</a>
 </p>
 <p align="center">
   <a href="https://downtify.henriquesebastiao.com/features/">Features</a> •
