@@ -1,4 +1,9 @@
 export default {
+  playlistFavorites: {
+    title: 'Lieblingsplaylists',
+    add: 'Playlist zu Favoriten hinzufügen',
+    remove: 'Playlist aus Favoriten entfernen',
+  },
   collaboration: {
     canEdit: 'Allow adding and removing tracks',
     copyHint:

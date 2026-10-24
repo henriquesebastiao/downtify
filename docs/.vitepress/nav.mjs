@@ -32,6 +32,10 @@ export const NAV = [
       { title: 'Podcasts', page: 'features/podcasts.md' },
       { title: 'Discover', page: 'features/discover.md' },
       { title: 'Users & Sign-in', page: 'features/users.md' },
+      {
+        title: 'Collaborative playlists',
+        page: 'features/collaborative-playlists.md',
+      },
       { title: 'Mobile Apps', page: 'features/mobile-apps.md' },
       { title: 'Server Settings', page: 'features/server.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
