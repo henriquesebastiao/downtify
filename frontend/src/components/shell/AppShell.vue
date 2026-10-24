@@ -7,7 +7,11 @@
       <main class="flex-1 pb-8">
         <RouterView v-slot="{ Component, route: viewRoute }">
           <Transition name="page" mode="out-in">
-            <component :is="Component" :key="viewKey(viewRoute)" />
+            <component
+              v-if="policyLoaded"
+              :is="Component"
+              :key="viewKey(viewRoute) + ':' + libraryOnly"
+            />
           </Transition>
         </RouterView>
       </main>
@@ -33,7 +37,12 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import {
+  libraryOnly,
+  policyLoaded,
+  startMusicPolicy,
+} from '/src/model/musicPolicy'
 import { useRoute, useRouter } from 'vue-router'
 import SideNav from './SideNav.vue'
 import TopBar from './TopBar.vue'
@@ -71,6 +80,11 @@ const router = useRouter()
 const ui = useUi()
 const nowPlaying = useNowPlaying()
 const shortcutsOpen = ref(false)
+let stopPolicy
+onMounted(() => {
+  stopPolicy = startMusicPolicy()
+})
+onUnmounted(() => stopPolicy?.())
 
 // The Now playing overlay lives in the query string (?np=1); it must not
 // remount the page underneath it.

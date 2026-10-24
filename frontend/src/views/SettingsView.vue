@@ -45,6 +45,21 @@
           <template v-if="section === 'general'">
             <AccountSettings v-if="!auth.authDisabled.value" />
             <SettingGroup
+              v-if="auth.isAdmin.value"
+              :title="t('libraryOnly.title')"
+              :description="t('libraryOnly.hint')"
+            >
+              <SettingRow
+                :label="t('libraryOnly.enable')"
+                :description="t('libraryOnly.serverHint')"
+              >
+                <UiSwitch
+                  v-model="s.library_only"
+                  :aria-label="t('libraryOnly.enable')"
+                />
+              </SettingRow>
+            </SettingGroup>
+            <SettingGroup
               :title="t('settings.appearance')"
               :description="t('settings.personalHint')"
             >

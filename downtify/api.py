@@ -313,12 +313,13 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Collection, Optional
+from typing import Any, AsyncIterator, Collection, Optional
 from urllib.parse import quote
 
 from fastapi import (
     APIRouter,
     Body,
+    Depends,
     HTTPException,
     Query,
     Request,
@@ -328,6 +329,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 from loguru import logger
+from starlette.requests import HTTPConnection
 
 from . import (
     artist_photo_proxy,
@@ -338,6 +340,7 @@ from . import (
     deezer,
     integration_check,
     library_import,
+    library_only,
     library_upgrade,
     library_visibility,
     lyrics,
@@ -532,6 +535,7 @@ MIN_COVER_RESOLUTION = 300
 MAX_COVER_RESOLUTION = 1200
 
 DEFAULT_SETTINGS: dict[str, Any] = {
+    'library_only': False,
     'audio_providers': ['youtube-music'],
     'deemix': dict(DEEMIX_DEFAULTS),
     'lyrics_providers': list(lyrics.PROVIDER_ORDER),
@@ -1104,13 +1108,67 @@ class AppState:
 
 
 state = AppState()
-router = APIRouter()
+
+
+async def library_only_guard(
+    connection: HTTPConnection,
+) -> AsyncIterator[None]:
+    """Apply the same policy to browsers and paired devices."""
+    if connection.scope.get('type') != 'http':
+        yield
+        return
+    path = connection.url.path
+    if not library_only.remote_route(
+        path, connection.scope.get('method', 'GET')
+    ):
+        yield
+    elif (
+        library_only.enabled(state.settings)
+        and path in library_only.LOCAL_ROUTES
+    ):
+        yield
+    else:
+        with library_only.policy.external(state.settings):
+            yield
+
+
+router = APIRouter(dependencies=[Depends(library_only_guard)])
 _shutdown_done = False
 
 
 def spawn_task(coro: Any, *, name: Optional[str] = None) -> asyncio.Task[Any]:
     """Create a task and track it for :func:`shutdown_resources`."""
-    task = asyncio.create_task(coro, name=name)
+    if name and name.startswith((
+        'playlist-batch',
+        'csv-batch',
+        'stream-prefetch-',
+        'replace-',
+        'monitor-initial-check',
+        'monitor-manual-check',
+    )):
+        lease = contextlib.ExitStack()
+        try:
+            lease.enter_context(library_only.policy.external(state.settings))
+        except HTTPException:
+            coro.close()
+            raise
+
+        async def guarded() -> Any:
+            try:
+                return await coro
+            finally:
+                lease.close()
+
+        task = asyncio.create_task(guarded(), name=name)
+
+        def release(finished: asyncio.Task[Any]) -> None:
+            lease.close()
+            if finished.cancelled():
+                coro.close()
+
+        task.add_done_callback(release)
+    else:
+        task = asyncio.create_task(coro, name=name)
     state.background_tasks.add(task)
     task.add_done_callback(state.background_tasks.discard)
     return task
@@ -2404,6 +2462,7 @@ def _load_settings(path: Path) -> dict[str, Any]:
             merged['cover_resolution'] = _clamp_cover_resolution(
                 merged['cover_resolution']
             )
+            merged['library_only'] = merged.get('library_only') is True
             merged['ui_language'] = _clean_ui_language(merged['ui_language'])
             merged['external_library'] = effective_external_library(merged)
             normalize_lyrics_location(merged)
@@ -2525,8 +2584,54 @@ def check_update() -> Optional[dict[str, Any]]:
     return state.update_checker.status(state.version)
 
 
+def local_catalog_for_request(
+    request: Optional[Request],
+    query: str = '',
+    limit: int = 25,
+    *,
+    collections: bool = False,
+) -> dict[str, Any]:
+    rows = library_only.catalog(entries_for_request(request), query, limit)
+    if collections:
+        rows['playlists'] = library_only.playlist_rows(
+            playlists_for_request(request), limit
+        )
+        blocked = (
+            state.discover.blocked_keys(request_user_id(request))
+            if state.discover
+            else set()
+        )
+        blocked = {library_only.text(name) for name in blocked}
+        rows['artists'] = [
+            row
+            for row in rows['artists']
+            if library_only.text(row['name']) not in blocked
+        ]
+        rows['albums'] = [
+            row
+            for row in rows['albums']
+            if library_only.text(row['artist']) not in blocked
+        ]
+    return rows
+
+
+def local_discovery_for_request(request: Request) -> dict[str, Any]:
+    rows = local_catalog_for_request(request, collections=True)
+    return {
+        **rows,
+        'seeds': [],
+        'more_albums': [],
+        'artist_urls': {},
+        'partial': False,
+    }
+
+
 @router.get('/api/songs/search')
-def search_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
+def search_endpoint(
+    query: str = Query(''), request: Request = None
+) -> list[dict[str, Any]]:
+    if library_only.enabled(state.settings):
+        return library_only.search(entries_for_request(request), query)
     results = providers.search_songs(query, limit=20)
     if results:
         return results
@@ -2560,19 +2665,30 @@ def search_albums_endpoint(
     )
     if not wanted:
         return []
+    if library_only.enabled(state.settings):
+        return local_catalog_for_request(request, query, limit)['albums']
     return providers.search_albums(query, limit=limit)
 
 
 @router.get('/api/artists/search')
-def search_artists_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
+def search_artists_endpoint(
+    query: str = Query(''), request: Request = None
+) -> list[dict[str, Any]]:
+    if library_only.enabled(state.settings):
+        return local_catalog_for_request(request, query, 10)['artists']
     return providers.search_artists(query, limit=10)
 
 
 @router.get('/api/discover/chart')
 def discover_chart_endpoint(
     limit: int = Query(25, ge=1, le=50),
+    request: Request = None,
 ) -> dict[str, Any]:
     try:
+        if library_only.enabled(state.settings):
+            return local_catalog_for_request(
+                request, limit=limit, collections=True
+            )
         return deezer.fetch_chart(limit=limit)
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -2585,8 +2701,16 @@ _DEEZER_ID = r'^\d+$'
 def finder_search_endpoint(
     query: str = Query(''),
     limit: int = Query(25, ge=1, le=50),
+    request: Request = None,
 ) -> dict[str, Any]:
     try:
+        if library_only.enabled(state.settings):
+            rows = local_catalog_for_request(request, query, limit)
+            return {
+                'songs': rows['tracks'],
+                'albums': rows['albums'],
+                'artists': rows['artists'],
+            }
         return deezer.finder_search(query, limit=limit)
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -3710,6 +3834,8 @@ async def _run_download(
     background.
     """
 
+    if library_only.enabled(state.settings):
+        raise HTTPException(status_code=409, detail=library_only.DETAIL)
     if state.downloader is None:
         raise RuntimeError('Downloader not ready')
 
@@ -7256,6 +7382,19 @@ def suggest_fs_dirs_endpoint(path: str = Query('')) -> dict[str, Any]:
     return {'dirs': suggest_directories(path)}
 
 
+def _set_library_only(value: Any) -> None:
+    if value is True and not library_only.enabled(state.settings):
+        if any(
+            j.get('status') in {'queued', 'downloading'}
+            for j in state.download_jobs.values()
+        ) or (state.upgrade_runner and state.upgrade_runner.busy()):
+            raise HTTPException(
+                status_code=409,
+                detail='Wait for external music operations to finish before enabling library-only mode.',
+            )
+    library_only.policy.set_enabled(state.settings, value)
+
+
 @router.post('/api/settings/update')
 async def update_settings_endpoint(
     request: Request, client_id: str = Query('')
@@ -7290,6 +7429,8 @@ async def update_settings_endpoint(
             slskd_cfg if 'slskd' in payload else {},
             navidrome_cfg if 'navidrome' in payload else {},
         )
+        if 'library_only' in payload:
+            _set_library_only(payload['library_only'])
         for key, raw_value in payload.items():
             if key not in DEFAULT_SETTINGS:
                 continue
@@ -7416,6 +7557,15 @@ async def update_settings_endpoint(
         await log_activity(
             request, 'settings_changed', ', '.join(changed), {'keys': changed}
         )
+    if before != json.dumps(
+        state.settings, sort_keys=True, default=str
+    ) and previous.get('library_only', False) != state.settings.get(
+        'library_only', False
+    ):
+        await state.connections.broadcast({
+            'type': 'music_policy_changed',
+            'library_only': library_only.enabled(state.settings),
+        })
     return state.settings
 
 
@@ -7682,6 +7832,8 @@ async def discover_endpoint(request: Request) -> dict[str, Any]:
     the rest still count, and ``partial`` says so.
     """
 
+    if library_only.enabled(state.settings):
+        return local_discovery_for_request(request)
     store = _require_discover()
     payload = await _json_object(request)
     library = payload.get('library')
@@ -7702,6 +7854,8 @@ async def discover_collections_endpoint(request: Request) -> dict[str, Any]:
     ids of downloaded playlists), both left out of the answer.
     """
 
+    if library_only.enabled(state.settings):
+        return local_discovery_for_request(request)
     store = _require_discover()
     payload = await _json_object(request)
     library = payload.get('library')
@@ -7735,6 +7889,8 @@ async def discover_deezer_collections_endpoint(
     already downloaded isn't suggested).
     """
 
+    if library_only.enabled(state.settings):
+        return local_discovery_for_request(request)
     store = _require_discover()
     payload = await _json_object(request)
     library = payload.get('library')
@@ -7761,6 +7917,14 @@ async def discover_spotify_collections_endpoint(
     (the album ``key``\\ s the page already shows, left out unmatched).
     """
 
+    if library_only.enabled(state.settings):
+        return {
+            'source': 'library',
+            'albums': [],
+            'more_albums': [],
+            'playlists': [],
+            'partial': False,
+        }
     store = _require_discover()
     payload = await _json_object(request)
     library = payload.get('library')
@@ -7801,6 +7965,7 @@ async def similar_tracks_endpoint(
     artist: str = Query('', max_length=200),
     track: str = Query('', max_length=200),
     limit: int = Query(20, ge=1, le=50),
+    request: Request = None,
 ) -> dict[str, Any]:
     """Tracks similar to *track* by *artist*, from YouTube Music's own
     radio mix for the track (see
@@ -7811,6 +7976,10 @@ async def similar_tracks_endpoint(
     rows plus ``match``. ``502`` when YouTube Music can't be used.
     """
 
+    if library_only.enabled(state.settings):
+        return library_only.similar(
+            entries_for_request(request), artist, track, limit
+        )
     try:
         return await asyncio.to_thread(
             providers.youtube_similar_tracks,

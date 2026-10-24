@@ -209,3 +209,7 @@ There are many ways to support Downtify:
 Licensed under the [AGPL-3.0](https://github.com/henriquesebastiao/downtify?tab=AGPL-3.0-1-ov-file#readme) License.
 
 Icons by [Font Awesome](https://fontawesome.com) (Free, [CC BY 4.0](https://fontawesome.com/license/free)), loaded via [Iconify](https://iconify.design).
+
+### Library-only mode
+
+Settings → General can restrict every browser and Android client to music already in the server library, including search and tag-based similar tracks. External streams and downloads are disabled without deleting music or watched playlists. See [Library-only mode](docs/features/library-only.md).
