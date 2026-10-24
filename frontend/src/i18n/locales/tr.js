@@ -23,6 +23,16 @@ export default {
   language: {
     name: 'Türkçe',
   },
+  buy: {
+    menu: 'Sanatçıyı destekle',
+    title: 'Sanatçıyı destekle',
+    body: 'Müziği satın al ya da sanatçının kendi web sitesini ziyaret et.',
+    inStore: 'Mağazada aç',
+    search: '“{query}” ara',
+    website: 'Resmî web sitesi',
+    failed: 'Mağazalarda aranamadı.',
+    note: 'Bandcamp her satışın büyük kısmını sanatçıya verir. Bunlar sıradan bağlantılardır: Downtify bir şey satmaz ve bunlardan kazanç elde etmez.',
+  },
   common: {
     cancel: 'İptal',
     confirm: 'Onayla',

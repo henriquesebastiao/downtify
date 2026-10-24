@@ -34,6 +34,7 @@ Downtify couvre tout ce qu’il faut pour construire et entretenir une biblioth�
 | [Export M3U](m3u-export.md) | Fichiers de playlist générés automatiquement pour Jellyfin, Navidrome, Plex et toute application multimédia |
 | [Pochettes de playlists](playlist-cover-art.md) | Enregistrez l’image de pochette de la playlist à côté de son fichier M3U |
 | [Photo, bannière et bio de l’artiste](artist-images.md) | Choisissez une vraie photo et une vraie bannière pour un artiste depuis YouTube Music, Deezer, Spotify ou votre propre envoi, et récupérez sa bio, son origine et ses liens depuis Apple Music et Deezer, automatiquement ou à la demande |
+| [Soutenir l’artiste](support-artists.md) | Trouvez où acheter un titre, un album ou un artiste : l’article de l’iTunes Store avec son prix, Bandcamp et Qobuz, le site de l’artiste |
 | [Organisation des fichiers](file-organization.md) | Structure à plat ou sous-dossiers par artiste |
 | [Paroles](lyrics.md) | Téléchargez et intégrez automatiquement les paroles (simples et synchronisées) ; `.lrc` à côté du fichier ou dans un dossier de votre choix |
 | [Cookies YouTube](youtube-cookies.md) | Envoyez un `cookies.txt` depuis l’interface web pour télécharger des titres explicites/soumis à une limite d’âge |

@@ -7,6 +7,8 @@ import { useHistory } from '/src/model/history'
 import { useUi } from '/src/model/ui'
 import { useAuth } from '/src/model/auth'
 import { useReplaceAudio } from '/src/model/replaceAudio'
+import { useBuyLinks } from '/src/model/buyLinks'
+import { buyTargetForTrack } from '/src/lib/buyLinks'
 import { useVisibility } from '/src/model/visibility'
 import { canReplace } from '/src/lib/replaceAudio'
 import { saveName } from '/src/lib/paths'
@@ -19,6 +21,7 @@ export function useTrackActions() {
   const ui = useUi()
   const auth = useAuth()
   const replaceAudio = useReplaceAudio()
+  const buyLinks = useBuyLinks()
   const visibility = useVisibility()
   const router = useRouter()
   const { t } = useI18n()
@@ -156,6 +159,13 @@ export function useTrackActions() {
             name: 'Similar',
             query: { artist: track.artist, track: track.title },
           }),
+      },
+      {
+        // Where to buy it, to support the artist.
+        label: t('buy.menu'),
+        icon: 'tag',
+        hidden: !track.artist,
+        action: () => buyLinks.open(buyTargetForTrack(track)),
       },
       {
         label: t('library.saveToDevice'),

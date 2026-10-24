@@ -1874,6 +1874,38 @@ Only a Deezer song by that artist with that title counts (both compared ignoring
 
 ---
 
+## Buy links
+
+### `GET /api/buy`
+
+Where to buy a song, an album or an artist's music, to support them — the **Support the artist** dialog (see [Support the Artist](features/support-artists.md)). Paired apps may call it too.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist` | string | yes | The (first) artist |
+| `title` | string | no | A song's title: the links are for that song |
+| `album` | string | no | Without `title`, the links are for this album; with neither, for everything by the artist |
+| `country` | string | no | Two-letter store country (`BR`); the US store when missing or invalid |
+
+**Response:**
+
+```json
+{
+  "kind": "track",
+  "query": "Portishead Roads",
+  "links": [
+    { "store": "itunes", "label": "iTunes Store", "url": "https://music.apple.com/br/album/roads/1440653096?i=1440653203&uo=4", "match": true, "price": 2.9, "currency": "BRL" },
+    { "store": "bandcamp", "label": "Bandcamp", "url": "https://bandcamp.com/search?q=Portishead+Roads&item_type=t", "match": false, "price": null, "currency": "" },
+    { "store": "qobuz", "label": "Qobuz", "url": "https://www.qobuz.com/us-en/search/tracks/Portishead%20Roads", "match": false, "price": null, "currency": "" },
+    { "store": "website", "label": "Official website", "url": "https://portishead.co.uk", "match": true, "price": null, "currency": "" }
+  ]
+}
+```
+
+`kind` is `track`, `album` or `artist`. The links come in this order, `website` only when the artist's saved profile has one. `match: true` means the link opens the item itself; `false` means it is a search for `query`. The `itunes` link is the iTunes Store item, looked up with Apple's public iTunes Search API, when one has the same artist and title (album, for an album) — else an Apple Music search. `price`/`currency` are set only on an iTunes Store song or album sold on its own (`null` for an artist, and for a song sold only with its album). Answers from Apple are kept in memory while the server runs. `400` without `artist`.
+
+---
+
 ## Streaming
 
 ### `GET /api/stream/file`

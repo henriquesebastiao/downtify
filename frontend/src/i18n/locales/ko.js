@@ -23,6 +23,16 @@ export default {
   language: {
     name: '한국어',
   },
+  buy: {
+    menu: '아티스트 응원하기',
+    title: '아티스트 응원하기',
+    body: '음악을 구매하거나 아티스트 공식 웹사이트를 방문하세요.',
+    inStore: '스토어에서 열기',
+    search: '“{query}” 검색',
+    website: '공식 웹사이트',
+    failed: '스토어를 조회하지 못했습니다.',
+    note: 'Bandcamp는 판매 금액의 대부분을 아티스트에게 전달합니다. 단순한 링크일 뿐이며 Downtify는 아무것도 판매하거나 수익을 얻지 않습니다.',
+  },
   common: {
     cancel: '취소',
     confirm: '확인',

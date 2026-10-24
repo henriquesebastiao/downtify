@@ -665,6 +665,12 @@ function findPreview({ artist, title, duration }) {
   return API.get('/api/preview', { params: { artist, title, duration } })
 }
 
+// Where to buy a song (`title`), an album or an artist's music, in the
+// `country` store - see downtify/buy_links.py.
+function getBuyLinks({ artist, title = '', album = '', country = '' }) {
+  return API.get('/api/buy', { params: { artist, title, album, country } })
+}
+
 // Albums and playlists in two answers: Deezer's first (quick), then what
 // Spotify adds, matched to Deezer - see downtify/discover.py.
 function getDiscoverDeezerCollections(payload) {
@@ -958,6 +964,7 @@ export default {
   getDiscoverDeezerCollections,
   getDiscoverSpotifyCollections,
   findPreview,
+  getBuyLinks,
   recordListen,
   clearListens,
   getBlockedArtists,

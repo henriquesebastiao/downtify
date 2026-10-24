@@ -93,6 +93,7 @@ export default {
       'features/playlist-cover-art.md': 'Εξώφυλλα λιστών',
       'features/artist-images.md':
         'Φωτογραφία, banner και βιογραφικό καλλιτέχνη',
+      'features/support-artists.md': 'Στηρίξτε τον καλλιτέχνη',
       'features/file-organization.md': 'Οργάνωση αρχείων',
       'features/lyrics.md': 'Στίχοι',
       'features/explicit-marker.md': 'Σήμανση ακατάλληλου περιεχομένου',

@@ -91,6 +91,7 @@ export default {
       'features/m3u-export.md': 'M3U експорт',
       'features/playlist-cover-art.md': 'Корици на плейлисти',
       'features/artist-images.md': 'Снимка, банер и биография на изпълнителя',
+      'features/support-artists.md': 'Подкрепете артиста',
       'features/file-organization.md': 'Организация на файловете',
       'features/lyrics.md': 'Текстове',
       'features/explicit-marker.md': 'Маркер за неподходящо съдържание',

@@ -58,6 +58,7 @@ export const NAV = [
         title: 'Artist Photo, Banner & Bio',
         page: 'features/artist-images.md',
       },
+      { title: 'Support the Artist', page: 'features/support-artists.md' },
       { title: 'File Organization', page: 'features/file-organization.md' },
       { title: 'Lyrics', page: 'features/lyrics.md' },
       { title: 'Explicit Marker', page: 'features/explicit-marker.md' },

@@ -34,6 +34,7 @@ A Downtify mindent lefed, amire szükséged van egy helyi zenekönyvtár felép�
 | [M3U-exportálás](m3u-export.md) | Automatikusan előállított lejátszásilista-fájlok a Jellyfinhez, Navidrome-hoz, Plexhez és bármely médiaalkalmazáshoz |
 | [Lejátszási lista borítók](playlist-cover-art.md) | Mentsd el a lejátszási lista saját borítóképét az M3U fájl mellé |
 | [Előadó fotója, bannere és bemutatkozása](artist-images.md) | Válassz valódi fotót és bannert egy előadóhoz a YouTube Musicból, Deezerről, Spotifyról vagy saját feltöltésből, és kérd le a bemutatkozását, származását és hivatkozásait az Apple Musicról és a Deezerről, automatikusan vagy kérésre |
+| [Az előadó támogatása](support-artists.md) | Nézd meg, hol veheted meg a számot, albumot vagy előadót: a tételt az iTunes Store-ban az árával, Bandcamp és Qobuz, az előadó weboldala |
 | [Fájlszervezés](file-organization.md) | Lapos elrendezés vagy előadónkénti almappák |
 | [Dalszövegek](lyrics.md) | Dalszövegek (egyszerű és időzített) automatikus letöltése és beágyazása; `.lrc` a fájl mellett vagy egy általad választott mappában |
 | [YouTube sütik](youtube-cookies.md) | Tölts fel egy `cookies.txt` fájlt a webes felületen az explicit/korhatáros számok letöltéséhez |

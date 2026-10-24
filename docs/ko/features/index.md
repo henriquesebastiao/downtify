@@ -34,6 +34,7 @@ Downtify는 Spotify에서 로컬 음악 라이브러리를 만들고 유지하�
 | [M3U 내보내기](m3u-export.md) | Jellyfin, Navidrome, Plex 및 모든 미디어 앱을 위한 자동 생성 재생목록 파일 |
 | [재생목록 커버 아트](playlist-cover-art.md) | 재생목록 고유의 커버 이미지를 M3U 파일 옆에 저장 |
 | [아티스트 사진, 배너, 소개](artist-images.md) | YouTube Music, Deezer, Spotify 또는 직접 업로드한 실제 사진과 배너를 아티스트에 지정하고, Apple Music과 Deezer에서 소개, 출신지, 링크를 자동 또는 수동으로 가져오기 |
+| [아티스트 응원하기](support-artists.md) | 곡, 앨범, 아티스트를 어디서 살 수 있는지 확인합니다: 가격이 표시된 iTunes Store 항목, Bandcamp와 Qobuz, 아티스트 웹사이트 |
 | [파일 정리](file-organization.md) | 평면 구조 또는 아티스트별 하위 폴더 |
 | [가사](lyrics.md) | 가사(일반 및 시간 동기화)를 자동으로 내려받아 포함. `.lrc`는 파일 옆 또는 지정한 폴더에 |
 | [YouTube 쿠키](youtube-cookies.md) | 웹 UI에서 `cookies.txt`를 업로드해 선정적/연령 제한 트랙을 내려받기 |

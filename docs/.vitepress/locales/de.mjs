@@ -91,6 +91,7 @@ export default {
       'features/m3u-export.md': 'M3U-Export',
       'features/playlist-cover-art.md': 'Playlist-Cover',
       'features/artist-images.md': 'Künstlerfoto, Banner und Bio',
+      'features/support-artists.md': 'Künstler unterstützen',
       'features/file-organization.md': 'Dateiorganisation',
       'features/lyrics.md': 'Songtexte',
       'features/explicit-marker.md': 'Explicit-Kennzeichnung',
