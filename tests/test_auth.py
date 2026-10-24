@@ -741,6 +741,7 @@ def test_server_info_is_public_and_says_little(client):
         'api_version',
         'require_sign_in',
         'capabilities',
+        'library_only',
     }
     assert info['api_version'] == 1
     assert info['require_sign_in'] is True

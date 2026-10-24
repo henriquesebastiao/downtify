@@ -217,3 +217,7 @@ Podcast episodes: `PUT /api/podcasts/episodes/{id}/playback` with `{ "position_s
 | `429` | Rate-limited (pairing) — wait `Retry-After` seconds |
 | `499` | The server stopped a transcode because the client disconnected (you won't normally see it) |
 | `501` | Transcoding requested but the server has no ffmpeg — use `format=original` |
+
+## Library-only policy
+
+`GET /api/server/info` includes the optional boolean `library_only` (default false). Current clients retain it per paired server and react to `music_policy_changed` by refreshing server info. When true, use library search and local file identities, suppress external results, previews, prefetches and streams, and remove stream-only queue entries. The server refuses external music endpoints with HTTP 409. See [Library-only mode](features/library-only.md).

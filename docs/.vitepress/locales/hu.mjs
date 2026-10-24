@@ -79,6 +79,7 @@ export default {
       'features/discover.md': 'Felfedezés',
       'features/users.md': 'Felhasználók és bejelentkezés',
       'features/mobile-apps.md': 'Mobilalkalmazások',
+      'features/library-only.md': 'Library-only mode',
       'features/server.md': 'Szerverbeállítások',
       'features/slskd-navidrome.md': 'slskd és Navidrome',
       'features/deemix.md': 'Deemix',

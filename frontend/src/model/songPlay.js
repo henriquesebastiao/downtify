@@ -11,6 +11,7 @@
 import { computed } from 'vue'
 
 import { useLibrary } from '/src/model/library'
+import { normalizeTrack } from '/src/lib/library'
 import { usePlayer } from '/src/model/player'
 import { isStreamingSong, playStream, resolvingFor } from '/src/model/stream'
 import {
@@ -24,8 +25,15 @@ import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
 
 /** The player track behind a song: the library's, else an unstored one. */
+function localTrack(song, findTrack) {
+  if (song?.source === 'library' && song.file) {
+    return normalizeTrack({ ...song, title: song.name, album: song.album_name })
+  }
+  return findTrack(songArtist(song), songTitle(song))
+}
+
 export function songToPlayerTrack(song, findTrack) {
-  const found = findTrack(songArtist(song), songTitle(song))
+  const found = localTrack(song, findTrack)
   if (found) return found
   return {
     file: '',
@@ -77,7 +85,7 @@ export function useSongStarter() {
       )
       return
     }
-    const track = library.findTrack(songArtist(song), songTitle(song))
+    const track = localTrack(song, library.findTrack)
     if (track) {
       const index = (queue || []).findIndex((item) => item.file === track.file)
       if (index < 0) actions.play([track], 0, context)
@@ -107,9 +115,7 @@ export function useSongPlay(props) {
 
   // The library track behind the song once it's downloaded - the library
   // refreshes itself shortly after a download finishes, and this follows.
-  const track = computed(() =>
-    library.findTrack(songArtist(props.song), songTitle(props.song))
-  )
+  const track = computed(() => localTrack(props.song, library.findTrack))
   const streaming = computed(() => isStreamingSong(props.song))
   const isCurrent = computed(
     () =>

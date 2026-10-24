@@ -7,6 +7,7 @@
 import { ref, shallowRef, watch } from 'vue'
 
 import API from '/src/model/api'
+import { libraryOnly } from '/src/model/musicPolicy'
 import { usePlayer } from '/src/model/player'
 import {
   addPlayed,
@@ -41,24 +42,49 @@ let pendingCollections = null
 // Bumped by every load of the collections: an answer from an older one
 // (the page refreshed meanwhile) is dropped instead of mixed in.
 let collectionsRun = 0
+let artistRun = 0
+watch(libraryOnly, () => {
+  artistRun += 1
+  collectionsRun += 1
+  pending = null
+  pendingCollections = null
+  items.value = []
+  seeds.value = []
+  albums.value = []
+  moreAlbums.value = []
+  deezerPlaylists.value = []
+  spotifyPlaylists.value = []
+  loading.value = false
+  loaded.value = false
+  partial.value = false
+  collectionsLoading.value = false
+  spotifyLoading.value = false
+  error.value = ''
+  collectionsError.value = ''
+})
 
 /** Ask for suggestions; `library` is `libraryPayload(...)`. */
 async function load(library) {
   if (pending) return pending
+  const run = ++artistRun
   loading.value = true
   error.value = ''
   pending = (async () => {
     try {
       const res = await API.getDiscover(library)
+      if (run !== artistRun) return
       items.value = res.data?.artists || []
       seeds.value = res.data?.seeds || []
       partial.value = Boolean(res.data?.partial)
       loaded.value = true
     } catch (err) {
-      error.value = err?.response?.data?.detail || err?.message || 'failed'
+      if (run === artistRun)
+        error.value = err?.response?.data?.detail || err?.message || 'failed'
     } finally {
-      loading.value = false
-      pending = null
+      if (run === artistRun) {
+        loading.value = false
+        pending = null
+      }
     }
   })()
   return pending
@@ -90,8 +116,10 @@ async function loadCollections(payload) {
     } catch (err) {
       if (run === collectionsRun) collectionsError.value = errorText(err)
     } finally {
-      if (run === collectionsRun) collectionsLoading.value = false
-      pendingCollections = null
+      if (run === collectionsRun) {
+        collectionsLoading.value = false
+        pendingCollections = null
+      }
     }
     if (run === collectionsRun) addFromSpotify(payload, run)
   })()

@@ -78,6 +78,7 @@ export default {
       'features/discover.md': '둘러보기',
       'features/users.md': '사용자와 로그인',
       'features/mobile-apps.md': '모바일 앱',
+      'features/library-only.md': 'Library-only mode',
       'features/server.md': '서버 설정',
       'features/slskd-navidrome.md': 'slskd와 Navidrome',
       'features/deemix.md': 'Deemix',

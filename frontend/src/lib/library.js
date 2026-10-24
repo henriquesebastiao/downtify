@@ -445,3 +445,20 @@ export function indexTracksBySong(tracks) {
   }
   return index
 }
+
+export function localCatalogRoute(item, kind = item?.kind) {
+  if (item?.source !== 'library') return null
+  if (kind === 'playlist')
+    return {
+      name: 'Playlist',
+      query: { name: item.playlist_name || item.name },
+    }
+  if (kind === 'artist') return { name: 'Artist', query: { name: item.name } }
+  return {
+    name: 'Album',
+    query: {
+      artist: item.album_artist || item.artist || item.artists?.[0] || '',
+      title: item.album_name || item.name || '',
+    },
+  }
+}
