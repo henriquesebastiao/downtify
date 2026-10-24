@@ -1,5 +1,10 @@
 export default {
   playlistNames: { restore: 'Restore source name' },
+  playlistFavorites: {
+    title: 'Kedvenc lejátszási listák',
+    add: 'Lista hozzáadása a kedvencekhez',
+    remove: 'Lista eltávolítása a kedvencekből',
+  },
   language: {
     name: 'Magyar',
   },

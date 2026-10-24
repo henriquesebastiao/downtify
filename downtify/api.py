@@ -1383,7 +1383,14 @@ def _filter_playlists_for(
                 'visibility': PRIVATE,
             })
     labels = (
-        state.playlist_shares.display_names() if state.playlist_shares else {}
+        state.playlist_shares.display_names()
+        if state.playlist_shares is not None
+        else {}
+    )
+    favorites = (
+        state.playlist_shares.favorites(lens.user_id)
+        if state.playlist_shares is not None and lens.user_id
+        else frozenset()
     )
     kept = [
         {
@@ -1391,11 +1398,13 @@ def _filter_playlists_for(
             'display_name': labels.get(
                 playlist_display_identity(row), row['name']
             ),
+            'favorite': playlist_favorite_identity(row) in favorites,
         }
         for row in kept
     ]
     kept.sort(
         key=lambda item: (
+            not item.get('favorite'),
             not item.get('liked'),
             str(item.get('display_name') or item.get('name') or '').casefold(),
         )
@@ -1411,6 +1420,15 @@ def playlist_display_identity(entry: dict[str, Any]) -> str:
         catalog.spotify_id_for_playlist(name) if catalog is not None else None
     )
     return f'source:{source}' if source else f'name:{share_key(name)}'
+
+
+def playlist_favorite_identity(entry: dict[str, Any]) -> str:
+    name = str(entry['name'])
+    catalog = state.playlist_catalog
+    source = catalog.spotify_id_for_playlist(name) if catalog else None
+    if source:
+        return '@source:' + hashlib.sha256(source.encode()).hexdigest()
+    return share_key(name)
 
 
 def _filter_entries_for(
@@ -5832,7 +5850,9 @@ def _upgrade_payload(
     payload = runner.status()
     payload['categories'] = list(library_upgrade.CATEGORIES)
     payload['artwork_sources'] = list(cover_sources.ARTWORK_SOURCES)
-    payload['deemix_available'] = bool((state.settings.get('deemix') or {}).get('enabled'))
+    payload['deemix_available'] = bool(
+        (state.settings.get('deemix') or {}).get('enabled')
+    )
     return payload
 
 
@@ -6316,6 +6336,36 @@ async def announce_playlists_changed() -> None:
     detached, renamed or deleted, so they list them again."""
 
     await state.connections.broadcast({'type': 'playlists_changed'})
+
+
+@router.put('/api/library/playlists/favorite')
+async def set_playlist_favorite_endpoint(request: Request) -> dict[str, Any]:
+    """Pin an accessible playlist for the signed-in account only."""
+    user_id = request_user_id(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail='Sign in required')
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    favorite = payload.get('favorite')
+    if not isinstance(favorite, bool):
+        raise HTTPException(
+            status_code=400, detail='favorite must be a boolean'
+        )
+    if state.playlist_shares is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    if favorite:
+        entry = require_playlist_visible(name, request)
+        name = str(entry['name'])
+    elif not name:
+        raise HTTPException(status_code=400, detail='name is required')
+    await asyncio.to_thread(
+        state.playlist_shares.set_favorite,
+        user_id,
+        playlist_favorite_identity({'name': name}),
+        favorite,
+    )
+    await announce_playlists_changed()
+    return {'name': name, 'favorite': favorite}
 
 
 def _owner_of(entry: dict[str, Any]) -> int:

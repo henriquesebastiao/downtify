@@ -38,7 +38,7 @@ Be respectful, constructive, and patient. Reviews focus on code, not on the cont
 - Adding a feature that has been discussed and accepted in an issue or discussion.
 - Improving documentation (`README.md`, in-repo docs, or the VitePress site under `docs/`).
 - Adding or improving tests, especially around the Spotify embed scraping, yt-dlp pipeline, and tag embedding.
-- Adding a UI translation (see [Translations](#translations)).
+- Translating the app, the documentation, or both (see [Translations](#translations)).
 - Reviewing open pull requests.
 
 For non-trivial changes, **open an issue first** to align on scope before writing code. This avoids wasted work if the change conflicts with the project's direction.
@@ -150,7 +150,7 @@ make doc        # docs dev server (VitePress)
 make doc-build  # production build; fails on dead links and broken anchors
 ```
 
-Pages are Markdown in `docs/`; the sidebar lives in `docs/.vitepress/nav.mjs`. See [Contributing](https://henriquesebastiao.github.io/downtify/contributing/#work-on-the-documentation) in the docs for link and callout syntax.
+Pages are Markdown in `docs/`; the sidebar lives in `docs/.vitepress/nav.mjs`. The English pages are the source; each other language has a folder of the same name (`docs/pt-BR/…`). See [Contributing](https://henriquesebastiao.github.io/downtify/contributing/#work-on-the-documentation) in the docs for link and callout syntax.
 
 ---
 
@@ -307,13 +307,30 @@ Reviews are an exchange. Expect to iterate. Keep responses to review comments fo
 
 ## Translations
 
-Adding a UI translation is a small, three-step change documented in the [README](./README.md#contributing-translations). In short:
+Downtify has two things to translate — the **app** and the **documentation** — and you can contribute either one or both, in a single pull request or in separate ones. They are independent: a language can exist in one and not yet in the other, and partial work is welcome (missing app strings fall back to English; untranslated pages stay in English).
 
-1. Copy `frontend/src/i18n/locales/en.js` to a new file named after the [IETF language tag](https://en.wikipedia.org/wiki/IETF_language_tag) (`fr.js`, `de.js`, `ja.js`, …).
+### The app
+
+A small, three-step change (full walkthrough in [Internationalization](https://henriquesebastiao.github.io/downtify/features/internationalization/#translating-the-app)):
+
+1. Copy `frontend/src/i18n/locales/en.js` to a new file named after the [IETF language tag](https://en.wikipedia.org/wiki/IETF_language_tag) (`it.js`, `ja.js`, `pt-PT.js`, …).
 2. Translate the values; leave keys and placeholder tokens (`{count}`, `{file}`, …) unchanged.
 3. Register the locale in `frontend/src/i18n/index.js`.
 
-Missing keys fall back to English, so partial translations are welcome.
+### The documentation
+
+The English Markdown in `docs/` is the source; each language has a folder named after its code with the same file names (`docs/pt-BR/features/users.md`), plus one file with the site's own text (`docs/.vitepress/locales/pt-BR.mjs`). Work from `docs/`:
+
+```bash
+npm install
+npm run i18n -- status pt-BR                    # coverage of a language
+npm run i18n -- start pt-BR features/users.md   # copy an English page to translate
+npm test                                        # a translated page must keep the English structure
+```
+
+To start a new language, copy `docs/.vitepress/locales/en.mjs`, register it in `docs/.vitepress/locales/index.mjs` and run `npm run i18n -- stubs <code>`. Keep code, URLs, API names and heading order as they are, and use the app's own translation for names of buttons and settings. The details, with the rules for links and callouts, are in [Internationalization](https://henriquesebastiao.github.io/downtify/features/internationalization/#translating-the-documentation).
+
+Pull requests that touch only translations get the `translation` label. The reference pages for developers (the API reference, the mobile client contract) and the changelog stay in English.
 
 ---
 

@@ -172,6 +172,79 @@ def test_imported_display_name_reset_and_owner_only(world):
     assert world.shares.display_names() == {}
 
 
+def test_favorites_are_personal_persistent_and_do_not_grant_access(world):
+    payload = {'name': 'Mix', 'favorite': True}
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(
+            api.set_playlist_favorite_endpoint(_request(BO, body=payload))
+        )
+    assert error.value.status_code == 404
+    asyncio.run(
+        api.set_playlist_favorite_endpoint(_request(ANA, body=payload))
+    )
+    rows = api.playlists_for_request(_request(ANA))
+    assert rows[0]['name'] == 'Mix'
+    assert rows[0]['favorite'] is True
+    assert not any(
+        p.get('favorite') for p in api.playlists_for_request(_request(BO))
+    )
+    reopened = PlaylistShares(Path(world.shares._path))
+    assert reopened.favorites(ANA) == frozenset({'mix'})
+
+
+def test_favorites_follow_rename_and_are_cleaned_on_delete(world):
+    world.shares.set_favorite(ANA, 'Mix', True)
+    world.shares.rename('Mix', 'Renamed')
+    assert world.shares.favorites(ANA) == frozenset({'renamed'})
+    world.shares.forget('Renamed')
+    assert world.shares.favorites(ANA) == frozenset()
+    world.shares.set_favorite(ANA, 'Mix', True)
+    world.shares.remove_user(ANA)
+    assert not world.shares.favorites(ANA)
+
+
+def test_imported_favorite_keeps_the_source_identity(world):
+    asyncio.run(
+        api.set_playlist_favorite_endpoint(
+            _request(ANA, body={'name': 'Road', 'favorite': True})
+        )
+    )
+    world.catalog.ensure_playlist(
+        'New source title', spotify_id='sp1', user_id=ANA
+    )
+    world.found[0] = _row('New source title')
+    renamed = next(
+        p
+        for p in api.playlists_for_request(_request(ANA))
+        if p['name'] == 'New source title'
+    )
+    assert renamed['favorite']
+    world.catalog.ensure_playlist(
+        'Different source', spotify_id='SP1', user_id=ANA
+    )
+    assert api.playlist_favorite_identity({
+        'name': 'Different source'
+    }) != api.playlist_favorite_identity({'name': 'New source title'})
+
+
+def test_revoked_playlist_favorite_is_not_disclosed(world):
+    world.shares.set_visibility('Mix', SHARED, [BO])
+    world.shares.set_favorite(BO, 'Mix', True)
+    assert next(
+        p
+        for p in api.playlists_for_request(_request(BO))
+        if p['name'] == 'Mix'
+    )['favorite']
+    world.shares.set_visibility('Mix', PRIVATE)
+    assert 'Mix' not in _names(_request(BO))
+    result = asyncio.run(
+        api.set_playlist_favorite_endpoint(
+            _request(BO, body={'name': 'Mix', 'favorite': False})
+        )
+    )
+    assert result['favorite'] is False
+
+
 def test_source_cover_cannot_edit_someone_elses_playlist(world, monkeypatch):
     monkeypatch.setattr(
         api,

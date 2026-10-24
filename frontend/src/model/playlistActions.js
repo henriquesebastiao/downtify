@@ -387,9 +387,29 @@ export function usePlaylistActions() {
   }
 
   // What someone else's playlist offers: play it, follow it, keep a copy.
+  function favoriteAction(playlist) {
+    return {
+      label: t(
+        playlist.favorite ? 'playlistFavorites.remove' : 'playlistFavorites.add'
+      ),
+      icon: playlist.favorite ? 'heart' : 'heart-outline',
+      action: async () => {
+        try {
+          await API.setPlaylistFavorite(playlist.name, !playlist.favorite)
+          await library.refreshPlaylists()
+        } catch (error) {
+          ui.toast(error?.response?.data?.detail || t('toast.actionFailed'), {
+            kind: 'error',
+          })
+        }
+      },
+    }
+  }
+
   function viewerMenuFor(playlist) {
     const empty = !itemTrackCount(playlist)
     return [
+      favoriteAction(playlist),
       {
         label: t('actions.play'),
         icon: 'play',
@@ -445,6 +465,7 @@ export function usePlaylistActions() {
     const empty = !itemTrackCount(playlist)
     const imported = !playlist.manual && !playlist.liked
     return [
+      favoriteAction(playlist),
       {
         label: t('actions.play'),
         icon: 'play',

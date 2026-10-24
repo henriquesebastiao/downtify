@@ -80,6 +80,43 @@ class PlaylistShares:
                 )
             """)
 
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS playlist_favorites (
+                    user_id INTEGER NOT NULL,
+                    name_key TEXT NOT NULL,
+                    PRIMARY KEY (user_id, name_key)
+                )
+            """)
+
+    def favorites(self, user_id: int) -> frozenset[str]:
+        """Favorites are personal preferences, never permission grants."""
+        with self._connect() as conn:
+            return frozenset(
+                str(row['name_key'])
+                for row in conn.execute(
+                    'SELECT name_key FROM playlist_favorites WHERE user_id = ?',
+                    (int(user_id),),
+                )
+            )
+
+    def set_favorite(self, user_id: int, name: str, favorite: bool) -> None:
+        key = share_key(name)
+        if not key or not user_id:
+            raise ValueError('A user and playlist are required')
+        with self._connect() as conn:
+            if favorite:
+                conn.execute(
+                    'INSERT OR IGNORE INTO playlist_favorites '
+                    '(user_id, name_key) VALUES (?, ?)',
+                    (int(user_id), key),
+                )
+            else:
+                conn.execute(
+                    'DELETE FROM playlist_favorites WHERE user_id = ? '
+                    'AND name_key = ?',
+                    (int(user_id), key),
+                )
+
     def display_names(self) -> dict[str, str]:
         with self._connect() as conn:
             return {
@@ -263,6 +300,7 @@ class PlaylistShares:
                 'playlist_shares',
                 'playlist_share_users',
                 'playlist_follows',
+                'playlist_favorites',
             ):
                 conn.execute(
                     f'UPDATE OR REPLACE {table} SET name_key = ? '
@@ -280,6 +318,7 @@ class PlaylistShares:
                 'playlist_shares',
                 'playlist_share_users',
                 'playlist_follows',
+                'playlist_favorites',
             ):
                 conn.execute(f'DELETE FROM {table} WHERE name_key = ?', (key,))
 
@@ -287,6 +326,10 @@ class PlaylistShares:
         """A deleted account's follows, and being on anyone's list."""
 
         with self._connect() as conn:
+            conn.execute(
+                'DELETE FROM playlist_favorites WHERE user_id = ?',
+                (int(user_id),),
+            )
             conn.execute(
                 'DELETE FROM playlist_follows WHERE user_id = ?',
                 (int(user_id),),

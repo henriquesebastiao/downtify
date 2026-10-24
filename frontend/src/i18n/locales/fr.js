@@ -1,5 +1,10 @@
 export default {
   playlistNames: { restore: 'Rétablir le nom source' },
+  playlistFavorites: {
+    title: 'Playlists favorites',
+    add: 'Mettre la playlist en favoris',
+    remove: 'Retirer la playlist des favoris',
+  },
   language: {
     name: 'Français',
   },

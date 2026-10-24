@@ -54,3 +54,16 @@ export function resolveSourceLink(href, dir) {
   if (page.startsWith('..')) return null
   return pageRoute(page) + match[2]
 }
+
+/**
+ * A page path split into its locale and the English page it translates:
+ * `pt-BR/features/player.md` → `{ locale: 'pt-BR', page: 'features/player.md' }`.
+ * English pages (no locale folder) come back with `locale: null`.
+ */
+export function splitLocale(page, codes) {
+  const first = page.split('/')[0]
+  if (page.includes('/') && codes.includes(first)) {
+    return { locale: first, page: page.slice(first.length + 1) }
+  }
+  return { locale: null, page }
+}
