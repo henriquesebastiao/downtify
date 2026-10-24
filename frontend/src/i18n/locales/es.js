@@ -35,6 +35,7 @@ export default {
     seeAll: 'Ver todo',
     show: 'Mostrar',
     hide: 'Ocultar',
+    undo: 'Deshacer',
     unknownArtist: 'Artista desconocido',
     tracks: { one: '{count} canción', other: '{count} canciones' },
     albums: { one: '{count} álbum', other: '{count} álbumes' },
@@ -596,6 +597,19 @@ export default {
     },
     alreadyIn: 'Ya está en «{name}»',
     removedTrack: 'Quitada de “{name}”',
+    hideTrack: 'Ocultar de la playlist',
+    hiddenTrack: 'Oculta de “{name}”',
+    hiddenTitle: {
+      one: '{count} canción oculta',
+      other: '{count} canciones ocultas',
+    },
+    hiddenHint:
+      'Canciones que ocultaste de esta playlist. Siguen fuera cuando se sincroniza con su origen y siguen en tu biblioteca.',
+    hiddenGone: 'Ya no está en tu biblioteca',
+    unhide: 'Mostrar de nuevo',
+    unhidden: 'De vuelta en “{name}”',
+    unhiddenLater:
+      'Vuelve a “{name}” cuando la playlist descargue lo que le falta',
     created: 'Creada “{name}”',
     rename: 'Renombrar',
     renameTitle: 'Renombrar playlist',

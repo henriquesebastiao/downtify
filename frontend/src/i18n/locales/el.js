@@ -35,6 +35,7 @@ export default {
     seeAll: 'Όλα',
     show: 'Εμφάνιση',
     hide: 'Απόκρυψη',
+    undo: 'Αναίρεση',
     unknownArtist: 'Άγνωστος καλλιτέχνης',
     tracks: { one: '{count} κομμάτι', other: '{count} κομμάτια' },
     albums: { one: '{count} άλμπουμ', other: '{count} άλμπουμ' },
@@ -595,6 +596,19 @@ export default {
     },
     alreadyIn: 'Ήδη στο «{name}»',
     removedTrack: 'Αφαιρέθηκε από τη «{name}»',
+    hideTrack: 'Απόκρυψη από τη λίστα',
+    hiddenTrack: 'Κρύφτηκε από τη «{name}»',
+    hiddenTitle: {
+      one: '{count} κρυμμένο τραγούδι',
+      other: '{count} κρυμμένα τραγούδια',
+    },
+    hiddenHint:
+      'Τραγούδια που κρύψατε από αυτή τη λίστα. Μένουν εκτός όταν συγχρονίζεται με την πηγή της και μένουν στη βιβλιοθήκη σας.',
+    hiddenGone: 'Δεν είναι πια στη βιβλιοθήκη σας',
+    unhide: 'Εμφάνιση ξανά',
+    unhidden: 'Ξανά στη «{name}»',
+    unhiddenLater:
+      'Επιστρέφει στη «{name}» όταν η λίστα κατεβάσει ό,τι της λείπει',
     created: 'Δημιουργήθηκε η «{name}»',
     rename: 'Μετονομασία',
     renameTitle: 'Μετονομασία λίστας',

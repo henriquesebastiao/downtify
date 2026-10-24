@@ -35,6 +35,7 @@ export default {
     seeAll: 'See all',
     show: 'Show',
     hide: 'Hide',
+    undo: 'Undo',
     unknownArtist: 'Unknown artist',
     tracks: { one: '{count} track', other: '{count} tracks' },
     albums: { one: '{count} album', other: '{count} albums' },
@@ -585,6 +586,19 @@ export default {
     },
     alreadyIn: 'Already in “{name}”',
     removedTrack: 'Removed from “{name}”',
+    hideTrack: 'Hide from playlist',
+    hiddenTrack: 'Hidden from “{name}”',
+    hiddenTitle: {
+      one: '{count} hidden song',
+      other: '{count} hidden songs',
+    },
+    hiddenHint:
+      'Songs you hid from this playlist. They stay out when it syncs with its source, and stay in your library.',
+    hiddenGone: 'No longer in your library',
+    unhide: 'Show again',
+    unhidden: 'Back in “{name}”',
+    unhiddenLater:
+      'It returns to “{name}” when the playlist downloads what it’s missing',
     created: 'Created “{name}”',
     rename: 'Rename',
     renameTitle: 'Rename playlist',

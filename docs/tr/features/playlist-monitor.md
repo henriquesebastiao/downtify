@@ -196,6 +196,8 @@ Top 50 - USA        →  new song appears   →  Downtify downloads it
 
 Sesi silen tek şeyler sizin açıkça istedikleriniz: Kitaplıkta bir parça ya da seçim üzerinde **Sil**, Kitaplıktan bir çalma listesini silmek (parçalarını gerçekten siler — önce sorar) veya dosyaları kendiniz dosya sisteminden kaldırmak.
 
+İstemediğin bir şarkıyı listeden çıkarmak ve her kontrolde dışarıda tutmak için onu gizle: bkz. [Listeden gizlenen şarkılar](hidden-playlist-songs.md). Dosyası kitaplığında kalır.
+
 ::: info Bir izlemeyi silmek ve bir çalma listesini silmek
 **İzlemeyi bırak** (izlemenin ⋯ menüsünde) yalnızca izlemeyi unutur: diskte hiçbir şey değişmez. **Kitaplık** sayfasında bir çalma listesinde **Sil** yıkıcı olandır — o çalma listesinin parçalarını, M3U’sunu ve katalog girdisini kaldırır.
 :::

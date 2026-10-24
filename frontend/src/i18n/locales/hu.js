@@ -35,6 +35,7 @@ export default {
     seeAll: 'Összes',
     show: 'Megjelenítés',
     hide: 'Elrejtés',
+    undo: 'Visszavonás',
     unknownArtist: 'Ismeretlen előadó',
     tracks: { one: '{count} szám', other: '{count} szám' },
     albums: { one: '{count} album', other: '{count} album' },
@@ -595,6 +596,19 @@ export default {
     },
     alreadyIn: 'Már benne van: „{name}”',
     removedTrack: 'Eltávolítva: „{name}”',
+    hideTrack: 'Elrejtés a listáról',
+    hiddenTrack: 'Elrejtve: „{name}”',
+    hiddenTitle: {
+      one: '{count} elrejtett szám',
+      other: '{count} elrejtett szám',
+    },
+    hiddenHint:
+      'A listáról elrejtett számaid. Kimaradnak, amikor a lista szinkronizál a forrásával, és a könyvtáradban maradnak.',
+    hiddenGone: 'Már nincs a könyvtáradban',
+    unhide: 'Megjelenítés újra',
+    unhidden: 'Újra itt: „{name}”',
+    unhiddenLater:
+      'Visszakerül ide: „{name}”, amikor a lista letölti, ami hiányzik belőle',
     created: 'Létrehozva: „{name}”',
     rename: 'Átnevezés',
     renameTitle: 'Lista átnevezése',

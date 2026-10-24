@@ -49,6 +49,8 @@ export function usePlaylistActions() {
       // Editing is for the owner: a playlist shared with the user is
       // view-only.
       manual: Boolean(playlist.manual && playlist.mine),
+      // The owner hides songs from an imported playlist instead.
+      imported: Boolean(playlist.mine && !playlist.manual && !playlist.liked),
       playlistName: playlist.name,
     }
   }
@@ -272,6 +274,59 @@ export function usePlaylistActions() {
       ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
         kind: 'error',
       })
+    }
+  }
+
+  // An imported playlist follows its source: hiding a song takes it out
+  // and keeps it out when the watch or the link brings it back. The song
+  // stays in the library.
+  async function hideFiles(playlist, files) {
+    const names = files.map((item) =>
+      typeof item === 'string' ? item : item.file
+    )
+    try {
+      const res = await API.changeHiddenPlaylistSongs(playlist.name, {
+        hide: names,
+      })
+      const keys = res.data?.keys || []
+      await library.load({ force: true })
+      ui.toast(t('playlists.hiddenTrack', { name: playlist.title }), {
+        kind: 'success',
+        action: keys.length
+          ? {
+              label: t('common.undo'),
+              run: () => showHidden(playlist, keys, { quiet: true }),
+            }
+          : undefined,
+      })
+      return true
+    } catch (err) {
+      failed(err)
+      return false
+    }
+  }
+
+  // Puts hidden songs back; one whose file is gone returns the next time
+  // the playlist downloads what it is missing.
+  async function showHidden(playlist, keys, { quiet = false } = {}) {
+    try {
+      const res = await API.changeHiddenPlaylistSongs(playlist.name, {
+        show: keys,
+      })
+      await library.load({ force: true })
+      if (!quiet) {
+        const restored = Number(res.data?.restored ?? keys.length)
+        ui.toast(
+          t(restored ? 'playlists.unhidden' : 'playlists.unhiddenLater', {
+            name: playlist.title,
+          }),
+          { kind: 'success' }
+        )
+      }
+      return true
+    } catch (err) {
+      failed(err)
+      return false
     }
   }
 
@@ -576,6 +631,8 @@ export function usePlaylistActions() {
     renameNamed,
     addFiles,
     removeFiles,
+    hideFiles,
+    showHidden,
     addMenuItems,
     createOpen,
     createFiles,

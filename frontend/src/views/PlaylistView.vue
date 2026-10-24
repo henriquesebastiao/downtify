@@ -185,6 +185,54 @@
             </li>
           </ul>
         </UiPanel>
+
+        <UiPanel
+          v-if="canHide && playlist.hiddenCount"
+          :title="t('playlists.hiddenTitle', { count: playlist.hiddenCount })"
+          :description="t('playlists.hiddenHint')"
+        >
+          <template #actions>
+            <UiButton
+              v-if="!hidden.length"
+              variant="ghost"
+              size="sm"
+              :loading="loadingHidden"
+              @click="loadHidden"
+            >
+              {{ t('playlists.showMissing') }}
+            </UiButton>
+          </template>
+          <ul v-if="hidden.length" class="-mx-2 flex flex-col">
+            <li
+              v-for="song in hidden"
+              :key="song.key"
+              class="flex h-14 items-center gap-3 rounded-[10px] px-2 hover:bg-surface-2"
+            >
+              <CoverArt
+                :src="song.present ? coverURL(song.file) : ''"
+                :name="song.label"
+                rounded="rounded-[6px]"
+                :letter-size="12"
+                class="size-10"
+              />
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold">{{ song.label }}</p>
+                <p v-if="!song.present" class="truncate text-[13px] text-muted">
+                  {{ t('playlists.hiddenGone') }}
+                </p>
+              </div>
+              <UiButton
+                variant="ghost"
+                size="sm"
+                icon="eye"
+                :loading="showing === song.key"
+                @click="unhide(song)"
+              >
+                {{ t('playlists.unhide') }}
+              </UiButton>
+            </li>
+          </ul>
+        </UiPanel>
       </div>
     </DetailState>
   </div>
@@ -215,6 +263,7 @@ import { usePlayer } from '/src/model/player'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
 import { sortTracks } from '/src/lib/library'
+import { coverURL } from '/src/lib/paths'
 import { splitLength } from '/src/lib/format'
 import { useI18n } from '/src/i18n'
 
@@ -255,6 +304,12 @@ const canDetach = computed(
     !playlist.value.liked &&
     !playlist.value.manual &&
     playlist.value.fileCount > 0
+)
+
+// Songs are hidden from the user's own imported playlists (a Library one
+// is edited instead).
+const canHide = computed(
+  () => playlist.value?.mine && !playlist.value.liked && !playlist.value.manual
 )
 
 // "by ana", or how the user's own playlist is shared.
@@ -330,10 +385,45 @@ async function loadMissing() {
   }
 }
 
+const hidden = ref([])
+const loadingHidden = ref(false)
+const showing = ref('')
+
+async function loadHidden() {
+  if (!playlist.value) return
+  loadingHidden.value = true
+  try {
+    const res = await API.getHiddenPlaylistSongs(playlist.value.name)
+    hidden.value = res.data?.songs || []
+  } finally {
+    loadingHidden.value = false
+  }
+}
+
+async function unhide(song) {
+  showing.value = song.key
+  try {
+    if (await playlistActions.showHidden(playlist.value, [song.key])) {
+      hidden.value = hidden.value.filter((item) => item.key !== song.key)
+    }
+  } finally {
+    showing.value = ''
+  }
+}
+
+// An open list follows songs hidden from the track menu meanwhile.
+watch(
+  () => playlist.value?.hiddenCount,
+  (count) => {
+    if (hidden.value.length && count !== hidden.value.length) loadHidden()
+  }
+)
+
 watch(
   () => String(route.query.name || ''),
   async (name) => {
     missing.value = []
+    hidden.value = []
     await library.loadPlaylistTracks(name)
     // Opening a playlist shared with the user clears its "new" marker.
     playlistActions.markSeen(library.findPlaylist(name))

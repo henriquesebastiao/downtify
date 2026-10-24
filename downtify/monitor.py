@@ -32,6 +32,7 @@ from .navidrome import (
 )
 from .navidrome_index import NavidromeIndex
 from .playlist_catalog import PlaylistCatalog
+from .playlist_hidden import HiddenSongs, PlaylistHiddenSongs
 from .playlist_spotify_cache import PlaylistSpotifyCache
 from .podcasts import PodcastStore, sync_show
 from .sqlite_utils import ClosingConnection
@@ -57,6 +58,8 @@ class LibraryStores:
     cover_cache: Optional[CoverArtCache] = None
     playlist_spotify_cache: Optional[PlaylistSpotifyCache] = None
     track_owners: Optional[TrackOwners] = None
+    # Songs the owner hid from a playlist: never listed or fetched again.
+    playlist_hidden: Optional[PlaylistHiddenSongs] = None
 
 
 def _now_iso() -> str:
@@ -886,6 +889,11 @@ async def check_playlist(
         )
 
     known_tracks = await asyncio.to_thread(db.get_track_filenames, playlist.id)
+    # Songs the owner hid from the playlist are left out from here on:
+    # not downloaded (even once their file is gone), not in the M3U.
+    tracks = _without_hidden(
+        tracks, _hidden_songs(library, playlist.name), known_tracks
+    )
 
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
 
@@ -1005,6 +1013,36 @@ async def check_playlist(
             settings,
         )
     return downloaded
+
+
+def _hidden_songs(library: LibraryStores, name: str) -> HiddenSongs:
+    if library.playlist_hidden is None:
+        return HiddenSongs()
+    try:
+        return library.playlist_hidden.songs(name)
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not read the hidden songs of "{}"', name
+        )
+        return HiddenSongs()
+
+
+def _without_hidden(
+    tracks: list[dict[str, Any]],
+    hidden: HiddenSongs,
+    known_tracks: dict[str, Optional[str]],
+) -> list[dict[str, Any]]:
+    """*tracks* minus the songs hidden from the playlist - by source id,
+    or by the file the watch recorded for them."""
+
+    if not hidden:
+        return tracks
+    return [
+        track
+        for track in tracks
+        if not hidden.hides_song(track)
+        and not hidden.hides_file(known_tracks.get(track.get('song_id') or ''))
+    ]
 
 
 def _catalog_spotify_id(playlist: MonitoredPlaylist) -> Optional[str]:

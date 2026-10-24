@@ -15,6 +15,7 @@ Downtify cubre todo lo que necesitas para crear y mantener una biblioteca de mú
 | [Buscador](finder.md) | Busca en Deezer y luego explora un artista, sus álbumes y las canciones de cualquier álbum en columnas |
 | [Ajustes de descarga](download-settings.md) | Elige el formato (MP3/FLAC/M4A/OGG/OPUS), la tasa de bits, las descargas simultáneas y la pausa entre descargas |
 | [Monitor de playlists](playlist-monitor.md) | Vigila playlists y artistas de Spotify o YouTube Music y descarga automáticamente canciones y lanzamientos nuevos |
+| [Canciones ocultas de una playlist](hidden-playlist-songs.md) | Quita de una playlist descargada o vigilada las canciones que no quieres y mantenlas fuera; los archivos siguen en la biblioteca |
 | [Canciones más populares](top-songs.md) | Pega el enlace de un artista y descarga sus canciones más populares, opcionalmente como playlist |
 | [Importar biblioteca (CSV)](library-import.md) | Importa una exportación de Soundiiz, TuneMyMusic o Exportify y pon todo en cola |
 | [Reproductor integrado](player.md) | Reproduce tu biblioteca en el navegador: gestión de la cola, letras sincronizadas, temporizador de apagado, teclado y teclas multimedia |

@@ -254,6 +254,8 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       favorite: Boolean(playlist.favorite),
       sharedWithMe: Boolean(playlist.shared_with_me),
       isNew: Boolean(playlist.new),
+      // Songs the owner hid from an imported playlist.
+      hiddenCount: Number(playlist.hidden_count) || 0,
     }
   })
   // A tracked Spotify playlist whose M3U isn't written (M3U export off,
@@ -280,6 +282,7 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       followed: false,
       sharedWithMe: false,
       isNew: false,
+      hiddenCount: 0,
     }))
   return [...fromM3u, ...tracked].sort(
     (a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))

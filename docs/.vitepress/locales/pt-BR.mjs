@@ -70,6 +70,7 @@ export default {
       'features/finder.md': 'Localizador',
       'features/download-settings.md': 'Configurações de download',
       'features/playlist-names.md': 'Playlist display names',
+      'features/hidden-playlist-songs.md': 'Músicas ocultas da playlist',
       'features/playlist-monitor.md': 'Monitor de playlists',
       'features/top-songs.md': 'Músicas mais tocadas',
       'features/library-import.md': 'Importar biblioteca (CSV)',

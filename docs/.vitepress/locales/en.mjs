@@ -78,6 +78,7 @@ export default {
       'features/finder.md': 'Finder',
       'features/download-settings.md': 'Download Settings',
       'features/playlist-names.md': 'Playlist display names',
+      'features/hidden-playlist-songs.md': 'Hidden playlist songs',
       'features/playlist-monitor.md': 'Playlist Monitor',
       'features/top-songs.md': 'Top Songs',
       'features/library-import.md': 'Library Import (CSV)',

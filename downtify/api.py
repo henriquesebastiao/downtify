@@ -174,6 +174,11 @@ downloads are shared, and files are never stored twice.
   ``POST /api/library/playlists/copy`` (save a copy of a playlist you can
   open) and ``POST /api/library/playlists/detach`` (turn an imported
   playlist into an editable one)
+* ``GET|POST /api/library/playlists/hidden`` (songs hidden from an
+  imported playlist - ``POST`` body ``{name, hide, show}``: library
+  paths to hide, hidden song keys to show again; a hidden song stays
+  out of the playlist when its watch or link brings it back - see
+  ``downtify/playlist_hidden.py``)
 * ``POST /api/library/reconcile`` (fix stored library paths after files
   moved on disk, then refresh M3U/Navidrome playlists)
 * ``POST /api/library/external/sync`` (start a background scan of
@@ -289,6 +294,7 @@ downloads are shared, and files are never stored twice.
   (``?since=`` change feed), ``GET /api/v1/tracks/{id}`` (and
   ``/stream``, ``/cover``, ``/lyrics``), ``GET /api/v1/playlists``,
   ``POST|DELETE /api/v1/playlists/follow``, ``POST /api/v1/playlists/seen``,
+  ``GET|POST /api/v1/playlists/hidden``,
   ``GET /api/v1/usernames``, ``GET|PUT /api/v1/likes`` and
   ``POST /api/v1/sign`` - see
   ``downtify/mobile_routes.py`` and ``docs/mobile-client-contract.md``
@@ -471,7 +477,12 @@ from .monitor import (
     normalize_release_types,
     parse_playlist_url,
 )
-from .navidrome import _effective_navidrome_settings, cache_navidrome_song_id
+from .navidrome import (
+    _effective_navidrome_settings,
+    cache_navidrome_song_id,
+    enrich_song_from_library_file,
+    sync_playlist_to_navidrome,
+)
 from .navidrome_index import NavidromeIndex
 from .playlist_batches import (
     LibrarySnapshot,
@@ -480,6 +491,16 @@ from .playlist_batches import (
     split_tracks_by_library,
 )
 from .playlist_catalog import ManualPlaylistOwners, PlaylistCatalog
+from .playlist_hidden import (
+    HiddenSongs,
+    HiddenSongsError,
+    PlaylistHiddenSongs,
+    catalog_names_for,
+    hidden_key,
+    hide_playlist_songs,
+    show_playlist_songs,
+    source_track_ids,
+)
 from .playlist_listing import list_library_playlists
 from .playlist_mosaic import keep_explicit_cover
 from .playlist_shares import (
@@ -1078,6 +1099,7 @@ class AppState:
     library_visibility: Optional[LibraryVisibility] = None
     manual_playlist_owners: Optional[ManualPlaylistOwners] = None
     playlist_shares: Optional[PlaylistShares] = None
+    playlist_hidden: Optional[PlaylistHiddenSongs] = None
     external_playlist_imports: Optional[ExternalPlaylistImports] = None
     traffic: Optional[TrafficCounters] = None
     podcasts: Optional[PodcastStore] = None
@@ -1354,7 +1376,8 @@ def _filter_playlists_for(
     Rows are copies carrying ``owner_id``, ``owner``, ``visibility``,
     ``mine`` (theirs to change: their own, or anything for an admin),
     ``followed``, ``shared_with_me`` and ``new`` (shared with them, not
-    opened yet); the owner's also list ``shared_with`` (usernames).
+    opened yet); the owner's also list ``shared_with`` (usernames) and,
+    on an imported playlist they hid songs from, ``hidden_count``.
     """
 
     lens = _playlist_lens(request)
@@ -1407,6 +1430,12 @@ def _filter_playlists_for(
         }
         for row in kept
     ]
+    hidden_counts = _hidden_song_counts()
+    for row in kept:
+        # The owner's imported playlists say how many songs they hide.
+        count = hidden_counts.get(hidden_key(row['name']), 0)
+        if count and row.get('mine') and not row.get('manual'):
+            row['hidden_count'] = count
     kept.sort(
         key=lambda item: (
             not item.get('favorite'),
@@ -1415,6 +1444,18 @@ def _filter_playlists_for(
         )
     )
     return kept
+
+
+def _hidden_song_counts() -> dict[str, int]:
+    """``{playlist key: hidden songs}`` (empty when nothing is hidden)."""
+
+    if state.playlist_hidden is None:
+        return {}
+    try:
+        return state.playlist_hidden.counts()
+    except Exception:
+        logger.opt(exception=True).debug('Could not count hidden songs')
+        return {}
 
 
 def playlist_display_identity(entry: dict[str, Any]) -> str:
@@ -1813,6 +1854,7 @@ def library_stores() -> LibraryStores:
         cover_cache=state.cover_cache,
         playlist_spotify_cache=state.playlist_spotify_cache,
         track_owners=state.track_owners,
+        playlist_hidden=state.playlist_hidden,
     )
 
 
@@ -1944,6 +1986,14 @@ def rekey_file_owners(
         except Exception:
             logger.opt(exception=True).debug(
                 'Could not rekey hidden item for {}', stored_path
+            )
+    # So does a song hidden from a playlist.
+    if state.playlist_hidden is not None:
+        try:
+            state.playlist_hidden.rekey(old_key, new_key, stored_path)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not rekey hidden playlist song {}', stored_path
             )
 
 
@@ -2279,6 +2329,8 @@ def _upsert_track_in_playlists(
             spotify_id=sid,
             user_id=user_id if pl_name == primary else None,
         )
+        if hidden_from_playlist(pl_name, song, filename):
+            continue
         order = primary_order if pl_name == primary else 0
         catalog.upsert_track(pl_name, song, filename, full, track_order=order)
 
@@ -4046,20 +4098,51 @@ async def download_endpoint(
     return filename
 
 
+def hidden_songs_for(name: str) -> HiddenSongs:
+    """The songs the owner hid from playlist *name* (see
+    :mod:`downtify.playlist_hidden`) - empty when none, or on error."""
+
+    store = state.playlist_hidden
+    if store is None or not name:
+        return HiddenSongs()
+    try:
+        return store.songs(name)
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Could not read the hidden songs of {!r}', name
+        )
+        return HiddenSongs()
+
+
+def hidden_from_playlist(
+    playlist_name: str, song: dict[str, Any], filename: str
+) -> bool:
+    """Whether the owner hid *song* (downloaded as *filename*) from
+    playlist *playlist_name* - then it is never linked to it again."""
+
+    hidden = hidden_songs_for(playlist_name)
+    return hidden.hides_song(song) or hidden.hides_file(filename)
+
+
 def _m3u_entries_for(
-    songs: list[dict[str, Any]], resolved: dict[int, Optional[str]]
+    songs: list[dict[str, Any]],
+    resolved: dict[int, Optional[str]],
+    hidden: HiddenSongs = HiddenSongs(),
 ) -> list[dict[str, Any]]:
     """Build M3U entries for the songs downloaded so far.
 
     Iterates ``songs`` in playlist order (not completion order, which
     varies with concurrency) and keeps only those with a filename in
     ``resolved``, so a partially-finished batch still produces a
-    correctly-ordered file.
+    correctly-ordered file. Songs *hidden* from the playlist stay out
+    of it even when downloaded again from its link.
     """
     entries: list[dict[str, Any]] = []
     for index, song in enumerate(songs):
         filename = resolved.get(index)
         if not filename:
+            continue
+        if hidden.hides_song(song) or hidden.hides_file(filename):
             continue
         entries.append({
             'filename': filename,
@@ -4076,7 +4159,9 @@ async def _write_batch_m3u(
     playlist_name: str,
     playlist_subdir: str,
 ) -> Optional[Path]:
-    entries = _m3u_entries_for(songs, resolved)
+    entries = _m3u_entries_for(
+        songs, resolved, hidden_songs_for(playlist_name)
+    )
     if not entries:
         return None
     # When organize-by-artist/album is on, songs land in those folders
@@ -4411,7 +4496,9 @@ async def _finish_playlist_batch(
                 if filename
                 else None
             )
-            if full is None:
+            if full is None or hidden_from_playlist(
+                playlist_name, song, filename
+            ):
                 continue
             catalog.upsert_track(
                 playlist_name,
@@ -4508,7 +4595,11 @@ def _rebuild_playlist_catalog_from_library(
                 filename = str(catalog_filenames.get(tid) or '').strip()
                 if filename:
                     full = locate_library_file(filename, dl_dir, slskd)
-        if filename and full is not None:
+        if (
+            filename
+            and full is not None
+            and not hidden_from_playlist(pl_name, track, filename)
+        ):
             state.playlist_catalog.upsert_track(
                 pl_name, track, filename, full, track_order=index
             )
@@ -4773,6 +4864,7 @@ def _playlist_batch_summary(
     if cached_tracks is not None:
         if cached_name:
             playlist_name = cached_name
+        cached_tracks = _without_hidden_songs(playlist_name, cached_tracks)
         expected_count = len(cached_tracks)
         downloaded_count = 0
         missing_count = expected_count
@@ -4855,6 +4947,18 @@ def _playlist_batch_summary(
     }
 
 
+def _without_hidden_songs(
+    playlist_name: str, tracks: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """*tracks* (a playlist's source rows) minus the songs its owner hid
+    from it: they neither count as expected nor as missing."""
+
+    hidden = hidden_songs_for(playlist_name)
+    if not hidden:
+        return tracks
+    return [track for track in tracks if not hidden.hides_song(track)]
+
+
 def _playlist_completeness_report(
     spotify_id: str,
     playlist_name: str,
@@ -4878,6 +4982,7 @@ def _playlist_completeness_report(
             'playlist batch: Spotify fetch failed for {}',
             spotify_id,
         )
+    tracks = _without_hidden_songs(playlist_name, tracks)
 
     subdir = _playlist_subdir_for_name(playlist_name)
     catalog_filenames = _catalog_filenames_for_playlist(
@@ -5092,6 +5197,8 @@ def _missing_tracks_for_playlist(
         raise HTTPException(
             status_code=502, detail='Failed to fetch playlist from Spotify'
         ) from exc
+    # A song hidden from the playlist is never "missing" from it.
+    tracks = _without_hidden_songs(playlist_name, tracks)
 
     subdir = _playlist_subdir_for_name(playlist_name)
     catalog_filenames = _catalog_filenames_for_playlist(
@@ -6593,6 +6700,10 @@ def _unlink_imported_playlist(entry: dict[str, Any], name: str) -> None:
             catalog.delete_playlist(exact)
     if state.manual_playlist_owners is not None and owner_id:
         state.manual_playlist_owners.set_owner(name, owner_id)
+    # Nothing rewrites it from a source any more: hidden songs simply
+    # aren't in it, and can be added back like any other song.
+    if state.playlist_hidden is not None:
+        state.playlist_hidden.forget(name)
     if state.monitor_db is not None:
         for watch in state.monitor_db.list_playlists(owner_id or None):
             if watch.kind == KIND_PLAYLIST and (
@@ -6649,6 +6760,197 @@ async def detach_library_playlist_endpoint(
     invalidate_library_paths_cache()
     await announce_playlists_changed()
     return result
+
+
+def _require_playlist_hidden() -> PlaylistHiddenSongs:
+    if state.playlist_hidden is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    return state.playlist_hidden
+
+
+def _imported_playlist_to_change(
+    name: str, request: Optional[Request]
+) -> dict[str, Any]:
+    """Imported playlist *name*'s entry, when *request* may change it -
+    the owner's or, for an admin, anyone's. 409 for a Library playlist
+    (it is edited instead) and for liked songs."""
+
+    entry = require_playlist_visible(name, request, manage=True)
+    if entry.get('liked') or entry.get('manual'):
+        raise HTTPException(
+            status_code=409,
+            detail='Songs are removed from a Library playlist, not hidden',
+        )
+    return entry
+
+
+def hidden_playlist_songs(
+    name: str, request: Optional[Request]
+) -> dict[str, Any]:
+    """``{name, songs}``: the songs hidden from imported playlist *name*,
+    most recently hidden first, each ``{key, label, file, present,
+    hidden_at}`` - ``present`` while its file is still in the library."""
+
+    entry = _imported_playlist_to_change(name, request)
+    rows = _require_playlist_hidden().items(entry['name'])
+    ctx = library_context()
+    return {
+        'name': entry['name'],
+        'songs': [
+            {
+                'key': row['key'],
+                'label': row['label'],
+                'file': row['file'],
+                'present': bool(row['file'])
+                and resolve_library_file(row['file'], ctx) is not None,
+                'hidden_at': row['hidden_at'],
+            }
+            for row in rows
+        ],
+    }
+
+
+async def change_hidden_playlist_songs(
+    request: Request, name: str, hide: list[str], show: list[str]
+) -> dict[str, Any]:
+    """Hide the library files *hide* from imported playlist *name* and
+    show the hidden songs *show* (their ``key``) again - for the web page
+    and the apps alike. ``{name, hidden, keys, shown, restored, files,
+    count}``: ``keys`` are the hidden songs' (what *show* takes to undo
+    it); ``restored`` of the ``shown`` songs went back into the playlist
+    (the others' files are gone; the source brings them back)."""
+
+    if not hide and not show:
+        raise HTTPException(status_code=400, detail='Nothing to hide or show')
+    entry = _imported_playlist_to_change(name, request)
+    store = _require_playlist_hidden()
+    ctx = library_context()
+    stored = str(entry['name'])
+    result: dict[str, Any] = {
+        'name': stored,
+        'hidden': 0,
+        'keys': [],
+        'shown': 0,
+        'restored': 0,
+    }
+    try:
+        if show:
+            result.update(
+                await asyncio.to_thread(
+                    show_playlist_songs,
+                    ctx,
+                    store,
+                    stored,
+                    show,
+                    catalog=state.playlist_catalog,
+                )
+            )
+        if hide:
+            ids = await asyncio.to_thread(
+                source_track_ids,
+                stored,
+                hide,
+                catalog=state.playlist_catalog,
+                monitor_db=state.monitor_db,
+            )
+            result.update(
+                await asyncio.to_thread(
+                    hide_playlist_songs,
+                    ctx,
+                    store,
+                    stored,
+                    hide,
+                    track_ids=ids,
+                    catalog=state.playlist_catalog,
+                )
+            )
+    except HiddenSongsError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    invalidate_library_paths_cache()
+    if _navidrome_playlist_sync_on():
+        spawn_task(
+            asyncio.to_thread(_sync_navidrome_playlist, stored),
+            name='navidrome-sync-hidden-songs',
+        )
+    await announce_playlists_changed()
+    return result
+
+
+def _navidrome_playlist_sync_on() -> bool:
+    settings = state.settings
+    return settings.get('sync_navidrome', True) is not False and bool(
+        _effective_navidrome_settings(settings).get('enabled')
+    )
+
+
+def _sync_navidrome_playlist(name: str) -> None:
+    """Mirror playlist *name*'s M3U into its Navidrome playlist (best
+    effort)."""
+
+    settings = state.settings
+    ctx = library_context()
+    path = m3u.find_m3u_for_name(ctx.download_dir, name)
+    if path is None:
+        return
+    files = m3u.read_m3u_tracks(
+        path, ctx.download_dir, ctx.slskd_dir, tuple(ctx.extra_dirs or ())
+    )
+    songs = [
+        enrich_song_from_library_file(
+            {'filename': stored}, ctx.download_dir, ctx.slskd_dir
+        )
+        for stored in files
+    ]
+    # A watch named its Navidrome playlist with the source's own name.
+    synced = next(iter(catalog_names_for(state.playlist_catalog, name)), name)
+    try:
+        sync_playlist_to_navidrome(
+            synced,
+            songs,
+            settings,
+            navidrome_index=state.navidrome_index,
+            download_dir=ctx.download_dir,
+            trigger_scan=False,
+        )
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Navidrome sync failed for {!r}', synced
+        )
+
+
+@router.get('/api/library/playlists/hidden')
+async def hidden_playlist_songs_endpoint(
+    request: Request, name: str = Query(..., min_length=1)
+) -> dict[str, Any]:
+    """The songs hidden from an imported playlist you can change."""
+
+    return await asyncio.to_thread(hidden_playlist_songs, name, request)
+
+
+@router.post('/api/library/playlists/hidden')
+async def change_hidden_playlist_songs_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Hide songs from an imported playlist - and keep them out of it
+    when its watch or its link brings them back - or show them again:
+    ``{name, hide: [library paths], show: [hidden song keys]}``. The
+    audio files stay in the library; the source playlist is untouched."""
+
+    payload = await _json_object(request)
+    return await change_hidden_playlist_songs(
+        request,
+        str(payload.get('name') or '').strip(),
+        _string_list(payload.get('hide')),
+        _string_list(payload.get('show')),
+    )
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item or '').strip()]
 
 
 @router.delete('/api/library/playlist')
@@ -6716,6 +7018,8 @@ async def _delete_playlist_by_name(
     result['playlists_refresh_scheduled'] = bool(affected)
     if state.playlist_shares is not None:
         await asyncio.to_thread(state.playlist_shares.forget, playlist_name)
+    if state.playlist_hidden is not None:
+        await asyncio.to_thread(state.playlist_hidden.forget, playlist_name)
     if state.external_playlist_imports is not None:
         await asyncio.to_thread(
             state.external_playlist_imports.forget, playlist_name
@@ -7151,7 +7455,12 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
         logger.exception('Failed to resolve playlist {}', playlist_url)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    entries = [t for t in tracks if isinstance(t, dict)]
+    hidden = hidden_songs_for(playlist_name)
+    entries = [
+        t
+        for t in tracks
+        if isinstance(t, dict) and not hidden.hides_file(t.get('filename'))
+    ]
     playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
     organize = _organize_enabled()
     target, kept = m3u.write_m3u(

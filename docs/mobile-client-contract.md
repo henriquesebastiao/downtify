@@ -122,10 +122,12 @@ Other reads, all by track id:
 | `GET /api/v1/tracks/{id}` | One track row |
 | `GET /api/v1/tracks/{id}/lyrics` | `{ "synced": "<LRC>", "plain": "…" }` (either may be empty) |
 | `GET /api/v1/tracks/{id}/cover?size=150\|300\|600` | JPEG thumbnail; omit `size` for the full picture. `ETag` + `Cache-Control: private, max-age=604800` |
-| `GET /api/v1/playlists` | `[{ "name", "liked", "manual", "count", "cover", "track_ids": [...], "owner", "visibility", "mine", "followed", "shared_with_me", "new" }]` (`cover` is a path for `GET /playlist-cover?file=`, or `""`). Other people's shared or followed playlists are in here, view-only (`mine: false`): list them apart from the user's own, labelled with `owner` |
+| `GET /api/v1/playlists` | `[{ "name", "liked", "manual", "count", "cover", "track_ids": [...], "owner", "visibility", "mine", "followed", "shared_with_me", "new", "hidden_count" }]` (`cover` is a path for `GET /playlist-cover?file=`, or `""`). Other people's shared or followed playlists are in here, view-only (`mine: false`): list them apart from the user's own, labelled with `owner` |
 | `GET /api/v1/usernames` | `{ "enabled", "usernames": [...] }` — who a playlist can be shared with |
 | `POST` / `DELETE /api/v1/playlists/follow` | Body (or `?name=`) `{ "name" }` — follow a public playlist, or stop |
 | `POST /api/v1/playlists/seen` | Body `{ "name" }` — clear the `new` marker of a playlist shared with the user |
+| `GET /api/v1/playlists/hidden?name=` | `{ "name", "songs": [{ "key", "label", "track_id", "hidden_at" }] }` — the songs the user hid from an imported playlist of theirs (`track_id` is `""` once the file is gone) |
+| `POST /api/v1/playlists/hidden` | Body `{ "name", "hide": [track_ids], "show": [keys] }` — hide tracks from an imported playlist of the user's (they stay out when its watch or link brings them back; the tracks stay in the library), or show hidden ones again. Answers `{ "name", "hidden", "keys", "shown", "restored", "count", "track_ids" }`; send `keys` as `show` to undo. Offer it on `mine` playlists that aren't `manual` or `liked` (`409` otherwise). See [Hidden playlist songs](features/hidden-playlist-songs.md) |
 | `GET /api/v1/likes` | `{ "track_ids": [...] }`, newest first |
 | `PUT /api/v1/likes` | Body `{ "track_id", "liked" }` — idempotent |
 
@@ -174,7 +176,7 @@ Messages the app can rely on:
 | Message | When |
 |---------|------|
 | `{ "type": "library_changed" }` | Tracks were added, removed or moved (debounced ~2 s) — sync |
-| `{ "type": "playlists_changed" }` | A playlist was shared, unshared, followed, copied, detached, renamed or deleted — refetch `GET /api/v1/playlists` |
+| `{ "type": "playlists_changed" }` | A playlist was shared, unshared, followed, copied, detached, renamed or deleted, or songs were hidden from it or shown again — refetch `GET /api/v1/playlists` |
 | `{ "type": "likes", "count": 3 }` | Likes changed somewhere — refetch `GET /api/v1/likes` |
 | `{ "type": "queue_reload" }` | Many downloads were queued at once — refetch `GET /api/queue` |
 | `{ "song": {…}, "progress": 42.5, "status": "downloading"\|"done"\|"error", "message", "filename", "provider" }` | A server download's progress (no `type`) — one’s own jobs only (every job on an admin’s device) |
