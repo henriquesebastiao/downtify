@@ -35,6 +35,7 @@ export default {
     seeAll: 'Ver tudo',
     show: 'Mostrar',
     hide: 'Ocultar',
+    undo: 'Desfazer',
     unknownArtist: 'Artista desconhecido',
     tracks: { one: '{count} faixa', other: '{count} faixas' },
     albums: { one: '{count} álbum', other: '{count} álbuns' },
@@ -594,6 +595,19 @@ export default {
     },
     alreadyIn: 'Já está em “{name}”',
     removedTrack: 'Removida de “{name}”',
+    hideTrack: 'Ocultar da playlist',
+    hiddenTrack: 'Oculta de “{name}”',
+    hiddenTitle: {
+      one: '{count} música oculta',
+      other: '{count} músicas ocultas',
+    },
+    hiddenHint:
+      'Músicas que você ocultou desta playlist. Elas continuam fora quando ela sincroniza com a origem e continuam na sua biblioteca.',
+    hiddenGone: 'Não está mais na sua biblioteca',
+    unhide: 'Mostrar de novo',
+    unhidden: 'De volta em “{name}”',
+    unhiddenLater:
+      'Ela volta para “{name}” quando a playlist baixar o que falta',
     created: 'Criada “{name}”',
     rename: 'Renomear',
     renameTitle: 'Renomear playlist',

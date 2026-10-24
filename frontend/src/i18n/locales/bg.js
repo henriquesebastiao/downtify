@@ -35,6 +35,7 @@ export default {
     seeAll: 'Виж всички',
     show: 'Покажи',
     hide: 'Скрий',
+    undo: 'Отмяна',
     unknownArtist: 'Неизвестен изпълнител',
     tracks: { one: '{count} песен', other: '{count} песни' },
     albums: { one: '{count} албум', other: '{count} албума' },
@@ -588,6 +589,19 @@ export default {
     },
     alreadyIn: 'Вече е в „{name}“',
     removedTrack: 'Премахната от „{name}“',
+    hideTrack: 'Скрий от плейлиста',
+    hiddenTrack: 'Скрита от „{name}“',
+    hiddenTitle: {
+      one: '{count} скрита песен',
+      other: '{count} скрити песни',
+    },
+    hiddenHint:
+      'Песни, които сте скрили от този плейлист. Те остават извън него, когато се синхронизира с източника си, и остават в библиотеката ви.',
+    hiddenGone: 'Вече не е в библиотеката ви',
+    unhide: 'Покажи отново',
+    unhidden: 'Отново в „{name}“',
+    unhiddenLater:
+      'Тя ще се върне в „{name}“, когато плейлистът изтегли липсващото',
     created: 'Създаден „{name}“',
     rename: 'Преименувай',
     renameTitle: 'Преименувай плейлиста',

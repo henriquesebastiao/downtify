@@ -35,6 +35,7 @@ export default {
     seeAll: 'Tümünü gör',
     show: 'Göster',
     hide: 'Gizle',
+    undo: 'Geri al',
     unknownArtist: 'Bilinmeyen sanatçı',
     tracks: { one: '{count} parça', other: '{count} parça' },
     albums: { one: '{count} albüm', other: '{count} albüm' },
@@ -595,6 +596,19 @@ export default {
     },
     alreadyIn: 'Zaten “{name}” içinde',
     removedTrack: '“{name}” listesinden çıkarıldı',
+    hideTrack: 'Listeden gizle',
+    hiddenTrack: '“{name}” listesinden gizlendi',
+    hiddenTitle: {
+      one: '{count} gizli şarkı',
+      other: '{count} gizli şarkı',
+    },
+    hiddenHint:
+      'Bu listeden gizlediğin şarkılar. Liste kaynağıyla eşitlendiğinde dışarıda kalır ve kitaplığında durmaya devam eder.',
+    hiddenGone: 'Artık kitaplığında değil',
+    unhide: 'Tekrar göster',
+    unhidden: '“{name}” listesine geri döndü',
+    unhiddenLater:
+      'Liste eksiklerini indirdiğinde “{name}” listesine geri döner',
     created: '“{name}” oluşturuldu',
     rename: 'Yeniden adlandır',
     renameTitle: 'Çalma listesini yeniden adlandır',

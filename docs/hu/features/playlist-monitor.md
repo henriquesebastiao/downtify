@@ -196,6 +196,8 @@ Top 50 - USA        →  new song appears   →  Downtify downloads it
 
 Az egyetlen dolgok, amelyek hangot törölnek, azok, amelyeket kifejezetten kérsz: **Törlés** egy számon vagy kijelölésen a Könyvtárban, egy lejátszási lista törlése a Könyvtárból (ami törli a számait — előtte rákérdez), vagy a fájlok saját kezű eltávolítása a fájlrendszerből.
 
+Ha egy nem kívánt számot ki akarsz venni a listából, és minden ellenőrzéskor kint akarod tartani, rejtsd el: lásd [Elrejtett számok a listákban](hidden-playlist-songs.md). A fájlja a könyvtáradban marad.
+
 ::: info Figyelés törlése vs. lejátszási lista törlése
 A **Figyelés leállítása** (a figyelés ⋯ menüjében) csak a figyelést felejti el: a lemezen semmi nem változik. A **Törlés** egy lejátszási listán a **Könyvtár** oldalon a romboló — eltávolítja a lista számait, az M3U-ját és a katalógusbejegyzését.
 :::

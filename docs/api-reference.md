@@ -924,6 +924,8 @@ Sorted by name, except that the [liked songs](features/liked-songs.md) playlist 
 
 `cover` is the library path of the playlist's own artwork when one was saved beside its M3U (see [Playlist cover art](features/playlist-cover-art.md)), and `""` otherwise. Fetch it from [`GET /playlist-cover`](#get-playlist-cover).
 
+On the caller's own imported playlists that [hide songs](features/hidden-playlist-songs.md), `hidden_count` says how many (absent otherwise); list them with [`GET /api/library/playlists/hidden`](#get-apilibraryplaylistshidden).
+
 ---
 
 ### `GET /tracks`
@@ -1222,7 +1224,7 @@ Create an empty playlist the user can edit in **Library → Playlists**. Writes 
 
 ### `POST /api/library/playlists/tracks`
 
-Add or remove library files (downloads or [extra folders](features/external-library.md)) on a **manual** playlist. Imported playlists return `403`. Missing files are dropped from the M3U.
+Add or remove library files (downloads or [extra folders](features/external-library.md)) on a **manual** playlist. Imported playlists return `403`: hide their songs with [`POST /api/library/playlists/hidden`](#post-apilibraryplaylistshidden) instead. Missing files are dropped from the M3U.
 
 **Request body:**
 
@@ -1277,6 +1279,57 @@ Turn an **imported** (Spotify or YouTube Music) playlist you own into a manual o
 **Request body:** `{ "name": "Road trip" }`
 
 **Response:** `{ "name": "Road trip", "manual": true, "files": [...], "count": 42 }`
+
+Detaching forgets the playlist's [hidden songs](features/hidden-playlist-songs.md): with no source to bring them back, they just aren't in it.
+
+---
+
+### `GET /api/library/playlists/hidden`
+
+The songs hidden from an **imported** playlist the caller may change (their own; any for an admin), most recently hidden first. See [Hidden playlist songs](features/hidden-playlist-songs.md). `403` for someone who can open the playlist without owning it, `404` for one they can't open, `409` for a manual playlist or liked songs.
+
+**Query:** `?name=Road trip`
+
+**Response:**
+
+```json
+{
+  "name": "Road trip",
+  "songs": [
+    {
+      "key": "4uLU6hMCjMI75M1A2tKUQC",
+      "label": "Artist - Song",
+      "file": "Road trip/Artist - Song.mp3",
+      "present": true,
+      "hidden_at": "2026-10-24T12:00:00+00:00"
+    }
+  ]
+}
+```
+
+`key` is what `show` takes below: the song's source track id (Spotify id or YouTube video id) when Downtify knows it, else an id of its file. `present` is `false` once the file is no longer in the library. `label` comes from the M3U's `#EXTINF` line (the file name when it had none).
+
+---
+
+### `POST /api/library/playlists/hidden`
+
+Hide songs from an **imported** playlist, or show hidden ones again. A hidden song leaves the playlist's M3U (and Navidrome playlist, when Navidrome sync is on) at once and stays out: [Playlist Monitor](features/playlist-monitor.md) sweeps neither list it nor download it again, even after its file is deleted; it is never counted as missing; and downloading the playlist again from its link keeps it out of the M3U. The audio file stays in the library, and the source playlist on Spotify / YouTube Music is not changed. Same errors as `GET` above, plus `400` when there is nothing to do, when a path isn't in the playlist, and when hiding would leave the playlist empty (delete it instead).
+
+**Request body:**
+
+```json
+{ "name": "Road trip", "hide": ["Road trip/Artist - Song.mp3"], "show": ["7ouMYWpwJ422jRcDASZB7P"] }
+```
+
+`hide` takes library paths (as `GET /tracks` returns them), `show` takes the `key` of hidden songs; either may be left out, at most 500 of each. Showing a song puts it back where it was in the playlist when its file is still in the library; otherwise it only stops being hidden, and the next sweep or **Download missing** brings it back like any missing song.
+
+**Response:**
+
+```json
+{ "name": "Road trip", "hidden": 1, "keys": ["4uLU6hMCjMI75M1A2tKUQC"], "shown": 1, "restored": 1, "files": ["…"], "count": 41 }
+```
+
+`keys` are the keys of the songs just hidden (pass them as `show` to undo); `restored` is how many of the `shown` songs went back into the M3U; `files` / `count` are the playlist's tracks afterwards. Connected clients get `playlists_changed`.
 
 ---
 
@@ -1927,7 +1980,7 @@ Tracked playlist downloads that are still missing tracks (one's own for a user).
 
 ### `POST /api/playlists/incomplete/download-missing`
 
-Queue only the tracks of a Spotify playlist that aren't in the library yet. For a user, tracks on disk that someone else downloaded count as missing: queuing them claims the shared files instead of downloading twice.
+Queue only the tracks of a Spotify playlist that aren't in the library yet. For a user, tracks on disk that someone else downloaded count as missing: queuing them claims the shared files instead of downloading twice. Songs [hidden from the playlist](features/hidden-playlist-songs.md) are never missing, here or in the batch reports' counts.
 
 **Request body:** `{ "spotify_playlist_id": "…" }` or `{ "playlist_url": "https://open.spotify.com/playlist/…" }`, optionally with `"generate_m3u": true`.
 
@@ -2696,6 +2749,7 @@ The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playli
 | `new` | Shared with the caller and not opened yet; clear it with [`POST /api/v1/playlists/seen`](#post-apiv1playlistsseen) |
 | `followed` | A public playlist the caller follows |
 | `shared_with` | On the caller's own shared playlists: the usernames it is shared with |
+| `hidden_count` | Songs the owner [hid](features/hidden-playlist-songs.md) from an imported playlist of theirs (`0` otherwise); list them with [`GET /api/v1/playlists/hidden`](#get-apiv1playlistshidden) |
 
 Keep the other people's playlists apart from the caller's own (a "Shared with me" and a "Public playlists" section, each entry labelled with its `owner`).
 
@@ -2716,6 +2770,26 @@ Follow a public playlist of someone else's (`{ "name": "Late night" }`), so it s
 ### `POST /api/v1/playlists/seen`
 
 Clear the `new` marker of a playlist shared with the caller (`{ "name": "Late night" }`). **Response:** `{ "name": "Late night", "new": false }`.
+
+---
+
+### `GET /api/v1/playlists/hidden`
+
+The songs the caller [hid](features/hidden-playlist-songs.md) from an imported playlist of theirs (`?name=`), most recently hidden first — [`GET /api/library/playlists/hidden`](#get-apilibraryplaylistshidden) by track id:
+
+```json
+{ "name": "Road trip", "songs": [ { "key": "4uLU6hMCjMI75M1A2tKUQC", "label": "Artist - Song", "track_id": "t7b2…", "hidden_at": "2026-10-24T12:00:00+00:00" } ] }
+```
+
+`track_id` is `""` once the song's file is no longer in the library. Same errors as the web route.
+
+---
+
+### `POST /api/v1/playlists/hidden`
+
+Hide tracks from an imported playlist of the caller's, or show hidden songs again: `{ "name": "Road trip", "hide": ["t7b2…"], "show": ["<key>"] }` (`hide` takes track ids, `show` the `key` from the listing). Same rules as [`POST /api/library/playlists/hidden`](#post-apilibraryplaylistshidden); `404` for an unknown track id.
+
+**Response:** `{ "name": "Road trip", "hidden": 1, "keys": ["4uLU…"], "shown": 0, "restored": 0, "count": 41, "track_ids": ["…"] }` — `keys` undo the hide (send them as `show`), `track_ids` are the playlist's tracks afterwards, in order.
 
 ---
 
@@ -2830,7 +2904,7 @@ When tracks are added, removed or moved (a finished download, a delete, a reconc
 { "type": "library_changed" }
 ```
 
-When a playlist is shared, unshared, followed, copied, detached, renamed or deleted, connected clients are told, so they list the playlists again (`GET /playlists` or [`GET /api/v1/playlists`](#get-apiv1playlists)):
+When a playlist is shared, unshared, followed, copied, detached, renamed or deleted, or songs are hidden from it or shown again, connected clients are told, so they list the playlists again (`GET /playlists` or [`GET /api/v1/playlists`](#get-apiv1playlists)):
 
 ```json
 { "type": "playlists_changed" }

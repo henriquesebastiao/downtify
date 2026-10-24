@@ -196,6 +196,8 @@ Top 50 - USA        →  new song appears   →  Downtify downloads it
 
 Lo único que borra audio es lo que pides explícitamente: **Eliminar** en una canción o una selección de la Biblioteca, eliminar una playlist desde la Biblioteca (que sí elimina sus canciones — y pregunta antes), o quitar archivos tú mismo del sistema de archivos.
 
+Para quitar de la playlist una canción que no quieres, y que no vuelva en cada comprobación, ocúltala: consulta [Canciones ocultas de una playlist](hidden-playlist-songs.md). Su archivo sigue en tu biblioteca.
+
 ::: info Eliminar una vigilancia vs. eliminar una playlist
 **Dejar de vigilar** (en el menú ⋯ de la vigilancia) solo olvida la vigilancia: nada cambia en el disco. **Eliminar** en una playlist de la página **Biblioteca** es lo destructivo — quita las canciones de esa playlist, su M3U y su entrada de catálogo.
 :::

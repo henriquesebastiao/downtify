@@ -15,6 +15,7 @@ Downtify, Spotify’dan yerel bir müzik kitaplığı oluşturmak ve sürdürmek
 | [Bulucu](finder.md) | Deezer’da arayın, sonra bir sanatçıya, albümlerine ve herhangi bir albümün parçalarına sütunlar halinde göz atın |
 | [İndirme ayarları](download-settings.md) | Biçimi (MP3/FLAC/M4A/OGG/OPUS), bit hızını, eşzamanlı indirmeleri ve indirmeler arası beklemeyi seçin |
 | [Çalma listesi izleyici](playlist-monitor.md) | Spotify veya YouTube Music çalma listelerini ve sanatçılarını izleyin, yeni parça ve çıkışları otomatik indirin |
+| [Listeden gizlenen şarkılar](hidden-playlist-songs.md) | İndirilen ya da izlenen bir listeden istemediğin şarkıları çıkar ve dışarıda tut; dosyalar kitaplıkta kalır |
 | [En çok dinlenen şarkılar](top-songs.md) | Bir sanatçı bağlantısı yapıştırın ve en popüler şarkılarını, isteğe bağlı olarak çalma listesi halinde indirin |
 | [Kitaplığı içe aktarma (CSV)](library-import.md) | Soundiiz, TuneMyMusic veya Exportify’dan bir kitaplık dışa aktarımını içe aktarın ve hepsini kuyruğa alın |
 | [Yerleşik oynatıcı](player.md) | Kitaplığınızı tarayıcıda çalın: kuyruk yönetimi, eşzamanlı sözler, uyku zamanlayıcısı, klavye ve medya tuşları |

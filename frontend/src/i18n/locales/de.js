@@ -35,6 +35,7 @@ export default {
     seeAll: 'Alle sehen',
     show: 'Zeigen',
     hide: 'Verstecken',
+    undo: 'Rückgängig',
     unknownArtist: 'Unbekannter Künstler',
     tracks: { one: '{count} Titel', other: '{count} Titel' },
     albums: { one: '{count} Album', other: '{count} Alben' },
@@ -610,6 +611,19 @@ export default {
     },
     alreadyIn: 'Bereits in „{name}“',
     removedTrack: 'Aus „{name}“ entfernt',
+    hideTrack: 'In Playlist ausblenden',
+    hiddenTrack: 'In „{name}“ ausgeblendet',
+    hiddenTitle: {
+      one: '{count} ausgeblendeter Titel',
+      other: '{count} ausgeblendete Titel',
+    },
+    hiddenHint:
+      'Titel, die du in dieser Playlist ausgeblendet hast. Sie bleiben draußen, wenn sie mit ihrer Quelle abgeglichen wird, und bleiben in deiner Bibliothek.',
+    hiddenGone: 'Nicht mehr in deiner Bibliothek',
+    unhide: 'Wieder anzeigen',
+    unhidden: 'Wieder in „{name}“',
+    unhiddenLater:
+      'Er kommt zurück in „{name}“, sobald die Playlist herunterlädt, was ihr fehlt',
     created: '„{name}“ erstellt',
     rename: 'Umbenennen',
     renameTitle: 'Playlist umbenennen',

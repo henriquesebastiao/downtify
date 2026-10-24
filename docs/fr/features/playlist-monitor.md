@@ -196,6 +196,8 @@ Top 50 - USA        →  new song appears   →  Downtify downloads it
 
 Les seules choses qui suppriment de l’audio sont celles que vous demandez explicitement : **Supprimer** sur un morceau ou une sélection dans la Bibliothèque, supprimer une playlist depuis la Bibliothèque (ce qui supprime bien ses morceaux — après confirmation), ou retirer vous-même des fichiers du système de fichiers.
 
+Pour retirer de la playlist un titre dont vous ne voulez pas, et qu’il n’y revienne à aucune vérification, masquez-le : voir [Titres masqués d’une playlist](hidden-playlist-songs.md). Son fichier reste dans votre bibliothèque.
+
 ::: info Supprimer une surveillance vs supprimer une playlist
 **Arrêter la surveillance** (dans le menu ⋯ de la surveillance) ne fait qu’oublier la surveillance : rien ne change sur le disque. **Supprimer** sur une playlist de la page **Bibliothèque** est l’action destructrice — elle retire les morceaux de cette playlist, son M3U et son entrée de catalogue.
 :::

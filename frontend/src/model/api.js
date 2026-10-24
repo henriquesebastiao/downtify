@@ -471,6 +471,16 @@ function detachLibraryPlaylist(name) {
   return API.post('/api/library/playlists/detach', { name })
 }
 
+// Songs hidden from an imported playlist (they stay out when its watch
+// or link brings them back).
+function getHiddenPlaylistSongs(name) {
+  return API.get('/api/library/playlists/hidden', { params: { name } })
+}
+
+function changeHiddenPlaylistSongs(name, { hide = [], show = [] } = {}) {
+  return API.post('/api/library/playlists/hidden', { name, hide, show })
+}
+
 function followPlaylist(name) {
   return API.post('/api/v1/playlists/follow', { name })
 }
@@ -897,6 +907,8 @@ export default {
   setPlaylistFavorite,
   copyLibraryPlaylist,
   detachLibraryPlaylist,
+  getHiddenPlaylistSongs,
+  changeHiddenPlaylistSongs,
   followPlaylist,
   unfollowPlaylist,
   markPlaylistSeen,

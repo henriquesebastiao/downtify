@@ -89,6 +89,7 @@ from downtify.playlist_catalog import (
     ManualPlaylistOwners,
     PlaylistCatalog,
 )
+from downtify.playlist_hidden import PlaylistHiddenSongs
 from downtify.playlist_shares import PlaylistShares
 from downtify.playlist_spotify_cache import (
     PlaylistSpotifyCache,
@@ -379,6 +380,7 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_catalog = PlaylistCatalog(library_db)
     api.state.manual_playlist_owners = ManualPlaylistOwners(library_db)
     api.state.playlist_shares = PlaylistShares(library_db)
+    api.state.playlist_hidden = PlaylistHiddenSongs(library_db)
     api.state.external_playlist_imports = ExternalPlaylistImports(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)

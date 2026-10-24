@@ -227,6 +227,7 @@ import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import LikeButton from '../player/LikeButton.vue'
 import { useAuth } from '/src/model/auth'
+import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
@@ -249,6 +250,7 @@ const props = defineProps({
 const emit = defineEmits(['update:selected', 'update:sort'])
 
 const auth = useAuth()
+const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
@@ -406,6 +408,17 @@ function menuItems(row) {
         label: t('playlists.removeTrack'),
         icon: 'x',
         action: () => playlistActions.removeFiles(playlist, [row.track]),
+      })
+    }
+  }
+  if (props.context?.imported && props.context?.playlistName) {
+    const playlist = library.findPlaylist(props.context.playlistName)
+    if (playlist) {
+      const trashAt = items.findIndex((item) => item.danger)
+      items.splice(trashAt >= 0 ? trashAt : items.length, 0, {
+        label: t('playlists.hideTrack'),
+        icon: 'eye-off',
+        action: () => playlistActions.hideFiles(playlist, [row.track]),
       })
     }
   }

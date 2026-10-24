@@ -71,6 +71,7 @@ export default {
       'features/finder.md': 'Αναζήτηση μουσικής',
       'features/download-settings.md': 'Ρυθμίσεις λήψης',
       'features/playlist-names.md': 'Playlist display names',
+      'features/hidden-playlist-songs.md': 'Κρυμμένα τραγούδια λίστας',
       'features/playlist-monitor.md': 'Παρακολούθηση λιστών',
       'features/top-songs.md': 'Δημοφιλέστερα τραγούδια',
       'features/library-import.md': 'Εισαγωγή βιβλιοθήκης (CSV)',

@@ -70,6 +70,7 @@ export default {
       'features/finder.md': 'Bulucu',
       'features/download-settings.md': 'İndirme ayarları',
       'features/playlist-names.md': 'Playlist display names',
+      'features/hidden-playlist-songs.md': 'Listeden gizlenen şarkılar',
       'features/playlist-monitor.md': 'Çalma listesi izleyici',
       'features/top-songs.md': 'En çok dinlenen şarkılar',
       'features/library-import.md': 'Kitaplığı içe aktarma (CSV)',

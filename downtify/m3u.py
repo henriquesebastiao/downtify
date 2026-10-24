@@ -174,12 +174,7 @@ def read_m3u_tracks(
     malicious or malformed M3U escaping the library via ``../``.
     """
 
-    download_dir = Path(download_dir).resolve()
-    slskd_root = Path(slskd_dir).resolve() if slskd_dir else None
-    m3u_dir = m3u_path.resolve().parent
-    extras = ResolvedLibraryRoots.from_dirs(
-        download_dir, slskd_dir, extra_dirs
-    ).extras
+    resolve = _line_resolver(m3u_path, download_dir, slskd_dir, extra_dirs)
     try:
         lines = m3u_path.read_text(encoding='utf-8').splitlines()
     except OSError:
@@ -190,18 +185,180 @@ def read_m3u_tracks(
         line = raw.strip()
         if not line or line.startswith('#'):
             continue
-        try:
-            resolved = (m3u_dir / line).resolve()
-        except OSError:
+        found = resolve(line)
+        if found is None:
             continue
-        stored = _stored_library_path(
-            resolved, download_dir, slskd_root, extras
-        )
-        if not stored:
-            continue
+        stored, resolved = found
         if resolved.is_file() or keep_missing:
             tracks.append(stored)
     return tracks
+
+
+def _line_resolver(
+    m3u_path: Path,
+    download_dir: Path,
+    slskd_dir: Optional[Path],
+    extra_dirs: Optional[Sequence[Path]],
+):
+    """``line -> (stored path, resolved path)`` for an M3U's track lines,
+    ``None`` for a line outside the library (see :func:`read_m3u_tracks`)."""
+
+    download_dir = Path(download_dir).resolve()
+    slskd_root = Path(slskd_dir).resolve() if slskd_dir else None
+    m3u_dir = m3u_path.resolve().parent
+    extras = ResolvedLibraryRoots.from_dirs(
+        download_dir, slskd_dir, extra_dirs
+    ).extras
+
+    def resolve(line: str) -> Optional[tuple[str, Path]]:
+        try:
+            resolved = (m3u_dir / line).resolve()
+        except OSError:
+            return None
+        stored = _stored_library_path(
+            resolved, download_dir, slskd_root, extras
+        )
+        return (stored, resolved) if stored else None
+
+    return resolve
+
+
+def extinf_label(extinf: str) -> str:
+    """``Artist - Title`` from an ``#EXTINF:<seconds>,<label>`` line."""
+
+    text = str(extinf or '').strip()
+    if not text.startswith('#EXTINF'):
+        return ''
+    _duration, _sep, label = text.partition(',')
+    return label.strip()
+
+
+def read_m3u_entries(
+    m3u_path: Path,
+    download_dir: Path,
+    slskd_dir: Optional[Path] = None,
+    extra_dirs: Optional[Sequence[Path]] = None,
+) -> list[tuple[str, str]]:
+    """``(stored path, #EXTINF line or '')`` for every track of
+    *m3u_path* that is in the library, present or not, in file order."""
+
+    resolve = _line_resolver(m3u_path, download_dir, slskd_dir, extra_dirs)
+    try:
+        lines = m3u_path.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return []
+    entries: list[tuple[str, str]] = []
+    extinf = ''
+    for raw in lines:
+        line = raw.strip()
+        if line.startswith('#EXTINF'):
+            extinf = line
+            continue
+        if not line or line.startswith('#'):
+            continue
+        found = resolve(line)
+        if found is not None:
+            entries.append((found[0], extinf))
+        extinf = ''
+    return entries
+
+
+def remove_m3u_tracks(
+    m3u_path: Path,
+    stored_paths: Iterable[str],
+    download_dir: Path,
+    slskd_dir: Optional[Path] = None,
+    extra_dirs: Optional[Sequence[Path]] = None,
+) -> int:
+    """Take the tracks at *stored_paths* (library paths, as
+    :func:`read_m3u_tracks` returns them) out of *m3u_path*, with their
+    ``#EXTINF`` lines. Every other line - markers, comments, the other
+    tracks - is kept as written. How many lines went."""
+
+    drop = {
+        str(item or '').strip().replace('\\', '/')
+        for item in stored_paths
+        if str(item or '').strip()
+    }
+    if not drop:
+        return 0
+    resolve = _line_resolver(m3u_path, download_dir, slskd_dir, extra_dirs)
+    try:
+        lines = m3u_path.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return 0
+    kept: list[str] = []
+    pending: list[str] = []
+    removed = 0
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith('#'):
+            pending.append(raw)
+            continue
+        found = resolve(line)
+        if found is not None and found[0] in drop:
+            kept.extend(
+                p for p in pending if not p.strip().startswith('#EXTINF')
+            )
+            removed += 1
+        else:
+            kept.extend(pending)
+            kept.append(raw)
+        pending = []
+    kept.extend(pending)
+    if removed:
+        m3u_path.write_text(
+            '\n'.join(kept) + '\n', encoding='utf-8', newline='\n'
+        )
+        forget_cached_playlists()
+    return removed
+
+
+def insert_m3u_track(
+    m3u_path: Path,
+    stored_path: str,
+    position: int,
+    extinf: str,
+    download_dir: Path,
+    slskd_dir: Optional[Path] = None,
+    extra_dirs: Optional[Sequence[Path]] = None,
+) -> bool:
+    """Put the library file *stored_path* back into *m3u_path* as its
+    *position*-th track (at the end when the list is shorter), with its
+    ``#EXTINF`` line. ``False`` when the file isn't in the library."""
+
+    full = locate_library_file(
+        stored_path, download_dir, slskd_dir, extra_dirs
+    )
+    if full is None:
+        return False
+    try:
+        lines = m3u_path.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return False
+    block = [extinf] if str(extinf or '').startswith('#EXTINF') else []
+    block.append(os.path.relpath(full, start=m3u_path.parent))
+    at = len(lines)
+    seen = 0
+    start: Optional[int] = None
+    for index, raw in enumerate(lines):
+        line = raw.strip()
+        if line.startswith('#EXTINF'):
+            start = index if start is None else start
+            continue
+        if not line or line.startswith('#'):
+            continue
+        if seen == position:
+            at = index if start is None else start
+            break
+        seen += 1
+        start = None
+    lines[at:at] = block
+    m3u_path.write_text(
+        '\n'.join(lines) + '\n', encoding='utf-8', newline='\n'
+    )
+    forget_cached_playlists()
+    return True
 
 
 def _stored_library_path(

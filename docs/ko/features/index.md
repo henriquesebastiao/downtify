@@ -15,6 +15,7 @@ Downtify는 Spotify에서 로컬 음악 라이브러리를 만들고 유지하�
 | [파인더](finder.md) | Deezer를 검색한 뒤 아티스트, 앨범, 앨범의 트랙을 열 단위로 탐색 |
 | [다운로드 설정](download-settings.md) | 형식(MP3/FLAC/M4A/OGG/OPUS), 비트레이트, 동시 다운로드, 다운로드 간격 선택 |
 | [재생목록 모니터](playlist-monitor.md) | Spotify 또는 YouTube Music 재생목록과 아티스트를 지켜보다가 새 트랙과 발매작을 자동으로 내려받기 |
+| [재생목록에서 숨긴 곡](hidden-playlist-songs.md) | 다운로드했거나 감시 중인 재생목록에서 원하지 않는 곡을 빼고 다시 들어오지 않게 합니다. 파일은 라이브러리에 남습니다 |
 | [인기곡](top-songs.md) | 아티스트 링크를 붙여넣고 가장 인기 있는 곡을 내려받기(재생목록으로도 가능) |
 | [라이브러리 가져오기(CSV)](library-import.md) | Soundiiz, TuneMyMusic, Exportify의 라이브러리 내보내기 파일을 가져와 전체를 대기열에 넣기 |
 | [내장 플레이어](player.md) | 브라우저에서 라이브러리 재생: 대기열 관리, 동기화 가사, 수면 타이머, 키보드와 미디어 키 |

@@ -69,6 +69,7 @@ export default {
       'features/finder.md': '파인더',
       'features/download-settings.md': '다운로드 설정',
       'features/playlist-names.md': 'Playlist display names',
+      'features/hidden-playlist-songs.md': '재생목록에서 숨긴 곡',
       'features/playlist-monitor.md': '재생목록 모니터',
       'features/top-songs.md': '인기곡',
       'features/library-import.md': '라이브러리 가져오기(CSV)',

@@ -26,6 +26,10 @@ export const NAV = [
       { title: 'Download Settings', page: 'features/download-settings.md' },
       { title: 'Playlist Monitor', page: 'features/playlist-monitor.md' },
       { title: 'Playlist display names', page: 'features/playlist-names.md' },
+      {
+        title: 'Hidden playlist songs',
+        page: 'features/hidden-playlist-songs.md',
+      },
       { title: 'Top Songs', page: 'features/top-songs.md' },
       { title: 'Library Import (CSV)', page: 'features/library-import.md' },
       { title: 'Built-in Player', page: 'features/player.md' },

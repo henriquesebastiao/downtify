@@ -196,6 +196,8 @@ Top 50 - USA        →  new song appears   →  Downtify downloads it
 
 Das Einzige, was Audio löscht, sind Dinge, die du ausdrücklich verlangst: **Löschen** bei einem Titel oder einer Auswahl in der Bibliothek, das Löschen einer Playlist aus der Bibliothek (was ihre Titel löscht — es fragt vorher) oder das Entfernen von Dateien durch dich selbst im Dateisystem.
 
+Um einen ungewollten Titel aus der Playlist zu nehmen und ihn bei jeder Prüfung draußen zu halten, blende ihn aus: siehe [Ausgeblendete Playlist-Titel](hidden-playlist-songs.md). Seine Datei bleibt in deiner Bibliothek.
+
 ::: info Eine Beobachtung löschen vs. eine Playlist löschen
 **Überwachung beenden** (im ⋯-Menü der Beobachtung) vergisst nur die Beobachtung: Auf der Festplatte ändert sich nichts. **Löschen** bei einer Playlist auf der **Bibliothek**-Seite ist die zerstörerische Aktion — es entfernt die Titel dieser Playlist, ihre M3U und ihren Katalogeintrag.
 :::

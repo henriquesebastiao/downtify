@@ -196,6 +196,8 @@ Top 50 - USA        →  new song appears   →  Downtify downloads it
 
 The only things that delete audio are ones you ask for explicitly: **Delete** on a track or a selection in the Library, deleting a playlist from the Library (which does delete its tracks — it asks first), or removing files yourself from the filesystem.
 
+To take a song you don't want out of the playlist, and keep it out on every sweep, hide it: see [Hidden playlist songs](hidden-playlist-songs.md). Its file stays in your library.
+
 ::: info Deleting a watch vs. deleting a playlist
 **Stop watching** (in the watch's ⋯ menu) only forgets the watch: nothing on disk changes. **Delete** on a playlist in the **Library** page is the destructive one — it removes that playlist's tracks, its M3U and its catalog entry.
 :::

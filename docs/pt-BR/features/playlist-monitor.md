@@ -196,6 +196,8 @@ Top 50 - USA        →  new song appears   →  Downtify downloads it
 
 As únicas coisas que excluem áudio são as que você pede explicitamente: **Excluir** numa faixa ou numa seleção na Biblioteca, excluir uma playlist pela Biblioteca (que realmente exclui as faixas dela — e pergunta antes), ou remover arquivos você mesmo do sistema de arquivos.
 
+Para tirar da playlist uma música que você não quer, e mantê-la fora a cada verificação, oculte-a: veja [Músicas ocultas da playlist](hidden-playlist-songs.md). O arquivo dela continua na sua biblioteca.
+
 ::: info Excluir um monitoramento vs. excluir uma playlist
 **Parar de monitorar** (no menu ⋯ do monitoramento) só esquece o monitoramento: nada muda no disco. **Excluir** numa playlist da página **Biblioteca** é a destrutiva — remove as faixas dessa playlist, o M3U dela e a entrada no catálogo.
 :::
