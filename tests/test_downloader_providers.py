@@ -349,3 +349,55 @@ def test_known_video_youtube_first_does_not_try_later_local_source(
 
     assert d.download(known_video_song) == 'Artist - Track.mp3'
     assert no_youtube == ['https://music.youtube.com/watch?v=known123456']
+
+
+def test_known_video_respects_deemix_first(
+    tmp_path, monkeypatch, no_youtube, known_video_song
+):
+    source_dir, source = _slskd_file(tmp_path)
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_deemix', lambda *a, **k: source
+    )
+    for name in (
+        'find_match',
+        'find_match_youtube_only',
+        'find_match_for_video',
+    ):
+        monkeypatch.setattr(downloader_mod, name, _reject_youtube_search)
+    reports = []
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['deemix', 'youtube-music'],
+        deemix_settings={'enabled': True, 'source_dir': str(source_dir)},
+    )
+
+    assert d.download(
+        known_video_song,
+        lambda pct, message, provider=None: reports.append(provider),
+    )
+    assert no_youtube == []
+    assert reports[-1] == 'deemix'
+    assert source.is_file()
+
+
+def test_known_video_deemix_miss_never_enables_youtube(
+    tmp_path, monkeypatch, no_youtube, known_video_song
+):
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_deemix', lambda *a, **k: None
+    )
+    for name in (
+        'find_match',
+        'find_match_youtube_only',
+        'find_match_for_video',
+    ):
+        monkeypatch.setattr(downloader_mod, name, _reject_youtube_search)
+    d = Downloader(
+        tmp_path,
+        audio_providers=['deemix'],
+        deemix_settings={'enabled': True},
+    )
+
+    with pytest.raises(NoAudioMatchError, match='an audio match'):
+        d.download(known_video_song)
+    assert no_youtube == []
