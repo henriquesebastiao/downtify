@@ -9,6 +9,18 @@ function listMonitoredPlaylists() {
   return API.get('/api/monitor/playlists')
 }
 
+function artistSuggestions(offsets = {}) {
+  return API.get('/api/monitor/artist-suggestions', {
+    params: { limit: 20, ...offsets },
+  })
+}
+
+function resolveArtistSuggestion(name) {
+  return API.get('/api/monitor/artist-suggestions/resolve', {
+    params: { name },
+  })
+}
+
 // `options`: an artist watch's `release_types` and `new_only`.
 function addMonitoredPlaylist(url, intervalMinutes = 60, options = {}) {
   return API.post('/api/monitor/playlists', {
@@ -31,6 +43,8 @@ function checkMonitoredPlaylist(id) {
 }
 
 export default {
+  artistSuggestions,
+  resolveArtistSuggestion,
   listMonitoredPlaylists,
   addMonitoredPlaylist,
   updateMonitoredPlaylist,

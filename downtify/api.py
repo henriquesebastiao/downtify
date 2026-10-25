@@ -361,6 +361,7 @@ from . import (
     stream,
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
+from .artist_suggestions import artist_candidates, artist_suggestions
 from .auth import (
     AuthStore,
     PairingStore,
@@ -8979,7 +8980,12 @@ def _youtube_artist_for_name(name: str) -> tuple[str, str]:
         for r in results
         if str(r.get('name') or '').casefold().strip() == wanted
     ]
-    best = (exact or results)[0]
+    if len({str(r.get('artist_id') or '') for r in exact}) != 1:
+        raise HTTPException(
+            status_code=409,
+            detail='Artist identity is ambiguous; choose a YouTube Music artist channel URL',
+        )
+    best = exact[0]
     channel_id = str(best.get('artist_id') or '')
     if not channel_id:
         raise HTTPException(
@@ -9069,6 +9075,56 @@ def _monitor_watch_for_request(
     if user_id and watch.user_id == user_id:
         return watch
     return None
+
+
+@router.get('/api/monitor/artist-suggestions')
+def monitor_artist_suggestions(
+    request: Request,
+    listening_offset: int = Query(0, ge=0),
+    library_offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+) -> dict[str, Any]:
+    """Personal local signals, including for administrators; no provider calls."""
+    user_id = request_user_id(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail='Sign in required')
+    artists = library_artist_index(
+        library_context(),
+        allowed_keys=allowed_entry_keys(request),
+        hidden=admin_hidden_rules(request),
+    )
+    listens = _require_discover().listens(user_id)
+    if not request_is_admin(request):
+        rules = hidden_rules()
+        listens = [row for row in listens if not rules.artist_hidden(row.get('name') or '')]
+    return artist_suggestions(
+        artists,
+        listens,
+        _require_monitor_db().list_playlists(user_id),
+        listening_offset=listening_offset,
+        library_offset=library_offset,
+        limit=limit,
+    )
+
+
+@router.get('/api/monitor/artist-suggestions/resolve')
+def resolve_monitor_artist_suggestion(
+    request: Request,
+    name: str = Query(..., min_length=1, max_length=200),
+) -> dict[str, Any]:
+    """Resolve only after a user action; creating a watch remains a separate POST."""
+    if not request_user_id(request):
+        raise HTTPException(status_code=401, detail='Sign in required')
+    name = name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail='Artist name required')
+    try:
+        results = providers.search_artists(name, limit=10)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail='Artist lookup unavailable'
+        ) from exc
+    return artist_candidates(name, results)
 
 
 @router.get('/api/monitor/playlists')

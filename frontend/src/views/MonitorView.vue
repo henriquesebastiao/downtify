@@ -17,6 +17,7 @@
     <UiTabs :items="tabs" :model-value="tab" />
 
     <form
+      ref="watchForm"
       class="flex flex-col gap-2 rounded-panel border border-line-2 bg-surface p-2 sm:flex-row sm:items-center"
       @submit.prevent="add"
     >
@@ -86,6 +87,21 @@
         copy.explainer
       }}
     </p>
+
+    <p
+      v-if="suggestedArtist && tab === 'artist'"
+      class="text-sm text-muted"
+      role="status"
+    >
+      {{ t('artistSuggestions.confirm', { name: suggestedArtist }) }}
+    </p>
+    <ArtistSuggestions
+      v-if="tab === 'artist' && !loading"
+      :revision="
+        JSON.stringify(items.map((item) => [item.id, item.name, item.kind]))
+      "
+      @select="chooseSuggestedArtist"
+    />
 
     <div v-if="loading && !items.length" class="flex flex-col gap-2">
       <UiSkeleton v-for="n in 4" :key="n" class="h-[72px] !rounded-[12px]" />
@@ -310,6 +326,7 @@ import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import ReleaseFilters from '/src/components/monitor/ReleaseFilters.vue'
+import ArtistSuggestions from '/src/components/monitor/ArtistSuggestions.vue'
 import WatchEditDialog from '/src/components/monitor/WatchEditDialog.vue'
 import WatchSourceBadge from '/src/components/monitor/WatchSourceBadge.vue'
 import { intervalOptions } from '/src/components/monitor/intervals'
@@ -336,6 +353,16 @@ const route = useRoute()
 const router = useRouter()
 
 const items = ref([])
+const watchForm = ref(null)
+const suggestedArtist = ref('')
+
+function chooseSuggestedArtist(artist) {
+  newUrl.artist = artist.url
+  suggestedArtist.value = artist.name
+  addError.artist = ''
+  watchForm.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  watchForm.value?.querySelector('input')?.focus({ preventScroll: true })
+}
 const loading = ref(false)
 const adding = ref(false)
 // Per tab, so switching tabs keeps what was typed in each.
@@ -538,6 +565,7 @@ async function add() {
     )
     items.value = [res.data, ...items.value]
     newUrl[kind] = ''
+    suggestedArtist.value = ''
     ui.toast(t('toast.watching', { name: res.data.name }), { kind: 'success' })
     // A link the page couldn't classify turned out to be the other kind.
     if (watchKind(res.data) !== kind) router.push(tabRoute(watchKind(res.data)))

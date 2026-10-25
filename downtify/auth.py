@@ -1036,6 +1036,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('PUT'), r'^/api/podcasts/episodes/\d+/playback$', CLIENT),
         (_m('POST'), r'^/api/activity/playback$', CLIENT),
         (_READ, r'^/api/monitor/playlists$', CLIENT),
+        (_READ, r'^/api/monitor/artist-suggestions(?:/resolve)?$', CLIENT),
         (_READ, r'^/api/check_update$', CLIENT),
         # Admin (after the client rules, which carve out exceptions):
         # changes to the library, the queue, watches and profiles.

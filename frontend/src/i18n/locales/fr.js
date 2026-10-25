@@ -1,4 +1,32 @@
 export default {
+  artistSuggestions: {
+    title: 'Artistes à suivre',
+    listening: 'Basé sur votre écoute',
+    library: 'Basé sur votre bibliothèque',
+    listeningHelp:
+      'Vos écoutes pondérées par leur récence (demi-vie de 45 jours).',
+    libraryHelp:
+      'Les artistes avec le plus de titres, puis d’albums, dans votre bibliothèque disponible.',
+    listeningCount: '{count} écoutes',
+    libraryCounts: '{tracks} titres · {albums} albums',
+    follow: 'Suivre',
+    more: 'Voir plus',
+    loading: 'Chargement des suggestions…',
+    empty: 'Aucun autre artiste à proposer pour le moment.',
+    failed: 'Impossible de charger les suggestions.',
+    retry: 'Réessayer',
+    choose: 'Choisissez l’artiste : {name}',
+    chooseHelp:
+      'Vérifiez sa page, ou collez un lien officiel d’artiste dans le formulaire.',
+    lookupFailed:
+      'La recherche est indisponible. Vous pouvez toujours coller un lien.',
+    inspect: 'Ouvrir l’artiste',
+    manual: 'Coller un lien',
+    cancel: 'Annuler',
+    confirm:
+      'Vérifiez le lien et les sorties à suivre pour {name}, puis confirmez le suivi ci-dessus.',
+  },
+
   playlistNames: { restore: 'Rétablir le nom source' },
   playlistFavorites: {
     title: 'Playlists favorites',

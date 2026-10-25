@@ -1,4 +1,31 @@
 export default {
+  artistSuggestions: {
+    title: 'Artists to follow',
+    listening: 'Based on your listening',
+    library: 'Based on your library',
+    listeningHelp:
+      'Your listening counts, weighted by recent activity (45-day half-life).',
+    libraryHelp:
+      'Artists with the most tracks, then albums, in your available library.',
+    listeningCount: '{count} listens',
+    libraryCounts: '{tracks} tracks · {albums} albums',
+    follow: 'Follow',
+    more: 'Show more',
+    loading: 'Loading suggestions…',
+    empty: 'No more artists to suggest yet.',
+    failed: 'Suggestions could not be loaded.',
+    retry: 'Retry',
+    choose: 'Choose the artist: {name}',
+    chooseHelp:
+      'Check the artist page, or paste an official artist link in the form.',
+    lookupFailed: 'Artist lookup is unavailable. You can still paste a link.',
+    inspect: 'Open artist',
+    manual: 'Paste a link',
+    cancel: 'Cancel',
+    confirm:
+      'Check the link and release options for {name}, then confirm the follow above.',
+  },
+
   playlistNames: { restore: 'Restore source name' },
   playlistFavorites: {
     title: 'Αγαπημένες λίστες',
