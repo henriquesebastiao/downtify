@@ -13,6 +13,7 @@ from typing import Any, Callable, Optional
 from loguru import logger
 
 from . import m3u, providers, spotify
+from .artist_release_store import ArtistReleaseStore
 from .cover_cache import CoverArtCache
 from .downloader import (
     DOWNLOAD_EXECUTOR,
@@ -20,6 +21,7 @@ from .downloader import (
     ProgressCallback,
     save_playlist_cover,
 )
+from .external_library import extra_dirs_from_settings
 from .library_cache_keys import file_content_key
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
@@ -35,6 +37,7 @@ from .playlist_catalog import PlaylistCatalog
 from .playlist_hidden import HiddenSongs, PlaylistHiddenSongs
 from .playlist_spotify_cache import PlaylistSpotifyCache
 from .podcasts import PodcastStore, sync_show
+from .release_files import matches_release
 from .sqlite_utils import ClosingConnection
 from .track_index import TrackIndex, normalize_spotify_track_id
 from .track_owners import TrackOwners
@@ -291,6 +294,7 @@ class PlaylistMonitorDB:
         self._path = str(db_path)
         self._lock = asyncio.Lock()
         self._init_db()
+        self.releases = ArtistReleaseStore(self._connect)
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(
@@ -580,6 +584,10 @@ class PlaylistMonitorDB:
                 'DELETE FROM seen_albums WHERE playlist_id = ?',
                 (playlist_id,),
             )
+            conn.execute(
+                'DELETE FROM artist_release_tracks WHERE playlist_id = ?',
+                (playlist_id,),
+            )
             row = conn.execute(
                 'SELECT * FROM monitored_playlists WHERE id = ?',
                 (playlist_id,),
@@ -615,11 +623,11 @@ class PlaylistMonitorDB:
         with self._connect() as conn:
             conn.execute(
                 """INSERT INTO seen_albums
-                   (playlist_id, album_id, name, seen_at)
-                   VALUES (?, ?, ?, ?)
+                   (playlist_id, album_id, name, seen_at, last_attempt)
+                   VALUES (?, ?, ?, ?, ?)
                    ON CONFLICT(playlist_id, album_id) DO UPDATE SET
-                   name=excluded.name, skipped=0""",
-                (playlist_id, album_id, name, _now_iso()),
+                   name=excluded.name, skipped=0,last_attempt=excluded.last_attempt""",
+                (playlist_id, album_id, name, _now_iso(), _now_iso()),
             )
 
     def mark_albums_skipped(
@@ -1309,6 +1317,19 @@ def _progress_cb(
     return _cb
 
 
+def _release_file_present(
+    filename: str,
+    song: dict[str, Any],
+    downloader: Downloader,
+    settings: dict[str, Any],
+) -> bool:
+    root = Path(downloader.download_dir)
+    slskd = slskd_dir_from_downloader(downloader)
+    extras = extra_dirs_from_settings(settings, root, slskd)
+    path = locate_library_file(filename, root, slskd, extras)
+    return path is not None and matches_release(path, song)
+
+
 async def check_artist(
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
@@ -1387,6 +1408,9 @@ async def check_artist(
         (playlist.release_types or ALL_RELEASE_TYPES).split(',')
     )
     seen = await asyncio.to_thread(db.get_seen_album_ids, playlist.id)
+    seen.discard(
+        await asyncio.to_thread(db.releases.next_release, playlist.id)
+    )
     new_albums = [
         a
         for a in albums
@@ -1407,6 +1431,7 @@ async def check_artist(
     downloaded = 0
     for album in new_albums:
         album_id = album['album_id']
+        await asyncio.to_thread(db.releases.attempt, playlist.id, album_id)
         try:
             tracks = await asyncio.to_thread(
                 providers.album_tracks_from_browse_id, album_id
@@ -1419,23 +1444,64 @@ async def check_artist(
             )
             continue
 
-        complete = True
-        for song in tracks:
+        complete = bool(tracks) and max(
+            (int(s.get('album_track_total') or 0) for s in tracks), default=0
+        ) <= len(tracks)
+        release_tracks = await asyncio.to_thread(
+            db.releases.tracks, playlist.id, album_id
+        )
+        for position, song in enumerate(tracks, start=1):
             track_id = song.get('song_id')
             if not track_id:
                 complete = False
                 continue
-            if track_id in known_tracks:
+            filename = release_tracks.get(
+                (position, track_id), known_tracks.get(track_id)
+            )
+            if filename and await asyncio.to_thread(
+                _release_file_present,
+                filename,
+                song,
+                downloader,
+                settings or {},
+            ):
+                await asyncio.to_thread(
+                    db.releases.record,
+                    playlist.id,
+                    album_id,
+                    position,
+                    track_id,
+                    filename,
+                )
                 continue
             try:
                 filename = await loop.run_in_executor(
                     DOWNLOAD_EXECUTOR,
                     lambda s=song: downloader.download(
-                        s, _progress_cb(s, playlist.name, broadcast, loop)
+                        {**s, '_monitor_release': album_id},
+                        _progress_cb(s, playlist.name, broadcast, loop),
                     ),
                 )
+                if not filename or not await asyncio.to_thread(
+                    _release_file_present,
+                    filename,
+                    song,
+                    downloader,
+                    settings or {},
+                ):
+                    raise ValueError(
+                        'Downloaded file does not validate against the requested release'
+                    )
                 await asyncio.to_thread(
                     db.mark_track_downloaded, playlist.id, track_id, filename
+                )
+                await asyncio.to_thread(
+                    db.releases.record,
+                    playlist.id,
+                    album_id,
+                    position,
+                    track_id,
+                    filename,
                 )
                 invalidate_library_paths_cache()
                 known_tracks[track_id] = filename
