@@ -1299,10 +1299,16 @@ def _progress_cb(
     label: str,
     broadcast: Callable[[dict[str, Any]], Any],
     loop: asyncio.AbstractEventLoop,
+    observed: Optional[dict[str, Any]] = None,
 ) -> ProgressCallback:
     """Build a downloader progress callback that broadcasts over the WS."""
 
     def _cb(pct: float, message: str, provider: Optional[str] = None) -> None:
+        if observed is not None:
+            observed['message'] = message
+            observed['reused'] = message == 'Already downloaded'
+            if provider:
+                observed['provider'] = provider
         asyncio.run_coroutine_threadsafe(
             broadcast({
                 'song': song,
@@ -1475,11 +1481,20 @@ async def check_artist(
                 )
                 continue
             try:
+                observed: dict[str, Any] = {}
                 filename = await loop.run_in_executor(
                     DOWNLOAD_EXECUTOR,
-                    lambda s=song: downloader.download(
-                        {**s, '_monitor_release': album_id},
-                        _progress_cb(s, playlist.name, broadcast, loop),
+                    lambda s=song, progress_state=observed: (
+                        downloader.download(
+                            {**s, '_monitor_release': album_id},
+                            _progress_cb(
+                                s,
+                                playlist.name,
+                                broadcast,
+                                loop,
+                                progress_state,
+                            ),
+                        )
                     ),
                 )
                 if not filename or not await asyncio.to_thread(
@@ -1505,7 +1520,7 @@ async def check_artist(
                 )
                 invalidate_library_paths_cache()
                 known_tracks[track_id] = filename
-                downloaded += 1
+                downloaded += int(not observed.get('reused'))
                 if library is not None and filename:
                     await asyncio.to_thread(
                         _record_artist_sweep_owner,
@@ -1514,7 +1529,19 @@ async def check_artist(
                         downloader,
                         playlist.user_id,
                     )
-                if delay_seconds > 0:
+                await broadcast({
+                    'song': song,
+                    'progress': 100,
+                    'message': 'Already downloaded'
+                    if observed.get('reused')
+                    else 'Done',
+                    'status': 'done',
+                    'filename': filename,
+                    'playlist_name': playlist.name,
+                    'reused': bool(observed.get('reused')),
+                    'provider': observed.get('provider', ''),
+                })
+                if delay_seconds > 0 and not observed.get('reused'):
                     await asyncio.sleep(delay_seconds)
             except Exception:
                 complete = False
@@ -1523,6 +1550,12 @@ async def check_artist(
                     track_id,
                     album.get('name'),
                 )
+                await broadcast({
+                    'song': song,
+                    'status': 'error',
+                    'message': 'Artist release download or validation failed',
+                    'playlist_name': playlist.name,
+                })
 
         # Only remember the release once every track is accounted for, so
         # a transient failure is retried on the next sweep instead of

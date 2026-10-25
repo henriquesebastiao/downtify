@@ -361,3 +361,20 @@ describe('queue index lifecycle', () => {
     expect(fixture.api.download).not.toHaveBeenCalled()
   })
 })
+
+it('shows a reused file as completed library content without a stale audio-provider badge', () => {
+  const song = { song_id: 'reuse-fixture' }
+  send({ song, progress: 15, status: 'downloading', provider: 'youtube-music' })
+  send({
+    song,
+    progress: 100,
+    status: 'done',
+    reused: true,
+    message: 'Already downloaded',
+    filename: 'existing.mp3',
+  })
+  const item = tracker.getBySong(song)
+  expect(item.state).toBe('done')
+  expect(item.provider).toBe('')
+  expect(item.message).toBe('Already downloaded')
+})

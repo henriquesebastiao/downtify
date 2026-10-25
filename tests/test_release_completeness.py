@@ -1,5 +1,9 @@
 """A known recording ID is not proof of a complete, readable album."""
 
+import asyncio
+
+import pytest
+
 from mutagen.id3 import ID3, TALB, TIT2, TPE1, TRCK
 
 from downtify import monitor
@@ -159,3 +163,57 @@ def test_tag_only_file_is_not_validated_as_audio(tmp_path):
     tags.add(TRCK(encoding=3, text=['1']))
     tags.save(path)
     assert not matches_release(path, _track('one', 'One', 'Album', 1))
+
+
+@pytest.mark.parametrize('valid', [True, False])
+def test_watch_terminal_event_follows_validation_and_persistence(monkeypatch, tmp_path, valid):
+    db, events = _db(tmp_path), []
+    watch = _add_artist(db)
+    dl = _FakeDownloader(tmp_path)
+    _patch_provider(monkeypatch, [_album('album', 'Album')], {'album': [_track('one', 'One', 'Album', 1)]})
+    monkeypatch.setattr(monitor, 'matches_release', lambda *a: valid)
+
+    async def broadcast(message):
+        if message.get('status') == 'done':
+            assert db.releases.tracks(watch.id, 'album')
+        events.append(message)
+
+    async def check():
+        return await monitor.check_artist(watch, db, dl, broadcast, asyncio.get_running_loop(), settings={})
+
+    count = asyncio.run(check())
+    assert count == int(valid)
+    assert [e['status'] for e in events if 'status' in e] == ['done' if valid else 'error']
+
+
+def test_reused_file_is_not_counted_or_delayed_as_a_new_download(monkeypatch, tmp_path):
+    db = _db(tmp_path)
+    watch = _add_artist(db)
+    dl = _FakeDownloader(tmp_path)
+    song = _track('one', 'One', 'Album', 1)
+    _patch_provider(monkeypatch, [_album('album', 'Album')], {'album': [song]})
+    filename = dl.download(song)
+    before = (tmp_path / filename).read_bytes()
+    events = []
+
+    def reuse(song, progress_cb, *args):
+        progress_cb(100, 'Already downloaded')
+        return filename
+
+    async def no_delay(seconds):
+        pytest.fail('Reusing an existing file must not incur download pacing')
+
+    async def broadcast(message):
+        events.append(message)
+
+    async def check():
+        return await monitor.check_artist(watch, db, dl, broadcast, asyncio.get_running_loop(), settings={'download_delay_seconds': 5})
+
+    monkeypatch.setattr(dl, 'download', reuse)
+    monkeypatch.setattr(monitor.asyncio, 'sleep', no_delay)
+    assert asyncio.run(check()) == 0
+    assert db.get_seen_album_ids(watch.id) == {'album'}
+    assert db.releases.tracks(watch.id, 'album')
+    assert (tmp_path / filename).read_bytes() == before
+    done = [row for row in events if row.get('status') == 'done'][0]
+    assert done['reused'] is True and done['message'] == 'Already downloaded'
