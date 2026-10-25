@@ -3,7 +3,6 @@
 import asyncio
 
 import pytest
-
 from mutagen.id3 import ID3, TALB, TIT2, TPE1, TRCK
 
 from downtify import monitor
@@ -216,4 +215,5 @@ def test_reused_file_is_not_counted_or_delayed_as_a_new_download(monkeypatch, tm
     assert db.releases.tracks(watch.id, 'album')
     assert (tmp_path / filename).read_bytes() == before
     done = [row for row in events if row.get('status') == 'done'][0]
-    assert done['reused'] is True and done['message'] == 'Already downloaded'
+    assert done['reused'] is True
+    assert done['message'] == 'Already downloaded'
