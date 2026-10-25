@@ -17,7 +17,7 @@ function artistSuggestions(offsets = {}) {
 
 function resolveArtistSuggestion(name) {
   return API.get('/api/monitor/artist-suggestions/resolve', {
-    params: { name },
+    params: { name, provider: 'spotify' },
   })
 }
 

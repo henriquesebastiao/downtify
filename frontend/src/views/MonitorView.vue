@@ -88,18 +88,13 @@
       }}
     </p>
 
-    <p
-      v-if="suggestedArtist && tab === 'artist'"
-      class="text-sm text-muted"
-      role="status"
-    >
-      {{ t('artistSuggestions.confirm', { name: suggestedArtist }) }}
-    </p>
     <ArtistSuggestions
       v-if="tab === 'artist' && !loading"
       :revision="
         JSON.stringify(items.map((item) => [item.id, item.name, item.kind]))
       "
+      :busy="adding"
+      :follow-error="addError.artist"
       @select="chooseSuggestedArtist"
     />
 
@@ -309,7 +304,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { nextTick, computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import AppIcon from '/src/components/ui/AppIcon.vue'
@@ -354,12 +349,16 @@ const router = useRouter()
 
 const items = ref([])
 const watchForm = ref(null)
-const suggestedArtist = ref('')
 
-function chooseSuggestedArtist(artist) {
+async function chooseSuggestedArtist(artist) {
+  if (adding.value) return
   newUrl.artist = artist.url
-  suggestedArtist.value = artist.name
   addError.artist = ''
+  if (artist.url) {
+    await add()
+    if (!addError.artist || artist.fromDialog) return
+  }
+  await nextTick()
   watchForm.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   watchForm.value?.querySelector('input')?.focus({ preventScroll: true })
 }
@@ -565,7 +564,6 @@ async function add() {
     )
     items.value = [res.data, ...items.value]
     newUrl[kind] = ''
-    suggestedArtist.value = ''
     ui.toast(t('toast.watching', { name: res.data.name }), { kind: 'success' })
     // A link the page couldn't classify turned out to be the other kind.
     if (watchKind(res.data) !== kind) router.push(tabRoute(watchKind(res.data)))

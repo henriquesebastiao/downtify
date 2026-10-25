@@ -9096,7 +9096,11 @@ def monitor_artist_suggestions(
     listens = _require_discover().listens(user_id)
     if not request_is_admin(request):
         rules = hidden_rules()
-        listens = [row for row in listens if not rules.artist_hidden(row.get('name') or '')]
+        listens = [
+            row
+            for row in listens
+            if not rules.artist_hidden(row.get('name') or '')
+        ]
     return artist_suggestions(
         artists,
         listens,
@@ -9111,6 +9115,7 @@ def monitor_artist_suggestions(
 def resolve_monitor_artist_suggestion(
     request: Request,
     name: str = Query(..., min_length=1, max_length=200),
+    provider: str = 'youtube-music',
 ) -> dict[str, Any]:
     """Resolve only after a user action; creating a watch remains a separate POST."""
     if not request_user_id(request):
@@ -9118,6 +9123,38 @@ def resolve_monitor_artist_suggestion(
     name = name.strip()
     if not name:
         raise HTTPException(status_code=400, detail='Artist name required')
+    if provider not in {'spotify', 'youtube-music'}:
+        raise HTTPException(
+            status_code=400, detail='Unsupported artist catalogue'
+        )
+    if provider == 'spotify':
+        try:
+            items = spotify.search_results(
+                spotify._search_suggestion_items(name)
+            )['artists']
+        except ValueError:
+            items = []
+        result = artist_candidates(
+            name,
+            [{**row, 'artist_id': row['id']} for row in items],
+            source='spotify',
+        )
+        if result['candidates']:
+            if result['url']:
+                try:
+                    mapped = artist_candidates(
+                        name, providers.search_artists(name, limit=10)
+                    )
+                except Exception as exc:
+                    raise HTTPException(
+                        status_code=502,
+                        detail='Artist catalogue lookup unavailable',
+                    ) from exc
+                if not mapped['url']:
+                    # The native Spotify watch must map to a channel. Ask now,
+                    # rather than prefill a link that the native POST will reject.
+                    return mapped
+            return result
     try:
         results = providers.search_artists(name, limit=10)
     except Exception as exc:

@@ -1,5 +1,7 @@
 export default {
   artistSuggestions: {
+    followProfile: 'Follow this artist',
+    catalogue: 'Catalogue: {source}',
     title: 'Artists to follow',
     listening: 'Based on your listening',
     library: 'Based on your library',
@@ -17,7 +19,7 @@ export default {
     retry: 'Retry',
     choose: 'Choose the artist: {name}',
     chooseHelp:
-      'Check the artist page, or paste an official artist link in the form.',
+      'We are not certain which artist you mean. Compare the photos or open the official profiles, then choose Follow this artist. Downloads use your configured audio sources.',
     lookupFailed: 'Artist lookup is unavailable. You can still paste a link.',
     inspect: 'Open artist',
     manual: 'Paste a link',

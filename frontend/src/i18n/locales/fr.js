@@ -1,5 +1,7 @@
 export default {
   artistSuggestions: {
+    followProfile: 'Suivre cet artiste',
+    catalogue: 'Catalogue : {source}',
     title: 'Artistes à suivre',
     listening: 'Basé sur votre écoute',
     library: 'Basé sur votre bibliothèque',
@@ -17,7 +19,7 @@ export default {
     retry: 'Réessayer',
     choose: 'Choisissez l’artiste : {name}',
     chooseHelp:
-      'Vérifiez sa page, ou collez un lien officiel d’artiste dans le formulaire.',
+      'Nous avons un doute sur l’identité de cet artiste. Comparez les photos ou ouvrez les profils officiels, puis choisissez « Suivre cet artiste ». Les téléchargements utiliseront vos sources audio configurées.',
     lookupFailed:
       'La recherche est indisponible. Vous pouvez toujours coller un lien.',
     inspect: 'Ouvrir l’artiste',

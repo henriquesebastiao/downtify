@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 from typing import Any, Iterable
+from urllib.parse import urlsplit
 
 from .discover import LISTEN_HALF_LIFE_DAYS, artist_key
 
@@ -27,6 +28,10 @@ def artist_suggestions(
     """
     now = now or datetime.now(timezone.utc)
     watched = {artist_key(w.name) for w in watches if w.kind == 'artist'}
+    watched.update(
+        artist_key(n)
+        for n in ('Various Artists', 'Various Artist', 'Artistes divers')
+    )
     by_name: dict[str, dict[str, Any]] = {}
     for row in library:
         name = str(row.get('name') or '').strip()
@@ -99,8 +104,32 @@ def artist_suggestions(
     }
 
 
+def _artist_image(row: dict[str, Any]) -> str:
+    value = str(row.get('image_url') or row.get('cover_url') or '')
+    try:
+        parsed = urlsplit(value)
+        host = parsed.hostname or ''
+        allowed = host in {
+            'i.scdn.co',
+            'yt3.ggpht.com',
+            'yt3.googleusercontent.com',
+            'lh3.googleusercontent.com',
+        } or host.endswith('.spotifycdn.com')
+        if (
+            parsed.scheme == 'https'
+            and allowed
+            and not parsed.username
+            and not parsed.password
+            and parsed.port in {None, 443}
+        ):
+            return value
+    except ValueError:
+        pass
+    return ''
+
+
 def artist_candidates(
-    name: str, results: list[dict[str, Any]]
+    name: str, results: list[dict[str, Any]], *, source: str = 'youtube-music'
 ) -> dict[str, Any]:
     """Only a unique exact-name result can prefill the native form.
 
@@ -110,12 +139,21 @@ def artist_candidates(
     candidates: dict[str, dict[str, str]] = {}
     for row in results:
         channel = str(row.get('artist_id') or '')
-        if not re.fullmatch(r'UC[A-Za-z0-9_-]{22}', channel):
+        pattern = (
+            r'[A-Za-z0-9]{22}'
+            if source == 'spotify'
+            else r'UC[A-Za-z0-9_-]{22}'
+        )
+        if not re.fullmatch(pattern, channel):
             continue
         candidates[channel] = {
             'name': str(row.get('name') or '').strip(),
-            'url': f'https://music.youtube.com/channel/{channel}',
+            'url': f'https://open.spotify.com/artist/{channel}'
+            if source == 'spotify'
+            else f'https://music.youtube.com/channel/{channel}',
             'artist_id': channel,
+            'source': 'spotify' if source == 'spotify' else 'youtube_music',
+            'image_url': _artist_image(row),
         }
     exact = [
         r
