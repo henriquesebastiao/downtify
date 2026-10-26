@@ -718,6 +718,8 @@ export default {
       "The equalizer couldn't start. Playback continues without it.",
   },
   monitor: {
+    tableColumns: 'Columns',
+    resetTableColumns: 'Reset columns',
     releaseTypes: 'Download',
     releaseTypesAtLeastOne: 'Keep at least one kind of release',
     release: { album: 'Albums', single: 'Singles', ep: 'EPs' },

@@ -731,6 +731,8 @@ export default {
       'Ο ισοσταθμιστής δεν ξεκίνησε. Η αναπαραγωγή συνεχίζει χωρίς αυτόν.',
   },
   monitor: {
+    tableColumns: 'Στήλες',
+    resetTableColumns: 'Επαναφορά στηλών',
     releaseTypes: 'Λήψη',
     releaseTypesAtLeastOne: 'Κρατήστε τουλάχιστον ένα είδος κυκλοφορίας',
     release: { album: 'Άλμπουμ', single: 'Single', ep: 'EP' },

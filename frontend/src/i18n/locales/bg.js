@@ -722,6 +722,8 @@ export default {
       'Еквалайзерът не можа да стартира. Възпроизвеждането продължава без него.',
   },
   monitor: {
+    tableColumns: 'Колони',
+    resetTableColumns: 'Нулиране на колоните',
     releaseTypes: 'Изтегляне',
     releaseTypesAtLeastOne: 'Оставете поне един вид издание',
     release: { album: 'Албуми', single: 'Сингли', ep: 'EP' },

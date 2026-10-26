@@ -747,6 +747,8 @@ export default {
       'Der Equalizer konnte nicht gestartet werden. Die Wiedergabe wird ohne ihn fortgesetzt.',
   },
   monitor: {
+    tableColumns: 'Spalten',
+    resetTableColumns: 'Spalten zurücksetzen',
     releaseTypes: 'Veröffentlichungen',
     releaseTypesAtLeastOne:
       'Lass mindestens eine Veröffentlichungsart ausgewählt',

@@ -746,6 +746,8 @@ export default {
       'Impossible de démarrer l’égaliseur. La lecture continue sans lui.',
   },
   monitor: {
+    tableColumns: 'Colonnes',
+    resetTableColumns: 'Réinitialiser les colonnes',
     releaseTypes: 'Télécharger',
     releaseTypesAtLeastOne: 'Gardez au moins un type de sortie',
     release: { album: 'Albums', single: 'Singles', ep: 'EP' },
