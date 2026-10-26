@@ -88,16 +88,6 @@
       }}
     </p>
 
-    <ArtistSuggestions
-      v-if="tab === 'artist' && !loading"
-      :revision="
-        JSON.stringify(items.map((item) => [item.id, item.name, item.kind]))
-      "
-      :busy="adding"
-      :follow-error="addError.artist"
-      @select="chooseSuggestedArtist"
-    />
-
     <div v-if="loading && !items.length" class="flex flex-col gap-2">
       <UiSkeleton v-for="n in 4" :key="n" class="h-[72px] !rounded-[12px]" />
     </div>
@@ -293,6 +283,16 @@
         </TransitionGroup>
       </template>
     </template>
+
+    <ArtistSuggestions
+      v-if="tab === 'artist' && !loading"
+      :revision="
+        JSON.stringify(items.map((item) => [item.id, item.name, item.kind]))
+      "
+      :busy="adding"
+      :follow-error="addError.artist"
+      @select="chooseSuggestedArtist"
+    />
 
     <WatchEditDialog
       :watch="editing"
