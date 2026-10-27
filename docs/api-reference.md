@@ -2190,6 +2190,128 @@ Trigger an immediate check for a specific playlist outside the normal schedule.
 
 ---
 
+### `GET /api/monitor/stats`
+
+Each watch's storage, download status and activity — see [Activity and storage per watch](features/playlist-monitor.md#activity-and-storage-per-watch). A user gets their own watches; an admin every watch. Podcast watches are left out.
+
+| Query | Description |
+|-------|-------------|
+| `days` | The activity period, `1`–`365` (default `30`) |
+
+**Response:**
+
+```json
+{
+  "days": 30,
+  "bucket_days": 7,
+  "generated_at": "2026-10-27T08:46:36+00:00",
+  "totals": { "watches": 2, "files": 512, "bytes": 4294967296, "shared_files": 40 },
+  "watches": [
+    {
+      "id": 1,
+      "storage": {
+        "files": 300, "missing": 2,
+        "unique_files": 280, "shared_files": 20,
+        "bytes": 2600000000, "unique_bytes": 2400000000,
+        "shared_bytes": 200000000, "share_bytes": 2500000000
+      },
+      "status": { "downloaded": 250, "linked": 30, "unknown": 20, "failing": 3 },
+      "providers": { "youtube-music": 290, "slskd": 10 },
+      "period": {
+        "added": 60, "downloaded": 58, "linked": 4, "unknown": 2,
+        "initial": 0, "bytes": 520000000
+      },
+      "rate": { "per_day": 2.0, "per_week": 14.0, "per_month": 60.0 },
+      "series": [12, 15, 16, 17],
+      "trend": { "direction": "up", "slope": 1.6 },
+      "last_added_at": "2026-10-26T03:00:12+00:00"
+    }
+  ]
+}
+```
+
+- `totals` counts a file once however many watches hold it; `shared_files` are the files more than one watch holds.
+- `storage` covers the watch's songs on disk (`missing`: recorded but gone). `unique_*` are the files no other watch holds — other accounts' watches included — `shared_*` the rest, and `share_bytes` splits each shared file evenly between its watches.
+- `status` says how the songs on disk got into the watch: `downloaded` (the watch fetched them), `linked` (already in the library), `unknown` (recorded before this was kept); `failing` is how many tracks keep failing to download.
+- `period` counts the watch's additions in the last `days`. `added` (`downloaded` + `unknown`) grew the library; `linked` didn't; `initial` came with the watch's first check and is left out of the others. `bytes` is the space of the added songs still on disk.
+- `rate` is `added` over the period, or over the watch's own age when it's younger. `series` is added songs per bucket of `bucket_days` (1 for periods up to 14 days, else 7), oldest first, whole buckets only. `trend.direction` is `up`, `down`, `steady`, `idle` (nothing added) or `new` (fewer than three buckets); `slope` is the fitted change in songs per bucket, per bucket.
+- A watch retargeted at another playlist only counts what it did since.
+
+---
+
+### `GET /api/monitor/provenance`
+
+Where one library file came from — see [Where a song came from](features/playlist-monitor.md#where-a-song-came-from).
+
+| Query | Description |
+|-------|-------------|
+| `file` | The library path, as in `GET /tracks` |
+
+**Response:**
+
+```json
+{
+  "file": "Weekly Mix/Artist - Song.mp3",
+  "origin": {
+    "watch_id": 1,
+    "name": "Weekly Mix",
+    "at": "2026-10-20T03:00:05+00:00",
+    "provider": "youtube-music",
+    "initial": false,
+    "estimated": false,
+    "watch": { "id": 1, "name": "Weekly Mix", "url": "https://open.spotify.com/playlist/…", "kind": "playlist", "source": "spotify", "enabled": true, "created_at": "…", "owner": "bob" }
+  },
+  "watches": [
+    { "id": 1, "name": "Weekly Mix", "url": "…", "kind": "playlist", "source": "spotify", "enabled": true, "created_at": "…", "owner": "bob", "added_at": "2026-10-20T03:00:05+00:00", "outcome": "downloaded", "initial": false },
+    { "id": 4, "name": "Daily Mix", "url": "…", "kind": "playlist", "source": "spotify", "enabled": true, "created_at": "…", "owner": "bob", "added_at": "2026-10-22T03:00:41+00:00", "outcome": "linked", "initial": false }
+  ],
+  "others": 0
+}
+```
+
+- `origin` is the first watch that downloaded the file (`null` when none did). `estimated` is `true` when only a track recorded before outcomes were kept says so. `watch` is `null` when that watch was stopped or now follows another link — `watch_id` and `name` are then what it was.
+- `watches` are the watches holding the file now, oldest first: `outcome` is `downloaded`, `linked` or `unknown`, `added_at` when it got the song. `owner` is the owner's username for an admin, `""` otherwise.
+- A user only sees their own watches: `others` counts the rest, and an origin that is another account's watch is only `{ "hidden": true, "at", "initial", "estimated" }`.
+
+`400` without a `file`.
+
+---
+
+### `GET /api/monitor/playlists/{playlist_id}/tracks`
+
+The songs a watch holds, newest first, as [`GET /tracks`](#get-tracks) rows — including songs that have since left the playlist — each with how it got there, plus the tracks it keeps failing on.
+
+**Response:**
+
+```json
+{
+  "watch": { "id": 1, "name": "Weekly Mix", "kind": "playlist", "…": "…" },
+  "tracks": [
+    {
+      "file": "Weekly Mix/Artist - Song.mp3",
+      "title": "Song",
+      "…": "…",
+      "watch": {
+        "track_id": "4uLU6hMCjMI75M1A2tKUQC",
+        "added_at": "2026-10-20T03:00:05+00:00",
+        "outcome": "downloaded",
+        "initial": false,
+        "provider": "youtube-music",
+        "shared_with": 1
+      }
+    }
+  ],
+  "missing": 2,
+  "failures": [
+    { "track_id": "…", "name": "Song", "artists": "Artist", "error": "Could not find a YouTube match", "attempts": 3, "first_failed_at": "…", "last_failed_at": "…" }
+  ]
+}
+```
+
+`watch` is the watch object of [`GET /api/monitor/playlists`](#get-apimonitorplaylists). `shared_with` is how many other watches hold the same file, `missing` how many recorded songs are no longer on disk. Songs an admin hid from users are left out for a user. `404` for a watch that doesn't exist or belongs to another account (unless you're an admin).
+
+---
+
 ## Podcasts
 
 Subscriptions belong to whoever subscribes (an admin sees every show); episodes, resume positions and dismissals follow the subscription. Subscribing to a show, its episodes, and per-episode playback position — see [Podcasts](features/podcasts.md). Scheduling (the interval, enabled flag and last-checked time) lives on the same watch object [`GET /api/monitor/playlists`](#get-apimonitorplaylists) returns for playlists and artists (`kind: "podcast"`); everything below is what that generic shape has no room for.

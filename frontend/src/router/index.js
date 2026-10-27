@@ -58,6 +58,12 @@ const routes = [
     component: () => import('/src/views/PlaylistView.vue'),
   },
   {
+    // One watch: its activity, storage and the songs it brought in.
+    path: '/monitor/watch/:id(\\d+)',
+    name: 'MonitorWatch',
+    component: () => import('/src/views/WatchView.vue'),
+  },
+  {
     path: '/monitor/:tab(playlists|artists)?',
     name: 'Monitor',
     // Switching tabs keeps the page (and what was typed in it).

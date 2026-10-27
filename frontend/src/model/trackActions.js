@@ -8,6 +8,7 @@ import { useUi } from '/src/model/ui'
 import { useAuth } from '/src/model/auth'
 import { useReplaceAudio } from '/src/model/replaceAudio'
 import { useBuyLinks } from '/src/model/buyLinks'
+import { useTrackOrigin } from '/src/model/trackOrigin'
 import { buyTargetForTrack } from '/src/lib/buyLinks'
 import { useVisibility } from '/src/model/visibility'
 import { canReplace } from '/src/lib/replaceAudio'
@@ -22,6 +23,7 @@ export function useTrackActions() {
   const auth = useAuth()
   const replaceAudio = useReplaceAudio()
   const buyLinks = useBuyLinks()
+  const trackOrigin = useTrackOrigin()
   const visibility = useVisibility()
   const router = useRouter()
   const { t } = useI18n()
@@ -166,6 +168,12 @@ export function useTrackActions() {
         icon: 'tag',
         hidden: !track.artist,
         action: () => buyLinks.open(buyTargetForTrack(track)),
+      },
+      {
+        // Which Playlist Monitor watch brought it in, and which hold it.
+        label: t('origin.menu'),
+        icon: 'radar',
+        action: () => trackOrigin.open(track),
       },
       {
         label: t('library.saveToDevice'),

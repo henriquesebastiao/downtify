@@ -873,6 +873,138 @@ export default {
     saved: 'Surveillance mise à jour',
     retargeted: 'Surveillance de {name}',
   },
+  watchStats: {
+    colActivity: 'Activité',
+    colStorage: 'Stockage',
+    period: 'Période',
+    days: { one: '{count} jour', other: '{count} jours' },
+    totalNew: {
+      one: 'Nouveaux titres sur le dernier jour',
+      other: 'Nouveaux titres sur {count} jours',
+    },
+    totalSongs: 'Titres des surveillances',
+    totalSize: 'Sur le disque',
+    totalShared: 'Dans plusieurs surveillances',
+    statsFailed: 'Impossible de charger les statistiques.',
+    rateWeekShort: '{rate}/semaine',
+    sharedShort: '+{count} partagés',
+    activityTooltip:
+      '{added} nouveaux sur les {count} derniers jours · {rate} par semaine · {trend}',
+    storageTooltip:
+      '{unique} uniquement dans cette surveillance · {shared} partagés avec d’autres surveillances',
+    sortActivity: 'Activité récente',
+    sortRate: 'Rythme moyen',
+    sortGrowth: 'Croissance du stockage',
+    sortStorage: 'Stockage propre',
+    sortContributed: 'Titres téléchargés',
+    details: 'Activité et titres',
+    openInLibrary: 'Ouvrir dans la bibliothèque',
+    notFound: 'Surveillance introuvable',
+    notFoundHint:
+      'Elle a peut-être été supprimée, ou elle appartient à un autre compte.',
+    since: 'Surveillée depuis le {date}',
+    tileSongs: 'Titres sur le disque',
+    tileDownloaded: 'Téléchargés par elle',
+    tileLinked: 'Déjà dans la bibliothèque',
+    tileUnique: 'Uniquement ici',
+    tileUniqueHint: {
+      one: '{count} titre qu’aucune autre surveillance n’a',
+      other: '{count} titres qu’aucune autre surveillance n’a',
+    },
+    tileShared: 'Partagés',
+    tileSharedHint:
+      '{size}, aussi dans d’autres surveillances, stockés une seule fois',
+    tileFailing: 'En échec',
+    unknownNote: {
+      one: '{count} titre a été ajouté avant que Downtify note comment les titres entrent dans une surveillance.',
+      other:
+        '{count} titres ont été ajoutés avant que Downtify note comment les titres entrent dans une surveillance.',
+    },
+    missingNote: {
+      one: '{count} titre noté par cette surveillance n’est plus sur le disque.',
+      other:
+        '{count} titres notés par cette surveillance ne sont plus sur le disque.',
+    },
+    activityTitle: 'Activité',
+    activityHint:
+      'Les nouveaux titres qu’elle a ajoutés : ni ceux déjà dans votre bibliothèque, ni ceux de sa première vérification.',
+    newSongsLabel: {
+      one: 'nouveau titre ajouté',
+      other: 'nouveaux titres ajoutés',
+    },
+    rateDay: 'Par jour',
+    rateWeek: 'Par semaine',
+    rateMonth: 'Par mois',
+    trendUp: 'En ajoute plus ces derniers temps',
+    trendDown: 'En ajoute moins ces derniers temps',
+    trendSteady: 'Rythme stable',
+    trendIdle: 'Rien de nouveau récemment',
+    trendNew: 'Trop récente pour le dire',
+    periodGrowth: '{size} de nouvel audio',
+    periodLinked: {
+      one: '{count} autre était déjà dans votre bibliothèque',
+      other: '{count} autres étaient déjà dans votre bibliothèque',
+    },
+    periodInitial: {
+      one: '{count} est venu avec sa première vérification',
+      other: '{count} sont venus avec sa première vérification',
+    },
+    periodUnknown: {
+      one: '{count} d’entre eux a été noté avant que Downtify note comment',
+      other:
+        '{count} d’entre eux ont été notés avant que Downtify note comment',
+    },
+    barsPerDay: 'Nouveaux titres par jour',
+    barsPerWeek: 'Nouveaux titres par semaine',
+    providersTitle: 'D’où vient l’audio',
+    failuresTitle: {
+      one: '{count} titre échoue encore',
+      other: '{count} titres échouent encore',
+    },
+    attempts: { one: '{count} essai', other: '{count} essais' },
+    lastTried: 'dernier essai {when}',
+    songsTitle: 'Titres de cette surveillance',
+    songsHint:
+      'Les plus récents d’abord, y compris ceux qui ont depuis quitté la playlist. Sélectionnez-en pour les écouter, les ajouter à une playlist ou les supprimer.',
+    filter: {
+      all: 'Tous',
+      recent: { one: 'Dernier jour', other: '{count} derniers jours' },
+      downloaded: 'Téléchargés par elle',
+      linked: 'Déjà dans la bibliothèque',
+      unknown: 'Avant le suivi',
+    },
+    noSongs: 'Aucun titre de cette surveillance sur le disque',
+    noSongsHint:
+      'Ils apparaissent ici dès qu’une vérification les télécharge ou les trouve dans votre bibliothèque.',
+  },
+  origin: {
+    menu: 'D’où il vient',
+    title: 'D’où vient ce titre',
+    body: 'Les surveillances de playlists qui l’ont fait entrer dans votre bibliothèque.',
+    failed: 'Impossible de charger l’origine de ce titre.',
+    firstTitle: 'Téléchargé d’abord par',
+    none: 'Aucune surveillance ne l’a téléchargé : il a été téléchargé à la main, ou avant que Downtify le note.',
+    otherAccount: 'Une surveillance d’un autre compte',
+    backfill: 'Première vérification',
+    estimated: 'Probablement',
+    gone: 'Cette surveillance a été supprimée ou suit désormais un autre lien.',
+    watchesTitle: {
+      one: 'Dans {count} surveillance',
+      other: 'Dans {count} surveillances',
+    },
+    noWatches: 'Aucune surveillance ne l’a pour l’instant.',
+    others: {
+      one: '{count} d’entre elles appartient à un autre compte.',
+      other: '{count} d’entre elles appartiennent à d’autres comptes.',
+    },
+    oneFile:
+      'C’est un seul fichier : toutes les surveillances pointent vers la même copie.',
+    outcome: {
+      downloaded: 'L’a téléchargé',
+      linked: 'Déjà dans la bibliothèque',
+      unknown: 'Avant le suivi',
+    },
+  },
   sharing: {
     title: 'Partager « {name} »',
     hint: 'Les personnes avec qui vous la partagez peuvent l’écouter, la suivre et en enregistrer une copie, mais pas la modifier.',

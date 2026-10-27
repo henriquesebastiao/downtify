@@ -11,6 +11,20 @@ export const MONITOR_COLUMNS = [
     label: 'monitor.colLastChecked',
   },
   { key: 'size', width: 110, min: 90, max: 240, label: 'monitor.colSize' },
+  {
+    key: 'activity',
+    width: 170,
+    min: 140,
+    max: 360,
+    label: 'watchStats.colActivity',
+  },
+  {
+    key: 'storage',
+    width: 120,
+    min: 100,
+    max: 300,
+    label: 'watchStats.colStorage',
+  },
   { key: 'active', width: 80, min: 64, max: 160, label: 'monitor.colActive' },
   { key: 'actions', width: 128, min: 128, max: 240, label: 'common.more' },
 ]

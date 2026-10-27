@@ -125,14 +125,19 @@ Cada pestaña lista solo su propio tipo de vigilancia. Sobre la lista:
 - **Filtrar** — escribe parte de un nombre o del enlace (p. ej. un id de playlist) para acotar la lista
 - **Todo / En pausa** — muestra solo las vigilancias en pausa
 - **Comprobar todo ahora** — comprueba todas las vigilancias activas de la pestaña actual
+- Una franja con cuántas canciones llegaron en el periodo elegido (**7 días**, **30 días** o **90 días**) y, sumando todas las vigilancias, cuántas canciones tienen, el espacio que ocupan (**En disco**) y cuántas están **En más de una vigilancia** — consulta [Actividad y almacenamiento por vigilancia](#activity-and-storage-per-watch)
 
 En cada fila:
 
 - Interruptor **Activo** — pausa o reanuda la vigilancia sin quitarla
 - **Comprobaciones** — con qué frecuencia se comprueba
 - **Comprobar ahora** (↻) — la comprueba de inmediato, fuera del calendario
+- **Actividad** — canciones nuevas en el periodo elegido, la media por semana y si ese ritmo sube o baja; haz clic para abrir la página de la vigilancia
+- **Almacenamiento** — el espacio de las canciones que solo tiene esta vigilancia, y cuántas comparte con otras
 - **Editar** (✎) — ve y cambia el enlace, el intervalo y el estado activo de la vigilancia (consulta [Editar una vigilancia](#editing-a-watch))
-- **⋯** — pausar/reanudar, copiar el enlace, abrir el original o **Dejar de vigilar** (se borra el registro; los archivos descargados se conservan)
+- **⋯** — **Actividad y canciones** (la página de la vigilancia), pausar/reanudar, copiar el enlace, abrir el original o **Dejar de vigilar** (se borra el registro; los archivos descargados se conservan)
+
+**Actividad** y **Almacenamiento** son columnas como las demás: ocúltalas o cambia su ancho desde **Columnas**.
 
 ### Editar una vigilancia
 
@@ -157,6 +162,11 @@ El control **Ordenar por** sobre la lista ordena la pestaña actual por:
 | Última comprobación | Las comprobadas hace menos primero; las nunca comprobadas, al final |
 | Frecuencia | Menos frecuentes (intervalo más largo) primero |
 | Número de canciones / lanzamientos | Más primero |
+| Actividad reciente | Canciones nuevas en el periodo elegido |
+| Ritmo medio | Canciones nuevas al día en el periodo |
+| Crecimiento del almacenamiento | Espacio de las canciones nuevas del periodo |
+| Almacenamiento solo suyo | Espacio de las canciones que ninguna otra vigilancia tiene |
+| Canciones descargadas | Canciones en disco que descargó la propia vigilancia |
 
 El botón de al lado alterna entre orden ascendente y descendente. La elección se recuerda en el navegador y solo cambia la lista — no el orden de comprobación ni el calendario.
 
@@ -211,5 +221,41 @@ El estado del monitor se guarda en una base de datos SQLite en `/data/downtify_m
 - Cada vigilancia (tipo, id de playlist de Spotify o YouTube Music o id de canal de YouTube Music, nombre, URL, intervalo, estado activo, hora de la última comprobación). Si una vigilancia es de Spotify o de YouTube Music se lee de su URL guardada, así que no hace falta una columna extra.
 - Cada canción descargada con éxito por vigilancia, incluido el nombre del archivo en disco
 - Para las vigilancias de artistas, los lanzamientos ya procesados, de modo que un barrido solo obtiene listas de canciones de los realmente nuevos — incluidos los que **Solo lanzamientos nuevos** omitió, marcados como tales para que desactivarla pueda traerlos de vuelta — además de los tipos de lanzamiento de la vigilancia y si es de solo lanzamientos nuevos
+- Cada pista que añadió una vigilancia (`watch_events`): cuándo, el archivo, qué proveedor de audio la obtuvo, si la vigilancia la descargó o la encontró ya en la biblioteca, y si llegó con su primera comprobación. Estas filas guardan el id, el nombre y el dueño de la vigilancia tal como eran, y la sobreviven: dejar de vigilar o redirigir una vigilancia las conserva, así que sus canciones siguen diciendo de dónde vinieron
+- Las pistas que cada vigilancia sigue sin poder descargar (`watch_failures`), hasta que una funciona, sale de la playlist o la vigilancia se redirige
 
-Las bases de datos creadas antes de la Vigilancia de artistas se migran automáticamente al iniciar; las filas existentes siguen funcionando como vigilancias de playlists.
+Las bases de datos creadas antes de la Vigilancia de artistas se migran automáticamente al iniciar; las filas existentes siguen funcionando como vigilancias de playlists. Las pistas registradas antes de que Downtify guardara el historial anterior se añaden a él una vez, en el primer arranque, con un resultado desconocido (**Antes del registro**) — las del primer día de una vigilancia cuentan como su primera comprobación.
+
+## Actividad y almacenamiento por vigilancia
+
+La página Monitor y la página de cada vigilancia (**Actividad y canciones** en el menú **⋯** de una vigilancia, o un clic en su **Actividad**) muestran qué vigilancias hacen crecer tu biblioteca — útil con muchas vigilancias, o para averiguar por qué un mix generado trajo canciones que no esperabas.
+
+**Qué cuenta como actividad.** Solo cuentan las canciones que una vigilancia añadió de verdad: las que descargó. Las que encontró ya en tu biblioteca (otra vigilancia, o una descarga tuya, ya las tenía) cuentan aparte como **Ya en la biblioteca**, igual que lo que trajo su primera comprobación, cuando descarga todo lo que la playlist ya tenía. Así, una playlist estática aparece inactiva aunque su primera comprobación descargara 300 canciones, y un mix que añade 15 canciones por semana aparece como 15 por semana. Las pistas registradas antes de que Downtify guardara este historial cuentan como añadidas, y la página dice cuántas son.
+
+En el periodo elegido (7, 30 o 90 días, recordado en el navegador) una vigilancia muestra:
+
+| Número | Qué es |
+|--------|------------|
+| Canciones nuevas | Canciones que añadió en el periodo |
+| Al día / A la semana / Al mes | El ritmo medio en el periodo — o desde que empezó la vigilancia, si es más reciente |
+| Tendencia | Si el ritmo sube (**Añade más últimamente**), baja (**Añade menos últimamente**) o se mantiene, según las canciones nuevas por día (7 días) o por semana (30 y 90 días); **Aún es pronto para saberlo** mientras haya menos de tres para comparar |
+| Crecimiento del almacenamiento | Espacio de las canciones nuevas del periodo que siguen en el disco |
+
+**Almacenamiento.** Un archivo se guarda una vez, lo tengan cuantas vigilancias lo tengan, y los números lo reflejan: **Solo en esta vigilancia** es el espacio de las canciones que ninguna otra vigilancia tiene (lo que liberaría dejar de vigilar y borrar sus canciones), **Compartidas** las canciones que también tienen otras vigilancias, y la franja de la página Monitor cuenta cada archivo una vez. Las vigilancias de otras cuentas cuentan para saber si un archivo es compartido, pero no se nombran.
+
+La página de una vigilancia también muestra:
+
+- **Canciones en disco**, **Descargadas por ella**, **Ya en la biblioteca** y **Con fallos** — cómo llegaron sus canciones, y cuántas siguen fallando al descargar (listadas más abajo, con el número de intentos y el último error)
+- **De dónde vino el audio** — YouTube Music, YouTube, Soulseek (slskd) o Deemix, por canción en disco
+- **Canciones de esta vigilancia** — todas las canciones que tiene, de la más reciente a la más antigua, incluidas las que ya salieron de la playlist, con filtros (**Últimos 30 días** — o el periodo elegido —, **Descargadas por ella**, **Ya en la biblioteca**, **Antes del registro**). Selecciona canciones para reproducirlas, ponerlas en cola, añadirlas a una playlist, descargarlas como ZIP o eliminarlas — por ejemplo, para limpiar lo que un mix trajo la última semana
+- **Abrir en la Biblioteca** (la página de la playlist, o la del artista en una vigilancia de artista), **Abrir original** y **Comprobar ahora**
+
+El id de la vigilancia (`#12`) aparece junto a su nombre, así que dos vigilancias del mismo enlace — dos cuentas que siguen una playlist, por ejemplo — se pueden distinguir.
+
+## De dónde viene una canción
+
+**De dónde viene** en el menú de una canción (en cualquier lugar de la Biblioteca) dice qué vigilancia la descargó primero, cuándo y con qué proveedor — **Primera comprobación** si llegó con la primera comprobación — y lista todas las vigilancias que la tienen ahora, cada una con su id, dueño (para un admin), cuándo recibió la canción y cómo: **La descargó**, **Ya en la biblioteca** o **Antes del registro**. Es un solo archivo: las vigilancias que comparten una canción apuntan todas a la misma copia.
+
+Desde ahí, **Actividad y canciones** abre la página de la vigilancia y **Abrir en la Biblioteca** su playlist. Una vigilancia que se dejó, o que ahora sigue otro enlace, sigue apareciendo como origen de las canciones que descargó. Para una canción registrada antes de que existiera este historial, aparece la primera vigilancia que la registró, marcada como **Probablemente**. Una canción que ninguna vigilancia descargó (una que descargaste tú) lo dice.
+
+Un usuario ve sus propias vigilancias por su nombre; una canción que descargó la vigilancia de otra cuenta solo dice eso, y cuándo.

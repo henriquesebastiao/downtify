@@ -255,7 +255,12 @@ const items = [
     label: 'nav.discover',
     match: ['FinderBrowse'],
   },
-  { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
+  {
+    name: 'Monitor',
+    icon: 'radar',
+    label: 'nav.monitor',
+    match: ['MonitorWatch'],
+  },
   {
     name: 'Podcasts',
     icon: 'mic',

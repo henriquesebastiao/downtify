@@ -34,6 +34,7 @@
     <DefaultPasswordPrompt />
     <ReplaceAudioDialog v-if="auth.isAdmin.value" />
     <BuyLinksDialog />
+    <TrackOriginDialog />
   </div>
 </template>
 
@@ -61,6 +62,7 @@ import SignIn from './SignIn.vue'
 import DefaultPasswordPrompt from './DefaultPasswordPrompt.vue'
 import ReplaceAudioDialog from '../library/ReplaceAudioDialog.vue'
 import BuyLinksDialog from '../library/BuyLinksDialog.vue'
+import TrackOriginDialog from '../monitor/TrackOriginDialog.vue'
 import API from '/src/model/api'
 import { useAccount } from '/src/model/account'
 import { useAuth } from '/src/model/auth'

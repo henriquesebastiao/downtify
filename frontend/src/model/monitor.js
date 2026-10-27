@@ -30,7 +30,25 @@ function checkMonitoredPlaylist(id) {
   return API.post(`/api/monitor/playlists/${id}/check`)
 }
 
+// Each watch's storage, status and activity over the last `days`.
+function getMonitorStats(days = 30) {
+  return API.get('/api/monitor/stats', { params: { days } })
+}
+
+// Which watch first downloaded a library file, and which hold it now.
+function getTrackProvenance(file) {
+  return API.get('/api/monitor/provenance', { params: { file } })
+}
+
+// A watch's songs, newest first, with how each got there.
+function getWatchTracks(id) {
+  return API.get(`/api/monitor/playlists/${id}/tracks`)
+}
+
 export default {
+  getMonitorStats,
+  getTrackProvenance,
+  getWatchTracks,
   listMonitoredPlaylists,
   addMonitoredPlaylist,
   updateMonitoredPlaylist,
