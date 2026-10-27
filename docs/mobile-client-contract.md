@@ -4,7 +4,7 @@ icon: lucide/file-code
 
 # Mobile Client Contract
 
-How an app (the official Android client, or any other) talks to a Downtify server: **discover → check → pair → sync → stream → report**. Everything here is `api_version` **1**; the full request/response shapes of each endpoint are in the [API reference](api-reference.md#server-and-sign-in). User-facing behaviour (pairing, accounts, transcoding limits) is described in [Mobile Apps](features/mobile-apps.md) and [Users & Sign-in](features/users.md).
+How an app (the official Android client, or any other) talks to a Downtify server: **discover → check → sign in (or pair) → sync → stream → report**. Everything here is `api_version` **1**; the full request/response shapes of each endpoint are in the [API reference](api-reference.md#server-and-sign-in). User-facing behaviour (signing in, pairing, accounts, transcoding limits) is described in [Mobile Apps](features/mobile-apps.md) and [Users & Sign-in](features/users.md).
 
 ## 1. Discover
 
@@ -36,7 +36,7 @@ Build the address from the resolved host + `port`. Discovery is a convenience: a
   "require_sign_in": true,
   "capabilities": {
     "transcoding": { "available": true, "formats": ["aac", "mp3", "opus"], "bitrates": [96, 128, 160, 192, 256, 320] },
-    "signed_urls": true, "pairing": true, "podcasts": true, "discover": true, "lyrics": true, "library_sync": true
+    "signed_urls": true, "pairing": true, "password_sign_in": true, "podcasts": true, "discover": true, "lyrics": true, "library_sync": true
   }
 }
 ```
@@ -44,8 +44,26 @@ Build the address from the resolved host + `port`. Discovery is a convenience: a
 - Refuse to continue when `product` isn't `Downtify` or `api_version` is higher than the app knows.
 - Remember `server_id`: it identifies the server across address changes. When the address later answers with a different id, it's a different server.
 - Use `capabilities` to enable features (e.g. hide mobile-data quality when `transcoding.available` is false).
+- `capabilities.password_sign_in` decides how the app asks for credentials next: a username and password when it is `true`, a pairing code otherwise (accounts turned off, or a server older than `POST /api/auth/token`).
 
-## 3. Pair
+## 3. Sign in or pair
+
+Either way the app ends up with the same device token, tied to one user. Sign-in is the usual way; pairing is the shortcut for a phone that shouldn't see the password, or when the web page is already open.
+
+### Sign in
+
+The user types their username and password (the ones they use on the web page):
+
+```http
+POST /api/auth/token
+Content-Type: application/json
+
+{ "username": "maria", "password": "…", "device_name": "Pixel 8", "platform": "android" }
+```
+
+The answer is the same as pairing's below (`token`, `device`, `server`, `user`). `401` wrong username or password, `429` too many attempts (`Retry-After` seconds; shared with the web page's sign-in), `409` accounts are turned off — offer pairing. Don't keep the password: the token is the credential from here on.
+
+### Pair
 
 The user opens **Settings → Apps → Pair a phone** on the web page, which shows a QR code and an 8-character code.
 
@@ -69,12 +87,15 @@ Content-Type: application/json
 ```
 
 - `401` wrong/expired/used code, `429` too many attempts (`Retry-After` seconds).
+
+### Keep the token
+
 - Store the token in the Android Keystore-backed storage (EncryptedSharedPreferences / Jetpack DataStore + Tink); it's shown once and can't be retrieved again.
 - Send it on **every** request as `Authorization: Bearer <token>`. `require_sign_in` is `false` only on a server with accounts turned off (`DOWNTIFY_DISABLE_AUTH`) or an older one — send the token anyway: it lets the server tell the app when it was unpaired.
-- The device belongs to the user who showed the code (`user` in the response: `{ "username", "role" }`); `GET /api/me` answers who that is. Show it in the app ("Signed in as maria").
+- The device belongs to the user who signed in or showed the code (`user` in the response: `{ "username", "role" }`); `GET /api/me` answers who that is. Show it in the app ("Signed in as maria").
 - `GET /api/auth/status` with the token answers `{ "signed_in": true, "via": "device", "user": { "username", "role", … }, "device": { "id", "name" }, … }` — a cheap "am I still paired?" check.
 
-**Unpaired / revoked:** any request answers `401` with `{"detail": "Invalid or revoked token"}` and the WebSocket closes with code `4401`. Drop the token and send the user back to pairing.
+**Unpaired / revoked:** any request answers `401` with `{"detail": "Invalid or revoked token"}` and the WebSocket closes with code `4401`. Drop the token and send the user back to sign in.
 
 **What a device may do:** everything below, plus the web API's read endpoints, searching and previews (`/api/songs/search`, `/api/url/resolve`, `/api/preview`), where to buy a song to support the artist (`/api/buy`, see [Support the Artist](features/support-artists.md)), asking the server to download (`POST /api/download/url|batch|album`), likes, listens and podcast episode playback/downloads. Settings, credentials, deleting files and managing devices answer `403` for a device. Searching, previews, streaming and asking the server to download are shared: a track anyone downloaded can be played and then claimed by downloading it. The library feed, playlists, likes and the queue hold the paired account’s own entries (everything, on an admin’s device). An account being deleted, or its owner choosing **Sign out everywhere**, unpairs the device (`401`).
 

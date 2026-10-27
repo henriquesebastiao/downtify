@@ -504,11 +504,17 @@ def test_with_auth_disabled_everyone_is_the_admin(open_client):
     assert open_client.get('/api/activity').status_code == 200
     info = open_client.get('/api/server/info').json()
     assert info['require_sign_in'] is False
+    assert info['capabilities']['password_sign_in'] is False
 
 
 def test_with_auth_disabled_accounts_cannot_be_managed(open_client):
     assert (
         open_client.post('/api/auth/login', json=DEFAULT_LOGIN).status_code
+        == 409
+    )
+    # Apps pair with a code instead.
+    assert (
+        open_client.post('/api/auth/token', json=DEFAULT_LOGIN).status_code
         == 409
     )
     assert open_client.get('/api/users').status_code == 409

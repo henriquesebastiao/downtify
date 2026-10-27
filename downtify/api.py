@@ -290,8 +290,9 @@ downloads are shared, and files are never stored twice.
   /api/auth/devices[/{id}]`` (your paired apps; everyone's for an admin),
   ``POST /api/auth/revoke-all`` (everyone signed out), ``POST
   /api/auth/pairing``, ``GET|DELETE /api/auth/pairing/{id}``, ``POST
-  /api/auth/pair`` (pairing an app) and ``POST /api/auth/ws-ticket`` -
-  see ``downtify/auth.py`` for who may call what
+  /api/auth/pair`` (pairing an app), ``POST /api/auth/token`` (an app
+  signs in: ``{username, password, device_name, platform}``) and ``POST
+  /api/auth/ws-ticket`` - see ``downtify/auth.py`` for who may call what
 * ``GET|PATCH /api/me``, ``PUT /api/me/password``, ``GET|PUT
   /api/me/preferences``, ``POST /api/me/sign-out-everywhere`` (your
   account), ``GET|POST /api/users``, ``PATCH|DELETE /api/users/{id}``
