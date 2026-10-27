@@ -490,6 +490,10 @@ class Downloader:
         provider came up empty.
         """
 
+        known_video_id = song.get('youtube_id')
+        if not known_video_id and song.get('source') == 'youtube':
+            known_video_id = song.get('song_id')
+
         youtube_searched = False
         for provider in self.audio_providers:
             if provider == 'deemix':
@@ -514,6 +518,8 @@ class Downloader:
                 )
                 _report(progress_cb, 0.0, 'Trying next source', 'slskd')
             elif provider == 'youtube-music':
+                if known_video_id:
+                    return known_video_id, None, provider, None
                 # find_match falls back to standard YouTube on its own when
                 # YouTube Music has nothing (or only a far-off length).
                 video_id, match = find_match(song)
@@ -526,6 +532,8 @@ class Downloader:
                         None,
                     )
             elif provider == 'youtube' and not youtube_searched:
+                if known_video_id:
+                    return known_video_id, None, provider, None
                 video_id = find_match_youtube_only(song)
                 youtube_searched = True
                 if video_id:
@@ -845,21 +853,24 @@ class Downloader:
         # Known-long tracks are refused before any search or fetch.
         reject_overlong_song(song, self.max_track_duration_seconds)
 
-        video_id = song.get('youtube_id')
-        if not video_id and (song.get('source') == 'youtube'):
-            video_id = song.get('song_id')
+        known_video_id = song.get('youtube_id')
+        if not known_video_id and song.get('source') == 'youtube':
+            known_video_id = song.get('song_id')
 
-        match: Optional[dict[str, Any]] = None
-        provider: Optional[str] = 'youtube-music' if video_id else None
-        local_source: Optional[Path] = None
-        if not video_id:
+        if not known_video_id:
             # Playlist rows lack year/track number; the per-track embed has
             # them, and they can feed the output path and the slskd match.
             song = spotify_mod.enrich_track_from_spotify_if_sparse(song)
-            video_id, match, provider, local_source = self._resolve_source(
-                song, progress_cb
-            )
-        elif not song.get('album_name') or not song.get('cover_url'):
+        # A known video is a candidate for an enabled YouTube provider,
+        # not permission to bypass earlier sources or disabled providers.
+        video_id, match, provider, local_source = self._resolve_source(
+            song, progress_cb
+        )
+        if (
+            video_id
+            and video_id == known_video_id
+            and (not song.get('album_name') or not song.get('cover_url'))
+        ):
             # We already have a target video, but the metadata is incomplete.
             # Look up the YT Music entry for THIS specific videoId so we
             # don't risk switching to a karaoke / cover that happens to
@@ -872,10 +883,12 @@ class Downloader:
 
         if not video_id and local_source is None:
             source = (
-                'an audio match'
-                if 'slskd' in self.audio_providers
-                and self.slskd_settings.get('enabled')
-                else 'a YouTube match'
+                'a YouTube match'
+                if all(
+                    source in {'youtube-music', 'youtube'}
+                    for source in self.audio_providers
+                )
+                else 'an audio match'
             )
             raise NoAudioMatchError(
                 f'Could not find {source} for {song.get("name")!r}'
