@@ -229,6 +229,19 @@ downloads are shared, and files are never stored twice.
   retargets the watch; artist watches also take ``release_types``
   (``album``/``single``/``ep``) and ``new_only``, on ``POST`` too),
   ``POST /api/monitor/playlists/{id}/check``
+* ``GET  /api/monitor/stats`` (``?days=``, 1-365, default 30: per watch
+  ``{id, storage, status, providers, period, rate, series, trend,
+  last_added_at}`` plus ``totals`` - a file several watches hold is
+  counted once; activity leaves out what a watch found already in the
+  library and its first check's backfill), ``GET
+  /api/monitor/provenance`` (``?file=``: ``{origin, watches, others}`` -
+  the watch that first downloaded the file, every watch holding it; a
+  user only sees their own watches by name) and ``GET
+  /api/monitor/playlists/{id}/tracks`` (``{watch, tracks, missing,
+  failures}``: the watch's songs as ``GET /tracks`` rows, newest first,
+  each with ``watch: {added_at, outcome, initial, provider,
+  shared_with}``) - see ``downtify/watch_stats.py`` and
+  ``downtify/watch_history.py``
 * ``GET|PUT /api/likes`` and ``POST /api/likes/clear`` (the heart on a
   library track; while any song is liked they are also written out as a
   playlist)
@@ -334,7 +347,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, AsyncIterator, Collection, Optional
+from typing import Any, AsyncIterator, Collection, Iterable, Optional
 from urllib.parse import quote
 
 from fastapi import (
@@ -431,6 +444,7 @@ from .external_sync import (
 )
 from .file_providers import FileProviders, providers_for
 from .fs_suggest import suggest_directories
+from .library_cache_keys import file_content_key_from_name_and_size
 from .library_catalog import (
     LibraryContext,
     drop_library_listing_files,
@@ -439,6 +453,7 @@ from .library_catalog import (
     library_artist_index,
     library_context_from_state,
     library_home_summary,
+    list_entries_for_stored_paths,
     list_library_paths,
     listing_for_request,
     lookup_library_songs,
@@ -559,6 +574,17 @@ from .track_owners import TrackOwners
 from .traffic import DIRECTION_IN, TrafficCounters
 from .transcode import Transcoder
 from .update_check import UpdateChecker
+from .watch_history import OUTCOME_UNKNOWN
+from .watch_stats import (
+    DEFAULT_DAYS,
+    clamp_days,
+    first_events,
+    holders_by_file,
+    norm_path,
+    provenance,
+    providers_from_events,
+    watch_stats,
+)
 
 MIN_PARALLEL_DOWNLOADS = 1
 
@@ -9809,3 +9835,249 @@ async def manual_check_playlist(
 
     spawn_task(_run(), name='monitor-manual-check')
     return {'status': 'check_started', 'id': playlist_id}
+
+
+# ---------------------------------------------------------------------------
+# Playlist Monitor provenance and statistics (downtify/watch_stats.py)
+# ---------------------------------------------------------------------------
+
+
+def _watch_file_facts(
+    paths: Iterable[str],
+) -> tuple[dict[str, int], dict[str, str]]:
+    """``({path: size}, {path: provider})`` for the library files among
+    *paths* still on disk.
+
+    Read off the library listing snapshot, so a file it has costs no disk
+    access; one it lacks (a download not merged into it yet) is looked up
+    on disk.
+    """
+
+    wanted = {norm_path(path) for path in paths}
+    wanted.discard('')
+    if not wanted:
+        return {}, {}
+    ctx = library_context()
+    try:
+        listing = listing_for_request(ctx)
+    except Exception:
+        logger.opt(exception=True).warning(
+            'Library listing unavailable for the watch statistics'
+        )
+        listing = []
+    by_file = {}
+    for entry in listing:
+        name = norm_path(entry.get('file'))
+        if name in wanted:
+            by_file[name] = entry
+    sizes: dict[str, int] = {}
+    keys: dict[str, str] = {}
+    for name in wanted:
+        entry = by_file.get(name)
+        if entry is not None:
+            sizes[name] = int(entry.get('size') or 0)
+            keys[name] = entry_content_key(entry)
+            continue
+        full = resolve_library_file(name, ctx)
+        try:
+            size = full.stat().st_size if full is not None else -1
+        except OSError:
+            size = -1
+        if size >= 0:
+            sizes[name] = size
+            keys[name] = file_content_key_from_name_and_size(name, size) or ''
+    return sizes, providers_for(state.file_providers, keys)
+
+
+def _watch_summary(
+    watch: MonitoredPlaylist, usernames: dict[int, str]
+) -> dict[str, Any]:
+    """What the provenance panel shows of a watch - enough to tell two
+    watches of the same link apart (id, owner, when it was added)."""
+
+    return {
+        'id': watch.id,
+        'name': watch.name,
+        'url': watch.url,
+        'kind': watch.kind,
+        'source': watch.source,
+        'enabled': watch.enabled,
+        'created_at': watch.created_at,
+        'owner': usernames.get(watch.user_id, ''),
+    }
+
+
+def _sees_watch(request: Request, owner_id: int) -> bool:
+    """Whether *request* may see a watch of *owner_id* by name."""
+
+    if request_is_admin(request):
+        return True
+    user_id = request_user_id(request)
+    return bool(user_id) and owner_id == user_id
+
+
+@router.get('/api/monitor/stats')
+async def monitor_stats(
+    request: Request, days: int = DEFAULT_DAYS
+) -> dict[str, Any]:
+    """Each watch's storage, download status and activity over the last
+    *days* - see :func:`downtify.watch_stats.watch_stats`."""
+
+    db = _require_monitor_db()
+    scope = None if request_is_admin(request) else request_user_id(request)
+    return await asyncio.to_thread(_monitor_stats, db, scope, days)
+
+
+def _monitor_stats(
+    db: PlaylistMonitorDB, scope: Optional[int], days: int
+) -> dict[str, Any]:
+    associations = db.list_all_downloaded_tracks()
+    sizes, file_providers = _watch_file_facts(
+        row['filename'] for row in associations
+    )
+    return watch_stats(
+        [w for w in db.list_playlists(scope) if w.kind != KIND_PODCAST],
+        associations,
+        db.history.events(),
+        sizes,
+        now=datetime.now(timezone.utc),
+        days=clamp_days(days),
+        providers=file_providers,
+        failures=db.history.failure_counts(),
+    )
+
+
+@router.get('/api/monitor/provenance')
+async def monitor_provenance(
+    request: Request, file: str = ''
+) -> dict[str, Any]:
+    """Which watch first downloaded a library file, and which hold it."""
+
+    db = _require_monitor_db()
+    name = norm_path(file)
+    if not name:
+        raise HTTPException(status_code=400, detail='A file is required')
+    return await asyncio.to_thread(_monitor_provenance, db, name, request)
+
+
+def _monitor_provenance(
+    db: PlaylistMonitorDB, name: str, request: Request
+) -> dict[str, Any]:
+    history = db.history
+    holdings = history.holdings(name)
+    events = history.events(filename=name)
+    if not holdings and not events and state.track_index is not None:
+        # The watches may still name the song's old path.
+        tid = state.track_index.spotify_id_for_filename(name)
+        if tid:
+            holdings = history.holdings(name, {tid})
+            events = history.events(filename=name, track_ids={tid})
+    found = provenance(
+        holdings, events, {w.id: w for w in db.list_playlists()}
+    )
+    usernames = _usernames() if request_is_admin(request) else {}
+    watches = [
+        {
+            **_watch_summary(holder['watch'], usernames),
+            'added_at': holder['added_at'],
+            'outcome': holder['outcome'],
+            'initial': holder['initial'],
+        }
+        for holder in found['holders']
+        if _sees_watch(request, holder['watch'].user_id)
+    ]
+    origin = found['origin']
+    if origin is not None:
+        watch = origin.pop('watch')
+        if not _sees_watch(request, origin.pop('user_id')):
+            # Another account's watch: when, not whose.
+            origin = {
+                'hidden': True,
+                'at': origin['at'],
+                'initial': origin['initial'],
+                'estimated': origin['estimated'],
+            }
+        else:
+            origin['watch'] = (
+                _watch_summary(watch, usernames) if watch else None
+            )
+    return {
+        'file': name,
+        'origin': origin,
+        'watches': watches,
+        'others': len(found['holders']) - len(watches),
+    }
+
+
+@router.get('/api/monitor/playlists/{playlist_id}/tracks')
+async def monitor_playlist_tracks(
+    playlist_id: int, request: Request
+) -> dict[str, Any]:
+    """The songs a watch holds, newest first, as ``GET /tracks`` rows -
+    with how and when each got there - plus the ones failing."""
+
+    db = _require_monitor_db()
+    watch = await asyncio.to_thread(
+        _monitor_watch_for_request, playlist_id, request
+    )
+    if watch is None:
+        raise HTTPException(
+            status_code=404, detail='Monitored playlist not found'
+        )
+    return await asyncio.to_thread(_monitor_watch_tracks, db, watch, request)
+
+
+def _monitor_watch_tracks(
+    db: PlaylistMonitorDB, watch: MonitoredPlaylist, request: Request
+) -> dict[str, Any]:
+    events = db.history.events()
+    firsts = first_events(
+        event
+        for event in events
+        if event['playlist_id'] == watch.id
+        and event['watch_key'] == watch.spotify_id
+    )
+    added: dict[str, dict[str, Any]] = {}
+    for track_id, filename in db.get_track_filenames(watch.id).items():
+        name = norm_path(filename)
+        if not name:
+            continue
+        first = firsts.get((watch.id, watch.spotify_id, track_id)) or {}
+        info = {
+            'track_id': track_id,
+            'added_at': first.get('happened_at') or '',
+            'outcome': first.get('outcome') or OUTCOME_UNKNOWN,
+            'initial': bool(first.get('initial')),
+            'provider': first.get('provider') or '',
+        }
+        known = added.get(name)
+        if known is None or info['added_at'] < known['added_at']:
+            added[name] = info
+    order = sorted(added, key=lambda n: added[n]['added_at'], reverse=True)
+    on_disk = list_entries_for_stored_paths(library_context(), order)
+    holders = holders_by_file(db.list_all_downloaded_tracks())
+    fetched_by = {
+        **providers_from_events(events),
+        **providers_for(
+            state.file_providers,
+            {entry['file']: entry_content_key(entry) for entry in on_disk},
+        ),
+    }
+    tracks = []
+    for entry in visible_entries(on_disk, request):
+        name = norm_path(entry['file'])
+        info = added.get(name, {})
+        tracks.append({
+            **entry,
+            'watch': {
+                **info,
+                'provider': fetched_by.get(name) or info.get('provider', ''),
+                'shared_with': max(0, len(holders.get(name, ())) - 1),
+            },
+        })
+    return {
+        'watch': watch.to_dict(),
+        'tracks': tracks,
+        'missing': len(order) - len(on_disk),
+        'failures': db.history.failures(watch.id),
+    }

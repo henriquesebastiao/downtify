@@ -125,14 +125,19 @@ Minden fül csak a saját fajta figyeléseit listázza. A lista felett:
 - **Szűrés** — gépeld be egy név vagy a hivatkozás egy részét (pl. egy lejátszásilista-azonosítót) a lista szűkítéséhez
 - **Mind / Szüneteltetett** — csak a szüneteltetett figyelések megjelenítése
 - **Összes ellenőrzése most** — az aktuális fül minden aktív figyelésének ellenőrzése
+- Egy sáv arról, hány szám érkezett a választott időszakban (**7 nap**, **30 nap** vagy **90 nap**), és az összes figyelésre nézve hány számot tartanak, mennyi helyet foglalnak (**A lemezen**) és hány van **Több figyelésben** — lásd [Aktivitás és tárhely figyelésenként](#activity-and-storage-per-watch)
 
 Minden soron:
 
 - **Aktív** kapcsoló — a figyelés szüneteltetése vagy folytatása eltávolítás nélkül
 - **Ellenőrzések** — milyen gyakran ellenőrzik
 - **Ellenőrzés most** (↻) — azonnali ellenőrzés, az ütemezésen kívül
+- **Aktivitás** — az új számok a választott időszakban, a heti átlag, és hogy ez a tempó nő vagy csökken; kattints rá a figyelés saját oldalához
+- **Tárhely** — a csak ebben a figyelésben lévő számok helye, és hogy hányat oszt meg más figyelésekkel
 - **Szerkesztés** (✎) — a figyelés hivatkozásának, intervallumának és aktív állapotának megtekintése és módosítása (lásd: [Figyelés szerkesztése](#editing-a-watch))
-- **⋯** — szüneteltetés/folytatás, a hivatkozás másolása, az eredeti megnyitása, vagy **Figyelés leállítása** (a bejegyzés törlődik; a letöltött fájlok megmaradnak)
+- **⋯** — **Aktivitás és számok** (a figyelés saját oldala), szüneteltetés/folytatás, a hivatkozás másolása, az eredeti megnyitása, vagy **Figyelés leállítása** (a bejegyzés törlődik; a letöltött fájlok megmaradnak)
+
+Az **Aktivitás** és a **Tárhely** ugyanolyan oszlop, mint a többi: az **Oszlopok** alatt elrejtheted vagy átméretezheted őket.
 
 ### Figyelés szerkesztése
 
@@ -157,6 +162,11 @@ A lista feletti **Rendezés** vezérlő az aktuális fület ez szerint rendezi:
 | Utolsó ellenőrzés | A legutóbb ellenőrzött elöl; a soha nem ellenőrzöttek legvégül |
 | Ellenőrzési gyakoriság | A legritkább (leghosszabb intervallum) elöl |
 | Számok / kiadványok száma | A legtöbb elöl |
+| Legutóbbi aktivitás | Új számok a választott időszakban |
+| Átlagos tempó | Új számok naponta az időszakban |
+| Tárhely növekedése | Az időszak új számainak helye |
+| Saját tárhely | Azoknak a számoknak a helye, amelyek más figyelésben nincsenek |
+| Letöltött számok | A lemezen lévő számok, amelyeket maga a figyelés töltött le |
 
 Mellette lévő gomb váltogat a növekvő és csökkenő sorrend között. A választás megjegyződik a böngészőben, és csak a listát változtatja — az ellenőrzési sorrendet és az ütemezést nem.
 
@@ -211,5 +221,41 @@ A figyelő állapota egy SQLite-adatbázisban van a `/data/downtify_monitor.db` 
 - Minden figyelést (fajta, Spotify- vagy YouTube Music-lejátszásilista-azonosító vagy YouTube Music-csatornaazonosító, név, URL, intervallum, engedélyezett állapot, utolsó ellenőrzés ideje). Hogy egy figyelés Spotify vagy YouTube Music, azt a tárolt URL-jéből olvassa ki, így nem kell külön oszlop.
 - Minden sikeresen letöltött számot figyelésenként, a lemezen lévő fájlnévvel együtt
 - Az előadófigyeléseknél a már feldolgozott kiadványokat, hogy egy átfésülés csak a valóban újakhoz kérjen le számlistákat — beleértve azokat is, amelyeket a **Csak új kiadások** kihagyott, ekként megjelölve, hogy a kikapcsolása visszahozhassa őket — plusz a figyelés kiadványfajtáit és hogy csak új kiadásokra szól-e
+- Minden szám, amelyet egy figyelés hozzáadott (`watch_events`): mikor, a fájl, melyik hangszolgáltató szerezte be, a figyelés letöltötte-e vagy már a könyvtárban találta, és az első ellenőrzésével jött-e. Ezek a sorok megőrzik a figyelés azonosítóját, nevét és tulajdonosát, ahogy akkor voltak, és túlélik a figyelést: leállítása vagy átirányítása után is megmaradnak, így a számai továbbra is megmondják, honnan jöttek
+- Azok a számok, amelyeket egy figyelés továbbra sem tud letölteni (`watch_failures`), amíg az egyik sikerül, kikerül a listából, vagy a figyelést átirányítják
 
-Az Előadófigyelés előtt létrehozott adatbázisok indításkor automatikusan migrálódnak; a meglévő sorok lejátszásilista-figyelésként működnek tovább.
+Az Előadófigyelés előtt létrehozott adatbázisok indításkor automatikusan migrálódnak; a meglévő sorok lejátszásilista-figyelésként működnek tovább. A fenti előzmény előtt rögzített számok az első indításkor egyszer bekerülnek ide ismeretlen eredménnyel (**A rögzítés előtt**) — a figyelés első napjáról származók az első ellenőrzéséhez számítanak.
+
+## Aktivitás és tárhely figyelésenként
+
+A figyelő oldala és minden figyelés saját oldala (**Aktivitás és számok** a figyelés **⋯** menüjében, vagy kattintás az **Aktivitás** oszlopára) megmutatja, mely figyelések növelik a könyvtáradat — hasznos sok figyelés esetén, vagy ha ki akarod deríteni, miért hozott egy generált mix váratlan számokat.
+
+**Mi számít aktivitásnak.** Csak azok a számok számítanak, amelyeket egy figyelés ténylegesen hozzáadott: amelyeket letöltött. Azok, amelyeket már a könyvtáradban talált (egy másik figyelés vagy a saját letöltésed már tartalmazta), külön számítanak **Már a könyvtárban** néven, ahogy az első ellenőrzés hozama is, amikor letölt mindent, ami a listán már rajta volt. Így egy statikus lista tétlennek látszik, még ha az első ellenőrzése 300 számot töltött is le, egy hetente 15 számot hozzáadó mix pedig heti 15-öt mutat. Az előzmény vezetése előtt rögzített számok hozzáadottnak számítanak, és az oldal megmondja, hány ilyen van.
+
+A választott időszakban (7, 30 vagy 90 nap, a böngésző megjegyzi) egy figyelés ezt mutatja:
+
+| Szám | Mi ez |
+|--------|------------|
+| Új számok | Az időszakban hozzáadott számok |
+| Naponta / Hetente / Havonta | Az átlagos tempó az időszakban — vagy a figyelés kezdete óta, ha az későbbi |
+| Trend | A tempó nő (**Mostanában többet ad hozzá**), csökken (**Mostanában kevesebbet ad hozzá**) vagy egyenletes, a napi (7 nap) vagy heti (30 és 90 nap) új számok alapján; **Még túl új**, amíg háromnál kevesebb van belőlük az összevetéshez |
+| Tárhely növekedése | Az időszak új számainak helye, amelyek még a lemezen vannak |
+
+**Tárhely.** Egy fájl egyszer tárolódik, akárhány figyelés tartalmazza, és a számok ezt mutatják: a **Csak ebben a figyelésben** azoknak a számoknak a helye, amelyek más figyelésben nincsenek (ennyi szabadulna fel, ha leállítanád a figyelést és törölnéd a számait), a **Közös** azok a számok, amelyek más figyelésekben is megvannak, a figyelő oldalának sávja pedig minden fájlt egyszer számol. Más fiókok figyelései beleszámítanak abba, hogy egy fájl közös-e, de név szerint nem jelennek meg.
+
+Egy figyelés oldala ezeket is mutatja:
+
+- **Számok a lemezen**, **Általa letöltve**, **Már a könyvtárban** és **Sikertelen** — hogyan kerültek oda a számai, és hány nem töltődik le újra meg újra (lejjebb felsorolva, a próbálkozások számával és az utolsó hibával)
+- **Honnan jött a hanganyag** — YouTube Music, YouTube, Soulseek (slskd) vagy Deemix, a lemezen lévő számonként
+- **Számok ebből a figyelésből** — minden szám, amit tartalmaz, a legújabbak elöl, azokkal együtt, amelyek azóta kikerültek a listából, szűrőkkel (**Elmúlt 30 nap** — vagy a választott időszak —, **Általa letöltve**, **Már a könyvtárban**, **A rögzítés előtt**). Jelölj ki számokat a lejátszáshoz, sorba állításhoz, listához adáshoz, ZIP-ként letöltéshez vagy törléshez — például hogy kitakarítsd, amit egy mix az elmúlt héten hozott
+- **Megnyitás a könyvtárban** (a lista oldala, előadófigyelésnél az előadóé), **Eredeti megnyitása** és **Ellenőrzés most**
+
+A figyelés azonosítója (`#12`) a neve mellett látszik, így ugyanannak a linknek két figyelése — például két fiók, amely ugyanazt a listát követi — megkülönböztethető.
+
+## Honnan jött egy szám
+
+A szám menüjében (bárhol a könyvtárban) a **Honnan jött** megmondja, melyik figyelés töltötte le először, mikor és melyik szolgáltatóval — **Első ellenőrzés**, ha az első ellenőrzéssel jött —, és felsorolja az összes figyelést, amely most tartalmazza, mindegyiket az azonosítójával, a tulajdonosával (adminnak), azzal, hogy mikor kapta meg a számot, és hogyan: **Letöltötte**, **Már a könyvtárban** vagy **A rögzítés előtt**. Ez egyetlen fájl: a számot megosztó figyelések mind ugyanarra a példányra mutatnak.
+
+Innen az **Aktivitás és számok** a figyelés oldalát nyitja meg, a **Megnyitás a könyvtárban** pedig a listáját. A leállított vagy már más linket követő figyelés továbbra is az általa letöltött számok forrásaként jelenik meg. Az előzmény előtt rögzített számnál az első figyelés látszik, amely rögzítette, **Valószínűleg** jelöléssel. Egy szám, amelyet egyik figyelés sem töltött le (te töltötted le), ezt jelzi.
+
+Egy felhasználó a saját figyeléseit név szerint látja; egy másik fiók figyelése által letöltött szám csak ennyit árul el, és hogy mikor.

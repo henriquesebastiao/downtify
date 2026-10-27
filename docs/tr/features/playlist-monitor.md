@@ -125,14 +125,19 @@ Her sekme yalnızca kendi izleme türünü listeler. Listenin üstünde:
 - **Süz** — listeyi daraltmak için bir adın veya bağlantının (örn. bir çalma listesi kimliğinin) bir kısmını yazın
 - **Tümü / Duraklatılmış** — yalnızca duraklatılmış izlemeleri göster
 - **Tümünü şimdi kontrol et** — geçerli sekmedeki her etkin izlemeyi denetle
+- Seçilen dönemde (**7 gün**, **30 gün** ya da **90 gün**) kaç şarkı geldiğini ve tüm izlemeler için toplamda kaç şarkı tuttuklarını, bunların kapladığı alanı (**Diskte**) ve kaçının **Birden fazla izlemede** olduğunu gösteren bir şerit — bkz. [İzleme başına etkinlik ve depolama](#activity-and-storage-per-watch)
 
 Her satırda:
 
 - **Etkin** anahtarı — izlemeyi kaldırmadan duraklat veya sürdür
 - **Denetimler** — ne sıklıkta denetlendiği
 - **Şimdi kontrol et** (↻) — zamanlamanın dışında hemen denetle
+- **Etkinlik** — seçilen dönemdeki yeni şarkılar, haftalık ortalama ve bu hızın artıp azaldığı; tıklayınca izlemenin kendi sayfası açılır
+- **Depolama** — yalnızca bu izlemenin tuttuğu şarkıların kapladığı alan, artı diğer izlemelerle kaç şarkıyı paylaştığı
 - **Düzenle** (✎) — izlemenin bağlantısını, aralığını ve etkin durumunu gör ve değiştir (bkz. [Bir izlemeyi düzenleme](#editing-a-watch))
-- **⋯** — duraklat/sürdür, bağlantıyı kopyala, orijinali aç veya **İzlemeyi bırak** (kayıt silinir; indirilen dosyalar korunur)
+- **⋯** — **Etkinlik ve şarkılar** (izlemenin kendi sayfası), duraklat/sürdür, bağlantıyı kopyala, orijinali aç veya **İzlemeyi bırak** (kayıt silinir; indirilen dosyalar korunur)
+
+**Etkinlik** ve **Depolama** diğerleri gibi birer sütundur: **Sütunlar** menüsünden gizleyebilir ya da genişliklerini değiştirebilirsin.
 
 ### Bir izlemeyi düzenleme
 
@@ -157,6 +162,11 @@ Listenin üstündeki **Sırala** denetimi geçerli sekmeyi şuna göre sıralar:
 | Son kontrol | En son denetlenen önce; hiç denetlenmeyenler en son |
 | Kontrol sıklığı | En seyrek (en uzun aralık) önce |
 | Parça / yayın sayısı | En çok önce |
+| Son etkinlik | Seçilen dönemdeki yeni şarkılar |
+| Ortalama hız | Dönem içinde günde yeni şarkı |
+| Depolama artışı | Dönemin yeni şarkılarının kapladığı alan |
+| Kendine ait depolama | Başka hiçbir izlemenin tutmadığı şarkıların alanı |
+| İndirilen şarkılar | İzlemenin kendisinin indirdiği, diskteki şarkılar |
 
 Yanındaki düğme artan ve azalan sıra arasında geçiş yapar. Seçim tarayıcıda hatırlanır ve yalnızca listeyi değiştirir — denetim sırasını ya da zamanlamayı değil.
 
@@ -211,5 +221,41 @@ Bir dosya gerçekten kaybolursa — indirme klasöründen çıkardınız ya da e
 - Her izleme (tür, Spotify veya YouTube Music çalma listesi kimliği ya da YouTube Music kanal kimliği, ad, URL, aralık, etkin durumu, son denetim zamanı). Bir izlemenin Spotify mı YouTube Music mi olduğu saklanan URL’sinden okunur, bu yüzden ek bir sütun gerekmez.
 - İzleme başına başarıyla indirilen her parça, diskteki dosya adı dahil
 - Sanatçı izlemeleri için, işlenmiş yayınlar; böylece bir tarama yalnızca gerçekten yeni olanların parça listelerini getirir — **Yalnızca yeni yayınlar**ın atladıkları dahil, kapatmanın onları geri getirebilmesi için öyle işaretlenmiş olarak — ayrıca izlemenin yayın türleri ve yalnızca-yeni-yayınlar olup olmadığı
+- Bir izlemenin eklediği her parça (`watch_events`): ne zaman, dosya, hangi ses sağlayıcısının getirdiği, izlemenin onu indirip indirmediği ya da kitaplıkta zaten bulup bulmadığı ve ilk kontrolüyle gelip gelmediği. Bu satırlar izlemenin kimliğini, adını ve sahibini o anki hâliyle saklar ve izlemeden uzun yaşar: bir izlemeyi bırakmak ya da başka bir hedefe yöneltmek onları silmez, böylece şarkıları nereden geldiklerini söylemeye devam eder
+- Her izlemenin indirmekte başarısız olmaya devam ettiği parçalar (`watch_failures`); biri başarılı olana, listeden çıkana ya da izleme başka bir hedefe yöneltilene kadar
 
-Sanatçı İzleme’den önce oluşturulan veritabanları başlangıçta otomatik taşınır; mevcut satırlar çalma listesi izlemeleri olarak çalışmaya devam eder.
+Sanatçı İzleme’den önce oluşturulan veritabanları başlangıçta otomatik taşınır; mevcut satırlar çalma listesi izlemeleri olarak çalışmaya devam eder. Downtify yukarıdaki geçmişi tutmaya başlamadan önce kaydedilen parçalar, ilk açılışta bir kez bilinmeyen sonuçla (**Kayıttan önce**) eklenir — bir izlemenin ilk gününden olanlar onun ilk kontrolü sayılır.
+
+## İzleme başına etkinlik ve depolama
+
+İzleyici sayfası ve her izlemenin kendi sayfası (bir izlemenin **⋯** menüsündeki **Etkinlik ve şarkılar** ya da **Etkinlik** sütununa tıklama) kitaplığını hangi izlemelerin büyüttüğünü gösterir — çok sayıda izlemede ya da otomatik oluşturulan bir mix’in neden beklemediğin şarkılar getirdiğini anlamak için kullanışlıdır.
+
+**Etkinlik olarak sayılanlar.** Yalnızca bir izlemenin gerçekten eklediği şarkılar sayılır: indirdikleri. Kitaplığında zaten bulduğu şarkılar (başka bir izleme ya da kendi indirmen onlara sahipti) ayrıca **Zaten kitaplıkta** olarak sayılır; ilk kontrolün getirdikleri de öyle, çünkü o kontrol listede zaten olan her şeyi indirir. Böylece ilk kontrolü 300 şarkı indirmiş olsa bile durağan bir liste sakin görünür, haftada 15 şarkı ekleyen bir mix de haftada 15 olarak görünür. Downtify bu geçmişi tutmadan önce kaydedilen parçalar eklenmiş sayılır ve sayfa kaç tane olduğunu söyler.
+
+Seçilen dönemde (7, 30 ya da 90 gün, tarayıcıda hatırlanır) bir izleme şunları gösterir:
+
+| Sayı | Ne olduğu |
+|--------|------------|
+| Yeni şarkılar | Dönem içinde eklediği şarkılar |
+| Günde / Haftada / Ayda | Dönem boyunca ortalama hız — ya da izleme daha yeni başladıysa o zamandan beri |
+| Eğilim | Günlük (7 gün) ya da haftalık (30 ve 90 gün) yeni şarkılara göre hızın arttığı (**Son zamanlarda daha çok ekliyor**), azaldığı (**Son zamanlarda daha az ekliyor**) ya da sabit kaldığı; karşılaştırılacak üçten az dilim varken **Söylemek için çok yeni** |
+| Depolama artışı | Dönemin hâlâ diskte olan yeni şarkılarının kapladığı alan |
+
+**Depolama.** Bir dosya, kaç izlemede olursa olsun bir kez saklanır ve sayılar bunu yansıtır: **Yalnızca bu izlemede** başka hiçbir izlemenin tutmadığı şarkıların alanıdır (izlemeyi bırakıp şarkılarını silmenin boşaltacağı alan), **Ortak** diğer izlemelerin de tuttuğu şarkılardır, İzleyici sayfasındaki şerit de her dosyayı bir kez sayar. Diğer hesapların izlemeleri, bir dosyanın ortak olup olmadığına karar verirken sayılır ama adları gösterilmez.
+
+Bir izlemenin sayfası ayrıca şunları gösterir:
+
+- **Diskteki şarkılar**, **Kendisi indirdi**, **Zaten kitaplıkta** ve **Başarısız** — şarkılarının oraya nasıl geldiği ve kaçının indirilemeye devam ettiği (aşağıda, deneme sayısı ve son hatayla listelenir)
+- **Sesin geldiği yer** — diskteki şarkı başına YouTube Music, YouTube, Soulseek (slskd) ya da Deemix
+- **Bu izlemeden gelen şarkılar** — tuttuğu her şarkı, en yeniler önce, o zamandan beri listeden çıkanlar dahil, filtrelerle (**Son 30 gün** — ya da seçilen dönem —, **Kendisi indirdi**, **Zaten kitaplıkta**, **Kayıttan önce**). Şarkıları çalmak, kuyruğa eklemek, bir listeye eklemek, ZIP olarak indirmek ya da silmek için seç — örneğin bir mix’in geçen hafta getirdiklerini temizlemek için
+- **Kitaplıkta aç** (listenin sayfası ya da sanatçı izlemesinde sanatçınınki), **Orijinali aç** ve **Şimdi kontrol et**
+
+İzlemenin kimliği (`#12`) adının yanında görünür; böylece aynı bağlantının iki izlemesi — örneğin aynı listeyi takip eden iki hesap — ayırt edilebilir.
+
+## Bir şarkının nereden geldiği
+
+Kitaplığın herhangi bir yerinde bir şarkının menüsündeki **Nereden geldi**, onu ilk hangi izlemenin, ne zaman ve hangi sağlayıcıyla indirdiğini — ilk kontrolle geldiyse **İlk kontrol** — söyler ve şu anda onu tutan her izlemeyi kimliği, sahibi (yönetici için), şarkıyı ne zaman ve nasıl aldığıyla listeler: **İndirdi**, **Zaten kitaplıkta** ya da **Kayıttan önce**. Tek bir dosyadır: bir şarkıyı paylaşan izlemelerin hepsi aynı kopyayı gösterir.
+
+Oradan **Etkinlik ve şarkılar** izlemenin sayfasını, **Kitaplıkta aç** da listesini açar. Bırakılmış ya da artık başka bir bağlantıyı izleyen bir izleme, indirdiği şarkıların kaynağı olarak gösterilmeye devam eder. Bu geçmiş yokken kaydedilmiş bir şarkı için onu ilk kaydeden izleme **Muhtemelen** işaretiyle gösterilir. Hiçbir izlemenin indirmediği bir şarkı (kendin indirdiğin) bunu söyler.
+
+Bir kullanıcı kendi izlemelerini adlarıyla görür; başka bir hesabın izlemesinin indirdiği bir şarkı yalnızca bunu ve ne zaman olduğunu söyler.

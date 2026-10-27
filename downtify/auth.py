@@ -979,6 +979,10 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('PATCH', 'DELETE'), r'^/api/podcasts/shows/\d+$', USER),
         (_m('DELETE'), r'^/api/podcasts/episodes/\d+$', USER),
         (_m('POST', 'PATCH', 'DELETE'), r'^/api/monitor/playlists', USER),
+        # Where a song came from and what each watch added (own
+        # watches; every one for an admin).
+        (_READ, r'^/api/monitor/(stats|provenance)$', USER),
+        (_READ, r'^/api/monitor/playlists/\d+/tracks$', USER),
         # Admin: signing everyone out, settings and credentials.
         (_ALL, r'^/api/auth/', ADMIN),
         (_ALL, r'^/api/server(/port)?$', ADMIN),

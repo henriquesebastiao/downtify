@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import os
 import sqlite3
 from dataclasses import asdict, dataclass
@@ -43,6 +44,11 @@ from .release_files import matches_release
 from .sqlite_utils import ClosingConnection
 from .track_index import TrackIndex, normalize_spotify_track_id
 from .track_owners import TrackOwners
+from .watch_history import (
+    OUTCOME_DOWNLOADED,
+    OUTCOME_LINKED,
+    WatchHistoryStore,
+)
 
 MONITOR_LOOP_INTERVAL = 60  # seconds between loop sweeps
 # Seconds between filesystem reconciliation sweeps (see reconcile_loop).
@@ -297,6 +303,8 @@ class PlaylistMonitorDB:
         self._lock = asyncio.Lock()
         self._init_db()
         self.releases = ArtistReleaseStore(self._connect)
+        # What each watch added and failed to (provenance and statistics).
+        self.history = WatchHistoryStore(self._connect)
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(
@@ -565,7 +573,8 @@ class PlaylistMonitorDB:
         new watch: the name follows the new target, and the download and
         release history of the old one is dropped. Files already in the
         library stay; ones the new target shares are reused when it's
-        checked.
+        checked. Its ``watch_events`` stay too, naming the old target, so
+        the songs it brought in keep their origin.
         """
         with self._connect() as conn:
             cur = conn.execute(
@@ -578,6 +587,11 @@ class PlaylistMonitorDB:
             )
             if cur.rowcount == 0:
                 return None
+            # The old target's failures don't concern the new one.
+            conn.execute(
+                'DELETE FROM watch_failures WHERE playlist_id = ?',
+                (playlist_id,),
+            )
             conn.execute(
                 'DELETE FROM downloaded_tracks WHERE playlist_id = ?',
                 (playlist_id,),
@@ -728,6 +742,7 @@ class PlaylistMonitorDB:
                    AND (filename IS NULL OR filename != ?)""",
                 (name, tid, name),
             )
+        self.history.rename_file(tid, name)
         return self.playlists_for_track(tid)
 
     def mark_track_downloaded(
@@ -735,7 +750,19 @@ class PlaylistMonitorDB:
         playlist_id: int,
         track_spotify_id: str,
         filename: Optional[str] = None,
+        *,
+        outcome: Optional[str] = None,
+        provider: str = '',
+        initial: bool = False,
     ) -> None:
+        """Record that the watch has the track (in *filename*).
+
+        With an *outcome* (see ``OUTCOME_*``) the addition is also logged
+        in the watch's history (:mod:`downtify.watch_history`) - which
+        provider fetched it, and whether it came with the watch's first
+        check (*initial*, its backfill) - and any failure recorded for
+        the track is cleared.
+        """
         with self._connect() as conn:
             conn.execute(
                 """INSERT INTO downloaded_tracks
@@ -746,6 +773,15 @@ class PlaylistMonitorDB:
                    filename=excluded.filename""",
                 (playlist_id, track_spotify_id, _now_iso(), filename),
             )
+        if outcome:
+            self.history.record_added(
+                playlist_id,
+                track_spotify_id,
+                filename,
+                outcome=outcome,
+                provider=provider,
+                initial=initial,
+            )
 
     def list_all_downloaded_tracks(self) -> list[dict[str, Any]]:
         """Every ``downloaded_tracks`` row that has a filename, across
@@ -754,7 +790,7 @@ class PlaylistMonitorDB:
         Used by the hourly reconciliation sweep (see
         :func:`reconcile_downloaded_tracks`), which checks all of them
         against the filesystem in one pass instead of one watch at a
-        time.
+        time, and by the per-watch statistics.
         """
         with self._connect() as conn:
             rows = conn.execute(
@@ -869,6 +905,9 @@ async def check_playlist(
     )
 
     from_spotify = playlist.source == SOURCE_SPOTIFY
+    # The first check backfills whatever the playlist already had; the
+    # statistics keep that apart from what it adds over time.
+    initial = playlist.last_checked is None
     fetch_tracks = (
         spotify.playlist_tracks_from_id
         if from_spotify
@@ -924,7 +963,14 @@ async def check_playlist(
     resolved: dict[str, str] = {}
 
     new_tracks, linked_from_library = await _split_new_tracks(
-        playlist, tracks, db, downloader, library, known_tracks, resolved
+        playlist,
+        tracks,
+        db,
+        downloader,
+        library,
+        known_tracks,
+        resolved,
+        initial=initial,
     )
 
     if new_tracks:
@@ -946,7 +992,6 @@ async def check_playlist(
     downloaded = 0
     for index, song in enumerate(new_tracks):
         track_id = song['song_id']
-        pl_name = playlist.name
         # A paused download queue holds the sweep before each track.
         await queue_pause.wait()
 
@@ -954,19 +999,17 @@ async def check_playlist(
         if from_spotify:
             await _fill_from_spotify_track(song)
 
-        def _make_cb(s: dict, name: str) -> ProgressCallback:
-            return _progress_cb(s, name, broadcast, loop)
-
+        filename = None
         try:
-            async with queue_pause.running():
-                filename = await loop.run_in_executor(
-                    DOWNLOAD_EXECUTOR,
-                    lambda s=song: downloader.download(
-                        s, _make_cb(s, pl_name), subdir=pl_subdir
-                    ),
-                )
-            await asyncio.to_thread(
-                db.mark_track_downloaded, playlist.id, track_id, filename
+            filename = await _fetch_watch_track(
+                song,
+                playlist,
+                db,
+                downloader,
+                broadcast,
+                loop,
+                subdir=pl_subdir,
+                initial=initial,
             )
             invalidate_library_paths_cache()
             downloaded += 1
@@ -993,14 +1036,25 @@ async def check_playlist(
                 )
             if delay_seconds > 0 and index != len(new_tracks) - 1:
                 await asyncio.sleep(delay_seconds)
-        except Exception:
+        except Exception as exc:
             logger.exception('Failed to auto-download track {}', track_id)
+            # Only the download itself failing makes it a failed track.
+            if filename is None:
+                await asyncio.to_thread(
+                    _record_failure, db, playlist.id, song, exc
+                )
 
     await asyncio.to_thread(
         db.update_playlist,
         playlist.id,
         last_checked=_now_iso(),
         last_track_count=len(tracks),
+    )
+    await asyncio.to_thread(
+        _forget_stale_failures,
+        db,
+        playlist.id,
+        {str(t.get('song_id')) for t in tracks if t.get('song_id')},
     )
 
     if downloaded > 0 or linked_from_library > 0:
@@ -1073,13 +1127,15 @@ async def _split_new_tracks(
     library: LibraryStores,
     known_tracks: dict[str, Optional[str]],
     resolved: dict[str, str],
+    *,
+    initial: bool = False,
 ) -> tuple[list[dict[str, Any]], int]:
     """``(tracks to download, number linked from the library)``.
 
     Tracks the watch already recorded are skipped (and their filenames
     added to ``resolved``). With *Overwrite existing files* off, a new
     track the track index already has on disk is recorded for the watch
-    instead of being downloaded again.
+    instead of being downloaded again (as :data:`OUTCOME_LINKED`).
     """
 
     new_tracks: list[dict[str, Any]] = []
@@ -1107,7 +1163,14 @@ async def _split_new_tracks(
             new_tracks.append(track)
             continue
         await asyncio.to_thread(
-            db.mark_track_downloaded, playlist.id, tid, existing
+            functools.partial(
+                db.mark_track_downloaded,
+                playlist.id,
+                tid,
+                existing,
+                outcome=OUTCOME_LINKED,
+                initial=initial,
+            )
         )
         resolved[tid] = existing
         linked += 1
@@ -1118,6 +1181,75 @@ async def _split_new_tracks(
             playlist.name,
         )
     return new_tracks, linked
+
+
+async def _fetch_watch_track(
+    song: dict[str, Any],
+    playlist: MonitoredPlaylist,
+    db: PlaylistMonitorDB,
+    downloader: Downloader,
+    broadcast: Callable[[dict[str, Any]], Any],
+    loop: asyncio.AbstractEventLoop,
+    *,
+    subdir: str,
+    initial: bool,
+) -> str:
+    """Download one new track of a playlist watch and record it, with
+    how it went (see :func:`_outcome_of`). Raises when it failed."""
+
+    observed: dict[str, Any] = {}
+    progress = _progress_cb(song, playlist.name, broadcast, loop, observed)
+    async with queue_pause.running():
+        filename = await loop.run_in_executor(
+            DOWNLOAD_EXECUTOR,
+            lambda: downloader.download(song, progress, subdir=subdir),
+        )
+    await asyncio.to_thread(
+        functools.partial(
+            db.mark_track_downloaded,
+            playlist.id,
+            song['song_id'],
+            filename,
+            outcome=_outcome_of(observed),
+            provider=observed.get('provider', ''),
+            initial=initial,
+        )
+    )
+    return filename
+
+
+def _outcome_of(observed: dict[str, Any]) -> str:
+    """What a finished download was, from its progress messages: the
+    downloader found the song already on disk, or fetched it."""
+
+    return OUTCOME_LINKED if observed.get('reused') else OUTCOME_DOWNLOADED
+
+
+def _record_failure(
+    db: PlaylistMonitorDB,
+    playlist_id: int,
+    song: dict[str, Any],
+    error: BaseException,
+) -> None:
+    """Best effort: a failure that can't be recorded is only logged."""
+
+    try:
+        db.history.record_failure(playlist_id, song, str(error))
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not record the failure of {}', song.get('song_id')
+        )
+
+
+def _forget_stale_failures(
+    db: PlaylistMonitorDB, playlist_id: int, track_ids: set[str]
+) -> None:
+    try:
+        db.history.forget_failures_except(playlist_id, track_ids)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not prune the failures of watch {}', playlist_id
+        )
 
 
 def _library_file_for(
@@ -1515,7 +1647,16 @@ async def check_artist(
                         'Downloaded file does not validate against the requested release'
                     )
                 await asyncio.to_thread(
-                    db.mark_track_downloaded, playlist.id, track_id, filename
+                    functools.partial(
+                        db.mark_track_downloaded,
+                        playlist.id,
+                        track_id,
+                        filename,
+                        outcome=_outcome_of(observed),
+                        provider=observed.get('provider', ''),
+                        # The first check downloads the back catalog.
+                        initial=playlist.last_checked is None,
+                    )
                 )
                 await asyncio.to_thread(
                     db.releases.record,
@@ -1550,12 +1691,15 @@ async def check_artist(
                 })
                 if delay_seconds > 0 and not observed.get('reused'):
                     await asyncio.sleep(delay_seconds)
-            except Exception:
+            except Exception as exc:
                 complete = False
                 logger.exception(
                     'Failed to auto-download track {} of release {}',
                     track_id,
                     album.get('name'),
+                )
+                await asyncio.to_thread(
+                    _record_failure, db, playlist.id, song, exc
                 )
                 await broadcast({
                     'song': song,

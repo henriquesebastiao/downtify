@@ -38,6 +38,10 @@ const summary = shallowRef({
   recentAlbums: [],
 })
 
+// The files last dropped from the library (deleted), for pages that keep
+// their own list of tracks (a watch's songs) to drop them too.
+const forgotten = shallowRef([])
+
 const tracksByFile = computed(
   () => new Map(tracks.value.map((track) => [track.file, track]))
 )
@@ -351,6 +355,7 @@ API.onMessage((data) => {
 
 function forget(files) {
   const gone = new Set(files)
+  if (gone.size) forgotten.value = [...gone]
   tracks.value = tracks.value.filter((track) => !gone.has(track.file))
   rawPlaylists.value = rawPlaylists.value.map((playlist) => ({
     ...playlist,
@@ -484,6 +489,7 @@ export function useLibrary() {
     refreshSoon,
     forget,
     forgetByPrefix,
+    forgotten,
     deleteFiles,
     deletePlaylist,
     downloadZip,

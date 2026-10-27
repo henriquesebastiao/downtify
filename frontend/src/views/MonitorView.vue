@@ -99,6 +99,32 @@
     />
 
     <template v-else>
+      <div
+        class="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-panel border border-line-2 bg-surface px-4 py-3"
+      >
+        <template v-if="totals">
+          <div v-for="total in totalItems" :key="total.key" class="min-w-0">
+            <p
+              class="text-[11px] font-semibold tracking-[0.06em] text-faint uppercase"
+            >
+              {{ total.label }}
+            </p>
+            <p class="tabular text-lg font-semibold">{{ total.value }}</p>
+          </div>
+        </template>
+        <p v-else-if="statsError" class="text-[13px] text-danger" role="alert">
+          {{ t('watchStats.statsFailed') }}
+        </p>
+        <UiSkeleton v-else class="h-11 w-64" />
+        <UiSegmented
+          v-model="days"
+          :options="periodOptions"
+          show-labels
+          class="ml-auto"
+          :aria-label="t('watchStats.period')"
+        />
+      </div>
+
       <div class="flex flex-wrap items-center gap-2">
         <label
           class="flex h-10 w-full items-center gap-2.5 rounded-control border border-line-2 bg-surface px-3 transition-colors focus-within:border-accent sm:w-72"
@@ -340,6 +366,88 @@
                       : t('common.tracks', { count: item.last_track_count })
                   }}
                 </span>
+                <RouterLink
+                  :to="watchRouteFor(item)"
+                  class="flex min-w-0 items-center gap-2 text-[13px] text-muted hover:text-fg"
+                  :class="
+                    layout.hidden.includes('activity')
+                      ? 'monitor-column-hidden'
+                      : ''
+                  "
+                  :title="activityTitle(item)"
+                >
+                  <template v-if="stats.get(item.id)">
+                    <AppIcon
+                      :name="
+                        trendDisplay(stats.get(item.id).trend.direction).icon
+                      "
+                      :size="14"
+                      :class="[
+                        trendDisplay(stats.get(item.id).trend.direction).flip
+                          ? '-scale-y-100'
+                          : '',
+                        stats.get(item.id).trend.direction === 'up'
+                          ? 'text-accent'
+                          : '',
+                      ]"
+                    />
+                    <span class="tabular font-semibold text-fg"
+                      >+{{ stats.get(item.id).period.added }}</span
+                    >
+                    <span class="tabular truncate">{{
+                      t('watchStats.rateWeekShort', {
+                        rate: formatRate(
+                          stats.get(item.id).rate.per_week,
+                          locale
+                        ),
+                      })
+                    }}</span>
+                    <svg
+                      v-if="stats.get(item.id).series.length > 1"
+                      class="hidden h-4 w-12 shrink-0 text-accent xl:block"
+                      :viewBox="`0 0 ${stats.get(item.id).series.length * 4} 16`"
+                      preserveAspectRatio="none"
+                      aria-hidden="true"
+                    >
+                      <rect
+                        v-for="(height, index) in sparkline(
+                          stats.get(item.id).series
+                        )"
+                        :key="index"
+                        :x="index * 4 + 0.5"
+                        :y="16 - Math.max(1, height * 16)"
+                        width="3"
+                        :height="Math.max(1, height * 16)"
+                        fill="currentColor"
+                        :opacity="height ? 1 : 0.25"
+                      />
+                    </svg>
+                  </template>
+                  <span v-else class="text-faint">—</span>
+                </RouterLink>
+                <span
+                  class="tabular truncate text-[13px] text-muted"
+                  :class="
+                    layout.hidden.includes('storage')
+                      ? 'monitor-column-hidden'
+                      : ''
+                  "
+                  :title="storageTitle(item)"
+                >
+                  <template v-if="stats.get(item.id)">
+                    {{ formatBytes(stats.get(item.id).storage.unique_bytes) }}
+                    <span
+                      v-if="stats.get(item.id).storage.shared_files"
+                      class="text-faint"
+                      >{{
+                        t('watchStats.sharedShort', {
+                          count: stats.get(item.id).storage.shared_files,
+                        })
+                      }}</span
+                    >
+                  </template>
+                  <span v-else class="text-faint">—</span>
+                </span>
                 <UiSwitch
                   :model-value="item.enabled"
                   class="ml-auto lg:ml-0"
@@ -382,6 +490,7 @@ import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
 import UiMenu from '/src/components/ui/UiMenu.vue'
 import UiSelect from '/src/components/ui/UiSelect.vue'
+import UiSegmented from '/src/components/ui/UiSegmented.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
@@ -394,7 +503,15 @@ import API from '/src/model/api'
 import monitorAPI from '/src/model/monitor'
 import { useUi } from '/src/model/ui'
 import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
-import { timeAgo } from '/src/lib/format'
+import { formatBytes, timeAgo } from '/src/lib/format'
+import {
+  STAT_PERIODS,
+  formatRate,
+  sparkline,
+  statsById,
+  trendDisplay,
+  watchRouteFor,
+} from '/src/lib/watchStats'
 import {
   WATCH_SORT_KEYS,
   countWatches,
@@ -437,6 +554,86 @@ const editing = ref(null)
 const sortKey = useLocalStorage('downtify-monitor-sort', 'created_at')
 const sortDir = useLocalStorage('downtify-monitor-sort-dir', 'desc')
 if (!WATCH_SORT_KEYS.includes(sortKey.value)) sortKey.value = 'created_at'
+
+// What each watch holds and adds (GET /api/monitor/stats), over the
+// period picked here (shared with a watch's own page).
+const days = useLocalStorage('downtify-monitor-period', 30)
+if (!STAT_PERIODS.includes(days.value)) days.value = 30
+const stats = ref(new Map())
+const totals = ref(null)
+const statsError = ref(false)
+let statsRequest = 0
+
+async function loadStats() {
+  const request = ++statsRequest
+  statsError.value = false
+  try {
+    const res = await monitorAPI.getMonitorStats(days.value)
+    if (request !== statsRequest) return
+    stats.value = statsById(res.data)
+    totals.value = res.data?.totals || null
+  } catch {
+    if (request === statsRequest) statsError.value = true
+  }
+}
+
+watch(days, loadStats)
+
+const periodOptions = computed(() =>
+  STAT_PERIODS.map((value) => ({
+    value,
+    label: t('watchStats.days', { count: value }),
+  }))
+)
+
+const totalItems = computed(() => {
+  const added = inTab.value.reduce(
+    (sum, item) => sum + (stats.value.get(item.id)?.period.added || 0),
+    0
+  )
+  return [
+    {
+      key: 'new',
+      label: t('watchStats.totalNew', { count: days.value }),
+      value: added,
+    },
+    {
+      key: 'songs',
+      label: t('watchStats.totalSongs'),
+      value: totals.value.files,
+    },
+    {
+      key: 'size',
+      label: t('watchStats.totalSize'),
+      value: formatBytes(totals.value.bytes),
+    },
+    {
+      key: 'shared',
+      label: t('watchStats.totalShared'),
+      value: totals.value.shared_files,
+    },
+  ]
+})
+
+function activityTitle(item) {
+  const row = stats.value.get(item.id)
+  if (!row) return ''
+  return t('watchStats.activityTooltip', {
+    added: row.period.added,
+    count: days.value,
+    rate: formatRate(row.rate.per_week, locale.value),
+    trend: t(trendDisplay(row.trend.direction).label),
+  })
+}
+
+function storageTitle(item) {
+  const row = stats.value.get(item.id)
+  if (!row) return ''
+  return t('watchStats.storageTooltip', {
+    unique: formatBytes(row.storage.unique_bytes),
+    shared: formatBytes(row.storage.shared_bytes),
+  })
+}
 
 const counts = computed(() => countWatches(items.value))
 
@@ -655,7 +852,8 @@ const visible = computed(() =>
       paused: show.value === 'paused',
     }),
     sortKey.value,
-    sortDir.value
+    sortDir.value,
+    stats.value
   )
 )
 
@@ -671,6 +869,11 @@ const sortOptions = computed(() => [
         ? t('monitor.sortReleases')
         : t('monitor.sortSize'),
   },
+  { value: 'activity', label: t('watchStats.sortActivity') },
+  { value: 'rate', label: t('watchStats.sortRate') },
+  { value: 'growth', label: t('watchStats.sortGrowth') },
+  { value: 'storage', label: t('watchStats.sortStorage') },
+  { value: 'contributed', label: t('watchStats.sortContributed') },
 ])
 
 watch(tab, () => {
@@ -704,6 +907,7 @@ async function load() {
   } finally {
     loading.value = false
   }
+  loadStats()
 }
 
 function tabRoute(kind) {
@@ -842,6 +1046,11 @@ function menuFor(item) {
       label: t('monitor.edit'),
       icon: 'pencil',
       action: () => (editing.value = item),
+    },
+    {
+      label: t('watchStats.details'),
+      icon: 'activity',
+      action: () => router.push(watchRouteFor(item)),
     },
     {
       label: item.enabled ? t('monitor.pause') : t('monitor.resume'),
