@@ -731,6 +731,8 @@ export default {
       'No se pudo iniciar el ecualizador. La reproducción continúa sin él.',
   },
   monitor: {
+    tableColumns: 'Columnas',
+    resetTableColumns: 'Restablecer columnas',
     releaseTypes: 'Descargar',
     releaseTypesAtLeastOne: 'Deja al menos un tipo de lanzamiento',
     release: { album: 'Álbumes', single: 'Sencillos', ep: 'EP' },

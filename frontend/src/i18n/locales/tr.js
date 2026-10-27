@@ -731,6 +731,8 @@ export default {
     equalizerError: 'Ekolayzır başlatılamadı. Çalma onsuz devam ediyor.',
   },
   monitor: {
+    tableColumns: 'Sütunlar',
+    resetTableColumns: 'Sütunları sıfırla',
     releaseTypes: 'İndir',
     releaseTypesAtLeastOne: 'En az bir yayın türü bırakın',
     release: { album: 'Albümler', single: 'Single’lar', ep: 'EP’ler' },

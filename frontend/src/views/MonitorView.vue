@@ -114,6 +114,15 @@
         </label>
         <UiChips v-model="show" :items="showFilters" />
         <div class="ml-auto flex items-center gap-2">
+          <span class="hidden lg:inline-flex">
+            <UiMenu :items="tableColumnMenu" :label="t('monitor.tableColumns')"
+              ><template #trigger
+                ><UiButton size="sm" variant="ghost" icon="filter">{{
+                  t('monitor.tableColumns')
+                }}</UiButton></template
+              ></UiMenu
+            >
+          </span>
           <UiSelect
             v-model="sortKey"
             :options="sortOptions"
@@ -145,141 +154,209 @@
 
       <template v-else>
         <div
-          class="hidden grid-cols-[minmax(0,2fr)_140px_170px_150px_110px_64px_128px] items-center gap-4 border-b border-line px-4 pb-2.5 text-[11px] font-semibold tracking-[0.06em] text-faint uppercase lg:grid"
-        >
-          <span>{{
+          class="monitor-table-scroll rounded-panel focus-visible:outline-accent"
+          tabindex="0"
+          role="region"
+          :aria-label="
             tab === 'artist' ? t('monitor.colArtist') : t('monitor.colPlaylist')
-          }}</span>
-          <span>{{ t('monitor.colSource') }}</span>
-          <span>{{ t('monitor.colChecks') }}</span>
-          <span>{{ t('monitor.colLastChecked') }}</span>
-          <span>{{ t('monitor.colSize') }}</span>
-          <span>{{ t('monitor.colActive') }}</span>
-          <span />
-        </div>
-
-        <TransitionGroup name="list" tag="ul" class="-mt-3 flex flex-col">
-          <li
-            v-for="item in visible"
-            :key="item.id"
-            class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-[12px] px-4 py-3 transition-colors hover:bg-surface lg:grid-cols-[minmax(0,2fr)_140px_170px_150px_110px_64px_128px]"
+          "
+          :style="tableStyle"
+          :class="resizingTable ? 'select-none cursor-col-resize' : ''"
+        >
+          <div
+            class="monitor-table-grid hidden items-center gap-4 border-b border-line px-4 pb-2.5 text-[11px] font-semibold tracking-[0.06em] text-faint uppercase lg:grid"
           >
             <div
-              class="flex min-w-0 items-center gap-3 transition-opacity"
-              :class="item.enabled ? '' : 'opacity-50'"
+              v-for="column in tableColumns"
+              :key="column.key"
+              class="relative min-w-0 py-1"
             >
-              <CoverArt
-                :src="tab === 'artist' ? artistCover(item) : ''"
-                :name="item.name"
-                :round="tab === 'artist'"
-                :icon="tab === 'artist' ? 'user' : 'playlist'"
-                rounded="rounded-[8px]"
-                :letter-size="16"
-                class="size-11"
-              />
-              <div class="min-w-0">
-                <button
-                  type="button"
-                  class="block max-w-full truncate text-left text-sm font-semibold hover:underline"
-                  @click="editing = item"
-                >
-                  {{ item.name }}
-                </button>
-                <a
-                  :href="item.url"
-                  target="_blank"
-                  rel="noopener"
-                  :title="item.url"
-                  class="block truncate font-mono text-[11.5px] text-muted hover:text-fg hover:underline"
-                  >{{ displayUrl(item.url) }}</a
-                >
+              <span :class="column.key === 'actions' ? 'sr-only' : ''">{{
+                column.label
+              }}</span>
+              <div
+                v-if="column.key !== 'actions'"
+                role="separator"
+                aria-orientation="vertical"
+                tabindex="0"
+                :aria-label="`${t('finder.resizeColumn')}: ${column.label}`"
+                :title="t('finder.resizeHint')"
+                :aria-valuemin="column.min"
+                :aria-valuemax="column.max"
+                :aria-valuenow="layout.widths[column.key]"
+                class="absolute inset-y-0 -right-2 flex w-3 cursor-col-resize touch-none items-stretch justify-center outline-none group"
+                @pointerdown="startTableResize(column.key, $event)"
+                @dblclick="resetTableColumn(column.key)"
+                @keydown.left.prevent="
+                  nudgeTableColumn(column.key, $event.shiftKey ? -40 : -16)
+                "
+                @keydown.right.prevent="
+                  nudgeTableColumn(column.key, $event.shiftKey ? 40 : 16)
+                "
+                @keydown.home.prevent="resetTableColumn(column.key)"
+              >
                 <span
-                  v-if="
-                    releaseFilterSummary(item).types.length ||
-                    releaseFilterSummary(item).newOnly
-                  "
-                  class="mt-1 flex flex-wrap gap-1"
-                >
-                  <UiBadge v-if="releaseFilterSummary(item).types.length">
-                    {{
-                      releaseFilterSummary(item)
-                        .types.map((type) => t(`monitor.release.${type}`))
-                        .join(' · ')
-                    }}
-                  </UiBadge>
-                  <UiBadge
-                    v-if="releaseFilterSummary(item).newOnly"
-                    tone="accent"
-                  >
-                    {{ t('monitor.newOnlyBadge') }}
-                  </UiBadge>
-                </span>
+                  class="w-0.5 bg-line-2 group-hover:bg-accent group-focus-visible:bg-accent"
+                />
               </div>
             </div>
+          </div>
 
-            <div class="flex items-center justify-end gap-1 lg:order-last">
-              <UiIconButton
-                icon="retry"
-                :label="t('monitor.checkNow')"
-                size="sm"
-                :disabled="checking.has(item.id)"
-                :class="checking.has(item.id) ? 'animate-spin' : ''"
-                @click="check(item)"
-              />
-              <UiIconButton
-                icon="pencil"
-                :label="t('monitor.edit')"
-                size="sm"
-                @click="editing = item"
-              />
-              <UiMenu
-                :items="menuFor(item)"
-                :label="t('common.more')"
-                size="sm"
-              />
-            </div>
-
-            <div
-              class="col-span-2 flex flex-wrap items-center gap-2 lg:contents"
+          <TransitionGroup name="list" tag="ul" class="-mt-3 flex flex-col">
+            <li
+              v-for="item in visible"
+              :key="item.id"
+              class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-[12px] px-4 py-3 transition-colors hover:bg-surface monitor-table-grid"
             >
-              <span class="lg:block">
-                <WatchSourceBadge :source="item.source" />
-              </span>
-              <UiSelect
-                :model-value="item.interval_minutes"
-                :options="intervalOptions(t, item.interval_minutes)"
-                :label="t('monitor.interval')"
-                size="sm"
-                @update:model-value="
-                  (value) => update(item, { interval_minutes: value })
-                "
-              />
-              <span class="flex items-center gap-1.5 text-[13px] text-muted">
-                <AppIcon name="clock" :size="14" class="lg:hidden" />
-                {{
-                  item.last_checked
-                    ? timeAgo(item.last_checked, locale)
-                    : t('monitor.never')
-                }}
-              </span>
-              <span class="tabular text-[13px] text-muted">
-                {{
-                  tab === 'artist'
-                    ? t('monitor.releases', { count: item.last_track_count })
-                    : t('common.tracks', { count: item.last_track_count })
-                }}
-              </span>
-              <UiSwitch
-                :model-value="item.enabled"
-                class="ml-auto lg:ml-0"
-                :aria-label="`${t('monitor.colActive')}: ${item.name}`"
-                @update:model-value="
-                  (value) => update(item, { enabled: value })
-                "
-              />
-            </div>
-          </li>
-        </TransitionGroup>
+              <div
+                class="flex min-w-0 items-center gap-3 transition-opacity"
+                :class="item.enabled ? '' : 'opacity-50'"
+              >
+                <CoverArt
+                  :src="tab === 'artist' ? artistCover(item) : ''"
+                  :name="item.name"
+                  :round="tab === 'artist'"
+                  :icon="tab === 'artist' ? 'user' : 'playlist'"
+                  rounded="rounded-[8px]"
+                  :letter-size="16"
+                  class="size-11"
+                />
+                <div class="min-w-0">
+                  <button
+                    type="button"
+                    class="block max-w-full whitespace-normal break-words text-left text-sm font-semibold hover:underline"
+                    :title="item.name"
+                    @click="editing = item"
+                  >
+                    {{ item.name }}
+                  </button>
+                  <a
+                    :href="item.url"
+                    target="_blank"
+                    rel="noopener"
+                    :title="item.url"
+                    class="block truncate font-mono text-[11.5px] text-muted hover:text-fg hover:underline"
+                    >{{ displayUrl(item.url) }}</a
+                  >
+                  <span
+                    v-if="
+                      releaseFilterSummary(item).types.length ||
+                      releaseFilterSummary(item).newOnly
+                    "
+                    class="mt-1 flex flex-wrap gap-1"
+                  >
+                    <UiBadge v-if="releaseFilterSummary(item).types.length">
+                      {{
+                        releaseFilterSummary(item)
+                          .types.map((type) => t(`monitor.release.${type}`))
+                          .join(' · ')
+                      }}
+                    </UiBadge>
+                    <UiBadge
+                      v-if="releaseFilterSummary(item).newOnly"
+                      tone="accent"
+                    >
+                      {{ t('monitor.newOnlyBadge') }}
+                    </UiBadge>
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-end gap-1 lg:order-last">
+                <UiIconButton
+                  icon="retry"
+                  :label="t('monitor.checkNow')"
+                  size="sm"
+                  :disabled="checking.has(item.id)"
+                  :class="checking.has(item.id) ? 'animate-spin' : ''"
+                  @click="check(item)"
+                />
+                <UiIconButton
+                  icon="pencil"
+                  :label="t('monitor.edit')"
+                  size="sm"
+                  @click="editing = item"
+                />
+                <UiMenu
+                  :items="menuFor(item)"
+                  :label="t('common.more')"
+                  size="sm"
+                />
+              </div>
+
+              <div
+                class="col-span-2 flex flex-wrap items-center gap-2 lg:contents"
+              >
+                <span
+                  class="lg:block"
+                  :class="
+                    layout.hidden.includes('source')
+                      ? 'monitor-column-hidden'
+                      : ''
+                  "
+                >
+                  <WatchSourceBadge :source="item.source" />
+                </span>
+                <UiSelect
+                  :class="
+                    layout.hidden.includes('checks')
+                      ? 'monitor-column-hidden'
+                      : ''
+                  "
+                  :model-value="item.interval_minutes"
+                  :options="intervalOptions(t, item.interval_minutes)"
+                  :label="t('monitor.interval')"
+                  size="sm"
+                  @update:model-value="
+                    (value) => update(item, { interval_minutes: value })
+                  "
+                />
+                <span
+                  class="flex items-center gap-1.5 text-[13px] text-muted"
+                  :class="
+                    layout.hidden.includes('checked')
+                      ? 'monitor-column-hidden'
+                      : ''
+                  "
+                >
+                  <AppIcon name="clock" :size="14" class="lg:hidden" />
+                  {{
+                    item.last_checked
+                      ? timeAgo(item.last_checked, locale)
+                      : t('monitor.never')
+                  }}
+                </span>
+                <span
+                  class="tabular text-[13px] text-muted"
+                  :class="
+                    layout.hidden.includes('size')
+                      ? 'monitor-column-hidden'
+                      : ''
+                  "
+                >
+                  {{
+                    tab === 'artist'
+                      ? t('monitor.releases', { count: item.last_track_count })
+                      : t('common.tracks', { count: item.last_track_count })
+                  }}
+                </span>
+                <UiSwitch
+                  :model-value="item.enabled"
+                  class="ml-auto lg:ml-0"
+                  :class="
+                    layout.hidden.includes('active')
+                      ? 'monitor-column-hidden'
+                      : ''
+                  "
+                  :aria-label="`${t('monitor.colActive')}: ${item.name}`"
+                  @update:model-value="
+                    (value) => update(item, { enabled: value })
+                  "
+                />
+              </div>
+            </li>
+          </TransitionGroup>
+        </div>
       </template>
     </template>
 
@@ -293,7 +370,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import AppIcon from '/src/components/ui/AppIcon.vue'
@@ -329,6 +406,12 @@ import {
   watchKindOfUrl,
 } from '/src/lib/watches'
 import { useI18n } from '/src/i18n'
+import {
+  MONITOR_COLUMNS,
+  monitorLayout,
+  resizeMonitorColumn,
+  toggleMonitorColumn,
+} from '/src/lib/monitorColumns'
 
 const { t, locale } = useI18n()
 const ui = useUi()
@@ -364,6 +447,123 @@ const tab = computed(() => {
   if (route.params.tab === 'playlists') return 'playlist'
   return !counts.value.playlist && counts.value.artist ? 'artist' : 'playlist'
 })
+
+// A drag updates only the grid at animation-frame cadence. Save once on
+// release, not on every pointer move; resizing performs no API requests.
+const savedTableLayouts = useLocalStorage(
+  'downtify-monitor-table-layout-v1',
+  {}
+)
+const dragLayout = ref(null)
+const resizingTable = ref(false)
+let stopTableResize = null
+const layout = computed(() =>
+  monitorLayout(dragLayout.value || savedTableLayouts.value?.[tab.value])
+)
+const tableColumns = computed(() =>
+  MONITOR_COLUMNS.filter((col) => !layout.value.hidden.includes(col.key)).map(
+    (col) => ({
+      ...col,
+      label:
+        col.key === 'name'
+          ? tab.value === 'artist'
+            ? t('monitor.colArtist')
+            : t('monitor.colPlaylist')
+          : t(col.label),
+    })
+  )
+)
+const tableStyle = computed(() => ({
+  '--monitor-columns': tableColumns.value
+    .map((col) => `${layout.value.widths[col.key]}px`)
+    .join(' '),
+  '--monitor-width': `${tableColumns.value.reduce((sum, col) => sum + layout.value.widths[col.key], 32 + 16 * (tableColumns.value.length - 1))}px`,
+}))
+function saveTableLayout(value) {
+  savedTableLayouts.value = {
+    ...(savedTableLayouts.value || {}),
+    [tab.value]: value,
+  }
+}
+const tableColumnMenu = computed(() => [
+  ...MONITOR_COLUMNS.slice(1, -1).map((col) => ({
+    label: t(col.label),
+    checked: !layout.value.hidden.includes(col.key),
+    action: () => saveTableLayout(toggleMonitorColumn(layout.value, col.key)),
+  })),
+  { divider: true },
+  {
+    label: t('monitor.resetTableColumns'),
+    icon: 'retry',
+    action: () => saveTableLayout(monitorLayout({})),
+  },
+])
+function nudgeTableColumn(key, delta) {
+  saveTableLayout(
+    resizeMonitorColumn(layout.value, key, layout.value.widths[key] + delta)
+  )
+}
+function resetTableColumn(key) {
+  saveTableLayout(
+    resizeMonitorColumn(
+      layout.value,
+      key,
+      MONITOR_COLUMNS.find((col) => col.key === key).width
+    )
+  )
+}
+function startTableResize(key, event) {
+  if (event.button !== 0) return
+  stopTableResize?.(false)
+  event.preventDefault()
+  const grip = event.currentTarget
+  const from = monitorLayout(layout.value)
+  const startX = event.clientX
+  let latestX = startX
+  let frame = null
+  resizingTable.value = true
+  grip.setPointerCapture(event.pointerId)
+  const apply = () => {
+    frame = null
+    dragLayout.value = resizeMonitorColumn(
+      from,
+      key,
+      from.widths[key] + latestX - startX
+    )
+  }
+  const move = (e) => {
+    if (e.pointerId !== event.pointerId) return
+    latestX = e.clientX
+    if (frame === null) frame = requestAnimationFrame(apply)
+  }
+  const finish = (commit) => {
+    if (frame !== null) {
+      cancelAnimationFrame(frame)
+      apply()
+    }
+    if (commit && dragLayout.value) saveTableLayout(dragLayout.value)
+    window.removeEventListener('pointermove', move, true)
+    window.removeEventListener('pointerup', up, true)
+    window.removeEventListener('pointercancel', cancel, true)
+    if (grip.hasPointerCapture(event.pointerId))
+      grip.releasePointerCapture(event.pointerId)
+    resizingTable.value = false
+    dragLayout.value = null
+    stopTableResize = null
+  }
+  const up = (e) => {
+    if (e.pointerId === event.pointerId) finish(true)
+  }
+  const cancel = (e) => {
+    if (e.pointerId === event.pointerId) finish(false)
+  }
+  stopTableResize = finish
+  window.addEventListener('pointermove', move, true)
+  window.addEventListener('pointerup', up, true)
+  window.addEventListener('pointercancel', cancel, true)
+}
+watch(tab, () => stopTableResize?.(false))
+onBeforeUnmount(() => stopTableResize?.(false))
 
 // Photos saved for the watched artists via the artist page's picker (see
 // artist_profile.py), asked for in one call whenever the artists tab opens or
@@ -670,3 +870,18 @@ function menuFor(item) {
 
 onMounted(load)
 </script>
+
+<style scoped>
+@media (min-width: 1024px) {
+  .monitor-table-scroll {
+    overflow-x: auto;
+  }
+  .monitor-table-grid {
+    grid-template-columns: var(--monitor-columns);
+    min-width: var(--monitor-width);
+  }
+  .monitor-column-hidden {
+    display: none !important;
+  }
+}
+</style>

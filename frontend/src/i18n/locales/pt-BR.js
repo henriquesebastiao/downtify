@@ -729,6 +729,8 @@ export default {
       'Não foi possível iniciar o equalizador. A reprodução continua sem ele.',
   },
   monitor: {
+    tableColumns: 'Colunas',
+    resetTableColumns: 'Redefinir colunas',
     releaseTypes: 'Baixar',
     releaseTypesAtLeastOne: 'Mantenha ao menos um tipo de lançamento',
     release: { album: 'Álbuns', single: 'Singles', ep: 'EPs' },

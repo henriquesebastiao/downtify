@@ -732,6 +732,8 @@ export default {
       '이퀄라이저를 시작할 수 없습니다. 이퀄라이저 없이 재생을 계속합니다.',
   },
   monitor: {
+    tableColumns: '열',
+    resetTableColumns: '열 초기화',
     releaseTypes: '다운로드할 종류',
     releaseTypesAtLeastOne: '발매작 종류를 최소 하나 이상 유지해야 합니다',
     release: { album: '앨범', single: '싱글', ep: 'EP' },

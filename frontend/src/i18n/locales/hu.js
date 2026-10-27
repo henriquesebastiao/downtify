@@ -730,6 +730,8 @@ export default {
       'A hangszínszabályzó nem indult el. A lejátszás nélküle folytatódik.',
   },
   monitor: {
+    tableColumns: 'Oszlopok',
+    resetTableColumns: 'Oszlopok visszaállítása',
     releaseTypes: 'Letöltés',
     releaseTypesAtLeastOne: 'Legalább egy megjelenéstípus maradjon',
     release: { album: 'Albumok', single: 'Kislemezek', ep: 'EP-k' },
