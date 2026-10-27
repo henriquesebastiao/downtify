@@ -413,6 +413,7 @@ export default {
     downloadZip: 'ZIP으로 다운로드',
     saveToDevice: '이 기기에 저장',
     upgrade: '라이브러리 업그레이드',
+    storage: '저장 공간 및 사용량',
   },
   likes: {
     like: '좋아요 표시한 곡에 추가',
@@ -532,6 +533,124 @@ export default {
     stageLyrics: '가사 검색 중',
     stageWriting: '파일 기록 중',
     loadFailed: '라이브러리 업그레이드 정보를 불러오지 못했습니다',
+  },
+  usage: {
+    title: '저장 공간 및 사용량',
+    subtitle: '라이브러리 크기, 증가 속도, 출처를 보여줍니다.',
+    adminOnly: '관리자만 볼 수 있습니다',
+    adminOnlyHint: '이 서버의 관리자에게 저장 공간 수치를 요청하세요.',
+    loadFailed: '저장 공간 수치를 불러오지 못했습니다.',
+    tileLibrary: '라이브러리',
+    tileAdded: {
+      one: '최근 하루 동안 추가됨',
+      other: '{count}일 동안 추가됨',
+    },
+    tileGrowth: '순증감',
+    tileFree: '여유 공간',
+    tileDownloads: '다운로드됨',
+    tileCleanup: '확보 가능',
+    songs: {
+      one: '{count}곡',
+      other: '{count}곡',
+    },
+    files: {
+      one: '파일 {count}개',
+      other: '파일 {count}개',
+    },
+    perWeekRate: '주당 {size}',
+    ofTotal: '전체 {total}',
+    daysLeft: {
+      one: '전체 {total} · 이 속도라면 약 {count}일 후 가득 참',
+      other: '전체 {total} · 이 속도라면 약 {count}일 후 가득 참',
+    },
+    downloadsShort: '{skipped}개 건너뜀 · {failed}개 실패',
+    growthTitle: '라이브러리 크기',
+    growthHint:
+      '매일 끝 시점의 라이브러리 크기이며, slskd 작업 사본은 제외합니다.',
+    estimated: '파일 날짜로 추정함',
+    estimatedNote:
+      '{date} 이전의 크기는 라이브러리에 아직 남아 있는 곡의 날짜로 추정하므로, 그 후 삭제된 곡은 빠져 있습니다.',
+    allEstimatedNote:
+      'Downtify가 이제부터 매시간 라이브러리 크기를 기록합니다. 이전 날짜는 라이브러리에 아직 남아 있는 곡의 날짜로 추정합니다.',
+    addedPerDay: '일별 추가',
+    addedPerWeek: '주별 추가',
+    sourcesTitle: '출처별',
+    sourcesHint: {
+      one: '오디오의 출처와 최근 하루 동안 각 출처가 추가한 양입니다.',
+      other: '오디오의 출처와 최근 {count}일 동안 각 출처가 추가한 양입니다.',
+    },
+    addedInPeriod: {
+      one: '+{size} · 기간 중 {count}곡',
+      other: '+{size} · 기간 중 {count}곡',
+    },
+    emptyLibrary: '라이브러리가 비어 있습니다.',
+    whereTitle: '저장 위치',
+    byLocation: '폴더',
+    byFormat: '형식',
+    location: {
+      downloads: '다운로드 폴더',
+      slskd: 'slskd 폴더',
+      folders: '추가 음악 폴더',
+    },
+    unknown: '알 수 없음',
+    downloadsTitle: '다운로드',
+    downloadsHint: {
+      one: '최근 하루 동안 대기열과 플레이리스트 모니터에서 시작한 다운로드의 결과입니다. 모든 시도가 집계됩니다.',
+      other:
+        '최근 {count}일 동안 대기열과 플레이리스트 모니터에서 시작한 다운로드의 결과입니다. 모든 시도가 집계됩니다.',
+    },
+    outcome: {
+      completed: '완료',
+      skipped: '건너뜀',
+      failed: '실패',
+    },
+    perDay: '일별',
+    perWeek: '주별',
+    downloadedBySource: '출처별 다운로드 · {size}',
+    noDownloads: '이 기간에는 다운로드한 항목이 없습니다.',
+    logEmptyNote:
+      '아직 집계된 다운로드가 없습니다. Downtify는 이 버전부터 다운로드를 집계합니다.',
+    logSinceNote: '다운로드는 {date}부터 집계됩니다.',
+    cleanupTitle: '정리 가능',
+    cleanupHint:
+      'Downtify가 중복되거나 남은 것으로 판단할 수 있는 공간입니다. 여기서는 아무것도 삭제하지 않습니다.',
+    duplicatesTitle: '중복된 곡',
+    duplicatesHint:
+      '{exact}곡은 같은 파일로 두 번 저장되었고, {likely}곡은 다른 출처에서 온 같은 곡으로 보입니다. 크기는 가장 큰 사본만 남길 때 확보되는 공간입니다.',
+    duplicateKind: {
+      exact: '같은 파일',
+      likely: '같은 곡으로 추정',
+    },
+    workingTitle: 'slskd 작업 사본',
+    workingHint:
+      'Downtify가 라이브러리로 복사한 뒤 slskd 폴더에 남은 Soulseek 전송 파일입니다.',
+    workingInPlace:
+      'slskd 파일을 그 자리에 두도록 설정되어 있어 slskd 폴더도 라이브러리의 일부입니다.',
+    leftoversTitle: '남은 임시 파일',
+    leftoversHint: '한 시간 넘게 지난 미완료 다운로드와 변환 파일입니다.',
+    orphansTitle: '고아 부속 파일',
+    orphansHint: '곡이 사라진 가사 파일과 앨범 커버입니다.',
+    foldersTitle: '폴더',
+    foldersHint: 'Downtify가 기록하는 폴더의 모든 내용을 종류별로 보여줍니다.',
+    rescan: '다시 검사',
+    scanFailed: '폴더를 검사하지 못했습니다.',
+    scanning: '폴더 검사 중…',
+    scannedAt: '{when} 검사함 ({seconds}초 소요)',
+    folder: {
+      downloads: '다운로드 폴더',
+      slskd: 'slskd 폴더',
+      lyrics: '가사 폴더',
+    },
+    kind: {
+      audio: '곡',
+      podcasts: '팟캐스트',
+      lyrics: '가사',
+      images: '이미지',
+      playlists: '플레이리스트',
+      metadata: '아티스트 사진 및 프로필',
+      temporary: '임시 파일',
+      other: '기타',
+    },
   },
   album: {
     kicker: '앨범',

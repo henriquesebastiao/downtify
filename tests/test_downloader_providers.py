@@ -127,6 +127,34 @@ def test_slskd_copy_mode_uses_main_destination_and_keeps_format(
     assert source.is_file()
 
 
+@pytest.mark.parametrize('leave_in_place', [False, True])
+def test_the_hook_hears_which_slskd_transfer_a_copy_came_from(
+    tmp_path, monkeypatch, no_youtube, leave_in_place
+):
+    slskd_dir, source = _slskd_file(tmp_path)
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_slskd', lambda *a, **k: source
+    )
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['slskd'],
+        slskd_settings={
+            'enabled': True,
+            'leave_in_place': leave_in_place,
+            'source_dir': str(slskd_dir),
+        },
+    )
+    heard = []
+    d.on_downloaded = lambda song, filename: heard.append(song)
+
+    d.download(dict(_SONG))
+
+    # Copied: the transfer left in slskd's folder is no library song.
+    expected = None if leave_in_place else str(source.resolve())
+    assert heard[0].get('download_source') == expected
+    assert heard[0]['download_provider'] == 'slskd'
+
+
 def test_disabled_slskd_is_skipped(tmp_path, monkeypatch, no_youtube):
     def _boom(*args, **kwargs):
         raise AssertionError('slskd must not be searched when disabled')

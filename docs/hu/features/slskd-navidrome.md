@@ -63,6 +63,7 @@ Ha nem akad semmi elfogadható, az átvitel nem fejeződik be a **Teljes időkor
 Ha a **slskd-fájlok helyben hagyása** be van kapcsolva (alapértelmezés), a letöltött fájl a slskd mappájában marad: a Downtify ott helyben beleírja a metaadatokat, a borítót és a dalszöveget, és `slskd/…` útvonallal regisztrálja a könyvtárban. A Könyvtár, a lejátszó és az M3U-fájlok ezt az útvonalat használják, és a `/media/slskd/…` útvonalon szolgálódik ki.
 
 Kapcsold ki, hogy a fájl helyette a többi letöltésed mellé másolódjon, a fájlnév-sablonod és a [fájlszervezés](file-organization.md) beállításai szerint.
+Maga az átvitel az slskd mappában marad; a [Tárhely és használat](storage-usage.md#the-library-not-its-working-copies) ezeket a másolatokat a könyvtártól külön, *slskd munkapéldányokként* számolja, így látod, mennyi helyet foglalnak.
 
 ::: info
 A slskd-fájlok megtartják az eredeti formátumukat — nem kódolódnak át a Beállításokban választott formátumra.

@@ -32,6 +32,7 @@ Downtify, Spotify’dan yerel bir müzik kitaplığı oluşturmak ve sürdürmek
 | [Kitaplık kataloğu ve yol eşitleme](library-catalog.md) | Downtify’ın kitaplık dosyalarını ve çalma listelerini nasıl izlediği, Kitaplıkta oluşturduğunuz çalma listeleri ve dosyaları taşıdıktan sonra yolların düzeltilmesi |
 | [Mevcut müzik klasörleri](external-library.md) | Downtify’ı zaten sahip olduğunuz ses klasörlerine yöneltin; eşitleme etiketleri okur, sanatçıları eşleştirir ve kitaplıkta zaten olan şarkıları atlar |
 | [Kitaplığı iyileştir](library-upgrade.md) | Zaten indirdiğiniz müziği tarayın ve küçük kapakları, eksik sözleri ve eksik etiketleri onarın |
+| [Depolama ve kullanım](storage-usage.md) | Kitaplığın ne kadar büyük olduğunu ve ne hızla büyüdüğünü, her parçanın hangi kaynaktan geldiğini, indirmelerin nasıl sonuçlandığını ve yinelenenlerin, slskd kopyalarının ve artıkların ne kadar yer kapladığını görün |
 | [M3U dışa aktarma](m3u-export.md) | Jellyfin, Navidrome, Plex ve her medya uygulaması için otomatik üretilen çalma listesi dosyaları |
 | [Çalma listesi kapakları](playlist-cover-art.md) | Çalma listesinin kendi kapak resmini M3U dosyasının yanına kaydedin |
 | [Sanatçı fotoğrafı, afişi ve biyografisi](artist-images.md) | Bir sanatçı için YouTube Music, Deezer, Spotify veya kendi yüklemenizden gerçek bir fotoğraf ve afiş seçin; biyografisini, kökenini ve bağlantılarını Apple Music ve Deezer’dan otomatik ya da isteğe bağlı olarak alın |

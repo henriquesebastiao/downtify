@@ -413,6 +413,7 @@ export default {
     downloadZip: 'ZIP olarak indir',
     saveToDevice: 'Bu cihaza kaydet',
     upgrade: 'Kitaplığı iyileştir',
+    storage: 'Depolama ve kullanım',
   },
   likes: {
     like: 'Beğenilen şarkılara ekle',
@@ -532,6 +533,127 @@ export default {
     stageLyrics: 'Şarkı sözü aranıyor',
     stageWriting: 'Dosya yazılıyor',
     loadFailed: 'Kitaplık iyileştirmesi yüklenemedi',
+  },
+  usage: {
+    title: 'Depolama ve kullanım',
+    subtitle:
+      'Kitaplığın ne kadar büyük olduğu, ne hızla büyüdüğü ve nereden geldiği.',
+    adminOnly: 'Bunu yalnızca yöneticiler görebilir',
+    adminOnlyHint:
+      'Depolama rakamlarını bu sunucunun bir yöneticisinden isteyin.',
+    loadFailed: 'Depolama rakamları yüklenemedi.',
+    tileLibrary: 'Kitaplık',
+    tileAdded: {
+      one: 'Son gün eklenen',
+      other: '{count} günde eklenen',
+    },
+    tileGrowth: 'Net değişim',
+    tileFree: 'Boş alan',
+    tileDownloads: 'İndirilen',
+    tileCleanup: 'Boşaltılabilir',
+    songs: {
+      one: '{count} şarkı',
+      other: '{count} şarkı',
+    },
+    files: {
+      one: '{count} dosya',
+      other: '{count} dosya',
+    },
+    perWeekRate: 'Haftada {size}',
+    ofTotal: '{total} içinden',
+    daysLeft: {
+      one: '{total} içinden · bu hızla yaklaşık {count} günde dolar',
+      other: '{total} içinden · bu hızla yaklaşık {count} günde dolar',
+    },
+    downloadsShort: '{skipped} atlandı · {failed} başarısız',
+    growthTitle: 'Kitaplık boyutu',
+    growthHint: 'Her günün sonunda kitaplık, slskd çalışma kopyaları hariç.',
+    estimated: 'Dosya tarihlerinden tahmin edildi',
+    estimatedNote:
+      '{date} öncesinde boyut, hâlâ kitaplıkta olan şarkıların tarihlerinden tahmin edilir; o zamandan beri silinen şarkılar dahil değildir.',
+    allEstimatedNote:
+      'Downtify bundan sonra kitaplık boyutunu her saat not eder. Önceki günler, hâlâ kitaplıkta olan şarkıların tarihlerinden tahmin edilir.',
+    addedPerDay: 'Günlük eklenen',
+    addedPerWeek: 'Haftalık eklenen',
+    sourcesTitle: 'Kaynağa göre',
+    sourcesHint: {
+      one: 'Sesin nereden geldiği ve her kaynağın son gün ne eklediği.',
+      other:
+        'Sesin nereden geldiği ve her kaynağın son {count} günde ne eklediği.',
+    },
+    addedInPeriod: {
+      one: '+{size} · dönemde {count} şarkı',
+      other: '+{size} · dönemde {count} şarkı',
+    },
+    emptyLibrary: 'Kitaplık boş.',
+    whereTitle: 'Nerede saklandığı',
+    byLocation: 'Klasör',
+    byFormat: 'Biçim',
+    location: {
+      downloads: 'İndirilenler klasörü',
+      slskd: 'slskd klasörü',
+      folders: 'Ek müzik klasörleri',
+    },
+    unknown: 'Bilinmiyor',
+    downloadsTitle: 'İndirmeler',
+    downloadsHint: {
+      one: 'Kuyruktan ve Çalma Listesi İzleyicisinden yapılan indirmelerin son gün nasıl sonuçlandığı. Her deneme sayılır.',
+      other:
+        'Kuyruktan ve Çalma Listesi İzleyicisinden yapılan indirmelerin son {count} günde nasıl sonuçlandığı. Her deneme sayılır.',
+    },
+    outcome: {
+      completed: 'Tamamlandı',
+      skipped: 'Atlandı',
+      failed: 'Başarısız',
+    },
+    perDay: 'Günlük',
+    perWeek: 'Haftalık',
+    downloadedBySource: 'Kaynağa göre indirilen · {size}',
+    noDownloads: 'Bu dönemde hiçbir şey indirilmedi.',
+    logEmptyNote:
+      'Henüz hiçbir indirme sayılmadı: Downtify bunları bu sürümden itibaren sayar.',
+    logSinceNote: 'İndirmeler {date} tarihinden beri sayılıyor.',
+    cleanupTitle: 'Temizlenebilir',
+    cleanupHint:
+      'Downtify’ın gereksiz ya da artakalan olarak tanıyabildiği alan. Buradan hiçbir şey silinmez.',
+    duplicatesTitle: 'Yinelenen şarkılar',
+    duplicatesHint:
+      '{exact} aynı dosya olarak iki kez saklanmış, {likely} büyük olasılıkla başka bir kaynaktan gelen aynı şarkı. Boyut, yalnızca en büyük kopyayı tutmanın boşaltacağı alandır.',
+    duplicateKind: {
+      exact: 'Aynı dosya',
+      likely: 'Büyük olasılıkla aynı şarkı',
+    },
+    workingTitle: 'slskd çalışma kopyaları',
+    workingHint:
+      'Downtify kitaplığa kopyaladıktan sonra slskd klasöründe kalan Soulseek aktarımları.',
+    workingInPlace:
+      'slskd dosyaları yerinde bırakılıyor, yani slskd klasörü kitaplığın bir parçası.',
+    leftoversTitle: 'Artakalan geçici dosyalar',
+    leftoversHint: 'Bir saatten eski yarım kalmış indirmeler ve dönüştürmeler.',
+    orphansTitle: 'Sahipsiz yan dosyalar',
+    orphansHint:
+      'Şarkıları artık olmayan şarkı sözü dosyaları ve albüm kapakları.',
+    foldersTitle: 'Klasörler',
+    foldersHint: 'Downtify’ın yazdığı klasörlerdeki her şey, türüne göre.',
+    rescan: 'Yeniden tara',
+    scanFailed: 'Klasörler taranamadı.',
+    scanning: 'Klasörler taranıyor…',
+    scannedAt: '{when} tarandı, {seconds} sn sürdü',
+    folder: {
+      downloads: 'İndirilenler klasörü',
+      slskd: 'slskd klasörü',
+      lyrics: 'Şarkı sözleri klasörü',
+    },
+    kind: {
+      audio: 'Şarkılar',
+      podcasts: 'Podcast’ler',
+      lyrics: 'Şarkı sözleri',
+      images: 'Görseller',
+      playlists: 'Çalma listeleri',
+      metadata: 'Sanatçı fotoğrafları ve profilleri',
+      temporary: 'Geçici dosyalar',
+      other: 'Diğer',
+    },
   },
   album: {
     kicker: 'Albüm',

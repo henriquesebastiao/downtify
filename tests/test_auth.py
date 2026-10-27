@@ -456,6 +456,8 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/api/library/albums', CLIENT),
         ('GET', '/api/library/artists', CLIENT),
         ('POST', '/api/library/lookup', CLIENT),
+        ('GET', '/api/library/usage', ADMIN),
+        ('GET', '/api/library/usage/scan', ADMIN),
         ('GET', '/api/v1/library', CLIENT),
         ('GET', '/api/something-new', ADMIN),
     ],

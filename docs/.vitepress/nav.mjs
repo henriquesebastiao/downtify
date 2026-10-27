@@ -49,6 +49,7 @@ export const NAV = [
         page: 'features/external-library.md',
       },
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
+      { title: 'Storage & Usage', page: 'features/storage-usage.md' },
       { title: 'Replace Audio', page: 'features/replace-audio.md' },
       { title: 'M3U Export', page: 'features/m3u-export.md' },
       {

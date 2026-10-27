@@ -88,6 +88,7 @@ export default {
       'features/library-catalog.md': 'Könyvtárkatalógus',
       'features/external-library.md': 'Meglévő zenemappák',
       'features/library-upgrade.md': 'Könyvtár javítása',
+      'features/storage-usage.md': 'Tárhely és használat',
       'features/replace-audio.md': 'Hang cseréje',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U-exportálás',

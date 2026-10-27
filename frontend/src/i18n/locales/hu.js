@@ -410,6 +410,7 @@ export default {
     downloadZip: 'Letöltés ZIP-ként',
     saveToDevice: 'Mentés erre az eszközre',
     upgrade: 'Könyvtár feljavítása',
+    storage: 'Tárhely és használat',
   },
   likes: {
     like: 'Hozzáadás a Kedvelt számokhoz',
@@ -529,6 +530,127 @@ export default {
     stageLyrics: 'Dalszöveg keresése',
     stageWriting: 'Fájl írása',
     loadFailed: 'A könyvtár feljavítása nem tölthető be',
+  },
+  usage: {
+    title: 'Tárhely és használat',
+    subtitle: 'Mekkora a könyvtár, milyen gyorsan nő, és honnan származik.',
+    adminOnly: 'Ezt csak adminisztrátorok láthatják',
+    adminOnlyHint:
+      'Kérd el a tárhelyadatokat a szerver egyik adminisztrátorától.',
+    loadFailed: 'Nem sikerült betölteni a tárhelyadatokat.',
+    tileLibrary: 'Könyvtár',
+    tileAdded: {
+      one: 'Az utolsó napon hozzáadva',
+      other: '{count} nap alatt hozzáadva',
+    },
+    tileGrowth: 'Nettó változás',
+    tileFree: 'Szabad hely',
+    tileDownloads: 'Letöltve',
+    tileCleanup: 'Felszabadítható',
+    songs: {
+      one: '{count} dal',
+      other: '{count} dal',
+    },
+    files: {
+      one: '{count} fájl',
+      other: '{count} fájl',
+    },
+    perWeekRate: 'Hetente {size}',
+    ofTotal: '{total} összesből',
+    daysLeft: {
+      one: '{total} összesből · ilyen ütemben kb. {count} nap múlva megtelik',
+      other: '{total} összesből · ilyen ütemben kb. {count} nap múlva megtelik',
+    },
+    downloadsShort: '{skipped} kihagyva · {failed} sikertelen',
+    growthTitle: 'A könyvtár mérete',
+    growthHint: 'A könyvtár minden nap végén, az slskd munkapéldányai nélkül.',
+    estimated: 'A fájlok dátumából becsülve',
+    estimatedNote:
+      '{date} előtt a méret a könyvtárban még meglévő dalok dátumából becsült, így az azóta törölt dalok kimaradnak belőle.',
+    allEstimatedNote:
+      'A Downtify mostantól óránként feljegyzi a könyvtár méretét. A korábbi napok a könyvtárban még meglévő dalok dátumából becsültek.',
+    addedPerDay: 'Naponta hozzáadva',
+    addedPerWeek: 'Hetente hozzáadva',
+    sourcesTitle: 'Forrás szerint',
+    sourcesHint: {
+      one: 'Honnan származik a hang, és mit adott hozzá az egyes források az utolsó napon.',
+      other:
+        'Honnan származik a hang, és mit adott hozzá az egyes források az utolsó {count} napban.',
+    },
+    addedInPeriod: {
+      one: '+{size} · {count} dal az időszakban',
+      other: '+{size} · {count} dal az időszakban',
+    },
+    emptyLibrary: 'A könyvtár üres.',
+    whereTitle: 'Hol tárolódik',
+    byLocation: 'Mappa',
+    byFormat: 'Formátum',
+    location: {
+      downloads: 'Letöltések mappa',
+      slskd: 'slskd mappa',
+      folders: 'További zenei mappák',
+    },
+    unknown: 'Ismeretlen',
+    downloadsTitle: 'Letöltések',
+    downloadsHint: {
+      one: 'Hogyan végződtek a sorból és a Lejátszási lista figyelőből indított letöltések az utolsó napon. Minden próbálkozás számít.',
+      other:
+        'Hogyan végződtek a sorból és a Lejátszási lista figyelőből indított letöltések az utolsó {count} napban. Minden próbálkozás számít.',
+    },
+    outcome: {
+      completed: 'Kész',
+      skipped: 'Kihagyva',
+      failed: 'Sikertelen',
+    },
+    perDay: 'Naponta',
+    perWeek: 'Hetente',
+    downloadedBySource: 'Letöltve forrás szerint · {size}',
+    noDownloads: 'Ebben az időszakban semmi sem lett letöltve.',
+    logEmptyNote:
+      'Még nincs számolt letöltés: a Downtify ettől a verziótól számolja őket.',
+    logSinceNote: 'A letöltések számolása {date} óta tart.',
+    cleanupTitle: 'Takarítható',
+    cleanupHint:
+      'Tárhely, amelyről a Downtify felismeri, hogy felesleges vagy ottmaradt. Innen semmi sem törlődik.',
+    duplicatesTitle: 'Ismétlődő dalok',
+    duplicatesHint:
+      '{exact} kétszer tárolva ugyanazzal a fájllal, {likely} valószínűleg ugyanaz a dal egy másik forrásból. A méret azt mutatja, mennyi szabadulna fel, ha csak a legnagyobb példány maradna.',
+    duplicateKind: {
+      exact: 'Ugyanaz a fájl',
+      likely: 'Valószínűleg ugyanaz a dal',
+    },
+    workingTitle: 'slskd munkapéldányok',
+    workingHint:
+      'Soulseek-átvitelek, amelyek az slskd mappában maradtak, miután a Downtify a könyvtárba másolta őket.',
+    workingInPlace:
+      'Az slskd fájlok a helyükön maradnak, így az slskd mappa a könyvtár része.',
+    leftoversTitle: 'Ottmaradt ideiglenes fájlok',
+    leftoversHint: 'Egy óránál régebbi félbemaradt letöltések és átalakítások.',
+    orphansTitle: 'Árva kísérőfájlok',
+    orphansHint:
+      'Dalszövegfájlok és albumborítók, amelyek dalai már nincsenek meg.',
+    foldersTitle: 'Mappák',
+    foldersHint:
+      'Minden, ami a Downtify által írt mappákban van, típus szerint.',
+    rescan: 'Újbóli átvizsgálás',
+    scanFailed: 'Nem sikerült átvizsgálni a mappákat.',
+    scanning: 'Mappák átvizsgálása…',
+    scannedAt: 'Átvizsgálva {when}, {seconds} mp alatt',
+    folder: {
+      downloads: 'Letöltések mappa',
+      slskd: 'slskd mappa',
+      lyrics: 'Dalszövegek mappa',
+    },
+    kind: {
+      audio: 'Dalok',
+      podcasts: 'Podcastok',
+      lyrics: 'Dalszövegek',
+      images: 'Képek',
+      playlists: 'Lejátszási listák',
+      metadata: 'Előadói fotók és profilok',
+      temporary: 'Ideiglenes fájlok',
+      other: 'Egyéb',
+    },
   },
   album: {
     kicker: 'Album',

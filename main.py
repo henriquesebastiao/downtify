@@ -49,6 +49,7 @@ from downtify.deemix_upgrade import DeemixLibraryUpgrade, alias_file
 from downtify.deemix_upgrade_store import AudioReplacementStore
 from downtify.discover import DiscoverStore
 from downtify.discovery import Announcer, discovery_enabled
+from downtify.download_log import DownloadLog
 from downtify.download_queue import PendingDownloads
 from downtify.downloader import Downloader
 from downtify.external_playlists import ExternalPlaylistImports
@@ -80,6 +81,7 @@ from downtify.library_paths_cache import (
 from downtify.library_sync import LibrarySync
 from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
+from downtify.library_usage import UsageSnapshots
 from downtify.library_visibility import LibraryVisibility
 from downtify.likes import LikedTracks
 from downtify.lyrics import read_track_lyrics
@@ -384,6 +386,8 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_shares = PlaylistShares(library_db)
     api.state.playlist_hidden = PlaylistHiddenSongs(library_db)
     api.state.file_providers = FileProviders(library_db)
+    api.state.download_log = DownloadLog(library_db)
+    api.state.usage_snapshots = UsageSnapshots(library_db)
     api.state.external_playlist_imports = ExternalPlaylistImports(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.pending_downloads = PendingDownloads(library_db)
@@ -595,6 +599,9 @@ def build_app() -> FastAPI:
             update_check_loop(api.state.update_checker),
             name='update-check-loop',
         )
+        # The library's size once an hour, for the growth on the library
+        # usage page (downtify/library_usage.py).
+        api.spawn_task(api.usage_snapshot_loop(), name='usage-snapshot-loop')
         # "Found on this network" in the apps (downtify/discovery.py).
         if discovery_enabled() and api.state.identity is not None:
             announcer = Announcer(
@@ -722,8 +729,10 @@ def build_app() -> FastAPI:
     api.normalize_lyrics_location(api.state.settings)
     api.bind_lrc_resolver()
     # A finished download (from the UI or a monitor sweep alike) records
-    # which provider fetched it and seeds its artist's profile.
+    # which provider fetched it and seeds its artist's profile; every
+    # download, finished or not, is logged for the library usage page.
     api.state.downloader.on_downloaded = api.after_download
+    api.state.downloader.on_outcome = api.record_download_outcome
     api.providers.set_cover_resolution(
         api._clamp_cover_resolution(
             api.state.settings.get(

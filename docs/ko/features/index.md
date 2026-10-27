@@ -32,6 +32,7 @@ Downtify는 Spotify에서 로컬 음악 라이브러리를 만들고 유지하�
 | [라이브러리 카탈로그와 경로 동기화](library-catalog.md) | Downtify가 라이브러리 파일과 재생목록을 추적하는 방식, 라이브러리에서 만드는 재생목록, 파일을 옮긴 뒤의 경로 수정 |
 | [기존 음악 폴더](external-library.md) | 이미 가지고 있는 오디오 폴더를 Downtify에 지정. 동기화가 태그를 읽고 아티스트를 매칭하며 라이브러리에 이미 있는 곡은 건너뜀 |
 | [라이브러리 업그레이드](library-upgrade.md) | 이미 내려받은 음악을 스캔해 작은 커버, 없는 가사, 불완전한 태그를 수리 |
+| [저장 공간 및 사용량](storage-usage.md) | 라이브러리 크기와 증가 속도, 각 부분의 출처, 다운로드 결과, 그리고 중복 파일·slskd 사본·남은 파일이 차지하는 공간을 확인합니다 |
 | [M3U 내보내기](m3u-export.md) | Jellyfin, Navidrome, Plex 및 모든 미디어 앱을 위한 자동 생성 재생목록 파일 |
 | [재생목록 커버 아트](playlist-cover-art.md) | 재생목록 고유의 커버 이미지를 M3U 파일 옆에 저장 |
 | [아티스트 사진, 배너, 소개](artist-images.md) | YouTube Music, Deezer, Spotify 또는 직접 업로드한 실제 사진과 배너를 아티스트에 지정하고, Apple Music과 Deezer에서 소개, 출신지, 링크를 자동 또는 수동으로 가져오기 |

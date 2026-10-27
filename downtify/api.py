@@ -206,6 +206,17 @@ downloads are shared, and files are never stored twice.
   artwork, no lyrics or incomplete tags; writes nothing),
   ``POST /api/library/upgrade/start`` (body ``{categories}``) and
   ``POST /api/library/upgrade/{pause,resume,cancel}``
+* ``GET  /api/library/usage`` (admin; ``?days=``, 1-365, default 30:
+  ``{library, period, growth, downloads, duplicates, working, disk}`` -
+  the library's size by provider, location and format, what came in
+  during the period, its size per day or week (daily snapshots,
+  estimated from file dates before the first one), how downloads ended,
+  songs stored more than once and slskd's working copies, apart from
+  the library - see ``downtify/library_usage.py``) and ``GET
+  /api/library/usage/scan`` (``?refresh=``: what the downloads, slskd
+  and lyrics folders hold by kind, leftover temporary files and orphaned
+  sidecars - a walk of the folders, kept for a few minutes; see
+  ``downtify/storage_scan.py``)
 * ``GET  /api/playlists/batches`` and
   ``GET|DELETE /api/playlists/batches/{spotify_playlist_id}`` (Spotify
   playlist downloads and their completeness against Spotify)
@@ -343,9 +354,10 @@ import mimetypes
 import re
 import shutil
 import threading
+import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, AsyncIterator, Collection, Iterable, Optional
 from urllib.parse import quote
@@ -417,6 +429,7 @@ from .discover import (
     recommendations,
     spotify_collections,
 )
+from .download_log import OUTCOME_COMPLETED, OUTCOME_SKIPPED, DownloadLog
 from .download_queue import PendingDownload, PendingDownloads, queue_pause
 from .downloader import (
     AUDIO_PROVIDERS,
@@ -467,7 +480,11 @@ from .library_delete import (
 )
 from .library_metadata import read_audio_metadata
 from .library_metadata_cache import LibraryMetadataCache
-from .library_paths import locate_library_file, slskd_dir_from_downloader
+from .library_paths import (
+    library_stored_path,
+    locate_library_file,
+    slskd_dir_from_downloader,
+)
 from .library_paths_cache import (
     add_invalidation_listener,
     invalidate_library_paths_cache,
@@ -479,6 +496,12 @@ from .library_reconcile import (
     refresh_playlists_after_moves,
 )
 from .library_sync import LibrarySync
+from .library_usage import (
+    UsageSnapshots,
+    library_snapshot,
+    snapshot_of,
+    usage_report,
+)
 from .library_visibility import HiddenRules, LibraryVisibility
 from .likes import (
     LIKED_PLAYLIST_NAME,
@@ -564,6 +587,7 @@ from .podcasts import (
 )
 from .server_identity import ServerIdentity
 from .slskd_provider import reset_slskd_parallelism
+from .storage_scan import plan_folders, scan_folders
 from .stream import StreamCache
 from .track_index import (
     TrackIndex,
@@ -1153,6 +1177,10 @@ class AppState:
     playlist_hidden: Optional[PlaylistHiddenSongs] = None
     # Which audio provider fetched each file (downtify/file_providers.py).
     file_providers: Optional[FileProviders] = None
+    # How each download ended and the library's size day by day, for the
+    # library usage page (downtify/download_log.py, library_usage.py).
+    download_log: Optional[DownloadLog] = None
+    usage_snapshots: Optional[UsageSnapshots] = None
     external_playlist_imports: Optional[ExternalPlaylistImports] = None
     traffic: Optional[TrafficCounters] = None
     podcasts: Optional[PodcastStore] = None
@@ -3295,15 +3323,19 @@ def after_download(song: dict[str, Any], filename: str) -> None:
 
 
 def record_download_provider(song: dict[str, Any], filename: str) -> None:
-    """Store ``song['download_provider']`` for *filename* (see
-    :mod:`downtify.file_providers`) - best effort."""
+    """Store ``song['download_provider']`` for *filename*, and the slskd
+    transfer it was copied from (``song['download_source']``), see
+    :mod:`downtify.file_providers` - best effort."""
 
     provider = str(song.get('download_provider') or '').strip()
     if not provider or state.file_providers is None:
         return
     try:
         state.file_providers.record(
-            stored_content_key(filename), filename, provider
+            stored_content_key(filename),
+            filename,
+            provider,
+            str(song.get('download_source') or ''),
         )
     except Exception:
         logger.opt(exception=True).debug(
@@ -3334,6 +3366,37 @@ def enrich_artist_after_download(song: dict[str, Any], filename: str) -> None:
     except Exception:
         logger.opt(exception=True).debug(
             'Could not queue the artist profile of {}', filename
+        )
+
+
+def record_download_outcome(
+    song: dict[str, Any], outcome: str, filename: str = ''
+) -> None:
+    """``Downloader.on_outcome`` (set in ``main.py``), and the queue's own
+    "already in library" check: log how a download ended, with the new
+    file's size and provider (see :mod:`downtify.download_log`). Runs on
+    the download's own thread; never raises."""
+
+    log = state.download_log
+    if log is None:
+        return
+    completed = outcome == OUTCOME_COMPLETED
+    size = 0
+    try:
+        if completed and filename:
+            full = resolve_library_file(filename, library_context())
+            size = full.stat().st_size if full is not None else 0
+        log.record(
+            outcome,
+            provider=str(song.get('download_provider') or '')
+            if completed
+            else '',
+            size=size,
+            filename=filename,
+        )
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not log the download of {}', song.get('name')
         )
 
 
@@ -4179,6 +4242,9 @@ async def _finish_with_existing(
         'Skipping download ({}): {}',
         skip_message.lower(),
         existing,
+    )
+    await asyncio.to_thread(
+        record_download_outcome, song, OUTCOME_SKIPPED, existing
     )
     job.update(
         status='done',
@@ -9835,6 +9901,180 @@ async def manual_check_playlist(
 
     spawn_task(_run(), name='monitor-manual-check')
     return {'status': 'check_started', 'id': playlist_id}
+
+
+# ---------------------------------------------------------------------------
+# Library storage and download usage (downtify/library_usage.py,
+# downtify/storage_scan.py)
+# ---------------------------------------------------------------------------
+
+#: How long a walk of the folders is reused, in seconds.
+USAGE_SCAN_TTL = 600.0
+#: How often the library's size is noted (the day's last reading stays).
+USAGE_SNAPSHOT_INTERVAL = 3600
+#: The first reading waits for the library listing to be warm.
+USAGE_SNAPSHOT_FIRST_DELAY = 300
+
+_usage_scan_lock = threading.Lock()
+_usage_scan: dict[str, Any] = {}
+
+
+def _usage_library_inputs(ctx: LibraryContext) -> dict[str, Any]:
+    """The listing and what is known of its files, for
+    :func:`downtify.library_usage.usage_report` /
+    :func:`~downtify.library_usage.library_snapshot`."""
+
+    entries = listing_for_request(ctx)
+    keys = {norm_path(e.get('file')): entry_content_key(e) for e in entries}
+    keys.pop('', None)
+    store = state.file_providers
+    recorded = store.recorded(keys) if store is not None else {}
+    referenced = set(recorded)
+    if state.track_index is not None:
+        referenced.update(state.track_index.list_filenames())
+    return {
+        'entries': entries,
+        'providers': {path: row['provider'] for path, row in recorded.items()},
+        'recorded': {
+            path: row['recorded_at'] for path, row in recorded.items()
+        },
+        'sources': _working_sources(ctx),
+        'slskd_in_place': bool(
+            _effective_slskd_settings(state.settings)['leave_in_place']
+        ),
+        'referenced': referenced,
+    }
+
+
+def _working_sources(ctx: LibraryContext) -> dict[str, int]:
+    """``{library path: size}`` of the slskd transfers copied into the
+    library and still on disk."""
+
+    store = state.file_providers
+    found: dict[str, int] = {}
+    for raw in store.sources() if store is not None else []:
+        path = Path(raw)
+        try:
+            if not path.is_file():
+                continue
+            size = path.stat().st_size
+        except OSError:
+            continue
+        stored = library_stored_path(
+            path, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+        )
+        found[stored] = size
+    return found
+
+
+def _disk_usage(path: Path) -> Optional[dict[str, int]]:
+    try:
+        usage = shutil.disk_usage(path)
+    except OSError:
+        return None
+    return {'total': usage.total, 'used': usage.used, 'free': usage.free}
+
+
+@router.get('/api/library/usage')
+async def library_usage(days: int = DEFAULT_DAYS) -> dict[str, Any]:
+    """The library's size, growth, download outcomes, duplicates and
+    working copies (admins) - see
+    :func:`downtify.library_usage.usage_report`."""
+
+    return await asyncio.to_thread(_library_usage, clamp_days(days))
+
+
+def _library_usage(days: int) -> dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(days=days)
+    ctx = library_context()
+    snapshots = state.usage_snapshots
+    log = state.download_log
+    report = usage_report(
+        **_usage_library_inputs(ctx),
+        snapshots=snapshots.since(start.date().isoformat())
+        if snapshots is not None
+        else [],
+        downloads=log.since(start) if log is not None else [],
+        downloads_since=log.first_at() if log is not None else None,
+        disk=_disk_usage(ctx.download_dir),
+        now=now,
+        days=days,
+    )
+    if snapshots is not None:
+        try:
+            snapshots.record(snapshot_of(report), now)
+        except Exception:
+            logger.opt(exception=True).debug('Could not note the library size')
+    return report
+
+
+@router.get('/api/library/usage/scan')
+async def library_usage_scan(refresh: bool = False) -> dict[str, Any]:
+    """What Downtify's folders hold besides library songs, and what could
+    be cleaned up (admins) - see :func:`downtify.storage_scan.scan_folders`.
+    Kept for :data:`USAGE_SCAN_TTL` unless *refresh*."""
+
+    return await asyncio.to_thread(_library_usage_scan, refresh)
+
+
+def _library_usage_scan(refresh: bool) -> dict[str, Any]:
+    with _usage_scan_lock:
+        cached = _usage_scan.get('result')
+        fresh = time.monotonic() - _usage_scan.get('at', 0.0) < USAGE_SCAN_TTL
+        if cached is not None and fresh and not refresh:
+            return cached
+        ctx = library_context()
+        folders, lyrics_folder = plan_folders(
+            ctx.download_dir,
+            ctx.slskd_dir,
+            Path(
+                str(
+                    state.settings.get('lyrics_lrc_dir')
+                    or lyrics.DEFAULT_LYRICS_LRC_DIR
+                )
+            ),
+        )
+        stems = {
+            Path(stored).with_suffix('').as_posix()
+            for stored in list_library_paths(ctx)
+        }
+        result = {
+            **scan_folders(folders, lyrics=lyrics_folder, library_stems=stems),
+            'scanned_at': datetime.now(timezone.utc).isoformat(),
+        }
+        _usage_scan.update(result=result, at=time.monotonic())
+        return result
+
+
+def take_usage_snapshot() -> None:
+    """Note the library's size for today, and drop download log rows
+    older than :data:`downtify.download_log.RETENTION_DAYS`."""
+
+    if state.usage_snapshots is not None:
+        inputs = _usage_library_inputs(library_context())
+        inputs.pop('recorded')
+        state.usage_snapshots.record(
+            library_snapshot(**inputs), datetime.now(timezone.utc)
+        )
+    if state.download_log is not None:
+        state.download_log.prune()
+
+
+async def usage_snapshot_loop(
+    interval_seconds: float = USAGE_SNAPSHOT_INTERVAL,
+    first_delay: float = USAGE_SNAPSHOT_FIRST_DELAY,
+) -> None:
+    """Background task: every hour, note the library's size, so the
+    usage page has a day-by-day growth even when nobody opens it."""
+
+    await asyncio.sleep(first_delay)
+    while True:
+        try:
+            await asyncio.to_thread(take_usage_snapshot)
+        except Exception:
+            logger.exception('Could not note the library size')
+        await asyncio.sleep(interval_seconds)
 
 
 # ---------------------------------------------------------------------------

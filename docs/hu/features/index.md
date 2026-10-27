@@ -32,6 +32,7 @@ A Downtify mindent lefed, amire szükséged van egy helyi zenekönyvtár felép�
 | [Könyvtárkatalógus és útvonal-szinkronizálás](library-catalog.md) | Hogyan követi a Downtify a könyvtár fájljait és lejátszási listáit, a Könyvtárban létrehozott lejátszási listák, és az útvonalak javítása fájlok áthelyezése után |
 | [Meglévő zenemappák](external-library.md) | Irányítsd a Downtifyt a már meglévő hangfájlmappákra; a szinkronizálás beolvassa a címkéket, párosítja az előadókat, és kihagyja a könyvtárban már meglévő dalokat |
 | [Könyvtár javítása](library-upgrade.md) | Szkenneld a már letöltött zenét, és javítsd a kis borítókat, a hiányzó dalszövegeket és a hiányos címkéket |
+| [Tárhely és használat](storage-usage.md) | Nézd meg, mekkora a könyvtár és milyen gyorsan nő, melyik része melyik forrásból jött, hogyan végződtek a letöltések, és mennyi helyet foglalnak az ismétlődések, az slskd-másolatok és a maradékok |
 | [M3U-exportálás](m3u-export.md) | Automatikusan előállított lejátszásilista-fájlok a Jellyfinhez, Navidrome-hoz, Plexhez és bármely médiaalkalmazáshoz |
 | [Lejátszási lista borítók](playlist-cover-art.md) | Mentsd el a lejátszási lista saját borítóképét az M3U fájl mellé |
 | [Előadó fotója, bannere és bemutatkozása](artist-images.md) | Válassz valódi fotót és bannert egy előadóhoz a YouTube Musicból, Deezerről, Spotifyról vagy saját feltöltésből, és kérd le a bemutatkozását, származását és hivatkozásait az Apple Musicról és a Deezerről, automatikusan vagy kérésre |
