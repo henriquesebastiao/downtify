@@ -2361,7 +2361,7 @@ Who this server is, signing in, and pairing apps — see [Users & Sign-in](featu
 
 | Scope | Credentials | Covers |
 |-------|-------------|--------|
-| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair` |
+| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair`, `POST /api/auth/token` |
 | Client | a device token (`Authorization: Bearer dtfy_…`), a signed URL (reads only), a WebSocket ticket, or any web session | Library and media reads (`/tracks`, `/list`, `/playlists`, `/lyrics`, `/cover`, `/playlist-cover`, `/downloads/…`, `/media/…`), `/api/v1/…`, search and link resolving, previews, `POST /api/download/url\|batch\|album`, likes, Discover and listens, podcast reads, episode downloads and playback, the queue and monitor lists (read), `GET /api/me`, `POST /api/activity/playback`, `POST /api/auth/ws-ticket`, `WS /api/ws` |
 | User | a web session of any user (the `downtify_session` cookie) | Client, plus your own account (`/api/me…`), your paired devices and pairing (`/api/auth/devices…`, `/api/auth/pairing…`) |
 | Admin | a web session of an **admin** | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, hiding songs from users, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, renaming the server, users, the activity log, signing everyone out |
@@ -2384,6 +2384,7 @@ Public. What an app checks before it has credentials.
     "transcoding": { "available": true, "formats": ["aac", "mp3", "opus"], "bitrates": [96, 128, 160, 192, 256, 320] },
     "signed_urls": true,
     "pairing": true,
+    "password_sign_in": true,
     "podcasts": true,
     "discover": true,
     "lyrics": true,
@@ -2392,7 +2393,7 @@ Public. What an app checks before it has credentials.
 }
 ```
 
-`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `transcoding.available` is `false` (and the lists empty) without ffmpeg.
+`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `password_sign_in` says an app may sign in with a username and password ([`POST /api/auth/token`](#post-apiauthtoken)); it is `false` while accounts are turned off, and missing on servers older than this endpoint — pair with a code then. `transcoding.available` is `false` (and the lists empty) without ffmpeg.
 
 ---
 
@@ -2544,6 +2545,16 @@ Public, rate-limited per address (10 failures per 5 minutes). An app trades a pa
 ```
 
 The device belongs to the user who showed the code. A code works once and for five minutes; `401` otherwise. The token is shown only here — the server keeps a hash.
+
+---
+
+### `POST /api/auth/token`
+
+Public, rate-limited per address together with [`POST /api/auth/login`](#post-apiauthlogin) (10 failures per 5 minutes across both, then `429` with `Retry-After`). An app signs in with a username and password and gets its device token, without the web page.
+
+**Request body:** `{ "username": "maria", "password": "…", "device_name": "Pixel 8", "platform": "android" }` — the username in any case.
+
+**Response:** the same as [`POST /api/auth/pair`](#post-apiauthpair): `{ "token", "device", "server", "user" }`. The device belongs to that user and is listed with their paired apps; no session cookie is set. `401` `{"detail": "Wrong username or password"}` otherwise — the same for an unknown user. `409` while accounts are turned off (`DOWNTIFY_DISABLE_AUTH`): pair with a code instead. The activity log records a `login` (or `login_failed`) and a `device_paired`, both from the app's name.
 
 ---
 

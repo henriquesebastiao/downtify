@@ -15,9 +15,12 @@ account in Settings > Apps.
   ``POST /api/auth/pair`` within five minutes gets a long-lived device
   token, ``dtfy_<device id>_<secret>``, sent as ``Authorization: Bearer``,
   tied to the user who paired it. Only a hash of the secret is stored; a
-  device can be revoked at any time. Devices get the *client* scope: they
-  can read and play the library and ask for downloads, but settings,
-  credentials, deleting files and managing devices need a browser.
+  device can be revoked at any time. An app may instead sign in with the
+  user's username and password at ``POST /api/auth/token`` and get the
+  same kind of token without the web page. Devices get the *client*
+  scope: they can read and play the library and ask for downloads, but
+  settings, credentials, deleting files and managing devices need a
+  browser.
 
 Players that can't send headers (a Chromecast receiver fetching a stream
 itself) use **signed URLs**: ``exp``, ``kid`` (the device) and ``sig``
@@ -950,6 +953,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('POST'), r'^/api/auth/login$', PUBLIC),
         (_m('POST'), r'^/api/auth/logout$', PUBLIC),
         (_m('POST'), r'^/api/auth/pair$', PUBLIC),
+        (_m('POST'), r'^/api/auth/token$', PUBLIC),
         # Any signed-in user: their own account, devices and pairing
         # (the routes check whose), and a WebSocket ticket.
         (_m('POST'), r'^/api/auth/ws-ticket$', CLIENT),

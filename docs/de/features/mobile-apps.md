@@ -12,7 +12,15 @@ Downtify kann Apps auf deinem Handy bedienen: Sie durchsuchen die Bibliothek und
 Die App wird offen unter [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android) entwickelt. Alles andere lässt sich gegen dieselbe API bauen — siehe den [Vertrag für mobile Clients](../mobile-client-contract.md).
 :::
 
+## In der App anmelden
+
+Gib die Adresse des Servers ein (oder wähle ihn unter **In diesem Netzwerk gefunden**) und melde dich mit **demselben Benutzernamen und Passwort** wie auf der Webseite an. Das Handy erscheint unter **Verbundene Apps**, genau als hättest du es unten mit einem Code gekoppelt: Es spielt als du, behält einen eigenen Schlüssel (das Passwort wird nicht auf dem Handy gespeichert), und **Verbindung trennen** stoppt es.
+
+Falsche Passwörter sind zusammen mit der Anmeldung auf der Webseite ratenbegrenzt. Solange Konten ausgeschaltet sind (`DOWNTIFY_DISABLE_AUTH`), gibt es nichts, womit man sich anmelden könnte: Kopple dann mit einem Code.
+
 ## Ein Handy koppeln
+
+Koppeln braucht kein Passwort auf dem Handy: praktisch, wenn die Webseite schon offen ist, oder auf einem Handy, auf dem du dein Passwort lieber nicht eintippst.
 
 1. Öffne **Einstellungen → Apps** und drücke **Telefon koppeln**.
 2. Wähle in der App **Code scannen** und richte die Kamera auf den QR-Code — oder tippe den darunter angezeigten 8-stelligen Code ein (`K7QM-2XPD`; Groß-/Kleinschreibung und Bindestriche spielen keine Rolle).

@@ -12,7 +12,15 @@ Downtify puede dar servicio a apps en tu teléfono: navegan por la biblioteca y 
 La app se desarrolla en abierto en [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Cualquier otra cosa puede construirse sobre la misma API — consulta el [contrato del cliente móvil](../mobile-client-contract.md).
 :::
 
+## Iniciar sesión desde la app
+
+Escribe la dirección del servidor (o elígelo en **Encontrados en esta red**) e inicia sesión con **el mismo usuario y contraseña** que en la página web. El teléfono aparece en **Apps vinculadas**, igual que si lo hubieras vinculado con un código más abajo: reproduce como tú, guarda una clave propia (la contraseña no se guarda en el teléfono) y **Desvincular** lo detiene.
+
+Las contraseñas erróneas tienen límite de intentos junto con el inicio de sesión de la página web. Mientras las cuentas están desactivadas (`DOWNTIFY_DISABLE_AUTH`) no hay con qué iniciar sesión: vincúlalo con un código.
+
 ## Vincular un teléfono
+
+Vincular no necesita contraseña en el teléfono: útil cuando la página web ya está abierta, o en un teléfono en el que prefieres no escribir tu contraseña.
 
 1. Abre **Ajustes → Apps** y pulsa **Vincular un teléfono**.
 2. En la app, elige **Escanear el código** y apunta la cámara al código QR — o escribe el código de 8 caracteres que aparece debajo (`K7QM-2XPD`; da igual mayúsculas o guiones).

@@ -12,7 +12,15 @@ O Downtify pode atender apps no seu celular: eles navegam pela biblioteca e a to
 O app é construído de forma aberta em [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Qualquer outro app pode ser feito sobre a mesma API — veja o [contrato do cliente móvel](../mobile-client-contract.md).
 :::
 
+## Entrando pelo app
+
+Digite o endereço do servidor (ou escolha-o em **Encontrados nesta rede**) e entre com **o mesmo usuário e senha** da página web. O celular aparece em **Apps pareados**, exatamente como se você o tivesse pareado com um código abaixo: ele toca como você, guarda uma chave própria (a senha não fica guardada no celular) e **Desparear** o bloqueia.
+
+Senhas erradas têm limite de tentativas junto com o login da página web. Enquanto as contas estão desligadas (`DOWNTIFY_DISABLE_AUTH`), não há com o que entrar: pareie com um código.
+
 ## Pareando um celular
+
+Parear não pede senha no celular: prático quando a página web já está aberta, ou num celular em que você prefere não digitar sua senha.
 
 1. Abra **Configurações → Apps** e pressione **Parear um celular**.
 2. No app, escolha **Escanear o código** e aponte a câmera para o QR code — ou digite o código de 8 caracteres exibido abaixo dele (`K7QM-2XPD`; maiúsculas e hifens não importam).

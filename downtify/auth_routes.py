@@ -20,6 +20,7 @@ from .auth import (
     SESSION_TTL,
     AuthStore,
     Principal,
+    clean_device_name,
     client_ip,
     identify,
     open_principal,
@@ -494,6 +495,80 @@ async def pair(request: Request) -> dict[str, Any]:
         raise HTTPException(
             status_code=401, detail='Wrong or expired pairing code'
         )
+    return await _new_device(payload, user, ip, pairing_id)
+
+
+@router.post('/api/auth/token')
+async def sign_in_device(request: Request) -> dict[str, Any]:
+    """An app signs in with a username and password and gets its device
+    token: ``{username, password, device_name, platform}`` -> ``{token,
+    device, server, user}``, the same answer as ``POST /api/auth/pair``.
+    The device belongs to that user.
+
+    Public and rate-limited per address together with ``POST
+    /api/auth/login``, so switching between the two doesn't buy more
+    tries. ``409`` while sign-in is turned off: pair with a code then.
+    """
+
+    store = _store()
+    if store.auth_disabled:
+        raise HTTPException(
+            status_code=409,
+            detail='Sign-in is turned off (DOWNTIFY_DISABLE_AUTH)',
+        )
+    ip = _ip(request)
+    wait = api.state.login_limiter.retry_after(ip)
+    if wait:
+        raise _too_many(wait)
+    payload = await _json(request)
+    username = str(payload.get('username') or '').strip()[:64]
+    password = str(payload.get('password') or '')
+    user = await asyncio.to_thread(
+        store.users.authenticate, username, password
+    )
+    log = api.state.activity
+    client = clean_device_name(payload.get('device_name'))
+    if user is None:
+        api.state.login_limiter.fail(ip)
+        logger.warning('App sign-in: wrong username or password from {}', ip)
+        if log is not None:
+            await asyncio.to_thread(
+                log.record,
+                'login_failed',
+                username=username,
+                summary=username,
+                client=client,
+                ip=ip,
+            )
+        raise HTTPException(
+            status_code=401, detail='Wrong username or password'
+        )
+    api.state.login_limiter.reset(ip)
+    await asyncio.to_thread(store.users.record_login, user['id'], ip)
+    if log is not None:
+        await asyncio.to_thread(
+            log.record,
+            'login',
+            user_id=user['id'],
+            username=user['username'],
+            client=client,
+            ip=ip,
+        )
+    return await _new_device(payload, user, ip, None)
+
+
+async def _new_device(
+    payload: dict[str, Any],
+    user: dict[str, Any],
+    ip: str,
+    pairing_id: Optional[str],
+) -> dict[str, Any]:
+    """Make the device an app asked for (``device_name``, ``platform`` in
+    *payload*) for *user*, tell their pages and the activity log, and
+    answer with its token - shown here once and never stored.
+    *pairing_id* is the pairing it completes, ``None`` for a sign-in."""
+
+    store = _store()
     device, token = await asyncio.to_thread(
         store.create_device,
         str(payload.get('device_name') or ''),
@@ -501,7 +576,8 @@ async def pair(request: Request) -> dict[str, Any]:
         ip,
         user['id'],
     )
-    api.state.pairing.complete(pairing_id, device)
+    if pairing_id is not None:
+        api.state.pairing.complete(pairing_id, device)
     await api.state.connections.send_user(
         user['id'],
         {'type': 'device_paired', 'pairing_id': pairing_id, 'device': device},

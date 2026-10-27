@@ -12,7 +12,15 @@ Downtify peut servir des applications sur votre téléphone : elles parcourent l
 L’application est développée en ouvert sur [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Tout autre client peut être construit sur la même API — voir le [contrat du client mobile](../mobile-client-contract.md).
 :::
 
+## Se connecter depuis l’application
+
+Saisissez l’adresse du serveur (ou choisissez-le sous **Trouvés sur ce réseau**), puis connectez-vous avec **les mêmes nom d’utilisateur et mot de passe** que sur la page web. Le téléphone apparaît sous **Applications associées**, exactement comme si vous l’aviez associé avec un code ci-dessous : il lit en tant que vous, garde une clé qui lui est propre (le mot de passe n’est pas stocké sur le téléphone) et **Dissocier** l’arrête.
+
+Les mauvais mots de passe sont limités en même temps que la connexion de la page web. Tant que les comptes sont désactivés (`DOWNTIFY_DISABLE_AUTH`), il n’y a rien avec quoi se connecter : associez-le avec un code.
+
 ## Associer un téléphone
+
+L’association ne demande aucun mot de passe sur le téléphone : pratique quand la page web est déjà ouverte, ou sur un téléphone où vous préférez ne pas saisir votre mot de passe.
 
 1. Ouvrez **Paramètres → Applications** et appuyez sur **Associer un téléphone**.
 2. Dans l’application, choisissez **Scanner le code** et pointez la caméra vers le QR code — ou saisissez le code de 8 caractères affiché dessous (`K7QM-2XPD` ; casse et tirets sans importance).
