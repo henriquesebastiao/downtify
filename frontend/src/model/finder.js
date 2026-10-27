@@ -1,7 +1,8 @@
 // The Finder page: a Deezer-only search, then an artist -> albums -> tracks
 // column view, with what each fetch returned kept around so going back to
 // an artist or album is instant.
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
+import { libraryOnly, musicPolicyRevision } from '/src/model/musicPolicy'
 import { useLocalStorage } from '@vueuse/core'
 
 import API from '/src/model/api'
@@ -102,7 +103,10 @@ function cached(key, fetch) {
       promises.delete(oldest)
       values.delete(oldest)
     }
+    const revision = musicPolicyRevision.value
     const promise = fetch().then((res) => {
+      if (revision !== musicPolicyRevision.value)
+        throw new Error('Music policy changed')
       values.set(key, res.data)
       return res.data
     })
@@ -175,6 +179,19 @@ export function useRecentSearches() {
     clear: () => (recent.value = []),
   }
 }
+
+watch(libraryOnly, () => {
+  serial += 1
+  query.value = ''
+  searchedArtist.value = null
+  clearResults()
+  loading.value = false
+  error.value = ''
+  promises.clear()
+  values.clear()
+  pendingCounts.clear()
+  for (const key of Object.keys(trackCounts)) delete trackCounts[key]
+})
 
 export function useFinder() {
   return {

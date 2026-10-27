@@ -80,6 +80,7 @@ export default {
       'features/discover.md': 'Keşfet',
       'features/users.md': 'Kullanıcılar ve oturum açma',
       'features/mobile-apps.md': 'Mobil uygulamalar',
+      'features/library-only.md': 'Library-only mode',
       'features/server.md': 'Sunucu ayarları',
       'features/slskd-navidrome.md': 'slskd ve Navidrome',
       'features/deemix.md': 'Deemix',

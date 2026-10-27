@@ -1,5 +1,16 @@
 export default {
   playlistNames: { restore: 'Rétablir le nom source' },
+  libraryOnly: {
+    title: 'Mode bibliothèque seule',
+    active: 'Seule la musique de la bibliothèque du serveur est disponible.',
+    enable: 'Utiliser uniquement la bibliothèque',
+    hint: 'La recherche et les morceaux similaires utilisent votre bibliothèque. Musique externe, aperçus, téléchargements et suivis automatiques sont désactivés.',
+    serverHint:
+      'S’applique à tous les comptes, navigateurs et clients Android. Attendez la fin des opérations externes avant de l’activer. Le téléphone doit encore joindre le serveur, sauf pour ses morceaux téléchargés.',
+    empty: 'Aucun morceau correspondant dans la bibliothèque accessible.',
+    similar:
+      'Morceaux similaires selon les tags de votre bibliothèque. Aucun fournisseur externe n’est contacté.',
+  },
   playlistFavorites: {
     title: 'Playlists favorites',
     add: 'Mettre la playlist en favoris',

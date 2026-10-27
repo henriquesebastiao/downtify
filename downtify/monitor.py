@@ -24,6 +24,7 @@ from .downloader import (
 from .external_library import extra_dirs_from_settings
 from .library_cache_keys import file_content_key
 from .library_metadata_cache import LibraryMetadataCache
+from .library_only import enabled, policy
 from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .library_paths_cache import invalidate_library_paths_cache
 from .navidrome import (
@@ -1727,6 +1728,32 @@ async def check_podcast_watch(
 
 
 async def check_watch(
+    playlist: MonitoredPlaylist,
+    db: PlaylistMonitorDB,
+    downloader: Downloader,
+    broadcast: Callable[[dict[str, Any]], Any],
+    loop: asyncio.AbstractEventLoop,
+    settings: Optional[dict[str, Any]] = None,
+    library: Optional[LibraryStores] = None,
+    podcasts: Optional[PodcastStore] = None,
+) -> int:
+    saved = settings if settings is not None else {}
+    if enabled(saved):
+        return 0
+    with policy.external(saved):
+        return await _check_watch_online(
+            playlist,
+            db,
+            downloader,
+            broadcast,
+            loop,
+            settings,
+            library,
+            podcasts,
+        )
+
+
+async def _check_watch_online(
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
     downloader: Downloader,

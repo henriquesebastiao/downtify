@@ -81,6 +81,7 @@ export default {
       'features/discover.md': 'Ανακάλυψη',
       'features/users.md': 'Χρήστες και σύνδεση',
       'features/mobile-apps.md': 'Εφαρμογές κινητού',
+      'features/library-only.md': 'Library-only mode',
       'features/server.md': 'Ρυθμίσεις διακομιστή',
       'features/slskd-navidrome.md': 'slskd και Navidrome',
       'features/deemix.md': 'Deemix',

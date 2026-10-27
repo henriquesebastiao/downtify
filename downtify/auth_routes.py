@@ -145,12 +145,14 @@ def get_server_info() -> dict[str, Any]:
     if identity is None:
         raise HTTPException(status_code=503, detail='Starting up')
     transcoder = getattr(api.state, 'transcoder', None)
-    return server_info(
+    result = server_info(
         identity,
         version=api.state.version,
         require_sign_in=not (api.state.auth and api.state.auth.auth_disabled),
         transcoding=transcoder.capability() if transcoder else None,
     )
+    result['library_only'] = api.state.settings.get('library_only') is True
+    return result
 
 
 @router.patch('/api/server')

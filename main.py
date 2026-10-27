@@ -550,6 +550,7 @@ def build_app() -> FastAPI:
             playlist_spotify_cache_loop(
                 api.state.playlist_spotify_cache,
                 api.known_spotify_playlist_ids,
+                settings=api.state.settings,
             ),
             name='playlist-spotify-cache',
         )
@@ -610,7 +611,7 @@ def build_app() -> FastAPI:
             logger.exception('Liked songs playlist: could not sync')
         # A library upgrade can run for hours, so a restart in the
         # middle of one picks the queue back up where it stopped.
-        if api.state.upgrade_runner is not None:
+        if api.state.upgrade_runner is not None and not api.state.settings.get('library_only'):
             try:
                 api.state.upgrade_runner.resume_after_restart()
             except Exception:

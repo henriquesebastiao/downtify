@@ -80,6 +80,7 @@ export default {
       'features/discover.md': 'Découvrir',
       'features/users.md': 'Utilisateurs et connexion',
       'features/mobile-apps.md': 'Applications mobiles',
+      'features/library-only.md': 'Mode bibliothèque seule',
       'features/server.md': 'Réglages du serveur',
       'features/slskd-navidrome.md': 'slskd et Navidrome',
       'features/deemix.md': 'Deemix',
