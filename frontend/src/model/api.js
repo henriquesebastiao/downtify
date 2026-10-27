@@ -786,6 +786,18 @@ function cancelLibraryUpgrade() {
   return API.post('/api/library/upgrade/cancel')
 }
 
+// ── Library storage and usage (admins) ───────────────────────────────
+// Size, growth, downloads, duplicates and working copies over `days`.
+function getLibraryUsage(days = 30) {
+  return API.get('/api/library/usage', { params: { days } })
+}
+
+// What the folders hold besides songs: leftovers and orphaned sidecars.
+// Kept by the server for a few minutes unless `refresh`.
+function scanLibraryUsage(refresh = false) {
+  return API.get('/api/library/usage/scan', { params: { refresh } })
+}
+
 function writePlaylistM3u(payload) {
   return API.post('/api/playlist/m3u', payload)
 }
@@ -1007,6 +1019,8 @@ export default {
   pauseLibraryUpgrade,
   resumeLibraryUpgrade,
   cancelLibraryUpgrade,
+  getLibraryUsage,
+  scanLibraryUsage,
   writePlaylistM3u,
   getQueue,
   removeQueueItem,

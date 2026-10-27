@@ -424,6 +424,7 @@ export default {
     downloadZip: 'Télécharger en ZIP',
     saveToDevice: 'Enregistrer sur cet appareil',
     upgrade: 'Améliorer la bibliothèque',
+    storage: 'Stockage et utilisation',
   },
   likes: {
     like: 'Ajouter aux Titres likés',
@@ -544,6 +545,129 @@ export default {
     stageLyrics: 'Recherche des paroles',
     stageWriting: 'Écriture du fichier',
     loadFailed: 'Impossible de charger l’amélioration de la bibliothèque',
+  },
+  usage: {
+    title: 'Stockage et utilisation',
+    subtitle: "La taille de la bibliothèque, sa croissance et d'où elle vient.",
+    adminOnly: 'Réservé aux administrateurs',
+    adminOnlyHint:
+      'Demandez les chiffres de stockage à un administrateur de ce serveur.',
+    loadFailed: 'Impossible de charger les chiffres de stockage.',
+    tileLibrary: 'Bibliothèque',
+    tileAdded: {
+      one: 'Ajouté le dernier jour',
+      other: 'Ajouté en {count} jours',
+    },
+    tileGrowth: 'Variation',
+    tileFree: 'Espace libre',
+    tileDownloads: 'Téléchargés',
+    tileCleanup: 'Pourrait être libéré',
+    songs: {
+      one: '{count} titre',
+      other: '{count} titres',
+    },
+    files: {
+      one: '{count} fichier',
+      other: '{count} fichiers',
+    },
+    perWeekRate: '{size} par semaine',
+    ofTotal: 'sur {total}',
+    daysLeft: {
+      one: 'sur {total} · plein dans environ {count} jour à ce rythme',
+      other: 'sur {total} · plein dans environ {count} jours à ce rythme',
+    },
+    downloadsShort: '{skipped} ignorés · {failed} en échec',
+    growthTitle: 'Taille de la bibliothèque',
+    growthHint:
+      'La bibliothèque à la fin de chaque jour, sans les copies de travail de slskd.',
+    estimated: 'Estimé à partir des dates des fichiers',
+    estimatedNote:
+      'Avant le {date}, la taille est estimée à partir des dates des titres encore dans la bibliothèque : les titres supprimés depuis n’y figurent pas.',
+    allEstimatedNote:
+      'Downtify note désormais la taille de la bibliothèque toutes les heures. Les jours précédents sont estimés à partir des dates des titres encore dans la bibliothèque.',
+    addedPerDay: 'Ajouté par jour',
+    addedPerWeek: 'Ajouté par semaine',
+    sourcesTitle: 'Par source',
+    sourcesHint: {
+      one: "D'où vient l'audio, et ce que chaque source a ajouté le dernier jour.",
+      other:
+        "D'où vient l'audio, et ce que chaque source a ajouté ces {count} derniers jours.",
+    },
+    addedInPeriod: {
+      one: '+{size} · {count} titre sur la période',
+      other: '+{size} · {count} titres sur la période',
+    },
+    emptyLibrary: 'La bibliothèque est vide.',
+    whereTitle: 'Où elle est stockée',
+    byLocation: 'Dossier',
+    byFormat: 'Format',
+    location: {
+      downloads: 'Dossier de téléchargements',
+      slskd: 'Dossier slskd',
+      folders: 'Dossiers de musique supplémentaires',
+    },
+    unknown: 'Inconnu',
+    downloadsTitle: 'Téléchargements',
+    downloadsHint: {
+      one: 'Comment se sont terminés les téléchargements de la file et du Moniteur de playlists le dernier jour. Chaque tentative compte.',
+      other:
+        'Comment se sont terminés les téléchargements de la file et du Moniteur de playlists ces {count} derniers jours. Chaque tentative compte.',
+    },
+    outcome: {
+      completed: 'Terminés',
+      skipped: 'Ignorés',
+      failed: 'En échec',
+    },
+    perDay: 'Par jour',
+    perWeek: 'Par semaine',
+    downloadedBySource: 'Téléchargé par source · {size}',
+    noDownloads: "Rien n'a été téléchargé sur cette période.",
+    logEmptyNote:
+      "Aucun téléchargement n'a encore été compté : Downtify les compte à partir de cette version.",
+    logSinceNote: 'Les téléchargements sont comptés depuis le {date}.',
+    cleanupTitle: 'Pourrait être nettoyé',
+    cleanupHint:
+      "L'espace que Downtify sait redondant ou laissé de côté. Rien n'est supprimé d'ici.",
+    duplicatesTitle: 'Titres en double',
+    duplicatesHint:
+      "{exact} stockés deux fois dans le même fichier, {likely} probablement le même titre venu d'une autre source. La taille est ce que garder seulement la plus grande copie libérerait.",
+    duplicateKind: {
+      exact: 'Même fichier',
+      likely: 'Probablement le même titre',
+    },
+    workingTitle: 'Copies de travail slskd',
+    workingHint:
+      'Transferts Soulseek restés dans le dossier slskd après que Downtify les a copiés dans la bibliothèque.',
+    workingInPlace:
+      'Les fichiers slskd sont laissés sur place : le dossier slskd fait donc partie de la bibliothèque.',
+    leftoversTitle: 'Fichiers temporaires restants',
+    leftoversHint:
+      "Téléchargements et conversions inachevés de plus d'une heure.",
+    orphansTitle: 'Fichiers annexes orphelins',
+    orphansHint:
+      "Fichiers de paroles et pochettes d'album dont les titres ont disparu.",
+    foldersTitle: 'Dossiers',
+    foldersHint:
+      'Tout ce que contiennent les dossiers où Downtify écrit, par type.',
+    rescan: 'Analyser à nouveau',
+    scanFailed: "Impossible d'analyser les dossiers.",
+    scanning: 'Analyse des dossiers…',
+    scannedAt: 'Analysé {when} en {seconds} s',
+    folder: {
+      downloads: 'Dossier de téléchargements',
+      slskd: 'Dossier slskd',
+      lyrics: 'Dossier des paroles',
+    },
+    kind: {
+      audio: 'Titres',
+      podcasts: 'Podcasts',
+      lyrics: 'Paroles',
+      images: 'Images',
+      playlists: 'Playlists',
+      metadata: "Photos et profils d'artistes",
+      temporary: 'Fichiers temporaires',
+      other: 'Autres',
+    },
   },
   album: {
     kicker: 'Album',

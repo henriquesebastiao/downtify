@@ -88,6 +88,7 @@ export default {
       'features/library-catalog.md': 'Kitaplık kataloğu',
       'features/external-library.md': 'Mevcut müzik klasörleri',
       'features/library-upgrade.md': 'Kitaplığı iyileştir',
+      'features/storage-usage.md': 'Depolama ve kullanım',
       'features/replace-audio.md': 'Sesi değiştir',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U dışa aktarma',

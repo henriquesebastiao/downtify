@@ -1516,6 +1516,130 @@ It runs as a queue job, with the usual [WebSocket](#websocket) progress messages
 
 ---
 
+### `GET /api/library/usage`
+
+Admin. The library's size, growth and download outcomes over the last `days` (query, 1–365, default `30`), what could be cleaned up, and the disk's free space — the [Storage & Usage](features/storage-usage.md) page. Opening it also notes today's size (as the hourly reading does).
+
+**Response:**
+
+```json
+{
+  "days": 30,
+  "generated_at": "2026-10-27T12:00:00+00:00",
+  "library": {
+    "files": 5120,
+    "bytes": 41234567890,
+    "by_provider": [{ "id": "slskd", "files": 900, "bytes": 21000000000 }],
+    "by_location": [{ "id": "downloads", "files": 4200, "bytes": 30000000000 }],
+    "by_format": [{ "id": "flac", "files": 900, "bytes": 21000000000 }]
+  },
+  "period": {
+    "files": 320,
+    "bytes": 2600000000,
+    "by_provider": [{ "id": "youtube-music", "files": 250, "bytes": 1500000000 }],
+    "bucket_days": 7,
+    "series": [{ "files": 60, "bytes": 480000000 }]
+  },
+  "growth": {
+    "step_days": 1,
+    "points": [{ "day": "2026-09-27", "files": 4800, "bytes": 38600000000, "estimated": true }],
+    "change": { "files": 320, "bytes": 2600000000 },
+    "per_day_bytes": 86666667,
+    "since": "2026-10-20"
+  },
+  "downloads": {
+    "completed": 300,
+    "skipped": 40,
+    "failed": 12,
+    "bytes": 2500000000,
+    "by_provider": [{ "id": "youtube-music", "files": 240, "bytes": 1400000000 }],
+    "bucket_days": 7,
+    "series": [{ "completed": 60, "skipped": 8, "failed": 2 }],
+    "since": "2026-10-01T09:12:00+00:00"
+  },
+  "duplicates": {
+    "groups": 14,
+    "files": 15,
+    "bytes": 160000000,
+    "exact": { "groups": 9, "files": 9, "bytes": 70000000 },
+    "likely": { "groups": 5, "files": 6, "bytes": 90000000 },
+    "examples": [
+      {
+        "kind": "likely",
+        "title": "Roads",
+        "artist": "Portishead",
+        "bytes": 9000000,
+        "files": [
+          { "file": "slskd/user/Dummy/05 Roads.flac", "bytes": 34000000, "provider": "slskd", "codec": "flac", "bitrate": 900000 },
+          { "file": "Portishead - Roads.mp3", "bytes": 9000000, "provider": "youtube-music", "codec": "mp3", "bitrate": 320000 }
+        ]
+      }
+    ]
+  },
+  "working": {
+    "files": 120,
+    "bytes": 3900000000,
+    "slskd_in_place": false,
+    "examples": [{ "file": "slskd/user/Dummy/05 Roads.flac", "bytes": 34000000 }]
+  },
+  "disk": { "total": 2000000000000, "used": 1500000000000, "free": 500000000000, "days_left": 5769 }
+}
+```
+
+- `library` leaves out the slskd **working copies** (`working`): transfers copied into the library while slskd files aren't left in place, and — in that mode — any other `slskd/…` file Downtify doesn't know as a library song.
+- `by_provider` ids are `youtube-music`, `youtube`, `slskd`, `deemix`, `folder` (an extra music folder) or `unknown`; `by_location` ids are `downloads`, `slskd` and `folders`.
+- `period` counts the songs still in the library that came in during the period (download time when recorded, else the file's modification time), per bucket of `bucket_days`, oldest first.
+- `growth.points` run from `days` ago to today (one a day up to 90 days, one a week beyond); a day before the first daily snapshot is `estimated` from the same file dates. `since` is the oldest snapshot used, `null` when none.
+- `downloads` counts every attempt that ended in the period, from the queue and Playlist Monitor alike; `since` is the oldest one still kept (400 days at most), `null` when none.
+- `duplicates.bytes` is what keeping only the largest file of each group would free; `examples` are the 50 groups that would free most. `kind` is `exact` (one name and size) or `likely` (same artist and title, lengths within 3 s).
+- `disk` is the volume of the downloads folder (`null` when unreadable); `days_left` is `null` while the library isn't growing.
+
+---
+
+### `GET /api/library/usage/scan`
+
+Admin. What the downloads, slskd and lyrics folders hold, by kind, and what could go: leftover temporary files and orphaned sidecars. Walking the folders takes a while, so the result is kept for 10 minutes; `?refresh=true` walks them again. Nothing is deleted.
+
+**Response:**
+
+```json
+{
+  "folders": [
+    {
+      "id": "downloads",
+      "path": "/downloads",
+      "files": 5300,
+      "bytes": 30100000000,
+      "kinds": {
+        "audio": { "files": 4200, "bytes": 30000000000 },
+        "lyrics": { "files": 900, "bytes": 2000000 },
+        "temporary": { "files": 3, "bytes": 21000000 }
+      }
+    }
+  ],
+  "leftovers": {
+    "files": 2,
+    "bytes": 20000000,
+    "by_kind": { "temporary": 2 },
+    "examples": [{ "folder": "downloads", "file": "Song.webm.part", "bytes": 12000000, "kind": "temporary", "modified": 1793000000 }]
+  },
+  "orphans": {
+    "files": 4,
+    "bytes": 9000,
+    "by_kind": { "cover": 1, "lyrics": 3 },
+    "examples": [{ "folder": "downloads", "file": "Old Album/cover.jpg", "bytes": 6000, "kind": "cover", "modified": 1790000000 }]
+  },
+  "seconds": 1.42,
+  "scanned_at": "2026-10-27T12:00:00+00:00"
+}
+```
+
+- Folder `id`s are `downloads`, `slskd` and `lyrics` (only when lyrics are kept in a folder of their own); kinds are `audio`, `podcasts`, `lyrics`, `images`, `playlists`, `metadata` (saved artist photos and profiles), `temporary` and `other`.
+- A leftover is a temporary file — `.part`, `.part-FragN`, `.ytdl`, `.tmp`, `name.temp.ext`, an Upgrade library working copy — older than an hour.
+- An orphan is an `.lrc` with no song of the same name beside it (in the lyrics folder: no library song at its path) or an album `cover.jpg` in a folder with no song and no playlist.
+
+---
+
 ### `GET /api/library/upgrade`
 
 The state of the library upgrade: the current (or last) run, its queue counts and what the scan found. See [Upgrade library](features/library-upgrade.md).

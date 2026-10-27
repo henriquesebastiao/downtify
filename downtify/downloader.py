@@ -43,6 +43,11 @@ from .content_advisory import (
 )
 from .cookies import CookiesStore
 from .deemix_provider import download_from_deemix, normalize_settings
+from .download_log import (
+    OUTCOME_COMPLETED,
+    OUTCOME_FAILED,
+    OUTCOME_SKIPPED,
+)
 from .file_naming import sanitize_file_name
 from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
@@ -357,7 +362,15 @@ class Downloader:
     #: (see ``api.enrich_artist_after_download``); it runs on the download's
     #: own thread, so it must only hand the work off and return. Whatever it
     #: raises is logged and never fails the download.
+    #: ``song['download_source']`` is the absolute path of the transfer a
+    #: file was copied from (slskd, not left in place), else absent.
     on_downloaded: Optional[Callable[[dict[str, Any], str], None]] = None
+    #: Called as ``on_outcome(song, outcome, filename)`` whenever a
+    #: download ends - ``completed``, ``skipped`` (the song was already in
+    #: the library) or ``failed`` (*filename* empty), see
+    #: :mod:`downtify.download_log` - on the download's own thread, like
+    #: :attr:`on_downloaded`, and just as unable to fail the download.
+    on_outcome: Optional[Callable[[dict[str, Any], str, str], None]] = None
 
     def __init__(
         self,
@@ -813,12 +826,15 @@ class Downloader:
         with self._target_locks_guard:
             return self._target_locks.setdefault(key, threading.Lock())
 
-    @staticmethod
     def _skip_existing(
-        existing: str, progress_cb: Optional[ProgressCallback]
+        self,
+        song: dict[str, Any],
+        existing: str,
+        progress_cb: Optional[ProgressCallback],
     ) -> str:
         logger.info('Skipping download, file already exists: {}', existing)
         _report(progress_cb, 100.0, 'Already downloaded')
+        self._report_outcome(song, OUTCOME_SKIPPED, existing)
         return existing
 
     def _resolve_target_dir(self, subdir: Optional[str]) -> tuple[Path, str]:
@@ -858,13 +874,29 @@ class Downloader:
         With ``overwrite_existing_files`` off, a song already anywhere in
         the library is not downloaded again; the existing file's name is
         returned instead (see :meth:`find_existing_download`).
+
+        However it ends, :attr:`on_outcome` hears of it.
         """
+
+        try:
+            return self._download(song, progress_cb, subdir)
+        except Exception:
+            self._report_outcome(song, OUTCOME_FAILED)
+            raise
+
+    def _download(
+        self,
+        song: dict[str, Any],
+        progress_cb: Optional[ProgressCallback],
+        subdir: Optional[str],
+    ) -> str:
+        """:meth:`download` itself."""
 
         skip_existing = not self.overwrite_existing_files
         if skip_existing and self._can_resolve_path_early(song):
             existing = self.find_existing_download(song, subdir)
             if existing is not None:
-                return self._skip_existing(existing, progress_cb)
+                return self._skip_existing(song, existing, progress_cb)
 
         # Known-long tracks are refused before any search or fetch.
         reject_overlong_song(song, self.max_track_duration_seconds)
@@ -917,13 +949,10 @@ class Downloader:
         reject_overlong_song(song, self.max_track_duration_seconds)
 
         if local_source is not None:
-            return self._downloaded(
-                song,
-                self._finalize_local_source(
-                    song, local_source, provider, progress_cb, subdir
-                ),
-                provider,
+            stored, copied_from = self._finalize_local_source(
+                song, local_source, provider, progress_cb, subdir
             )
+            return self._downloaded(song, stored, provider, copied_from)
 
         if not skip_existing:
             return self._downloaded(
@@ -942,7 +971,7 @@ class Downloader:
         with self._target_lock(song):
             existing = self.find_existing_download(song, subdir)
             if existing is not None:
-                return self._skip_existing(existing, progress_cb)
+                return self._skip_existing(song, existing, progress_cb)
             return self._downloaded(
                 song,
                 self._fetch_and_tag(
@@ -956,20 +985,41 @@ class Downloader:
         song: dict[str, Any],
         filename: str,
         provider: Optional[str] = None,
+        source: Optional[Path] = None,
     ) -> str:
-        """Tell :attr:`on_downloaded` that *filename* is new (and which
-        *provider* fetched it); returns it. A hook that fails is logged and
-        ignored: the file is already there."""
+        """Tell :attr:`on_downloaded` that *filename* is new (which
+        *provider* fetched it, and the *source* file it was copied from,
+        if any); returns it. A hook that fails is logged and ignored: the
+        file is already there."""
 
+        song = {**song, 'download_provider': provider or ''}
+        if source is not None:
+            song['download_source'] = str(source)
         hook = self.on_downloaded
         if hook is not None:
             try:
-                hook({**song, 'download_provider': provider or ''}, filename)
+                hook(song, filename)
             except Exception:
                 logger.opt(exception=True).warning(
                     'The after-download hook failed for {}', filename
                 )
+        self._report_outcome(song, OUTCOME_COMPLETED, filename)
         return filename
+
+    def _report_outcome(
+        self, song: dict[str, Any], outcome: str, filename: str = ''
+    ) -> None:
+        """Tell :attr:`on_outcome` how a download ended (best effort)."""
+
+        hook = self.on_outcome
+        if hook is None:
+            return
+        try:
+            hook(song, outcome, filename)
+        except Exception:
+            logger.opt(exception=True).warning(
+                'The download outcome hook failed for {}', song.get('name')
+            )
 
     def _target_location(
         self, song: dict[str, Any], subdir: Optional[str]
@@ -1038,15 +1088,16 @@ class Downloader:
         provider: Optional[str],
         progress_cb: Optional[ProgressCallback],
         subdir: Optional[str],
-    ) -> str:
-        """Tag a file a provider already downloaded (slskd) and return its
-        library path.
+    ) -> tuple[str, Optional[Path]]:
+        """Tag a file a provider already downloaded (slskd) and return
+        ``(its library path, the file it was copied from or None)``.
 
         With slskd's ``leave_in_place`` the file stays under the slskd
         folder and is returned with the virtual ``slskd/`` prefix (served
         via ``/media/slskd/...``); otherwise it's copied into the same
         destination a YouTube download would use, keeping its original
-        format — slskd files are not transcoded.
+        format — slskd files are not transcoded — and the transfer left
+        behind in slskd's folder is returned too.
         """
 
         if provider == 'deemix':
@@ -1057,8 +1108,9 @@ class Downloader:
                 [Path(self.deemix_settings['source_dir'])],
             )
             _report(progress_cb, 100.0, 'Done', provider)
-            return stored
+            return stored, None
 
+        copied_from: Optional[Path] = None
         lookups = _MetadataLookups(self, song)
         try:
             if provider == 'slskd' and self.slskd_settings.get(
@@ -1080,6 +1132,7 @@ class Downloader:
                 final_path = target_dir / f'{basename}{suffix}'
                 if source_path.resolve() != final_path.resolve():
                     shutil.copy2(source_path, final_path)
+                    copied_from = source_path.resolve()
                 stored = f'{rel_prefix}{final_path.name}'
                 in_place = False
             found = lookups.collect()
@@ -1095,7 +1148,7 @@ class Downloader:
             save_album_cover=not in_place,
         )
         _report(progress_cb, 100.0, 'Done', provider)
-        return stored
+        return stored, copied_from
 
     @staticmethod
     def _progress_hook(

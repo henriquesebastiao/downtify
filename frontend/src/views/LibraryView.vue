@@ -13,6 +13,14 @@
         <span class="max-sm:sr-only">{{ t('library.upgrade') }}</span>
       </UiButton>
       <UiButton
+        v-if="auth.isAdmin.value"
+        variant="ghost"
+        icon="hard-drive"
+        :to="{ name: 'Storage' }"
+      >
+        <span class="max-sm:sr-only">{{ t('library.storage') }}</span>
+      </UiButton>
+      <UiButton
         variant="ghost"
         icon="refresh"
         :loading="library.loading.value"

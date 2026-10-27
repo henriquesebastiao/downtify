@@ -32,6 +32,7 @@ Downtify deckt alles ab, was du brauchst, um aus Spotify eine lokale Musikbiblio
 | [Bibliothekskatalog und Pfadabgleich](library-catalog.md) | Wie Downtify Bibliotheksdateien und Playlists verfolgt, in der Bibliothek angelegte Playlists und das Reparieren von Pfaden nach dem Verschieben von Dateien |
 | [Vorhandene Musikordner](external-library.md) | Downtify auf Ordner mit vorhandenem Audio richten; die Synchronisierung liest Tags, ordnet Künstler zu und überspringt Songs, die schon in der Bibliothek sind |
 | [Bibliothek verbessern](library-upgrade.md) | Bereits heruntergeladene Musik scannen und kleine Cover, fehlende Songtexte und unvollständige Tags reparieren |
+| [Speicher und Nutzung](storage-usage.md) | Sieh, wie groß die Bibliothek ist und wie schnell sie wächst, aus welcher Quelle jeder Teil stammt, wie Downloads endeten und wie viel Platz Duplikate, slskd-Kopien und Reste belegen |
 | [M3U-Export](m3u-export.md) | Automatisch erzeugte Playlist-Dateien für Jellyfin, Navidrome, Plex und jede Medien-App |
 | [Playlist-Cover](playlist-cover-art.md) | Das eigene Titelbild der Playlist neben ihrer M3U-Datei speichern |
 | [Künstlerfoto, Banner und Bio](artist-images.md) | Ein echtes Foto und Banner für einen Künstler von YouTube Music, Deezer, Spotify oder aus eigenem Upload wählen und Bio, Herkunft und Links von Apple Music und Deezer holen, automatisch oder auf Abruf |

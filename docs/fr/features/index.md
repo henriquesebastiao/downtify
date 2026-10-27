@@ -32,6 +32,7 @@ Downtify couvre tout ce qu’il faut pour construire et entretenir une biblioth�
 | [Catalogue de la bibliothèque et synchro des chemins](library-catalog.md) | Comment Downtify suit les fichiers et playlists de la bibliothèque, les playlists que vous créez dans la Bibliothèque, et la correction des chemins après un déplacement de fichiers |
 | [Dossiers de musique existants](external-library.md) | Pointez Downtify vers des dossiers d’audio que vous avez déjà ; la synchronisation lit les tags, associe les artistes et ignore les morceaux déjà dans la bibliothèque |
 | [Améliorer la bibliothèque](library-upgrade.md) | Analysez la musique déjà téléchargée et réparez les petites pochettes, les paroles manquantes et les tags incomplets |
+| [Stockage et utilisation](storage-usage.md) | Voyez la taille de la bibliothèque et sa croissance, la source de chaque partie, comment se sont terminés les téléchargements et la place prise par les doublons, les copies slskd et les restes |
 | [Export M3U](m3u-export.md) | Fichiers de playlist générés automatiquement pour Jellyfin, Navidrome, Plex et toute application multimédia |
 | [Pochettes de playlists](playlist-cover-art.md) | Enregistrez l’image de pochette de la playlist à côté de son fichier M3U |
 | [Photo, bannière et bio de l’artiste](artist-images.md) | Choisissez une vraie photo et une vraie bannière pour un artiste depuis YouTube Music, Deezer, Spotify ou votre propre envoi, et récupérez sa bio, son origine et ses liens depuis Apple Music et Deezer, automatiquement ou à la demande |

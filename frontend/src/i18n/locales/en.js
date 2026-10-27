@@ -406,6 +406,7 @@ export default {
     downloadZip: 'Download as ZIP',
     saveToDevice: 'Save to this device',
     upgrade: 'Upgrade library',
+    storage: 'Storage and usage',
   },
   likes: {
     like: 'Add to Liked songs',
@@ -524,6 +525,126 @@ export default {
     stageLyrics: 'Looking for lyrics',
     stageWriting: 'Writing the file',
     loadFailed: "Couldn't load the library upgrade",
+  },
+  usage: {
+    title: 'Storage and usage',
+    subtitle:
+      'How big the library is, how fast it grows and where it came from.',
+    adminOnly: 'Only admins can see this',
+    adminOnlyHint: 'Ask an admin of this server for the storage figures.',
+    loadFailed: "Couldn't load the storage figures.",
+    tileLibrary: 'Library',
+    tileAdded: {
+      one: 'Added in the last day',
+      other: 'Added in {count} days',
+    },
+    tileGrowth: 'Net change',
+    tileFree: 'Free space',
+    tileDownloads: 'Downloaded',
+    tileCleanup: 'Could be freed',
+    songs: {
+      one: '{count} song',
+      other: '{count} songs',
+    },
+    files: {
+      one: '{count} file',
+      other: '{count} files',
+    },
+    perWeekRate: '{size} a week',
+    ofTotal: 'of {total}',
+    daysLeft: {
+      one: 'of {total} · full in about {count} day at this rate',
+      other: 'of {total} · full in about {count} days at this rate',
+    },
+    downloadsShort: '{skipped} skipped · {failed} failed',
+    growthTitle: 'Library size',
+    growthHint:
+      'The library at the end of each day, without slskd working copies.',
+    estimated: 'Estimated from file dates',
+    estimatedNote:
+      'Before {date}, the size is estimated from the dates of the songs still in the library, so songs deleted since are left out.',
+    allEstimatedNote:
+      'Downtify notes the library size every hour from now on. Earlier days are estimated from the dates of the songs still in the library.',
+    addedPerDay: 'Added per day',
+    addedPerWeek: 'Added per week',
+    sourcesTitle: 'By source',
+    sourcesHint: {
+      one: 'Where the audio came from, and what each source added in the last day.',
+      other:
+        'Where the audio came from, and what each source added in the last {count} days.',
+    },
+    addedInPeriod: {
+      one: '+{size} · {count} song in the period',
+      other: '+{size} · {count} songs in the period',
+    },
+    emptyLibrary: 'The library is empty.',
+    whereTitle: 'Where it is stored',
+    byLocation: 'Folder',
+    byFormat: 'Format',
+    location: {
+      downloads: 'Downloads folder',
+      slskd: 'slskd folder',
+      folders: 'Extra music folders',
+    },
+    unknown: 'Unknown',
+    downloadsTitle: 'Downloads',
+    downloadsHint: {
+      one: 'How downloads from the queue and the Playlist Monitor ended in the last day. Every attempt counts.',
+      other:
+        'How downloads from the queue and the Playlist Monitor ended in the last {count} days. Every attempt counts.',
+    },
+    outcome: {
+      completed: 'Completed',
+      skipped: 'Skipped',
+      failed: 'Failed',
+    },
+    perDay: 'Per day',
+    perWeek: 'Per week',
+    downloadedBySource: 'Downloaded by source · {size}',
+    noDownloads: 'Nothing was downloaded in this period.',
+    logEmptyNote:
+      'No download has been counted yet: Downtify counts them from this version on.',
+    logSinceNote: 'Downloads are counted since {date}.',
+    cleanupTitle: 'Could be cleaned up',
+    cleanupHint:
+      'Storage Downtify can tell is redundant or left over. Nothing is deleted from here.',
+    duplicatesTitle: 'Duplicate songs',
+    duplicatesHint:
+      '{exact} stored twice as the same file, {likely} likely the same song from another source. The size is what keeping only the largest copy would free.',
+    duplicateKind: {
+      exact: 'Same file',
+      likely: 'Likely the same song',
+    },
+    workingTitle: 'slskd working copies',
+    workingHint:
+      'Soulseek transfers left in the slskd folder after Downtify copied them into the library.',
+    workingInPlace:
+      'slskd files are left in place, so the slskd folder is part of the library.',
+    leftoversTitle: 'Leftover temporary files',
+    leftoversHint: 'Partial downloads and conversions older than an hour.',
+    orphansTitle: 'Orphaned sidecars',
+    orphansHint: 'Lyrics files and album covers whose songs are gone.',
+    foldersTitle: 'Folders',
+    foldersHint: 'Everything in the folders Downtify writes to, by kind.',
+    rescan: 'Scan again',
+    scanFailed: "Couldn't scan the folders.",
+    scanning: 'Scanning the folders…',
+    scannedAt: 'Scanned {when} in {seconds} s',
+    folder: {
+      downloads: 'Downloads folder',
+      slskd: 'slskd folder',
+      lyrics: 'Lyrics folder',
+    },
+    kind: {
+      audio: 'Songs',
+      podcasts: 'Podcasts',
+      lyrics: 'Lyrics',
+      images: 'Images',
+      playlists: 'Playlists',
+      metadata: 'Artist photos and profiles',
+      temporary: 'Temporary files',
+      other: 'Other',
+    },
   },
   album: {
     kicker: 'Album',

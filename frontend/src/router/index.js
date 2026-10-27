@@ -43,6 +43,13 @@ const routes = [
     component: () => import('/src/views/UpgradeView.vue'),
   },
   {
+    // Library storage and usage (admins): size, growth, downloads and
+    // what could be cleaned up.
+    path: '/library/storage',
+    name: 'Storage',
+    component: () => import('/src/views/StorageView.vue'),
+  },
+  {
     path: '/library/album',
     name: 'Album',
     component: () => import('/src/views/AlbumView.vue'),
