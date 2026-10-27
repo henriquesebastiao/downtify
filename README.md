@@ -219,3 +219,5 @@ Icons by [Font Awesome](https://fontawesome.com) (Free, [CC BY 4.0](https://font
 ### Library-only mode
 
 Settings → General can restrict every browser and Android client to music already in the server library, including search and tag-based similar tracks. External streams and downloads are disabled without deleting music or watched playlists. See [Library-only mode](docs/features/library-only.md).
+
+Administrators can configure [download exclusions and cumulative attempt budgets](docs/features/download-exclusions.md).

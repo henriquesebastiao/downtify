@@ -133,6 +133,7 @@
       </div>
 
       <aside class="flex flex-col gap-4 xl:sticky xl:top-[96px]">
+        <DownloadExclusions />
         <UiPanel
           v-if="activeBatches.length"
           :title="t('queue.playlistDownloads')"
@@ -202,6 +203,7 @@ import UiTabs from '/src/components/ui/UiTabs.vue'
 import SourceBadge from '/src/components/ui/SourceBadge.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import QueueItem from '/src/components/queue/QueueItem.vue'
+import DownloadExclusions from '/src/components/queue/DownloadExclusions.vue'
 import CsvImport from '/src/components/queue/CsvImport.vue'
 import {
   useDownloadManager,

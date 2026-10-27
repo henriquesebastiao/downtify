@@ -623,6 +623,14 @@ MAX_TRACK_DURATION_SETTING_SECONDS = 6 * 3600
 MIN_COVER_RESOLUTION = 300
 MAX_COVER_RESOLUTION = 1200
 
+
+def _clamp_retry_budget(value: Any) -> int:
+    try:
+        return max(0, min(1440, int(value)))
+    except (TypeError, ValueError, OverflowError):
+        return 0
+
+
 DEFAULT_SETTINGS: dict[str, Any] = {
     'library_only': False,
     'audio_providers': ['youtube-music'],
@@ -644,6 +652,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'download_cover_art_artist_banner': False,
     'max_parallel_downloads': 3,
     'download_delay_seconds': 0,
+    'download_retry_budget_minutes': 0,
     'max_track_duration_seconds': MAX_TRACK_DURATION_SECONDS,
     'external_sync_delay_seconds': 0,
     'cover_resolution': providers.DEFAULT_COVER_RESOLUTION,
@@ -8245,6 +8254,8 @@ async def update_settings_endpoint(
                 continue
             if key == 'max_parallel_downloads':
                 state.settings[key] = _clamp_parallel_downloads(raw_value)
+            elif key == 'download_retry_budget_minutes':
+                state.settings[key] = _clamp_retry_budget(raw_value)
             elif key == 'download_delay_seconds':
                 state.settings[key] = _clamp_download_delay(raw_value)
             elif key == 'max_track_duration_seconds':

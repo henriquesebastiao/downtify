@@ -48,6 +48,7 @@ from .download_log import (
     OUTCOME_FAILED,
     OUTCOME_SKIPPED,
 )
+from .download_policy import DownloadPolicyBlocked
 from .file_naming import sanitize_file_name
 from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
@@ -493,6 +494,7 @@ class Downloader:
         self,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback],
+        cancel_check=None,
     ) -> tuple[
         Optional[str], Optional[dict[str, Any]], Optional[str], Optional[Path]
     ]:
@@ -510,11 +512,16 @@ class Downloader:
 
         youtube_searched = False
         for provider in self.audio_providers:
+            if cancel_check:
+                cancel_check()
             if provider == 'deemix':
                 if not self.deemix_settings.get('enabled'):
                     continue
                 local = download_from_deemix(
-                    song, self.deemix_settings, progress_cb=progress_cb
+                    song,
+                    self.deemix_settings,
+                    progress_cb=progress_cb,
+                    **({'cancel_check': cancel_check} if cancel_check else {}),
                 )
                 if local is not None:
                     return None, None, 'deemix', local
@@ -523,7 +530,10 @@ class Downloader:
                 if not self.slskd_settings.get('enabled'):
                     continue
                 local = download_from_slskd(
-                    song, self.slskd_settings, progress_cb=progress_cb
+                    song,
+                    self.slskd_settings,
+                    progress_cb=progress_cb,
+                    **({'cancel_check': cancel_check} if cancel_check else {}),
                 )
                 if local is not None:
                     return None, None, 'slskd', local
@@ -864,6 +874,39 @@ class Downloader:
         progress_cb: Optional[ProgressCallback] = None,
         subdir: Optional[str] = None,
     ) -> str:
+        policy = getattr(self, 'download_policy', None)
+        if policy is None:
+            return self._download_inner(song, progress_cb, subdir)
+        limit_getter = getattr(self, 'download_policy_limit', lambda: 0)
+        try:
+            limit_minutes = max(0, min(1440, int(limit_getter())))
+        except (TypeError, ValueError, OverflowError):
+            limit_minutes = 0
+        try:
+            attempt = policy.begin(song, limit_minutes * 60)
+        except ValueError as exc:
+            if str(exc) != 'identity_uncertain':
+                raise
+            return self._download_inner(song, progress_cb, subdir)
+        successful = False
+        try:
+            attempt.check(force=True)
+            result = self._download_inner(
+                song, progress_cb, subdir, attempt.check
+            )
+            attempt.check(force=True)
+            successful = bool(result) and not song.get('_monitor_release')
+            return result
+        finally:
+            attempt.finish(successful=successful)
+
+    def _download_inner(
+        self,
+        song: dict[str, Any],
+        progress_cb: Optional[ProgressCallback] = None,
+        subdir: Optional[str] = None,
+        cancel_check=None,
+    ) -> str:
         """Download ``song`` and return the resulting file name.
 
         When ``subdir`` is provided the file is written under
@@ -878,8 +921,18 @@ class Downloader:
         However it ends, :attr:`on_outcome` hears of it.
         """
 
+        def progress(*args):
+            if cancel_check:
+                cancel_check()
+            if progress_cb:
+                progress_cb(*args)
+
         try:
+            if cancel_check:
+                return self._download(song, progress, subdir, cancel_check)
             return self._download(song, progress_cb, subdir)
+        except DownloadPolicyBlocked:
+            raise
         except Exception:
             self._report_outcome(song, OUTCOME_FAILED)
             raise
@@ -889,6 +942,7 @@ class Downloader:
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback],
         subdir: Optional[str],
+        cancel_check=None,
     ) -> str:
         """:meth:`download` itself."""
 
@@ -912,8 +966,12 @@ class Downloader:
         # A known video is a candidate for an enabled YouTube provider,
         # not permission to bypass earlier sources or disabled providers.
         video_id, match, provider, local_source = self._resolve_source(
-            song, progress_cb
+            song,
+            progress_cb,
+            **({'cancel_check': cancel_check} if cancel_check else {}),
         )
+        if cancel_check:
+            cancel_check()
         if (
             video_id
             and video_id == known_video_id
