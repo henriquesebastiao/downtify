@@ -14,6 +14,7 @@ Downtify couvre tout ce qu’il faut pour construire et entretenir une biblioth�
 | [Similaires](similar.md) | Indiquez un artiste ou un titre ; YouTube Music répond avec des titres similaires qui se lisent en entier et se téléchargent, sans clé |
 | [Explorateur](finder.md) | Cherchez sur Deezer, puis parcourez un artiste, ses albums et les titres de n’importe quel album en colonnes |
 | [Réglages de téléchargement](download-settings.md) | Choisissez le format (MP3/FLAC/M4A/OGG/OPUS), le débit, les téléchargements simultanés et la pause entre téléchargements |
+| [File de téléchargement](download-queue.md) | Mettez les téléchargements en pause avant de modifier les réglages ou de mettre à jour : ceux en cours se terminent, aucun nouveau ne démarre et les morceaux en attente survivent à un redémarrage |
 | [Surveillance de playlists](playlist-monitor.md) | Surveillez des playlists et artistes Spotify ou YouTube Music, et téléchargez automatiquement les nouveaux titres et sorties |
 | [Titres masqués d’une playlist](hidden-playlist-songs.md) | Retirez d’une playlist téléchargée ou surveillée les titres dont vous ne voulez pas, pour de bon ; les fichiers restent dans la bibliothèque |
 | [Titres les plus écoutés](top-songs.md) | Collez le lien d’un artiste et téléchargez ses morceaux les plus populaires, éventuellement sous forme de playlist |

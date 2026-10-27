@@ -313,6 +313,18 @@ export default {
     retryFailed: 'Sikertelenek újra ({count})',
     clearDone: 'Készek törlése ({count})',
     clearAll: 'Sor ürítése',
+    pause: 'Letöltések szüneteltetése',
+    resume: 'Letöltések folytatása',
+    pauseFailed: 'Nem sikerült módosítani a sort. Próbáld újra.',
+    pausingTitle: 'Letöltések szüneteltetése…',
+    pausingBody: {
+      one: 'Várakozás {count} letöltés befejezésére. Új letöltés nem indul.',
+      other: 'Várakozás {count} letöltés befejezésére. Új letöltés nem indul.',
+    },
+    pausedTitle: 'Letöltések szüneteltetve',
+    pausedBody: 'A folytatásig nem indul új letöltés.',
+    pausedKept:
+      'A várakozó dalok a sorban maradnak, akkor is, ha a Downtify újraindul vagy frissül.',
     emptyTitle: 'A sor üres',
     emptyBody:
       'Keress zenét vagy illessz be egy linket — a letöltések itt jelennek meg.',
@@ -330,6 +342,7 @@ export default {
     },
     showMore: 'Még {count} megjelenítése',
     statusQueued: 'Várakozik',
+    statusPaused: 'Szüneteltetve',
     statusDone: 'Letöltve',
     retry: 'Újra',
     remove: 'Eltávolítás a sorból',

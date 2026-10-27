@@ -652,7 +652,7 @@ Remove finished (`done`) jobs, keeping queued, in-progress and failed ones. A us
 
 ### `DELETE /api/queue`
 
-Clear the download queue/history — one's own for a user, the entire one for an admin.
+Clear the download queue/history — one's own for a user, the entire one for an admin. A job that hasn't started yet never starts; one already downloading finishes.
 
 **Response:** `{ "cleared": true }`
 
@@ -660,13 +660,51 @@ Clear the download queue/history — one's own for a user, the entire one for an
 
 ### `DELETE /api/queue/item`
 
-Remove a single job from the queue (one's own, unless admin).
+Remove a single job from the queue (one's own, unless admin). If it hasn't started yet, it never does.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `song_id` | string | yes | Job ID |
 
 **Response:** `{ "removed": true }` or `{ "removed": false }`
+
+---
+
+### `GET /api/queue/state`
+
+Whether the download queue is paused. Anyone signed in can read it. See [Download Queue](features/download-queue.md).
+
+**Response:**
+
+```json
+{ "paused": true, "state": "pausing", "active": 2 }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `paused` | boolean | Whether the queue is paused |
+| `state` | string | `running`, `pausing` (paused, with `active` downloads still finishing) or `paused` (nothing running) |
+| `active` | integer | Downloads running right now, everyone's (Playlist Monitor sweeps included) |
+
+Every change is also broadcast as a `queue_state` [WebSocket](#websocket) frame.
+
+---
+
+### `POST /api/queue/pause`
+
+Admin. Pause the queue: no download starts until it is resumed, and the ones already running finish normally. Waiting jobs keep their place (`status: "queued"`, including a `POST /api/download/url` that hasn't started — that request waits until the queue is resumed), and Playlist Monitor sweeps wait before each track. The switch is saved, so the queue is still paused after a restart.
+
+**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+
+---
+
+### `POST /api/queue/resume`
+
+Admin. Carry on with the waiting jobs, with the current settings and audio provider order.
+
+**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+
+Unfinished jobs (waiting, or interrupted mid-download) are saved in `/data` and queued again when Downtify starts, paused or not; finished and failed ones are not.
 
 ---
 
@@ -2926,13 +2964,21 @@ The handshake needs a device token (`Authorization: Bearer …`), a web session 
 }
 ```
 
-`status` on a per-track event is `downloading`, `done`, or `error`. `filename` is set (non-null) on the final `done` event. A row that is still waiting has `status: "queued"` on [`GET /api/queue`](#get-apiqueue), not as its own socket event.
+`status` on a per-track event is `downloading`, `done`, or `error` (or `queued` for a job a paused queue holds back, see below). `filename` is set (non-null) on the final `done` event. A row that is still waiting has `status: "queued"` on [`GET /api/queue`](#get-apiqueue), not as its own socket event.
 
 Queuing a playlist batch or a CSV import registers every job, then broadcasts one reload so open pages fetch that list once:
 
 ```json
 { "type": "queue_reload" }
 ```
+
+Pausing or resuming the queue, and the moment a paused queue's last running download ends, broadcast its state (the [`GET /api/queue/state`](#get-apiqueuestate) object):
+
+```json
+{ "type": "queue_state", "paused": true, "state": "paused", "active": 0 }
+```
+
+A job held by a paused queue after it was announced as `downloading` (a single download) is sent again with `status: "queued"`.
 
 A [library upgrade](features/library-upgrade.md) broadcasts its progress on the same socket, tagged so download clients can ignore it:
 

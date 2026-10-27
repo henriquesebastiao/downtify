@@ -323,6 +323,19 @@ export default {
     retryFailed: 'Relancer les échecs ({count})',
     clearDone: 'Retirer les terminés ({count})',
     clearAll: 'Vider la file',
+    pause: 'Mettre en pause',
+    resume: 'Reprendre les téléchargements',
+    pauseFailed: 'Impossible de modifier la file. Réessayez.',
+    pausingTitle: 'Mise en pause…',
+    pausingBody: {
+      one: 'En attente de la fin de {count} téléchargement. Aucun nouveau téléchargement ne démarrera.',
+      other:
+        'En attente de la fin de {count} téléchargements. Aucun nouveau téléchargement ne démarrera.',
+    },
+    pausedTitle: 'Téléchargements en pause',
+    pausedBody: 'Aucun nouveau téléchargement ne démarrera avant la reprise.',
+    pausedKept:
+      'Les morceaux en attente restent dans la file, même si Downtify redémarre ou est mis à jour.',
     emptyTitle: 'La file est vide',
     emptyBody:
       'Cherchez de la musique ou collez un lien — les téléchargements apparaissent ici.',
@@ -340,6 +353,7 @@ export default {
     },
     showMore: 'Afficher {count} de plus',
     statusQueued: 'En attente',
+    statusPaused: 'En pause',
     statusDone: 'Téléchargé',
     retry: 'Réessayer',
     remove: 'Retirer de la file',

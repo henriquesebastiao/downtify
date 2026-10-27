@@ -14,6 +14,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Similar](similar.md) | Name an artist or a track; YouTube Music answers with similar tracks that play in full and download, no key needed |
 | [Finder](finder.md) | Search Deezer, then browse an artist, their albums and any album's tracks in columns |
 | [Download Settings](download-settings.md) | Choose format (MP3/FLAC/M4A/OGG/OPUS), bitrate, parallel downloads and delay between downloads |
+| [Download Queue](download-queue.md) | Pause downloads before changing settings or updating: running ones finish, nothing new starts, and the waiting songs survive a restart |
 | [Playlist Monitor](playlist-monitor.md) | Watch Spotify or YouTube Music playlists and artists, and auto-download new tracks and releases |
 | [Hidden playlist songs](hidden-playlist-songs.md) | Take songs you don't want out of a downloaded or watched playlist and keep them out; the files stay in your library |
 | [Top Songs](top-songs.md) | Paste an artist link and download their most popular songs, optionally as a playlist |

@@ -314,6 +314,19 @@ export default {
     retryFailed: 'Başarısızları yeniden dene ({count})',
     clearDone: 'Tamamlananları temizle ({count})',
     clearAll: 'Kuyruğu temizle',
+    pause: 'İndirmeleri duraklat',
+    resume: 'İndirmeleri sürdür',
+    pauseFailed: 'Kuyruk değiştirilemedi. Tekrar deneyin.',
+    pausingTitle: 'İndirmeler duraklatılıyor…',
+    pausingBody: {
+      one: '{count} indirmenin bitmesi bekleniyor. Yeni indirme başlamayacak.',
+      other:
+        '{count} indirmenin bitmesi bekleniyor. Yeni indirme başlamayacak.',
+    },
+    pausedTitle: 'İndirmeler duraklatıldı',
+    pausedBody: 'Sürdürülene kadar yeni indirme başlamayacak.',
+    pausedKept:
+      'Bekleyen şarkılar, Downtify yeniden başlasa veya güncellense bile kuyrukta kalır.',
     emptyTitle: 'Kuyrukta bir şey yok',
     emptyBody:
       'Müzik ara ya da bir bağlantı yapıştır — indirmeler burada görünür.',
@@ -331,6 +344,7 @@ export default {
     },
     showMore: '{count} tane daha göster',
     statusQueued: 'Bekliyor',
+    statusPaused: 'Duraklatıldı',
     statusDone: 'İndirildi',
     retry: 'Tekrar dene',
     remove: 'Kuyruktan kaldır',

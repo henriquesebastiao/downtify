@@ -78,7 +78,11 @@
           v-if="item.state === 'queued'"
           class="text-xs text-faint max-sm:hidden"
         >
-          {{ t('queue.statusQueued') }}
+          {{
+            queuePause.paused.value
+              ? t('queue.statusPaused')
+              : t('queue.statusQueued')
+          }}
         </span>
         <template v-if="item.state === 'done' && item.filename">
           <UiIconButton
@@ -152,6 +156,7 @@ import UiIconButton from '../ui/UiIconButton.vue'
 import UiProgress from '../ui/UiProgress.vue'
 import { useDownloadManager } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
+import { useQueuePause } from '/src/model/queuePause'
 import { useTrackActions } from '/src/model/trackActions'
 // Display only: the job's `cover_url` is what its file gets.
 import { deezerImage } from '/src/lib/deezerImage'
@@ -168,6 +173,7 @@ const { t } = useI18n()
 const dm = useDownloadManager()
 const library = useLibrary()
 const actions = useTrackActions()
+const queuePause = useQueuePause()
 const override = ref('')
 const overrideError = ref('')
 

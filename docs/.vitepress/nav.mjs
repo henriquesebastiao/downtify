@@ -24,6 +24,7 @@ export const NAV = [
       { title: 'Similar', page: 'features/similar.md' },
       { title: 'Finder', page: 'features/finder.md' },
       { title: 'Download Settings', page: 'features/download-settings.md' },
+      { title: 'Download Queue', page: 'features/download-queue.md' },
       { title: 'Playlist Monitor', page: 'features/playlist-monitor.md' },
       { title: 'Playlist display names', page: 'features/playlist-names.md' },
       {

@@ -309,6 +309,19 @@ export default {
     retryFailed: 'Retry failed ({count})',
     clearDone: 'Clear done ({count})',
     clearAll: 'Clear queue',
+    pause: 'Pause downloads',
+    resume: 'Resume downloads',
+    pauseFailed: "Couldn't change the queue. Try again.",
+    pausingTitle: 'Pausing downloads…',
+    pausingBody: {
+      one: 'Waiting for {count} download to finish. No new downloads will start.',
+      other:
+        'Waiting for {count} downloads to finish. No new downloads will start.',
+    },
+    pausedTitle: 'Downloads paused',
+    pausedBody: 'No new downloads will start until resumed.',
+    pausedKept:
+      'Waiting songs stay in the queue, even if Downtify restarts or is updated.',
     emptyTitle: 'Nothing in the queue',
     emptyBody: 'Search for music or paste a link — downloads show up here.',
     emptyAction: 'Find music',
@@ -325,6 +338,7 @@ export default {
     },
     showMore: 'Show {count} more',
     statusQueued: 'Waiting',
+    statusPaused: 'Paused',
     statusDone: 'Downloaded',
     retry: 'Retry',
     remove: 'Remove from queue',
