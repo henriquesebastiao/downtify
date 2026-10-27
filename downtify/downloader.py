@@ -53,6 +53,7 @@ from .providers import (
     find_match_for_video,
     find_match_youtube_only,
 )
+from .release_files import matches_release
 from .slskd_provider import download_from_slskd
 
 # Extensions that count as "this song is already downloaded". Deliberately
@@ -745,11 +746,23 @@ class Downloader:
 
         exact = self.existing_filename_for(song, subdir)
         if exact is not None:
+            if song.get('_monitor_release'):
+                if not matches_release(self.download_dir / exact, song):
+                    raise FileExistsError(
+                        'A different recording occupies the requested release path'
+                    )
             return exact
         wanted = [p.casefold() for p in self._format_output_parts(song)]
+        if song.get('_monitor_release'):
+            return self._scan_library(wanted[-1], wanted[:-1], song)
         return self._scan_library(wanted[-1], wanted[:-1])
 
-    def _scan_library(self, stem: str, parents: list[str]) -> Optional[str]:
+    def _scan_library(
+        self,
+        stem: str,
+        parents: list[str],
+        release: Optional[dict[str, Any]] = None,
+    ) -> Optional[str]:
         root_dir = self.download_dir
         for root, dirs, files in os.walk(root_dir):
             dirs[:] = sorted(d for d in dirs if not d.startswith('.'))
@@ -765,6 +778,9 @@ class Downloader:
                 if parents:
                     folders = [p.casefold() for p in rel.parts[:-1]]
                     if folders[-len(parents) :] != parents:
+                        continue
+                if release:
+                    if not matches_release(root_dir / rel, release):
                         continue
                 return rel.as_posix()
         return None
