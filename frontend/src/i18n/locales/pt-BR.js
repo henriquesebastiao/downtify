@@ -313,6 +313,19 @@ export default {
     retryFailed: 'Repetir falhas ({count})',
     clearDone: 'Limpar concluídos ({count})',
     clearAll: 'Limpar fila',
+    pause: 'Pausar downloads',
+    resume: 'Retomar downloads',
+    pauseFailed: 'Não foi possível alterar a fila. Tente novamente.',
+    pausingTitle: 'Pausando downloads…',
+    pausingBody: {
+      one: 'Aguardando {count} download terminar. Nenhum download novo será iniciado.',
+      other:
+        'Aguardando {count} downloads terminarem. Nenhum download novo será iniciado.',
+    },
+    pausedTitle: 'Downloads pausados',
+    pausedBody: 'Nenhum download novo será iniciado até você retomar.',
+    pausedKept:
+      'As músicas em espera continuam na fila, mesmo se o Downtify for reiniciado ou atualizado.',
     emptyTitle: 'Nada na fila',
     emptyBody: 'Busque músicas ou cole um link — os downloads aparecem aqui.',
     emptyAction: 'Encontrar músicas',
@@ -329,6 +342,7 @@ export default {
     },
     showMore: 'Mostrar mais {count}',
     statusQueued: 'Aguardando',
+    statusPaused: 'Pausado',
     statusDone: 'Baixado',
     retry: 'Tentar de novo',
     remove: 'Remover da fila',

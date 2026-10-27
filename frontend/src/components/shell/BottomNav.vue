@@ -24,7 +24,11 @@
         </span>
         <span
           v-if="item.name === 'Queue' && pending"
-          class="tabular absolute top-0 left-[calc(50%+4px)] flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-on-accent"
+          class="tabular absolute top-0 left-[calc(50%+4px)] flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold"
+          :class="
+            queuePaused ? 'bg-surface-2 text-muted' : 'bg-accent text-on-accent'
+          "
+          :title="queuePaused ? t('queue.pausedTitle') : undefined"
           >{{ pending }}</span
         >
       </RouterLink>
@@ -145,6 +149,7 @@ import { useRoute } from 'vue-router'
 import AppIcon from '../ui/AppIcon.vue'
 import { useI18n } from '/src/i18n'
 import { useAuth } from '/src/model/auth'
+import { useQueuePause } from '/src/model/queuePause'
 import { useTheme } from '/src/model/theme'
 import { useUpdateCheck } from '/src/model/updateCheck'
 import { usePendingCount } from './navState'
@@ -154,6 +159,7 @@ const route = useRoute()
 const theme = useTheme()
 const auth = useAuth()
 const pending = usePendingCount()
+const queuePaused = useQueuePause().paused
 const sheet = ref(false)
 const update = useUpdateCheck().status
 const hasUpdate = computed(() => Boolean(update.value?.update_available))

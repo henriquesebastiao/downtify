@@ -70,6 +70,7 @@ export default {
       'features/similar.md': 'Παρόμοια',
       'features/finder.md': 'Αναζήτηση μουσικής',
       'features/download-settings.md': 'Ρυθμίσεις λήψης',
+      'features/download-queue.md': 'Ουρά λήψεων',
       'features/playlist-names.md': 'Playlist display names',
       'features/hidden-playlist-songs.md': 'Κρυμμένα τραγούδια λίστας',
       'features/playlist-monitor.md': 'Παρακολούθηση λιστών',

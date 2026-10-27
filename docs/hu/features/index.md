@@ -14,6 +14,7 @@ A Downtify mindent lefed, amire szükséged van egy helyi zenekönyvtár felép�
 | [Hasonlók](similar.md) | Adj meg egy előadót vagy számot; a YouTube Music hasonló számokkal válaszol, amelyek teljes hosszban lejátszhatók és letölthetők, kulcs nélkül |
 | [Kereső](finder.md) | Keress a Deezeren, majd böngéssz oszlopokban egy előadót, albumait és bármely album számait |
 | [Letöltési beállítások](download-settings.md) | Válaszd ki a formátumot (MP3/FLAC/M4A/OGG/OPUS), a bitrátát, a párhuzamos letöltéseket és a szünetet a letöltések között |
+| [Letöltési sor](download-queue.md) | Szüneteltesd a letöltéseket, mielőtt beállításokat módosítasz vagy frissítesz: a futók befejeződnek, új nem indul, a várakozó dalok pedig megmaradnak újraindítás után is |
 | [Lejátszási lista figyelő](playlist-monitor.md) | Figyelj Spotify- vagy YouTube Music-lejátszási listákat és előadókat, és automatikusan töltsd le az új számokat és kiadványokat |
 | [Elrejtett számok a listákban](hidden-playlist-songs.md) | Vedd ki a nem kívánt számokat egy letöltött vagy figyelt listából, és tartsd is kint őket; a fájlok a könyvtárban maradnak |
 | [Legnépszerűbb számok](top-songs.md) | Illessz be egy előadó hivatkozását, és töltsd le a legnépszerűbb dalait, opcionálisan lejátszási listaként |

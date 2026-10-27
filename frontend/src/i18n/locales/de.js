@@ -326,6 +326,20 @@ export default {
     retryFailed: 'Fehlgeschlagene erneut versuchen ({count})',
     clearDone: 'Abgeschlossene entfernen ({count})',
     clearAll: 'Warteschlange leeren',
+    pause: 'Downloads pausieren',
+    resume: 'Downloads fortsetzen',
+    pauseFailed:
+      'Die Warteschlange konnte nicht geändert werden. Versuche es erneut.',
+    pausingTitle: 'Downloads werden pausiert…',
+    pausingBody: {
+      one: 'Warte, bis {count} Download fertig ist. Es starten keine neuen Downloads.',
+      other:
+        'Warte, bis {count} Downloads fertig sind. Es starten keine neuen Downloads.',
+    },
+    pausedTitle: 'Downloads pausiert',
+    pausedBody: 'Bis zum Fortsetzen startet kein neuer Download.',
+    pausedKept:
+      'Wartende Titel bleiben in der Warteschlange, auch wenn Downtify neu startet oder aktualisiert wird.',
     emptyTitle: 'Die Warteschlange ist leer',
     emptyBody:
       'Suche nach Musik oder füge einen Link ein - Downloads erscheinen hier.',
@@ -343,6 +357,7 @@ export default {
     },
     showMore: 'Weitere {count} anzeigen',
     statusQueued: 'Wartend',
+    statusPaused: 'Pausiert',
     statusDone: 'Heruntergeladen',
     retry: 'Erneut versuchen',
     remove: 'Aus Warteschlange entfernen',

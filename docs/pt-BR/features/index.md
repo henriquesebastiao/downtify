@@ -14,6 +14,7 @@ O Downtify cobre tudo de que você precisa para montar e manter uma biblioteca d
 | [Similares](similar.md) | Informe um artista ou uma faixa; o YouTube Music responde com faixas parecidas que tocam por inteiro e podem ser baixadas, sem chave |
 | [Localizador](finder.md) | Pesquise no Deezer e depois navegue por um artista, seus álbuns e as faixas de qualquer álbum em colunas |
 | [Configurações de download](download-settings.md) | Escolha o formato (MP3/FLAC/M4A/OGG/OPUS), a taxa de bits, os downloads simultâneos e a pausa entre downloads |
+| [Fila de downloads](download-queue.md) | Pause os downloads antes de mudar configurações ou atualizar: os que estão em andamento terminam, nenhum novo começa e as músicas em espera sobrevivem a uma reinicialização |
 | [Monitor de playlists](playlist-monitor.md) | Acompanhe playlists e artistas do Spotify ou YouTube Music e baixe automaticamente faixas e lançamentos novos |
 | [Músicas ocultas da playlist](hidden-playlist-songs.md) | Tire de uma playlist baixada ou monitorada as músicas que você não quer e mantenha-as fora; os arquivos continuam na biblioteca |
 | [Músicas mais tocadas](top-songs.md) | Cole o link de um artista e baixe suas músicas mais populares, opcionalmente como playlist |

@@ -68,6 +68,7 @@ export default {
       'features/similar.md': '유사 음악',
       'features/finder.md': '파인더',
       'features/download-settings.md': '다운로드 설정',
+      'features/download-queue.md': '다운로드 대기열',
       'features/playlist-names.md': 'Playlist display names',
       'features/hidden-playlist-songs.md': '재생목록에서 숨긴 곡',
       'features/playlist-monitor.md': '재생목록 모니터',

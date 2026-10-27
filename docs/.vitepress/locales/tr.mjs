@@ -69,6 +69,7 @@ export default {
       'features/similar.md': 'Benzerler',
       'features/finder.md': 'Bulucu',
       'features/download-settings.md': 'İndirme ayarları',
+      'features/download-queue.md': 'İndirme kuyruğu',
       'features/playlist-names.md': 'Playlist display names',
       'features/hidden-playlist-songs.md': 'Listeden gizlenen şarkılar',
       'features/playlist-monitor.md': 'Çalma listesi izleyici',

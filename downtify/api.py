@@ -159,6 +159,12 @@ downloads are shared, and files are never stored twice.
 * ``POST /api/playlist/m3u``
 * ``GET  /api/queue``, ``DELETE /api/queue``, ``DELETE /api/queue/item``
   and ``DELETE /api/queue/completed`` (drop finished jobs only)
+* ``GET  /api/queue/state``, ``POST /api/queue/pause`` and ``POST
+  /api/queue/resume`` (``{paused, state, active}``: a paused queue starts
+  nothing new and lets running downloads finish - ``state`` is
+  ``running``, ``pausing`` while some still run, then ``paused``; the
+  switch and the unfinished jobs survive a restart, see
+  :mod:`downtify.download_queue`)
 * ``DELETE /api/library/playlist`` (delete a downloaded playlist's
   tracks, M3U and catalog entry; a manual playlist only loses the M3U)
 * ``GET  /api/library/summary`` (Home page: counts + recent albums)
@@ -398,6 +404,7 @@ from .discover import (
     recommendations,
     spotify_collections,
 )
+from .download_queue import PendingDownload, PendingDownloads, queue_pause
 from .downloader import (
     AUDIO_PROVIDERS,
     DOWNLOAD_EXECUTOR,
@@ -1094,6 +1101,9 @@ class AppState:
     monitor_db: Optional[PlaylistMonitorDB] = None
     download_jobs: dict[str, dict[str, Any]] = {}
     download_semaphore: Optional[asyncio.Semaphore] = None
+    # The unfinished jobs and the pause switch, for the next start
+    # (downtify/download_queue.py).
+    pending_downloads: Optional[PendingDownloads] = None
     # Fire-and-forget work owned by the process (import batches, monitor
     # loops, playlist refresh). Cancelled in :func:`shutdown_resources`.
     background_tasks: set[asyncio.Task[Any]] = set()
@@ -1180,6 +1190,7 @@ def spawn_task(coro: Any, *, name: Optional[str] = None) -> asyncio.Task[Any]:
         'replace-',
         'monitor-initial-check',
         'monitor-manual-check',
+        'queue-restore',
     )):
         lease = contextlib.ExitStack()
         try:
@@ -3904,6 +3915,108 @@ def _note_download_owners(stored_path: str, user_ids: Collection[int]) -> None:
             _note_download_owner(stored_path, waiter)
 
 
+def _pending_download(
+    song: dict[str, Any],
+    song_id: str,
+    *,
+    user_id: int = 0,
+    subdir: Optional[str] = None,
+    delay_seconds: float = 0,
+    playlist_name: Optional[str] = None,
+    spotify_playlist_id: Optional[str] = None,
+    track_order: int = 0,
+) -> PendingDownload:
+    """The saved copy of a job, with what ``_run_download`` was given."""
+
+    job = state.download_jobs.get(song_id) or {}
+    users = _job_users(job) | ({user_id} if user_id else set())
+    return PendingDownload(
+        song_id=song_id,
+        song=song,
+        options={
+            'subdir': subdir,
+            'delay_seconds': delay_seconds,
+            'playlist_name': playlist_name,
+            'spotify_playlist_id': spotify_playlist_id,
+            'track_order': track_order,
+        },
+        user_ids=sorted(users),
+    )
+
+
+def _drop_pending(song_ids: Optional[Collection[str]] = None) -> None:
+    """Forget saved jobs (every one when *song_ids* is ``None``)."""
+
+    store = state.pending_downloads
+    if store is None:
+        return
+    try:
+        if song_ids is None:
+            store.clear()
+        else:
+            store.forget(song_ids)
+    except Exception:
+        logger.exception('Could not update the saved download queue')
+
+
+async def _remember_pending(rows: list[PendingDownload]) -> None:
+    """Save unfinished jobs so a restart queues them again (best effort)."""
+
+    store = state.pending_downloads
+    if store is None or not rows:
+        return
+    try:
+        await asyncio.to_thread(store.add, rows)
+    except Exception:
+        logger.exception('Could not save the download queue')
+
+
+async def _forget_pending(song_ids: Collection[str]) -> None:
+    if state.pending_downloads is not None:
+        await asyncio.to_thread(_drop_pending, song_ids)
+
+
+async def _broadcast_queue_state() -> None:
+    await state.connections.broadcast({
+        'type': 'queue_state',
+        **queue_pause.status(),
+    })
+
+
+# Everyone learns the moment a paused queue's last download ends.
+queue_pause.on_drained = _broadcast_queue_state
+
+
+async def _queue_turn(
+    song_id: str, job: dict[str, Any], song: dict[str, Any]
+) -> bool:
+    """Wait while the queue is paused; whether the job should still run.
+
+    The paused job keeps its concurrency slot and shows as waiting again
+    (a single download registers as ``downloading``). A job taken off
+    the queue meanwhile (``DELETE /api/queue...``) is dropped here
+    instead of started.
+    """
+
+    if queue_pause.paused:
+        if job.get('status') != 'queued':
+            job['status'] = 'queued'
+            await state.connections.broadcast_job(
+                _job_users(job),
+                {
+                    'song': song,
+                    'progress': 0,
+                    'message': '',
+                    'status': 'queued',
+                },
+            )
+        await queue_pause.wait()
+    if state.download_jobs.get(song_id) is job:
+        return True
+    logger.info('Skipping download (removed from the queue): {}', song_id)
+    return False
+
+
 async def _run_download(
     song: dict[str, Any],
     song_id: str,
@@ -3915,6 +4028,7 @@ async def _run_download(
     track_order: int = 0,
     refresh_playlists: bool = True,
     user_id: int = 0,
+    pending_saved: bool = False,
 ) -> Optional[str]:
     """Run a single download to completion, updating jobs state and broadcasting WS events.
 
@@ -3938,6 +4052,11 @@ async def _run_download(
     ``refresh_playlists`` is off (a batch refreshes once at the end), the
     M3U/Navidrome playlists that contain the track are refreshed in the
     background.
+
+    The job is saved (:class:`PendingDownloads`) until it ends, unless
+    the caller already did (*pending_saved*): a shutdown mid-queue keeps
+    it for the next start. A paused queue holds it before it starts
+    (:func:`_queue_turn`).
     """
 
     if library_only.enabled(state.settings):
@@ -3957,10 +4076,25 @@ async def _run_download(
         else:
             job['user_ids'] = _job_users(job) | {user_id}
 
+    if not pending_saved:
+        await _remember_pending([
+            _pending_download(
+                song,
+                song_id,
+                user_id=user_id,
+                subdir=subdir,
+                delay_seconds=delay_seconds,
+                playlist_name=playlist_name,
+                spotify_playlist_id=spotify_playlist_id,
+                track_order=track_order,
+            )
+        ])
+
     # One download per track no matter how many accounts asked for it:
     # a second caller waits here, then shares the finished file (and
     # its ownership) instead of fetching the same bytes twice.
     lock = _download_locks.setdefault(song_id, asyncio.Lock())
+    keep_pending = False
     try:
         async with lock:
             if job.get('status') == 'done' and job.get('filename'):
@@ -3985,9 +4119,63 @@ async def _run_download(
                 refresh_playlists=refresh_playlists,
                 user_id=user_id,
             )
+    except asyncio.CancelledError:
+        # Shutting down mid-queue: the saved job stays, so the next
+        # start downloads it again.
+        keep_pending = True
+        raise
     finally:
         if not lock.locked():
             _download_locks.pop(song_id, None)
+        if not keep_pending:
+            await _forget_pending([song_id])
+
+
+async def _finish_with_existing(
+    song: dict[str, Any], job: dict[str, Any], subdir: Optional[str]
+) -> Optional[str]:
+    """With *Overwrite existing files* off, end *job* with the song's
+    copy already in the library - its stored path, or ``None``."""
+
+    if getattr(state.downloader, 'overwrite_existing_files', True):
+        return None
+    existing_hit = await asyncio.to_thread(
+        resolve_existing_download,
+        state.downloader,
+        song,
+        subdir=subdir,
+        track_index=state.track_index,
+    )
+    if not existing_hit:
+        return None
+    existing, skip_message = existing_hit
+    logger.info(
+        'Skipping download ({}): {}',
+        skip_message.lower(),
+        existing,
+    )
+    job.update(
+        status='done',
+        filename=existing,
+        progress=100,
+        message=skip_message,
+    )
+    sharers = _job_users(job)
+    if sharers:
+        # The file is shared, the ownership isn't: everyone waiting on
+        # this job asked for it too.
+        await asyncio.to_thread(_note_download_owners, existing, sharers)
+    await state.connections.broadcast_job(
+        _job_users(job),
+        {
+            'song': song,
+            'progress': 100,
+            'message': skip_message,
+            'status': 'done',
+            'filename': existing,
+        },
+    )
+    return existing
 
 
 async def _run_download_locked(
@@ -4017,120 +4205,89 @@ async def _run_download_locked(
     sem = state.download_semaphore
     try:
         async with sem if sem is not None else contextlib.nullcontext():
-            if not getattr(state.downloader, 'overwrite_existing_files', True):
-                existing_hit = await asyncio.to_thread(
-                    resolve_existing_download,
-                    state.downloader,
-                    song,
-                    subdir=subdir,
-                    track_index=state.track_index,
-                )
-                if existing_hit:
-                    existing, skip_message = existing_hit
-                    logger.info(
-                        'Skipping download ({}): {}',
-                        skip_message.lower(),
-                        existing,
-                    )
-                    job.update(
-                        status='done',
-                        filename=existing,
-                        progress=100,
-                        message=skip_message,
-                    )
-                    sharers = _job_users(job)
-                    if sharers:
-                        # The file is shared, the ownership isn't:
-                        # everyone waiting on this job asked for it too.
-                        await asyncio.to_thread(
-                            _note_download_owners, existing, sharers
-                        )
-                    await state.connections.broadcast_job(
-                        _job_users(job),
-                        {
-                            'song': song,
-                            'progress': 100,
-                            'message': skip_message,
-                            'status': 'done',
-                            'filename': existing,
-                        },
-                    )
+            if not await _queue_turn(song_id, job, song):
+                return None
+            async with queue_pause.running():
+                existing = await _finish_with_existing(song, job, subdir)
+                if existing:
                     return existing
 
-            job['status'] = 'downloading'
+                job['status'] = 'downloading'
 
-            await state.connections.broadcast_job(
-                _job_users(job),
-                {
-                    'song': song,
-                    'progress': 0,
-                    'message': '',
-                    'status': 'downloading',
-                },
-            )
-
-            def progress(
-                pct: float, message: str, provider: Optional[str] = None
-            ) -> None:
-                j = state.download_jobs.get(song_id)
-                if j:
-                    j['progress'] = pct
-                    j['message'] = message
-                    if provider:
-                        j['provider'] = provider
-                asyncio.run_coroutine_threadsafe(
-                    state.connections.broadcast_job(
-                        _job_users(j or {}),
-                        {
-                            'song': song,
-                            'progress': pct,
-                            'message': message,
-                            'provider': provider
-                            or (j or {}).get('provider', ''),
-                            'status': 'downloading',
-                        },
-                    ),
-                    loop,
+                await state.connections.broadcast_job(
+                    _job_users(job),
+                    {
+                        'song': song,
+                        'progress': 0,
+                        'message': '',
+                        'status': 'downloading',
+                    },
                 )
 
-            filename = await loop.run_in_executor(
-                DOWNLOAD_EXECUTOR,
-                lambda: state.downloader.download(
-                    song, progress, subdir=subdir
-                ),
-            )
-            job['status'] = 'done'
-            job['filename'] = filename
-            job['progress'] = 100
-            if filename:
-                await _record_finished_download(
-                    song,
-                    filename,
-                    playlist_name=playlist_name,
-                    spotify_playlist_id=spotify_playlist_id,
-                    track_order=track_order,
-                    refresh_playlists=refresh_playlists,
-                    user_id=user_id,
-                )
-                others = _job_users(job) - ({user_id} if user_id else set())
-                if others:
-                    # The leader is recorded inside
-                    # _record_finished_download; everyone else waiting
-                    # on the shared job claims the same file too.
-                    await asyncio.to_thread(
-                        _note_download_owners, filename, others
+                def progress(
+                    pct: float, message: str, provider: Optional[str] = None
+                ) -> None:
+                    j = state.download_jobs.get(song_id)
+                    if j:
+                        j['progress'] = pct
+                        j['message'] = message
+                        if provider:
+                            j['provider'] = provider
+                    asyncio.run_coroutine_threadsafe(
+                        state.connections.broadcast_job(
+                            _job_users(j or {}),
+                            {
+                                'song': song,
+                                'progress': pct,
+                                'message': message,
+                                'provider': provider
+                                or (j or {}).get('provider', ''),
+                                'status': 'downloading',
+                            },
+                        ),
+                        loop,
                     )
-            invalidate_library_paths_cache()
-            await state.connections.broadcast_job(
-                _job_users(job),
-                {
-                    'song': song,
-                    'progress': 100,
-                    'message': 'Done',
-                    'status': 'done',
-                    'filename': filename,
-                },
-            )
+
+                filename = await loop.run_in_executor(
+                    DOWNLOAD_EXECUTOR,
+                    lambda: state.downloader.download(
+                        song, progress, subdir=subdir
+                    ),
+                )
+                job['status'] = 'done'
+                job['filename'] = filename
+                job['progress'] = 100
+                if filename:
+                    await _record_finished_download(
+                        song,
+                        filename,
+                        playlist_name=playlist_name,
+                        spotify_playlist_id=spotify_playlist_id,
+                        track_order=track_order,
+                        refresh_playlists=refresh_playlists,
+                        user_id=user_id,
+                    )
+                    others = _job_users(job) - (
+                        {user_id} if user_id else set()
+                    )
+                    if others:
+                        # The leader is recorded inside
+                        # _record_finished_download; everyone else waiting
+                        # on the shared job claims the same file too.
+                        await asyncio.to_thread(
+                            _note_download_owners, filename, others
+                        )
+                invalidate_library_paths_cache()
+                await state.connections.broadcast_job(
+                    _job_users(job),
+                    {
+                        'song': song,
+                        'progress': 100,
+                        'message': 'Done',
+                        'status': 'done',
+                        'filename': filename,
+                    },
+                )
             if delay_seconds > 0:
                 await asyncio.sleep(delay_seconds)
     except Exception as exc:
@@ -4563,6 +4720,24 @@ async def _process_batch(
     resolved: dict[int, Optional[str]] = {}
     m3u_lock = asyncio.Lock()
 
+    def _order(index: int, song: dict[str, Any]) -> int:
+        return int(song.get('downtify_track_order') or index)
+
+    # One write for the whole batch, so a restart picks it back up.
+    await _remember_pending([
+        _pending_download(
+            song,
+            song_id,
+            user_id=user_id,
+            subdir=playlist_subdir,
+            delay_seconds=delay_seconds,
+            playlist_name=playlist_name,
+            spotify_playlist_id=spotify_playlist_id,
+            track_order=_order(index, song),
+        )
+        for index, (song, song_id) in enumerate(zip(songs, job_ids))
+    ])
+
     async def _bounded(index: int, song: dict[str, Any], song_id: str) -> None:
         try:
             filename = await _run_download(
@@ -4572,9 +4747,10 @@ async def _process_batch(
                 delay_seconds=delay_seconds,
                 playlist_name=playlist_name,
                 spotify_playlist_id=spotify_playlist_id,
-                track_order=int(song.get('downtify_track_order') or index),
+                track_order=_order(index, song),
                 refresh_playlists=False,
                 user_id=user_id,
+                pending_saved=True,
             )
         except Exception:
             filename = None
@@ -6037,16 +6213,20 @@ async def _run_replacement(
             'status': 'downloading',
         })
         async with sem if sem is not None else contextlib.nullcontext():
-            await loop.run_in_executor(
-                DOWNLOAD_EXECUTOR,
-                lambda: audio_replace.replace_audio(
-                    state.downloader,
-                    full,
-                    video_id,
-                    song=song,
-                    progress_cb=progress,
-                ),
-            )
+            if not await _queue_turn(job_id, job, song):
+                _replacing.discard(file)
+                return
+            async with queue_pause.running():
+                await loop.run_in_executor(
+                    DOWNLOAD_EXECUTOR,
+                    lambda: audio_replace.replace_audio(
+                        state.downloader,
+                        full,
+                        video_id,
+                        song=song,
+                        progress_cb=progress,
+                    ),
+                )
     except Exception as exc:
         _replacing.discard(file)
         logger.opt(
@@ -7607,15 +7787,21 @@ def get_queue(request: Request) -> list[dict[str, Any]]:
 
 @router.delete('/api/queue')
 def clear_queue(request: Request) -> dict:
+    """Clear the queue. A job that hasn't started yet never starts;
+    downloads already running finish."""
+
     if request_is_admin(request):
         state.download_jobs.clear()
+        _drop_pending()
         return {'cleared': True}
-    for song_id in [
+    removed = [
         key
         for key, job in list(state.download_jobs.items())
         if _queue_job_visible(job, request)
-    ]:
+    ]
+    for song_id in removed:
         del state.download_jobs[song_id]
+    _drop_pending(removed)
     return {'cleared': True}
 
 
@@ -7637,8 +7823,128 @@ def remove_queue_item(request: Request, song_id: str = Query(...)) -> dict:
     job = state.download_jobs.get(song_id)
     if job is not None and _queue_job_visible(job, request):
         del state.download_jobs[song_id]
+        _drop_pending([song_id])
         return {'removed': True}
     return {'removed': False}
+
+
+@router.get('/api/queue/state')
+def get_queue_state() -> dict[str, Any]:
+    """Whether the queue is paused: ``{paused, state, active}``.
+
+    ``state`` is ``running``, ``pausing`` (paused, ``active`` downloads
+    still finishing) or ``paused``; ``active`` counts the downloads
+    running right now, everyone's. Each change is also a ``queue_state``
+    WebSocket frame.
+    """
+
+    return queue_pause.status()
+
+
+async def _set_queue_paused(paused: bool) -> dict[str, Any]:
+    if paused:
+        queue_pause.pause()
+    else:
+        queue_pause.resume()
+    store = state.pending_downloads
+    if store is not None:
+        try:
+            await asyncio.to_thread(store.set_paused, paused)
+        except Exception:
+            logger.exception('Could not save the queue pause')
+    logger.info('Download queue {}', 'paused' if paused else 'resumed')
+    await _broadcast_queue_state()
+    return queue_pause.status()
+
+
+@router.post('/api/queue/pause')
+async def pause_queue() -> dict[str, Any]:
+    """Start no new download until resumed; running ones finish."""
+
+    return await _set_queue_paused(True)
+
+
+@router.post('/api/queue/resume')
+async def resume_queue() -> dict[str, Any]:
+    """Carry on with the waiting jobs, with the current settings."""
+
+    return await _set_queue_paused(False)
+
+
+async def restore_download_queue() -> int:
+    """Pick the saved queue back up after a restart; how many jobs.
+
+    The pause switch comes back first, so a queue paused before an
+    update stays paused. Jobs run with today's settings and provider
+    order. Each playlist's M3U/Navidrome playlist is refreshed once its
+    rows are done (as a batch does), loose songs one by one. Nothing is
+    started in library-only mode: the rows wait for a later start.
+    """
+
+    store = state.pending_downloads
+    if store is None:
+        return 0
+    if await asyncio.to_thread(store.paused):
+        queue_pause.pause()
+    rows = await asyncio.to_thread(store.rows)
+    if not rows or state.downloader is None:
+        return 0
+    if library_only.enabled(state.settings):
+        logger.info(
+            'Library-only mode: {} saved download(s) left for later',
+            len(rows),
+        )
+        return 0
+    for row in rows:
+        song = row.song
+        if not (song.get('song_id') or song.get('url')):
+            song['song_id'] = row.song_id
+        for uid in row.user_ids or [0]:
+            _register_job(song, status='queued', user_id=uid)
+    logger.info(
+        'Download queue: {} unfinished job(s) restored{}',
+        len(rows),
+        ' (paused)' if queue_pause.paused else '',
+    )
+    spawn_task(_run_restored_queue(rows), name='queue-restore')
+    return len(rows)
+
+
+async def _run_restored_queue(rows: list[PendingDownload]) -> None:
+    groups: dict[str, list[PendingDownload]] = {}
+    for row in rows:
+        name = str(row.options.get('playlist_name') or '')
+        groups.setdefault(name, []).append(row)
+    await asyncio.gather(
+        *(_run_restored_group(name, group) for name, group in groups.items())
+    )
+
+
+async def _run_restored_group(
+    playlist_name: str, rows: list[PendingDownload]
+) -> None:
+    async def _one(row: PendingDownload) -> Optional[str]:
+        options = row.options
+        try:
+            return await _run_download(
+                row.song,
+                row.song_id,
+                subdir=options.get('subdir') or None,
+                delay_seconds=float(options.get('delay_seconds') or 0),
+                playlist_name=playlist_name or None,
+                spotify_playlist_id=options.get('spotify_playlist_id') or None,
+                track_order=int(options.get('track_order') or 0),
+                refresh_playlists=not playlist_name,
+                user_id=row.user_ids[0] if row.user_ids else 0,
+                pending_saved=True,
+            )
+        except Exception:
+            # Already marked failed on the queue (and logged).
+            return None
+
+    results = await asyncio.gather(*(_one(row) for row in rows))
+    if playlist_name and any(results):
+        await _schedule_playlist_refresh_after_download({playlist_name})
 
 
 @router.post('/api/playlist/m3u')

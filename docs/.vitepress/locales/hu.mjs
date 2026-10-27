@@ -69,6 +69,7 @@ export default {
       'features/similar.md': 'Hasonlók',
       'features/finder.md': 'Kereső',
       'features/download-settings.md': 'Letöltési beállítások',
+      'features/download-queue.md': 'Letöltési sor',
       'features/playlist-names.md': 'Playlist display names',
       'features/hidden-playlist-songs.md': 'Elrejtett számok a listákban',
       'features/playlist-monitor.md': 'Lejátszási lista figyelő',

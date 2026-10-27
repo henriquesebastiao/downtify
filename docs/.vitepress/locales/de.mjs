@@ -69,6 +69,7 @@ export default {
       'features/similar.md': 'Ähnliche Titel',
       'features/finder.md': 'Finder',
       'features/download-settings.md': 'Download-Einstellungen',
+      'features/download-queue.md': 'Download-Warteschlange',
       'features/playlist-names.md': 'Playlist display names',
       'features/hidden-playlist-songs.md': 'Ausgeblendete Playlist-Titel',
       'features/playlist-monitor.md': 'Playlist-Überwachung',

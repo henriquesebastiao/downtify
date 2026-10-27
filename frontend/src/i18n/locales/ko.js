@@ -316,6 +316,19 @@ export default {
     retryFailed: '실패 항목 다시 시도 ({count})',
     clearDone: '완료 항목 지우기 ({count})',
     clearAll: '대기열 비우기',
+    pause: '다운로드 일시 중지',
+    resume: '다운로드 재개',
+    pauseFailed: '대기열을 변경하지 못했습니다. 다시 시도하세요.',
+    pausingTitle: '다운로드 일시 중지 중…',
+    pausingBody: {
+      one: '다운로드 {count}개가 끝나기를 기다리는 중입니다. 새 다운로드는 시작되지 않습니다.',
+      other:
+        '다운로드 {count}개가 끝나기를 기다리는 중입니다. 새 다운로드는 시작되지 않습니다.',
+    },
+    pausedTitle: '다운로드 일시 중지됨',
+    pausedBody: '재개할 때까지 새 다운로드가 시작되지 않습니다.',
+    pausedKept:
+      'Downtify를 다시 시작하거나 업데이트해도 대기 중인 곡은 대기열에 남아 있습니다.',
     emptyTitle: '대기열이 비어 있습니다',
     emptyBody:
       '음악을 검색하거나 링크를 붙여넣으면 다운로드 항목이 여기에 표시됩니다.',
@@ -333,6 +346,7 @@ export default {
     },
     showMore: '{count}개 더보기',
     statusQueued: '대기 중',
+    statusPaused: '일시 중지됨',
     statusDone: '다운로드 완료',
     retry: '다시 시도',
     remove: '대기열에서 제거',

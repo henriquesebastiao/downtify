@@ -313,6 +313,19 @@ export default {
     retryFailed: 'Reintentar fallidas ({count})',
     clearDone: 'Limpiar completadas ({count})',
     clearAll: 'Vaciar cola',
+    pause: 'Pausar descargas',
+    resume: 'Reanudar descargas',
+    pauseFailed: 'No se pudo cambiar la cola. Inténtalo de nuevo.',
+    pausingTitle: 'Pausando descargas…',
+    pausingBody: {
+      one: 'Esperando a que termine {count} descarga. No se iniciará ninguna descarga nueva.',
+      other:
+        'Esperando a que terminen {count} descargas. No se iniciará ninguna descarga nueva.',
+    },
+    pausedTitle: 'Descargas en pausa',
+    pausedBody: 'No se iniciará ninguna descarga nueva hasta que la reanudes.',
+    pausedKept:
+      'Las canciones en espera siguen en la cola, aunque Downtify se reinicie o se actualice.',
     emptyTitle: 'La cola está vacía',
     emptyBody: 'Busca música o pega un enlace — las descargas aparecen aquí.',
     emptyAction: 'Buscar música',
@@ -329,6 +342,7 @@ export default {
     },
     showMore: 'Mostrar {count} más',
     statusQueued: 'En espera',
+    statusPaused: 'En pausa',
     statusDone: 'Descargada',
     retry: 'Reintentar',
     remove: 'Quitar de la cola',

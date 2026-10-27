@@ -77,6 +77,7 @@ export default {
       'features/similar.md': 'Similar',
       'features/finder.md': 'Finder',
       'features/download-settings.md': 'Download Settings',
+      'features/download-queue.md': 'Download Queue',
       'features/playlist-names.md': 'Playlist display names',
       'features/hidden-playlist-songs.md': 'Hidden playlist songs',
       'features/playlist-monitor.md': 'Playlist Monitor',

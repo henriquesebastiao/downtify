@@ -69,6 +69,7 @@ export default {
       'features/similar.md': 'Similares',
       'features/finder.md': 'Buscador',
       'features/download-settings.md': 'Ajustes de descarga',
+      'features/download-queue.md': 'Cola de descargas',
       'features/playlist-names.md': 'Playlist display names',
       'features/hidden-playlist-songs.md': 'Canciones ocultas de una playlist',
       'features/playlist-monitor.md': 'Monitor de playlists',
