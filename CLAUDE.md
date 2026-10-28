@@ -108,13 +108,27 @@ Cross-check both against the code, not against each other — a stale doc citing
 6. If the change affects the SPA: `npm --prefix frontend run build` succeeds and the resulting `frontend/dist` is served correctly by the backend.
 7. Docker: if Python deps changed, run `make export` so `requirements.txt` matches `uv.lock` before merging — the Docker build uses `requirements.txt`, not `uv.lock`.
 8. **Before calling any task finished**, check whether it changed user-facing behavior (new/changed setting, env var, endpoint, UI control, supported input type, language, limit). If it did, update `README.md` (brief overview + link) and the matching `docs/` page(s) in the same change — see [Documentation](#documentation). If nothing user-facing changed (internal refactor, test-only change, CI config), say so explicitly instead of silently skipping this.
+9. Every change is described in `commit-message.md` — this repo's, and `~/git/downtify-android`'s if the task touched the app. See [Server and Android client together](#server-and-android-client-together).
+
+## Server and Android client together
+
+The server lives in `~/git/downtify` (this repo), the Android client in `~/git/downtify-android`. They evolve as one product: when a task here needs a change on the other side — the app has to use a new or changed `/api/v1` endpoint or field, a WebSocket frame, the pairing flow, or it breaks on something this change does — make that change in `~/git/downtify-android` in the same task, without stopping to ask. A session opened in the Android repo may change this one the same way.
+
+- Before editing the other repo, read its `CLAUDE.md` and follow it there (architecture, translations, tests, its own checks: `./gradlew build detekt spotlessCheck` for the app).
+- The app reads the contract in `docs/mobile-client-contract.md` and the "Server and sign-in", "Mobile API (v1)" and "WebSocket" parts of `docs/api-reference.md`: change them with the code. Installed apps keep calling the old shape, so add fields and endpoints rather than renaming or removing.
+- **Don't commit, stage or push, in either repo.** The maintainer commits by hand.
+- **No change goes undescribed.** Every edit to tracked files (code, tests, docs, config) is described in `commit-message.md` at the root of the repo it touched (git-ignored in both). A task that touched both repos leaves a message in each, and each mentions the other side ("Needs the server's …" / "Used by the Android app's …").
+- Write it before the final reply, as Conventional Commits: imperative subject ≤ 72 characters, a body saying why, then what changed per file or area.
+- The file may hold an older message. If `git log` already has its subject, it was committed: replace it. If it describes changes still uncommitted, keep them: extend the message to cover everything pending, or add a separate message for unrelated work, separated by a `---` line and each naming the files it covers.
+- End the reply by naming every repo changed and its `commit-message.md`.
 
 ## Things to never do
 
 - Reintroduce `spotdl` / `spotipy` / Spotify Web API credentials. The project deliberately removed that dependency.
 - Commit `frontend/dist`, `downloads/`, `data/`, or any `.mp3` / `.m4a` artefacts (`.gitignore` covers these — keep it that way).
 - Bypass `ruff` / `prettier` with inline disables to silence a warning. Fix the cause.
-- Change the public API endpoint paths or response shapes without simultaneously updating the Vue frontend.
+- Change the public API endpoint paths or response shapes without simultaneously updating the Vue frontend (and the Android client, when it uses them).
+- Commit or push, here or in `~/git/downtify-android` — describe the change in `commit-message.md` instead.
 - Add network calls to tests without a recorded fixture.
 - Hand-edit `requirements.txt` — regenerate via `make export`.
 - Skip hooks (`--no-verify`) on commits.
