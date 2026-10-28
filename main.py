@@ -35,6 +35,7 @@ from downtify import (
     account_routes,
     api,
     auth_routes,
+    download_policy_routes,
     mobile_routes,
     trash_routes,
 )
@@ -557,6 +558,12 @@ def build_app() -> FastAPI:
         )
         db_path = DATABASE_DIR / 'downtify_monitor.db'
         api.state.monitor_db = PlaylistMonitorDB(db_path)
+        api.state.downloader.download_policy = (
+            api.state.monitor_db.download_policy
+        )
+        api.state.downloader.download_policy_limit = lambda: (
+            api.state.settings.get('download_retry_budget_minutes', 0)
+        )
         _open_library_stores(db_path)
         if api.state.library_trash is not None:
             api.spawn_task(
@@ -772,6 +779,7 @@ def build_app() -> FastAPI:
     app.include_router(account_routes.router)
     app.include_router(mobile_routes.router)
     app.include_router(trash_routes.router)
+    app.include_router(download_policy_routes.router)
 
     @app.get('/list')
     def list_downloads(request: Request, refresh: bool = False) -> list[str]:

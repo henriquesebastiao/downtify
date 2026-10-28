@@ -3275,4 +3275,6 @@ When an app is paired, the web page showing the code learns it at once:
 ```
 
 
+See also the [administrative download policy API](./api-download-policy.md).
+
 See the [opt-in music trash API and operator requirements](./features/music-trash.md).

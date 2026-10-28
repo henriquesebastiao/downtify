@@ -11,6 +11,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from . import api, lyrics
+from .admin_access import admin_user
 from .library_catalog import list_library_entries
 from .library_paths import library_file_root
 from .library_paths_cache import invalidate_library_paths_cache
@@ -71,22 +72,6 @@ async def _run_preview(job_id: str, payload: Selection, user_id: int):
         except Exception as error:
             logger.warning('Trash preview failed ({})', type(error).__name__)
             _previews[job_id].update(state='failed', error='unavailable')
-
-
-def admin_user(request: Request) -> int:
-    principal = api.principal_of(request)
-    if (
-        principal is None
-        or principal.kind not in {'session', 'device'}
-        or not principal.is_admin
-        or not principal.user_id
-    ):
-        raise HTTPException(403, detail={'code': 'admin_required'})
-    auth = api.state.auth
-    user = auth.users.get(principal.user_id) if auth else None
-    if user is None or user.get('role') != 'admin':
-        raise HTTPException(403, detail={'code': 'admin_required'})
-    return principal.user_id
 
 
 def store() -> LibraryTrash:
