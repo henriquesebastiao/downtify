@@ -1,4 +1,21 @@
 export default {
+  downloadPolicy: {
+    block: 'Ne plus télécharger',
+    blocked: 'Téléchargements suspendus pour ce titre.',
+    confirm: 'Suspendre les téléchargements de ce titre ?',
+    confirmHelp:
+      'Les nouvelles tentatives seront bloquées. Un transfert partagé déjà lancé peut se terminer. Aucun fichier existant ne sera supprimé.',
+    exclusions: 'Titres suspendus',
+    empty: 'Aucun titre suspendu.',
+    resume: 'Réautoriser',
+    timeout: 'Limite de tentatives atteinte',
+    manual: 'Suspendu manuellement',
+    error: 'Impossible de modifier la suspension.',
+    alreadyActive: 'Une tentative pour ce titre est déjà en cours.',
+    budget: 'Limite cumulée des tentatives',
+    budgetHelp:
+      'Suspend automatiquement un titre après ce temps cumulé. Les périodes entre les tentatives ne comptent pas. 0 désactive la limite.',
+  },
   playlistNames: { restore: 'Rétablir le nom source' },
   libraryOnly: {
     title: 'Mode bibliothèque seule',

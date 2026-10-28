@@ -456,6 +456,30 @@
 
             <SettingGroup :title="t('settings.pacingGroup')">
               <SettingRow
+                :label="t('downloadPolicy.budget')"
+                :description="t('downloadPolicy.budgetHelp')"
+                stacked
+              >
+                <PresetPicker
+                  :model-value="s.download_retry_budget_minutes"
+                  :presets="[0, 30, 60, 120]"
+                  :min="0"
+                  :max="1440"
+                  unit="min"
+                  :format="
+                    (v) => (v === 0 ? t('settings.unlimited') : `${v} min`)
+                  "
+                  :custom-label="t('settings.custom')"
+                  @update:model-value="
+                    (v) =>
+                      (s.download_retry_budget_minutes = Math.max(
+                        0,
+                        Math.min(1440, Number(v) || 0)
+                      ))
+                  "
+                />
+              </SettingRow>
+              <SettingRow
                 :label="t('settings.parallel')"
                 :description="t('settings.parallelHint')"
                 stacked

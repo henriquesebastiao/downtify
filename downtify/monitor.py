@@ -16,6 +16,7 @@ from loguru import logger
 from . import m3u, providers, spotify
 from .artist_release_store import ArtistReleaseStore
 from .cover_cache import CoverArtCache
+from .download_policy import DownloadPolicy, DownloadPolicyBlocked
 from .download_queue import queue_pause
 from .downloader import (
     DOWNLOAD_EXECUTOR,
@@ -303,6 +304,7 @@ class PlaylistMonitorDB:
         self._lock = asyncio.Lock()
         self._init_db()
         self.releases = ArtistReleaseStore(self._connect)
+        self.download_policy = DownloadPolicy(self._connect)
         # What each watch added and failed to (provenance and statistics).
         self.history = WatchHistoryStore(self._connect)
 
@@ -1617,6 +1619,9 @@ async def check_artist(
                     filename,
                 )
                 continue
+            if await asyncio.to_thread(db.download_policy.blocked, song):
+                complete = False
+                continue
             await queue_pause.wait()
             try:
                 observed: dict[str, Any] = {}
@@ -1666,6 +1671,7 @@ async def check_artist(
                     track_id,
                     filename,
                 )
+                await asyncio.to_thread(db.download_policy.succeeded, song)
                 invalidate_library_paths_cache()
                 known_tracks[track_id] = filename
                 downloaded += int(not observed.get('reused'))
@@ -1691,6 +1697,15 @@ async def check_artist(
                 })
                 if delay_seconds > 0 and not observed.get('reused'):
                     await asyncio.sleep(delay_seconds)
+            except DownloadPolicyBlocked:
+                complete = False
+                await broadcast({
+                    'song': song,
+                    'status': 'failed',
+                    'progress': 0,
+                    'message': 'download_excluded',
+                    'playlist_name': playlist.name,
+                })
             except Exception as exc:
                 complete = False
                 logger.exception(

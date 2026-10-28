@@ -3274,3 +3274,5 @@ When an app is paired, the web page showing the code learns it at once:
 { "type": "device_paired", "pairing_id": "rfLmICXqGfRBXyXl", "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8", "platform": "android", "…": "…" } }
 ```
 
+
+See also the [administrative download policy API](./api-download-policy.md).
