@@ -708,6 +708,50 @@ Unfinished jobs (waiting, or interrupted mid-download) are saved in `/data` and 
 
 ---
 
+## Download policy
+
+Recordings excluded from automatic downloads. A recording is excluded by hand, or once its attempts together have taken longer than `download_retry_budget_minutes` ([settings](#post-apisettingsupdate); 0–1440, default `0` = no limit). Excluding a recording never removes a file.
+
+These endpoints need a browser session or a paired device of an account that is still an administrator; anything else gets `403` (`admin_required`).
+
+### `GET /api/v1/download-policy/exclusions`
+
+List the excluded recordings, most recently changed first.
+
+**Response:**
+
+```json
+{ "items": [{ "id": "3f9c…", "title": "Song", "artist": "Artist", "album": "Album", "duration": 215, "elapsed": 1800.5, "reason": "timeout", "updated": 1761600000.0 }] }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Exclusion ID |
+| `duration` | integer | Length in seconds, `0` when unknown |
+| `elapsed` | number | Seconds spent on attempts so far |
+| `reason` | string | `manual` or `timeout` (retry budget used up) |
+| `updated` | number | Unix time of the last change |
+
+---
+
+### `POST /api/v1/download-policy/exclusions`
+
+Exclude a recording from automatic downloads.
+
+**Body:** `{ "name": "Song", "song_id": "…", "artist": "Artist", "artists": ["Artist"], "album_name": "Album", "duration": 215 }` — only `name` is required; `duration` is in seconds.
+
+**Response:** `{ "id": "3f9c…", "reason": "manual" }`. `422` (`identity_uncertain`) when the recording can't be told apart: no `song_id`, and not all of artist, album and duration.
+
+---
+
+### `DELETE /api/v1/download-policy/exclusions/{id}`
+
+Allow automatic downloads of the recording again and reset its elapsed time.
+
+**Response:** `{ "ok": true }`. `404` for an unknown ID; `409` (`attempt_still_stopping`) while an attempt at it is still stopping.
+
+---
+
 ## Settings
 
 ### `GET /api/settings`
@@ -3273,6 +3317,3 @@ When an app is paired, the web page showing the code learns it at once:
 ```json
 { "type": "device_paired", "pairing_id": "rfLmICXqGfRBXyXl", "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8", "platform": "android", "…": "…" } }
 ```
-
-
-See also the [administrative download policy API](./api-download-policy.md).
