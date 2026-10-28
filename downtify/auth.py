@@ -1245,10 +1245,21 @@ class AuthMiddleware:
         send: Callable[..., Awaitable[None]],
     ) -> None:
         kind = scope.get('type')
-        store = self._get_store()
-        if kind not in {'http', 'websocket'} or store is None:
+        if kind not in {'http', 'websocket'}:
             await self.app(scope, receive, send)
             return
+        
+        store = self._get_store()
+
+        if store is None:
+            await self._deny(
+                scope,
+                send,
+                503,
+                'Authentication service unavailable'
+            )
+            return
+
         method = 'WS' if kind == 'websocket' else scope.get('method', 'GET')
         path = scope.get('path', '')
         needed = (
