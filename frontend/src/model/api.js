@@ -395,6 +395,47 @@ function deleteDownload(file) {
   return API.delete('/delete', { params: { file } })
 }
 
+function trashCapabilities() {
+  return API.get('/api/v1/library/trash/capabilities')
+}
+async function trashPreview(files) {
+  const started = await API.post('/api/v1/library/trash/preview', { files })
+  for (let attempt = 0; attempt < 1800; attempt++) {
+    const result = await API.get(
+      '/api/v1/library/trash/preview/' +
+        encodeURIComponent(started.data.request_id)
+    )
+    if (result.data.state === 'ready') return { data: result.data.preview }
+    if (result.data.state === 'failed') {
+      const error = new Error('preview_unavailable')
+      error.response = {
+        data: { detail: { code: result.data.error || 'preview_unavailable' } },
+      }
+      throw error
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+  }
+  throw new Error('preview_unavailable')
+}
+function trashConfirm(confirmation) {
+  return API.post('/api/v1/library/trash/confirm', { confirmation })
+}
+function trashList(params) {
+  return API.get('/api/v1/library/trash', { params })
+}
+function trashRestore(ids) {
+  return API.post('/api/v1/library/trash/restore', { ids })
+}
+function trashRetry(ids) {
+  return API.post('/api/v1/library/trash/retry', { ids })
+}
+function trashExclusions() {
+  return API.get('/api/v1/library/trash/exclusions')
+}
+function trashAllowDownload(ids) {
+  return API.post('/api/v1/library/trash/allow-download', { ids })
+}
+
 function deleteDownloadsBatch(files) {
   return API.delete('/delete/batch', { data: { files } })
 }
@@ -879,6 +920,14 @@ function setSettings(settings) {
 }
 
 export default {
+  trashCapabilities,
+  trashPreview,
+  trashConfirm,
+  trashList,
+  trashRestore,
+  trashRetry,
+  trashExclusions,
+  trashAllowDownload,
   search,
   searchAlbums,
   searchArtists,

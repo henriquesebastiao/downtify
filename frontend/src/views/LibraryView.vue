@@ -3,6 +3,14 @@
     class="mx-auto flex max-w-[1680px] flex-col gap-6 px-4 pt-6 sm:px-6 md:pt-8 lg:px-10"
   >
     <PageHeader :title="t('library.title')" :subtitle="summary">
+      <UiButton
+        v-if="auth.isAdmin.value && trashCapability.canManage.value"
+        variant="ghost"
+        icon="trash"
+        :to="{ name: 'Trash' }"
+      >
+        {{ t('trash.title') }}
+      </UiButton>
       <ExternalPlaylistImport v-if="tab === 'playlists'" />
       <UiButton
         v-if="library.trackCount.value"
@@ -269,6 +277,8 @@
 </template>
 
 <script setup>
+import { useTrashCapability } from '/src/lib/trash'
+const trashCapability = useTrashCapability()
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'

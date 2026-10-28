@@ -1,4 +1,100 @@
 export default {
+  trash: {
+    title: 'Trash',
+    move: 'Move to trash',
+    back: 'Library',
+    help: 'Files remain recoverable for 30 days after they are moved.',
+    confirmTitle: 'Move {count} file(s) to trash?',
+    confirmBody:
+      'Only the listed files will be moved for 30 days. They will also disappear from Deemix and Jellyfin. Playlist and favourite references are retained for restoration. Automatic downloads remain blocked until you explicitly allow them again.',
+    pending: 'Request saved. Open Trash to follow the operation.',
+    preparing: 'Checking files in the background. This may take a moment.',
+    search: 'Search trash',
+    summary: '{count} file(s) · {size} MB retained',
+    empty: 'Trash is empty.',
+    restore: 'Restore',
+    restoreSelected: 'Restore selection',
+    retry: 'Resume',
+    select: 'Select {title}',
+    expires: 'Kept until {date}',
+    previous: 'Previous',
+    next: 'Next',
+    exclusions: 'Excluded from automatic downloads',
+    exclusionsHelp:
+      'These files have expired. Their download exclusions remain active.',
+    allowDownload: 'Allow a new download',
+    allowHelp:
+      'This track can be downloaded again, including by an automatic monitor. This button does not start a download.',
+    states: {
+      preview: 'Awaiting confirmation',
+      pending: 'Waiting to move',
+      moving: 'Moving',
+      trashed: 'In trash',
+      restore_pending: 'Waiting to restore',
+      restoring: 'Restoring',
+      restored: 'Restored',
+      purging: 'Expiring',
+      purged: 'Expired',
+      error: 'Attention needed: files retained',
+    },
+    errors: {
+      unavailable: 'Trash is temporarily unavailable. No move is confirmed.',
+      admin_required: 'Only an administrator can manage the trash.',
+      trash_not_configured: 'Trash is not configured on this server.',
+      file_changed:
+        'The file changed after verification. It is retained; select it again.',
+      file_missing:
+        'An expected file is missing. Check storage before resuming.',
+      filesystem_unavailable:
+        'Storage is unavailable. Check the NAS, then resume.',
+      nas_marker_missing:
+        'The expected NAS mount is unavailable. Operation paused.',
+      nas_marker_changed:
+        'Storage does not match the expected NAS. Operation paused.',
+      root_unavailable: 'The music folder is unavailable.',
+      unsupported_collection: 'This music folder is not enabled for trash.',
+      confirmation_expired: 'Verification expired. Select the tracks again.',
+      confirmation_invalid:
+        'This confirmation does not match your selection or account.',
+      restore_collision:
+        'A file already exists here. Nothing was overwritten; the trashed copy is retained.',
+      trash_file_changed:
+        'The retained file changed. Permanent deletion is blocked.',
+      trash_file_missing: 'A trashed file is missing. The operation stopped.',
+      retention_expired: 'The 30-day retention period has elapsed.',
+      admin_access_revoked:
+        'The requesting account no longer has administrator rights.',
+      track_is_playing: 'This track is playing. Pause it before continuing.',
+      invalid_selection: 'Select between 1 and 200 files.',
+      item_not_found: 'This track is no longer available.',
+      operation_already_pending:
+        'An operation is already pending for this file.',
+      operation_not_complete: 'Wait for the current operation to finish.',
+      unsafe_symlink:
+        'This path contains a symbolic link and cannot be changed.',
+      invalid_path: 'This file is outside the allowed folders.',
+      trash_permissions_unsafe:
+        'Trash folder permissions require administrator attention.',
+      atomic_move_unsupported:
+        'Storage does not support the required safe move.',
+      file_changed_during_move:
+        'The file changed while moving. Data is retained for verification.',
+      identity_uncertain:
+        'The track information is insufficient to prevent automatic redownload. No files were moved.',
+      preview_busy:
+        'A verification is already running. Wait for it to finish before trying again.',
+      preview_unavailable:
+        'Verification was interrupted. Select the tracks again.',
+      library_task_active:
+        'A library upgrade is running. Wait for it or pause it first.',
+      trash_ignore_invalid:
+        'The Jellyfin trash exclusion is invalid. No files were deleted.',
+      unsupported_lyrics_location:
+        'The lyrics folder is not enabled for trash. No files were moved.',
+      operation_in_progress:
+        'The move is in progress. Wait for it to finish before restoring the file.',
+    },
+  },
   playlistNames: { restore: 'Restore source name' },
   libraryOnly: {
     title: 'Library-only mode',

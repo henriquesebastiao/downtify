@@ -892,6 +892,9 @@ class Downloader:
     ) -> str:
         """:meth:`download` itself."""
 
+        trash = getattr(self, 'trash_store', None)
+        if trash is not None and trash.blocked(song):
+            raise ValueError('library_trash_excluded')
         skip_existing = not self.overwrite_existing_files
         if skip_existing and self._can_resolve_path_early(song):
             existing = self.find_existing_download(song, subdir)

@@ -1,4 +1,107 @@
 export default {
+  trash: {
+    title: 'Corbeille',
+    move: 'Mettre à la corbeille',
+    back: 'Bibliothèque',
+    help: 'Les fichiers restent restaurables pendant 30 jours après leur déplacement.',
+    confirmTitle: 'Mettre {count} fichier(s) à la corbeille ?',
+    confirmBody:
+      'Seuls les fichiers indiqués seront déplacés pendant 30 jours. Ils disparaîtront aussi de Deemix et Jellyfin. Les playlists et favoris seront conservés pour la restauration. Les téléchargements automatiques de ces morceaux seront bloqués jusqu’à votre intervention.',
+    pending:
+      'Demande enregistrée. Consultez la corbeille pour suivre le déplacement.',
+    preparing:
+      'Vérification des fichiers en cours : cela peut prendre quelques instants.',
+    search: 'Rechercher dans la corbeille',
+    summary: '{count} fichier(s) · {size} Mo conservés',
+    empty: 'La corbeille est vide.',
+    restore: 'Restaurer',
+    restoreSelected: 'Restaurer la sélection',
+    retry: 'Reprendre',
+    select: 'Sélectionner {title}',
+    expires: 'Conservé jusqu’au {date}',
+    previous: 'Précédent',
+    next: 'Suivant',
+    exclusions: 'Morceaux exclus des téléchargements automatiques',
+    exclusionsHelp:
+      'Ces fichiers ont expiré. Leur exclusion reste active pour éviter que les suivis les téléchargent à nouveau.',
+    allowDownload: 'Autoriser un nouveau téléchargement',
+    allowHelp:
+      'Le morceau pourra de nouveau être téléchargé, y compris par un suivi automatique. Aucun téléchargement ne sera lancé par ce bouton.',
+    states: {
+      preview: 'À confirmer',
+      pending: 'En attente de déplacement',
+      moving: 'Déplacement en cours',
+      trashed: 'Dans la corbeille',
+      restore_pending: 'Restauration en attente',
+      restoring: 'Restauration en cours',
+      restored: 'Restauré',
+      purging: 'Expiration en cours',
+      purged: 'Expiré',
+      error: 'Intervention nécessaire : fichiers conservés',
+    },
+    errors: {
+      unavailable:
+        'La corbeille est momentanément indisponible. Aucun déplacement n’est confirmé.',
+      admin_required: 'Seul un administrateur peut gérer la corbeille.',
+      trash_not_configured: 'La corbeille n’est pas configurée sur ce serveur.',
+      file_changed:
+        'Le fichier a changé depuis la vérification. Il est conservé ; recommencez la sélection.',
+      file_missing:
+        'Un fichier attendu est introuvable. Vérifiez le NAS avant de reprendre.',
+      filesystem_unavailable:
+        'Le stockage est inaccessible. Vérifiez le NAS, puis reprenez l’opération.',
+      nas_marker_missing:
+        'Le montage NAS attendu n’est pas disponible. Opération suspendue.',
+      nas_marker_changed:
+        'Le stockage ne correspond pas au NAS attendu. Opération suspendue.',
+      root_unavailable: 'Le dossier musical est indisponible.',
+      unsupported_collection:
+        'Ce dossier musical n’est pas autorisé pour la corbeille.',
+      confirmation_expired:
+        'La vérification a expiré. Sélectionnez à nouveau les morceaux.',
+      confirmation_invalid:
+        'Cette confirmation ne correspond pas à votre sélection ou votre compte.',
+      restore_collision:
+        'Un fichier existe déjà à cet emplacement. Rien n’a été écrasé ; la copie reste dans la corbeille.',
+      trash_file_changed:
+        'Le fichier conservé a été modifié. La suppression définitive est bloquée.',
+      trash_file_missing:
+        'Un fichier de la corbeille est introuvable. L’opération est arrêtée.',
+      retention_expired: 'Les 30 jours de conservation sont écoulés.',
+      admin_access_revoked:
+        'Le compte ayant demandé cette action n’a plus les droits administrateur.',
+      track_is_playing:
+        'Ce morceau est en cours de lecture. Mettez-le en pause avant de continuer.',
+      invalid_selection: 'Sélectionnez entre 1 et 200 fichiers.',
+      item_not_found: 'Ce morceau n’est plus disponible.',
+      operation_already_pending:
+        'Une opération est déjà en cours pour ce fichier.',
+      operation_not_complete: 'Attendez la fin de l’opération en cours.',
+      unsafe_symlink:
+        'Ce chemin contient un lien symbolique et ne peut pas être modifié.',
+      invalid_path: 'Ce fichier est hors des dossiers autorisés.',
+      trash_permissions_unsafe:
+        'Les droits du dossier corbeille nécessitent une vérification administrateur.',
+      atomic_move_unsupported:
+        'Le stockage ne permet pas le déplacement sécurisé demandé.',
+      file_changed_during_move:
+        'Le fichier a changé pendant son déplacement. Les données sont conservées pour vérification.',
+      identity_uncertain:
+        'Les informations du morceau sont insuffisantes pour empêcher son retéléchargement automatique. Aucun fichier n’a été déplacé.',
+      preview_busy:
+        'Une vérification est déjà en cours. Attendez sa fin avant de recommencer.',
+      preview_unavailable:
+        'La vérification a été interrompue. Sélectionnez à nouveau les morceaux.',
+      library_task_active:
+        'Une amélioration de la bibliothèque est en cours. Attendez sa fin ou mettez-la en pause.',
+      trash_ignore_invalid:
+        'La protection Jellyfin de la corbeille est incorrecte. Aucun fichier n’a été supprimé.',
+      unsupported_lyrics_location:
+        'Le dossier des paroles n’est pas autorisé pour la corbeille. Aucun fichier n’a été déplacé.',
+      operation_in_progress:
+        'Le déplacement est en cours. Attendez sa fin avant de restaurer le fichier.',
+    },
+  },
   playlistNames: { restore: 'Rétablir le nom source' },
   libraryOnly: {
     title: 'Mode bibliothèque seule',
