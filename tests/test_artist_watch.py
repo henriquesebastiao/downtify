@@ -61,7 +61,9 @@ class _FakeDownloader:
         # Header-readable MPEG frames: tag-only files must not count as audio.
         # Full decoding belongs to the audio/replacement integration tests.
         with path.open('ab') as stream:
-            payload = (hashlib.sha256(song['song_id'].encode()).digest() * 13)[:413]
+            payload = (hashlib.sha256(song['song_id'].encode()).digest() * 13)[
+                :413
+            ]
             stream.write((b'\xff\xfb\x90\x64' + payload) * 4)
         return filename
 

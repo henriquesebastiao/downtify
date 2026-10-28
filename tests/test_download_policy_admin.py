@@ -8,7 +8,8 @@ from downtify import admin_access
 
 
 @pytest.mark.parametrize(
-    ('kind', 'role'), [('signed', 'admin'), ('device', 'user'), ('session', 'user')]
+    ('kind', 'role'),
+    [('signed', 'admin'), ('device', 'user'), ('session', 'user')],
 )
 def test_sensitive_mutation_revalidates_admin(monkeypatch, kind, role):
     principal = SimpleNamespace(kind=kind, is_admin=True, user_id=1)

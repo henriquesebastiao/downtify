@@ -165,11 +165,17 @@ def test_tag_only_file_is_not_validated_as_audio(tmp_path):
 
 
 @pytest.mark.parametrize('valid', [True, False])
-def test_watch_terminal_event_follows_validation_and_persistence(monkeypatch, tmp_path, valid):
+def test_watch_terminal_event_follows_validation_and_persistence(
+    monkeypatch, tmp_path, valid
+):
     db, events = _db(tmp_path), []
     watch = _add_artist(db)
     dl = _FakeDownloader(tmp_path)
-    _patch_provider(monkeypatch, [_album('album', 'Album')], {'album': [_track('one', 'One', 'Album', 1)]})
+    _patch_provider(
+        monkeypatch,
+        [_album('album', 'Album')],
+        {'album': [_track('one', 'One', 'Album', 1)]},
+    )
     monkeypatch.setattr(monitor, 'matches_release', lambda *a: valid)
 
     async def broadcast(message):
@@ -178,14 +184,20 @@ def test_watch_terminal_event_follows_validation_and_persistence(monkeypatch, tm
         events.append(message)
 
     async def check():
-        return await monitor.check_artist(watch, db, dl, broadcast, asyncio.get_running_loop(), settings={})
+        return await monitor.check_artist(
+            watch, db, dl, broadcast, asyncio.get_running_loop(), settings={}
+        )
 
     count = asyncio.run(check())
     assert count == int(valid)
-    assert [e['status'] for e in events if 'status' in e] == ['done' if valid else 'error']
+    assert [e['status'] for e in events if 'status' in e] == [
+        'done' if valid else 'error'
+    ]
 
 
-def test_reused_file_is_not_counted_or_delayed_as_a_new_download(monkeypatch, tmp_path):
+def test_reused_file_is_not_counted_or_delayed_as_a_new_download(
+    monkeypatch, tmp_path
+):
     db = _db(tmp_path)
     watch = _add_artist(db)
     dl = _FakeDownloader(tmp_path)
@@ -206,7 +218,14 @@ def test_reused_file_is_not_counted_or_delayed_as_a_new_download(monkeypatch, tm
         events.append(message)
 
     async def check():
-        return await monitor.check_artist(watch, db, dl, broadcast, asyncio.get_running_loop(), settings={'download_delay_seconds': 5})
+        return await monitor.check_artist(
+            watch,
+            db,
+            dl,
+            broadcast,
+            asyncio.get_running_loop(),
+            settings={'download_delay_seconds': 5},
+        )
 
     monkeypatch.setattr(dl, 'download', reuse)
     monkeypatch.setattr(monitor.asyncio, 'sleep', no_delay)

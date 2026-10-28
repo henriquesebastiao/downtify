@@ -1248,15 +1248,12 @@ class AuthMiddleware:
         if kind not in {'http', 'websocket'}:
             await self.app(scope, receive, send)
             return
-        
+
         store = self._get_store()
 
         if store is None:
             await self._deny(
-                scope,
-                send,
-                503,
-                'Authentication service unavailable'
+                scope, send, 503, 'Authentication service unavailable'
             )
             return
 
