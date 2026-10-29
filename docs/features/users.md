@@ -69,7 +69,7 @@ Other people's playlists never mix into your own. The Library's **Playlists** ta
 
 The sidebar also shows a few of what is shared with you and of the public playlists you follow.
 
-**What a viewer can do:** play, shuffle, add to the queue, download as a ZIP (or to a phone or desktop app), **Follow** a public playlist so it stays in their lists — even with *Show public playlists* off — and follows its owner's changes, and **Save a copy**: a private, editable playlist of their own, with the songs they can see. A viewer can't edit, rename, delete, share or detach someone else's playlist.
+**What a viewer can do:** play, shuffle, add to the queue, download as a ZIP (or to a phone or desktop app), **Follow** a public playlist so it stays in their lists — even with *Show public playlists* off — and follows its owner's changes, and **Save a copy**: a private, editable playlist of their own, with the songs they can see. A viewer can't edit, rename, delete, share or detach someone else's playlist. The owner of a Library playlist can also make some of the people it is shared with its editors, who add and remove its songs — see [Collaborative playlists](collaborative-playlists.md).
 
 **Unsharing:** when the owner makes a playlist private again, or removes someone from the list, it leaves that person's lists at once (followed or not); a playlist that stops being public is no longer followed. Copies people already saved stay with them. Renaming a shared playlist keeps it shared; deleting it takes the sharing with it. Songs an admin [hides from users](#hiding-from-users) are left out of a shared playlist's tracks for them, as everywhere.
 

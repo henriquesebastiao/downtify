@@ -55,6 +55,8 @@ class LibraryContext:
     metadata_cache: Optional[LibraryMetadataCache] = None
     playlist_catalog: Optional[PlaylistCatalog] = None
     primary_extra_id: str = ''
+    hidden_files: frozenset[str] = frozenset()
+    hidden_resolved: frozenset[str] = frozenset()
 
 
 def library_context_from_state(
@@ -63,6 +65,8 @@ def library_context_from_state(
     track_index: Optional[TrackIndex] = None,
     metadata_cache: Optional[LibraryMetadataCache] = None,
     playlist_catalog: Optional[PlaylistCatalog] = None,
+    hidden_files: frozenset[str] = frozenset(),
+    hidden_resolved: frozenset[str] = frozenset(),
 ) -> LibraryContext:
     slskd_raw = settings.get('slskd')
     slskd_dir: Optional[Path] = None
@@ -85,6 +89,8 @@ def library_context_from_state(
         (extra_dir_id(root) for root in extra_dirs if str(root) == primary), ''
     )
     return LibraryContext(
+        hidden_files=hidden_files,
+        hidden_resolved=hidden_resolved,
         primary_extra_id=primary_id,
         download_dir=Path(download_dir),
         slskd_dir=slskd_dir,
@@ -145,15 +151,24 @@ def _resolve_within_library(
     """A library-relative path, confined to the library's own folders."""
 
     text = str(stored or '').strip().replace('\\', '/')
+    if text in getattr(ctx, 'hidden_files', frozenset()):
+        return None
     if not text or text.startswith('/'):
         return None
     if '\0' in text:
+        return None
+    # Files in the library trash must not be served as normal media.
+    if '.downtify-trash' in text.split('/'):
         return None
 
     candidate = locate_library_file(
         text, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
     )
     if candidate is None or not accept(candidate):
+        return None
+    if '.downtify-trash' in candidate.parts or str(
+        candidate.resolve()
+    ) in getattr(ctx, 'hidden_resolved', frozenset()):
         return None
 
     allowed_roots = [ctx.download_dir.resolve()]
@@ -211,6 +226,8 @@ def _register_path(
 ) -> None:
     if UPGRADE_STAGING_MARKER in file_path.name:
         return
+    if '.downtify-trash' in file_path.parts:
+        return
     if file_path.suffix.lower() not in AUDIO_EXTENSIONS:
         return
     try:
@@ -220,6 +237,12 @@ def _register_path(
     if _under_podcasts(resolved, ctx.download_dir):
         return
     resolved_key = str(resolved)
+    if resolved_key in getattr(
+        ctx, 'hidden_resolved', frozenset()
+    ) or roots.stored_for(resolved) in getattr(
+        ctx, 'hidden_files', frozenset()
+    ):
+        return
     if resolved_key in by_resolved:
         return
     by_resolved[resolved_key] = roots.stored_for(resolved)
@@ -234,6 +257,7 @@ def _walk_audio_files(root: Path, *, prune_podcasts: bool = False):
     except OSError:
         return
     for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        dirnames[:] = [name for name in dirnames if name != '.downtify-trash']
         current = Path(dirpath)
         if prune_podcasts and current == root:
             dirnames[:] = [
@@ -490,13 +514,21 @@ def list_library_entries(
     if fold_extra:
         cached = get_cached_track_entries(ctx)
         if cached is not None:
-            return _filter_entries(cached, allowed_keys)
+            return _filter_entries(
+                cached,
+                allowed_keys,
+                hidden_files=getattr(ctx, 'hidden_files', frozenset()),
+            )
 
     with listing_lock():
         if fold_extra:
             cached = get_cached_track_entries(ctx)
             if cached is not None:
-                return _filter_entries(cached, allowed_keys)
+                return _filter_entries(
+                    cached,
+                    allowed_keys,
+                    hidden_files=getattr(ctx, 'hidden_files', frozenset()),
+                )
 
         path_rows = list_library_path_pairs(ctx)
         pairs: list[tuple[str, Path]] = [
@@ -521,13 +553,22 @@ def list_library_entries(
             else fold_library_entries(entries)
         )
         store_cached_track_entries(ctx, entries, paths=path_rows)
-        return _filter_entries(entries, allowed_keys)
+        return _filter_entries(
+            entries,
+            allowed_keys,
+            hidden_files=getattr(ctx, 'hidden_files', frozenset()),
+        )
 
 
 def _filter_entries(
     entries: list[dict[str, Any]],
     allowed_keys: Optional[Collection[str]],
+    hidden_files: frozenset[str] = frozenset(),
 ) -> list[dict[str, Any]]:
+    if hidden_files:
+        entries = [
+            e for e in entries if str(e.get('file') or '') not in hidden_files
+        ]
     if allowed_keys is None:
         return entries
     allowed = set(allowed_keys)

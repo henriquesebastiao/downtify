@@ -14,10 +14,14 @@ Downtify deckt alles ab, was du brauchst, um aus Spotify eine lokale Musikbiblio
 | [Ähnliche Titel](similar.md) | Nenne einen Künstler oder Titel; YouTube Music antwortet mit ähnlichen Titeln, die sich vollständig abspielen und herunterladen lassen, ohne Schlüssel |
 | [Finder](finder.md) | Bei Deezer suchen und dann einen Künstler, seine Alben und die Titel jedes Albums in Spalten durchblättern |
 | [Download-Einstellungen](download-settings.md) | Format (MP3/FLAC/M4A/OGG/OPUS), Bitrate, parallele Downloads und Pause zwischen Downloads wählen |
+| [Download-Warteschlange](download-queue.md) | Downloads pausieren, bevor du Einstellungen änderst oder aktualisierst: laufende laufen zu Ende, keine neuen starten, und wartende Titel überstehen einen Neustart |
 | [Playlist-Überwachung](playlist-monitor.md) | Spotify- oder YouTube-Music-Playlists und -Künstler beobachten und neue Titel und Veröffentlichungen automatisch herunterladen |
+| [Ausgeblendete Playlist-Titel](hidden-playlist-songs.md) | Nimm ungewollte Titel aus einer heruntergeladenen oder überwachten Playlist und halte sie draußen; die Dateien bleiben in der Bibliothek |
+| [Gemeinsam bearbeitete Playlists](collaborative-playlists.md) | Lass einige der Personen, mit denen du eine Bibliotheks-Playlist teilst, Titel hinzufügen und entfernen; Umbenennen, Teilen und Löschen bleiben bei dir |
 | [Top-Songs](top-songs.md) | Den Link eines Künstlers einfügen und seine beliebtesten Songs herunterladen, optional als Playlist |
 | [Bibliotheksimport (CSV)](library-import.md) | Einen Bibliotheksexport von Soundiiz, TuneMyMusic oder Exportify importieren und alles in die Warteschlange stellen |
 | [Integrierter Player](player.md) | Die Bibliothek im Browser abspielen: Warteschlangenverwaltung, synchrone Songtexte, Schlaf-Timer, Tastatur und Mediatasten |
+| [Lautstärkenormalisierung](playback-normalization.md) | Alle Songs in ähnlicher Lautstärke abspielen, nach Messungen, die ein Admin startet; Audiodateien werden nie verändert |
 | [Lieblingssongs](liked-songs.md) | Mit einem Herz einen Song liken; eine Playlist aller gelikten Songs entsteht von selbst |
 | [Podcasts](podcasts.md) | Eine Sendung per RSS-Feed, Spotify-Link oder Namen abonnieren; neue Folgen werden von selbst geladen und getaggt |
 | [Benutzer und Anmeldung](users.md) | Anmeldung mit Benutzername und Passwort (`admin` / `downtify` auf einem neuen Server), Admin- und normale Benutzerkonten, Einstellungen pro Benutzer und ein Aktivitätsprotokoll von Anmeldungen und dem, was jeder hört |
@@ -30,9 +34,11 @@ Downtify deckt alles ab, was du brauchst, um aus Spotify eine lokale Musikbiblio
 | [Bibliothekskatalog und Pfadabgleich](library-catalog.md) | Wie Downtify Bibliotheksdateien und Playlists verfolgt, in der Bibliothek angelegte Playlists und das Reparieren von Pfaden nach dem Verschieben von Dateien |
 | [Vorhandene Musikordner](external-library.md) | Downtify auf Ordner mit vorhandenem Audio richten; die Synchronisierung liest Tags, ordnet Künstler zu und überspringt Songs, die schon in der Bibliothek sind |
 | [Bibliothek verbessern](library-upgrade.md) | Bereits heruntergeladene Musik scannen und kleine Cover, fehlende Songtexte und unvollständige Tags reparieren |
+| [Speicher und Nutzung](storage-usage.md) | Sieh, wie groß die Bibliothek ist und wie schnell sie wächst, aus welcher Quelle jeder Teil stammt, wie Downloads endeten und wie viel Platz Duplikate, slskd-Kopien und Reste belegen |
 | [M3U-Export](m3u-export.md) | Automatisch erzeugte Playlist-Dateien für Jellyfin, Navidrome, Plex und jede Medien-App |
 | [Playlist-Cover](playlist-cover-art.md) | Das eigene Titelbild der Playlist neben ihrer M3U-Datei speichern |
 | [Künstlerfoto, Banner und Bio](artist-images.md) | Ein echtes Foto und Banner für einen Künstler von YouTube Music, Deezer, Spotify oder aus eigenem Upload wählen und Bio, Herkunft und Links von Apple Music und Deezer holen, automatisch oder auf Abruf |
+| [Künstler unterstützen](support-artists.md) | Finde, wo du einen Titel, ein Album oder einen Künstler kaufen kannst: der Artikel im iTunes Store mit Preis, Bandcamp und Qobuz, die Website des Künstlers |
 | [Dateiorganisation](file-organization.md) | Flaches Layout oder Unterordner pro Künstler |
 | [Songtexte](lyrics.md) | Songtexte (einfach und zeitsynchron) automatisch herunterladen und einbetten; `.lrc` neben der Datei oder in einem Ordner deiner Wahl |
 | [YouTube-Cookies](youtube-cookies.md) | Eine `cookies.txt` über die Weboberfläche hochladen, um explizite/altersbeschränkte Titel herunterzuladen |

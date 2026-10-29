@@ -128,6 +128,50 @@ class NavidromeIndex:
             return None
         return str(row['navidrome_song_id'] or '').strip() or None
 
+    def matched_files(self, keys_by_path: dict[str, str]) -> set[str]:
+        """The library paths of ``{path: content key}`` that have a
+        Navidrome song id - matched by content key or by path."""
+
+        wanted = {
+            _norm_filename(path): str(key or '')
+            for path, key in keys_by_path.items()
+        }
+        wanted.pop('', None)
+        if not wanted:
+            return set()
+        found_keys: set[str] = set()
+        found_paths: set[str] = set()
+        keys = sorted({key for key in wanted.values() if key})
+        paths = sorted(wanted)
+        with self._connect() as conn:
+            for start in range(0, len(keys), 400):
+                chunk = keys[start : start + 400]
+                marks = ','.join('?' * len(chunk))
+                found_keys.update(
+                    str(row['content_key'])
+                    for row in conn.execute(
+                        'SELECT content_key FROM navidrome_tracks '
+                        f'WHERE content_key IN ({marks})',
+                        chunk,
+                    )
+                )
+            for start in range(0, len(paths), 400):
+                chunk = paths[start : start + 400]
+                marks = ','.join('?' * len(chunk))
+                found_paths.update(
+                    _norm_filename(row['filename'])
+                    for row in conn.execute(
+                        'SELECT filename FROM navidrome_tracks '
+                        f'WHERE filename IN ({marks})',
+                        chunk,
+                    )
+                )
+        return {
+            path
+            for path, key in wanted.items()
+            if path in found_paths or (key and key in found_keys)
+        }
+
     def lookup_spotify(self, spotify_track_id: str) -> Optional[str]:
         tid = normalize_spotify_track_id({'song_id': spotify_track_id})
         if not tid:

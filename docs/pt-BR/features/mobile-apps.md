@@ -12,7 +12,15 @@ O Downtify pode atender apps no seu celular: eles navegam pela biblioteca e a to
 O app é construído de forma aberta em [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Qualquer outro app pode ser feito sobre a mesma API — veja o [contrato do cliente móvel](../mobile-client-contract.md).
 :::
 
+## Entrando pelo app
+
+Digite o endereço do servidor (ou escolha-o em **Encontrados nesta rede**) e entre com **o mesmo usuário e senha** da página web. O celular aparece em **Apps pareados**, exatamente como se você o tivesse pareado com um código abaixo: ele toca como você, guarda uma chave própria (a senha não fica guardada no celular) e **Desparear** o bloqueia.
+
+Senhas erradas têm limite de tentativas junto com o login da página web. Enquanto as contas estão desligadas (`DOWNTIFY_DISABLE_AUTH`), não há com o que entrar: pareie com um código.
+
 ## Pareando um celular
+
+Parear não pede senha no celular: prático quando a página web já está aberta, ou num celular em que você prefere não digitar sua senha.
 
 1. Abra **Configurações → Apps** e pressione **Parear um celular**.
 2. No app, escolha **Escanear o código** e aponte a câmera para o QR code — ou digite o código de 8 caracteres exibido abaixo dele (`K7QM-2XPD`; maiúsculas e hifens não importam).
@@ -47,6 +55,10 @@ Os apps tocam os arquivos como estão (**Original**) ou pedem ao servidor uma c�
 - Um arquivo que já é pequeno o bastante (um arquivo com perdas em bitrate igual ou menor que o pedido) é enviado como está, nunca recodificado.
 - As cópias ficam em `/data/transcode_cache`, no máximo 2 GB por padrão; as tocadas há mais tempo saem primeiro. No máximo duas são feitas ao mesmo tempo. Os dois limites são [variáveis de ambiente](../getting-started/environment-variables.md#mobile-apps-and-sign-in).
 - Se o celular desiste enquanto uma cópia está sendo feita, o servidor para de fazê-la.
+
+## Normalização de volume
+
+O app Android pode tocar as músicas com volume parecido usando as mesmas medições do player web: ative **Normalizar volume** em **Configurações → Reprodução**. Vale a partir da próxima música, e músicas sem medição tocam no volume original. Uma cópia offline só usa a medição quando foi baixada inteira e corresponde ao arquivo que o servidor mediu. Veja [Normalização de volume](playback-normalization.md).
 
 ## Transmissão (cast)
 

@@ -204,7 +204,9 @@ class _FakeMonitorDB:
     def get_track_filenames(self, playlist_id):
         return self.filenames
 
-    def mark_track_downloaded(self, playlist_id, track_id, filename):
+    def mark_track_downloaded(
+        self, playlist_id, track_id, filename, **_kwargs
+    ):
         pass
 
     def update_playlist(self, playlist_id, **kwargs):

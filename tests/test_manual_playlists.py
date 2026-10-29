@@ -18,6 +18,7 @@ from downtify.m3u import MANUAL_M3U_MARKER, is_manual_m3u, write_m3u
 from downtify.manual_playlists import (
     ManualPlaylistError,
     create_manual_playlist,
+    detach_imported_playlist,
     drop_manual_playlist,
     edit_manual_playlist,
     prune_files_from_manual_playlists,
@@ -111,6 +112,24 @@ def test_cannot_edit_imported_playlist(tmp_path):
     with pytest.raises(ManualPlaylistError) as caught:
         edit_manual_playlist(ctx, 'Spotify Hits', add=['Song.mp3'])
     assert caught.value.status_code == 403
+
+
+def test_detach_preserves_legacy_paths_and_metadata(tmp_path: Path) -> None:
+    path = tmp_path / 'Mix.m3u'
+    path.write_bytes(
+        b'#EXTM3U\r\n#EXTINF:196,Beyonc\xe9\r\nBeyonc\xe9.mp3\r\n'
+    )
+    audio = tmp_path / 'Beyoncé.mp3'
+    audio.write_bytes(b'audio')
+
+    result = detach_imported_playlist(
+        LibraryContext(download_dir=tmp_path), 'Mix'
+    )
+
+    assert result['files'] == ['Beyoncé.mp3']
+    assert '#EXTINF:196,Beyoncé' in path.read_text(encoding='utf-8')
+    assert is_manual_m3u(path)
+    assert audio.read_bytes() == b'audio'
 
 
 def test_drop_manual_keeps_audio(tmp_path):

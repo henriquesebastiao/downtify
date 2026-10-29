@@ -103,6 +103,7 @@ La cola, la canción actual, su posición, el aleatorio y la repetición se recu
 | `Q` | Abrir a continuación |
 | `E` | Abrir el ecualizador |
 | `Ctrl` / `⌘` + `K` o `/` | Buscar |
+| `Ctrl` / `⌘` + `F` | Buscar en la playlist (en la página de una playlist) |
 | `G` y luego `L` / `D` | Ir a la biblioteca / cola |
 | `Esc` | Cerrar Reproduciendo |
 | `?` | Mostrar todos los atajos |

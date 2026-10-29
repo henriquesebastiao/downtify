@@ -63,6 +63,7 @@ Si rien d’acceptable ne se présente, que le transfert ne se termine pas dans 
 Avec **Laisser les fichiers slskd en place** activé (par défaut), le fichier téléchargé reste dans le dossier de slskd : Downtify y écrit les métadonnées, la pochette et les paroles, et l’enregistre dans la bibliothèque sous un chemin `slskd/…`. La Bibliothèque, le lecteur et les fichiers M3U utilisent ce chemin, servi via `/media/slskd/…`.
 
 Désactivez-le pour copier le fichier à côté de vos autres téléchargements, selon votre modèle de nom de fichier et les réglages d’[organisation des fichiers](file-organization.md).
+Le transfert lui-même reste dans le dossier slskd ; [Stockage et utilisation](storage-usage.md#the-library-not-its-working-copies) compte ces copies à part de la bibliothèque, comme *copies de travail slskd*, pour que vous voyiez la place qu’elles prennent.
 
 ::: info
 Les fichiers slskd gardent leur format d’origine — ils ne sont pas transcodés vers le format choisi dans les Paramètres.

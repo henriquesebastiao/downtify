@@ -63,6 +63,7 @@ Se nada aceitável aparecer, a transferência não terminar dentro do **Tempo li
 Com **Deixar os arquivos do slskd no lugar** ligado (o padrão), o arquivo baixado fica na pasta do slskd: o Downtify grava nele ali mesmo os metadados, a capa e a letra e o registra na biblioteca com um caminho `slskd/…`. A Biblioteca, o player e os arquivos M3U usam esse caminho, e ele é servido por `/media/slskd/…`.
 
 Desligue para copiar o arquivo ao lado dos seus outros downloads, seguindo o seu modelo de nome de arquivo e as configurações de [organização de arquivos](file-organization.md).
+A transferência em si continua na pasta do slskd; [Armazenamento e uso](storage-usage.md#the-library-not-its-working-copies) conta essas cópias à parte da biblioteca, como *cópias de trabalho do slskd*, para você ver quanto espaço elas ocupam.
 
 ::: info
 Os arquivos do slskd mantêm o formato original — não são transcodificados para o formato escolhido em Configurações.

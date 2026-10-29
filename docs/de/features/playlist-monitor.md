@@ -70,7 +70,7 @@ Ein Handle wird beim Hinzufügen der Beobachtung zum Kanal des Künstlers aufgel
 Bei jedem Durchlauf listet Downtify die Diskografie des Künstlers auf, vergleicht sie mit den bereits verarbeiteten Veröffentlichungen und lädt jeden Titel von allem Neuen herunter. Ein Durchlauf im Normalbetrieb kostet eine einzige Anfrage — Titellisten werden nur für Veröffentlichungen abgerufen, die es noch nicht gesehen hat.
 
 ::: info Warum die Diskografie von YouTube Music kommt
-Spotifys öffentliches Embed zeigt den Namen eines Künstlers und eine Vorschau der Top-Titel, aber **nicht** seine Diskografie — sie zu lesen würde Spotify-API-Zugangsdaten erfordern, die Downtify bewusst nicht nutzt. Ein Spotify-Künstlerlink wird also zu seinem Namen aufgelöst und demselben Künstler auf YouTube Music zugeordnet, von wo auch das Audio geholt wird. Der Vorteil: Jede Veröffentlichung, die Downtify sehen kann, kann es auch tatsächlich herunterladen. Der Kompromiss: Bei einem Künstler mit mehrdeutigem Namen prüfe, dass der aufgelöste Name der Beobachtung der gemeinte Künstler ist — füge die YouTube-Music-Künstler-URL direkt ein, wenn der falsche gewählt wurde.
+Spotifys öffentliches Embed zeigt den Namen eines Künstlers und eine Vorschau der Top-Titel, aber **nicht** seine Diskografie — sie zu lesen würde Spotify-API-Zugangsdaten erfordern, die Downtify bewusst nicht nutzt. Ein Spotify-Künstlerlink wird also zu seinem Namen aufgelöst und demselben Künstler auf YouTube Music zugeordnet, von wo auch das Audio geholt wird. Der Vorteil: Jede Veröffentlichung, die Downtify sehen kann, kann es auch tatsächlich herunterladen. Der Kompromiss: Der Link folgt dem Künstler auf YouTube Music mit genau diesem Namen (Groß-/Kleinschreibung und Satzzeichen egal), bei mehreren gleichnamigen dem besten Treffer von YouTube Music. Prüfe bei einem häufigen Namen, dass die Beobachtung der gemeinte Künstler ist, und füge sonst die YouTube-Music-Künstler-URL direkt ein. Einen Spotify-Künstler, dessen genauen Namen kein Künstler auf YouTube Music trägt, kannst du nur so hinzufügen: Downtify rät nicht.
 :::
 
 ::: warning Der erste Durchlauf lädt den gesamten Back-Katalog herunter
@@ -101,6 +101,24 @@ Eine Veröffentlichung wird erst als verarbeitet erfasst, wenn jeder ihrer Titel
 
 Künstlerbeobachtungen erzeugen keine M3U-Dateien — die Titel werden nach deinen Einstellungen zur [Dateiorganisation](file-organization.md) abgelegt, nicht als Playlist.
 
+### Vorgeschlagene Künstler
+
+Unter der Liste der Künstlerbeobachtungen schlägt der Tab **Künstler** Künstler zum Folgen vor, in zwei Listen:
+
+| Liste | Wer drinsteht |
+|-------|---------------|
+| **Nach deinem Hörverlauf** | Die Künstler, die du am meisten hörst: deine eigenen Wiedergaben, die [Entdecken](discover.md) zählt. Neue Wiedergaben zählen mehr: Das Gewicht einer Wiedergabe halbiert sich alle 45 Tage, ein Künstler, den du letztes Jahr viel gehört hast, steht also unter einem, den du gerade jeden Tag hörst. |
+| **Nach deiner Bibliothek** | Die Künstler mit den meisten Titeln, dann Alben, in der Bibliothek, die du siehst. |
+
+Künstler, die du schon beobachtest (auch pausierte Beobachtungen), und Sammelnamen wie **Various Artists** bleiben draußen. Jede Liste zeigt 20 Künstler auf einmal; **Mehr anzeigen** lädt die nächsten. Die Listen gehören nur dir, auch einem Admin: Die Wiedergaben eines anderen Kontos tauchen nie auf. Ein Künstler, den ein Admin vor Nutzern verborgen hat, bleibt aus den Listen eines Nutzers draußen, wie aus seiner Bibliothek.
+
+Das Laden der Listen sucht nach nichts. **Folgen** sucht den Namen auf YouTube Music, wo eine Künstlerbeobachtung dem Künstler folgt:
+
+- Heißt dort genau ein Künstler so, wird die Beobachtung sofort hinzugefügt, mit dem Intervall und den Optionen **Herunterladen** / **Nur neue Veröffentlichungen** aus dem Feld darüber;
+- sonst (Namensvettern, oder kein Künstler mit genau diesem Namen) zeigt ein Dialog die gefundenen YouTube-Music-Künstler, jeweils mit Foto und einem Link zum Profil. Wähle einen mit **Diesem Künstler folgen**, oder **Link einfügen**, um den Link des Künstlers selbst in das Feld darüber einzufügen.
+
+Vorschläge wählen nur aus, welcher Künstler beobachtet wird: Die Titel werden weiter wie gewohnt aus deinen [Audioquellen](download-settings.md) heruntergeladen.
+
 ## Prüfintervalle
 
 | Bezeichnung | Minuten | Am besten für |
@@ -125,14 +143,19 @@ Jeder Tab listet nur seine eigene Art von Beobachtung. Über der Liste:
 - **Filtern** — tippe einen Teil eines Namens oder des Links (z. B. einer Playlist-ID) ein, um die Liste einzugrenzen
 - **Alle / Pausiert** — nur pausierte Beobachtungen zeigen
 - **Alle jetzt prüfen** — jede aktive Beobachtung des aktuellen Tabs prüfen
+- Eine Leiste mit der Zahl der Titel, die im gewählten Zeitraum (**7 Tage**, **30 Tage** oder **90 Tage**) dazukamen, und, über alle Beobachtungen, wie viele Titel sie haben, wie viel Platz diese **Auf dem Datenträger** belegen und wie viele **In mehreren Überwachungen** sind — siehe [Aktivität und Speicher je Beobachtung](#activity-and-storage-per-watch)
 
 In jeder Zeile:
 
 - Schalter **Aktiv** — die Beobachtung pausieren oder fortsetzen, ohne sie zu entfernen
 - **Prüfungen** — wie oft sie geprüft wird
 - **Jetzt prüfen** (↻) — sie sofort prüfen, außerhalb des Zeitplans
+- **Aktivität** — neue Titel im gewählten Zeitraum, der Durchschnitt pro Woche und ob dieses Tempo steigt oder fällt; ein Klick öffnet die Seite der Beobachtung
+- **Speicher** — der Platz der Titel, die nur diese Beobachtung hat, plus wie viele sie mit anderen teilt
 - **Bearbeiten** (✎) — Link, Intervall und Aktivzustand der Beobachtung ansehen und ändern (siehe [Eine Beobachtung bearbeiten](#editing-a-watch))
-- **⋯** — pausieren/fortsetzen, den Link kopieren, das Original öffnen oder **Überwachung beenden** (der Eintrag wird gelöscht; heruntergeladene Dateien bleiben)
+- **⋯** — **Aktivität und Titel** (die eigene Seite der Beobachtung), pausieren/fortsetzen, den Link kopieren, das Original öffnen oder **Überwachung beenden** (der Eintrag wird gelöscht; heruntergeladene Dateien bleiben)
+
+**Aktivität** und **Speicher** sind Spalten wie die anderen: Unter **Spalten** blendest du sie aus oder änderst ihre Breite.
 
 ### Eine Beobachtung bearbeiten
 
@@ -157,6 +180,11 @@ Das Steuerelement **Sortieren nach** über der Liste ordnet den aktuellen Tab na
 | Zuletzt geprüft | Zuletzt geprüfte zuerst; nie geprüfte zuletzt |
 | Prüfhäufigkeit | Seltenste (längstes Intervall) zuerst |
 | Anzahl der Titel / Veröffentlichungen | Meiste zuerst |
+| Letzte Aktivität | Neue Titel im gewählten Zeitraum |
+| Durchschnittliches Tempo | Neue Titel pro Tag im Zeitraum |
+| Speicherzuwachs | Platz der neuen Titel des Zeitraums |
+| Eigener Speicher | Platz der Titel, die keine andere Beobachtung hat |
+| Heruntergeladene Titel | Titel auf dem Datenträger, die die Beobachtung selbst heruntergeladen hat |
 
 Die Schaltfläche daneben wechselt zwischen auf- und absteigender Reihenfolge. Die Wahl wird im Browser gemerkt und ändert nur die Liste — nicht die Prüfreihenfolge oder die Planung.
 
@@ -196,6 +224,8 @@ Top 50 - USA        →  new song appears   →  Downtify downloads it
 
 Das Einzige, was Audio löscht, sind Dinge, die du ausdrücklich verlangst: **Löschen** bei einem Titel oder einer Auswahl in der Bibliothek, das Löschen einer Playlist aus der Bibliothek (was ihre Titel löscht — es fragt vorher) oder das Entfernen von Dateien durch dich selbst im Dateisystem.
 
+Um einen ungewollten Titel aus der Playlist zu nehmen und ihn bei jeder Prüfung draußen zu halten, blende ihn aus: siehe [Ausgeblendete Playlist-Titel](hidden-playlist-songs.md). Seine Datei bleibt in deiner Bibliothek.
+
 ::: info Eine Beobachtung löschen vs. eine Playlist löschen
 **Überwachung beenden** (im ⋯-Menü der Beobachtung) vergisst nur die Beobachtung: Auf der Festplatte ändert sich nichts. **Löschen** bei einer Playlist auf der **Bibliothek**-Seite ist die zerstörerische Aktion — es entfernt die Titel dieser Playlist, ihre M3U und ihren Katalogeintrag.
 :::
@@ -209,5 +239,41 @@ Der Zustand der Überwachung wird in einer SQLite-Datenbank unter `/data/downtif
 - Jede Beobachtung (Art, Spotify- oder YouTube-Music-Playlist-ID oder YouTube-Music-Kanal-ID, Name, URL, Intervall, aktiviert, Zeitpunkt der letzten Prüfung). Ob eine Beobachtung Spotify oder YouTube Music ist, wird aus ihrer gespeicherten URL gelesen, sodass keine zusätzliche Spalte nötig ist.
 - Jeden erfolgreich heruntergeladenen Titel pro Beobachtung, einschließlich des Dateinamens auf der Festplatte
 - Bei Künstlerbeobachtungen die bereits verarbeiteten Veröffentlichungen, damit ein Durchlauf Titellisten nur für wirklich neue abruft — einschließlich derer, die **Nur neue Veröffentlichungen** übersprungen hat, als solche markiert, damit das Ausschalten sie zurückholen kann — plus die Veröffentlichungsarten der Beobachtung und ob sie nur neue Veröffentlichungen beobachtet
+- Jeder Titel, den eine Beobachtung hinzugefügt hat (`watch_events`): wann, die Datei, welcher Audio-Anbieter ihn geholt hat, ob die Beobachtung ihn heruntergeladen oder schon in der Bibliothek gefunden hat und ob er mit ihrer ersten Prüfung kam. Diese Zeilen behalten Id, Namen und Besitzer der Beobachtung, wie sie damals waren, und überdauern sie: Beim Beenden oder Umstellen einer Beobachtung bleiben sie erhalten, ihre Titel sagen also weiter, woher sie kamen
+- Die Titel, die eine Beobachtung immer wieder nicht herunterladen kann (`watch_failures`), bis einer klappt, die Playlist verlässt oder die Beobachtung umgestellt wird
 
-Vor der Künstlerbeobachtung angelegte Datenbanken werden beim Start automatisch migriert; bestehende Zeilen funktionieren weiter als Playlist-Beobachtungen.
+Vor der Künstlerbeobachtung angelegte Datenbanken werden beim Start automatisch migriert; bestehende Zeilen funktionieren weiter als Playlist-Beobachtungen. Titel, die erfasst wurden, bevor Downtify den obigen Verlauf führte, werden ihm einmalig beim ersten Start mit unbekanntem Ergebnis hinzugefügt (**Vor der Erfassung**) — die vom ersten Tag einer Beobachtung zählen als ihre erste Prüfung.
+
+## Aktivität und Speicher je Beobachtung
+
+Die Überwachungsseite und die eigene Seite jeder Beobachtung (**Aktivität und Titel** im **⋯**-Menü einer Beobachtung, oder ein Klick auf ihre **Aktivität**) zeigen, welche Beobachtungen deine Bibliothek wachsen lassen — praktisch bei vielen Beobachtungen, oder um herauszufinden, warum ein generierter Mix unerwartete Titel gebracht hat.
+
+**Was als Aktivität zählt.** Es zählen nur Titel, die eine Beobachtung tatsächlich hinzugefügt hat: die, die sie heruntergeladen hat. Titel, die sie schon in deiner Bibliothek fand (eine andere Beobachtung oder ein eigener Download hatte sie), zählen gesondert als **Schon in der Bibliothek**, ebenso das, was ihre erste Prüfung bringt, wenn sie alles herunterlädt, was die Playlist schon enthielt. So wirkt eine statische Playlist ruhig, auch wenn ihre erste Prüfung 300 Titel geladen hat, und ein Mix, der 15 Titel pro Woche hinzufügt, zeigt 15 pro Woche. Titel, die erfasst wurden, bevor Downtify diesen Verlauf führte, zählen als hinzugefügt, und die Seite sagt, wie viele es sind.
+
+Im gewählten Zeitraum (7, 30 oder 90 Tage, im Browser gespeichert) zeigt eine Beobachtung:
+
+| Zahl | Was sie ist |
+|--------|------------|
+| Neue Titel | Titel, die sie im Zeitraum hinzugefügt hat |
+| Pro Tag / Pro Woche / Pro Monat | Das durchschnittliche Tempo im Zeitraum — oder seit Beginn der Beobachtung, wenn das kürzer her ist |
+| Trend | Ob das Tempo steigt (**Fügt zuletzt mehr hinzu**), fällt (**Fügt zuletzt weniger hinzu**) oder gleich bleibt, anhand der neuen Titel pro Tag (7 Tage) oder pro Woche (30 und 90 Tage); **Noch zu neu**, solange es weniger als drei davon zu vergleichen gibt |
+| Speicherzuwachs | Platz der neuen Titel des Zeitraums, die noch auf dem Datenträger sind |
+
+**Speicher.** Eine Datei wird einmal gespeichert, egal wie viele Beobachtungen sie haben, und die Zahlen berücksichtigen das: **Nur in dieser Überwachung** ist der Platz der Titel, die keine andere Beobachtung hat (was das Beenden der Beobachtung und das Löschen ihrer Titel freigäbe), **Geteilt** die Titel, die auch andere Beobachtungen haben, und die Leiste der Überwachungsseite zählt jede Datei einmal. Beobachtungen anderer Konten zählen bei der Frage, ob eine Datei geteilt ist, werden aber nicht genannt.
+
+Die Seite einer Beobachtung zeigt außerdem:
+
+- **Titel auf dem Datenträger**, **Von ihr heruntergeladen**, **Schon in der Bibliothek** und **Fehlgeschlagen** — wie ihre Titel dorthin kamen und wie viele beim Herunterladen immer wieder scheitern (weiter unten aufgelistet, mit der Zahl der Versuche und dem letzten Fehler)
+- **Woher das Audio kam** — YouTube Music, YouTube, Soulseek (slskd) oder Deemix, je Titel auf dem Datenträger
+- **Titel aus dieser Überwachung** — jeder Titel, den sie hat, die neuesten zuerst, auch solche, die die Playlist inzwischen verlassen haben, mit Filtern (**Letzte 30 Tage** — bzw. der gewählte Zeitraum —, **Von ihr heruntergeladen**, **Schon in der Bibliothek**, **Vor der Erfassung**). Wähle Titel aus, um sie abzuspielen, einzureihen, zu einer Playlist hinzuzufügen, als ZIP herunterzuladen oder zu löschen — etwa um aufzuräumen, was ein Mix in der letzten Woche gebracht hat
+- **In der Bibliothek öffnen** (die Seite der Playlist, oder die des Künstlers bei einer Künstlerbeobachtung), **Original öffnen** und **Jetzt prüfen**
+
+Die Id der Beobachtung (`#12`) steht neben ihrem Namen, damit sich zwei Beobachtungen desselben Links — etwa zwei Konten, die derselben Playlist folgen — unterscheiden lassen.
+
+## Woher ein Titel kommt
+
+**Woher er kommt** im Menü eines Titels (überall in der Bibliothek) sagt, welche Beobachtung ihn zuerst heruntergeladen hat, wann und mit welchem Anbieter — **Erste Prüfung**, wenn er mit der ersten Prüfung kam — und listet jede Beobachtung auf, die ihn jetzt hat, jeweils mit Id, Besitzer (für einen Admin), wann sie den Titel bekam und wie: **Hat ihn geladen**, **Schon in der Bibliothek** oder **Vor der Erfassung**. Es ist eine Datei: Beobachtungen, die einen Titel teilen, zeigen alle auf dieselbe Kopie.
+
+Von dort öffnet **Aktivität und Titel** die Seite der Beobachtung und **In der Bibliothek öffnen** ihre Playlist. Eine beendete Beobachtung, oder eine, die jetzt einem anderen Link folgt, wird weiter als Herkunft der Titel genannt, die sie heruntergeladen hat. Bei einem Titel, der erfasst wurde, bevor es diesen Verlauf gab, erscheint die erste Beobachtung, die ihn erfasst hat, markiert mit **Vermutlich**. Ein Titel, den keine Beobachtung heruntergeladen hat (einen, den du selbst geladen hast), sagt das.
+
+Ein Benutzer sieht seine eigenen Beobachtungen mit Namen; ein Titel, den die Beobachtung eines anderen Kontos heruntergeladen hat, sagt nur das, und wann.

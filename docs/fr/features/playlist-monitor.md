@@ -70,7 +70,7 @@ Un handle est résolu vers la chaîne de l’artiste quand vous ajoutez la surve
 À chaque passage, Downtify liste la discographie de l’artiste, la compare aux sorties qu’il a déjà traitées et télécharge chaque morceau de tout ce qui est nouveau. Un passage en régime établi coûte une seule requête — les listes de morceaux ne sont récupérées que pour les sorties qu’il n’a pas encore vues.
 
 ::: info Pourquoi la discographie vient de YouTube Music
-L’intégration publique de Spotify expose le nom d’un artiste et un aperçu de ses morceaux les plus populaires, mais **pas** sa discographie — la lire exigerait des identifiants de l’API Spotify, que Downtify n’utilise délibérément pas. Un lien d’artiste Spotify est donc résolu vers son nom et apparié au même artiste sur YouTube Music, d’où l’audio est aussi récupéré. L’avantage : toute sortie que Downtify peut voir est une sortie qu’il peut réellement télécharger. Le compromis : pour un artiste au nom ambigu, vérifiez que le nom résolu de la surveillance est bien l’artiste voulu — collez directement l’URL de l’artiste YouTube Music s’il a choisi le mauvais.
+L’intégration publique de Spotify expose le nom d’un artiste et un aperçu de ses morceaux les plus populaires, mais **pas** sa discographie — la lire exigerait des identifiants de l’API Spotify, que Downtify n’utilise délibérément pas. Un lien d’artiste Spotify est donc résolu vers son nom et apparié au même artiste sur YouTube Music, d’où l’audio est aussi récupéré. L’avantage : toute sortie que Downtify peut voir est une sortie qu’il peut réellement télécharger. Le compromis : le lien suit l’artiste YouTube Music qui porte exactement ce nom (casse et ponctuation mises à part), la meilleure correspondance de YouTube Music quand plusieurs le partagent. Pour un nom courant, vérifiez que la surveillance est bien l’artiste voulu, sinon collez directement l’URL de l’artiste YouTube Music. Un artiste Spotify dont aucun artiste YouTube Music ne porte exactement le nom ne peut être ajouté que de cette façon : Downtify ne devine pas.
 :::
 
 ::: warning Le premier passage télécharge tout le catalogue ancien
@@ -101,6 +101,24 @@ Une sortie n’est enregistrée comme traitée que lorsque chacun de ses morceau
 
 Les surveillances d’artistes ne génèrent pas de fichiers M3U — les morceaux sont rangés selon vos réglages d’[organisation des fichiers](file-organization.md) plutôt que comme une playlist.
 
+### Artistes suggérés
+
+Sous la liste des surveillances d’artistes, l’onglet **Artistes** suggère des artistes à suivre, en deux listes :
+
+| Liste | Qui y figure |
+|-------|--------------|
+| **D’après vos écoutes** | Les artistes que vous écoutez le plus : vos propres écoutes, celles que compte [Découvrir](discover.md). Les écoutes récentes comptent davantage : le poids d’une écoute est divisé par deux tous les 45 jours, si bien qu’un artiste beaucoup écouté l’an dernier passe derrière un artiste que vous écoutez chaque jour en ce moment. |
+| **D’après votre bibliothèque** | Les artistes qui ont le plus de morceaux, puis d’albums, dans la bibliothèque que vous voyez. |
+
+Les artistes que vous surveillez déjà (surveillances en pause comprises) et les noms de compilations comme **Various Artists** sont écartés. Chaque liste affiche 20 artistes à la fois ; **Afficher plus** charge les suivants. Les listes sont les vôtres, y compris pour un admin : les écoutes d’un autre compte n’y apparaissent jamais. Un artiste qu’un admin a masqué aux utilisateurs reste hors des listes d’un utilisateur, comme il reste hors de sa Bibliothèque.
+
+Charger les listes ne lance aucune recherche. **Suivre** cherche le nom sur YouTube Music, où une surveillance d’artiste suit l’artiste :
+
+- quand un seul artiste y porte ce nom, la surveillance est ajoutée tout de suite, avec l’intervalle et les options **Télécharger** / **Nouvelles sorties uniquement** choisis dans le cadre au-dessus ;
+- sinon (homonymes, ou aucun artiste portant exactement ce nom), une fenêtre montre les artistes YouTube Music trouvés, chacun avec sa photo et un lien vers son profil. Choisissez-en un avec **Suivre cet artiste**, ou **Coller un lien** pour coller vous-même le lien de l’artiste dans le cadre au-dessus.
+
+Les suggestions ne font que choisir l’artiste à surveiller : les morceaux se téléchargent toujours depuis vos [sources audio](download-settings.md), comme d’habitude.
+
 ## Intervalles de vérification
 
 | Étiquette | Minutes | Idéal pour |
@@ -125,14 +143,19 @@ Chaque onglet liste uniquement son propre type de surveillance. Au-dessus de la 
 - **Filtrer** — saisissez une partie d’un nom ou du lien (par ex. un identifiant de playlist) pour restreindre la liste
 - **Tout / En pause** — n’afficher que les surveillances en pause
 - **Tout vérifier** — vérifier toutes les surveillances actives de l’onglet courant
+- Un bandeau avec le nombre de titres arrivés sur la période choisie (**7 jours**, **30 jours** ou **90 jours**) et, pour toutes les surveillances, combien de titres elles ont, la place qu’ils prennent (**Sur le disque**) et combien sont **Dans plusieurs surveillances** — voir [Activité et stockage par surveillance](#activity-and-storage-per-watch)
 
 Sur chaque ligne :
 
 - Interrupteur **Actif** — mettre en pause ou reprendre la surveillance sans la retirer
 - **Vérifications** — à quelle fréquence elle est vérifiée
 - **Vérifier maintenant** (↻) — la vérifier immédiatement, hors planning
+- **Activité** — les nouveaux titres sur la période choisie, la moyenne par semaine et si ce rythme monte ou baisse ; cliquez pour ouvrir la page de la surveillance
+- **Stockage** — la place des titres que seule cette surveillance a, plus le nombre qu’elle partage avec d’autres
 - **Modifier** (✎) — voir et changer le lien, l’intervalle et l’état actif de la surveillance (voir [Modifier une surveillance](#editing-a-watch))
-- **⋯** — pause/reprise, copier le lien, ouvrir l’original, ou **Arrêter la surveillance** (l’enregistrement est supprimé ; les fichiers téléchargés sont conservés)
+- **⋯** — **Activité et titres** (la page de la surveillance), pause/reprise, copier le lien, ouvrir l’original, ou **Arrêter la surveillance** (l’enregistrement est supprimé ; les fichiers téléchargés sont conservés)
+
+**Activité** et **Stockage** sont des colonnes comme les autres : masquez-les ou redimensionnez-les depuis **Colonnes**.
 
 ### Modifier une surveillance
 
@@ -157,6 +180,11 @@ Le contrôle **Trier par** au-dessus de la liste ordonne l’onglet courant par 
 | Dernière vérification | Vérifiées le plus récemment d’abord ; jamais vérifiées en dernier |
 | Fréquence | Moins fréquentes (intervalle le plus long) d’abord |
 | Nombre de morceaux / sorties | Plus nombreux d’abord |
+| Activité récente | Nouveaux titres sur la période choisie |
+| Rythme moyen | Nouveaux titres par jour sur la période |
+| Croissance du stockage | Place prise par les nouveaux titres de la période |
+| Stockage propre | Place des titres qu’aucune autre surveillance n’a |
+| Titres téléchargés | Titres sur le disque que la surveillance a elle-même téléchargés |
 
 Le bouton à côté bascule entre l’ordre croissant et décroissant. Le choix est mémorisé dans le navigateur et ne change que la liste — pas l’ordre de vérification ni le planning.
 
@@ -196,6 +224,8 @@ Top 50 - USA        →  new song appears   →  Downtify downloads it
 
 Les seules choses qui suppriment de l’audio sont celles que vous demandez explicitement : **Supprimer** sur un morceau ou une sélection dans la Bibliothèque, supprimer une playlist depuis la Bibliothèque (ce qui supprime bien ses morceaux — après confirmation), ou retirer vous-même des fichiers du système de fichiers.
 
+Pour retirer de la playlist un titre dont vous ne voulez pas, et qu’il n’y revienne à aucune vérification, masquez-le : voir [Titres masqués d’une playlist](hidden-playlist-songs.md). Son fichier reste dans votre bibliothèque.
+
 ::: info Supprimer une surveillance vs supprimer une playlist
 **Arrêter la surveillance** (dans le menu ⋯ de la surveillance) ne fait qu’oublier la surveillance : rien ne change sur le disque. **Supprimer** sur une playlist de la page **Bibliothèque** est l’action destructrice — elle retire les morceaux de cette playlist, son M3U et son entrée de catalogue.
 :::
@@ -209,5 +239,41 @@ L’état du moniteur est stocké dans une base SQLite à `/data/downtify_monito
 - Chaque surveillance (type, identifiant de playlist Spotify ou YouTube Music ou identifiant de chaîne YouTube Music, nom, URL, intervalle, état activé, heure de la dernière vérification). Le fait qu’une surveillance soit Spotify ou YouTube Music se lit dans son URL enregistrée, donc aucune colonne supplémentaire n’est nécessaire.
 - Chaque morceau téléchargé avec succès par surveillance, y compris le nom de fichier sur disque
 - Pour les surveillances d’artistes, les sorties déjà traitées, de sorte qu’un passage ne récupère les listes de morceaux que pour les sorties réellement nouvelles — y compris celles que **Nouvelles sorties uniquement** a ignorées, marquées comme telles pour que la désactivation puisse les ramener — plus les types de sorties de la surveillance et si elle est en nouvelles sorties uniquement
+- Chaque morceau ajouté par une surveillance (`watch_events`) : quand, le fichier, quel fournisseur audio l’a récupéré, si la surveillance l’a téléchargé ou l’a trouvé déjà dans la bibliothèque, et s’il est venu avec sa première vérification. Ces lignes gardent l’id, le nom et le propriétaire de la surveillance tels qu’ils étaient, et lui survivent : arrêter ou rediriger une surveillance les conserve, ses titres disent donc toujours d’où ils viennent
+- Les morceaux que chaque surveillance n’arrive toujours pas à télécharger (`watch_failures`), jusqu’à ce que l’un réussisse, quitte la playlist ou que la surveillance soit redirigée
 
-Les bases créées avant le Suivi d’artistes sont migrées automatiquement au démarrage ; les lignes existantes continuent de fonctionner comme des surveillances de playlists.
+Les bases créées avant le Suivi d’artistes sont migrées automatiquement au démarrage ; les lignes existantes continuent de fonctionner comme des surveillances de playlists. Les morceaux enregistrés avant que Downtify garde l’historique ci-dessus y sont ajoutés une fois, au premier démarrage, avec un résultat inconnu (**Avant le suivi**) — ceux du premier jour d’une surveillance comptent comme sa première vérification.
+
+## Activité et stockage par surveillance
+
+La page Surveillance et la page de chaque surveillance (**Activité et titres** dans le menu **⋯** d’une surveillance, ou un clic sur son **Activité**) indiquent quelles surveillances font grossir votre bibliothèque — pratique avec beaucoup de surveillances, ou pour comprendre pourquoi un mix généré a apporté des titres inattendus.
+
+**Ce qui compte comme activité.** Seuls comptent les titres qu’une surveillance a vraiment ajoutés : ceux qu’elle a téléchargés. Ceux qu’elle a trouvés déjà dans votre bibliothèque (une autre surveillance, ou un téléchargement de votre part, les avait) comptent à part comme **Déjà dans la bibliothèque**, tout comme ce qu’apporte sa première vérification, quand elle télécharge tout ce que la playlist contenait déjà. Une playlist statique paraît donc inactive même si sa première vérification a téléchargé 300 titres, et un mix qui ajoute 15 titres par semaine affiche 15 par semaine. Les morceaux enregistrés avant que Downtify garde cet historique comptent comme ajoutés, et la page indique combien il y en a.
+
+Sur la période choisie (7, 30 ou 90 jours, mémorisée dans le navigateur) une surveillance affiche :
+
+| Nombre | Ce que c’est |
+|--------|------------|
+| Nouveaux titres | Les titres ajoutés sur la période |
+| Par jour / Par semaine / Par mois | Le rythme moyen sur la période — ou depuis le début de la surveillance, si c’est plus récent |
+| Tendance | Si le rythme monte (**En ajoute plus ces derniers temps**), baisse (**En ajoute moins ces derniers temps**) ou reste stable, d’après les nouveaux titres par jour (7 jours) ou par semaine (30 et 90 jours) ; **Trop récente pour le dire** tant qu’il y en a moins de trois à comparer |
+| Croissance du stockage | Place des nouveaux titres de la période encore sur le disque |
+
+**Stockage.** Un fichier est stocké une seule fois, quel que soit le nombre de surveillances qui l’ont, et les chiffres en tiennent compte : **Uniquement ici** est la place des titres qu’aucune autre surveillance n’a (ce que libérerait l’arrêt de la surveillance et la suppression de ses titres), **Partagés** les titres que d’autres surveillances ont aussi, et le bandeau de la page Surveillance compte chaque fichier une fois. Les surveillances des autres comptes comptent pour savoir si un fichier est partagé, mais ne sont pas nommées.
+
+La page d’une surveillance affiche aussi :
+
+- **Titres sur le disque**, **Téléchargés par elle**, **Déjà dans la bibliothèque** et **En échec** — comment ses titres sont arrivés, et combien échouent encore au téléchargement (listés plus bas, avec le nombre d’essais et la dernière erreur)
+- **D’où vient l’audio** — YouTube Music, YouTube, Soulseek (slskd) ou Deemix, par titre sur le disque
+- **Titres de cette surveillance** — tous ses titres, du plus récent au plus ancien, y compris ceux qui ont depuis quitté la playlist, avec des filtres (**30 derniers jours** — ou la période choisie —, **Téléchargés par elle**, **Déjà dans la bibliothèque**, **Avant le suivi**). Sélectionnez des titres pour les écouter, les mettre en file d’attente, les ajouter à une playlist, les télécharger en ZIP ou les supprimer — par exemple pour faire le ménage dans ce qu’un mix a apporté la semaine passée
+- **Ouvrir dans la bibliothèque** (la page de la playlist, ou celle de l’artiste pour une surveillance d’artiste), **Ouvrir l’original** et **Vérifier maintenant**
+
+L’id de la surveillance (`#12`) est affiché à côté de son nom, pour distinguer deux surveillances du même lien — deux comptes qui suivent la même playlist, par exemple.
+
+## D’où vient un titre
+
+**D’où il vient** dans le menu d’un titre (partout dans la bibliothèque) indique quelle surveillance l’a téléchargé en premier, quand et avec quel fournisseur — **Première vérification** s’il est venu avec la première vérification — et liste toutes les surveillances qui l’ont maintenant, chacune avec son id, son propriétaire (pour un admin), quand elle a reçu le titre et comment : **L’a téléchargé**, **Déjà dans la bibliothèque** ou **Avant le suivi**. C’est un seul fichier : les surveillances qui partagent un titre pointent toutes vers la même copie.
+
+De là, **Activité et titres** ouvre la page de la surveillance et **Ouvrir dans la bibliothèque** sa playlist. Une surveillance arrêtée, ou qui suit désormais un autre lien, reste nommée comme origine des titres qu’elle a téléchargés. Pour un titre enregistré avant que cet historique existe, c’est la première surveillance qui l’a enregistré qui est affichée, marquée **Probablement**. Un titre qu’aucune surveillance n’a téléchargé (un que vous avez téléchargé vous-même) l’indique.
+
+Un utilisateur voit ses propres surveillances par leur nom ; un titre téléchargé par la surveillance d’un autre compte n’indique que cela, et quand.

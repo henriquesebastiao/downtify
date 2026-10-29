@@ -7,7 +7,11 @@
       <main class="flex-1 pb-8">
         <RouterView v-slot="{ Component, route: viewRoute }">
           <Transition name="page" mode="out-in">
-            <component :is="Component" :key="viewKey(viewRoute)" />
+            <component
+              v-if="policyLoaded"
+              :is="Component"
+              :key="viewKey(viewRoute) + ':' + libraryOnly"
+            />
           </Transition>
         </RouterView>
       </main>
@@ -29,11 +33,18 @@
     <AddTracksToPlaylistModal />
     <DefaultPasswordPrompt />
     <ReplaceAudioDialog v-if="auth.isAdmin.value" />
+    <BuyLinksDialog />
+    <TrackOriginDialog />
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import {
+  libraryOnly,
+  policyLoaded,
+  startMusicPolicy,
+} from '/src/model/musicPolicy'
 import { useRoute, useRouter } from 'vue-router'
 import SideNav from './SideNav.vue'
 import TopBar from './TopBar.vue'
@@ -50,6 +61,8 @@ import AddTracksToPlaylistModal from '../library/AddTracksToPlaylistModal.vue'
 import SignIn from './SignIn.vue'
 import DefaultPasswordPrompt from './DefaultPasswordPrompt.vue'
 import ReplaceAudioDialog from '../library/ReplaceAudioDialog.vue'
+import BuyLinksDialog from '../library/BuyLinksDialog.vue'
+import TrackOriginDialog from '../monitor/TrackOriginDialog.vue'
 import API from '/src/model/api'
 import { useAccount } from '/src/model/account'
 import { useAuth } from '/src/model/auth'
@@ -71,6 +84,11 @@ const router = useRouter()
 const ui = useUi()
 const nowPlaying = useNowPlaying()
 const shortcutsOpen = ref(false)
+let stopPolicy
+onMounted(() => {
+  stopPolicy = startMusicPolicy()
+})
+onUnmounted(() => stopPolicy?.())
 
 // The Now playing overlay lives in the query string (?np=1); it must not
 // remount the page underneath it.

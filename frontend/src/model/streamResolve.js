@@ -8,6 +8,7 @@
 // evaluates before init - the shipped app then dies on load with
 // `TypeError: e is not a function` in the vendor chunk.
 import API from '/src/model/api'
+import { libraryOnly } from '/src/model/musicPolicy'
 
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/
 
@@ -33,6 +34,7 @@ export function directVideoId(song) {
 
 /** The video id to stream: the song's own, else the first search hit. */
 export async function videoIdFor(song) {
+  if (libraryOnly.value) throw new Error('Library-only mode')
   const direct = directVideoId(song)
   if (direct) return direct
   const artist = songArtist(song)
@@ -80,6 +82,7 @@ export async function prefetchServerCache(track) {
 
 /** Warm the server cache for a known video id (never throws). */
 export async function warmServerCache(videoId) {
+  if (libraryOnly.value) return
   try {
     await API.prefetchStream(videoId)
   } catch {

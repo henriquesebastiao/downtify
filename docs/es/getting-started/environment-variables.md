@@ -42,6 +42,15 @@ Consulta [Apps móviles](../features/mobile-apps.md) y [Usuarios e inicio de ses
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | Tamaño máximo, en MB, al que se mantiene la caché de audio emitido en streaming (`/data/stream_cache`); las copias reproducidas hace más tiempo salen primero. El streaming a través del servidor es lo que reproduce canciones sin descargar donde el propio navegador no llega a YouTube. |
 | `DOWNTIFY_STREAM_CONCURRENCY` | `2` | Cuántas descargas de streaming pueden ejecutarse a la vez. |
 
+## Papelera de música
+
+Consulta [Papelera de música](../features/music-trash.md). Desactivada salvo que se defina una de estas.
+
+| Variable | Predeterminado | Descripción |
+|----------|---------|-------------|
+| `DOWNTIFY_TRASH` | `false` | `true` activa la papelera de música para la carpeta de descargas: quitar canciones las mueve a una papelera que se guarda 30 días, y el propio Downtify mueve los archivos. Mientras está activa, solo los administradores quitan canciones. |
+| `DOWNTIFY_TRASH_CONFIG` | _(sin definir)_ | Ruta, dentro del contenedor, de un archivo JSON con las carpetas que cubre la papelera y dónde se ejecuta su worker (`embedded` o `external`). Tiene prioridad sobre `DOWNTIFY_TRASH`. Un archivo que no se puede leer impide que el servidor arranque. Consulta [El archivo de configuración](../features/music-trash.md#the-configuration-file). |
+
 ## Comprobación de estado
 
 La imagen incluye un [`HEALTHCHECK` de Docker](https://docs.docker.com/reference/dockerfile/#healthcheck) integrado — no hace falta un `--health-cmd` propio. Consulta `GET /api/health` en el puerto del propio contenedor cada 30 segundos (timeout de 5 segundos, 20 segundos de margen en el arranque, 3 reintentos antes de marcar el contenedor como no saludable). `docker ps` y `docker inspect` muestran el resultado, y herramientas como el `condition: service_healthy` de Compose o Watchtower pueden actuar en consecuencia.

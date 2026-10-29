@@ -42,6 +42,15 @@ Lásd: [Mobilalkalmazások](../features/mobile-apps.md) és [Felhasználók és 
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | A legnagyobb méret MB-ban, amely alatt a streamelt hang gyorsítótárát (`/data/stream_cache`) tartja; a legrégebben lejátszott másolatok mennek előbb. A szerveren át történő streamelés játssza le a le nem töltött számokat ott, ahol maga a böngésző nem éri el a YouTube-ot. |
 | `DOWNTIFY_STREAM_CONCURRENCY` | `2` | Hány streamletöltés futhat egyszerre. |
 
+## Zenekuka
+
+Lásd: [Zenekuka](../features/music-trash.md). Ki van kapcsolva, hacsak valamelyik nincs beállítva.
+
+| Változó | Alapértelmezés | Leírás |
+|----------|---------|-------------|
+| `DOWNTIFY_TRASH` | `false` | A `true` bekapcsolja a zenekukát a letöltési mappára: az eltávolított számok 30 napig megőrzött kukába kerülnek, és a Downtify maga helyezi át a fájlokat. Amíg be van kapcsolva, csak adminisztrátorok távolíthatnak el számokat. |
+| `DOWNTIFY_TRASH_CONFIG` | _(nincs beállítva)_ | Egy JSON-fájl útvonala a konténeren belül, amely felsorolja a kuka által lefedett mappákat és hogy hol fut a workere (`embedded` vagy `external`). Elsőbbséget élvez a `DOWNTIFY_TRASH`-sel szemben. Ha a fájl nem olvasható, a szerver nem indul el. Lásd: [A konfigurációs fájl](../features/music-trash.md#the-configuration-file). |
+
 ## Állapotellenőrzés
 
 A képfájl beépített [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) ellenőrzést tartalmaz — egyéni `--health-cmd` nem szükséges. Ez 30 másodpercenként lekérdezi a `GET /api/health` végpontot a konténer saját portján (5 másodperces időtúllépés, 20 másodperces indulási türelmi idő, 3 újrapróbálkozás, mielőtt a konténert nem egészségesnek jelöli). A `docker ps` és a `docker inspect` mutatja az eredményt, és az olyan eszközök, mint a Compose `condition: service_healthy` feltétele vagy a Watchtower, reagálhatnak rá.

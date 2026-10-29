@@ -30,7 +30,11 @@ def playlist(tmp_path, monkeypatch):
     monkeypatch.setattr(
         api,
         'require_playlist_visible',
-        lambda *a, **kw: {'manual': True, 'mine': True, 'can_edit_tracks': True},
+        lambda *a, **kw: {
+            'manual': True,
+            'mine': True,
+            'can_edit_tracks': True,
+        },
     )
     return tmp_path / 'Playlists' / 'Mix.m3u'
 

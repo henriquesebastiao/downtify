@@ -224,7 +224,7 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       name: playlist.name,
       // What to show. The file on disk has a fixed name, so the liked
       // songs playlist is given a translated title by the model.
-      title: playlist.name,
+      title: playlist.display_name || playlist.name,
       // The playlist of hearted songs, not a downloaded one.
       liked: Boolean(playlist.liked),
       manual: Boolean(playlist.manual),
@@ -245,17 +245,24 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       // Sharing (see downtify/playlist_shares.py). Without these fields a
       // playlist is the user's own and private.
       mine: playlist.mine !== false,
-      canEditTracks: Boolean(playlist.can_edit_tracks),
-      editors: Array.isArray(playlist.editors) ? playlist.editors : [],
+      // Its songs can be added and removed: a Library playlist of the
+      // user's, or one shared with them as an editor.
+      canEditTracks:
+        playlist.can_edit_tracks != null
+          ? Boolean(playlist.can_edit_tracks)
+          : Boolean(playlist.manual) && playlist.mine !== false,
       owner: String(playlist.owner || ''),
       visibility: playlist.visibility || 'private',
       sharedWith: Array.isArray(playlist.shared_with)
         ? playlist.shared_with
         : [],
+      editors: Array.isArray(playlist.editors) ? playlist.editors : [],
       followed: Boolean(playlist.followed),
       favorite: Boolean(playlist.favorite),
       sharedWithMe: Boolean(playlist.shared_with_me),
       isNew: Boolean(playlist.new),
+      // Songs the owner hid from an imported playlist.
+      hiddenCount: Number(playlist.hidden_count) || 0,
     }
   })
   // A tracked Spotify playlist whose M3U isn't written (M3U export off,
@@ -276,12 +283,15 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       added: 0,
       batch,
       mine: true,
+      canEditTracks: false,
       owner: '',
       visibility: 'private',
       sharedWith: [],
+      editors: [],
       followed: false,
       sharedWithMe: false,
       isNew: false,
+      hiddenCount: 0,
     }))
   return [...fromM3u, ...tracked].sort(
     (a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))
@@ -446,4 +456,21 @@ export function indexTracksBySong(tracks) {
     if (!index.has(key)) index.set(key, track)
   }
   return index
+}
+
+export function localCatalogRoute(item, kind = item?.kind) {
+  if (item?.source !== 'library') return null
+  if (kind === 'playlist')
+    return {
+      name: 'Playlist',
+      query: { name: item.playlist_name || item.name },
+    }
+  if (kind === 'artist') return { name: 'Artist', query: { name: item.name } }
+  return {
+    name: 'Album',
+    query: {
+      artist: item.album_artist || item.artist || item.artists?.[0] || '',
+      title: item.album_name || item.name || '',
+    },
+  }
 }

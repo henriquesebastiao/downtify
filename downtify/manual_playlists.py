@@ -7,10 +7,11 @@ edited, and so deleting them never removes the audio files.
 
 from __future__ import annotations
 
+import functools
 import threading
 from pathlib import Path
 from shutil import copyfile
-from typing import Any, Optional
+from typing import Any, Callable, Optional, ParamSpec, TypeVar
 
 from loguru import logger
 
@@ -26,7 +27,23 @@ from .playlist_mosaic import (
 
 MAX_PLAYLIST_NAME_LEN = 120
 MAX_TRACKS_PER_EDIT = 500
-_MANUAL_EDIT_LOCK = threading.RLock()
+
+_P = ParamSpec('_P')
+_R = TypeVar('_R')
+_WRITE_LOCK = threading.RLock()
+
+
+def _serialized(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run *func* alone among this module's M3U rewrites: the owner and
+    the editors of a shared playlist read, change and write it back at
+    the same time, and the last write would drop the other's songs."""
+
+    @functools.wraps(func)
+    def run(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+        with _WRITE_LOCK:
+            return func(*args, **kwargs)
+
+    return run
 
 
 class ManualPlaylistError(ValueError):
@@ -118,19 +135,8 @@ def create_manual_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
     }
 
 
+@_serialized
 def edit_manual_playlist(
-    ctx: LibraryContext,
-    name: str,
-    *,
-    add: Optional[list[str]] = None,
-    remove: Optional[list[str]] = None,
-) -> dict[str, Any]:
-    # Read/modify/write is one operation when collaborators edit together.
-    with _MANUAL_EDIT_LOCK:
-        return _edit_manual_playlist(ctx, name, add=add, remove=remove)
-
-
-def _edit_manual_playlist(
     ctx: LibraryContext,
     name: str,
     *,
@@ -195,10 +201,10 @@ def detach_imported_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
         raise ManualPlaylistError(
             f'Playlist {path.stem!r} can already be edited', status_code=409
         )
-    try:
-        lines = path.read_text(encoding='utf-8').splitlines()
-    except OSError as exc:
-        raise ManualPlaylistError(f'Could not read {path.name}') from exc
+    text = m3u.read_m3u_text(path)
+    if text is None:
+        raise ManualPlaylistError(f'Could not read {path.name}')
+    lines = text.splitlines()
     if lines[:1] != ['#EXTM3U']:
         lines.insert(0, '#EXTM3U')
     lines.insert(1, m3u.MANUAL_M3U_MARKER)
@@ -248,6 +254,7 @@ def copy_playlist(
     }
 
 
+@_serialized
 def rename_manual_playlist(
     ctx: LibraryContext, name: str, new_name: str
 ) -> dict[str, Any]:
@@ -306,6 +313,7 @@ def rename_manual_playlist(
     }
 
 
+@_serialized
 def drop_manual_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
     """Remove the M3U only — audio files stay on disk."""
 
@@ -340,6 +348,7 @@ def drop_manual_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
     }
 
 
+@_serialized
 def prune_files_from_manual_playlists(
     ctx: LibraryContext, filenames: list[str]
 ) -> list[str]:

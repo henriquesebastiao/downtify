@@ -15,6 +15,7 @@ import { useHistory } from '/src/model/history'
 import { useAccount } from '/src/model/account'
 import { useI18n } from '/src/i18n'
 import { itemTrackCount } from '/src/lib/library'
+import { useTrashCapability } from '/src/lib/trash'
 
 const createOpen = ref(false)
 const createFiles = ref([])
@@ -32,6 +33,7 @@ export function usePlaylistActions() {
   const library = useLibrary()
   const likes = useLikes()
   const tracks = useTrackActions()
+  const trash = useTrashCapability()
   const ui = useUi()
   const player = usePlayer()
   const history = useHistory()
@@ -46,11 +48,11 @@ export function usePlaylistActions() {
       cover: playlist.cover || '',
       covers: playlist.covers || [],
       route: { name: 'Playlist', query: { name: playlist.name } },
-      // Editing is for the owner: a playlist shared with the user is
-      // view-only.
-      manual: Boolean(
-        playlist.manual && (playlist.mine || playlist.canEditTracks)
-      ),
+      // Editing the songs is for the owner and the playlist's editors:
+      // for anyone else it is view-only.
+      manual: Boolean(playlist.canEditTracks),
+      // The owner hides songs from an imported playlist instead.
+      imported: Boolean(playlist.mine && !playlist.manual && !playlist.liked),
       playlistName: playlist.name,
     }
   }
@@ -64,10 +66,12 @@ export function usePlaylistActions() {
   }
 
   function manuals() {
-    // Only the user's own: a playlist shared with them is view-only.
-    return library.playlists.value.filter(
-      (item) => item.manual && (item.mine || item.canEditTracks)
-    )
+    // The user's own, then those shared with them as an editor: the
+    // rest are view-only.
+    return [
+      ...library.ownPlaylists.value,
+      ...library.sharedPlaylists.value,
+    ].filter((item) => item.canEditTracks)
   }
 
   function openCreate(
@@ -200,12 +204,17 @@ export function usePlaylistActions() {
     }
   }
 
-  async function renameNamed(playlist, newName) {
+  async function renameNamed(playlist, newName, resetDisplayName = false) {
     try {
-      const res = await API.renameLibraryPlaylist(playlist.name, newName)
+      const res = await API.renameLibraryPlaylist(
+        playlist.name,
+        newName,
+        resetDisplayName
+      )
       const renamed = res.data?.name || newName
+      const displayName = res.data?.display_name || renamed
       const previous = playlist.name
-      history.retitlePlaylist(previous, renamed)
+      history.retitlePlaylist(previous, renamed, displayName)
       const ctx = player.context.value
       if (
         ctx?.type === 'playlist' &&
@@ -215,13 +224,15 @@ export function usePlaylistActions() {
       ) {
         player.context.value = {
           ...ctx,
-          title: renamed,
+          title: displayName,
           playlistName: renamed,
           route: { name: 'Playlist', query: { name: renamed } },
         }
       }
       await library.load({ force: true })
-      ui.toast(t('playlists.renamed', { name: renamed }), { kind: 'success' })
+      ui.toast(t('playlists.renamed', { name: displayName }), {
+        kind: 'success',
+      })
       return renamed
     } catch (err) {
       ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
@@ -269,6 +280,59 @@ export function usePlaylistActions() {
       ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
         kind: 'error',
       })
+    }
+  }
+
+  // An imported playlist follows its source: hiding a song takes it out
+  // and keeps it out when the watch or the link brings it back. The song
+  // stays in the library.
+  async function hideFiles(playlist, files) {
+    const names = files.map((item) =>
+      typeof item === 'string' ? item : item.file
+    )
+    try {
+      const res = await API.changeHiddenPlaylistSongs(playlist.name, {
+        hide: names,
+      })
+      const keys = res.data?.keys || []
+      await library.load({ force: true })
+      ui.toast(t('playlists.hiddenTrack', { name: playlist.title }), {
+        kind: 'success',
+        action: keys.length
+          ? {
+              label: t('common.undo'),
+              run: () => showHidden(playlist, keys, { quiet: true }),
+            }
+          : undefined,
+      })
+      return true
+    } catch (err) {
+      failed(err)
+      return false
+    }
+  }
+
+  // Puts hidden songs back; one whose file is gone returns the next time
+  // the playlist downloads what it is missing.
+  async function showHidden(playlist, keys, { quiet = false } = {}) {
+    try {
+      const res = await API.changeHiddenPlaylistSongs(playlist.name, {
+        show: keys,
+      })
+      await library.load({ force: true })
+      if (!quiet) {
+        const restored = Number(res.data?.restored ?? keys.length)
+        ui.toast(
+          t(restored ? 'playlists.unhidden' : 'playlists.unhiddenLater', {
+            name: playlist.title,
+          }),
+          { kind: 'success' }
+        )
+      }
+      return true
+    } catch (err) {
+      failed(err)
+      return false
     }
   }
 
@@ -356,11 +420,14 @@ export function usePlaylistActions() {
 
   async function remove(playlist) {
     if (playlist.liked) return removeLikes()
+    // With the music trash on, deleting a playlist never deletes songs.
+    await trash.refresh()
     const ok = await ui.confirm({
       title: t('confirm.deletePlaylistTitle', { name: playlist.name }),
-      body: playlist.manual
-        ? t('confirm.deleteManualPlaylistBody')
-        : t('confirm.deletePlaylistBody'),
+      body:
+        playlist.manual || trash.enabled.value
+          ? t('confirm.deleteManualPlaylistBody')
+          : t('confirm.deletePlaylistBody'),
       confirmLabel: t('common.delete'),
       danger: true,
     })
@@ -408,12 +475,6 @@ export function usePlaylistActions() {
     return [
       favoriteAction(playlist),
       {
-        label: t('playlists.addSongs'),
-        icon: 'plus',
-        hidden: !playlist.canEditTracks,
-        action: () => openAddSongs(playlist),
-      },
-      {
         label: t('actions.play'),
         icon: 'play',
         hidden: empty,
@@ -436,6 +497,13 @@ export function usePlaylistActions() {
         },
       },
       { divider: true },
+      {
+        // Shared with them as an editor.
+        label: t('playlists.addSongs'),
+        icon: 'plus',
+        hidden: !playlist.canEditTracks,
+        action: () => openAddSongs(playlist),
+      },
       {
         label: t('sharing.follow'),
         icon: 'heart-outline',
@@ -515,14 +583,21 @@ export function usePlaylistActions() {
       {
         label: t('playlists.addSongs'),
         icon: 'plus',
-        hidden: !playlist.manual,
+        hidden: !playlist.canEditTracks,
         action: () => openAddSongs(playlist),
       },
       {
         label: t('playlists.rename'),
         icon: 'pencil',
-        hidden: !playlist.manual,
+        hidden: playlist.liked,
         action: () => openRename(playlist),
+      },
+      {
+        label: t('playlistNames.restore'),
+        icon: 'refresh',
+        hidden:
+          playlist.manual || playlist.liked || playlist.title === playlist.name,
+        action: () => renameNamed(playlist, '', true),
       },
       {
         label: t('sharing.detach'),
@@ -572,6 +647,8 @@ export function usePlaylistActions() {
     renameNamed,
     addFiles,
     removeFiles,
+    hideFiles,
+    showHidden,
     addMenuItems,
     createOpen,
     createFiles,
