@@ -12,7 +12,15 @@ Downtify telefonunuzdaki uygulamalara hizmet verebilir: kitaplığa göz atar ve
 Uygulama [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android) adresinde açık biçimde geliştirilir. Başka her şey aynı API üzerine kurulabilir — bkz. [mobil istemci sözleşmesi](../mobile-client-contract.md).
 :::
 
+## Uygulamadan oturum açma
+
+Sunucunun adresini yazın (veya **Bu ağda bulunanlar** altından seçin), ardından web sayfasındaki **aynı kullanıcı adı ve parolayla** oturum açın. Telefon, aşağıda bir kodla eşleştirmişsiniz gibi **Eşleştirilmiş uygulamalar** altında görünür: sizin olarak çalar, kendine ait bir anahtar saklar (parola telefonda saklanmaz) ve **Eşleştirmeyi kaldır** onu durdurur.
+
+Yanlış parola denemeleri web sayfasındaki oturum açmayla birlikte hız sınırlıdır. Hesaplar kapalıyken (`DOWNTIFY_DISABLE_AUTH`) oturum açılacak bir şey yoktur: bir kodla eşleştirin.
+
 ## Bir telefonu eşleştirme
+
+Eşleştirme telefonda parola gerektirmez: web sayfası zaten açıkken ya da parolanızı yazmak istemediğiniz bir telefonda kullanışlıdır.
 
 1. **Ayarlar → Uygulamalar**’ı açın ve **Telefon eşleştir**’e basın.
 2. Uygulamada **Kodu tara**’yı seçin ve kamerayı QR koda doğrultun — veya altında gösterilen 8 karakterlik kodu yazın (`K7QM-2XPD`; harf büyüklüğü ve tireler önemli değil).

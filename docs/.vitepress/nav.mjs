@@ -24,6 +24,7 @@ export const NAV = [
       { title: 'Similar', page: 'features/similar.md' },
       { title: 'Finder', page: 'features/finder.md' },
       { title: 'Download Settings', page: 'features/download-settings.md' },
+      { title: 'Download Queue', page: 'features/download-queue.md' },
       { title: 'Playlist Monitor', page: 'features/playlist-monitor.md' },
       { title: 'Playlist display names', page: 'features/playlist-names.md' },
       {
@@ -39,6 +40,7 @@ export const NAV = [
       { title: 'Users & Sign-in', page: 'features/users.md' },
       { title: 'Mobile Apps', page: 'features/mobile-apps.md' },
       { title: 'Server Settings', page: 'features/server.md' },
+      { title: 'Library-only mode', page: 'features/library-only.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Deemix', page: 'features/deemix.md' },
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
@@ -47,6 +49,8 @@ export const NAV = [
         page: 'features/external-library.md',
       },
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
+      { title: 'Storage & Usage', page: 'features/storage-usage.md' },
+      { title: 'Music Trash', page: 'features/music-trash.md' },
       { title: 'Replace Audio', page: 'features/replace-audio.md' },
       { title: 'M3U Export', page: 'features/m3u-export.md' },
       {

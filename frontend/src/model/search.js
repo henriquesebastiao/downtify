@@ -1,5 +1,6 @@
 // Free-text search across YouTube Music songs, albums and artists.
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { libraryOnly } from '/src/model/musicPolicy'
 
 import API from '/src/model/api'
 import { useAccount } from '/src/model/account'
@@ -11,6 +12,15 @@ const artists = ref([])
 const loading = ref(false)
 const error = ref('')
 let serial = 0
+watch(libraryOnly, () => {
+  serial += 1
+  query.value = ''
+  songs.value = []
+  albums.value = []
+  artists.value = []
+  loading.value = false
+  error.value = ''
+})
 
 async function searchFor(text) {
   const term = String(text || '').trim()

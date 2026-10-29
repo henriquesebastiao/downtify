@@ -652,7 +652,7 @@ Remove finished (`done`) jobs, keeping queued, in-progress and failed ones. A us
 
 ### `DELETE /api/queue`
 
-Clear the download queue/history — one's own for a user, the entire one for an admin.
+Clear the download queue/history — one's own for a user, the entire one for an admin. A job that hasn't started yet never starts; one already downloading finishes.
 
 **Response:** `{ "cleared": true }`
 
@@ -660,13 +660,95 @@ Clear the download queue/history — one's own for a user, the entire one for an
 
 ### `DELETE /api/queue/item`
 
-Remove a single job from the queue (one's own, unless admin).
+Remove a single job from the queue (one's own, unless admin). If it hasn't started yet, it never does.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `song_id` | string | yes | Job ID |
 
 **Response:** `{ "removed": true }` or `{ "removed": false }`
+
+---
+
+### `GET /api/queue/state`
+
+Whether the download queue is paused. Anyone signed in can read it. See [Download Queue](features/download-queue.md).
+
+**Response:**
+
+```json
+{ "paused": true, "state": "pausing", "active": 2 }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `paused` | boolean | Whether the queue is paused |
+| `state` | string | `running`, `pausing` (paused, with `active` downloads still finishing) or `paused` (nothing running) |
+| `active` | integer | Downloads running right now, everyone's (Playlist Monitor sweeps included) |
+
+Every change is also broadcast as a `queue_state` [WebSocket](#websocket) frame.
+
+---
+
+### `POST /api/queue/pause`
+
+Admin. Pause the queue: no download starts until it is resumed, and the ones already running finish normally. Waiting jobs keep their place (`status: "queued"`, including a `POST /api/download/url` that hasn't started — that request waits until the queue is resumed), and Playlist Monitor sweeps wait before each track. The switch is saved, so the queue is still paused after a restart.
+
+**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+
+---
+
+### `POST /api/queue/resume`
+
+Admin. Carry on with the waiting jobs, with the current settings and audio provider order.
+
+**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+
+Unfinished jobs (waiting, or interrupted mid-download) are saved in `/data` and queued again when Downtify starts, paused or not; finished and failed ones are not.
+
+---
+
+## Download policy
+
+Recordings excluded from automatic downloads. A recording is excluded by hand, or once its attempts together have taken longer than `download_retry_budget_minutes` ([settings](#post-apisettingsupdate); 0–1440, default `0` = no limit). Excluding a recording never removes a file.
+
+These endpoints need a browser session or a paired device of an account that is still an administrator; anything else gets `403` (`admin_required`).
+
+### `GET /api/v1/download-policy/exclusions`
+
+List the excluded recordings, most recently changed first.
+
+**Response:**
+
+```json
+{ "items": [{ "id": "3f9c…", "title": "Song", "artist": "Artist", "album": "Album", "duration": 215, "elapsed": 1800.5, "reason": "timeout", "updated": 1761600000.0 }] }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Exclusion ID |
+| `duration` | integer | Length in seconds, `0` when unknown |
+| `elapsed` | number | Seconds spent on attempts so far |
+| `reason` | string | `manual` or `timeout` (retry budget used up) |
+| `updated` | number | Unix time of the last change |
+
+---
+
+### `POST /api/v1/download-policy/exclusions`
+
+Exclude a recording from automatic downloads.
+
+**Body:** `{ "name": "Song", "song_id": "…", "artist": "Artist", "artists": ["Artist"], "album_name": "Album", "duration": 215 }` — only `name` is required; `duration` is in seconds.
+
+**Response:** `{ "id": "3f9c…", "reason": "manual" }`. `422` (`identity_uncertain`) when the recording can't be told apart: no `song_id`, and not all of artist, album and duration.
+
+---
+
+### `DELETE /api/v1/download-policy/exclusions/{id}`
+
+Allow automatic downloads of the recording again and reset its elapsed time.
+
+**Response:** `{ "ok": true }`. `404` for an unknown ID; `409` (`attempt_still_stopping`) while an attempt at it is still stopping.
 
 ---
 
@@ -994,6 +1076,8 @@ Delete a downloaded file, plus its leftovers — best-effort, so a missing or un
 
 `playlists_affected` lists the downloaded playlists that contained the file; their M3U files and Navidrome playlists are rewritten in the background (`playlists_refresh_scheduled`).
 
+With the [music trash](#music-trash) on, this answers `409` (`trash_confirmation_required`): songs leave through the trash instead.
+
 Deleting follows who downloaded the file. An admin deletes anything. A user who is the only one to have downloaded it deletes it. When others downloaded it too, the user only gives up their own claim (`{ "released": true }`) and the file stays on disk and in the shared library. A file the user didn't download answers `Only an admin or whoever downloaded it can delete this song`.
 
 ---
@@ -1008,7 +1092,7 @@ Delete several files in one request — same cleanup as `DELETE /delete` (sideca
 { "files": ["My Playlist/Song.mp3", "Some Album/Track 2.mp3"] }
 ```
 
-Duplicate paths are deduplicated before processing. Capped at 2000 files per request (`413` if exceeded).
+Duplicate paths are deduplicated before processing. Capped at 2000 files per request (`413` if exceeded). With the [music trash](#music-trash) on, it answers `409` (`trash_confirmation_required`).
 
 **Response:**
 
@@ -1110,7 +1194,7 @@ Tickets are single-use and expire after 5 minutes: `404` for an unknown, expired
 
 ### `DELETE /api/library/playlist`
 
-Delete a downloaded playlist: every track registered to it (including tracks other playlists also contain), its playlist-folder leftovers, its M3U file(s) and its catalog entry. A playlist created in the Library (`manual`) only removes the M3U — the audio stays.
+Delete a downloaded playlist: every track registered to it (including tracks other playlists also contain), its playlist-folder leftovers, its M3U file(s) and its catalog entry. A playlist created in the Library (`manual`) only removes the M3U — the audio stays. So does every playlist while the [music trash](#music-trash) is on.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -1475,6 +1559,130 @@ Admin. Versions of a library track to [replace its audio](features/replace-audio
 Admin. Replace a library track's audio with a YouTube video: `{ "file": "…", "video_id": "7nxWP9BhI7w" }`. **Response:** `{ "job_id": "replace:<file>", "file": "…" }`.
 
 It runs as a queue job, with the usual [WebSocket](#websocket) progress messages (`song.song_id` is `job_id`, and `song.replace` is `{file, video_id}`), ending in `done` or `error`. The file keeps its path, format, tags and modification date; a failure leaves it untouched. `400` for an invalid video id or file type, `404` for an unknown file, `409` while the same file is already being replaced.
+
+---
+
+### `GET /api/library/usage`
+
+Admin. The library's size, growth and download outcomes over the last `days` (query, 1–365, default `30`), what could be cleaned up, and the disk's free space — the [Storage & Usage](features/storage-usage.md) page. Opening it also notes today's size (as the hourly reading does).
+
+**Response:**
+
+```json
+{
+  "days": 30,
+  "generated_at": "2026-10-27T12:00:00+00:00",
+  "library": {
+    "files": 5120,
+    "bytes": 41234567890,
+    "by_provider": [{ "id": "slskd", "files": 900, "bytes": 21000000000 }],
+    "by_location": [{ "id": "downloads", "files": 4200, "bytes": 30000000000 }],
+    "by_format": [{ "id": "flac", "files": 900, "bytes": 21000000000 }]
+  },
+  "period": {
+    "files": 320,
+    "bytes": 2600000000,
+    "by_provider": [{ "id": "youtube-music", "files": 250, "bytes": 1500000000 }],
+    "bucket_days": 7,
+    "series": [{ "files": 60, "bytes": 480000000 }]
+  },
+  "growth": {
+    "step_days": 1,
+    "points": [{ "day": "2026-09-27", "files": 4800, "bytes": 38600000000, "estimated": true }],
+    "change": { "files": 320, "bytes": 2600000000 },
+    "per_day_bytes": 86666667,
+    "since": "2026-10-20"
+  },
+  "downloads": {
+    "completed": 300,
+    "skipped": 40,
+    "failed": 12,
+    "bytes": 2500000000,
+    "by_provider": [{ "id": "youtube-music", "files": 240, "bytes": 1400000000 }],
+    "bucket_days": 7,
+    "series": [{ "completed": 60, "skipped": 8, "failed": 2 }],
+    "since": "2026-10-01T09:12:00+00:00"
+  },
+  "duplicates": {
+    "groups": 14,
+    "files": 15,
+    "bytes": 160000000,
+    "exact": { "groups": 9, "files": 9, "bytes": 70000000 },
+    "likely": { "groups": 5, "files": 6, "bytes": 90000000 },
+    "examples": [
+      {
+        "kind": "likely",
+        "title": "Roads",
+        "artist": "Portishead",
+        "bytes": 9000000,
+        "files": [
+          { "file": "slskd/user/Dummy/05 Roads.flac", "bytes": 34000000, "provider": "slskd", "codec": "flac", "bitrate": 900000 },
+          { "file": "Portishead - Roads.mp3", "bytes": 9000000, "provider": "youtube-music", "codec": "mp3", "bitrate": 320000 }
+        ]
+      }
+    ]
+  },
+  "working": {
+    "files": 120,
+    "bytes": 3900000000,
+    "slskd_in_place": false,
+    "examples": [{ "file": "slskd/user/Dummy/05 Roads.flac", "bytes": 34000000 }]
+  },
+  "disk": { "total": 2000000000000, "used": 1500000000000, "free": 500000000000, "days_left": 5769 }
+}
+```
+
+- `library` leaves out the slskd **working copies** (`working`): transfers copied into the library while slskd files aren't left in place, and — in that mode — any other `slskd/…` file Downtify doesn't know as a library song.
+- `by_provider` ids are `youtube-music`, `youtube`, `slskd`, `deemix`, `folder` (an extra music folder) or `unknown`; `by_location` ids are `downloads`, `slskd` and `folders`.
+- `period` counts the songs still in the library that came in during the period (download time when recorded, else the file's modification time), per bucket of `bucket_days`, oldest first.
+- `growth.points` run from `days` ago to today (one a day up to 90 days, one a week beyond); a day before the first daily snapshot is `estimated` from the same file dates. `since` is the oldest snapshot used, `null` when none.
+- `downloads` counts every attempt that ended in the period, from the queue and Playlist Monitor alike; `since` is the oldest one still kept (400 days at most), `null` when none.
+- `duplicates.bytes` is what keeping only the largest file of each group would free; `examples` are the 50 groups that would free most. `kind` is `exact` (one name and size) or `likely` (same artist and title, lengths within 3 s).
+- `disk` is the volume of the downloads folder (`null` when unreadable); `days_left` is `null` while the library isn't growing.
+
+---
+
+### `GET /api/library/usage/scan`
+
+Admin. What the downloads, slskd and lyrics folders hold, by kind, and what could go: leftover temporary files and orphaned sidecars. Walking the folders takes a while, so the result is kept for 10 minutes; `?refresh=true` walks them again. Nothing is deleted.
+
+**Response:**
+
+```json
+{
+  "folders": [
+    {
+      "id": "downloads",
+      "path": "/downloads",
+      "files": 5300,
+      "bytes": 30100000000,
+      "kinds": {
+        "audio": { "files": 4200, "bytes": 30000000000 },
+        "lyrics": { "files": 900, "bytes": 2000000 },
+        "temporary": { "files": 3, "bytes": 21000000 }
+      }
+    }
+  ],
+  "leftovers": {
+    "files": 2,
+    "bytes": 20000000,
+    "by_kind": { "temporary": 2 },
+    "examples": [{ "folder": "downloads", "file": "Song.webm.part", "bytes": 12000000, "kind": "temporary", "modified": 1793000000 }]
+  },
+  "orphans": {
+    "files": 4,
+    "bytes": 9000,
+    "by_kind": { "cover": 1, "lyrics": 3 },
+    "examples": [{ "folder": "downloads", "file": "Old Album/cover.jpg", "bytes": 6000, "kind": "cover", "modified": 1790000000 }]
+  },
+  "seconds": 1.42,
+  "scanned_at": "2026-10-27T12:00:00+00:00"
+}
+```
+
+- Folder `id`s are `downloads`, `slskd` and `lyrics` (only when lyrics are kept in a folder of their own); kinds are `audio`, `podcasts`, `lyrics`, `images`, `playlists`, `metadata` (saved artist photos and profiles), `temporary` and `other`.
+- A leftover is a temporary file — `.part`, `.part-FragN`, `.ytdl`, `.tmp`, `name.temp.ext`, an Upgrade library working copy — older than an hour.
+- An orphan is an `.lrc` with no song of the same name beside it (in the lyrics folder: no library song at its path) or an album `cover.jpg` in a folder with no song and no playlist.
 
 ---
 
@@ -2112,7 +2320,7 @@ An artist watch also takes:
 
 Both are ignored for a playlist link.
 
-**Response:** Watch object. `400` if the URL is none of the above, `409` if it is already watched (an artist added by handle and by channel URL is the same watch), `404` if no matching YouTube Music artist exists.
+**Response:** Watch object. `400` if the URL is none of the above, `409` if it is already watched (an artist added by handle and by channel URL is the same watch), `404` if no matching YouTube Music artist exists. A Spotify artist URL is also `409` when no YouTube Music artist has exactly that name — the YouTube Music artist URL is needed then (see [Artist Watch](features/playlist-monitor.md#artist-watch)).
 
 ---
 
@@ -2149,6 +2357,200 @@ Stop monitoring a playlist.
 Trigger an immediate check for a specific playlist outside the normal schedule.
 
 **Response:** `{ "downloaded": 3 }`
+
+---
+
+### `GET /api/monitor/stats`
+
+Each watch's storage, download status and activity — see [Activity and storage per watch](features/playlist-monitor.md#activity-and-storage-per-watch). A user gets their own watches; an admin every watch. Podcast watches are left out.
+
+| Query | Description |
+|-------|-------------|
+| `days` | The activity period, `1`–`365` (default `30`) |
+
+**Response:**
+
+```json
+{
+  "days": 30,
+  "bucket_days": 7,
+  "generated_at": "2026-10-27T08:46:36+00:00",
+  "totals": { "watches": 2, "files": 512, "bytes": 4294967296, "shared_files": 40 },
+  "watches": [
+    {
+      "id": 1,
+      "storage": {
+        "files": 300, "missing": 2,
+        "unique_files": 280, "shared_files": 20,
+        "bytes": 2600000000, "unique_bytes": 2400000000,
+        "shared_bytes": 200000000, "share_bytes": 2500000000
+      },
+      "status": { "downloaded": 250, "linked": 30, "unknown": 20, "failing": 3 },
+      "providers": { "youtube-music": 290, "slskd": 10 },
+      "period": {
+        "added": 60, "downloaded": 58, "linked": 4, "unknown": 2,
+        "initial": 0, "bytes": 520000000
+      },
+      "rate": { "per_day": 2.0, "per_week": 14.0, "per_month": 60.0 },
+      "series": [12, 15, 16, 17],
+      "trend": { "direction": "up", "slope": 1.6 },
+      "last_added_at": "2026-10-26T03:00:12+00:00"
+    }
+  ]
+}
+```
+
+- `totals` counts a file once however many watches hold it; `shared_files` are the files more than one watch holds.
+- `storage` covers the watch's songs on disk (`missing`: recorded but gone). `unique_*` are the files no other watch holds — other accounts' watches included — `shared_*` the rest, and `share_bytes` splits each shared file evenly between its watches.
+- `status` says how the songs on disk got into the watch: `downloaded` (the watch fetched them), `linked` (already in the library), `unknown` (recorded before this was kept); `failing` is how many tracks keep failing to download.
+- `period` counts the watch's additions in the last `days`. `added` (`downloaded` + `unknown`) grew the library; `linked` didn't; `initial` came with the watch's first check and is left out of the others. `bytes` is the space of the added songs still on disk.
+- `rate` is `added` over the period, or over the watch's own age when it's younger. `series` is added songs per bucket of `bucket_days` (1 for periods up to 14 days, else 7), oldest first, whole buckets only. `trend.direction` is `up`, `down`, `steady`, `idle` (nothing added) or `new` (fewer than three buckets); `slope` is the fitted change in songs per bucket, per bucket.
+- A watch retargeted at another playlist only counts what it did since.
+
+---
+
+### `GET /api/monitor/provenance`
+
+Where one library file came from — see [Where a song came from](features/playlist-monitor.md#where-a-song-came-from).
+
+| Query | Description |
+|-------|-------------|
+| `file` | The library path, as in `GET /tracks` |
+
+**Response:**
+
+```json
+{
+  "file": "Weekly Mix/Artist - Song.mp3",
+  "origin": {
+    "watch_id": 1,
+    "name": "Weekly Mix",
+    "at": "2026-10-20T03:00:05+00:00",
+    "provider": "youtube-music",
+    "initial": false,
+    "estimated": false,
+    "watch": { "id": 1, "name": "Weekly Mix", "url": "https://open.spotify.com/playlist/…", "kind": "playlist", "source": "spotify", "enabled": true, "created_at": "…", "owner": "bob" }
+  },
+  "watches": [
+    { "id": 1, "name": "Weekly Mix", "url": "…", "kind": "playlist", "source": "spotify", "enabled": true, "created_at": "…", "owner": "bob", "added_at": "2026-10-20T03:00:05+00:00", "outcome": "downloaded", "initial": false },
+    { "id": 4, "name": "Daily Mix", "url": "…", "kind": "playlist", "source": "spotify", "enabled": true, "created_at": "…", "owner": "bob", "added_at": "2026-10-22T03:00:41+00:00", "outcome": "linked", "initial": false }
+  ],
+  "others": 0
+}
+```
+
+- `origin` is the first watch that downloaded the file (`null` when none did). `estimated` is `true` when only a track recorded before outcomes were kept says so. `watch` is `null` when that watch was stopped or now follows another link — `watch_id` and `name` are then what it was.
+- `watches` are the watches holding the file now, oldest first: `outcome` is `downloaded`, `linked` or `unknown`, `added_at` when it got the song. `owner` is the owner's username for an admin, `""` otherwise.
+- A user only sees their own watches: `others` counts the rest, and an origin that is another account's watch is only `{ "hidden": true, "at", "initial", "estimated" }`.
+
+`400` without a `file`.
+
+---
+
+### `GET /api/monitor/playlists/{playlist_id}/tracks`
+
+The songs a watch holds, newest first, as [`GET /tracks`](#get-tracks) rows — including songs that have since left the playlist — each with how it got there, plus the tracks it keeps failing on.
+
+**Response:**
+
+```json
+{
+  "watch": { "id": 1, "name": "Weekly Mix", "kind": "playlist", "…": "…" },
+  "tracks": [
+    {
+      "file": "Weekly Mix/Artist - Song.mp3",
+      "title": "Song",
+      "…": "…",
+      "watch": {
+        "track_id": "4uLU6hMCjMI75M1A2tKUQC",
+        "added_at": "2026-10-20T03:00:05+00:00",
+        "outcome": "downloaded",
+        "initial": false,
+        "provider": "youtube-music",
+        "shared_with": 1
+      }
+    }
+  ],
+  "missing": 2,
+  "failures": [
+    { "track_id": "…", "name": "Song", "artists": "Artist", "error": "Could not find a YouTube match", "attempts": 3, "first_failed_at": "…", "last_failed_at": "…" }
+  ]
+}
+```
+
+`watch` is the watch object of [`GET /api/monitor/playlists`](#get-apimonitorplaylists). `shared_with` is how many other watches hold the same file, `missing` how many recorded songs are no longer on disk. Songs an admin hid from users are left out for a user. `404` for a watch that doesn't exist or belongs to another account (unless you're an admin).
+
+---
+
+### `GET /api/monitor/artist-suggestions`
+
+Artists to follow, for the Monitor page's Artists tab: two lists, ranked from what the server already keeps — nothing is searched for. See [Suggested artists](features/playlist-monitor.md#suggested-artists).
+
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `listening_offset` | integer | `0` | Where the `listening` page starts |
+| `library_offset` | integer | `0` | Where the `library` page starts |
+| `limit` | integer | `20` | Artists per page, 1–100 |
+
+**Response:**
+
+```json
+{
+  "listening": {
+    "items": [
+      {
+        "name": "Artist",
+        "track_count": 12,
+        "album_count": 2,
+        "plays": 40,
+        "score": 31.7,
+        "last_played": "2026-10-20T21:14:03+00:00"
+      }
+    ],
+    "total": 48,
+    "next_offset": 20
+  },
+  "library": {
+    "items": [{ "name": "Other Artist", "track_count": 85, "album_count": 7 }],
+    "total": 230,
+    "next_offset": 20
+  },
+  "half_life_days": 45
+}
+```
+
+- **`listening`** — the artists of your own listens (the ones [`POST /api/discover/listens`](#post-apidiscoverlistens) counts), by `score`: every listen, halved every `half_life_days` since the artist was last played. `plays` counts every listen. `track_count` / `album_count` are `0` for an artist not in the library.
+- **`library`** — the library's artists (as the Library groups them, by album artist), by tracks, then albums, then name.
+
+Each list is paged on its own; `next_offset` is `null` on the last page. Listens and watches are always the caller's own, an admin's too. Artists you already watch (paused watches too) and compilation placeholders such as `Various Artists` are left out; an artist an admin hid from users is left out of a user's lists. Browser sign-in only (`user` scope); `401` without a user.
+
+---
+
+### `GET /api/monitor/artist-suggestions/resolve`
+
+The YouTube Music artist to follow for a suggested name — the identity an artist watch follows. It searches YouTube Music, and adds nothing: following is then a [`POST /api/monitor/playlists`](#post-apimonitorplaylists) with the chosen `url`.
+
+**Query parameters:** `name` (required, 1–200 characters).
+
+**Response:**
+
+```json
+{
+  "candidates": [
+    {
+      "name": "Artist",
+      "artist_id": "UC…",
+      "url": "https://music.youtube.com/channel/UC…",
+      "image_url": "https://lh3.googleusercontent.com/…"
+    }
+  ],
+  "url": "https://music.youtube.com/channel/UC…"
+}
+```
+
+`url` is set only when exactly one result is named `name` (ignoring case and the characters a file name can't hold); otherwise it is `null` and the caller picks from `candidates` — the ones named `name` first, then the other results, 10 at most. `candidates` is empty when nothing was found. `image_url` is only ever a YouTube Music image over HTTPS, else `""`. `400` for a blank name.
 
 ---
 
@@ -2361,7 +2763,7 @@ Who this server is, signing in, and pairing apps — see [Users & Sign-in](featu
 
 | Scope | Credentials | Covers |
 |-------|-------------|--------|
-| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair` |
+| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair`, `POST /api/auth/token` |
 | Client | a device token (`Authorization: Bearer dtfy_…`), a signed URL (reads only), a WebSocket ticket, or any web session | Library and media reads (`/tracks`, `/list`, `/playlists`, `/lyrics`, `/cover`, `/playlist-cover`, `/downloads/…`, `/media/…`), `/api/v1/…`, search and link resolving, previews, `POST /api/download/url\|batch\|album`, likes, Discover and listens, podcast reads, episode downloads and playback, the queue and monitor lists (read), `GET /api/me`, `POST /api/activity/playback`, `POST /api/auth/ws-ticket`, `WS /api/ws` |
 | User | a web session of any user (the `downtify_session` cookie) | Client, plus your own account (`/api/me…`), your paired devices and pairing (`/api/auth/devices…`, `/api/auth/pairing…`) |
 | Admin | a web session of an **admin** | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, hiding songs from users, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, renaming the server, users, the activity log, signing everyone out |
@@ -2384,6 +2786,7 @@ Public. What an app checks before it has credentials.
     "transcoding": { "available": true, "formats": ["aac", "mp3", "opus"], "bitrates": [96, 128, 160, 192, 256, 320] },
     "signed_urls": true,
     "pairing": true,
+    "password_sign_in": true,
     "podcasts": true,
     "discover": true,
     "lyrics": true,
@@ -2392,7 +2795,7 @@ Public. What an app checks before it has credentials.
 }
 ```
 
-`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `transcoding.available` is `false` (and the lists empty) without ffmpeg.
+`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `password_sign_in` says an app may sign in with a username and password ([`POST /api/auth/token`](#post-apiauthtoken)); it is `false` while accounts are turned off, and missing on servers older than this endpoint — pair with a code then. `transcoding.available` is `false` (and the lists empty) without ffmpeg.
 
 ---
 
@@ -2547,6 +2950,16 @@ The device belongs to the user who showed the code. A code works once and for fi
 
 ---
 
+### `POST /api/auth/token`
+
+Public, rate-limited per address together with [`POST /api/auth/login`](#post-apiauthlogin) (10 failures per 5 minutes across both, then `429` with `Retry-After`). An app signs in with a username and password and gets its device token, without the web page.
+
+**Request body:** `{ "username": "maria", "password": "…", "device_name": "Pixel 8", "platform": "android" }` — the username in any case.
+
+**Response:** the same as [`POST /api/auth/pair`](#post-apiauthpair): `{ "token", "device", "server", "user" }`. The device belongs to that user and is listed with their paired apps; no session cookie is set. `401` `{"detail": "Wrong username or password"}` otherwise — the same for an unknown user. `409` while accounts are turned off (`DOWNTIFY_DISABLE_AUTH`): pair with a code instead. The activity log records a `login` (or `login_failed`) and a `device_paired`, both from the app's name.
+
+---
+
 ### `POST /api/auth/ws-ticket`
 
 Client. A single-use ticket, valid for 60 seconds, for opening the [WebSocket](#websocket) as `/api/ws?client_id=…&ticket=…` without an `Authorization` header. **Response:** `{ "ticket": "…" }`.
@@ -2683,6 +3096,145 @@ Admin. What each browser tab and app is playing — the players that reported in
 ### `POST /api/activity/playback`
 
 Client. A player says what it plays: `{ "player": "<id stable for this player>", "state": "playing" | "paused" | "stopped", "track": { "title", "artist", "album", "file" or "track_id", "duration" }, "position": 42 }`. Send it when a song starts, on pause/resume and stop, and about every 30 seconds while playing. A new song adds a `playback` entry to the log; the rest only update `GET /api/activity/now`. `400` for an unknown `state`, or no `file`/`track_id` (except for `stopped`). **Response:** `{ "ok": true }`.
+
+---
+
+## Music trash
+
+The [music trash](features/music-trash.md), when the server has it on (`DOWNTIFY_TRASH` or `DOWNTIFY_TRASH_CONFIG`): songs an admin removes are moved aside and kept for 30 days, restorable until then. The web app and the Android app use the same endpoints.
+
+Everything except `GET /api/v1/library/trash/capabilities` needs a browser session or a paired device of an account that is still an administrator (or sign-in turned off); anything else gets `403` (`admin_required`). With the trash off they answer `503` (`trash_not_configured`). Errors carry a stable code in `detail.code` and never a path on the server.
+
+The files are moved by the trash worker, inside the server or in a [separate process](features/music-trash.md#a-separate-worker): a confirmed request answers before anything has moved, and `state` says how far it got. Songs leave the library (`/tracks`, `/list`, [`GET /api/v1/library`](#get-apiv1library), streaming by path) as soon as they are confirmed, and the journal's changes reach connected clients as `library_changed` and `playlists_changed` frames.
+
+While the trash is on, [`DELETE /delete`](#delete-delete) and [`DELETE /delete/batch`](#delete-deletebatch) answer `409` (`trash_confirmation_required`), and deleting a playlist ([`DELETE /api/library/playlist`](#delete-apilibraryplaylist), [`DELETE /api/playlists/batches/{spotify_playlist_id}`](#delete-apiplaylistsbatchesspotify_playlist_id)) removes the playlist but keeps its songs.
+
+An operation (one song) looks like this:
+
+```json
+{
+  "id": "6f0c2a…",
+  "file": "Artist/Album/01 - Song.flac",
+  "track_id": "q0Zr3k…",
+  "metadata": { "title": "Song", "artist": "Artist", "album": "Album", "codec": "flac", "…": "…" },
+  "state": "trashed",
+  "size": 31457280,
+  "expires_at": 1764288000.0,
+  "error": ""
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Operation ID, for restore, retry and allow-download |
+| `file` | string | Library path it had (and gets back) |
+| `track_id` | string | Its [library id](#get-apiv1library), `""` when it had none; restoring keeps it |
+| `metadata` | object | Its library row when it was confirmed |
+| `state` | string | `pending` (confirmed, not moved yet), `moving`, `trashed`, `restore_pending`, `restoring`, `restored`, `purging`, `purged` (expired and deleted) or `error` (stopped; files kept) |
+| `size` | integer | Bytes of the audio and the sidecars that move with it |
+| `expires_at` | number \| null | Unix time it is deleted for good; set once it has moved |
+| `error` | string | The stop's code when `state` is `error` |
+
+---
+
+### `GET /api/v1/library/trash/capabilities`
+
+Whether the trash is on and whether this caller may use it. Any signed-in caller; an older server answers `404`, which a client takes as "off".
+
+**Response:** `{ "enabled": true, "can_manage": true, "retention_days": 30 }`. `can_manage` is `true` only for an administrator while the trash is on.
+
+---
+
+### `POST /api/v1/library/trash/preview`
+
+Check exactly what would move, in the background.
+
+**Body:** `{ "files": ["Artist/Album/01 - Song.flac"] }` or `{ "track_ids": ["q0Zr3k…"] }` (both may be given; up to 200 in all).
+
+**Response** (`202`): `{ "request_id": "Yx3…", "state": "preparing" }`. `409` (`invalid_selection`) when nothing was given; `409` (`preview_busy`) while this admin has a check running, `429` (`preview_busy`) while four are.
+
+---
+
+### `GET /api/v1/library/trash/preview/{request_id}`
+
+The check's result, for the admin who started it. Poll until it is ready.
+
+**Response:** `{ "state": "preparing" }`, then
+
+```json
+{
+  "state": "ready",
+  "preview": {
+    "confirmation": "Lr0…",
+    "expires_at": 1761600600.0,
+    "items": [{ "id": "6f0c2a…", "file": "Artist/Album/01 - Song.flac", "state": "preview", "…": "…" }]
+  }
+}
+```
+
+`items` are the operations, one per song, with the files that will move counted in `size`. When the check failed it answers `409` with the reason — `item_not_found`, `invalid_selection`, `track_is_playing`, `library_task_active`, `unsupported_collection`, `unsupported_lyrics_location`, `identity_uncertain` (tags too thin to keep the song out of automatic downloads), `unsafe_symlink`, `root_unavailable`, `nas_marker_missing`, `nas_marker_changed`, `admin_access_revoked`, `filesystem_unavailable`. `404` (`preview_unavailable`) for an unknown request, another admin's, or one finished more than an hour ago.
+
+---
+
+### `POST /api/v1/library/trash/confirm`
+
+Move what a check listed. The confirmation is good for 10 minutes, once, for the admin who asked for it.
+
+**Body:** `{ "confirmation": "Lr0…" }`
+
+**Response** (`202`): `{ "ids": ["6f0c2a…"], "state": "pending" }` — the files have not moved yet. Confirming again answers the same. `409` with `confirmation_invalid`, `confirmation_expired`, `file_changed` (a file differs from what was checked), `operation_already_pending`, `track_is_playing` or `library_task_active`; nothing moves then.
+
+---
+
+### `GET /api/v1/library/trash`
+
+What is in the trash or on its way, newest first: every operation not restored or expired.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `offset` | integer | no | Default `0` |
+| `limit` | integer | no | 1–100, default `50` |
+| `search` | string | no | Matches the path and the metadata, case-insensitive |
+
+**Response:** `{ "items": [{ "id": "6f0c2a…", "…": "…" }], "total": 1, "size": 31457280 }` — `total` and `size` (bytes) cover every match, not only this page.
+
+---
+
+### `POST /api/v1/library/trash/restore`
+
+Put songs back where they were. Works for `trashed`, `error` and still-`pending` operations (the last two only bring the song back into the library when nothing had moved).
+
+**Body:** `{ "ids": ["6f0c2a…"] }` (1–200)
+
+**Response** (`202`): `{ "state": "restore_pending" }`. `409` with `item_not_found`, `operation_in_progress` (still moving) or `retention_expired`. A file found at the old place meanwhile is never overwritten: that operation stops with `restore_collision`.
+
+---
+
+### `POST /api/v1/library/trash/retry`
+
+Resume operations that stopped (`state` `error`) once the cause is fixed.
+
+**Body:** `{ "ids": ["6f0c2a…"] }` (1–200)
+
+**Response** (`202`): `{ "state": "pending" }`. `409` (`operation_not_complete`) for one that isn't stopped.
+
+---
+
+### `GET /api/v1/library/trash/exclusions`
+
+Songs whose time in the trash ran out and that automatic downloads still skip.
+
+**Response:** `{ "items": [{ "id": "6f0c2a…", "state": "purged", "…": "…" }] }`
+
+---
+
+### `POST /api/v1/library/trash/allow-download`
+
+Let automatic downloads fetch songs again. Nothing is downloaded by this.
+
+**Body:** `{ "ids": ["6f0c2a…"] }` (1–200)
+
+**Response:** `{ "ok": true }`. `409` (`operation_not_complete`) for an operation that hasn't moved or been restored yet.
 
 ---
 
@@ -2915,13 +3467,21 @@ The handshake needs a device token (`Authorization: Bearer …`), a web session 
 }
 ```
 
-`status` on a per-track event is `downloading`, `done`, or `error`. `filename` is set (non-null) on the final `done` event. A row that is still waiting has `status: "queued"` on [`GET /api/queue`](#get-apiqueue), not as its own socket event.
+`status` on a per-track event is `downloading`, `done`, or `error` (or `queued` for a job a paused queue holds back, see below). `filename` is set (non-null) on the final `done` event. A row that is still waiting has `status: "queued"` on [`GET /api/queue`](#get-apiqueue), not as its own socket event.
 
 Queuing a playlist batch or a CSV import registers every job, then broadcasts one reload so open pages fetch that list once:
 
 ```json
 { "type": "queue_reload" }
 ```
+
+Pausing or resuming the queue, and the moment a paused queue's last running download ends, broadcast its state (the [`GET /api/queue/state`](#get-apiqueuestate) object):
+
+```json
+{ "type": "queue_state", "paused": true, "state": "paused", "active": 0 }
+```
+
+A job held by a paused queue after it was announced as `downloading` (a single download) is sent again with `status: "queued"`.
 
 A [library upgrade](features/library-upgrade.md) broadcasts its progress on the same socket, tagged so download clients can ignore it:
 
@@ -2970,4 +3530,3 @@ When an app is paired, the web page showing the code learns it at once:
 ```json
 { "type": "device_paired", "pairing_id": "rfLmICXqGfRBXyXl", "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8", "platform": "android", "…": "…" } }
 ```
-

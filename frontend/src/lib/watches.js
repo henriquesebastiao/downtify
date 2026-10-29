@@ -2,6 +2,7 @@
 // of watch a pasted link makes, and filtering/sorting.
 import { classifyInput } from './input'
 import { compareText, fold } from './library'
+import { STAT_SORT_KEYS, statValue } from './watchStats'
 
 export const WATCH_KINDS = ['playlist', 'artist']
 
@@ -49,11 +50,22 @@ export const WATCH_SORT_KEYS = [
   'last_checked',
   'interval_minutes',
   'last_track_count',
+  ...STAT_SORT_KEYS,
 ]
 
-export function sortWatches(items, key, dir = 'desc') {
+/**
+ * `items` ordered by `key`. The statistics keys (see lib/watchStats.js)
+ * read `stats`, a `Map(watch id -> stats row)`.
+ */
+export function sortWatches(items, key, dir = 'desc', stats = null) {
   const sign = dir === 'asc' ? 1 : -1
   return [...items].sort((a, b) => {
+    if (STAT_SORT_KEYS.includes(key)) {
+      return (
+        sign *
+        (statValue(stats?.get(a.id), key) - statValue(stats?.get(b.id), key))
+      )
+    }
     if (key === 'name') return sign * compareText(a.name, b.name)
     if (key === 'created_at' || key === 'last_checked') {
       // Never-checked watches sort as the oldest.

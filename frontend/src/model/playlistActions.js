@@ -15,6 +15,7 @@ import { useHistory } from '/src/model/history'
 import { useAccount } from '/src/model/account'
 import { useI18n } from '/src/i18n'
 import { itemTrackCount } from '/src/lib/library'
+import { useTrashCapability } from '/src/lib/trash'
 
 const createOpen = ref(false)
 const createFiles = ref([])
@@ -32,6 +33,7 @@ export function usePlaylistActions() {
   const library = useLibrary()
   const likes = useLikes()
   const tracks = useTrackActions()
+  const trash = useTrashCapability()
   const ui = useUi()
   const player = usePlayer()
   const history = useHistory()
@@ -414,11 +416,14 @@ export function usePlaylistActions() {
 
   async function remove(playlist) {
     if (playlist.liked) return removeLikes()
+    // With the music trash on, deleting a playlist never deletes songs.
+    await trash.refresh()
     const ok = await ui.confirm({
       title: t('confirm.deletePlaylistTitle', { name: playlist.name }),
-      body: playlist.manual
-        ? t('confirm.deleteManualPlaylistBody')
-        : t('confirm.deletePlaylistBody'),
+      body:
+        playlist.manual || trash.enabled.value
+          ? t('confirm.deleteManualPlaylistBody')
+          : t('confirm.deletePlaylistBody'),
       confirmLabel: t('common.delete'),
       danger: true,
     })

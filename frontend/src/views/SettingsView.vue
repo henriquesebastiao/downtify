@@ -45,6 +45,21 @@
           <template v-if="section === 'general'">
             <AccountSettings v-if="!auth.authDisabled.value" />
             <SettingGroup
+              v-if="auth.isAdmin.value"
+              :title="t('libraryOnly.title')"
+              :description="t('libraryOnly.hint')"
+            >
+              <SettingRow
+                :label="t('libraryOnly.enable')"
+                :description="t('libraryOnly.serverHint')"
+              >
+                <UiSwitch
+                  v-model="s.library_only"
+                  :aria-label="t('libraryOnly.enable')"
+                />
+              </SettingRow>
+            </SettingGroup>
+            <SettingGroup
               :title="t('settings.appearance')"
               :description="t('settings.personalHint')"
             >
@@ -440,6 +455,30 @@
             </SettingGroup>
 
             <SettingGroup :title="t('settings.pacingGroup')">
+              <SettingRow
+                :label="t('downloadPolicy.budget')"
+                :description="t('downloadPolicy.budgetHelp')"
+                stacked
+              >
+                <PresetPicker
+                  :model-value="s.download_retry_budget_minutes"
+                  :presets="[0, 30, 60, 120]"
+                  :min="0"
+                  :max="1440"
+                  unit="min"
+                  :format="
+                    (v) => (v === 0 ? t('settings.unlimited') : `${v} min`)
+                  "
+                  :custom-label="t('settings.custom')"
+                  @update:model-value="
+                    (v) =>
+                      (s.download_retry_budget_minutes = Math.max(
+                        0,
+                        Math.min(1440, Number(v) || 0)
+                      ))
+                  "
+                />
+              </SettingRow>
               <SettingRow
                 :label="t('settings.parallel')"
                 :description="t('settings.parallelHint')"

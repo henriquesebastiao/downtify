@@ -4,7 +4,7 @@ icon: lucide/smartphone
 
 # Mobile Apps
 
-Downtify can serve apps on your phone: they browse and stream the library straight from your server, and keep songs on the phone for offline listening. Everything an app needs is set up in **Settings → Apps**: pairing phones and the server's name. Who may use the server at all is set by the accounts in [Users & Sign-in](users.md).
+Downtify can serve apps on your phone: they browse and stream the library straight from your server, and keep songs on the phone for offline listening. An app signs in with your username and password, or pairs with a code from **Settings → Apps**, where your paired apps and the server's name are too. Who may use the server at all is set by the accounts in [Users & Sign-in](users.md).
 
 ::: warning The app is still in development
 **Settings → Apps** is marked *Experimental*. The server side described on this page is finished and working, but **no version of the Android app has been published yet**, so there is nothing to install for now, and details of pairing and streaming may still change between Downtify versions.
@@ -12,7 +12,15 @@ Downtify can serve apps on your phone: they browse and stream the library straig
 The app is built in the open at [henriquesebastiao/downtify-android](https://github.com/henriquesebastiao/downtify-android). Anything else can be built against the same API — see the [mobile client contract](../mobile-client-contract.md).
 :::
 
+## Signing in from the app
+
+Type the server's address (or pick it under **Found on this network**), then sign in with the **same username and password** as on the web page. The phone becomes one of your **Paired apps**, exactly as if you had paired it with a code below: it plays as you, it keeps a key of its own (the password isn't stored on the phone), and **Unpair** stops it.
+
+Wrong passwords are rate-limited together with the web page's sign-in. While accounts are turned off (`DOWNTIFY_DISABLE_AUTH`) there is nothing to sign in with: pair with a code instead.
+
 ## Pairing a phone
+
+Pairing needs no password on the phone: handy when the web page is already open, or on a phone you'd rather not type your password into.
 
 1. Open **Settings → Apps** and press **Pair a phone**.
 2. In the app, choose **Scan the code** and point the camera at the QR code — or type the 8-character code shown under it (`K7QM-2XPD`; case and dashes don't matter).

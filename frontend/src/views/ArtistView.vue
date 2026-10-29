@@ -126,7 +126,7 @@
             }}</UiButton>
           </UiEmpty>
           <TopSongsShelf
-            v-else-if="topSongsData?.songs.length"
+            v-else-if="!libraryOnly && topSongsData?.songs.length"
             :data="topSongsData"
             :context="context"
           />
@@ -201,6 +201,7 @@
 </template>
 
 <script setup>
+import { libraryOnly } from '/src/model/musicPolicy'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import UiBadge from '/src/components/ui/UiBadge.vue'
@@ -597,6 +598,7 @@ async function refreshProfile() {
   try {
     // Seeds a brand-new artist's profile on their very first visit - a
     // cheap no-op every time after, once a profile file exists at all.
+    if (libraryOnly.value) return
     const res = await API.ensureArtistProfile(
       artist.value.name,
       locale.value,

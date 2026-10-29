@@ -63,6 +63,7 @@ Kabul edilebilir bir şey çıkmazsa, aktarım **Toplam zaman aşımı** içinde
 **slskd dosyalarını yerinde bırak** açıkken (varsayılan) indirilen dosya slskd klasöründe kalır: Downtify üst verileri, kapağı ve sözleri doğrudan orada içine yazar ve kitaplıkta `slskd/…` yoluyla kaydeder. Kitaplık, oynatıcı ve M3U dosyaları bu yolu kullanır ve `/media/slskd/…` üzerinden sunulur.
 
 Dosyayı bunun yerine dosya adı şablonunuza ve [dosya düzeni](file-organization.md) ayarlarınıza göre diğer indirmelerinizin yanına kopyalamak için kapatın.
+Aktarımın kendisi slskd klasöründe kalır; [Depolama ve kullanım](storage-usage.md#the-library-not-its-working-copies) bu kopyaları kitaplıktan ayrı, *slskd çalışma kopyaları* olarak sayar; böylece ne kadar yer kapladıklarını görebilirsiniz.
 
 ::: info
 slskd dosyaları özgün biçimlerini korur — Ayarlar’da seçilen biçime dönüştürülmezler.

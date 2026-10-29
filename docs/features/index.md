@@ -14,6 +14,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Similar](similar.md) | Name an artist or a track; YouTube Music answers with similar tracks that play in full and download, no key needed |
 | [Finder](finder.md) | Search Deezer, then browse an artist, their albums and any album's tracks in columns |
 | [Download Settings](download-settings.md) | Choose format (MP3/FLAC/M4A/OGG/OPUS), bitrate, parallel downloads and delay between downloads |
+| [Download Queue](download-queue.md) | Pause downloads before changing settings or updating: running ones finish, nothing new starts, and the waiting songs survive a restart |
 | [Playlist Monitor](playlist-monitor.md) | Watch Spotify or YouTube Music playlists and artists, and auto-download new tracks and releases |
 | [Hidden playlist songs](hidden-playlist-songs.md) | Take songs you don't want out of a downloaded or watched playlist and keep them out; the files stay in your library |
 | [Top Songs](top-songs.md) | Paste an artist link and download their most popular songs, optionally as a playlist |
@@ -31,6 +32,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Library catalog & path sync](library-catalog.md) | How Downtify tracks library files and playlists, playlists you create in the Library, and fixing paths after moving files |
 | [Existing music folders](external-library.md) | Point Downtify at folders of audio you already have; Sync reads tags, matches artists and skips songs already in the library |
 | [Upgrade library](library-upgrade.md) | Scan music you already downloaded and repair small covers, missing lyrics and incomplete tags |
+| [Storage & Usage](storage-usage.md) | See how big the library is and how fast it grows, which source each part came from, how downloads ended, and what duplicates, slskd copies and leftovers take up |
 | [M3U Export](m3u-export.md) | Auto-generated playlist files for Jellyfin, Navidrome, Plex and any media app |
 | [Playlist cover art](playlist-cover-art.md) | Save the playlist's own cover image alongside its M3U file |
 | [Artist photo, banner & bio](artist-images.md) | Pick a real photo and banner for an artist from YouTube Music, Deezer, Spotify or your own upload, and fetch their bio, origin and links from Apple Music and Deezer, automatically or on demand |

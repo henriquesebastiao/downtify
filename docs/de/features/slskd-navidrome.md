@@ -63,6 +63,7 @@ Findet sich nichts Akzeptables, endet die Übertragung nicht innerhalb des **Ges
 Ist **slskd-Dateien an Ort und Stelle lassen** an (Standard), bleibt die heruntergeladene Datei im slskd-Ordner: Downtify schreibt Metadaten, Cover und Songtext direkt dort hinein und registriert sie in der Bibliothek unter einem `slskd/…`-Pfad. Bibliothek, Player und M3U-Dateien nutzen diesen Pfad, und er wird über `/media/slskd/…` ausgeliefert.
 
 Schalte es aus, um die Datei stattdessen neben deine anderen Downloads zu kopieren, gemäß deiner Dateinamenvorlage und den Einstellungen zur [Dateiorganisation](file-organization.md).
+Die Übertragung selbst bleibt im slskd-Ordner; [Speicher und Nutzung](storage-usage.md#the-library-not-its-working-copies) zählt diese Kopien getrennt von der Bibliothek als *Arbeitskopien von slskd*, damit du siehst, wie viel Platz sie belegen.
 
 ::: info
 slskd-Dateien behalten ihr Originalformat — sie werden nicht in das in den Einstellungen gewählte Format transkodiert.

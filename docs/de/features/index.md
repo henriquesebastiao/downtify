@@ -14,6 +14,7 @@ Downtify deckt alles ab, was du brauchst, um aus Spotify eine lokale Musikbiblio
 | [Ähnliche Titel](similar.md) | Nenne einen Künstler oder Titel; YouTube Music antwortet mit ähnlichen Titeln, die sich vollständig abspielen und herunterladen lassen, ohne Schlüssel |
 | [Finder](finder.md) | Bei Deezer suchen und dann einen Künstler, seine Alben und die Titel jedes Albums in Spalten durchblättern |
 | [Download-Einstellungen](download-settings.md) | Format (MP3/FLAC/M4A/OGG/OPUS), Bitrate, parallele Downloads und Pause zwischen Downloads wählen |
+| [Download-Warteschlange](download-queue.md) | Downloads pausieren, bevor du Einstellungen änderst oder aktualisierst: laufende laufen zu Ende, keine neuen starten, und wartende Titel überstehen einen Neustart |
 | [Playlist-Überwachung](playlist-monitor.md) | Spotify- oder YouTube-Music-Playlists und -Künstler beobachten und neue Titel und Veröffentlichungen automatisch herunterladen |
 | [Ausgeblendete Playlist-Titel](hidden-playlist-songs.md) | Nimm ungewollte Titel aus einer heruntergeladenen oder überwachten Playlist und halte sie draußen; die Dateien bleiben in der Bibliothek |
 | [Top-Songs](top-songs.md) | Den Link eines Künstlers einfügen und seine beliebtesten Songs herunterladen, optional als Playlist |
@@ -31,6 +32,7 @@ Downtify deckt alles ab, was du brauchst, um aus Spotify eine lokale Musikbiblio
 | [Bibliothekskatalog und Pfadabgleich](library-catalog.md) | Wie Downtify Bibliotheksdateien und Playlists verfolgt, in der Bibliothek angelegte Playlists und das Reparieren von Pfaden nach dem Verschieben von Dateien |
 | [Vorhandene Musikordner](external-library.md) | Downtify auf Ordner mit vorhandenem Audio richten; die Synchronisierung liest Tags, ordnet Künstler zu und überspringt Songs, die schon in der Bibliothek sind |
 | [Bibliothek verbessern](library-upgrade.md) | Bereits heruntergeladene Musik scannen und kleine Cover, fehlende Songtexte und unvollständige Tags reparieren |
+| [Speicher und Nutzung](storage-usage.md) | Sieh, wie groß die Bibliothek ist und wie schnell sie wächst, aus welcher Quelle jeder Teil stammt, wie Downloads endeten und wie viel Platz Duplikate, slskd-Kopien und Reste belegen |
 | [M3U-Export](m3u-export.md) | Automatisch erzeugte Playlist-Dateien für Jellyfin, Navidrome, Plex und jede Medien-App |
 | [Playlist-Cover](playlist-cover-art.md) | Das eigene Titelbild der Playlist neben ihrer M3U-Datei speichern |
 | [Künstlerfoto, Banner und Bio](artist-images.md) | Ein echtes Foto und Banner für einen Künstler von YouTube Music, Deezer, Spotify oder aus eigenem Upload wählen und Bio, Herkunft und Links von Apple Music und Deezer holen, automatisch oder auf Abruf |

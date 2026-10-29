@@ -34,13 +34,50 @@ _PLAYLIST_NAME_INVALID = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 MANUAL_M3U_MARKER = '#EXTDOWNTIFY:manual'
 
 
+def read_m3u_text(m3u_path: Path) -> Optional[str]:
+    """Read a playlist without modifying it, or warn and return ``None``.
+
+    Prefer strict UTF-8 (with an optional BOM). Legacy ``.m3u`` files
+    fall back to strict Windows-1252, matching the external-playlist
+    importer; ``.m3u8`` files must be UTF-8. Windows-1252 also covers
+    printable Latin-1 text, but undefined bytes are rejected rather
+    than dropped or replaced. NULs indicate unsupported text (such as
+    UTF-16) or binary data and must not reach path resolution.
+    """
+
+    try:
+        data = m3u_path.read_bytes()
+        try:
+            text = data.decode('utf-8-sig')
+        except UnicodeDecodeError:
+            if m3u_path.suffix.lower() != '.m3u':
+                raise
+            text = data.decode('cp1252')
+    except (OSError, UnicodeDecodeError) as exc:
+        logger.warning(
+            'Skipping unreadable playlist {}: {}. Check file permissions '
+            'or save a copy as UTF-8.',
+            m3u_path,
+            exc,
+        )
+        return None
+    if '\x00' in text:
+        logger.warning(
+            'Skipping unreadable playlist {}: NUL characters in text. '
+            'Save a copy as UTF-8.',
+            m3u_path,
+        )
+        return None
+    return text
+
+
 def is_manual_m3u(m3u_path: Path) -> bool:
     """True when *m3u_path* was written as a Library-created playlist."""
 
-    try:
-        head = m3u_path.read_text(encoding='utf-8')[:2048]
-    except OSError:
+    text = read_m3u_text(m3u_path)
+    if text is None:
         return False
+    head = text[:2048]
     return any(
         line.strip() == MANUAL_M3U_MARKER for line in head.splitlines()[:12]
     )
@@ -175,10 +212,10 @@ def read_m3u_tracks(
     """
 
     resolve = _line_resolver(m3u_path, download_dir, slskd_dir, extra_dirs)
-    try:
-        lines = m3u_path.read_text(encoding='utf-8').splitlines()
-    except OSError:
+    text = read_m3u_text(m3u_path)
+    if text is None:
         return []
+    lines = text.splitlines()
 
     tracks: list[str] = []
     for raw in lines:
@@ -243,10 +280,10 @@ def read_m3u_entries(
     *m3u_path* that is in the library, present or not, in file order."""
 
     resolve = _line_resolver(m3u_path, download_dir, slskd_dir, extra_dirs)
-    try:
-        lines = m3u_path.read_text(encoding='utf-8').splitlines()
-    except OSError:
+    text = read_m3u_text(m3u_path)
+    if text is None:
         return []
+    lines = text.splitlines()
     entries: list[tuple[str, str]] = []
     extinf = ''
     for raw in lines:
@@ -283,10 +320,10 @@ def remove_m3u_tracks(
     if not drop:
         return 0
     resolve = _line_resolver(m3u_path, download_dir, slskd_dir, extra_dirs)
-    try:
-        lines = m3u_path.read_text(encoding='utf-8').splitlines()
-    except OSError:
+    text = read_m3u_text(m3u_path)
+    if text is None:
         return 0
+    lines = text.splitlines()
     kept: list[str] = []
     pending: list[str] = []
     removed = 0
@@ -332,10 +369,10 @@ def insert_m3u_track(
     )
     if full is None:
         return False
-    try:
-        lines = m3u_path.read_text(encoding='utf-8').splitlines()
-    except OSError:
+    text = read_m3u_text(m3u_path)
+    if text is None:
         return False
+    lines = text.splitlines()
     block = [extinf] if str(extinf or '').startswith('#EXTINF') else []
     block.append(os.path.relpath(full, start=m3u_path.parent))
     at = len(lines)

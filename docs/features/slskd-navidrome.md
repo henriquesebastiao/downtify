@@ -63,6 +63,7 @@ If nothing acceptable turns up, the transfer doesn't finish within **Total timeo
 With **Leave slskd files in place** on (the default), the downloaded file stays in the slskd folder: Downtify writes the metadata, cover art and lyrics into it there and registers it in the library under a `slskd/…` path. The Library, player and M3U files use that path, and it's served through `/media/slskd/…`.
 
 Turn it off to copy the file next to your other downloads instead, following your filename template and [file organization](file-organization.md) settings.
+The transfer itself stays in the slskd folder; [Storage & Usage](storage-usage.md#the-library-not-its-working-copies) counts these copies apart from the library, as *slskd working copies*, so you can see how much room they take.
 
 ::: info
 slskd files keep their original format — they aren't transcoded to the format chosen in Settings.

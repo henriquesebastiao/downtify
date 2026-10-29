@@ -143,6 +143,7 @@ class DownloadItem {
     if (message.progress !== undefined) values.progress = message.progress
     if (message.message !== undefined) values.message = message.message
     if (message.provider) values.provider = message.provider
+    if (message.reused) values.provider = ''
     this.patch(values)
   }
 }

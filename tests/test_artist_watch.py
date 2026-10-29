@@ -9,10 +9,12 @@ faked.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import sqlite3
 
 import pytest
 from fastapi import HTTPException
+from mutagen.id3 import ID3, TALB, TIT2, TPE1, TRCK
 
 from downtify import api, monitor
 
@@ -47,7 +49,23 @@ class _FakeDownloader:
         if song['song_id'] in self.fail_song_ids:
             raise RuntimeError('boom')
         self.calls.append(song['song_id'])
-        return f'{song["song_id"]}.mp3'
+        filename = f'{song["album_name"]}/{song["song_id"]}.mp3'
+        path = self.download_dir / filename
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tags = ID3()
+        tags.add(TIT2(encoding=3, text=[song['name']]))
+        tags.add(TALB(encoding=3, text=[song['album_name']]))
+        tags.add(TPE1(encoding=3, text=song['artists']))
+        tags.add(TRCK(encoding=3, text=[str(song['track_number'])]))
+        tags.save(path)
+        # Header-readable MPEG frames: tag-only files must not count as audio.
+        # Full decoding belongs to the audio/replacement integration tests.
+        with path.open('ab') as stream:
+            payload = (hashlib.sha256(song['song_id'].encode()).digest() * 13)[
+                :413
+            ]
+            stream.write((b'\xff\xfb\x90\x64' + payload) * 4)
+        return filename
 
 
 def _db(tmp_path) -> monitor.PlaylistMonitorDB:
@@ -353,6 +371,41 @@ def test_resolve_spotify_artist_does_not_guess_first_result(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         _resolve('https://open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg')
     assert exc.value.status_code == 409
+    assert 'No YouTube Music artist is named exactly' in exc.value.detail
+
+
+def test_resolve_spotify_artist_namesakes_follow_the_best_match(monkeypatch):
+    monkeypatch.setattr(
+        api.spotify, 'artist_name_from_id', lambda artist_id: 'Test Artist'
+    )
+    monkeypatch.setattr(
+        api.providers,
+        'search_artists',
+        lambda query, limit: [
+            {'name': 'Test Artist', 'artist_id': CHANNEL_ID},
+            {'name': 'Test Artist', 'artist_id': 'UCnamesake'},
+        ],
+    )
+    _kind, key, _name = _resolve(
+        'https://open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg'
+    )
+    assert key == CHANNEL_ID
+
+
+def test_resolve_spotify_artist_ignores_case_and_slashes(monkeypatch):
+    monkeypatch.setattr(
+        api.spotify, 'artist_name_from_id', lambda artist_id: 'AC/DC'
+    )
+    monkeypatch.setattr(
+        api.providers,
+        'search_artists',
+        lambda query, limit: [{'name': 'acdc', 'artist_id': CHANNEL_ID}],
+    )
+    _kind, key, name = _resolve(
+        'https://open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg'
+    )
+    assert key == CHANNEL_ID
+    assert name == 'acdc'
 
 
 def test_resolve_spotify_artist_with_no_match_is_404(monkeypatch):

@@ -14,6 +14,7 @@ A Downtify mindent lefed, amire szükséged van egy helyi zenekönyvtár felép�
 | [Hasonlók](similar.md) | Adj meg egy előadót vagy számot; a YouTube Music hasonló számokkal válaszol, amelyek teljes hosszban lejátszhatók és letölthetők, kulcs nélkül |
 | [Kereső](finder.md) | Keress a Deezeren, majd böngéssz oszlopokban egy előadót, albumait és bármely album számait |
 | [Letöltési beállítások](download-settings.md) | Válaszd ki a formátumot (MP3/FLAC/M4A/OGG/OPUS), a bitrátát, a párhuzamos letöltéseket és a szünetet a letöltések között |
+| [Letöltési sor](download-queue.md) | Szüneteltesd a letöltéseket, mielőtt beállításokat módosítasz vagy frissítesz: a futók befejeződnek, új nem indul, a várakozó dalok pedig megmaradnak újraindítás után is |
 | [Lejátszási lista figyelő](playlist-monitor.md) | Figyelj Spotify- vagy YouTube Music-lejátszási listákat és előadókat, és automatikusan töltsd le az új számokat és kiadványokat |
 | [Elrejtett számok a listákban](hidden-playlist-songs.md) | Vedd ki a nem kívánt számokat egy letöltött vagy figyelt listából, és tartsd is kint őket; a fájlok a könyvtárban maradnak |
 | [Legnépszerűbb számok](top-songs.md) | Illessz be egy előadó hivatkozását, és töltsd le a legnépszerűbb dalait, opcionálisan lejátszási listaként |
@@ -31,6 +32,7 @@ A Downtify mindent lefed, amire szükséged van egy helyi zenekönyvtár felép�
 | [Könyvtárkatalógus és útvonal-szinkronizálás](library-catalog.md) | Hogyan követi a Downtify a könyvtár fájljait és lejátszási listáit, a Könyvtárban létrehozott lejátszási listák, és az útvonalak javítása fájlok áthelyezése után |
 | [Meglévő zenemappák](external-library.md) | Irányítsd a Downtifyt a már meglévő hangfájlmappákra; a szinkronizálás beolvassa a címkéket, párosítja az előadókat, és kihagyja a könyvtárban már meglévő dalokat |
 | [Könyvtár javítása](library-upgrade.md) | Szkenneld a már letöltött zenét, és javítsd a kis borítókat, a hiányzó dalszövegeket és a hiányos címkéket |
+| [Tárhely és használat](storage-usage.md) | Nézd meg, mekkora a könyvtár és milyen gyorsan nő, melyik része melyik forrásból jött, hogyan végződtek a letöltések, és mennyi helyet foglalnak az ismétlődések, az slskd-másolatok és a maradékok |
 | [M3U-exportálás](m3u-export.md) | Automatikusan előállított lejátszásilista-fájlok a Jellyfinhez, Navidrome-hoz, Plexhez és bármely médiaalkalmazáshoz |
 | [Lejátszási lista borítók](playlist-cover-art.md) | Mentsd el a lejátszási lista saját borítóképét az M3U fájl mellé |
 | [Előadó fotója, bannere és bemutatkozása](artist-images.md) | Válassz valódi fotót és bannert egy előadóhoz a YouTube Musicból, Deezerről, Spotifyról vagy saját feltöltésből, és kérd le a bemutatkozását, származását és hivatkozásait az Apple Musicról és a Deezerről, automatikusan vagy kérésre |

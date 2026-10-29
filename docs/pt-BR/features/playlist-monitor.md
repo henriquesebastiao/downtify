@@ -70,7 +70,7 @@ Um handle é resolvido para o canal do artista quando você adiciona o monitoram
 A cada varredura, o Downtify lista a discografia do artista, compara com os lançamentos que já processou e baixa todas as faixas de qualquer coisa nova. Uma varredura em regime estável custa uma única requisição — as listas de faixas só são buscadas para lançamentos que ele ainda não viu.
 
 ::: info Por que a discografia vem do YouTube Music
-O embed público do Spotify expõe o nome de um artista e uma prévia das faixas mais populares, mas **não** a discografia — lê-la exigiria credenciais da API do Spotify, que o Downtify deliberadamente não usa. Então um link de artista do Spotify é resolvido para o nome dele e associado ao mesmo artista no YouTube Music, que também é de onde o áudio é buscado. A vantagem: todo lançamento que o Downtify consegue ver é um que ele consegue de fato baixar. O custo: para um artista de nome ambíguo, confira se o nome resolvido do monitoramento é o artista que você queria — cole direto o URL do artista no YouTube Music se ele escolheu o errado.
+O embed público do Spotify expõe o nome de um artista e uma prévia das faixas mais populares, mas **não** a discografia — lê-la exigiria credenciais da API do Spotify, que o Downtify deliberadamente não usa. Então um link de artista do Spotify é resolvido para o nome dele e associado ao mesmo artista no YouTube Music, que também é de onde o áudio é buscado. A vantagem: todo lançamento que o Downtify consegue ver é um que ele consegue de fato baixar. O custo: o link segue o artista do YouTube Music com exatamente esse nome (sem contar maiúsculas e pontuação), o melhor resultado do YouTube Music quando vários têm o mesmo nome. Com um nome comum, confira se o monitoramento é o artista que você queria e, se não for, cole direto o URL do artista no YouTube Music. Um artista do Spotify cujo nome exato nenhum artista do YouTube Music tem só pode ser adicionado assim: o Downtify não chuta.
 :::
 
 ::: warning A primeira varredura baixa todo o catálogo antigo
@@ -101,6 +101,24 @@ Um lançamento só é registrado como processado quando cada uma de suas faixas 
 
 Os monitoramentos de artistas não geram arquivos M3U — as faixas são organizadas pelas suas configurações de [organização de arquivos](file-organization.md) e não como uma playlist.
 
+### Artistas sugeridos
+
+Abaixo da lista de monitoramentos de artistas, a aba **Artistas** sugere artistas para seguir, em duas listas:
+
+| Lista | Quem aparece |
+|-------|--------------|
+| **Com base no que você ouve** | Os artistas que você mais ouve: as suas próprias audições, as que o [Descobrir](discover.md) conta. Audições recentes contam mais: o peso de uma audição cai pela metade a cada 45 dias, então um artista que você ouviu muito no ano passado fica abaixo de um que você ouve todo dia agora. |
+| **Com base na sua biblioteca** | Os artistas com mais faixas, depois mais álbuns, na biblioteca que você vê. |
+
+Artistas que você já monitora (inclusive monitoramentos pausados) e nomes de coletâneas como **Various Artists** ficam de fora. Cada lista mostra 20 artistas por vez; **Mostrar mais** carrega os próximos. As listas são só suas, inclusive para um admin: as audições de outra conta nunca aparecem. Um artista que um admin escondeu dos usuários fica fora das listas de um usuário, como fica fora da Biblioteca dele.
+
+Carregar as listas não busca nada. **Seguir** procura o nome no YouTube Music, onde um monitoramento de artista acompanha o artista:
+
+- quando exatamente um artista de lá tem esse nome, o monitoramento é adicionado na hora, com o intervalo e as opções **Baixar** / **Só lançamentos novos** definidos na caixa acima;
+- senão (homônimos, ou nenhum artista com exatamente esse nome), uma janela mostra os artistas do YouTube Music encontrados, cada um com a foto e um link para o perfil. Escolha um com **Seguir este artista**, ou use **Colar um link** para colar você mesmo o link do artista na caixa acima.
+
+As sugestões só escolhem qual artista monitorar: as músicas continuam sendo baixadas das suas [fontes de áudio](download-settings.md) como sempre.
+
 ## Intervalos de verificação
 
 | Rótulo | Minutos | Ideal para |
@@ -125,14 +143,19 @@ Cada aba lista só o seu tipo de monitoramento. Acima da lista:
 - **Filtrar** — digite parte de um nome ou do link (por exemplo o id de uma playlist) para restringir a lista
 - **Tudo / Pausados** — mostra só os monitoramentos pausados
 - **Verificar tudo agora** — verifica todos os monitoramentos ativos da aba atual
+- Uma faixa com quantas músicas chegaram no período escolhido (**7 dias**, **30 dias** ou **90 dias**) e, somando todos os monitoramentos, quantas músicas eles têm, o espaço que ocupam (**No disco**) e quantas estão **Em mais de um monitoramento** — veja [Atividade e armazenamento por monitoramento](#activity-and-storage-per-watch)
 
 Em cada linha:
 
 - Interruptor **Ativo** — pausa ou retoma o monitoramento sem removê-lo
 - **Verificações** — com que frequência é verificado
 - **Verificar agora** (↻) — verifica na hora, fora do agendamento
+- **Atividade** — músicas novas no período escolhido, a média por semana e se esse ritmo está subindo ou caindo; clique para abrir a página do monitoramento
+- **Armazenamento** — o espaço das músicas que só este monitoramento tem, mais quantas ele compartilha com outros
 - **Editar** (✎) — vê e muda o link, o intervalo e o estado ativo do monitoramento (veja [Editando um monitoramento](#editing-a-watch))
-- **⋯** — pausar/retomar, copiar o link, abrir o original ou **Parar de monitorar** (o registro é excluído; os arquivos baixados são mantidos)
+- **⋯** — **Atividade e músicas** (a página do monitoramento), pausar/retomar, copiar o link, abrir o original ou **Parar de monitorar** (o registro é excluído; os arquivos baixados são mantidos)
+
+**Atividade** e **Armazenamento** são colunas como as outras: esconda ou redimensione em **Colunas**.
 
 ### Editando um monitoramento
 
@@ -157,6 +180,11 @@ O controle **Ordenar por** acima da lista ordena a aba atual por:
 | Última verificação | Verificados há menos tempo primeiro; nunca verificados por último |
 | Frequência | Menos frequentes (intervalo mais longo) primeiro |
 | Número de faixas / lançamentos | Mais primeiro |
+| Atividade recente | Músicas novas no período escolhido |
+| Ritmo médio | Músicas novas por dia no período |
+| Crescimento do armazenamento | Espaço das músicas novas do período |
+| Armazenamento só dele | Espaço das músicas que nenhum outro monitoramento tem |
+| Músicas baixadas | Músicas no disco que o próprio monitoramento baixou |
 
 O botão ao lado alterna entre ordem crescente e decrescente. A escolha é lembrada no navegador e só muda a lista — não a ordem de verificação nem o agendamento.
 
@@ -211,5 +239,41 @@ O estado do monitor fica em um banco SQLite em `/data/downtify_monitor.db`. O ba
 - Cada monitoramento (tipo, ID de playlist do Spotify ou do YouTube Music ou ID de canal do YouTube Music, nome, URL, intervalo, estado ativo, hora da última verificação). Se um monitoramento é do Spotify ou do YouTube Music é lido do URL guardado, então não é preciso uma coluna extra.
 - Cada faixa baixada com sucesso por monitoramento, incluindo o nome do arquivo no disco
 - Para monitoramentos de artistas, os lançamentos já processados, para que uma varredura só busque listas de faixas de lançamentos realmente novos — inclusive os que **Só lançamentos novos** pulou, marcados como tal para que desligá-la possa trazê-los de volta — além dos tipos de lançamento do monitoramento e se ele é de só lançamentos novos
+- Cada faixa que um monitoramento adicionou (`watch_events`): quando, o arquivo, qual provedor de áudio a buscou, se o monitoramento a baixou ou a encontrou já na biblioteca, e se veio com a primeira verificação. Essas linhas guardam o id, o nome e o dono do monitoramento como eram, e sobrevivem a ele: parar ou redirecionar um monitoramento as mantém, então as músicas dele continuam dizendo de onde vieram
+- As faixas que cada monitoramento continua sem conseguir baixar (`watch_failures`), até uma dar certo, sair da playlist ou o monitoramento ser redirecionado
 
-Bancos criados antes do Monitoramento de artistas são migrados automaticamente na inicialização; as linhas existentes continuam funcionando como monitoramentos de playlists.
+Bancos criados antes do Monitoramento de artistas são migrados automaticamente na inicialização; as linhas existentes continuam funcionando como monitoramentos de playlists. As faixas registradas antes de o Downtify manter o histórico acima são adicionadas a ele uma vez, na primeira inicialização, com resultado desconhecido (**Antes do registro**) — as do primeiro dia de um monitoramento contam como a primeira verificação.
+
+## Atividade e armazenamento por monitoramento
+
+A página Monitor e a página de cada monitoramento (**Atividade e músicas** no menu **⋯** de um monitoramento, ou um clique na **Atividade** dele) mostram quais monitoramentos fazem sua biblioteca crescer — útil com muitos monitoramentos, ou para descobrir por que um mix gerado trouxe músicas que você não esperava.
+
+**O que conta como atividade.** Só contam as músicas que um monitoramento realmente adicionou: as que ele baixou. As que ele encontrou já na sua biblioteca (outro monitoramento, ou um download seu, já as tinha) contam à parte como **Já na biblioteca**, assim como o que veio na primeira verificação, quando ele baixa tudo o que a playlist já tinha. Assim, uma playlist estática aparece parada mesmo que a primeira verificação tenha baixado 300 músicas, e um mix que adiciona 15 músicas por semana aparece como 15 por semana. As faixas registradas antes de o Downtify manter esse histórico contam como adicionadas, e a página diz quantas são.
+
+No período escolhido (7, 30 ou 90 dias, lembrado no navegador) um monitoramento mostra:
+
+| Número | O que é |
+|--------|------------|
+| Músicas novas | Músicas que ele adicionou no período |
+| Por dia / Por semana / Por mês | O ritmo médio no período — ou desde que o monitoramento começou, se isso for mais recente |
+| Tendência | Se o ritmo está subindo (**Adicionando mais ultimamente**), caindo (**Adicionando menos ultimamente**) ou estável, pelas músicas novas por dia (7 dias) ou por semana (30 e 90 dias); **Ainda é cedo para dizer** enquanto houver menos de três delas para comparar |
+| Crescimento do armazenamento | Espaço das músicas novas do período que ainda estão no disco |
+
+**Armazenamento.** Um arquivo é guardado uma vez, não importa quantos monitoramentos o tenham, e os números refletem isso: **Só neste monitoramento** é o espaço das músicas que nenhum outro monitoramento tem (o que parar o monitoramento e excluir as músicas dele liberaria), **Compartilhadas** as músicas que outros monitoramentos também têm, e a faixa da página Monitor conta cada arquivo uma vez. Monitoramentos de outras contas contam para saber se um arquivo é compartilhado, mas não são nomeados.
+
+A página de um monitoramento mostra também:
+
+- **Músicas no disco**, **Baixadas por ele**, **Já na biblioteca** e **Com falha** — como as músicas chegaram lá, e quantas continuam falhando no download (listadas mais abaixo, com o número de tentativas e o último erro)
+- **De onde veio o áudio** — YouTube Music, YouTube, Soulseek (slskd) ou Deemix, por música no disco
+- **Músicas deste monitoramento** — todas as músicas que ele tem, das mais recentes para as mais antigas, incluindo as que já saíram da playlist, com filtros (**Últimos 30 dias** — ou o período escolhido —, **Baixadas por ele**, **Já na biblioteca**, **Antes do registro**). Selecione músicas para tocar, pôr na fila, adicionar a uma playlist, baixar como ZIP ou excluir — por exemplo, para limpar o que um mix trouxe na última semana
+- **Abrir na Biblioteca** (a página da playlist, ou a do artista num monitoramento de artista), **Abrir original** e **Verificar agora**
+
+O id do monitoramento (`#12`) aparece ao lado do nome, então dois monitoramentos do mesmo link — duas contas seguindo uma playlist, por exemplo — podem ser diferenciados.
+
+## De onde veio uma música
+
+**De onde veio** no menu de uma música (em qualquer lugar da Biblioteca) diz qual monitoramento a baixou primeiro, quando e com qual provedor — **Primeira verificação** quando veio com a primeira verificação — e lista todos os monitoramentos que a têm agora, cada um com seu id, dono (para um admin), quando recebeu a música e como: **Baixou**, **Já na biblioteca** ou **Antes do registro**. É um arquivo só: os monitoramentos que compartilham uma música apontam todos para a mesma cópia.
+
+Dali, **Atividade e músicas** abre a página do monitoramento e **Abrir na Biblioteca** a playlist dele. Um monitoramento que foi parado, ou que agora segue outro link, continua sendo mostrado como origem das músicas que baixou. Para uma música registrada antes de esse histórico existir, aparece o primeiro monitoramento que a registrou, marcado como **Provavelmente**. Uma música que nenhum monitoramento baixou (uma que você mesmo baixou) diz isso.
+
+Um usuário vê os próprios monitoramentos pelo nome; uma música que o monitoramento de outra conta baixou diz só isso, e quando.

@@ -1,13 +1,72 @@
-"""Local, personal suggestions for the existing artist monitor."""
+"""Artists to follow, suggested on the Monitor page's Artists tab.
+
+Two lists, ranked from what the server already keeps - nothing is
+searched for while they load:
+
+* **listening**: the user's own listens (``DiscoverStore.listens``),
+  each artist's plays faded by how long ago they were last played, with
+  Discover's half-life (:data:`downtify.discover.LISTEN_HALF_LIFE_DAYS`);
+* **library**: the artists of the library the user can see, by track
+  count, then album count.
+
+Artists the user already watches (paused watches too) and compilation
+placeholders (``Various Artists``) are left out. Following one is a
+separate step: :func:`artist_candidates` picks the YouTube Music artist
+an artist watch follows, or leaves the choice to the user.
+"""
 
 from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 from urllib.parse import urlsplit
 
 from .discover import LISTEN_HALF_LIFE_DAYS, artist_key
+from .monitor import KIND_ARTIST
+
+#: Album artists of compilations, never an artist to follow.
+_PLACEHOLDERS = frozenset(
+    artist_key(name)
+    for name in (
+        'Various Artists',
+        'Various Artist',
+        'Various',
+        'Artistes divers',
+        'Unknown',
+        'Unknown Artist',
+    )
+)
+#: A YouTube Music artist's channel id; anything else isn't offered.
+_CHANNEL_ID = re.compile(r'UC[A-Za-z0-9_-]{22}')
+#: Where a YouTube Music artist's photo is served from. A photo from
+#: anywhere else is dropped, not shown.
+_PHOTO_HOSTS = frozenset({
+    'yt3.ggpht.com',
+    'yt3.googleusercontent.com',
+    'lh3.googleusercontent.com',
+})
+
+
+def _parse_time(value: Any) -> Optional[datetime]:
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _page(
+    rows: list[dict[str, Any]], offset: int, limit: int
+) -> dict[str, Any]:
+    end = offset + limit
+    return {
+        'items': rows[offset:end],
+        'total': len(rows),
+        'next_offset': end if end < len(rows) else None,
+    }
 
 
 def artist_suggestions(
@@ -18,149 +77,141 @@ def artist_suggestions(
     listening_offset: int = 0,
     library_offset: int = 0,
     limit: int = 20,
-    now: datetime | None = None,
+    now: Optional[datetime] = None,
 ) -> dict[str, Any]:
-    """Rank existing signals; never resolve artists or scan audio files.
+    """One page of each list: ``{listening, library, half_life_days}``.
 
-    Listening counts are lifetime aggregates weighted by last activity,
-    not a reconstructed time-window history. Callers must scope all three
-    inputs to the requesting user before entering this function.
+    *library* is ``library_artist_index`` rows, *listens* the user's
+    ``DiscoverStore.listens`` and *watches* their monitor watches - the
+    caller scopes all three to the user asking. Each list is ``{items,
+    total, next_offset}``; an item is ``{name, track_count,
+    album_count}``, and a listening one also has ``plays`` (every listen
+    counted), ``score`` (the faded plays it is ranked by) and
+    ``last_played``. A listen with no readable time is left out.
     """
+
     now = now or datetime.now(timezone.utc)
-    watched = {artist_key(w.name) for w in watches if w.kind == 'artist'}
-    watched.update(
-        artist_key(n)
-        for n in ('Various Artists', 'Various Artist', 'Artistes divers')
-    )
-    by_name: dict[str, dict[str, Any]] = {}
+    skip = _PLACEHOLDERS | {
+        artist_key(watch.name)
+        for watch in watches
+        if watch.kind == KIND_ARTIST
+    }
+    counts: dict[str, dict[str, Any]] = {}
     for row in library:
         name = str(row.get('name') or '').strip()
         key = artist_key(name)
-        if not key or key in watched:
+        if not key or key in skip:
             continue
-        bucket = by_name.setdefault(
+        bucket = counts.setdefault(
             key, {'name': name, 'track_count': 0, 'album_count': 0}
         )
-        bucket['track_count'] += int(row.get('track_count') or 0)
-        bucket['album_count'] += int(row.get('album_count') or 0)
-    library_rows = sorted(
-        (r for r in by_name.values() if r['track_count'] > 0),
-        key=lambda r: (
-            -r['track_count'],
-            -r['album_count'],
-            r['name'].casefold(),
+        bucket['track_count'] += max(0, int(row.get('track_count') or 0))
+        bucket['album_count'] += max(0, int(row.get('album_count') or 0))
+    in_library = sorted(
+        (row for row in counts.values() if row['track_count']),
+        key=lambda row: (
+            -row['track_count'],
+            -row['album_count'],
+            row['name'].casefold(),
         ),
     )
-    listening: dict[str, dict[str, Any]] = {}
+
+    played: dict[str, dict[str, Any]] = {}
     for row in listens:
         name = str(row.get('name') or '').strip()
         key = artist_key(name)
         plays = max(0, int(row.get('plays') or 0))
-        if not key or key in watched or not plays:
+        last = _parse_time(row.get('last_played'))
+        if not key or key in skip or not plays or last is None:
             continue
-        try:
-            last = datetime.fromisoformat(str(row.get('last_played')))
-            last = (
-                last.replace(tzinfo=timezone.utc)
-                if last.tzinfo is None
-                else last
-            )
-        except (TypeError, ValueError):
-            continue
-        last = last.astimezone(timezone.utc)
-        age = max(0, (now - last).total_seconds() / 86400)
-        bucket = listening.setdefault(
-            key,
-            {
-                **by_name.get(
-                    key, {'name': name, 'track_count': 0, 'album_count': 0}
-                ),
+        age_days = max(0.0, (now - last).total_seconds() / 86400)
+        bucket = played.get(key)
+        if bucket is None:
+            known = counts.get(key, {'name': name})
+            bucket = played[key] = {
+                'name': known['name'],
+                'track_count': known.get('track_count', 0),
+                'album_count': known.get('album_count', 0),
                 'plays': 0,
                 'score': 0.0,
-                'last_played': last.isoformat(),
-            },
-        )
+                'last_played': last,
+            }
         bucket['plays'] += plays
-        bucket['score'] += plays * 0.5 ** (age / LISTEN_HALF_LIFE_DAYS)
-        bucket['last_played'] = max(
-            bucket['last_played'], last.astimezone(timezone.utc).isoformat()
-        )
-    listening_rows = sorted(
-        listening.values(), key=lambda r: (-r['score'], r['name'].casefold())
+        bucket['score'] += plays * 0.5 ** (age_days / LISTEN_HALF_LIFE_DAYS)
+        bucket['last_played'] = max(bucket['last_played'], last)
+    listening = sorted(
+        played.values(),
+        key=lambda row: (-row['score'], row['name'].casefold()),
     )
-
-    def page(rows: list[dict[str, Any]], offset: int) -> dict[str, Any]:
-        end = offset + limit
-        return {
-            'items': rows[offset:end],
-            'total': len(rows),
-            'next_offset': end if end < len(rows) else None,
-        }
+    for row in listening:
+        row['score'] = round(row['score'], 3)
+        row['last_played'] = (
+            row['last_played'].astimezone(timezone.utc).isoformat()
+        )
 
     return {
-        'listening': page(listening_rows, listening_offset),
-        'library': page(library_rows, library_offset),
+        'listening': _page(listening, listening_offset, limit),
+        'library': _page(in_library, library_offset, limit),
         'half_life_days': LISTEN_HALF_LIFE_DAYS,
     }
 
 
-def _artist_image(row: dict[str, Any]) -> str:
-    value = str(row.get('image_url') or row.get('cover_url') or '')
+def _photo(row: dict[str, Any]) -> str:
+    value = str(row.get('cover_url') or '')
     try:
         parsed = urlsplit(value)
-        host = parsed.hostname or ''
-        allowed = host in {
-            'i.scdn.co',
-            'yt3.ggpht.com',
-            'yt3.googleusercontent.com',
-            'lh3.googleusercontent.com',
-        } or host.endswith('.spotifycdn.com')
-        if (
-            parsed.scheme == 'https'
-            and allowed
-            and not parsed.username
-            and not parsed.password
-            and parsed.port in {None, 443}
-        ):
-            return value
+        port = parsed.port
     except ValueError:
-        pass
+        return ''
+    if (
+        parsed.scheme == 'https'
+        and parsed.hostname in _PHOTO_HOSTS
+        and not parsed.username
+        and not parsed.password
+        and port in {None, 443}
+    ):
+        return value
     return ''
 
 
 def artist_candidates(
-    name: str, results: list[dict[str, Any]], *, source: str = 'youtube-music'
+    name: str, results: Iterable[dict[str, Any]], *, limit: int = 10
 ) -> dict[str, Any]:
-    """Only a unique exact-name result can prefill the native form.
+    """The YouTube Music artists to offer for *name*: ``{candidates,
+    url}``.
 
-    A homonym remains an explicit choice, even when the provider ranked
-    one candidate first. Channel URLs are constructed from validated IDs.
+    *results* are ``providers.search_artists`` rows. ``url`` is set only
+    when exactly one of them is named *name* (case and the characters a
+    file name can't hold ignored, see :func:`artist_key`): that one is
+    followed without asking. Otherwise - namesakes, or no exact name - the
+    user picks from ``candidates`` (``{name, artist_id, url,
+    image_url}``, the ones named *name* first, at most *limit* - a famous
+    name easily has twenty namesakes), never the top result on its own.
+    Rows without a valid channel id are left out, and the link is built
+    from the id, not taken from the row.
     """
-    candidates: dict[str, dict[str, str]] = {}
+
+    wanted = artist_key(name)
+    named: dict[str, dict[str, str]] = {}
+    others: dict[str, dict[str, str]] = {}
     for row in results:
         channel = str(row.get('artist_id') or '')
-        pattern = (
-            r'[A-Za-z0-9]{22}'
-            if source == 'spotify'
-            else r'UC[A-Za-z0-9_-]{22}'
-        )
-        if not re.fullmatch(pattern, channel):
+        if not _CHANNEL_ID.fullmatch(channel):
             continue
-        candidates[channel] = {
+        if channel in named or channel in others:
+            continue
+        candidate = {
             'name': str(row.get('name') or '').strip(),
-            'url': f'https://open.spotify.com/artist/{channel}'
-            if source == 'spotify'
-            else f'https://music.youtube.com/channel/{channel}',
             'artist_id': channel,
-            'source': 'spotify' if source == 'spotify' else 'youtube_music',
-            'image_url': _artist_image(row),
+            'url': f'https://music.youtube.com/channel/{channel}',
+            'image_url': _photo(row),
         }
-    exact = [
-        r
-        for r in candidates.values()
-        if r['name'].casefold() == name.strip().casefold()
-    ]
+        if artist_key(candidate['name']) == wanted:
+            named[channel] = candidate
+        else:
+            others[channel] = candidate
+    exact = list(named.values())
     return {
-        'candidates': list(candidates.values()),
+        'candidates': [*exact, *others.values()][:limit],
         'url': exact[0]['url'] if len(exact) == 1 else None,
     }

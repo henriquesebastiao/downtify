@@ -8,13 +8,17 @@ import { useUi } from '/src/model/ui'
 import { useAuth } from '/src/model/auth'
 import { useReplaceAudio } from '/src/model/replaceAudio'
 import { useBuyLinks } from '/src/model/buyLinks'
+import { useTrackOrigin } from '/src/model/trackOrigin'
 import { buyTargetForTrack } from '/src/lib/buyLinks'
 import { useVisibility } from '/src/model/visibility'
 import { canReplace } from '/src/lib/replaceAudio'
 import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
+import API from '/src/model/api'
+import { previewLines, trashError, useTrashCapability } from '/src/lib/trash'
 
 export function useTrackActions() {
+  const trashCapability = useTrashCapability()
   const player = usePlayer()
   const library = useLibrary()
   const history = useHistory()
@@ -22,6 +26,7 @@ export function useTrackActions() {
   const auth = useAuth()
   const replaceAudio = useReplaceAudio()
   const buyLinks = useBuyLinks()
+  const trackOrigin = useTrackOrigin()
   const visibility = useVisibility()
   const router = useRouter()
   const { t } = useI18n()
@@ -76,8 +81,8 @@ export function useTrackActions() {
     }
   }
 
-  /** Confirm, delete and report; resolves the deleted files. */
-  async function remove(tracks) {
+  /** Confirm, delete for good and report; resolves the deleted files. */
+  async function legacyRemove(tracks) {
     if (!tracks.length) return []
     const ok = await ui.confirm({
       title:
@@ -107,6 +112,51 @@ export function useTrackActions() {
       return deleted
     } catch {
       ui.toast(t('toast.deleteFailed'), { kind: 'error' })
+      return []
+    }
+  }
+
+  /** Confirm, delete and report; resolves the files that left the
+   * library. With the music trash on, they go there instead (admins
+   * only), after the server has checked exactly what will move. */
+  async function remove(tracks) {
+    await trashCapability.refresh()
+    if (!trashCapability.enabled.value) return legacyRemove(tracks)
+    if (!tracks.length) return []
+    if (!auth.isAdmin.value) {
+      ui.toast(t('trash.errors.admin_required'), { kind: 'error' })
+      return []
+    }
+    let preview
+    try {
+      ui.toast(t('trash.preparing'))
+      preview = (await API.trashPreview(tracks.map((track) => track.file))).data
+    } catch (error) {
+      ui.toast(trashError(error, t), { kind: 'error' })
+      return []
+    }
+    const { lines, more } = previewLines(preview.items)
+    const ok = await ui.confirm({
+      title: t('trash.confirmTitle', { count: preview.items.length }),
+      body: [
+        t('trash.confirmBody', { days: trashCapability.retentionDays.value }),
+        '',
+        ...lines,
+        ...(more ? [t('trash.confirmMore', { count: more })] : []),
+      ].join('\n'),
+      confirmLabel: t('trash.move'),
+      danger: true,
+    })
+    if (!ok) return []
+    try {
+      await API.trashConfirm(preview.confirmation)
+      await library.load({ force: true })
+      ui.toast(t('trash.pending', { count: preview.items.length }), {
+        kind: 'success',
+      })
+      return preview.items.map((item) => item.file)
+    } catch (error) {
+      ui.toast(trashError(error, t), { kind: 'error' })
       return []
     }
   }
@@ -168,6 +218,12 @@ export function useTrackActions() {
         action: () => buyLinks.open(buyTargetForTrack(track)),
       },
       {
+        // Which Playlist Monitor watch brought it in, and which hold it.
+        label: t('origin.menu'),
+        icon: 'radar',
+        action: () => trackOrigin.open(track),
+      },
+      {
         label: t('library.saveToDevice'),
         icon: 'download',
         action: () => saveToDevice(track),
@@ -183,9 +239,12 @@ export function useTrackActions() {
       ...visibility.trackMenu(track),
       { divider: true },
       {
-        label: t('actions.delete'),
+        label: trashCapability.enabled.value
+          ? t('trash.move')
+          : t('actions.delete'),
         icon: 'trash',
         danger: true,
+        hidden: trashCapability.enabled.value && !auth.isAdmin.value,
         action: () => remove([track]),
       },
     ]
