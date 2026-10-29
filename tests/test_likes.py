@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from downtify import api, likes, m3u
+from downtify.auth import Principal
 from downtify.downloader import Downloader
 from downtify.library_catalog import LibraryContext
 from downtify.library_paths import library_stored_path
@@ -22,6 +25,24 @@ from downtify.likes import (
 )
 from downtify.playlist_catalog import PlaylistCatalog
 from downtify.track_index import TrackIndex
+
+_ADMIN = Principal('device', 'client', '', 1, 'admin', 'admin')
+_USER = Principal('device', 'client', '', 2, 'maria', 'user')
+
+
+def _request(payload: Any = None, principal: Any = None) -> Request:
+    """A bare request, optionally signed in (no auth middleware here)."""
+
+    body = json.dumps(payload if payload is not None else {}).encode()
+
+    async def receive() -> dict[str, Any]:
+        return {'type': 'http.request', 'body': body, 'more_body': False}
+
+    scope: dict[str, Any] = {'type': 'http', 'method': 'PUT', 'headers': []}
+    if principal is not None:
+        scope['state'] = {'principal': principal}
+    return Request(scope, receive)
+
 
 # ── helpers ────────────────────────────────────────────────────────────
 
@@ -41,14 +62,6 @@ def _liked_m3u(download_dir: Path) -> Path:
     return download_dir / 'Playlists' / f'{LIKED_PLAYLIST_NAME}.m3u'
 
 
-class _Body:
-    def __init__(self, payload: Any = None):
-        self._payload = payload
-
-    async def json(self) -> Any:
-        return self._payload
-
-
 @pytest.fixture
 def app_state(monkeypatch, tmp_path):
     """The bits of ``api.state`` liking touches, pointed at ``tmp_path``."""
@@ -66,8 +79,12 @@ def app_state(monkeypatch, tmp_path):
     return downloads
 
 
-def _like(file: str, liked: bool = True) -> dict[str, Any]:
-    return asyncio.run(api.set_like(_Body({'file': file, 'liked': liked})))
+def _like(
+    file: str, liked: bool = True, principal: Any = None
+) -> dict[str, Any]:
+    return asyncio.run(
+        api.set_like(_request({'file': file, 'liked': liked}, principal))
+    )
 
 
 # ── the store ──────────────────────────────────────────────────────────
@@ -358,7 +375,7 @@ def test_liking_a_library_song_creates_the_playlist(app_state):
 
     assert result == {'file': 'Artist - Song.mp3', 'liked': True, 'count': 1}
     assert _liked_m3u(app_state).is_file()
-    assert api.get_likes()['files'] == ['Artist - Song.mp3']
+    assert api.get_likes(_request())['files'] == ['Artist - Song.mp3']
 
 
 def test_unliking_the_only_song_removes_the_playlist(app_state):
@@ -378,7 +395,7 @@ def test_the_same_request_twice_changes_nothing(app_state):
     second = _like('a.mp3')
 
     assert first == second
-    assert api.get_likes()['count'] == 1
+    assert api.get_likes(_request())['count'] == 1
     assert _like('a.mp3', liked=False)['count'] == 0
     assert _like('a.mp3', liked=False)['count'] == 0
 
@@ -392,12 +409,12 @@ def test_only_songs_in_the_library_can_be_liked(app_state, tmp_path):
             _like(bad)
         assert exc.value.status_code == 404, bad
 
-    assert api.get_likes()['count'] == 0
+    assert api.get_likes(_request())['count'] == 0
 
 
 def test_a_like_needs_a_file(app_state):
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(api.set_like(_Body({'liked': True})))
+        asyncio.run(api.set_like(_request({'liked': True})))
 
     assert exc.value.status_code == 400
 
@@ -426,10 +443,10 @@ def test_clearing_unlikes_everything_and_removes_the_playlist(app_state):
         _track(app_state, name)
         _like(name)
 
-    result = asyncio.run(api.clear_likes_endpoint())
+    result = asyncio.run(api.clear_likes_endpoint(_request()))
 
     assert result == {'cleared': 2, 'count': 0}
-    assert api.get_likes()['count'] == 0
+    assert api.get_likes(_request())['count'] == 0
     assert not _liked_m3u(app_state).exists()
     # Only the hearts went: no song was deleted.
     assert (app_state / 'a.mp3').is_file()
@@ -440,7 +457,7 @@ def test_liking_before_the_store_is_ready_is_an_error(monkeypatch):
     monkeypatch.setattr(api.state, 'likes', None)
 
     with pytest.raises(HTTPException) as exc:
-        api.get_likes()
+        api.get_likes(_request())
 
     assert exc.value.status_code == 500
 
@@ -468,7 +485,9 @@ def test_deleting_the_liked_playlist_only_unlikes_never_deletes_audio(
     _like(f'{LIKED_PLAYLIST_NAME}/Kept.mp3')
 
     result = asyncio.run(
-        api.delete_library_playlist_endpoint(playlist_name=LIKED_PLAYLIST_NAME)
+        api.delete_library_playlist_endpoint(
+            _request(), playlist_name=LIKED_PLAYLIST_NAME
+        )
     )
 
     assert result['ok'] is True
@@ -476,7 +495,7 @@ def test_deleting_the_liked_playlist_only_unlikes_never_deletes_audio(
     assert result['deleted_count'] == 0
     assert lookalike.is_file()
     assert elsewhere.is_file()
-    assert api.get_likes()['count'] == 0
+    assert api.get_likes(_request())['count'] == 0
     assert not _liked_m3u(app_state).exists()
 
 
@@ -486,12 +505,12 @@ def test_the_guard_ignores_case_and_padding(app_state):
 
     asyncio.run(
         api.delete_library_playlist_endpoint(
-            playlist_name=f' {LIKED_PLAYLIST_NAME.lower()} '
+            _request(), playlist_name=f' {LIKED_PLAYLIST_NAME.lower()} '
         )
     )
 
     assert kept.is_file()
-    assert api.get_likes()['count'] == 0
+    assert api.get_likes(_request())['count'] == 0
 
 
 def test_other_playlists_still_go_through_the_normal_delete(
@@ -506,7 +525,9 @@ def test_other_playlists_still_go_through_the_normal_delete(
     monkeypatch.setattr(api, 'delete_playlist_from_library', fake_delete)
 
     result = asyncio.run(
-        api.delete_library_playlist_endpoint(playlist_name='Road Trip')
+        api.delete_library_playlist_endpoint(
+            _request(principal=_ADMIN), playlist_name='Road Trip'
+        )
     )
 
     assert seen == ['Road Trip']
@@ -527,7 +548,7 @@ def test_deleting_a_liked_track_unlikes_it_and_rewrites_the_playlist(
 
     asyncio.run(api.after_library_delete({'a.mp3': {'deleted': True}}, {}))
 
-    assert api.get_likes()['files'] == ['b.mp3']
+    assert api.get_likes(_request())['files'] == ['b.mp3']
     text = _liked_m3u(app_state).read_text(encoding='utf-8')
     assert 'b.mp3' in text
     assert 'a.mp3' not in text
@@ -540,7 +561,7 @@ def test_deleting_the_last_liked_track_takes_the_playlist_with_it(app_state):
 
     asyncio.run(api.after_library_delete({'a.mp3': {'deleted': True}}, {}))
 
-    assert api.get_likes()['count'] == 0
+    assert api.get_likes(_request())['count'] == 0
     assert not _liked_m3u(app_state).exists()
 
 
@@ -555,7 +576,7 @@ def test_deleting_a_song_that_was_not_liked_leaves_the_playlist_alone(
 
     asyncio.run(api.after_library_delete({'other.mp3': {'deleted': True}}, {}))
 
-    assert api.get_likes()['files'] == ['liked.mp3']
+    assert api.get_likes(_request())['files'] == ['liked.mp3']
     assert _liked_m3u(app_state).stat().st_mtime_ns == before
 
 

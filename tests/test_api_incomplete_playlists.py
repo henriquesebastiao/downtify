@@ -7,7 +7,10 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+from starlette.requests import Request
+
 from downtify import api
+from downtify.auth import Principal
 from downtify.playlist_batches import (
     PlaylistBatchStore,
     split_tracks_by_library,
@@ -15,6 +18,16 @@ from downtify.playlist_batches import (
 from downtify.playlist_catalog import PlaylistCatalog
 from downtify.playlist_spotify_cache import PlaylistSpotifyCache
 from downtify.track_index import TrackIndex
+
+
+def _admin_request() -> Request:
+    return Request({
+        'type': 'http',
+        'headers': [],
+        'state': {
+            'principal': Principal('device', 'client', '', 1, 'admin', 'admin')
+        },
+    })
 
 
 def test_build_incomplete_playlist_reports_marks_complete(
@@ -504,7 +517,9 @@ def test_delete_playlist_batch_endpoint(tmp_path: Path) -> None:
     try:
 
         async def _run() -> dict[str, Any]:
-            return await api.delete_playlist_batch_endpoint(sid)
+            return await api.delete_playlist_batch_endpoint(
+                _admin_request(), sid
+            )
 
         result = asyncio.run(_run())
         assert result['ok'] is True

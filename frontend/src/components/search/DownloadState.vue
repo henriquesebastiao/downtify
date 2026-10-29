@@ -46,6 +46,7 @@ import UiBadge from '../ui/UiBadge.vue'
 import UiProgress from '../ui/UiProgress.vue'
 import { useDownloadManager, useProgressTracker } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
+import { songDownloadState } from '/src/lib/downloadState'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({ song: { type: Object, required: true } })
@@ -60,11 +61,13 @@ const item = computed(() => {
   return tracker.getBySong(props.song)
 })
 
-const state = computed(() => {
-  if (item.value) return item.value.state
+const inLibrary = computed(() => {
+  if (props.song.source === 'library' && props.song.file) return true
   const artist = (props.song.artists || [])[0] || props.song.artist
-  return library.hasSong(artist, props.song.name) ? 'library' : 'new'
+  return library.hasSong(artist, props.song.name)
 })
+
+const state = computed(() => songDownloadState(item.value, inLibrary.value))
 
 function download() {
   if (state.value === 'failed') dm.retry(props.song)

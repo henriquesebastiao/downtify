@@ -269,10 +269,12 @@ class DiscoverStore:
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS discover_listens (
-                    artist_key TEXT PRIMARY KEY,
+                    artist_key TEXT NOT NULL,
+                    user_id INTEGER NOT NULL DEFAULT 0,
                     name TEXT NOT NULL,
                     plays INTEGER NOT NULL DEFAULT 0,
-                    last_played TEXT NOT NULL
+                    last_played TEXT NOT NULL,
+                    PRIMARY KEY (artist_key, user_id)
                 )
             """)
             conn.execute("""
@@ -283,11 +285,14 @@ class DiscoverStore:
             """)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS discover_blocked (
-                    artist_key TEXT PRIMARY KEY,
+                    artist_key TEXT NOT NULL,
+                    user_id INTEGER NOT NULL DEFAULT 0,
                     name TEXT NOT NULL,
-                    blocked_at TEXT NOT NULL
+                    blocked_at TEXT NOT NULL,
+                    PRIMARY KEY (artist_key, user_id)
                 )
             """)
+            self._migrate(conn)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS discover_search (
                     artist_key TEXT PRIMARY KEY,
@@ -326,6 +331,60 @@ class DiscoverStore:
                 )
             """)
 
+    @staticmethod
+    def _migrate(conn: Any) -> None:
+        """One-time upgrade of single-user tables to per-user ones."""
+
+        columns = {
+            row[1]
+            for row in conn.execute('PRAGMA table_info(discover_listens)')
+        }
+        if 'user_id' not in columns:
+            conn.execute("""
+                CREATE TABLE discover_listens_new (
+                    artist_key TEXT NOT NULL,
+                    user_id INTEGER NOT NULL DEFAULT 0,
+                    name TEXT NOT NULL,
+                    plays INTEGER NOT NULL DEFAULT 0,
+                    last_played TEXT NOT NULL,
+                    PRIMARY KEY (artist_key, user_id)
+                )
+            """)
+            conn.execute("""
+                INSERT INTO discover_listens_new
+                (artist_key, user_id, name, plays, last_played)
+                SELECT artist_key, 0, name, plays, last_played
+                FROM discover_listens
+            """)
+            conn.execute('DROP TABLE discover_listens')
+            conn.execute(
+                'ALTER TABLE discover_listens_new RENAME TO discover_listens'
+            )
+        columns = {
+            row[1]
+            for row in conn.execute('PRAGMA table_info(discover_blocked)')
+        }
+        if 'user_id' not in columns:
+            conn.execute("""
+                CREATE TABLE discover_blocked_new (
+                    artist_key TEXT NOT NULL,
+                    user_id INTEGER NOT NULL DEFAULT 0,
+                    name TEXT NOT NULL,
+                    blocked_at TEXT NOT NULL,
+                    PRIMARY KEY (artist_key, user_id)
+                )
+            """)
+            conn.execute("""
+                INSERT INTO discover_blocked_new
+                (artist_key, user_id, name, blocked_at)
+                SELECT artist_key, 0, name, blocked_at
+                FROM discover_blocked
+            """)
+            conn.execute('DROP TABLE discover_blocked')
+            conn.execute(
+                'ALTER TABLE discover_blocked_new RENAME TO discover_blocked'
+            )
+
     # Listens
 
     def record_listen(
@@ -333,8 +392,10 @@ class DiscoverStore:
         name: str,
         when: Optional[datetime] = None,
         play_id: str = '',
+        user_id: int = 0,
     ) -> Optional[dict[str, Any]]:
-        """Count one listen to *name*. ``None`` for a name with no key.
+        """Count one listen to *name* for *user_id*. ``None`` for a name
+        with no key.
 
         *when* is when it was played - an app that was offline reports
         its plays later; a late report never moves ``last_played`` back.
@@ -347,6 +408,7 @@ class DiscoverStore:
         if not key:
             return None
         stamp = (when or _now()).isoformat()
+        uid = int(user_id or 0)
         with self._connect() as conn:
             fresh = True
             if play_id:
@@ -359,36 +421,78 @@ class DiscoverStore:
             if fresh:
                 conn.execute(
                     """INSERT INTO discover_listens
-                       (artist_key, name, plays, last_played)
-                       VALUES (?, ?, 1, ?)
-                       ON CONFLICT(artist_key) DO UPDATE SET
+                       (artist_key, user_id, name, plays, last_played)
+                       VALUES (?, ?, ?, 1, ?)
+                       ON CONFLICT(artist_key, user_id) DO UPDATE SET
                          name = excluded.name,
                          plays = plays + 1,
                          last_played = MAX(last_played, excluded.last_played)""",
-                    (key, name, stamp),
+                    (key, uid, name, stamp),
                 )
             row = conn.execute(
                 'SELECT name, plays, last_played FROM discover_listens '
-                'WHERE artist_key = ?',
-                (key,),
+                'WHERE artist_key = ? AND user_id = ?',
+                (key, uid),
             ).fetchone()
         return dict(row)
 
-    def listens(self) -> list[dict[str, Any]]:
+    def listens(self, user_id: Optional[int] = None) -> list[dict[str, Any]]:
         with self._connect() as conn:
-            rows = conn.execute(
-                'SELECT name, plays, last_played FROM discover_listens '
-                'ORDER BY plays DESC, name'
-            ).fetchall()
+            if user_id is None:
+                rows = conn.execute(
+                    'SELECT name, plays, last_played FROM discover_listens '
+                    'ORDER BY plays DESC, name'
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    'SELECT name, plays, last_played FROM discover_listens '
+                    'WHERE user_id = ? ORDER BY plays DESC, name',
+                    (int(user_id),),
+                ).fetchall()
         return [dict(row) for row in rows]
 
-    def clear_listens(self) -> int:
+    def clear_listens(self, user_id: Optional[int] = None) -> int:
         with self._connect() as conn:
-            return conn.execute('DELETE FROM discover_listens').rowcount
+            if user_id is None:
+                return conn.execute('DELETE FROM discover_listens').rowcount
+            cur = conn.execute(
+                'DELETE FROM discover_listens WHERE user_id = ?',
+                (int(user_id),),
+            )
+            return cur.rowcount
+
+    def reassign_legacy(self, user_id: int) -> int:
+        """Give pre-feature listens and blocks to *user_id* (once)."""
+
+        if not user_id:
+            return 0
+        with self._connect() as conn:
+            listens = conn.execute(
+                'UPDATE discover_listens SET user_id = ? WHERE user_id = 0',
+                (int(user_id),),
+            ).rowcount
+            blocked = conn.execute(
+                'UPDATE discover_blocked SET user_id = ? WHERE user_id = 0',
+                (int(user_id),),
+            ).rowcount
+            return listens + blocked
+
+    def remove_user(self, user_id: int) -> None:
+        """Forget a deleted account's listens and blocks."""
+
+        with self._connect() as conn:
+            conn.execute(
+                'DELETE FROM discover_listens WHERE user_id = ?',
+                (int(user_id),),
+            )
+            conn.execute(
+                'DELETE FROM discover_blocked WHERE user_id = ?',
+                (int(user_id),),
+            )
 
     # Block list
 
-    def block(self, name: str) -> Optional[dict[str, Any]]:
+    def block(self, name: str, user_id: int = 0) -> Optional[dict[str, Any]]:
         """Never suggest *name* again. ``None`` for a name with no key."""
 
         name = str(name or '').strip()
@@ -396,41 +500,64 @@ class DiscoverStore:
         if not key:
             return None
         stamp = _now().isoformat()
+        uid = int(user_id or 0)
         with self._connect() as conn:
             conn.execute(
-                """INSERT INTO discover_blocked (artist_key, name, blocked_at)
-                   VALUES (?, ?, ?)
-                   ON CONFLICT(artist_key) DO NOTHING""",
-                (key, name, stamp),
+                """INSERT INTO discover_blocked (artist_key, user_id, name,
+                                                 blocked_at)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT(artist_key, user_id) DO NOTHING""",
+                (key, uid, name, stamp),
             )
             row = conn.execute(
                 'SELECT name, blocked_at FROM discover_blocked '
-                'WHERE artist_key = ?',
-                (key,),
+                'WHERE artist_key = ? AND user_id = ?',
+                (key, uid),
             ).fetchone()
         return dict(row)
 
-    def unblock(self, name: str) -> bool:
+    def unblock(self, name: str, user_id: Optional[int] = None) -> bool:
         with self._connect() as conn:
-            cur = conn.execute(
-                'DELETE FROM discover_blocked WHERE artist_key = ?',
-                (artist_key(name),),
-            )
+            if user_id is None:
+                cur = conn.execute(
+                    'DELETE FROM discover_blocked WHERE artist_key = ?',
+                    (artist_key(name),),
+                )
+            else:
+                cur = conn.execute(
+                    'DELETE FROM discover_blocked WHERE artist_key = ? '
+                    'AND user_id = ?',
+                    (artist_key(name), int(user_id)),
+                )
             return cur.rowcount > 0
 
-    def blocked(self) -> list[dict[str, Any]]:
+    def blocked(self, user_id: Optional[int] = None) -> list[dict[str, Any]]:
         with self._connect() as conn:
-            rows = conn.execute(
-                'SELECT name, blocked_at FROM discover_blocked '
-                'ORDER BY blocked_at DESC, name'
-            ).fetchall()
+            if user_id is None:
+                rows = conn.execute(
+                    'SELECT name, blocked_at FROM discover_blocked '
+                    'ORDER BY blocked_at DESC, name'
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    'SELECT name, blocked_at FROM discover_blocked '
+                    'WHERE user_id = ? ORDER BY blocked_at DESC, name',
+                    (int(user_id),),
+                ).fetchall()
         return [dict(row) for row in rows]
 
-    def blocked_keys(self) -> set[str]:
+    def blocked_keys(self, user_id: Optional[int] = None) -> set[str]:
         with self._connect() as conn:
-            rows = conn.execute(
-                'SELECT artist_key FROM discover_blocked'
-            ).fetchall()
+            if user_id is None:
+                rows = conn.execute(
+                    'SELECT artist_key FROM discover_blocked'
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    'SELECT artist_key FROM discover_blocked WHERE user_id '
+                    '= ?',
+                    (int(user_id),),
+                ).fetchall()
         return {row['artist_key'] for row in rows}
 
     # Related-artists cache
@@ -830,6 +957,7 @@ def recommendations(
     lookup_id: Callable[[str], Optional[str]] = deezer.lookup_artist_id,
     fetch_related: Callable[[str, int], Related] = deezer.related_artists,
     now: Optional[datetime] = None,
+    user_id: int = 0,
 ) -> dict[str, Any]:
     """Suggested artists for a library.
 
@@ -843,7 +971,7 @@ def recommendations(
 
     now = now or _now()
     library = [a for a in library if isinstance(a, dict)]
-    seeds = pick_seeds(seed_weights(library, store.listens(), now))
+    seeds = pick_seeds(seed_weights(library, store.listens(user_id), now))
     if not seeds:
         return {'artists': [], 'seeds': [], 'partial': False}
 
@@ -870,7 +998,7 @@ def recommendations(
 
     related = {key: rows for key, rows, _failed in results}
     exclude = {artist_key(a.get('name')) for a in library}
-    exclude |= store.blocked_keys()
+    exclude |= store.blocked_keys(user_id)
     exclude.discard('')
     return {
         'artists': rank_candidates(seeds, related, exclude, limit=limit),

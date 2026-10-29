@@ -16,7 +16,8 @@ export function compareText(a, b) {
 
 // What sits between the members' names in an act's own name: "Henrique &
 // Juliano", "Simon + Garfunkel", "Sandy e Junior", "Zé Neto, Cristiano".
-const ACT_NAME_JOINER = String.raw`\s*(?:&|\+|,|/|\b(?:e|and|y|x)\b)\s*`
+// Not "x": "Anitta x Pedro Sampaio" names a collaboration, not an act.
+const ACT_NAME_JOINER = String.raw`\s*(?:&|\+|,|/|\b(?:e|and|y)\b)\s*`
 
 /** Whether `act` is the name of an act made of exactly `names` (two or
  * more), joined the way an act's name joins its members, in any order.
@@ -109,7 +110,14 @@ export function normalizeTrack(row) {
   const artists = listed.length
     ? listed
     : splitArtists(artist, raw.album_artist)
-  const albumArtist = String(raw.album_artist || '').trim() || artists[0] || ''
+  // "Various Artists" only names a compilation with the flag Downtify
+  // writes on one: older versions tagged any song with several artists
+  // that way, and such a track stays with its first artist's album.
+  // Mirrors album_owner_of in downtify/library_catalog.py.
+  const compilation = Boolean(raw.compilation)
+  const tagged = String(raw.album_artist || '').trim()
+  const albumArtist =
+    (isVariousArtists(tagged) && !compilation ? '' : tagged) || artists[0] || ''
   return {
     file,
     title: String(raw.title || '').trim() || fallback.title,
@@ -117,9 +125,14 @@ export function normalizeTrack(row) {
     artists,
     album: String(raw.album || '').trim(),
     albumArtist,
+    compilation,
     trackNumber: Number(raw.track_number) || 0,
     year: String(raw.year || ''),
     duration: Number(raw.duration) || 0,
+    explicit: Boolean(raw.explicit),
+    // Admins only: why users can't see this track ('track', 'album' or
+    // 'artist' - the widest rule that hides it), '' when they can.
+    hiddenBy: String(raw.hidden_by || ''),
     added: Number(raw.added) || 0,
     size: Number(raw.size) || 0,
     // Bare paths (no /tracks row) don't know; try the cover endpoint.
@@ -170,6 +183,7 @@ export function groupAlbums(tracks) {
         added: 0,
         duration: 0,
         size: 0,
+        hiddenBy: '',
       }
       map.set(key, album)
     }
@@ -177,6 +191,12 @@ export function groupAlbums(tracks) {
     album.added = Math.max(album.added, track.added)
     album.duration += track.duration
     album.size += track.size
+    // A rule on the album (or its artist) hides the whole album; one on a
+    // single track doesn't.
+    if (track.hiddenBy === 'artist') album.hiddenBy = 'artist'
+    else if (track.hiddenBy === 'album' && !album.hiddenBy) {
+      album.hiddenBy = 'album'
+    }
     if (!album.year && track.year) album.year = track.year
     if (!album.cover && track.hasCover) album.cover = track.cover
   }
@@ -261,8 +281,12 @@ export function albumLinkFor(albums, song, { search = true } = {}) {
 /**
  * Group tracks by artist, with their albums attached. A track counts for
  * the artist it belongs to (groupingArtistName) and for every other artist
- * credited on it, so a guest gets a page of their own; albums only count
- * for their album artist. "Various Artists" is never one of them.
+ * credited on it who has a page - an artist some track belongs to. A
+ * guest credit alone makes no page: tags can name a duo's members one by
+ * one ("Henrique; Juliano", as YouTube Music credits some duos), and a
+ * page per member would be an artist that doesn't exist. Albums only
+ * count for their album artist. "Various Artists" is never one of them.
+ * Mirrors library_artist_index in downtify/library_catalog.py.
  */
 export function groupArtists(tracks, albums = groupAlbums(tracks)) {
   const map = new Map()
@@ -277,21 +301,32 @@ export function groupArtists(tracks, albums = groupAlbums(tracks)) {
         cover: '',
         added: 0,
         duration: 0,
+        hiddenBy: '',
       })
     }
     return map.get(key)
   }
+  const owners = new Set()
   for (const track of tracks) {
+    const name = groupingArtistName(track)
+    if (name && !isVariousArtists(name)) owners.add(artistKey(name))
+  }
+  for (const track of tracks) {
+    const lead = artistKey(groupingArtistName(track))
     const names = new Map()
     for (const name of [groupingArtistName(track), ...track.artists]) {
-      if (!name || isVariousArtists(name)) continue
-      if (!names.has(artistKey(name))) names.set(artistKey(name), name)
+      const key = artistKey(name)
+      if (owners.has(key) && !names.has(key)) names.set(key, name)
     }
-    for (const name of names.values()) {
+    for (const [key, name] of names) {
       const artist = entry(name)
       artist.tracks.push(track)
       artist.added = Math.max(artist.added, track.added)
       artist.duration += track.duration
+      // An artist rule hides the tracks that belong to that artist.
+      if (track.hiddenBy === 'artist' && key === lead) {
+        artist.hiddenBy = 'artist'
+      }
       if (!artist.cover && track.hasCover) artist.cover = track.cover
     }
   }
@@ -329,22 +364,45 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       name: playlist.name,
       // What to show. The file on disk has a fixed name, so the liked
       // songs playlist is given a translated title by the model.
-      title: playlist.name,
+      title: playlist.display_name || playlist.name,
       // The playlist of hearted songs, not a downloaded one.
       liked: Boolean(playlist.liked),
       manual: Boolean(playlist.manual),
       fileCount: playlist.count != null ? Number(playlist.count) : files.length,
       tracks,
-      // Downloaded playlists keep their own artwork. Manual ones leave
-      // this empty so CoverArt mosaics up to four track covers (the
-      // sidecar JPEG is still written for Navidrome).
-      cover: playlist.manual ? '' : playlistCoverURL(playlist.cover),
+      // A manual playlist uses a live mosaic unless a source image was
+      // explicitly imported with it.
+      cover:
+        playlist.manual && !playlist.explicit_cover
+          ? ''
+          : playlistCoverURL(playlist.cover),
       covers,
       duration: tracks.reduce((sum, track) => sum + track.duration, 0),
       // M3U mtime from GET /playlists — not the resolved tracks, or the
       // sidebar would reshuffle every time a playlist's songs load.
       added: Number(playlist.added) || 0,
       batch: batchByName.get(playlist.name) || null,
+      // Sharing (see downtify/playlist_shares.py). Without these fields a
+      // playlist is the user's own and private.
+      mine: playlist.mine !== false,
+      // Its songs can be added and removed: a Library playlist of the
+      // user's, or one shared with them as an editor.
+      canEditTracks:
+        playlist.can_edit_tracks != null
+          ? Boolean(playlist.can_edit_tracks)
+          : Boolean(playlist.manual) && playlist.mine !== false,
+      owner: String(playlist.owner || ''),
+      visibility: playlist.visibility || 'private',
+      sharedWith: Array.isArray(playlist.shared_with)
+        ? playlist.shared_with
+        : [],
+      editors: Array.isArray(playlist.editors) ? playlist.editors : [],
+      followed: Boolean(playlist.followed),
+      favorite: Boolean(playlist.favorite),
+      sharedWithMe: Boolean(playlist.shared_with_me),
+      isNew: Boolean(playlist.new),
+      // Songs the owner hid from an imported playlist.
+      hiddenCount: Number(playlist.hidden_count) || 0,
     }
   })
   // A tracked Spotify playlist whose M3U isn't written (M3U export off,
@@ -364,8 +422,47 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       duration: 0,
       added: 0,
       batch,
+      mine: true,
+      canEditTracks: false,
+      owner: '',
+      visibility: 'private',
+      sharedWith: [],
+      editors: [],
+      followed: false,
+      sharedWithMe: false,
+      isNew: false,
+      hiddenCount: 0,
     }))
-  return [...fromM3u, ...tracked]
+  return [...fromM3u, ...tracked].sort(
+    (a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))
+  )
+}
+
+/**
+ * The playlists in the three places they are listed, never mixed: the
+ * user's own, those shared with them by name (new ones first) and other
+ * people's public ones (by owner, then name).
+ */
+export function splitPlaylists(playlists) {
+  const own = []
+  const shared = []
+  const publicOnes = []
+  for (const playlist of playlists) {
+    if (playlist.mine) own.push(playlist)
+    else if (playlist.sharedWithMe) shared.push(playlist)
+    else publicOnes.push(playlist)
+  }
+  const byOwner = (a, b) =>
+    compareText(a.owner, b.owner) ||
+    compareText(a.title ?? a.name, b.title ?? b.name)
+  const favoritesFirst = (a, b) =>
+    Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))
+  shared.sort(
+    (a, b) =>
+      favoritesFirst(a, b) || Number(b.isNew) - Number(a.isNew) || byOwner(a, b)
+  )
+  publicOnes.sort((a, b) => favoritesFirst(a, b) || byOwner(a, b))
+  return { own, shared, public: publicOnes }
 }
 
 const SORTERS = {
@@ -398,7 +495,54 @@ export function itemTrackCount(item) {
 export function sortItems(items, key, direction = 'asc') {
   const sorter = SORTERS[key] || SORTERS.added
   const sorted = [...items].sort(sorter)
-  return direction === 'desc' ? sorted.reverse() : sorted
+  const ordered = direction === 'desc' ? sorted.reverse() : sorted
+  return ordered.sort(
+    (a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))
+  )
+}
+
+/**
+ * The orders a track list can be sorted in, as the sort picker offers
+ * them: `[name, key, dir]` for `sortItems`. `order` is a playlist's own
+ * order (not a sorter). Note that for `added` and `duration` the
+ * library's "ascending" is newest / longest first, as the column
+ * headers have always sorted.
+ */
+export const TRACK_SORTS = [
+  ['order', 'order', 'asc'],
+  ['addedNew', 'added', 'asc'],
+  ['addedOld', 'added', 'desc'],
+  ['titleAsc', 'title', 'asc'],
+  ['titleDesc', 'title', 'desc'],
+  ['artistAsc', 'artist', 'asc'],
+  ['artistDesc', 'artist', 'desc'],
+  ['albumAsc', 'album', 'asc'],
+  ['albumDesc', 'album', 'desc'],
+  ['longest', 'duration', 'asc'],
+  ['shortest', 'duration', 'desc'],
+]
+
+/** The picker's name for a `{ key, dir }` sort, or '' when it has none. */
+export function trackSortName(sort) {
+  const found = TRACK_SORTS.find(
+    ([, key, dir]) => key === sort?.key && dir === (sort?.dir || 'asc')
+  )
+  return found ? found[0] : ''
+}
+
+/** The `{ key, dir }` sort for a picker name (the default for an unknown one). */
+export function trackSortByName(name) {
+  const found = TRACK_SORTS.find(([id]) => id === name) || TRACK_SORTS[1]
+  return { key: found[1], dir: found[2] }
+}
+
+/**
+ * `tracks` in the order `sort` (`{ key, dir }`) says. `order` keeps the
+ * list as it came, which for a playlist is the playlist's own order.
+ */
+export function sortTracks(tracks, sort) {
+  if (!sort || sort.key === 'order') return tracks
+  return sortItems(tracks, sort.key, sort.dir)
 }
 
 export function fold(text) {
@@ -452,4 +596,21 @@ export function indexTracksBySong(tracks) {
     if (!index.has(key)) index.set(key, track)
   }
   return index
+}
+
+export function localCatalogRoute(item, kind = item?.kind) {
+  if (item?.source !== 'library') return null
+  if (kind === 'playlist')
+    return {
+      name: 'Playlist',
+      query: { name: item.playlist_name || item.name },
+    }
+  if (kind === 'artist') return { name: 'Artist', query: { name: item.name } }
+  return {
+    name: 'Album',
+    query: {
+      artist: item.album_artist || item.artist || item.artists?.[0] || '',
+      title: item.album_name || item.name || '',
+    },
+  }
 }

@@ -13,6 +13,7 @@ import pytest
 from fastapi import HTTPException
 
 from downtify import api, monitor, providers
+from downtify.playlist_catalog import PlaylistCatalog
 
 PLAYLIST_ID = 'PLx6XKQDAhfWZ4vxtvdmpkDKUnR2omdAdr'
 PLAYLIST_URL = (
@@ -301,6 +302,50 @@ def test_unavailable_and_id_less_rows_are_dropped(fake_ytm):
     ] == ['ok']
 
 
+def test_a_row_without_a_video_id_is_recovered_from_its_thumbnail(fake_ytm):
+    """Importers' playlists list songs YouTube Music has no catalog entry
+    for: ``videoId`` null and ``isAvailable`` false, but the thumbnail is
+    the video's own (issue #460)."""
+
+    row = _row(None, 'Imported song', [('Some Artist', None)])
+    row['isAvailable'] = False
+    row['thumbnails'] = [
+        {'url': 'https://lh3.googleusercontent.com/album-art=w60-h60'},
+        {'url': 'https://i.ytimg.com/vi/v3LE7bSgwZg/hqdefault.jpg?sqp=x'},
+    ]
+    fake_ytm(playlist=_playlist(row, _row('ok', 'A - B', [])))
+
+    songs = providers.playlist_tracks_from_id(PLAYLIST_ID)
+
+    assert [s['song_id'] for s in songs] == ['v3LE7bSgwZg', 'ok']
+    assert songs[0]['youtube_id'] == 'v3LE7bSgwZg'
+    assert songs[0]['name'] == 'Imported song'
+    # The row YouTube Music sent is not modified.
+    assert row['videoId'] is None
+
+
+def test_the_webp_thumbnail_form_recovers_the_id_too(fake_ytm):
+    row = _row(None, 'Imported song', [])
+    row['thumbnails'] = [
+        {'url': 'https://i.ytimg.com/vi_webp/AbC-_12345x/mq.webp'}
+    ]
+    fake_ytm(playlist=_playlist(row))
+    (song,) = providers.playlist_tracks_from_id(PLAYLIST_ID)
+    assert song['song_id'] == 'AbC-_12345x'
+
+
+def test_a_row_with_neither_id_nor_video_thumbnail_is_still_dropped(fake_ytm):
+    row = _row(None, 'Nothing to go on', [])
+    row['thumbnails'] = [
+        {'url': 'https://lh3.googleusercontent.com/album-art=w60-h60'},
+        {'url': 'https://i.ytimg.com/vi/too-short/hq.jpg'},
+    ]
+    del_row = _row('gone', 'Deleted video', [])
+    del_row['isAvailable'] = False
+    fake_ytm(playlist=_playlist(row, del_row))
+    assert providers.playlist_tracks_from_id(PLAYLIST_ID) == []
+
+
 # ── watch source ────────────────────────────────────────────────────────────
 
 
@@ -510,6 +555,7 @@ def test_same_artist_by_handle_and_channel_is_one_watch(monkeypatch, tmp_path):
     class _Req:
         def __init__(self, url):
             self.url = url
+            self.scope = {}
 
         async def json(self):
             return {'url': self.url, 'interval_minutes': 60}
@@ -630,3 +676,44 @@ def test_check_guard_is_released_when_a_check_fails(monkeypatch, tmp_path):
     with pytest.raises(RuntimeError):
         asyncio.run(monitor.check_watch(pl, db, None, _noop_broadcast, None))
     assert pl.id not in monitor._checks_running
+
+
+# ── what gets looked up on Spotify ──────────────────────────────────────────
+
+SPOTIFY_ID = '37i9dQZF1DXcBWIGoYBM5M'
+
+
+def test_only_spotify_playlist_watches_are_looked_up_on_spotify(
+    tmp_path, monkeypatch
+):
+    """The background Spotify cache asks Spotify for every id this returns;
+    a YouTube Music playlist, an artist or a podcast is none of its business
+    (issue #460: "Spotify entity not found in embed payload")."""
+
+    db = monitor.PlaylistMonitorDB(tmp_path / 'monitor.db')
+    db.add_playlist(
+        SPOTIFY_ID,
+        'Top 50',
+        f'https://open.spotify.com/playlist/{SPOTIFY_ID}',
+    )
+    db.add_playlist(PLAYLIST_ID, 'Mix', PLAYLIST_URL)
+    db.add_playlist(
+        CHANNEL_ID,
+        'Some Artist',
+        f'https://music.youtube.com/channel/{CHANNEL_ID}',
+        kind=monitor.KIND_ARTIST,
+    )
+    db.add_playlist(
+        '4rOoJ6Egrf8K2IrywzwOMk',
+        'Some Show',
+        'https://open.spotify.com/show/4rOoJ6Egrf8K2IrywzwOMk',
+        kind=monitor.KIND_PODCAST,
+    )
+    # The YouTube playlist also exists in the catalog, without a Spotify id.
+    catalog = PlaylistCatalog(tmp_path / 'library.db')
+    catalog.ensure_playlist('Mix')
+    monkeypatch.setattr(api.state, 'monitor_db', db)
+    monkeypatch.setattr(api.state, 'playlist_catalog', catalog)
+    monkeypatch.setattr(api.state, 'playlist_batch_store', None)
+
+    assert api.known_spotify_playlist_ids() == [SPOTIFY_ID]

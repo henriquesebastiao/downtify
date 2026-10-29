@@ -36,7 +36,7 @@ import sqlite3
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from .sqlite_utils import connect_sqlite
 
@@ -65,7 +65,9 @@ PREFERENCES: dict[str, type] = {
     'theme': str,
     'locale': str,
     'show_lyrics': bool,
+    'normalize_volume': bool,
     'search_albums': bool,
+    'show_public_playlists': bool,
 }
 
 
@@ -183,8 +185,20 @@ class UserStore:
     def __init__(self, db_path: Path) -> None:
         self._path = str(db_path)
         self._lock = threading.Lock()
+        self._listeners: list[Callable[[], None]] = []
         self._init_db()
         self._dummy: Optional[str] = None
+
+    def add_change_listener(self, fn: Callable[[], None]) -> None:
+        """Call *fn* after an account's name, role or password changes,
+        or it is deleted - e.g. to drop cached sign-ins."""
+
+        if fn not in self._listeners:
+            self._listeners.append(fn)
+
+    def _changed(self) -> None:
+        for fn in list(self._listeners):
+            fn()
 
     def _connect(self) -> sqlite3.Connection:
         return connect_sqlite(self._path, row_factory=True)
@@ -335,6 +349,7 @@ class UserStore:
                     'default_password = 1 WHERE id = ?',
                     (hash_password(DEFAULT_PASSWORD), ROLE_ADMIN, row['id']),
                 )
+        self._changed()
         return self.by_username(DEFAULT_USERNAME) or {}
 
     # Signing in
@@ -462,6 +477,7 @@ class UserStore:
                         )
                 except sqlite3.IntegrityError as exc:
                     raise UserError('That username is taken') from exc
+                self._changed()
         return self.get(user_id) or {}
 
     def set_password(self, user_id: int, password: Any) -> None:
@@ -474,6 +490,7 @@ class UserStore:
             )
             if cur.rowcount == 0:
                 raise UserError('User not found')
+        self._changed()
 
     def check_password(self, user_id: int, password: str) -> bool:
         with self._connect() as conn:
@@ -492,6 +509,7 @@ class UserStore:
                 raise UserError('The last admin cannot be deleted')
             with self._connect() as conn:
                 conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        self._changed()
         return current
 
     # Preferences

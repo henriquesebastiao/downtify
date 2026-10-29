@@ -9,6 +9,7 @@ import {
   groupingArtistName,
   indexTracksBySong,
   itemTrackCount,
+  isActOf,
   isGuestOn,
   isVariousArtists,
   normalizeTrack,
@@ -56,6 +57,21 @@ const rows = [
 ]
 const tracks = rows.map(normalizeTrack)
 
+describe('explicit manual playlist artwork', () => {
+  it('uses imported source artwork while ordinary manual playlists keep mosaics', () => {
+    const base = {
+      name: 'Mix',
+      files: [],
+      manual: true,
+      cover: 'Playlists/Mix.jpg',
+    }
+    expect(buildPlaylists([base], new Map())[0].cover).toBe('')
+    expect(
+      buildPlaylists([{ ...base, explicit_cover: true }], new Map())[0].cover
+    ).toContain('Mix.jpg')
+  })
+})
+
 describe('normalizeTrack', () => {
   it('builds playable URLs and splits artists', () => {
     const [, harbor] = tracks
@@ -80,6 +96,17 @@ describe('normalizeTrack', () => {
   it('plays extra-folder tracks through /media', () => {
     const track = normalizeTrack('ext/abc123def456/Artist - Title.mp3')
     expect(track.url).toBe('/media/ext/abc123def456/Artist%20-%20Title.mp3')
+  })
+
+  it('keeps the explicit mark, and is clean without one', () => {
+    const loud = normalizeTrack({ file: 'a.mp3', title: 'A', explicit: true })
+    const rows = [
+      normalizeTrack({ file: 'b.mp3', title: 'B' }),
+      normalizeTrack({ file: 'c.mp3', title: 'C', explicit: false }),
+      normalizeTrack('d.mp3'),
+    ]
+    expect(loud.explicit).toBe(true)
+    expect(rows.map((track) => track.explicit)).toEqual([false, false, false])
   })
 })
 
@@ -158,11 +185,32 @@ describe('groupArtists', () => {
     const artists = groupArtists([duo])
     expect(artists.map((a) => a.name)).toEqual(['Zé Neto & Cristiano'])
     expect(artists[0].tracks).toHaveLength(1)
-    // ...while the album keeps its tag: a "Various Artists" album stays
-    // one album (Unmark as Various Artists on its page fixes a wrong tag).
-    expect(duo.albumArtist).toBe('Various Artists')
-    expect(groupAlbums([duo]).map((a) => a.artist)).toEqual(['Various Artists'])
-    expect(artists[0].albums).toEqual([])
+    // ...and so has its album: without the compilation flag, "Various
+    // Artists" is how older versions tagged songs with several artists.
+    expect(duo.albumArtist).toBe('Zé Neto & Cristiano')
+    expect(groupAlbums([duo]).map((a) => a.artist)).toEqual([
+      'Zé Neto & Cristiano',
+    ])
+    expect(artists[0].albums.map((a) => a.title)).toEqual(['Acústico'])
+  })
+
+  it('keeps a flagged Various Artists album as one compilation', () => {
+    const compilation = normalizeTrack({
+      file: 'Soundtrack/a.mp3',
+      title: 'Sintonia',
+      artist: 'Zé Neto & Cristiano',
+      album: 'Soundtrack',
+      album_artist: 'Various Artists',
+      compilation: true,
+    })
+    expect(compilation.albumArtist).toBe('Various Artists')
+    expect(groupAlbums([compilation]).map((a) => a.artist)).toEqual([
+      'Various Artists',
+    ])
+    // Its track is still on its artist's page.
+    expect(groupArtists([compilation]).map((a) => a.name)).toEqual([
+      'Zé Neto & Cristiano',
+    ])
   })
 })
 
@@ -413,6 +461,18 @@ describe('isVariousArtists', () => {
   })
 })
 
+describe('isActOf', () => {
+  it('reads an act named after its members, in any order', () => {
+    expect(isActOf(['Mica', 'Tomas'], 'Mica & Tomas')).toBe(true)
+    expect(isActOf(['Tomas', 'Mica'], 'mica e tomas')).toBe(true)
+    expect(isActOf(['Mica', 'Tomas', 'Solenne'], 'Mica & Tomas')).toBe(false)
+  })
+
+  it('never takes an "x" collaboration for an act', () => {
+    expect(isActOf(['Mica', 'Tomas'], 'Mica x Tomas')).toBe(false)
+  })
+})
+
 describe('artists credited on a track', () => {
   // A compilation track with four artists, a regular album with a guest,
   // and one artist whose own name holds a comma.
@@ -424,6 +484,7 @@ describe('artists credited on a track', () => {
       artists: ['Kenji Aoki', 'Mira Kovač', 'Ana Luz', 'Tom Reyes'],
       album: 'Soundtrack',
       album_artist: 'Various Artists',
+      compilation: true,
     },
     {
       file: 'b.mp3',
@@ -440,6 +501,14 @@ describe('artists credited on a track', () => {
       artists: ['Coast, Hill & Vale'],
       album: 'Best Of',
       album_artist: 'Coast, Hill & Vale',
+    },
+    {
+      file: 'e.mp3',
+      title: 'Low Water',
+      artist: 'Mira Kovač',
+      artists: ['Mira Kovač'],
+      album: 'Tide',
+      album_artist: 'Mira Kovač',
     },
   ].map(normalizeTrack)
   const artists = groupArtists(credited)
@@ -462,19 +531,46 @@ describe('artists credited on a track', () => {
     ])
   })
 
-  it('gives every credited artist a page, guests included', () => {
+  it('gives a page to every artist a track belongs to', () => {
+    // Ana Luz and Tom Reyes are only ever credited next to someone else.
     expect(artists.map((a) => a.name).sort()).toEqual([
-      'Ana Luz',
       'Coast, Hill & Vale',
       'Kenji Aoki',
       'Mira Kovač',
-      'Tom Reyes',
     ])
+    // An artist with a page gets the tracks they are a guest on too.
     expect(byName('Mira Kovač').tracks.map((t) => t.title)).toEqual([
       'Marmalade',
       'Undertow',
+      'Low Water',
     ])
     expect(byName('Kenji Aoki').tracks).toHaveLength(2)
+  })
+
+  it('makes no page for a duo tagged as its members', () => {
+    // How older versions tagged a single YouTube Music credited to a
+    // duo's members.
+    const split = normalizeTrack({
+      file: 'Mica - Harbor Lights.mp3',
+      title: 'Harbor Lights',
+      artist: 'Mica; Tomas',
+      album: 'Harbor Lights',
+      album_artist: 'Various Artists',
+    })
+    expect(split.artists).toEqual(['Mica', 'Tomas'])
+    expect(groupArtists([split]).map((a) => a.name)).toEqual(['Mica'])
+    expect(groupAlbums([split]).map((a) => a.artist)).toEqual(['Mica'])
+  })
+
+  it('marks an artist hidden only by a rule on their own tracks', () => {
+    const hidden = credited.map((track) =>
+      track.file === 'b.mp3' ? { ...track, hiddenBy: 'artist' } : track
+    )
+    const grouped = groupArtists(hidden)
+    const hiddenBy = (name) => grouped.find((a) => a.name === name).hiddenBy
+    // Undertow belongs to Kenji Aoki; Mira Kovač is only a guest on it.
+    expect(hiddenBy('Kenji Aoki')).toBe('artist')
+    expect(hiddenBy('Mira Kovač')).toBe('')
   })
 
   it('never makes Various Artists a page, nor gives it albums', () => {
@@ -483,7 +579,7 @@ describe('artists credited on a track', () => {
       'Glass Harbor',
     ])
     // Albums stay with their album artist only.
-    expect(byName('Mira Kovač').albums).toEqual([])
+    expect(byName('Mira Kovač').albums.map((a) => a.title)).toEqual(['Tide'])
   })
 
   it('links a track to the artist it belongs to', () => {

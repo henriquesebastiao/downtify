@@ -6,7 +6,8 @@
     "dev": "vitepress dev",
     "build": "vitepress build",
     "preview": "vitepress preview",
-    "test": "vitest run --dir .vitepress/tests"
+    "test": "vitest run --dir .vitepress/tests",
+    "i18n": "node .vitepress/scripts/i18n.mjs"
   },
   "devDependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",

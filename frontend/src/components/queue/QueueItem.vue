@@ -44,6 +44,13 @@
             <span class="tabular w-9 shrink-0 text-right text-xs text-fg-3">
               {{ item.progress ? `${Math.round(item.progress)}%` : '' }}
             </span>
+            <span
+              v-if="item.position != null"
+              class="tabular shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted"
+              :title="t('queue.statusQueued')"
+            >
+              #{{ item.position }}
+            </span>
           </div>
           <p v-if="item.message" class="mt-1 truncate text-xs text-muted">
             {{ item.message }}
@@ -54,18 +61,26 @@
           class="mt-1 flex items-start gap-1.5 text-xs text-danger"
         >
           <AppIcon name="alert" :size="14" class="mt-px" />
-          <span class="line-clamp-2">{{
-            item.message || t('queue.failedGeneric')
-          }}</span>
+          <span class="line-clamp-2">{{ failure }}</span>
         </p>
       </div>
 
       <div class="flex shrink-0 items-center gap-1">
         <span
+          v-if="item.state === 'queued' && item.position != null"
+          class="tabular rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted max-sm:hidden"
+        >
+          #{{ item.position }}
+        </span>
+        <span
           v-if="item.state === 'queued'"
           class="text-xs text-faint max-sm:hidden"
         >
-          {{ t('queue.statusQueued') }}
+          {{
+            queuePause.paused.value
+              ? t('queue.statusPaused')
+              : t('queue.statusQueued')
+          }}
         </span>
         <template v-if="item.state === 'done' && item.filename">
           <UiIconButton
@@ -92,6 +107,18 @@
           @click="dm.retry(song)"
         >
           {{ t('queue.retry') }}
+        </UiButton>
+        <UiButton
+          v-if="
+            auth.isAdmin.value &&
+            (item.state === 'failed' || item.state === 'active')
+          "
+          size="sm"
+          variant="secondary"
+          :disabled="suspending"
+          @click="suspendDownload"
+        >
+          {{ t('downloadPolicy.block') }}
         </UiButton>
         <UiIconButton
           icon="x"
@@ -131,6 +158,9 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import API from '/src/model/api'
+import { useAuth } from '/src/model/auth'
+import { useUi } from '/src/model/ui'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import SourceBadge from '../ui/SourceBadge.vue'
@@ -139,11 +169,13 @@ import UiIconButton from '../ui/UiIconButton.vue'
 import UiProgress from '../ui/UiProgress.vue'
 import { useDownloadManager } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
+import { useQueuePause } from '/src/model/queuePause'
 import { useTrackActions } from '/src/model/trackActions'
 // Display only: the job's `cover_url` is what its file gets.
 import { deezerImage } from '/src/lib/deezerImage'
 import { normalizeTrack } from '/src/lib/library'
 import { saveName } from '/src/lib/paths'
+import { classifyInput } from '/src/lib/input'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -152,13 +184,56 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
+// Codes the server sends for songs it won't download (download policy,
+// music trash) instead of a message.
+const FAILURE_CODES = {
+  download_excluded: 'downloadPolicy.blocked',
+  library_trash_excluded: 'trash.downloadBlocked',
+}
+const failure = computed(() => {
+  const message = props.item.message
+  if (FAILURE_CODES[message]) return t(FAILURE_CODES[message])
+  return message || t('queue.failedGeneric')
+})
+const auth = useAuth()
+const ui = useUi()
+const suspending = ref(false)
 const dm = useDownloadManager()
 const library = useLibrary()
 const actions = useTrackActions()
+const queuePause = useQueuePause()
 const override = ref('')
 const overrideError = ref('')
 
 const song = computed(() => props.item.song)
+async function suspendDownload() {
+  if (
+    !(await ui.confirm({
+      title: t('downloadPolicy.confirm'),
+      body: t('downloadPolicy.confirmHelp'),
+      confirmLabel: t('downloadPolicy.block'),
+    }))
+  )
+    return
+  const track = song.value || {}
+  suspending.value = true
+  try {
+    await API.excludeDownload({
+      song_id: String(track.song_id || ''),
+      name: String(track.name || ''),
+      artist: String(track.artist || ''),
+      artists: Array.isArray(track.artists) ? track.artists : [],
+      album_name: String(track.album_name || ''),
+      duration: Number(track.duration) || 0,
+    })
+    ui.toast(t('downloadPolicy.blocked'))
+    window.dispatchEvent(new Event('downtify-download-policy-changed'))
+  } catch {
+    ui.toast(t('downloadPolicy.error'), { kind: 'error' })
+  } finally {
+    suspending.value = false
+  }
+}
 const artists = computed(
   () =>
     (song.value.artists || []).join(', ') ||
@@ -179,14 +254,19 @@ function youtubeId(url) {
   return match ? match[1] : ''
 }
 
+// A YouTube video or a SoundCloud track to use as the audio.
 function useLink() {
-  const id = youtubeId(override.value)
-  if (!id) {
-    overrideError.value = t('queue.invalidYoutube')
+  const parsed = classifyInput(override.value)
+  const track = parsed.type === 'link' && parsed.kind === 'track'
+  if (track && parsed.source === 'soundcloud') {
+    dm.retryWithAudio(song.value, parsed.url, 'soundcloud')
+  } else if (track && parsed.source === 'youtube') {
+    dm.retryWithAudio(song.value, youtubeId(parsed.url))
+  } else {
+    overrideError.value = t('queue.invalidAudioLink')
     return
   }
   overrideError.value = ''
-  dm.retryWithAudio(song.value, id)
   override.value = ''
 }
 </script>

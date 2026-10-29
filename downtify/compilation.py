@@ -279,13 +279,18 @@ class _Track:
     album: str
     album_artist: str
     artists: list[str]
+    compilation: bool = False
 
     @property
     def credited_as(self) -> str:
         """The album artist the Library shows it under: the tag, else its
-        first artist (``normalizeTrack`` in ``frontend/src/lib/library.js``)."""
+        first artist - and "Various Artists" only with the compilation
+        flag (``library_catalog.album_owner_of``)."""
 
-        return self.album_artist or (self.artists[0] if self.artists else '')
+        first = self.artists[0] if self.artists else ''
+        if is_various_artists(self.album_artist) and not self.compilation:
+            return first
+        return self.album_artist or first
 
 
 @dataclass
@@ -317,6 +322,7 @@ def _read_tracks(files: list[tuple[str, Path]]) -> list[_Track]:
                     for a in meta.get('artists') or []
                     if str(a).strip()
                 ],
+                compilation=bool(meta.get('compilation')),
             )
         )
     return tracks

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 from mutagen.id3 import APIC, ID3, TIT2, TPE1
 
+from downtify import manual_playlists
 from downtify.library_catalog import LibraryContext
 from downtify.library_paths import library_stored_path
 from downtify.likes import LIKED_PLAYLIST_NAME
@@ -15,13 +18,19 @@ from downtify.m3u import MANUAL_M3U_MARKER, is_manual_m3u, write_m3u
 from downtify.manual_playlists import (
     ManualPlaylistError,
     create_manual_playlist,
+    detach_imported_playlist,
     drop_manual_playlist,
     edit_manual_playlist,
     prune_files_from_manual_playlists,
     rename_manual_playlist,
 )
 from downtify.playlist_listing import list_library_playlists
-from downtify.playlist_mosaic import _filter_complex, unique_cover_images
+from downtify.playlist_mosaic import (
+    _filter_complex,
+    has_explicit_cover,
+    keep_explicit_cover,
+    unique_cover_images,
+)
 
 _JPEG = bytes.fromhex(
     'ffd8ffe000104a46494600010100000100010000ffdb004300080606070605080707'
@@ -103,6 +112,24 @@ def test_cannot_edit_imported_playlist(tmp_path):
     with pytest.raises(ManualPlaylistError) as caught:
         edit_manual_playlist(ctx, 'Spotify Hits', add=['Song.mp3'])
     assert caught.value.status_code == 403
+
+
+def test_detach_preserves_legacy_paths_and_metadata(tmp_path: Path) -> None:
+    path = tmp_path / 'Mix.m3u'
+    path.write_bytes(
+        b'#EXTM3U\r\n#EXTINF:196,Beyonc\xe9\r\nBeyonc\xe9.mp3\r\n'
+    )
+    audio = tmp_path / 'Beyoncé.mp3'
+    audio.write_bytes(b'audio')
+
+    result = detach_imported_playlist(
+        LibraryContext(download_dir=tmp_path), 'Mix'
+    )
+
+    assert result['files'] == ['Beyoncé.mp3']
+    assert '#EXTINF:196,Beyoncé' in path.read_text(encoding='utf-8')
+    assert is_manual_m3u(path)
+    assert audio.read_bytes() == b'audio'
 
 
 def test_drop_manual_keeps_audio(tmp_path):
@@ -219,3 +246,90 @@ def test_rename_rejects_taken_name(tmp_path):
     with pytest.raises(ManualPlaylistError) as caught:
         rename_manual_playlist(ctx, 'Alpha', 'Beta')
     assert caught.value.status_code == 409
+
+
+def test_concurrent_additions_keep_both_tracks(tmp_path, monkeypatch):
+    root = tmp_path / 'downloads'
+    root.mkdir()
+    for name in ('One.mp3', 'Two.mp3'):
+        (root / name).write_bytes(b'audio fixture')
+    ctx = LibraryContext(download_dir=root)
+    monkeypatch.setattr(
+        manual_playlists, 'refresh_manual_playlist_cover', lambda *args: None
+    )
+    create_manual_playlist(ctx, 'Together')
+    ready = Barrier(2)
+
+    def add(name):
+        ready.wait(timeout=5)
+        return edit_manual_playlist(ctx, 'Together', add=[name])
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(add, ['One.mp3', 'Two.mp3']))
+    assert sorted(result['count'] for result in results) == [1, 2]
+    assert set(
+        manual_playlists._read_files(ctx, root / 'Playlists' / 'Together.m3u')
+    ) == {'One.mp3', 'Two.mp3'}
+
+
+def test_source_cover_survives_edits_rename_and_does_not_change_audio(
+    tmp_path,
+):
+    download = tmp_path / 'downloads'
+    extra = tmp_path / 'external'
+    native = download / 'One.mp3'
+    imported = extra / 'Two.mp3'
+    _mp3(native, title='One', artist='A')
+    _mp3(imported, title='Two', artist='B')
+    original = {
+        path: (path.read_bytes(), path.stat().st_mtime_ns)
+        for path in (native, imported)
+    }
+    ctx = LibraryContext(download_dir=download, extra_dirs=(extra,))
+    create_manual_playlist(ctx, 'Mix')
+    stored = library_stored_path(imported, download, extra_dirs=(extra,))
+    edit_manual_playlist(ctx, 'Mix', add=['One.mp3', stored])
+    path = download / 'Playlists' / 'Mix.m3u'
+    image = _jpeg(b'official-source')
+    path.with_suffix('.jpg').write_bytes(image)
+    keep_explicit_cover(path)
+    keep_explicit_cover(path)
+    listed = list_library_playlists(download, extra_dirs=(extra,))
+    assert listed[0]['explicit_cover'] is True
+    assert listed[0]['cover'].endswith('Mix.jpg')
+    result = edit_manual_playlist(ctx, 'Mix', add=['One.mp3', stored])
+    assert result['files'] == ['One.mp3', stored]
+    assert has_explicit_cover(path)
+    assert path.with_suffix('.jpg').read_bytes() == image
+    edit_manual_playlist(ctx, 'Mix', remove=['One.mp3'])
+    assert path.with_suffix('.jpg').read_bytes() == image
+    renamed = rename_manual_playlist(ctx, 'Mix', 'Acoustic')
+    assert renamed['files'] == [stored]
+    dest = download / 'Playlists' / 'Acoustic.m3u'
+    assert is_manual_m3u(dest)
+    assert has_explicit_cover(dest)
+    assert dest.with_suffix('.jpg').read_bytes() == image
+    assert not path.exists()
+    assert not path.with_suffix('.jpg').exists()
+    drop_manual_playlist(ctx, 'Acoustic')
+    assert not dest.with_suffix('.jpg').exists()
+    assert {
+        p: (p.read_bytes(), p.stat().st_mtime_ns) for p in original
+    } == original
+
+
+def test_missing_explicit_image_allows_normal_mosaic_fallback(tmp_path):
+    download = tmp_path / 'downloads'
+    _mp3(download / 'One.mp3', title='One', artist='A', cover=_JPEG)
+    ctx = LibraryContext(download_dir=download)
+    create_manual_playlist(ctx, 'Mix')
+    edit_manual_playlist(ctx, 'Mix', add=['One.mp3'])
+    path = download / 'Playlists' / 'Mix.m3u'
+    path.with_suffix('.jpg').write_bytes(_jpeg(b'official'))
+    keep_explicit_cover(path)
+    path.with_suffix('.jpg').unlink()
+    assert not has_explicit_cover(path)
+    edit_manual_playlist(ctx, 'Mix', add=['One.mp3'])
+    assert path.with_suffix('.jpg').read_bytes().startswith(b'\xff\xd8')
+    assert path.with_suffix('.jpg').read_bytes() != _jpeg(b'official')
+    assert not has_explicit_cover(path)

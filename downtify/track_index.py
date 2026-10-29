@@ -222,6 +222,22 @@ class TrackIndex:
             if row['filename']
         ]
 
+    def filenames_by_spotify_id(self) -> dict[str, str]:
+        """Every ``{spotify_track_id: filename}``, in one query - for
+        checking many tracks at once instead of one :meth:`lookup` each."""
+
+        with self._connect() as conn:
+            rows = conn.execute(
+                'SELECT spotify_track_id, filename FROM library_tracks'
+            ).fetchall()
+        return {
+            str(row['spotify_track_id']): str(row['filename']).replace(
+                '\\', '/'
+            )
+            for row in rows
+            if row['spotify_track_id'] and row['filename']
+        }
+
     def forget(self, spotify_track_id: str) -> None:
         tid = str(spotify_track_id or '').strip()
         if not _SPOTIFY_TRACK_ID.fullmatch(tid):

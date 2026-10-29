@@ -30,46 +30,13 @@
       class="flex w-6 items-center justify-center text-[13px] text-faint max-sm:hidden"
     >
       <EqBars v-if="isCurrent" :size="12" :playing="player.isPlaying.value" />
-      <!-- A clip that isn't downloaded yet, while it is loaded: play/pause
-           with a ring that fills as the clip goes, where the number was. -->
-      <button
-        v-else-if="previewActive"
-        type="button"
-        class="relative grid size-6 place-items-center text-fg"
-        :aria-label="playLabel"
-        @click.stop="toggle"
-      >
-        <svg
-          class="absolute inset-0 size-full -rotate-90"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <circle
-            cx="12"
-            cy="12"
-            :r="PREVIEW_RING_RADIUS"
-            stroke="currentColor"
-            stroke-opacity="0.25"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            :r="PREVIEW_RING_RADIUS"
-            class="stroke-accent"
-            stroke-linecap="round"
-            :stroke-dasharray="PREVIEW_RING_LENGTH"
-            :stroke-dashoffset="ringOffset(progress)"
-            style="transition: stroke-dashoffset 250ms linear"
-          />
-        </svg>
-        <AppIcon
-          :name="previewPlaying ? 'pause' : 'play'"
-          :size="10"
-          :class="previewLoading ? 'animate-pulse' : ''"
-        />
-      </button>
+      <!-- A stream being resolved, where the number was. -->
+      <AppIcon
+        v-else-if="loading"
+        name="refresh"
+        :size="14"
+        class="animate-spin text-fg"
+      />
       <template v-else>
         <span class="tabular" :class="playable ? 'group-hover:hidden' : ''">{{
           index + 1
@@ -127,12 +94,7 @@
           :class="highlighted ? 'text-accent' : ''"
           >{{ song.name }}</span
         >
-        <span
-          v-if="song.explicit"
-          class="shrink-0 rounded-[3px] bg-muted px-1 text-[9px] leading-[14px] font-bold text-bg"
-          :title="t('search.explicit')"
-          >E</span
-        >
+        <ExplicitBadge v-if="song.explicit" />
       </p>
       <p class="truncate text-[13px] text-muted">
         <TrackArtistLinks
@@ -169,35 +131,22 @@
       <template v-else>{{ song.album_name }}</template>
     </span>
     <span
-      class="tabular relative hidden w-12 text-right text-[13px] text-muted sm:block"
+      class="tabular hidden w-12 text-right text-[13px] text-muted sm:block"
     >
-      <!-- Only a clip to hear (not downloaded): its length gives way to
-           "Preview" while the row is hovered, and for as long as the clip is
-           loaded (the row stays highlighted then, like a hovered one, with
-           the mouse gone). The length is hidden, not removed, so nothing
-           moves; the label sits on the cell's right edge and may run a little
-           to its left, over the gap before it. -->
-      <span
-        :class="
-          previewable
-            ? previewActive
-              ? 'invisible'
-              : 'group-hover:invisible'
-            : ''
-        "
-        >{{ song.duration ? formatDuration(song.duration) : '' }}</span
-      >
-      <span
-        v-if="previewable"
-        class="pointer-events-none absolute inset-y-0 right-0 items-center text-[10px] font-semibold tracking-[0.06em] whitespace-nowrap uppercase"
-        :class="previewActive ? 'flex' : 'hidden group-hover:flex'"
-        >{{ t('actions.previewLabel') }}</span
-      >
+      {{ song.duration ? formatDuration(song.duration) : '' }}
     </span>
     <!-- Not downloaded: the download button, with its progress and retry;
          downloaded: the "In library" label. Playing is on the left. A click
          here is the download's own, never the row's (a tap plays). -->
-    <div class="flex w-28 shrink-0 justify-end" @click.stop @dblclick.stop>
+    <!-- Wide enough for the wand plus the download's widest state (its
+         progress bar is w-28 on its own), so nothing ever overlaps the
+         duration column; the header spacer below matches this width. -->
+    <div
+      class="flex w-40 shrink-0 items-center justify-end gap-2"
+      @click.stop
+      @dblclick.stop
+    >
+      <SimilarButton :artist="firstArtist" :title="song.name" filled />
       <DownloadState :song="song" />
     </div>
   </div>
@@ -211,9 +160,9 @@
 // screen). On the right it shows the download state - the button, its
 // progress, or the "In library" label - the way a search result does.
 //
-// Until the song is downloaded the same affordances play its 30 s preview
-// clip: on the row itself, without the built-in player - see
-// model/songPlay.js and model/preview.js.
+// Until the song is downloaded the same affordances stream it in full
+// from YouTube, always shown in the built-in player - see
+// model/songPlay.js and model/stream.js.
 //
 // Deliberately standalone: it borrows the look of SongRow and the behaviour
 // of TrackList without importing or editing either, so neither grid can be
@@ -224,7 +173,9 @@ import { RouterLink } from 'vue-router'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import EqBars from '../ui/EqBars.vue'
+import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import DownloadState from '../search/DownloadState.vue'
+import SimilarButton from '../similar/SimilarButton.vue'
 import TrackArtistLinks from './TrackArtistLinks.vue'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
@@ -232,11 +183,6 @@ import { useSongPlay } from '/src/model/songPlay'
 import { deezerImage } from '/src/lib/deezerImage'
 import { formatDuration } from '/src/lib/format'
 import { albumLinkFor } from '/src/lib/library'
-import {
-  PREVIEW_RING_LENGTH,
-  PREVIEW_RING_RADIUS,
-  ringOffset,
-} from '/src/lib/preview'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -247,6 +193,9 @@ const props = defineProps({
   // The library tracks playing this song starts a queue from (typically the
   // list's other downloaded songs, in order). Without it, just this song.
   queue: { type: Array, default: () => [] },
+  // The whole song list, for a mixed queue (downloaded rows from the
+  // library, the rest streamed) the player works through to the end.
+  songs: { type: Array, default: null },
   // Where the queue comes from, for the player's "playing from".
   context: { type: Object, default: null },
   // Off by default: a caller doing multi-select (e.g. a "download selected"
@@ -289,22 +238,21 @@ onMounted(() => {
 })
 const {
   isCurrent,
-  previewable,
-  previewActive,
-  previewPlaying,
-  previewLoading,
+  loading,
   playable,
   highlighted: playing,
   playLabel,
-  progress,
   toggle,
   ensurePlaying,
 } = useSongPlay(props)
 
+const firstArtist = computed(
+  () => (props.song.artists || [])[0] || props.song.artist || ''
+)
 // A Deezer cover at its medium size, for the 44px thumbnail - display only:
 // the song's own `cover_url` is what its download embeds.
 const cover = computed(() => deezerImage(props.song.cover_url))
-// Lit up while it plays (or its clip does), and when the caller points at it.
+// Lit up while it plays, and when the caller points at it.
 const highlighted = computed(() => props.marked || playing.value)
 
 // On a touch screen a tap on the row plays it (a double click can't).

@@ -7,18 +7,43 @@ edited, and so deleting them never removes the audio files.
 
 from __future__ import annotations
 
+import functools
+import threading
 from pathlib import Path
-from typing import Any, Optional
+from shutil import copyfile
+from typing import Any, Callable, Optional, ParamSpec, TypeVar
 
 from loguru import logger
 
 from . import m3u
 from .library_catalog import LibraryContext, resolve_library_file
 from .library_paths_cache import invalidate_library_paths_cache
-from .playlist_mosaic import refresh_manual_playlist_cover
+from .playlist_mosaic import (
+    EXPLICIT_COVER_MARKER,
+    has_explicit_cover,
+    keep_explicit_cover,
+    refresh_manual_playlist_cover,
+)
 
 MAX_PLAYLIST_NAME_LEN = 120
 MAX_TRACKS_PER_EDIT = 500
+
+_P = ParamSpec('_P')
+_R = TypeVar('_R')
+_WRITE_LOCK = threading.RLock()
+
+
+def _serialized(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run *func* alone among this module's M3U rewrites: the owner and
+    the editors of a shared playlist read, change and write it back at
+    the same time, and the last write would drop the other's songs."""
+
+    @functools.wraps(func)
+    def run(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+        with _WRITE_LOCK:
+            return func(*args, **kwargs)
+
+    return run
 
 
 class ManualPlaylistError(ValueError):
@@ -40,6 +65,7 @@ def _entries_for(files: list[str]) -> list[dict[str, str]]:
 
 
 def _write(ctx: LibraryContext, files: list[str], path: Path) -> Path:
+    explicit_cover = has_explicit_cover(path)
     content, _kept = m3u.build_m3u_content(
         _entries_for(files),
         download_dir=ctx.download_dir,
@@ -50,6 +76,8 @@ def _write(ctx: LibraryContext, files: list[str], path: Path) -> Path:
     lines = content.splitlines()
     if lines[:1] == ['#EXTM3U'] and m3u.MANUAL_M3U_MARKER not in lines[:4]:
         lines.insert(1, m3u.MANUAL_M3U_MARKER)
+        if explicit_cover:
+            lines.insert(2, EXPLICIT_COVER_MARKER)
         content = '\n'.join(lines) + '\n'
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding='utf-8', newline='\n')
@@ -107,6 +135,7 @@ def create_manual_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
     }
 
 
+@_serialized
 def edit_manual_playlist(
     ctx: LibraryContext,
     name: str,
@@ -154,6 +183,78 @@ def edit_manual_playlist(
     }
 
 
+def detach_imported_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
+    """Turn an imported playlist into a Library one (tracks kept).
+
+    Only the M3U changes: it gets the manual marker, so it can be edited
+    and no longer counts as downloaded from a link. Its artwork stays
+    until the first edit. Unlinking it from its source (catalog row,
+    watch) is the caller's job.
+    """
+
+    path = m3u.find_m3u_for_name(ctx.download_dir, name)
+    if path is None:
+        raise ManualPlaylistError(
+            f'Playlist {name!r} was not found', status_code=404
+        )
+    if m3u.is_manual_m3u(path):
+        raise ManualPlaylistError(
+            f'Playlist {path.stem!r} can already be edited', status_code=409
+        )
+    text = m3u.read_m3u_text(path)
+    if text is None:
+        raise ManualPlaylistError(f'Could not read {path.name}')
+    lines = text.splitlines()
+    if lines[:1] != ['#EXTM3U']:
+        lines.insert(0, '#EXTM3U')
+    lines.insert(1, m3u.MANUAL_M3U_MARKER)
+    try:
+        path.write_text(
+            '\n'.join(lines) + '\n', encoding='utf-8', newline='\n'
+        )
+    except OSError as exc:
+        raise ManualPlaylistError(f'Could not write {path.name}') from exc
+    invalidate_library_paths_cache()
+    kept = _read_files(ctx, path)
+    logger.info('Detached playlist {!r} from its source', path.stem)
+    return {
+        'name': path.stem,
+        'manual': True,
+        'files': kept,
+        'count': len(kept),
+    }
+
+
+def copy_playlist(
+    ctx: LibraryContext, files: list[str], new_name: str
+) -> dict[str, Any]:
+    """Save *files* as a new Library playlist called *new_name*."""
+
+    safe = _validated_name(new_name)
+    if safe.casefold() in existing_playlist_names(ctx.download_dir):
+        raise ManualPlaylistError(
+            f'A playlist named {safe!r} already exists', status_code=409
+        )
+    path = m3u.m3u_path_for(ctx.download_dir, safe)
+    unique = list(
+        dict.fromkeys(
+            str(item or '').strip().replace('\\', '/')
+            for item in files
+            if str(item or '').strip()
+        )
+    )
+    written = _write(ctx, unique, path)
+    kept = _read_files(ctx, written)
+    logger.info('Saved a copy of a playlist as {!r}', written.stem)
+    return {
+        'name': written.stem,
+        'manual': True,
+        'files': kept,
+        'count': len(kept),
+    }
+
+
+@_serialized
 def rename_manual_playlist(
     ctx: LibraryContext, name: str, new_name: str
 ) -> dict[str, Any]:
@@ -181,9 +282,13 @@ def rename_manual_playlist(
                 f'A playlist named {safe!r} already exists', status_code=409
             )
     files = _read_files(ctx, path)
+    explicit_cover = has_explicit_cover(path)
     written = _write(ctx, files, dest)
     if written.resolve() != path.resolve():
         old_cover = path.with_suffix('.jpg')
+        if explicit_cover:
+            copyfile(old_cover, written.with_suffix('.jpg'))
+            keep_explicit_cover(written)
         try:
             path.unlink(missing_ok=True)
         except OSError as exc:
@@ -208,6 +313,7 @@ def rename_manual_playlist(
     }
 
 
+@_serialized
 def drop_manual_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
     """Remove the M3U only — audio files stay on disk."""
 
@@ -242,6 +348,7 @@ def drop_manual_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
     }
 
 
+@_serialized
 def prune_files_from_manual_playlists(
     ctx: LibraryContext, filenames: list[str]
 ) -> list[str]:

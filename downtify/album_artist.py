@@ -68,7 +68,8 @@ def is_various_artists(name: Any, *, artist_id: Any = '') -> bool:
 
 # What sits between the members' names in an act's own name: "Henrique &
 # Juliano", "Simon + Garfunkel", "Sandy e Junior", "Zé Neto, Cristiano".
-_ACT_NAME_JOINER = r'\s*(?:&|\+|,|/|\b(?:e|and|y|x)\b)\s*'
+# Not "x": "Anitta x Pedro Sampaio" names a collaboration, not an act.
+_ACT_NAME_JOINER = r'\s*(?:&|\+|,|/|\b(?:e|and|y)\b)\s*'
 
 
 def is_act_of(names: list[str], act: Any) -> bool:

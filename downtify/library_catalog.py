@@ -5,16 +5,18 @@ from __future__ import annotations
 import os
 import re
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Collection, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
+from .catalog_worker import fold_library_entries
 from .library_cache_keys import file_content_key_from_name_and_size
 from .library_metadata import library_entry_for_file
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import (
     ResolvedLibraryRoots,
+    extra_dir_id,
     library_stored_path,
     locate_library_file,
 )
@@ -29,6 +31,9 @@ from .library_paths_cache import (
 )
 from .playlist_catalog import PlaylistCatalog
 from .track_index import TrackIndex
+
+if TYPE_CHECKING:
+    from .library_visibility import HiddenRules
 
 AUDIO_EXTENSIONS = frozenset({
     '.mp3',
@@ -49,6 +54,9 @@ class LibraryContext:
     track_index: Optional[TrackIndex] = None
     metadata_cache: Optional[LibraryMetadataCache] = None
     playlist_catalog: Optional[PlaylistCatalog] = None
+    primary_extra_id: str = ''
+    hidden_files: frozenset[str] = frozenset()
+    hidden_resolved: frozenset[str] = frozenset()
 
 
 def library_context_from_state(
@@ -57,6 +65,8 @@ def library_context_from_state(
     track_index: Optional[TrackIndex] = None,
     metadata_cache: Optional[LibraryMetadataCache] = None,
     playlist_catalog: Optional[PlaylistCatalog] = None,
+    hidden_files: frozenset[str] = frozenset(),
+    hidden_resolved: frozenset[str] = frozenset(),
 ) -> LibraryContext:
     slskd_raw = settings.get('slskd')
     slskd_dir: Optional[Path] = None
@@ -69,7 +79,19 @@ def library_context_from_state(
     extra_dirs = extra_dirs_from_settings(
         settings, Path(download_dir), slskd_dir
     )
+    external = settings.get('external_library')
+    primary = (
+        str(external.get('primary_folder') or '')
+        if isinstance(external, dict)
+        else ''
+    )
+    primary_id = next(
+        (extra_dir_id(root) for root in extra_dirs if str(root) == primary), ''
+    )
     return LibraryContext(
+        hidden_files=hidden_files,
+        hidden_resolved=hidden_resolved,
+        primary_extra_id=primary_id,
         download_dir=Path(download_dir),
         slskd_dir=slskd_dir,
         extra_dirs=extra_dirs,
@@ -129,15 +151,24 @@ def _resolve_within_library(
     """A library-relative path, confined to the library's own folders."""
 
     text = str(stored or '').strip().replace('\\', '/')
+    if text in getattr(ctx, 'hidden_files', frozenset()):
+        return None
     if not text or text.startswith('/'):
         return None
     if '\0' in text:
+        return None
+    # Files in the library trash must not be served as normal media.
+    if '.downtify-trash' in text.split('/'):
         return None
 
     candidate = locate_library_file(
         text, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
     )
     if candidate is None or not accept(candidate):
+        return None
+    if '.downtify-trash' in candidate.parts or str(
+        candidate.resolve()
+    ) in getattr(ctx, 'hidden_resolved', frozenset()):
         return None
 
     allowed_roots = [ctx.download_dir.resolve()]
@@ -195,6 +226,8 @@ def _register_path(
 ) -> None:
     if UPGRADE_STAGING_MARKER in file_path.name:
         return
+    if '.downtify-trash' in file_path.parts:
+        return
     if file_path.suffix.lower() not in AUDIO_EXTENSIONS:
         return
     try:
@@ -204,6 +237,12 @@ def _register_path(
     if _under_podcasts(resolved, ctx.download_dir):
         return
     resolved_key = str(resolved)
+    if resolved_key in getattr(
+        ctx, 'hidden_resolved', frozenset()
+    ) or roots.stored_for(resolved) in getattr(
+        ctx, 'hidden_files', frozenset()
+    ):
+        return
     if resolved_key in by_resolved:
         return
     by_resolved[resolved_key] = roots.stored_for(resolved)
@@ -218,6 +257,7 @@ def _walk_audio_files(root: Path, *, prune_podcasts: bool = False):
     except OSError:
         return
     for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        dirnames[:] = [name for name in dirnames if name != '.downtify-trash']
         current = Path(dirpath)
         if prune_podcasts and current == root:
             dirnames[:] = [
@@ -344,14 +384,22 @@ def _attach_m3u_playlists_to_entries(
         entry['playlists'] = sorted(names)
 
 
-def listing_for_request(ctx: LibraryContext) -> list[dict[str, Any]]:
-    """Last snapshot for UI routes; never walks the library on a hit."""
+def listing_for_request(
+    ctx: LibraryContext,
+    *,
+    allowed_keys: Optional[Collection[str]] = None,
+) -> list[dict[str, Any]]:
+    """Last snapshot for UI routes; never walks the library on a hit.
+
+    ``allowed_keys`` keeps only a non-admin's own rows (the snapshot
+    itself is never narrowed).
+    """
 
     set_listing_refresh_fn(lambda: list_library_entries(ctx))
     peeked = peek_cached_track_entries(ctx)
     if peeked is not None:
-        return peeked
-    return list_library_entries(ctx)
+        return _filter_entries(peeked, allowed_keys)
+    return list_library_entries(ctx, allowed_keys=allowed_keys)
 
 
 def merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
@@ -360,6 +408,13 @@ def merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
     UI artist/album lists read that snapshot; a full rescan still runs
     later, after the download queue is idle.
     """
+
+    with listing_lock():
+        _merge_library_listing_file(ctx, stored)
+
+
+def _merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
+    """Read/modify/publish under the writer lock, never the UI read lock."""
 
     name = str(stored or '').strip().replace('\\', '/')
     if not name:
@@ -382,13 +437,11 @@ def merge_library_listing_file(ctx: LibraryContext, stored: str) -> None:
         rows = [library_entry_for_file(name, full)]
     if not rows:
         return
-    from .external_library import finish_library_entries  # noqa: PLC0415
-
-    merged = finish_library_entries([*peeked, *rows])
+    merged = fold_library_entries([*peeked, *rows])
     paths = peek_cached_path_pairs(ctx) or []
     if not any(str(item[0]) == name for item in paths):
         paths = [*paths, (name, str(full))]
-    store_cached_track_entries(ctx, merged, paths=paths)
+    store_cached_track_entries(ctx, merged, paths=paths, provisional=True)
 
 
 def refresh_library_listing_files(
@@ -448,6 +501,13 @@ def drop_library_listing_files(
     later, after the download queue is idle.
     """
 
+    with listing_lock():
+        _drop_library_listing_files(ctx, stored_paths)
+
+
+def _drop_library_listing_files(
+    ctx: LibraryContext, stored_paths: Sequence[str]
+) -> None:
     names = {
         str(item or '').strip().replace('\\', '/') for item in stored_paths
     }
@@ -469,30 +529,54 @@ def drop_library_listing_files(
         for item in (peek_cached_path_pairs(ctx) or [])
         if str(item[0]).replace('\\', '/') not in names
     ]
-    store_cached_track_entries(ctx, kept, paths=paths)
+    store_cached_track_entries(ctx, kept, paths=paths, provisional=True)
+
+
+def entry_content_key(entry: dict[str, Any]) -> str:
+    """The ownership key of a listing row (no disk access needed)."""
+
+    try:
+        size = int(entry.get('size') or 0)
+    except (TypeError, ValueError):
+        return ''
+    return (
+        file_content_key_from_name_and_size(str(entry.get('file') or ''), size)
+        or ''
+    )
 
 
 def list_library_entries(
     ctx: LibraryContext,
     *,
     fold_extra: bool = True,
+    allowed_keys: Optional[Collection[str]] = None,
 ) -> list[dict[str, Any]]:
     """Playable library rows with title/artist from embedded tags.
 
     ``fold_extra`` (default) drops extra-folder duplicates and remaps
     artist names. Sync passes ``False`` so it can log those skips itself.
+    ``allowed_keys`` keeps only rows whose content key is in it (a
+    non-admin's library); the shared snapshot itself is never narrowed.
     """
 
     if fold_extra:
         cached = get_cached_track_entries(ctx)
         if cached is not None:
-            return cached
+            return _filter_entries(
+                cached,
+                allowed_keys,
+                hidden_files=getattr(ctx, 'hidden_files', frozenset()),
+            )
 
     with listing_lock():
         if fold_extra:
             cached = get_cached_track_entries(ctx)
             if cached is not None:
-                return cached
+                return _filter_entries(
+                    cached,
+                    allowed_keys,
+                    hidden_files=getattr(ctx, 'hidden_files', frozenset()),
+                )
 
         path_rows = list_library_path_pairs(ctx)
         pairs: list[tuple[str, Path]] = [
@@ -511,13 +595,32 @@ def list_library_entries(
             _attach_m3u_playlists_to_entries(entries, ctx)
         if not fold_extra:
             return entries
-        from .external_library import (  # noqa: PLC0415  # import cycle
-            finish_library_entries,
+        entries = (
+            fold_library_entries(entries, ctx.primary_extra_id)
+            if ctx.primary_extra_id
+            else fold_library_entries(entries)
+        )
+        store_cached_track_entries(ctx, entries, paths=path_rows)
+        return _filter_entries(
+            entries,
+            allowed_keys,
+            hidden_files=getattr(ctx, 'hidden_files', frozenset()),
         )
 
-        entries = finish_library_entries(entries)
-        store_cached_track_entries(ctx, entries, paths=path_rows)
+
+def _filter_entries(
+    entries: list[dict[str, Any]],
+    allowed_keys: Optional[Collection[str]],
+    hidden_files: frozenset[str] = frozenset(),
+) -> list[dict[str, Any]]:
+    if hidden_files:
+        entries = [
+            e for e in entries if str(e.get('file') or '') not in hidden_files
+        ]
+    if allowed_keys is None:
         return entries
+    allowed = set(allowed_keys)
+    return [e for e in entries if entry_content_key(e) in allowed]
 
 
 def list_entries_for_stored_paths(
@@ -605,16 +708,26 @@ def album_artist_of(entry: dict[str, Any]) -> str:
 def album_owner_of(entry: dict[str, Any]) -> str:
     """The artist an album is listed under: its album-artist tag as it is
     - so a ``Various Artists`` compilation stays one album - else the
-    track's first artist. Matches ``groupAlbums`` in the web app."""
+    track's first artist. ``Various Artists`` only counts on a track with
+    the compilation flag (``TCMP`` / ``COMPILATION`` / ``cpil``), which
+    Downtify writes on a real compilation: older versions tagged any song
+    with several artists ``Various Artists`` without it, and such a track
+    stays with its first artist's album (:func:`album_artist_of`).
+    Matches ``albumOwnerName`` in the web app."""
 
-    return str(entry.get('album_artist') or '').strip() or _first_artist(entry)
+    album_artist = str(entry.get('album_artist') or '').strip()
+    if album_artist.casefold() in _VARIOUS_ARTISTS and not entry.get(
+        'compilation'
+    ):
+        return album_artist_of(entry)
+    return album_artist or _first_artist(entry)
 
 
 def credited_artists_of(entry: dict[str, Any]) -> list[str]:
-    """Every artist with a Library page for this track: the one it belongs
-    to (:func:`album_artist_of`), then every other credited artist - a
-    guest gets a page too. Never ``Various Artists``. Matches
-    ``groupArtists`` in the web app."""
+    """Every artist credited on this track: the one it belongs to
+    (:func:`album_artist_of`), then every other credited artist. Never
+    ``Various Artists``. A guest's credit only counts on a page they
+    already have (see :func:`artists_with_pages`)."""
 
     names: list[str] = []
     seen: set[str] = set()
@@ -629,6 +742,21 @@ def credited_artists_of(entry: dict[str, Any]) -> list[str]:
             continue
         seen.add(key)
         names.append(text)
+    return names
+
+
+def artists_with_pages(entries: Iterable[dict[str, Any]]) -> set[str]:
+    """The casefolded names with a Library page: every artist some track
+    belongs to (:func:`album_artist_of`). A guest credit alone makes none:
+    tags can name a duo's members one by one (``Henrique; Juliano``, as
+    YouTube Music credits some duos), and a page per member would be an
+    artist that doesn't exist. Matches ``groupArtists`` in the web app."""
+
+    names: set[str] = set()
+    for entry in entries:
+        key = album_artist_of(entry).casefold()
+        if key and key not in _VARIOUS_ARTISTS:
+            names.add(key)
     return names
 
 
@@ -707,9 +835,16 @@ def filter_library_entries(
 
 
 def lookup_library_songs(
-    ctx: LibraryContext, songs: Sequence[Any]
+    ctx: LibraryContext,
+    songs: Sequence[Any],
+    *,
+    allowed_keys: Optional[Collection[str]] = None,
 ) -> list[dict[str, Any]]:
-    """``GET /tracks`` rows that match search/link songs already downloaded."""
+    """``GET /tracks`` rows that match search/link songs already downloaded.
+
+    ``allowed_keys`` keeps only a non-admin's own matches, so the search
+    page doesn't offer someone else's file as "already downloaded".
+    """
 
     wanted: list[str] = []
     seen_keys: set[str] = set()
@@ -731,7 +866,7 @@ def lookup_library_songs(
     pending = set(wanted)
     found: list[dict[str, Any]] = []
     found_keys: set[str] = set()
-    for entry in listing_for_request(ctx):
+    for entry in listing_for_request(ctx, allowed_keys=allowed_keys):
         key = song_key(
             str(entry.get('artist') or ''),
             str(entry.get('title') or ''),
@@ -745,10 +880,22 @@ def lookup_library_songs(
     return found
 
 
-def library_album_index(ctx: LibraryContext) -> list[dict[str, Any]]:
-    """Albums for the Library grid: counts and a cover file, not every track."""
+def library_album_index(
+    ctx: LibraryContext,
+    *,
+    allowed_keys: Optional[Collection[str]] = None,
+    hidden: Optional[HiddenRules] = None,
+) -> list[dict[str, Any]]:
+    """Albums for the Library grid: counts and a cover file, not every track.
 
-    grouped = _group_albums(listing_for_request(ctx))
+    ``hidden`` (an admin's view, see :mod:`downtify.library_visibility`)
+    marks albums hidden from other users with ``hidden_by`` (``album`` or
+    ``artist``); they stay in the list.
+    """
+
+    grouped = _group_albums(
+        listing_for_request(ctx, allowed_keys=allowed_keys)
+    )
     rows: list[dict[str, Any]] = []
     for bucket in grouped.values():
         tracks = bucket['tracks']
@@ -760,7 +907,7 @@ def library_album_index(ctx: LibraryContext) -> list[dict[str, Any]]:
             size += int(track.get('size') or 0)
             if not cover_file and track.get('has_cover'):
                 cover_file = str(track.get('file') or '')
-        rows.append({
+        row = {
             'title': bucket['title'],
             'artist': bucket['artist'],
             'year': bucket['year'],
@@ -769,7 +916,12 @@ def library_album_index(ctx: LibraryContext) -> list[dict[str, Any]]:
             'size': size,
             'track_count': len(tracks),
             'cover_file': cover_file,
-        })
+        }
+        if hidden:
+            reason = hidden.album_reason(bucket['artist'], bucket['title'])
+            if reason:
+                row['hidden_by'] = reason
+        rows.append(row)
     rows.sort(
         key=lambda row: (-int(row['added']), str(row['title']).casefold())
     )
@@ -779,19 +931,30 @@ def library_album_index(ctx: LibraryContext) -> list[dict[str, Any]]:
 def library_artist_index(
     ctx: LibraryContext,
     liked_paths: Optional[set[str]] = None,
+    *,
+    allowed_keys: Optional[Collection[str]] = None,
+    hidden: Optional[HiddenRules] = None,
 ) -> list[dict[str, Any]]:
-    """Artists for the Library grid and Discover, without every track row."""
+    """Artists for the Library grid and Discover, without every track row.
+
+    ``hidden`` (an admin's view) marks artists hidden from other users
+    with ``hidden_by: 'artist'``; they stay in the list.
+    """
 
     liked = liked_paths or set()
     artists: dict[str, dict[str, Any]] = {}
-    for entry in listing_for_request(ctx):
+    entries = listing_for_request(ctx, allowed_keys=allowed_keys)
+    with_pages = artists_with_pages(entries)
+    for entry in entries:
         stored = str(entry.get('file') or '').replace('\\', '/')
         album = str(entry.get('album') or '').strip()
         owner = album_owner_of(entry).casefold()
-        # Every credited artist gets the track (a guest too); an album only
-        # counts for its own album artist.
+        # Every credited artist with a page gets the track (a guest too);
+        # an album only counts for its own album artist.
         for name in credited_artists_of(entry):
             key = name.casefold()
+            if key not in with_pages:
+                continue
             bucket = artists.get(key)
             if bucket is None:
                 bucket = {
@@ -820,23 +983,27 @@ def library_artist_index(
     for bucket in artists.values():
         album_keys = bucket.pop('_albums')
         bucket['album_count'] = len(album_keys)
+        if hidden and hidden.artist_hidden(bucket['name']):
+            bucket['hidden_by'] = 'artist'
         rows.append(bucket)
     rows.sort(key=lambda row: str(row['name']).casefold())
     return rows
 
 
 def library_home_summary(
-    ctx: LibraryContext, *, recent_albums: int = 12
+    ctx: LibraryContext,
+    *,
+    recent_albums: int = 12,
+    allowed_keys: Optional[Collection[str]] = None,
 ) -> dict[str, Any]:
     """Counts and a short recent-album shelf for the Home page."""
 
-    entries = listing_for_request(ctx)
+    entries = listing_for_request(ctx, allowed_keys=allowed_keys)
     albums = _group_albums(entries)
-    artists: set[str] = set()
+    artists = artists_with_pages(entries)
     total_size = 0
     for entry in entries:
         total_size += int(entry.get('size') or 0)
-        artists.update(name.casefold() for name in credited_artists_of(entry))
     recent = sorted(albums.values(), key=lambda row: -int(row['added']))[
         :recent_albums
     ]

@@ -10,21 +10,21 @@
           target="_blank"
           rel="noopener"
           class="hover:text-fg"
-          >Releases</a
+          >{{ ui.releases }}</a
         >
         <a
           :href="`${theme.repo}/issues`"
           target="_blank"
           rel="noopener"
           class="hover:text-fg"
-          >Issues</a
+          >{{ ui.issues }}</a
         >
         <a
           :href="`${theme.repo}/blob/main/LICENSE`"
           target="_blank"
           rel="noopener"
           class="hover:text-fg"
-          >License</a
+          >{{ ui.license }}</a
         >
       </p>
     </div>
@@ -33,6 +33,8 @@
 
 <script setup>
 import { useData } from 'vitepress'
+import { useUi } from '../composables/ui'
 
 const { theme } = useData()
+const { ui } = useUi()
 </script>

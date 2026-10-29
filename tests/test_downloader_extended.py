@@ -1273,3 +1273,15 @@ def test_extract_audio_pp_ogg_produces_vorbis(tmp_path):
     assert info['filepath'].endswith('.ogg')
     codec, _ = _probe_audio(info['filepath'])
     assert codec == 'vorbis'
+
+
+def test_expected_stem_for_matches_existing_filename_for(tmp_path):
+    d = _make(tmp_path, audio_format='flac')
+    (tmp_path / 'Mix').mkdir()
+    (tmp_path / 'Mix' / 'Artist - Song.mp3').write_bytes(b'x')
+
+    found = d.existing_filename_for(_OVERWRITE_SONG, subdir='Mix')
+    stem = d.expected_stem_for(_OVERWRITE_SONG, subdir='Mix')
+
+    assert found == 'Mix/Artist - Song.mp3'
+    assert found.rpartition('.')[0] == stem

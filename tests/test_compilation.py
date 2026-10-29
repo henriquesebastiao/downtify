@@ -33,6 +33,7 @@ from downtify.library_catalog import (
     list_library_entries,
     listing_for_request,
 )
+from downtify.library_metadata import read_compilation
 
 needs_ffmpeg = pytest.mark.skipif(
     shutil.which('ffmpeg') is None, reason='no ffmpeg'
@@ -128,12 +129,15 @@ def test_write_album_artist_tags_round_trip(tmp_path, fmt):
         'title': 'Harbor Lights',
     }
 
+    assert read_compilation(path) is True
+
     write_album_artist_tags(path, 'AliasNorth', compilation=False)
     assert _tags(path) == {
         'album_artist': 'AliasNorth',
         'compilation': False,
         'title': 'Harbor Lights',
     }
+    assert read_compilation(path) is False
 
 
 @needs_ffmpeg
@@ -269,6 +273,32 @@ def test_unmarking_a_source_compilation_is_remembered(tmp_path):
         'album_artist': 'AliasSouth',
         'compilation': False,
     }
+
+
+@needs_ffmpeg
+def test_an_old_various_artists_tag_without_the_flag_can_be_marked(tmp_path):
+    # Older versions tagged a song with several artists "Various Artists"
+    # without the compilation flag; the Library lists such an album under
+    # its first artist, so it isn't one yet.
+    files = [
+        (
+            'AliasNorth/Glass Harbor/a.mp3',
+            _track(
+                tmp_path / 'a.mp3',
+                'Harbor Lights',
+                ['AliasNorth', 'AliasGuest'],
+                album_artist='Various Artists',
+            ),
+        ),
+    ]
+    marks = CompilationMarks(tmp_path / 'library.db')
+    with pytest.raises(CompilationError, match='not a compilation'):
+        set_album_compilation(files, compilation=False, marks=marks)
+
+    result = set_album_compilation(files, compilation=True, marks=marks)
+
+    assert result.changed == ['AliasNorth/Glass Harbor/a.mp3']
+    assert _tags(files[0][1])['compilation'] is True
 
 
 @needs_ffmpeg

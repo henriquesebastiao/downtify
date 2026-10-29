@@ -37,12 +37,16 @@
         <span :class="labelClass">{{ t(item.label) }}</span>
         <span
           v-if="item.name === 'Queue' && pending"
-          class="tabular flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-on-accent"
-          :class="
+          class="tabular flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold"
+          :class="[
             collapsed
               ? 'absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[10px]'
-              : 'absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[10px] xl:static xl:ml-auto xl:h-5 xl:min-w-5 xl:px-1.5 xl:text-[11px]'
-          "
+              : 'absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[10px] xl:static xl:ml-auto xl:h-5 xl:min-w-5 xl:px-1.5 xl:text-[11px]',
+            queuePaused
+              ? 'bg-surface-2 text-muted'
+              : 'bg-accent text-on-accent',
+          ]"
+          :title="queuePaused ? t('queue.pausedTitle') : undefined"
           >{{ pending }}</span
         >
       </RouterLink>
@@ -68,6 +72,7 @@
         class="flex h-11 items-center gap-2.5 rounded-control px-3 transition-colors hover:bg-surface-2/60"
       >
         <CoverArt
+          :thumb="150"
           :src="playlist.cover"
           :covers="playlist.covers"
           :name="playlist.title"
@@ -86,6 +91,52 @@
             t('common.tracks', { count: itemTrackCount(playlist) })
           }}</span>
         </span>
+      </RouterLink>
+    </div>
+
+    <div
+      v-if="sharedNav.length"
+      class="flex flex-col gap-1"
+      :class="labelClass"
+    >
+      <div class="flex items-center justify-between px-3 pb-1.5">
+        <span class="eyebrow">{{ t('sharing.navTitle') }}</span>
+        <RouterLink
+          :to="{ name: 'Library', params: { tab: 'playlists' } }"
+          class="text-xs font-semibold text-faint hover:text-fg"
+          >{{ t('common.seeAll') }}</RouterLink
+        >
+      </div>
+      <RouterLink
+        v-for="playlist in sharedNav"
+        :key="playlist.key"
+        :to="{ name: 'Playlist', query: { name: playlist.name } }"
+        class="flex h-11 items-center gap-2.5 rounded-control px-3 transition-colors hover:bg-surface-2/60"
+      >
+        <CoverArt
+          :thumb="150"
+          :src="playlist.cover"
+          :covers="playlist.covers"
+          :name="playlist.title"
+          rounded="rounded-[7px]"
+          :letter-size="13"
+          :icon-size="14"
+          icon="playlist"
+          class="size-[30px]"
+        />
+        <span class="flex min-w-0 flex-col">
+          <span class="truncate text-[13px] font-medium text-fg-2">{{
+            playlist.title
+          }}</span>
+          <span class="truncate text-[11px] text-faint">{{
+            playlist.owner
+          }}</span>
+        </span>
+        <span
+          v-if="playlist.isNew"
+          class="ml-auto size-2 shrink-0 rounded-full bg-accent"
+          :title="t('sharing.new')"
+        />
       </RouterLink>
     </div>
 
@@ -166,6 +217,7 @@ import { useI18n } from '/src/i18n'
 import { itemTrackCount } from '/src/lib/library'
 import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
+import { useQueuePause } from '/src/model/queuePause'
 import { useUpdateCheck } from '/src/model/updateCheck'
 import { usePendingCount } from './navState'
 
@@ -174,6 +226,7 @@ const route = useRoute()
 const library = useLibrary()
 const auth = useAuth()
 const pending = usePendingCount()
+const queuePaused = useQueuePause().paused
 const update = useUpdateCheck().status
 const collapsed = useLocalStorage('downtify-sidebar-collapsed', false)
 const version = computed(() => {
@@ -202,7 +255,12 @@ const items = [
     label: 'nav.discover',
     match: ['FinderBrowse'],
   },
-  { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
+  {
+    name: 'Monitor',
+    icon: 'radar',
+    label: 'nav.monitor',
+    match: ['MonitorWatch'],
+  },
   {
     name: 'Podcasts',
     icon: 'mic',
@@ -210,6 +268,7 @@ const items = [
     match: ['PodcastShow'],
   },
   { name: 'Charts', icon: 'trending', label: 'nav.charts' },
+  { name: 'Similar', icon: 'wand', label: 'nav.similar' },
 ]
 
 function isActive(item) {
@@ -221,10 +280,21 @@ const labelClass = computed(() =>
 )
 
 const recentPlaylists = computed(() =>
-  [...library.playlists.value]
+  [...library.ownPlaylists.value]
     .filter((playlist) => itemTrackCount(playlist))
     // The liked songs stay at the top; the rest are the newest.
     .sort((a, b) => Number(b.liked) - Number(a.liked) || b.added - a.added)
     .slice(0, 6)
+)
+
+// Other people's: what was shared with the user (new ones first) and the
+// public playlists they follow.
+const sharedNav = computed(() =>
+  [
+    ...library.sharedPlaylists.value,
+    ...library.publicPlaylists.value.filter((playlist) => playlist.followed),
+  ]
+    .sort((a, b) => Number(b.isNew) - Number(a.isNew))
+    .slice(0, 4)
 )
 </script>

@@ -4,6 +4,91 @@ icon: lucide/history
 
 # Changelog
 
+## [3.7.0](https://github.com/henriquesebastiao/downtify/tree/3.7.0) (2026-10-21)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.6.0...3.7.0)
+
+**Implemented enhancements:**
+
+- Feature request: share playlists with other users \(view-only\), and detach imported playlists so they can be edited [\#465](https://github.com/henriquesebastiao/downtify/issues/465)
+- Explicit marker on tracks [\#431](https://github.com/henriquesebastiao/downtify/issues/431)
+
+**Fixed bugs:**
+
+- YouTube Music playlists are incorrectly processed as Spotify playlists \(0 tracks downloaded\) [\#460](https://github.com/henriquesebastiao/downtify/issues/460)
+- Library [\#430](https://github.com/henriquesebastiao/downtify/issues/430)
+- Can't sort in playlist view [\#427](https://github.com/henriquesebastiao/downtify/issues/427)
+- Could not find a YouTube match for ... [\#338](https://github.com/henriquesebastiao/downtify/issues/338)
+
+**Merged pull requests:**
+
+- feat\(playlists\): share playlists view-only, and detach an imported playlist [\#467](https://github.com/henriquesebastiao/downtify/pull/467) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(library\): sort a playlist's songs, and a sort menu for the Tracks tab [\#464](https://github.com/henriquesebastiao/downtify/pull/464) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix: share the library with every user, and let admins hide songs from them [\#463](https://github.com/henriquesebastiao/downtify/pull/463) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: explicit marker on songs, in the file, the Library and the player [\#462](https://github.com/henriquesebastiao/downtify/pull/462) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(monitor\): YouTube Music playlists no longer hit Spotify and no longer come out empty [\#461](https://github.com/henriquesebastiao/downtify/pull/461) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(i18n\): add Korean \(ko\) translation [\#459](https://github.com/henriquesebastiao/downtify/pull/459) ([gitcodeB](https://github.com/gitcodeB))
+
+## [3.6.0](https://github.com/henriquesebastiao/downtify/tree/3.6.0) (2026-10-20)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.5.0...3.6.0)
+
+**Implemented enhancements:**
+
+- implement a local music scan [\#432](https://github.com/henriquesebastiao/downtify/issues/432)
+
+**Fixed bugs:**
+
+- Queue tab switches back to “In Progress” while downloading [\#455](https://github.com/henriquesebastiao/downtify/issues/455)
+- Library pages slow, and 500s with "OSError: \[Errno 24\]" on a large NAS library [\#445](https://github.com/henriquesebastiao/downtify/issues/445)
+- slskd transfer in Completed, Rejected state waits for queued timeout instead of failing immediately [\#416](https://github.com/henriquesebastiao/downtify/issues/416)
+
+**Closed issues:**
+
+- Library Upgrade fails on intentionally read-only music mounts [\#443](https://github.com/henriquesebastiao/downtify/issues/443)
+- Large download queues spend quadratic work reconciling reactive rows [\#441](https://github.com/henriquesebastiao/downtify/issues/441)
+- Repeated artist matching stalls catalog finalization with large external libraries [\#436](https://github.com/henriquesebastiao/downtify/issues/436)
+- Title match fails when the title contains " - " and the candidate has a "\(feat. …\)" suffix [\#433](https://github.com/henriquesebastiao/downtify/issues/433)
+
+**Merged pull requests:**
+
+- fix: stop the catalog worker again when the app shuts down [\#458](https://github.com/henriquesebastiao/downtify/pull/458) ([ruflas](https://github.com/ruflas))
+- Keep the Queue tab put while a batch downloads [\#457](https://github.com/henriquesebastiao/downtify/pull/457) ([chiliec](https://github.com/chiliec))
+- Add de - german translation [\#456](https://github.com/henriquesebastiao/downtify/pull/456) ([Raspi-it](https://github.com/Raspi-it))
+- chore\(deps-dev\): bump ruff from 0.17.0 to 0.17.1 [\#452](https://github.com/henriquesebastiao/downtify/pull/452) ([dependabot[bot]](https://github.com/apps/dependabot))
+- perf: Library grids render visible rows only and use scaled covers [\#451](https://github.com/henriquesebastiao/downtify/pull/451) ([ruflas](https://github.com/ruflas))
+- perf: stop walking the library tree on playlist reads and per download [\#450](https://github.com/henriquesebastiao/downtify/pull/450) ([ruflas](https://github.com/ruflas))
+- perf: cache checked sign-ins for 30 s, cleared on any revocation [\#449](https://github.com/henriquesebastiao/downtify/pull/449) ([ruflas](https://github.com/ruflas))
+- perf: count served bytes in memory instead of a write per response [\#448](https://github.com/henriquesebastiao/downtify/pull/448) ([ruflas](https://github.com/ruflas))
+- perf: playlist batch summaries in memory, without blocking the Library [\#447](https://github.com/henriquesebastiao/downtify/pull/447) ([ruflas](https://github.com/ruflas))
+- fix: close SQLite connections when their with-block ends [\#446](https://github.com/henriquesebastiao/downtify/pull/446) ([ruflas](https://github.com/ruflas))
+- fix: skip library upgrades on read-only filesystems [\#444](https://github.com/henriquesebastiao/downtify/pull/444) ([QuietForge7294](https://github.com/QuietForge7294))
+- perf: reconcile reactive download queues in linear time [\#442](https://github.com/henriquesebastiao/downtify/pull/442) ([QuietForge7294](https://github.com/QuietForge7294))
+- perf: keep catalog folding off the web process [\#437](https://github.com/henriquesebastiao/downtify/pull/437) ([QuietForge7294](https://github.com/QuietForge7294))
+- Match titles with a dash against candidates with a feat. suffix [\#435](https://github.com/henriquesebastiao/downtify/pull/435) ([cristianchiriac](https://github.com/cristianchiriac))
+- Treat rejected and timed out slskd transfers as failed [\#434](https://github.com/henriquesebastiao/downtify/pull/434) ([cristianchiriac](https://github.com/cristianchiriac))
+
+## [3.5.0](https://github.com/henriquesebastiao/downtify/tree/3.5.0) (2026-10-14)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.4.0...3.5.0)
+
+**Implemented enhancements:**
+
+- Jellyfin/Plex Integration for Organized Music Libraries [\#227](https://github.com/henriquesebastiao/downtify/issues/227)
+
+**Fixed bugs:**
+
+- Playlist Monitor reconciliation removes valid slskd leave-in-place tracks [\#393](https://github.com/henriquesebastiao/downtify/issues/393)
+
+**Merged pull requests:**
+
+- chore: remove personal production compose file [\#422](https://github.com/henriquesebastiao/downtify/pull/422) ([MrBrillik](https://github.com/MrBrillik))
+- chore: bump to Python 3.15, refresh dependencies, add httpx2 for tests [\#421](https://github.com/henriquesebastiao/downtify/pull/421) ([betterix](https://github.com/betterix))
+- Full-track streaming and Similar tracks page [\#419](https://github.com/henriquesebastiao/downtify/pull/419) ([MrBrillik](https://github.com/MrBrillik))
+- chore\(deps\): bump websockets from 17.1 to 17.2 [\#415](https://github.com/henriquesebastiao/downtify/pull/415) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Fix reconcile removing valid slskd leave-in-place tracks [\#413](https://github.com/henriquesebastiao/downtify/pull/413) ([chiliec](https://github.com/chiliec))
+- fix: big player responsive layout [\#409](https://github.com/henriquesebastiao/downtify/pull/409) ([luizbossoi](https://github.com/luizbossoi))
+
 ## [3.4.0](https://github.com/henriquesebastiao/downtify/tree/3.4.0) (2026-10-02)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.3.0...3.4.0)

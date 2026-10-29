@@ -100,6 +100,7 @@
               :key="song.song_id || song.url"
               :song="song"
               :index="i"
+              :songs="visibleSongs"
             />
           </div>
           <button

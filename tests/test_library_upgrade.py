@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import errno
+import os
 import struct
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Optional
 
 import pytest
@@ -36,6 +39,42 @@ from downtify.library_upgrade_db import (
     check_is_fresh,
 )
 from downtify.lyrics import Lyrics
+
+
+def test_upgrade_with_central_lyrics_on_another_volume(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(ctx.download_dir / 'a.mp3')
+    before_mtime = track.stat().st_mtime_ns
+    destination = tmp_path / 'central-lyrics' / 'a.lrc'
+    monkeypatch.setattr(
+        library_upgrade.lyrics_mod, '_lrc_resolve', lambda _audio: destination
+    )
+    monkeypatch.setattr(
+        library_upgrade.lyrics_mod,
+        'fetch',
+        lambda *_a, **_k: Lyrics(plain='line', synced='[00:01.00] line'),
+    )
+    replace = os.replace
+
+    def same_volume(src: str, dst: str) -> None:
+        if Path(src).parent != Path(dst).parent:
+            raise OSError(errno.EXDEV, 'Cross-device link')
+        replace(src, dst)
+
+    monkeypatch.setattr(library_upgrade.os, 'replace', same_volume)
+    outcome = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx),
+        options=UpgradeOptions(categories=(CATEGORY_LYRICS,)),
+    )
+    assert outcome.status == JOB_DONE
+    assert destination.is_file()
+    assert '[00:01.00] line' in destination.read_text(encoding='utf-8')
+    assert track.stat().st_mtime_ns == before_mtime
+    assert not staging_path(track).with_suffix('.lrc').exists()
+
 
 # One MPEG-1 Layer III frame at 128 kbit/s, 44.1 kHz. mutagen reads the
 # duration from the header plus the file size, so a stream of these is a
@@ -475,6 +514,101 @@ def test_a_missing_file_is_skipped(tmp_path: Path) -> None:
     assert 'no longer' in outcome.detail
 
 
+@pytest.mark.parametrize('readonly_target', ['file', 'parent'])
+def test_readonly_mount_is_skipped_before_remote_work(
+    tmp_path: Path, monkeypatch: Any, readonly_target: str
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(ctx.download_dir / 'a.mp3', cover_px=300)
+    original = track.read_bytes()
+    before = track.stat().st_mtime_ns
+    target = track if readonly_target == 'file' else track.parent
+    monkeypatch.setattr(
+        library_upgrade.os,
+        'statvfs',
+        lambda path: SimpleNamespace(f_flag=int(path == target)),
+        raising=False,
+    )
+    # Permission checks alone can report writable for a privileged process.
+    monkeypatch.setattr(library_upgrade.os, 'access', lambda *_a: True)
+
+    def _never(*_args: Any, **_kwargs: Any) -> Any:
+        raise AssertionError('read-only files must not reach remote work')
+
+    monkeypatch.setattr(library_upgrade, 'song_for_track', _never)
+    monkeypatch.setattr(library_upgrade.cover_sources, 'best_cover', _never)
+    monkeypatch.setattr(library_upgrade.lyrics_mod, 'fetch', _never)
+    monkeypatch.setattr(library_upgrade, '_stage', _never)
+
+    outcome = upgrade_track('a.mp3', deps=_deps(ctx), options=UpgradeOptions())
+
+    assert outcome.status == JOB_SKIPPED
+    assert 'Read-only filesystem' in outcome.detail
+    assert not outcome.checked
+    assert outcome.changed == []
+    assert track.read_bytes() == original
+    assert track.stat().st_mtime_ns == before
+    assert not staging_path(track).exists()
+
+
+@pytest.mark.parametrize(
+    ('error_number', 'status'),
+    [
+        (errno.EROFS, JOB_SKIPPED),
+        (errno.EACCES, 'failed'),
+        (errno.EIO, 'failed'),
+        (errno.ENOSPC, 'failed'),
+    ],
+)
+def test_only_readonly_staging_errors_are_skipped(
+    tmp_path: Path, monkeypatch: Any, error_number: int, status: str
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(ctx.download_dir / 'a.mp3', cover_px=300)
+    original = track.read_bytes()
+    _stub_cover(monkeypatch, 1200)
+    monkeypatch.setattr(
+        library_upgrade, '_read_only_filesystem', lambda _p: False
+    )
+
+    def _fail(*_args: Any, **_kwargs: Any) -> None:
+        raise OSError(error_number, 'simulated staging failure')
+
+    monkeypatch.setattr(library_upgrade.shutil, 'copy2', _fail)
+    outcome = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx),
+        options=UpgradeOptions(categories=(CATEGORY_ARTWORK,)),
+    )
+
+    assert outcome.status == status
+    if error_number == errno.EROFS:
+        assert not outcome.checked
+    else:
+        assert 'Could not stage a copy' in outcome.detail
+    assert track.read_bytes() == original
+    assert not staging_path(track).exists()
+
+
+def test_upgrade_still_works_when_statvfs_is_unavailable(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(ctx.download_dir / 'a.mp3', cover_px=300)
+    _stub_cover(monkeypatch, 1200)
+    monkeypatch.delattr(library_upgrade.os, 'statvfs', raising=False)
+
+    outcome = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx),
+        options=UpgradeOptions(categories=(CATEGORY_ARTWORK,)),
+    )
+
+    assert outcome.status == JOB_DONE
+    assert outcome.checked
+    assert ID3(str(track)).getall('APIC')[0].data == _png(1200)
+
+
 # ── The queue ──────────────────────────────────────────────────────
 def test_jobs_are_claimed_once_and_counted(tmp_path: Path) -> None:
     db = LibraryUpgradeDB(tmp_path / 'lib.db')
@@ -690,6 +824,78 @@ def test_a_finished_track_is_remembered_so_the_next_scan_skips_it(
     _wait(runner)
 
     assert runner.status()['counts']['total'] == 0
+
+
+@pytest.mark.parametrize('remount_during_staging', [False, True])
+def test_readonly_skips_do_not_mark_categories_checked(
+    tmp_path: Path, monkeypatch: Any, remount_during_staging: bool
+) -> None:
+    ctx = _context(tmp_path)
+    _write_track(ctx.download_dir / 'small.mp3', cover_px=300)
+    runner = _runner(tmp_path, ctx)
+    runner.start_scan(UpgradeOptions())
+    _wait(runner)
+    original_checks = runner.db.checks_for(['small.mp3'])
+    monkeypatch.setattr(
+        library_upgrade,
+        '_read_only_filesystem',
+        lambda _p: not remount_during_staging,
+    )
+    if remount_during_staging:
+        _stub_cover(monkeypatch, 1200)
+        monkeypatch.setattr(
+            library_upgrade.lyrics_mod, 'fetch', lambda *_a, **_k: None
+        )
+
+        def _remounted(*_args: Any, **_kwargs: Any) -> None:
+            raise OSError(errno.EROFS, 'remounted read-only')
+
+        monkeypatch.setattr(library_upgrade.shutil, 'copy2', _remounted)
+
+    runner.start(library_upgrade.CATEGORIES)
+    _wait(runner)
+
+    assert runner.status()['counts']['skipped'] == 1
+    assert runner.status()['counts']['failed'] == 0
+    assert runner.db.checks_for(['small.mp3']) == original_checks
+    # If the mount becomes writable later, the work is still due.
+    monkeypatch.setattr(
+        library_upgrade, '_read_only_filesystem', lambda _p: False
+    )
+    runner.start_scan(UpgradeOptions())
+    _wait(runner)
+    assert runner.status()['counts']['total'] == 1
+
+
+def test_filesystem_probe_errors_remain_failures(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(ctx.download_dir / 'small.mp3', cover_px=300)
+    original = track.read_bytes()
+    runner = _runner(tmp_path, ctx)
+    runner.start_scan(UpgradeOptions())
+    _wait(runner)
+    original_checks = runner.db.checks_for(['small.mp3'])
+
+    def _io_error(_path: Path) -> Any:
+        raise OSError(errno.EIO, 'filesystem probe failed')
+
+    monkeypatch.setattr(
+        library_upgrade.os, 'statvfs', _io_error, raising=False
+    )
+    runner.start(library_upgrade.CATEGORIES)
+    _wait(runner)
+
+    assert runner.status()['counts']['failed'] == 1
+    assert (
+        'filesystem probe failed'
+        in runner.db.jobs(runner.status()['run']['id'], status='failed')[0][
+            'detail'
+        ]
+    )
+    assert runner.db.checks_for(['small.mp3']) == original_checks
+    assert track.read_bytes() == original
 
 
 def test_repairing_one_category_leaves_the_others_due(

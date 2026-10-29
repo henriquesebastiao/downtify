@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import html
 import re
+import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from html.parser import HTMLParser
@@ -719,6 +720,7 @@ def download_episode(
 
 # ── Storage ──────────────────────────────────────────────────────────
 def _show_dict(row: Any) -> dict[str, Any]:
+    keys = set(row.keys()) if hasattr(row, 'keys') else set()
     return {
         'id': row['id'],
         'feed_url': row['feed_url'],
@@ -730,6 +732,7 @@ def _show_dict(row: Any) -> dict[str, Any]:
         'folder_name': row['folder_name'],
         'retention': row['retention'],
         'created_at': row['created_at'],
+        'user_id': int(row['user_id'] or 0) if 'user_id' in keys else 0,
     }
 
 
@@ -782,7 +785,7 @@ class PodcastStore:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS podcast_shows (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    feed_url TEXT NOT NULL UNIQUE,
+                    feed_url TEXT NOT NULL,
                     name TEXT NOT NULL,
                     author TEXT NOT NULL DEFAULT '',
                     description TEXT NOT NULL DEFAULT '',
@@ -790,7 +793,9 @@ class PodcastStore:
                     source_url TEXT NOT NULL DEFAULT '',
                     folder_name TEXT NOT NULL,
                     retention INTEGER NOT NULL DEFAULT 0,
-                    created_at TEXT NOT NULL
+                    created_at TEXT NOT NULL,
+                    user_id INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(feed_url, user_id)
                 );
                 CREATE TABLE IF NOT EXISTS podcast_episodes (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -812,14 +817,59 @@ class PodcastStore:
                     UNIQUE(show_id, guid)
                 );
                 CREATE TABLE IF NOT EXISTS podcast_playback (
-                    episode_id INTEGER PRIMARY KEY,
+                    episode_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL DEFAULT 0,
                     position_seconds REAL NOT NULL DEFAULT 0,
                     played INTEGER NOT NULL DEFAULT 0,
                     updated_at TEXT NOT NULL,
+                    PRIMARY KEY (episode_id, user_id),
                     FOREIGN KEY (episode_id) REFERENCES podcast_episodes(id)
                         ON DELETE CASCADE
                 );
             """)
+            self._migrate(conn)
+
+    @staticmethod
+    def _migrate(conn: Any) -> None:
+        """One-time upgrades, in place, guarded by shape checks."""
+
+        columns = {
+            row[1] for row in conn.execute('PRAGMA table_info(podcast_shows)')
+        }
+        if 'user_id' not in columns:
+            conn.execute('PRAGMA foreign_keys = OFF')
+            try:
+                conn.execute("""
+                    CREATE TABLE podcast_shows_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        feed_url TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        author TEXT NOT NULL DEFAULT '',
+                        description TEXT NOT NULL DEFAULT '',
+                        artwork_url TEXT NOT NULL DEFAULT '',
+                        source_url TEXT NOT NULL DEFAULT '',
+                        folder_name TEXT NOT NULL,
+                        retention INTEGER NOT NULL DEFAULT 0,
+                        created_at TEXT NOT NULL,
+                        user_id INTEGER NOT NULL DEFAULT 0,
+                        UNIQUE(feed_url, user_id)
+                    )
+                """)
+                conn.execute("""
+                    INSERT INTO podcast_shows_new
+                    (id, feed_url, name, author, description, artwork_url,
+                     source_url, folder_name, retention, created_at, user_id)
+                    SELECT id, feed_url, name, author, description,
+                           artwork_url, source_url, folder_name, retention,
+                           created_at, 0
+                    FROM podcast_shows ORDER BY id
+                """)
+                conn.execute('DROP TABLE podcast_shows')
+                conn.execute(
+                    'ALTER TABLE podcast_shows_new RENAME TO podcast_shows'
+                )
+            finally:
+                conn.execute('PRAGMA foreign_keys = ON')
 
     # ── shows ────────────────────────────────────────────────────
     def add_show(
@@ -832,6 +882,7 @@ class PodcastStore:
         artwork_url: str = '',
         source_url: str = '',
         retention: int = 0,
+        user_id: int = 0,
     ) -> dict[str, Any]:
         folder_name = sanitize_playlist_name(name)
         with self._connect() as conn:
@@ -849,23 +900,28 @@ class PodcastStore:
                 while f'{folder_name} ({suffix})' in existing:
                     suffix += 1
                 folder_name = f'{folder_name} ({suffix})'
-            cur = conn.execute(
-                """INSERT INTO podcast_shows
-                   (feed_url, name, author, description, artwork_url,
-                    source_url, folder_name, retention, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    feed_url,
-                    name,
-                    author,
-                    description,
-                    artwork_url,
-                    source_url,
-                    folder_name,
-                    retention,
-                    _now_iso(),
-                ),
-            )
+            try:
+                cur = conn.execute(
+                    """INSERT INTO podcast_shows
+                       (feed_url, name, author, description, artwork_url,
+                        source_url, folder_name, retention, created_at,
+                        user_id)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        feed_url,
+                        name,
+                        author,
+                        description,
+                        artwork_url,
+                        source_url,
+                        folder_name,
+                        retention,
+                        _now_iso(),
+                        int(user_id or 0),
+                    ),
+                )
+            except sqlite3.IntegrityError:
+                return self.get_show_by_feed_url(feed_url, user_id) or {}
             row = conn.execute(
                 'SELECT * FROM podcast_shows WHERE id = ?', (cur.lastrowid,)
             ).fetchone()
@@ -878,19 +934,64 @@ class PodcastStore:
             ).fetchone()
             return _show_dict(row) if row else None
 
-    def get_show_by_feed_url(self, feed_url: str) -> Optional[dict[str, Any]]:
+    def get_show_by_feed_url(
+        self, feed_url: str, user_id: Optional[int] = None
+    ) -> Optional[dict[str, Any]]:
         with self._connect() as conn:
-            row = conn.execute(
-                'SELECT * FROM podcast_shows WHERE feed_url = ?', (feed_url,)
-            ).fetchone()
+            if user_id is None:
+                row = conn.execute(
+                    'SELECT * FROM podcast_shows WHERE feed_url = ? '
+                    'ORDER BY id LIMIT 1',
+                    (feed_url,),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    'SELECT * FROM podcast_shows WHERE feed_url = ? '
+                    'AND user_id = ?',
+                    (feed_url, int(user_id)),
+                ).fetchone()
             return _show_dict(row) if row else None
 
-    def list_shows(self) -> list[dict[str, Any]]:
+    def list_shows(
+        self, user_id: Optional[int] = None
+    ) -> list[dict[str, Any]]:
         with self._connect() as conn:
-            rows = conn.execute(
-                'SELECT * FROM podcast_shows ORDER BY name COLLATE NOCASE'
-            ).fetchall()
+            if user_id is None:
+                rows = conn.execute(
+                    'SELECT * FROM podcast_shows ORDER BY name COLLATE NOCASE'
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    'SELECT * FROM podcast_shows WHERE user_id = ? '
+                    'ORDER BY name COLLATE NOCASE',
+                    (int(user_id),),
+                ).fetchall()
             return [_show_dict(r) for r in rows]
+
+    def reassign_legacy(self, user_id: int) -> int:
+        """Give pre-feature shows and progress rows to *user_id* (once)."""
+
+        if not user_id:
+            return 0
+        with self._connect() as conn:
+            shows = conn.execute(
+                'UPDATE podcast_shows SET user_id = ? WHERE user_id = 0',
+                (int(user_id),),
+            ).rowcount
+            progress = conn.execute(
+                'UPDATE podcast_playback SET user_id = ? WHERE user_id = 0',
+                (int(user_id),),
+            ).rowcount
+            return shows + progress
+
+    def remove_user(self, user_id: int) -> None:
+        """Drop a deleted account's shows (episodes cascade)."""
+
+        with self._connect() as conn:
+            conn.execute(
+                'DELETE FROM podcast_shows WHERE user_id = ?',
+                (int(user_id),),
+            )
 
     def update_show(
         self, show_id: int, **fields: Any
@@ -978,29 +1079,33 @@ class PodcastStore:
         return inserted
 
     def list_episodes(
-        self, show_id: int, *, include_dismissed: bool = True
+        self, show_id: int, *, include_dismissed: bool = True, user_id: int = 0
     ) -> list[dict[str, Any]]:
         query = """
             SELECT e.*, p.position_seconds, p.played
             FROM podcast_episodes e
             LEFT JOIN podcast_playback p ON p.episode_id = e.id
+                AND p.user_id = ?
             WHERE e.show_id = ?
         """
         if not include_dismissed:
             query += ' AND e.dismissed = 0'
         query += ' ORDER BY e.published_at DESC, e.id DESC'
         with self._connect() as conn:
-            rows = conn.execute(query, (show_id,)).fetchall()
+            rows = conn.execute(query, (int(user_id or 0), show_id)).fetchall()
             return [_episode_dict(r) for r in rows]
 
-    def get_episode(self, episode_id: int) -> Optional[dict[str, Any]]:
+    def get_episode(
+        self, episode_id: int, user_id: int = 0
+    ) -> Optional[dict[str, Any]]:
         with self._connect() as conn:
             row = conn.execute(
                 """SELECT e.*, p.position_seconds, p.played
                    FROM podcast_episodes e
                    LEFT JOIN podcast_playback p ON p.episode_id = e.id
+                       AND p.user_id = ?
                    WHERE e.id = ?""",
-                (episode_id,),
+                (int(user_id or 0), episode_id),
             ).fetchone()
             return _episode_dict(row) if row else None
 
@@ -1035,11 +1140,14 @@ class PodcastStore:
         *,
         position_seconds: Optional[float] = None,
         played: Optional[bool] = None,
+        user_id: int = 0,
     ) -> None:
+        uid = int(user_id or 0)
         with self._connect() as conn:
             row = conn.execute(
-                'SELECT * FROM podcast_playback WHERE episode_id = ?',
-                (episode_id,),
+                'SELECT * FROM podcast_playback WHERE episode_id = ? '
+                'AND user_id = ?',
+                (episode_id, uid),
             ).fetchone()
             pos = row['position_seconds'] if row else 0.0
             was_played = bool(row['played']) if row else False
@@ -1049,13 +1157,14 @@ class PodcastStore:
                 was_played = played
             conn.execute(
                 """INSERT INTO podcast_playback
-                       (episode_id, position_seconds, played, updated_at)
-                   VALUES (?, ?, ?, ?)
-                   ON CONFLICT(episode_id) DO UPDATE SET
-                       position_seconds = excluded.position_seconds,
-                       played = excluded.played,
-                       updated_at = excluded.updated_at""",
-                (episode_id, pos, int(was_played), _now_iso()),
+                       (episode_id, user_id, position_seconds, played,
+                        updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(episode_id, user_id) DO UPDATE SET
+                        position_seconds = excluded.position_seconds,
+                        played = excluded.played,
+                        updated_at = excluded.updated_at""",
+                (episode_id, uid, pos, int(was_played), _now_iso()),
             )
 
     def downloaded_episodes(self, show_id: int) -> list[dict[str, Any]]:

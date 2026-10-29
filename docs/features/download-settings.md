@@ -145,7 +145,7 @@ Nothing is lost, but you get duplicates. To actually replace a file, see [Replac
 
 ### Cover art comes from Spotify or YouTube Music, not from the file
 
-Whatever artwork the downloaded audio carries — including a high-resolution cover embedded in an slskd file — is **discarded and replaced** during tagging. Downtify always embeds the cover it fetches for the track from Spotify or YouTube Music, at the [cover art resolution](#cover-art-resolution) you configured (600 px by default). The same applies to the title, artists, album and the rest of the tags: the source's own tags are not kept.
+Whatever artwork the downloaded audio carries — including a high-resolution cover embedded in an slskd file — is **discarded and replaced** during tagging. Downtify always embeds the cover it fetches for the track from Spotify or YouTube Music (or SoundCloud's artwork, for a SoundCloud link), at the [cover art resolution](#cover-art-resolution) you configured (600 px by default). The same applies to the title, artists, album and the rest of the tags: the source's own tags are not kept.
 
 If what you want is bigger artwork on files you already have, re-downloading is the long way around. [Upgrade library](library-upgrade.md) does exactly that — it compares each file's embedded cover against Spotify, iTunes and YouTube Music, writes the largest one, fills in missing lyrics and tags, and never touches the audio.
 
@@ -165,11 +165,15 @@ When a song is skipped:
 - The queue shows the song as finished, and playlist [M3U files](m3u-export.md) point at the existing file wherever it lives (e.g. `../Artist - Title.mp3`), so the playlist still plays in full.
 - If the same song is queued twice at the same time (listed twice in one playlist, or in two playlists downloading in parallel), only one copy is downloaded. The other waits for it and then skips.
 
+## Long tracks
+
+**Settings → Downloads → Longest track taken** caps the track length for downloads *and* streams alike (default **10 minutes**, `0` takes everything). Longer songs are refused before anything is fetched, with a *"tracks over … are not downloaded"* queue error — hour-long mixes and uploads are never what a library track should be. The same cap guards streaming: a longer track is refused with a `400` (callers that know its length pass `duration`, and the cached file is probed either way), so long uploads never accumulate in the stream cache either. Already-downloaded files and podcast episodes (which are routinely longer) are unaffected.
+
 ## Audio provider
 
 The default audio provider is **YouTube Music**. Downtify uses [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) to search for the best match by comparing track duration. When YouTube Music has no acceptable match, or only one whose duration is far off (a likely different recording), Downtify automatically falls back to searching standard YouTube — see [How it works](../how-it-works.md#fallback-to-standard-youtube).
 
-**Settings → Audio source** can also use standard **YouTube** only, or **slskd** (Soulseek), as an ordered fallback list — see [slskd & Navidrome](slskd-navidrome.md#audio-sources-and-fallback-order).
+**Settings → Audio source** can also use standard **YouTube** only, **SoundCloud**, **slskd** (Soulseek) or **Deemix**, as an ordered fallback list — see [slskd & Navidrome](slskd-navidrome.md#audio-sources-and-fallback-order).
 
 ### Force a specific audio source
 
@@ -186,10 +190,10 @@ When downloading via YouTube URL, metadata (title, artist, cover) comes from You
 **Option B — force audio on a failed track**
 
 1. In the **Download Queue**, click **Force audio source** under a failed track.
-2. Paste a YouTube or YouTube Music URL into the input that appears.
+2. Paste a YouTube or YouTube Music URL into the input that appears — or a SoundCloud track URL, when the **SoundCloud** source is on.
 3. Press **Enter** or click **Apply**.
 
-Downtify re-downloads the track using that exact video while keeping all Spotify metadata (title, artist, album, cover art, lyrics).
+Downtify re-downloads the track using that exact video (or SoundCloud track) while keeping all Spotify metadata (title, artist, album, cover art, lyrics).
 
 ## Embedded metadata
 

@@ -1,11 +1,11 @@
 // The signed-in user's own preferences (Settings > General) and the
 // "what am I playing" reports behind the admins' Activity page.
 //
-// Theme, language and "Show lyrics" still apply at once in this browser
-// (and are remembered in it); they are also kept with the account, so
-// signing in somewhere else brings them along. "Albums in search" lives
-// only with the account - and changing any of these changes nothing for
-// anyone else.
+// Theme, language, "Show lyrics" and "Normalize playback volume" still
+// apply at once in this browser (and are remembered in it); they are
+// also kept with the account, so signing in somewhere else brings them
+// along. "Albums in search" lives only with the account - and changing
+// any of these changes nothing for anyone else.
 import { ref, watch } from 'vue'
 
 import API from '/src/model/api'
@@ -17,30 +17,41 @@ import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useTheme } from '/src/model/theme'
 
 const searchAlbums = ref(true)
+// Other people's public playlists in the lists (the server also applies
+// it, so apps agree). On unless switched off.
+const showPublicPlaylists = ref(true)
+// Whether the admin lets users share playlists at all.
+const playlistSharing = ref(true)
 const ready = ref(false)
 let started = false
 
 function current() {
   const theme = useTheme()
-  const { showLyrics } = usePlayerPrefs()
+  const { showLyrics, normalizeVolume } = usePlayerPrefs()
   return {
     theme: theme.mode.value,
     locale: currentLocale.value,
     show_lyrics: showLyrics.value,
+    normalize_volume: normalizeVolume.value,
     search_albums: searchAlbums.value,
+    show_public_playlists: showPublicPlaylists.value,
   }
 }
 
 function apply(prefs) {
   const theme = useTheme()
-  const { showLyrics } = usePlayerPrefs()
+  const { showLyrics, normalizeVolume } = usePlayerPrefs()
   if (prefs.theme) theme.setMode(prefs.theme)
   if (prefs.locale && prefs.locale !== currentLocale.value)
     setLocale(prefs.locale)
   if (typeof prefs.show_lyrics === 'boolean')
     showLyrics.value = prefs.show_lyrics
+  if (typeof prefs.normalize_volume === 'boolean')
+    normalizeVolume.value = prefs.normalize_volume
   if (typeof prefs.search_albums === 'boolean')
     searchAlbums.value = prefs.search_albums
+  if (typeof prefs.show_public_playlists === 'boolean')
+    showPublicPlaylists.value = prefs.show_public_playlists
 }
 
 async function save() {
@@ -57,7 +68,9 @@ async function start() {
   started = true
   let prefs = {}
   try {
-    prefs = (await API.getMe()).data?.preferences || {}
+    const me = (await API.getMe()).data || {}
+    prefs = me.preferences || {}
+    playlistSharing.value = me.playlist_sharing !== false
   } catch {
     started = false
     return
@@ -67,10 +80,19 @@ async function start() {
   // An account without them adopts this browser's.
   if (Object.keys(prefs).length < 4) save()
   const theme = useTheme()
-  const { showLyrics } = usePlayerPrefs()
-  watch([theme.mode, currentLocale, showLyrics, searchAlbums], () => save(), {
-    flush: 'post',
-  })
+  const { showLyrics, normalizeVolume } = usePlayerPrefs()
+  watch(
+    [
+      theme.mode,
+      currentLocale,
+      showLyrics,
+      normalizeVolume,
+      searchAlbums,
+      showPublicPlaylists,
+    ],
+    () => save(),
+    { flush: 'post' }
+  )
 }
 
 // ── Playback reports ──────────────────────────────────────────────────
@@ -124,5 +146,13 @@ function startPlaybackReports() {
 
 export function useAccount() {
   const auth = useAuth()
-  return { searchAlbums, ready, start, startPlaybackReports, user: auth.user }
+  return {
+    searchAlbums,
+    showPublicPlaylists,
+    playlistSharing,
+    ready,
+    start,
+    startPlaybackReports,
+    user: auth.user,
+  }
 }

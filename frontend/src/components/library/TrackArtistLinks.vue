@@ -15,9 +15,9 @@
 
 <script setup>
 // A track's credited artists, comma-separated, each one a link to their own
-// Library page - every credited artist has one (see groupArtists in
-// lib/library.js). For a song not in the Library yet (`onlyKnown`), only
-// the artists the Library already has get that link; with `searchMissing`
+// Library page. With `onlyKnown`, only the artists that have one get that
+// link (see groupArtists in lib/library.js: a guest credit alone makes no
+// page, and a song may not be in the Library yet); with `searchMissing`
 // the rest link to a search for them, else they stay plain text.
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -50,7 +50,7 @@ const items = computed(() =>
   artistLinkItems(props.artists, {
     fallback: props.fallback,
     plain: props.plain,
-    hasPage: props.onlyKnown ? (name) => !!library.findArtist(name) : null,
+    hasPage: props.onlyKnown ? library.hasArtistPage : null,
     searchMissing: props.searchMissing,
   })
 )

@@ -13,6 +13,8 @@ export const KNOWN_CODES = new Set([
   'connection_bad_url',
   'connection_tls',
   'connection_not_slskd',
+  'connection_not_deemix',
+  'quality_unavailable',
   'connection_not_navidrome',
   'connection_http_error',
   'auth_bad_key',
@@ -66,5 +68,6 @@ export function canTest(config, fields) {
 
 export const REQUIRED_FIELDS = {
   slskd: ['base_url', 'api_key'],
+  deemix: ['base_url', 'source_dir', 'remote_dir'],
   navidrome: ['url', 'username', 'password'],
 }

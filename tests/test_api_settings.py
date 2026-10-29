@@ -17,12 +17,15 @@ from downtify.api import (
     MAX_COVER_RESOLUTION,
     MAX_DOWNLOAD_DELAY_SECONDS,
     MAX_PARALLEL_DOWNLOADS,
+    MAX_TRACK_DURATION_SETTING_SECONDS,
     MIN_COVER_RESOLUTION,
     MIN_DOWNLOAD_DELAY_SECONDS,
     MIN_PARALLEL_DOWNLOADS,
+    MIN_TRACK_DURATION_SETTING_SECONDS,
     _clamp_cover_resolution,
     _clamp_download_delay,
     _clamp_parallel_downloads,
+    _clamp_track_duration,
     _effective_audio_providers,
     _effective_lyrics_providers,
     _effective_slskd_settings,
@@ -393,6 +396,28 @@ def test_clamp_parallel_downloads_boundaries_are_inclusive():
     )
 
 
+def test_clamp_track_duration_zero_means_unlimited():
+    assert _clamp_track_duration(0) == MIN_TRACK_DURATION_SETTING_SECONDS
+    assert _clamp_track_duration(-5) == MIN_TRACK_DURATION_SETTING_SECONDS
+
+
+def test_clamp_track_duration_clamps_to_the_allowed_window():
+    assert _clamp_track_duration(600) == 600
+    assert _clamp_track_duration(59) == 60
+    assert _clamp_track_duration(99999) == MAX_TRACK_DURATION_SETTING_SECONDS
+
+
+def test_clamp_track_duration_falls_back_on_garbage():
+    assert (
+        _clamp_track_duration('not-a-number')
+        == DEFAULT_SETTINGS['max_track_duration_seconds']
+    )
+    assert (
+        _clamp_track_duration(None)
+        == DEFAULT_SETTINGS['max_track_duration_seconds']
+    )
+
+
 def test_load_settings_clamps_out_of_range_parallel_downloads(tmp_path):
     path = tmp_path / 'settings.json'
     path.write_text(
@@ -700,11 +725,17 @@ def test_update_settings_leaves_providers_untouched_when_key_absent(
 
 def test_effective_audio_providers_keeps_allowed_order():
     settings = {
-        'audio_providers': ['youtube', 'slskd', 'youtube-music'],
+        'audio_providers': [
+            'youtube',
+            'soundcloud',
+            'slskd',
+            'youtube-music',
+        ],
         'slskd': {'enabled': True},
     }
     assert _effective_audio_providers(settings) == [
         'youtube',
+        'soundcloud',
         'slskd',
         'youtube-music',
     ]

@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from mutagen.id3 import ID3, TALB, TIT2, TPE1, TPE2, TXXX
+from mutagen.id3 import ID3, TALB, TCMP, TIT2, TPE1, TPE2, TXXX
 
 from downtify.downloader import embed_metadata
 from downtify.library_catalog import (
@@ -195,6 +195,24 @@ def _tagged(
     tags.add(TXXX(encoding=3, desc='ARTISTS', text=list(artists)))
     tags.add(TPE2(encoding=3, text=album_artist))
     tags.add(TALB(encoding=3, text=album))
+    # The flag Downtify writes on a compilation's tracks.
+    if album_artist == 'Various Artists':
+        tags.add(TCMP(encoding=3, text='1'))
+    tags.save(str(path), v2_version=4)
+
+
+def _tagged_by_an_older_version(
+    path: Path, title: str, artists: list[str], *, album: str
+) -> None:
+    """A song with several artists as older versions tagged it: the names
+    in the artist text only, "Various Artists" as album artist, and no
+    compilation flag."""
+
+    tags = ID3()
+    tags.add(TIT2(encoding=3, text=title))
+    tags.add(TPE1(encoding=3, text='; '.join(artists)))
+    tags.add(TPE2(encoding=3, text='Various Artists'))
+    tags.add(TALB(encoding=3, text=album))
     tags.save(str(path), v2_version=4)
 
 
@@ -240,20 +258,84 @@ def test_a_compilation_stays_one_album(tmp_path):
     }
 
 
-def test_every_credited_artist_is_in_the_artist_index(tmp_path):
+def test_a_guest_credit_alone_makes_no_artist_page(tmp_path):
     ctx = _library(tmp_path)
     rows = {row['name']: row for row in library_artist_index(ctx)}
-    assert sorted(rows) == [
-        'AliasEast',
-        'AliasGuest',
-        'AliasNorth',
-        'AliasSouth',
-    ]
+    # AliasSouth is only credited second on a compilation track and
+    # AliasGuest only as a guest: neither has a track of their own.
+    assert sorted(rows) == ['AliasEast', 'AliasNorth']
     assert rows['AliasNorth']['track_count'] == 2
     # Albums only count for their own album artist.
     assert rows['AliasNorth']['album_count'] == 1
-    assert rows['AliasGuest']['album_count'] == 0
-    assert library_home_summary(ctx)['artist_count'] == 4
+    assert library_home_summary(ctx)['artist_count'] == 2
+
+
+def test_an_artist_with_a_page_gets_their_guest_tracks_too(tmp_path):
+    ctx = _library(tmp_path)
+    _tagged(
+        ctx.download_dir / 'd.mp3',
+        'Tide Line',
+        ['AliasGuest'],
+        album='Driftlight',
+        album_artist='AliasGuest',
+    )
+    invalidate_library_paths_cache()
+    rows = {row['name']: row for row in library_artist_index(ctx)}
+    assert sorted(rows) == ['AliasEast', 'AliasGuest', 'AliasNorth']
+    # Their own song and the one they are a guest on.
+    assert rows['AliasGuest']['track_count'] == 2
+    assert rows['AliasGuest']['album_count'] == 1
+    assert library_home_summary(ctx)['artist_count'] == 3
+
+
+def test_a_duo_tagged_as_its_members_makes_one_page(tmp_path):
+    # How older versions tagged a single YouTube Music credited to a duo's
+    # members.
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    _tagged_by_an_older_version(
+        download_dir / 'a.mp3',
+        'Harbor Lights',
+        ['Mica', 'Tomas'],
+        album='Harbor Lights',
+    )
+    invalidate_library_paths_cache()
+    cache = LibraryMetadataCache(tmp_path / 'library.db')
+    ctx = LibraryContext(download_dir=download_dir, metadata_cache=cache)
+    assert [row['name'] for row in library_artist_index(ctx)] == ['Mica']
+    # Its album stays with its first artist, as before: no "Various
+    # Artists" album made of one single.
+    assert [
+        (row['artist'], row['title']) for row in library_album_index(ctx)
+    ] == [('Mica', 'Harbor Lights')]
+
+
+def test_various_artists_without_the_flag_keeps_the_album_whole(tmp_path):
+    # Older versions tagged the one track with a guest "Various Artists"
+    # (no compilation flag): it stays in its artist's album.
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    _tagged(
+        download_dir / 'a.mp3',
+        'Harbor Lights',
+        ['AliasNorth'],
+        album='Glass Harbor',
+        album_artist='AliasNorth',
+    )
+    _tagged_by_an_older_version(
+        download_dir / 'b.mp3',
+        'Tide Line',
+        ['AliasNorth', 'AliasGuest'],
+        album='Glass Harbor',
+    )
+    invalidate_library_paths_cache()
+    cache = LibraryMetadataCache(tmp_path / 'library.db')
+    ctx = LibraryContext(download_dir=download_dir, metadata_cache=cache)
+    albums = {
+        (row['artist'], row['title']): row['track_count']
+        for row in library_album_index(ctx)
+    }
+    assert albums == {('AliasNorth', 'Glass Harbor'): 2}
 
 
 def test_tracks_by_artist_include_guest_and_compilation_tracks(tmp_path):

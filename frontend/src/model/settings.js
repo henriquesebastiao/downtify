@@ -1,12 +1,22 @@
 import { ref, computed, watch } from 'vue'
 
 import API from '/src/model/api'
+import { libraryOnly } from '/src/model/musicPolicy'
 import { useAuth } from '/src/model/auth'
 import { currentLocale } from '/src/i18n'
 import { needsLanguageSync, splitUiLanguage } from '/src/lib/uiLanguage'
 
 const settings = ref({
+  library_only: false,
   audio_providers: ['youtube-music'],
+  deemix: {
+    enabled: false,
+    base_url: '',
+    remote_dir: '/downloads',
+    source_dir: '/deemix',
+    bitrate: '3',
+    download_timeout_seconds: 600,
+  },
   slskd: {
     enabled: false,
     base_url: '',
@@ -28,6 +38,7 @@ const settings = ref({
     min_bitrate: 256,
   },
   external_library: {
+    primary_folder: '',
     folders: [],
   },
   lyrics_providers: [''],
@@ -42,6 +53,7 @@ const settings = ref({
   download_cover_art_artist: true,
   download_cover_art_artist_banner: false,
   sync_navidrome: true,
+  allow_playlist_sharing: true,
   navidrome: {
     enabled: false,
     url: '',
@@ -61,6 +73,7 @@ const settings = ref({
   organize_by_album: true,
   max_parallel_downloads: 3,
   download_delay_seconds: 0,
+  max_track_duration_seconds: 600,
   external_sync_delay_seconds: 0,
   cover_resolution: 600,
   download_cover_art: true,
@@ -75,11 +88,20 @@ const MAX_PARALLEL_DOWNLOADS = 30
 const MIN_DOWNLOAD_DELAY_SECONDS = 0
 const MAX_DOWNLOAD_DELAY_SECONDS = 300
 
+const MIN_TRACK_DURATION_SECONDS = 0
+const MAX_TRACK_DURATION_SECONDS = 21600
+
 const MIN_COVER_RESOLUTION = 300
 const MAX_COVER_RESOLUTION = 1200
 
 const settingsOptions = {
-  audio_providers: ['youtube', 'youtube-music', 'slskd'],
+  audio_providers: [
+    'youtube',
+    'youtube-music',
+    'soundcloud',
+    'slskd',
+    'deemix',
+  ],
   lyrics_providers: ['lrclib', 'genius', 'musixmatch', 'azlyrics'],
   format: ['mp3', 'flac', 'ogg', 'opus', 'm4a'],
   bitrate: ['128', '192', '256', '320'],
@@ -89,6 +111,9 @@ const settingsOptions = {
   download_delay_seconds_presets: [0, 5, 15, 30, 60],
   download_delay_seconds_min: MIN_DOWNLOAD_DELAY_SECONDS,
   download_delay_seconds_max: MAX_DOWNLOAD_DELAY_SECONDS,
+  max_track_duration_seconds_presets: [0, 300, 600, 900, 1800, 3600],
+  max_track_duration_seconds_min: MIN_TRACK_DURATION_SECONDS,
+  max_track_duration_seconds_max: MAX_TRACK_DURATION_SECONDS,
   external_sync_delay_seconds_presets: [0, 5, 15, 30, 60],
   external_sync_delay_seconds_min: MIN_DOWNLOAD_DELAY_SECONDS,
   external_sync_delay_seconds_max: MAX_DOWNLOAD_DELAY_SECONDS,
@@ -121,6 +146,17 @@ export function clampDownloadDelaySeconds(value) {
 }
 
 export const clampExternalSyncDelaySeconds = clampDownloadDelaySeconds
+
+export function clampTrackDurationSeconds(value) {
+  const parsed = Number.parseInt(value, 10)
+  if (Number.isNaN(parsed)) {
+    return 600
+  }
+  if (parsed <= 0) {
+    return MIN_TRACK_DURATION_SECONDS
+  }
+  return Math.min(MAX_TRACK_DURATION_SECONDS, Math.max(60, parsed))
+}
 
 export function clampCoverResolution(value) {
   const parsed = Number.parseInt(value, 10)
@@ -179,10 +215,12 @@ function loadServerSettings() {
         ...settings.value,
         ...rest,
         slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
+        deemix: { ...settings.value.deemix, ...(rest.deemix || {}) },
         navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
         external_library: {
           ...settings.value.external_library,
           ...(rest.external_library || {}),
+          primary_folder: rest.external_library?.primary_folder || '',
           folders: Array.isArray(rest.external_library?.folders)
             ? rest.external_library.folders
             : settings.value.external_library.folders,
@@ -229,11 +267,15 @@ function rememberExternalFolders(folders) {
     settings.value.external_library = { folders: [] }
   }
   settings.value.external_library.folders = folders
+  if (!folders.includes(settings.value.external_library.primary_folder)) {
+    settings.value.external_library.primary_folder = ''
+  }
   if (!saved.value) return
   try {
     const parsed = JSON.parse(saved.value)
     parsed.external_library = {
       ...(parsed.external_library || {}),
+      primary_folder: settings.value.external_library.primary_folder || '',
       folders,
     }
     saved.value = JSON.stringify(parsed)
@@ -258,16 +300,19 @@ async function saveSettings() {
       ...settings.value,
       ...rest,
       slskd: { ...settings.value.slskd, ...(rest.slskd || {}) },
+      deemix: { ...settings.value.deemix, ...(rest.deemix || {}) },
       navidrome: { ...settings.value.navidrome, ...(rest.navidrome || {}) },
       external_library: {
         ...settings.value.external_library,
         ...(rest.external_library || {}),
+        primary_folder: rest.external_library?.primary_folder || '',
         folders: Array.isArray(rest.external_library?.folders)
           ? rest.external_library.folders
           : settings.value.external_library.folders,
       },
     }
     saved.value = snapshot()
+    libraryOnly.value = rest.library_only === true
     isSaved.value = true
     return true
   } catch (error) {

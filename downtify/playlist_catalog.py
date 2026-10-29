@@ -47,6 +47,23 @@ class PlaylistCatalog:
                     updated_at TEXT NOT NULL
                 )
             """)
+            columns = {
+                row[1] for row in conn.execute('PRAGMA table_info(playlists)')
+            }
+            if 'user_id' not in columns:
+                # Who downloaded it (``0``: before accounts could own
+                # anything - admins only, like everywhere else).
+                conn.execute(
+                    'ALTER TABLE playlists ADD COLUMN user_id INTEGER '
+                    'NOT NULL DEFAULT 0'
+                )
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS manual_playlist_owners (
+                    name_key TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    user_id INTEGER NOT NULL
+                )
+            """)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS playlist_tracks (
                     playlist_name TEXT NOT NULL,
@@ -66,20 +83,33 @@ class PlaylistCatalog:
             """)
 
     def ensure_playlist(
-        self, name: str, *, spotify_id: Optional[str] = None
+        self,
+        name: str,
+        *,
+        spotify_id: Optional[str] = None,
+        user_id: Optional[int] = None,
     ) -> None:
+        """Make sure the playlist row exists. *user_id* claims ownership
+        when the row is created - or when nobody claimed it yet
+        (``0``); re-saving someone else's playlist never steals it."""
+
         pl_name = str(name or '').strip()
         if not pl_name:
             return
         sid = str(spotify_id or '').strip() or None
+        owner = int(user_id or 0)
         with self._connect() as conn:
             conn.execute(
-                """INSERT INTO playlists (name, spotify_id, updated_at)
-                   VALUES (?, ?, ?)
+                """INSERT INTO playlists (name, spotify_id, updated_at,
+                                          user_id)
+                   VALUES (?, ?, ?, ?)
                    ON CONFLICT(name) DO UPDATE SET
-                   spotify_id=COALESCE(excluded.spotify_id, playlists.spotify_id),
-                   updated_at=excluded.updated_at""",
-                (pl_name, sid, _now_iso()),
+                   spotify_id=COALESCE(excluded.spotify_id,
+                                       playlists.spotify_id),
+                   updated_at=excluded.updated_at,
+                   user_id=CASE WHEN playlists.user_id = 0
+                       THEN excluded.user_id ELSE playlists.user_id END""",
+                (pl_name, sid, _now_iso(), owner),
             )
 
     def upsert_track(
@@ -116,13 +146,18 @@ class PlaylistCatalog:
         rows: list[tuple[dict[str, Any], str, Path]],
         *,
         spotify_id: Optional[str] = None,
+        user_id: Optional[int] = None,
     ) -> None:
-        """Replace all tracks for a playlist (batch download)."""
+        """Replace all tracks for a playlist (batch download).
+
+        *user_id* claims the playlist when the row is created; sweeps
+        re-saving someone else's playlist never steal it.
+        """
 
         pl_name = str(playlist_name or '').strip()
         if not pl_name:
             return
-        self.ensure_playlist(pl_name, spotify_id=spotify_id)
+        self.ensure_playlist(pl_name, spotify_id=spotify_id, user_id=user_id)
         with self._connect() as conn:
             conn.execute(
                 'DELETE FROM playlist_tracks WHERE playlist_name = ?',
@@ -178,6 +213,15 @@ class PlaylistCatalog:
                 'SELECT name FROM playlists ORDER BY name'
             ).fetchall()
         return [str(row['name']) for row in rows]
+
+    def playlist_owner_map(self) -> dict[str, int]:
+        """``{name: user_id}`` for downloaded playlists (one query)."""
+
+        with self._connect() as conn:
+            rows = conn.execute(
+                'SELECT name, user_id FROM playlists'
+            ).fetchall()
+        return {str(row['name']): int(row['user_id'] or 0) for row in rows}
 
     def list_playlists_with_spotify_id(self) -> list[dict[str, Any]]:
         """Playlists in the catalog that have a linked Spotify playlist id."""
@@ -349,6 +393,22 @@ class PlaylistCatalog:
             )
             return cur.rowcount > 0
 
+    def reassign_legacy(self, user_id: int) -> int:
+        """Give pre-feature playlists (``user_id`` ``0``) to *user_id*.
+
+        Runs once on the first start with ownership; later system rows
+        keep ``0`` (admins-only), so this must not run again.
+        """
+
+        if not user_id:
+            return 0
+        with self._connect() as conn:
+            cur = conn.execute(
+                'UPDATE playlists SET user_id = ? WHERE user_id = 0',
+                (int(user_id),),
+            )
+            return cur.rowcount
+
     def delete_playlist(self, playlist_name: str) -> list[str]:
         """Remove playlist and all track rows; return registered filenames."""
 
@@ -371,21 +431,28 @@ class PlaylistCatalog:
             conn.execute('DELETE FROM playlists WHERE name = ?', (pl_name,))
         return filenames
 
-    def remove_tracks_for_filename(self, filename: str) -> list[str]:
-        """Delete rows pointing at *filename*; return affected playlist names."""
+    def remove_tracks_for_filename(
+        self, filename: str, playlist_name: Optional[str] = None
+    ) -> list[str]:
+        """Delete rows pointing at *filename* - only *playlist_name*'s
+        when given (a song hidden from it); return affected playlist
+        names."""
 
         name = _norm_path(filename)
         if not name:
             return []
+        where = 'filename = ?'
+        params: tuple[str, ...] = (name,)
+        if playlist_name is not None:
+            where += ' AND playlist_name = ?'
+            params = (name, str(playlist_name))
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT DISTINCT playlist_name FROM playlist_tracks
-                   WHERE filename = ?""",
-                (name,),
+                f'SELECT DISTINCT playlist_name FROM playlist_tracks '
+                f'WHERE {where}',
+                params,
             ).fetchall()
-            conn.execute(
-                'DELETE FROM playlist_tracks WHERE filename = ?', (name,)
-            )
+            conn.execute(f'DELETE FROM playlist_tracks WHERE {where}', params)
         return [str(row['playlist_name']) for row in rows]
 
     def all_track_rows(self) -> list[dict[str, Any]]:
@@ -403,3 +470,97 @@ class PlaylistCatalog:
             }
             for row in rows
         ]
+
+
+class ManualPlaylistOwners:
+    """Who created each Library playlist (M3U files carry no owner).
+
+    A user opens their own manual playlists only; unclaimed
+    (pre-feature) ones are admins-only, like everywhere else.
+    """
+
+    def __init__(self, db_path: Path) -> None:
+        self._path = str(db_path)
+        self._init_db()
+
+    def _connect(self) -> sqlite3.Connection:
+        return connect_sqlite(self._path, row_factory=True)
+
+    def _init_db(self) -> None:
+        with self._connect() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS manual_playlist_owners (
+                    name_key TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    user_id INTEGER NOT NULL
+                )
+            """)
+
+    @staticmethod
+    def _key(name: str) -> str:
+        return str(name or '').strip().casefold()
+
+    def set_owner(self, name: str, user_id: int) -> None:
+        """Claim a Library-created playlist for *user_id*."""
+
+        key = self._key(name)
+        if not key or not user_id:
+            return
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO manual_playlist_owners
+                   (name_key, name, user_id)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(name_key) DO UPDATE SET
+                   name=excluded.name, user_id=excluded.user_id""",
+                (key, str(name or '').strip(), int(user_id)),
+            )
+
+    def owner(self, name: str) -> Optional[int]:
+        """The owner's user id, or ``None`` when nobody claimed it."""
+
+        key = self._key(name)
+        if not key:
+            return None
+        with self._connect() as conn:
+            row = conn.execute(
+                'SELECT user_id FROM manual_playlist_owners WHERE name_key '
+                '= ?',
+                (key,),
+            ).fetchone()
+        if row is None:
+            return None
+        return int(row['user_id'] or 0) or None
+
+    def forget_owner(self, name: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                'DELETE FROM manual_playlist_owners WHERE name_key = ?',
+                (self._key(name),),
+            )
+
+    def rename_owner(self, name: str, new_name: str) -> None:
+        """Move a manual playlist's owner to its new name (if any)."""
+
+        owner = self.owner(name)
+        self.forget_owner(name)
+        if owner is not None:
+            self.set_owner(new_name, owner)
+
+    def owner_map(self) -> dict[str, int]:
+        """``{casefolded name: user_id}`` (one query)."""
+
+        with self._connect() as conn:
+            rows = conn.execute(
+                'SELECT name_key, user_id FROM manual_playlist_owners'
+            ).fetchall()
+        return {str(row['name_key']): int(row['user_id'] or 0) for row in rows}
+
+    def remove_user(self, user_id: int) -> None:
+        """Release a deleted account's playlists (files stay put)."""
+
+        with self._connect() as conn:
+            conn.execute(
+                'DELETE FROM manual_playlist_owners WHERE user_id = ?',
+                (int(user_id),),
+            )

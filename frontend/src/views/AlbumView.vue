@@ -131,8 +131,11 @@ import { usePlayer } from '/src/model/player'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
+import { useVisibility } from '/src/model/visibility'
+import { useBuyLinks } from '/src/model/buyLinks'
 import { albumKey, isVariousArtists } from '/src/lib/library'
 import { formatBytes, splitLength } from '/src/lib/format'
+import { useTrashCapability } from '/src/lib/trash'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
@@ -142,6 +145,10 @@ const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
+const visibility = useVisibility()
+const buyLinks = useBuyLinks()
+const auth = useAuth()
+const trash = useTrashCapability()
 
 const ready = ref(false)
 
@@ -156,7 +163,6 @@ watch(
   () => [route.query.artist, route.query.title],
   () => loadAlbum()
 )
-const auth = useAuth()
 const ui = useUi()
 
 const album = computed(() =>
@@ -279,6 +285,13 @@ const menu = computed(() => [
     action: () => actions.downloadZip(album.value.tracks),
   },
   {
+    label: t('buy.menu'),
+    icon: 'tag',
+    hidden: !album.value?.artist,
+    action: () =>
+      buyLinks.open({ artist: album.value.artist, album: album.value.title }),
+  },
+  {
     label: t('album.searchMore'),
     icon: 'search',
     action: () =>
@@ -287,11 +300,13 @@ const menu = computed(() => [
         params: { query: `${album.value.artist} ${album.value.title}` },
       }),
   },
+  ...(album.value ? visibility.albumMenu(album.value) : []),
   { divider: true },
   {
-    label: t('album.delete'),
+    label: trash.enabled.value ? t('trash.move') : t('album.delete'),
     icon: 'trash',
     danger: true,
+    hidden: trash.enabled.value && !auth.isAdmin.value,
     action: async () => {
       const deleted = await actions.remove(album.value.tracks)
       if (deleted.length)

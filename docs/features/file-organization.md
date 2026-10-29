@@ -21,7 +21,7 @@ downloads/
 
 ## Organize by artist
 
-With **Settings → File organization → Organize by artist** on (the default), to group every track — including playlist and album downloads — under a subfolder named after its album artist (see [Several artists and compilations](#several-artists-and-compilations)):
+With **Settings → Downloads & files → Organize by artist** on (the default), to group every track — including playlist and album downloads — under a subfolder named after its album artist (see [Several artists and compilations](#several-artists-and-compilations)):
 
 ```
 downloads/
@@ -41,9 +41,10 @@ This structure is compatible with media servers (Jellyfin, Navidrome, Plex) and 
 A song often credits several artists. Downtify keeps all of them in the file's **Artist** tag, and also writes each one separately to an **ARTISTS** tag (`TXXX:ARTISTS` in MP3), so a player never has to split a name like `Earth, Wind & Fire` on its comma. The folder, though, belongs to a single artist: the **album artist**, or for a compilation the track's first artist.
 
 - The album artist is the artist the source (Spotify, YouTube Music or Deezer) credits for the **album**, the same for every track on it, and it's written to the **Album artist** tag. When the source doesn't say, it's the track's first artist.
-- A duo or group is one artist. YouTube Music credits some acts as their members, one per entry (`Henrique & Juliano` comes back as `Henrique` and `Juliano`, on the album and on each track - sometimes in the other order, `Mateus` and `Jorge` for `Jorge & Mateus`). Each credited name links to a YouTube Music channel; when one member's link leads to a channel named after the whole act, made of the names credited next to it, Downtify joins those names back into the act's name: the folder, **Album artist**, **Artist** and **ARTISTS** tags all say `Henrique & Juliano`. A real collaboration (each artist under their own channel) keeps every artist.
+- A duo or group is one artist. YouTube Music credits some acts as their members, one per entry (`Henrique & Juliano` comes back as `Henrique` and `Juliano`, on the album and on each track - sometimes in the other order, `Mateus` and `Jorge` for `Jorge & Mateus`). Each credited name links to a YouTube Music channel; when one member's link leads to a channel named after the whole act, made of the names credited next to it, Downtify joins those names back into the act's name: the folder, **Album artist**, **Artist** and **ARTISTS** tags all say `Henrique & Juliano`. A real collaboration (each artist under their own channel) keeps every artist. When YouTube Music links no member to the act's channel, the names stay split; the Library still gives no page to a name that is only ever credited next to someone else (see [Library catalog](library-catalog.md#library-page)).
 - A guest never changes it. *The Girl Is Mine*, with a guest on Michael Jackson's *Thriller*, stays in `Michael Jackson/Thriller/`, and *Lady Marmalade* the single (Christina Aguilera, Lil' Kim, Mýa, P!nk) goes to `Christina Aguilera/`.
 - Only an album the source itself credits to **Various Artists** (a soundtrack, a "Now That's What I Call…") is a compilation — unless you [mark it yourself](#marking-an-album-as-various-artists). A single YouTube Music song never is: YouTube Music files the same audio under several releases and may show any of them as its album, often a compilation, so only a whole YouTube Music album download counts. Its tracks get "Various Artists" as their album artist plus the compilation flag (`TCMP` in MP3, `COMPILATION` in FLAC/Ogg/Opus, `cpil` in M4A). That keeps the album whole in Navidrome and other media servers, which group albums by these tags rather than by folder. On disk, though, **Organize by artist** never makes a `Various Artists` folder: each track goes to its own first artist's folder.
+- Older Downtify versions tagged any song with several artists **Various Artists**, without the compilation flag. The Library keeps listing such a song in its first artist's album, as before; **Mark as Various Artists** makes the album a real compilation.
 
 ```
 downloads/
@@ -64,7 +65,7 @@ downloads/
 A source can credit a release to one artist when it belongs to several equally — Deezer lists the *Lady Marmalade* single under Christina Aguilera alone. An admin can fix that from the album's page in the Library, with the **Mark as Various Artists** button next to **Add to queue**.
 
 - Every track of the album gets "Various Artists" as its album artist and the compilation flag. Nothing else in the files changes, and they stay where they are (a compilation's tracks are filed under their own first artist anyway). Each file is rewritten through a working copy, keeps its modification date, and is left untouched if the rewrite fails.
-- The album moves to the **Various Artists** artist in the Library, and the page follows it there.
+- In the Library the album is then listed by **Various Artists** under **Albums** (each track stays on its own artist's page), and the album's page follows it there.
 - Downtify remembers the album: a track of it downloaded later is tagged the same way.
 - On a compilation the same button reads **Unmark as Various Artists**: it undoes the mark and puts back the album artist the album had. It also works on an album its source made a compilation; then the album artist becomes the artist most of its tracks list first, and later downloads of that album aren't marked again.
 

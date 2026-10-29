@@ -32,6 +32,8 @@ _COMMA_BAND = 'Coast, Hill & Vale'
         (['Mica', 'Tomas'], 'Mica & Tomasz', False),
         (['Mica'], 'Mica & Tomas', False),
         (['Mica', 'Tomas'], '', False),
+        # "x" joins a collaboration, not an act.
+        (['Mica', 'Tomas'], 'Mica x Tomas', False),
     ],
 )
 def test_is_act_of(names, act, expected):

@@ -4,6 +4,7 @@ list (no network - Deezer is stubbed)."""
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -11,8 +12,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from downtify import api
+from downtify.auth import Principal
 from downtify.deezer import find_track_preview, related_artists
 from downtify.discover import (
     RELATED_TTL,
@@ -29,6 +32,28 @@ from downtify.discover import (
 from downtify.file_naming import title_key
 
 NOW = datetime(2026, 9, 26, 12, 0, tzinfo=timezone.utc)
+
+
+_ADMIN = Principal('device', 'client', '', 1, 'admin', 'admin')
+
+
+def _request(payload: Any = None) -> Request:
+    """A signed-in admin request (the pre-ownership global view)."""
+
+    body = json.dumps(payload if payload is not None else {}).encode()
+
+    async def receive() -> dict[str, Any]:
+        return {'type': 'http.request', 'body': body, 'more_body': False}
+
+    return Request(
+        {
+            'type': 'http',
+            'method': 'POST',
+            'headers': [],
+            'state': {'principal': _ADMIN},
+        },
+        receive,
+    )
 
 
 class _Body:
@@ -448,32 +473,35 @@ def discover_state(monkeypatch, tmp_path):
 
 
 def test_listen_endpoint_counts_and_rejects_blank(discover_state):
-    row = asyncio.run(api.record_listen_endpoint(_Body({'artist': 'Air'})))
+    row = asyncio.run(api.record_listen_endpoint(_request({'artist': 'Air'})))
 
     assert row['plays'] == 1
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(api.record_listen_endpoint(_Body({'artist': ' '})))
+        asyncio.run(api.record_listen_endpoint(_request({'artist': ' '})))
     assert exc.value.status_code == 400
 
 
 def test_clear_listens_endpoint(discover_state):
     discover_state.record_listen('Air')
 
-    assert asyncio.run(api.clear_listens_endpoint()) == {'cleared': 1}
+    assert asyncio.run(api.clear_listens_endpoint(_request())) == {
+        'cleared': 1
+    }
 
 
 def test_block_endpoints_round_trip(discover_state):
-    asyncio.run(api.block_artist_endpoint(_Body({'name': 'Air'})))
+    asyncio.run(api.block_artist_endpoint(_request({'name': 'Air'})))
 
     assert [
-        r['name'] for r in asyncio.run(api.blocked_artists_endpoint())
+        r['name']
+        for r in asyncio.run(api.blocked_artists_endpoint(_request()))
     ] == ['Air']
-    assert asyncio.run(api.unblock_artist_endpoint('air')) == {
+    assert asyncio.run(api.unblock_artist_endpoint(_request(), 'air')) == {
         'name': 'air',
         'removed': True,
     }
     with pytest.raises(HTTPException):
-        asyncio.run(api.block_artist_endpoint(_Body({})))
+        asyncio.run(api.block_artist_endpoint(_request({})))
 
 
 def test_discover_endpoint_needs_a_library_list(discover_state):
@@ -489,7 +517,7 @@ def test_discover_endpoint_ranks_the_posted_library(
     monkeypatch.setattr(
         api,
         'recommendations',
-        lambda store, library: recommendations(
+        lambda store, library, **_kwargs: recommendations(
             store,
             library,
             lookup_id=fake.lookup_id,
@@ -499,7 +527,7 @@ def test_discover_endpoint_ranks_the_posted_library(
 
     result = asyncio.run(
         api.discover_endpoint(
-            _Body({'library': [{'name': 'X', 'tracks': 3}, 'junk']})
+            _request({'library': [{'name': 'X', 'tracks': 3}, 'junk']})
         )
     )
 
