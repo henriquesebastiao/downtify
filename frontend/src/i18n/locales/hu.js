@@ -1,4 +1,33 @@
 export default {
+  artistSuggestions: {
+    title: 'Követhető előadók',
+    listening: 'A hallgatásaid alapján',
+    library: 'A könyvtárad alapján',
+    listeningHelp:
+      'Az előadók, akiket a legtöbbet hallgatsz. A friss lejátszások többet számítanak: egy lejátszás súlya {days} naponta a felére csökken.',
+    libraryHelp:
+      'Az előadók a könyvtáradban, a legtöbb szám, majd album szerint.',
+    listens: { one: '{count} lejátszás', other: '{count} lejátszás' },
+    tracks: { one: '{count} szám', other: '{count} szám' },
+    albums: { one: '{count} album', other: '{count} album' },
+    follow: 'Követés',
+    more: 'Több megjelenítése',
+    loading: 'Javaslatok betöltése…',
+    empty: 'Egyelőre nincs több javasolható előadó.',
+    failed: 'A javaslatokat nem sikerült betölteni.',
+    retry: 'Újra',
+    choose: 'Melyik előadó a(z) {name}?',
+    chooseHelp:
+      'Több YouTube Music-előadó is lehet a(z) {name}. Hasonlítsd össze a fotókat, vagy nyisd meg a profiljukat, és kövesd a megfelelőt.',
+    notFound:
+      'Nem található {name} nevű előadó a YouTube Musicon. Inkább illeszd be az előadó linkjét.',
+    lookupFailed:
+      'Az előadókeresés nem érhető el. Linket továbbra is beilleszthetsz.',
+    followProfile: 'Előadó követése',
+    inspect: 'Megnyitás a YouTube Musicon',
+    manual: 'Link beillesztése',
+    cancel: 'Mégse',
+  },
   trash: {
     title: 'Kuka',
     subtitle:

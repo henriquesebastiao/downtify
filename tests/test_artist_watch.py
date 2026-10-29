@@ -357,7 +357,7 @@ def test_resolve_spotify_artist_url_maps_to_youtube_channel(monkeypatch):
     assert name == 'Test Artist'
 
 
-def test_resolve_spotify_artist_falls_back_to_first_result(monkeypatch):
+def test_resolve_spotify_artist_does_not_guess_first_result(monkeypatch):
     monkeypatch.setattr(
         api.spotify, 'artist_name_from_id', lambda artist_id: 'Test Artist'
     )
@@ -368,11 +368,44 @@ def test_resolve_spotify_artist_falls_back_to_first_result(monkeypatch):
             {'name': 'Close Enough', 'artist_id': 'UCfirst'}
         ],
     )
+    with pytest.raises(HTTPException) as exc:
+        _resolve('https://open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg')
+    assert exc.value.status_code == 409
+    assert 'No YouTube Music artist is named exactly' in exc.value.detail
+
+
+def test_resolve_spotify_artist_namesakes_follow_the_best_match(monkeypatch):
+    monkeypatch.setattr(
+        api.spotify, 'artist_name_from_id', lambda artist_id: 'Test Artist'
+    )
+    monkeypatch.setattr(
+        api.providers,
+        'search_artists',
+        lambda query, limit: [
+            {'name': 'Test Artist', 'artist_id': CHANNEL_ID},
+            {'name': 'Test Artist', 'artist_id': 'UCnamesake'},
+        ],
+    )
+    _kind, key, _name = _resolve(
+        'https://open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg'
+    )
+    assert key == CHANNEL_ID
+
+
+def test_resolve_spotify_artist_ignores_case_and_slashes(monkeypatch):
+    monkeypatch.setattr(
+        api.spotify, 'artist_name_from_id', lambda artist_id: 'AC/DC'
+    )
+    monkeypatch.setattr(
+        api.providers,
+        'search_artists',
+        lambda query, limit: [{'name': 'acdc', 'artist_id': CHANNEL_ID}],
+    )
     _kind, key, name = _resolve(
         'https://open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg'
     )
-    assert key == 'UCfirst'
-    assert name == 'Close Enough'
+    assert key == CHANNEL_ID
+    assert name == 'acdc'
 
 
 def test_resolve_spotify_artist_with_no_match_is_404(monkeypatch):

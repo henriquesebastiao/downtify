@@ -70,7 +70,7 @@ Un handle est résolu vers la chaîne de l’artiste quand vous ajoutez la surve
 À chaque passage, Downtify liste la discographie de l’artiste, la compare aux sorties qu’il a déjà traitées et télécharge chaque morceau de tout ce qui est nouveau. Un passage en régime établi coûte une seule requête — les listes de morceaux ne sont récupérées que pour les sorties qu’il n’a pas encore vues.
 
 ::: info Pourquoi la discographie vient de YouTube Music
-L’intégration publique de Spotify expose le nom d’un artiste et un aperçu de ses morceaux les plus populaires, mais **pas** sa discographie — la lire exigerait des identifiants de l’API Spotify, que Downtify n’utilise délibérément pas. Un lien d’artiste Spotify est donc résolu vers son nom et apparié au même artiste sur YouTube Music, d’où l’audio est aussi récupéré. L’avantage : toute sortie que Downtify peut voir est une sortie qu’il peut réellement télécharger. Le compromis : pour un artiste au nom ambigu, vérifiez que le nom résolu de la surveillance est bien l’artiste voulu — collez directement l’URL de l’artiste YouTube Music s’il a choisi le mauvais.
+L’intégration publique de Spotify expose le nom d’un artiste et un aperçu de ses morceaux les plus populaires, mais **pas** sa discographie — la lire exigerait des identifiants de l’API Spotify, que Downtify n’utilise délibérément pas. Un lien d’artiste Spotify est donc résolu vers son nom et apparié au même artiste sur YouTube Music, d’où l’audio est aussi récupéré. L’avantage : toute sortie que Downtify peut voir est une sortie qu’il peut réellement télécharger. Le compromis : le lien suit l’artiste YouTube Music qui porte exactement ce nom (casse et ponctuation mises à part), la meilleure correspondance de YouTube Music quand plusieurs le partagent. Pour un nom courant, vérifiez que la surveillance est bien l’artiste voulu, sinon collez directement l’URL de l’artiste YouTube Music. Un artiste Spotify dont aucun artiste YouTube Music ne porte exactement le nom ne peut être ajouté que de cette façon : Downtify ne devine pas.
 :::
 
 ::: warning Le premier passage télécharge tout le catalogue ancien
@@ -100,6 +100,24 @@ La liste de la Surveillance affiche les filtres d’une surveillance sous son li
 Une sortie n’est enregistrée comme traitée que lorsque chacun de ses morceaux est réglé, si bien qu’un morceau qui échoue sur une erreur transitoire est réessayé au passage suivant au lieu d’être ignoré pour toujours. Les morceaux déjà téléchargés ne sont jamais récupérés deux fois.
 
 Les surveillances d’artistes ne génèrent pas de fichiers M3U — les morceaux sont rangés selon vos réglages d’[organisation des fichiers](file-organization.md) plutôt que comme une playlist.
+
+### Artistes suggérés
+
+Sous la liste des surveillances d’artistes, l’onglet **Artistes** suggère des artistes à suivre, en deux listes :
+
+| Liste | Qui y figure |
+|-------|--------------|
+| **D’après vos écoutes** | Les artistes que vous écoutez le plus : vos propres écoutes, celles que compte [Découvrir](discover.md). Les écoutes récentes comptent davantage : le poids d’une écoute est divisé par deux tous les 45 jours, si bien qu’un artiste beaucoup écouté l’an dernier passe derrière un artiste que vous écoutez chaque jour en ce moment. |
+| **D’après votre bibliothèque** | Les artistes qui ont le plus de morceaux, puis d’albums, dans la bibliothèque que vous voyez. |
+
+Les artistes que vous surveillez déjà (surveillances en pause comprises) et les noms de compilations comme **Various Artists** sont écartés. Chaque liste affiche 20 artistes à la fois ; **Afficher plus** charge les suivants. Les listes sont les vôtres, y compris pour un admin : les écoutes d’un autre compte n’y apparaissent jamais. Un artiste qu’un admin a masqué aux utilisateurs reste hors des listes d’un utilisateur, comme il reste hors de sa Bibliothèque.
+
+Charger les listes ne lance aucune recherche. **Suivre** cherche le nom sur YouTube Music, où une surveillance d’artiste suit l’artiste :
+
+- quand un seul artiste y porte ce nom, la surveillance est ajoutée tout de suite, avec l’intervalle et les options **Télécharger** / **Nouvelles sorties uniquement** choisis dans le cadre au-dessus ;
+- sinon (homonymes, ou aucun artiste portant exactement ce nom), une fenêtre montre les artistes YouTube Music trouvés, chacun avec sa photo et un lien vers son profil. Choisissez-en un avec **Suivre cet artiste**, ou **Coller un lien** pour coller vous-même le lien de l’artiste dans le cadre au-dessus.
+
+Les suggestions ne font que choisir l’artiste à surveiller : les morceaux se téléchargent toujours depuis vos [sources audio](download-settings.md), comme d’habitude.
 
 ## Intervalles de vérification
 

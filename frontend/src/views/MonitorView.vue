@@ -17,6 +17,7 @@
     <UiTabs :items="tabs" :model-value="tab" />
 
     <form
+      ref="watchForm"
       class="flex flex-col gap-2 rounded-panel border border-line-2 bg-surface p-2 sm:flex-row sm:items-center"
       @submit.prevent="add"
     >
@@ -468,6 +469,14 @@
       </template>
     </template>
 
+    <ArtistSuggestions
+      v-if="tab === 'artist' && listed"
+      :revision="watchesRevision"
+      :busy="adding"
+      :follow-error="addError.artist"
+      @select="chooseSuggestedArtist"
+    />
+
     <WatchEditDialog
       :watch="editing"
       :cover="editing && tab === 'artist' ? artistCover(editing) : ''"
@@ -478,7 +487,15 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import AppIcon from '/src/components/ui/AppIcon.vue'
@@ -496,6 +513,7 @@ import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import ReleaseFilters from '/src/components/monitor/ReleaseFilters.vue'
+import ArtistSuggestions from '/src/components/monitor/ArtistSuggestions.vue'
 import WatchEditDialog from '/src/components/monitor/WatchEditDialog.vue'
 import WatchSourceBadge from '/src/components/monitor/WatchSourceBadge.vue'
 import { intervalOptions } from '/src/components/monitor/intervals'
@@ -536,7 +554,11 @@ const route = useRoute()
 const router = useRouter()
 
 const items = ref([])
+const watchForm = ref(null)
 const loading = ref(false)
+// The watches have been listed once (the suggestions wait for it, and stay
+// mounted when the list is loaded again).
+const listed = ref(false)
 const adding = ref(false)
 // Per tab, so switching tabs keeps what was typed in each.
 const newUrl = reactive({ playlist: '', artist: '' })
@@ -906,9 +928,15 @@ async function load() {
     items.value = res.data || []
   } finally {
     loading.value = false
+    listed.value = true
   }
   loadStats()
 }
+
+// What the artist suggestions leave out: they load again when it changes.
+const watchesRevision = computed(() =>
+  JSON.stringify(items.value.map((item) => [item.id, item.name, item.kind]))
+)
 
 function tabRoute(kind) {
   return {
@@ -950,6 +978,22 @@ async function add() {
   } finally {
     adding.value = false
   }
+}
+
+// A suggested artist picked under the list (ArtistSuggestions), followed
+// through the link box as a pasted link would be. "Paste a link", or a
+// follow straight from the list that failed, brings the link box into view
+// instead (its error shows there; the dialog shows its own).
+async function chooseSuggestedArtist(artist) {
+  if (adding.value) return
+  if (artist.url) {
+    newUrl.artist = artist.url
+    await add()
+    if (!addError.artist || artist.fromDialog) return
+  }
+  await nextTick()
+  watchForm.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  watchForm.value?.querySelector('input')?.focus({ preventScroll: true })
 }
 
 function moveToOtherTab() {

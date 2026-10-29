@@ -253,6 +253,14 @@ downloads are shared, and files are never stored twice.
   each with ``watch: {added_at, outcome, initial, provider,
   shared_with}``) - see ``downtify/watch_stats.py`` and
   ``downtify/watch_history.py``
+* ``GET  /api/monitor/artist-suggestions`` (``?listening_offset=``,
+  ``?library_offset=``, ``?limit=`` 1-100, default 20: ``{listening,
+  library, half_life_days}``, each list ``{items, total, next_offset}`` -
+  artists to follow from the user's own listens and the library they
+  can see, minus the ones they watch; no search) and ``GET
+  /api/monitor/artist-suggestions/resolve`` (``?name=``: ``{candidates,
+  url}`` - the YouTube Music artist to follow, ``url`` only when exactly
+  one is named so) - see ``downtify/artist_suggestions.py``
 * ``GET|PUT /api/likes`` and ``POST /api/likes/clear`` (the heart on a
   library track; while any song is liked they are also written out as a
   playlist)
@@ -396,6 +404,7 @@ from . import (
     stream,
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
+from .artist_suggestions import artist_candidates, artist_suggestions
 from .auth import (
     AuthStore,
     PairingStore,
@@ -424,6 +433,7 @@ from .deemix_provider import (
 )
 from .discover import (
     DiscoverStore,
+    artist_key,
     collections,
     deezer_collections,
     recommendations,
@@ -9561,6 +9571,11 @@ def _youtube_artist_for_name(name: str) -> tuple[str, str]:
     Music instead — which is also where the audio is fetched from, so
     every release we can see is one we can actually download. Returns
     ``(channel_id, resolved_name)``.
+
+    Only an artist named exactly *name* (by :func:`artist_key`) is
+    followed: the first one, YouTube Music's best match when namesakes
+    share the name. The top result alone could be someone else entirely,
+    so without an exact name ``409`` asks for the YouTube Music link.
     """
 
     results = providers.search_artists(name, limit=10)
@@ -9569,19 +9584,24 @@ def _youtube_artist_for_name(name: str) -> tuple[str, str]:
             status_code=404,
             detail=f'No YouTube Music artist found for {name!r}',
         )
-    wanted = name.casefold().strip()
-    exact = [
-        r
-        for r in results
-        if str(r.get('name') or '').casefold().strip() == wanted
-    ]
-    best = (exact or results)[0]
-    channel_id = str(best.get('artist_id') or '')
-    if not channel_id:
+    wanted = artist_key(name)
+    best = next(
+        (
+            r
+            for r in results
+            if r.get('artist_id') and artist_key(r.get('name')) == wanted
+        ),
+        None,
+    )
+    if best is None:
         raise HTTPException(
-            status_code=502,
-            detail=f'YouTube Music artist for {name!r} has no channel id',
+            status_code=409,
+            detail=(
+                f'No YouTube Music artist is named exactly {name!r}: '
+                "paste the artist's YouTube Music link instead"
+            ),
         )
+    channel_id = str(best['artist_id'])
     return channel_id, str(best.get('name') or name)
 
 
@@ -9665,6 +9685,68 @@ def _monitor_watch_for_request(
     if user_id and watch.user_id == user_id:
         return watch
     return None
+
+
+@router.get('/api/monitor/artist-suggestions')
+def monitor_artist_suggestions(
+    request: Request,
+    listening_offset: int = Query(0, ge=0),
+    library_offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+) -> dict[str, Any]:
+    """Artists to follow, from the asking user's own listens and the
+    library they can see (see :mod:`downtify.artist_suggestions`).
+
+    Listens and watches are always the user's own, an admin's too; an
+    artist hidden from users stays out of a user's listens as it does
+    out of their library. Nothing is searched for here.
+    """
+
+    user_id = request_user_id(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail='Sign in required')
+    artists = library_artist_index(
+        library_context(),
+        allowed_keys=allowed_entry_keys(request),
+        hidden=admin_hidden_rules(request),
+    )
+    listens = _require_discover().listens(user_id)
+    if not request_is_admin(request):
+        rules = hidden_rules()
+        listens = [
+            row
+            for row in listens
+            if not rules.artist_hidden(row.get('name') or '')
+        ]
+    return artist_suggestions(
+        artists,
+        listens,
+        _require_monitor_db().list_playlists(user_id),
+        listening_offset=listening_offset,
+        library_offset=library_offset,
+        limit=limit,
+    )
+
+
+@router.get('/api/monitor/artist-suggestions/resolve')
+def resolve_monitor_artist_suggestion(
+    request: Request,
+    name: str = Query(..., min_length=1, max_length=200),
+) -> dict[str, Any]:
+    """The YouTube Music artist to follow for a suggested *name*, or the
+    ones to choose from (see :func:`artist_candidates`).
+
+    Searched for only when the user clicks Follow. It never adds the
+    watch: the page then posts the chosen link to
+    ``POST /api/monitor/playlists``, as a pasted one.
+    """
+
+    if not request_user_id(request):
+        raise HTTPException(status_code=401, detail='Sign in required')
+    name = name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail='Artist name required')
+    return artist_candidates(name, providers.search_artists(name, limit=10))
 
 
 @router.get('/api/monitor/playlists')

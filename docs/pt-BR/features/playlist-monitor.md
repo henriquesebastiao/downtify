@@ -70,7 +70,7 @@ Um handle é resolvido para o canal do artista quando você adiciona o monitoram
 A cada varredura, o Downtify lista a discografia do artista, compara com os lançamentos que já processou e baixa todas as faixas de qualquer coisa nova. Uma varredura em regime estável custa uma única requisição — as listas de faixas só são buscadas para lançamentos que ele ainda não viu.
 
 ::: info Por que a discografia vem do YouTube Music
-O embed público do Spotify expõe o nome de um artista e uma prévia das faixas mais populares, mas **não** a discografia — lê-la exigiria credenciais da API do Spotify, que o Downtify deliberadamente não usa. Então um link de artista do Spotify é resolvido para o nome dele e associado ao mesmo artista no YouTube Music, que também é de onde o áudio é buscado. A vantagem: todo lançamento que o Downtify consegue ver é um que ele consegue de fato baixar. O custo: para um artista de nome ambíguo, confira se o nome resolvido do monitoramento é o artista que você queria — cole direto o URL do artista no YouTube Music se ele escolheu o errado.
+O embed público do Spotify expõe o nome de um artista e uma prévia das faixas mais populares, mas **não** a discografia — lê-la exigiria credenciais da API do Spotify, que o Downtify deliberadamente não usa. Então um link de artista do Spotify é resolvido para o nome dele e associado ao mesmo artista no YouTube Music, que também é de onde o áudio é buscado. A vantagem: todo lançamento que o Downtify consegue ver é um que ele consegue de fato baixar. O custo: o link segue o artista do YouTube Music com exatamente esse nome (sem contar maiúsculas e pontuação), o melhor resultado do YouTube Music quando vários têm o mesmo nome. Com um nome comum, confira se o monitoramento é o artista que você queria e, se não for, cole direto o URL do artista no YouTube Music. Um artista do Spotify cujo nome exato nenhum artista do YouTube Music tem só pode ser adicionado assim: o Downtify não chuta.
 :::
 
 ::: warning A primeira varredura baixa todo o catálogo antigo
@@ -100,6 +100,24 @@ A lista do Monitor mostra os filtros de um monitoramento sob o link quando não 
 Um lançamento só é registrado como processado quando cada uma de suas faixas está resolvida, então uma faixa que falha por um erro transitório é tentada de novo na próxima varredura em vez de ser pulada para sempre. Faixas que já foram baixadas nunca são buscadas duas vezes.
 
 Os monitoramentos de artistas não geram arquivos M3U — as faixas são organizadas pelas suas configurações de [organização de arquivos](file-organization.md) e não como uma playlist.
+
+### Artistas sugeridos
+
+Abaixo da lista de monitoramentos de artistas, a aba **Artistas** sugere artistas para seguir, em duas listas:
+
+| Lista | Quem aparece |
+|-------|--------------|
+| **Com base no que você ouve** | Os artistas que você mais ouve: as suas próprias audições, as que o [Descobrir](discover.md) conta. Audições recentes contam mais: o peso de uma audição cai pela metade a cada 45 dias, então um artista que você ouviu muito no ano passado fica abaixo de um que você ouve todo dia agora. |
+| **Com base na sua biblioteca** | Os artistas com mais faixas, depois mais álbuns, na biblioteca que você vê. |
+
+Artistas que você já monitora (inclusive monitoramentos pausados) e nomes de coletâneas como **Various Artists** ficam de fora. Cada lista mostra 20 artistas por vez; **Mostrar mais** carrega os próximos. As listas são só suas, inclusive para um admin: as audições de outra conta nunca aparecem. Um artista que um admin escondeu dos usuários fica fora das listas de um usuário, como fica fora da Biblioteca dele.
+
+Carregar as listas não busca nada. **Seguir** procura o nome no YouTube Music, onde um monitoramento de artista acompanha o artista:
+
+- quando exatamente um artista de lá tem esse nome, o monitoramento é adicionado na hora, com o intervalo e as opções **Baixar** / **Só lançamentos novos** definidos na caixa acima;
+- senão (homônimos, ou nenhum artista com exatamente esse nome), uma janela mostra os artistas do YouTube Music encontrados, cada um com a foto e um link para o perfil. Escolha um com **Seguir este artista**, ou use **Colar um link** para colar você mesmo o link do artista na caixa acima.
+
+As sugestões só escolhem qual artista monitorar: as músicas continuam sendo baixadas das suas [fontes de áudio](download-settings.md) como sempre.
 
 ## Intervalos de verificação
 

@@ -70,7 +70,7 @@ Bir handle, izlemeyi eklediğinizde sanatçının kanalına çözümlenir; böyl
 Her taramada Downtify sanatçının diskografisini listeler, zaten işlediği yayınlarla karşılaştırır ve yeni olan her şeyin her parçasını indirir. Kararlı durumdaki bir tarama tek bir isteğe mal olur — parça listeleri yalnızca daha önce görmediği yayınlar için getirilir.
 
 ::: info Diskografi neden YouTube Music’ten gelir
-Spotify’ın herkese açık embed’i bir sanatçının adını ve en çok dinlenen parçalarının önizlemesini gösterir, ama diskografisini **göstermez** — onu okumak, Downtify’ın bilerek kullanmadığı Spotify API kimlik bilgileri gerektirir. Bu yüzden bir Spotify sanatçı bağlantısı adına çözümlenir ve YouTube Music’teki aynı sanatçıyla eşleştirilir; ses de oradan getirilir. Artısı: Downtify’ın görebildiği her yayın gerçekten indirebildiği bir yayındır. Dengesi: adı belirsiz bir sanatçı için, izlemenin çözümlenen adının kastettiğiniz sanatçı olduğunu denetleyin — yanlışı seçtiyse YouTube Music sanatçı URL’sini doğrudan yapıştırın.
+Spotify’ın herkese açık embed’i bir sanatçının adını ve en çok dinlenen parçalarının önizlemesini gösterir, ama diskografisini **göstermez** — onu okumak, Downtify’ın bilerek kullanmadığı Spotify API kimlik bilgileri gerektirir. Bu yüzden bir Spotify sanatçı bağlantısı adına çözümlenir ve YouTube Music’teki aynı sanatçıyla eşleştirilir; ses de oradan getirilir. Artısı: Downtify’ın görebildiği her yayın gerçekten indirebildiği bir yayındır. Dengesi: bağlantı, tam olarak bu ada sahip YouTube Music sanatçısını izler (büyük/küçük harf ve noktalama dikkate alınmaz); birden fazla sanatçı bu adı taşıyorsa YouTube Music’in en iyi eşleşmesini. Yaygın bir adda izlemenin kastettiğiniz sanatçı olduğunu denetleyin, değilse YouTube Music sanatçı URL’sini doğrudan yapıştırın. Tam adını hiçbir YouTube Music sanatçısının taşımadığı bir Spotify sanatçısı yalnızca bu şekilde eklenebilir: Downtify tahmin yürütmez.
 :::
 
 ::: warning İlk tarama tüm eski kataloğu indirir
@@ -100,6 +100,24 @@ Var olan yayınları “atlamak”, sanatçının diskografisine bir kez başar�
 Bir yayın yalnızca her parçası hesaba katıldığında işlenmiş olarak kaydedilir; bu yüzden geçici bir hatada başarısız olan bir parça sonsuza dek atlanmak yerine sonraki taramada yeniden denenir. Zaten indirilmiş parçalar asla iki kez getirilmez.
 
 Sanatçı izlemeleri M3U dosyası üretmez — parçalar bir çalma listesi olarak değil, [dosya düzeni](file-organization.md) ayarlarınıza göre yerleştirilir.
+
+### Önerilen sanatçılar
+
+Sanatçı izlemeleri listesinin altında, **Sanatçılar** sekmesi takip edilecek sanatçıları iki listede önerir:
+
+| Liste | Kimler var |
+|-------|------------|
+| **Dinlediklerine göre** | En çok dinlediğiniz sanatçılar: [Keşfet](discover.md)’in saydığı kendi dinlemeleriniz. Yakın zamandaki dinlemeler daha çok sayılır: bir dinlemenin ağırlığı her 45 günde yarıya iner; bu yüzden geçen yıl çok dinlediğiniz bir sanatçı, şu sıralar her gün dinlediğiniz bir sanatçının altında kalır. |
+| **Kitaplığına göre** | Gördüğünüz kitaplıkta en çok parçası, ardından albümü olan sanatçılar. |
+
+Zaten izlediğiniz sanatçılar (duraklatılmış izlemeler dahil) ve **Various Artists** gibi derleme adları dışarıda kalır. Her liste aynı anda 20 sanatçı gösterir; **Daha fazla göster** sonrakileri yükler. Listeler yalnızca sizindir, yönetici için de: başka bir hesabın dinlemeleri asla görünmez. Bir yöneticinin kullanıcılardan gizlediği bir sanatçı, Kitaplık’ta olduğu gibi kullanıcının listelerinde de yer almaz.
+
+Listeleri yüklemek hiçbir şey aramaz. **Takip et**, adı bir sanatçı izlemesinin sanatçıyı takip ettiği yer olan YouTube Music’te arar:
+
+- orada tam olarak tek bir sanatçı bu adı taşıyorsa, izleme yukarıdaki kutuda ayarlanan aralık ve **İndir** / **Yalnızca yeni yayınlar** seçenekleriyle hemen eklenir;
+- aksi halde (adaşlar varsa ya da hiçbir sanatçı tam olarak bu adı taşımıyorsa) bir pencere, bulunan YouTube Music sanatçılarını her birinin fotoğrafı ve profil bağlantısıyla gösterir. **Bu sanatçıyı takip et** ile birini seçin ya da sanatçının bağlantısını yukarıdaki kutuya kendiniz yapıştırmak için **Bağlantı yapıştır**’ı kullanın.
+
+Öneriler yalnızca hangi sanatçının izleneceğini seçer: şarkılar her zamanki gibi [ses kaynaklarınızdan](download-settings.md) indirilir.
 
 ## Denetim aralıkları
 

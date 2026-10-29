@@ -1,4 +1,31 @@
 export default {
+  artistSuggestions: {
+    title: 'Artists to follow',
+    listening: 'Based on your listening',
+    library: 'Based on your library',
+    listeningHelp:
+      'Artists you play the most. Recent plays count more: a play’s weight halves every {days} days.',
+    libraryHelp: 'Artists with the most tracks, then albums, in your library.',
+    listens: { one: '{count} listen', other: '{count} listens' },
+    tracks: { one: '{count} track', other: '{count} tracks' },
+    albums: { one: '{count} album', other: '{count} albums' },
+    follow: 'Follow',
+    more: 'Show more',
+    loading: 'Loading suggestions…',
+    empty: 'No more artists to suggest yet.',
+    failed: 'Suggestions could not be loaded.',
+    retry: 'Retry',
+    choose: 'Which artist is {name}?',
+    chooseHelp:
+      'More than one YouTube Music artist could be {name}. Compare the photos or open their profiles, then follow the right one.',
+    notFound:
+      'No YouTube Music artist named {name} was found. Paste the artist’s link instead.',
+    lookupFailed: 'Artist lookup is unavailable. You can still paste a link.',
+    followProfile: 'Follow this artist',
+    inspect: 'Open on YouTube Music',
+    manual: 'Paste a link',
+    cancel: 'Cancel',
+  },
   trash: {
     title: 'Trash',
     subtitle:

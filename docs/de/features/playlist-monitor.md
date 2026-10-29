@@ -70,7 +70,7 @@ Ein Handle wird beim Hinzufügen der Beobachtung zum Kanal des Künstlers aufgel
 Bei jedem Durchlauf listet Downtify die Diskografie des Künstlers auf, vergleicht sie mit den bereits verarbeiteten Veröffentlichungen und lädt jeden Titel von allem Neuen herunter. Ein Durchlauf im Normalbetrieb kostet eine einzige Anfrage — Titellisten werden nur für Veröffentlichungen abgerufen, die es noch nicht gesehen hat.
 
 ::: info Warum die Diskografie von YouTube Music kommt
-Spotifys öffentliches Embed zeigt den Namen eines Künstlers und eine Vorschau der Top-Titel, aber **nicht** seine Diskografie — sie zu lesen würde Spotify-API-Zugangsdaten erfordern, die Downtify bewusst nicht nutzt. Ein Spotify-Künstlerlink wird also zu seinem Namen aufgelöst und demselben Künstler auf YouTube Music zugeordnet, von wo auch das Audio geholt wird. Der Vorteil: Jede Veröffentlichung, die Downtify sehen kann, kann es auch tatsächlich herunterladen. Der Kompromiss: Bei einem Künstler mit mehrdeutigem Namen prüfe, dass der aufgelöste Name der Beobachtung der gemeinte Künstler ist — füge die YouTube-Music-Künstler-URL direkt ein, wenn der falsche gewählt wurde.
+Spotifys öffentliches Embed zeigt den Namen eines Künstlers und eine Vorschau der Top-Titel, aber **nicht** seine Diskografie — sie zu lesen würde Spotify-API-Zugangsdaten erfordern, die Downtify bewusst nicht nutzt. Ein Spotify-Künstlerlink wird also zu seinem Namen aufgelöst und demselben Künstler auf YouTube Music zugeordnet, von wo auch das Audio geholt wird. Der Vorteil: Jede Veröffentlichung, die Downtify sehen kann, kann es auch tatsächlich herunterladen. Der Kompromiss: Der Link folgt dem Künstler auf YouTube Music mit genau diesem Namen (Groß-/Kleinschreibung und Satzzeichen egal), bei mehreren gleichnamigen dem besten Treffer von YouTube Music. Prüfe bei einem häufigen Namen, dass die Beobachtung der gemeinte Künstler ist, und füge sonst die YouTube-Music-Künstler-URL direkt ein. Einen Spotify-Künstler, dessen genauen Namen kein Künstler auf YouTube Music trägt, kannst du nur so hinzufügen: Downtify rät nicht.
 :::
 
 ::: warning Der erste Durchlauf lädt den gesamten Back-Katalog herunter
@@ -100,6 +100,24 @@ Die Liste der Überwachung zeigt die Filter einer Beobachtung unter ihrem Link, 
 Eine Veröffentlichung wird erst als verarbeitet erfasst, wenn jeder ihrer Titel geklärt ist, sodass ein Titel, der an einem vorübergehenden Fehler scheitert, beim nächsten Durchlauf erneut versucht wird, statt für immer übersprungen zu werden. Bereits heruntergeladene Titel werden nie zweimal abgerufen.
 
 Künstlerbeobachtungen erzeugen keine M3U-Dateien — die Titel werden nach deinen Einstellungen zur [Dateiorganisation](file-organization.md) abgelegt, nicht als Playlist.
+
+### Vorgeschlagene Künstler
+
+Unter der Liste der Künstlerbeobachtungen schlägt der Tab **Künstler** Künstler zum Folgen vor, in zwei Listen:
+
+| Liste | Wer drinsteht |
+|-------|---------------|
+| **Nach deinem Hörverlauf** | Die Künstler, die du am meisten hörst: deine eigenen Wiedergaben, die [Entdecken](discover.md) zählt. Neue Wiedergaben zählen mehr: Das Gewicht einer Wiedergabe halbiert sich alle 45 Tage, ein Künstler, den du letztes Jahr viel gehört hast, steht also unter einem, den du gerade jeden Tag hörst. |
+| **Nach deiner Bibliothek** | Die Künstler mit den meisten Titeln, dann Alben, in der Bibliothek, die du siehst. |
+
+Künstler, die du schon beobachtest (auch pausierte Beobachtungen), und Sammelnamen wie **Various Artists** bleiben draußen. Jede Liste zeigt 20 Künstler auf einmal; **Mehr anzeigen** lädt die nächsten. Die Listen gehören nur dir, auch einem Admin: Die Wiedergaben eines anderen Kontos tauchen nie auf. Ein Künstler, den ein Admin vor Nutzern verborgen hat, bleibt aus den Listen eines Nutzers draußen, wie aus seiner Bibliothek.
+
+Das Laden der Listen sucht nach nichts. **Folgen** sucht den Namen auf YouTube Music, wo eine Künstlerbeobachtung dem Künstler folgt:
+
+- Heißt dort genau ein Künstler so, wird die Beobachtung sofort hinzugefügt, mit dem Intervall und den Optionen **Herunterladen** / **Nur neue Veröffentlichungen** aus dem Feld darüber;
+- sonst (Namensvettern, oder kein Künstler mit genau diesem Namen) zeigt ein Dialog die gefundenen YouTube-Music-Künstler, jeweils mit Foto und einem Link zum Profil. Wähle einen mit **Diesem Künstler folgen**, oder **Link einfügen**, um den Link des Künstlers selbst in das Feld darüber einzufügen.
+
+Vorschläge wählen nur aus, welcher Künstler beobachtet wird: Die Titel werden weiter wie gewohnt aus deinen [Audioquellen](download-settings.md) heruntergeladen.
 
 ## Prüfintervalle
 

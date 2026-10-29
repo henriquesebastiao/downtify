@@ -1,4 +1,33 @@
 export default {
+  artistSuggestions: {
+    title: 'Künstler zum Folgen',
+    listening: 'Nach deinem Hörverlauf',
+    library: 'Nach deiner Bibliothek',
+    listeningHelp:
+      'Die Künstler, die du am meisten hörst. Neue Wiedergaben zählen mehr: Das Gewicht einer Wiedergabe halbiert sich alle {days} Tage.',
+    libraryHelp:
+      'Die Künstler mit den meisten Titeln, dann Alben, in deiner Bibliothek.',
+    listens: { one: '{count} Wiedergabe', other: '{count} Wiedergaben' },
+    tracks: { one: '{count} Titel', other: '{count} Titel' },
+    albums: { one: '{count} Album', other: '{count} Alben' },
+    follow: 'Folgen',
+    more: 'Mehr anzeigen',
+    loading: 'Vorschläge werden geladen…',
+    empty: 'Gerade gibt es keine weiteren Künstler vorzuschlagen.',
+    failed: 'Die Vorschläge konnten nicht geladen werden.',
+    retry: 'Erneut versuchen',
+    choose: 'Welcher Künstler ist {name}?',
+    chooseHelp:
+      'Mehrere Künstler auf YouTube Music könnten {name} sein. Vergleiche die Fotos oder öffne ihre Profile und folge dem richtigen.',
+    notFound:
+      'Auf YouTube Music wurde kein Künstler namens {name} gefunden. Füge stattdessen den Link des Künstlers ein.',
+    lookupFailed:
+      'Die Künstlersuche ist nicht verfügbar. Du kannst trotzdem einen Link einfügen.',
+    followProfile: 'Diesem Künstler folgen',
+    inspect: 'Auf YouTube Music öffnen',
+    manual: 'Link einfügen',
+    cancel: 'Abbrechen',
+  },
   trash: {
     title: 'Papierkorb',
     subtitle:

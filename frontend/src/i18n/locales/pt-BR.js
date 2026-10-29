@@ -1,4 +1,33 @@
 export default {
+  artistSuggestions: {
+    title: 'Artistas para seguir',
+    listening: 'Com base no que você ouve',
+    library: 'Com base na sua biblioteca',
+    listeningHelp:
+      'Os artistas que você mais ouve. Audições recentes contam mais: o peso de cada uma cai pela metade a cada {days} dias.',
+    libraryHelp:
+      'Os artistas com mais faixas, depois mais álbuns, na sua biblioteca.',
+    listens: { one: '{count} audição', other: '{count} audições' },
+    tracks: { one: '{count} faixa', other: '{count} faixas' },
+    albums: { one: '{count} álbum', other: '{count} álbuns' },
+    follow: 'Seguir',
+    more: 'Mostrar mais',
+    loading: 'Carregando sugestões…',
+    empty: 'Nenhum outro artista para sugerir por enquanto.',
+    failed: 'Não foi possível carregar as sugestões.',
+    retry: 'Tentar de novo',
+    choose: 'Qual artista é {name}?',
+    chooseHelp:
+      'Mais de um artista do YouTube Music pode ser {name}. Compare as fotos ou abra os perfis e siga o certo.',
+    notFound:
+      'Nenhum artista chamado {name} foi encontrado no YouTube Music. Cole o link do artista.',
+    lookupFailed:
+      'A busca de artistas não está disponível. Você ainda pode colar um link.',
+    followProfile: 'Seguir este artista',
+    inspect: 'Abrir no YouTube Music',
+    manual: 'Colar um link',
+    cancel: 'Cancelar',
+  },
   trash: {
     title: 'Lixeira',
     subtitle:

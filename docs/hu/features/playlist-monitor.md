@@ -70,7 +70,7 @@ A handle a figyelés hozzáadásakor feloldódik az előadó csatornájára, íg
 Minden átfésüléskor a Downtify felsorolja az előadó diszkográfiáját, összeveti a már feldolgozott kiadványokkal, és letölti minden új kiadvány minden számát. Egy állandósult állapotú átfésülés egyetlen kérésbe kerül — a számlistákat csak azokhoz a kiadványokhoz kéri le, amelyeket még nem látott.
 
 ::: info Miért a YouTube Musicból jön a diszkográfia
-A Spotify nyilvános embedje megadja egy előadó nevét és a legnépszerűbb számainak előnézetét, de a diszkográfiáját **nem** — ennek olvasásához Spotify API-hitelesítő adatok kellenének, amelyeket a Downtify szándékosan nem használ. Így egy Spotify-előadóhivatkozás a nevére oldódik fel, és ugyanazzal az előadóval egyeztetődik a YouTube Musicon, ahonnan a hang is jön. Az előny: minden kiadvány, amelyet a Downtify lát, olyan, amelyet ténylegesen le is tud tölteni. A kompromisszum: egy kétértelmű nevű előadónál ellenőrizd, hogy a figyelés feloldott neve az-e az előadó, akit szántál — illeszd be közvetlenül a YouTube Music-előadó URL-jét, ha rosszat választott.
+A Spotify nyilvános embedje megadja egy előadó nevét és a legnépszerűbb számainak előnézetét, de a diszkográfiáját **nem** — ennek olvasásához Spotify API-hitelesítő adatok kellenének, amelyeket a Downtify szándékosan nem használ. Így egy Spotify-előadóhivatkozás a nevére oldódik fel, és ugyanazzal az előadóval egyeztetődik a YouTube Musicon, ahonnan a hang is jön. Az előny: minden kiadvány, amelyet a Downtify lát, olyan, amelyet ténylegesen le is tud tölteni. A kompromisszum: a hivatkozás a pontosan ilyen nevű YouTube Music-előadót követi (a kis- és nagybetűktől és az írásjelektől eltekintve), több azonos nevű esetén a YouTube Music legjobb találatát. Gyakori névnél ellenőrizd, hogy a figyelés az az előadó-e, akit szántál, és ha nem, illeszd be közvetlenül a YouTube Music-előadó URL-jét. Egy Spotify-előadót, akinek pontos nevét egyetlen YouTube Music-előadó sem viseli, csak így lehet hozzáadni: a Downtify nem találgat.
 :::
 
 ::: warning Az első átfésülés a teljes régi katalógust letölti
@@ -100,6 +100,24 @@ A Figyelő listája a figyelés szűrőit a hivatkozása alatt mutatja, ha nem a
 Egy kiadvány csak akkor kerül feldolgozottként rögzítésre, ha minden száma rendezett, így az átmeneti hibán elbukó számot a következő átfésülés újra megpróbálja, ahelyett hogy örökre kihagyná. A már letöltött számokat soha nem kéri le kétszer.
 
 Az előadófigyelések nem generálnak M3U-fájlokat — a számok a [fájlszervezés](file-organization.md) beállításaid szerint kerülnek el, nem lejátszási listaként.
+
+### Javasolt előadók
+
+Az előadófigyelések listája alatt az **Előadók** fül követhető előadókat javasol, két listában:
+
+| Lista | Kik vannak benne |
+|-------|------------------|
+| **A hallgatásaid alapján** | Az előadók, akiket a legtöbbet hallgatsz: a saját lejátszásaid, amelyeket a [Felfedezés](discover.md) számol. A friss lejátszások többet számítanak: egy lejátszás súlya 45 naponta a felére csökken, így egy tavaly sokat hallgatott előadó lejjebb kerül annál, akit most minden nap hallgatsz. |
+| **A könyvtárad alapján** | Az előadók az általad látott könyvtárban, a legtöbb szám, majd album szerint. |
+
+A már figyelt előadók (a szüneteltetett figyelések is) és az olyan válogatásnevek, mint a **Various Artists**, kimaradnak. Minden lista egyszerre 20 előadót mutat; a **Több megjelenítése** betölti a következőket. A listák csak a tieid, adminként is: egy másik fiók lejátszásai sosem jelennek meg. Egy előadó, akit egy admin elrejtett a felhasználók elől, kimarad a felhasználó listáiból, ahogy a Könyvtárából is.
+
+A listák betöltése semmit sem keres. A **Követés** megkeresi a nevet a YouTube Musicon, ahol egy előadófigyelés az előadót követi:
+
+- ha ott pontosan egy előadónak ez a neve, a figyelés azonnal létrejön, a fenti mezőben beállított intervallummal és **Letöltés** / **Csak új kiadások** beállításokkal;
+- különben (névrokonok, vagy egyetlen előadónak sem pontosan ez a neve) egy ablak mutatja a talált YouTube Music-előadókat, mindegyiket a fotójával és a profiljára mutató linkkel. Válassz egyet az **Előadó követése** gombbal, vagy a **Link beillesztése** gombbal illeszd be magad az előadó linkjét a fenti mezőbe.
+
+A javaslatok csak azt választják ki, melyik előadót figyeld: a számok továbbra is a szokásos módon, a [hangforrásaidból](download-settings.md) töltődnek le.
 
 ## Ellenőrzési intervallumok
 

@@ -1,4 +1,33 @@
 export default {
+  artistSuggestions: {
+    title: 'Artistas para seguir',
+    listening: 'Según lo que escuchas',
+    library: 'Según tu biblioteca',
+    listeningHelp:
+      'Los artistas que más escuchas. Las escuchas recientes cuentan más: el peso de cada una se reduce a la mitad cada {days} días.',
+    libraryHelp:
+      'Los artistas con más pistas, y luego más álbumes, de tu biblioteca.',
+    listens: { one: '{count} reproducción', other: '{count} reproducciones' },
+    tracks: { one: '{count} pista', other: '{count} pistas' },
+    albums: { one: '{count} álbum', other: '{count} álbumes' },
+    follow: 'Seguir',
+    more: 'Mostrar más',
+    loading: 'Cargando sugerencias…',
+    empty: 'Por ahora no hay más artistas que sugerir.',
+    failed: 'No se pudieron cargar las sugerencias.',
+    retry: 'Reintentar',
+    choose: '¿Qué artista es {name}?',
+    chooseHelp:
+      'Más de un artista de YouTube Music podría ser {name}. Compara las fotos o abre sus perfiles y sigue al correcto.',
+    notFound:
+      'No se encontró ningún artista llamado {name} en YouTube Music. Pega el enlace del artista.',
+    lookupFailed:
+      'La búsqueda de artistas no está disponible. Aún puedes pegar un enlace.',
+    followProfile: 'Seguir a este artista',
+    inspect: 'Abrir en YouTube Music',
+    manual: 'Pegar un enlace',
+    cancel: 'Cancelar',
+  },
   trash: {
     title: 'Papelera',
     subtitle:

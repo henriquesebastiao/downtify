@@ -1,4 +1,33 @@
 export default {
+  artistSuggestions: {
+    title: 'Artistes à suivre',
+    listening: 'D’après vos écoutes',
+    library: 'D’après votre bibliothèque',
+    listeningHelp:
+      'Les artistes que vous écoutez le plus. Les écoutes récentes comptent davantage : le poids d’une écoute est divisé par deux tous les {days} jours.',
+    libraryHelp:
+      'Les artistes qui ont le plus de morceaux, puis d’albums, dans votre bibliothèque.',
+    listens: { one: '{count} écoute', other: '{count} écoutes' },
+    tracks: { one: '{count} morceau', other: '{count} morceaux' },
+    albums: { one: '{count} album', other: '{count} albums' },
+    follow: 'Suivre',
+    more: 'Afficher plus',
+    loading: 'Chargement des suggestions…',
+    empty: 'Aucun autre artiste à proposer pour le moment.',
+    failed: 'Impossible de charger les suggestions.',
+    retry: 'Réessayer',
+    choose: 'Quel artiste est {name} ?',
+    chooseHelp:
+      'Plusieurs artistes YouTube Music pourraient être {name}. Comparez les photos ou ouvrez leurs profils, puis suivez le bon.',
+    notFound:
+      'Aucun artiste nommé {name} n’a été trouvé sur YouTube Music. Collez plutôt le lien de l’artiste.',
+    lookupFailed:
+      'La recherche d’artistes est indisponible. Vous pouvez toujours coller un lien.',
+    followProfile: 'Suivre cet artiste',
+    inspect: 'Ouvrir sur YouTube Music',
+    manual: 'Coller un lien',
+    cancel: 'Annuler',
+  },
   trash: {
     title: 'Corbeille',
     subtitle:

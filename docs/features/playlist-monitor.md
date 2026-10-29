@@ -70,7 +70,7 @@ A handle is resolved to the artist's channel when you add the watch, so the same
 On each sweep Downtify lists the artist's discography, compares it against the releases it has already processed, and downloads every track of anything new. A steady-state sweep costs a single request — tracklists are only fetched for releases it hasn't seen before.
 
 ::: info Why the discography comes from YouTube Music
-Spotify's public embed exposes an artist's name and a top-tracks preview, but **not** their discography — reading that would need Spotify API credentials, which Downtify deliberately doesn't use. So a Spotify artist link is resolved to its name and matched to the same artist on YouTube Music, which is also where the audio is fetched from. The upside: every release Downtify can see is one it can actually download. The trade-off: for an artist whose name is ambiguous, check that the watch's resolved name is the artist you meant — paste the YouTube Music artist URL directly if it picked the wrong one.
+Spotify's public embed exposes an artist's name and a top-tracks preview, but **not** their discography — reading that would need Spotify API credentials, which Downtify deliberately doesn't use. So a Spotify artist link is resolved to its name and matched to the same artist on YouTube Music, which is also where the audio is fetched from. The upside: every release Downtify can see is one it can actually download. The trade-off: the link follows the YouTube Music artist with exactly that name (case and punctuation aside), YouTube Music's best match when several share it. For a common name, check that the watch is the artist you meant, and paste the YouTube Music artist URL directly if it isn't. A Spotify artist whose exact name no YouTube Music artist has can only be added that way: Downtify doesn't guess.
 :::
 
 ::: warning The first sweep downloads the whole back catalogue
@@ -100,6 +100,24 @@ The Monitor list shows a watch's filters under its link when they're not the def
 A release is only recorded as processed once every one of its tracks is accounted for, so a track that fails on a transient error is retried on the next sweep rather than being skipped forever. Tracks that already downloaded are never fetched twice.
 
 Artist watches don't generate M3U files — the tracks are laid out by your [file organization](file-organization.md) settings rather than as a playlist.
+
+### Suggested artists
+
+Under the list of artist watches, the **Artists** tab suggests artists to follow, in two lists:
+
+| List | Who is in it |
+|------|--------------|
+| **Based on your listening** | The artists you play the most: your own listens, the ones [Discover](discover.md) counts. Recent plays count more: a play's weight halves every 45 days, so an artist you played a lot last year ranks below one you play every day now. |
+| **Based on your library** | The artists with the most tracks, then albums, in the library you can see. |
+
+Artists you already watch (paused watches too) and compilation names such as **Various Artists** are left out. Each list shows 20 artists at a time; **Show more** loads the next ones. The lists are your own, an admin's too: another account's listens never show up. An artist an admin hid from users stays out of a user's lists, as it does out of their Library.
+
+Loading the lists searches nothing. **Follow** looks the name up on YouTube Music, where an artist watch follows the artist:
+
+- when exactly one artist there has that name, the watch is added right away, with the interval and the **Download** / **New releases only** options set in the box above;
+- otherwise (namesakes, or no artist with exactly that name) a dialog shows the YouTube Music artists found, each with its photo and a link to its profile. Pick one with **Follow this artist**, or choose **Paste a link** to paste the artist's link in the box above yourself.
+
+Suggestions only pick which artist to watch: the songs still download from your [audio sources](download-settings.md) as usual.
 
 ## Check intervals
 

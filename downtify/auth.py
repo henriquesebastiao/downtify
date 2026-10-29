@@ -983,6 +983,8 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         # watches; every one for an admin).
         (_READ, r'^/api/monitor/(stats|provenance)$', USER),
         (_READ, r'^/api/monitor/playlists/\d+/tracks$', USER),
+        # Artists to suggest following, from one's own listens.
+        (_READ, r'^/api/monitor/artist-suggestions(/resolve)?$', USER),
         # Admin: signing everyone out, settings and credentials.
         (_ALL, r'^/api/auth/', ADMIN),
         (_ALL, r'^/api/server(/port)?$', ADMIN),

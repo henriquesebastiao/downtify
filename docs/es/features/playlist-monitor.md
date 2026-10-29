@@ -70,7 +70,7 @@ Un handle se resuelve al canal del artista cuando añades la vigilancia, así qu
 En cada barrido, Downtify lista la discografía del artista, la compara con los lanzamientos que ya ha procesado y descarga todas las canciones de lo que sea nuevo. Un barrido en régimen estable cuesta una sola petición — las listas de canciones solo se obtienen para lanzamientos que no ha visto antes.
 
 ::: info Por qué la discografía viene de YouTube Music
-El embed público de Spotify expone el nombre de un artista y una vista previa de sus canciones más populares, pero **no** su discografía — leerla exigiría credenciales de la API de Spotify, que Downtify deliberadamente no usa. Así que un enlace de artista de Spotify se resuelve a su nombre y se asocia al mismo artista en YouTube Music, que es también de donde se obtiene el audio. La ventaja: todo lanzamiento que Downtify puede ver es uno que realmente puede descargar. El inconveniente: para un artista de nombre ambiguo, comprueba que el nombre resuelto de la vigilancia es el artista que querías — pega directamente la URL del artista de YouTube Music si eligió el equivocado.
+El embed público de Spotify expone el nombre de un artista y una vista previa de sus canciones más populares, pero **no** su discografía — leerla exigiría credenciales de la API de Spotify, que Downtify deliberadamente no usa. Así que un enlace de artista de Spotify se resuelve a su nombre y se asocia al mismo artista en YouTube Music, que es también de donde se obtiene el audio. La ventaja: todo lanzamiento que Downtify puede ver es uno que realmente puede descargar. El inconveniente: el enlace sigue al artista de YouTube Music con exactamente ese nombre (sin importar mayúsculas ni signos), la mejor coincidencia de YouTube Music cuando varios lo comparten. Con un nombre común, comprueba que la vigilancia es el artista que querías y, si no, pega directamente la URL del artista de YouTube Music. Un artista de Spotify cuyo nombre exacto no tiene ningún artista de YouTube Music solo se puede añadir así: Downtify no adivina.
 :::
 
 ::: warning El primer barrido descarga todo el catálogo antiguo
@@ -100,6 +100,24 @@ La lista del Monitor muestra los filtros de una vigilancia bajo su enlace cuando
 Un lanzamiento solo se registra como procesado cuando todas sus canciones están resueltas, así que una canción que falla por un error transitorio se reintenta en el siguiente barrido en lugar de omitirse para siempre. Las canciones que ya se descargaron nunca se obtienen dos veces.
 
 Las vigilancias de artistas no generan archivos M3U — las canciones se organizan según tus ajustes de [organización de archivos](file-organization.md) y no como una playlist.
+
+### Artistas sugeridos
+
+Debajo de la lista de vigilancias de artistas, la pestaña **Artistas** sugiere artistas para seguir, en dos listas:
+
+| Lista | Quién aparece |
+|-------|---------------|
+| **Según lo que escuchas** | Los artistas que más escuchas: tus propias escuchas, las que cuenta [Descubrir](discover.md). Las escuchas recientes cuentan más: el peso de una escucha se reduce a la mitad cada 45 días, así que un artista que escuchaste mucho el año pasado queda por debajo de uno que escuchas a diario ahora. |
+| **Según tu biblioteca** | Los artistas con más pistas, y luego más álbumes, de la biblioteca que ves. |
+
+Se dejan fuera los artistas que ya vigilas (también las vigilancias en pausa) y los nombres de recopilatorios como **Various Artists**. Cada lista muestra 20 artistas a la vez; **Mostrar más** carga los siguientes. Las listas son solo tuyas, también para un admin: las escuchas de otra cuenta nunca aparecen. Un artista que un admin ocultó a los usuarios queda fuera de las listas de un usuario, como queda fuera de su Biblioteca.
+
+Cargar las listas no busca nada. **Seguir** busca el nombre en YouTube Music, donde una vigilancia de artista sigue al artista:
+
+- cuando exactamente un artista de allí tiene ese nombre, la vigilancia se añade enseguida, con el intervalo y las opciones **Descargar** / **Solo lanzamientos nuevos** elegidos en el cuadro de arriba;
+- si no (homónimos, o ningún artista con exactamente ese nombre), un diálogo muestra los artistas de YouTube Music encontrados, cada uno con su foto y un enlace a su perfil. Elige uno con **Seguir a este artista**, o usa **Pegar un enlace** para pegar tú mismo el enlace del artista en el cuadro de arriba.
+
+Las sugerencias solo eligen qué artista vigilar: las canciones se siguen descargando de tus [fuentes de audio](download-settings.md) como siempre.
 
 ## Intervalos de comprobación
 

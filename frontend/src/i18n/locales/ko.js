@@ -1,4 +1,33 @@
 export default {
+  artistSuggestions: {
+    title: '팔로우할 아티스트',
+    listening: '감상 기록 기반',
+    library: '라이브러리 기반',
+    listeningHelp:
+      '가장 많이 듣는 아티스트입니다. 최근 재생일수록 더 크게 반영되며, 재생의 가중치는 {days}일마다 절반으로 줄어듭니다.',
+    libraryHelp:
+      '라이브러리에서 트랙이 가장 많은 아티스트, 그다음 앨범이 많은 순입니다.',
+    listens: { one: '재생 {count}회', other: '재생 {count}회' },
+    tracks: { one: '트랙 {count}개', other: '트랙 {count}개' },
+    albums: { one: '앨범 {count}개', other: '앨범 {count}개' },
+    follow: '팔로우',
+    more: '더 보기',
+    loading: '추천을 불러오는 중…',
+    empty: '아직 추천할 아티스트가 더 없습니다.',
+    failed: '추천을 불러오지 못했습니다.',
+    retry: '다시 시도',
+    choose: '{name}은(는) 어떤 아티스트인가요?',
+    chooseHelp:
+      'YouTube Music에서 {name}일 수 있는 아티스트가 여러 명입니다. 사진을 비교하거나 프로필을 열어 본 뒤 맞는 아티스트를 팔로우하세요.',
+    notFound:
+      'YouTube Music에서 {name}(이)라는 아티스트를 찾지 못했습니다. 대신 아티스트 링크를 붙여 넣으세요.',
+    lookupFailed:
+      '아티스트 검색을 사용할 수 없습니다. 링크는 여전히 붙여 넣을 수 있습니다.',
+    followProfile: '이 아티스트 팔로우',
+    inspect: 'YouTube Music에서 열기',
+    manual: '링크 붙여 넣기',
+    cancel: '취소',
+  },
   trash: {
     title: '휴지통',
     subtitle:

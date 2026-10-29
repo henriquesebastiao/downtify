@@ -9,6 +9,22 @@ function listMonitoredPlaylists() {
   return API.get('/api/monitor/playlists')
 }
 
+// Artists to follow, from one's listens and the library: a page of each
+// list (`offsets`: `listening_offset` / `library_offset`).
+function artistSuggestions(offsets = {}) {
+  return API.get('/api/monitor/artist-suggestions', {
+    params: { limit: 20, ...offsets },
+  })
+}
+
+// The YouTube Music artist to follow for a suggested name: `{ url }` when
+// there is exactly one, else `{ candidates }` to pick from.
+function resolveArtistSuggestion(name) {
+  return API.get('/api/monitor/artist-suggestions/resolve', {
+    params: { name },
+  })
+}
+
 // `options`: an artist watch's `release_types` and `new_only`.
 function addMonitoredPlaylist(url, intervalMinutes = 60, options = {}) {
   return API.post('/api/monitor/playlists', {
@@ -46,6 +62,8 @@ function getWatchTracks(id) {
 }
 
 export default {
+  artistSuggestions,
+  resolveArtistSuggestion,
   getMonitorStats,
   getTrackProvenance,
   getWatchTracks,

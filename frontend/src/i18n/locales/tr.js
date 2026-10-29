@@ -1,4 +1,33 @@
 export default {
+  artistSuggestions: {
+    title: 'Takip edilecek sanatçılar',
+    listening: 'Dinlediklerine göre',
+    library: 'Kitaplığına göre',
+    listeningHelp:
+      'En çok dinlediğin sanatçılar. Yakın zamandaki dinlemeler daha çok sayılır: bir dinlemenin ağırlığı her {days} günde yarıya iner.',
+    libraryHelp:
+      'Kitaplığında en çok parçası, ardından albümü olan sanatçılar.',
+    listens: { one: '{count} dinleme', other: '{count} dinleme' },
+    tracks: { one: '{count} parça', other: '{count} parça' },
+    albums: { one: '{count} albüm', other: '{count} albüm' },
+    follow: 'Takip et',
+    more: 'Daha fazla göster',
+    loading: 'Öneriler yükleniyor…',
+    empty: 'Şimdilik önerilecek başka sanatçı yok.',
+    failed: 'Öneriler yüklenemedi.',
+    retry: 'Tekrar dene',
+    choose: '{name} hangi sanatçı?',
+    chooseHelp:
+      'YouTube Music’te birden fazla sanatçı {name} olabilir. Fotoğrafları karşılaştır ya da profillerini aç, sonra doğru olanı takip et.',
+    notFound:
+      'YouTube Music’te {name} adında bir sanatçı bulunamadı. Bunun yerine sanatçının bağlantısını yapıştır.',
+    lookupFailed:
+      'Sanatçı araması kullanılamıyor. Yine de bir bağlantı yapıştırabilirsin.',
+    followProfile: 'Bu sanatçıyı takip et',
+    inspect: 'YouTube Music’te aç',
+    manual: 'Bağlantı yapıştır',
+    cancel: 'İptal',
+  },
   trash: {
     title: 'Çöp kutusu',
     subtitle:

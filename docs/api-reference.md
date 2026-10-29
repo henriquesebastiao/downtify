@@ -2320,7 +2320,7 @@ An artist watch also takes:
 
 Both are ignored for a playlist link.
 
-**Response:** Watch object. `400` if the URL is none of the above, `409` if it is already watched (an artist added by handle and by channel URL is the same watch), `404` if no matching YouTube Music artist exists.
+**Response:** Watch object. `400` if the URL is none of the above, `409` if it is already watched (an artist added by handle and by channel URL is the same watch), `404` if no matching YouTube Music artist exists. A Spotify artist URL is also `409` when no YouTube Music artist has exactly that name — the YouTube Music artist URL is needed then (see [Artist Watch](features/playlist-monitor.md#artist-watch)).
 
 ---
 
@@ -2479,6 +2479,78 @@ The songs a watch holds, newest first, as [`GET /tracks`](#get-tracks) rows — 
 ```
 
 `watch` is the watch object of [`GET /api/monitor/playlists`](#get-apimonitorplaylists). `shared_with` is how many other watches hold the same file, `missing` how many recorded songs are no longer on disk. Songs an admin hid from users are left out for a user. `404` for a watch that doesn't exist or belongs to another account (unless you're an admin).
+
+---
+
+### `GET /api/monitor/artist-suggestions`
+
+Artists to follow, for the Monitor page's Artists tab: two lists, ranked from what the server already keeps — nothing is searched for. See [Suggested artists](features/playlist-monitor.md#suggested-artists).
+
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `listening_offset` | integer | `0` | Where the `listening` page starts |
+| `library_offset` | integer | `0` | Where the `library` page starts |
+| `limit` | integer | `20` | Artists per page, 1–100 |
+
+**Response:**
+
+```json
+{
+  "listening": {
+    "items": [
+      {
+        "name": "Artist",
+        "track_count": 12,
+        "album_count": 2,
+        "plays": 40,
+        "score": 31.7,
+        "last_played": "2026-10-20T21:14:03+00:00"
+      }
+    ],
+    "total": 48,
+    "next_offset": 20
+  },
+  "library": {
+    "items": [{ "name": "Other Artist", "track_count": 85, "album_count": 7 }],
+    "total": 230,
+    "next_offset": 20
+  },
+  "half_life_days": 45
+}
+```
+
+- **`listening`** — the artists of your own listens (the ones [`POST /api/discover/listens`](#post-apidiscoverlistens) counts), by `score`: every listen, halved every `half_life_days` since the artist was last played. `plays` counts every listen. `track_count` / `album_count` are `0` for an artist not in the library.
+- **`library`** — the library's artists (as the Library groups them, by album artist), by tracks, then albums, then name.
+
+Each list is paged on its own; `next_offset` is `null` on the last page. Listens and watches are always the caller's own, an admin's too. Artists you already watch (paused watches too) and compilation placeholders such as `Various Artists` are left out; an artist an admin hid from users is left out of a user's lists. Browser sign-in only (`user` scope); `401` without a user.
+
+---
+
+### `GET /api/monitor/artist-suggestions/resolve`
+
+The YouTube Music artist to follow for a suggested name — the identity an artist watch follows. It searches YouTube Music, and adds nothing: following is then a [`POST /api/monitor/playlists`](#post-apimonitorplaylists) with the chosen `url`.
+
+**Query parameters:** `name` (required, 1–200 characters).
+
+**Response:**
+
+```json
+{
+  "candidates": [
+    {
+      "name": "Artist",
+      "artist_id": "UC…",
+      "url": "https://music.youtube.com/channel/UC…",
+      "image_url": "https://lh3.googleusercontent.com/…"
+    }
+  ],
+  "url": "https://music.youtube.com/channel/UC…"
+}
+```
+
+`url` is set only when exactly one result is named `name` (ignoring case and the characters a file name can't hold); otherwise it is `null` and the caller picks from `candidates` — the ones named `name` first, then the other results, 10 at most. `candidates` is empty when nothing was found. `image_url` is only ever a YouTube Music image over HTTPS, else `""`. `400` for a blank name.
 
 ---
 
