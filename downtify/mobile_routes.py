@@ -124,16 +124,21 @@ def track_lyrics(track_id: str) -> dict[str, Any]:
 @router.get('/playlists')
 async def playlists(request: Request) -> list[dict[str, Any]]:
     """Downloaded playlists as ``{name, liked, manual, count, track_ids,
-    cover, owner, visibility, mine, followed, shared_with_me, new}`` -
-    ``cover`` is a path for ``GET /playlist-cover?file=`` or ``''``.
+    cover, owner, visibility, mine, followed, can_edit_tracks,
+    shared_with_me, new, hidden_count}`` - ``cover`` is a path for
+    ``GET /playlist-cover?file=`` or ``''``; ``hidden_count`` is how many
+    songs the owner hid from an imported playlist (``0`` for everything
+    else).
 
     A user sees their own playlists (and their own liked songs as the
     liked one), those shared with them (``shared_with_me``; ``new`` until
     opened) and public ones: the ones they follow, and - unless they
     switched *Show public playlists* off - the rest. ``mine`` says whether
-    it is theirs to change, ``owner`` is the owner's username and
+    it is theirs to change, ``can_edit_tracks`` whether they may add and
+    remove its songs (a Library playlist of theirs, or one shared with
+    them as an editor), ``owner`` is the owner's username and
     ``visibility`` is ``private``, ``shared`` or ``public``. Own playlists
-    also list ``shared_with`` (usernames).
+    also list ``shared_with`` and ``editors`` (usernames).
     """
 
     await asyncio.to_thread(_refresh)
@@ -143,6 +148,7 @@ async def playlists(request: Request) -> list[dict[str, Any]]:
     return [
         {
             'name': p['name'],
+            'display_name': p.get('display_name', p['name']),
             'liked': p['liked'],
             'manual': bool(p.get('manual')),
             'count': p['count'],
@@ -152,13 +158,17 @@ async def playlists(request: Request) -> list[dict[str, Any]]:
             'visibility': p.get('visibility', 'private'),
             'mine': bool(p.get('mine', True)),
             'followed': bool(p.get('followed')),
+            'can_edit_tracks': bool(p.get('can_edit_tracks')),
+            'favorite': bool(p.get('favorite')),
             'shared_with_me': bool(p.get('shared_with_me')),
             'new': bool(p.get('new')),
+            'hidden_count': int(p.get('hidden_count') or 0),
             **(
                 {'shared_with': p['shared_with']}
                 if p.get('shared_with')
                 else {}
             ),
+            **({'editors': p['editors']} if p.get('editors') else {}),
         }
         for p in found
     ]
@@ -177,6 +187,20 @@ async def usernames(request: Request) -> dict[str, Any]:
         key=str.casefold,
     )
     return {'enabled': enabled, 'usernames': names if enabled else []}
+
+
+@router.get('/tracks/{track_id}/loudness')
+async def track_loudness(track_id: str, request: Request) -> dict[str, Any]:
+    """The track's playback loudness profile (see downtify/loudness.py)."""
+
+    row, _ = await asyncio.to_thread(_track_path, track_id)
+    return await api.track_loudness(request, str(row['file']))
+
+
+@router.put('/playlists/favorite')
+async def favorite_playlist(request: Request) -> dict[str, Any]:
+    """Set the same account preference as the web player."""
+    return await api.set_playlist_favorite_endpoint(request)
 
 
 async def _playlist_name(request: Request) -> str:
@@ -241,6 +265,77 @@ async def playlist_seen(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=401, detail='Sign in required')
     await asyncio.to_thread(_shares().mark_seen, name, user_id)
     return {'name': name, 'new': False}
+
+
+@router.get('/playlists/hidden')
+async def hidden_songs(request: Request) -> dict[str, Any]:
+    """The songs hidden from an imported playlist of yours (``?name=``),
+    most recently hidden first: ``{name, songs: [{key, label, track_id,
+    hidden_at}]}``. ``track_id`` is ``''`` once the song's file is no
+    longer in the library; ``key`` is what ``show`` takes."""
+
+    name = await _playlist_name(request)
+    found = await asyncio.to_thread(api.hidden_playlist_songs, name, request)
+    files = [song['file'] for song in found['songs'] if song['present']]
+    ids = await asyncio.to_thread(_sync().ids_for_paths, files)
+    return {
+        'name': found['name'],
+        'songs': [
+            {
+                'key': song['key'],
+                'label': song['label'],
+                'track_id': ids.get(song['file'], '')
+                if song['present']
+                else '',
+                'hidden_at': song['hidden_at'],
+            }
+            for song in found['songs']
+        ],
+    }
+
+
+@router.post('/playlists/hidden')
+async def change_hidden_songs(request: Request) -> dict[str, Any]:
+    """Hide tracks from an imported playlist of yours, or show hidden
+    songs again: ``{name, hide: [track_ids], show: [keys]}``. A hidden
+    song leaves the playlist and stays out when its watch or link brings
+    it back; the track itself stays in the library. Answers ``{name,
+    hidden, keys, shown, restored, count, track_ids}``: ``keys`` undo the
+    hide (pass them as ``show``), ``track_ids`` are the playlist's tracks
+    after the change."""
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    payload = payload if isinstance(payload, dict) else {}
+    name = str(payload.get('name') or '').strip()
+    if not name:
+        raise HTTPException(status_code=400, detail='name is required')
+    paths = [
+        (await asyncio.to_thread(_track_path, str(track_id)))[0]['file']
+        for track_id in _strings(payload.get('hide'))
+    ]
+    result = await api.change_hidden_playlist_songs(
+        request, name, paths, _strings(payload.get('show'))
+    )
+    files = list(result.get('files') or [])
+    ids = await asyncio.to_thread(_sync().ids_for_paths, files)
+    return {
+        'name': result['name'],
+        'hidden': result['hidden'],
+        'keys': result['keys'],
+        'shown': result['shown'],
+        'restored': result['restored'],
+        'count': len(files),
+        'track_ids': [ids[f] for f in files if f in ids],
+    }
+
+
+def _strings(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item or '').strip()]
 
 
 @router.get('/likes')

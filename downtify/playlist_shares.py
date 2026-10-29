@@ -1,10 +1,12 @@
-"""Who besides its owner may see a playlist (view-only).
+"""Who besides its owner may see a playlist, and who may edit its songs.
 
 Every playlist is private to its owner (and admins) until the owner
 shares it: with named users (``shared``) or with everyone on the server
 (``public``). A viewer can play it, follow a public one so it stays in
-their sidebar, and save a copy - never edit it. The owner is whoever the
-playlist catalog or the Library-playlist owners table says (see
+their sidebar, and save a copy. Some of the named users of a Library
+playlist can also be its editors: they add and remove its songs, while
+renaming, sharing and deleting stay with the owner. The owner is whoever
+the playlist catalog or the Library-playlist owners table says (see
 ``downtify.playlist_catalog``); this module only records the sharing, by
 casefolded playlist name like those tables.
 """
@@ -14,7 +16,7 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
 
 from .sqlite_utils import connect_sqlite
 
@@ -41,7 +43,8 @@ class ShareView:
 
 
 class PlaylistShares:
-    """Visibility, the share list and follows, in the library database."""
+    """Visibility, the share list, editors and follows, in the library
+    database."""
 
     def __init__(self, db_path: Path) -> None:
         self._path = str(db_path)
@@ -73,6 +76,77 @@ class PlaylistShares:
                     PRIMARY KEY (user_id, name_key)
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS playlist_editors (
+                    name_key TEXT NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    PRIMARY KEY (name_key, user_id)
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS playlist_display_names (
+                    identity TEXT PRIMARY KEY,
+                    display_name TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS playlist_favorites (
+                    user_id INTEGER NOT NULL,
+                    name_key TEXT NOT NULL,
+                    PRIMARY KEY (user_id, name_key)
+                )
+            """)
+
+    def favorites(self, user_id: int) -> frozenset[str]:
+        """Favorites are personal preferences, never permission grants."""
+        with self._connect() as conn:
+            return frozenset(
+                str(row['name_key'])
+                for row in conn.execute(
+                    'SELECT name_key FROM playlist_favorites WHERE user_id = ?',
+                    (int(user_id),),
+                )
+            )
+
+    def set_favorite(self, user_id: int, name: str, favorite: bool) -> None:
+        key = share_key(name)
+        if not key or not user_id:
+            raise ValueError('A user and playlist are required')
+        with self._connect() as conn:
+            if favorite:
+                conn.execute(
+                    'INSERT OR IGNORE INTO playlist_favorites '
+                    '(user_id, name_key) VALUES (?, ?)',
+                    (int(user_id), key),
+                )
+            else:
+                conn.execute(
+                    'DELETE FROM playlist_favorites WHERE user_id = ? '
+                    'AND name_key = ?',
+                    (int(user_id), key),
+                )
+
+    def display_names(self) -> dict[str, str]:
+        with self._connect() as conn:
+            return {
+                str(row['identity']): str(row['display_name'])
+                for row in conn.execute('SELECT * FROM playlist_display_names')
+            }
+
+    def set_display_name(self, identity: str, display_name: str) -> None:
+        with self._connect() as conn:
+            if display_name:
+                conn.execute(
+                    'INSERT INTO playlist_display_names (identity, display_name) '
+                    'VALUES (?, ?) ON CONFLICT(identity) DO UPDATE SET '
+                    'display_name = excluded.display_name',
+                    (identity, display_name),
+                )
+            else:
+                conn.execute(
+                    'DELETE FROM playlist_display_names WHERE identity = ?',
+                    (identity,),
+                )
 
     # Reading
 
@@ -109,6 +183,22 @@ class PlaylistShares:
                 int(row['user_id'])
             )
         return shared
+
+    def editors(self) -> dict[str, list[int]]:
+        """``{name key: [user ids]}``: who may add and remove the songs of
+        a playlist shared with them by name."""
+
+        with self._connect() as conn:
+            rows = conn.execute(
+                'SELECT name_key, user_id FROM playlist_editors '
+                'ORDER BY user_id'
+            ).fetchall()
+        editors: dict[str, list[int]] = {}
+        for row in rows:
+            editors.setdefault(str(row['name_key']), []).append(
+                int(row['user_id'])
+            )
+        return editors
 
     def view_for(self, user_id: int) -> ShareView:
         """Public playlists, those shared with *user_id*, and the public
@@ -147,11 +237,20 @@ class PlaylistShares:
     # Changing
 
     def set_visibility(
-        self, name: str, visibility: str, user_ids: Iterable[int] = ()
+        self,
+        name: str,
+        visibility: str,
+        user_ids: Iterable[int] = (),
+        editors: Optional[Iterable[int]] = None,
     ) -> None:
         """Make *name* ``private``, ``public`` or ``shared`` with exactly
         *user_ids*. Users already on the list keep whether they opened it;
-        anyone new has not. Following only makes sense while public."""
+        anyone new has not. Following only makes sense while public.
+
+        *editors* replaces who of *user_ids* may also edit its songs
+        (``None`` keeps them); only users on the list can be editors, so
+        dropping someone from it, or the playlist leaving ``shared``, ends
+        their editing too."""
 
         key = share_key(name)
         if not key or visibility not in VISIBILITIES:
@@ -193,6 +292,26 @@ class PlaylistShares:
                     '(name_key, user_id, seen) VALUES (?, ?, 0)',
                     (key, uid),
                 )
+            if editors is None:
+                editors = [
+                    int(row['user_id'])
+                    for row in conn.execute(
+                        'SELECT user_id FROM playlist_editors '
+                        'WHERE name_key = ?',
+                        (key,),
+                    )
+                ]
+            conn.execute(
+                'DELETE FROM playlist_editors WHERE name_key = ?', (key,)
+            )
+            conn.executemany(
+                'INSERT INTO playlist_editors (name_key, user_id) '
+                'VALUES (?, ?)',
+                [
+                    (key, uid)
+                    for uid in sorted({int(uid) for uid in editors} & wanted)
+                ],
+            )
             if visibility != PUBLIC:
                 conn.execute(
                     'DELETE FROM playlist_follows WHERE name_key = ?', (key,)
@@ -235,6 +354,8 @@ class PlaylistShares:
                 'playlist_shares',
                 'playlist_share_users',
                 'playlist_follows',
+                'playlist_editors',
+                'playlist_favorites',
             ):
                 conn.execute(
                     f'UPDATE OR REPLACE {table} SET name_key = ? '
@@ -252,6 +373,8 @@ class PlaylistShares:
                 'playlist_shares',
                 'playlist_share_users',
                 'playlist_follows',
+                'playlist_editors',
+                'playlist_favorites',
             ):
                 conn.execute(f'DELETE FROM {table} WHERE name_key = ?', (key,))
 
@@ -259,6 +382,14 @@ class PlaylistShares:
         """A deleted account's follows, and being on anyone's list."""
 
         with self._connect() as conn:
+            conn.execute(
+                'DELETE FROM playlist_editors WHERE user_id = ?',
+                (int(user_id),),
+            )
+            conn.execute(
+                'DELETE FROM playlist_favorites WHERE user_id = ?',
+                (int(user_id),),
+            )
             conn.execute(
                 'DELETE FROM playlist_follows WHERE user_id = ?',
                 (int(user_id),),

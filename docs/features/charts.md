@@ -17,20 +17,12 @@ Open **Charts** from the sidebar (or the **More** sheet on phones). Four tabs re
 
 A chart track doesn't need a resolve step to download: Deezer already gives its title, artist and album name, which is enough to search for and match on YouTube, the same way a free-text search result is. An album, artist or playlist does need one — turning its link into a tracklist — so its card opens that resolved page instead of downloading straight from the grid. Playing a track row streams it in full from YouTube (never for albums, artists or playlists) — the same streaming every other track row uses, just fed the chart's title and artist.
 
-## Following and collecting chart playlists
+## Watching or saving a chart playlist
 
-Playlist cards offer **Watch playlist**, using the existing Playlist Monitor
-with a six-hour interval. The first check downloads the playlist's current
-tracks; later checks download additions. Public Deezer playlists need no
-Deezer login. Change the interval, pause or stop the watch on **Monitor**.
-An unavailable playlist or duplicate watch is reported as an error.
+Each playlist card has a **⋯** menu over its cover, with the two things its page offers besides downloading:
 
-For admins, **Add to playlist** opens the existing playlist picker with the
-chart playlist's already-downloaded library tracks. Pick an existing manual
-playlist or create one. This does not download missing tracks or keep that
-manual playlist subscribed to future changes; use **Download** or **Watch
-playlist** for those separate actions. If none of its tracks are downloaded,
-the app asks you to download them first.
+- **Watch for new tracks** adds a [Playlist Monitor](playlist-monitor.md#deezer-playlists) watch, checked every 6 hours: its first check downloads what the playlist has now, later ones what is added to it. Change the interval, pause or stop it on the **Monitor** page.
+- **Add to my playlists** opens the playlist picker with the playlist's songs that are **already in your library**, to add them to one of your playlists or a new one named after it. Nothing is downloaded, and your playlist doesn't follow the chart playlist afterwards — use the download button or **Watch for new tracks** for that. When none of its songs are in the library yet, it says so instead.
 
 ## API
 

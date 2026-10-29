@@ -1,8 +1,9 @@
-"""Sharing playlists view-only, and detaching an imported playlist. Offline.
+"""Sharing playlists, editors, and detaching an imported playlist. Offline.
 
 A playlist is private to its owner (and admins) until the owner shares it
-with named users or makes it public; viewers play, follow and copy, never
-edit. See ``downtify/playlist_shares.py``.
+with named users or makes it public; viewers play, follow and copy. Named
+users of a Library playlist can be made editors: they add and remove its
+songs, nothing more. See ``downtify/playlist_shares.py``.
 """
 
 from __future__ import annotations
@@ -127,6 +128,144 @@ def _names(request: Request) -> list[str]:
 
 def _share(request: Request) -> dict[str, Any]:
     return asyncio.run(api.set_playlist_visibility_endpoint(request))
+
+
+def test_imported_playlist_display_name_preserves_identity_and_sharing(world):
+    world.shares.set_visibility('Road', SHARED, [BO])
+    result = asyncio.run(
+        api.rename_library_playlist_endpoint(
+            _request(ANA, body={'name': 'Road', 'new_name': 'My road trip'})
+        )
+    )
+    assert result['name'] == 'Road'
+    assert result['display_name'] == 'My road trip'
+    assert world.catalog.spotify_id_for_playlist('Road') == 'sp1'
+    assert world.shares.visibility('Road') == SHARED
+    shared = next(
+        row
+        for row in api.playlists_for_request(_request(BO))
+        if row['name'] == 'Road'
+    )
+    assert shared['display_name'] == 'My road trip'
+    assert api.playlist_display_identity({'name': 'Road'}) == 'source:sp1'
+
+
+def test_imported_display_name_reset_and_owner_only(world):
+    world.shares.set_visibility('Road', PUBLIC)
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(
+            api.rename_library_playlist_endpoint(
+                _request(BO, body={'name': 'Road', 'new_name': 'No'})
+            )
+        )
+    assert error.value.status_code == 403
+    asyncio.run(
+        api.rename_library_playlist_endpoint(
+            _request(ANA, body={'name': 'Road', 'new_name': 'Alias'})
+        )
+    )
+    result = asyncio.run(
+        api.rename_library_playlist_endpoint(
+            _request(ANA, body={'name': 'Road', 'reset_display_name': True})
+        )
+    )
+    assert result['display_name'] == 'Road'
+    assert world.shares.display_names() == {}
+
+
+def test_favorites_are_personal_persistent_and_do_not_grant_access(world):
+    payload = {'name': 'Mix', 'favorite': True}
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(
+            api.set_playlist_favorite_endpoint(_request(BO, body=payload))
+        )
+    assert error.value.status_code == 404
+    asyncio.run(
+        api.set_playlist_favorite_endpoint(_request(ANA, body=payload))
+    )
+    rows = api.playlists_for_request(_request(ANA))
+    assert rows[0]['name'] == 'Mix'
+    assert rows[0]['favorite'] is True
+    assert not any(
+        p.get('favorite') for p in api.playlists_for_request(_request(BO))
+    )
+    reopened = PlaylistShares(Path(world.shares._path))
+    assert reopened.favorites(ANA) == frozenset({'mix'})
+
+
+def test_favorites_follow_rename_and_are_cleaned_on_delete(world):
+    world.shares.set_favorite(ANA, 'Mix', True)
+    world.shares.rename('Mix', 'Renamed')
+    assert world.shares.favorites(ANA) == frozenset({'renamed'})
+    world.shares.forget('Renamed')
+    assert world.shares.favorites(ANA) == frozenset()
+    world.shares.set_favorite(ANA, 'Mix', True)
+    world.shares.remove_user(ANA)
+    assert not world.shares.favorites(ANA)
+
+
+def test_imported_favorite_keeps_the_source_identity(world):
+    asyncio.run(
+        api.set_playlist_favorite_endpoint(
+            _request(ANA, body={'name': 'Road', 'favorite': True})
+        )
+    )
+    world.catalog.ensure_playlist(
+        'New source title', spotify_id='sp1', user_id=ANA
+    )
+    world.found[0] = _row('New source title')
+    renamed = next(
+        p
+        for p in api.playlists_for_request(_request(ANA))
+        if p['name'] == 'New source title'
+    )
+    assert renamed['favorite']
+    world.catalog.ensure_playlist(
+        'Different source', spotify_id='SP1', user_id=ANA
+    )
+    assert api.playlist_favorite_identity({
+        'name': 'Different source'
+    }) != api.playlist_favorite_identity({'name': 'New source title'})
+
+
+def test_revoked_playlist_favorite_is_not_disclosed(world):
+    world.shares.set_visibility('Mix', SHARED, [BO])
+    world.shares.set_favorite(BO, 'Mix', True)
+    assert next(
+        p
+        for p in api.playlists_for_request(_request(BO))
+        if p['name'] == 'Mix'
+    )['favorite']
+    world.shares.set_visibility('Mix', PRIVATE)
+    assert 'Mix' not in _names(_request(BO))
+    result = asyncio.run(
+        api.set_playlist_favorite_endpoint(
+            _request(BO, body={'name': 'Mix', 'favorite': False})
+        )
+    )
+    assert result['favorite'] is False
+
+
+def test_source_cover_cannot_edit_someone_elses_playlist(world, monkeypatch):
+    monkeypatch.setattr(
+        api,
+        '_download_playlist_cover_for_batch',
+        lambda *a: pytest.fail('network'),
+    )
+    with pytest.raises(HTTPException) as caught:
+        asyncio.run(
+            api.edit_library_playlist_tracks_endpoint(
+                _request(
+                    BO,
+                    body={
+                        'name': 'Mix',
+                        'source_playlist_url': 'https://deezer.com/playlist/333',
+                    },
+                )
+            )
+        )
+    # A private playlist is deliberately hidden, even from other users.
+    assert caught.value.status_code == 404
 
 
 # ── the store ────────────────────────────────────────────────────────
@@ -318,6 +457,182 @@ def test_a_viewer_cannot_edit_rename_or_delete(world):
     assert err.value.status_code == 403
 
 
+# ── editors: shared with them to add and remove songs ────────────────
+
+
+def _edit(user_id: int, **body: Any) -> dict[str, Any]:
+    return asyncio.run(
+        api.edit_library_playlist_tracks_endpoint(
+            _request(user_id, body={'name': 'Mix', **body})
+        )
+    )
+
+
+def _mix_with(root: Path, *files: str) -> None:
+    for name in ('a.mp3', 'b.mp3', 'c.mp3'):
+        (root / name).write_bytes(b'audio')
+    (root / 'Mix.m3u').write_text(
+        '#EXTM3U\n'
+        + MANUAL_M3U_MARKER
+        + '\n'
+        + ''.join(f'{f}\n' for f in files)
+    )
+
+
+def test_an_editor_changes_the_songs_but_not_the_playlist(world):
+    _mix_with(world.ctx.download_dir, 'a.mp3')
+    result = _share(
+        _request(
+            ANA,
+            body={
+                'name': 'Mix',
+                'visibility': SHARED,
+                'shared_with': ['bob', 'cyd'],
+                'editors': ['BOB'],
+            },
+        )
+    )
+    assert result['editors'] == ['bob']
+
+    assert _edit(BO, add=['b.mp3'])['files'] == ['a.mp3', 'b.mp3']
+    assert _edit(BO, remove=['a.mp3'])['files'] == ['b.mp3']
+    rows = {p['name']: p for p in api.playlists_for_request(_request(BO))}
+    assert rows['Mix']['can_edit_tracks'] is True
+    assert rows['Mix']['mine'] is False
+    assert 'editors' not in rows['Mix']
+    # The owner sees who edits; a plain viewer can't edit.
+    own = {p['name']: p for p in api.playlists_for_request(_request(ANA))}
+    assert own['Mix']['editors'] == ['bob']
+    assert own['Mix']['can_edit_tracks'] is True
+    viewer = {p['name']: p for p in api.playlists_for_request(_request(CY))}
+    assert viewer['Mix']['can_edit_tracks'] is False
+    with pytest.raises(HTTPException) as err:
+        _edit(CY, add=['c.mp3'])
+    assert err.value.status_code == 403
+
+    # Renaming, sharing, deleting and the source artwork stay the owner's.
+    for endpoint, body in (
+        (api.rename_library_playlist_endpoint, {'new_name': 'Nope'}),
+        (api.set_playlist_visibility_endpoint, {'visibility': PRIVATE}),
+        (
+            api.edit_library_playlist_tracks_endpoint,
+            {'source_playlist_url': 'https://deezer.com/playlist/333'},
+        ),
+    ):
+        with pytest.raises(HTTPException) as err:
+            asyncio.run(endpoint(_request(BO, body={'name': 'Mix', **body})))
+        assert err.value.status_code == 403
+    with pytest.raises(HTTPException) as err:
+        asyncio.run(api._delete_playlist_by_name(_request(BO), 'Mix'))
+    assert err.value.status_code == 403
+
+
+def test_an_editor_cannot_add_a_song_hidden_from_them(world, monkeypatch):
+    _mix_with(world.ctx.download_dir, 'a.mp3')
+    world.shares.set_visibility('Mix', SHARED, [BO], editors=[BO])
+    monkeypatch.setattr(
+        api,
+        'filter_paths_for_request',
+        lambda paths, request: [p for p in paths if p != 'c.mp3'],
+    )
+
+    with pytest.raises(HTTPException) as err:
+        _edit(BO, add=['b.mp3', 'c.mp3'])
+    assert err.value.status_code == 400
+    assert 'c.mp3' in err.value.detail
+    assert _edit(BO, add=['b.mp3'])['files'] == ['a.mp3', 'b.mp3']
+
+
+def test_editing_ends_with_the_share(world):
+    world.shares.set_visibility('Mix', SHARED, [BO, CY], editors=[BO, CY])
+    assert world.shares.editors() == {'mix': [BO, CY]}
+
+    # Leaving editors out keeps those still on the list.
+    world.shares.set_visibility('Mix', SHARED, [BO])
+    assert world.shares.editors() == {'mix': [BO]}
+    assert api.require_playlist_visible('Mix', _request(BO))['can_edit_tracks']
+
+    world.shares.set_visibility('Mix', PUBLIC)
+    assert world.shares.editors() == {}
+    assert not api.require_playlist_visible('Mix', _request(BO))[
+        'can_edit_tracks'
+    ]
+
+
+def test_editors_follow_a_rename_and_go_with_the_account(world):
+    world.shares.set_visibility('Mix', SHARED, [BO, CY], editors=[BO, CY])
+    world.shares.rename('Mix', 'Mix 2')
+    assert world.shares.editors() == {'mix 2': [BO, CY]}
+    world.shares.remove_user(BO)
+    assert world.shares.editors() == {'mix 2': [CY]}
+    world.shares.forget('Mix 2')
+    assert world.shares.editors() == {}
+
+
+def test_the_admin_switch_stops_editors_too(world, monkeypatch):
+    world.shares.set_visibility('Mix', SHARED, [BO], editors=[BO])
+    monkeypatch.setitem(api.state.settings, 'allow_playlist_sharing', False)
+
+    assert 'Mix' not in _names(_request(BO))
+    with pytest.raises(HTTPException) as err:
+        _edit(BO, add=['b.mp3'])
+    assert err.value.status_code == 404
+
+
+def test_leaving_editors_out_of_a_share_keeps_them(world):
+    world.shares.set_visibility('Mix', SHARED, [BO], editors=[BO])
+    result = _share(
+        _request(
+            ANA,
+            body={
+                'name': 'Mix',
+                'visibility': SHARED,
+                'shared_with': ['bob', 'cyd'],
+            },
+        )
+    )
+    assert result['editors'] == ['bob']
+    _share(
+        _request(
+            ANA,
+            body={
+                'name': 'Mix',
+                'visibility': SHARED,
+                'shared_with': ['bob', 'cyd'],
+                'editors': [],
+            },
+        )
+    )
+    assert world.shares.editors() == {}
+
+
+@pytest.mark.parametrize(
+    ('name', 'visibility', 'editors'),
+    [
+        ('Road', SHARED, ['bob']),  # imported: it follows its source
+        ('Mix', SHARED, ['cyd']),  # not on the list
+        ('Mix', SHARED, ['zed']),  # no such user
+        ('Mix', PUBLIC, ['bob']),  # only named users edit
+    ],
+)
+def test_bad_editors_are_refused(world, name, visibility, editors):
+    with pytest.raises(HTTPException) as err:
+        _share(
+            _request(
+                ANA,
+                body={
+                    'name': name,
+                    'visibility': visibility,
+                    'shared_with': ['bob'],
+                    'editors': editors,
+                },
+            )
+        )
+    assert err.value.status_code == 400
+    assert world.shares.visibility(name) == PRIVATE
+    assert world.shares.editors() == {}
+
+
 # ── the visibility endpoint ──────────────────────────────────────────
 
 
@@ -337,6 +652,7 @@ def test_the_owner_shares_with_named_users(world):
         'name': 'Mix',
         'visibility': 'shared',
         'shared_with': ['bob'],
+        'editors': [],
     }
     assert _names(_request(BO)) == ['Chill', 'Mix']
 
@@ -456,7 +772,15 @@ def test_the_apps_playlist_rows_carry_owner_and_following(world, monkeypatch):
     assert rows[0]['visibility'] == PUBLIC
     assert rows[0]['followed'] is True
     assert rows[0]['mine'] is False
+    assert rows[0]['can_edit_tracks'] is False
     assert rows[0]['track_ids'] == ['id-a']
+
+    world.shares.set_visibility('Mix', SHARED, [CY], editors=[CY])
+    rows = asyncio.run(mobile_routes.playlists(_request(CY)))
+    assert rows[0]['can_edit_tracks'] is True
+    own = asyncio.run(mobile_routes.playlists(_request(ANA)))
+    mix = next(row for row in own if row['name'] == 'Mix')
+    assert mix['editors'] == ['cyd']
 
 
 # ── saving a copy ────────────────────────────────────────────────────

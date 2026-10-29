@@ -70,6 +70,48 @@ describe('classifyInput', () => {
     })
   })
 
+  it('recognises SoundCloud track links without changing text search', () => {
+    expect(
+      classifyInput('https://soundcloud.com/artist/track-name?si=abc')
+    ).toMatchObject({
+      type: 'link',
+      source: 'soundcloud',
+      kind: 'track',
+    })
+    expect(classifyInput('soundcloud.com/artist/track-name').url).toBe(
+      'https://soundcloud.com/artist/track-name'
+    )
+    expect(classifyInput('artist search')).toEqual({
+      type: 'search',
+      query: 'artist search',
+    })
+    expect(
+      classifyInput('https://soundcloud.com/artist/sets/playlist-name')
+    ).toMatchObject({ type: 'unsupported' })
+  })
+
+  it('keeps private SoundCloud tracks and drops the share query', () => {
+    expect(
+      classifyInput('https://m.soundcloud.com/artist/track/s-AbC123?si=x').url
+    ).toBe('https://soundcloud.com/artist/track/s-AbC123')
+    expect(classifyInput('https://soundcloud.com/artist/track?si=x').url).toBe(
+      'https://soundcloud.com/artist/track'
+    )
+  })
+
+  it("doesn't take a SoundCloud user's pages for tracks", () => {
+    for (const url of [
+      'https://soundcloud.com/artist/likes',
+      'https://soundcloud.com/artist/tracks',
+      'https://soundcloud.com/discover/sets',
+      'https://soundcloud.com/artist',
+      'https://on.soundcloud.com/AbC123',
+      'https://soundcloud.com.evil.example/artist/track',
+    ]) {
+      expect(classifyInput(url), url).toMatchObject({ type: 'unsupported' })
+    }
+  })
+
   it('does not search for other web links', () => {
     expect(classifyInput('https://example.com/song')).toMatchObject({
       type: 'unsupported',

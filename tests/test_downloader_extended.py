@@ -348,13 +348,15 @@ def test_artist_subdir_falls_back_to_track_artists_when_album_artist_blank():
 
 def test_album_artist_keeps_duo_name_with_ampersand():
     # A single credited name with "&" is the act, not a compilation.
-    assert _album_artist_for_tags(['Zé Neto & Cristiano']) == (
+    assert _album_artist_for_tags({'artists': ['Zé Neto & Cristiano']}) == (
         'Zé Neto & Cristiano'
     )
-    assert _album_artist_for_tags(['Ana Luz', 'Kenji Aoki']) == (
-        'Various Artists'
+    # Several credited artists aren't a compilation either: only the
+    # source says so (`compilation`, see album_artist.py).
+    assert _album_artist_for_tags({'artists': ['Ana Luz', 'Kenji Aoki']}) == (
+        'Ana Luz'
     )
-    assert _album_artist_for_tags([]) is None
+    assert _album_artist_for_tags({'artists': []}) is None
 
 
 # ── organize_by_artist – existing_filename_for ────────────────────────────────

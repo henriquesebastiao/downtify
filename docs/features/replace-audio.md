@@ -11,7 +11,7 @@ Only admins can replace audio (see [Users & Sign-in](users.md#admins-and-users))
 ## Replacing a track's audio
 
 1. In the **Library**, open the menu of the track (right-click, or the **⋯** button) and choose **Replace audio…**.
-2. Downtify searches **YouTube Music** and **YouTube** for "Artist - Title" and lists what it finds. Change the search, or paste a YouTube or YouTube Music link to one video or song, to get exactly the upload you want.
+2. Downtify searches **YouTube Music** and **YouTube** for "Artist - Title" and lists what it finds. Change the search, or paste a YouTube or YouTube Music link to one video or song — or a SoundCloud track link — to get exactly the upload you want.
 3. Pick a version. Each shows where it comes from and how long it is, next to the length of your file. A version within 3 seconds of your file's length is highlighted. The ↗ button opens it on YouTube, so you can listen before choosing.
 4. Press **Replace audio**. The replacement runs like a download: it shows its progress in the dialog and in the **Queue**, and the dialog says when it's done.
 

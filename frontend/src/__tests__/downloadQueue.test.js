@@ -337,6 +337,18 @@ describe('queue index lifecycle', () => {
     expect(result.filename).toBe('generated.mp3')
   })
 
+  it('retries with a SoundCloud track instead of an earlier video', async () => {
+    const item = tracker.appendSong({ song_id: 'a', youtube_id: 'old-video' })
+    item.setError()
+    const url = 'https://soundcloud.com/artist/track'
+    await manager.retryWithAudio(item.song, url, 'soundcloud')
+    expect(item.song.soundcloud_url).toBe(url)
+    expect(item.song.youtube_id).toBeUndefined()
+    const sent = fixture.api.download.mock.calls.at(-1)[0]
+    expect(sent.soundcloud_url).toBe(url)
+    expect(sent.youtube_id).toBeUndefined()
+  })
+
   it('batches resubmitted songs without replacing their items', async () => {
     const item = tracker.appendSong({ song_id: 'a' })
     item.setDownloaded()
@@ -360,4 +372,21 @@ describe('queue index lifecycle', () => {
     expect(fixture.api.replaceAudio).toHaveBeenCalledWith('a.mp3', 'new')
     expect(fixture.api.download).not.toHaveBeenCalled()
   })
+})
+
+it('shows a reused file as completed library content without a stale audio-provider badge', () => {
+  const song = { song_id: 'reuse-fixture' }
+  send({ song, progress: 15, status: 'downloading', provider: 'youtube-music' })
+  send({
+    song,
+    progress: 100,
+    status: 'done',
+    reused: true,
+    message: 'Already downloaded',
+    filename: 'existing.mp3',
+  })
+  const item = tracker.getBySong(song)
+  expect(item.state).toBe('done')
+  expect(item.provider).toBe('')
+  expect(item.message).toBe('Already downloaded')
 })

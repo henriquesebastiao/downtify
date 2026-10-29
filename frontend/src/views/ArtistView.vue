@@ -52,10 +52,8 @@
             {{ t('artist.findMore') }}
           </UiButton>
           <ArtistWatchButton
-            :key="artist.name"
+            v-if="!libraryOnly && !isVariousArtists(artist.name)"
             :name="artist.name"
-            :spotify-id="spotifyId"
-            :ready="profileReady"
             :variant="artBannerUrl ? 'photo' : 'ghost'"
           />
           <UiMenu v-if="moreMenu.length" :items="moreMenu">
@@ -133,7 +131,7 @@
             }}</UiButton>
           </UiEmpty>
           <TopSongsShelf
-            v-else-if="topSongsData?.songs.length"
+            v-else-if="!libraryOnly && topSongsData?.songs.length"
             :data="topSongsData"
             :context="context"
           />
@@ -183,6 +181,7 @@
           :context="context"
           :show-added="false"
           :hide-menu="['artist']"
+          :guest-of="artist.name"
         />
       </div>
     </DetailState>
@@ -208,6 +207,7 @@
 </template>
 
 <script setup>
+import { libraryOnly } from '/src/model/musicPolicy'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import UiBadge from '/src/components/ui/UiBadge.vue'
@@ -232,8 +232,9 @@ import { usePlayer } from '/src/model/player'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
 import { useVisibility } from '/src/model/visibility'
+import { useBuyLinks } from '/src/model/buyLinks'
 import { useUi } from '/src/model/ui'
-import { sortItems } from '/src/lib/library'
+import { isVariousArtists, sortItems } from '/src/lib/library'
 import { splitLength } from '/src/lib/format'
 import { proxiedArtistPhotoUrl } from '/src/lib/artistPhotoProxy'
 import { versionedArtUrl } from '/src/lib/artistArt'
@@ -247,6 +248,7 @@ const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
 const visibility = useVisibility()
+const buyLinks = useBuyLinks()
 const playlistActions = usePlaylistActions()
 const ui = useUi()
 
@@ -286,9 +288,19 @@ const allTracks = computed(() => {
 const moreMenu = computed(() => {
   const add = playlistActions.addMenuItems(allTracks.value)
   const hide = artist.value ? visibility.artistMenu(artist.value) : []
-  return add.length && hide.length
-    ? [...add, { divider: true }, ...hide]
-    : [...add, ...hide]
+  // Where to buy their music, to support them.
+  const buy = artist.value?.name
+    ? [
+        {
+          label: t('buy.menu'),
+          icon: 'tag',
+          action: () => buyLinks.open({ artist: artist.value.name }),
+        },
+      ]
+    : []
+  return [add, buy, hide]
+    .filter((group) => group.length)
+    .flatMap((group, index) => (index ? [{ divider: true }, ...group] : group))
 })
 
 const context = computed(() => ({
@@ -593,6 +605,7 @@ async function refreshProfile() {
   try {
     // Seeds a brand-new artist's profile on their very first visit - a
     // cheap no-op every time after, once a profile file exists at all.
+    if (libraryOnly.value) return
     const res = await API.ensureArtistProfile(
       artist.value.name,
       locale.value,

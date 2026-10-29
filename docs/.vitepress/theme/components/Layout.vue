@@ -3,7 +3,7 @@
     <a
       href="#main"
       class="sr-only z-[70] rounded-control bg-accent px-4 py-2 font-semibold text-on-accent focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
-      >Skip to content</a
+      >{{ ui.skipToContent }}</a
     >
     <SideNav class="hidden lg:flex" />
     <div class="flex min-w-0 flex-1 flex-col">
@@ -33,10 +33,12 @@ import SiteFooter from './SiteFooter.vue'
 import TopBar from './TopBar.vue'
 import { useSearch } from '../composables/search'
 import { startThemeMode } from '../composables/theme-mode'
+import { useUi } from '../composables/ui'
 
 const { page, frontmatter } = useData()
 const route = useRoute()
 const search = useSearch()
+const { ui } = useUi()
 const navOpen = ref(false)
 
 watch(

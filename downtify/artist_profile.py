@@ -54,6 +54,7 @@ import httpx
 from loguru import logger
 
 from . import apple_music, deezer, providers, spotify
+from .album_artist import filing_artist
 from .downloader import _sanitize
 from .file_naming import file_name_key
 from .image_size import image_dimensions
@@ -727,7 +728,9 @@ def resolve_spotify_artist_id(
 
     First choice is the first of *track_files* that was itself
     downloaded from Spotify (*track_index* may be ``None`` to skip this):
-    a track already known to be theirs can't resolve to a namesake. When
+    a track already known to be theirs can't resolve to a namesake. With
+    *name*, it's the id of that artist among those the track credits - a
+    guest's track belongs to someone else, whose id isn't theirs. When
     none is, *name* - if given - is searched on Spotify by exact name
     (:func:`_spotify_id_from_name`). Not private: a caller with its own
     track/track_index (e.g. a download-pipeline hook - see
@@ -743,7 +746,11 @@ def resolve_spotify_artist_id(
         if not track_id:
             continue
         try:
-            artist_id = spotify.primary_artist_id_from_track_id(track_id)
+            artist_id = (
+                spotify.credited_artist_id_from_track_id(track_id, name)
+                if name.strip()
+                else spotify.primary_artist_id_from_track_id(track_id)
+            )
         except Exception:
             logger.opt(exception=True).debug(
                 'Spotify artist id resolution failed for track {}', track_id
@@ -966,23 +973,19 @@ def _seed_lock_for(download_dir: Path, name: str) -> threading.Lock:
 
 def profile_seed_artist_of(song: dict[str, Any]) -> str:
     """The artist whose profile a downloaded *song* seeds: the one its file
-    is filed under (the album artist, else the first credited artist - the
-    rule ``Downloader._artist_subdir`` uses), or ``''`` when that is no one
-    worth a profile (``Various Artists``)."""
+    is filed under (:func:`downtify.album_artist.filing_artist` - the album
+    artist, or for a compilation the track's first artist), or ``''`` when
+    that is no one worth a profile (``Various Artists``)."""
 
-    album_artist = str(song.get('album_artist') or '').strip()
-    artists = song.get('artists') or []
-    first = str(artists[0]).strip() if artists else ''
-    name = album_artist or first
+    name = filing_artist(song)
     return '' if name.casefold() in {'various artists', 'unknown'} else name
 
 
 def _spotify_artist_id_for_song(
     song: dict[str, Any], name: str
 ) -> Optional[str]:
-    """Spotify's id for *name*: from the song's own Spotify track when its
-    first credited artist is *name* (it can't pick a namesake), else an
-    exact-name search."""
+    """Spotify's id for *name*: from the song's own Spotify track when it
+    credits *name* (it can't pick a namesake), else an exact-name search."""
 
     track_id = song.get('song_id')
     artists = song.get('artists') or []
@@ -990,11 +993,10 @@ def _spotify_artist_id_for_song(
         song.get('source') == 'spotify'
         and isinstance(track_id, str)
         and re.fullmatch(r'[A-Za-z0-9]{22}', track_id)
-        and artists
-        and file_name_key(str(artists[0])) == file_name_key(name)
+        and any(file_name_key(str(a)) == file_name_key(name) for a in artists)
     ):
         try:
-            found = spotify.primary_artist_id_from_track_id(track_id)
+            found = spotify.credited_artist_id_from_track_id(track_id, name)
         except Exception:
             logger.opt(exception=True).debug(
                 'Spotify artist id from track {} failed', track_id

@@ -2,10 +2,18 @@
 // the Now playing view, with its queue, shuffle/repeat, sleep timer and
 // OS media controls (Media Session).
 import { ref, computed, watch } from 'vue'
+import { libraryOnly } from '/src/model/musicPolicy'
 
 import { normalizeTrack } from '/src/lib/library'
 import { attachEqualizer, resumeEqualizer } from '/src/model/equalizer'
 import { resolveTrackUrl, warmServerCache } from '/src/model/streamResolve'
+import {
+  normalizationEnabled,
+  knownTrackNormalization,
+  getTrackNormalization,
+  prefetchTrackNormalization,
+  applyTrackNormalization,
+} from '/src/model/normalization'
 
 const VOLUME_KEY = 'downtify-player-volume'
 const RATE_KEY = 'downtify-player-rate'
@@ -70,6 +78,7 @@ let shuffleOrder = []
 let shufflePos = 0
 let sleepTimer = null
 let restoreTime = 0
+let playbackAttempt = 0
 
 function ensureAudio() {
   if (audio) return audio
@@ -155,7 +164,13 @@ function sameTrackOrder(a, b) {
 
 // ── Queue ────────────────────────────────────────────────────────────
 function setPlaylist(files, options = {}) {
-  const tracks = (files || []).map(toTrack)
+  const incoming = (files || []).map(toTrack)
+  const tracks = incoming.filter((track) => !libraryOnly.value || !track.stream)
+  if (libraryOnly.value && typeof options.startIndex === 'number') {
+    const startIndex = tracks.indexOf(incoming[options.startIndex])
+    if (startIndex < 0) return
+    options = { ...options, startIndex }
+  }
   if (options.context !== undefined) context.value = options.context
   if (
     typeof options.startIndex !== 'number' &&
@@ -192,7 +207,9 @@ function setPlaylist(files, options = {}) {
 
 /** Play a list, optionally shuffled, starting from the first track. */
 function playList(files, { context: ctx = null, shuffled = false } = {}) {
-  const tracks = (files || []).map(toTrack)
+  const tracks = (files || [])
+    .map(toTrack)
+    .filter((track) => !libraryOnly.value || !track.stream)
   if (!tracks.length) return
   shuffle.value = shuffled
   playlist.value = tracks
@@ -207,7 +224,9 @@ function playList(files, { context: ctx = null, shuffled = false } = {}) {
 }
 
 function insertTracks(files, position) {
-  const tracks = (files || []).map(toTrack)
+  const tracks = (files || [])
+    .map(toTrack)
+    .filter((track) => !libraryOnly.value || !track.stream)
   if (!tracks.length) return
   if (!playlist.value.length) {
     setPlaylist(tracks, { autoplay: true, context: null })
@@ -321,6 +340,7 @@ function stop() {
 
 // ── Transport ────────────────────────────────────────────────────────
 function playAt(index) {
+  if (libraryOnly.value && playlist.value[index]?.stream) return
   if (index < 0 || index >= playlist.value.length) return
   const a = ensureAudio()
   currentIndex.value = index
@@ -351,6 +371,7 @@ function needsStreamUrl(track) {
 }
 
 function startAudio(a, index) {
+  if (libraryOnly.value && playlist.value[index]?.stream) return
   a.src = playlist.value[index].url
   a.currentTime = 0
   // A track change doesn't reliably keep the rate in every browser — a
@@ -370,6 +391,7 @@ let prefetchedFor = -1
 function maybePrefetch() {
   if (currentIndex.value < 0 || prefetchedFor === currentIndex.value) return
   prefetchedFor = currentIndex.value
+  prefetchTrackNormalization(playlist.value[nextIndex()])
   prefetchNext()
 }
 
@@ -426,6 +448,7 @@ async function playUnresolved(index) {
 
 /** Resolve the next unstored track while this one plays, one ahead. */
 function prefetchNext() {
+  if (libraryOnly.value) return
   const upcoming = nextIndex()
   if (upcoming < 0) return
   const track = playlist.value[upcoming]
@@ -448,11 +471,42 @@ function prefetchNext() {
 }
 
 function startPlayback(a) {
+  if (libraryOnly.value && playlist.value[currentIndex.value]?.stream) return
+  const attempt = ++playbackAttempt
+  const track = playlist.value[currentIndex.value]
+  const known = knownTrackNormalization(track)
+  if (known === undefined) {
+    // Normalized but not measured yet: hold the start until the server
+    // answers (the request gives up quickly), so no moment of the song
+    // plays at the wrong level.
+    const identity = trackIdentity(track)
+    const url = a.src
+    a.pause()
+    applyTrackNormalization(null)
+    // Build/resume during the user gesture, before awaiting the measurement.
+    resumeEqualizer()
+    isBuffering.value = true
+    void getTrackNormalization(track).then((profile) => {
+      if (
+        attempt !== playbackAttempt ||
+        a.src !== url ||
+        trackIdentity(playlist.value[currentIndex.value]) !== identity
+      )
+        return
+      applyTrackNormalization(profile)
+      isBuffering.value = false
+      resumeEqualizer()
+      a.play().catch(() => {})
+    })
+    return
+  }
+  applyTrackNormalization(known)
   resumeEqualizer()
   a.play().catch(() => {})
 }
 
 function play() {
+  if (libraryOnly.value && playlist.value[currentIndex.value]?.stream) return
   if (playlist.value.length === 0) return
   const a = ensureAudio()
   if (currentIndex.value < 0) {
@@ -472,6 +526,8 @@ function play() {
 }
 
 function pause() {
+  playbackAttempt += 1
+  isBuffering.value = false
   if (audio) audio.pause()
 }
 
@@ -714,6 +770,36 @@ function updateMediaSession(track) {
 }
 
 watch(currentTrack, (track) => updateMediaSession(track))
+
+// Switched on mid-song: level the current one too (the equalizer ramps
+// to it), instead of waiting for the next.
+watch(normalizationEnabled, (on) => {
+  const track = playlist.value[currentIndex.value]
+  if (!on || !track?.file) return
+  void getTrackNormalization(track).then((profile) => {
+    if (
+      normalizationEnabled.value &&
+      playlist.value[currentIndex.value] === track
+    )
+      applyTrackNormalization(profile)
+  })
+})
+watch(libraryOnly, (enabled) => {
+  if (!enabled) return
+  const selected = playlist.value[currentIndex.value]
+  if (selected?.stream) {
+    pause()
+    if (audio) {
+      audio.removeAttribute('src')
+      audio.load()
+    }
+    isBuffering.value = false
+    resolving.value = null
+  }
+  playlist.value = playlist.value.filter((track) => !track.stream)
+  currentIndex.value = playlist.value.indexOf(selected)
+  if (shuffle.value) buildShuffleOrder()
+})
 watch(isPlaying, (playing) => {
   if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
     navigator.mediaSession.playbackState = playing ? 'playing' : 'paused'

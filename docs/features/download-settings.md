@@ -48,7 +48,8 @@ Available tokens:
 | Token | Description |
 |-------|-------------|
 | `{title}` | Track title |
-| `{artists}` | Comma-separated artist names |
+| `{artists}` | Every credited artist, comma-separated (e.g. `Christina Aguilera, Lil' Kim, Mýa, P!nk`) |
+| `{artist}` | The first credited artist only (e.g. `Christina Aguilera`). A name that contains a comma, like `Earth, Wind & Fire`, stays whole. |
 | `{album}` | Album name |
 | `{tracknumber}` | Track's position on its album, zero-padded to 2 digits (e.g. `01`, `12`). Empty when the source has no track number (e.g. a free-text/YouTube search result). |
 | `{year}` | Release year (e.g. `2025`). Empty when the source has no release date (e.g. a free-text/YouTube search result). |
@@ -56,11 +57,17 @@ Available tokens:
 The template can also include `/` to build subfolders. For example, to lay out a library as `Artist/Album (2025)/01 - Title.mp3` — handy when downloading a full discography, since each album lands in its own folder alongside its release year:
 
 ```
-{artists}/{album} ({year})/{tracknumber} - {title}
+{artist}/{album} ({year})/{tracknumber} - {title}
 ```
 
+Use `{artist}` rather than `{artists}` in a folder: with `{artists}`, a song with guests gets a folder of its own (`Christina Aguilera, Lil' Kim, Mýa, P!nk/`) instead of landing in the first artist's.
+
 ::: info
-This is independent of the **Organize by artist** / **Organize by album** toggles below — those route playlist/album downloads into shared per-artist or per-album folders across your whole library. `{tracknumber}` and `{year}` just let a template like the one above build that same layout manually, track by track, without turning those toggles on.
+This is independent of the **Organize by artist** / **Organize by album** toggles — those route playlist/album downloads into shared per-artist or per-album folders across your whole library (see [File Organization](file-organization.md)). `{tracknumber}` and `{year}` just let a template like the one above build that same layout manually, track by track, without turning those toggles on.
+:::
+
+::: tip Compilations
+The template applies to a track from a various-artists compilation like to any other: `{artist}` is the track's own first artist, never "Various Artists". See [Several artists and compilations](file-organization.md#several-artists-and-compilations).
 :::
 
 ## Parallel downloads
@@ -138,7 +145,7 @@ Nothing is lost, but you get duplicates. To actually replace a file, see [Replac
 
 ### Cover art comes from Spotify or YouTube Music, not from the file
 
-Whatever artwork the downloaded audio carries — including a high-resolution cover embedded in an slskd file — is **discarded and replaced** during tagging. Downtify always embeds the cover it fetches for the track from Spotify or YouTube Music, at the [cover art resolution](#cover-art-resolution) you configured (600 px by default). The same applies to the title, artists, album and the rest of the tags: the source's own tags are not kept.
+Whatever artwork the downloaded audio carries — including a high-resolution cover embedded in an slskd file — is **discarded and replaced** during tagging. Downtify always embeds the cover it fetches for the track from Spotify or YouTube Music (or SoundCloud's artwork, for a SoundCloud link), at the [cover art resolution](#cover-art-resolution) you configured (600 px by default). The same applies to the title, artists, album and the rest of the tags: the source's own tags are not kept.
 
 If what you want is bigger artwork on files you already have, re-downloading is the long way around. [Upgrade library](library-upgrade.md) does exactly that — it compares each file's embedded cover against Spotify, iTunes and YouTube Music, writes the largest one, fills in missing lyrics and tags, and never touches the audio.
 
@@ -166,7 +173,7 @@ When a song is skipped:
 
 The default audio provider is **YouTube Music**. Downtify uses [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) to search for the best match by comparing track duration. When YouTube Music has no acceptable match, or only one whose duration is far off (a likely different recording), Downtify automatically falls back to searching standard YouTube — see [How it works](../how-it-works.md#fallback-to-standard-youtube).
 
-**Settings → Audio source** can also use standard **YouTube** only, or **slskd** (Soulseek), as an ordered fallback list — see [slskd & Navidrome](slskd-navidrome.md#audio-sources-and-fallback-order).
+**Settings → Audio source** can also use standard **YouTube** only, **SoundCloud**, **slskd** (Soulseek) or **Deemix**, as an ordered fallback list — see [slskd & Navidrome](slskd-navidrome.md#audio-sources-and-fallback-order).
 
 ### Force a specific audio source
 
@@ -183,10 +190,10 @@ When downloading via YouTube URL, metadata (title, artist, cover) comes from You
 **Option B — force audio on a failed track**
 
 1. In the **Download Queue**, click **Force audio source** under a failed track.
-2. Paste a YouTube or YouTube Music URL into the input that appears.
+2. Paste a YouTube or YouTube Music URL into the input that appears — or a SoundCloud track URL, when the **SoundCloud** source is on.
 3. Press **Enter** or click **Apply**.
 
-Downtify re-downloads the track using that exact video while keeping all Spotify metadata (title, artist, album, cover art, lyrics).
+Downtify re-downloads the track using that exact video (or SoundCloud track) while keeping all Spotify metadata (title, artist, album, cover art, lyrics).
 
 ## Embedded metadata
 

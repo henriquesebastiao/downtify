@@ -50,14 +50,7 @@ You can also start watching from a playlist's page: paste its link in the search
 
 ## Deezer playlists
 
-Public Deezer playlists can be followed from their resolved link page or
-directly from **Charts → Playlists**, without finding a Spotify equivalent.
-The existing Deezer resolver fetches every page of tracks. The monitor
-remembers Deezer track identities between checks, downloads new additions
-through the configured audio providers and keeps the existing playlist
-catalog, ownership and M3U behavior. It does not delete downloaded files
-when the source playlist removes a track. Private playlists, account-wide
-sync and private favourites are not supported by this public-link workflow.
+Public Deezer playlists are watched like any other: paste the link on the **Playlists** tab, use **Watch for new tracks** on the playlist's page, or pick **Watch for new tracks** in the **⋯** menu of a playlist card in [Charts](charts.md). No Deezer account is needed, and every track is fetched, however long the playlist is. The songs download through your [audio sources](download-settings.md) like any other Deezer link, and the playlist gets its M3U file, cover art and Library entry as a Spotify one does — even with M3U files turned off, the Library keeps track of which songs belong to it. Only public playlists can be watched, and a Deezer **artist** link can be downloaded but not watched.
 
 ## YouTube Music playlists
 
@@ -69,19 +62,6 @@ Use a YouTube Music playlist for songs that aren't on Spotify: remixes, live set
 - **Not every `list=` link is a playlist.** An album's `OLAK5uy_…` link is still downloaded as an album. A `watch?v=…&list=…` link is the one song that was playing. A radio mix (`list=RD…`) has no fixed track list and can't be watched.
 
 ## Artist Watch
-
-### Starting from the library
-
-On a library artist page, **Watch artist** uses its resolved Spotify artist
-link and starts a daily watch with **New releases only** enabled. It does
-not download the back catalogue. If the Spotify link is missing or cannot
-be resolved, a dialog asks for the correct Spotify artist link and offers
-the existing release-type and new-only filters before submission. The
-button reports success only once the server accepts the watch. Manage its
-interval and filters on **Monitor → Artists** afterwards.
-
-The artist monitor still resolves Spotify artists through YouTube Music,
-as described below. The supplied Spotify link is not an account login.
 
 Instead of building a playlist per artist, paste an artist link and Downtify follows their whole catalogue. Add one from the **Artists** tab of the Monitor page — paste the URL, pick an interval, click **Watch artist**. Artist watches show a release count instead of a track count.
 
@@ -95,7 +75,7 @@ A handle is resolved to the artist's channel when you add the watch, so the same
 On each sweep Downtify lists the artist's discography, compares it against the releases it has already processed, and downloads every track of anything new. A steady-state sweep costs a single request — tracklists are only fetched for releases it hasn't seen before.
 
 ::: info Why the discography comes from YouTube Music
-Spotify's public embed exposes an artist's name and a top-tracks preview, but **not** their discography — reading that would need Spotify API credentials, which Downtify deliberately doesn't use. So a Spotify artist link is resolved to its name and matched to the same artist on YouTube Music, which is also where the audio is fetched from. The upside: every release Downtify can see is one it can actually download. The trade-off: for an artist whose name is ambiguous, check that the watch's resolved name is the artist you meant — paste the YouTube Music artist URL directly if it picked the wrong one.
+Spotify's public embed exposes an artist's name and a top-tracks preview, but **not** their discography — reading that would need Spotify API credentials, which Downtify deliberately doesn't use. So a Spotify artist link is resolved to its name and matched to the same artist on YouTube Music, which is also where the audio is fetched from. The upside: every release Downtify can see is one it can actually download. The trade-off: the link follows the YouTube Music artist with exactly that name (case and punctuation aside), YouTube Music's best match when several share it. For a common name, check that the watch is the artist you meant, and paste the YouTube Music artist URL directly if it isn't. A Spotify artist whose exact name no YouTube Music artist has can only be added that way: Downtify doesn't guess.
 :::
 
 ::: warning The first sweep downloads the whole back catalogue
@@ -126,6 +106,33 @@ A release is only recorded as processed once every one of its tracks is accounte
 
 Artist watches don't generate M3U files — the tracks are laid out by your [file organization](file-organization.md) settings rather than as a playlist.
 
+### Suggested artists
+
+Under the list of artist watches, the **Artists** tab suggests artists to follow, in two lists:
+
+| List | Who is in it |
+|------|--------------|
+| **Based on your listening** | The artists you play the most: your own listens, the ones [Discover](discover.md) counts. Recent plays count more: a play's weight halves every 45 days, so an artist you played a lot last year ranks below one you play every day now. |
+| **Based on your library** | The artists with the most tracks, then albums, in the library you can see. |
+
+Artists you already watch (paused watches too) and compilation names such as **Various Artists** are left out. Each list shows 20 artists at a time; **Show more** loads the next ones. The lists are your own, an admin's too: another account's listens never show up. An artist an admin hid from users stays out of a user's lists, as it does out of their Library.
+
+Loading the lists searches nothing. **Follow** looks the name up on YouTube Music, where an artist watch follows the artist:
+
+- when exactly one artist there has that name, the watch is added right away, with the interval and the **Download** / **New releases only** options set in the box above;
+- otherwise (namesakes, or no artist with exactly that name) a dialog shows the YouTube Music artists found, each with its photo and a link to its profile. Pick one with **Follow this artist**, or choose **Paste a link** to paste the artist's link in the box above yourself.
+
+Suggestions only pick which artist to watch: the songs still download from your [audio sources](download-settings.md) as usual.
+
+### From an artist's Library page
+
+An artist's page in the Library (`/library/artist`) has a **Watch artist** button, so you can follow an artist you already have without looking up their link. It looks the name up on YouTube Music the same way **Follow** does above:
+
+- when exactly one artist there has that name, the watch is added right away. It is checked daily and has **New releases only** on, since the library already holds their earlier music;
+- otherwise (namesakes, no artist with exactly that name, or the lookup failed) a dialog shows the YouTube Music artists found, each with its photo and a link to its profile, plus a box for a Spotify or YouTube Music artist link. The **Download** and **New releases only** options at the top apply to whichever you follow.
+
+Once the server has added the watch, the button turns into a **Monitor** link, where you change the interval and options; a refusal (the artist is already watched, say) shows in the dialog instead. It isn't shown in [library-only mode](library-only.md) or on the **Various Artists** page.
+
 ## Check intervals
 
 | Label | Minutes | Best for |
@@ -150,14 +157,19 @@ Each tab lists only its own kind of watch. Above the list:
 - **Filter** — type part of a name or of the link (e.g. a playlist id) to narrow the list
 - **All / Paused** — show only paused watches
 - **Check all now** — check every active watch in the current tab
+- A strip with how many songs came in over the chosen period (**7 days**, **30 days** or **90 days**) and, across every watch, how many songs they hold, the space those take **On disk** and how many are **In more than one watch** — see [Activity and storage per watch](#activity-and-storage-per-watch)
 
 On each row:
 
 - **Active** switch — pause or resume the watch without removing it
 - **Checks** — how often it's checked
 - **Check now** (↻) — check it immediately, outside the schedule
+- **Activity** — new songs over the chosen period, the average per week and whether that pace is rising or falling; click it to open the watch's own page
+- **Storage** — the space taken by the songs only this watch holds, plus how many it shares with other watches
 - **Edit** (✎) — see and change the watch's link, interval and active state (see [Editing a watch](#editing-a-watch))
-- **⋯** — pause/resume, copy the link, open the original, or **Stop watching** (the record is deleted; downloaded files are kept)
+- **⋯** — **Activity and songs** (the watch's own page), pause/resume, copy the link, open the original, or **Stop watching** (the record is deleted; downloaded files are kept)
+
+**Activity** and **Storage** are columns like the others: hide or resize them from **Columns**.
 
 ### Editing a watch
 
@@ -182,6 +194,11 @@ The **Sort by** control above the list orders the current tab by:
 | Last checked | Most recently checked first; never-checked watches last |
 | Check frequency | Least frequent (longest interval) first |
 | Number of tracks / releases | Most first |
+| Recent activity | New songs over the chosen period |
+| Average rate | New songs per day over the period |
+| Storage growth | Space taken by the new songs of the period |
+| Storage only in it | Space taken by the songs no other watch holds |
+| Songs downloaded | Songs on disk that the watch itself downloaded |
 
 The button next to it flips between ascending and descending order. The choice is remembered in the browser, and it only changes the list — not check order or scheduling.
 
@@ -221,6 +238,8 @@ Top 50 - USA        →  new song appears   →  Downtify downloads it
 
 The only things that delete audio are ones you ask for explicitly: **Delete** on a track or a selection in the Library, deleting a playlist from the Library (which does delete its tracks — it asks first), or removing files yourself from the filesystem.
 
+To take a song you don't want out of the playlist, and keep it out on every sweep, hide it: see [Hidden playlist songs](hidden-playlist-songs.md). Its file stays in your library.
+
 ::: info Deleting a watch vs. deleting a playlist
 **Stop watching** (in the watch's ⋯ menu) only forgets the watch: nothing on disk changes. **Delete** on a playlist in the **Library** page is the destructive one — it removes that playlist's tracks, its M3U and its catalog entry.
 :::
@@ -234,5 +253,41 @@ Monitor state is stored in a SQLite database at `/data/downtify_monitor.db`. The
 - Each watch (kind, Spotify or YouTube Music playlist ID or YouTube Music channel ID, name, URL, interval, enabled state, last check time). Whether a watch is Spotify or YouTube Music is read from its stored URL, so no extra column is needed.
 - Every track successfully downloaded per watch, including the filename on disk
 - For artist watches, the releases already processed, so a sweep only fetches tracklists for genuinely new ones — including the ones **New releases only** skipped, marked as such so turning it off can bring them back — plus the watch's release kinds and whether it's new-releases-only
+- Each track a watch added (`watch_events`): when, the file, which audio provider fetched it, whether the watch downloaded it or found it already in the library, and whether it came with the watch's first check. These rows keep the watch's id, name and owner as they were, and outlive the watch: stopping or retargeting a watch keeps them, so its songs still say where they came from
+- The tracks each watch keeps failing to download (`watch_failures`), until one succeeds, leaves the playlist or the watch is retargeted
 
-Databases created before Artist Watch are migrated automatically on startup; existing rows keep working as playlist watches.
+Databases created before Artist Watch are migrated automatically on startup; existing rows keep working as playlist watches. Tracks recorded before Downtify kept the history above are added to it once, on the first start, with an unknown outcome (**Before tracking**) — the ones from a watch's first day counted as its first check.
+
+## Activity and storage per watch
+
+The Monitor page and each watch's own page (**Activity and songs** in a watch's **⋯** menu, or a click on its **Activity**) tell which watches make your library grow — handy with many watches, or to find out why a generated mix brought in songs you didn't expect.
+
+**What counts as activity.** Only songs a watch actually added count: the ones it downloaded. Songs it found already in your library (another watch, or a download of your own, had them) are counted apart as **Already in library**, and so is the backfill of its first check, when it downloads whatever the playlist already had. So a static playlist reads as idle even though its first check downloaded 300 songs, and a mix that adds 15 songs a week reads as 15 a week. Tracks recorded before Downtify kept this history count as added, and the page says how many of them there are.
+
+Over the chosen period (7, 30 or 90 days, remembered in the browser) a watch shows:
+
+| Number | What it is |
+|--------|------------|
+| New songs | Songs it added in the period |
+| A day / A week / A month | The average pace over the period — or since the watch started, if that's more recent |
+| Trend | Whether the pace is rising (**Adding more lately**), falling (**Adding less lately**) or steady, from the new songs per day (7 days) or per week (30 and 90 days); **Too new to tell** while there are fewer than three of those to compare |
+| Storage growth | Space taken by the period's new songs that are still on disk |
+
+**Storage.** One file is stored once, however many watches hold it, and the numbers say so: **Only in this watch** is the space of the songs no other watch holds (what stopping the watch and deleting its songs would free), **Shared** the songs other watches hold too, and the strip on the Monitor page counts every file once. Other accounts' watches count when telling whether a file is shared, but aren't named.
+
+A watch's page also shows:
+
+- **Songs on disk**, **Downloaded by it**, **Already in library** and **Failing** — how its songs got there, and how many keep failing to download (listed further down, with the number of tries and the last error)
+- **Where the audio came from** — YouTube Music, YouTube, Soulseek (slskd) or Deemix, per song on disk
+- **Songs from this watch** — every song it holds, newest first, including ones that have since left the playlist, with filters (**Last 30 days** — or whichever period is chosen — **Downloaded by it**, **Already in library**, **Before tracking**). Select songs to play them, queue them, add them to a playlist, save them as a ZIP or delete them — for example to clean up what a mix brought in over the last week
+- **Open in Library** (the playlist's page, or the artist's for an artist watch), **Open original** and **Check now**
+
+The watch's id (`#12`) is shown next to its name, so two watches of the same link — two accounts following one playlist, say — can be told apart.
+
+## Where a song came from
+
+**Where it came from** in a song's menu (anywhere in the Library) tells which watch first downloaded it, when, and with which provider — **First check** when it came with the watch's backfill — and lists every watch that holds it now, each with its id, owner (for an admin), when it got the song and how: **Downloaded it**, **Already in library** or **Before tracking**. It's one file: watches that share a song all point at the same copy.
+
+From there, **Activity and songs** opens the watch's page and **Open in Library** its playlist. A watch that was stopped, or now follows another link, is still named as the origin of the songs it downloaded. For a song recorded before this history existed, the first watch that recorded it is shown, marked **Probably**. A song no watch downloaded (one you downloaded yourself) says so.
+
+A user sees their own watches by name; a song another account's watch downloaded says only that, and when.

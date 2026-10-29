@@ -49,7 +49,10 @@ const willRun = computed(() =>
 )
 
 function apply(payload) {
-  status.value = normalizeStatus(payload)
+  status.value = normalizeStatus({
+    deemix_available: status.value.deemixAvailable,
+    ...payload,
+  })
   const key = `${status.value.run?.id || 0}:${status.value.state}`
   if (status.value.state === 'ready' && selectionFor !== key) {
     selectionFor = key

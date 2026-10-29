@@ -19,6 +19,7 @@
         key="results"
         :query="query"
         :artist="artist"
+        :search-links="false"
       />
       <DiscoverView v-else key="discover" />
     </Transition>

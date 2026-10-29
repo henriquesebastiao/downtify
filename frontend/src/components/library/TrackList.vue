@@ -103,7 +103,7 @@
             <span class="tabular group-hover:hidden">{{
               numbering === 'track'
                 ? row.track.trackNumber || '–'
-                : row.index + 1
+                : positions?.get(row.track.file) || row.index + 1
             }}</span>
             <button
               type="button"
@@ -162,14 +162,18 @@
                 class="mr-1.5 inline-block rounded-[4px] border border-line-3 px-1 text-[10px] font-semibold text-faint md:hidden"
                 >{{ row.track.format }}</span
               >
-              <RouterLink
-                v-if="row.track.albumArtist && linkArtist"
-                :to="{ name: 'Artist', query: { name: row.track.albumArtist } }"
-                class="hover:text-fg hover:underline"
-                @click.stop
-                >{{ row.track.artist }}</RouterLink
+              <span
+                v-if="guestOf && isGuestOn(row.track, guestOf)"
+                class="mr-1.5 inline-block rounded-[4px] border border-line-3 px-1 text-[10px] font-semibold text-faint"
+                >{{ t('artist.guest') }}</span
               >
-              <template v-else>{{ row.track.artist }}</template>
+              <TrackArtistLinks
+                :artists="row.track.artists"
+                :fallback="row.track.artist"
+                :plain="!linkArtist"
+                only-known
+                search-missing
+              />
             </p>
           </div>
         </div>
@@ -226,11 +230,14 @@ import EqBars from '../ui/EqBars.vue'
 import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import LikeButton from '../player/LikeButton.vue'
+import TrackArtistLinks from './TrackArtistLinks.vue'
 import { useAuth } from '/src/model/auth'
+import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { formatDuration, timeAgo } from '/src/lib/format'
+import { isGuestOn } from '/src/lib/library'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -242,13 +249,20 @@ const props = defineProps({
   showCover: { type: Boolean, default: true },
   linkArtist: { type: Boolean, default: true },
   numbering: { type: String, default: 'index' },
+  // file -> place in the whole list, numbered instead of the row's own
+  // place while a filtered list is shown (a playlist search).
+  positions: { type: Map, default: null },
   header: { type: Boolean, default: true },
   sort: { type: Object, default: null },
   hideMenu: { type: Array, default: () => [] },
+  // On an artist's page: their name, so the tracks they only guest on
+  // are labelled as such.
+  guestOf: { type: String, default: '' },
 })
 const emit = defineEmits(['update:selected', 'update:sort'])
 
 const auth = useAuth()
+const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
@@ -406,6 +420,17 @@ function menuItems(row) {
         label: t('playlists.removeTrack'),
         icon: 'x',
         action: () => playlistActions.removeFiles(playlist, [row.track]),
+      })
+    }
+  }
+  if (props.context?.imported && props.context?.playlistName) {
+    const playlist = library.findPlaylist(props.context.playlistName)
+    if (playlist) {
+      const trashAt = items.findIndex((item) => item.danger)
+      items.splice(trashAt >= 0 ? trashAt : items.length, 0, {
+        label: t('playlists.hideTrack'),
+        icon: 'eye-off',
+        action: () => playlistActions.hideFiles(playlist, [row.track]),
       })
     }
   }

@@ -104,3 +104,25 @@ describe('proxiedArtistPhotoUrl with a Deezer picture', () => {
     })
   })
 })
+
+describe('proxiedArtistPhotoUrl with a YouTube Music picture', () => {
+  // A search result's artist photo: '=' and '-' in the address, which
+  // must not reach the query string as they are.
+  const picture =
+    'https://lh3.googleusercontent.com/abc-DEF_ghi=w600-h600-l90-rj'
+
+  it('sends the picture base64url-encoded, never the raw address', () => {
+    const url = proxiedArtistPhotoUrl('Kenji Aoki', picture)
+    const encoded = url.split('&url=')[1]
+    expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/)
+    expect(url).not.toContain('googleusercontent')
+    expect(atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))).toBe(picture)
+  })
+
+  it('knownArtistPhoto falls back to the YouTube Music picture itself', () => {
+    expect(knownArtistPhoto('Kenji Aoki', picture)).toEqual({
+      cover: `/api/artists/photo-proxy?name=Kenji%20Aoki&url=${base64Url(picture)}`,
+      fallback: picture,
+    })
+  })
+})

@@ -92,6 +92,8 @@ Docs site gotchas:
 - Page URLs are directory-style (`features/player.md` → `/features/player/`) and heading ids follow Python-Markdown's rules (`GET /api/url/resolve` → `#get-apiurlresolve`, repeats get `_1`) — both kept from the old zensical site because README and issues link to them. Don't change `docs/.vitepress/lib/routes.mjs` or `slug.mjs` without checking existing links.
 - Write Markdown links relative to the source file (`[Lyrics](../features/lyrics.md#x)`); the build rewrites them. Callouts use `::: info|tip|warning Title` … `:::`.
 - The build fails on dead links **and** broken `#anchors`; run `make doc-build` after editing docs.
+- **The docs are translated** (the same languages as the app, plus any added later). English pages in `docs/` are the source; each language mirrors them in `docs/<code>/` with the same file names, and its site text and sidebar titles live in `docs/.vitepress/locales/<code>.mjs` (`en.mjs` is the template). A page without a translation is a stub (`<EnglishOnly />` plus an `@include` of the English page), so every language has every page: a **new page needs `npm run i18n -- stubs`** (in `docs/`) and a title in each locale file's `nav.pages`, and `npm test` fails until it has. Translated pages must keep the English page's headings, code blocks, tables, callouts and link targets (`.vitepress/lib/page-structure.mjs` checks it); their heading ids are copied from the English headings by position, so anchors written against the English ids work everywhere — never hand-write ids. Changing an English page doesn't require touching its translations in the same change (`npm run i18n -- status <code>` lists the stale ones), but don't rename or reorder its headings without saying so, and keep new UI labels in the text identical to the app's `en.js` so translators can look them up. The API reference, mobile client contract and changelog stay English-only (stubs).
+- The docs open in the browser's language through a script in every page's `<head>` (`lib/locale-redirect.mjs`), and the language button in the top bar remembers the pick in `localStorage` (`downtify-docs-locale`). Don't turn it into a server redirect: the site is static.
 - Pages are Vue templates: a literal `{{` or an unknown `<Tag>` outside code breaks the build.
 
 Cross-check both against the code, not against each other — a stale doc citing another stale doc just launders the error.
@@ -106,13 +108,36 @@ Cross-check both against the code, not against each other — a stale doc citing
 6. If the change affects the SPA: `npm --prefix frontend run build` succeeds and the resulting `frontend/dist` is served correctly by the backend.
 7. Docker: if Python deps changed, run `make export` so `requirements.txt` matches `uv.lock` before merging — the Docker build uses `requirements.txt`, not `uv.lock`.
 8. **Before calling any task finished**, check whether it changed user-facing behavior (new/changed setting, env var, endpoint, UI control, supported input type, language, limit). If it did, update `README.md` (brief overview + link) and the matching `docs/` page(s) in the same change — see [Documentation](#documentation). If nothing user-facing changed (internal refactor, test-only change, CI config), say so explicitly instead of silently skipping this.
+9. Every change is described in `commit-message.md` — this repo's, and `~/git/downtify-android`'s if the task touched the app. See [Server and Android client together](#server-and-android-client-together).
+10. The final reply says how to test the change and where it shows in the interface — see [Final reply](#final-reply).
+
+## Final reply
+
+Every task ends with a reply that lets the maintainer check the change by hand, in this order:
+
+- **How to test it.** Concrete steps, not "run the tests": the commands (`make test`, a single `uv run pytest tests/test_x.py -k name`, `make run`, `make doc`, `npm --prefix frontend run dev`), any setup they need (an env var, a setting to turn on, an admin account, a scratch `DOWNLOAD_DIR`), the input to use (a Spotify track/playlist link, an endpoint with an example `curl`), and what they should see when it works. Say which of these you already ran and which are left to them.
+- **Where it shows in the interface.** When the web SPA changed, name the page and its route, then the section or control: e.g. "Library → Trash (`/library/trash`), the *Restore* button on each row" or "Settings → Tags & lyrics (`/settings/tags`), the *Providers* list under lyrics". Say who sees it (admins only, only with `DOWNTIFY_TRASH=true`, only while a song plays). For the docs site, give the page path (e.g. `/features/music-trash/`). When the Android app changed too, say where in the app (tab or side menu entry, screen, menu or sheet). If nothing visible changed, say so in one line.
+- Then name every repo changed and its `commit-message.md`.
+
+## Server and Android client together
+
+The server lives in `~/git/downtify` (this repo), the Android client in `~/git/downtify-android`. They evolve as one product: when a task here needs a change on the other side — the app has to use a new or changed `/api/v1` endpoint or field, a WebSocket frame, the pairing flow, or it breaks on something this change does — make that change in `~/git/downtify-android` in the same task, without stopping to ask. A session opened in the Android repo may change this one the same way.
+
+- Before editing the other repo, read its `CLAUDE.md` and follow it there (architecture, translations, tests, its own checks: `./gradlew build detekt spotlessCheck` for the app).
+- The app reads the contract in `docs/mobile-client-contract.md` and the "Server and sign-in", "Mobile API (v1)" and "WebSocket" parts of `docs/api-reference.md`: change them with the code. Installed apps keep calling the old shape, so add fields and endpoints rather than renaming or removing.
+- **Don't commit, stage or push, in either repo.** The maintainer commits by hand.
+- **No change goes undescribed.** Every edit to tracked files (code, tests, docs, config) is described in `commit-message.md` at the root of the repo it touched (git-ignored in both). A task that touched both repos leaves a message in each, and each mentions the other side ("Needs the server's …" / "Used by the Android app's …").
+- Write it before the final reply, as Conventional Commits: imperative subject ≤ 72 characters, a body saying why, then what changed per file or area.
+- The file may hold an older message. If `git log` already has its subject, it was committed: replace it. If it describes changes still uncommitted, keep them: extend the message to cover everything pending, or add a separate message for unrelated work, separated by a `---` line and each naming the files it covers.
+- End the reply by naming every repo changed and its `commit-message.md`.
 
 ## Things to never do
 
 - Reintroduce `spotdl` / `spotipy` / Spotify Web API credentials. The project deliberately removed that dependency.
 - Commit `frontend/dist`, `downloads/`, `data/`, or any `.mp3` / `.m4a` artefacts (`.gitignore` covers these — keep it that way).
 - Bypass `ruff` / `prettier` with inline disables to silence a warning. Fix the cause.
-- Change the public API endpoint paths or response shapes without simultaneously updating the Vue frontend.
+- Change the public API endpoint paths or response shapes without simultaneously updating the Vue frontend (and the Android client, when it uses them).
+- Commit or push, here or in `~/git/downtify-android` — describe the change in `commit-message.md` instead.
 - Add network calls to tests without a recorded fixture.
 - Hand-edit `requirements.txt` — regenerate via `make export`.
 - Skip hooks (`--no-verify`) on commits.

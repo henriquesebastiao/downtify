@@ -44,3 +44,85 @@ def test_merge_applies_youtube_id_override():
     _merge_client_track_hints(base, {'youtube_id': ' dQw4w9WgXcQ '})
     assert base['youtube_id'] == 'dQw4w9WgXcQ'
     assert base['youtube_id_override'] is True
+
+
+def test_merge_applies_the_album_artist_of_the_listed_album():
+    base: dict = {'song_id': 'a'}
+    _merge_client_track_hints(
+        base, {'album_artist': ' Various Artists ', 'compilation': True}
+    )
+    assert base['album_artist'] == 'Various Artists'
+    assert base['compilation'] is True
+
+
+def test_merge_keeps_the_album_artist_the_url_resolved():
+    base: dict = {'song_id': 'a', 'album_artist': 'AliasSolo'}
+    _merge_client_track_hints(
+        base, {'album_artist': 'Various Artists', 'compilation': True}
+    )
+    assert base['album_artist'] == 'AliasSolo'
+    assert 'compilation' not in base
+
+
+def test_merge_never_takes_a_compilation_flag_on_its_own():
+    base: dict = {'song_id': 'a'}
+    _merge_client_track_hints(base, {'compilation': True})
+    assert 'compilation' not in base
+
+
+def test_merge_applies_soundcloud_track_url_override():
+    base = {
+        'song_id': 'spotify:id',
+        'name': 'Spotify track',
+        'album_name': 'Spotify album',
+        'source': 'spotify',
+    }
+
+    _merge_client_track_hints(
+        base,
+        {'soundcloud_url': 'https://soundcloud.com/artist/track'},
+    )
+
+    assert base['soundcloud_url'] == 'https://soundcloud.com/artist/track'
+    assert base['soundcloud_url_override'] is True
+    assert base['name'] == 'Spotify track'
+    assert base['album_name'] == 'Spotify album'
+    assert base['source'] == 'spotify'
+
+
+def test_merge_ignores_non_soundcloud_override_url():
+    base = {'song_id': 'spotify:id'}
+
+    _merge_client_track_hints(
+        base,
+        {'soundcloud_url': 'https://example.com/redirect'},
+    )
+
+    assert 'soundcloud_url' not in base
+
+
+def test_soundcloud_override_drops_the_known_video():
+    base = {'song_id': 'yt1', 'youtube_id': 'dQw4w9WgXcQ'}
+
+    _merge_client_track_hints(
+        base,
+        {
+            'youtube_id': 'dQw4w9WgXcQ',
+            'soundcloud_url': 'https://soundcloud.com/artist/track?si=x',
+        },
+    )
+
+    assert base['soundcloud_url'] == 'https://soundcloud.com/artist/track'
+    assert 'youtube_id' not in base
+
+
+def test_youtube_override_drops_a_stale_soundcloud_track():
+    base = {
+        'song_id': 'spotify:id',
+        'soundcloud_url': 'https://soundcloud.com/artist/track',
+    }
+
+    _merge_client_track_hints(base, {'youtube_id': 'dQw4w9WgXcQ'})
+
+    assert base['youtube_id'] == 'dQw4w9WgXcQ'
+    assert 'soundcloud_url' not in base

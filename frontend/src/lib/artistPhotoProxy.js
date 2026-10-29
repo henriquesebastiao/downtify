@@ -7,10 +7,10 @@
 // Use it for an <img> on screen and nowhere else: never save, upload or
 // copy what it returns into an artist's photo/banner, and never call it
 // for an artist that already has a saved photo — that one comes from
-// `getArtistArt`/`getArtistArtBulk` (ask those first, as LibraryView does;
-// the search page never uses this: its artists bring their own picture).
-// Discover and the Finder do, handing it the Deezer picture they already
-// have (`knownArtistPhoto`), so a saved photo shows instead when there is one.
+// `getArtistArt`/`getArtistArtBulk` (ask those first, as LibraryView does).
+// Discover and the Finder hand it the Deezer picture they already have, and
+// the search page the YouTube Music one (`knownArtistPhoto`), so a saved
+// photo shows instead when there is one.
 // Pure (no API client import), like
 // paths.js.
 import { versionedArtUrl } from './artistArt'

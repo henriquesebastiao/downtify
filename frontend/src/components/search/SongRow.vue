@@ -69,6 +69,16 @@
     >
       <AppIcon name="arrow-up-right" :size="16" />
     </a>
+    <button
+      v-if="firstArtist"
+      type="button"
+      class="hidden size-8 items-center justify-center rounded-control text-faint hover:bg-surface-2 hover:text-fg sm:flex lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100"
+      :title="t('buy.menu')"
+      :aria-label="t('buy.menu')"
+      @click.stop="buyLinks.open(buyTargetForSong(song))"
+    >
+      <AppIcon name="tag" :size="16" />
+    </button>
     <div class="flex w-40 shrink-0 items-center justify-end gap-2">
       <SimilarButton :artist="firstArtist" :title="song.name" filled />
       <DownloadState :song="song" />
@@ -88,6 +98,8 @@ import DownloadState from './DownloadState.vue'
 import SimilarButton from '../similar/SimilarButton.vue'
 import { formatDuration } from '/src/lib/format'
 import { useSongPlay } from '/src/model/songPlay'
+import { useBuyLinks } from '/src/model/buyLinks'
+import { buyTargetForSong } from '/src/lib/buyLinks'
 import { usePlayer } from '/src/model/player'
 import { useI18n } from '/src/i18n'
 
@@ -100,6 +112,7 @@ const props = defineProps({
 })
 const { t } = useI18n()
 const player = usePlayer()
+const buyLinks = useBuyLinks()
 
 // Playing works like every other track row: a downloaded song plays in
 // full through the built-in player, anything else streams in full.

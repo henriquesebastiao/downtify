@@ -91,6 +91,30 @@ describe('streaming in the player queue', () => {
     expect(player.playError.value).toBe('')
   })
 
+  it('keeps the current local file and local order when the policy changes', async () => {
+    const { libraryOnly } = await import('../model/musicPolicy')
+    const { nextTick } = await import('vue')
+    player.playList([lib('A'), pending('B'), lib('C')])
+    const audio = audios.list[0]
+    const src = audio.src
+    libraryOnly.value = true
+    await nextTick()
+    expect(player.playlist.value.map((t) => t.title)).toEqual(['A', 'C'])
+    expect(player.currentTrack.value.title).toBe('A')
+    expect(audio.src).toBe(src)
+  })
+
+  it('rejects late external queue entries while allowing local playback', async () => {
+    const { libraryOnly } = await import('../model/musicPolicy')
+    const { nextTick } = await import('vue')
+    libraryOnly.value = true
+    await nextTick()
+    player.playList([pending('B'), lib('A')])
+    player.enqueue([pending('D'), lib('C')])
+    expect(player.playlist.value.map((t) => t.title)).toEqual(['A', 'C'])
+    expect(resolveTrackUrl).not.toHaveBeenCalled()
+  })
+
   it('keeps one track ahead resolved while the current one plays', async () => {
     player.playList([lib('A'), pending('B'), pending('C')])
     await vi.waitFor(() => {

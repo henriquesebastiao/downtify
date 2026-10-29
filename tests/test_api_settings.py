@@ -725,11 +725,17 @@ def test_update_settings_leaves_providers_untouched_when_key_absent(
 
 def test_effective_audio_providers_keeps_allowed_order():
     settings = {
-        'audio_providers': ['youtube', 'slskd', 'youtube-music'],
+        'audio_providers': [
+            'youtube',
+            'soundcloud',
+            'slskd',
+            'youtube-music',
+        ],
         'slskd': {'enabled': True},
     }
     assert _effective_audio_providers(settings) == [
         'youtube',
+        'soundcloud',
         'slskd',
         'youtube-music',
     ]

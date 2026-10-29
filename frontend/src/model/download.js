@@ -143,6 +143,7 @@ class DownloadItem {
     if (message.progress !== undefined) values.progress = message.progress
     if (message.message !== undefined) values.message = message.message
     if (message.provider) values.provider = message.provider
+    if (message.reused) values.provider = ''
     this.patch(values)
   }
 }
@@ -401,14 +402,21 @@ export function useDownloadManager() {
     }
   }
 
-  function retryWithAudio(song, youtubeVideoId) {
-    if (song.replace) return replaceAgain(song, youtubeVideoId)
+  // `audio` is a YouTube video id, or a SoundCloud track URL when `source`
+  // is 'soundcloud'. Setting one clears the other, so a link pasted on an
+  // earlier retry can't win over this one.
+  function retryWithAudio(song, audio, source = 'youtube') {
+    if (song.replace) return replaceAgain(song, audio)
+    const audioOverride =
+      source === 'soundcloud'
+        ? { soundcloud_url: audio, youtube_id: undefined }
+        : { youtube_id: audio, soundcloud_url: undefined }
     const item = findItem(song)
     if (item) {
-      item.song = { ...item.song, youtube_id: youtubeVideoId }
+      item.song = { ...item.song, ...audioOverride }
       item.resetForRetry()
     }
-    return download({ ...song, youtube_id: youtubeVideoId })
+    return download({ ...song, ...audioOverride })
   }
 
   function remove(song) {

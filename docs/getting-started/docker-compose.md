@@ -48,7 +48,7 @@ services:
       - downtify_data:/data
 ```
 
-Then, in **Settings → slskd (Soulseek)**, enable slskd, enter its URL (e.g. `http://slskd:5030` when both containers share a Docker network) and API key, and set the download folder to `/slskd`.
+Then, in **Settings → Audio sources → slskd**, enable slskd, enter its URL (e.g. `http://slskd:5030` when both containers share a Docker network) and API key, and set the download folder to `/slskd`.
 
 ## Existing music folders
 

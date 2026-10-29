@@ -62,6 +62,7 @@ const item = computed(() => {
 })
 
 const inLibrary = computed(() => {
+  if (props.song.source === 'library' && props.song.file) return true
   const artist = (props.song.artists || [])[0] || props.song.artist
   return library.hasSong(artist, props.song.name)
 })
