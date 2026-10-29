@@ -17,6 +17,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Download Queue](download-queue.md) | Pause downloads before changing settings or updating: running ones finish, nothing new starts, and the waiting songs survive a restart |
 | [Playlist Monitor](playlist-monitor.md) | Watch Spotify or YouTube Music playlists and artists, and auto-download new tracks and releases |
 | [Hidden playlist songs](hidden-playlist-songs.md) | Take songs you don't want out of a downloaded or watched playlist and keep them out; the files stay in your library |
+| [Collaborative playlists](collaborative-playlists.md) | Let some of the people you share a Library playlist with add and remove its songs; renaming, sharing and deleting stay yours |
 | [Top Songs](top-songs.md) | Paste an artist link and download their most popular songs, optionally as a playlist |
 | [Library Import (CSV)](library-import.md) | Import a library export from Soundiiz, TuneMyMusic or Exportify and queue the whole thing |
 | [Built-in Player](player.md) | Play your library in the browser: queue management, synced lyrics, sleep timer, keyboard and media keys |

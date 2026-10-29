@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 from mutagen.id3 import APIC, ID3, TIT2, TPE1
 
+from downtify import manual_playlists
 from downtify.library_catalog import LibraryContext
 from downtify.library_paths import library_stored_path
 from downtify.likes import LIKED_PLAYLIST_NAME
@@ -243,6 +246,30 @@ def test_rename_rejects_taken_name(tmp_path):
     with pytest.raises(ManualPlaylistError) as caught:
         rename_manual_playlist(ctx, 'Alpha', 'Beta')
     assert caught.value.status_code == 409
+
+
+def test_concurrent_additions_keep_both_tracks(tmp_path, monkeypatch):
+    root = tmp_path / 'downloads'
+    root.mkdir()
+    for name in ('One.mp3', 'Two.mp3'):
+        (root / name).write_bytes(b'audio fixture')
+    ctx = LibraryContext(download_dir=root)
+    monkeypatch.setattr(
+        manual_playlists, 'refresh_manual_playlist_cover', lambda *args: None
+    )
+    create_manual_playlist(ctx, 'Together')
+    ready = Barrier(2)
+
+    def add(name):
+        ready.wait(timeout=5)
+        return edit_manual_playlist(ctx, 'Together', add=[name])
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(add, ['One.mp3', 'Two.mp3']))
+    assert sorted(result['count'] for result in results) == [1, 2]
+    assert set(
+        manual_playlists._read_files(ctx, root / 'Playlists' / 'Together.m3u')
+    ) == {'One.mp3', 'Two.mp3'}
 
 
 def test_source_cover_survives_edits_rename_and_does_not_change_audio(

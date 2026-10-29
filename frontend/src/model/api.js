@@ -517,11 +517,14 @@ function renameLibraryPlaylist(name, newName, resetDisplayName = false) {
   })
 }
 
-function setPlaylistVisibility(name, visibility, sharedWith = []) {
+// `editors`: who of `sharedWith` may also add and remove songs (Library
+// playlists only); left out, the current editors still listed stay.
+function setPlaylistVisibility(name, visibility, sharedWith = [], editors) {
   return API.put('/api/library/playlists/visibility', {
     name,
     visibility,
     shared_with: sharedWith,
+    ...(editors ? { editors } : {}),
   })
 }
 

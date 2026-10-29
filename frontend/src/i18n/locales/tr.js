@@ -215,6 +215,13 @@ export default {
     result:
       '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
   },
+  collaboration: {
+    canEdit: 'Şarkı ekleyip çıkarabilir',
+    copyHint:
+      'Bu liste kaynağını takip ediyor, bu yüzden başkaları şarkılarını düzenleyemez. Bunun yerine düzenlenebilir bir kopya paylaş: kopya senin kalır, orijinal de kaynağını takip etmeye devam eder.',
+    copy: 'Düzenlenebilir kopya paylaş',
+    byEditor: '{owner} tarafından · şarkı ekleyip çıkarabilirsin',
+  },
   language: {
     name: 'Türkçe',
   },
@@ -1285,7 +1292,7 @@ export default {
   },
   sharing: {
     title: '“{name}” paylaş',
-    hint: 'Paylaştığın kişiler listeyi çalabilir, takip edebilir ve kopyasını kaydedebilir; ama değiştiremez.',
+    hint: 'Paylaştığın kişiler listeyi çalabilir, takip edebilir ve kopyasını kaydedebilir. Yalnızca düzenlemesine izin verdiklerin şarkı ekleyip çıkarabilir.',
     private: 'Özel',
     privateHint: 'Yalnızca sen görebilirsin.',
     shared: 'Belirli kişiler',
@@ -1322,7 +1329,7 @@ export default {
     },
     sharedWithMe: 'Benimle paylaşılanlar',
     sharedWithMeHint:
-      'Başkalarının seninle paylaştığı listeler. Çalabilirsin ama değiştiremezsin.',
+      'Başkalarının seninle paylaştığı listeler. Çalabilirsin; sahibinin izin verdiği listelere şarkı ekleyip çıkarabilirsin.',
     publicPlaylists: 'Herkese açık listeler',
     publicPlaylistsHint:
       'Bu sunucudaki herkesle paylaşılır. Kenar çubuğunda tutmak için birini takip et.',

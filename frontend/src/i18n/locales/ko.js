@@ -213,6 +213,13 @@ export default {
     result:
       '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
   },
+  collaboration: {
+    canEdit: '곡 추가 및 제거 가능',
+    copyHint:
+      '이 재생목록은 원본을 따라가므로 다른 사람이 곡을 편집할 수 없습니다. 대신 편집 가능한 사본을 공유하세요. 사본은 내 것으로 남고, 원래 재생목록은 계속 원본을 따라갑니다.',
+    copy: '편집 가능한 사본 공유',
+    byEditor: '{owner}님의 재생목록 · 곡을 추가하고 제거할 수 있습니다',
+  },
   language: {
     name: '한국어',
   },
@@ -1283,7 +1290,7 @@ export default {
   },
   sharing: {
     title: '“{name}” 공유',
-    hint: '공유받은 사람은 재생하고, 팔로우하고, 사본을 저장할 수 있지만 변경할 수는 없습니다.',
+    hint: '공유받은 사람은 재생하고, 팔로우하고, 사본을 저장할 수 있습니다. 편집을 허용한 사람만 곡을 추가하거나 제거할 수 있습니다.',
     private: '비공개',
     privateHint: '나만 볼 수 있습니다.',
     shared: '특정 사용자',
@@ -1320,7 +1327,7 @@ export default {
     },
     sharedWithMe: '나에게 공유됨',
     sharedWithMeHint:
-      '다른 사람이 나와 공유한 재생목록입니다. 재생할 수는 있지만 변경할 수는 없습니다.',
+      '다른 사람이 나와 공유한 재생목록입니다. 재생할 수 있고, 소유자가 허용한 재생목록에서는 곡을 추가하거나 제거할 수 있습니다.',
     publicPlaylists: '공개 재생목록',
     publicPlaylistsHint:
       '이 서버의 모든 사람과 공유됩니다. 팔로우하면 사이드바에 유지됩니다.',

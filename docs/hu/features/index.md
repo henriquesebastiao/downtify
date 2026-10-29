@@ -17,6 +17,7 @@ A Downtify mindent lefed, amire szükséged van egy helyi zenekönyvtár felép�
 | [Letöltési sor](download-queue.md) | Szüneteltesd a letöltéseket, mielőtt beállításokat módosítasz vagy frissítesz: a futók befejeződnek, új nem indul, a várakozó dalok pedig megmaradnak újraindítás után is |
 | [Lejátszási lista figyelő](playlist-monitor.md) | Figyelj Spotify- vagy YouTube Music-lejátszási listákat és előadókat, és automatikusan töltsd le az új számokat és kiadványokat |
 | [Elrejtett számok a listákban](hidden-playlist-songs.md) | Vedd ki a nem kívánt számokat egy letöltött vagy figyelt listából, és tartsd is kint őket; a fájlok a könyvtárban maradnak |
+| [Közösen szerkesztett listák](collaborative-playlists.md) | Engedd meg néhány embernek, akikkel egy könyvtári listát megosztasz, hogy számokat adjanak hozzá és távolítsanak el; az átnevezés, a megosztás és a törlés a tiéd marad |
 | [Legnépszerűbb számok](top-songs.md) | Illessz be egy előadó hivatkozását, és töltsd le a legnépszerűbb dalait, opcionálisan lejátszási listaként |
 | [Könyvtár importálása (CSV)](library-import.md) | Importálj egy Soundiiz-, TuneMyMusic- vagy Exportify-exportot, és állítsd sorba az egészet |
 | [Beépített lejátszó](player.md) | Játszd le a könyvtárad a böngészőben: sorkezelés, időzített dalszövegek, elalvási időzítő, billentyűzet és médiabillentyűk |

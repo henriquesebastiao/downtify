@@ -226,6 +226,13 @@ export default {
     result:
       '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
   },
+  collaboration: {
+    canEdit: 'Darf Titel hinzufügen und entfernen',
+    copyHint:
+      'Diese Playlist folgt ihrer Quelle, daher können andere ihre Titel nicht bearbeiten. Teile stattdessen eine bearbeitbare Kopie: Sie bleibt deine, und das Original folgt weiter seiner Quelle.',
+    copy: 'Bearbeitbare Kopie teilen',
+    byEditor: 'von {owner} · du kannst Titel hinzufügen und entfernen',
+  },
   language: {
     name: 'Deutsch',
   },
@@ -1325,7 +1332,7 @@ export default {
   },
   sharing: {
     title: '„{name}“ teilen',
-    hint: 'Wer sie bekommt, kann sie abspielen, ihr folgen und eine Kopie speichern, aber nichts daran ändern.',
+    hint: 'Wer sie bekommt, kann sie abspielen, ihr folgen und eine Kopie speichern. Titel hinzufügen oder entfernen kann nur, wem du das Bearbeiten erlaubst.',
     private: 'Privat',
     privateHint: 'Nur du kannst sie sehen.',
     shared: 'Bestimmte Personen',
@@ -1362,7 +1369,7 @@ export default {
     },
     sharedWithMe: 'Mit mir geteilt',
     sharedWithMeHint:
-      'Playlists, die andere mit dir geteilt haben. Du kannst sie abspielen, aber nicht ändern.',
+      'Playlists, die andere mit dir geteilt haben. Du kannst sie abspielen und, wo es der Besitzer erlaubt, Titel hinzufügen oder entfernen.',
     publicPlaylists: 'Öffentliche Playlists',
     publicPlaylistsHint:
       'Mit allen auf diesem Server geteilt. Folge einer, um sie in der Seitenleiste zu behalten.',

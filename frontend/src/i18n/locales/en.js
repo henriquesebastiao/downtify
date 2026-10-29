@@ -212,6 +212,13 @@ export default {
     result:
       '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
   },
+  collaboration: {
+    canEdit: 'Can add and remove songs',
+    copyHint:
+      'This playlist follows its source, so others can’t edit its songs. Share an editable copy instead: it stays yours, and the original keeps following its source.',
+    copy: 'Share an editable copy',
+    byEditor: 'by {owner} · you can add and remove songs',
+  },
   language: {
     name: 'English',
   },
@@ -1262,7 +1269,7 @@ export default {
   },
   sharing: {
     title: 'Share “{name}”',
-    hint: 'People you share with can play it, follow it and save a copy. They can’t change it.',
+    hint: 'People you share with can play it, follow it and save a copy. Only those you let edit it can add or remove songs.',
     private: 'Private',
     privateHint: 'Only you can see it.',
     shared: 'Specific people',
@@ -1299,7 +1306,7 @@ export default {
     },
     sharedWithMe: 'Shared with me',
     sharedWithMeHint:
-      'Playlists other people shared with you. You can play them, but not change them.',
+      'Playlists other people shared with you. You can play them, and add or remove songs where the owner lets you.',
     publicPlaylists: 'Public playlists',
     publicPlaylistsHint:
       'Shared with everyone on this server. Follow one to keep it in your sidebar.',

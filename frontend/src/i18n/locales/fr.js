@@ -228,6 +228,13 @@ export default {
     result:
       '{added} ajoutées · {existing} déjà présentes · {failed} à vérifier ou non importées',
   },
+  collaboration: {
+    canEdit: 'Peut ajouter et retirer des titres',
+    copyHint:
+      'Cette playlist suit sa source : personne d’autre ne peut modifier ses titres. Partagez plutôt une copie modifiable : elle reste à vous, et l’originale continue de suivre sa source.',
+    copy: 'Partager une copie modifiable',
+    byEditor: 'par {owner} · vous pouvez ajouter et retirer des titres',
+  },
   language: {
     name: 'Français',
   },
@@ -1327,7 +1334,7 @@ export default {
   },
   sharing: {
     title: 'Partager « {name} »',
-    hint: 'Les personnes avec qui vous la partagez peuvent l’écouter, la suivre et en enregistrer une copie, mais pas la modifier.',
+    hint: 'Les personnes avec qui vous la partagez peuvent l’écouter, la suivre et en enregistrer une copie. Seules celles que vous autorisez à la modifier peuvent ajouter ou retirer des titres.',
     private: 'Privée',
     privateHint: 'Vous seul pouvez la voir.',
     shared: 'Certaines personnes',
@@ -1364,7 +1371,7 @@ export default {
     },
     sharedWithMe: 'Partagées avec moi',
     sharedWithMeHint:
-      'Playlists que d’autres personnes ont partagées avec vous. Vous pouvez les écouter, pas les modifier.',
+      'Playlists que d’autres personnes ont partagées avec vous. Vous pouvez les écouter et, quand le propriétaire l’autorise, y ajouter ou retirer des titres.',
     publicPlaylists: 'Playlists publiques',
     publicPlaylistsHint:
       'Partagées avec tout le monde sur ce serveur. Suivez-en une pour la garder dans la barre latérale.',

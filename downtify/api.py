@@ -173,10 +173,11 @@ downloads are shared, and files are never stored twice.
 * ``POST /api/library/lookup`` (search/link songs already in the library)
 * ``POST /api/library/playlists`` (create an empty editable playlist)
 * ``POST /api/library/playlists/tracks`` (add or remove tracks on a
-  manual playlist)
+  manual playlist - its owner's, or one shared with you as an editor)
 * ``POST /api/library/playlists/rename`` (rename a manual playlist)
-* ``PUT  /api/library/playlists/visibility`` (share a playlist you own,
-  view-only: private, with named users, or public),
+* ``PUT  /api/library/playlists/visibility`` (share a playlist you own:
+  private, with named users - some of them editors of a Library
+  playlist - or public),
   ``POST /api/library/playlists/copy`` (save a copy of a playlist you can
   open) and ``POST /api/library/playlists/detach`` (turn an imported
   playlist into an editable one)
@@ -1462,6 +1463,7 @@ class _PlaylistLens:
     owners: tuple[dict[str, int], dict[str, int]]
     visibility: dict[str, str]
     shared_users: dict[str, list[int]]
+    editors: dict[str, list[int]]
     view: ShareView
     show_public: bool
     names: dict[int, str]
@@ -1482,6 +1484,7 @@ class _PlaylistLens:
             )
         ):
             return None
+        editors = self.editors.get(key, [])
         row = {
             **playlist,
             'owner_id': owner_id,
@@ -1491,12 +1494,21 @@ class _PlaylistLens:
             'followed': followed,
             'shared_with_me': invited,
             'new': invited and not self.view.to_me[key],
+            # Songs of a Library playlist: the owner's (or an admin's) to
+            # change, and its editors' while it is shared with them.
+            'can_edit_tracks': bool(
+                playlist.get('manual')
+                and (mine or (invited and self.user_id in editors))
+            ),
         }
         if mine:
             row['shared_with'] = [
                 self.names[uid]
                 for uid in self.shared_users.get(key, [])
                 if uid in self.names
+            ]
+            row['editors'] = [
+                self.names[uid] for uid in editors if uid in self.names
             ]
         return row
 
@@ -1506,11 +1518,13 @@ def _playlist_lens(request: Optional[Request]) -> _PlaylistLens:
     user_id = request_user_id(request)
     visibility: dict[str, str] = {}
     shared_users: dict[str, list[int]] = {}
+    editors: dict[str, list[int]] = {}
     shares = state.playlist_shares
     if shares is not None and sharing_enabled():
         try:
             visibility = shares.visibility_map()
             shared_users = shares.shared_users()
+            editors = shares.editors()
         except Exception:
             logger.opt(exception=True).debug('Could not read playlist shares')
     return _PlaylistLens(
@@ -1519,6 +1533,7 @@ def _playlist_lens(request: Optional[Request]) -> _PlaylistLens:
         owners=_playlist_owner_maps(),
         visibility=visibility,
         shared_users=shared_users,
+        editors=editors,
         view=ShareView() if admin else _share_view(user_id),
         show_public=admin
         or bool(user_preferences(request).get('show_public_playlists', True)),
@@ -1540,9 +1555,12 @@ def _filter_playlists_for(
 
     Rows are copies carrying ``owner_id``, ``owner``, ``visibility``,
     ``mine`` (theirs to change: their own, or anything for an admin),
-    ``followed``, ``shared_with_me`` and ``new`` (shared with them, not
-    opened yet); the owner's also list ``shared_with`` (usernames) and,
-    on an imported playlist they hid songs from, ``hidden_count``.
+    ``followed``, ``shared_with_me``, ``new`` (shared with them, not
+    opened yet) and ``can_edit_tracks`` (they may add and remove songs:
+    a Library playlist that is theirs, or shared with them as an
+    editor); the owner's also list ``shared_with`` and ``editors``
+    (usernames) and, on an imported playlist they hid songs from,
+    ``hidden_count``.
     """
 
     lens = _playlist_lens(request)
@@ -6953,12 +6971,20 @@ async def control_loudness(request: Request, action: str) -> dict[str, Any]:
 async def edit_library_playlist_tracks_endpoint(
     request: Request,
 ) -> dict[str, Any]:
-    """Add or remove library files on a manual playlist."""
+    """Add or remove library files on a manual playlist: its owner's (or
+    an admin's) to change, and its editors' - songs only: the source
+    artwork (``source_playlist_url``) stays with the owner."""
 
     payload = await _json_object(request)
     name = str(payload.get('name') or '').strip()
-    require_playlist_visible(name, request, manage=True)
+    entry = require_playlist_visible(name, request)
+    mine = bool(entry.get('mine', True))
     source_url = str(payload.get('source_playlist_url') or '').strip()
+    if not mine and (not entry.get('can_edit_tracks') or source_url):
+        raise HTTPException(
+            status_code=403,
+            detail='Only the owner can change this playlist',
+        )
     cover_target = (
         _playlist_target_for_batch(source_url) if source_url else None
     )
@@ -6973,6 +6999,17 @@ async def edit_library_playlist_tracks_endpoint(
         else []
     )
     ctx = library_context()
+    # Only songs they can see: one an admin hid is as good as missing.
+    added = [path for path in (str(item).strip() for item in add) if path]
+    if added:
+        allowed = set(
+            await asyncio.to_thread(filter_paths_for_request, added, request)
+        )
+        for path in added:
+            if path not in allowed:
+                raise HTTPException(
+                    status_code=400, detail=f'Track not in the library: {path}'
+                )
     try:
         result = await asyncio.to_thread(
             edit_manual_playlist,
@@ -6997,6 +7034,9 @@ async def edit_library_playlist_tracks_endpoint(
             if saved:
                 await asyncio.to_thread(keep_explicit_cover, path)
     invalidate_library_paths_cache()
+    if entry.get('visibility', PRIVATE) != PRIVATE:
+        # Others have it open: the owner and its other editors.
+        await announce_playlists_changed()
     return result
 
 
@@ -7133,10 +7173,13 @@ def _owner_of(entry: dict[str, Any]) -> int:
 async def set_playlist_visibility_endpoint(
     request: Request,
 ) -> dict[str, Any]:
-    """Share a playlist you own (view-only): ``{name, visibility,
-    shared_with}`` with ``visibility`` ``private`` (the default),
-    ``shared`` (with the usernames in ``shared_with``) or ``public``
-    (everyone on the server). Liked songs are never shareable."""
+    """Share a playlist you own: ``{name, visibility, shared_with,
+    editors?}`` with ``visibility`` ``private`` (the default), ``shared``
+    (with the usernames in ``shared_with``) or ``public`` (everyone on
+    the server). Viewers only play it; ``editors`` - some of
+    ``shared_with``, on a Library playlist - may also add and remove its
+    songs (left out: the current editors still on the list stay).
+    Liked songs are never shareable."""
 
     payload = await _json_object(request)
     name = str(payload.get('name') or '').strip()
@@ -7175,19 +7218,66 @@ async def set_playlist_visibility_endpoint(
         raise HTTPException(
             status_code=400, detail='Choose who to share the playlist with'
         )
+    editor_ids = _playlist_editor_ids(
+        payload, entry, visibility, user_ids, by_name
+    )
     stored = str(entry.get('name') or name)
     await asyncio.to_thread(
-        shares.set_visibility, stored, visibility, user_ids
+        shares.set_visibility, stored, visibility, user_ids, editor_ids
     )
     await announce_playlists_changed()
     usernames = _usernames()
+    editors = (await asyncio.to_thread(shares.editors)).get(
+        share_key(stored), []
+    )
     return {
         'name': stored,
         'visibility': visibility,
         'shared_with': [
             usernames[uid] for uid in user_ids if uid in usernames
         ],
+        'editors': [usernames[uid] for uid in editors if uid in usernames],
     }
+
+
+def _playlist_editor_ids(
+    payload: dict[str, Any],
+    entry: dict[str, Any],
+    visibility: str,
+    user_ids: list[int],
+    by_name: dict[str, int],
+) -> Optional[list[int]]:
+    """The ``editors`` of a visibility change as user ids (``None`` when
+    left out: the current ones stay); 400 unless each is on the share
+    list of a Library playlist."""
+
+    if 'editors' not in payload:
+        return None
+    raw = payload['editors']
+    if not isinstance(raw, list):
+        raise HTTPException(status_code=400, detail='editors must be a list')
+    editor_ids: list[int] = []
+    for value in raw:
+        uid = by_name.get(str(value or '').strip().casefold())
+        if uid is None:
+            raise HTTPException(
+                status_code=400, detail=f'Unknown user {value}'
+            )
+        if uid not in editor_ids:
+            editor_ids.append(uid)
+    if not editor_ids:
+        return editor_ids
+    if not entry.get('manual'):
+        raise HTTPException(
+            status_code=400,
+            detail='Only playlists made in the Library can have editors',
+        )
+    if visibility != SHARED or not set(editor_ids) <= set(user_ids):
+        raise HTTPException(
+            status_code=400,
+            detail='Editors must be among the people it is shared with',
+        )
+    return editor_ids
 
 
 @router.post('/api/library/playlists/copy')

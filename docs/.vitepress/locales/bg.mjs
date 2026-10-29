@@ -80,6 +80,7 @@ export default {
       'features/liked-songs.md': 'Харесани песни',
       'features/podcasts.md': 'Подкасти',
       'features/discover.md': 'Откриване',
+      'features/collaborative-playlists.md': 'Съвместни плейлисти',
       'features/users.md': 'Потребители и вход',
       'features/mobile-apps.md': 'Мобилни приложения',
       'features/library-only.md': 'Library-only mode',

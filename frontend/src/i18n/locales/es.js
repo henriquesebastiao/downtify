@@ -224,6 +224,13 @@ export default {
     result:
       '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
   },
+  collaboration: {
+    canEdit: 'Puede añadir y quitar canciones',
+    copyHint:
+      'Esta lista sigue a su origen, así que nadie más puede editar sus canciones. Comparte una copia editable: sigue siendo tuya y la original sigue a su origen.',
+    copy: 'Compartir una copia editable',
+    byEditor: 'de {owner} · puedes añadir y quitar canciones',
+  },
   language: {
     name: 'Español',
   },
@@ -1306,7 +1313,7 @@ export default {
   },
   sharing: {
     title: 'Compartir “{name}”',
-    hint: 'Quienes la reciban pueden reproducirla, seguirla y guardar una copia, pero no modificarla.',
+    hint: 'Quienes la reciban pueden reproducirla, seguirla y guardar una copia. Solo quienes dejes editarla pueden añadir o quitar canciones.',
     private: 'Privada',
     privateHint: 'Solo tú puedes verla.',
     shared: 'Personas concretas',
@@ -1343,7 +1350,7 @@ export default {
     },
     sharedWithMe: 'Compartidas conmigo',
     sharedWithMeHint:
-      'Listas que otras personas han compartido contigo. Puedes reproducirlas, pero no modificarlas.',
+      'Listas que otras personas han compartido contigo. Puedes reproducirlas y, donde el propietario te deje, añadir o quitar canciones.',
     publicPlaylists: 'Playlists públicas',
     publicPlaylistsHint:
       'Compartidas con todos en este servidor. Sigue una para tenerla en la barra lateral.',

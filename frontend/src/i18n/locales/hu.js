@@ -220,6 +220,13 @@ export default {
     result:
       '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
   },
+  collaboration: {
+    canEdit: 'Adhat hozzá és távolíthat el számokat',
+    copyHint:
+      'Ez a lista a forrását követi, ezért mások nem szerkeszthetik a számait. Ossz meg inkább egy szerkeszthető másolatot: az a tiéd marad, az eredeti pedig továbbra is követi a forrását.',
+    copy: 'Szerkeszthető másolat megosztása',
+    byEditor: '{owner} listája · hozzáadhatsz és eltávolíthatsz számokat',
+  },
   language: {
     name: 'Magyar',
   },
@@ -1295,7 +1302,7 @@ export default {
   },
   sharing: {
     title: '„{name}” megosztása',
-    hint: 'Akikkel megosztod, lejátszhatják, követhetik és másolatot menthetnek róla, de nem módosíthatják.',
+    hint: 'Akikkel megosztod, lejátszhatják, követhetik és másolatot menthetnek róla. Számokat csak azok adhatnak hozzá vagy távolíthatnak el, akiknek megengeded a szerkesztést.',
     private: 'Privát',
     privateHint: 'Csak te látod.',
     shared: 'Meghatározott személyek',
@@ -1332,7 +1339,7 @@ export default {
     },
     sharedWithMe: 'Velem megosztott',
     sharedWithMeHint:
-      'Mások által veled megosztott listák. Lejátszhatod őket, de nem módosíthatod.',
+      'Mások által veled megosztott listák. Lejátszhatod őket, és ahol a tulajdonos engedi, számokat adhatsz hozzá vagy távolíthatsz el.',
     publicPlaylists: 'Nyilvános listák',
     publicPlaylistsHint:
       'A szerver mindenkivel megosztva. Kövess egyet, hogy az oldalsávban maradjon.',

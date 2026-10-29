@@ -80,6 +80,7 @@ export default {
       'features/liked-songs.md': 'Beğenilen şarkılar',
       'features/podcasts.md': 'Podcast’ler',
       'features/discover.md': 'Keşfet',
+      'features/collaborative-playlists.md': 'Birlikte düzenlenen listeler',
       'features/users.md': 'Kullanıcılar ve oturum açma',
       'features/mobile-apps.md': 'Mobil uygulamalar',
       'features/library-only.md': 'Library-only mode',

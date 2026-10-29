@@ -54,7 +54,7 @@
             {{ t('playlists.downloadMissing', { count: batch.missing_count }) }}
           </UiButton>
           <UiButton
-            v-if="playlist.manual && playlist.mine"
+            v-if="playlist.canEditTracks"
             variant="secondary"
             icon="plus"
             @click="playlistActions.openAddSongs(playlist)"
@@ -526,7 +526,11 @@ const canHide = computed(
 const sharingLine = computed(() => {
   const p = playlist.value
   if (!p || p.liked) return ''
-  if (!p.mine) return t('sharing.by', { owner: p.owner })
+  if (!p.mine) {
+    return t(p.canEditTracks ? 'collaboration.byEditor' : 'sharing.by', {
+      owner: p.owner,
+    })
+  }
   if (p.visibility === 'public') return t('sharing.public')
   if (p.visibility === 'shared') {
     return t('sharing.sharedWithCount', { count: p.sharedWith.length })
@@ -645,12 +649,16 @@ watch(
 )
 
 // New songs arrive with a provider (and maybe a Navidrome match) of their
-// own: refresh what the filters know.
+// own: refresh what the filters know. Songs an editor added elsewhere may
+// not have their rows here yet.
 watch(
   () => playlist.value?.fileCount,
   (count, before) => {
     if (playlist.value && before !== undefined && count !== before) {
       loadDetails(playlist.value.name)
+      if (count > before) {
+        library.loadPlaylistTracks(playlist.value.name).catch(() => {})
+      }
     }
   }
 )

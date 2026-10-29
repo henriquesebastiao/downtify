@@ -984,7 +984,7 @@ List audio files in the downloads directory (recursive), plus slskd downloads le
 
 ### `GET /playlists`
 
-List downloaded playlists, derived from the `.m3u` files already on disk (see [M3U Export](features/m3u-export.md)). Used by the [Library page](features/library-catalog.md#library-page) to list playlists, and to play or queue just one of them. A user sees their own playlists only (with their own liked songs as the liked one); an admin sees everything.
+List downloaded playlists, derived from the `.m3u` files already on disk (see [M3U Export](features/m3u-export.md)). Used by the [Library page](features/library-catalog.md#library-page) to list playlists, and to play or queue just one of them. A user sees their own playlists (with their own liked songs as the liked one) and the ones [shared with them](features/users.md#sharing-playlists); an admin sees everything. Rows also carry the sharing fields described under [`GET /api/v1/playlists`](#get-apiv1playlists) (`owner`, `visibility`, `mine`, `can_edit_tracks`, `editors`, …).
 
 **Response:**
 
@@ -1308,7 +1308,7 @@ Create an empty playlist the user can edit in **Library → Playlists**. Writes 
 
 ### `POST /api/library/playlists/tracks`
 
-Add or remove library files (downloads or [extra folders](features/external-library.md)) on a **manual** playlist. Imported playlists return `403`: hide their songs with [`POST /api/library/playlists/hidden`](#post-apilibraryplaylistshidden) instead. Missing files are dropped from the M3U.
+Add or remove library files (downloads or [extra folders](features/external-library.md)) on a **manual** playlist: your own (an admin may change any), or one shared with you as an [editor](features/collaborative-playlists.md) (`can_edit_tracks`). Imported playlists return `403`: hide their songs with [`POST /api/library/playlists/hidden`](#post-apilibraryplaylistshidden) instead. `403` for someone who can open the playlist without being its owner or an editor, and for an editor sending `source_playlist_url` (the source artwork stays the owner's). A song the caller can't see — missing, or [hidden from users](features/users.md#hiding-from-users) — is refused with `400`. Missing files are dropped from the M3U. When the playlist is shared, `playlists_changed` goes out on the WebSocket so the owner and the other editors list it again.
 
 **Request body:**
 
@@ -1336,13 +1336,15 @@ Rename a **manual** playlist. Imported playlists return `403`. The M3U and sidec
 
 ### `PUT /api/library/playlists/visibility`
 
-Share a playlist you own, view-only (an admin may change any). Liked songs are never shareable (`400`). `403` for anyone who can open the playlist without owning it, and `403` while the admin's `allow_playlist_sharing` setting is off (making a playlist `private` is always allowed). `404` for a playlist the caller can't open.
+Share a playlist you own (an admin may change any). Liked songs are never shareable (`400`). `403` for anyone who can open the playlist without owning it — its editors included — and `403` while the admin's `allow_playlist_sharing` setting is off (making a playlist `private` is always allowed). `404` for a playlist the caller can't open.
 
-**Request body:** `{ "name": "Late night", "visibility": "shared", "shared_with": ["bob", "cyd"] }`
+**Request body:** `{ "name": "Late night", "visibility": "shared", "shared_with": ["bob", "cyd"], "editors": ["bob"] }`
 
 `visibility` is `private` (the default: the owner and admins only), `shared` (the usernames in `shared_with`, which must exist and not be empty) or `public` (everyone on the server). Anyone not listed — or everyone, once it is `private` again — loses it at once: it leaves their lists, and a follow ends. Saved copies stay with whoever made them.
 
-**Response:** `{ "name": "Late night", "visibility": "shared", "shared_with": ["bob", "cyd"] }`
+`editors` (optional) are the people among `shared_with` who may also add and remove the songs of a **manual** playlist — see [Collaborative playlists](features/collaborative-playlists.md). It replaces the current editors; `[]` removes them all, and leaving it out keeps the ones still in `shared_with`. Viewers only play. `400` for an editor who isn't in `shared_with`, and for editors on an imported playlist or with a `visibility` other than `shared`. A person leaving `shared_with`, or the playlist leaving `shared`, ends their editing.
+
+**Response:** `{ "name": "Late night", "visibility": "shared", "shared_with": ["bob", "cyd"], "editors": ["bob"] }`
 
 ---
 
@@ -3407,9 +3409,9 @@ The same profile as [`GET /api/library/loudness`](#get-apilibraryloudness), by t
 ```json
 [
   { "name": "Downtify Liked Songs", "liked": true, "manual": false, "count": 12, "cover": "", "track_ids": ["t7b2…", "…"],
-    "owner": "", "visibility": "private", "mine": true, "followed": false, "shared_with_me": false, "new": false },
+    "owner": "", "visibility": "private", "mine": true, "followed": false, "can_edit_tracks": false, "shared_with_me": false, "new": false },
   { "name": "Late night", "liked": false, "manual": true, "count": 8, "cover": "", "track_ids": ["…"],
-    "owner": "ana", "visibility": "public", "mine": false, "followed": true, "shared_with_me": false, "new": false }
+    "owner": "ana", "visibility": "public", "mine": false, "followed": true, "can_edit_tracks": false, "shared_with_me": false, "new": false }
 ]
 ```
 
@@ -3419,11 +3421,13 @@ The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playli
 |-------|---------|
 | `owner` | The owner's username (`""` for liked songs) |
 | `visibility` | `private`, `shared` or `public` |
-| `mine` | `true` when it is the caller's to change (their own, or any for an admin); `false` means view-only — don't offer edit, rename or delete |
+| `mine` | `true` when it is the caller's to change (their own, or any for an admin); `false` means someone else's — don't offer rename, share or delete |
+| `can_edit_tracks` | The caller may add and remove its songs with [`POST /api/library/playlists/tracks`](#post-apilibraryplayliststracks): a manual playlist that is `mine`, or one shared with them as an [editor](features/collaborative-playlists.md) |
 | `shared_with_me` | Shared with the caller by name |
 | `new` | Shared with the caller and not opened yet; clear it with [`POST /api/v1/playlists/seen`](#post-apiv1playlistsseen) |
 | `followed` | A public playlist the caller follows |
 | `shared_with` | On the caller's own shared playlists: the usernames it is shared with |
+| `editors` | On the caller's own shared playlists: those of `shared_with` who may edit its songs (absent when none) |
 | `hidden_count` | Songs the owner [hid](features/hidden-playlist-songs.md) from an imported playlist of theirs (`0` otherwise); list them with [`GET /api/v1/playlists/hidden`](#get-apiv1playlistshidden) |
 
 Keep the other people's playlists apart from the caller's own (a "Shared with me" and a "Public playlists" section, each entry labelled with its `owner`).

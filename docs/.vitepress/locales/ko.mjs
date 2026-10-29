@@ -79,6 +79,7 @@ export default {
       'features/liked-songs.md': '좋아요 표시한 곡',
       'features/podcasts.md': '팟캐스트',
       'features/discover.md': '둘러보기',
+      'features/collaborative-playlists.md': '함께 편집하는 재생목록',
       'features/users.md': '사용자와 로그인',
       'features/mobile-apps.md': '모바일 앱',
       'features/library-only.md': 'Library-only mode',

@@ -27,7 +27,15 @@ def playlist(tmp_path, monkeypatch):
     ctx = LibraryContext(download_dir=tmp_path)
     create_manual_playlist(ctx, 'Mix')
     monkeypatch.setattr(api, 'library_context', lambda: ctx)
-    monkeypatch.setattr(api, 'require_playlist_visible', lambda *a, **kw: None)
+    monkeypatch.setattr(
+        api,
+        'require_playlist_visible',
+        lambda *a, **kw: {
+            'manual': True,
+            'mine': True,
+            'can_edit_tracks': True,
+        },
+    )
     return tmp_path / 'Playlists' / 'Mix.m3u'
 
 

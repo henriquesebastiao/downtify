@@ -17,6 +17,7 @@ Downtify, Spotify’dan yerel bir müzik kitaplığı oluşturmak ve sürdürmek
 | [İndirme kuyruğu](download-queue.md) | Ayarları değiştirmeden veya güncellemeden önce indirmeleri duraklatın: süren indirmeler biter, yenisi başlamaz ve bekleyen şarkılar yeniden başlatmadan sonra da kalır |
 | [Çalma listesi izleyici](playlist-monitor.md) | Spotify veya YouTube Music çalma listelerini ve sanatçılarını izleyin, yeni parça ve çıkışları otomatik indirin |
 | [Listeden gizlenen şarkılar](hidden-playlist-songs.md) | İndirilen ya da izlenen bir listeden istemediğin şarkıları çıkar ve dışarıda tut; dosyalar kitaplıkta kalır |
+| [Birlikte düzenlenen listeler](collaborative-playlists.md) | Kitaplıktaki bir listeyi paylaştığın kişilerden bazılarının şarkı ekleyip çıkarmasına izin ver; yeniden adlandırma, paylaşma ve silme sende kalır |
 | [En çok dinlenen şarkılar](top-songs.md) | Bir sanatçı bağlantısı yapıştırın ve en popüler şarkılarını, isteğe bağlı olarak çalma listesi halinde indirin |
 | [Kitaplığı içe aktarma (CSV)](library-import.md) | Soundiiz, TuneMyMusic veya Exportify’dan bir kitaplık dışa aktarımını içe aktarın ve hepsini kuyruğa alın |
 | [Yerleşik oynatıcı](player.md) | Kitaplığınızı tarayıcıda çalın: kuyruk yönetimi, eşzamanlı sözler, uyku zamanlayıcısı, klavye ve medya tuşları |

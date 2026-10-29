@@ -124,18 +124,21 @@ def track_lyrics(track_id: str) -> dict[str, Any]:
 @router.get('/playlists')
 async def playlists(request: Request) -> list[dict[str, Any]]:
     """Downloaded playlists as ``{name, liked, manual, count, track_ids,
-    cover, owner, visibility, mine, followed, shared_with_me, new,
-    hidden_count}`` - ``cover`` is a path for ``GET /playlist-cover?file=``
-    or ``''``; ``hidden_count`` is how many songs the owner hid from an
-    imported playlist (``0`` for everything else).
+    cover, owner, visibility, mine, followed, can_edit_tracks,
+    shared_with_me, new, hidden_count}`` - ``cover`` is a path for
+    ``GET /playlist-cover?file=`` or ``''``; ``hidden_count`` is how many
+    songs the owner hid from an imported playlist (``0`` for everything
+    else).
 
     A user sees their own playlists (and their own liked songs as the
     liked one), those shared with them (``shared_with_me``; ``new`` until
     opened) and public ones: the ones they follow, and - unless they
     switched *Show public playlists* off - the rest. ``mine`` says whether
-    it is theirs to change, ``owner`` is the owner's username and
+    it is theirs to change, ``can_edit_tracks`` whether they may add and
+    remove its songs (a Library playlist of theirs, or one shared with
+    them as an editor), ``owner`` is the owner's username and
     ``visibility`` is ``private``, ``shared`` or ``public``. Own playlists
-    also list ``shared_with`` (usernames).
+    also list ``shared_with`` and ``editors`` (usernames).
     """
 
     await asyncio.to_thread(_refresh)
@@ -155,6 +158,7 @@ async def playlists(request: Request) -> list[dict[str, Any]]:
             'visibility': p.get('visibility', 'private'),
             'mine': bool(p.get('mine', True)),
             'followed': bool(p.get('followed')),
+            'can_edit_tracks': bool(p.get('can_edit_tracks')),
             'favorite': bool(p.get('favorite')),
             'shared_with_me': bool(p.get('shared_with_me')),
             'new': bool(p.get('new')),
@@ -164,6 +168,7 @@ async def playlists(request: Request) -> list[dict[str, Any]]:
                 if p.get('shared_with')
                 else {}
             ),
+            **({'editors': p['editors']} if p.get('editors') else {}),
         }
         for p in found
     ]

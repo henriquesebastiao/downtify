@@ -80,6 +80,7 @@ export default {
       'features/liked-songs.md': 'Kedvelt számok',
       'features/podcasts.md': 'Podcastok',
       'features/discover.md': 'Felfedezés',
+      'features/collaborative-playlists.md': 'Közösen szerkesztett listák',
       'features/users.md': 'Felhasználók és bejelentkezés',
       'features/mobile-apps.md': 'Mobilalkalmazások',
       'features/library-only.md': 'Library-only mode',

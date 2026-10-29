@@ -17,6 +17,7 @@ Downtify deckt alles ab, was du brauchst, um aus Spotify eine lokale Musikbiblio
 | [Download-Warteschlange](download-queue.md) | Downloads pausieren, bevor du Einstellungen änderst oder aktualisierst: laufende laufen zu Ende, keine neuen starten, und wartende Titel überstehen einen Neustart |
 | [Playlist-Überwachung](playlist-monitor.md) | Spotify- oder YouTube-Music-Playlists und -Künstler beobachten und neue Titel und Veröffentlichungen automatisch herunterladen |
 | [Ausgeblendete Playlist-Titel](hidden-playlist-songs.md) | Nimm ungewollte Titel aus einer heruntergeladenen oder überwachten Playlist und halte sie draußen; die Dateien bleiben in der Bibliothek |
+| [Gemeinsam bearbeitete Playlists](collaborative-playlists.md) | Lass einige der Personen, mit denen du eine Bibliotheks-Playlist teilst, Titel hinzufügen und entfernen; Umbenennen, Teilen und Löschen bleiben bei dir |
 | [Top-Songs](top-songs.md) | Den Link eines Künstlers einfügen und seine beliebtesten Songs herunterladen, optional als Playlist |
 | [Bibliotheksimport (CSV)](library-import.md) | Einen Bibliotheksexport von Soundiiz, TuneMyMusic oder Exportify importieren und alles in die Warteschlange stellen |
 | [Integrierter Player](player.md) | Die Bibliothek im Browser abspielen: Warteschlangenverwaltung, synchrone Songtexte, Schlaf-Timer, Tastatur und Mediatasten |

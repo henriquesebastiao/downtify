@@ -31,6 +31,10 @@ export const NAV = [
         title: 'Hidden playlist songs',
         page: 'features/hidden-playlist-songs.md',
       },
+      {
+        title: 'Collaborative playlists',
+        page: 'features/collaborative-playlists.md',
+      },
       { title: 'Top Songs', page: 'features/top-songs.md' },
       { title: 'Library Import (CSV)', page: 'features/library-import.md' },
       { title: 'Built-in Player', page: 'features/player.md' },

@@ -17,6 +17,7 @@ O Downtify cobre tudo de que você precisa para montar e manter uma biblioteca d
 | [Fila de downloads](download-queue.md) | Pause os downloads antes de mudar configurações ou atualizar: os que estão em andamento terminam, nenhum novo começa e as músicas em espera sobrevivem a uma reinicialização |
 | [Monitor de playlists](playlist-monitor.md) | Acompanhe playlists e artistas do Spotify ou YouTube Music e baixe automaticamente faixas e lançamentos novos |
 | [Músicas ocultas da playlist](hidden-playlist-songs.md) | Tire de uma playlist baixada ou monitorada as músicas que você não quer e mantenha-as fora; os arquivos continuam na biblioteca |
+| [Playlists colaborativas](collaborative-playlists.md) | Deixe algumas das pessoas com quem você compartilha uma playlist da biblioteca adicionar e remover músicas; renomear, compartilhar e excluir continuam com você |
 | [Músicas mais tocadas](top-songs.md) | Cole o link de um artista e baixe suas músicas mais populares, opcionalmente como playlist |
 | [Importar biblioteca (CSV)](library-import.md) | Importe uma exportação do Soundiiz, TuneMyMusic ou Exportify e coloque tudo na fila |
 | [Player integrado](player.md) | Toque sua biblioteca no navegador: gerenciamento da fila, letras sincronizadas, timer de sono, teclado e teclas de mídia |

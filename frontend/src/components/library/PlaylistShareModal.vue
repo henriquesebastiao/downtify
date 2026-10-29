@@ -58,8 +58,37 @@
                 />
                 <span class="truncate">{{ name }}</span>
               </label>
+              <label
+                v-if="playlist?.manual && picked.includes(name)"
+                class="flex cursor-pointer items-center gap-3 py-2 pr-3.5 pl-10 text-[13px] text-muted hover:bg-surface-2"
+              >
+                <input
+                  v-model="editors"
+                  type="checkbox"
+                  :value="name"
+                  class="size-4 accent-[var(--color-accent)]"
+                />
+                {{ t('collaboration.canEdit') }}
+              </label>
             </li>
           </ul>
+          <!-- An imported playlist follows its source: editors work on a
+               copy, which stays the user's own. -->
+          <div
+            v-if="!playlist?.manual"
+            class="flex flex-col items-start gap-2 text-[13px] text-muted"
+          >
+            <p>{{ t('collaboration.copyHint') }}</p>
+            <UiButton
+              variant="secondary"
+              size="sm"
+              icon="copy"
+              :loading="copying"
+              @click="makeCollaborativeCopy"
+            >
+              {{ t('collaboration.copy') }}
+            </UiButton>
+          </div>
         </template>
       </div>
 
@@ -85,7 +114,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiInput from '../ui/UiInput.vue'
@@ -105,11 +134,16 @@ const open = actions.shareOpen
 const playlist = computed(() => actions.sharePlaylist.value)
 const visibility = ref('private')
 const picked = ref([])
+const editors = ref([])
 const usernames = ref([])
 const filter = ref('')
 const loading = ref(false)
 const saving = ref(false)
+const copying = ref(false)
 const error = ref('')
+// The people picked for an imported playlist, carried over to its
+// collaborative copy as its editors.
+let carried = null
 
 const options = computed(() => [
   {
@@ -148,8 +182,11 @@ const canSave = computed(
 watch(open, async (value) => {
   if (!value) return
   const current = playlist.value
-  visibility.value = current?.visibility || 'private'
-  picked.value = [...(current?.sharedWith || [])]
+  const seed = carried
+  carried = null
+  visibility.value = seed ? 'shared' : current?.visibility || 'private'
+  picked.value = [...(seed || current?.sharedWith || [])]
+  editors.value = [...(seed || current?.editors || [])]
   filter.value = ''
   error.value = ''
   loading.value = true
@@ -166,16 +203,34 @@ function close() {
   open.value = false
 }
 
+async function makeCollaborativeCopy() {
+  const people = [...picked.value]
+  copying.value = true
+  const created = await actions.copy(playlist.value)
+  copying.value = false
+  if (!created) return
+  close()
+  await nextTick()
+  const copied = library.findPlaylist(created)
+  if (!copied) return
+  carried = people.length ? people : null
+  actions.openShare(copied)
+}
+
 async function save() {
   const current = playlist.value
   if (!current || !canSave.value) return
   saving.value = true
   error.value = ''
   try {
+    const shared = visibility.value === 'shared'
     await API.setPlaylistVisibility(
       current.name,
       visibility.value,
-      visibility.value === 'shared' ? picked.value : []
+      shared ? picked.value : [],
+      current.manual
+        ? editors.value.filter((name) => shared && picked.value.includes(name))
+        : undefined
     )
     await library.refreshPlaylists()
     ui.toast(t(`sharing.saved.${visibility.value}`, { name: current.title }), {

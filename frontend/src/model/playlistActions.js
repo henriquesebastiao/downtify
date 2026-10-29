@@ -48,9 +48,9 @@ export function usePlaylistActions() {
       cover: playlist.cover || '',
       covers: playlist.covers || [],
       route: { name: 'Playlist', query: { name: playlist.name } },
-      // Editing is for the owner: a playlist shared with the user is
-      // view-only.
-      manual: Boolean(playlist.manual && playlist.mine),
+      // Editing the songs is for the owner and the playlist's editors:
+      // for anyone else it is view-only.
+      manual: Boolean(playlist.canEditTracks),
       // The owner hides songs from an imported playlist instead.
       imported: Boolean(playlist.mine && !playlist.manual && !playlist.liked),
       playlistName: playlist.name,
@@ -66,8 +66,12 @@ export function usePlaylistActions() {
   }
 
   function manuals() {
-    // Only the user's own: a playlist shared with them is view-only.
-    return library.ownPlaylists.value.filter((item) => item.manual)
+    // The user's own, then those shared with them as an editor: the
+    // rest are view-only.
+    return [
+      ...library.ownPlaylists.value,
+      ...library.sharedPlaylists.value,
+    ].filter((item) => item.canEditTracks)
   }
 
   function openCreate(
@@ -494,6 +498,13 @@ export function usePlaylistActions() {
       },
       { divider: true },
       {
+        // Shared with them as an editor.
+        label: t('playlists.addSongs'),
+        icon: 'plus',
+        hidden: !playlist.canEditTracks,
+        action: () => openAddSongs(playlist),
+      },
+      {
         label: t('sharing.follow'),
         icon: 'heart-outline',
         hidden: playlist.visibility !== 'public' || playlist.followed,
@@ -572,7 +583,7 @@ export function usePlaylistActions() {
       {
         label: t('playlists.addSongs'),
         icon: 'plus',
-        hidden: !playlist.manual,
+        hidden: !playlist.canEditTracks,
         action: () => openAddSongs(playlist),
       },
       {

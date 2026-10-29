@@ -80,6 +80,7 @@ export default {
       'features/liked-songs.md': 'Lieblingssongs',
       'features/podcasts.md': 'Podcasts',
       'features/discover.md': 'Entdecken',
+      'features/collaborative-playlists.md': 'Gemeinsam bearbeitete Playlists',
       'features/users.md': 'Benutzer und Anmeldung',
       'features/mobile-apps.md': 'Mobile Apps',
       'features/library-only.md': 'Library-only mode',
