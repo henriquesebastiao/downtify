@@ -2,6 +2,7 @@
   <article class="tile group relative flex min-w-0 flex-col gap-2.5">
     <RouterLink :to="to" class="relative block" :aria-label="title">
       <CoverArt
+        :thumb="300"
         :src="cover"
         :fallback="fallback"
         :covers="covers"
@@ -20,6 +21,13 @@
           <EqBars :size="10" />{{ t('player.playing') }}
         </span>
         <slot name="badge" />
+        <span
+          v-if="hiddenBy"
+          class="absolute bottom-2.5 left-2.5 flex h-6 items-center gap-1.5 rounded-full bg-black/60 px-2 text-[11px] font-semibold text-white backdrop-blur"
+          :title="t(`visibility.hiddenBy.${hiddenBy}`)"
+        >
+          <AppIcon name="eye-off" :size="12" />{{ t('visibility.hiddenShort') }}
+        </span>
       </CoverArt>
     </RouterLink>
     <button
@@ -70,6 +78,8 @@ defineProps({
   round: { type: Boolean, default: false },
   playing: { type: Boolean, default: false },
   playable: { type: Boolean, default: true },
+  // Admins: the rule hiding this from users ('album', 'artist'), or ''.
+  hiddenBy: { type: String, default: '' },
 })
 defineEmits(['play'])
 const { t } = useI18n()

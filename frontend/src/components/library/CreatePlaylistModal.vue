@@ -2,7 +2,7 @@
   <UiModal
     :open="open"
     :title="t('playlists.createTitle')"
-    :description="t('playlists.createHint')"
+    :description="actions.createDescription.value || t('playlists.createHint')"
     @close="close"
   >
     <form class="flex flex-col gap-4" @submit.prevent="submit">
@@ -61,7 +61,7 @@ const manuals = computed(() => actions.manuals())
 const open = actions.createOpen
 
 watch(open, (value) => {
-  if (value) name.value = ''
+  if (value) name.value = actions.createName.value
 })
 
 function close() {
@@ -84,7 +84,9 @@ async function submit() {
   if (!title || saving.value) return
   saving.value = true
   try {
-    await actions.createNamed(title, actions.createFiles.value)
+    await actions.createNamed(title, actions.createFiles.value, {
+      sourcePlaylistUrl: actions.createSourceUrl.value,
+    })
     close()
   } catch {
     /* toast in createNamed's caller — wrap createNamed */

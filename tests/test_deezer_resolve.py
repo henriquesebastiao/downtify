@@ -16,6 +16,7 @@ from downtify.deezer import (
     parse_deezer_url,
     playlist_cover_url_from_id,
     playlist_info_and_tracks,
+    playlist_page_from_id,
     track_from_id,
 )
 
@@ -146,6 +147,33 @@ def _album_track_row(track_id, title, artist='Album Artist'):
             'cover_xl': 'https://example.com/album-xl.jpg',
         },
     }
+
+
+def test_playlist_page_returns_official_image_with_no_extra_request():
+    payload = {
+        'title': 'Acoustic collection',
+        'picture_xl': 'https://example.test/playlist.jpg',
+        'tracks': {'data': [_album_track_row(1, 'First')]},
+    }
+    with patch(
+        'downtify.deezer.httpx.get', return_value=_mock_response(payload)
+    ) as get:
+        name, cover, songs = playlist_page_from_id('123')
+    assert name == 'Acoustic collection'
+    assert cover == payload['picture_xl']
+    assert [song['name'] for song in songs] == ['First']
+    assert get.call_count == 1
+
+
+def test_playlist_page_without_image_does_not_claim_an_album_cover():
+    payload = {
+        'title': 'Mix',
+        'tracks': {'data': [_album_track_row(1, 'First')]},
+    }
+    with patch(
+        'downtify.deezer.httpx.get', return_value=_mock_response(payload)
+    ):
+        assert not playlist_page_from_id('123')[1]
 
 
 def test_album_from_id_numbers_tracks_in_order():

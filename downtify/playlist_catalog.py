@@ -431,21 +431,28 @@ class PlaylistCatalog:
             conn.execute('DELETE FROM playlists WHERE name = ?', (pl_name,))
         return filenames
 
-    def remove_tracks_for_filename(self, filename: str) -> list[str]:
-        """Delete rows pointing at *filename*; return affected playlist names."""
+    def remove_tracks_for_filename(
+        self, filename: str, playlist_name: Optional[str] = None
+    ) -> list[str]:
+        """Delete rows pointing at *filename* - only *playlist_name*'s
+        when given (a song hidden from it); return affected playlist
+        names."""
 
         name = _norm_path(filename)
         if not name:
             return []
+        where = 'filename = ?'
+        params: tuple[str, ...] = (name,)
+        if playlist_name is not None:
+            where += ' AND playlist_name = ?'
+            params = (name, str(playlist_name))
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT DISTINCT playlist_name FROM playlist_tracks
-                   WHERE filename = ?""",
-                (name,),
+                f'SELECT DISTINCT playlist_name FROM playlist_tracks '
+                f'WHERE {where}',
+                params,
             ).fetchall()
-            conn.execute(
-                'DELETE FROM playlist_tracks WHERE filename = ?', (name,)
-            )
+            conn.execute(f'DELETE FROM playlist_tracks WHERE {where}', params)
         return [str(row['playlist_name']) for row in rows]
 
     def all_track_rows(self) -> list[dict[str, Any]]:

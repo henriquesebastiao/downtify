@@ -1,4 +1,4 @@
-"""Audio search/match helpers for YouTube Music and SoundCloud downloads."""
+"""Audio search/match helpers: YouTube Music, YouTube and SoundCloud."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import json
 import os
 import re
 import zlib
+from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from threading import Lock
 from typing import Any, Optional
@@ -1518,75 +1519,196 @@ def youtube_search(query: str, limit: int = 10) -> list[dict[str, Any]]:
     return _youtube_search(query, limit)
 
 
-def parse_soundcloud_url(url: str) -> Optional[tuple[str, str]]:
-    """Recognize public SoundCloud track URLs."""
+_SOUNDCLOUD_HOSTS = frozenset({
+    'soundcloud.com',
+    'www.soundcloud.com',
+    'm.soundcloud.com',
+})
+#: First path segments of soundcloud.com pages that aren't a user.
+_SOUNDCLOUD_PAGES = frozenset({
+    'charts',
+    'discover',
+    'feed',
+    'messages',
+    'mobile',
+    'notifications',
+    'pages',
+    'people',
+    'search',
+    'settings',
+    'stations',
+    'stream',
+    'tags',
+    'terms-of-use',
+    'upload',
+    'you',
+})
+#: Second path segments that are a tab of the user's page, not a track
+#: (yt-dlp's SoundCloud extractor refuses the same ones).
+_SOUNDCLOUD_USER_TABS = frozenset({
+    'albums',
+    'comments',
+    'followers',
+    'following',
+    'likes',
+    'popular-tracks',
+    'reposts',
+    'sets',
+    'spotlight',
+    'tracks',
+})
+_SOUNDCLOUD_SLUG = re.compile(r'[\w-]+')
 
+
+def parse_soundcloud_url(url: str) -> Optional[tuple[str, str]]:
+    """``('track', canonical URL)`` for a SoundCloud track link, else
+    ``None``.
+
+    Takes ``soundcloud.com/<user>/<track>`` (``www.``/``m.``, with or
+    without the scheme) and a private track's ``/<user>/<track>/s-<token>``.
+    Sets (albums and playlists), a user's own tabs and short
+    ``on.soundcloud.com`` links aren't tracks here. The canonical URL
+    drops the query string (the ``?si=`` share tags).
+    """
+
+    text = str(url or '').strip()
+    if text and '://' not in text:
+        text = f'https://{text}'
     try:
-        parsed = urlparse(str(url or '').strip())
+        parsed = urlparse(text)
+        host = (parsed.hostname or '').lower()
     except ValueError:
         return None
-    host = (parsed.hostname or '').lower()
     if (
         parsed.scheme not in {'http', 'https'}
         or parsed.username
         or parsed.password
-        or host
-        not in {'soundcloud.com', 'www.soundcloud.com', 'm.soundcloud.com'}
+        or host not in _SOUNDCLOUD_HOSTS
     ):
         return None
-    parts = [part for part in parsed.path.split('/') if part]
-    if len(parts) != 2 or 'sets' in parts:
+    parts = [unquote(part) for part in parsed.path.split('/') if part]
+    private = len(parts) == 3 and parts[2].startswith('s-')
+    if len(parts) != 2 and not private:
         return None
-    return 'track', parsed.geturl()
+    if (
+        parts[0].lower() in _SOUNDCLOUD_PAGES
+        or parts[1].lower() in _SOUNDCLOUD_USER_TABS
+        or not all(_SOUNDCLOUD_SLUG.fullmatch(part) for part in parts)
+    ):
+        return None
+    return 'track', 'https://soundcloud.com/' + '/'.join(parts)
 
 
-def soundcloud_track_from_url(url: str) -> dict[str, Any]:
-    """Resolve a public SoundCloud track into Downtify's song shape."""
+def soundcloud_track_url(song: dict[str, Any]) -> Optional[str]:
+    """The SoundCloud track *song* is known to be, else ``None``: the
+    ``soundcloud_url`` a retry pasted, or the link a SoundCloud song was
+    resolved from."""
 
-    parsed = parse_soundcloud_url(url)
-    if parsed is None:
-        raise ValueError('Not a SoundCloud track URL')
+    candidates = [song.get('soundcloud_url')]
+    if song.get('source') == 'soundcloud':
+        candidates.append(song.get('url'))
+    for raw in candidates:
+        parsed = parse_soundcloud_url(str(raw or ''))
+        if parsed is not None:
+            return parsed[1]
+    return None
+
+
+def _soundcloud_ydl_opts(**extra: Any) -> dict[str, Any]:
+    """yt-dlp options for a SoundCloud lookup (never a download)."""
+
     opts: dict[str, Any] = {
         'quiet': True,
         'no_warnings': True,
         'skip_download': True,
         'noplaylist': True,
+        **extra,
     }
-    with yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(parsed[1], download=False)
-    if not isinstance(info, dict) or not info.get('title'):
-        raise ValueError('SoundCloud track metadata is unavailable')
-    title = str(info.get('title') or '').strip()
-    artist = str(
+    if os.getenv('DOWNTIFY_FORCE_IPV4', '').strip() in {'1', 'true', 'yes'}:
+        opts['source_address'] = '0.0.0.0'
+    return opts
+
+
+def _soundcloud_artist(info: dict[str, Any]) -> str:
+    """The credited artist (the publisher metadata) before the uploader:
+    a label's upload names the artist there."""
+
+    for artist in info.get('artists') or []:
+        if str(artist or '').strip():
+            return str(artist).strip()
+    return str(
         info.get('artist') or info.get('uploader') or info.get('creator') or ''
     ).strip()
-    thumbnails = info.get('thumbnails') or []
-    cover_url = str(
-        info.get('thumbnail')
-        or next(
-            (
-                thumb.get('url')
-                for thumb in reversed(thumbnails)
-                if isinstance(thumb, dict) and thumb.get('url')
-            ),
-            '',
-        )
-        or ''
-    )
-    track_url = str(info.get('webpage_url') or parsed[1])
-    if parse_soundcloud_url(track_url) is None:
-        track_url = parsed[1]
-    track_id = str(info.get('id') or track_url)
-    album = str(info.get('album') or '').strip()
+
+
+def _soundcloud_cover(info: dict[str, Any]) -> str:
+    """The 500 px artwork when SoundCloud has it (``original`` can be a
+    multi-megabyte PNG), else yt-dlp's pick."""
+
+    thumbnails = [
+        thumb
+        for thumb in info.get('thumbnails') or []
+        if isinstance(thumb, dict) and thumb.get('url')
+    ]
+    for thumb in thumbnails:
+        if thumb.get('id') == 't500x500':
+            return str(thumb['url'])
+    if info.get('thumbnail'):
+        return str(info['thumbnail'])
+    return str(thumbnails[-1]['url']) if thumbnails else ''
+
+
+def _soundcloud_release(info: dict[str, Any]) -> tuple[str, str]:
+    """``(year, release_date)`` from the release date, else the upload."""
+
+    for key in ('release_timestamp', 'timestamp'):
+        try:
+            stamp = float(info.get(key) or 0)
+        except (TypeError, ValueError):
+            continue
+        if stamp > 0:
+            date = datetime.fromtimestamp(stamp, tz=timezone.utc).date()
+            return str(date.year), date.isoformat()
+    return '', ''
+
+
+def soundcloud_track_from_url(url: str) -> dict[str, Any]:
+    """Resolve a SoundCloud track link into Downtify's song shape.
+
+    SoundCloud has no albums: a track that names none is its own album,
+    like a single.
+    """
+
+    parsed = parse_soundcloud_url(url)
+    if parsed is None:
+        raise ValueError('Not a SoundCloud track URL')
+    with yt_dlp.YoutubeDL(_soundcloud_ydl_opts()) as ydl:
+        # process=False: the metadata, without picking a format to fetch.
+        info = ydl.extract_info(parsed[1], download=False, process=False)
+    if not isinstance(info, dict) or not str(info.get('title') or '').strip():
+        raise ValueError('SoundCloud track metadata is unavailable')
+    title = str(info['title']).strip()
+    artist = _soundcloud_artist(info)
+    track_url = parse_soundcloud_url(str(info.get('webpage_url') or ''))
+    track_url = track_url[1] if track_url else parsed[1]
+    year, release_date = _soundcloud_release(info)
+    genres = [str(g).strip() for g in info.get('genres') or [] if g]
+    try:
+        duration = int(float(info.get('duration') or 0))
+    except (TypeError, ValueError):
+        duration = 0
     return {
-        'song_id': f'soundcloud:{track_id}',
+        'song_id': f'soundcloud:{info.get("id") or track_url}',
         'name': title,
         'artists': [artist] if artist else [],
         'artist': artist,
-        'album_name': album or title,
+        'album_name': str(info.get('album') or '').strip() or title,
         'album_artist': artist,
-        'cover_url': cover_url,
-        'duration': info.get('duration') or 0,
+        'cover_url': _soundcloud_cover(info),
+        'duration': duration,
+        'year': year,
+        'release_date': release_date,
+        'genre': genres[0] if genres else '',
         'url': track_url,
         'soundcloud_url': track_url,
         'source': 'soundcloud',
@@ -1597,18 +1719,52 @@ def _soundcloud_normalize(value: str) -> str:
     return ''.join(char for char in value.casefold() if char.isalnum())
 
 
+#: Words that mark a SoundCloud upload as another take of a song (on top
+#: of the YouTube ones): remixes and bootlegs are most of what a search
+#: there turns up.
+_SOUNDCLOUD_VARIANT_WORDS = (
+    'bootleg',
+    'live',
+    'mashup',
+    'preview',
+    'remix',
+    'snippet',
+)
+
+
+def _soundcloud_is_variant(title: str, result_title: str) -> bool:
+    """Whether *result_title* is a variant (remix, live, cover…) that
+    *title* doesn't ask for."""
+
+    wanted = title.casefold()
+    found = result_title.casefold()
+    if any(kw in found and kw not in wanted for kw in _NEGATIVE_KEYWORDS):
+        return True
+    return any(
+        re.search(rf'\b{word}\b', found)
+        and not re.search(rf'\b{word}\b', wanted)
+        for word in _SOUNDCLOUD_VARIANT_WORDS
+    )
+
+
+#: Minimum title similarity (``SequenceMatcher`` ratio, 0-1) for a
+#: SoundCloud search result to stand in for a song.
+_SOUNDCLOUD_MIN_TITLE_SCORE = 0.72
+
+
 def _soundcloud_candidate_score(
     title: str, artist: str, duration: float, entry: dict[str, Any]
 ) -> Optional[tuple[float, str]]:
-    """Score a flat SoundCloud result against a catalog track."""
+    """``(title similarity, track URL)`` of a flat SoundCloud search
+    result that can stand in for the song, else ``None``.
+
+    The artist must appear in the uploader or the title, the length must
+    be within 30 s (or 20 %), and a result that isn't the original
+    (live, remix, cover…) only stands in for a song that says the same.
+    """
 
     result_title = str(entry.get('title') or '')
-    result_artist = str(
-        entry.get('artist')
-        or entry.get('uploader')
-        or entry.get('creator')
-        or ''
-    )
+    result_artist = _soundcloud_artist(entry)
     normalized_title = _soundcloud_normalize(title)
     normalized_result_title = _soundcloud_normalize(result_title)
     normalized_artist = _soundcloud_normalize(artist)
@@ -1618,12 +1774,17 @@ def _soundcloud_candidate_score(
         or not normalized_artist
     ):
         return None
+    if _soundcloud_is_variant(title, result_title):
+        return None
     title_score = SequenceMatcher(
         None, normalized_title, normalized_result_title
     ).ratio()
     artist_match = normalized_artist in _soundcloud_normalize(
         f'{result_artist} {result_title}'
     )
+    if artist_match and normalized_title in normalized_result_title:
+        # "Artist - Track" uploads: the title holds the artist too.
+        title_score = max(title_score, 0.9)
     try:
         result_duration = float(entry.get('duration') or 0)
     except (TypeError, ValueError):
@@ -1633,37 +1794,40 @@ def _soundcloud_candidate_score(
         or not result_duration
         or abs(duration - result_duration) <= max(30, duration * 0.2)
     )
-    result_url = str(
-        entry.get('webpage_url') or entry.get('url') or ''
-    ).strip()
+    track = parse_soundcloud_url(
+        str(entry.get('webpage_url') or entry.get('url') or '')
+    )
     if (
-        title_score < 0.72
+        title_score < _SOUNDCLOUD_MIN_TITLE_SCORE
         or not artist_match
         or not duration_match
-        or not parse_soundcloud_url(result_url)
+        or track is None
     ):
         return None
-    return title_score, result_url
+    return title_score, track[1]
 
 
 def find_match_soundcloud(song: dict[str, Any]) -> Optional[str]:
-    """Find a likely SoundCloud track for a song's Spotify metadata."""
+    """The SoundCloud track URL that best stands in for *song*, or
+    ``None`` when no search result is close enough."""
 
     title = str(song.get('name') or '').strip()
     artists = song.get('artists') or []
     artist = str(artists[0] if artists else song.get('artist') or '').strip()
     if not title or not artist:
         return None
-    opts: dict[str, Any] = {
-        'quiet': True,
-        'no_warnings': True,
-        'skip_download': True,
-        'extract_flat': 'in_playlist',
-    }
-    if os.getenv('DOWNTIFY_FORCE_IPV4', '').strip() in {'1', 'true', 'yes'}:
-        opts['source_address'] = '0.0.0.0'
-    with yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(f'scsearch10:{artist} {title}', download=False)
+    try:
+        with yt_dlp.YoutubeDL(
+            _soundcloud_ydl_opts(extract_flat='in_playlist')
+        ) as ydl:
+            info = ydl.extract_info(
+                f'scsearch10:{artist} {title}', download=False
+            )
+    except Exception:
+        logger.opt(exception=True).warning(
+            'SoundCloud search failed for {!r}', title
+        )
+        return None
     try:
         duration = float(song.get('duration') or 0)
     except (TypeError, ValueError):
@@ -1674,11 +1838,10 @@ def find_match_soundcloud(song: dict[str, Any]) -> Optional[str]:
             score = _soundcloud_candidate_score(title, artist, duration, entry)
             if score is not None:
                 candidates.append(score)
-    return (
-        max(candidates, key=lambda candidate: candidate[0])[1]
-        if candidates
-        else None
-    )
+    if not candidates:
+        return None
+    # The first of equal scores: SoundCloud ranks the original higher.
+    return max(candidates, key=lambda candidate: candidate[0])[1]
 
 
 def _youtube_entry_to_result(
@@ -1911,8 +2074,24 @@ def _names_match(target: Any, candidate: Any) -> bool:
     " (Suffix)" — see :data:`_DASH_VERSION_SUFFIX_RE`.
     """
 
-    t = _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', _norm_compact_title(target))
-    c = _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', _norm_compact_title(candidate))
+    t = _norm_compact_title(target)
+    c = _norm_compact_title(candidate)
+    if _normalized_names_match(
+        _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', t),
+        _DASH_VERSION_SUFFIX_RE.sub(r'\1 (\2)', c),
+    ):
+        return True
+    # The rewrite only touches the last " - " segment, so a name that itself
+    # contains " - " can be rewritten on one side but not on the other (a
+    # "(feat. …)" suffix blocks it); compare the plain forms as well. Only a
+    # bracketed tag may follow the shared name there: text that continues
+    # its last segment ("- Live" vs "- Live at Wembley") names another take.
+    shorter, longer = sorted((t, c), key=len)
+    tail = longer[len(shorter) :].lstrip()
+    return tail.startswith(('(', '[')) and _normalized_names_match(t, c)
+
+
+def _normalized_names_match(t: str, c: str) -> bool:
     if not t or not c:
         return False
     if t == c:
@@ -2603,6 +2782,10 @@ def enrich_from_match(
         match,
     )
     enriched = dict(song)
+    # The mark describes the audio that gets downloaded, which is this hit:
+    # explicit if either source says so, never un-marked by the match.
+    if match.get('isExplicit'):
+        enriched['explicit'] = True
     if not enriched.get('album_name'):
         album = match.get('album') or {}
         if isinstance(album, dict) and album.get('name'):
@@ -2893,6 +3076,11 @@ def song_from_video_id(video_id: str) -> dict[str, Any]:
     # enrich_from_match never touches these, but pin them explicitly so
     # the returned song always describes the video the caller asked
     # for, never whichever video the catalog lookup happened to match.
+    # That goes for the explicit mark too: the hit may be the album's
+    # version of a song whose video this is a clean edit of.
+    enriched['explicit'] = bool(
+        match.get('isExplicit') and match.get('videoId') == video_id
+    )
     enriched['song_id'] = video_id
     enriched['url'] = f'https://music.youtube.com/watch?v={video_id}'
     enriched['source'] = 'youtube'
@@ -2937,12 +3125,42 @@ def _split_upload_title(
     return tail.strip(), credited
 
 
+# A video's thumbnail lives at ``.../vi/<11-character id>/...`` (or
+# ``vi_webp``); other artwork (album covers) never matches.
+_THUMBNAIL_VIDEO_ID_RE = re.compile(r'/vi(?:_webp)?/([A-Za-z0-9_-]{11})/')
+
+
+def _video_id_from_thumbnails(track: dict[str, Any]) -> Optional[str]:
+    """The video id a playlist row's thumbnail URLs point at, if any."""
+
+    for thumb in track.get('thumbnails') or []:
+        match = _THUMBNAIL_VIDEO_ID_RE.search(str((thumb or {}).get('url')))
+        if match:
+            return match.group(1)
+    return None
+
+
 def _playlist_track_song(track: dict[str, Any]) -> Optional[dict[str, Any]]:
-    """One playlist row as a song dict, pinned to that exact video."""
+    """One playlist row as a song dict, pinned to that exact video.
+
+    Playlists made by importers and converters often list their songs as
+    uploads YouTube Music has no catalog entry for: the row comes back with
+    ``videoId: null`` and ``isAvailable: false``, yet its thumbnail is the
+    video's own and the video plays fine on YouTube. Such a row is kept
+    under the id its thumbnail gives. A row that *does* carry a ``videoId``
+    but is flagged unavailable is a deleted or private video, and is
+    dropped.
+    """
 
     video_id = track.get('videoId')
-    if not video_id or track.get('isAvailable') is False:
-        return None
+    if video_id:
+        if track.get('isAvailable') is False:
+            return None
+    else:
+        video_id = _video_id_from_thumbnails(track)
+        if not video_id:
+            return None
+        track = {**track, 'videoId': video_id}
     song = _result_to_song(track)
     if song is None:
         return None

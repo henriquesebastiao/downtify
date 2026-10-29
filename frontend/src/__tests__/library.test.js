@@ -51,6 +51,21 @@ const rows = [
 ]
 const tracks = rows.map(normalizeTrack)
 
+describe('explicit manual playlist artwork', () => {
+  it('uses imported source artwork while ordinary manual playlists keep mosaics', () => {
+    const base = {
+      name: 'Mix',
+      files: [],
+      manual: true,
+      cover: 'Playlists/Mix.jpg',
+    }
+    expect(buildPlaylists([base], new Map())[0].cover).toBe('')
+    expect(
+      buildPlaylists([{ ...base, explicit_cover: true }], new Map())[0].cover
+    ).toContain('Mix.jpg')
+  })
+})
+
 describe('normalizeTrack', () => {
   it('builds playable URLs and splits artists', () => {
     const [, harbor] = tracks
@@ -75,6 +90,17 @@ describe('normalizeTrack', () => {
   it('plays extra-folder tracks through /media', () => {
     const track = normalizeTrack('ext/abc123def456/Artist - Title.mp3')
     expect(track.url).toBe('/media/ext/abc123def456/Artist%20-%20Title.mp3')
+  })
+
+  it('keeps the explicit mark, and is clean without one', () => {
+    const loud = normalizeTrack({ file: 'a.mp3', title: 'A', explicit: true })
+    const rows = [
+      normalizeTrack({ file: 'b.mp3', title: 'B' }),
+      normalizeTrack({ file: 'c.mp3', title: 'C', explicit: false }),
+      normalizeTrack('d.mp3'),
+    ]
+    expect(loud.explicit).toBe(true)
+    expect(rows.map((track) => track.explicit)).toEqual([false, false, false])
   })
 })
 

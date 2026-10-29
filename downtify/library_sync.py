@@ -39,6 +39,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from .deemix_upgrade_store import replacement_for_id
 from .library_cache_keys import file_content_key_from_name_and_size
 from .sqlite_utils import connect_sqlite
 
@@ -135,7 +136,12 @@ def public_row(entry: dict[str, Any]) -> dict[str, Any]:
         'playlists': sorted(entry.get('playlists') or []),
     }
     row.update(grouping_keys(entry))
-    return {key: row[key] for key in ROW_FIELDS}
+    public = {key: row[key] for key in ROW_FIELDS}
+    # Present (true) only on explicit tracks: absent means "not explicit",
+    # and the rows of every other track - hash included - stay as they were.
+    if entry.get('explicit'):
+        public['explicit'] = True
+    return public
 
 
 def _row_hash(row: dict[str, Any]) -> str:
@@ -239,13 +245,39 @@ class LibrarySync:
                 rows[row['file']] = row
         with self._lock, self._connect() as conn:
             seq = self._meta(conn, 'seq')
+            reserved = set()
+            restored = set()
+            if (
+                conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='library_trash'"
+                ).fetchone()
+                is not None
+            ):
+                reserved = {
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT track_id FROM library_trash WHERE state NOT IN ('preview','restored') AND track_id<>''"
+                    )
+                }
+                restored = {
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT track_id FROM library_trash WHERE (state='restored' OR blocked=0) AND track_id<>''"
+                    )
+                }
             live = {
                 r['path']: r
                 for r in conn.execute(
-                    'SELECT track_id, path, content_key, tag_key, row_hash '
+                    'SELECT track_id, path, content_key, tag_key, row_hash, deleted_at '
                     'FROM sync_tracks WHERE deleted_at IS NULL'
                 ).fetchall()
             }
+            if restored:
+                for r in conn.execute(
+                    'SELECT track_id,path,content_key,tag_key,row_hash,deleted_at FROM sync_tracks WHERE deleted_at IS NOT NULL AND path IS NOT NULL'
+                ):
+                    if r['track_id'] in restored and r['path'] in rows:
+                        live[r['path']] = r
             vanished = {
                 path: r for path, r in live.items() if path not in rows
             }
@@ -269,12 +301,12 @@ class LibrarySync:
                 digest = _row_hash(row)
                 known = live.get(path)
                 if known is not None:
-                    if known['row_hash'] == digest:
+                    if known['row_hash'] == digest and not known['deleted_at']:
                         continue
                     seq += 1
                     conn.execute(
                         'UPDATE sync_tracks SET content_key = ?, tag_key = ?, '
-                        'row_json = ?, row_hash = ?, seq = ? '
+                        'row_json = ?, row_hash = ?, seq = ?, deleted_at = NULL '
                         'WHERE track_id = ?',
                         (
                             content_key,
@@ -324,6 +356,12 @@ class LibrarySync:
 
             for gone in vanished.values():
                 seq += 1
+                if gone['track_id'] in reserved:
+                    conn.execute(
+                        'UPDATE sync_tracks SET deleted_at=?,seq=? WHERE track_id=?',
+                        (now.isoformat(), seq, gone['track_id']),
+                    )
+                    continue
                 conn.execute(
                     'UPDATE sync_tracks SET path = NULL, deleted_at = ?, '
                     "seq = ?, row_json = '{}' WHERE track_id = ?",
@@ -339,15 +377,20 @@ class LibrarySync:
         client whose cursor predates them then needs a full sync."""
 
         cutoff = (now - timedelta(days=TOMBSTONE_DAYS)).isoformat()
+        protected = ''
+        if conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE name='library_trash'"
+        ).fetchone():
+            protected = " AND track_id NOT IN (SELECT track_id FROM library_trash WHERE state NOT IN ('preview','restored','purged'))"
         rows = conn.execute(
             'SELECT MAX(seq) AS seq FROM sync_tracks '
-            'WHERE deleted_at IS NOT NULL AND deleted_at < ?',
+            'WHERE deleted_at IS NOT NULL AND deleted_at < ?' + protected,
             (cutoff,),
         ).fetchone()
         if rows and rows['seq'] is not None:
             conn.execute(
                 'DELETE FROM sync_tracks '
-                'WHERE deleted_at IS NOT NULL AND deleted_at < ?',
+                'WHERE deleted_at IS NOT NULL AND deleted_at < ?' + protected,
                 (cutoff,),
             )
             floor = max(self._meta(conn, 'floor'), int(rows['seq']))
@@ -464,6 +507,9 @@ class LibrarySync:
 
     def path_for(self, track_id: str) -> Optional[str]:
         with self._connect() as conn:
+            replacement = replacement_for_id(conn, track_id)
+            if replacement is not None:
+                return replacement['file']
             row = conn.execute(
                 'SELECT path FROM sync_tracks WHERE track_id = ? '
                 'AND deleted_at IS NULL',
@@ -473,6 +519,15 @@ class LibrarySync:
 
     def row_for(self, track_id: str) -> Optional[dict[str, Any]]:
         with self._connect() as conn:
+            replacement = replacement_for_id(conn, track_id)
+            if replacement is not None:
+                current = conn.execute(
+                    'SELECT row_json FROM sync_tracks WHERE path=? AND deleted_at IS NULL',
+                    (replacement['file'],),
+                ).fetchone()
+                if current is not None:
+                    return {'id': track_id, **json.loads(current['row_json'])}
+                return {'id': track_id, **public_row(replacement)}
             row = conn.execute(
                 'SELECT track_id, row_json FROM sync_tracks '
                 'WHERE track_id = ? AND deleted_at IS NULL',

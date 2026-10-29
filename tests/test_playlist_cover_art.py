@@ -148,7 +148,7 @@ class _FakeMonitorDB:
         return {}
 
     @staticmethod
-    def mark_track_downloaded(playlist_id, track_id, filename):
+    def mark_track_downloaded(playlist_id, track_id, filename, **_kwargs):
         pass
 
     @staticmethod

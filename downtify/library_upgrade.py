@@ -18,10 +18,10 @@ Three categories are handled, all of them writes to tags:
     Re-read the track from Spotify and write back album, album artist,
     release date and track number.
 
-Audio itself is never replaced: swapping the file a user already has is
-a different problem (match confidence, review of uncertain matches,
-playlists and M3Us pointing at the old name) and is deliberately left
-out rather than done half-way.
+Audio replacement is a separate, explicitly selected Deemix mode. It
+prepares verified recordings, publishes playlist/catalog references,
+then optionally removes only unchanged originals with durable receipts.
+The default artwork/lyrics/metadata workflow is unchanged.
 
 Every write goes to a copy beside the original, which is verified and
 only then moved into place, so an interrupted or failed upgrade leaves
@@ -30,11 +30,14 @@ the existing file untouched.
 
 from __future__ import annotations
 
+import errno
 import os
+import re
 import shutil
+import tempfile
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -78,6 +81,7 @@ CATEGORY_METADATA = 'metadata'
 
 #: Every category a scan reports on, in the order the UI shows them.
 CATEGORIES = (CATEGORY_ARTWORK, CATEGORY_LYRICS, CATEGORY_METADATA)
+SUPPORTED_CATEGORIES = (*CATEGORIES, 'audio')
 
 #: How far a rewritten file's duration may drift from the original
 #: before it is rejected. Tag writes don't touch audio, so this only
@@ -92,6 +96,8 @@ DEFAULT_RECHECK_DAYS = 30
 #: count query plus a broadcast.
 _PUBLISH_INTERVAL_SECONDS = 1.0
 
+_READ_ONLY_DETAIL = 'Read-only filesystem; original file left unchanged'
+
 
 @dataclass(frozen=True)
 class UpgradeOptions:
@@ -101,14 +107,26 @@ class UpgradeOptions:
     artwork_min_px: int = DEFAULT_ARTWORK_MIN_PX
     artwork_source: str = cover_sources.PREFERENCE_HIGHEST
     recheck_days: int = DEFAULT_RECHECK_DAYS
+    replace_audio_deemix: bool = False
+    delete_replaced_audio: bool = False
+    files: tuple[str, ...] = ()
+    deemix_recordings: dict[str, str] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        result = {
             'categories': list(self.categories),
             'artwork_min_px': self.artwork_min_px,
             'artwork_source': self.artwork_source,
             'recheck_days': self.recheck_days,
         }
+        if self.replace_audio_deemix:
+            result['replace_audio_deemix'] = True
+            result['delete_replaced_audio'] = self.delete_replaced_audio
+            if self.deemix_recordings:
+                result['deemix_recordings'] = dict(self.deemix_recordings)
+        if self.files:
+            result['files'] = list(self.files)
+        return result
 
 
 def normalize_categories(raw: Any) -> tuple[str, ...]:
@@ -117,7 +135,7 @@ def normalize_categories(raw: Any) -> tuple[str, ...]:
     if not isinstance(raw, (list, tuple)):
         return CATEGORIES
     wanted = {str(item) for item in raw}
-    picked = tuple(name for name in CATEGORIES if name in wanted)
+    picked = tuple(name for name in SUPPORTED_CATEGORIES if name in wanted)
     return picked or CATEGORIES
 
 
@@ -131,6 +149,17 @@ def options_from(payload: dict[str, Any]) -> UpgradeOptions:
             value = default
         return min(high, max(low, value))
 
+    raw_recordings = payload.get('deemix_recordings')
+    recordings = {}
+    if isinstance(raw_recordings, dict):
+        for stored, ident in list(raw_recordings.items())[:1000]:
+            if (
+                isinstance(stored, str)
+                and not stored.startswith(('/', 'ext/', 'slskd/'))
+                and '..' not in stored.replace('\\', '/').split('/')
+                and re.fullmatch(r'[1-9][0-9]{0,19}', str(ident))
+            ):
+                recordings[stored] = str(ident)
     source = str(payload.get('artwork_source') or '')
     if source not in cover_sources.ARTWORK_SOURCES:
         source = cover_sources.PREFERENCE_HIGHEST
@@ -141,6 +170,12 @@ def options_from(payload: dict[str, Any]) -> UpgradeOptions:
         ),
         artwork_source=source,
         recheck_days=_int('recheck_days', DEFAULT_RECHECK_DAYS, 0, 3650),
+        replace_audio_deemix=payload.get('replace_audio_deemix') is True,
+        delete_replaced_audio=payload.get('delete_replaced_audio') is True,
+        deemix_recordings=recordings,
+        files=tuple(str(f) for f in payload.get('files', [])[:1000])
+        if isinstance(payload.get('files'), list)
+        else (),
     )
 
 
@@ -167,6 +202,9 @@ def _summarize(
 
     counts = {name: 0 for name in CATEGORIES}
     sizes = {name: 0 for name in CATEGORIES}
+    if any('audio' in job.get('categories', []) for job in jobs):
+        counts['audio'] = 0
+        sizes['audio'] = 0
     for job in jobs:
         for name in job.get('categories') or []:
             if name in counts:
@@ -214,6 +252,9 @@ def _song_from_tags(entry: dict[str, Any]) -> dict[str, Any]:
         'year': str(entry.get('year') or ''),
         'track_number': int(entry.get('track_number') or 0),
         'duration': float(entry.get('duration') or 0.0),
+        # A file already marked explicit stays so when its tags are
+        # written back (the mark is only ever added, never cleared).
+        'explicit': bool(entry.get('explicit')),
     }
 
 
@@ -351,6 +392,23 @@ class UpgradeOutcome:
     changed: list[str] = field(default_factory=list)
     artwork_px: int = 0
     artwork_source: str = ''
+    checked: bool = True
+
+
+def _read_only_filesystem(path: Path) -> bool:
+    """Inspect mount flags, including when the process runs as root.
+
+    Windows has no statvfs; staging still reports any write failure.
+    Do not use permission bits to turn unexpected access errors into skips.
+    """
+
+    statvfs = getattr(os, 'statvfs', None)
+    if statvfs is None:
+        return False
+    read_only = getattr(os, 'ST_RDONLY', 1)
+    return any(
+        statvfs(target).f_flag & read_only for target in (path, path.parent)
+    )
 
 
 @dataclass
@@ -364,6 +422,7 @@ class UpgradeDeps:
     lyrics_cache: Any = None
     publish: Optional[Callable[[dict[str, Any]], None]] = None
     rekey_owners: Optional[Callable[[str, str, str], None]] = None
+    audio_replacement: Any = None
 
 
 def resolve_track(stored_path: str, ctx: LibraryContext) -> Optional[Path]:
@@ -436,6 +495,36 @@ def _pick_lyrics(
     return found if found is not None and found.has_any() else None
 
 
+def _publish_staged_lrc(source: Path, destination: Path) -> None:
+    """Publish on the destination filesystem, keeping source until verified.
+
+    Audio and centralized lyrics may be different Docker bind mounts;
+    os.replace(source, destination) would then raise EXDEV.
+    """
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Optional[Path] = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=destination.parent,
+            prefix='.downtify-upgrade-lrc-',
+            suffix='.tmp',
+            delete=False,
+        ) as output:
+            temporary = Path(output.name)
+            with source.open('rb') as incoming:
+                shutil.copyfileobj(incoming, output)
+            shutil.copymode(source, temporary)
+            output.flush()
+            os.fsync(output.fileno())
+        if temporary.read_bytes() != source.read_bytes():
+            raise OSError('Staged lyrics copy failed verification')
+        os.replace(str(temporary), str(destination))
+        source.unlink()
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def _write_upgrade(
     full: Path,
     song: dict[str, Any],
@@ -449,6 +538,8 @@ def _write_upgrade(
     try:
         stage = _stage(full)
     except OSError as exc:
+        if exc.errno == errno.EROFS:
+            return _READ_ONLY_DETAIL
         return f'Could not stage a copy: {exc}'
 
     try:
@@ -483,7 +574,7 @@ def _write_upgrade(
     if new_lyrics is not None and staged_lrc.exists():
         dest_lrc = lyrics_mod.lrc_path_for(full)
         dest_lrc.parent.mkdir(parents=True, exist_ok=True)
-        os.replace(str(staged_lrc), str(dest_lrc))
+        _publish_staged_lrc(staged_lrc, dest_lrc)
         beside = full.with_suffix('.lrc')
         if dest_lrc != beside:
             beside.unlink(missing_ok=True)
@@ -518,6 +609,8 @@ def upgrade_track(
     if found is None:
         return UpgradeOutcome(JOB_SKIPPED, 'File is no longer in the library')
     full, entry = found
+    if _read_only_filesystem(full):
+        return UpgradeOutcome(JOB_SKIPPED, _READ_ONLY_DETAIL, checked=False)
 
     spotify_id = (
         deps.spotify_id_for(stored_path) or ''
@@ -565,6 +658,8 @@ def upgrade_track(
         new_lyrics=new_lyrics,
         write_tags=bool(changed),
     )
+    if error == _READ_ONLY_DETAIL:
+        return UpgradeOutcome(JOB_SKIPPED, error, checked=False)
     if error:
         return UpgradeOutcome(JOB_FAILED, error)
     if old_key and deps.rekey_owners is not None:
@@ -609,6 +704,7 @@ class LibraryUpgradeRunner:
         self._scanned = 0
         self._scan_total = 0
         self._last_publish = 0.0
+        self._finalization_error = ''
 
     # -- helpers --
     def _publish(
@@ -650,6 +746,12 @@ class LibraryUpgradeRunner:
         }
         if extra:
             payload.update(extra)
+        if self._finalization_error:
+            payload['finalization_error'] = self._finalization_error
+        if self.deps.audio_replacement is not None:
+            payload['replacements'] = (
+                self.deps.audio_replacement.store.summary(int(run['id']))
+            )
         return payload
 
     def busy(self) -> bool:
@@ -661,6 +763,11 @@ class LibraryUpgradeRunner:
         with self._lock:
             if self.busy():
                 raise RuntimeError('A library upgrade is already running')
+            if (
+                options.replace_audio_deemix
+                and self.deps.audio_replacement is None
+            ):
+                raise RuntimeError('Deemix replacement is unavailable')
             run_id = self.db.create_run(list(CATEGORIES), options.as_dict())
             self._cancelled = False
             self._stop.clear()
@@ -678,7 +785,20 @@ class LibraryUpgradeRunner:
     def _scan(self, run_id: int, options: UpgradeOptions) -> None:
         try:
             ctx = self.deps.context()
-            entries = list_library_entries(ctx)
+            entries = (
+                list_library_entries(ctx, fold_extra=False)
+                if options.replace_audio_deemix
+                else list_library_entries(ctx)
+            )
+            if options.replace_audio_deemix:
+                entries = [
+                    e
+                    for e in entries
+                    if not str(e['file']).startswith(('ext/', 'slskd/'))
+                ]
+            if options.files:
+                wanted_files = set(options.files)
+                entries = [e for e in entries if e['file'] in wanted_files]
             self._scan_total = len(entries)
             checks = self.db.checks_for([str(e['file']) for e in entries])
             jobs: list[dict[str, Any]] = []
@@ -694,6 +814,15 @@ class LibraryUpgradeRunner:
                 total_bytes += int(entry.get('size') or 0)
                 self._scanned = index
                 self._publish(throttle=True)
+                if options.replace_audio_deemix:
+                    jobs.append({
+                        'file': stored,
+                        'categories': ['audio'],
+                        'size': int(entry.get('size') or 0),
+                        'title': str(entry.get('title') or ''),
+                        'artist': str(entry.get('artist') or ''),
+                    })
+                    continue
                 due = self._categories_due(
                     checks.get(stored) or {}, options.recheck_days
                 )
@@ -789,25 +918,15 @@ class LibraryUpgradeRunner:
             # Remembered so a resume after a restart runs the same
             # categories the user picked, not everything the scan found.
             self.db.set_categories(run_id, list(categories))
-            options = UpgradeOptions(
-                categories=categories,
-                artwork_min_px=int(
-                    run['options'].get('artwork_min_px')
-                    or DEFAULT_ARTWORK_MIN_PX
-                ),
-                artwork_source=str(
-                    run['options'].get('artwork_source')
-                    or cover_sources.PREFERENCE_HIGHEST
-                ),
-                recheck_days=int(
-                    run['options'].get('recheck_days') or DEFAULT_RECHECK_DAYS
-                ),
+            options = replace(
+                options_from(run['options']), categories=categories
             )
             self._begin(run_id, options)
         return self.status()
 
     def _begin(self, run_id: int, options: UpgradeOptions) -> None:
         self._cancelled = False
+        self._finalization_error = ''
         self._stop.clear()
         self.db.requeue_running(run_id)
         self.db.set_state(run_id, STATE_RUNNING)
@@ -824,6 +943,33 @@ class LibraryUpgradeRunner:
         while not self._stop.is_set():
             job = self.db.take_next(run_id)
             if job is None:
+                if options.replace_audio_deemix and 'audio' in wanted:
+                    try:
+                        completed = self.deps.audio_replacement.finalize(
+                            run_id, self._stop.is_set
+                        )
+                        for receipt in completed or []:
+                            detail = (
+                                'Deemix imported; old copy removed'
+                                if receipt['source_deleted']
+                                else 'Deemix imported; original kept'
+                            )
+                            self.db.finish_job(
+                                run_id,
+                                receipt['old_file'],
+                                JOB_DONE,
+                                detail=detail,
+                                changed=['audio'],
+                            )
+                    except Exception as exc:
+                        self._finalization_error = str(exc)[:200]
+                        self.db.set_state(
+                            run_id,
+                            STATE_CANCELLED
+                            if self._cancelled
+                            else STATE_PAUSED,
+                        )
+                        break
                 self.db.set_state(run_id, STATE_DONE)
                 break
             stored = str(job['file'])
@@ -852,17 +998,29 @@ class LibraryUpgradeRunner:
             self.db.set_stage(run_id, stored, stage)
 
         try:
-            outcome = upgrade_track(
-                stored,
-                deps=self.deps,
-                options=UpgradeOptions(
-                    categories=tuple(todo),
-                    artwork_min_px=options.artwork_min_px,
-                    artwork_source=options.artwork_source,
-                    recheck_days=options.recheck_days,
-                ),
-                on_stage=on_stage,
-            )
+            if 'audio' in todo:
+                if (
+                    not options.replace_audio_deemix
+                    or self.deps.audio_replacement is None
+                ):
+                    raise ValueError(
+                        'Audio replacement was not enabled for this scan'
+                    )
+                outcome = self.deps.audio_replacement.prepare(
+                    stored, options, run_id, on_stage
+                )
+            else:
+                outcome = upgrade_track(
+                    stored,
+                    deps=self.deps,
+                    options=UpgradeOptions(
+                        categories=tuple(todo),
+                        artwork_min_px=options.artwork_min_px,
+                        artwork_source=options.artwork_source,
+                        recheck_days=options.recheck_days,
+                    ),
+                    on_stage=on_stage,
+                )
         except Exception as exc:
             logger.opt(exception=True).warning(
                 'Library upgrade: {} failed', stored
@@ -876,7 +1034,7 @@ class LibraryUpgradeRunner:
             detail=outcome.detail,
             changed=outcome.changed,
         )
-        if outcome.status != JOB_FAILED:
+        if outcome.status != JOB_FAILED and outcome.checked:
             # Only the categories this run actually looked at: the rest
             # stay due, so a later run for them still considers the
             # track.
@@ -922,18 +1080,9 @@ class LibraryUpgradeRunner:
         if run['state'] != STATE_RUNNING:
             return
         requeued = self.db.requeue_running(run_id)
-        options = UpgradeOptions(
+        options = replace(
+            options_from(run['options']),
             categories=normalize_categories(run['categories']),
-            artwork_min_px=int(
-                run['options'].get('artwork_min_px') or DEFAULT_ARTWORK_MIN_PX
-            ),
-            artwork_source=str(
-                run['options'].get('artwork_source')
-                or cover_sources.PREFERENCE_HIGHEST
-            ),
-            recheck_days=int(
-                run['options'].get('recheck_days') or DEFAULT_RECHECK_DAYS
-            ),
         )
         logger.info(
             'Library upgrade: resuming run {} ({} track(s) re-queued)',

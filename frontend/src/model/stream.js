@@ -54,6 +54,7 @@ export function streamTrack(song, url, videoId) {
     hasCover: !!song?.cover_url,
     url,
     duration: Number(song?.duration) || 0,
+    explicit: Boolean(song?.explicit),
   }
 }
 

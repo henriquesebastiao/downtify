@@ -44,9 +44,9 @@ Returns `null` in the brief window right after startup, before the first check h
 
 Search YouTube Music by free text.
 
-| Parameter | Type   | Required | Description  |
-| --------- | ------ | -------- | ------------ |
-| `query`   | string | yes      | Search query |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | yes | Search query |
 
 **Response:** Array of song objects (up to 20 results).
 
@@ -58,46 +58,18 @@ When YouTube Music returns nothing and slskd is an enabled audio source, the res
 
 Deezer's own global chart (no genre filter, no auth) — top tracks, albums, artists and playlists, for the [Charts](features/charts.md) page.
 
-| Parameter | Type    | Required | Description                         |
-| --------- | ------- | -------- | ----------------------------------- |
-| `limit`   | integer | no       | Rows per section, 1–50 (default 25) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `limit` | integer | no | Rows per section, 1–50 (default 25) |
 
 **Response:**
 
 ```json
 {
-  "tracks": [
-    /* song objects, "source": "deezer", plus "preview_url" when Deezer offers a 30s clip */
-  ],
-  "albums": [
-    {
-      "album_id": "…",
-      "name": "…",
-      "artist": "…",
-      "cover_url": "https://…",
-      "url": "https://www.deezer.com/album/…",
-      "source": "deezer"
-    }
-  ],
-  "artists": [
-    {
-      "artist_id": "…",
-      "name": "…",
-      "cover_url": "https://…",
-      "url": "https://www.deezer.com/artist/…",
-      "source": "deezer"
-    }
-  ],
-  "playlists": [
-    {
-      "playlist_id": "…",
-      "name": "…",
-      "owner": "…",
-      "cover_url": "https://…",
-      "url": "https://www.deezer.com/playlist/…",
-      "source": "deezer"
-    }
-  ]
+  "tracks": [ /* song objects, "source": "deezer", plus "preview_url" when Deezer offers a 30s clip */ ],
+  "albums": [ { "album_id": "…", "name": "…", "artist": "…", "cover_url": "https://…", "url": "https://www.deezer.com/album/…", "source": "deezer" } ],
+  "artists": [ { "artist_id": "…", "name": "…", "cover_url": "https://…", "url": "https://www.deezer.com/artist/…", "source": "deezer" } ],
+  "playlists": [ { "playlist_id": "…", "name": "…", "owner": "…", "cover_url": "https://…", "url": "https://www.deezer.com/playlist/…", "source": "deezer" } ]
 }
 ```
 
@@ -109,43 +81,18 @@ Track rows download the same way a search result does — Downtify has no Deezer
 
 Free-text search on Deezer alone, for the [Finder](features/finder.md) page.
 
-| Parameter | Type    | Required | Description                                              |
-| --------- | ------- | -------- | -------------------------------------------------------- |
-| `query`   | string  | yes      | Search query (blank → empty lists, no request to Deezer) |
-| `limit`   | integer | no       | Rows per section, 1–50 (default 25)                      |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | yes | Search query (blank → empty lists, no request to Deezer) |
+| `limit` | integer | no | Rows per section, 1–50 (default 25) |
 
 **Response:**
 
 ```json
 {
-  "songs": [
-    /* song objects like /api/discover/chart's tracks, plus "deezer_artist_id" and "deezer_album_id" */
-  ],
-  "albums": [
-    {
-      "album_id": "…",
-      "name": "…",
-      "artist": "…",
-      "artist_id": "…",
-      "cover_url": "https://…",
-      "release_type": "Album",
-      "track_count": 14,
-      "explicit": false,
-      "url": "https://www.deezer.com/album/…",
-      "source": "deezer"
-    }
-  ],
-  "artists": [
-    {
-      "artist_id": "…",
-      "name": "…",
-      "cover_url": "https://…",
-      "fans": 5212632,
-      "album_count": 36,
-      "url": "https://www.deezer.com/artist/…",
-      "source": "deezer"
-    }
-  ]
+  "songs": [ /* song objects like /api/discover/chart's tracks, plus "deezer_artist_id" and "deezer_album_id" */ ],
+  "albums": [ { "album_id": "…", "name": "…", "artist": "…", "artist_id": "…", "cover_url": "https://…", "release_type": "Album", "track_count": 14, "explicit": false, "url": "https://www.deezer.com/album/…", "source": "deezer" } ],
+  "artists": [ { "artist_id": "…", "name": "…", "cover_url": "https://…", "fans": 5212632, "album_count": 36, "url": "https://www.deezer.com/artist/…", "source": "deezer" } ]
 }
 ```
 
@@ -157,10 +104,10 @@ Songs download the same way chart tracks do. Albums and artists are extras: when
 
 Everything the Finder's artist column shows.
 
-| Parameter   | Type   | Required | Description                        |
-| ----------- | ------ | -------- | ---------------------------------- |
-| `artist_id` | string | yes      | Deezer artist id (digits)          |
-| `lang`      | string | no       | Language of the bio (default `en`) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist_id` | string | yes | Deezer artist id (digits) |
+| `lang` | string | no | Language of the bio (default `en`) |
 
 **Response:** `{artist_id, name, cover_url, fans, album_count, url, source, bio, social, related, top_songs}`. `bio` is plain text, paragraphs separated by a blank line (the same cleanup a saved [artist bio](features/artist-images.md) gets). `social` holds `twitter`, `facebook`, `website` and `instagram` links. `related` lists up to 20 artists shaped like the search's artists, and `top_songs` lists their 10 most-played tracks shaped like the search's songs. Only the artist itself is required: the bio, related artists and top songs come back empty when fetching them fails. `502` when the artist doesn't resolve.
 
@@ -170,10 +117,10 @@ Everything the Finder's artist column shows.
 
 A Deezer artist's songs, shaped like a Finder search — Discover's **Find songs**.
 
-| Parameter   | Type   | Required | Description                     |
-| ----------- | ------ | -------- | ------------------------------- |
-| `artist_id` | string | yes      | Deezer artist id (digits)       |
-| `name`      | string | yes      | The artist's name, searched for |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist_id` | string | yes | Deezer artist id (digits) |
+| `name` | string | yes | The artist's name, searched for |
 
 **Response:** `{songs, albums, artists}` like [`GET /api/finder/search`](#get-apifindersearch), with `albums` and `artists` always empty. Deezer is searched for `name` (up to 3 pages of 100 results) and only the songs whose main artist is `artist_id` are kept, in Deezer's order. Deezer's field search (`artist:"..."`) would be the direct way, but it finds no tracks at all today. `502` when Deezer can't be reached or refuses.
 
@@ -181,9 +128,9 @@ A Deezer artist's songs, shaped like a Finder search — Discover's **Find songs
 
 ### `GET /api/finder/artist/albums`
 
-| Parameter   | Type   | Required | Description               |
-| ----------- | ------ | -------- | ------------------------- |
-| `artist_id` | string | yes      | Deezer artist id (digits) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist_id` | string | yes | Deezer artist id (digits) |
 
 **Response:** The artist's whole discography, most recent first, as album rows like the search's, plus `release_date`, `year` and `fans`. Deezer's discography listing carries no track count, so `track_count` is `null` until Downtify has looked it up (see below).
 
@@ -191,9 +138,9 @@ A Deezer artist's songs, shaped like a Finder search — Discover's **Find songs
 
 ### `GET /api/finder/albums/track_counts`
 
-| Parameter | Type   | Required | Description                                  |
-| --------- | ------ | -------- | -------------------------------------------- |
-| `ids`     | string | yes      | Comma-separated Deezer album ids, 50 at most |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ids` | string | yes | Comma-separated Deezer album ids, 50 at most |
 
 **Response:** `{"<album id>": <track count>}`, for the albums Deezer answered for. A lookup that fails, such as a rate limit, is left out so it can be asked again. It costs one small request per album, throttled to stay under Deezer's quota of 50 requests per 5 seconds, and counts are cached for the life of the process.
 
@@ -201,9 +148,9 @@ A Deezer artist's songs, shaped like a Finder search — Discover's **Find songs
 
 ### `GET /api/finder/album`
 
-| Parameter  | Type   | Required | Description              |
-| ---------- | ------ | -------- | ------------------------ |
-| `album_id` | string | yes      | Deezer album id (digits) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `album_id` | string | yes | Deezer album id (digits) |
 
 **Response:** `{album_id, name, artist, artist_id, cover_url, release_date, year, label, genres, duration, track_count, fans, release_type, explicit, upc, url, contributors, source, tracks}`. `contributors` is a list of `{artist_id, name, role}` objects. `tracks` holds song objects numbered like a resolved album's (`track_number`, `album_track_total`), each with its `preview_url`. `502` when the album doesn't resolve.
 
@@ -211,15 +158,15 @@ A Deezer artist's songs, shaped like a Finder search — Discover's **Find songs
 
 ### `GET /api/song/url`
 
-Resolve a Spotify, YouTube Music, Deezer or SoundCloud track URL to metadata.
+Resolve a Spotify, YouTube Music, Deezer or SoundCloud URL to metadata.
 
-| Parameter | Type   | Required | Description                                                                                                                                                                                                  |
-| --------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `url`     | string | yes      | Spotify track, album or playlist URL; a YouTube / YouTube Music video, album, playlist or artist URL; a Deezer track, album, playlist or artist URL (`deezer.com/track/…`); or a public SoundCloud track URL |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | yes | Spotify track, album or playlist URL; a YouTube / YouTube Music video, album, playlist or artist URL; a Deezer track, album, playlist or artist URL (`deezer.com/track/…`); or a SoundCloud track URL (`soundcloud.com/<user>/<track>`, or a private `…/s-<token>` one) |
 
 **Response:**
 
-- **Track URL** → single song object. A SoundCloud track's song object carries `source: "soundcloud"` and its exact `soundcloud_url`; a Deezer track's song object also carries `preview_url` - a 30-second MP3 clip Deezer streams (`https://` only), or `""` when it has none.
+- **Track URL** → single song object. A Deezer track's song object also carries `preview_url` - a 30-second MP3 clip Deezer streams (`https://` only), or `""` when it has none. A SoundCloud track's has `"source": "soundcloud"`, `song_id` `soundcloud:<id>`, and `url`/`soundcloud_url` set to the canonical track URL (no query string); its `album_name` is the title unless SoundCloud names an album. See [SoundCloud](features/soundcloud.md).
 - **Album URL** → array of song objects
 - **Playlist URL** → array of song objects. For a YouTube Music playlist (`…/playlist?list=…`), every song is pinned to the playlist's own video (`youtube_id`), and for uploads the artist/title are taken from an `Artist - Title` video title. See [YouTube Music playlists](features/playlist-monitor.md#youtube-music-playlists).
 - **Artist URL** (YouTube Music `…/channel/UC…`/`…/@handle`, or Deezer `deezer.com/artist/…`) → array of release summaries. `404` if a YouTube Music handle doesn't belong to an artist.
@@ -232,9 +179,9 @@ Resolve a Spotify, YouTube Music, Deezer or SoundCloud track URL to metadata.
 
 Resolve a pasted link to a single object describing what it points at — used by the web UI's link page. Accepts the same URLs as [`GET /api/song/url`](#get-apisongurl), plus Spotify artist URLs.
 
-| Parameter | Type   | Required | Description                                                                                                                                                    |
-| --------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `url`     | string | yes      | Spotify track, album, playlist or artist URL; a YouTube / YouTube Music video, album, playlist or artist URL; or a Deezer track, album, playlist or artist URL |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | yes | Spotify track, album, playlist or artist URL; a YouTube / YouTube Music video, album, playlist or artist URL; a Deezer track, album, playlist or artist URL; or a SoundCloud track URL (`kind` `track`) |
 
 **Response:**
 
@@ -245,7 +192,7 @@ Resolve a pasted link to a single object describing what it points at — used b
   "subtitle": "Rick Astley",
   "cover_url": "https://…",
   "year": "1987",
-  "tracks": [/* song objects */],
+  "tracks": [ /* song objects */ ],
   "albums": []
 }
 ```
@@ -258,9 +205,9 @@ Resolve a pasted link to a single object describing what it points at — used b
 
 An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.md) page.
 
-| Parameter | Type   | Required | Description                                                                                                                                             |
-| --------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `url`     | string | yes      | Spotify artist URL (`open.spotify.com/artist/…`), YouTube Music artist URL (`/channel/UC…` or `/@handle`), or Deezer artist URL (`deezer.com/artist/…`) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | yes | Spotify artist URL (`open.spotify.com/artist/…`), YouTube Music artist URL (`/channel/UC…` or `/@handle`), or Deezer artist URL (`deezer.com/artist/…`) |
 
 **Response:**
 
@@ -270,11 +217,11 @@ An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.
   "artist_id": "0p4nmQO2msCgU4IF37Wi3j",
   "name": "Avril Lavigne",
   "cover_url": "https://…",
-  "songs": [/* song objects, most popular first */]
+  "songs": [ /* song objects, most popular first */ ]
 }
 ```
 
-`source` is `spotify`, `youtube` or `deezer`. Songs also carry `play_count`, an integer, when the source reports one (left out otherwise - Deezer never does). Spotify's is the exact total. YouTube Music only reports a rounded figure (`4.4M plays`), so its `play_count` is an approximation (`4400000`) and the song also has `play_count_approx: true`. Spotify returns the artist's own _Popular_ shelf (up to 10 songs); YouTube Music returns the head of the artist's _Top songs_ playlist (up to 50); Deezer returns its own "top" ranking (up to 50). `400` for a URL that isn't an artist link, `404` when a YouTube Music handle doesn't resolve to an artist, `502` when the upstream lookup fails.
+`source` is `spotify`, `youtube` or `deezer`. Songs also carry `play_count`, an integer, when the source reports one (left out otherwise - Deezer never does). Spotify's is the exact total. YouTube Music only reports a rounded figure (`4.4M plays`), so its `play_count` is an approximation (`4400000`) and the song also has `play_count_approx: true`. Spotify returns the artist's own *Popular* shelf (up to 10 songs); YouTube Music returns the head of the artist's *Top songs* playlist (up to 50); Deezer returns its own "top" ranking (up to 50). `400` for a URL that isn't an artist link, `404` when a YouTube Music handle doesn't resolve to an artist, `502` when the upstream lookup fails.
 
 ---
 
@@ -282,9 +229,9 @@ An artist's most popular songs, for the web UI's [Top Songs](features/top-songs.
 
 The first five Spotify top songs of an artist in your Library, for the [Top songs tab](features/top-songs.md#on-an-artists-library-page) of their page. They're read from `<downloads>/.metadata/ArtistTopSongs/<Artist>.topsongs.json` while that file is fresh (7 days); with no file yet they're fetched from Spotify and saved (a few seconds), and a file older than that is returned right away with `"stale": true` while a refresh runs in the background (ask again a few seconds later for the fresh one, as the web UI does). The Spotify artist comes from the artist's profile (`platforms_id.spotify`).
 
-| Parameter | Type   | Required | Description                                  |
-| --------- | ------ | -------- | -------------------------------------------- |
-| `name`    | string | yes      | Artist name, exactly as shown in the Library |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
 
 **Response:** the same shape as [`GET /api/artists/top_songs/url`](#get-apiartiststop_songsurl) for Spotify, plus when the songs were fetched:
 
@@ -297,17 +244,17 @@ The first five Spotify top songs of an artist in your Library, for the [Top song
   "cover_url": "https://…",
   "fetched_at": "2026-09-24T10:12:03+00:00",
   "stale": false,
-  "songs": [/* five song objects, most popular first */]
+  "songs": [ /* five song objects, most popular first */ ]
 }
 ```
 
 Each song object also has `preview_url`: the 30-second clip Spotify's own player offers for the song (`https://p.scdn.co/mp3-preview/…`, MP3), or `""` when there is none. Downtify only passes on an `https` link on `p.scdn.co`. `schema` is the file's layout; a file of an older one is treated as stale.
 
-| Status | When                                        |
-| ------ | ------------------------------------------- |
-| `400`  | `name` is blank.                            |
-| `404`  | The artist has no Spotify id saved yet.     |
-| `502`  | Nothing saved and Spotify couldn't be read. |
+| Status | When |
+|--------|------|
+| `400` | `name` is blank. |
+| `404` | The artist has no Spotify id saved yet. |
+| `502` | Nothing saved and Spotify couldn't be read. |
 
 ---
 
@@ -319,9 +266,9 @@ Manual picker for an artist's profile photo and banner, plus their profile data 
 
 Whether an artist has a saved photo and/or banner.
 
-| Parameter | Type   | Required | Description                                  |
-| --------- | ------ | -------- | -------------------------------------------- |
-| `name`    | string | yes      | Artist name, exactly as shown in the Library |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
 
 **Response:**
 
@@ -342,7 +289,7 @@ A saved image keeps the same URL every time it's replaced, so a browser that alr
 
 ### `POST /api/artists/art/bulk`
 
-The same answer for many artists at once, so a page listing them (the Library's _Artists_ tab) doesn't send one request per tile.
+The same answer for many artists at once, so a page listing them (the Library's *Artists* tab) doesn't send one request per tile.
 
 **Request body:** `{ "names": ["Avril Lavigne", "Evanescence"] }`
 
@@ -354,9 +301,9 @@ The same answer for many artists at once, so a page listing them (the Library's 
 
 Free-text artist photo candidates from YouTube Music and Deezer.
 
-| Parameter | Type   | Required | Description                              |
-| --------- | ------ | -------- | ---------------------------------------- |
-| `name`    | string | yes      | Search query (usually the artist's name) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Search query (usually the artist's name) |
 
 **Response:** array of `{ "source": "youtube" | "deezer", "name": "…", "image_url": "…" }`, largest image each source offers.
 
@@ -366,11 +313,11 @@ Free-text artist photo candidates from YouTube Music and Deezer.
 
 A Spotify photo or banner candidate. The artist is resolved from one already-downloaded track when that track came from Spotify (the most reliable route), otherwise from an exact-name search on Spotify - see [Artist photo, banner & bio](features/artist-images.md#spotify).
 
-| Parameter | Type   | Required | Description                                                                                                 |
-| --------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------- |
-| `file`    | string | no       | Library-relative path of one of the artist's tracks (as returned by `GET /tracks`)                          |
-| `name`    | string | no       | Artist name, used for an exact-name Spotify search when `file` is missing or wasn't downloaded from Spotify |
-| `kind`    | string | no       | `"photo"` (default) or `"banner"` - these are different Spotify images, not the same one reused             |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | no | Library-relative path of one of the artist's tracks (as returned by `GET /tracks`) |
+| `name` | string | no | Artist name, used for an exact-name Spotify search when `file` is missing or wasn't downloaded from Spotify |
+| `kind` | string | no | `"photo"` (default) or `"banner"` - these are different Spotify images, not the same one reused |
 
 **Response:** `{ "source": "spotify", "name": "…", "image_url": "…" }`, or `{}` when neither `file` nor `name` resolves a Spotify artist, or (for `kind=banner`) the artist has no banner set.
 
@@ -396,17 +343,17 @@ Fetch an image and save it as an artist's photo or banner — used both for a pi
 
 Save an uploaded photo or banner. The body is the **raw image file**, not multipart form-data — same idea as `POST /api/cookies`.
 
-| Parameter | Type   | Required | Description             |
-| --------- | ------ | -------- | ----------------------- |
-| `name`    | string | yes      | Artist name             |
-| `kind`    | string | yes      | `"photo"` or `"banner"` |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name |
+| `kind` | string | yes | `"photo"` or `"banner"` |
 
 **Response:** `{ "url": "…" }`.
 
-| Status | Meaning                                                        |
-| ------ | -------------------------------------------------------------- |
-| `400`  | `kind` isn't `photo`/`banner`, or the body isn't a real image. |
-| `413`  | Larger than 15 MB.                                             |
+| Status | Meaning |
+|--------|---------|
+| `400` | `kind` isn't `photo`/`banner`, or the body isn't a real image. |
+| `413` | Larger than 15 MB. |
 
 ---
 
@@ -414,10 +361,10 @@ Save an uploaded photo or banner. The body is the **raw image file**, not multip
 
 Remove a saved photo or banner.
 
-| Parameter | Type   | Required | Description             |
-| --------- | ------ | -------- | ----------------------- |
-| `name`    | string | yes      | Artist name             |
-| `kind`    | string | yes      | `"photo"` or `"banner"` |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name |
+| `kind` | string | yes | `"photo"` or `"banner"` |
 
 **Response:** `{ "removed": true }` when a file was deleted, `{ "removed": false }` when there was nothing to remove. `400` when `kind` isn't `photo`/`banner`.
 
@@ -425,12 +372,12 @@ Remove a saved photo or banner.
 
 ### `GET /api/artists/photo-proxy`
 
-A **display-only** photo for an artist that has no saved photo, used for the tiles in the artist page's _Related_ tab, for the artists in the Library's _Artists_ grid, for the round photo on an artist's own page, for the artists on the Monitor's _Artists_ tab, and for the artists Discover suggests and the Finder shows, whenever nobody picked a photo for them. The search page doesn't use it. It is a relay, not a way to get a photo to keep: the image is fetched from Deezer, sent to your browser and forgotten - nothing is written to your downloads folder, and only the artist-name → Deezer image link is remembered (in memory, for three hours). To actually save a photo for an artist use the picker (`POST /api/artists/art/from_url`).
+A **display-only** photo for an artist that has no saved photo, used for the tiles in the artist page's *Related* tab, for the artists in the Library's *Artists* grid, for the round photo on an artist's own page, for the artists on the Monitor's *Artists* tab, and for the artists Discover suggests and the Finder shows, whenever nobody picked a photo for them. The search page doesn't use it. It is a relay, not a way to get a photo to keep: the image is fetched from Deezer, sent to your browser and forgotten - nothing is written to your downloads folder, and only the artist-name → Deezer image link is remembered (in memory, for three hours). To actually save a photo for an artist use the picker (`POST /api/artists/art/from_url`).
 
-| Parameter | Type   | Required | Description                                                                                                                                                                                                                                                                                                                                                                                             |
-| --------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`    | string | yes      | Artist name - matched against Deezer's results exactly (ignoring case and the characters a file name can't hold, so `ACDC` finds `AC/DC`), so a near-match never shows someone else's face. When several Deezer artists share the name, the one with the most fans is used                                                                                                                              |
-| `url`     | string | no       | The artist's Deezer picture, when the page already has it (Discover's suggestions, the Finder), **base64url-encoded** (RFC 4648 §5, `=` padding optional) so the address travels as one plain query value. It is relayed as the photo, with no search by name. Only an `https://` address on Deezer's image CDN (`*.dzcdn.net`) is accepted; anything else, or a value that isn't base64url, is a `400` |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name - matched against Deezer's results exactly (ignoring case and the characters a file name can't hold, so `ACDC` finds `AC/DC`), so a near-match never shows someone else's face. When several Deezer artists share the name, the one with the most fans is used |
+| `url` | string | no | The artist's Deezer picture, when the page already has it (Discover's suggestions, the Finder), **base64url-encoded** (RFC 4648 §5, `=` padding optional) so the address travels as one plain query value. It is relayed as the photo, with no search by name. Only an `https://` address on Deezer's image CDN (`*.dzcdn.net`) is accepted; anything else, or a value that isn't base64url, is a `400` |
 
 **Response:** the image bytes with `Cache-Control: public, max-age=10800` and an `ETag`, so the browser holds on to it for three hours. If a photo is already saved for that artist, that local file is sent instead, without browser caching (`Cache-Control: no-cache`), so a newly picked photo shows up right away. `404` (also cacheable for three hours) when Deezer has no exact match, or when the matched artist has no photo on Deezer (it only has a generic placeholder picture, which is never returned).
 
@@ -442,9 +389,9 @@ Only a real answer is ever cached. If something goes wrong - Deezer can't be rea
 
 An artist's saved profile: bio, origin, formation year, genre, group flag, banner hero colour, social links, related artists, platform ids, and which image their current photo/banner is (`current_cover`/`current_cover_banner`: the path of the URL it was downloaded from, e.g. `/image/ab67…`, without host or query; `upload` for an uploaded one; empty for none - an older profile may still hold the source name, such as `spotify`, instead) — see [Artist photo, banner & bio](features/artist-images.md#fetching-a-bio-automatically).
 
-| Parameter | Type   | Required | Description                                  |
-| --------- | ------ | -------- | -------------------------------------------- |
-| `name`    | string | yes      | Artist name, exactly as shown in the Library |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
 
 **Response:**
 
@@ -482,16 +429,12 @@ A blank skeleton (as above) when nothing has been saved for this artist yet - ne
 
 ### `POST /api/artists/profile/ensure`
 
-Seeds a brand-new artist's profile automatically the first time it's needed (e.g. opening their Library page) - a no-op past the very first call for a given artist, so it's safe to call on every visit. Saves a photo and/or banner from Spotify (resolved from one of `track_files` already downloaded from there, else by an exact-name search on Spotify), falling back to an exact YouTube Music name match when Spotify has nothing - but only the ones enabled by the `download_cover_art_artist` (photo) and `download_cover_art_artist_banner` (banner) [settings](#post-apisettingsupdate); with both off (the default) no image is saved. Then fetches bio/origin/social/platform-ids the same way `POST .../bio` does - the profile JSON is always written, whatever those settings say, once Apple Music and Deezer have _answered_. If either of them fails (unreachable, over its limit), nothing is written - no JSON, no image - and the blank profile is returned, so the next call tries again; a service saying it doesn't know the artist is an answer. The same seeding also runs in the background when a download finishes (see [Artist photo, banner & bio](features/artist-images.md#when-a-download-finishes)).
+Seeds a brand-new artist's profile automatically the first time it's needed (e.g. opening their Library page) - a no-op past the very first call for a given artist, so it's safe to call on every visit. Saves a photo and/or banner from Spotify (resolved from one of `track_files` already downloaded from there, else by an exact-name search on Spotify), falling back to an exact YouTube Music name match when Spotify has nothing - but only the ones enabled by the `download_cover_art_artist` (photo) and `download_cover_art_artist_banner` (banner) [settings](#post-apisettingsupdate); with both off (the default) no image is saved. Then fetches bio/origin/social/platform-ids the same way `POST .../bio` does - the profile JSON is always written, whatever those settings say, once Apple Music and Deezer have *answered*. If either of them fails (unreachable, over its limit), nothing is written - no JSON, no image - and the blank profile is returned, so the next call tries again; a service saying it doesn't know the artist is an answer. The same seeding also runs in the background when a download finishes (see [Artist photo, banner & bio](features/artist-images.md#when-a-download-finishes)).
 
 **Request body:**
 
 ```json
-{
-  "name": "Avril Lavigne",
-  "lang": "pt-BR",
-  "track_files": ["Avril Lavigne/Let Go/Complicated.mp3"]
-}
+{ "name": "Avril Lavigne", "lang": "pt-BR", "track_files": ["Avril Lavigne/Let Go/Complicated.mp3"] }
 ```
 
 `track_files` is optional (an empty/omitted list just skips the Spotify/YouTube Music image seeding, everything else still runs).
@@ -502,7 +445,7 @@ Seeds a brand-new artist's profile automatically the first time it's needed (e.g
 
 ### `POST /api/artists/profile/bio/preview`
 
-One service's biography text, **without saving anything** - what the artist edit modal's _Fetch from Apple Music_ / _Fetch from Deezer_ links use to fill the text box, so the user decides whether to keep it (with `PUT /api/artists/profile/bio`). Unlike `POST /api/artists/profile/bio`, it doesn't touch the profile at all: no bio, no other field, and an artist id it had to look up isn't cached.
+One service's biography text, **without saving anything** - what the artist edit modal's *Fetch from Apple Music* / *Fetch from Deezer* links use to fill the text box, so the user decides whether to keep it (with `PUT /api/artists/profile/bio`). Unlike `POST /api/artists/profile/bio`, it doesn't touch the profile at all: no bio, no other field, and an artist id it had to look up isn't cached.
 
 **Request body:**
 
@@ -526,7 +469,7 @@ Fetch an artist's bio and save it. Apple Music is the primary source (also bring
 { "name": "Avril Lavigne", "lang": "pt-BR", "source": "deezer" }
 ```
 
-`source` is optional and chooses whose biography _text_ is saved: `"applemusic"` or `"deezer"` use only that service's bio (no fallback to the other one; a `400` `detail` says which service has none, and the saved bio is left as it was), while `"auto"` - the default, and what `POST .../ensure` does - saves Apple Music's bio and falls back to Deezer's only when Apple Music has none. Every other field is fetched the same way whatever `source` is; an unknown value is a `400`.
+`source` is optional and chooses whose biography *text* is saved: `"applemusic"` or `"deezer"` use only that service's bio (no fallback to the other one; a `400` `detail` says which service has none, and the saved bio is left as it was), while `"auto"` - the default, and what `POST .../ensure` does - saves Apple Music's bio and falls back to Deezer's only when Apple Music has none. Every other field is fetched the same way whatever `source` is; an unknown value is a `400`.
 
 `lang` affects the bio text itself, not just formatting - but for Apple Music it's not a simple header: each supported language is tied to a specific Apple Music storefront (e.g. `pt-BR` uses the Brazil storefront, `el` uses Greece's), and a language with no working storefront (`bg`) falls back to whatever that artist's default-language bio is.
 
@@ -538,9 +481,9 @@ Fetch an artist's bio and save it. Apple Music is the primary source (also bring
 
 Clear only the saved bio text. Everything else - `origin`, `born_or_formed`, `is_group`, `banner_bg_color`, `social`, `related_artists` and `platforms_id` (including the cached ids) - is left as-is, so fetching again later doesn't need to search by name.
 
-| Parameter | Type   | Required | Description                                  |
-| --------- | ------ | -------- | -------------------------------------------- |
-| `name`    | string | yes      | Artist name, exactly as shown in the Library |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name, exactly as shown in the Library |
 
 **Response:** the same shape as `GET /api/artists/profile`, with `bio` cleared.
 
@@ -586,20 +529,21 @@ Manually set all four social links directly, replacing the whole object - never 
 
 ## Downloads
 
-**Settings → Downloads → Longest track taken** caps the track length for downloads _and_ streams alike (default 10 minutes, `0` takes everything).
+**Settings → Downloads → Longest track taken** caps the track length for downloads *and* streams alike (default 10 minutes, `0` takes everything).
 
-Whoever asks for a download owns the tracks: a second user asking for the same songs shares the files on disk (nothing is downloaded twice) and gains their own ownership rows. Users browse their own library only — see [Users & Sign-in](features/users.md#your-library).
+Whoever asks for a download owns the tracks: a second user asking for the same songs shares the files on disk (nothing is downloaded twice) and gains their own ownership rows. The library is shared — users browse every downloaded song except what an admin [hid from users](#get-apilibraryvisibility); who asked for a download only decides who may delete it. See [Users & Sign-in](features/users.md#your-library).
+
 
 ### `POST /api/download/url`
 
 Download a single track. Blocks until complete.
 
-| Parameter   | Type   | Required | Description                                                                      |
-| ----------- | ------ | -------- | -------------------------------------------------------------------------------- |
-| `url`       | string | yes      | Spotify track URL, YouTube URL, Deezer track URL, or public SoundCloud track URL |
-| `client_id` | string | no       | WebSocket client ID for progress events                                          |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | yes | Spotify track URL, YouTube URL, Deezer track URL, or SoundCloud track URL |
+| `client_id` | string | no | WebSocket client ID for progress events |
 
-**Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` forces a YouTube video, and `soundcloud_url` forces an exact SoundCloud track while keeping the song object's Spotify metadata. `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download. A body with `"source": "deezer"` (a Deezer chart or resolved-link row) is taken as-is instead of re-fetching by `url` - Deezer isn't a URL this endpoint otherwise resolves on its own.
+**Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` (a video id) or `soundcloud_url` (a SoundCloud track URL) forces the audio source — one replaces the other, and either is used at its source's place in `audio_providers` — and `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download. A body with `"source": "deezer"` (a Deezer chart or resolved-link row) is taken as-is instead of re-fetching by `url` - Deezer isn't a URL this endpoint otherwise resolves on its own.
 
 **Response:** Filename string of the downloaded file — a `slskd/…` path for a slskd download left in place. `404` when no audio source has a match for the track.
 
@@ -613,19 +557,19 @@ Download multiple tracks concurrently, gated by the [`max_parallel_downloads` se
 
 ```json
 {
-  "songs": [/* array of song objects */],
+  "songs": [ /* array of song objects */ ],
   "playlist_url": "https://open.spotify.com/playlist/…",
   "generate_m3u": true
 }
 ```
 
-| Field           | Type    | Description                                                                                                                                                                                                                                                                                                  |
-| --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `songs`         | array   | Song objects to download                                                                                                                                                                                                                                                                                     |
-| `playlist_url`  | string  | Optional. A Spotify, YouTube Music or Deezer playlist URL, used to determine the playlist subfolder and M3U name. A Spotify playlist is also tracked as a [playlist download](#playlist-downloads) - Deezer and YouTube Music playlists get the same folder/M3U/cover treatment but aren't tracked that way. |
-| `playlist_name` | string  | Optional. Names the playlist subfolder and M3U when there is no `playlist_url`, e.g. an artist's [top songs](features/top-songs.md). Ignored when `playlist_url` resolves.                                                                                                                                   |
-| `cover_url`     | string  | Optional. Image saved as the playlist's [cover art](features/playlist-cover-art.md) when there is no `playlist_url`. Only used when `generate_m3u` is true, a `playlist_name` is set and the cover art setting is on.                                                                                        |
-| `generate_m3u`  | boolean | Whether to write an M3U after the batch finishes. Default: `true`.                                                                                                                                                                                                                                           |
+| Field | Type | Description |
+|-------|------|-------------|
+| `songs` | array | Song objects to download |
+| `playlist_url` | string | Optional. A Spotify, YouTube Music or Deezer playlist URL, used to determine the playlist subfolder and M3U name. A Spotify playlist is also tracked as a [playlist download](#playlist-downloads) - Deezer and YouTube Music playlists get the same folder/M3U/cover treatment but aren't tracked that way. |
+| `playlist_name` | string | Optional. Names the playlist subfolder and M3U when there is no `playlist_url`, e.g. an artist's [top songs](features/top-songs.md). Ignored when `playlist_url` resolves. |
+| `cover_url` | string | Optional. Image saved as the playlist's [cover art](features/playlist-cover-art.md) when there is no `playlist_url`. Only used when `generate_m3u` is true, a `playlist_name` is set and the cover art setting is on. |
+| `generate_m3u` | boolean | Whether to write an M3U after the batch finishes. Default: `true`. |
 
 **Response:**
 
@@ -642,9 +586,9 @@ Download multiple tracks concurrently, gated by the [`max_parallel_downloads` se
 
 Download every track of a YouTube Music album/browse URL, resolving the full tracklist once so every track shares consistent metadata (this avoids the album/compilation drift that downloading each track independently via `/api/download/url` can cause).
 
-| Parameter | Type   | Required | Description                    |
-| --------- | ------ | -------- | ------------------------------ |
-| `url`     | string | yes      | YouTube Music album/browse URL |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | yes | YouTube Music album/browse URL |
 
 **Response:** Object mapping `song_id -> downloaded filename` for every track that downloaded successfully (failed tracks are omitted, not raised).
 
@@ -664,11 +608,11 @@ Import a [library-export CSV](../features/library-import.md) (Soundiiz, TuneMyMu
 }
 ```
 
-| Field           | Type    | Description                                                                                   |
-| --------------- | ------- | --------------------------------------------------------------------------------------------- |
-| `csv`           | string  | Required. The raw CSV file content.                                                           |
-| `playlist_name` | string  | Optional. Defaults to `"Imported Library"`. Used for the M3U filename and download subfolder. |
-| `generate_m3u`  | boolean | Whether to write an M3U after the import finishes. Default: `true`.                           |
+| Field | Type | Description |
+|-------|------|-------------|
+| `csv` | string | Required. The raw CSV file content. |
+| `playlist_name` | string | Optional. Defaults to `"Imported Library"`. Used for the M3U filename and download subfolder. |
+| `generate_m3u` | boolean | Whether to write an M3U after the import finishes. Default: `true`. |
 
 **Response:**
 
@@ -708,7 +652,7 @@ Remove finished (`done`) jobs, keeping queued, in-progress and failed ones. A us
 
 ### `DELETE /api/queue`
 
-Clear the download queue/history — one's own for a user, the entire one for an admin.
+Clear the download queue/history — one's own for a user, the entire one for an admin. A job that hasn't started yet never starts; one already downloading finishes.
 
 **Response:** `{ "cleared": true }`
 
@@ -716,13 +660,95 @@ Clear the download queue/history — one's own for a user, the entire one for an
 
 ### `DELETE /api/queue/item`
 
-Remove a single job from the queue (one's own, unless admin).
+Remove a single job from the queue (one's own, unless admin). If it hasn't started yet, it never does.
 
-| Parameter | Type   | Required | Description |
-| --------- | ------ | -------- | ----------- |
-| `song_id` | string | yes      | Job ID      |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `song_id` | string | yes | Job ID |
 
 **Response:** `{ "removed": true }` or `{ "removed": false }`
+
+---
+
+### `GET /api/queue/state`
+
+Whether the download queue is paused. Anyone signed in can read it. See [Download Queue](features/download-queue.md).
+
+**Response:**
+
+```json
+{ "paused": true, "state": "pausing", "active": 2 }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `paused` | boolean | Whether the queue is paused |
+| `state` | string | `running`, `pausing` (paused, with `active` downloads still finishing) or `paused` (nothing running) |
+| `active` | integer | Downloads running right now, everyone's (Playlist Monitor sweeps included) |
+
+Every change is also broadcast as a `queue_state` [WebSocket](#websocket) frame.
+
+---
+
+### `POST /api/queue/pause`
+
+Admin. Pause the queue: no download starts until it is resumed, and the ones already running finish normally. Waiting jobs keep their place (`status: "queued"`, including a `POST /api/download/url` that hasn't started — that request waits until the queue is resumed), and Playlist Monitor sweeps wait before each track. The switch is saved, so the queue is still paused after a restart.
+
+**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+
+---
+
+### `POST /api/queue/resume`
+
+Admin. Carry on with the waiting jobs, with the current settings and audio provider order.
+
+**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+
+Unfinished jobs (waiting, or interrupted mid-download) are saved in `/data` and queued again when Downtify starts, paused or not; finished and failed ones are not.
+
+---
+
+## Download policy
+
+Recordings excluded from automatic downloads. A recording is excluded by hand, or once its attempts together have taken longer than `download_retry_budget_minutes` ([settings](#post-apisettingsupdate); 0–1440, default `0` = no limit). Excluding a recording never removes a file.
+
+These endpoints need a browser session or a paired device of an account that is still an administrator; anything else gets `403` (`admin_required`).
+
+### `GET /api/v1/download-policy/exclusions`
+
+List the excluded recordings, most recently changed first.
+
+**Response:**
+
+```json
+{ "items": [{ "id": "3f9c…", "title": "Song", "artist": "Artist", "album": "Album", "duration": 215, "elapsed": 1800.5, "reason": "timeout", "updated": 1761600000.0 }] }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Exclusion ID |
+| `duration` | integer | Length in seconds, `0` when unknown |
+| `elapsed` | number | Seconds spent on attempts so far |
+| `reason` | string | `manual` or `timeout` (retry budget used up) |
+| `updated` | number | Unix time of the last change |
+
+---
+
+### `POST /api/v1/download-policy/exclusions`
+
+Exclude a recording from automatic downloads.
+
+**Body:** `{ "name": "Song", "song_id": "…", "artist": "Artist", "artists": ["Artist"], "album_name": "Album", "duration": 215 }` — only `name` is required; `duration` is in seconds.
+
+**Response:** `{ "id": "3f9c…", "reason": "manual" }`. `422` (`identity_uncertain`) when the recording can't be told apart: no `song_id`, and not all of artist, album and duration.
+
+---
+
+### `DELETE /api/v1/download-policy/exclusions/{id}`
+
+Allow automatic downloads of the recording again and reset its elapsed time.
+
+**Response:** `{ "ok": true }`. `404` for an unknown ID; `409` (`attempt_still_stopping`) while an attempt at it is still stopping.
 
 ---
 
@@ -792,30 +818,31 @@ Return the current settings.
 }
 ```
 
-| Field                              | Type    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `max_parallel_downloads`           | integer | Concurrent download **and extra-folder Sync** limit. Clamped to `1–30`.                                                                                                                                                                                                                                                                                                                                                                                       |
-| `download_delay_seconds`           | number  | Seconds to wait after each download in a batch before starting the next. Clamped to `0–300`.                                                                                                                                                                                                                                                                                                                                                                  |
-| `external_sync_delay_seconds`      | number  | Seconds to wait after each extra-folder **batch** (batch size = `max_parallel_downloads`) before looking up lyrics, covers and genre. Clamped to `0–300`. `0` keeps those lookups concurrent, still capped by `max_parallel_downloads`. See [Existing music folders](features/external-library.md).                                                                                                                                                           |
-| `mini_player_enabled`              | boolean | Legacy UI preference, kept so older clients keep working. The web UI no longer reads it — the player bar always appears while a track is loaded. The backend never reads it either.                                                                                                                                                                                                                                                                           |
-| `ui_language`                      | string  | The language the web UI is shown in, as a code like `en` or `pt-BR`. You don't set it by hand: the page sends it every time it loads and whenever you change the language, so the server knows your language for work that runs without a browser. `""` until a page has said. Anything that isn't a language code of that shape is ignored, and the settings page's own save never touches it. See [Internationalization](features/internationalization.md). |
-| `download_cover_art`               | boolean | Whether to fetch and embed cover art at all. See [Download cover art](features/download-settings.md#download-cover-art).                                                                                                                                                                                                                                                                                                                                      |
-| `cover_resolution`                 | integer | Target pixel size (width & height) for YouTube Music-sourced cover art. Clamped to `300–1200`. Only used when `download_cover_art` is true. See [Cover art resolution](features/download-settings.md#cover-art-resolution).                                                                                                                                                                                                                                   |
-| `overwrite_existing_files`         | boolean | When `false`, a song already in the library (matched by output filename, or by Spotify track ID through the [library track index](features/library-catalog.md)) isn't downloaded again; the download returns the existing file's path instead. See [Overwrite existing files](features/download-settings.md#overwrite-existing-files).                                                                                                                        |
-| `download_cover_art_playlists`     | boolean | Save the playlist's own cover art alongside its M3U file, as `<playlist-name>.jpg`. Only applies while `generate_m3u` is true. Default: `true`. See [Playlist cover art](features/playlist-cover-art.md).                                                                                                                                                                                                                                                     |
-| `download_cover_art_artist`        | boolean | Let Downtify save an artist's photo on its own - when an artist's page is opened for the first time and when one of their tracks finishes downloading (see [`POST /api/artists/profile/ensure`](#post-apiartistsprofileensure)). The manual picker on an artist's Library page is always available regardless of this setting. Default: `true`. See [Artist photo, banner & bio](features/artist-images.md).                                                  |
-| `download_cover_art_artist_banner` | boolean | Same as above, for the artist's banner image - independent of the photo setting. Default: `false`. See [Artist photo, banner & bio](features/artist-images.md).                                                                                                                                                                                                                                                                                               |
-| `lyrics_providers`                 | array   | Ordered fallback list of lyrics providers: `lrclib`, `netease`. Each track tries them in order until one has lyrics. Unknown names are dropped; a list left with only the legacy `genius`/`musixmatch`/`azlyrics` names falls back to the defaults. An empty list means no lyrics, as does `download_lyrics: false`. See [Lyrics](features/lyrics.md).                                                                                                        |
-| `download_lyrics`                  | boolean | Whether to look lyrics up at all.                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `lyrics_lrc_beside`                | boolean | When `true` (default), time-synced `.lrc` files are written next to the audio. When `false`, they go under `lyrics_lrc_dir`. See [Lyrics](features/lyrics.md#sidecar-lrc-file).                                                                                                                                                                                                                                                                               |
-| `lyrics_lrc_dir`                   | string  | Absolute folder for `.lrc` files when `lyrics_lrc_beside` is false. Default `/data/lyrics`. Paths inside downloads, slskd, or extra music folders are rejected.                                                                                                                                                                                                                                                                                               |
-| `audio_providers`                  | array   | Ordered fallback list of audio sources: `youtube-music`, `youtube`, `slskd`. `slskd` is dropped while `slskd.enabled` is false. See [slskd & Navidrome](features/slskd-navidrome.md#audio-sources-and-fallback-order).                                                                                                                                                                                                                                        |
-| `slskd`                            | object  | slskd connection and matching options. Saving with `enabled: true` but no `base_url` or `api_key` returns `400`.                                                                                                                                                                                                                                                                                                                                              |
-| `navidrome`                        | object  | Navidrome connection. Saving with `enabled: true` but no `url`, `username` or `password` returns `400`.                                                                                                                                                                                                                                                                                                                                                       |
-| `sync_navidrome`                   | boolean | Create/update a Navidrome playlist after playlist downloads, Playlist Monitor sweeps and library changes.                                                                                                                                                                                                                                                                                                                                                     |
-| `cache_cover_art`                  | boolean | Keep extracted cover images under `/data/cover_cache` to speed up `/cover`. Covers fetched for [read-only extra folders](features/external-library.md) are always stored there, even when this is `false`.                                                                                                                                                                                                                                                    |
-| `library_upgrade`                  | object  | Defaults a library upgrade scan starts from: `artwork_min_px` (clamped to `100–3000`), `artwork_source` (`highest`, `spotify`, `itunes`, `youtube-music`) and `recheck_days` (`0–3650`, `0` meaning always re-check). A scan request may override them. See [Upgrade library](features/library-upgrade.md#options).                                                                                                                                           |
-| `external_library`                 | object  | Extra folders of already-tagged audio. `folders` is a list of absolute paths (as seen inside the container, max 20). Relative paths are dropped. See [Existing music folders](features/external-library.md).                                                                                                                                                                                                                                                  |
+| Field | Type | Description |
+|-------|------|-------------|
+| `max_parallel_downloads` | integer | Concurrent download **and extra-folder Sync** limit. Clamped to `1–30`. |
+| `download_delay_seconds` | number | Seconds to wait after each download in a batch before starting the next. Clamped to `0–300`. |
+| `external_sync_delay_seconds` | number | Seconds to wait after each extra-folder **batch** (batch size = `max_parallel_downloads`) before looking up lyrics, covers and genre. Clamped to `0–300`. `0` keeps those lookups concurrent, still capped by `max_parallel_downloads`. See [Existing music folders](features/external-library.md). |
+| `mini_player_enabled` | boolean | Legacy UI preference, kept so older clients keep working. The web UI no longer reads it — the player bar always appears while a track is loaded. The backend never reads it either. |
+| `ui_language` | string | The language the web UI is shown in, as a code like `en` or `pt-BR`. You don't set it by hand: the page sends it every time it loads and whenever you change the language, so the server knows your language for work that runs without a browser. `""` until a page has said. Anything that isn't a language code of that shape is ignored, and the settings page's own save never touches it. See [Internationalization](features/internationalization.md). |
+| `download_cover_art` | boolean | Whether to fetch and embed cover art at all. See [Download cover art](features/download-settings.md#download-cover-art). |
+| `cover_resolution` | integer | Target pixel size (width & height) for YouTube Music-sourced cover art. Clamped to `300–1200`. Only used when `download_cover_art` is true. See [Cover art resolution](features/download-settings.md#cover-art-resolution). |
+| `overwrite_existing_files` | boolean | When `false`, a song already in the library (matched by output filename, or by Spotify track ID through the [library track index](features/library-catalog.md)) isn't downloaded again; the download returns the existing file's path instead. See [Overwrite existing files](features/download-settings.md#overwrite-existing-files). |
+| `download_cover_art_playlists` | boolean | Save the playlist's own cover art alongside its M3U file, as `<playlist-name>.jpg`. Only applies while `generate_m3u` is true. Default: `true`. See [Playlist cover art](features/playlist-cover-art.md). |
+| `download_cover_art_artist` | boolean | Let Downtify save an artist's photo on its own - when an artist's page is opened for the first time and when one of their tracks finishes downloading (see [`POST /api/artists/profile/ensure`](#post-apiartistsprofileensure)). The manual picker on an artist's Library page is always available regardless of this setting. Default: `true`. See [Artist photo, banner & bio](features/artist-images.md). |
+| `download_cover_art_artist_banner` | boolean | Same as above, for the artist's banner image - independent of the photo setting. Default: `false`. See [Artist photo, banner & bio](features/artist-images.md). |
+| `lyrics_providers` | array | Ordered fallback list of lyrics providers: `lrclib`, `netease`. Each track tries them in order until one has lyrics. Unknown names are dropped; a list left with only the legacy `genius`/`musixmatch`/`azlyrics` names falls back to the defaults. An empty list means no lyrics, as does `download_lyrics: false`. See [Lyrics](features/lyrics.md). |
+| `download_lyrics` | boolean | Whether to look lyrics up at all. |
+| `lyrics_lrc_beside` | boolean | When `true` (default), time-synced `.lrc` files are written next to the audio. When `false`, they go under `lyrics_lrc_dir`. See [Lyrics](features/lyrics.md#sidecar-lrc-file). |
+| `lyrics_lrc_dir` | string | Absolute folder for `.lrc` files when `lyrics_lrc_beside` is false. Default `/data/lyrics`. Paths inside downloads, slskd, or extra music folders are rejected. |
+| `audio_providers` | array | Ordered fallback list of audio sources: `youtube-music`, `youtube`, `soundcloud`, `slskd`, `deemix`. `slskd` is dropped while `slskd.enabled` is false, `deemix` while `deemix.enabled` is. See [slskd & Navidrome](features/slskd-navidrome.md#audio-sources-and-fallback-order) and [SoundCloud](features/soundcloud.md). |
+| `slskd` | object | slskd connection and matching options. Saving with `enabled: true` but no `base_url` or `api_key` returns `400`. |
+| `navidrome` | object | Navidrome connection. Saving with `enabled: true` but no `url`, `username` or `password` returns `400`. |
+| `sync_navidrome` | boolean | Create/update a Navidrome playlist after playlist downloads, Playlist Monitor sweeps and library changes. |
+| `allow_playlist_sharing` | boolean | Whether users may [share their playlists](features/users.md#sharing-playlists) (default `true`). While `false` every share is hidden from the people it was shared with and nobody can share or follow; the shares come back when it is turned on again. |
+| `cache_cover_art` | boolean | Keep extracted cover images under `/data/cover_cache` to speed up `/cover`. Covers fetched for [read-only extra folders](features/external-library.md) are always stored there, even when this is `false`. |
+| `library_upgrade` | object | Defaults a library upgrade scan starts from: `artwork_min_px` (clamped to `100–3000`), `artwork_source` (`highest`, `spotify`, `itunes`, `youtube-music`) and `recheck_days` (`0–3650`, `0` meaning always re-check). A scan request may override them. See [Upgrade library](features/library-upgrade.md#options). |
+| `external_library` | object | Extra folders of already-tagged audio. `folders` is a list of absolute paths (as seen inside the container, max 20). Relative paths are dropped. See [Existing music folders](features/external-library.md). |
 
 ---
 
@@ -860,13 +887,13 @@ Try a slskd connection without saving anything. See [Testing the connection](fea
 
 `ok` is `false` when any check has `status: "fail"`; a `warn` (slskd signed out of Soulseek, an unreadable folder) doesn't fail the test. `server` is set only when the address and key were both accepted. Each check is `{id, status, code, detail}`, where `detail` is only ever a short fact — a path, a state, an HTTP status — never text copied from an error.
 
-| `id`         | `code` values                                                         |
-| ------------ | --------------------------------------------------------------------- |
-| `config`     | `missing` — the address or key is empty; nothing was tried            |
+| `id` | `code` values |
+|------|---------------|
+| `config` | `missing` — the address or key is empty; nothing was tried |
 | `connection` | `unreachable`, `timeout`, `bad_url`, `tls`, `not_slskd`, `http_error` |
-| `auth`       | `bad_key`                                                             |
-| `soulseek`   | `ok`, `offline`                                                       |
-| `folder`     | `ok`, `missing`                                                       |
+| `auth` | `bad_key` |
+| `soulseek` | `ok`, `offline` |
+| `folder` | `ok`, `missing` |
 
 Each request gives up after 8 seconds.
 
@@ -876,12 +903,12 @@ Each request gives up after 8 seconds.
 
 Try a Navidrome connection without saving anything. Same behaviour and answer shape as `POST /api/slskd/test`, with the `navidrome` settings object as the body (`url`, `username`, `password`, and optionally `admin_username` and `admin_password`).
 
-| `id`         | `code` values                                                             |
-| ------------ | ------------------------------------------------------------------------- |
-| `config`     | `missing`                                                                 |
+| `id` | `code` values |
+|------|---------------|
+| `config` | `missing` |
 | `connection` | `unreachable`, `timeout`, `bad_url`, `tls`, `not_navidrome`, `http_error` |
-| `auth`       | `bad_credentials`, `api_error` (`detail` holds the server's own message)  |
-| `scan`       | `ok`, `not_admin`, `not_admin_separate`, `bad_admin`                      |
+| `auth` | `bad_credentials`, `api_error` (`detail` holds the server's own message) |
+| `scan` | `ok`, `not_admin`, `not_admin_separate`, `bad_admin` |
 
 The `scan` check reads whether the account used for library scans (the admin login when set, else the normal one) is an admin — Navidrome only lets admins start a scan — and never starts one. It is left out when the account can't be looked up, and when scanning after a download is turned off.
 
@@ -910,12 +937,12 @@ Current cookie configuration.
 }
 ```
 
-| Field                 | Type            | Description                                                                          |
-| --------------------- | --------------- | ------------------------------------------------------------------------------------ |
-| `configured`          | boolean         | Whether a usable cookie file is in place.                                            |
-| `source`              | string \| null  | `"upload"`, `"env"` (`DOWNTIFY_COOKIES_FILE`), or `null` when unconfigured.          |
-| `locked`              | boolean         | `true` when `DOWNTIFY_COOKIES_FILE` is set — uploads and deletions are then refused. |
-| `size` / `updated_at` | integer \| null | Only reported for an uploaded file.                                                  |
+| Field | Type | Description |
+|-------|------|-------------|
+| `configured` | boolean | Whether a usable cookie file is in place. |
+| `source` | string \| null | `"upload"`, `"env"` (`DOWNTIFY_COOKIES_FILE`), or `null` when unconfigured. |
+| `locked` | boolean | `true` when `DOWNTIFY_COOKIES_FILE` is set — uploads and deletions are then refused. |
+| `size` / `updated_at` | integer \| null | Only reported for an uploaded file. |
 
 ---
 
@@ -925,11 +952,11 @@ Upload a Netscape `cookies.txt`, replacing any previous one. The body is the **r
 
 **Response:** the `GET /api/cookies` object plus a `warnings` array (e.g. when the file has no `youtube.com` cookies).
 
-| Status | Meaning                                                                |
-| ------ | ---------------------------------------------------------------------- |
-| `400`  | Not a valid Netscape cookie jar (empty, binary, or no cookie lines).   |
-| `409`  | `DOWNTIFY_COOKIES_FILE` is set, so the file is managed outside the UI. |
-| `413`  | Larger than 2 MB, so it isn't a cookies.txt.                           |
+| Status | Meaning |
+|--------|---------|
+| `400` | Not a valid Netscape cookie jar (empty, binary, or no cookie lines). |
+| `409` | `DOWNTIFY_COOKIES_FILE` is set, so the file is managed outside the UI. |
+| `413` | Larger than 2 MB, so it isn't a cookies.txt. |
 
 ---
 
@@ -947,9 +974,9 @@ Remove the uploaded cookie file.
 
 List audio files in the downloads directory (recursive), plus slskd downloads left in place (`slskd/...`) — one's own files for a user, everything for an admin (see [Users & Sign-in](features/users.md#your-library)).
 
-| Parameter | Type    | Required | Description                                        |
-| --------- | ------- | -------- | -------------------------------------------------- |
-| `refresh` | boolean | no       | Rescan instead of using the briefly cached listing |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `refresh` | boolean | no | Rescan instead of using the briefly cached listing |
 
 **Response:** Sorted array of relative paths (e.g. `["My Playlist/Song.mp3", "Artist - Track.mp3", "slskd/user/Album/Track.flac"]`).
 
@@ -957,7 +984,7 @@ List audio files in the downloads directory (recursive), plus slskd downloads le
 
 ### `GET /playlists`
 
-List downloaded playlists, derived from the `.m3u` files already on disk (see [M3U Export](features/m3u-export.md)). Used by the [Library page](features/library-catalog.md#library-page) to list playlists, and to play or queue just one of them. A user sees their own playlists only (with their own liked songs as the liked one); an admin sees everything.
+List downloaded playlists, derived from the `.m3u` files already on disk (see [M3U Export](features/m3u-export.md)). Used by the [Library page](features/library-catalog.md#library-page) to list playlists, and to play or queue just one of them. A user sees their own playlists (with their own liked songs as the liked one) and the ones [shared with them](features/users.md#sharing-playlists); an admin sees everything. Rows also carry the sharing fields described under [`GET /api/v1/playlists`](#get-apiv1playlists) (`owner`, `visibility`, `mine`, `can_edit_tracks`, `editors`, …).
 
 **Response:**
 
@@ -979,11 +1006,13 @@ Sorted by name, except that the [liked songs](features/liked-songs.md) playlist 
 
 `cover` is the library path of the playlist's own artwork when one was saved beside its M3U (see [Playlist cover art](features/playlist-cover-art.md)), and `""` otherwise. Fetch it from [`GET /playlist-cover`](#get-playlist-cover).
 
+On the caller's own imported playlists that [hide songs](features/hidden-playlist-songs.md), `hidden_count` says how many (absent otherwise); list them with [`GET /api/library/playlists/hidden`](#get-apilibraryplaylistshidden).
+
 ---
 
 ### `GET /tracks`
 
-List library tracks with artist/album read from each file's embedded tags — downloads, slskd files left in place, and [extra folders](features/external-library.md). A user sees their own tracks only (an admin sees everything); an unknown — or someone else's — `?playlist=` reads as empty. The Library **Tracks** tab uses the unfiltered list; album and artist pages use `?artist=`; playlists use `?playlist=`. The [Built-in Player](features/player.md#how-it-works) plays the rows those pages already loaded.
+List library tracks with artist/album read from each file's embedded tags — downloads, slskd files left in place, and [extra folders](features/external-library.md). Everyone sees every track except what an admin [hid from users](#get-apilibraryvisibility); an admin sees everything, and each row an admin has hidden carries `hidden_by`. A `?playlist=` that isn't the caller's — or doesn't exist — reads as empty, and a playlist's tracks leave out what is hidden from a user. The Library **Tracks** tab uses the unfiltered list; album and artist pages use `?artist=`; playlists use `?playlist=`. The [Built-in Player](features/player.md#how-it-works) plays the rows those pages already loaded.
 
 **Response:**
 
@@ -1002,6 +1031,7 @@ List library tracks with artist/album read from each file's embedded tags — do
     "bitrate": 320000,
     "sample_rate": 44100,
     "channels": 2,
+    "explicit": true,
     "has_cover": true,
     "added": 1789600669,
     "size": 8567376,
@@ -1010,17 +1040,19 @@ List library tracks with artist/album read from each file's embedded tags — do
 ]
 ```
 
-`album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info, and `codec` (`mp3`, `flac`, `aac`, `alac`, `opus`, `vorbis`, or `""`), `bitrate` (bits/s), `sample_rate` (Hz) and `channels` (`0` when unknown) from the audio stream; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes. The assembled listing is kept in memory and snapshotted in `/data`. `GET /tracks`, [`GET /api/library/summary`](#get-apilibrarysummary), albums and artists serve that snapshot without walking the disk; a download keeps the track snapshot and refreshes it in the background so the UI stays usable while the queue is running. A library delete removes those files from the snapshot immediately. `GET /list?refresh=true` (and the mobile library `refresh` flag) drop the snapshot and rescan. Writing a playlist (including Liked songs) does not rebuild the catalog. The Home page uses [`GET /api/library/summary`](#get-apilibrarysummary) instead of this endpoint.
+`hidden_by` appears only for an admin, and only on rows hidden from users: `"track"` (hidden on its own), `"album"` or `"artist"` (the widest rule that hides it).
+
+`album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info, and `codec` (`mp3`, `flac`, `aac`, `alac`, `opus`, `vorbis`, or `""`), `bitrate` (bits/s), `sample_rate` (Hz) and `channels` (`0` when unknown) from the audio stream; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `explicit` is whether the file is marked explicit (see [Explicit Marker](features/explicit-marker.md)). `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes. The assembled listing is kept in memory and snapshotted in `/data`. `GET /tracks`, [`GET /api/library/summary`](#get-apilibrarysummary), albums and artists serve that snapshot without walking the disk; a download keeps the track snapshot and refreshes it in the background so the UI stays usable while the queue is running. A library delete removes those files from the snapshot immediately. `GET /list?refresh=true` (and the mobile library `refresh` flag) drop the snapshot and rescan. Writing a playlist (including Liked songs) does not rebuild the catalog. The Home page uses [`GET /api/library/summary`](#get-apilibrarysummary) instead of this endpoint.
 
 Query filters so the browser does not download every track to show a short list:
 
-| Query           | What it returns                                                             |
-| --------------- | --------------------------------------------------------------------------- |
-| `playlist=Name` | That playlist's files, in playlist order                                    |
-| `artist=Name`   | Tracks grouped under that album artist                                      |
-| `album=Title`   | Tracks on that album (combine with `artist=` when two albums share a title) |
-| `q=words`       | Title / artist / album / path must contain every word                       |
-| `limit=N`       | Cap the list (`1`–`200`). Used by the "add songs" picker                    |
+| Query | What it returns |
+|-------|-----------------|
+| `playlist=Name` | That playlist's files, in playlist order |
+| `artist=Name` | Tracks grouped under that album artist |
+| `album=Title` | Tracks on that album (combine with `artist=` when two albums share a title) |
+| `q=words` | Title / artist / album / path must contain every word |
+| `limit=N` | Cap the list (`1`–`200`). Used by the "add songs" picker |
 
 Unfiltered `GET /tracks` is still the Library **Tracks** tab. Album and artist pages use `?artist=`. Search and pasted links use [`POST /api/library/lookup`](#post-apilibrarylookup).
 
@@ -1033,18 +1065,20 @@ Sorted by `file`, same order as `/list` (except `?playlist=`, which keeps playli
 Delete a downloaded file, plus its leftovers — best-effort, so a missing or unremovable one doesn't fail the request:
 
 - its `.lrc` lyrics sidecar, if any (same basename, see [Lyrics](features/lyrics.md));
-- the folder's shared `cover.jpg` under [_Organize by album_](features/download-settings.md#download-cover-art), but only once no other track in that same folder still needs it;
+- the folder's shared `cover.jpg` under [*Organize by album*](features/download-settings.md#download-cover-art), but only once no other track in that same folder still needs it;
 - the file's folder, and any of its ancestors, that end up empty as a result — climbing up but never past the downloads directory root.
 
-| Parameter | Type   | Required | Description                                        |
-| --------- | ------ | -------- | -------------------------------------------------- |
-| `file`    | string | yes      | Relative path to the file (as returned by `/list`) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | Relative path to the file (as returned by `/list`) |
 
 **Response:** `{ "deleted": true, "playlists_affected": [], "playlists_refresh_scheduled": false }` or `{ "deleted": false, "error": "…", … }`
 
 `playlists_affected` lists the downloaded playlists that contained the file; their M3U files and Navidrome playlists are rewritten in the background (`playlists_refresh_scheduled`).
 
-A user deleting a file others still own only releases it (`{ "released": true }`): the file stays on disk for the rest, and leaves their library — their like on it goes too, everyone else's stays. Someone else's file answers `Not in your library`.
+With the [music trash](#music-trash) on, this answers `409` (`trash_confirmation_required`): songs leave through the trash instead.
+
+Deleting follows who downloaded the file. An admin deletes anything. A user who is the only one to have downloaded it deletes it. When others downloaded it too, the user only gives up their own claim (`{ "released": true }`) and the file stays on disk and in the shared library. A file the user didn't download answers `Only an admin or whoever downloaded it can delete this song`.
 
 ---
 
@@ -1058,7 +1092,7 @@ Delete several files in one request — same cleanup as `DELETE /delete` (sideca
 { "files": ["My Playlist/Song.mp3", "Some Album/Track 2.mp3"] }
 ```
 
-Duplicate paths are deduplicated before processing. Capped at 2000 files per request (`413` if exceeded).
+Duplicate paths are deduplicated before processing. Capped at 2000 files per request (`413` if exceeded). With the [music trash](#music-trash) on, it answers `409` (`trash_confirmation_required`).
 
 **Response:**
 
@@ -1073,7 +1107,7 @@ Duplicate paths are deduplicated before processing. Capped at 2000 files per req
 }
 ```
 
-`results` maps each requested path to the same shape `DELETE /delete` returns for it. The response also carries `playlists_affected` and `playlists_refresh_scheduled`, as for `DELETE /delete` — plus `released_count` for files that left one's own library without leaving the disk (see above).
+`results` maps each requested path to the same shape `DELETE /delete` returns for it. The response also carries `playlists_affected` and `playlists_refresh_scheduled`, as for `DELETE /delete` — plus `released_count` for files where the caller only gave up their own claim and the file stayed (see above).
 
 ---
 
@@ -1089,9 +1123,10 @@ Serve a library file by its library path. Unlike the `/downloads` static mount, 
 
 Return cover art for a library file: `/data/cover_cache` first (including covers Sync stored for a [read-only extra folder](features/external-library.md)), then embedded tags, then `cover.jpg` / `folder.jpg` next to the audio.
 
-| Parameter | Type   | Required | Description               |
-| --------- | ------ | -------- | ------------------------- |
-| `file`    | string | yes      | Relative path to the file |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | Relative path to the file |
+| `size` | integer | no | `150`, `300` or `600` (longest side, px; other values round up to the next one, anything above `600` is full size). Serves a scaled JPEG made once with ffmpeg and kept under `/data/cover_thumbs`, with an `ETag`. The web UI asks for `300` in grids and `150` in lists. A cover only found in `/data/cover_cache` (or without ffmpeg) comes back full size. |
 
 **Response:** Image bytes (`image/jpeg` or `image/png`). Returns `404` if none of those sources have a cover.
 
@@ -1101,9 +1136,9 @@ Return cover art for a library file: `/data/cover_cache` first (including covers
 
 Return a playlist's own cover art — the sidecar image saved next to its M3U, not a cover read out of a track's tags. See [Playlist cover art](features/playlist-cover-art.md).
 
-| Parameter | Type   | Required | Description                                              |
-| --------- | ------ | -------- | -------------------------------------------------------- |
-| `file`    | string | yes      | The `cover` path from [`GET /playlists`](#get-playlists) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | The `cover` path from [`GET /playlists`](#get-playlists) |
 
 **Response:** Image bytes. Returns `404` when the path isn't an image inside the library, which also refuses an audio file or a path pointing outside it.
 
@@ -1113,17 +1148,14 @@ Return a playlist's own cover art — the sidecar image saved next to its M3U, n
 
 Return the lyrics saved for a library file — used by the player's lyrics panel.
 
-| Parameter | Type   | Required | Description                                        |
-| --------- | ------ | -------- | -------------------------------------------------- |
-| `file`    | string | yes      | Relative path to the file (as returned by `/list`) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | Relative path to the file (as returned by `/list`) |
 
 **Response:**
 
 ```json
-{
-  "synced": "[00:00.00] First line\n[00:05.00] Second line",
-  "plain": "First line\nSecond line"
-}
+{ "synced": "[00:00.00] First line\n[00:05.00] Second line", "plain": "First line\nSecond line" }
 ```
 
 `synced` is the content of the `.lrc` sidecar next to the file, `plain` the lyrics embedded in its tags (ID3 `USLT`, MP4 `©lyr`, Vorbis `LYRICS`); either is `""` when missing. `404` if the file isn't in the library. See [Lyrics](features/lyrics.md).
@@ -1162,11 +1194,11 @@ Tickets are single-use and expire after 5 minutes: `404` for an unknown, expired
 
 ### `DELETE /api/library/playlist`
 
-Delete a downloaded playlist: every track registered to it (including tracks other playlists also contain), its playlist-folder leftovers, its M3U file(s) and its catalog entry. A playlist created in the Library (`manual`) only removes the M3U — the audio stays.
+Delete a downloaded playlist: every track registered to it (including tracks other playlists also contain), its playlist-folder leftovers, its M3U file(s) and its catalog entry. A playlist created in the Library (`manual`) only removes the M3U — the audio stays. So does every playlist while the [music trash](#music-trash) is on.
 
-| Parameter       | Type   | Required | Description   |
-| --------------- | ------ | -------- | ------------- |
-| `playlist_name` | string | yes      | Playlist name |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `playlist_name` | string | yes | Playlist name |
 
 ::: warning The liked songs playlist is never deleted this way
 `Downtify Liked Songs` isn't a downloaded playlist, so no song is removed. Asking to delete it clears the likes instead (like [`POST /api/likes/clear`](#post-apilikesclear)) and answers with `deleted_count: 0`.
@@ -1217,15 +1249,50 @@ Home page payload: how many tracks / albums / artists are in the library, the to
 
 ### `GET /api/library/albums`
 
-Album tiles for **Library → Albums**: title, artist, year, added, duration, size, `track_count`, and `cover_file` (a library path for `/cover`). Tracks themselves are not included — opening an album loads `GET /tracks?artist=&album=`.
+Album tiles for **Library → Albums**: title, artist, year, added, duration, size, `track_count`, and `cover_file` (a library path for `/cover`). Tracks themselves are not included — opening an album loads `GET /tracks?artist=&album=`. Users get no tile for an album that is entirely hidden; an admin gets every album, with `hidden_by` (`"album"` or `"artist"`) on the ones [hidden from users](#get-apilibraryvisibility).
 
 ### `GET /api/library/artists`
 
-Artist tiles for **Library → Artists** and Discover: `name`, `track_count`, `album_count`, `liked_count`, `cover_file`, added and duration. Opening an artist loads `GET /tracks?artist=`.
+Artist tiles for **Library → Artists** and Discover: `name`, `track_count`, `album_count`, `liked_count`, `cover_file`, added and duration. Opening an artist loads `GET /tracks?artist=`. Counts leave out what is hidden from a user; an admin's tiles carry `hidden_by: "artist"` on artists [hidden from users](#get-apilibraryvisibility).
+
+### `GET /api/library/visibility`
+
+Admin. What admins hid from users, newest first:
+
+```json
+{
+  "artists": [{ "name": "Ana", "label": "Ana", "key": "ana", "hidden_at": "2026-10-20T12:00:00+00:00" }],
+  "albums": [{ "title": "Sun", "artist": "Ana", "key": "ana\u001fsun", "hidden_at": "…" }],
+  "tracks": [{ "file": "Bo/Sea/Bo - Four.mp3", "label": "Bo - Four", "detail": "Sea", "key": "7add…", "hidden_at": "…" }]
+}
+```
+
+Nothing is hidden on a new server. See [Hiding from users](features/users.md#hiding-from-users).
+
+### `POST /api/library/visibility`
+
+Admin. Hide items from users, or show them again. Admins keep seeing everything either way.
+
+```json
+{
+  "action": "hide",
+  "items": [
+    { "kind": "track", "file": "Bo/Sea/Bo - Four.mp3" },
+    { "kind": "album", "artist": "Ana", "title": "Sun" },
+    { "kind": "artist", "name": "Ana" }
+  ]
+}
+```
+
+`action` is `hide` or `show`; `items` takes up to 2000. A track is a library path (as in [`GET /tracks`](#get-tracks)); an album and an artist are matched by name, ignoring case, the way the Library groups them — an album by its album artist and title, an artist by the artist its songs are filed under. A track rule survives the file being moved, upgraded or replaced.
+
+**Response:** `{ "changed": 2, "artists": […], "albums": […], "tracks": […] }` — how many items actually changed (hiding something already hidden changes nothing), then the same lists as `GET /api/library/visibility`. `400` for a bad `action`, an unknown `kind`, or an album without a title or an artist without a name; `404` when a track to hide isn't in the library; `413` for more than 2000 items.
+
+Paired apps pick the change up on their next sync: tracks that became hidden arrive in `deleted`, and tracks shown again arrive as ordinary rows. The change is recorded in the [activity log](features/users.md#activity) as `library_hidden` / `library_shown`.
 
 ### `POST /api/library/lookup`
 
-Search / link / top-songs pages send the songs on screen (`{ "songs": [{ "artist", "name" }] }`, up to 200). The response is the matching `GET /tracks` rows already in the library, so "in library" and Play work without downloading the whole catalog.
+Search / link / top-songs pages send the songs on screen (`{ "songs": [{ "artist", "name" }] }`, up to 200). The response is the matching `GET /tracks` rows already in the library (not the ones hidden from the caller), so "in library" and Play work without downloading the whole catalog.
 
 ---
 
@@ -1241,7 +1308,7 @@ Create an empty playlist the user can edit in **Library → Playlists**. Writes 
 
 ### `POST /api/library/playlists/tracks`
 
-Add or remove library files (downloads or [extra folders](features/external-library.md)) on a **manual** playlist. Imported playlists return `403`. Missing files are dropped from the M3U.
+Add or remove library files (downloads or [extra folders](features/external-library.md)) on a **manual** playlist: your own (an admin may change any), or one shared with you as an [editor](features/collaborative-playlists.md) (`can_edit_tracks`). Imported playlists return `403`: hide their songs with [`POST /api/library/playlists/hidden`](#post-apilibraryplaylistshidden) instead. `403` for someone who can open the playlist without being its owner or an editor, and for an editor sending `source_playlist_url` (the source artwork stays the owner's). A song the caller can't see — missing, or [hidden from users](features/users.md#hiding-from-users) — is refused with `400`. Missing files are dropped from the M3U. When the playlist is shared, `playlists_changed` goes out on the WebSocket so the owner and the other editors list it again.
 
 **Request body:**
 
@@ -1264,6 +1331,114 @@ Rename a **manual** playlist. Imported playlists return `403`. The M3U and sidec
 **Request body:** `{ "name": "Late night", "new_name": "Late night mix" }`
 
 **Response:** `{ "name": "Late night mix", "previous": "Late night", "manual": true, "files": ["Artist - Song.mp3"], "count": 1 }`
+
+---
+
+### `PUT /api/library/playlists/visibility`
+
+Share a playlist you own (an admin may change any). Liked songs are never shareable (`400`). `403` for anyone who can open the playlist without owning it — its editors included — and `403` while the admin's `allow_playlist_sharing` setting is off (making a playlist `private` is always allowed). `404` for a playlist the caller can't open.
+
+**Request body:** `{ "name": "Late night", "visibility": "shared", "shared_with": ["bob", "cyd"], "editors": ["bob"] }`
+
+`visibility` is `private` (the default: the owner and admins only), `shared` (the usernames in `shared_with`, which must exist and not be empty) or `public` (everyone on the server). Anyone not listed — or everyone, once it is `private` again — loses it at once: it leaves their lists, and a follow ends. Saved copies stay with whoever made them.
+
+`editors` (optional) are the people among `shared_with` who may also add and remove the songs of a **manual** playlist — see [Collaborative playlists](features/collaborative-playlists.md). It replaces the current editors; `[]` removes them all, and leaving it out keeps the ones still in `shared_with`. Viewers only play. `400` for an editor who isn't in `shared_with`, and for editors on an imported playlist or with a `visibility` other than `shared`. A person leaving `shared_with`, or the playlist leaving `shared`, ends their editing.
+
+**Response:** `{ "name": "Late night", "visibility": "shared", "shared_with": ["bob", "cyd"], "editors": ["bob"] }`
+
+---
+
+### `POST /api/library/playlists/copy`
+
+Save a copy of a playlist the caller can open (their own, one shared with them, or a public one) as a new **manual** playlist of theirs: private, editable, and independent of the original. Songs an admin hid from users are left out. `404` for a playlist the caller can't open, `409` if `new_name` is taken.
+
+**Request body:** `{ "name": "Late night", "new_name": "Late night (mine)" }` — without `new_name` the copy is called `<name> (copy)`, then `<name> (copy) 2`, and so on.
+
+**Response:** `{ "name": "Late night (mine)", "manual": true, "files": [...], "count": 12 }`
+
+---
+
+### `POST /api/library/playlists/detach`
+
+Turn an **imported** (Spotify or YouTube Music) playlist you own into a manual one, so it can be edited with [`/api/library/playlists/tracks`](#post-apilibraryplayliststracks). Its songs and owner stay; the link to its source goes — the playlist catalog row, the Playlist Monitor watch (if there is one) and its cached tracklist and download batches — and it is no longer rewritten by sweeps. Its artwork stays until the first edit. `409` if the playlist can already be edited, `403` for someone who can open it without owning it.
+
+**Request body:** `{ "name": "Road trip" }`
+
+**Response:** `{ "name": "Road trip", "manual": true, "files": [...], "count": 42 }`
+
+Detaching forgets the playlist's [hidden songs](features/hidden-playlist-songs.md): with no source to bring them back, they just aren't in it.
+
+---
+
+### `GET /api/library/playlists/details`
+
+What the playlist page [filters its songs by](features/library-catalog.md#search-a-playlist), for a playlist the caller can open (`404` otherwise).
+
+**Query:** `?name=Road trip`
+
+**Response:**
+
+```json
+{
+  "name": "Road trip",
+  "providers": {
+    "Road trip/Artist - Song.mp3": "youtube-music",
+    "slskd/Artist/Album/02 - Other.flac": "slskd"
+  },
+  "navidrome": { "enabled": true, "unmatched": ["Road trip/Artist - Third.mp3"] }
+}
+```
+
+`providers` maps the playlist's files (as `GET /tracks` lists them) to the audio provider that fetched them: `youtube-music`, `youtube`, `soundcloud`, `slskd` or `deemix`, or `folder` for a file from an [extra music folder](features/external-library.md). Downtify records it when a download finishes, so files downloaded before that are left out — except slskd files left in place, recognised by their `slskd/` path. `navidrome.enabled` is whether Navidrome sync is on; while it is, `unmatched` lists the playlist's files that have no Navidrome song id in Downtify's index yet (not matched by a playlist sync or after a download). Songs an admin hid from users are left out for them.
+
+---
+
+### `GET /api/library/playlists/hidden`
+
+The songs hidden from an **imported** playlist the caller may change (their own; any for an admin), most recently hidden first. See [Hidden playlist songs](features/hidden-playlist-songs.md). `403` for someone who can open the playlist without owning it, `404` for one they can't open, `409` for a manual playlist or liked songs.
+
+**Query:** `?name=Road trip`
+
+**Response:**
+
+```json
+{
+  "name": "Road trip",
+  "songs": [
+    {
+      "key": "4uLU6hMCjMI75M1A2tKUQC",
+      "label": "Artist - Song",
+      "file": "Road trip/Artist - Song.mp3",
+      "present": true,
+      "hidden_at": "2026-10-24T12:00:00+00:00"
+    }
+  ]
+}
+```
+
+`key` is what `show` takes below: the song's source track id (Spotify id or YouTube video id) when Downtify knows it, else an id of its file. `present` is `false` once the file is no longer in the library. `label` comes from the M3U's `#EXTINF` line (the file name when it had none).
+
+---
+
+### `POST /api/library/playlists/hidden`
+
+Hide songs from an **imported** playlist, or show hidden ones again. A hidden song leaves the playlist's M3U (and Navidrome playlist, when Navidrome sync is on) at once and stays out: [Playlist Monitor](features/playlist-monitor.md) sweeps neither list it nor download it again, even after its file is deleted; it is never counted as missing; and downloading the playlist again from its link keeps it out of the M3U. The audio file stays in the library, and the source playlist on Spotify / YouTube Music is not changed. Same errors as `GET` above, plus `400` when there is nothing to do, when a path isn't in the playlist, and when hiding would leave the playlist empty (delete it instead).
+
+**Request body:**
+
+```json
+{ "name": "Road trip", "hide": ["Road trip/Artist - Song.mp3"], "show": ["7ouMYWpwJ422jRcDASZB7P"] }
+```
+
+`hide` takes library paths (as `GET /tracks` returns them), `show` takes the `key` of hidden songs; either may be left out, at most 500 of each. Showing a song puts it back where it was in the playlist when its file is still in the library; otherwise it only stops being hidden, and the next sweep or **Download missing** brings it back like any missing song.
+
+**Response:**
+
+```json
+{ "name": "Road trip", "hidden": 1, "keys": ["4uLU6hMCjMI75M1A2tKUQC"], "shown": 1, "restored": 1, "files": ["…"], "count": 41 }
+```
+
+`keys` are the keys of the songs just hidden (pass them as `show` to undo); `restored` is how many of the `shown` songs went back into the M3U; `files` / `count` are the playlist's tracks afterwards. Connected clients get `playlists_changed`.
 
 ---
 
@@ -1352,20 +1527,14 @@ Admin. Stop mapping one extra folder. Audio stays on disk; tracks leave the Libr
 
 Admin. Versions of a library track to [replace its audio](features/replace-audio.md) with.
 
-| Parameter | Type   | Required | Description                                                                                                                  |
-| --------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `file`    | string | yes      | The track's library path                                                                                                     |
-| `query`   | string | no       | What to search; default "Artist - Title" from its tags. A YouTube or YouTube Music link to one video returns just that video |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | The track's library path |
+| `query` | string | no | What to search; default "Artist - Title" from its tags. A YouTube or YouTube Music link to one video returns just that video; a SoundCloud track link returns that track, its `video_id` being the track URL |
 
 ```json
 {
-  "track": {
-    "file": "Portishead/Dummy/Portishead - Roads.mp3",
-    "title": "Roads",
-    "artist": "Portishead",
-    "album": "Dummy",
-    "duration": 304.1
-  },
+  "track": { "file": "Portishead/Dummy/Portishead - Roads.mp3", "title": "Roads", "artist": "Portishead", "album": "Dummy", "duration": 304.1 },
   "query": "Portishead - Roads",
   "candidates": [
     {
@@ -1383,15 +1552,139 @@ Admin. Versions of a library track to [replace its audio](features/replace-audio
 }
 ```
 
-`source` is `youtube-music`, `youtube` or `link`. `duration_diff` is the candidate's length minus the file's, in seconds (`null` when either is unknown). `404` for an unknown file, `400` for a file that isn't `.mp3`, `.flac`, `.m4a`, `.ogg` or `.opus`, or a link to something other than one video.
+`source` is `youtube-music`, `youtube` or `link`. `duration_diff` is the candidate's length minus the file's, in seconds (`null` when either is unknown). `404` for an unknown file, `400` for a file that isn't `.mp3`, `.flac`, `.m4a`, `.ogg` or `.opus`, a link to something other than one video, or a SoundCloud link that can't be read.
 
 ---
 
 ### `POST /api/library/replace`
 
-Admin. Replace a library track's audio with a YouTube video: `{ "file": "…", "video_id": "7nxWP9BhI7w" }`. **Response:** `{ "job_id": "replace:<file>", "file": "…" }`.
+Admin. Replace a library track's audio with a YouTube video: `{ "file": "…", "video_id": "7nxWP9BhI7w" }`. `video_id` may also be a SoundCloud track URL (as a SoundCloud candidate carries it). **Response:** `{ "job_id": "replace:<file>", "file": "…" }`.
 
 It runs as a queue job, with the usual [WebSocket](#websocket) progress messages (`song.song_id` is `job_id`, and `song.replace` is `{file, video_id}`), ending in `done` or `error`. The file keeps its path, format, tags and modification date; a failure leaves it untouched. `400` for an invalid video id or file type, `404` for an unknown file, `409` while the same file is already being replaced.
+
+---
+
+### `GET /api/library/usage`
+
+Admin. The library's size, growth and download outcomes over the last `days` (query, 1–365, default `30`), what could be cleaned up, and the disk's free space — the [Storage & Usage](features/storage-usage.md) page. Opening it also notes today's size (as the hourly reading does).
+
+**Response:**
+
+```json
+{
+  "days": 30,
+  "generated_at": "2026-10-27T12:00:00+00:00",
+  "library": {
+    "files": 5120,
+    "bytes": 41234567890,
+    "by_provider": [{ "id": "slskd", "files": 900, "bytes": 21000000000 }],
+    "by_location": [{ "id": "downloads", "files": 4200, "bytes": 30000000000 }],
+    "by_format": [{ "id": "flac", "files": 900, "bytes": 21000000000 }]
+  },
+  "period": {
+    "files": 320,
+    "bytes": 2600000000,
+    "by_provider": [{ "id": "youtube-music", "files": 250, "bytes": 1500000000 }],
+    "bucket_days": 7,
+    "series": [{ "files": 60, "bytes": 480000000 }]
+  },
+  "growth": {
+    "step_days": 1,
+    "points": [{ "day": "2026-09-27", "files": 4800, "bytes": 38600000000, "estimated": true }],
+    "change": { "files": 320, "bytes": 2600000000 },
+    "per_day_bytes": 86666667,
+    "since": "2026-10-20"
+  },
+  "downloads": {
+    "completed": 300,
+    "skipped": 40,
+    "failed": 12,
+    "bytes": 2500000000,
+    "by_provider": [{ "id": "youtube-music", "files": 240, "bytes": 1400000000 }],
+    "bucket_days": 7,
+    "series": [{ "completed": 60, "skipped": 8, "failed": 2 }],
+    "since": "2026-10-01T09:12:00+00:00"
+  },
+  "duplicates": {
+    "groups": 14,
+    "files": 15,
+    "bytes": 160000000,
+    "exact": { "groups": 9, "files": 9, "bytes": 70000000 },
+    "likely": { "groups": 5, "files": 6, "bytes": 90000000 },
+    "examples": [
+      {
+        "kind": "likely",
+        "title": "Roads",
+        "artist": "Portishead",
+        "bytes": 9000000,
+        "files": [
+          { "file": "slskd/user/Dummy/05 Roads.flac", "bytes": 34000000, "provider": "slskd", "codec": "flac", "bitrate": 900000 },
+          { "file": "Portishead - Roads.mp3", "bytes": 9000000, "provider": "youtube-music", "codec": "mp3", "bitrate": 320000 }
+        ]
+      }
+    ]
+  },
+  "working": {
+    "files": 120,
+    "bytes": 3900000000,
+    "slskd_in_place": false,
+    "examples": [{ "file": "slskd/user/Dummy/05 Roads.flac", "bytes": 34000000 }]
+  },
+  "disk": { "total": 2000000000000, "used": 1500000000000, "free": 500000000000, "days_left": 5769 }
+}
+```
+
+- `library` leaves out the slskd **working copies** (`working`): transfers copied into the library while slskd files aren't left in place, and — in that mode — any other `slskd/…` file Downtify doesn't know as a library song.
+- `by_provider` ids are `youtube-music`, `youtube`, `soundcloud`, `slskd`, `deemix`, `folder` (an extra music folder) or `unknown`; `by_location` ids are `downloads`, `slskd` and `folders`.
+- `period` counts the songs still in the library that came in during the period (download time when recorded, else the file's modification time), per bucket of `bucket_days`, oldest first.
+- `growth.points` run from `days` ago to today (one a day up to 90 days, one a week beyond); a day before the first daily snapshot is `estimated` from the same file dates. `since` is the oldest snapshot used, `null` when none.
+- `downloads` counts every attempt that ended in the period, from the queue and Playlist Monitor alike; `since` is the oldest one still kept (400 days at most), `null` when none.
+- `duplicates.bytes` is what keeping only the largest file of each group would free; `examples` are the 50 groups that would free most. `kind` is `exact` (one name and size) or `likely` (same artist and title, lengths within 3 s).
+- `disk` is the volume of the downloads folder (`null` when unreadable); `days_left` is `null` while the library isn't growing.
+
+---
+
+### `GET /api/library/usage/scan`
+
+Admin. What the downloads, slskd and lyrics folders hold, by kind, and what could go: leftover temporary files and orphaned sidecars. Walking the folders takes a while, so the result is kept for 10 minutes; `?refresh=true` walks them again. Nothing is deleted.
+
+**Response:**
+
+```json
+{
+  "folders": [
+    {
+      "id": "downloads",
+      "path": "/downloads",
+      "files": 5300,
+      "bytes": 30100000000,
+      "kinds": {
+        "audio": { "files": 4200, "bytes": 30000000000 },
+        "lyrics": { "files": 900, "bytes": 2000000 },
+        "temporary": { "files": 3, "bytes": 21000000 }
+      }
+    }
+  ],
+  "leftovers": {
+    "files": 2,
+    "bytes": 20000000,
+    "by_kind": { "temporary": 2 },
+    "examples": [{ "folder": "downloads", "file": "Song.webm.part", "bytes": 12000000, "kind": "temporary", "modified": 1793000000 }]
+  },
+  "orphans": {
+    "files": 4,
+    "bytes": 9000,
+    "by_kind": { "cover": 1, "lyrics": 3 },
+    "examples": [{ "folder": "downloads", "file": "Old Album/cover.jpg", "bytes": 6000, "kind": "cover", "modified": 1790000000 }]
+  },
+  "seconds": 1.42,
+  "scanned_at": "2026-10-27T12:00:00+00:00"
+}
+```
+
+- Folder `id`s are `downloads`, `slskd` and `lyrics` (only when lyrics are kept in a folder of their own); kinds are `audio`, `podcasts`, `lyrics`, `images`, `playlists`, `metadata` (saved artist photos and profiles), `temporary` and `other`.
+- A leftover is a temporary file — `.part`, `.part-FragN`, `.ytdl`, `.tmp`, `name.temp.ext`, an Upgrade library working copy — older than an hour.
+- An orphan is an `.lrc` with no song of the same name beside it (in the lyrics folder: no library song at its path) or an album `cover.jpg` in a folder with no song and no playlist.
 
 ---
 
@@ -1430,11 +1723,7 @@ The state of the library upgrade: the current (or last) run, its queue counts an
   },
   "summary": {
     "categories": { "artwork": 16921, "lyrics": 2104, "metadata": 5382 },
-    "category_bytes": {
-      "artwork": 110300000000,
-      "lyrics": 13700000000,
-      "metadata": 35100000000
-    },
+    "category_bytes": { "artwork": 110300000000, "lyrics": 13700000000, "metadata": 35100000000 },
     "tracks": 16921,
     "recently_checked": 1204,
     "library_tracks": 18742,
@@ -1458,10 +1747,10 @@ The tracks in the current run, most recently touched first.
 
 **Query parameters:**
 
-| Parameter | Type   | Description                                             |
-| --------- | ------ | ------------------------------------------------------- |
-| `status`  | string | Only `queued`, `running`, `done`, `skipped` or `failed` |
-| `limit`   | int    | 1–1000, default 100                                     |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Only `queued`, `running`, `done`, `skipped` or `failed` |
+| `limit` | int | 1–1000, default 100 |
 
 **Response:**
 
@@ -1530,6 +1819,68 @@ Drop the rest of the queue. Tracks already upgraded stay upgraded.
 
 ---
 
+## Playback normalization
+
+Measured loudness for the [playback volume normalization](features/playback-normalization.md). Audio files are only read, never changed.
+
+### `GET /api/library/loudness`
+
+A library track's playback loudness profile. Any signed-in account, for the tracks it can see (`404` otherwise).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | Library path, as in [`GET /tracks`](#get-tracks) |
+
+**Response:**
+
+```json
+{
+  "state": "ready",
+  "gain_db": -4.2,
+  "integrated_lufs": -13.8,
+  "true_peak_dbtp": 0.4,
+  "algorithm_version": 1,
+  "fingerprint": "9f2c…",
+  "source_etag": "\"5d41402abc4b2a76b9719d911017c592\"",
+  "source_size": 8312004
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `state` | `ready` (measured), `silent` (nothing to measure), `unanalysed` (no measurement for the file as it is now: never analyzed, or replaced or changed since) or `unavailable` (the server is starting) |
+| `gain_db` | The constant gain to play the track at: towards -18 LUFS, at most +12 dB, and low enough to keep the peak at -1 dBTP. `0` unless `ready` |
+| `integrated_lufs`, `true_peak_dbtp` | The measurement (`ready` only). The peak is the sample peak at 192 kHz |
+| `algorithm_version` | `1`. A client that doesn't know the version should ignore the profile |
+| `fingerprint` | Identifies the measured file (size, modification time, inode, algorithm) |
+| `source_etag`, `source_size` | The `ETag` and size [`GET /api/v1/tracks/{id}/stream`](#get-apiv1tracksidstream) sends for the original file, to tie an offline copy to its measurement |
+
+---
+
+### `GET /api/library/loudness/status`
+
+Admin. The analysis queue: `{ "active", "pause_requested", "paused", "total", "done", "failed", "pending", "running", "workers" }`. `paused` means work is left and nothing runs — after a pause or a restart; analysis never resumes on its own.
+
+---
+
+### `POST /api/library/loudness/start`
+
+Admin. Queue every library track and start analyzing with up to two low-priority FFmpeg workers (fewer with a smaller CPU quota). Files whose measurement is still valid are skipped, so a new run measures only new, moved, replaced or changed files and those that failed before. Answers the status. `409` while a run is going.
+
+---
+
+### `POST /api/library/loudness/pause`
+
+Admin. Finish the files being measured, then stop; the rest of the queue is kept.
+
+---
+
+### `POST /api/library/loudness/resume`
+
+Admin. Continue a paused (or interrupted) queue. `409` while a run is going.
+
+---
+
 ## Likes
 
 The heart on a library track — see [Liked songs](features/liked-songs.md). Files are library paths, the same ones [`GET /tracks`](#get-tracks) uses. Hearts belong to whoever tapped them: a user sees their own, an admin sees everyone's.
@@ -1562,10 +1913,10 @@ Like or unlike one library file. Idempotent: sending the state you want twice ch
 { "file": "Artist - Song.mp3", "liked": true }
 ```
 
-| Field   | Type    | Required | Description                                                 |
-| ------- | ------- | -------- | ----------------------------------------------------------- |
-| `file`  | string  | yes      | Library path of the song                                    |
-| `liked` | boolean | no       | `true` (the default) to like, `false` to take the like back |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | string | yes | Library path of the song |
+| `liked` | boolean | no | `true` (the default) to like, `false` to take the like back |
 
 Liking needs a file that is in the library (`404` otherwise); unliking accepts any path, so the like of a file that has since vanished can still be cleared. `400` when `file` is missing.
 
@@ -1602,9 +1953,9 @@ Artists the library doesn't have yet, ranked from the ones it does. The client s
 }
 ```
 
-| Field     | Type  | Required | Description                                                                                           |
-| --------- | ----- | -------- | ----------------------------------------------------------------------------------------------------- |
-| `library` | array | yes      | Every library artist: `name`, `tracks` (songs in the library), `liked` (of those, how many are liked) |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `library` | array | yes | Every library artist: `name`, `tracks` (songs in the library), `liked` (of those, how many are liked) |
 
 **Response:**
 
@@ -1635,10 +1986,10 @@ Albums and playlists built on the suggested artists — see [Albums and playlist
 
 **Request body:** the same `library` as `POST /api/discover`, plus:
 
-| Field          | Type  | Required | Description                                                                                                      |
-| -------------- | ----- | -------- | ---------------------------------------------------------------------------------------------------------------- |
-| `albums`       | array | no       | `{artist, title}` per library album — left out of the answer (titles match ignoring `(…)`/`[…]`/` - …` suffixes) |
-| `playlist_ids` | array | no       | Spotify ids of playlists already downloaded — left out of the answer                                             |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `albums` | array | no | `{artist, title}` per library album — left out of the answer (titles match ignoring `(…)`/`[…]`/` - …` suffixes) |
+| `playlist_ids` | array | no | Spotify ids of playlists already downloaded — left out of the answer |
 
 **Response:**
 
@@ -1656,7 +2007,7 @@ Albums and playlists built on the suggested artists — see [Albums and playlist
       "because": ["Radiohead"]
     }
   ],
-  "more_albums": [/* same shape, "reason": "more_from" */],
+  "more_albums": [ /* same shape, "reason": "more_from" */ ],
   "playlists": [
     {
       "name": "Portishead Radio",
@@ -1668,9 +2019,7 @@ Albums and playlists built on the suggested artists — see [Albums and playlist
       "artist": "Portishead"
     }
   ],
-  "artist_urls": {
-    "Jeff Buckley": "https://open.spotify.com/artist/3nnQpaTvKb5jCQabZefACI"
-  },
+  "artist_urls": { "Jeff Buckley": "https://open.spotify.com/artist/3nnQpaTvKb5jCQabZefACI" },
   "partial": false
 }
 ```
@@ -1687,9 +2036,9 @@ The same shelves from Deezer alone — the web page's first, quick answer (see [
 
 **Request body:** what `POST /api/discover/collections` takes, plus:
 
-| Field            | Type  | Required | Description                                                                                          |
-| ---------------- | ----- | -------- | ---------------------------------------------------------------------------------------------------- |
-| `playlist_names` | array | no       | The library's playlist names — a Deezer playlist already downloaded (known by its title) is left out |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `playlist_names` | array | no | The library's playlist names — a Deezer playlist already downloaded (known by its title) is left out |
 
 **Response:**
 
@@ -1710,7 +2059,7 @@ The same shelves from Deezer alone — the web page's first, quick answer (see [
       "because": ["Justice"]
     }
   ],
-  "more_albums": [/* same shape, "reason": "more_from" */],
+  "more_albums": [ /* same shape, "reason": "more_from" */ ],
   "playlists": [
     {
       "name": "100% Radiohead",
@@ -1737,9 +2086,9 @@ What Spotify adds to the Deezer answer — the web page's second answer, loaded 
 
 **Request body:** what `POST /api/discover/collections` takes, plus:
 
-| Field   | Type  | Required | Description                                                                               |
-| ------- | ----- | -------- | ----------------------------------------------------------------------------------------- |
-| `shown` | array | no       | The `key` of every album already on the page — left out without being looked up on Deezer |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `shown` | array | no | The `key` of every album already on the page — left out without being looked up on Deezer |
 
 **Response:** `{albums, more_albums, playlists, partial}`. An album Deezer has comes in the Deezer shape above (`source: "deezer"`, opens in the Finder); one it doesn't keeps the Spotify shape of `POST /api/discover/collections` plus `source: "spotify"` and `key`. `playlists` are only Spotify's `This Is <artist>` (`reason: "this_is"`, `source: "spotify"`) — its `Radio` mixes aren't offered. A match is kept for 30 days (a missing one for 7); a failed lookup is never kept and makes `partial` true. `400` when `library` isn't a list.
 
@@ -1751,12 +2100,12 @@ Count one listen to an artist. Sent by the player once a library song has played
 
 **Request body:** `{ "artist": "Portishead" }`
 
-| Field       | Type   | Required     | Description                                                                                                                                   |
-| ----------- | ------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `artist`    | string | one of these | The artist the play counts for                                                                                                                |
-| `track_id`  | string | one of these | A [track id](#mobile-api-v1) instead: its album artist is used                                                                                |
-| `played_at` | string | no           | ISO 8601 time of the play, for plays reported after being offline (a future time counts as now; a late report never moves `last_played` back) |
-| `play_id`   | string | no           | Identifies this play: reporting it again doesn't count it twice                                                                               |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `artist` | string | one of these | The artist the play counts for |
+| `track_id` | string | one of these | A [track id](#mobile-api-v1) instead: its album artist is used |
+| `played_at` | string | no | ISO 8601 time of the play, for plays reported after being offline (a future time counts as now; a late report never moves `last_played` back) |
+| `play_id` | string | no | Identifies this play: reporting it again doesn't count it twice |
 
 **Response:** `{ "name": "Portishead", "plays": 7, "last_played": "2026-09-26T17:31:40+00:00" }`
 
@@ -1794,9 +2143,9 @@ Never suggest an artist again. Hiding one twice is a no-op. Names are matched ig
 
 Show a hidden artist again.
 
-| Parameter | Type   | Required | Description                   |
-| --------- | ------ | -------- | ----------------------------- |
-| `name`    | string | yes      | Artist name (query parameter) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | yes | Artist name (query parameter) |
 
 **Response:** `{ "name": "Archive", "removed": true }` — `removed` is `false` when it wasn't hidden.
 
@@ -1808,15 +2157,47 @@ Show a hidden artist again.
 
 A song's 30-second preview clip from Deezer, for a song without a `preview_url` of its own (a YouTube Music result, or a Spotify playlist track past what the embed lists). Kept for third-party clients: the web UI streams songs in full through [`GET /api/stream`](#get-apistream) instead.
 
-| Parameter  | Type   | Required | Description                                                 |
-| ---------- | ------ | -------- | ----------------------------------------------------------- |
-| `artist`   | string | yes      | The song's (first) artist                                   |
-| `title`    | string | yes      | The song's title                                            |
-| `duration` | number | no       | Its length in seconds — among matches, the closest one wins |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist` | string | yes | The song's (first) artist |
+| `title` | string | yes | The song's title |
+| `duration` | number | no | Its length in seconds — among matches, the closest one wins |
 
 **Response:** `{ "preview_url": "https://cdnt-preview.dzcdn.net/…" }`
 
 Only a Deezer song by that artist with that title counts (both compared ignoring case and `(Live)`/`[Remastered]`/` - Radio Edit` style suffixes); `preview_url` is `""` when there's none. `503` when Deezer can't be reached or refuses (rate limit). The link is Deezer's own, short-lived — ask again rather than storing it.
+
+---
+
+## Buy links
+
+### `GET /api/buy`
+
+Where to buy a song, an album or an artist's music, to support them — the **Support the artist** dialog (see [Support the Artist](features/support-artists.md)). Paired apps may call it too.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist` | string | yes | The (first) artist |
+| `title` | string | no | A song's title: the links are for that song |
+| `album` | string | no | Without `title`, the links are for this album; with neither, for everything by the artist |
+| `country` | string | no | Two-letter store country (`BR`); the US store when missing or invalid |
+
+**Response:**
+
+```json
+{
+  "kind": "track",
+  "query": "Portishead Roads",
+  "links": [
+    { "store": "itunes", "label": "iTunes Store", "url": "https://music.apple.com/br/album/roads/1440653096?i=1440653203&uo=4", "match": true, "price": 2.9, "currency": "BRL" },
+    { "store": "bandcamp", "label": "Bandcamp", "url": "https://bandcamp.com/search?q=Portishead+Roads&item_type=t", "match": false, "price": null, "currency": "" },
+    { "store": "qobuz", "label": "Qobuz", "url": "https://www.qobuz.com/us-en/search/tracks/Portishead%20Roads", "match": false, "price": null, "currency": "" },
+    { "store": "website", "label": "Official website", "url": "https://portishead.co.uk", "match": true, "price": null, "currency": "" }
+  ]
+}
+```
+
+`kind` is `track`, `album` or `artist`. The links come in this order, `website` only when the artist's saved profile has one. `match: true` means the link opens the item itself; `false` means it is a search for `query`. The `itunes` link is the iTunes Store item, looked up with Apple's public iTunes Search API, when one has the same artist and title (album, for an album) — else an Apple Music search. `price`/`currency` are set only on an iTunes Store song or album sold on its own (`null` for an artist, and for a song sold only with its album). Answers from Apple are kept in memory while the server runs. `400` without `artist`.
 
 ---
 
@@ -1826,10 +2207,10 @@ Only a Deezer song by that artist with that title counts (both compared ignoring
 
 A track's full audio, downloaded once into `/data/stream_cache` and served from this server with seeking support — what plays in the built-in player when the song behind a row isn't downloaded yet. This is what keeps playback working where the browser itself can't reach YouTube (or only slowly): the only YouTube traffic is server-side, and the second play of a track never touches YouTube at all.
 
-| Parameter  | Type   | Required | Description                                                                                                |
-| ---------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------- |
-| `video_id` | string | yes      | The song's YouTube video id (11 characters)                                                                |
-| `duration` | number | no       | The track's length in seconds, when the caller knows it — refused before any download when over 10 minutes |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `video_id` | string | yes | The song's YouTube video id (11 characters) |
+| `duration` | number | no | The track's length in seconds, when the caller knows it — refused before any download when over 10 minutes |
 
 The first request for a video downloads it (concurrent requests share one download); the cache is pruned least-recently-used past `DOWNTIFY_STREAM_CACHE_MB` (default 1024) with at most `DOWNTIFY_STREAM_CONCURRENCY` downloads at once (default 2). `400` for a malformed id and for tracks over 10 minutes (the served file's probed length is enforced either way, so long uploads never accumulate), `503` when YouTube can't provide the audio — including age-gated tracks without usable cookies (see [YouTube Cookies](features/youtube-cookies.md)). A stream never lands in the library, the activity log or the saved player session.
 
@@ -1851,11 +2232,11 @@ The same audio as a fresh direct URL (`{ "url": "https://r1---sn.googlevideo.com
 
 Tracks similar to one track, from YouTube Music's own radio mix for it, backing the [Similar](features/similar.md) page. Needs no key.
 
-| Parameter | Type   | Required                | Description                                                    |
-| --------- | ------ | ----------------------- | -------------------------------------------------------------- |
-| `artist`  | string | either this or `track`  | The seed track's artist (a bare artist seeds from its top hit) |
-| `track`   | string | either this or `artist` | The seed track's title                                         |
-| `limit`   | number | no                      | How many similar tracks to return (default `20`, max `50`)     |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `artist` | string | either this or `track` | The seed track's artist (a bare artist seeds from its top hit) |
+| `track` | string | either this or `artist` | The seed track's title |
+| `limit` | number | no | How many similar tracks to return (default `20`, max `50`) |
 
 **Response:** `{ "artist": "Cher", "track": "Believe", "source": "youtube", "tracks": [{ "song_id": "…", "name": "Strong Enough", "artists": ["Cher"], "cover_url": "https://…", "duration": 224, "url": "https://music.youtube.com/watch?v=…", "match": 0.9 }] }` — full song objects plus `match`, which decays with the row's position since YouTube gives no score.
 
@@ -1878,7 +2259,7 @@ A playlist report looks like:
   "expected_count": 50,
   "downloaded_count": 48,
   "missing_count": 2,
-  "missing_tracks": [/* song objects, when requested */],
+  "missing_tracks": [ /* song objects, when requested */ ],
   "active_in_queue": 0,
   "status": "incomplete",
   "source": "spotify",
@@ -1899,10 +2280,10 @@ Every tracked playlist download, as summary reports: one's own for a user, every
 
 One playlist's report, checked against its cached Spotify track list.
 
-| Parameter | Type    | Required | Description                                              |
-| --------- | ------- | -------- | -------------------------------------------------------- |
-| `tracks`  | boolean | no       | Include `missing_tracks`. Default: `true`                |
-| `refresh` | boolean | no       | Refetch the track list from Spotify instead of the cache |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `tracks` | boolean | no | Include `missing_tracks`. Default: `true` |
+| `refresh` | boolean | no | Refetch the track list from Spotify instead of the cache |
 
 **Response:** A playlist report. `404` if the playlist isn't tracked (or isn't theirs, for a user).
 
@@ -1926,7 +2307,7 @@ Tracked playlist downloads that are still missing tracks (one's own for a user).
 
 ### `POST /api/playlists/incomplete/download-missing`
 
-Queue only the tracks of a Spotify playlist that aren't in the library yet. For a user, tracks on disk that aren't theirs count as missing: queuing them claims the shared files instead of downloading twice.
+Queue only the tracks of a Spotify playlist that aren't in the library yet. For a user, tracks on disk that someone else downloaded count as missing: queuing them claims the shared files instead of downloading twice. Songs [hidden from the playlist](features/hidden-playlist-songs.md) are never missing, here or in the batch reports' counts.
 
 **Request body:** `{ "spotify_playlist_id": "…" }` or `{ "playlist_url": "https://open.spotify.com/playlist/…" }`, optionally with `"generate_m3u": true`.
 
@@ -1987,23 +2368,23 @@ Add a watch. Triggers an immediate initial download.
 }
 ```
 
-| `url`                                                     | Creates                                                                                                                         |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Spotify playlist URL                                      | A playlist watch                                                                                                                |
-| YouTube Music playlist URL (`…/playlist?list=…`)          | A playlist watch                                                                                                                |
-| Spotify artist URL                                        | An artist watch (resolved to the matching YouTube Music artist — see [Artist Watch](features/playlist-monitor.md#artist-watch)) |
-| YouTube Music artist URL (`…/channel/UC…` or `…/@handle`) | An artist watch                                                                                                                 |
+| `url` | Creates |
+|-------|---------|
+| Spotify playlist URL | A playlist watch |
+| YouTube Music playlist URL (`…/playlist?list=…`) | A playlist watch |
+| Spotify artist URL | An artist watch (resolved to the matching YouTube Music artist — see [Artist Watch](features/playlist-monitor.md#artist-watch)) |
+| YouTube Music artist URL (`…/channel/UC…` or `…/@handle`) | An artist watch |
 
 An artist watch also takes:
 
-| Field           | Type    | Description                                                                                                                                              |
-| --------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `release_types` | array   | Kinds of release to download: any of `album`, `single`, `ep` (default: all). Unknown values are ignored; `400` when none is left                         |
-| `new_only`      | boolean | Skip everything already released; only later releases download (default `false`). The first check then records the discography instead of downloading it |
+| Field | Type | Description |
+|-------|------|-------------|
+| `release_types` | array | Kinds of release to download: any of `album`, `single`, `ep` (default: all). Unknown values are ignored; `400` when none is left |
+| `new_only` | boolean | Skip everything already released; only later releases download (default `false`). The first check then records the discography instead of downloading it |
 
 Both are ignored for a playlist link.
 
-**Response:** Watch object. `400` if the URL is none of the above, `409` if it is already watched (an artist added by handle and by channel URL is the same watch), `404` if no matching YouTube Music artist exists.
+**Response:** Watch object. `400` if the URL is none of the above, `409` if it is already watched (an artist added by handle and by channel URL is the same watch), `404` if no matching YouTube Music artist exists. A Spotify artist URL is also `409` when no YouTube Music artist has exactly that name — the YouTube Music artist URL is needed then (see [Artist Watch](features/playlist-monitor.md#artist-watch)).
 
 ---
 
@@ -2013,13 +2394,13 @@ Update a watch.
 
 **Request body:** Partial object with any of:
 
-| Field              | Type    | Description                                                                                                                                             |
-| ------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `interval_minutes` | integer | Check interval                                                                                                                                          |
-| `enabled`          | boolean | Pause (`false`) or resume (`true`)                                                                                                                      |
-| `url`              | string  | A new link for the watch — same kinds as in `POST`                                                                                                      |
-| `release_types`    | array   | Artist watches only — as in `POST`                                                                                                                      |
-| `new_only`         | boolean | Artist watches only. `true` records whatever is out at the next check as skipped; `false` forgets the skipped releases so the next check downloads them |
+| Field | Type | Description |
+|-------|------|-------------|
+| `interval_minutes` | integer | Check interval |
+| `enabled` | boolean | Pause (`false`) or resume (`true`) |
+| `url` | string | A new link for the watch — same kinds as in `POST` |
+| `release_types` | array | Artist watches only — as in `POST` |
+| `new_only` | boolean | Artist watches only. `true` records whatever is out at the next check as skipped; `false` forgets the skipped releases so the next check downloads them |
 
 Changing `release_types` or `new_only` starts a check in the background if the watch is enabled, and is a `400` on a playlist watch. A `url` that points at the **same** playlist or artist only replaces the stored `url`. One that points at a **different** playlist or artist of the same kind retargets the watch: `spotify_id`, `name` and `url` change, `last_checked` becomes `null`, `last_track_count` becomes `0`, and its downloaded-track and seen-release history is cleared. If the watch is enabled, a first check starts in the background, as after `POST`. An unchanged `url` is ignored.
 
@@ -2040,6 +2421,200 @@ Stop monitoring a playlist.
 Trigger an immediate check for a specific playlist outside the normal schedule.
 
 **Response:** `{ "downloaded": 3 }`
+
+---
+
+### `GET /api/monitor/stats`
+
+Each watch's storage, download status and activity — see [Activity and storage per watch](features/playlist-monitor.md#activity-and-storage-per-watch). A user gets their own watches; an admin every watch. Podcast watches are left out.
+
+| Query | Description |
+|-------|-------------|
+| `days` | The activity period, `1`–`365` (default `30`) |
+
+**Response:**
+
+```json
+{
+  "days": 30,
+  "bucket_days": 7,
+  "generated_at": "2026-10-27T08:46:36+00:00",
+  "totals": { "watches": 2, "files": 512, "bytes": 4294967296, "shared_files": 40 },
+  "watches": [
+    {
+      "id": 1,
+      "storage": {
+        "files": 300, "missing": 2,
+        "unique_files": 280, "shared_files": 20,
+        "bytes": 2600000000, "unique_bytes": 2400000000,
+        "shared_bytes": 200000000, "share_bytes": 2500000000
+      },
+      "status": { "downloaded": 250, "linked": 30, "unknown": 20, "failing": 3 },
+      "providers": { "youtube-music": 290, "slskd": 10 },
+      "period": {
+        "added": 60, "downloaded": 58, "linked": 4, "unknown": 2,
+        "initial": 0, "bytes": 520000000
+      },
+      "rate": { "per_day": 2.0, "per_week": 14.0, "per_month": 60.0 },
+      "series": [12, 15, 16, 17],
+      "trend": { "direction": "up", "slope": 1.6 },
+      "last_added_at": "2026-10-26T03:00:12+00:00"
+    }
+  ]
+}
+```
+
+- `totals` counts a file once however many watches hold it; `shared_files` are the files more than one watch holds.
+- `storage` covers the watch's songs on disk (`missing`: recorded but gone). `unique_*` are the files no other watch holds — other accounts' watches included — `shared_*` the rest, and `share_bytes` splits each shared file evenly between its watches.
+- `status` says how the songs on disk got into the watch: `downloaded` (the watch fetched them), `linked` (already in the library), `unknown` (recorded before this was kept); `failing` is how many tracks keep failing to download.
+- `period` counts the watch's additions in the last `days`. `added` (`downloaded` + `unknown`) grew the library; `linked` didn't; `initial` came with the watch's first check and is left out of the others. `bytes` is the space of the added songs still on disk.
+- `rate` is `added` over the period, or over the watch's own age when it's younger. `series` is added songs per bucket of `bucket_days` (1 for periods up to 14 days, else 7), oldest first, whole buckets only. `trend.direction` is `up`, `down`, `steady`, `idle` (nothing added) or `new` (fewer than three buckets); `slope` is the fitted change in songs per bucket, per bucket.
+- A watch retargeted at another playlist only counts what it did since.
+
+---
+
+### `GET /api/monitor/provenance`
+
+Where one library file came from — see [Where a song came from](features/playlist-monitor.md#where-a-song-came-from).
+
+| Query | Description |
+|-------|-------------|
+| `file` | The library path, as in `GET /tracks` |
+
+**Response:**
+
+```json
+{
+  "file": "Weekly Mix/Artist - Song.mp3",
+  "origin": {
+    "watch_id": 1,
+    "name": "Weekly Mix",
+    "at": "2026-10-20T03:00:05+00:00",
+    "provider": "youtube-music",
+    "initial": false,
+    "estimated": false,
+    "watch": { "id": 1, "name": "Weekly Mix", "url": "https://open.spotify.com/playlist/…", "kind": "playlist", "source": "spotify", "enabled": true, "created_at": "…", "owner": "bob" }
+  },
+  "watches": [
+    { "id": 1, "name": "Weekly Mix", "url": "…", "kind": "playlist", "source": "spotify", "enabled": true, "created_at": "…", "owner": "bob", "added_at": "2026-10-20T03:00:05+00:00", "outcome": "downloaded", "initial": false },
+    { "id": 4, "name": "Daily Mix", "url": "…", "kind": "playlist", "source": "spotify", "enabled": true, "created_at": "…", "owner": "bob", "added_at": "2026-10-22T03:00:41+00:00", "outcome": "linked", "initial": false }
+  ],
+  "others": 0
+}
+```
+
+- `origin` is the first watch that downloaded the file (`null` when none did). `estimated` is `true` when only a track recorded before outcomes were kept says so. `watch` is `null` when that watch was stopped or now follows another link — `watch_id` and `name` are then what it was.
+- `watches` are the watches holding the file now, oldest first: `outcome` is `downloaded`, `linked` or `unknown`, `added_at` when it got the song. `owner` is the owner's username for an admin, `""` otherwise.
+- A user only sees their own watches: `others` counts the rest, and an origin that is another account's watch is only `{ "hidden": true, "at", "initial", "estimated" }`.
+
+`400` without a `file`.
+
+---
+
+### `GET /api/monitor/playlists/{playlist_id}/tracks`
+
+The songs a watch holds, newest first, as [`GET /tracks`](#get-tracks) rows — including songs that have since left the playlist — each with how it got there, plus the tracks it keeps failing on.
+
+**Response:**
+
+```json
+{
+  "watch": { "id": 1, "name": "Weekly Mix", "kind": "playlist", "…": "…" },
+  "tracks": [
+    {
+      "file": "Weekly Mix/Artist - Song.mp3",
+      "title": "Song",
+      "…": "…",
+      "watch": {
+        "track_id": "4uLU6hMCjMI75M1A2tKUQC",
+        "added_at": "2026-10-20T03:00:05+00:00",
+        "outcome": "downloaded",
+        "initial": false,
+        "provider": "youtube-music",
+        "shared_with": 1
+      }
+    }
+  ],
+  "missing": 2,
+  "failures": [
+    { "track_id": "…", "name": "Song", "artists": "Artist", "error": "Could not find a YouTube match", "attempts": 3, "first_failed_at": "…", "last_failed_at": "…" }
+  ]
+}
+```
+
+`watch` is the watch object of [`GET /api/monitor/playlists`](#get-apimonitorplaylists). `shared_with` is how many other watches hold the same file, `missing` how many recorded songs are no longer on disk. Songs an admin hid from users are left out for a user. `404` for a watch that doesn't exist or belongs to another account (unless you're an admin).
+
+---
+
+### `GET /api/monitor/artist-suggestions`
+
+Artists to follow, for the Monitor page's Artists tab: two lists, ranked from what the server already keeps — nothing is searched for. See [Suggested artists](features/playlist-monitor.md#suggested-artists).
+
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `listening_offset` | integer | `0` | Where the `listening` page starts |
+| `library_offset` | integer | `0` | Where the `library` page starts |
+| `limit` | integer | `20` | Artists per page, 1–100 |
+
+**Response:**
+
+```json
+{
+  "listening": {
+    "items": [
+      {
+        "name": "Artist",
+        "track_count": 12,
+        "album_count": 2,
+        "plays": 40,
+        "score": 31.7,
+        "last_played": "2026-10-20T21:14:03+00:00"
+      }
+    ],
+    "total": 48,
+    "next_offset": 20
+  },
+  "library": {
+    "items": [{ "name": "Other Artist", "track_count": 85, "album_count": 7 }],
+    "total": 230,
+    "next_offset": 20
+  },
+  "half_life_days": 45
+}
+```
+
+- **`listening`** — the artists of your own listens (the ones [`POST /api/discover/listens`](#post-apidiscoverlistens) counts), by `score`: every listen, halved every `half_life_days` since the artist was last played. `plays` counts every listen. `track_count` / `album_count` are `0` for an artist not in the library.
+- **`library`** — the library's artists (as the Library groups them, by album artist), by tracks, then albums, then name.
+
+Each list is paged on its own; `next_offset` is `null` on the last page. Listens and watches are always the caller's own, an admin's too. Artists you already watch (paused watches too) and compilation placeholders such as `Various Artists` are left out; an artist an admin hid from users is left out of a user's lists. Browser sign-in only (`user` scope); `401` without a user.
+
+---
+
+### `GET /api/monitor/artist-suggestions/resolve`
+
+The YouTube Music artist to follow for a suggested name — the identity an artist watch follows. It searches YouTube Music, and adds nothing: following is then a [`POST /api/monitor/playlists`](#post-apimonitorplaylists) with the chosen `url`.
+
+**Query parameters:** `name` (required, 1–200 characters).
+
+**Response:**
+
+```json
+{
+  "candidates": [
+    {
+      "name": "Artist",
+      "artist_id": "UC…",
+      "url": "https://music.youtube.com/channel/UC…",
+      "image_url": "https://lh3.googleusercontent.com/…"
+    }
+  ],
+  "url": "https://music.youtube.com/channel/UC…"
+}
+```
+
+`url` is set only when exactly one result is named `name` (ignoring case and the characters a file name can't hold); otherwise it is `null` and the caller picks from `candidates` — the ones named `name` first, then the other results, 10 at most. `candidates` is empty when nothing was found. `image_url` is only ever a YouTube Music image over HTTPS, else `""`. `400` for a blank name.
 
 ---
 
@@ -2091,9 +2666,9 @@ Preview a podcast from a pasted link, before subscribing. Accepts a direct RSS f
 
 Free-text podcast search, via the iTunes podcast directory.
 
-| Parameter | Type   | Required | Description |
-| --------- | ------ | -------- | ----------- |
-| `q`       | string | yes      | Show name   |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `q` | string | yes | Show name |
 
 **Response:** `{ "results": [ { "name": "…", "author": "…", "feed_url": "…", "artwork_url": "…" } ] }`. A result with an empty `feed_url` has no public feed and can't be subscribed to.
 
@@ -2165,9 +2740,9 @@ One show. `404` if not subscribed.
 
 A show's episodes, newest first.
 
-| Parameter           | Type    | Required | Description                                                              |
-| ------------------- | ------- | -------- | ------------------------------------------------------------------------ |
-| `include_dismissed` | boolean | no       | Include episodes whose download was removed on purpose (default `false`) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `include_dismissed` | boolean | no | Include episodes whose download was removed on purpose (default `false`) |
 
 **Response:** `{ "show": { /* show object */ }, "episodes": [ /* episode objects */ ] }`
 
@@ -2210,9 +2785,9 @@ Update a show's retention, and/or its watch's interval or enabled state.
 
 Unsubscribe.
 
-| Parameter    | Type    | Required | Description                                                                                    |
-| ------------ | ------- | -------- | ---------------------------------------------------------------------------------------------- |
-| `keep_files` | boolean | no       | Keep downloaded episode files on disk (default `false`, which deletes the show's whole folder) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `keep_files` | boolean | no | Keep downloaded episode files on disk (default `false`, which deletes the show's whole folder) |
 
 **Response:** `{ "ok": true, "show": { /* the deleted show */ }, "files_deleted": true }`
 
@@ -2250,12 +2825,12 @@ Who this server is, signing in, and pairing apps — see [Users & Sign-in](featu
 
 **Who may call what.** Every request needs a signed-in user, except the public routes below — unless `DOWNTIFY_DISABLE_AUTH` is `true`: then a request without credentials is the first admin's, `POST /api/auth/login`, `/api/users…` and changing your username or password answer `409`, and device tokens and the same-site check work as usual. A request that sends a revoked device token gets `401` even on a public route, so an app learns it was unpaired.
 
-| Scope  | Credentials                                                                                                        | Covers                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ------ | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Public | none                                                                                                               | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair`                                                                                                                                                                                                                                           |
+| Scope | Credentials | Covers |
+|-------|-------------|--------|
+| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair`, `POST /api/auth/token` |
 | Client | a device token (`Authorization: Bearer dtfy_…`), a signed URL (reads only), a WebSocket ticket, or any web session | Library and media reads (`/tracks`, `/list`, `/playlists`, `/lyrics`, `/cover`, `/playlist-cover`, `/downloads/…`, `/media/…`), `/api/v1/…`, search and link resolving, previews, `POST /api/download/url\|batch\|album`, likes, Discover and listens, podcast reads, episode downloads and playback, the queue and monitor lists (read), `GET /api/me`, `POST /api/activity/playback`, `POST /api/auth/ws-ticket`, `WS /api/ws` |
-| User   | a web session of any user (the `downtify_session` cookie)                                                          | Client, plus your own account (`/api/me…`), your paired devices and pairing (`/api/auth/devices…`, `/api/auth/pairing…`)                                                                                                                                                                                                                                                                                                         |
-| Admin  | a web session of an **admin**                                                                                      | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, renaming the server, users, the activity log, signing everyone out                                                                                                                                                             |
+| User | a web session of any user (the `downtify_session` cookie) | Client, plus your own account (`/api/me…`), your paired devices and pairing (`/api/auth/devices…`, `/api/auth/pairing…`) |
+| Admin | a web session of an **admin** | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, hiding songs from users, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, renaming the server, users, the activity log, signing everyone out |
 
 Without credentials: `401` (`WWW-Authenticate: Bearer`). A normal user's browser calling an admin route: `403` `{"detail": "This needs an admin"}`; a device calling a route that needs a browser: `403` `{"detail": "This needs a signed-in browser"}`. A cookie-authenticated change (`POST`/`PUT`/`PATCH`/`DELETE`, or the WebSocket) whose `Origin`/`Referer` is another site: `403`. CORS allows any origin **without** credentials, so a web session only works from Downtify's own page.
 
@@ -2272,13 +2847,10 @@ Public. What an app checks before it has credentials.
   "api_version": 1,
   "require_sign_in": true,
   "capabilities": {
-    "transcoding": {
-      "available": true,
-      "formats": ["aac", "mp3", "opus"],
-      "bitrates": [96, 128, 160, 192, 256, 320]
-    },
+    "transcoding": { "available": true, "formats": ["aac", "mp3", "opus"], "bitrates": [96, 128, 160, 192, 256, 320] },
     "signed_urls": true,
     "pairing": true,
+    "password_sign_in": true,
     "podcasts": true,
     "discover": true,
     "lyrics": true,
@@ -2287,7 +2859,7 @@ Public. What an app checks before it has credentials.
 }
 ```
 
-`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `transcoding.available` is `false` (and the lists empty) without ffmpeg.
+`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `password_sign_in` says an app may sign in with a username and password ([`POST /api/auth/token`](#post-apiauthtoken)); it is `false` while accounts are turned off, and missing on servers older than this endpoint — pair with a code then. `transcoding.available` is `false` (and the lists empty) without ffmpeg.
 
 ---
 
@@ -2306,16 +2878,7 @@ Admin. Rename the server — the name apps and [LAN discovery](features/mobile-a
 Admin. The port the server listens on and the one it starts on next:
 
 ```json
-{
-  "port": 8000,
-  "saved": 9000,
-  "next": 9000,
-  "locked_by": "",
-  "in_docker": true,
-  "can_restart": true,
-  "min": 1024,
-  "max": 65535
-}
+{ "port": 8000, "saved": 9000, "next": 9000, "locked_by": "", "in_docker": true, "can_restart": true, "min": 1024, "max": 65535 }
 ```
 
 `saved` is the port chosen in Settings → Server (`null` when none). `locked_by` is `DOWNTIFY_PORT`, `PORT` or `--port` when one of those sets the port instead of Settings, `""` otherwise.
@@ -2339,15 +2902,7 @@ Public. How this request is signed in.
   "min_password_length": 8,
   "signed_in": true,
   "via": "device",
-  "user": {
-    "id": 2,
-    "username": "maria",
-    "role": "user",
-    "default_password": false,
-    "created_at": "…",
-    "last_login_at": "…",
-    "last_login_ip": "192.168.1.31"
-  },
+  "user": { "id": 2, "username": "maria", "role": "user", "default_password": false, "created_at": "…", "last_login_at": "…", "last_login_ip": "192.168.1.31" },
   "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8" },
   "notice": null
 }
@@ -2459,6 +3014,16 @@ The device belongs to the user who showed the code. A code works once and for fi
 
 ---
 
+### `POST /api/auth/token`
+
+Public, rate-limited per address together with [`POST /api/auth/login`](#post-apiauthlogin) (10 failures per 5 minutes across both, then `429` with `Retry-After`). An app signs in with a username and password and gets its device token, without the web page.
+
+**Request body:** `{ "username": "maria", "password": "…", "device_name": "Pixel 8", "platform": "android" }` — the username in any case.
+
+**Response:** the same as [`POST /api/auth/pair`](#post-apiauthpair): `{ "token", "device", "server", "user" }`. The device belongs to that user and is listed with their paired apps; no session cookie is set. `401` `{"detail": "Wrong username or password"}` otherwise — the same for an unknown user. `409` while accounts are turned off (`DOWNTIFY_DISABLE_AUTH`): pair with a code instead. The activity log records a `login` (or `login_failed`) and a `device_paired`, both from the app's name.
+
+---
+
 ### `POST /api/auth/ws-ticket`
 
 Client. A single-use ticket, valid for 60 seconds, for opening the [WebSocket](#websocket) as `/api/ws?client_id=…&ticket=…` without an `Authorization` header. **Response:** `{ "ticket": "…" }`.
@@ -2471,7 +3036,7 @@ Your own account, every account (admins), and what everyone does — see [Users 
 
 ### `GET /api/me`
 
-Client. Who is signed in, and their preferences: `{ "user": { … }, "preferences": { "theme": "dark", "locale": "pt-BR", "show_lyrics": true, "search_albums": false } }` — a preference not set yet is missing.
+Client. Who is signed in, and their preferences: `{ "user": { … }, "preferences": { "theme": "dark", "locale": "pt-BR", "show_lyrics": true, "search_albums": false, "show_public_playlists": true }, "playlist_sharing": true }` — a preference not set yet is missing. `playlist_sharing` is whether the admin lets users [share playlists](features/users.md#sharing-playlists).
 
 ---
 
@@ -2489,7 +3054,7 @@ User. Change your password: `{ "current_password": "…", "new_password": "…" 
 
 ### `GET /api/me/preferences` · `PUT /api/me/preferences`
 
-User. Your preferences (Settings → General): `theme` (`dark`/`light`/`system`), `locale`, `show_lyrics`, `search_albums`. `PUT` merges what it's sent into them and answers the result; other keys are ignored. `search_albums: false` makes `GET /api/albums/search` answer `[]` for you, whatever the server's setting.
+User. Your preferences (Settings → General): `theme` (`dark`/`light`/`system`), `locale`, `show_lyrics`, `search_albums`, `show_public_playlists` (other people's public playlists in your lists; on unless set to `false`, and the playlists you follow show either way). `PUT` merges what it's sent into them and answers the result; other keys are ignored. `search_albums: false` makes `GET /api/albums/search` answer `[]` for you, whatever the server's setting.
 
 ---
 
@@ -2540,12 +3105,12 @@ upstream vs. served to clients), plus the totals across everyone.
 
 Admin. The activity log, newest first.
 
-| Parameter | Type    | Required | Description                          |
-| --------- | ------- | -------- | ------------------------------------ |
-| `limit`   | integer | no       | 1–200, default 100                   |
-| `before`  | integer | no       | The `next` of the previous page      |
-| `user_id` | integer | no       | Only this user                       |
-| `kind`    | string  | no       | One kind, or several comma-separated |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `limit` | integer | no | 1–200, default 100 |
+| `before` | integer | no | The `next` of the previous page |
+| `user_id` | integer | no | Only this user |
+| `kind` | string | no | One kind, or several comma-separated |
 
 ```json
 {
@@ -2557,14 +3122,7 @@ Admin. The activity log, newest first.
       "username": "maria",
       "kind": "playback",
       "summary": "Portishead - Roads",
-      "detail": {
-        "track": {
-          "title": "Roads",
-          "artist": "Portishead",
-          "file": "Portishead - Roads.flac",
-          "duration": 305.0
-        }
-      },
+      "detail": { "track": { "title": "Roads", "artist": "Portishead", "file": "Portishead - Roads.flac", "duration": 305.0 } },
       "client": "Pixel 8",
       "ip": "192.168.1.31"
     }
@@ -2588,12 +3146,7 @@ Admin. What each browser tab and app is playing — the players that reported in
     "username": "maria",
     "client": "Pixel 8",
     "ip": "192.168.1.31",
-    "track": {
-      "title": "Roads",
-      "artist": "Portishead",
-      "track_id": "t7b255c87668ba03b",
-      "duration": 305.0
-    },
+    "track": { "title": "Roads", "artist": "Portishead", "track_id": "t7b255c87668ba03b", "duration": 305.0 },
     "paused": false,
     "position": 42.0,
     "started_at": "2026-09-27T19:10:03+00:00",
@@ -2610,18 +3163,157 @@ Client. A player says what it plays: `{ "player": "<id stable for this player>",
 
 ---
 
+## Music trash
+
+The [music trash](features/music-trash.md), when the server has it on (`DOWNTIFY_TRASH` or `DOWNTIFY_TRASH_CONFIG`): songs an admin removes are moved aside and kept for 30 days, restorable until then. The web app and the Android app use the same endpoints.
+
+Everything except `GET /api/v1/library/trash/capabilities` needs a browser session or a paired device of an account that is still an administrator (or sign-in turned off); anything else gets `403` (`admin_required`). With the trash off they answer `503` (`trash_not_configured`). Errors carry a stable code in `detail.code` and never a path on the server.
+
+The files are moved by the trash worker, inside the server or in a [separate process](features/music-trash.md#a-separate-worker): a confirmed request answers before anything has moved, and `state` says how far it got. Songs leave the library (`/tracks`, `/list`, [`GET /api/v1/library`](#get-apiv1library), streaming by path) as soon as they are confirmed, and the journal's changes reach connected clients as `library_changed` and `playlists_changed` frames.
+
+While the trash is on, [`DELETE /delete`](#delete-delete) and [`DELETE /delete/batch`](#delete-deletebatch) answer `409` (`trash_confirmation_required`), and deleting a playlist ([`DELETE /api/library/playlist`](#delete-apilibraryplaylist), [`DELETE /api/playlists/batches/{spotify_playlist_id}`](#delete-apiplaylistsbatchesspotify_playlist_id)) removes the playlist but keeps its songs.
+
+An operation (one song) looks like this:
+
+```json
+{
+  "id": "6f0c2a…",
+  "file": "Artist/Album/01 - Song.flac",
+  "track_id": "q0Zr3k…",
+  "metadata": { "title": "Song", "artist": "Artist", "album": "Album", "codec": "flac", "…": "…" },
+  "state": "trashed",
+  "size": 31457280,
+  "expires_at": 1764288000.0,
+  "error": ""
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Operation ID, for restore, retry and allow-download |
+| `file` | string | Library path it had (and gets back) |
+| `track_id` | string | Its [library id](#get-apiv1library), `""` when it had none; restoring keeps it |
+| `metadata` | object | Its library row when it was confirmed |
+| `state` | string | `pending` (confirmed, not moved yet), `moving`, `trashed`, `restore_pending`, `restoring`, `restored`, `purging`, `purged` (expired and deleted) or `error` (stopped; files kept) |
+| `size` | integer | Bytes of the audio and the sidecars that move with it |
+| `expires_at` | number \| null | Unix time it is deleted for good; set once it has moved |
+| `error` | string | The stop's code when `state` is `error` |
+
+---
+
+### `GET /api/v1/library/trash/capabilities`
+
+Whether the trash is on and whether this caller may use it. Any signed-in caller; an older server answers `404`, which a client takes as "off".
+
+**Response:** `{ "enabled": true, "can_manage": true, "retention_days": 30 }`. `can_manage` is `true` only for an administrator while the trash is on.
+
+---
+
+### `POST /api/v1/library/trash/preview`
+
+Check exactly what would move, in the background.
+
+**Body:** `{ "files": ["Artist/Album/01 - Song.flac"] }` or `{ "track_ids": ["q0Zr3k…"] }` (both may be given; up to 200 in all).
+
+**Response** (`202`): `{ "request_id": "Yx3…", "state": "preparing" }`. `409` (`invalid_selection`) when nothing was given; `409` (`preview_busy`) while this admin has a check running, `429` (`preview_busy`) while four are.
+
+---
+
+### `GET /api/v1/library/trash/preview/{request_id}`
+
+The check's result, for the admin who started it. Poll until it is ready.
+
+**Response:** `{ "state": "preparing" }`, then
+
+```json
+{
+  "state": "ready",
+  "preview": {
+    "confirmation": "Lr0…",
+    "expires_at": 1761600600.0,
+    "items": [{ "id": "6f0c2a…", "file": "Artist/Album/01 - Song.flac", "state": "preview", "…": "…" }]
+  }
+}
+```
+
+`items` are the operations, one per song, with the files that will move counted in `size`. When the check failed it answers `409` with the reason — `item_not_found`, `invalid_selection`, `track_is_playing`, `library_task_active`, `unsupported_collection`, `unsupported_lyrics_location`, `identity_uncertain` (tags too thin to keep the song out of automatic downloads), `unsafe_symlink`, `root_unavailable`, `nas_marker_missing`, `nas_marker_changed`, `admin_access_revoked`, `filesystem_unavailable`. `404` (`preview_unavailable`) for an unknown request, another admin's, or one finished more than an hour ago.
+
+---
+
+### `POST /api/v1/library/trash/confirm`
+
+Move what a check listed. The confirmation is good for 10 minutes, once, for the admin who asked for it.
+
+**Body:** `{ "confirmation": "Lr0…" }`
+
+**Response** (`202`): `{ "ids": ["6f0c2a…"], "state": "pending" }` — the files have not moved yet. Confirming again answers the same. `409` with `confirmation_invalid`, `confirmation_expired`, `file_changed` (a file differs from what was checked), `operation_already_pending`, `track_is_playing` or `library_task_active`; nothing moves then.
+
+---
+
+### `GET /api/v1/library/trash`
+
+What is in the trash or on its way, newest first: every operation not restored or expired.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `offset` | integer | no | Default `0` |
+| `limit` | integer | no | 1–100, default `50` |
+| `search` | string | no | Matches the path and the metadata, case-insensitive |
+
+**Response:** `{ "items": [{ "id": "6f0c2a…", "…": "…" }], "total": 1, "size": 31457280 }` — `total` and `size` (bytes) cover every match, not only this page.
+
+---
+
+### `POST /api/v1/library/trash/restore`
+
+Put songs back where they were. Works for `trashed`, `error` and still-`pending` operations (the last two only bring the song back into the library when nothing had moved).
+
+**Body:** `{ "ids": ["6f0c2a…"] }` (1–200)
+
+**Response** (`202`): `{ "state": "restore_pending" }`. `409` with `item_not_found`, `operation_in_progress` (still moving) or `retention_expired`. A file found at the old place meanwhile is never overwritten: that operation stops with `restore_collision`.
+
+---
+
+### `POST /api/v1/library/trash/retry`
+
+Resume operations that stopped (`state` `error`) once the cause is fixed.
+
+**Body:** `{ "ids": ["6f0c2a…"] }` (1–200)
+
+**Response** (`202`): `{ "state": "pending" }`. `409` (`operation_not_complete`) for one that isn't stopped.
+
+---
+
+### `GET /api/v1/library/trash/exclusions`
+
+Songs whose time in the trash ran out and that automatic downloads still skip.
+
+**Response:** `{ "items": [{ "id": "6f0c2a…", "state": "purged", "…": "…" }] }`
+
+---
+
+### `POST /api/v1/library/trash/allow-download`
+
+Let automatic downloads fetch songs again. Nothing is downloaded by this.
+
+**Body:** `{ "ids": ["6f0c2a…"] }` (1–200)
+
+**Response:** `{ "ok": true }`. `409` (`operation_not_complete`) for an operation that hasn't moved or been restored yet.
+
+---
+
 ## Mobile API (v1)
 
 What the apps use: everything by **track id**, which survives the file being moved or renamed. Versioned apart from the web app's routes (`api_version` in [`GET /api/server/info`](#get-apiserverinfo)). The flow is in the [mobile client contract](mobile-client-contract.md). All routes are in the client scope.
 
 ### `GET /api/v1/library`
 
-The library as a change feed — one's own tracks for a paired user account, everything for an admin (see [Users & Sign-in](features/users.md#your-library)). Tracks outside the account read as removed.
+The library as a change feed — every track for a paired account except what an admin [hid from users](features/users.md#hiding-from-users), everything for an admin (see [Users & Sign-in](features/users.md#your-library)). A track hidden from the account reads as removed.
 
-| Parameter | Type    | Required | Description                                                               |
-| --------- | ------- | -------- | ------------------------------------------------------------------------- |
-| `since`   | integer | no       | The `cursor` from the last response; `0` (default) for everything         |
-| `refresh` | boolean | no       | Rescan the folder now instead of using the scan cached for about a minute |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `since` | integer | no | The `cursor` from the last response; `0` (default) for everything |
+| `refresh` | boolean | no | Rescan the folder now instead of using the scan cached for about a minute |
 
 **Response:**
 
@@ -2650,6 +3342,7 @@ The library as a change feed — one's own tracks for a paired user account, eve
       "size": 34812211,
       "added": 1789600669,
       "has_cover": true,
+      "explicit": true,
       "playlists": ["Trip-hop"]
     }
   ],
@@ -2657,11 +3350,11 @@ The library as a change feed — one's own tracks for a paired user account, eve
 }
 ```
 
-`tracks` are the tracks added or changed after `since`, `deleted` the ids removed after it. `full: true` (for `since=0`, or a `since` older than the 90 days removed ids are kept, or newer than `cursor`) means `tracks` is the whole library: replace what you have. `artists` splits `artist` the way the web app does; `album_artist` is the tag, else the first artist; `album_id` (album artist + album, case-insensitive; `""` without an album) and `artist_id` (the album artist) are the keys the web app groups albums and artists by. `codec` is `mp3`, `flac`, `aac`, `alac`, `opus` or `vorbis` (`""` when unknown); `bitrate` in bits per second.
+`tracks` are the tracks added or changed after `since`, `deleted` the ids removed after it. `full: true` (for `since=0`, or a `since` older than the 90 days removed ids are kept, or newer than `cursor`) means `tracks` is the whole library: replace what you have. `artists` splits `artist` the way the web app does; `album_artist` is the tag, else the first artist; `album_id` (album artist + album, case-insensitive; `""` without an album) and `artist_id` (the album artist) are the keys the web app groups albums and artists by. `codec` is `mp3`, `flac`, `aac`, `alac`, `opus` or `vorbis` (`""` when unknown); `bitrate` in bits per second. `explicit` is `true` on a track marked explicit and **absent** on every other track (read absent as `false`).
 
 `ETag` is set; a matching `If-None-Match` gets `304`. A sync that finds changes on disk also sends `library_changed` to other connected clients.
 
-**Track ids:** a file keeps its id when it's re-tagged in place, moved (same name and size) or renamed (same title, artist, album and length). A file moved _and_ re-tagged in the same sweep gets a new id; the old one is reported in `deleted`.
+**Track ids:** a file keeps its id when it's re-tagged in place, moved (same name and size) or renamed (same title, artist, album and length). A file moved *and* re-tagged in the same sweep gets a new id; the old one is reported in `deleted`.
 
 ---
 
@@ -2675,11 +3368,11 @@ One track row (the shape above). `404` for an unknown or removed id.
 
 The track's audio. Also `HEAD`.
 
-| Parameter  | Type    | Required | Description                                                                             |
-| ---------- | ------- | -------- | --------------------------------------------------------------------------------------- |
-| `format`   | string  | no       | `original` (default), `opus`, `aac` or `mp3`                                            |
-| `bitrate`  | integer | no       | kbps for a transcoded format: 96, 128, 160 (default), 192, 256 or 320 (others round up) |
-| `download` | boolean | no       | Add `Content-Disposition: attachment` (saving an offline copy)                          |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `format` | string | no | `original` (default), `opus`, `aac` or `mp3` |
+| `bitrate` | integer | no | kbps for a transcoded format: 96, 128, 160 (default), 192, 256 or 320 (others round up) |
+| `download` | boolean | no | Add `Content-Disposition: attachment` (saving an offline copy) |
 
 **Response:** the audio with HTTP Range support (`206 Partial Content`, `Content-Range`, `Accept-Ranges: bytes`), exact `Content-Length`, and `Content-Type` `audio/flac`, `audio/mpeg`, `audio/mp4` or `audio/ogg`. `Cache-Control: private, max-age=604800`.
 
@@ -2691,9 +3384,9 @@ A transcoded copy is made with ffmpeg on the first request (the request waits), 
 
 The track's cover. Also `HEAD`.
 
-| Parameter | Type    | Required | Description                                                                               |
-| --------- | ------- | -------- | ----------------------------------------------------------------------------------------- |
-| `size`    | integer | no       | `150`, `300` or `600` (longest side, px; others round up). Omit for the full-size picture |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `size` | integer | no | `150`, `300` or `600` (longest side, px; others round up). Omit for the full-size picture |
 
 **Response:** the image (thumbnails are JPEG), `ETag`, `Cache-Control: private, max-age=604800`; `304` for a matching `If-None-Match`. `404` when the file has no cover. Every size is made once and kept in `/data/cover_thumbs`.
 
@@ -2705,21 +3398,77 @@ The track's cover. Also `HEAD`.
 
 ---
 
+### `GET /api/v1/tracks/{id}/loudness`
+
+The same profile as [`GET /api/library/loudness`](#get-apilibraryloudness), by track id. `404` for a track the caller can't see.
+
+---
+
 ### `GET /api/v1/playlists`
 
 ```json
 [
-  {
-    "name": "Downtify Liked Songs",
-    "liked": true,
-    "count": 12,
-    "cover": "",
-    "track_ids": ["t7b2…", "…"]
-  }
+  { "name": "Downtify Liked Songs", "liked": true, "manual": false, "count": 12, "cover": "", "track_ids": ["t7b2…", "…"],
+    "owner": "", "visibility": "private", "mine": true, "followed": false, "can_edit_tracks": false, "shared_with_me": false, "new": false },
+  { "name": "Late night", "liked": false, "manual": true, "count": 8, "cover": "", "track_ids": ["…"],
+    "owner": "ana", "visibility": "public", "mine": false, "followed": true, "can_edit_tracks": false, "shared_with_me": false, "new": false }
 ]
 ```
 
-The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playlist order — one's own for a user (with their own liked songs as the liked one), everything for an admin. `cover` is a path for `GET /playlist-cover?file=`, or `""`.
+The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playlist order. A user gets their own (with their own liked songs as the liked one), the ones [shared with them](features/users.md#sharing-playlists) by name, the public ones they follow and — unless they turned *Show public playlists* off — every other public one. An admin gets everything. `cover` is a path for `GET /playlist-cover?file=`, or `""`.
+
+| Field | Meaning |
+|-------|---------|
+| `owner` | The owner's username (`""` for liked songs) |
+| `visibility` | `private`, `shared` or `public` |
+| `mine` | `true` when it is the caller's to change (their own, or any for an admin); `false` means someone else's — don't offer rename, share or delete |
+| `can_edit_tracks` | The caller may add and remove its songs with [`POST /api/library/playlists/tracks`](#post-apilibraryplayliststracks): a manual playlist that is `mine`, or one shared with them as an [editor](features/collaborative-playlists.md) |
+| `shared_with_me` | Shared with the caller by name |
+| `new` | Shared with the caller and not opened yet; clear it with [`POST /api/v1/playlists/seen`](#post-apiv1playlistsseen) |
+| `followed` | A public playlist the caller follows |
+| `shared_with` | On the caller's own shared playlists: the usernames it is shared with |
+| `editors` | On the caller's own shared playlists: those of `shared_with` who may edit its songs (absent when none) |
+| `hidden_count` | Songs the owner [hid](features/hidden-playlist-songs.md) from an imported playlist of theirs (`0` otherwise); list them with [`GET /api/v1/playlists/hidden`](#get-apiv1playlistshidden) |
+
+Keep the other people's playlists apart from the caller's own (a "Shared with me" and a "Public playlists" section, each entry labelled with its `owner`).
+
+---
+
+### `GET /api/v1/usernames`
+
+`{ "enabled": true, "usernames": ["bob", "cyd"] }` — everyone but the caller, for a share picker; users can't list accounts otherwise. `enabled` is the admin's *Allow users to share playlists* (the list is empty while it is off).
+
+---
+
+### `POST /api/v1/playlists/follow` · `DELETE /api/v1/playlists/follow`
+
+Follow a public playlist of someone else's (`{ "name": "Late night" }`), so it stays in the caller's lists — even with *Show public playlists* off — and follows its owner's changes; or stop following it (`DELETE`, with `?name=` or the same body; idempotent). `POST` answers `400` for a playlist that isn't public or is the caller's own, `404` for one they can't open. A follow ends by itself when the owner makes the playlist private or shares it by name. **Response:** `{ "name": "Late night", "followed": true }`.
+
+---
+
+### `POST /api/v1/playlists/seen`
+
+Clear the `new` marker of a playlist shared with the caller (`{ "name": "Late night" }`). **Response:** `{ "name": "Late night", "new": false }`.
+
+---
+
+### `GET /api/v1/playlists/hidden`
+
+The songs the caller [hid](features/hidden-playlist-songs.md) from an imported playlist of theirs (`?name=`), most recently hidden first — [`GET /api/library/playlists/hidden`](#get-apilibraryplaylistshidden) by track id:
+
+```json
+{ "name": "Road trip", "songs": [ { "key": "4uLU6hMCjMI75M1A2tKUQC", "label": "Artist - Song", "track_id": "t7b2…", "hidden_at": "2026-10-24T12:00:00+00:00" } ] }
+```
+
+`track_id` is `""` once the song's file is no longer in the library. Same errors as the web route.
+
+---
+
+### `POST /api/v1/playlists/hidden`
+
+Hide tracks from an imported playlist of the caller's, or show hidden songs again: `{ "name": "Road trip", "hide": ["t7b2…"], "show": ["<key>"] }` (`hide` takes track ids, `show` the `key` from the listing). Same rules as [`POST /api/library/playlists/hidden`](#post-apilibraryplaylistshidden); `404` for an unknown track id.
+
+**Response:** `{ "name": "Road trip", "hidden": 1, "keys": ["4uLU…"], "shown": 0, "restored": 0, "count": 41, "track_ids": ["…"] }` — `keys` undo the hide (send them as `show`), `track_ids` are the playlist's tracks afterwards, in order.
 
 ---
 
@@ -2744,10 +3493,7 @@ Signed URLs for a player that can't send the device token (a Cast receiver). Onl
 ```json
 {
   "items": [
-    {
-      "path": "/api/v1/tracks/t7b2…/stream",
-      "params": { "format": "aac", "bitrate": "256" }
-    },
+    { "path": "/api/v1/tracks/t7b2…/stream", "params": { "format": "aac", "bitrate": "256" } },
     { "path": "/api/v1/tracks/t7b2…/cover", "params": { "size": "600" } }
   ],
   "ttl": 3600
@@ -2758,10 +3504,7 @@ Signed URLs for a player that can't send the device token (a Cast receiver). Onl
 
 ```json
 {
-  "urls": [
-    "/api/v1/tracks/t7b2…/stream?format=aac&bitrate=256&exp=1790479684&kid=8uz4d35zjpn2&sig=…",
-    "…"
-  ],
+  "urls": ["/api/v1/tracks/t7b2…/stream?format=aac&bitrate=256&exp=1790479684&kid=8uz4d35zjpn2&sig=…", "…"],
   "expires_at": 1790479684
 }
 ```
@@ -2776,10 +3519,10 @@ Paths must start with `/api/v1/tracks/`, `/downloads/`, `/media/`, `/cover` or `
 
 Real-time download progress events.
 
-| Query parameter | Required | Description                                                                                |
-| --------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `client_id`     | yes      | Unique client identifier (UUID recommended)                                                |
-| `ticket`        | no       | A [WebSocket ticket](#post-apiauthws-ticket), for a client that can't send `Authorization` |
+| Query parameter | Required | Description |
+|----------------|----------|-------------|
+| `client_id` | yes | Unique client identifier (UUID recommended) |
+| `ticket` | no | A [WebSocket ticket](#post-apiauthws-ticket), for a client that can't send `Authorization` |
 
 The handshake needs a device token (`Authorization: Bearer …`), a web session cookie (from Downtify's own page) or a ticket; otherwise it's refused. A socket is closed with code `4401` when its device is unpaired or its user is signed out everywhere or deleted.
 
@@ -2787,7 +3530,7 @@ The handshake needs a device token (`Authorization: Bearer …`), a web session 
 
 ```json
 {
-  "song": {/* song metadata object */},
+  "song": { /* song metadata object */ },
   "progress": 42.5,
   "message": "Downloading…",
   "status": "downloading",
@@ -2796,7 +3539,7 @@ The handshake needs a device token (`Authorization: Bearer …`), a web session 
 }
 ```
 
-`status` on a per-track event is `downloading`, `done`, or `error`. `filename` is set (non-null) on the final `done` event. A row that is still waiting has `status: "queued"` on [`GET /api/queue`](#get-apiqueue), not as its own socket event.
+`status` on a per-track event is `downloading`, `done`, or `error` (or `queued` for a job a paused queue holds back, see below). `filename` is set (non-null) on the final `done` event. A row that is still waiting has `status: "queued"` on [`GET /api/queue`](#get-apiqueue), not as its own socket event.
 
 Queuing a playlist batch or a CSV import registers every job, then broadcasts one reload so open pages fetch that list once:
 
@@ -2804,12 +3547,20 @@ Queuing a playlist batch or a CSV import registers every job, then broadcasts on
 { "type": "queue_reload" }
 ```
 
+Pausing or resuming the queue, and the moment a paused queue's last running download ends, broadcast its state (the [`GET /api/queue/state`](#get-apiqueuestate) object):
+
+```json
+{ "type": "queue_state", "paused": true, "state": "paused", "active": 0 }
+```
+
+A job held by a paused queue after it was announced as `downloading` (a single download) is sent again with `status: "queued"`.
+
 A [library upgrade](features/library-upgrade.md) broadcasts its progress on the same socket, tagged so download clients can ignore it:
 
 ```json
 {
   "type": "library_upgrade",
-  "upgrade": {/* same shape as GET /api/library/upgrade */}
+  "upgrade": { /* same shape as GET /api/library/upgrade */ }
 }
 ```
 
@@ -2840,17 +3591,14 @@ When tracks are added, removed or moved (a finished download, a delete, a reconc
 { "type": "library_changed" }
 ```
 
+When a playlist is shared, unshared, followed, copied, detached, renamed or deleted, or songs are hidden from it or shown again, connected clients are told, so they list the playlists again (`GET /playlists` or [`GET /api/v1/playlists`](#get-apiv1playlists)):
+
+```json
+{ "type": "playlists_changed" }
+```
+
 When an app is paired, the web page showing the code learns it at once:
 
 ```json
-{
-  "type": "device_paired",
-  "pairing_id": "rfLmICXqGfRBXyXl",
-  "device": {
-    "id": "8uz4d35zjpn2",
-    "name": "Pixel 8",
-    "platform": "android",
-    "…": "…"
-  }
-}
+{ "type": "device_paired", "pairing_id": "rfLmICXqGfRBXyXl", "device": { "id": "8uz4d35zjpn2", "name": "Pixel 8", "platform": "android", "…": "…" } }
 ```

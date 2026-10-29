@@ -86,9 +86,10 @@
               v-else
               class="inline-flex h-12 items-center gap-2 rounded-control bg-accent/12 px-5 text-[15px] font-semibold text-accent"
             >
-              <AppIcon name="check-circle" :size="18" />{{
-                t('link.allInLibrary')
-              }}
+              <AppIcon
+                :name="allInLibrary ? 'check-circle' : 'queue'"
+                :size="18"
+              />{{ t(allInLibrary ? 'link.allInLibrary' : 'link.allHandled') }}
             </span>
             <UiButton
               v-if="newSongs.length && newSongs.length < details.tracks.length"
@@ -99,6 +100,16 @@
               {{ t('link.redownloadAll') }}
             </UiButton>
           </template>
+          <UiButton
+            v-if="details.kind === 'playlist' && details.tracks.length"
+            variant="primary"
+            size="lg"
+            icon="playlist"
+            :loading="savingPlaylist"
+            @click="savePlaylist"
+          >
+            {{ t('link.addPlaylist') }}
+          </UiButton>
           <UiButton
             v-if="watchable"
             variant="ghost"
@@ -271,6 +282,7 @@ import {
   useProgressTracker,
 } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
+import { usePlaylistActions } from '/src/model/playlistActions'
 import { songDownloadState } from '/src/lib/downloadState'
 import { useUi } from '/src/model/ui'
 import { classifyInput } from '/src/lib/input'
@@ -284,6 +296,7 @@ const router = useRouter()
 const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const library = useLibrary()
+const playlistActions = usePlaylistActions()
 const ui = useUi()
 
 const details = ref(null)
@@ -291,6 +304,7 @@ const loading = ref(false)
 const error = ref('')
 const submitting = ref(false)
 const watching = ref(false)
+const savingPlaylist = ref(false)
 const filter = ref('all')
 const selected = ref(new Set())
 
@@ -416,6 +430,40 @@ const rows = computed(() =>
 const newSongs = computed(() =>
   rows.value.filter((row) => row.status === 'new').map((row) => row.song)
 )
+const allInLibrary = computed(
+  () =>
+    rows.value.length > 0 && rows.value.every((row) => row.status === 'library')
+)
+
+async function savePlaylist() {
+  if (savingPlaylist.value) return
+  savingPlaylist.value = true
+  const requestedUrl = url.value
+  const collection = details.value
+  try {
+    await library.lookupSongs(collection.tracks)
+    if (url.value !== requestedUrl || details.value !== collection) return
+    const files = playableQueue(collection.tracks, library.findTrack)
+    if (!files.length) {
+      ui.toast(t('link.noAvailableTracks'), { kind: 'error' })
+      return
+    }
+    playlistActions.openCreate(files, {
+      name: collection.name || '',
+      sourcePlaylistUrl: requestedUrl,
+      description: t('link.saveAvailableHint', {
+        count: files.length,
+        total: collection.tracks.length,
+      }),
+    })
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    savingPlaylist.value = false
+  }
+}
 
 const filters = computed(() => {
   const count = (status) =>

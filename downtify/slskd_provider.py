@@ -180,9 +180,12 @@ class SlskdClient:
         *,
         on_poll: Optional[Callable[[float], None]] = None,
         deadline: Optional[float] = None,
+        cancel_check: Optional[Callable[[], None]] = None,
     ) -> bool:
         max_attempts = max(1, self.search_retries)
         for attempt in range(max_attempts):
+            if cancel_check:
+                cancel_check()
             if deadline is not None and _past_deadline(deadline):
                 return False
             if on_poll is not None:
@@ -896,7 +899,16 @@ def _parse_soulseek_path(filename: str) -> tuple[str, str]:
 
 def _transfer_failed(status: dict[str, Any]) -> bool:
     state = str(status.get('state') or '')
-    return 'Errored' in state or 'Cancelled' in state or 'Aborted' in state
+    return any(
+        failure in state
+        for failure in (
+            'Errored',
+            'Cancelled',
+            'Aborted',
+            'Rejected',
+            'TimedOut',
+        )
+    )
 
 
 def _transfer_succeeded(status: dict[str, Any]) -> bool:
@@ -1115,6 +1127,7 @@ def _wait_for_slskd_file(
     expected_size: int = 0,
     progress_cb: Optional[ProgressCallback] = None,
     deadline: Optional[float] = None,
+    cancel_check: Optional[Callable[[], None]] = None,
 ) -> Optional[Path]:
     """Wait for slskd to finish, then return the file path on disk (if found)."""
     interval = _int_setting(
@@ -1136,6 +1149,8 @@ def _wait_for_slskd_file(
     last_reported_pct = -1.0
 
     for attempt in range(max(1, attempts)):
+        if cancel_check:
+            cancel_check()
         if deadline is not None and _past_deadline(deadline):
             logger.info(
                 'slskd: download timeout while waiting for file title={!r} '
@@ -1223,7 +1238,11 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
     song: dict[str, Any],
     settings: dict[str, Any],
     progress_cb: Optional[ProgressCallback] = None,
+    *,
+    cancel_check=None,
 ) -> Optional[Path]:
+    if cancel_check:
+        cancel_check()
     if not bool(settings.get('enabled')):
         return None
     client = SlskdClient(settings)
@@ -1287,6 +1306,8 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
         min_score = _match_min_score(settings)
 
         for query in queries:
+            if cancel_check:
+                cancel_check()
             if _past_deadline(deadline):
                 logger.info(
                     'slskd: download timeout during search title={!r}',
@@ -1302,6 +1323,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                 label,
                 on_poll=lambda pct: report(pct, 'searching'),
                 deadline=deadline,
+                **({'cancel_check': cancel_check} if cancel_check else {}),
             ):
                 client.delete_search(search_id)
                 search_id = ''
@@ -1424,6 +1446,8 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             roots.append(output_dir)
 
         for attempt_idx, file_row in enumerate(files, start=1):
+            if cancel_check:
+                cancel_check()
             if _past_deadline(deadline):
                 logger.info(
                     'slskd: download timeout before trying candidate {} title={!r}',
@@ -1461,6 +1485,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                 roots,
                 expected_size=queued_size,
                 progress_cb=progress_cb,
+                **({'cancel_check': cancel_check} if cancel_check else {}),
                 deadline=deadline,
             )
             if found is None:

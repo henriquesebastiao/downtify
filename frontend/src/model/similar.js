@@ -1,6 +1,7 @@
 // Tracks similar to one track, via YouTube Music's own radio mix
 // (the Similar page). Needs no API key.
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { libraryOnly } from '/src/model/musicPolicy'
 
 import API from '/src/model/api'
 import { useLibrary } from '/src/model/library'
@@ -16,6 +17,7 @@ const searched = ref(false)
 const hasMore = ref(true)
 const loadingMore = ref(false)
 let serial = 0
+watch(libraryOnly, clear)
 
 function songKey(item) {
   const id = String(item?.song_id || '')
@@ -124,6 +126,7 @@ export function useSimilar() {
   const songs = computed(() =>
     tracks.value.map((item) => ({
       song_id: item.song_id || '',
+      ...(item.file ? { file: item.file, source: 'library' } : {}),
       name: item.name || '',
       artists: Array.isArray(item.artists)
         ? item.artists

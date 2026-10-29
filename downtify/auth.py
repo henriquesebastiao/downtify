@@ -15,9 +15,12 @@ account in Settings > Apps.
   ``POST /api/auth/pair`` within five minutes gets a long-lived device
   token, ``dtfy_<device id>_<secret>``, sent as ``Authorization: Bearer``,
   tied to the user who paired it. Only a hash of the secret is stored; a
-  device can be revoked at any time. Devices get the *client* scope: they
-  can read and play the library and ask for downloads, but settings,
-  credentials, deleting files and managing devices need a browser.
+  device can be revoked at any time. An app may instead sign in with the
+  user's username and password at ``POST /api/auth/token`` and get the
+  same kind of token without the web page. Devices get the *client*
+  scope: they can read and play the library and ask for downloads, but
+  settings, credentials, deleting files and managing devices need a
+  browser.
 
 Players that can't send headers (a Chromecast receiver fetching a stream
 itself) use **signed URLs**: ``exp``, ``kid`` (the device) and ``sig``
@@ -97,6 +100,10 @@ SESSION_TTL = timedelta(days=30)
 SESSION_TOUCH_INTERVAL = timedelta(hours=1)
 #: A device's last-seen time and IP are written at most this often.
 DEVICE_TOUCH_INTERVAL = timedelta(minutes=1)
+#: Seconds a checked session or device token is trusted without asking
+#: the database again (every request is checked, on the event loop).
+#: Signing out, revoking and account changes clear it at once.
+SIGN_IN_CACHE_SECONDS = 30.0
 #: How long a pairing code shown in Settings > Apps can be used.
 PAIRING_TTL_SECONDS = 300
 #: How long a WebSocket ticket can be used.
@@ -409,6 +416,60 @@ def _header(scope: MutableMapping[str, Any], name: str) -> str:
 # ── The store ───────────────────────────────────────────────────────────
 
 
+class _SignInCache:
+    """Recently checked credentials: ``key -> (deadline, user dict)``.
+
+    :meth:`clear` bumps a generation; a lookup that started before a
+    clear (and so may have read a session that is gone now) doesn't
+    store its answer.
+    """
+
+    _MAX_ITEMS = 1024
+
+    def __init__(self, ttl_seconds: float) -> None:
+        self._ttl = ttl_seconds
+        self._items: dict[str, tuple[float, dict[str, Any]]] = {}
+        self._generation = 0
+        self._lock = threading.Lock()
+
+    def generation(self) -> int:
+        with self._lock:
+            return self._generation
+
+    def get(self, key: str) -> Optional[dict[str, Any]]:
+        with self._lock:
+            hit = self._items.get(key)
+            if hit is None:
+                return None
+            if hit[0] <= time.monotonic():
+                del self._items[key]
+                return None
+            return dict(hit[1])
+
+    def put(
+        self,
+        key: str,
+        value: dict[str, Any],
+        *,
+        generation: int,
+        max_age: Optional[float] = None,
+    ) -> None:
+        ttl = self._ttl if max_age is None else min(self._ttl, max_age)
+        if ttl <= 0:
+            return
+        with self._lock:
+            if generation != self._generation:
+                return
+            if len(self._items) >= self._MAX_ITEMS:
+                self._items.clear()
+            self._items[key] = (time.monotonic() + ttl, dict(value))
+
+    def clear(self) -> None:
+        with self._lock:
+            self._items.clear()
+            self._generation += 1
+
+
 class AuthStore:
     """Users, web sessions, paired devices and the signing key.
 
@@ -428,8 +489,10 @@ class AuthStore:
         #: ``DOWNTIFY_DISABLE_AUTH``: no sign-in, one user (the admin).
         self.auth_disabled = auth_disabled
         self._lock = threading.Lock()
+        self._signed_in = _SignInCache(SIGN_IN_CACHE_SECONDS)
         self._init_db()
         self.users = UserStore(db_path)
+        self.users.add_change_listener(self._signed_in.clear)
         if self.users.ensure_default_admin(existing_install=existing_install):
             # Sessions from before accounts belong to nobody.
             self.end_all_sessions()
@@ -511,6 +574,10 @@ class AuthStore:
         if not token or len(token) > 128:
             return None
         key = _sha256(token)
+        cached = self._signed_in.get('s:' + key)
+        if cached is not None:
+            return cached
+        generation = self._signed_in.generation()
         with self._connect() as conn:
             row = conn.execute(
                 'SELECT s.expires_at, s.touched_at, u.* '
@@ -534,7 +601,15 @@ class AuthStore:
                     'WHERE id_hash = ?',
                     (_iso(now + SESSION_TTL), _iso(now), key),
                 )
-        return public_user(row)
+                expires = now + SESSION_TTL
+        user = public_user(row)
+        self._signed_in.put(
+            's:' + key,
+            user,
+            generation=generation,
+            max_age=(expires - now).total_seconds(),
+        )
+        return user
 
     def end_session(self, token: str) -> None:
         with self._connect() as conn:
@@ -542,20 +617,25 @@ class AuthStore:
                 'DELETE FROM auth_sessions WHERE id_hash = ?',
                 (_sha256(token or ''),),
             )
+        self._signed_in.clear()
 
     def end_all_sessions(self) -> int:
         with self._connect() as conn:
-            return conn.execute('DELETE FROM auth_sessions').rowcount
+            count = conn.execute('DELETE FROM auth_sessions').rowcount
+        self._signed_in.clear()
+        return count
 
     def end_user_sessions(self, user_id: int, keep: str = '') -> int:
         """Sign *user_id* out of every browser but the one with the
         session *keep* (e.g. the one that just changed the password)."""
 
         with self._connect() as conn:
-            return conn.execute(
+            count = conn.execute(
                 'DELETE FROM auth_sessions WHERE user_id = ? AND id_hash != ?',
                 (user_id, _sha256(keep) if keep else ''),
             ).rowcount
+        self._signed_in.clear()
+        return count
 
     # Devices
 
@@ -646,6 +726,11 @@ class AuthStore:
         if not match:
             return None
         device_id, secret = match.groups()
+        cache_key = 'd:' + _sha256(token)
+        cached = self._signed_in.get(cache_key)
+        if cached is not None:
+            return cached
+        generation = self._signed_in.generation()
         with self._connect() as conn:
             row = conn.execute(
                 'SELECT d.id, d.name, d.token_hash, d.last_seen_at, '
@@ -670,13 +755,15 @@ class AuthStore:
                     'WHERE id = ?',
                     (_iso(now), ip[:64], device_id),
                 )
-        return {
+        device = {
             'id': row['id'],
             'name': row['name'],
             'user_id': int(row['user_id']),
             'username': row['username'],
             'role': row['role'],
         }
+        self._signed_in.put(cache_key, device, generation=generation)
+        return device
 
     def rename_device(self, device_id: str, name: str) -> bool:
         with self._connect() as conn:
@@ -694,7 +781,9 @@ class AuthStore:
                 'AND revoked_at IS NULL',
                 (_iso(_now()), device_id),
             )
-            return cur.rowcount > 0
+            revoked = cur.rowcount > 0
+        self._signed_in.clear()
+        return revoked
 
     def revoke_user(self, user_id: int, keep_session: str = '') -> list[str]:
         """Sign *user_id* out everywhere - every paired device and every
@@ -730,6 +819,7 @@ class AuthStore:
                 )
                 conn.execute('DELETE FROM auth_sessions')
             self.signer.rotate()
+        self._signed_in.clear()
 
     def reset(self) -> dict[str, Any]:
         """Recovery (``python main.py auth-reset``): the admin ``admin``
@@ -863,6 +953,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('POST'), r'^/api/auth/login$', PUBLIC),
         (_m('POST'), r'^/api/auth/logout$', PUBLIC),
         (_m('POST'), r'^/api/auth/pair$', PUBLIC),
+        (_m('POST'), r'^/api/auth/token$', PUBLIC),
         # Any signed-in user: their own account, devices and pairing
         # (the routes check whose), and a WebSocket ticket.
         (_m('POST'), r'^/api/auth/ws-ticket$', CLIENT),
@@ -888,20 +979,29 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('PATCH', 'DELETE'), r'^/api/podcasts/shows/\d+$', USER),
         (_m('DELETE'), r'^/api/podcasts/episodes/\d+$', USER),
         (_m('POST', 'PATCH', 'DELETE'), r'^/api/monitor/playlists', USER),
+        # Where a song came from and what each watch added (own
+        # watches; every one for an admin).
+        (_READ, r'^/api/monitor/(stats|provenance)$', USER),
+        (_READ, r'^/api/monitor/playlists/\d+/tracks$', USER),
+        # Artists to suggest following, from one's own listens.
+        (_READ, r'^/api/monitor/artist-suggestions(/resolve)?$', USER),
         # Admin: signing everyone out, settings and credentials.
         (_ALL, r'^/api/auth/', ADMIN),
         (_ALL, r'^/api/server(/port)?$', ADMIN),
         (_ALL, r'^/api/settings', ADMIN),
         (_READ, r'^/api/fs/dirs$', ADMIN),
         (_ALL, r'^/api/cookies$', ADMIN),
-        (_ALL, r'^/api/(slskd|navidrome)/test$', ADMIN),
+        (_ALL, r'^/api/(slskd|navidrome|deemix)/test$', ADMIN),
         (_ALL, r'^/api/similar/test$', ADMIN),
         (_READ, r'^/api/library/summary$', CLIENT),
+        (_READ, r'^/api/library/loudness$', CLIENT),
+        (_ALL, r'^/api/library/loudness/', ADMIN),
         (_READ, r'^/api/library/(albums|artists)$', CLIENT),
         (_m('POST'), r'^/api/library/lookup$', CLIENT),
         (
             _ALL,
-            r'^/api/library/(upgrade|reconcile|archive|replace|external)',
+            r'^/api/library/'
+            r'(upgrade|reconcile|archive|replace|external|visibility|usage)',
             ADMIN,
         ),
         (_ALL, r'^/api/library/playlist', ADMIN),
@@ -922,11 +1022,15 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_READ, r'^/api/similar/', CLIENT),
         (_READ, r'^/api/artists/', CLIENT),
         (_m('POST'), r'^/api/artists/(art/bulk|profile/ensure)$', CLIENT),
-        (_READ, r'^/api/(song/url|url|url/resolve|preview|stream)$', CLIENT),
+        (
+            _READ,
+            r'^/api/(song/url|url|url/resolve|preview|stream|buy)$',
+            CLIENT,
+        ),
         (_READ, r'^/api/stream/file$', CLIENT),
         (_m('POST'), r'^/api/stream/prefetch$', CLIENT),
         (_m('POST'), r'^/api/download/(url|batch|album)$', CLIENT),
-        (_READ, r'^/api/queue$', CLIENT),
+        (_READ, r'^/api/queue(/state)?$', CLIENT),
         (_READ, r'^/api/playlists/(batches|incomplete)', CLIENT),
         (_READ, r'^/api/likes$', CLIENT),
         (_m('PUT'), r'^/api/likes$', CLIENT),
@@ -953,6 +1057,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('POST'), r'^/api/playlist/m3u$', ADMIN),
         (_m('POST', 'DELETE'), r'^/api/playlists/', ADMIN),
         (_m('DELETE'), r'^/api/queue', ADMIN),
+        (_m('POST'), r'^/api/queue/(pause|resume)$', ADMIN),
         (_m('POST'), r'^/api/likes/clear$', ADMIN),
         (_m('DELETE'), r'^/api/discover/listens$', ADMIN),
         (_m('POST', 'PATCH', 'DELETE'), r'^/api/podcasts/', ADMIN),
@@ -1144,10 +1249,18 @@ class AuthMiddleware:
         send: Callable[..., Awaitable[None]],
     ) -> None:
         kind = scope.get('type')
-        store = self._get_store()
-        if kind not in {'http', 'websocket'} or store is None:
+        if kind not in {'http', 'websocket'}:
             await self.app(scope, receive, send)
             return
+
+        store = self._get_store()
+
+        if store is None:
+            await self._deny(
+                scope, send, 503, 'Authentication service unavailable'
+            )
+            return
+
         method = 'WS' if kind == 'websocket' else scope.get('method', 'GET')
         path = scope.get('path', '')
         needed = (

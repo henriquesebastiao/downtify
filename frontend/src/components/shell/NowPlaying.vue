@@ -112,9 +112,14 @@
                 class="flex w-full min-w-0 shrink-0 items-end justify-between gap-4"
               >
                 <div class="min-w-0 flex-1">
-                  <h2 class="now-playing-title text-display truncate font-bold">
-                    {{ track.title }}
-                  </h2>
+                  <div class="flex min-w-0 items-center gap-2.5">
+                    <h2
+                      class="now-playing-title text-display truncate font-bold"
+                    >
+                      {{ track.title }}
+                    </h2>
+                    <ExplicitBadge v-if="track.explicit" tone="onDark" />
+                  </div>
                   <RouterLink
                     v-if="track.albumArtist && !track.isPodcast"
                     :to="{ name: 'Artist', query: { name: track.albumArtist } }"
@@ -455,6 +460,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useMediaQuery, useNow } from '@vueuse/core'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
+import ExplicitBadge from '../ui/ExplicitBadge.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import WaveSeekBar from '../player/WaveSeekBar.vue'
 import VolumeControl from '../player/VolumeControl.vue'
@@ -473,6 +479,8 @@ import { formatBytes, formatDuration, hueFor } from '/src/lib/format'
 import { availablePanels, defaultPanel, requestedPanel } from '/src/lib/panels'
 import { useCoverPalette } from '/src/model/coverPalette'
 import { saveName } from '/src/lib/paths'
+import { useBuyLinks } from '/src/model/buyLinks'
+import { buyTargetForTrack } from '/src/lib/buyLinks'
 import { useI18n } from '/src/i18n'
 
 const player = usePlayer()
@@ -482,6 +490,7 @@ const tracker = useProgressTracker()
 const ui = useUi()
 const { showLyrics } = usePlayerPrefs()
 const nowPlaying = useNowPlaying()
+const buyLinks = useBuyLinks()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
@@ -645,6 +654,12 @@ const trackMenu = computed(() => {
       hidden: !tr.albumArtist || tr.isPodcast,
       action: () =>
         navigate({ name: 'Artist', query: { name: tr.albumArtist } }),
+    },
+    {
+      label: t('buy.menu'),
+      icon: 'tag',
+      hidden: !tr.artist || tr.isPodcast,
+      action: () => buyLinks.open(buyTargetForTrack(tr)),
     },
     {
       label: t('library.saveToDevice'),

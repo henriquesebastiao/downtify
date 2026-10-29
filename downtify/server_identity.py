@@ -141,7 +141,9 @@ def server_info(
 
     *transcoding* is :meth:`downtify.transcode.Transcoder.capability`, or
     ``None`` when ffmpeg isn't available - the app then only offers
-    original quality.
+    original quality. ``password_sign_in`` says an app may sign in with a
+    username and password (``POST /api/auth/token``): not while sign-in
+    is turned off, when it pairs with a code instead.
     """
 
     return {
@@ -156,6 +158,7 @@ def server_info(
             or {'available': False, 'formats': [], 'bitrates': []},
             'signed_urls': True,
             'pairing': True,
+            'password_sign_in': require_sign_in,
             'podcasts': True,
             'discover': True,
             'lyrics': True,

@@ -47,6 +47,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { localCatalogRoute } from '/src/lib/library'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 // Display only (a Deezer cover at its medium size); the download below
@@ -66,10 +67,11 @@ const props = defineProps({
 const { t } = useI18n()
 const dm = useDownloadManager()
 const ui = useUi()
-const queued = ref(false)
+const queued = ref(props.release.source === 'library')
 
 const linkTo = computed(
   () =>
+    localCatalogRoute(props.release, props.round ? 'artist' : 'album') ||
     props.to || {
       name: 'Link',
       query: { url: props.release.url },

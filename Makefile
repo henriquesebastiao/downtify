@@ -1,6 +1,6 @@
 #!make
 
-DOWNTIFY_VERSION := 3.4.0
+DOWNTIFY_VERSION := 3.7.0
 TARGET := henriquesebastiao/downtify
 
 all: build up
@@ -57,9 +57,15 @@ doc-build:
 	npm ci --prefix docs
 	npm run build --prefix docs
 
+# Translation coverage of the docs; `make doc-i18n LOCALE=pt-BR` for one language.
+doc-i18n:
+	npm run i18n --prefix docs -- status $(LOCALE)
+
 rm:
 	sudo rm -rf docker/downloads/*
+	sudo rm -rf docker/downloads/.*
 	sudo rm -rf docker/data/*
+	sudo rm -rf docker/data/.*
 
 update:
 	uvx uv-bump
@@ -69,4 +75,4 @@ update:
 %:
 	@:
 
-.PHONY: all build clean up down run format lint export changelog version doc doc-build rm
+.PHONY: all build clean up down run format lint export changelog version doc doc-build doc-i18n rm
