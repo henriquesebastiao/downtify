@@ -66,6 +66,22 @@ Les morceaux d’une playlist ont le même menu **Trier par**, avec **Ordre de l
 
 Ouvrir un album, un artiste ou une playlist affiche ses morceaux avec **Lire**, **Aléatoire**, **Ajouter à la file** et **Télécharger en ZIP**. Une playlist que vous avez créée a aussi **Ajouter des titres**, **Renommer** et **Partager…** (voir [partager des playlists](users.md#sharing-playlists)) ; une importée a **Partager…** et **Détacher de la source** (ci-dessous) ; la page d’une playlist téléchargée indique combien de ses morceaux sont téléchargés, liste les manquants avec **Télécharger les manquants**, et propose **Surveiller les nouveaux titres**. **Supprimer la playlist** est dans le menu **⋯** : les playlists importées suppriment l’audio ; une playlist que vous avez créée ne supprime que la playlist.
 
+### Rechercher dans une playlist
+
+Une longue playlist n’affiche que les titres visibles à l’écran, si bien que la recherche du navigateur (`Ctrl` + `F`) ne voit pas le reste. Le champ **Rechercher dans cette playlist**, au-dessus des titres, les parcourt tous : titre, artiste, album et nom de fichier, sans tenir compte de la casse ni des accents. Sur la page d’une playlist, `Ctrl` / `⌘` + `F` y place le curseur (appuyez de nouveau dans le champ pour la recherche du navigateur), et `Esc` le vide.
+
+Juste à côté, des filtres restreignent la liste. Chacun indique combien de titres il contient et n’apparaît que s’il en a :
+
+| Filtre | Affiche |
+|--------|---------|
+| **Tous** | Tous les titres téléchargés de la playlist |
+| **Manquants** | Les titres de la playlist d’origine qui ne sont pas encore dans la bibliothèque (téléchargements de playlists Spotify), avec l’état de leur téléchargement — recherchés sur Spotify quand vous choisissez le filtre |
+| **Échoués** | Les titres manquants dont le téléchargement a échoué, chacun avec un bouton pour réessayer — une fois **Manquants** consulté |
+| **YouTube Music**, **Soulseek (slskd)**, **Deemix**… | Les titres récupérés par cette source. Downtify s’en souvient pour les titres téléchargés à partir de maintenant ; les plus anciens comptent comme **Source inconnue**, sauf les fichiers slskd laissés en place et les titres de vos propres dossiers |
+| **Absents de Navidrome** | Avec la [synchronisation Navidrome](slskd-navidrome.md) activée, les titres que Downtify n’a pas encore associés à un titre de Navidrome |
+
+La recherche et un filtre se combinent, et le nombre de titres affichés apparaît en dessous. Chaque titre garde son numéro dans la playlist, et le tri, la lecture et le menu de chaque titre portent sur ce qui est affiché.
+
 ### Détacher une playlist importée
 
 Une playlist importée depuis un lien Spotify ou YouTube Music ne peut pas être modifiée, car Downtify la tient synchronisée avec sa source. Pour en mettre une en ordre — retirer un morceau qui n’y a pas sa place, en ajouter un qui l’a — ouvrez-la et choisissez **Détacher de la source**. Elle devient une playlist comme celles que vous créez : ses morceaux et son propriétaire restent tels quels, et vous obtenez **Ajouter des titres**, **Renommer** et la suppression de morceaux. En échange, le lien avec sa source est coupé : elle n’est plus mise à jour depuis Spotify ou YouTube Music, sa surveillance du [Suivi de playlists](playlist-monitor.md) (si elle en avait une) est retirée, et son suivi des « morceaux manquants » disparaît. Les morceaux déjà téléchargés ne sont jamais touchés, et son image reste jusqu’à votre première modification, où une mosaïque de ses morceaux la remplace. Détacher ne peut pas être annulé depuis l’application ; télécharger de nouveau le lien crée une nouvelle playlist importée.

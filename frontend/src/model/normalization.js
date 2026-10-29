@@ -1,3 +1,6 @@
+// Playback volume normalization: the server's loudness measurement of a
+// library track (downtify/loudness.py) becomes one constant gain, applied
+// by the equalizer's output node. Audio files are never changed.
 import { ref } from 'vue'
 import API from '/src/model/api'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
@@ -5,6 +8,22 @@ import { usePlayerPrefs } from '/src/model/playerPrefs'
 export const normalizationEnabled = usePlayerPrefs().normalizeVolume
 export const normalizationGain = ref(0)
 export const normalizationState = ref('unanalysed')
+
+// Profiles already fetched, by library path, so resuming, repeating or
+// reaching a prefetched track applies its gain without waiting. Kept a
+// while only: an analysis run or a replaced file changes them.
+const PROFILE_TTL_MS = 10 * 60 * 1000
+const MAX_PROFILES = 200
+const profiles = new Map()
+const pending = new Map()
+
+function remember(file, profile) {
+  profiles.delete(file)
+  profiles.set(file, { profile, at: Date.now() })
+  if (profiles.size > MAX_PROFILES) {
+    profiles.delete(profiles.keys().next().value)
+  }
+}
 
 export function safeNormalizationGain(profile) {
   if (profile?.state !== 'ready' || profile.algorithm_version !== 1) return 0
@@ -23,12 +42,42 @@ export function safeNormalizationGain(profile) {
   return Math.min(12, -18 - integrated, -1 - peak, gain)
 }
 
-export async function getTrackNormalization(track) {
+/**
+ * The profile to apply to `track` right away: null when there is nothing
+ * to look up (normalization off, a streamed track), undefined while it
+ * still has to be fetched.
+ */
+export function knownTrackNormalization(track) {
   if (!normalizationEnabled.value || !track?.file) return null
-  try {
-    return (await API.getTrackLoudness(track.file)).data
-  } catch {
-    return { state: 'unavailable', gain_db: 0 }
+  const hit = profiles.get(track.file)
+  if (hit && Date.now() - hit.at < PROFILE_TTL_MS) return hit.profile
+  return undefined
+}
+
+export function getTrackNormalization(track) {
+  const known = knownTrackNormalization(track)
+  if (known !== undefined) return Promise.resolve(known)
+  const file = track.file
+  if (!pending.has(file)) {
+    pending.set(
+      file,
+      API.getTrackLoudness(file)
+        .then(({ data }) => {
+          remember(file, data)
+          return data
+        })
+        // Not remembered: the next play asks again.
+        .catch(() => ({ state: 'unavailable', gain_db: 0 }))
+        .finally(() => pending.delete(file))
+    )
+  }
+  return pending.get(file)
+}
+
+/** Look up the next track's profile while this one plays. */
+export function prefetchTrackNormalization(track) {
+  if (knownTrackNormalization(track) === undefined) {
+    void getTrackNormalization(track)
   }
 }
 

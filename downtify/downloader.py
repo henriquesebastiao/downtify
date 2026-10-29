@@ -43,6 +43,12 @@ from .content_advisory import (
 )
 from .cookies import CookiesStore
 from .deemix_provider import download_from_deemix, normalize_settings
+from .download_log import (
+    OUTCOME_COMPLETED,
+    OUTCOME_FAILED,
+    OUTCOME_SKIPPED,
+)
+from .download_policy import DownloadPolicyBlocked
 from .file_naming import sanitize_file_name
 from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
@@ -53,6 +59,7 @@ from .providers import (
     find_match_for_video,
     find_match_youtube_only,
 )
+from .release_files import matches_release
 from .slskd_provider import download_from_slskd
 
 # Extensions that count as "this song is already downloaded". Deliberately
@@ -350,11 +357,21 @@ class Downloader:
 
     #: Called as ``on_downloaded(song, filename)`` once a *new* file has been
     #: downloaded and tagged - not for a song that was already in the library.
+    #: ``song['download_provider']`` says which audio provider fetched it
+    #: (``youtube-music``, ``youtube``, ``slskd``, ``deemix``).
     #: Set by the app (``main.py``) to hook work on to a finished download
     #: (see ``api.enrich_artist_after_download``); it runs on the download's
     #: own thread, so it must only hand the work off and return. Whatever it
     #: raises is logged and never fails the download.
+    #: ``song['download_source']`` is the absolute path of the transfer a
+    #: file was copied from (slskd, not left in place), else absent.
     on_downloaded: Optional[Callable[[dict[str, Any], str], None]] = None
+    #: Called as ``on_outcome(song, outcome, filename)`` whenever a
+    #: download ends - ``completed``, ``skipped`` (the song was already in
+    #: the library) or ``failed`` (*filename* empty), see
+    #: :mod:`downtify.download_log` - on the download's own thread, like
+    #: :attr:`on_downloaded`, and just as unable to fail the download.
+    on_outcome: Optional[Callable[[dict[str, Any], str, str], None]] = None
 
     def __init__(
         self,
@@ -477,6 +494,7 @@ class Downloader:
         self,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback],
+        cancel_check=None,
     ) -> tuple[
         Optional[str], Optional[dict[str, Any]], Optional[str], Optional[Path]
     ]:
@@ -488,13 +506,22 @@ class Downloader:
         provider came up empty.
         """
 
+        known_video_id = song.get('youtube_id')
+        if not known_video_id and song.get('source') == 'youtube':
+            known_video_id = song.get('song_id')
+
         youtube_searched = False
         for provider in self.audio_providers:
+            if cancel_check:
+                cancel_check()
             if provider == 'deemix':
                 if not self.deemix_settings.get('enabled'):
                     continue
                 local = download_from_deemix(
-                    song, self.deemix_settings, progress_cb=progress_cb
+                    song,
+                    self.deemix_settings,
+                    progress_cb=progress_cb,
+                    **({'cancel_check': cancel_check} if cancel_check else {}),
                 )
                 if local is not None:
                     return None, None, 'deemix', local
@@ -503,7 +530,10 @@ class Downloader:
                 if not self.slskd_settings.get('enabled'):
                     continue
                 local = download_from_slskd(
-                    song, self.slskd_settings, progress_cb=progress_cb
+                    song,
+                    self.slskd_settings,
+                    progress_cb=progress_cb,
+                    **({'cancel_check': cancel_check} if cancel_check else {}),
                 )
                 if local is not None:
                     return None, None, 'slskd', local
@@ -512,6 +542,8 @@ class Downloader:
                 )
                 _report(progress_cb, 0.0, 'Trying next source', 'slskd')
             elif provider == 'youtube-music':
+                if known_video_id:
+                    return known_video_id, None, provider, None
                 # find_match falls back to standard YouTube on its own when
                 # YouTube Music has nothing (or only a far-off length).
                 video_id, match = find_match(song)
@@ -524,6 +556,8 @@ class Downloader:
                         None,
                     )
             elif provider == 'youtube' and not youtube_searched:
+                if known_video_id:
+                    return known_video_id, None, provider, None
                 video_id = find_match_youtube_only(song)
                 youtube_searched = True
                 if video_id:
@@ -735,11 +769,23 @@ class Downloader:
 
         exact = self.existing_filename_for(song, subdir)
         if exact is not None:
+            if song.get('_monitor_release'):
+                if not matches_release(self.download_dir / exact, song):
+                    raise FileExistsError(
+                        'A different recording occupies the requested release path'
+                    )
             return exact
         wanted = [p.casefold() for p in self._format_output_parts(song)]
+        if song.get('_monitor_release'):
+            return self._scan_library(wanted[-1], wanted[:-1], song)
         return self._scan_library(wanted[-1], wanted[:-1])
 
-    def _scan_library(self, stem: str, parents: list[str]) -> Optional[str]:
+    def _scan_library(
+        self,
+        stem: str,
+        parents: list[str],
+        release: Optional[dict[str, Any]] = None,
+    ) -> Optional[str]:
         root_dir = self.download_dir
         for root, dirs, files in os.walk(root_dir):
             dirs[:] = sorted(d for d in dirs if not d.startswith('.'))
@@ -755,6 +801,9 @@ class Downloader:
                 if parents:
                     folders = [p.casefold() for p in rel.parts[:-1]]
                     if folders[-len(parents) :] != parents:
+                        continue
+                if release:
+                    if not matches_release(root_dir / rel, release):
                         continue
                 return rel.as_posix()
         return None
@@ -787,12 +836,15 @@ class Downloader:
         with self._target_locks_guard:
             return self._target_locks.setdefault(key, threading.Lock())
 
-    @staticmethod
     def _skip_existing(
-        existing: str, progress_cb: Optional[ProgressCallback]
+        self,
+        song: dict[str, Any],
+        existing: str,
+        progress_cb: Optional[ProgressCallback],
     ) -> str:
         logger.info('Skipping download, file already exists: {}', existing)
         _report(progress_cb, 100.0, 'Already downloaded')
+        self._report_outcome(song, OUTCOME_SKIPPED, existing)
         return existing
 
     def _resolve_target_dir(self, subdir: Optional[str]) -> tuple[Path, str]:
@@ -822,6 +874,39 @@ class Downloader:
         progress_cb: Optional[ProgressCallback] = None,
         subdir: Optional[str] = None,
     ) -> str:
+        policy = getattr(self, 'download_policy', None)
+        if policy is None:
+            return self._download_inner(song, progress_cb, subdir)
+        limit_getter = getattr(self, 'download_policy_limit', lambda: 0)
+        try:
+            limit_minutes = max(0, min(1440, int(limit_getter())))
+        except (TypeError, ValueError, OverflowError):
+            limit_minutes = 0
+        try:
+            attempt = policy.begin(song, limit_minutes * 60)
+        except ValueError as exc:
+            if str(exc) != 'identity_uncertain':
+                raise
+            return self._download_inner(song, progress_cb, subdir)
+        successful = False
+        try:
+            attempt.check(force=True)
+            result = self._download_inner(
+                song, progress_cb, subdir, attempt.check
+            )
+            attempt.check(force=True)
+            successful = bool(result) and not song.get('_monitor_release')
+            return result
+        finally:
+            attempt.finish(successful=successful)
+
+    def _download_inner(
+        self,
+        song: dict[str, Any],
+        progress_cb: Optional[ProgressCallback] = None,
+        subdir: Optional[str] = None,
+        cancel_check=None,
+    ) -> str:
         """Download ``song`` and return the resulting file name.
 
         When ``subdir`` is provided the file is written under
@@ -832,32 +917,71 @@ class Downloader:
         With ``overwrite_existing_files`` off, a song already anywhere in
         the library is not downloaded again; the existing file's name is
         returned instead (see :meth:`find_existing_download`).
+
+        However it ends, :attr:`on_outcome` hears of it.
         """
 
+        def progress(*args):
+            if cancel_check:
+                cancel_check()
+            if progress_cb:
+                progress_cb(*args)
+
+        try:
+            if cancel_check:
+                return self._download(song, progress, subdir, cancel_check)
+            return self._download(song, progress_cb, subdir)
+        except DownloadPolicyBlocked:
+            raise
+        except Exception:
+            self._report_outcome(song, OUTCOME_FAILED)
+            raise
+
+    def _download(
+        self,
+        song: dict[str, Any],
+        progress_cb: Optional[ProgressCallback],
+        subdir: Optional[str],
+        cancel_check=None,
+    ) -> str:
+        """:meth:`download` itself."""
+
+        # A song sent to the music trash stays out until an admin restores
+        # it or allows it again; like an exclusion, not a failed attempt.
+        trash = getattr(self, 'trash_store', None)
+        if trash is not None and trash.blocked(song):
+            raise DownloadPolicyBlocked('library_trash_excluded')
         skip_existing = not self.overwrite_existing_files
         if skip_existing and self._can_resolve_path_early(song):
             existing = self.find_existing_download(song, subdir)
             if existing is not None:
-                return self._skip_existing(existing, progress_cb)
+                return self._skip_existing(song, existing, progress_cb)
 
         # Known-long tracks are refused before any search or fetch.
         reject_overlong_song(song, self.max_track_duration_seconds)
 
-        video_id = song.get('youtube_id')
-        if not video_id and (song.get('source') == 'youtube'):
-            video_id = song.get('song_id')
+        known_video_id = song.get('youtube_id')
+        if not known_video_id and song.get('source') == 'youtube':
+            known_video_id = song.get('song_id')
 
-        match: Optional[dict[str, Any]] = None
-        provider: Optional[str] = 'youtube-music' if video_id else None
-        local_source: Optional[Path] = None
-        if not video_id:
+        if not known_video_id:
             # Playlist rows lack year/track number; the per-track embed has
             # them, and they can feed the output path and the slskd match.
             song = spotify_mod.enrich_track_from_spotify_if_sparse(song)
-            video_id, match, provider, local_source = self._resolve_source(
-                song, progress_cb
-            )
-        elif not song.get('album_name') or not song.get('cover_url'):
+        # A known video is a candidate for an enabled YouTube provider,
+        # not permission to bypass earlier sources or disabled providers.
+        video_id, match, provider, local_source = self._resolve_source(
+            song,
+            progress_cb,
+            **({'cancel_check': cancel_check} if cancel_check else {}),
+        )
+        if cancel_check:
+            cancel_check()
+        if (
+            video_id
+            and video_id == known_video_id
+            and (not song.get('album_name') or not song.get('cover_url'))
+        ):
             # We already have a target video, but the metadata is incomplete.
             # Look up the YT Music entry for THIS specific videoId so we
             # don't risk switching to a karaoke / cover that happens to
@@ -870,10 +994,12 @@ class Downloader:
 
         if not video_id and local_source is None:
             source = (
-                'an audio match'
-                if 'slskd' in self.audio_providers
-                and self.slskd_settings.get('enabled')
-                else 'a YouTube match'
+                'a YouTube match'
+                if all(
+                    source in {'youtube-music', 'youtube'}
+                    for source in self.audio_providers
+                )
+                else 'an audio match'
             )
             raise NoAudioMatchError(
                 f'Could not find {source} for {song.get("name")!r}'
@@ -886,12 +1012,10 @@ class Downloader:
         reject_overlong_song(song, self.max_track_duration_seconds)
 
         if local_source is not None:
-            return self._downloaded(
-                song,
-                self._finalize_local_source(
-                    song, local_source, provider, progress_cb, subdir
-                ),
+            stored, copied_from = self._finalize_local_source(
+                song, local_source, provider, progress_cb, subdir
             )
+            return self._downloaded(song, stored, provider, copied_from)
 
         if not skip_existing:
             return self._downloaded(
@@ -899,6 +1023,7 @@ class Downloader:
                 self._fetch_and_tag(
                     song, video_id, progress_cb, subdir, provider
                 ),
+                provider,
             )
 
         # Re-checked after enrichment (which can fill in the album/track
@@ -909,18 +1034,30 @@ class Downloader:
         with self._target_lock(song):
             existing = self.find_existing_download(song, subdir)
             if existing is not None:
-                return self._skip_existing(existing, progress_cb)
+                return self._skip_existing(song, existing, progress_cb)
             return self._downloaded(
                 song,
                 self._fetch_and_tag(
                     song, video_id, progress_cb, subdir, provider
                 ),
+                provider,
             )
 
-    def _downloaded(self, song: dict[str, Any], filename: str) -> str:
-        """Tell :attr:`on_downloaded` that *filename* is new; returns it.
-        A hook that fails is logged and ignored: the file is already there."""
+    def _downloaded(
+        self,
+        song: dict[str, Any],
+        filename: str,
+        provider: Optional[str] = None,
+        source: Optional[Path] = None,
+    ) -> str:
+        """Tell :attr:`on_downloaded` that *filename* is new (which
+        *provider* fetched it, and the *source* file it was copied from,
+        if any); returns it. A hook that fails is logged and ignored: the
+        file is already there."""
 
+        song = {**song, 'download_provider': provider or ''}
+        if source is not None:
+            song['download_source'] = str(source)
         hook = self.on_downloaded
         if hook is not None:
             try:
@@ -929,7 +1066,23 @@ class Downloader:
                 logger.opt(exception=True).warning(
                     'The after-download hook failed for {}', filename
                 )
+        self._report_outcome(song, OUTCOME_COMPLETED, filename)
         return filename
+
+    def _report_outcome(
+        self, song: dict[str, Any], outcome: str, filename: str = ''
+    ) -> None:
+        """Tell :attr:`on_outcome` how a download ended (best effort)."""
+
+        hook = self.on_outcome
+        if hook is None:
+            return
+        try:
+            hook(song, outcome, filename)
+        except Exception:
+            logger.opt(exception=True).warning(
+                'The download outcome hook failed for {}', song.get('name')
+            )
 
     def _target_location(
         self, song: dict[str, Any], subdir: Optional[str]
@@ -998,15 +1151,16 @@ class Downloader:
         provider: Optional[str],
         progress_cb: Optional[ProgressCallback],
         subdir: Optional[str],
-    ) -> str:
-        """Tag a file a provider already downloaded (slskd) and return its
-        library path.
+    ) -> tuple[str, Optional[Path]]:
+        """Tag a file a provider already downloaded (slskd) and return
+        ``(its library path, the file it was copied from or None)``.
 
         With slskd's ``leave_in_place`` the file stays under the slskd
         folder and is returned with the virtual ``slskd/`` prefix (served
         via ``/media/slskd/...``); otherwise it's copied into the same
         destination a YouTube download would use, keeping its original
-        format — slskd files are not transcoded.
+        format — slskd files are not transcoded — and the transfer left
+        behind in slskd's folder is returned too.
         """
 
         if provider == 'deemix':
@@ -1017,8 +1171,9 @@ class Downloader:
                 [Path(self.deemix_settings['source_dir'])],
             )
             _report(progress_cb, 100.0, 'Done', provider)
-            return stored
+            return stored, None
 
+        copied_from: Optional[Path] = None
         lookups = _MetadataLookups(self, song)
         try:
             if provider == 'slskd' and self.slskd_settings.get(
@@ -1040,6 +1195,7 @@ class Downloader:
                 final_path = target_dir / f'{basename}{suffix}'
                 if source_path.resolve() != final_path.resolve():
                     shutil.copy2(source_path, final_path)
+                    copied_from = source_path.resolve()
                 stored = f'{rel_prefix}{final_path.name}'
                 in_place = False
             found = lookups.collect()
@@ -1055,7 +1211,7 @@ class Downloader:
             save_album_cover=not in_place,
         )
         _report(progress_cb, 100.0, 'Done', provider)
-        return stored
+        return stored, copied_from
 
     @staticmethod
     def _progress_hook(

@@ -224,7 +224,7 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       name: playlist.name,
       // What to show. The file on disk has a fixed name, so the liked
       // songs playlist is given a translated title by the model.
-      title: playlist.name,
+      title: playlist.display_name || playlist.name,
       // The playlist of hearted songs, not a downloaded one.
       liked: Boolean(playlist.liked),
       manual: Boolean(playlist.manual),
@@ -254,6 +254,8 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       favorite: Boolean(playlist.favorite),
       sharedWithMe: Boolean(playlist.shared_with_me),
       isNew: Boolean(playlist.new),
+      // Songs the owner hid from an imported playlist.
+      hiddenCount: Number(playlist.hidden_count) || 0,
     }
   })
   // A tracked Spotify playlist whose M3U isn't written (M3U export off,
@@ -280,6 +282,7 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       followed: false,
       sharedWithMe: false,
       isNew: false,
+      hiddenCount: 0,
     }))
   return [...fromM3u, ...tracked].sort(
     (a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))
@@ -444,4 +447,21 @@ export function indexTracksBySong(tracks) {
     if (!index.has(key)) index.set(key, track)
   }
   return index
+}
+
+export function localCatalogRoute(item, kind = item?.kind) {
+  if (item?.source !== 'library') return null
+  if (kind === 'playlist')
+    return {
+      name: 'Playlist',
+      query: { name: item.playlist_name || item.name },
+    }
+  if (kind === 'artist') return { name: 'Artist', query: { name: item.name } }
+  return {
+    name: 'Album',
+    query: {
+      artist: item.album_artist || item.artist || item.artists?.[0] || '',
+      title: item.album_name || item.name || '',
+    },
+  }
 }

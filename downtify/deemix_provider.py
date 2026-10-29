@@ -274,13 +274,18 @@ def download_from_deemix(
     song: dict[str, Any],
     cfg: dict[str, Any],
     progress_cb: Optional[Callable[..., None]] = None,
+    cancel_check: Optional[Callable[[], None]] = None,
 ) -> Optional[Path]:
     """Download one matched recording; keep all Deemix files in place."""
     client: Optional[DeemixClient] = None
     try:
+        if cancel_check:
+            cancel_check()
         client = DeemixClient(cfg)
         client.connect()
         row = _catalog_track(client, song)
+        if cancel_check:
+            cancel_check()
         if row is None:
             return None
         ident = str(row['id'])
@@ -300,6 +305,8 @@ def download_from_deemix(
             uuid = str(obj.get('uuid') or uuid)
         deadline = time.monotonic() + cfg['download_timeout_seconds']
         while time.monotonic() < deadline:
+            if cancel_check:
+                cancel_check()
             queue = client.request('GET', 'getQueue')
             job = (queue.get('queue') or {}).get(uuid)
             if job:

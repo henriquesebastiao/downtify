@@ -42,6 +42,15 @@ See [Mobile Apps](../features/mobile-apps.md) and [Users & Sign-in](../features/
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | Largest size, in MB, the cache of streamed audio (`/data/stream_cache`) is kept under; least recently played copies go first. Streaming through the server is what plays undownloaded tracks where the browser itself can't reach YouTube. |
 | `DOWNTIFY_STREAM_CONCURRENCY` | `2` | How many stream downloads may run at once. |
 
+## Music trash
+
+See [Music Trash](../features/music-trash.md). Off unless one of these is set.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DOWNTIFY_TRASH` | `false` | `true` turns the music trash on for the downloads folder: removing songs moves them to a trash kept for 30 days, and Downtify itself moves the files. While it's on, only admins remove songs. |
+| `DOWNTIFY_TRASH_CONFIG` | _(unset)_ | Path, inside the container, of a JSON file listing the folders the trash covers and where its worker runs (`embedded` or `external`). Wins over `DOWNTIFY_TRASH`. A file that can't be read stops the server at start. See [The configuration file](../features/music-trash.md#the-configuration-file). |
+
 ## Health check
 
 The image has a built-in [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) — no custom `--health-cmd` needed. It polls `GET /api/health` on the container's own port every 30 seconds (5 second timeout, 20 second start-up grace period, 3 retries before the container is marked unhealthy). `docker ps` and `docker inspect` show the result, and tools like Compose's `condition: service_healthy` or Watchtower can act on it.

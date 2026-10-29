@@ -1,11 +1,11 @@
 // The signed-in user's own preferences (Settings > General) and the
 // "what am I playing" reports behind the admins' Activity page.
 //
-// Theme, language and "Show lyrics" still apply at once in this browser
-// (and are remembered in it); they are also kept with the account, so
-// signing in somewhere else brings them along. "Albums in search" lives
-// only with the account - and changing any of these changes nothing for
-// anyone else.
+// Theme, language, "Show lyrics" and "Normalize playback volume" still
+// apply at once in this browser (and are remembered in it); they are
+// also kept with the account, so signing in somewhere else brings them
+// along. "Albums in search" lives only with the account - and changing
+// any of these changes nothing for anyone else.
 import { ref, watch } from 'vue'
 
 import API from '/src/model/api'
@@ -41,12 +41,13 @@ function current() {
 function apply(prefs) {
   const theme = useTheme()
   const { showLyrics, normalizeVolume } = usePlayerPrefs()
-  normalizeVolume.value = prefs.normalize_volume === true
   if (prefs.theme) theme.setMode(prefs.theme)
   if (prefs.locale && prefs.locale !== currentLocale.value)
     setLocale(prefs.locale)
   if (typeof prefs.show_lyrics === 'boolean')
     showLyrics.value = prefs.show_lyrics
+  if (typeof prefs.normalize_volume === 'boolean')
+    normalizeVolume.value = prefs.normalize_volume
   if (typeof prefs.search_albums === 'boolean')
     searchAlbums.value = prefs.search_albums
   if (typeof prefs.show_public_playlists === 'boolean')

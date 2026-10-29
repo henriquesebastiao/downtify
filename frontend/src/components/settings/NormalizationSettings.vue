@@ -13,7 +13,7 @@
       />
     </SettingRow>
     <p
-      v-if="normalizeVolume"
+      v-if="normalizeVolume && player.currentTrack.value"
       class="px-5 pb-4 text-sm text-muted"
       role="status"
     >
@@ -39,7 +39,7 @@
       </p>
       <div class="flex flex-wrap gap-2">
         <UiButton
-          :disabled="busy || status?.active || status?.pending > 0"
+          :disabled="busy || status?.active"
           @click="control('start')"
           >{{ t('normalization.analyze') }}</UiButton
         >
@@ -80,17 +80,25 @@ import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { normalizationState } from '/src/model/normalization'
 import { useEqualizer } from '/src/model/equalizer'
 import { useAuth } from '/src/model/auth'
+import { usePlayer } from '/src/model/player'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
 const { normalizeVolume } = usePlayerPrefs()
 const { supported } = useEqualizer()
 const auth = useAuth()
+const player = usePlayer()
 const status = ref(null)
 const error = ref('')
 const busy = ref(false)
 let timer
+let unmounted = false
 
+// Polled only while an analysis runs.
+function schedule() {
+  clearTimeout(timer)
+  if (!unmounted && status.value?.active) timer = setTimeout(refresh, 3000)
+}
 async function refresh() {
   if (!auth.isAdmin.value) return
   try {
@@ -98,6 +106,7 @@ async function refresh() {
   } catch {
     error.value = t('normalization.states.unavailable')
   }
+  schedule()
 }
 async function control(action) {
   busy.value = true
@@ -109,10 +118,11 @@ async function control(action) {
   } finally {
     busy.value = false
   }
+  schedule()
 }
-onMounted(() => {
-  void refresh()
-  timer = setInterval(refresh, 3000)
+onMounted(refresh)
+onUnmounted(() => {
+  unmounted = true
+  clearTimeout(timer)
 })
-onUnmounted(() => clearInterval(timer))
 </script>

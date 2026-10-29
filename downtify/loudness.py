@@ -8,6 +8,7 @@ import math
 import os
 import re
 import shutil
+import sqlite3
 import subprocess
 import threading
 from pathlib import Path
@@ -59,6 +60,18 @@ def file_signature(path: Path) -> str:
         ALGORITHM_VERSION,
     )
     return hashlib.sha256(repr(identity).encode()).hexdigest()
+
+
+def file_etag(stat: os.stat_result) -> str:
+    """The ETag Starlette's ``FileResponse`` sends for a file with ``stat``.
+
+    The apps download the original through ``FileResponse`` and compare
+    this to the header they got, to know the measurement is of their copy.
+    """
+    etag = hashlib.md5(
+        f'{stat.st_mtime}-{stat.st_size}'.encode(), usedforsecurity=False
+    ).hexdigest()
+    return f'"{etag}"'
 
 
 def analysis_workers() -> int:
@@ -342,11 +355,7 @@ class LoudnessAnalyzer:
                     stat = full.stat()
                     profile['fingerprint'] = before
                     profile['source_size'] = stat.st_size
-                    etag = hashlib.md5(
-                        f'{stat.st_mtime}-{stat.st_size}'.encode(),
-                        usedforsecurity=False,
-                    ).hexdigest()
-                    profile['source_etag'] = f'"{etag}"'
+                    profile['source_etag'] = file_etag(stat)
                     with connect_sqlite(self.path) as conn:
                         conn.execute(
                             'INSERT INTO loudness_measurements VALUES (?, ?, ?) '
@@ -358,7 +367,7 @@ class LoudnessAnalyzer:
                             ),
                         )
                 result = 'done'
-            except (OSError, ValueError, KeyError, IndexError):
+            except (OSError, ValueError, KeyError, IndexError, sqlite3.Error):
                 # Do not export FFmpeg stderr: tags and filenames can be private.
                 if self._closed.is_set():
                     result = 'pending'

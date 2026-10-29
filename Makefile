@@ -63,7 +63,9 @@ doc-i18n:
 
 rm:
 	sudo rm -rf docker/downloads/*
+	sudo rm -rf docker/downloads/.*
 	sudo rm -rf docker/data/*
+	sudo rm -rf docker/data/.*
 
 update:
 	uvx uv-bump

@@ -43,6 +43,20 @@ const routes = [
     component: () => import('/src/views/UpgradeView.vue'),
   },
   {
+    // Library storage and usage (admins): size, growth, downloads and
+    // what could be cleaned up.
+    path: '/library/storage',
+    name: 'Storage',
+    component: () => import('/src/views/StorageView.vue'),
+  },
+  {
+    // The music trash (admins, when the server has it on): songs kept
+    // for a while after leaving the library, restorable until then.
+    path: '/library/trash',
+    name: 'Trash',
+    component: () => import('/src/views/TrashView.vue'),
+  },
+  {
     path: '/library/album',
     name: 'Album',
     component: () => import('/src/views/AlbumView.vue'),
@@ -56,6 +70,12 @@ const routes = [
     path: '/library/playlist',
     name: 'Playlist',
     component: () => import('/src/views/PlaylistView.vue'),
+  },
+  {
+    // One watch: its activity, storage and the songs it brought in.
+    path: '/monitor/watch/:id(\\d+)',
+    name: 'MonitorWatch',
+    component: () => import('/src/views/WatchView.vue'),
   },
   {
     path: '/monitor/:tab(playlists|artists)?',

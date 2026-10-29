@@ -1,9 +1,10 @@
 // The player's equalizer: a Web Audio filter bank between the shared
 // <audio> element and the speakers, plus its saved settings.
 //
-// The audio graph is only built once the equalizer is on and the user
-// switches it on or presses play (a gesture, so the browser lets the
-// AudioContext run). Until then
+// The audio graph is only built once the equalizer (or volume
+// normalization, which uses its output gain) is on and the user switches
+// it on or presses play (a gesture, so the browser lets the AudioContext
+// run). Until then
 // playback is a plain <audio> element, exactly as before. Once built it
 // stays for the life of the page — an element can only be routed into
 // Web Audio once — and switching off just flattens every filter.
@@ -215,9 +216,18 @@ if (
 }
 
 watch(headroom, () => apply())
-watch(normalizationGain, () => apply(true), { flush: 'sync' })
-watch(normalizationEnabled, () => {
-  if (normalizationEnabled.value) resumeEqualizer()
+// A new song's gain is set before its first sample (the element is
+// paused while it loads); a change during playback ramps like the rest.
+watch(normalizationGain, () => apply(!element || element.paused), {
+  flush: 'sync',
+})
+watch(normalizationEnabled, (on) => {
+  // Switched on here, while a song plays: route it now so it can be
+  // leveled. Switched on from another tab or the account (no gesture, so
+  // the context couldn't start and the song would go silent): on the
+  // next play.
+  const gesture = globalThis.navigator?.userActivation?.isActive === true
+  if (on && gesture && element && !element.paused) resumeEqualizer()
   apply()
 })
 

@@ -267,7 +267,7 @@ class _FakeMonitorDB:
         return {}
 
     @staticmethod
-    def mark_track_downloaded(playlist_id, track_id, filename):
+    def mark_track_downloaded(playlist_id, track_id, filename, **_kwargs):
         pass
 
     @staticmethod
@@ -449,7 +449,7 @@ def test_check_playlist_reuses_files_from_earlier_sweeps_in_the_m3u(
             return {'old': old_filename}
 
         @staticmethod
-        def mark_track_downloaded(playlist_id, track_id, filename):
+        def mark_track_downloaded(playlist_id, track_id, filename, **_kwargs):
             pass
 
         @staticmethod

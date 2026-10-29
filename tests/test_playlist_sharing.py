@@ -129,6 +129,49 @@ def _share(request: Request) -> dict[str, Any]:
     return asyncio.run(api.set_playlist_visibility_endpoint(request))
 
 
+def test_imported_playlist_display_name_preserves_identity_and_sharing(world):
+    world.shares.set_visibility('Road', SHARED, [BO])
+    result = asyncio.run(
+        api.rename_library_playlist_endpoint(
+            _request(ANA, body={'name': 'Road', 'new_name': 'My road trip'})
+        )
+    )
+    assert result['name'] == 'Road'
+    assert result['display_name'] == 'My road trip'
+    assert world.catalog.spotify_id_for_playlist('Road') == 'sp1'
+    assert world.shares.visibility('Road') == SHARED
+    shared = next(
+        row
+        for row in api.playlists_for_request(_request(BO))
+        if row['name'] == 'Road'
+    )
+    assert shared['display_name'] == 'My road trip'
+    assert api.playlist_display_identity({'name': 'Road'}) == 'source:sp1'
+
+
+def test_imported_display_name_reset_and_owner_only(world):
+    world.shares.set_visibility('Road', PUBLIC)
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(
+            api.rename_library_playlist_endpoint(
+                _request(BO, body={'name': 'Road', 'new_name': 'No'})
+            )
+        )
+    assert error.value.status_code == 403
+    asyncio.run(
+        api.rename_library_playlist_endpoint(
+            _request(ANA, body={'name': 'Road', 'new_name': 'Alias'})
+        )
+    )
+    result = asyncio.run(
+        api.rename_library_playlist_endpoint(
+            _request(ANA, body={'name': 'Road', 'reset_display_name': True})
+        )
+    )
+    assert result['display_name'] == 'Road'
+    assert world.shares.display_names() == {}
+
+
 def test_favorites_are_personal_persistent_and_do_not_grant_access(world):
     payload = {'name': 'Mix', 'favorite': True}
     with pytest.raises(HTTPException) as error:

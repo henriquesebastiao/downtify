@@ -1,11 +1,13 @@
 import { ref, computed, watch } from 'vue'
 
 import API from '/src/model/api'
+import { libraryOnly } from '/src/model/musicPolicy'
 import { useAuth } from '/src/model/auth'
 import { currentLocale } from '/src/i18n'
 import { needsLanguageSync, splitUiLanguage } from '/src/lib/uiLanguage'
 
 const settings = ref({
+  library_only: false,
   audio_providers: ['youtube-music'],
   deemix: {
     enabled: false,
@@ -304,6 +306,7 @@ async function saveSettings() {
       },
     }
     saved.value = snapshot()
+    libraryOnly.value = rest.library_only === true
     isSaved.value = true
     return true
   } catch (error) {

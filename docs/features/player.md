@@ -103,6 +103,7 @@ The queue, the current track, its position, shuffle and repeat are remembered, s
 | `Q` | Open up next |
 | `E` | Open the equalizer |
 | `Ctrl` / `⌘` + `K` or `/` | Search |
+| `Ctrl` / `⌘` + `F` | Search the playlist (on a playlist page) |
 | `G` then `L` / `D` | Go to library / queue |
 | `Esc` | Close now playing |
 | `?` | Show all shortcuts |

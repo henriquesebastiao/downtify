@@ -66,6 +66,22 @@ Die Songs einer Playlist haben dasselbe Menü **Sortieren nach**, mit **Reihenfo
 
 Das Öffnen eines Albums, Künstlers oder einer Playlist zeigt die Titel mit **Abspielen**, **Zufallswiedergabe**, **Zur Warteschlange hinzufügen** und **Als ZIP herunterladen**. Eine von dir erstellte Playlist hat zusätzlich **Titel hinzufügen**, **Umbenennen** und **Teilen…** (siehe [Playlists teilen](users.md#sharing-playlists)); eine importierte hat **Teilen…** und **Von der Quelle lösen** (unten); die Seite einer heruntergeladenen Playlist zeigt, wie viele ihrer Titel heruntergeladen sind, listet die fehlenden mit **Fehlende herunterladen** auf und bietet **Auf neue Titel achten**. **Playlist löschen** steht im **⋯**-Menü: importierte Playlists löschen das Audio; eine von dir erstellte Playlist entfernt nur die Playlist.
 
+### Eine Playlist durchsuchen
+
+Eine lange Playlist zeichnet nur die Titel, die gerade auf dem Bildschirm sind, deshalb sieht die Suche des Browsers (`Ctrl` + `F`) den Rest nicht. Das Feld **In dieser Playlist suchen** über den Titeln durchsucht sie alle – Titel, Künstler, Album und Dateiname, ohne Rücksicht auf Groß- und Kleinschreibung oder Akzente. Auf der Seite einer Playlist setzt `Ctrl` / `⌘` + `F` den Cursor hinein (im Feld noch einmal gedrückt öffnet es die Suche des Browsers), und `Esc` leert es.
+
+Daneben grenzen Filter die Liste ein. Jeder zeigt, wie viele Titel er enthält, und erscheint nur, wenn er welche hat:
+
+| Filter | Zeigt |
+|--------|-------|
+| **Alle** | Alle heruntergeladenen Titel der Playlist |
+| **Fehlend** | Titel der Quell-Playlist, die noch nicht in der Bibliothek sind (Downloads von Spotify-Playlists), mit ihrem Download-Status – beim Auswählen bei Spotify nachgeschlagen |
+| **Fehlgeschlagen** | Die fehlenden Titel, deren Download fehlgeschlagen ist, jeweils mit einer Schaltfläche für einen neuen Versuch – sobald **Fehlend** nachgeschlagen wurde |
+| **YouTube Music**, **Soulseek (slskd)**, **Deemix** … | Die Titel, die diese Quelle geholt hat. Downtify merkt sich das für Titel, die ab jetzt heruntergeladen werden; ältere zählen als **Unbekannte Quelle**, außer slskd-Dateien, die an ihrem Ort bleiben, und Titeln aus deinen eigenen Ordnern |
+| **Nicht in Navidrome** | Bei eingeschalteter [Navidrome-Synchronisierung](slskd-navidrome.md) die Titel, die Downtify noch keinem Navidrome-Titel zugeordnet hat |
+
+Suche und Filter wirken zusammen, und darunter steht, wie viele Titel angezeigt werden. Jeder Titel behält seine Nummer in der Playlist, und Sortieren, Abspielen und das Menü jedes Titels beziehen sich auf das Angezeigte.
+
 ### Eine importierte Playlist lösen
 
 Eine aus einem Spotify- oder YouTube-Music-Link importierte Playlist kann nicht bearbeitet werden, weil Downtify sie mit ihrer Quelle synchron hält. Um eine aufzuräumen — einen Song entfernen, der nicht dazugehört, einen hinzufügen, der dazugehört — öffne sie und wähle **Von der Quelle lösen**. Sie wird zu einer Playlist wie die, die du erstellst: Ihre Songs und ihr Besitzer bleiben, wie sie sind, und du erhältst **Titel hinzufügen**, **Umbenennen** und das Entfernen von Songs. Im Gegenzug wird die Verbindung zur Quelle gekappt: Sie wird nicht mehr von Spotify oder YouTube Music aktualisiert, ihre Beobachtung in der [Playlist-Überwachung](playlist-monitor.md) (falls vorhanden) wird entfernt, und ihr „fehlende Songs“-Tracking verschwindet. Bereits heruntergeladene Songs werden nie angefasst, und ihr Artwork bleibt bis zu deiner ersten Bearbeitung, wenn ein Mosaik ihrer Songs es ersetzt. Das Lösen lässt sich in der App nicht rückgängig machen; den Link erneut herunterzuladen erzeugt eine neue importierte Playlist.

@@ -3,6 +3,7 @@
     class="mx-auto flex max-w-[1680px] flex-col gap-6 px-4 pt-6 sm:px-6 md:pt-8 lg:px-10"
   >
     <PageHeader :title="t('library.title')" :subtitle="summary">
+      <ExternalPlaylistImport v-if="tab === 'playlists'" />
       <UiButton
         v-if="library.trackCount.value"
         variant="ghost"
@@ -10,6 +11,22 @@
         :to="{ name: 'Upgrade' }"
       >
         <span class="max-sm:sr-only">{{ t('library.upgrade') }}</span>
+      </UiButton>
+      <UiButton
+        v-if="auth.isAdmin.value"
+        variant="ghost"
+        icon="hard-drive"
+        :to="{ name: 'Storage' }"
+      >
+        <span class="max-sm:sr-only">{{ t('library.storage') }}</span>
+      </UiButton>
+      <UiButton
+        v-if="auth.isAdmin.value && trashCapability.canManage.value"
+        variant="ghost"
+        icon="trash"
+        :to="{ name: 'Trash' }"
+      >
+        <span class="max-sm:sr-only">{{ t('trash.title') }}</span>
       </UiButton>
       <UiButton
         variant="ghost"
@@ -276,6 +293,7 @@ import MediaRow from '/src/components/library/MediaRow.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'
 import VirtualGrid from '/src/components/library/VirtualGrid.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
+import ExternalPlaylistImport from '/src/components/library/ExternalPlaylistImport.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
 import SharedPlaylists from '/src/components/library/SharedPlaylists.vue'
@@ -300,6 +318,7 @@ import {
 import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
 import { selectionChanges } from '/src/lib/visibility'
 import { formatBytes, splitLength } from '/src/lib/format'
+import { useTrashCapability } from '/src/lib/trash'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
@@ -308,6 +327,7 @@ const router = useRouter()
 const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
+const trashCapability = useTrashCapability()
 const playlistActions = usePlaylistActions()
 const ui = useUi()
 const auth = useAuth()

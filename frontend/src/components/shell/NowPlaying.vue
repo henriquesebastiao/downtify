@@ -479,6 +479,8 @@ import { formatBytes, formatDuration, hueFor } from '/src/lib/format'
 import { availablePanels, defaultPanel, requestedPanel } from '/src/lib/panels'
 import { useCoverPalette } from '/src/model/coverPalette'
 import { saveName } from '/src/lib/paths'
+import { useBuyLinks } from '/src/model/buyLinks'
+import { buyTargetForTrack } from '/src/lib/buyLinks'
 import { useI18n } from '/src/i18n'
 
 const player = usePlayer()
@@ -488,6 +490,7 @@ const tracker = useProgressTracker()
 const ui = useUi()
 const { showLyrics } = usePlayerPrefs()
 const nowPlaying = useNowPlaying()
+const buyLinks = useBuyLinks()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
@@ -651,6 +654,12 @@ const trackMenu = computed(() => {
       hidden: !tr.albumArtist || tr.isPodcast,
       action: () =>
         navigate({ name: 'Artist', query: { name: tr.albumArtist } }),
+    },
+    {
+      label: t('buy.menu'),
+      icon: 'tag',
+      hidden: !tr.artist || tr.isPodcast,
+      action: () => buyLinks.open(buyTargetForTrack(tr)),
     },
     {
       label: t('library.saveToDevice'),

@@ -53,6 +53,7 @@
 // immediately-downloadable kind and use TrackDownPlay instead, not this
 // card.
 import { computed, ref } from 'vue'
+import { localCatalogRoute } from '/src/lib/library'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import { useDownloadManager } from '/src/model/download'
@@ -71,7 +72,7 @@ const props = defineProps({
 const { t } = useI18n()
 const dm = useDownloadManager()
 const ui = useUi()
-const queued = ref(false)
+const queued = ref(props.item.source === 'library')
 
 const round = computed(() => props.kind === 'artist')
 // An artist resolves to release summaries, not songs - nothing fromURL
@@ -80,10 +81,13 @@ const round = computed(() => props.kind === 'artist')
 const downloadable = computed(
   () => props.kind === 'album' || props.kind === 'playlist'
 )
-const linkTo = computed(() => ({
-  name: 'Link',
-  query: { url: props.item.url },
-}))
+const linkTo = computed(
+  () =>
+    localCatalogRoute(props.item, props.kind) || {
+      name: 'Link',
+      query: { url: props.item.url },
+    }
+)
 
 const icon = computed(
   () => ({ album: 'disc', artist: 'user', playlist: 'playlist' })[props.kind]
