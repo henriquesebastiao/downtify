@@ -109,6 +109,15 @@ Cross-check both against the code, not against each other — a stale doc citing
 7. Docker: if Python deps changed, run `make export` so `requirements.txt` matches `uv.lock` before merging — the Docker build uses `requirements.txt`, not `uv.lock`.
 8. **Before calling any task finished**, check whether it changed user-facing behavior (new/changed setting, env var, endpoint, UI control, supported input type, language, limit). If it did, update `README.md` (brief overview + link) and the matching `docs/` page(s) in the same change — see [Documentation](#documentation). If nothing user-facing changed (internal refactor, test-only change, CI config), say so explicitly instead of silently skipping this.
 9. Every change is described in `commit-message.md` — this repo's, and `~/git/downtify-android`'s if the task touched the app. See [Server and Android client together](#server-and-android-client-together).
+10. The final reply says how to test the change and where it shows in the interface — see [Final reply](#final-reply).
+
+## Final reply
+
+Every task ends with a reply that lets the maintainer check the change by hand, in this order:
+
+- **How to test it.** Concrete steps, not "run the tests": the commands (`make test`, a single `uv run pytest tests/test_x.py -k name`, `make run`, `make doc`, `npm --prefix frontend run dev`), any setup they need (an env var, a setting to turn on, an admin account, a scratch `DOWNLOAD_DIR`), the input to use (a Spotify track/playlist link, an endpoint with an example `curl`), and what they should see when it works. Say which of these you already ran and which are left to them.
+- **Where it shows in the interface.** When the web SPA changed, name the page and its route, then the section or control: e.g. "Library → Trash (`/library/trash`), the *Restore* button on each row" or "Settings → Tags & lyrics (`/settings/tags`), the *Providers* list under lyrics". Say who sees it (admins only, only with `DOWNTIFY_TRASH=true`, only while a song plays). For the docs site, give the page path (e.g. `/features/music-trash/`). When the Android app changed too, say where in the app (tab or side menu entry, screen, menu or sheet). If nothing visible changed, say so in one line.
+- Then name every repo changed and its `commit-message.md`.
 
 ## Server and Android client together
 
