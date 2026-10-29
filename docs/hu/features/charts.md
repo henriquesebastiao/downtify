@@ -17,6 +17,13 @@ Nyisd meg a **Toplisták** oldalt az oldalsávról (telefonon a **Továbbiak** l
 
 Egy toplistás számnak nincs szüksége feloldási lépésre a letöltéshez: a Deezer már megadja a címét, az előadóját és az album nevét, ami elég a YouTube-on való kereséshez és illesztéshez, akárcsak egy szabad szöveges keresési találatnál. Egy albumnak, előadónak vagy lejátszási listának viszont kell — a hivatkozását számlistává alakítani —, ezért a kártyája ezt a feloldott oldalt nyitja meg ahelyett, hogy közvetlenül a rácsból töltene le. Egy számsor lejátszása teljes hosszban streamel a YouTube-ról (albumoknál, előadóknál és lejátszási listáknál soha) — ugyanaz a streamelés, amelyet minden számsor használ, csak a toplista címével és előadójával táplálva.
 
+## Toplistás lejátszási lista figyelése vagy mentése
+
+Minden lejátszásilista-kártya borítóján van egy **⋯** menü azzal a két dologgal, amit az oldala a letöltésen kívül kínál:
+
+- Az **Új számok figyelése** létrehoz egy figyelést a [Lejátszási lista figyelőben](playlist-monitor.md#deezer-playlists), 6 óránkénti ellenőrzéssel: az első ellenőrzés letölti, ami most a listán van, a későbbiek azt, ami hozzákerül. Az intervallumot a **Figyelő** oldalon módosíthatod, és ott szüneteltetheted vagy állíthatod le a figyelést.
+- A **Hozzáadás a lejátszási listáimhoz** megnyitja a listaválasztót a lista azon számaival, amelyek **már megvannak a könyvtáradban**, hogy hozzáadd őket valamelyik saját listádhoz vagy egy új, róla elnevezett listához. Semmi sem töltődik le, és a listád utána nem követi a toplistás listát — ehhez a letöltés gombot vagy az **Új számok figyelése** pontot használd. Ha egyik száma sincs még meg a könyvtárban, ezt jelzi.
+
 ## API
 
 Lásd a [`GET /api/discover/chart`](../api-reference.md#get-apidiscoverchart) részt az API-referenciában.

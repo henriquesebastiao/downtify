@@ -1149,7 +1149,7 @@ export default {
     urlLabelPlaylist: 'Σύνδεσμος λίστας',
     urlLabelArtist: 'Σύνδεσμος καλλιτέχνη',
     urlPlaceholderPlaylist:
-      'Επικόλλησε σύνδεσμο λίστας Spotify ή YouTube Music',
+      'Επικόλλησε σύνδεσμο λίστας Spotify, Deezer ή YouTube Music',
     urlPlaceholderArtist:
       'Επικόλλησε σύνδεσμο καλλιτέχνη Spotify ή YouTube Music',
     watchPlaylist: 'Παρακολούθηση λίστας',

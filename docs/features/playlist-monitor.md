@@ -4,16 +4,16 @@ icon: lucide/eye
 
 # Playlist Monitor
 
-The Playlist Monitor watches your favourite Spotify and YouTube Music playlists — and the artists you follow — and automatically downloads new tracks and new releases as they appear, hands-free.
+The Playlist Monitor watches your favourite Spotify, public Deezer and YouTube Music playlists — and the artists you follow — and automatically downloads new tracks and new releases as they appear, hands-free.
 
 There are two kinds of watch, each on its own tab of the Monitor page (**Playlists** and **Artists**, at `/monitor/playlists` and `/monitor/artists`):
 
 | Watch | Paste | Downloads |
 |-------|-------|-----------|
-| **Playlist** | A Spotify or YouTube Music playlist URL | Every track in the playlist, then any track added later |
+| **Playlist** | A Spotify, public Deezer or YouTube Music playlist URL | Every track in the playlist, then any track added later |
 | **Artist** | A Spotify **artist** URL, or a YouTube Music artist URL | The artist's whole discography, then every new release |
 
-Every watch shows the link it follows under its name, and a **Spotify** or **YouTube Music** badge naming the service it was added from.
+Every watch shows the link it follows under its name, and a **Spotify**, **Deezer** or **YouTube Music** badge naming the service it was added from.
 
 See [Artist Watch](#artist-watch) for how artist watches work.
 
@@ -23,7 +23,7 @@ Watches belong to whoever created them: each account follows its own playlists a
 
 Downtify keeps a background task running every 60 seconds. On each sweep it checks every enabled watch to see if it is due for inspection (based on its configured interval). When a *playlist* is due, Downtify:
 
-1. Fetches the full track list from Spotify or YouTube Music
+1. Fetches the full track list from Spotify, Deezer or YouTube Music
 2. Compares it against the set of tracks already downloaded
 3. Downloads any new tracks using the same pipeline as a manual download
 4. Updates the M3U file for the playlist (if M3U generation is enabled)
@@ -39,6 +39,7 @@ A watch is never checked twice at the same time. Adding a watch starts its first
 1. Open **Monitor** from the sidebar (on phones: **More → Monitor**) and stay on the **Playlists** tab
 2. Paste a playlist URL:
     - Spotify: `https://open.spotify.com/playlist/…`
+    - Public Deezer playlist: `https://www.deezer.com/playlist/…` (locale-prefixed links also work)
     - YouTube Music: `https://music.youtube.com/playlist?list=…` (a `www.youtube.com/playlist?list=…` link works too)
 3. Choose a check interval (from 15 minutes to once a month)
 4. Click **Watch playlist**
@@ -46,6 +47,10 @@ A watch is never checked twice at the same time. Adding a watch starts its first
 Each tab has its own box. Pasting an artist link into the Playlists tab (or a playlist link into Artists) doesn't add anything: the page says what kind of link it is and offers to move it to the right tab.
 
 You can also start watching from a playlist's page: paste its link in the search bar and use **Watch for new tracks** (or **Watch for new releases** on a YouTube Music artist). Downloaded playlists in the Library offer the same action in their **⋯** menu. Watches added this way use a 6-hour interval — change it on the Monitor page.
+
+## Deezer playlists
+
+Public Deezer playlists are watched like any other: paste the link on the **Playlists** tab, use **Watch for new tracks** on the playlist's page, or pick **Watch for new tracks** in the **⋯** menu of a playlist card in [Charts](charts.md). No Deezer account is needed, and every track is fetched, however long the playlist is. The songs download through your [audio sources](download-settings.md) like any other Deezer link, and the playlist gets its M3U file, cover art and Library entry as a Spotify one does — even with M3U files turned off, the Library keeps track of which songs belong to it. Only public playlists can be watched, and a Deezer **artist** link can be downloaded but not watched.
 
 ## YouTube Music playlists
 
@@ -118,6 +123,15 @@ Loading the lists searches nothing. **Follow** looks the name up on YouTube Musi
 - otherwise (namesakes, or no artist with exactly that name) a dialog shows the YouTube Music artists found, each with its photo and a link to its profile. Pick one with **Follow this artist**, or choose **Paste a link** to paste the artist's link in the box above yourself.
 
 Suggestions only pick which artist to watch: the songs still download from your [audio sources](download-settings.md) as usual.
+
+### From an artist's Library page
+
+An artist's page in the Library (`/library/artist`) has a **Watch artist** button, so you can follow an artist you already have without looking up their link. It looks the name up on YouTube Music the same way **Follow** does above:
+
+- when exactly one artist there has that name, the watch is added right away. It is checked daily and has **New releases only** on, since the library already holds their earlier music;
+- otherwise (namesakes, no artist with exactly that name, or the lookup failed) a dialog shows the YouTube Music artists found, each with its photo and a link to its profile, plus a box for a Spotify or YouTube Music artist link. The **Download** and **New releases only** options at the top apply to whichever you follow.
+
+Once the server has added the watch, the button turns into a **Monitor** link, where you change the interval and options; a refusal (the artist is already watched, say) shows in the dialog instead. It isn't shown in [library-only mode](library-only.md) or on the **Various Artists** page.
 
 ## Check intervals
 

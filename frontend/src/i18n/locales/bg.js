@@ -1123,7 +1123,7 @@ export default {
     urlLabelPlaylist: 'Линк към плейлиста',
     urlLabelArtist: 'Линк към изпълнителя',
     urlPlaceholderPlaylist:
-      'Постави линк към плейлист от Spotify или YouTube Music',
+      'Постави линк към плейлист от Spotify, Deezer или YouTube Music',
     urlPlaceholderArtist:
       'Постави линк към изпълнител от Spotify или YouTube Music',
     watchPlaylist: 'Следи плейлиста',

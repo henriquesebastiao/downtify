@@ -4,16 +4,16 @@ icon: lucide/eye
 
 # Monitor de playlists
 
-O Monitor de playlists acompanha suas playlists favoritas do Spotify e do YouTube Music — e os artistas que você segue — e baixa automaticamente as faixas e os lançamentos novos assim que aparecem, sem você mexer em nada.
+O Monitor de playlists acompanha suas playlists favoritas do Spotify, do Deezer (as públicas) e do YouTube Music — e os artistas que você segue — e baixa automaticamente as faixas e os lançamentos novos assim que aparecem, sem você mexer em nada.
 
 Há dois tipos de monitoramento, cada um na sua aba da página Monitor (**Playlists** e **Artistas**, em `/monitor/playlists` e `/monitor/artists`):
 
 | Monitoramento | Cole | Baixa |
 |-------|-------|-----------|
-| **Playlist** | O URL de uma playlist do Spotify ou do YouTube Music | Todas as faixas da playlist, e depois qualquer faixa acrescentada |
+| **Playlist** | O URL de uma playlist do Spotify, de uma playlist pública do Deezer ou do YouTube Music | Todas as faixas da playlist, e depois qualquer faixa acrescentada |
 | **Artista** | O URL de um **artista** do Spotify, ou de um artista do YouTube Music | A discografia inteira do artista, e depois cada lançamento novo |
 
-Cada monitoramento mostra o link que acompanha sob o nome, e um selo **Spotify** ou **YouTube Music** com o serviço de onde foi adicionado.
+Cada monitoramento mostra o link que acompanha sob o nome, e um selo **Spotify**, **Deezer** ou **YouTube Music** com o serviço de onde foi adicionado.
 
 Veja [Monitoramento de artistas](#artist-watch) para saber como eles funcionam.
 
@@ -23,7 +23,7 @@ Os monitoramentos pertencem a quem os criou: cada conta segue as próprias playl
 
 O Downtify mantém uma tarefa em segundo plano rodando a cada 60 segundos. A cada varredura, ele verifica se cada monitoramento ativo está na hora de ser inspecionado (conforme o intervalo configurado). Quando uma *playlist* está na hora, o Downtify:
 
-1. Busca a lista completa de faixas no Spotify ou no YouTube Music
+1. Busca a lista completa de faixas no Spotify, no Deezer ou no YouTube Music
 2. Compara com o conjunto de faixas já baixadas
 3. Baixa as faixas novas pelo mesmo pipeline de um download manual
 4. Atualiza o arquivo M3U da playlist (se a geração de M3U estiver ativada)
@@ -39,6 +39,7 @@ Um monitoramento nunca é verificado duas vezes ao mesmo tempo. Adicionar um mon
 1. Abra **Monitor** na barra lateral (no celular: **Mais → Monitor**) e fique na aba **Playlists**
 2. Cole o URL de uma playlist:
     - Spotify: `https://open.spotify.com/playlist/…`
+    - Playlist pública do Deezer: `https://www.deezer.com/playlist/…` (links com prefixo de idioma também funcionam)
     - YouTube Music: `https://music.youtube.com/playlist?list=…` (um link `www.youtube.com/playlist?list=…` também funciona)
 3. Escolha um intervalo de verificação (de 15 minutos a uma vez por mês)
 4. Clique em **Monitorar playlist**
@@ -46,6 +47,10 @@ Um monitoramento nunca é verificado duas vezes ao mesmo tempo. Adicionar um mon
 Cada aba tem a sua caixa. Colar um link de artista na aba Playlists (ou de playlist em Artistas) não adiciona nada: a página diz que tipo de link é e se oferece para movê-lo para a aba certa.
 
 Você também pode começar a monitorar pela página de uma playlist: cole o link dela na barra de pesquisa e use **Monitorar novas faixas** (ou **Monitorar novos lançamentos** em um artista do YouTube Music). As playlists baixadas na Biblioteca oferecem a mesma ação no menu **⋯**. Monitoramentos adicionados assim usam um intervalo de 6 horas — mude-o na página Monitor.
+
+## Playlists do Deezer
+
+Playlists públicas do Deezer são monitoradas como qualquer outra: cole o link na aba **Playlists**, use **Monitorar novas faixas** na página da playlist, ou escolha **Monitorar novas faixas** no menu **⋯** do card de uma playlist nas [Paradas de sucesso](charts.md). Não precisa de conta no Deezer, e todas as faixas são buscadas, por maior que seja a playlist. As músicas são baixadas pelas suas [fontes de áudio](download-settings.md) como qualquer outro link do Deezer, e a playlist ganha o arquivo M3U, a capa e a entrada na Biblioteca como uma do Spotify — mesmo com os arquivos M3U desligados, a Biblioteca guarda quais músicas pertencem a ela. Só playlists públicas podem ser monitoradas, e um link de **artista** do Deezer pode ser baixado, mas não monitorado.
 
 ## Playlists do YouTube Music
 
@@ -118,6 +123,15 @@ Carregar as listas não busca nada. **Seguir** procura o nome no YouTube Music, 
 - senão (homônimos, ou nenhum artista com exatamente esse nome), uma janela mostra os artistas do YouTube Music encontrados, cada um com a foto e um link para o perfil. Escolha um com **Seguir este artista**, ou use **Colar um link** para colar você mesmo o link do artista na caixa acima.
 
 As sugestões só escolhem qual artista monitorar: as músicas continuam sendo baixadas das suas [fontes de áudio](download-settings.md) como sempre.
+
+### Pela página de um artista na Biblioteca
+
+A página de um artista na Biblioteca (`/library/artist`) tem um botão **Monitorar artista**, para seguir um artista que você já tem sem procurar o link dele. Ele procura o nome no YouTube Music do mesmo jeito que o **Seguir** acima:
+
+- quando exatamente um artista de lá tem esse nome, o monitoramento é adicionado na hora. Ele é verificado diariamente e vem com **Só lançamentos novos** ligado, já que a biblioteca tem as músicas anteriores do artista;
+- senão (homônimos, nenhum artista com exatamente esse nome, ou a busca falhou), uma janela mostra os artistas do YouTube Music encontrados, cada um com a foto e um link para o perfil, além de uma caixa para o link de um artista do Spotify ou do YouTube Music. As opções **Baixar** e **Só lançamentos novos** no topo valem para quem você seguir.
+
+Depois que o servidor adiciona o monitoramento, o botão vira um link para o **Monitor**, onde você muda o intervalo e as opções; uma recusa (o artista já é monitorado, por exemplo) aparece na janela. Ele não aparece no [modo só biblioteca](library-only.md) nem na página **Various Artists**.
 
 ## Intervalos de verificação
 

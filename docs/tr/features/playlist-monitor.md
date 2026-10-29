@@ -4,16 +4,16 @@ icon: lucide/eye
 
 # Çalma Listesi İzleyici
 
-Çalma Listesi İzleyici, favori Spotify ve YouTube Music çalma listelerinizi — ve takip ettiğiniz sanatçıları — izler ve yeni parçaları ile yeni yayınları ortaya çıktıkça kendiliğinden, elinizi sürmeden indirir.
+Çalma Listesi İzleyici, favori Spotify, herkese açık Deezer ve YouTube Music çalma listelerinizi — ve takip ettiğiniz sanatçıları — izler ve yeni parçaları ile yeni yayınları ortaya çıktıkça kendiliğinden, elinizi sürmeden indirir.
 
 İki tür izleme vardır; her biri İzleyici sayfasının kendi sekmesindedir (**Çalma listeleri** ve **Sanatçılar**, `/monitor/playlists` ve `/monitor/artists` adreslerinde):
 
 | İzleme | Yapıştırın | İndirir |
 |-------|-------|-----------|
-| **Çalma listesi** | Bir Spotify veya YouTube Music çalma listesi URL’si | Çalma listesindeki her parçayı, sonra sonradan eklenen her parçayı |
+| **Çalma listesi** | Bir Spotify, herkese açık Deezer veya YouTube Music çalma listesi URL’si | Çalma listesindeki her parçayı, sonra sonradan eklenen her parçayı |
 | **Sanatçı** | Bir Spotify **sanatçı** URL’si veya bir YouTube Music sanatçı URL’si | Sanatçının tüm diskografisini, sonra her yeni yayını |
 
-Her izleme adının altında izlediği bağlantıyı ve eklendiği hizmeti belirten bir **Spotify** ya da **YouTube Music** rozetini gösterir.
+Her izleme adının altında izlediği bağlantıyı ve eklendiği hizmeti belirten bir **Spotify**, **Deezer** ya da **YouTube Music** rozetini gösterir.
 
 Sanatçı izlemelerinin nasıl çalıştığı için bkz. [Sanatçı İzleme](#artist-watch).
 
@@ -23,7 +23,7 @@ Sanatçı izlemelerinin nasıl çalıştığı için bkz. [Sanatçı İzleme](#a
 
 Downtify, 60 saniyede bir çalışan bir arka plan görevi tutar. Her taramada, etkin her izlemenin (yapılandırılmış aralığına göre) denetlenme zamanının gelip gelmediğine bakar. Bir *çalma listesinin* zamanı geldiğinde Downtify:
 
-1. Spotify veya YouTube Music’ten tam parça listesini getirir
+1. Spotify, Deezer veya YouTube Music’ten tam parça listesini getirir
 2. Onu zaten indirilmiş parçalar kümesiyle karşılaştırır
 3. Yeni parçaları elle indirmeyle aynı işlem hattıyla indirir
 4. Çalma listesinin M3U dosyasını günceller (M3U üretimi etkinse)
@@ -39,6 +39,7 @@ Bir izleme asla aynı anda iki kez denetlenmez. Bir izleme eklemek ilk denetimin
 1. Kenar çubuğundan **İzleyici**’yi açın (telefonda: **Daha fazla → İzleyici**) ve **Çalma listeleri** sekmesinde kalın
 2. Bir çalma listesi URL’si yapıştırın:
     - Spotify: `https://open.spotify.com/playlist/…`
+    - Herkese açık Deezer çalma listesi: `https://www.deezer.com/playlist/…` (dil önekli bağlantılar da çalışır)
     - YouTube Music: `https://music.youtube.com/playlist?list=…` (bir `www.youtube.com/playlist?list=…` bağlantısı da çalışır)
 3. Bir denetim aralığı seçin (15 dakikadan ayda bire kadar)
 4. **Çalma listesini izle**’ye tıklayın
@@ -46,6 +47,10 @@ Bir izleme asla aynı anda iki kez denetlenmez. Bir izleme eklemek ilk denetimin
 Her sekmenin kendi kutusu vardır. Çalma listeleri sekmesine bir sanatçı bağlantısı (veya Sanatçılar’a bir çalma listesi bağlantısı) yapıştırmak hiçbir şey eklemez: sayfa bunun ne tür bir bağlantı olduğunu söyler ve doğru sekmeye taşımayı önerir.
 
 İzlemeyi bir çalma listesinin sayfasından da başlatabilirsiniz: bağlantısını arama çubuğuna yapıştırın ve **Yeni parçaları izle**’yi (veya bir YouTube Music sanatçısında **Yeni yayınları izle**’yi) kullanın. Kitaplıktaki indirilmiş çalma listeleri aynı eylemi **⋯** menülerinde sunar. Bu şekilde eklenen izlemeler 6 saatlik aralık kullanır — onu İzleyici sayfasında değiştirin.
+
+## Deezer çalma listeleri
+
+Herkese açık Deezer çalma listeleri diğerleri gibi izlenir: bağlantıyı **Çalma listeleri** sekmesine yapıştırın, çalma listesinin sayfasında **Yeni parçaları izle**’yi kullanın ya da [Müzik listeleri](charts.md) sayfasındaki bir çalma listesi kartının **⋯** menüsünden **Yeni parçaları izle**’yi seçin. Deezer hesabı gerekmez ve çalma listesi ne kadar uzun olursa olsun her parça getirilir. Şarkılar diğer Deezer bağlantıları gibi [ses kaynaklarınızdan](download-settings.md) indirilir; çalma listesi de bir Spotify listesi gibi M3U dosyasını, kapak görselini ve Kitaplık’taki yerini alır — M3U dosyaları kapalıyken bile Kitaplık hangi şarkıların ona ait olduğunu bilir. Yalnızca herkese açık çalma listeleri izlenebilir; bir Deezer **sanatçı** bağlantısı indirilebilir ama izlenemez.
 
 ## YouTube Music çalma listeleri
 
@@ -118,6 +123,15 @@ Listeleri yüklemek hiçbir şey aramaz. **Takip et**, adı bir sanatçı izleme
 - aksi halde (adaşlar varsa ya da hiçbir sanatçı tam olarak bu adı taşımıyorsa) bir pencere, bulunan YouTube Music sanatçılarını her birinin fotoğrafı ve profil bağlantısıyla gösterir. **Bu sanatçıyı takip et** ile birini seçin ya da sanatçının bağlantısını yukarıdaki kutuya kendiniz yapıştırmak için **Bağlantı yapıştır**’ı kullanın.
 
 Öneriler yalnızca hangi sanatçının izleneceğini seçer: şarkılar her zamanki gibi [ses kaynaklarınızdan](download-settings.md) indirilir.
+
+### Kitaplıktaki sanatçı sayfasından
+
+Kitaplıkta bir sanatçının sayfasında (`/library/artist`) bir **Sanatçıyı izle** düğmesi vardır; böylece zaten sahip olduğunuz bir sanatçıyı bağlantısını aramadan takip edebilirsiniz. Adı, yukarıdaki **Takip et** ile aynı şekilde YouTube Music’te arar:
+
+- orada tam olarak tek bir sanatçı bu adı taşıyorsa izleme hemen eklenir. Her gün denetlenir ve kitaplıkta sanatçının önceki müzikleri zaten bulunduğundan **Yalnızca yeni yayınlar** açıktır;
+- aksi halde (adaşlar varsa, hiçbir sanatçı tam olarak bu adı taşımıyorsa ya da arama başarısız olduysa) bir pencere, bulunan YouTube Music sanatçılarını her birinin fotoğrafı ve profil bağlantısıyla, bir Spotify veya YouTube Music sanatçı bağlantısı kutusuyla birlikte gösterir. Üstteki **İndir** ve **Yalnızca yeni yayınlar** seçenekleri takip ettiğiniz sanatçıya uygulanır.
+
+Sunucu izlemeyi ekledikten sonra düğme, aralığı ve seçenekleri değiştirebileceğiniz **İzleyici**’ye giden bir bağlantıya dönüşür; bir ret (örneğin sanatçı zaten izleniyorsa) pencerede gösterilir. Düğme [yalnızca kitaplık modunda](library-only.md) ve **Various Artists** sayfasında gösterilmez.
 
 ## Denetim aralıkları
 

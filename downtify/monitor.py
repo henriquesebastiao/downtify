@@ -13,7 +13,7 @@ from typing import Any, Callable, Optional
 
 from loguru import logger
 
-from . import m3u, providers, spotify
+from . import deezer, m3u, providers, spotify
 from .artist_release_store import ArtistReleaseStore
 from .cover_cache import CoverArtCache
 from .download_policy import DownloadPolicy, DownloadPolicyBlocked
@@ -155,6 +155,8 @@ KIND_PODCAST = 'podcast'
 
 SOURCE_SPOTIFY = 'spotify'
 SOURCE_YOUTUBE_MUSIC = 'youtube_music'
+SOURCE_DEEZER = 'deezer'
+DEEZER_PLAYLIST_PREFIX = 'deezer:playlist:'
 
 #: The kinds of release an artist watch can download (YouTube Music's own
 #: 'Album' / 'Single' / 'EP' split). A watch stores the ones it wants as a
@@ -195,39 +197,73 @@ def release_type_of(album: dict[str, Any]) -> str:
 def watch_source(url: str) -> str:
     """The service a watch was added from, read off the URL it was added with.
 
-    Anything that isn't a YouTube URL is Spotify, which is what every
-    watch was before YouTube Music ones existed, so older rows need no
-    migration.
+    Anything that isn't a YouTube Music or Deezer URL is Spotify, which is
+    what every watch was before the other services existed, so older rows
+    need no migration.
     """
     if providers.parse_youtube_url(url or '') is not None:
         return SOURCE_YOUTUBE_MUSIC
+    if deezer.parse_deezer_url(url or '') is not None:
+        return SOURCE_DEEZER
     return SOURCE_SPOTIFY
 
 
 def parse_playlist_url(url: str) -> Optional[tuple[str, str]]:
-    """``(source, playlist_id)`` for a Spotify or YouTube Music playlist URL."""
+    """``(source, playlist_id)`` for a supported public playlist URL."""
     parsed = spotify.parse_spotify_url(url or '')
     if parsed is not None and parsed[0] == 'playlist':
         return SOURCE_SPOTIFY, parsed[1]
     youtube_parsed = providers.parse_youtube_url(url or '')
     if youtube_parsed is not None and youtube_parsed[0] == 'playlist':
         return SOURCE_YOUTUBE_MUSIC, youtube_parsed[1]
+    deezer_parsed = deezer.parse_deezer_url(url or '')
+    if deezer_parsed is not None and deezer_parsed[0] == 'playlist':
+        return SOURCE_DEEZER, deezer_parsed[1]
     return None
+
+
+def playlist_watch_key(source: str, playlist_id: str) -> str:
+    """The key (``spotify_id`` column) a playlist watch is stored under:
+    the playlist's own id, namespaced for Deezer, whose ids are bare
+    numbers. :func:`fetch_playlist` and friends accept either form."""
+
+    if source == SOURCE_DEEZER:
+        return DEEZER_PLAYLIST_PREFIX + playlist_id
+    return playlist_id
 
 
 def fetch_playlist(
     source: str, playlist_id: str
 ) -> tuple[str, list[dict[str, Any]]]:
-    """``(name, tracks)`` of a playlist on either service (blocking)."""
+    """``(name, tracks)`` of a public playlist (blocking)."""
     if source == SOURCE_YOUTUBE_MUSIC:
         return providers.playlist_info_and_tracks_from_id(playlist_id)
+    if source == SOURCE_DEEZER:
+        return deezer.playlist_info_and_tracks(
+            playlist_id.removeprefix(DEEZER_PLAYLIST_PREFIX)
+        )
     return spotify.playlist_info_and_tracks(playlist_id)
 
 
+def fetch_playlist_tracks(
+    source: str, playlist_id: str
+) -> list[dict[str, Any]]:
+    """Every track of a public playlist (blocking)."""
+    if source == SOURCE_SPOTIFY:
+        return spotify.playlist_tracks_from_id(playlist_id)
+    if source == SOURCE_DEEZER:
+        return fetch_playlist(source, playlist_id)[1]
+    return providers.playlist_tracks_from_id(playlist_id)
+
+
 def fetch_playlist_cover_url(source: str, playlist_id: str) -> str:
-    """Largest playlist cover art available on either service (blocking)."""
+    """Largest playlist cover art available on its service (blocking)."""
     if source == SOURCE_YOUTUBE_MUSIC:
         return providers.playlist_cover_url_from_id(playlist_id)
+    if source == SOURCE_DEEZER:
+        return deezer.playlist_cover_url_from_id(
+            playlist_id.removeprefix(DEEZER_PLAYLIST_PREFIX)
+        )
     return spotify.playlist_cover_url_from_id(playlist_id)
 
 
@@ -910,13 +946,10 @@ async def check_playlist(
     # The first check backfills whatever the playlist already had; the
     # statistics keep that apart from what it adds over time.
     initial = playlist.last_checked is None
-    fetch_tracks = (
-        spotify.playlist_tracks_from_id
-        if from_spotify
-        else providers.playlist_tracks_from_id
-    )
     try:
-        tracks = await asyncio.to_thread(fetch_tracks, playlist.spotify_id)
+        tracks = await asyncio.to_thread(
+            fetch_playlist_tracks, playlist.source, playlist.spotify_id
+        )
     except Exception:
         logger.exception('Failed to fetch playlist {}', playlist.spotify_id)
         await asyncio.to_thread(

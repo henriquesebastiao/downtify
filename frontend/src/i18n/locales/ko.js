@@ -1130,7 +1130,7 @@ export default {
     urlLabelPlaylist: '재생목록 링크',
     urlLabelArtist: '아티스트 링크',
     urlPlaceholderPlaylist:
-      'Spotify 또는 YouTube Music 재생목록 링크를 붙여넣으세요',
+      'Spotify, Deezer 또는 YouTube Music 재생목록 링크를 붙여넣으세요',
     urlPlaceholderArtist:
       'Spotify 또는 YouTube Music 아티스트 링크를 붙여넣으세요',
     watchPlaylist: '재생목록 모니터링',

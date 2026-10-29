@@ -1167,7 +1167,7 @@ export default {
     urlLabelPlaylist: 'Playlist-Link',
     urlLabelArtist: 'Künstler-Link',
     urlPlaceholderPlaylist:
-      'Spotify- oder YouTube-Music-Playlist-Link einfügen',
+      'Spotify-, Deezer- oder YouTube-Music-Playlist-Link einfügen',
     urlPlaceholderArtist: 'Spotify- oder YouTube-Music-Künstlerlink einfügen',
     watchPlaylist: 'Playlist überwachen',
     watchArtist: 'Künstler überwachen',

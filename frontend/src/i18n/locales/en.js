@@ -1115,7 +1115,8 @@ export default {
     everyMonths: { one: 'Every month', other: 'Every {count} months' },
     urlLabelPlaylist: 'Playlist link',
     urlLabelArtist: 'Artist link',
-    urlPlaceholderPlaylist: 'Paste a Spotify or YouTube Music playlist link',
+    urlPlaceholderPlaylist:
+      'Paste a Spotify, Deezer or YouTube Music playlist link',
     urlPlaceholderArtist: 'Paste a Spotify or YouTube Music artist link',
     watchPlaylist: 'Watch playlist',
     watchArtist: 'Watch artist',

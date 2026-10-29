@@ -4,16 +4,16 @@ icon: lucide/eye
 
 # Suivi de playlists
 
-Le Suivi de playlists surveille vos playlists Spotify et YouTube Music préférées — et les artistes que vous suivez — et télécharge automatiquement les nouveaux morceaux et les nouvelles sorties dès qu’ils apparaissent, sans rien faire.
+Le Suivi de playlists surveille vos playlists Spotify, Deezer (publiques) et YouTube Music préférées — et les artistes que vous suivez — et télécharge automatiquement les nouveaux morceaux et les nouvelles sorties dès qu’ils apparaissent, sans rien faire.
 
 Il y a deux types de surveillance, chacun dans son onglet de la page Surveillance (**Playlists** et **Artistes**, à `/monitor/playlists` et `/monitor/artists`) :
 
 | Surveillance | Collez | Télécharge |
 |-------|-------|-----------|
-| **Playlist** | L’URL d’une playlist Spotify ou YouTube Music | Chaque morceau de la playlist, puis tout morceau ajouté plus tard |
+| **Playlist** | L’URL d’une playlist Spotify, d’une playlist Deezer publique ou d’une playlist YouTube Music | Chaque morceau de la playlist, puis tout morceau ajouté plus tard |
 | **Artiste** | L’URL d’un **artiste** Spotify, ou d’un artiste YouTube Music | Toute la discographie de l’artiste, puis chaque nouvelle sortie |
 
-Chaque surveillance affiche sous son nom le lien qu’elle suit, et un badge **Spotify** ou **YouTube Music** indiquant le service d’où elle a été ajoutée.
+Chaque surveillance affiche sous son nom le lien qu’elle suit, et un badge **Spotify**, **Deezer** ou **YouTube Music** indiquant le service d’où elle a été ajoutée.
 
 Voir [Suivi d’artistes](#artist-watch) pour savoir comment elles fonctionnent.
 
@@ -23,7 +23,7 @@ Les surveillances appartiennent à qui les a créées : chaque compte suit ses p
 
 Downtify garde une tâche d’arrière-plan qui s’exécute toutes les 60 secondes. À chaque passage, il vérifie si chaque surveillance activée doit être inspectée (selon son intervalle configuré). Quand une *playlist* est due, Downtify :
 
-1. Récupère la liste complète des morceaux sur Spotify ou YouTube Music
+1. Récupère la liste complète des morceaux sur Spotify, Deezer ou YouTube Music
 2. La compare à l’ensemble des morceaux déjà téléchargés
 3. Télécharge les nouveaux morceaux avec le même pipeline qu’un téléchargement manuel
 4. Met à jour le fichier M3U de la playlist (si la génération de M3U est activée)
@@ -39,6 +39,7 @@ Une surveillance n’est jamais vérifiée deux fois en même temps. Ajouter une
 1. Ouvrez **Surveillance** dans la barre latérale (sur téléphone : **Plus → Surveillance**) et restez sur l’onglet **Playlists**
 2. Collez l’URL d’une playlist :
     - Spotify : `https://open.spotify.com/playlist/…`
+    - Playlist Deezer publique : `https://www.deezer.com/playlist/…` (les liens avec un préfixe de langue fonctionnent aussi)
     - YouTube Music : `https://music.youtube.com/playlist?list=…` (un lien `www.youtube.com/playlist?list=…` fonctionne aussi)
 3. Choisissez un intervalle de vérification (de 15 minutes à une fois par mois)
 4. Cliquez sur **Surveiller la playlist**
@@ -46,6 +47,10 @@ Une surveillance n’est jamais vérifiée deux fois en même temps. Ajouter une
 Chaque onglet a sa propre zone. Coller un lien d’artiste dans l’onglet Playlists (ou un lien de playlist dans Artistes) n’ajoute rien : la page indique de quel type de lien il s’agit et propose de le déplacer vers le bon onglet.
 
 Vous pouvez aussi commencer à surveiller depuis la page d’une playlist : collez son lien dans la barre de recherche et utilisez **Surveiller les nouveaux titres** (ou **Surveiller les nouvelles sorties** sur un artiste YouTube Music). Les playlists téléchargées dans la Bibliothèque proposent la même action dans leur menu **⋯**. Les surveillances ajoutées ainsi utilisent un intervalle de 6 heures — modifiez-le sur la page Surveillance.
+
+## Playlists Deezer
+
+Les playlists Deezer publiques se surveillent comme les autres : collez le lien dans l’onglet **Playlists**, utilisez **Surveiller les nouveaux titres** sur la page de la playlist, ou choisissez **Surveiller les nouveaux titres** dans le menu **⋯** d’une carte de playlist des [Classements](charts.md). Aucun compte Deezer n’est nécessaire, et tous les morceaux sont récupérés, quelle que soit la longueur de la playlist. Les morceaux se téléchargent via vos [sources audio](download-settings.md) comme tout autre lien Deezer, et la playlist obtient son fichier M3U, sa pochette et son entrée dans la Bibliothèque comme une playlist Spotify — même avec les fichiers M3U désactivés, la Bibliothèque retient quels morceaux en font partie. Seules les playlists publiques peuvent être surveillées, et un lien d’**artiste** Deezer peut être téléchargé mais pas surveillé.
 
 ## Playlists YouTube Music
 
@@ -118,6 +123,15 @@ Charger les listes ne lance aucune recherche. **Suivre** cherche le nom sur YouT
 - sinon (homonymes, ou aucun artiste portant exactement ce nom), une fenêtre montre les artistes YouTube Music trouvés, chacun avec sa photo et un lien vers son profil. Choisissez-en un avec **Suivre cet artiste**, ou **Coller un lien** pour coller vous-même le lien de l’artiste dans le cadre au-dessus.
 
 Les suggestions ne font que choisir l’artiste à surveiller : les morceaux se téléchargent toujours depuis vos [sources audio](download-settings.md), comme d’habitude.
+
+### Depuis la page d’un artiste dans la Bibliothèque
+
+La page d’un artiste dans la Bibliothèque (`/library/artist`) a un bouton **Surveiller l’artiste**, pour suivre un artiste que vous avez déjà sans chercher son lien. Il cherche le nom sur YouTube Music de la même façon que **Suivre** ci-dessus :
+
+- quand un seul artiste y porte ce nom, la surveillance est ajoutée tout de suite. Elle est vérifiée chaque jour et a **Nouvelles sorties uniquement** activé, puisque la bibliothèque contient déjà sa musique plus ancienne ;
+- sinon (homonymes, aucun artiste portant exactement ce nom, ou la recherche a échoué), une fenêtre montre les artistes YouTube Music trouvés, chacun avec sa photo et un lien vers son profil, plus un champ pour le lien d’un artiste Spotify ou YouTube Music. Les options **Télécharger** et **Nouvelles sorties uniquement** en haut s’appliquent à celui que vous suivez.
+
+Une fois la surveillance ajoutée par le serveur, le bouton devient un lien vers **Surveillance**, où vous changez l’intervalle et les options ; un refus (l’artiste est déjà surveillé, par exemple) s’affiche dans la fenêtre. Il n’apparaît pas en [mode bibliothèque seule](library-only.md) ni sur la page **Various Artists**.
 
 ## Intervalles de vérification
 
