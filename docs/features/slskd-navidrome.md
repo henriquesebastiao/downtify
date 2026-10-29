@@ -59,6 +59,19 @@ Downtify searches slskd with the track's title and artist and ranks the results 
 
 If nothing acceptable turns up, the transfer doesn't finish within **Total timeout**, or it sits queued on the remote peer without progress for longer than **Queued timeout**, Downtify moves on to the next audio source.
 
+**Polling and resource use.**
+
+Downtify polls every 5 seconds while the requested transfer exists, and every 60 seconds when it is absent from slskd. An idle transfer can therefore take up to 60 seconds to appear in the queue progress. Timeouts still bound the wait, and cancellation is checked during the idle sleep without additional network requests.
+
+- `DOWNTIFY_POLL_INTERVAL` (default `5`): active interval in seconds (1–30). When unset, the existing `poll_interval_seconds` setting is honored.
+- `DOWNTIFY_POLL_IDLE_INTERVAL` (default `60`): interval when no matching transfer exists, in seconds (1–60).
+- `DOWNTIFY_TRANSFERS_TTL` (default `3`): lifetime of a shared transfer-list snapshot in seconds (0–60); `0` disables caching. Snapshots are isolated by server URL and API credentials, bounded to 32 entries, and invalidated after enqueue. Failed requests are not cached.
+- `DOWNTIFY_POLL_DEEP_SCAN_EVERY` (default `12`): recursive disk lookup every N ticks (1–300) when the transfer is absent. The first tick and ticks with a matching transfer also allow a deep scan. A time limit of 60 seconds between deep scans prevents idle backoff from hiding a finalized file for twelve minutes.
+
+Predictable file locations are probed every tick; throttling affects only recursive fallback searches, including renamed files. The final fallback scan, tag matching, rejected/failed transfer handling and provider fallback remain in place. Backoff does not multiply the existing attempt/time budget. Invalid environment values use the defaults and out-of-range values are bounded.
+
+`httpx` and `httpcore` request logs are restricted to WARNING. `uvicorn.access` is WARNING too, except with `--log-level DEBUG`. Downtify's own progress and failure logs remain available. Counting request log lines is not a reliable measure of HTTP traffic once INFO logs are suppressed: use the slskd-side access log or a counting test client when comparing request rates.
+
 ### Leave files in place
 
 With **Leave slskd files in place** on (the default), the downloaded file stays in the slskd folder: Downtify writes the metadata, cover art and lyrics into it there and registers it in the library under a `slskd/…` path. The Library, player and M3U files use that path, and it's served through `/media/slskd/…`.

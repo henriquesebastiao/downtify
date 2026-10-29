@@ -16,6 +16,12 @@ services:
       # - settings/server./docker/cookies.txt:/cookies.txt
     environment:
       DOWNTIFY_TRASH: true
+      # slskd polling: active/idle interval, shared snapshot TTL (seconds),
+      # and recursive fallback scan cadence (ticks).
+      DOWNTIFY_POLL_INTERVAL: '5'
+      DOWNTIFY_POLL_IDLE_INTERVAL: '60'
+      DOWNTIFY_TRANSFERS_TTL: '3'
+      DOWNTIFY_POLL_DEEP_SCAN_EVERY: '12'
       # - DOWNTIFY_PORT=30321
       # https://downtify.henriquesebastiao.com/getting-started/environment-variables/#getting-a-cookiestxt
       # - DOWNTIFY_COOKIES_FILE=/cookies.txt

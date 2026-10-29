@@ -191,6 +191,10 @@ Missing keys fall back to English, so a partial translation is welcome. For the 
 > [!WARNING]
 > Users are responsible for their actions and any legal consequences. Downtify does not support unauthorized downloading of copyrighted material and takes no responsibility for user actions.
 
+## slskd polling
+
+Idle Soulseek transfers are checked every 60 seconds instead of repeatedly walking the music folders. `DOWNTIFY_POLL_INTERVAL` (5), `DOWNTIFY_POLL_IDLE_INTERVAL` (60), `DOWNTIFY_TRANSFERS_TTL` (3) and `DOWNTIFY_POLL_DEEP_SCAN_EVERY` (12) tune this behavior; see [slskd polling](docs/features/slskd-navidrome.md#how-a-track-is-matched) for limits and latency. The Compose example includes the defaults.
+
 ## Contributing
 
 Contributions, issues and feature requests are welcome. Check the [issues page](https://github.com/henriquesebastiao/downtify/issues) or open a pull request.
