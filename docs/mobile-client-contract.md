@@ -12,15 +12,15 @@ How an app (the official Android client, or any other) talks to a Downtify serve
 
 Browse mDNS/DNS-SD for **`_downtify._tcp`** (Android: `NsdManager`). Each service carries a TXT record:
 
-| Key       | Example     | Meaning                                                                           |
-| --------- | ----------- | --------------------------------------------------------------------------------- |
-| `id`      | `cf12b3c4…` | Server id (stable; same as `server_id` below)                                     |
-| `name`    | `nas`       | Server name, editable in Settings → Apps                                          |
-| `version` | `3.2.0`     | Downtify version                                                                  |
-| `api`     | `1`         | API version                                                                       |
-| `port`    | `8000`      | Port                                                                              |
-| `scheme`  | `http`      | `http` (a reverse proxy in front may offer `https` — the user types that address) |
-| `path`    | `/`         | Base path                                                                         |
+| Key | Example | Meaning |
+|-----|---------|---------|
+| `id` | `cf12b3c4…` | Server id (stable; same as `server_id` below) |
+| `name` | `nas` | Server name, editable in Settings → Apps |
+| `version` | `3.2.0` | Downtify version |
+| `api` | `1` | API version |
+| `port` | `8000` | Port |
+| `scheme` | `http` | `http` (a reverse proxy in front may offer `https` — the user types that address) |
+| `path` | `/` | Base path |
 
 Build the address from the resolved host + `port`. Discovery is a convenience: always offer manual entry (Docker bridge networks don't announce — see the user docs).
 
@@ -37,18 +37,8 @@ Build the address from the resolved host + `port`. Discovery is a convenience: a
   "api_version": 1,
   "require_sign_in": true,
   "capabilities": {
-    "transcoding": {
-      "available": true,
-      "formats": ["aac", "mp3", "opus"],
-      "bitrates": [96, 128, 160, 192, 256, 320]
-    },
-    "signed_urls": true,
-    "pairing": true,
-    "password_sign_in": true,
-    "podcasts": true,
-    "discover": true,
-    "lyrics": true,
-    "library_sync": true
+    "transcoding": { "available": true, "formats": ["aac", "mp3", "opus"], "bitrates": [96, 128, 160, 192, 256, 320] },
+    "signed_urls": true, "pairing": true, "password_sign_in": true, "podcasts": true, "discover": true, "lyrics": true, "library_sync": true
   }
 }
 ```
@@ -125,25 +115,12 @@ GET /api/v1/library?since=<cursor>
     {
       "id": "t7b255c87668ba03b",
       "file": "Portishead - Roads.flac",
-      "title": "Roads",
-      "artist": "Portishead",
-      "artists": ["Portishead"],
-      "album": "Dummy",
-      "album_artist": "Portishead",
-      "album_id": "6aa1df0c3e5f2b11",
-      "artist_id": "0a92c1e0bb3d8f44",
-      "track_number": 3,
-      "year": "1994",
-      "duration": 305.12,
-      "codec": "flac",
-      "bitrate": 912000,
-      "sample_rate": 44100,
-      "channels": 2,
-      "size": 34812211,
-      "added": 1789600669,
-      "has_cover": true,
-      "explicit": true,
-      "playlists": ["Trip-hop"]
+      "title": "Roads", "artist": "Portishead", "artists": ["Portishead"],
+      "album": "Dummy", "album_artist": "Portishead",
+      "album_id": "6aa1df0c3e5f2b11", "artist_id": "0a92c1e0bb3d8f44",
+      "track_number": 3, "year": "1994", "duration": 305.12,
+      "codec": "flac", "bitrate": 912000, "sample_rate": 44100, "channels": 2,
+      "size": 34812211, "added": 1789600669, "has_cover": true, "explicit": true, "playlists": ["Trip-hop"]
     }
   ],
   "deleted": ["t0c4…"]
@@ -153,7 +130,7 @@ GET /api/v1/library?since=<cursor>
 - First launch: `since=0` → `full: true`, `tracks` is the whole library.
 - Later: `since=<last cursor>` → only tracks added or changed since, and ids of removed ones. Save `cursor` only after applying the response.
 - **`full: true` at any time** (a cursor too old — removed tracks are remembered for 90 days — or one the server doesn't recognise) means: replace the local library with `tracks`.
-- **`id`** is stable across moves and renames of the file (see `downtify/library_sync.py` for the exact rules); a file moved _and_ re-tagged in the same sweep comes back as a new id plus a deleted old one. Key everything local (offline files, likes, queue, history) by `id`, never by `file`.
+- **`id`** is stable across moves and renames of the file (see `downtify/library_sync.py` for the exact rules); a file moved *and* re-tagged in the same sweep comes back as a new id plus a deleted old one. Key everything local (offline files, likes, queue, history) by `id`, never by `file`.
 - **`explicit`** is `true` on a track whose file is marked explicit and **absent** on every other track: read absent as `false`. Show it like the web app does, a small "E" next to the title (see [Explicit Marker](features/explicit-marker.md)).
 - **Grouping:** albums group by `album_id` (album artist + album title, case-insensitive; `""` = no album), artists by `artist_id` (the album artist). This is exactly the web app's grouping.
 - `ETag`/`If-None-Match` are supported (`304` when nothing changed for that `since`).
@@ -163,20 +140,20 @@ GET /api/v1/library?since=<cursor>
 
 Other reads, all by track id:
 
-| Endpoint                                           | Returns                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/v1/tracks/{id}`                          | One track row                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `GET /api/v1/tracks/{id}/lyrics`                   | `{ "synced": "<LRC>", "plain": "…" }` (either may be empty)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `GET /api/v1/tracks/{id}/loudness`                 | The track's [playback loudness profile](features/playback-normalization.md): `{ "state", "gain_db", "integrated_lufs", "true_peak_dbtp", "algorithm_version", "fingerprint", "source_etag", "source_size" }`. Apply `gain_db` only when `state` is `ready` and `algorithm_version` is `1`, capped at +12 dB and at `-1 - true_peak_dbtp`; anything else (`unanalysed`, `silent`, a `404` from an older server) means the original level. `source_etag` and `source_size` are the `ETag` and size of the original file's stream: bind the profile to an offline copy only when they match the download       |
-| `GET /api/v1/tracks/{id}/cover?size=150\|300\|600` | JPEG thumbnail; omit `size` for the full picture. `ETag` + `Cache-Control: private, max-age=604800`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `GET /api/v1/playlists`                            | `[{ "name", "liked", "manual", "count", "cover", "track_ids": [...], "owner", "visibility", "mine", "followed", "can_edit_tracks", "shared_with_me", "new", "hidden_count" }]` (`cover` is a path for `GET /playlist-cover?file=`, or `""`). Other people's shared or followed playlists are in here (`mine: false`): list them apart from the user's own, labelled with `owner`. They are view-only unless `can_edit_tracks` says the user is one of its [editors](features/collaborative-playlists.md) (songs only — never rename, share or delete); the user's own also list `shared_with` and `editors` |
-| `GET /api/v1/usernames`                            | `{ "enabled", "usernames": [...] }` — who a playlist can be shared with                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `POST` / `DELETE /api/v1/playlists/follow`         | Body (or `?name=`) `{ "name" }` — follow a public playlist, or stop                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `POST /api/v1/playlists/seen`                      | Body `{ "name" }` — clear the `new` marker of a playlist shared with the user                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `GET /api/v1/playlists/hidden?name=`               | `{ "name", "songs": [{ "key", "label", "track_id", "hidden_at" }] }` — the songs the user hid from an imported playlist of theirs (`track_id` is `""` once the file is gone)                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `POST /api/v1/playlists/hidden`                    | Body `{ "name", "hide": [track_ids], "show": [keys] }` — hide tracks from an imported playlist of the user's (they stay out when its watch or link brings them back; the tracks stay in the library), or show hidden ones again. Answers `{ "name", "hidden", "keys", "shown", "restored", "count", "track_ids" }`; send `keys` as `show` to undo. Offer it on `mine` playlists that aren't `manual` or `liked` (`409` otherwise). See [Hidden playlist songs](features/hidden-playlist-songs.md)                                                                                                           |
-| `GET /api/v1/likes`                                | `{ "track_ids": [...] }`, newest first                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `PUT /api/v1/likes`                                | Body `{ "track_id", "liked" }` — idempotent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Endpoint | Returns |
+|----------|---------|
+| `GET /api/v1/tracks/{id}` | One track row |
+| `GET /api/v1/tracks/{id}/lyrics` | `{ "synced": "<LRC>", "plain": "…" }` (either may be empty) |
+| `GET /api/v1/tracks/{id}/loudness` | The track's [playback loudness profile](features/playback-normalization.md): `{ "state", "gain_db", "integrated_lufs", "true_peak_dbtp", "algorithm_version", "fingerprint", "source_etag", "source_size" }`. Apply `gain_db` only when `state` is `ready` and `algorithm_version` is `1`, capped at +12 dB and at `-1 - true_peak_dbtp`; anything else (`unanalysed`, `silent`, a `404` from an older server) means the original level. `source_etag` and `source_size` are the `ETag` and size of the original file's stream: bind the profile to an offline copy only when they match the download |
+| `GET /api/v1/tracks/{id}/cover?size=150\|300\|600` | JPEG thumbnail; omit `size` for the full picture. `ETag` + `Cache-Control: private, max-age=604800` |
+| `GET /api/v1/playlists` | `[{ "name", "liked", "manual", "count", "cover", "track_ids": [...], "owner", "visibility", "mine", "followed", "can_edit_tracks", "shared_with_me", "new", "hidden_count" }]` (`cover` is a path for `GET /playlist-cover?file=`, or `""`). Other people's shared or followed playlists are in here (`mine: false`): list them apart from the user's own, labelled with `owner`. They are view-only unless `can_edit_tracks` says the user is one of its [editors](features/collaborative-playlists.md) (songs only — never rename, share or delete); the user's own also list `shared_with` and `editors` |
+| `GET /api/v1/usernames` | `{ "enabled", "usernames": [...] }` — who a playlist can be shared with |
+| `POST` / `DELETE /api/v1/playlists/follow` | Body (or `?name=`) `{ "name" }` — follow a public playlist, or stop |
+| `POST /api/v1/playlists/seen` | Body `{ "name" }` — clear the `new` marker of a playlist shared with the user |
+| `GET /api/v1/playlists/hidden?name=` | `{ "name", "songs": [{ "key", "label", "track_id", "hidden_at" }] }` — the songs the user hid from an imported playlist of theirs (`track_id` is `""` once the file is gone) |
+| `POST /api/v1/playlists/hidden` | Body `{ "name", "hide": [track_ids], "show": [keys] }` — hide tracks from an imported playlist of the user's (they stay out when its watch or link brings them back; the tracks stay in the library), or show hidden ones again. Answers `{ "name", "hidden", "keys", "shown", "restored", "count", "track_ids" }`; send `keys` as `show` to undo. Offer it on `mine` playlists that aren't `manual` or `liked` (`409` otherwise). See [Hidden playlist songs](features/hidden-playlist-songs.md) |
+| `GET /api/v1/likes` | `{ "track_ids": [...] }`, newest first |
+| `PUT /api/v1/likes` | Body `{ "track_id", "liked" }` — idempotent |
 
 ## 5. Stream and download
 
@@ -205,13 +182,8 @@ Authorization: Bearer <token>
 ```
 
 ```json
-{
-  "urls": [
-    "/api/v1/tracks/t7b2…/stream?format=aac&bitrate=256&exp=1790479684&kid=8uz4d35zjpn2&sig=…",
-    "…"
-  ],
-  "expires_at": 1790479684
-}
+{ "urls": ["/api/v1/tracks/t7b2…/stream?format=aac&bitrate=256&exp=1790479684&kid=8uz4d35zjpn2&sig=…", "…"],
+  "expires_at": 1790479684 }
 ```
 
 - Prepend the base address. Valid for `GET`/`HEAD` of exactly that path and those parameters, until `exp`, while the device stays paired. `ttl` 60 s – 24 h.
@@ -225,15 +197,15 @@ Authorization: Bearer <token>
 
 Messages the app can rely on:
 
-| Message                                                                                                          | When                                                                                                                                                           |
-| ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `{ "type": "library_changed" }`                                                                                  | Tracks were added, removed or moved (debounced ~2 s) — sync                                                                                                    |
-| `{ "type": "playlists_changed" }`                                                                                | A playlist was shared, unshared, followed, copied, detached, renamed or deleted, or songs were hidden from it or shown again — refetch `GET /api/v1/playlists` |
-| `{ "type": "likes", "count": 3 }`                                                                                | Likes changed somewhere — refetch `GET /api/v1/likes`                                                                                                          |
-| `{ "type": "queue_reload" }`                                                                                     | Many downloads were queued at once — refetch `GET /api/queue`                                                                                                  |
-| `{ "song": {…}, "progress": 42.5, "status": "downloading"\|"done"\|"error", "message", "filename", "provider" }` | A server download's progress (no `type`) — one’s own jobs only (every job on an admin’s device)                                                                |
-| `{ "type": "podcasts" }` / `{ "type": "podcast_progress", … }`                                                   | Podcast episodes downloaded / progress                                                                                                                         |
-| `{ "type": "device_paired", … }`                                                                                 | A device was paired (for the web page; ignore)                                                                                                                 |
+| Message | When |
+|---------|------|
+| `{ "type": "library_changed" }` | Tracks were added, removed or moved (debounced ~2 s) — sync |
+| `{ "type": "playlists_changed" }` | A playlist was shared, unshared, followed, copied, detached, renamed or deleted, or songs were hidden from it or shown again — refetch `GET /api/v1/playlists` |
+| `{ "type": "likes", "count": 3 }` | Likes changed somewhere — refetch `GET /api/v1/likes` |
+| `{ "type": "queue_reload" }` | Many downloads were queued at once — refetch `GET /api/queue` |
+| `{ "song": {…}, "progress": 42.5, "status": "downloading"\|"done"\|"error", "message", "filename", "provider" }` | A server download's progress (no `type`) — one’s own jobs only (every job on an admin’s device) |
+| `{ "type": "podcasts" }` / `{ "type": "podcast_progress", … }` | Podcast episodes downloaded / progress |
+| `{ "type": "device_paired", … }` | A device was paired (for the web page; ignore) |
 
 "The server is downloading N songs": `GET /api/queue` (count rows with `status` `queued` or `downloading`), kept fresh by the progress messages. A waiting row carries `position` (1-based place in the queue, `null` once finished) and `user_ids` (every account waiting on that job — one shared row when two accounts ask for the same track at once). Close code `4401` = unpaired.
 
@@ -263,14 +235,14 @@ Podcast episodes: `PUT /api/podcasts/episodes/{id}/playback` with `{ "position_s
 
 ## Error handling summary
 
-| Status | Meaning                                                                                    |
-| ------ | ------------------------------------------------------------------------------------------ |
-| `401`  | No/invalid/revoked credentials — re-pair (or sign in)                                      |
-| `403`  | Signed in, but this needs the web page (admin)                                             |
-| `404`  | Unknown track id or missing file — resync                                                  |
-| `429`  | Rate-limited (pairing) — wait `Retry-After` seconds                                        |
-| `499`  | The server stopped a transcode because the client disconnected (you won't normally see it) |
-| `501`  | Transcoding requested but the server has no ffmpeg — use `format=original`                 |
+| Status | Meaning |
+|--------|---------|
+| `401` | No/invalid/revoked credentials — re-pair (or sign in) |
+| `403` | Signed in, but this needs the web page (admin) |
+| `404` | Unknown track id or missing file — resync |
+| `429` | Rate-limited (pairing) — wait `Retry-After` seconds |
+| `499` | The server stopped a transcode because the client disconnected (you won't normally see it) |
+| `501` | Transcoding requested but the server has no ffmpeg — use `format=original` |
 
 ## Library-only policy
 
