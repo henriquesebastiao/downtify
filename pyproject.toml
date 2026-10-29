@@ -5,7 +5,7 @@ description = "Download your Spotify playlists and songs along with album art an
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
 dependencies = [
-    "fastapi>=0.156.8",
+    "fastapi>=0.162.0",
     "feedparser>=6.0.14",
     "httpx>=0.28.1",
     "load-dotenv>=0.1.0",
@@ -13,7 +13,7 @@ dependencies = [
     "mutagen>=1.48.1",
     "uvicorn>=0.54.0",
     "websockets>=17.3",
-    "yt-dlp>=2026.8.19",
+    "yt-dlp>=2026.10.26",
     "ytmusicapi>=1.12.3",
     "zeroconf>=0.151.5",
 ]
@@ -21,9 +21,9 @@ dependencies = [
 [dependency-groups]
 dev = [
     "codeflash>=0.20.6",
-    "httpx2>=2.13.1",
-    "pytest>=9.1.1",
-    "ruff>=0.16.9",
+    "httpx2>=2.16.0",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
 ]
 
 [tool.pytest.ini_options]
