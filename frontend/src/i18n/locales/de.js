@@ -331,6 +331,7 @@ export default {
     hintSpotify: 'Titel, Alben, Playlists und Künstler',
     hintYoutube: 'YouTube-Music-Titel, Alben, Playlists und Künstler',
     hintDeezer: 'Deezer-Titel, Alben, Playlists und Künstler',
+    hintSoundcloud: 'SoundCloud-Titel',
     hintCsv: 'CSV importieren (Soundiiz, Exportify …)',
     downloading: 'Wird heruntergeladen',
     waiting: {
@@ -386,7 +387,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify kann diesen Link nicht herunterladen. Füge einen Spotify, Album- oder ein Playlist- oder einen YouTube-Music-Link ein.',
+      'Downtify kann diesen Link nicht herunterladen. Füge einen Spotify-Titel, ein Album oder eine Playlist, einen YouTube-Music-Link oder einen SoundCloud-Titel ein.',
     tipSearchTitle: 'Nach Namen suchen',
     tipSearchBody:
       'Gib einen Künstler, ein Album oder einen Titel ein - die Ergebnisse stammen von YouTube Music.',
@@ -495,6 +496,7 @@ export default {
     openSpotify: 'Auf Spotify öffnen',
     openYoutube: 'Auf YouTube Music öffnen',
     openDeezer: 'Auf Deezer öffnen',
+    openSoundcloud: 'Auf SoundCloud öffnen',
     filterAll: 'Alle',
     filterNew: 'Neu',
     filterLibrary: 'In der Bibliothek',
@@ -564,9 +566,11 @@ export default {
     retry: 'Erneut versuchen',
     remove: 'Aus Warteschlange entfernen',
     failedGeneric: 'Der Download ist fehlgeschlagen.',
-    overridePlaceholder: 'YouTube-Link als Audioquelle einfügen',
+    overridePlaceholder:
+      'YouTube- oder SoundCloud-Link als Audioquelle einfügen',
     useLink: 'Diesen Link verwenden',
-    invalidYoutube: 'Das sieht nicht wie ein YouTube-Videolink aus.',
+    invalidAudioLink:
+      'Das sieht nicht wie ein YouTube-Video- oder SoundCloud-Titellink aus.',
     playlistDownloads: 'Playlist-Downloads',
     sources: 'Heruntergeladen von',
     noSourcesYet:
@@ -1434,6 +1438,9 @@ export default {
     sourceYtmHint: 'Beste Metadaten-Übereinstimmungen',
     sourceYt: 'YouTube',
     sourceYtHint: 'Ersatzquelle für Titel, die auf YouTube Music fehlen',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Uploads, die anderswo fehlen, und der Titel selbst bei SoundCloud-Links',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1798,7 +1805,8 @@ export default {
     body: 'Falscher Titel oder falsche Version? Wähle die richtige. Dateiname, Tags, Cover und Songtexte bleiben erhalten, ebenso die Zugehörigkeit zu Playlists.',
     current: 'Aktuell',
     search: 'Suche',
-    searchHint: 'Oder füge einen YouTube- oder YouTube-Music-Link ein.',
+    searchHint:
+      'Oder füge einen YouTube-, YouTube-Music- oder SoundCloud-Link ein.',
     searchButton: 'Suchen',
     results: 'Version auswählen',
     none: 'Nichts gefunden. Versuche andere Begriffe oder füge einen Link ein.',

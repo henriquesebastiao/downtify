@@ -151,6 +151,9 @@ export const FILLED = {
   bandcamp: '<path d="M0 18.75 7.44 5.25H24l-7.44 13.5H0z"/>',
   deezer:
     '<rect x="3" y="14" width="3" height="6" rx="1"/><rect x="8" y="10" width="3" height="10" rx="1"/><rect x="13" y="6" width="3" height="14" rx="1"/><rect x="18" y="2" width="3" height="18" rx="1"/>',
+  // SoundCloud's mark: rising bars beside a cloud.
+  soundcloud:
+    '<rect x="1" y="12" width="1.6" height="5" rx=".8"/><rect x="3.6" y="10" width="1.6" height="7" rx=".8"/><rect x="6.2" y="8.5" width="1.6" height="8.5" rx=".8"/><path d="M9 8.2a6.5 6.5 0 0 1 10.1 2.2A3.3 3.3 0 0 1 19.6 17H9z"/>',
   'apple-music':
     '<path d="M15.8 3.4c.1 1-.3 2-.9 2.7-.6.7-1.6 1.3-2.6 1.2-.1-1 .4-2 1-2.7.6-.7 1.7-1.2 2.5-1.2zM18.9 17c-.5 1.1-.7 1.6-1.3 2.6-.9 1.4-2.1 3.1-3.6 3.1-1.3 0-1.7-.9-3.5-.9s-2.2.9-3.5.8c-1.6 0-2.7-1.5-3.6-2.9-2.5-3.8-2.7-8.3-1.2-10.7 1.1-1.7 2.7-2.7 4.3-2.7 1.6 0 2.6 1 3.9 1 1.3 0 2.1-1 3.9-1 1.4 0 2.9.8 4 2.1-3.5 1.9-2.9 6.9.6 8.6z"/>',
   twitter:

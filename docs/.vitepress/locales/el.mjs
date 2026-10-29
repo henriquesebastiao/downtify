@@ -88,6 +88,7 @@ export default {
       'features/server.md': 'Ρυθμίσεις διακομιστή',
       'features/slskd-navidrome.md': 'slskd και Navidrome',
       'features/deemix.md': 'Deemix',
+      'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': 'Κατάλογος βιβλιοθήκης',
       'features/external-library.md': 'Υπάρχοντες φάκελοι μουσικής',
       'features/library-upgrade.md': 'Αναβάθμιση βιβλιοθήκης',

@@ -51,6 +51,7 @@ export const NAV = [
       { title: 'Library-only mode', page: 'features/library-only.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Deemix', page: 'features/deemix.md' },
+      { title: 'SoundCloud', page: 'features/soundcloud.md' },
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
       {
         title: 'Existing music folders',

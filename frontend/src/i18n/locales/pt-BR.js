@@ -325,6 +325,7 @@ export default {
     hintSpotify: 'Faixas, álbuns, playlists e artistas',
     hintYoutube: 'Músicas, álbuns, playlists e artistas do YouTube Music',
     hintDeezer: 'Faixas, álbuns, playlists e artistas do Deezer',
+    hintSoundcloud: 'Faixas do SoundCloud',
     hintCsv: 'Importe um CSV (Soundiiz, Exportify…)',
     downloading: 'Baixando agora',
     waiting: {
@@ -380,7 +381,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'O Downtify não consegue baixar esse link. Cole uma faixa, álbum ou playlist do Spotify, ou um link do YouTube Music.',
+      'O Downtify não consegue baixar esse link. Cole uma faixa, álbum ou playlist do Spotify, um link do YouTube Music ou uma faixa do SoundCloud.',
     tipSearchTitle: 'Busque pelo nome',
     tipSearchBody:
       'Digite um artista, álbum ou música — os resultados vêm do YouTube Music.',
@@ -482,6 +483,7 @@ export default {
     openSpotify: 'Abrir no Spotify',
     openYoutube: 'Abrir no YouTube Music',
     openDeezer: 'Abrir no Deezer',
+    openSoundcloud: 'Abrir no SoundCloud',
     filterAll: 'Tudo',
     filterNew: 'Novas',
     filterLibrary: 'Na biblioteca',
@@ -543,9 +545,11 @@ export default {
     retry: 'Tentar de novo',
     remove: 'Remover da fila',
     failedGeneric: 'O download falhou.',
-    overridePlaceholder: 'Cole um link do YouTube para usar como áudio',
+    overridePlaceholder:
+      'Cole um link do YouTube ou do SoundCloud para usar como áudio',
     useLink: 'Usar este link',
-    invalidYoutube: 'Isso não parece um link de vídeo do YouTube.',
+    invalidAudioLink:
+      'Isso não parece um link de vídeo do YouTube nem de faixa do SoundCloud.',
     playlistDownloads: 'Downloads de playlists',
     sources: 'Baixado de',
     noSourcesYet: 'Downloads concluídos mostram a origem aqui.',
@@ -1405,6 +1409,9 @@ export default {
     sourceYtmHint: 'Melhores correspondências de metadados',
     sourceYt: 'YouTube',
     sourceYtHint: 'Alternativa para músicas ausentes do YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Uploads que faltam em outras fontes, e a própria faixa dos links do SoundCloud',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1752,7 +1759,8 @@ export default {
     body: 'Música ou versão errada? Escolha a certa. O arquivo mantém o nome, as tags, a capa e a letra, e continua nas playlists.',
     current: 'Atual',
     search: 'Buscar',
-    searchHint: 'Ou cole um link do YouTube ou do YouTube Music.',
+    searchHint:
+      'Ou cole um link do YouTube, do YouTube Music ou do SoundCloud.',
     searchButton: 'Buscar',
     results: 'Versões para escolher',
     none: 'Nada encontrado. Tente outras palavras ou cole um link.',

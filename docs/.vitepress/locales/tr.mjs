@@ -87,6 +87,7 @@ export default {
       'features/server.md': 'Sunucu ayarları',
       'features/slskd-navidrome.md': 'slskd ve Navidrome',
       'features/deemix.md': 'Deemix',
+      'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': 'Kitaplık kataloğu',
       'features/external-library.md': 'Mevcut müzik klasörleri',
       'features/library-upgrade.md': 'Kitaplığı iyileştir',

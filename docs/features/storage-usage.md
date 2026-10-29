@@ -19,7 +19,7 @@ The period buttons at the top (7, 30, 90 or 365 days) set what "in the period" m
 | **Downloaded** | Downloads that finished in the period, with how many were skipped or failed |
 | **Could be freed** | What [Could be cleaned up](#could-be-cleaned-up) adds up to |
 | **Library size** | The library's size at the end of each day (each week for 365 days); hover the chart for a day's size and song count. Below it, what was added per day or week |
-| **By source** | The library split by audio source — YouTube Music, YouTube, Soulseek (slskd), Deemix, [extra music folders](external-library.md) — and what each one added in the period |
+| **By source** | The library split by audio source — YouTube Music, YouTube, SoundCloud, Soulseek (slskd), Deemix, [extra music folders](external-library.md) — and what each one added in the period |
 | **Where it is stored** | The library by folder (downloads folder, slskd folder, extra music folders) and by format (MP3, FLAC, M4A…) |
 | **Downloads** | Completed, skipped and failed downloads per day or week, and how much each source downloaded |
 | **Could be cleaned up** | Duplicate songs, slskd working copies, leftover temporary files and orphaned sidecars, each with the files involved |

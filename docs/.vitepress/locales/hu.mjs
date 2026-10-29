@@ -87,6 +87,7 @@ export default {
       'features/server.md': 'Szerverbeállítások',
       'features/slskd-navidrome.md': 'slskd és Navidrome',
       'features/deemix.md': 'Deemix',
+      'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': 'Könyvtárkatalógus',
       'features/external-library.md': 'Meglévő zenemappák',
       'features/library-upgrade.md': 'Könyvtár javítása',

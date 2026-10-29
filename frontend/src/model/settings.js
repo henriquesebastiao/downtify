@@ -95,7 +95,13 @@ const MIN_COVER_RESOLUTION = 300
 const MAX_COVER_RESOLUTION = 1200
 
 const settingsOptions = {
-  audio_providers: ['youtube', 'youtube-music', 'slskd', 'deemix'],
+  audio_providers: [
+    'youtube',
+    'youtube-music',
+    'soundcloud',
+    'slskd',
+    'deemix',
+  ],
   lyrics_providers: ['lrclib', 'genius', 'musixmatch', 'azlyrics'],
   format: ['mp3', 'flac', 'ogg', 'opus', 'm4a'],
   bitrate: ['128', '192', '256', '320'],

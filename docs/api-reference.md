@@ -158,15 +158,15 @@ A Deezer artist's songs, shaped like a Finder search — Discover's **Find songs
 
 ### `GET /api/song/url`
 
-Resolve a Spotify, YouTube Music or Deezer URL to metadata.
+Resolve a Spotify, YouTube Music, Deezer or SoundCloud URL to metadata.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify track, album or playlist URL; a YouTube / YouTube Music video, album, playlist or artist URL; or a Deezer track, album, playlist or artist URL (`deezer.com/track/…`) |
+| `url` | string | yes | Spotify track, album or playlist URL; a YouTube / YouTube Music video, album, playlist or artist URL; a Deezer track, album, playlist or artist URL (`deezer.com/track/…`); or a SoundCloud track URL (`soundcloud.com/<user>/<track>`, or a private `…/s-<token>` one) |
 
 **Response:**
 
-- **Track URL** → single song object. A Deezer track's song object also carries `preview_url` - a 30-second MP3 clip Deezer streams (`https://` only), or `""` when it has none.
+- **Track URL** → single song object. A Deezer track's song object also carries `preview_url` - a 30-second MP3 clip Deezer streams (`https://` only), or `""` when it has none. A SoundCloud track's has `"source": "soundcloud"`, `song_id` `soundcloud:<id>`, and `url`/`soundcloud_url` set to the canonical track URL (no query string); its `album_name` is the title unless SoundCloud names an album. See [SoundCloud](features/soundcloud.md).
 - **Album URL** → array of song objects
 - **Playlist URL** → array of song objects. For a YouTube Music playlist (`…/playlist?list=…`), every song is pinned to the playlist's own video (`youtube_id`), and for uploads the artist/title are taken from an `Artist - Title` video title. See [YouTube Music playlists](features/playlist-monitor.md#youtube-music-playlists).
 - **Artist URL** (YouTube Music `…/channel/UC…`/`…/@handle`, or Deezer `deezer.com/artist/…`) → array of release summaries. `404` if a YouTube Music handle doesn't belong to an artist.
@@ -181,7 +181,7 @@ Resolve a pasted link to a single object describing what it points at — used b
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify track, album, playlist or artist URL; a YouTube / YouTube Music video, album, playlist or artist URL; or a Deezer track, album, playlist or artist URL |
+| `url` | string | yes | Spotify track, album, playlist or artist URL; a YouTube / YouTube Music video, album, playlist or artist URL; a Deezer track, album, playlist or artist URL; or a SoundCloud track URL (`kind` `track`) |
 
 **Response:**
 
@@ -540,10 +540,10 @@ Download a single track. Blocks until complete.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | yes | Spotify track URL, YouTube URL, or Deezer track URL |
+| `url` | string | yes | Spotify track URL, YouTube URL, Deezer track URL, or SoundCloud track URL |
 | `client_id` | string | no | WebSocket client ID for progress events |
 
-**Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` forces the audio source, and `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download. A body with `"source": "deezer"` (a Deezer chart or resolved-link row) is taken as-is instead of re-fetching by `url` - Deezer isn't a URL this endpoint otherwise resolves on its own.
+**Request body (optional):** the song object as returned by search/resolve. Its `track_number`/`album_track_total` survive the re-fetch by URL, `youtube_id` (a video id) or `soundcloud_url` (a SoundCloud track URL) forces the audio source — one replaces the other, and either is used at its source's place in `audio_providers` — and `downtify_playlist_url` (a Spotify playlist URL) registers the track as part of that playlist's download. A body with `"source": "deezer"` (a Deezer chart or resolved-link row) is taken as-is instead of re-fetching by `url` - Deezer isn't a URL this endpoint otherwise resolves on its own.
 
 **Response:** Filename string of the downloaded file — a `slskd/…` path for a slskd download left in place. `404` when no audio source has a match for the track.
 
@@ -835,7 +835,7 @@ Return the current settings.
 | `download_lyrics` | boolean | Whether to look lyrics up at all. |
 | `lyrics_lrc_beside` | boolean | When `true` (default), time-synced `.lrc` files are written next to the audio. When `false`, they go under `lyrics_lrc_dir`. See [Lyrics](features/lyrics.md#sidecar-lrc-file). |
 | `lyrics_lrc_dir` | string | Absolute folder for `.lrc` files when `lyrics_lrc_beside` is false. Default `/data/lyrics`. Paths inside downloads, slskd, or extra music folders are rejected. |
-| `audio_providers` | array | Ordered fallback list of audio sources: `youtube-music`, `youtube`, `slskd`. `slskd` is dropped while `slskd.enabled` is false. See [slskd & Navidrome](features/slskd-navidrome.md#audio-sources-and-fallback-order). |
+| `audio_providers` | array | Ordered fallback list of audio sources: `youtube-music`, `youtube`, `soundcloud`, `slskd`, `deemix`. `slskd` is dropped while `slskd.enabled` is false, `deemix` while `deemix.enabled` is. See [slskd & Navidrome](features/slskd-navidrome.md#audio-sources-and-fallback-order) and [SoundCloud](features/soundcloud.md). |
 | `slskd` | object | slskd connection and matching options. Saving with `enabled: true` but no `base_url` or `api_key` returns `400`. |
 | `navidrome` | object | Navidrome connection. Saving with `enabled: true` but no `url`, `username` or `password` returns `400`. |
 | `sync_navidrome` | boolean | Create/update a Navidrome playlist after playlist downloads, Playlist Monitor sweeps and library changes. |
@@ -1389,7 +1389,7 @@ What the playlist page [filters its songs by](features/library-catalog.md#search
 }
 ```
 
-`providers` maps the playlist's files (as `GET /tracks` lists them) to the audio provider that fetched them: `youtube-music`, `youtube`, `slskd` or `deemix`, or `folder` for a file from an [extra music folder](features/external-library.md). Downtify records it when a download finishes, so files downloaded before that are left out — except slskd files left in place, recognised by their `slskd/` path. `navidrome.enabled` is whether Navidrome sync is on; while it is, `unmatched` lists the playlist's files that have no Navidrome song id in Downtify's index yet (not matched by a playlist sync or after a download). Songs an admin hid from users are left out for them.
+`providers` maps the playlist's files (as `GET /tracks` lists them) to the audio provider that fetched them: `youtube-music`, `youtube`, `soundcloud`, `slskd` or `deemix`, or `folder` for a file from an [extra music folder](features/external-library.md). Downtify records it when a download finishes, so files downloaded before that are left out — except slskd files left in place, recognised by their `slskd/` path. `navidrome.enabled` is whether Navidrome sync is on; while it is, `unmatched` lists the playlist's files that have no Navidrome song id in Downtify's index yet (not matched by a playlist sync or after a download). Songs an admin hid from users are left out for them.
 
 ---
 
@@ -1530,7 +1530,7 @@ Admin. Versions of a library track to [replace its audio](features/replace-audio
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `file` | string | yes | The track's library path |
-| `query` | string | no | What to search; default "Artist - Title" from its tags. A YouTube or YouTube Music link to one video returns just that video |
+| `query` | string | no | What to search; default "Artist - Title" from its tags. A YouTube or YouTube Music link to one video returns just that video; a SoundCloud track link returns that track, its `video_id` being the track URL |
 
 ```json
 {
@@ -1552,13 +1552,13 @@ Admin. Versions of a library track to [replace its audio](features/replace-audio
 }
 ```
 
-`source` is `youtube-music`, `youtube` or `link`. `duration_diff` is the candidate's length minus the file's, in seconds (`null` when either is unknown). `404` for an unknown file, `400` for a file that isn't `.mp3`, `.flac`, `.m4a`, `.ogg` or `.opus`, or a link to something other than one video.
+`source` is `youtube-music`, `youtube` or `link`. `duration_diff` is the candidate's length minus the file's, in seconds (`null` when either is unknown). `404` for an unknown file, `400` for a file that isn't `.mp3`, `.flac`, `.m4a`, `.ogg` or `.opus`, a link to something other than one video, or a SoundCloud link that can't be read.
 
 ---
 
 ### `POST /api/library/replace`
 
-Admin. Replace a library track's audio with a YouTube video: `{ "file": "…", "video_id": "7nxWP9BhI7w" }`. **Response:** `{ "job_id": "replace:<file>", "file": "…" }`.
+Admin. Replace a library track's audio with a YouTube video: `{ "file": "…", "video_id": "7nxWP9BhI7w" }`. `video_id` may also be a SoundCloud track URL (as a SoundCloud candidate carries it). **Response:** `{ "job_id": "replace:<file>", "file": "…" }`.
 
 It runs as a queue job, with the usual [WebSocket](#websocket) progress messages (`song.song_id` is `job_id`, and `song.replace` is `{file, video_id}`), ending in `done` or `error`. The file keeps its path, format, tags and modification date; a failure leaves it untouched. `400` for an invalid video id or file type, `404` for an unknown file, `409` while the same file is already being replaced.
 
@@ -1635,7 +1635,7 @@ Admin. The library's size, growth and download outcomes over the last `days` (qu
 ```
 
 - `library` leaves out the slskd **working copies** (`working`): transfers copied into the library while slskd files aren't left in place, and — in that mode — any other `slskd/…` file Downtify doesn't know as a library song.
-- `by_provider` ids are `youtube-music`, `youtube`, `slskd`, `deemix`, `folder` (an extra music folder) or `unknown`; `by_location` ids are `downloads`, `slskd` and `folders`.
+- `by_provider` ids are `youtube-music`, `youtube`, `soundcloud`, `slskd`, `deemix`, `folder` (an extra music folder) or `unknown`; `by_location` ids are `downloads`, `slskd` and `folders`.
 - `period` counts the songs still in the library that came in during the period (download time when recorded, else the file's modification time), per bucket of `bucket_days`, oldest first.
 - `growth.points` run from `days` ago to today (one a day up to 90 days, one a week beyond); a day before the first daily snapshot is `estimated` from the same file dates. `since` is the oldest snapshot used, `null` when none.
 - `downloads` counts every attempt that ended in the period, from the queue and Playlist Monitor alike; `since` is the oldest one still kept (400 days at most), `null` when none.

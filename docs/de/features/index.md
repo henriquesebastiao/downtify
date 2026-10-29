@@ -55,6 +55,7 @@ Downtify akzeptiert in der Suchleiste mehrere Eingabearten:
 | YouTube-/YouTube-Music-URL | `https://www.youtube.com/watch?v=…` |
 | URL einer YouTube-Music-Playlist oder eines Künstlers | `https://music.youtube.com/playlist?list=…` |
 | Deezer-URL eines Titels, Albums, einer Playlist oder eines Künstlers | `https://www.deezer.com/track/…` |
+| SoundCloud-Titel-URL ([Details](soundcloud.md)) | `https://soundcloud.com/artist/track` |
 | Freitextsuche | `The Night Owls Do I Still Recall` |
 
 Freitextsuchen gehen direkt an YouTube Music — ein Spotify-Link ist nicht nötig.

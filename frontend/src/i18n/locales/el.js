@@ -332,6 +332,7 @@ export default {
     hintSpotify: 'Κομμάτια, άλμπουμ, λίστες και καλλιτέχνες',
     hintYoutube: 'Τραγούδια, άλμπουμ, λίστες και καλλιτέχνες του YouTube Music',
     hintDeezer: 'Κομμάτια, άλμπουμ, λίστες και καλλιτέχνες του Deezer',
+    hintSoundcloud: 'Κομμάτια του SoundCloud',
     hintCsv: 'Εισαγωγή CSV (Soundiiz, Exportify…)',
     downloading: 'Λήψη τώρα',
     waiting: {
@@ -387,7 +388,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'Το Downtify δεν μπορεί να κατεβάσει αυτόν τον σύνδεσμο. Επικόλλησε κομμάτι, άλμπουμ ή λίστα Spotify, ή σύνδεσμο YouTube Music.',
+      'Το Downtify δεν μπορεί να κατεβάσει αυτόν τον σύνδεσμο. Επικόλλησε κομμάτι, άλμπουμ ή λίστα Spotify, σύνδεσμο YouTube Music ή κομμάτι SoundCloud.',
     tipSearchTitle: 'Αναζήτηση με όνομα',
     tipSearchBody:
       'Γράψε καλλιτέχνη, άλμπουμ ή τραγούδι — τα αποτελέσματα έρχονται από το YouTube Music.',
@@ -491,6 +492,7 @@ export default {
     openSpotify: 'Άνοιγμα στο Spotify',
     openYoutube: 'Άνοιγμα στο YouTube Music',
     openDeezer: 'Άνοιγμα στο Deezer',
+    openSoundcloud: 'Άνοιγμα στο SoundCloud',
     filterAll: 'Όλα',
     filterNew: 'Νέα',
     filterLibrary: 'Στη βιβλιοθήκη',
@@ -553,9 +555,11 @@ export default {
     retry: 'Επανάληψη',
     remove: 'Αφαίρεση από την ουρά',
     failedGeneric: 'Η λήψη απέτυχε.',
-    overridePlaceholder: 'Επικόλλησε σύνδεσμο YouTube για χρήση ως ήχο',
+    overridePlaceholder:
+      'Επικόλλησε σύνδεσμο YouTube ή SoundCloud για χρήση ως ήχο',
     useLink: 'Χρήση συνδέσμου',
-    invalidYoutube: 'Αυτό δεν μοιάζει με σύνδεσμο βίντεο YouTube.',
+    invalidAudioLink:
+      'Αυτό δεν μοιάζει με σύνδεσμο βίντεο YouTube ή κομματιού SoundCloud.',
     playlistDownloads: 'Λήψεις λιστών',
     sources: 'Πηγή λήψης',
     noSourcesYet: 'Οι ολοκληρωμένες λήψεις δείχνουν εδώ την πηγή τους.',
@@ -1422,6 +1426,9 @@ export default {
     sourceYtmHint: 'Καλύτερες αντιστοιχίες μεταδεδομένων',
     sourceYt: 'YouTube',
     sourceYtHint: 'Εναλλακτική για τραγούδια που λείπουν από το YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Ανεβάσματα που λείπουν αλλού, και το ίδιο το κομμάτι των συνδέσμων SoundCloud',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1778,7 +1785,7 @@ export default {
     body: 'Λάθος τραγούδι ή εκδοχή; Διαλέξτε τη σωστή. Το αρχείο κρατά όνομα, ετικέτες, εξώφυλλο και στίχους και μένει στις λίστες του.',
     current: 'Τώρα',
     search: 'Αναζήτηση',
-    searchHint: 'Ή επικολλήστε σύνδεσμο YouTube ή YouTube Music.',
+    searchHint: 'Ή επικολλήστε σύνδεσμο YouTube, YouTube Music ή SoundCloud.',
     searchButton: 'Αναζήτηση',
     results: 'Εκδοχές για επιλογή',
     none: 'Δεν βρέθηκε τίποτα. Δοκιμάστε άλλες λέξεις ή επικολλήστε σύνδεσμο.',

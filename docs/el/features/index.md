@@ -55,6 +55,7 @@ icon: lucide/sparkles
 | URL YouTube / YouTube Music | `https://www.youtube.com/watch?v=…` |
 | URL λίστας ή καλλιτέχνη YouTube Music | `https://music.youtube.com/playlist?list=…` |
 | URL κομματιού, άλμπουμ, λίστας ή καλλιτέχνη Deezer | `https://www.deezer.com/track/…` |
+| URL κομματιού SoundCloud ([λεπτομέρειες](soundcloud.md)) | `https://soundcloud.com/artist/track` |
 | Αναζήτηση ελεύθερου κειμένου | `The Night Owls Do I Still Recall` |
 
 Οι αναζητήσεις ελεύθερου κειμένου πηγαίνουν απευθείας στο YouTube Music — δεν χρειάζεται σύνδεσμος Spotify.

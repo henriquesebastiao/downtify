@@ -86,6 +86,7 @@ export default {
       'features/server.md': '서버 설정',
       'features/slskd-navidrome.md': 'slskd와 Navidrome',
       'features/deemix.md': 'Deemix',
+      'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': '라이브러리 카탈로그',
       'features/external-library.md': '기존 음악 폴더',
       'features/library-upgrade.md': '라이브러리 업그레이드',

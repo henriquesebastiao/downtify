@@ -11,6 +11,65 @@ const SPOTIFY_ENTITY =
 const DEEZER_ENTITY =
   /deezer\.com\/(?:[a-z]{2}\/)?(track|album|playlist|artist)\//i
 
+// soundcloud.com pages that aren't a user, and a user's tabs that aren't a
+// track - the same lists as `providers.parse_soundcloud_url`.
+const SOUNDCLOUD_PAGES = new Set([
+  'charts',
+  'discover',
+  'feed',
+  'messages',
+  'mobile',
+  'notifications',
+  'pages',
+  'people',
+  'search',
+  'settings',
+  'stations',
+  'stream',
+  'tags',
+  'terms-of-use',
+  'upload',
+  'you',
+])
+const SOUNDCLOUD_USER_TABS = new Set([
+  'albums',
+  'comments',
+  'followers',
+  'following',
+  'likes',
+  'popular-tracks',
+  'reposts',
+  'sets',
+  'spotlight',
+  'tracks',
+])
+
+/**
+ * The canonical `https://soundcloud.com/<user>/<track>` of a SoundCloud
+ * track link (a private one keeps its `/s-<token>`), without the share
+ * query; null for sets, a user's pages and anything else.
+ */
+export function soundcloudTrackURL(text) {
+  let url
+  try {
+    url = new URL(/^https?:\/\//i.test(text) ? text : `https://${text}`)
+  } catch {
+    return null
+  }
+  if (!/^(?:www\.|m\.)?soundcloud\.com$/i.test(url.hostname)) return null
+  const parts = url.pathname.split('/').filter(Boolean)
+  const isPrivate = parts.length === 3 && parts[2].startsWith('s-')
+  if (parts.length !== 2 && !isPrivate) return null
+  if (
+    SOUNDCLOUD_PAGES.has(parts[0].toLowerCase()) ||
+    SOUNDCLOUD_USER_TABS.has(parts[1].toLowerCase()) ||
+    !parts.every((part) => /^[\w-]+$/.test(part))
+  ) {
+    return null
+  }
+  return `https://soundcloud.com/${parts.join('/')}`
+}
+
 function youtubeKind(text) {
   if (!/(?:youtube\.com|youtu\.be)\//.test(text)) return null
   if (/\/channel\/UC|youtube\.com\/@/.test(text)) return 'artist'
@@ -26,8 +85,9 @@ function youtubeKind(text) {
 /**
  * Classify the search box contents:
  * - `{ type: 'empty' }`
- * - `{ type: 'link', source: 'spotify' | 'youtube' | 'deezer', kind, url }`
- *   for links Downtify can download (`kind`: track, album, playlist, artist)
+ * - `{ type: 'link', source: 'spotify' | 'youtube' | 'deezer' | 'soundcloud',
+ *   kind, url }` for links Downtify can download (`kind`: track, album,
+ *   playlist, artist; a SoundCloud link is always a track)
  * - `{ type: 'unsupported', source, kind }` for other links
  * - `{ type: 'search', query }` for everything else
  */
@@ -45,6 +105,15 @@ export function classifyInput(raw) {
   const deezer = DEEZER_ENTITY.exec(text)
   if (deezer) {
     return { type: 'link', source: 'deezer', kind: deezer[1], url: text }
+  }
+  const soundcloud = soundcloudTrackURL(text)
+  if (soundcloud) {
+    return {
+      type: 'link',
+      source: 'soundcloud',
+      kind: 'track',
+      url: soundcloud,
+    }
   }
   const looksLikeURL =
     /^https?:\/\//i.test(text) || /(?:youtube\.com|youtu\.be)\//.test(text)

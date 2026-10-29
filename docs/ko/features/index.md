@@ -55,6 +55,7 @@ Downtify는 검색창에서 여러 유형의 입력을 받습니다.
 | YouTube / YouTube Music URL | `https://www.youtube.com/watch?v=…` |
 | YouTube Music 재생목록 또는 아티스트 URL | `https://music.youtube.com/playlist?list=…` |
 | Deezer 트랙, 앨범, 재생목록 또는 아티스트 URL | `https://www.deezer.com/track/…` |
+| SoundCloud 트랙 URL ([자세히](soundcloud.md)) | `https://soundcloud.com/artist/track` |
 | 자유 입력 검색 | `The Night Owls Do I Still Recall` |
 
 자유 입력 검색은 YouTube Music으로 바로 전달됩니다. Spotify 링크는 필요 없습니다.

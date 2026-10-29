@@ -19,6 +19,7 @@ Kendi sunucunuzda barındırılan kitaplıklar için iki isteğe bağlı entegra
 |--------|-------------|
 | **YouTube Music** | Varsayılan. YouTube Music’te arar, kabul edilebilir eşleşme yoksa standart YouTube’a geçer — bkz. [Nasıl çalışır](../how-it-works.md#fallback-to-standard-youtube). |
 | **YouTube** | Yalnızca standart YouTube’da arar. |
+| **SoundCloud** | Varsayılan olarak kapalı. SoundCloud’da arar ve yapıştırılan bir SoundCloud bağlantısının parçasını olduğu gibi indirir — [SoundCloud](soundcloud.md). |
 | **slskd** | slskd üzerinden Soulseek’te arar ve en iyi eşleşen dosyayı indirir. |
 
 slskd’yi etkinleştirmek onu listenin başına koyar. slskd tek kaynak kalırsa YouTube Music ve YouTube yine de ondan sonra denenir; böylece slskd’nin bulamadığı bir parça yine iner. İndirme kuyruğu, her parçayı hangi kaynağın sunduğunu gösterir.

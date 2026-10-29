@@ -181,6 +181,46 @@ def test_a_pasted_link_is_that_video(monkeypatch):
         )
 
 
+def test_a_pasted_soundcloud_link_is_that_track(monkeypatch):
+    url = 'https://soundcloud.com/portishead/roads'
+    monkeypatch.setattr(
+        providers,
+        'soundcloud_track_from_url',
+        lambda link: {
+            'name': 'Roads',
+            'artist': 'Portishead',
+            'duration': 305,
+            'cover_url': 'https://i1.sndcdn.com/roads-t500x500.jpg',
+            'url': url,
+        },
+    )
+
+    found = audio_replace.candidates(f'{url}?si=share')
+
+    assert found == [
+        {
+            'video_id': url,
+            'title': 'Roads',
+            'artist': 'Portishead',
+            'album': '',
+            'duration': 305,
+            'thumbnail': 'https://i1.sndcdn.com/roads-t500x500.jpg',
+            'source': 'link',
+            'url': url,
+        }
+    ]
+
+
+def test_an_unreadable_soundcloud_link_is_refused(monkeypatch):
+    def fail(link):
+        raise RuntimeError('HTTP Error 404')
+
+    monkeypatch.setattr(providers, 'soundcloud_track_from_url', fail)
+
+    with pytest.raises(audio_replace.ReplaceError, match='SoundCloud'):
+        audio_replace.candidates('https://soundcloud.com/portishead/roads')
+
+
 # ── Replacing ───────────────────────────────────────────────────────────
 
 
@@ -341,6 +381,43 @@ def test_replace_route_runs_a_queue_job(client, monkeypatch):
     assert read_audio_metadata(target)['duration'] > 4
     kinds = [e['kind'] for e in client.get('/api/activity').json()['entries']]
     assert 'audio_replaced' in kinds
+
+
+def test_replace_route_takes_a_soundcloud_track(client, monkeypatch):
+    client.downloads.mkdir(parents=True, exist_ok=True)
+    (client.downloads / 'Roads.mp3').write_bytes(b'')
+    monkeypatch.setattr(
+        api,
+        'read_audio_metadata',
+        lambda path: {'title': 'Roads', 'artist': 'Portishead'},
+    )
+    replaced = []
+    monkeypatch.setattr(
+        audio_replace,
+        'replace_audio',
+        lambda downloader, target, video_id, **kw: replaced.append(video_id),
+    )
+    spawned = []
+    monkeypatch.setattr(
+        api, 'spawn_task', lambda coro, name=None: spawned.append(coro)
+    )
+
+    started = client.post(
+        '/api/library/replace',
+        json={
+            'file': 'Roads.mp3',
+            'video_id': 'https://soundcloud.com/portishead/roads?si=x',
+        },
+    ).json()
+    monkeypatch.setattr(api.state, 'loop', None)
+    asyncio.run(spawned[0])
+
+    track_url = 'https://soundcloud.com/portishead/roads'
+    job = api.state.download_jobs[started['job_id']]
+    assert job['status'] == 'done', job
+    assert replaced == [track_url]
+    assert job['song']['url'] == track_url
+    assert job['song']['replace']['video_id'] == track_url
 
 
 def test_only_admins_replace_audio(client):

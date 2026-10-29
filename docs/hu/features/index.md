@@ -55,6 +55,7 @@ A Downtify a keresősávban többféle bemenetet fogad el:
 | YouTube / YouTube Music URL | `https://www.youtube.com/watch?v=…` |
 | YouTube Music lejátszási lista vagy előadó URL-je | `https://music.youtube.com/playlist?list=…` |
 | Deezer-szám, -album, -lejátszási lista vagy -előadó URL-je | `https://www.deezer.com/track/…` |
+| SoundCloud szám URL ([részletek](soundcloud.md)) | `https://soundcloud.com/artist/track` |
 | Szabad szöveges keresés | `The Night Owls Do I Still Recall` |
 
 A szabad szöveges keresések közvetlenül a YouTube Musichoz mennek — nem kell Spotify-hivatkozás.

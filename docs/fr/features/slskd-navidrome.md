@@ -19,6 +19,7 @@ Les deux sont désactivées par défaut et se configurent dans **Paramètres**.
 |--------|-------------|
 | **YouTube Music** | Celle par défaut. Cherche sur YouTube Music, en se rabattant sur YouTube standard quand il n’y a pas de correspondance acceptable — voir [Comment ça marche](../how-it-works.md#fallback-to-standard-youtube). |
 | **YouTube** | Cherche uniquement sur YouTube standard. |
+| **SoundCloud** | Désactivée par défaut. Cherche sur SoundCloud et télécharge le titre exact d’un lien SoundCloud collé — [SoundCloud](soundcloud.md). |
 | **slskd** | Cherche sur Soulseek via slskd et télécharge le fichier qui correspond le mieux. |
 
 Activer slskd le place en premier dans la liste. Si slskd finit par être la seule source, YouTube Music et YouTube sont quand même essayés après lui, si bien qu’un morceau que slskd ne trouve pas se télécharge quand même. La file de téléchargement indique quelle source a servi chaque morceau.

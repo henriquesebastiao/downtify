@@ -320,6 +320,7 @@ export default {
     hintSpotify: 'Песни, албуми, плейлисти и изпълнители',
     hintYoutube: 'Песни, албуми, плейлисти и изпълнители от YouTube Music',
     hintDeezer: 'Песни, албуми, плейлисти и изпълнители от Deezer',
+    hintSoundcloud: 'Песни от SoundCloud',
     hintCsv: 'Импортирай CSV (Soundiiz, Exportify…)',
     downloading: 'Изтегля се сега',
     waiting: { one: 'Още {count} чака', other: 'Още {count} чакат' },
@@ -372,7 +373,7 @@ export default {
     typeSingle: 'Сингъл',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify не може да изтегли този линк. Постави песен, албум или плейлист от Spotify, или линк от YouTube Music.',
+      'Downtify не може да изтегли този линк. Постави песен, албум или плейлист от Spotify, линк от YouTube Music или песен от SoundCloud.',
     tipSearchTitle: 'Търси по име',
     tipSearchBody:
       'Въведи изпълнител, албум или песен — резултатите идват от YouTube Music.',
@@ -472,6 +473,7 @@ export default {
     openSpotify: 'Отвори в Spotify',
     openYoutube: 'Отвори в YouTube Music',
     openDeezer: 'Отвори в Deezer',
+    openSoundcloud: 'Отвори в SoundCloud',
     filterAll: 'Всички',
     filterNew: 'Нови',
     filterLibrary: 'В библиотеката',
@@ -534,9 +536,10 @@ export default {
     retry: 'Опитай отново',
     remove: 'Премахни от опашката',
     failedGeneric: 'Изтеглянето не успя.',
-    overridePlaceholder: 'Постави линк от YouTube за аудио',
+    overridePlaceholder: 'Постави линк от YouTube или SoundCloud за аудио',
     useLink: 'Използвай този линк',
-    invalidYoutube: 'Това не прилича на линк към видео в YouTube.',
+    invalidAudioLink:
+      'Това не прилича на линк към видео в YouTube или песен в SoundCloud.',
     playlistDownloads: 'Изтегляния на плейлисти',
     sources: 'Изтеглено от',
     noSourcesYet: 'Завършените изтегляния показват източника си тук.',
@@ -1389,6 +1392,9 @@ export default {
     sourceYtmHint: 'Най-добри съвпадения на метаданни',
     sourceYt: 'YouTube',
     sourceYtHint: 'Резерва за песни, които липсват в YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Качвания, които липсват другаде, и самата песен при линкове от SoundCloud',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1739,7 +1745,8 @@ export default {
     body: 'Грешна песен или версия? Изберете правилната. Файлът запазва името, таговете, обложката и текста си и остава в плейлистите.',
     current: 'Сега',
     search: 'Търсене',
-    searchHint: 'Или поставете връзка от YouTube или YouTube Music.',
+    searchHint:
+      'Или поставете връзка от YouTube, YouTube Music или SoundCloud.',
     searchButton: 'Търсене',
     results: 'Версии за избор',
     none: 'Няма резултати. Опитайте други думи или поставете връзка.',

@@ -321,6 +321,7 @@ export default {
     hintYoutube:
       'YouTube Music şarkıları, albümleri, çalma listeleri ve sanatçıları',
     hintDeezer: 'Deezer parçaları, albümleri, çalma listeleri ve sanatçıları',
+    hintSoundcloud: 'SoundCloud parçaları',
     hintCsv: 'CSV içe aktar (Soundiiz, Exportify…)',
     downloading: 'Şimdi indiriliyor',
     waiting: {
@@ -376,7 +377,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify bu bağlantıyı indiremiyor. Bir Spotify parçası, albümü veya çalma listesi ya da YouTube Music bağlantısı yapıştır.',
+      'Downtify bu bağlantıyı indiremiyor. Bir Spotify parçası, albümü veya çalma listesi, bir YouTube Music bağlantısı ya da bir SoundCloud parçası yapıştır.',
     tipSearchTitle: 'Adla ara',
     tipSearchBody:
       'Bir sanatçı, albüm veya şarkı yaz — sonuçlar YouTube Music’ten gelir.',
@@ -478,6 +479,7 @@ export default {
     openSpotify: 'Spotify’da aç',
     openYoutube: 'YouTube Music’te aç',
     openDeezer: "Deezer'da aç",
+    openSoundcloud: 'SoundCloud’da aç',
     filterAll: 'Tümü',
     filterNew: 'Yeni',
     filterLibrary: 'Kitaplıkta',
@@ -541,9 +543,10 @@ export default {
     remove: 'Kuyruktan kaldır',
     failedGeneric: 'İndirme başarısız oldu.',
     overridePlaceholder:
-      'Ses olarak kullanılacak YouTube bağlantısını yapıştır',
+      'Ses olarak kullanılacak YouTube veya SoundCloud bağlantısını yapıştır',
     useLink: 'Bu bağlantıyı kullan',
-    invalidYoutube: 'Bu bir YouTube video bağlantısına benzemiyor.',
+    invalidAudioLink:
+      'Bu bir YouTube video ya da SoundCloud parça bağlantısına benzemiyor.',
     playlistDownloads: 'Çalma listesi indirmeleri',
     sources: 'İndirme kaynağı',
     noSourcesYet: 'Tamamlanan indirmeler kaynaklarını burada gösterir.',
@@ -1393,6 +1396,9 @@ export default {
     sourceYtmHint: 'En iyi meta veri eşleşmeleri',
     sourceYt: 'YouTube',
     sourceYtHint: 'YouTube Music’te olmayan şarkılar için yedek',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Başka yerde olmayan yüklemeler ve SoundCloud bağlantılarının kendi parçası',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1737,7 +1743,8 @@ export default {
     body: 'Yanlış şarkı ya da sürüm mü? Doğrusunu seçin. Dosya adını, etiketlerini, kapağını ve sözlerini korur, çalma listelerinde kalır.',
     current: 'Şu an',
     search: 'Ara',
-    searchHint: 'Ya da bir YouTube veya YouTube Music bağlantısı yapıştırın.',
+    searchHint:
+      'Ya da bir YouTube, YouTube Music veya SoundCloud bağlantısı yapıştırın.',
     searchButton: 'Ara',
     results: 'Seçilecek sürümler',
     none: 'Bir şey bulunamadı. Başka sözcükler deneyin ya da bağlantı yapıştırın.',

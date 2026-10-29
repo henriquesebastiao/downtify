@@ -55,6 +55,7 @@ Downtify acepta varios tipos de entrada en la barra de búsqueda:
 | URL de YouTube / YouTube Music | `https://www.youtube.com/watch?v=…` |
 | URL de playlist o artista de YouTube Music | `https://music.youtube.com/playlist?list=…` |
 | URL de canción, álbum, playlist o artista de Deezer | `https://www.deezer.com/track/…` |
+| URL de canción de SoundCloud ([detalles](soundcloud.md)) | `https://soundcloud.com/artist/track` |
 | Búsqueda de texto libre | `The Night Owls Do I Still Recall` |
 
 Las búsquedas de texto libre van directamente a YouTube Music — no hace falta un enlace de Spotify.

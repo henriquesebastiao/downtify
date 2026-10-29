@@ -368,6 +368,7 @@ const unmatched = computed(() => details.value?.navidrome?.unmatched || [])
 const PROVIDER_LABELS = {
   'youtube-music': 'settings.sourceYtm',
   youtube: 'settings.sourceYt',
+  soundcloud: 'settings.sourceSoundcloud',
   slskd: 'settings.sourceSlskd',
   deemix: 'settings.deemixTitle',
   folder: 'playlistSearch.fromFolders',

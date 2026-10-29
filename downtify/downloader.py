@@ -57,7 +57,10 @@ from .providers import (
     enrich_from_match,
     find_match,
     find_match_for_video,
+    find_match_soundcloud,
     find_match_youtube_only,
+    parse_soundcloud_url,
+    soundcloud_track_url,
 )
 from .release_files import matches_release
 from .slskd_provider import download_from_slskd
@@ -68,11 +71,17 @@ from .slskd_provider import download_from_slskd
 _AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'ogg', 'opus', 'm4a'})
 
 # ``(percent, message, provider)`` — ``provider`` is the audio source
-# handling the download (``'slskd'``, ``'youtube-music'``, ``'youtube'``),
-# shown next to each queue row.
+# handling the download (``'slskd'``, ``'youtube-music'``, ``'youtube'``,
+# ``'soundcloud'``, ``'deemix'``), shown next to each queue row.
 ProgressCallback = Callable[[float, str, Optional[str]], None]
 
-AUDIO_PROVIDERS = ('youtube-music', 'youtube', 'slskd', 'deemix')
+AUDIO_PROVIDERS = (
+    'youtube-music',
+    'youtube',
+    'soundcloud',
+    'slskd',
+    'deemix',
+)
 
 
 class NoAudioMatchError(RuntimeError):
@@ -323,6 +332,12 @@ def is_age_restricted_error(message: str) -> bool:
     )
 
 
+def _is_missing_format_error(exc: Exception) -> bool:
+    """Whether yt-dlp found the media but none of the wanted formats."""
+
+    return 'requested format is not available' in str(exc).lower()
+
+
 def _translate_download_error(
     exc: Exception, song: dict[str, Any], has_cookies: bool
 ) -> Exception:
@@ -358,7 +373,8 @@ class Downloader:
     #: Called as ``on_downloaded(song, filename)`` once a *new* file has been
     #: downloaded and tagged - not for a song that was already in the library.
     #: ``song['download_provider']`` says which audio provider fetched it
-    #: (``youtube-music``, ``youtube``, ``slskd``, ``deemix``).
+    #: (``youtube-music``, ``youtube``, ``soundcloud``, ``slskd``,
+    #: ``deemix``).
     #: Set by the app (``main.py``) to hook work on to a finished download
     #: (see ``api.enrich_artist_after_download``); it runs on the download's
     #: own thread, so it must only hand the work off and return. Whatever it
@@ -501,14 +517,15 @@ class Downloader:
         """Try each audio provider in order.
 
         Returns ``(video_id, ytm_match, provider, local_path)``: a YouTube
-        video id (with its YouTube Music result, if any) or, for slskd, the
-        path of the already-downloaded file. All ``None`` when every
-        provider came up empty.
+        video id (with its YouTube Music result, if any), a SoundCloud
+        track URL or, for slskd/deemix, the path of the already-downloaded
+        file. All ``None`` when every provider came up empty.
         """
 
         known_video_id = song.get('youtube_id')
         if not known_video_id and song.get('source') == 'youtube':
             known_video_id = song.get('song_id')
+        known_soundcloud_url = soundcloud_track_url(song)
 
         youtube_searched = False
         for provider in self.audio_providers:
@@ -562,6 +579,17 @@ class Downloader:
                 youtube_searched = True
                 if video_id:
                     return video_id, None, 'youtube', None
+            elif provider == 'soundcloud':
+                # Like a known video: the exact track, but only here, at
+                # SoundCloud's place in the order.
+                track_url = known_soundcloud_url or find_match_soundcloud(song)
+                if track_url:
+                    return track_url, None, 'soundcloud', None
+                logger.info(
+                    'Audio provider soundcloud: no match for {!r}',
+                    song.get('name'),
+                )
+                _report(progress_cb, 0.0, 'Trying next source', 'soundcloud')
         return None, None, None, None
 
     def _resolve_cookies_file(self) -> str:
@@ -1001,8 +1029,15 @@ class Downloader:
                 )
                 else 'an audio match'
             )
+            hint = (
+                ' - turn SoundCloud on in Settings > Audio sources to '
+                'download SoundCloud tracks'
+                if soundcloud_track_url(song)
+                and 'soundcloud' not in self.audio_providers
+                else ''
+            )
             raise NoAudioMatchError(
-                f'Could not find {source} for {song.get("name")!r}'
+                f'Could not find {source} for {song.get("name")!r}{hint}'
             )
 
         song = enrich_from_match(song, match)
@@ -1336,7 +1371,8 @@ class Downloader:
         provider: Optional[str] = None,
         audio_format: Optional[str] = None,
     ) -> Path:
-        """Download YouTube video *video_id*'s audio as
+        """Download YouTube video *video_id*'s audio - or, when it is a
+        SoundCloud track URL, that track's - as
         ``<target_dir>/<basename>.<audio_format>`` (default: the chosen
         format) and return the file - untagged. *song* only words the
         error when it fails."""
@@ -1345,7 +1381,16 @@ class Downloader:
         out_template = str(target_dir / f'{basename}.%(ext)s')
         hook = self._progress_hook(progress_cb, provider)
         ydl_opts, has_cookies = self._ydl_options(out_template, hook)
-        url = f'https://music.youtube.com/watch?v={video_id}'
+        soundcloud = parse_soundcloud_url(video_id)
+        if soundcloud is not None:
+            url = soundcloud[1]
+            # Without SoundCloud Go+ a Go+ track only streams a 30-second
+            # preview: fail rather than file the preview as the song.
+            ydl_opts['format'] = (
+                'bestaudio[format_id!*=preview]/best[format_id!*=preview]'
+            )
+        else:
+            url = f'https://music.youtube.com/watch?v={video_id}'
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 # Registered directly: `ydl_opts['postprocessors']` only
@@ -1356,6 +1401,12 @@ class Downloader:
                 )
                 ydl.download([url])
         except Exception as exc:
+            if soundcloud is not None and _is_missing_format_error(exc):
+                raise RuntimeError(
+                    f'"{song.get("name") or "This track"}" only streams a '
+                    '30-second preview on SoundCloud (a SoundCloud Go+ '
+                    'track).'
+                ) from exc
             raise _translate_download_error(
                 exc, song, has_cookies=has_cookies
             ) from exc

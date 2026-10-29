@@ -325,6 +325,7 @@ export default {
     hintSpotify: 'Számok, albumok, lejátszási listák és előadók',
     hintYoutube: 'YouTube Music dalok, albumok, lejátszási listák és előadók',
     hintDeezer: 'Deezer számok, albumok, lejátszási listák és előadók',
+    hintSoundcloud: 'SoundCloud számok',
     hintCsv: 'CSV importálása (Soundiiz, Exportify…)',
     downloading: 'Letöltés folyamatban',
     waiting: { one: 'Még {count} vár', other: 'Még {count} vár' },
@@ -377,7 +378,7 @@ export default {
     typeSingle: 'Kislemez',
     typeEp: 'EP',
     unsupportedLink:
-      'A Downtify nem tudja letölteni ezt a linket. Illessz be Spotify számot, albumot vagy listát, vagy YouTube Music linket.',
+      'A Downtify nem tudja letölteni ezt a linket. Illessz be Spotify számot, albumot vagy listát, YouTube Music linket vagy SoundCloud számot.',
     tipSearchTitle: 'Keresés név szerint',
     tipSearchBody:
       'Írj be előadót, albumot vagy dalt — a találatok a YouTube Musicból jönnek.',
@@ -479,6 +480,7 @@ export default {
     openSpotify: 'Megnyitás a Spotifyban',
     openYoutube: 'Megnyitás a YouTube Musicban',
     openDeezer: 'Megnyitás a Deezeren',
+    openSoundcloud: 'Megnyitás a SoundCloudon',
     filterAll: 'Összes',
     filterNew: 'Új',
     filterLibrary: 'A könyvtárban',
@@ -543,9 +545,11 @@ export default {
     retry: 'Újra',
     remove: 'Eltávolítás a sorból',
     failedGeneric: 'A letöltés nem sikerült.',
-    overridePlaceholder: 'Illessz be egy YouTube linket hangforrásként',
+    overridePlaceholder:
+      'Illessz be egy YouTube vagy SoundCloud linket hangforrásként',
     useLink: 'Link használata',
-    invalidYoutube: 'Ez nem tűnik YouTube videólinknek.',
+    invalidAudioLink:
+      'Ez nem tűnik YouTube videó- vagy SoundCloud számlinknek.',
     playlistDownloads: 'Lejátszásilista-letöltések',
     sources: 'Letöltési forrás',
     noSourcesYet: 'A kész letöltések forrása itt jelenik meg.',
@@ -1403,6 +1407,9 @@ export default {
     sourceYtmHint: 'Legjobb metaadat-egyezések',
     sourceYt: 'YouTube',
     sourceYtHint: 'Tartalék a YouTube Musicból hiányzó dalokhoz',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Máshol hiányzó feltöltések, és a SoundCloud linkek saját száma',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1754,7 +1761,8 @@ export default {
     body: 'Rossz dal vagy változat? Válaszd ki a jót. A fájl megtartja a nevét, címkéit, borítóját és dalszövegét, és a lejátszási listákban marad.',
     current: 'Jelenlegi',
     search: 'Keresés',
-    searchHint: 'Vagy illessz be egy YouTube vagy YouTube Music linket.',
+    searchHint:
+      'Vagy illessz be egy YouTube, YouTube Music vagy SoundCloud linket.',
     searchButton: 'Keresés',
     results: 'Választható változatok',
     none: 'Nincs találat. Próbálj más szavakat, vagy illessz be egy linket.',

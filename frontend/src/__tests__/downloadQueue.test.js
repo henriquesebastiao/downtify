@@ -337,6 +337,18 @@ describe('queue index lifecycle', () => {
     expect(result.filename).toBe('generated.mp3')
   })
 
+  it('retries with a SoundCloud track instead of an earlier video', async () => {
+    const item = tracker.appendSong({ song_id: 'a', youtube_id: 'old-video' })
+    item.setError()
+    const url = 'https://soundcloud.com/artist/track'
+    await manager.retryWithAudio(item.song, url, 'soundcloud')
+    expect(item.song.soundcloud_url).toBe(url)
+    expect(item.song.youtube_id).toBeUndefined()
+    const sent = fixture.api.download.mock.calls.at(-1)[0]
+    expect(sent.soundcloud_url).toBe(url)
+    expect(sent.youtube_id).toBeUndefined()
+  })
+
   it('batches resubmitted songs without replacing their items', async () => {
     const item = tracker.appendSong({ song_id: 'a' })
     item.setDownloaded()

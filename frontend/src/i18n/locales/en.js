@@ -317,6 +317,7 @@ export default {
     hintSpotify: 'Tracks, albums, playlists and artists',
     hintYoutube: 'YouTube Music songs, albums, playlists and artists',
     hintDeezer: 'Deezer tracks, albums, playlists and artists',
+    hintSoundcloud: 'SoundCloud tracks',
     hintCsv: 'Import a CSV (Soundiiz, Exportify…)',
     downloading: 'Downloading now',
     waiting: { one: '{count} more waiting', other: '{count} more waiting' },
@@ -369,7 +370,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      "Downtify can't download that link. Paste a Spotify track, album or playlist, or a YouTube Music link.",
+      "Downtify can't download that link. Paste a Spotify track, album or playlist, a YouTube Music link or a SoundCloud track.",
     tipSearchTitle: 'Search by name',
     tipSearchBody:
       'Type an artist, album or song — results come from YouTube Music.',
@@ -470,6 +471,7 @@ export default {
     openSpotify: 'Open on Spotify',
     openYoutube: 'Open on YouTube Music',
     openDeezer: 'Open on Deezer',
+    openSoundcloud: 'Open on SoundCloud',
     filterAll: 'All',
     filterNew: 'New',
     filterLibrary: 'In library',
@@ -531,9 +533,11 @@ export default {
     retry: 'Retry',
     remove: 'Remove from queue',
     failedGeneric: 'The download failed.',
-    overridePlaceholder: 'Paste a YouTube link to use as the audio',
+    overridePlaceholder:
+      'Paste a YouTube or SoundCloud link to use as the audio',
     useLink: 'Use this link',
-    invalidYoutube: "That doesn't look like a YouTube video link.",
+    invalidAudioLink:
+      "That doesn't look like a YouTube video or SoundCloud track link.",
     playlistDownloads: 'Playlist downloads',
     sources: 'Downloaded from',
     noSourcesYet: 'Finished downloads show their source here.',
@@ -1370,6 +1374,9 @@ export default {
     sourceYtmHint: 'Best metadata matches',
     sourceYt: 'YouTube',
     sourceYtHint: 'Fallback for songs missing from YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      "Uploads missing elsewhere, and SoundCloud links' own tracks",
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1709,7 +1716,7 @@ export default {
     body: 'Wrong song or version? Pick the right one. The file keeps its name, tags, cover and lyrics, and stays in its playlists.',
     current: 'Now',
     search: 'Search',
-    searchHint: 'Or paste a YouTube or YouTube Music link.',
+    searchHint: 'Or paste a YouTube, YouTube Music or SoundCloud link.',
     searchButton: 'Search',
     results: 'Versions to pick from',
     none: 'Nothing found. Try other words, or paste a link.',

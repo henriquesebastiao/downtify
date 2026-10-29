@@ -55,6 +55,7 @@ Downtify arama çubuğunda çeşitli girdi türlerini kabul eder:
 | YouTube / YouTube Music URL’si | `https://www.youtube.com/watch?v=…` |
 | YouTube Music çalma listesi veya sanatçı URL’si | `https://music.youtube.com/playlist?list=…` |
 | Deezer parça, albüm, çalma listesi veya sanatçı URL’si | `https://www.deezer.com/track/…` |
+| SoundCloud parça URL’si ([ayrıntılar](soundcloud.md)) | `https://soundcloud.com/artist/track` |
 | Serbest metin araması | `The Night Owls Do I Still Recall` |
 
 Serbest metin aramaları doğrudan YouTube Music’e gider — Spotify bağlantısı gerekmez.

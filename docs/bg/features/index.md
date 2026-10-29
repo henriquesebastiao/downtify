@@ -55,6 +55,7 @@ Downtify приема няколко вида вход в лентата за т
 | URL от YouTube / YouTube Music | `https://www.youtube.com/watch?v=…` |
 | URL на плейлист или изпълнител от YouTube Music | `https://music.youtube.com/playlist?list=…` |
 | URL на песен, албум, плейлист или изпълнител от Deezer | `https://www.deezer.com/track/…` |
+| Линк към песен в SoundCloud ([подробности](soundcloud.md)) | `https://soundcloud.com/artist/track` |
 | Свободно текстово търсене | `The Night Owls Do I Still Recall` |
 
 Свободните текстови търсения отиват директно към YouTube Music — не е нужен линк от Spotify.

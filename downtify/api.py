@@ -127,8 +127,9 @@ downloads are shared, and files are never stored twice.
   summaries, same shape as ``/api/albums/search`` - no tracklists;
   resolve a chosen release's tracks separately). A YouTube Music or
   Deezer playlist URL resolves to its tracks, like a Spotify playlist.
-  Accepts a Spotify, YouTube Music or Deezer track/album/playlist URL
-  (plus a YouTube Music/Deezer artist URL, as above).
+  Accepts a Spotify, YouTube Music or Deezer track/album/playlist URL,
+  or a SoundCloud track URL (plus a YouTube Music/Deezer artist URL, as
+  above).
 * ``GET  /api/url/resolve`` (the same links, always as
   ``{kind, name, subtitle, cover_url, year, tracks, albums}`` - adds the
   playlist/album name and cover the plain track list lacks; a Deezer
@@ -3612,6 +3613,16 @@ def _resolve_url(url: str):
             status_code=400, detail=f'Unsupported entity type: {kind}'
         )
 
+    soundcloud_parsed = providers.parse_soundcloud_url(url)
+    if soundcloud_parsed is not None:
+        try:
+            return providers.soundcloud_track_from_url(url)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception('Failed to resolve SoundCloud URL {}', url)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
     raise HTTPException(status_code=400, detail='Invalid URL')
 
 
@@ -3736,6 +3747,10 @@ def _deezer_details(kind: str, did: str) -> dict[str, Any]:
     )
 
 
+def _soundcloud_details(url: str) -> dict[str, Any]:
+    return _track_details(providers.soundcloud_track_from_url(url))
+
+
 @router.get('/api/url/resolve')
 def url_resolve_endpoint(url: str = Query(...)) -> dict[str, Any]:
     """What a pasted link points at, with its tracks (or releases).
@@ -3755,14 +3770,26 @@ def url_resolve_endpoint(url: str = Query(...)) -> dict[str, Any]:
         if spotify_parsed or youtube_parsed
         else deezer.parse_deezer_url(url)
     )
-    if spotify_parsed is None and youtube_parsed is None and not deezer_parsed:
+    soundcloud_parsed = (
+        None
+        if spotify_parsed or youtube_parsed or deezer_parsed
+        else providers.parse_soundcloud_url(url)
+    )
+    if (
+        spotify_parsed is None
+        and youtube_parsed is None
+        and not deezer_parsed
+        and not soundcloud_parsed
+    ):
         raise HTTPException(status_code=400, detail='Invalid URL')
     try:
         if spotify_parsed is not None:
             return _spotify_details(*spotify_parsed)
         if youtube_parsed is not None:
             return _youtube_details(*youtube_parsed)
-        return _deezer_details(*deezer_parsed)
+        if deezer_parsed is not None:
+            return _deezer_details(*deezer_parsed)
+        return _soundcloud_details(url)
     except HTTPException:
         raise
     except ValueError as exc:
@@ -3898,12 +3925,21 @@ def _merge_client_track_hints(
     yr = hints.get('year')
     if isinstance(yr, str) and yr.strip():
         base['year'] = yr.strip()
-    # A video id the user pasted to retry a failed track: download exactly
-    # that video instead of matching again.
+    # A video id or SoundCloud track the user pasted to retry a failed
+    # track: download exactly that audio instead of matching again. One
+    # replaces the other, so a stale one can't win the provider order.
+    soundcloud = providers.parse_soundcloud_url(
+        str(hints.get('soundcloud_url') or '')
+    )
     ytid = str(hints.get('youtube_id') or '').strip()
-    if ytid:
+    if soundcloud is not None:
+        base['soundcloud_url'] = soundcloud[1]
+        base['soundcloud_url_override'] = True
+        base.pop('youtube_id', None)
+    elif ytid:
         base['youtube_id'] = ytid
         base['youtube_id_override'] = True
+        base.pop('soundcloud_url', None)
 
 
 _CLIENT_RESOLVED_SOURCES = {'text_search', 'deezer'}
@@ -3961,6 +3997,17 @@ def _song_for_download(url: str) -> dict[str, Any]:
             status_code=400,
             detail='Only Deezer track URLs are supported here',
         )
+    soundcloud_parsed = providers.parse_soundcloud_url(url)
+    if soundcloud_parsed is not None:
+        try:
+            return providers.soundcloud_track_from_url(url)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception(
+                'Failed to resolve SoundCloud download URL {}', url
+            )
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
 
@@ -6250,8 +6297,9 @@ async def replace_candidates(
 ) -> dict[str, Any]:
     """Versions of a library track to replace its audio with:
     ``{track, query, candidates}``. ``query`` defaults to "Artist -
-    Title"; a YouTube or YouTube Music link is that one video. Each
-    candidate is ``{video_id, title, artist, album, duration,
+    Title"; a YouTube or YouTube Music link is that one video, a
+    SoundCloud track link that track (its ``video_id`` is the track URL).
+    Each candidate is ``{video_id, title, artist, album, duration,
     duration_diff, thumbnail, source, url}``."""
 
     full, entry = await asyncio.to_thread(_replaceable_track, file)
@@ -6277,7 +6325,8 @@ async def replace_candidates(
 @router.post('/api/library/replace')
 async def replace_track_audio(request: Request) -> dict[str, Any]:
     """Replace a library track's audio with a YouTube video:
-    ``{file, video_id}`` -> ``{job_id, file}``. Runs as a queue job (the
+    ``{file, video_id}`` -> ``{job_id, file}`` (``video_id`` may be a
+    SoundCloud track URL instead). Runs as a queue job (the
     usual progress messages, ``song.song_id`` = ``job_id``); the file keeps
     its path, format and tags."""
 
@@ -6286,7 +6335,10 @@ async def replace_track_audio(request: Request) -> dict[str, Any]:
     video_id = str(payload.get('video_id') or '').strip()
     if not file:
         raise HTTPException(status_code=400, detail='file is required')
-    if not _VIDEO_ID_RE.fullmatch(video_id):
+    soundcloud = providers.parse_soundcloud_url(video_id)
+    if soundcloud is not None:
+        video_id = soundcloud[1]
+    elif not _VIDEO_ID_RE.fullmatch(video_id):
         raise HTTPException(status_code=400, detail='Unknown video')
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
@@ -6305,7 +6357,11 @@ async def replace_track_audio(request: Request) -> dict[str, Any]:
         'album_name': summary['album'],
         'cover_url': f'/cover?file={quote(file)}',
         'duration': summary['duration'],
-        'url': f'https://music.youtube.com/watch?v={video_id}',
+        'url': (
+            video_id
+            if soundcloud is not None
+            else f'https://music.youtube.com/watch?v={video_id}'
+        ),
         # Tells the queue this job replaces a file's audio: a retry
         # replaces again instead of downloading a new track.
         'replace': {'file': file, 'video_id': video_id},

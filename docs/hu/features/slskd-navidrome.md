@@ -19,6 +19,7 @@ A **Beállítások → Hangforrások** egy rendezett lista. Koppints egy forrás
 |--------|-------------|
 | **YouTube Music** | Az alapértelmezett. A YouTube Musicban keres, és a hagyományos YouTube-ra esik vissza, ha nincs elfogadható találat — lásd: [Hogyan működik](../how-it-works.md#fallback-to-standard-youtube). |
 | **YouTube** | Csak a hagyományos YouTube-on keres. |
+| **SoundCloud** | Alapértelmezetten ki van kapcsolva. A SoundCloudon keres, és egy beillesztett SoundCloud link pontos számát tölti le — [SoundCloud](soundcloud.md). |
 | **slskd** | A slskd-n keresztül keres a Soulseeken, és letölti a legjobban egyező fájlt. |
 
 A slskd engedélyezése a lista elejére teszi. Ha a slskd lesz az egyetlen forrás, a YouTube Music és a YouTube akkor is ki lesz próbálva utána, így egy olyan szám is letöltődik, amelyet a slskd nem talál. A letöltési sor megmutatja, melyik forrás szolgálta ki az egyes számokat.

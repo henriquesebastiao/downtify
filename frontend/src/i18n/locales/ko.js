@@ -317,6 +317,7 @@ export default {
     hintSpotify: '트랙, 앨범, 재생목록 및 아티스트',
     hintYoutube: 'YouTube Music 곡, 앨범, 재생목록 및 아티스트',
     hintDeezer: 'Deezer 트랙, 앨범, 재생목록 및 아티스트',
+    hintSoundcloud: 'SoundCloud 트랙',
     hintCsv: 'CSV 가져오기 (Soundiiz, Exportify…)',
     downloading: '현재 다운로드 중',
     waiting: { one: '{count}개 대기 중', other: '{count}개 대기 중' },
@@ -369,7 +370,7 @@ export default {
     typeSingle: '싱글',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify에서 지원하지 않는 링크입니다. Spotify 트랙, 앨범, 재생목록 또는 YouTube Music 링크를 입력하세요.',
+      'Downtify에서 지원하지 않는 링크입니다. Spotify 트랙, 앨범, 재생목록, YouTube Music 링크 또는 SoundCloud 트랙을 입력하세요.',
     tipSearchTitle: '이름으로 검색',
     tipSearchBody:
       '아티스트, 앨범 또는 곡명을 입력하세요 — 결과는 YouTube Music에서 가져옵니다.',
@@ -475,6 +476,7 @@ export default {
     openSpotify: 'Spotify에서 열기',
     openYoutube: 'YouTube Music에서 열기',
     openDeezer: 'Deezer에서 열기',
+    openSoundcloud: 'SoundCloud에서 열기',
     filterAll: '전체',
     filterNew: '신규',
     filterLibrary: '라이브러리 내',
@@ -540,9 +542,11 @@ export default {
     retry: '다시 시도',
     remove: '대기열에서 제거',
     failedGeneric: '다운로드에 실패했습니다.',
-    overridePlaceholder: '음원으로 사용할 YouTube 링크 붙여넣기',
+    overridePlaceholder:
+      '음원으로 사용할 YouTube 또는 SoundCloud 링크 붙여넣기',
     useLink: '이 링크 사용',
-    invalidYoutube: '올바른 YouTube 영상 링크 형식이 아닙니다.',
+    invalidAudioLink:
+      '올바른 YouTube 영상 또는 SoundCloud 트랙 링크 형식이 아닙니다.',
     playlistDownloads: '재생목록 다운로드',
     sources: '다운로드 출처',
     noSourcesYet: '완료된 다운로드의 출처가 여기에 표시됩니다.',
@@ -1391,6 +1395,9 @@ export default {
     sourceYtmHint: '가장 일치도가 높은 메타데이터 제공',
     sourceYt: 'YouTube',
     sourceYtHint: 'YouTube Music에 없는 곡을 위한 대체 출처',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      '다른 곳에 없는 업로드, 그리고 SoundCloud 링크의 원래 트랙',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1740,7 +1747,8 @@ export default {
     body: '잘못된 곡이거나 다른 버전인가요? 올바른 음원을 선택하세요. 파일명, 태그, 커버 아트, 가사는 그대로 유지되며 기존 재생목록에도 보존됩니다.',
     current: '현재 곡',
     search: '검색',
-    searchHint: '또는 YouTube / YouTube Music 링크를 붙여넣으세요.',
+    searchHint:
+      '또는 YouTube / YouTube Music / SoundCloud 링크를 붙여넣으세요.',
     searchButton: '검색',
     results: '선택 가능한 버전',
     none: '결과가 없습니다. 다른 검색어를 입력하거나 링크를 붙여넣으세요.',

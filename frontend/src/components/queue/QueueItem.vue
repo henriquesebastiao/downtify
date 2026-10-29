@@ -175,6 +175,7 @@ import { useTrackActions } from '/src/model/trackActions'
 import { deezerImage } from '/src/lib/deezerImage'
 import { normalizeTrack } from '/src/lib/library'
 import { saveName } from '/src/lib/paths'
+import { classifyInput } from '/src/lib/input'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -253,14 +254,19 @@ function youtubeId(url) {
   return match ? match[1] : ''
 }
 
+// A YouTube video or a SoundCloud track to use as the audio.
 function useLink() {
-  const id = youtubeId(override.value)
-  if (!id) {
-    overrideError.value = t('queue.invalidYoutube')
+  const parsed = classifyInput(override.value)
+  const track = parsed.type === 'link' && parsed.kind === 'track'
+  if (track && parsed.source === 'soundcloud') {
+    dm.retryWithAudio(song.value, parsed.url, 'soundcloud')
+  } else if (track && parsed.source === 'youtube') {
+    dm.retryWithAudio(song.value, youtubeId(parsed.url))
+  } else {
+    overrideError.value = t('queue.invalidAudioLink')
     return
   }
   overrideError.value = ''
-  dm.retryWithAudio(song.value, id)
   override.value = ''
 }
 </script>

@@ -1,5 +1,5 @@
-"""Audio provider order in Downloader.download(): slskd, YouTube Music and
-plain YouTube, on top of main's tagging pipeline."""
+"""Audio provider order in Downloader.download(): slskd, YouTube Music,
+plain YouTube and SoundCloud, on top of main's tagging pipeline."""
 
 from __future__ import annotations
 
@@ -205,6 +205,143 @@ def test_youtube_only_provider(tmp_path, monkeypatch, no_youtube):
     assert d.download(dict(_SONG)) == 'Artist - Track.mp3'
 
 
+def test_soundcloud_provider_is_tried_in_configured_order(
+    tmp_path, monkeypatch, no_youtube
+):
+    calls = []
+    monkeypatch.setattr(
+        downloader_mod,
+        'find_match_soundcloud',
+        lambda song: calls.append(song) or 'https://soundcloud.com/a/track',
+    )
+    d = Downloader(tmp_path, audio_providers=['soundcloud'])
+
+    assert d.download(dict(_SONG)) == 'Artist - Track.mp3'
+    assert calls == [_SONG]
+    assert no_youtube == ['https://soundcloud.com/a/track']
+
+
+_SOUNDCLOUD_SONG = {
+    **_SONG,
+    'song_id': 'soundcloud:track1',
+    'url': 'https://soundcloud.com/artist/track',
+    'soundcloud_url': 'https://soundcloud.com/artist/track',
+    'source': 'soundcloud',
+}
+
+
+def _reject_soundcloud_search(song):
+    raise AssertionError('A known SoundCloud track must not be searched')
+
+
+def test_known_soundcloud_track_is_downloaded_without_a_search(
+    tmp_path, monkeypatch, no_youtube
+):
+    monkeypatch.setattr(
+        downloader_mod, 'find_match_soundcloud', _reject_soundcloud_search
+    )
+    reports = []
+    d = Downloader(tmp_path, audio_providers=['soundcloud'])
+
+    d.download(
+        dict(_SOUNDCLOUD_SONG),
+        lambda pct, msg, provider=None: reports.append(provider),
+    )
+
+    assert no_youtube == ['https://soundcloud.com/artist/track']
+    assert reports[-1] == 'soundcloud'
+
+
+def test_known_soundcloud_track_respects_earlier_local_source(
+    tmp_path, monkeypatch, no_youtube
+):
+    slskd_dir, source = _slskd_file(tmp_path)
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_slskd', lambda *a, **k: source
+    )
+    monkeypatch.setattr(
+        downloader_mod, 'find_match_soundcloud', _reject_soundcloud_search
+    )
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['slskd', 'soundcloud'],
+        slskd_settings={
+            'enabled': True,
+            'source_dir': str(slskd_dir),
+            'leave_in_place': True,
+        },
+    )
+
+    assert d.download(dict(_SOUNDCLOUD_SONG)) == (
+        'slskd/Artist - Album/01 - Track.mp3'
+    )
+    assert no_youtube == []
+
+
+def test_known_soundcloud_track_does_not_enable_soundcloud(
+    tmp_path, monkeypatch, no_youtube
+):
+    monkeypatch.setattr(
+        downloader_mod, 'find_match', lambda song: (None, None)
+    )
+    d = Downloader(tmp_path, audio_providers=['youtube-music'])
+
+    with pytest.raises(NoAudioMatchError, match='turn SoundCloud on'):
+        d.download(dict(_SOUNDCLOUD_SONG))
+    assert no_youtube == []
+
+
+def test_soundcloud_downloads_skip_go_plus_previews(tmp_path, monkeypatch):
+    opts = []
+
+    class _YoutubeDL:
+        def __init__(self, params):
+            self.params = params
+            opts.append(params)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc_info):
+            return False
+
+        def add_post_processor(self, pp, when='post_process'):
+            pass
+
+        @staticmethod
+        def download(urls):
+            raise downloader_mod.yt_dlp.utils.DownloadError(
+                'ERROR: [soundcloud] 123: Requested format is not available'
+            )
+
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _YoutubeDL)
+    d = Downloader(tmp_path)
+
+    with pytest.raises(RuntimeError, match='30-second preview'):
+        d.fetch_audio(
+            'https://soundcloud.com/artist/track',
+            tmp_path,
+            'Track',
+            song=_SONG,
+            provider='soundcloud',
+        )
+    assert 'preview' in opts[0]['format']
+
+
+def test_fetch_audio_only_takes_soundcloud_urls(tmp_path, no_youtube):
+    d = Downloader(tmp_path)
+
+    d.fetch_audio('https://example.com/track', tmp_path, 'a', song=_SONG)
+    d.fetch_audio('dQw4w9WgXcQ', tmp_path, 'b', song=_SONG)
+
+    # Anything but a SoundCloud track is a YouTube id, never a URL to
+    # hand to yt-dlp's generic extractor.
+    assert no_youtube == [
+        'https://music.youtube.com/watch?v=https://example.com/track',
+        'https://music.youtube.com/watch?v=dQw4w9WgXcQ',
+    ]
+
+
 def test_youtube_is_not_searched_again_after_youtube_music(
     tmp_path, monkeypatch, no_youtube
 ):
@@ -253,7 +390,8 @@ def test_audio_providers_are_normalized():
         'bogus',
         'slskd',
         'youtube',
-    ]) == ['slskd', 'youtube']
+        'soundcloud',
+    ]) == ['slskd', 'youtube', 'soundcloud']
 
 
 @pytest.fixture(params=['youtube_id', 'youtube_song_id'])

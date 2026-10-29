@@ -63,6 +63,7 @@ export function formatRate(value, locale = 'en') {
 const PROVIDER_LABELS = {
   'youtube-music': 'settings.sourceYtm',
   youtube: 'settings.sourceYt',
+  soundcloud: 'settings.sourceSoundcloud',
   slskd: 'settings.sourceSlskd',
   deemix: 'settings.deemixTitle',
   folder: 'playlistSearch.fromFolders',

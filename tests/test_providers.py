@@ -87,6 +87,264 @@ def test_enrich_from_match_backfills_artists_when_empty():
     assert out['artist'] == 'AliasFromYT'
 
 
+@pytest.mark.parametrize(
+    ('url', 'canonical'),
+    [
+        (
+            'https://www.soundcloud.com/artist/track?si=abc&utm_source=x',
+            'https://soundcloud.com/artist/track',
+        ),
+        (
+            'm.soundcloud.com/artist/track',
+            'https://soundcloud.com/artist/track',
+        ),
+        (
+            'https://soundcloud.com/artist/track/s-AbC123',
+            'https://soundcloud.com/artist/track/s-AbC123',
+        ),
+    ],
+)
+def test_parse_soundcloud_url_accepts_tracks(url, canonical):
+    assert providers.parse_soundcloud_url(url) == ('track', canonical)
+
+
+@pytest.mark.parametrize(
+    'url',
+    [
+        'https://soundcloud.com/artist/sets/album',
+        'https://soundcloud.com/artist/likes',
+        'https://soundcloud.com/artist/tracks',
+        'https://soundcloud.com/discover/sets',
+        'https://soundcloud.com/artist',
+        'https://soundcloud.com/artist/track/extra',
+        'https://on.soundcloud.com/AbC123',
+        'https://soundcloud.com.evil.example/artist/track',
+        'https://user:pw@soundcloud.com/artist/track',
+        'ftp://soundcloud.com/artist/track',
+        'artist track',
+        '',
+    ],
+)
+def test_parse_soundcloud_url_rejects_everything_else(url):
+    assert providers.parse_soundcloud_url(url) is None
+
+
+def test_soundcloud_track_url_of_a_song():
+    url = 'https://soundcloud.com/artist/track'
+    assert providers.soundcloud_track_url({'soundcloud_url': url}) == url
+    assert (
+        providers.soundcloud_track_url({'source': 'soundcloud', 'url': url})
+        == url
+    )
+    # Only a SoundCloud song's own link counts.
+    assert providers.soundcloud_track_url({'url': url}) is None
+    assert providers.soundcloud_track_url({'source': 'spotify'}) is None
+
+
+def _soundcloud_ydl(result, seen: list):
+    class _YoutubeDL:
+        def __init__(self, opts):
+            seen.append(opts)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc_info):
+            return False
+
+        @staticmethod
+        def extract_info(url, download=False, process=True):
+            seen.append((url, download, process))
+            if isinstance(result, Exception):
+                raise result
+            return result
+
+    return _YoutubeDL
+
+
+def test_soundcloud_track_metadata_uses_yt_dlp(monkeypatch):
+    seen = []
+    url = 'https://soundcloud.com/label/a-track'
+    monkeypatch.setattr(
+        providers.yt_dlp,
+        'YoutubeDL',
+        _soundcloud_ydl(
+            {
+                'id': '123',
+                'title': 'A Track',
+                'uploader': 'A Label',
+                'artists': ['An Artist'],
+                'genres': ['House'],
+                'thumbnails': [
+                    {'id': 't300x300', 'url': 'https://i1.sndcdn.com/a-t300'},
+                    {'id': 't500x500', 'url': 'https://i1.sndcdn.com/a-t500'},
+                    {'id': 'original', 'url': 'https://i1.sndcdn.com/a-orig'},
+                ],
+                'duration': 181.4,
+                'release_timestamp': 1700000000,
+                'webpage_url': url,
+            },
+            seen,
+        ),
+    )
+
+    song = providers.soundcloud_track_from_url(f'{url}?si=share')
+
+    # The metadata only: no format is picked, nothing is downloaded.
+    assert seen[1] == (url, False, False)
+    assert song == {
+        'song_id': 'soundcloud:123',
+        'name': 'A Track',
+        'artists': ['An Artist'],
+        'artist': 'An Artist',
+        'album_name': 'A Track',
+        'album_artist': 'An Artist',
+        'cover_url': 'https://i1.sndcdn.com/a-t500',
+        'duration': 181,
+        'year': '2023',
+        'release_date': '2023-11-14',
+        'genre': 'House',
+        'url': url,
+        'soundcloud_url': url,
+        'source': 'soundcloud',
+    }
+
+
+def test_soundcloud_track_metadata_falls_back_to_the_uploader(monkeypatch):
+    monkeypatch.setattr(
+        providers.yt_dlp,
+        'YoutubeDL',
+        _soundcloud_ydl(
+            {'id': '1', 'title': 'Song', 'uploader': 'Someone'}, []
+        ),
+    )
+
+    song = providers.soundcloud_track_from_url(
+        'https://soundcloud.com/someone/song'
+    )
+
+    assert song['artists'] == ['Someone']
+    assert not song['year']
+    assert not song['cover_url']
+
+
+def test_soundcloud_track_metadata_refuses_other_links():
+    with pytest.raises(ValueError, match='Not a SoundCloud track'):
+        providers.soundcloud_track_from_url(
+            'https://soundcloud.com/artist/sets/album'
+        )
+
+
+def _entry(title, uploader='Artist', duration=200, slug='track'):
+    return {
+        'title': title,
+        'uploader': uploader,
+        'duration': duration,
+        'url': f'https://soundcloud.com/{uploader.lower()}/{slug}',
+    }
+
+
+def test_find_match_soundcloud_filters_unrelated_results(monkeypatch):
+    seen = []
+    monkeypatch.setattr(
+        providers.yt_dlp,
+        'YoutubeDL',
+        _soundcloud_ydl(
+            {
+                'entries': [
+                    _entry('Track (Live)', slug='live'),
+                    _entry('Track (Someone Remix)', slug='remix'),
+                    _entry('Track', duration=30, slug='short'),
+                    _entry('Track', uploader='Other', slug='other'),
+                    _entry('Track', slug='track'),
+                    _entry('Track', slug='reupload'),
+                ]
+            },
+            seen,
+        ),
+    )
+
+    assert (
+        providers.find_match_soundcloud({
+            'name': 'Track',
+            'artists': ['Artist'],
+            'duration': 200,
+        })
+        == 'https://soundcloud.com/artist/track'
+    )
+    assert seen[1][0] == 'scsearch10:Artist Track'
+
+
+def test_find_match_soundcloud_takes_artist_dash_title_uploads(monkeypatch):
+    monkeypatch.setattr(
+        providers.yt_dlp,
+        'YoutubeDL',
+        _soundcloud_ydl(
+            {
+                'entries': [
+                    _entry('Artist - Track [Free DL]', uploader='Label')
+                ]
+            },
+            [],
+        ),
+    )
+
+    assert (
+        providers.find_match_soundcloud({
+            'name': 'Track',
+            'artists': ['Artist'],
+        })
+        == 'https://soundcloud.com/label/track'
+    )
+
+
+def test_find_match_soundcloud_keeps_a_wanted_remix(monkeypatch):
+    monkeypatch.setattr(
+        providers.yt_dlp,
+        'YoutubeDL',
+        _soundcloud_ydl(
+            {'entries': [_entry('Track (Someone Remix)', slug='remix')]}, []
+        ),
+    )
+
+    assert (
+        providers.find_match_soundcloud({
+            'name': 'Track (Someone Remix)',
+            'artists': ['Artist'],
+        })
+        == 'https://soundcloud.com/artist/remix'
+    )
+
+
+def test_find_match_soundcloud_survives_a_failed_search(monkeypatch):
+    monkeypatch.setattr(
+        providers.yt_dlp,
+        'YoutubeDL',
+        _soundcloud_ydl(RuntimeError('HTTP Error 429'), []),
+    )
+
+    assert (
+        providers.find_match_soundcloud({'name': 'Track', 'artists': ['A']})
+        is None
+    )
+
+
+def test_soundcloud_match_preserves_non_latin_text():
+    assert (
+        providers._soundcloud_candidate_score(
+            '東京',
+            'Artist',
+            0,
+            {
+                'title': '大阪',
+                'uploader': 'Artist',
+                'webpage_url': 'https://soundcloud.com/artist/osaka',
+            },
+        )
+        is None
+    )
+
+
 def test_enrich_from_match_does_not_replace_existing_artists():
     song = {
         'name': 'Test Song',

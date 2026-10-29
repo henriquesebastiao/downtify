@@ -19,6 +19,7 @@ Beide sind standardmäßig aus und werden in den **Einstellungen** konfiguriert.
 |--------|-------------|
 | **YouTube Music** | Der Standard. Durchsucht YouTube Music und fällt auf normales YouTube zurück, wenn es keinen akzeptablen Treffer gibt — siehe [So funktioniert es](../how-it-works.md#fallback-to-standard-youtube). |
 | **YouTube** | Durchsucht nur normales YouTube. |
+| **SoundCloud** | Standardmäßig aus. Durchsucht SoundCloud und lädt bei einem eingefügten SoundCloud-Link genau diesen Titel — [SoundCloud](soundcloud.md). |
 | **slskd** | Durchsucht Soulseek über slskd und lädt die am besten passende Datei herunter. |
 
 Wird slskd aktiviert, steht es an erster Stelle der Liste. Ist slskd am Ende die einzige Quelle, werden YouTube Music und YouTube trotzdem danach probiert, sodass ein Titel, den slskd nicht findet, trotzdem heruntergeladen wird. Die Download-Warteschlange zeigt, welche Quelle jeden Titel geliefert hat.

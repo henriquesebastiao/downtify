@@ -87,6 +87,7 @@ export default {
       'features/server.md': 'Ajustes del servidor',
       'features/slskd-navidrome.md': 'slskd y Navidrome',
       'features/deemix.md': 'Deemix',
+      'features/soundcloud.md': 'SoundCloud',
       'features/library-catalog.md': 'Catálogo de la biblioteca',
       'features/external-library.md': 'Carpetas de música existentes',
       'features/library-upgrade.md': 'Mejorar la biblioteca',

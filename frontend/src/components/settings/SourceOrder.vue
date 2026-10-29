@@ -44,5 +44,10 @@ const providers = computed(() => [
     title: t('settings.sourceYt'),
     description: t('settings.sourceYtHint'),
   },
+  {
+    id: 'soundcloud',
+    title: t('settings.sourceSoundcloud'),
+    description: t('settings.sourceSoundcloudHint'),
+  },
 ])
 </script>

@@ -329,6 +329,7 @@ export default {
     hintSpotify: 'Canciones, álbumes, playlists y artistas',
     hintYoutube: 'Canciones, álbumes, playlists y artistas de YouTube Music',
     hintDeezer: 'Canciones, álbumes, playlists y artistas de Deezer',
+    hintSoundcloud: 'Canciones de SoundCloud',
     hintCsv: 'Importa un CSV (Soundiiz, Exportify…)',
     downloading: 'Descargando ahora',
     waiting: { one: '{count} más en espera', other: '{count} más en espera' },
@@ -381,7 +382,7 @@ export default {
     typeSingle: 'Sencillo',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify no puede descargar ese enlace. Pega una canción, álbum o playlist de Spotify, o un enlace de YouTube Music.',
+      'Downtify no puede descargar ese enlace. Pega una canción, álbum o playlist de Spotify, un enlace de YouTube Music o una canción de SoundCloud.',
     tipSearchTitle: 'Busca por nombre',
     tipSearchBody:
       'Escribe un artista, álbum o canción — los resultados vienen de YouTube Music.',
@@ -486,6 +487,7 @@ export default {
     openSpotify: 'Abrir en Spotify',
     openYoutube: 'Abrir en YouTube Music',
     openDeezer: 'Abrir en Deezer',
+    openSoundcloud: 'Abrir en SoundCloud',
     filterAll: 'Todo',
     filterNew: 'Nuevas',
     filterLibrary: 'En la biblioteca',
@@ -547,9 +549,11 @@ export default {
     retry: 'Reintentar',
     remove: 'Quitar de la cola',
     failedGeneric: 'La descarga falló.',
-    overridePlaceholder: 'Pega un enlace de YouTube para usarlo como audio',
+    overridePlaceholder:
+      'Pega un enlace de YouTube o SoundCloud para usarlo como audio',
     useLink: 'Usar este enlace',
-    invalidYoutube: 'Eso no parece un enlace de vídeo de YouTube.',
+    invalidAudioLink:
+      'Eso no parece un enlace de vídeo de YouTube ni de canción de SoundCloud.',
     playlistDownloads: 'Descargas de playlists',
     sources: 'Descargado desde',
     noSourcesYet: 'Las descargas completadas muestran su origen aquí.',
@@ -1414,6 +1418,9 @@ export default {
     sourceYtmHint: 'Mejores coincidencias de metadatos',
     sourceYt: 'YouTube',
     sourceYtHint: 'Alternativa para canciones que faltan en YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Subidas que faltan en otros sitios, y la propia canción de los enlaces de SoundCloud',
     deemixTitle: 'Deemix',
     deemixHint:
       'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
@@ -1767,7 +1774,7 @@ export default {
     body: '¿Canción o versión equivocada? Elige la correcta. El archivo conserva su nombre, etiquetas, portada y letra, y sigue en sus playlists.',
     current: 'Actual',
     search: 'Buscar',
-    searchHint: 'O pega un enlace de YouTube o YouTube Music.',
+    searchHint: 'O pega un enlace de YouTube, YouTube Music o SoundCloud.',
     searchButton: 'Buscar',
     results: 'Versiones para elegir',
     none: 'No se encontró nada. Prueba otras palabras o pega un enlace.',

@@ -19,6 +19,7 @@ icon: lucide/share-2
 |--------|-------------|
 | **YouTube Music** | 기본값. YouTube Music에서 검색하며, 받아들일 만한 결과가 없으면 일반 YouTube로 대체합니다 — [작동 방식](../how-it-works.md#fallback-to-standard-youtube)을 참고하세요. |
 | **YouTube** | 일반 YouTube에서만 검색합니다. |
+| **SoundCloud** | 기본적으로 꺼져 있습니다. SoundCloud에서 검색하고, 붙여넣은 SoundCloud 링크는 그 트랙을 그대로 내려받습니다 — [SoundCloud](soundcloud.md). |
 | **slskd** | slskd를 통해 Soulseek를 검색하고 가장 잘 맞는 파일을 내려받습니다. |
 
 slskd를 켜면 목록 맨 앞에 놓입니다. slskd가 유일한 출처가 되더라도 그 뒤에 YouTube Music과 YouTube가 여전히 시도되므로, slskd가 찾지 못하는 트랙도 내려받아집니다. 다운로드 대기열은 각 트랙을 어느 출처가 제공했는지 보여줍니다.

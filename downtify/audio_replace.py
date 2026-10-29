@@ -2,8 +2,9 @@
 
 Automatic matching sometimes lands on the wrong song or the wrong version
 (a live cut, a remix, a lyric video with an intro). From a track's menu,
-an admin searches YouTube Music and YouTube (or pastes a link), picks the
-right upload, and the file's audio is swapped for it:
+an admin searches YouTube Music and YouTube (or pastes a YouTube or
+SoundCloud track link), picks the right upload, and the file's audio is
+swapped for it:
 
 * **Same file.** The new audio is written to the same path, in the same
   format (an ``.flac`` stays FLAC, an ``.mp3`` MP3 at the chosen bitrate),
@@ -113,10 +114,36 @@ def _from_youtube(entry: dict[str, Any]) -> Optional[dict[str, Any]]:
     }
 
 
+def _from_soundcloud_link(url: str) -> list[dict[str, Any]]:
+    """The one track a pasted SoundCloud link names; its ``video_id`` is
+    the track URL (what :func:`replace_audio` fetches)."""
+
+    try:
+        song = providers.soundcloud_track_from_url(url)
+    except Exception as exc:
+        logger.opt(exception=True).debug('SoundCloud lookup failed')
+        raise ReplaceError('Could not read that SoundCloud track') from exc
+    return [
+        {
+            'video_id': song['url'],
+            'title': song['name'],
+            'artist': song['artist'],
+            'album': '',
+            'duration': int(song.get('duration') or 0),
+            'thumbnail': song['cover_url'],
+            'source': 'link',
+            'url': song['url'],
+        }
+    ]
+
+
 def _from_link(query: str) -> Optional[list[dict[str, Any]]]:
-    """The one video a pasted YouTube / YouTube Music link names, or
+    """The one video (or SoundCloud track) a pasted link names, or
     ``None`` when *query* isn't such a link."""
 
+    soundcloud = providers.parse_soundcloud_url(query.strip())
+    if soundcloud is not None:
+        return _from_soundcloud_link(soundcloud[1])
     parsed = providers.parse_youtube_url(query.strip())
     if parsed is None:
         return None
@@ -233,8 +260,9 @@ def replace_audio(
     song: dict[str, Any],
     progress_cb: Optional[ProgressCallback] = None,
 ) -> dict[str, Any]:
-    """Replace *target*'s audio with YouTube video *video_id*, keeping its
-    path, format, tags and modification time. ``{duration_before,
+    """Replace *target*'s audio with YouTube video *video_id* (or the
+    SoundCloud track it is the URL of), keeping its path, format, tags and
+    modification time. ``{duration_before,
     duration_after}``. Raises :class:`ReplaceError` (nothing changed) or
     the download's own error."""
 
@@ -244,6 +272,11 @@ def replace_audio(
     before = _length(target)
     stat = target.stat()
     basename = staging_basename(target)
+    provider = (
+        'soundcloud'
+        if providers.parse_soundcloud_url(video_id) is not None
+        else 'youtube'
+    )
     staged: Optional[Path] = None
     try:
         staged = downloader.fetch_audio(
@@ -252,7 +285,7 @@ def replace_audio(
             basename,
             song=song,
             progress_cb=progress_cb,
-            provider='youtube',
+            provider=provider,
             audio_format=fmt,
         )
         if staged.suffix.lower() != target.suffix.lower():
@@ -263,7 +296,7 @@ def replace_audio(
         if after <= 0:
             raise ReplaceError('The downloaded audio could not be read')
         if progress_cb is not None:
-            progress_cb(98.0, 'Copying tags', 'youtube')
+            progress_cb(98.0, 'Copying tags', provider)
         copy_tags(target, staged)
         os.replace(str(staged), str(target))
         staged = None

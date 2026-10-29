@@ -42,6 +42,8 @@ If neither site has an acceptable match, the track fails with `Could not find a 
 
 For YouTube URLs entered directly, this step is skipped — Downtify downloads that specific video.
 
+**SoundCloud** is an optional audio source too (Settings → Audio sources, off by default): at its place in the source order it searches SoundCloud with its own title, artist and length checks, and for a pasted SoundCloud track link — whose title, artist and cover come from SoundCloud itself — it downloads that exact track. The SoundCloud page under Features has the details.
+
 ::: info Deezer links
 A pasted Deezer track/album/playlist/artist link (`deezer.com/track/…`) works the same way a Spotify one does: Deezer's public REST API supplies the title, artist(s), album and cover, every track streams in full from YouTube before you download it, and this same step then matches it on YouTube Music/YouTube. Downtify has no Deezer discography resolver of its own beyond what Deezer's API already returns, so a Deezer link downloads and (for a playlist) gets its own M3U and cover art, but can't be watched by the [Playlist Monitor](features/playlist-monitor.md).
 :::
@@ -50,7 +52,7 @@ A pasted Deezer track/album/playlist/artist link (`deezer.com/track/…`) works 
 
 ### Download
 
-[yt-dlp](https://github.com/yt-dlp/yt-dlp) downloads the audio from YouTube. Downtify configures it to try several player clients in order (`ios`, `android`, `web_embedded`, `mweb`, `web`, `tv`) to work around YouTube's bot-detection challenges. See [Environment Variables](getting-started/environment-variables.md) for advanced anti-bot options.
+[yt-dlp](https://github.com/yt-dlp/yt-dlp) downloads the audio from YouTube (or SoundCloud, for a SoundCloud track). For YouTube, Downtify configures it to try several player clients in order (`ios`, `android`, `web_embedded`, `mweb`, `web`, `tv`) to work around YouTube's bot-detection challenges. See [Environment Variables](getting-started/environment-variables.md) for advanced anti-bot options.
 
 ### Conversion
 

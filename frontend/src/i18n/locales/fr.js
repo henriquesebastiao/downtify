@@ -333,6 +333,7 @@ export default {
     hintSpotify: 'Titres, albums, playlists et artistes',
     hintYoutube: 'Titres, albums, playlists et artistes YouTube Music',
     hintDeezer: 'Titres, albums, playlists et artistes Deezer',
+    hintSoundcloud: 'Titres SoundCloud',
     hintCsv: 'Importer un CSV (Soundiiz, Exportify…)',
     downloading: 'Téléchargement en cours',
     waiting: {
@@ -388,7 +389,7 @@ export default {
     typeSingle: 'Single',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify ne peut pas télécharger ce lien. Collez un titre, un album ou une playlist Spotify, ou un lien YouTube Music.',
+      'Downtify ne peut pas télécharger ce lien. Collez un titre, un album ou une playlist Spotify, un lien YouTube Music ou un titre SoundCloud.',
     tipSearchTitle: 'Cherchez par nom',
     tipSearchBody:
       'Tapez un artiste, un album ou un titre — les résultats viennent de YouTube Music.',
@@ -496,6 +497,7 @@ export default {
     openSpotify: 'Ouvrir dans Spotify',
     openYoutube: 'Ouvrir dans YouTube Music',
     openDeezer: 'Ouvrir sur Deezer',
+    openSoundcloud: 'Ouvrir sur SoundCloud',
     filterAll: 'Tout',
     filterNew: 'Nouveaux',
     filterLibrary: 'Dans la bibliothèque',
@@ -561,9 +563,11 @@ export default {
     retry: 'Réessayer',
     remove: 'Retirer de la file',
     failedGeneric: 'Le téléchargement a échoué.',
-    overridePlaceholder: 'Collez un lien YouTube à utiliser comme audio',
+    overridePlaceholder:
+      'Collez un lien YouTube ou SoundCloud à utiliser comme audio',
     useLink: 'Utiliser ce lien',
-    invalidYoutube: 'Ceci ne ressemble pas à un lien de vidéo YouTube.',
+    invalidAudioLink:
+      'Ceci ne ressemble pas à un lien de vidéo YouTube ou de titre SoundCloud.',
     playlistDownloads: 'Téléchargements de playlists',
     sources: 'Téléchargé depuis',
     noSourcesYet: 'Les téléchargements terminés indiquent leur source ici.',
@@ -1435,6 +1439,9 @@ export default {
     sourceYtmHint: 'Meilleures correspondances de métadonnées',
     sourceYt: 'YouTube',
     sourceYtHint: 'Solution de repli pour les titres absents de YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Les mises en ligne absentes ailleurs, et le titre même des liens SoundCloud',
     deemixTitle: 'Deemix',
     deemixHint:
       'Télécharger avec votre serveur Deemix. La qualité demandée nécessite les droits Deezer correspondants.',
@@ -1791,7 +1798,7 @@ export default {
     body: 'Mauvais titre ou mauvaise version ? Choisissez la bonne. Le fichier garde son nom, ses tags, sa pochette et ses paroles, et reste dans ses playlists.',
     current: 'Actuel',
     search: 'Rechercher',
-    searchHint: 'Ou collez un lien YouTube ou YouTube Music.',
+    searchHint: 'Ou collez un lien YouTube, YouTube Music ou SoundCloud.',
     searchButton: 'Rechercher',
     results: 'Versions au choix',
     none: 'Rien trouvé. Essayez d’autres mots ou collez un lien.',
