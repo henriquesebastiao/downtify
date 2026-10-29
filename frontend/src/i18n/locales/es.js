@@ -503,6 +503,17 @@ export default {
     playCountYoutubeMusic: 'Reproducciones en YouTube Music (aproximado)',
   },
   queue: {
+    globalPause: 'Pausar descargas y seguimientos',
+    globalResume: 'Reanudar descargas y seguimientos',
+    globalTitle: 'Actividad del servidor',
+    globalHint:
+      'Las nuevas descargas y comprobaciones esperan. El trabajo activo termina y la cola se conserva.',
+    globalPaused: 'Descargas y seguimientos en pausa.',
+    globalDraining: 'Terminando el trabajo activo…',
+    globalRetry: 'Comprobar estado',
+    globalFailed: 'No se pudo confirmar el cambio.',
+    globalAdmin: 'Se necesita una sesión web de administrador.',
+    globalExpired: 'Sesión caducada. Inicia sesión de nuevo.',
     title: 'Cola',
     tabActive: 'En curso',
     tabQueued: 'En espera',

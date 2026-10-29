@@ -4201,7 +4201,7 @@ async def _forget_pending(song_ids: Collection[str]) -> None:
 async def _broadcast_queue_state() -> None:
     await state.connections.broadcast({
         'type': 'queue_state',
-        **queue_pause.status(),
+        **_global_queue_status(),
     })
 
 
@@ -8256,7 +8256,7 @@ def remove_queue_item(request: Request, song_id: str = Query(...)) -> dict:
 
 
 @router.get('/api/queue/state')
-def get_queue_state() -> dict[str, Any]:
+def get_queue_state(request: Request) -> dict[str, Any]:
     """Whether the queue is paused: ``{paused, state, active}``.
 
     ``state`` is ``running``, ``pausing`` (paused, ``active`` downloads
@@ -8265,12 +8265,30 @@ def get_queue_state() -> dict[str, Any]:
     WebSocket frame.
     """
 
-    return queue_pause.status()
+    return {
+        **_global_queue_status(),
+        'monitors_paused': queue_pause.paused,
+        'global_pause_supported': True,
+        'can_control': request_is_admin(request)
+        and getattr(getattr(request.state, 'principal', None), 'kind', '')
+        != 'device',
+    }
+
+
+def _global_queue_status() -> dict[str, Any]:
+    status = queue_pause.status()
+    runner = state.upgrade_runner
+    if status['paused'] and runner is not None and runner.busy():
+        status['active'] += 1
+        status['state'] = 'pausing'
+    return status
 
 
 async def _set_queue_paused(paused: bool) -> dict[str, Any]:
     if paused:
         queue_pause.pause()
+        if state.upgrade_runner is not None and state.upgrade_runner.busy():
+            state.upgrade_runner.pause()
     else:
         queue_pause.resume()
     store = state.pending_downloads
@@ -8281,7 +8299,7 @@ async def _set_queue_paused(paused: bool) -> dict[str, Any]:
             logger.exception('Could not save the queue pause')
     logger.info('Download queue {}', 'paused' if paused else 'resumed')
     await _broadcast_queue_state()
-    return queue_pause.status()
+    return _global_queue_status()
 
 
 @router.post('/api/queue/pause')
@@ -9754,16 +9772,17 @@ async def download_podcast_episode(
         cover_bytes = await asyncio.to_thread(
             best_cover_bytes, show['artwork_url']
         )
-        filename = await asyncio.to_thread(
-            download_episode,
-            info,
-            show_name=show['name'],
-            author=show['author'],
-            folder_name=show['folder_name'],
-            download_dir=Path(state.downloader.download_dir),
-            cover_bytes=cover_bytes,
-            progress=_progress,
-        )
+        async with queue_pause.running():
+            filename = await asyncio.to_thread(
+                download_episode,
+                info,
+                show_name=show['name'],
+                author=show['author'],
+                folder_name=show['folder_name'],
+                download_dir=Path(state.downloader.download_dir),
+                cover_bytes=cover_bytes,
+                progress=_progress,
+            )
     except Exception as exc:
         raise HTTPException(
             status_code=502, detail=f'Download failed: {exc}'

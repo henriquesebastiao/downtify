@@ -492,6 +492,17 @@ export default {
     playCountYoutubeMusic: 'YouTube Music 재생 횟수 (근사치)',
   },
   queue: {
+    globalPause: '다운로드 및 모니터링 일시 중지',
+    globalResume: '다운로드 및 모니터링 재개',
+    globalTitle: '서버 활동',
+    globalHint:
+      '새 다운로드와 확인은 대기합니다. 진행 중인 작업은 완료되며 대기열은 유지됩니다.',
+    globalPaused: '다운로드 및 모니터링이 일시 중지되었습니다.',
+    globalDraining: '진행 중인 작업 완료 중…',
+    globalRetry: '상태 확인',
+    globalFailed: '변경 사항을 확인할 수 없습니다.',
+    globalAdmin: '웹 관리자 세션이 필요합니다.',
+    globalExpired: '세션이 만료되었습니다. 다시 로그인하세요.',
     title: '대기열',
     tabActive: '진행 중',
     tabQueued: '대기 중',

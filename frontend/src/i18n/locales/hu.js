@@ -496,6 +496,17 @@ export default {
     playCountYoutubeMusic: 'Lejátszások a YouTube Musicon (hozzávetőleges)',
   },
   queue: {
+    globalPause: 'Letöltések és figyelések szüneteltetése',
+    globalResume: 'Letöltések és figyelések folytatása',
+    globalTitle: 'Szervertevékenység',
+    globalHint:
+      'Az új letöltések és ellenőrzések várnak. A folyamatban lévő munka befejeződik, a sor megmarad.',
+    globalPaused: 'A letöltések és figyelések szünetelnek.',
+    globalDraining: 'Aktív munka befejezése…',
+    globalRetry: 'Állapot ellenőrzése',
+    globalFailed: 'A változtatás nem erősíthető meg.',
+    globalAdmin: 'Webes rendszergazdai munkamenet szükséges.',
+    globalExpired: 'A munkamenet lejárt. Jelentkezzen be újra.',
     title: 'Sor',
     tabActive: 'Folyamatban',
     tabQueued: 'Várakozik',

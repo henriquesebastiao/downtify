@@ -234,7 +234,7 @@ def test_running_download_finishes_then_queue_reads_paused(queue):
         pausing = await api.pause_queue()
         downloader.release.set()
         await asyncio.wait_for(task, 5)
-        return [pausing['state'], api.get_queue_state()['state']]
+        return [pausing['state'], queue_pause.status()['state']]
 
     assert asyncio.run(scenario()) == [STATE_PAUSING, STATE_PAUSED]
     assert api.state.download_jobs['s1']['status'] == 'done'

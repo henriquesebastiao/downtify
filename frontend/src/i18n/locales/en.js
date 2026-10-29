@@ -487,6 +487,17 @@ export default {
     playCountYoutubeMusic: 'Plays on YouTube Music (approximate)',
   },
   queue: {
+    globalPause: 'Pause downloads and watches',
+    globalResume: 'Resume downloads and watches',
+    globalTitle: 'Server activity',
+    globalHint:
+      'New downloads and checks wait. Active work finishes; the queue is kept.',
+    globalPaused: 'Downloads and watches are paused.',
+    globalDraining: 'Finishing active work…',
+    globalRetry: 'Retry status',
+    globalFailed: 'Unable to confirm the change.',
+    globalAdmin: 'Web administrator access required.',
+    globalExpired: 'Session expired. Sign in again.',
     title: 'Queue',
     tabActive: 'In progress',
     tabQueued: 'Waiting',

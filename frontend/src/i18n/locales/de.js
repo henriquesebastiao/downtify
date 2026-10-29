@@ -512,6 +512,17 @@ export default {
     playCountYoutubeMusic: 'Wiedergaben auf YouTube Music (ungefähr)',
   },
   queue: {
+    globalPause: 'Downloads und Überwachung pausieren',
+    globalResume: 'Downloads und Überwachung fortsetzen',
+    globalTitle: 'Serveraktivität',
+    globalHint:
+      'Neue Downloads und Prüfungen warten. Laufende Arbeit endet, die Warteschlange bleibt erhalten.',
+    globalPaused: 'Downloads und Überwachung pausiert.',
+    globalDraining: 'Laufende Arbeit wird beendet…',
+    globalRetry: 'Status prüfen',
+    globalFailed: 'Änderung konnte nicht bestätigt werden.',
+    globalAdmin: 'Eine Web-Administratorsitzung ist erforderlich.',
+    globalExpired: 'Sitzung abgelaufen. Bitte erneut anmelden.',
     title: 'Warteschlange',
     tabActive: 'In Bearbeitung',
     tabQueued: 'Wartend',
