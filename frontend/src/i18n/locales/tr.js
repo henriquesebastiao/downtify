@@ -181,6 +181,12 @@ export default {
     remove: 'Çalma listesini favorilerden kaldır',
   },
   normalization: {
+    level: 'Ses seviyesi',
+    levelNormal: 'Normal',
+    levelLouder: 'Daha yüksek',
+    levelMaximum: 'En yüksek',
+    levelHint:
+      'Ses, her parçanın ölçülen sınırları içinde artar. Dosyalarınız değişmez.',
     title: 'Ses seviyesi normalleştirme',
     hint: 'Ses dosyalarınızı değiştirmeden tüm şarkıları benzer bir ses seviyesinde çalın.',
     enable: 'Çalma ses seviyesini normalleştir',

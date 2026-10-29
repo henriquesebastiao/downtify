@@ -179,6 +179,12 @@ export default {
     remove: '재생목록을 즐겨찾기에서 제거',
   },
   normalization: {
+    level: '재생 음량',
+    levelNormal: '보통',
+    levelLouder: '더 크게',
+    levelMaximum: '최대',
+    levelHint:
+      '각 곡의 측정된 한도 내에서 음량을 높입니다. 파일은 변경되지 않습니다.',
     title: '볼륨 정규화',
     hint: '오디오 파일을 바꾸지 않고 모든 곡을 비슷한 음량으로 재생합니다.',
     enable: '재생 볼륨 정규화',

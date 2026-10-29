@@ -186,6 +186,12 @@ export default {
     remove: 'Remover playlist dos favoritos',
   },
   normalization: {
+    level: 'Nível de volume',
+    levelNormal: 'Normal',
+    levelLouder: 'Mais alto',
+    levelMaximum: 'Máximo',
+    levelHint:
+      'O volume aumenta dentro dos limites medidos de cada faixa. Os arquivos não mudam.',
     title: 'Normalização de volume',
     hint: 'Toque todas as músicas com volume parecido, sem alterar seus arquivos de áudio.',
     enable: 'Normalizar o volume da reprodução',

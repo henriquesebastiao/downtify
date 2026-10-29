@@ -190,6 +190,12 @@ export default {
     remove: 'Playlist aus Favoriten entfernen',
   },
   normalization: {
+    level: 'Lautstärke',
+    levelNormal: 'Normal',
+    levelLouder: 'Lauter',
+    levelMaximum: 'Maximum',
+    levelHint:
+      'Die Lautstärke steigt innerhalb der gemessenen Grenzen jedes Titels. Die Dateien bleiben unverändert.',
     title: 'Lautstärkenormalisierung',
     hint: 'Alle Songs in ähnlicher Lautstärke abspielen, ohne deine Audiodateien zu verändern.',
     enable: 'Wiedergabelautstärke normalisieren',

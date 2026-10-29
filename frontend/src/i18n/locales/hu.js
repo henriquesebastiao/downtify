@@ -186,6 +186,12 @@ export default {
     remove: 'Lista eltávolítása a kedvencekből',
   },
   normalization: {
+    level: 'Hangerőszint',
+    levelNormal: 'Normál',
+    levelLouder: 'Hangosabb',
+    levelMaximum: 'Maximum',
+    levelHint:
+      'A hangerő az egyes számok mért határain belül nő. A fájlok változatlanok maradnak.',
     title: 'Hangerő-normalizálás',
     hint: 'Minden dal hasonló hangerővel szól, a hangfájlok módosítása nélkül.',
     enable: 'Lejátszási hangerő normalizálása',
