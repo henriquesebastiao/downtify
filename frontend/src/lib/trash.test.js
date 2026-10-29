@@ -40,3 +40,44 @@ describe('trash feature negotiation', () => {
     expect(capability.canManage.value).toBe(false)
   })
 })
+
+describe('trash helpers', () => {
+  it('maps unknown error codes to the generic message', async () => {
+    const { trashErrorKey } = await import('./trash')
+    expect(trashErrorKey('restore_collision')).toBe(
+      'trash.errors.restore_collision'
+    )
+    expect(trashErrorKey('something_new')).toBe('trash.errors.unavailable')
+    expect(trashErrorKey(undefined)).toBe('trash.errors.unavailable')
+  })
+
+  it('restores only kept, waiting or stopped songs within their retention', async () => {
+    const { restorable } = await import('./trash')
+    const now = 1_000_000_000_000
+    expect(
+      restorable({ state: 'trashed', expires_at: now / 1000 + 60 }, now)
+    ).toBe(true)
+    expect(
+      restorable({ state: 'trashed', expires_at: now / 1000 - 1 }, now)
+    ).toBe(false)
+    expect(restorable({ state: 'pending', expires_at: null }, now)).toBe(true)
+    expect(restorable({ state: 'error', expires_at: null }, now)).toBe(true)
+    expect(restorable({ state: 'moving' }, now)).toBe(false)
+    expect(restorable({ state: 'purged' }, now)).toBe(false)
+  })
+
+  it('lists at most a few files in the confirmation', async () => {
+    const { previewLines } = await import('./trash')
+    const items = Array.from({ length: 10 }, (_, i) => ({
+      file: `Artist/Song ${i}.flac`,
+      metadata: i ? { title: `Song ${i}`, artist: 'Artist' } : {},
+    }))
+    const { lines, more } = previewLines(items, 3)
+    expect(lines).toEqual([
+      '• Artist/Song 0.flac (FLAC)',
+      '• Artist — Song 1 (FLAC)',
+      '• Artist — Song 2 (FLAC)',
+    ])
+    expect(more).toBe(7)
+  })
+})

@@ -1,7 +1,9 @@
 """Bounded filesystem worker; run separately with only allowlisted mounts.
 
-No HTTP listener, network access, Docker socket or application startup.
-The auth database is opened read-only to recheck administrator rights.
+For a configuration with ``"worker": "external"``: the server then only
+records what to do, and this does it. No HTTP listener, network access,
+Docker socket or application startup. The auth database is opened
+read-only to recheck administrator rights.
 """
 
 from __future__ import annotations
@@ -9,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import sys
 from pathlib import Path
 
 from .library_trash import trash_from_config
@@ -25,6 +28,13 @@ def main():
     if not options.auth_database.is_file() or not options.database.is_file():
         raise SystemExit('required_database_unavailable')
     store = trash_from_config(options.config, options.database)
+    if store.worker != 'external':
+        # Harmless (one worker at a time), but the server already does it.
+        print(
+            'note: this configuration runs the worker inside the server; '
+            'set "worker": "external" to run it here instead',
+            file=sys.stderr,
+        )
 
     def authorized(user_id):
         uri = options.auth_database.resolve().as_uri() + '?mode=ro'

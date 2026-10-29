@@ -14,7 +14,8 @@ services:
       # slskd's download folder, when using the slskd audio source:
       # - ./docker/slskd:/slskd
       # - settings/server./docker/cookies.txt:/cookies.txt
-    # environment:
+    environment:
+      DOWNTIFY_TRASH: true
       # - DOWNTIFY_PORT=30321
       # https://downtify.henriquesebastiao.com/getting-started/environment-variables/#getting-a-cookiestxt
       # - DOWNTIFY_COOKIES_FILE=/cookies.txt

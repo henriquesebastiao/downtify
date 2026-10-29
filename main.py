@@ -81,7 +81,7 @@ from downtify.library_paths_cache import (
     set_listing_refresh_gate,
 )
 from downtify.library_sync import LibrarySync
-from downtify.library_trash import trash_from_config
+from downtify.library_trash import trash_from_env
 from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
 from downtify.library_usage import UsageSnapshots
@@ -414,15 +414,27 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.library_visibility = LibraryVisibility(library_db)
     api.state.traffic = TrafficCounters(library_db)
     api.state.podcasts = PodcastStore(library_db)
-    # The mobile API (downtify/mobile_routes.py).
-    trash_config = os.getenv('DOWNTIFY_TRASH_CONFIG', '')
-    api.state.library_trash = (
-        trash_from_config(Path(trash_config), library_db)
-        if trash_config
-        else None
-    )
+    # The music trash (downtify/library_trash.py), when the operator
+    # turned it on. A configuration that doesn't load stops the server:
+    # carrying on would quietly bring permanent deletion back.
+    try:
+        api.state.library_trash = trash_from_env(DOWNLOAD_DIR, library_db)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        logger.error(
+            'Music trash configuration unusable ({}): fix '
+            'DOWNTIFY_TRASH_CONFIG or unset it',
+            error,
+        )
+        raise
+    if api.state.library_trash is not None:
+        logger.info(
+            'Music trash on ({} worker): {}',
+            api.state.library_trash.worker,
+            ', '.join(sorted(api.state.library_trash.roots)),
+        )
     if api.state.downloader is not None:
         api.state.downloader.trash_store = api.state.library_trash
+    # The mobile API (downtify/mobile_routes.py).
     api.state.library_sync = LibrarySync(library_db)
     api.state.transcoder = transcoder_from_env(DATABASE_DIR)
     api.state.stream_cache = stream_cache_from_env(DATABASE_DIR)

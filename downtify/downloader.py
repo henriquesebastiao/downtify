@@ -946,9 +946,11 @@ class Downloader:
     ) -> str:
         """:meth:`download` itself."""
 
+        # A song sent to the music trash stays out until an admin restores
+        # it or allows it again; like an exclusion, not a failed attempt.
         trash = getattr(self, 'trash_store', None)
         if trash is not None and trash.blocked(song):
-            raise ValueError('library_trash_excluded')
+            raise DownloadPolicyBlocked('library_trash_excluded')
         skip_existing = not self.overwrite_existing_files
         if skip_existing and self._can_resolve_path_early(song):
             existing = self.find_existing_download(song, subdir)

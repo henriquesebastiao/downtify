@@ -1,7 +1,10 @@
-"""Persistent, reversible music trash. Filesystem work runs in a separate worker.
+"""Persistent, reversible music trash.
 
-No playlist, favourite or ownership record is deleted by this module. A
-confirmed operation reserves its original path until restored or expired.
+Filesystem work runs in a worker: inside the app (``embedded``, the
+default) or as a separate process (``python -m downtify.trash_worker``)
+for installs whose app only mounts the music read-only. No playlist,
+favourite or ownership record is deleted by this module. A confirmed
+operation reserves its original path until restored or expired.
 """
 
 from __future__ import annotations
@@ -11,6 +14,7 @@ import errno
 import hashlib
 import json
 import os
+import platform
 import re
 import secrets
 import sqlite3
@@ -21,7 +25,7 @@ import unicodedata
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Callable
+from typing import Callable, Mapping, Optional
 
 if os.name == 'nt':
     import msvcrt
@@ -29,8 +33,20 @@ else:
     import fcntl
 
 TRASH_DIR = '.downtify-trash'
-RETENTION_SECONDS = 30 * 86400
+RETENTION_DAYS = 30
+RETENTION_SECONDS = RETENTION_DAYS * 86400
 PREVIEW_SECONDS = 600
+WORKER_MODES = ('embedded', 'external')
+#: How long the hidden paths are trusted before the journal's revision is
+#: read again (a separate worker process changes it behind our back).
+HIDDEN_RECHECK_SECONDS = 2.0
+_TRUE = {'1', 'true', 'yes', 'on'}
+#: The operations a worker pass picks up (``?`` is the current time).
+_WORK = (
+    "FROM library_trash WHERE state IN ('pending','moving',"
+    "'restore_pending','restoring','purging') OR "
+    "(state='trashed' AND expires<=?)"
+)
 BLOCKING_STATES = (
     'pending',
     'moving',
@@ -141,7 +157,10 @@ class TrashRoot:
                 raise TrashError('nas_marker_missing')
             if marker.read_text().strip() != self.marker_value:
                 raise TrashError('nas_marker_changed')
-        return root
+        # The root itself may not be a link, but a folder above it may
+        # (``/home`` on some distributions): every later step opens each
+        # component without following links, so start from the real path.
+        return root.resolve()
 
 
 def _relative(value: str, *, internal: bool = False) -> str:
@@ -217,13 +236,26 @@ def _fsync_dir(path: Path) -> None:
         os.fsync(fd)
 
 
-def _rename_no_replace(source: Path, target: Path) -> None:
-    """Same-mount atomic rename which never replaces a concurrent file."""
-    if sys.platform == 'linux':
-        libc = ctypes.CDLL(None, use_errno=True)
-        rename = getattr(libc, 'renameat2', None)
-        if rename is None:
-            raise TrashError('atomic_move_unsupported')
+#: ``renameat2``'s syscall number, for a C library without the wrapper
+#: (musl before 1.2.5, as in some Alpine images).
+_RENAMEAT2_SYSCALL = {
+    'x86_64': 316,
+    'amd64': 316,
+    'i386': 353,
+    'i686': 353,
+    'aarch64': 276,
+    'arm64': 276,
+    'riscv64': 276,
+    'armv7l': 382,
+    'armv6l': 382,
+}
+_RENAME_NOREPLACE = 1
+
+
+def _renameat2() -> Callable[[int, bytes, int, bytes, int], int]:
+    libc = ctypes.CDLL(None, use_errno=True)
+    rename = getattr(libc, 'renameat2', None)
+    if rename is not None:
         rename.argtypes = [
             ctypes.c_int,
             ctypes.c_char_p,
@@ -232,6 +264,30 @@ def _rename_no_replace(source: Path, target: Path) -> None:
             ctypes.c_uint,
         ]
         rename.restype = ctypes.c_int
+        return rename
+    number = _RENAMEAT2_SYSCALL.get(platform.machine().lower())
+    if number is None:
+        raise TrashError('atomic_move_unsupported')
+    syscall = libc.syscall
+    syscall.restype = ctypes.c_long
+
+    def via_syscall(src_fd, src, dst_fd, dst, flags):
+        return syscall(
+            ctypes.c_long(number),
+            ctypes.c_int(src_fd),
+            ctypes.c_char_p(src),
+            ctypes.c_int(dst_fd),
+            ctypes.c_char_p(dst),
+            ctypes.c_uint(flags),
+        )
+
+    return via_syscall
+
+
+def _rename_no_replace(source: Path, target: Path) -> None:
+    """Same-mount atomic rename which never replaces a concurrent file."""
+    if sys.platform == 'linux':
+        rename = _renameat2()
         with (
             _directory_fd(source.parent) as source_fd,
             _directory_fd(target.parent) as target_fd,
@@ -241,11 +297,15 @@ def _rename_no_replace(source: Path, target: Path) -> None:
                 os.fsencode(source.name),
                 target_fd,
                 os.fsencode(target.name),
-                1,
+                _RENAME_NOREPLACE,
             ):
                 code = ctypes.get_errno()
                 if code == errno.EEXIST:
                     raise TrashError('restore_collision')
+                if code in {errno.EINVAL, errno.ENOSYS, errno.EOPNOTSUPP}:
+                    # The filesystem (or kernel) can't promise not to
+                    # replace: refuse rather than fall back to rename().
+                    raise TrashError('atomic_move_unsupported')
                 raise OSError(code, os.strerror(code))
     elif os.name == 'nt':
         # Windows rename fails if the destination already exists.
@@ -321,6 +381,14 @@ def _unlink_verified(path: Path, expected: dict) -> None:
         os.fsync(directory)
 
 
+@dataclass
+class _Hidden:
+    revision: int
+    files: frozenset[str]
+    resolved: frozenset[str]
+    checked: float
+
+
 class LibraryTrash:
     def __init__(
         self,
@@ -328,10 +396,15 @@ class LibraryTrash:
         roots: dict[str, TrashRoot],
         *,
         clock: Callable[[], float] = time.time,
+        worker: str = 'embedded',
     ):
+        if worker not in WORKER_MODES:
+            raise TrashError('unsupported_configuration')
         self.db = Path(db)
         self.roots = roots
         self.clock = clock
+        self.worker = worker
+        self._hidden: Optional[_Hidden] = None
         self.db.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as conn:
             conn.executescript("""
@@ -545,6 +618,7 @@ class LibraryTrash:
                         'INSERT OR IGNORE INTO library_trash_blocks(identity,item_id) VALUES (?,?)',
                         (key, row['id']),
                     )
+        self._hidden = None
         return [r['id'] for r in rows]
 
     def confirmation_files(self, user_id: int, batch: str) -> list[str]:
@@ -603,25 +677,47 @@ class LibraryTrash:
                     (user_id or row['user_id'], item),
                 )
 
-    def hidden_paths(self) -> set[str]:
-        with self.connect() as conn:
-            return {
-                r[0]
-                for r in conn.execute(
-                    "SELECT stored FROM library_trash WHERE state NOT IN ('preview','restored') AND blocked=1"
-                )
-            }
+    def hidden(self) -> tuple[frozenset[str], frozenset[str]]:
+        """The library paths kept out of every listing, as stored and as
+        resolved on disk. Read on every request, so cached until the
+        journal's revision moves."""
 
-    def hidden_resolved(self) -> set[str]:
+        now = time.monotonic()
+        cached = self._hidden
+        if cached is not None and now - cached.checked < (
+            HIDDEN_RECHECK_SECONDS
+        ):
+            return cached.files, cached.resolved
         with self.connect() as conn:
+            revision = conn.execute(
+                "SELECT value FROM library_trash_meta WHERE key='revision'"
+            ).fetchone()[0]
+            if cached is not None and cached.revision == revision:
+                cached.checked = now
+                return cached.files, cached.resolved
             rows = conn.execute(
-                "SELECT root_key,relative FROM library_trash WHERE state NOT IN ('preview','restored') AND blocked=1"
+                "SELECT stored,root_key,relative FROM library_trash WHERE state NOT IN ('preview','restored') AND blocked=1"
             ).fetchall()
-        return {
-            str((self.roots[r['root_key']].path / r['relative']).absolute())
+        bases = {}
+        for key, root in self.roots.items():
+            try:
+                bases[key] = root.path.absolute().resolve()
+            except OSError:
+                continue
+        files = frozenset(r['stored'] for r in rows)
+        resolved = frozenset(
+            str(bases[r['root_key']] / r['relative'])
             for r in rows
-            if r['root_key'] in self.roots
-        }
+            if r['root_key'] in bases
+        )
+        self._hidden = _Hidden(revision, files, resolved, now)
+        return files, resolved
+
+    def hidden_paths(self) -> frozenset[str]:
+        return self.hidden()[0]
+
+    def hidden_resolved(self) -> frozenset[str]:
+        return self.hidden()[1]
 
     def _update(self, item: str, **values) -> None:
         with self.connect() as conn:
@@ -635,6 +731,7 @@ class LibraryTrash:
                 conn.execute(
                     "UPDATE library_trash_meta SET value=value+1 WHERE key='revision'"
                 )
+        self._hidden = None
 
     def revision(self) -> int:
         with self.connect() as conn:
@@ -689,6 +786,7 @@ class LibraryTrash:
             conn.execute(
                 "UPDATE library_trash_meta SET value=value+1 WHERE key='revision'"
             )
+        self._hidden = None
 
     def retry(self, ids: list[str], *, user_id: int) -> None:
         if not ids or len(ids) > 200:
@@ -710,6 +808,30 @@ class LibraryTrash:
                     (state, user_id, '', item),
                 )
 
+    def has_work(self) -> bool:
+        """Whether a worker pass would do anything (cheap: one query)."""
+
+        with self.connect() as conn:
+            return (
+                conn.execute(
+                    'SELECT 1 ' + _WORK + ' LIMIT 1',
+                    (self.clock(),),
+                ).fetchone()
+                is not None
+            )
+
+    def work_files(self) -> dict[str, str]:
+        """``{operation id: library path}`` of the work waiting, so the
+        embedded worker can hold back a song that is playing."""
+
+        with self.connect() as conn:
+            return {
+                r['id']: r['stored']
+                for r in conn.execute(
+                    'SELECT id,stored ' + _WORK, (self.clock(),)
+                )
+            }
+
     def exclusions(self) -> list[dict]:
         with self.connect() as conn:
             return [
@@ -730,7 +852,7 @@ class LibraryTrash:
         result = []
         with self.connect() as conn:
             rows = conn.execute(
-                "SELECT * FROM library_trash WHERE state IN ('pending','moving','restore_pending','restoring','purging') OR (state='trashed' AND expires<=?) ORDER BY created LIMIT ?",
+                'SELECT * ' + _WORK + ' ORDER BY created LIMIT ?',
                 (self.clock(), limit + len(skip_ids)),
             ).fetchall()
         for row in rows:
@@ -815,6 +937,11 @@ class LibraryTrash:
                     current, file['fingerprint'], original=action == 'move'
                 ):
                     raise TrashError('file_changed')
+            elif action == 'restore' and other.exists():
+                # Never moved (a move that failed or was interrupted
+                # first): the file is still where it was, whatever has
+                # happened to it since. Restoring only shows it again.
+                continue
             elif not other.exists() or not _matches(
                 other, file['fingerprint']
             ):
@@ -875,4 +1002,30 @@ def trash_from_config(config_path: Path, db: Path) -> LibraryTrash:
         roots[key] = TrashRoot(
             path, marker, str(value.get('marker_value', ''))
         )
-    return LibraryTrash(db, roots)
+    if not roots:
+        raise TrashError('invalid_root')
+    return LibraryTrash(
+        db, roots, worker=str(config.get('worker', 'embedded'))
+    )
+
+
+def trash_from_env(
+    download_dir: Path,
+    db: Path,
+    env: Optional[Mapping[str, str]] = None,
+) -> Optional[LibraryTrash]:
+    """The trash the operator turned on, or ``None``.
+
+    ``DOWNTIFY_TRASH_CONFIG`` (a JSON file naming each folder, and where
+    the worker runs) wins; otherwise ``DOWNTIFY_TRASH=true`` keeps it to
+    the download folder, with the worker inside the app."""
+
+    env = os.environ if env is None else env
+    config = str(env.get('DOWNTIFY_TRASH_CONFIG') or '').strip()
+    if config:
+        return trash_from_config(Path(config), db)
+    if str(env.get('DOWNTIFY_TRASH') or '').strip().lower() in _TRUE:
+        return LibraryTrash(
+            db, {'downloads': TrashRoot(Path(download_dir).absolute())}
+        )
+    return None

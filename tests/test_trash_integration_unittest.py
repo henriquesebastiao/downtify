@@ -62,6 +62,7 @@ class IntegrationTests(unittest.TestCase):
             loop=None,
             settings={},
             monitor_db=PlaylistMonitorDB(Path(self.temp.name) / 'monitor.db'),
+            background_tasks=set(),
         )
         self.state = state
         self.addCleanup(patch.stopall)

@@ -6,11 +6,6 @@ const LIBRARY_TABS = 'tracks|albums|artists|playlists'
 const CHARTS_TABS = 'tracks|albums|artists|playlists'
 
 const routes = [
-  {
-    path: '/library/trash',
-    name: 'Trash',
-    component: () => import('/src/views/TrashView.vue'),
-  },
   { path: '/', name: 'Home', component: HomeView },
   {
     path: '/search/:query?',
@@ -53,6 +48,13 @@ const routes = [
     path: '/library/storage',
     name: 'Storage',
     component: () => import('/src/views/StorageView.vue'),
+  },
+  {
+    // The music trash (admins, when the server has it on): songs kept
+    // for a while after leaving the library, restorable until then.
+    path: '/library/trash',
+    name: 'Trash',
+    component: () => import('/src/views/TrashView.vue'),
   },
   {
     path: '/library/album',

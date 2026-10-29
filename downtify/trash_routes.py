@@ -15,7 +15,7 @@ from .admin_access import admin_user
 from .library_catalog import list_library_entries
 from .library_paths import library_file_root
 from .library_paths_cache import invalidate_library_paths_cache
-from .library_trash import LibraryTrash, TrashError
+from .library_trash import RETENTION_DAYS, LibraryTrash, TrashError
 
 router = APIRouter(prefix='/api/v1/library/trash')
 
@@ -36,6 +36,13 @@ class Items(BaseModel):
 _previews = {}
 _preview_slots = asyncio.Semaphore(1)
 _PREVIEW_JOB_TTL = 3600
+#: How often the watcher looks for work and for a separate worker's
+#: progress, unless a request wakes it sooner.
+_WATCH_SECONDS = 2.0
+#: Operations one embedded worker pass handles before the library is
+#: refreshed and the next pass starts.
+_WORKER_BATCH = 10
+_wake: asyncio.Event | None = None
 
 
 def _clean_preview_jobs():
@@ -199,18 +206,17 @@ def ensure_idle(files: list[str]):
 
 @router.get('/capabilities')
 def capabilities(request: Request):
+    enabled = getattr(api.state, 'library_trash', None) is not None
     try:
         admin_user(request)
     except HTTPException:
-        return {
-            'can_manage': False,
-            'enabled': getattr(api.state, 'library_trash', None) is not None,
-            'retention_days': 30,
-        }
+        admin = False
+    else:
+        admin = True
     return {
-        'can_manage': getattr(api.state, 'library_trash', None) is not None,
-        'enabled': getattr(api.state, 'library_trash', None) is not None,
-        'retention_days': 30,
+        'can_manage': enabled and admin,
+        'enabled': enabled,
+        'retention_days': RETENTION_DAYS,
     }
 
 
@@ -234,7 +240,7 @@ async def preview(payload: Selection, request: Request):
         'state': 'preparing',
         'created': time.monotonic(),
     }
-    asyncio.create_task(_run_preview(job_id, payload, user))
+    api.spawn_task(_run_preview(job_id, payload, user), name='trash-preview')
     return {'request_id': job_id, 'state': 'preparing'}
 
 
@@ -259,6 +265,7 @@ async def confirm(payload: Confirmation, request: Request):
     await call(ensure_idle, files)
     ids = await call(store().confirm, user, payload.confirmation)
     await publish_changes()
+    wake_worker()
     await api.log_activity(request, 'library_trash_requested', str(len(ids)))
     return {'ids': ids, 'state': 'pending'}
 
@@ -285,6 +292,7 @@ async def exclusions(request: Request):
 async def restore(payload: Items, request: Request):
     user = admin_user(request)
     await call(store().request_restore, payload.ids, user_id=user)
+    wake_worker()
     await api.log_activity(
         request, 'library_trash_restore_requested', str(len(payload.ids))
     )
@@ -303,6 +311,7 @@ async def allow_download(payload: Items, request: Request):
 async def retry(payload: Items, request: Request):
     user = admin_user(request)
     await call(store().retry, payload.ids, user_id=user)
+    wake_worker()
     return {'state': 'pending'}
 
 
@@ -331,12 +340,77 @@ async def publish_changes():
     _revision = revision
 
 
+def wake_worker() -> None:
+    """Run the watcher now: a request just queued work for it."""
+
+    if _wake is not None:
+        _wake.set()
+
+
+def _still_admin(user_id: int) -> bool:
+    auth = api.state.auth
+    user = auth.users.get(user_id) if auth is not None and user_id else None
+    return user is not None and user.get('role') == 'admin'
+
+
+def _held_back(trash: LibraryTrash) -> frozenset[str] | None:
+    """Operations that must wait: the ones on a song playing right now,
+    or all of them while the library upgrade rewrites files (``None``)."""
+
+    try:
+        ensure_idle([])
+    except TrashError:
+        return None
+    playing = {
+        str(p.get('track', {}).get('file') or '')
+        for p in api.state.now_playing.active()
+        if not p.get('paused', False)
+    }
+    return frozenset(
+        item for item, file in trash.work_files().items() if file in playing
+    )
+
+
+def run_worker_pass(trash: LibraryTrash) -> list[dict]:
+    """One bounded pass of the embedded worker (in a thread)."""
+
+    if trash.worker != 'embedded' or not trash.has_work():
+        return []
+    skip = _held_back(trash)
+    if skip is None:
+        return []
+    done = trash.process(
+        limit=_WORKER_BATCH, authorized=_still_admin, skip_ids=skip
+    )
+    for row in done:
+        if not row['ok']:
+            logger.warning(
+                'Trash operation {} stopped: {}', row['id'], row['error']
+            )
+    return done
+
+
 async def watch_trash():
+    """Publish the journal's changes to the library and, with the
+    embedded worker, carry out the queued moves, restores and expiries."""
+
+    global _wake
+    _wake = asyncio.Event()
     while True:
+        done = []
         try:
+            trash = getattr(api.state, 'library_trash', None)
+            if trash is not None and trash.worker == 'embedded':
+                done = await asyncio.to_thread(run_worker_pass, trash)
             await publish_changes()
         except Exception as error:
             logger.warning(
                 'Trash synchronization deferred ({})', type(error).__name__
             )
-        await asyncio.sleep(2)
+        if done:
+            continue  # more may be waiting: don't sit out the interval
+        try:
+            await asyncio.wait_for(_wake.wait(), _WATCH_SECONDS)
+        except asyncio.TimeoutError:
+            pass
+        _wake.clear()

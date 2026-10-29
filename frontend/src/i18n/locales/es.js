@@ -1,98 +1,127 @@
 export default {
   trash: {
-    title: 'Trash',
-    move: 'Move to trash',
-    back: 'Library',
-    help: 'Files remain recoverable for 30 days after they are moved.',
-    confirmTitle: 'Move {count} file(s) to trash?',
+    title: 'Papelera',
+    subtitle:
+      'Canciones sacadas de la biblioteca, guardadas {days} días después de moverlas. Puedes restaurarlas hasta entonces.',
+    adminOnly: 'Solo los administradores pueden ver esto',
+    adminOnlyHint:
+      'Pide a un administrador de este servidor que restaure una canción.',
+    off: 'La papelera está desactivada',
+    offHint:
+      'En este servidor las canciones se eliminan para siempre. La papelera se activa en la configuración del servidor (DOWNTIFY_TRASH).',
+    inTrash: 'En la papelera',
+    exclusions: 'Fuera de las descargas',
+    search: 'Buscar en la papelera',
+    restoreSelected: {
+      one: 'Restaurar {count} canción',
+      other: 'Restaurar {count} canciones',
+    },
+    summary: {
+      one: '{count} canción · {size}',
+      other: '{count} canciones · {size}',
+    },
+    empty: 'La papelera está vacía',
+    emptyHint:
+      'Las canciones que mueves de la biblioteca a la papelera aparecen aquí hasta que caducan.',
+    noMatch: 'Nada en la papelera coincide',
+    select: 'Seleccionar «{title}»',
+    keptUntil: 'Se guarda hasta el {date}',
+    restore: 'Restaurar',
+    retry: 'Reintentar',
+    previous: 'Anterior',
+    next: 'Siguiente',
+    exclusionsHint:
+      'Canciones cuyo plazo en la papelera terminó. Las descargas automáticas (Monitor de playlists, seguimientos) las siguen saltando hasta que las vuelvas a permitir.',
+    exclusionsEmpty: 'No hay nada fuera de las descargas',
+    allowDownload: 'Permitir descargas',
+    allowTitle: '¿Permitir que «{title}» se vuelva a descargar?',
+    allowBody:
+      'Las descargas automáticas pueden volver a bajarla. No se descarga nada ahora.',
+    move: 'Mover a la papelera',
+    preparing: 'Comprobando los archivos…',
+    confirmTitle: {
+      one: '¿Mover {count} canción a la papelera?',
+      other: '¿Mover {count} canciones a la papelera?',
+    },
     confirmBody:
-      'Only the listed files will be moved for 30 days. They will also disappear from Deemix and Jellyfin. Playlist and favourite references are retained for restoration. Automatic downloads remain blocked until you explicitly allow them again.',
-    pending: 'Request saved. Open Trash to follow the operation.',
-    preparing: 'Checking files in the background. This may take a moment.',
-    search: 'Search trash',
-    summary: '{count} file(s) · {size} MB retained',
-    empty: 'Trash is empty.',
-    restore: 'Restore',
-    restoreSelected: 'Restore selection',
-    retry: 'Resume',
-    select: 'Select {title}',
-    expires: 'Kept until {date}',
-    previous: 'Previous',
-    next: 'Next',
-    exclusions: 'Excluded from automatic downloads',
-    exclusionsHelp:
-      'These files have expired. Their download exclusions remain active.',
-    allowDownload: 'Allow a new download',
-    allowHelp:
-      'This track can be downloaded again, including by an automatic monitor. This button does not start a download.',
+      'Solo se mueven estos archivos, con sus archivos de letras. Salen de la biblioteca para todos y se pueden restaurar durante {days} días. Sus playlists y me gusta vuelven con ellos, y mientras tanto las descargas automáticas los saltan.',
+    confirmMore: {
+      one: 'y {count} más',
+      other: 'y {count} más',
+    },
+    pending: {
+      one: 'Moviendo {count} canción a la papelera',
+      other: 'Moviendo {count} canciones a la papelera',
+    },
+    downloadBlocked:
+      'En la papelera de música: un administrador tiene que volver a permitirla.',
     states: {
-      preview: 'Awaiting confirmation',
-      pending: 'Waiting to move',
-      moving: 'Moving',
-      trashed: 'In trash',
-      restore_pending: 'Waiting to restore',
-      restoring: 'Restoring',
-      restored: 'Restored',
-      purging: 'Expiring',
-      purged: 'Expired',
-      error: 'Attention needed: files retained',
+      preview: 'Esperando confirmación',
+      pending: 'Esperando para mover',
+      moving: 'Moviendo',
+      trashed: 'En la papelera',
+      restore_pending: 'Esperando para restaurar',
+      restoring: 'Restaurando',
+      restored: 'Restaurada',
+      purging: 'Caducando',
+      purged: 'Caducada',
+      error: 'Detenida — archivos conservados',
     },
     errors: {
-      unavailable: 'Trash is temporarily unavailable. No move is confirmed.',
-      admin_required: 'Only an administrator can manage the trash.',
-      trash_not_configured: 'Trash is not configured on this server.',
-      file_changed:
-        'The file changed after verification. It is retained; select it again.',
-      file_missing:
-        'An expected file is missing. Check storage before resuming.',
-      filesystem_unavailable:
-        'Storage is unavailable. Check the NAS, then resume.',
-      nas_marker_missing:
-        'The expected NAS mount is unavailable. Operation paused.',
-      nas_marker_changed:
-        'Storage does not match the expected NAS. Operation paused.',
-      root_unavailable: 'The music folder is unavailable.',
-      unsupported_collection: 'This music folder is not enabled for trash.',
-      confirmation_expired: 'Verification expired. Select the tracks again.',
-      confirmation_invalid:
-        'This confirmation does not match your selection or account.',
-      restore_collision:
-        'A file already exists here. Nothing was overwritten; the trashed copy is retained.',
-      trash_file_changed:
-        'The retained file changed. Permanent deletion is blocked.',
-      trash_file_missing: 'A trashed file is missing. The operation stopped.',
-      retention_expired: 'The 30-day retention period has elapsed.',
-      admin_access_revoked:
-        'The requesting account no longer has administrator rights.',
-      track_is_playing: 'This track is playing. Pause it before continuing.',
-      invalid_selection: 'Select between 1 and 200 files.',
-      item_not_found: 'This track is no longer available.',
-      operation_already_pending:
-        'An operation is already pending for this file.',
-      operation_not_complete: 'Wait for the current operation to finish.',
-      unsafe_symlink:
-        'This path contains a symbolic link and cannot be changed.',
-      invalid_path: 'This file is outside the allowed folders.',
-      trash_permissions_unsafe:
-        'Trash folder permissions require administrator attention.',
+      unavailable: 'La papelera no está disponible ahora. No se movió nada.',
+      admin_required: 'Solo un administrador puede usar la papelera.',
+      admin_access_revoked: 'La cuenta que lo pidió ya no es administradora.',
       atomic_move_unsupported:
-        'Storage does not support the required safe move.',
+        'Este almacenamiento no puede mover archivos de forma segura. No se movió nada.',
+      confirmation_expired:
+        'La comprobación caducó. Elige las canciones de nuevo.',
+      confirmation_invalid:
+        'Esta confirmación no es de tu cuenta o de tu selección.',
+      file_changed:
+        'El archivo cambió después de comprobarlo. Se quedó donde estaba; elígelo de nuevo.',
       file_changed_during_move:
-        'The file changed while moving. Data is retained for verification.',
+        'El archivo cambió mientras se movía. Se guarda en la papelera para que lo revises.',
+      file_missing:
+        'Falta un archivo. Revisa el almacenamiento y vuelve a intentarlo.',
+      filesystem_unavailable:
+        'El almacenamiento no está disponible. Revísalo y vuelve a intentarlo.',
       identity_uncertain:
-        'The track information is insufficient to prevent automatic redownload. No files were moved.',
-      preview_busy:
-        'A verification is already running. Wait for it to finish before trying again.',
-      preview_unavailable:
-        'Verification was interrupted. Select the tracks again.',
+        'Las etiquetas de esta canción no bastan para mantenerla fuera de las descargas automáticas. No se movió nada.',
+      invalid_path:
+        'Este archivo está fuera de las carpetas que cubre la papelera.',
+      invalid_selection: 'Elige entre 1 y 200 canciones.',
+      item_not_found: 'Esta canción ya no está en la biblioteca.',
       library_task_active:
-        'A library upgrade is running. Wait for it or pause it first.',
-      trash_ignore_invalid:
-        'The Jellyfin trash exclusion is invalid. No files were deleted.',
-      unsupported_lyrics_location:
-        'The lyrics folder is not enabled for trash. No files were moved.',
+        'La mejora de la biblioteca está en marcha. Espera o páusala antes.',
+      nas_marker_changed:
+        'El almacenamiento no es el que espera la papelera. No se movió nada.',
+      nas_marker_missing:
+        'El almacenamiento esperado no está montado. No se movió nada.',
+      operation_already_pending: 'Esta canción ya está en camino.',
       operation_in_progress:
-        'The move is in progress. Wait for it to finish before restoring the file.',
+        'El movimiento sigue en marcha. Espera antes de restaurar.',
+      operation_not_complete: 'Espera a que termine el paso actual.',
+      preview_busy: 'Hay otra comprobación en marcha. Espera a que termine.',
+      preview_unavailable:
+        'La comprobación se interrumpió. Elige las canciones de nuevo.',
+      restore_collision:
+        'Ya hay otro archivo ahí. No se sobrescribió nada; la canción sigue en la papelera.',
+      retention_expired: 'Su plazo en la papelera terminó.',
+      root_unavailable: 'La carpeta de música no está disponible.',
+      track_is_playing:
+        'Alguien está reproduciendo esta canción. Páusala antes.',
+      trash_file_changed: 'La copia de la papelera cambió. No se eliminará.',
+      trash_file_missing: 'Falta un archivo de la papelera.',
+      trash_ignore_invalid:
+        'El archivo .ignore de la carpeta de la papelera no está vacío. No se movió nada.',
+      trash_not_configured: 'La papelera está desactivada en este servidor.',
+      trash_permissions_unsafe:
+        'Otros pueden leer la carpeta de la papelera. Revisa sus permisos.',
+      unsafe_symlink: 'La ruta tiene un enlace simbólico, así que no se toca.',
+      unsupported_collection:
+        'La carpeta de esta canción no la cubre la papelera.',
+      unsupported_lyrics_location:
+        'La carpeta de letras no la cubre la papelera. No se movió nada.',
     },
   },
   downloadPolicy: {

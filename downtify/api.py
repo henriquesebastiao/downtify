@@ -1980,18 +1980,21 @@ def library_context() -> LibraryContext:
         if state.downloader is not None
         else Path('/downloads')
     )
+    # Songs in the music trash (or waiting to go there) are no longer
+    # part of the library, for anyone.
+    hidden_files, hidden_resolved = (
+        state.library_trash.hidden()
+        if state.library_trash is not None
+        else (frozenset(), frozenset())
+    )
     return library_context_from_state(
         download_dir,
         state.settings,
         state.track_index,
         metadata_cache=state.metadata_cache,
         playlist_catalog=state.playlist_catalog,
-        hidden_files=frozenset(state.library_trash.hidden_paths())
-        if state.library_trash
-        else frozenset(),
-        hidden_resolved=frozenset(state.library_trash.hidden_resolved())
-        if state.library_trash
-        else frozenset(),
+        hidden_files=hidden_files,
+        hidden_resolved=hidden_resolved,
     )
 
 

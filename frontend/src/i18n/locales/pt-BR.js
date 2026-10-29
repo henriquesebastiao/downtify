@@ -1,98 +1,125 @@
 export default {
   trash: {
-    title: 'Trash',
-    move: 'Move to trash',
-    back: 'Library',
-    help: 'Files remain recoverable for 30 days after they are moved.',
-    confirmTitle: 'Move {count} file(s) to trash?',
+    title: 'Lixeira',
+    subtitle:
+      'Músicas tiradas da biblioteca, guardadas por {days} dias depois de movidas. Restaure-as até lá.',
+    adminOnly: 'Só administradores podem ver isto',
+    adminOnlyHint:
+      'Peça a um administrador deste servidor para restaurar uma música.',
+    off: 'A lixeira está desligada',
+    offHint:
+      'Neste servidor as músicas são excluídas de vez. A lixeira é ligada na configuração do servidor (DOWNTIFY_TRASH).',
+    inTrash: 'Na lixeira',
+    exclusions: 'Fora dos downloads',
+    search: 'Buscar na lixeira',
+    restoreSelected: {
+      one: 'Restaurar {count} música',
+      other: 'Restaurar {count} músicas',
+    },
+    summary: {
+      one: '{count} música · {size}',
+      other: '{count} músicas · {size}',
+    },
+    empty: 'A lixeira está vazia',
+    emptyHint:
+      'As músicas movidas da biblioteca para a lixeira aparecem aqui até expirarem.',
+    noMatch: 'Nada na lixeira corresponde',
+    select: 'Selecionar “{title}”',
+    keptUntil: 'Guardada até {date}',
+    restore: 'Restaurar',
+    retry: 'Tentar de novo',
+    previous: 'Anterior',
+    next: 'Próxima',
+    exclusionsHint:
+      'Músicas cujo prazo na lixeira acabou. Os downloads automáticos (Monitor de Playlists, acompanhamentos) continuam pulando-as até você liberar de novo.',
+    exclusionsEmpty: 'Nada está fora dos downloads',
+    allowDownload: 'Liberar downloads',
+    allowTitle: 'Liberar “{title}” para ser baixada de novo?',
+    allowBody:
+      'Os downloads automáticos podem baixá-la outra vez. Nada é baixado agora.',
+    move: 'Mover para a lixeira',
+    preparing: 'Verificando os arquivos…',
+    confirmTitle: {
+      one: 'Mover {count} música para a lixeira?',
+      other: 'Mover {count} músicas para a lixeira?',
+    },
     confirmBody:
-      'Only the listed files will be moved for 30 days. They will also disappear from Deemix and Jellyfin. Playlist and favourite references are retained for restoration. Automatic downloads remain blocked until you explicitly allow them again.',
-    pending: 'Request saved. Open Trash to follow the operation.',
-    preparing: 'Checking files in the background. This may take a moment.',
-    search: 'Search trash',
-    summary: '{count} file(s) · {size} MB retained',
-    empty: 'Trash is empty.',
-    restore: 'Restore',
-    restoreSelected: 'Restore selection',
-    retry: 'Resume',
-    select: 'Select {title}',
-    expires: 'Kept until {date}',
-    previous: 'Previous',
-    next: 'Next',
-    exclusions: 'Excluded from automatic downloads',
-    exclusionsHelp:
-      'These files have expired. Their download exclusions remain active.',
-    allowDownload: 'Allow a new download',
-    allowHelp:
-      'This track can be downloaded again, including by an automatic monitor. This button does not start a download.',
+      'Só estes arquivos são movidos, com seus arquivos de letra. Eles saem da biblioteca para todos e podem ser restaurados por {days} dias. Playlists e curtidas voltam com eles, e os downloads automáticos os pulam enquanto isso.',
+    confirmMore: {
+      one: 'e mais {count}',
+      other: 'e mais {count}',
+    },
+    pending: {
+      one: 'Movendo {count} música para a lixeira',
+      other: 'Movendo {count} músicas para a lixeira',
+    },
+    downloadBlocked:
+      'Na lixeira de músicas: um administrador precisa liberar de novo.',
     states: {
-      preview: 'Awaiting confirmation',
-      pending: 'Waiting to move',
-      moving: 'Moving',
-      trashed: 'In trash',
-      restore_pending: 'Waiting to restore',
-      restoring: 'Restoring',
-      restored: 'Restored',
-      purging: 'Expiring',
-      purged: 'Expired',
-      error: 'Attention needed: files retained',
+      preview: 'Aguardando confirmação',
+      pending: 'Aguardando para mover',
+      moving: 'Movendo',
+      trashed: 'Na lixeira',
+      restore_pending: 'Aguardando para restaurar',
+      restoring: 'Restaurando',
+      restored: 'Restaurada',
+      purging: 'Expirando',
+      purged: 'Expirada',
+      error: 'Parada — arquivos mantidos',
     },
     errors: {
-      unavailable: 'Trash is temporarily unavailable. No move is confirmed.',
-      admin_required: 'Only an administrator can manage the trash.',
-      trash_not_configured: 'Trash is not configured on this server.',
-      file_changed:
-        'The file changed after verification. It is retained; select it again.',
-      file_missing:
-        'An expected file is missing. Check storage before resuming.',
-      filesystem_unavailable:
-        'Storage is unavailable. Check the NAS, then resume.',
-      nas_marker_missing:
-        'The expected NAS mount is unavailable. Operation paused.',
-      nas_marker_changed:
-        'Storage does not match the expected NAS. Operation paused.',
-      root_unavailable: 'The music folder is unavailable.',
-      unsupported_collection: 'This music folder is not enabled for trash.',
-      confirmation_expired: 'Verification expired. Select the tracks again.',
-      confirmation_invalid:
-        'This confirmation does not match your selection or account.',
-      restore_collision:
-        'A file already exists here. Nothing was overwritten; the trashed copy is retained.',
-      trash_file_changed:
-        'The retained file changed. Permanent deletion is blocked.',
-      trash_file_missing: 'A trashed file is missing. The operation stopped.',
-      retention_expired: 'The 30-day retention period has elapsed.',
-      admin_access_revoked:
-        'The requesting account no longer has administrator rights.',
-      track_is_playing: 'This track is playing. Pause it before continuing.',
-      invalid_selection: 'Select between 1 and 200 files.',
-      item_not_found: 'This track is no longer available.',
-      operation_already_pending:
-        'An operation is already pending for this file.',
-      operation_not_complete: 'Wait for the current operation to finish.',
-      unsafe_symlink:
-        'This path contains a symbolic link and cannot be changed.',
-      invalid_path: 'This file is outside the allowed folders.',
-      trash_permissions_unsafe:
-        'Trash folder permissions require administrator attention.',
+      unavailable: 'A lixeira não está disponível agora. Nada foi movido.',
+      admin_required: 'Só um administrador pode usar a lixeira.',
+      admin_access_revoked: 'A conta que pediu não é mais administradora.',
       atomic_move_unsupported:
-        'Storage does not support the required safe move.',
+        'Este armazenamento não consegue mover arquivos com segurança. Nada foi movido.',
+      confirmation_expired:
+        'A verificação expirou. Escolha as músicas de novo.',
+      confirmation_invalid:
+        'Esta confirmação não é da sua conta ou da sua seleção.',
+      file_changed:
+        'O arquivo mudou depois de verificado. Ele ficou onde estava; escolha-o de novo.',
       file_changed_during_move:
-        'The file changed while moving. Data is retained for verification.',
+        'O arquivo mudou enquanto era movido. Ele fica na lixeira para você conferir.',
+      file_missing:
+        'Falta um arquivo. Confira o armazenamento e tente de novo.',
+      filesystem_unavailable:
+        'O armazenamento não está disponível. Confira-o e tente de novo.',
       identity_uncertain:
-        'The track information is insufficient to prevent automatic redownload. No files were moved.',
-      preview_busy:
-        'A verification is already running. Wait for it to finish before trying again.',
-      preview_unavailable:
-        'Verification was interrupted. Select the tracks again.',
+        'As tags desta música são insuficientes para mantê-la fora dos downloads automáticos. Nada foi movido.',
+      invalid_path: 'Este arquivo está fora das pastas cobertas pela lixeira.',
+      invalid_selection: 'Escolha entre 1 e 200 músicas.',
+      item_not_found: 'Esta música não está mais na biblioteca.',
       library_task_active:
-        'A library upgrade is running. Wait for it or pause it first.',
-      trash_ignore_invalid:
-        'The Jellyfin trash exclusion is invalid. No files were deleted.',
-      unsupported_lyrics_location:
-        'The lyrics folder is not enabled for trash. No files were moved.',
+        'A melhoria da biblioteca está rodando. Espere ou pause-a antes.',
+      nas_marker_changed:
+        'O armazenamento não é o que a lixeira espera. Nada foi movido.',
+      nas_marker_missing:
+        'O armazenamento esperado não está montado. Nada foi movido.',
+      operation_already_pending: 'Esta música já está a caminho.',
       operation_in_progress:
-        'The move is in progress. Wait for it to finish before restoring the file.',
+        'A movimentação ainda está rodando. Espere antes de restaurar.',
+      operation_not_complete: 'Espere a etapa atual terminar.',
+      preview_busy: 'Outra verificação está rodando. Espere ela terminar.',
+      preview_unavailable:
+        'A verificação foi interrompida. Escolha as músicas de novo.',
+      restore_collision:
+        'Já existe outro arquivo lá. Nada foi sobrescrito; a música continua na lixeira.',
+      retention_expired: 'O prazo dela na lixeira acabou.',
+      root_unavailable: 'A pasta de músicas não está disponível.',
+      track_is_playing: 'Alguém está tocando esta música. Pause-a antes.',
+      trash_file_changed: 'A cópia na lixeira mudou. Ela não será excluída.',
+      trash_file_missing: 'Falta um arquivo na lixeira.',
+      trash_ignore_invalid:
+        'O arquivo .ignore da pasta da lixeira não está vazio. Nada foi movido.',
+      trash_not_configured: 'A lixeira está desligada neste servidor.',
+      trash_permissions_unsafe:
+        'Outros podem ler a pasta da lixeira. Confira as permissões dela.',
+      unsafe_symlink: 'O caminho tem um link simbólico, por isso não é tocado.',
+      unsupported_collection:
+        'A pasta desta música não é coberta pela lixeira.',
+      unsupported_lyrics_location:
+        'A pasta de letras não é coberta pela lixeira. Nada foi movido.',
     },
   },
   downloadPolicy: {

@@ -42,6 +42,15 @@ Voir [Applications mobiles](../features/mobile-apps.md) et [Utilisateurs et conn
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | Taille maximale, en Mo, sous laquelle est maintenu le cache de l’audio diffusé (`/data/stream_cache`) ; les copies lues le moins récemment partent en premier. La diffusion via le serveur est ce qui lit les titres non téléchargés là où le navigateur lui-même ne peut pas joindre YouTube. |
 | `DOWNTIFY_STREAM_CONCURRENCY` | `2` | Combien de téléchargements de diffusion peuvent s’exécuter en même temps. |
 
+## Corbeille musicale
+
+Voir [Corbeille musicale](../features/music-trash.md). Désactivée sauf si l’une de ces variables est définie.
+
+| Variable | Défaut | Description |
+|----------|---------|-------------|
+| `DOWNTIFY_TRASH` | `false` | `true` active la corbeille musicale pour le dossier de téléchargements : retirer des morceaux les déplace dans une corbeille gardée 30 jours, et Downtify déplace lui-même les fichiers. Tant qu’elle est active, seuls les administrateurs retirent des morceaux. |
+| `DOWNTIFY_TRASH_CONFIG` | _(non définie)_ | Chemin, dans le conteneur, d’un fichier JSON listant les dossiers couverts par la corbeille et où tourne son worker (`embedded` ou `external`). Prime sur `DOWNTIFY_TRASH`. Un fichier illisible empêche le serveur de démarrer. Voir [Le fichier de configuration](../features/music-trash.md#the-configuration-file). |
+
 ## Contrôle de santé
 
 L’image intègre un [`HEALTHCHECK` Docker](https://docs.docker.com/reference/dockerfile/#healthcheck) — aucun `--health-cmd` personnalisé n’est nécessaire. Il interroge `GET /api/health` sur le port du conteneur lui-même toutes les 30 secondes (délai d’attente de 5 secondes, 20 secondes de grâce au démarrage, 3 essais avant que le conteneur soit marqué comme non sain). `docker ps` et `docker inspect` affichent le résultat, et des outils comme le `condition: service_healthy` de Compose ou Watchtower peuvent s’en servir.

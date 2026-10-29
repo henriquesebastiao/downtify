@@ -1,98 +1,125 @@
 export default {
   trash: {
-    title: 'Trash',
-    move: 'Move to trash',
-    back: 'Library',
-    help: 'Files remain recoverable for 30 days after they are moved.',
-    confirmTitle: 'Move {count} file(s) to trash?',
+    title: 'Kuka',
+    subtitle:
+      'A könyvtárból kivett számok, az áthelyezés után {days} napig megmaradnak. Addig visszaállíthatod őket.',
+    adminOnly: 'Ezt csak adminisztrátorok láthatják',
+    adminOnlyHint:
+      'Kérd meg a szerver egyik adminisztrátorát, hogy állítson vissza egy számot.',
+    off: 'A kuka ki van kapcsolva',
+    offHint:
+      'Ezen a szerveren a számok véglegesen törlődnek. A kukát a szerver beállításaiban lehet bekapcsolni (DOWNTIFY_TRASH).',
+    inTrash: 'A kukában',
+    exclusions: 'Letöltésekből kizárva',
+    search: 'Keresés a kukában',
+    restoreSelected: {
+      one: '{count} szám visszaállítása',
+      other: '{count} szám visszaállítása',
+    },
+    summary: {
+      one: '{count} szám · {size}',
+      other: '{count} szám · {size}',
+    },
+    empty: 'A kuka üres',
+    emptyHint:
+      'A könyvtárból a kukába tett számok itt látszanak, amíg le nem járnak.',
+    noMatch: 'Semmi sem egyezik a kukában',
+    select: '„{title}” kijelölése',
+    keptUntil: 'Megőrizve eddig: {date}',
+    restore: 'Visszaállítás',
+    retry: 'Újrapróbálás',
+    previous: 'Előző',
+    next: 'Következő',
+    exclusionsHint:
+      'Számok, amelyek ideje lejárt a kukában. Az automatikus letöltések (lejátszásilista-figyelő, követések) továbbra is kihagyják őket, amíg újra nem engedélyezed.',
+    exclusionsEmpty: 'Semmi sincs kizárva a letöltésekből',
+    allowDownload: 'Letöltés engedélyezése',
+    allowTitle: 'Újra letölthető legyen ez: „{title}”?',
+    allowBody:
+      'Az automatikus letöltések újra letölthetik. Most semmi sem töltődik le.',
+    move: 'Áthelyezés a kukába',
+    preparing: 'Fájlok ellenőrzése…',
+    confirmTitle: {
+      one: 'Áthelyezel {count} számot a kukába?',
+      other: 'Áthelyezel {count} számot a kukába?',
+    },
     confirmBody:
-      'Only the listed files will be moved for 30 days. They will also disappear from Deemix and Jellyfin. Playlist and favourite references are retained for restoration. Automatic downloads remain blocked until you explicitly allow them again.',
-    pending: 'Request saved. Open Trash to follow the operation.',
-    preparing: 'Checking files in the background. This may take a moment.',
-    search: 'Search trash',
-    summary: '{count} file(s) · {size} MB retained',
-    empty: 'Trash is empty.',
-    restore: 'Restore',
-    restoreSelected: 'Restore selection',
-    retry: 'Resume',
-    select: 'Select {title}',
-    expires: 'Kept until {date}',
-    previous: 'Previous',
-    next: 'Next',
-    exclusions: 'Excluded from automatic downloads',
-    exclusionsHelp:
-      'These files have expired. Their download exclusions remain active.',
-    allowDownload: 'Allow a new download',
-    allowHelp:
-      'This track can be downloaded again, including by an automatic monitor. This button does not start a download.',
+      'Csak ezek a fájlok kerülnek át, a dalszövegfájljaikkal együtt. Mindenkinél eltűnnek a könyvtárból, és {days} napig visszaállíthatók. A lejátszási listáik és kedvenceik velük együtt térnek vissza, az automatikus letöltések addig kihagyják őket.',
+    confirmMore: {
+      one: 'és még {count}',
+      other: 'és még {count}',
+    },
+    pending: {
+      one: '{count} szám áthelyezése a kukába',
+      other: '{count} szám áthelyezése a kukába',
+    },
+    downloadBlocked:
+      'A zenekukában van: egy adminisztrátornak újra engedélyeznie kell.',
     states: {
-      preview: 'Awaiting confirmation',
-      pending: 'Waiting to move',
-      moving: 'Moving',
-      trashed: 'In trash',
-      restore_pending: 'Waiting to restore',
-      restoring: 'Restoring',
-      restored: 'Restored',
-      purging: 'Expiring',
-      purged: 'Expired',
-      error: 'Attention needed: files retained',
+      preview: 'Megerősítésre vár',
+      pending: 'Áthelyezésre vár',
+      moving: 'Áthelyezés',
+      trashed: 'A kukában',
+      restore_pending: 'Visszaállításra vár',
+      restoring: 'Visszaállítás',
+      restored: 'Visszaállítva',
+      purging: 'Lejár',
+      purged: 'Lejárt',
+      error: 'Leállt — a fájlok megmaradtak',
     },
     errors: {
-      unavailable: 'Trash is temporarily unavailable. No move is confirmed.',
-      admin_required: 'Only an administrator can manage the trash.',
-      trash_not_configured: 'Trash is not configured on this server.',
-      file_changed:
-        'The file changed after verification. It is retained; select it again.',
-      file_missing:
-        'An expected file is missing. Check storage before resuming.',
-      filesystem_unavailable:
-        'Storage is unavailable. Check the NAS, then resume.',
-      nas_marker_missing:
-        'The expected NAS mount is unavailable. Operation paused.',
-      nas_marker_changed:
-        'Storage does not match the expected NAS. Operation paused.',
-      root_unavailable: 'The music folder is unavailable.',
-      unsupported_collection: 'This music folder is not enabled for trash.',
-      confirmation_expired: 'Verification expired. Select the tracks again.',
-      confirmation_invalid:
-        'This confirmation does not match your selection or account.',
-      restore_collision:
-        'A file already exists here. Nothing was overwritten; the trashed copy is retained.',
-      trash_file_changed:
-        'The retained file changed. Permanent deletion is blocked.',
-      trash_file_missing: 'A trashed file is missing. The operation stopped.',
-      retention_expired: 'The 30-day retention period has elapsed.',
-      admin_access_revoked:
-        'The requesting account no longer has administrator rights.',
-      track_is_playing: 'This track is playing. Pause it before continuing.',
-      invalid_selection: 'Select between 1 and 200 files.',
-      item_not_found: 'This track is no longer available.',
-      operation_already_pending:
-        'An operation is already pending for this file.',
-      operation_not_complete: 'Wait for the current operation to finish.',
-      unsafe_symlink:
-        'This path contains a symbolic link and cannot be changed.',
-      invalid_path: 'This file is outside the allowed folders.',
-      trash_permissions_unsafe:
-        'Trash folder permissions require administrator attention.',
+      unavailable: 'A kuka most nem érhető el. Semmi sem került át.',
+      admin_required: 'Csak adminisztrátor használhatja a kukát.',
+      admin_access_revoked: 'A kérést indító fiók már nem adminisztrátor.',
       atomic_move_unsupported:
-        'Storage does not support the required safe move.',
+        'Ez a tárhely nem tud biztonságosan fájlokat áthelyezni. Semmi sem került át.',
+      confirmation_expired: 'Az ellenőrzés lejárt. Válaszd ki újra a számokat.',
+      confirmation_invalid:
+        'Ez a megerősítés nem a te fiókodhoz vagy kijelölésedhez tartozik.',
+      file_changed:
+        'A fájl az ellenőrzés után megváltozott. A helyén maradt; válaszd ki újra.',
       file_changed_during_move:
-        'The file changed while moving. Data is retained for verification.',
+        'A fájl áthelyezés közben megváltozott. A kukában marad, hogy ellenőrizhesd.',
+      file_missing:
+        'Hiányzik egy fájl. Ellenőrizd a tárhelyet, majd próbáld újra.',
+      filesystem_unavailable:
+        'A tárhely nem érhető el. Ellenőrizd, majd próbáld újra.',
       identity_uncertain:
-        'The track information is insufficient to prevent automatic redownload. No files were moved.',
-      preview_busy:
-        'A verification is already running. Wait for it to finish before trying again.',
-      preview_unavailable:
-        'Verification was interrupted. Select the tracks again.',
+        'Ennek a számnak a címkéi kevesek ahhoz, hogy kimaradjon az automatikus letöltésekből. Semmi sem került át.',
+      invalid_path: 'Ez a fájl a kuka által lefedett mappákon kívül van.',
+      invalid_selection: 'Válassz 1 és 200 közötti számot.',
+      item_not_found: 'Ez a szám már nincs a könyvtárban.',
       library_task_active:
-        'A library upgrade is running. Wait for it or pause it first.',
-      trash_ignore_invalid:
-        'The Jellyfin trash exclusion is invalid. No files were deleted.',
-      unsupported_lyrics_location:
-        'The lyrics folder is not enabled for trash. No files were moved.',
+        'A könyvtár feljavítása fut. Várd meg, vagy előbb szüneteltesd.',
+      nas_marker_changed:
+        'A tárhely nem az, amire a kuka számít. Semmi sem került át.',
+      nas_marker_missing: 'A várt tárhely nincs csatolva. Semmi sem került át.',
+      operation_already_pending: 'Ez a szám már úton van.',
       operation_in_progress:
-        'The move is in progress. Wait for it to finish before restoring the file.',
+        'Az áthelyezés még fut. Várd meg a visszaállítás előtt.',
+      operation_not_complete: 'Várd meg, amíg a mostani lépés befejeződik.',
+      preview_busy: 'Egy másik ellenőrzés fut. Várd meg, amíg befejeződik.',
+      preview_unavailable:
+        'Az ellenőrzés megszakadt. Válaszd ki újra a számokat.',
+      restore_collision:
+        'Ott már van egy másik fájl. Semmi sem lett felülírva; a szám a kukában marad.',
+      retention_expired: 'Lejárt az ideje a kukában.',
+      root_unavailable: 'A zenemappa nem érhető el.',
+      track_is_playing:
+        'Valaki épp ezt a számot hallgatja. Előbb szüneteltesd.',
+      trash_file_changed:
+        'A kukában lévő másolat megváltozott. Nem lesz törölve.',
+      trash_file_missing: 'Hiányzik egy fájl a kukából.',
+      trash_ignore_invalid:
+        'A kukamappa .ignore fájlja nem üres. Semmi sem került át.',
+      trash_not_configured: 'A kuka ki van kapcsolva ezen a szerveren.',
+      trash_permissions_unsafe:
+        'Mások is olvashatják a kukamappát. Ellenőrizd a jogosultságait.',
+      unsafe_symlink:
+        'Az útvonalban szimbolikus link van, ezért érintetlen marad.',
+      unsupported_collection: 'Ennek a számnak a mappáját nem fedi le a kuka.',
+      unsupported_lyrics_location:
+        'A dalszövegmappát nem fedi le a kuka. Semmi sem került át.',
     },
   },
   downloadPolicy: {

@@ -88,6 +88,7 @@ export default {
       'features/external-library.md': '기존 음악 폴더',
       'features/library-upgrade.md': '라이브러리 업그레이드',
       'features/storage-usage.md': '저장 공간 및 사용량',
+      'features/music-trash.md': '음악 휴지통',
       'features/replace-audio.md': '오디오 교체',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U 내보내기',

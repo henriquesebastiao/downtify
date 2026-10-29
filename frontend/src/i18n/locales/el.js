@@ -1,98 +1,130 @@
 export default {
   trash: {
-    title: 'Trash',
-    move: 'Move to trash',
-    back: 'Library',
-    help: 'Files remain recoverable for 30 days after they are moved.',
-    confirmTitle: 'Move {count} file(s) to trash?',
+    title: 'Κάδος',
+    subtitle:
+      'Κομμάτια που βγήκαν από τη βιβλιοθήκη, φυλάσσονται {days} ημέρες αφού μετακινηθούν. Μέχρι τότε μπορείς να τα επαναφέρεις.',
+    adminOnly: 'Μόνο οι διαχειριστές μπορούν να το δουν αυτό',
+    adminOnlyHint:
+      'Ζήτησε από έναν διαχειριστή αυτού του διακομιστή να επαναφέρει ένα κομμάτι.',
+    off: 'Ο κάδος είναι απενεργοποιημένος',
+    offHint:
+      'Σε αυτόν τον διακομιστή τα κομμάτια διαγράφονται οριστικά. Ο κάδος ενεργοποιείται στις ρυθμίσεις του διακομιστή (DOWNTIFY_TRASH).',
+    inTrash: 'Στον κάδο',
+    exclusions: 'Εκτός λήψεων',
+    search: 'Αναζήτηση στον κάδο',
+    restoreSelected: {
+      one: 'Επαναφορά {count} κομματιού',
+      other: 'Επαναφορά {count} κομματιών',
+    },
+    summary: {
+      one: '{count} κομμάτι · {size}',
+      other: '{count} κομμάτια · {size}',
+    },
+    empty: 'Ο κάδος είναι άδειος',
+    emptyHint:
+      'Τα κομμάτια που μετακινείς από τη βιβλιοθήκη στον κάδο εμφανίζονται εδώ μέχρι να λήξουν.',
+    noMatch: 'Τίποτα στον κάδο δεν ταιριάζει',
+    select: 'Επιλογή «{title}»',
+    keptUntil: 'Φυλάσσεται έως {date}',
+    restore: 'Επαναφορά',
+    retry: 'Δοκίμασε ξανά',
+    previous: 'Προηγούμενη',
+    next: 'Επόμενη',
+    exclusionsHint:
+      'Κομμάτια των οποίων ο χρόνος στον κάδο έληξε. Οι αυτόματες λήψεις (παρακολούθηση λιστών, παρακολουθήσεις) συνεχίζουν να τα παραλείπουν μέχρι να τα επιτρέψεις ξανά.',
+    exclusionsEmpty: 'Τίποτα δεν είναι εκτός λήψεων',
+    allowDownload: 'Επίτρεψε λήψεις',
+    allowTitle: 'Να επιτραπεί ξανά η λήψη του «{title}»;',
+    allowBody:
+      'Οι αυτόματες λήψεις μπορεί να το κατεβάσουν ξανά. Τίποτα δεν κατεβαίνει τώρα.',
+    move: 'Μετακίνηση στον κάδο',
+    preparing: 'Έλεγχος αρχείων…',
+    confirmTitle: {
+      one: 'Μετακίνηση {count} κομματιού στον κάδο;',
+      other: 'Μετακίνηση {count} κομματιών στον κάδο;',
+    },
     confirmBody:
-      'Only the listed files will be moved for 30 days. They will also disappear from Deemix and Jellyfin. Playlist and favourite references are retained for restoration. Automatic downloads remain blocked until you explicitly allow them again.',
-    pending: 'Request saved. Open Trash to follow the operation.',
-    preparing: 'Checking files in the background. This may take a moment.',
-    search: 'Search trash',
-    summary: '{count} file(s) · {size} MB retained',
-    empty: 'Trash is empty.',
-    restore: 'Restore',
-    restoreSelected: 'Restore selection',
-    retry: 'Resume',
-    select: 'Select {title}',
-    expires: 'Kept until {date}',
-    previous: 'Previous',
-    next: 'Next',
-    exclusions: 'Excluded from automatic downloads',
-    exclusionsHelp:
-      'These files have expired. Their download exclusions remain active.',
-    allowDownload: 'Allow a new download',
-    allowHelp:
-      'This track can be downloaded again, including by an automatic monitor. This button does not start a download.',
+      'Μετακινούνται μόνο αυτά τα αρχεία, μαζί με τα αρχεία στίχων τους. Βγαίνουν από τη βιβλιοθήκη για όλους και μπορούν να επανέλθουν για {days} ημέρες. Οι λίστες και τα «μου αρέσει» τους επιστρέφουν μαζί τους, και στο μεταξύ οι αυτόματες λήψεις τα παραλείπουν.',
+    confirmMore: {
+      one: 'και {count} ακόμη',
+      other: 'και {count} ακόμη',
+    },
+    pending: {
+      one: 'Μετακίνηση {count} κομματιού στον κάδο',
+      other: 'Μετακίνηση {count} κομματιών στον κάδο',
+    },
+    downloadBlocked:
+      'Στον κάδο μουσικής: ένας διαχειριστής πρέπει να το επιτρέψει ξανά.',
     states: {
-      preview: 'Awaiting confirmation',
-      pending: 'Waiting to move',
-      moving: 'Moving',
-      trashed: 'In trash',
-      restore_pending: 'Waiting to restore',
-      restoring: 'Restoring',
-      restored: 'Restored',
-      purging: 'Expiring',
-      purged: 'Expired',
-      error: 'Attention needed: files retained',
+      preview: 'Αναμονή επιβεβαίωσης',
+      pending: 'Αναμονή μετακίνησης',
+      moving: 'Μετακινείται',
+      trashed: 'Στον κάδο',
+      restore_pending: 'Αναμονή επαναφοράς',
+      restoring: 'Επαναφέρεται',
+      restored: 'Επανήλθε',
+      purging: 'Λήγει',
+      purged: 'Έληξε',
+      error: 'Σταμάτησε — τα αρχεία κρατήθηκαν',
     },
     errors: {
-      unavailable: 'Trash is temporarily unavailable. No move is confirmed.',
-      admin_required: 'Only an administrator can manage the trash.',
-      trash_not_configured: 'Trash is not configured on this server.',
-      file_changed:
-        'The file changed after verification. It is retained; select it again.',
-      file_missing:
-        'An expected file is missing. Check storage before resuming.',
-      filesystem_unavailable:
-        'Storage is unavailable. Check the NAS, then resume.',
-      nas_marker_missing:
-        'The expected NAS mount is unavailable. Operation paused.',
-      nas_marker_changed:
-        'Storage does not match the expected NAS. Operation paused.',
-      root_unavailable: 'The music folder is unavailable.',
-      unsupported_collection: 'This music folder is not enabled for trash.',
-      confirmation_expired: 'Verification expired. Select the tracks again.',
-      confirmation_invalid:
-        'This confirmation does not match your selection or account.',
-      restore_collision:
-        'A file already exists here. Nothing was overwritten; the trashed copy is retained.',
-      trash_file_changed:
-        'The retained file changed. Permanent deletion is blocked.',
-      trash_file_missing: 'A trashed file is missing. The operation stopped.',
-      retention_expired: 'The 30-day retention period has elapsed.',
+      unavailable:
+        'Ο κάδος δεν είναι διαθέσιμος τώρα. Δεν μετακινήθηκε τίποτα.',
+      admin_required:
+        'Μόνο ένας διαχειριστής μπορεί να χρησιμοποιήσει τον κάδο.',
       admin_access_revoked:
-        'The requesting account no longer has administrator rights.',
-      track_is_playing: 'This track is playing. Pause it before continuing.',
-      invalid_selection: 'Select between 1 and 200 files.',
-      item_not_found: 'This track is no longer available.',
-      operation_already_pending:
-        'An operation is already pending for this file.',
-      operation_not_complete: 'Wait for the current operation to finish.',
-      unsafe_symlink:
-        'This path contains a symbolic link and cannot be changed.',
-      invalid_path: 'This file is outside the allowed folders.',
-      trash_permissions_unsafe:
-        'Trash folder permissions require administrator attention.',
+        'Ο λογαριασμός που το ζήτησε δεν είναι πια διαχειριστής.',
       atomic_move_unsupported:
-        'Storage does not support the required safe move.',
+        'Αυτός ο χώρος αποθήκευσης δεν μπορεί να μετακινήσει αρχεία με ασφάλεια. Δεν μετακινήθηκε τίποτα.',
+      confirmation_expired: 'Ο έλεγχος έληξε. Επίλεξε ξανά τα κομμάτια.',
+      confirmation_invalid:
+        'Αυτή η επιβεβαίωση δεν είναι για τον λογαριασμό ή την επιλογή σου.',
+      file_changed:
+        'Το αρχείο άλλαξε μετά τον έλεγχο. Έμεινε στη θέση του· επίλεξέ το ξανά.',
       file_changed_during_move:
-        'The file changed while moving. Data is retained for verification.',
+        'Το αρχείο άλλαξε κατά τη μετακίνηση. Φυλάσσεται στον κάδο για να το ελέγξεις.',
+      file_missing:
+        'Λείπει ένα αρχείο. Έλεγξε τον χώρο αποθήκευσης και δοκίμασε ξανά.',
+      filesystem_unavailable:
+        'Ο χώρος αποθήκευσης δεν είναι διαθέσιμος. Έλεγξέ τον και δοκίμασε ξανά.',
       identity_uncertain:
-        'The track information is insufficient to prevent automatic redownload. No files were moved.',
-      preview_busy:
-        'A verification is already running. Wait for it to finish before trying again.',
-      preview_unavailable:
-        'Verification was interrupted. Select the tracks again.',
+        'Τα tags αυτού του κομματιού δεν αρκούν για να μείνει εκτός αυτόματων λήψεων. Δεν μετακινήθηκε τίποτα.',
+      invalid_path:
+        'Αυτό το αρχείο είναι εκτός των φακέλων που καλύπτει ο κάδος.',
+      invalid_selection: 'Επίλεξε από 1 έως 200 κομμάτια.',
+      item_not_found: 'Αυτό το κομμάτι δεν είναι πια στη βιβλιοθήκη.',
       library_task_active:
-        'A library upgrade is running. Wait for it or pause it first.',
-      trash_ignore_invalid:
-        'The Jellyfin trash exclusion is invalid. No files were deleted.',
-      unsupported_lyrics_location:
-        'The lyrics folder is not enabled for trash. No files were moved.',
+        'Η αναβάθμιση της βιβλιοθήκης τρέχει. Περίμενε ή βάλ’ την σε παύση πρώτα.',
+      nas_marker_changed:
+        'Ο χώρος αποθήκευσης δεν είναι αυτός που περιμένει ο κάδος. Δεν μετακινήθηκε τίποτα.',
+      nas_marker_missing:
+        'Ο αναμενόμενος χώρος αποθήκευσης δεν είναι προσαρτημένος. Δεν μετακινήθηκε τίποτα.',
+      operation_already_pending: 'Αυτό το κομμάτι είναι ήδη καθ’ οδόν.',
       operation_in_progress:
-        'The move is in progress. Wait for it to finish before restoring the file.',
+        'Η μετακίνηση τρέχει ακόμη. Περίμενε πριν την επαναφορά.',
+      operation_not_complete: 'Περίμενε να τελειώσει το τρέχον βήμα.',
+      preview_busy: 'Τρέχει άλλος έλεγχος. Περίμενε να τελειώσει.',
+      preview_unavailable: 'Ο έλεγχος διακόπηκε. Επίλεξε ξανά τα κομμάτια.',
+      restore_collision:
+        'Υπάρχει ήδη άλλο αρχείο εκεί. Δεν αντικαταστάθηκε τίποτα· το κομμάτι μένει στον κάδο.',
+      retention_expired: 'Ο χρόνος του στον κάδο έληξε.',
+      root_unavailable: 'Ο φάκελος μουσικής δεν είναι διαθέσιμος.',
+      track_is_playing:
+        'Κάποιος ακούει αυτό το κομμάτι. Βάλ’ το σε παύση πρώτα.',
+      trash_file_changed: 'Το αντίγραφο στον κάδο άλλαξε. Δεν θα διαγραφεί.',
+      trash_file_missing: 'Λείπει ένα αρχείο από τον κάδο.',
+      trash_ignore_invalid:
+        'Το αρχείο .ignore του φακέλου του κάδου δεν είναι κενό. Δεν μετακινήθηκε τίποτα.',
+      trash_not_configured:
+        'Ο κάδος είναι απενεργοποιημένος σε αυτόν τον διακομιστή.',
+      trash_permissions_unsafe:
+        'Άλλοι μπορούν να διαβάσουν τον φάκελο του κάδου. Έλεγξε τα δικαιώματά του.',
+      unsafe_symlink:
+        'Η διαδρομή έχει συμβολικό σύνδεσμο, γι’ αυτό δεν αγγίζεται.',
+      unsupported_collection:
+        'Ο φάκελος αυτού του κομματιού δεν καλύπτεται από τον κάδο.',
+      unsupported_lyrics_location:
+        'Ο φάκελος στίχων δεν καλύπτεται από τον κάδο. Δεν μετακινήθηκε τίποτα.',
     },
   },
   downloadPolicy: {

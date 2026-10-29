@@ -1,98 +1,120 @@
 export default {
   trash: {
-    title: 'Trash',
-    move: 'Move to trash',
-    back: 'Library',
-    help: 'Files remain recoverable for 30 days after they are moved.',
-    confirmTitle: 'Move {count} file(s) to trash?',
+    title: 'Çöp kutusu',
+    subtitle:
+      'Kitaplıktan çıkarılan parçalar, taşındıktan sonra {days} gün saklanır. O zamana kadar geri yükleyebilirsin.',
+    adminOnly: 'Bunu yalnızca yöneticiler görebilir',
+    adminOnlyHint:
+      'Bir parçayı geri yüklemesi için bu sunucunun bir yöneticisine başvur.',
+    off: 'Çöp kutusu kapalı',
+    offHint:
+      'Bu sunucuda parçalar kalıcı olarak silinir. Çöp kutusu sunucu yapılandırmasından açılır (DOWNTIFY_TRASH).',
+    inTrash: 'Çöp kutusunda',
+    exclusions: 'İndirmelerin dışında',
+    search: 'Çöp kutusunda ara',
+    restoreSelected: {
+      one: '{count} parçayı geri yükle',
+      other: '{count} parçayı geri yükle',
+    },
+    summary: {
+      one: '{count} parça · {size}',
+      other: '{count} parça · {size}',
+    },
+    empty: 'Çöp kutusu boş',
+    emptyHint:
+      'Kitaplıktan çöp kutusuna taşınan parçalar süreleri dolana kadar burada görünür.',
+    noMatch: 'Çöp kutusunda eşleşen bir şey yok',
+    select: '“{title}” seç',
+    keptUntil: '{date} tarihine kadar saklanır',
+    restore: 'Geri yükle',
+    retry: 'Yeniden dene',
+    previous: 'Önceki',
+    next: 'Sonraki',
+    exclusionsHint:
+      'Çöp kutusundaki süresi dolan parçalar. Otomatik indirmeler (Çalma Listesi İzleyici, takipler) sen yeniden izin verene kadar onları atlamaya devam eder.',
+    exclusionsEmpty: 'İndirmelerin dışında tutulan bir şey yok',
+    allowDownload: 'İndirmelere izin ver',
+    allowTitle: '“{title}” yeniden indirilebilsin mi?',
+    allowBody:
+      'Otomatik indirmeler onu yeniden alabilir. Şu anda hiçbir şey indirilmez.',
+    move: 'Çöp kutusuna taşı',
+    preparing: 'Dosyalar denetleniyor…',
+    confirmTitle: {
+      one: '{count} parça çöp kutusuna taşınsın mı?',
+      other: '{count} parça çöp kutusuna taşınsın mı?',
+    },
     confirmBody:
-      'Only the listed files will be moved for 30 days. They will also disappear from Deemix and Jellyfin. Playlist and favourite references are retained for restoration. Automatic downloads remain blocked until you explicitly allow them again.',
-    pending: 'Request saved. Open Trash to follow the operation.',
-    preparing: 'Checking files in the background. This may take a moment.',
-    search: 'Search trash',
-    summary: '{count} file(s) · {size} MB retained',
-    empty: 'Trash is empty.',
-    restore: 'Restore',
-    restoreSelected: 'Restore selection',
-    retry: 'Resume',
-    select: 'Select {title}',
-    expires: 'Kept until {date}',
-    previous: 'Previous',
-    next: 'Next',
-    exclusions: 'Excluded from automatic downloads',
-    exclusionsHelp:
-      'These files have expired. Their download exclusions remain active.',
-    allowDownload: 'Allow a new download',
-    allowHelp:
-      'This track can be downloaded again, including by an automatic monitor. This button does not start a download.',
+      'Yalnızca bu dosyalar, şarkı sözü dosyalarıyla birlikte taşınır. Herkes için kitaplıktan çıkarlar ve {days} gün boyunca geri yüklenebilirler. Çalma listeleri ve beğenileri onlarla birlikte geri gelir; bu sırada otomatik indirmeler onları atlar.',
+    confirmMore: {
+      one: 've {count} tane daha',
+      other: 've {count} tane daha',
+    },
+    pending: {
+      one: '{count} parça çöp kutusuna taşınıyor',
+      other: '{count} parça çöp kutusuna taşınıyor',
+    },
+    downloadBlocked:
+      'Müzik çöp kutusunda: bir yöneticinin yeniden izin vermesi gerekir.',
     states: {
-      preview: 'Awaiting confirmation',
-      pending: 'Waiting to move',
-      moving: 'Moving',
-      trashed: 'In trash',
-      restore_pending: 'Waiting to restore',
-      restoring: 'Restoring',
-      restored: 'Restored',
-      purging: 'Expiring',
-      purged: 'Expired',
-      error: 'Attention needed: files retained',
+      preview: 'Onay bekliyor',
+      pending: 'Taşınmayı bekliyor',
+      moving: 'Taşınıyor',
+      trashed: 'Çöp kutusunda',
+      restore_pending: 'Geri yüklenmeyi bekliyor',
+      restoring: 'Geri yükleniyor',
+      restored: 'Geri yüklendi',
+      purging: 'Süresi doluyor',
+      purged: 'Süresi doldu',
+      error: 'Durdu — dosyalar korundu',
     },
     errors: {
-      unavailable: 'Trash is temporarily unavailable. No move is confirmed.',
-      admin_required: 'Only an administrator can manage the trash.',
-      trash_not_configured: 'Trash is not configured on this server.',
-      file_changed:
-        'The file changed after verification. It is retained; select it again.',
-      file_missing:
-        'An expected file is missing. Check storage before resuming.',
-      filesystem_unavailable:
-        'Storage is unavailable. Check the NAS, then resume.',
-      nas_marker_missing:
-        'The expected NAS mount is unavailable. Operation paused.',
-      nas_marker_changed:
-        'Storage does not match the expected NAS. Operation paused.',
-      root_unavailable: 'The music folder is unavailable.',
-      unsupported_collection: 'This music folder is not enabled for trash.',
-      confirmation_expired: 'Verification expired. Select the tracks again.',
-      confirmation_invalid:
-        'This confirmation does not match your selection or account.',
-      restore_collision:
-        'A file already exists here. Nothing was overwritten; the trashed copy is retained.',
-      trash_file_changed:
-        'The retained file changed. Permanent deletion is blocked.',
-      trash_file_missing: 'A trashed file is missing. The operation stopped.',
-      retention_expired: 'The 30-day retention period has elapsed.',
-      admin_access_revoked:
-        'The requesting account no longer has administrator rights.',
-      track_is_playing: 'This track is playing. Pause it before continuing.',
-      invalid_selection: 'Select between 1 and 200 files.',
-      item_not_found: 'This track is no longer available.',
-      operation_already_pending:
-        'An operation is already pending for this file.',
-      operation_not_complete: 'Wait for the current operation to finish.',
-      unsafe_symlink:
-        'This path contains a symbolic link and cannot be changed.',
-      invalid_path: 'This file is outside the allowed folders.',
-      trash_permissions_unsafe:
-        'Trash folder permissions require administrator attention.',
+      unavailable: 'Çöp kutusu şu anda kullanılamıyor. Hiçbir şey taşınmadı.',
+      admin_required: 'Çöp kutusunu yalnızca bir yönetici kullanabilir.',
+      admin_access_revoked: 'İsteyen hesap artık yönetici değil.',
       atomic_move_unsupported:
-        'Storage does not support the required safe move.',
+        'Bu depolama dosyaları güvenle taşıyamıyor. Hiçbir şey taşınmadı.',
+      confirmation_expired: 'Denetimin süresi doldu. Parçaları yeniden seç.',
+      confirmation_invalid: 'Bu onay senin hesabına veya seçimine ait değil.',
+      file_changed:
+        'Dosya denetimden sonra değişti. Yerinde kaldı; yeniden seç.',
       file_changed_during_move:
-        'The file changed while moving. Data is retained for verification.',
+        'Dosya taşınırken değişti. Denetleyebilmen için çöp kutusunda tutuluyor.',
+      file_missing: 'Bir dosya eksik. Depolamayı denetle, sonra yeniden dene.',
+      filesystem_unavailable:
+        'Depolama kullanılamıyor. Denetle, sonra yeniden dene.',
       identity_uncertain:
-        'The track information is insufficient to prevent automatic redownload. No files were moved.',
-      preview_busy:
-        'A verification is already running. Wait for it to finish before trying again.',
-      preview_unavailable:
-        'Verification was interrupted. Select the tracks again.',
+        'Bu parçanın etiketleri onu otomatik indirmelerin dışında tutmaya yetmiyor. Hiçbir şey taşınmadı.',
+      invalid_path: 'Bu dosya çöp kutusunun kapsadığı klasörlerin dışında.',
+      invalid_selection: '1 ile 200 arasında parça seç.',
+      item_not_found: 'Bu parça artık kitaplıkta değil.',
       library_task_active:
-        'A library upgrade is running. Wait for it or pause it first.',
+        'Kitaplık iyileştirme çalışıyor. Bitmesini bekle ya da önce duraklat.',
+      nas_marker_changed:
+        'Depolama, çöp kutusunun beklediği depolama değil. Hiçbir şey taşınmadı.',
+      nas_marker_missing:
+        'Beklenen depolama bağlı değil. Hiçbir şey taşınmadı.',
+      operation_already_pending: 'Bu parça zaten yolda.',
+      operation_in_progress: 'Taşıma hâlâ sürüyor. Geri yüklemeden önce bekle.',
+      operation_not_complete: 'Geçerli adımın bitmesini bekle.',
+      preview_busy: 'Başka bir denetim sürüyor. Bitmesini bekle.',
+      preview_unavailable: 'Denetim yarıda kesildi. Parçaları yeniden seç.',
+      restore_collision:
+        'Orada zaten başka bir dosya var. Hiçbir şeyin üzerine yazılmadı; parça çöp kutusunda kalıyor.',
+      retention_expired: 'Çöp kutusundaki süresi doldu.',
+      root_unavailable: 'Müzik klasörü kullanılamıyor.',
+      track_is_playing: 'Biri bu parçayı çalıyor. Önce duraklat.',
+      trash_file_changed: 'Çöp kutusundaki kopya değişti. Silinmeyecek.',
+      trash_file_missing: 'Çöp kutusunda bir dosya eksik.',
       trash_ignore_invalid:
-        'The Jellyfin trash exclusion is invalid. No files were deleted.',
+        'Çöp kutusu klasörünün .ignore dosyası boş değil. Hiçbir şey taşınmadı.',
+      trash_not_configured: 'Bu sunucuda çöp kutusu kapalı.',
+      trash_permissions_unsafe:
+        'Başkaları çöp kutusu klasörünü okuyabiliyor. İzinlerini denetle.',
+      unsafe_symlink: 'Yolda sembolik bağlantı var, bu yüzden dokunulmuyor.',
+      unsupported_collection:
+        'Bu parçanın klasörü çöp kutusunun kapsamında değil.',
       unsupported_lyrics_location:
-        'The lyrics folder is not enabled for trash. No files were moved.',
-      operation_in_progress:
-        'The move is in progress. Wait for it to finish before restoring the file.',
+        'Şarkı sözü klasörü çöp kutusunun kapsamında değil. Hiçbir şey taşınmadı.',
     },
   },
   downloadPolicy: {
