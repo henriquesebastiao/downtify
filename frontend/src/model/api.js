@@ -481,6 +481,22 @@ function importExternalPlaylists(selected) {
   return API.post('/api/library/playlists/external', { selected })
 }
 
+function getTrackLoudness(file) {
+  return API.get('/api/library/loudness', {
+    params: { file },
+    timeout: 1500,
+    quiet: true,
+  })
+}
+
+function getLoudnessStatus() {
+  return API.get('/api/library/loudness/status', { quiet: true })
+}
+
+function controlLoudness(action) {
+  return API.post(`/api/library/loudness/${action}`)
+}
+
 function editLibraryPlaylistTracks(
   name,
   { add = [], remove = [], sourcePlaylistUrl = '' } = {}
@@ -1001,6 +1017,9 @@ export default {
   createLibraryPlaylist,
   discoverExternalPlaylists,
   importExternalPlaylists,
+  getTrackLoudness,
+  getLoudnessStatus,
+  controlLoudness,
   editLibraryPlaylistTracks,
   renameLibraryPlaylist,
   setPlaylistVisibility,

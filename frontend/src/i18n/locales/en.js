@@ -177,6 +177,26 @@ export default {
     add: 'Add playlist to favorites',
     remove: 'Remove playlist from favorites',
   },
+  normalization: {
+    title: 'Volume normalization',
+    hint: 'Play every song at a similar loudness without changing your audio files.',
+    enable: 'Normalize playback volume',
+    enableHint:
+      'Uses the measured loudness of each song, boosts by at most 12 dB and keeps peaks from clipping. Songs not measured yet play at their original level.',
+    analysisHint:
+      'Analysis reads each song once in the background; later runs only measure new or changed files. It never starts on its own, not even after a restart.',
+    progress: '{done} / {total} analyzed · {failed} failed',
+    analyze: 'Analyze library',
+    pause: 'Pause analysis',
+    resume: 'Resume analysis',
+    pausing: 'Finishing the current files before pausing…',
+    states: {
+      ready: 'Measured volume applied to the current song.',
+      silent: 'Silent song: original level kept.',
+      unanalysed: 'No measurement for this song yet: original level kept.',
+      unavailable: 'Normalization unavailable: original level kept.',
+    },
+  },
   externalPlaylistImport: {
     open: 'Import folder playlists',
     title: 'Playlists in your music folders',

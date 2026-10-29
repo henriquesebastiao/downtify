@@ -20,6 +20,7 @@ Downtify, Spotify’dan yerel bir müzik kitaplığı oluşturmak ve sürdürmek
 | [En çok dinlenen şarkılar](top-songs.md) | Bir sanatçı bağlantısı yapıştırın ve en popüler şarkılarını, isteğe bağlı olarak çalma listesi halinde indirin |
 | [Kitaplığı içe aktarma (CSV)](library-import.md) | Soundiiz, TuneMyMusic veya Exportify’dan bir kitaplık dışa aktarımını içe aktarın ve hepsini kuyruğa alın |
 | [Yerleşik oynatıcı](player.md) | Kitaplığınızı tarayıcıda çalın: kuyruk yönetimi, eşzamanlı sözler, uyku zamanlayıcısı, klavye ve medya tuşları |
+| [Ses seviyesi normalleştirme](playback-normalization.md) | Bir yöneticinin başlattığı ölçümlerle tüm şarkıları benzer ses seviyesinde çalın; ses dosyaları asla değiştirilmez |
 | [Beğenilen şarkılar](liked-songs.md) | Bir şarkıyı kalple beğenin; beğendiğiniz her şeyin çalma listesi kendiliğinden belirir |
 | [Podcast’ler](podcasts.md) | Bir programa RSS akışı, Spotify bağlantısı veya adla abone olun; yeni bölümler kendiliğinden indirilir ve etiketlenir |
 | [Kullanıcılar ve oturum açma](users.md) | Kullanıcı adı ve parolayla oturum açma (yeni sunucuda `admin` / `downtify`), yönetici ve normal kullanıcı hesapları, kullanıcı başına tercihler ve oturum açmaların ve herkesin ne dinlediğinin etkinlik günlüğü |

@@ -20,6 +20,7 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Top Songs](top-songs.md) | Paste an artist link and download their most popular songs, optionally as a playlist |
 | [Library Import (CSV)](library-import.md) | Import a library export from Soundiiz, TuneMyMusic or Exportify and queue the whole thing |
 | [Built-in Player](player.md) | Play your library in the browser: queue management, synced lyrics, sleep timer, keyboard and media keys |
+| [Volume normalization](playback-normalization.md) | Play every song at a similar loudness, from measurements an admin starts; audio files are never changed |
 | [Liked songs](liked-songs.md) | Heart a song to like it; a playlist of everything you have liked appears on its own |
 | [Podcasts](podcasts.md) | Subscribe to a show by RSS feed, Spotify link or name; new episodes download and tag on their own |
 | [Users & Sign-in](users.md) | Username and password sign-in (`admin` / `downtify` on a new server), admin and normal user accounts, per-user preferences, and an activity log of sign-ins and what everyone plays |

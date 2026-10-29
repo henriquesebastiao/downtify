@@ -189,6 +189,28 @@ export default {
     add: 'Playlist zu Favoriten hinzufügen',
     remove: 'Playlist aus Favoriten entfernen',
   },
+  normalization: {
+    title: 'Lautstärkenormalisierung',
+    hint: 'Alle Songs in ähnlicher Lautstärke abspielen, ohne deine Audiodateien zu verändern.',
+    enable: 'Wiedergabelautstärke normalisieren',
+    enableHint:
+      'Nutzt die gemessene Lautheit jedes Songs, verstärkt um höchstens 12 dB und verhindert übersteuerte Spitzen. Noch nicht gemessene Songs spielen in ihrer ursprünglichen Lautstärke.',
+    analysisHint:
+      'Die Analyse liest jeden Song einmal im Hintergrund; spätere Durchläufe messen nur neue oder geänderte Dateien. Sie startet nie von selbst, auch nicht nach einem Neustart.',
+    progress: '{done} / {total} analysiert · {failed} fehlgeschlagen',
+    analyze: 'Bibliothek analysieren',
+    pause: 'Analyse pausieren',
+    resume: 'Analyse fortsetzen',
+    pausing: 'Die aktuellen Dateien werden vor der Pause fertig analysiert…',
+    states: {
+      ready: 'Gemessene Lautstärke auf den aktuellen Song angewendet.',
+      silent: 'Stiller Song: ursprüngliche Lautstärke beibehalten.',
+      unanalysed:
+        'Dieser Song ist noch nicht gemessen: ursprüngliche Lautstärke beibehalten.',
+      unavailable:
+        'Normalisierung nicht verfügbar: ursprüngliche Lautstärke beibehalten.',
+    },
+  },
   externalPlaylistImport: {
     open: 'Import folder playlists',
     title: 'Playlists in your music folders',

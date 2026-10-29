@@ -56,6 +56,10 @@ Apps spielen die Dateien so ab, wie sie sind (**Original**), oder bitten den Ser
 - Kopien liegen in `/data/transcode_cache`, standardmäßig höchstens 2 GB; die am längsten nicht gespielten fliegen zuerst raus. Höchstens zwei werden gleichzeitig erstellt. Beide Grenzen sind [Umgebungsvariablen](../getting-started/environment-variables.md#mobile-apps-and-sign-in).
 - Gibt das Handy auf, während eine Kopie erstellt wird, hört der Server damit auf.
 
+## Lautstärkenormalisierung
+
+Die Android-App kann Songs mit denselben Messungen wie der Web-Player in ähnlicher Lautstärke abspielen: Schalte in ihren **Settings → Playback** die Option **Normalize volume** ein. Sie gilt ab dem nächsten Song; Songs ohne Messung spielen in ihrer ursprünglichen Lautstärke. Eine Offline-Kopie nutzt eine Messung nur, wenn sie vollständig heruntergeladen wurde und zur Datei passt, die der Server gemessen hat. Siehe [Lautstärkenormalisierung](playback-normalization.md).
+
 ## Casting
 
 Apps können einen Song an einen Chromecast oder einen anderen Player senden, der das Audio selbst abholt. Die App erhält vom Server einen Link, der für genau diesen Song eine begrenzte Zeit (standardmäßig eine Stunde) und nur gültig ist, solange das Handy gekoppelt bleibt; kein Schlüssel des Handys steckt darin.

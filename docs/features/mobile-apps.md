@@ -56,6 +56,10 @@ Apps play the files as they are (**Original**) or ask the server for a smaller c
 - Copies are kept in `/data/transcode_cache`, 2 GB at most by default; the least recently played go first. At most two are made at a time. Both limits are [environment variables](../getting-started/environment-variables.md#mobile-apps-and-sign-in).
 - If the phone gives up while a copy is being made, the server stops making it.
 
+## Volume normalization
+
+The Android app can play songs at a similar loudness with the same measurements as the web player: switch on **Normalize volume** in its **Settings → Playback**. It applies from the next song, and songs without a measurement play at their original level. An offline copy uses a measurement only when it was downloaded whole and matches the file the server measured. See [Volume normalization](playback-normalization.md).
+
 ## Casting
 
 Apps can send a song to a Chromecast or other player that fetches audio on its own. The app gets a link from the server that works for that one song for a limited time (an hour by default) and only while the phone stays paired; no key of the phone's goes into it.

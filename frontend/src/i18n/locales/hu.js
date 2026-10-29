@@ -185,6 +185,26 @@ export default {
     add: 'Lista hozzáadása a kedvencekhez',
     remove: 'Lista eltávolítása a kedvencekből',
   },
+  normalization: {
+    title: 'Hangerő-normalizálás',
+    hint: 'Minden dal hasonló hangerővel szól, a hangfájlok módosítása nélkül.',
+    enable: 'Lejátszási hangerő normalizálása',
+    enableHint:
+      'Az egyes dalok mért hangosságát használja, legfeljebb 12 dB-lel erősít, és megakadályozza a csúcsok torzítását. A még nem mért dalok eredeti hangerővel szólnak.',
+    analysisHint:
+      'Az elemzés minden dalt egyszer olvas be a háttérben; a későbbi futások csak az új vagy módosult fájlokat mérik. Soha nem indul el magától, újraindítás után sem.',
+    progress: '{done} / {total} elemezve · {failed} sikertelen',
+    analyze: 'Könyvtár elemzése',
+    pause: 'Elemzés szüneteltetése',
+    resume: 'Elemzés folytatása',
+    pausing: 'Az aktuális fájlok befejezése a szünet előtt…',
+    states: {
+      ready: 'A mért hangerő alkalmazva az aktuális dalra.',
+      silent: 'Néma dal: az eredeti hangerő megmarad.',
+      unanalysed: 'Ez a dal még nincs megmérve: az eredeti hangerő megmarad.',
+      unavailable: 'A normalizálás nem érhető el: az eredeti hangerő megmarad.',
+    },
+  },
   externalPlaylistImport: {
     open: 'Import folder playlists',
     title: 'Playlists in your music folders',

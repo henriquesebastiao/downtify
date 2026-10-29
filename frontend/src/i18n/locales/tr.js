@@ -180,6 +180,26 @@ export default {
     add: 'Çalma listesini favorilere ekle',
     remove: 'Çalma listesini favorilerden kaldır',
   },
+  normalization: {
+    title: 'Ses seviyesi normalleştirme',
+    hint: 'Ses dosyalarınızı değiştirmeden tüm şarkıları benzer bir ses seviyesinde çalın.',
+    enable: 'Çalma ses seviyesini normalleştir',
+    enableHint:
+      'Her şarkının ölçülen ses yüksekliğini kullanır, en fazla 12 dB yükseltir ve tepe noktalarının bozulmasını önler. Henüz ölçülmemiş şarkılar özgün seviyelerinde çalar.',
+    analysisHint:
+      'Analiz her şarkıyı arka planda bir kez okur; sonraki çalıştırmalar yalnızca yeni veya değişmiş dosyaları ölçer. Yeniden başlatmadan sonra bile asla kendiliğinden başlamaz.',
+    progress: '{done} / {total} analiz edildi · {failed} başarısız',
+    analyze: 'Kitaplığı analiz et',
+    pause: 'Analizi duraklat',
+    resume: 'Analizi sürdür',
+    pausing: 'Duraklatmadan önce geçerli dosyalar bitiriliyor…',
+    states: {
+      ready: 'Ölçülen ses seviyesi geçerli şarkıya uygulandı.',
+      silent: 'Sessiz şarkı: özgün seviye korunuyor.',
+      unanalysed: 'Bu şarkı henüz ölçülmedi: özgün seviye korunuyor.',
+      unavailable: 'Normalleştirme kullanılamıyor: özgün seviye korunuyor.',
+    },
+  },
   externalPlaylistImport: {
     open: 'Import folder playlists',
     title: 'Playlists in your music folders',

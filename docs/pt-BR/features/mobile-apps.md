@@ -56,6 +56,10 @@ Os apps tocam os arquivos como estão (**Original**) ou pedem ao servidor uma c�
 - As cópias ficam em `/data/transcode_cache`, no máximo 2 GB por padrão; as tocadas há mais tempo saem primeiro. No máximo duas são feitas ao mesmo tempo. Os dois limites são [variáveis de ambiente](../getting-started/environment-variables.md#mobile-apps-and-sign-in).
 - Se o celular desiste enquanto uma cópia está sendo feita, o servidor para de fazê-la.
 
+## Normalização de volume
+
+O app Android pode tocar as músicas com volume parecido usando as mesmas medições do player web: ative **Normalizar volume** em **Configurações → Reprodução**. Vale a partir da próxima música, e músicas sem medição tocam no volume original. Uma cópia offline só usa a medição quando foi baixada inteira e corresponde ao arquivo que o servidor mediu. Veja [Normalização de volume](playback-normalization.md).
+
 ## Transmissão (cast)
 
 Os apps podem enviar uma música para um Chromecast ou outro player que busca o áudio por conta própria. O app recebe do servidor um link que vale para aquela música por um tempo limitado (uma hora por padrão) e só enquanto o celular continuar pareado; nenhuma chave do celular vai dentro dele.

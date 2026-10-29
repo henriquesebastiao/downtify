@@ -65,6 +65,7 @@ PREFERENCES: dict[str, type] = {
     'theme': str,
     'locale': str,
     'show_lyrics': bool,
+    'normalize_volume': bool,
     'search_albums': bool,
     'show_public_playlists': bool,
 }

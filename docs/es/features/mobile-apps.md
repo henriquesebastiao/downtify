@@ -56,6 +56,10 @@ Las apps reproducen los archivos tal cual (**Original**) o piden al servidor una
 - Las copias se guardan en `/data/transcode_cache`, 2 GB como máximo por defecto; las reproducidas hace más tiempo salen primero. Se hacen como mucho dos a la vez. Ambos límites son [variables de entorno](../getting-started/environment-variables.md#mobile-apps-and-sign-in).
 - Si el teléfono abandona mientras se hace una copia, el servidor deja de hacerla.
 
+## Normalización del volumen
+
+La app de Android puede reproducir las canciones con un volumen parecido usando las mismas mediciones que el reproductor web: activa **Normalizar el volumen** en sus **Ajustes → Reproducción**. Se aplica desde la siguiente canción, y las canciones sin medición suenan a su nivel original. Una copia sin conexión usa una medición solo si se descargó completa y coincide con el archivo que midió el servidor. Consulta [Normalización del volumen](playback-normalization.md).
+
 ## Transmisión (cast)
 
 Las apps pueden enviar una canción a un Chromecast u otro reproductor que obtiene el audio por su cuenta. La app recibe del servidor un enlace que sirve para esa canción durante un tiempo limitado (una hora por defecto) y solo mientras el teléfono siga vinculado; ninguna clave del teléfono va dentro.

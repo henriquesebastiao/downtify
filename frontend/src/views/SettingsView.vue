@@ -118,6 +118,7 @@
                 />
               </SettingRow>
             </SettingGroup>
+            <NormalizationSettings />
             <SettingGroup :title="t('settings.playlistsGroup')">
               <SettingRow
                 :label="t('settings.showPublicPlaylists')"
@@ -930,6 +931,7 @@ import ExternalLibrarySettings from '/src/components/settings/ExternalLibrarySet
 import PathSuggestInput from '/src/components/settings/PathSuggestInput.vue'
 import PresetPicker from '/src/components/settings/PresetPicker.vue'
 import AccountSettings from '/src/components/settings/AccountSettings.vue'
+import NormalizationSettings from '/src/components/settings/NormalizationSettings.vue'
 import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
 import AppsSettings from '/src/components/settings/AppsSettings.vue'
 import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'

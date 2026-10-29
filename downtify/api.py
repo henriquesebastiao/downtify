@@ -206,6 +206,13 @@ downloads are shared, and files are never stored twice.
   artwork, no lyrics or incomplete tags; writes nothing),
   ``POST /api/library/upgrade/start`` (body ``{categories}``) and
   ``POST /api/library/upgrade/{pause,resume,cancel}``
+* ``GET  /api/library/loudness`` (``?file=``: a visible track's playback
+  loudness profile ``{state, gain_db, ...}``; ``unanalysed`` with a
+  zero gain when it has no valid measurement - see
+  ``downtify/loudness.py``), ``GET /api/library/loudness/status`` and
+  ``POST /api/library/loudness/{start,pause,resume}`` (admin: the
+  analysis queue's counts; ``start`` queues the whole library again,
+  reusing the measurements of unchanged files)
 * ``GET  /api/library/usage`` (admin; ``?days=``, 1-365, default 30:
   ``{library, period, growth, downloads, duplicates, working, disk}`` -
   the library's size by provider, location and format, what came in
@@ -521,6 +528,7 @@ from .likes import (
     remap_moved,
     sync_liked_playlist,
 )
+from .loudness import LoudnessAnalyzer
 from .lyrics_cache import LyricsLookupCache
 from .manual_playlists import (
     ManualPlaylistError,
@@ -1201,6 +1209,7 @@ class AppState:
     download_log: Optional[DownloadLog] = None
     usage_snapshots: Optional[UsageSnapshots] = None
     external_playlist_imports: Optional[ExternalPlaylistImports] = None
+    loudness_analyzer: Optional[LoudnessAnalyzer] = None
     traffic: Optional[TrafficCounters] = None
     podcasts: Optional[PodcastStore] = None
     discover: Optional[DiscoverStore] = None
@@ -1936,6 +1945,8 @@ async def shutdown_resources() -> None:
     _shutdown_done = True
 
     logger.info('Downtify shutdown: closing WebSockets and background tasks')
+    if state.loudness_analyzer is not None:
+        await asyncio.to_thread(state.loudness_analyzer.close)
     await state.connections.close_all()
 
     tasks = list(state.background_tasks)
@@ -6885,6 +6896,57 @@ async def import_external_playlists_endpoint(
     invalidate_library_paths_cache()
     await announce_playlists_changed()
     return {'results': results}
+
+
+@router.get('/api/library/loudness')
+async def track_loudness(
+    request: Request, file: str = Query(..., min_length=1)
+) -> dict[str, Any]:
+    if not request_user_id(request) and not request_is_admin(request):
+        raise HTTPException(status_code=401, detail='Sign in required')
+    if not filter_paths_for_request([file], request):
+        raise HTTPException(status_code=404, detail='Track not found')
+    full = resolve_library_file(file, library_context())
+    if full is None:
+        raise HTTPException(status_code=404, detail='Track not found')
+    runner = state.loudness_analyzer
+    if runner is None:
+        return {'state': 'unavailable', 'gain_db': 0.0}
+    profile = await asyncio.to_thread(runner.info, file, full)
+    return profile or {'state': 'unanalysed', 'gain_db': 0.0}
+
+
+@router.get('/api/library/loudness/status')
+async def loudness_status(request: Request) -> dict[str, Any]:
+    if not request_is_admin(request):
+        raise HTTPException(status_code=403, detail='This needs an admin')
+    if state.loudness_analyzer is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    return await asyncio.to_thread(state.loudness_analyzer.status)
+
+
+@router.post('/api/library/loudness/{action}')
+async def control_loudness(request: Request, action: str) -> dict[str, Any]:
+    if not request_is_admin(request):
+        raise HTTPException(status_code=403, detail='This needs an admin')
+    runner = state.loudness_analyzer
+    if runner is None:
+        raise HTTPException(status_code=503, detail='Starting up')
+    try:
+        if action == 'start':
+            entries = await asyncio.to_thread(entries_for_request, request)
+            await asyncio.to_thread(
+                runner.start, [entry['file'] for entry in entries]
+            )
+        elif action == 'pause':
+            runner.pause()
+        elif action == 'resume':
+            runner.resume()
+        else:
+            raise HTTPException(status_code=404, detail='Unknown action')
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return await asyncio.to_thread(runner.status)
 
 
 @router.post('/api/library/playlists/tracks')

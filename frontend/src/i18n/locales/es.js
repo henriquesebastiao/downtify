@@ -187,6 +187,28 @@ export default {
     add: 'Añadir playlist a favoritos',
     remove: 'Quitar playlist de favoritos',
   },
+  normalization: {
+    title: 'Normalización del volumen',
+    hint: 'Reproduce todas las canciones con un volumen parecido, sin cambiar tus archivos de audio.',
+    enable: 'Normalizar el volumen de reproducción',
+    enableHint:
+      'Usa el volumen medido de cada canción, sube como máximo 12 dB y evita que los picos saturen. Las canciones aún sin medir suenan a su nivel original.',
+    analysisHint:
+      'El análisis lee cada canción una vez en segundo plano; las siguientes pasadas solo miden archivos nuevos o modificados. Nunca empieza solo, ni siquiera tras un reinicio.',
+    progress: '{done} / {total} analizadas · {failed} con error',
+    analyze: 'Analizar biblioteca',
+    pause: 'Pausar análisis',
+    resume: 'Reanudar análisis',
+    pausing: 'Terminando los archivos actuales antes de pausar…',
+    states: {
+      ready: 'Volumen medido aplicado a la canción actual.',
+      silent: 'Canción en silencio: se mantiene el nivel original.',
+      unanalysed:
+        'Esta canción aún no se ha medido: se mantiene el nivel original.',
+      unavailable:
+        'Normalización no disponible: se mantiene el nivel original.',
+    },
+  },
   externalPlaylistImport: {
     open: 'Import folder playlists',
     title: 'Playlists in your music folders',

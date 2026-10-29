@@ -76,6 +76,7 @@ export default {
       'features/playlist-monitor.md': 'Παρακολούθηση λιστών',
       'features/top-songs.md': 'Δημοφιλέστερα τραγούδια',
       'features/library-import.md': 'Εισαγωγή βιβλιοθήκης (CSV)',
+      'features/playback-normalization.md': 'Κανονικοποίηση έντασης',
       'features/player.md': 'Ενσωματωμένο πρόγραμμα αναπαραγωγής',
       'features/liked-songs.md': 'Αγαπημένα τραγούδια',
       'features/podcasts.md': 'Podcasts',

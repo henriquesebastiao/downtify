@@ -178,6 +178,26 @@ export default {
     add: '재생목록을 즐겨찾기에 추가',
     remove: '재생목록을 즐겨찾기에서 제거',
   },
+  normalization: {
+    title: '볼륨 정규화',
+    hint: '오디오 파일을 바꾸지 않고 모든 곡을 비슷한 음량으로 재생합니다.',
+    enable: '재생 볼륨 정규화',
+    enableHint:
+      '곡마다 측정된 음량을 사용하며, 최대 12dB까지만 키우고 피크가 찌그러지지 않게 합니다. 아직 측정되지 않은 곡은 원래 음량으로 재생됩니다.',
+    analysisHint:
+      '분석은 백그라운드에서 각 곡을 한 번 읽으며, 이후 실행에서는 새로 추가되거나 변경된 파일만 측정합니다. 재시작 후에도 스스로 시작하지 않습니다.',
+    progress: '{done} / {total}곡 분석됨 · {failed}곡 실패',
+    analyze: '라이브러리 분석',
+    pause: '분석 일시 중지',
+    resume: '분석 재개',
+    pausing: '일시 중지 전에 현재 파일을 마무리하는 중…',
+    states: {
+      ready: '측정된 볼륨이 현재 곡에 적용되었습니다.',
+      silent: '무음 곡: 원래 음량을 유지합니다.',
+      unanalysed: '이 곡은 아직 측정되지 않았습니다: 원래 음량을 유지합니다.',
+      unavailable: '정규화를 사용할 수 없습니다: 원래 음량을 유지합니다.',
+    },
+  },
   externalPlaylistImport: {
     open: 'Import folder playlists',
     title: 'Playlists in your music folders',

@@ -75,6 +75,7 @@ export default {
       'features/playlist-monitor.md': 'Lejátszási lista figyelő',
       'features/top-songs.md': 'Legnépszerűbb számok',
       'features/library-import.md': 'Könyvtár importálása (CSV)',
+      'features/playback-normalization.md': 'Hangerő-normalizálás',
       'features/player.md': 'Beépített lejátszó',
       'features/liked-songs.md': 'Kedvelt számok',
       'features/podcasts.md': 'Podcastok',

@@ -20,6 +20,7 @@ Downtify cubre todo lo que necesitas para crear y mantener una biblioteca de mú
 | [Canciones más populares](top-songs.md) | Pega el enlace de un artista y descarga sus canciones más populares, opcionalmente como playlist |
 | [Importar biblioteca (CSV)](library-import.md) | Importa una exportación de Soundiiz, TuneMyMusic o Exportify y pon todo en cola |
 | [Reproductor integrado](player.md) | Reproduce tu biblioteca en el navegador: gestión de la cola, letras sincronizadas, temporizador de apagado, teclado y teclas multimedia |
+| [Normalización del volumen](playback-normalization.md) | Reproduce todas las canciones con un volumen parecido, según mediciones que inicia un administrador; los archivos de audio nunca cambian |
 | [Canciones que me gustan](liked-songs.md) | Dale un corazón a una canción para marcarla; una playlist con todo lo que te gusta aparece sola |
 | [Podcasts](podcasts.md) | Suscríbete a un programa por feed RSS, enlace de Spotify o nombre; los episodios nuevos se descargan y etiquetan solos |
 | [Usuarios e inicio de sesión](users.md) | Inicio de sesión con usuario y contraseña (`admin` / `downtify` en un servidor nuevo), cuentas de administrador y de usuario normal, preferencias por usuario y un registro de actividad con inicios de sesión y lo que escucha cada uno |

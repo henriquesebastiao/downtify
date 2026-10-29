@@ -7,6 +7,13 @@ import { libraryOnly } from '/src/model/musicPolicy'
 import { normalizeTrack } from '/src/lib/library'
 import { attachEqualizer, resumeEqualizer } from '/src/model/equalizer'
 import { resolveTrackUrl, warmServerCache } from '/src/model/streamResolve'
+import {
+  normalizationEnabled,
+  knownTrackNormalization,
+  getTrackNormalization,
+  prefetchTrackNormalization,
+  applyTrackNormalization,
+} from '/src/model/normalization'
 
 const VOLUME_KEY = 'downtify-player-volume'
 const RATE_KEY = 'downtify-player-rate'
@@ -71,6 +78,7 @@ let shuffleOrder = []
 let shufflePos = 0
 let sleepTimer = null
 let restoreTime = 0
+let playbackAttempt = 0
 
 function ensureAudio() {
   if (audio) return audio
@@ -383,6 +391,7 @@ let prefetchedFor = -1
 function maybePrefetch() {
   if (currentIndex.value < 0 || prefetchedFor === currentIndex.value) return
   prefetchedFor = currentIndex.value
+  prefetchTrackNormalization(playlist.value[nextIndex()])
   prefetchNext()
 }
 
@@ -463,6 +472,35 @@ function prefetchNext() {
 
 function startPlayback(a) {
   if (libraryOnly.value && playlist.value[currentIndex.value]?.stream) return
+  const attempt = ++playbackAttempt
+  const track = playlist.value[currentIndex.value]
+  const known = knownTrackNormalization(track)
+  if (known === undefined) {
+    // Normalized but not measured yet: hold the start until the server
+    // answers (the request gives up quickly), so no moment of the song
+    // plays at the wrong level.
+    const identity = trackIdentity(track)
+    const url = a.src
+    a.pause()
+    applyTrackNormalization(null)
+    // Build/resume during the user gesture, before awaiting the measurement.
+    resumeEqualizer()
+    isBuffering.value = true
+    void getTrackNormalization(track).then((profile) => {
+      if (
+        attempt !== playbackAttempt ||
+        a.src !== url ||
+        trackIdentity(playlist.value[currentIndex.value]) !== identity
+      )
+        return
+      applyTrackNormalization(profile)
+      isBuffering.value = false
+      resumeEqualizer()
+      a.play().catch(() => {})
+    })
+    return
+  }
+  applyTrackNormalization(known)
   resumeEqualizer()
   a.play().catch(() => {})
 }
@@ -488,6 +526,8 @@ function play() {
 }
 
 function pause() {
+  playbackAttempt += 1
+  isBuffering.value = false
   if (audio) audio.pause()
 }
 
@@ -730,6 +770,20 @@ function updateMediaSession(track) {
 }
 
 watch(currentTrack, (track) => updateMediaSession(track))
+
+// Switched on mid-song: level the current one too (the equalizer ramps
+// to it), instead of waiting for the next.
+watch(normalizationEnabled, (on) => {
+  const track = playlist.value[currentIndex.value]
+  if (!on || !track?.file) return
+  void getTrackNormalization(track).then((profile) => {
+    if (
+      normalizationEnabled.value &&
+      playlist.value[currentIndex.value] === track
+    )
+      applyTrackNormalization(profile)
+  })
+})
 watch(libraryOnly, (enabled) => {
   if (!enabled) return
   const selected = playlist.value[currentIndex.value]

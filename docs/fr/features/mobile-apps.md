@@ -56,6 +56,10 @@ Les applications lisent les fichiers tels quels (**Original**) ou demandent au s
 - Les copies sont conservées dans `/data/transcode_cache`, 2 Go au maximum par défaut ; les moins récemment lues partent en premier. Deux au plus sont faites en même temps. Les deux limites sont des [variables d’environnement](../getting-started/environment-variables.md#mobile-apps-and-sign-in).
 - Si le téléphone abandonne pendant qu’une copie est en cours, le serveur cesse de la faire.
 
+## Normalisation du volume
+
+L’application Android peut lire les morceaux à un volume semblable avec les mêmes mesures que le lecteur web : activez **Normaliser le volume** dans ses **Paramètres → Lecture**. Le réglage s’applique dès le morceau suivant, et les morceaux sans mesure gardent leur niveau d’origine. Une copie hors ligne n’utilise une mesure que si elle a été téléchargée en entier et correspond au fichier mesuré par le serveur. Voir [Normalisation du volume](playback-normalization.md).
+
 ## Diffusion (cast)
 
 Les applications peuvent envoyer un morceau vers un Chromecast ou un autre lecteur qui récupère l’audio lui-même. L’application obtient du serveur un lien valable pour ce seul morceau pendant une durée limitée (une heure par défaut) et seulement tant que le téléphone reste associé ; aucune clé du téléphone n’y figure.

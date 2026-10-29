@@ -75,6 +75,7 @@ export default {
       'features/playlist-monitor.md': 'Monitor de playlists',
       'features/top-songs.md': 'Canciones más populares',
       'features/library-import.md': 'Importar biblioteca (CSV)',
+      'features/playback-normalization.md': 'Normalización del volumen',
       'features/player.md': 'Reproductor integrado',
       'features/liked-songs.md': 'Canciones que me gustan',
       'features/podcasts.md': 'Podcasts',

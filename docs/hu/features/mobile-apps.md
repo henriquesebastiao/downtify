@@ -56,6 +56,10 @@ Az alkalmazások a fájlokat úgy játsszák le, ahogy vannak (**Eredeti**), vag
 - A másolatok a `/data/transcode_cache` mappában vannak, alapértelmezetten legfeljebb 2 GB; a legrégebben lejátszottak mennek előbb. Egyszerre legfeljebb kettő készül. Mindkét korlát [környezeti változó](../getting-started/environment-variables.md#mobile-apps-and-sign-in).
 - Ha a telefon feladja, miközben egy másolat készül, a szerver abbahagyja a készítését.
 
+## Hangerő-normalizálás
+
+Az Android-alkalmazás a webes lejátszóval azonos mérések alapján hasonló hangerővel játszhatja le a dalokat: kapcsold be a **Hangerő normalizálása** beállítást a **Beállítások → Lejátszás** alatt. A következő dalnál lép életbe, a mérés nélküli dalok pedig eredeti hangerővel szólnak. Egy offline másolat csak akkor használ mérést, ha teljes egészében töltődött le, és egyezik a szerver által mért fájllal. Lásd: [Hangerő-normalizálás](playback-normalization.md).
+
 ## Casting
 
 Az alkalmazások egy dalt Chromecastnak vagy más lejátszónak küldhetnek, amely maga kéri le a hangot. Az alkalmazás a szervertől egy hivatkozást kap, amely az adott dalra korlátozott ideig (alapértelmezetten egy óráig) és csak addig működik, amíg a telefon párosítva marad; a telefon egyetlen kulcsa sem kerül bele.

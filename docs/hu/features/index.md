@@ -20,6 +20,7 @@ A Downtify mindent lefed, amire szükséged van egy helyi zenekönyvtár felép�
 | [Legnépszerűbb számok](top-songs.md) | Illessz be egy előadó hivatkozását, és töltsd le a legnépszerűbb dalait, opcionálisan lejátszási listaként |
 | [Könyvtár importálása (CSV)](library-import.md) | Importálj egy Soundiiz-, TuneMyMusic- vagy Exportify-exportot, és állítsd sorba az egészet |
 | [Beépített lejátszó](player.md) | Játszd le a könyvtárad a böngészőben: sorkezelés, időzített dalszövegek, elalvási időzítő, billentyűzet és médiabillentyűk |
+| [Hangerő-normalizálás](playback-normalization.md) | Minden dal hasonló hangerővel szól, egy rendszergazda által indított mérések alapján; a hangfájlok sosem változnak |
 | [Kedvelt számok](liked-songs.md) | Szívvel kedvelj egy számot; a kedvelt számokból magától megjelenik egy lejátszási lista |
 | [Podcastok](podcasts.md) | Iratkozz fel egy műsorra RSS-csatornával, Spotify-hivatkozással vagy névvel; az új epizódok maguktól letöltődnek és címkézést kapnak |
 | [Felhasználók és bejelentkezés](users.md) | Bejelentkezés felhasználónévvel és jelszóval (`admin` / `downtify` új szerveren), adminisztrátori és normál felhasználói fiókok, felhasználónkénti beállítások és tevékenységnapló a bejelentkezésekről és arról, ki mit hallgat |

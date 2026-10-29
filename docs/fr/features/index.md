@@ -20,6 +20,7 @@ Downtify couvre tout ce qu’il faut pour construire et entretenir une biblioth�
 | [Titres les plus écoutés](top-songs.md) | Collez le lien d’un artiste et téléchargez ses morceaux les plus populaires, éventuellement sous forme de playlist |
 | [Import de bibliothèque (CSV)](library-import.md) | Importez un export de Soundiiz, TuneMyMusic ou Exportify et mettez le tout en file |
 | [Lecteur intégré](player.md) | Écoutez votre bibliothèque dans le navigateur : gestion de la file, paroles synchronisées, minuterie de mise en veille, clavier et touches multimédias |
+| [Normalisation du volume](playback-normalization.md) | Lire tous les morceaux à un volume semblable, d’après des mesures lancées par un administrateur ; les fichiers audio ne sont jamais modifiés |
 | [Titres likés](liked-songs.md) | Mettez un cœur à un titre pour le liker ; une playlist de tout ce que vous avez liké apparaît toute seule |
 | [Podcasts](podcasts.md) | Abonnez-vous à une émission par flux RSS, lien Spotify ou nom ; les nouveaux épisodes se téléchargent et s’étiquettent tout seuls |
 | [Utilisateurs et connexion](users.md) | Connexion par nom d’utilisateur et mot de passe (`admin` / `downtify` sur un nouveau serveur), comptes administrateur et utilisateur, préférences par utilisateur et journal d’activité des connexions et de ce que chacun écoute |

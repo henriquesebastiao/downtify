@@ -20,6 +20,7 @@ Downtify deckt alles ab, was du brauchst, um aus Spotify eine lokale Musikbiblio
 | [Top-Songs](top-songs.md) | Den Link eines Künstlers einfügen und seine beliebtesten Songs herunterladen, optional als Playlist |
 | [Bibliotheksimport (CSV)](library-import.md) | Einen Bibliotheksexport von Soundiiz, TuneMyMusic oder Exportify importieren und alles in die Warteschlange stellen |
 | [Integrierter Player](player.md) | Die Bibliothek im Browser abspielen: Warteschlangenverwaltung, synchrone Songtexte, Schlaf-Timer, Tastatur und Mediatasten |
+| [Lautstärkenormalisierung](playback-normalization.md) | Alle Songs in ähnlicher Lautstärke abspielen, nach Messungen, die ein Admin startet; Audiodateien werden nie verändert |
 | [Lieblingssongs](liked-songs.md) | Mit einem Herz einen Song liken; eine Playlist aller gelikten Songs entsteht von selbst |
 | [Podcasts](podcasts.md) | Eine Sendung per RSS-Feed, Spotify-Link oder Namen abonnieren; neue Folgen werden von selbst geladen und getaggt |
 | [Benutzer und Anmeldung](users.md) | Anmeldung mit Benutzername und Passwort (`admin` / `downtify` auf einem neuen Server), Admin- und normale Benutzerkonten, Einstellungen pro Benutzer und ein Aktivitätsprotokoll von Anmeldungen und dem, was jeder hört |

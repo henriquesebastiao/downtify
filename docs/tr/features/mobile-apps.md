@@ -56,6 +56,10 @@ Uygulamalar dosyaları olduğu gibi çalar (**Orijinal**) ya da sunucudan daha k
 - Kopyalar `/data/transcode_cache` içinde tutulur, varsayılan olarak en fazla 2 GB; en uzun süredir çalınmayanlar önce gider. Aynı anda en fazla iki tane yapılır. İki sınır da [ortam değişkenleridir](../getting-started/environment-variables.md#mobile-apps-and-sign-in).
 - Bir kopya yapılırken telefon vazgeçerse sunucu onu yapmayı bırakır.
 
+## Ses seviyesi normalleştirme
+
+Android uygulaması, web oynatıcıyla aynı ölçümleri kullanarak şarkıları benzer ses seviyesinde çalabilir: **Ayarlar → Oynatma** bölümünde **Ses seviyesini normalleştir** seçeneğini açın. Bir sonraki şarkıdan itibaren geçerli olur; ölçümü olmayan şarkılar özgün seviyelerinde çalar. Çevrimdışı bir kopya, ölçümü yalnızca tamamen indirildiyse ve sunucunun ölçtüğü dosyayla eşleşiyorsa kullanır. Bkz. [Ses seviyesi normalleştirme](playback-normalization.md).
+
 ## Yayın (cast)
 
 Uygulamalar bir şarkıyı bir Chromecast’e veya sesi kendi başına çeken başka bir oynatıcıya gönderebilir. Uygulama sunucudan, o tek şarkı için sınırlı bir süre (varsayılan bir saat) ve yalnızca telefon eşleşmiş kaldığı sürece çalışan bir bağlantı alır; telefonun hiçbir anahtarı içine girmez.

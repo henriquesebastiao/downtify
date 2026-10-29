@@ -184,6 +184,14 @@ async def usernames(request: Request) -> dict[str, Any]:
     return {'enabled': enabled, 'usernames': names if enabled else []}
 
 
+@router.get('/tracks/{track_id}/loudness')
+async def track_loudness(track_id: str, request: Request) -> dict[str, Any]:
+    """The track's playback loudness profile (see downtify/loudness.py)."""
+
+    row, _ = await asyncio.to_thread(_track_path, track_id)
+    return await api.track_loudness(request, str(row['file']))
+
+
 @router.put('/playlists/favorite')
 async def favorite_playlist(request: Request) -> dict[str, Any]:
     """Set the same account preference as the web player."""

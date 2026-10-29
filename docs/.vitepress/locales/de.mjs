@@ -75,6 +75,7 @@ export default {
       'features/playlist-monitor.md': 'Playlist-Überwachung',
       'features/top-songs.md': 'Top-Songs',
       'features/library-import.md': 'Bibliotheksimport (CSV)',
+      'features/playback-normalization.md': 'Lautstärkenormalisierung',
       'features/player.md': 'Integrierter Player',
       'features/liked-songs.md': 'Lieblingssongs',
       'features/podcasts.md': 'Podcasts',

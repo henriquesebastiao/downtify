@@ -1817,6 +1817,68 @@ Drop the rest of the queue. Tracks already upgraded stay upgraded.
 
 ---
 
+## Playback normalization
+
+Measured loudness for the [playback volume normalization](features/playback-normalization.md). Audio files are only read, never changed.
+
+### `GET /api/library/loudness`
+
+A library track's playback loudness profile. Any signed-in account, for the tracks it can see (`404` otherwise).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `file` | string | yes | Library path, as in [`GET /tracks`](#get-tracks) |
+
+**Response:**
+
+```json
+{
+  "state": "ready",
+  "gain_db": -4.2,
+  "integrated_lufs": -13.8,
+  "true_peak_dbtp": 0.4,
+  "algorithm_version": 1,
+  "fingerprint": "9f2c…",
+  "source_etag": "\"5d41402abc4b2a76b9719d911017c592\"",
+  "source_size": 8312004
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `state` | `ready` (measured), `silent` (nothing to measure), `unanalysed` (no measurement for the file as it is now: never analyzed, or replaced or changed since) or `unavailable` (the server is starting) |
+| `gain_db` | The constant gain to play the track at: towards -18 LUFS, at most +12 dB, and low enough to keep the peak at -1 dBTP. `0` unless `ready` |
+| `integrated_lufs`, `true_peak_dbtp` | The measurement (`ready` only). The peak is the sample peak at 192 kHz |
+| `algorithm_version` | `1`. A client that doesn't know the version should ignore the profile |
+| `fingerprint` | Identifies the measured file (size, modification time, inode, algorithm) |
+| `source_etag`, `source_size` | The `ETag` and size [`GET /api/v1/tracks/{id}/stream`](#get-apiv1tracksidstream) sends for the original file, to tie an offline copy to its measurement |
+
+---
+
+### `GET /api/library/loudness/status`
+
+Admin. The analysis queue: `{ "active", "pause_requested", "paused", "total", "done", "failed", "pending", "running", "workers" }`. `paused` means work is left and nothing runs — after a pause or a restart; analysis never resumes on its own.
+
+---
+
+### `POST /api/library/loudness/start`
+
+Admin. Queue every library track and start analyzing with up to two low-priority FFmpeg workers (fewer with a smaller CPU quota). Files whose measurement is still valid are skipped, so a new run measures only new, moved, replaced or changed files and those that failed before. Answers the status. `409` while a run is going.
+
+---
+
+### `POST /api/library/loudness/pause`
+
+Admin. Finish the files being measured, then stop; the rest of the queue is kept.
+
+---
+
+### `POST /api/library/loudness/resume`
+
+Admin. Continue a paused (or interrupted) queue. `409` while a run is going.
+
+---
+
 ## Likes
 
 The heart on a library track — see [Liked songs](features/liked-songs.md). Files are library paths, the same ones [`GET /tracks`](#get-tracks) uses. Hearts belong to whoever tapped them: a user sees their own, an admin sees everyone's.
@@ -3331,6 +3393,12 @@ The track's cover. Also `HEAD`.
 ### `GET /api/v1/tracks/{id}/lyrics`
 
 `{ "synced": "<LRC text>", "plain": "<text>" }` — the same as [`GET /lyrics`](#get-lyrics); either may be empty.
+
+---
+
+### `GET /api/v1/tracks/{id}/loudness`
+
+The same profile as [`GET /api/library/loudness`](#get-apilibraryloudness), by track id. `404` for a track the caller can't see.
 
 ---
 
