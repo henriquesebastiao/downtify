@@ -187,6 +187,12 @@ def _setup_logging(level: str) -> None:
         _log = logging.getLogger(_name)
         _log.handlers = [_InterceptHandler()]
         _log.propagate = False
+        _log.setLevel(level.upper())
+    for _name in ('httpx', 'httpcore'):
+        logging.getLogger(_name).setLevel(logging.WARNING)
+    logging.getLogger('uvicorn.access').setLevel(
+        logging.DEBUG if level.upper() == 'DEBUG' else logging.WARNING
+    )
 
 
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
@@ -1261,7 +1267,8 @@ def main() -> None:
         host=args.host,
         port=port,
         loop=loop,  # type: ignore[arg-type]
-        log_level=args.log_level.lower(),
+        # _setup_logging owns per-logger levels, including quiet access logs.
+        log_level=None,
         log_config=None,
         workers=1,
         # Do not wait on the SPA's keep-alive HTTP / leftover WS.
