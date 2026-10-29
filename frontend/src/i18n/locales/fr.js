@@ -1,4 +1,133 @@
 export default {
+  trash: {
+    title: 'Corbeille',
+    subtitle:
+      'Les morceaux retirés de la bibliothèque, gardés {days} jours après leur déplacement. Restaurez-les d’ici là.',
+    adminOnly: 'Réservé aux administrateurs',
+    adminOnlyHint:
+      'Demandez à un administrateur de ce serveur de restaurer un morceau.',
+    off: 'La corbeille est désactivée',
+    offHint:
+      'Sur ce serveur, les morceaux sont supprimés définitivement. La corbeille s’active dans la configuration du serveur (DOWNTIFY_TRASH).',
+    inTrash: 'Dans la corbeille',
+    exclusions: 'Exclus des téléchargements',
+    search: 'Rechercher dans la corbeille',
+    restoreSelected: {
+      one: 'Restaurer {count} morceau',
+      other: 'Restaurer {count} morceaux',
+    },
+    summary: {
+      one: '{count} morceau · {size}',
+      other: '{count} morceaux · {size}',
+    },
+    empty: 'La corbeille est vide',
+    emptyHint:
+      'Les morceaux mis à la corbeille depuis la bibliothèque apparaissent ici jusqu’à leur expiration.',
+    noMatch: 'Rien dans la corbeille ne correspond',
+    select: 'Sélectionner « {title} »',
+    keptUntil: 'Gardé jusqu’au {date}',
+    restore: 'Restaurer',
+    retry: 'Réessayer',
+    previous: 'Précédent',
+    next: 'Suivant',
+    exclusionsHint:
+      'Les morceaux dont le délai dans la corbeille est écoulé. Les téléchargements automatiques (surveillance de playlists, suivis) les ignorent toujours, jusqu’à ce que vous les réautorisiez.',
+    exclusionsEmpty: 'Rien n’est exclu des téléchargements',
+    allowDownload: 'Réautoriser',
+    allowTitle: 'Autoriser « {title} » à être téléchargé de nouveau ?',
+    allowBody:
+      'Les téléchargements automatiques pourront le récupérer de nouveau. Rien n’est téléchargé maintenant.',
+    move: 'Mettre à la corbeille',
+    preparing: 'Vérification des fichiers…',
+    confirmTitle: {
+      one: 'Mettre {count} morceau à la corbeille ?',
+      other: 'Mettre {count} morceaux à la corbeille ?',
+    },
+    confirmBody:
+      'Seuls ces fichiers sont déplacés, avec leurs fichiers de paroles. Ils quittent la bibliothèque pour tout le monde et peuvent être restaurés pendant {days} jours. Leurs playlists et favoris reviennent avec eux, et les téléchargements automatiques les ignorent en attendant.',
+    confirmMore: {
+      one: 'et {count} autre',
+      other: 'et {count} autres',
+    },
+    pending: {
+      one: 'Mise à la corbeille de {count} morceau',
+      other: 'Mise à la corbeille de {count} morceaux',
+    },
+    downloadBlocked:
+      'Dans la corbeille : un administrateur doit le réautoriser.',
+    states: {
+      preview: 'En attente de confirmation',
+      pending: 'En attente de déplacement',
+      moving: 'Déplacement',
+      trashed: 'Dans la corbeille',
+      restore_pending: 'En attente de restauration',
+      restoring: 'Restauration',
+      restored: 'Restauré',
+      purging: 'Expiration',
+      purged: 'Expiré',
+      error: 'Arrêté — fichiers conservés',
+    },
+    errors: {
+      unavailable:
+        'La corbeille n’est pas disponible pour le moment. Rien n’a été déplacé.',
+      admin_required: 'Seul un administrateur peut utiliser la corbeille.',
+      admin_access_revoked:
+        'Le compte qui l’a demandé n’est plus administrateur.',
+      atomic_move_unsupported:
+        'Ce stockage ne peut pas déplacer les fichiers en sécurité. Rien n’a été déplacé.',
+      confirmation_expired:
+        'La vérification a expiré. Choisissez de nouveau les morceaux.',
+      confirmation_invalid:
+        'Cette confirmation ne correspond pas à votre compte ou à votre sélection.',
+      file_changed:
+        'Le fichier a changé après la vérification. Il est resté en place ; choisissez-le de nouveau.',
+      file_changed_during_move:
+        'Le fichier a changé pendant le déplacement. Il est gardé dans la corbeille pour vérification.',
+      file_missing: 'Un fichier manque. Vérifiez le stockage, puis réessayez.',
+      filesystem_unavailable:
+        'Le stockage n’est pas disponible. Vérifiez-le, puis réessayez.',
+      identity_uncertain:
+        'Les tags de ce morceau ne suffisent pas à l’exclure des téléchargements automatiques. Rien n’a été déplacé.',
+      invalid_path:
+        'Ce fichier est hors des dossiers couverts par la corbeille.',
+      invalid_selection: 'Choisissez entre 1 et 200 morceaux.',
+      item_not_found: 'Ce morceau n’est plus dans la bibliothèque.',
+      library_task_active:
+        'L’amélioration de la bibliothèque est en cours. Attendez-la ou mettez-la en pause.',
+      nas_marker_changed:
+        'Le stockage n’est pas celui qu’attend la corbeille. Rien n’a été déplacé.',
+      nas_marker_missing:
+        'Le stockage attendu n’est pas monté. Rien n’a été déplacé.',
+      operation_already_pending: 'Ce morceau est déjà en route.',
+      operation_in_progress:
+        'Le déplacement est en cours. Attendez-le avant de restaurer.',
+      operation_not_complete: 'Attendez la fin de l’étape en cours.',
+      preview_busy:
+        'Une autre vérification est en cours. Attendez qu’elle se termine.',
+      preview_unavailable:
+        'La vérification a été interrompue. Choisissez de nouveau les morceaux.',
+      restore_collision:
+        'Un autre fichier s’y trouve déjà. Rien n’a été écrasé ; le morceau reste dans la corbeille.',
+      retention_expired: 'Son délai dans la corbeille est écoulé.',
+      root_unavailable: 'Le dossier de musique n’est pas disponible.',
+      track_is_playing:
+        'Quelqu’un écoute ce morceau. Mettez-le en pause d’abord.',
+      trash_file_changed:
+        'La copie dans la corbeille a changé. Elle ne sera pas supprimée.',
+      trash_file_missing: 'Un fichier de la corbeille manque.',
+      trash_ignore_invalid:
+        'Le fichier .ignore du dossier de la corbeille n’est pas vide. Rien n’a été déplacé.',
+      trash_not_configured: 'La corbeille est désactivée sur ce serveur.',
+      trash_permissions_unsafe:
+        'D’autres peuvent lire le dossier de la corbeille. Vérifiez ses permissions.',
+      unsafe_symlink:
+        'Le chemin contient un lien symbolique : il n’est pas touché.',
+      unsupported_collection:
+        'Le dossier de ce morceau n’est pas couvert par la corbeille.',
+      unsupported_lyrics_location:
+        'Le dossier des paroles n’est pas couvert par la corbeille. Rien n’a été déplacé.',
+    },
+  },
   downloadPolicy: {
     block: 'Ne plus télécharger',
     blocked: 'Téléchargements suspendus pour ce titre.',

@@ -42,6 +42,15 @@ environment:
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | 스트리밍된 오디오의 캐시(`/data/stream_cache`)를 유지하는 최대 크기(MB). 가장 오래 재생되지 않은 사본부터 삭제됩니다. 서버를 통한 스트리밍은 브라우저가 직접 YouTube에 접근할 수 없는 곳에서 내려받지 않은 트랙을 재생해 줍니다. |
 | `DOWNTIFY_STREAM_CONCURRENCY` | `2` | 동시에 실행할 수 있는 스트림 다운로드 수. |
 
+## 음악 휴지통
+
+[음악 휴지통](../features/music-trash.md)을 참고하세요. 아래 변수 중 하나를 설정하지 않으면 꺼져 있습니다.
+
+| 변수 | 기본값 | 설명 |
+|----------|---------|-------------|
+| `DOWNTIFY_TRASH` | `false` | `true`로 설정하면 다운로드 폴더에 음악 휴지통이 켜집니다. 곡을 삭제하면 30일 동안 보관되는 휴지통으로 옮겨지며, Downtify가 직접 파일을 옮깁니다. 켜져 있는 동안에는 관리자만 곡을 삭제할 수 있습니다. |
+| `DOWNTIFY_TRASH_CONFIG` | _(설정 안 됨)_ | 컨테이너 안에 있는 JSON 파일의 경로로, 휴지통이 다루는 폴더와 워커가 실행되는 위치(`embedded` 또는 `external`)를 지정합니다. `DOWNTIFY_TRASH`보다 우선합니다. 파일을 읽을 수 없으면 서버가 시작되지 않습니다. [설정 파일](../features/music-trash.md#the-configuration-file)을 참고하세요. |
+
 ## 상태 확인
 
 이미지에는 [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck)가 내장되어 있어 별도의 `--health-cmd`가 필요 없습니다. 30초마다 컨테이너 자체 포트의 `GET /api/health`를 확인합니다(타임아웃 5초, 시작 유예 20초, 컨테이너를 비정상으로 표시하기 전 3회 재시도). `docker ps`와 `docker inspect`에서 결과를 볼 수 있고, Compose의 `condition: service_healthy`나 Watchtower 같은 도구가 이를 활용할 수 있습니다.

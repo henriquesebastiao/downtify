@@ -1,4 +1,129 @@
 export default {
+  trash: {
+    title: 'Papelera',
+    subtitle:
+      'Canciones sacadas de la biblioteca, guardadas {days} días después de moverlas. Puedes restaurarlas hasta entonces.',
+    adminOnly: 'Solo los administradores pueden ver esto',
+    adminOnlyHint:
+      'Pide a un administrador de este servidor que restaure una canción.',
+    off: 'La papelera está desactivada',
+    offHint:
+      'En este servidor las canciones se eliminan para siempre. La papelera se activa en la configuración del servidor (DOWNTIFY_TRASH).',
+    inTrash: 'En la papelera',
+    exclusions: 'Fuera de las descargas',
+    search: 'Buscar en la papelera',
+    restoreSelected: {
+      one: 'Restaurar {count} canción',
+      other: 'Restaurar {count} canciones',
+    },
+    summary: {
+      one: '{count} canción · {size}',
+      other: '{count} canciones · {size}',
+    },
+    empty: 'La papelera está vacía',
+    emptyHint:
+      'Las canciones que mueves de la biblioteca a la papelera aparecen aquí hasta que caducan.',
+    noMatch: 'Nada en la papelera coincide',
+    select: 'Seleccionar «{title}»',
+    keptUntil: 'Se guarda hasta el {date}',
+    restore: 'Restaurar',
+    retry: 'Reintentar',
+    previous: 'Anterior',
+    next: 'Siguiente',
+    exclusionsHint:
+      'Canciones cuyo plazo en la papelera terminó. Las descargas automáticas (Monitor de playlists, seguimientos) las siguen saltando hasta que las vuelvas a permitir.',
+    exclusionsEmpty: 'No hay nada fuera de las descargas',
+    allowDownload: 'Permitir descargas',
+    allowTitle: '¿Permitir que «{title}» se vuelva a descargar?',
+    allowBody:
+      'Las descargas automáticas pueden volver a bajarla. No se descarga nada ahora.',
+    move: 'Mover a la papelera',
+    preparing: 'Comprobando los archivos…',
+    confirmTitle: {
+      one: '¿Mover {count} canción a la papelera?',
+      other: '¿Mover {count} canciones a la papelera?',
+    },
+    confirmBody:
+      'Solo se mueven estos archivos, con sus archivos de letras. Salen de la biblioteca para todos y se pueden restaurar durante {days} días. Sus playlists y me gusta vuelven con ellos, y mientras tanto las descargas automáticas los saltan.',
+    confirmMore: {
+      one: 'y {count} más',
+      other: 'y {count} más',
+    },
+    pending: {
+      one: 'Moviendo {count} canción a la papelera',
+      other: 'Moviendo {count} canciones a la papelera',
+    },
+    downloadBlocked:
+      'En la papelera de música: un administrador tiene que volver a permitirla.',
+    states: {
+      preview: 'Esperando confirmación',
+      pending: 'Esperando para mover',
+      moving: 'Moviendo',
+      trashed: 'En la papelera',
+      restore_pending: 'Esperando para restaurar',
+      restoring: 'Restaurando',
+      restored: 'Restaurada',
+      purging: 'Caducando',
+      purged: 'Caducada',
+      error: 'Detenida — archivos conservados',
+    },
+    errors: {
+      unavailable: 'La papelera no está disponible ahora. No se movió nada.',
+      admin_required: 'Solo un administrador puede usar la papelera.',
+      admin_access_revoked: 'La cuenta que lo pidió ya no es administradora.',
+      atomic_move_unsupported:
+        'Este almacenamiento no puede mover archivos de forma segura. No se movió nada.',
+      confirmation_expired:
+        'La comprobación caducó. Elige las canciones de nuevo.',
+      confirmation_invalid:
+        'Esta confirmación no es de tu cuenta o de tu selección.',
+      file_changed:
+        'El archivo cambió después de comprobarlo. Se quedó donde estaba; elígelo de nuevo.',
+      file_changed_during_move:
+        'El archivo cambió mientras se movía. Se guarda en la papelera para que lo revises.',
+      file_missing:
+        'Falta un archivo. Revisa el almacenamiento y vuelve a intentarlo.',
+      filesystem_unavailable:
+        'El almacenamiento no está disponible. Revísalo y vuelve a intentarlo.',
+      identity_uncertain:
+        'Las etiquetas de esta canción no bastan para mantenerla fuera de las descargas automáticas. No se movió nada.',
+      invalid_path:
+        'Este archivo está fuera de las carpetas que cubre la papelera.',
+      invalid_selection: 'Elige entre 1 y 200 canciones.',
+      item_not_found: 'Esta canción ya no está en la biblioteca.',
+      library_task_active:
+        'La mejora de la biblioteca está en marcha. Espera o páusala antes.',
+      nas_marker_changed:
+        'El almacenamiento no es el que espera la papelera. No se movió nada.',
+      nas_marker_missing:
+        'El almacenamiento esperado no está montado. No se movió nada.',
+      operation_already_pending: 'Esta canción ya está en camino.',
+      operation_in_progress:
+        'El movimiento sigue en marcha. Espera antes de restaurar.',
+      operation_not_complete: 'Espera a que termine el paso actual.',
+      preview_busy: 'Hay otra comprobación en marcha. Espera a que termine.',
+      preview_unavailable:
+        'La comprobación se interrumpió. Elige las canciones de nuevo.',
+      restore_collision:
+        'Ya hay otro archivo ahí. No se sobrescribió nada; la canción sigue en la papelera.',
+      retention_expired: 'Su plazo en la papelera terminó.',
+      root_unavailable: 'La carpeta de música no está disponible.',
+      track_is_playing:
+        'Alguien está reproduciendo esta canción. Páusala antes.',
+      trash_file_changed: 'La copia de la papelera cambió. No se eliminará.',
+      trash_file_missing: 'Falta un archivo de la papelera.',
+      trash_ignore_invalid:
+        'El archivo .ignore de la carpeta de la papelera no está vacío. No se movió nada.',
+      trash_not_configured: 'La papelera está desactivada en este servidor.',
+      trash_permissions_unsafe:
+        'Otros pueden leer la carpeta de la papelera. Revisa sus permisos.',
+      unsafe_symlink: 'La ruta tiene un enlace simbólico, así que no se toca.',
+      unsupported_collection:
+        'La carpeta de esta canción no la cubre la papelera.',
+      unsupported_lyrics_location:
+        'La carpeta de letras no la cubre la papelera. No se movió nada.',
+    },
+  },
   downloadPolicy: {
     block: 'Stop downloading',
     blocked: 'Downloads suspended for this track.',

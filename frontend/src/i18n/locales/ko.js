@@ -1,4 +1,120 @@
 export default {
+  trash: {
+    title: '휴지통',
+    subtitle:
+      '라이브러리에서 뺀 곡은 옮긴 뒤 {days}일 동안 보관됩니다. 그때까지 복원할 수 있습니다.',
+    adminOnly: '관리자만 볼 수 있습니다',
+    adminOnlyHint: '곡을 복원하려면 이 서버의 관리자에게 요청하세요.',
+    off: '휴지통이 꺼져 있습니다',
+    offHint:
+      '이 서버에서는 곡이 영구 삭제됩니다. 휴지통은 서버 설정(DOWNTIFY_TRASH)에서 켭니다.',
+    inTrash: '휴지통',
+    exclusions: '다운로드 제외',
+    search: '휴지통 검색',
+    restoreSelected: {
+      one: '{count}곡 복원',
+      other: '{count}곡 복원',
+    },
+    summary: {
+      one: '{count}곡 · {size}',
+      other: '{count}곡 · {size}',
+    },
+    empty: '휴지통이 비어 있습니다',
+    emptyHint:
+      '라이브러리에서 휴지통으로 옮긴 곡은 만료될 때까지 여기에 표시됩니다.',
+    noMatch: '휴지통에 일치하는 항목이 없습니다',
+    select: '“{title}” 선택',
+    keptUntil: '{date}까지 보관',
+    restore: '복원',
+    retry: '다시 시도',
+    previous: '이전',
+    next: '다음',
+    exclusionsHint:
+      '휴지통 보관 기간이 끝난 곡입니다. 다시 허용할 때까지 자동 다운로드(재생목록 모니터링, 팔로우)에서 계속 건너뜁니다.',
+    exclusionsEmpty: '다운로드에서 제외된 항목이 없습니다',
+    allowDownload: '다운로드 허용',
+    allowTitle: '“{title}”을(를) 다시 다운로드할 수 있게 할까요?',
+    allowBody:
+      '자동 다운로드가 이 곡을 다시 받을 수 있습니다. 지금 바로 다운로드되지는 않습니다.',
+    move: '휴지통으로 이동',
+    preparing: '파일 확인 중…',
+    confirmTitle: {
+      one: '{count}곡을 휴지통으로 옮길까요?',
+      other: '{count}곡을 휴지통으로 옮길까요?',
+    },
+    confirmBody:
+      '이 파일들만 가사 파일과 함께 옮겨집니다. 모든 사람의 라이브러리에서 사라지며 {days}일 동안 복원할 수 있습니다. 재생목록과 좋아요는 복원 시 함께 돌아오고, 그동안 자동 다운로드는 이 곡들을 건너뜁니다.',
+    confirmMore: {
+      one: '외 {count}곡',
+      other: '외 {count}곡',
+    },
+    pending: {
+      one: '{count}곡을 휴지통으로 옮기는 중',
+      other: '{count}곡을 휴지통으로 옮기는 중',
+    },
+    downloadBlocked: '음악 휴지통에 있음: 관리자가 다시 허용해야 합니다.',
+    states: {
+      preview: '확인 대기 중',
+      pending: '이동 대기 중',
+      moving: '이동 중',
+      trashed: '휴지통에 있음',
+      restore_pending: '복원 대기 중',
+      restoring: '복원 중',
+      restored: '복원됨',
+      purging: '만료 중',
+      purged: '만료됨',
+      error: '중단됨 — 파일 보존',
+    },
+    errors: {
+      unavailable:
+        '지금은 휴지통을 사용할 수 없습니다. 아무것도 옮겨지지 않았습니다.',
+      admin_required: '관리자만 휴지통을 사용할 수 있습니다.',
+      admin_access_revoked: '요청한 계정이 더 이상 관리자가 아닙니다.',
+      atomic_move_unsupported:
+        '이 저장소에서는 파일을 안전하게 옮길 수 없습니다. 아무것도 옮겨지지 않았습니다.',
+      confirmation_expired: '확인이 만료되었습니다. 곡을 다시 선택하세요.',
+      confirmation_invalid: '이 확인은 내 계정이나 선택과 일치하지 않습니다.',
+      file_changed:
+        '확인한 뒤 파일이 바뀌었습니다. 원래 자리에 그대로 있으니 다시 선택하세요.',
+      file_changed_during_move:
+        '옮기는 동안 파일이 바뀌었습니다. 확인할 수 있도록 휴지통에 보관합니다.',
+      file_missing: '파일이 없습니다. 저장소를 확인한 뒤 다시 시도하세요.',
+      filesystem_unavailable:
+        '저장소를 사용할 수 없습니다. 확인한 뒤 다시 시도하세요.',
+      identity_uncertain:
+        '이 곡의 태그 정보가 부족해 자동 다운로드에서 제외할 수 없습니다. 아무것도 옮겨지지 않았습니다.',
+      invalid_path: '이 파일은 휴지통이 다루는 폴더 밖에 있습니다.',
+      invalid_selection: '1곡에서 200곡 사이로 선택하세요.',
+      item_not_found: '이 곡은 더 이상 라이브러리에 없습니다.',
+      library_task_active:
+        '라이브러리 업그레이드가 실행 중입니다. 끝날 때까지 기다리거나 먼저 일시 정지하세요.',
+      nas_marker_changed:
+        '휴지통이 기대하는 저장소가 아닙니다. 아무것도 옮겨지지 않았습니다.',
+      nas_marker_missing:
+        '기대하는 저장소가 마운트되어 있지 않습니다. 아무것도 옮겨지지 않았습니다.',
+      operation_already_pending: '이 곡은 이미 처리 중입니다.',
+      operation_in_progress: '아직 옮기는 중입니다. 복원하기 전에 기다리세요.',
+      operation_not_complete: '현재 단계가 끝날 때까지 기다리세요.',
+      preview_busy: '다른 확인이 진행 중입니다. 끝날 때까지 기다리세요.',
+      preview_unavailable: '확인이 중단되었습니다. 곡을 다시 선택하세요.',
+      restore_collision:
+        '그 자리에 이미 다른 파일이 있습니다. 덮어쓰지 않았으며 곡은 휴지통에 남아 있습니다.',
+      retention_expired: '휴지통 보관 기간이 끝났습니다.',
+      root_unavailable: '음악 폴더를 사용할 수 없습니다.',
+      track_is_playing: '누군가 이 곡을 재생 중입니다. 먼저 일시 정지하세요.',
+      trash_file_changed: '휴지통의 사본이 바뀌었습니다. 삭제하지 않습니다.',
+      trash_file_missing: '휴지통의 파일이 없습니다.',
+      trash_ignore_invalid:
+        '휴지통 폴더의 .ignore 파일이 비어 있지 않습니다. 아무것도 옮겨지지 않았습니다.',
+      trash_not_configured: '이 서버에서는 휴지통이 꺼져 있습니다.',
+      trash_permissions_unsafe:
+        '다른 사용자가 휴지통 폴더를 읽을 수 있습니다. 권한을 확인하세요.',
+      unsafe_symlink: '경로에 심볼릭 링크가 있어 건드리지 않습니다.',
+      unsupported_collection: '이 곡의 폴더는 휴지통이 다루지 않습니다.',
+      unsupported_lyrics_location:
+        '가사 폴더는 휴지통이 다루지 않습니다. 아무것도 옮겨지지 않았습니다.',
+    },
+  },
   downloadPolicy: {
     block: 'Stop downloading',
     blocked: 'Downloads suspended for this track.',

@@ -61,9 +61,7 @@
           class="mt-1 flex items-start gap-1.5 text-xs text-danger"
         >
           <AppIcon name="alert" :size="14" class="mt-px" />
-          <span class="line-clamp-2">{{
-            item.message || t('queue.failedGeneric')
-          }}</span>
+          <span class="line-clamp-2">{{ failure }}</span>
         </p>
       </div>
 
@@ -185,6 +183,17 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
+// Codes the server sends for songs it won't download (download policy,
+// music trash) instead of a message.
+const FAILURE_CODES = {
+  download_excluded: 'downloadPolicy.blocked',
+  library_trash_excluded: 'trash.downloadBlocked',
+}
+const failure = computed(() => {
+  const message = props.item.message
+  if (FAILURE_CODES[message]) return t(FAILURE_CODES[message])
+  return message || t('queue.failedGeneric')
+})
 const auth = useAuth()
 const ui = useUi()
 const suspending = ref(false)

@@ -1,4 +1,131 @@
 export default {
+  trash: {
+    title: 'Papierkorb',
+    subtitle:
+      'Aus der Bibliothek genommene Titel, nach dem Verschieben {days} Tage aufbewahrt. Bis dahin kannst du sie wiederherstellen.',
+    adminOnly: 'Nur für Admins sichtbar',
+    adminOnlyHint:
+      'Bitte einen Admin dieses Servers, einen Titel wiederherzustellen.',
+    off: 'Der Papierkorb ist aus',
+    offHint:
+      'Auf diesem Server werden Titel endgültig gelöscht. Der Papierkorb wird in der Serverkonfiguration eingeschaltet (DOWNTIFY_TRASH).',
+    inTrash: 'Im Papierkorb',
+    exclusions: 'Von Downloads ausgeschlossen',
+    search: 'Papierkorb durchsuchen',
+    restoreSelected: {
+      one: '{count} Titel wiederherstellen',
+      other: '{count} Titel wiederherstellen',
+    },
+    summary: {
+      one: '{count} Titel · {size}',
+      other: '{count} Titel · {size}',
+    },
+    empty: 'Der Papierkorb ist leer',
+    emptyHint:
+      'Titel, die du aus der Bibliothek in den Papierkorb verschiebst, erscheinen hier, bis sie ablaufen.',
+    noMatch: 'Nichts im Papierkorb passt',
+    select: '„{title}“ auswählen',
+    keptUntil: 'Aufbewahrt bis {date}',
+    restore: 'Wiederherstellen',
+    retry: 'Erneut versuchen',
+    previous: 'Zurück',
+    next: 'Weiter',
+    exclusionsHint:
+      'Titel, deren Zeit im Papierkorb abgelaufen ist. Automatische Downloads (Playlist-Überwachung, Beobachtungen) überspringen sie weiter, bis du sie wieder erlaubst.',
+    exclusionsEmpty: 'Nichts ist von Downloads ausgeschlossen',
+    allowDownload: 'Downloads erlauben',
+    allowTitle: '„{title}“ wieder herunterladen lassen?',
+    allowBody:
+      'Automatische Downloads können ihn wieder holen. Jetzt wird nichts heruntergeladen.',
+    move: 'In den Papierkorb',
+    preparing: 'Dateien werden geprüft…',
+    confirmTitle: {
+      one: '{count} Titel in den Papierkorb verschieben?',
+      other: '{count} Titel in den Papierkorb verschieben?',
+    },
+    confirmBody:
+      'Nur diese Dateien werden verschoben, mit ihren Songtext-Dateien. Sie verschwinden für alle aus der Bibliothek und lassen sich {days} Tage lang wiederherstellen. Ihre Playlists und Likes kommen mit ihnen zurück, und automatische Downloads überspringen sie so lange.',
+    confirmMore: {
+      one: 'und {count} weiterer',
+      other: 'und {count} weitere',
+    },
+    pending: {
+      one: '{count} Titel wird in den Papierkorb verschoben',
+      other: '{count} Titel werden in den Papierkorb verschoben',
+    },
+    downloadBlocked: 'Im Musik-Papierkorb: Ein Admin muss ihn wieder erlauben.',
+    states: {
+      preview: 'Wartet auf Bestätigung',
+      pending: 'Wartet aufs Verschieben',
+      moving: 'Wird verschoben',
+      trashed: 'Im Papierkorb',
+      restore_pending: 'Wartet aufs Wiederherstellen',
+      restoring: 'Wird wiederhergestellt',
+      restored: 'Wiederhergestellt',
+      purging: 'Läuft ab',
+      purged: 'Abgelaufen',
+      error: 'Angehalten — Dateien behalten',
+    },
+    errors: {
+      unavailable:
+        'Der Papierkorb ist gerade nicht verfügbar. Nichts wurde verschoben.',
+      admin_required: 'Nur ein Admin kann den Papierkorb benutzen.',
+      admin_access_revoked: 'Das anfragende Konto ist kein Admin mehr.',
+      atomic_move_unsupported:
+        'Dieser Speicher kann Dateien nicht sicher verschieben. Nichts wurde verschoben.',
+      confirmation_expired:
+        'Die Prüfung ist abgelaufen. Wähle die Titel erneut.',
+      confirmation_invalid:
+        'Diese Bestätigung gehört nicht zu deinem Konto oder deiner Auswahl.',
+      file_changed:
+        'Die Datei hat sich nach der Prüfung geändert. Sie blieb, wo sie war; wähle sie erneut.',
+      file_changed_during_move:
+        'Die Datei hat sich beim Verschieben geändert. Sie bleibt zur Prüfung im Papierkorb.',
+      file_missing:
+        'Eine Datei fehlt. Prüfe den Speicher und versuch es erneut.',
+      filesystem_unavailable:
+        'Der Speicher ist nicht verfügbar. Prüfe ihn und versuch es erneut.',
+      identity_uncertain:
+        'Die Tags dieses Titels reichen nicht, um ihn von automatischen Downloads auszuschließen. Nichts wurde verschoben.',
+      invalid_path:
+        'Diese Datei liegt außerhalb der Ordner, die der Papierkorb abdeckt.',
+      invalid_selection: 'Wähle zwischen 1 und 200 Titeln.',
+      item_not_found: 'Dieser Titel ist nicht mehr in der Bibliothek.',
+      library_task_active:
+        'Die Bibliotheksverbesserung läuft. Warte oder pausiere sie zuerst.',
+      nas_marker_changed:
+        'Der Speicher ist nicht der, den der Papierkorb erwartet. Nichts wurde verschoben.',
+      nas_marker_missing:
+        'Der erwartete Speicher ist nicht eingehängt. Nichts wurde verschoben.',
+      operation_already_pending: 'Dieser Titel ist schon unterwegs.',
+      operation_in_progress:
+        'Das Verschieben läuft noch. Warte, bevor du wiederherstellst.',
+      operation_not_complete: 'Warte, bis der aktuelle Schritt fertig ist.',
+      preview_busy: 'Eine andere Prüfung läuft. Warte, bis sie fertig ist.',
+      preview_unavailable:
+        'Die Prüfung wurde unterbrochen. Wähle die Titel erneut.',
+      restore_collision:
+        'Dort liegt schon eine andere Datei. Nichts wurde überschrieben; der Titel bleibt im Papierkorb.',
+      retention_expired: 'Seine Zeit im Papierkorb ist abgelaufen.',
+      root_unavailable: 'Der Musikordner ist nicht verfügbar.',
+      track_is_playing:
+        'Jemand spielt diesen Titel gerade. Pausiere ihn zuerst.',
+      trash_file_changed:
+        'Die Kopie im Papierkorb hat sich geändert. Sie wird nicht gelöscht.',
+      trash_file_missing: 'Eine Datei im Papierkorb fehlt.',
+      trash_ignore_invalid:
+        'Die .ignore-Datei des Papierkorbordners ist nicht leer. Nichts wurde verschoben.',
+      trash_not_configured: 'Der Papierkorb ist auf diesem Server aus.',
+      trash_permissions_unsafe:
+        'Andere können den Papierkorbordner lesen. Prüfe seine Berechtigungen.',
+      unsafe_symlink:
+        'Der Pfad enthält einen symbolischen Link und wird daher nicht angefasst.',
+      unsupported_collection:
+        'Der Ordner dieses Titels wird vom Papierkorb nicht abgedeckt.',
+      unsupported_lyrics_location:
+        'Der Songtext-Ordner wird vom Papierkorb nicht abgedeckt. Nichts wurde verschoben.',
+    },
+  },
   downloadPolicy: {
     block: 'Stop downloading',
     blocked: 'Downloads suspended for this track.',

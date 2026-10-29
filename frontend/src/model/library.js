@@ -346,6 +346,7 @@ async function refreshPlaylists() {
 let playlistsTimer = null
 
 API.onMessage((data) => {
+  if (data?.type === 'library_changed') refreshSoon()
   if (data?.status === 'done') refreshSoon()
   if (data?.type === 'playlists_changed') {
     clearTimeout(playlistsTimer)

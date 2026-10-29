@@ -25,7 +25,7 @@ def test_sensitive_mutation_revalidates_admin(monkeypatch, kind, role):
     assert error.value.status_code == 403
 
 
-@pytest.mark.parametrize('kind', ['session', 'device'])
+@pytest.mark.parametrize('kind', ['session', 'device', 'open'])
 def test_valid_administrators_can_mutate(monkeypatch, kind):
     principal = SimpleNamespace(kind=kind, is_admin=True, user_id=1)
     monkeypatch.setattr(

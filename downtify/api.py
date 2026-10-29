@@ -1209,6 +1209,7 @@ class AppState:
     now_playing: NowPlaying = NowPlaying()
     # The mobile API (downtify/mobile_routes.py).
     library_sync: Optional[LibrarySync] = None
+    library_trash: Any = None
     transcoder: Optional[Transcoder] = None
     stream_cache: Optional[StreamCache] = None
     cover_thumbs: Optional[CoverThumbs] = None
@@ -1979,12 +1980,21 @@ def library_context() -> LibraryContext:
         if state.downloader is not None
         else Path('/downloads')
     )
+    # Songs in the music trash (or waiting to go there) are no longer
+    # part of the library, for anyone.
+    hidden_files, hidden_resolved = (
+        state.library_trash.hidden()
+        if state.library_trash is not None
+        else (frozenset(), frozenset())
+    )
     return library_context_from_state(
         download_dir,
         state.settings,
         state.track_index,
         metadata_cache=state.metadata_cache,
         playlist_catalog=state.playlist_catalog,
+        hidden_files=hidden_files,
+        hidden_resolved=hidden_resolved,
     )
 
 
@@ -7549,6 +7559,13 @@ async def _delete_owned_playlist(
     def _run() -> dict[str, Any]:
         assert state.downloader is not None
         download_dir = Path(state.downloader.download_dir)
+        if state.library_trash is not None:
+            result = delete_playlist_from_library(
+                name, download_dir, state.settings, state
+            )
+            if state.manual_playlist_owners is not None:
+                state.manual_playlist_owners.forget_owner(name)
+            return result
         if match.get('manual'):
             result = delete_playlist_from_library(
                 name, download_dir, state.settings, state

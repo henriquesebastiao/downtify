@@ -42,6 +42,15 @@ environment:
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | Akıtılan sesin önbelleğinin (`/data/stream_cache`) altında tutulduğu en büyük boyut, MB cinsinden; en uzun süredir çalınmayan kopyalar önce gider. Sunucu üzerinden akış, tarayıcının YouTube’a ulaşamadığı yerlerde indirilmemiş parçaları çalan şeydir. |
 | `DOWNTIFY_STREAM_CONCURRENCY` | `2` | Aynı anda kaç akış indirmesinin çalışabileceği. |
 
+## Müzik çöp kutusu
+
+Bkz. [Müzik çöp kutusu](../features/music-trash.md). Bunlardan biri ayarlanmadıkça kapalıdır.
+
+| Değişken | Varsayılan | Açıklama |
+|----------|---------|-------------|
+| `DOWNTIFY_TRASH` | `false` | `true`, indirme klasörü için müzik çöp kutusunu açar: kaldırılan parçalar 30 gün saklanan bir çöp kutusuna taşınır ve dosyaları Downtify kendisi taşır. Açıkken parçaları yalnızca yöneticiler kaldırabilir. |
+| `DOWNTIFY_TRASH_CONFIG` | _(ayarlı değil)_ | Çöp kutusunun kapsadığı klasörleri ve çalışanının nerede çalıştığını (`embedded` veya `external`) listeleyen JSON dosyasının konteyner içindeki yolu. `DOWNTIFY_TRASH` ayarının önüne geçer. Okunamayan bir dosya sunucunun başlamasını engeller. Bkz. [Yapılandırma dosyası](../features/music-trash.md#the-configuration-file). |
+
 ## Sağlık denetimi
 
 İmajda yerleşik bir [Docker `HEALTHCHECK`](https://docs.docker.com/reference/dockerfile/#healthcheck) vardır — özel bir `--health-cmd` gerekmez. Kapsayıcının kendi bağlantı noktasında her 30 saniyede bir `GET /api/health`’i sorgular (5 saniye zaman aşımı, 20 saniye başlangıç toleransı, kapsayıcı sağlıksız işaretlenmeden önce 3 deneme). `docker ps` ve `docker inspect` sonucu gösterir; Compose’un `condition: service_healthy` değeri veya Watchtower gibi araçlar buna göre hareket edebilir.

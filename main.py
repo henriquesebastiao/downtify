@@ -37,6 +37,7 @@ from downtify import (
     auth_routes,
     download_policy_routes,
     mobile_routes,
+    trash_routes,
 )
 from downtify.activity import ActivityLog
 from downtify.auth import AuthMiddleware, AuthStore, auth_disabled_from_env
@@ -80,6 +81,7 @@ from downtify.library_paths_cache import (
     set_listing_refresh_gate,
 )
 from downtify.library_sync import LibrarySync
+from downtify.library_trash import trash_from_env
 from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
 from downtify.library_usage import UsageSnapshots
@@ -202,6 +204,11 @@ def _read_library_file(stored: str) -> Optional[Path]:
     full = resolve_library_file(stored, ctx)
     if full is None and api.state.audio_replacements is not None:
         full = alias_file(stored, api.state.audio_replacements, ctx)
+    if full is not None and (
+        '.downtify-trash' in full.resolve().parts
+        or str(full.resolve()) in ctx.hidden_resolved
+    ):
+        return None
     return full
 
 
@@ -209,6 +216,14 @@ class LibraryAudioFiles(StaticFiles):
     """Old playback URLs survive a verified audio replacement."""
 
     async def get_response(self, path: str, scope: dict) -> Any:
+        ctx = api.library_context()
+        candidate = (DOWNLOAD_DIR / path).resolve()
+        if (
+            '.downtify-trash' in candidate.parts
+            or path in ctx.hidden_files
+            or str(candidate) in ctx.hidden_resolved
+        ):
+            raise StaticHTTPException(status_code=404)
         try:
             return await super().get_response(path, scope)
         except StaticHTTPException as exc:
@@ -399,6 +414,26 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.library_visibility = LibraryVisibility(library_db)
     api.state.traffic = TrafficCounters(library_db)
     api.state.podcasts = PodcastStore(library_db)
+    # The music trash (downtify/library_trash.py), when the operator
+    # turned it on. A configuration that doesn't load stops the server:
+    # carrying on would quietly bring permanent deletion back.
+    try:
+        api.state.library_trash = trash_from_env(DOWNLOAD_DIR, library_db)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        logger.error(
+            'Music trash configuration unusable ({}): fix '
+            'DOWNTIFY_TRASH_CONFIG or unset it',
+            error,
+        )
+        raise
+    if api.state.library_trash is not None:
+        logger.info(
+            'Music trash on ({} worker): {}',
+            api.state.library_trash.worker,
+            ', '.join(sorted(api.state.library_trash.roots)),
+        )
+    if api.state.downloader is not None:
+        api.state.downloader.trash_store = api.state.library_trash
     # The mobile API (downtify/mobile_routes.py).
     api.state.library_sync = LibrarySync(library_db)
     api.state.transcoder = transcoder_from_env(DATABASE_DIR)
@@ -542,6 +577,10 @@ def build_app() -> FastAPI:
             api.state.settings.get('download_retry_budget_minutes', 0)
         )
         _open_library_stores(db_path)
+        if api.state.library_trash is not None:
+            api.spawn_task(
+                trash_routes.watch_trash(), name='library-trash-events'
+            )
         # First start with per-user libraries: every file on disk
         # becomes the migration user's (plus their likes, playlists,
         # batches, shows, watches and history). Later arrivals record
@@ -751,6 +790,7 @@ def build_app() -> FastAPI:
     app.include_router(auth_routes.router)
     app.include_router(account_routes.router)
     app.include_router(mobile_routes.router)
+    app.include_router(trash_routes.router)
     app.include_router(download_policy_routes.router)
 
     @app.get('/list')
@@ -946,6 +986,10 @@ def build_app() -> FastAPI:
         """Delete one track: off disk (an admin, or the last owner), or
         out of one's own library when others still have it."""
 
+        if api.state.library_trash is not None:
+            raise HTTPException(
+                409, detail={'code': 'trash_confirmation_required'}
+            )
         ctx = api.library_context()
         principal = api.principal_of(request)
         user_id = int(getattr(principal, 'user_id', 0) or 0)
@@ -985,6 +1029,10 @@ def build_app() -> FastAPI:
         path or a file that's already gone doesn't stop the rest. Files
         others still own are only released, and reported as such.
         """
+        if api.state.library_trash is not None:
+            raise HTTPException(
+                409, detail={'code': 'trash_confirmation_required'}
+            )
         # Dedupe (order-preserving) so a client sending the same path
         # twice can't have the second attempt report a spurious
         # "File not found" for a file the first attempt already removed.

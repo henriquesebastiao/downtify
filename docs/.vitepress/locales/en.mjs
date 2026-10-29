@@ -97,6 +97,7 @@ export default {
       'features/external-library.md': 'Existing music folders',
       'features/library-upgrade.md': 'Upgrade Library',
       'features/storage-usage.md': 'Storage & Usage',
+      'features/music-trash.md': 'Music Trash',
       'features/replace-audio.md': 'Replace Audio',
       'features/external-playlists.md': 'Import existing playlists',
       'features/m3u-export.md': 'M3U Export',

@@ -1,4 +1,121 @@
 export default {
+  trash: {
+    title: 'Trash',
+    subtitle:
+      'Songs taken out of the library, kept for {days} days after they move. Restore them until then.',
+    adminOnly: 'Only admins can see this',
+    adminOnlyHint: 'Ask an admin of this server to restore a song.',
+    off: 'The trash is off',
+    offHint:
+      'Songs are deleted for good on this server. The trash is turned on in the server’s configuration (DOWNTIFY_TRASH).',
+    inTrash: 'In the trash',
+    exclusions: 'Kept out of downloads',
+    search: 'Search the trash',
+    restoreSelected: {
+      one: 'Restore {count} song',
+      other: 'Restore {count} songs',
+    },
+    summary: {
+      one: '{count} song · {size}',
+      other: '{count} songs · {size}',
+    },
+    empty: 'The trash is empty',
+    emptyHint:
+      'Songs moved to the trash from the library show up here until they expire.',
+    noMatch: 'Nothing in the trash matches',
+    select: 'Select “{title}”',
+    keptUntil: 'Kept until {date}',
+    restore: 'Restore',
+    retry: 'Try again',
+    previous: 'Previous',
+    next: 'Next',
+    exclusionsHint:
+      'Songs whose time in the trash ran out. Automatic downloads (Playlist Monitor, watches) still skip them until you allow them again.',
+    exclusionsEmpty: 'Nothing is kept out of downloads',
+    allowDownload: 'Allow downloads',
+    allowTitle: 'Allow “{title}” to be downloaded again?',
+    allowBody:
+      'Automatic downloads may fetch it again. Nothing is downloaded right now.',
+    move: 'Move to trash',
+    preparing: 'Checking the files…',
+    confirmTitle: {
+      one: 'Move {count} song to the trash?',
+      other: 'Move {count} songs to the trash?',
+    },
+    confirmBody:
+      'Only these files move, with their lyrics files. They leave the library for everyone and can be restored for {days} days. Their playlists and likes come back with them, and automatic downloads skip them meanwhile.',
+    confirmMore: {
+      one: 'and {count} more',
+      other: 'and {count} more',
+    },
+    pending: {
+      one: 'Moving {count} song to the trash',
+      other: 'Moving {count} songs to the trash',
+    },
+    downloadBlocked: 'In the music trash: an admin has to allow it again.',
+    states: {
+      preview: 'Waiting for confirmation',
+      pending: 'Waiting to move',
+      moving: 'Moving',
+      trashed: 'In the trash',
+      restore_pending: 'Waiting to restore',
+      restoring: 'Restoring',
+      restored: 'Restored',
+      purging: 'Expiring',
+      purged: 'Expired',
+      error: 'Stopped — files kept',
+    },
+    errors: {
+      unavailable: 'The trash isn’t available right now. Nothing was moved.',
+      admin_required: 'Only an admin can use the trash.',
+      admin_access_revoked: 'The account that asked is no longer an admin.',
+      atomic_move_unsupported:
+        'This storage can’t move files safely. Nothing was moved.',
+      confirmation_expired: 'The check expired. Choose the songs again.',
+      confirmation_invalid:
+        'This confirmation isn’t for your account or selection.',
+      file_changed:
+        'The file changed after it was checked. It stayed where it was; choose it again.',
+      file_changed_during_move:
+        'The file changed while it moved. It is kept in the trash for you to check.',
+      file_missing: 'A file is missing. Check the storage, then try again.',
+      filesystem_unavailable:
+        'The storage isn’t available. Check it, then try again.',
+      identity_uncertain:
+        'This song’s tags are too thin to keep it out of automatic downloads. Nothing was moved.',
+      invalid_path: 'This file is outside the folders the trash covers.',
+      invalid_selection: 'Choose between 1 and 200 songs.',
+      item_not_found: 'This song is no longer in the library.',
+      library_task_active:
+        'The library upgrade is running. Wait for it or pause it first.',
+      nas_marker_changed:
+        'The storage isn’t the one the trash expects. Nothing was moved.',
+      nas_marker_missing:
+        'The expected storage isn’t mounted. Nothing was moved.',
+      operation_already_pending: 'This song is already on its way.',
+      operation_in_progress:
+        'The move is still running. Wait for it before restoring.',
+      operation_not_complete: 'Wait for the current step to finish.',
+      preview_busy: 'Another check is running. Wait for it to finish.',
+      preview_unavailable: 'The check was interrupted. Choose the songs again.',
+      restore_collision:
+        'Another file is already there. Nothing was overwritten; the song stays in the trash.',
+      retention_expired: 'Its time in the trash ran out.',
+      root_unavailable: 'The music folder isn’t available.',
+      track_is_playing: 'Someone is playing this song. Pause it first.',
+      trash_file_changed: 'The copy in the trash changed. It won’t be deleted.',
+      trash_file_missing: 'A file in the trash is missing.',
+      trash_ignore_invalid:
+        'The trash folder’s .ignore file isn’t empty. Nothing was moved.',
+      trash_not_configured: 'The trash is off on this server.',
+      trash_permissions_unsafe:
+        'Others can read the trash folder. Check its permissions.',
+      unsafe_symlink: 'The path has a symbolic link, so it isn’t touched.',
+      unsupported_collection: 'This song’s folder isn’t covered by the trash.',
+      unsupported_lyrics_location:
+        'The lyrics folder isn’t covered by the trash. Nothing was moved.',
+    },
+  },
   downloadPolicy: {
     block: 'Stop downloading',
     blocked: 'Downloads suspended for this track.',
