@@ -17,6 +17,13 @@ Kenar çubuğundan (telefonda **Daha fazla** sayfasından) **Müzik listeleri**�
 
 Bir liste parçasının indirilmek için çözümleme adımına ihtiyacı yoktur: Deezer başlığı, sanatçıyı ve albüm adını zaten verir; bu, serbest metin arama sonucunda olduğu gibi YouTube’da arayıp eşleştirmeye yeter. Bir albüm, sanatçı ya da çalma listesinin ise bu adıma ihtiyacı vardır — bağlantısını parça listesine dönüştürmek —, bu yüzden kartı doğrudan ızgaradan indirmek yerine çözümlenmiş sayfayı açar. Bir parça satırını çalmak YouTube’dan tam olarak akıtır (albümler, sanatçılar ya da çalma listeleri için asla) — her parça satırının kullandığı aynı akış, yalnızca listenin başlığı ve sanatçısıyla beslenir.
 
+## Bir müzik listesindeki çalma listesini izleme ya da kaydetme
+
+Her çalma listesi kartının kapağının üstünde, sayfasının indirme dışında sunduğu iki şeyi içeren bir **⋯** menüsü vardır:
+
+- **Yeni parçaları izle**, 6 saatte bir denetlenen bir [Çalma Listesi İzleyici](playlist-monitor.md#deezer-playlists) izlemesi ekler: ilk denetim çalma listesinde şu an olanları, sonrakiler ona eklenenleri indirir. Aralığı değiştirmek, izlemeyi duraklatmak ya da durdurmak için **İzleyici** sayfasını kullanın.
+- **Çalma listelerime ekle**, çalma listesinin **kitaplığınızda zaten bulunan** şarkılarıyla çalma listesi seçicisini açar; bunları çalma listelerinizden birine ya da onun adını taşıyan yeni bir listeye ekleyebilirsiniz. Hiçbir şey indirilmez ve listeniz sonrasında müzik listesindeki çalma listesini takip etmez — bunun için indirme düğmesini ya da **Yeni parçaları izle**’yi kullanın. Şarkılarından hiçbiri henüz kitaplıkta değilse bunu söyler.
+
 ## API
 
 API başvurusunda [`GET /api/discover/chart`](../api-reference.md#get-apidiscoverchart) bölümüne bakın.

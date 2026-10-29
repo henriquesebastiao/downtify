@@ -4,16 +4,16 @@ icon: lucide/eye
 
 # Lejátszási lista figyelő
 
-A Lejátszási lista figyelő a kedvenc Spotify- és YouTube Music-lejátszási listáidat — és az általad követett előadókat — figyeli, és automatikusan letölti az új számokat és az új kiadványokat, ahogy megjelennek, anélkül hogy bármit tenned kellene.
+A Lejátszási lista figyelő a kedvenc Spotify-, nyilvános Deezer- és YouTube Music-lejátszási listáidat — és az általad követett előadókat — figyeli, és automatikusan letölti az új számokat és az új kiadványokat, ahogy megjelennek, anélkül hogy bármit tenned kellene.
 
 Kétféle figyelés van, mindegyik a Figyelő oldal saját fülén (**Lejátszási listák** és **Előadók**, a `/monitor/playlists` és `/monitor/artists` címen):
 
 | Figyelés | Illeszd be | Letölti |
 |-------|-------|-----------|
-| **Lejátszási lista** | Egy Spotify- vagy YouTube Music-lejátszásilista-URL | A lista minden számát, majd később minden hozzáadottat |
+| **Lejátszási lista** | Egy Spotify-, nyilvános Deezer- vagy YouTube Music-lejátszásilista-URL | A lista minden számát, majd később minden hozzáadottat |
 | **Előadó** | Egy Spotify-**előadó** URL-je, vagy egy YouTube Music-előadó URL-je | Az előadó teljes diszkográfiáját, majd minden új kiadványt |
 
-Minden figyelés a neve alatt megmutatja a követett hivatkozást, és egy **Spotify** vagy **YouTube Music** jelvényt arról a szolgáltatásról, amelyből hozzáadták.
+Minden figyelés a neve alatt megmutatja a követett hivatkozást, és egy **Spotify**, **Deezer** vagy **YouTube Music** jelvényt arról a szolgáltatásról, amelyből hozzáadták.
 
 Lásd: [Előadófigyelés](#artist-watch), hogyan működnek az előadófigyelések.
 
@@ -23,7 +23,7 @@ A figyelések azoké, akik létrehozták őket: minden fiók a saját lejátszá
 
 A Downtify egy háttérfeladatot futtat 60 másodpercenként. Minden átfésüléskor ellenőrzi, hogy minden engedélyezett figyelés esedékes-e vizsgálatra (a beállított intervalluma alapján). Amikor egy *lejátszási lista* esedékes, a Downtify:
 
-1. Lekéri a teljes számlistát a Spotifyról vagy a YouTube Musicról
+1. Lekéri a teljes számlistát a Spotifyról, a Deezerről vagy a YouTube Musicról
 2. Összeveti a már letöltött számok halmazával
 3. Letölti az új számokat ugyanazzal a folyamattal, mint egy kézi letöltést
 4. Frissíti a lejátszási lista M3U-fájlját (ha az M3U-generálás be van kapcsolva)
@@ -39,6 +39,7 @@ Egy figyelést soha nem ellenőriz kétszer egyszerre. A figyelés hozzáadása 
 1. Nyisd meg a **Figyelő** oldalt az oldalsávról (telefonon: **Továbbiak → Figyelő**), és maradj a **Lejátszási listák** fülön
 2. Illessz be egy lejátszásilista-URL-t:
     - Spotify: `https://open.spotify.com/playlist/…`
+    - Nyilvános Deezer-lista: `https://www.deezer.com/playlist/…` (a nyelvi előtagos hivatkozások is működnek)
     - YouTube Music: `https://music.youtube.com/playlist?list=…` (a `www.youtube.com/playlist?list=…` hivatkozás is működik)
 3. Válassz ellenőrzési intervallumot (15 perctől havonta egyszerig)
 4. Kattints a **Lista figyelése** gombra
@@ -46,6 +47,10 @@ Egy figyelést soha nem ellenőriz kétszer egyszerre. A figyelés hozzáadása 
 Minden fülnek saját mezője van. Egy előadóhivatkozás beillesztése a Lejátszási listák fülre (vagy lejátszásilista-hivatkozásé az Előadókhoz) nem ad hozzá semmit: az oldal megmondja, milyen hivatkozás, és felajánlja, hogy áthelyezi a megfelelő fülre.
 
 A figyelést egy lejátszási lista oldaláról is elindíthatod: illeszd be a hivatkozását a keresősávba, és használd az **Új számok figyelése** (vagy egy YouTube Music-előadónál az **Új kiadások figyelése**) lehetőséget. A Könyvtárban lévő letöltött lejátszási listák ugyanezt a műveletet kínálják a **⋯** menüjükben. Az így hozzáadott figyelések 6 órás intervallumot használnak — módosítsd a Figyelő oldalon.
+
+## Deezer-lejátszási listák
+
+A nyilvános Deezer-lejátszási listák ugyanúgy figyelhetők, mint a többi: illeszd be a linket a **Lejátszási listák** fülön, használd az **Új számok figyelése** gombot a lista oldalán, vagy válaszd az **Új számok figyelése** pontot egy lejátszásilista-kártya **⋯** menüjében a [Toplisták](charts.md) oldalon. Nem kell Deezer-fiók, és a lista minden száma lekérődik, bármilyen hosszú is. A számok a [hangforrásaidból](download-settings.md) töltődnek le, mint bármely más Deezer-link esetén, és a lista megkapja az M3U-fájlját, a borítóját és a könyvtárbeli bejegyzését, ahogy egy Spotify-lista is — a Könyvtár akkor is számon tartja, mely számok tartoznak hozzá, ha az M3U-fájlok ki vannak kapcsolva. Csak nyilvános listák figyelhetők, és egy Deezer-**előadó** linkje letölthető, de nem figyelhető.
 
 ## YouTube Music-lejátszási listák
 
@@ -118,6 +123,15 @@ A listák betöltése semmit sem keres. A **Követés** megkeresi a nevet a YouT
 - különben (névrokonok, vagy egyetlen előadónak sem pontosan ez a neve) egy ablak mutatja a talált YouTube Music-előadókat, mindegyiket a fotójával és a profiljára mutató linkkel. Válassz egyet az **Előadó követése** gombbal, vagy a **Link beillesztése** gombbal illeszd be magad az előadó linkjét a fenti mezőbe.
 
 A javaslatok csak azt választják ki, melyik előadót figyeld: a számok továbbra is a szokásos módon, a [hangforrásaidból](download-settings.md) töltődnek le.
+
+### Egy előadó oldaláról a Könyvtárban
+
+Egy előadó oldalán a Könyvtárban (`/library/artist`) van egy **Előadó figyelése** gomb, így követhetsz egy előadót, akitől már van zenéd, anélkül hogy kikeresnéd a linkjét. Ugyanúgy keresi meg a nevet a YouTube Musicon, mint a fenti **Követés**:
+
+- ha ott pontosan egy előadónak ez a neve, a figyelés azonnal létrejön. Naponta ellenőrződik, és be van kapcsolva a **Csak új kiadások**, hiszen a korábbi zenéi már megvannak a könyvtárban;
+- különben (névrokonok, egyetlen előadónak sem pontosan ez a neve, vagy a keresés nem sikerült) egy ablak mutatja a talált YouTube Music-előadókat, mindegyiket a fotójával és a profiljára mutató linkkel, valamint egy mezőt egy Spotify- vagy YouTube Music-előadó linkjének. A fenti **Letöltés** és **Csak új kiadások** beállítások arra vonatkoznak, akit követsz.
+
+Amint a szerver létrehozta a figyelést, a gomb a **Figyelő** oldalra mutató linkké válik, ahol az intervallumot és a beállításokat módosíthatod; ha a szerver elutasítja (például mert az előadót már figyeled), az az ablakban jelenik meg. [Csak könyvtár módban](library-only.md) és a **Various Artists** oldalon nem jelenik meg.
 
 ## Ellenőrzési intervallumok
 

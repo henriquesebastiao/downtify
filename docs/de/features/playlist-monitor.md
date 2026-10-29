@@ -4,16 +4,16 @@ icon: lucide/eye
 
 # Playlist-Überwachung
 
-Die Playlist-Überwachung beobachtet deine liebsten Spotify- und YouTube-Music-Playlists — und die Künstler, denen du folgst — und lädt neue Titel und neue Veröffentlichungen automatisch herunter, sobald sie erscheinen, ganz ohne dein Zutun.
+Die Playlist-Überwachung beobachtet deine liebsten Spotify-, öffentlichen Deezer- und YouTube-Music-Playlists — und die Künstler, denen du folgst — und lädt neue Titel und neue Veröffentlichungen automatisch herunter, sobald sie erscheinen, ganz ohne dein Zutun.
 
 Es gibt zwei Arten von Beobachtung, jede auf einem eigenen Tab der Überwachungsseite (**Playlists** und **Künstler**, unter `/monitor/playlists` und `/monitor/artists`):
 
 | Beobachtung | Einfügen | Lädt herunter |
 |-------|-------|-----------|
-| **Playlist** | Eine Spotify- oder YouTube-Music-Playlist-URL | Jeden Titel der Playlist, danach jeden später hinzugefügten |
+| **Playlist** | Eine Spotify-, öffentliche Deezer- oder YouTube-Music-Playlist-URL | Jeden Titel der Playlist, danach jeden später hinzugefügten |
 | **Künstler** | Die URL eines Spotify-**Künstlers** oder eines YouTube-Music-Künstlers | Die ganze Diskografie des Künstlers, danach jede neue Veröffentlichung |
 
-Jede Beobachtung zeigt unter ihrem Namen den Link, dem sie folgt, und ein Abzeichen **Spotify** oder **YouTube Music**, das den Dienst nennt, von dem sie hinzugefügt wurde.
+Jede Beobachtung zeigt unter ihrem Namen den Link, dem sie folgt, und ein Abzeichen **Spotify**, **Deezer** oder **YouTube Music**, das den Dienst nennt, von dem sie hinzugefügt wurde.
 
 Siehe [Künstlerbeobachtung](#artist-watch), wie Künstlerbeobachtungen funktionieren.
 
@@ -23,7 +23,7 @@ Beobachtungen gehören dem, der sie angelegt hat: Jedes Konto folgt seinen eigen
 
 Downtify lässt eine Hintergrundaufgabe laufen, die alle 60 Sekunden ausgeführt wird. Bei jedem Durchlauf prüft sie bei jeder aktivierten Beobachtung, ob sie (gemäß ihrem eingestellten Intervall) zur Prüfung ansteht. Steht eine *Playlist* an, tut Downtify Folgendes:
 
-1. Ruft die vollständige Titelliste von Spotify oder YouTube Music ab
+1. Ruft die vollständige Titelliste von Spotify, Deezer oder YouTube Music ab
 2. Vergleicht sie mit der Menge der bereits heruntergeladenen Titel
 3. Lädt neue Titel mit derselben Pipeline wie ein manueller Download herunter
 4. Aktualisiert die M3U-Datei der Playlist (wenn die M3U-Erzeugung aktiviert ist)
@@ -39,6 +39,7 @@ Eine Beobachtung wird nie zweimal gleichzeitig geprüft. Beim Hinzufügen starte
 1. Öffne **Überwachung** in der Seitenleiste (am Handy: **Mehr → Überwachung**) und bleibe auf dem Tab **Playlists**
 2. Füge eine Playlist-URL ein:
     - Spotify: `https://open.spotify.com/playlist/…`
+    - Öffentliche Deezer-Playlist: `https://www.deezer.com/playlist/…` (Links mit Sprachpräfix funktionieren auch)
     - YouTube Music: `https://music.youtube.com/playlist?list=…` (ein Link `www.youtube.com/playlist?list=…` funktioniert auch)
 3. Wähle ein Prüfintervall (von 15 Minuten bis einmal im Monat)
 4. Klicke auf **Playlist überwachen**
@@ -46,6 +47,10 @@ Eine Beobachtung wird nie zweimal gleichzeitig geprüft. Beim Hinzufügen starte
 Jeder Tab hat sein eigenes Feld. Einen Künstlerlink in den Tab Playlists (oder einen Playlist-Link in Künstler) einzufügen, fügt nichts hinzu: Die Seite sagt, was für ein Link es ist, und bietet an, ihn in den richtigen Tab zu verschieben.
 
 Du kannst auch von der Seite einer Playlist aus mit dem Beobachten beginnen: Füge ihren Link in die Suchleiste ein und nutze **Auf neue Titel achten** (oder **Auf neue Veröffentlichungen achten** bei einem YouTube-Music-Künstler). Heruntergeladene Playlists in der Bibliothek bieten dieselbe Aktion in ihrem **⋯**-Menü. So hinzugefügte Beobachtungen nutzen ein 6-Stunden-Intervall — ändere es auf der Überwachungsseite.
+
+## Deezer-Playlists
+
+Öffentliche Deezer-Playlists werden wie alle anderen beobachtet: Füge den Link im Tab **Playlists** ein, nutze **Auf neue Titel achten** auf der Seite der Playlist, oder wähle **Auf neue Titel achten** im Menü **⋯** einer Playlist-Karte in den [Charts](charts.md). Ein Deezer-Konto ist nicht nötig, und jeder Titel wird abgerufen, egal wie lang die Playlist ist. Die Titel werden wie bei jedem anderen Deezer-Link über deine [Audioquellen](download-settings.md) heruntergeladen, und die Playlist bekommt ihre M3U-Datei, ihr Cover und ihren Eintrag in der Bibliothek wie eine Spotify-Playlist — auch mit ausgeschalteten M3U-Dateien merkt sich die Bibliothek, welche Titel dazugehören. Nur öffentliche Playlists können beobachtet werden, und ein Deezer-**Künstler**-Link lässt sich herunterladen, aber nicht beobachten.
 
 ## YouTube-Music-Playlists
 
@@ -118,6 +123,15 @@ Das Laden der Listen sucht nach nichts. **Folgen** sucht den Namen auf YouTube M
 - sonst (Namensvettern, oder kein Künstler mit genau diesem Namen) zeigt ein Dialog die gefundenen YouTube-Music-Künstler, jeweils mit Foto und einem Link zum Profil. Wähle einen mit **Diesem Künstler folgen**, oder **Link einfügen**, um den Link des Künstlers selbst in das Feld darüber einzufügen.
 
 Vorschläge wählen nur aus, welcher Künstler beobachtet wird: Die Titel werden weiter wie gewohnt aus deinen [Audioquellen](download-settings.md) heruntergeladen.
+
+### Von der Künstlerseite in der Bibliothek
+
+Die Seite eines Künstlers in der Bibliothek (`/library/artist`) hat eine Schaltfläche **Künstler überwachen**, damit du einem Künstler, den du schon hast, folgen kannst, ohne seinen Link herauszusuchen. Sie sucht den Namen auf YouTube Music, genau wie **Folgen** oben:
+
+- Heißt dort genau ein Künstler so, wird die Beobachtung sofort hinzugefügt. Sie wird täglich geprüft und hat **Nur neue Veröffentlichungen** eingeschaltet, da die Bibliothek seine frühere Musik schon enthält;
+- sonst (Namensvettern, kein Künstler mit genau diesem Namen, oder die Suche schlug fehl) zeigt ein Dialog die gefundenen YouTube-Music-Künstler, jeweils mit Foto und einem Link zum Profil, dazu ein Feld für den Link eines Spotify- oder YouTube-Music-Künstlers. Die Optionen **Herunterladen** und **Nur neue Veröffentlichungen** oben gelten für den, dem du folgst.
+
+Sobald der Server die Beobachtung hinzugefügt hat, wird die Schaltfläche zu einem Link zur **Überwachung**, wo du Intervall und Optionen änderst; eine Ablehnung (etwa weil der Künstler schon beobachtet wird) erscheint stattdessen im Dialog. Im [Nur-Bibliothek-Modus](library-only.md) und auf der Seite **Various Artists** wird sie nicht angezeigt.
 
 ## Prüfintervalle
 

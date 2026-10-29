@@ -93,48 +93,14 @@
         >
           {{ followError }}
         </p>
-        <ul
+        <ArtistCandidateList
           v-if="candidates.length"
-          class="mt-4 grid max-h-[60vh] gap-3 overflow-y-auto sm:grid-cols-2"
-        >
-          <li
-            v-for="candidate in candidates"
-            :key="candidate.artist_id"
-            class="rounded-xl border border-line-2 bg-surface-2 p-3"
-          >
-            <div class="flex items-center gap-3">
-              <CoverArt
-                :src="candidate.image_url || ''"
-                :name="candidate.name"
-                :alt="candidate.name"
-                round
-                icon="user"
-                :letter-size="24"
-                class="size-16 flex-none"
-              />
-              <div class="min-w-0">
-                <p class="truncate font-semibold">{{ candidate.name }}</p>
-                <a
-                  :href="candidate.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="mt-1 inline-block text-xs text-muted underline underline-offset-4"
-                  >{{ t('artistSuggestions.inspect') }}</a
-                >
-              </div>
-            </div>
-            <UiButton
-              size="sm"
-              variant="primary"
-              class="mt-3 w-full"
-              :disabled="busy"
-              :loading="busy && chosen === candidate.url"
-              @click="choose(candidate)"
-            >
-              {{ t('artistSuggestions.followProfile') }}
-            </UiButton>
-          </li>
-        </ul>
+          class="mt-4"
+          :candidates="candidates"
+          :busy="busy"
+          :chosen="chosen"
+          @choose="choose"
+        />
         <div class="mt-4 flex flex-wrap justify-end gap-2">
           <UiButton
             size="sm"
@@ -164,7 +130,7 @@
 import { onBeforeUnmount, ref, watch } from 'vue'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiModal from '/src/components/ui/UiModal.vue'
-import CoverArt from '/src/components/ui/CoverArt.vue'
+import ArtistCandidateList from './ArtistCandidateList.vue'
 import API from '/src/model/monitor'
 import { useI18n } from '/src/i18n'
 import {

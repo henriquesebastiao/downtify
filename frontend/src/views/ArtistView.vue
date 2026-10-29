@@ -51,6 +51,11 @@
           >
             {{ t('artist.findMore') }}
           </UiButton>
+          <ArtistWatchButton
+            v-if="!libraryOnly && !isVariousArtists(artist.name)"
+            :name="artist.name"
+            :variant="artBannerUrl ? 'photo' : 'ghost'"
+          />
           <UiMenu v-if="moreMenu.length" :items="moreMenu">
             <template #trigger>
               <UiIconButton
@@ -214,6 +219,7 @@ import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import ArtistArtModal from '/src/components/library/ArtistArtModal.vue'
 import ArtistLinks from '/src/components/library/ArtistLinks.vue'
+import ArtistWatchButton from '/src/components/monitor/ArtistWatchButton.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DetailState from '/src/components/library/DetailState.vue'
 import MediaTile from '/src/components/library/MediaTile.vue'
@@ -228,7 +234,7 @@ import { useTrackActions } from '/src/model/trackActions'
 import { useVisibility } from '/src/model/visibility'
 import { useBuyLinks } from '/src/model/buyLinks'
 import { useUi } from '/src/model/ui'
-import { sortItems } from '/src/lib/library'
+import { isVariousArtists, sortItems } from '/src/lib/library'
 import { splitLength } from '/src/lib/format'
 import { proxiedArtistPhotoUrl } from '/src/lib/artistPhotoProxy'
 import { versionedArtUrl } from '/src/lib/artistArt'

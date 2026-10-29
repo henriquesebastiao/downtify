@@ -1136,7 +1136,7 @@ export default {
     urlLabelPlaylist: 'Lista linkje',
     urlLabelArtist: 'Előadó linkje',
     urlPlaceholderPlaylist:
-      'Illessz be egy Spotify vagy YouTube Music lista linket',
+      'Illessz be egy Spotify, Deezer vagy YouTube Music lista linket',
     urlPlaceholderArtist:
       'Illessz be egy Spotify vagy YouTube Music előadó linket',
     watchPlaylist: 'Lista figyelése',

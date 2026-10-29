@@ -1132,7 +1132,7 @@ export default {
     urlLabelPlaylist: 'Çalma listesi bağlantısı',
     urlLabelArtist: 'Sanatçı bağlantısı',
     urlPlaceholderPlaylist:
-      'Spotify veya YouTube Music çalma listesi bağlantısı yapıştır',
+      'Spotify, Deezer veya YouTube Music çalma listesi bağlantısı yapıştır',
     urlPlaceholderArtist:
       'Spotify veya YouTube Music sanatçı bağlantısı yapıştır',
     watchPlaylist: 'Çalma listesini izle',

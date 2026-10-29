@@ -1162,7 +1162,7 @@ export default {
     urlLabelPlaylist: 'Lien de la playlist',
     urlLabelArtist: 'Lien de l’artiste',
     urlPlaceholderPlaylist:
-      'Collez le lien d’une playlist Spotify ou YouTube Music',
+      'Collez le lien d’une playlist Spotify, Deezer ou YouTube Music',
     urlPlaceholderArtist:
       'Collez le lien d’un artiste Spotify ou YouTube Music',
     watchPlaylist: 'Surveiller la playlist',

@@ -4,16 +4,16 @@ icon: lucide/eye
 
 # Monitor de playlists
 
-El Monitor de playlists vigila tus playlists favoritas de Spotify y YouTube Music — y los artistas que sigues — y descarga automáticamente las canciones y los lanzamientos nuevos según aparecen, sin que tengas que hacer nada.
+El Monitor de playlists vigila tus playlists favoritas de Spotify, de Deezer (las públicas) y de YouTube Music — y los artistas que sigues — y descarga automáticamente las canciones y los lanzamientos nuevos según aparecen, sin que tengas que hacer nada.
 
 Hay dos tipos de vigilancia, cada uno en su pestaña de la página Monitor (**Playlists** y **Artistas**, en `/monitor/playlists` y `/monitor/artists`):
 
 | Vigilancia | Pega | Descarga |
 |-------|-------|-----------|
-| **Playlist** | La URL de una playlist de Spotify o YouTube Music | Todas las canciones de la playlist, y luego cualquiera añadida más tarde |
+| **Playlist** | La URL de una playlist de Spotify, de una playlist pública de Deezer o de YouTube Music | Todas las canciones de la playlist, y luego cualquiera añadida más tarde |
 | **Artista** | La URL de un **artista** de Spotify, o de un artista de YouTube Music | Toda la discografía del artista, y luego cada lanzamiento nuevo |
 
-Cada vigilancia muestra bajo su nombre el enlace que sigue, y una insignia **Spotify** o **YouTube Music** con el servicio desde el que se añadió.
+Cada vigilancia muestra bajo su nombre el enlace que sigue, y una insignia **Spotify**, **Deezer** o **YouTube Music** con el servicio desde el que se añadió.
 
 Consulta [Vigilancia de artistas](#artist-watch) para ver cómo funcionan.
 
@@ -23,7 +23,7 @@ Las vigilancias pertenecen a quien las creó: cada cuenta sigue sus propias play
 
 Downtify mantiene una tarea en segundo plano que se ejecuta cada 60 segundos. En cada barrido comprueba si cada vigilancia activa debe inspeccionarse ya (según su intervalo configurado). Cuando le toca a una *playlist*, Downtify:
 
-1. Obtiene la lista completa de canciones de Spotify o YouTube Music
+1. Obtiene la lista completa de canciones de Spotify, Deezer o YouTube Music
 2. La compara con el conjunto de canciones ya descargadas
 3. Descarga las canciones nuevas con el mismo pipeline que una descarga manual
 4. Actualiza el archivo M3U de la playlist (si la generación de M3U está activada)
@@ -39,6 +39,7 @@ Una vigilancia nunca se comprueba dos veces a la vez. Añadir una vigilancia ini
 1. Abre **Monitor** en la barra lateral (en el móvil: **Más → Monitor**) y quédate en la pestaña **Playlists**
 2. Pega la URL de una playlist:
     - Spotify: `https://open.spotify.com/playlist/…`
+    - Playlist pública de Deezer: `https://www.deezer.com/playlist/…` (los enlaces con prefijo de idioma también sirven)
     - YouTube Music: `https://music.youtube.com/playlist?list=…` (un enlace `www.youtube.com/playlist?list=…` también sirve)
 3. Elige un intervalo de comprobación (de 15 minutos a una vez al mes)
 4. Haz clic en **Vigilar playlist**
@@ -46,6 +47,10 @@ Una vigilancia nunca se comprueba dos veces a la vez. Añadir una vigilancia ini
 Cada pestaña tiene su propio cuadro. Pegar un enlace de artista en la pestaña Playlists (o de playlist en Artistas) no añade nada: la página dice qué tipo de enlace es y se ofrece a moverlo a la pestaña correcta.
 
 También puedes empezar a vigilar desde la página de una playlist: pega su enlace en la barra de búsqueda y usa **Vigilar canciones nuevas** (o **Vigilar lanzamientos nuevos** en un artista de YouTube Music). Las playlists descargadas en la Biblioteca ofrecen la misma acción en su menú **⋯**. Las vigilancias añadidas así usan un intervalo de 6 horas — cámbialo en la página Monitor.
+
+## Playlists de Deezer
+
+Las playlists públicas de Deezer se vigilan como cualquier otra: pega el enlace en la pestaña **Playlists**, usa **Vigilar canciones nuevas** en la página de la playlist, o elige **Vigilar canciones nuevas** en el menú **⋯** de la tarjeta de una playlist en [Listas de éxitos](charts.md). No hace falta una cuenta de Deezer, y se obtienen todas las canciones, por larga que sea la playlist. Las canciones se descargan con tus [fuentes de audio](download-settings.md) como cualquier otro enlace de Deezer, y la playlist recibe su archivo M3U, su portada y su entrada en la Biblioteca como una de Spotify — incluso con los archivos M3U desactivados, la Biblioteca recuerda qué canciones le pertenecen. Solo se pueden vigilar playlists públicas, y el enlace de un **artista** de Deezer se puede descargar pero no vigilar.
 
 ## Playlists de YouTube Music
 
@@ -118,6 +123,15 @@ Cargar las listas no busca nada. **Seguir** busca el nombre en YouTube Music, do
 - si no (homónimos, o ningún artista con exactamente ese nombre), un diálogo muestra los artistas de YouTube Music encontrados, cada uno con su foto y un enlace a su perfil. Elige uno con **Seguir a este artista**, o usa **Pegar un enlace** para pegar tú mismo el enlace del artista en el cuadro de arriba.
 
 Las sugerencias solo eligen qué artista vigilar: las canciones se siguen descargando de tus [fuentes de audio](download-settings.md) como siempre.
+
+### Desde la página de un artista en la Biblioteca
+
+La página de un artista en la Biblioteca (`/library/artist`) tiene un botón **Vigilar artista**, para seguir a un artista que ya tienes sin buscar su enlace. Busca el nombre en YouTube Music igual que **Seguir** más arriba:
+
+- cuando exactamente un artista de allí tiene ese nombre, la vigilancia se añade enseguida. Se comprueba a diario y tiene activado **Solo lanzamientos nuevos**, porque la biblioteca ya tiene su música anterior;
+- si no (homónimos, ningún artista con exactamente ese nombre, o la búsqueda falló), un diálogo muestra los artistas de YouTube Music encontrados, cada uno con su foto y un enlace a su perfil, además de un cuadro para el enlace de un artista de Spotify o YouTube Music. Las opciones **Descargar** y **Solo lanzamientos nuevos** de arriba se aplican al que sigas.
+
+Cuando el servidor ha añadido la vigilancia, el botón pasa a ser un enlace a **Monitor**, donde cambias el intervalo y las opciones; un rechazo (por ejemplo, que el artista ya se vigila) se muestra en el diálogo. No aparece en el [modo solo biblioteca](library-only.md) ni en la página **Various Artists**.
 
 ## Intervalos de comprobación
 
