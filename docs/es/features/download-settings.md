@@ -48,7 +48,8 @@ Tokens disponibles:
 | Token | Descripción |
 |-------|-------------|
 | `{title}` | Título de la canción |
-| `{artists}` | Nombres de los artistas separados por comas |
+| `{artists}` | Todos los artistas acreditados, separados por comas (p. ej. `Christina Aguilera, Lil' Kim, Mýa, P!nk`) |
+| `{artist}` | Solo el primer artista acreditado (p. ej. `Christina Aguilera`). Un nombre con una coma, como `Earth, Wind & Fire`, se mantiene entero. |
 | `{album}` | Nombre del álbum |
 | `{tracknumber}` | Posición de la canción en su álbum, con ceros a la izquierda hasta 2 dígitos (p. ej. `01`, `12`). Vacío cuando la fuente no tiene número de canción (p. ej. un resultado de texto libre/búsqueda de YouTube). |
 | `{year}` | Año de lanzamiento (p. ej. `2025`). Vacío cuando la fuente no tiene fecha de lanzamiento (p. ej. un resultado de texto libre/búsqueda de YouTube). |
@@ -56,11 +57,17 @@ Tokens disponibles:
 La plantilla también puede incluir `/` para crear subcarpetas. Por ejemplo, para organizar una biblioteca como `Artista/Álbum (2025)/01 - Título.mp3` — útil al descargar una discografía completa, ya que cada álbum acaba en su propia carpeta junto con su año de lanzamiento:
 
 ```
-{artists}/{album} ({year})/{tracknumber} - {title}
+{artist}/{album} ({year})/{tracknumber} - {title}
 ```
 
+Usa `{artist}` en lugar de `{artists}` en una carpeta: con `{artists}`, una canción con invitados tiene su propia carpeta (`Christina Aguilera, Lil' Kim, Mýa, P!nk/`) en vez de ir a la del primer artista.
+
 ::: info
-Esto es independiente de las opciones **Organizar por artista** / **Organizar por álbum** de abajo — esas llevan las descargas de playlists/álbumes a carpetas compartidas por artista o por álbum en toda tu biblioteca. `{tracknumber}` y `{year}` solo permiten que una plantilla como la anterior construya ese mismo diseño a mano, canción a canción, sin activar esas opciones.
+Esto es independiente de las opciones **Organizar por artista** / **Organizar por álbum** — esas llevan las descargas de playlists/álbumes a carpetas compartidas por artista o por álbum en toda tu biblioteca (consulta [Organización de archivos](file-organization.md)). `{tracknumber}` y `{year}` solo permiten que una plantilla como la anterior construya ese mismo diseño a mano, canción a canción, sin activar esas opciones.
+:::
+
+::: tip Recopilatorios
+La plantilla se aplica a una canción de un recopilatorio de varios artistas como a cualquier otra: `{artist}` es el primer artista de la propia canción, nunca "Various Artists". Consulta [Varios artistas y recopilatorios](file-organization.md#several-artists-and-compilations).
 :::
 
 ## Descargas simultáneas

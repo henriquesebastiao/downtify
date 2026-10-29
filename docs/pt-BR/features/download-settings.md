@@ -48,7 +48,8 @@ Tokens disponíveis:
 | Token | Descrição |
 |-------|-------------|
 | `{title}` | Título da faixa |
-| `{artists}` | Nomes dos artistas separados por vírgula |
+| `{artists}` | Todos os artistas creditados, separados por vírgula (por exemplo, `Christina Aguilera, Lil' Kim, Mýa, P!nk`) |
+| `{artist}` | Só o primeiro artista creditado (por exemplo, `Christina Aguilera`). Um nome com vírgula, como `Earth, Wind & Fire`, fica inteiro. |
 | `{album}` | Nome do álbum |
 | `{tracknumber}` | Posição da faixa no álbum, com zeros à esquerda até 2 dígitos (por exemplo, `01`, `12`). Vazio quando a fonte não tem número de faixa (por exemplo, um resultado de texto livre/busca do YouTube). |
 | `{year}` | Ano de lançamento (por exemplo, `2025`). Vazio quando a fonte não tem data de lançamento (por exemplo, um resultado de texto livre/busca do YouTube). |
@@ -56,11 +57,17 @@ Tokens disponíveis:
 O modelo também pode incluir `/` para criar subpastas. Por exemplo, para organizar uma biblioteca como `Artista/Álbum (2025)/01 - Título.mp3` — útil ao baixar uma discografia completa, já que cada álbum cai na própria pasta junto com o ano de lançamento:
 
 ```
-{artists}/{album} ({year})/{tracknumber} - {title}
+{artist}/{album} ({year})/{tracknumber} - {title}
 ```
 
+Use `{artist}` em vez de `{artists}` numa pasta: com `{artists}`, uma música com convidados ganha uma pasta própria (`Christina Aguilera, Lil' Kim, Mýa, P!nk/`) em vez de ir para a do primeiro artista.
+
 ::: info
-Isso é independente das opções **Organizar por artista** / **Organizar por álbum** abaixo — elas direcionam downloads de playlists/álbuns para pastas compartilhadas por artista ou por álbum em toda a sua biblioteca. `{tracknumber}` e `{year}` apenas permitem que um modelo como o acima monte esse mesmo layout manualmente, faixa por faixa, sem ativar essas opções.
+Isso é independente das opções **Organizar por artista** / **Organizar por álbum** — elas direcionam downloads de playlists/álbuns para pastas compartilhadas por artista ou por álbum em toda a sua biblioteca (veja [Organização de arquivos](file-organization.md)). `{tracknumber}` e `{year}` apenas permitem que um modelo como o acima monte esse mesmo layout manualmente, faixa por faixa, sem ativar essas opções.
+:::
+
+::: tip Coletâneas
+O modelo vale para uma faixa de uma coletânea de vários artistas como para qualquer outra: `{artist}` é o primeiro artista da própria faixa, nunca "Various Artists". Veja [Vários artistas e coletâneas](file-organization.md#several-artists-and-compilations).
 :::
 
 ## Downloads simultâneos

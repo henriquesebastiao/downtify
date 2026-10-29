@@ -12,6 +12,7 @@ import { useTrackOrigin } from '/src/model/trackOrigin'
 import { buyTargetForTrack } from '/src/lib/buyLinks'
 import { useVisibility } from '/src/model/visibility'
 import { canReplace } from '/src/lib/replaceAudio'
+import { groupingArtistName } from '/src/lib/library'
 import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
 import API from '/src/model/api'
@@ -196,9 +197,12 @@ export function useTrackActions() {
       {
         label: t('actions.goToArtist'),
         icon: 'user',
-        hidden: !track.albumArtist || hide.includes('artist'),
+        hidden: !groupingArtistName(track) || hide.includes('artist'),
         action: () =>
-          router.push({ name: 'Artist', query: { name: track.albumArtist } }),
+          router.push({
+            name: 'Artist',
+            query: { name: groupingArtistName(track) },
+          }),
       },
       {
         label: t('similar.findSimilar'),

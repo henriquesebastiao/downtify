@@ -13,7 +13,10 @@ Three kinds of rule, each matching the way the Library groups things:
   being rewritten in place, e.g. by an upgrade), so neither a move nor a
   rewrite quietly shows a hidden song again. Flows that rewrite a file
   re-point the rule (:meth:`LibraryVisibility.rekey_track`).
-* **album** - every track of an album, by album artist + title.
+* **album** - every track of an album, by album artist + title (the
+  album-artist tag as it is, so a ``Various Artists`` compilation is one
+  album - rules made before that, keyed by its tracks' own artist, still
+  match).
 * **artist** - every track filed under an artist (their album artist, as
   the Library's Artists tab groups them).
 
@@ -31,7 +34,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .library_catalog import album_artist_of, entry_content_key
+from .library_catalog import (
+    album_artist_of,
+    album_owner_of,
+    entry_content_key,
+)
 from .sqlite_utils import connect_sqlite
 
 KIND_TRACK = 'track'
@@ -91,7 +98,10 @@ class HiddenRules:
         if artist and artist_key(artist) in self.artists:
             return KIND_ARTIST
         album = str(entry.get('album') or '').strip()
-        if album and album_key(artist, album) in self.albums:
+        if album and (
+            album_key(album_owner_of(entry), album) in self.albums
+            or album_key(artist, album) in self.albums
+        ):
             return KIND_ALBUM
         if (
             _norm_path(entry.get('file')) in self.track_paths

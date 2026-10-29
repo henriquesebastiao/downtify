@@ -48,7 +48,8 @@ Elérhető tokenek:
 | Token | Leírás |
 |-------|-------------|
 | `{title}` | A szám címe |
-| `{artists}` | Vesszővel elválasztott előadónevek |
+| `{artists}` | Minden közreműködő előadó, vesszővel elválasztva (pl. `Christina Aguilera, Lil' Kim, Mýa, P!nk`) |
+| `{artist}` | Csak az első közreműködő előadó (pl. `Christina Aguilera`). A vesszőt tartalmazó név, például `Earth, Wind & Fire`, egyben marad. |
 | `{album}` | Az album neve |
 | `{tracknumber}` | A szám helye az albumán, 2 számjegyre nullákkal kiegészítve (pl. `01`, `12`). Üres, ha a forrásnak nincs számsorszáma (pl. szabad szöveges/YouTube-keresési találat). |
 | `{year}` | Megjelenés éve (pl. `2025`). Üres, ha a forrásnak nincs megjelenési dátuma (pl. szabad szöveges/YouTube-keresési találat). |
@@ -56,11 +57,17 @@ Elérhető tokenek:
 A sablon `/` jelet is tartalmazhat almappák létrehozásához. Például egy könyvtár `Előadó/Album (2025)/01 - Cím.mp3` elrendezéséhez — hasznos egy teljes diszkográfia letöltésekor, mert minden album a saját mappájába kerül a megjelenési évével együtt:
 
 ```
-{artists}/{album} ({year})/{tracknumber} - {title}
+{artist}/{album} ({year})/{tracknumber} - {title}
 ```
 
+Mappában a `{artist}` tokent használd a `{artists}` helyett: a `{artists}` tokennel egy vendégelőadós szám saját mappát kap (`Christina Aguilera, Lil' Kim, Mýa, P!nk/`), ahelyett hogy az első előadóéba kerülne.
+
 ::: info
-Ez független az alábbi **Rendezés előadó szerint** / **Rendezés album szerint** kapcsolóktól — azok a lejátszási lista-/albumletöltéseket közös előadónkénti vagy albumonkénti mappákba irányítják a teljes könyvtárban. A `{tracknumber}` és a `{year}` csak azt teszik lehetővé, hogy egy, a fentihez hasonló sablon ugyanezt az elrendezést kézzel, számonként felépítse, e kapcsolók bekapcsolása nélkül.
+Ez független a **Rendezés előadó szerint** / **Rendezés album szerint** kapcsolóktól — azok a lejátszási lista-/albumletöltéseket közös előadónkénti vagy albumonkénti mappákba irányítják a teljes könyvtárban (lásd: [Fájlszervezés](file-organization.md)). A `{tracknumber}` és a `{year}` csak azt teszik lehetővé, hogy egy, a fentihez hasonló sablon ugyanezt az elrendezést kézzel, számonként felépítse, e kapcsolók bekapcsolása nélkül.
+:::
+
+::: tip Válogatások
+A sablon egy több előadós válogatás számára ugyanúgy vonatkozik, mint bármely másikra: a `{artist}` a szám saját első előadója, soha nem „Various Artists”. Lásd: [Több előadó és válogatások](file-organization.md#several-artists-and-compilations).
 :::
 
 ## Párhuzamos letöltések

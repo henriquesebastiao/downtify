@@ -7,7 +7,9 @@ from typing import Any
 
 from mutagen import File as MutagenFile
 from mutagen.id3 import ID3
+from mutagen.mp4 import MP4
 
+from .album_artist import is_act_of
 from .content_advisory import (
     ADVISORY_TAG,
     EXPLICIT_VALUES,
@@ -26,14 +28,55 @@ def _tag_text(value: Any) -> str:
     return str(value).strip()
 
 
-def _split_artists(artist: str) -> list[str]:
-    text = artist.strip()
+def split_artists(artist: str, album_artist: str = '') -> list[str]:
+    """The artists in an artist tag's text, for a file with no ``ARTISTS``
+    tag: split on the first of ``;`` (how Downtify joins them in MP3 and
+    how a multi-value tag reads back), `` / `` or ``, `` it contains - the
+    web app's own rule (``frontend/src/lib/library.js``). ``AC/DC`` stays
+    whole, and so does a text that is the file's *album_artist* too
+    (``Earth, Wind & Fire`` on its own album): that is one name.
+
+    So is a split whose names make up the album artist: an act YouTube
+    Music credited as its members, which older Downtify versions wrote as
+    ``Henrique; Juliano`` on an album by ``Henrique, Juliano`` - one act,
+    named as its album is."""
+
+    text = str(artist or '').strip()
     if not text:
         return []
-    for sep in (';', '/', ',', '\\'):
+    album_artist = str(album_artist or '').strip()
+    if text.casefold() == album_artist.casefold():
+        return [text]
+    for sep in (';', ' / ', ', '):
         if sep in text:
-            return [part.strip() for part in text.split(sep) if part.strip()]
+            parts = [part.strip() for part in text.split(sep) if part.strip()]
+            if is_act_of(parts, album_artist):
+                return [album_artist]
+            return parts
     return [text]
+
+
+def _multi_value_artists(path: Path, audio: Any) -> list[str]:
+    """The ``ARTISTS`` tag - one artist per value, as Downtify and
+    MusicBrainz Picard write it - or ``[]`` when the file has none."""
+
+    suffix = path.suffix.lower()
+    try:
+        if suffix == '.mp3':
+            frame = ID3(str(path)).get('TXXX:ARTISTS')
+            values = list(frame.text) if frame is not None else []
+        elif suffix in {'.m4a', '.mp4', '.aac'}:
+            tags = MP4(str(path)).tags or {}
+            values = [
+                bytes(value).decode('utf-8', 'replace')
+                for value in tags.get('----:com.apple.iTunes:ARTISTS', [])
+            ]
+        else:
+            tags = getattr(audio, 'tags', None)
+            values = list(tags.get('artists') or []) if tags else []
+    except Exception:
+        return []
+    return [str(value).strip() for value in values if str(value).strip()]
 
 
 def _track_number(value: Any) -> int:
@@ -125,6 +168,31 @@ def read_explicit(path: Path) -> bool:
     return any(value.strip() in EXPLICIT_VALUES for value in values)
 
 
+def read_compilation(path: Path) -> bool:
+    """Whether the file carries the compilation flag Downtify writes on a
+    various-artists compilation's tracks (and taggers like Picard do): ID3
+    ``TCMP``, MP4 ``cpil`` or a Vorbis/FLAC/Opus ``COMPILATION`` comment."""
+
+    try:
+        if path.suffix.lower() == '.mp3':
+            frame = ID3(str(path)).get('TCMP')
+            values = [str(text) for text in (frame.text if frame else [])]
+        else:
+            audio = MutagenFile(str(path))
+            tags = audio.tags if audio is not None else None
+            if tags is None:
+                return False
+            raw = tags.get('cpil')
+            if raw is None:
+                raw = tags.get('compilation') or tags.get('COMPILATION')
+            if isinstance(raw, bool):
+                return raw
+            values = [str(item) for item in (raw or [])]
+    except Exception:
+        return False
+    return any(value.strip() in {'1', 'True', 'true'} for value in values)
+
+
 def read_audio_metadata(path: Path) -> dict[str, Any]:
     """Return display tags read from ``path``.
 
@@ -132,7 +200,8 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
     ``album_artist``, ``track_number`` (0 when unknown), ``year`` and
     ``duration`` in seconds (0 when unknown), plus the audio format:
     ``codec``, ``bitrate``, ``sample_rate`` and ``channels`` (see
-    :func:`audio_format`), and ``explicit`` (:func:`read_explicit`).
+    :func:`audio_format`), ``explicit`` (:func:`read_explicit`) and
+    ``compilation`` (:func:`read_compilation`).
     """
 
     empty: dict[str, Any] = {
@@ -146,6 +215,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'genre': '',
         'duration': 0.0,
         'explicit': False,
+        'compilation': False,
         **audio_format(None),
     }
     if not path.is_file():
@@ -197,7 +267,9 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
             year = _year(id3.get('TDRC'))
             genre = _tag_text(id3.get('TCON'))
 
-    artists = _split_artists(artist)
+    artists = _multi_value_artists(path, audio) or split_artists(
+        artist, album_artist
+    )
     return {
         'title': title,
         'artist': artist,
@@ -209,6 +281,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'genre': genre,
         'duration': duration,
         'explicit': read_explicit(path),
+        'compilation': read_compilation(path),
         **fmt,
     }
 
@@ -232,6 +305,11 @@ def library_entry_for_file(
     meta = read_audio_metadata(full_path)
     title = str(meta.get('title') or '').strip() or fb_title
     artist = str(meta.get('artist') or '').strip() or fb_artist
+    artists = [
+        str(name).strip()
+        for name in meta.get('artists') or []
+        if str(name).strip()
+    ] or split_artists(artist, str(meta.get('album_artist') or ''))
     album = str(meta.get('album') or '').strip()
     # The cover is read once and both answered from it: whether there is
     # one, and how big it is (which the library upgrade scan needs for
@@ -243,6 +321,8 @@ def library_entry_for_file(
         'file': stored_path,
         'title': title,
         'artist': artist,
+        # Every credited artist, one per entry (see read_audio_metadata).
+        'artists': artists,
         'album': album,
         'album_artist': str(meta.get('album_artist') or '').strip(),
         'track_number': int(meta.get('track_number') or 0),
@@ -254,6 +334,7 @@ def library_entry_for_file(
         'sample_rate': int(meta.get('sample_rate') or 0),
         'channels': int(meta.get('channels') or 0),
         'explicit': bool(meta.get('explicit')),
+        'compilation': bool(meta.get('compilation')),
         'has_cover': bool(cover_data),
         'cover_px': image_short_side(cover_data),
         **file_stat_fields(full_path),

@@ -81,7 +81,7 @@ def test_each_format_uses_the_tag_players_and_servers_read(tmp_path):
     for path in (mp3, m4a, flac):
         embed_metadata(path, {**SONG, 'explicit': True}, download_cover=False)
 
-    frames = ID3(str(mp3)).getall('TXXX')
+    frames = ID3(str(mp3)).getall('TXXX:ITUNESADVISORY')
     assert [(f.desc, list(f.text)) for f in frames] == [
         ('ITUNESADVISORY', ['1'])
     ]

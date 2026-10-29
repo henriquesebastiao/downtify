@@ -46,6 +46,30 @@ def test_merge_applies_youtube_id_override():
     assert base['youtube_id_override'] is True
 
 
+def test_merge_applies_the_album_artist_of_the_listed_album():
+    base: dict = {'song_id': 'a'}
+    _merge_client_track_hints(
+        base, {'album_artist': ' Various Artists ', 'compilation': True}
+    )
+    assert base['album_artist'] == 'Various Artists'
+    assert base['compilation'] is True
+
+
+def test_merge_keeps_the_album_artist_the_url_resolved():
+    base: dict = {'song_id': 'a', 'album_artist': 'AliasSolo'}
+    _merge_client_track_hints(
+        base, {'album_artist': 'Various Artists', 'compilation': True}
+    )
+    assert base['album_artist'] == 'AliasSolo'
+    assert 'compilation' not in base
+
+
+def test_merge_never_takes_a_compilation_flag_on_its_own():
+    base: dict = {'song_id': 'a'}
+    _merge_client_track_hints(base, {'compilation': True})
+    assert 'compilation' not in base
+
+
 def test_merge_applies_soundcloud_track_url_override():
     base = {
         'song_id': 'spotify:id',

@@ -42,6 +42,7 @@ from downtify import (
 from downtify.activity import ActivityLog
 from downtify.auth import AuthMiddleware, AuthStore, auth_disabled_from_env
 from downtify.catalog_worker import start_catalog_worker
+from downtify.compilation import CompilationMarks
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
@@ -417,6 +418,8 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.track_owners = TrackOwners(library_db)
     api.state.library_visibility = LibraryVisibility(library_db)
     api.state.traffic = TrafficCounters(library_db)
+    # Albums an admin marked (or unmarked) as Various Artists by hand.
+    api.state.compilation_marks = CompilationMarks(library_db)
     api.state.podcasts = PodcastStore(library_db)
     # The music trash (downtify/library_trash.py), when the operator
     # turned it on. A configuration that doesn't load stops the server:
@@ -783,6 +786,8 @@ def build_app() -> FastAPI:
     # download, finished or not, is logged for the library usage page.
     api.state.downloader.on_downloaded = api.after_download
     api.state.downloader.on_outcome = api.record_download_outcome
+    # A download gets the tags an admin set for its album by hand.
+    api.state.downloader.album_override = api.album_override_for
     api.providers.set_cover_resolution(
         api._clamp_cover_resolution(
             api.state.settings.get(
@@ -834,11 +839,17 @@ def build_app() -> FastAPI:
 
         ``?playlist=``, ``?artist=``, ``?album=`` and ``?q=`` return a
         subset so pages that show one list do not download the whole
-        library. ``?limit=`` caps that subset (search picker). The filters
-        come from the query string (one handler argument) so a user never
-        sees a row an admin hid from users.
+        library - ``?artist=`` is every track that artist is credited on
+        (a guest too) or, for an album's page, every track of that album
+        artist's albums ("Various Artists" included). ``?limit=`` caps
+        that subset (search picker). The filters come from the query
+        string (one handler argument) so a user never sees a row an admin
+        hid from users.
 
-        Each row has ``file``, ``artist`` and ``album``, plus ``title``,
+        Each row has ``file``, ``artist`` (the tag's text), ``artists``
+        (every credited artist, one per entry - see
+        ``library_metadata.read_audio_metadata``) and ``album``, plus
+        ``title``,
         ``has_cover`` and, when the file belongs to a downloaded
         playlist, ``playlists``. Tags are cached in /data per file and
         re-read only when the file's modification time or size changes.

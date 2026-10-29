@@ -41,6 +41,7 @@ import httpx
 from loguru import logger
 
 from . import providers
+from .album_artist import album_artist_fields
 from .file_naming import file_name_key, title_key
 
 _SEARCH_URL = 'https://api.deezer.com/search/artist'
@@ -909,11 +910,41 @@ def _song_from_full_track(
         'release_date': rd,
         'source': 'deezer',
     }
+    if 'contributors' not in row:
+        # An album/playlist tracklist row names only the lead artist; the
+        # guests are read from the track itself before it's downloaded
+        # (see enrich_track_from_deezer_if_sparse).
+        song['artists_unverified'] = True
     if track_number:
         song['track_number'] = track_number
     if album_track_total:
         song['album_track_total'] = album_track_total
     return song
+
+
+def enrich_track_from_deezer_if_sparse(song: dict[str, Any]) -> dict[str, Any]:
+    """*song* with every credited artist, for a Deezer album or playlist
+    row that only named its lead artist (``artists_unverified``) - one
+    request for the track itself, made when it is downloaded rather than
+    for every row of an album when it is opened. Anything else, or a
+    failed request, is returned as it is."""
+
+    if song.get('source') != 'deezer' or not song.get('artists_unverified'):
+        return song
+    track_id = str(song.get('song_id') or '').removeprefix('deezer-')
+    if not track_id.isdigit():
+        return song
+    try:
+        row = _get_json(f'https://api.deezer.com/track/{track_id}')
+    except ValueError:
+        logger.debug('Deezer artists lookup failed for {}', track_id)
+        return song
+    artists = _artists_from_track_row(row)
+    if not artists:
+        return song
+    enriched = {**song, 'artists': artists}
+    enriched.pop('artists_unverified', None)
+    return enriched
 
 
 def track_from_id(track_id: str) -> dict[str, Any]:
@@ -930,7 +961,40 @@ def track_from_id(track_id: str) -> dict[str, Any]:
     )
     if song is None:
         raise ValueError('Deezer track has no title or artist')
+    song.update(_album_artist_of_track(row))
     return song
+
+
+def _album_artist_fields(album: dict[str, Any]) -> dict[str, Any]:
+    """``album_artist`` (and ``compilation``) fields from a Deezer album
+    resource's ``artist`` - matched by id, since Deezer localizes the
+    "Various Artists" name ("Vários intérpretes")."""
+
+    artist = (
+        album.get('artist') if isinstance(album.get('artist'), dict) else {}
+    )
+    return album_artist_fields(
+        artist.get('name'), artist_id=str(artist.get('id') or '')
+    )
+
+
+def _album_artist_of_track(row: dict[str, Any]) -> dict[str, Any]:
+    """The album artist of a track resource's album, which the track
+    resource itself doesn't carry - one more request; ``{}`` (so the
+    track's first artist is used) when it fails."""
+
+    album = row.get('album') if isinstance(row.get('album'), dict) else {}
+    album_id = album.get('id')
+    if not album_id:
+        return {}
+    try:
+        payload = _get_json(f'https://api.deezer.com/album/{album_id}')
+    except ValueError:
+        logger.opt(exception=True).debug(
+            'Deezer album lookup failed for {}', album_id
+        )
+        return {}
+    return _album_artist_fields(payload)
 
 
 def _paginate_tracks(first_page: dict[str, Any]) -> list[dict[str, Any]]:
@@ -970,6 +1034,7 @@ def _album_songs(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
     rows = _paginate_tracks(payload.get('tracks') or {})
     release_date = str(payload.get('release_date') or '').strip()
+    album_fields = _album_artist_fields(payload)
     total = len(rows)
     songs: list[dict[str, Any]] = []
     for index, row in enumerate(rows):
@@ -982,7 +1047,7 @@ def _album_songs(payload: dict[str, Any]) -> list[dict[str, Any]]:
             release_date=release_date,
         )
         if song:
-            songs.append(song)
+            songs.append({**song, **album_fields})
     return songs
 
 

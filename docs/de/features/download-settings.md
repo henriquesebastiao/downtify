@@ -48,7 +48,8 @@ Verfügbare Tokens:
 | Token | Beschreibung |
 |-------|-------------|
 | `{title}` | Titel des Songs |
-| `{artists}` | Künstlernamen, durch Kommas getrennt |
+| `{artists}` | Alle genannten Künstler, durch Kommas getrennt (z. B. `Christina Aguilera, Lil' Kim, Mýa, P!nk`) |
+| `{artist}` | Nur der erste genannte Künstler (z. B. `Christina Aguilera`). Ein Name mit Komma wie `Earth, Wind & Fire` bleibt ganz. |
 | `{album}` | Albumname |
 | `{tracknumber}` | Position des Titels auf seinem Album, auf 2 Stellen mit Nullen aufgefüllt (z. B. `01`, `12`). Leer, wenn die Quelle keine Titelnummer hat (z. B. bei einem Freitext-/YouTube-Suchergebnis). |
 | `{year}` | Erscheinungsjahr (z. B. `2025`). Leer, wenn die Quelle kein Veröffentlichungsdatum hat (z. B. bei einem Freitext-/YouTube-Suchergebnis). |
@@ -56,11 +57,17 @@ Verfügbare Tokens:
 Die Vorlage kann auch `/` enthalten, um Unterordner anzulegen. Zum Beispiel, um eine Bibliothek als `Künstler/Album (2025)/01 - Titel.mp3` aufzubauen — praktisch beim Herunterladen einer ganzen Diskografie, da jedes Album samt Erscheinungsjahr in einem eigenen Ordner landet:
 
 ```
-{artists}/{album} ({year})/{tracknumber} - {title}
+{artist}/{album} ({year})/{tracknumber} - {title}
 ```
 
+Nimm in einem Ordner `{artist}` statt `{artists}`: mit `{artists}` bekommt ein Song mit Gästen einen eigenen Ordner (`Christina Aguilera, Lil' Kim, Mýa, P!nk/`), statt beim ersten Künstler zu landen.
+
 ::: info
-Das ist unabhängig von den Schaltern **Nach Künstler sortieren** / **Nach Album sortieren** weiter unten — diese leiten Playlist-/Album-Downloads in gemeinsame Ordner pro Künstler oder pro Album in deiner ganzen Bibliothek. `{tracknumber}` und `{year}` erlauben es einer Vorlage wie der obigen lediglich, dasselbe Layout von Hand, Titel für Titel, aufzubauen, ohne diese Schalter einzuschalten.
+Das ist unabhängig von den Schaltern **Nach Künstler sortieren** / **Nach Album sortieren** — diese leiten Playlist-/Album-Downloads in gemeinsame Ordner pro Künstler oder pro Album in deiner ganzen Bibliothek (siehe [Dateiorganisation](file-organization.md)). `{tracknumber}` und `{year}` erlauben es einer Vorlage wie der obigen lediglich, dasselbe Layout von Hand, Titel für Titel, aufzubauen, ohne diese Schalter einzuschalten.
+:::
+
+::: tip Compilations
+Die Vorlage gilt für einen Titel einer Various-Artists-Compilation wie für jeden anderen: `{artist}` ist der eigene erste Künstler des Titels, nie „Various Artists“. Siehe [Mehrere Künstler und Compilations](file-organization.md#several-artists-and-compilations).
 :::
 
 ## Parallele Downloads

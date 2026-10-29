@@ -444,6 +444,21 @@ function findArtist(name) {
   return artists.value.find((artist) => artist.key === key) || live || null
 }
 
+// Who has a Library page (see groupArtists): the artists index, plus the
+// artists of the tracks loaded so far (a new download the index hasn't
+// caught up with). One set for every row that asks.
+const artistPageKeys = computed(() => {
+  const keys = new Set(artists.value.map((artist) => artist.key))
+  if (!tracksComplete.value) {
+    for (const artist of groupArtists(tracks.value)) keys.add(artist.key)
+  }
+  return keys
+})
+
+function hasArtistPage(name) {
+  return artistPageKeys.value.has(artistKey(name))
+}
+
 function findPlaylist(name) {
   return playlists.value.find((playlist) => playlist.name === name) || null
 }
@@ -496,6 +511,7 @@ export function useLibrary() {
     downloadZip,
     findAlbum,
     findArtist,
+    hasArtistPage,
     findPlaylist,
     hasSong,
     findTrack,

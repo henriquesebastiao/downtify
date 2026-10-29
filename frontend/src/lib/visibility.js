@@ -51,9 +51,13 @@ function matches(track, item) {
   if (item.kind === 'track') return track.file === item.file
   const artist = groupingArtistName(track)
   if (item.kind === 'album') {
+    // The album as the Library groups it (a compilation by "Various
+    // Artists"), or as rules made before that keyed it.
+    const key = albumKey(item.artist, item.title)
     return (
       Boolean(track.album) &&
-      albumKey(artist, track.album) === albumKey(item.artist, item.title)
+      (albumKey(track.albumArtist, track.album) === key ||
+        albumKey(artist, track.album) === key)
     )
   }
   return artistKey(artist) === artistKey(item.name)

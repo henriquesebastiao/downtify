@@ -48,7 +48,8 @@ Jetons disponibles :
 | Jeton | Description |
 |-------|-------------|
 | `{title}` | Titre du morceau |
-| `{artists}` | Noms des artistes séparés par des virgules |
+| `{artists}` | Tous les artistes crédités, séparés par des virgules (par ex. `Christina Aguilera, Lil' Kim, Mýa, P!nk`) |
+| `{artist}` | Le premier artiste crédité seulement (par ex. `Christina Aguilera`). Un nom qui contient une virgule, comme `Earth, Wind & Fire`, reste entier. |
 | `{album}` | Nom de l’album |
 | `{tracknumber}` | Position du morceau dans son album, complétée par un zéro sur 2 chiffres (par ex. `01`, `12`). Vide quand la source n’a pas de numéro de piste (par ex. un résultat de texte libre/recherche YouTube). |
 | `{year}` | Année de sortie (par ex. `2025`). Vide quand la source n’a pas de date de sortie (par ex. un résultat de texte libre/recherche YouTube). |
@@ -56,11 +57,17 @@ Jetons disponibles :
 Le modèle peut aussi contenir `/` pour créer des sous-dossiers. Par exemple, pour organiser une bibliothèque en `Artiste/Album (2025)/01 - Titre.mp3` — pratique pour télécharger une discographie complète, puisque chaque album atterrit dans son propre dossier avec son année de sortie :
 
 ```
-{artists}/{album} ({year})/{tracknumber} - {title}
+{artist}/{album} ({year})/{tracknumber} - {title}
 ```
 
+Utilisez `{artist}` plutôt que `{artists}` dans un dossier : avec `{artists}`, un morceau avec des invités obtient son propre dossier (`Christina Aguilera, Lil' Kim, Mýa, P!nk/`) au lieu d’atterrir dans celui du premier artiste.
+
 ::: info
-Ceci est indépendant des options **Classer par artiste** / **Classer par album** ci-dessous — celles-ci dirigent les téléchargements de playlists/albums vers des dossiers partagés par artiste ou par album dans toute votre bibliothèque. `{tracknumber}` et `{year}` permettent simplement à un modèle comme celui ci-dessus de construire cette même organisation à la main, morceau par morceau, sans activer ces options.
+Ceci est indépendant des options **Classer par artiste** / **Classer par album** — celles-ci dirigent les téléchargements de playlists/albums vers des dossiers partagés par artiste ou par album dans toute votre bibliothèque (voir [Organisation des fichiers](file-organization.md)). `{tracknumber}` et `{year}` permettent simplement à un modèle comme celui ci-dessus de construire cette même organisation à la main, morceau par morceau, sans activer ces options.
+:::
+
+::: tip Compilations
+Le modèle s’applique à un morceau d’une compilation multi-artistes comme à n’importe quel autre : `{artist}` est le premier artiste du morceau lui-même, jamais « Various Artists ». Voir [Plusieurs artistes et compilations](file-organization.md#several-artists-and-compilations).
 :::
 
 ## Téléchargements simultanés

@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from threading import Lock
@@ -34,6 +36,7 @@ from ytmusicapi.navigation import (
 )
 from ytmusicapi.parsers.library import parse_albums as _parse_ytm_albums
 
+from .album_artist import album_artist_fields, is_act_of
 from .file_naming import file_name_key
 from .telemetry import json_log_blob, redact_sensitive_mapping
 
@@ -94,6 +97,15 @@ _album_search_artist_cache: dict[str, list[str]] = {}
 # per music-video track, which is most of what makes an album "slow to
 # start" downloading.
 _omv_preference_cache: dict[str, tuple[str, int]] = {}
+# Artist channel id -> the channel's own name.
+_artist_channel_name_cache: dict[str, str] = {}
+# Artist channel id -> when reading its name last failed (monotonic): it is
+# tried again after _CHANNEL_NAME_RETRY_SECONDS, not on every credit.
+_artist_channel_name_failed: dict[str, float] = {}
+_CHANNEL_NAME_RETRY_SECONDS = 600
+# How many artist channels a playlist reads at once (see
+# _prefetch_artist_channel_names).
+_CHANNEL_NAME_WORKERS = 4
 
 
 def _ytm() -> YTMusic:
@@ -103,6 +115,114 @@ def _ytm() -> YTMusic:
             if _client is None:
                 _client = YTMusic()
     return _client
+
+
+def _artist_channel_name(channel_id: str) -> str:
+    """The name of the YouTube Music artist channel *channel_id*, cached;
+    '' when it can't be read (tried again a while later)."""
+
+    with _lock:
+        if channel_id in _artist_channel_name_cache:
+            return _artist_channel_name_cache[channel_id]
+        failed = _artist_channel_name_failed.get(channel_id)
+        if (
+            failed is not None
+            and time.monotonic() - failed < _CHANNEL_NAME_RETRY_SECONDS
+        ):
+            return ''
+    try:
+        data = _ytm().get_artist(channel_id) or {}
+        name = str(data.get('name') or '').strip()
+    except Exception:
+        logger.opt(exception=True).debug(
+            'YouTube Music get_artist failed for {}', channel_id
+        )
+        with _lock:
+            _artist_channel_name_failed[channel_id] = time.monotonic()
+        return ''
+    with _lock:
+        _artist_channel_name_cache[channel_id] = name
+        _artist_channel_name_failed.pop(channel_id, None)
+    return name
+
+
+def _prefetch_artist_channel_names(rows: Any) -> None:
+    """Read, a few at once, the artist channels :func:`_credited_artist_names`
+    will look up for *rows* (playlist rows), so a long playlist doesn't
+    wait on one lookup after another."""
+
+    wanted: set[str] = set()
+    for row in rows or []:
+        entries = [
+            entry
+            for entry in (row or {}).get('artists') or []
+            if isinstance(entry, dict) and str(entry.get('name') or '').strip()
+        ]
+        if len(entries) < 2:
+            continue
+        wanted.update(
+            str(entry.get('id') or '') for entry in entries if entry.get('id')
+        )
+    with _lock:
+        wanted -= _artist_channel_name_cache.keys()
+    if len(wanted) < 2:
+        return
+    with ThreadPoolExecutor(max_workers=_CHANNEL_NAME_WORKERS) as pool:
+        list(pool.map(_artist_channel_name, sorted(wanted)))
+
+
+def _credited_artist_names(entries: Any) -> list[str]:
+    """The artist names of a YouTube Music credit (a list of ``{name,
+    id}``), one per artist - with an act it split into its members joined
+    back into one name.
+
+    YouTube Music credits some duos as their members: "Henrique &
+    Juliano" comes back as "Henrique" (linked to the duo's own channel)
+    and "Juliano" (linked to an unrelated namesake), on the album as well
+    as on its tracks - and in either order: "Mateus" (a namesake), then
+    "Jorge" (linked to "Jorge & Mateus"). The tell is a member's channel
+    named after the whole act rather than after the name credited, and
+    that act's name made of the names next to it. A real collaboration
+    ("Christina Aguilera, Lil' Kim, ...") credits each artist under their
+    own channel's name, so it's left alone. Costs one lookup per artist
+    channel in a credit of two or more, cached.
+    """
+
+    credited = [
+        (str(entry.get('name') or '').strip(), str(entry.get('id') or ''))
+        for entry in entries or []
+        if isinstance(entry, dict) and str(entry.get('name') or '').strip()
+    ]
+    index = 0
+    while len(credited) > 1 and index < len(credited):
+        name, channel_id = credited[index]
+        act = _artist_channel_name(channel_id) if channel_id else ''
+        span = None
+        if act and act.casefold() != name.casefold():
+            span = _act_span([n for n, _id in credited], index, act)
+        if span is None:
+            index += 1
+            continue
+        start, end = span
+        credited[start:end] = [(act, '')]
+        index = start + 1
+    return [name for name, _id in credited]
+
+
+def _act_span(
+    names: list[str], index: int, act: str
+) -> Optional[tuple[int, int]]:
+    """The ``(start, end)`` of the run of *names* around *index* that make
+    up *act* (see :func:`album_artist.is_act_of`), the longest first;
+    ``None`` when there is none."""
+
+    for size in range(len(names), 1, -1):
+        for start in range(
+            max(0, index - size + 1), min(index, len(names) - size) + 1
+        ):
+            if is_act_of(names[start : start + size], act):
+                return start, start + size
+    return None
 
 
 DEFAULT_COVER_RESOLUTION = 600
@@ -178,15 +298,25 @@ def _parse_duration(value: Any) -> int:
     return 0
 
 
-def _result_to_song(result: dict[str, Any]) -> Optional[dict[str, Any]]:
+def _result_to_song(
+    result: dict[str, Any], *, rejoin_acts: bool = False
+) -> Optional[dict[str, Any]]:
+    """*result* (a search or playlist row) as a song dict. *rejoin_acts*
+    joins back an act YouTube Music split into its members (see
+    :func:`_credited_artist_names`) - for a row about to be downloaded,
+    not for a page of search results, as it may cost a lookup."""
+
     video_id = result.get('videoId')
     if not video_id:
         return None
-    artists = [
-        a.get('name', '')
-        for a in (result.get('artists') or [])
-        if isinstance(a, dict) and a.get('name')
-    ]
+    if rejoin_acts:
+        artists = _credited_artist_names(result.get('artists'))
+    else:
+        artists = [
+            a.get('name', '')
+            for a in (result.get('artists') or [])
+            if isinstance(a, dict) and a.get('name')
+        ]
     artists = _extract_title_featuring_artist(result.get('title', ''), artists)
     thumbs = result.get('thumbnails') or []
     cover = thumbs[-1].get('url', '') if thumbs else ''
@@ -2348,11 +2478,7 @@ def _cached_album_tracks_and_count(
         total_ct = None
     if not total_ct and tracks:
         total_ct = len(tracks)
-    artists = [
-        a.get('name', '')
-        for a in (data.get('artists') or [])
-        if isinstance(a, dict) and a.get('name')
-    ]
+    artists = _credited_artist_names(data.get('artists'))
     tup = (tracks, total_ct)
     with _lock:
         _album_track_cache[browse_id] = tup
@@ -2552,11 +2678,7 @@ def _album_track_song(
 ) -> dict[str, Any]:
     """Build one album-track song dict, given the album's cached metadata."""
 
-    artists = [
-        a.get('name', '')
-        for a in (track.get('artists') or [])
-        if isinstance(a, dict) and a.get('name')
-    ]
+    artists = _credited_artist_names(track.get('artists'))
     artists = _split_combined_featuring_artist(
         artists, meta.get('artists') or []
     )
@@ -2590,12 +2712,11 @@ def _album_track_song(
         'track_number': track_number,
         'album_track_total': total,
         'release_type': meta.get('type', ''),
-        # The album's own artist, so every track in the album gets the
-        # same "album artist" tag even when a track's own `artists` differs
-        # (a feature, a remix credit, ...) — see
-        # `downloader._album_artist_for_tags`, which falls back to a
-        # per-track heuristic when this isn't set.
-        'album_artist': ', '.join(meta.get('artists') or []),
+        # The album's own (first) artist, so every track in the album gets
+        # the same "album artist" tag even when a track's own `artists`
+        # differs (a feature, a remix credit, ...) - "Various Artists",
+        # plus `compilation`, for a compilation. See `album_artist.py`.
+        **album_artist_fields((meta.get('artists') or [''])[0]),
     }
 
 
@@ -2840,6 +2961,11 @@ def enrich_from_match(
                     enriched['year'] = album_year
                     if not str(enriched.get('release_date') or '').strip():
                         enriched['release_date'] = album_year
+    # Deliberately no album artist from the match's album: YouTube Music
+    # links one audio video to whichever of the releases sharing it it
+    # likes (often a compilation that doesn't even list that video), so
+    # it can't tell a track's own album artist - or that its album is a
+    # compilation. Only an album download (`_album_track_song`) knows that.
     spotify_tid = enriched.get('song_id')
     if yt_n is None:
         logger.info(
@@ -3002,6 +3128,34 @@ def _pick_best(
     return best
 
 
+def _watch_playlist_artists(video_id: str) -> list[str]:
+    """The artists of *video_id*, one per entry, from the first track of
+    its watch playlist - ``[]`` when that can't be read. A guest that
+    track names only in its title ("Baby (feat. Ludacris)", credited to
+    Justin Bieber alone) is added too, as the album path does."""
+
+    try:
+        data = _ytm().get_watch_playlist(video_id, limit=1)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'YouTube Music get_watch_playlist failed for {}', video_id
+        )
+        return []
+    for track in (data or {}).get('tracks') or []:
+        if not isinstance(track, dict) or track.get('videoId') not in {
+            None,
+            video_id,
+        }:
+            continue
+        artists = _credited_artist_names(track.get('artists'))
+        if not artists:
+            return []
+        return _extract_title_featuring_artist(
+            str(track.get('title') or ''), artists
+        )
+    return []
+
+
 def _song_from_video_details(video_id: str) -> dict[str, Any]:
     """Basic song info from ``get_song``'s raw video-player payload.
 
@@ -3025,7 +3179,10 @@ def _song_from_video_details(video_id: str) -> dict[str, Any]:
     except (TypeError, ValueError):
         duration = 0
     author = details.get('author', '')
-    artists = [author] if author else []
+    # `author` joins every artist into one string ("Christina Aguilera,
+    # Lil' Kim, Mya, & P!nk") that can't be split safely - "Earth, Wind &
+    # Fire" is one artist. The watch playlist lists them one by one.
+    artists = _watch_playlist_artists(video_id) or ([author] if author else [])
     return {
         'song_id': video_id,
         'name': details.get('title', ''),
@@ -3161,7 +3318,7 @@ def _playlist_track_song(track: dict[str, Any]) -> Optional[dict[str, Any]]:
         if not video_id:
             return None
         track = {**track, 'videoId': video_id}
-    song = _result_to_song(track)
+    song = _result_to_song(track, rejoin_acts=True)
     if song is None:
         return None
     catalog = track.get('videoType') == _MUSIC_VIDEO_TYPE_OFFICIAL_AUDIO or (
@@ -3195,6 +3352,7 @@ def playlist_info_and_tracks_from_id(
 
     data = _ytm().get_playlist(playlist_id, limit=None)
     _log_ytm_response(f'get_playlist {playlist_id}', data)
+    _prefetch_artist_channel_names(data.get('tracks'))
     songs = [
         song
         for track in (data.get('tracks') or [])

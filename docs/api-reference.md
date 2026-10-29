@@ -372,12 +372,12 @@ Remove a saved photo or banner.
 
 ### `GET /api/artists/photo-proxy`
 
-A **display-only** photo for an artist that has no saved photo, used for the tiles in the artist page's *Related* tab, for the artists in the Library's *Artists* grid, for the round photo on an artist's own page, for the artists on the Monitor's *Artists* tab, and for the artists Discover suggests and the Finder shows, whenever nobody picked a photo for them. The search page doesn't use it. It is a relay, not a way to get a photo to keep: the image is fetched from Deezer, sent to your browser and forgotten - nothing is written to your downloads folder, and only the artist-name → Deezer image link is remembered (in memory, for three hours). To actually save a photo for an artist use the picker (`POST /api/artists/art/from_url`).
+A **display-only** photo for an artist that has no saved photo, used for the tiles in the artist page's *Related* tab, for the artists in the Library's *Artists* grid, for the round photo on an artist's own page, for the artists on the Monitor's *Artists* tab, for the artists Discover suggests and the Finder shows, for the artists in the search page's results, and for the photo of a pasted artist link, whenever nobody picked a photo for them. It is a relay, not a way to get a photo to keep: the image is fetched from Deezer (or, for a search result or an artist link, the platform it came from), sent to your browser and forgotten - nothing is written to your downloads folder, and only the artist-name → Deezer image link is remembered (in memory, for three hours). To actually save a photo for an artist use the picker (`POST /api/artists/art/from_url`).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `name` | string | yes | Artist name - matched against Deezer's results exactly (ignoring case and the characters a file name can't hold, so `ACDC` finds `AC/DC`), so a near-match never shows someone else's face. When several Deezer artists share the name, the one with the most fans is used |
-| `url` | string | no | The artist's Deezer picture, when the page already has it (Discover's suggestions, the Finder), **base64url-encoded** (RFC 4648 §5, `=` padding optional) so the address travels as one plain query value. It is relayed as the photo, with no search by name. Only an `https://` address on Deezer's image CDN (`*.dzcdn.net`) is accepted; anything else, or a value that isn't base64url, is a `400` |
+| `url` | string | no | The artist's picture, when the page already has it — Deezer's (Discover's suggestions, the Finder), YouTube Music's (the search page) or Spotify's, Deezer's or YouTube Music's (a pasted artist link) — **base64url-encoded** (RFC 4648 §5, `=` padding optional) so the address travels as one plain query value. It is relayed as the photo, with no search by name. Only an `https://` address on Deezer's image CDN (`*.dzcdn.net`), one of YouTube Music's image hosts (`lh3.googleusercontent.com`, `yt3.googleusercontent.com`, `yt3.ggpht.com`) or Spotify's (`i.scdn.co`, `image-cdn-*.spotifycdn.com`) is accepted; anything else, or a value that isn't base64url, is a `400` |
 
 **Response:** the image bytes with `Cache-Control: public, max-age=10800` and an `ETag`, so the browser holds on to it for three hours. If a photo is already saved for that artist, that local file is sent instead, without browser caching (`Cache-Control: no-cache`), so a newly picked photo shows up right away. `404` (also cacheable for three hours) when Deezer has no exact match, or when the matched artist has no photo on Deezer (it only has a generic placeholder picture, which is never returned).
 
@@ -1021,9 +1021,11 @@ List library tracks with artist/album read from each file's embedded tags — do
   {
     "file": "Artist - Song.mp3",
     "title": "Song",
-    "artist": "Artist",
+    "artist": "Artist; Guest",
+    "artists": ["Artist", "Guest"],
     "album": "Some Album",
     "album_artist": "Artist",
+    "compilation": false,
     "track_number": 3,
     "year": "2024",
     "duration": 213.08,
@@ -1042,14 +1044,14 @@ List library tracks with artist/album read from each file's embedded tags — do
 
 `hidden_by` appears only for an admin, and only on rows hidden from users: `"track"` (hidden on its own), `"album"` or `"artist"` (the widest rule that hides it).
 
-`album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info, and `codec` (`mp3`, `flac`, `aac`, `alac`, `opus`, `vorbis`, or `""`), `bitrate` (bits/s), `sample_rate` (Hz) and `channels` (`0` when unknown) from the audio stream; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `explicit` is whether the file is marked explicit (see [Explicit Marker](features/explicit-marker.md)). `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes. The assembled listing is kept in memory and snapshotted in `/data`. `GET /tracks`, [`GET /api/library/summary`](#get-apilibrarysummary), albums and artists serve that snapshot without walking the disk; a download keeps the track snapshot and refreshes it in the background so the UI stays usable while the queue is running. A library delete removes those files from the snapshot immediately. `GET /list?refresh=true` (and the mobile library `refresh` flag) drop the snapshot and rescan. Writing a playlist (including Liked songs) does not rebuild the catalog. The Home page uses [`GET /api/library/summary`](#get-apilibrarysummary) instead of this endpoint.
+`artists` is every credited artist, one per entry: the file's `ARTISTS` tag when it has one, else its artist text split on `;`, ` / ` or `, ` (not when it equals `album_artist`, or when the names it splits into make up `album_artist` - `Henrique; Juliano` on an album by `Henrique, Juliano`: then it's one name, `album_artist`). `compilation` is whether the file carries the compilation flag (`TCMP` / `COMPILATION` / `cpil`): only with it is an `album_artist` of `Various Artists` a compilation's album — older versions tagged any song with several artists that way without the flag, and the Library then groups the track by its first artist. `album_artist`, `track_number` (`0` when untagged), `year` and `duration` (seconds) come from the file's tags and stream info, and `codec` (`mp3`, `flac`, `aac`, `alac`, `opus`, `vorbis`, or `""`), `bitrate` (bits/s), `sample_rate` (Hz) and `channels` (`0` when unknown) from the audio stream; `added` is the file's modification time (Unix seconds) and `size` its size in bytes. `explicit` is whether the file is marked explicit (see [Explicit Marker](features/explicit-marker.md)). `playlists` lists the downloaded Spotify playlists the track belongs to, and is omitted when there are none. Tags are cached in `/data` per file and re-read only when the file's modification time or size changes. The assembled listing is kept in memory and snapshotted in `/data`. `GET /tracks`, [`GET /api/library/summary`](#get-apilibrarysummary), albums and artists serve that snapshot without walking the disk; a download keeps the track snapshot and refreshes it in the background so the UI stays usable while the queue is running. A library delete removes those files from the snapshot immediately. `GET /list?refresh=true` (and the mobile library `refresh` flag) drop the snapshot and rescan. Writing a playlist (including Liked songs) does not rebuild the catalog. The Home page uses [`GET /api/library/summary`](#get-apilibrarysummary) instead of this endpoint.
 
 Query filters so the browser does not download every track to show a short list:
 
 | Query | What it returns |
 |-------|-----------------|
 | `playlist=Name` | That playlist's files, in playlist order |
-| `artist=Name` | Tracks grouped under that album artist |
+| `artist=Name` | Every track that artist is credited on (a guest too), or that belongs to an album by them — `Various Artists` included, for a compilation's page |
 | `album=Title` | Tracks on that album (combine with `artist=` when two albums share a title) |
 | `q=words` | Title / artist / album / path must contain every word |
 | `limit=N` | Cap the list (`1`–`200`). Used by the "add songs" picker |
@@ -1253,7 +1255,7 @@ Album tiles for **Library → Albums**: title, artist, year, added, duration, si
 
 ### `GET /api/library/artists`
 
-Artist tiles for **Library → Artists** and Discover: `name`, `track_count`, `album_count`, `liked_count`, `cover_file`, added and duration. Opening an artist loads `GET /tracks?artist=`. Counts leave out what is hidden from a user; an admin's tiles carry `hidden_by: "artist"` on artists [hidden from users](#get-apilibraryvisibility).
+Artist tiles for **Library → Artists** and Discover: `name`, `track_count`, `album_count`, `liked_count`, `cover_file`, added and duration. An artist has a tile when some track belongs to them (its album artist, or its first artist on a compilation or a file with no album artist); their tile then also counts the tracks they are a guest on. A guest credit alone makes no tile, and `Various Artists` never has one. Opening an artist loads `GET /tracks?artist=`. Counts leave out what is hidden from a user; an admin's tiles carry `hidden_by: "artist"` on artists [hidden from users](#get-apilibraryvisibility).
 
 ### `GET /api/library/visibility`
 
@@ -1561,6 +1563,26 @@ Admin. Versions of a library track to [replace its audio](features/replace-audio
 Admin. Replace a library track's audio with a YouTube video: `{ "file": "…", "video_id": "7nxWP9BhI7w" }`. `video_id` may also be a SoundCloud track URL (as a SoundCloud candidate carries it). **Response:** `{ "job_id": "replace:<file>", "file": "…" }`.
 
 It runs as a queue job, with the usual [WebSocket](#websocket) progress messages (`song.song_id` is `job_id`, and `song.replace` is `{file, video_id}`), ending in `done` or `error`. The file keeps its path, format, tags and modification date; a failure leaves it untouched. `400` for an invalid video id or file type, `404` for an unknown file, `409` while the same file is already being replaced.
+
+---
+
+### `POST /api/library/compilation`
+
+Admin. Mark (`"compilation": true`) or unmark an album as a Various Artists compilation: `{ "files": ["…", "…"], "compilation": true }`, where `files` are every track of the album. See [Marking an album as Various Artists](features/file-organization.md#marking-an-album-as-various-artists).
+
+**Response:**
+
+```json
+{
+  "album": "Lady Marmalade",
+  "album_artist": "Various Artists",
+  "compilation": true,
+  "changed": ["Christina Aguilera/Lady Marmalade/…mp3"],
+  "failed": []
+}
+```
+
+Only the album-artist tag and the compilation flag of each file change; files keep their path and modification date, and one that fails to rewrite is left untouched and listed in `failed` (`{file, error}`). `album_artist` is the album's new album artist — "Various Artists", or when unmarking the one it had before. The album is remembered, so tracks of it downloaded later get the same tags. `400` when the files aren't all from one album or the album is already in that state, `404` for an unknown file.
 
 ---
 

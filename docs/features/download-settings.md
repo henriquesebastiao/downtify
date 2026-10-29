@@ -48,7 +48,8 @@ Available tokens:
 | Token | Description |
 |-------|-------------|
 | `{title}` | Track title |
-| `{artists}` | Comma-separated artist names |
+| `{artists}` | Every credited artist, comma-separated (e.g. `Christina Aguilera, Lil' Kim, Mýa, P!nk`) |
+| `{artist}` | The first credited artist only (e.g. `Christina Aguilera`). A name that contains a comma, like `Earth, Wind & Fire`, stays whole. |
 | `{album}` | Album name |
 | `{tracknumber}` | Track's position on its album, zero-padded to 2 digits (e.g. `01`, `12`). Empty when the source has no track number (e.g. a free-text/YouTube search result). |
 | `{year}` | Release year (e.g. `2025`). Empty when the source has no release date (e.g. a free-text/YouTube search result). |
@@ -56,11 +57,17 @@ Available tokens:
 The template can also include `/` to build subfolders. For example, to lay out a library as `Artist/Album (2025)/01 - Title.mp3` — handy when downloading a full discography, since each album lands in its own folder alongside its release year:
 
 ```
-{artists}/{album} ({year})/{tracknumber} - {title}
+{artist}/{album} ({year})/{tracknumber} - {title}
 ```
 
+Use `{artist}` rather than `{artists}` in a folder: with `{artists}`, a song with guests gets a folder of its own (`Christina Aguilera, Lil' Kim, Mýa, P!nk/`) instead of landing in the first artist's.
+
 ::: info
-This is independent of the **Organize by artist** / **Organize by album** toggles below — those route playlist/album downloads into shared per-artist or per-album folders across your whole library. `{tracknumber}` and `{year}` just let a template like the one above build that same layout manually, track by track, without turning those toggles on.
+This is independent of the **Organize by artist** / **Organize by album** toggles — those route playlist/album downloads into shared per-artist or per-album folders across your whole library (see [File Organization](file-organization.md)). `{tracknumber}` and `{year}` just let a template like the one above build that same layout manually, track by track, without turning those toggles on.
+:::
+
+::: tip Compilations
+The template applies to a track from a various-artists compilation like to any other: `{artist}` is the track's own first artist, never "Various Artists". See [Several artists and compilations](file-organization.md#several-artists-and-compilations).
 :::
 
 ## Parallel downloads

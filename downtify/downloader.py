@@ -19,6 +19,7 @@ from mutagen.id3 import (
     APIC,
     ID3,
     TALB,
+    TCMP,
     TCON,
     TDRC,
     TIT2,
@@ -34,8 +35,10 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
+from . import deezer as deezer_mod
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
+from .album_artist import VARIOUS_ARTISTS, filing_artist
 from .content_advisory import (
     ADVISORY_EXPLICIT,
     ADVISORY_TAG,
@@ -388,6 +391,12 @@ class Downloader:
     #: :mod:`downtify.download_log` - on the download's own thread, like
     #: :attr:`on_downloaded`, and just as unable to fail the download.
     on_outcome: Optional[Callable[[dict[str, Any], str, str], None]] = None
+    #: Called as ``album_override(song)`` once a song's metadata is complete,
+    #: before its path and tags are worked out: the ``album_artist`` /
+    #: ``compilation`` an admin set for its album by hand, or ``{}``. Set by
+    #: the app (``main.py``, see ``compilation.CompilationMarks``). Whatever
+    #: it raises is logged and the song keeps its source's values.
+    album_override: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None
 
     def __init__(
         self,
@@ -606,16 +615,12 @@ class Downloader:
 
     @staticmethod
     def _artist_subdir(song: dict[str, Any]) -> str:
-        # Prefer the source's own album-level artist (set for YouTube
-        # Music albums) so every track in an album lands in the same
-        # folder even when one track's own `artists` differs (a feature,
-        # a remix credit, ...) — mirrors the album-artist tag fallback in
-        # `embed_metadata`.
-        album_artist = (song.get('album_artist') or '').strip()
-        if album_artist:
-            return _sanitize(album_artist)
-        artists = song.get('artists') or []
-        return _sanitize(artists[0] if artists else 'unknown')
+        # The album artist the source declares, so every track of an album
+        # lands in the same folder even when one track's own `artists`
+        # differs (a feature, a remix credit, ...) - but a compilation's
+        # tracks go to their own first artist, never a "Various Artists"
+        # folder. See `album_artist.filing_artist`.
+        return _sanitize(filing_artist(song) or 'unknown')
 
     @staticmethod
     def _album_subdir(song: dict[str, Any]) -> str:
@@ -694,7 +699,8 @@ class Downloader:
         return {
             'title': _sanitize(song.get('name', 'Unknown')),
             'artists': artists,
-            'artist': artists,
+            # The first credited artist alone, as the Settings preview shows.
+            'artist': next((a for a in artist_names if a), 'Unknown Artist'),
             'album': _sanitize(song.get('album_name', '')),
             'tracknumber': f'{track_number:02d}' if track_number else '',
             'year': year,
@@ -996,6 +1002,8 @@ class Downloader:
             # Playlist rows lack year/track number; the per-track embed has
             # them, and they can feed the output path and the slskd match.
             song = spotify_mod.enrich_track_from_spotify_if_sparse(song)
+            # A Deezer album/playlist row names only its lead artist.
+            song = deezer_mod.enrich_track_from_deezer_if_sparse(song)
         # A known video is a candidate for an enabled YouTube provider,
         # not permission to bypass earlier sources or disabled providers.
         video_id, match, provider, local_source = self._resolve_source(
@@ -1040,7 +1048,7 @@ class Downloader:
                 f'Could not find {source} for {song.get("name")!r}{hint}'
             )
 
-        song = enrich_from_match(song, match)
+        song = self._with_album_override(enrich_from_match(song, match))
 
         # Sparse rows learn their duration from the per-track embed
         # above; re-check now that it is known.
@@ -1077,6 +1085,21 @@ class Downloader:
                 ),
                 provider,
             )
+
+    def _with_album_override(self, song: dict[str, Any]) -> dict[str, Any]:
+        """*song* with what :attr:`album_override` says for its album."""
+
+        hook = self.album_override
+        if hook is None:
+            return song
+        try:
+            override = hook(song)
+        except Exception:
+            logger.opt(exception=True).warning(
+                'The album override failed for {!r}', song.get('name')
+            )
+            return song
+        return {**song, **override} if override else song
 
     def _downloaded(
         self,
@@ -1626,18 +1649,22 @@ def _recording_date_for_tags(song: dict[str, Any]) -> str:
     return str(song.get('year') or '').strip()
 
 
-def _album_artist_for_tags(artists: list[str]) -> Optional[str]:
-    """Album artist for a single download when the source has no album field.
-
-    One credited name is used as-is — including duo names with ``&``.
-    Several credited names (a collab list) still map to Various Artists.
+def _album_artist_for_tags(song: dict[str, Any]) -> Optional[str]:
+    """The album-artist tag: the album artist the source declares (the
+    same on every track of an album, which media servers group albums by),
+    else the track's first artist. Never inferred from how many artists a
+    track has - a guest on one track doesn't make an album a compilation;
+    "Various Artists" only comes from the source (see ``album_artist.py``).
     """
 
-    if not artists:
-        return None
-    if len(artists) > 1:
-        return 'Various Artists'
-    return artists[0]
+    if song.get('compilation'):
+        return VARIOUS_ARTISTS
+    album_artist = str(song.get('album_artist') or '').strip()
+    if album_artist:
+        return album_artist
+    artists = song.get('artists') or []
+    first = str(artists[0]).strip() if artists else ''
+    return first or None
 
 
 def _release_type_for_tags(song: dict[str, Any]) -> str:
@@ -1661,13 +1688,10 @@ def embed_metadata(
 
     title = song.get('name', '')
     artists = song.get('artists') or []
-    # Prefer the source's own album-level artist (set for YouTube Music
-    # albums — see `providers._album_track_song`) so every track in an
-    # album gets the same tag even when one track's own artists differ
-    # (a feature, a remix credit, ...). Falls back to a per-track heuristic
-    # when the source doesn't know an album artist (single-track/playlist
-    # downloads).
-    album_artist = song.get('album_artist') or _album_artist_for_tags(artists)
+    album_artist = _album_artist_for_tags(song)
+    # Only ever added, never removed: a file re-tagged by the library
+    # upgrade (whose song has no `compilation`) keeps its flag.
+    compilation = bool(song.get('compilation'))
     album = song.get('album_name', '') or ''
     recording_date = _recording_date_for_tags(song)
     genre = (song.get('genre') or '').strip()
@@ -1723,6 +1747,7 @@ def embed_metadata(
             album_track_total,
             release_type,
             explicit,
+            compilation=compilation,
         )
     elif suffix in {'m4a', 'mp4', 'aac'}:
         _tag_mp4(
@@ -1738,6 +1763,7 @@ def embed_metadata(
             album_track_total,
             release_type,
             explicit,
+            compilation=compilation,
         )
     elif suffix == 'flac':
         _tag_flac(
@@ -1753,6 +1779,7 @@ def embed_metadata(
             album_track_total,
             release_type,
             explicit,
+            compilation=compilation,
         )
     elif suffix in {'ogg', 'oga'}:
         _tag_ogg_vorbis(
@@ -1768,6 +1795,7 @@ def embed_metadata(
             album_track_total,
             release_type,
             explicit,
+            compilation=compilation,
         )
     elif suffix == 'opus':
         _tag_opus(
@@ -1783,6 +1811,7 @@ def embed_metadata(
             album_track_total,
             release_type,
             explicit,
+            compilation=compilation,
         )
 
 
@@ -1799,6 +1828,8 @@ def _tag_mp3(
     album_track_total: Optional[int],
     release_type: str = '',
     explicit: bool = False,
+    *,
+    compilation: bool = False,
 ) -> None:
     audio = MP3(str(path), ID3=ID3)
     if audio.tags is None:
@@ -1807,8 +1838,13 @@ def _tag_mp3(
     audio.tags.add(TIT2(encoding=3, text=title))
     if artists:
         audio.tags.add(TPE1(encoding=3, text='; '.join(artists)))
+        # One value per artist (MusicBrainz Picard's ARTISTS), so readers
+        # never have to split "Earth, Wind & Fire" on its comma.
+        audio.tags.add(TXXX(encoding=3, desc='ARTISTS', text=list(artists)))
     if album_artist:
         audio.tags.add(TPE2(encoding=3, text=album_artist))
+    if compilation:
+        audio.tags.add(TCMP(encoding=3, text='1'))
     if album:
         audio.tags.add(TALB(encoding=3, text=album))
     if track_number is not None:
@@ -1877,13 +1913,20 @@ def _tag_mp4(
     album_track_total: Optional[int],
     release_type: str = '',
     explicit: bool = False,
+    *,
+    compilation: bool = False,
 ) -> None:
     audio = MP4(str(path))
     audio['\xa9nam'] = title
     if artists:
         audio['\xa9ART'] = artists
+        audio['----:com.apple.iTunes:ARTISTS'] = [
+            MP4FreeForm(a.encode('utf-8')) for a in artists
+        ]
     if album_artist:
         audio['aART'] = [album_artist]
+    if compilation:
+        audio['cpil'] = True
     if album:
         audio['\xa9alb'] = album
     if track_number is not None:
@@ -1921,13 +1964,18 @@ def _tag_flac(
     album_track_total: Optional[int],
     release_type: str = '',
     explicit: bool = False,
+    *,
+    compilation: bool = False,
 ) -> None:
     audio = FLAC(str(path))
     audio['title'] = title
     if artists:
         audio['artist'] = artists
+        audio['artists'] = artists
     if album_artist:
         audio['albumartist'] = album_artist
+    if compilation:
+        audio['compilation'] = '1'
     if album:
         audio['album'] = album
     if track_number is not None:
@@ -1967,6 +2015,8 @@ def _tag_ogg_vorbis(
     album_track_total: Optional[int],
     release_type: str = '',
     explicit: bool = False,
+    *,
+    compilation: bool = False,
 ) -> None:
     audio = OggVorbis(str(path))
     _apply_vorbis_comments(
@@ -1982,6 +2032,7 @@ def _tag_ogg_vorbis(
         album_track_total,
         release_type,
         explicit,
+        compilation=compilation,
     )
     audio.save()
 
@@ -1999,6 +2050,8 @@ def _tag_opus(
     album_track_total: Optional[int],
     release_type: str = '',
     explicit: bool = False,
+    *,
+    compilation: bool = False,
 ) -> None:
     audio = OggOpus(str(path))
     _apply_vorbis_comments(
@@ -2014,6 +2067,7 @@ def _tag_opus(
         album_track_total,
         release_type,
         explicit,
+        compilation=compilation,
     )
     audio.save()
 
@@ -2031,12 +2085,17 @@ def _apply_vorbis_comments(
     album_track_total: Optional[int],
     release_type: str = '',
     explicit: bool = False,
+    *,
+    compilation: bool = False,
 ):
     audio['title'] = title
     if artists:
         audio['artist'] = artists
+        audio['artists'] = artists
     if album_artist:
         audio['albumartist'] = album_artist
+    if compilation:
+        audio['compilation'] = '1'
     if album:
         audio['album'] = album
     if track_number is not None:
