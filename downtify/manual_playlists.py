@@ -181,10 +181,10 @@ def detach_imported_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
         raise ManualPlaylistError(
             f'Playlist {path.stem!r} can already be edited', status_code=409
         )
-    try:
-        lines = path.read_text(encoding='utf-8').splitlines()
-    except OSError as exc:
-        raise ManualPlaylistError(f'Could not read {path.name}') from exc
+    text = m3u.read_m3u_text(path)
+    if text is None:
+        raise ManualPlaylistError(f'Could not read {path.name}')
+    lines = text.splitlines()
     if lines[:1] != ['#EXTM3U']:
         lines.insert(0, '#EXTM3U')
     lines.insert(1, m3u.MANUAL_M3U_MARKER)

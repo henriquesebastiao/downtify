@@ -19,6 +19,7 @@ from loguru import logger
 
 from .cover_art import extract_cover_art
 from .library_catalog import LibraryContext, resolve_library_file
+from .m3u import read_m3u_text
 
 MOSAIC_SIZE = 600
 MAX_TILES = 4
@@ -171,14 +172,12 @@ def has_explicit_cover(m3u_path: Path) -> bool:
 
     if not m3u_path.with_suffix('.jpg').is_file():
         return False
-    try:
-        with m3u_path.open(encoding='utf-8-sig') as stream:
-            return any(
-                line.strip() == EXPLICIT_COVER_MARKER
-                for _, line in zip(range(5), stream)
-            )
-    except OSError:
+    text = read_m3u_text(m3u_path)
+    if text is None:
         return False
+    return any(
+        line.strip() == EXPLICIT_COVER_MARKER for line in text.splitlines()[:5]
+    )
 
 
 def keep_explicit_cover(m3u_path: Path) -> None:
@@ -186,7 +185,9 @@ def keep_explicit_cover(m3u_path: Path) -> None:
 
     if not m3u_path.with_suffix('.jpg').is_file():
         return
-    text = m3u_path.read_text(encoding='utf-8')
+    text = read_m3u_text(m3u_path)
+    if text is None:
+        return
     if EXPLICIT_COVER_MARKER not in text.splitlines()[:5]:
         lines = text.splitlines()
         lines.insert(1, EXPLICIT_COVER_MARKER)

@@ -74,6 +74,8 @@ All of it runs inside a single Docker container. See **[How it works](https://he
 
 Read-only music folders stay protected during **Upgrade library**: their tracks are skipped before remote lookups, without changing files or marking unchecked categories as complete. See [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/#read-only-music-folders).
 
+Existing Library `.m3u` playlists can use UTF-8 or the Windows-1252 legacy fallback. Unreadable playlists are skipped with a warning; reading keeps existing files intact. See [M3U compatibility](docs/features/m3u-export.md#compatibility).
+
 ## Quick start
 
 You only need [Docker](https://docs.docker.com/get-docker/).
