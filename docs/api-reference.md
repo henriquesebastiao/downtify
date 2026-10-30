@@ -1061,6 +1061,8 @@ Query filters so the browser does not download every track to show a short list:
 | `q=words` | Title / artist / album / path must contain every word |
 | `limit=N` | Cap the list (`1`–`200`). Used by the "add songs" picker |
 
+`GET /tracks`, `GET /playlists`, `GET /api/library/albums`, `GET /api/library/artists` and `GET /api/library/summary` carry an `ETag` and `Cache-Control: private, no-cache`: send the tag back as `If-None-Match` and an unchanged listing answers `304 Not Modified` with no body. Browsers do this on their own.
+
 Unfiltered `GET /tracks` is still the Library **Tracks** tab. Album and artist pages use `?artist=`. Search and pasted links use [`POST /api/library/lookup`](#post-apilibrarylookup).
 
 Sorted by `file`, same order as `/list` (except `?playlist=`, which keeps playlist order). `artist`/`album` come back as `""` when the file has no readable tag for that field — the frontend then simply doesn't offer it as a filter for that track.

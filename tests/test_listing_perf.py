@@ -284,10 +284,93 @@ def test_a_hand_edited_m3u_shows_up_after_the_recheck_window(
 
     clock = time.monotonic() + paths_cache.PLAYLIST_RECHECK_SECONDS + 1
     monkeypatch.setattr(paths_cache.time, 'monotonic', lambda: clock)
+    # That read doesn't wait for the check it starts; the next one has it.
+    assert list_library_playlists(download_dir, stale_ok=True) == []
+    _finish_background_recheck()
     names = [
         p['name'] for p in list_library_playlists(download_dir, stale_ok=True)
     ]
     assert names == ['Manual']
+
+
+def _finish_background_recheck() -> None:
+    for thread in threading.enumerate():
+        if thread.name == 'downtify-playlist-recheck':
+            thread.join(timeout=5)
+
+
+def test_a_stale_playlist_listing_never_makes_a_page_wait(
+    tmp_path, monkeypatch
+):
+    """Each read past the recheck window walked the downloads folder, one
+    after another behind a lock: a page load after a minute of quiet took
+    seconds on a large library."""
+
+    download_dir = tmp_path / 'downloads'
+    download_dir.mkdir()
+    invalidate_library_paths_cache()
+    set_listing_refresh_fn(lambda: None)
+    assert list_library_playlists(download_dir, stale_ok=True) == []
+
+    clock = time.monotonic() + paths_cache.PLAYLIST_RECHECK_SECONDS + 1
+    monkeypatch.setattr(paths_cache.time, 'monotonic', lambda: clock)
+    real_walk = paths_cache.playlist_listing_fingerprint
+    release = threading.Event()
+    walks = []
+
+    def slow_walk(folder):
+        walks.append(folder)
+        release.wait(5)
+        return real_walk(folder)
+
+    monkeypatch.setattr(paths_cache, 'playlist_listing_fingerprint', slow_walk)
+
+    # All three answer while the only walk is still stuck on the disk.
+    for _ in range(3):
+        assert list_library_playlists(download_dir, stale_ok=True) == []
+    release.set()
+    _finish_background_recheck()
+
+    assert len(walks) == 1
+
+
+def test_a_walk_cannot_overwrite_a_listing_dropped_meanwhile(
+    tmp_path, monkeypatch
+):
+    """An M3U written during a background check must not be hidden by what
+    the check read before it."""
+
+    download_dir = tmp_path / 'downloads'
+    (download_dir / 'Playlists').mkdir(parents=True)
+    invalidate_library_paths_cache()
+    built = threading.Event()
+    release = threading.Event()
+    answers = [['before'], ['read too early'], ['after']]
+
+    def build():
+        answer = answers.pop(0)
+        if answer == ['read too early']:
+            built.set()
+            release.wait(5)
+        return answer
+
+    def read():
+        return paths_cache.get_cached_playlists(
+            download_dir, None, (), build, stale_ok=True
+        )
+
+    assert read() == ['before']
+    (download_dir / 'Playlists' / 'New.m3u').write_text('#EXTM3U\n')
+    clock = time.monotonic() + paths_cache.PLAYLIST_RECHECK_SECONDS + 1
+    monkeypatch.setattr(paths_cache.time, 'monotonic', lambda: clock)
+    assert read() == ['before']
+    assert built.wait(5)
+
+    paths_cache.forget_cached_playlists()
+    release.set()
+    _finish_background_recheck()
+
+    assert read() == ['after']
 
 
 def test_merging_a_download_neither_walks_nor_rewrites_the_snapshot(

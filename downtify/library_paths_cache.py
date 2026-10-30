@@ -48,6 +48,12 @@ _REFRESH_DEBOUNCE_S = 5.0
 PLAYLIST_RECHECK_SECONDS = 60.0
 #: When each playlist listing was last checked against the disk.
 _PLAYLIST_CHECKED: dict[str, float] = {}
+#: Listings being checked in the background: a burst of page loads starts
+#: one walk of the downloads folder, not one each.
+_PLAYLIST_RECHECKING: set[str] = set()
+#: Bumped when a listing is dropped, so a walk that began before an M3U was
+#: written can't store what it read over the drop.
+_PLAYLIST_GENERATION = 0
 
 
 def set_listing_refresh_fn(fn: Callable[[], None]) -> None:
@@ -135,9 +141,17 @@ def drop_listing_memory_caches() -> None:
 
     with _DATA_LOCK:
         _PATH_CACHE.clear()
-        _PLAYLIST_CACHE.clear()
-        _PLAYLIST_CHECKED.clear()
+        _drop_playlist_listings()
         _ENTRIES_CACHE.clear()
+
+
+def _drop_playlist_listings() -> None:
+    """Forget every playlist listing. Call with ``_DATA_LOCK`` held."""
+
+    global _PLAYLIST_GENERATION
+    _PLAYLIST_CACHE.clear()
+    _PLAYLIST_CHECKED.clear()
+    _PLAYLIST_GENERATION += 1
 
 
 def forget_cached_playlists() -> None:
@@ -145,8 +159,7 @@ def forget_cached_playlists() -> None:
     ``GET /playlists`` reads the M3U files again."""
 
     with _DATA_LOCK:
-        _PLAYLIST_CACHE.clear()
-        _PLAYLIST_CHECKED.clear()
+        _drop_playlist_listings()
 
 
 def _hydrate_snapshot(key: str, snap: dict[str, Any]) -> None:
@@ -299,24 +312,55 @@ def get_cached_playlists(
 ) -> list[dict[str, Any]]:
     """``GET /playlists`` rows.
 
-    *stale_ok* (UI reads) serves the RAM listing without walking the
-    downloads folder when it was checked in the last
-    :data:`PLAYLIST_RECHECK_SECONDS`. Without it, every call checks the
-    M3U files, so tests and writes see a new M3U on the next listing.
+    *stale_ok* (UI reads) always serves the RAM listing when there is one,
+    so no page waits on a walk of the downloads folder; once it is older
+    than :data:`PLAYLIST_RECHECK_SECONDS` a background check brings it up
+    to date for the next read. Without it, every call checks the M3U
+    files, so tests and writes see a new M3U on the next listing.
     """
 
     key = cache_key_for_dirs(download_dir, slskd_dir, extra_dirs)
     with _DATA_LOCK:
         hit = _PLAYLIST_CACHE.get(key)
         cached = list(hit[1]) if hit is not None else None
-        checked = _PLAYLIST_CHECKED.get(key)
-    fresh = (
+        fresh = _playlists_checked_recently(key)
+    if cached is not None and stale_ok:
+        if not fresh:
+            _recheck_playlists_in_background(key, download_dir, build_fn)
+        return cached
+    return _check_playlists(key, download_dir, build_fn, stale_ok=stale_ok)
+
+
+def _playlists_checked_recently(key: str) -> bool:
+    """Call with ``_DATA_LOCK`` held."""
+
+    checked = _PLAYLIST_CHECKED.get(key)
+    return (
         checked is not None
         and time.monotonic() - checked < PLAYLIST_RECHECK_SECONDS
     )
-    if cached is not None and stale_ok and fresh:
-        return cached
+
+
+def _check_playlists(
+    key: str,
+    download_dir: Path,
+    build_fn: Callable[[], list[dict[str, Any]]],
+    *,
+    stale_ok: bool = False,
+) -> list[dict[str, Any]]:
+    """The listing, rebuilt when the M3U files on disk have changed."""
+
     with _PLAYLIST_LOCK:
+        with _DATA_LOCK:
+            generation = _PLAYLIST_GENERATION
+            hit = _PLAYLIST_CACHE.get(key)
+            # Whoever held the lock just walked: don't walk again after it.
+            if (
+                stale_ok
+                and hit is not None
+                and _playlists_checked_recently(key)
+            ):
+                return list(hit[1])
         fingerprint = playlist_listing_fingerprint(download_dir)
         with _DATA_LOCK:
             hit = _PLAYLIST_CACHE.get(key)
@@ -325,9 +369,38 @@ def get_cached_playlists(
                 return list(hit[1])
         playlists = build_fn()
         with _DATA_LOCK:
-            _PLAYLIST_CACHE[key] = (fingerprint, playlists)
-            _PLAYLIST_CHECKED[key] = time.monotonic()
+            if generation == _PLAYLIST_GENERATION:
+                _PLAYLIST_CACHE[key] = (fingerprint, playlists)
+                _PLAYLIST_CHECKED[key] = time.monotonic()
         return list(playlists)
+
+
+def _recheck_playlists_in_background(
+    key: str,
+    download_dir: Path,
+    build_fn: Callable[[], list[dict[str, Any]]],
+) -> None:
+    """Run :func:`_check_playlists` on a daemon thread, one per listing."""
+
+    with _DATA_LOCK:
+        if key in _PLAYLIST_RECHECKING:
+            return
+        _PLAYLIST_RECHECKING.add(key)
+
+    def worker() -> None:
+        try:
+            _check_playlists(key, download_dir, build_fn)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Background playlist listing check failed'
+            )
+        finally:
+            with _DATA_LOCK:
+                _PLAYLIST_RECHECKING.discard(key)
+
+    threading.Thread(
+        target=worker, name='downtify-playlist-recheck', daemon=True
+    ).start()
 
 
 def get_cached_track_entries(
@@ -426,8 +499,7 @@ def invalidate_library_paths_cache(
     """
 
     with _DATA_LOCK:
-        _PLAYLIST_CACHE.clear()
-        _PLAYLIST_CHECKED.clear()
+        _drop_playlist_listings()
         if drop_entries:
             _PATH_CACHE.clear()
             _ENTRIES_CACHE.clear()
