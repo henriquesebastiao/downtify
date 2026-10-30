@@ -12,6 +12,7 @@
       >
         {{ t('monitor.checkAll') }}
       </UiButton>
+      <GlobalQueueControl compact />
     </PageHeader>
 
     <UiTabs :items="tabs" :model-value="tab" />
@@ -487,6 +488,7 @@
 </template>
 
 <script setup>
+import GlobalQueueControl from '/src/components/queue/GlobalQueueControl.vue'
 import {
   computed,
   nextTick,

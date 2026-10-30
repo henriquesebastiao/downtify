@@ -685,6 +685,11 @@ Whether the download queue is paused. Anyone signed in can read it. See [Downloa
 | `paused` | boolean | Whether the queue is paused |
 | `state` | string | `running`, `pausing` (paused, with `active` downloads still finishing) or `paused` (nothing running) |
 | `active` | integer | Downloads running right now, everyone's (Playlist Monitor sweeps included) |
+| `global_pause_supported` | boolean | Whether pause also gates watch checks and podcasts; absent on older servers |
+| `monitors_paused` | boolean | Whether new automatic checks wait at the global gate |
+| `can_control` | boolean | Whether this request can use the web administrator control; false for paired devices |
+
+A native library improvement finishing its current track also counts as active while paused. Pausing requests its native pause; global resume leaves it paused until explicitly resumed in its own screen. Starting or recovering an improvement run respects the global pause.
 
 Every change is also broadcast as a `queue_state` [WebSocket](#websocket) frame.
 
@@ -694,7 +699,7 @@ Every change is also broadcast as a `queue_state` [WebSocket](#websocket) frame.
 
 Admin. Pause the queue: no download starts until it is resumed, and the ones already running finish normally. Waiting jobs keep their place (`status: "queued"`, including a `POST /api/download/url` that hasn't started — that request waits until the queue is resumed), and Playlist Monitor sweeps wait before each track. The switch is saved, so the queue is still paused after a restart.
 
-**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+**Response:** the `paused`, `state` and `active` fields of [`GET /api/queue/state`](#get-apiqueuestate). Read GET for request-specific control capability.
 
 ---
 
@@ -702,7 +707,7 @@ Admin. Pause the queue: no download starts until it is resumed, and the ones alr
 
 Admin. Carry on with the waiting jobs, with the current settings and audio provider order.
 
-**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+**Response:** the `paused`, `state` and `active` fields of [`GET /api/queue/state`](#get-apiqueuestate). Read GET for request-specific control capability.
 
 Unfinished jobs (waiting, or interrupted mid-download) are saved in `/data` and queued again when Downtify starts, paused or not; finished and failed ones are not.
 

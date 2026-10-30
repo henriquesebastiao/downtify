@@ -501,6 +501,17 @@ export default {
     playCountYoutubeMusic: 'YouTube Music’teki dinlenme sayısı (yaklaşık)',
   },
   queue: {
+    globalPause: 'İndirmeleri ve izlemeyi duraklat',
+    globalResume: 'İndirmeleri ve izlemeyi sürdür',
+    globalTitle: 'Sunucu etkinliği',
+    globalHint:
+      'Yeni indirmeler ve kontroller bekler. Etkin işler tamamlanır ve kuyruk korunur.',
+    globalPaused: 'İndirmeler ve izleme duraklatıldı.',
+    globalDraining: 'Etkin iş tamamlanıyor…',
+    globalRetry: 'Durumu kontrol et',
+    globalFailed: 'Değişiklik doğrulanamadı.',
+    globalAdmin: 'Web yöneticisi oturumu gerekli.',
+    globalExpired: 'Oturum sona erdi. Yeniden giriş yapın.',
     title: 'Kuyruk',
     tabActive: 'Devam eden',
     tabQueued: 'Bekleyen',

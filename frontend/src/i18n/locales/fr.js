@@ -519,6 +519,17 @@ export default {
     playCountYoutubeMusic: 'Écoutes sur YouTube Music (approximatif)',
   },
   queue: {
+    globalPause: 'Pause téléchargements et surveillances',
+    globalResume: 'Reprendre téléchargements et surveillances',
+    globalTitle: 'Activité du serveur',
+    globalHint:
+      'Les nouveaux téléchargements et contrôles attendent. Le travail actif se termine ; la file est conservée.',
+    globalPaused: 'Téléchargements et surveillances en pause.',
+    globalDraining: 'Fin du travail actif…',
+    globalRetry: 'Vérifier l’état',
+    globalFailed: 'Impossible de confirmer le changement.',
+    globalAdmin: 'Une session web administrateur est nécessaire.',
+    globalExpired: 'Session expirée. Reconnectez-vous.',
     title: 'File',
     tabActive: 'En cours',
     tabQueued: 'En attente',
