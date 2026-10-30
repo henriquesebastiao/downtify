@@ -653,6 +653,36 @@ def list_entries_for_stored_paths(
     return [library_entry_for_file(stored, full) for stored, full in pairs]
 
 
+def list_entries_for_playlist(
+    ctx: LibraryContext,
+    stored_paths: list[str],
+) -> list[dict[str, Any]]:
+    """``GET /tracks?playlist=`` rows, in playlist order.
+
+    Read from the listing snapshot, like ``GET /tracks``: asking the disk
+    about each file twice took over a second for a playlist of 4000 songs
+    on a NAS. Only files the snapshot doesn't have go to the disk (a
+    folded extra-folder copy, or a file too new for it).
+    """
+
+    snapshot = peek_cached_track_entries(ctx)
+    if not snapshot:
+        return list_entries_for_stored_paths(ctx, stored_paths)
+    by_file = {str(row.get('file') or ''): row for row in snapshot}
+    names = dict.fromkeys(
+        name
+        for name in (
+            str(stored or '').strip().replace('\\', '/')
+            for stored in stored_paths
+        )
+        if name
+    )
+    missing = [name for name in names if name not in by_file]
+    for row in list_entries_for_stored_paths(ctx, missing):
+        by_file[str(row.get('file') or '')] = row
+    return [by_file[name] for name in names if name in by_file]
+
+
 def fold_text(text: str) -> str:
     """Case- and accent-fold, matching the Library page's filter."""
 

@@ -1,11 +1,12 @@
 <template>
   <div
+    ref="root"
     class="relative isolate shrink-0 overflow-hidden"
     :class="[round ? 'rounded-full' : rounded, shadow ? 'shadow-cover' : '']"
     :style="{ background: placeholder }"
   >
     <div
-      v-if="mosaic.length >= 2"
+      v-if="mosaic.length >= 2 && mayLoad"
       class="grid size-full"
       :class="mosaic.length === 2 ? 'grid-cols-2' : 'grid-cols-2 grid-rows-2'"
     >
@@ -22,7 +23,7 @@
       />
     </div>
     <img
-      v-else-if="imageSrc && !failed"
+      v-else-if="imageSrc && !failed && mayLoad"
       :src="displaySrc"
       :srcset="displaySrcset"
       :alt="alt"
@@ -63,8 +64,9 @@
 // Many Requests, and serves the same burst fine without one. Only images
 // - the API's own requests keep their Origin/Referer, which the backend's
 // same-site check needs.
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import AppIcon from './AppIcon.vue'
+import { cancelUnfinishedImages, coverDelay } from '/src/lib/coverGate'
 import { hueFor, initials } from '/src/lib/format'
 import { COVER_SIZES, sizedCoverURL } from '/src/lib/paths'
 
@@ -92,15 +94,38 @@ const props = defineProps({
   thumb: { type: Number, default: 0 },
 })
 
+const root = ref(null)
 const failed = ref(false)
 const ready = ref(false)
 const usingFallback = ref(false)
+
+// See lib/coverGate.js: a tile that scrolls by never asks for its picture.
+const mayLoad = ref(false)
+let gate = null
+function openGate() {
+  clearTimeout(gate)
+  const delay = coverDelay(performance.now())
+  mayLoad.value = delay === 0
+  if (delay) {
+    gate = setTimeout(() => {
+      mayLoad.value = true
+    }, delay)
+  }
+}
+openGate()
+
+onBeforeUnmount(() => {
+  clearTimeout(gate)
+  cancelUnfinishedImages(root.value)
+})
+
 watch(
   () => props.src,
   () => {
     failed.value = false
     ready.value = false
     usingFallback.value = false
+    openGate()
   }
 )
 

@@ -58,6 +58,7 @@ from downtify.downloader import Downloader
 from downtify.external_playlists import ExternalPlaylistImports
 from downtify.external_sync import ExternalSyncJob
 from downtify.file_providers import FileProviders
+from downtify.http_etag import JsonETagMiddleware
 from downtify.library_archive import (
     MAX_ARCHIVE_FILES,
     ArchiveTicketStore,
@@ -67,7 +68,7 @@ from downtify.library_archive import (
 from downtify.library_catalog import (
     TRACK_QUERY_LIMIT_MAX,
     filter_library_entries,
-    list_entries_for_stored_paths,
+    list_entries_for_playlist,
     list_library_entries,
     list_library_paths,
     resolve_library_file,
@@ -198,6 +199,8 @@ def _setup_logging(level: str) -> None:
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 DATABASE_DIR = Path(os.getenv('DATABASE_DIR', '/data'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
+#: ``Cache-Control`` for the hashed files under ``assets/``.
+IMMUTABLE_ASSET = 'public, max-age=31536000, immutable'
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
 # Where the server listens, for the LAN announcement; set by main().
 _LISTEN: dict[str, Any] = {
@@ -247,13 +250,26 @@ class LibraryAudioFiles(StaticFiles):
 
 
 class SPAStaticFiles(StaticFiles):
-    """Serve ``index.html`` for unknown paths so SPA routing works."""
+    """Serve ``index.html`` for unknown paths so SPA routing works.
+
+    Vite puts a content hash in the name of everything under ``assets/``, so
+    the browser may keep those for good. ``index.html`` names the current
+    ones, so it is checked on every load: that is what lets an upgrade reach
+    the browser without a forced reload.
+    """
 
     async def get_response(self, path: str, scope):
         try:
-            return await super().get_response(path, scope)
+            response = await super().get_response(path, scope)
         except Exception:
-            return await super().get_response('index.html', scope)
+            response = await super().get_response('index.html', scope)
+        else:
+            if path.startswith('assets/'):
+                response.headers['Cache-Control'] = IMMUTABLE_ASSET
+                return response
+        if response.headers.get('content-type', '').startswith('text/html'):
+            response.headers['Cache-Control'] = 'no-cache'
+        return response
 
 
 def _fix_mime_types() -> None:
@@ -750,8 +766,22 @@ def build_app() -> FastAPI:
             'X-Downtify-Transcoded',
         ],
     )
-    # Compress large JSON listings (``GET /tracks``) for the web UI.
-    app.add_middleware(GZipMiddleware, minimum_size=1000)
+    # Inside the compression, so a 304 skips it. Large listings the web UI
+    # reads again on every page load.
+    app.add_middleware(
+        JsonETagMiddleware,
+        paths=(
+            '/tracks',
+            '/playlists',
+            '/api/library/albums',
+            '/api/library/artists',
+            '/api/library/summary',
+        ),
+    )
+    # Compress large JSON listings (``GET /tracks``) for the web UI. Level 4
+    # is a fifth of the default 9's work for 6% more bytes, and it runs on
+    # the event loop, where every other request waits for it.
+    app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=4)
 
     settings_path = DATABASE_DIR / 'settings.json'
     api.state.settings_path = settings_path
@@ -886,7 +916,7 @@ def build_app() -> FastAPI:
             match = api.playlist_entry_for_request(name, request)
             files = list(match.get('files') or []) if match else []
             tracks = api.visible_entries(
-                list_entries_for_stored_paths(ctx, files), request
+                list_entries_for_playlist(ctx, files), request
             )
         else:
             tracks = api.entries_for_request(request)
