@@ -8,8 +8,12 @@
         aria-modal="true"
         :aria-label="t('player.nowPlaying')"
       >
-        <!-- Backdrop: the artwork, blown up and blurred. -->
-        <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+        <!-- Backdrop: the artwork, blown up and blurred. Clipped, or what
+             sticks out lets the whole view scroll. -->
+        <div
+          class="pointer-events-none absolute inset-0 overflow-hidden"
+          aria-hidden="true"
+        >
           <div
             class="absolute inset-0 transition-colors duration-700"
             :style="{ backgroundColor: tint }"

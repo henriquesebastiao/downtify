@@ -73,6 +73,7 @@ import AppIcon from '../ui/AppIcon.vue'
 import { usePlayer } from '/src/model/player'
 import { loadLyrics } from '/src/model/lyrics'
 import { activeLineIndex } from '/src/lib/lrc'
+import { centerWithin } from '/src/lib/lyricsScroll'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -117,6 +118,6 @@ function userScrolled() {
 watch(active, async (index) => {
   if (index < 0 || Date.now() < manualUntil) return
   await nextTick()
-  lineEls.value[index]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  centerWithin(scroller.value, lineEls.value[index])
 })
 </script>
