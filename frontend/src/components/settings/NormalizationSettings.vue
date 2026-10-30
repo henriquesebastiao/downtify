@@ -12,6 +12,22 @@
         :aria-label="t('normalization.enable')"
       />
     </SettingRow>
+    <SettingRow
+      v-if="normalizeVolume"
+      :label="t('normalization.level')"
+      :description="t('normalization.levelHint')"
+      stacked
+    >
+      <UiSegmented
+        v-model="normalizationLevel"
+        show-labels
+        :options="[
+          { value: 'normal', label: t('normalization.levelNormal') },
+          { value: 'louder', label: t('normalization.levelLouder') },
+          { value: 'maximum', label: t('normalization.levelMaximum') },
+        ]"
+      />
+    </SettingRow>
     <p
       v-if="normalizeVolume && player.currentTrack.value"
       class="px-5 pb-4 text-sm text-muted"
@@ -75,6 +91,7 @@ import SettingGroup from './SettingGroup.vue'
 import SettingRow from './SettingRow.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiSwitch from '../ui/UiSwitch.vue'
+import UiSegmented from '../ui/UiSegmented.vue'
 import API from '/src/model/api'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { normalizationState } from '/src/model/normalization'
@@ -84,7 +101,7 @@ import { usePlayer } from '/src/model/player'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
-const { normalizeVolume } = usePlayerPrefs()
+const { normalizeVolume, normalizationLevel } = usePlayerPrefs()
 const { supported } = useEqualizer()
 const auth = useAuth()
 const player = usePlayer()
