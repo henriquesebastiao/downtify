@@ -323,6 +323,7 @@ def _result_to_song(
     cover = _upgrade_thumbnail(cover)
     album = result.get('album') or {}
     album_name = album.get('name', '') if isinstance(album, dict) else ''
+    album_id = str(album.get('id') or '') if isinstance(album, dict) else ''
     duration = result.get('duration_seconds') or _parse_duration(
         result.get('duration')
     )
@@ -335,6 +336,14 @@ def _result_to_song(
         'name': result.get('title', ''),
         'artists': artists,
         'album_name': album_name,
+        # Where the search page's album and artist names lead: the
+        # YouTube Music album and each credited artist's channel.
+        'album_url': (
+            f'https://music.youtube.com/browse/{album_id.strip()}'
+            if album_id.strip()
+            else ''
+        ),
+        'artist_urls': _artist_channel_urls(result.get('artists')),
         'cover_url': cover,
         'duration': duration,
         'url': f'https://music.youtube.com/watch?v={video_id}',
@@ -345,6 +354,21 @@ def _result_to_song(
     }
     row['spotify_url'] = spotify_open_url(row)
     return row
+
+
+def _artist_channel_urls(artists: Any) -> dict[str, str]:
+    """``{name: YouTube Music channel URL}`` for each artist entry of a
+    search row that carries a channel id (uncredited ones don't)."""
+
+    urls: dict[str, str] = {}
+    for artist in artists or []:
+        if not isinstance(artist, dict):
+            continue
+        name = str(artist.get('name') or '').strip()
+        channel_id = str(artist.get('id') or '').strip()
+        if name and channel_id:
+            urls[name] = f'https://music.youtube.com/channel/{channel_id}'
+    return urls
 
 
 def spotify_open_url(song: dict[str, Any]) -> str:

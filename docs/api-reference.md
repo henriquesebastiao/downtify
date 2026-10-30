@@ -48,7 +48,7 @@ Search YouTube Music by free text.
 |-----------|------|----------|-------------|
 | `query` | string | yes | Search query |
 
-**Response:** Array of song objects (up to 20 results).
+**Response:** Array of song objects (up to 20 results). Each YouTube Music row also carries `album_url` (its album on YouTube Music, `""` when it has none) and `artist_urls` (`{name: YouTube Music channel URL}` for each credited artist that has a channel); the search page links a row's album and artist names to them.
 
 When YouTube Music returns nothing and slskd is an enabled audio source, the response is a single placeholder song built from the query itself (`"source": "text_search"`; `Artist - Title` is split into artist and title), so it can still be downloaded from Soulseek.
 
