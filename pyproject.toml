@@ -12,10 +12,10 @@ dependencies = [
     "loguru>=0.7.3",
     "mutagen>=1.48.1",
     "uvicorn>=0.54.0",
-    "websockets>=17.3",
+    "websockets>=17.4",
     "yt-dlp>=2026.10.26",
     "ytmusicapi>=1.12.3",
-    "zeroconf>=0.151.5",
+    "zeroconf>=0.152.0",
 ]
 
 [dependency-groups]
