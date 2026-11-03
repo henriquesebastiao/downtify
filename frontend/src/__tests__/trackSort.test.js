@@ -14,6 +14,7 @@ const tracks = [
     title: 'Bravo',
     artist: 'Zed',
     album: 'Two',
+    releaseDate: '2002-05-01',
     added: 20,
     duration: 300,
   },
@@ -22,6 +23,7 @@ const tracks = [
     title: 'alpha',
     artist: 'Yan',
     album: 'One',
+    releaseDate: '2024-01-15',
     added: 30,
     duration: 100,
   },
@@ -30,6 +32,7 @@ const tracks = [
     title: 'Charlie',
     artist: 'Xi',
     album: 'Three',
+    releaseDate: '1997',
     added: 10,
     duration: 200,
   },
@@ -59,6 +62,11 @@ describe('sortTracks', () => {
   it('sorts by length: longest or shortest first', () => {
     expect(order('longest')).toEqual(['b', 'c', 'a'])
     expect(order('shortest')).toEqual(['a', 'c', 'b'])
+  })
+
+  it('sorts by release date, including year-only dates', () => {
+    expect(order('releaseNewest')).toEqual(['a', 'b', 'c'])
+    expect(order('releaseOldest')).toEqual(['c', 'b', 'a'])
   })
 
   it('never reorders the list it was given', () => {

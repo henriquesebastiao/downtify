@@ -28,7 +28,8 @@ _TAG_READ_THREADS = 8
 #: 7: every credited artist (``artists``, from the ARTISTS tag), with an
 #: act split into its members read as its album artist
 #: (``library_metadata.split_artists``), and the compilation flag.
-META_VERSION = 7
+#: 8: the full release date from audio tags.
+META_VERSION = 8
 
 #: Columns added after the table was first created, with their SQL type.
 _ADDED_COLUMNS = {
@@ -37,6 +38,7 @@ _ADDED_COLUMNS = {
     'album_artist': "TEXT NOT NULL DEFAULT ''",
     'track_number': 'INTEGER NOT NULL DEFAULT 0',
     'year': "TEXT NOT NULL DEFAULT ''",
+    'release_date': "TEXT NOT NULL DEFAULT ''",
     'duration': 'REAL NOT NULL DEFAULT 0',
     'meta_version': 'INTEGER NOT NULL DEFAULT 1',
     'codec': "TEXT NOT NULL DEFAULT ''",
@@ -52,6 +54,7 @@ _ADDED_COLUMNS = {
 _ROW_COLUMNS = (
     'content_key, filename, file_mtime_ns, file_size, title, artist, '
     'album, has_cover, cover_px, album_artist, track_number, year, '
+    'release_date, '
     'duration, meta_version, codec, bitrate, sample_rate, channels, '
     'genre, explicit, artists, compilation'
 )
@@ -91,6 +94,7 @@ def _row_entry(
         'album_artist': str(row['album_artist'] or ''),
         'track_number': int(row['track_number'] or 0),
         'year': str(row['year'] or ''),
+        'release_date': str(row['release_date'] or ''),
         'duration': float(row['duration'] or 0.0),
         'codec': str(row['codec'] or ''),
         'bitrate': int(row['bitrate'] or 0),
@@ -146,6 +150,7 @@ class LibraryMetadataCache:
                         album_artist TEXT NOT NULL DEFAULT '',
                         track_number INTEGER NOT NULL DEFAULT 0,
                         year TEXT NOT NULL DEFAULT '',
+                        release_date TEXT NOT NULL DEFAULT '',
                         duration REAL NOT NULL DEFAULT 0,
                         meta_version INTEGER NOT NULL DEFAULT 1,
                         codec TEXT NOT NULL DEFAULT '',
@@ -514,12 +519,13 @@ class LibraryMetadataCache:
         conn.execute(
             """INSERT INTO library_metadata
                (content_key, filename, title, artist, album, has_cover,
-                cover_px, album_artist, track_number, year, duration,
+                     cover_px, album_artist, track_number, year, release_date,
+                     duration,
                 meta_version, codec, bitrate, sample_rate, channels, genre,
                 explicit, artists, compilation, file_mtime_ns, file_size,
                 cached_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                       ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                              ?, ?, ?, ?, ?, ?)
                ON CONFLICT(content_key) DO UPDATE SET
                filename=excluded.filename,
                title=excluded.title,
@@ -530,6 +536,7 @@ class LibraryMetadataCache:
                album_artist=excluded.album_artist,
                track_number=excluded.track_number,
                year=excluded.year,
+               release_date=excluded.release_date,
                duration=excluded.duration,
                meta_version=excluded.meta_version,
                codec=excluded.codec,
@@ -554,6 +561,7 @@ class LibraryMetadataCache:
                 str(entry.get('album_artist') or ''),
                 int(entry.get('track_number') or 0),
                 str(entry.get('year') or ''),
+                str(entry.get('release_date') or ''),
                 float(entry.get('duration') or 0.0),
                 META_VERSION,
                 str(entry.get('codec') or ''),

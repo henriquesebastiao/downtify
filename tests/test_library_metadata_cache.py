@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from unittest.mock import patch
 
-from mutagen.id3 import ID3, TIT2, TPE1
+from mutagen.id3 import ID3, TDRC, TIT2, TPE1
 
 from downtify import library_metadata
 from downtify.library_catalog import LibraryContext, list_library_entries
@@ -14,11 +14,15 @@ from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.sqlite_utils import connect_sqlite
 
 
-def _write_tagged_mp3(path: Path, title: str, artist: str) -> None:
+def _write_tagged_mp3(
+    path: Path, title: str, artist: str, release_date: str = ''
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tags = ID3()
     tags.add(TIT2(encoding=3, text=title))
     tags.add(TPE1(encoding=3, text=artist))
+    if release_date:
+        tags.add(TDRC(encoding=3, text=release_date))
     tags.save(str(path), v2_version=3)
 
 
@@ -128,7 +132,7 @@ def test_cache_rows_carry_album_and_file_details(tmp_path: Path) -> None:
     download_dir = tmp_path / 'downloads'
     download_dir.mkdir()
     track = download_dir / 'Artist - Song.mp3'
-    _write_tagged_mp3(track, 'Song', 'Artist')
+    _write_tagged_mp3(track, 'Song', 'Artist', '2022-10-07')
 
     cache = LibraryMetadataCache(tmp_path / 'library.db')
     first = cache.get_entry('Artist - Song.mp3', track)
@@ -142,6 +146,7 @@ def test_cache_rows_carry_album_and_file_details(tmp_path: Path) -> None:
         assert entry['added'] == int(track.stat().st_mtime)
         assert entry['track_number'] == 0
         assert 'album_artist' in entry
+        assert entry['release_date'] == '2022-10-07'
         assert 'duration' in entry
 
 
