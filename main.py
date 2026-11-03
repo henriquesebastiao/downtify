@@ -1229,8 +1229,8 @@ def build_app() -> FastAPI:
             full,
             media_type=mimetypes.guess_type(str(full))[0] or 'image/jpeg',
             headers={
-                'Cache-Control': 'public, max-age=86400',
-                'ETag': f'"{int(full.stat().st_mtime)}"',
+                'Cache-Control': 'no-cache',
+                'ETag': f'"{full.stat().st_mtime_ns}"',
             },
         )
 

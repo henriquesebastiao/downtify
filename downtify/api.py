@@ -545,7 +545,9 @@ from .manual_playlists import (
     detach_imported_playlist,
     edit_manual_playlist,
     existing_playlist_names,
+    remove_manual_playlist_cover,
     rename_manual_playlist,
+    save_manual_playlist_cover,
 )
 from .monitor import (
     ALL_RELEASE_TYPES,
@@ -588,7 +590,7 @@ from .playlist_hidden import (
     source_track_ids,
 )
 from .playlist_listing import list_library_playlists
-from .playlist_mosaic import keep_explicit_cover
+from .playlist_mosaic import MAX_PLAYLIST_COVER_BYTES, keep_explicit_cover
 from .playlist_shares import (
     PRIVATE,
     SHARED,
@@ -6973,6 +6975,68 @@ async def create_library_playlist_endpoint(request: Request) -> dict[str, Any]:
     claim_manual_playlist(str(result.get('name') or name), request)
     invalidate_library_paths_cache()
     return result
+
+
+@router.put('/api/library/playlists/cover')
+async def upload_library_playlist_cover_endpoint(
+    request: Request, name: str = Query(...)
+) -> dict[str, Any]:
+    """Set a manual playlist's own cover (owner or admin only)."""
+
+    entry = require_playlist_visible(name, request, manage=True)
+    if not entry.get('manual'):
+        raise HTTPException(
+            status_code=403, detail='Only a Library playlist can change its cover'
+        )
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > MAX_PLAYLIST_COVER_BYTES:
+            raise HTTPException(status_code=413, detail='Cover image is too large')
+    content_type = request.headers.get('content-type', '').split(';', 1)[0]
+    try:
+        await asyncio.to_thread(
+            save_manual_playlist_cover,
+            library_context(),
+            str(entry.get('name') or name),
+            bytes(data),
+            content_type.lower(),
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    await announce_playlists_changed()
+    return {'ok': True}
+
+
+@router.delete('/api/library/playlists/cover')
+async def remove_library_playlist_cover_endpoint(
+    request: Request, name: str = Query(...)
+) -> dict[str, Any]:
+    """Remove a manual playlist's own cover (owner or admin only)."""
+
+    entry = require_playlist_visible(name, request, manage=True)
+    if not entry.get('manual'):
+        raise HTTPException(
+            status_code=403, detail='Only a Library playlist can change its cover'
+        )
+    try:
+        await asyncio.to_thread(
+            remove_manual_playlist_cover,
+            library_context(),
+            str(entry.get('name') or name),
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    await announce_playlists_changed()
+    return {'ok': True}
 
 
 @router.get('/api/library/playlists/external')

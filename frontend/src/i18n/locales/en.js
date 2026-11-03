@@ -993,6 +993,12 @@ export default {
     nothingYet: 'No tracks yet',
     nothingYetHint: 'Tracks appear here as they finish downloading.',
     nothingYetManualHint: 'Add songs from your library.',
+    uploadCover: 'Upload cover',
+    removeCover: 'Remove cover',
+    coverSaved: 'Playlist cover saved',
+    coverRemoved: 'Playlist cover removed',
+    coverInvalid: 'Choose a JPEG, PNG or WebP image.',
+    coverTooLarge: 'Cover images must be 10 MiB or smaller.',
   },
   track: {
     title: 'Title',

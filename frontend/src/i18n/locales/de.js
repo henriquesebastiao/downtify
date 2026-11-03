@@ -1037,6 +1037,12 @@ export default {
     nothingYetHint:
       'Hier erscheinen Titel, sobald der Download abgeschlossen ist.',
     nothingYetManualHint: 'Füge Titel aus deiner Bibliothek hinzu.',
+    uploadCover: 'Cover hochladen',
+    removeCover: 'Cover entfernen',
+    coverSaved: 'Playlist-Cover gespeichert',
+    coverRemoved: 'Playlist-Cover entfernt',
+    coverInvalid: 'Wähle ein JPEG-, PNG- oder WebP-Bild aus.',
+    coverTooLarge: 'Das Bild darf höchstens 10 MiB groß sein.',
   },
   track: {
     title: 'Titel',

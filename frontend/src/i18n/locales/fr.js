@@ -1037,6 +1037,12 @@ export default {
     nothingYetHint:
       'Les titres apparaissent ici à mesure qu’ils sont téléchargés.',
     nothingYetManualHint: 'Ajoutez des titres depuis votre bibliothèque.',
+    uploadCover: 'Importer une pochette',
+    removeCover: 'Supprimer la pochette',
+    coverSaved: 'Pochette de la playlist enregistrée',
+    coverRemoved: 'Pochette de la playlist supprimée',
+    coverInvalid: 'Choisissez une image JPEG, PNG ou WebP.',
+    coverTooLarge: 'L’image doit faire 10 Mio ou moins.',
   },
   track: {
     title: 'Titre',

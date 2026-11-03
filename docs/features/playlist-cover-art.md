@@ -50,6 +50,8 @@ Failing to resolve or download the cover (a network error, a playlist with no ar
 
 A playlist that has its own artwork (downloaded with a Spotify or YouTube playlist) shows it everywhere the Library lists playlists — the grid, the playlist page, the sidebar and the player. Playlists without one, and playlists you create in the Library, show a mosaic of up to four distinct track covers: two side by side, three as a tall left tile plus two stacked on the right, four as a 2×2 grid. The same collage is written as `<playlist-name>.jpg` beside a manual playlist's M3U so Navidrome sees it too, and it is rebuilt whenever you add or remove songs.
 
+On a playlist you created, choose **Upload cover** to use your own JPEG, PNG or WebP image (up to 10 MiB). Downtify converts it to the `.jpg` sidecar beside the M3U, and shows it in the Library, on the playlist page and in the player's playlist context. Only the playlist owner and admins can upload or remove it. **Remove cover** restores the generated track mosaic.
+
 ## Navidrome
 
 Nothing to configure: Navidrome resolves playlist artwork from a **sidecar image** — a file named after the playlist, in the same folder — which is exactly what Downtify writes. As long as Navidrome's music folder covers your downloads folder, the artwork appears on its next scan. No API call from Downtify is involved. See [slskd & Navidrome](slskd-navidrome.md#navidrome).

@@ -369,6 +369,7 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       // The playlist of hearted songs, not a downloaded one.
       liked: Boolean(playlist.liked),
       manual: Boolean(playlist.manual),
+      explicitCover: Boolean(playlist.explicit_cover),
       fileCount: playlist.count != null ? Number(playlist.count) : files.length,
       tracks,
       // A manual playlist uses a live mosaic unless a source image was

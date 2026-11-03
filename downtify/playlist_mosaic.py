@@ -145,6 +145,66 @@ def _compose(images: list[bytes], dest: Path) -> bool:
         return True
 
 
+MAX_PLAYLIST_COVER_BYTES = 10 * 1024 * 1024
+
+
+def normalize_uploaded_cover(data: bytes, content_type: str) -> bytes:
+    """Validate and convert an uploaded JPEG, PNG or WebP to a sidecar JPEG."""
+
+    if not data or len(data) > MAX_PLAYLIST_COVER_BYTES:
+        raise ValueError('Cover image must be between 1 byte and 10 MiB')
+    signatures = {
+        'image/jpeg': data.startswith(b'\xff\xd8\xff'),
+        'image/png': data.startswith(b'\x89PNG\r\n\x1a\n'),
+        'image/webp': (
+            len(data) >= 12
+            and data.startswith(b'RIFF')
+            and data[8:12] == b'WEBP'
+        ),
+    }
+    if content_type not in signatures or not signatures[content_type]:
+        raise ValueError('Upload a valid JPEG, PNG or WebP image')
+    ffmpeg = _ffmpeg()
+    if not ffmpeg:
+        raise RuntimeError('Image conversion is unavailable')
+    try:
+        result = subprocess.run(
+            [
+                ffmpeg,
+                '-nostdin',
+                '-hide_banner',
+                '-loglevel',
+                'error',
+                '-max_pixels',
+                '40000000',
+                '-f',
+                'image2pipe',
+                '-i',
+                'pipe:0',
+                '-frames:v',
+                '1',
+                '-vf',
+                'scale=1600:1600:force_original_aspect_ratio=decrease',
+                '-q:v',
+                '3',
+                '-f',
+                'image2pipe',
+                '-vcodec',
+                'mjpeg',
+                'pipe:1',
+            ],
+            input=data,
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ValueError('Could not decode cover image') from exc
+    if result.returncode or not result.stdout.startswith(b'\xff\xd8'):
+        raise ValueError('Could not decode cover image')
+    return result.stdout
+
+
 def refresh_manual_playlist_cover(
     ctx: LibraryContext, m3u_path: Path, files: list[str]
 ) -> Optional[Path]:

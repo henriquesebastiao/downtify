@@ -999,6 +999,12 @@ export default {
     nothingYet: 'Още няма изтеглени песни',
     nothingYetHint: 'Песните се появяват тук, когато се изтеглят.',
     nothingYetManualHint: 'Добави песни от библиотеката.',
+    uploadCover: 'Качи обложка',
+    removeCover: 'Премахни обложката',
+    coverSaved: 'Обложката на плейлиста е запазена',
+    coverRemoved: 'Обложката на плейлиста е премахната',
+    coverInvalid: 'Избери JPEG, PNG или WebP изображение.',
+    coverTooLarge: 'Изображението трябва да е до 10 MiB.',
   },
   track: {
     title: 'Заглавие',

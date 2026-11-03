@@ -1315,6 +1315,22 @@ Create an empty playlist the user can edit in **Library → Playlists**. Writes 
 
 ---
 
+### `PUT /api/library/playlists/cover`
+
+Upload a custom cover for a **manual** playlist. Only its owner or an admin may change it; imported playlists return `403`, and playlists the caller cannot open return `404`. The raw request body must be an `image/jpeg`, `image/png` or `image/webp` image no larger than 10 MiB. Downtify validates and converts it to the `.jpg` sidecar beside the M3U, then sends `playlists_changed` so connected clients refresh the cover.
+
+**Query parameter:** `name` — playlist name.
+
+**Response:** `{ "ok": true }`; `400` for an invalid image, `413` when the body exceeds 10 MiB, or `503` if image conversion is unavailable.
+
+---
+
+### `DELETE /api/library/playlists/cover`
+
+Remove the custom cover from a **manual** playlist. Only its owner or an admin may change it; the generated track mosaic is restored beside the M3U. Uses the same `name` query parameter and returns `{ "ok": true }`.
+
+---
+
 ### `POST /api/library/playlists/tracks`
 
 Add or remove library files (downloads or [extra folders](features/external-library.md)) on a **manual** playlist: your own (an admin may change any), or one shared with you as an [editor](features/collaborative-playlists.md) (`can_edit_tracks`). Imported playlists return `403`: hide their songs with [`POST /api/library/playlists/hidden`](#post-apilibraryplaylistshidden) instead. `403` for someone who can open the playlist without being its owner or an editor, and for an editor sending `source_playlist_url` (the source artwork stays the owner's). A song the caller can't see — missing, or [hidden from users](features/users.md#hiding-from-users) — is refused with `400`. Missing files are dropped from the M3U. When the playlist is shared, `playlists_changed` goes out on the WebSocket so the owner and the other editors list it again.
