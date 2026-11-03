@@ -473,6 +473,17 @@ function createLibraryPlaylist(name) {
   return API.post('/api/library/playlists', { name })
 }
 
+function uploadLibraryPlaylistCover(name, file, contentType) {
+  return API.put('/api/library/playlists/cover', file, {
+    params: { name },
+    headers: { 'Content-Type': contentType },
+  })
+}
+
+function removeLibraryPlaylistCover(name) {
+  return API.delete('/api/library/playlists/cover', { params: { name } })
+}
+
 function discoverExternalPlaylists() {
   return API.get('/api/library/playlists/external')
 }
@@ -1024,6 +1035,8 @@ export default {
   deleteDownloadsBatch,
   deleteLibraryPlaylist,
   createLibraryPlaylist,
+  uploadLibraryPlaylistCover,
+  removeLibraryPlaylistCover,
   discoverExternalPlaylists,
   importExternalPlaylists,
   getTrackLoudness,

@@ -305,6 +305,7 @@
 
           <!-- Downloads & files -->
           <template v-else-if="section === 'files'">
+            <GlobalQueueControl />
             <SettingGroup :title="t('settings.audioGroup')">
               <SettingRow
                 :label="t('settings.format')"
@@ -912,6 +913,7 @@
 </template>
 
 <script setup>
+import GlobalQueueControl from '/src/components/queue/GlobalQueueControl.vue'
 import { computed, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute } from 'vue-router'
 import AppIcon from '/src/components/ui/AppIcon.vue'

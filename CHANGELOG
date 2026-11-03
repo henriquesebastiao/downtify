@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.8.1](https://github.com/henriquesebastiao/downtify/tree/3.8.1) (2026-10-31)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.8.0...3.8.1)
+
+**Merged pull requests:**
+
+- perf: serve library pages without waiting on the disk [\#519](https://github.com/henriquesebastiao/downtify/pull/519) ([ruflas](https://github.com/ruflas))
+- fix\(player\): keep Now playing in place at the end of the lyrics [\#518](https://github.com/henriquesebastiao/downtify/pull/518) ([ruflas](https://github.com/ruflas))
+- feat\(search\): open a song result's album or artist from its row [\#517](https://github.com/henriquesebastiao/downtify/pull/517) ([michaelmcg](https://github.com/michaelmcg))
+- feat\(player\): add safe playback normalization levels [\#516](https://github.com/henriquesebastiao/downtify/pull/516) ([QuietForge7294](https://github.com/QuietForge7294))
+- feat: pause server downloads and watches from settings and monitor [\#515](https://github.com/henriquesebastiao/downtify/pull/515) ([QuietForge7294](https://github.com/QuietForge7294))
+- perf: reduce idle slskd polling and repeated disk scans [\#513](https://github.com/henriquesebastiao/downtify/pull/513) ([QuietForge7294](https://github.com/QuietForge7294))
+
 ## [3.8.0](https://github.com/henriquesebastiao/downtify/tree/3.8.0) (2026-10-29)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.7.0...3.8.0)

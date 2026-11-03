@@ -1976,6 +1976,38 @@ def test_result_to_song_adds_title_featuring_artist():
     assert song['artists'] == ['Turf Rebels', 'Grian Chatten']
 
 
+def test_result_to_song_links_album_and_artists():
+    # The search page links a row's album and artists to their YouTube
+    # Music pages; an artist without a channel id stays plain text.
+    result = {
+        'videoId': 'aaaaaaaaaaa',
+        'title': 'Innerbloom',
+        'artists': [
+            {'name': 'RÜFÜS DU SOL', 'id': 'UCabc'},
+            {'name': 'Guest', 'id': None},
+        ],
+        'album': {'name': 'Bloom', 'id': 'MPREb_xyz'},
+        'duration_seconds': 579,
+    }
+    song = providers._result_to_song(result)
+    assert song['album_url'] == 'https://music.youtube.com/browse/MPREb_xyz'
+    assert song['artist_urls'] == {
+        'RÜFÜS DU SOL': 'https://music.youtube.com/channel/UCabc'
+    }
+
+
+def test_result_to_song_without_album_id_has_no_album_url():
+    result = {
+        'videoId': 'aaaaaaaaaaa',
+        'title': 'Loose',
+        'artists': [{'name': 'Someone'}],
+        'album': {'name': 'Bloom'},
+    }
+    song = providers._result_to_song(result)
+    assert not song['album_url']
+    assert song['artist_urls'] == {}
+
+
 # ── _prefer_official_audio_track ────────────────────────────────────────────────
 
 

@@ -1,13 +1,19 @@
 // Playback volume normalization: the server's loudness measurement of a
 // library track (downtify/loudness.py) becomes one constant gain, applied
 // by the equalizer's output node. Audio files are never changed.
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import API from '/src/model/api'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 
 export const normalizationEnabled = usePlayerPrefs().normalizeVolume
+export const normalizationLevel = usePlayerPrefs().normalizationLevel
 export const normalizationGain = ref(0)
 export const normalizationState = ref('unanalysed')
+let appliedProfile = null
+
+watch(normalizationLevel, (level) => {
+  normalizationGain.value = safeNormalizationGain(appliedProfile, level)
+})
 
 // Profiles already fetched, by library path, so resuming, repeating or
 // reaching a prefetched track applies its gain without waiting. Kept a
@@ -25,7 +31,7 @@ function remember(file, profile) {
   }
 }
 
-export function safeNormalizationGain(profile) {
+export function safeNormalizationGain(profile, level = 'normal') {
   if (profile?.state !== 'ready' || profile.algorithm_version !== 1) return 0
   const integrated = profile.integrated_lufs
   const peak = profile.true_peak_dbtp
@@ -39,7 +45,8 @@ export function safeNormalizationGain(profile) {
     gain < -60
   )
     return 0
-  return Math.min(12, -18 - integrated, -1 - peak, gain)
+  const offset = level === 'louder' ? 6 : level === 'maximum' ? 12 : 0
+  return Math.min(12, -18 + offset - integrated, -1 - peak, gain + offset)
 }
 
 /**
@@ -82,7 +89,11 @@ export function prefetchTrackNormalization(track) {
 }
 
 export function applyTrackNormalization(profile) {
-  normalizationGain.value = safeNormalizationGain(profile)
+  appliedProfile = profile
+  normalizationGain.value = safeNormalizationGain(
+    profile,
+    normalizationLevel.value
+  )
   const state = profile?.state
   normalizationState.value = [
     'ready',

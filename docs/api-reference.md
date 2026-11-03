@@ -48,7 +48,7 @@ Search YouTube Music by free text.
 |-----------|------|----------|-------------|
 | `query` | string | yes | Search query |
 
-**Response:** Array of song objects (up to 20 results).
+**Response:** Array of song objects (up to 20 results). Each YouTube Music row also carries `album_url` (its album on YouTube Music, `""` when it has none) and `artist_urls` (`{name: YouTube Music channel URL}` for each credited artist that has a channel); the search page links a row's album and artist names to them.
 
 When YouTube Music returns nothing and slskd is an enabled audio source, the response is a single placeholder song built from the query itself (`"source": "text_search"`; `Artist - Title` is split into artist and title), so it can still be downloaded from Soulseek.
 
@@ -685,6 +685,11 @@ Whether the download queue is paused. Anyone signed in can read it. See [Downloa
 | `paused` | boolean | Whether the queue is paused |
 | `state` | string | `running`, `pausing` (paused, with `active` downloads still finishing) or `paused` (nothing running) |
 | `active` | integer | Downloads running right now, everyone's (Playlist Monitor sweeps included) |
+| `global_pause_supported` | boolean | Whether pause also gates watch checks and podcasts; absent on older servers |
+| `monitors_paused` | boolean | Whether new automatic checks wait at the global gate |
+| `can_control` | boolean | Whether this request can use the web administrator control; false for paired devices |
+
+A native library improvement finishing its current track also counts as active while paused. Pausing requests its native pause; global resume leaves it paused until explicitly resumed in its own screen. Starting or recovering an improvement run respects the global pause.
 
 Every change is also broadcast as a `queue_state` [WebSocket](#websocket) frame.
 
@@ -694,7 +699,7 @@ Every change is also broadcast as a `queue_state` [WebSocket](#websocket) frame.
 
 Admin. Pause the queue: no download starts until it is resumed, and the ones already running finish normally. Waiting jobs keep their place (`status: "queued"`, including a `POST /api/download/url` that hasn't started — that request waits until the queue is resumed), and Playlist Monitor sweeps wait before each track. The switch is saved, so the queue is still paused after a restart.
 
-**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+**Response:** the `paused`, `state` and `active` fields of [`GET /api/queue/state`](#get-apiqueuestate). Read GET for request-specific control capability.
 
 ---
 
@@ -702,7 +707,7 @@ Admin. Pause the queue: no download starts until it is resumed, and the ones alr
 
 Admin. Carry on with the waiting jobs, with the current settings and audio provider order.
 
-**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+**Response:** the `paused`, `state` and `active` fields of [`GET /api/queue/state`](#get-apiqueuestate). Read GET for request-specific control capability.
 
 Unfinished jobs (waiting, or interrupted mid-download) are saved in `/data` and queued again when Downtify starts, paused or not; finished and failed ones are not.
 
@@ -1056,6 +1061,8 @@ Query filters so the browser does not download every track to show a short list:
 | `q=words` | Title / artist / album / path must contain every word |
 | `limit=N` | Cap the list (`1`–`200`). Used by the "add songs" picker |
 
+`GET /tracks`, `GET /playlists`, `GET /api/library/albums`, `GET /api/library/artists` and `GET /api/library/summary` carry an `ETag` and `Cache-Control: private, no-cache`: send the tag back as `If-None-Match` and an unchanged listing answers `304 Not Modified` with no body. Browsers do this on their own.
+
 Unfiltered `GET /tracks` is still the Library **Tracks** tab. Album and artist pages use `?artist=`. Search and pasted links use [`POST /api/library/lookup`](#post-apilibrarylookup).
 
 Sorted by `file`, same order as `/list` (except `?playlist=`, which keeps playlist order). `artist`/`album` come back as `""` when the file has no readable tag for that field — the frontend then simply doesn't offer it as a filter for that track.
@@ -1305,6 +1312,22 @@ Create an empty playlist the user can edit in **Library → Playlists**. Writes 
 **Request body:** `{ "name": "Late night" }`
 
 **Response:** `{ "name": "Late night", "manual": true, "files": [], "count": 0 }`
+
+---
+
+### `PUT /api/library/playlists/cover`
+
+Upload a custom cover for a **manual** playlist. Only its owner or an admin may change it; imported playlists return `403`, and playlists the caller cannot open return `404`. The raw request body must be an `image/jpeg`, `image/png` or `image/webp` image no larger than 10 MiB. Downtify validates and converts it to the `.jpg` sidecar beside the M3U, then sends `playlists_changed` so connected clients refresh the cover.
+
+**Query parameter:** `name` — playlist name.
+
+**Response:** `{ "ok": true }`; `400` for an invalid image, `413` when the body exceeds 10 MiB, or `503` if image conversion is unavailable.
+
+---
+
+### `DELETE /api/library/playlists/cover`
+
+Remove the custom cover from a **manual** playlist. Only its owner or an admin may change it; the generated track mosaic is restored beside the M3U. Uses the same `name` query parameter and returns `{ "ok": true }`.
 
 ---
 

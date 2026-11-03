@@ -1,12 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 
-const { getLibrarySummary, listPlaylists, getPlaylistBatches } = vi.hoisted(
-  () => ({
-    getLibrarySummary: vi.fn(),
-    listPlaylists: vi.fn(),
-    getPlaylistBatches: vi.fn(),
-  })
-)
+const {
+  getLibrarySummary,
+  listPlaylists,
+  getPlaylistBatches,
+  getLibraryAlbums,
+} = vi.hoisted(() => ({
+  getLibrarySummary: vi.fn(),
+  listPlaylists: vi.fn(),
+  getPlaylistBatches: vi.fn(),
+  getLibraryAlbums: vi.fn(),
+}))
 
 vi.mock('/src/model/api', () => ({
   default: {
@@ -14,6 +18,7 @@ vi.mock('/src/model/api', () => ({
     getLibrarySummary,
     listPlaylists,
     getPlaylistBatches,
+    getLibraryAlbums,
   },
 }))
 
@@ -64,5 +69,47 @@ describe('load', () => {
 
     expect(library.loaded.value).toBe(true)
     expect(library.error.value).toBe('')
+  })
+})
+
+describe('load and a page asking for its list at the same time', () => {
+  async function freshLibrary() {
+    vi.resetModules()
+    getLibrarySummary.mockReset()
+    listPlaylists.mockReset()
+    getPlaylistBatches.mockReset()
+    getLibraryAlbums.mockReset()
+    getPlaylistBatches.mockResolvedValue({ data: { playlists: [] } })
+    listPlaylists.mockResolvedValue({ data: [] })
+    getLibraryAlbums.mockResolvedValue({ data: [] })
+    const { useLibrary: fresh } = await import('../model/library.js')
+    return fresh()
+  }
+
+  it('does not fetch a list the page just got again', async () => {
+    const library = await freshLibrary()
+    let answerSummary
+    getLibrarySummary.mockReturnValue(
+      new Promise((resolve) => {
+        answerSummary = resolve
+      })
+    )
+
+    const loading = library.load()
+    await library.ensureAlbums()
+    answerSummary({ data: { track_count: 1 } })
+    await loading
+
+    expect(getLibraryAlbums).toHaveBeenCalledTimes(1)
+  })
+
+  it('fetches the lists again on a forced reload', async () => {
+    const library = await freshLibrary()
+    getLibrarySummary.mockResolvedValue({ data: { track_count: 1 } })
+
+    await library.ensureAlbums()
+    await library.load({ force: true })
+
+    expect(getLibraryAlbums).toHaveBeenCalledTimes(2)
   })
 })

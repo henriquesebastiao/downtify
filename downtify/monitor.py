@@ -1911,9 +1911,15 @@ async def check_podcast_watch(
         )
 
     try:
-        count = await asyncio.to_thread(
-            sync_show, podcasts, show, download_dir, progress=_progress
-        )
+        async with queue_pause.running():
+            count = await asyncio.to_thread(
+                sync_show,
+                podcasts,
+                show,
+                download_dir,
+                progress=_progress,
+                should_continue=lambda: not queue_pause.paused,
+            )
     except Exception:
         logger.exception('Podcast sync failed for "{}"', playlist.name)
         count = 0
@@ -1938,6 +1944,7 @@ async def check_watch(
     saved = settings if settings is not None else {}
     if enabled(saved):
         return 0
+    await queue_pause.wait()
     with policy.external(saved):
         return await _check_watch_online(
             playlist,
@@ -2005,8 +2012,10 @@ async def monitor_loop(
     """Background task: sweep all enabled playlists that are due for checking."""
     while True:
         try:
+            await queue_pause.wait()
             playlists = await asyncio.to_thread(db.list_playlists)
             for pl in playlists:
+                await queue_pause.wait()
                 if not pl.enabled:
                     continue
                 if not _is_due(pl.last_checked, pl.interval_minutes):
@@ -2087,6 +2096,7 @@ async def reconcile_loop(
     """
     while True:
         try:
+            await queue_pause.wait()
             downloader = get_downloader()
             if downloader is not None:
                 removed = await reconcile_downloaded_tracks(db, downloader)

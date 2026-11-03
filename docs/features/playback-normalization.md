@@ -10,6 +10,8 @@ Songs come from many sources and are mastered at very different levels, so one s
 
 In the web app, open **Settings → General** (`/settings`) and switch on **Normalize playback volume** in the **Volume normalization** group. The choice is yours alone: it follows your account to other browsers and doesn't change anything for anyone else.
 
+When enabled, **Playback level** offers **Normal**, **Louder** and **Maximum**. This level choice is remembered in the current browser and is independent of the phone's choice. Normal keeps the existing target; the other choices raise it within each song's measured peak limit. The playing song changes level smoothly, without waiting for another track or running analysis again. Some songs therefore sound similar in Louder and Maximum when little peak headroom is available.
+
 While a song plays, the line under the switch says what was applied to it:
 
 | Message | Meaning |
@@ -27,7 +29,7 @@ The Android app has its own switch: **Settings → Playback → Normalize volume
 
 Each song gets one constant gain for its whole length — there is no compression, and quiet and loud passages inside a song keep their balance:
 
-- The target is **-18 LUFS** integrated loudness.
+- The targets are **-18 LUFS** (Normal), **-12 LUFS** (Louder) and **-6 LUFS** (Maximum) integrated loudness; the measured peak limit can keep a song below the selected target.
 - A quiet song is turned up by **at most 12 dB**.
 - The gain never pushes the song's peak above **-1 dBTP**, so it doesn't clip. The peak is measured on the song resampled to 192 kHz, which also catches peaks between samples.
 

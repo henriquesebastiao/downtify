@@ -69,6 +69,10 @@ describe('explicit manual playlist artwork', () => {
     expect(
       buildPlaylists([{ ...base, explicit_cover: true }], new Map())[0].cover
     ).toContain('Mix.jpg')
+    expect(
+      buildPlaylists([{ ...base, explicit_cover: true }], new Map())[0]
+        .explicitCover
+    ).toBe(true)
   })
 })
 
@@ -96,6 +100,15 @@ describe('normalizeTrack', () => {
   it('plays extra-folder tracks through /media', () => {
     const track = normalizeTrack('ext/abc123def456/Artist - Title.mp3')
     expect(track.url).toBe('/media/ext/abc123def456/Artist%20-%20Title.mp3')
+  })
+
+  it('keeps the release date, falling back to the year', () => {
+    expect(
+      normalizeTrack({ file: 'a.mp3', release_date: '2022-10-07' }).releaseDate
+    ).toBe('2022-10-07')
+    expect(normalizeTrack({ file: 'b.mp3', year: '1997' }).releaseDate).toBe(
+      '1997'
+    )
   })
 
   it('keeps the explicit mark, and is clean without one', () => {

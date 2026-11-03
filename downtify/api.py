@@ -545,7 +545,9 @@ from .manual_playlists import (
     detach_imported_playlist,
     edit_manual_playlist,
     existing_playlist_names,
+    remove_manual_playlist_cover,
     rename_manual_playlist,
+    save_manual_playlist_cover,
 )
 from .monitor import (
     ALL_RELEASE_TYPES,
@@ -588,7 +590,7 @@ from .playlist_hidden import (
     source_track_ids,
 )
 from .playlist_listing import list_library_playlists
-from .playlist_mosaic import keep_explicit_cover
+from .playlist_mosaic import MAX_PLAYLIST_COVER_BYTES, keep_explicit_cover
 from .playlist_shares import (
     PRIVATE,
     SHARED,
@@ -4201,7 +4203,7 @@ async def _forget_pending(song_ids: Collection[str]) -> None:
 async def _broadcast_queue_state() -> None:
     await state.connections.broadcast({
         'type': 'queue_state',
-        **queue_pause.status(),
+        **_global_queue_status(),
     })
 
 
@@ -6975,6 +6977,68 @@ async def create_library_playlist_endpoint(request: Request) -> dict[str, Any]:
     return result
 
 
+@router.put('/api/library/playlists/cover')
+async def upload_library_playlist_cover_endpoint(
+    request: Request, name: str = Query(...)
+) -> dict[str, Any]:
+    """Set a manual playlist's own cover (owner or admin only)."""
+
+    entry = require_playlist_visible(name, request, manage=True)
+    if not entry.get('manual'):
+        raise HTTPException(
+            status_code=403, detail='Only a Library playlist can change its cover'
+        )
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > MAX_PLAYLIST_COVER_BYTES:
+            raise HTTPException(status_code=413, detail='Cover image is too large')
+    content_type = request.headers.get('content-type', '').split(';', 1)[0]
+    try:
+        await asyncio.to_thread(
+            save_manual_playlist_cover,
+            library_context(),
+            str(entry.get('name') or name),
+            bytes(data),
+            content_type.lower(),
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    await announce_playlists_changed()
+    return {'ok': True}
+
+
+@router.delete('/api/library/playlists/cover')
+async def remove_library_playlist_cover_endpoint(
+    request: Request, name: str = Query(...)
+) -> dict[str, Any]:
+    """Remove a manual playlist's own cover (owner or admin only)."""
+
+    entry = require_playlist_visible(name, request, manage=True)
+    if not entry.get('manual'):
+        raise HTTPException(
+            status_code=403, detail='Only a Library playlist can change its cover'
+        )
+    try:
+        await asyncio.to_thread(
+            remove_manual_playlist_cover,
+            library_context(),
+            str(entry.get('name') or name),
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    await announce_playlists_changed()
+    return {'ok': True}
+
+
 @router.get('/api/library/playlists/external')
 async def external_playlist_candidates(request: Request) -> dict[str, Any]:
     user_id = request_user_id(request)
@@ -8256,7 +8320,7 @@ def remove_queue_item(request: Request, song_id: str = Query(...)) -> dict:
 
 
 @router.get('/api/queue/state')
-def get_queue_state() -> dict[str, Any]:
+def get_queue_state(request: Request) -> dict[str, Any]:
     """Whether the queue is paused: ``{paused, state, active}``.
 
     ``state`` is ``running``, ``pausing`` (paused, ``active`` downloads
@@ -8265,12 +8329,30 @@ def get_queue_state() -> dict[str, Any]:
     WebSocket frame.
     """
 
-    return queue_pause.status()
+    return {
+        **_global_queue_status(),
+        'monitors_paused': queue_pause.paused,
+        'global_pause_supported': True,
+        'can_control': request_is_admin(request)
+        and getattr(getattr(request.state, 'principal', None), 'kind', '')
+        != 'device',
+    }
+
+
+def _global_queue_status() -> dict[str, Any]:
+    status = queue_pause.status()
+    runner = state.upgrade_runner
+    if status['paused'] and runner is not None and runner.busy():
+        status['active'] += 1
+        status['state'] = 'pausing'
+    return status
 
 
 async def _set_queue_paused(paused: bool) -> dict[str, Any]:
     if paused:
         queue_pause.pause()
+        if state.upgrade_runner is not None and state.upgrade_runner.busy():
+            state.upgrade_runner.pause()
     else:
         queue_pause.resume()
     store = state.pending_downloads
@@ -8281,7 +8363,7 @@ async def _set_queue_paused(paused: bool) -> dict[str, Any]:
             logger.exception('Could not save the queue pause')
     logger.info('Download queue {}', 'paused' if paused else 'resumed')
     await _broadcast_queue_state()
-    return queue_pause.status()
+    return _global_queue_status()
 
 
 @router.post('/api/queue/pause')
@@ -9754,16 +9836,17 @@ async def download_podcast_episode(
         cover_bytes = await asyncio.to_thread(
             best_cover_bytes, show['artwork_url']
         )
-        filename = await asyncio.to_thread(
-            download_episode,
-            info,
-            show_name=show['name'],
-            author=show['author'],
-            folder_name=show['folder_name'],
-            download_dir=Path(state.downloader.download_dir),
-            cover_bytes=cover_bytes,
-            progress=_progress,
-        )
+        async with queue_pause.running():
+            filename = await asyncio.to_thread(
+                download_episode,
+                info,
+                show_name=show['name'],
+                author=show['author'],
+                folder_name=show['folder_name'],
+                download_dir=Path(state.downloader.download_dir),
+                cover_bytes=cover_bytes,
+                progress=_progress,
+            )
     except Exception as exc:
         raise HTTPException(
             status_code=502, detail=f'Download failed: {exc}'

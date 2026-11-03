@@ -99,6 +99,7 @@ class QueuePause:
     async def running(self) -> AsyncIterator[None]:
         """Count one download as running for as long as the block lasts."""
 
+        await self.wait()
         self._active += 1
         try:
             yield

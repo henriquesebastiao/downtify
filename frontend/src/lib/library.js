@@ -128,6 +128,7 @@ export function normalizeTrack(row) {
     compilation,
     trackNumber: Number(raw.track_number) || 0,
     year: String(raw.year || ''),
+    releaseDate: String(raw.release_date || raw.year || ''),
     duration: Number(raw.duration) || 0,
     explicit: Boolean(raw.explicit),
     // Admins only: why users can't see this track ('track', 'album' or
@@ -368,6 +369,7 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
       // The playlist of hearted songs, not a downloaded one.
       liked: Boolean(playlist.liked),
       manual: Boolean(playlist.manual),
+      explicitCover: Boolean(playlist.explicit_cover),
       fileCount: playlist.count != null ? Number(playlist.count) : files.length,
       tracks,
       // A manual playlist uses a live mosaic unless a source image was
@@ -473,6 +475,9 @@ const SORTERS = {
     compareText(a.title ?? a.name, b.title ?? b.name),
   album: (a, b) => compareText(a.album, b.album) || byTrackOrder(a, b),
   year: (a, b) => compareText(b.year, a.year) || compareText(a.title, b.title),
+  releaseDate: (a, b) =>
+    compareText(b.releaseDate || b.year, a.releaseDate || a.year) ||
+    compareText(a.title, b.title),
   duration: (a, b) => b.duration - a.duration,
   count: (a, b) => itemTrackCount(b) - itemTrackCount(a),
 }
@@ -518,6 +523,8 @@ export const TRACK_SORTS = [
   ['artistDesc', 'artist', 'desc'],
   ['albumAsc', 'album', 'asc'],
   ['albumDesc', 'album', 'desc'],
+  ['releaseNewest', 'releaseDate', 'asc'],
+  ['releaseOldest', 'releaseDate', 'desc'],
   ['longest', 'duration', 'asc'],
   ['shortest', 'duration', 'desc'],
 ]

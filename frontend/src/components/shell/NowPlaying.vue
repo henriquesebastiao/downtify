@@ -8,8 +8,12 @@
         aria-modal="true"
         :aria-label="t('player.nowPlaying')"
       >
-        <!-- Backdrop: the artwork, blown up and blurred. -->
-        <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+        <!-- Backdrop: the artwork, blown up and blurred. Clipped, or what
+             sticks out lets the whole view scroll. -->
+        <div
+          class="pointer-events-none absolute inset-0 overflow-hidden"
+          aria-hidden="true"
+        >
           <div
             class="absolute inset-0 transition-colors duration-700"
             :style="{ backgroundColor: tint }"
@@ -42,13 +46,28 @@
             <component
               :is="contextRoute ? RouterLink : 'div'"
               :to="contextRoute || undefined"
-              class="flex min-w-0 flex-col max-lg:flex-1 max-lg:items-center"
+              class="flex min-w-0 items-center gap-2 max-lg:flex-1 max-lg:justify-center"
               @click="contextRoute && nowPlaying.close()"
             >
-              <span class="eyebrow !text-white/55">{{ contextLabel }}</span>
-              <span class="max-w-full truncate text-sm font-semibold">{{
-                contextTitle
-              }}</span>
+              <CoverArt
+                v-if="
+                  context?.type === 'playlist' &&
+                  (context.cover || context.covers?.length)
+                "
+                :src="context.cover || ''"
+                :covers="context.covers || []"
+                :name="context.title"
+                rounded="rounded-[5px]"
+                :letter-size="10"
+                :icon-size="12"
+                class="size-8 shrink-0"
+              />
+              <span class="flex min-w-0 flex-col">
+                <span class="eyebrow !text-white/55">{{ contextLabel }}</span>
+                <span class="max-w-full truncate text-sm font-semibold">{{
+                  contextTitle
+                }}</span>
+              </span>
             </component>
             <div
               class="ml-auto hidden gap-1 rounded-[12px] bg-white/8 p-1 lg:flex"

@@ -69,6 +69,30 @@ describe('videoIdFor', () => {
     expect(search).not.toHaveBeenCalled()
   })
 
+  it('keeps the video id on an already queued player track', async () => {
+    search.mockClear()
+    const queuedTrack = {
+      stream: true,
+      video_id: 'crAmZkrKODg',
+      title: 'Believe',
+      artist: 'Cher',
+      url: '/api/stream/file?video_id=crAmZkrKODg',
+    }
+
+    await expect(videoIdFor(queuedTrack)).resolves.toBe('crAmZkrKODg')
+    expect(search).not.toHaveBeenCalled()
+  })
+
+  it('ignores an invalid player video id and falls back to search', async () => {
+    search.mockResolvedValueOnce({
+      data: [{ name: 'Believe', artists: ['Cher'], youtube_id: 'abc123DEFGH' }],
+    })
+    await expect(
+      videoIdFor({ ...SONG, video_id: 'not-a-video-id' })
+    ).resolves.toBe('abc123DEFGH')
+    expect(search).toHaveBeenCalledWith('Cher Believe')
+  })
+
   it('falls back to the first search hit with a video id', async () => {
     search.mockResolvedValueOnce({
       data: [

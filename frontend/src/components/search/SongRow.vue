@@ -44,15 +44,43 @@
         <ExplicitBadge v-if="song.explicit" />
       </p>
       <p class="truncate text-[13px] text-muted">
-        {{ artists
-        }}<span v-if="song.album_name" class="lg:hidden">
-          · {{ song.album_name }}</span
+        <template v-if="artistLinks.length">
+          <template v-for="(artist, i) in artistLinks" :key="artist.name"
+            ><template v-if="i">, </template
+            ><RouterLink
+              v-if="artist.to"
+              :to="artist.to"
+              class="hover:text-fg hover:underline"
+              @click.stop
+              @dblclick.stop
+              >{{ artist.name }}</RouterLink
+            ><template v-else>{{ artist.name }}</template></template
+          >
+        </template>
+        <template v-else>{{ artists }}</template
+        ><span v-if="song.album_name" class="lg:hidden">
+          ·
+          <RouterLink
+            v-if="albumTo"
+            :to="albumTo"
+            class="hover:text-fg hover:underline"
+            @click.stop
+            @dblclick.stop
+            >{{ song.album_name }}</RouterLink
+          ><template v-else>{{ song.album_name }}</template></span
         >
       </p>
     </div>
-    <span class="hidden w-[30%] truncate text-[13px] text-muted lg:block">{{
-      song.album_name
-    }}</span>
+    <span class="hidden w-[30%] truncate text-[13px] text-muted lg:block">
+      <RouterLink
+        v-if="albumTo"
+        :to="albumTo"
+        class="hover:text-fg hover:underline"
+        @click.stop
+        @dblclick.stop
+        >{{ song.album_name }}</RouterLink
+      ><template v-else>{{ song.album_name }}</template>
+    </span>
     <span
       class="tabular hidden w-12 text-right text-[13px] text-muted sm:block"
     >
@@ -100,6 +128,7 @@ import { formatDuration } from '/src/lib/format'
 import { useSongPlay } from '/src/model/songPlay'
 import { useBuyLinks } from '/src/model/buyLinks'
 import { buyTargetForSong } from '/src/lib/buyLinks'
+import { localCatalogRoute } from '/src/lib/library'
 import { usePlayer } from '/src/model/player'
 import { useI18n } from '/src/i18n'
 
@@ -132,6 +161,26 @@ const artists = computed(
     (props.song.artists || []).join(', ') ||
     props.song.artist ||
     t('common.unknownArtist')
+)
+// The album and each artist open their page: a library row's Library
+// page, else the YouTube Music album / channel resolved like a pasted
+// link (the Link page), as the album and artist cards below do.
+function linkPage(url) {
+  return url ? { name: 'Link', query: { url } } : null
+}
+const artistLinks = computed(() => {
+  const urls = props.song.artist_urls || {}
+  return (props.song.artists || []).map((name) => ({
+    name,
+    to:
+      localCatalogRoute({ ...props.song, name }, 'artist') ||
+      linkPage(urls[name]),
+  }))
+})
+const albumTo = computed(
+  () =>
+    (props.song.album_name && localCatalogRoute(props.song, 'album')) ||
+    linkPage(props.song.album_url)
 )
 const firstArtist = computed(
   () => (props.song.artists || [])[0] || props.song.artist || ''

@@ -4,6 +4,8 @@ icon: lucide/file-code
 
 # Mobile Client Contract
 
+Global server pause uses `GET /api/queue/state` and web-administrator-only `POST /api/queue/pause` / `POST /api/queue/resume`. GET adds `global_pause_supported`, `monitors_paused` and request-specific `can_control` to the existing `paused`, `state`, `active` fields. A paired device token remains client-scoped even when its account is an administrator, so it must not be offered this server administration action. Phone offline copies have their own controls. See the [queue API](api-reference.md#get-apiqueuestate).
+
 How an app (the official Android client, or any other) talks to a Downtify server: **discover → check → sign in (or pair) → sync → stream → report**. Everything here is `api_version` **1**; the full request/response shapes of each endpoint are in the [API reference](api-reference.md#server-and-sign-in). User-facing behaviour (signing in, pairing, accounts, transcoding limits) is described in [Mobile Apps](features/mobile-apps.md) and [Users & Sign-in](features/users.md).
 
 ## 1. Discover

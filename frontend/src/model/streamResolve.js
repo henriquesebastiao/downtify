@@ -28,6 +28,8 @@ export function rowKey(song) {
 export function directVideoId(song) {
   const direct = String(song?.youtube_id || '').trim()
   if (VIDEO_ID_RE.test(direct)) return direct
+  const playerVideoId = String(song?.video_id || '').trim()
+  if (VIDEO_ID_RE.test(playerVideoId)) return playerVideoId
   const sid = String(song?.song_id || '').trim()
   return VIDEO_ID_RE.test(sid) ? sid : ''
 }

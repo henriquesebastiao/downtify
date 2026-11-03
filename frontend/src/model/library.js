@@ -199,9 +199,13 @@ async function load({ force = false } = {}) {
       // server checks every tracked Spotify track to build them: the page
       // shows first and the badges fill in when they arrive.
       refreshBatches()
-      if (tracksComplete.value) await ensureTracks({ force: true })
-      if (albumsComplete.value) await ensureAlbums({ force: true })
-      if (artistsComplete.value) await ensureArtists({ force: true })
+      // Only a forced reload has anything new to fetch: on a first load a
+      // list already here was requested by the page moments ago.
+      if (force) {
+        if (tracksComplete.value) await ensureTracks({ force: true })
+        if (albumsComplete.value) await ensureAlbums({ force: true })
+        if (artistsComplete.value) await ensureArtists({ force: true })
+      }
     } catch (err) {
       error.value = err?.message || 'failed'
     } finally {
