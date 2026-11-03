@@ -4,7 +4,7 @@ annotated-doc==0.0.5
     # via fastapi
 annotated-types==0.8.0
     # via pydantic
-anyio==4.15.1
+anyio==4.16.0
     # via
     #   httpx
     #   starlette
@@ -13,12 +13,16 @@ certifi==2026.10.23
     #   httpcore
     #   httpx
     #   requests
+cffi==2.1.1 ; platform_python_implementation != 'PyPy'
+    # via cryptography
 charset-normalizer==3.5.2
     # via requests
 click==8.5.0
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
     # via loguru
+cryptography==50.0.2
+    # via joserfc
 fastapi==0.162.0
     # via downtify
 feedparser==6.0.14
@@ -40,6 +44,8 @@ idna==3.20
     #   requests
 ifaddr==0.2.0
     # via zeroconf
+joserfc==1.7.7
+    # via downtify
 load-dotenv==0.1.0
     # via downtify
 loguru==0.7.3
@@ -48,6 +54,8 @@ mutagen==1.48.1
     # via downtify
 opentelemetry-api==1.45.2
     # via fastapi
+pycparser==3.12 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
+    # via cffi
 pydantic==2.14.2
     # via fastapi
 pydantic-core==2.50.2
@@ -83,5 +91,5 @@ yt-dlp==2026.10.26
     # via downtify
 ytmusicapi==1.12.3
     # via downtify
-zeroconf==0.152.0
+zeroconf==0.153.0
     # via downtify

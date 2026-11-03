@@ -35,12 +35,24 @@ Lásd: [Mobilalkalmazások](../features/mobile-apps.md) és [Felhasználók és 
 | Változó | Alapértelmezés | Leírás |
 |----------|---------|-------------|
 | `DOWNTIFY_DISABLE_AUTH` | `false` | A `true` kikapcsolja a fiókokat: senki nem jelentkezik be, és aki eléri a szervert, adminisztrátorként használja. A bejelentkezési oldal, a kijelentkezés gombok, a **Beállítások → Felhasználók** és a **Beállítások → Általános** fiókrésze eltűnik. A párosított alkalmazások tovább működnek. Állítsd vissza `false`-ra (vagy töröld), és a bejelentkezés újra kötelező, a fiókok pedig úgy maradtak, ahogy voltak. Lásd: [Felhasználók és bejelentkezés](../features/users.md#turning-accounts-off). |
+| `DOWNTIFY_DISABLE_LOCAL_LOGIN` | `false` | `true` disables username/password login in the web UI and `POST /api/auth/token`. OIDC and app pairing remain available; current sessions and device tokens are not revoked. Requires all three OIDC credentials below. |
+| `DOWNTIFY_OIDC_ISSUER` | _(unset)_ | The exact OIDC issuer URL. Enables OIDC when used with client ID and secret. |
+| `DOWNTIFY_OIDC_CLIENT_ID` | _(unset)_ | OIDC confidential client ID. |
+| `DOWNTIFY_OIDC_CLIENT_SECRET` | _(unset)_ | OIDC confidential client secret. |
+| `DOWNTIFY_OIDC_REDIRECT_URI` | _(derived)_ | Public callback URL registered with the identity provider, normally `https://music.example.com/api/auth/oidc/callback`. Set explicitly behind a reverse proxy if needed. |
+| `DOWNTIFY_OIDC_SCOPES` | `openid profile email` | Space-separated OIDC scopes. |
+| `DOWNTIFY_OIDC_USERNAME_CLAIM` | `preferred_username` | Claim used for new account names, falling back to `email` and then `sub`. |
+| `DOWNTIFY_OIDC_GROUPS_CLAIM` | `groups` | Claim containing group names; dotted paths are supported. |
+| `DOWNTIFY_OIDC_ALLOWED_GROUPS` | _(empty)_ | Comma-separated group allowlist; unset means any authenticated provider identity may sign in. |
+| `DOWNTIFY_OIDC_ADMIN_GROUPS` | _(empty)_ | Comma-separated groups mapped to Downtify admins. Other OIDC users are normal users. |
 | `DOWNTIFY_TRUSTED_PROXIES` | _(nincs beállítva)_ | A fordított proxyd vesszővel elválasztott címei vagy hálózatai (pl. `172.18.0.0/16,10.0.0.5`). Csak az ezektől érkező kéréseknél hisz az `X-Forwarded-For`, `X-Forwarded-Proto` és `X-Forwarded-Host` fejléceknek — a kliens címénél, amely alapján a bejelentkezési és párosítási kísérleteket korlátozza, a bejelentkezési süti secure jelzőjénél és az azonos webhelyre vonatkozó ellenőrzésnél. Ha nincs beállítva: ezeket a fejléceket figyelmen kívül hagyja. |
 | `DOWNTIFY_DISCOVERY` | `true` | A `false` leállítja a szerver hirdetését a helyi hálózaton (mDNS, `_downtify._tcp`), amelyet az alkalmazások arra használnak, hogy a *Ezen a hálózaton található* alatt felsorolják. A Docker bridge hálózatában a hirdetés amúgy sem jut el a LAN-ra — lásd: [Docker Compose](docker-compose.md#finding-the-server-from-the-apps). |
 | `DOWNTIFY_TRANSCODE_CACHE_MB` | `2048` | A legnagyobb méret MB-ban, amely alatt az átkódolt másolatok gyorsítótárát (`/data/transcode_cache`) tartja; a legrégebben lejátszott másolatok mennek előbb. |
 | `DOWNTIFY_TRANSCODE_CONCURRENCY` | `2` | Hány dalt kódol át egyszerre az alkalmazások kisebb streaming-minőségeihez. |
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | A legnagyobb méret MB-ban, amely alatt a streamelt hang gyorsítótárát (`/data/stream_cache`) tartja; a legrégebben lejátszott másolatok mennek előbb. A szerveren át történő streamelés játssza le a le nem töltött számokat ott, ahol maga a böngésző nem éri el a YouTube-ot. |
 | `DOWNTIFY_STREAM_CONCURRENCY` | `2` | Hány streamletöltés futhat egyszerre. |
+
+OIDC is optional. Configure the issuer, client ID and secret together; partial configuration prevents startup. The provider must allow the callback URL `https://<your-public-host>/api/auth/oidc/callback`. See [OpenID Connect](../features/users.md#openid-connect) for account linking, group mapping and a full explanation of local login options.
 
 ## Zenekuka
 

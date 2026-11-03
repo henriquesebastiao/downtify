@@ -1708,9 +1708,14 @@ export default {
   auth: {
     signInTitle: 'Downtify’a giriş yap',
     signInBody: 'Kullanıcı adınız ve parolanızla giriş yapın.',
+    signInBodyOidcOnly: 'Kimlik sağlayıcınızla giriş yapın.',
     username: 'Kullanıcı adı',
     password: 'Parola',
     signIn: 'Giriş yap',
+    oidcSignIn: 'Kimlik sağlayıcısıyla devam et',
+    or: 'veya',
+    oidcFailed:
+      'Kimlik sağlayıcısıyla giriş yapılamadı. Lütfen tekrar deneyin.',
     wrongPassword: 'Kullanıcı adı veya parola yanlış',
     tooMany: 'Çok fazla deneme. Birkaç dakika bekleyip tekrar deneyin.',
     forgotHint:

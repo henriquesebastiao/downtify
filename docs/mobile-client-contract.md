@@ -46,7 +46,7 @@ Build the address from the resolved host + `port`. Discovery is a convenience: a
 - Refuse to continue when `product` isn't `Downtify` or `api_version` is higher than the app knows.
 - Remember `server_id`: it identifies the server across address changes. When the address later answers with a different id, it's a different server.
 - Use `capabilities` to enable features (e.g. hide mobile-data quality when `transcoding.available` is false).
-- `capabilities.password_sign_in` decides how the app asks for credentials next: a username and password when it is `true`, a pairing code otherwise (accounts turned off, or a server older than `POST /api/auth/token`).
+- `capabilities.password_sign_in` decides how the app asks for credentials next: a username and password when it is `true`, a pairing code otherwise (accounts turned off, local password login disabled, or a server older than `POST /api/auth/token`).
 
 ## 3. Sign in or pair
 

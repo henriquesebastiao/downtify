@@ -2873,7 +2873,7 @@ Who this server is, signing in, and pairing apps — see [Users & Sign-in](featu
 
 | Scope | Credentials | Covers |
 |-------|-------------|--------|
-| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair`, `POST /api/auth/token` |
+| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `GET /api/auth/oidc` and `/api/auth/oidc/callback` (when configured), `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair`, `POST /api/auth/token` |
 | Client | a device token (`Authorization: Bearer dtfy_…`), a signed URL (reads only), a WebSocket ticket, or any web session | Library and media reads (`/tracks`, `/list`, `/playlists`, `/lyrics`, `/cover`, `/playlist-cover`, `/downloads/…`, `/media/…`), `/api/v1/…`, search and link resolving, previews, `POST /api/download/url\|batch\|album`, likes, Discover and listens, podcast reads, episode downloads and playback, the queue and monitor lists (read), `GET /api/me`, `POST /api/activity/playback`, `POST /api/auth/ws-ticket`, `WS /api/ws` |
 | User | a web session of any user (the `downtify_session` cookie) | Client, plus your own account (`/api/me…`), your paired devices and pairing (`/api/auth/devices…`, `/api/auth/pairing…`) |
 | Admin | a web session of an **admin** | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, hiding songs from users, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, renaming the server, users, the activity log, signing everyone out |
@@ -2905,7 +2905,7 @@ Public. What an app checks before it has credentials.
 }
 ```
 
-`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `password_sign_in` says an app may sign in with a username and password ([`POST /api/auth/token`](#post-apiauthtoken)); it is `false` while accounts are turned off, and missing on servers older than this endpoint — pair with a code then. `transcoding.available` is `false` (and the lists empty) without ffmpeg.
+`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `password_sign_in` says an app may sign in with a username and password ([`POST /api/auth/token`](#post-apiauthtoken)); it is `false` when accounts or local password login are off, and missing on servers older than this endpoint — pair with a code then. `transcoding.available` is `false` (and the lists empty) without ffmpeg.
 
 ---
 
@@ -2945,6 +2945,8 @@ Public. How this request is signed in.
 {
   "require_sign_in": true,
   "auth_disabled": false,
+  "local_login_enabled": true,
+  "oidc_enabled": false,
   "min_password_length": 8,
   "signed_in": true,
   "via": "device",
@@ -2958,13 +2960,21 @@ Public. How this request is signed in.
 
 `auth_disabled` is `true` when accounts are turned off (`DOWNTIFY_DISABLE_AUTH`): then `signed_in` is `true`, `via` is `open` and `user` is the first admin.
 
+`local_login_enabled` reflects `DOWNTIFY_DISABLE_LOCAL_LOGIN`; `oidc_enabled` is `true` when an OIDC provider is configured. Both are `false` while `DOWNTIFY_DISABLE_AUTH` is on.
+
 `notice` is only set while signed out, on a server upgraded from a version without accounts, until an admin signs in: `{ "username": "admin", "password": "downtify" }` — `password` is `null` when the sign-in password of the older version was kept.
+
+---
+
+### `GET /api/auth/oidc` and `GET /api/auth/oidc/callback`
+
+Public, only when OIDC is configured. The first endpoint starts the Authorization Code flow with PKCE and redirects to the provider. The provider returns to `/api/auth/oidc/callback`; Downtify checks state, nonce, issuer, audience, expiry and the ID-token signature before provisioning or finding the `(issuer, sub)` account and issuing a normal `downtify_session` cookie. Provider rejection returns to the sign-in page with a generic error. See [OpenID Connect setup](features/users.md#openid-connect).
 
 ---
 
 ### `POST /api/auth/login`
 
-Public, rate-limited per address (10 failures per 5 minutes, then `429` with `Retry-After`). Signs a browser in.
+Public, rate-limited per address (10 failures per 5 minutes, then `429` with `Retry-After`). Signs a browser in; answers `409` when `DOWNTIFY_DISABLE_LOCAL_LOGIN` is enabled.
 
 **Request body:** `{ "username": "admin", "password": "…" }` — the username in any case.
 

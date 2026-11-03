@@ -35,12 +35,24 @@ environment:
 | Променлива | По подразбиране | Описание |
 |----------|---------|-------------|
 | `DOWNTIFY_DISABLE_AUTH` | `false` | `true` изключва акаунтите: никой не влиза и който достигне сървъра, го ползва като администратор. Страницата за вход, бутоните за изход, **Настройки → Потребители** и частта за акаунт от **Настройки → Общи** изчезват. Сдвоените приложения продължават да работят. Върнете `false` (или я махнете) и входът пак е задължителен, с акаунтите както са били. Вижте [Потребители и вход](../features/users.md#turning-accounts-off). |
+| `DOWNTIFY_DISABLE_LOCAL_LOGIN` | `false` | `true` disables username/password login in the web UI and `POST /api/auth/token`. OIDC and app pairing remain available; current sessions and device tokens are not revoked. Requires all three OIDC credentials below. |
+| `DOWNTIFY_OIDC_ISSUER` | _(unset)_ | The exact OIDC issuer URL. Enables OIDC when used with client ID and secret. |
+| `DOWNTIFY_OIDC_CLIENT_ID` | _(unset)_ | OIDC confidential client ID. |
+| `DOWNTIFY_OIDC_CLIENT_SECRET` | _(unset)_ | OIDC confidential client secret. |
+| `DOWNTIFY_OIDC_REDIRECT_URI` | _(derived)_ | Public callback URL registered with the identity provider, normally `https://music.example.com/api/auth/oidc/callback`. Set explicitly behind a reverse proxy if needed. |
+| `DOWNTIFY_OIDC_SCOPES` | `openid profile email` | Space-separated OIDC scopes. |
+| `DOWNTIFY_OIDC_USERNAME_CLAIM` | `preferred_username` | Claim used for new account names, falling back to `email` and then `sub`. |
+| `DOWNTIFY_OIDC_GROUPS_CLAIM` | `groups` | Claim containing group names; dotted paths are supported. |
+| `DOWNTIFY_OIDC_ALLOWED_GROUPS` | _(empty)_ | Comma-separated group allowlist; unset means any authenticated provider identity may sign in. |
+| `DOWNTIFY_OIDC_ADMIN_GROUPS` | _(empty)_ | Comma-separated groups mapped to Downtify admins. Other OIDC users are normal users. |
 | `DOWNTIFY_TRUSTED_PROXIES` | _(не е зададена)_ | Адреси или мрежи на вашия обратен прокси, разделени със запетая (напр. `172.18.0.0/16,10.0.0.5`). Само на заявките от тях се вярва за хедърите `X-Forwarded-For`, `X-Forwarded-Proto` и `X-Forwarded-Host` — за адреса на клиента, по който се ограничават опитите за вход и сдвояване, за secure флага на бисквитката за вход и за проверката за същия сайт. Незададена: тези хедъри се игнорират. |
 | `DOWNTIFY_DISCOVERY` | `true` | `false` спира обявяването на сървъра в локалната мрежа (mDNS, `_downtify._tcp`), което приложенията ползват, за да го изброят под *Намерени в тази мрежа*. В bridge мрежата на Docker обявяването така или иначе не стига до LAN — вижте [Docker Compose](docker-compose.md#finding-the-server-from-the-apps). |
 | `DOWNTIFY_TRANSCODE_CACHE_MB` | `2048` | Най-големият размер, в MB, под който се държи кешът на прекодираните копия (`/data/transcode_cache`); най-отдавна пускани копия излизат първи. |
 | `DOWNTIFY_TRANSCODE_CONCURRENCY` | `2` | Колко песни се прекодират едновременно за по-малките качества на стриймване на приложенията. |
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | Най-големият размер, в MB, под който се държи кешът на стримваното аудио (`/data/stream_cache`); най-отдавна пускани копия излизат първи. Стриймването през сървъра е това, което пуска неизтеглени песни там, където самият браузър не достига YouTube. |
 | `DOWNTIFY_STREAM_CONCURRENCY` | `2` | Колко изтегляния за стриймване могат да вървят едновременно. |
+
+OIDC is optional. Configure the issuer, client ID and secret together; partial configuration prevents startup. The provider must allow the callback URL `https://<your-public-host>/api/auth/oidc/callback`. See [OpenID Connect](../features/users.md#openid-connect) for account linking, group mapping and a full explanation of local login options.
 
 ## Кошче за музика
 

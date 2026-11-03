@@ -35,12 +35,24 @@ Veja [Apps para celular](../features/mobile-apps.md) e [Usuários e login](../fe
 | Variável | Padrão | Descrição |
 |----------|---------|-------------|
 | `DOWNTIFY_DISABLE_AUTH` | `false` | `true` desliga as contas: ninguém faz login, e quem alcançar o servidor o usa como administrador. A página de login, os botões de sair, **Configurações → Usuários** e a parte de conta de **Configurações → Geral** desaparecem. Os apps pareados continuam funcionando. Volte para `false` (ou remova-a) e o login volta a ser exigido, com as contas como estavam. Veja [Usuários e login](../features/users.md#turning-accounts-off). |
+| `DOWNTIFY_DISABLE_LOCAL_LOGIN` | `false` | `true` disables username/password login in the web UI and `POST /api/auth/token`. OIDC and app pairing remain available; current sessions and device tokens are not revoked. Requires all three OIDC credentials below. |
+| `DOWNTIFY_OIDC_ISSUER` | _(unset)_ | The exact OIDC issuer URL. Enables OIDC when used with client ID and secret. |
+| `DOWNTIFY_OIDC_CLIENT_ID` | _(unset)_ | OIDC confidential client ID. |
+| `DOWNTIFY_OIDC_CLIENT_SECRET` | _(unset)_ | OIDC confidential client secret. |
+| `DOWNTIFY_OIDC_REDIRECT_URI` | _(derived)_ | Public callback URL registered with the identity provider, normally `https://music.example.com/api/auth/oidc/callback`. Set explicitly behind a reverse proxy if needed. |
+| `DOWNTIFY_OIDC_SCOPES` | `openid profile email` | Space-separated OIDC scopes. |
+| `DOWNTIFY_OIDC_USERNAME_CLAIM` | `preferred_username` | Claim used for new account names, falling back to `email` and then `sub`. |
+| `DOWNTIFY_OIDC_GROUPS_CLAIM` | `groups` | Claim containing group names; dotted paths are supported. |
+| `DOWNTIFY_OIDC_ALLOWED_GROUPS` | _(empty)_ | Comma-separated group allowlist; unset means any authenticated provider identity may sign in. |
+| `DOWNTIFY_OIDC_ADMIN_GROUPS` | _(empty)_ | Comma-separated groups mapped to Downtify admins. Other OIDC users are normal users. |
 | `DOWNTIFY_TRUSTED_PROXIES` | _(não definida)_ | Endereços ou redes do seu proxy reverso, separados por vírgula (por exemplo `172.18.0.0/16,10.0.0.5`). Só as requisições vindas deles têm os cabeçalhos `X-Forwarded-For`, `X-Forwarded-Proto` e `X-Forwarded-Host` aceitos — para o endereço do cliente pelo qual as tentativas de login e de pareamento são limitadas, a flag secure do cookie de login e a verificação de mesma origem. Não definida: esses cabeçalhos são ignorados. |
 | `DOWNTIFY_DISCOVERY` | `true` | `false` para de anunciar o servidor na rede local (mDNS, `_downtify._tcp`), que os apps usam para listá-lo em *Encontrados nesta rede*. Na rede bridge do Docker o anúncio não chega à LAN de qualquer forma — veja [Docker Compose](docker-compose.md#finding-the-server-from-the-apps). |
 | `DOWNTIFY_TRANSCODE_CACHE_MB` | `2048` | Maior tamanho, em MB, em que o cache de cópias transcodificadas (`/data/transcode_cache`) é mantido; as cópias tocadas há mais tempo saem primeiro. |
 | `DOWNTIFY_TRANSCODE_CONCURRENCY` | `2` | Quantas músicas são transcodificadas ao mesmo tempo para as qualidades de streaming menores dos apps. |
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | Maior tamanho, em MB, em que o cache de áudio transmitido (`/data/stream_cache`) é mantido; as cópias tocadas há mais tempo saem primeiro. Transmitir pelo servidor é o que toca faixas não baixadas onde o próprio navegador não alcança o YouTube. |
 | `DOWNTIFY_STREAM_CONCURRENCY` | `2` | Quantos downloads de streaming podem rodar ao mesmo tempo. |
+
+OIDC is optional. Configure the issuer, client ID and secret together; partial configuration prevents startup. The provider must allow the callback URL `https://<your-public-host>/api/auth/oidc/callback`. See [OpenID Connect](../features/users.md#openid-connect) for account linking, group mapping and a full explanation of local login options.
 
 ## Lixeira de músicas
 

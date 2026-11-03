@@ -1766,9 +1766,14 @@ export default {
   auth: {
     signInTitle: 'Bei Downtify anmelden',
     signInBody: 'Melde dich mit deinem Benutzernamen und Passwort an.',
+    signInBodyOidcOnly: 'Melde dich über deinen Identitätsanbieter an.',
     username: 'Benutzername',
     password: 'Passwort',
     signIn: 'Anmelden',
+    oidcSignIn: 'Mit Identitätsanbieter fortfahren',
+    or: 'oder',
+    oidcFailed:
+      'Die Anmeldung über den Identitätsanbieter ist fehlgeschlagen. Bitte versuche es erneut.',
     wrongPassword: 'Benutzername oder Passwort falsch',
     tooMany: 'Zu viele Versuche. Warte einige Minuten und versuche es erneut.',
     forgotHint:
