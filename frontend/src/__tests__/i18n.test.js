@@ -72,8 +72,7 @@ describe('i18n locale key consistency', () => {
           for (const form of forms) {
             // Forms that en also has share its placeholders; forms that
             // only this language has share en's `other` placeholders.
-            const expected =
-              form in enValue ? enValue[form] : enValue.other
+            const expected = form in enValue ? enValue[form] : enValue.other
             expect(
               placeholders(value[form]).sort(),
               `${code}: "${key}.${form}"`
