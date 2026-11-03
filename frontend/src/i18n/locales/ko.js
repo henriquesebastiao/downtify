@@ -1005,6 +1005,12 @@ export default {
     nothingYet: '아직 트랙이 없습니다',
     nothingYetHint: '다운로드가 완료되면 트랙이 여기에 나타납니다.',
     nothingYetManualHint: '라이브러리에서 곡을 추가하세요.',
+    uploadCover: '커버 업로드',
+    removeCover: '커버 삭제',
+    coverSaved: '재생목록 커버를 저장했습니다',
+    coverRemoved: '재생목록 커버를 삭제했습니다',
+    coverInvalid: 'JPEG, PNG 또는 WebP 이미지를 선택하세요.',
+    coverTooLarge: '이미지 크기는 10MiB 이하여야 합니다.',
   },
   track: {
     title: '제목',

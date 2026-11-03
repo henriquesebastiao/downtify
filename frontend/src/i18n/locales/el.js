@@ -1022,6 +1022,12 @@ export default {
     nothingYet: 'Δεν έχουν κατέβει κομμάτια ακόμα',
     nothingYetHint: 'Τα κομμάτια εμφανίζονται εδώ καθώς ολοκληρώνονται.',
     nothingYetManualHint: 'Προσθέστε κομμάτια από τη βιβλιοθήκη.',
+    uploadCover: 'Μεταφόρτωση εξωφύλλου',
+    removeCover: 'Αφαίρεση εξωφύλλου',
+    coverSaved: 'Το εξώφυλλο της λίστας αποθηκεύτηκε',
+    coverRemoved: 'Το εξώφυλλο της λίστας αφαιρέθηκε',
+    coverInvalid: 'Επιλέξτε εικόνα JPEG, PNG ή WebP.',
+    coverTooLarge: 'Η εικόνα πρέπει να είναι έως 10 MiB.',
   },
   track: {
     title: 'Τίτλος',

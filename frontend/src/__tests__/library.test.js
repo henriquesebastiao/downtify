@@ -69,6 +69,10 @@ describe('explicit manual playlist artwork', () => {
     expect(
       buildPlaylists([{ ...base, explicit_cover: true }], new Map())[0].cover
     ).toContain('Mix.jpg')
+    expect(
+      buildPlaylists([{ ...base, explicit_cover: true }], new Map())[0]
+        .explicitCover
+    ).toBe(true)
   })
 })
 

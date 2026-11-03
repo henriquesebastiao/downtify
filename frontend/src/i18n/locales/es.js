@@ -1018,6 +1018,12 @@ export default {
     nothingYet: 'Aún no hay canciones descargadas',
     nothingYetHint: 'Las canciones aparecen aquí a medida que se descargan.',
     nothingYetManualHint: 'Añade canciones de tu biblioteca.',
+    uploadCover: 'Subir portada',
+    removeCover: 'Quitar portada',
+    coverSaved: 'Portada de la playlist guardada',
+    coverRemoved: 'Portada de la playlist eliminada',
+    coverInvalid: 'Elige una imagen JPEG, PNG o WebP.',
+    coverTooLarge: 'La imagen debe ocupar 10 MiB o menos.',
   },
   track: {
     title: 'Título',

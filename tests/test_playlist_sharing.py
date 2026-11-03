@@ -69,6 +69,29 @@ def _admin(body: Any = None) -> Request:
     return _request(ADMIN_ID, 'admin', body)
 
 
+def _image_request(user_id: int, role: str, data: bytes) -> Request:
+    sent = False
+    scope = {
+        'type': 'http',
+        'headers': [(b'content-type', b'image/jpeg')],
+        'query_string': b'',
+        'state': {
+            'principal': Principal(
+                'device', 'client', '', user_id, f'u{user_id}', role
+            )
+        },
+    }
+
+    async def receive() -> dict[str, Any]:
+        nonlocal sent
+        if sent:
+            return {'type': 'http.request', 'body': b'', 'more_body': False}
+        sent = True
+        return {'type': 'http.request', 'body': data, 'more_body': False}
+
+    return Request(scope, receive)
+
+
 def _row(name: str, manual: bool = False, files=('a.mp3',)) -> dict[str, Any]:
     return {
         'name': name,
@@ -171,6 +194,47 @@ def test_imported_display_name_reset_and_owner_only(world):
     )
     assert result['display_name'] == 'Road'
     assert world.shares.display_names() == {}
+
+
+def test_manual_playlist_cover_changes_are_owner_or_admin_only(
+    world, monkeypatch
+):
+    saved = []
+
+    def save(ctx, name, data, content_type):
+        saved.append((name, data, content_type))
+
+    monkeypatch.setattr(api, 'save_manual_playlist_cover', save)
+    owner = _image_request(ANA, 'user', b'jpeg')
+    assert asyncio.run(
+        api.upload_library_playlist_cover_endpoint(owner, name='Mix')
+    ) == {'ok': True}
+    assert saved == [('Mix', b'jpeg', 'image/jpeg')]
+
+    admin = _image_request(ADMIN_ID, 'admin', b'jpeg')
+    assert asyncio.run(
+        api.upload_library_playlist_cover_endpoint(admin, name='Chill')
+    ) == {'ok': True}
+    assert saved[-1][0] == 'Chill'
+
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(
+            api.upload_library_playlist_cover_endpoint(
+                _image_request(BO, 'user', b'jpeg'), name='Mix'
+            )
+        )
+    assert error.value.status_code == 404
+
+
+def test_manual_playlist_cover_upload_enforces_size_limit(world):
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(
+            api.upload_library_playlist_cover_endpoint(
+                _image_request(ANA, 'user', b'x' * (10 * 1024 * 1024 + 1)),
+                name='Mix',
+            )
+        )
+    assert error.value.status_code == 413
 
 
 def test_favorites_are_personal_persistent_and_do_not_grant_access(world):

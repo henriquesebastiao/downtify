@@ -29,6 +29,7 @@ from downtify.playlist_mosaic import (
     _filter_complex,
     has_explicit_cover,
     keep_explicit_cover,
+    normalize_uploaded_cover,
     unique_cover_images,
 )
 
@@ -184,6 +185,15 @@ def test_mosaic_filter_matches_spotify_layouts():
     assert 'vstack' in four
 
 
+def test_uploaded_jpeg_is_normalized_and_invalid_images_are_rejected():
+    if not shutil.which('ffmpeg'):
+        pytest.skip('ffmpeg is not installed')
+    normalized = normalize_uploaded_cover(_JPEG, 'image/jpeg')
+    assert normalized.startswith(b'\xff\xd8')
+    with pytest.raises(ValueError, match='JPEG, PNG or WebP'):
+        normalize_uploaded_cover(_JPEG, 'image/png')
+
+
 def test_manual_playlist_cover_uses_distinct_track_art(tmp_path):
     download = tmp_path / 'downloads'
     one = download / 'One.mp3'
@@ -316,6 +326,28 @@ def test_source_cover_survives_edits_rename_and_does_not_change_audio(
     assert {
         p: (p.read_bytes(), p.stat().st_mtime_ns) for p in original
     } == original
+
+
+def test_uploaded_cover_replaces_and_remove_restores_mosaic(
+    tmp_path, monkeypatch
+):
+    download = tmp_path / 'downloads'
+    ctx = LibraryContext(download_dir=download)
+    create_manual_playlist(ctx, 'Mix')
+    path = download / 'Playlists' / 'Mix.m3u'
+    monkeypatch.setattr(
+        manual_playlists, 'normalize_uploaded_cover', lambda *_: _JPEG
+    )
+
+    cover = manual_playlists.save_manual_playlist_cover(
+        ctx, 'Mix', b'validated image', 'image/png'
+    )
+
+    assert cover.read_bytes() == _JPEG
+    assert has_explicit_cover(path)
+    manual_playlists.remove_manual_playlist_cover(ctx, 'Mix')
+    assert not has_explicit_cover(path)
+    assert not cover.exists()
 
 
 def test_missing_explicit_image_allows_normal_mosaic_fallback(tmp_path):

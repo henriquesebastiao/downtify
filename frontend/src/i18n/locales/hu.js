@@ -1011,6 +1011,12 @@ export default {
     nothingYet: 'Még nincs letöltött szám',
     nothingYetHint: 'A számok letöltés után itt jelennek meg.',
     nothingYetManualHint: 'Adj hozzá számokat a könyvtárból.',
+    uploadCover: 'Borító feltöltése',
+    removeCover: 'Borító eltávolítása',
+    coverSaved: 'Lejátszási lista borítója mentve',
+    coverRemoved: 'Lejátszási lista borítója eltávolítva',
+    coverInvalid: 'JPEG-, PNG- vagy WebP-képet válassz.',
+    coverTooLarge: 'A kép legfeljebb 10 MiB lehet.',
   },
   track: {
     title: 'Cím',

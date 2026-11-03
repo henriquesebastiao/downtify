@@ -1006,6 +1006,12 @@ export default {
     nothingYet: 'Henüz indirilen parça yok',
     nothingYetHint: 'Parçalar indirildikçe burada görünür.',
     nothingYetManualHint: 'Kitaplığından şarkı ekle.',
+    uploadCover: 'Kapak yükle',
+    removeCover: 'Kapağı kaldır',
+    coverSaved: 'Çalma listesi kapağı kaydedildi',
+    coverRemoved: 'Çalma listesi kapağı kaldırıldı',
+    coverInvalid: 'JPEG, PNG veya WebP görseli seç.',
+    coverTooLarge: 'Görsel en fazla 10 MiB olmalıdır.',
   },
   track: {
     title: 'Başlık',

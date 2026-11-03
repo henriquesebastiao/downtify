@@ -22,6 +22,7 @@ from .playlist_mosaic import (
     EXPLICIT_COVER_MARKER,
     has_explicit_cover,
     keep_explicit_cover,
+    normalize_uploaded_cover,
     refresh_manual_playlist_cover,
 )
 
@@ -99,6 +100,51 @@ def _require_manual(path: Path, name: str) -> None:
             f'Playlist {name!r} is imported and cannot be edited',
             status_code=403,
         )
+
+
+@_serialized
+def save_manual_playlist_cover(
+    ctx: LibraryContext,
+    name: str,
+    data: bytes,
+    content_type: str,
+) -> Path:
+    """Replace a manual playlist's generated cover with uploaded art."""
+
+    path = m3u.find_m3u_for_name(ctx.download_dir, name)
+    if path is None:
+        raise ManualPlaylistError(
+            f'Playlist {name!r} was not found', status_code=404
+        )
+    _require_manual(path, path.stem)
+    cover = path.with_suffix('.jpg')
+    cover.write_bytes(normalize_uploaded_cover(data, content_type))
+    keep_explicit_cover(path)
+    invalidate_library_paths_cache()
+    return cover
+
+
+@_serialized
+def remove_manual_playlist_cover(ctx: LibraryContext, name: str) -> None:
+    """Remove custom art and restore the manual playlist's track mosaic."""
+
+    path = m3u.find_m3u_for_name(ctx.download_dir, name)
+    if path is None:
+        raise ManualPlaylistError(
+            f'Playlist {name!r} was not found', status_code=404
+        )
+    _require_manual(path, path.stem)
+    path.with_suffix('.jpg').unlink(missing_ok=True)
+    text = m3u.read_m3u_text(path)
+    if text is not None:
+        lines = [
+            line
+            for line in text.splitlines()
+            if line.strip() != EXPLICIT_COVER_MARKER
+        ]
+        path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    refresh_manual_playlist_cover(ctx, path, _read_files(ctx, path))
+    invalidate_library_paths_cache()
 
 
 def existing_playlist_names(download_dir: Path) -> set[str]:
