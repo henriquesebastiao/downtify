@@ -635,7 +635,7 @@ requires-dist = [
     { name = "websockets", specifier = ">=17.4" },
     { name = "yt-dlp", specifier = ">=2026.10.26" },
     { name = "ytmusicapi", specifier = ">=1.12.3" },
-    { name = "zeroconf", specifier = ">=0.152.0" },
+    { name = "zeroconf", specifier = ">=0.153.0" },
 ]
 
 [package.metadata.requires-dev]
