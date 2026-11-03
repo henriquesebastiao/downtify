@@ -4,6 +4,23 @@ icon: lucide/history
 
 # Changelog
 
+## [3.9.0](https://github.com/henriquesebastiao/downtify/tree/3.9.0) (2026-11-03)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.8.1...3.9.0)
+
+**Implemented enhancements:**
+
+- Add release date to library table [\#523](https://github.com/henriquesebastiao/downtify/issues/523)
+- Custom cover images for my own playlists, and an optional per-user library mode with download quotas [\#520](https://github.com/henriquesebastiao/downtify/issues/520)
+- \[FR\] Add OIDC authentication support [\#453](https://github.com/henriquesebastiao/downtify/issues/453)
+
+**Merged pull requests:**
+
+- feat\(auth\): add optional OpenID Connect login [\#527](https://github.com/henriquesebastiao/downtify/pull/527) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(playlists\): support custom playlist covers [\#525](https://github.com/henriquesebastiao/downtify/pull/525) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(library\): sort tracks by release date [\#524](https://github.com/henriquesebastiao/downtify/pull/524) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- Fix queued YouTube video playback [\#522](https://github.com/henriquesebastiao/downtify/pull/522) ([michaelmoskie](https://github.com/michaelmoskie))
+
 ## [3.8.1](https://github.com/henriquesebastiao/downtify/tree/3.8.1) (2026-10-31)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.8.0...3.8.1)
