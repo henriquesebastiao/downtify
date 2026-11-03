@@ -1,17 +1,20 @@
 <template>
   <main class="flex min-h-dvh items-center justify-center bg-bg px-4 text-fg">
-    <form
+    <section
       class="flex w-full max-w-sm flex-col gap-6 rounded-panel border border-line-2 bg-surface p-6 sm:p-8"
-      @submit.prevent="submit"
     >
       <div class="flex flex-col items-center gap-3 text-center">
         <AppLogo :size="48" />
         <h1 class="text-display text-2xl font-semibold">
           {{ t('auth.signInTitle') }}
         </h1>
-        <p class="text-sm text-muted">{{ t('auth.signInBody') }}</p>
+        <p class="text-sm text-muted">{{ signInBody }}</p>
       </div>
-      <div class="flex flex-col gap-4">
+      <form
+        v-if="localLoginEnabled"
+        class="flex flex-col gap-4"
+        @submit.prevent="submit"
+      >
         <UiInput
           v-model="username"
           :label="t('auth.username')"
@@ -26,20 +29,43 @@
           autocomplete="current-password"
           :error="error"
         />
+        <UiButton
+          type="submit"
+          variant="primary"
+          size="lg"
+          :loading="busy"
+          :disabled="!username.trim() || !password"
+        >
+          {{ t('auth.signIn') }}
+        </UiButton>
+      </form>
+      <div
+        v-if="localLoginEnabled && oidcEnabled"
+        class="flex items-center gap-3 text-xs text-faint"
+        aria-hidden="true"
+      >
+        <span class="h-px flex-1 bg-line-2" />
+        <span>{{ t('auth.or') }}</span>
+        <span class="h-px flex-1 bg-line-2" />
       </div>
       <UiButton
-        type="submit"
-        variant="primary"
+        v-if="oidcEnabled"
+        type="button"
+        variant="secondary"
         size="lg"
-        :loading="busy"
-        :disabled="!username.trim() || !password"
+        icon="log-in"
+        :loading="oidcBusy"
+        @click="startOidc"
       >
-        {{ t('auth.signIn') }}
+        {{ t('auth.oidcSignIn') }}
       </UiButton>
-      <p class="text-center text-[12px] text-faint">
+      <p v-if="oidcError" class="text-center text-sm text-danger">
+        {{ t('auth.oidcFailed') }}
+      </p>
+      <p v-if="localLoginEnabled" class="text-center text-[12px] text-faint">
         {{ t('auth.forgotHint') }}
       </p>
-    </form>
+    </section>
 
     <!-- A server upgraded from a version without accounts says so once. -->
     <UiModal
@@ -92,9 +118,22 @@ const auth = useAuth()
 const username = ref('')
 const password = ref('')
 const busy = ref(false)
+const oidcBusy = ref(false)
 const error = ref('')
 
 const notice = computed(() => auth.status.value?.notice || null)
+const localLoginEnabled = computed(
+  () => auth.status.value?.local_login_enabled !== false
+)
+const oidcEnabled = computed(() => auth.status.value?.oidc_enabled === true)
+const signInBody = computed(() =>
+  oidcEnabled.value && !localLoginEnabled.value
+    ? t('auth.signInBodyOidcOnly')
+    : t('auth.signInBody')
+)
+const oidcError = computed(
+  () => new URLSearchParams(window.location.search).get('auth_error') === 'oidc'
+)
 const noticeOpen = ref(false)
 watch(
   notice,
@@ -122,5 +161,10 @@ async function submit() {
     else error.value = String(result)
     busy.value = false
   }
+}
+
+function startOidc() {
+  oidcBusy.value = true
+  window.location.assign('/api/auth/oidc')
 }
 </script>

@@ -1723,9 +1723,14 @@ export default {
   auth: {
     signInTitle: 'Bejelentkezés a Downtify-ba',
     signInBody: 'Jelentkezz be a felhasználóneveddel és a jelszavaddal.',
+    signInBodyOidcOnly: 'Jelentkezz be az identitásszolgáltatóddal.',
     username: 'Felhasználónév',
     password: 'Jelszó',
     signIn: 'Bejelentkezés',
+    oidcSignIn: 'Folytatás az identitásszolgáltatóval',
+    or: 'vagy',
+    oidcFailed:
+      'Nem sikerült bejelentkezni az identitásszolgáltatóval. Próbáld újra.',
     wrongPassword: 'Hibás felhasználónév vagy jelszó',
     tooMany: 'Túl sok próbálkozás. Várj néhány percet, és próbáld újra.',
     forgotHint:

@@ -1725,9 +1725,14 @@ export default {
   auth: {
     signInTitle: 'Entrar no Downtify',
     signInBody: 'Entre com seu usuário e senha.',
+    signInBodyOidcOnly: 'Entre usando seu provedor de identidade.',
     username: 'Usuário',
     password: 'Senha',
     signIn: 'Entrar',
+    oidcSignIn: 'Continuar com o provedor de identidade',
+    or: 'ou',
+    oidcFailed:
+      'Não foi possível entrar pelo provedor de identidade. Tente novamente.',
     wrongPassword: 'Usuário ou senha incorretos',
     tooMany: 'Tentativas demais. Espere alguns minutos e tente de novo.',
     forgotHint:

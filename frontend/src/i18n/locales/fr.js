@@ -1760,9 +1760,14 @@ export default {
     signInTitle: 'Se connecter à Downtify',
     signInBody:
       'Connectez-vous avec votre nom d’utilisateur et votre mot de passe.',
+    signInBodyOidcOnly: 'Connectez-vous avec votre fournisseur d’identité.',
     username: 'Nom d’utilisateur',
     password: 'Mot de passe',
     signIn: 'Se connecter',
+    oidcSignIn: 'Continuer avec le fournisseur d’identité',
+    or: 'ou',
+    oidcFailed:
+      'Connexion au fournisseur d’identité impossible. Veuillez réessayer.',
     wrongPassword: 'Nom d’utilisateur ou mot de passe incorrect',
     tooMany: 'Trop de tentatives. Patientez quelques minutes et réessayez.',
     forgotHint:

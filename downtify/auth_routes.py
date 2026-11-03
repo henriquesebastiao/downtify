@@ -12,6 +12,7 @@ from ipaddress import ip_address
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.responses import RedirectResponse
 from loguru import logger
 
 from . import api
@@ -27,6 +28,7 @@ from .auth import (
     session_cookie,
     trusted_proxies_from_env,
 )
+from .oidc import clean_oidc_username
 from .server_identity import server_info
 from .server_port import (
     MAX_PORT,
@@ -45,6 +47,8 @@ from .users import MIN_PASSWORD_LENGTH, ROLE_ADMIN
 router = APIRouter()
 
 _TRUSTED = trusted_proxies_from_env()
+_OIDC_STATE_COOKIE = 'downtify_oidc_state'
+_OIDC_TTL_SECONDS = 600
 
 
 def _store() -> AuthStore:
@@ -149,6 +153,11 @@ def get_server_info() -> dict[str, Any]:
         identity,
         version=api.state.version,
         require_sign_in=not (api.state.auth and api.state.auth.auth_disabled),
+        password_sign_in=bool(
+            api.state.auth
+            and not api.state.auth.auth_disabled
+            and getattr(api.state, 'local_login_enabled', True)
+        ),
         transcoding=transcoder.capability() if transcoder else None,
     )
     result['library_only'] = api.state.settings.get('library_only') is True
@@ -282,6 +291,13 @@ def auth_status(request: Request) -> dict[str, Any]:
     return {
         'require_sign_in': not store.auth_disabled,
         'auth_disabled': store.auth_disabled,
+        'local_login_enabled': bool(
+            getattr(api.state, 'local_login_enabled', True)
+            and not store.auth_disabled
+        ),
+        'oidc_enabled': bool(
+            getattr(api.state, 'oidc', None) and not store.auth_disabled
+        ),
         'min_password_length': MIN_PASSWORD_LENGTH,
         'signed_in': principal is not None,
         'via': principal.kind if principal else None,
@@ -291,6 +307,112 @@ def auth_status(request: Request) -> dict[str, Any]:
         if principal or store.auth_disabled
         else store.users.notice(),
     }
+
+
+def _oidc_callback_uri(request: Request) -> str:
+    provider = getattr(api.state, 'oidc', None)
+    if provider is None:
+        raise HTTPException(status_code=404, detail='OIDC is not configured')
+    return provider.config.redirect_uri or str(
+        request.url_for('oidc_callback')
+    )
+
+
+def _oidc_failure() -> RedirectResponse:
+    return RedirectResponse('/?auth_error=oidc', status_code=303)
+
+
+@router.get('/api/auth/oidc', name='oidc_login')
+async def oidc_login(request: Request) -> Response:
+    """Start the OIDC Authorization Code flow with PKCE."""
+
+    store = _store()
+    provider = getattr(api.state, 'oidc', None)
+    if provider is None or store.auth_disabled:
+        raise HTTPException(status_code=404, detail='OIDC is not enabled')
+    try:
+        authorization_url, state = await provider.begin(
+            _oidc_callback_uri(request)
+        )
+    except Exception as exc:
+        logger.warning('OIDC authorization could not start: {}', exc)
+        raise HTTPException(
+            status_code=503, detail='Identity provider is unavailable'
+        ) from exc
+    response = RedirectResponse(authorization_url, status_code=303)
+    response.set_cookie(
+        _OIDC_STATE_COOKIE,
+        state,
+        max_age=_OIDC_TTL_SECONDS,
+        httponly=True,
+        samesite='lax',
+        secure=_is_https(request),
+        path='/api/auth/oidc',
+    )
+    return response
+
+
+@router.get('/api/auth/oidc/callback', name='oidc_callback')
+async def oidc_callback(request: Request) -> Response:
+    """Validate the provider response and create a local web session."""
+
+    provider = getattr(api.state, 'oidc', None)
+    store = _store()
+    if provider is None or store.auth_disabled:
+        raise HTTPException(status_code=404, detail='OIDC is not enabled')
+    state = request.query_params.get('state', '')
+    cookie_state = request.cookies.get(_OIDC_STATE_COOKIE, '')
+    code = request.query_params.get('code', '')
+    if request.query_params.get('error') or not code:
+        response = _oidc_failure()
+        response.delete_cookie(_OIDC_STATE_COOKIE, path='/api/auth/oidc')
+        return response
+    try:
+        claims, asserted_username, role = await provider.authenticate(
+            code=code,
+            state=state,
+            cookie_state=cookie_state,
+            callback_uri=_oidc_callback_uri(request),
+        )
+        username = clean_oidc_username(
+            asserted_username, provider.config.issuer, claims['sub']
+        )
+        user = await asyncio.to_thread(
+            store.users._get_or_create_oidc_user,
+            provider.config.issuer,
+            claims['sub'],
+            username,
+            role,
+        )
+    except Exception as exc:
+        logger.warning('OIDC sign-in rejected: {}', exc)
+        response = _oidc_failure()
+        response.delete_cookie(_OIDC_STATE_COOKIE, path='/api/auth/oidc')
+        return response
+
+    ip = _ip(request)
+    await asyncio.to_thread(store.users.record_login, user['id'], ip)
+    if user['role'] == ROLE_ADMIN:
+        await asyncio.to_thread(store.users.clear_notice)
+    if api.state.activity is not None:
+        await asyncio.to_thread(
+            api.state.activity.record,
+            'login',
+            user_id=user['id'],
+            username=user['username'],
+            client=api.client_label(request, None),
+            ip=ip,
+        )
+    token = await asyncio.to_thread(
+        store.create_session,
+        user['id'],
+        ip,
+        request.headers.get('user-agent', ''),
+    )
+    response = RedirectResponse('/', status_code=303)
+    response.delete_cookie(_OIDC_STATE_COOKIE, path='/api/auth/oidc')
+    _set_session(response, request, token)
+    return response
 
 
 @router.post('/api/auth/login')
@@ -303,6 +425,12 @@ async def login(request: Request, response: Response) -> dict[str, Any]:
         raise HTTPException(
             status_code=409,
             detail='Sign-in is turned off (DOWNTIFY_DISABLE_AUTH)',
+        )
+    if not getattr(api.state, 'local_login_enabled', True):
+        raise HTTPException(
+            status_code=409,
+            detail='Password sign-in is turned off '
+            '(DOWNTIFY_DISABLE_LOCAL_LOGIN)',
         )
     ip = _ip(request)
     wait = api.state.login_limiter.retry_after(ip)
@@ -374,6 +502,7 @@ async def logout(request: Request, response: Response) -> dict[str, Any]:
                 ip=_ip(request),
             )
     response.delete_cookie(SESSION_COOKIE, path='/')
+    response.delete_cookie(_OIDC_STATE_COOKIE, path='/api/auth/oidc')
     return {'signed_in': False}
 
 
@@ -517,6 +646,12 @@ async def sign_in_device(request: Request) -> dict[str, Any]:
         raise HTTPException(
             status_code=409,
             detail='Sign-in is turned off (DOWNTIFY_DISABLE_AUTH)',
+        )
+    if not getattr(api.state, 'local_login_enabled', True):
+        raise HTTPException(
+            status_code=409,
+            detail='Password sign-in is turned off '
+            '(DOWNTIFY_DISABLE_LOCAL_LOGIN)',
         )
     ip = _ip(request)
     wait = api.state.login_limiter.retry_after(ip)

@@ -1713,9 +1713,13 @@ export default {
   auth: {
     signInTitle: 'Downtify 로그인',
     signInBody: '사용자 이름과 비밀번호를 입력하여 로그인하세요.',
+    signInBodyOidcOnly: 'ID 공급자를 통해 로그인하세요.',
     username: '사용자 이름',
     password: '비밀번호',
     signIn: '로그인',
+    oidcSignIn: 'ID 공급자로 계속하기',
+    or: '또는',
+    oidcFailed: 'ID 공급자를 통한 로그인에 실패했습니다. 다시 시도하세요.',
     wrongPassword: '사용자 이름 또는 비밀번호가 올바르지 않습니다',
     tooMany: '로그인 시도가 너무 많습니다. 몇 분 후 다시 시도하세요.',
     forgotHint:

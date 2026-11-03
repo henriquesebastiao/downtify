@@ -4,16 +4,21 @@ themselves are tests/test_users.py."""
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import re
 import time
 from ipaddress import ip_network
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.routing import APIRoute, APIWebSocketRoute
+from joserfc import jwt
+from joserfc.jwk import RSAKey
 from starlette.routing import Mount, Route
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
@@ -37,6 +42,7 @@ from downtify.auth import (
     normalize_pairing_code,
     rule_for,
 )
+from downtify.oidc import OIDCConfig, OIDCProvider
 from downtify.server_identity import ServerIdentity
 from downtify.users import hash_password, verify_password
 
@@ -592,6 +598,100 @@ def test_login_with_the_default_admin(client):
     client.post('/api/auth/logout')
     client.cookies.clear()
     assert client.get('/api/settings').status_code == 401
+
+
+def test_oidc_callback_creates_a_local_session(client, monkeypatch):
+    issuer = 'https://id.example.test'
+    client_id = 'downtify'
+    key = RSAKey.generate_key(2048)
+    jwks = {'keys': [key.as_dict(private=False)]}
+    transaction = {}
+
+    def provider_response(request):
+        if request.url.path == '/.well-known/openid-configuration':
+            return httpx.Response(
+                200,
+                json={
+                    'issuer': issuer,
+                    'authorization_endpoint': issuer + '/authorize',
+                    'token_endpoint': issuer + '/token',
+                    'jwks_uri': issuer + '/jwks',
+                },
+            )
+        if request.url.path == '/jwks':
+            return httpx.Response(200, json=jwks)
+        if request.url.path == '/token':
+            form = parse_qs(request.content.decode())
+            assert request.headers['authorization'].startswith('Basic ')
+            assert form['grant_type'] == ['authorization_code']
+            verifier = form['code_verifier'][0]
+            challenge = base64.urlsafe_b64encode(
+                hashlib.sha256(verifier.encode()).digest()
+            ).rstrip(b'=').decode()
+            assert challenge == transaction['challenge']
+            now = int(time.time())
+            id_token = jwt.encode(
+                {'alg': 'RS256'},
+                {
+                    'iss': issuer,
+                    'sub': 'oidc-subject',
+                    'aud': client_id,
+                    'exp': now + 300,
+                    'iat': now,
+                    'nonce': transaction['nonce'],
+                    'preferred_username': 'maria',
+                    'groups': ['downtify-admins'],
+                },
+                key,
+            )
+            return httpx.Response(200, json={'id_token': id_token})
+        return httpx.Response(404)
+
+    config = OIDCConfig(
+        issuer=issuer,
+        client_id=client_id,
+        client_secret='client-secret',
+        redirect_uri='http://testserver/api/auth/oidc/callback',
+        admin_groups=('downtify-admins',),
+    )
+    provider = OIDCProvider(
+        config, transport=httpx.MockTransport(provider_response)
+    )
+    monkeypatch.setattr(api.state, 'oidc', provider)
+
+    started = client.get('/api/auth/oidc', follow_redirects=False)
+    assert started.status_code == 303
+    authorization = parse_qs(urlsplit(started.headers['location']).query)
+    transaction['challenge'] = authorization['code_challenge'][0]
+    transaction['nonce'] = authorization['nonce'][0]
+    state = authorization['state'][0]
+
+    callback = client.get(
+        '/api/auth/oidc/callback',
+        params={'code': 'authorization-code', 'state': state},
+        follow_redirects=False,
+    )
+
+    assert callback.status_code == 303
+    assert callback.headers['location'] == '/'
+    assert SESSION_COOKIE in callback.headers['set-cookie']
+    status = client.get('/api/auth/status').json()
+    assert status['signed_in'] is True
+    assert status['user']['username'] == 'maria'
+    assert status['user']['role'] == 'admin'
+    assert status['via'] == 'session'
+
+
+def test_disabling_local_login_keeps_pairing_available(client, monkeypatch):
+    monkeypatch.setattr(api.state, 'local_login_enabled', False)
+
+    assert _sign_in(client).status_code == 409
+    assert _sign_in_app(client).status_code == 409
+    assert client.post('/api/auth/pair', json={'code': 'invalid'}).status_code == 401
+    status = client.get('/api/auth/status').json()
+    assert status['local_login_enabled'] is False
+    info = client.get('/api/server/info').json()
+    assert info['capabilities']['password_sign_in'] is False
 
 
 def test_usernames_are_case_insensitive_at_sign_in(client):

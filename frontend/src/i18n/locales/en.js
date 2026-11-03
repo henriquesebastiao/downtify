@@ -1684,9 +1684,14 @@ export default {
   auth: {
     signInTitle: 'Sign in to Downtify',
     signInBody: 'Sign in with your username and password.',
+    signInBodyOidcOnly: 'Sign in with your identity provider.',
     username: 'Username',
     password: 'Password',
     signIn: 'Sign in',
+    oidcSignIn: 'Continue with identity provider',
+    or: 'or',
+    oidcFailed:
+      'Could not sign in with the identity provider. Please try again.',
     wrongPassword: 'Wrong username or password',
     tooMany: 'Too many attempts. Wait a few minutes and try again.',
     forgotHint:
