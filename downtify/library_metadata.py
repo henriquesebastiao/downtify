@@ -212,6 +212,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'album_artist': '',
         'track_number': 0,
         'year': '',
+        'release_date': '',
         'genre': '',
         'duration': 0.0,
         'explicit': False,
@@ -227,6 +228,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
     album_artist = ''
     track_number = 0
     year = ''
+    release_date = ''
     genre = ''
     duration = 0.0
 
@@ -242,7 +244,8 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         album = _tag_text(audio.get('album'))
         album_artist = _tag_text(audio.get('albumartist'))
         track_number = _track_number(audio.get('tracknumber'))
-        year = _year(audio.get('date'))
+        release_date = _tag_text(audio.get('date'))
+        year = _year(release_date)
         genre = _tag_text(audio.get('genre'))
         duration = _duration(audio)
 
@@ -264,7 +267,8 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
             album = _tag_text(id3.get('TALB'))
             album_artist = _tag_text(id3.get('TPE2'))
             track_number = _track_number(id3.get('TRCK'))
-            year = _year(id3.get('TDRC'))
+            release_date = _tag_text(id3.get('TDRC'))
+            year = _year(release_date)
             genre = _tag_text(id3.get('TCON'))
 
     artists = _multi_value_artists(path, audio) or split_artists(
@@ -278,6 +282,7 @@ def read_audio_metadata(path: Path) -> dict[str, Any]:
         'album_artist': album_artist,
         'track_number': track_number,
         'year': year,
+        'release_date': release_date,
         'genre': genre,
         'duration': duration,
         'explicit': read_explicit(path),
@@ -327,6 +332,7 @@ def library_entry_for_file(
         'album_artist': str(meta.get('album_artist') or '').strip(),
         'track_number': int(meta.get('track_number') or 0),
         'year': str(meta.get('year') or ''),
+        'release_date': str(meta.get('release_date') or ''),
         'genre': str(meta.get('genre') or ''),
         'duration': float(meta.get('duration') or 0.0),
         'codec': str(meta.get('codec') or ''),

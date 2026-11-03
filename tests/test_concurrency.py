@@ -552,6 +552,7 @@ def _entry(stored, full):
         'album_artist': '',
         'track_number': 0,
         'year': '',
+        'release_date': '',
         'duration': 0.0,
         'codec': 'mp3',
         'bitrate': 320000,

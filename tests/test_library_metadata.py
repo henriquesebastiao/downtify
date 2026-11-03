@@ -59,6 +59,7 @@ def test_library_entry_includes_album_and_file_details(tmp_path):
     assert entry['album_artist'] == 'Artist'
     assert entry['track_number'] == 3
     assert entry['year'] == '2024'
+    assert entry['release_date'] == '2024-05-01'
     assert entry['duration'] == 0.0  # not a decodable audio stream
     assert entry['size'] == track.stat().st_size
     assert entry['added'] == int(track.stat().st_mtime)

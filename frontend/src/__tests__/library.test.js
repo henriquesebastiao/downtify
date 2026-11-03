@@ -98,6 +98,15 @@ describe('normalizeTrack', () => {
     expect(track.url).toBe('/media/ext/abc123def456/Artist%20-%20Title.mp3')
   })
 
+  it('keeps the release date, falling back to the year', () => {
+    expect(
+      normalizeTrack({ file: 'a.mp3', release_date: '2022-10-07' }).releaseDate
+    ).toBe('2022-10-07')
+    expect(normalizeTrack({ file: 'b.mp3', year: '1997' }).releaseDate).toBe(
+      '1997'
+    )
+  })
+
   it('keeps the explicit mark, and is clean without one', () => {
     const loud = normalizeTrack({ file: 'a.mp3', title: 'A', explicit: true })
     const rows = [
