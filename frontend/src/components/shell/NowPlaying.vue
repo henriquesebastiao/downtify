@@ -50,7 +50,10 @@
               @click="contextRoute && nowPlaying.close()"
             >
               <CoverArt
-                v-if="context?.type === 'playlist' && (context.cover || context.covers?.length)"
+                v-if="
+                  context?.type === 'playlist' &&
+                  (context.cover || context.covers?.length)
+                "
                 :src="context.cover || ''"
                 :covers="context.covers || []"
                 :name="context.title"
