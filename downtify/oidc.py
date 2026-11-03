@@ -117,26 +117,28 @@ def create_authorization_url(
     transactions: OIDCTransactions,
 ) -> tuple[str, str]:
     endpoint = metadata.get('authorization_endpoint')
-    if not isinstance(endpoint, str) or not endpoint.startswith(
-        ('https://', 'http://')
-    ):
+    if not isinstance(endpoint, str) or not endpoint.startswith((
+        'https://',
+        'http://',
+    )):
         raise OIDCError('The provider has no valid authorization endpoint')
     state, nonce, verifier = transactions.create()
-    challenge = base64.urlsafe_b64encode(
-        hashlib.sha256(verifier.encode()).digest()
-    ).rstrip(b'=').decode()
-    query = urlencode(
-        {
-            'client_id': config.client_id,
-            'redirect_uri': callback_uri,
-            'response_type': 'code',
-            'scope': config.scopes,
-            'state': state,
-            'nonce': nonce,
-            'code_challenge': challenge,
-            'code_challenge_method': 'S256',
-        }
+    challenge = (
+        base64
+        .urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
+        .rstrip(b'=')
+        .decode()
     )
+    query = urlencode({
+        'client_id': config.client_id,
+        'redirect_uri': callback_uri,
+        'response_type': 'code',
+        'scope': config.scopes,
+        'state': state,
+        'nonce': nonce,
+        'code_challenge': challenge,
+        'code_challenge_method': 'S256',
+    })
     separator = '&' if '?' in endpoint else '?'
     return f'{endpoint}{separator}{query}', state
 
@@ -247,7 +249,9 @@ def local_login_enabled_from_env(
     environ: Optional[Mapping[str, str]] = None,
 ) -> bool:
     values = os.environ if environ is None else environ
-    return values.get('DOWNTIFY_DISABLE_LOCAL_LOGIN', '').strip().lower() not in {
+    return values.get(
+        'DOWNTIFY_DISABLE_LOCAL_LOGIN', ''
+    ).strip().lower() not in {
         '1',
         'true',
         'yes',
@@ -296,9 +300,10 @@ class OIDCProvider:
                 'jwks_uri',
             ):
                 endpoint = metadata.get(name)
-                if not isinstance(endpoint, str) or not endpoint.startswith(
-                    ('https://', 'http://')
-                ):
+                if not isinstance(endpoint, str) or not endpoint.startswith((
+                    'https://',
+                    'http://',
+                )):
                     raise OIDCError(f'The provider is missing {name}')
             self._metadata = metadata
         return self._metadata
@@ -317,13 +322,17 @@ class OIDCProvider:
         cookie_state: str,
         callback_uri: str,
     ) -> tuple[dict[str, Any], str, str]:
-        if not state or not cookie_state or not hmac.compare_digest(
-            state, cookie_state
+        if (
+            not state
+            or not cookie_state
+            or not hmac.compare_digest(state, cookie_state)
         ):
             raise OIDCError('The sign-in state does not match')
         transaction = self.transactions.consume(state)
         if transaction is None:
-            raise OIDCError('The sign-in state has expired or was already used')
+            raise OIDCError(
+                'The sign-in state has expired or was already used'
+            )
         nonce, verifier = transaction
         metadata = await self.metadata()
         async with httpx.AsyncClient(

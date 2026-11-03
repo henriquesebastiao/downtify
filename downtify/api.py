@@ -6986,13 +6986,16 @@ async def upload_library_playlist_cover_endpoint(
     entry = require_playlist_visible(name, request, manage=True)
     if not entry.get('manual'):
         raise HTTPException(
-            status_code=403, detail='Only a Library playlist can change its cover'
+            status_code=403,
+            detail='Only a Library playlist can change its cover',
         )
     data = bytearray()
     async for chunk in request.stream():
         data.extend(chunk)
         if len(data) > MAX_PLAYLIST_COVER_BYTES:
-            raise HTTPException(status_code=413, detail='Cover image is too large')
+            raise HTTPException(
+                status_code=413, detail='Cover image is too large'
+            )
     content_type = request.headers.get('content-type', '').split(';', 1)[0]
     try:
         await asyncio.to_thread(
@@ -7023,7 +7026,8 @@ async def remove_library_playlist_cover_endpoint(
     entry = require_playlist_visible(name, request, manage=True)
     if not entry.get('manual'):
         raise HTTPException(
-            status_code=403, detail='Only a Library playlist can change its cover'
+            status_code=403,
+            detail='Only a Library playlist can change its cover',
         )
     try:
         await asyncio.to_thread(

@@ -51,16 +51,14 @@ def test_oidc_config_is_optional_and_requires_complete_credentials():
 
 
 def test_config_reads_claim_and_group_settings():
-    config = OIDCConfig.from_env(
-        {
-            'DOWNTIFY_OIDC_ISSUER': 'https://id.example',
-            'DOWNTIFY_OIDC_CLIENT_ID': 'downtify',
-            'DOWNTIFY_OIDC_CLIENT_SECRET': 'secret',
-            'DOWNTIFY_OIDC_GROUPS_CLAIM': 'realm_access.roles',
-            'DOWNTIFY_OIDC_ALLOWED_GROUPS': 'users, admins',
-            'DOWNTIFY_OIDC_ADMIN_GROUPS': 'admins',
-        }
-    )
+    config = OIDCConfig.from_env({
+        'DOWNTIFY_OIDC_ISSUER': 'https://id.example',
+        'DOWNTIFY_OIDC_CLIENT_ID': 'downtify',
+        'DOWNTIFY_OIDC_CLIENT_SECRET': 'secret',
+        'DOWNTIFY_OIDC_GROUPS_CLAIM': 'realm_access.roles',
+        'DOWNTIFY_OIDC_ALLOWED_GROUPS': 'users, admins',
+        'DOWNTIFY_OIDC_ADMIN_GROUPS': 'admins',
+    })
 
     assert config is not None
     assert config.groups_claim == 'realm_access.roles'
@@ -118,7 +116,11 @@ def test_valid_signed_id_token_is_accepted():
     [
         ({'aud': 'another-client'}, 'expected-nonce', 'different client'),
         ({}, 'wrong-nonce', 'nonce does not match'),
-        ({'iss': 'https://other.example'}, 'expected-nonce', 'invalid ID token'),
+        (
+            {'iss': 'https://other.example'},
+            'expected-nonce',
+            'invalid ID token',
+        ),
         ({'exp': 1}, 'expected-nonce', 'invalid ID token'),
     ],
 )
@@ -156,9 +158,7 @@ def test_group_claim_maps_role_and_enforces_allowlist():
         {
             'sub': 'subject-123',
             'preferred_username': 'maria',
-            'realm_access': {
-                'roles': ['downtify-users', 'downtify-admins']
-            },
+            'realm_access': {'roles': ['downtify-users', 'downtify-admins']},
         },
         config,
     ) == ('maria', 'admin')

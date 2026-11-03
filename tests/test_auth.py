@@ -625,9 +625,12 @@ def test_oidc_callback_creates_a_local_session(client, monkeypatch):
             assert request.headers['authorization'].startswith('Basic ')
             assert form['grant_type'] == ['authorization_code']
             verifier = form['code_verifier'][0]
-            challenge = base64.urlsafe_b64encode(
-                hashlib.sha256(verifier.encode()).digest()
-            ).rstrip(b'=').decode()
+            challenge = (
+                base64
+                .urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
+                .rstrip(b'=')
+                .decode()
+            )
             assert challenge == transaction['challenge']
             now = int(time.time())
             id_token = jwt.encode(
@@ -687,7 +690,10 @@ def test_disabling_local_login_keeps_pairing_available(client, monkeypatch):
 
     assert _sign_in(client).status_code == 409
     assert _sign_in_app(client).status_code == 409
-    assert client.post('/api/auth/pair', json={'code': 'invalid'}).status_code == 401
+    assert (
+        client.post('/api/auth/pair', json={'code': 'invalid'}).status_code
+        == 401
+    )
     status = client.get('/api/auth/status').json()
     assert status['local_login_enabled'] is False
     info = client.get('/api/server/info').json()

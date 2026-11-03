@@ -456,9 +456,7 @@ class UserStore:
                         ).fetchone()['n']
                         <= 1
                     ):
-                        raise UserError(
-                            'The last admin must stay an admin'
-                        )
+                        raise UserError('The last admin must stay an admin')
                     conn.execute(
                         'UPDATE users SET role = ? WHERE id = ?',
                         (role, row['id']),
