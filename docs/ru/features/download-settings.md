@@ -1,0 +1,209 @@
+---
+icon: lucide/sliders-horizontal
+---
+
+# Download Settings
+
+Open **Settings** from the sidebar (on phones: **More → Settings**). The page is split into sections — General, Audio sources, Downloads & files, Tags & lyrics, Navidrome, Library and About. Changes are held until you press **Save changes** in the bar that appears at the bottom; leaving the page with unsaved changes asks first. Settings are saved to disk and survive container restarts.
+
+## Format
+
+| Format | Extension | Notes |
+|--------|-----------|-------|
+| MP3 | `.mp3` | Default. Universal compatibility. |
+| FLAC | `.flac` | Lossless. Bitrate setting is ignored. |
+| M4A | `.m4a` | AAC in an MPEG-4 container. Good for Apple devices. |
+| OGG | `.ogg` | Ogg Vorbis. Open format, good quality-to-size ratio. |
+| OPUS | `.opus` | Best compression at low bitrates. |
+
+## Bitrate
+
+Available for lossy formats (MP3, M4A, OGG, OPUS). FLAC ignores this setting.
+
+| Option | Kbps |
+|--------|------|
+| Low | 128 |
+| Medium | 192 |
+| High | 256 |
+| Best | **320** (default) |
+
+The downloaded audio is encoded at the bitrate you pick, for every lossy format. If the audio YouTube serves already has the target codec at roughly that bitrate (e.g. its ~128 kbps AAC stream for **M4A @ 128**), it's kept as-is instead of being re-encoded, since a re-encode would only lose quality.
+
+::: info A higher bitrate doesn't add quality
+YouTube's audio tops out at roughly **128–160 kbps** (AAC or Opus), and Downtify always downloads the best stream available. Encoding it at 256 or 320 kbps gives larger files that preserve that source faithfully, but can't restore detail the source never had. Pick a lower bitrate if file size matters more to you.
+:::
+
+## Output filename template
+
+The default filename template is:
+
+```
+{artists} - {title}
+```
+
+Which produces filenames like `The Night Owls - Do I Still Recall.mp3`.
+
+Available tokens:
+
+| Token | Description |
+|-------|-------------|
+| `{title}` | Track title |
+| `{artists}` | Every credited artist, comma-separated (e.g. `Christina Aguilera, Lil' Kim, Mýa, P!nk`) |
+| `{artist}` | The first credited artist only (e.g. `Christina Aguilera`). A name that contains a comma, like `Earth, Wind & Fire`, stays whole. |
+| `{album}` | Album name |
+| `{tracknumber}` | Track's position on its album, zero-padded to 2 digits (e.g. `01`, `12`). Empty when the source has no track number (e.g. a free-text/YouTube search result). |
+| `{year}` | Release year (e.g. `2025`). Empty when the source has no release date (e.g. a free-text/YouTube search result). |
+
+The template can also include `/` to build subfolders. For example, to lay out a library as `Artist/Album (2025)/01 - Title.mp3` — handy when downloading a full discography, since each album lands in its own folder alongside its release year:
+
+```
+{artist}/{album} ({year})/{tracknumber} - {title}
+```
+
+Use `{artist}` rather than `{artists}` in a folder: with `{artists}`, a song with guests gets a folder of its own (`Christina Aguilera, Lil' Kim, Mýa, P!nk/`) instead of landing in the first artist's.
+
+::: info
+This is independent of the **Organize by artist** / **Organize by album** toggles — those route playlist/album downloads into shared per-artist or per-album folders across your whole library (see [File Organization](file-organization.md)). `{tracknumber}` and `{year}` just let a template like the one above build that same layout manually, track by track, without turning those toggles on.
+:::
+
+::: tip Compilations
+The template applies to a track from a various-artists compilation like to any other: `{artist}` is the track's own first artist, never "Various Artists". See [Several artists and compilations](file-organization.md#several-artists-and-compilations).
+:::
+
+## Parallel downloads
+
+Controls how many songs are downloaded simultaneously. Pick a preset (1, 2, 3, 5, 8) or type any custom value from **1 to 30** into the number field next to the presets.
+
+| Value | Behaviour |
+|-------|-----------|
+| **1** | Sequential — one song at a time (safest, lowest resource use) |
+| **3** | Default. Good balance of speed and stability. |
+| **8** | Faster for large playlists |
+| **up to 30** | Best for very fast connections; uses more CPU and bandwidth, and increases the chance of YouTube rate-limiting you. |
+
+The limit applies to every batch download — playlist/album downloads, the batch queue endpoint, and CSV [library imports](library-import.md) — and to **[Existing music folders](external-library.md)** Sync lookups (lyrics, covers, genre). It does **not** apply to Playlist Monitor sweeps, which download new tracks one at a time. Changing this value in Settings takes effect immediately without a restart; the server clamps any value outside `1–30`.
+
+## Delay between downloads
+
+Makes Downtify wait a configurable number of seconds after finishing one song before starting the next one, instead of firing requests back-to-back.
+
+| Value | Behaviour |
+|-------|-----------|
+| **0** | Default — off, no delay. |
+| **5 / 15 / 30 / 60** | Presets, or type any custom value from **0 to 300 seconds**. |
+
+This applies to playlist, album and batch downloads, CSV [library imports](library-import.md), and Playlist Monitor's automatic sweeps. It is skipped for a single manual track download (there's no "next" song to wait for), and skipped after the *last* track in any batch so a run doesn't trail off with a pointless wait at the end.
+
+Combined with a lower **Parallel downloads** value, this is the main tool for avoiding YouTube rate-limiting when downloading a large playlist or an imported library unattended.
+
+## Pause between sync lookups
+
+The same idea, for **[Existing music folders](external-library.md)** rather than downloads. Sync looks up lyrics, missing covers and genre in batches of **[Parallel downloads](#parallel-downloads)** tracks at a time, then waits this many seconds before the next batch. Default **0** (lookups keep running concurrently, still capped by Parallel downloads). Use a few seconds on a large collection so LRCLIB, cover sources and iTunes aren't hit all at once.
+
+## Download cover art
+
+Controls whether Downtify embeds album art at all. On by default. Turn it off to skip fetching cover art entirely — every other tag (title, artist, album, year, lyrics) still embeds normally, but files end up smaller and download slightly faster since the cover image is never requested or written.
+
+Turning this off also skips writing the standalone `cover.jpg` that the *Organize by album* option (see [File Organization](file-organization.md)) produces, and the [player](player.md)/library will show no artwork for tracks downloaded this way (the fallback music-note icon instead).
+
+That `cover.jpg` is shared by every track in the album folder. Deleting a track from the Library page removes it too, but only once it's the **last** track left in that folder — as long as another track from the same album is still there, the cover stays.
+
+## Cover art resolution
+
+Only relevant when **Download cover art** (above) is on. Sets the target size (width and height, in pixels) Downtify requests for embedded cover art sourced from **YouTube Music** or **Deezer**. Pick a preset (300, 600, 800, 1000, 1200) or drag the slider anywhere from **300 to 1200**; the current value in pixels is shown next to it. Default is 600.
+
+This is useful when feeding your library into a media server like Plex that displays cover art at higher resolution than Downtify embedded by default.
+
+The two sources apply the setting differently, since only one of them can actually be resized on demand:
+
+- **YouTube Music** thumbnails can be resized by editing their URL — verified against the live CDN, the higher presets return genuinely more detail (not just upscaling) for most album art, up to the source image's own resolution.
+- **Deezer** only ever offers four fixed sizes for any track, album, artist or playlist cover (56, 250, 500 and 1000px) — there's no in-between size to request. Downtify picks the smallest of those four that's still at least as big as the configured value (asking for 300px gets the 500px one, since there's no exact 300px size); asking for more than 1000px still gets the 1000px one, Deezer's largest.
+
+::: info Spotify-sourced covers aren't affected
+Downtify already embeds the **largest** cover Spotify's public embed API offers for Spotify-resolved tracks/albums/playlists — there's no larger size to request. This setting only raises the ceiling for tracks resolved through YouTube Music (free-text search, YouTube URLs, and any Spotify track re-matched to YouTube Music for the actual audio) or Deezer (a pasted Deezer link, or a track from [Charts](charts.md)).
+:::
+
+Changing this value in Settings takes effect immediately, including for the currently-open search page — it does not require re-downloading anything already on disk.
+
+## Overwrite existing files
+
+On by default, matching Downtify's historical behavior: every download runs through the pipeline (audio fetch, tagging, cover art, lyrics) and overwrites whatever file already sits at the computed output path.
+
+### What "again" actually means
+
+With it on, a re-download is a **completely fresh run**, not a repair of the existing file. Downtify does not look at what you already have: it searches your [audio sources](#audio-provider) in their configured order — so if slskd is first, slskd is tried first, not only as a fallback — fetches the audio from whichever source answers, and writes today's tags, cover art and lyrics onto it.
+
+That has one consequence worth knowing before re-downloading a large library:
+
+::: warning A different format leaves the old file behind
+The new file is written at the path the [filename template](#output-filename-template) produces, with the **new** audio's extension. Downtify overwrites the old file only when both end up with the same extension.
+
+So re-downloading `Artist - Song.mp3` when slskd answers with a FLAC gives you **both** `Artist - Song.mp3` (the old one, untouched) and `Artist - Song.flac`. With [Leave slskd files in place](slskd-navidrome.md#leave-files-in-place) on — the default — the slskd file isn't even copied into your downloads folder, so the old file stays exactly where it was and the new one lives under `slskd/`.
+
+Nothing is lost, but you get duplicates. To actually replace a file, see [Replace audio](replace-audio.md), which keeps the path, the format and the tags.
+:::
+
+### Cover art comes from Spotify or YouTube Music, not from the file
+
+Whatever artwork the downloaded audio carries — including a high-resolution cover embedded in an slskd file — is **discarded and replaced** during tagging. Downtify always embeds the cover it fetches for the track from Spotify or YouTube Music (or SoundCloud's artwork, for a SoundCloud link), at the [cover art resolution](#cover-art-resolution) you configured (600 px by default). The same applies to the title, artists, album and the rest of the tags: the source's own tags are not kept.
+
+If what you want is bigger artwork on files you already have, re-downloading is the long way around. [Upgrade library](library-upgrade.md) does exactly that — it compares each file's embedded cover against Spotify, iTunes and YouTube Music, writes the largest one, fills in missing lyrics and tags, and never touches the audio.
+
+Turn this off to never download a song that is already on disk. This matters most when downloading a playlist, importing a [CSV library](library-import.md), or letting the [Playlist Monitor](playlist-monitor.md) sync playlists that share tracks with each other or with songs already in your library — with the option on, every one of those duplicates is downloaded again.
+
+With it off, Downtify looks for the song **anywhere in the download folder**, not just where the new download would go:
+
+- the library root (single-track downloads),
+- any playlist's folder (playlist downloads, CSV imports, Playlist Monitor),
+- an artist/album folder, or the flat layout from before you turned *Organize by artist/album* on or off.
+
+A song counts as already downloaded when an audio file (`.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`) has the name the [output filename template](#output-filename-template) produces for it, compared case-insensitively. A leftover `.lrc` lyrics file alone doesn't count. If the template contains folders (e.g. `{artists}/{title}`), those folders must match too, so another artist's song with the same title isn't mistaken for this one. Because files don't carry a Spotify/YouTube track ID, matching is by name: a file you renamed, or one saved under a different filename template, won't be recognized.
+
+When a song is skipped:
+
+- Nothing is fetched: no audio, no cover art, no lyrics, no re-tagging. For Spotify tracks the check runs before the YouTube Music search too, so already-downloaded songs don't cost any search requests.
+- The queue shows the song as finished, and playlist [M3U files](m3u-export.md) point at the existing file wherever it lives (e.g. `../Artist - Title.mp3`), so the playlist still plays in full.
+- If the same song is queued twice at the same time (listed twice in one playlist, or in two playlists downloading in parallel), only one copy is downloaded. The other waits for it and then skips.
+
+## Long tracks
+
+**Settings → Downloads → Longest track taken** caps the track length for downloads *and* streams alike (default **10 minutes**, `0` takes everything). Longer songs are refused before anything is fetched, with a *"tracks over … are not downloaded"* queue error — hour-long mixes and uploads are never what a library track should be. The same cap guards streaming: a longer track is refused with a `400` (callers that know its length pass `duration`, and the cached file is probed either way), so long uploads never accumulate in the stream cache either. Already-downloaded files and podcast episodes (which are routinely longer) are unaffected.
+
+## Audio provider
+
+The default audio provider is **YouTube Music**. Downtify uses [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) to search for the best match by comparing track duration. When YouTube Music has no acceptable match, or only one whose duration is far off (a likely different recording), Downtify automatically falls back to searching standard YouTube — see [How it works](../how-it-works.md#fallback-to-standard-youtube).
+
+**Settings → Audio source** can also use standard **YouTube** only, **SoundCloud**, **slskd** (Soulseek) or **Deemix**, as an ordered fallback list — see [slskd & Navidrome](slskd-navidrome.md#audio-sources-and-fallback-order).
+
+### Force a specific audio source
+
+If Downtify picks the wrong YouTube Music video (e.g. a cover instead of the original), you can override it per track:
+
+**Option A — paste a YouTube Music URL directly**
+
+Paste `https://music.youtube.com/watch?v=…` (or a regular `youtube.com/watch?v=…` URL) into the search bar and hit download. Downtify fetches the audio from that exact video.
+
+::: info
+When downloading via YouTube URL, metadata (title, artist, cover) comes from YouTube rather than Spotify. For clean tags, use Option B.
+:::
+
+**Option B — force audio on a failed track**
+
+1. In the **Download Queue**, click **Force audio source** under a failed track.
+2. Paste a YouTube or YouTube Music URL into the input that appears — or a SoundCloud track URL, when the **SoundCloud** source is on.
+3. Press **Enter** or click **Apply**.
+
+Downtify re-downloads the track using that exact video (or SoundCloud track) while keeping all Spotify metadata (title, artist, album, cover art, lyrics).
+
+## Embedded metadata
+
+Downtify embeds the following tags in every downloaded file, regardless of format:
+
+| Tag | Source |
+|-----|--------|
+| Title | Spotify embed |
+| Artist(s) | Spotify embed |
+| Album | Spotify embed — for a single-track download, the album the track's public Spotify page names (the track embed itself has none) |
+| Year | Spotify embed (track-level fetch) |
+| Album art | Spotify embed (track-level cover) for Spotify-resolved tracks; YouTube Music thumbnail or Deezer cover otherwise. Optional — see [Download cover art](#download-cover-art) and [Cover art resolution](#cover-art-resolution) |
+| Lyrics | lrclib (if enabled) |

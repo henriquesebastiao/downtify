@@ -16,9 +16,28 @@ function allKeys(obj, prefix = '') {
   })
 }
 
+/** Dotted key paths, treating each plural message as a single leaf. */
+function shapeKeys(obj, prefix = '') {
+  return Object.entries(obj).flatMap(([key, value]) => {
+    const path = prefix ? `${prefix}.${key}` : key
+    if (typeof value !== 'object' || value === null) return [path]
+    const forms = Object.keys(value)
+    return forms.length && forms.every((f) => PLURAL_FORMS.includes(f))
+      ? [path]
+      : shapeKeys(value, path)
+  })
+}
+
 function valueAt(obj, key) {
   return key.split('.').reduce((cur, k) => cur?.[k], obj)
 }
+
+const PLURAL_FORMS = ['zero', 'one', 'two', 'few', 'many', 'other']
+const pluralNode = (value) =>
+  typeof value === 'object' &&
+  value !== null &&
+  Object.keys(value).length > 0 &&
+  Object.keys(value).every((form) => PLURAL_FORMS.includes(form))
 
 const enKeys = allKeys(en).sort()
 const placeholders = (text) =>
@@ -27,8 +46,40 @@ const placeholders = (text) =>
 describe('i18n locale key consistency', () => {
   for (const { code, messages } of AVAILABLE_LOCALES) {
     describe(code, () => {
-      it('has exactly the same keys as en', () => {
-        expect(allKeys(messages).sort()).toEqual(enKeys)
+      it('has exactly the same key shape as en', () => {
+        // Every plural message maps to one path, so a language may add
+        // the plural forms it needs (e.g. Russian's `few`/`many`)
+        // without losing one-to-one key parity.
+        expect(shapeKeys(messages).sort()).toEqual(shapeKeys(en).sort())
+      })
+
+      it('declares plural messages where en has them, with an `other` form', () => {
+        for (const key of shapeKeys(en)) {
+          const enValue = valueAt(en, key)
+          if (!pluralNode(enValue)) continue
+          const value = valueAt(messages, key)
+          if (!pluralNode(value)) {
+            throw new Error(
+              `${code}: plural message at "${key}" must stay a message object`
+            )
+          }
+          const forms = Object.keys(value)
+          expect(
+            forms.every((f) => PLURAL_FORMS.includes(f)),
+            `${code}: unknown plural form at "${key}"`
+          ).toBe(true)
+          expect(value.other, `${code}: "${key}" needs "other"`).toBeTruthy()
+          for (const form of forms) {
+            // Forms that en also has share its placeholders; forms that
+            // only this language has share en's `other` placeholders.
+            const expected =
+              form in enValue ? enValue[form] : enValue.other
+            expect(
+              placeholders(value[form]).sort(),
+              `${code}: "${key}.${form}"`
+            ).toEqual(placeholders(expected).sort())
+          }
+        }
       })
 
       it('declares a language name', () => {

@@ -31,6 +31,7 @@ Henüz çevrilmemiş bir sayfa bir not ve İngilizce metni gösterir; böylece h
 | `hu` | Magyar | ✓ | ✓ |
 | `bg` | Български | ✓ | ✓ |
 | `de` | Deutsch | ✓ | ✓ |
+| `ru` | Русский | ✓ | ✗ |
 | `ko` | 한국어 | ✓ | ✓ |
 
 Geliştiriciler için hazırlanmış başvuru sayfaları — [API başvurusu](../api-reference.md), [mobil istemci sözleşmesi](../mobile-client-contract.md) ve değişiklik günlüğü — her dilde İngilizce kalır.

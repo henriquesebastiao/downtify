@@ -31,6 +31,7 @@ Una página que aún no está traducida muestra un aviso y el texto en inglés, 
 | `hu` | Magyar | ✓ | ✓ |
 | `bg` | Български | ✓ | ✓ |
 | `de` | Deutsch | ✓ | ✓ |
+| `ru` | Русский | ✓ | ✗ |
 | `ko` | 한국어 | ✓ | ✓ |
 
 Las páginas de referencia pensadas para desarrolladores — la [referencia de la API](../api-reference.md), el [contrato del cliente móvil](../mobile-client-contract.md) y el changelog — se quedan en inglés en todos los idiomas.

@@ -4,7 +4,7 @@ icon: lucide/languages
 
 # Internationalization
 
-Downtify is translated in two independent places: the **app** (its interface) and this **documentation**. The default language of both is **English**, with nine other languages included out of the box.
+Downtify is translated in two independent places: the **app** (its interface) and this **documentation**. The default language of both is **English**, with ten other languages included out of the box.
 
 ## Switching language
 
@@ -32,6 +32,7 @@ A page that has not been translated yet shows a note and the English text, so ev
 | `bg`    | Български          | ✓   | ✓    |
 | `de`    | Deutsch            | ✓   | ✓    |
 | `ko`    | 한국어             | ✓   | ✓    |
+| `ru`    | Русский            | ✓   | ✗    |
 
 The reference pages meant for developers — the [API reference](../api-reference.md), the [mobile client contract](../mobile-client-contract.md) and the changelog — stay in English in every language.
 

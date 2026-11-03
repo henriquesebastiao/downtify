@@ -31,6 +31,7 @@ Une page pas encore traduite affiche une note et le texte anglais, si bien que c
 | `hu` | Magyar | ✓ | ✓ |
 | `bg` | Български | ✓ | ✓ |
 | `de` | Deutsch | ✓ | ✓ |
+| `ru` | Русский | ✓ | ✗ |
 | `ko` | 한국어 | ✓ | ✓ |
 
 Les pages de référence destinées aux développeurs — la [référence de l’API](../api-reference.md), le [contrat du client mobile](../mobile-client-contract.md) et le journal des modifications — restent en anglais dans toutes les langues.

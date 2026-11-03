@@ -272,6 +272,94 @@ def test_concurrent_additions_keep_both_tracks(tmp_path, monkeypatch):
     ) == {'One.mp3', 'Two.mp3'}
 
 
+def test_concurrent_user_and_admin_edits_keep_neighbours(
+    tmp_path, monkeypatch
+):
+    """An editor's and an admin's edits racing on the same playlist never
+    drop each other's tracks nor move the neighbours around: every
+    read-modify-write runs under the module lock, adds append at the end
+    and removals splice out exactly one path."""
+    root = tmp_path / 'downloads'
+    root.mkdir()
+    for name in ('Alpha.mp3', 'Beta.mp3', 'Gamma.mp3', 'Delta.mp3'):
+        (root / name).write_bytes(b'audio fixture')
+    ctx = LibraryContext(download_dir=root)
+    monkeypatch.setattr(
+        manual_playlists, 'refresh_manual_playlist_cover', lambda *args: None
+    )
+    create_manual_playlist(ctx, 'Together')
+    edit_manual_playlist(
+        ctx, 'Together', add=['Alpha.mp3', 'Beta.mp3', 'Gamma.mp3']
+    )
+    ready = Barrier(2)
+
+    def user_adds(name):
+        ready.wait(timeout=5)
+        return edit_manual_playlist(ctx, 'Together', add=[name])
+
+    def admin_removes(name):
+        ready.wait(timeout=5)
+        return edit_manual_playlist(ctx, 'Together', remove=[name])
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        user_result = pool.submit(user_adds, 'Delta.mp3')
+        admin_result = pool.submit(admin_removes, 'Alpha.mp3')
+        # Both edits applied, in either order.
+        assert 'removed' in admin_result.result()
+        assert 'added' in user_result.result()
+    files = manual_playlists._read_files(
+        ctx, root / 'Playlists' / 'Together.m3u'
+    )
+    assert files == ['Beta.mp3', 'Gamma.mp3', 'Delta.mp3']
+
+
+def test_concurrent_three_edits_keep_neighbour_order(tmp_path, monkeypatch):
+    """Two adds and one removal racing: neighbours Beta and Gamma keep
+    their relative order and the Alpha neighbour that an admin removes
+    leaves exactly once, whatever order the edits land in."""
+    root = tmp_path / 'downloads'
+    root.mkdir()
+    for name in (
+        'Alpha.mp3',
+        'Beta.mp3',
+        'Gamma.mp3',
+        'Delta.mp3',
+        'Epsil.mp3',
+    ):
+        (root / name).write_bytes(b'audio fixture')
+    ctx = LibraryContext(download_dir=root)
+    monkeypatch.setattr(
+        manual_playlists, 'refresh_manual_playlist_cover', lambda *args: None
+    )
+    create_manual_playlist(ctx, 'Together')
+    edit_manual_playlist(
+        ctx, 'Together', add=['Alpha.mp3', 'Beta.mp3', 'Gamma.mp3']
+    )
+    ready = Barrier(3)
+
+    def edit(operation, name):
+        ready.wait(timeout=5)
+        return edit_manual_playlist(ctx, 'Together', **{operation: [name]})
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        for result in (
+            pool.submit(edit, 'add', 'Delta.mp3'),
+            pool.submit(edit, 'add', 'Epsil.mp3'),
+            pool.submit(edit, 'remove', 'Alpha.mp3'),
+        ):
+            result.result()
+    files = manual_playlists._read_files(
+        ctx, root / 'Playlists' / 'Together.m3u'
+    )
+    assert sorted(files) == [
+        'Beta.mp3',
+        'Delta.mp3',
+        'Epsil.mp3',
+        'Gamma.mp3',
+    ]
+    assert files.index('Beta.mp3') < files.index('Gamma.mp3')
+
+
 def test_source_cover_survives_edits_rename_and_does_not_change_audio(
     tmp_path,
 ):
