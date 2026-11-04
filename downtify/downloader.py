@@ -1421,9 +1421,7 @@ class Downloader:
                 # Registered directly: `ydl_opts['postprocessors']` only
                 # accepts yt-dlp's built-in postprocessors by name.
                 ydl.add_post_processor(
-                    _ExtractAudioPP(
-                        ydl, extract_format, extract_bitrate
-                    ),
+                    _ExtractAudioPP(ydl, extract_format, extract_bitrate),
                     when='post_process',
                 )
                 ydl.download([url])
