@@ -32,6 +32,7 @@ Eine noch nicht übersetzte Seite zeigt einen Hinweis und den englischen Text, s
 | `bg` | Български | ✓ | ✓ |
 | `de` | Deutsch | ✓ | ✓ |
 | `ko` | 한국어 | ✓ | ✓ |
+| `zh-CN` | 简体中文 | ✓ | — |
 
 Die für Entwickler gedachten Referenzseiten — die [API-Referenz](../api-reference.md), der [Vertrag für mobile Clients](../mobile-client-contract.md) und das Changelog — bleiben in jeder Sprache auf Englisch.
 

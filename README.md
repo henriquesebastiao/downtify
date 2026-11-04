@@ -167,7 +167,9 @@ See **[Troubleshooting](https://henriquesebastiao.github.io/downtify/troubleshoo
 
 ## Translations
 
-The interface is available in English, Spanish, Brazilian Portuguese, French, Turkish, Hungarian, Greek, Bulgarian, German and Korean, and so is the [documentation](https://downtify.henriquesebastiao.com/): it opens in your browser's language when it is translated into it (English otherwise), and the globe button in the top bar switches language. Switch the app's language in **Settings → Language**; the choice is saved in the browser and applies without a reload.
+The interface is available in English, Spanish, Brazilian Portuguese, French, Turkish, Hungarian, Greek, Bulgarian, German, Korean and Simplified Chinese (简体中文, `zh-CN`). Switch the app's language in **Settings → Language**; the choice is saved in the browser and applies without a reload.
+
+The [documentation](https://downtify.henriquesebastiao.com/) is translated into the same languages except Simplified Chinese. It opens in your browser's language when it is translated into it (English otherwise), and the globe button in the top bar switches language. See [Internationalization](https://henriquesebastiao.github.io/downtify/features/internationalization/) for the app and documentation language list.
 
 ### Contributing translations
 
