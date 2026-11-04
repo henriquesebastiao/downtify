@@ -9,6 +9,7 @@ import hu from './locales/hu.js'
 import bg from './locales/bg.js'
 import de from './locales/de.js'
 import ko from './locales/ko.js'
+import zhCN from './locales/zh-CN.js'
 
 // Registry of available locales. To add a new language:
 //   1. Create ./locales/<code>.js exporting the same key shape as en.js
@@ -26,6 +27,7 @@ export const AVAILABLE_LOCALES = [
   { code: 'bg', name: 'Български', messages: bg },
   { code: 'de', name: 'Deutsch', messages: de },
   { code: 'ko', name: '한국어', messages: ko },
+  { code: 'zh-CN', name: '简体中文', messages: zhCN },
 ]
 
 const DEFAULT_LOCALE = 'en'
