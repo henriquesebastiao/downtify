@@ -15,6 +15,7 @@ Abra **Configurações** na barra lateral (no celular: **Mais → Configuraçõe
 | M4A | `.m4a` | AAC em um contêiner MPEG-4. Bom para dispositivos Apple. |
 | OGG | `.ogg` | Ogg Vorbis. Formato aberto, boa relação qualidade/tamanho. |
 | OPUS | `.opus` | Melhor compressão em bitrates baixos. |
+| Original | varies | Mantém o melhor fluxo de áudio disponível sem recodificá-lo. A extensão acompanha a fonte (por exemplo, `.opus` ou `.m4a`). |
 
 ## Bitrate
 

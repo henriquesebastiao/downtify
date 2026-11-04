@@ -15,6 +15,7 @@ Nyisd meg a **Beállítások** oldalt az oldalsávról (telefonon: **Továbbiak 
 | M4A | `.m4a` | AAC MPEG-4 konténerben. Jó Apple-eszközökhöz. |
 | OGG | `.ogg` | Ogg Vorbis. Nyílt formátum, jó minőség/méret arány. |
 | OPUS | `.opus` | A legjobb tömörítés alacsony bitrátáknál. |
+| Eredeti | varies | Újrakódolás nélkül megtartja a legjobb elérhető hangfolyamot. A fájlkiterjesztés a forrástól függ (például `.opus` vagy `.m4a`). |
 
 ## Bitráta
 

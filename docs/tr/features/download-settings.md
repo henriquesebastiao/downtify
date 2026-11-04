@@ -15,6 +15,7 @@ Kenar çubuğundan **Ayarlar**’ı açın (telefonda: **Daha fazla → Ayarlar*
 | M4A | `.m4a` | MPEG-4 kapsayıcısında AAC. Apple cihazları için iyi. |
 | OGG | `.ogg` | Ogg Vorbis. Açık biçim, iyi kalite/boyut oranı. |
 | OPUS | `.opus` | Düşük bit hızlarında en iyi sıkıştırma. |
+| Orijinal | varies | Yeniden kodlamadan kullanılabilen en iyi ses akışını korur. Dosya uzantısı kaynağa bağlıdır (ör. `.opus` veya `.m4a`). |
 
 ## Bit hızı
 

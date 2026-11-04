@@ -15,6 +15,7 @@ icon: lucide/sliders-horizontal
 | M4A | `.m4a` | MPEG-4 컨테이너의 AAC. Apple 기기에 적합합니다. |
 | OGG | `.ogg` | Ogg Vorbis. 개방형 형식으로 품질 대비 용량이 좋습니다. |
 | OPUS | `.opus` | 낮은 비트레이트에서 가장 좋은 압축. |
+| 원본 | varies | 재인코딩 없이 사용 가능한 최고 품질의 오디오 스트림을 유지합니다. 파일 확장자는 소스에 따라 달라집니다(예: `.opus`, `.m4a`). |
 
 ## 비트레이트
 

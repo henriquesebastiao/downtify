@@ -15,10 +15,11 @@ Open **Settings** from the sidebar (on phones: **More → Settings**). The page 
 | M4A | `.m4a` | AAC in an MPEG-4 container. Good for Apple devices. |
 | OGG | `.ogg` | Ogg Vorbis. Open format, good quality-to-size ratio. |
 | OPUS | `.opus` | Best compression at low bitrates. |
+| Original | varies | Keeps the best available audio stream without re-encoding it. The extension follows the source audio (for example, `.opus` or `.m4a`). |
 
 ## Bitrate
 
-Available for lossy formats (MP3, M4A, OGG, OPUS). FLAC ignores this setting.
+Available for lossy formats (MP3, M4A, OGG, OPUS). FLAC and Original ignore this setting.
 
 | Option | Kbps |
 |--------|------|

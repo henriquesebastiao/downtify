@@ -1471,9 +1471,13 @@ export default {
     audioGroup: 'Ses',
     format: 'Biçim',
     formatHint: 'YouTube’dan indirilen dosyalar bu biçime dönüştürülür.',
+    formatOriginal: 'Orijinal',
+    formatOriginalHint:
+      'Yeniden kodlamadan kullanılabilen en iyi ses akışını korur. Dosya uzantısı kaynağa bağlıdır.',
     bitrate: 'Kalite',
     bitrateHint: 'Kayıplı biçimler için bit hızı.',
     bitrateLossless: 'Kayıpsız olan FLAC için kullanılmaz.',
+    bitrateOriginal: 'Orijinal ses biçimi korunurken kullanılmaz.',
     filesGroup: 'Dosyalar',
     template: 'Dosya adı',
     templateHint: 'Klasör oluşturmak için / kullan.',

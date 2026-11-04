@@ -309,7 +309,11 @@
             <SettingGroup :title="t('settings.audioGroup')">
               <SettingRow
                 :label="t('settings.format')"
-                :description="t('settings.formatHint')"
+                :description="
+                  s.format === 'original'
+                    ? t('settings.formatOriginalHint')
+                    : t('settings.formatHint')
+                "
               >
                 <UiSegmented
                   v-model="s.format"
@@ -317,7 +321,10 @@
                   :options="
                     sm.settingsOptions.format.map((f) => ({
                       value: f,
-                      label: f.toUpperCase(),
+                      label:
+                        f === 'original'
+                          ? t('settings.formatOriginal')
+                          : f.toUpperCase(),
                     }))
                   "
                 />
@@ -325,16 +332,20 @@
               <SettingRow
                 :label="t('settings.bitrate')"
                 :description="
-                  s.format === 'flac'
-                    ? t('settings.bitrateLossless')
-                    : t('settings.bitrateHint')
+                  s.format === 'original'
+                    ? t('settings.bitrateOriginal')
+                    : s.format === 'flac'
+                      ? t('settings.bitrateLossless')
+                      : t('settings.bitrateHint')
                 "
               >
                 <UiSegmented
                   v-model="s.bitrate"
                   show-labels
                   :class="
-                    s.format === 'flac' ? 'pointer-events-none opacity-40' : ''
+                    s.format === 'flac' || s.format === 'original'
+                      ? 'pointer-events-none opacity-40'
+                      : ''
                   "
                   :options="
                     sm.settingsOptions.bitrate.map((b) => ({
@@ -1062,6 +1073,10 @@ function addToken(token) {
 
 const templatePreview = computed(() => {
   const template = String(s.value.output || sm.settingsOptions.output)
+  const previewTemplate =
+    s.value.format === 'original'
+      ? template.replace('.{output-ext}', '')
+      : template
   const values = {
     '{artists}': 'Kenji Aoki, Mira Kovač',
     '{artist}': 'Kenji Aoki',
@@ -1073,7 +1088,7 @@ const templatePreview = computed(() => {
   }
   return Object.entries(values).reduce(
     (text, [token, value]) => text.split(token).join(value),
-    template
+    previewTemplate
   )
 })
 
