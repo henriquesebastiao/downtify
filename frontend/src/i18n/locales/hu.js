@@ -1485,9 +1485,13 @@ export default {
     format: 'Formátum',
     formatHint:
       'A YouTube-ról letöltött fájlok ebbe a formátumba konvertálódnak.',
+    formatOriginal: 'Eredeti',
+    formatOriginalHint:
+      'A legjobb elérhető hangfolyamot újrakódolás nélkül tartja meg. A fájlkiterjesztés a forrástól függ.',
     bitrate: 'Minőség',
     bitrateHint: 'Bitráta veszteséges formátumokhoz.',
     bitrateLossless: 'FLAC-nál nem használt, mert veszteségmentes.',
+    bitrateOriginal: 'Az eredeti hangformátum megtartásakor nem használatos.',
     filesGroup: 'Fájlok',
     template: 'Fájlnév',
     templateHint: 'Mappák létrehozásához használj / jelet.',

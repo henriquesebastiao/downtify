@@ -1472,9 +1472,13 @@ export default {
     audioGroup: '오디오',
     format: '포맷',
     formatHint: 'YouTube에서 다운로드한 파일은 이 포맷으로 변환됩니다.',
+    formatOriginal: '원본',
+    formatOriginalHint:
+      '재인코딩 없이 사용 가능한 최고 품질의 오디오 스트림을 유지합니다. 파일 확장자는 소스에 따라 달라집니다.',
     bitrate: '품질',
     bitrateHint: '손실 압축 포맷의 비트레이트입니다.',
     bitrateLossless: '무손실 포맷인 FLAC에는 적용되지 않습니다.',
+    bitrateOriginal: '원본 오디오 포맷을 유지할 때는 적용되지 않습니다.',
     filesGroup: '파일',
     template: '파일명 템플릿',
     templateHint: '/ 문자를 사용하여 하위 폴더를 구성할 수 있습니다.',

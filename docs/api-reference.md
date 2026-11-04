@@ -763,6 +763,8 @@ Allow automatic downloads of the recording again and reset its elapsed time.
 
 Return the current settings.
 
+The `format` setting accepts `mp3`, `flac`, `m4a`, `ogg`, `opus` or `original`. `original` keeps the best available audio stream without re-encoding it; the saved extension depends on the source.
+
 **Response:**
 
 ```json

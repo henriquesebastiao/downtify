@@ -1496,9 +1496,13 @@ export default {
     format: 'Formato',
     formatHint:
       'Los archivos descargados de YouTube se convierten a este formato.',
+    formatOriginal: 'Original',
+    formatOriginalHint:
+      'Conserva el mejor flujo de audio disponible sin volver a codificarlo. La extensión del archivo depende de la fuente.',
     bitrate: 'Calidad',
     bitrateHint: 'Tasa de bits para formatos con pérdida.',
     bitrateLossless: 'No se usa para FLAC, que es sin pérdida.',
+    bitrateOriginal: 'No se usa al conservar el formato de audio original.',
     filesGroup: 'Archivos',
     template: 'Nombre de archivo',
     templateHint: 'Usa / para crear carpetas.',

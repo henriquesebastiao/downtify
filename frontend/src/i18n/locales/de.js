@@ -1518,9 +1518,14 @@ export default {
     format: 'Format',
     formatHint:
       'Von YouTube heruntergeladene Dateien werden in dieses Format konvertiert.',
+    formatOriginal: 'Original',
+    formatOriginalHint:
+      'Den besten verfügbaren Audiostream ohne erneute Kodierung beibehalten. Die Dateiendung hängt von der Quelle ab.',
     bitrate: 'Qualität',
     bitrateHint: 'Bitrate für verlustbehaftete Formate.',
     bitrateLossless: 'Wird für verlustfreies FLAC nicht verwendet.',
+    bitrateOriginal:
+      'Wird beim Beibehalten des Originalformats nicht verwendet.',
     filesGroup: 'Dateien',
     template: 'Dateiname',
     templateHint: 'Verwende /, um Ordner zu erstellen.',

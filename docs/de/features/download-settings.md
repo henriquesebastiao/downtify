@@ -15,6 +15,7 @@ icon: lucide/sliders-horizontal
 | M4A | `.m4a` | AAC in einem MPEG-4-Container. Gut für Apple-Geräte. |
 | OGG | `.ogg` | Ogg Vorbis. Offenes Format, gutes Verhältnis von Qualität zu Größe. |
 | OPUS | `.opus` | Beste Kompression bei niedrigen Bitraten. |
+| Original | varies | Behält den besten verfügbaren Audiostream ohne erneute Kodierung bei. Die Dateiendung richtet sich nach der Quelle (z. B. `.opus` oder `.m4a`). |
 
 ## Bitrate
 
