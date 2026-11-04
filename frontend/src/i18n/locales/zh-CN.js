@@ -1369,9 +1369,13 @@ export default {
     audioGroup: '音频',
     format: '格式',
     formatHint: '从 YouTube 下载的文件将转换为此格式。',
+    formatOriginal: '原始格式',
+    formatOriginalHint:
+      '保留可用的最佳音频流，不进行重新编码。文件扩展名取决于来源。',
     bitrate: '音质',
     bitrateHint: '有损格式的比特率。',
     bitrateLossless: 'FLAC 为无损格式，不使用此选项。',
+    bitrateOriginal: '保留原始音频格式时不使用。',
     filesGroup: '文件',
     template: '文件名',
     templateHint: '使用 / 创建文件夹。',
