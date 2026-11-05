@@ -17,7 +17,7 @@ import httpx
 import pytest
 from loguru import logger
 
-from downtify import api, integration_check, navidrome
+from downtify import api, integration_check, navidrome, proxy_config
 from downtify.api import (
     _effective_navidrome_settings,
     _effective_slskd_settings,
@@ -38,6 +38,104 @@ def _response(status: int = 200, **kwargs: Any) -> httpx.Response:
 
 def _by_id(result: dict[str, Any]) -> dict[str, dict[str, str]]:
     return {check['id']: check for check in result['checks']}
+
+
+def _configured_proxy(monkeypatch, proxy_urls=None, strict=True):
+    monkeypatch.setattr(
+        proxy_config,
+        '_config',
+        proxy_config.OutboundProxyConfig(proxy_urls or {}, strict, ()),
+    )
+    monkeypatch.setattr(integration_check, 'proxy_bypass', lambda host: False)
+
+
+def test_proxy_diagnostic_reports_tor_without_returning_the_ip(monkeypatch):
+    _configured_proxy(monkeypatch, {'https': 'http://proxy:8080'})
+    monkeypatch.setattr(
+        integration_check.httpx,
+        'get',
+        lambda url, **kwargs: _response(
+            json={'IsTor': True, 'IP': '198.51.100.10'}
+        ),
+    )
+
+    result = integration_check.check_outbound_proxy()
+
+    assert result['ok'] is True
+    assert result['configured'] is True
+    assert result['tor_exit'] is True
+    assert _by_id(result)['connection']['code'] == 'reachable'
+    assert '198.51.100.10' not in repr(result)
+
+
+def test_proxy_diagnostic_distinguishes_non_tor_exit(monkeypatch):
+    _configured_proxy(monkeypatch, {'all': 'socks5h://proxy:9050'})
+    monkeypatch.setattr(
+        integration_check.httpx,
+        'get',
+        lambda url, **kwargs: _response(
+            json={'IsTor': False, 'IP': '198.51.100.10'}
+        ),
+    )
+
+    result = integration_check.check_outbound_proxy()
+
+    assert result['ok'] is True
+    assert result['tor_exit'] is False
+    assert _by_id(result)['tor']['status'] == integration_check.STATUS_WARN
+
+
+def test_proxy_diagnostic_does_not_make_a_direct_request_when_unconfigured(
+    monkeypatch,
+):
+    _configured_proxy(monkeypatch, {}, strict=False)
+    monkeypatch.setattr(
+        integration_check.httpx,
+        'get',
+        lambda *args, **kwargs: pytest.fail('must not connect directly'),
+    )
+
+    result = integration_check.check_outbound_proxy()
+
+    assert result['configured'] is False
+    assert _by_id(result)['connection']['code'] == 'not_configured'
+
+
+def test_proxy_diagnostic_skips_a_bypassed_test_host(monkeypatch):
+    _configured_proxy(monkeypatch, {'https': 'http://proxy:8080'})
+    monkeypatch.setattr(integration_check, 'proxy_bypass', lambda host: True)
+    monkeypatch.setattr(
+        integration_check.httpx,
+        'get',
+        lambda *args, **kwargs: pytest.fail('must not bypass to direct'),
+    )
+
+    result = integration_check.check_outbound_proxy()
+
+    assert _by_id(result)['connection']['code'] == 'bypassed'
+
+
+def test_proxy_diagnostic_sanitizes_transport_failures(monkeypatch):
+    _configured_proxy(monkeypatch, {'https': 'http://proxy:8080'})
+
+    def fail(url, **kwargs):
+        raise httpx.ConnectError('http://user:password@proxy:8080')
+
+    monkeypatch.setattr(integration_check.httpx, 'get', fail)
+
+    result = integration_check.check_outbound_proxy()
+
+    assert _by_id(result)['connection']['code'] == 'unreachable'
+    assert 'password' not in repr(result)
+
+
+def test_proxy_test_route_delegates_to_the_diagnostic(monkeypatch):
+    expected = {'ok': True, 'configured': True, 'tor_exit': True}
+    monkeypatch.setattr(
+        api.integration_check, 'check_outbound_proxy', lambda: expected
+    )
+
+    assert asyncio.run(api.test_proxy_endpoint()) == expected
 
 
 # ── slskd ──────────────────────────────────────────────────────────────

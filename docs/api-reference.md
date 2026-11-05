@@ -10,6 +10,10 @@ Every endpoint needs a signed-in user except a few public ones — see [Server a
 
 ## General
 
+### `POST /api/proxy/test`
+
+Admin. Checks the configured outbound proxy by requesting the Tor Project's status endpoint. The response includes whether the route was reachable and whether the exit was recognized as Tor; it never includes the observed public IP. It does not make a direct request when no proxy is configured or the test host is bypassed.
+
 ### `GET /api/version`
 
 Returns the current Downtify version as a plain string.
@@ -763,6 +767,8 @@ Allow automatic downloads of the recording again and reset its elapsed time.
 
 Return the current settings.
 
+The `format` setting accepts `mp3`, `flac`, `m4a`, `ogg`, `opus` or `original`. `original` keeps the best available audio stream without re-encoding it; the saved extension depends on the source.
+
 **Response:**
 
 ```json
@@ -1415,6 +1421,35 @@ What the playlist page [filters its songs by](features/library-catalog.md#search
 ```
 
 `providers` maps the playlist's files (as `GET /tracks` lists them) to the audio provider that fetched them: `youtube-music`, `youtube`, `soundcloud`, `slskd` or `deemix`, or `folder` for a file from an [extra music folder](features/external-library.md). Downtify records it when a download finishes, so files downloaded before that are left out — except slskd files left in place, recognised by their `slskd/` path. `navidrome.enabled` is whether Navidrome sync is on; while it is, `unmatched` lists the playlist's files that have no Navidrome song id in Downtify's index yet (not matched by a playlist sync or after a download). Songs an admin hid from users are left out for them.
+
+---
+
+### `GET /api/library/playlists/diagnostics`
+
+Compare a Spotify playlist's cached tracklist with its downloaded playlist catalog, physical files, TrackIndex, the caller's Monitor history and Navidrome. The request uses the same playlist visibility rules as [`GET /api/library/playlists/details`](#get-apilibraryplaylistsdetails).
+
+**Query:** `?name=Road trip`
+
+**Response:**
+
+```json
+{
+  "available": true,
+  "items": [
+    { "key": "spotify_tracks", "count": 280, "issues": [] },
+    { "key": "downloaded", "count": 278, "issues": [{ "track_id": "…", "label": "Artist - Song" }] },
+    { "key": "physical_files", "count": 278, "issues": [] },
+    { "key": "track_index", "count": 280, "issues": [] },
+    { "key": "monitor_history", "count": null, "issues": [] },
+    { "key": "navidrome_matched", "count": 278, "issues": [] },
+    { "key": "navidrome_rows", "count": 278, "issues": [] },
+    { "key": "missing_files", "count": 2, "issues": [{ "track_id": "…", "label": "Artist - Song" }] },
+    { "key": "orphan_files", "count": 0, "issues": [] }
+  ]
+}
+```
+
+`issues` lists the affected tracks or files for that metric. `downloaded` counts source tracks in the playlist catalog; `physical_files` counts those whose files are present; `track_index`, `monitor_history` and `navidrome_matched` count source track IDs in the corresponding store. `navidrome_rows` is the current number of rows in the synchronized Navidrome playlist; its issues include expected tracks missing there and extra Navidrome rows. `missing_files` counts Spotify tracks without a physical file, and `orphan_files` counts catalog rows not in the cached source tracklist. A `null` count means the relevant watch, index or Navidrome data is not available, not that its count is zero. If the Spotify tracklist is not cached, the response is `{ "available": false, "reason": "spotify_tracks_unavailable" }`. Hidden tracks are omitted for non-admin callers.
 
 ---
 
@@ -2873,7 +2908,7 @@ Who this server is, signing in, and pairing apps — see [Users & Sign-in](featu
 
 | Scope | Credentials | Covers |
 |-------|-------------|--------|
-| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair`, `POST /api/auth/token` |
+| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `GET /api/auth/oidc` and `/api/auth/oidc/callback` (when configured), `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair`, `POST /api/auth/token` |
 | Client | a device token (`Authorization: Bearer dtfy_…`), a signed URL (reads only), a WebSocket ticket, or any web session | Library and media reads (`/tracks`, `/list`, `/playlists`, `/lyrics`, `/cover`, `/playlist-cover`, `/downloads/…`, `/media/…`), `/api/v1/…`, search and link resolving, previews, `POST /api/download/url\|batch\|album`, likes, Discover and listens, podcast reads, episode downloads and playback, the queue and monitor lists (read), `GET /api/me`, `POST /api/activity/playback`, `POST /api/auth/ws-ticket`, `WS /api/ws` |
 | User | a web session of any user (the `downtify_session` cookie) | Client, plus your own account (`/api/me…`), your paired devices and pairing (`/api/auth/devices…`, `/api/auth/pairing…`) |
 | Admin | a web session of an **admin** | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, hiding songs from users, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, renaming the server, users, the activity log, signing everyone out |
@@ -2905,7 +2940,7 @@ Public. What an app checks before it has credentials.
 }
 ```
 
-`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `password_sign_in` says an app may sign in with a username and password ([`POST /api/auth/token`](#post-apiauthtoken)); it is `false` while accounts are turned off, and missing on servers older than this endpoint — pair with a code then. `transcoding.available` is `false` (and the lists empty) without ffmpeg.
+`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `password_sign_in` says an app may sign in with a username and password ([`POST /api/auth/token`](#post-apiauthtoken)); it is `false` when accounts or local password login are off, and missing on servers older than this endpoint — pair with a code then. `transcoding.available` is `false` (and the lists empty) without ffmpeg.
 
 ---
 
@@ -2945,6 +2980,8 @@ Public. How this request is signed in.
 {
   "require_sign_in": true,
   "auth_disabled": false,
+  "local_login_enabled": true,
+  "oidc_enabled": false,
   "min_password_length": 8,
   "signed_in": true,
   "via": "device",
@@ -2958,13 +2995,21 @@ Public. How this request is signed in.
 
 `auth_disabled` is `true` when accounts are turned off (`DOWNTIFY_DISABLE_AUTH`): then `signed_in` is `true`, `via` is `open` and `user` is the first admin.
 
+`local_login_enabled` reflects `DOWNTIFY_DISABLE_LOCAL_LOGIN`; `oidc_enabled` is `true` when an OIDC provider is configured. Both are `false` while `DOWNTIFY_DISABLE_AUTH` is on.
+
 `notice` is only set while signed out, on a server upgraded from a version without accounts, until an admin signs in: `{ "username": "admin", "password": "downtify" }` — `password` is `null` when the sign-in password of the older version was kept.
+
+---
+
+### `GET /api/auth/oidc` and `GET /api/auth/oidc/callback`
+
+Public, only when OIDC is configured. The first endpoint starts the Authorization Code flow with PKCE and redirects to the provider. The provider returns to `/api/auth/oidc/callback`; Downtify checks state, nonce, issuer, audience, expiry and the ID-token signature before provisioning or finding the `(issuer, sub)` account and issuing a normal `downtify_session` cookie. Provider rejection returns to the sign-in page with a generic error. See [OpenID Connect setup](features/users.md#openid-connect).
 
 ---
 
 ### `POST /api/auth/login`
 
-Public, rate-limited per address (10 failures per 5 minutes, then `429` with `Retry-After`). Signs a browser in.
+Public, rate-limited per address (10 failures per 5 minutes, then `429` with `Retry-After`). Signs a browser in; answers `409` when `DOWNTIFY_DISABLE_LOCAL_LOGIN` is enabled.
 
 **Request body:** `{ "username": "admin", "password": "…" }` — the username in any case.
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import os
 import re
-import shutil
 import threading
 import time
 import unicodedata
@@ -510,19 +509,6 @@ def _title_in_basename(filename: str, title_alnum: str) -> bool:
     return False
 
 
-def _discard_mismatched_download(path: Path) -> None:
-    try:
-        if path.is_file():
-            path.unlink()
-            logger.info('slskd: removed mismatched download file={!r}', path)
-    except OSError as exc:
-        logger.warning(
-            'slskd: could not remove mismatched file={!r} err={}',
-            path,
-            exc,
-        )
-
-
 def _slskd_search_queries(song: dict[str, Any]) -> list[str]:
     artists = [
         str(a).strip()
@@ -908,16 +894,75 @@ def _collect_matching_files(
 def _select_download_candidates(
     ranked: list[dict[str, Any]], settings: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    """Pick up to download_attempts files, preferring extension order at equal score."""
+    """Choose candidates by score, or in ordered format tiers when enabled."""
     raw_ext = settings.get('extensions') or ['mp3', 'flac']
-    extensions = [
-        str(e).strip().lower().lstrip('.') for e in raw_ext if str(e).strip()
-    ] or ['mp3', 'flac']
+    extensions = list(
+        dict.fromkeys(
+            str(e).strip().lower().lstrip('.')
+            for e in raw_ext
+            if str(e).strip()
+        )
+    ) or ['mp3', 'flac']
     min_bitrate = int(settings.get('min_bitrate') or 0)
     max_files = int(settings.get('download_attempts') or 5)
+    strict_priority = bool(settings.get('strict_format_priority', False))
+    whitelist = bool(settings.get('extensions_whitelist', False))
+
+    def bitrate_of(file_row: dict[str, Any]) -> int:
+        try:
+            return int(file_row.get('bitRate') or file_row.get('bitrate') or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    candidates = [
+        row
+        for row in ranked
+        if not whitelist
+        or _file_extension(str(row.get('filename') or '')) in extensions
+    ]
+
+    def passes_bitrate(file_row: dict[str, Any]) -> bool:
+        bitrate = bitrate_of(file_row)
+        ext = _file_extension(str(file_row.get('filename') or ''))
+        if strict_priority and ext == 'flac':
+            return True
+        if not min_bitrate:
+            return True
+        if strict_priority:
+            return bitrate >= min_bitrate
+        return not bitrate or bitrate >= min_bitrate
+
+    if strict_priority:
+        selected: list[dict[str, Any]] = []
+        tiers = [
+            [
+                row
+                for row in candidates
+                if _file_extension(str(row.get('filename') or '')) == ext
+            ]
+            for ext in extensions
+        ]
+        if not whitelist:
+            tiers.append([
+                row
+                for row in candidates
+                if _file_extension(str(row.get('filename') or ''))
+                not in extensions
+            ])
+
+        for tier in tiers:
+            accepted = [row for row in tier if passes_bitrate(row)]
+            accepted.sort(
+                key=lambda row: (
+                    -int(row.get('match_score') or 0),
+                    -bitrate_of(row),
+                )
+            )
+            selected.extend(accepted[:max_files])
+        return selected
 
     by_score: dict[int, list[dict[str, Any]]] = {}
-    for row in ranked:
+    for row in candidates:
         by_score.setdefault(int(row.get('match_score') or 0), []).append(row)
 
     selected: list[dict[str, Any]] = []
@@ -927,13 +972,7 @@ def _select_download_candidates(
             for file_row in bucket:
                 if _file_extension(str(file_row.get('filename') or '')) != ext:
                     continue
-                try:
-                    bitrate = int(
-                        file_row.get('bitRate') or file_row.get('bitrate') or 0
-                    )
-                except (TypeError, ValueError):
-                    bitrate = 0
-                if min_bitrate and bitrate and bitrate < min_bitrate:
+                if not passes_bitrate(file_row):
                     continue
                 selected.append(file_row)
                 if len(selected) >= max_files:
@@ -941,13 +980,7 @@ def _select_download_candidates(
         for file_row in bucket:
             if file_row in selected:
                 continue
-            try:
-                bitrate = int(
-                    file_row.get('bitRate') or file_row.get('bitrate') or 0
-                )
-            except (TypeError, ValueError):
-                bitrate = 0
-            if min_bitrate and bitrate and bitrate < min_bitrate:
+            if not passes_bitrate(file_row):
                 continue
             selected.append(file_row)
             if len(selected) >= max_files:
@@ -1204,44 +1237,27 @@ def _find_on_disk_for_song(
     return best
 
 
-def _copy_to_output(src: Path, output_dir: Path) -> Path:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    dest = output_dir / src.name
-    if dest.resolve() != src.resolve():
-        shutil.copy2(src, dest)
-    return dest
-
-
 def _resolve_downloaded_file(
     roots: list[Path],
-    output_dir: Path,
     song: dict[str, Any],
     soulseek_filename: str,
     *,
     username: str,
-    leave_in_place: bool,
     expected_size: int = 0,
 ) -> Optional[Path]:
-    found = _find_on_disk_for_song(
+    return _find_on_disk_for_song(
         roots,
         song,
         soulseek_filename,
         username=username,
         expected_size=expected_size,
     )
-    if found is None:
-        return None
-    if leave_in_place:
-        return found
-    return _copy_to_output(found, output_dir)
 
 
-def _finalize_slskd_path(
-    found: Path, output_dir: Path, leave_in_place: bool
-) -> Path:
-    if leave_in_place:
-        return found
-    return _copy_to_output(found, output_dir)
+def _finalize_slskd_path(found: Path) -> Path:
+    """Return the original transfer; Downloader owns import and cleanup."""
+
+    return found
 
 
 def _wait_for_slskd_file(
@@ -1398,7 +1414,6 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             or output_dir
         )
     )
-    leave_in_place = bool(settings.get('leave_in_place', True))
     spotify_row = snapshot_spotify_metadata(song)
     queries = _slskd_search_queries(spotify_row)
     if not queries:
@@ -1618,11 +1633,9 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             if found is None:
                 found = _resolve_downloaded_file(
                     roots,
-                    output_dir,
                     song,
                     filename,
                     username=username,
-                    leave_in_place=leave_in_place,
                     expected_size=queued_size,
                 )
 
@@ -1639,19 +1652,19 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                     }
                     logger.info(
                         'slskd: tags mismatch after download {}; '
-                        'trying next candidate ({}/{}) file={!r}',
+                        'retaining source and trying next candidate '
+                        '({}/{}) file={!r}',
                         spotify_file_tag_mismatch_label(mismatch_row),
                         attempt_idx,
                         len(files),
                         _file_basename(filename)[:120],
                     )
-                    _discard_mismatched_download(found)
                     found = None
 
             if found is not None:
                 if search_id:
                     client.delete_search(search_id)
-                return _finalize_slskd_path(found, output_dir, leave_in_place)
+                return _finalize_slskd_path(found)
 
             logger.info(
                 'slskd: candidate failed candidate={}/{} title={!r} user={!r} file={!r}',

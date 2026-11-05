@@ -38,6 +38,7 @@ from ytmusicapi.parsers.library import parse_albums as _parse_ytm_albums
 
 from .album_artist import album_artist_fields, is_act_of
 from .file_naming import file_name_key
+from .proxy_config import requests_proxies_for_youtube_music
 from .telemetry import json_log_blob, redact_sensitive_mapping
 
 
@@ -113,7 +114,7 @@ def _ytm() -> YTMusic:
     if _client is None:
         with _lock:
             if _client is None:
-                _client = YTMusic()
+                _client = YTMusic(proxies=requests_proxies_for_youtube_music())
     return _client
 
 

@@ -35,12 +35,24 @@ Voir [Applications mobiles](../features/mobile-apps.md) et [Utilisateurs et conn
 | Variable | Valeur par défaut | Description |
 |----------|---------|-------------|
 | `DOWNTIFY_DISABLE_AUTH` | `false` | `true` désactive les comptes : personne ne se connecte, et quiconque atteint le serveur l’utilise en tant qu’administrateur. La page de connexion, les boutons de déconnexion, **Paramètres → Utilisateurs** et la partie compte de **Paramètres → Général** disparaissent. Les applications associées continuent de fonctionner. Remettez `false` (ou supprimez-la) et la connexion est de nouveau exigée, avec les comptes tels qu’ils étaient. Voir [Utilisateurs et connexion](../features/users.md#turning-accounts-off). |
+| `DOWNTIFY_DISABLE_LOCAL_LOGIN` | `false` | `true` disables username/password login in the web UI and `POST /api/auth/token`. OIDC and app pairing remain available; current sessions and device tokens are not revoked. Requires all three OIDC credentials below. |
+| `DOWNTIFY_OIDC_ISSUER` | _(unset)_ | The exact OIDC issuer URL. Enables OIDC when used with client ID and secret. |
+| `DOWNTIFY_OIDC_CLIENT_ID` | _(unset)_ | OIDC confidential client ID. |
+| `DOWNTIFY_OIDC_CLIENT_SECRET` | _(unset)_ | OIDC confidential client secret. |
+| `DOWNTIFY_OIDC_REDIRECT_URI` | _(derived)_ | Public callback URL registered with the identity provider, normally `https://music.example.com/api/auth/oidc/callback`. Set explicitly behind a reverse proxy if needed. |
+| `DOWNTIFY_OIDC_SCOPES` | `openid profile email` | Space-separated OIDC scopes. |
+| `DOWNTIFY_OIDC_USERNAME_CLAIM` | `preferred_username` | Claim used for new account names, falling back to `email` and then `sub`. |
+| `DOWNTIFY_OIDC_GROUPS_CLAIM` | `groups` | Claim containing group names; dotted paths are supported. |
+| `DOWNTIFY_OIDC_ALLOWED_GROUPS` | _(empty)_ | Comma-separated group allowlist; unset means any authenticated provider identity may sign in. |
+| `DOWNTIFY_OIDC_ADMIN_GROUPS` | _(empty)_ | Comma-separated groups mapped to Downtify admins. Other OIDC users are normal users. |
 | `DOWNTIFY_TRUSTED_PROXIES` | _(non définie)_ | Adresses ou réseaux de votre proxy inverse, séparés par des virgules (par ex. `172.18.0.0/16,10.0.0.5`). Seules les requêtes issues de ceux-ci voient leurs en-têtes `X-Forwarded-For`, `X-Forwarded-Proto` et `X-Forwarded-Host` pris en compte — pour l’adresse client sur laquelle les tentatives de connexion et d’association sont limitées, l’indicateur secure du cookie de connexion et la vérification de même origine. Non définie : ces en-têtes sont ignorés. |
 | `DOWNTIFY_DISCOVERY` | `true` | `false` cesse d’annoncer le serveur sur le réseau local (mDNS, `_downtify._tcp`), ce que les applications utilisent pour le lister sous *Trouvés sur ce réseau*. Dans le réseau bridge de Docker, l’annonce n’atteint de toute façon pas le LAN — voir [Docker Compose](docker-compose.md#finding-the-server-from-the-apps). |
 | `DOWNTIFY_TRANSCODE_CACHE_MB` | `2048` | Taille maximale, en Mo, sous laquelle est maintenu le cache des copies transcodées (`/data/transcode_cache`) ; les copies lues le moins récemment partent en premier. |
 | `DOWNTIFY_TRANSCODE_CONCURRENCY` | `2` | Combien de morceaux sont transcodés à la fois pour les qualités de streaming plus petites des applications. |
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | Taille maximale, en Mo, sous laquelle est maintenu le cache de l’audio diffusé (`/data/stream_cache`) ; les copies lues le moins récemment partent en premier. La diffusion via le serveur est ce qui lit les titres non téléchargés là où le navigateur lui-même ne peut pas joindre YouTube. |
 | `DOWNTIFY_STREAM_CONCURRENCY` | `2` | Combien de téléchargements de diffusion peuvent s’exécuter en même temps. |
+
+OIDC is optional. Configure the issuer, client ID and secret together; partial configuration prevents startup. The provider must allow the callback URL `https://<your-public-host>/api/auth/oidc/callback`. See [OpenID Connect](../features/users.md#openid-connect) for account linking, group mapping and a full explanation of local login options.
 
 ## Corbeille musicale
 

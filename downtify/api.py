@@ -242,6 +242,7 @@ downloads are shared, and files are never stored twice.
   fields, ``?path=``)
 * ``POST /api/slskd/test`` and ``POST /api/navidrome/test`` (try the
   connection with the settings as they are in the form, saved or not)
+* ``POST /api/proxy/test`` (admin: test outbound proxy reachability)
 * ``GET  /api/cookies`` (current YouTube cookie configuration)
 * ``POST /api/cookies`` (upload a Netscape cookies.txt as the raw request
   body - no multipart, so no ``python-multipart`` dependency)
@@ -566,6 +567,7 @@ from .monitor import (
     playlist_watch_key,
 )
 from .navidrome import (
+    NavidromeClient,
     _effective_navidrome_settings,
     cache_navidrome_song_id,
     enrich_song_from_library_file,
@@ -579,6 +581,10 @@ from .playlist_batches import (
     split_tracks_by_library,
 )
 from .playlist_catalog import ManualPlaylistOwners, PlaylistCatalog
+from .playlist_diagnostics import (
+    PlaylistDiagnosticsContext,
+    build_playlist_diagnostics,
+)
 from .playlist_hidden import (
     HiddenSongs,
     HiddenSongsError,
@@ -717,6 +723,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'duration_tolerance_percent': 15,
         'mix_duration_tolerance_percent': 50,
         'extensions': ['mp3', 'flac'],
+        'strict_format_priority': False,
+        'extensions_whitelist': False,
         'min_bitrate': 256,
     },
     # Navidrome (Subsonic API) playlist sync after playlist downloads.
@@ -907,13 +915,15 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
     source_dir = str(raw.get('source_dir') or '').strip() or (
         '/slskd' if leave_in_place else download_dir
     )
-    try:
-        min_bitrate = int(raw.get('min_bitrate') or 256)
-    except (TypeError, ValueError):
-        min_bitrate = 256
 
     def bounded(key: str, default: int, low: int, high: int) -> int:
         return _setting_int(raw, key, default, minimum=low, maximum=high)
+
+    try:
+        min_bitrate = int(raw.get('min_bitrate'))
+    except (TypeError, ValueError):
+        min_bitrate = 256
+    min_bitrate = min(10000, max(0, min_bitrate))
 
     return {
         'enabled': bool(raw.get('enabled', False)),
@@ -944,6 +954,10 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'mix_duration_tolerance_percent': bounded(
             'mix_duration_tolerance_percent', 50, 1, 200
         ),
+        'strict_format_priority': bool(
+            raw.get('strict_format_priority', False)
+        ),
+        'extensions_whitelist': bool(raw.get('extensions_whitelist', False)),
         'min_bitrate': min_bitrate,
         'max_parallel_downloads': _setting_int(
             settings, 'max_parallel_downloads', 3, minimum=1, maximum=8
@@ -2848,7 +2862,7 @@ def search_endpoint(
         return library_only.search(entries_for_request(request), query)
     results = providers.search_songs(query, limit=20)
     if results:
-        return results
+        return [{**song, 'download_by_metadata': True} for song in results]
     q = query.strip()
     if not q or 'slskd' not in _effective_audio_providers(state.settings):
         return []
@@ -3981,14 +3995,23 @@ def _song_from_download_request(
     """The song to download for ``POST /api/download/url``.
 
     A slskd search stub (``source == 'text_search'``, see
-    :func:`search_endpoint`) or a Deezer chart/Finder row (``source ==
-    'deezer'``, see :func:`discover_chart_endpoint` and
+    :func:`search_endpoint`), a YouTube Music search row marked for
+    metadata matching, or a Deezer chart/Finder row (``source == 'deezer'``,
+    see :func:`discover_chart_endpoint` and
     :func:`finder_search_endpoint`) has no URL this app
-    can resolve on its own - both are taken from the request body as-is,
+    can resolve on its own - these rows are taken from the request body as-is,
     already-resolved metadata that :func:`downtify.providers.find_match`
     can search YouTube/YouTube Music for directly.
     """
 
+    if (
+        isinstance(client_hints, dict)
+        and client_hints.get('download_by_metadata') is True
+    ):
+        song = dict(client_hints)
+        song.pop('download_by_metadata', None)
+        song['_match_by_metadata'] = True
+        return song
     if (
         isinstance(client_hints, dict)
         and client_hints.get('source') in _CLIENT_RESOLVED_SOURCES
@@ -7787,6 +7810,45 @@ async def playlist_details_endpoint(
     )
 
 
+@router.get('/api/library/playlists/diagnostics')
+async def playlist_diagnostics_endpoint(
+    request: Request, name: str = Query(..., min_length=1)
+) -> dict[str, Any]:
+    """Compare a Spotify playlist with its local and Navidrome records."""
+
+    entry = require_playlist_visible(name, request)
+    files = await asyncio.to_thread(
+        filter_paths_for_request, list(entry.get('files') or []), request
+    )
+    return await asyncio.to_thread(
+        _playlist_diagnostics, str(entry['name']), files, request
+    )
+
+
+def _playlist_diagnostics(
+    name: str, files: list[str], request: Request
+) -> dict[str, Any]:
+    ctx = library_context()
+    return build_playlist_diagnostics(
+        name,
+        files,
+        PlaylistDiagnosticsContext(
+            catalog=state.playlist_catalog,
+            spotify_cache=state.playlist_spotify_cache,
+            track_index=state.track_index,
+            navidrome_index=state.navidrome_index,
+            monitor_db=state.monitor_db,
+            hidden=state.playlist_hidden,
+            settings=state.settings,
+            download_dir=ctx.download_dir,
+            slskd_dir=ctx.slskd_dir,
+            is_admin=request_is_admin(request),
+            user_id=request_user_id(request),
+            navidrome_client=NavidromeClient,
+        ),
+    )
+
+
 def _playlist_details(name: str, files: list[str]) -> dict[str, Any]:
     by_file = {
         str(row.get('file') or '').replace('\\', '/'): row
@@ -8850,6 +8912,13 @@ async def test_navidrome_endpoint(request: Request) -> dict[str, Any]:
         'navidrome': payload or (saved if isinstance(saved, dict) else {}),
     })
     return await asyncio.to_thread(integration_check.check_navidrome, cfg)
+
+
+@router.post('/api/proxy/test')
+async def test_proxy_endpoint() -> dict[str, Any]:
+    """Check the configured outbound proxy without exposing its egress IP."""
+
+    return await asyncio.to_thread(integration_check.check_outbound_proxy)
 
 
 # ---------------------------------------------------------------------------

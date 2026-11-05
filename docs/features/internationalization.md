@@ -33,8 +33,9 @@ A page that has not been translated yet shows a note and the English text, so ev
 | `de`    | Deutsch            | ✓   | ✓    |
 | `ko`    | 한국어             | ✓   | ✓    |
 | `ru`    | Русский            | ✓   | ✗    |
+| `zh-CN` | 简体中文           | ✓   | ✓    |
 
-The reference pages meant for developers — the [API reference](../api-reference.md), the [mobile client contract](../mobile-client-contract.md) and the changelog — stay in English in every language.
+The reference pages meant for developers — the [API reference](../api-reference.md) and the changelog — stay in English in every language. The [mobile client contract](../mobile-client-contract.md) may be translated where a locale provides a translation.
 
 ## Contributing a translation
 

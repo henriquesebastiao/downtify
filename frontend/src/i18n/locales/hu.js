@@ -951,6 +951,23 @@ export default {
   },
   playlists: {
     kicker: 'Lejátszási lista',
+    diagnostics: {
+      title: 'Lejátszási lista diagnosztika',
+      check: 'Ellenőrzés',
+      refresh: 'Frissítés',
+      unavailable: 'A diagnosztika nem érhető el ehhez a lejátszási listához.',
+      items: {
+        spotify_tracks: 'Spotify-számok',
+        downloaded: 'Downtify által letöltve',
+        physical_files: 'Megtalált fájlok',
+        track_index: 'TrackIndex-hozzárendelések',
+        monitor_history: 'Monitor-előzmények',
+        navidrome_matched: 'Megtalálva a Navidrome-ban',
+        navidrome_rows: 'Számok a Navidrome-listában',
+        missing_files: 'Hiányzó fájlok',
+        orphan_files: 'Árva fájlok',
+      },
+    },
     notFound: 'A lista nem található',
     progress: '{total} számból {have} letöltve',
     missingShort: { one: '{count} hiányzik', other: '{count} hiányzik' },
@@ -1454,6 +1471,21 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Formátumok prioritása',
+    slskdFormatsHint:
+      'Vesszővel elválasztott kiterjesztések, prioritás szerint (például flac, mp3).',
+    slskdMinBitrate: 'Minimális bitráta veszteséges formátumoknál',
+    slskdMinBitrateHint:
+      'Szigorú módban elutasítja az ennél kisebb vagy nem jelzett bitrátájú veszteséges fájlokat. A FLAC kivétel.',
+    slskdAttempts: 'Jelöltek próbálkozásai',
+    slskdAttemptsHint:
+      'Szigorú módban formátumonként ennyi jelöltet próbál; egyébként ez az összesített szám.',
+    slskdStrictPriority: 'Szigorú formátumprioritás',
+    slskdStrictPriorityHint:
+      'Próbálja sorban a formátumokat, és az egyes formátumokon belül rangsorolja a találatokat.',
+    slskdWhitelist: 'Csak a felsorolt formátumok engedélyezése',
+    slskdWhitelistHint:
+      'Elutasítja a listában nem szereplő kiterjesztésű találatokat.',
     slskdHint:
       'Letöltés a Soulseekről a slskd szervereden át. A nem talált számok a következő forráshoz kerülnek.',
     slskdEnabled: 'slskd használata',
@@ -1467,7 +1499,7 @@ export default {
     slskdQueuedTimeout: 'Sorban állási időkorlát',
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
-      'Ott címkézi őket, ahová az slskd mentette, ahelyett hogy a letöltési mappába másolná.',
+      'Bekapcsolva: címkézés a helyükön, a fájlok megtartásával. Kikapcsolva: másolás és címkézés a Letöltések mappába; a forrás csak sikeres import után törlődik. Hiba esetén megmarad.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube sütik',
     cookiesHint:
@@ -1485,9 +1517,13 @@ export default {
     format: 'Formátum',
     formatHint:
       'A YouTube-ról letöltött fájlok ebbe a formátumba konvertálódnak.',
+    formatOriginal: 'Eredeti',
+    formatOriginalHint:
+      'A legjobb elérhető hangfolyamot újrakódolás nélkül tartja meg. A fájlkiterjesztés a forrástól függ.',
     bitrate: 'Minőség',
     bitrateHint: 'Bitráta veszteséges formátumokhoz.',
     bitrateLossless: 'FLAC-nál nem használt, mert veszteségmentes.',
+    bitrateOriginal: 'Az eredeti hangformátum megtartásakor nem használatos.',
     filesGroup: 'Fájlok',
     template: 'Fájlnév',
     templateHint: 'Mappák létrehozásához használj / jelet.',
@@ -1723,9 +1759,14 @@ export default {
   auth: {
     signInTitle: 'Bejelentkezés a Downtify-ba',
     signInBody: 'Jelentkezz be a felhasználóneveddel és a jelszavaddal.',
+    signInBodyOidcOnly: 'Jelentkezz be az identitásszolgáltatóddal.',
     username: 'Felhasználónév',
     password: 'Jelszó',
     signIn: 'Bejelentkezés',
+    oidcSignIn: 'Folytatás az identitásszolgáltatóval',
+    or: 'vagy',
+    oidcFailed:
+      'Nem sikerült bejelentkezni az identitásszolgáltatóval. Próbáld újra.',
     wrongPassword: 'Hibás felhasználónév vagy jelszó',
     tooMany: 'Túl sok próbálkozás. Várj néhány percet, és próbáld újra.',
     forgotHint:

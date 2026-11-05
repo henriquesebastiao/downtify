@@ -965,6 +965,23 @@ export default {
   },
   playlists: {
     kicker: 'Λίστα',
+    diagnostics: {
+      title: 'Διαγνωστικά λίστας',
+      check: 'Έλεγχος',
+      refresh: 'Ανανέωση',
+      unavailable: 'Τα διαγνωστικά δεν είναι διαθέσιμα για αυτή τη λίστα.',
+      items: {
+        spotify_tracks: 'Κομμάτια Spotify',
+        downloaded: 'Λήψεις Downtify',
+        physical_files: 'Αρχεία που βρέθηκαν',
+        track_index: 'Αντιστοιχίσεις TrackIndex',
+        monitor_history: 'Ιστορικό Monitor',
+        navidrome_matched: 'Βρέθηκαν στο Navidrome',
+        navidrome_rows: 'Κομμάτια στη λίστα Navidrome',
+        missing_files: 'Αρχεία που λείπουν',
+        orphan_files: 'Ορφανά αρχεία',
+      },
+    },
     notFound: 'Η λίστα δεν βρέθηκε',
     progress: '{have} από {total} κατεβασμένα',
     missingShort: { one: 'λείπει {count}', other: 'λείπουν {count}' },
@@ -1473,6 +1490,21 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Προτεραιότητα μορφών',
+    slskdFormatsHint:
+      'Επεκτάσεις χωρισμένες με κόμμα, πρώτα η υψηλότερη προτεραιότητα (π.χ. flac, mp3).',
+    slskdMinBitrate: 'Ελάχιστο bitrate για απωλεστικές μορφές',
+    slskdMinBitrateHint:
+      'Στην αυστηρή λειτουργία απορρίπτονται απωλεστικά αρχεία κάτω από αυτήν την τιμή ή χωρίς αναφερόμενο bitrate. Το FLAC εξαιρείται.',
+    slskdAttempts: 'Προσπάθειες υποψηφίων',
+    slskdAttemptsHint:
+      'Στην αυστηρή λειτουργία δοκιμάζονται τόσοι υποψήφιοι ανά μορφή· διαφορετικά είναι το σύνολο.',
+    slskdStrictPriority: 'Αυστηρή προτεραιότητα μορφών',
+    slskdStrictPriorityHint:
+      'Δοκίμασε τις μορφές με τη σειρά και κατάταξε τις αντιστοιχίες μέσα σε κάθε μορφή.',
+    slskdWhitelist: 'Να επιτρέπονται μόνο οι μορφές της λίστας',
+    slskdWhitelistHint:
+      'Απόρριψε αποτελέσματα με επέκταση που δεν υπάρχει στη λίστα.',
     slskdHint:
       'Λήψη από Soulseek μέσω του διακομιστή slskd. Όσα δεν βρεθούν περνούν στην επόμενη πηγή.',
     slskdEnabled: 'Χρήση slskd',
@@ -1486,7 +1518,7 @@ export default {
     slskdQueuedTimeout: 'Χρονικό όριο αναμονής',
     slskdInPlace: 'Διατήρηση αρχείων στον φάκελο slskd',
     slskdInPlaceHint:
-      'Επισήμανση εκεί όπου τα αποθήκευσε το slskd αντί για αντιγραφή στον φάκελο λήψεων.',
+      'Ενεργό: επισήμανση των αρχείων εκεί όπου βρίσκονται και διατήρησή τους. Ανενεργό: αντιγραφή και επισήμανση στον φάκελο λήψεων· η πηγή αφαιρείται μόνο μετά από επιτυχή εισαγωγή. Σε αποτυχία διατηρείται.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies YouTube',
     cookiesHint:
@@ -1504,9 +1536,14 @@ export default {
     audioGroup: 'Ήχος',
     format: 'Μορφή',
     formatHint: 'Τα αρχεία από το YouTube μετατρέπονται σε αυτή τη μορφή.',
+    formatOriginal: 'Πρωτότυπο',
+    formatOriginalHint:
+      'Διατήρηση της καλύτερης διαθέσιμης ροής ήχου χωρίς επανακωδικοποίηση. Η επέκταση αρχείου εξαρτάται από την πηγή.',
     bitrate: 'Ποιότητα',
     bitrateHint: 'Ρυθμός bit για μορφές με απώλειες.',
     bitrateLossless: 'Δεν χρησιμοποιείται για FLAC, που είναι χωρίς απώλειες.',
+    bitrateOriginal:
+      'Δεν χρησιμοποιείται όταν διατηρείται η αρχική μορφή ήχου.',
     filesGroup: 'Αρχεία',
     template: 'Όνομα αρχείου',
     templateHint: 'Χρησιμοποίησε / για δημιουργία φακέλων.',
@@ -1747,9 +1784,14 @@ export default {
   auth: {
     signInTitle: 'Σύνδεση στο Downtify',
     signInBody: 'Συνδεθείτε με το όνομα χρήστη και τον κωδικό σας.',
+    signInBodyOidcOnly: 'Συνδεθείτε μέσω του παρόχου ταυτότητάς σας.',
     username: 'Όνομα χρήστη',
     password: 'Κωδικός',
     signIn: 'Σύνδεση',
+    oidcSignIn: 'Συνέχεια με τον πάροχο ταυτότητας',
+    or: 'ή',
+    oidcFailed:
+      'Η σύνδεση μέσω του παρόχου ταυτότητας απέτυχε. Δοκιμάστε ξανά.',
     wrongPassword: 'Λάθος όνομα χρήστη ή κωδικός',
     tooMany:
       'Πάρα πολλές προσπάθειες. Περιμένετε λίγα λεπτά και δοκιμάστε ξανά.',

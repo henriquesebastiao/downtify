@@ -94,6 +94,11 @@ from downtify.lyrics import read_track_lyrics
 from downtify.lyrics_cache import LyricsLookupCache
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 from downtify.navidrome_index import NavidromeIndex
+from downtify.oidc import (
+    OIDCConfig,
+    OIDCProvider,
+    local_login_enabled_from_env,
+)
 from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
 from downtify.playlist_catalog import (
     ManualPlaylistOwners,
@@ -106,6 +111,7 @@ from downtify.playlist_spotify_cache import (
     playlist_spotify_cache_loop,
 )
 from downtify.podcasts import PodcastStore
+from downtify.proxy_config import configure_outbound_proxy
 from downtify.server_identity import ServerIdentity
 from downtify.server_port import (
     DEFAULT_PORT,
@@ -741,6 +747,17 @@ def build_app() -> FastAPI:
     # Where this server listens (downtify/server_port.py), for Settings.
     api.state.listen = _LISTEN
     api.state.auth = open_auth_store()
+    oidc_config = OIDCConfig.from_env()
+    api.state.local_login_enabled = local_login_enabled_from_env()
+    if (
+        not api.state.auth.auth_disabled
+        and not api.state.local_login_enabled
+        and oidc_config is None
+    ):
+        raise ValueError(
+            'DOWNTIFY_DISABLE_LOCAL_LOGIN requires OIDC to be configured'
+        )
+    api.state.oidc = OIDCProvider(oidc_config) if oidc_config else None
     api.state.activity = ActivityLog(DATABASE_DIR / 'downtify_activity.db')
     app.add_middleware(
         AuthMiddleware,
@@ -1286,6 +1303,7 @@ def main() -> None:
         _auth_reset()
         return None
 
+    configure_outbound_proxy()
     _fix_mime_types()
     port, source = resolve_port(args.port, ServerIdentity(DATABASE_DIR).port)
     _LISTEN.update(host=args.host, port=port, source=source)

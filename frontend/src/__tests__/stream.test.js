@@ -104,6 +104,51 @@ describe('videoIdFor', () => {
     expect(search).toHaveBeenCalledWith('Cher Believe')
   })
 
+  it('skips search hits whose known duration is more than 10 seconds off', async () => {
+    search.mockResolvedValueOnce({
+      data: [
+        {
+          name: 'Main Title 3rd Season',
+          artists: ['Christopher Franke'],
+          song_id: 'wrong123456',
+          duration: 143,
+        },
+        {
+          name: 'Main Title 3rd Season',
+          artists: ['Christopher Franke'],
+          song_id: 'right123456',
+          duration: 89,
+        },
+      ],
+    })
+
+    await expect(
+      videoIdFor({
+        name: 'Main Title 3rd Season',
+        artists: ['Christopher Franke'],
+        duration: 89,
+      })
+    ).resolves.toBe('right123456')
+  })
+
+  it('accepts a search hit at the 10-second duration boundary', async () => {
+    search.mockResolvedValueOnce({
+      data: [{ ...SONG, song_id: 'abc123DEFGH', duration: 234 }],
+    })
+
+    await expect(videoIdFor({ ...SONG, duration: 224 })).resolves.toBe(
+      'abc123DEFGH'
+    )
+  })
+
+  it('fails when every search hit has an incompatible known duration', async () => {
+    search.mockResolvedValueOnce({
+      data: [{ ...SONG, song_id: 'abc123DEFGH', duration: 240 }],
+    })
+
+    await expect(videoIdFor({ ...SONG, duration: 224 })).rejects.toThrow()
+  })
+
   it('fails when nothing resolves', async () => {
     search.mockResolvedValueOnce({ data: [] })
     await expect(videoIdFor(SONG)).rejects.toThrow()

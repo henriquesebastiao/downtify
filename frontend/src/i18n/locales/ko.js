@@ -944,6 +944,23 @@ export default {
   },
   playlists: {
     kicker: '재생목록',
+    diagnostics: {
+      title: '재생목록 진단',
+      check: '확인',
+      refresh: '새로고침',
+      unavailable: '이 재생목록의 진단 정보를 사용할 수 없습니다.',
+      items: {
+        spotify_tracks: 'Spotify 트랙',
+        downloaded: 'Downtify 다운로드',
+        physical_files: '찾은 파일',
+        track_index: 'TrackIndex 매핑',
+        monitor_history: 'Monitor 기록',
+        navidrome_matched: 'Navidrome 일치 항목',
+        navidrome_rows: 'Navidrome 재생목록 항목',
+        missing_files: '누락된 파일',
+        orphan_files: '연결되지 않은 파일',
+      },
+    },
     notFound: '재생목록을 찾을 수 없습니다',
     progress: '총 {total}개 중 {have}개 다운로드됨',
     missingShort: { one: '{count}개 누락', other: '{count}개 누락' },
@@ -1442,6 +1459,20 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: '형식 우선순위',
+    slskdFormatsHint:
+      '쉼표로 구분한 확장자를 우선순위가 높은 순서로 입력하세요(예: flac, mp3).',
+    slskdMinBitrate: '손실 형식의 최소 비트레이트',
+    slskdMinBitrateHint:
+      '엄격 모드에서는 이 값보다 낮거나 비트레이트가 보고되지 않은 손실 파일을 거부합니다. FLAC은 제외됩니다.',
+    slskdAttempts: '후보 시도 횟수',
+    slskdAttemptsHint:
+      '엄격 모드에서는 형식별로 이 수만큼 시도하며, 그 외에는 전체 횟수입니다.',
+    slskdStrictPriority: '엄격한 형식 우선순위',
+    slskdStrictPriorityHint:
+      '나열된 형식을 순서대로 시도하고 각 형식 안에서 일치도를 기준으로 정렬합니다.',
+    slskdWhitelist: '나열된 형식만 허용',
+    slskdWhitelistHint: '목록에 없는 확장자의 결과를 거부합니다.',
     slskdHint:
       'slskd 서버를 통해 Soulseek에서 음원을 다운로드합니다. 찾지 못한 트랙은 다음 음원 출처로 넘어갑니다.',
     slskdEnabled: 'slskd 사용',
@@ -1455,7 +1486,7 @@ export default {
     slskdQueuedTimeout: '대기 타임아웃',
     slskdInPlace: 'slskd 폴더에 파일 그대로 유지',
     slskdInPlaceHint:
-      '다운로드 폴더로 복사하지 않고 slskd가 저장한 원래 위치에서 바로 태그를 작성합니다.',
+      '켜짐: 원래 위치에서 태그를 작성하고 파일을 유지합니다. 꺼짐: 다운로드 폴더로 복사하고 태그를 작성한 뒤 가져오기가 성공해야 원본을 삭제합니다. 실패하면 원본을 유지합니다.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube 쿠키',
     cookiesHint:
@@ -1472,9 +1503,13 @@ export default {
     audioGroup: '오디오',
     format: '포맷',
     formatHint: 'YouTube에서 다운로드한 파일은 이 포맷으로 변환됩니다.',
+    formatOriginal: '원본',
+    formatOriginalHint:
+      '재인코딩 없이 사용 가능한 최고 품질의 오디오 스트림을 유지합니다. 파일 확장자는 소스에 따라 달라집니다.',
     bitrate: '품질',
     bitrateHint: '손실 압축 포맷의 비트레이트입니다.',
     bitrateLossless: '무손실 포맷인 FLAC에는 적용되지 않습니다.',
+    bitrateOriginal: '원본 오디오 포맷을 유지할 때는 적용되지 않습니다.',
     filesGroup: '파일',
     template: '파일명 템플릿',
     templateHint: '/ 문자를 사용하여 하위 폴더를 구성할 수 있습니다.',
@@ -1713,9 +1748,13 @@ export default {
   auth: {
     signInTitle: 'Downtify 로그인',
     signInBody: '사용자 이름과 비밀번호를 입력하여 로그인하세요.',
+    signInBodyOidcOnly: 'ID 공급자를 통해 로그인하세요.',
     username: '사용자 이름',
     password: '비밀번호',
     signIn: '로그인',
+    oidcSignIn: 'ID 공급자로 계속하기',
+    or: '또는',
+    oidcFailed: 'ID 공급자를 통한 로그인에 실패했습니다. 다시 시도하세요.',
     wrongPassword: '사용자 이름 또는 비밀번호가 올바르지 않습니다',
     tooMany: '로그인 시도가 너무 많습니다. 몇 분 후 다시 시도하세요.',
     forgotHint:

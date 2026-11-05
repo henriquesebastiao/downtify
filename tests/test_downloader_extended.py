@@ -1095,6 +1095,48 @@ def test_download_registers_bitrate_aware_extract_audio_pp(
     assert pp._bitrate_bps == 320_000
 
 
+def test_original_format_uses_best_available_audio_without_bitrate_encoding(
+    tmp_path, monkeypatch
+):
+    _FakeYoutubeDL.captured = {}
+    _FakeYoutubeDL.post_processors = []
+    monkeypatch.setattr(downloader_mod.yt_dlp, 'YoutubeDL', _FakeYoutubeDL)
+    d = _make(tmp_path, audio_format='original', audio_bitrate='320')
+    try:
+        d.fetch_audio('video-id', tmp_path, 'Song', song=_OVERWRITE_SONG)
+    except _CapturedOpts:
+        pass
+
+    [(pp, when)] = _FakeYoutubeDL.post_processors
+    assert isinstance(pp, _ExtractAudioPP)
+    assert when == 'post_process'
+    assert pp._codec == 'best'
+    assert pp._bitrate_bps is None
+
+
+def test_original_format_remuxes_webm_opus_without_encoding(
+    tmp_path, monkeypatch
+):
+    source = tmp_path / 'Song.webm'
+    source.write_bytes(b'webm')
+    pp = _ExtractAudioPP(yt_dlp.YoutubeDL({'quiet': True}), 'best', '')
+    monkeypatch.setattr(pp, 'get_audio_codec', lambda path: 'opus')
+    calls = []
+
+    def run_ffmpeg(path, target, codec, options):
+        calls.append((codec, options))
+        Path(target).write_bytes(b'opus')
+
+    monkeypatch.setattr(pp, 'run_ffmpeg', run_ffmpeg)
+    info = {'filepath': str(source), 'ext': 'webm'}
+
+    pp.run(info)
+
+    assert calls[0][0] == 'copy'
+    assert info['ext'] == 'opus'
+    assert Path(info['filepath']).read_bytes() == b'opus'
+
+
 def test_extract_audio_pp_maps_ogg_to_vorbis():
     # Regression: yt-dlp has no "ogg" codec; OGG downloads crashed with
     # KeyError: 'ogg' inside the conversion.

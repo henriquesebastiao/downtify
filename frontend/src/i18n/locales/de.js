@@ -974,6 +974,23 @@ export default {
   },
   playlists: {
     kicker: 'Playlist',
+    diagnostics: {
+      title: 'Playlist-Diagnose',
+      check: 'Prüfen',
+      refresh: 'Aktualisieren',
+      unavailable: 'Für diese Playlist ist keine Diagnose verfügbar.',
+      items: {
+        spotify_tracks: 'Spotify-Titel',
+        downloaded: 'Von Downtify heruntergeladen',
+        physical_files: 'Gefundene Dateien',
+        track_index: 'TrackIndex-Zuordnungen',
+        monitor_history: 'Monitor-Verlauf',
+        navidrome_matched: 'In Navidrome gefunden',
+        navidrome_rows: 'Titel in der Navidrome-Playlist',
+        missing_files: 'Fehlende Dateien',
+        orphan_files: 'Verwaiste Dateien',
+      },
+    },
     notFound: 'Playlist nicht gefunden',
     progress: '{have} von {total} heruntergeladen',
     missingShort: { one: '{count} fehlt', other: '{count} fehlen' },
@@ -1485,6 +1502,21 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Formatpriorität',
+    slskdFormatsHint:
+      'Kommagetrennte Dateiendungen, zuerst die höchste Priorität (z. B. flac, mp3).',
+    slskdMinBitrate: 'Minimale Bitrate für verlustbehaftete Formate',
+    slskdMinBitrateHint:
+      'Im strikten Modus werden verlustbehaftete Dateien unter diesem Wert oder ohne gemeldete Bitrate abgelehnt. FLAC ist ausgenommen.',
+    slskdAttempts: 'Kandidatenversuche',
+    slskdAttemptsHint:
+      'Im strikten Modus wird diese Anzahl je Format versucht, sonst insgesamt.',
+    slskdStrictPriority: 'Strikte Formatpriorität',
+    slskdStrictPriorityHint:
+      'Formate der Reihe nach versuchen und Treffer innerhalb jedes Formats bewerten.',
+    slskdWhitelist: 'Nur aufgeführte Formate zulassen',
+    slskdWhitelistHint:
+      'Ergebnisse mit einer nicht aufgeführten Dateiendung ablehnen.',
     slskdHint:
       'Lade Musik über deinen slskd-Server von Soulseek herunter. Nicht gefundene Titel werden bei der nächsten Quelle gesucht.',
     slskdEnabled: 'slskd verwenden',
@@ -1499,7 +1531,7 @@ export default {
     slskdQueuedTimeout: 'Zeitlimit in Warteschlange',
     slskdInPlace: 'Dateien im slskd-Ordner belassen',
     slskdInPlaceHint:
-      'Füge Tags dort hinzu, wo slskd die Dateien gespeichert hat, statt sie in den Downloadordner zu kopieren.',
+      'Ein: Dateien am Speicherort taggen und behalten. Aus: in Downloads kopieren und taggen; die Quelle wird erst nach erfolgreichem Import entfernt. Bei Fehlern bleibt sie erhalten.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube-Cookies',
     cookiesHint:
@@ -1518,9 +1550,14 @@ export default {
     format: 'Format',
     formatHint:
       'Von YouTube heruntergeladene Dateien werden in dieses Format konvertiert.',
+    formatOriginal: 'Original',
+    formatOriginalHint:
+      'Den besten verfügbaren Audiostream ohne erneute Kodierung beibehalten. Die Dateiendung hängt von der Quelle ab.',
     bitrate: 'Qualität',
     bitrateHint: 'Bitrate für verlustbehaftete Formate.',
     bitrateLossless: 'Wird für verlustfreies FLAC nicht verwendet.',
+    bitrateOriginal:
+      'Wird beim Beibehalten des Originalformats nicht verwendet.',
     filesGroup: 'Dateien',
     template: 'Dateiname',
     templateHint: 'Verwende /, um Ordner zu erstellen.',
@@ -1766,9 +1803,14 @@ export default {
   auth: {
     signInTitle: 'Bei Downtify anmelden',
     signInBody: 'Melde dich mit deinem Benutzernamen und Passwort an.',
+    signInBodyOidcOnly: 'Melde dich über deinen Identitätsanbieter an.',
     username: 'Benutzername',
     password: 'Passwort',
     signIn: 'Anmelden',
+    oidcSignIn: 'Mit Identitätsanbieter fortfahren',
+    or: 'oder',
+    oidcFailed:
+      'Die Anmeldung über den Identitätsanbieter ist fehlgeschlagen. Bitte versuche es erneut.',
     wrongPassword: 'Benutzername oder Passwort falsch',
     tooMany: 'Zu viele Versuche. Warte einige Minuten und versuche es erneut.',
     forgotHint:

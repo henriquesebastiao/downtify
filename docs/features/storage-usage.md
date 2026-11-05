@@ -29,9 +29,9 @@ Nothing on this page deletes or changes a file: it only tells you where the room
 
 ## The library, not its working copies
 
-Every number above counts the **library**: the songs the Library page lists, minus the **slskd working copies**. With **Leave files in the slskd folder** off, Downtify copies each finished Soulseek transfer into the library and the transfer stays behind in slskd's folder; that copy is counted apart, as a working copy, so it never looks like library content of its own (see [slskd & Navidrome](slskd-navidrome.md)). A working copy is:
+Every number above counts the **library**: the songs the Library page lists, minus the **slskd working copies**. With **Leave files in the slskd folder** off, Downtify copies, tags and verifies each finished Soulseek transfer before removing its source; a source left behind after an older import or a failed cleanup is counted apart as a working copy, so it never looks like library content of its own (see [slskd & Navidrome](slskd-navidrome.md)). A working copy is:
 
-- a transfer Downtify copied into the library — known for every download from this version on;
+- a source copy left behind by an older import or a failed cleanup;
 - while files aren't left in place, any other audio file in slskd's folder that Downtify doesn't know as a library song.
 
 With **Leave files in the slskd folder** on, slskd's folder *is* where those songs live, so it is part of the library.

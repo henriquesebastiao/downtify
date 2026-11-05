@@ -128,7 +128,7 @@ function start(code, page) {
 }
 
 const [command, ...args] = process.argv.slice(2)
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+if (import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   try {
     if (command === 'status') status(args[0])
     else if (command === 'stubs') stubs(args[0])

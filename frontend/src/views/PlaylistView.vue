@@ -150,6 +150,71 @@
       <div
         class="mx-auto flex max-w-[1680px] flex-col gap-10 px-4 sm:px-6 lg:px-10"
       >
+        <UiPanel
+          v-if="batch?.spotify_playlist_id"
+          :title="t('playlists.diagnostics.title')"
+        >
+          <template #actions>
+            <UiButton
+              variant="ghost"
+              size="sm"
+              icon="activity"
+              :loading="loadingDiagnostics"
+              @click="loadDiagnostics"
+            >
+              {{
+                diagnostics
+                  ? t('playlists.diagnostics.refresh')
+                  : t('playlists.diagnostics.check')
+              }}
+            </UiButton>
+          </template>
+          <p
+            v-if="diagnostics && !diagnostics.available"
+            class="text-[13px] text-muted"
+            role="status"
+          >
+            {{ t('playlists.diagnostics.unavailable') }}
+          </p>
+          <ul
+            v-else-if="diagnosticItems.length"
+            class="-mx-2 divide-y divide-line-2"
+          >
+            <li v-for="item in diagnosticItems" :key="item.key">
+              <button
+                type="button"
+                class="flex min-h-10 w-full items-center justify-between gap-4 rounded-control px-2 text-left text-[13px] hover:bg-surface-2 disabled:cursor-default disabled:hover:bg-transparent"
+                :aria-expanded="expandedDiagnostic === item.key"
+                :disabled="!item.issues.length"
+                @click="toggleDiagnostic(item.key)"
+              >
+                <span class="min-w-0 truncate text-muted">
+                  {{ t(`playlists.diagnostics.items.${item.key}`) }}
+                </span>
+                <span class="tabular shrink-0 font-semibold text-fg">
+                  {{
+                    item.count === null
+                      ? '-'
+                      : t('common.tracks', { count: item.count })
+                  }}
+                </span>
+              </button>
+              <ul
+                v-if="expandedDiagnostic === item.key"
+                class="mb-2 ml-2 border-l border-line-2 pl-3 text-[13px] text-muted"
+              >
+                <li
+                  v-for="(issue, index) in item.issues"
+                  :key="`${issue.track_id}-${index}`"
+                  class="py-1 break-words"
+                >
+                  {{ issue.label }}
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </UiPanel>
+
         <div
           v-if="playlist.tracks.length || batch?.missing_count"
           class="flex flex-col gap-3"
@@ -399,6 +464,10 @@ const searchInput = ref(null)
 const details = ref(null)
 const providers = computed(() => details.value?.providers || {})
 const unmatched = computed(() => details.value?.navidrome?.unmatched || [])
+const diagnostics = ref(null)
+const loadingDiagnostics = ref(false)
+const expandedDiagnostic = ref('')
+const diagnosticItems = computed(() => diagnostics.value?.items || [])
 
 const PROVIDER_LABELS = {
   'youtube-music': 'settings.sourceYtm',
@@ -516,6 +585,25 @@ async function loadDetails(name) {
   } catch {
     // Only the provider and Navidrome filters need it.
   }
+}
+
+async function loadDiagnostics() {
+  const name = playlist.value?.name
+  if (!name) return
+  loadingDiagnostics.value = true
+  expandedDiagnostic.value = ''
+  try {
+    const res = await API.getPlaylistDiagnostics(name)
+    if (playlist.value?.name === name) diagnostics.value = res.data
+  } catch {
+    if (playlist.value?.name === name) diagnostics.value = { available: false }
+  } finally {
+    loadingDiagnostics.value = false
+  }
+}
+
+function toggleDiagnostic(key) {
+  expandedDiagnostic.value = expandedDiagnostic.value === key ? '' : key
 }
 
 // Ctrl/⌘+F searches the playlist; pressed again in the box, it is the
@@ -737,6 +825,8 @@ watch(
     query.value = ''
     view.value = 'all'
     details.value = null
+    diagnostics.value = null
+    expandedDiagnostic.value = ''
     loadDetails(name)
     await library.loadPlaylistTracks(name)
     // Opening a playlist shared with the user clears its "new" marker.

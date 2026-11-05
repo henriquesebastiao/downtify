@@ -85,6 +85,7 @@ export default {
       'features/mobile-apps.md': 'Mobilalkalmazások',
       'features/library-only.md': 'Library-only mode',
       'features/server.md': 'Szerverbeállítások',
+      'features/outbound-proxy.md': 'Kimenő proxy',
       'features/slskd-navidrome.md': 'slskd és Navidrome',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',

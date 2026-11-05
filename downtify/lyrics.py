@@ -29,7 +29,7 @@ from mutagen import File as MutagenFile
 from mutagen.flac import FLAC
 from mutagen.id3 import ID3, USLT
 from mutagen.mp3 import MP3
-from mutagen.mp4 import MP4
+from mutagen.mp4 import MP4, MP4Tags
 from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 
@@ -585,21 +585,30 @@ def _file_tags(path: Path) -> Any:
 
 
 def _embedded_lyrics(path: Path) -> str:
-    tags = _file_tags(path)
-    if not tags:
-        return ''
-    if hasattr(tags, 'getall'):
-        frames = tags.getall('USLT')
-        return str(frames[0].text).strip() if frames else ''
-    for key in (_MP4_LYRICS_KEY, _VORBIS_LYRICS_KEY):
-        try:
-            value = tags.get(key)
-        except (KeyError, ValueError):
-            # Vorbis comments refuse keys like MP4's "\xa9lyr" outright.
-            continue
+    try:
+        tags = _file_tags(path)
+        if not tags:
+            return ''
+        if hasattr(tags, 'getall'):
+            frames = tags.getall('USLT')
+            return str(frames[0].text).strip() if frames else ''
+        # Vorbis comments reject MP4's non-ASCII key with ValueError.
+        # Use the tag container, not the filename, to choose a valid key.
+        key = (
+            _MP4_LYRICS_KEY
+            if isinstance(tags, MP4Tags)
+            else _VORBIS_LYRICS_KEY
+        )
+        value = tags.get(key)
         if value:
             first = value[0] if isinstance(value, list) else value
             return str(first).strip()
+    except Exception:
+        # Damaged/unsupported tags must not fail the API or upgrade scan,
+        # or prevent read_track_lyrics from returning a valid sidecar.
+        logger.opt(exception=True).debug(
+            'Could not read embedded lyrics from {}', path
+        )
     return ''
 
 

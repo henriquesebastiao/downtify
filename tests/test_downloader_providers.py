@@ -65,6 +65,15 @@ def _slskd_file(tmp_path: Path) -> tuple[Path, Path]:
     return slskd_dir, source
 
 
+class _NoMetadataLookups:
+    @staticmethod
+    def collect():
+        return downloader_mod._LookupResults(None, None, None)
+
+    def cancel(self):
+        pass
+
+
 def test_slskd_leave_in_place_tags_the_file_where_it_is(
     tmp_path, monkeypatch, no_youtube
 ):
@@ -113,7 +122,11 @@ def test_slskd_copy_mode_uses_main_destination_and_keeps_format(
         tmp_path / 'downloads',
         audio_format='m4a',
         audio_providers=['slskd'],
-        slskd_settings={'enabled': True, 'leave_in_place': False},
+        slskd_settings={
+            'enabled': True,
+            'leave_in_place': False,
+            'source_dir': str(slskd_dir),
+        },
         organize_by_album=True,
     )
 
@@ -124,6 +137,190 @@ def test_slskd_copy_mode_uses_main_destination_and_keeps_format(
     target = tmp_path / 'downloads' / 'Album'
     assert (target / 'Artist - Track.mp3').is_file()
     assert (target / 'cover.jpg').read_bytes() == b'IMG-BYTES'
+    assert not source.exists()
+
+
+def test_slskd_source_is_kept_when_tagging_fails(
+    tmp_path, monkeypatch, no_youtube
+):
+    slskd_dir, source = _slskd_file(tmp_path)
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_slskd', lambda *a, **k: source
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_MetadataLookups', lambda *a: _NoMetadataLookups()
+    )
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['slskd'],
+        slskd_settings={
+            'enabled': True,
+            'leave_in_place': False,
+            'source_dir': str(slskd_dir),
+        },
+    )
+    monkeypatch.setattr(d, '_tag_file', lambda *a, **k: False)
+
+    with pytest.raises(RuntimeError, match='source retained'):
+        d.download(dict(_SONG))
+
+    assert source.is_file()
+
+
+def test_slskd_source_is_kept_when_copy_fails(
+    tmp_path, monkeypatch, no_youtube
+):
+    slskd_dir, source = _slskd_file(tmp_path)
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_slskd', lambda *a, **k: source
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_MetadataLookups', lambda *a: _NoMetadataLookups()
+    )
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['slskd'],
+        slskd_settings={
+            'enabled': True,
+            'leave_in_place': False,
+            'source_dir': str(slskd_dir),
+        },
+    )
+
+    def fail_copy(*args, **kwargs):
+        raise OSError('disk full')
+
+    monkeypatch.setattr(downloader_mod.shutil, 'copy2', fail_copy)
+
+    with pytest.raises(OSError, match='disk full'):
+        d.download(dict(_SONG))
+
+    assert source.is_file()
+
+
+def test_slskd_source_is_kept_when_imported_audio_is_invalid(
+    tmp_path, monkeypatch, no_youtube
+):
+    slskd_dir, source = _slskd_file(tmp_path)
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_slskd', lambda *a, **k: source
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_MetadataLookups', lambda *a: _NoMetadataLookups()
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_valid_imported_audio', lambda path: False
+    )
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['slskd'],
+        slskd_settings={
+            'enabled': True,
+            'leave_in_place': False,
+            'source_dir': str(slskd_dir),
+        },
+    )
+    monkeypatch.setattr(d, '_tag_file', lambda *a, **k: True)
+
+    with pytest.raises(RuntimeError, match='verification'):
+        d.download(dict(_SONG))
+
+    assert source.is_file()
+
+
+def test_slskd_source_cleanup_failure_is_logged_after_import(
+    tmp_path, monkeypatch, no_youtube
+):
+    slskd_dir, source = _slskd_file(tmp_path)
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_slskd', lambda *a, **k: source
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_MetadataLookups', lambda *a: _NoMetadataLookups()
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_valid_imported_audio', lambda path: True
+    )
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['slskd'],
+        slskd_settings={
+            'enabled': True,
+            'leave_in_place': False,
+            'source_dir': str(slskd_dir),
+        },
+    )
+    monkeypatch.setattr(d, '_tag_file', lambda *a, **k: True)
+    original_unlink = Path.unlink
+
+    def fail_source_unlink(path, *args, **kwargs):
+        if path == source.resolve():
+            raise PermissionError('cannot remove source')
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, 'unlink', fail_source_unlink)
+    warnings = []
+    monkeypatch.setattr(
+        downloader_mod.logger,
+        'warning',
+        lambda *args, **kwargs: warnings.append(args),
+    )
+
+    stored = d.download(dict(_SONG))
+
+    assert (tmp_path / 'downloads' / stored).is_file()
+    assert source.is_file()
+    assert any('source cleanup failed' in args[0] for args in warnings)
+
+
+def test_slskd_source_outside_configured_root_is_not_removed(
+    tmp_path, monkeypatch, no_youtube
+):
+    slskd_dir, source = _slskd_file(tmp_path)
+    configured_root = tmp_path / 'configured-source'
+    configured_root.mkdir()
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_slskd', lambda *a, **k: source
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_MetadataLookups', lambda *a: _NoMetadataLookups()
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_valid_imported_audio', lambda path: True
+    )
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['slskd'],
+        slskd_settings={
+            'enabled': True,
+            'leave_in_place': False,
+            'source_dir': str(configured_root),
+        },
+    )
+    monkeypatch.setattr(d, '_tag_file', lambda *a, **k: True)
+
+    stored = d.download(dict(_SONG))
+
+    assert (tmp_path / 'downloads' / stored).is_file()
+    assert source.is_file()
+
+
+def test_slskd_cleanup_never_removes_the_destination_itself(
+    tmp_path, no_youtube
+):
+    slskd_dir, source = _slskd_file(tmp_path)
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['slskd'],
+        slskd_settings={
+            'enabled': True,
+            'leave_in_place': False,
+            'source_dir': str(slskd_dir),
+        },
+    )
+
+    d._remove_slskd_source_after_import(source, source)
+
     assert source.is_file()
 
 
@@ -433,6 +630,42 @@ def test_known_video_respects_earlier_local_source(
         'slskd/Artist - Album/01 - Track.mp3'
     )
     assert no_youtube == []
+
+
+def test_search_result_uses_metadata_through_provider_order(
+    tmp_path, monkeypatch, no_youtube
+):
+    seen_by_slskd = []
+    seen_by_match = []
+
+    def local_miss(song, *args, **kwargs):
+        seen_by_slskd.append(song.copy())
+
+    def metadata_match(song):
+        seen_by_match.append(song.copy())
+        return 'matched12345', {}
+
+    monkeypatch.setattr(downloader_mod, 'download_from_slskd', local_miss)
+    monkeypatch.setattr(downloader_mod, 'find_match', metadata_match)
+    d = Downloader(
+        tmp_path,
+        audio_providers=['slskd', 'youtube-music'],
+        slskd_settings={'enabled': True},
+    )
+    song = {
+        **_SONG,
+        'song_id': 'selected12345',
+        'source': 'youtube',
+        '_match_by_metadata': True,
+    }
+
+    d.download(song)
+
+    assert seen_by_slskd[0]['name'] == 'Track'
+    assert seen_by_slskd[0]['artists'] == ['Artist']
+    assert seen_by_slskd[0]['duration'] == 200
+    assert seen_by_match[0]['name'] == 'Track'
+    assert no_youtube == ['https://music.youtube.com/watch?v=matched12345']
 
 
 @pytest.mark.parametrize('local_enabled', [False, True])

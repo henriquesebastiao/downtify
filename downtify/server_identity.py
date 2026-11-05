@@ -135,6 +135,7 @@ def server_info(
     *,
     version: str,
     require_sign_in: bool,
+    password_sign_in: Optional[bool] = None,
     transcoding: Optional[dict[str, Any]],
 ) -> dict[str, Any]:
     """The public description of this server (``GET /api/server/info``).
@@ -143,7 +144,7 @@ def server_info(
     ``None`` when ffmpeg isn't available - the app then only offers
     original quality. ``password_sign_in`` says an app may sign in with a
     username and password (``POST /api/auth/token``): not while sign-in
-    is turned off, when it pairs with a code instead.
+    or local password login is turned off, when it pairs with a code.
     """
 
     return {
@@ -158,7 +159,11 @@ def server_info(
             or {'available': False, 'formats': [], 'bitrates': []},
             'signed_urls': True,
             'pairing': True,
-            'password_sign_in': require_sign_in,
+            'password_sign_in': (
+                require_sign_in
+                if password_sign_in is None
+                else password_sign_in
+            ),
             'podcasts': True,
             'discover': True,
             'lyrics': True,

@@ -976,6 +976,23 @@ export default {
   },
   playlists: {
     kicker: 'Playlist',
+    diagnostics: {
+      title: 'Diagnostic de la playlist',
+      check: 'Vérifier',
+      refresh: 'Actualiser',
+      unavailable: 'Le diagnostic est indisponible pour cette playlist.',
+      items: {
+        spotify_tracks: 'Titres Spotify',
+        downloaded: 'Téléchargés par Downtify',
+        physical_files: 'Fichiers trouvés',
+        track_index: 'Correspondances TrackIndex',
+        monitor_history: 'Historique du Monitor',
+        navidrome_matched: 'Trouvés dans Navidrome',
+        navidrome_rows: 'Titres dans la playlist Navidrome',
+        missing_files: 'Fichiers manquants',
+        orphan_files: 'Fichiers orphelins',
+      },
+    },
     notFound: 'Playlist introuvable',
     progress: '{have} sur {total} téléchargés',
     missingShort: { one: '{count} manquant', other: '{count} manquants' },
@@ -1486,6 +1503,21 @@ export default {
     deemixLocal: 'Même dossier dans Downtify (lecture seule acceptée)',
     deemixQuality: 'Qualité audio',
     slskdTitle: 'slskd',
+    slskdFormats: 'Priorité des formats',
+    slskdFormatsHint:
+      'Extensions séparées par des virgules, de la plus prioritaire à la moins prioritaire (ex. flac, mp3).',
+    slskdMinBitrate: 'Débit minimum des formats avec perte',
+    slskdMinBitrateHint:
+      'En mode strict, les fichiers avec perte sous cette valeur ou sans débit indiqué sont refusés. FLAC est exempté.',
+    slskdAttempts: 'Tentatives de candidats',
+    slskdAttemptsHint:
+      'En mode strict, ce nombre de candidats est essayé par format ; sinon, il s’applique au total.',
+    slskdStrictPriority: 'Priorité stricte des formats',
+    slskdStrictPriorityHint:
+      'Essaie chaque format dans l’ordre et classe les correspondances dans chaque format.',
+    slskdWhitelist: 'Autoriser uniquement les formats listés',
+    slskdWhitelistHint:
+      'Refuse les résultats dont l’extension ne figure pas dans la liste.',
     slskdHint:
       'Téléchargez depuis Soulseek via votre serveur slskd. Les titres introuvables passent à la source suivante.',
     slskdEnabled: 'Utiliser slskd',
@@ -1498,7 +1530,7 @@ export default {
     slskdQueuedTimeout: 'Délai en file',
     slskdInPlace: 'Laisser les fichiers dans le dossier slskd',
     slskdInPlaceHint:
-      'Les taguer là où slskd les a enregistrés au lieu de les copier dans votre dossier de téléchargements.',
+      'Activé : tague les fichiers sur place et conserve-les. Désactivé : copie et tague dans Téléchargements ; la source est supprimée uniquement après un import réussi. En cas d’échec, la source est conservée.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies YouTube',
     cookiesHint:
@@ -1517,9 +1549,14 @@ export default {
     format: 'Format',
     formatHint:
       'Les fichiers téléchargés depuis YouTube sont convertis dans ce format.',
+    formatOriginal: 'Original',
+    formatOriginalHint:
+      'Conserver le meilleur flux audio disponible sans le réencoder. L’extension du fichier dépend de la source.',
     bitrate: 'Qualité',
     bitrateHint: 'Débit pour les formats avec perte.',
     bitrateLossless: 'Non utilisé pour le FLAC, qui est sans perte.',
+    bitrateOriginal:
+      'Non utilisé lorsque le format audio original est conservé.',
     filesGroup: 'Fichiers',
     template: 'Nom de fichier',
     templateHint: 'Utilisez / pour créer des dossiers.',
@@ -1760,9 +1797,14 @@ export default {
     signInTitle: 'Se connecter à Downtify',
     signInBody:
       'Connectez-vous avec votre nom d’utilisateur et votre mot de passe.',
+    signInBodyOidcOnly: 'Connectez-vous avec votre fournisseur d’identité.',
     username: 'Nom d’utilisateur',
     password: 'Mot de passe',
     signIn: 'Se connecter',
+    oidcSignIn: 'Continuer avec le fournisseur d’identité',
+    or: 'ou',
+    oidcFailed:
+      'Connexion au fournisseur d’identité impossible. Veuillez réessayer.',
     wrongPassword: 'Nom d’utilisateur ou mot de passe incorrect',
     tooMany: 'Trop de tentatives. Patientez quelques minutes et réessayez.',
     forgotHint:

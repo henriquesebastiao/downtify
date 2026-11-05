@@ -35,12 +35,24 @@ environment:
 | 변수 | 기본값 | 설명 |
 |----------|---------|-------------|
 | `DOWNTIFY_DISABLE_AUTH` | `false` | `true`로 하면 계정이 꺼집니다. 아무도 로그인하지 않으며, 서버에 접속한 사람은 누구나 관리자로 사용합니다. 로그인 페이지, 로그아웃 버튼, **설정 → 사용자 관리**, **설정 → 일반**의 계정 부분이 사라집니다. 페어링된 앱은 계속 동작합니다. `false`로 되돌리거나 제거하면 로그인이 다시 필요해지며 계정은 그대로입니다. [사용자와 로그인](../features/users.md#turning-accounts-off)을 참고하세요. |
+| `DOWNTIFY_DISABLE_LOCAL_LOGIN` | `false` | `true` disables username/password login in the web UI and `POST /api/auth/token`. OIDC and app pairing remain available; current sessions and device tokens are not revoked. Requires all three OIDC credentials below. |
+| `DOWNTIFY_OIDC_ISSUER` | _(unset)_ | The exact OIDC issuer URL. Enables OIDC when used with client ID and secret. |
+| `DOWNTIFY_OIDC_CLIENT_ID` | _(unset)_ | OIDC confidential client ID. |
+| `DOWNTIFY_OIDC_CLIENT_SECRET` | _(unset)_ | OIDC confidential client secret. |
+| `DOWNTIFY_OIDC_REDIRECT_URI` | _(derived)_ | Public callback URL registered with the identity provider, normally `https://music.example.com/api/auth/oidc/callback`. Set explicitly behind a reverse proxy if needed. |
+| `DOWNTIFY_OIDC_SCOPES` | `openid profile email` | Space-separated OIDC scopes. |
+| `DOWNTIFY_OIDC_USERNAME_CLAIM` | `preferred_username` | Claim used for new account names, falling back to `email` and then `sub`. |
+| `DOWNTIFY_OIDC_GROUPS_CLAIM` | `groups` | Claim containing group names; dotted paths are supported. |
+| `DOWNTIFY_OIDC_ALLOWED_GROUPS` | _(empty)_ | Comma-separated group allowlist; unset means any authenticated provider identity may sign in. |
+| `DOWNTIFY_OIDC_ADMIN_GROUPS` | _(empty)_ | Comma-separated groups mapped to Downtify admins. Other OIDC users are normal users. |
 | `DOWNTIFY_TRUSTED_PROXIES` | _(설정 안 됨)_ | 리버스 프록시의 주소 또는 네트워크를 쉼표로 구분(예: `172.18.0.0/16,10.0.0.5`). 이들에게서 온 요청의 `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host` 헤더만 신뢰합니다. 로그인과 페어링 시도를 제한하는 기준이 되는 클라이언트 주소, 로그인 쿠키의 secure 플래그, same-site 검사에 쓰입니다. 설정하지 않으면 이 헤더들은 무시됩니다. |
 | `DOWNTIFY_DISCOVERY` | `true` | `false`로 하면 앱이 *이 네트워크에서 찾음*에 서버를 나열하는 데 쓰는 로컬 네트워크 알림(mDNS, `_downtify._tcp`)을 중단합니다. Docker 브리지 네트워크에서는 알림이 어차피 LAN에 닿지 않습니다. [Docker Compose](docker-compose.md#finding-the-server-from-the-apps)를 참고하세요. |
 | `DOWNTIFY_TRANSCODE_CACHE_MB` | `2048` | 트랜스코딩된 사본의 캐시(`/data/transcode_cache`)를 유지하는 최대 크기(MB). 가장 오래 재생되지 않은 사본부터 삭제됩니다. |
 | `DOWNTIFY_TRANSCODE_CONCURRENCY` | `2` | 앱의 낮은 스트리밍 음질을 위해 동시에 트랜스코딩하는 곡 수. |
 | `DOWNTIFY_STREAM_CACHE_MB` | `1024` | 스트리밍된 오디오의 캐시(`/data/stream_cache`)를 유지하는 최대 크기(MB). 가장 오래 재생되지 않은 사본부터 삭제됩니다. 서버를 통한 스트리밍은 브라우저가 직접 YouTube에 접근할 수 없는 곳에서 내려받지 않은 트랙을 재생해 줍니다. |
 | `DOWNTIFY_STREAM_CONCURRENCY` | `2` | 동시에 실행할 수 있는 스트림 다운로드 수. |
+
+OIDC is optional. Configure the issuer, client ID and secret together; partial configuration prevents startup. The provider must allow the callback URL `https://<your-public-host>/api/auth/oidc/callback`. See [OpenID Connect](../features/users.md#openid-connect) for account linking, group mapping and a full explanation of local login options.
 
 ## 음악 휴지통
 

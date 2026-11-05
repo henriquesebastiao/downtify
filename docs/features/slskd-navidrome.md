@@ -24,6 +24,8 @@ Both are off by default and configured in **Settings**.
 
 Enabling slskd puts it first in the list. If slskd ends up being the only source, YouTube Music and YouTube are still tried after it, so a track slskd can't find still downloads. The download queue shows which source served each track.
 
+Songs downloaded from the search bar use the result's title, artist and duration to try each source in this same order. The selected YouTube Music video is not pinned, so slskd can supply a different version or a lossless file before YouTube is used as a fallback.
+
 ## slskd
 
 ### Setup
@@ -55,7 +57,13 @@ Editing any field clears the last result, since it no longer describes what is i
 
 ### How a track is matched
 
-Downtify searches slskd with the track's title and artist and ranks the results by how well the file name and duration match the track. Among equally good matches it prefers MP3, then FLAC, and it skips files that report a bitrate below 256 kbps. It tries up to five candidates, one after another. When a transfer finishes, Downtify checks the file's tags and duration against the track before keeping it.
+Downtify searches slskd with the track's title and artist and ranks the results by how well the file name and duration match the track. By default, match score comes first; the configured format order only breaks ties. The default order is MP3, then FLAC, and results reporting a bitrate below 256 kbps are skipped. It tries up to five candidates total, one after another. When a transfer finishes, Downtify checks the file's tags and duration against the track before keeping it.
+
+In **Settings → Audio source → slskd**, set **Format priority** to a comma-separated list such as `flac, mp3`. Turn on **Strict format priority** to try each format as a separate tier in that order; matches are still ranked by score within a tier. **Candidate attempts** then applies per format, so `5` tries up to five FLAC files before moving on to up to five MP3 files. In strict mode, **Minimum lossy bitrate** rejects lossy files below the threshold and files that don't report a bitrate; FLAC is exempt.
+
+By default, formats not in the list remain eligible as a final catch-all tier. Turn on **Only allow listed formats** to reject those results instead. This whitelist also works with strict priority disabled, where the normal score-first selection remains unchanged. If all acceptable slskd candidates fail or are exhausted, Downtify continues to the next configured audio source.
+
+For example, `flac, mp3` with strict priority and the whitelist enabled, a minimum lossy bitrate of `320`, and five candidate attempts per format tries FLAC first, then MP3 at 320 kbps or higher. If neither tier succeeds, the next configured provider is tried.
 
 If nothing acceptable turns up, the transfer doesn't finish within **Total timeout**, or it sits queued on the remote peer without progress for longer than **Queued timeout**, Downtify moves on to the next audio source.
 
@@ -77,7 +85,7 @@ Predictable file locations are probed every tick; throttling affects only recurs
 With **Leave slskd files in place** on (the default), the downloaded file stays in the slskd folder: Downtify writes the metadata, cover art and lyrics into it there and registers it in the library under a `slskd/…` path. The Library, player and M3U files use that path, and it's served through `/media/slskd/…`.
 
 Turn it off to copy the file next to your other downloads instead, following your filename template and [file organization](file-organization.md) settings.
-The transfer itself stays in the slskd folder; [Storage & Usage](storage-usage.md#the-library-not-its-working-copies) counts these copies apart from the library, as *slskd working copies*, so you can see how much room they take.
+After the copy is tagged and verified as readable audio, Downtify removes the original from the configured slskd source folder. If copying, tagging or verification fails, the source is kept and the download reports an error. If removing the source fails, the imported library file remains successful and Downtify logs a warning with both paths. When the source and destination are the same file, or the source is outside the configured folder, it is not removed. Existing leftovers and failed cleanups are counted as [slskd working copies](storage-usage.md#the-library-not-its-working-copies).
 
 ::: info
 slskd files keep their original format — they aren't transcoded to the format chosen in Settings.
