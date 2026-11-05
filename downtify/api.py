@@ -2861,9 +2861,7 @@ def search_endpoint(
         return library_only.search(entries_for_request(request), query)
     results = providers.search_songs(query, limit=20)
     if results:
-        return [
-            {**song, 'download_by_metadata': True} for song in results
-        ]
+        return [{**song, 'download_by_metadata': True} for song in results]
     q = query.strip()
     if not q or 'slskd' not in _effective_audio_providers(state.settings):
         return []

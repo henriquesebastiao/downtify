@@ -38,7 +38,9 @@ def test_search_results_are_downloaded_by_metadata(monkeypatch):
         'source': 'youtube',
     }
     monkeypatch.setattr(api.library_only, 'enabled', lambda settings: False)
-    monkeypatch.setattr(api.providers, 'search_songs', lambda query, limit: [row])
+    monkeypatch.setattr(
+        api.providers, 'search_songs', lambda query, limit: [row]
+    )
 
     result = api.search_endpoint(query='Daft Punk - One More Time')
 
