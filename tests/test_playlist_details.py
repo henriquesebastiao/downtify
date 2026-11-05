@@ -289,9 +289,7 @@ def test_playlist_diagnostics_reports_pipeline_mismatches(
         ),
     )
 
-    result = api._playlist_diagnostics(
-        'Road', ['Road/first.mp3'], _admin()
-    )
+    result = api._playlist_diagnostics('Road', ['Road/first.mp3'], _admin())
     items = {item['key']: item for item in result['items']}
 
     assert result['available'] is True

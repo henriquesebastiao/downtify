@@ -77,7 +77,9 @@ def _playlist_snapshot(
     if not tracks:
         return None
 
-    allowed_files = {_normalize_path(path) for path in files if _normalize_path(path)}
+    allowed_files = {
+        _normalize_path(path) for path in files if _normalize_path(path)
+    }
     catalog_files = _catalog_files(name, spotify_id, catalog, allowed_files)
     index_files, source_files, physical_files = _library_files(
         tracks, catalog_files, allowed_files, context
@@ -324,9 +326,8 @@ def _navidrome_rows(
     context: PlaylistDiagnosticsContext,
 ) -> tuple[Optional[int], list[dict[str, str]]]:
     cfg = _effective_navidrome_settings(context.settings)
-    if (
-        not context.settings.get('sync_navidrome', True)
-        or not cfg.get('enabled')
+    if not context.settings.get('sync_navidrome', True) or not cfg.get(
+        'enabled'
     ):
         return None, []
     try:
@@ -334,7 +335,9 @@ def _navidrome_rows(
         if not client.configured():
             return None, []
         playlist_ids = client.find_playlist_ids_by_name(name)
-        songs = client.get_playlist_songs(playlist_ids[0]) if playlist_ids else []
+        songs = (
+            client.get_playlist_songs(playlist_ids[0]) if playlist_ids else []
+        )
     except Exception as exc:
         logger.info(
             'playlist diagnostics: Navidrome lookup failed name={!r} err={}',
