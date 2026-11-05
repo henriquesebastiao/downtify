@@ -20,11 +20,14 @@ import re
 import ssl
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlsplit
+from urllib.request import proxy_bypass
 
 import httpx
 from loguru import logger
 
 from .navidrome import SUBSONIC_AUTH_FAILED, NavidromeClient, SubsonicError
+from .proxy_config import outbound_proxy_config
 from .slskd_provider import SlskdClient
 
 #: Seconds each request may take. A test that hangs is worse than one
@@ -36,6 +39,7 @@ STATUS_WARN = 'warn'
 STATUS_FAIL = 'fail'
 
 _VERSION = re.compile(r'^\d+(\.\d+)+')
+_PROXY_TEST_URL = 'https://check.torproject.org/api/ip'
 
 
 def _get(url: str, **kwargs: Any) -> httpx.Response:
@@ -78,6 +82,77 @@ def _transport_code(exc: BaseException) -> str:
 def _log_failure(what: str, exc: BaseException) -> None:
     # The type only: the message may carry the URL, and with it a token.
     logger.info('{} check failed: {}', what, type(exc).__name__)
+
+
+def check_outbound_proxy() -> dict[str, Any]:
+    """Check proxy reachability and whether the exit is a Tor relay.
+
+    The response deliberately omits the public IP returned by the check
+    service. A configured bypass for that host is reported without making a
+    direct request.
+    """
+
+    config = outbound_proxy_config()
+    proxy_url = config.proxy_urls.get('https') or config.proxy_urls.get('all')
+    result: dict[str, Any] = {
+        'ok': False,
+        'configured': bool(proxy_url),
+        'strict': config.strict,
+        'proxy_scheme': urlsplit(proxy_url).scheme if proxy_url else '',
+        'tor_exit': None,
+        'checks': [],
+    }
+    if not proxy_url:
+        result['checks'] = [
+            _check('connection', STATUS_FAIL, 'not_configured')
+        ]
+        return result
+    if proxy_bypass('check.torproject.org'):
+        result['checks'] = [_check('connection', STATUS_FAIL, 'bypassed')]
+        return result
+
+    try:
+        response = httpx.get(_PROXY_TEST_URL, timeout=PROBE_TIMEOUT)
+    except Exception as exc:
+        _log_failure('outbound proxy', exc)
+        result['checks'] = [
+            _check('connection', STATUS_FAIL, _transport_code(exc))
+        ]
+        return result
+    if response.status_code != 200:
+        result['checks'] = [
+            _check(
+                'connection',
+                STATUS_FAIL,
+                'http_error',
+                str(response.status_code),
+            )
+        ]
+        return result
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = None
+    if not isinstance(payload, dict) or not isinstance(
+        payload.get('IsTor'), bool
+    ):
+        result['checks'] = [
+            _check('connection', STATUS_FAIL, 'invalid_response')
+        ]
+        return result
+
+    tor_exit = payload['IsTor']
+    result['ok'] = True
+    result['tor_exit'] = tor_exit
+    result['checks'] = [
+        _check('connection', STATUS_OK, 'reachable'),
+        _check(
+            'tor',
+            STATUS_OK if tor_exit else STATUS_WARN,
+            'tor_exit' if tor_exit else 'not_tor',
+        ),
+    ]
+    return result
 
 
 # ── slskd ────────────────────────────────────────────────────────────

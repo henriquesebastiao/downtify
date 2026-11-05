@@ -85,6 +85,7 @@ export default {
       'features/mobile-apps.md': 'Мобилни приложения',
       'features/library-only.md': 'Library-only mode',
       'features/server.md': 'Настройки на сървъра',
+      'features/outbound-proxy.md': 'Изходящ прокси сървър',
       'features/slskd-navidrome.md': 'slskd и Navidrome',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',

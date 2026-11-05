@@ -85,6 +85,7 @@ export default {
       'features/mobile-apps.md': 'Mobil uygulamalar',
       'features/library-only.md': 'Library-only mode',
       'features/server.md': 'Sunucu ayarları',
+      'features/outbound-proxy.md': 'Giden proxy',
       'features/slskd-navidrome.md': 'slskd ve Navidrome',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',

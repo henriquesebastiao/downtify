@@ -10,6 +10,10 @@ Every endpoint needs a signed-in user except a few public ones — see [Server a
 
 ## General
 
+### `POST /api/proxy/test`
+
+Admin. Checks the configured outbound proxy by requesting the Tor Project's status endpoint. The response includes whether the route was reachable and whether the exit was recognized as Tor; it never includes the observed public IP. It does not make a direct request when no proxy is configured or the test host is bypassed.
+
 ### `GET /api/version`
 
 Returns the current Downtify version as a plain string.

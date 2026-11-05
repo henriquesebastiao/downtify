@@ -85,6 +85,7 @@ export default {
       'features/mobile-apps.md': 'Apps móviles',
       'features/library-only.md': 'Library-only mode',
       'features/server.md': 'Ajustes del servidor',
+      'features/outbound-proxy.md': 'Proxy de salida',
       'features/slskd-navidrome.md': 'slskd y Navidrome',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',

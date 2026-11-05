@@ -111,6 +111,7 @@ from downtify.playlist_spotify_cache import (
     playlist_spotify_cache_loop,
 )
 from downtify.podcasts import PodcastStore
+from downtify.proxy_config import configure_outbound_proxy
 from downtify.server_identity import ServerIdentity
 from downtify.server_port import (
     DEFAULT_PORT,
@@ -1302,6 +1303,7 @@ def main() -> None:
         _auth_reset()
         return None
 
+    configure_outbound_proxy()
     _fix_mime_types()
     port, source = resolve_port(args.port, ServerIdentity(DATABASE_DIR).port)
     _LISTEN.update(host=args.host, port=port, source=source)

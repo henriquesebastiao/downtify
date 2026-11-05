@@ -48,6 +48,7 @@ export const NAV = [
       { title: 'Users & Sign-in', page: 'features/users.md' },
       { title: 'Mobile Apps', page: 'features/mobile-apps.md' },
       { title: 'Server Settings', page: 'features/server.md' },
+      { title: 'Outbound Proxy', page: 'features/outbound-proxy.md' },
       { title: 'Library-only mode', page: 'features/library-only.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Deemix', page: 'features/deemix.md' },

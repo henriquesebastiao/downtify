@@ -79,6 +79,8 @@ In **Library → Tracks**, sort by release date from the column heading or **Sor
 
 Soulseek downloads can use strict format tiers (for example, FLAC before MP3 at a minimum bitrate) and optionally reject formats outside the configured list. Search-bar downloads also follow the configured audio source order. See [slskd & Navidrome](https://downtify.henriquesebastiao.com/features/slskd-navidrome/#how-a-track-is-matched).
 
+Route supported outbound requests through an optional HTTP(S) or SOCKS5 proxy, with fail-closed startup and an admin connection check. See [Outbound Proxy](https://downtify.henriquesebastiao.com/features/outbound-proxy/).
+
 Read-only music folders stay protected during **Upgrade library**: their tracks are skipped before remote lookups, without changing files or marking unchecked categories as complete. See [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/#read-only-music-folders).
 
 Existing Library `.m3u` playlists can use UTF-8 or the Windows-1252 legacy fallback. Unreadable playlists are skipped with a warning; reading keeps existing files intact. See [M3U compatibility](docs/features/m3u-export.md#compatibility).

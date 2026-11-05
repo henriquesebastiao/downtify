@@ -242,6 +242,7 @@ downloads are shared, and files are never stored twice.
   fields, ``?path=``)
 * ``POST /api/slskd/test`` and ``POST /api/navidrome/test`` (try the
   connection with the settings as they are in the form, saved or not)
+* ``POST /api/proxy/test`` (admin: test outbound proxy reachability)
 * ``GET  /api/cookies`` (current YouTube cookie configuration)
 * ``POST /api/cookies`` (upload a Netscape cookies.txt as the raw request
   body - no multipart, so no ``python-multipart`` dependency)
@@ -8911,6 +8912,13 @@ async def test_navidrome_endpoint(request: Request) -> dict[str, Any]:
         'navidrome': payload or (saved if isinstance(saved, dict) else {}),
     })
     return await asyncio.to_thread(integration_check.check_navidrome, cfg)
+
+
+@router.post('/api/proxy/test')
+async def test_proxy_endpoint() -> dict[str, Any]:
+    """Check the configured outbound proxy without exposing its egress IP."""
+
+    return await asyncio.to_thread(integration_check.check_outbound_proxy)
 
 
 # ---------------------------------------------------------------------------

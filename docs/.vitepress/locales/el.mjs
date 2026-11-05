@@ -86,6 +86,7 @@ export default {
       'features/mobile-apps.md': 'Εφαρμογές κινητού',
       'features/library-only.md': 'Library-only mode',
       'features/server.md': 'Ρυθμίσεις διακομιστή',
+      'features/outbound-proxy.md': 'Εξερχόμενος διακομιστής μεσολάβησης',
       'features/slskd-navidrome.md': 'slskd και Navidrome',
       'features/deemix.md': 'Deemix',
       'features/soundcloud.md': 'SoundCloud',
