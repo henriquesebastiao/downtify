@@ -1486,7 +1486,7 @@ export default {
     slskdQueuedTimeout: 'Kuyruk zaman aşımı',
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
     slskdInPlaceHint:
-      'İndirme klasörüne kopyalamak yerine slskd’nin kaydettiği yerde etiketle.',
+      'Açık: dosyaları yerinde etiketle ve koru. Kapalı: İndirilenler klasörüne kopyalayıp etiketle; kaynak yalnızca içe aktarma başarılı olursa silinir. Hata olursa kaynak korunur.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube çerezleri',
     cookiesHint:

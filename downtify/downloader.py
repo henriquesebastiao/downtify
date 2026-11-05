@@ -14,6 +14,7 @@ from typing import Any, Callable, Optional
 import httpx
 import yt_dlp
 from loguru import logger
+from mutagen import File as MutagenFile
 from mutagen.flac import FLAC, Picture
 from mutagen.id3 import (
     APIC,
@@ -72,6 +73,19 @@ from .slskd_provider import download_from_slskd
 # excludes sidecars written next to the audio (.lrc, cover.jpg, .m3u) so a
 # leftover lyrics file can never stand in for a missing track.
 _AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'ogg', 'opus', 'm4a'})
+
+
+def _valid_imported_audio(path: Path) -> bool:
+    """Whether *path* is non-empty audio that Mutagen can inspect."""
+
+    try:
+        if not path.is_file() or path.stat().st_size <= 0:
+            return False
+        audio = MutagenFile(path)
+        return audio is not None and float(audio.info.length) > 0
+    except Exception:
+        return False
+
 
 # ``(percent, message, provider)`` — ``provider`` is the audio source
 # handling the download (``'slskd'``, ``'youtube-music'``, ``'youtube'``,
@@ -1190,9 +1204,10 @@ class Downloader:
         found: _LookupResults,
         *,
         save_album_cover: bool = True,
-    ) -> None:
+    ) -> bool:
         """Embed metadata, album cover.jpg and lyrics into ``final_path``."""
 
+        succeeded = True
         if found.genre:
             song = {**song, 'genre': found.genre}
 
@@ -1204,12 +1219,14 @@ class Downloader:
                 cover_bytes=found.cover_bytes,
             )
         except Exception:
+            succeeded = False
             logger.exception('Failed to embed metadata into {}', final_path)
 
         if self.download_cover_art and save_album_cover:
             try:
                 self._save_album_cover(target_dir, song, found.cover_bytes)
             except Exception:
+                succeeded = False
                 logger.exception(
                     'Failed to write album cover in {}', target_dir
                 )
@@ -1218,7 +1235,63 @@ class Downloader:
             try:
                 embed_lyrics(final_path, found.lyrics)
             except Exception:
+                succeeded = False
                 logger.exception('Failed to embed lyrics into {}', final_path)
+        return succeeded
+
+    def _remove_slskd_source_after_import(
+        self, source_path: Path, final_path: Path
+    ) -> None:
+        """Remove a completed slskd source only inside its configured root."""
+
+        if source_path.is_symlink():
+            logger.warning(
+                'slskd: source cleanup skipped for symlink source={!r}',
+                source_path,
+            )
+            return
+        try:
+            source = source_path.resolve(strict=True)
+            destination = final_path.resolve(strict=True)
+            source_root = Path(
+                str(self.slskd_settings.get('source_dir') or '')
+            ).resolve(strict=True)
+        except OSError as exc:
+            logger.warning(
+                'slskd: source cleanup skipped; paths could not be verified '
+                'source={!r} destination={!r} err={}',
+                source_path,
+                final_path,
+                exc,
+            )
+            return
+        if source == destination:
+            return
+        if not source.is_relative_to(source_root) or not source.is_file():
+            logger.warning(
+                'slskd: source cleanup skipped; file is outside the configured '
+                'source folder source={!r} source_dir={!r}',
+                source,
+                source_root,
+            )
+            return
+        try:
+            source.unlink()
+        except OSError as exc:
+            logger.warning(
+                'slskd: imported file is ready but source cleanup failed '
+                'source={!r} destination={!r} err={}',
+                source,
+                destination,
+                exc,
+            )
+            return
+        logger.info(
+            'slskd: removed source after successful import source={!r} '
+            'destination={!r}',
+            source,
+            destination,
+        )
 
     def _finalize_local_source(
         self,
@@ -1235,8 +1308,8 @@ class Downloader:
         folder and is returned with the virtual ``slskd/`` prefix (served
         via ``/media/slskd/...``); otherwise it's copied into the same
         destination a YouTube download would use, keeping its original
-        format — slskd files are not transcoded — and the transfer left
-        behind in slskd's folder is returned too.
+        format — slskd files are not transcoded — and the source is removed
+        only after the imported file has been tagged and verified.
         """
 
         if provider == 'deemix':
@@ -1250,6 +1323,7 @@ class Downloader:
             return stored, None
 
         copied_from: Optional[Path] = None
+        cleanup_source: Optional[Path] = None
         lookups = _MetadataLookups(self, song)
         try:
             if provider == 'slskd' and self.slskd_settings.get(
@@ -1272,6 +1346,8 @@ class Downloader:
                 if source_path.resolve() != final_path.resolve():
                     shutil.copy2(source_path, final_path)
                     copied_from = source_path.resolve()
+                    if provider == 'slskd':
+                        cleanup_source = source_path
                 stored = f'{rel_prefix}{final_path.name}'
                 in_place = False
             found = lookups.collect()
@@ -1279,13 +1355,35 @@ class Downloader:
             lookups.cancel()
 
         # Never drop a cover.jpg into slskd's own folders.
-        self._tag_file(
+        tagged = self._tag_file(
             final_path,
             target_dir,
             song,
             found,
             save_album_cover=not in_place,
         )
+        if cleanup_source is not None:
+            if not tagged:
+                logger.warning(
+                    'slskd: retaining source because tagging failed '
+                    'source={!r} destination={!r}',
+                    cleanup_source,
+                    final_path,
+                )
+                raise RuntimeError(
+                    'Could not tag imported slskd file; source retained'
+                )
+            if not _valid_imported_audio(final_path):
+                logger.warning(
+                    'slskd: retaining source because imported file failed '
+                    'audio verification source={!r} destination={!r}',
+                    cleanup_source,
+                    final_path,
+                )
+                raise RuntimeError(
+                    'Imported slskd file failed verification; source retained'
+                )
+            self._remove_slskd_source_after_import(cleanup_source, final_path)
         _report(progress_cb, 100.0, 'Done', provider)
         return stored, copied_from
 

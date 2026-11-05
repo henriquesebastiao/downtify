@@ -1486,7 +1486,7 @@ export default {
     slskdQueuedTimeout: '대기 타임아웃',
     slskdInPlace: 'slskd 폴더에 파일 그대로 유지',
     slskdInPlaceHint:
-      '다운로드 폴더로 복사하지 않고 slskd가 저장한 원래 위치에서 바로 태그를 작성합니다.',
+      '켜짐: 원래 위치에서 태그를 작성하고 파일을 유지합니다. 꺼짐: 다운로드 폴더로 복사하고 태그를 작성한 뒤 가져오기가 성공해야 원본을 삭제합니다. 실패하면 원본을 유지합니다.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube 쿠키',
     cookiesHint:

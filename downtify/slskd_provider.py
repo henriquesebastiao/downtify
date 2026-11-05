@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import os
 import re
-import shutil
 import threading
 import time
 import unicodedata
@@ -508,19 +507,6 @@ def _title_in_basename(filename: str, title_alnum: str) -> bool:
     if len(title_alnum) >= 6 and title_alnum in base_alnum:
         return True
     return False
-
-
-def _discard_mismatched_download(path: Path) -> None:
-    try:
-        if path.is_file():
-            path.unlink()
-            logger.info('slskd: removed mismatched download file={!r}', path)
-    except OSError as exc:
-        logger.warning(
-            'slskd: could not remove mismatched file={!r} err={}',
-            path,
-            exc,
-        )
 
 
 def _slskd_search_queries(song: dict[str, Any]) -> list[str]:
@@ -1251,44 +1237,27 @@ def _find_on_disk_for_song(
     return best
 
 
-def _copy_to_output(src: Path, output_dir: Path) -> Path:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    dest = output_dir / src.name
-    if dest.resolve() != src.resolve():
-        shutil.copy2(src, dest)
-    return dest
-
-
 def _resolve_downloaded_file(
     roots: list[Path],
-    output_dir: Path,
     song: dict[str, Any],
     soulseek_filename: str,
     *,
     username: str,
-    leave_in_place: bool,
     expected_size: int = 0,
 ) -> Optional[Path]:
-    found = _find_on_disk_for_song(
+    return _find_on_disk_for_song(
         roots,
         song,
         soulseek_filename,
         username=username,
         expected_size=expected_size,
     )
-    if found is None:
-        return None
-    if leave_in_place:
-        return found
-    return _copy_to_output(found, output_dir)
 
 
-def _finalize_slskd_path(
-    found: Path, output_dir: Path, leave_in_place: bool
-) -> Path:
-    if leave_in_place:
-        return found
-    return _copy_to_output(found, output_dir)
+def _finalize_slskd_path(found: Path) -> Path:
+    """Return the original transfer; Downloader owns import and cleanup."""
+
+    return found
 
 
 def _wait_for_slskd_file(
@@ -1445,7 +1414,6 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             or output_dir
         )
     )
-    leave_in_place = bool(settings.get('leave_in_place', True))
     spotify_row = snapshot_spotify_metadata(song)
     queries = _slskd_search_queries(spotify_row)
     if not queries:
@@ -1665,11 +1633,9 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             if found is None:
                 found = _resolve_downloaded_file(
                     roots,
-                    output_dir,
                     song,
                     filename,
                     username=username,
-                    leave_in_place=leave_in_place,
                     expected_size=queued_size,
                 )
 
@@ -1686,19 +1652,19 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
                     }
                     logger.info(
                         'slskd: tags mismatch after download {}; '
-                        'trying next candidate ({}/{}) file={!r}',
+                        'retaining source and trying next candidate '
+                        '({}/{}) file={!r}',
                         spotify_file_tag_mismatch_label(mismatch_row),
                         attempt_idx,
                         len(files),
                         _file_basename(filename)[:120],
                     )
-                    _discard_mismatched_download(found)
                     found = None
 
             if found is not None:
                 if search_id:
                     client.delete_search(search_id)
-                return _finalize_slskd_path(found, output_dir, leave_in_place)
+                return _finalize_slskd_path(found)
 
             logger.info(
                 'slskd: candidate failed candidate={}/{} title={!r} user={!r} file={!r}',

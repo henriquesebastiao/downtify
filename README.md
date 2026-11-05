@@ -79,6 +79,8 @@ In **Library → Tracks**, sort by release date from the column heading or **Sor
 
 Soulseek downloads can use strict format tiers (for example, FLAC before MP3 at a minimum bitrate) and optionally reject formats outside the configured list. Search-bar downloads also follow the configured audio source order. See [slskd & Navidrome](https://downtify.henriquesebastiao.com/features/slskd-navidrome/#how-a-track-is-matched).
 
+Turn off **Leave files in the slskd folder** to remove a Soulseek source after its library copy is successfully imported; failed imports keep the source. See [slskd & Navidrome](https://downtify.henriquesebastiao.com/features/slskd-navidrome/#leave-files-in-place).
+
 Route supported outbound requests through an optional HTTP(S) or SOCKS5 proxy, with fail-closed startup and an admin connection check. See [Outbound Proxy](https://downtify.henriquesebastiao.com/features/outbound-proxy/).
 
 Read-only music folders stay protected during **Upgrade library**: their tracks are skipped before remote lookups, without changing files or marking unchecked categories as complete. See [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/#read-only-music-folders).

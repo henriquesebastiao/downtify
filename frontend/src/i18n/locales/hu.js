@@ -1499,7 +1499,7 @@ export default {
     slskdQueuedTimeout: 'Sorban állási időkorlát',
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
-      'Ott címkézi őket, ahová az slskd mentette, ahelyett hogy a letöltési mappába másolná.',
+      'Bekapcsolva: címkézés a helyükön, a fájlok megtartásával. Kikapcsolva: másolás és címkézés a Letöltések mappába; a forrás csak sikeres import után törlődik. Hiba esetén megmarad.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube sütik',
     cookiesHint:

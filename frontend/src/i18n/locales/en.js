@@ -1466,7 +1466,7 @@ export default {
     slskdQueuedTimeout: 'Queued timeout',
     slskdInPlace: 'Leave files in the slskd folder',
     slskdInPlaceHint:
-      'Tag them where slskd saved them instead of copying into your downloads folder.',
+      'On: tag files in place and keep them. Off: copy and tag in Downloads, then remove the source after a successful import. Copy, tagging or verification failures keep the source.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube cookies',
     cookiesHint:

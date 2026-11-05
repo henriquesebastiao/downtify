@@ -1530,7 +1530,7 @@ export default {
     slskdQueuedTimeout: 'Délai en file',
     slskdInPlace: 'Laisser les fichiers dans le dossier slskd',
     slskdInPlaceHint:
-      'Les taguer là où slskd les a enregistrés au lieu de les copier dans votre dossier de téléchargements.',
+      'Activé : tague les fichiers sur place et conserve-les. Désactivé : copie et tague dans Téléchargements ; la source est supprimée uniquement après un import réussi. En cas d’échec, la source est conservée.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies YouTube',
     cookiesHint:
