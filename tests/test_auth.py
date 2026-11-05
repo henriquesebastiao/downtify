@@ -415,6 +415,7 @@ def test_the_signing_key_is_private_and_kept(tmp_path):
         ('GET', '/api/settings', ADMIN),
         ('GET', '/api/fs/dirs', ADMIN),
         ('POST', '/api/cookies', ADMIN),
+        ('POST', '/api/proxy/test', ADMIN),
         ('DELETE', '/delete', USER),
         ('DELETE', '/delete/batch', USER),
         ('DELETE', '/api/queue', USER),
@@ -716,6 +717,7 @@ def test_a_normal_user_is_not_an_admin(client):
     refused = client.get('/api/settings')
     assert refused.status_code == 403
     assert refused.json()['detail'] == 'This needs an admin'
+    assert client.post('/api/proxy/test').status_code == 403
     assert client.get('/api/users').status_code == 403
     assert client.get('/api/activity').status_code == 403
     # Their own deletes are allowed (missing files just report so).
