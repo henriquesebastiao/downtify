@@ -24,6 +24,8 @@ Both are off by default and configured in **Settings**.
 
 Enabling slskd puts it first in the list. If slskd ends up being the only source, YouTube Music and YouTube are still tried after it, so a track slskd can't find still downloads. The download queue shows which source served each track.
 
+Songs downloaded from the search bar use the result's title, artist and duration to try each source in this same order. The selected YouTube Music video is not pinned, so slskd can supply a different version or a lossless file before YouTube is used as a fallback.
+
 ## slskd
 
 ### Setup
