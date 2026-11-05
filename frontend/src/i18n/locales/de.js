@@ -974,6 +974,23 @@ export default {
   },
   playlists: {
     kicker: 'Playlist',
+    diagnostics: {
+      title: 'Playlist-Diagnose',
+      check: 'Prüfen',
+      refresh: 'Aktualisieren',
+      unavailable: 'Für diese Playlist ist keine Diagnose verfügbar.',
+      items: {
+        spotify_tracks: 'Spotify-Titel',
+        downloaded: 'Von Downtify heruntergeladen',
+        physical_files: 'Gefundene Dateien',
+        track_index: 'TrackIndex-Zuordnungen',
+        monitor_history: 'Monitor-Verlauf',
+        navidrome_matched: 'In Navidrome gefunden',
+        navidrome_rows: 'Titel in der Navidrome-Playlist',
+        missing_files: 'Fehlende Dateien',
+        orphan_files: 'Verwaiste Dateien',
+      },
+    },
     notFound: 'Playlist nicht gefunden',
     progress: '{have} von {total} heruntergeladen',
     missingShort: { one: '{count} fehlt', other: '{count} fehlen' },

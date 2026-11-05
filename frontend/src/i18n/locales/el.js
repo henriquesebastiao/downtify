@@ -965,6 +965,23 @@ export default {
   },
   playlists: {
     kicker: 'Λίστα',
+    diagnostics: {
+      title: 'Διαγνωστικά λίστας',
+      check: 'Έλεγχος',
+      refresh: 'Ανανέωση',
+      unavailable: 'Τα διαγνωστικά δεν είναι διαθέσιμα για αυτή τη λίστα.',
+      items: {
+        spotify_tracks: 'Κομμάτια Spotify',
+        downloaded: 'Λήψεις Downtify',
+        physical_files: 'Αρχεία που βρέθηκαν',
+        track_index: 'Αντιστοιχίσεις TrackIndex',
+        monitor_history: 'Ιστορικό Monitor',
+        navidrome_matched: 'Βρέθηκαν στο Navidrome',
+        navidrome_rows: 'Κομμάτια στη λίστα Navidrome',
+        missing_files: 'Αρχεία που λείπουν',
+        orphan_files: 'Ορφανά αρχεία',
+      },
+    },
     notFound: 'Η λίστα δεν βρέθηκε',
     progress: '{have} από {total} κατεβασμένα',
     missingShort: { one: 'λείπει {count}', other: 'λείπουν {count}' },
