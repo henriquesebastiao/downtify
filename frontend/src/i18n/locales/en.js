@@ -936,6 +936,23 @@ export default {
   },
   playlists: {
     kicker: 'Playlist',
+    diagnostics: {
+      title: 'Playlist diagnostics',
+      check: 'Check',
+      refresh: 'Refresh',
+      unavailable: 'Diagnostics are unavailable for this playlist.',
+      items: {
+        spotify_tracks: 'Spotify tracks',
+        downloaded: 'Downtify downloaded',
+        physical_files: 'Physical files found',
+        track_index: 'TrackIndex mappings',
+        monitor_history: 'Monitor history',
+        navidrome_matched: 'Navidrome matched',
+        navidrome_rows: 'Navidrome playlist rows',
+        missing_files: 'Missing files',
+        orphan_files: 'Orphan files',
+      },
+    },
     notFound: 'Playlist not found',
     progress: '{have} of {total} downloaded',
     missingShort: { one: '{count} missing', other: '{count} missing' },

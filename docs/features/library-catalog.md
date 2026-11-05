@@ -86,6 +86,8 @@ Next to it, filters narrow the list. Each shows how many songs it holds, and app
 
 The search and a filter work together, and the number of songs shown appears under them. Each song keeps its number in the playlist, and sorting, playing and each song's menu work on what is shown.
 
+Downloaded Spotify playlists also have a **Playlist diagnostics** panel. Choose **Check** to compare the cached Spotify tracklist with the playlist catalog, files on disk, TrackIndex, the current user's Monitor history and the synced Navidrome playlist. Select a count to see the tracks or files behind that metric. Navidrome checks run only when requested; unavailable history or Navidrome data is shown as unavailable rather than as zero. Admin-hidden tracks are not shown to other users.
+
 ### Detach an imported playlist
 
 A playlist imported from a Spotify or YouTube Music link can't be edited, because Downtify keeps it in step with its source. To tidy one up — drop a song that doesn't belong, add one that does — open it and choose **Detach from source**. It becomes a playlist like the ones you create: its songs and owner stay as they are, and you get **Add songs**, **Rename** and removing songs. In exchange the link to its source is cut: it is no longer updated from Spotify or YouTube Music, its [Playlist Monitor](playlist-monitor.md) watch (if it had one) is removed, and its "missing songs" tracking goes. Songs already downloaded are never touched, and its artwork stays until your first edit, when a mosaic of its songs replaces it. Detaching can't be undone from the app; downloading the link again makes a new imported playlist.

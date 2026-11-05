@@ -620,3 +620,18 @@ def test_create_playlist_batches_many_songs(mock_post):
     assert 'updatePlaylist' in update_url
     assert update_kwargs['params']['playlistId'] == 'pl-big'
     assert len(update_kwargs['data']['songIdToAdd']) == 70
+
+
+def test_get_playlist_songs_handles_a_single_entry(monkeypatch):
+    client = NavidromeClient({})
+    monkeypatch.setattr(
+        client,
+        '_request',
+        lambda *_args, **_kwargs: {
+            'playlist': {'entry': {'id': 'song-1', 'title': 'First'}}
+        },
+    )
+
+    assert client.get_playlist_songs('playlist-1') == [
+        {'id': 'song-1', 'title': 'First'}
+    ]

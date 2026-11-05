@@ -566,6 +566,7 @@ from .monitor import (
     playlist_watch_key,
 )
 from .navidrome import (
+    NavidromeClient,
     _effective_navidrome_settings,
     cache_navidrome_song_id,
     enrich_song_from_library_file,
@@ -579,6 +580,10 @@ from .playlist_batches import (
     split_tracks_by_library,
 )
 from .playlist_catalog import ManualPlaylistOwners, PlaylistCatalog
+from .playlist_diagnostics import (
+    PlaylistDiagnosticsContext,
+    build_playlist_diagnostics,
+)
 from .playlist_hidden import (
     HiddenSongs,
     HiddenSongsError,
@@ -7784,6 +7789,45 @@ async def playlist_details_endpoint(
     )
     return await asyncio.to_thread(
         _playlist_details, str(entry['name']), files
+    )
+
+
+@router.get('/api/library/playlists/diagnostics')
+async def playlist_diagnostics_endpoint(
+    request: Request, name: str = Query(..., min_length=1)
+) -> dict[str, Any]:
+    """Compare a Spotify playlist with its local and Navidrome records."""
+
+    entry = require_playlist_visible(name, request)
+    files = await asyncio.to_thread(
+        filter_paths_for_request, list(entry.get('files') or []), request
+    )
+    return await asyncio.to_thread(
+        _playlist_diagnostics, str(entry['name']), files, request
+    )
+
+
+def _playlist_diagnostics(
+    name: str, files: list[str], request: Request
+) -> dict[str, Any]:
+    ctx = library_context()
+    return build_playlist_diagnostics(
+        name,
+        files,
+        PlaylistDiagnosticsContext(
+            catalog=state.playlist_catalog,
+            spotify_cache=state.playlist_spotify_cache,
+            track_index=state.track_index,
+            navidrome_index=state.navidrome_index,
+            monitor_db=state.monitor_db,
+            hidden=state.playlist_hidden,
+            settings=state.settings,
+            download_dir=ctx.download_dir,
+            slskd_dir=ctx.slskd_dir,
+            is_admin=request_is_admin(request),
+            user_id=request_user_id(request),
+            navidrome_client=NavidromeClient,
+        ),
     )
 
 

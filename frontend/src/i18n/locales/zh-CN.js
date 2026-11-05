@@ -874,6 +874,23 @@ export default {
   },
   playlists: {
     kicker: '播放列表',
+    diagnostics: {
+      title: '播放列表诊断',
+      check: '检查',
+      refresh: '刷新',
+      unavailable: '此播放列表的诊断信息不可用。',
+      items: {
+        spotify_tracks: 'Spotify 曲目',
+        downloaded: 'Downtify 已下载',
+        physical_files: '找到的文件',
+        track_index: 'TrackIndex 映射',
+        monitor_history: 'Monitor 历史记录',
+        navidrome_matched: 'Navidrome 匹配项',
+        navidrome_rows: 'Navidrome 播放列表曲目',
+        missing_files: '缺失文件',
+        orphan_files: '孤立文件',
+      },
+    },
     notFound: '未找到播放列表',
     progress: '已下载 {have} / {total}',
     missingShort: { one: '{count} 首未下载', other: '{count} 首未下载' },

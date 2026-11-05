@@ -951,6 +951,23 @@ export default {
   },
   playlists: {
     kicker: 'Lejátszási lista',
+    diagnostics: {
+      title: 'Lejátszási lista diagnosztika',
+      check: 'Ellenőrzés',
+      refresh: 'Frissítés',
+      unavailable: 'A diagnosztika nem érhető el ehhez a lejátszási listához.',
+      items: {
+        spotify_tracks: 'Spotify-számok',
+        downloaded: 'Downtify által letöltve',
+        physical_files: 'Megtalált fájlok',
+        track_index: 'TrackIndex-hozzárendelések',
+        monitor_history: 'Monitor-előzmények',
+        navidrome_matched: 'Megtalálva a Navidrome-ban',
+        navidrome_rows: 'Számok a Navidrome-listában',
+        missing_files: 'Hiányzó fájlok',
+        orphan_files: 'Árva fájlok',
+      },
+    },
     notFound: 'A lista nem található',
     progress: '{total} számból {have} letöltve',
     missingShort: { one: '{count} hiányzik', other: '{count} hiányzik' },

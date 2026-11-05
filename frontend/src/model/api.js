@@ -560,6 +560,10 @@ function getPlaylistDetails(name) {
   return API.get('/api/library/playlists/details', { params: { name } })
 }
 
+function getPlaylistDiagnostics(name) {
+  return API.get('/api/library/playlists/diagnostics', { params: { name } })
+}
+
 // Songs hidden from an imported playlist (they stay out when its watch
 // or link brings them back).
 function getHiddenPlaylistSongs(name) {
@@ -1049,6 +1053,7 @@ export default {
   copyLibraryPlaylist,
   detachLibraryPlaylist,
   getPlaylistDetails,
+  getPlaylistDiagnostics,
   getHiddenPlaylistSongs,
   changeHiddenPlaylistSongs,
   followPlaylist,

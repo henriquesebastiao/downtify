@@ -942,6 +942,23 @@ export default {
   },
   playlists: {
     kicker: 'Плейлист',
+    diagnostics: {
+      title: 'Диагностика на плейлиста',
+      check: 'Провери',
+      refresh: 'Обнови',
+      unavailable: 'Диагностиката не е налична за този плейлист.',
+      items: {
+        spotify_tracks: 'Песни в Spotify',
+        downloaded: 'Изтеглени от Downtify',
+        physical_files: 'Намерени файлове',
+        track_index: 'Съответствия в TrackIndex',
+        monitor_history: 'История на Monitor',
+        navidrome_matched: 'Намерени в Navidrome',
+        navidrome_rows: 'Песни в плейлиста на Navidrome',
+        missing_files: 'Липсващи файлове',
+        orphan_files: 'Осиротели файлове',
+      },
+    },
     notFound: 'Плейлистът не е намерен',
     progress: '{have} от {total} изтеглени',
     missingShort: { one: 'липсва {count}', other: 'липсват {count}' },

@@ -944,6 +944,23 @@ export default {
   },
   playlists: {
     kicker: '재생목록',
+    diagnostics: {
+      title: '재생목록 진단',
+      check: '확인',
+      refresh: '새로고침',
+      unavailable: '이 재생목록의 진단 정보를 사용할 수 없습니다.',
+      items: {
+        spotify_tracks: 'Spotify 트랙',
+        downloaded: 'Downtify 다운로드',
+        physical_files: '찾은 파일',
+        track_index: 'TrackIndex 매핑',
+        monitor_history: 'Monitor 기록',
+        navidrome_matched: 'Navidrome 일치 항목',
+        navidrome_rows: 'Navidrome 재생목록 항목',
+        missing_files: '누락된 파일',
+        orphan_files: '연결되지 않은 파일',
+      },
+    },
     notFound: '재생목록을 찾을 수 없습니다',
     progress: '총 {total}개 중 {have}개 다운로드됨',
     missingShort: { one: '{count}개 누락', other: '{count}개 누락' },

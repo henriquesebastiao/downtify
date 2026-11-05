@@ -954,6 +954,23 @@ export default {
   },
   playlists: {
     kicker: 'Playlist',
+    diagnostics: {
+      title: 'Diagnóstico da playlist',
+      check: 'Verificar',
+      refresh: 'Atualizar',
+      unavailable: 'O diagnóstico não está disponível para esta playlist.',
+      items: {
+        spotify_tracks: 'Faixas no Spotify',
+        downloaded: 'Baixadas pelo Downtify',
+        physical_files: 'Arquivos encontrados',
+        track_index: 'Mapeamentos no TrackIndex',
+        monitor_history: 'Histórico do Monitor',
+        navidrome_matched: 'Encontradas no Navidrome',
+        navidrome_rows: 'Faixas na playlist do Navidrome',
+        missing_files: 'Arquivos ausentes',
+        orphan_files: 'Arquivos órfãos',
+      },
+    },
     notFound: 'Playlist não encontrada',
     progress: '{have} de {total} baixadas',
     missingShort: { one: '{count} faltando', other: '{count} faltando' },

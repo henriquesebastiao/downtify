@@ -598,6 +598,18 @@ class NavidromeClient:
                 ids.append(pid)
         return ids
 
+    def get_playlist_songs(self, playlist_id: str) -> list[dict[str, Any]]:
+        """Return the rows currently stored in a Navidrome playlist."""
+
+        body = self._request('getPlaylist', {'id': playlist_id})
+        playlist = body.get('playlist') if isinstance(body, dict) else None
+        songs = playlist.get('entry') if isinstance(playlist, dict) else None
+        if isinstance(songs, dict):
+            songs = [songs]
+        if not isinstance(songs, list):
+            return []
+        return [song for song in songs if isinstance(song, dict)]
+
     def delete_playlist(self, playlist_id: str) -> None:
         self._request('deletePlaylist', {'id': playlist_id})
 

@@ -1420,6 +1420,35 @@ What the playlist page [filters its songs by](features/library-catalog.md#search
 
 ---
 
+### `GET /api/library/playlists/diagnostics`
+
+Compare a Spotify playlist's cached tracklist with its downloaded playlist catalog, physical files, TrackIndex, the caller's Monitor history and Navidrome. The request uses the same playlist visibility rules as [`GET /api/library/playlists/details`](#get-apilibraryplaylistsdetails).
+
+**Query:** `?name=Road trip`
+
+**Response:**
+
+```json
+{
+  "available": true,
+  "items": [
+    { "key": "spotify_tracks", "count": 280, "issues": [] },
+    { "key": "downloaded", "count": 278, "issues": [{ "track_id": "…", "label": "Artist - Song" }] },
+    { "key": "physical_files", "count": 278, "issues": [] },
+    { "key": "track_index", "count": 280, "issues": [] },
+    { "key": "monitor_history", "count": null, "issues": [] },
+    { "key": "navidrome_matched", "count": 278, "issues": [] },
+    { "key": "navidrome_rows", "count": 278, "issues": [] },
+    { "key": "missing_files", "count": 2, "issues": [{ "track_id": "…", "label": "Artist - Song" }] },
+    { "key": "orphan_files", "count": 0, "issues": [] }
+  ]
+}
+```
+
+`issues` lists the affected tracks or files for that metric. `downloaded` counts source tracks in the playlist catalog; `physical_files` counts those whose files are present; `track_index`, `monitor_history` and `navidrome_matched` count source track IDs in the corresponding store. `navidrome_rows` is the current number of rows in the synchronized Navidrome playlist; its issues include expected tracks missing there and extra Navidrome rows. `missing_files` counts Spotify tracks without a physical file, and `orphan_files` counts catalog rows not in the cached source tracklist. A `null` count means the relevant watch, index or Navidrome data is not available, not that its count is zero. If the Spotify tracklist is not cached, the response is `{ "available": false, "reason": "spotify_tracks_unavailable" }`. Hidden tracks are omitted for non-admin callers.
+
+---
+
 ### `GET /api/library/playlists/hidden`
 
 The songs hidden from an **imported** playlist the caller may change (their own; any for an admin), most recently hidden first. See [Hidden playlist songs](features/hidden-playlist-songs.md). `403` for someone who can open the playlist without owning it, `404` for one they can't open, `409` for a manual playlist or liked songs.

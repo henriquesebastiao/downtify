@@ -949,6 +949,23 @@ export default {
   },
   playlists: {
     kicker: 'Çalma listesi',
+    diagnostics: {
+      title: 'Çalma listesi tanılaması',
+      check: 'Denetle',
+      refresh: 'Yenile',
+      unavailable: 'Bu çalma listesi için tanılama kullanılamıyor.',
+      items: {
+        spotify_tracks: 'Spotify parçaları',
+        downloaded: 'Downtify tarafından indirildi',
+        physical_files: 'Bulunan dosyalar',
+        track_index: 'TrackIndex eşlemeleri',
+        monitor_history: 'Monitor geçmişi',
+        navidrome_matched: 'Navidrome’da eşleşenler',
+        navidrome_rows: 'Navidrome çalma listesi satırları',
+        missing_files: 'Eksik dosyalar',
+        orphan_files: 'Bağlantısız dosyalar',
+      },
+    },
     notFound: 'Çalma listesi bulunamadı',
     progress: '{total} parçadan {have} tanesi indirildi',
     missingShort: { one: '{count} eksik', other: '{count} eksik' },
