@@ -508,6 +508,12 @@ class Downloader:
                 raw.get('mix_duration_tolerance_percent'), 50, 1, 200
             ),
             'extensions': raw.get('extensions') or ['mp3', 'flac'],
+            'strict_format_priority': bool(
+                raw.get('strict_format_priority', False)
+            ),
+            'extensions_whitelist': bool(
+                raw.get('extensions_whitelist', False)
+            ),
             'min_bitrate': _int(raw.get('min_bitrate'), 256, 0, 10000),
             'leave_in_place': bool(raw.get('leave_in_place', True)),
             'max_parallel_downloads': _int(

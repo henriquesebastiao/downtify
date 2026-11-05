@@ -205,6 +205,32 @@
                     placeholder="/slskd"
                     mono
                   />
+                  <UiInput
+                    v-model.trim="slskdFormatsText"
+                    :label="t('settings.slskdFormats')"
+                    :hint="t('settings.slskdFormatsHint')"
+                    placeholder="flac, mp3"
+                    mono
+                  />
+                  <div class="grid grid-cols-2 gap-3">
+                    <UiInput
+                      v-model="s.slskd.min_bitrate"
+                      :label="t('settings.slskdMinBitrate')"
+                      :hint="t('settings.slskdMinBitrateHint')"
+                      type="number"
+                      min="0"
+                      max="10000"
+                      suffix="kbps"
+                    />
+                    <UiInput
+                      v-model="s.slskd.download_attempts"
+                      :label="t('settings.slskdAttempts')"
+                      :hint="t('settings.slskdAttemptsHint')"
+                      type="number"
+                      min="1"
+                      max="10"
+                    />
+                  </div>
                   <div class="grid grid-cols-2 gap-3">
                     <UiInput
                       v-model="s.slskd.download_timeout_seconds"
@@ -224,6 +250,24 @@
                     />
                   </div>
                 </div>
+                <SettingRow
+                  :label="t('settings.slskdStrictPriority')"
+                  :description="t('settings.slskdStrictPriorityHint')"
+                >
+                  <UiSwitch
+                    v-model="s.slskd.strict_format_priority"
+                    :aria-label="t('settings.slskdStrictPriority')"
+                  />
+                </SettingRow>
+                <SettingRow
+                  :label="t('settings.slskdWhitelist')"
+                  :description="t('settings.slskdWhitelistHint')"
+                >
+                  <UiSwitch
+                    v-model="s.slskd.extensions_whitelist"
+                    :aria-label="t('settings.slskdWhitelist')"
+                  />
+                </SettingRow>
                 <div class="px-5 py-4">
                   <ConnectionTest
                     kind="slskd"
@@ -986,6 +1030,19 @@ const update = useUpdateCheck().status
 
 const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
+const slskdFormatsText = computed({
+  get: () => (s.value.slskd.extensions || []).join(', '),
+  set: (value) => {
+    s.value.slskd.extensions = [
+      ...new Set(
+        String(value)
+          .split(',')
+          .map((extension) => extension.trim().toLowerCase().replace(/^\./, ''))
+          .filter(Boolean)
+      ),
+    ]
+  },
+})
 const version = localStorage.getItem('version')
 
 // Normal users see General, Apps and About; the rest is the server's,

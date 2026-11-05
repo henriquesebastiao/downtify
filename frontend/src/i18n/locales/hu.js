@@ -1471,6 +1471,21 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Formátumok prioritása',
+    slskdFormatsHint:
+      'Vesszővel elválasztott kiterjesztések, prioritás szerint (például flac, mp3).',
+    slskdMinBitrate: 'Minimális bitráta veszteséges formátumoknál',
+    slskdMinBitrateHint:
+      'Szigorú módban elutasítja az ennél kisebb vagy nem jelzett bitrátájú veszteséges fájlokat. A FLAC kivétel.',
+    slskdAttempts: 'Jelöltek próbálkozásai',
+    slskdAttemptsHint:
+      'Szigorú módban formátumonként ennyi jelöltet próbál; egyébként ez az összesített szám.',
+    slskdStrictPriority: 'Szigorú formátumprioritás',
+    slskdStrictPriorityHint:
+      'Próbálja sorban a formátumokat, és az egyes formátumokon belül rangsorolja a találatokat.',
+    slskdWhitelist: 'Csak a felsorolt formátumok engedélyezése',
+    slskdWhitelistHint:
+      'Elutasítja a listában nem szereplő kiterjesztésű találatokat.',
     slskdHint:
       'Letöltés a Soulseekről a slskd szervereden át. A nem talált számok a következő forráshoz kerülnek.',
     slskdEnabled: 'slskd használata',

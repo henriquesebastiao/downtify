@@ -1359,6 +1359,19 @@ export default {
     deemixLocal: 'Downtify 中对应的同一文件夹（支持只读）',
     deemixQuality: '音频质量',
     slskdTitle: 'slskd',
+    slskdFormats: '格式优先级',
+    slskdFormatsHint:
+      '用逗号分隔扩展名，并按优先级从高到低排列（例如 flac, mp3）。',
+    slskdMinBitrate: '有损格式的最低比特率',
+    slskdMinBitrateHint:
+      '严格模式下，低于此值或未报告比特率的有损文件会被拒绝。FLAC 不受此限制。',
+    slskdAttempts: '候选尝试次数',
+    slskdAttemptsHint: '严格模式下每种格式尝试此数量的候选；否则为总数。',
+    slskdStrictPriority: '严格格式优先级',
+    slskdStrictPriorityHint:
+      '按顺序尝试列出的格式，并在每种格式内按匹配度排序。',
+    slskdWhitelist: '仅允许列出的格式',
+    slskdWhitelistHint: '拒绝扩展名不在格式列表中的结果。',
     slskdHint:
       '通过你的 slskd 服务器从 Soulseek 下载。找不到的歌曲会尝试下一个来源。',
     slskdEnabled: '使用 slskd',

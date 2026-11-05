@@ -55,7 +55,13 @@ Editing any field clears the last result, since it no longer describes what is i
 
 ### How a track is matched
 
-Downtify searches slskd with the track's title and artist and ranks the results by how well the file name and duration match the track. Among equally good matches it prefers MP3, then FLAC, and it skips files that report a bitrate below 256 kbps. It tries up to five candidates, one after another. When a transfer finishes, Downtify checks the file's tags and duration against the track before keeping it.
+Downtify searches slskd with the track's title and artist and ranks the results by how well the file name and duration match the track. By default, match score comes first; the configured format order only breaks ties. The default order is MP3, then FLAC, and results reporting a bitrate below 256 kbps are skipped. It tries up to five candidates total, one after another. When a transfer finishes, Downtify checks the file's tags and duration against the track before keeping it.
+
+In **Settings → Audio source → slskd**, set **Format priority** to a comma-separated list such as `flac, mp3`. Turn on **Strict format priority** to try each format as a separate tier in that order; matches are still ranked by score within a tier. **Candidate attempts** then applies per format, so `5` tries up to five FLAC files before moving on to up to five MP3 files. In strict mode, **Minimum lossy bitrate** rejects lossy files below the threshold and files that don't report a bitrate; FLAC is exempt.
+
+By default, formats not in the list remain eligible as a final catch-all tier. Turn on **Only allow listed formats** to reject those results instead. This whitelist also works with strict priority disabled, where the normal score-first selection remains unchanged. If all acceptable slskd candidates fail or are exhausted, Downtify continues to the next configured audio source.
+
+For example, `flac, mp3` with strict priority and the whitelist enabled, a minimum lossy bitrate of `320`, and five candidate attempts per format tries FLAC first, then MP3 at 320 kbps or higher. If neither tier succeeds, the next configured provider is tried.
 
 If nothing acceptable turns up, the transfer doesn't finish within **Total timeout**, or it sits queued on the remote peer without progress for longer than **Queued timeout**, Downtify moves on to the next audio source.
 
