@@ -722,6 +722,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'duration_tolerance_percent': 15,
         'mix_duration_tolerance_percent': 50,
         'extensions': ['mp3', 'flac'],
+        'strict_format_priority': False,
+        'extensions_whitelist': False,
         'min_bitrate': 256,
     },
     # Navidrome (Subsonic API) playlist sync after playlist downloads.
@@ -912,13 +914,15 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
     source_dir = str(raw.get('source_dir') or '').strip() or (
         '/slskd' if leave_in_place else download_dir
     )
-    try:
-        min_bitrate = int(raw.get('min_bitrate') or 256)
-    except (TypeError, ValueError):
-        min_bitrate = 256
 
     def bounded(key: str, default: int, low: int, high: int) -> int:
         return _setting_int(raw, key, default, minimum=low, maximum=high)
+
+    try:
+        min_bitrate = int(raw.get('min_bitrate'))
+    except (TypeError, ValueError):
+        min_bitrate = 256
+    min_bitrate = min(10000, max(0, min_bitrate))
 
     return {
         'enabled': bool(raw.get('enabled', False)),
@@ -949,6 +953,10 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'mix_duration_tolerance_percent': bounded(
             'mix_duration_tolerance_percent', 50, 1, 200
         ),
+        'strict_format_priority': bool(
+            raw.get('strict_format_priority', False)
+        ),
+        'extensions_whitelist': bool(raw.get('extensions_whitelist', False)),
         'min_bitrate': min_bitrate,
         'max_parallel_downloads': _setting_int(
             settings, 'max_parallel_downloads', 3, minimum=1, maximum=8

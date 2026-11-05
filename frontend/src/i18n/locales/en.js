@@ -1439,6 +1439,21 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Format priority',
+    slskdFormatsHint:
+      'Comma-separated extensions, highest priority first (for example, flac, mp3).',
+    slskdMinBitrate: 'Minimum lossy bitrate',
+    slskdMinBitrateHint:
+      'In strict mode, lossy files below this value or without a reported bitrate are rejected. FLAC is exempt.',
+    slskdAttempts: 'Candidate attempts',
+    slskdAttemptsHint:
+      'In strict mode, this many candidates are tried per format; otherwise this is the total.',
+    slskdStrictPriority: 'Strict format priority',
+    slskdStrictPriorityHint:
+      'Try each listed format in order, ranking matches within each format.',
+    slskdWhitelist: 'Only allow listed formats',
+    slskdWhitelistHint:
+      'Reject results whose extension is not in the format list.',
     slskdHint:
       'Download from Soulseek through your slskd server. Tracks it can’t find fall through to the next source.',
     slskdEnabled: 'Use slskd',

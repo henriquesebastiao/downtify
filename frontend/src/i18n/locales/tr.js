@@ -1460,6 +1460,20 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Biçim önceliği',
+    slskdFormatsHint:
+      'Virgülle ayrılmış uzantıları en yüksek öncelikliden başlayarak yazın (ör. flac, mp3).',
+    slskdMinBitrate: 'Kayıplı biçimler için minimum bit hızı',
+    slskdMinBitrateHint:
+      'Katı modda bu değerin altındaki veya bit hızı bildirilmemiş kayıplı dosyalar reddedilir. FLAC etkilenmez.',
+    slskdAttempts: 'Aday denemeleri',
+    slskdAttemptsHint:
+      'Katı modda her biçim için bu kadar aday denenir; diğer durumda toplam sayıdır.',
+    slskdStrictPriority: 'Katı biçim önceliği',
+    slskdStrictPriorityHint:
+      'Listelenen biçimleri sırayla dene ve her biçimdeki eşleşmeleri puanla.',
+    slskdWhitelist: 'Yalnızca listelenen biçimlere izin ver',
+    slskdWhitelistHint: 'Uzantısı listede olmayan sonuçları reddet.',
     slskdHint:
       'Soulseek’ten slskd sunucun üzerinden indir. Bulunamayan parçalar sonraki kaynağa geçer.',
     slskdEnabled: 'slskd kullan',

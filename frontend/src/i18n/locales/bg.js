@@ -1456,6 +1456,20 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Приоритет на форматите',
+    slskdFormatsHint:
+      'Разширения, разделени със запетая, подредени по приоритет (например flac, mp3).',
+    slskdMinBitrate: 'Минимален битрейт за формати със загуби',
+    slskdMinBitrateHint:
+      'При строг режим файловете със загуби под тази стойност или без отчетен битрейт се отхвърлят. FLAC не се влияе.',
+    slskdAttempts: 'Опити за кандидати',
+    slskdAttemptsHint:
+      'При строг режим се пробват толкова кандидати за всеки формат; иначе това е общият брой.',
+    slskdStrictPriority: 'Строг приоритет на форматите',
+    slskdStrictPriorityHint:
+      'Пробвай форматите по ред, като подреждаш съвпаденията във всеки формат.',
+    slskdWhitelist: 'Разреши само изброените формати',
+    slskdWhitelistHint: 'Отхвърляй резултати с разширение извън списъка.',
     slskdHint:
       'Изтегляй от Soulseek чрез своя slskd сървър. Ненамерените песни минават към следващия източник.',
     slskdEnabled: 'Използвай slskd',

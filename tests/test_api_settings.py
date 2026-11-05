@@ -814,6 +814,27 @@ def test_effective_slskd_settings_normalizes_values():
     assert out['search_retries'] == 5
 
 
+def test_effective_slskd_settings_normalizes_format_policy():
+    out = _effective_slskd_settings({
+        'slskd': {
+            'extensions': ['flac', 'mp3'],
+            'strict_format_priority': True,
+            'extensions_whitelist': True,
+            'min_bitrate': 320,
+        }
+    })
+
+    assert out['extensions'] == ['flac', 'mp3']
+    assert out['strict_format_priority'] is True
+    assert out['extensions_whitelist'] is True
+    assert out['min_bitrate'] == 320
+    assert _effective_slskd_settings({})['min_bitrate'] == 256
+    assert (
+        _effective_slskd_settings({'slskd': {'min_bitrate': 0}})['min_bitrate']
+        == 0
+    )
+
+
 def test_effective_slskd_settings_caps_parallelism_at_eight():
     out = _effective_slskd_settings({'max_parallel_downloads': 30})
     assert out['max_parallel_downloads'] == 8

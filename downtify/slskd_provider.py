@@ -908,16 +908,75 @@ def _collect_matching_files(
 def _select_download_candidates(
     ranked: list[dict[str, Any]], settings: dict[str, Any]
 ) -> list[dict[str, Any]]:
-    """Pick up to download_attempts files, preferring extension order at equal score."""
+    """Choose candidates by score, or in ordered format tiers when enabled."""
     raw_ext = settings.get('extensions') or ['mp3', 'flac']
-    extensions = [
-        str(e).strip().lower().lstrip('.') for e in raw_ext if str(e).strip()
-    ] or ['mp3', 'flac']
+    extensions = list(
+        dict.fromkeys(
+            str(e).strip().lower().lstrip('.')
+            for e in raw_ext
+            if str(e).strip()
+        )
+    ) or ['mp3', 'flac']
     min_bitrate = int(settings.get('min_bitrate') or 0)
     max_files = int(settings.get('download_attempts') or 5)
+    strict_priority = bool(settings.get('strict_format_priority', False))
+    whitelist = bool(settings.get('extensions_whitelist', False))
+
+    def bitrate_of(file_row: dict[str, Any]) -> int:
+        try:
+            return int(file_row.get('bitRate') or file_row.get('bitrate') or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    candidates = [
+        row
+        for row in ranked
+        if not whitelist
+        or _file_extension(str(row.get('filename') or '')) in extensions
+    ]
+
+    def passes_bitrate(file_row: dict[str, Any]) -> bool:
+        bitrate = bitrate_of(file_row)
+        ext = _file_extension(str(file_row.get('filename') or ''))
+        if strict_priority and ext == 'flac':
+            return True
+        if not min_bitrate:
+            return True
+        if strict_priority:
+            return bitrate >= min_bitrate
+        return not bitrate or bitrate >= min_bitrate
+
+    if strict_priority:
+        selected: list[dict[str, Any]] = []
+        tiers = [
+            [
+                row
+                for row in candidates
+                if _file_extension(str(row.get('filename') or '')) == ext
+            ]
+            for ext in extensions
+        ]
+        if not whitelist:
+            tiers.append([
+                row
+                for row in candidates
+                if _file_extension(str(row.get('filename') or ''))
+                not in extensions
+            ])
+
+        for tier in tiers:
+            accepted = [row for row in tier if passes_bitrate(row)]
+            accepted.sort(
+                key=lambda row: (
+                    -int(row.get('match_score') or 0),
+                    -bitrate_of(row),
+                )
+            )
+            selected.extend(accepted[:max_files])
+        return selected
 
     by_score: dict[int, list[dict[str, Any]]] = {}
-    for row in ranked:
+    for row in candidates:
         by_score.setdefault(int(row.get('match_score') or 0), []).append(row)
 
     selected: list[dict[str, Any]] = []
@@ -927,13 +986,7 @@ def _select_download_candidates(
             for file_row in bucket:
                 if _file_extension(str(file_row.get('filename') or '')) != ext:
                     continue
-                try:
-                    bitrate = int(
-                        file_row.get('bitRate') or file_row.get('bitrate') or 0
-                    )
-                except (TypeError, ValueError):
-                    bitrate = 0
-                if min_bitrate and bitrate and bitrate < min_bitrate:
+                if not passes_bitrate(file_row):
                     continue
                 selected.append(file_row)
                 if len(selected) >= max_files:
@@ -941,13 +994,7 @@ def _select_download_candidates(
         for file_row in bucket:
             if file_row in selected:
                 continue
-            try:
-                bitrate = int(
-                    file_row.get('bitRate') or file_row.get('bitrate') or 0
-                )
-            except (TypeError, ValueError):
-                bitrate = 0
-            if min_bitrate and bitrate and bitrate < min_bitrate:
+            if not passes_bitrate(file_row):
                 continue
             selected.append(file_row)
             if len(selected) >= max_files:
