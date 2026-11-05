@@ -508,16 +508,32 @@ function controlLoudness(action) {
   return API.post(`/api/library/loudness/${action}`)
 }
 
+// `removeEntries`: [{file, occurrence}], one copy each of a song the
+// playlist repeats (`remove` takes every copy). `allowDuplicates` adds
+// a song the playlist already has again.
 function editLibraryPlaylistTracks(
   name,
-  { add = [], remove = [], sourcePlaylistUrl = '' } = {}
+  {
+    add = [],
+    remove = [],
+    removeEntries = [],
+    allowDuplicates = false,
+    sourcePlaylistUrl = '',
+  } = {}
 ) {
   return API.post('/api/library/playlists/tracks', {
     name,
     add,
     remove,
+    ...(removeEntries.length ? { remove_entries: removeEntries } : {}),
+    ...(allowDuplicates ? { allow_duplicates: true } : {}),
     ...(sourcePlaylistUrl ? { source_playlist_url: sourcePlaylistUrl } : {}),
   })
+}
+
+// Every song of the playlist, repeats included, in its new place.
+function reorderLibraryPlaylist(name, files) {
+  return API.put('/api/library/playlists/order', { name, files })
 }
 
 function renameLibraryPlaylist(name, newName, resetDisplayName = false) {
@@ -1047,6 +1063,7 @@ export default {
   getLoudnessStatus,
   controlLoudness,
   editLibraryPlaylistTracks,
+  reorderLibraryPlaylist,
   renameLibraryPlaylist,
   setPlaylistVisibility,
   setPlaylistFavorite,

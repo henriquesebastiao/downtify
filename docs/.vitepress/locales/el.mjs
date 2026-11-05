@@ -82,6 +82,7 @@ export default {
       'features/podcasts.md': 'Podcasts',
       'features/discover.md': 'Ανακάλυψη',
       'features/collaborative-playlists.md': 'Συνεργατικές λίστες',
+      'features/playlist-order.md': 'Σειρά και επαναλαμβανόμενα κομμάτια',
       'features/users.md': 'Χρήστες και σύνδεση',
       'features/mobile-apps.md': 'Εφαρμογές κινητού',
       'features/library-only.md': 'Library-only mode',

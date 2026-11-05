@@ -81,6 +81,7 @@ export default {
       'features/podcasts.md': 'Podcasts',
       'features/discover.md': 'Découvrir',
       'features/collaborative-playlists.md': 'Playlists collaboratives',
+      'features/playlist-order.md': 'Ordre et titres répétés',
       'features/users.md': 'Utilisateurs et connexion',
       'features/mobile-apps.md': 'Applications mobiles',
       'features/library-only.md': 'Mode bibliothèque seule',

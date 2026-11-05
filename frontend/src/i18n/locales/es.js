@@ -1014,6 +1014,26 @@ export default {
     },
     alreadyIn: 'Ya está en «{name}»',
     removedTrack: 'Quitada de “{name}”',
+    reorder: 'Reordenar',
+    reorderHint:
+      'Arrastra las canciones o usa las flechas y guarda el nuevo orden.',
+    reorderSave: 'Guardar orden',
+    reordered: 'Orden guardado',
+    reorderStale:
+      'Alguien cambió esta playlist mientras tanto. Se ha recargado: vuelve a ordenarla.',
+    moveUp: 'Subir',
+    moveDown: 'Bajar',
+    moveTop: 'Mover al principio',
+    moveBottom: 'Mover al final',
+    repeatTitle: 'Ya está en esta playlist',
+    repeatBody: {
+      one: 'Esta canción ya está en «{name}». ¿Añadirla otra vez?',
+      other:
+        '{count} de estas canciones ya están en «{name}». ¿Añadirlas otra vez?',
+    },
+    repeatConfirm: 'Añadir de todos modos',
+    repeatCancel: 'No añadir',
+    inPlaylist: 'Ya añadida',
     hideTrack: 'Ocultar de la playlist',
     hiddenTrack: 'Oculta de “{name}”',
     hiddenTitle: {

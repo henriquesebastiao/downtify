@@ -20,6 +20,7 @@ icon: lucide/users-round
 
 - 在播放列表页面或其 **⋯** 菜单中 **Add songs**；也可以在任意歌曲的菜单中选择 **Add to playlist**，然后在自己创建的播放列表之后选择该列表。
 - 在播放列表页面中的歌曲 **⋯** 菜单选择 **Remove from playlist**。
+- 选择 **Reorder** 调整歌曲顺序，或再次添加列表中已有的歌曲；参见[播放列表顺序与重复歌曲](playlist-order.md)。
 
 重命名、共享、删除，以及从源链接保存的封面仍由所有者和管理员管理。编辑者仍可像普通查看者一样 **Save a copy**。
 

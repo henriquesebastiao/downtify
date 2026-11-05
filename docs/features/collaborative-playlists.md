@@ -20,6 +20,7 @@ The playlist shows up for them under **Shared with me**, and its page says it is
 
 - **Add songs** from the playlist page or its **⋯** menu, and pick the playlist under **Add to playlist** in any song's menu, after their own playlists.
 - **Remove from playlist** in a song's **⋯** menu on the playlist's page.
+- **Reorder** its songs, and add a song it already has again — see [Playlist order & repeated songs](playlist-order.md).
 
 Renaming, sharing, deleting and the cover art saved from a source link stay with the owner and admins. An editor can still **Save a copy**, like any viewer.
 

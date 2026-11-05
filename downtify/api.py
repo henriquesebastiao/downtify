@@ -174,7 +174,11 @@ downloads are shared, and files are never stored twice.
 * ``POST /api/library/lookup`` (search/link songs already in the library)
 * ``POST /api/library/playlists`` (create an empty editable playlist)
 * ``POST /api/library/playlists/tracks`` (add or remove tracks on a
-  manual playlist - its owner's, or one shared with you as an editor)
+  manual playlist - its owner's, or one shared with you as an editor;
+  ``allow_duplicates`` adds a song it already has again,
+  ``remove_entries`` takes out one copy of a repeated song)
+* ``PUT  /api/library/playlists/order`` (put a manual playlist's songs in
+  a new order: ``{name, files}``, every song in its new place)
 * ``POST /api/library/playlists/rename`` (rename a manual playlist)
 * ``PUT  /api/library/playlists/visibility`` (share a playlist you own:
   private, with named users - some of them editors of a Library
@@ -548,6 +552,7 @@ from .manual_playlists import (
     existing_playlist_names,
     remove_manual_playlist_cover,
     rename_manual_playlist,
+    reorder_manual_playlist,
     save_manual_playlist_cover,
 )
 from .monitor import (
@@ -7236,6 +7241,7 @@ async def edit_library_playlist_tracks_endpoint(
         if isinstance(payload.get('remove'), list)
         else []
     )
+    remove_entries = _playlist_entry_refs(payload.get('remove_entries'))
     ctx = library_context()
     # Only songs they can see: one an admin hid is as good as missing.
     added = [path for path in (str(item).strip() for item in add) if path]
@@ -7255,6 +7261,8 @@ async def edit_library_playlist_tracks_endpoint(
             name,
             add=[str(item) for item in add],
             remove=[str(item) for item in remove],
+            remove_entries=remove_entries,
+            allow_duplicates=payload.get('allow_duplicates') is True,
         )
     except ManualPlaylistError as exc:
         raise HTTPException(
@@ -7274,6 +7282,63 @@ async def edit_library_playlist_tracks_endpoint(
     invalidate_library_paths_cache()
     if entry.get('visibility', PRIVATE) != PRIVATE:
         # Others have it open: the owner and its other editors.
+        await announce_playlists_changed()
+    return result
+
+
+def _playlist_entry_refs(raw: object) -> list[tuple[str, int]]:
+    """``[{file, occurrence}]`` from a request as ``(file, occurrence)``:
+    one copy of a song a playlist may hold more than once."""
+
+    if not isinstance(raw, list):
+        return []
+    refs: list[tuple[str, int]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        file = str(item.get('file') or '').strip()
+        occurrence = item.get('occurrence', 0)
+        if file and isinstance(occurrence, int) and occurrence >= 0:
+            refs.append((file, occurrence))
+    return refs
+
+
+@router.put('/api/library/playlists/order')
+async def reorder_library_playlist_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Put a manual playlist's songs in a new order: ``{name, files}``,
+    every song the caller sees (repeats included) in its new place. For
+    its owner (or an admin) and its editors; ``409`` when the playlist
+    changed since the caller loaded it."""
+
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    entry = require_playlist_visible(name, request)
+    if not entry.get('mine', True) and not entry.get('can_edit_tracks'):
+        raise HTTPException(
+            status_code=403,
+            detail='Only the owner can change this playlist',
+        )
+    files = payload.get('files')
+    if not isinstance(files, list):
+        raise HTTPException(status_code=400, detail='Send the new order')
+    try:
+        result = await asyncio.to_thread(
+            reorder_manual_playlist,
+            library_context(),
+            name,
+            [str(item) for item in files],
+            # What the caller was shown: songs hidden from them keep
+            # their places.
+            visible=set(entry.get('files') or []),
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    invalidate_library_paths_cache()
+    if entry.get('visibility', PRIVATE) != PRIVATE:
         await announce_playlists_changed()
     return result
 

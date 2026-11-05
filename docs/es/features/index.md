@@ -18,6 +18,7 @@ Downtify cubre todo lo que necesitas para crear y mantener una biblioteca de mú
 | [Monitor de playlists](playlist-monitor.md) | Vigila playlists y artistas de Spotify o YouTube Music y descarga automáticamente canciones y lanzamientos nuevos |
 | [Canciones ocultas de una playlist](hidden-playlist-songs.md) | Quita de una playlist descargada o vigilada las canciones que no quieres y mantenlas fuera; los archivos siguen en la biblioteca |
 | [Playlists colaborativas](collaborative-playlists.md) | Deja que algunas de las personas con quienes compartes una playlist de la biblioteca añadan y quiten canciones; renombrarla, compartirla y borrarla sigue siendo cosa tuya |
+| [Orden y canciones repetidas](playlist-order.md) | Pon las canciones de una playlist de la biblioteca en el orden que quieras y repite una canción en ella |
 | [Canciones más populares](top-songs.md) | Pega el enlace de un artista y descarga sus canciones más populares, opcionalmente como playlist |
 | [Importar biblioteca (CSV)](library-import.md) | Importa una exportación de Soundiiz, TuneMyMusic o Exportify y pon todo en cola |
 | [Reproductor integrado](player.md) | Reproduce tu biblioteca en el navegador: gestión de la cola, letras sincronizadas, temporizador de apagado, teclado y teclas multimedia |

@@ -1013,7 +1013,7 @@ List downloaded playlists, derived from the `.m3u` files already on disk (see [M
 ]
 ```
 
-Sorted by name, except that the [liked songs](features/liked-songs.md) playlist (`"liked": true`, named `Downtify Liked Songs`) comes first. `"manual": true` is a playlist created in the Library (editable); imported Spotify/YouTube playlists are `"manual": false`. A single track or an album downloaded without an M3U doesn't appear here. `added` is the M3U file's modification time (Unix seconds).
+Sorted by name, except that the [liked songs](features/liked-songs.md) playlist (`"liked": true`, named `Downtify Liked Songs`) comes first. `"manual": true` is a playlist created in the Library (editable); imported Spotify/YouTube playlists are `"manual": false`. A single track or an album downloaded without an M3U doesn't appear here. `added` is the M3U file's modification time (Unix seconds). `files` is in playlist order, and a manual playlist may [repeat a song](features/playlist-order.md): it is listed once per copy, and `count` counts every copy.
 
 `cover` is the library path of the playlist's own artwork when one was saved beside its M3U (see [Playlist cover art](features/playlist-cover-art.md)), and `""` otherwise. Fetch it from [`GET /playlist-cover`](#get-playlist-cover).
 
@@ -1347,11 +1347,28 @@ Add or remove library files (downloads or [extra folders](features/external-libr
 {
   "name": "Late night",
   "add": ["Artist - Song.mp3", "ext/ab12cd34ef56/Other.mp3"],
-  "remove": ["old.mp3"]
+  "remove": ["old.mp3"],
+  "remove_entries": [{ "file": "Artist - Loop.mp3", "occurrence": 1 }],
+  "allow_duplicates": false
 }
 ```
 
-**Response:** `{ "name": "Late night", "manual": true, "files": ["Artist - Song.mp3"], "count": 1, "added": 1, "removed": 1 }`
+New songs go at the end. A playlist can hold a song more than once (see [Playlist order & repeated songs](features/playlist-order.md)):
+
+- `remove` takes every copy of a song; `remove_entries` takes one copy each — `occurrence` counts the song's copies from `0`, in playlist order. An occurrence the playlist doesn't have takes nothing.
+- A song in `add` that the playlist already has is skipped and listed in `already`, unless `allow_duplicates` is `true`: then it is added again.
+
+**Response:** `{ "name": "Late night", "manual": true, "files": ["Artist - Song.mp3"], "count": 1, "added": 1, "removed": 1, "already": [] }` — `removed` counts the copies taken out.
+
+---
+
+### `PUT /api/library/playlists/order`
+
+Put a **manual** playlist's songs in a new order. The same people as [`POST /api/library/playlists/tracks`](#post-apilibraryplayliststracks) may: its owner (an admin may change any) and its [editors](features/collaborative-playlists.md); `403` for anyone else who can open it, and for an imported playlist. `files` is every song the caller sees in the playlist, each copy of a repeated song included, in its new place. When that isn't the playlist's songs — someone added or removed one in the meantime — it answers `409` and changes nothing: reload the playlist and try again. Songs [hidden from](features/users.md#hiding-from-users) the caller keep their places. `400` without `files`. When the playlist is shared, `playlists_changed` goes out on the WebSocket.
+
+**Request body:** `{ "name": "Late night", "files": ["b.mp3", "a.mp3", "a.mp3"] }`
+
+**Response:** `{ "name": "Late night", "manual": true, "files": ["b.mp3", "a.mp3", "a.mp3"], "count": 3 }`
 
 ---
 
@@ -1381,7 +1398,7 @@ Share a playlist you own (an admin may change any). Liked songs are never sharea
 
 ### `POST /api/library/playlists/copy`
 
-Save a copy of a playlist the caller can open (their own, one shared with them, or a public one) as a new **manual** playlist of theirs: private, editable, and independent of the original. Songs an admin hid from users are left out. `404` for a playlist the caller can't open, `409` if `new_name` is taken.
+Save a copy of a playlist the caller can open (their own, one shared with them, or a public one) as a new **manual** playlist of theirs: private, editable, and independent of the original. The songs keep their order, a song the original repeats included. Songs an admin hid from users are left out. `404` for a playlist the caller can't open, `409` if `new_name` is taken.
 
 **Request body:** `{ "name": "Late night", "new_name": "Late night (mine)" }` — without `new_name` the copy is called `<name> (copy)`, then `<name> (copy) 2`, and so on.
 
@@ -3506,7 +3523,7 @@ The same profile as [`GET /api/library/loudness`](#get-apilibraryloudness), by t
 ]
 ```
 
-The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playlist order. A user gets their own (with their own liked songs as the liked one), the ones [shared with them](features/users.md#sharing-playlists) by name, the public ones they follow and — unless they turned *Show public playlists* off — every other public one. An admin gets everything. `cover` is a path for `GET /playlist-cover?file=`, or `""`.
+The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playlist order. A `manual` playlist may [repeat a song](features/playlist-order.md): its id is listed once per copy, so key list rows by position as well as id. A user gets their own (with their own liked songs as the liked one), the ones [shared with them](features/users.md#sharing-playlists) by name, the public ones they follow and — unless they turned *Show public playlists* off — every other public one. An admin gets everything. `cover` is a path for `GET /playlist-cover?file=`, or `""`.
 
 | Field | Meaning |
 |-------|---------|
