@@ -1510,7 +1510,7 @@ export default {
     slskdQueuedTimeout: 'Tiempo de espera en cola',
     slskdInPlace: 'Dejar los archivos en la carpeta de slskd',
     slskdInPlaceHint:
-      'Etiquetarlos donde slskd los guardó en lugar de copiarlos a tu carpeta de descargas.',
+      'Activado: etiqueta los archivos en su ubicación y consérvalos. Desactivado: cópialos y etiquétalos en Descargas; elimina el origen solo tras una importación correcta. Si falla, conserva el origen.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies de YouTube',
     cookiesHint:

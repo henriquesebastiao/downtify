@@ -1531,7 +1531,7 @@ export default {
     slskdQueuedTimeout: 'Zeitlimit in Warteschlange',
     slskdInPlace: 'Dateien im slskd-Ordner belassen',
     slskdInPlaceHint:
-      'Füge Tags dort hinzu, wo slskd die Dateien gespeichert hat, statt sie in den Downloadordner zu kopieren.',
+      'Ein: Dateien am Speicherort taggen und behalten. Aus: in Downloads kopieren und taggen; die Quelle wird erst nach erfolgreichem Import entfernt. Bei Fehlern bleibt sie erhalten.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube-Cookies',
     cookiesHint:

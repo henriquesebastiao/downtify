@@ -1383,7 +1383,8 @@ export default {
     slskdTimeout: '总超时',
     slskdQueuedTimeout: '排队超时',
     slskdInPlace: '将文件保留在 slskd 文件夹中',
-    slskdInPlaceHint: '直接在 slskd 保存的位置写入标签，而不复制到下载文件夹。',
+    slskdInPlaceHint:
+      '开启：在原位置写入标签并保留文件。关闭：复制并标记到下载文件夹；仅在成功导入后删除源文件。复制、标记或验证失败时会保留源文件。',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube Cookie',
     cookiesHint:

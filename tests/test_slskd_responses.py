@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Any
 
 from downtify.slskd_provider import (
@@ -689,16 +688,6 @@ def test_download_from_slskd_retries_when_tags_mismatch(monkeypatch, tmp_path):
         'downtify.slskd_provider.verify_downloaded_file_matches_spotify',
         fake_verify,
     )
-    removed: list[Path] = []
-
-    def _record_discard(path: Path) -> None:
-        removed.append(path)
-
-    monkeypatch.setattr(
-        'downtify.slskd_provider._discard_mismatched_download',
-        _record_discard,
-    )
-
     settings = {
         'enabled': True,
         'base_url': 'https://slskd.example',
@@ -712,7 +701,7 @@ def test_download_from_slskd_retries_when_tags_mismatch(monkeypatch, tmp_path):
         settings,
     )
     assert result == good
-    assert bad in removed
+    assert bad.is_file()
 
 
 def test_download_from_slskd_tries_next_candidate_on_failure(

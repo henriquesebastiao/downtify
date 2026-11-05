@@ -1500,7 +1500,7 @@ export default {
     slskdQueuedTimeout: 'Tempo limite na fila',
     slskdInPlace: 'Manter arquivos na pasta do slskd',
     slskdInPlaceHint:
-      'Marcar os arquivos onde o slskd os salvou em vez de copiar para sua pasta de downloads.',
+      'Ativado: marca os arquivos no local e os mantém. Desativado: copia e marca em Downloads; remove a origem somente após a importação bem-sucedida. Falhas mantêm a origem.',
     youtubeTitle: 'YouTube',
     cookies: 'Cookies do YouTube',
     cookiesHint:

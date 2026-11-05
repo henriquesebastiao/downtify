@@ -85,7 +85,7 @@ Predictable file locations are probed every tick; throttling affects only recurs
 With **Leave slskd files in place** on (the default), the downloaded file stays in the slskd folder: Downtify writes the metadata, cover art and lyrics into it there and registers it in the library under a `slskd/…` path. The Library, player and M3U files use that path, and it's served through `/media/slskd/…`.
 
 Turn it off to copy the file next to your other downloads instead, following your filename template and [file organization](file-organization.md) settings.
-The transfer itself stays in the slskd folder; [Storage & Usage](storage-usage.md#the-library-not-its-working-copies) counts these copies apart from the library, as *slskd working copies*, so you can see how much room they take.
+After the copy is tagged and verified as readable audio, Downtify removes the original from the configured slskd source folder. If copying, tagging or verification fails, the source is kept and the download reports an error. If removing the source fails, the imported library file remains successful and Downtify logs a warning with both paths. When the source and destination are the same file, or the source is outside the configured folder, it is not removed. Existing leftovers and failed cleanups are counted as [slskd working copies](storage-usage.md#the-library-not-its-working-copies).
 
 ::: info
 slskd files keep their original format — they aren't transcoded to the format chosen in Settings.
