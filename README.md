@@ -38,7 +38,7 @@ Spotify embed page  →  YouTube Music search  →  yt-dlp + ffmpeg + mutagen
 ```
 
 1. **Metadata.** Track, album and playlist links are resolved from the public `open.spotify.com/embed` pages, so no Spotify credentials of any kind are needed.
-2. **Audio match.** [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) finds the best YouTube Music result by comparing durations. When there is no good match, standard YouTube is searched automatically ([details](https://henriquesebastiao.github.io/downtify/how-it-works/#fallback-to-standard-youtube)).
+2. **Audio match.** [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) finds the best YouTube Music result by comparing durations. When there is no good match, standard YouTube is searched automatically ([details](https://henriquesebastiao.github.io/downtify/how-it-works/#fallback-to-standard-youtube)). The player applies the same 10-second duration tolerance when resolving an undownloaded track.
 3. **Download and tag.** [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) fetches the audio; `ffmpeg` converts it to your chosen format or keeps the best available source audio without re-encoding. [`mutagen`](https://mutagen.readthedocs.io/) embeds title, every credited artist, album, album artist, year and cover art; a song with several artists is filed under its album artist (see [File organization](https://henriquesebastiao.github.io/downtify/features/file-organization/#several-artists-and-compilations)).
 
 All of it runs inside a single Docker container. See **[How it works](https://henriquesebastiao.github.io/downtify/how-it-works/)** for the full pipeline.
