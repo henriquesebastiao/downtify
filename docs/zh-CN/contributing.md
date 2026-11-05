@@ -22,7 +22,7 @@ icon: lucide/hand-heart
 
 ### 前置条件
 
-- Python 3.15+
+- Python 3.11–3.14（项目声明的支持范围为 `>=3.11,<3.15`）
 - Node.js 20+
 - [uv](https://github.com/astral-sh/uv)（Python 包管理器）
 - ffmpeg（必须位于 `PATH` 中）
