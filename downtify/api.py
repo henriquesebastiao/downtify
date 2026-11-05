@@ -2861,7 +2861,9 @@ def search_endpoint(
         return library_only.search(entries_for_request(request), query)
     results = providers.search_songs(query, limit=20)
     if results:
-        return results
+        return [
+            {**song, 'download_by_metadata': True} for song in results
+        ]
     q = query.strip()
     if not q or 'slskd' not in _effective_audio_providers(state.settings):
         return []
@@ -3994,14 +3996,23 @@ def _song_from_download_request(
     """The song to download for ``POST /api/download/url``.
 
     A slskd search stub (``source == 'text_search'``, see
-    :func:`search_endpoint`) or a Deezer chart/Finder row (``source ==
-    'deezer'``, see :func:`discover_chart_endpoint` and
+    :func:`search_endpoint`), a YouTube Music search row marked for
+    metadata matching, or a Deezer chart/Finder row (``source == 'deezer'``,
+    see :func:`discover_chart_endpoint` and
     :func:`finder_search_endpoint`) has no URL this app
-    can resolve on its own - both are taken from the request body as-is,
+    can resolve on its own - these rows are taken from the request body as-is,
     already-resolved metadata that :func:`downtify.providers.find_match`
     can search YouTube/YouTube Music for directly.
     """
 
+    if (
+        isinstance(client_hints, dict)
+        and client_hints.get('download_by_metadata') is True
+    ):
+        song = dict(client_hints)
+        song.pop('download_by_metadata', None)
+        song['_match_by_metadata'] = True
+        return song
     if (
         isinstance(client_hints, dict)
         and client_hints.get('source') in _CLIENT_RESOLVED_SOURCES

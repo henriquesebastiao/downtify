@@ -294,5 +294,5 @@ def test_disabled_mode_retains_provider_search(local_client, monkeypatch):
         lambda *args, **kwargs: [{'name': 'online'}],
     )
     assert local_client.get('/api/songs/search?query=online').json() == [
-        {'name': 'online'}
+        {'name': 'online', 'download_by_metadata': True}
     ]

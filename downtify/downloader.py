@@ -537,8 +537,14 @@ class Downloader:
         file. All ``None`` when every provider came up empty.
         """
 
-        known_video_id = song.get('youtube_id')
-        if not known_video_id and song.get('source') == 'youtube':
+        known_video_id = (
+            None if song.get('_match_by_metadata') else song.get('youtube_id')
+        )
+        if (
+            not known_video_id
+            and not song.get('_match_by_metadata')
+            and song.get('source') == 'youtube'
+        ):
             known_video_id = song.get('song_id')
         known_soundcloud_url = soundcloud_track_url(song)
 
@@ -1000,8 +1006,14 @@ class Downloader:
         # Known-long tracks are refused before any search or fetch.
         reject_overlong_song(song, self.max_track_duration_seconds)
 
-        known_video_id = song.get('youtube_id')
-        if not known_video_id and song.get('source') == 'youtube':
+        known_video_id = (
+            None if song.get('_match_by_metadata') else song.get('youtube_id')
+        )
+        if (
+            not known_video_id
+            and not song.get('_match_by_metadata')
+            and song.get('source') == 'youtube'
+        ):
             known_video_id = song.get('song_id')
 
         if not known_video_id:

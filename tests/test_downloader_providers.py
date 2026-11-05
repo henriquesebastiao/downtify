@@ -435,6 +435,42 @@ def test_known_video_respects_earlier_local_source(
     assert no_youtube == []
 
 
+def test_search_result_uses_metadata_through_provider_order(
+    tmp_path, monkeypatch, no_youtube
+):
+    seen_by_slskd = []
+    seen_by_match = []
+
+    def local_miss(song, *args, **kwargs):
+        seen_by_slskd.append(song.copy())
+
+    def metadata_match(song):
+        seen_by_match.append(song.copy())
+        return 'matched12345', {}
+
+    monkeypatch.setattr(downloader_mod, 'download_from_slskd', local_miss)
+    monkeypatch.setattr(downloader_mod, 'find_match', metadata_match)
+    d = Downloader(
+        tmp_path,
+        audio_providers=['slskd', 'youtube-music'],
+        slskd_settings={'enabled': True},
+    )
+    song = {
+        **_SONG,
+        'song_id': 'selected12345',
+        'source': 'youtube',
+        '_match_by_metadata': True,
+    }
+
+    d.download(song)
+
+    assert seen_by_slskd[0]['name'] == 'Track'
+    assert seen_by_slskd[0]['artists'] == ['Artist']
+    assert seen_by_slskd[0]['duration'] == 200
+    assert seen_by_match[0]['name'] == 'Track'
+    assert no_youtube == ['https://music.youtube.com/watch?v=matched12345']
+
+
 @pytest.mark.parametrize('local_enabled', [False, True])
 def test_known_video_does_not_enable_disabled_youtube(
     tmp_path, monkeypatch, no_youtube, known_video_song, local_enabled

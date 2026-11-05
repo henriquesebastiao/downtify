@@ -77,7 +77,7 @@ Optional **OpenID Connect** login works alongside local accounts and can restric
 
 In **Library → Tracks**, sort by release date from the column heading or **Sort by** menu. See [Library catalog](https://downtify.henriquesebastiao.com/features/library-catalog/#library-page).
 
-Soulseek downloads can use strict format tiers (for example, FLAC before MP3 at a minimum bitrate) and optionally reject formats outside the configured list. See [slskd & Navidrome](https://downtify.henriquesebastiao.com/features/slskd-navidrome/#how-a-track-is-matched).
+Soulseek downloads can use strict format tiers (for example, FLAC before MP3 at a minimum bitrate) and optionally reject formats outside the configured list. Search-bar downloads also follow the configured audio source order. See [slskd & Navidrome](https://downtify.henriquesebastiao.com/features/slskd-navidrome/#how-a-track-is-matched).
 
 Read-only music folders stay protected during **Upgrade library**: their tracks are skipped before remote lookups, without changing files or marking unchecked categories as complete. See [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/#read-only-music-folders).
 
