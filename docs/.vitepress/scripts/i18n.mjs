@@ -14,7 +14,7 @@
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import matter from 'gray-matter'
 import { LOCALES, TRANSLATED } from '../locales/index.mjs'
 import { NAV } from '../nav.mjs'
@@ -128,7 +128,7 @@ function start(code, page) {
 }
 
 const [command, ...args] = process.argv.slice(2)
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   try {
     if (command === 'status') status(args[0])
     else if (command === 'stubs') stubs(args[0])

@@ -13,6 +13,7 @@ import hu from './hu.mjs'
 import ko from './ko.mjs'
 import ptBR from './pt-BR.mjs'
 import tr from './tr.mjs'
+import zhCN from './zh-CN.mjs'
 
 export const SOURCE_LOCALE = 'en'
 
@@ -28,6 +29,7 @@ export const LOCALES = {
   ko,
   'pt-BR': ptBR,
   tr,
+  'zh-CN': zhCN,
 }
 
 /** Codes of the translated locales (everything but English). */

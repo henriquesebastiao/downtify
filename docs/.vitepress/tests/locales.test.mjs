@@ -134,9 +134,13 @@ describe('redirectToLocale', () => {
   })
 
   it('stays in English without a translation', () => {
-    expect(visit('/', { languages: ['ja', 'zh-CN'] })).toBeNull()
+    expect(visit('/', { languages: ['ja'] })).toBeNull()
     expect(visit('/', { languages: ['en-US'] })).toBeNull()
     expect(visit('/', { languages: [] })).toBeNull()
+  })
+
+  it('opens the Simplified Chinese translation', () => {
+    expect(visit('/', { languages: ['zh-CN'] })).toBe('/zh-CN/')
   })
 
   it('uses the first language that matches anything', () => {
