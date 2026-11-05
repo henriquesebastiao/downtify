@@ -31,6 +31,7 @@ Henüz çevrilmemiş bir sayfa bir not ve İngilizce metni gösterir; böylece h
 | `hu` | Magyar | ✓ | ✓ |
 | `bg` | Български | ✓ | ✓ |
 | `de` | Deutsch | ✓ | ✓ |
+| `ru` | Русский | ✓ | ✗ |
 | `ko` | 한국어 | ✓ | ✓ |
 | `zh-CN` | 简体中文 | ✓ | — |
 

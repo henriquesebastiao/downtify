@@ -31,6 +31,7 @@ Uma página ainda não traduzida mostra um aviso e o texto em inglês, então to
 | `hu` | Magyar | ✓ | ✓ |
 | `bg` | Български | ✓ | ✓ |
 | `de` | Deutsch | ✓ | ✓ |
+| `ru` | Русский | ✓ | ✗ |
 | `ko` | 한국어 | ✓ | ✓ |
 | `zh-CN` | 简体中文 | ✓ | — |
 

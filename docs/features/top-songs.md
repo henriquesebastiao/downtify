@@ -2,67 +2,67 @@
 icon: lucide/star
 ---
 
-# Top Songs
+# Популярные песни
 
-Some artists have huge catalogs where only a handful of tracks matter. Instead of grabbing links track by track, or downloading a 50+ track "This is…" playlist for the few songs you actually want, paste the artist's own link and pick from their most popular songs.
+У некоторых артистов огромные каталоги, где по-настоящему важны лишь несколько треков. Вместо того чтобы собирать ссылки трек за треком или скачивать плейлист «This is…» из 50+ треков ради нескольких песен, которые вам действительно нужны, вставьте собственную ссылку артиста и выбирайте из его самых популярных песен.
 
-## How to use it
+## Как этим пользоваться
 
-1. Paste an artist link into the search box or on the Home screen:
+1. Вставьте ссылку на артиста в строку поиска или на главный экран:
    - **Spotify**: `https://open.spotify.com/artist/…`
-   - **YouTube Music**: `https://music.youtube.com/channel/UC…` or `https://music.youtube.com/@handle`
+   - **YouTube Music**: `https://music.youtube.com/channel/UC…` или `https://music.youtube.com/@handle`
    - **Deezer**: `https://www.deezer.com/artist/…`
-2. The **artist page** opens with their photo and name, and lists their releases (albums, singles, EPs and compilations, where the service has them), newest first on Spotify and Deezer; click one to see its tracks or download it. Next to a **Top Songs** button, Spotify and YouTube Music artists also get **Watch for new releases** — Deezer artists don't, since the [Playlist Monitor](playlist-monitor.md) has no Deezer support.
-3. **Top Songs** opens the list of their most popular songs, in the order the service ranks them. For Spotify and YouTube Music, a badge with an eye shows how many times each song has been played, shortened the way your language does it (`1,5 bi` in Portuguese, `1.5B` in English) — Spotify's is green and YouTube Music's is red. YouTube Music only reports a rounded figure (`1.2B plays`), so its number is an approximation; Downtify reads it from the same YouTube Music request that lists the songs, plus one more request for the play counts. Deezer's own "top" ranking has no public play-count figure to show, so its songs list without a badge. The first five are already ticked; tick more or untick any of them, then press **Download selected**.
+2. Откроется **страница артиста** с его фото и именем и списком релизов (альбомы, синглы, EP и сборники — там, где они есть у сервиса), новейшие первыми у Spotify и Deezer; нажмите релиз, чтобы увидеть его треки или скачать его. Рядом с кнопкой **Популярные песни** артисты Spotify и YouTube Music получают также **Следить за новыми релизами** — а артисты Deezer нет, поскольку [Монитор плейлистов](playlist-monitor.md) не поддерживает Deezer.
+3. **Популярные песни** открывают список их самых популярных песен в том порядке, в каком их ранжирует сервис. Для Spotify и YouTube Music бейдж с глазом показывает, сколько раз прослушана каждая песня, сокращённо, как принято в вашем языке (`1,5 bi` на португальском, `1.5B` на английском) — у Spotify он зелёный, у YouTube Music красный. YouTube Music отдаёт только округлённую цифру (`1.2B plays`), так что его число приблизительно; Downtify читает его из того же запроса к YouTube Music, который перечисляет песни, плюс ещё один запрос на счётчики прослушиваний. У собственного топ-ранжирования Deezer нет публичной цифры прослушиваний, которую можно показать, поэтому его песни выводятся без бейджа. Первые пять уже отмечены; отметьте ещё или снимите любую из отметок, затем нажмите **Скачать выбранные**.
 
-### Playing songs before downloading
+### Прослушивание песен перед скачиванием
 
-On the Top Songs page, and on the page a pasted **album** or **playlist** link opens, every song plays in full: hover its row and the number turns into a play button (on a phone the play button is always there); press it and the song streams from YouTube straight into the built-in player. Press it again to pause, or another row's button to switch. A song that is already in your library plays from the library instead, with the list's other downloaded songs queued after it.
+На странице «Популярные песни» и на странице, которую открывает вставленная ссылка на **альбом** или **плейлист**, каждая песня играется целиком: наведите курсор на её строку, и номер превратится в кнопку воспроизведения (на телефоне кнопка воспроизведения есть всегда); нажмите её, и песня стримится с YouTube прямо во встроенный плеер. Нажмите ещё раз — пауза, или кнопку другой строки — переключение. Песня, уже лежащая в вашей библиотеке, играется из библиотеки, а остальные скачанные песни списка встают в очередь после неё.
 
-A stream is served from this server, never from the browser straight to YouTube: the row resolves to its YouTube video (its own, for a YouTube Music song, else the closest search match) and the server downloads the audio once into its stream cache, then plays the cached file (see [`GET /api/stream/file`](../api-reference.md#get-apistreamfile)). Only the server needs YouTube to be reachable, and an age-gated track needs YouTube cookies (see [YouTube Cookies](youtube-cookies.md)) just like a download does.
+Поток отдаётся с этого сервера, а не из браузера напрямую в YouTube: строка разрешается в своё видео YouTube (собственное — для песни YouTube Music, иначе ближайшее совпадение поиска), сервер один раз скачивает аудио в свой кеш потоков и играет кешированный файл (см. [`GET /api/stream/file`](../api-reference.md#get-apistreamfile)). Достижимость YouTube нужна только серверу, а треку с возрастным ограничением нужны куки YouTube (см. [Куки YouTube](youtube-cookies.md)) — как и при загрузке.
 
-## Sources
+## Источники
 
-| Source | What "top songs" means | Songs listed |
+| Источник | Что значит «популярные песни» | Песен в списке |
 |--------|------------------------|--------------|
-| Spotify | The artist's own **Popular** shelf, the same tracks shown at the top of their Spotify page | Up to 10 |
-| YouTube Music | The artist's **Top songs** playlist, ranked by popularity | The first 50 |
-| Deezer | The artist's own **top** ranking (the same shelf `deezer.com` shows on their page) | The first 50 |
+| Spotify | Собственная полка **Popular** артиста — те же треки, что показаны вверху его страницы в Spotify | До 10 |
+| YouTube Music | Плейлист артиста **Top songs**, ранжированный по популярности | Первые 50 |
+| Deezer | Собственный топ-ранжинг артиста (та же полка, что `deezer.com` показывает на его странице) | Первые 50 |
 
-Spotify's public embed has no discography, so Downtify reads the releases from the Spotify web player's own discography query, the same non-public API it uses for the album names. If Spotify changes it, Downtify falls back to a shorter list (every album, but only the ten most recent singles) and, failing that, shows no releases. Spotify songs go through the usual metadata-then-audio-match pipeline, with their album name attached up front; the download fills in the rest (track number, year) as it does for any Spotify song. YouTube Music songs are pinned to their own video, like any other YouTube Music link. Deezer has a real, public discography endpoint, so its releases list needs no fallback; its songs go through the same metadata-then-audio-match pipeline as Spotify's, with a 30-second preview clip attached when Deezer offers one.
+У публичного встраивания Spotify нет дискографии, так что Downtify читает релизы из собственного запроса дискографии веб-плеера Spotify — того же непубличного API, что он использует для названий альбомов. Если Spotify его изменит, Downtify переходит на более короткий список (все альбомы, но только десять самых свежих синглов), а в крайнем случае не показывает релизов вовсе. Песни Spotify проходят обычный конвейер «метаданные → сопоставление аудио», с названием альбома, приложенным заранее; при скачивании остальное (номер трека, год) заполняется, как и для любой песни Spotify. Песни YouTube Music привязаны к собственному видео, как и любая другая ссылка YouTube Music. У Deezer есть настоящий публичный конечный пункт дискографии, поэтому его список релизов не нуждается в запасном варианте; его песни проходят тот же конвейер «метаданные → сопоставление аудио», что и песни Spotify, с приложенным 30-секундным клипом-предпросмотром, когда Deezer его даёт.
 
-## On an artist's Library page
+## На странице артиста в Библиотеке
 
-An artist Downtify knows on Spotify (see [Artist photo, banner & bio](artist-images.md)) also gets a **Top songs** tab on their page in your Library, next to Tracks and Fans also like. It lists the first **5** of their Spotify top songs as a minimal list, like the search results, under column headings (#, Title, Album, length): number, cover, title, artist, album and length. A song that isn't in your library has a **download** button on the right (with its progress while it downloads); once it's downloaded that turns into the **In library** label, and the song can be played the way it is on an album page: the number turns into a play button on hover, the cover plays, and a double click or a tap plays too. Playing one queues the list's other downloaded songs after it, in ranking order, and the song being played is highlighted. A song that isn't downloaded yet **streams in full** instead: hover its row and where the number is a play button appears; press it (or the cover) and it plays in the built-in player like a downloaded song (see [Playing songs before downloading](#playing-songs-before-downloading)). Below the list, **See more popular songs** opens this artist on the Top Songs page described above, which is where the selection, the **Create playlist** switch and downloading several at once live. The tab only appears once the artist's Spotify id is known, which happens the first time their page is opened; the songs are asked for right then, so the tab's count fills in by itself a few seconds later, wherever you are on the page.
+Артист, которого Downtify знает в Spotify (см. [Фото, баннер и биография артиста](artist-images.md)), получает ещё и вкладку **Популярные песни** на своей странице в Библиотеке — рядом с «Треками» и «Также нравится фанатам». Она перечисляет первые **5** его популярных песен Spotify минимальным списком, как результаты поиска, под заголовками колонок (#, Название, Альбом, длина): номер, обложка, название, артист, альбом и длина. У песни, которой нет в вашей библиотеке, справа кнопка **скачать** (с прогрессом во время загрузки); когда она скачана, кнопка превращается в надпись **В библиотеке**, и песню можно проигрывать так же, как на странице альбома: номер при наведении превращается в кнопку воспроизведения, обложка играет, и двойной щелчок или касание тоже играют. Запуск одной ставит в очередь остальные скачанные песни списка, в порядке рейтинга, и играемая песня подсвечивается. Ещё не скачанная песня вместо этого **стримится целиком**: наведите курсор на её строку — там, где номер, появится кнопка воспроизведения; нажмите её (или обложку), и она играет во встроенном плеере как скачанная песня (см. [Прослушивание песен перед скачиванием](#playing-songs-before-downloading)). Под списком **Больше популярных песен** открывает этого артиста на описанной выше странице «Популярные песни», где живут и выделение, и переключатель **Создать плейлист**, и скачивание нескольких песен разом. Вкладка появляется, только когда известен Spotify-id артиста, а это происходит при первом открытии его страницы; песни запрашиваются тут же, так что счётчик вкладки сам дозаполнится через несколько секунд, где бы вы ни находились на странице.
 
-Reading a song's cover, album and play count takes a few seconds, so Downtify keeps the five songs in a file per artist, `<downloads>/.metadata/ArtistTopSongs/<Artist>.topsongs.json`, made in the background the first time the artist's page is opened. It is trusted for **7 days**: opening the tab reads the file at once, and once it is older than that the old list is shown right away while a fresh one is fetched behind it - the page swaps it in by itself within a few seconds, without disturbing a song that is downloading or playing. The file only holds the songs, their cover art, clip links and play counts - never the audio or the images, and never whether a song is in your library, which is worked out live. It's a cache: delete it whenever you like and it is made again.
+Прочитать обложку, альбом и счётчик прослушиваний песни занимает несколько секунд, поэтому Downtify держит пять песен в файле на артиста, `<downloads>/.metadata/ArtistTopSongs/<Artist>.topsongs.json`, создаваемом в фоне при первом открытии страницы артиста. Файлу доверяют **7 дней**: открытие вкладки сразу читает файл, а когда он становится старше, старый список тут же показывается, пока за ним в фоне подгружается свежий — страница сама заменит его в течение нескольких секунд, не потревожа скачиваемую или играемую песню. Файл хранит только песни, их обложки, ссылки на клипы и счётчики прослушиваний — никогда само аудио или изображения и никогда сведения о том, лежит ли песня в вашей библиотеке (это вычисляется на лету). Это кеш: удалите его когда угодно — он будет создан заново.
 
-## Creating a playlist
+## Создание плейлиста
 
-The **Create playlist** switch on the Top Songs page starts **off** the first time you open an artist, and starts **on** once a playlist named **Top Songs of {artist}** already exists in your library, so later downloads keep adding to it. Flip the switch and your choice stays for as long as you are on that page. With it off, the songs download like any other individual songs: straight into your downloads folder, or into your artist/album folders when [File organization](file-organization.md) is on, with no folder of their own, no M3U and no artist photo.
+Переключатель **Создать плейлист** на странице «Популярные песни» в первый раз, когда вы открываете артиста, стоит **выключенным**, а **включается**, если в вашей библиотеке уже существует плейлист **`Популярные песни {artist}`** — так последующие загрузки продолжат добавлять в него. Переключите его, и ваш выбор сохранится, пока вы на этой странице. В выключенном состоянии песни скачиваются как любые отдельные песни: прямо в папку загрузок или в папки артистов/альбомов, когда включена [Организация файлов](file-organization.md), — без собственной папки, без M3U и без фото артиста.
 
-Turn it on and Downtify treats them as a playlist named **Top Songs of {artist}**. Where it goes depends on File organization:
+Включите его, и Downtify обращается с ними как с плейлистом **`Популярные песни {artist}`**. Куда они попадают, зависит от Организации файлов:
 
-| Organize by artist / album | Songs | M3U and cover |
+| Сортировать по артистам / альбомам | Песни | M3U и обложка |
 |---|---|---|
-| Both off | In a folder named `Top Songs of {artist}` | In that same folder |
-| Either or both on | Filed by those settings: `<Artist>/`, `<Album>/` or `<Artist>/<Album>/`. There is no `Top Songs of {artist}` folder. | In `Playlists/`, as `Top Songs of {artist}.m3u` and `.jpg` |
+| Оба выключены | В папке с именем `Популярные песни {artist}` | В той же папке |
+| Включён один или оба | Разложены по этим настройкам: `<Artist>/`, `<Album>/` или `<Artist>/<Album>/`. Папки `Популярные песни {artist}` нет. | В `Playlists/`, как `Популярные песни {artist}.m3u` и `.jpg` |
 
-In both cases:
+В обоих случаях:
 
-- the [M3U playlist](m3u-export.md) lists the songs **in the artist's ranking order**, even when you only ticked some of them;
-- the artist's photo is saved next to the M3U as its cover, if **Save playlist cover art** is enabled (see [Playlist cover art](playlist-cover-art.md)). There is no separate setting for this.
+- [M3U-плейлист](m3u-export.md) перечисляет песни **в порядке их рейтинга у артиста**, даже если вы отметили лишь часть из них;
+- фото артиста сохраняется рядом с M3U в качестве обложки, если включено **Сохранять обложки плейлистов** (см. [Обложки плейлистов](playlist-cover-art.md)). Отдельной настройки для этого нет.
 
-## Known limitations
+## Известные ограничения
 
-::: warning Mixing Spotify and YouTube Music for the same artist
-The M3U of **Top Songs of {artist}** is kept in sync from the [playlist catalog](library-catalog.md), which is keyed by Spotify track ids. If you download an artist's top songs from **Spotify** and later from **YouTube Music** (or the other way around), the second batch's files download correctly, but the next M3U refresh drops them from the playlist file, because YouTube Music ids don't fit that format. Adding more songs from the **same** source is unaffected.
+::: warning Смешивание Spotify и YouTube Music для одного артиста
+M3U плейлиста **`Популярные песни {artist}`** держится в согласии с [каталогом плейлистов](library-catalog.md), который индексируется по Spotify id треков. Если вы скачаете популярные песни артиста из **Spotify**, а позже из **YouTube Music** (или наоборот), файлы второй партии скачаются правильно, но следующее обновление M3U выкинет их из файла плейлиста, потому что id YouTube Music не подходят к этому формату. Добавление песен из того **же** источника не затрагивается.
 :::
 
-::: info Album names for Spotify songs
-Spotify's artist page doesn't say which album a song is from. Downtify gets the album names, and the play counts, from the same Spotify player API it uses to read full playlists: one extra request per artist, plus one for each album that request doesn't list. That API isn't public, so if Spotify changes it, the **Album** column comes up empty for Spotify songs and the play-count badge disappears; the songs still download, but Downtify then has to recover the album from its YouTube Music match, which often fails, leaving the file without an album tag and, with [Organize by album](file-organization.md) on, in an `unknown` album folder. YouTube Music top songs carry their album already. If the play counts stop coming through, for either source, the badge simply doesn't appear.
+::: info Названия альбомов для песен Spotify
+Страница артиста в Spotify не говорит, из какого альбома песня. Downtify берёт названия альбомов и счётчики прослушиваний из того же API плеера Spotify, которым читает целые плейлисты: один дополнительный запрос на артиста плюс по одному на каждый альбом, который тот запрос не перечислил. Это API непубличное, поэтому если Spotify его изменит, колонка **Альбом** для песен Spotify окажется пустой, а бейдж счётчика прослушиваний исчезнет; песни по-прежнему скачиваются, но тогда Downtify приходится восстанавливать альбом по совпадению с YouTube Music, что часто не удаётся — файл остаётся без тега альбома и, при включённой [Сортировке по альбомам](file-organization.md), в папке альбома `unknown`. Песни «Популярных песен» YouTube Music несут свой альбом с собой. Если счётчики прослушиваний перестанут приходить — от любого из источников — бейдж просто не появится.
 :::
 
 ## API
 
-See [`GET /api/artists/top_songs/url`](../api-reference.md#get-apiartiststop_songsurl) in the API Reference.
+См. [`GET /api/artists/top_songs/url`](../api-reference.md#get-apiartiststop_songsurl) в Справочнике API.

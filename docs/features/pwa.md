@@ -2,28 +2,28 @@
 icon: lucide/smartphone
 ---
 
-# Install as an App (PWA)
+# Установка как приложение (PWA)
 
-Downtify's web UI is a Progressive Web App: on both iOS and Android you can add it to your home screen and it launches full-screen, like a native app, with no browser address bar or navigation chrome.
+Веб-интерфейс Downtify — это Progressive Web App: и на iOS, и на Android его можно добавить на главный экран, и он запускается на весь экран, как нативное приложение, без адресной строки и навигационной обвязки браузера.
 
 ## iOS (Safari)
 
-1. Open Downtify in Safari
-2. Tap the **Share** button
-3. Tap **Add to Home Screen**
+1. Откройте Downtify в Safari
+2. Нажмите кнопку **Share** («Поделиться»)
+3. Нажмите **Add to Home Screen** («На экран „Домой“»)
 
-The Downtify icon appears on your home screen and launches in a standalone window.
+Иконка Downtify появится на главном экране и будет запускать приложение в отдельном окне.
 
 ## Android (Chrome)
 
-1. Open Downtify in Chrome
-2. Tap the **⋮** menu
-3. Tap **Add to Home screen** (or **Install app**, if Chrome offers it directly)
+1. Откройте Downtify в Chrome
+2. Откройте меню **⋮**
+3. Нажмите **Add to Home screen** («Добавить на главный экран») (или **Install app** («Установить приложение»), если Chrome предлагает это сразу)
 
-## How it works
+## Как это устроено
 
-`frontend/index.html` links a [web app manifest](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest) (`/manifest.json`) that sets `"display": "standalone"` and `start_url: "/"`, plus the icons Android uses for the home screen shortcut and app switcher. This is what Chrome/Android reads to install the app full-screen with its own icon.
+`frontend/index.html` подключает [манифест веб-приложения](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest) (`/manifest.json`), задающий `"display": "standalone"` и `start_url: "/"`, плюс иконки, которые Android использует для ярлыка на главном экране и переключателя приложений. Именно это Chrome/Android читает, чтобы установить приложение на весь экран со своей иконкой.
 
-iOS Safari doesn't read the manifest's `display` or icon fields at all for "Add to Home Screen" — it needs its own `apple-mobile-web-app-capable` and `apple-touch-icon` `<meta>`/`<link>` tags in `index.html`, which are set alongside the manifest so both platforms get the same standalone, full-screen behavior with the Downtify icon.
+Safari на iOS для «Add to Home Screen» вообще не читает из манифеста поля `display` или иконок — ему нужны собственные теги `apple-mobile-web-app-capable` и `apple-touch-icon` (`<meta>`/`<link>`) в `index.html`, которые задаются вместе с манифестом, чтобы обе платформы получали одинаковое поведение — отдельное, полноэкранное окно с иконкой Downtify.
 
-There's no offline support or service worker — Downtify's UI is only useful while it can reach the backend it's paired with, so this is "installable, full-screen web app," not an offline-capable one.
+Офлайн-поддержки и service worker нет — интерфейс Downtify полезен, только пока он может достучаться до сопряжённого с ним бэкенда, поэтому это «устанавливаемое полноэкранное веб-приложение», а не работающее офлайн.
