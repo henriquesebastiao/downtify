@@ -35,6 +35,10 @@ export const NAV = [
         title: 'Collaborative playlists',
         page: 'features/collaborative-playlists.md',
       },
+      {
+        title: 'Playlist order & repeated songs',
+        page: 'features/playlist-order.md',
+      },
       { title: 'Top Songs', page: 'features/top-songs.md' },
       { title: 'Library Import (CSV)', page: 'features/library-import.md' },
       { title: 'Built-in Player', page: 'features/player.md' },

@@ -345,6 +345,34 @@ export function groupArtists(tracks, albums = groupAlbums(tracks)) {
 }
 
 /**
+ * A Library playlist may hold a song more than once. From the second
+ * copy on it is an object of its own carrying `occurrence` (1, 2, …),
+ * so a sorted or filtered list still tells the copies apart; a song
+ * listed once stays the shared library object.
+ */
+export function withRepeats(tracks) {
+  const seen = new Map()
+  return tracks.map((track) => {
+    const occurrence = seen.get(track.file) || 0
+    seen.set(track.file, occurrence + 1)
+    return occurrence ? { ...track, occurrence } : track
+  })
+}
+
+/** A copy of `list` with the item at `from` moved to `to`. */
+export function moveItem(list, from, to) {
+  const next = [...list]
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  return next
+}
+
+/** A row's identity in a list that may repeat a song (see withRepeats). */
+export function trackRowKey(track) {
+  return track.occurrence ? `${track.file}\n${track.occurrence}` : track.file
+}
+
+/**
  * Downloaded playlists (`GET /playlists`, one per M3U) joined with the
  * library tracks they reference and, when known, their Spotify
  * download tracking (`GET /api/playlists/batches`).
@@ -356,7 +384,9 @@ export function buildPlaylists(playlists, tracksByFile, batches = []) {
   const names = new Set(playlists.map((playlist) => playlist.name))
   const fromM3u = playlists.map((playlist) => {
     const files = playlist.files || []
-    const tracks = files.map((file) => tracksByFile.get(file)).filter(Boolean)
+    const tracks = withRepeats(
+      files.map((file) => tracksByFile.get(file)).filter(Boolean)
+    )
     // Mosaic from the M3U paths so the sidebar does not wait for
     // GET /tracks rows. `/cover?file=` reads tags on its own.
     const covers = [...new Set(files.map((file) => coverURL(file)))].slice(0, 4)

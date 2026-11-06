@@ -1002,6 +1002,26 @@ export default {
     },
     alreadyIn: 'Zaten “{name}” içinde',
     removedTrack: '“{name}” listesinden çıkarıldı',
+    reorder: 'Yeniden sırala',
+    reorderHint:
+      'Şarkıları sürükle ya da okları kullan, ardından yeni sırayı kaydet.',
+    reorderSave: 'Sırayı kaydet',
+    reordered: 'Sıra kaydedildi',
+    reorderStale:
+      'Bu liste bu arada başka biri tarafından değiştirildi. Yeniden yüklendi: tekrar sırala.',
+    moveUp: 'Yukarı taşı',
+    moveDown: 'Aşağı taşı',
+    moveTop: 'En üste taşı',
+    moveBottom: 'En alta taşı',
+    repeatTitle: 'Zaten bu listede',
+    repeatBody: {
+      one: 'Bu şarkı zaten “{name}” içinde. Yeniden eklensin mi?',
+      other:
+        'Bu şarkılardan {count} tanesi zaten “{name}” içinde. Yeniden eklensin mi?',
+    },
+    repeatConfirm: 'Yine de ekle',
+    repeatCancel: 'Ekleme',
+    inPlaylist: 'Zaten eklendi',
     hideTrack: 'Listeden gizle',
     hiddenTrack: '“{name}” listesinden gizlendi',
     hiddenTitle: {

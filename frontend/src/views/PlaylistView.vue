@@ -219,10 +219,16 @@
           v-if="playlist.tracks.length || batch?.missing_count"
           class="flex flex-col gap-3"
         >
+          <PlaylistReorder
+            v-if="reordering"
+            :playlist="playlist"
+            @close="reordering = false"
+            @saved="onReordered"
+          />
           <!-- Search and filters over the whole playlist: the list below
                only renders the rows on screen, so the browser's own find
                can't see the rest. -->
-          <div class="flex flex-wrap items-center gap-2">
+          <div v-if="!reordering" class="flex flex-wrap items-center gap-2">
             <label
               class="flex h-10 min-w-0 flex-1 basis-56 items-center gap-2.5 rounded-control border border-line-2 bg-surface px-3 focus-within:border-accent sm:max-w-xs"
             >
@@ -249,9 +255,17 @@
               playlist-order
               class="ml-auto"
             />
+            <UiButton
+              v-if="canReorder && !isSongView(view)"
+              variant="ghost"
+              icon="grip"
+              @click="reordering = true"
+            >
+              {{ t('playlists.reorder') }}
+            </UiButton>
           </div>
           <p
-            v-if="filtering"
+            v-if="filtering && !reordering"
             class="tabular text-[13px] text-muted"
             aria-live="polite"
           >
@@ -298,7 +312,7 @@
               :body="t('playlistSearch.noMatchHint')"
             />
           </template>
-          <template v-else>
+          <template v-else-if="!reordering">
             <TrackList
               v-if="shownTracks.length"
               v-model:sort="trackSort"
@@ -392,6 +406,7 @@ import UiPanel from '/src/components/ui/UiPanel.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
 import DetailState from '/src/components/library/DetailState.vue'
 import PlayButton from '/src/components/library/PlayButton.vue'
+import PlaylistReorder from '/src/components/library/PlaylistReorder.vue'
 import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import TrackList from '/src/components/library/TrackList.vue'
 import TrackSortSelect from '/src/components/library/TrackSortSelect.vue'
@@ -404,7 +419,7 @@ import { usePlayer } from '/src/model/player'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { useTrackActions } from '/src/model/trackActions'
 import { useUi } from '/src/model/ui'
-import { sortTracks } from '/src/lib/library'
+import { sortTracks, trackRowKey } from '/src/lib/library'
 import { songDownloadState } from '/src/lib/downloadState'
 import {
   filterPlaylistSongs,
@@ -553,10 +568,34 @@ const filtering = computed(
   () => Boolean(query.value.trim()) || view.value !== 'all'
 )
 // Where each song sits in the playlist, numbered while filtering so a
-// song found by the search shows its real place.
+// song found by the search shows its real place (each copy of a song
+// the playlist repeats its own).
 const positions = computed(
-  () => new Map((playlist.value?.tracks || []).map((t, i) => [t.file, i + 1]))
+  () =>
+    new Map(
+      (playlist.value?.tracks || []).map((t, i) => [trackRowKey(t), i + 1])
+    )
 )
+
+// A Library playlist's songs can be put in another order by whoever may
+// edit them; imported ones follow their source.
+const reordering = ref(false)
+const canReorder = computed(
+  () =>
+    playlist.value?.manual &&
+    playlist.value.canEditTracks &&
+    !playlist.value.liked &&
+    playlist.value.tracks.length > 1
+)
+watch(canReorder, (can) => {
+  if (!can) reordering.value = false
+})
+
+// Show the order just saved, rather than a sort picked before.
+function onReordered() {
+  reordering.value = false
+  trackSort.value = { key: 'order', dir: 'asc' }
+}
 const shown = computed(() =>
   isSongView(view.value) ? shownSongs.value.length : shownTracks.value.length
 )
@@ -824,6 +863,7 @@ watch(
     hidden.value = []
     query.value = ''
     view.value = 'all'
+    reordering.value = false
     details.value = null
     diagnostics.value = null
     expandedDiagnostic.value = ''

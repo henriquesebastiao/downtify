@@ -607,6 +607,63 @@ def test_an_editor_cannot_add_a_song_hidden_from_them(world, monkeypatch):
     assert _edit(BO, add=['b.mp3'])['files'] == ['a.mp3', 'b.mp3']
 
 
+def _order(user_id: int, files: list[str]) -> dict[str, Any]:
+    return asyncio.run(
+        api.reorder_library_playlist_endpoint(
+            _request(user_id, body={'name': 'Mix', 'files': files})
+        )
+    )
+
+
+def test_an_editor_repeats_a_song_and_takes_out_one_copy(world):
+    _mix_with(world.ctx.download_dir, 'a.mp3', 'b.mp3')
+    world.shares.set_visibility('Mix', SHARED, [BO], editors=[BO])
+
+    asked = _edit(BO, add=['a.mp3'])
+    assert asked['added'] == 0
+    assert asked['already'] == ['a.mp3']
+    assert _edit(BO, add=['a.mp3'], allow_duplicates=True)['files'] == [
+        'a.mp3',
+        'b.mp3',
+        'a.mp3',
+    ]
+    removed = _edit(
+        BO,
+        remove_entries=[
+            {'file': 'a.mp3', 'occurrence': 1},
+            {'file': 'b.mp3', 'occurrence': 'first'},
+            'a.mp3',
+        ],
+    )
+    assert removed['files'] == ['a.mp3', 'b.mp3']
+
+
+def test_an_editor_reorders_and_a_viewer_cannot(world):
+    _mix_with(world.ctx.download_dir, 'a.mp3', 'b.mp3', 'a.mp3')
+    world.found[1]['files'] = ['a.mp3', 'b.mp3', 'a.mp3']
+    world.shares.set_visibility('Mix', SHARED, [BO, CY], editors=[BO])
+
+    assert _order(BO, ['b.mp3', 'a.mp3', 'a.mp3'])['files'] == [
+        'b.mp3',
+        'a.mp3',
+        'a.mp3',
+    ]
+    with pytest.raises(HTTPException) as err:
+        _order(CY, ['a.mp3', 'a.mp3', 'b.mp3'])
+    assert err.value.status_code == 403
+    # The owner's list is out of date: a song is missing from it.
+    with pytest.raises(HTTPException) as err:
+        _order(ANA, ['a.mp3', 'b.mp3'])
+    assert err.value.status_code == 409
+    with pytest.raises(HTTPException) as err:
+        asyncio.run(
+            api.reorder_library_playlist_endpoint(
+                _request(ANA, body={'name': 'Mix'})
+            )
+        )
+    assert err.value.status_code == 400
+
+
 def test_editing_ends_with_the_share(world):
     world.shares.set_visibility('Mix', SHARED, [BO, CY], editors=[BO, CY])
     assert world.shares.editors() == {'mix': [BO, CY]}
@@ -862,7 +919,8 @@ def test_copy_playlist_writes_an_editable_playlist(world):
     result = copy_playlist(world.ctx, files + ['one.mp3'], 'Road (copy)')
 
     assert result['name'] == 'Road (copy)'
-    assert result['files'] == files
+    # A song the original repeats is repeated in the copy too.
+    assert result['files'] == [*files, 'one.mp3']
     path = root / 'Playlists' / 'Road (copy).m3u'
     assert is_manual_m3u(path)
     with pytest.raises(ManualPlaylistError) as err:

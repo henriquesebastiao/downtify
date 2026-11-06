@@ -1031,6 +1031,26 @@ export default {
     },
     alreadyIn: 'Bereits in „{name}“',
     removedTrack: 'Aus „{name}“ entfernt',
+    reorder: 'Neu anordnen',
+    reorderHint:
+      'Ziehe die Titel oder nutze die Pfeile und speichere dann die neue Reihenfolge.',
+    reorderSave: 'Reihenfolge speichern',
+    reordered: 'Reihenfolge gespeichert',
+    reorderStale:
+      'Jemand hat diese Playlist inzwischen geändert. Sie wurde neu geladen: Ordne sie erneut an.',
+    moveUp: 'Nach oben',
+    moveDown: 'Nach unten',
+    moveTop: 'An den Anfang',
+    moveBottom: 'Ans Ende',
+    repeatTitle: 'Bereits in dieser Playlist',
+    repeatBody: {
+      one: 'Dieser Titel ist bereits in „{name}“. Erneut hinzufügen?',
+      other:
+        '{count} dieser Titel sind bereits in „{name}“. Erneut hinzufügen?',
+    },
+    repeatConfirm: 'Trotzdem hinzufügen',
+    repeatCancel: 'Nicht hinzufügen',
+    inPlaylist: 'Bereits hinzugefügt',
     hideTrack: 'In Playlist ausblenden',
     hiddenTrack: 'In „{name}“ ausgeblendet',
     hiddenTitle: {

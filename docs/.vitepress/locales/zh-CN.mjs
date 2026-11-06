@@ -80,6 +80,7 @@ export default {
       'features/podcasts.md': '播客',
       'features/discover.md': '发现',
       'features/collaborative-playlists.md': '协作播放列表',
+      'features/playlist-order.md': '播放列表顺序与重复歌曲',
       'features/users.md': '用户与登录',
       'features/mobile-apps.md': '移动应用',
       'features/library-only.md': '仅媒体库模式',

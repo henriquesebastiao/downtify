@@ -31,6 +31,8 @@ export const STROKE = {
   'chevron-left': '<path d="m15 6-6 6 6 6"/>',
   'arrow-left': '<path d="M19 12H5m0 0 6-6m-6 6 6 6"/>',
   'arrow-up-right': '<path d="M7 17 17 7M8 7h9v9"/>',
+  'arrow-up-to-line': '<path d="M5 3h14M18 13l-6-6-6 6M12 7v14"/>',
+  'arrow-down-to-line': '<path d="M12 17V3M6 11l6 6 6-6M19 21H5"/>',
   sort: '<path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/>',
   trending: '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
   eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',

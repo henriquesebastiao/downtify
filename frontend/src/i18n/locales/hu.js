@@ -1007,6 +1007,26 @@ export default {
     },
     alreadyIn: 'Már benne van: „{name}”',
     removedTrack: 'Eltávolítva: „{name}”',
+    reorder: 'Átrendezés',
+    reorderHint:
+      'Húzd a számokat, vagy használd a nyilakat, majd mentsd az új sorrendet.',
+    reorderSave: 'Sorrend mentése',
+    reordered: 'Sorrend mentve',
+    reorderStale:
+      'Valaki időközben módosította ezt a listát. Újratöltöttük: rendezd át újra.',
+    moveUp: 'Feljebb',
+    moveDown: 'Lejjebb',
+    moveTop: 'Az elejére',
+    moveBottom: 'A végére',
+    repeatTitle: 'Már benne van ebben a listában',
+    repeatBody: {
+      one: 'Ez a szám már benne van: „{name}”. Hozzáadod újra?',
+      other:
+        'Ezek közül {count} szám már benne van: „{name}”. Hozzáadod őket újra?',
+    },
+    repeatConfirm: 'Hozzáadás mégis',
+    repeatCancel: 'Ne add hozzá',
+    inPlaylist: 'Már hozzáadva',
     hideTrack: 'Elrejtés a listáról',
     hiddenTrack: 'Elrejtve: „{name}”',
     hiddenTitle: {

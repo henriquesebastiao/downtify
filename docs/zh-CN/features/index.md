@@ -18,6 +18,7 @@ Downtify 提供构建和维护本地音乐库所需的各种功能。
 | [播放列表监控](playlist-monitor.md) | 监控 Spotify 或 YouTube Music 播放列表和艺人，自动下载新曲目和新发行内容 |
 | [隐藏的播放列表歌曲](hidden-playlist-songs.md) | 从已下载或正在监控的播放列表中排除不需要的歌曲，文件仍保留在媒体库 |
 | [协作播放列表](collaborative-playlists.md) | 允许指定共享媒体库播放列表的用户添加或移除歌曲；重命名、分享和删除仍由你管理 |
+| [播放列表顺序与重复歌曲](playlist-order.md) | 按任意顺序排列媒体库播放列表中的歌曲，并可在其中多次播放同一首歌曲 |
 | [热门歌曲](top-songs.md) | 粘贴艺人链接，下载其热门歌曲，也可将歌曲加入播放列表 |
 | [导入媒体库（CSV）](library-import.md) | 导入 Soundiiz、TuneMyMusic 或 Exportify 导出的媒体库，并将曲目加入队列 |
 | [内置播放器](player.md) | 在浏览器中播放媒体库，支持队列管理、同步歌词、睡眠定时器、键盘和媒体按键 |

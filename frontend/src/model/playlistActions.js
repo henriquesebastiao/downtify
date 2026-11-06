@@ -242,16 +242,38 @@ export function usePlaylistActions() {
     }
   }
 
-  async function addFiles(playlist, files) {
+  // A song the playlist already has is only added again once the user
+  // says so (`allowDuplicates` when they already did).
+  async function addFiles(playlist, files, { allowDuplicates = false } = {}) {
     const names = files.map((item) =>
       typeof item === 'string' ? item : item.file
     )
     try {
       const res = await API.editLibraryPlaylistTracks(playlist.name, {
         add: names,
+        allowDuplicates,
       })
       // The server skips what the playlist already has: report what it did.
-      const added = Number(res.data?.added ?? names.length)
+      let added = Number(res.data?.added ?? names.length)
+      const already = res.data?.already || []
+      if (already.length) {
+        const again = await ui.confirm({
+          title: t('playlists.repeatTitle'),
+          body: t('playlists.repeatBody', {
+            count: already.length,
+            name: playlist.title,
+          }),
+          confirmLabel: t('playlists.repeatConfirm'),
+          cancelLabel: t('playlists.repeatCancel'),
+        })
+        if (again) {
+          const repeat = await API.editLibraryPlaylistTracks(playlist.name, {
+            add: already,
+            allowDuplicates: true,
+          })
+          added += Number(repeat.data?.added ?? already.length)
+        }
+      }
       await library.load({ force: true })
       ui.toast(
         added
@@ -266,12 +288,18 @@ export function usePlaylistActions() {
     }
   }
 
+  // A path takes every copy of the song; a playlist row (a track, see
+  // withRepeats) only that copy.
   async function removeFiles(playlist, files) {
-    const names = files.map((item) =>
-      typeof item === 'string' ? item : item.file
-    )
+    const remove = files.filter((item) => typeof item === 'string')
+    const removeEntries = files
+      .filter((item) => typeof item !== 'string')
+      .map((track) => ({ file: track.file, occurrence: track.occurrence || 0 }))
     try {
-      await API.editLibraryPlaylistTracks(playlist.name, { remove: names })
+      await API.editLibraryPlaylistTracks(playlist.name, {
+        remove,
+        removeEntries,
+      })
       await library.load({ force: true })
       ui.toast(t('playlists.removedTrack', { name: playlist.title }), {
         kind: 'success',
@@ -280,6 +308,25 @@ export function usePlaylistActions() {
       ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
         kind: 'error',
       })
+    }
+  }
+
+  // Saves a Library playlist's new order. False when it changed in the
+  // meantime: it is reloaded, so the next try starts from what is there.
+  async function reorder(playlist, files) {
+    try {
+      await API.reorderLibraryPlaylist(playlist.name, files)
+      await library.load({ force: true })
+      ui.toast(t('playlists.reordered'), { kind: 'success' })
+      return true
+    } catch (err) {
+      if (err?.response?.status !== 409) {
+        failed(err)
+        return false
+      }
+      await library.load({ force: true })
+      ui.toast(t('playlists.reorderStale'), { kind: 'error' })
+      return false
     }
   }
 
@@ -647,6 +694,7 @@ export function usePlaylistActions() {
     renameNamed,
     addFiles,
     removeFiles,
+    reorder,
     hideFiles,
     showHidden,
     addMenuItems,

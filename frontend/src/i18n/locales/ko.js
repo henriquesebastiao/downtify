@@ -1001,6 +1001,25 @@ export default {
     },
     alreadyIn: '이미 “{name}”에 포함되어 있습니다',
     removedTrack: '“{name}”에서 제거됨',
+    reorder: '순서 변경',
+    reorderHint:
+      '곡을 끌어서 옮기거나 화살표를 사용한 다음 새 순서를 저장하세요.',
+    reorderSave: '순서 저장',
+    reordered: '순서를 저장했습니다',
+    reorderStale:
+      '그 사이에 누군가 이 재생목록을 변경했습니다. 다시 불러왔으니 순서를 다시 정해 주세요.',
+    moveUp: '위로 이동',
+    moveDown: '아래로 이동',
+    moveTop: '맨 위로 이동',
+    moveBottom: '맨 아래로 이동',
+    repeatTitle: '이미 이 재생목록에 있습니다',
+    repeatBody: {
+      one: '이 곡은 이미 “{name}”에 있습니다. 다시 추가할까요?',
+      other: '이 중 {count}곡은 이미 “{name}”에 있습니다. 다시 추가할까요?',
+    },
+    repeatConfirm: '그래도 추가',
+    repeatCancel: '추가 안 함',
+    inPlaylist: '이미 추가됨',
     hideTrack: '재생목록에서 숨기기',
     hiddenTrack: '“{name}”에서 숨김',
     hiddenTitle: {
