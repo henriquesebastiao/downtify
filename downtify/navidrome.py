@@ -221,6 +221,24 @@ def _normalize_tag(text: str) -> str:
     return unicodedata.normalize('NFC', str(text or '').strip()).casefold()
 
 
+def _title_matches_with_navidrome_suffix(
+    title: str, candidate_title: str
+) -> bool:
+    """Match titles when Navidrome appends a media source label."""
+
+    expected = _normalize_tag(title)
+    candidate = _normalize_tag(candidate_title)
+    if expected == candidate:
+        return True
+    if not expected or not candidate.startswith(f'{expected} ('):
+        return False
+    suffix = candidate[len(expected) + 2 :].strip()
+    if not suffix.endswith(')'):
+        return False
+    suffix = suffix[:-1].strip()
+    return suffix == 'pmedia' or bool(re.fullmatch(r'\[\d+\]\s*pl', suffix))
+
+
 def _duration_close(
     target_duration: int, candidate_duration: int, *, slack: int = 12
 ) -> bool:
@@ -349,10 +367,9 @@ def _pick_song_id_from_candidates(
         c_duration = int(candidate.get('duration') or 0)
 
         artist_match = artist and artist.casefold() in c_artist.casefold()
-        title_match = (
-            search_title.casefold() == c_title.casefold()
-            or title.casefold() == c_title.casefold()
-        )
+        title_match = _title_matches_with_navidrome_suffix(
+            search_title, c_title
+        ) or _title_matches_with_navidrome_suffix(title, c_title)
         duration_match = _duration_close(target_duration, c_duration, slack=10)
 
         if artist_match and title_match and duration_match:
