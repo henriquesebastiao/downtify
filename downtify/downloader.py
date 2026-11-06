@@ -1004,6 +1004,18 @@ class Downloader:
         subdir: Optional[str],
         cancel_check=None,
     ) -> str:
+        if self.overwrite_existing_files:
+            return self._download_impl(song, progress_cb, subdir, cancel_check)
+        with self._target_lock(song):
+            return self._download_impl(song, progress_cb, subdir, cancel_check)
+
+    def _download_impl(
+        self,
+        song: dict[str, Any],
+        progress_cb: Optional[ProgressCallback],
+        subdir: Optional[str],
+        cancel_check=None,
+    ) -> str:
         """:meth:`download` itself."""
 
         # A song sent to the music trash stays out until an admin restores
@@ -1101,22 +1113,16 @@ class Downloader:
                 provider,
             )
 
-        # Re-checked after enrichment (which can fill in the album/track
-        # number the path depends on), and serialized per target file so
-        # two downloads of the same song running at once — a duplicate row
-        # in one playlist, or two playlists sharing a track — can't both
-        # miss the check and fetch it twice.
-        with self._target_lock(song):
-            existing = self.find_existing_download(song, subdir)
-            if existing is not None:
-                return self._skip_existing(song, existing, progress_cb)
-            return self._downloaded(
-                song,
-                self._fetch_and_tag(
-                    song, video_id, progress_cb, subdir, provider
-                ),
-                provider,
-            )
+        # Re-check after enrichment while the target lock is still held,
+        # so every provider (including local slskd transfers) is serialized.
+        existing = self.find_existing_download(song, subdir)
+        if existing is not None:
+            return self._skip_existing(song, existing, progress_cb)
+        return self._downloaded(
+            song,
+            self._fetch_and_tag(song, video_id, progress_cb, subdir, provider),
+            provider,
+        )
 
     def _with_album_override(self, song: dict[str, Any]) -> dict[str, Any]:
         """*song* with what :attr:`album_override` says for its album."""

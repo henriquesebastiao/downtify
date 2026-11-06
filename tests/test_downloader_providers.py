@@ -3,7 +3,9 @@ plain YouTube and SoundCloud, on top of main's tagging pipeline."""
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier, Lock
 
 import pytest
 from mutagen.id3 import ID3
@@ -138,6 +140,47 @@ def test_slskd_copy_mode_uses_main_destination_and_keeps_format(
     assert (target / 'Artist - Track.mp3').is_file()
     assert (target / 'cover.jpg').read_bytes() == b'IMG-BYTES'
     assert not source.exists()
+
+
+def test_concurrent_slskd_downloads_share_the_target_lock(
+    tmp_path, monkeypatch, no_youtube
+):
+    slskd_dir, source = _slskd_file(tmp_path)
+    requests = []
+    requests_lock = Lock()
+
+    def find_source(*_args, **_kwargs):
+        with requests_lock:
+            requests.append(True)
+        return source
+
+    monkeypatch.setattr(downloader_mod, 'download_from_slskd', find_source)
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda _url: b'IMG-BYTES'
+    )
+    downloader = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['slskd'],
+        slskd_settings={
+            'enabled': True,
+            'leave_in_place': False,
+            'source_dir': str(slskd_dir),
+        },
+        organize_by_album=True,
+        overwrite_existing_files=False,
+    )
+    ready = Barrier(2)
+
+    def download():
+        ready.wait(timeout=5)
+        return downloader.download(dict(_SONG))
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _index: download(), range(2)))
+
+    assert results == ['Album/Artist - Track.mp3'] * 2
+    assert len(requests) == 1
+    assert len(list((tmp_path / 'downloads').rglob('*.mp3'))) == 1
 
 
 def test_slskd_source_is_kept_when_tagging_fails(
