@@ -1004,7 +1004,7 @@ class Downloader:
         subdir: Optional[str],
         cancel_check=None,
     ) -> str:
-        if self.overwrite_existing_files:
+        if getattr(self, 'overwrite_existing_files', True):
             return self._download_impl(song, progress_cb, subdir, cancel_check)
         with self._target_lock(song):
             return self._download_impl(song, progress_cb, subdir, cancel_check)
