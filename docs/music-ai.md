@@ -263,6 +263,9 @@ separate disk cache. No GPU or paid service is required. Do not confuse configur
 caps with actual usage, minimum hardware or a phone battery result. Android's
 64 MiB target bounds the audio allocator; artwork/offline caches have separate
 budgets. Its beta build enables R8, resource shrinking and shell profiling.
+The README records a separate post-deployment Docker usage snapshot from
+6 November 2026. Its uncontrolled workload cannot establish active-render
+throughput or a causal before/after performance improvement.
 Physical Macrobenchmark/baseline-profile measurements must use the real paired
 server and report Android version, startup, warm home, pause p95, memory,
 temperature and transport recovery. No physical-device numbers are claimed yet.

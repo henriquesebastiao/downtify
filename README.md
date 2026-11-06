@@ -66,7 +66,21 @@ and making zero full-catalog calls. The reconstructed former reconciliation
 path measured 2,812.54 ms median over three runs. This is an in-process
 comparison, **not** a LAN, NAS or Android benchmark.
 
-Latest corrective-candidate checks: 766 web tests passed (one skipped), a
+One post-deployment snapshot, about 50 minutes after startup on 6 November 2026,
+reported the following Docker process usage:
+
+| Component | Observed CPU | Observed memory |
+| --- | --- | --- |
+| Web | 0.24% | 283.9 MiB |
+| Analysis | 1.20% | 78.05 MiB |
+| DJ | 1.36% | 21.18 MiB |
+
+All three containers were running with zero restarts and no observed OOM exit.
+This is a **single uncontrolled snapshot**: model warm-up, concurrent work and
+playback load were not controlled. It establishes neither active-mix/inference
+throughput nor a controlled before/after improvement, minimum RAM or phone cost.
+
+Latest corrective-candidate checks: 771 web tests passed (one skipped), a
 production web build, 116 focused Python checks, 75 Linux DJ checks with local
 models, and 3,375 native/server checks plus ten subtests. Test groups overlap;
 they are not a subjective music-quality score. The broad server harness needs
