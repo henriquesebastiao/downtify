@@ -9,6 +9,7 @@ export function createDjStream({
 }) {
   let hls,
     loading,
+    clock,
     connected = false,
     generation = 0
   const number = (value) =>
@@ -98,21 +99,30 @@ export function createDjStream({
   }
   function unload() {
     generation++
+    clock = null
     hls?.destroy()
     hls = null
     connected = false
     loading = null
   }
   function position(origin) {
+    const time = Number.isFinite(media.currentTime) ? media.currentTime : 0
     if (Number.isFinite(origin) && origin > 0) {
+      // Program dates locate a late join in the mix. Once located, the audio
+      // clock owns progress; refreshed fragment metadata must not move it.
+      if (clock?.origin === origin) return Math.max(0, time + clock.offset)
       const date = hls?.playingDate
-      if (date instanceof Date && Number.isFinite(date.getTime()))
-        return Math.max(0, date.getTime() / 1000 - origin)
+      if (date instanceof Date && Number.isFinite(date.getTime())) {
+        clock = { origin, offset: date.getTime() / 1000 - origin - time }
+        return Math.max(0, time + clock.offset)
+      }
       const start = media.getStartDate?.()
-      if (start instanceof Date && Number.isFinite(start.getTime()))
-        return Math.max(0, start.getTime() / 1000 + media.currentTime - origin)
+      if (start instanceof Date && Number.isFinite(start.getTime())) {
+        clock = { origin, offset: start.getTime() / 1000 - origin }
+        return Math.max(0, time + clock.offset)
+      }
     }
-    return media.currentTime || 0
+    return time
   }
   return { connect, unload, position }
 }

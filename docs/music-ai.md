@@ -270,7 +270,7 @@ Physical Macrobenchmark/baseline-profile measurements must use the real paired
 server and report Android version, startup, warm home, pause p95, memory,
 temperature and transport recovery. No physical-device numbers are claimed yet.
 
-Current automated evidence: web 771 passed/one skipped plus production build;
+Current automated evidence: web 773 passed/one skipped plus production build;
 focused Python 116 passed; isolated Linux DJ 75 passed; isolated native/server
 3375 passed and ten subtests. Groups overlap. A synthetic local 50000-entry
 comparison measured home p50=46.49ms/p95=51.81ms (25 requests), max160 ids and
@@ -284,8 +284,17 @@ Pending gates: latest full Android build/tests and static checks; physical Pixel
 background/Bluetooth/latency/thermal tests; 20 comparative transitions and seed
 listening; one uninterrupted hour and longer battery testing. On-device Beat
 This! small0 ONNX export/inference and a dual-deck transport are unqualified;
-server mode remains the available implementation. A larger model is not a fix
+the Android companion offers an unqualified short-fade prototype without model
+inference, while server mode remains the initial choice. A larger model is not a fix
 for lifecycle races or full-catalog work on interactive requests.
+
+Web HLS position uses a program date to locate a late join, then advances on the
+audio element's clock. Refreshing fragment timestamps cannot move the listener
+cursor; real seeks, stalls and interruption events remain visible to continuity
+validation. Reconnection or a changed mix origin establishes a new anchor.
+Synthetic clock tests cover stale dates, genuine seeks and reconnection. This
+does not establish a successful one-hour stream: the latest live trial reset on
+clock drift and client interruption events, and the engine stays unqualified.
 
 Official references rechecked 6 November 2026:
 - https://developer.android.com/media/media3/session/player

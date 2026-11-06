@@ -34,7 +34,11 @@ function fixture(supported = true) {
       calls.destroy()
     }
   }
-  const media = { canPlayType: vi.fn(() => 'probably'), src: '' }
+  const media = {
+    canPlayType: vi.fn(() => 'probably'),
+    src: '',
+    currentTime: 0,
+  }
   const loadHls = vi.fn(async () => ({ default: Hls }))
   const options = {
     media,
@@ -47,6 +51,41 @@ function fixture(supported = true) {
 }
 
 describe('DJ stream lifecycle', () => {
+  it('keeps audio progress and real seeks independent of refreshed program dates', async () => {
+    const f = fixture()
+    const origin = Date.parse('2026-11-06T14:00:00Z') / 1000
+    f.media.currentTime = 12
+    f.Hls.prototype.playingDate = new Date((origin + 120) * 1000)
+    const stream = createDjStream(f.options)
+    await stream.connect()
+    expect(stream.position(origin)).toBe(120)
+    f.media.currentTime = 42
+    f.Hls.prototype.playingDate = new Date((origin + 148) * 1000)
+    expect(stream.position(origin)).toBe(150)
+    // A stall stays a stall, and a real seek remains visible to validation.
+    f.Hls.prototype.playingDate = new Date((origin + 180) * 1000)
+    expect(stream.position(origin)).toBe(150)
+    f.media.currentTime = 102
+    expect(stream.position(origin)).toBe(210)
+    stream.unload()
+    await stream.connect()
+    expect(stream.position(origin)).toBe(180)
+    expect(stream.position(origin + 60)).toBe(120)
+    stream.unload()
+  })
+  it('waits for a valid program date before pinning the mix origin', async () => {
+    const f = fixture()
+    const origin = Date.parse('2026-11-06T14:00:00Z') / 1000
+    const stream = createDjStream(f.options)
+    await stream.connect()
+    f.media.currentTime = 3
+    expect(stream.position(origin)).toBe(3)
+    f.Hls.prototype.playingDate = new Date((origin + 123) * 1000)
+    expect(stream.position(origin)).toBe(123)
+    f.media.currentTime = 8
+    expect(stream.position(origin)).toBe(128)
+    stream.unload()
+  })
   it('maps a late HLS join to the absolute mix position using program dates', async () => {
     const f = fixture()
     f.Hls.prototype.playingDate = new Date('2026-11-06T14:02:00Z')
