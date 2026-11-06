@@ -1,0 +1,110 @@
+name: Greetings
+
+on:
+  pull_request:
+    types:
+      - opened
+  issues:
+    types:
+      - opened
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  greeting:
+    name: Greet First-Time Contributors
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/first-interaction@v3
+        with:
+          issue_message: |
+            ## 👋 Welcome to Downtify, and thanks for opening your first issue!
+
+            Thanks for taking the time to report this. Bug reports, ideas and questions from users are how Downtify gets better. A maintainer will triage this issue as soon as possible. In the meantime, here's what helps us act on it quickly.
+
+            ### 🐛 Reporting a bug?
+
+            Please make sure the issue includes:
+
+            - **Downtify version** and **how you run it** (Docker, Docker Compose, Umbrel, local…).
+            - **Steps to reproduce**, plus what you expected and what happened instead.
+            - **The Spotify link** that triggers it, if any. Downtify only uses public endpoints, so the link isn't sensitive.
+            - **Logs** from around the time it failed:
+
+            ```bash
+            docker logs downtify --tail 100            # Docker
+            docker compose logs downtify --tail 100    # Docker Compose
+            ```
+
+            > [!TIP]
+            > Many download problems (YouTube "Sign in to confirm" errors, missing matches, wrong tags or covers) already have a fix in Troubleshooting. Updating to the latest version also solves a lot of them.
+
+            💡 Suggesting a feature?
+
+            - Start with the problem you're trying to solve, then the solution you have in mind. That makes it easier to find the best fit for the project.
+            - Downtify deliberately works without Spotify credentials, so features that need Spotify Premium or the Spotify Web API won't be accepted.
+
+            ❓ Asking a question?
+
+            Check the documentation first. Open-ended questions and setup help also fit well in Discussions, where other users can chime in.
+
+            🛠️  Want to fix it yourself?
+
+            You're very welcome to! Leave a comment here so nobody duplicates the work, then read CONTRIBUTING.md for the setup and PR checklist. For bigger changes, let's agree on the approach in this issue before you write the code. Translations of the app or the docs are
+            always welcome too: see Internationalization.
+
+            📌 Good to know
+
+            - We may ask follow-up questions. Issues with no activity for 60 days are marked stale and closed 7 days later, so a quick reply keeps yours open.
+            - Found a security vulnerability? Please don't discuss it publicly. Email contato@henriquesebastiao.com instead.
+
+            Thanks again, and welcome! 🎶
+          pr_message: |
+            ## 👋 Welcome to Downtify, and thanks for your first pull request!
+
+            It's great to have you here. Every contribution (code, tests, docs or translations) helps keep Downtify alive, and we're glad you chose to spend your time on it. A maintainer will review this PR as soon as possible. In the meantime, here's what helps it get merged
+            quickly.
+
+            ### ✅ Before review
+
+            - **Read [CONTRIBUTING.md](https://github.com/henriquesebastiao/downtify/blob/main/CONTRIBUTING.md)**: local setup, coding standards and the full PR checklist.
+            - **Rebase on the latest `main`** so the diff only contains your change.
+            - **Format and lint:** run `make format`, then `make lint` (Ruff for Python, Prettier for the frontend and docs). CI runs the same checks.
+            - **Run the tests:** `make test` (pytest + Vitest). New behavior should come with a test, or the description should explain why it can't.
+            - **Update the docs** if the change is user-facing (a new setting, env var, endpoint or UI control): a short note in `README.md` and the details in [`docs/`](https://github.com/henriquesebastiao/downtify/tree/main/docs).
+
+            <details>
+            <summary><strong>🧭 Project rules worth knowing</strong></summary>
+
+            <br>
+
+            - **Tests run offline.** Stub HTTP with fixtures or `monkeypatch`. Never call Spotify, YouTube or lrclib from a test.
+            - **The API is a contract.** The web app and the Android client depend on the current endpoint paths and response shapes. Add new endpoints or fields instead of renaming or removing existing ones.
+            - **No Spotify credentials.** `spotdl`, `spotipy` and the Spotify Web API were removed on purpose. Metadata comes from the public embed endpoints.
+            - **Don't hand-edit `requirements.txt`.** Change `pyproject.toml`, then run `uv lock && make export`.
+            - **Don't silence the linter** with `# noqa` or wider ignore rules. Fix the code instead.
+            - **UI text goes in the locale files** (`frontend/src/i18n/locales/en.js`), never hard-coded in components.
+            - **Don't bump the version.** The maintainer does that at release time.
+
+            </details>
+
+            ### 📝 A good PR description
+
+            - **What** changed and **why**, plus `Closes #123` if it fixes an issue.
+            - **Screenshots or a short clip** for UI changes.
+            - **How you tested it:** what you ran, and for changes to downloading, the track and playlist you pulled to check tags, cover art and lyrics.
+
+            ### 💬 Need help?
+
+            - Questions about the code or the direction of a change: ask right here, or open a thread in [Discussions](https://github.com/henriquesebastiao/downtify/discussions).
+            - Bigger changes go more smoothly when they start as an [issue](https://github.com/henriquesebastiao/downtify/issues), so we can agree on the scope first.
+            - Want to translate the app or the documentation? See [Internationalization](https://downtify.henriquesebastiao.com/features/internationalization/).
+            - Found a security issue? Please don't post it publicly. Email **contato@henriquesebastiao.com** instead.
+
+            Reviews are a conversation, so expect a round or two of feedback. That's normal, not a sign something is wrong. By contributing, you agree that your work is licensed under the project's [AGPL-3.0](https://github.com/henriquesebastiao/downtify/blob/main/LICENSE)
+            license.
+
+            Thanks again, and welcome aboard! 🎶
