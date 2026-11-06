@@ -106,6 +106,18 @@ def test_add_downloaded_and_extra_tracks(tmp_path):
     assert mix['files'] == edited['files']
 
 
+def test_edit_manual_playlist_accepts_747_tracks(tmp_path, monkeypatch):
+    tracks = [f'Track {index:04}.mp3' for index in range(747)]
+    ctx = _plain_library(tmp_path, monkeypatch, *tracks)
+    create_manual_playlist(ctx, 'Large mix')
+
+    edited = edit_manual_playlist(ctx, 'Large mix', add=tracks)
+
+    assert edited['count'] == 747
+    assert edited['added'] == 747
+    assert edited['files'] == tracks
+
+
 def test_cannot_edit_imported_playlist(tmp_path):
     download = tmp_path / 'downloads'
     track = download / 'Song.mp3'
