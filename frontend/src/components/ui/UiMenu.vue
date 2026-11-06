@@ -28,7 +28,13 @@
               @change="choose(item, $event)"
             >
               <option value="" disabled>{{ item.label }}</option>
-              <option v-for="option in item.options" :key="option.value" :value="option.value">{{ option.label }}</option>
+              <option
+                v-for="option in item.options"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
             </select>
           </label>
           <button
@@ -157,7 +163,9 @@ function choose(item, event) {
 }
 
 function onKeydown(event) {
-  const buttons = [...menuEl.value.querySelectorAll('button:not(:disabled), select')]
+  const buttons = [
+    ...menuEl.value.querySelectorAll('button:not(:disabled), select'),
+  ]
   if (event.target.tagName === 'SELECT' && event.key !== 'Escape') return
   const index = buttons.indexOf(document.activeElement)
   if (event.key === 'Escape') {

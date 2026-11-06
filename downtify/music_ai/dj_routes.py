@@ -189,7 +189,7 @@ def public(session, rows):
     result['timeline'] = session.get('timeline', [])
     if session['mode'] == 'interactive':
         result['commands'] = database().command_results(session['id'])
-        if session['state'] in ('playing', 'paused', 'ready'):
+        if session['state'] in {'playing', 'paused', 'ready'}:
             result['media_url'] = (
                 f'/api/v1/music-ai/dj/sessions/{session["id"]}/hls/index.m3u8'
             )
@@ -470,11 +470,11 @@ def hls(identity: str, filename: str, request: Request):
 
     session = owned(request, identity)
     visible_session(request, session)
-    if session['mode'] != 'interactive' or session['state'] not in (
+    if session['mode'] != 'interactive' or session['state'] not in {
         'playing',
         'paused',
         'ready',
-    ):
+    }:
         raise HTTPException(409, 'Le flux interactif n’est pas prêt.')
     if filename != 'index.m3u8' and not re.fullmatch(
         r'segment-[0-9]{8}\.ts', filename

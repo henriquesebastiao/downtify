@@ -371,13 +371,13 @@ downloads are shared, and files are never stored twice.
 from __future__ import annotations
 
 import asyncio
-import os
 import base64
 import concurrent.futures.thread as cf_thread
 import contextlib
 import hashlib
 import json
 import mimetypes
+import os
 import re
 import shutil
 import threading
@@ -9384,11 +9384,15 @@ async def similar_tracks_endpoint(
     """
 
     if os.environ.get('DOWNTIFY_MUSIC_AI_ENABLED') == '1':
-        from .music_ai.routes import similar
+        from .music_ai.routes import similar  # noqa: PLC0415
 
         return await similar(
-            request=request, artist=artist, track=track, limit=limit,
-            seed='', library_file='',
+            request=request,
+            artist=artist,
+            track=track,
+            limit=limit,
+            seed='',
+            library_file='',
         )
     return await _external_similar_tracks(artist, track, limit, request)
 
@@ -9549,9 +9553,11 @@ async def record_listen_endpoint(request: Request) -> dict[str, Any]:
     """
 
     if os.environ.get('DOWNTIFY_MUSIC_AI_ENABLED') == '1':
-        from .music_ai.routes import store as music_ai_store
+        from .music_ai.routes import store as music_ai_store  # noqa: PLC0415
 
-        if not music_ai_store().effective(request_user_id(request))['personalization']:
+        if not music_ai_store().effective(request_user_id(request))[
+            'personalization'
+        ]:
             return {'recorded': False}
 
     store = _require_discover()

@@ -76,7 +76,7 @@ def harmonic_cost(a: Profile, b: Profile) -> float:
     interval = (pitch_b - pitch_a) % 12
     if same_mode and interval == 0:
         return 0.0
-    if same_mode and interval in (5, 7):
+    if same_mode and interval in {5, 7}:
         return 0.15
     major, minor = (pitch_a, pitch_b) if a.key < 12 else (pitch_b, pitch_a)
     if not same_mode and (minor - major) % 12 == 9:

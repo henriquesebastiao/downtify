@@ -21,11 +21,17 @@ export const musicAI = {
   account,
   djSelection,
   selectForDj(tracks) {
-    djSelection.value = tracks.slice(0, 40).map(({ id, title, artist }) => ({ id, title, artist }))
+    djSelection.value = tracks
+      .slice(0, 40)
+      .map(({ id, title, artist }) => ({ id, title, artist }))
   },
   sourceUrl: `${http.defaults.baseURL}/api/v1/music-ai/source`,
   mediaUrl(path) {
-    if (!/^\/api\/v1\/music-ai\/dj\/sessions\/[a-f0-9]{32}\/(media|hls\/index\.m3u8)$/.test(path))
+    if (
+      !/^\/api\/v1\/music-ai\/dj\/sessions\/[a-f0-9]{32}\/(media|hls\/index\.m3u8)$/.test(
+        path
+      )
+    )
       throw new Error('Adresse de lecture DJ invalide')
     return `${http.defaults.baseURL}${path}`
   },
@@ -36,13 +42,28 @@ export const musicAI = {
     return (await http.post('/api/v1/music-ai/dj/sessions', selection)).data
   },
   async validateDj(selection) {
-    return (await http.post('/api/v1/music-ai/dj/admin/validation-sessions', selection)).data
+    return (
+      await http.post(
+        '/api/v1/music-ai/dj/admin/validation-sessions',
+        selection
+      )
+    ).data
   },
   async commandDj(id, command) {
-    return (await http.post(`/api/v1/music-ai/dj/sessions/${encodeURIComponent(id)}/commands`, command)).data
+    return (
+      await http.post(
+        `/api/v1/music-ai/dj/sessions/${encodeURIComponent(id)}/commands`,
+        command
+      )
+    ).data
   },
   async continuityDj(id, report) {
-    return (await http.post(`/api/v1/music-ai/dj/sessions/${encodeURIComponent(id)}/validation`, report)).data
+    return (
+      await http.post(
+        `/api/v1/music-ai/dj/sessions/${encodeURIComponent(id)}/validation`,
+        report
+      )
+    ).data
   },
   async stopDj(id) {
     await http.delete(`/api/v1/music-ai/dj/sessions/${encodeURIComponent(id)}`)

@@ -93,6 +93,7 @@ def validate_models(models):
 def analyze_child(options):
     import torch
     from beat_this.inference import Audio2Beats
+
     from .dj_evidence import profile_from_signal
 
     validate_models(options.models)

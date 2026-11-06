@@ -35,7 +35,9 @@ jobs:
         run: uv run ruff check .; uv run ruff check . --diff
 
       - name: Run pytest
-        run: uv run pytest -x -s -v
+        run: |
+          uv pip install --python .venv/bin/python -r requirements-music-ai-tests.txt
+          uv run --no-sync pytest -x -s -v
 
   frontend-test:
     name: Frontend tests

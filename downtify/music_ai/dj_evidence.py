@@ -83,10 +83,10 @@ def tonal_key(signal, rate):
     ])
     scores = []
     for template in (major, minor):
-        template = template - template.mean()
-        template /= np.linalg.norm(template)
+        normalized = template - template.mean()
+        normalized /= np.linalg.norm(normalized)
         scores.extend(
-            float(chroma @ np.roll(template, pitch)) for pitch in range(12)
+            float(chroma @ np.roll(normalized, pitch)) for pitch in range(12)
         )
     ordered = np.argsort(scores)
     best, runner = int(ordered[-1]), int(ordered[-2])

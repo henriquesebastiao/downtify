@@ -91,10 +91,18 @@ let stopAiTracking
 let aiRefreshTimer
 onMounted(() => {
   stopPolicy = startMusicPolicy()
-  stopAiTracking = player.observeAudio(audio => attachMusicAiListening(audio, () => player.currentTrack.value))
-  aiRefreshTimer = setInterval(() => { void musicAI.refresh() }, 15000)
+  stopAiTracking = player.observeAudio((audio) =>
+    attachMusicAiListening(audio, () => player.currentTrack.value)
+  )
+  aiRefreshTimer = setInterval(() => {
+    void musicAI.refresh()
+  }, 15000)
 })
-onUnmounted(() => { stopPolicy?.(); stopAiTracking?.(); clearInterval(aiRefreshTimer) })
+onUnmounted(() => {
+  stopPolicy?.()
+  stopAiTracking?.()
+  clearInterval(aiRefreshTimer)
+})
 
 // The Now playing overlay lives in the query string (?np=1); it must not
 // remount the page underneath it.

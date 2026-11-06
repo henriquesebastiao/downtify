@@ -13,8 +13,12 @@ const error = ref('')
 const searched = ref(false)
 const source = ref('local')
 const selection = ref({})
-const localEnabled = computed(() => musicAI.capabilities.value?.features?.similarity === true)
-const externalEnabled = computed(() => musicAI.capabilities.value?.features?.external_beta === true)
+const localEnabled = computed(
+  () => musicAI.capabilities.value?.features?.similarity === true
+)
+const externalEnabled = computed(
+  () => musicAI.capabilities.value?.features?.external_beta === true
+)
 const canSearch = computed(() => localEnabled.value || externalEnabled.value)
 // The endless list: the radio mix is finite per request, so pages are
 // chained by seeding each request from the last row.
@@ -26,19 +30,37 @@ watch(() => musicAI.account?.value, clear)
 watch(
   () => musicAI.capabilities.value?.features,
   (flags) => {
-    if (source.value === 'external' && !flags?.external_beta && flags?.similarity) setSource('local')
-    if (source.value === 'local' && !flags?.similarity && flags?.external_beta) setSource('external')
-    if (!flags?.[source.value === 'local' ? 'similarity' : 'external_beta']) clear()
+    if (
+      source.value === 'external' &&
+      !flags?.external_beta &&
+      flags?.similarity
+    )
+      setSource('local')
+    if (source.value === 'local' && !flags?.similarity && flags?.external_beta)
+      setSource('external')
+    if (!flags?.[source.value === 'local' ? 'similarity' : 'external_beta'])
+      clear()
   },
   { immediate: true }
 )
 
-async function fetchTracks(artist, track, mine = serial, choice = source.value, selected = selection.value, owner = musicAI.account?.value) {
+async function fetchTracks(
+  artist,
+  track,
+  mine = serial,
+  choice = source.value,
+  selected = selection.value,
+  owner = musicAI.account?.value
+) {
   await musicAI.refresh()
-  if (mine !== serial || owner !== musicAI.account?.value) throw new Error('Recherche remplacée.')
+  if (mine !== serial || owner !== musicAI.account?.value)
+    throw new Error('Recherche remplacée.')
   if (choice === 'local') {
-    if (!localEnabled.value) throw new Error('La similarité locale est désactivée.')
-    return Object.keys(selected).length ? musicAI.similar(artist, track, selected) : musicAI.similar(artist, track)
+    if (!localEnabled.value)
+      throw new Error('La similarité locale est désactivée.')
+    return Object.keys(selected).length
+      ? musicAI.similar(artist, track, selected)
+      : musicAI.similar(artist, track)
   }
   if (!externalEnabled.value) {
     throw new Error('La découverte externe bêta est désactivée.')

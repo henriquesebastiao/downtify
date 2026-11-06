@@ -126,11 +126,20 @@
                   class="aspect-square w-full min-h-0 min-w-0 transition-transform duration-500 ease-out-soft"
                   :class="player.isPlaying.value ? 'scale-100' : 'scale-[0.94]'"
                 />
-                <CoverArt v-if="player.dj.value?.next && player.dj.value.transition !== null"
-                  :src="player.dj.value.next.hasCover ? player.dj.value.next.cover : ''"
-                  :name="player.dj.value.next.title" rounded="rounded-[20px]"
+                <CoverArt
+                  v-if="
+                    player.dj.value?.next && player.dj.value.transition !== null
+                  "
+                  :src="
+                    player.dj.value.next.hasCover
+                      ? player.dj.value.next.cover
+                      : ''
+                  "
+                  :name="player.dj.value.next.title"
+                  rounded="rounded-[20px]"
                   class="pointer-events-none absolute inset-0 aspect-square w-full motion-reduce:transition-none"
-                  :style="{ opacity: player.dj.value.transition }" />
+                  :style="{ opacity: player.dj.value.transition }"
+                />
               </div>
               <div
                 class="flex w-full min-w-0 shrink-0 items-end justify-between gap-4"
@@ -232,7 +241,13 @@
                 @update:model-value="(v) => (scrub = v)"
                 @commit="commitSeek"
               />
-              <progress v-else class="h-1 flex-1 accent-violet-400" :value="player.currentTime.value" :max="player.duration.value || 1" aria-label="Progression du titre DJ" />
+              <progress
+                v-else
+                class="h-1 flex-1 accent-violet-400"
+                :value="player.currentTime.value"
+                :max="player.duration.value || 1"
+                aria-label="Progression du titre DJ"
+              />
               <span class="tabular w-12 text-right text-xs text-white/65">{{
                 formatDuration(player.duration.value)
               }}</span>
@@ -265,7 +280,12 @@
                 <!-- Left of shuffle: tracks like this one
                      (podcasts have none). -->
                 <button
-                  v-if="similarArtist && similarTitle && mixAvailable && !track?.stream"
+                  v-if="
+                    similarArtist &&
+                    similarTitle &&
+                    mixAvailable &&
+                    !track?.stream
+                  "
                   type="button"
                   class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
                   aria-label="Lancer un mix à partir de ce titre"
@@ -647,7 +667,8 @@ const speedMenu = computed(() =>
 const sleepMenu = computed(() => [
   { heading: t('player.sleepTimer') },
   ...[5, 10, 20, 30, 45, 60].map((minutes) => ({
-    label: minutes === 60 ? '1 h' : t('player.sleepMinutes', { count: minutes }),
+    label:
+      minutes === 60 ? '1 h' : t('player.sleepMinutes', { count: minutes }),
     action: () => player.setSleepTimer(minutes),
   })),
   {

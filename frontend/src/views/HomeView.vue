@@ -2,291 +2,322 @@
   <div
     class="mx-auto flex max-w-[1680px] flex-col gap-10 px-4 pt-6 sm:px-6 md:pt-8 lg:px-10"
   >
-    <div role="tablist" aria-label="Accueil" class="flex gap-2 border-b border-line-2 pb-3">
-      <button v-if="forYouAvailable" type="button" role="tab" :aria-selected="showForYou" aria-controls="home-for-you" class="rounded-control px-5 py-3 font-semibold" :class="showForYou ? 'bg-accent/10 text-accent' : 'text-muted'" @click="router.replace({ query: { ...route.query, tab: 'for-you' } })">Pour vous</button>
-      <button type="button" role="tab" :aria-selected="!showForYou" aria-controls="home-library" class="rounded-control px-5 py-3 font-semibold" :class="!showForYou ? 'bg-accent/10 text-accent' : 'text-muted'" @click="router.replace({ query: { ...route.query, tab: 'library' } })">Ma musique</button>
-    </div>
-    <div v-if="showForYou" id="home-for-you" role="tabpanel"><MusicForYou /></div>
-    <div v-else id="home-library" role="tabpanel" class="flex flex-col gap-10">
-    <!-- Hero: paste or search -->
     <div
-      class="grid gap-4 animate-rise lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
+      role="tablist"
+      aria-label="Accueil"
+      class="flex gap-2 border-b border-line-2 pb-3"
     >
-      <section
-        class="relative flex flex-col gap-5 overflow-hidden rounded-panel border border-line-2 bg-surface p-6 sm:p-8"
+      <button
+        v-if="forYouAvailable"
+        type="button"
+        role="tab"
+        :aria-selected="showForYou"
+        aria-controls="home-for-you"
+        class="rounded-control px-5 py-3 font-semibold"
+        :class="showForYou ? 'bg-accent/10 text-accent' : 'text-muted'"
+        @click="router.replace({ query: { ...route.query, tab: 'for-you' } })"
       >
-        <div
-          class="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-accent/10 blur-3xl"
-          aria-hidden="true"
-        />
-        <div class="relative flex flex-col gap-1.5">
-          <h1 class="text-display text-3xl font-bold sm:text-[32px]">
-            {{ greeting }}
-          </h1>
-          <p class="text-[15px] text-muted">{{ t('home.lead') }}</p>
-        </div>
-        <form
-          class="relative flex flex-col gap-2 sm:flex-row"
-          @submit.prevent="submit"
+        Pour vous
+      </button>
+      <button
+        type="button"
+        role="tab"
+        :aria-selected="!showForYou"
+        aria-controls="home-library"
+        class="rounded-control px-5 py-3 font-semibold"
+        :class="!showForYou ? 'bg-accent/10 text-accent' : 'text-muted'"
+        @click="router.replace({ query: { ...route.query, tab: 'library' } })"
+      >
+        Ma musique
+      </button>
+    </div>
+    <div v-if="showForYou" id="home-for-you" role="tabpanel">
+      <MusicForYou />
+    </div>
+    <div v-else id="home-library" role="tabpanel" class="flex flex-col gap-10">
+      <!-- Hero: paste or search -->
+      <div
+        class="grid gap-4 animate-rise lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
+      >
+        <section
+          class="relative flex flex-col gap-5 overflow-hidden rounded-panel border border-line-2 bg-surface p-6 sm:p-8"
         >
-          <label
-            class="flex h-14 min-w-0 flex-none items-center gap-3 rounded-[14px] sm:flex-1 border bg-bg px-4 transition-colors focus-within:border-accent"
-            :class="kind.type === 'link' ? 'border-accent/60' : 'border-line-3'"
+          <div
+            class="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-accent/10 blur-3xl"
+            aria-hidden="true"
+          />
+          <div class="relative flex flex-col gap-1.5">
+            <h1 class="text-display text-3xl font-bold sm:text-[32px]">
+              {{ greeting }}
+            </h1>
+            <p class="text-[15px] text-muted">{{ t('home.lead') }}</p>
+          </div>
+          <form
+            class="relative flex flex-col gap-2 sm:flex-row"
+            @submit.prevent="submit"
           >
-            <AppIcon
-              :name="kind.type === 'link' ? 'link' : 'search'"
-              :size="20"
-              :class="kind.type === 'link' ? 'text-accent' : 'text-faint'"
-            />
-            <span class="sr-only">{{ t('home.inputLabel') }}</span>
+            <label
+              class="flex h-14 min-w-0 flex-none items-center gap-3 rounded-[14px] sm:flex-1 border bg-bg px-4 transition-colors focus-within:border-accent"
+              :class="
+                kind.type === 'link' ? 'border-accent/60' : 'border-line-3'
+              "
+            >
+              <AppIcon
+                :name="kind.type === 'link' ? 'link' : 'search'"
+                :size="20"
+                :class="kind.type === 'link' ? 'text-accent' : 'text-faint'"
+              />
+              <span class="sr-only">{{ t('home.inputLabel') }}</span>
+              <input
+                v-model="text"
+                type="text"
+                enterkeyhint="go"
+                autocomplete="off"
+                :placeholder="t('home.inputPlaceholder')"
+                class="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-faint"
+              />
+            </label>
+            <UiButton
+              type="submit"
+              variant="primary"
+              size="lg"
+              class="!h-14 sm:!px-6"
+              :icon="kind.type === 'link' ? 'download' : 'search'"
+              :disabled="kind.type === 'empty'"
+            >
+              {{
+                kind.type === 'link'
+                  ? t('home.getIt')
+                  : t('search.searchButton')
+              }}
+            </UiButton>
+          </form>
+          <p v-if="unsupported" class="relative -mt-2 text-[13px] text-danger">
+            {{ unsupported }}
+          </p>
+          <div
+            class="relative flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-faint"
+          >
+            <span class="flex items-center gap-1.5">
+              <AppIcon name="spotify" :size="14" class="text-spotify" />{{
+                t('home.hintSpotify')
+              }}
+            </span>
+            <span class="flex items-center gap-1.5">
+              <AppIcon name="youtube" :size="14" class="text-src-ytm" />{{
+                t('home.hintYoutube')
+              }}
+            </span>
+            <span class="flex items-center gap-1.5">
+              <AppIcon name="deezer" :size="14" class="text-deezer" />{{
+                t('home.hintDeezer')
+              }}
+            </span>
+            <span class="flex items-center gap-1.5">
+              <AppIcon
+                name="soundcloud"
+                :size="14"
+                class="text-src-soundcloud"
+              />{{ t('home.hintSoundcloud') }}
+            </span>
+            <button
+              type="button"
+              class="flex items-center gap-1.5 hover:text-fg"
+              @click="csvPicker?.click()"
+            >
+              <AppIcon name="file-music" :size="14" />{{ t('home.hintCsv') }}
+            </button>
             <input
-              v-model="text"
-              type="text"
-              enterkeyhint="go"
-              autocomplete="off"
-              :placeholder="t('home.inputPlaceholder')"
-              class="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-faint"
+              ref="csvPicker"
+              type="file"
+              accept=".csv,text/csv"
+              class="hidden"
+              @change="importCsv"
             />
-          </label>
-          <UiButton
-            type="submit"
-            variant="primary"
-            size="lg"
-            class="!h-14 sm:!px-6"
-            :icon="kind.type === 'link' ? 'download' : 'search'"
-            :disabled="kind.type === 'empty'"
-          >
-            {{
-              kind.type === 'link' ? t('home.getIt') : t('search.searchButton')
-            }}
-          </UiButton>
-        </form>
-        <p v-if="unsupported" class="relative -mt-2 text-[13px] text-danger">
-          {{ unsupported }}
-        </p>
-        <div
-          class="relative flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-faint"
+          </div>
+        </section>
+
+        <section
+          class="flex flex-col gap-4 rounded-panel border border-line-2 bg-surface p-6"
         >
-          <span class="flex items-center gap-1.5">
-            <AppIcon name="spotify" :size="14" class="text-spotify" />{{
-              t('home.hintSpotify')
-            }}
-          </span>
-          <span class="flex items-center gap-1.5">
-            <AppIcon name="youtube" :size="14" class="text-src-ytm" />{{
-              t('home.hintYoutube')
-            }}
-          </span>
-          <span class="flex items-center gap-1.5">
-            <AppIcon name="deezer" :size="14" class="text-deezer" />{{
-              t('home.hintDeezer')
-            }}
-          </span>
-          <span class="flex items-center gap-1.5">
-            <AppIcon
-              name="soundcloud"
-              :size="14"
-              class="text-src-soundcloud"
-            />{{ t('home.hintSoundcloud') }}
-          </span>
-          <button
-            type="button"
-            class="flex items-center gap-1.5 hover:text-fg"
-            @click="csvPicker?.click()"
+          <div class="flex items-center justify-between">
+            <h2 class="text-[15px] font-semibold">
+              {{ pending ? t('home.downloading') : t('home.yourLibrary') }}
+            </h2>
+            <RouterLink
+              :to="{ name: pending ? 'Queue' : 'Library' }"
+              class="text-[13px] font-semibold text-accent hover:text-accent-hi"
+              >{{
+                pending ? t('home.openQueue') : t('home.openLibrary')
+              }}</RouterLink
+            >
+          </div>
+
+          <template v-if="pending">
+            <ul class="flex flex-col gap-3">
+              <li
+                v-for="item in activeItems"
+                :key="item.key"
+                class="flex items-center gap-3"
+              >
+                <CoverArt
+                  :src="item.song.cover_url"
+                  :name="item.song.album_name || item.song.name"
+                  rounded="rounded-[8px]"
+                  :letter-size="13"
+                  class="size-11"
+                />
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="truncate text-[13px] font-semibold">{{
+                      item.song.name
+                    }}</span>
+                    <SourceBadge
+                      v-if="item.provider"
+                      :source="item.provider"
+                      compact
+                    />
+                  </div>
+                  <UiProgress
+                    class="mt-2"
+                    :value="item.progress"
+                    :indeterminate="!item.progress"
+                  />
+                </div>
+              </li>
+            </ul>
+            <p
+              v-if="waiting"
+              class="border-t border-line pt-3 text-[13px] text-muted"
+            >
+              {{ t('home.waiting', { count: waiting }) }}
+            </p>
+          </template>
+
+          <dl v-else class="grid grid-cols-2 gap-4">
+            <div
+              v-for="stat in stats"
+              :key="stat.label"
+              class="flex flex-col gap-0.5"
+            >
+              <dt class="text-xs text-muted">{{ stat.label }}</dt>
+              <dd class="text-display tabular text-2xl font-semibold">
+                {{ stat.value }}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      </div>
+
+      <!-- Personal shortcuts stay below the welcome and library summary. -->
+      <div
+        v-if="jumpBackIn.length || favoriteEntries.length"
+        class="grid gap-5"
+        :class="
+          jumpBackIn.length && favoriteEntries.length ? 'lg:grid-cols-2' : ''
+        "
+        data-home-access
+      >
+        <HomeShelf
+          v-if="jumpBackIn.length"
+          kind="recent"
+          :title="t('home.jumpBackIn')"
+          :entries="jumpBackIn"
+        />
+        <HomeShelf
+          v-if="favoriteEntries.length"
+          kind="favorites"
+          :title="t('playlistFavorites.title')"
+          :entries="favoriteEntries"
+          @play="favoriteActions.play($event)"
+        />
+      </div>
+
+      <!-- Recently added -->
+      <section
+        v-if="recentAlbums.length"
+        class="flex flex-col gap-4 animate-rise [animation-delay:160ms]"
+      >
+        <div class="flex items-baseline justify-between gap-4">
+          <h2 class="text-display text-xl font-semibold">
+            {{ t('home.recentlyAdded') }}
+          </h2>
+          <RouterLink
+            :to="{ name: 'Library', params: { tab: 'albums' } }"
+            class="text-[13px] font-semibold text-muted hover:text-fg"
+            >{{ t('common.seeAll') }}</RouterLink
           >
-            <AppIcon name="file-music" :size="14" />{{ t('home.hintCsv') }}
-          </button>
-          <input
-            ref="csvPicker"
-            type="file"
-            accept=".csv,text/csv"
-            class="hidden"
-            @change="importCsv"
+        </div>
+        <div
+          class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6"
+        >
+          <MediaTile
+            v-for="album in recentAlbums"
+            :key="album.key"
+            :to="{
+              name: 'Album',
+              query: { artist: album.artist, title: album.title },
+            }"
+            :title="album.title"
+            :subtitle="[album.artist, album.year].filter(Boolean).join(' · ')"
+            :cover="album.cover"
+            :name="album.title"
+            @play="playAlbum(album)"
           />
         </div>
       </section>
 
+      <!-- Playlists -->
       <section
-        class="flex flex-col gap-4 rounded-panel border border-line-2 bg-surface p-6"
+        v-if="recentPlaylists.length"
+        class="flex flex-col gap-4 animate-rise [animation-delay:240ms]"
       >
-        <div class="flex items-center justify-between">
-          <h2 class="text-[15px] font-semibold">
-            {{ pending ? t('home.downloading') : t('home.yourLibrary') }}
+        <div class="flex items-baseline justify-between gap-4">
+          <h2 class="text-display text-xl font-semibold">
+            {{ t('home.playlists') }}
           </h2>
           <RouterLink
-            :to="{ name: pending ? 'Queue' : 'Library' }"
-            class="text-[13px] font-semibold text-accent hover:text-accent-hi"
-            >{{
-              pending ? t('home.openQueue') : t('home.openLibrary')
-            }}</RouterLink
+            :to="{ name: 'Library', params: { tab: 'playlists' } }"
+            class="text-[13px] font-semibold text-muted hover:text-fg"
+            >{{ t('common.seeAll') }}</RouterLink
           >
         </div>
-
-        <template v-if="pending">
-          <ul class="flex flex-col gap-3">
-            <li
-              v-for="item in activeItems"
-              :key="item.key"
-              class="flex items-center gap-3"
-            >
-              <CoverArt
-                :src="item.song.cover_url"
-                :name="item.song.album_name || item.song.name"
-                rounded="rounded-[8px]"
-                :letter-size="13"
-                class="size-11"
-              />
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="truncate text-[13px] font-semibold">{{
-                    item.song.name
-                  }}</span>
-                  <SourceBadge
-                    v-if="item.provider"
-                    :source="item.provider"
-                    compact
-                  />
-                </div>
-                <UiProgress
-                  class="mt-2"
-                  :value="item.progress"
-                  :indeterminate="!item.progress"
-                />
-              </div>
-            </li>
-          </ul>
-          <p
-            v-if="waiting"
-            class="border-t border-line pt-3 text-[13px] text-muted"
-          >
-            {{ t('home.waiting', { count: waiting }) }}
-          </p>
-        </template>
-
-        <dl v-else class="grid grid-cols-2 gap-4">
-          <div
-            v-for="stat in stats"
-            :key="stat.label"
-            class="flex flex-col gap-0.5"
-          >
-            <dt class="text-xs text-muted">{{ stat.label }}</dt>
-            <dd class="text-display tabular text-2xl font-semibold">
-              {{ stat.value }}
-            </dd>
-          </div>
-        </dl>
+        <div
+          class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6"
+        >
+          <MediaTile
+            v-for="playlist in recentPlaylists"
+            :key="playlist.key"
+            :to="{ name: 'Playlist', query: { name: playlist.name } }"
+            :title="playlist.title"
+            :subtitle="t('common.tracks', { count: itemTrackCount(playlist) })"
+            :cover="playlist.cover"
+            :covers="playlist.covers"
+            :name="playlist.title"
+            :icon="playlist.liked ? 'heart' : 'playlist'"
+            :symbol="playlist.liked"
+            @play="playlistActions.play(playlist)"
+          />
+        </div>
       </section>
-    </div>
 
-    <!-- Personal shortcuts stay below the welcome and library summary. -->
-    <div
-      v-if="jumpBackIn.length || favoriteEntries.length"
-      class="grid gap-5"
-      :class="
-        jumpBackIn.length && favoriteEntries.length ? 'lg:grid-cols-2' : ''
-      "
-      data-home-access
-    >
-      <HomeShelf
-        v-if="jumpBackIn.length"
-        kind="recent"
-        :title="t('home.jumpBackIn')"
-        :entries="jumpBackIn"
-      />
-      <HomeShelf
-        v-if="favoriteEntries.length"
-        kind="favorites"
-        :title="t('playlistFavorites.title')"
-        :entries="favoriteEntries"
-        @play="favoriteActions.play($event)"
-      />
-    </div>
-
-    <!-- Recently added -->
-    <section
-      v-if="recentAlbums.length"
-      class="flex flex-col gap-4 animate-rise [animation-delay:160ms]"
-    >
-      <div class="flex items-baseline justify-between gap-4">
-        <h2 class="text-display text-xl font-semibold">
-          {{ t('home.recentlyAdded') }}
-        </h2>
-        <RouterLink
-          :to="{ name: 'Library', params: { tab: 'albums' } }"
-          class="text-[13px] font-semibold text-muted hover:text-fg"
-          >{{ t('common.seeAll') }}</RouterLink
-        >
-      </div>
-      <div
-        class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6"
+      <!-- First run -->
+      <section
+        v-if="library.loaded.value && !library.trackCount.value"
+        class="grid gap-4 md:grid-cols-3"
       >
-        <MediaTile
-          v-for="album in recentAlbums"
-          :key="album.key"
-          :to="{
-            name: 'Album',
-            query: { artist: album.artist, title: album.title },
-          }"
-          :title="album.title"
-          :subtitle="[album.artist, album.year].filter(Boolean).join(' · ')"
-          :cover="album.cover"
-          :name="album.title"
-          @play="playAlbum(album)"
-        />
-      </div>
-    </section>
-
-    <!-- Playlists -->
-    <section
-      v-if="recentPlaylists.length"
-      class="flex flex-col gap-4 animate-rise [animation-delay:240ms]"
-    >
-      <div class="flex items-baseline justify-between gap-4">
-        <h2 class="text-display text-xl font-semibold">
-          {{ t('home.playlists') }}
-        </h2>
-        <RouterLink
-          :to="{ name: 'Library', params: { tab: 'playlists' } }"
-          class="text-[13px] font-semibold text-muted hover:text-fg"
-          >{{ t('common.seeAll') }}</RouterLink
+        <div
+          v-for="(step, i) in onboarding"
+          :key="step.title"
+          class="flex flex-col gap-2 rounded-panel border border-dashed border-line-3 p-5"
         >
-      </div>
-      <div
-        class="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6"
-      >
-        <MediaTile
-          v-for="playlist in recentPlaylists"
-          :key="playlist.key"
-          :to="{ name: 'Playlist', query: { name: playlist.name } }"
-          :title="playlist.title"
-          :subtitle="t('common.tracks', { count: itemTrackCount(playlist) })"
-          :cover="playlist.cover"
-          :covers="playlist.covers"
-          :name="playlist.title"
-          :icon="playlist.liked ? 'heart' : 'playlist'"
-          :symbol="playlist.liked"
-          @play="playlistActions.play(playlist)"
-        />
-      </div>
-    </section>
-
-    <!-- First run -->
-    <section
-      v-if="library.loaded.value && !library.trackCount.value"
-      class="grid gap-4 md:grid-cols-3"
-    >
-      <div
-        v-for="(step, i) in onboarding"
-        :key="step.title"
-        class="flex flex-col gap-2 rounded-panel border border-dashed border-line-3 p-5"
-      >
-        <span class="text-display tabular text-sm font-semibold text-accent"
-          >0{{ i + 1 }}</span
-        >
-        <p class="text-[15px] font-semibold">{{ step.title }}</p>
-        <p class="text-[13px] text-pretty text-muted">{{ step.body }}</p>
-      </div>
-    </section>
+          <span class="text-display tabular text-sm font-semibold text-accent"
+            >0{{ i + 1 }}</span
+          >
+          <p class="text-[15px] font-semibold">{{ step.title }}</p>
+          <p class="text-[13px] text-pretty text-muted">{{ step.body }}</p>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -318,8 +349,14 @@ import { useI18n } from '/src/i18n'
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
-const forYouAvailable = computed(() => ['personalization', 'daily', 'weekly'].some(key => musicAI.capabilities.value?.features?.[key] === true))
-const showForYou = computed(() => forYouAvailable.value && route.query.tab !== 'library')
+const forYouAvailable = computed(() =>
+  ['personalization', 'daily', 'weekly'].some(
+    (key) => musicAI.capabilities.value?.features?.[key] === true
+  )
+)
+const showForYou = computed(
+  () => forYouAvailable.value && route.query.tab !== 'library'
+)
 onMounted(() => musicAI.refresh())
 const library = useLibrary()
 const favoriteActions = usePlaylistActions()

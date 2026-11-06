@@ -51,6 +51,13 @@ preview = true
 quote-style = 'single'
 
 [tool.ruff.lint.per-file-ignores]
+# Companions load heavy audio dependencies lazily and implement worker protocols.
+# Numerical pipelines retain named intermediate values for review/debugging.
+"downtify/music_ai/*.py" = ["PLC0415", "PLR0914", "PLR0904", "PLR6301"]
+# Test doubles implement the same instance protocols; imports follow monkeypatches.
+# Invalid-input matrices check exception classes, without coupling error wording.
+"tests/music_ai/*.py" = ["PLC0415", "PLR6301", "PT011"]
+"curation/*.py" = ["E501", "PLR2004"]
 "main.py" = ["E501", "PLR0915", "PLR2004", "PLR1702", "PLR0912", "PLR0911"]
 "downloader.py" = ["PLC1901"]
 "downtify/*.py" = ["E501", "PLR0913", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916"]

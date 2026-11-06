@@ -8,8 +8,8 @@ import time
 from pathlib import Path
 
 from .encoder import Encoder
-from .store import ANALYSIS_FEATURES, MOODS, Store
 from .sqlite_busy import is_busy, retry_busy
+from .store import ANALYSIS_FEATURES, MOODS, Store
 
 
 class Deferred(Exception):

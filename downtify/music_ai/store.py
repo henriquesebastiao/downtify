@@ -104,15 +104,23 @@ class Store:
     def _freeze_existing_preferences(db):
         """Preserve deployed choices; all new accounts/installations opt in."""
         db.execute('BEGIN IMMEDIATE')
-        if db.execute("SELECT 1 FROM metadata WHERE key='beta_defaults_v2'").fetchone():
+        if db.execute(
+            "SELECT 1 FROM metadata WHERE key='beta_defaults_v2'"
+        ).fetchone():
             return
         rows = db.execute('SELECT owner,value FROM preferences').fetchall()
         legacy = {**DEFAULTS, **dict.fromkeys(ANALYSIS_FEATURES, True)}
         for row in rows:
             value = {**legacy, **json.loads(row['value'])}
-            db.execute('UPDATE preferences SET value=? WHERE owner=?', (json.dumps(value), row['owner']))
+            db.execute(
+                'UPDATE preferences SET value=? WHERE owner=?',
+                (json.dumps(value), row['owner']),
+            )
         global_flags = legacy if rows else DEFAULTS
-        db.execute('INSERT OR IGNORE INTO preferences VALUES (-1,?)', (json.dumps(global_flags),))
+        db.execute(
+            'INSERT OR IGNORE INTO preferences VALUES (-1,?)',
+            (json.dumps(global_flags),),
+        )
         db.execute("INSERT INTO metadata VALUES ('beta_defaults_v2','true')")
 
     @contextmanager

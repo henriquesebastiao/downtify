@@ -22,6 +22,13 @@ as the web process and only read-only audio roots. Operators must provision the
 state directory for their chosen runtime UID; no recursive library permission
 changes are needed. Runtime model downloading is disabled.
 
+For developer tests, install the native development environment first, then
+`uv pip install --python .venv/bin/python -r requirements-music-ai-tests.txt` and
+run `uv run --no-sync pytest tests/music_ai`. The extra dependencies are CPU
+signal fixtures, not the model runtimes or weights. FFmpeg/FFprobe integration
+tests skip explicitly when these executables are absent. Use the DJ image for
+the real encoder and UID acceptance checks.
+
 The CPU companion runs independently from the native web process. Mount the
 existing catalog roots read-only, and only
 the separate derived database directory read-write. Run without a network,

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-import subprocess
 import os
 import selectors
+import subprocess
 from pathlib import Path
 
 PIPELINE = 'dclap-logmel-48k-128-10s-hop5-chronological-v1'
@@ -16,7 +16,7 @@ def verify_manifest(directory: Path):
     directory = directory.resolve(strict=True)
     raw = (directory / 'manifest.json').read_bytes()
     manifest = json.loads(raw)
-    if manifest.get('format') not in (1, 2) or not manifest.get('files'):
+    if manifest.get('format') not in {1, 2} or not manifest.get('files'):
         raise ValueError('Unsupported model manifest')
     for relative, expected in manifest['files'].items():
         if not isinstance(relative, str) or Path(relative).is_absolute():

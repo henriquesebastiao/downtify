@@ -116,7 +116,7 @@ class LivePlan:
         )
 
     def change(self, action, payload, rendered, playhead, *, guard=6.0):
-        if action not in ('next', 'replace', 'theme') or not isinstance(
+        if action not in {'next', 'replace', 'theme'} or not isinstance(
             payload, dict
         ):
             raise ValueError('Invalid live plan command')

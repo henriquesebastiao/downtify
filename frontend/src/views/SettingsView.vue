@@ -31,7 +31,15 @@
             :class="section === item.id ? 'text-accent' : ''"
           />
           {{ item.label }}
-          <ExperimentalBadge v-if="item.experimental" :hint="item.id === 'ai' ? 'Fonctions IA expérimentales. La qualité dépend de l’analyse locale ; chaque module peut être désactivé.' : ''" class="lg:ml-auto" />
+          <ExperimentalBadge
+            v-if="item.experimental"
+            :hint="
+              item.id === 'ai'
+                ? 'Fonctions IA expérimentales. La qualité dépend de l’analyse locale ; chaque module peut être désactivé.'
+                : ''
+            "
+            class="lg:ml-auto"
+          />
         </RouterLink>
       </nav>
 

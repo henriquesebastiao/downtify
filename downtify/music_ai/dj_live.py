@@ -182,7 +182,7 @@ class LiveRenderer:
             action = command['action']
             original = self.plan.rows, self.plan.theme, self.plan.revision
             try:
-                if action in ('pause', 'resume'):
+                if action in {'pause', 'resume'}:
                     position = self.position()
                     self.paused = action == 'pause'
                     self.anchor_position, self.anchor = position, self.clock()

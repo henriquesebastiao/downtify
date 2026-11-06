@@ -208,7 +208,8 @@ export function useTrackActions() {
       {
         label: 'Lancer un mix à partir de ce titre',
         icon: 'wand',
-        hidden: !track.file || track.stream || track.isPodcast || !mixAvailable.value,
+        hidden:
+          !track.file || track.stream || track.isPodcast || !mixAvailable.value,
         disabled: songMixLoading.value,
         action: () => startSongMix(track),
       },

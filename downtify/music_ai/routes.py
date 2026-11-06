@@ -6,8 +6,8 @@ import asyncio
 import hashlib
 import json
 import time
-from pathlib import Path
 from functools import lru_cache, wraps
+from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -565,6 +565,7 @@ def resume_analysis(request: Request):
     return {'queued': True}
 
 
-from .dj_routes import router as dj_router
+# Register DJ after shared route adapters exist, avoiding a circular import.
+from .dj_routes import router as dj_router  # noqa: E402
 
 router.include_router(dj_router)

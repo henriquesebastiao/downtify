@@ -25,15 +25,24 @@ function recentPlaylistKey() {
 function recentPlaylists() {
   try {
     const value = JSON.parse(localStorage.getItem(recentPlaylistKey()) || '[]')
-    return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : []
-  } catch { return [] }
+    return Array.isArray(value)
+      ? value.filter((item) => typeof item === 'string')
+      : []
+  } catch {
+    return []
+  }
 }
 
 function rememberAddition(name, owner) {
   if (owner !== musicAI.account.value) return
   try {
-    localStorage.setItem(recentPlaylistKey(), JSON.stringify(rememberPlaylist(recentPlaylists(), name)))
-  } catch { /* Adding tracks remains available with browser storage disabled. */ }
+    localStorage.setItem(
+      recentPlaylistKey(),
+      JSON.stringify(rememberPlaylist(recentPlaylists(), name))
+    )
+  } catch {
+    /* Adding tracks remains available with browser storage disabled. */
+  }
 }
 
 const createOpen = ref(false)
@@ -212,7 +221,8 @@ export function usePlaylistActions() {
           add: files,
           sourcePlaylistUrl,
         })
-        if (Number(added.data?.added ?? files.length) > 0) rememberAddition(created, owner)
+        if (Number(added.data?.added ?? files.length) > 0)
+          rememberAddition(created, owner)
       }
       await library.load({ force: true })
       ui.toast(t('playlists.created', { name: created }), { kind: 'success' })
@@ -416,14 +426,21 @@ export function usePlaylistActions() {
         icon: 'playlist',
         action: () => addFiles(playlist, list),
       })),
-      ...(others.length ? [{
-        label: 'Autres playlists…',
-        options: others.map((playlist) => ({ value: playlist.name, label: playlist.title })),
-        action: (name) => {
-          const playlist = manuals().find((item) => item.name === name)
-          if (playlist) return addFiles(playlist, list)
-        },
-      }] : []),
+      ...(others.length
+        ? [
+            {
+              label: 'Autres playlists…',
+              options: others.map((playlist) => ({
+                value: playlist.name,
+                label: playlist.title,
+              })),
+              action: (name) => {
+                const playlist = manuals().find((item) => item.name === name)
+                if (playlist) return addFiles(playlist, list)
+              },
+            },
+          ]
+        : []),
       {
         label: t('playlists.new'),
         icon: 'plus',

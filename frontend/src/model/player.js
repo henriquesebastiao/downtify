@@ -73,13 +73,18 @@ const dj = ref(null)
 let djTransport = null
 let classicPosition = 0
 let djHandover = null
-function armDjHandover(callback) { djHandover = callback }
+function armDjHandover(callback) {
+  djHandover = callback
+}
 
 function attachDj(transport, { resumeNext = false } = {}) {
   if (djTransport) detachDj()
   const node = ensureAudio()
   classicPosition = node.currentTime || 0
-  if (resumeNext) { currentIndex.value = nextIndex(); classicPosition = 0 }
+  if (resumeNext) {
+    currentIndex.value = nextIndex()
+    classicPosition = 0
+  }
   playbackAttempt++
   node.pause()
   node.removeAttribute('src')
@@ -101,7 +106,11 @@ function detachDj() {
   const previous = djTransport
   djTransport = null
   previous?.unload()
-  if (audio) { audio.pause(); audio.removeAttribute('src'); audio.load() }
+  if (audio) {
+    audio.pause()
+    audio.removeAttribute('src')
+    audio.load()
+  }
   dj.value = null
   currentTime.value = classicPosition
   duration.value = playlist.value[currentIndex.value]?.duration || 0
@@ -124,7 +133,10 @@ function observeAudio(observe) {
   const observer = { observe, stop: null }
   audioObservers.add(observer)
   if (audio) observer.stop = observe(audio)
-  return () => { audioObservers.delete(observer); observer.stop?.() }
+  return () => {
+    audioObservers.delete(observer)
+    observer.stop?.()
+  }
 }
 
 function ensureAudio() {
@@ -217,10 +229,15 @@ function sameTrackOrder(a, b) {
 // ── Queue ────────────────────────────────────────────────────────────
 function startMix(seed, tracks) {
   if (djTransport) detachDj()
-  const keep = currentTrack.value?.file === seed.file && !currentTrack.value?.stream
+  const keep =
+    currentTrack.value?.file === seed.file && !currentTrack.value?.stream
   shuffle.value = false
   repeatMode.value = 'off'
-  context.value = { type: 'mix', title: `Mix · ${seed.title}`, subtitle: seed.artist }
+  context.value = {
+    type: 'mix',
+    title: `Mix · ${seed.title}`,
+    subtitle: seed.artist,
+  }
   if (!keep) {
     setPlaylist([seed, ...tracks], { startIndex: 0 })
     return
@@ -501,7 +518,12 @@ async function playUnresolved(index) {
     if (resolving.value === track) resolving.value = null
   }
   // The queue moved on (or the track left it) while resolving.
-  if (djTransport || playlist.value[index] !== track || currentIndex.value !== index) return
+  if (
+    djTransport ||
+    playlist.value[index] !== track ||
+    currentIndex.value !== index
+  )
+    return
   if (!url) {
     resolveFailures += 1
     if (resolveFailures >= MAX_RESOLVE_FAILURES) {
@@ -579,7 +601,11 @@ function startPlayback(a) {
 }
 
 function play() {
-  if (djTransport) { resumeEqualizer(); void djTransport.play(); return }
+  if (djTransport) {
+    resumeEqualizer()
+    void djTransport.play()
+    return
+  }
   if (libraryOnly.value && playlist.value[currentIndex.value]?.stream) return
   if (playlist.value.length === 0) return
   const a = ensureAudio()
@@ -612,7 +638,10 @@ function toggle() {
 }
 
 function seek(seconds) {
-  if (djTransport) { djTransport.seek?.(seconds); return }
+  if (djTransport) {
+    djTransport.seek?.(seconds)
+    return
+  }
   const a = ensureAudio()
   const max = duration.value || 0
   const clamped = Math.max(0, Math.min(max, seconds))
@@ -692,7 +721,10 @@ function prevIndex() {
 }
 
 function next() {
-  if (djTransport) { void djTransport.next(); return }
+  if (djTransport) {
+    void djTransport.next()
+    return
+  }
   const i = nextIndex()
   if (i < 0) {
     pause()
@@ -714,7 +746,10 @@ function prev() {
 }
 
 function onEnded() {
-  if (djTransport) { pause(); return }
+  if (djTransport) {
+    pause()
+    return
+  }
   if (djHandover) {
     const handover = djHandover
     djHandover = null
@@ -779,10 +814,12 @@ function setSleepTimer(minutes) {
 }
 
 // ── Derived state ────────────────────────────────────────────────────
-const currentTrack = computed(() =>
-  dj.value?.current || (currentIndex.value >= 0 && currentIndex.value < playlist.value.length
-    ? playlist.value[currentIndex.value]
-    : null)
+const currentTrack = computed(
+  () =>
+    dj.value?.current ||
+    (currentIndex.value >= 0 && currentIndex.value < playlist.value.length
+      ? playlist.value[currentIndex.value]
+      : null)
 )
 
 const progressPct = computed(() =>
@@ -791,7 +828,8 @@ const progressPct = computed(() =>
 
 /** Upcoming tracks, in the order they'll play: `[{ track, index }]`. */
 const upcoming = computed(() => {
-  if (dj.value) return dj.value.next ? [{ track: dj.value.next, index: -1 }] : []
+  if (dj.value)
+    return dj.value.next ? [{ track: dj.value.next, index: -1 }] : []
   const list = playlist.value
   // Reading these keeps the computed in step with shuffle/index changes.
   const current = currentIndex.value

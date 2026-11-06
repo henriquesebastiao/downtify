@@ -17,18 +17,60 @@
       </button>
     </div>
     <div v-if="djController.available.value" class="mx-2 mb-3">
-      <button type="button" class="rounded-full border border-white/20 px-3 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50"
+      <button
+        type="button"
+        class="rounded-full border border-white/20 px-3 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50"
         :aria-pressed="Boolean(player.dj.value || djController.busy.value)"
-        :disabled="!player.dj.value && !djController.busy.value && !djController.ready.value"
-        @click="player.dj.value || djController.busy.value ? djController.stop() : djController.startQueue()">
-        {{ player.dj.value || djController.busy.value ? 'Désactiver le mode DJ' : 'Mode DJ' }}
+        :disabled="
+          !player.dj.value &&
+          !djController.busy.value &&
+          !djController.ready.value
+        "
+        @click="
+          player.dj.value || djController.busy.value
+            ? djController.stop()
+            : djController.startQueue()
+        "
+      >
+        {{
+          player.dj.value || djController.busy.value
+            ? 'Désactiver le mode DJ'
+            : 'Mode DJ'
+        }}
       </button>
-      <p class="mt-2 text-xs text-white/60" role="status">{{ djController.notice.value || (!djController.ready.value ? 'Disponible après validation du moteur sur ce serveur.' : 'Transitions adaptées · ordre de la file conservé') }}</p>
-      <p v-if="djController.proof.value && musicAI.capabilities.value?.administrator" class="mt-2 text-xs text-white/60" role="status">Validation : {{ Math.floor(djController.proof.value.continuous_seconds / 60) }} min continues · {{ djController.proof.value.total_interruptions || 0 }} interruption(s).</p>
+      <p class="mt-2 text-xs text-white/60" role="status">
+        {{
+          djController.notice.value ||
+          (!djController.ready.value
+            ? 'Disponible après validation du moteur sur ce serveur.'
+            : 'Transitions adaptées · ordre de la file conservé')
+        }}
+      </p>
+      <p
+        v-if="
+          djController.proof.value && musicAI.capabilities.value?.administrator
+        "
+        class="mt-2 text-xs text-white/60"
+        role="status"
+      >
+        Validation :
+        {{ Math.floor(djController.proof.value.continuous_seconds / 60) }} min
+        continues ·
+        {{ djController.proof.value.total_interruptions || 0 }} interruption(s).
+      </p>
     </div>
-    <div v-if="player.dj.value?.transition !== null && player.dj.value" class="mx-2 mb-3 rounded-lg bg-white/10 p-3" role="status">
+    <div
+      v-if="player.dj.value?.transition !== null && player.dj.value"
+      class="mx-2 mb-3 rounded-lg bg-white/10 p-3"
+      role="status"
+    >
       <span class="text-xs font-semibold">Transition en cours</span>
-      <progress class="mt-2 h-1 w-full accent-violet-400 motion-reduce:transition-none" :value="player.dj.value.transition" max="1" aria-label="Transition vers le prochain titre" />
+      <progress
+        class="mt-2 h-1 w-full accent-violet-400 motion-reduce:transition-none"
+        :value="player.dj.value.transition"
+        max="1"
+        aria-label="Transition vers le prochain titre"
+      />
     </div>
 
     <div
@@ -103,7 +145,8 @@
             {{ item.track.duration ? formatDuration(item.track.duration) : '' }}
           </span>
           <button
-            v-if="!player.dj.value" type="button"
+            v-if="!player.dj.value"
+            type="button"
             class="hidden size-8 items-center justify-center rounded-full text-white/60 hover:bg-white/10 hover:text-white group-hover:flex"
             :aria-label="t('player.removeFromQueue')"
             @click="player.removeAt(item.index)"

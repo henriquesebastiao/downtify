@@ -131,7 +131,7 @@ class DjStore:
             not isinstance(intent, str)
             or not 1 <= len(intent) <= 8192
             or selection_basis
-            not in ('explicit', 'audio_similarity', 'dj_analysis')
+            not in {'explicit', 'audio_similarity', 'dj_analysis'}
         ):
             raise ValueError('Invalid selection intent')
         identity, now = secrets.token_hex(16), time.time()
@@ -299,7 +299,7 @@ class DjStore:
         return None
 
     def publish(self, identity, token, state, changes=None, *, now=None):
-        if state not in (*ACTIVE, 'ready', 'stopped', 'failed'):
+        if state not in {*ACTIVE, 'ready', 'stopped', 'failed'}:
             raise ValueError('Invalid render state')
         now = time.time() if now is None else now
         with self.database.connect() as db:
@@ -416,7 +416,7 @@ class DjStore:
         if (
             not isinstance(nonce, str)
             or not 1 <= len(nonce) <= 128
-            or action not in ('pause', 'resume', 'next', 'replace', 'theme')
+            or action not in {'pause', 'resume', 'next', 'replace', 'theme'}
             or not isinstance(payload, dict)
         ):
             raise ValueError('Invalid DJ command')
@@ -435,7 +435,7 @@ class DjStore:
             if row['state'] not in ACTIVE or row['lease_until'] <= now:
                 raise RuntimeError('DJ session is not rendering')
             document = json.loads(row['document'])
-            if action in ('pause', 'resume', 'next') and payload:
+            if action in {'pause', 'resume', 'next'} and payload:
                 raise ValueError('This command has no payload')
             if action == 'theme' and (
                 set(payload) != {'theme'}
@@ -472,7 +472,7 @@ class DjStore:
                 return json.loads(result[0])
             delay = (
                 0.0
-                if action in ('pause', 'resume')
+                if action in {'pause', 'resume'}
                 else max(
                     0.0,
                     float(document.get('next_mutable_at', 0))

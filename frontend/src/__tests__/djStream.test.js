@@ -2,19 +2,47 @@ import { describe, it, expect, vi } from 'vitest'
 import { createDjStream } from '../model/djStream'
 
 function fixture(supported = true) {
-  const calls = { created: vi.fn(), attach: vi.fn(), load: vi.fn(), destroy: vi.fn(), handlers: new Map() }
+  const calls = {
+    created: vi.fn(),
+    attach: vi.fn(),
+    load: vi.fn(),
+    destroy: vi.fn(),
+    handlers: new Map(),
+  }
   class Hls {
-    static Events = { ERROR: 'error', FRAG_LOADED: 'fragment', LEVEL_LOADED: 'playlist' }
-    static isSupported() { return supported }
-    constructor() { calls.created() }
-    on(event, callback) { calls.handlers.set(event, callback) }
-    attachMedia(media) { calls.attach(media) }
-    loadSource(url) { calls.load(url) }
-    destroy() { calls.destroy() }
+    static Events = {
+      ERROR: 'error',
+      FRAG_LOADED: 'fragment',
+      LEVEL_LOADED: 'playlist',
+    }
+    static isSupported() {
+      return supported
+    }
+    constructor() {
+      calls.created()
+    }
+    on(event, callback) {
+      calls.handlers.set(event, callback)
+    }
+    attachMedia(media) {
+      calls.attach(media)
+    }
+    loadSource(url) {
+      calls.load(url)
+    }
+    destroy() {
+      calls.destroy()
+    }
   }
   const media = { canPlayType: vi.fn(() => 'probably'), src: '' }
   const loadHls = vi.fn(async () => ({ default: Hls }))
-  const options = { media, url: '/local/stream.m3u8', current: () => true, onFatal: vi.fn(), loadHls }
+  const options = {
+    media,
+    url: '/local/stream.m3u8',
+    current: () => true,
+    onFatal: vi.fn(),
+    loadHls,
+  }
   return { calls, Hls, media, loadHls, options }
 }
 
@@ -42,7 +70,10 @@ describe('DJ stream lifecycle', () => {
     const stream = createDjStream(f.options)
     expect(f.loadHls).not.toHaveBeenCalled()
     expect(f.media.src).toBe('')
-    expect(await Promise.all([stream.connect(), stream.connect()])).toEqual([true, true])
+    expect(await Promise.all([stream.connect(), stream.connect()])).toEqual([
+      true,
+      true,
+    ])
     await stream.connect()
     expect(f.calls.created).toHaveBeenCalledTimes(1)
     expect(f.calls.attach).toHaveBeenCalledWith(f.media)
@@ -60,20 +91,27 @@ describe('DJ stream lifecycle', () => {
     expect(f.calls.created).not.toHaveBeenCalled()
   })
 
-  it.each(['unload', 'owner'])('cannot attach after %s during module loading', async (action) => {
-    const f = fixture()
-    let resolve, allowed = true
-    f.options.loadHls = () => new Promise(r => { resolve = r })
-    f.options.current = () => allowed
-    const stream = createDjStream(f.options)
-    const pending = stream.connect()
-    if (action === 'unload') stream.unload()
-    else allowed = false
-    resolve({ default: f.Hls })
-    expect(await pending).toBe(false)
-    expect(f.calls.created).not.toHaveBeenCalled()
-    expect(f.media.src).toBe('')
-  })
+  it.each(['unload', 'owner'])(
+    'cannot attach after %s during module loading',
+    async (action) => {
+      const f = fixture()
+      let resolve,
+        allowed = true
+      f.options.loadHls = () =>
+        new Promise((r) => {
+          resolve = r
+        })
+      f.options.current = () => allowed
+      const stream = createDjStream(f.options)
+      const pending = stream.connect()
+      if (action === 'unload') stream.unload()
+      else allowed = false
+      resolve({ default: f.Hls })
+      expect(await pending).toBe(false)
+      expect(f.calls.created).not.toHaveBeenCalled()
+      expect(f.media.src).toBe('')
+    }
+  )
 
   it('refuses unsupported playback without opening a source', async () => {
     const f = fixture(false)
@@ -99,10 +137,19 @@ describe('DJ stream lifecycle', () => {
     const onDiagnostic = vi.fn()
     const stream = createDjStream({ ...f.options, onDiagnostic })
     await stream.connect()
-    f.calls.handlers.get('error')(null, { type: 'networkError', details: 'fragLoadTimeOut',
-      fatal: false, response: { code: 503, url: '/private-secret' }, error: new Error('private-secret') })
+    f.calls.handlers.get('error')(null, {
+      type: 'networkError',
+      details: 'fragLoadTimeOut',
+      fatal: false,
+      response: { code: 503, url: '/private-secret' },
+      error: new Error('private-secret'),
+    })
     const value = onDiagnostic.mock.calls[0][0]
-    expect(value.error).toMatchObject({ type: 'networkError', detail: 'fragLoadTimeOut', http_status: 503 })
+    expect(value.error).toMatchObject({
+      type: 'networkError',
+      detail: 'fragLoadTimeOut',
+      http_status: 503,
+    })
     expect(JSON.stringify(value)).not.toContain('private-secret')
     stream.unload()
     f.calls.handlers.get('error')(null, { type: 'networkError' })

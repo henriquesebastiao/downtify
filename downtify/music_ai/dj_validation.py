@@ -54,7 +54,7 @@ def validated(proof, engine, runtime):
         for key in ('continuous_seconds', 'render_speed', 'interruptions')
     ]
     if not all(
-        type(value) in (int, float) and math.isfinite(value)
+        type(value) in {int, float} and math.isfinite(value)
         for value in values
     ):
         return False
@@ -88,7 +88,7 @@ def receive(store, session, position, sequence, *, interruptions=0, now=None):
         ).fetchone()
         if (
             not row
-            or row['state'] not in ('playing', 'paused')
+            or row['state'] not in {'playing', 'paused'}
             or row['lease_until'] <= now
         ):
             raise PermissionError('Validation session is not active')

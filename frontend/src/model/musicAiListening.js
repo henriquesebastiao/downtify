@@ -16,7 +16,13 @@ export function attachMusicAiListening(audio, currentTrack) {
     account.value &&
     musicAI.capabilities.value?.features.personalization === true
   function publish(outcome) {
-    if (!active || !enabled() || active.owner !== account.value || active.generation !== revision()) return
+    if (
+      !active ||
+      !enabled() ||
+      active.owner !== account.value ||
+      active.generation !== revision()
+    )
+      return
     const event = {
       event_id: active.id,
       library_file: active.file,
@@ -35,8 +41,16 @@ export function attachMusicAiListening(audio, currentTrack) {
     }
     const track = currentTrack()
     if (!track?.file || track.stream || track.episode || track.podcast) return
-    if (active?.file !== track.file || active.generation !== revision() || active.djOccurrence !== track.djOccurrence) {
-      publish(active?.djSession && active.djSession === track.djSession ? 'pause' : 'skip')
+    if (
+      active?.file !== track.file ||
+      active.generation !== revision() ||
+      active.djOccurrence !== track.djOccurrence
+    ) {
+      publish(
+        active?.djSession && active.djSession === track.djSession
+          ? 'pause'
+          : 'skip'
+      )
       const id = Array.from(
         crypto.getRandomValues(new Uint8Array(16)),
         (value) => value.toString(16).padStart(2, '0')
@@ -105,6 +119,7 @@ export function attachMusicAiListening(audio, currentTrack) {
     active = null
     stopAccount()
     stopFeatures()
-    for (const [event, handler] of handlers) audio.removeEventListener(event, handler)
+    for (const [event, handler] of handlers)
+      audio.removeEventListener(event, handler)
   }
 }

@@ -1,4 +1,5 @@
 """Explicit opt-in for functional fixtures written before beta became off by default."""
+
 from downtify.music_ai.store import ANALYSIS_FEATURES, Store
 
 

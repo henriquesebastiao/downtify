@@ -618,7 +618,7 @@ def build_app() -> FastAPI:
         )
         _open_library_stores(db_path)
         if os.getenv('DOWNTIFY_MUSIC_AI_ENABLED', '0') == '1':
-            from downtify.music_ai.indexer import loop as music_ai_index_loop
+            from downtify.music_ai.indexer import loop as music_ai_index_loop  # noqa: PLC0415
 
             api.spawn_task(music_ai_index_loop(), name='music-ai-index')
         if api.state.library_trash is not None:
@@ -864,7 +864,7 @@ def build_app() -> FastAPI:
     app.include_router(trash_routes.router)
     app.include_router(download_policy_routes.router)
     if os.getenv('DOWNTIFY_MUSIC_AI_ENABLED', '0') == '1':
-        from downtify.music_ai.routes import router as music_ai_router
+        from downtify.music_ai.routes import router as music_ai_router  # noqa: PLC0415
 
         app.include_router(music_ai_router)
 

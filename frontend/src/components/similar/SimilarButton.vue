@@ -45,6 +45,13 @@ function go() {
   const artist = String(props.artist || '').trim()
   const title = String(props.title || '').trim()
   if (!artist || !title) return
-  router.push({ name: 'Similar', query: { artist, track: title, ...(props.file ? { file: props.file } : {}) } })
+  router.push({
+    name: 'Similar',
+    query: {
+      artist,
+      track: title,
+      ...(props.file ? { file: props.file } : {}),
+    },
+  })
 }
 </script>

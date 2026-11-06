@@ -1,4 +1,4 @@
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 // Retry only temporary read failures. A disabled module, changed account or
 // disposed view cancels further requests; authentication failures never retry.

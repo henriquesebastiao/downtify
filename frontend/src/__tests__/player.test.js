@@ -244,16 +244,19 @@ describe('usePlayer queue', () => {
     expect(player.sleepAt.value).toBe(null)
   })
 
-  it.each([5, 10, 20, 30, 45, 60])('pauses after %i minutes without clearing the queue', (minutes) => {
-    vi.useFakeTimers()
-    player.setSleepTimer(minutes)
-    vi.advanceTimersByTime(minutes * 60000 - 1)
-    expect(player.isPlaying.value).toBe(true)
-    vi.advanceTimersByTime(1)
-    expect(player.isPlaying.value).toBe(false)
-    expect(player.sleepAt.value).toBe(null)
-    expect(titles()).toEqual(['One', 'Two', 'Three'])
-  })
+  it.each([5, 10, 20, 30, 45, 60])(
+    'pauses after %i minutes without clearing the queue',
+    (minutes) => {
+      vi.useFakeTimers()
+      player.setSleepTimer(minutes)
+      vi.advanceTimersByTime(minutes * 60000 - 1)
+      expect(player.isPlaying.value).toBe(true)
+      vi.advanceTimersByTime(1)
+      expect(player.isPlaying.value).toBe(false)
+      expect(player.sleepAt.value).toBe(null)
+      expect(titles()).toEqual(['One', 'Two', 'Three'])
+    }
+  )
 
   it('replaces and cancels a pending pause', () => {
     vi.useFakeTimers()

@@ -51,12 +51,16 @@ const ROWS = [
 
 describe('useSimilar', () => {
   beforeEach(async () => {
-    musicAI.capabilities.value = { features: { external_beta: true, similarity: true } }
+    musicAI.capabilities.value = {
+      features: { external_beta: true, similarity: true },
+    }
     await nextTick()
     useSimilar().setSource('external')
   })
   it('hides both search commands and makes no request when both modules are disabled', async () => {
-    musicAI.capabilities.value = { features: { external_beta: false, similarity: false } }
+    musicAI.capabilities.value = {
+      features: { external_beta: false, similarity: false },
+    }
     await nextTick()
     getSimilarTracks.mockClear()
     getLocalSimilar.mockClear()
@@ -67,13 +71,17 @@ describe('useSimilar', () => {
     expect(getLocalSimilar).not.toHaveBeenCalled()
   })
   it('chooses the only enabled source without exposing the other command', async () => {
-    musicAI.capabilities.value = { features: { external_beta: true, similarity: false } }
+    musicAI.capabilities.value = {
+      features: { external_beta: true, similarity: false },
+    }
     await nextTick()
     const similar = useSimilar()
     expect(similar.source.value).toBe('external')
     expect(similar.localEnabled.value).toBe(false)
     expect(similar.canSearch.value).toBe(true)
-    musicAI.capabilities.value = { features: { external_beta: false, similarity: true } }
+    musicAI.capabilities.value = {
+      features: { external_beta: false, similarity: true },
+    }
     await nextTick()
     expect(similar.source.value).toBe('local')
     expect(similar.externalEnabled.value).toBe(false)
