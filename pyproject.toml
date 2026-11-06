@@ -8,11 +8,11 @@ dependencies = [
     "fastapi>=0.162.0",
     "feedparser>=6.0.14",
     "httpx[socks]>=0.28.1",
-    "joserfc>=1.7.7",
+    "joserfc>=1.8.0",
     "load-dotenv>=0.1.0",
     "loguru>=0.7.3",
     "mutagen>=1.48.1",
-    "requests[socks]>=2.32.0",
+    "requests[socks]>=2.34.2",
     "uvicorn>=0.54.0",
     "websockets>=17.4",
     "yt-dlp>=2026.10.26",
@@ -25,7 +25,7 @@ dev = [
     "codeflash>=0.20.6",
     "httpx2>=2.16.0",
     "pytest>=9.2.0",
-    "ruff>=0.17.3",
+    "ruff>=0.17.4",
 ]
 
 [tool.pytest.ini_options]
