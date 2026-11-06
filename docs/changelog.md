@@ -4,6 +4,51 @@ icon: lucide/history
 
 # Changelog
 
+## [3.10.0](https://github.com/henriquesebastiao/downtify/tree/3.10.0) (2026-11-06)
+
+[Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.9.0...3.10.0)
+
+**Implemented enhancements:**
+
+- Native HTTP/SOCKS5 proxy support across outbound services \(optional strict mode\) [\#521](https://github.com/henriquesebastiao/downtify/issues/521)
+- Feature request: Remove Soulseek source copies after successful import into the Downtify library [\#493](https://github.com/henriquesebastiao/downtify/issues/493)
+- Apply the audio source order \(slskd first\) to downloads started from the search bar [\#420](https://github.com/henriquesebastiao/downtify/issues/420)
+- slskd: add strict format priority and allowed-format filtering \(e.g. FLAC → 320 kbps MP3\) [\#417](https://github.com/henriquesebastiao/downtify/issues/417)
+- Playlist diagnostics / health summary [\#402](https://github.com/henriquesebastiao/downtify/issues/402)
+- Feature request: connect with Spotify to choose imports from user playlists [\#383](https://github.com/henriquesebastiao/downtify/issues/383)
+- Feature Request: Lidarr-style Artist Library & Discography Monitoring [\#317](https://github.com/henriquesebastiao/downtify/issues/317)
+- Original file format downloading option [\#249](https://github.com/henriquesebastiao/downtify/issues/249)
+
+**Fixed bugs:**
+
+- Title Streaming from an album can play the wrong track: `videoIdFor()` takes the first search hit and ignores duration [\#514](https://github.com/henriquesebastiao/downtify/issues/514)
+- Navidrome playlist sync misses tracks unless "Report Real Path" is enabled [\#392](https://github.com/henriquesebastiao/downtify/issues/392)
+- Possible race condition: slskd downloads bypass the per-target lock [\#389](https://github.com/henriquesebastiao/downtify/issues/389)
+- 500 error viewing lyrics for FLAC files — ValueError in \_embedded\_lyrics [\#374](https://github.com/henriquesebastiao/downtify/issues/374)
+- ValueError during library upgrade scan on .opus files with embedded lyrics [\#371](https://github.com/henriquesebastiao/downtify/issues/371)
+- Every downloaded song is just called "unknown.mp3" [\#264](https://github.com/henriquesebastiao/downtify/issues/264)
+
+**Closed issues:**
+
+- Question: could manual playlists hold more than 500 tracks? [\#488](https://github.com/henriquesebastiao/downtify/issues/488)
+
+**Merged pull requests:**
+
+- Add first-interaction action [\#544](https://github.com/henriquesebastiao/downtify/pull/544) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix: improve playlist editing, Soulseek locking, and Navidrome matching [\#543](https://github.com/henriquesebastiao/downtify/pull/543) ([pakhozako](https://github.com/pakhozako))
+- feat\(playlists\): reorder Library playlists and repeat songs in them [\#541](https://github.com/henriquesebastiao/downtify/pull/541) ([ruflas](https://github.com/ruflas))
+- Add stale action [\#540](https://github.com/henriquesebastiao/downtify/pull/540) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(slskd\): remove source files after successful import [\#539](https://github.com/henriquesebastiao/downtify/pull/539) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(player\): reject streaming matches with wrong duration [\#538](https://github.com/henriquesebastiao/downtify/pull/538) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(lyrics\): safely read embedded lyrics across audio formats [\#537](https://github.com/henriquesebastiao/downtify/pull/537) ([pakhozako](https://github.com/pakhozako))
+- docs\(i18n\): add Simplified Chinese documentation [\#536](https://github.com/henriquesebastiao/downtify/pull/536) ([pakhozako](https://github.com/pakhozako))
+- feat\(proxy\): support strict outbound HTTP and SOCKS routing [\#535](https://github.com/henriquesebastiao/downtify/pull/535) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- fix\(download\): honor source order for search results [\#534](https://github.com/henriquesebastiao/downtify/pull/534) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(slskd\): add strict format priority and whitelist [\#533](https://github.com/henriquesebastiao/downtify/pull/533) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat: add playlist pipeline diagnostics [\#532](https://github.com/henriquesebastiao/downtify/pull/532) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(downloads\): keep the best available original audio [\#530](https://github.com/henriquesebastiao/downtify/pull/530) ([henriquesebastiao](https://github.com/henriquesebastiao))
+- feat\(i18n\): add Simplified Chinese \(zh-CN\) translation [\#529](https://github.com/henriquesebastiao/downtify/pull/529) ([pakhozako](https://github.com/pakhozako))
+
 ## [3.9.0](https://github.com/henriquesebastiao/downtify/tree/3.9.0) (2026-11-03)
 
 [Full Changelog](https://github.com/henriquesebastiao/downtify/compare/3.8.1...3.9.0)
