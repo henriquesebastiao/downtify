@@ -4,8 +4,8 @@
     icon="wand"
     tabindex="0"
     role="note"
-    :title="t('settings.experimentalHint')"
-    :aria-label="`${t('settings.experimental')}: ${t('settings.experimentalHint')}`"
+    :title="hint || t('settings.experimentalHint')"
+    :aria-label="`${t('settings.experimental')}: ${hint || t('settings.experimentalHint')}`"
   >
     {{ t('settings.experimental') }}
   </UiBadge>
@@ -19,4 +19,5 @@ import UiBadge from './UiBadge.vue'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
+defineProps({ hint: { type: String, default: '' } })
 </script>

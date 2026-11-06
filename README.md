@@ -28,6 +28,49 @@
   <img src="assets/readme-hero.png" alt="Downtify 3.0: paste a Spotify link, get the music. The home screen, the full-screen player and the mobile app." width="100%">
 </p>
 
+## Experimental music AI and DJ beta
+
+I am testing an optional local recommendation and DJ companion. **All seven
+modules default off** for new installations and accounts; administrators enable
+server capabilities and each user chooses their own synchronized preferences.
+Existing explicit choices are preserved during upgrades.
+
+Home → **For you** contains daily/weekly mood playlists and continuous themed DJ
+shortcuts. Song actions can start a mix from that exact local title. The normal
+player gains a DJ button for its current queue, current/next title metadata and
+transition progress. Sleep timers and a bounded recent-playlist menu also work
+with ordinary playback. External discovery is a separate opt-in beta; continuous
+DJ uses local files and does not fall back to a radio.
+
+| Resource | Operator budget / behavior |
+| --- | --- |
+| Analysis companion | CPU ONNX/DCLAP, one thread; example cap: 1 CPU, 1.5 GiB RAM |
+| DJ companion | CPU Beat This! + Rubber Band; example cap: 1 CPU, 2 GiB RAM |
+| DJ cache | Separate 5 GiB default, configurable; 2 GiB free-disk reserve |
+| Embeddings | 512 float32 values = 2 KiB/title; ~195 MiB raw for 100,000 titles, before database overhead |
+| Interactive transport | One render session, shared by its clients; six-second HLS segments |
+
+These are configurable budgets and storage arithmetic, **not measured minimum
+requirements or a hardware performance guarantee**. No GPU or paid AI service is
+required. Analysis and mixing run outside the web process; originals are mounted
+read-only. See [the operator and licensing guide](docs/music-ai.md).
+
+The delivered candidate passed 760 frontend tests (one skipped) and its production
+build. Focused Linux checks passed 69 native/API tests, 91 preference/privacy/route
+tests and 63 DJ tests as UID 1000. These groups overlap and must not be summed into
+a unique total. The companion's latest engine still needs a real uninterrupted
+one-hour playback test, sustained rendering above 1.5× real time and zero
+interruptions before ordinary interactive creation is enabled. That acceptance
+test is deliberately separate from synthetic tests. Human comparative listening,
+resource measurements under sustained load and physical Android background
+recovery remain pending. This contribution is a **draft beta**.
+
+Continuous selection currently cycles a bounded pool (24 tracks for theme
+shortcuts, up to 40 from the queue), avoids recent repeats when possible and
+extends only uncommitted audio. Commands take effect at the next available
+transition, with the effective delay shown. It does not yet choose indefinitely
+from the entire library. Prepared sets are available separately.
+
 ## Overview
 
 Downtify is a self-hosted web app that turns Spotify and YouTube Music links into a tagged audio library. It never touches the Spotify API, and it needs no account and no Premium subscription. It also plays that library back, so what you download is one tab away from listening.

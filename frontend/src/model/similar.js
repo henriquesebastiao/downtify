@@ -1,9 +1,8 @@
-// Tracks similar to one track, via YouTube Music's own radio mix
-// (the Similar page). Needs no API key.
+// Existing Similar page: local sound analysis and explicitly enabled external radio.
 import { computed, ref, watch } from 'vue'
 import { libraryOnly } from '/src/model/musicPolicy'
 
-import API from '/src/model/api'
+import { musicAI } from '/src/model/musicAI'
 import { useLibrary } from '/src/model/library'
 
 const artist = ref('')
@@ -12,12 +11,46 @@ const tracks = ref([])
 const loading = ref(false)
 const error = ref('')
 const searched = ref(false)
+const source = ref('local')
+const selection = ref({})
+const localEnabled = computed(() => musicAI.capabilities.value?.features?.similarity === true)
+const externalEnabled = computed(() => musicAI.capabilities.value?.features?.external_beta === true)
+const canSearch = computed(() => localEnabled.value || externalEnabled.value)
 // The endless list: the radio mix is finite per request, so pages are
 // chained by seeding each request from the last row.
 const hasMore = ref(true)
 const loadingMore = ref(false)
 let serial = 0
 watch(libraryOnly, clear)
+watch(() => musicAI.account?.value, clear)
+watch(
+  () => musicAI.capabilities.value?.features,
+  (flags) => {
+    if (source.value === 'external' && !flags?.external_beta && flags?.similarity) setSource('local')
+    if (source.value === 'local' && !flags?.similarity && flags?.external_beta) setSource('external')
+    if (!flags?.[source.value === 'local' ? 'similarity' : 'external_beta']) clear()
+  },
+  { immediate: true }
+)
+
+async function fetchTracks(artist, track, mine = serial, choice = source.value, selected = selection.value, owner = musicAI.account?.value) {
+  await musicAI.refresh()
+  if (mine !== serial || owner !== musicAI.account?.value) throw new Error('Recherche remplacée.')
+  if (choice === 'local') {
+    if (!localEnabled.value) throw new Error('La similarité locale est désactivée.')
+    return Object.keys(selected).length ? musicAI.similar(artist, track, selected) : musicAI.similar(artist, track)
+  }
+  if (!externalEnabled.value) {
+    throw new Error('La découverte externe bêta est désactivée.')
+  }
+  return musicAI.externalSimilar(artist, track)
+}
+
+function setSource(value) {
+  if (!['local', 'external'].includes(value)) throw new Error('Unknown source')
+  if (source.value !== value) clear()
+  source.value = value
+}
 
 function songKey(item) {
   const id = String(item?.song_id || '')
@@ -35,7 +68,8 @@ function songKey(item) {
   return `${a}|${n}`
 }
 
-async function searchFor(seedArtist, seedTrack) {
+async function searchFor(seedArtist, seedTrack, exact = {}) {
+  selection.value = exact
   const a = String(seedArtist || '').trim()
   const t = String(seedTrack || '').trim()
   artist.value = a
@@ -49,11 +83,11 @@ async function searchFor(seedArtist, seedTrack) {
   const mine = ++serial
   loading.value = true
   loadingMore.value = false
-  hasMore.value = true
+  hasMore.value = source.value === 'external'
   error.value = ''
   searched.value = true
   try {
-    const res = await API.getSimilarTracks(a, t)
+    const res = await fetchTracks(a, t)
     if (mine !== serial) return
     tracks.value = res.data?.tracks || []
   } catch (err) {
@@ -85,7 +119,7 @@ async function loadMore() {
   const mine = serial
   loadingMore.value = true
   try {
-    const res = await API.getSimilarTracks(seedArtist, seedTrack)
+    const res = await fetchTracks(seedArtist, seedTrack)
     if (mine !== serial) return []
     const fresh = (res.data?.tracks || []).filter(
       (item) => !list.some((known) => songKey(known) === songKey(item))
@@ -140,6 +174,12 @@ export function useSimilar() {
     }))
   )
   return {
+    source,
+    localEnabled,
+    externalEnabled,
+    canSearch,
+    setSource,
+    capabilities: musicAI.capabilities,
     artist,
     track,
     tracks,

@@ -1,0 +1,40 @@
+FROM python@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df AS sqlite_build
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=sqlite_source /sqlite3.c /sqlite3.h /build/
+RUN python -c "import hashlib; from pathlib import Path; assert hashlib.sha3_256(Path('/build/sqlite3.c').read_bytes()).hexdigest() == '67f423e9ebbbdc473cbc4772c872ee6b89f31fde4ed0279a5c25d5f65c043a16'" \
+    && mkdir -p /out \
+    && gcc -O2 -fPIC -shared -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_RTREE \
+       -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_ENABLE_MATH_FUNCTIONS -DSQLITE_ENABLE_DBSTAT_VTAB \
+       -Wl,-soname,libsqlite3.so.0 -o /out/libsqlite3.so.0 /build/sqlite3.c -ldl -lm -lpthread
+FROM python@sha256:413041be39649714885528a06586416279db85744b6dcdf290af0ae557d782f6
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
+    OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+    NUMBA_NUM_THREADS=1 USE_TORCH=0 USE_TF=0 \
+    HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false \
+    NUMBA_CACHE_DIR=/tmp/numba HF_HOME=/tmp/huggingface
+RUN apt-get update && apt-get install -y --no-install-recommends libsndfile1 libgomp1 libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=ghcr.io/henriquesebastiao/downtify@sha256:663b2c3e193cd4f2792968071b45524316ad622c49abd54546531d69ab5ca2a0 /usr/local/bin/ffmpeg /usr/local/bin/ffprobe /usr/local/bin/
+WORKDIR /app
+COPY requirements-music-ai-audio.txt ./requirements-music-ai.txt
+RUN mkdir -p /usr/share/doc/music-ai \
+    && python -m pip install --no-cache-dir -r requirements-music-ai.txt \
+    && python -m pip freeze > /usr/share/doc/music-ai/python-lock.txt \
+    && python -m pip uninstall -y pip
+RUN mkdir -p /app/downtify/music_ai /models && touch /app/downtify/__init__.py
+COPY --from=audio_bundle --chmod=444 /manifest.json /moods.json /model_epoch_36.onnx /model_epoch_36.onnx.data /models/
+COPY downtify/music_ai/__init__.py downtify/music_ai/store.py downtify/music_ai/encoder.py downtify/music_ai/worker.py downtify/music_ai/sqlite_busy.py /app/downtify/music_ai/
+COPY downtify/music_ai/ranking.py /app/downtify/music_ai/
+COPY curation/benchmark_companion.py /app/benchmark_companion.py
+COPY LICENSE /usr/share/licenses/music-ai/AGPL-3.0.txt
+COPY docs/music-ai.md /usr/share/doc/music-ai/README.md
+COPY docs/sqlite-runtime.md /usr/share/doc/music-ai/sqlite-runtime.md
+COPY Dockerfile.music-ai /usr/share/doc/music-ai/Dockerfile
+COPY curation/prepare_audio_bundle.py /usr/share/doc/music-ai/prepare_audio_bundle.py
+COPY --from=sqlite_build --chmod=555 /out/libsqlite3.so.0 /opt/sqlite/lib/libsqlite3.so.0
+ENV LD_LIBRARY_PATH=/opt/sqlite/lib
+RUN python -c "import sqlite3; assert sqlite3.sqlite_version == '3.53.4'"
+USER 1000:1000
+ENTRYPOINT ["python", "-m", "downtify.music_ai.worker"]
+CMD ["--database", "/state/derived.db", "--models", "/models", "--root", "/downloads", "--root", "/slskd", "--root", "/music/existing"]

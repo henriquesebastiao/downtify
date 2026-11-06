@@ -1,0 +1,217 @@
+# Optional local music analysis
+
+**Experimental beta: all seven modules default off for new installations and
+accounts.** Existing explicit preferences are retained. Set
+`DOWNTIFY_MUSIC_AI_ENABLED=1` only after supplying the optional web dependencies,
+matching companion images, verified model build contexts and shared derived
+state. This flag exposes capabilities; it does not opt users into modules.
+
+For the optional web recipe, build the frontend with `npm ci` and `npm run build`
+inside `frontend/`. Create a source offer from the committed public revision using
+`git archive --format=tar.gz --output=<source-offer-directory>/source.tar.gz HEAD`.
+Build `Dockerfile.music-ai-web` with
+`--build-context source_offer=<source-offer-directory>`. Keep that corresponding
+source archive available to authenticated users of modified builds.
+
+The analysis recipe also needs `audio_bundle` and `sqlite_source` named contexts;
+the DJ recipe needs `dj_models` and `sqlite_source`. Models are public upstream
+inputs, not music-library files. Do not generate a trusted manifest from arbitrary
+downloads: compare upstream provenance and expected hashes before bundle creation.
+Deploy the companions without network access, using the same derived-state mount
+as the web process and only read-only audio roots. Operators must provision the
+state directory for their chosen runtime UID; no recursive library permission
+changes are needed. Runtime model downloading is disabled.
+
+The CPU companion runs independently from the native web process. Mount the
+existing catalog roots read-only, and only
+the separate derived database directory read-write. Run without a network,
+without Docker access and with all Linux capabilities dropped. Match the web
+process runtime identity for the shared private SQLite database. The standalone
+image defaults to UID/GID 1000. Match this to your native runtime user.
+Neither provider credentials nor the native application data directory are
+mounted in the companion. No provider credentials are required.
+The web process supplies jobs using the existing catalog and visibility rules.
+
+DCLAP v1 weights and the LAION tokenizer revision are verified against the model
+manifest before loading. The six fixed English descriptions are encoded once
+with the pinned reference text tower during bundle preparation. The runtime
+contains only the small audio tower and those verified fixed vectors; it does
+not load the text tower or Transformers. Audio analysis uses chronological ten
+second windows with five second overlap, bounded PCM buffering and CPU ONNX
+sessions with one thread. The worker checks pause, native activity, leases and
+file changes before publishing derived vectors. Original music is never changed.
+
+Sources checked 2026-11-05:
+
+- DCLAP: https://github.com/NeptuneHub/AudioMuse-AI-DCLAP
+- DCLAP license: https://github.com/NeptuneHub/AudioMuse-AI-DCLAP/blob/main/LICENSE
+- LAION CLAP: https://github.com/LAION-AI/CLAP
+- ONNX Runtime: https://onnxruntime.ai/docs/
+
+DCLAP's repository uses AGPL-3.0. The companion includes that license, its full
+Python source and the dependency/build recipe. Preserve these with modifications
+and provide corresponding source to the users of the modified service. Upstream
+model and dataset notices remain applicable; no training audio is redistributed.
+
+Prepare the bundle with `curation/prepare_audio_bundle.py` in the reference
+environment. Build with `--build-context audio_bundle=/path/to/public/bundle`.
+The four public model files are copied into the image with read-only file modes.
+Compare audio and normalized mood vector hashes against the reference benchmark
+before using a new bundle. The final image requires no model mount. Preserve the
+original reference release for reproducibility.
+
+Each module has an administrator switch and a user preference. Local similarity,
+personalization, similarity, daily/weekly playlists, external beta and both DJ
+modes default off on new installations and accounts. An administrator must
+enable a module globally, then each user can opt in independently. Existing
+stored preferences are preserved during upgrades. Turning off personalization rejects new listening events. Erasing
+analyses pauses analysis rather than silently recreating it. Erasing the listening
+profile does not delete liked songs or saved native playlists.
+
+Daily playlists rotate at 04:00 Europe/Paris; weekly selections rotate Monday at
+04:15, including catch-up after restart. Native saved copies remain stable.
+
+## Optional prepared DJ renderer
+
+The separate CPU renderer uses Beat This! 1.1.0 (MIT), verified small0/final0
+checkpoints, conservative onset/grid confidence, and FFmpeg's Rubber Band filter.
+Rubber Band changes tempo by at most four percent without changing pitch.
+The key estimate is advisory. Rhythm never proves absence of vocals: uncertain
+vocals or grids always use short transitions. There is no stem separation.
+The mixer exchanges bass progressively, normalizes track level conservatively
+and limits oversampled output peaks. Originals are strictly inputs.
+
+Prepared sets stream directly from the two-deck mixer into one AAC encoder.
+Decoded PCM is loaded when needed and removed after its last block; a complete
+uncompressed copy of the set is never written. The dedicated DJ cache defaults
+to 5 GiB, configurable with --cache-bytes. A 2 GiB disk reserve is required.
+The budget includes working files and completed sets and refuses allocation
+before crossing it. Delete individual sets with the owner-scoped cache action;
+the single renderer performs deletion after cancelled child processes exit.
+Other caches, library permissions and original audio are not modified.
+
+DJ API uses native authentication, current catalog ids and visibility rules.
+Session creation has an owner-scoped request id for retry safety. Status and
+media access recheck visibility of every source. Set media supports HTTP Range;
+filesystem paths, source versions and owner columns are never returned. The
+prepared page pauses classical playback without modifying its queue.
+
+Build Dockerfile.music-dj with --build-context dj_models=/path/to/verified/models.
+The image pins its Python base, direct dependencies, FFmpeg package and model
+hashes. Runtime has no network, read-only roots, dropped capabilities and a
+separate state mount. The deployment matches the native runtime identity.
+Exact installed Python/Debian versions and license notices are in
+/usr/share/doc/music-dj. Corresponding application source is served by the
+authenticated source endpoint, including the Dockerfile and dependency recipe.
+
+Upstream sources and notices checked 2026-11-05/06:
+- https://github.com/CPJKU/beat_this/tree/ad7974846029835307ba19a3d5cefbf40b243041
+- https://github.com/CPJKU/beat_this/blob/ad7974846029835307ba19a3d5cefbf40b243041/LICENSE
+- https://sources.debian.org/src/ffmpeg/ (5.1.9-0+deb12u1 source package)
+- https://breakfastquay.com/rubberband/ (GPL/commercial dual licensing; GPL build used)
+- https://ffmpeg.org/ffmpeg-filters.html#rubberband
+
+## Interactive HLS and validation gate
+
+The interactive renderer uses one continuous AAC encoder, six-second HLS
+segments and a 24-second render horizon. A twelve-segment manifest and four
+extra segments support short network interruptions. Only completed files are
+published atomically. Segments and manifests recheck native authentication,
+ownership, enabled modules and current source visibility; no arbitrary URI or
+key resource can be embedded in a manifest. The same account can share one
+render between web and Android. One global renderer runs at a time.
+
+Pause/resume, next, replace and theme commands carry idempotent request ids.
+The renderer acknowledges the actual effective transition; already rendered
+audio is never rewritten. Replacement uses unused analyzed tracks from the
+session selection, and theme changes reorder its remaining tracks. The UI
+shows the effective delay. Prepared sets retain full seeking; live playback
+follows the active HLS window. There is no promise of instantaneous changes.
+
+Live inputs are frozen into private temporary files at session preparation,
+within the same 5 GiB DJ budget and disk reserve. This prevents a concurrent
+concurrent library replacement from breaking an ongoing live set. File versions
+are checked during the copy, originals stay read-only, and temporary copies
+are removed when the session ends or fails. There is no application backup.
+Derived rhythm profiles remain fenced by their original fingerprints, model
+hashes and physical source versions. DJ reuses valid sound embeddings when
+available. Otherwise a bounded local selection feeds its own rhythm/energy
+analysis. Whole-library recommendation indexing follows its four independent
+recommendation/playlist switches. Creation retries retain the same selection
+even when the catalog or its analyses advance during a request.
+
+Interactive mode is unavailable until an administrator runs its local
+validation from the music page. Both global and user interactive switches
+must be enabled; this does not bypass disabled modules. The administrator
+validation endpoint is separate from ordinary session creation. It chooses
+up to forty local tracks and requires at least 3700 seconds of planned audio.
+Play the resulting direct stream without pausing, seeking or stopping it.
+Only continuous progress timed by the server can accumulate the required
+3600 seconds; client elapsed-time claims or accelerated seeks cannot do so.
+The clock compares total server and playback progress within each uninterrupted
+window. A bounded two-second phase allowance absorbs HTTP response/queue jitter;
+it never contributes to the required duration. Both observed durations must
+reach 3600 seconds. Reader interruption events reset the window, as do missing
+reports, reversed progress and cumulative clock drift beyond that allowance.
+An administrator can revalidate an earlier interactive selection to reuse still
+valid analyses; current file versions and visibility are checked again.
+The gate also requires render throughput above 1.5 times real time and zero
+interruptions. It is bound to exact engine, model and runtime hashes; an
+incompatible update invalidates it. Synthetic tests never satisfy this gate.
+
+Web uses pinned hls.js 1.7.4 only when a direct stream is opened. Its BSD
+license is in docs/hlsjs-LICENSE.txt and the source offer. Android reuses the
+existing Media3 1.11.1 foreground media service, native authentication and
+logical media ids. DJ manifests/segments bypass the persistent audio cache,
+and capability changes stop disabled playback. DJ mixes never become fake
+library listening/favorite events.
+
+Sources checked 2026-11-06:
+- https://raw.githubusercontent.com/FFmpeg/FFmpeg/n5.1.9/doc/muxers.texi
+- https://github.com/video-dev/hls.js/releases/tag/v1.7.4
+- https://developer.android.com/media/media3/exoplayer/hls
+
+Status: experimental. Synthetic tests do not prove musical relevance.
+Physical Android/background QA and twenty-seed listening comparisons require
+separate evidence. A real prepared set has been rendered and checked, but
+this does not establish subjective transition quality or the live one-hour
+gate. External beta and both DJ modes remain off by default.
+
+## Queue DJ and continuous themes (candidate, 6 November 2026)
+
+The queue's Mode DJ preserves the order of 2–40 upcoming local tracks,
+including repeated occurrences. During playback it prepares the following
+tracks and hands over at the actual end of the current song, provided the
+render is ready. If preparation misses that boundary, ordinary playback
+continues. Non-local entries require an explicit different selection.
+
+The web uses the main audio transport for DJ playback, volume, equalizer,
+media-session controls and the sleep timer. Current and next decks come from
+the audible media clock. Only their actual overlap animates the artwork and
+transition progress. The classic queue is retained when leaving DJ mode.
+Android uses its existing foreground Media3 service and updates compatible
+media-item metadata without changing the stream address.
+
+Continuous themes reuse a bounded pool of up to 40 analyzed local tracks
+(24 for the home shortcuts), exclude recently planned titles where the pool
+allows, and append transitions beyond the committed render horizon. One HLS
+encoder remains alive; decoded decks, rolling segments and timeline history
+are bounded. The pool rotates without performing downloads or starting a
+classic radio. Rap, rock and electronic shortcuts filter native genre tags;
+insufficient matching metadata yields a clear error, never a different genre.
+
+Program-date-time timestamps map late-joining clients onto the same absolute
+timeline. A continuous session without HLS readers pauses after 90 seconds
+and stops after 15 minutes. Restarting playback resumes a paused session.
+The engine qualification remains mandatory and version-specific; proofs for
+previous engines are retained for rollback. Synthetic accelerated tests do
+not qualify a new engine for interactive use.
+
+Design references checked 6 November 2026:
+- https://support.apple.com/fr-fr/105067
+- https://developer.android.com/reference/androidx/media3/common/Player
+- https://datatracker.ietf.org/doc/html/rfc8216
+
+This section describes candidate behavior, not a deployment or listening
+qualification receipt. Physical Android background playback and subjective
+listening comparisons still require their own evidence.

@@ -1,6 +1,6 @@
 <template>
   <button
-    v-if="artist && title"
+    v-if="artist && title && enabled"
     type="button"
     :class="
       filled
@@ -22,22 +22,29 @@
 // nothing to search for. With `filled` it sits inside the download
 // block and looks like the download button (Charts, Discover).
 import { useRouter } from 'vue-router'
+import { computed, onMounted } from 'vue'
+import { musicAI } from '/src/model/musicAI'
 import AppIcon from '../ui/AppIcon.vue'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
   artist: { type: String, default: '' },
   title: { type: String, default: '' },
+  file: { type: String, default: '' },
   filled: { type: Boolean, default: false },
 })
 
 const { t } = useI18n()
 const router = useRouter()
+const enabled = computed(
+  () => musicAI.capabilities.value?.features.similarity === true
+)
+onMounted(() => musicAI.refresh())
 
 function go() {
   const artist = String(props.artist || '').trim()
   const title = String(props.title || '').trim()
   if (!artist || !title) return
-  router.push({ name: 'Similar', query: { artist, track: title } })
+  router.push({ name: 'Similar', query: { artist, track: title, ...(props.file ? { file: props.file } : {}) } })
 }
 </script>

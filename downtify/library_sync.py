@@ -152,6 +152,8 @@ def public_row(entry: dict[str, Any]) -> dict[str, Any]:
     # and the rows of every other track - hash included - stay as they were.
     if entry.get('explicit'):
         public['explicit'] = True
+    if entry.get('genre'):
+        public['genre'] = str(entry['genre'])[:512]
     return public
 
 

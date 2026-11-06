@@ -371,6 +371,7 @@ downloads are shared, and files are never stored twice.
 from __future__ import annotations
 
 import asyncio
+import os
 import base64
 import concurrent.futures.thread as cf_thread
 import contextlib
@@ -9382,6 +9383,17 @@ async def similar_tracks_endpoint(
     rows plus ``match``. ``502`` when YouTube Music can't be used.
     """
 
+    if os.environ.get('DOWNTIFY_MUSIC_AI_ENABLED') == '1':
+        from .music_ai.routes import similar
+
+        return await similar(
+            request=request, artist=artist, track=track, limit=limit,
+            seed='', library_file='',
+        )
+    return await _external_similar_tracks(artist, track, limit, request)
+
+
+async def _external_similar_tracks(artist, track, limit, request):
     if library_only.enabled(state.settings):
         return library_only.similar(
             entries_for_request(request), artist, track, limit
@@ -9535,6 +9547,12 @@ async def record_listen_endpoint(request: Request) -> dict[str, Any]:
     after being offline; a future time counts as now) and ``play_id``
     (the same play reported twice counts once).
     """
+
+    if os.environ.get('DOWNTIFY_MUSIC_AI_ENABLED') == '1':
+        from .music_ai.routes import store as music_ai_store
+
+        if not music_ai_store().effective(request_user_id(request))['personalization']:
+            return {'recorded': False}
 
     store = _require_discover()
     payload = await _json_object(request)

@@ -69,6 +69,44 @@ const playError = ref('')
 // queue advancing into it) - rows spin on it. Prefetches don't land
 // here: they resolve silently one track ahead.
 const resolving = ref(null)
+const dj = ref(null)
+let djTransport = null
+let classicPosition = 0
+let djHandover = null
+function armDjHandover(callback) { djHandover = callback }
+
+function attachDj(transport, { resumeNext = false } = {}) {
+  if (djTransport) detachDj()
+  const node = ensureAudio()
+  classicPosition = node.currentTime || 0
+  if (resumeNext) { currentIndex.value = nextIndex(); classicPosition = 0 }
+  playbackAttempt++
+  node.pause()
+  node.removeAttribute('src')
+  node.load()
+  node.playbackRate = 1
+  applyTrackNormalization(null)
+  resumeEqualizer()
+  djTransport = transport
+  dj.value = transport.presentation(0)
+  return node
+}
+function refreshDj(position) {
+  if (!djTransport) return
+  dj.value = djTransport.presentation(djTransport.position?.() ?? position)
+  currentTime.value = dj.value.elapsed
+  duration.value = dj.value.duration
+}
+function detachDj() {
+  const previous = djTransport
+  djTransport = null
+  previous?.unload()
+  if (audio) { audio.pause(); audio.removeAttribute('src'); audio.load() }
+  dj.value = null
+  currentTime.value = classicPosition
+  duration.value = playlist.value[currentIndex.value]?.duration || 0
+  restoreTime = classicPosition
+}
 
 // shuffleOrder is a plain array; this makes `upcoming` notice changes.
 const shuffleVersion = ref(0)
@@ -80,23 +118,36 @@ let sleepTimer = null
 let restoreTime = 0
 let playbackAttempt = 0
 
+const audioObservers = new Set()
+
+function observeAudio(observe) {
+  const observer = { observe, stop: null }
+  audioObservers.add(observer)
+  if (audio) observer.stop = observe(audio)
+  return () => { audioObservers.delete(observer); observer.stop?.() }
+}
+
 function ensureAudio() {
   if (audio) return audio
   audio = new Audio()
+  for (const observer of audioObservers) observer.stop = observer.observe(audio)
   // Buffer aggressively: a stream starts while it is still arriving, and
   // the next one is already resolved one track ahead (see prefetchNext).
   audio.preload = 'auto'
   audio.volume = volume.value
   audio.playbackRate = playbackRate.value
   audio.addEventListener('timeupdate', () => {
-    currentTime.value = audio.currentTime
+    if (djTransport) refreshDj(audio.currentTime)
+    else currentTime.value = audio.currentTime
   })
   audio.addEventListener('progress', () => {
+    if (djTransport) return
     // The current track finished loading: warm the next one now, so a
     // skip starts instantly instead of waiting on the network.
     if (fullyBuffered()) maybePrefetch()
   })
   audio.addEventListener('loadedmetadata', () => {
+    if (djTransport) return
     duration.value = isFinite(audio.duration) ? audio.duration : 0
     if (restoreTime) {
       audio.currentTime = Math.min(restoreTime, duration.value || 0)
@@ -104,6 +155,7 @@ function ensureAudio() {
     }
   })
   audio.addEventListener('durationchange', () => {
+    if (djTransport) return
     duration.value = isFinite(audio.duration) ? audio.duration : 0
   })
   audio.addEventListener('ended', onEnded)
@@ -163,7 +215,23 @@ function sameTrackOrder(a, b) {
 }
 
 // ── Queue ────────────────────────────────────────────────────────────
+function startMix(seed, tracks) {
+  if (djTransport) detachDj()
+  const keep = currentTrack.value?.file === seed.file && !currentTrack.value?.stream
+  shuffle.value = false
+  repeatMode.value = 'off'
+  context.value = { type: 'mix', title: `Mix · ${seed.title}`, subtitle: seed.artist }
+  if (!keep) {
+    setPlaylist([seed, ...tracks], { startIndex: 0 })
+    return
+  }
+  playlist.value = [currentTrack.value, ...tracks.map(toTrack)]
+  currentIndex.value = 0
+  prefetchedFor = -1
+}
+
 function setPlaylist(files, options = {}) {
+  if (djTransport) detachDj()
   const incoming = (files || []).map(toTrack)
   const tracks = incoming.filter((track) => !libraryOnly.value || !track.stream)
   if (libraryOnly.value && typeof options.startIndex === 'number') {
@@ -207,6 +275,7 @@ function setPlaylist(files, options = {}) {
 
 /** Play a list, optionally shuffled, starting from the first track. */
 function playList(files, { context: ctx = null, shuffled = false } = {}) {
+  if (djTransport) detachDj()
   const tracks = (files || [])
     .map(toTrack)
     .filter((track) => !libraryOnly.value || !track.stream)
@@ -329,6 +398,8 @@ function refreshTracks(byFile) {
 }
 
 function stop() {
+  djHandover = null
+  if (djTransport) detachDj()
   pause()
   if (audio) audio.removeAttribute('src')
   playlist.value = []
@@ -340,6 +411,8 @@ function stop() {
 
 // ── Transport ────────────────────────────────────────────────────────
 function playAt(index) {
+  djHandover = null
+  if (djTransport) detachDj()
   if (libraryOnly.value && playlist.value[index]?.stream) return
   if (index < 0 || index >= playlist.value.length) return
   const a = ensureAudio()
@@ -428,7 +501,7 @@ async function playUnresolved(index) {
     if (resolving.value === track) resolving.value = null
   }
   // The queue moved on (or the track left it) while resolving.
-  if (playlist.value[index] !== track || currentIndex.value !== index) return
+  if (djTransport || playlist.value[index] !== track || currentIndex.value !== index) return
   if (!url) {
     resolveFailures += 1
     if (resolveFailures >= MAX_RESOLVE_FAILURES) {
@@ -506,6 +579,7 @@ function startPlayback(a) {
 }
 
 function play() {
+  if (djTransport) { resumeEqualizer(); void djTransport.play(); return }
   if (libraryOnly.value && playlist.value[currentIndex.value]?.stream) return
   if (playlist.value.length === 0) return
   const a = ensureAudio()
@@ -529,6 +603,7 @@ function pause() {
   playbackAttempt += 1
   isBuffering.value = false
   if (audio) audio.pause()
+  if (djTransport) void djTransport.pause()
 }
 
 function toggle() {
@@ -537,6 +612,7 @@ function toggle() {
 }
 
 function seek(seconds) {
+  if (djTransport) { djTransport.seek?.(seconds); return }
   const a = ensureAudio()
   const max = duration.value || 0
   const clamped = Math.max(0, Math.min(max, seconds))
@@ -616,6 +692,7 @@ function prevIndex() {
 }
 
 function next() {
+  if (djTransport) { void djTransport.next(); return }
   const i = nextIndex()
   if (i < 0) {
     pause()
@@ -625,6 +702,7 @@ function next() {
 }
 
 function prev() {
+  if (djTransport) return
   const a = ensureAudio()
   if (a.currentTime > 3) {
     seek(0)
@@ -636,6 +714,12 @@ function prev() {
 }
 
 function onEnded() {
+  if (djTransport) { pause(); return }
+  if (djHandover) {
+    const handover = djHandover
+    djHandover = null
+    if (handover()) return
+  }
   if (sleepAt.value === 'track') {
     setSleepTimer(null)
     pause()
@@ -696,9 +780,9 @@ function setSleepTimer(minutes) {
 
 // ── Derived state ────────────────────────────────────────────────────
 const currentTrack = computed(() =>
-  currentIndex.value >= 0 && currentIndex.value < playlist.value.length
+  dj.value?.current || (currentIndex.value >= 0 && currentIndex.value < playlist.value.length
     ? playlist.value[currentIndex.value]
-    : null
+    : null)
 )
 
 const progressPct = computed(() =>
@@ -707,6 +791,7 @@ const progressPct = computed(() =>
 
 /** Upcoming tracks, in the order they'll play: `[{ track, index }]`. */
 const upcoming = computed(() => {
+  if (dj.value) return dj.value.next ? [{ track: dj.value.next, index: -1 }] : []
   const list = playlist.value
   // Reading these keeps the computed in step with shuffle/index changes.
   const current = currentIndex.value
@@ -774,11 +859,13 @@ watch(currentTrack, (track) => updateMediaSession(track))
 // Switched on mid-song: level the current one too (the equalizer ramps
 // to it), instead of waiting for the next.
 watch(normalizationEnabled, (on) => {
+  if (djTransport) return
   const track = playlist.value[currentIndex.value]
   if (!on || !track?.file) return
   void getTrackNormalization(track).then((profile) => {
     if (
       normalizationEnabled.value &&
+      !djTransport &&
       playlist.value[currentIndex.value] === track
     )
       applyTrackNormalization(profile)
@@ -826,7 +913,7 @@ function saveSession() {
       JSON.stringify({
         tracks: playlist.value,
         index: currentIndex.value,
-        time: Math.floor(currentTime.value),
+        time: Math.floor(djTransport ? classicPosition : currentTime.value),
         context: context.value,
         shuffle: shuffle.value,
         repeat: repeatMode.value,
@@ -885,6 +972,12 @@ export function trackInfoFromFile(file) {
 
 export function usePlayer() {
   return {
+    dj,
+    attachDj,
+    armDjHandover,
+    refreshDj,
+    detachDj,
+    observeAudio,
     playlist,
     currentIndex,
     currentTrack,
@@ -904,6 +997,7 @@ export function usePlayer() {
     sleepAt,
     resolving,
     setPlaylist,
+    startMix,
     playList,
     enqueue,
     playNext,

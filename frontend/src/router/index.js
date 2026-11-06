@@ -6,6 +6,7 @@ const LIBRARY_TABS = 'tracks|albums|artists|playlists'
 const CHARTS_TABS = 'tracks|albums|artists|playlists'
 
 const routes = [
+  { path: '/music-ai', name: 'MusicAI', component: () => import('/src/views/MusicAIView.vue') },
   { path: '/', name: 'Home', component: HomeView },
   {
     path: '/search/:query?',

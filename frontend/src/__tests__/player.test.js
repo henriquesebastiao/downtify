@@ -172,6 +172,8 @@ describe('usePlayer queue', () => {
   })
 
   afterEach(() => {
+    player.setSleepTimer(null)
+    vi.useRealTimers()
     delete globalThis.Audio
   })
 
@@ -240,5 +242,38 @@ describe('usePlayer queue', () => {
     expect(player.sleepAt.value).toBe('track')
     player.setSleepTimer(null)
     expect(player.sleepAt.value).toBe(null)
+  })
+
+  it.each([5, 10, 20, 30, 45, 60])('pauses after %i minutes without clearing the queue', (minutes) => {
+    vi.useFakeTimers()
+    player.setSleepTimer(minutes)
+    vi.advanceTimersByTime(minutes * 60000 - 1)
+    expect(player.isPlaying.value).toBe(true)
+    vi.advanceTimersByTime(1)
+    expect(player.isPlaying.value).toBe(false)
+    expect(player.sleepAt.value).toBe(null)
+    expect(titles()).toEqual(['One', 'Two', 'Three'])
+  })
+
+  it('replaces and cancels a pending pause', () => {
+    vi.useFakeTimers()
+    player.setSleepTimer(5)
+    player.setSleepTimer(10)
+    vi.advanceTimersByTime(5 * 60000)
+    expect(player.isPlaying.value).toBe(true)
+    player.setSleepTimer(null)
+    vi.advanceTimersByTime(10 * 60000)
+    expect(player.isPlaying.value).toBe(true)
+  })
+
+  it('starts a seeded mix without restarting its current track', () => {
+    player.duration.value = 120
+    player.seek(17)
+    const seed = player.currentTrack.value
+    player.startMix(seed, ['A - Four.mp3', 'A - Five.mp3'])
+    expect(player.currentTrack.value.file).toBe(seed.file)
+    expect(player.currentTime.value).toBe(17)
+    expect(titles()).toEqual(['One', 'Four', 'Five'])
+    expect(player.isPlaying.value).toBe(true)
   })
 })

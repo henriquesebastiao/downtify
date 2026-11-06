@@ -16,6 +16,25 @@ import { useAccount } from '/src/model/account'
 import { useI18n } from '/src/i18n'
 import { itemTrackCount } from '/src/lib/library'
 import { useTrashCapability } from '/src/lib/trash'
+import { playlistChoices, rememberPlaylist } from '/src/lib/recentPlaylists'
+import { musicAI } from './musicAI'
+
+function recentPlaylistKey() {
+  return `downtify:playlist-additions:${encodeURIComponent(musicAI.account.value || 'anonymous')}`
+}
+function recentPlaylists() {
+  try {
+    const value = JSON.parse(localStorage.getItem(recentPlaylistKey()) || '[]')
+    return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : []
+  } catch { return [] }
+}
+
+function rememberAddition(name, owner) {
+  if (owner !== musicAI.account.value) return
+  try {
+    localStorage.setItem(recentPlaylistKey(), JSON.stringify(rememberPlaylist(recentPlaylists(), name)))
+  } catch { /* Adding tracks remains available with browser storage disabled. */ }
+}
 
 const createOpen = ref(false)
 const createFiles = ref([])
@@ -184,14 +203,16 @@ export function usePlaylistActions() {
     files = [],
     { sourcePlaylistUrl = '' } = {}
   ) {
+    const owner = musicAI.account.value
     try {
       const res = await API.createLibraryPlaylist(name)
       const created = res.data?.name || name
       if (files.length) {
-        await API.editLibraryPlaylistTracks(created, {
+        const added = await API.editLibraryPlaylistTracks(created, {
           add: files,
           sourcePlaylistUrl,
         })
+        if (Number(added.data?.added ?? files.length) > 0) rememberAddition(created, owner)
       }
       await library.load({ force: true })
       ui.toast(t('playlists.created', { name: created }), { kind: 'success' })
@@ -245,6 +266,7 @@ export function usePlaylistActions() {
   // A song the playlist already has is only added again once the user
   // says so (`allowDuplicates` when they already did).
   async function addFiles(playlist, files, { allowDuplicates = false } = {}) {
+    const owner = musicAI.account.value
     const names = files.map((item) =>
       typeof item === 'string' ? item : item.file
     )
@@ -274,6 +296,7 @@ export function usePlaylistActions() {
           added += Number(repeat.data?.added ?? already.length)
         }
       }
+      if (added > 0) rememberAddition(playlist.name, owner)
       await library.load({ force: true })
       ui.toast(
         added
@@ -385,13 +408,22 @@ export function usePlaylistActions() {
 
   function addMenuItems(files) {
     const list = Array.isArray(files) ? files : [files]
+    const { quick, others } = playlistChoices(manuals(), recentPlaylists())
     const items = [
       { heading: t('playlists.addTo') },
-      ...manuals().map((playlist) => ({
+      ...quick.map((playlist) => ({
         label: playlist.title,
         icon: 'playlist',
         action: () => addFiles(playlist, list),
       })),
+      ...(others.length ? [{
+        label: 'Autres playlists…',
+        options: others.map((playlist) => ({ value: playlist.name, label: playlist.title })),
+        action: (name) => {
+          const playlist = manuals().find((item) => item.name === name)
+          if (playlist) return addFiles(playlist, list)
+        },
+      }] : []),
       {
         label: t('playlists.new'),
         icon: 'plus',

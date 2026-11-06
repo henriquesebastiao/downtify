@@ -2,9 +2,34 @@
   <div
     class="mx-auto flex max-w-[1680px] flex-col gap-8 px-4 pt-6 sm:px-6 md:pt-8 lg:px-10"
   >
-    <PageHeader :title="t('similar.title')" :subtitle="t('similar.subtitle')" />
+    <PageHeader :title="t('similar.title')" :subtitle="subtitle" />
+    <div class="flex flex-wrap items-center gap-3">
+      <label v-if="similar.canSearch.value" for="similar-source">Rechercher dans</label>
+      <select
+        v-if="similar.canSearch.value"
+        id="similar-source"
+        :value="similar.source.value"
+        class="rounded border border-line-2 bg-surface p-2"
+        @change="changeSource"
+      >
+        <option v-if="similar.localEnabled.value" value="local">Ma bibliothèque — analyse locale</option>
+        <option
+          v-if="similar.capabilities.value?.features.external_beta"
+          value="external"
+        >
+          YouTube Music — bêta
+        </option>
+      </select>
+      <RouterLink to="/settings/ai" class="text-accent"
+        >Préférences musicales</RouterLink
+      >
+    </div>
 
-    <!-- No search button: Enter (like the main search) starts the mix. -->
+    <UiEmpty v-if="similar.capabilities.value && !similar.canSearch.value" icon="search"
+      title="Les musiques similaires sont désactivées."
+      body="Les préférences musicales indiquent les sources autorisées sur votre compte et sur ce serveur." />
+    <p v-else-if="!similar.capabilities.value" role="status" class="text-muted">Vérification des sources disponibles…</p>
+    <template v-if="similar.canSearch.value">
     <form
       class="flex flex-col gap-2 sm:flex-row sm:items-end"
       @submit.prevent="submit"
@@ -23,6 +48,7 @@
         :placeholder="t('similar.trackPlaceholder')"
         autocomplete="off"
       />
+      <UiButton type="submit" icon="search" :disabled="similar.loading.value || (!artistInput && !trackInput)">Rechercher</UiButton>
     </form>
 
     <div v-if="similar.loading.value" class="flex flex-col gap-2">
@@ -98,11 +124,12 @@
         <p class="text-[13px] text-pretty text-muted">{{ tip.body }}</p>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
@@ -117,6 +144,7 @@ import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { songToPlayerTrack } from '/src/model/songPlay'
 import { useI18n } from '/src/i18n'
+import { musicAI } from '/src/model/musicAI'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -127,6 +155,13 @@ const player = usePlayer()
 
 const artistInput = ref(similar.artist.value)
 const trackInput = ref(similar.track.value)
+onMounted(() => musicAI.refresh())
+function changeSource(event) {
+  const artist = artistInput.value
+  const track = trackInput.value
+  similar.setSource(event.target.value)
+  if (artist || track) similar.searchFor(artist, track)
+}
 
 watch(
   () => similar.songs.value,
@@ -140,15 +175,15 @@ function applyQuery() {
   const artist = String(route.query.artist || '').trim()
   const track = String(route.query.track || '').trim()
   if (!artist && !track) return
-  if (artist === similar.artist.value && track === similar.track.value) {
+  if (artist === similar.artist.value && track === similar.track.value && !route.query.file) {
     return
   }
   artistInput.value = artist
   trackInput.value = track
-  similar.searchFor(artist, track)
+  similar.searchFor(artist, track, route.query.file ? { library_file: String(route.query.file) } : {})
 }
 
-watch(() => [route.query.artist, route.query.track], applyQuery, {
+watch(() => [route.query.artist, route.query.track, route.query.file], applyQuery, {
   immediate: true,
 })
 
@@ -240,7 +275,23 @@ watch(
   }
 )
 
-const tips = computed(() => [
+const subtitle = computed(() => !similar.canSearch.value
+  ? 'Consultez vos préférences pour activer une source musicale.'
+  : similar.source.value === 'local'
+    ? 'Des morceaux proches de votre titre, à partir de l’analyse sonore de votre bibliothèque.'
+    : t('similar.subtitle'))
+const tips = computed(() => similar.source.value === 'local' ? [
+  {
+    icon: 'wand', tone: 'bg-accent/12 text-accent',
+    title: 'Partez d’un titre local',
+    body: 'Indiquez son artiste ou son titre, puis lancez la recherche dans votre bibliothèque analysée.',
+  },
+  {
+    icon: 'play', tone: 'bg-accent/12 text-accent',
+    title: 'Écoutez vos découvertes',
+    body: 'Les résultats utilisent vos fichiers locaux, sans téléchargement ni recherche chez un fournisseur externe.',
+  },
+] : [
   {
     icon: 'wand',
     tone: 'bg-accent/12 text-accent',
