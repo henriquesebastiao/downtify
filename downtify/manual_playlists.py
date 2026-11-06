@@ -29,7 +29,8 @@ from .playlist_mosaic import (
 )
 
 MAX_PLAYLIST_NAME_LEN = 120
-MAX_TRACKS_PER_EDIT = 500
+# Keep edits bounded, while supporting large imported playlists.
+MAX_TRACKS_PER_EDIT = 10_000
 
 _P = ParamSpec('_P')
 _R = TypeVar('_R')
